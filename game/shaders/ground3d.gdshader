@@ -11,6 +11,10 @@ uniform float tex_world = 460.0;
 uniform float patch_world = 1500.0;
 uniform float sharp = 9.0;
 uniform float seed = 0.0;
+// B-24: яркость земли (текстуры светлые — под солнцем песок выгорал) и псевдорельеф по яркости:
+// светлые места текстуры чуть «выше» тёмных, трещины и рябь получают тени от низкого солнца
+uniform float albedo_k = 0.8;
+uniform float bump_k = 6.0;
 
 varying vec2 world;
 
@@ -41,7 +45,10 @@ void fragment() {
 		+ texture(t_gravel, uv * 0.97 + 0.61).rgb * e.z
 		+ texture(t_river, uv + 0.13).rgb * e.w;
 	float macro = 0.9 + 0.18 * vnoise(world / 2600.0 + 5.0);
-	ALBEDO = c * macro;
+	ALBEDO = c * macro * albedo_k;
+	float h = dot(c, vec3(0.3333));
+	vec2 g = vec2(dFdx(h), dFdy(h)) * bump_k;
+	NORMAL_MAP = normalize(vec3(-g.x, g.y, 1.0)) * 0.5 + 0.5;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.1;
 }
