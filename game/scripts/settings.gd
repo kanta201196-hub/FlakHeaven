@@ -1,0 +1,133 @@
+extends Node
+## Настройки игры (2.8): экран, частота кадров, интерфейс и переназначение клавиш.
+## Хранятся в user://settings.json. Громкости и параметры геймплея — в Tuning (user://tuning.json).
+
+const PATH := "user://settings.json"
+
+const WINDOW_MODES := ["В окне", "Без рамки (весь экран)", "Полный экран"]
+const RESOLUTIONS := [Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3840, 2160)]
+const FPS_LIMITS := [0, 60, 120, 144, 165, 240]
+
+## Действия, которые можно переназначить: [действие, подпись, раздел]
+const REBIND := [
+	["move_up", "Вверх / газ +", "Полёт"],
+	["move_down", "Вниз / газ −", "Полёт"],
+	["move_left", "Влево", "Полёт"],
+	["move_right", "Вправо", "Полёт"],
+	["afterburner", "Форсаж", "Полёт"],
+	["roll", "Бочка", "Полёт"],
+	["throttle_cut", "Сброс газа", "Полёт"],
+	["sharp_turn", "Навык класса", "Бой"],
+	["toggle_fire_mode", "Огонь: авто / ручной", "Бой"],
+	["fire", "Огонь курсовым (клавиша)", "Бой"],
+	["fire_hardpoint", "НАР / бомбы по кнопке (клавиша)", "Бой"],
+	["loadout", "Подвесы (пауза)", "Интерфейс"],
+	["reroll", "Перебросить карточки / заново", "Интерфейс"],
+	["toggle_scheme", "Сменить схему управления", "Интерфейс"],
+]
+
+var window_mode := 1
+var resolution := 2
+var vsync := true
+var fps_limit := 0
+var hide_hud := false
+var binds := {}          # действие → physical_keycode (только клавиатура)
+var _defaults := {}      # исходные клавиши (для «Сбросить»)
+
+
+func _ready() -> void:
+	# запоминаем раскладку по умолчанию (InputSetup уже добавил действия — он раньше в автозагрузке)
+	for r in REBIND:
+		_defaults[r[0]] = _first_key(r[0])
+	load_settings()
+	apply()
+
+
+func _first_key(action: String) -> int:
+	if not InputMap.has_action(action):
+		return 0
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey:
+			return (e as InputEventKey).physical_keycode
+	return 0
+
+
+func key_name(action: String) -> String:
+	var k := _first_key(action)
+	if k == 0:
+		return "—"
+	return OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(k))
+
+
+func rebind(action: String, physical: int) -> void:
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey:
+			InputMap.action_erase_event(action, e)
+	var ev := InputEventKey.new()
+	ev.physical_keycode = physical
+	InputMap.action_add_event(action, ev)
+	binds[action] = physical
+	save_settings()
+
+
+func reset_binds() -> void:
+	for a in _defaults:
+		if int(_defaults[a]) != 0:
+			rebind(a, int(_defaults[a]))
+	binds.clear()
+	save_settings()
+
+
+func apply() -> void:
+	if DisplayServer.get_name() == "headless" or OS.get_cmdline_user_args().has("--autotest"):
+		return
+	match window_mode:
+		0:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			var r: Vector2i = RESOLUTIONS[resolution]
+			var scr := DisplayServer.screen_get_size()
+			r = Vector2i(mini(r.x, scr.x), mini(r.y, scr.y))
+			DisplayServer.window_set_size(r)
+			DisplayServer.window_set_position((scr - r) / 2)
+		1:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		2:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = FPS_LIMITS[fps_limit]
+	apply_audio()
+
+
+func apply_audio() -> void:
+	AudioServer.set_bus_volume_db(0, Tuning.g("master_db"))
+
+
+func save_settings() -> void:
+	var f := FileAccess.open(PATH, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
+		"hide_hud": hide_hud, "binds": binds}, "  "))
+	f.close()
+
+
+func load_settings() -> void:
+	if not FileAccess.file_exists(PATH):
+		return
+	var f := FileAccess.open(PATH, FileAccess.READ)
+	if f == null:
+		return
+	var d = JSON.parse_string(f.get_as_text())
+	f.close()
+	if not d is Dictionary:
+		return
+	window_mode = clampi(int(d.get("window_mode", window_mode)), 0, WINDOW_MODES.size() - 1)
+	resolution = clampi(int(d.get("resolution", resolution)), 0, RESOLUTIONS.size() - 1)
+	vsync = bool(d.get("vsync", vsync))
+	fps_limit = clampi(int(d.get("fps_limit", fps_limit)), 0, FPS_LIMITS.size() - 1)
+	hide_hud = bool(d.get("hide_hud", hide_hud))
+	var b = d.get("binds", {})
+	if b is Dictionary:
+		for a in b:
+			if InputMap.has_action(a):
+				rebind(a, int(b[a]))
