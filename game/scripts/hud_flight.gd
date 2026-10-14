@@ -1,0 +1,320 @@
+class_name HudFlight
+extends HudKit
+## Интерфейс в полёте: опыт, прочность, навыки, подвесы, время и асы, указатели угроз,
+## эвакуация, активности, радио, полоса подвесов, строка курса.
+
+
+func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
+	var p := m.player
+	if dmg_flash > 0.0:
+		ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0, 0, dmg_flash * 0.5))
+
+	# Опыт и уровень — полоса во всю ширину сверху
+	ctrl.draw_rect(Rect2(0, 0, size.x, 10), Color(0, 0, 0, 0.6))
+	ctrl.draw_rect(Rect2(0, 0, size.x * clampf(m.xp / m.xp_need(), 0.0, 1.0), 10), Color(0.4, 1.0, 0.55))
+
+	var hide := Settings.hide_hud and m.state == "playing"
+	if is_instance_valid(p) and not hide:
+		_left_panel(m, p)
+		_flight_panel(m, p, size)
+		if m.state == "playing":
+			_activity_panel(m, p, size)
+	_right_panel(m, size)
+	if is_instance_valid(p) and m.state == "playing":
+		_loadout_strip(p, size)
+	_boss_bars(m, size)
+	_threat_markers(size)
+	if m.state == "playing":
+		_evac_marker(m, size)
+
+	if m.banner_t > 0.0 and m.state == "playing":
+		var a := clampf(m.banner_t, 0.0, 1.0)
+		_ctext(170, m.banner, 30, Color(1.0, 0.85, 0.5, a))
+
+	var hint := "Мышь — курс · W/S — газ · ЛКМ — огонь (ручн.) · ПКМ — НАР/бомбы (по кнопке) · Q — авто/ручной · Space — бочка · Shift — форсаж · E — навык класса · Tab/Esc — подвесы · F2 — схема" + (" · F5/F6/F7 — отладка" if Main.DEBUG else "")
+	_text(Vector2(0, size.y - 20), hint, 15, Color(0.75, 0.78, 0.85, 0.8), HORIZONTAL_ALIGNMENT_CENTER, size.x)
+
+
+func _skill(y: float, title: String, key: String, cd: float, active: float) -> void:
+	var s: String
+	var c := Color(0.6, 1.0, 0.7)
+	if active > 0.0:
+		s = "%s [%s]: действует %.1f с" % [title, key, active]
+		c = Color(1.0, 0.85, 0.4)
+	elif cd > 0.0:
+		s = "%s [%s]: %.1f с" % [title, key, cd]
+		c = Color(0.7, 0.72, 0.78)
+	else:
+		s = "%s [%s]: готово" % [title, key]
+	_text(Vector2(24, y), s, 18, c)
+
+
+func _left_panel(m: Main, p: Player) -> void:
+	# 3.1: подложка под левой панелью — светлая земля не «съедает» текст
+	var ph := 300.0 + p.groups.size() * 22.0 + (22.0 if p.wingmen.size() > 0 else 0.0) + (24.0 if p.skill_b != "" else 0.0)
+	_backing(Rect2(10, 14, 480, ph))
+	ctrl.draw_rect(Rect2(24, 24, 320, 20), Color(0, 0, 0, 0.55))
+	ctrl.draw_rect(Rect2(24, 24, 320.0 * p.hp / p.max_hp, 20), Color(0.4, 0.9, 0.5))
+	_text(Vector2(30, 40), "Прочность %d / %d" % [int(p.hp), int(p.max_hp)], 16, Color(0.05, 0.1, 0.05))
+	_text(Vector2(356, 40), "Ур. %d" % m.level, 20, Color(0.6, 1.0, 0.7))
+	if p.manual_mode:
+		_text(Vector2(24, 76), "Курсовое: РУЧНОЕ — обороты +%d%% урона  [Q]" % int(round(p.manual_bonus * 100.0)), 19, Color(1.0, 0.82, 0.35))
+	else:
+		_text(Vector2(24, 76), "Курсовое: АВТО  [Q — ручное, до +50% урона]", 19)
+	_skill(104, "Бочка", "Space", p.roll_cd, p.roll_t)
+	_skill(128, "Форсаж", "Shift", p.ab_cd, p.ab_t)
+	var s3: Dictionary = p.s3_def()
+	_skill(152, "%s %s" % [s3["title"], Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active())
+	if p.skill_b != "":
+		_skill(176, PlaneClasses.SKILL3[p.skill_b]["title"], "F", p.sb_cd, p.s3_active(p.skill_b))
+	var y := 210.0 if p.skill_b != "" else 186.0
+	for g in p.groups:
+		var h := g as Hardpoint
+		var c := Color(0.75, 0.85, 0.95)
+		var s := h.label()
+		if h.is_empty():
+			c = Color(0.55, 0.58, 0.65)
+		else:
+			if Weapons.DEFS[h.weapon]["uses_priority"]:
+				s += " · %s" % Weapons.PRIORITY_NAMES[h.priority]
+			if h.cd > 0.25:
+				s += " · %.1f с" % h.cd
+		_text(Vector2(24, y), s, 17, c)
+		y += 22.0
+	if p.wingmen.size() > 0:
+		var wl := PackedStringArray()
+		for w in p.wingmen:
+			if not is_instance_valid(w):
+				continue
+			var wm: Wingman = w
+			var st: String = "%s %d" % [Prog.WING_TYPES[wm.type]["short"], wm.lvl]
+			if wm.temp:
+				st += " (%d с)" % int(ceil(wm.life))
+			elif not wm.alive():
+				st += " (вернётся %d с)" % int(ceil(wm.dead_t))
+			wl.append(st)
+		_text(Vector2(24, y), "Звено: " + ", ".join(wl), 17, Color(0.8, 0.75, 1.0))
+		y += 22.0
+	_text(Vector2(24, y + 6), "Управление: %s  [F2]" % Hud.SCHEMES[int(Tuning.g("scheme"))], 16, Color(0.7, 0.78, 0.9))
+	_course_bar(p, Vector2(24, y + 22))
+	if m.god_mode:
+		_text(Vector2(24, y + 30), "ОТЛАДКА: неуязвимость (F7)", 16, Color(1, 0.5, 0.5))
+	if int(Tuning.g("scheme")) == 2 and m.state == "playing":
+		var mp := ctrl.get_local_mouse_position()
+		ctrl.draw_arc(mp, 12.0, 0.0, TAU, 24, Color(1, 1, 1, 0.7), 2.0)
+		ctrl.draw_circle(mp, 2.0, Color(1, 1, 1, 0.9))
+
+
+func _right_panel(m: Main, size: Vector2) -> void:
+	var t := int(m.run_time)
+	var w := size.x - 24.0
+	_backing(Rect2(size.x - 340, 14, 330, 172), true)
+	_text(Vector2(0, 46), "%02d:%02d" % [t / 60, t % 60], 28, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
+	_text(Vector2(0, 74), "Сбито: %d" % m.kills, 20, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
+	_text(Vector2(0, 100), "Запчасти: %d" % int(m.parts), 20, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, w)
+	var every := Tuning.g("boss_every")
+	var next := (floorf(m.run_time / every) + 1.0) * every - m.run_time
+	if m.boss_alive():
+		_text(Vector2(0, 126), "Ас в бою!", 18, Color(1.0, 0.5, 0.4), HORIZONTAL_ALIGNMENT_RIGHT, w)
+	else:
+		_text(Vector2(0, 126), "Следующий ас через %d:%02d" % [int(next) / 60, int(next) % 60], 18, Color(0.85, 0.8, 0.8), HORIZONTAL_ALIGNMENT_RIGHT, w)
+	if m.run_time > 900.0:
+		_text(Vector2(0, 150), "Продолжение: добыча ×%.1f" % m.continue_mult(), 18, Color(1.0, 0.8, 0.4), HORIZONTAL_ALIGNMENT_RIGHT, w)
+	_text(Vector2(0, 174), "FPS: %d" % Engine.get_frames_per_second(), 15, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, w)
+
+
+func _boss_bars(m: Main, size: Vector2) -> void:
+	var y := 30.0
+	for n in m.get_tree().get_nodes_in_group("enemies"):
+		var b := n as Boss
+		if b == null:
+			continue
+		var w := 560.0
+		var x := (size.x - w) / 2.0
+		_text(Vector2(x, y + 2), b.title, 18, Color(1, 0.85, 0.7), HORIZONTAL_ALIGNMENT_CENTER, w)
+		ctrl.draw_rect(Rect2(x, y + 10, w, 14), Color(0, 0, 0, 0.6))
+		ctrl.draw_rect(Rect2(x, y + 10, w * b.hp / b.max_hp, 14), Color(1.0, 0.35, 0.3))
+		if b.shield > 0.0:
+			ctrl.draw_rect(Rect2(x, y + 25, w * b.shield / b.shield_max, 5), Color(0.5, 0.8, 1.0))
+		y += 48.0
+
+
+# ---------- Указатели у края экрана ----------
+
+func _threat_markers(size: Vector2) -> void:
+	var m := Main.I
+	if m.projectiles == null:
+		return
+	var xf := m.get_viewport().get_canvas_transform()
+	var rect := Rect2(Vector2.ZERO, size).grow(-40.0)
+	for mi in m.projectiles.missiles:
+		if not mi["lost"]:
+			_edge_arrow(xf * (mi["p"] as Vector2), rect, size, Color(1.0, 0.2, 0.15))
+	for n in m.get_tree().get_nodes_in_group("enemies"):
+		if n is MissileCarrier and n._lock > 0.0:
+			_edge_arrow(xf * (n as Node2D).global_position, rect, size, Color(1.0, 0.6, 0.2))
+		elif n is Boss:
+			_edge_arrow(xf * (n as Node2D).global_position, rect, size, Color(1.0, 0.3, 0.6), 1.6)
+
+
+func _evac_marker(m: Main, size: Vector2) -> void:
+	if not is_instance_valid(m.evac) or not is_instance_valid(m.player):
+		return
+	var xf := m.get_viewport().get_canvas_transform()
+	var rect := Rect2(Vector2.ZERO, size).grow(-60.0)
+	var sp := xf * m.evac.target_pos()
+	_edge_arrow(sp, rect, size, Color(0.4, 1.0, 0.5), 1.8)
+	var d := int(m.player.global_position.distance_to(m.evac.target_pos()))
+	_ctext(246, "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с" % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7))
+
+
+func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1.0) -> void:
+	if rect.has_point(sp):
+		return
+	var c := size / 2.0
+	var dir := (sp - c).normalized()
+	var tx := INF if absf(dir.x) < 0.001 else (rect.size.x / 2.0) / absf(dir.x)
+	var ty := INF if absf(dir.y) < 0.001 else (rect.size.y / 2.0) / absf(dir.y)
+	var pos := c + dir * minf(tx, ty)
+	var a := dir.angle()
+	var pts := PackedVector2Array([pos + Vector2.from_angle(a) * 18.0 * scale, pos + Vector2.from_angle(a + 2.5) * 14.0 * scale, pos + Vector2.from_angle(a - 2.5) * 14.0 * scale])
+	ctrl.draw_colored_polygon(pts, col)
+
+
+## Газ (РУД), «на хвосте», серия сбитий
+func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
+	if p.hp <= 0.0:
+		return
+	var x := 24.0
+	var y := size.y - 74.0
+	var sch := int(Tuning.g("scheme"))
+	if sch != 0:
+		var lo := Tuning.g("throttle_min")
+		var hi := Tuning.g("throttle_max")
+		var w := 260.0
+		_text(Vector2(x, y - 8), "Газ [W/S]: %d%%%s" % [int(round(p.throttle * 100.0)), "  ФОРСАЖ" if p.ab_t > 0.0 else ""], 17, Color(0.85, 0.9, 1.0))
+		ctrl.draw_rect(Rect2(x, y, w, 10), Color(1, 1, 1, 0.08))
+		ctrl.draw_rect(Rect2(x, y, w * (p.throttle - lo) / (hi - lo), 10), Color(0.55, 0.8, 1.0) if p.throttle <= 1.0 else Color(1.0, 0.7, 0.35))
+		var mid := x + w * (1.0 - lo) / (hi - lo)
+		ctrl.draw_line(Vector2(mid, y - 3), Vector2(mid, y + 13), Color.WHITE, 2.0)
+	if p.on_tail():
+		_ctext(size.y / 2.0 + 120.0, "НА ХВОСТЕ: курсовое +50%", 22, Color(1.0, 0.9, 0.4))
+	if m.streak >= 3:
+		var a := clampf(m.streak_t, 0.0, 1.0)
+		_text(Vector2(0, 220), "Серия ×%d · опыт ×%.2f" % [m.streak, m.streak_mult()], 22, Color(1.0, 0.75, 0.4, a), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24.0)
+
+
+## Активности: указатели на позицию ПВО и аса-соперника, радиопереговоры, «ХВОСТ!»
+func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
+	var xf := m.get_viewport().get_canvas_transform()
+	var rect := Rect2(Vector2.ZERO, size).grow(-60.0)
+	var node: Node = m.spawner.activity_node if m.spawner != null else null
+	if is_instance_valid(node):
+		if node is AASite:
+			var site := node as AASite
+			_edge_arrow(xf * site.global_position, rect, size, Color(1.0, 0.85, 0.3), 1.8)
+			var d := int(p.global_position.distance_to(site.global_position))
+			var s: String
+			if site.failed:
+				s = "Позиция ПВО устояла · осталось целей: %d" % site.left()
+			elif site.active:
+				s = "ПОЗИЦИЯ ПВО: %d с · целей: %d" % [int(ceil(site.timer)), site.left()]
+			else:
+				s = "Позиция ПВО: %d м — подлетите, чтобы начать" % (d / 10)
+			_ctext(276, s, 22, Color(1.0, 0.85, 0.4))
+			if not site.failed:
+				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
+		elif node is RivalAce:
+			var ace := node as RivalAce
+			_edge_arrow(xf * ace.global_position, rect, size, Color(1.0, 0.25, 0.3), 1.8)
+			_ctext(276, "ДОГФАЙТ: ас «%s» · уйдёт через %d с" % [ace.callsign, int(ceil(ace.life))], 22, Color(1.0, 0.6, 0.6))
+			_ctext(302, "Награда: выбор из редких карточек", 17, Color(0.85, 0.75, 1.0))
+			if ace.threatening() and int(Time.get_ticks_msec() / 200) % 2 == 0:
+				_ctext(size.y / 2.0 - 110.0, "ХВОСТ! Сбрось газ (S) или манёвр", 30, Color(1.0, 0.3, 0.25))
+	if m.radio_t > 0.0:
+		var a := clampf(m.radio_t, 0.0, 1.0)
+		var w := 760.0
+		var r := Rect2((size.x - w) / 2.0, size.y - 200.0, w, 56)
+		ctrl.draw_rect(r, Color(0.05, 0.06, 0.08, 0.8 * a))
+		ctrl.draw_rect(r, Color(1.0, 0.4, 0.4, 0.6 * a), false, 2.0)
+		_text(Vector2(r.position.x + 16, r.position.y + 24), "Радио · «%s»:" % m.radio_from, 16, Color(1.0, 0.6, 0.6, a))
+		_text(Vector2(r.position.x + 16, r.position.y + 46), m.radio_text, 19, Color(1, 1, 1, a))
+
+
+## 2.8: полоса подвесов внизу экрана — картинка оружия, уровень, перезарядка, связки
+func _loadout_strip(p: Player, size: Vector2) -> void:
+	var items: Array = []
+	for g in p.groups:
+		if not g.is_empty():
+			items.append(g)
+	if items.is_empty():
+		return
+	var cw := 150.0
+	var total := cw * items.size() + 12.0 * (items.size() - 1)
+	var x := (size.x - total) / 2.0
+	var y := size.y - 118.0
+	for g in items:
+		var hp: Hardpoint = g
+		var r := Rect2(x, y, cw, 78)
+		_panel(r, false)
+		var t := PlaneArt.weapon_tex(hp.weapon)
+		if t != null:
+			var k := 60.0 / t.get_height()
+			ctrl.draw_set_transform(Vector2(x + 26, y + 39), 0.0, Vector2(k, k))
+			ctrl.draw_texture(t, -t.get_size() / 2.0)
+			ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		_text(Vector2(x + 50, y + 24), Weapons.DEFS[hp.weapon]["short"], 15, Color(0.92, 0.9, 0.84))
+		_text(Vector2(x + 50, y + 42), "×%d" % hp.slots, 13, Color(0.62, 0.62, 0.56))
+		for i in Weapons.MAX_LEVEL:
+			ctrl.draw_rect(Rect2(x + 50 + i * 17, y + 50, 13, 6), (Cards.EVO_COLOR if hp.evo else Menu.C_AMBER) if i < hp.level else Color(1, 1, 1, 0.12))
+		if hp.evo:
+			_text(Vector2(x + 112, y + 42), "Э%s" % (("+%d" % hp.evo_plus) if hp.evo_plus > 0 else ""), 14, Cards.EVO_COLOR)
+		# перезарядка
+		var full := maxf(hp.reload_time(p), 0.01)
+		var k2 := 1.0 - clampf(hp.cd / full, 0.0, 1.0)
+		ctrl.draw_rect(Rect2(x + 50, y + 64, 85, 4), Color(1, 1, 1, 0.1))
+		ctrl.draw_rect(Rect2(x + 50, y + 64, 85 * k2, 4), Color(0.5, 0.95, 0.6) if k2 >= 1.0 else Color(0.85, 0.83, 0.78))
+		x += cw + 12.0
+	if not p.syn.is_empty():
+		var names := PackedStringArray()
+		for id in p.syn:
+			names.append(Cards.SYNERGIES[id]["title"] if Cards.SYNERGIES.has(id) else PlaneClasses.SKILL3[p.skill3]["syn"]["title"])
+		_text(Vector2(0, y - 10), "Связки: " + ", ".join(names), 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+
+
+# ---------- 3.2: курс ----------
+
+## Строка курса в левой панели: слоты связок и прогресс к курсу
+func _course_bar(p: Player, pos: Vector2) -> void:
+	var x := pos.x
+	for i in Cards.MAX_SYN:
+		var r := Rect2(x, pos.y, 132, 26)
+		var ids: Array = p.syn.keys()
+		if i < ids.size():
+			var sd := Cards.syn_def(p, ids[i])
+			var col: Color = sd.get("color", Menu.C_AMBER)
+			ctrl.draw_rect(r, Color(col.r, col.g, col.b, 0.35))
+			ctrl.draw_rect(r, col, false, 2.0)
+			_text(Vector2(x + 6, pos.y + 19), "◆ " + String(sd["title"]), 13, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT, 124)
+		else:
+			ctrl.draw_rect(r, Color(1, 1, 1, 0.06))
+			ctrl.draw_rect(r, Color(1, 1, 1, 0.2), false, 1.0)
+			_text(Vector2(x + 6, pos.y + 19), "слот %d" % (i + 1), 13, Color(0.6, 0.62, 0.68))
+		x += 140.0
+	if not p.has_course():
+		return
+	var sd2 := Cards.syn_def(p, p.course)
+	var conds := Cards.cond_list(p, p.course)
+	var k := Cards._progress(conds)
+	var ready := Cards.conds_ok(conds)
+	var y := pos.y + 34.0
+	var col2: Color = sd2.get("color", Menu.C_AMBER)
+	_text(Vector2(pos.x, y + 14), "Курс: «%s»" % sd2["title"], 16, col2.lightened(0.2))
+	ctrl.draw_rect(Rect2(pos.x + 190, y + 2, 220, 14), Color(0, 0, 0, 0.5))
+	var a := 1.0 if not ready else (0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.01))
+	ctrl.draw_rect(Rect2(pos.x + 190, y + 2, 220 * k, 14), Color(col2.r, col2.g, col2.b, a))
+	var parts := PackedStringArray()
+	for c in conds:
+		parts.append(("✓" if c[1] else "") + String(c[0]))
+	_text(Vector2(pos.x, y + 36), "Связка придёт в следующем выборе!" if ready else " · ".join(parts), 14,
+		Color(1.0, 0.9, 0.4) if ready else Color(0.85, 0.87, 0.92))
