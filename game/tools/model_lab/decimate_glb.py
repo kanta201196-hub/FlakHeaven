@@ -1,18 +1,24 @@
 # Упрощение GLB из генераторов (TRELLIS.2 отдаёт от 100 000 треугольников) до бюджета игры
 # с сохранением UV и PBR-материала. Запускать до `model_lab.gd prep`.
 #   python3 -m pip install pymeshlab trimesh   (pymeshlab на Linux нужна libopengl0)
-#   python3 decimate_glb.py <in.glb> <out.glb> [треугольников=12000]
+#   python3 decimate_glb.py <in.glb> <out.glb> [треугольников=12000] [макс. текстура=2048]
 import sys, os, tempfile
 import numpy as np
 import trimesh, pymeshlab
+from PIL import Image
 
 src, dst = sys.argv[1], sys.argv[2]
 target = int(sys.argv[3]) if len(sys.argv) > 3 else 12000
+tex_max = int(sys.argv[4]) if len(sys.argv) > 4 else 2048  # Hunyuan отдаёт 4096 — для игры с запасом хватит 2048
 
 scene = trimesh.load(src, force="scene")
 out = trimesh.Scene()
 for name, g in scene.geometry.items():
     mat = g.visual.material
+    for key in ("baseColorTexture", "metallicRoughnessTexture", "normalTexture", "emissiveTexture", "occlusionTexture"):
+        img = getattr(mat, key, None)
+        if img is not None and max(img.size) > tex_max:
+            setattr(mat, key, img.resize((tex_max, tex_max * img.size[1] // img.size[0]), Image.LANCZOS))
     with tempfile.TemporaryDirectory() as d:
         ms = pymeshlab.MeshSet()
         uv = np.asarray(g.visual.uv, dtype=np.float64)
