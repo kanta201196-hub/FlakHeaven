@@ -11,6 +11,7 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/model_lab/model_lab.gd -- build-zsu <out.glb>
 ##   python3 tools/model_lab/trellis_gen.py <in.png> <seed> <out.glb>   (генерация TRELLIS.2, нужен HF_TOKEN)
 ##   python3 tools/model_lab/decimate_glb.py <in.glb> <out.glb> [12000]   (упрощение до бюджета)
+##   python3 tools/model_lab/fit_span.py <in.glb> <out.glb> 0.753   (размах под спрайт)
 ##   godot --headless --path . --script res://tools/model_lab/model_lab.gd -- prep <in.glb> <out.glb> [--nose=+z] [--ground] [--budget=8000]
 ##   xvfb-run godot --path . --rendering-driver opengl3 --script res://tools/model_lab/model_lab.gd -- preview <model.glb> <sprite.png> <len_px> <out.png> [--ground] [--turret=40]
 ##
