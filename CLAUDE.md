@@ -16,6 +16,7 @@ Flak Heaven — roguelike / bullet heaven про боевую авиацию, в
 | `docs/status-log.md` | Отчёты по сборкам и спринтам |
 | `docs/team/` | Роли агентов (продюсер, геймдизайнер, арт, аналитик, программист, PM) и процесс |
 | `docs/sprint1/` | Спецификации, планы, разборы плейтестов (в т.ч. `s3-3d-cloud-plan.md` — план перехода на 3D) |
+| `game/tools/model_lab/` | Конвейер 3D-моделей в облаке: подготовка GLB, предпросмотр сверху рядом со спрайтом, модели кодом (команды — в начале `model_lab.gd`) |
 | `tools/reports/` | Приём отчётов тестеров: Apps Script для Google Таблицы, тестовый приёмник |
 | `tools/tester/` | Инструкции для внешних тестеров: `INSTRUCTIONS_windows.txt`, `INSTRUCTIONS_mac.txt` |
 
