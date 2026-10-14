@@ -128,4 +128,5 @@
 - Конвейер: roll −90° → decimate 14 000 → fit_span 0,753 (крылья ×1,28; у Hunyuan размах 0,62 длины) → prep. Модель `game/models/pilot/fh_plane_osa_hunyuan.glb`, предпросмотр `docs/sprint1/pilot3d/osa_hunyuan_preview.jpg`.
 - Итог: детализация заметно выше, чем у TRELLIS (кабина, сопла, панели видны и при ×4). Недостатки: левое и правое крыло чуть разные; файл тяжёлый (9 МБ GLB).
 - Ждёт Kirill: условия Hunyuan 3D (коммерция, регион) не проверены; выбор между TRELLIS и Hunyuan.
+- «Оса» ур. 2 (спрайт `fighter_2`) из Hunyuan: тоже «на боку» → roll −90° → decimate 14 000 → prep. Размах совпал со спрайтом (0,60 длины), подгонка не нужна. Модель `game/models/pilot/fh_plane_osa2_hunyuan.glb`, предпросмотр `docs/sprint1/pilot3d/osa2_hunyuan_preview.jpg`. Полные версии для ангара (50 тыс. треугольников, текстуры 4096) — в общей папке проекта `pilot3d/*_hq.glb`, в репозиторий пока не кладём (26–35 МБ).
 
