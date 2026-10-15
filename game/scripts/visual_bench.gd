@@ -109,7 +109,12 @@ func _make_points() -> Array:
 	if empty == Vector2.INF:
 		empty = Vector2.ZERO
 	var pts := [{"name": "desert", "pos": empty}]
-	for k in [["mountain", "o_mesa"], ["village", "o_village"], ["oasis", "o_oasis"]]:
+	# B-26: горы теперь — рельеф; берём самую высокую точку рядом с пустой клеткой
+	var peak := empty + Vector2(4000, 0)
+	if Render3D.I != null and Render3D.I.terrain != null:
+		peak = Render3D.I.terrain.find_peak(empty)
+	pts.append({"name": "mountain", "pos": peak})
+	for k in [["village", "o_village"], ["oasis", "o_oasis"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	pts.append({"name": "closeup", "pos": found.get("o_rocks_big", empty) + Vector2(-260, 0), "zoom": 2.5})

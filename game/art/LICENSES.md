@@ -13,3 +13,4 @@
 | `pbr/clay_*` | Mud Cracked Dry Riverbed 002 (`mud_cracked_dry_riverbed_002`) | Dario Barresi, Dimitrios Savva | https://polyhaven.com/a/mud_cracked_dry_riverbed_002 |
 | `pbr/gravel_*` | Dry Ground Rocks (`dry_ground_rocks`) | Rob Tuytel | https://polyhaven.com/a/dry_ground_rocks |
 | `pbr/river_*` | River Small Rocks (`river_small_rocks`) | Rob Tuytel, Rico Cilliers | https://polyhaven.com/a/river_small_rocks |
+| `pbr/rock_*` | Cliff Side (`cliff_side`) | James Ray Cock, Jenelle van Heerden, Dario Barresi | https://polyhaven.com/a/cliff_side |

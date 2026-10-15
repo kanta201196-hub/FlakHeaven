@@ -10,7 +10,8 @@ extends Node3D
 ## 2D→3D: (x, y) → (x, высота, y).
 
 const FOV := 50.0
-const GROUND_Y := -70.0      # земля ниже плоскости боя: тени и параллакс
+## B-26: земля ниже плоскости боя на ground_depth (было 70 px) — между ними настоящий рельеф
+var GROUND_Y := -500.0
 const CLOUD_Y := 380.0       # облака между камерой и самолётами
 const ON := true
 
@@ -19,7 +20,8 @@ static var enabled := true
 
 var cam: Camera3D
 var sun: DirectionalLight3D
-var ground: MeshInstance3D
+var terrain: Terrain3D
+var _ground_mat: ShaderMaterial
 var _units := {}      # instance_id → {node, kind, prev_heading, bank}
 var _objs := {}       # ключ клетки → MeshInstance3D
 var _clouds: Array = []
@@ -73,14 +75,11 @@ func _ready() -> void:
 	add_child(cam)
 	cam.current = true
 
-	ground = MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(1, 1)
-	ground.mesh = pm
+	GROUND_Y = -Tuning.g("ground_depth")
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://shaders/ground3d.gdshader")
 	# B-25: наборы PBR (CC0, game/art/ground/pbr/) — если есть все, иначе старые текстуры 2.6
-	var slots := [["sand", "sand"], ["clay", "clay"], ["gravel", "gravel"], ["river", "riverbed"]]
+	var slots := [["sand", "sand"], ["clay", "clay"], ["gravel", "gravel"], ["river", "riverbed"], ["rock", "gravel"]]
 	var pbr := true
 	for n in slots:
 		pbr = pbr and ResourceLoader.exists("res://art/ground/pbr/%s_albedo.jpg" % n[0]) and ResourceLoader.exists("res://art/ground/pbr/%s_nh.jpg" % n[0])
@@ -97,9 +96,11 @@ func _ready() -> void:
 		sm.set_shader_parameter("tex_world", Tuning.g("ground_tile"))
 	sm.set_shader_parameter("seed", float(randi() % 1000))
 	sm.set_shader_parameter("albedo_k", Tuning.g("ground_albedo"))
-	ground.material_override = sm
-	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(ground)
+	sm.set_shader_parameter("relief", true)
+	_ground_mat = sm
+	terrain = Terrain3D.new()
+	add_child(terrain)
+	terrain.setup(-GROUND_Y, sm, null)
 
 	_scorch_mesh = QuadMesh.new()
 	_scorch_mesh.size = Vector2(1, 1)
@@ -125,12 +126,20 @@ func _cam_height(zoom: float) -> float:
 	return (vh / maxf(zoom, 0.01)) / (2.0 * tan(deg_to_rad(FOV) / 2.0))
 
 
-## Точка на земле, которая на экране совпадает с точкой p плоскости боя (для наземных целей и пятен)
+## Точка на земле, которая на экране совпадает с точкой p плоскости боя (для наземных целей и пятен).
+## B-26: луч камеры через p пересекаем с рельефом — три уточнения высоты хватает (склоны пологие
+## относительно высоты камеры)
 func ground_under(p: Vector2) -> Vector3:
 	var c := cam.global_position
 	var h := c.y
-	var k := (h - GROUND_Y) / h
-	return Vector3(c.x + (p.x - c.x) * k, GROUND_Y, c.z + (p.y - c.z) * k)
+	var y := GROUND_Y
+	var g := Vector3.ZERO
+	for i in 3:
+		var k := (h - y) / h
+		g = Vector3(c.x + (p.x - c.x) * k, 0.0, c.z + (p.y - c.z) * k)
+		y = terrain.surface(g.x, g.z).y if terrain != null else GROUND_Y
+	g.y = y
+	return g
 
 
 func _process(delta: float) -> void:
@@ -152,10 +161,12 @@ func _process(delta: float) -> void:
 	var h := _cam_height(zoom)
 	cam.global_position = Vector3(c2.x, h, c2.y)
 	cam.basis = Basis.looking_at(Vector3(0, -1, 0), Vector3(0, 0, -1))
-	# земля — большой квадрат под камерой
-	var span := h * 2.6 + 3000.0
-	ground.global_position = Vector3(c2.x, GROUND_Y, c2.y)
-	ground.scale = Vector3(span, 1, span)
+	# рельеф — куски под видимой областью дна долин (+ запас на тени и сглаживание камеры)
+	if terrain._bg != m.background:
+		terrain._bg = m.background
+		terrain.clear()
+	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
+	terrain.sync(Rect2(c2 - half_g, half_g * 2.0), 64 if terrain._chunks.is_empty() else 2)
 	_sync_units(m, delta)
 	_sync_objects(c2, h)
 	_sync_clouds(m, c2, h)
@@ -241,7 +252,7 @@ func _sync_units(m: Main, delta: float) -> void:
 		var ang: float = info.get("angle", e.heading)
 		if e.is_ground:
 			var gp := ground_under(e.global_position)
-			_place(ue, Vector2(gp.x, gp.z), ang, 0.0, 0.0, GROUND_Y + 1.0, (cam.global_position.y - GROUND_Y) / cam.global_position.y)
+			_place(ue, Vector2(gp.x, gp.z), ang, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
 		else:
 			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), 0.0)
 		var mi2: MeshInstance3D = ue["mi"]
@@ -301,8 +312,10 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 
 # ---------- объекты биома ----------
 
-## Потолок рельефа: 70 px до плоскости боя минус запас на крен и толщину моделей.
-const OBJ_MAX_H := 48.0
+## Верх объектов не ближе 30 px к плоскости боя (запас на крен и толщину моделей)
+const OBJ_TOP := -30.0
+## B-26: столовая гора-картинка не нужна — горы теперь настоящие
+const OBJ_SKIP_3D := ["o_mesa"]
 
 const OBJ_RELIEF := {
 	"o_rocks_big": [0.16, 0.45], "o_rocks_small": [0.18, 0.45], "o_mesa": [0.16, 0.25],
@@ -322,7 +335,7 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 		for cy in range(int(floorf(view.position.y / CH)), int(floorf(view.end.y / CH)) + 1):
 			var key := Vector2i(cx, cy)
 			var o := bg.chunk_object(cx, cy)
-			if o.is_empty():
+			if o.is_empty() or o["name"] in OBJ_SKIP_3D:
 				continue
 			seen[key] = true
 			if _objs.has(key):
@@ -331,16 +344,17 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 			var rel: Array = OBJ_RELIEF.get(o["name"], [0.08, 0.3])
 			var mi := MeshInstance3D.new()
 			var k: float = o["size"] / float(maxi(t.get_width(), t.get_height()))
+			var gy := terrain.surface(o["pos"].x, o["pos"].y).y
 			if float(rel[0]) > 0.0:
 				# 3.3: самолёт летит над всем (как в Sublight) — рельеф никогда не дотягивается до плоскости боя
-				var h_world := minf(float(o["size"]) * float(rel[0]), OBJ_MAX_H)
+				var h_world := clampf(float(o["size"]) * float(rel[0]), 2.0, OBJ_TOP - gy)
 				mi.mesh = ReliefMesh.build(t, snappedf(h_world / k, 1.0), 80, float(rel[1]), 0.8, false)
 			else:
 				var qm := PlaneMesh.new()
 				qm.size = Vector2(t.get_width(), t.get_height())
 				mi.mesh = qm
 			mi.material_override = ReliefMesh.material(t, 0.0, 0.95, Color.WHITE * Tuning.g("obj_albedo"))
-			mi.position = Vector3(o["pos"].x, GROUND_Y + 0.5, o["pos"].y)
+			mi.position = Vector3(o["pos"].x, gy + 0.5, o["pos"].y)
 			mi.basis = Basis(Vector3.UP, -float(o["rot"])).scaled(Vector3(k, k, k))
 			add_child(mi)
 			_objs[key] = mi
