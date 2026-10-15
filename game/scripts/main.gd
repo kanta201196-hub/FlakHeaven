@@ -104,6 +104,8 @@ func _ready() -> void:
 	for a in _args:
 		if a.begins_with("--report-url="):
 			REPORT_URL = a.substr(13)
+		if a.begins_with("--tilt="):   # B-47: наклон камеры, град (проба; 0 — строго сверху)
+			Tuning.set_param("cam_tilt", float(a.substr(7)))
 	DEBUG = not (OS.has_feature("tester") or _args.has("--tester"))
 	_autotest = _args.has("--autotest")
 	god_mode = _args.has("--god")

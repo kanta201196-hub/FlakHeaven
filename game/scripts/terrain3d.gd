@@ -20,6 +20,7 @@ const D_ROAD := 85.0           # ось дороги
 const D_FLOOR := 260.0         # ровное дно долины
 const D_FAN := 480.0           # конусы выноса и осыпи до подножия склона
 const D_CLIMB := 2200.0        # от подножия до гребня
+const V_SCALE := 0.00028       # перевод поля долин в «пиксели» вдали от реки
 
 var base_y := -500.0
 var ceiling := 470.0           # максимальная высота рельефа над дном долин
@@ -110,7 +111,7 @@ func _height_v(x: float, z: float, v: float) -> float:
 	var climb := smoothstep(D_FAN - 40.0, D_CLIMB, a)
 	climb = 1.0 - pow(1.0 - climb, 1.6)   # выпуклый склон: круче у подножия плеча, острее у гребня
 	h += (top - 0.1) * climb * 0.85
-	h += (r * r - 0.3) * 0.22 * climb * climb * top
+	h += r * r * 0.15 * climb * climb * top   # только прибавка: зубцы над склоном, без ям между ними
 	# уступы пород: горизонтальные слои дают скальные пояса на склонах
 	# только на крутой части склона — на пологих конусах и плато уступы дают полосы «как горизонтали»
 	var steep := smoothstep(0.08, 0.25, climb) * (1.0 - smoothstep(0.7, 0.92, climb))
@@ -175,7 +176,11 @@ func river_field(x: float, z: float) -> float:
 	var e := 6.0
 	var v := _v_raw(x, z)
 	var g := Vector2(_v_raw(x + e, z) - v, _v_raw(x, z + e) - v) / e
-	return clampf(v / maxf(g.length(), 1e-5), -5000.0, 5000.0)
+	# у реки — точное расстояние (ровная ширина русла и дороги); дальше — по самому полю с постоянным
+	# масштабом: расстояние-оценка «гуляет» с наклоном поля и рождала ямы на склонах
+	var near := v / maxf(g.length(), 1e-5)
+	var far := v / V_SCALE
+	return lerpf(near, far, smoothstep(0.03, 0.12, absf(v)))
 
 
 func _v_raw(x: float, z: float) -> float:

@@ -23,7 +23,7 @@ var _suffix := ""
 
 func _init(main: Main) -> void:
 	m = main
-	# --tilt=N — кадры с наклоном камеры (обсуждение вида, cam_tilt в tuning.gd), файлы vis_<имя>_tN.png
+	# --tilt=N (main.gd ставит cam_tilt) — файлы кадров vis_<имя>_tN.png
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--tilt="):
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
@@ -83,6 +83,8 @@ func _hold(p: Dictionary) -> void:
 func _save(name: String) -> void:
 	var img := m.get_viewport().get_texture().get_image()
 	img.save_png("user://vis_%s%s.png" % [name, _suffix])
+	if Render3D.I != null and Render3D.I._tilt_on:   # отладка B-47: что попало в текстуру слоя боя
+		Render3D.I._combat_vp.get_texture().get_image().save_png("user://vis_%s_combat.png" % name)
 	# яркость: каждый 4-й пиксель по обеим осям
 	var n := 0
 	var hot := 0

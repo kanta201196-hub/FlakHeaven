@@ -172,7 +172,9 @@ func separation(e: Enemy) -> Vector2:
 
 
 func _place(e: Enemy, p: Player, ang: float, t: float) -> void:
-	e.position = p.global_position + Vector2.from_angle(ang) * randf_range(1150.0, 1350.0)
+	# B-47: с наклоном камеры вверх по экрану видно дальше — появляемся дальше, чтобы не «возникать» в кадре
+	var far := 1.0 + 0.5 * sin(deg_to_rad(Tuning.g("cam_tilt")))
+	e.position = p.global_position + Vector2.from_angle(ang) * randf_range(1150.0, 1350.0) * far
 	Main.I.world.add_child(e)
 	e.apply_hp_mult(Tuning.g("enemy_hp_mult") * hp_ramp(t))
 	# 2.8: с 10-й минуты — элитные варианты (прочнее ×3, крупнее, больше опыта)

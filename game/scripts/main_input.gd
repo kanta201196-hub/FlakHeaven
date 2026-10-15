@@ -71,6 +71,9 @@ func handle_global_input() -> void:
 		Tuning.set_param("sprites", 1.0 - Tuning.g("sprites"))
 	if Input.is_action_just_pressed("toggle_scheme"):
 		_cycle_scheme()
+	if Input.is_action_just_pressed("cycle_tilt"):
+		cycle_tilt(1)
+		m.show_banner("Наклон камеры: %s  [F9]" % tilt_name())
 	if (Input.is_action_just_pressed("pause") or Input.is_action_just_pressed("loadout")) and not m.tuning_panel.visible:
 		m._set_state("paused" if m.state == "playing" else "playing")
 	if m.state == "playing" and Main.DEBUG:
@@ -86,6 +89,23 @@ func handle_global_input() -> void:
 		if Input.is_action_just_pressed("debug_god"):
 			m.god_mode = not m.god_mode
 			m.show_banner("Отладка: неуязвимость %s" % ("ВКЛ" if m.god_mode else "ВЫКЛ"))
+
+
+## B-47: варианты наклона камеры для тестовой сборки (решение владельца — после теста)
+const TILTS := [28.0, 35.0, 45.0, 0.0]
+
+
+static func tilt_name() -> String:
+	var t := Tuning.g("cam_tilt")
+	return "сверху" if t < 0.5 else "%d°" % int(round(t))
+
+
+func cycle_tilt(dir: int) -> void:
+	var i := TILTS.find(Tuning.g("cam_tilt"))
+	Tuning.set_param("cam_tilt", TILTS[wrapi(i + dir if i >= 0 else 0, 0, TILTS.size())])
+	Tuning.save_params()
+	if m.tele != null:
+		m.tele.add("tilt_changes")
 
 
 func _cycle_scheme() -> void:

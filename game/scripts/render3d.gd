@@ -31,6 +31,35 @@ var _scorch_mat: StandardMaterial3D
 var _flash_mat: StandardMaterial3D
 var _elite_mat: StandardMaterial3D
 var _zoom := 1.0
+var _shadow_shader: Shader
+## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
+## настоящая тень размыта полутенью солнца до пятна и лежит далеко в стороне, а крупная чёткая тень
+## читается как бреющий полёт. Оставляем подсказку «где самолёт над землёй», но в стиле высоты.
+const SHADOW_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+uniform sampler2D tex : filter_linear, repeat_disable;
+uniform float alpha = 0.35;
+uniform float blur = 0.03;
+void fragment() {
+	float a = 0.0;
+	for (int i = 0; i < 12; i++) {
+		float t = float(i) * 2.39996;
+		float r = blur * sqrt((float(i) + 0.5) / 12.0);
+		a += texture(tex, UV + vec2(cos(t), sin(t)) * r).a;
+	}
+	ALBEDO = vec3(0.04, 0.05, 0.09);
+	ALPHA = a / 12.0 * alpha;
+}
+"""
+## B-47: наклонная камера. Слой боя (2D: пули, взрывы, эффекты) рисуется вторым вьюпортом с тем же
+## World2D в текстуру, а она лежит в 3D на плоскости боя (y = 0) — совпадает с моделями в любой точке
+## кадра. В основном вьюпорте слой боя скрыт маской (видимость CanvasItem, бит COMBAT_LAYER).
+const COMBAT_LAYER := 2
+const COMBAT_VP_MAX := 2600.0     # предел стороны текстуры слоя боя, px
+var _combat_vp: SubViewport
+var _combat_quad: MeshInstance3D
+var _tilt_on := false
 
 
 func _ready() -> void:
@@ -66,6 +95,8 @@ func _ready() -> void:
 	# Свет сверху-слева (на экране): тени уходят вниз-вправо
 	sun.basis = Basis.looking_at(Vector3(0.62, -0.85, 0.75).normalized(), Vector3(0, 0, -1))
 	add_child(sun)
+
+	_setup_combat_layer()
 
 	cam = Camera3D.new()
 	cam.fov = FOV
@@ -118,6 +149,108 @@ func _ready() -> void:
 	_elite_mat.albedo_color = Color(1.0, 0.75, 0.2, 0.28)
 	_elite_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_elite_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+
+
+# ---------- слой боя для наклонной камеры (B-47) ----------
+
+func _setup_combat_layer() -> void:
+	_combat_vp = SubViewport.new()
+	_combat_vp.transparent_bg = true
+	_combat_vp.disable_3d = true
+	_combat_vp.canvas_cull_mask = 0xFFFFFFFF   # предки слоя боя (Main) в слое 1 — иначе отсекаются вместе с детьми
+	_combat_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_combat_vp.size = Vector2i(16, 16)
+	add_child(_combat_vp)
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(1, 1)
+	_combat_quad = MeshInstance3D.new()
+	_combat_quad.mesh = pm
+	_combat_quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.no_depth_test = true      # как раньше 2D-слой: пули и вспышки поверх самолётов и облаков
+	m.render_priority = 100
+	m.albedo_texture = _combat_vp.get_texture()
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_combat_quad.material_override = m
+	_combat_quad.visible = false
+	add_child(_combat_quad)
+	get_tree().node_added.connect(_on_node_added)
+
+
+func _on_node_added(n: Node) -> void:
+	if _tilt_on and n is CanvasItem and Main.I != null and is_instance_valid(Main.I.world) and Main.I.world.is_ancestor_of(n):
+		(n as CanvasItem).visibility_layer = COMBAT_LAYER
+
+
+func _set_layer(n: Node, layer: int) -> void:
+	if n is CanvasItem:
+		(n as CanvasItem).visibility_layer = layer
+	for c in n.get_children():
+		_set_layer(c, layer)
+
+
+## Включение и выключение наклона: слой боя уходит из основного вьюпорта в текстуру на плоскости
+func _set_tilt_mode(on: bool, m: Main) -> void:
+	if on == _tilt_on and (not on or m.world.visibility_layer == COMBAT_LAYER):
+		return
+	_tilt_on = on
+	_set_layer(m.world, COMBAT_LAYER if on else 1)
+	get_viewport().canvas_cull_mask = 0xFFFFFFFF & ~COMBAT_LAYER if on else 0xFFFFFFFF
+	_combat_vp.world_2d = get_viewport().world_2d
+	_combat_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	_combat_quad.visible = on
+
+
+## Каждый кадр: какую часть плоскости боя видит камера → такой прямоугольник рисуем в текстуру
+func _sync_combat_layer() -> void:
+	var vs := get_viewport().get_visible_rect().size
+	var r := Rect2()
+	var first := true
+	for corner in [Vector2.ZERO, Vector2(vs.x, 0), Vector2(0, vs.y), vs, Vector2(vs.x * 0.5, 0)]:
+		var o := cam.project_ray_origin(corner)
+		var d := cam.project_ray_normal(corner)
+		if d.y > -0.05:
+			d.y = -0.05
+		var t := -o.y / d.y
+		var p := Vector2(o.x + d.x * t, o.z + d.z * t)
+		if first:
+			r = Rect2(p, Vector2.ZERO)
+			first = false
+		else:
+			r = r.expand(p)
+	var base := vs / _zoom
+	r = r.intersection(Rect2(r.get_center() - base * 1.5, base * 3.0))   # не тянуть текстуру до горизонта
+	var px := r.size * _zoom
+	var k := minf(1.0, COMBAT_VP_MAX / maxf(px.x, px.y))
+	var size := Vector2i(maxi(16, int(px.x * k)), maxi(16, int(px.y * k)))
+	if _combat_vp.size != size:
+		_combat_vp.size = size
+	var sc := float(size.x) / r.size.x
+	_combat_vp.canvas_transform = Transform2D(0.0, Vector2(sc, sc), 0.0, -r.position * sc)
+	_combat_quad.position = Vector3(r.get_center().x, 0.0, r.get_center().y)
+	_combat_quad.scale = Vector3(r.size.x, 1.0, r.size.y)
+
+
+## Точка плоскости боя под курсором мыши (с наклоном камеры — через луч из камеры)
+func mouse_world(fallback: Vector2) -> Vector2:
+	if not _tilt_on:
+		return fallback
+	var mp := get_viewport().get_mouse_position()
+	var o := cam.project_ray_origin(mp)
+	var d := cam.project_ray_normal(mp)
+	if d.y > -0.01:
+		return fallback
+	var t := -o.y / d.y
+	return Vector2(o.x + d.x * t, o.z + d.z * t)
+
+
+## Экранная точка для точки мира (указатели интерфейса); без наклона — как 2D-камера
+func world_to_screen(p: Vector2, fallback: Vector2) -> Vector2:
+	if not _tilt_on:
+		return fallback
+	return cam.unproject_position(Vector3(p.x, 0.0, p.y))
 
 
 # ---------- камера ----------
@@ -174,6 +307,9 @@ func _process(delta: float) -> void:
 		terrain._bg = m.background
 		terrain.clear()
 	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
+	_set_tilt_mode(tilt > 0.001, m)
+	if _tilt_on:
+		_sync_combat_layer()
 	var view_g := Rect2(c2 - half_g, half_g * 2.0)
 	if tilt > 0.001:
 		# с наклоном видно дальше вперёд (вверх по экрану)
@@ -213,6 +349,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 		root.add_child(mi)
 		add_child(root)
 		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}}
+		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
+			u["sh"] = _make_shadow(tex, root)
 		_units[id] = u
 	u["seen"] = true
 	return u
@@ -224,6 +362,57 @@ func _place(u: Dictionary, p: Vector2, heading: float, bank: float, roll: float,
 	var b := Basis(Vector3.UP, -heading) * Basis(Vector3.RIGHT, bank + roll)
 	var k: float = u["k"] * scale_k
 	root.basis = b.scaled(Vector3(k, k, k))
+	if u.has("sh"):
+		_place_shadow(u, p, heading, k)
+
+
+func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
+	if _shadow_shader == null:
+		_shadow_shader = Shader.new()
+		_shadow_shader.code = SHADOW_SHADER
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(tex.get_width(), tex.get_height())
+	var mat := ShaderMaterial.new()
+	mat.shader = _shadow_shader
+	mat.set_shader_parameter("tex", tex)
+	var sh := MeshInstance3D.new()
+	sh.mesh = pm
+	sh.material_override = mat
+	sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.tree_exiting.connect(sh.queue_free)
+	add_child(sh)
+	return sh
+
+
+## Тень самолёта: точка на рельефе по лучу солнца, сдвиг от самолёта укорочен (shadow_off),
+## силуэт уменьшен (shadow_size) и прижат к склону по нормали рельефа.
+func _place_shadow(u: Dictionary, p: Vector2, heading: float, k: float) -> void:
+	var sh: MeshInstance3D = u["sh"]
+	var hi := Tuning.g("plane_shadow") > 0.5 and terrain != null
+	var cs := GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if hi else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	for c in (u["node"] as Node3D).find_children("*", "GeometryInstance3D", true, false):
+		(c as GeometryInstance3D).cast_shadow = cs
+	sh.visible = hi
+	if not hi:
+		return
+	var d := -sun.global_transform.basis.z   # куда светит солнце
+	var y := GROUND_Y
+	var g := Vector2.ZERO
+	var off := Tuning.g("shadow_off")
+	for i in 3:
+		var t := y / d.y
+		g = p + Vector2(d.x, d.z) * t * off
+		y = terrain.surface(g.x, g.y).y
+	var e := 8.0
+	var n := Vector3(terrain.surface(g.x - e, g.y).y - terrain.surface(g.x + e, g.y).y, 2.0 * e,
+		terrain.surface(g.x, g.y - e).y - terrain.surface(g.x, g.y + e).y).normalized()
+	var s := k * Tuning.g("shadow_size")
+	var yaw := Basis(Vector3.UP, -heading)
+	var tilt := Basis(Quaternion(Vector3.UP, n))
+	sh.global_transform = Transform3D((tilt * yaw).scaled(Vector3(s, 1.0, s)), Vector3(g.x, y + 3.0, g.y))
+	var mat := sh.material_override as ShaderMaterial
+	mat.set_shader_parameter("alpha", Tuning.g("shadow_alpha"))
+	mat.set_shader_parameter("blur", 0.03 + 0.03 * (1.0 - Tuning.g("shadow_size")))
 
 
 func _sync_units(m: Main, delta: float) -> void:

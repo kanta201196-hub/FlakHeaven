@@ -143,8 +143,14 @@ void fragment() {
 		float scree = smoothstep(0.08, 0.2, slope) * (1.0 - rk) * 0.35;
 		c = mix(c, vec3(dot(c, vec3(0.333))) * 1.08, scree);
 		// снег на высоких пологих гребнях
-		float snow = smoothstep(snow_from, snow_from + 0.08, rel.y + (hgt - 0.5) * 0.08) * (1.0 - smoothstep(0.35, 0.6, slope));
-		c = mix(c, vec3(0.85, 0.86, 0.88), snow);
+		// B-47: снег был почти белым (0.85) и пересвечивался на солнце (до 18 % кадра в белый),
+		// а рисунок трещин земли проступал сквозь него. Теперь снег серо-голубой, пятнистый по краю,
+		// с мягкими застругами вместо рисунка грунта
+		float patch = (vnoise(world / 420.0 + 17.0) - 0.5) * 0.07;
+		float snow = smoothstep(snow_from, snow_from + 0.08, rel.y + (hgt - 0.5) * 0.08 + patch) * (1.0 - smoothstep(0.35, 0.6, slope));
+		vec3 snow_c = vec3(0.64, 0.67, 0.72) * (0.93 + 0.1 * vnoise(world / 160.0 - 4.0));
+		c = mix(c, snow_c, snow);
+		nxy *= 1.0 - 0.8 * snow;
 		ao = mix(0.55, 1.0, smoothstep(0.15, 0.55, rel.x));
 	}
 	c = mix(vec3(dot(c, vec3(0.299, 0.587, 0.114))), c, saturation);

@@ -451,7 +451,7 @@ func _fire_bombs(p: Player, manual := false) -> bool:
 			var tv: Vector2 = t.get("velocity") if t.get("velocity") is Vector2 else Vector2.ZERO
 			to = t.global_position + tv * fuse
 		elif int(Tuning.g("scheme")) == 2:
-			var mp := p.get_global_mouse_position()
+			var mp := Render3D.I.mouse_world(p.get_global_mouse_position())
 			to = p.global_position + (mp - p.global_position).limit_length(460.0)
 		else:
 			to = p.global_position + Vector2.from_angle(p.heading) * 300.0

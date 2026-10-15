@@ -207,6 +207,8 @@ func _option(key: String, dir: int) -> void:
 		"scheme":
 			Tuning.set_param("scheme", float(wrapi(int(Tuning.g("scheme")) + dir, 0, 3)))
 			Tuning.save_params()
+		"cam_tilt":
+			Main.I.input_ctl.cycle_tilt(dir)
 	Settings.save_settings()
 
 
@@ -426,6 +428,7 @@ func _settings(size: Vector2) -> void:
 			y = _opt(x, y, w2, "Схема управления", Hud.SCHEMES[int(Tuning.g("scheme"))], "scheme")
 			y = _opt(x, y, w2, "Язык", "Русский", "lang")
 			y = _section(x, y + 10, w2, "Камера и масштаб")
+			y = _opt(x, y, w2, "Наклон камеры (F9)", MainInput.tilt_name(), "cam_tilt")
 			y = _slider(x, y, w2, "Масштаб камеры", "camera_zoom", "%.2f")
 			y = _slider(x, y, w2, "Размер самолётов", "plane_len", "%d")
 			y = _slider(x, y, w2, "Размер врагов", "unit_scale", "×%.2f")

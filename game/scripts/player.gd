@@ -444,7 +444,7 @@ func _activate_skill3(id := "", slot := 0) -> void:
 			s3_t = float(d["time"])
 			turn_t = s3_t
 			if int(Tuning.g("scheme")) == 2:
-				_turn_target = (get_global_mouse_position() - global_position).angle()
+				_turn_target = (Render3D.I.mouse_world(get_global_mouse_position()) - global_position).angle()
 			else:
 				_turn_target = wrapf(heading + PI, -PI, PI)
 			combat_t = s3_t + 3.0 + (1.0 if lvl >= 1 else 0.0)
@@ -642,7 +642,7 @@ func _steer(delta: float) -> void:
 		# Боевой разворот: рывок носом к цели в 4 раза быстрее обычного
 		heading = rotate_toward(heading, _turn_target, tr * 4.0 * delta + PI / float(s3_def()["time"]) * delta)
 	elif int(Tuning.g("scheme")) == 2:
-		var to_mouse := get_global_mouse_position() - global_position
+		var to_mouse := Render3D.I.mouse_world(get_global_mouse_position()) - global_position
 		if to_mouse.length() > 30.0:
 			heading = rotate_toward(heading, to_mouse.angle(), tr * delta)
 	elif int(Tuning.g("scheme")) == 0:
