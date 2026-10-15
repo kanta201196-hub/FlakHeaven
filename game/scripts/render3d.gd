@@ -31,6 +31,27 @@ var _scorch_mat: StandardMaterial3D
 var _flash_mat: StandardMaterial3D
 var _elite_mat: StandardMaterial3D
 var _zoom := 1.0
+var _shadow_shader: Shader
+## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
+## настоящая тень размыта полутенью солнца до пятна и лежит далеко в стороне, а крупная чёткая тень
+## читается как бреющий полёт. Оставляем подсказку «где самолёт над землёй», но в стиле высоты.
+const SHADOW_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+uniform sampler2D tex : filter_linear, repeat_disable;
+uniform float alpha = 0.35;
+uniform float blur = 0.03;
+void fragment() {
+	float a = 0.0;
+	for (int i = 0; i < 12; i++) {
+		float t = float(i) * 2.39996;
+		float r = blur * sqrt((float(i) + 0.5) / 12.0);
+		a += texture(tex, UV + vec2(cos(t), sin(t)) * r).a;
+	}
+	ALBEDO = vec3(0.04, 0.05, 0.09);
+	ALPHA = a / 12.0 * alpha;
+}
+"""
 ## B-47: наклонная камера. Слой боя (2D: пули, взрывы, эффекты) рисуется вторым вьюпортом с тем же
 ## World2D в текстуру, а она лежит в 3D на плоскости боя (y = 0) — совпадает с моделями в любой точке
 ## кадра. В основном вьюпорте слой боя скрыт маской (видимость CanvasItem, бит COMBAT_LAYER).
@@ -328,6 +349,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 		root.add_child(mi)
 		add_child(root)
 		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}}
+		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
+			u["sh"] = _make_shadow(tex, root)
 		_units[id] = u
 	u["seen"] = true
 	return u
@@ -339,6 +362,57 @@ func _place(u: Dictionary, p: Vector2, heading: float, bank: float, roll: float,
 	var b := Basis(Vector3.UP, -heading) * Basis(Vector3.RIGHT, bank + roll)
 	var k: float = u["k"] * scale_k
 	root.basis = b.scaled(Vector3(k, k, k))
+	if u.has("sh"):
+		_place_shadow(u, p, heading, k)
+
+
+func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
+	if _shadow_shader == null:
+		_shadow_shader = Shader.new()
+		_shadow_shader.code = SHADOW_SHADER
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(tex.get_width(), tex.get_height())
+	var mat := ShaderMaterial.new()
+	mat.shader = _shadow_shader
+	mat.set_shader_parameter("tex", tex)
+	var sh := MeshInstance3D.new()
+	sh.mesh = pm
+	sh.material_override = mat
+	sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.tree_exiting.connect(sh.queue_free)
+	add_child(sh)
+	return sh
+
+
+## Тень самолёта: точка на рельефе по лучу солнца, сдвиг от самолёта укорочен (shadow_off),
+## силуэт уменьшен (shadow_size) и прижат к склону по нормали рельефа.
+func _place_shadow(u: Dictionary, p: Vector2, heading: float, k: float) -> void:
+	var sh: MeshInstance3D = u["sh"]
+	var hi := Tuning.g("plane_shadow") > 0.5 and terrain != null
+	var cs := GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if hi else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	for c in (u["node"] as Node3D).find_children("*", "GeometryInstance3D", true, false):
+		(c as GeometryInstance3D).cast_shadow = cs
+	sh.visible = hi
+	if not hi:
+		return
+	var d := -sun.global_transform.basis.z   # куда светит солнце
+	var y := GROUND_Y
+	var g := Vector2.ZERO
+	var off := Tuning.g("shadow_off")
+	for i in 3:
+		var t := y / d.y
+		g = p + Vector2(d.x, d.z) * t * off
+		y = terrain.surface(g.x, g.y).y
+	var e := 8.0
+	var n := Vector3(terrain.surface(g.x - e, g.y).y - terrain.surface(g.x + e, g.y).y, 2.0 * e,
+		terrain.surface(g.x, g.y - e).y - terrain.surface(g.x, g.y + e).y).normalized()
+	var s := k * Tuning.g("shadow_size")
+	var yaw := Basis(Vector3.UP, -heading)
+	var tilt := Basis(Quaternion(Vector3.UP, n))
+	sh.global_transform = Transform3D((tilt * yaw).scaled(Vector3(s, 1.0, s)), Vector3(g.x, y + 3.0, g.y))
+	var mat := sh.material_override as ShaderMaterial
+	mat.set_shader_parameter("alpha", Tuning.g("shadow_alpha"))
+	mat.set_shader_parameter("blur", 0.03 + 0.03 * (1.0 - Tuning.g("shadow_size")))
 
 
 func _sync_units(m: Main, delta: float) -> void:
