@@ -292,7 +292,7 @@ func result(m: Main, size: Vector2) -> void:
 	y += 26.0
 	_text(Vector2(rx, y), "Сбито: дроны %d · камик. %d · перехв. %d · ракетон. %d · асы %d" % [m.stat("kills_by", "дроны"), m.stat("kills_by", "камикадзе"), m.stat("kills_by", "перехватчики"), m.stat("kills_by", "ракетоносцы"), m.stat("kills_by", "асы")], 18, hc)
 	y += 26.0
-	_text(Vector2(rx, y), "Сбито ракет противоракетами: %d · срывов захвата: %d" % [int(m.counters.get("intercepted", 0)), int(m.counters.get("locks_broken", 0))], 18, hc)
+	_text(Vector2(rx, y), "Уведено ракет ловушками: %d · срывов захвата: %d" % [int(m.counters.get("intercepted", 0)), int(m.counters.get("locks_broken", 0))], 18, hc)
 	y += 26.0
 	_text(Vector2(rx, y), "На волоске: %d · лучшая серия: %d · сбито с хвоста: %d" % [m.near_misses, m.best_streak, m.tail_kills], 18, Color(0.7, 0.95, 1.0))
 	y += 26.0

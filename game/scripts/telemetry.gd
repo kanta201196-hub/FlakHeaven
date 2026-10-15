@@ -5,7 +5,7 @@ extends RefCounted
 ## timeline — снимок каждой минуты вылета, компактной строкой.
 
 ## Версия набора колонок: меняется — меняется и имя файла лога
-const LOG_VER := "l4"
+const LOG_VER := "l5"
 const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_s", "kbm_s", "scheme_changes",
 	"gun_rate_max", "gun_multi_frames", "shots_lead", "hits_lead", "lead_nosol", "swept_hits",
 	"roll_uses", "invuln_s", "invuln_chain_max", "nm_through", "hitstops", "hitstop_in_slowmo",
@@ -13,7 +13,9 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	"cam_tilt", "tilt_changes", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s",
 	# T4-03: 3D-картинка и производительность (рельеф, модели биома, тени, качество графики)
 	"gfx_start", "gfx", "gfx_drops", "plane_shadow", "tris_avg", "tris_max", "draws_avg", "draws_max", "vram_mb",
-	"nodes_max", "enemies_max", "load_ms", "chunks", "chunk_ms_max"]
+	"nodes_max", "enemies_max", "load_ms", "chunks", "chunk_ms_max",
+	# 3.5: время жизни асов (с появления до гибели), РУД вернули принудительно, залпы ловушек «Кита», разрешение 3D
+	"boss_n", "boss_life_avg", "boss_life_min", "boss_life_max", "throttle_locks", "flare_salvos", "scale3d"]
 
 ## T4-04: автоснижение качества — окна по 20 с с 5-й секунды; FPS ниже порога → пресет ниже (до 3 раз за вылет)
 const AUTO_FPS := 35.0
@@ -60,6 +62,13 @@ func maxv(k: String, n: float) -> void:
 	v[k] = maxf(float(v.get(k, 0.0)), n)
 
 
+func boss_killed(life: float) -> void:
+	add("boss_n")
+	add("boss_life_sum", life)
+	v["boss_life_min"] = minf(float(v.get("boss_life_min", life)), life)
+	maxv("boss_life_max", life)
+
+
 func g(k: String) -> float:
 	return float(v.get(k, 0.0))
 
@@ -88,7 +97,7 @@ func frame(delta: float, m: Main) -> void:
 	var p := m.player
 	if not is_instance_valid(p):
 		return
-	if p.roll_t > 0.0 or p.invuln > 0.0:
+	if p.roll_inv > 0.0 or p.invuln > 0.0:
 		add("invuln_s", delta)
 		_inv_chain += delta
 		maxv("invuln_chain_max", _inv_chain)
@@ -192,8 +201,10 @@ func row(m: Main) -> PackedStringArray:
 	v["plane_shadow"] = Tuning.g("plane_shadow")
 	v["tris_avg"] = g("tris_sum") / maxf(_rs_n, 1)
 	v["draws_avg"] = g("draws_sum") / maxf(_rs_n, 1)
+	v["boss_life_avg"] = g("boss_life_sum") / maxf(g("boss_n"), 1.0)
+	v["scale3d"] = 100.0 * float(Render3D.GFX_SCALE[clampi(Settings.gfx, 0, 3)])
 	var out := PackedStringArray()
 	for k in COLS:
 		var x := g(k)
-		out.append(("%.1f" % x) if k in ["invuln_s", "invuln_chain_max", "pad_s", "kbm_s", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s"] else str(int(round(x))))
+		out.append(("%.1f" % x) if k in ["invuln_s", "invuln_chain_max", "pad_s", "kbm_s", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s", "boss_life_avg", "boss_life_min", "boss_life_max"] else str(int(round(x))))
 	return out

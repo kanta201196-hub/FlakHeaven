@@ -61,7 +61,7 @@ func _left_panel(m: Main, p: Player) -> void:
 		_text(Vector2(24, 76), "Курсовое: РУЧНОЕ — обороты +%d%% урона  [Q]" % int(round(p.manual_bonus * 100.0)), 19, Color(1.0, 0.82, 0.35))
 	else:
 		_text(Vector2(24, 76), "Курсовое: АВТО  [Q — ручное, до +50% урона]", 19)
-	_skill(104, "Бочка", "Space", p.roll_cd, p.roll_t)
+	_skill(104, "Бочка" if p.has_roll() else "Залп ловушек", "Space", p.roll_cd, p.roll_t if p.has_roll() else p.salvo_t)
 	_skill(128, "Форсаж", "Shift", p.ab_cd, p.ab_t)
 	var s3: Dictionary = p.s3_def()
 	_skill(152, "%s %s" % [s3["title"], Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active())

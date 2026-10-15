@@ -41,6 +41,8 @@ var xp := 0.0
 var pending_levels := 0
 var offers: Array = []
 const OFFER_COUNT := 4
+## 3.5: неуязвимость после выбора карточки (было 1 с — к 15-й минуте набегало больше минуты)
+const CARD_INVULN := 0.5
 var rerolls := 2        # переброс выбора (базово 2 за вылет, +1 за каждого аса)
 var bans := 2           # исключение карточки до конца вылета (базово 2, +1 за аса)
 var banned := {}        # ключи исключённых карточек
@@ -360,7 +362,7 @@ func choose_card(i: int) -> void:
 		offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
 	else:
 		_set_state("playing")
-		player.invuln = maxf(player.invuln, 1.0)
+		player.invuln = maxf(player.invuln, CARD_INVULN)
 
 
 # ---------- 3.2: курс ----------
@@ -391,7 +393,7 @@ func choose_course(i: int) -> void:
 		_set_state("levelup")
 	else:
 		_set_state("playing")
-		player.invuln = maxf(player.invuln, 1.0)
+		player.invuln = maxf(player.invuln, CARD_INVULN)
 
 
 # ---------- 3.2: ангар ----------
@@ -510,6 +512,10 @@ func boss_alive() -> bool:
 
 func on_boss_wave(wave: int, n: int) -> void:
 	show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
+	# 3.5 (правка 30): время жизни аса — для лога
+	for b in get_tree().get_nodes_in_group("enemies"):
+		if b is Enemy and (b as Enemy).is_boss and not (b as Node).has_meta("born"):
+			(b as Node).set_meta("born", run_time)
 	sfx.play("boss", -2.0)
 	add_shake(6.0)
 
@@ -600,6 +606,8 @@ func on_enemy_killed(e: Enemy) -> void:
 		hitstop()
 	if e.is_boss:
 		bosses_killed += 1
+		if e.has_meta("born"):
+			tele.boss_killed(run_time - float(e.get_meta("born")))
 		if is_instance_valid(player):
 			player.add_course_pts(2) # 3.2: ас — +2 к курсу
 		rerolls += 1

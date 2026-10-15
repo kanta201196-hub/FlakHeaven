@@ -138,13 +138,15 @@ func blast(pos: Vector2, radius: float) -> void:
 
 
 ## 3.1: отстрел тепловых ловушек — веер ярких точек назад-в-стороны, падают и гаснут, дымный след
-func flare_burst(pos: Vector2, heading: float, n := 6, vel := Vector2.ZERO) -> Array:
+## 3.5 (правка 12): ловушки крупнее и ярче, мерцают, вокруг — вспышка; s — масштаб (залп «Кита» крупнее)
+func flare_burst(pos: Vector2, heading: float, n := 6, vel := Vector2.ZERO, s := 1.0) -> Array:
 	var out: Array = []
+	rings.append({"p": pos, "r": 40.0 * s, "max": 70.0 * s, "life": 0.25, "max_life": 0.25, "c": Color(1.0, 0.9, 0.6)})
 	for i in n:
 		var side := -1.0 if i % 2 == 0 else 1.0
-		var a := heading + PI + side * deg_to_rad(randf_range(35.0, 80.0))
-		var f := {"p": pos, "v": vel * 0.4 + Vector2.from_angle(a) * randf_range(180.0, 300.0), "life": randf_range(1.1, 1.6),
-			"max": 1.5, "trail": PackedVector2Array([pos])}
+		var a := heading + PI + side * deg_to_rad(randf_range(30.0, 95.0))
+		var f := {"p": pos, "v": vel * 0.4 + Vector2.from_angle(a) * randf_range(180.0, 320.0) * sqrt(s), "life": randf_range(1.3, 1.9),
+			"max": 1.8, "trail": PackedVector2Array([pos]), "s": s, "ph": randf() * TAU}
 		flares.append(f)
 		out.append(f)
 	if flares.size() > 120:
@@ -302,8 +304,11 @@ func _draw() -> void:
 			var a := float(j) / tr.size()
 			draw_line(tr[j - 1], tr[j], Color(0.92, 0.92, 0.95, 0.45 * a * k), 2.0 + 5.0 * (1.0 - a))
 		var fp: Vector2 = fl["p"]
-		_blob(_soft, fp, 16.0 * (0.6 + 0.4 * k), Color(1.0, 0.85, 0.5, 0.65 * k))
-		draw_circle(fp, 3.5 * (0.5 + 0.5 * k), Color(1, 1, 0.92, k))
+		var fs := float(fl.get("s", 1.0))
+		var fk := 0.8 + 0.2 * sin(float(fl["life"]) * 40.0 + float(fl.get("ph", 0.0))) # мерцание магниевой ловушки
+		_blob(_soft, fp, 34.0 * fs * (0.6 + 0.4 * k) * fk, Color(1.0, 0.8, 0.45, 0.55 * k))
+		_blob(_soft, fp, 14.0 * fs * (0.6 + 0.4 * k), Color(1.0, 0.97, 0.85, 0.9 * k))
+		draw_circle(fp, 5.0 * fs * (0.5 + 0.5 * k) * fk, Color(1, 1, 0.95, k))
 
 
 ## Слой на земле: выжженные пятна от взрывов (под самолётами, над объектами биома)

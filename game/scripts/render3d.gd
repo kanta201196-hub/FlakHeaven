@@ -152,16 +152,43 @@ func _ready() -> void:
 	apply_gfx(Settings.gfx)
 
 
-## T4-04: «Качество графики». Низкое — тени солнца ближе и грубее, мелкие модели биома без теней и вдвое реже;
-## Среднее — тени ближе и грубее; Высокое — как было; Максимальное — + сглаживание MSAA 2×.
+## T4-04: «Качество графики».
+## 3.5 (правка 7): в 3.4 пресеты меняли только тени — на слабом ноутбуке разницы не было. Теперь:
+##   Низкое — 3D-картинка в 60% разрешения, слой боя до 1400 пикс., рельеф реже (сетка 40), модели биома
+##            без теней и мелочи вдвое реже, тени грубее (атлас 1024);
+##   Среднее — 80% разрешения, слой боя до 2000, сетка рельефа 56, мелкие модели без теней, атлас 2048;
+##   Высокое — как было; Максимальное — + сглаживание MSAA 2×.
 ## Деревья полной детализации (11–14 тыс. треуг.) — только на «Максимальном» (BiomeProps).
+## Правка 16: дальность теней теперь по видимой земле (углы кадра), а не по пресету — тень не обрывается
+## полосой посреди экрана при наклоне камеры; грубость слабых пресетов — размером атласа.
+const GFX_SCALE := [0.6, 0.8, 1.0, 1.0]
+const GFX_COMBAT_MAX := [1400.0, 2000.0, 2600.0, 2600.0]
+var _gfx := 2
+
+
 func apply_gfx(q: int) -> void:
+	_gfx = clampi(q, 0, 3)
 	# тени не выключаем: в GL Compatibility без теней солнца кадр темнее и рыжее (замер стенда: яркость 104 против 144)
-	sun.directional_shadow_max_distance = [1500.0, 2500.0, 4000.0, 4000.0][q]
-	RenderingServer.directional_shadow_atlas_set_size([1024, 2048, 4096, 4096][q], true)
-	get_viewport().msaa_3d = Viewport.MSAA_2X if q >= 3 else Viewport.MSAA_DISABLED
+	RenderingServer.directional_shadow_atlas_set_size([1024, 2048, 4096, 4096][_gfx], true)
+	get_viewport().msaa_3d = Viewport.MSAA_2X if _gfx >= 3 else Viewport.MSAA_DISABLED
+	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	get_viewport().scaling_3d_scale = GFX_SCALE[_gfx]
 	if terrain != null:
-		terrain.clear()   # куски рельефа пересоберутся с новыми моделями биома
+		terrain.clear()   # куски рельефа пересоберутся с новыми моделями биома и сеткой
+
+
+## Правка 16: тени — на всю видимую землю. Лучи из углов кадра до дна долин → самая дальняя точка.
+func _fit_shadow() -> void:
+	var vs := get_viewport().get_visible_rect().size
+	var far := 0.0
+	for corner in [Vector2.ZERO, Vector2(vs.x, 0), Vector2(0, vs.y), vs]:
+		var o := cam.project_ray_origin(corner)
+		var d := cam.project_ray_normal(corner)
+		if d.y > -0.05:
+			d.y = -0.05
+		var t := (GROUND_Y - o.y) / d.y
+		far = maxf(far, t)
+	sun.directional_shadow_max_distance = clampf(far * 1.1 + 300.0, 1500.0, 12000.0)
 
 
 # ---------- слой боя для наклонной камеры (B-47) ----------
@@ -236,7 +263,7 @@ func _sync_combat_layer() -> void:
 	var base := vs / _zoom
 	r = r.intersection(Rect2(r.get_center() - base * 1.5, base * 3.0))   # не тянуть текстуру до горизонта
 	var px := r.size * _zoom
-	var k := minf(1.0, COMBAT_VP_MAX / maxf(px.x, px.y))
+	var k := minf(1.0, minf(COMBAT_VP_MAX, GFX_COMBAT_MAX[_gfx]) / maxf(px.x, px.y))
 	var size := Vector2i(maxi(16, int(px.x * k)), maxi(16, int(px.y * k)))
 	if _combat_vp.size != size:
 		_combat_vp.size = size
@@ -327,7 +354,8 @@ func _process(delta: float) -> void:
 	if tilt > 0.001:
 		# с наклоном видно дальше вперёд (вверх по экрану)
 		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
-	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 2)
+	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1)
+	_fit_shadow()
 	_sync_units(m, delta)
 	_sync_objects(c2, h)
 	_sync_clouds(m, c2, h)
