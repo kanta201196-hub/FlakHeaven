@@ -89,6 +89,7 @@ func handle_global_input() -> void:
 
 
 func _cycle_scheme() -> void:
+	m.tele.add("scheme_changes")
 	Tuning.set_param("scheme", float((int(Tuning.g("scheme")) + 1) % 3))
 
 

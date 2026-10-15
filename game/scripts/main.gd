@@ -91,6 +91,7 @@ var _autotest := false
 var _args: PackedStringArray
 var input_ctl: MainInput   # глобальные клавиши, клики интерфейса, действия ангара
 var dbg: MainDebug         # автотест, скриншоты, отладочные проверки
+var tele := Telemetry.new() # 3.4: замеры для анализа правок (колонки в конце лога)
 
 
 func _ready() -> void:
@@ -225,6 +226,7 @@ func start_run() -> void:
 	radio_t = 0.0
 	tail_kills = 0
 	level_at_5 = 0
+	tele.reset()
 	camera.global_position = Vector2.ZERO
 	camera.reset_smoothing()
 
@@ -236,8 +238,10 @@ func _process(delta: float) -> void:
 		result_t += delta / maxf(Engine.time_scale, 0.01)
 	if _slow_t > 0.0 and state == "playing":
 		_slow_t -= delta / maxf(Engine.time_scale, 0.01)
-		Engine.time_scale = base_ts * (0.3 if _slow_t > 0.0 else 1.0)
+		if not _hitstop: # 3.4: стоп-кадр не перебивается замедлением
+			Engine.time_scale = _base_scale()
 	if state == "playing" and not is_dead:
+		tele.frame(delta, self)
 		_fps_acc += Engine.get_frames_per_second()
 		_fps_n += 1
 		run_time += delta
@@ -639,13 +643,32 @@ func add_shake(amount: float) -> void:
 	shake = maxf(shake, amount * Tuning.g("shake_mult"))
 
 
+var _hitstop := false
+
+
+## Обычная скорость времени с учётом замедления открытия связки
+func _base_scale() -> float:
+	return base_ts * (0.3 if _slow_t > 0.0 else 1.0)
+
+
 func hitstop() -> void:
 	var ms := Tuning.g("hitstop_ms")
-	if ms <= 0.0:
+	if ms <= 0.0 or _hitstop:
 		return
+	tele.add("hitstops")
+	if _slow_t > 0.0:
+		tele.add("hitstop_in_slowmo")
+	_hitstop = true
 	Engine.time_scale = 0.05
 	await get_tree().create_timer(ms / 1000.0, true, false, true).timeout
-	Engine.time_scale = base_ts
+	_hitstop = false
+	# 3.4: после стоп-кадра возвращаем замедление связки, если оно ещё идёт (раньше сбрасывалось в 1,0)
+	if state == "playing":
+		Engine.time_scale = _base_scale()
+
+
+func _input(event: InputEvent) -> void:
+	tele.input(event)
 
 
 func _exit_tree() -> void:

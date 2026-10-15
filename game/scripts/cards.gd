@@ -230,7 +230,10 @@ static func course_options(p: Player) -> Array:
 	if not have.is_empty():
 		out.append(have[0])
 	var sid: String = PlaneClasses.SKILL3[p.skill3]["syn"]["id"]
-	if not p.syn.has(sid):
+	# 3.4: «Под одним зонтом» без живых постоянных ведомых бесполезна — не предлагаем курсом
+	if sid == "s_shelter" and p.permanent_wingmen() == 0:
+		Main.I.tele.add("course_shelter_skipped")
+	elif not p.syn.has(sid):
 		out.append(sid)
 	var rest: Array = avail.filter(func(id): return not out.has(id))
 	rest.shuffle()

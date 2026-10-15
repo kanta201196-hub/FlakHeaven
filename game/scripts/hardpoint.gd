@@ -174,7 +174,8 @@ func update(delta: float, p: Player) -> void:
 			fired = _fire_flares(p)
 		"bombs":
 			fired = _fire_bombs(p, manual)
-	cd = reload_time(p) if fired else 0.2
+	# 3.4: после выстрела переносим опоздание (до 0,05 с) — темп меньше зависит от FPS
+	cd = (minf(0.0, maxf(cd, -0.05)) + reload_time(p)) if fired else 0.2
 	if _quick:
 		_quick = false
 		cd = 0.2
@@ -288,8 +289,9 @@ func _fire_aam(p: Player) -> bool:
 		Main.I.projectiles.spawn_player_missile(pos, vel, t, md, "ракеты В-В", opts)
 		if i < slots:
 			_wolf(p, t, md)
-		if randf() < float(p.mods["twin"]): # «Спаренные направляющие»
-			Main.I.projectiles.spawn_player_missile(pos, vel.rotated(-side * 0.3), t, dmg(), "ракеты В-В", opts)
+		if randf() < float(p.mods["twin"]): # «Спаренные направляющие» (3.4: урон как у первой — с веткой ангара)
+			Main.I.projectiles.spawn_player_missile(pos, vel.rotated(-side * 0.3), t, md, "ракеты В-В", opts)
+			Main.I.tele.add("twin_extra")
 	Main.I.sfx.play("aam_launch", -16.0, 1.4)
 	return true
 
@@ -469,8 +471,15 @@ func _fire_carpet_row(p: Player, manual: bool) -> bool:
 	var fwd := Vector2.from_angle(p.heading)
 	var side := Vector2.from_angle(p.heading + PI / 2.0)
 	var c := p.global_position + fwd * 220.0 + p.velocity * 0.4
+	# 3.4: ветки бомб из ангара (урон, радиус, взрыватель) и «Ковровая дорожка» действуют и после эволюции
+	var road := p.syn.has("carpet_road")
 	for i in 8:
 		var off := (float(i) / 7.0 - 0.5) * 600.0
-		Main.I.projectiles.spawn_bomb(p.global_position, 0.5 + 0.04 * i, dmg(), 150.0, "бомбы", c + side * off)
+		Main.I.projectiles.spawn_bomb(p.global_position, (0.5 + 0.04 * i) * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg"),
+			150.0 * Profile.wk("bombs", "blast_r"), "бомбы", c + side * off)
+		if road:
+			Main.I.projectiles.bombs[-1]["road"] = true
+	if road:
+		Main.I.tele.add("carpet_road_evo")
 	Main.I.sfx.play("bomb_drop", -12.0, 1.0)
 	return true
