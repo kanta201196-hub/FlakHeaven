@@ -169,8 +169,17 @@ func _hg_crew(c: String, area: Rect2) -> void:
 	var y := area.position.y + 40.0
 	_text(Vector2(lx + 24, y), "Позывной: «%s»" % cd["callsign"], 22, Color.WHITE)
 	_button(Rect2(lx + lw - 150, y - 28, 130, 38), "СМЕНИТЬ", "hg:callsign", 14)
-	y += 34.0
-	_text(Vector2(lx + 24, y), String(Profile.CREW[c]["crew"]), 17, Color(0.8, 0.84, 0.9))
+	y += 30.0
+	_text(Vector2(lx + 24, y), String(Profile.CREW[c]["crew"]), 16, Color(0.8, 0.84, 0.9))
+	# 3.5: черта характера — плюс и минус
+	var tr := Profile.trait_of(c)
+	if not tr.is_empty():
+		y += 30.0
+		_text(Vector2(lx + 24, y), "Черта: «%s»" % tr["title"], 18, Menu.C_AMBER)
+		y += 24.0
+		_text(Vector2(lx + 24, y), "+ " + String(tr["plus"]), 15, Color(0.6, 1.0, 0.7))
+		y += 22.0
+		_text(Vector2(lx + 24, y), "− " + String(tr["minus"]), 15, Color(1.0, 0.6, 0.55))
 	y += 40.0
 	var lv := Profile.crew_lvl(c)
 	var pr := Profile.crew_progress(c)
@@ -178,11 +187,23 @@ func _hg_crew(c: String, area: Rect2) -> void:
 	y += 18.0
 	ctrl.draw_rect(Rect2(lx + 24, y, lw - 48, 14), Color(0, 0, 0, 0.5))
 	if int(pr[1]) > 0:
-		ctrl.draw_rect(Rect2(lx + 24, y, (lw - 48) * float(pr[0]) / float(pr[1]), 14), Color(0.5, 1.0, 0.6))
-		_text(Vector2(lx + 24, y + 36), "%d / %d до ур. %d" % [pr[0], pr[1], lv + 1], 15, Color(0.8, 0.84, 0.9))
-	y += 70.0
+		ctrl.draw_rect(Rect2(lx + 24, y, (lw - 48) * minf(1.0, float(pr[0]) / float(pr[1])), 14), Color(0.5, 1.0, 0.6))
+		var ready := Profile.promote_ready(c)
+		_text(Vector2(lx + 24, y + 36), ("опыт для ур. %d набран" % (lv + 1)) if ready else "%d / %d опыта до ур. %d" % [pr[0], pr[1], lv + 1], 15,
+			Color(1.0, 0.9, 0.4) if ready else Color(0.8, 0.84, 0.9))
+		y += 50.0
+		var cost := Profile.promote_cost(lv + 1)
+		var can := Profile.can_promote(c)
+		var br := Rect2(lx + 24, y, lw - 48, 40)
+		if can:
+			_button(br, "ПОВЫСИТЬ В ЗВАНИИ — %d запчастей" % cost, "hg:promote", 15)
+		else:
+			_panel(br, false)
+			_text(Vector2(br.position.x + 14, br.position.y + 26), ("Повысить в звании — %d (не хватает запчастей)" % cost) if Profile.promote_ready(c) else "Повысить в звании — %d (нужен опыт)" % cost, 14, Color(0.6, 0.62, 0.68))
+		y += 40.0
+	y += 34.0
 	_para(Vector2(lx + 24, y), "Рост показателей: " + String(Profile.CREW[c]["stats"]), lw - 48, 15)
-	y += 70.0
+	y += 56.0
 	_text(Vector2(lx + 24, y), "Открытия по уровню экипажа:", 16, Menu.C_AMBER)
 	var unl := [[3, "2-й навык класса; самолёт ур. 2"], [4, "ведомый «Ласка»"], [5, "2-й слот навыка [F]"], [6, "перки 2-й ступени"], [7, "3-й навык класса"], [8, "ведомый «Грачонок»"]]
 	for u in unl:

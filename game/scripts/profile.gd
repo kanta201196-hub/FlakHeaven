@@ -47,16 +47,35 @@ const CREW := {
 	"attacker": {"crew": "Пилот и стрелок", "stats": "прочность +0,7% и урон турели +0,7% за уровень"},
 	"bomber": {"crew": "Командир, штурман, стрелки", "stats": "прочность +0,5%, подбор опыта +0,7%, темп турелей +0,6% за уровень"},
 }
+## 3.5: 5 позывных на класс, у каждого черта характера — плюс и минус.
+## mods: множитель ключа Player.mods ("hp" — прочность). Применяется × meta_k.
 const CALLSIGNS := {
-	"fighter": ["Шмель", "Сокол-2", "Чиж", "Барс", "Стриж", "Кузнечик", "Комар", "Ласточка", "Пчела", "Юла", "Свисток", "Искра"],
-	"attacker": ["Утюг", "Дед", "Молот", "Бульдог", "Кочерга", "Самовар", "Валенок", "Броневик", "Грач-1", "Крот", "Бобёр", "Прораб"],
-	"bomber": ["Борода", "Маяк", "Тюлень", "Шкаф", "Дирижабль", "Пельмень", "Буксир", "Мамонт", "Сундук", "Комод", "Паром", "Баржа"],
+	"fighter": ["Шмель", "Сокол-2", "Чиж", "Барс", "Искра"],
+	"attacker": ["Утюг", "Дед", "Молот", "Бульдог", "Кочерга"],
+	"bomber": ["Борода", "Маяк", "Тюлень", "Шкаф", "Дирижабль"],
+}
+const TRAITS := {
+	"Шмель": {"title": "Торопыга", "plus": "скорость +8%", "minus": "разворот −6%", "mods": {"speed": 1.08, "turn": 0.94}},
+	"Сокол-2": {"title": "Хладнокровие", "plus": "перезарядка навыков −10%", "minus": "скорость −5%", "mods": {"s3_cd": 0.9, "speed": 0.95}},
+	"Чиж": {"title": "Новичок-везунчик", "plus": "подбор опыта +20%", "minus": "прочность −10%", "mods": {"pickup": 1.2, "hp": 0.9}},
+	"Барс": {"title": "Ветеран", "plus": "прочность +10%", "minus": "перезарядка манёвров +10%", "mods": {"hp": 1.1, "man_cd": 1.1}},
+	"Искра": {"title": "Риск", "plus": "наносимый урон +15%", "minus": "получаемый урон +15%", "mods": {"dmg_all": 1.15, "taken_k": 1.15}},
+	"Утюг": {"title": "Упрямец", "plus": "получаемый урон −10%", "minus": "скорость −6%", "mods": {"taken_k": 0.9, "speed": 0.94}},
+	"Дед": {"title": "Старая школа", "plus": "урон пушки +15%", "minus": "урон ракет −10%", "mods": {"gun_dmg": 1.15, "missile_dmg": 0.9}},
+	"Молот": {"title": "Кувалда", "plus": "урон взрывов +12%", "minus": "подбор опыта −15%", "mods": {"blast_dmg": 1.12, "pickup": 0.85}},
+	"Бульдог": {"title": "Хватка", "plus": "урон по наземным целям +15%", "minus": "разворот −5%", "mods": {"ground_dmg": 1.15, "turn": 0.95}},
+	"Кочерга": {"title": "Механик", "plus": "перезарядка подвесов −8%", "minus": "прочность −8%", "mods": {"hp_cd": 0.92, "hp": 0.92}},
+	"Борода": {"title": "Хозяйственный", "plus": "прочность +10%", "minus": "наносимый урон −5%", "mods": {"hp": 1.1, "dmg_all": 0.95}},
+	"Маяк": {"title": "Дальнозоркий", "plus": "дальность турелей +12%", "minus": "темп турелей −8%", "mods": {"servo_range": 1.12, "turret_rate": 0.92}},
+	"Тюлень": {"title": "Флегматик", "plus": "получаемый урон −8%", "minus": "перезарядка навыков +10%", "mods": {"taken_k": 0.92, "s3_cd": 1.1}},
+	"Шкаф": {"title": "Бомбардир", "plus": "радиус взрывов +12%", "minus": "скорость −5%", "mods": {"blast_r": 1.12, "speed": 0.95}},
+	"Дирижабль": {"title": "Азарт", "plus": "наносимый урон +12%", "minus": "прочность −12%", "mods": {"dmg_all": 1.12, "hp": 0.88}},
 }
 ## Перки: 3 ветки × 2 ступени на класс
 const PERKS := {
 	"fighter": [
 		["Охотник", [["f_tail1", "Цепкий", "«на хвосте» срабатывает за 0,15 с, конус 32°"], ["f_tail2", "Добивание", "сбитие с хвоста: −1 с перезарядки бочки, форсажа и навыков"]]],
-		["Ракетчик", [["f_msl1", "Глазастый", "ракеты +10% урона"], ["f_msl2", "Спаренный пуск", "15% шанс второй ракеты В-В"]]],
+		["Ракетчик", [["f_msl1", "Глазастый", "ракеты +10% урона"], ["f_msl2", "Форсированный старт", "ракеты +15% скорости и +10% урона на первой секунде полёта"]]],
 		["Акробат", [["f_acro1", "На волоске", "пролёт на волоске снимает вдвое больше перезарядки"], ["f_acro2", "Двойная бочка", "бочка +0,2 с неуязвимости, перезарядка −1 с"]]],
 	],
 	"attacker": [
@@ -75,6 +94,8 @@ const SKILL_UNLOCK := [1, 3, 7]   # навыки класса по порядк�
 const SLOT2_LVL := 5
 const WING_UNLOCK := {"weasel": 4, "rook": 8}
 const WAGE := 50
+## 3.5: звание экипажа покупается за запчасти, когда опыта хватает (цена — за новый уровень)
+const PROMOTE_COST := [[5, 100], [10, 300], [15, 700], [20, 1200]]
 
 var data := {}
 
@@ -85,7 +106,7 @@ func _ready() -> void:
 
 
 func _default_class(cls: String) -> Dictionary:
-	return {"crew_xp": 0, "callsign": CALLSIGNS[cls][0], "plane2": false,
+	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false,
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": []}
 
@@ -120,6 +141,10 @@ func load_profile() -> void:
 					if src.has(k2):
 						dst[k2] = src[k2]
 				dst["crew_xp"] = int(dst["crew_xp"])
+				# 3.5: старый профиль без звания — звание = уровень по опыту (прогресс не теряется)
+				dst["crew_rank"] = int(src["crew_rank"]) if src.has("crew_rank") else xp_lvl_of(int(dst["crew_xp"]))
+				if not (CALLSIGNS[c] as Array).has(dst["callsign"]):
+					dst["callsign"] = CALLSIGNS[c][0]
 	if d.get("weapons") is Dictionary:
 		for w in WEAPON_ORDER:
 			if (d["weapons"] as Dictionary).has(w):
@@ -155,8 +180,12 @@ func parts() -> int:
 	return int(data["parts"])
 
 
+## Уровень (звание) экипажа — то, что действует на самолёт. Повышается кнопкой «Повысить в звании».
 func crew_lvl(c: String) -> int:
-	var xp := int(cls(c)["crew_xp"])
+	return clampi(int(cls(c).get("crew_rank", 1)), 1, CREW_CUM.size())
+
+
+func xp_lvl_of(xp: int) -> int:
 	var lv := 1
 	for i in CREW_CUM.size():
 		if xp >= int(CREW_CUM[i]):
@@ -164,13 +193,70 @@ func crew_lvl(c: String) -> int:
 	return lv
 
 
-## Опыт: [сейчас в уровне, нужно на уровень] (на ур. 20 — [0, 0])
+## Уровень, до которого хватает опыта
+func xp_lvl(c: String) -> int:
+	return xp_lvl_of(int(cls(c)["crew_xp"]))
+
+
+## Опыт к следующему званию: [набрано, нужно] (может быть набрано > нужно; на ур. 20 — [0, 0])
 func crew_progress(c: String) -> Array:
 	var lv := crew_lvl(c)
 	if lv >= CREW_CUM.size():
 		return [0, 0]
 	var xp := int(cls(c)["crew_xp"])
 	return [xp - int(CREW_CUM[lv - 1]), int(CREW_CUM[lv]) - int(CREW_CUM[lv - 1])]
+
+
+## Цена повышения до уровня lv
+func promote_cost(lv: int) -> int:
+	for row in PROMOTE_COST:
+		if lv <= int(row[0]):
+			return int(row[1])
+	return 0
+
+
+## Опыта хватает на следующее звание
+func promote_ready(c: String) -> bool:
+	return crew_lvl(c) < CREW_CUM.size() and xp_lvl(c) > crew_lvl(c)
+
+
+func can_promote(c: String) -> bool:
+	return promote_ready(c) and parts() >= promote_cost(crew_lvl(c) + 1)
+
+
+## Повысить в звании: списать запчасти, +1 уровень. Возвращает, что открылось.
+func promote(c: String) -> Array:
+	if not can_promote(c):
+		return []
+	var lv := crew_lvl(c) + 1
+	data["parts"] = parts() - promote_cost(lv)
+	cls(c)["crew_rank"] = lv
+	save()
+	return unlocks_at(c, lv)
+
+
+## Что открывает уровень экипажа lv
+func unlocks_at(c: String, lv: int) -> Array:
+	var out: Array = []
+	if lv % 2 == 0:
+		out.append("очко перка (ур. %d)" % lv)
+	for i in SKILL_UNLOCK.size():
+		if int(SKILL_UNLOCK[i]) == lv and i > 0:
+			out.append("навык «%s»" % PlaneClasses.SKILL3[PlaneClasses.CLASS_SKILLS[c][i]]["title"])
+	if lv == SLOT2_LVL:
+		out.append("второй слот навыка [F]")
+	if lv == PLANE2_CREW:
+		out.append("можно купить самолёт ур. 2")
+	if lv == PERK_T2_LVL:
+		out.append("перки 2-й ступени")
+	for t in WING_UNLOCK:
+		if int(WING_UNLOCK[t]) == lv:
+			out.append("ведомый %s в карточках" % Prog.WING_TYPES[t]["title"])
+	return out
+
+
+func trait_of(c: String) -> Dictionary:
+	return TRAITS.get(cls(c)["callsign"], {})
 
 
 func perk_points(c: String) -> int:
@@ -344,7 +430,10 @@ func hint_buy(c: String) -> String:
 			price = int(NODE_COST[lv])
 			best = "%s ур. %d (%d)" % [NODES[id]["title"], lv + 1, price]
 	if can_buy_plane2(c) and PLANE2_COST < price:
+		price = PLANE2_COST
 		best = "Самолёт ур. 2 (%d)" % PLANE2_COST
+	if can_promote(c) and promote_cost(crew_lvl(c) + 1) < price:
+		best = "Повысить в звании до ур. %d (%d)" % [crew_lvl(c) + 1, promote_cost(crew_lvl(c) + 1)]
 	return best
 
 
@@ -408,21 +497,11 @@ func award_run(s: Dictionary) -> Dictionary:
 	out["wage"] = wage
 	out["parts_after"] = parts()
 	out["lvl_after"] = crew_lvl(c)
-	for lv in range(int(out["lvl_before"]) + 1, int(out["lvl_after"]) + 1):
-		if lv % 2 == 0:
-			out["unlocked"].append("очко перка (ур. %d)" % lv)
-		for i in SKILL_UNLOCK.size():
-			if int(SKILL_UNLOCK[i]) == lv and i > 0:
-				out["unlocked"].append("навык «%s»" % PlaneClasses.SKILL3[PlaneClasses.CLASS_SKILLS[c][i]]["title"])
-		if lv == SLOT2_LVL:
-			out["unlocked"].append("второй слот навыка [F]")
-		if lv == PLANE2_CREW:
-			out["unlocked"].append("можно купить самолёт ур. 2")
-		if lv == PERK_T2_LVL:
-			out["unlocked"].append("перки 2-й ступени")
-		for t in WING_UNLOCK:
-			if int(WING_UNLOCK[t]) == lv:
-				out["unlocked"].append("ведомый %s в карточках" % Prog.WING_TYPES[t]["title"])
+	# 3.5: уровень больше не растёт сам — опыт открывает звание, покупка в ангаре
+	out["xp_lvl_before"] = xp_lvl_of(xp_before)
+	out["xp_lvl"] = xp_lvl(c)
+	if promote_ready(c):
+		out["promote"] = [crew_lvl(c) + 1, promote_cost(crew_lvl(c) + 1)]
 	out["hint_buy"] = hint_buy(c)
 	save()
 	return out
@@ -457,11 +536,20 @@ func apply(p: Player) -> void:
 			p.max_hp *= 1.0 + 0.005 * L * k
 			m["pickup"] *= 1.0 + 0.007 * L * k
 			m["turret_rate"] *= 1.0 + 0.006 * L * k
+	# черта позывного (плюс и минус)
+	var tr: Dictionary = trait_of(c).get("mods", {})
+	for key in tr:
+		var v := lerpf(1.0, float(tr[key]), k)
+		if key == "hp":
+			p.max_hp *= v
+		else:
+			m[key] *= v
 	# перки
 	if has_perk(c, "f_msl1"):
 		m["missile_dmg"] *= 1.1
-	if has_perk(c, "f_msl2"):
-		m["twin"] += 0.15
+	if has_perk(c, "f_msl2"): # 3.5: «Форсированный старт» вместо «Спаренного пуска»
+		m["missile_spd"] *= 1.15
+		m["msl_boost"] = 1.1
 	if has_perk(c, "f_acro2"):
 		m["roll_time"] += 0.2
 		m["roll_cd"] -= 1.0
@@ -504,12 +592,14 @@ func debug_parts(n: int) -> void:
 func debug_level(c: String) -> void:
 	var lv := crew_lvl(c)
 	if lv < CREW_CUM.size():
-		cls(c)["crew_xp"] = int(CREW_CUM[lv])
+		cls(c)["crew_xp"] = maxi(int(cls(c)["crew_xp"]), int(CREW_CUM[lv]))
+		cls(c)["crew_rank"] = lv + 1
 	save()
 
 
 func debug_all() -> void:
 	for c in PlaneClasses.LIST:
 		cls(c)["crew_xp"] = int(CREW_CUM[CREW_CUM.size() - 1])
+		cls(c)["crew_rank"] = CREW_CUM.size()
 	data["parts"] = parts() + 50000
 	save()
