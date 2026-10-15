@@ -392,7 +392,9 @@ func award_run(s: Dictionary) -> Dictionary:
 		sum += cut
 	var cm: float = s.get("continue_mult", 1.0)
 	if cm > 1.0:
-		var bonus := int(round(sum * (cm - 1.0)))
+		# 3.4: множитель продолжения — только к доле опыта, заработанной после 15:00 (раньше — ко всему вылету)
+		var bonus := int(round(sum * (cm - 1.0) * maxf(0.0, rt - 900.0) / maxf(rt, 1.0)))
+		out["xp_continue"] = bonus
 		lines.append(["Продолжение ×%.1f" % cm, bonus])
 		sum += bonus
 	lines.append(["За вылет", 30])

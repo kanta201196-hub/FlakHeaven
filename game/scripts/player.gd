@@ -404,7 +404,9 @@ func _turn_side() -> float:
 func _handle_skills() -> void:
 	if Input.is_action_just_pressed("roll") and roll_cd <= 0.0 and roll_t <= 0.0:
 		roll_t = roll_time()
-		roll_cd = maxf(2.0, (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+		# 3.4: перезарядка не короче бочки + 1 с — без непрерывной неуязвимости при прокачке
+		roll_cd = maxf(maxf(2.0, roll_t + 1.0), (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+		Main.I.tele.add("roll_uses")
 		roll_dir = _turn_side()
 		if syn.has("mirror"):
 			_mirror_fan()
@@ -644,8 +646,9 @@ func _steer(delta: float) -> void:
 		if to_mouse.length() > 30.0:
 			heading = rotate_toward(heading, to_mouse.angle(), tr * delta)
 	elif int(Tuning.g("scheme")) == 0:
+		# 3.4: мёртвая зона одна — у действий (0,25); get_vector уже пересчитал длину после неё
 		var dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-		if dir.length() > 0.25:
+		if dir != Vector2.ZERO:
 			heading = rotate_toward(heading, dir.angle(), tr * delta)
 	else:
 		heading += Input.get_axis("move_left", "move_right") * tr * delta
@@ -770,11 +773,13 @@ func _shoot(delta: float) -> void:
 	var range_px := gun_range()
 	var want := false
 	var aim := fwd
+	var lead := false
 	if manual_mode:
 		want = Input.is_action_pressed("fire")
 		var t := _find_target(deg_to_rad(Tuning.g("assist_cone")), range_px)
 		if t:
 			aim = _lead_dir(t)
+			lead = true
 	else:
 		var t2 := _find_target(deg_to_rad(Tuning.g("auto_cone")), range_px)
 		if on_tail():
@@ -782,29 +787,74 @@ func _shoot(delta: float) -> void:
 		want = t2 != null
 		if t2 and (combat_t > 0.0 or on_tail()):
 			aim = _lead_dir(t2)
-	if want and _fire_cd <= 0.0:
-		_fire_cd = 1.0 / gun_rate()
-		_gun_side = -_gun_side
-		var muzzle := global_position + fwd * 16.0 * size + Vector2.from_angle(heading + PI / 2.0) * 7.0 * size * _gun_side
-		Main.I.shots += 1
-		_gun_n += 1
-		var src := "курсовое (ручн.)" if manual_mode else "курсовое (авто)"
-		var every := 3 if (manual_mode and manual_bonus >= 0.4) else 4
-		if gun_evo and _gun_n % every == 0:
-			# «Дятел»: пробивающий снаряд — всё на линии 900 пикс., урон ×2,5
-			var spd := Tuning.g("bullet_speed") * 1.3
-			Main.I.projectiles.spawn_player_bullet(muzzle, aim * spd + velocity, gun_damage() / 0.85 * 2.5, 900.0 / spd, manual_mode, src, 99)
-		else:
-			Main.I.projectiles.spawn_player_bullet(muzzle, aim * Tuning.g("bullet_speed") + velocity, gun_damage(), GUN_LIFE, manual_mode, src)
-		if _gun_side > 0.0:
-			Main.I.sfx.play("gun_fire", -15.0)
+			lead = true
+	if not want:
+		_fire_cd = maxf(_fire_cd, 0.0) # остаток таймера не копится, пока не стреляем
+		return
+	# 3.4: темп не зависит от FPS — остаток таймера переносится, за кадр до 4 выстрелов
+	var rate := gun_rate()
+	Main.I.tele.maxv("gun_rate_max", rate)
+	var n := 0
+	while _fire_cd <= 0.0 and n < 4:
+		_fire_cd += 1.0 / rate
+		n += 1
+		_fire_one(fwd, aim, lead, maxf(0.0, -(_fire_cd - 1.0 / rate)))
+	if n > 1:
+		Main.I.tele.add("gun_multi_frames")
+	_fire_cd = maxf(_fire_cd, -1.0 / rate)
+
+
+func _fire_one(fwd: Vector2, aim: Vector2, lead: bool, age := 0.0) -> void:
+	_gun_side = -_gun_side
+	var muzzle := global_position + fwd * 16.0 * size + Vector2.from_angle(heading + PI / 2.0) * 7.0 * size * _gun_side
+	Main.I.shots += 1
+	_gun_n += 1
+	var src := "курсовое (ручн.)" if manual_mode else "курсовое (авто)"
+	var every := 3 if (manual_mode and manual_bonus >= 0.4) else 4
+	if gun_evo and _gun_n % every == 0:
+		# «Дятел»: пробивающий снаряд — всё на линии 900 пикс., урон ×2,5
+		var spd := Tuning.g("bullet_speed") * 1.3
+		Main.I.projectiles.spawn_player_bullet(muzzle, aim * spd + velocity, gun_damage() / 0.85 * 2.5, 900.0 / spd, manual_mode, src, 99)
+	else:
+		Main.I.projectiles.spawn_player_bullet(muzzle, aim * Tuning.g("bullet_speed") + velocity, gun_damage(), GUN_LIFE, manual_mode, src)
+	var bl: Dictionary = Main.I.projectiles.bullets[-1]
+	if age > 0.0: # выстрел «опоздал» на часть кадра — первый шаг пули длиннее на это время
+		bl["lag"] = age
+	if lead:
+		bl["lead"] = true
+		Main.I.tele.add("shots_lead")
+	if _gun_side > 0.0:
+		Main.I.sfx.play("gun_fire", -15.0)
 
 
 ## Направление с упреждением: куда стрелять, чтобы снаряд встретил цель
+## 3.4: учитывает скорость самолёта, которую наследует пуля, и решает время встречи (ближайшее t > 0 в пределах жизни пули)
 func _lead_dir(t: Enemy) -> Vector2:
-	var d := global_position.distance_to(t.global_position)
-	var lead := t.global_position + t.move_vel * (d / Tuning.g("bullet_speed"))
-	return (lead - global_position).normalized()
+	var s := Tuning.g("bullet_speed")
+	var r := t.global_position - global_position
+	var w := t.move_vel - velocity # движение цели относительно точки вылета пули
+	# |r + w·τ| = s·τ  →  (w·w − s²)τ² + 2(r·w)τ + r·r = 0
+	var a := w.dot(w) - s * s
+	var b := 2.0 * r.dot(w)
+	var c := r.dot(r)
+	var tau := -1.0
+	if absf(a) < 0.001:
+		if absf(b) > 0.001:
+			tau = -c / b
+	else:
+		var disc := b * b - 4.0 * a * c
+		if disc >= 0.0:
+			var sq := sqrt(disc)
+			var t1 := (-b - sq) / (2.0 * a)
+			var t2 := (-b + sq) / (2.0 * a)
+			for x in [minf(t1, t2), maxf(t1, t2)]:
+				if x > 0.0:
+					tau = x
+					break
+	if tau <= 0.0 or tau > GUN_LIFE:
+		Main.I.tele.add("lead_nosol")
+		return r.normalized() # встречи нет — стреляем прямо по цели
+	return ((r + w * tau) / (s * tau)).normalized()
 
 
 func _find_target(cone: float, max_dist: float) -> Enemy:
