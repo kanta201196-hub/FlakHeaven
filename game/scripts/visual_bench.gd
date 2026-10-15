@@ -18,8 +18,16 @@ static func seed_world() -> void:
 	seed(SEED)
 
 
+var _suffix := ""
+
+
 func _init(main: Main) -> void:
 	m = main
+	# --tilt=N — кадры с наклоном камеры (обсуждение вида, cam_tilt в tuning.gd), файлы vis_<имя>_tN.png
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--tilt="):
+			Tuning.set_param("cam_tilt", float(a.substr(7)))
+			_suffix = "_t" + a.substr(7)
 
 
 func process(delta: float) -> void:
@@ -74,7 +82,7 @@ func _hold(p: Dictionary) -> void:
 
 func _save(name: String) -> void:
 	var img := m.get_viewport().get_texture().get_image()
-	img.save_png("user://vis_%s.png" % name)
+	img.save_png("user://vis_%s%s.png" % [name, _suffix])
 	# яркость: каждый 4-й пиксель по обеим осям
 	var n := 0
 	var hot := 0
@@ -109,7 +117,12 @@ func _make_points() -> Array:
 	if empty == Vector2.INF:
 		empty = Vector2.ZERO
 	var pts := [{"name": "desert", "pos": empty}]
-	for k in [["mountain", "o_mesa"], ["village", "o_village"], ["oasis", "o_oasis"]]:
+	# B-26: горы теперь — рельеф; берём самую высокую точку рядом с пустой клеткой
+	var peak := empty + Vector2(4000, 0)
+	if Render3D.I != null and Render3D.I.terrain != null:
+		peak = Render3D.I.terrain.find_peak(empty)
+	pts.append({"name": "mountain", "pos": peak})
+	for k in [["village", "o_village"], ["oasis", "o_oasis"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	pts.append({"name": "closeup", "pos": found.get("o_rocks_big", empty) + Vector2(-260, 0), "zoom": 2.5})
