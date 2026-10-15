@@ -79,10 +79,22 @@ func _ready() -> void:
 	ground.mesh = pm
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://shaders/ground3d.gdshader")
-	for n in [["t_sand", "sand"], ["t_clay", "clay"], ["t_gravel", "gravel"], ["t_river", "riverbed"]]:
-		var p := "res://art/ground/g_%s.png" % n[1]
-		if ResourceLoader.exists(p):
-			sm.set_shader_parameter(n[0], load(p))
+	# B-25: наборы PBR (CC0, game/art/ground/pbr/) — если есть все, иначе старые текстуры 2.6
+	var slots := [["sand", "sand"], ["clay", "clay"], ["gravel", "gravel"], ["river", "riverbed"]]
+	var pbr := true
+	for n in slots:
+		pbr = pbr and ResourceLoader.exists("res://art/ground/pbr/%s_albedo.jpg" % n[0]) and ResourceLoader.exists("res://art/ground/pbr/%s_nh.jpg" % n[0])
+	for n in slots:
+		if pbr:
+			sm.set_shader_parameter("t_" + n[0], load("res://art/ground/pbr/%s_albedo.jpg" % n[0]))
+			sm.set_shader_parameter("n_" + n[0], load("res://art/ground/pbr/%s_nh.jpg" % n[0]))
+		else:
+			var p := "res://art/ground/g_%s.png" % n[1]
+			if ResourceLoader.exists(p):
+				sm.set_shader_parameter("t_" + n[0], load(p))
+	sm.set_shader_parameter("use_nh", pbr)
+	if pbr:
+		sm.set_shader_parameter("tex_world", Tuning.g("ground_tile"))
 	sm.set_shader_parameter("seed", float(randi() % 1000))
 	sm.set_shader_parameter("albedo_k", Tuning.g("ground_albedo"))
 	ground.material_override = sm
