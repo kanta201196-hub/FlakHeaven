@@ -511,7 +511,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			if r > 0:
 				card["desc"] += "\nБонус редкости: +%s урона группы" % _pct(0.15 * (k - 1.0))
 			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
-				card["desc"] += "\nЭволюция: ур. 5 + %s, с 5:00" % _cat_text(g2.weapon)
+				card["desc"] += "\nЭволюция: ур. 5 + %s, с %d:%02d" % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
 			card["desc"] = syn_def(p, card["syn"])["desc"] + "\nОткрывает слот %d из %d. Следующий слот дороже." % [p.syn.size() + 1, MAX_SYN]
 		"evolution":

@@ -172,7 +172,7 @@ func _tag_chips(pos: Vector2, tags: Array, evo := false) -> void:
 		x += tw + 8.0
 
 
-## Пауза: очки тегов, нашивки, связки, эволюции
+## Пауза: очки тегов, прогресс курса, связки, эволюции
 func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 	var x := pos.x
 	var cw := w / Prog.TAG_ORDER.size()
@@ -184,14 +184,17 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 		ctrl.draw_rect(r, Color(col.r, col.g, col.b, 0.12 if n > 0 else 0.04))
 		ctrl.draw_rect(Rect2(r.position, Vector2(r.size.x, 3)), col if n > 0 else Color(1, 1, 1, 0.1))
 		_text(Vector2(r.position.x + 8, r.position.y + 22), "%s  %d" % [Prog.tag_title(t), n], 16, col.lightened(0.25) if n > 0 else Color(0.5, 0.52, 0.58))
-		var pl := p.patch(t)
-		var nxt: int = Prog.PATCH_AT[pl] if pl < 2 else -1
-		var line := ("нашивка %s" % Prog.ROMAN[pl]) if pl > 0 else ""
-		if nxt > 0:
-			line += (" · " if pl > 0 else "") + "%s на %d" % [Prog.ROMAN[pl + 1], nxt]
-		_text(Vector2(r.position.x + 8, r.position.y + 42), line, 13, Color(0.8, 0.82, 0.88))
-		if pl > 0:
-			_para(Vector2(r.position.x + 8, r.position.y + 54), Prog.PATCHES[t][pl - 1], r.size.x - 14, 11, Color(0.7, 0.72, 0.78))
+		# 3.2: нашивок нет — под тегом курса показываем прогресс к связке
+		if p.has_course():
+			var sd := Cards.syn_def(p, p.course)
+			var c := Cards.slot_cost(p)
+			var need := 0
+			if sd.get("tag", "") == t:
+				need = int(c["main"])
+			elif sd.get("tag2", "") == t:
+				need = int(c["second"])
+			if need > 0:
+				_text(Vector2(r.position.x + 8, r.position.y + 42), "▲ курс: %d/%d" % [n, need], 13, Color(1.0, 0.85, 0.35))
 		x += cw
 	var extra := PackedStringArray()
 	for id in p.syn:
