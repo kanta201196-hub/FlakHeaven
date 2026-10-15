@@ -101,6 +101,7 @@ func _ready() -> void:
 	terrain = Terrain3D.new()
 	add_child(terrain)
 	terrain.setup(-GROUND_Y, sm, null)
+	terrain.props = BiomeProps.new(terrain)
 
 	_scorch_mesh = QuadMesh.new()
 	_scorch_mesh.size = Vector2(1, 1)
@@ -314,8 +315,9 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 
 ## Верх объектов не ближе 30 px к плоскости боя (запас на крен и толщину моделей)
 const OBJ_TOP := -30.0
-## B-26: столовая гора-картинка не нужна — горы теперь настоящие
-const OBJ_SKIP_3D := ["o_mesa"]
+## B-26: столовая гора-картинка не нужна — горы теперь настоящие;
+## B-41: скалы-картинки заменены группами моделей (biome_props.gd)
+const OBJ_SKIP_3D := ["o_mesa", "o_rocks_big", "o_rocks_small"]
 
 const OBJ_RELIEF := {
 	"o_rocks_big": [0.16, 0.45], "o_rocks_small": [0.18, 0.45], "o_mesa": [0.16, 0.25],

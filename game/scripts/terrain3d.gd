@@ -20,6 +20,7 @@ var _ridge := FastNoiseLite.new()
 var _hill := FastNoiseLite.new()
 var _warp := FastNoiseLite.new()
 var _bg: Background
+var props: BiomeProps          # B-41: модели биома на рельефе (null — без них)
 
 
 func setup(depth: float, mat: Material, bg: Background) -> void:
@@ -109,6 +110,14 @@ func sync(view: Rect2, budget := 2) -> void:
 	var c := view.get_center() / CHUNK
 	var keys := want.keys()
 	keys.sort_custom(func(a, b): return Vector2(a).distance_squared_to(c) < Vector2(b).distance_squared_to(c))
+	# скачок камеры (старт, стенд, телепорт отладки): не хватает многих кусков — строим все сразу,
+	# иначе на экране дыра до фона
+	var missing := 0
+	for key in keys:
+		if not _chunks.has(key):
+			missing += 1
+	if missing > 6:
+		budget = missing
 	for key in keys:
 		if _chunks.has(key):
 			continue
@@ -192,6 +201,8 @@ func _build(key: Vector2i) -> MeshInstance3D:
 	mi.material_override = material
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	add_child(mi)
+	if props != null:
+		props.build(key, mi)
 	return mi
 
 
