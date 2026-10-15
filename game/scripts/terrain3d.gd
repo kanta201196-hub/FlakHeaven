@@ -265,7 +265,10 @@ func sync(view: Rect2, budget := 2) -> void:
 		if budget <= 0:
 			break
 		budget -= 1
+		var t0 := Time.get_ticks_usec()
 		_chunks[key] = _build(key)
+		if Main.I != null and Main.I.state == "playing":   # T4-03: рывки от сборки кусков рельефа
+			Main.I.tele.chunk_built((Time.get_ticks_usec() - t0) / 1000.0)
 	for key in _chunks.keys():
 		if not want.has(key):
 			(_chunks[key] as Node).queue_free()

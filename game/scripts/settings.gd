@@ -7,6 +7,9 @@ const PATH := "user://settings.json"
 const WINDOW_MODES := ["В окне", "Без рамки (весь экран)", "Полный экран"]
 const RESOLUTIONS := [Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3840, 2160)]
 const FPS_LIMITS := [0, 60, 120, 144, 165, 240]
+## T4-04 (B-33, минимум): «Качество графики». Что меняет — Render3D.apply_gfx и BiomeProps
+const GFX := ["Низкое", "Среднее", "Высокое", "Максимальное"]
+const GFX_MAX := 3
 
 ## Действия, которые можно переназначить: [действие, подпись, раздел]
 const REBIND := [
@@ -31,6 +34,8 @@ var resolution := 2
 var vsync := true
 var fps_limit := 0
 var hide_hud := false
+var gfx := 2               # «Высокое»; деревья полной детализации — только на «Максимальном»
+var gfx_auto := true       # автоснижение при низком FPS, пока игрок не выбрал качество сам
 var binds := {}          # действие → physical_keycode (только клавиатура)
 var _defaults := {}      # исходные клавиши (для «Сбросить»)
 
@@ -98,6 +103,12 @@ func apply() -> void:
 	apply_audio()
 
 
+## Качество графики: свет и тени сразу, модели биома — при пересборке кусков рельефа
+func apply_gfx() -> void:
+	if Render3D.I != null:
+		Render3D.I.apply_gfx(gfx)
+
+
 func apply_audio() -> void:
 	AudioServer.set_bus_volume_db(0, Tuning.g("master_db"))
 
@@ -107,7 +118,7 @@ func save_settings() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
-		"hide_hud": hide_hud, "binds": binds}, "  "))
+		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "binds": binds}, "  "))
 	f.close()
 
 
@@ -126,6 +137,8 @@ func load_settings() -> void:
 	vsync = bool(d.get("vsync", vsync))
 	fps_limit = clampi(int(d.get("fps_limit", fps_limit)), 0, FPS_LIMITS.size() - 1)
 	hide_hud = bool(d.get("hide_hud", hide_hud))
+	gfx = clampi(int(d.get("gfx", gfx)), 0, GFX_MAX)
+	gfx_auto = bool(d.get("gfx_auto", gfx_auto))
 	var b = d.get("binds", {})
 	if b is Dictionary:
 		for a in b:

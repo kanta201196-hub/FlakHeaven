@@ -15,6 +15,15 @@ var _rating := 0
 var _again := ""
 var _rate_btns: Array[Button] = []
 var _again_btns: Array[Button] = []
+## T4-03: вопросы про картинку, камеру, читаемость пуль и тормоза — ключ → ответ / кнопки
+const VIS_Q := [
+	["pic", "Как вам картинка? (1–5)", ["1", "2", "3", "4", "5"], 64],
+	["cam", "Какой наклон камеры удобнее? (F9)", ["28°", "35°", "45°", "Сверху", "Не пробовал(а)"], 0],
+	["bullets", "Пули и ракеты врагов видно?", ["Всегда", "Иногда терялись", "Часто терялись"], 0],
+	["lag", "Игра тормозила?", ["Нет", "Иногда", "Часто"], 0],
+]
+var _vis := {}
+var _vis_btns := {}
 var _boring: TextEdit
 var _unclear: TextEdit
 var _comment: TextEdit
@@ -63,8 +72,8 @@ func _build() -> void:
 	panel.add_theme_stylebox_override("panel", sb)
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.custom_minimum_size = Vector2(1180, 0)
-	panel.position = Vector2(-590, -440)
-	panel.size = Vector2(1180, 880)
+	panel.position = Vector2(-590, -500)
+	panel.size = Vector2(1180, 1000)
 	_root.add_child(panel)
 
 	var v := VBoxContainer.new()
@@ -102,6 +111,29 @@ func _build() -> void:
 		_again_btns.append(b)
 		ha.add_child(b)
 	v.add_child(ha)
+
+	# картинка и камера: по два вопроса в ряд
+	for row in [[0, 1], [2, 3]]:
+		var hq := HBoxContainer.new()
+		hq.add_theme_constant_override("separation", 30)
+		for qi in row:
+			var q: Array = VIS_Q[qi]
+			var col := VBoxContainer.new()
+			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			col.add_child(_caption(q[1]))
+			var hb2 := HBoxContainer.new()
+			hb2.add_theme_constant_override("separation", 6)
+			var btns: Array[Button] = []
+			for t in q[2]:
+				var b := _toggle(t, Vector2(q[3], 42))
+				b.add_theme_font_size_override("font_size", 17)
+				b.pressed.connect(_set_vis.bind(q[0], t))
+				btns.append(b)
+				hb2.add_child(b)
+			_vis_btns[q[0]] = btns
+			col.add_child(hb2)
+			hq.add_child(col)
+		v.add_child(hq)
 
 	v.add_child(_caption("Что было скучно или раздражало?"))
 	_boring = _area()
@@ -165,7 +197,7 @@ func _toggle(t: String, sz: Vector2) -> Button:
 
 func _area() -> TextEdit:
 	var te := TextEdit.new()
-	te.custom_minimum_size = Vector2(0, 92)
+	te.custom_minimum_size = Vector2(0, 72)
 	te.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	te.placeholder_text = "можно оставить пустым"
 	return te
@@ -175,6 +207,20 @@ func _set_rating(n: int) -> void:
 	_rating = n
 	for i in _rate_btns.size():
 		_rate_btns[i].button_pressed = (i + 1 == n)
+
+
+func _set_vis(key: String, t: String) -> void:
+	_vis[key] = t
+	for b in _vis_btns[key]:
+		(b as Button).button_pressed = (b.text == t)
+
+
+func _vis_text() -> String:
+	var parts := PackedStringArray()
+	for q in VIS_Q:
+		if _vis.has(q[0]):
+			parts.append("%s: %s" % [q[0], _vis[q[0]]])
+	return "; ".join(parts)
 
 
 func _set_again(t: String) -> void:
@@ -188,6 +234,10 @@ func open() -> void:
 		return
 	_set_rating(0)
 	_set_again("")
+	_vis.clear()
+	for k in _vis_btns:
+		for b in _vis_btns[k]:
+			(b as Button).button_pressed = false
 	for te in [_boring, _unclear, _comment]:
 		(te as TextEdit).text = ""
 	_status.text = ""
@@ -259,7 +309,9 @@ func _payload() -> Dictionary:
 		"again": _again,
 		"boring": _boring.text.strip_edges(),
 		"unclear": _unclear.text.strip_edges(),
-		"comment": _comment.text.strip_edges(),
+		# ответы про картинку — и отдельным полем, и в начале комментария (уже развёрнутый приёмник их не знает)
+		"visual": _vis_text(),
+		"comment": ("[%s] " % _vis_text() if _vis_text() != "" else "") + _comment.text.strip_edges(),
 		"os": "%s %s" % [OS.get_name(), OS.get_version()],
 		"gpu": "%s (%s)" % [RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_vendor()],
 		"screen": "%dx%d" % [scr.x, scr.y],
