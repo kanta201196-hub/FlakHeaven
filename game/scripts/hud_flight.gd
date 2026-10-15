@@ -31,7 +31,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 		var a := clampf(m.banner_t, 0.0, 1.0)
 		_ctext(170, m.banner, 30, Color(1.0, 0.85, 0.5, a))
 
-	var hint := "Мышь — курс · W/S — газ · ЛКМ — огонь (ручн.) · ПКМ — НАР/бомбы (по кнопке) · Q — авто/ручной · Space — бочка · Shift — форсаж · E — навык класса · Tab/Esc — подвесы · F2 — схема" + (" · F5/F6/F7 — отладка" if Main.DEBUG else "")
+	var hint := "Мышь — курс · W/S — газ · ЛКМ — огонь (ручн.) · ПКМ — НАР/бомбы (по кнопке) · Q — авто/ручной · Space — бочка · Shift — форсаж · E — навык класса · Tab/Esc — подвесы · F2 — схема · F9 — наклон камеры" + (" · F5/F6/F7 — отладка" if Main.DEBUG else "")
 	_text(Vector2(0, size.y - 20), hint, 15, Color(0.75, 0.78, 0.85, 0.8), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 
 

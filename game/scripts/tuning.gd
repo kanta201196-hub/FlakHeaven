@@ -10,7 +10,7 @@ const RANGES := {
 	"render3d": [0, 1, 1, 1, "3D-картинка (0 — старый 2D)"],
 	"light_exposure": [0.4, 1.6, 0.05, 1.0, "3D: экспозиция (меньше — темнее)"],
 	"ground_albedo": [0.4, 1.2, 0.05, 0.85, "3D: яркость земли"],
-	"cam_tilt": [0, 50, 1, 0, "3D: наклон камеры от вертикали, град (проба для обсуждения, 0 — строго сверху)"],
+	"cam_tilt": [0, 50, 1, 28, "3D: наклон камеры от вертикали, град (0 — строго сверху; F9 — 28/35/45/сверху)"],
 	"ground_depth": [70, 800, 10, 500, "3D: глубина земли под плоскостью боя, пикс (рельеф между ними)"],
 	"ground_tile": [60, 800, 10, 300, "3D: размер плитки текстуры земли, пикс"],
 	"obj_albedo": [0.4, 1.2, 0.05, 0.85, "3D: яркость объектов биома"],
@@ -82,7 +82,7 @@ const RANGES := {
 var params := {}
 ## Личные настройки игрока — переживают смену версии баланса
 const KEEP := ["master_db", "music_db", "sfx_db", "engine_db", "ui_db", "scheme", "render3d", "sprites", "damage_numbers",
-	"shake_mult", "range_rings", "camera_zoom", "plane_len"]
+	"shake_mult", "range_rings", "camera_zoom", "plane_len", "cam_tilt"]
 
 
 func _ready() -> void:
