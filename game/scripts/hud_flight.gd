@@ -149,12 +149,12 @@ func _threat_markers(size: Vector2) -> void:
 	var rect := Rect2(Vector2.ZERO, size).grow(-40.0)
 	for mi in m.projectiles.missiles:
 		if not mi["lost"]:
-			_edge_arrow(xf * (mi["p"] as Vector2), rect, size, Color(1.0, 0.2, 0.15))
+			_edge_arrow(_ws(xf, (mi["p"] as Vector2)), rect, size, Color(1.0, 0.2, 0.15))
 	for n in m.get_tree().get_nodes_in_group("enemies"):
 		if n is MissileCarrier and n._lock > 0.0:
-			_edge_arrow(xf * (n as Node2D).global_position, rect, size, Color(1.0, 0.6, 0.2))
+			_edge_arrow(_ws(xf, (n as Node2D).global_position), rect, size, Color(1.0, 0.6, 0.2))
 		elif n is Boss:
-			_edge_arrow(xf * (n as Node2D).global_position, rect, size, Color(1.0, 0.3, 0.6), 1.6)
+			_edge_arrow(_ws(xf, (n as Node2D).global_position), rect, size, Color(1.0, 0.3, 0.6), 1.6)
 
 
 func _evac_marker(m: Main, size: Vector2) -> void:
@@ -162,7 +162,7 @@ func _evac_marker(m: Main, size: Vector2) -> void:
 		return
 	var xf := m.get_viewport().get_canvas_transform()
 	var rect := Rect2(Vector2.ZERO, size).grow(-60.0)
-	var sp := xf * m.evac.target_pos()
+	var sp := _ws(xf, m.evac.target_pos())
 	_edge_arrow(sp, rect, size, Color(0.4, 1.0, 0.5), 1.8)
 	var d := int(m.player.global_position.distance_to(m.evac.target_pos()))
 	_ctext(246, "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с" % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7))
@@ -212,7 +212,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	if is_instance_valid(node):
 		if node is AASite:
 			var site := node as AASite
-			_edge_arrow(xf * site.global_position, rect, size, Color(1.0, 0.85, 0.3), 1.8)
+			_edge_arrow(_ws(xf, site.global_position), rect, size, Color(1.0, 0.85, 0.3), 1.8)
 			var d := int(p.global_position.distance_to(site.global_position))
 			var s: String
 			if site.failed:
@@ -226,7 +226,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
 		elif node is RivalAce:
 			var ace := node as RivalAce
-			_edge_arrow(xf * ace.global_position, rect, size, Color(1.0, 0.25, 0.3), 1.8)
+			_edge_arrow(_ws(xf, ace.global_position), rect, size, Color(1.0, 0.25, 0.3), 1.8)
 			_ctext(276, "ДОГФАЙТ: ас «%s» · уйдёт через %d с" % [ace.callsign, int(ceil(ace.life))], 22, Color(1.0, 0.6, 0.6))
 			_ctext(302, "Награда: выбор из редких карточек", 17, Color(0.85, 0.75, 1.0))
 			if ace.threatening() and int(Time.get_ticks_msec() / 200) % 2 == 0:
@@ -318,3 +318,8 @@ func _course_bar(p: Player, pos: Vector2) -> void:
 		parts.append(("✓" if c[1] else "") + String(c[0]))
 	_text(Vector2(pos.x, y + 36), "Связка придёт в следующем выборе!" if ready else " · ".join(parts), 14,
 		Color(1.0, 0.9, 0.4) if ready else Color(0.85, 0.87, 0.92))
+
+
+## Мир → экран: с наклонной камерой (B-47) через 3D-камеру, иначе через 2D-трансформ
+func _ws(xf: Transform2D, p: Vector2) -> Vector2:
+	return Render3D.I.world_to_screen(p, xf * p) if Render3D.I != null else xf * p
