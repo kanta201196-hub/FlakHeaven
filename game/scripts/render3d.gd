@@ -39,23 +39,30 @@ func _ready() -> void:
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
 	e.background_color = Color(0.52, 0.47, 0.4)
+	# B-24: заполняющий свет от неба — холодный, тени голубоватые, а не серые
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.72, 0.7, 0.68)
-	e.ambient_light_energy = 0.55
+	e.ambient_light_color = Color(0.6, 0.68, 0.82)
+	e.ambient_light_energy = 0.5
+	# экспозиция и яркость земли ниже, чем в 3.3, — песок и вершины гор не выгорают в белое
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	e.tonemap_exposure = Tuning.g("light_exposure")
+	e.adjustment_enabled = true
+	e.adjustment_contrast = 1.08
+	e.adjustment_saturation = 1.05
 	e.fog_enabled = false
 	env.environment = e
 	add_child(env)
 
 	sun = DirectionalLight3D.new()
-	sun.light_color = Color(1.0, 0.94, 0.84)
-	sun.light_energy = 1.25
+	sun.light_color = Color(1.0, 0.9, 0.76)
+	sun.light_energy = 1.15
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.directional_shadow_max_distance = 4000.0
 	sun.shadow_bias = 0.05
-	# свет сверху-слева (на экране): тени уходят вниз-вправо
-	sun.basis = Basis.looking_at(Vector3(0.45, -1.0, 0.6).normalized(), Vector3(0, 0, -1))
+	# B-24: солнце ниже (~40° над горизонтом) — тени длиннее, у объектов видна теневая сторона.
+	# Свет сверху-слева (на экране): тени уходят вниз-вправо
+	sun.basis = Basis.looking_at(Vector3(0.62, -0.85, 0.75).normalized(), Vector3(0, 0, -1))
 	add_child(sun)
 
 	cam = Camera3D.new()
@@ -72,11 +79,24 @@ func _ready() -> void:
 	ground.mesh = pm
 	var sm := ShaderMaterial.new()
 	sm.shader = load("res://shaders/ground3d.gdshader")
-	for n in [["t_sand", "sand"], ["t_clay", "clay"], ["t_gravel", "gravel"], ["t_river", "riverbed"]]:
-		var p := "res://art/ground/g_%s.png" % n[1]
-		if ResourceLoader.exists(p):
-			sm.set_shader_parameter(n[0], load(p))
+	# B-25: наборы PBR (CC0, game/art/ground/pbr/) — если есть все, иначе старые текстуры 2.6
+	var slots := [["sand", "sand"], ["clay", "clay"], ["gravel", "gravel"], ["river", "riverbed"]]
+	var pbr := true
+	for n in slots:
+		pbr = pbr and ResourceLoader.exists("res://art/ground/pbr/%s_albedo.jpg" % n[0]) and ResourceLoader.exists("res://art/ground/pbr/%s_nh.jpg" % n[0])
+	for n in slots:
+		if pbr:
+			sm.set_shader_parameter("t_" + n[0], load("res://art/ground/pbr/%s_albedo.jpg" % n[0]))
+			sm.set_shader_parameter("n_" + n[0], load("res://art/ground/pbr/%s_nh.jpg" % n[0]))
+		else:
+			var p := "res://art/ground/g_%s.png" % n[1]
+			if ResourceLoader.exists(p):
+				sm.set_shader_parameter("t_" + n[0], load(p))
+	sm.set_shader_parameter("use_nh", pbr)
+	if pbr:
+		sm.set_shader_parameter("tex_world", Tuning.g("ground_tile"))
 	sm.set_shader_parameter("seed", float(randi() % 1000))
+	sm.set_shader_parameter("albedo_k", Tuning.g("ground_albedo"))
 	ground.material_override = sm
 	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(ground)
@@ -319,7 +339,7 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				var qm := PlaneMesh.new()
 				qm.size = Vector2(t.get_width(), t.get_height())
 				mi.mesh = qm
-			mi.material_override = ReliefMesh.material(t, 0.0, 0.95)
+			mi.material_override = ReliefMesh.material(t, 0.0, 0.95, Color.WHITE * Tuning.g("obj_albedo"))
 			mi.position = Vector3(o["pos"].x, GROUND_Y + 0.5, o["pos"].y)
 			mi.basis = Basis(Vector3.UP, -float(o["rot"])).scaled(Vector3(k, k, k))
 			add_child(mi)

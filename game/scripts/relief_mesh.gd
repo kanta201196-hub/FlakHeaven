@@ -139,13 +139,15 @@ static func build(tex: Texture2D, height_px: float, grid := 72, lum_k := 0.0, pr
 static var _mats := {}
 
 
-## Материал для модели: текстура сверху, отсечение по альфе, металл/шероховатость
-static func material(tex: Texture2D, metal := 0.35, rough := 0.5) -> StandardMaterial3D:
-	var key := str(tex.get_rid()) + "|%.2f|%.2f" % [metal, rough]
+## Материал для модели: текстура сверху, отсечение по альфе, металл/шероховатость;
+## tint — множитель цвета (объекты биома: в их картинках уже «нарисован» свет)
+static func material(tex: Texture2D, metal := 0.35, rough := 0.5, tint := Color.WHITE) -> StandardMaterial3D:
+	var key := str(tex.get_rid()) + "|%.2f|%.2f|%s" % [metal, rough, tint.to_html()]
 	if _mats.has(key):
 		return _mats[key]
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = tex
+	m.albedo_color = Color(tint.r, tint.g, tint.b, 1.0)
 	m.vertex_color_use_as_albedo = true
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	m.alpha_scissor_threshold = 0.45

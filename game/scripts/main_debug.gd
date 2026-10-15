@@ -1,17 +1,22 @@
 class_name MainDebug
 extends RefCounted
 ## Отладочные режимы Main: автотест (-- --autotest), скриншоты (--shots), проверки --fxtest,
-## --reporttest, --mesatest. Работают только по флагам командной строки.
+## --reporttest, --mesatest, стенд картинки --visual (visual_bench.gd). Работают только по флагам командной строки.
 
 var m: Main
 var _fx_t := 0.0
 var _fx_at := 0.0
 var _fx_fired := false
 var _autotest_t := 0.0
+var _visual: VisualBench
 
 
 func _init(main: Main) -> void:
 	m = main
+	# Main._args ещё не заполнен: флаг читаем напрямую — зерно нужно до создания мира
+	if OS.get_cmdline_user_args().has("--visual"):
+		VisualBench.seed_world()
+		_visual = VisualBench.new(m)
 
 
 func process(delta: float) -> void:
@@ -19,6 +24,8 @@ func process(delta: float) -> void:
 		_run_autotest(delta)
 	if m._args.has("--shots"):
 		_debug_screenshots(delta)
+	if _visual != null:
+		_visual.process(delta)
 
 	if m._args.has("--fxtest") and m.state == "playing" and is_instance_valid(m.player):
 		_fx_t += delta
