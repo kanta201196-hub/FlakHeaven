@@ -58,7 +58,7 @@ func process(delta: float) -> void:
 		return
 	var p: Dictionary = _points[_i]
 	_hold(p)
-	if _phase == 0 and _t > WAIT:
+	if _phase == 0 and _t > float(p.get("wait", WAIT)):
 		if p.get("boom", false):
 			var c: Vector2 = p["pos"]
 			m.fx.explosion(c + Vector2(220, -90), 34.0)
@@ -66,18 +66,50 @@ func process(delta: float) -> void:
 			m.fx.explosion(c + Vector2(60, 230), 16.0, false)
 		_phase = 1
 		_t = 0.0
+		_pt = 0.0
 	elif _phase == 1 and _t > (0.25 if p.get("boom", false) else 0.05):
 		_save(p["name"])
 		_phase = 0
 		_t = 0.0
+		_pt = 0.0
 		_i += 1
+
+
+var _pt := 0.0     # время в точке (3.4-t1: эффекты — самолёт летит, за ним тянется след)
 
 
 func _hold(p: Dictionary) -> void:
 	var pos: Vector2 = p["pos"]
-	m.player.global_position = pos
-	m.player.heading = -PI / 4.0
-	m.camera.global_position = pos
+	var dt := m.get_process_delta_time()
+	_pt += dt
+	if p.has("cls"):   # 3.4-t1 п. 9, 19: другой самолёт (винты «Кита 1», сопла)
+		m.player.cls_id = p["cls"][0]
+		m.player.plane_lvl = p["cls"][1]
+	if p.get("fly", false):
+		# летим по кругу: след и огонь форсажа видны, камера над самолётом
+		var a := _pt * 0.9
+		pos += Vector2(cos(a), sin(a)) * 380.0
+		m.player.heading = a + PI / 2.0
+		m.player.ab_t = 1.0 if p.get("ab", false) else 0.0
+		if p.get("missiles", false) and fmod(_pt, 0.5) < dt:
+			m.projectiles.spawn_player_missile(pos, Vector2.from_angle(m.player.heading + randf_range(-0.6, 0.6)) * 700.0, null)
+			m.projectiles.spawn_missile(pos + Vector2(500, -300), Vector2(-1, 0.4).normalized())
+		m.player.global_position = pos
+		m.camera.global_position = p["pos"]
+	else:
+		m.player.global_position = pos
+		m.player.heading = -PI / 4.0
+		m.camera.global_position = pos
+	if p.get("crash", false) and m.player.wingmen.is_empty():
+		m.player.add_wingman()
+	if p.get("crash", false) and _pt > 1.2 and not p.has("_done"):
+		# 3.4-t1 п. 32: ведомый сбит (бессмертие не даёт урон — обнуляем напрямую)
+		p["_done"] = true
+		var wm: Wingman = m.player.wingmen[0]
+		wm.hp = 0.0
+		wm.dead_t = 20.0
+		wm.visible = false
+		m.fx.explosion(wm.global_position, 22.0)
 	if p.has("roll"):   # 3.4-t1 п. 6: самолёт в бочке, брюхом к камере
 		m.player.roll_dir = 1
 		m.player.roll_t = m.player.roll_time() * float(p["roll"])
@@ -135,5 +167,13 @@ func _make_points() -> Array:
 	pts.append({"name": "closeup", "pos": found.get("o_rocks_big", empty) + Vector2(-260, 0), "zoom": 2.5})
 	pts.append({"name": "roll", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.62})
 	pts.append({"name": "roll90", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.78})
+	if OS.get_cmdline_user_args().has("--fxbench"):   # 3.4-t1: эффекты (след, форсаж, ракеты, винты, падение ведомого)
+		pts = []
+		pts.append({"name": "trail", "pos": empty, "fly": true, "wait": 3.0, "zoom": 0.8})
+		pts.append({"name": "trail_ab", "pos": empty, "fly": true, "ab": true, "missiles": true, "wait": 3.0, "zoom": 0.8})
+		pts.append({"name": "nozzle_ab", "pos": empty, "fly": true, "ab": true, "wait": 1.0, "zoom": 2.2})
+		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
+		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
+		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
 	return pts
 
