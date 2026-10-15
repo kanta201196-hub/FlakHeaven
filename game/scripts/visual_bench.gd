@@ -18,8 +18,16 @@ static func seed_world() -> void:
 	seed(SEED)
 
 
+var _suffix := ""
+
+
 func _init(main: Main) -> void:
 	m = main
+	# --tilt=N — кадры с наклоном камеры (обсуждение вида, cam_tilt в tuning.gd), файлы vis_<имя>_tN.png
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--tilt="):
+			Tuning.set_param("cam_tilt", float(a.substr(7)))
+			_suffix = "_t" + a.substr(7)
 
 
 func process(delta: float) -> void:
@@ -74,7 +82,7 @@ func _hold(p: Dictionary) -> void:
 
 func _save(name: String) -> void:
 	var img := m.get_viewport().get_texture().get_image()
-	img.save_png("user://vis_%s.png" % name)
+	img.save_png("user://vis_%s%s.png" % [name, _suffix])
 	# яркость: каждый 4-й пиксель по обеим осям
 	var n := 0
 	var hot := 0

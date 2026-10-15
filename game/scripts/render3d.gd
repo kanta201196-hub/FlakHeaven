@@ -160,14 +160,25 @@ func _process(delta: float) -> void:
 		return
 	_zoom = zoom
 	var h := _cam_height(zoom)
-	cam.global_position = Vector3(c2.x, h, c2.y)
-	cam.basis = Basis.looking_at(Vector3(0, -1, 0), Vector3(0, 0, -1))
+	var tilt := deg_to_rad(Tuning.g("cam_tilt"))
+	if tilt > 0.001:
+		# проба наклона: камера отходит назад (вниз по экрану) на той же дальности до центра плоскости боя.
+		# Внимание: 2D-слой (пули, эффекты) рисуется без наклона — совпадает с 3D только в центре кадра.
+		cam.global_position = Vector3(c2.x, h * cos(tilt), c2.y + h * sin(tilt))
+		cam.basis = Basis.looking_at(Vector3(0, -cos(tilt), -sin(tilt)), Vector3(0, 0, -1))
+	else:
+		cam.global_position = Vector3(c2.x, h, c2.y)
+		cam.basis = Basis.looking_at(Vector3(0, -1, 0), Vector3(0, 0, -1))
 	# рельеф — куски под видимой областью дна долин (+ запас на тени и сглаживание камеры)
 	if terrain._bg != m.background:
 		terrain._bg = m.background
 		terrain.clear()
 	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
-	terrain.sync(Rect2(c2 - half_g, half_g * 2.0), 64 if terrain._chunks.is_empty() else 2)
+	var view_g := Rect2(c2 - half_g, half_g * 2.0)
+	if tilt > 0.001:
+		# с наклоном видно дальше вперёд (вверх по экрану)
+		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
+	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 2)
 	_sync_units(m, delta)
 	_sync_objects(c2, h)
 	_sync_clouds(m, c2, h)

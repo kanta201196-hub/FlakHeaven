@@ -24,6 +24,12 @@ uniform bool relief = false;
 uniform float rock_world = 520.0;  // размер плитки скалы, px
 uniform float snow_from = 0.86;    // доля высоты, выше которой снег на пологих гребнях
 uniform vec3 haze_color : source_color = vec3(0.62, 0.68, 0.78);
+// русло и дорога по расстоянию до реки (terrain3d.gd: D_RIVER, D_ROAD; в UV2.x, px со знаком)
+uniform float river_w = 26.0;
+uniform float road_v = 85.0;
+uniform float road_w = 10.0;
+uniform vec3 water_color : source_color = vec3(0.42, 0.58, 0.62);
+uniform vec3 road_color : source_color = vec3(0.78, 0.7, 0.58);
 uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к палитре стайл-гайда (фото рыжее)
 uniform float rock_sat = 0.45;
 uniform float hillshade = 0.3;     // отмывка рельефа: склоны от солнца темнее — горы читаются сверху
@@ -43,13 +49,13 @@ uniform float saturation = 0.8;     // насыщенность земли (фо
 varying vec2 world;
 varying vec3 world3;
 varying vec3 wnorm;
-varying vec2 rel;   // x — открытость (впадина < 0.5 < гребень), y — высота 0…1
+varying vec3 rel;   // x — открытость (впадина < 0.5 < гребень), y — высота 0…1, z — расстояние до реки, px
 
 void vertex() {
 	world3 = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world = world3.xz;
 	wnorm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
-	rel = relief ? COLOR.rg : vec2(0.5, 0.0);
+	rel = relief ? vec3(COLOR.rg, UV2.x) : vec3(0.5, 0.0, 9999.0);
 }
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + seed) * 43758.5453); }
@@ -116,6 +122,7 @@ void fragment() {
 		hgt = s0.n.b * e.x + s1.n.b * e.y + s2.n.b * e.z + s3.n.b * e.w;
 	}
 	float ao = 1.0;
+	float wet_out = 0.0;  // вода в русле: блестит (ниже шероховатость)
 	float hs = 1.0;  // отмывка — в цвет, а не в AO (AO в Godot гасит только рассеянный свет)
 	if (relief) {
 		// скала на крутых склонах: три проекции, на стенах слои пород горизонтальны
@@ -158,6 +165,6 @@ void fragment() {
 		NORMAL_MAP = normalize(vec3(-g.x, g.y, 1.0)) * 0.5 + 0.5;
 		AO = ao;
 	}
-	ROUGHNESS = 0.95;
-	SPECULAR = 0.1;
+	ROUGHNESS = mix(0.95, 0.12, wet_out);
+	SPECULAR = mix(0.1, 0.6, wet_out);
 }

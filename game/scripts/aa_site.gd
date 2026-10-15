@@ -16,6 +16,9 @@ var failed := false
 
 
 func setup(center: Vector2, hp_mult: float) -> void:
+	# 3D-рельеф: техника ПВО стоит на дне долины, а не на хребте (правила — s4-landscape-rules.md)
+	if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
+		center = Render3D.I.terrain.find_floor(center)
 	global_position = center
 	var layout := [["bunker", Vector2.ZERO], ["zsu", Vector2(-170, -90)], ["zsu", Vector2(170, 110)],
 		["sam", Vector2(140, -150)], ["radar", Vector2(-150, 140)]]
@@ -23,6 +26,8 @@ func setup(center: Vector2, hp_mult: float) -> void:
 		var g := GroundTarget.new()
 		g.setup(l[0], self, hp_mult)
 		g.position = center + (l[1] as Vector2).rotated(randf() * TAU) * randf_range(0.9, 1.2)
+		if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
+			g.position = Render3D.I.terrain.find_floor(g.position, 260.0)
 		targets.append(g)
 
 
