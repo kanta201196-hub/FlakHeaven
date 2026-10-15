@@ -465,10 +465,11 @@ func _sync_units(m: Main, delta: float) -> void:
 		var ue := _ensure(e.get_instance_id(), "enemy", t, len_px, 0.05 if e.is_ground else 0.07, 40 if not e.is_boss else 64)
 		var ang: float = info.get("angle", e.heading)
 		if e.is_ground:
-			var gp := ground_under(e.global_position)
+			# 3.5: у целей с точкой на рельефе (anchor) — ставим ровно туда, иначе проекция с камеры
+			var gp := terrain.surface(e.anchor.x, e.anchor.y) if (e.anchor != Vector2.INF and terrain != null) else ground_under(e.global_position)
 			_place(ue, Vector2(gp.x, gp.z), ang, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
 		else:
-			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), 0.0)
+			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle()) # 3.5: бочка при уклонении
 		var mi2: MeshInstance3D = ue["mi"]
 		mi2.material_overlay = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
 	for id in _units.keys():

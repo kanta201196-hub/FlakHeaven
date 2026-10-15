@@ -5,6 +5,8 @@ extends Enemy
 ##  2) отворот: после очереди или если подошёл ближе 250 пикс — уходит в сторону и вытягивает;
 ##  3) разворот на новый заход.
 ## От него можно уйти манёвром, а можно сесть ему на хвост во время отворота.
+## 3.5: видит, что игрок взял его на прицел (нос на нём), и иногда уходит рывком с бочкой.
+## Элитный — следит за самими очередями и уходит чаще.
 
 var _state := "attack"
 var _state_t := 0.0
@@ -13,6 +15,8 @@ var _burst_cd := 2.0
 var _aim := 0.0
 var _shots := 0
 var _shot_t := 0.0
+var _evade_cd := 1.5
+var _scan_t := 0.0
 
 
 func kind() -> String:
@@ -66,6 +70,7 @@ func behave(delta: float) -> void:
 				_state = "attack"
 				_state_t = 0.0
 	position += Vector2.from_angle(heading) * spd * delta
+	_try_evade(delta)
 
 	# Стрельба
 	if _shots > 0:
@@ -87,6 +92,23 @@ func behave(delta: float) -> void:
 	var off := absf(wrapf(to.angle() - heading, -PI, PI))
 	if _state == "attack" and _burst_cd <= 0.0 and d < 650.0 and d > 200.0 and off < 0.4:
 		_aim = 0.35
+
+
+## 3.5: уход из-под огня (не во время своей очереди)
+func _try_evade(delta: float) -> void:
+	_evade_cd -= delta
+	_scan_t -= delta
+	if _evade_cd > 0.0 or _scan_t > 0.0 or evade_t > 0.0 or _shots > 0:
+		return
+	_scan_t = 0.25
+	var threat := incoming_fire(0.4, 2) if elite else player_aiming(8.0, 650.0)
+	if threat == Vector2.ZERO:
+		return
+	if randf() < (0.7 if elite else 0.35):
+		start_evade(threat, 300.0, 0.65)
+		_evade_cd = randf_range(2.0, 3.0) if elite else randf_range(3.0, 5.0)
+	else:
+		_evade_cd = 1.0
 
 
 func _start_break(to: Vector2) -> void:

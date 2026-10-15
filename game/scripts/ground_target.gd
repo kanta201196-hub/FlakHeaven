@@ -3,9 +3,12 @@ extends Enemy
 ## Наземная цель (позиция ПВО). Не таранит, ракеты «воздух-воздух» её не берут —
 ## работают курсовое, НАР, бомбы, гондолы, турели и навыки.
 ##   zsu    — зенитная установка: очереди по 4 снаряда с упреждением, вспышка перед очередью;
+##            3.5: сбивает наши ракеты и НАР, подлетающие к позиции;
 ##   sam    — зенитный ракетный комплекс: захват (красная линия) → ракета;
 ##   radar  — РЛС: пока жива, ЗСУ и ЗРК стреляют дальше (+30%);
-##   bunker — командный бункер: прочный, без оружия.
+##   bunker — командный бункер: прочный, без оружия. 3.5: главная цель — уничтожен бункер, позиция взята.
+## 3.5: бункер и РЛС стоят на месте; ЗСУ и ЗРК переезжают между позициями вокруг бункера,
+## встают между ним и самолётом и прикрывают его. Без бункера техника теряет управление и уезжает.
 
 var variant := "zsu"
 var site: AASite
@@ -16,9 +19,17 @@ var _shot_t := 0.0
 var _lock := 0.0
 var _t := 0.0
 var _spin := 0.0
-
-
 var _body_angle := 0.0
+# 3.5: переезды и противоракетная оборона
+var _goal := Vector2.INF     # куда едет (точка рельефа)
+var _move_cd := 0.0
+var _def_cd := 0.0
+var _fire_dir := 0.0         # куда смотрит ствол при перехвате (для вспышки)
+var _def_flash := 0.0
+var leaderless := false      # бункер уничтожен
+
+const DRIVE_SPEED := 70.0
+const DEF_R := 300.0         # радиус перехвата наших ракет
 
 
 func setup(v: String, s: AASite, hp_mult: float) -> void:
@@ -45,7 +56,7 @@ func setup(v: String, s: AASite, hp_mult: float) -> void:
 			xp = 3
 			parts = 3
 		"bunker":
-			hp = 260.0
+			hp = 420.0 # 3.5: главная цель позиции
 			radius = 32.0
 			xp = 8
 			parts = 10
@@ -54,6 +65,7 @@ func setup(v: String, s: AASite, hp_mult: float) -> void:
 	repair_chance = 0.15
 	kill_shake = 6.0
 	_cd = randf_range(1.0, 2.5)
+	_move_cd = randf_range(1.0, 3.0)
 
 
 func kind() -> String:
@@ -68,6 +80,24 @@ func apply_hp_mult(_m: float) -> void:
 func _ready() -> void:
 	super()
 	z_index = -2
+	anchor = position # точка рельефа; логическая позиция считается от неё каждый кадр (Enemy._process)
+
+
+## Проекция точки рельефа на слой самолётов (как её видно с камеры). Без 3D — та же точка.
+static func air_pos(g: Vector2) -> Vector2:
+	var r := Render3D.I
+	if r == null or not Render3D.enabled or r.cam == null or r.terrain == null:
+		return g
+	var c := r.cam.global_position
+	var y := r.terrain.surface(g.x, g.y).y
+	if c.y <= 1.0 or c.y - y <= 1.0:
+		return g
+	var k := (c.y - y) / c.y
+	return Vector2(c.x + (g.x - c.x) / k, c.z + (g.y - c.z) / k)
+
+
+func mobile() -> bool:
+	return variant == "zsu" or variant == "sam"
 
 
 func _range() -> float:
@@ -80,14 +110,21 @@ func _range() -> float:
 func behave(delta: float) -> void:
 	_t += delta
 	_spin += delta * 1.5
+	_def_flash = maxf(0.0, _def_flash - delta)
+	if leaderless:
+		_drive_off(delta)
+		return
 	var p := Main.I.player
 	if p == null or p.hp <= 0.0 or site == null or not site.active:
 		return
+	if mobile():
+		_drive(delta, p)
 	var to := p.global_position - global_position
 	var d := to.length()
 	heading = rotate_toward(heading, to.angle(), deg_to_rad(120.0) * delta)
 	match variant:
 		"zsu":
+			_defend(delta)
 			if _shots > 0:
 				_shot_t -= delta
 				if _shot_t <= 0.0:
@@ -111,10 +148,84 @@ func behave(delta: float) -> void:
 					Main.I.sfx.play("missile_enemy", -6.0, 0.9)
 			else:
 				_cd -= delta
-				if _cd <= 0.0 and d < _range():
+				# ЗРК пускает только с места
+				if _cd <= 0.0 and d < _range() and _goal == Vector2.INF:
 					_lock = 1.2
 					_cd = randf_range(5.0, 6.5)
 					Main.I.sfx.play("lock", -6.0, 1.2)
+
+
+## Переезд: раз в несколько секунд — новая точка между бункером и самолётом (полукольцо 140–240 пикс.)
+func _drive(delta: float, p: Player) -> void:
+	if _goal == Vector2.INF:
+		_move_cd -= delta
+		if _move_cd > 0.0 or _lock > 0.0 or site.bunker == null:
+			return
+		var b: Vector2 = site.bunker.anchor
+		var toward := (p.global_position - site.global_position).angle()
+		var slot := b + Vector2.from_angle(toward + randf_range(-1.1, 1.1)) * randf_range(140.0, 240.0)
+		if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
+			slot = Render3D.I.terrain.find_floor(slot, 110.0)
+		_goal = slot
+		return
+	var step := _goal - anchor
+	if step.length() < 6.0:
+		_goal = Vector2.INF
+		_move_cd = randf_range(3.0, 5.5)
+		return
+	_body_angle = rotate_toward(_body_angle, step.angle(), deg_to_rad(140.0) * delta)
+	# сначала доворачивает корпус, потом едет
+	var k := clampf(1.0 - absf(wrapf(step.angle() - _body_angle, -PI, PI)) / 1.2, 0.0, 1.0)
+	anchor += Vector2.from_angle(_body_angle) * minf(DRIVE_SPEED * k * delta, step.length())
+
+
+## Бункер уничтожен: техника без командования прекращает огонь и уходит от позиции
+func _drive_off(delta: float) -> void:
+	if not mobile() or site == null:
+		return
+	var away := (anchor - site.anchor).angle()
+	_body_angle = rotate_toward(_body_angle, away, deg_to_rad(90.0) * delta)
+	anchor += Vector2.from_angle(_body_angle) * DRIVE_SPEED * 0.8 * delta
+
+
+## ПРО позиции: ЗСУ сбивает наши ракеты и НАР в радиусе DEF_R (очередь — 0,5 с перезарядки)
+func _defend(delta: float) -> void:
+	_def_cd -= delta
+	if _def_cd > 0.0:
+		return
+	var pr := Main.I.projectiles
+	var best := -1
+	var best_d := DEF_R
+	var arr := "m"
+	for i in pr.pmissiles.size():
+		var dd := global_position.distance_to(pr.pmissiles[i]["p"])
+		if dd < best_d:
+			best_d = dd
+			best = i
+	for i in pr.rockets.size():
+		if float(pr.rockets[i]["delay"]) > 0.0:
+			continue
+		var dd := global_position.distance_to(pr.rockets[i]["p"])
+		if dd < best_d:
+			best_d = dd
+			best = i
+			arr = "r"
+	if best < 0:
+		return
+	_def_cd = 0.5
+	var mp: Vector2 = (pr.pmissiles[best] if arr == "m" else pr.rockets[best])["p"]
+	_fire_dir = (mp - global_position).angle()
+	_def_flash = 0.12
+	Main.I.fx.zap(global_position, mp)
+	# не каждая очередь попадает: 65%
+	if randf() < 0.65:
+		Main.I.fx.explosion(mp, 12.0)
+		if arr == "m":
+			pr.pmissiles.remove_at(best)
+		else:
+			pr.rockets.remove_at(best)
+		Main.I.tele.add("aa_shot_down")
+	Main.I.sfx.play("enemy_fire", -12.0, 1.6)
 
 
 func _die() -> void:
@@ -126,10 +237,14 @@ func _die() -> void:
 func _draw() -> void:
 	# тень-подложка, чтобы наземное читалось «ниже» самолётов
 	var spr := {"zsu": ["e_zsu", 44.0], "sam": ["e_sam", 54.0], "radar": ["e_radar", 50.0], "bunker": ["e_bunker", 66.0]}
-	var ba: float = heading if variant in ["zsu", "sam"] else _body_angle
+	var ba: float = _body_angle
+	if mobile() and not leaderless and _goal == Vector2.INF and site != null and site.active:
+		ba = heading # стоит — разворачивается на цель
+	if variant == "zsu" and _def_flash > 0.0:
+		ba = _fire_dir
 	if draw_enemy_sprite(spr[variant][0], spr[variant][1], Color.WHITE, ba):
-		if variant == "zsu" and (_aim > 0.0 or _shots > 0):
-			draw_circle(Vector2.from_angle(heading) * 30.0, 6.0, Color(1.0, 0.9, 0.3))
+		if variant == "zsu" and (_aim > 0.0 or _shots > 0 or _def_flash > 0.0):
+			draw_circle(Vector2.from_angle(ba) * 30.0, 6.0, Color(1.0, 0.9, 0.3))
 		if variant == "sam" and _lock > 0.0:
 			var pl := Main.I.player
 			if pl != null and pl.hp > 0.0:

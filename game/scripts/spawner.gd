@@ -8,9 +8,9 @@ var _drone_cd := 3.0
 var _carrier_cd := 25.0
 var _icpt_cd := 40.0
 var boss_wave := 0
-## Активности: 1:30, 4:00, 6:30… каждые 2,5 мин, по очереди «позиция ПВО» и «догфайт».
+## Активности: с 1:00 каждую минуту (3.5, было 2,5 мин), по очереди «позиция ПВО» и «догфайт».
 ## Не стартуют, пока жив ас или идёт прошлая активность.
-var next_activity := 90.0
+var next_activity := 60.0
 var activity_i := 0
 var activity_node: Node = null
 
@@ -22,6 +22,30 @@ func _ready() -> void:
 var _grid := {}
 const CELL := 90.0
 
+## 3.5: урон игрока за последние 60 с — по нему считается прочность асов и бункера.
+## Иначе к 10–15-й минуте урон игрока растёт в ~30 раз, а прочность врагов — в ~3, и ас живёт 3–6 с.
+var _dealt_hist := PackedFloat32Array()   # сумма урона на каждую секунду вылета
+var _dealt_tick := 0.0
+## Сколько секунд ас должен выдерживать сосредоточенный огонь (по номеру волны асов)
+const BOSS_TTK := [25.0, 30.0, 35.0]
+const BUNKER_TTK := 9.0
+
+
+func dealt_total() -> float:
+	var sum := 0.0
+	for v in (Main.I.stats["dealt"] as Dictionary).values():
+		sum += float(v)
+	return sum
+
+
+## Средний урон игрока в секунду за последние 60 с
+func recent_dps() -> float:
+	var n := _dealt_hist.size()
+	if n < 2:
+		return 0.0
+	var back := mini(60, n - 1)
+	return (_dealt_hist[n - 1] - _dealt_hist[n - 1 - back]) / float(back)
+
 
 func _process(delta: float) -> void:
 	var m := Main.I
@@ -30,6 +54,12 @@ func _process(delta: float) -> void:
 		return
 	var t := m.run_time
 	_build_grid()
+	_dealt_tick += delta
+	if _dealt_tick >= 1.0 or _dealt_hist.is_empty():
+		_dealt_tick = 0.0
+		_dealt_hist.append(dealt_total())
+		if _dealt_hist.size() > 120:
+			_dealt_hist = _dealt_hist.slice(_dealt_hist.size() - 61)
 	# Ас каждые 5 минут
 	var due := int(t / Tuning.g("boss_every"))
 	if due > boss_wave:
@@ -100,7 +130,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 	if kind_s == "ground":
 		var site := AASite.new()
 		var dir := p.heading + randf_range(-1.0, 1.0)
-		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k)
+		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k, recent_dps() * BUNKER_TTK)
 		Main.I.world.add_child(site)
 		activity_node = site
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
@@ -124,6 +154,13 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	var variants: Array = ["carrier"] if wave == 1 else (["interceptor"] if wave == 2 else ["carrier", "interceptor"])
 	# 3.1: асы прочнее и растут вместе со временем вылета (как обычные враги)
 	var hp := Tuning.g("boss_hp") * Tuning.g("enemy_hp_mult") * 0.6 * hp_ramp(Main.I.run_time)
+	# 3.5: не меньше, чем урон игрока за BOSS_TTK секунд (щит +35% сверху — поэтому делим)
+	var ttk: float = BOSS_TTK[mini(wave - 1, BOSS_TTK.size() - 1)]
+	var hp_dps := recent_dps() * ttk / 1.35
+	if OS.get_cmdline_user_args().has("--autotest"):
+		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f)" % [wave, hp, hp_dps, recent_dps()])
+	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
+		hp = maxf(hp, hp_dps)
 	for v in variants:
 		var b := Boss.new()
 		b.setup(v, hp)
