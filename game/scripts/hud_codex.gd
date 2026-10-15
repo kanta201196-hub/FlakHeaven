@@ -141,7 +141,7 @@ func draw(m: Main, size: Vector2) -> void:
 			else:
 				_text(Vector2(x, y + 48), "другой навык — выбирается перед вылетом", 13, Color(0.5, 0.52, 0.58))
 		else:
-			_text(Vector2(x + 860, y + 24), _cond_text(ss), 13, Color(0.7, 0.72, 0.78), HORIZONTAL_ALIGNMENT_RIGHT, 0)
+			_text(Vector2(x + 860, y + 24), _cond_text(sk), 13, Color(0.7, 0.72, 0.78), HORIZONTAL_ALIGNMENT_RIGHT, 0)
 		y += hh
 	y += 20.0
 	_text(Vector2(x, y), "ЭВОЛЮЦИИ (оружие ур. 5 + модуль-катализатор, с 7:00)", 22, Cards.EVO_COLOR)
@@ -169,10 +169,7 @@ func draw(m: Main, size: Vector2) -> void:
 		y += 60.0
 
 
-func _cond_text(s: Dictionary) -> String:
-	var parts := PackedStringArray(["доводка ≥ I"])
-	if s.has("w"):
-		parts.append("%s ур. %d" % [Weapons.DEFS[s["w"]]["short"], int(s["lvl"])])
-	if s.has("tag"):
-		parts.append("%s %d" % [Prog.tag_title(s["tag"]), int(s["n"])])
-	return " + ".join(parts)
+## 3.2: условие связки навыка — главный (первый) тег навыка по порогам слотов + доводка I/II/III
+func _cond_text(sk: String) -> String:
+	var t: String = PlaneClasses.SKILL3[sk]["tags"][0]
+	return "%s %d/%d/%d + доводка I/II/III" % [Prog.tag_title(t), Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]]
