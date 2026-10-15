@@ -466,20 +466,22 @@ func on_activity_success(kind: String) -> void:
 	activities_done += 1
 	if _autotest:
 		print("AUTOTEST: activity success ", kind, " at %.0f" % run_time)
-	if kind == "ground":
-		# 3.1: награда понятнее — внеочередной выбор из редких карточек (как за аса)
+	# 3.5: активности стали чаще (раз в минуту) — выбор из редких карточек за каждую вторую,
+	# за остальные — ремонт 20% и запчасти, иначе сила игрока растёт ещё быстрее (лог 3.4-t1: Кит неуязвим с 12-й минуты)
+	var rare := activities_done % 2 == 1
+	var what := "Позиция ПВО уничтожена!" if kind == "ground" else "Ас-соперник сбит!"
+	player.add_course_pts(1)
+	if rare:
 		pending_levels += 1
 		rare_picks += 1
-		rare_reasons.append("ЗА ПОЗИЦИЮ ПВО")
-		player.add_course_pts(1)
-		parts += 40.0 * continue_mult()
-		show_banner("Позиция ПВО уничтожена! Награда: выбор из редких карточек и +40 запчастей", 4.0)
+		rare_reasons.append("ЗА ПОЗИЦИЮ ПВО" if kind == "ground" else "ЗА АСА")
 	else:
-		pending_levels += 1
-		rare_picks += 1
-		rare_reasons.append("ЗА АСА")
-		player.add_course_pts(1)
-		show_banner("Ас-соперник сбит! Выбор из редких карточек", 4.0)
+		player.heal(player.max_hp * 0.2)
+	if kind == "ground":
+		parts += 40.0 * continue_mult()
+	if not rare:
+		parts += 60.0 * continue_mult()
+	show_banner("%s Награда: %s" % [what, "выбор из редких карточек" + (" и +40 запчастей" if kind == "ground" else "") if rare else "ремонт 20%% и +%d запчастей" % (100 if kind == "ground" else 60)], 4.0)
 	sfx.play("evac", -4.0, 1.3)
 
 
