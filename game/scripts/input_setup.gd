@@ -16,7 +16,7 @@ func _ready() -> void:
 	_add("throttle_cut", [KEY_CTRL], [JOY_BUTTON_LEFT_SHOULDER])
 	_add("sharp_turn", [KEY_E], [JOY_BUTTON_X])
 	_add("skill_2", [KEY_F], [JOY_BUTTON_B])
-	_add("toggle_scheme", [KEY_F2], [JOY_BUTTON_LEFT_STICK])
+	_add("toggle_scheme", [KEY_F2], []) # 3.4: без L3 — нажатие стика в бою случайно меняло схему
 	_add("toggle_tuning", [KEY_F1], [])
 	_add("toggle_numbers", [KEY_F3], [])
 	_add("toggle_sprites", [KEY_F4], [])

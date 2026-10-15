@@ -219,17 +219,25 @@ func _update_bullets(delta: float) -> void:
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	for i in range(bullets.size() - 1, -1, -1):
 		var b := bullets[i]
-		b["life"] = float(b["life"]) - delta
-		var p: Vector2 = b["p"] + b["v"] * delta
+		var dt := delta + float(b.get("lag", 0.0))
+		b.erase("lag")
+		b["life"] = float(b["life"]) - dt
+		var p0: Vector2 = b["p"]
+		var p: Vector2 = p0 + b["v"] * dt
 		b["p"] = p
 		var hit := false
 		for n in enemies:
 			var e := n as Enemy
 			if e == null or e.hp <= 0.0:
 				continue
-			if p.distance_squared_to(e.global_position) < e.radius * e.radius:
+			# 3.4: попадание по всему отрезку за кадр, а не только по конечной точке (на 30–40 FPS пули пролетали мелких врагов)
+			if seg_hit(p0, p, e.global_position, e.radius):
 				if b.has("hit") and (b["hit"] as Array).has(e):
 					continue
+				if p.distance_squared_to(e.global_position) >= e.radius * e.radius:
+					Main.I.tele.add("swept_hits")
+				if b.has("lead"):
+					Main.I.tele.add("hits_lead")
 				var manual: bool = b["m"]
 				var src: String = b["src"]
 				e.take_hit(float(b["dmg"]) * _bullet_k(src, e), src)
@@ -252,6 +260,14 @@ func _update_bullets(delta: float) -> void:
 			if not hit and b["m"] and is_instance_valid(Main.I.player):
 				Main.I.player.on_bullet_miss()
 			bullets.remove_at(i)
+
+
+## Отрезок a→b проходит через круг (c, r)
+static func seg_hit(a: Vector2, b: Vector2, c: Vector2, r: float) -> bool:
+	var ab := b - a
+	var l2 := ab.length_squared()
+	var t := 0.0 if l2 < 0.0001 else clampf((c - a).dot(ab) / l2, 0.0, 1.0)
+	return (a + ab * t).distance_squared_to(c) < r * r
 
 
 ## «Кассетная БЧ»: ракета В-В игрока разбрасывает суббоеприпасы
@@ -453,7 +469,7 @@ func _update_missiles(delta: float) -> void:
 				Main.I.stats_add_counter("missile_hits", 1)
 				done = true
 			else:
-				_check_near_miss(m, dm, pl.radius + 50.0, pl, "ракета")
+				_check_near_miss(m, dm, pl.radius + 50.0, pl, "ракета", pl.radius + 6.0)
 		if done:
 			Main.I.fx.hit_spark(p, Color(1, 0.5, 0.2))
 			missiles.remove_at(i)
@@ -465,7 +481,8 @@ func _update_enemy_bullets(delta: float) -> void:
 	for i in range(ebullets.size() - 1, -1, -1):
 		var b := ebullets[i]
 		b["life"] = float(b["life"]) - delta
-		var p: Vector2 = b["p"] + b["v"] * delta
+		var p0: Vector2 = b["p"]
+		var p: Vector2 = p0 + b["v"] * delta
 		b["p"] = p
 		var done := float(b["life"]) <= 0.0
 		var r := 9.0 if b["big"] else 5.0
@@ -478,26 +495,34 @@ func _update_enemy_bullets(delta: float) -> void:
 					break
 		if alive and not done:
 			var d := p.distance_to(pl.global_position)
-			if not pl.is_invulnerable() and d < pl.radius + r:
+			# 3.4: пересечение по относительному движению за кадр (быстрый самолёт не «проскакивает» пулю)
+			var rel_hit := seg_hit(p0 - (pl.global_position - pl.velocity * delta), p - pl.global_position, Vector2.ZERO, pl.radius + r)
+			if not pl.is_invulnerable() and rel_hit:
 				pl.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0), "пули", str(b["who"]))
 				done = true
 			else:
-				_check_near_miss(b, d, pl.radius + r + 30.0, pl, "пуля")
+				_check_near_miss(b, d, pl.radius + r + 30.0, pl, "пуля", pl.radius + r)
 		if done:
 			ebullets.remove_at(i)
 
 
 ## Снаряд прошёл рядом и начал удаляться, не попав, — «на волоске»
-func _check_near_miss(b: Dictionary, d: float, near: float, pl: Player, kind: String) -> void:
+func _check_near_miss(b: Dictionary, d: float, near: float, pl: Player, kind: String, hit_r := 0.0) -> void:
 	if b.get("nm", false):
 		return
 	var prev: float = b.get("pd", INF)
 	b["pd"] = d
+	# 3.4: снаряд прошёл сквозь неуязвимый самолёт — это не «на волоске», перезарядки не сокращаются
+	if d < hit_r and pl.is_invulnerable():
+		b["through"] = true
 	if d < near:
 		b["close"] = true
 	elif b.get("close", false) and d > prev:
 		b["nm"] = true
-		pl.on_near_miss(kind)
+		if b.get("through", false):
+			Main.I.tele.add("nm_through")
+		else:
+			pl.on_near_miss(kind)
 		# 2.4: увернулся от ракеты — она проскакивает и гаснет, второго захода нет
 		if kind == "ракета":
 			b["lost"] = true

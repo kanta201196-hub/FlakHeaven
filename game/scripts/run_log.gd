@@ -12,7 +12,8 @@ const LOG_DEALT := ["курсовое (авто)", "курсовое (ручн.)
 
 static func write(m: Main, outcome: String) -> void:
 	m.menu.add_record(PlaneClasses.DATA[m.cls_id]["title"], outcome, m.run_time, m.level, m.kills)
-	var path := "user://playtest_log_%s.csv" % Main.BUILD
+	# 3.4: новые колонки — новый файл (версия набора колонок в имени), чтобы не смешивать заголовки
+	var path := "user://playtest_log_%s_%s.csv" % [Main.BUILD, Telemetry.LOG_VER]
 	var exists := FileAccess.file_exists(path)
 	var f := FileAccess.open(path, FileAccess.READ_WRITE if exists else FileAccess.WRITE)
 	if f == null:
@@ -24,6 +25,8 @@ static func write(m: Main, outcome: String) -> void:
 	head += ";shots;hits;peak_rev;near_misses;best_streak;tail_kills;banned;cards;synergies;max_hp"
 	head += ";skill3;skill3_lvl;skill3_uses;tags;patches;evolutions;wingmen;intercepted;dealt_detail;taken_by"
 	head += ";skill2;course_log;syn_open;course_pts;crew_lvl;crew_xp_gain;parts_total;nodes;plane2;perks;wbranch;meta_k"
+	# 3.4: замеры для анализа правок по кросс-проверке (Telemetry); timeline — последняя колонка
+	head += ";log_ver;" + ";".join(PackedStringArray(Telemetry.COLS)) + ";timeline"
 	m.last_log_header = head
 	if exists:
 		f.seek_end()
@@ -52,6 +55,10 @@ static func write(m: Main, outcome: String) -> void:
 	row.append_array(PackedStringArray([m.player.skill_b, " | ".join(PackedStringArray(m.course_log)), kv(m.player.syn), str(m.player.course_pts),
 		str(Profile.crew_lvl(m.cls_id)), str(int(m.meta_award.get("xp_add", 0))), str(Profile.parts()), kv(Profile.cls(m.cls_id)["nodes"]),
 		str(Profile.plane2(m.cls_id)), ",".join(PackedStringArray(Profile.cls(m.cls_id)["perks"])), " ".join(wb), str(Tuning.g("meta_k"))]))
+	m.tele.v["xp_continue"] = float(m.meta_award.get("xp_continue", 0))
+	row.append(Telemetry.LOG_VER)
+	row.append_array(m.tele.row(m))
+	row.append(" | ".join(m.tele.timeline))
 	m.last_log_row = ";".join(row)
 	m.last_outcome = outcome
 	f.store_line(m.last_log_row)

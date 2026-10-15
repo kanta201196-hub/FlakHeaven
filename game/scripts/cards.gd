@@ -230,7 +230,10 @@ static func course_options(p: Player) -> Array:
 	if not have.is_empty():
 		out.append(have[0])
 	var sid: String = PlaneClasses.SKILL3[p.skill3]["syn"]["id"]
-	if not p.syn.has(sid):
+	# 3.4: «Под одним зонтом» без живых постоянных ведомых бесполезна — не предлагаем курсом
+	if sid == "s_shelter" and p.permanent_wingmen() == 0:
+		Main.I.tele.add("course_shelter_skipped")
+	elif not p.syn.has(sid):
 		out.append(sid)
 	var rest: Array = avail.filter(func(id): return not out.has(id))
 	rest.shuffle()
@@ -511,7 +514,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			if r > 0:
 				card["desc"] += "\nБонус редкости: +%s урона группы" % _pct(0.15 * (k - 1.0))
 			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
-				card["desc"] += "\nЭволюция: ур. 5 + %s, с 5:00" % _cat_text(g2.weapon)
+				card["desc"] += "\nЭволюция: ур. 5 + %s, с %d:%02d" % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
 			card["desc"] = syn_def(p, card["syn"])["desc"] + "\nОткрывает слот %d из %d. Следующий слот дороже." % [p.syn.size() + 1, MAX_SYN]
 		"evolution":
