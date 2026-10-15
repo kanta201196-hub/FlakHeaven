@@ -149,6 +149,19 @@ func _ready() -> void:
 	_elite_mat.albedo_color = Color(1.0, 0.75, 0.2, 0.28)
 	_elite_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_elite_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	apply_gfx(Settings.gfx)
+
+
+## T4-04: «Качество графики». Низкое — тени солнца ближе и грубее, мелкие модели биома без теней и вдвое реже;
+## Среднее — тени ближе и грубее; Высокое — как было; Максимальное — + сглаживание MSAA 2×.
+## Деревья полной детализации (11–14 тыс. треуг.) — только на «Максимальном» (BiomeProps).
+func apply_gfx(q: int) -> void:
+	# тени не выключаем: в GL Compatibility без теней солнца кадр темнее и рыжее (замер стенда: яркость 104 против 144)
+	sun.directional_shadow_max_distance = [1500.0, 2500.0, 4000.0, 4000.0][q]
+	RenderingServer.directional_shadow_atlas_set_size([1024, 2048, 4096, 4096][q], true)
+	get_viewport().msaa_3d = Viewport.MSAA_2X if q >= 3 else Viewport.MSAA_DISABLED
+	if terrain != null:
+		terrain.clear()   # куски рельефа пересоберутся с новыми моделями биома
 
 
 # ---------- слой боя для наклонной камеры (B-47) ----------

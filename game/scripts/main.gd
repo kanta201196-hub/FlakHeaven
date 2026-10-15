@@ -70,7 +70,7 @@ var shake := 0.0
 var god_mode := false
 ## Тестовая сборка для внешних тестеров: экспорт с фичей «tester» или флаг --tester → без отладки
 static var DEBUG := true
-const BUILD := "3.3-t2"
+const BUILD := "3.4-t1"
 ## 3.3-t2: отчёты тестеров уходят в Google Таблицу через веб-приложение Apps Script (пусто — кнопки нет)
 const REPORT_URL_BUILTIN := "https://script.google.com/macros/s/AKfycbxUYjbaKRdhawZJqQp52ZlEnh2LoAxDyEf-PefnyF_90ssskJgmcnFrTGJ0P7Y9PHrw/exec"
 static var REPORT_URL := ""
@@ -104,6 +104,9 @@ func _ready() -> void:
 	for a in _args:
 		if a.begins_with("--report-url="):
 			REPORT_URL = a.substr(13)
+		if a.begins_with("--gfx="):    # T4-04: качество графики 0–3 на этот запуск (стенд, сравнение пресетов)
+			Settings.gfx = clampi(int(a.substr(6)), 0, Settings.GFX_MAX)
+			Settings.gfx_auto = false
 		if a.begins_with("--tilt="):   # B-47: наклон камеры, град (проба; 0 — строго сверху)
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
 	DEBUG = not (OS.has_feature("tester") or _args.has("--tester"))

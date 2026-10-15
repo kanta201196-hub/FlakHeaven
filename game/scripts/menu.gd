@@ -209,6 +209,10 @@ func _option(key: String, dir: int) -> void:
 			Tuning.save_params()
 		"cam_tilt":
 			Main.I.input_ctl.cycle_tilt(dir)
+		"gfx":
+			Settings.gfx = wrapi(Settings.gfx + dir, 0, Settings.GFX_MAX + 1)
+			Settings.gfx_auto = false   # выбрал сам — автоснижение больше не трогает
+			Settings.apply_gfx()
 	Settings.save_settings()
 
 
@@ -450,6 +454,7 @@ func _settings(size: Vector2) -> void:
 			var fl: int = Settings.FPS_LIMITS[Settings.fps_limit]
 			y = _opt(x, y, w2, "Ограничение кадров", "без ограничения" if fl == 0 else "%d к/с" % fl, "fps_limit")
 			y = _section(x, y + 10, w2, "Картинка")
+			y = _opt(x, y, w2, "Качество графики", Settings.GFX[Settings.gfx] + (" (авто)" if Settings.gfx_auto else ""), "gfx")
 			y = _check(x, y, w2, "Объёмная 3D-картинка (выкл. — старая 2D)", Tuning.g("render3d") > 0.5, "render3d")
 			y = _check(x, y, w2, "Спрайты (выкл. — схематичные фигуры, F4)", Tuning.g("sprites") > 0.5, "sprites")
 			y = _check(x, y, w2, "Круги дальности оружия (пунктир)", Tuning.g("range_rings") > 0.5, "range_rings")

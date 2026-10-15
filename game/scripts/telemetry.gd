@@ -5,12 +5,19 @@ extends RefCounted
 ## timeline — снимок каждой минуты вылета, компактной строкой.
 
 ## Версия набора колонок: меняется — меняется и имя файла лога
-const LOG_VER := "l3"
+const LOG_VER := "l4"
 const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_s", "kbm_s", "scheme_changes",
 	"gun_rate_max", "gun_multi_frames", "shots_lead", "hits_lead", "lead_nosol", "swept_hits",
 	"roll_uses", "invuln_s", "invuln_chain_max", "nm_through", "hitstops", "hitstop_in_slowmo",
 	"speed_avg", "speed_max", "turn_max", "twin_extra", "carpet_road_evo", "course_shelter_skipped", "xp_continue",
-	"cam_tilt", "tilt_changes", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s"]
+	"cam_tilt", "tilt_changes", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s",
+	# T4-03: 3D-картинка и производительность (рельеф, модели биома, тени, качество графики)
+	"gfx_start", "gfx", "gfx_drops", "plane_shadow", "tris_avg", "tris_max", "draws_avg", "draws_max", "vram_mb",
+	"nodes_max", "enemies_max", "load_ms", "chunks", "chunk_ms_max"]
+
+## T4-04: автоснижение качества — окна по 20 с с 5-й секунды; FPS ниже порога → пресет ниже (до 3 раз за вылет)
+const AUTO_FPS := 35.0
+const AUTO_WIN := 20.0
 
 var v := {}
 var timeline := PackedStringArray()
@@ -21,6 +28,11 @@ var _speed_acc := 0.0
 var _speed_n := 0
 var _next_min := 60.0
 var _snap := {}
+var _t0 := 0
+var _rs_n := 0            # замеров счётчиков отрисовки
+var _auto_t := 0.0        # время и кадры текущего окна автоснижения
+var _auto_f := 0
+var _auto_win := 0
 
 
 func reset() -> void:
@@ -32,6 +44,12 @@ func reset() -> void:
 	_speed_n = 0
 	_next_min = 60.0
 	_snap = {}
+	_t0 = Time.get_ticks_msec()
+	_rs_n = 0
+	_auto_t = 0.0
+	_auto_f = 0
+	_auto_win = 0
+	v["gfx_start"] = float(Settings.gfx)
 
 
 func add(k: String, n := 1.0) -> void:
@@ -62,6 +80,11 @@ func frame(delta: float, m: Main) -> void:
 		add("slow_frames")
 	add(_device + "_s", real)
 	add("tilt%d_s" % int(round(Tuning.g("cam_tilt"))), real)   # B-47: сколько секунд при каждом наклоне
+	if _frames.size() == 3:
+		v["load_ms"] = float(Time.get_ticks_msec() - _t0)   # от старта вылета до третьего кадра: рельеф и модели вокруг
+	if _frames.size() % 15 == 0:
+		_render_stats(m)
+	_auto_gfx(real, m)
 	var p := m.player
 	if not is_instance_valid(p):
 		return
@@ -81,6 +104,50 @@ func frame(delta: float, m: Main) -> void:
 		_next_min += 60.0
 
 
+## Счётчики отрисовки за прошлый кадр — раз в 15 кадров
+func _render_stats(m: Main) -> void:
+	var tris := float(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME))
+	var draws := float(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
+	_rs_n += 1
+	add("tris_sum", tris)
+	add("draws_sum", draws)
+	maxv("tris_max", tris)
+	maxv("draws_max", draws)
+	maxv("vram_mb", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED) / 1048576.0)
+	maxv("nodes_max", Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+	if _rs_n % 4 == 0:
+		maxv("enemies_max", m.get_tree().get_nodes_in_group("enemies").size())
+
+
+## Кусок рельефа с моделями собран за ms (Terrain3D)
+func chunk_built(ms: float) -> void:
+	add("chunks")
+	maxv("chunk_ms_max", ms)
+
+
+## Автоснижение «Качества графики», пока игрок не выбрал его сам
+func _auto_gfx(real: float, m: Main) -> void:
+	if not Settings.gfx_auto or Settings.gfx == 0 or _auto_win >= 3 or m.run_time < 5.0 or m._autotest:
+		return
+	_auto_t += real
+	_auto_f += 1
+	if _auto_t < AUTO_WIN:
+		return
+	var fps := _auto_f / _auto_t
+	_auto_t = 0.0
+	_auto_f = 0
+	_auto_win += 1
+	var cap := float(Settings.FPS_LIMITS[Settings.fps_limit])
+	if fps >= AUTO_FPS or (cap > 0.0 and cap < AUTO_FPS + 5.0):
+		_auto_win = 3   # FPS в норме — больше не проверяем в этом вылете
+		return
+	Settings.gfx -= 1
+	Settings.save_settings()
+	Settings.apply_gfx()
+	add("gfx_drops")
+	m.show_banner("Качество графики снижено до «%s» (%d к/с). Изменить: «Настройки» → «Графика»" % [Settings.GFX[Settings.gfx], int(fps)], 5.0)
+
+
 func _minute(m: Main) -> void:
 	var p := m.player
 	var now := {"dealt": m.total("dealt"), "taken": m.total("taken"), "kills": m.kills, "shots": m.shots, "hits": m.hits,
@@ -95,10 +162,12 @@ func _minute(m: Main) -> void:
 	var main_tag := 0
 	if p.has_course():
 		main_tag = p.tag(Cards.syn_def(p, p.course)["tag"])
-	timeline.append("%d:L%d hp%d fps%d dmg%d tk%d k%d sh%d/%d nm%d inv%.1f v%d syn%d c=%s/%d t%d" % [int(m.run_time / 60.0), m.level,
+	timeline.append("%d:L%d hp%d fps%d dmg%d tk%d k%d sh%d/%d nm%d inv%.1f v%d syn%d c=%s/%d t%d g%d tr%dk e%d" % [int(m.run_time / 60.0), m.level,
 		int(round(100.0 * p.hp / maxf(p.max_hp, 1.0))), int(round(fps)), int(d["dealt"]), int(d["taken"]), int(d["kills"]),
 		int(d["shots"]), int(d["hits"]), int(d["nm"]), float(d["inv"]), int(round(p.velocity.length())), p.syn.size(),
-		p.course if p.course != "" else "-", main_tag, int(round(Tuning.g("cam_tilt")))])
+		p.course if p.course != "" else "-", main_tag, int(round(Tuning.g("cam_tilt"))), Settings.gfx,
+		int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1000),
+		m.get_tree().get_nodes_in_group("enemies").size()])
 	_snap = now
 
 
@@ -119,6 +188,10 @@ func row(m: Main) -> PackedStringArray:
 	v["vsync"] = 1.0 if Settings.vsync else 0.0
 	v["speed_avg"] = _speed_acc / maxf(_speed_n, 1)
 	v["cam_tilt"] = Tuning.g("cam_tilt")
+	v["gfx"] = float(Settings.gfx)
+	v["plane_shadow"] = Tuning.g("plane_shadow")
+	v["tris_avg"] = g("tris_sum") / maxf(_rs_n, 1)
+	v["draws_avg"] = g("draws_sum") / maxf(_rs_n, 1)
 	var out := PackedStringArray()
 	for k in COLS:
 		var x := g(k)

@@ -21,6 +21,11 @@ const KINDS := {
 	"sandbag": ["b10_sandbag_post", 40.0, 55.0],
 }
 
+## T4-05: облегчённые деревья для пресетов ниже «Максимального» — ствол и крона простыми фигурами
+## по габаритам модели Meshy (~150 треуг. вместо 11–14 тыс.). Цвета — зелень садов из стайл-гайда.
+const LITE := {"poplar": Color(0.33, 0.39, 0.21), "orchard": Color(0.39, 0.43, 0.24)}
+const TRUNK_C := Color(0.33, 0.26, 0.2)
+
 var _meshes := {}   # вид → Mesh (или null, если модели нет)
 var _t: Terrain3D
 
@@ -30,16 +35,65 @@ func _init(terrain: Terrain3D) -> void:
 
 
 func _mesh(kind: String) -> Mesh:
+	if LITE.has(kind) and Settings.gfx < Settings.GFX_MAX:
+		var lk := kind + "_lite"
+		if not _meshes.has(lk):
+			_meshes[lk] = _lite_tree(kind)
+		return _meshes[lk]
+	return _full_mesh(kind)
+
+
+## Простое дерево в габаритах полной модели: ствол — шестигранник, крона — сплюснутая сфера
+func _lite_tree(kind: String) -> Mesh:
+	var full := _full_mesh(kind)
+	var size := full.get_aabb().size if full != null else Vector3(1.0, 1.4, 1.0)
+	var h := size.y
+	var am := ArrayMesh.new()
+	var trunk := CylinderMesh.new()
+	trunk.radial_segments = 6
+	trunk.rings = 1
+	trunk.top_radius = 0.035
+	trunk.bottom_radius = 0.05
+	trunk.height = h * 0.35
+	_add_part(am, trunk, Transform3D(Basis(), Vector3(0, h * 0.175, 0)), TRUNK_C)
+	var crown := SphereMesh.new()
+	crown.radial_segments = 10
+	crown.rings = 6
+	var cw := minf(size.x, size.z) * 0.9   # модели нормированы: ширина по X/Z = 1
+	crown.radius = 0.5
+	crown.height = 1.0
+	var ch := h * (0.75 if kind == "poplar" else 0.62)
+	_add_part(am, crown, Transform3D(Basis().scaled(Vector3(cw, ch, cw)), Vector3(0, h - ch * 0.5, 0)), LITE[kind])
+	return am
+
+
+func _add_part(am: ArrayMesh, pm: PrimitiveMesh, xf: Transform3D, c: Color) -> void:
+	var arr := pm.get_mesh_arrays()
+	var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	for i in vs.size():
+		vs[i] = xf * vs[i]
+		ns[i] = (xf.basis.inverse().transposed() * ns[i]).normalized()
+	arr[Mesh.ARRAY_VERTEX] = vs
+	arr[Mesh.ARRAY_NORMAL] = ns
+	arr[Mesh.ARRAY_TANGENT] = null
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.roughness = 0.95
+	am.surface_set_material(am.get_surface_count() - 1, m)
+
+
+func _full_mesh(kind: String) -> Mesh:
 	if not _meshes.has(kind):
-		var m: Mesh = null
+		_meshes[kind] = null
 		var path: String = DIR + KINDS[kind][0] + ".glb"
 		if ResourceLoader.exists(path):
 			var scene := (load(path) as PackedScene).instantiate()
 			var mi := _find_mesh(scene)
 			if mi != null:
-				m = mi.mesh
+				_meshes[kind] = mi.mesh
 			scene.free()
-		_meshes[kind] = m
 	return _meshes[kind]
 
 
@@ -100,6 +154,8 @@ func build(key: Vector2i, parent: Node3D) -> void:
 					_ring_zone(rng, put, "spire", p0, r0 * 0.6, r0 * 0.9, ["fan", "slope", "crest"])
 	# по зонам рельефа: каждый вид — там, где он бывает в природе (правила — s4-landscape-rules.md)
 	for i in 90:
+		if Settings.gfx == 0 and i % 2 == 1:   # «Низкое»: мелочи по зонам вдвое реже
+			continue
 		var p := Vector2(ox + rng.randf() * Terrain3D.CHUNK, oz + rng.randf() * Terrain3D.CHUNK)
 		var z := _zone(p)
 		var roll := rng.randf()
@@ -146,7 +202,8 @@ func build(key: Vector2i, parent: Node3D) -> void:
 			mm.set_instance_transform(j, arr[j])
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
-		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		var small: bool = kind in ["shrub", "boulders", "poplar", "orchard"]
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if Settings.gfx == 0 and small else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		parent.add_child(mmi)
 
 

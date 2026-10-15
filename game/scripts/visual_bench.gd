@@ -27,7 +27,9 @@ func _init(main: Main) -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--tilt="):
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
-			_suffix = "_t" + a.substr(7)
+			_suffix += "_t" + a.substr(7)
+		if a.begins_with("--gfx="):   # T4-04: сравнение пресетов качества — vis_<имя>_gN.png
+			_suffix += "_g" + a.substr(6)
 
 
 func process(delta: float) -> void:

@@ -14,7 +14,8 @@ const MAX_CELL = 45000;                  // лимит ячейки Google Та�
 const REPORT_COLS = [
   'Получен', 'Сборка', 'Тестер', 'Отправлен из игры', 'Класс', 'Итог', 'Время вылета, с', 'Уровень', 'Сбито',
   'Связки', 'Оценка 1–5', 'Сыграть ещё?', 'Скучно / раздражало', 'Непонятно', 'Комментарий / баги',
-  'ОС', 'Видеокарта', 'Экран', 'FPS средн.', 'ID отчёта'
+  'ОС', 'Видеокарта', 'Экран', 'FPS средн.', 'ID отчёта',
+  'Картинка / камера / пули / тормоза'   // с 3.4; в старой таблице заголовок дописать вручную (ответы есть и в комментарии)
 ];
 const LOG_COLS = ['ID отчёта', 'Сборка', 'Тестер', 'Заголовок лога', 'Строка лога вылета', 'Хвост журнала Godot'];
 
@@ -57,7 +58,7 @@ function doPost(e) {
     sheet_('Отчёты', REPORT_COLS).appendRow([
       new Date(), d.build, d.tester, d.sent_at, d.cls, d.outcome, d.run_seconds, d.level, d.kills,
       d.synergies, d.rating, d.again, cut_(d.boring), cut_(d.unclear), cut_(d.comment),
-      d.os, d.gpu, d.screen, d.fps, id
+      d.os, d.gpu, d.screen, d.fps, id, d.visual
     ].map(v => (typeof v === 'string' ? cut_(v) : v)));
     sheet_('Логи', LOG_COLS).appendRow([id, d.build, d.tester, cut_(d.run_header), cut_(d.run_row), cut_(d.log_tail)]);
     return ContentService.createTextOutput('ok ' + id);
