@@ -115,8 +115,12 @@ func explosion(pos: Vector2, size: float, air := true, secondary := true) -> voi
 			debris.append({"p": pos, "v": dv, "a": randf() * TAU, "w": randf_range(-12.0, 12.0), "s": randf_range(2.0, 4.5) * (0.6 + s / 30.0),
 				"life": life3, "max": life3, "puff": 0.0})
 	# двойная ударная волна: яркое тонкое кольцо и пыльная волна у земли
-	rings.append({"p": pos, "r": s * 0.6, "max": s * 3.6, "life": 0.3, "max_life": 0.3, "c": Color(1.0, 0.92, 0.75)})
-	if not air or s > 16.0:
+	# 3.4-t1 (п. 33): в 3D плоские кольца выглядели «кругами на земле», а не ударной волной — там их нет,
+	# волну передают вспышка, свет взрыва и разлёт огня
+	var flat := not (Render3D.I != null and Render3D.enabled)
+	if flat:
+		rings.append({"p": pos, "r": s * 0.6, "max": s * 3.6, "life": 0.3, "max_life": 0.3, "c": Color(1.0, 0.92, 0.75)})
+	if flat and (not air or s > 16.0):
 		rings.append({"p": pos, "r": s * 0.8, "max": s * 4.4, "life": 0.7, "max_life": 0.7, "c": Color(0.75, 0.62, 0.45), "dust": true})
 	# вторичные хлопки у крупных взрывов
 	if secondary and s >= 16.0:

@@ -91,6 +91,8 @@ func _ready() -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.directional_shadow_max_distance = 4000.0
 	sun.shadow_bias = 0.05
+	# 3.4-t1 (п. 18): тени уступов на склонах были почти чёрными полосами — свет неба их подсвечивает
+	sun.shadow_opacity = 0.8
 	# B-24: солнце ниже (~40° над горизонтом) — тени длиннее, у объектов видна теневая сторона.
 	# Свет сверху-слева (на экране): тени уходят вниз-вправо
 	sun.basis = Basis.looking_at(Vector3(0.62, -0.85, 0.75).normalized(), Vector3(0, 0, -1))
@@ -560,6 +562,16 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 			var mi := MeshInstance3D.new()
 			var k: float = o["size"] / float(maxi(t.get_width(), t.get_height()))
 			var gy := terrain.surface(o["pos"].x, o["pos"].y).y
+			if o["name"] in ["o_fort", "o_village"]:
+				# 3.4-t1 (п. 25): крепость и кишлак — объёмные постройки, а не выдавленная картинка
+				var sz := float(o["size"])
+				mi.mesh = AdobeBuild.fort() if o["name"] == "o_fort" else AdobeBuild.village(absi(hash(key)) % 4)
+				mi.material_override = AdobeBuild.material()
+				mi.position = Vector3(o["pos"].x, gy - sz * 0.01, o["pos"].y)
+				mi.basis = Basis(Vector3.UP, -float(o["rot"])).scaled(Vector3(sz, sz, sz))
+				add_child(mi)
+				_objs[key] = mi
+				continue
 			if float(rel[0]) > 0.0:
 				# 3.3: самолёт летит над всем (как в Sublight) — рельеф никогда не дотягивается до плоскости боя
 				var h_world := clampf(float(o["size"]) * float(rel[0]), 2.0, OBJ_TOP - gy)
@@ -621,6 +633,31 @@ func _sync_clouds(m: Main, c2: Vector2, h: float) -> void:
 		var d := sp.distance_to(pp)
 		var ss := size * h / (h - CLOUD_Y)
 		mat.albedo_color = Color(1, 1, 1, 0.5 * clampf((d - ss * 0.1) / (ss * 0.45), 0.2, 1.0))
+	_cloud_shadows(cl, its)
+
+
+## 3.4-t1 (п. 33): тени облаков — в шейдер земли (до 12 ближайших облаков)
+func _cloud_shadows(cl: Clouds, its: Array) -> void:
+	if _ground_mat == null:
+		return
+	var arr := PackedVector4Array()
+	var texs: Array = cl._tex
+	for it in its:
+		if arr.size() >= 12:
+			break
+		var ti := maxi(texs.find(it[3]), 0)
+		arr.append(Vector4(it[0].x, it[0].y, float(it[1]), fposmod(float(it[2]), TAU) + 10.0 * ti))
+	while arr.size() < 12:
+		arr.append(Vector4.ZERO)
+	_ground_mat.set_shader_parameter("clouds", arr)
+	_ground_mat.set_shader_parameter("cloud_n", mini(its.size(), 12))
+	if not _ground_mat.has_meta("cloud_tex") and texs.size() > 0:
+		_ground_mat.set_meta("cloud_tex", true)
+		_ground_mat.set_shader_parameter("cloud_a", texs[0])
+		_ground_mat.set_shader_parameter("cloud_b", texs[mini(1, texs.size() - 1)])
+		_ground_mat.set_shader_parameter("cloud_y", CLOUD_Y)
+		var dv := -sun.global_transform.basis.z
+		_ground_mat.set_shader_parameter("cloud_shift", Vector2(dv.x, dv.z) / dv.y)   # точка земли → точка облака против луча
 
 
 # ---------- 3.2: свет взрывов ----------

@@ -78,6 +78,9 @@ func _hold(p: Dictionary) -> void:
 	m.player.global_position = pos
 	m.player.heading = -PI / 4.0
 	m.camera.global_position = pos
+	if p.has("roll"):   # 3.4-t1 п. 6: самолёт в бочке, брюхом к камере
+		m.player.roll_dir = 1
+		m.player.roll_t = m.player.roll_time() * float(p["roll"])
 	m.camera.zoom = Vector2.ONE * float(p.get("zoom", 1.0))
 	m.camera.reset_smoothing()
 
@@ -126,9 +129,11 @@ func _make_points() -> Array:
 	if Render3D.I != null and Render3D.I.terrain != null:
 		peak = Render3D.I.terrain.find_peak(empty)
 	pts.append({"name": "mountain", "pos": peak})
-	for k in [["village", "o_village"], ["oasis", "o_oasis"]]:
+	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	pts.append({"name": "closeup", "pos": found.get("o_rocks_big", empty) + Vector2(-260, 0), "zoom": 2.5})
+	pts.append({"name": "roll", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.62})
+	pts.append({"name": "roll90", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.78})
 	return pts
 
