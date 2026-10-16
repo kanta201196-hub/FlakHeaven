@@ -57,6 +57,14 @@ func _left_panel(m: Main, p: Player) -> void:
 	ctrl.draw_rect(Rect2(24, 24, 320.0 * p.hp / p.max_hp, 20), Color(0.4, 0.9, 0.5))
 	_text(Vector2(30, 40), "Прочность %d / %d" % [int(p.hp), int(p.max_hp)], 16, Color(0.05, 0.1, 0.05))
 	_text(Vector2(356, 40), "Ур. %d" % m.level, 20, Color(0.6, 1.0, 0.7))
+	# 3.5: топливо — полоска под прочностью и остаток в минутах
+	var fu := Fuel.current()
+	if fu != null:
+		var fc := Color(1.0, 0.35, 0.3) if fu.frac() < 0.1 else (Color(1.0, 0.8, 0.35) if fu.frac() <= Fuel.CALL_AT else Color(0.95, 0.85, 0.55))
+		ctrl.draw_rect(Rect2(24, 48, 320, 8), Color(0, 0, 0, 0.55))
+		ctrl.draw_rect(Rect2(24, 48, 320.0 * fu.frac(), 8), fc)
+		var fs := "БАК ПУСТ" if fu.empty() else "Топливо %d:%02d" % [int(fu.left) / 60, int(fu.left) % 60]
+		_text(Vector2(356, 58), fs, 15, fc)
 	if p.manual_mode:
 		_text(Vector2(24, 76), "Курсовое: РУЧНОЕ — обороты +%d%% урона  [Q]" % int(round(p.manual_bonus * 100.0)), 19, Color(1.0, 0.82, 0.35))
 	else:
@@ -224,6 +232,11 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 			_ctext(276, s, 22, Color(1.0, 0.85, 0.4))
 			if not site.failed:
 				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
+		elif node is Transport:
+			var tr := node as Transport
+			_edge_arrow(_ws(xf, tr.global_position), rect, size, Color(1.0, 0.6, 0.25), 1.8)
+			_ctext(276, "ОХОТА: транспортник уйдёт через %d с · прочность %d%%" % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], 22, Color(1.0, 0.75, 0.45))
+			_ctext(302, "Награда: груз — запчасти и ремкомплекты", 17, Color(0.85, 0.75, 1.0))
 		elif node is RivalAce:
 			var ace := node as RivalAce
 			_edge_arrow(_ws(xf, ace.global_position), rect, size, Color(1.0, 0.25, 0.3), 1.8)
@@ -231,6 +244,12 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 			_ctext(302, "Награда: выбор из редких карточек", 17, Color(0.85, 0.75, 1.0))
 			if ace.threatening() and int(Time.get_ticks_msec() / 200) % 2 == 0:
 				_ctext(size.y / 2.0 - 110.0, "ХВОСТ! Сбрось газ (S) или манёвр", 30, Color(1.0, 0.3, 0.25))
+	# 3.5: свой заправщик
+	var tk: Tanker = m.spawner.fuel.tanker if m.spawner != null and m.spawner.fuel != null else null
+	if is_instance_valid(tk) and tk.alive() and not tk.leaving:
+		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8)
+		var ts := "ЗАПРАВКА ИДЁТ" if tk.filling else "ЗАПРАВЩИК: зайдите ему в хвост"
+		_ctext(328, "%s · уйдёт через %d с · прочность %d%%" % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
 	if m.radio_t > 0.0:
 		var a := clampf(m.radio_t, 0.0, 1.0)
 		var w := 760.0
