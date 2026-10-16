@@ -16,4 +16,4 @@
 | `pbr/rock_*` | Cliff Side (`cliff_side`) | James Ray Cock, Jenelle van Heerden, Dario Barresi | https://polyhaven.com/a/cliff_side |
 
 ## Портреты экипажа (`portraits/*.png`)
-Сгенерированы владельцем проекта в ChatGPT по промптам из `/mnt/project-files/progression/portraits_chatgpt_prompts.md` (2026-10-16). Уменьшены до 256×384. Оригиналы 1024×1536 хранятся в общей папке проекта (`progression/portraits/`).
+Сгенерированы владельцем проекта в ChatGPT по промптам из `/mnt/project-files/progression/portraits_chatgpt_prompts.md` (2026-10-16). Уменьшены до 256×384. Оригиналы (1024×1536; «Оса» v2 — 1448×1086, обрезка по центру 2:3) хранятся в общей папке проекта (`progression/portraits/`).
