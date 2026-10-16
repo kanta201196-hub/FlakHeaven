@@ -118,6 +118,8 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 	var lx := area.position.x
 	var y := area.position.y
 	for w in Profile.WEAPON_ORDER:
+		if not Weapons.in_game(w):
+			continue
 		var r := Rect2(lx, y, 300, 70)
 		var on: bool = m.hangar_w == w
 		_panel(r, on)
@@ -181,6 +183,16 @@ func _hg_crew(c: String, area: Rect2) -> void:
 	var y := area.position.y + 40.0
 	_text(Vector2(lx + 24, y), "Позывной: «%s»" % cd["callsign"], 22, Color.WHITE)
 	_button(Rect2(lx + lw - 150, y - 28, 130, 38), "СМЕНИТЬ", "hg:callsign", 14)
+	# 3.5: портрет (пока нет арта — силуэт)
+	var pr_r := Rect2(lx + lw - 124, y + 18, 100, 150)
+	var ptex := Profile.portrait(c)
+	if ptex != null:
+		ctrl.draw_texture_rect(ptex, pr_r, false)
+	else:
+		ctrl.draw_rect(pr_r, Color(0, 0, 0, 0.45))
+		ctrl.draw_circle(pr_r.position + Vector2(50, 58), 26, Color(0.35, 0.37, 0.42))
+		ctrl.draw_rect(Rect2(pr_r.position + Vector2(14, 92), Vector2(72, 58)), Color(0.35, 0.37, 0.42))
+	ctrl.draw_rect(pr_r, Menu.C_AMBER, false, 1.5)
 	y += 30.0
 	_text(Vector2(lx + 24, y), String(Profile.CREW[c]["crew"]), 16, Color(0.8, 0.84, 0.9))
 	# 3.5: черта характера — плюс и минус
@@ -192,7 +204,7 @@ func _hg_crew(c: String, area: Rect2) -> void:
 		_text(Vector2(lx + 24, y), "+ " + String(tr["plus"]), 15, Color(0.6, 1.0, 0.7))
 		y += 22.0
 		_text(Vector2(lx + 24, y), "− " + String(tr["minus"]), 15, Color(1.0, 0.6, 0.55))
-	y += 40.0
+	y = maxf(y + 40.0, pr_r.end.y + 34.0) # под портретом
 	var lv := Profile.crew_lvl(c)
 	var pr := Profile.crew_progress(c)
 	_text(Vector2(lx + 24, y), "Экипаж ур. %d" % lv, 26, Color(0.6, 1.0, 0.7))

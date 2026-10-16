@@ -60,7 +60,14 @@ const DEFS := {
 }
 
 ## Оружие, которое может выпасть картой «новое оружие» (турели — встроенные).
-const POOL := ["aam", "rockets", "gunpod", "flares", "bombs"]
+## 3.5: пушечная гондола убрана из игры решением владельца (16.10): курсовое вооружение
+## заменяет огонь по прямой. Код гондолы оставлен — вернуть = добавить "gunpod" сюда.
+const POOL := ["aam", "rockets", "flares", "bombs"]
+
+
+## Оружие есть в игре (в пуле карт или встроенное) — для ангара и связок
+static func in_game(id: String) -> bool:
+	return POOL.has(id) or id == "turret"
 
 
 static func title(id: String) -> String:

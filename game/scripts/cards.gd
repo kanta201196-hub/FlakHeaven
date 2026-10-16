@@ -209,6 +209,8 @@ static func _available(p: Player) -> Array:
 		var s: Dictionary = SYNERGIES[id]
 		var ok := true
 		if s.has("w"):
+			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w)):
+				continue
 			ok = _wlevel(p, s["w"]) > 0 or (free_group and not (s["w"] as Array).has("turret"))
 		if s.get("wingmen", false):
 			ok = int(p.cls["wingmen"]) > 0 or p.permanent_wingmen() > 0
