@@ -1,11 +1,11 @@
-# Автопроверка: на каждый PR и на push в main / next.
+# Автопроверка: на каждый PR и на push в main.
 # Импорт проекта Godot и быстрый вылет без окна (tools/ci/smoke.sh) за каждый класс.
 name: Проверка игры
 
 on:
   pull_request:
   push:
-    branches: [main, next]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
