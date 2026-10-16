@@ -23,7 +23,7 @@ static func tier(level: int, evo := false) -> int:
 ## (у «Кита» и «Грача» свои турели — модели Blender по фото владельца, 16.10)
 static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	var tm: Mesh = turret_model(cls) if weapon == "turret" else null
+	var tm: Mesh = turret_model(cls, t) if weapon == "turret" else weapon_model(weapon, t)
 	mi.mesh = tm if tm != null else mesh(weapon, t, side)
 	return mi
 
@@ -31,21 +31,41 @@ static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3
 ## Турели из Blender (game/tools/blender/turret_*.py → models/turrets): стволы +X, основание на y = 0.
 ## Масштаб — под размеры прежней турели (длина корпуса TURRET_MODELS.s), обшивка — в цвет самолёта.
 const TURRET_MODELS := {
-	"bomber": {"file": "res://models/turrets/turret_kit.glb", "s": 0.3, "muzzle": Vector3(2.7, 0.43, 0.0),
-		"body": Color(0.5, 0.52, 0.54)},
+	# стволы укорочены на ~40% (владелец 16.10); ступень 3 — «Дикобраз»: 4 ствола и антенна наведения
+	"bomber": {"file": "res://models/turrets/turret_kit.glb", "file3": "res://models/turrets/turret_kit_quad.glb",
+		"s": 0.3, "muzzle": Vector3(2.09, 0.43, 0.0), "body": Color(0.5, 0.52, 0.54)},
 	"attacker": {"file": "res://models/turrets/turret_grach.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
 		"body": Color(0.34, 0.37, 0.28)},
 }
 
 
-static func turret_model(cls: String) -> Mesh:
-	var spec: Dictionary = TURRET_MODELS.get(cls, {})
-	if spec.is_empty() or not ResourceLoader.exists(spec["file"]):
+## Ракеты В-В и блоки НАР из Blender (tools/blender/weapons.py) по примерам владельца 16.10:
+## ступени отличаются формой и деталями. Те же оси и длина 1, что у процедурных моделей ниже.
+const WEAPON_GLB := {"aam": "res://models/weapons/aam_%d.glb", "rockets": "res://models/weapons/rockets_%d.glb"}
+
+
+static func weapon_model(weapon: String, t: int) -> Mesh:
+	if not WEAPON_GLB.has(weapon):
 		return null
-	var key := "turret_model_" + cls
+	var file: String = WEAPON_GLB[weapon] % t
+	if not ResourceLoader.exists(file):
+		return null
+	return _glb_mesh(file, 1.0, Color(), "glb_%s_%d" % [weapon, t])
+
+
+static func turret_model(cls: String, t := 1) -> Mesh:
+	var spec: Dictionary = TURRET_MODELS.get(cls, {})
+	var file: String = spec.get("file3", "") if t >= 3 and spec.has("file3") else spec.get("file", "")
+	if spec.is_empty() or not ResourceLoader.exists(file):
+		return null
+	return _glb_mesh(file, float(spec["s"]), spec["body"], "turret_model_%s_%s" % [cls, file.get_file()])
+
+
+## Меш из GLB: все части в один ArrayMesh с масштабом s; материалы «body» перекрашиваются в tint
+static func _glb_mesh(file: String, s: float, tint: Color, key: String) -> Mesh:
 	if _cache.has(key):
 		return _cache[key]
-	var root: Node = (load(spec["file"]) as PackedScene).instantiate()
+	var root: Node = (load(file) as PackedScene).instantiate()
 	var src: MeshInstance3D = null
 	for c in root.find_children("*", "MeshInstance3D", true, false):
 		src = c
@@ -53,7 +73,7 @@ static func turret_model(cls: String) -> Mesh:
 	if src == null:
 		root.free()
 		return null
-	var xf := Transform3D(Basis.from_scale(Vector3.ONE * float(spec["s"])), Vector3.ZERO) * src.transform
+	var xf := Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3.ZERO) * src.transform
 	var am := ArrayMesh.new()
 	for si in src.mesh.get_surface_count():
 		var st := SurfaceTool.new()
@@ -61,9 +81,9 @@ static func turret_model(cls: String) -> Mesh:
 		st.append_from(src.mesh, si, xf)
 		st.commit(am)
 		var m: Material = src.mesh.surface_get_material(si)
-		if m is StandardMaterial3D and String(m.resource_name).contains("body"):
+		if tint != Color() and m is StandardMaterial3D and String(m.resource_name).contains("body"):
 			m = (m as StandardMaterial3D).duplicate()
-			(m as StandardMaterial3D).albedo_color = spec["body"]
+			(m as StandardMaterial3D).albedo_color = tint
 		am.surface_set_material(am.get_surface_count() - 1, m)
 	root.free()
 	_cache[key] = am
@@ -377,6 +397,45 @@ static func muzzle_world(p: Player, g: Hardpoint, si: int, aim := NAN) -> Vector
 
 
 
+## Точка турели сверху на крыле (пиксели картинки): по размаху — между фюзеляжем и мотогондолами
+## (WING_TURRET_Z доли полуразмаха), по хорде — середина крыла на этой линии. side: -1 левое, 1 правое
+const WING_TURRET_Z := {"bomber_1": 0.44, "bomber_2": 0.3}
+static var _wing_pts := {}
+
+
+static func wing_point(cls_id: String, lvl: int, side: float) -> Vector2:
+	var key := "%s_%d" % [cls_id, lvl]
+	if not _wing_pts.has(key):
+		var t := PlaneArt.plane_tex(cls_id, lvl)
+		var s := PlaneArt.shape_info(cls_id, lvl)
+		var res := Vector2.ZERO
+		if t != null and not s.is_empty():
+			var img := t.get_image()
+			if img.is_compressed():
+				img.decompress()
+			var w := img.get_width()
+			var h := img.get_height()
+			var zf: float = WING_TURRET_Z.get(key, 0.35)
+			var row := int(h / 2.0 + float(s["half"]) * zf)
+			# самый длинный непрерывный отрезок по строке — хорда крыла (без мотогондол спереди)
+			var best0 := 0
+			var best1 := -1
+			var run0 := -1
+			for x in w + 1:
+				var on := x < w and img.get_pixel(x, clampi(row, 0, h - 1)).a > 0.4
+				if on and run0 < 0:
+					run0 = x
+				elif not on and run0 >= 0:
+					if x - run0 > best1 - best0:
+						best0 = run0
+						best1 = x
+					run0 = -1
+			res = Vector2((best0 + best1) / 2.0 - w / 2.0, row - h / 2.0)
+		_wing_pts[key] = res
+	var r: Vector2 = _wing_pts[key]
+	return Vector2(r.x, absf(r.y) * signf(side))
+
+
 ## Точки крепления оружия (пиксели картинки самолёта, центр картинки, нос по +X) и сторона:
 ##   "under" — под крылом на пилоне (НАР, ракеты, бомбы, контейнеры — как на настоящих самолётах);
 ##   встроенные турели — как у реальных бомбардировщиков и штурмовиков:
@@ -396,12 +455,14 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	var nose: float = s["nose"]
 	var order: Array
 	if cls_id == "bomber":
-		# кормовая (главная), верхняя за кабиной, нижняя за крылом
-		order = [["tail", tail + L * 0.035, PI], ["top", nose - L * 0.3, PI], ["bottom", tail + L * 0.3, PI]]
+		# решение владельца 16.10: кормовая — снизу под килем, две — сверху на крыльях
+		var wl := wing_point(cls_id, lvl, -1.0)
+		var wr := wing_point(cls_id, lvl, 1.0)
+		order = [["tail", tail + L * 0.035, PI, 0.0], ["wing", wl.x, PI, wl.y], ["wing", wr.x, PI, wr.y]]
 	else:
 		# штурмовик: стрелок за кабиной (верхняя), вторая — нижняя под фюзеляжем
-		order = [["top", nose - L * 0.36, PI], ["bottom", nose - L * 0.45, PI], ["tail", tail + L * 0.035, PI]]
+		order = [["top", nose - L * 0.36, PI, 0.0], ["bottom", nose - L * 0.45, PI, 0.0], ["tail", tail + L * 0.035, PI, 0.0]]
 	for i in g.slots:
 		var o: Array = order[i % order.size()]
-		out.append({"p": Vector2(o[1], 0.0), "side": o[0], "yaw": o[2]})
+		out.append({"p": Vector2(o[1], o[3]), "side": o[0], "yaw": o[2]})
 	return out

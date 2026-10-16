@@ -29,6 +29,8 @@ def mat(name, rgb, metal=0.0, rough=0.6):
 #M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.6, 0.4)
 
 parts = []
+group = ""          # пусто — основной корпус; иначе подвижная часть (узел с этим именем в GLB)
+pivots = {}         # группа → точка вращения (x, y, z)
 
 def finish(ob, m, bevel=0.0, seg=1):
     ob.data.materials.append(m)
@@ -39,6 +41,7 @@ def finish(ob, m, bevel=0.0, seg=1):
         md.limit_method = "ANGLE"
     for p in ob.data.polygons:
         p.use_smooth = True
+    ob["fh_group"] = group
     parts.append(ob)
     return ob
 
@@ -57,6 +60,8 @@ def cyl(name, c, r, h, m, axis="Z", verts=24, bevel=0.0):
     ob.name = name
     if axis == "X":
         ob.rotation_euler = (0, math.pi / 2, 0)
+    elif axis == "Y":
+        ob.rotation_euler = (math.pi / 2, 0, 0)
     bpy.ops.object.transform_apply(rotation=True)
     return finish(ob, m, bevel)
 
@@ -101,14 +106,32 @@ def build(name, out):
         bpy.context.view_layer.objects.active = ob
         for md in list(ob.modifiers):
             bpy.ops.object.modifier_apply(modifier=md.name)
-    bpy.ops.object.select_all(action="DESELECT")
+    groups = {}
     for ob in parts:
-        ob.select_set(True)
-    bpy.context.view_layer.objects.active = parts[0]
-    bpy.ops.object.join()
-    tur = bpy.context.object
-    tur.name = name
-    print("TRIS", sum(len(p.vertices) - 2 for p in tur.data.polygons))
+        groups.setdefault(ob["fh_group"], []).append(ob)
+    tur = None
+    tris = 0
+    for gname, obs in groups.items():
+        bpy.ops.object.select_all(action="DESELECT")
+        for ob in obs:
+            ob.select_set(True)
+        bpy.context.view_layer.objects.active = obs[0]
+        bpy.ops.object.join()
+        j = bpy.context.object
+        j.name = gname if gname else name
+        tris += sum(len(p.vertices) - 2 for p in j.data.polygons)
+        if gname:
+            bpy.context.scene.cursor.location = pivots.get(gname, (0, 0, 0))
+            bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
+        else:
+            tur = j
+    for gname, obs in groups.items():
+        if gname:
+            o = bpy.data.objects[gname]
+            mw = o.matrix_world.copy()
+            o.parent = tur
+            o.matrix_world = mw
+    print("TRIS", tris)
 
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + ".blend"))
     bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format="GLB", use_selection=False)

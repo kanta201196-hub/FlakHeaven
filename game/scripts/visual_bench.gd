@@ -50,14 +50,19 @@ func process(delta: float) -> void:
 		return
 	m.god_mode = true
 	m.spawner.process_mode = Node.PROCESS_MODE_DISABLED
+	var keep: bool = _i >= 0 and _i < _points.size() and (_points[_i] as Dictionary).get("enemies", false)
 	for e in m.get_tree().get_nodes_in_group("enemies"):
-		(e as Node).queue_free()
+		if not keep:
+			(e as Node).queue_free()
 	if m.hud != null:
 		m.hud.visible = false
 	if _i < 0:
 		if _t < 1.0:
 			return
 		_points = _make_points()
+		for a in OS.get_cmdline_user_args():   # --only=model_ground — только точки с этим началом имени
+			if a.begins_with("--only="):
+				_points = _points.filter(func(q: Dictionary) -> bool: return String(q["name"]).begins_with(a.get_slice("=", 1)))
 		_i = 0
 		_t = 0.0
 	if _i >= _points.size():
@@ -65,6 +70,15 @@ func process(delta: float) -> void:
 		m.get_tree().quit()
 		return
 	var p: Dictionary = _points[_i]
+	if p.get("ground", false):
+		if not _g_spawned:
+			_g_spawned = true
+			var site := AASite.new()
+			site.setup(m.player.global_position + Vector2(0, -120), 1.0, 99999.0)
+			m.world.add_child(site)
+			p["pos"] = site.global_position + Vector2(0, 160)
+	elif p.get("enemies", false) and not _spawned:
+		_spawn_all_enemies(m.player.global_position)
 	_hold(p)
 	if _phase == 0 and _t > float(p.get("wait", WAIT)):
 		if p.get("boom", false):
@@ -190,8 +204,40 @@ func _make_points() -> Array:
 				pts.append({"name": "model_%s_%d" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "wait": 1.0, "zoom": 2.2})
 				pts.append({"name": "model_%s_%d_far" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "fly": true, "wait": 1.5, "zoom": 1.0})
 		pts.append({"name": "model_roll", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.2, "roll": 0.62})
+		pts.append({"name": "model_ground", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.3, "enemies": true, "ground": true, "wait": 2.5})
+		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
 	return pts
 
+
+
+## 3.5: враги всех видов рядом с игроком (стенд 3D-моделей в бою)
+var _spawned := false
+var _g_spawned := false
+
+
+func _spawn_all_enemies(c: Vector2) -> void:
+	_spawned = true
+	var list: Array = []
+	var d := Drone.new()
+	list.append(d)
+	var k := Drone.new()
+	k.kamikaze = true
+	list.append(k)
+	list.append(Interceptor.new())
+	list.append(MissileCarrier.new())
+	var r := RivalAce.new()
+	list.append(r)
+	for v in ["carrier", "interceptor"]:
+		var b := Boss.new()
+		b.setup(v, 99999.0)
+		list.append(b)
+	for i in list.size():
+		var e: Enemy = list[i]
+		e.position = c + Vector2.from_angle(TAU * i / list.size()) * 260.0
+		e.heading = TAU * i / list.size() + PI / 2.0
+		m.world.add_child(e)
+		if e is RivalAce:
+			(e as RivalAce).setup(99999.0)
 
 
 ## 3.4-t1 (п. 1): 3D-ангар — вкладка «САМОЛЁТ» каждого класса, ур. 1 и ур. 2 → user://vis_hangar_<класс>_<ур>.png

@@ -427,7 +427,7 @@ func model_units() -> Vector2:
 
 func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: float, grid := 56) -> Dictionary:
 	var u: Dictionary = _units.get(id, {})
-	var bm: PackedScene = _battle_model(tex) if kind != "enemy" else null
+	var bm: PackedScene = _battle_model(tex)   # 3.5 этап 2: враги в воздухе и наземные ПВО (ЗСУ, ЗРК, РЛС)
 	if u.is_empty() or u["tex"] != tex or u.get("bm") != bm:
 		if not u.is_empty():
 			(u["node"] as Node).queue_free()
@@ -571,7 +571,10 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		if e.is_ground:
 			# 3.5: у целей с точкой на рельефе (anchor) — ставим ровно туда, иначе проекция с камеры
 			var gp := terrain.surface(e.anchor.x, e.anchor.y) if (e.anchor != Vector2.INF and terrain != null) else ground_under(e.global_position)
-			_place(ue, Vector2(gp.x, gp.z), ang, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
+			var hull := ang
+			if ue.get("bm") != null:
+				hull = _ground_parts(ue, e, ang, delta)
+			_place(ue, Vector2(gp.x, gp.z), hull, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
 		else:
 			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle()) # 3.5: бочка при уклонении
 		var mi2: MeshInstance3D = ue["mi"]
@@ -581,6 +584,35 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			if not _start_crash(_units[id]):
 				(_units[id]["node"] as Node).queue_free()
 			_units.erase(id)
+
+
+## Подвижные части наземных моделей (tools/blender/ground_models.py): корпус стоит, как встал,
+## башня ЗСУ (turret) смотрит на цель, антенна РЛС (antenna) вращается, контейнеры ЗРК (launcher)
+## поднимаются, пока идёт захват цели — предупреждение перед пуском. Возвращает курс корпуса.
+func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
+	if not u.has("hull"):
+		u["hull"] = ang
+		var inst := (u["node"] as Node3D).get_child(0)
+		for nm in ["turret", "antenna", "launcher"]:
+			var n := inst.find_child(nm, true, false)
+			if n != null:
+				u[nm] = n
+	# едет — корпус по ходу движения
+	var lp: Vector2 = u.get("lastp", e.global_position)
+	var mv := e.global_position - lp
+	u["lastp"] = e.global_position
+	if mv.length() > 0.3:
+		u["hull"] = lerp_angle(float(u["hull"]), mv.angle(), 1.0 - exp(-delta * 4.0))
+	var hull: float = u["hull"]
+	if u.has("turret"):
+		(u["turret"] as Node3D).rotation.y = -wrapf(ang - hull, -PI, PI)
+	if u.has("antenna"):
+		(u["antenna"] as Node3D).rotate_y(delta * 1.6)
+	if u.has("launcher"):
+		var up := deg_to_rad(55.0) if float(e.get("_lock") if e.get("_lock") != null else 0.0) > 0.0 else 0.0
+		var ln := u["launcher"] as Node3D
+		ln.rotation.z = move_toward(ln.rotation.z, up, delta * 1.2)
+	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher")) else ang
 
 
 ## Крен от скорости поворота (для врагов и ведомых)
@@ -623,7 +655,7 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			# подвесы — под крылом на пилоне (видны на крене и под наклоном камеры), турели — на своих местах
 			# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
 			var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id)
-			var y: float = {"under": -tw * 0.012 - 0.09 * len_px, "top": tw * 0.028, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
+			var y: float = {"under": -tw * 0.012 - 0.09 * len_px, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
 			wmi.position = Vector3(pt.x, y, pt.y)
 			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель

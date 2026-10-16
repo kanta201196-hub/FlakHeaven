@@ -159,7 +159,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			match side:
 				"under":
 					y = (lo if not is_nan(lo) else -0.02) - 0.09 * wlen
-				"top":
+				"top", "wing":
 					y = hi if not is_nan(hi) else 0.03
 				"bottom":
 					y = lo if not is_nan(lo) else -0.03
