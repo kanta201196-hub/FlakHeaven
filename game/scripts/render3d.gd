@@ -395,19 +395,61 @@ func _unit_mesh(tex: Texture2D, length_px: float, thick: float, grid: int) -> Di
 	return {"mesh": mesh, "mat": ReliefMesh.material(tex), "k": length_px / float(tex.get_width())}
 
 
+## 3.5: бой на 3D-моделях (решение 14.10, подтверждено владельцем 16.10). Облегчённая модель
+## models/battle/fh_battle_<картинка>.glb (tools/blender/battle_lod.py из модели ангара); длина модели 1 =
+## ширина картинки, нос +X — те же оси, что у рельефа из спрайта, поэтому подвесы, сопла и следы на месте.
+## «Низкое» качество графики — прежний рельеф из спрайта (слабые ПК).
+func _battle_model(tex: Texture2D) -> PackedScene:
+	if Settings.gfx == 0:
+		return null
+	var path := "res://models/battle/fh_battle_%s.glb" % tex.resource_path.get_file().get_basename()
+	if not _bm_cache.has(path):
+		_bm_cache[path] = load(path) if ResourceLoader.exists(path) else null
+	return _bm_cache[path]
+
+
+var _bm_cache := {}
+
+
+## Для лога: (самолётов-моделей в бою, их треугольников всего)
+func model_units() -> Vector2:
+	var n := 0
+	var t := 0
+	for id in _units:
+		var u: Dictionary = _units[id]
+		if u.get("bm") != null:
+			n += 1
+			if not u.has("tris"):
+				u["tris"] = (u["mi"] as MeshInstance3D).mesh.get_faces().size() / 3
+			t += int(u["tris"])
+	return Vector2(n, t)
+
+
 func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: float, grid := 56) -> Dictionary:
 	var u: Dictionary = _units.get(id, {})
-	if u.is_empty() or u["tex"] != tex:
+	var bm: PackedScene = _battle_model(tex) if kind != "enemy" else null
+	if u.is_empty() or u["tex"] != tex or u.get("bm") != bm:
 		if not u.is_empty():
 			(u["node"] as Node).queue_free()
 		var root := Node3D.new()
-		var mi := MeshInstance3D.new()
-		var d := _unit_mesh(tex, length_px, thick, grid)
-		mi.mesh = d["mesh"]
-		mi.material_override = d["mat"]
-		root.add_child(mi)
+		var mi: MeshInstance3D = null
+		var d := {"k": length_px / float(tex.get_width())}
+		if bm != null:
+			var inst: Node3D = bm.instantiate()
+			inst.scale = Vector3.ONE * float(tex.get_width())
+			root.add_child(inst)
+			for c in inst.find_children("*", "MeshInstance3D", true, false):
+				mi = c
+				break
+		if mi == null:
+			bm = null
+			mi = MeshInstance3D.new()
+			d = _unit_mesh(tex, length_px, thick, grid)
+			mi.mesh = d["mesh"]
+			mi.material_override = d["mat"]
+			root.add_child(mi)
 		add_child(root)
-		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}}
+		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}, "bm": bm}
 		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
 			u["sh"] = _make_shadow(tex, root)
 		if kind != "enemy":

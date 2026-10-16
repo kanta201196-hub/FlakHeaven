@@ -20,7 +20,9 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	# 3.5 (тред «ИИ врагов и активности»): уклонения врагов, их ловушки и уведённые ими ракеты, сбитые ПВО наши ракеты
 	"enemy_evades", "enemy_flares", "enemy_flared_missiles", "aa_shot_down",
 	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа
-	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx", "plane_lvl"]
+	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx", "plane_lvl",
+	# 3.5: бой на 3D-моделях — сколько самолётов в кадре нарисовано моделями (макс.) и их треугольники
+	"units_model_max", "model_tris_max"]
 
 ## T4-04: автоснижение качества — окна по 20 с с 5-й секунды; FPS ниже порога → пресет ниже (до 3 раз за вылет)
 const AUTO_FPS := 35.0
@@ -132,6 +134,10 @@ func _render_stats(m: Main) -> void:
 	maxv("draws_max", draws)
 	maxv("vram_mb", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED) / 1048576.0)
 	maxv("nodes_max", Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+	if Render3D.I != null:
+		var mc := Render3D.I.model_units()
+		maxv("units_model_max", mc.x)
+		maxv("model_tris_max", mc.y)
 	if _rs_n % 4 == 0:
 		maxv("enemies_max", m.get_tree().get_nodes_in_group("enemies").size())
 

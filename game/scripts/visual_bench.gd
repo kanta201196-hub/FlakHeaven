@@ -38,7 +38,12 @@ func process(delta: float) -> void:
 		_hangar_bench()
 		return
 	if m.state == "menu" and _i < 0 and _t > 1.0:
-		m.select_class("fighter")
+		var cls := "fighter"
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--cls="):   # 3.5: кадры боя другим классом (3D-модели в бою)
+				cls = a.substr(6)
+				_suffix += "_" + cls
+		m.select_class(cls)
 		_t = 0.0
 		return
 	if m.state != "playing" or not is_instance_valid(m.player):
@@ -178,6 +183,13 @@ func _make_points() -> Array:
 		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
 		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
 		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
+	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
+		pts = []
+		for c in ["fighter", "attacker", "bomber"]:
+			for lv in [1, 2]:
+				pts.append({"name": "model_%s_%d" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "wait": 1.0, "zoom": 2.2})
+				pts.append({"name": "model_%s_%d_far" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "fly": true, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "model_roll", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.2, "roll": 0.62})
 	return pts
 
 
