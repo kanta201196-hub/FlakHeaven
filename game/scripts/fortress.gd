@@ -18,7 +18,12 @@ const ENGINE_SHARE := 0.15
 const PASS := 0.1                # доля урона в корпус, пока он прикрыт
 
 var phase := 1
-var points: Array = []           # [{name, kind, off (в осях самолёта: x — вперёд), hp, max, cd, shots, st}]
+var points: Array = []           # [{name, node, kind, off (в осях самолёта: x — вперёд), hp, max, cd, shots, st}]
+## Для 3D-модели (узлы GLB: turret_1…turret_4, engine_l, engine_r, hatch_l/r, bay_l/r, core):
+## выбитые части — имя узла → true; люки открыты с фазы 2, корпус раскрыт в фазе 3
+var parts_down := {}
+var hatches_open := false
+var hull_open := false
 var _missile_cd := 4.0
 var _escort_called := false
 var _ring_cd := 3.0
@@ -35,18 +40,18 @@ func setup_fortress(total: float) -> void:
 	contact_damage = 25.0
 	var k := LEN / 270.0
 	points = [
-		_pt("турель левого крыла", "turret", Vector2(-6, -78) * k, total * TURRET_SHARE),
-		_pt("турель правого крыла", "turret", Vector2(-6, 78) * k, total * TURRET_SHARE),
-		_pt("верхняя турель", "turret", Vector2(48, 0) * k, total * TURRET_SHARE),
-		_pt("кормовая турель", "turret", Vector2(-112, 0) * k, total * TURRET_SHARE),
-		_pt("левый двигатель", "engine", Vector2(14, -44) * k, total * ENGINE_SHARE),
-		_pt("правый двигатель", "engine", Vector2(14, 44) * k, total * ENGINE_SHARE),
+		_pt("турель левого крыла", "turret_1", "turret", Vector2(-6, -78) * k, total * TURRET_SHARE),
+		_pt("турель правого крыла", "turret_2", "turret", Vector2(-6, 78) * k, total * TURRET_SHARE),
+		_pt("верхняя турель", "turret_3", "turret", Vector2(48, 0) * k, total * TURRET_SHARE),
+		_pt("кормовая турель", "turret_4", "turret", Vector2(-112, 0) * k, total * TURRET_SHARE),
+		_pt("левый двигатель", "engine_l", "engine", Vector2(14, -44) * k, total * ENGINE_SHARE),
+		_pt("правый двигатель", "engine_r", "engine", Vector2(14, 44) * k, total * ENGINE_SHARE),
 	]
 	_set_title()
 
 
-func _pt(n: String, kd: String, off: Vector2, h: float) -> Dictionary:
-	return {"name": n, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0}
+func _pt(n: String, node: String, kd: String, off: Vector2, h: float) -> Dictionary:
+	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0}
 
 
 func kind() -> String:
@@ -99,6 +104,7 @@ func absorb(dmg: float) -> float:
 
 func _point_down(pt: Dictionary) -> void:
 	var at := _world(pt)
+	parts_down[pt["node"]] = true
 	Main.I.fx.explosion(at, 34.0)
 	Main.I.add_shake(5.0)
 	Main.I.sfx.play("shield_break", -4.0, 0.8)
@@ -107,11 +113,13 @@ func _point_down(pt: Dictionary) -> void:
 		Main.I.show_banner("%s сбит — «Крепость» теряет скорость" % String(pt["name"]).capitalize(), 2.5)
 	if phase == 1 and _alive("turret") == 0:
 		phase = 2
+		hatches_open = true
 		Main.I.show_banner("Турели сбиты! Люки открыты — бейте по двигателям", 3.5)
 		Main.I.tele.add("fortress_phase2_s", Main.I.run_time - _born)
 		_missile_cd = 1.5
 	elif phase == 2 and _alive("engine") == 0:
 		phase = 3
+		hull_open = true
 		Main.I.show_banner("Двигатели горят! Корпус открыт — добивайте «Крепость»", 3.5)
 		Main.I.tele.add("fortress_phase3_s", Main.I.run_time - _born)
 	_set_title()
