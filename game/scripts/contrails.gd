@@ -11,6 +11,7 @@ var _time := 0.0
 var _am := ArrayMesh.new()
 var _mat := StandardMaterial3D.new()
 var _count := 0
+var _dead := 0
 
 
 func _ready() -> void:
@@ -28,6 +29,12 @@ func _ready() -> void:
 ## Точка следа. style: [альфа, ширина у источника, ширина в конце, время жизни, шаг точек]
 func emit(key: Variant, pos: Vector3, style: Array) -> void:
 	var t: Dictionary = _tr.get(key, {})
+	if not t.is_empty() and (t["head"] as Vector3).distance_squared_to(pos) > 250.0 * 250.0:
+		# скачок (телепорт, новый вылет): старый след дотаивает сам, новый начинается заново
+		_dead += 1
+		_tr["dead%d" % _dead] = t
+		t["seen"] = false
+		t = {}
 	if t.is_empty():
 		t = {"p": [], "t": [], "s": [], "head": pos, "seen": true}
 		_tr[key] = t

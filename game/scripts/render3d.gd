@@ -536,21 +536,22 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		var k: float = u["k"]
 		var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k  # в пикселях текстуры самолёта
 		var dim := g.weapon in ["aam", "rockets", "bombs"] and g.cd > 0.3
+		# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5
+		var tr := WeaponModels.tier(g.level, g.evo)
 		for si in pts.size():
-			var key := "%d_%d_%s" % [gi, si, g.weapon]
+			var key := "%d_%d_%s_%d" % [gi, si, g.weapon, tr]
 			want[key] = true
 			var wmi: MeshInstance3D = u["weapons"].get(key)
 			if wmi == null:
-				wmi = MeshInstance3D.new()
-				wmi.mesh = ReliefMesh.build(wt, wt.get_width() * 0.35, 24)
-				wmi.material_override = ReliefMesh.material(wt, 0.5, 0.4)
+				wmi = WeaponModels.make(g.weapon, tr)
 				root.add_child(wmi)
 				u["weapons"][key] = wmi
 			var pt: Vector2 = pts[si]
-			var wk := len_px / float(wt.get_height())
-			# текстура оружия носом вверх → поворот на 90°, чтобы нос смотрел по +X
 			wmi.position = Vector3(pt.x, tex.get_width() * 0.03, pt.y)
-			wmi.basis = Basis(Vector3.UP, -PI / 2.0).scaled(Vector3(wk, wk, wk))
+			var yaw := 0.0
+			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
+				yaw = _turret_yaw(p, root, wmi.position)
+			wmi.basis = Basis(Vector3.UP, yaw).scaled(Vector3(len_px, len_px, len_px))
 			wmi.transparency = 0.6 if dim else 0.0
 	for key in u["weapons"].keys():
 		if not want.has(key):
@@ -708,6 +709,25 @@ func _make_smoke() -> CPUParticles3D:
 	s.emitting = true
 	add_child(s)
 	return s
+
+
+## Угол турели (в осях самолёта) на ближайшего врага в радиусе 700 px; без цели — вперёд
+func _turret_yaw(p: Player, root: Node3D, local: Vector3) -> float:
+	var wp := root.global_transform * local
+	var best: Node2D = null
+	var bd := 700.0 * 700.0
+	for n in get_tree().get_nodes_in_group("enemies"):
+		var e := n as Enemy
+		if e == null or e.hp <= 0.0:
+			continue
+		var d := e.global_position.distance_squared_to(Vector2(wp.x, wp.z))
+		if d < bd:
+			bd = d
+			best = e
+	if best == null:
+		return 0.0
+	var ang := (best.global_position - Vector2(wp.x, wp.z)).angle() - p.heading
+	return -ang
 
 
 # ---------- объекты биома ----------

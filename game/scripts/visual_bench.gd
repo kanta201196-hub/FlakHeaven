@@ -184,6 +184,7 @@ func _make_points() -> Array:
 
 ## 3.4-t1 (п. 1): 3D-ангар — вкладка «САМОЛЁТ» каждого класса, ур. 1 и ур. 2 → user://vis_hangar_<класс>_<ур>.png
 var _hq: Array = []
+var _hf := 0
 
 
 func _hangar_bench() -> void:
@@ -193,7 +194,9 @@ func _hangar_bench() -> void:
 		m.ui_click("menu_hangar")
 		for c in PlaneClasses.LIST:
 			for lv in [1, 2]:
-				_hq.append([c, lv])
+				_hq.append([c, lv, 1])
+			_hq.append([c, 1, 2])
+			_hq.append([c, 1, 3])
 		_t = 0.0
 		return
 	if _hq.is_empty():
@@ -206,7 +209,10 @@ func _hangar_bench() -> void:
 	if Hangar3D.I != null:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
-	if _t > 1.2:
-		_save("hangar_%s_%d" % [cur[0], cur[1]])
+		Hangar3D.I.weapon_tier = cur[2]
+	_hf += 1
+	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
+		_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])
 		_hq.pop_front()
 		_t = 0.0
+		_hf = 0
