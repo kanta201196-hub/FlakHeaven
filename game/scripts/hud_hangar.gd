@@ -56,6 +56,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	var lw := 560.0
 	_panel(Rect2(lx, area.position.y, lw, area.size.y), false)
 	var bought: bool = bool(Profile.cls(c)["plane2"])
+	var sel := Profile.plane_lvl(c)
 	for lv in [1, 2]:
 		var t := PlaneArt.plane_tex(c, lv)
 		if t == null:
@@ -66,16 +67,27 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		ctrl.draw_set_transform(Vector2(cx, cy), -PI / 2.0, Vector2(k, k))
 		ctrl.draw_texture(t, -t.get_size() / 2.0, Color(1, 1, 1, 1) if (lv == 1 or bought) else Color(0.25, 0.25, 0.28, 0.9))
 		ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		_text(Vector2(cx - 120, area.position.y + 390), "ур. %d" % lv, 18, Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 240)
+		if bought:
+			# 3.5: выбор самолёта на вылет
+			var br := Rect2(cx - 110, area.position.y + 366, 220, 36)
+			if lv == sel:
+				_panel(br, true)
+				ctrl.draw_rect(br, Color(0.5, 1.0, 0.6), false, 2.0)
+				_text(Vector2(br.position.x, br.position.y + 25), "✓ ур. %d — в вылет" % lv, 16, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
+			else:
+				_button(br, "ЛЕТАТЬ НА УР. %d" % lv, "hg:plane_sel:%d" % lv, 14)
+		else:
+			_text(Vector2(cx - 120, area.position.y + 390), "ур. %d" % lv, 18, Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 240)
 	var y := area.position.y + 430.0
 	if bought:
-		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен: модернизация в полёте на %d-м уровне пилота" % int(Tuning.g("plane_lvl2_at")), 16, Color(0.6, 1.0, 0.7))
-		_text(Vector2(lx + 24, y + 24), "даёт +20% прочности, +5% скорости и разворота, +1 переброс", 15, Color(0.8, 0.85, 0.9))
+		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
+		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс", 15, Color(0.8, 0.85, 0.9))
 	else:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — комплект модернизации", 18, Color.WHITE)
 		_text(Vector2(lx + 24, y + 24), "Требует: экипаж ур. %d (сейчас %d) · %d запчастей" % [Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
+		_text(Vector2(lx + 24, y + 46), "даёт: прочность +15%, скорость и разворот +5%, +1 переброс", 14, Color(0.7, 0.74, 0.8))
 		if Profile.can_buy_plane2(c):
-			_button(Rect2(lx + 24, y + 40, 320, 46), "МОДЕРНИЗИРОВАТЬ — %d" % Profile.PLANE2_COST, "hg:plane2", 17)
+			_button(Rect2(lx + 24, y + 60, 320, 46), "МОДЕРНИЗИРОВАТЬ — %d" % Profile.PLANE2_COST, "hg:plane2", 17)
 	# справа — 6 узлов
 	var rx := lx + lw + 30.0
 	var rw := area.size.x - lw - 30.0

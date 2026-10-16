@@ -213,7 +213,7 @@ func start_run() -> void:
 	show_banner("%s · %s" % [Background.BIOME_NAME.to_upper(), Background.BIOME_SUB], 4.0)
 	bosses_killed = 0
 	evac_windows = 0
-	rerolls = 2
+	rerolls = 2 + Profile.extra_rerolls(cls_id) # 3.5: самолёт ур. 2 — +1 переброс
 	bans = 2
 	banned = {}
 	locked = {}

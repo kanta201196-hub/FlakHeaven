@@ -173,6 +173,7 @@ func _run_autotest(delta: float) -> void:
 					Profile.debug_level("fighter")
 					# 3.5: опыта — на звание выше, чтобы на скриншоте была кнопка «Повысить в звании»
 					Profile.cls("fighter")["crew_xp"] = int(Profile.CREW_CUM[Profile.crew_lvl("fighter")])
+					Profile.buy_plane2("fighter") # 3.5: на скриншоте — выбор самолёта на вылет
 					m.ui_click("menu_hangar")
 				elif m._args.has("--shots") and not _shots_done.has("settings"):
 					m.menu.tab = 1
