@@ -26,6 +26,7 @@
 | `hangar3d/plan.md` | План 3D-ангара |
 | `notes/3d-pilot-unblock.md` | Заметка о запуске пилота 3D-моделей |
 | `process/efficiency-review.md` | Разбор процесса: где теряем время и что поменяли |
+| `process/project-instructions.md` | Текст для поля инструкций проекта Claude (по плейбуку «Как мы работаем над игрой») |
 | `owner-checklist/checklist.md` | Чек-лист владельца: Steam, юридическое, финансы, сроки |
 | `team/` | Роли агентов и процесс |
 | `threads/` | Выжимки тредов из проектов Claude участников (Kirill, Kanta) |
