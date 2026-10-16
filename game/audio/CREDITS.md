@@ -11,7 +11,20 @@ Sound Spark LLC, SoundMorph, InspectorJ, SmartSoundFX, 344 Audio, Gregor Quendel
 Articulated Sounds, Sergey Eybog, Olivier Girardot, Gladestock Studios, Justsoundeffects, Mechanical Wave, Epic Stock Media,
 Rescopic Sound, Eiravaein Sound, Stefano Cremona, Double Trouble Audio.
 
-## Интерфейс, джинглы, музыка (CC0, с 10.10.2026)
+## Музыка (стиль «гибрид», 16.10.2026, все CC0 с OpenGameArt)
+
+| Файл | Трек | Автор | Лицензия |
+| --- | --- | --- | --- |
+| music_menu | Night Club Chill (T&T Free Cyberpunk Pack 2) — https://opengameart.org/content/t-t-free-cyberpunk-pack-2 | tricksntraps | CC0 |
+| music_battle_1 | Final Hour — https://opengameart.org/content/final-hour | isaiah658 | CC0 |
+| music_battle_2 | Black Diamond — https://opengameart.org/content/black-diamond | Joth | CC0 |
+| music_battle_3 | System Overload (T&T Free Cyberpunk Pack 2) — https://opengameart.org/content/t-t-free-cyberpunk-pack-2 | tricksntraps | CC0 |
+| music_boss | Cybersecutor — https://opengameart.org/content/cybersecutor | ShggothSlave | CC0 |
+| music_result | Strange Experiments (T&T Free Cyberpunk Pack 2) — https://opengameart.org/content/t-t-free-cyberpunk-pack-2 | tricksntraps | CC0 |
+
+Обработка: `game/tools/build_audio_hybrid.py --only music` (обрезка длинных треков с затуханием, громкость −16 LUFS).
+
+## Интерфейс и джинглы (CC0, с 10.10.2026)
 Все файлы — CC0 (общественное достояние): указывать авторов не обязательно, но вежливо — укажем в титрах игры.
 
 | Файлы | Источник | Автор | Лицензия |
@@ -19,6 +32,5 @@ Rescopic Sound, Eiravaein Sound, Stefano Cremona, Double Trouble Audio.
 | pickup, card, ui_ban | Interface Sounds — https://kenney.nl/assets/interface-sounds | Kenney | CC0 |
 | levelup, boss, evac, gate | Music Jingles — https://kenney.nl/assets/music-jingles | Kenney | CC0 |
 | repair | Digital Audio — https://kenney.nl/assets/digital-audio | Kenney | CC0 |
-| music_menu, music_battle_1/2, music_boss, music_result | 5 Chiptunes (Action) — https://opengameart.org/content/5-chiptunes-action | Juhani Junkala | CC0 |
 
-Обработка этих файлов: `game/tools/build_audio.py` (нужен ffmpeg). Музыку по стилю «гибрид» ещё предстоит заменить.
+Обработка этих файлов: `game/tools/build_audio.py` (нужен ffmpeg).

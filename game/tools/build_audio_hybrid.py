@@ -10,7 +10,8 @@
 
 Запуск (нужны ffmpeg, numpy, сеть):
   python3 game/tools/build_audio_hybrid.py [--out ПАПКА] [--only событие,событие]
-Результат по умолчанию — сразу в game/audio/. Интерфейсные звуки, джинглы и музыка здесь не трогаются.
+Результат по умолчанию — сразу в game/audio/. `--only music` — только музыка (CC0, OpenGameArt).
+Интерфейсные звуки и джинглы здесь не трогаются.
 """
 import os, subprocess, sys, glob, urllib.parse, urllib.request
 import numpy as np
@@ -238,12 +239,44 @@ def build_engine(out_dir):
     print('engine         blast_off    loop %.1f s' % (len(loop) / SR))
 
 
+# Музыка «гибрид» (электроника + живые/брейкбит-барабаны), все треки CC0 с OpenGameArt.
+# имя файла -> (URL, обрезать до, с; None — целиком)
+OGA = 'https://opengameart.org/sites/default/files/'
+MUSIC = {
+    'music_menu': (OGA + 'night_club_chill_100bpm.ogg', 120),            # tricksntraps — T&T Free Cyberpunk Pack 2
+    'music_battle_1': (OGA + 'Final-Hour-isaiah658.ogg', None),           # isaiah658 — Final Hour (jungle / drum and bass)
+    'music_battle_2': (OGA + 'Black%20Diamond.mp3', 150),                 # Joth — Black Diamond (drum and bass)
+    'music_battle_3': (OGA + 'system_overload_154bpm.ogg', 150),          # tricksntraps — T&T Free Cyberpunk Pack 2
+    'music_boss': (OGA + 'cybersecutor.mp3', 150),                        # ShggothSlave — Cybersecutor (industrial metal)
+    'music_result': (OGA + 'strange_experiments_80bpm.ogg', 90),          # tricksntraps — T&T Free Cyberpunk Pack 2
+}
+
+
+def build_music(out_dir):
+    """Громкость -16 LUFS (как у прежней музыки), длинные треки обрезаны с затуханием 4 с."""
+    for f in glob.glob(os.path.join(out_dir, 'music_*.ogg')):
+        os.remove(f)
+    for name, (url, cut) in MUSIC.items():
+        src = os.path.join(CACHE, 'music_' + os.path.basename(url).replace('%20', '_'))
+        if not os.path.exists(src):
+            os.makedirs(CACHE, exist_ok=True)
+            urllib.request.urlretrieve(url, src)
+        af = 'afade=t=in:d=0.5'
+        if cut:
+            af = 'atrim=end=%d,afade=t=in:d=0.5,afade=t=out:st=%d:d=4' % (cut, cut - 4)
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-af', af + ',loudnorm=I=-16:TP=-1.5', '-ar', '44100', '-ac', '2',
+                        '-c:a', 'libvorbis', '-q:a', '4', os.path.join(out_dir, name + '.ogg')], check=True)
+        print('%-14s %s' % (name, os.path.basename(url)))
+
+
 def main():
     out_dir = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else AUDIO
     only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else None
     os.makedirs(out_dir, exist_ok=True)
     if only is None or 'engine' in only:
         build_engine(out_dir)
+    if only is None or 'music' in only:
+        build_music(out_dir)
     for event, variants in PLAN.items():
         if only is not None and event not in only:
             continue
