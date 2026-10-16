@@ -9,3 +9,7 @@ builds/
 Thumbs.db
 # локальные пользовательские данные и логи плейтестов (кладём в docs/playtests вручную при необходимости)
 playtest_log_*.csv
+
+# логи быстрой проверки (tools/ci/smoke.sh)
+import.log
+smoke_*.log
