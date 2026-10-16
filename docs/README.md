@@ -28,6 +28,7 @@
 | `process/efficiency-review.md` | Разбор процесса: где теряем время и что поменяли |
 | `owner-checklist/checklist.md` | Чек-лист владельца: Steam, юридическое, финансы, сроки |
 | `team/` | Роли агентов и процесс |
+| `threads/` | Выжимки тредов из проектов Claude участников (Kirill, Kanta) |
 | `sprint1/` | Спецификации, планы и разборы плейтестов по спринтам |
 | `audience*.md`, `market-analysis.md` | Аудитория и рынок |
 
