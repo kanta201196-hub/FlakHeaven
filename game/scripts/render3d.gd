@@ -32,6 +32,12 @@ var _flash_mat: StandardMaterial3D
 var _elite_mat: StandardMaterial3D
 var _zoom := 1.0
 var _shadow_shader: Shader
+var _trails: Contrails       # 3.4-t1 (п. 10, 34): инверсионные следы самолётов и ракет
+var _tid := 0                # номера ракет для их следов
+var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые падают
+var _wrecks: Array = []      # и остаются обломками на земле
+var _wreck_mat: StandardMaterial3D
+var _smoke_mat: StandardMaterial3D
 ## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
 ## настоящая тень размыта полутенью солнца до пятна и лежит далеко в стороне, а крупная чёткая тень
 ## читается как бреющий полёт. Оставляем подсказку «где самолёт над землёй», но в стиле высоты.
@@ -91,6 +97,8 @@ func _ready() -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.directional_shadow_max_distance = 4000.0
 	sun.shadow_bias = 0.05
+	# 3.4-t1 (п. 18): тени уступов на склонах были почти чёрными полосами — свет неба их подсвечивает
+	sun.shadow_opacity = 0.8
 	# B-24: солнце ниже (~40° над горизонтом) — тени длиннее, у объектов видна теневая сторона.
 	# Свет сверху-слева (на экране): тени уходят вниз-вправо
 	sun.basis = Basis.looking_at(Vector3(0.62, -0.85, 0.75).normalized(), Vector3(0, 0, -1))
@@ -149,6 +157,12 @@ func _ready() -> void:
 	_elite_mat.albedo_color = Color(1.0, 0.75, 0.2, 0.28)
 	_elite_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_elite_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_wreck_mat = StandardMaterial3D.new()
+	_wreck_mat.albedo_color = Color(0.07, 0.06, 0.05, 0.82)
+	_wreck_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_wreck_mat.roughness = 1.0
+	_trails = Contrails.new()
+	add_child(_trails)
 	apply_gfx(Settings.gfx)
 
 
@@ -328,7 +342,11 @@ func _process(delta: float) -> void:
 		# с наклоном видно дальше вперёд (вверх по экрану)
 		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
 	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 2)
-	_sync_units(m, delta)
+	var sd := 0.0 if get_tree().paused else delta   # время эффектов стоит на паузе
+	_sync_units(m, delta, sd)
+	_sync_missiles(m)
+	_sync_crashes(m, sd)
+	_trails.tick(sd)
 	_sync_objects(c2, h)
 	_sync_clouds(m, c2, h)
 	_sync_scorch(m)
@@ -364,6 +382,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}}
 		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
 			u["sh"] = _make_shadow(tex, root)
+		if kind != "enemy":
+			PlaneFx.attach(u, tex)
 		_units[id] = u
 	u["seen"] = true
 	return u
@@ -428,7 +448,7 @@ func _place_shadow(u: Dictionary, p: Vector2, heading: float, k: float) -> void:
 	mat.set_shader_parameter("blur", 0.03 + 0.03 * (1.0 - Tuning.g("shadow_size")))
 
 
-func _sync_units(m: Main, delta: float) -> void:
+func _sync_units(m: Main, delta: float, sd: float) -> void:
 	for id in _units:
 		_units[id]["seen"] = false
 	var p := m.player
@@ -440,6 +460,14 @@ func _sync_units(m: Main, delta: float) -> void:
 			if p.roll_t > 0.0:
 				roll = (1.0 - p.roll_t / p.roll_time()) * TAU * p.roll_dir
 			_place(u, p.global_position, p.heading, p.bank * 0.45, roll)
+			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
+			u["ab"] = move_toward(float(u.get("ab", 0.0)), 1.0 if p.ab_t > 0.0 else 0.0, sd * 4.0)
+			var ab: float = u["ab"]
+			PlaneFx.update(u, sd, ab)
+			var st := [lerpf(0.2, 0.5, ab), lerpf(4.0, 7.0, ab) * p.size, lerpf(12.0, 22.0, ab) * p.size, lerpf(1.8, 3.0, ab), 12.0]
+			var pts := PlaneFx.trail_points(u)
+			for i in pts.size():
+				_trails.emit("p%d" % i, pts[i], st)
 			var mi: MeshInstance3D = u["mi"]
 			mi.transparency = 0.6 if (p.invuln > 0.0 and p.roll_t <= 0.0 and int(p._blink * 20.0) % 2 == 0) else 0.0
 			_sync_weapons(u, p, tex)
@@ -450,7 +478,12 @@ func _sync_units(m: Main, delta: float) -> void:
 				continue
 			var len_w := Tuning.g("plane_len") * 0.85 * float(wt.get_width()) / float(PlaneArt.plane_tex("fighter", 1).get_width())
 			var uw := _ensure(wm.get_instance_id(), "wing", wt, len_w, 0.075, 48)
+			uw["ref"] = weakref(wm)
 			_place(uw, wm.global_position, wm.heading, _turn_bank(uw, wm.heading, delta), 0.0)
+			PlaneFx.update(uw, sd, 0.0)
+			var wpts := PlaneFx.trail_points(uw)
+			for i in wpts.size():
+				_trails.emit("w%d_%d" % [wm.get_instance_id(), i], wpts[i], [0.14, 3.0, 10.0, 1.5, 14.0])
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
 		if e == null or e.hp <= 0.0:
@@ -473,7 +506,8 @@ func _sync_units(m: Main, delta: float) -> void:
 		mi2.material_overlay = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
 	for id in _units.keys():
 		if not _units[id]["seen"]:
-			(_units[id]["node"] as Node).queue_free()
+			if not _start_crash(_units[id]):
+				(_units[id]["node"] as Node).queue_free()
 			_units.erase(id)
 
 
@@ -524,6 +558,158 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			u["weapons"].erase(key)
 
 
+# ---------- 3.4-t1: следы ракет (п. 34) ----------
+
+func _sync_missiles(m: Main) -> void:
+	var pr := m.projectiles
+	if pr == null:
+		return
+	for arr_st in [[pr.pmissiles, [0.5, 3.0, 14.0, 1.3, 16.0]], [pr.missiles, [0.42, 3.0, 13.0, 1.2, 16.0]], [pr.rockets, [0.3, 2.0, 8.0, 0.8, 14.0]]]:
+		for mm: Dictionary in arr_st[0]:
+			if float(mm.get("delay", 0.0)) > 0.0:
+				continue
+			if not mm.has("tid"):
+				_tid += 1
+				mm["tid"] = _tid
+			var v: Vector2 = mm["v"]
+			var tail: Vector2 = mm["p"] - (v.normalized() * 9.0 if v.length() > 1.0 else Vector2.ZERO)
+			_trails.emit(int(mm["tid"]), Vector3(tail.x, -2.0, tail.y), arr_st[1])
+
+
+# ---------- 3.4-t1: сбитый ведомый падает (п. 32) ----------
+
+const CRASH_G := 300.0        # ускорение падения, пикс/с²
+const WRECK_LIFE := 40.0      # сколько лежат обломки, с
+const WRECK_MAX := 8
+
+
+## Ведомый сбит (hp ≤ 0) — модель не удаляем, а роняем: дым, крен, удар о землю
+func _start_crash(u: Dictionary) -> bool:
+	if u["kind"] != "wing" or not u.has("ref"):
+		return false
+	var wm: Wingman = (u["ref"] as WeakRef).get_ref()
+	if wm == null or wm.hp > 0.0:
+		return false
+	var root: Node3D = u["node"]
+	if u.has("sh"):
+		(u["sh"] as Node3D).visible = false
+	PlaneFx.update(u, 0.0, 0.0, false)
+	var smoke := _make_smoke()
+	smoke.position = root.position
+	var dir := Vector2.from_angle(wm.heading)
+	_crashes.append({"u": u, "p": Vector2(root.position.x, root.position.z), "y": root.position.y, "vy": -60.0,
+		"v": dir * 260.0, "hd": wm.heading, "roll": float(u["bank"]), "spin": (2.0 + randf() * 2.0) * (1.0 if randf() < 0.5 else -1.0),
+		"t": 0.0, "smoke": smoke})
+	return true
+
+
+func _sync_crashes(m: Main, sd: float) -> void:
+	for i in range(_crashes.size() - 1, -1, -1):
+		var c: Dictionary = _crashes[i]
+		var u: Dictionary = c["u"]
+		var root: Node3D = u["node"]
+		var smoke: CPUParticles3D = c["smoke"]
+		c["t"] = float(c["t"]) + sd
+		c["v"] = (c["v"] as Vector2) * exp(-0.5 * sd)
+		c["p"] = (c["p"] as Vector2) + (c["v"] as Vector2) * sd
+		c["vy"] = float(c["vy"]) - CRASH_G * sd
+		c["y"] = float(c["y"]) + float(c["vy"]) * sd
+		c["roll"] = float(c["roll"]) + float(c["spin"]) * sd
+		c["hd"] = float(c["hd"]) + float(c["spin"]) * 0.25 * sd
+		var p: Vector2 = c["p"]
+		var pitch := clampf(float(c["t"]) * 0.6, 0.0, 1.0)   # нос опускается
+		var k: float = u["k"]
+		root.position = Vector3(p.x, c["y"], p.y)
+		root.basis = (Basis(Vector3.UP, -float(c["hd"])) * Basis(Vector3.BACK, -pitch) * Basis(Vector3.RIGHT, c["roll"])).scaled(Vector3(k, k, k))
+		smoke.position = root.position
+		var gy := terrain.surface(p.x, p.y).y if terrain != null else GROUND_Y
+		if float(c["y"]) > gy + 6.0:
+			continue
+		# удар о землю: взрыв и пятно там, где на экране земля под обломками
+		var g3 := Vector3(p.x, gy, p.y)
+		var p2 := _ground_to_combat(g3)
+		if m.fx != null:
+			m.fx.explosion(p2, 30.0, false)
+			if is_instance_valid(m.fx.ground):
+				m.fx.ground.scorch(p2, 38.0, false)
+		light_flash(p2, 30.0)
+		_crashes.remove_at(i)
+		# остов: тёмный, приплюснутый, лежит по склону; дымит ещё несколько секунд
+		root.position = g3 + Vector3(0, 2.0, 0)
+		root.basis = (Basis(Vector3.UP, -float(c["hd"]) + randf_range(-0.4, 0.4)) * Basis(Vector3.RIGHT, randf_range(-0.15, 0.15))).scaled(Vector3(k * 0.9, k * 0.4, k * 0.9))
+		for gi in root.find_children("*", "GeometryInstance3D", true, false):
+			(gi as GeometryInstance3D).material_overlay = _wreck_mat
+		for hub in (u.get("fx", {}) as Dictionary).get("props", []):
+			(hub as Node3D).visible = false
+		smoke.position = g3 + Vector3(0, 6.0, 0)
+		smoke.amount = 16
+		_wrecks.append({"n": root, "t": WRECK_LIFE, "smoke": smoke})
+		if _wrecks.size() > WRECK_MAX:
+			_free_wreck(_wrecks.pop_front())
+	for i in range(_wrecks.size() - 1, -1, -1):
+		var w: Dictionary = _wrecks[i]
+		w["t"] = float(w["t"]) - sd
+		if is_instance_valid(w["smoke"]) and float(w["t"]) < WRECK_LIFE - 8.0:
+			(w["smoke"] as CPUParticles3D).emitting = false
+		if float(w["t"]) <= 0.0:
+			_free_wreck(w)
+			_wrecks.remove_at(i)
+
+
+func _free_wreck(w: Dictionary) -> void:
+	(w["n"] as Node).queue_free()
+	if is_instance_valid(w["smoke"]):
+		(w["smoke"] as Node).queue_free()
+
+
+## Точка плоскости боя (y = 0), которая на экране совпадает с точкой мира g3 (обратное ground_under)
+func _ground_to_combat(g3: Vector3) -> Vector2:
+	var c := cam.global_position
+	var k := c.y / maxf(c.y - g3.y, 1.0)
+	return Vector2(c.x + (g3.x - c.x) * k, c.z + (g3.z - c.z) * k)
+
+
+## Шлейф дыма с огнём у падающего самолёта: частицы в мировых координатах, поднимаются и расплываются
+func _make_smoke() -> CPUParticles3D:
+	if _smoke_mat == null:
+		_smoke_mat = StandardMaterial3D.new()
+		_smoke_mat.albedo_texture = Fx._smoke_n[0] if not Fx._smoke_n.is_empty() else Fx._soft
+		_smoke_mat.vertex_color_use_as_albedo = true
+		_smoke_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_smoke_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_smoke_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+		_smoke_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	var q := QuadMesh.new()
+	q.size = Vector2(1, 1)
+	q.material = _smoke_mat
+	var s := CPUParticles3D.new()
+	s.mesh = q
+	s.amount = 36
+	s.lifetime = 1.8
+	s.local_coords = false
+	s.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	s.direction = Vector3.UP
+	s.spread = 30.0
+	s.initial_velocity_min = 10.0
+	s.initial_velocity_max = 30.0
+	s.gravity = Vector3(8.0, 25.0, 6.0)   # ветер и подъём тёплого дыма
+	s.angle_min = 0.0
+	s.angle_max = 360.0
+	s.scale_amount_min = 26.0
+	s.scale_amount_max = 40.0
+	var sc := Curve.new()
+	sc.add_point(Vector2(0, 0.6))
+	sc.add_point(Vector2(1, 2.5))
+	s.scale_amount_curve = sc
+	var gr := Gradient.new()
+	gr.offsets = PackedFloat32Array([0.0, 0.06, 0.2, 1.0])
+	gr.colors = PackedColorArray([Color(1.0, 0.75, 0.3, 0.95), Color(0.9, 0.4, 0.12, 0.8), Color(0.18, 0.17, 0.16, 0.6), Color(0.3, 0.3, 0.3, 0.0)])
+	s.color_ramp = gr
+	s.emitting = true
+	add_child(s)
+	return s
+
+
 # ---------- объекты биома ----------
 
 ## Верх объектов не ближе 30 px к плоскости боя (запас на крен и толщину моделей)
@@ -560,6 +746,16 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 			var mi := MeshInstance3D.new()
 			var k: float = o["size"] / float(maxi(t.get_width(), t.get_height()))
 			var gy := terrain.surface(o["pos"].x, o["pos"].y).y
+			if o["name"] in ["o_fort", "o_village"]:
+				# 3.4-t1 (п. 25): крепость и кишлак — объёмные постройки, а не выдавленная картинка
+				var sz := float(o["size"])
+				mi.mesh = AdobeBuild.fort() if o["name"] == "o_fort" else AdobeBuild.village(absi(hash(key)) % 4)
+				mi.material_override = AdobeBuild.material()
+				mi.position = Vector3(o["pos"].x, gy - sz * 0.01, o["pos"].y)
+				mi.basis = Basis(Vector3.UP, -float(o["rot"])).scaled(Vector3(sz, sz, sz))
+				add_child(mi)
+				_objs[key] = mi
+				continue
 			if float(rel[0]) > 0.0:
 				# 3.3: самолёт летит над всем (как в Sublight) — рельеф никогда не дотягивается до плоскости боя
 				var h_world := clampf(float(o["size"]) * float(rel[0]), 2.0, OBJ_TOP - gy)
@@ -621,6 +817,31 @@ func _sync_clouds(m: Main, c2: Vector2, h: float) -> void:
 		var d := sp.distance_to(pp)
 		var ss := size * h / (h - CLOUD_Y)
 		mat.albedo_color = Color(1, 1, 1, 0.5 * clampf((d - ss * 0.1) / (ss * 0.45), 0.2, 1.0))
+	_cloud_shadows(cl, its)
+
+
+## 3.4-t1 (п. 33): тени облаков — в шейдер земли (до 12 ближайших облаков)
+func _cloud_shadows(cl: Clouds, its: Array) -> void:
+	if _ground_mat == null:
+		return
+	var arr := PackedVector4Array()
+	var texs: Array = cl._tex
+	for it in its:
+		if arr.size() >= 12:
+			break
+		var ti := maxi(texs.find(it[3]), 0)
+		arr.append(Vector4(it[0].x, it[0].y, float(it[1]), fposmod(float(it[2]), TAU) + 10.0 * ti))
+	while arr.size() < 12:
+		arr.append(Vector4.ZERO)
+	_ground_mat.set_shader_parameter("clouds", arr)
+	_ground_mat.set_shader_parameter("cloud_n", mini(its.size(), 12))
+	if not _ground_mat.has_meta("cloud_tex") and texs.size() > 0:
+		_ground_mat.set_meta("cloud_tex", true)
+		_ground_mat.set_shader_parameter("cloud_a", texs[0])
+		_ground_mat.set_shader_parameter("cloud_b", texs[mini(1, texs.size() - 1)])
+		_ground_mat.set_shader_parameter("cloud_y", CLOUD_Y)
+		var dv := -sun.global_transform.basis.z
+		_ground_mat.set_shader_parameter("cloud_shift", Vector2(dv.x, dv.z) / dv.y)   # точка земли → точка облака против луча
 
 
 # ---------- 3.2: свет взрывов ----------

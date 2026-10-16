@@ -115,7 +115,9 @@ static func build(tex: Texture2D, height_px: float, grid := 72, lum_k := 0.0, pr
 	var oz := th / 2.0
 	var sides := [1.0, -0.45] if bottom else [1.0]
 	for side in sides:
-		var col := Color(1, 1, 1) if side > 0.0 else Color(0.45, 0.45, 0.48)
+		# 3.4-t1 (п. 6): низ был тёмным зеркалом (×0.45) — в бочке брюхо выглядело чёрным.
+		# Теперь брюхо светлое и чуть холоднее верха: так красят нижние поверхности самолётов
+		var col := Color(1, 1, 1) if side > 0.0 else Color(0.86, 0.88, 0.92)
 		for y in gh:
 			for x in gw:
 				if draw[y * gw + x] == 0:
