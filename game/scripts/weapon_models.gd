@@ -19,11 +19,55 @@ static func tier(level: int, evo := false) -> int:
 
 
 ## Узел с моделью (общий меш из кэша — копировать дёшево)
-## side — место крепления (mounts): от него зависит вид турели
-static func make(weapon: String, t: int, side := "") -> MeshInstance3D:
+## side — место крепления (mounts): от него зависит вид турели; cls — класс самолёта
+## (у «Кита» и «Грача» свои турели — модели Blender по фото владельца, 16.10)
+static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	mi.mesh = mesh(weapon, t, side)
+	var tm: Mesh = turret_model(cls) if weapon == "turret" else null
+	mi.mesh = tm if tm != null else mesh(weapon, t, side)
 	return mi
+
+
+## Турели из Blender (game/tools/blender/turret_*.py → models/turrets): стволы +X, основание на y = 0.
+## Масштаб — под размеры прежней турели (длина корпуса TURRET_MODELS.s), обшивка — в цвет самолёта.
+const TURRET_MODELS := {
+	"bomber": {"file": "res://models/turrets/turret_kit.glb", "s": 0.3, "muzzle": Vector3(2.7, 0.43, 0.0),
+		"body": Color(0.5, 0.52, 0.54)},
+	"attacker": {"file": "res://models/turrets/turret_grach.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
+		"body": Color(0.34, 0.37, 0.28)},
+}
+
+
+static func turret_model(cls: String) -> Mesh:
+	var spec: Dictionary = TURRET_MODELS.get(cls, {})
+	if spec.is_empty() or not ResourceLoader.exists(spec["file"]):
+		return null
+	var key := "turret_model_" + cls
+	if _cache.has(key):
+		return _cache[key]
+	var root: Node = (load(spec["file"]) as PackedScene).instantiate()
+	var src: MeshInstance3D = null
+	for c in root.find_children("*", "MeshInstance3D", true, false):
+		src = c
+		break
+	if src == null:
+		root.free()
+		return null
+	var xf := Transform3D(Basis.from_scale(Vector3.ONE * float(spec["s"])), Vector3.ZERO) * src.transform
+	var am := ArrayMesh.new()
+	for si in src.mesh.get_surface_count():
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		st.append_from(src.mesh, si, xf)
+		st.commit(am)
+		var m: Material = src.mesh.surface_get_material(si)
+		if m is StandardMaterial3D and String(m.resource_name).contains("body"):
+			m = (m as StandardMaterial3D).duplicate()
+			(m as StandardMaterial3D).albedo_color = spec["body"]
+		am.surface_set_material(am.get_surface_count() - 1, m)
+	root.free()
+	_cache[key] = am
+	return am
 
 
 static func mesh(weapon: String, t: int, side := "") -> ArrayMesh:
@@ -101,7 +145,10 @@ static func mesh(weapon: String, t: int, side := "") -> ArrayMesh:
 
 
 ## Точка вылета снаряда в координатах модели (длина 1): для ракет и бомб — центр, для стволов — дульный срез
-static func muzzle(weapon: String) -> Vector3:
+static func muzzle(weapon: String, cls := "") -> Vector3:
+	if weapon == "turret" and TURRET_MODELS.has(cls):
+		var spec: Dictionary = TURRET_MODELS[cls]
+		return (spec["muzzle"] as Vector3) * float(spec["s"])
 	match weapon:
 		"gunpod":
 			return Vector3(0.78, 0, 0)
@@ -322,7 +369,7 @@ static func muzzle_world(p: Player, g: Hardpoint, si: int, aim := NAN) -> Vector
 	var pt: Vector2 = (pts[si % pts.size()] as Dictionary)["p"]
 	var k := Tuning.g("plane_len") * p.size / float(tex1.get_width())   # пикселей мира на пиксель картинки
 	var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k
-	var mz := muzzle(g.weapon) * len_px
+	var mz := muzzle(g.weapon, p.cls_id) * len_px
 	var local := pt + Vector2(mz.x, mz.z)
 	if not is_nan(aim):   # турель: ствол смотрит на цель
 		local = pt + Vector2(mz.x, 0.0).rotated(aim - p.heading)

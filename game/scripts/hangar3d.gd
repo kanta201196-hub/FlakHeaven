@@ -148,7 +148,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		for mt: Dictionary in WeaponModels.mounts(cls_id, lvl, gi, g):
 			var pt: Vector2 = mt["p"]
 			var side: String = mt["side"]
-			var wmi := WeaponModels.make(g.weapon, weapon_tier, side)
+			var wmi := WeaponModels.make(g.weapon, weapon_tier, side, cls_id)
 			# по настоящей поверхности модели: подвес — под крылом на пилоне, верхняя турель
 			# утоплена в спину фюзеляжа, нижняя — в брюхо, кормовая — в конце фюзеляжа
 			var x := pt.x / tw
@@ -173,11 +173,16 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 					var l2 := _surface_y(x, 0.0, true)
 					var h2 := _surface_y(x, 0.0, false)
 					y = 0.0 if is_nan(l2) else ((l2 + h2) * 0.5 if h2 - l2 < 0.03 else l2 + 0.012)
+					if WeaponModels.TURRET_MODELS.has(cls_id):
+						# турель-модель: под концом фюзеляжа, основанием вверх (сверху мешает киль)
+						x = xe + 0.035
+						var l3 := _surface_y(x, 0.0, true)
+						y = l3 if not is_nan(l3) else y
 			wmi.position = Vector3(x, y, z)
 			if g.weapon == "turret":
 				turret_pos.append([wmi.position, side])
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
-			if side == "bottom":
+			if side == "bottom" or (side == "tail" and WeaponModels.TURRET_MODELS.has(cls_id)):
 				bs = bs * Basis(Vector3.RIGHT, PI)
 			wmi.basis = bs.scaled(Vector3(wlen, wlen, wlen))
 			pivot.add_child(wmi)

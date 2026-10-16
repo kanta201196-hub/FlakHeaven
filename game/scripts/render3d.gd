@@ -573,13 +573,15 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			var mt: Dictionary = pts[si]
 			var wmi: MeshInstance3D = u["weapons"].get(key)
 			if wmi == null:
-				wmi = WeaponModels.make(g.weapon, tr, mt["side"])
+				wmi = WeaponModels.make(g.weapon, tr, mt["side"], p.cls_id)
 				root.add_child(wmi)
 				u["weapons"][key] = wmi
 			var pt: Vector2 = mt["p"]
 			var tw := float(tex.get_width())
 			# подвесы — под крылом на пилоне (видны на крене и под наклоном камеры), турели — на своих местах
-			var y: float = {"under": -tw * 0.012 - 0.09 * len_px, "top": tw * 0.028, "bottom": -tw * 0.028, "tail": 0.0}.get(mt["side"], 0.0)
+			# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
+			var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id)
+			var y: float = {"under": -tw * 0.012 - 0.09 * len_px, "top": tw * 0.028, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
 			wmi.position = Vector3(pt.x, y, pt.y)
 			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
@@ -588,7 +590,7 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 				if mt["side"] == "tail":   # кормовая установка — в секторе ±60° назад, как настоящая
 					yaw = idle + clampf(wrapf(yaw - idle, -PI, PI), -1.05, 1.05)
 			var b := Basis(Vector3.UP, yaw)
-			if mt["side"] == "bottom":
+			if mt["side"] == "bottom" or under_tail:
 				b = b * Basis(Vector3.RIGHT, PI)
 			wmi.basis = b.scaled(Vector3(len_px, len_px, len_px))
 			wmi.transparency = 0.6 if dim else 0.0
