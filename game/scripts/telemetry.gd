@@ -17,7 +17,9 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	# 3.5: время жизни асов (с появления до гибели), РУД вернули принудительно, залпы ловушек «Кита», разрешение 3D
 	"boss_n", "boss_life_avg", "boss_life_min", "boss_life_max", "throttle_locks", "flare_salvos", "scale3d",
 	# 3.5 (тред «ИИ врагов и активности»): уклонения врагов, их ловушки и уведённые ими ракеты, сбитые ПВО наши ракеты
-	"enemy_evades", "enemy_flares", "enemy_flared_missiles", "aa_shot_down"]
+	"enemy_evades", "enemy_flares", "enemy_flared_missiles", "aa_shot_down",
+	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа
+	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx"]
 
 ## T4-04: автоснижение качества — окна по 20 с с 5-й секунды; FPS ниже порога → пресет ниже (до 3 раз за вылет)
 const AUTO_FPS := 35.0
@@ -110,6 +112,9 @@ func frame(delta: float, m: Main) -> void:
 	_speed_n += 1
 	maxv("speed_max", spd)
 	maxv("turn_max", rad_to_deg(p.turn_rate()))
+	var air := m.projectiles.pmissiles.size() + m.projectiles.rockets.size()
+	add("msl_air_sum", air)
+	maxv("msl_air_max", air)
 	if m.run_time >= _next_min:
 		_minute(m)
 		_next_min += 60.0
@@ -205,8 +210,12 @@ func row(m: Main) -> PackedStringArray:
 	v["draws_avg"] = g("draws_sum") / maxf(_rs_n, 1)
 	v["boss_life_avg"] = g("boss_life_sum") / maxf(g("boss_n"), 1.0)
 	v["scale3d"] = 100.0 * float(Render3D.GFX_SCALE[clampi(Settings.gfx, 0, 3)])
+	v["msl_air_avg"] = g("msl_air_sum") / maxf(_speed_n, 1)
+	v["crew_rank"] = float(Profile.crew_lvl(m.cls_id))
+	v["crew_xp_lvl"] = float(Profile.xp_lvl(m.cls_id))
+	v["callsign_idx"] = float((Profile.CALLSIGNS[m.cls_id] as Array).find(Profile.cls(m.cls_id)["callsign"]))
 	var out := PackedStringArray()
 	for k in COLS:
 		var x := g(k)
-		out.append(("%.1f" % x) if k in ["invuln_s", "invuln_chain_max", "pad_s", "kbm_s", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s", "boss_life_avg", "boss_life_min", "boss_life_max"] else str(int(round(x))))
+		out.append(("%.1f" % x) if k in ["msl_air_avg", "invuln_s", "invuln_chain_max", "pad_s", "kbm_s", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s", "boss_life_avg", "boss_life_min", "boss_life_max"] else str(int(round(x))))
 	return out

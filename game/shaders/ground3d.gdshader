@@ -27,14 +27,23 @@ uniform vec3 haze_color : source_color = vec3(0.62, 0.68, 0.78);
 // русло и дорога по расстоянию до реки (terrain3d.gd: D_RIVER, D_ROAD; в UV2.x, px со знаком)
 uniform float river_w = 26.0;
 uniform float road_v = 85.0;
-uniform float road_w = 10.0;
-uniform vec3 water_color : source_color = vec3(0.42, 0.58, 0.62);
-uniform vec3 road_color : source_color = vec3(0.78, 0.7, 0.58);
+uniform float road_w = 14.0;
+uniform vec3 water_color : source_color = vec3(0.3, 0.42, 0.44);
+uniform vec3 road_color : source_color = vec3(0.7, 0.62, 0.5);
 uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к палитре стайл-гайда (фото рыжее)
 uniform float rock_sat = 0.45;
 uniform float hillshade = 0.3;     // отмывка рельефа: склоны от солнца темнее — горы читаются сверху
 uniform vec3 shade_dir = vec3(-0.55, 0.6, -0.58); // откуда «светит» отмывка (как солнце, но ниже)
 uniform bool anti_tile = true;
+// 3.4-t1 (п. 33): тени облаков рисуются на самой земле (раньше — 2D-пятна на плоскости боя, при наклоне
+// они висели поверх гор). Облако: xy — центр, z — размер, w — поворот + 10 × номер текстуры
+uniform sampler2D cloud_a : filter_linear, repeat_disable;
+uniform sampler2D cloud_b : filter_linear, repeat_disable;
+uniform vec4 clouds[12];
+uniform int cloud_n = 0;
+uniform float cloud_y = 380.0;
+uniform vec2 cloud_shift = vec2(0.0);  // сдвиг тени на 1 px высоты (по солнцу)
+uniform float cloud_dark = 0.2;
 
 uniform float tex_world = 460.0;   // мировой размер плитки, px
 uniform float patch_world = 1500.0; // размер пятен материалов, px
@@ -43,7 +52,7 @@ uniform float seed = 0.0;
 uniform float albedo_k = 0.8;
 uniform float bump_k = 6.0;         // псевдорельеф по яркости (без наборов PBR)
 uniform float normal_k = 1.0;       // сила карт нормалей
-uniform float height_blend = 0.35;  // ширина перехода по высоте (меньше — резче)
+uniform float height_blend = 0.55;  // ширина перехода по высоте (меньше — резче)
 uniform float saturation = 0.8;     // насыщенность земли (фото CC0 ярче палитры стайл-гайда)
 
 varying vec2 world;
@@ -127,7 +136,7 @@ void fragment() {
 	if (relief) {
 		// скала на крутых склонах: три проекции, на стенах слои пород горизонтальны
 		float slope = 1.0 - clamp(wnorm.y, 0.0, 1.0);
-		float rk = smoothstep(0.22, 0.42, slope + (hgt - 0.5) * 0.15);
+		float rk = smoothstep(0.2, 0.5, slope + (hgt - 0.5) * 0.15);   // 3.4-t1 (п. 18): переход к скале шире
 		if (rk > 0.001) {
 			vec3 bw = pow(abs(wnorm), vec3(4.0));
 			bw /= (bw.x + bw.y + bw.z);
@@ -152,6 +161,23 @@ void fragment() {
 		c = mix(c, snow_c, snow);
 		nxy *= 1.0 - 0.8 * snow;
 		ao = mix(0.55, 1.0, smoothstep(0.15, 0.55, rel.x));
+		// 3.4-t1 (п. 18): русло, влажный берег и дорога (B-46 обещал их, но в шейдер они не попали —
+		// русло читалось чёрной канавой). rel.z — расстояние до линии реки со знаком, px
+		float rd = abs(rel.z);
+		float edge = (vnoise(world / 90.0 + 3.0) - 0.5) * 8.0;
+		float bank = 1.0 - smoothstep(river_w, river_w * 2.4, rd + edge);
+		c = mix(c, c * vec3(0.78, 0.82, 0.7), bank * 0.6);       // сырая земля и зелень у воды
+		float water = 1.0 - smoothstep(river_w * 0.45, river_w * 0.8, rd + edge * 0.5);
+		vec3 wc = water_color * (0.9 + 0.2 * vnoise(world / 60.0));
+		c = mix(c, wc, water);
+		nxy *= 1.0 - water;
+		wet_out = water;
+		ao = mix(ao, 1.0, water);
+		float rdist = abs(rel.z - road_v) + (vnoise(world / 140.0 - 7.0) - 0.5) * 4.0;
+		float road = (1.0 - smoothstep(road_w * 0.45, road_w, rdist)) * (1.0 - water);
+		float ruts = 1.0 - 0.18 * (1.0 - smoothstep(0.0, 1.6, abs(rdist - road_w * 0.3)));
+		c = mix(c, road_color * (0.92 + 0.12 * vnoise(world / 30.0)) * ruts, road * 0.6);
+		nxy *= 1.0 - road * 0.7;
 	}
 	c = mix(vec3(dot(c, vec3(0.299, 0.587, 0.114))), c, saturation);
 	float macro = 0.88 + 0.2 * vnoise(world / 2600.0 + 5.0) + 0.06 * (vnoise(world / 700.0 - 9.0) - 0.5);
@@ -160,6 +186,25 @@ void fragment() {
 		// дымка: дно долин чуть голубее и светлее (воздушная перспектива — глубина без тумана)
 		alb = mix(alb, haze_color * 0.75, (1.0 - rel.y) * 0.08);
 	}
+	float cs = 0.0;
+	for (int ci = 0; ci < 12; ci++) {
+		if (ci >= cloud_n) break;
+		vec4 cl = clouds[ci];
+		vec2 d = world3.xz + cloud_shift * (cloud_y - world3.y) - cl.xy;
+		float idx = floor(cl.w / 10.0);
+		float r = cl.w - idx * 10.0;
+		vec2 l = vec2(d.x * cos(r) + d.y * sin(r), -d.x * sin(r) + d.y * cos(r)) / cl.z + 0.5;
+		if (l.x > 0.0 && l.y > 0.0 && l.x < 1.0 && l.y < 1.0) {
+			// мягкий край: 5 выборок (у текстур облаков нет мип-уровней)
+			float acc = 0.0;
+			for (int k = 0; k < 5; k++) {
+				vec2 o = k == 0 ? vec2(0.0) : vec2(cos(float(k) * 1.5708), sin(float(k) * 1.5708)) * 0.05;
+				acc += idx < 0.5 ? texture(cloud_a, l + o).a : texture(cloud_b, l + o).a;
+			}
+			cs = max(cs, acc / 5.0);
+		}
+	}
+	alb *= 1.0 - cloud_dark * cs;
 	ALBEDO = alb;
 	if (use_nh) {
 		nxy *= normal_k;
@@ -171,6 +216,6 @@ void fragment() {
 		NORMAL_MAP = normalize(vec3(-g.x, g.y, 1.0)) * 0.5 + 0.5;
 		AO = ao;
 	}
-	ROUGHNESS = mix(0.95, 0.12, wet_out);
-	SPECULAR = mix(0.1, 0.6, wet_out);
+	ROUGHNESS = mix(0.95, 0.3, wet_out);
+	SPECULAR = mix(0.1, 0.35, wet_out);   // без неба для отражений сильный блеск давал чёрную воду
 }

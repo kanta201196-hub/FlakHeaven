@@ -21,10 +21,10 @@ const KINDS := {
 	"sandbag": ["b10_sandbag_post", 40.0, 55.0],
 }
 
-## T4-05: облегчённые деревья для пресетов ниже «Максимального» — ствол и крона простыми фигурами
-## по габаритам модели Meshy (~150 треуг. вместо 11–14 тыс.). Цвета — зелень садов из стайл-гайда.
-const LITE := {"poplar": Color(0.33, 0.39, 0.21), "orchard": Color(0.39, 0.43, 0.24)}
-const TRUNK_C := Color(0.33, 0.26, 0.2)
+## T4-05: облегчённые деревья для пресетов ниже «Максимального» (11–14 тыс. треуг. у полной модели).
+## 3.4-t1 (п. 17): вместо зелёного шара — «карточки» из картинок той же модели Meshy: две скрещённые
+## с видом сбоку и одна горизонтальная с видом сверху (tools/model_lab/bake_impostor.gd), 6 треугольников.
+const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree"}
 
 var _meshes := {}   # вид → Mesh (или null, если модели нет)
 var _t: Terrain3D
@@ -43,45 +43,52 @@ func _mesh(kind: String) -> Mesh:
 	return _full_mesh(kind)
 
 
-## Простое дерево в габаритах полной модели: ствол — шестигранник, крона — сплюснутая сфера
+## Дерево-карточки в габаритах полной модели (модели нормированы: ширина по X/Z = 1, низ в y = 0)
 func _lite_tree(kind: String) -> Mesh:
 	var full := _full_mesh(kind)
 	var size := full.get_aabb().size if full != null else Vector3(1.0, 1.4, 1.0)
 	var h := size.y
+	var w := maxf(size.x, size.z)
+	var side_s := maxf(h, w)   # кадр «сбоку» — квадрат со стороной max(h, w), центр на середине высоты
 	var am := ArrayMesh.new()
-	var trunk := CylinderMesh.new()
-	trunk.radial_segments = 6
-	trunk.rings = 1
-	trunk.top_radius = 0.035
-	trunk.bottom_radius = 0.05
-	trunk.height = h * 0.35
-	_add_part(am, trunk, Transform3D(Basis(), Vector3(0, h * 0.175, 0)), TRUNK_C)
-	var crown := SphereMesh.new()
-	crown.radial_segments = 10
-	crown.rings = 6
-	var cw := minf(size.x, size.z) * 0.9   # модели нормированы: ширина по X/Z = 1
-	crown.radius = 0.5
-	crown.height = 1.0
-	var ch := h * (0.75 if kind == "poplar" else 0.62)
-	_add_part(am, crown, Transform3D(Basis().scaled(Vector3(cw, ch, cw)), Vector3(0, h - ch * 0.5, 0)), LITE[kind])
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for ang in [0.0, PI / 2.0]:
+		var ax := Vector3(cos(ang), 0, sin(ang)) * side_s * 0.5
+		var y0 := h * 0.5 - side_s * 0.5
+		_card(st, Vector3(0, y0, 0) - ax, Vector3(0, y0, 0) + ax, Vector3(0, y0 + side_s, 0) + ax, Vector3(0, y0 + side_s, 0) - ax, Vector3(-sin(ang), 0, cos(ang)))
+	st.commit(am)
+	am.surface_set_material(0, _card_mat(DIR + LITE[kind] + "_side.png"))
+	var st2 := SurfaceTool.new()
+	st2.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var yt := h * (0.72 if kind == "poplar" else 0.66)
+	var r := w * 0.5
+	_card(st2, Vector3(-r, yt, r), Vector3(r, yt, r), Vector3(r, yt, -r), Vector3(-r, yt, -r), Vector3.UP)
+	st2.commit(am)
+	am.surface_set_material(1, _card_mat(DIR + LITE[kind] + "_top.png"))
 	return am
 
 
-func _add_part(am: ArrayMesh, pm: PrimitiveMesh, xf: Transform3D, c: Color) -> void:
-	var arr := pm.get_mesh_arrays()
-	var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
-	var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
-	for i in vs.size():
-		vs[i] = xf * vs[i]
-		ns[i] = (xf.basis.inverse().transposed() * ns[i]).normalized()
-	arr[Mesh.ARRAY_VERTEX] = vs
-	arr[Mesh.ARRAY_NORMAL] = ns
-	arr[Mesh.ARRAY_TANGENT] = null
-	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+func _card(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: Vector3) -> void:
+	var uv := [Vector2(0, 1), Vector2(1, 1), Vector2(1, 0), Vector2(0, 0)]
+	var vs := [a, b, c, d]
+	for k in [0, 1, 2, 0, 2, 3]:
+		st.set_normal(n)
+		st.set_uv(uv[k])
+		st.add_vertex(vs[k])
+
+
+func _card_mat(path: String) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	m.roughness = 0.95
-	am.surface_set_material(am.get_surface_count() - 1, m)
+	if ResourceLoader.exists(path):
+		m.albedo_texture = load(path)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	m.alpha_scissor_threshold = 0.4
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED   # свет уже «запечён» в картинку
+	m.albedo_color = Color(0.92, 0.92, 0.9)
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	return m
 
 
 func _full_mesh(kind: String) -> Mesh:

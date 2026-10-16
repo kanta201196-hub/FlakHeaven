@@ -32,7 +32,7 @@ func spawn_player_bullet(pos: Vector2, vel: Vector2, dmg: float, life: float, ma
 ## opts: splash (радиус осколков, 55), bounce (сколько раз искать новую цель после сбития), fire (огонь на земле)
 func spawn_player_missile(pos: Vector2, vel: Vector2, target: Enemy, dmg := 45.0, src := "ракеты В-В", opts := {}) -> void:
 	var m := {"p": pos, "v": vel, "life": 2.8, "t": weakref(target), "dmg": dmg, "trail": PackedVector2Array(), "src": src}
-	m.merge(opts)
+	m.merge(opts, true)
 	pmissiles.append(m)
 
 
@@ -271,15 +271,40 @@ static func seg_hit(a: Vector2, b: Vector2, c: Vector2, r: float) -> bool:
 	return (a + ab * t).distance_squared_to(c) < r * r
 
 
-## «Кассетная БЧ»: ракета В-В игрока разбрасывает суббоеприпасы
+## 3.5: «Боевая часть» с 3-го взятия — разделяющаяся БЧ: ракета В-В при попадании даёт 3 суббоеприпаса
 func _cluster(p: Vector2, m: Dictionary) -> void:
 	var pl := Main.I.player
-	if not is_instance_valid(pl) or float(pl.mods.get("cluster_dmg", 0.0)) <= 0.0 or m.get("src", "") != "ракеты В-В":
+	if not is_instance_valid(pl) or int(pl.taken.get("msl_head", 0)) < 3 or m.get("src", "") != "ракеты В-В" or m.get("sub", false):
 		return
-	var n := 2 + int(pl.taken.get("cluster", 0))
+	var n := 3
 	for i in n:
 		var to := p + Vector2.from_angle(TAU * i / n + randf() * 0.5) * randf_range(60.0, 110.0)
-		spawn_bomb(p, 0.25 + 0.05 * i, float(pl.mods["cluster_dmg"]), 50.0, "кассетная БЧ", to)
+		spawn_bomb(p, 0.25 + 0.05 * i, float(m["dmg"]) * 0.3, 50.0 * float(pl.mods.get("msl_r", 1.0)), "разделяющаяся БЧ", to)
+
+
+## 3.5: ГСН («Глазастик»): I — 600 пикс., 1 перенацеливание; II — 900 пикс., 2; без ГСН — нет
+func _seeker() -> Array:
+	var pl := Main.I.player
+	var n := int(pl.taken.get("seeker", 0)) if is_instance_valid(pl) else 0
+	if n <= 0:
+		return [0.0, 0]
+	return [600.0, 1] if n == 1 else [900.0, 2]
+
+
+## «Шмель»: тяжёлая ракета делится на 4 самонаводящиеся БЧ
+func _split(p: Vector2, m: Dictionary, hit: Enemy) -> void:
+	var n := int(m.get("split", 0))
+	var skip: Array = [hit]
+	var spare := 0
+	for i in n:
+		var nt := Weapons.pick_target(p, 700.0, "nearest", skip, true)
+		if nt == null:
+			spare += 1 # целей рядом нет — эта БЧ рвётся на месте
+			continue
+		skip.append(nt)
+		spawn_player_missile(p, Vector2.from_angle(TAU * i / n + randf() * 0.4) * 260.0, nt, float(m["split_dmg"]), "ракеты В-В", {"sub": true, "life": 1.1})
+	if spare > 0:
+		aoe(p, 90.0, float(m["split_dmg"]) * 0.5 * spare, "ракеты В-В", false)
 
 
 ## Множители пуль: нашивка «Кинетика I», «Штурмовой заход» по наземным
@@ -299,15 +324,30 @@ func _bullet_k(src: String, e: Enemy) -> float:
 
 
 func _update_player_missiles(delta: float) -> void:
+	var sk := _seeker()
+	var pl := Main.I.player
+	var boost := float(pl.mods.get("msl_boost", 1.0)) if is_instance_valid(pl) else 1.0
 	for i in range(pmissiles.size() - 1, -1, -1):
 		var m := pmissiles[i]
 		m["life"] = float(m["life"]) - delta
+		m["age"] = float(m.get("age", 0.0)) + delta
 		var v: Vector2 = m["v"]
 		var p: Vector2 = m["p"]
 		var t: Enemy = (m["t"] as WeakRef).get_ref() as Enemy
-		if t == null or t.hp <= 0.0:
-			t = Weapons.pick_target(p, 600.0, "nearest", [], true)
+		if (t == null or t.hp <= 0.0) and not m.get("lost", false):
+			var skm: Array = [0.0, 0] if m.get("sub", false) else sk # БЧ «Шмеля» не перенацеливаются — иначе рой
+			# 3.5: перенацеливание — только с модулем ГСН; без него ракета летит прямо и через 0,5 с самоликвидируется
+			t = null
+			if int(m.get("rt", 0)) < int(skm[1]):
+				t = Weapons.pick_target(p, float(skm[0]), "nearest", [], true)
+				if t != null:
+					m["rt"] = int(m.get("rt", 0)) + 1
+					Main.I.tele.add("msl_retarget")
 			m["t"] = weakref(t)
+			if t == null:
+				m["lost"] = true
+				m["life"] = minf(float(m["life"]), 0.5)
+				Main.I.tele.add("msl_lost")
 		var spd := minf(v.length() + 1500.0 * delta, 720.0 * _missile_spd() * float(m.get("spd_k", 1.0)))
 		if t != null:
 			var ang := rotate_toward(v.angle(), (t.global_position - p).angle(), deg_to_rad(320.0) * delta)
@@ -319,12 +359,18 @@ func _update_player_missiles(delta: float) -> void:
 		m["p"] = p
 		_trail_push(m, p, 26)
 		var done := float(m["life"]) <= 0.0
+		if done and m.get("lost", false):
+			Main.I.fx.explosion(p, 6.0) # самоликвидация
 		if t != null and p.distance_to(t.global_position) < t.radius + 6.0:
-			t.take_hit(float(m["dmg"]) * (float(m.get("ground_k", 1.0)) if t.is_ground else 1.0), m.get("src", "ракеты В-В"))
+			var dmg := float(m["dmg"]) * (boost if float(m["age"]) < 1.0 else 1.0) # «Форсированный старт»
+			t.take_hit(dmg * (float(m.get("ground_k", 1.0)) if t.is_ground else 1.0), m.get("src", "ракеты В-В"))
 			# 2.8: осколки — задевают соседей (55 пикс., урон падает к краю)
-			aoe(p, float(m.get("splash", 55.0)), float(m["dmg"]) * 0.5, m.get("src", "ракеты В-В"), false, t)
-			Main.I.fx.explosion(p, 20.0)
+			var msl_r := float(pl.mods.get("msl_r", 1.0)) if is_instance_valid(pl) else 1.0
+			aoe(p, float(m.get("splash", 55.0)) * msl_r, dmg * 0.5, m.get("src", "ракеты В-В"), false, t)
+			Main.I.fx.explosion(p, 30.0 if m.get("big", false) else 20.0)
 			_cluster(p, m)
+			if int(m.get("split", 0)) > 0:
+				_split(p, m, t)
 			# «Карусель»: сбитие → новая ракета с пилона в ближайшую цель, урон ×1,2 (до 4 перепусков)
 			if m.has("carousel") and t.hp <= 0.0 and int(m["carousel"]) < 4 and is_instance_valid(Main.I.player):
 				var pl2 := Main.I.player
@@ -336,11 +382,19 @@ func _update_player_missiles(delta: float) -> void:
 			if m.get("fire", false):
 				spawn_fire(p, 55.0, 12.0, 3.0, m.get("src", "ракеты В-В"))
 			done = true
-			# 3.1: «ищет новую цель» — ракета летит дальше (bounce раз)
-			if int(m.get("bounce", 0)) > 0:
+			# 3.1: «ищет новую цель» — ракета летит дальше (bounce раз); 3.5: ГСН III — +1 раз после сбития
+			var bounce := int(m.get("bounce", 0))
+			if t.hp <= 0.0 and not m.get("sub", false) and int(m.get("gsn3", -1)) != 0 and int(pl.taken.get("seeker", 0) if is_instance_valid(pl) else 0) >= 3 and m.get("src", "") == "ракеты В-В":
+				if not m.has("gsn3"):
+					m["gsn3"] = 1
+				bounce += int(m["gsn3"])
+			if bounce > 0:
 				var nt := Weapons.pick_target(p, 600.0, "nearest", [t], true)
 				if nt != null:
-					m["bounce"] = int(m["bounce"]) - 1
+					if int(m.get("bounce", 0)) > 0:
+						m["bounce"] = int(m["bounce"]) - 1
+					else:
+						m["gsn3"] = 0
 					m["t"] = weakref(nt)
 					m["life"] = 2.0
 					done = false

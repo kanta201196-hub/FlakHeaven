@@ -21,12 +21,14 @@ const MODULES := {
 	"gun_dmg": {"title": "Бронебойные снаряды", "max": 5, "cat": "Курсовое"},
 	"gun_rate": {"title": "Облегчённый затвор", "max": 5, "cat": "Курсовое"},
 	"reload": {"title": "Быстрая перезарядка", "max": 5, "cat": "Подвесы"},
-	"seeker": {"title": "ГСН «Глазастик»", "max": 5, "cat": "Подвесы"},
+	"seeker": {"title": "ГСН «Глазастик»", "max": 3, "cat": "Подвесы"},
 	"frag": {"title": "Осколочная рубашка", "max": 5, "cat": "Подвесы"},
 	"servo": {"title": "Сервоприводы", "max": 5, "cat": "Подвесы"},
 	"warhead": {"title": "Усиленная БЧ", "max": 5, "cat": "Подвесы"},
-	"twin_rail": {"title": "Спаренные направляющие", "max": 5, "cat": "Подвесы"},
-	"cluster": {"title": "Кассетная БЧ ракет", "max": 3, "cat": "Подвесы"},
+	# 3.5: ракеты — модули качества вместо «Спаренных направляющих» и «Кассетной БЧ»
+	"msl_head": {"title": "Боевая часть", "max": 5, "cat": "Подвесы"},
+	"msl_motor": {"title": "Ракетный двигатель", "max": 5, "cat": "Подвесы"},
+	"launcher": {"title": "Пусковое устройство", "max": 5, "cat": "Подвесы"},
 	"radio": {"title": "Радиостанция «Болтушка»", "max": 5, "cat": "Звено"},
 	"magnet": {"title": "Сборщик трофеев", "max": 3, "cat": "Модуль"},
 	"roll": {"title": "Бочка: тренировка", "max": 3, "cat": "Навык"},
@@ -334,18 +336,28 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 		"reload":
 			return "Все подвесы и турели: −%s перезарядки" % _pct(0.1 * k)
 		"seeker":
-			return "Ракеты: +%s урона, +%s скорости" % [_pct(0.12 * k), _pct(0.1 * k)]
+			match int(p.taken.get("seeker", 0)):
+				0:
+					return "Ракета, потерявшая цель, наводится на новую (600 пикс., 1 раз). Без ГСН — летит прямо и самоликвидируется"
+				1:
+					return "Перенацеливание: поиск 900 пикс., до 2 раз"
+				_:
+					return "После сбития ракета В-В ищет следующую цель (1 раз); ракеты В-В бьют и наземные цели (×1,5)"
 		"frag":
 			return "+%s радиуса всех взрывов" % _pct(0.1 * k)
 		"servo":
 			return "Гондола и турели: +%s темпа, +%s дальности" % [_pct(0.1 * k), _pct(0.06 * k)]
 		"warhead":
 			return "+%s урона всех взрывов (НАР, бомбы, осколки ракет, навыки)" % _pct(0.12 * k)
-		"twin_rail":
-			return "Ракеты В-В: +%s шанс второй ракеты с точки; НАР: +1 ракета в залпе" % _pct(0.15 * k)
-		"cluster":
-			var nn := int(p.taken.get("cluster", 0)) + 1
-			return "Ракета В-В при попадании разбрасывает %d суббоеприпаса (урон %d, радиус 50)" % [nn + 2, int(12 * k)]
+		"msl_head":
+			var s := "Ракеты: +%s урона, +%s радиуса разрыва" % [_pct(0.15 * k), _pct(0.08 * k)]
+			if int(p.taken.get("msl_head", 0)) + 1 == 3:
+				s += "; разделяющаяся БЧ: ракета В-В при попадании даёт 3 суббоеприпаса"
+			return s
+		"msl_motor":
+			return "Ракеты: +%s скорости, +%s дальности захвата" % [_pct(0.12 * k), _pct(0.08 * k)]
+		"launcher":
+			return "Ракеты В-В и НАР: −%s перезарядки" % _pct(0.1 * k)
 		"radio":
 			return "Ведомые: +%s урона, +%s прочности" % [_pct(0.2 * k), _pct(0.15 * k)]
 		"magnet":
@@ -421,7 +433,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 					continue
 			"warhead":
 				w = 1.8
-			"twin_rail", "cluster":
+			"msl_head", "msl_motor", "launcher":
 				if not (_equipped(p, "aam") or _equipped(p, "rockets")):
 					continue
 				w = 1.8
@@ -687,8 +699,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 				"reload":
 					p.mods["hp_cd"] = maxf(0.3, p.mods["hp_cd"] * (1.0 - 0.1 * k))
 				"seeker":
-					p.mods["missile_dmg"] *= 1.0 + 0.12 * k
-					p.mods["missile_spd"] *= 1.0 + 0.1 * k
+					pass # уровни ГСН читаются из p.taken (projectiles.gd)
 				"frag":
 					p.mods["blast_r"] *= 1.0 + 0.1 * k
 				"servo":
@@ -696,10 +707,14 @@ static func apply(p: Player, card: Dictionary) -> void:
 					p.mods["servo_range"] *= 1.0 + 0.06 * k
 				"warhead":
 					p.mods["blast_dmg"] *= 1.0 + 0.12 * k
-				"twin_rail":
-					p.mods["twin"] += 0.15 * k
-				"cluster":
-					p.mods["cluster_dmg"] = maxf(float(p.mods["cluster_dmg"]), 12.0 * k)
+				"msl_head":
+					p.mods["missile_dmg"] *= 1.0 + 0.15 * k
+					p.mods["msl_r"] = float(p.mods.get("msl_r", 1.0)) * (1.0 + 0.08 * k)
+				"msl_motor":
+					p.mods["missile_spd"] *= 1.0 + 0.12 * k
+					p.mods["msl_lock"] = float(p.mods.get("msl_lock", 1.0)) * (1.0 + 0.08 * k)
+				"launcher":
+					p.mods["msl_cd"] = maxf(0.4, float(p.mods.get("msl_cd", 1.0)) * (1.0 - 0.1 * k))
 				"radio":
 					p.mods["wing_dmg"] *= 1.0 + 0.2 * k
 					p.mods["wing_hp"] *= 1.0 + 0.15 * k

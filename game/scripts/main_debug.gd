@@ -171,6 +171,8 @@ func _run_autotest(delta: float) -> void:
 					Profile.debug_parts(3000)
 					Profile.debug_level("fighter")
 					Profile.debug_level("fighter")
+					# 3.5: опыта — на звание выше, чтобы на скриншоте была кнопка «Повысить в звании»
+					Profile.cls("fighter")["crew_xp"] = int(Profile.CREW_CUM[Profile.crew_lvl("fighter")])
 					m.ui_click("menu_hangar")
 				elif m._args.has("--shots") and not _shots_done.has("settings"):
 					m.menu.tab = 1
@@ -200,6 +202,9 @@ func _run_autotest(delta: float) -> void:
 					m.input_ctl.hangar_action("perk:f_msl1")
 				elif not _shots_done.has("hangar_crew"):
 					_shot("hangar_crew")
+					var lv0 := Profile.crew_lvl("fighter")
+					m.input_ctl.hangar_action("promote")
+					print("AUTOTEST: promote %d -> %d, parts %d" % [lv0, Profile.crew_lvl("fighter"), Profile.parts()])
 				else:
 					m.input_ctl.hangar_action("back")
 			return
@@ -235,6 +240,18 @@ func _run_autotest(delta: float) -> void:
 						if m.offers[ci].get("course", false) or m.offers[ci]["kind"] in ["synergy", "skill_syn"]:
 							m.choose_card(ci)
 							return
+				if m._args.has("--bot=missiles"):
+					# 3.5: проверка ракет — берём ракеты В-В, НАР, их уровни и ракетные модули
+					for pass_i in 2:
+						for ci in m.offers.size():
+							var o: Dictionary = m.offers[ci]
+							var w := String(o.get("weapon", ""))
+							if o["kind"] == "weapon_up" and m.player.groups.size() > int(o.get("group", 99)):
+								w = String((m.player.groups[int(o["group"])] as Hardpoint).weapon)
+							var want := (w in ["aam", "rockets"]) if pass_i == 0 else (String(o["id"]) in ["seeker", "msl_head", "msl_motor", "launcher", "reload"])
+							if want:
+								m.choose_card(ci)
+								return
 				if m._args.has("--shots") and m.level >= 6 and not _shots_done.has("loadout") and not _loadout_opened:
 					_loadout_opened = true
 					# один раз заглянуть в подвесы для скриншота

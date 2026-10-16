@@ -94,7 +94,7 @@ class CloudShadows:
 		z_index = -8
 
 	func _draw() -> void:
-		if owner_clouds == null:
+		if owner_clouds == null or Render3D.enabled:   # в 3D тень облаков рисует шейдер земли
 			return
 		var v := owner_clouds.view()
 		for it in owner_clouds.items():

@@ -122,12 +122,15 @@ func _height_v(x: float, z: float, v: float) -> float:
 	var steep := smoothstep(0.08, 0.25, climb) * (1.0 - smoothstep(0.7, 0.92, climb))
 	if h > 0.16 and steep > 0.0:
 		var t := h * 7.0
-		var step := (floorf(t) + smoothstep(0.25, 0.75, t - floorf(t))) / 7.0
-		h = lerpf(h, step, 0.45 * steep)
+		var step := (floorf(t) + smoothstep(0.12, 0.88, t - floorf(t))) / 7.0
+		# 3.4-t1 (п. 18): уступы мягче — обрыв в 1/7 высоты с тенью читался чёрной канавой поперёк склона
+		h = lerpf(h, step, 0.28 * steep)
 	# мелкие бугры на дне и на конусах
 	h += (_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * (0.3 + fan)
 	h *= _flat(x, z)
-	return clampf(h, 0.0, 1.0) * ceiling
+	# русло врезано в пойму: вода лежит в ложбине, а не на ровном месте
+	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
+	return clampf(h, -0.03, 1.0) * ceiling
 
 
 func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:

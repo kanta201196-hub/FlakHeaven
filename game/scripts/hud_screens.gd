@@ -429,11 +429,15 @@ func _meta_panel(m: Main, r: Rect2) -> void:
 	var frac := float(pr[0]) / maxf(float(pr[1]), 1.0) if int(pr[1]) > 0 else 1.0
 	ctrl.draw_rect(Rect2(x, y, w * frac * k, 16), Color(0.5, 1.0, 0.6))
 	y += 40.0
-	var up: bool = int(a["lvl_after"]) > int(a["lvl_before"])
-	_text(Vector2(x, y), ("Экипаж ур. %d → %d!" % [a["lvl_before"], a["lvl_after"]]) if up else "Экипаж ур. %d" % lv, 20,
-		Color(1.0, 0.9, 0.4) if up else Color.WHITE)
-	if int(pr[1]) > 0:
+	_text(Vector2(x, y), "Экипаж ур. %d" % lv, 20, Color.WHITE)
+	if int(pr[1]) > 0 and not a.has("promote"):
 		_text(Vector2(x, y), "до ур. %d: %d" % [lv + 1, int(pr[1]) - int(pr[0])], 16, Color(0.75, 0.8, 0.88), HORIZONTAL_ALIGNMENT_RIGHT, w)
+	# 3.5: уровень покупается в ангаре — «Повысить в звании»
+	if a.has("promote"):
+		y += 28.0
+		var pv: Array = a["promote"]
+		_text(Vector2(x, y), "Опыта хватает на ур. %d: «Повысить в звании» в ангаре — %d" % [int(pv[0]), int(pv[1])], 16,
+			Color(1.0, 0.9, 0.4))
 	for u in a["unlocked"]:
 		y += 26.0
 		_text(Vector2(x, y), "ОТКРЫТО: " + String(u), 16, Color(1.0, 0.85, 0.4))
