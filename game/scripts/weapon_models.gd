@@ -6,6 +6,10 @@ class_name WeaponModels
 
 static var _cache := {}
 static var _mats := {}
+## Вид турелей (на выбор владельца): 1 — всё с живыми стрелками: остеклённые колпаки и кабина в корме;
+## 2 — всё дистанционное: низкие обтекатели и металлический кормовой конус;
+## 3 — смешанный: кормовая кабина стрелка + дистанционные башни сверху и снизу
+static var turret_style := 3
 
 
 static func tier(level: int, evo := false) -> int:
@@ -15,14 +19,17 @@ static func tier(level: int, evo := false) -> int:
 
 
 ## Узел с моделью (общий меш из кэша — копировать дёшево)
-static func make(weapon: String, t: int) -> MeshInstance3D:
+## side — место крепления (mounts): от него зависит вид турели
+static func make(weapon: String, t: int, side := "") -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	mi.mesh = mesh(weapon, t)
+	mi.mesh = mesh(weapon, t, side)
 	return mi
 
 
-static func mesh(weapon: String, t: int) -> ArrayMesh:
+static func mesh(weapon: String, t: int, side := "") -> ArrayMesh:
 	var key := "%s_%d" % [weapon, t]
+	if weapon == "turret":
+		key += "_%d_%s" % [turret_style, side]
 	if _cache.has(key):
 		return _cache[key]
 	var parts: Array = []   # [меш-примитив, Transform3D, материал]
@@ -64,14 +71,7 @@ static func mesh(weapon: String, t: int) -> ArrayMesh:
 			if t == 3:
 				parts.append([_cyl(0.13, 0.25), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(0.4, 0, 0)), "dark"])
 		"turret":
-			# одноствольная → спарка → спарка со щитком (стволы по +X — турель поворачивается целиком)
-			parts.append([_sphere(0.28), Transform3D(Basis().scaled(Vector3(1, 0.6, 1)), Vector3.ZERO), "dark"])
-			var nb2 := 1 if t == 1 else 2
-			for i in nb2:
-				var z2 := (i - (nb2 - 1) / 2.0) * 0.12
-				parts.append([_cyl(0.03, 0.6), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(0.45, 0.04, z2)), "steel"])
-			if t == 3:
-				parts.append([_box(Vector3(0.04, 0.22, 0.42)), Transform3D(Basis(), Vector3(0.2, 0.06, 0)), "olive"])
+			_turret(parts, t, side)
 		"flares":
 			# малый кассетник → большой → два
 			var boxes: Array = [0.0] if t < 3 else [-0.14, 0.14]
@@ -84,7 +84,7 @@ static func mesh(weapon: String, t: int) -> ArrayMesh:
 			parts.append([_box(Vector3(1.0, 0.1, 0.12)), Transform3D(), "steel"])
 	var am := ArrayMesh.new()
 	# по поверхности на материал: светлый металл, тёмный металл, оливковый, красная полоса
-	for mname in ["steel", "dark", "olive", "band", "white"]:
+	for mname in ["steel", "dark", "olive", "band", "white", "hull", "glass"]:
 		var s2 := SurfaceTool.new()
 		s2.begin(Mesh.PRIMITIVE_TRIANGLES)
 		var any := false
@@ -106,7 +106,7 @@ static func muzzle(weapon: String) -> Vector3:
 		"gunpod":
 			return Vector3(0.78, 0, 0)
 		"turret":
-			return Vector3(0.75, 0.04, 0)
+			return Vector3(0.72, 0.05, 0) * TURRET_K
 		"rockets":
 			return Vector3(0.5, 0, 0)
 		"aam":
@@ -114,7 +114,107 @@ static func muzzle(weapon: String) -> Vector3:
 	return Vector3.ZERO
 
 
+# ---------- турели ----------
+# Стволы по +X (турель повёрнута стволами назад — yaw из mounts), срез у x = 0.72 до масштаба TURRET_K;
+# основание верхней/нижней — на y = 0 (поверхность фюзеляжа); у кормовой начало координат — конец фюзеляжа.
+# Ступени: 1 — спарка лёгких пушек, 2 — спарка тяжёлых с дульными тормозами, 3 — то же + прицел-радар.
+const TURRET_K := 0.8
+
+
+static func _turret(parts: Array, t: int, side: String) -> void:
+	var st := turret_style
+	var n0 := parts.size()
+	if side == "tail":
+		# корма: фюзеляж заканчивается установкой — остеклённой кабиной стрелка или металлическим конусом
+		if st == 2:
+			_tail_remote(parts, t)
+		else:
+			_tail_cabin(parts, t)
+	elif st == 1:
+		_dome(parts, t)
+	else:
+		_barbette(parts, t)
+	for i in range(n0, parts.size()):
+		parts[i][1] = Transform3D(Basis.from_scale(Vector3.ONE * TURRET_K)) * (parts[i][1] as Transform3D)
+
+
+## Остеклённый колпак стрелка на погоне: стрелок под стеклом, пушки — из прорези спереди
+static func _dome(parts: Array, t: int) -> void:
+	parts.append([_cyl(0.22, 0.05), Transform3D(Basis(), Vector3(0, 0.02, 0)), "hull"])
+	parts.append([_hemi(0.19), Transform3D(Basis().scaled(Vector3(1.15, 0.85, 1.0)), Vector3(0, 0.045, 0)), "glass"])
+	parts.append([_torus(0.185, 0.2), Transform3D(Basis(Vector3.RIGHT, PI / 2.0).scaled(Vector3(1.15, 1.0, 0.85)), Vector3(0, 0.045, 0)), "hull"])
+	parts.append([_cyl(0.18, 0.016), Transform3D(Basis(), Vector3(0, 0.11, 0)), "hull"])
+	parts.append([_box(Vector3(0.12, 0.07, 0.16)), Transform3D(Basis(), Vector3(0.2, 0.06, 0)), "dark"])
+	_barrels(parts, t, 0.24, 0.06, 0.06)
+	if t == 3:
+		parts.append([_sphere(0.05), Transform3D(Basis().scaled(Vector3(1.6, 0.8, 1.0)), Vector3(-0.05, 0.03, 0.2)), "hull"])
+
+
+## Дистанционная башня: низкий обтекатель цвета обшивки, пушки из подвижной маски; стрелок — у прицела в кабине
+static func _barbette(parts: Array, t: int) -> void:
+	parts.append([_sphere(0.22), Transform3D(Basis().scaled(Vector3(1.45, 0.4, 1.0)), Vector3(-0.02, 0.0, 0)), "hull"])
+	parts.append([_cyl(0.23, 0.03), Transform3D(Basis(), Vector3(-0.02, 0.0, 0)), "dark"])   # погон
+	parts.append([_box(Vector3(0.09, 0.08, 0.2)), Transform3D(Basis(), Vector3(0.3, 0.04, 0)), "dark"])
+	_barrels(parts, t, 0.33, 0.04, 0.07)
+	if t == 3:
+		parts.append([_sphere(0.05), Transform3D(Basis().scaled(Vector3(1.6, 0.8, 1.0)), Vector3(-0.05, 0.03, 0.2)), "hull"])
+
+
+## Кормовая кабина стрелка: остеклённый «фонарь» — продолжение фюзеляжа, спарка под ним
+static func _tail_cabin(parts: Array, t: int) -> void:
+	parts.append([_cyl(0.13, 0.32), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(-0.06, 0, 0)), "hull"])
+	parts.append([_cyl(0.135, 0.2), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(0.07, 0, 0)), "glass"])
+	parts.append([_hemi(0.135), Transform3D(Basis(Vector3.BACK, -PI / 2.0).scaled(Vector3(1.0, 0.9, 1.0)), Vector3(0.17, 0, 0)), "glass"])
+	for xr: float in [0.0, 0.1, 0.17]:
+		parts.append([_torus(0.13, 0.145), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(xr, 0, 0)), "hull"])
+	parts.append([_sphere(0.09), Transform3D(Basis().scaled(Vector3(1.2, 0.8, 1.0)), Vector3(0.22, -0.13, 0)), "dark"])
+	_barrels(parts, t, 0.26, -0.13, 0.07)
+	if t == 3:
+		parts.append([_sphere(0.05), Transform3D(Basis().scaled(Vector3(1.6, 0.8, 1.0)), Vector3(0.0, 0.14, 0)), "hull"])
+
+
+## Кормовая дистанционная установка: металлический конус, сверху маленькое окно прицела
+static func _tail_remote(parts: Array, t: int) -> void:
+	parts.append([_cyl(0.12, 0.3), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(-0.05, 0, 0)), "hull"])
+	parts.append([_cone(0.12, 0.18), Transform3D(Basis(Vector3.BACK, -PI / 2.0), Vector3(0.19, 0, 0)), "hull"])
+	parts.append([_hemi(0.05), Transform3D(Basis(), Vector3(-0.08, 0.11, 0)), "glass"])
+	parts.append([_box(Vector3(0.1, 0.1, 0.16)), Transform3D(Basis(), Vector3(0.24, -0.02, 0)), "dark"])
+	_barrels(parts, t, 0.28, -0.02, 0.06)
+	if t == 3:
+		parts.append([_sphere(0.05), Transform3D(Basis().scaled(Vector3(1.6, 0.8, 1.0)), Vector3(0.0, 0.12, 0.06)), "hull"])
+
+
+## Спарка пушек от x0 до среза 0.72
+static func _barrels(parts: Array, t: int, x0: float, y: float, gap: float) -> void:
+	var r := 0.014 if t == 1 else 0.019
+	var ln := 0.72 - x0
+	for i in 2:
+		var z := (i - 0.5) * gap
+		parts.append([_cyl(r, ln), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(x0 + ln * 0.5, y, z)), "steel"])
+		parts.append([_cyl(r * 1.8, ln * 0.3), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(x0 + ln * 0.15, y, z)), "dark"])
+		if t >= 2:
+			parts.append([_cyl(r * 1.6, 0.05), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(0.695, y, z)), "dark"])
+
+
 # ---------- формы ----------
+
+static func _hemi(r: float) -> SphereMesh:
+	var s := _sphere(r)
+	s.is_hemisphere = true
+	s.height = r
+	s.radial_segments = 20
+	s.rings = 8
+	return s
+
+
+static func _torus(ri: float, ro: float) -> TorusMesh:
+	var t := TorusMesh.new()
+	t.inner_radius = ri
+	t.outer_radius = ro
+	t.rings = 24
+	t.ring_segments = 4
+	return t
+
 
 static func _missile(parts: Array, at: Vector3, length: float, r: float) -> void:
 	var body := length * 0.78
@@ -194,6 +294,15 @@ static func _mat(n: String) -> StandardMaterial3D:
 		"white":
 			m.albedo_color = Color(0.88, 0.89, 0.9)
 			m.roughness = 0.45
+		"hull":   # металл обшивки: нейтральный серый, не спорит с окраской самолёта
+			m.albedo_color = Color(0.52, 0.54, 0.55)
+			m.metallic = 0.55
+			m.roughness = 0.45
+		"glass":  # остекление: тёмное, с бликом
+			m.albedo_color = Color(0.4, 0.55, 0.62, 0.45)
+			m.metallic = 0.85
+			m.roughness = 0.06
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_mats[n] = m
 	return m
 

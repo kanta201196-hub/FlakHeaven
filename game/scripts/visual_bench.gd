@@ -192,6 +192,16 @@ func _hangar_bench() -> void:
 		return
 	if m.state != "hangar":
 		m.ui_click("menu_hangar")
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--turretstyle="):
+				WeaponModels.turret_style = int(a.get_slice("=", 1))
+		if OS.get_cmdline_user_args().has("--turretclose"):
+			# крупно турели: штурмовик и бомбардировщик, ступени 1 и 3, два ракурса (сверху-сзади, снизу-сбоку)
+			# [класс, ур., ступень, № турели]
+			for q in [["attacker", 1, 1, 0], ["attacker", 1, 3, 0], ["bomber", 1, 1, 0], ["bomber", 1, 1, 1], ["bomber", 1, 1, 2], ["bomber", 2, 3, 0], ["bomber", 2, 3, 1]]:
+				_hq.append(q)
+			_t = 0.0
+			return
 		for c in PlaneClasses.LIST:
 			if OS.get_cmdline_user_args().has("--hangarside"):
 				_hq.append([c, 1, 1])
@@ -214,13 +224,24 @@ func _hangar_bench() -> void:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
 		Hangar3D.I.weapon_tier = cur[2]
-		if OS.get_cmdline_user_args().has("--hangarside"):   # вид сбоку: проверка, где сидят турели и подвесы
+		if cur.size() > 3:   # --turretclose: крупный план турели № cur[3]
+			var h := Hangar3D.I
+			var tp: Array = h.turret_pos[cur[3]] if cur[3] < h.turret_pos.size() else [Vector3.ZERO, "top"]
+			h.focus = tp[0]
+			h._yaw = 2.2 if tp[1] != "tail" else 2.7
+			h._pitch = {"top": 0.45, "tail": 0.3, "bottom": -0.25}.get(tp[1], 0.3)
+			h._dist = 0.3
+			h._idle = 0.0
+		elif OS.get_cmdline_user_args().has("--hangarside"):   # вид сбоку: проверка, где сидят турели и подвесы
 			Hangar3D.I._yaw = PI / 2.0
 			Hangar3D.I._pitch = 0.06
 			Hangar3D.I._idle = 0.0
 	_hf += 1
 	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
-		_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])
+		if cur.size() > 3:
+			_save("turret_s%d_%s_%d_w%d_v%d" % [WeaponModels.turret_style, cur[0], cur[1], cur[2], cur[3]])
+		else:
+			_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])
 		_hq.pop_front()
 		_t = 0.0
 		_hf = 0

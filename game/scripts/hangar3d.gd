@@ -29,6 +29,8 @@ var _drag := false
 var _idle := 0.0             # секунд без мыши — потом медленно крутится сам
 var _drawn_frame := -10
 var _cls := ""
+var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
+var turret_pos: Array = []   # [Vector3, сторона] — турели текущей модели
 
 
 static func ensure(ctrl: Control) -> Hangar3D:
@@ -115,6 +117,7 @@ func _build(cls_id: String, lvl: int) -> void:
 		return
 	var model: Node3D = (load(path) as PackedScene).instantiate()
 	pivot.add_child(model)
+	turret_pos.clear()
 	_collect_faces(model)
 	_add_weapons(cls_id, lvl)
 
@@ -145,7 +148,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		for mt: Dictionary in WeaponModels.mounts(cls_id, lvl, gi, g):
 			var pt: Vector2 = mt["p"]
 			var side: String = mt["side"]
-			var wmi := WeaponModels.make(g.weapon, weapon_tier)
+			var wmi := WeaponModels.make(g.weapon, weapon_tier, side)
 			# по настоящей поверхности модели: подвес — под крылом на пилоне, верхняя турель
 			# утоплена в спину фюзеляжа, нижняя — в брюхо, кормовая — в конце фюзеляжа
 			var x := pt.x / tw
@@ -161,9 +164,18 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 				"bottom":
 					y = lo if not is_nan(lo) else -0.03
 				"tail":
-					# у хвоста сверху киль — берём низ фюзеляжа и поднимаем на радиус башни
-					y = (lo if not is_nan(lo) else 0.0) + 0.12 * wlen
+					# корма: установка — продолжение фюзеляжа; ищем, где фюзеляж кончается на оси
+					var xe := -0.52
+					while xe < x + 0.1 and is_nan(_surface_y(xe, 0.0, true)):
+						xe += 0.004
+					x = xe + 0.006
+					z = 0.0
+					var l2 := _surface_y(x, 0.0, true)
+					var h2 := _surface_y(x, 0.0, false)
+					y = 0.0 if is_nan(l2) else ((l2 + h2) * 0.5 if h2 - l2 < 0.03 else l2 + 0.012)
 			wmi.position = Vector3(x, y, z)
+			if g.weapon == "turret":
+				turret_pos.append([wmi.position, side])
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
 			if side == "bottom":
 				bs = bs * Basis(Vector3.RIGHT, PI)
@@ -226,10 +238,10 @@ func _process(delta: float) -> void:
 	if not _drag and _idle > 3.0:
 		_yaw += delta * 0.25
 	_pitch = clampf(_pitch, -0.2, 1.35)
-	_dist = clampf(_dist, 0.7, 3.2)
+	_dist = clampf(_dist, 0.7 if focus == Vector3.ZERO else 0.2, 3.2)
 	var dir := Vector3(cos(_pitch) * cos(_yaw), sin(_pitch), cos(_pitch) * sin(_yaw))
-	cam.position = dir * _dist
-	cam.look_at(Vector3.ZERO, Vector3.UP)
+	cam.position = focus + dir * _dist
+	cam.look_at(focus, Vector3.UP)
 
 
 func _input(event: InputEvent) -> void:
