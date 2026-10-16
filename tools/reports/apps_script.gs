@@ -9,6 +9,7 @@
 
 const SHEET_ID = '1SYwhNWxzcdHOwwxqwPBZiOK3edZtQUk-fbXLQL8CbPw'; // таблица «Flak Heaven — отчёты тестеров»
 const TOKEN = 'fh-tester-2026';          // должен совпадать с игрой (защита от случайного мусора)
+const RUN_TOKEN = 'fh-run-2026';         // 3.5: строка лога каждого вылета, без анкеты → лист «Вылеты»
 const MAX_CELL = 45000;                  // лимит ячейки Google Таблиц — 50 000 символов
 
 const REPORT_COLS = [
@@ -17,6 +18,7 @@ const REPORT_COLS = [
   'ОС', 'Видеокарта', 'Экран', 'FPS средн.', 'ID отчёта',
   'Картинка / камера / пули / тормоза'   // с 3.4; в старой таблице заголовок дописать вручную (ответы есть и в комментарии)
 ];
+const RUN_COLS = ['Получен', 'Сборка', 'Тестер', 'Отправлен из игры', 'ОС', 'Видеокарта', 'Экран', 'Строка лога вылета', 'Заголовок лога'];
 const LOG_COLS = ['ID отчёта', 'Сборка', 'Тестер', 'Заголовок лога', 'Строка лога вылета', 'Хвост журнала Godot'];
 
 function sheet_(name, cols) {
@@ -51,6 +53,12 @@ function doPost(e) {
   lock.waitLock(20000);
   try {
     const d = JSON.parse(e.postData.contents);
+    if (d.token === RUN_TOKEN && d.kind === 'run') {
+      sheet_('Вылеты', RUN_COLS).appendRow([
+        new Date(), d.build, d.tester, d.sent_at, d.os, d.gpu, d.screen, cut_(d.run_row), cut_(d.run_header)
+      ]);
+      return ContentService.createTextOutput('ok run');
+    }
     if (d.token !== TOKEN) {
       return ContentService.createTextOutput('bad token');
     }

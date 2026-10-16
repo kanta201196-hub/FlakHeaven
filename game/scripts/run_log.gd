@@ -63,6 +63,7 @@ static func write(m: Main, outcome: String) -> void:
 	m.last_outcome = outcome
 	f.store_line(m.last_log_row)
 	f.close()
+	m.report.queue_run(m.last_log_header, m.last_log_row) # 3.5: строка вылета уходит в таблицу сама
 
 
 static func kv(d: Dictionary) -> String:

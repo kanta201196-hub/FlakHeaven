@@ -3,13 +3,19 @@ extends CanvasLayer
 ## 3.3-t2: «Отчёт тестера» — анкета после вылета + статистика вылета + хвост журнала Godot.
 ## Отправка: POST JSON на веб-приложение Google Apps Script (Main.REPORT_URL) → строки в Google Таблице.
 ## Нет сети — отчёт ложится в очередь user://report_queue.json и уходит при следующей отправке или запуске игры.
+## 3.5: строка лога каждого вылета уходит сама, без анкеты (queue_run → лист «Вылеты»), очередь user://run_queue.json.
 
 const TOKEN := "fh-tester-2026"
 const QUEUE := "user://report_queue.json"
 const TESTER_FILE := "user://tester_id"
 const LOG_TAIL_LINES := 150
+const RUN_TOKEN := "fh-run-2026"   # свой токен: старый приёмник без листа «Вылеты» ответит bad token и ничего не запишет
+const RUN_QUEUE := "user://run_queue.json"
+const RUN_QUEUE_MAX := 40
 
 var _http: HTTPRequest
+var _http_runs: HTTPRequest
+var _runs_busy := false
 var _root: Control
 var _rating := 0
 var _again := ""
@@ -42,10 +48,16 @@ func _ready() -> void:
 	_http.max_redirects = 0   # Apps Script отвечает 302 уже после записи — редирект нам не нужен
 	_http.request_completed.connect(_on_done)
 	add_child(_http)
+	_http_runs = HTTPRequest.new()
+	_http_runs.timeout = 25.0
+	_http_runs.max_redirects = 0
+	_http_runs.request_completed.connect(_on_run_done)
+	add_child(_http_runs)
 	_build()
 	# тихо досылаем то, что не ушло в прошлый раз
 	if Main.REPORT_URL != "":
 		call_deferred("_flush")
+		call_deferred("_flush_runs")
 
 
 # ---------- интерфейс ----------
@@ -320,6 +332,74 @@ func _payload() -> Dictionary:
 		"run_row": m.last_log_row,
 		"log_tail": _log_tail(),
 	}
+
+
+# ---------- лог каждого вылета (без анкеты) ----------
+
+## Вызывается из RunLog.write после записи строки CSV. В автотесте и без адреса приёмника — ничего не шлём.
+func queue_run(header: String, row: String) -> void:
+	if Main.REPORT_URL == "" or Main.I._autotest:
+		return
+	var scr := DisplayServer.screen_get_size()
+	var q := _read_json_array(RUN_QUEUE)
+	q.append({
+		"token": RUN_TOKEN,
+		"kind": "run",
+		"build": Main.BUILD,
+		"tester": _tester_id(),
+		"sent_at": Time.get_datetime_string_from_system(),
+		"os": "%s %s" % [OS.get_name(), OS.get_version()],
+		"gpu": "%s (%s)" % [RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_vendor()],
+		"screen": "%dx%d" % [scr.x, scr.y],
+		"run_header": header,
+		"run_row": row,
+	})
+	while q.size() > RUN_QUEUE_MAX:
+		q.remove_at(0)
+	_write_json(RUN_QUEUE, q)
+	_flush_runs()
+
+
+func _flush_runs() -> void:
+	if _runs_busy or Main.REPORT_URL == "":
+		return
+	var q := _read_json_array(RUN_QUEUE)
+	if q.is_empty():
+		return
+	_runs_busy = true
+	if _http_runs.request(Main.REPORT_URL, PackedStringArray(["Content-Type: application/json"]),
+			HTTPClient.METHOD_POST, JSON.stringify(q[0])) != OK:
+		_runs_busy = false
+
+
+func _on_run_done(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_runs_busy = false
+	var ok := (result == HTTPRequest.RESULT_SUCCESS or result == HTTPRequest.RESULT_REDIRECT_LIMIT_REACHED) and code >= 200 and code < 400
+	# старый приёмник (без листа «Вылеты») отвечает bad token — строка остаётся в очереди до обновления скрипта
+	if not ok or body.get_string_from_utf8().begins_with("bad token"):
+		return
+	var q := _read_json_array(RUN_QUEUE)
+	if not q.is_empty():
+		q.remove_at(0)
+	_write_json(RUN_QUEUE, q)
+	if not q.is_empty():
+		_flush_runs()
+
+
+static func _read_json_array(path: String) -> Array:
+	if not FileAccess.file_exists(path):
+		return []
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return []
+	var d = JSON.parse_string(f.get_as_text())
+	return d if d is Array else []
+
+
+static func _write_json(path: String, v: Variant) -> void:
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(v))
 
 
 # ---------- очередь и отправка ----------
