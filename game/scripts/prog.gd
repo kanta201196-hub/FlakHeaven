@@ -19,8 +19,8 @@ const WEAPON_TAGS := {
 	"turret": ["kinetic", "turrets"], "flares": ["maneuver", "armor"], "bombs": ["blast"],
 }
 const MODULE_TAGS := {
-	"reload": ["missiles"], "seeker": ["missiles"], "frag": ["blast"], "warhead": ["blast"], "twin_rail": ["missiles"],
-	"cluster": ["missiles", "blast"], "gun_dmg": ["kinetic"], "gun_rate": ["kinetic"],
+	"reload": ["missiles"], "seeker": ["missiles"], "frag": ["blast"], "warhead": ["blast"],
+	"msl_head": ["missiles", "blast"], "msl_motor": ["missiles"], "launcher": ["missiles"], "gun_dmg": ["kinetic"], "gun_rate": ["kinetic"],
 	"servo": ["turrets"], "radio": ["wing"], "engine": ["maneuver"], "wing": ["maneuver"], "roll": ["maneuver"],
 	"afterburner": ["maneuver"], "armor": ["armor"],
 }
@@ -40,8 +40,8 @@ const PATCHES := {
 ## Эволюции: оружие ур. 5 + модуль-катализатор ×N, с 7:00 (EVO_TIME). "gun" — курсовое.
 const EVO_TIME := 420.0
 const EVOS := {
-	"aam": {"title": "Рой «Шмели»", "cat": {"reload": 2},
-		"desc": "8 мини-ракет каждые 4,5 с, урон 40; после сбития ракета ищет новую цель (до 2 раз)"},
+	"aam": {"title": "«Шмель»", "cat": {"reload": 2},
+		"desc": "2 тяжёлые ракеты каждые 4,5 с, урон 120; при попадании каждая делится на 4 самонаводящиеся БЧ (урон 40)"},
 	"rockets": {"title": "«Ливень»", "cat": {"engine": 2},
 		"desc": "Залп веером в 3 стороны по 5 ракет с точки, урон 22, радиус 70, перезарядка 3,5 с; цель — в секторе 50°"},
 	"gunpod": {"title": "«Газонокосилка»", "cat": {"servo": 2},

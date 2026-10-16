@@ -227,6 +227,9 @@ func hangar_action(a: String) -> void:
 				m.skill_pick[c] = p[2]
 		"callsign":
 			Profile.next_callsign(c)
+		"promote":
+			ok = Profile.can_promote(c)
+			Profile.promote(c)
 		"fly":
 			m.skill_pick[c] = Profile.skills(c)[0]
 			m.select_class(c)

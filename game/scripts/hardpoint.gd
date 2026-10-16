@@ -54,7 +54,7 @@ func dmg() -> float:
 		var ek := (1.0 + bonus) * _owner_k() * (1.0 + 0.08 * evo_plus)
 		match weapon:
 			"aam":
-				return 40.0 * ek
+				return 120.0 * ek # «Шмель»: тяжёлая ракета; при попадании ещё 4 БЧ по 40
 			"rockets":
 				return 22.0 * ek
 			"gunpod":
@@ -64,8 +64,12 @@ func dmg() -> float:
 			"turret":
 				return Weapons.DEFS["turret"]["dmg"] * (1.0 + 0.15 * (level - 1)) * ek
 	match weapon:
-		"rockets", "turret":
+		"turret":
 			return base * (1.0 + 0.15 * (level - 1))
+		"rockets": # 3.5: залп фиксирован, уровень — урон и радиус
+			return base * (1.0 + Tuning.g("rocket_lvl_dmg") * (level - 1))
+		"aam": # 3.5: всегда 1 ракета с точки; ур. 4 вместо второй — урон и скорость
+			return base * (1.0 + Tuning.g("aam_lvl_dmg") * (level - 1)) * (1.0 + Tuning.g("aam_l4_dmg") if level >= 4 else 1.0)
 		_:
 			return base * (1.0 + 0.25 * (level - 1))
 
@@ -106,6 +110,8 @@ func reload_time(p: Player) -> float:
 		k /= 3.0 # «Штурмовой заход»: подвесы перезаряжаются втрое быстрее
 	if weapon == "turret":
 		k /= float(p.mods.get("turret_rate", 1.0))
+	if weapon == "aam" or weapon == "rockets":
+		k *= float(p.mods.get("msl_cd", 1.0)) # модуль «Пусковое устройство»
 	return base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd")
 
 
@@ -137,6 +143,8 @@ func range_px() -> float:
 		if weapon == "gunpod" or weapon == "turret":
 			base *= p.mods["servo_range"]
 		base *= Profile.wk(weapon, "range")
+		if weapon == "aam":
+			base *= float(p.mods.get("msl_lock", 1.0)) # «Ракетный двигатель»: дальность захвата
 		if evo and weapon == "gunpod":
 			return 520.0 * p.mods["servo_range"]
 		if evo and weapon == "flares":
@@ -259,13 +267,14 @@ func _slot_pos(p: Player, i: int) -> Vector2:
 
 
 func _fire_aam(p: Player) -> bool:
-	var per_slot := 1 + (1 if level >= 4 else 0)
+	# 3.5: качество вместо количества — всегда 1 ракета с точки (ур. 4 усиливает ракету, а не добавляет вторую)
+	var per_slot := 1
 	if evo:
-		per_slot = maxi(1, 8 / slots) # Рой «Шмели»: 8 мини-ракет
+		per_slot = maxi(1, 2 / slots) # «Шмель»: 2 тяжёлые ракеты, каждая делится на 4 БЧ
+	var hunter := int(p.taken.get("seeker", 0)) >= 3 # «ГСН» ×3: и по наземным
 	var targets: Array = []
 	var skip: Array = []
 	for i in slots * per_slot:
-		var hunter := int(p.taken.get("seeker", 0)) >= 3 # «Глазастик» ×3: и по наземным
 		var t := Weapons.pick_target(p.global_position, range_px(), priority if hunter else ("nearest" if priority == "ground" else priority), skip, not hunter)
 		if t == null:
 			break
@@ -278,20 +287,19 @@ func _fire_aam(p: Player) -> bool:
 		var t: Enemy = targets[i % targets.size()]
 		var side := -1.0 if i % 2 == 0 else 1.0
 		var pos := _slot_pos(p, i)
-		var vel := p.velocity + Vector2.from_angle(p.heading + side * (0.5 + (randf() * 0.6 if evo else 0.0))) * 150.0
-		var opts := {"bounce": 2} if evo else {}
-		if int(p.taken.get("seeker", 0)) >= 3:
+		var vel := p.velocity + Vector2.from_angle(p.heading + side * 0.5) * 150.0
+		var opts := {}
+		if evo:
+			opts = {"split": 4, "split_dmg": 40.0 * (1.0 + bonus) * _owner_k() * (1.0 + 0.08 * evo_plus), "big": true}
+		if hunter:
 			opts["ground_k"] = 1.5
 		if p.syn.has("carousel"):
 			opts["carousel"] = 0
 		var md := dmg() * Profile.wk("aam", "dmg")
-		opts["spd_k"] = Profile.wk("aam", "spd")
+		opts["spd_k"] = Profile.wk("aam", "spd") * (1.2 if level >= 4 and not evo else 1.0)
 		Main.I.projectiles.spawn_player_missile(pos, vel, t, md, "ракеты В-В", opts)
 		if i < slots:
 			_wolf(p, t, md)
-		if randf() < float(p.mods["twin"]): # «Спаренные направляющие» (3.4: урон как у первой — с веткой ангара)
-			Main.I.projectiles.spawn_player_missile(pos, vel.rotated(-side * 0.3), t, md, "ракеты В-В", opts)
-			Main.I.tele.add("twin_extra")
 	Main.I.sfx.play("aam_launch", -16.0, 1.4)
 	return true
 
@@ -308,20 +316,23 @@ func _fire_rockets(p: Player, manual := false) -> bool:
 		var to := e.global_position - p.global_position
 		if ok:
 			break
-		if to.length() < (700.0 if evo else 620.0) * Profile.wk("rockets", "auto_r") and absf(fwd.angle_to(to)) < cone + atan2(e.radius, to.length()):
+		if to.length() < (700.0 if evo else 620.0) * Profile.wk("rockets", "auto_r") * float(p.mods.get("msl_lock", 1.0)) and absf(fwd.angle_to(to)) < cone + atan2(e.radius, to.length()):
 			ok = true
 			break
 	if not ok:
 		return false
-	var per_slot := 3 + level
-	var splash := 60.0
+	var per_slot := 4 # 3.5: залп фиксирован — 4 с точки; уровень даёт урон и радиус
+	var splash := 60.0 * (1.0 + Tuning.g("rocket_lvl_r") * (level - 1))
 	var dirs := [0.0]
 	if evo: # «Ливень»: веер в 3 стороны по 5 ракет
 		per_slot = 5
 		splash = 70.0
 		dirs = [-deg_to_rad(25.0), 0.0, deg_to_rad(25.0)]
 	var rd := dmg() * Profile.wk("rockets", "dmg")
-	var rs := Profile.wk("rockets", "spd")
+	var rs := Profile.wk("rockets", "spd") * float(p.mods.get("missile_spd", 1.0))
+	if p.mods.has("msl_boost"):
+		rd *= float(p.mods["msl_boost"]) # «Форсированный старт»: НАР летит меньше секунды
+	splash *= float(p.mods.get("msl_r", 1.0))
 	_salvo_n += 1
 	if p.syn.has("salvo") and _salvo_n % 3 == 0:
 		_wall(p, fwd, rd)
@@ -331,7 +342,6 @@ func _fire_rockets(p: Player, manual := false) -> bool:
 	_wolf(p, Weapons.pick_target(p.global_position + fwd * 300.0, 500.0, "nearest"), rd * 3.0)
 	if p.assault_t > 0.0 and p.syn.has("s_conveyor"):
 		per_slot *= 2 # «Конвейер»
-	per_slot += int(p.taken.get("twin_rail", 0) > 0) + int(p.taken.get("twin_rail", 0)) / 3
 	for s in slots:
 		for d0 in dirs:
 			for i in per_slot:

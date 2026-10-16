@@ -5,7 +5,7 @@ extends RefCounted
 ## timeline — снимок каждой минуты вылета, компактной строкой.
 
 ## Версия набора колонок: меняется — меняется и имя файла лога
-const LOG_VER := "l4"
+const LOG_VER := "l5"
 const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_s", "kbm_s", "scheme_changes",
 	"gun_rate_max", "gun_multi_frames", "shots_lead", "hits_lead", "lead_nosol", "swept_hits",
 	"roll_uses", "invuln_s", "invuln_chain_max", "nm_through", "hitstops", "hitstop_in_slowmo",
@@ -13,7 +13,9 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	"cam_tilt", "tilt_changes", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s",
 	# T4-03: 3D-картинка и производительность (рельеф, модели биома, тени, качество графики)
 	"gfx_start", "gfx", "gfx_drops", "plane_shadow", "tris_avg", "tris_max", "draws_avg", "draws_max", "vram_mb",
-	"nodes_max", "enemies_max", "load_ms", "chunks", "chunk_ms_max"]
+	"nodes_max", "enemies_max", "load_ms", "chunks", "chunk_ms_max",
+	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа
+	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx"]
 
 ## T4-04: автоснижение качества — окна по 20 с с 5-й секунды; FPS ниже порога → пресет ниже (до 3 раз за вылет)
 const AUTO_FPS := 35.0
@@ -99,6 +101,9 @@ func frame(delta: float, m: Main) -> void:
 	_speed_n += 1
 	maxv("speed_max", spd)
 	maxv("turn_max", rad_to_deg(p.turn_rate()))
+	var air := m.projectiles.pmissiles.size() + m.projectiles.rockets.size()
+	add("msl_air_sum", air)
+	maxv("msl_air_max", air)
 	if m.run_time >= _next_min:
 		_minute(m)
 		_next_min += 60.0
@@ -192,8 +197,12 @@ func row(m: Main) -> PackedStringArray:
 	v["plane_shadow"] = Tuning.g("plane_shadow")
 	v["tris_avg"] = g("tris_sum") / maxf(_rs_n, 1)
 	v["draws_avg"] = g("draws_sum") / maxf(_rs_n, 1)
+	v["msl_air_avg"] = g("msl_air_sum") / maxf(_speed_n, 1)
+	v["crew_rank"] = float(Profile.crew_lvl(m.cls_id))
+	v["crew_xp_lvl"] = float(Profile.xp_lvl(m.cls_id))
+	v["callsign_idx"] = float((Profile.CALLSIGNS[m.cls_id] as Array).find(Profile.cls(m.cls_id)["callsign"]))
 	var out := PackedStringArray()
 	for k in COLS:
 		var x := g(k)
-		out.append(("%.1f" % x) if k in ["invuln_s", "invuln_chain_max", "pad_s", "kbm_s", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s"] else str(int(round(x))))
+		out.append(("%.1f" % x) if k in ["msl_air_avg", "invuln_s", "invuln_chain_max", "pad_s", "kbm_s", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s"] else str(int(round(x))))
 	return out
