@@ -94,7 +94,7 @@ func take_damage(d: float) -> void:
 		Main.I.fx.explosion(global_position, 46.0)
 		Main.I.add_shake(6.0)
 		Main.I.show_banner("Заправщик сбит! Следующий — через 2 минуты", 4.0)
-		Main.I.sfx.play("shield_break", -4.0, 0.6)
+		Main.I.sfx.play("tanker_down", -4.0, 0.6)
 		_finish(false)
 
 
@@ -172,7 +172,7 @@ func _refuel(p: Player, delta: float) -> void:
 	if fuel.frac() >= 0.999:
 		refueled = true
 		Main.I.show_banner("Заправка завершена — бак полный", 3.0)
-		Main.I.sfx.play("evac", -6.0, 1.4)
+		Main.I.sfx.play("refuel_done", -6.0, 1.4)
 		_finish(true)
 
 
@@ -196,10 +196,10 @@ func _boom(p: Player, in_cone: bool, delta: float) -> void:
 		boom_len = move_toward(boom_len, goal, BOOM_SPEED * delta)
 		docked = reach and tip.distance_to(nose) < BOOM_CATCH
 	if docked and not _was_docked:
-		Main.I.sfx.play("lock", -8.0, 1.6)
+		Main.I.sfx.play("boom_dock", -8.0, 1.6)
 		Main.I.tele.add("fuel_docks")
 	elif _was_docked and not docked and not refueled:
-		Main.I.sfx.play("lock", -10.0, 0.7)
+		Main.I.sfx.play("boom_undock", -10.0, 0.7)
 		Main.I.tele.add("fuel_undocks")
 	_was_docked = docked
 

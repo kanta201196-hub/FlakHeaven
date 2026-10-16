@@ -107,7 +107,7 @@ func _point_down(pt: Dictionary) -> void:
 	parts_down[pt["node"]] = true
 	Main.I.fx.explosion(at, 34.0)
 	Main.I.add_shake(5.0)
-	Main.I.sfx.play("shield_break", -4.0, 0.8)
+	Main.I.sfx.play("fortress_part", -4.0, 0.8)
 	Main.I.tele.add("fortress_points")
 	if pt["kind"] == "engine":
 		Main.I.show_banner("%s сбит — «Крепость» теряет скорость" % String(pt["name"]).capitalize(), 2.5)
@@ -156,7 +156,7 @@ func behave(delta: float) -> void:
 			for i in 16:
 				var dir := Vector2.from_angle(off + TAU * i / 16.0)
 				Main.I.projectiles.spawn_enemy_bullet(global_position + dir * radius, dir * 270.0, kind(), true)
-			Main.I.sfx.play("enemy_fire", -8.0, 0.4)
+			Main.I.sfx.play("fortress_ring", -8.0, 0.4)
 		if int(_t * 8.0) % 3 == 0:
 			Main.I.fx.ring(global_position + Vector2(randf_range(-40, 40), randf_range(-40, 40)), 14.0, Color(1.0, 0.55, 0.2))
 
