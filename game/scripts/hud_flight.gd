@@ -249,7 +249,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	var tk: Tanker = m.spawner.fuel.tanker if m.spawner != null and m.spawner.fuel != null else null
 	if is_instance_valid(tk) and tk.alive() and not tk.leaving:
 		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8)
-		var ts := "ЗАПРАВКА ИДЁТ" if tk.filling else "ЗАПРАВЩИК: зайдите ему в хвост"
+		var ts := "СТЫКОВКА — ЗАПРАВКА ИДЁТ" if tk.filling else ("ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно" if tk.in_cone else "ЗАПРАВЩИК: зайдите ему в хвост")
 		_ctext(328, "%s · уйдёт через %d с · прочность %d%%" % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
 	if m.radio_t > 0.0:
 		var a := clampf(m.radio_t, 0.0, 1.0)

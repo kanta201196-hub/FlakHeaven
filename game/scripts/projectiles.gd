@@ -73,9 +73,9 @@ func spawn_missile(pos: Vector2, dir: Vector2) -> void:
 	missiles.append({"p": pos, "v": dir * Tuning.g("missile_speed") * 0.6, "life": 4.5, "lost": false, "trail": PackedVector2Array()})
 
 
-func spawn_enemy_bullet(pos: Vector2, vel: Vector2, who := "", big := false) -> void:
-	ebullets.append({"p": pos, "v": vel, "life": 3.3, "who": who, "big": big})
-	if not big:
+func spawn_enemy_bullet(pos: Vector2, vel: Vector2, who := "", big := false, dmg_k := 1.0, quiet := false) -> void:
+	ebullets.append({"p": pos, "v": vel, "life": 3.3, "who": who, "big": big, "k": dmg_k})
+	if not big and not quiet:
 		Main.I.sfx.play("enemy_fire", -19.0)
 
 
@@ -545,7 +545,7 @@ func _update_enemy_bullets(delta: float) -> void:
 			for w in (pl.wingmen if alive else []):
 				var wm: Wingman = w
 				if wm.alive() and p.distance_to(wm.global_position) < 14.0 + r:
-					wm.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0))
+					wm.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0) * float(b["k"]))
 					done = true
 					break
 		if alive and not done:
@@ -555,7 +555,7 @@ func _update_enemy_bullets(delta: float) -> void:
 			if rel_hit and pl.dodges("пули", str(b["who"])):
 				Main.I.tele.add("dive_dodged") # 3.5: «Нырок» — пуля прошла над самолётом
 			elif not pl.is_invulnerable() and rel_hit:
-				pl.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0), "пули", str(b["who"]))
+				pl.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0) * float(b["k"]), "пули", str(b["who"]))
 				done = true
 			else:
 				_check_near_miss(b, d, pl.radius + r + 30.0, pl, "пуля", pl.radius + r)
