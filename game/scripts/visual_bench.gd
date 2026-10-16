@@ -34,6 +34,9 @@ func _init(main: Main) -> void:
 
 func process(delta: float) -> void:
 	_t += delta / maxf(Engine.time_scale, 0.01)
+	if OS.get_cmdline_user_args().has("--hangarbench"):
+		_hangar_bench()
+		return
 	if m.state == "menu" and _i < 0 and _t > 1.0:
 		m.select_class("fighter")
 		_t = 0.0
@@ -177,3 +180,33 @@ func _make_points() -> Array:
 		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
 	return pts
 
+
+
+## 3.4-t1 (п. 1): 3D-ангар — вкладка «САМОЛЁТ» каждого класса, ур. 1 и ур. 2 → user://vis_hangar_<класс>_<ур>.png
+var _hq: Array = []
+
+
+func _hangar_bench() -> void:
+	if _t < 1.5:
+		return
+	if m.state != "hangar":
+		m.ui_click("menu_hangar")
+		for c in PlaneClasses.LIST:
+			for lv in [1, 2]:
+				_hq.append([c, lv])
+		_t = 0.0
+		return
+	if _hq.is_empty():
+		print("VISUAL done")
+		m.get_tree().quit()
+		return
+	var cur: Array = _hq[0]
+	m.hangar_tab = "plane"
+	m.hangar_cls = cur[0]
+	if Hangar3D.I != null:
+		Hangar3D.I._cls = cur[0]
+		Hangar3D.I.view_lvl = cur[1]
+	if _t > 1.2:
+		_save("hangar_%s_%d" % [cur[0], cur[1]])
+		_hq.pop_front()
+		_t = 0.0

@@ -64,7 +64,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	h3.lvl_rects.clear()
 	for lv in [1, 2]:
 		var br := Rect2(lx + 24 + (lv - 1) * 150, area.position.y + 348, 140, 36)
-		var on := h3.view_lvl == lv
+		var on: bool = h3.view_lvl == lv
 		ctrl.draw_rect(br, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
 		_text(Vector2(br.position.x, br.position.y + 25), "Ур. %d" % lv, 17, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
 		h3.lvl_rects.append([br, lv])

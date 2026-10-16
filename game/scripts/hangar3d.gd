@@ -10,7 +10,7 @@ static var I: Hangar3D
 
 const YAW0 := -2.3
 const PITCH0 := 0.42
-const DIST0 := 1.75
+const DIST0 := 1.4
 
 var vp: SubViewport
 var cam: Camera3D
@@ -69,7 +69,7 @@ func _ready() -> void:
 	# пол ангара: тёмный бетон, на нём тень
 	var floor_mi := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(6, 6)
+	pm.size = Vector2(40, 40)
 	floor_mi.mesh = pm
 	var fm := StandardMaterial3D.new()
 	fm.albedo_color = Color(0.2, 0.21, 0.22)
