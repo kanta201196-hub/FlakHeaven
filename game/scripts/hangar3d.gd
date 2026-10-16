@@ -158,7 +158,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var y := 0.0
 			match side:
 				"under":
-					y = (lo if not is_nan(lo) else -0.02) - 0.09 * wlen
+					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, weapon_tier) * wlen
 				"top", "wing":
 					y = hi if not is_nan(hi) else 0.03
 				"bottom":

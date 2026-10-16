@@ -656,7 +656,7 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
 			var tail_cab: bool = mt["side"] == "tail" and g.weapon == "turret" and (WeaponModels.TURRET_MODELS.get(p.cls_id, {}) as Dictionary).has("tail")
 			var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id) and not tail_cab
-			var y: float = {"under": -tw * 0.012 - 0.09 * len_px, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
+			var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, tr) * len_px, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
 			wmi.position = Vector3(pt.x, y, pt.y)
 			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель

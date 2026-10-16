@@ -25,6 +25,12 @@ static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3
 	var mi := MeshInstance3D.new()
 	var tm: Mesh = turret_model(cls, t, side) if weapon == "turret" else weapon_model(weapon, t)
 	mi.mesh = tm if tm != null else mesh(weapon, t, side)
+	# разбор каталога 16.10: подвесное — только на пилоне (ракеты — на пусковой рельс), не «приклеено» к крылу
+	if side == "under":
+		var pm := MeshInstance3D.new()
+		pm.name = "pylon"
+		pm.mesh = pylon_mesh(weapon, mi.mesh.get_aabb().end.y)
+		mi.add_child(pm)
 	# кормовая кабина стрелка неподвижна — поворачивается только шар со стволами (поворот гасит render3d)
 	if weapon == "turret" and side == "tail" and tm != null:
 		var cab := turret_model(cls, t, "cabin")
@@ -48,6 +54,39 @@ const TURRET_MODELS := {
 	"attacker": {"file": "res://models/turrets/turret_grach.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
 		"body": Color(0.34, 0.37, 0.28)},
 }
+
+
+## Пилон под крылом: высота PYLON_H над верхом модели (top), для ракет — длинный пусковой рельс
+const PYLON_H := 0.07
+
+
+static func pylon_mesh(weapon: String, top: float) -> Mesh:
+	var key := "pylon_%s_%.3f" % [weapon, top]
+	if _cache.has(key):
+		return _cache[key]
+	var rail := weapon == "aam"
+	var am := ArrayMesh.new()
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# стойка пилона: обтекаемая пластина, спереди скошена
+	var body := _box(Vector3(0.5 if not rail else 0.36, PYLON_H, 0.03))
+	st.append_from(body, 0, Transform3D(Basis(), Vector3(-0.02, top + PYLON_H * 0.5, 0)))
+	var nose := _box(Vector3(0.1, PYLON_H * 0.7, 0.028))
+	st.append_from(nose, 0, Transform3D(Basis(Vector3.BACK, -0.6), Vector3(0.24 if not rail else 0.17, top + PYLON_H * 0.55, 0)))
+	if rail:   # пусковой рельс вдоль ракеты
+		st.append_from(_box(Vector3(0.62, 0.012, 0.045)), 0, Transform3D(Basis(), Vector3(-0.02, top + 0.006, 0)))
+	st.commit(am)
+	am.surface_set_material(0, _mat("hull"))
+	_cache[key] = am
+	return am
+
+
+## Глубина подвеса (длина 1): насколько ниже крыла центр модели — верх модели плюс пилон
+static func hang(weapon: String, t: int) -> float:
+	var m: Mesh = weapon_model(weapon, t)
+	if m == null:
+		m = mesh(weapon, t)
+	return m.get_aabb().end.y + PYLON_H
 
 
 ## Ракеты В-В и блоки НАР из Blender (tools/blender/weapons.py) по примерам владельца 16.10:
