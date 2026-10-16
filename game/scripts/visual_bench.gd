@@ -77,6 +77,17 @@ func process(delta: float) -> void:
 			site.setup(m.player.global_position + Vector2(0, -120), 1.0, 99999.0)
 			m.world.add_child(site)
 			p["pos"] = site.global_position + Vector2(0, 160)
+	elif p.get("tanker", false):
+		if not _spawned:   # заправщик впереди игрока, штанга выдвинута и отклонена (логика стоит)
+			_spawned = true
+			var tk := Tanker.new()
+			tk.heading = 0.0
+			tk.position = (p["pos"] as Vector2) + Vector2(260, 0)
+			tk.process_mode = Node.PROCESS_MODE_DISABLED
+			tk.boom_len = 190.0
+			tk.boom_angle = 0.25
+			tk.docked = true
+			m.world.add_child(tk)
 	elif p.get("enemies", false) and not _spawned:
 		_spawn_all_enemies(m.player.global_position)
 	_hold(p)
@@ -204,6 +215,7 @@ func _make_points() -> Array:
 				pts.append({"name": "model_%s_%d" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "wait": 1.0, "zoom": 2.2})
 				pts.append({"name": "model_%s_%d_far" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "fly": true, "wait": 1.5, "zoom": 1.0})
 		pts.append({"name": "model_roll", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.2, "roll": 0.62})
+		pts.append({"name": "model_tanker", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.5, "tanker": true, "wait": 1.0})
 		pts.append({"name": "model_ground", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.3, "enemies": true, "ground": true, "wait": 2.5})
 		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
 	return pts
