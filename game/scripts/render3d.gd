@@ -565,6 +565,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		var ah: float = an.get("heading")
 		_place(ua, an.global_position, ah, _turn_bank(ua, ah, delta), 0.0)
 		PlaneFx.update(ua, sd, 0.0)
+		if ua.get("bm") != null and an.get("boom_len") != null:
+			_tanker_boom(ua, an, float(an.call("ally_len")))
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
 		if e == null or e.hp <= 0.0:
@@ -623,6 +625,32 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 		var ln := u["launcher"] as Node3D
 		ln.rotation.z = move_toward(ln.rotation.z, up, delta * 1.2)
 	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher")) else ang
+
+
+## Штанга заправщика (tools/blender/tanker_boom.py, узлы Boom / BoomTube / BoomTip).
+## Логика заправщика (tanker.gd) считает штангу от точки в BOOM_ROOT пикс. за центром; у модели штанга
+## выходит из-под хвоста — длину и угол пересчитываем так, чтобы наконечник был там же, где в логике.
+const BOOM_PITCH := deg_to_rad(10.0)
+
+
+func _tanker_boom(u: Dictionary, an: Node2D, len_px: float) -> void:
+	if not u.has("boom"):
+		var inst := (u["node"] as Node3D).get_child(0)
+		var b := inst.find_child("Boom", true, false) as Node3D
+		u["boom"] = b
+		u["boom_tube"] = inst.find_child("BoomTube", true, false) if b != null else null
+		u["boom_tip"] = inst.find_child("BoomTip", true, false) if b != null else null
+	var boom := u["boom"] as Node3D
+	if boom == null or u["boom_tube"] == null:
+		return
+	# наконечник в осях заправщика (пикс., x — вперёд), потом в единицы модели (1 = длина модели)
+	var tip := Vector2(-Tanker.BOOM_ROOT, 0.0) + Vector2(-float(an.get("boom_len")), 0.0).rotated(float(an.get("boom_angle")))
+	var v := tip / len_px - Vector2(boom.position.x, boom.position.z)
+	var l := maxf(v.length(), 0.05)
+	boom.rotation.y = atan2(v.y, -v.x)
+	(u["boom_tube"] as Node3D).scale.x = l
+	if u["boom_tip"] != null:
+		(u["boom_tip"] as Node3D).position = Vector3(-cos(BOOM_PITCH), -sin(BOOM_PITCH), 0.0) * l
 
 
 ## Крен от скорости поворота (для врагов и ведомых)
