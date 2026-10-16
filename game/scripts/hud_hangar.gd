@@ -56,17 +56,20 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	var lw := 560.0
 	_panel(Rect2(lx, area.position.y, lw, area.size.y), false)
 	var bought: bool = bool(Profile.cls(c)["plane2"])
+	# 3.4-t1 (п. 1): объёмная модель — тянуть мышью, колесо — приближение; ур. 2 виден и не купленным
+	var h3 := Hangar3D.ensure(ctrl)
+	var vr := Rect2(lx + 8, area.position.y + 8, lw - 16, 330)
+	ctrl.draw_texture_rect(h3.show_plane(c, vr), vr, false)
+	_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
+	h3.lvl_rects.clear()
 	for lv in [1, 2]:
-		var t := PlaneArt.plane_tex(c, lv)
-		if t == null:
-			continue
-		var cx := lx + lw * (0.28 if lv == 1 else 0.72)
-		var cy := area.position.y + 210.0
-		var k := minf(300.0 / t.get_width(), 220.0 / t.get_height())
-		ctrl.draw_set_transform(Vector2(cx, cy), -PI / 2.0, Vector2(k, k))
-		ctrl.draw_texture(t, -t.get_size() / 2.0, Color(1, 1, 1, 1) if (lv == 1 or bought) else Color(0.25, 0.25, 0.28, 0.9))
-		ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		_text(Vector2(cx - 120, area.position.y + 390), "ур. %d" % lv, 18, Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 240)
+		var br := Rect2(lx + 24 + (lv - 1) * 150, area.position.y + 348, 140, 36)
+		var on := h3.view_lvl == lv
+		ctrl.draw_rect(br, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
+		_text(Vector2(br.position.x, br.position.y + 25), "Ур. %d" % lv, 17, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
+		h3.lvl_rects.append([br, lv])
+	if h3.view_lvl == 2 and not bought:
+		_text(Vector2(lx + 330, area.position.y + 372), "не куплен — в вылет недоступен", 15, Color(1.0, 0.75, 0.45))
 	var y := area.position.y + 430.0
 	if bought:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен: модернизация в полёте на %d-м уровне пилота" % int(Tuning.g("plane_lvl2_at")), 16, Color(0.6, 1.0, 0.7))
