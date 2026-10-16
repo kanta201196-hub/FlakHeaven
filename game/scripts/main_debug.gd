@@ -2,6 +2,8 @@ class_name MainDebug
 extends RefCounted
 ## Отладочные режимы Main: автотест (-- --autotest), скриншоты (--shots), проверки --fxtest,
 ## --reporttest, --mesatest, стенд картинки --visual (visual_bench.gd). Работают только по флагам командной строки.
+## Быстрая проверка правки (--smoke, вместе с --autotest): один вылет одним классом с перемоткой к боссу,
+## затем выход с кодом 0 («SMOKE: ok») или 1 («SMOKE: FAIL»). Обёртка с поиском SCRIPT ERROR — tools/ci/smoke.sh.
 
 var m: Main
 var _fx_t := 0.0
@@ -22,6 +24,8 @@ func _init(main: Main) -> void:
 func process(delta: float) -> void:
 	if m._autotest:
 		_run_autotest(delta)
+		if m._args.has("--smoke"):
+			_smoke_check()
 	if m._args.has("--shots"):
 		_debug_screenshots(delta)
 	if _visual != null:
@@ -154,6 +158,37 @@ func _debug_screenshots(delta: float) -> void:
 	if (m.state == "evac" or m.state == "dead") and m.result_t > 3.5:
 		_shot("result")
 		m.get_tree().quit()
+
+
+# ---------- Быстрая проверка (-- --autotest --smoke [--class=bomber]) ----------
+# Вылет: ~40 с обычного боя, перемотка к боссу, 25 с боя с боссом. Лимит по реальному времени — SMOKE_WALL_S.
+
+const SMOKE_WARMUP_S := 40.0
+const SMOKE_BOSS_S := 25.0
+const SMOKE_WALL_S := 300.0
+var _smoke_skipped := false
+
+
+func _smoke_check() -> void:
+	var wall := Time.get_ticks_msec() / 1000.0
+	if wall > SMOKE_WALL_S:
+		_smoke_end(1, "timeout %.0f s, state %s, run %.1f s" % [wall, m.state, m.run_time])
+		return
+	if m.state == "dead" or m.state == "evac":
+		_smoke_end(0, "%s at %.1f s" % [m.state, m.run_time])
+		return
+	if m.state != "playing":
+		return
+	if not _smoke_skipped and m.run_time > SMOKE_WARMUP_S:
+		_smoke_skipped = true
+		m.run_time = maxf(m.run_time, Tuning.g("boss_every") - 5.0)
+	elif _smoke_skipped and m.run_time > Tuning.g("boss_every") + SMOKE_BOSS_S:
+		_smoke_end(0, "boss %s" % ("alive" if m.boss_alive() else "killed"))
+
+
+func _smoke_end(code: int, why: String) -> void:
+	print("SMOKE: %s class %s, level %d, kills %d, %s, %.0f s real" % ["ok" if code == 0 else "FAIL", m.cls_id, m.level, m.kills, why, Time.get_ticks_msec() / 1000.0])
+	m.get_tree().quit(code)
 
 
 # ---------- Автотест (-- --autotest): бот летает, берёт карточки, умирает/эвакуируется и начинает заново ----------

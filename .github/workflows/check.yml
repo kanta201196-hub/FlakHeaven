@@ -1,0 +1,53 @@
+# Автопроверка: на каждый PR и на push в main.
+# Импорт проекта Godot и быстрый вылет без окна (tools/ci/smoke.sh) за каждый класс.
+name: Проверка игры
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        cls: [fighter, attacker, bomber]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Godot 4.4.1 (кэш)
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-4.4.1-linux
+
+      - name: Скачать Godot 4.4.1
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          curl -sSL -o g.zip https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
+          unzip -q g.zip && rm g.zip
+
+      - name: Быстрый вылет (${{ matrix.cls }})
+        env:
+          GODOT: /home/runner/godot/Godot_v4.4.1-stable_linux.x86_64
+        run: tools/ci/smoke.sh ${{ matrix.cls }}
+
+      - name: Лог вылета
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.cls }}
+          path: |
+            smoke_${{ matrix.cls }}.log
+            import.log
+          retention-days: 7
