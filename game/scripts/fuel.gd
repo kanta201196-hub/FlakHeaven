@@ -33,10 +33,11 @@ func _process(delta: float) -> void:
 		if not _empty_said:
 			_empty_said = true
 			m.show_banner("Бак пуст! Скорость −30%, форсажа нет — ждите заправщик", 4.0)
-			m.sfx.play("lock", -4.0, 0.5)
+			m.sfx.play("fuel_empty", -4.0, 0.5)
 	elif frac() < 0.1 and not _warned:
 		_warned = true
 		m.show_banner("Топливо на исходе", 3.0)
+		m.sfx.play("fuel_low", -8.0, 0.8)
 	_retry_t -= delta
 	if not is_instance_valid(tanker) and frac() <= CALL_AT and _retry_t <= 0.0:
 		_call_tanker(p)
@@ -73,7 +74,7 @@ func _call_tanker(p: Player) -> void:
 	tanker.setup(p, self)
 	Main.I.world.add_child(tanker)
 	Main.I.show_banner("Заправщик на подходе! Зайдите ему в хвост и держитесь за ним", 4.0)
-	Main.I.sfx.play("evac", -8.0, 0.8)
+	Main.I.sfx.play("tanker_call", -8.0, 0.8)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: tanker called at %.0f, fuel %.0f%%" % [Main.I.run_time, frac() * 100.0])
 
