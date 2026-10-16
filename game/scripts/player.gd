@@ -298,7 +298,7 @@ func _ready() -> void:
 
 
 func cruise_speed() -> float:
-	return Tuning.g("cruise_speed") * float(cls["speed"]) * mods["speed"]
+	return Tuning.g("cruise_speed") * float(cls["speed"]) * mods["speed"] * Fuel.speed_k() # 3.5: пустой бак −30%
 
 
 func turn_rate() -> float:
@@ -439,7 +439,7 @@ func _handle_skills() -> void:
 		dive_cd = maxf(dive_t + 1.0, Tuning.g("dive_cd") * float(mods["man_cd"]))
 		Main.I.tele.add("dive_uses")
 		Main.I.sfx.play("roll", -12.0, 0.6)
-	if Input.is_action_just_pressed("afterburner") and ab_cd <= 0.0:
+	if Input.is_action_just_pressed("afterburner") and ab_cd <= 0.0 and Fuel.can_afterburn(): # 3.5: без топлива форсажа нет
 		ab_t = Tuning.g("afterburner_time") + mods["ab_time"]
 		_pass_hit.clear()
 		ab_cd = maxf(4.0, (Tuning.g("afterburner_cd") + mods["ab_cd"]) * float(mods["man_cd"]))

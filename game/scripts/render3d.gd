@@ -513,6 +513,16 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var wpts := PlaneFx.trail_points(uw)
 			for i in wpts.size():
 				_trails.emit("w%d_%d" % [wm.get_instance_id(), i], wpts[i], [0.14, 3.0, 10.0, 1.5, 14.0])
+	# 3.5: свои самолёты вне звена (заправщик): ally_tex(), ally_len(), heading
+	for n in get_tree().get_nodes_in_group("allies3d"):
+		var an := n as Node2D
+		var at: Texture2D = an.call("ally_tex")
+		if at == null:
+			continue
+		var ua := _ensure(an.get_instance_id(), "ally", at, float(an.call("ally_len")), 0.075, 56)
+		var ah: float = an.get("heading")
+		_place(ua, an.global_position, ah, _turn_bank(ua, ah, delta), 0.0)
+		PlaneFx.update(ua, sd, 0.0)
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
 		if e == null or e.hp <= 0.0:
