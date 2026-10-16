@@ -28,7 +28,7 @@ func class_select(size: Vector2) -> void:
 		y += 32.0
 		_text(Vector2(x, y), d["role"], 18, Color(0.8, 0.85, 0.95))
 		var sb: String = Profile.skills(id)[1]
-		_text(Vector2(x, y), "Экипаж ур. %d%s%s" % [Profile.crew_lvl(id), " · самолёт ур. 2 ✓" if Profile.plane2(id) else "",
+		_text(Vector2(x, y), "Экипаж ур. %d%s%s" % [Profile.crew_lvl(id), " · самолёт ур. 2 ✓" if Profile.plane_lvl(id) == 2 else "",
 			(" · навык F: " + String(PlaneClasses.SKILL3[sb]["title"])) if sb != "" else ""], 15, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, w - 56.0)
 		y += 44.0
 		_stat_bar(x, y, "Прочность", float(d["hp"]) / 240.0, "%d" % int(d["hp"]))
@@ -69,7 +69,7 @@ func class_select(size: Vector2) -> void:
 				Color(0.85, 1.0, 0.85) if on else (Color(0.85, 0.88, 0.95) if unl else Color(0.5, 0.52, 0.56)))
 			_para(Vector2(x + 4, y + 40), sd["short"], w - 40.0, 13, Color(0.75, 0.8, 0.88))
 			y += 62.0
-		# картинки самолёта: ур. 1 и ур. 2 (модернизация в полёте), носом вверх
+		# картинки самолёта: ур. 1 и ур. 2 (покупка в ангаре), носом вверх
 		var area_top := y + 4.0
 		var area_h := r.end.y - area_top - 34.0
 		if area_h > 40.0:
@@ -82,7 +82,7 @@ func class_select(size: Vector2) -> void:
 				ctrl.draw_set_transform(c, -PI / 2.0, Vector2(k, k))
 				ctrl.draw_texture(t, -t.get_size() / 2.0)
 				ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-				_text(Vector2(c.x - 130.0, r.end.y - 14.0), "ур. %d%s" % [lv, "" if lv == 1 else " (с ур. пилота %d)" % int(Tuning.g("plane_lvl2_at"))], 15, Color(0.7, 0.75, 0.85), HORIZONTAL_ALIGNMENT_CENTER, 260.0)
+				_text(Vector2(c.x - 130.0, r.end.y - 14.0), "ур. %d%s" % [lv, (" ✓ в вылет" if Profile.plane_lvl(id) == lv else "") if Profile.plane2(id) else ("" if lv == 1 else " (в ангаре)")], 15, Color(0.7, 0.75, 0.85), HORIZONTAL_ALIGNMENT_CENTER, 260.0)
 	_ctext(932, "Управление: %s   [F2 — сменить]" % Hud.SCHEMES[int(Tuning.g("scheme"))], 20, Color(0.75, 0.85, 1.0))
 	_ctext(964, "Опыт с врагов подбирается сам рядом с самолётом. Каждые 5 минут — ас (мини-босс), после него — окно эвакуации.", 18, Color(0.8, 0.85, 0.9))
 	_ctext(992, "Угрозы: дроны — держат дистанцию и стреляют (мигают жёлтым) · оранжевые камикадзе — таран · перехватчики — заходы с очередью · ракетоносцы — ракеты после красной линии", 18, Color(0.95, 0.75, 0.75))
@@ -292,7 +292,7 @@ func result(m: Main, size: Vector2) -> void:
 	y += 26.0
 	_text(Vector2(rx, y), "Сбито: дроны %d · камик. %d · перехв. %d · ракетон. %d · асы %d" % [m.stat("kills_by", "дроны"), m.stat("kills_by", "камикадзе"), m.stat("kills_by", "перехватчики"), m.stat("kills_by", "ракетоносцы"), m.stat("kills_by", "асы")], 18, hc)
 	y += 26.0
-	_text(Vector2(rx, y), "Сбито ракет противоракетами: %d · срывов захвата: %d" % [int(m.counters.get("intercepted", 0)), int(m.counters.get("locks_broken", 0))], 18, hc)
+	_text(Vector2(rx, y), "Уведено ракет ловушками: %d · срывов захвата: %d" % [int(m.counters.get("intercepted", 0)), int(m.counters.get("locks_broken", 0))], 18, hc)
 	y += 26.0
 	_text(Vector2(rx, y), "На волоске: %d · лучшая серия: %d · сбито с хвоста: %d" % [m.near_misses, m.best_streak, m.tail_kills], 18, Color(0.7, 0.95, 1.0))
 	y += 26.0
@@ -441,6 +441,9 @@ func _meta_panel(m: Main, r: Rect2) -> void:
 	for u in a["unlocked"]:
 		y += 26.0
 		_text(Vector2(x, y), "ОТКРЫТО: " + String(u), 16, Color(1.0, 0.85, 0.4))
+	if String(a.get("tech", "")) != "":
+		y += 28.0
+		_text(Vector2(x, y), "Техник: «%s»" % String(a["tech"]), 16, Color(0.95, 0.85, 0.55))
 	if String(a.get("hint_buy", "")) != "":
 		y += 30.0
 		_text(Vector2(x, y), "Можно купить: " + String(a["hint_buy"]), 17, Color(0.6, 0.95, 1.0))

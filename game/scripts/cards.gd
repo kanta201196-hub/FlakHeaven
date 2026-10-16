@@ -363,6 +363,8 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 		"magnet":
 			return "+%s радиуса подбора опыта" % _pct(0.35 * k)
 		"roll":
+			if not p.has_roll():
+				return "Залп ловушек: −%.1f с перезарядки" % [1.0 * k]
 			return "Бочка: −%.1f с перезарядки, +%.2f с неуязвимости" % [1.0 * k, 0.15 * k]
 		"afterburner":
 			return "Форсаж: +%.1f с длительности, −%.1f с перезарядки" % [1.0 * k, 2.0 * k]
@@ -375,9 +377,13 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 	return ""
 
 
-## Лимит ведомых класса (связки «Волчья стая» и «Тёплая компания» — +1)
+## 3.5 (правка 24): больше двух постоянных ведомых не бывает — третий делал звено слишком сильным
+const WING_MAX := 2
+
+
+## Лимит ведомых класса (связки «Волчья стая» и «Тёплая компания» — +1), не больше WING_MAX
 static func wing_limit(p: Player) -> int:
-	return int(p.cls["wingmen"]) + (1 if (p.syn.has("wolfpack") or p.syn.has("warm")) else 0)
+	return mini(WING_MAX, int(p.cls["wingmen"]) + (1 if (p.syn.has("wolfpack") or p.syn.has("warm")) else 0))
 
 
 ## Все возможные карточки сейчас: [вес, карточка без редкости]
@@ -436,6 +442,8 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 				w = 1.2
 			"roll", "afterburner":
 				w = 1.0
+				if id == "roll" and not p.has_roll():
+					title = "Залп ловушек: тренировка"
 			"gun_dmg", "gun_rate":
 				w = 2.0 # 2.4: карточки курсового чаще
 		if taken > 0 and id != "repair" and id != "skill3":

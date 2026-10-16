@@ -2,8 +2,10 @@ class_name AASite
 extends Node2D
 ## Активность «Удар по позиции ПВО» (по концепту): на карте появляется оборудованная позиция —
 ## 2 ЗСУ, ЗРК, РЛС и командный бункер. Указатель у края экрана ведёт к ней.
-## Подлёт ближе 1000 пикс включает таймер 60 с. Уничтожил всё — внеочередное повышение уровня
-## и запчасти. Не успел — позиция остаётся и продолжает стрелять, награды нет.
+## Подлёт ближе 1000 пикс включает таймер 60 с. 3.5: цель — командный бункер: уничтожен бункер —
+## позиция взята (внеочередной выбор карточки и запчасти), техника без командования уезжает.
+## ЗСУ и ЗРК переезжают вокруг бункера, прикрывая его, ЗСУ сбивают наши ракеты и НАР.
+## Не успел — позиция остаётся и продолжает стрелять, награды нет.
 
 const LIMIT := 60.0
 const ACTIVATE_R := 1000.0
@@ -13,19 +15,27 @@ var active := false     # стреляет ли (после подлёта)
 var timer := LIMIT
 var done := false
 var failed := false
+var bunker: GroundTarget = null
+var anchor := Vector2.ZERO   # 3.5: центр позиции на рельефе (логическая позиция — проекция, см. GroundTarget.air_pos)
 
 
-func setup(center: Vector2, hp_mult: float) -> void:
+## bunker_hp — нижняя граница прочности бункера (спавнер считает её от текущего урона игрока)
+func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
 	# 3D-рельеф: техника ПВО стоит на дне долины, а не на хребте (правила — s4-landscape-rules.md)
 	if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
 		center = Render3D.I.terrain.find_floor(center)
 	global_position = center
+	anchor = center
 	var layout := [["bunker", Vector2.ZERO], ["zsu", Vector2(-170, -90)], ["zsu", Vector2(170, 110)],
 		["sam", Vector2(140, -150)], ["radar", Vector2(-150, 140)]]
 	for l in layout:
 		var g := GroundTarget.new()
 		g.setup(l[0], self, hp_mult)
-		g.position = center + (l[1] as Vector2).rotated(randf() * TAU) * randf_range(0.9, 1.2)
+		if l[0] == "bunker":
+			bunker = g
+			g.hp = maxf(g.hp, bunker_hp)
+			g.max_hp = g.hp
+		g.position = center + ((l[1] as Vector2).rotated(randf() * TAU) * randf_range(0.9, 1.2) if l[0] != "bunker" else Vector2.ZERO)
 		if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
 			g.position = Render3D.I.terrain.find_floor(g.position, 260.0)
 		targets.append(g)
@@ -44,6 +54,13 @@ func radar_alive() -> bool:
 	return false
 
 
+## Прочность бункера, 0–1 (для HUD)
+func bunker_frac() -> float:
+	if not is_instance_valid(bunker) or bunker.hp <= 0.0:
+		return 0.0
+	return bunker.hp / bunker.max_hp
+
+
 func left() -> int:
 	var n := 0
 	for g in targets:
@@ -52,21 +69,32 @@ func left() -> int:
 	return n
 
 
-func on_target_destroyed(_g: GroundTarget) -> void:
+func on_target_destroyed(g: GroundTarget) -> void:
+	if g == bunker and not done:
+		# 3.5: бункер взят — позиция подавлена, остальная техника уезжает без командования
+		done = true
+		for t in targets:
+			if is_instance_valid(t) and t != g:
+				(t as GroundTarget).leaderless = true
+		if not failed:
+			Main.I.on_activity_success("ground")
+		# активность закончена: следующая может начаться, остатки позиции убираются сами
+		if Main.I.spawner != null and Main.I.spawner.activity_node == self:
+			Main.I.spawner.activity_node = null
+		return
 	# вызывается до удаления цели; проверяем на следующем кадре
 	_check_done.call_deferred()
 
 
 func _check_done() -> void:
-	if done or left() > 0:
+	if left() > 0:
 		return
 	done = true
-	if not failed:
-		Main.I.on_activity_success("ground")
 	queue_free()
 
 
 func _process(delta: float) -> void:
+	global_position = GroundTarget.air_pos(anchor)
 	var p := Main.I.player
 	if p == null:
 		return
@@ -79,8 +107,8 @@ func _process(delta: float) -> void:
 		if timer <= 0.0:
 			failed = true
 			Main.I.show_banner("Позиция ПВО устояла — награды не будет", 3.0)
-	# ушли далеко после провала — позицию убираем
-	if failed and p.global_position.distance_to(global_position) > 3000.0:
+	# ушли далеко после провала или победы — остатки позиции убираем
+	if (failed or done) and p.global_position.distance_to(global_position) > 2600.0:
 		for g in targets:
 			if is_instance_valid(g):
 				g.queue_free()
@@ -92,5 +120,5 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	# площадка позиции и радиус обнаружения
 	draw_circle(Vector2.ZERO, 260.0, Color(0.35, 0.3, 0.2, 0.18))
-	if not active:
+	if not active and not done:
 		draw_arc(Vector2.ZERO, ACTIVATE_R, 0.0, TAU, 96, Color(1.0, 0.85, 0.3, 0.12), 2.0)

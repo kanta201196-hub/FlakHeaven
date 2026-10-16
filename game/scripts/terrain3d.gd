@@ -10,7 +10,10 @@ extends Node3D
 ## Координаты: x, z — как 2D-мир (px), y — вверх; base_y — дно долин, рельеф не выше ceiling.
 
 const CHUNK := 1400.0          # совпадает с Background.CHUNK: объекты биома и куски рельефа — одна сетка
-const N := 70                  # ячеек сетки по стороне куска (20 px) — острее гребни и уступы
+## ячеек сетки по стороне куска (20 px) — острее гребни и уступы.
+## 3.5 (правка 7): на «Низком» 40, на «Среднем» 56 — втрое / в полтора раза меньше треугольников и быстрее сборка
+const N_GFX := [40, 56, 70, 70]
+var N := 70
 ## Поселения — на дне долин (вес 1); обломки самолёта и воронки могут быть где угодно, под ними лишь вмятина
 const FLAT_OBJS := {"o_village": 1.0, "o_fort": 1.0, "o_oasis": 1.0, "o_crater": 0.3, "o_wreck": 0.3}
 const SETTLE := ["o_village", "o_fort", "o_oasis"]
@@ -40,6 +43,7 @@ var props: BiomeProps          # B-41: модели биома на рельеф
 
 func setup(depth: float, mat: Material, bg: Background) -> void:
 	base_y = -depth
+	N = N_GFX[clampi(Settings.gfx, 0, 3)]
 	ceiling = maxf(depth - 30.0, 0.0)   # запас на крен и толщину моделей у плоскости боя
 	material = mat
 	_bg = bg
@@ -73,6 +77,7 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 
 
 func clear() -> void:
+	N = N_GFX[clampi(Settings.gfx, 0, 3)]
 	for k in _chunks:
 		(_chunks[k] as Node).queue_free()
 	_chunks.clear()

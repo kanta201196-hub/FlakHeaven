@@ -210,7 +210,9 @@ func build(key: Vector2i, parent: Node3D) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		var small: bool = kind in ["shrub", "boulders", "poplar", "orchard"]
-		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if Settings.gfx == 0 and small else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
+		var no_shadow := Settings.gfx == 0 or (Settings.gfx == 1 and small)
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if no_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		parent.add_child(mmi)
 
 
