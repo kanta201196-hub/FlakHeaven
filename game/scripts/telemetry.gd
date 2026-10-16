@@ -14,6 +14,11 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	# T4-03: 3D-картинка и производительность (рельеф, модели биома, тени, качество графики)
 	"gfx_start", "gfx", "gfx_drops", "plane_shadow", "tris_avg", "tris_max", "draws_avg", "draws_max", "vram_mb",
 	"nodes_max", "enemies_max", "load_ms", "chunks", "chunk_ms_max",
+	# 3.5: время жизни асов (с появления до гибели), РУД вернули принудительно, залпы ловушек «Кита», разрешение 3D
+	"boss_n", "boss_life_avg", "boss_life_min", "boss_life_max", "throttle_locks", "flare_salvos", "scale3d",
+	"dive_uses", "dive_dodged",
+	# 3.5 (тред «ИИ врагов и активности»): уклонения врагов, их ловушки и уведённые ими ракеты, сбитые ПВО наши ракеты
+	"enemy_evades", "enemy_flares", "enemy_flared_missiles", "aa_shot_down",
 	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа
 	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx", "plane_lvl"]
 
@@ -62,6 +67,13 @@ func maxv(k: String, n: float) -> void:
 	v[k] = maxf(float(v.get(k, 0.0)), n)
 
 
+func boss_killed(life: float) -> void:
+	add("boss_n")
+	add("boss_life_sum", life)
+	v["boss_life_min"] = minf(float(v.get("boss_life_min", life)), life)
+	maxv("boss_life_max", life)
+
+
 func g(k: String) -> float:
 	return float(v.get(k, 0.0))
 
@@ -90,7 +102,7 @@ func frame(delta: float, m: Main) -> void:
 	var p := m.player
 	if not is_instance_valid(p):
 		return
-	if p.roll_t > 0.0 or p.invuln > 0.0:
+	if p.roll_inv > 0.0 or p.invuln > 0.0:
 		add("invuln_s", delta)
 		_inv_chain += delta
 		maxv("invuln_chain_max", _inv_chain)
@@ -197,6 +209,8 @@ func row(m: Main) -> PackedStringArray:
 	v["plane_shadow"] = Tuning.g("plane_shadow")
 	v["tris_avg"] = g("tris_sum") / maxf(_rs_n, 1)
 	v["draws_avg"] = g("draws_sum") / maxf(_rs_n, 1)
+	v["boss_life_avg"] = g("boss_life_sum") / maxf(g("boss_n"), 1.0)
+	v["scale3d"] = 100.0 * float(Render3D.GFX_SCALE[clampi(Settings.gfx, 0, 3)])
 	v["msl_air_avg"] = g("msl_air_sum") / maxf(_speed_n, 1)
 	v["crew_rank"] = float(Profile.crew_lvl(m.cls_id))
 	v["plane_lvl"] = float(m.player.plane_lvl) if is_instance_valid(m.player) else 0.0
@@ -205,5 +219,5 @@ func row(m: Main) -> PackedStringArray:
 	var out := PackedStringArray()
 	for k in COLS:
 		var x := g(k)
-		out.append(("%.1f" % x) if k in ["msl_air_avg", "invuln_s", "invuln_chain_max", "pad_s", "kbm_s", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s"] else str(int(round(x))))
+		out.append(("%.1f" % x) if k in ["msl_air_avg", "invuln_s", "invuln_chain_max", "pad_s", "kbm_s", "tilt28_s", "tilt35_s", "tilt45_s", "tilt0_s", "boss_life_avg", "boss_life_min", "boss_life_max"] else str(int(round(x))))
 	return out

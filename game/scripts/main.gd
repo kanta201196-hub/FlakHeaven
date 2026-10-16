@@ -41,6 +41,8 @@ var xp := 0.0
 var pending_levels := 0
 var offers: Array = []
 const OFFER_COUNT := 4
+## 3.5: неуязвимость после выбора карточки (было 1 с — к 15-й минуте набегало больше минуты)
+const CARD_INVULN := 0.5
 var rerolls := 2        # переброс выбора (базово 2 за вылет, +1 за каждого аса)
 var bans := 2           # исключение карточки до конца вылета (базово 2, +1 за аса)
 var banned := {}        # ключи исключённых карточек
@@ -360,7 +362,7 @@ func choose_card(i: int) -> void:
 		offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
 	else:
 		_set_state("playing")
-		player.invuln = maxf(player.invuln, 1.0)
+		player.invuln = maxf(player.invuln, CARD_INVULN)
 
 
 # ---------- 3.2: курс ----------
@@ -391,7 +393,7 @@ func choose_course(i: int) -> void:
 		_set_state("levelup")
 	else:
 		_set_state("playing")
-		player.invuln = maxf(player.invuln, 1.0)
+		player.invuln = maxf(player.invuln, CARD_INVULN)
 
 
 # ---------- 3.2: ангар ----------
@@ -464,20 +466,22 @@ func on_activity_success(kind: String) -> void:
 	activities_done += 1
 	if _autotest:
 		print("AUTOTEST: activity success ", kind, " at %.0f" % run_time)
-	if kind == "ground":
-		# 3.1: награда понятнее — внеочередной выбор из редких карточек (как за аса)
+	# 3.5: активности стали чаще (раз в минуту) — выбор из редких карточек за каждую вторую,
+	# за остальные — ремонт 20% и запчасти, иначе сила игрока растёт ещё быстрее (лог 3.4-t1: Кит неуязвим с 12-й минуты)
+	var rare := activities_done % 2 == 1
+	var what := "Позиция ПВО уничтожена!" if kind == "ground" else "Ас-соперник сбит!"
+	player.add_course_pts(1)
+	if rare:
 		pending_levels += 1
 		rare_picks += 1
-		rare_reasons.append("ЗА ПОЗИЦИЮ ПВО")
-		player.add_course_pts(1)
-		parts += 40.0 * continue_mult()
-		show_banner("Позиция ПВО уничтожена! Награда: выбор из редких карточек и +40 запчастей", 4.0)
+		rare_reasons.append("ЗА ПОЗИЦИЮ ПВО" if kind == "ground" else "ЗА АСА")
 	else:
-		pending_levels += 1
-		rare_picks += 1
-		rare_reasons.append("ЗА АСА")
-		player.add_course_pts(1)
-		show_banner("Ас-соперник сбит! Выбор из редких карточек", 4.0)
+		player.heal(player.max_hp * 0.2)
+	if kind == "ground":
+		parts += 40.0 * continue_mult()
+	if not rare:
+		parts += 60.0 * continue_mult()
+	show_banner("%s Награда: %s" % [what, "выбор из редких карточек" + (" и +40 запчастей" if kind == "ground" else "") if rare else "ремонт 20%% и +%d запчастей" % (100 if kind == "ground" else 60)], 4.0)
 	sfx.play("evac", -4.0, 1.3)
 
 
@@ -510,6 +514,10 @@ func boss_alive() -> bool:
 
 func on_boss_wave(wave: int, n: int) -> void:
 	show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
+	# 3.5 (правка 30): время жизни аса — для лога
+	for b in get_tree().get_nodes_in_group("enemies"):
+		if b is Enemy and (b as Enemy).is_boss and not (b as Node).has_meta("born"):
+			(b as Node).set_meta("born", run_time)
 	sfx.play("boss", -2.0)
 	add_shake(6.0)
 
@@ -600,6 +608,8 @@ func on_enemy_killed(e: Enemy) -> void:
 		hitstop()
 	if e.is_boss:
 		bosses_killed += 1
+		if e.has_meta("born"):
+			tele.boss_killed(run_time - float(e.get_meta("born")))
 		if is_instance_valid(player):
 			player.add_course_pts(2) # 3.2: ас — +2 к курсу
 		rerolls += 1

@@ -63,9 +63,10 @@ static func _trail_push(m: Dictionary, p: Vector2, maxn: int, step := 9.0) -> vo
 
 
 ## Бомба (2.8): летит к точке to за время fuse и рвётся там (воздушный подрыв — бьёт и самолёты).
-func spawn_bomb(pos: Vector2, fuse: float, dmg: float, radius: float, src := "бомбы", to = null) -> void:
+## 3.5: ground_only — бомба рвётся на земле и бьёт только наземные цели (бомбы «Кита»).
+func spawn_bomb(pos: Vector2, fuse: float, dmg: float, radius: float, src := "бомбы", to = null, ground_only := false) -> void:
 	var dest: Vector2 = pos if to == null else to
-	bombs.append({"p": pos, "from": pos, "to": dest, "t": fuse, "fuse": fuse, "dmg": dmg, "r": radius, "src": src})
+	bombs.append({"p": pos, "from": pos, "to": dest, "t": fuse, "fuse": fuse, "dmg": dmg, "r": radius, "src": src, "ground": ground_only})
 
 
 func spawn_missile(pos: Vector2, dir: Vector2) -> void:
@@ -142,7 +143,7 @@ func break_locks(from: Vector2, r: float) -> int:
 
 ## Взрыв по площади (2.8): урон падает от центра к краю — 100% в центре, 35% на границе зоны.
 ## 3.1: радиус × «Осколочная рубашка» (и «Штурмовой заход» II); нашивки «Взрыв» I (край 50%) и II (цепной подрыв).
-func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0) -> void:
+func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false) -> void:
 	var edge := 0.35
 	var pl := Main.I.player
 	var blast2 := false
@@ -157,7 +158,7 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 	var died: Array = []
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
-		if e == null or e.hp <= 0.0 or e == exclude:
+		if e == null or e.hp <= 0.0 or e == exclude or (ground_only and not e.is_ground):
 			continue
 		var d := pos.distance_to(e.global_position) - e.radius
 		if d < r:
@@ -469,11 +470,11 @@ func _update_bombs(delta: float) -> void:
 		var k := 1.0 - clampf(float(b["t"]) / float(b["fuse"]), 0.0, 1.0)
 		b["p"] = (b["from"] as Vector2).lerp(b["to"], 1.0 - pow(1.0 - k, 2.0))
 		if float(b["t"]) <= 0.0:
-			aoe(b["p"], float(b["r"]), float(b["dmg"]), b["src"])
+			aoe(b["p"], float(b["r"]), float(b["dmg"]), b["src"], true, null, 0, bool(b.get("ground", false)))
 			if b.get("road", false): # «Ковровая дорожка»: крест суббоеприпасов и горящее пятно
 				for j in 4:
 					var to: Vector2 = b["p"] + Vector2.from_angle(j * PI / 2.0 + PI / 4.0) * 90.0
-					spawn_bomb(b["p"], 0.35, float(b["dmg"]) * 0.5, float(b["r"]) * 0.7, "связка: ковровая дорожка", to)
+					spawn_bomb(b["p"], 0.35, float(b["dmg"]) * 0.5, float(b["r"]) * 0.7, "связка: ковровая дорожка", to, bool(b.get("ground", false)))
 				spawn_fire(b["p"], 70.0, 12.0, 2.5, "связка: ковровая дорожка")
 			Main.I.sfx.play("bomb", -10.0)
 			Main.I.add_shake(2.0)
@@ -551,7 +552,9 @@ func _update_enemy_bullets(delta: float) -> void:
 			var d := p.distance_to(pl.global_position)
 			# 3.4: пересечение по относительному движению за кадр (быстрый самолёт не «проскакивает» пулю)
 			var rel_hit := seg_hit(p0 - (pl.global_position - pl.velocity * delta), p - pl.global_position, Vector2.ZERO, pl.radius + r)
-			if not pl.is_invulnerable() and rel_hit:
+			if rel_hit and pl.dodges("пули", str(b["who"])):
+				Main.I.tele.add("dive_dodged") # 3.5: «Нырок» — пуля прошла над самолётом
+			elif not pl.is_invulnerable() and rel_hit:
 				pl.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0), "пули", str(b["who"]))
 				done = true
 			else:

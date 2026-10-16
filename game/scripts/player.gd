@@ -78,6 +78,15 @@ var invuln := 0.0
 var roll_t := 0.0
 var roll_cd := 0.0
 var roll_dir := 1.0
+var roll_inv := 0.0        # 3.5: неуязвимость бочки — у «Грача» переворот длиннее, а окно то же
+var salvo_t := 0.0         # 3.5: «Кит» — залп ловушек (для индикатора)
+var dive_t := 0.0          # 3.5 (правка 29): «Нырок» — самолёт ниже, пули и таран самолётов проходят над ним
+var dive_cd := 0.0
+var _turn_vel := 0.0       # 3.5: угловая скорость — набирается с ускорением класса
+var _thr_hold := 0.0       # 3.5: сколько секунд РУД не на крейсерской
+var _thr_lock := false     # 3.5: РУД вернули принудительно — ждём, пока отпустят W/S
+var _cut_hold := 0.0       # 3.5: сколько секунд держат сброс газа
+var _cut_lock := false
 var ab_t := 0.0
 var ab_cd := 0.0
 var s3_t := 0.0
@@ -309,7 +318,12 @@ func pickup_radius() -> float:
 
 
 func roll_time() -> float:
-	return Tuning.g("roll_time") + mods["roll_time"]
+	return (Tuning.g("roll_time") + mods["roll_time"]) * float(cls.get("roll_k", 1.0))
+
+
+## 3.5: на «Пробеле» у «Кита» залп ловушек вместо бочки
+func has_roll() -> bool:
+	return String(cls.get("space", "roll")) == "roll"
 
 
 func s3_def() -> Dictionary:
@@ -364,6 +378,10 @@ func _afterburner_pass() -> void:
 
 func _tick_timers(delta: float) -> void:
 	roll_t = maxf(0.0, roll_t - delta)
+	roll_inv = maxf(0.0, roll_inv - delta)
+	salvo_t = maxf(0.0, salvo_t - delta)
+	dive_t = maxf(0.0, dive_t - delta)
+	dive_cd = maxf(0.0, dive_cd - delta)
 	roll_cd = maxf(0.0, roll_cd - delta)
 	ab_t = maxf(0.0, ab_t - delta)
 	ab_cd = maxf(0.0, ab_cd - delta)
@@ -402,8 +420,11 @@ func _turn_side() -> float:
 
 
 func _handle_skills() -> void:
-	if Input.is_action_just_pressed("roll") and roll_cd <= 0.0 and roll_t <= 0.0:
+	if Input.is_action_just_pressed("roll") and roll_cd <= 0.0 and roll_t <= 0.0 and not has_roll():
+		_flare_salvo()
+	elif Input.is_action_just_pressed("roll") and roll_cd <= 0.0 and roll_t <= 0.0:
 		roll_t = roll_time()
+		roll_inv = Tuning.g("roll_time") + mods["roll_time"]
 		# 3.4: перезарядка не короче бочки + 1 с — без непрерывной неуязвимости при прокачке
 		roll_cd = maxf(maxf(2.0, roll_t + 1.0), (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
 		Main.I.tele.add("roll_uses")
@@ -413,6 +434,11 @@ func _handle_skills() -> void:
 		if patch("maneuver") >= 2:
 			man_buff_t = 2.0
 		Main.I.sfx.play("roll", -10.0)
+	if Input.is_action_just_pressed("dive") and dive_cd <= 0.0 and dive_t <= 0.0:
+		dive_t = Tuning.g("dive_time")
+		dive_cd = maxf(dive_t + 1.0, Tuning.g("dive_cd") * float(mods["man_cd"]))
+		Main.I.tele.add("dive_uses")
+		Main.I.sfx.play("roll", -12.0, 0.6)
 	if Input.is_action_just_pressed("afterburner") and ab_cd <= 0.0:
 		ab_t = Tuning.g("afterburner_time") + mods["ab_time"]
 		_pass_hit.clear()
@@ -486,7 +512,7 @@ func _activate_skill3(id := "", slot := 0) -> void:
 			var n2 := 3 if lvl >= 2 else 2
 			var life := 15.0 if lvl >= 1 else 12.0
 			for i in n2:
-				var keep := syn.has("s_nest") and not _nest_done and i == 0
+				var keep := syn.has("s_nest") and not _nest_done and i == 0 and permanent_wingmen() < Cards.WING_MAX
 				if keep:
 					_nest_done = true # «Гнездо»: один остаётся насовсем
 				add_wingman("rook", 1.0, not keep, life)
@@ -638,32 +664,70 @@ func _carpet(delta: float) -> void:
 func _steer(delta: float) -> void:
 	var tr := turn_rate()
 	var prev := heading
+	# 3.5 (правка 13): угловая скорость набирается и гасится с ускорением класса — Оса вертится сразу,
+	# Кит раскачивается и тормозит разворот заранее (без перелёта мимо цели)
+	var accel := tr * float(cls.get("turn_accel", 6.0))
+	var want := 0.0
 	if turn_t > 0.0:
 		# Боевой разворот: рывок носом к цели в 4 раза быстрее обычного
 		heading = rotate_toward(heading, _turn_target, tr * 4.0 * delta + PI / float(s3_def()["time"]) * delta)
-	elif int(Tuning.g("scheme")) == 2:
-		var to_mouse := Render3D.I.mouse_world(get_global_mouse_position()) - global_position
-		if to_mouse.length() > 30.0:
-			heading = rotate_toward(heading, to_mouse.angle(), tr * delta)
-	elif int(Tuning.g("scheme")) == 0:
-		# 3.4: мёртвая зона одна — у действий (0,25); get_vector уже пересчитал длину после неё
-		var dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-		if dir != Vector2.ZERO:
-			heading = rotate_toward(heading, dir.angle(), tr * delta)
+		_turn_vel = 0.0
 	else:
-		heading += Input.get_axis("move_left", "move_right") * tr * delta
+		if int(Tuning.g("scheme")) == 2:
+			var to_mouse := Render3D.I.mouse_world(get_global_mouse_position()) - global_position
+			if to_mouse.length() > 30.0:
+				want = _turn_to(to_mouse.angle(), tr, accel, delta)
+		elif int(Tuning.g("scheme")) == 0:
+			# 3.4: мёртвая зона одна — у действий (0,25); get_vector уже пересчитал длину после неё
+			var dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+			if dir != Vector2.ZERO:
+				want = _turn_to(dir.angle(), tr, accel, delta)
+		else:
+			want = Input.get_axis("move_left", "move_right") * tr
+		_turn_vel = move_toward(_turn_vel, want, accel * delta)
+		heading += _turn_vel * delta
 	heading = wrapf(heading, -PI, PI)
 	var ang_vel := wrapf(heading - prev, -PI, PI) / maxf(delta, 0.0001)
 	bank = lerpf(bank, clampf(ang_vel / tr, -1.0, 1.0), 1.0 - exp(-delta * 12.0))
 
 
+## Желаемая угловая скорость к курсу target: не больше, чем успеем погасить до него (без перелёта)
+func _turn_to(target: float, tr: float, accel: float, delta: float) -> float:
+	var diff := wrapf(target - heading, -PI, PI)
+	var v := minf(minf(tr, sqrt(2.0 * accel * absf(diff))), absf(diff) / maxf(delta, 0.0001))
+	return signf(diff) * v
+
+
+## 3.5 (правка 11): разгон и торможение — манёвр, а не режим. Держишь W/S — РУД уходит от крейсерской,
+## отпустил — плавно возвращается; дольше throttle_hold с — возвращается сам, пока не отпустишь клавишу.
+## Сброс газа (Ctrl) — так же, не дольше throttle_cut_hold с.
 func _throttle(delta: float) -> void:
+	_cut_hold = _cut_hold + delta if Input.is_action_pressed("throttle_cut") and not _cut_lock else 0.0
+	if _cut_hold > Tuning.g("throttle_cut_hold"):
+		_cut_lock = true
+		_cut_hold = 0.0
+	if _cut_lock and not Input.is_action_pressed("throttle_cut"):
+		_cut_lock = false
 	if int(Tuning.g("scheme")) == 0:
 		throttle = 1.0 # в схеме «по направлению» W/S — это курс
 		return
 	var a := Input.get_axis("move_down", "move_up")
-	if absf(a) > 0.1:
-		throttle = clampf(throttle + a * 0.9 * delta, Tuning.g("throttle_min"), Tuning.g("throttle_max"))
+	if absf(a) <= 0.1:
+		_thr_lock = false
+	if absf(a) > 0.1 and not _thr_lock:
+		throttle = clampf(throttle + a * 1.2 * delta, Tuning.g("throttle_min"), Tuning.g("throttle_max"))
+		_thr_hold += delta
+		if _thr_hold > Tuning.g("throttle_hold"):
+			_thr_lock = true
+			Main.I.tele.add("throttle_locks")
+	else:
+		throttle = move_toward(throttle, 1.0, Tuning.g("throttle_return") * delta)
+		if is_equal_approx(throttle, 1.0):
+			_thr_hold = 0.0
+
+
+func throttle_cut_on() -> bool:
+	return Input.is_action_pressed("throttle_cut") and not _cut_lock
 
 
 ## «На хвосте»: вражеский самолёт впереди в узком конусе, мы у него в задней полусфере.
@@ -713,7 +777,7 @@ func on_near_miss(kind: String) -> void:
 
 func _move(delta: float) -> void:
 	var speed := cruise_speed() * throttle
-	if Input.is_action_pressed("throttle_cut"):
+	if throttle_cut_on():
 		speed *= Tuning.g("throttle_cut_mult")
 	if ab_t > 0.0:
 		speed *= Tuning.g("afterburner_mult")
@@ -729,7 +793,7 @@ func _move(delta: float) -> void:
 			_straight_t = 0.0
 		speed *= 1.0 + 0.2 * clampf(_straight_t - 1.2, 0.0, 1.0)
 	var target := Vector2.from_angle(heading) * speed
-	var k := 1.0 - exp(-delta / maxf(Tuning.g("inertia"), 0.001))
+	var k := 1.0 - exp(-delta / maxf(Tuning.g("inertia") * float(cls.get("inertia_k", 1.0)), 0.001))
 	velocity = velocity.lerp(target, k)
 	var step := velocity * delta
 	if roll_t > 0.0:
@@ -897,8 +961,21 @@ func on_bullet_miss() -> void:
 		manual_bonus = maxf(0.0, manual_bonus - Tuning.g("manual_miss"))
 
 
+## 3.5 (правка 29): глубина нырка 0…1 — плавно вниз за 0,25 с, вверх за 0,35 с (для картинки)
+func dive_k() -> float:
+	if dive_t <= 0.0:
+		return 0.0
+	var gone := Tuning.g("dive_time") - dive_t
+	return clampf(minf(gone / 0.25, dive_t / 0.35), 0.0, 1.0)
+
+
+## В нырке пули и таран вражеских самолётов проходят выше; ПВО, ракеты и земля — бьют
+func dodges(source: String, who: String) -> bool:
+	return dive_t > 0.0 and who != "ПВО" and (source == "пули" or source == "таран")
+
+
 func is_invulnerable() -> bool:
-	return roll_t > 0.0 or invuln > 0.0 or Main.I.god_mode
+	return roll_inv > 0.0 or invuln > 0.0 or Main.I.god_mode
 
 
 func heal(amount: float) -> void:
@@ -910,6 +987,10 @@ func heal(amount: float) -> void:
 func damage(amount: float, source := "прочее", who := "") -> void:
 	if is_invulnerable() or hp <= 0.0:
 		return
+	if dodges(source, who):
+		return
+	if dive_t > 0.0 and who == "ПВО":
+		amount *= Tuning.g("dive_aa_k")
 	if shield_t > 0.0:
 		_shield_absorbed += amount * 0.7
 		amount *= 0.3
@@ -972,6 +1053,31 @@ func roller_ring(n: int) -> void:
 
 
 ## «Зеркало»: веер из 6 ловушек на бочке — каждая уводит ракету в 300 пикс.
+## 3.5 (правки 12, 26): «Кит» на «Пробеле» отстреливает веер тепловых ловушек.
+## Все вражеские ракеты рядом уходят на ловушки и рвутся возле них, дальние теряют захват. Неуязвимости нет.
+const SALVO_R := 420.0
+
+
+func _flare_salvo() -> void:
+	roll_cd = maxf(3.0, (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+	salvo_t = 0.6
+	Main.I.tele.add("roll_uses")
+	Main.I.tele.add("flare_salvos")
+	Main.I.fx.flare_burst(global_position, heading, 14, velocity, 1.6)
+	var n := 0
+	for i in 12:
+		if Main.I.projectiles.intercept_missile_at(global_position, SALVO_R, true) == null:
+			break
+		n += 1
+	n += Main.I.projectiles.break_locks(global_position, SALVO_R * 2.2)
+	Main.I.stats_add_counter("intercepted", n)
+	if syn.has("mirror"):
+		_mirror_fan()
+	if patch("maneuver") >= 2:
+		man_buff_t = 2.0
+	Main.I.sfx.play("flare", -6.0, 1.4)
+
+
 func _mirror_fan() -> void:
 	Main.I.fx.flare_burst(global_position, heading, 6, velocity)
 	for i in 6:
