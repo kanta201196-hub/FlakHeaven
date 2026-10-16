@@ -51,7 +51,7 @@ func _skill(y: float, title: String, key: String, cd: float, active: float) -> v
 
 func _left_panel(m: Main, p: Player) -> void:
 	# 3.1: подложка под левой панелью — светлая земля не «съедает» текст
-	var ph := 300.0 + p.groups.size() * 22.0 + (22.0 if p.wingmen.size() > 0 else 0.0) + (24.0 if p.skill_b != "" else 0.0)
+	var ph := 324.0 + p.groups.size() * 22.0 + (22.0 if p.wingmen.size() > 0 else 0.0) + (24.0 if p.skill_b != "" else 0.0)
 	_backing(Rect2(10, 14, 480, ph))
 	ctrl.draw_rect(Rect2(24, 24, 320, 20), Color(0, 0, 0, 0.55))
 	ctrl.draw_rect(Rect2(24, 24, 320.0 * p.hp / p.max_hp, 20), Color(0.4, 0.9, 0.5))
@@ -69,13 +69,14 @@ func _left_panel(m: Main, p: Player) -> void:
 		_text(Vector2(24, 76), "Курсовое: РУЧНОЕ — обороты +%d%% урона  [Q]" % int(round(p.manual_bonus * 100.0)), 19, Color(1.0, 0.82, 0.35))
 	else:
 		_text(Vector2(24, 76), "Курсовое: АВТО  [Q — ручное, до +50% урона]", 19)
-	_skill(104, "Бочка", "Space", p.roll_cd, p.roll_t)
+	_skill(104, "Бочка" if p.has_roll() else "Залп ловушек", "Space", p.roll_cd, p.roll_t if p.has_roll() else p.salvo_t)
 	_skill(128, "Форсаж", "Shift", p.ab_cd, p.ab_t)
+	_skill(152, "Нырок", "V", p.dive_cd, p.dive_t)
 	var s3: Dictionary = p.s3_def()
-	_skill(152, "%s %s" % [s3["title"], Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active())
+	_skill(176, "%s %s" % [s3["title"], Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active())
 	if p.skill_b != "":
-		_skill(176, PlaneClasses.SKILL3[p.skill_b]["title"], "F", p.sb_cd, p.s3_active(p.skill_b))
-	var y := 210.0 if p.skill_b != "" else 186.0
+		_skill(200, PlaneClasses.SKILL3[p.skill_b]["title"], "F", p.sb_cd, p.s3_active(p.skill_b))
+	var y := 234.0 if p.skill_b != "" else 210.0
 	for g in p.groups:
 		var h := g as Hardpoint
 		var c := Color(0.75, 0.85, 0.95)

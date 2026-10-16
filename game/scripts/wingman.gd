@@ -101,11 +101,13 @@ func salvo(n: int, dmg: float, over := 0.4) -> void:
 
 
 func _slot_offset(p: Player) -> Vector2:
-	# Строй «клин»: слоты слева/справа и чуть позади; «Сомкнуть строй» — вдвое ближе
+	# 3.5 (правка 23): сначала места по бокам (крыло к крылу), следующие — впереди-сбоку
+	# («Грачата» сверх двух постоянных); «Сомкнуть строй» — вдвое ближе
 	var side := -1.0 if slot % 2 == 0 else 1.0
-	var row := 1 + slot / 2
+	var row := slot / 2
 	var tight := 0.5 if p.ranks_t > 0.0 else 1.0
-	var off := Vector2(-55.0 * row, side * 60.0 * row).rotated(p.heading) * tight * (1.0 + 0.25 * (p.size - 1.0))
+	var base := Vector2(-10.0, side * 80.0) if row == 0 else Vector2(60.0 + 40.0 * (row - 1), side * (55.0 + 25.0 * row))
+	var off := base.rotated(p.heading) * tight * (1.0 + 0.25 * (p.size - 1.0))
 	if _run_t > 0.0: # «Тёплая компания»: заход вперёд
 		off += Vector2.from_angle(p.heading) * 330.0 * sin(clampf(1.0 - _run_t / 1.2, 0.0, 1.0) * PI)
 	return off
@@ -143,12 +145,7 @@ func _process(delta: float) -> void:
 			velocity = p.velocity
 			Main.I.radio("Ведомый", "Снова в строю!")
 		return
-	var target := p.global_position + _slot_offset(p)
-	var to := target - global_position
-	var desired := p.velocity + to * 3.0
-	velocity = velocity.lerp(desired, 1.0 - exp(-delta * 4.0))
-	position += velocity * delta
-	heading = rotate_toward(heading, p.heading if to.length() < 80.0 else velocity.angle(), deg_to_rad(300.0) * delta)
+	_fly(p, delta)
 	_gun(p, delta)
 	match type:
 		"swift":
@@ -182,6 +179,37 @@ func _missile(p: Player, t: Enemy, dmg: float, opts := {}) -> void:
 
 
 ## «Стриж»: ракеты В-В по воздуху; ур. 3 — сбивает ракеты рядом с ведущим
+## 3.5 (правка 23): ведомый летит как самолёт. Рядом со своим местом — держит строй (как раньше),
+## вдали — летит носом вперёд с ограниченным разворотом и меняет скорость в пределах 75–145% скорости
+## ведущего: отставший догоняет, а проскочивший вперёд не «тормозит в воздухе», а уходит в разворот
+## и заходит на место сзади.
+const WING_TURN := 160.0   # °/с
+var _fly_w := 0.0          # 0 — держит строй, 1 — летит сам (плавный переход)
+
+
+func _fly(p: Player, delta: float) -> void:
+	var target := p.global_position + _slot_offset(p)
+	var to := target - global_position
+	var dist := to.length()
+	var pv := p.velocity
+	var ps := maxf(pv.length(), 1.0)
+	var fwd := Vector2.from_angle(p.heading)
+	# держим строй, пока близко; летим сами, если отнесло дальше 140 (с запасом, чтобы не дёргалось)
+	if dist > 140.0:
+		_fly_w = minf(1.0, _fly_w + delta * 2.0)
+	elif dist < 60.0:
+		_fly_w = maxf(0.0, _fly_w - delta * 2.0)
+	var station := pv + to * 3.0
+	# точка захода — место в строю с упреждением по движению ведущего
+	var aim := to + pv * clampf(dist / ps, 0.2, 1.2)
+	heading = rotate_toward(heading, aim.angle() if _fly_w > 0.5 else (p.heading if dist < 80.0 else station.angle()), deg_to_rad(WING_TURN) * delta)
+	var along := to.dot(fwd)
+	var spd := ps * clampf(1.0 + along / 350.0, 0.75, 1.45)
+	var flying := Vector2.from_angle(heading) * spd
+	velocity = velocity.lerp(station.lerp(flying, _fly_w), 1.0 - exp(-delta * 4.0))
+	position += velocity * delta
+
+
 func _swift(p: Player, delta: float) -> void:
 	_aam_cd -= delta
 	if _aam_cd <= 0.0:

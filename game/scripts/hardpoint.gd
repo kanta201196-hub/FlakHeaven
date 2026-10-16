@@ -431,22 +431,26 @@ func _fire_flares(p: Player) -> bool:
 	if killed > 0 and Profile.wbranch("flares", 2) == "b" and randf() < 0.2:
 		_quick = true # «Запас ловушек»
 	if killed > 0:
-		Main.I.fx.flare_burst(p.global_position, p.heading, 6, p.velocity)
+		Main.I.fx.flare_burst(p.global_position, p.heading, 8, p.velocity, 1.15)
 		Main.I.stats_add_counter("intercepted", killed)
 		Main.I.sfx.play("flare", -12.0, 2.0)
 	return killed > 0
 
 
+## 3.5 (правка 8): бомбы только по наземным целям, зато вдвое сильнее
+const GROUND_BOMB_K := 2.0
+
+
 func _fire_bombs(p: Player, manual := false) -> bool:
 	if evo:
 		return _fire_carpet_row(p, manual)
-	# 2.8: бомбы с воздушным подрывом — летят к цели (упреждение) и рвутся рядом с ней,
-	# бьют и самолёты, и землю. Авто — по ближайшим целям в радиусе 480; по кнопке — к курсору / вперёд.
+	# 3.5: бомбы бьют только по земле (урон ×GROUND_BOMB_K), самолёты не задевают.
+	# Авто — по ближайшим наземным целям в радиусе 600; по кнопке — к курсору / вперёд.
 	var targets: Array = []
 	if not manual:
 		var skip: Array = []
 		for s in slots:
-			var t := Weapons.pick_target(p.global_position, 480.0, "nearest", skip)
+			var t := Weapons.pick_target(p.global_position, 600.0, "nearest", skip, false, true)
 			if t == null:
 				break
 			targets.append(t)
@@ -466,8 +470,8 @@ func _fire_bombs(p: Player, manual := false) -> bool:
 		else:
 			to = p.global_position + Vector2.from_angle(p.heading) * 300.0
 		to += Vector2(randf_range(-20, 20), randf_range(-20, 20))
-		Main.I.projectiles.spawn_bomb(_slot_pos(p, s), fuse * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg"),
-			range_px() * Profile.wk("bombs", "blast_r"), "бомбы", to)
+		Main.I.projectiles.spawn_bomb(_slot_pos(p, s), fuse * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
+			range_px() * Profile.wk("bombs", "blast_r"), "бомбы", to, true)
 		if p.syn.has("carpet_road"): # «Ковровая дорожка»: крест суббоеприпасов и огонь
 			Main.I.projectiles.bombs[-1]["road"] = true
 	Main.I.sfx.play("bomb_drop", -14.0, 1.2)
@@ -476,7 +480,7 @@ func _fire_bombs(p: Player, manual := false) -> bool:
 
 ## «Бабушкин ковёр»: ряд из 8 бомб поперёк курса, ширина 600
 func _fire_carpet_row(p: Player, manual: bool) -> bool:
-	if not manual and Weapons.pick_target(p.global_position, 700.0, "nearest") == null:
+	if not manual and Weapons.pick_target(p.global_position, 700.0, "nearest", [], false, true) == null:
 		return false
 	var fwd := Vector2.from_angle(p.heading)
 	var side := Vector2.from_angle(p.heading + PI / 2.0)
@@ -485,8 +489,8 @@ func _fire_carpet_row(p: Player, manual: bool) -> bool:
 	var road := p.syn.has("carpet_road")
 	for i in 8:
 		var off := (float(i) / 7.0 - 0.5) * 600.0
-		Main.I.projectiles.spawn_bomb(p.global_position, (0.5 + 0.04 * i) * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg"),
-			150.0 * Profile.wk("bombs", "blast_r"), "бомбы", c + side * off)
+		Main.I.projectiles.spawn_bomb(p.global_position, (0.5 + 0.04 * i) * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
+			150.0 * Profile.wk("bombs", "blast_r"), "бомбы", c + side * off, true)
 		if road:
 			Main.I.projectiles.bombs[-1]["road"] = true
 	if road:

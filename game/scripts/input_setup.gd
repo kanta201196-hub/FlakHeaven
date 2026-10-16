@@ -14,6 +14,7 @@ func _ready() -> void:
 	_add("roll", [KEY_SPACE], [JOY_BUTTON_A])
 	_add("afterburner", [KEY_SHIFT], [JOY_BUTTON_RIGHT_SHOULDER])
 	_add("throttle_cut", [KEY_CTRL], [JOY_BUTTON_LEFT_SHOULDER])
+	_add("dive", [KEY_V], [JOY_BUTTON_RIGHT_STICK], [], [MOUSE_BUTTON_MIDDLE]) # 3.5: «Нырок» (правка 29)
 	_add("sharp_turn", [KEY_E], [JOY_BUTTON_X])
 	_add("skill_2", [KEY_F], [JOY_BUTTON_B])
 	_add("toggle_scheme", [KEY_F2], []) # 3.4: без L3 — нажатие стика в бою случайно меняло схему

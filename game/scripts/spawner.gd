@@ -15,7 +15,7 @@ var activity_i := 0
 var activity_node: Node = null
 var fuel: Fuel = null   # 3.5: топливо и свой заправщик
 const ACTIVITIES := ["ground", "dogfight", "transport"]
-const TRANSPORT_TTK := 15.0
+const TRANSPORT_TTK := 12.0
 
 
 func _ready() -> void:
@@ -147,7 +147,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
 	elif kind_s == "transport":
 		var tr := Transport.new()
-		tr.setup(maxf(1500.0 * hp_k, recent_dps() * TRANSPORT_TTK))
+		tr.setup(maxf(700.0 * hp_k, recent_dps() * TRANSPORT_TTK))
 		# пересекает район впереди игрока поперёк курса
 		var side := 1.0 if randf() < 0.5 else -1.0
 		var mid := p.global_position + Vector2.from_angle(p.heading) * randf_range(500.0, 800.0)
