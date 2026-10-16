@@ -80,6 +80,8 @@ var roll_cd := 0.0
 var roll_dir := 1.0
 var roll_inv := 0.0        # 3.5: неуязвимость бочки — у «Грача» переворот длиннее, а окно то же
 var salvo_t := 0.0         # 3.5: «Кит» — залп ловушек (для индикатора)
+var dive_t := 0.0          # 3.5 (правка 29): «Нырок» — самолёт ниже, пули и таран самолётов проходят над ним
+var dive_cd := 0.0
 var _turn_vel := 0.0       # 3.5: угловая скорость — набирается с ускорением класса
 var _thr_hold := 0.0       # 3.5: сколько секунд РУД не на крейсерской
 var _thr_lock := false     # 3.5: РУД вернули принудительно — ждём, пока отпустят W/S
@@ -378,6 +380,8 @@ func _tick_timers(delta: float) -> void:
 	roll_t = maxf(0.0, roll_t - delta)
 	roll_inv = maxf(0.0, roll_inv - delta)
 	salvo_t = maxf(0.0, salvo_t - delta)
+	dive_t = maxf(0.0, dive_t - delta)
+	dive_cd = maxf(0.0, dive_cd - delta)
 	roll_cd = maxf(0.0, roll_cd - delta)
 	ab_t = maxf(0.0, ab_t - delta)
 	ab_cd = maxf(0.0, ab_cd - delta)
@@ -430,6 +434,11 @@ func _handle_skills() -> void:
 		if patch("maneuver") >= 2:
 			man_buff_t = 2.0
 		Main.I.sfx.play("roll", -10.0)
+	if Input.is_action_just_pressed("dive") and dive_cd <= 0.0 and dive_t <= 0.0:
+		dive_t = Tuning.g("dive_time")
+		dive_cd = maxf(dive_t + 1.0, Tuning.g("dive_cd") * float(mods["man_cd"]))
+		Main.I.tele.add("dive_uses")
+		Main.I.sfx.play("roll", -12.0, 0.6)
 	if Input.is_action_just_pressed("afterburner") and ab_cd <= 0.0:
 		ab_t = Tuning.g("afterburner_time") + mods["ab_time"]
 		_pass_hit.clear()
@@ -952,6 +961,19 @@ func on_bullet_miss() -> void:
 		manual_bonus = maxf(0.0, manual_bonus - Tuning.g("manual_miss"))
 
 
+## 3.5 (правка 29): глубина нырка 0…1 — плавно вниз за 0,25 с, вверх за 0,35 с (для картинки)
+func dive_k() -> float:
+	if dive_t <= 0.0:
+		return 0.0
+	var gone := Tuning.g("dive_time") - dive_t
+	return clampf(minf(gone / 0.25, dive_t / 0.35), 0.0, 1.0)
+
+
+## В нырке пули и таран вражеских самолётов проходят выше; ПВО, ракеты и земля — бьют
+func dodges(source: String, who: String) -> bool:
+	return dive_t > 0.0 and who != "ПВО" and (source == "пули" or source == "таран")
+
+
 func is_invulnerable() -> bool:
 	return roll_inv > 0.0 or invuln > 0.0 or Main.I.god_mode
 
@@ -965,6 +987,10 @@ func heal(amount: float) -> void:
 func damage(amount: float, source := "прочее", who := "") -> void:
 	if is_invulnerable() or hp <= 0.0:
 		return
+	if dodges(source, who):
+		return
+	if dive_t > 0.0 and who == "ПВО":
+		amount *= Tuning.g("dive_aa_k")
 	if shield_t > 0.0:
 		_shield_absorbed += amount * 0.7
 		amount *= 0.3

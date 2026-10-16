@@ -552,7 +552,9 @@ func _update_enemy_bullets(delta: float) -> void:
 			var d := p.distance_to(pl.global_position)
 			# 3.4: пересечение по относительному движению за кадр (быстрый самолёт не «проскакивает» пулю)
 			var rel_hit := seg_hit(p0 - (pl.global_position - pl.velocity * delta), p - pl.global_position, Vector2.ZERO, pl.radius + r)
-			if not pl.is_invulnerable() and rel_hit:
+			if rel_hit and pl.dodges("пули", str(b["who"])):
+				Main.I.tele.add("dive_dodged") # 3.5: «Нырок» — пуля прошла над самолётом
+			elif not pl.is_invulnerable() and rel_hit:
 				pl.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0), "пули", str(b["who"]))
 				done = true
 			else:

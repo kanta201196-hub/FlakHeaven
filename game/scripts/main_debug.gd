@@ -328,6 +328,7 @@ func _run_autotest(delta: float) -> void:
 		Input.action_press("move_up")
 	_tap("roll", phase == 2)
 	_tap("afterburner", phase == 5)
+	_tap("dive", phase == 7)
 	_tap("sharp_turn", phase == 8)
 	_tap("toggle_fire_mode", phase == 9 and int(_autotest_t) % 24 == 4)
 	if phase >= 9:

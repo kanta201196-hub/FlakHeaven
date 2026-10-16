@@ -487,7 +487,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var roll := 0.0
 			if p.roll_t > 0.0:
 				roll = (1.0 - p.roll_t / p.roll_time()) * TAU * p.roll_dir
-			_place(u, p.global_position, p.heading, p.bank * 0.45, roll)
+			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт ниже и меньше на экране
+			_place(u, p.global_position, p.heading, p.bank * 0.45, roll, -Tuning.g("dive_depth") * dk, 1.0 - 0.3 * dk)
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
 			u["ab"] = move_toward(float(u.get("ab", 0.0)), 1.0 if p.ab_t > 0.0 else 0.0, sd * 4.0)
 			var ab: float = u["ab"]

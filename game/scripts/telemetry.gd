@@ -16,6 +16,7 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	"nodes_max", "enemies_max", "load_ms", "chunks", "chunk_ms_max",
 	# 3.5: время жизни асов (с появления до гибели), РУД вернули принудительно, залпы ловушек «Кита», разрешение 3D
 	"boss_n", "boss_life_avg", "boss_life_min", "boss_life_max", "throttle_locks", "flare_salvos", "scale3d",
+	"dive_uses", "dive_dodged",
 	# 3.5 (тред «ИИ врагов и активности»): уклонения врагов, их ловушки и уведённые ими ракеты, сбитые ПВО наши ракеты
 	"enemy_evades", "enemy_flares", "enemy_flared_missiles", "aa_shot_down",
 	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа
