@@ -95,8 +95,7 @@ func _process(delta: float) -> void:
 			var ang := randf() * TAU
 			for i in count:
 				var d := Drone.new()
-				# Камикадзе — примерно каждый пятый (с 30-й секунды); остальные заходят цепью
-				d.kamikaze = t > 30.0 and randf() < 0.2
+				# 3.5: камикадзе выведен из игры (разбор каталога 16.10) — все дроны заходят цепью
 				d.lane = (i - (count - 1) / 2.0) * 70.0
 				_place(d, p, ang + randf_range(-0.2, 0.2), t)
 				d.heading = (p.global_position - d.position).angle()
@@ -184,6 +183,14 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f)" % [wave, hp, hp_dps, recent_dps()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
 		hp = maxf(hp, hp_dps)
+	# 3.5 (разбор каталога 16.10): третья волна — босс «Крепость» вместо пары асов
+	if wave >= 3 or OS.get_cmdline_user_args().has("--fortress"):
+		var f := Fortress.new()
+		f.setup_fortress(hp * 2.0 * 1.35) # прочность двух асов вместе со щитами; фазы делят её на точки и корпус
+		f.position = p.global_position + Vector2.from_angle(randf() * TAU) * 1100.0
+		f.heading = (p.global_position - f.position).angle() + PI / 2.0
+		Main.I.world.add_child(f)
+		variants = []
 	for v in variants:
 		var b := Boss.new()
 		b.setup(v, hp)
@@ -195,7 +202,7 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 		if n is Drone and (n as Node2D).global_position.distance_to(p.global_position) > 600.0:
 			(n as Enemy).remove_from_group("enemies")
 			(n as Node).queue_free()
-	Main.I.on_boss_wave(wave, variants.size())
+	Main.I.on_boss_wave(wave, maxi(1, variants.size()))
 
 
 ## Сетка для расталкивания: враги держат вокруг себя небольшое пространство и не слипаются
