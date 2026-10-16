@@ -1,30 +1,27 @@
 class_name Drone
 extends Enemy
-## Дроны — два подвида:
-##  • стрелок (основной): держит дистанцию 380–480 пикс, заходит цепью (у каждого своё место
-##    в строю «фронтом»), кружит и стреляет одиночными — перед выстрелом мигает жёлтым;
-##    вплотную не лезет — при сближении отваливает в сторону;
-##  • камикадзе (единственный подкласс, который таранит): оранжевый «шип», быстрее, без оружия,
-##    летит прямо на игрока; его можно перехитрить манёвром или пропустить бочкой.
+## Дрон-стрелок: держит дистанцию 380–480 пикс, заходит цепью (у каждого своё место
+## в строю «фронтом»), кружит и стреляет — перед выстрелом мигает жёлтым;
+## вплотную не лезет — при сближении отваливает в сторону.
+## 3.5 (разбор каталога 16.10): камикадзе выведен из игры (модель — основа для ракеты);
+## у модели спаренная пушка — стреляет парой пуль из двух стволов, урон каждой вдвое меньше.
 
-var kamikaze := false
 var lane := 0.0          # смещение в цепи поперёк направления на игрока
 var _standoff := 430.0
 var _gun_cd := 3.0
 var _aim := 0.0
 var _orbit := 1.0
-var _beep := 0.0
 
 
 func kind() -> String:
-	return "камикадзе" if kamikaze else "дроны"
+	return "дроны"
 
 
 func _ready() -> void:
 	super()
 	hp = 12.0
 	radius = 11.0
-	contact_damage = 18.0 if kamikaze else 6.0
+	contact_damage = 6.0
 	xp = 1
 	parts = 1
 	repair_chance = 0.012
@@ -43,11 +40,6 @@ func behave(delta: float) -> void:
 		return
 	var to := p.global_position - global_position
 	var d := to.length()
-	if kamikaze:
-		heading = rotate_toward(heading, to.angle(), deg_to_rad(Tuning.g("drone_turn")) * delta)
-		position += Vector2.from_angle(heading) * spd * 1.25 * delta
-		_beep -= delta
-		return
 	# Стрелок: точка в цепи на дистанции от игрока
 	var dir := to / maxf(d, 1.0)
 	var side := Vector2(-dir.y, dir.x)
@@ -65,7 +57,7 @@ func behave(delta: float) -> void:
 	if _aim > 0.0:
 		_aim -= delta
 		if _aim <= 0.0:
-			fire_at_player()
+			fire_at_player(0.0, true) # спаренная пушка: две пули по половине урона
 			_gun_cd = randf_range(3.0, 5.0)
 	else:
 		_gun_cd -= delta
@@ -74,15 +66,6 @@ func behave(delta: float) -> void:
 
 
 func _draw() -> void:
-	if kamikaze:
-		if draw_enemy_sprite("e_kamikaze", 28.0, Color(1.6, 1.3, 0.6) if int(_beep * -6.0) % 2 == 0 else Color.WHITE):
-			return
-		var kc := body_color(Color(1.0, 0.5, 0.1))
-		if int(_beep * -6.0) % 2 == 0 and _flash <= 0.0:
-			kc = Color(1.0, 0.75, 0.3)
-		var kp := Transform2D(heading, Vector2.ZERO) * PackedVector2Array([Vector2(15, 0), Vector2(-6, 7), Vector2(-2, 0), Vector2(-6, -7)])
-		draw_colored_polygon(kp, kc)
-		return
 	var c := body_color(Color(0.95, 0.35, 0.3))
 	if _aim > 0.0 and _flash <= 0.0:
 		c = Color(1.0, 0.9, 0.3)

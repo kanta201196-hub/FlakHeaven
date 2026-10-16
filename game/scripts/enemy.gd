@@ -253,7 +253,8 @@ func draw_hp_bar() -> void:
 
 
 ## Выстрел по игроку с упреждением.
-func fire_at_player(spread := 0.0) -> void:
+## twin — спаренная пушка: две параллельные пули по половине урона (3.5, дрон)
+func fire_at_player(spread := 0.0, twin := false) -> void:
 	var p := Main.I.player
 	if p == null or p.hp <= 0.0:
 		return
@@ -263,7 +264,13 @@ func fire_at_player(spread := 0.0) -> void:
 	var dir := (lead - global_position).normalized().rotated(spread)
 	# 3.1: пуля летит быстрее стрелка — к её скорости добавляется скорость самолёта по курсу
 	var add := maxf(0.0, move_vel.dot(dir)) * 0.6 if not is_ground else 0.0 # 3.2: пуля всё ещё быстрее стрелка, но мягче
-	Main.I.projectiles.spawn_enemy_bullet(global_position + dir * (radius + 4.0), dir * (spd + add), kind())
+	var at := global_position + dir * (radius + 4.0)
+	if twin:
+		var side := Vector2(-dir.y, dir.x) * 5.0
+		Main.I.projectiles.spawn_enemy_bullet(at + side, dir * (spd + add), kind(), false, 0.5)
+		Main.I.projectiles.spawn_enemy_bullet(at - side, dir * (spd + add), kind(), false, 0.5, true)
+		return
+	Main.I.projectiles.spawn_enemy_bullet(at, dir * (spd + add), kind())
 
 
 ## Спрайт врага (2.6): res://art/enemies/<name>.png, нос ВПРАВО. Нет файла — вернёт false (рисуем фигуру).
