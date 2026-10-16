@@ -23,8 +23,16 @@ static func tier(level: int, evo := false) -> int:
 ## (у «Кита» и «Грача» свои турели — модели Blender по фото владельца, 16.10)
 static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	var tm: Mesh = turret_model(cls, t) if weapon == "turret" else weapon_model(weapon, t)
+	var tm: Mesh = turret_model(cls, t, side) if weapon == "turret" else weapon_model(weapon, t)
 	mi.mesh = tm if tm != null else mesh(weapon, t, side)
+	# кормовая кабина стрелка неподвижна — поворачивается только шар со стволами (поворот гасит render3d)
+	if weapon == "turret" and side == "tail" and tm != null:
+		var cab := turret_model(cls, t, "cabin")
+		if cab != null:
+			var cmi := MeshInstance3D.new()
+			cmi.name = "cabin"
+			cmi.mesh = cab
+			mi.add_child(cmi)
 	return mi
 
 
@@ -33,7 +41,10 @@ static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3
 const TURRET_MODELS := {
 	# стволы укорочены на ~40% (владелец 16.10); ступень 3 — «Дикобраз»: 4 ствола и антенна наведения
 	"bomber": {"file": "res://models/turrets/turret_kit.glb", "file3": "res://models/turrets/turret_kit_quad.glb",
-		"s": 0.3, "muzzle": Vector3(2.09, 0.43, 0.0), "body": Color(0.5, 0.52, 0.54)},
+		"s": 0.3, "muzzle": Vector3(2.09, 0.43, 0.0), "body": Color(0.5, 0.52, 0.54),
+		# корма (пример владельца 16.10): кабина стрелка с фонарём и шаровая установка под килем
+		"tail": "res://models/turrets/turret_kit_tail_ball.glb", "cabin": "res://models/turrets/turret_kit_tail_cabin.glb",
+		"muzzle_tail": Vector3(1.36, 0.0, 0.0)},
 	"attacker": {"file": "res://models/turrets/turret_grach.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
 		"body": Color(0.34, 0.37, 0.28)},
 }
@@ -53,9 +64,11 @@ static func weapon_model(weapon: String, t: int) -> Mesh:
 	return _glb_mesh(file, 1.0, Color(), "glb_%s_%d" % [weapon, t])
 
 
-static func turret_model(cls: String, t := 1) -> Mesh:
+static func turret_model(cls: String, t := 1, side := "") -> Mesh:
 	var spec: Dictionary = TURRET_MODELS.get(cls, {})
 	var file: String = spec.get("file3", "") if t >= 3 and spec.has("file3") else spec.get("file", "")
+	if side in ["tail", "cabin"] and spec.has(side):
+		file = spec[side]
 	if spec.is_empty() or not ResourceLoader.exists(file):
 		return null
 	return _glb_mesh(file, float(spec["s"]), spec["body"], "turret_model_%s_%s" % [cls, file.get_file()])
@@ -165,10 +178,10 @@ static func mesh(weapon: String, t: int, side := "") -> ArrayMesh:
 
 
 ## Точка вылета снаряда в координатах модели (длина 1): для ракет и бомб — центр, для стволов — дульный срез
-static func muzzle(weapon: String, cls := "") -> Vector3:
+static func muzzle(weapon: String, cls := "", side := "") -> Vector3:
 	if weapon == "turret" and TURRET_MODELS.has(cls):
 		var spec: Dictionary = TURRET_MODELS[cls]
-		return (spec["muzzle"] as Vector3) * float(spec["s"])
+		return (spec.get("muzzle_tail" if side == "tail" and spec.has("tail") else "muzzle") as Vector3) * float(spec["s"])
 	match weapon:
 		"gunpod":
 			return Vector3(0.78, 0, 0)
@@ -387,9 +400,10 @@ static func muzzle_world(p: Player, g: Hardpoint, si: int, aim := NAN) -> Vector
 	if pts.is_empty():
 		return p.global_position
 	var pt: Vector2 = (pts[si % pts.size()] as Dictionary)["p"]
+	var side: String = (pts[si % pts.size()] as Dictionary)["side"]
 	var k := Tuning.g("plane_len") * p.size / float(tex1.get_width())   # пикселей мира на пиксель картинки
 	var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k
-	var mz := muzzle(g.weapon, p.cls_id) * len_px
+	var mz := muzzle(g.weapon, p.cls_id, side) * len_px
 	var local := pt + Vector2(mz.x, mz.z)
 	if not is_nan(aim):   # турель: ствол смотрит на цель
 		local = pt + Vector2(mz.x, 0.0).rotated(aim - p.heading)

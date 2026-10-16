@@ -173,7 +173,11 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 					var l2 := _surface_y(x, 0.0, true)
 					var h2 := _surface_y(x, 0.0, false)
 					y = 0.0 if is_nan(l2) else ((l2 + h2) * 0.5 if h2 - l2 < 0.03 else l2 + 0.012)
-					if WeaponModels.TURRET_MODELS.has(cls_id):
+					if (WeaponModels.TURRET_MODELS.get(cls_id, {}) as Dictionary).has("tail"):
+						# кабина стрелка с шаровой установкой: шар сразу за концом фюзеляжа, кабина — внутри него
+						x = xe + 0.012
+						y = 0.0 if is_nan(l2) else (l2 + h2) * 0.5
+					elif WeaponModels.TURRET_MODELS.has(cls_id):
 						# турель-модель: под концом фюзеляжа, основанием вверх (сверху мешает киль)
 						x = xe + 0.035
 						var l3 := _surface_y(x, 0.0, true)
@@ -182,7 +186,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			if g.weapon == "turret":
 				turret_pos.append([wmi.position, side])
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
-			if side == "bottom" or (side == "tail" and WeaponModels.TURRET_MODELS.has(cls_id)):
+			if side == "bottom" or (side == "tail" and WeaponModels.TURRET_MODELS.has(cls_id) and not (WeaponModels.TURRET_MODELS[cls_id] as Dictionary).has("tail")):
 				bs = bs * Basis(Vector3.RIGHT, PI)
 			wmi.basis = bs.scaled(Vector3(wlen, wlen, wlen))
 			pivot.add_child(wmi)
