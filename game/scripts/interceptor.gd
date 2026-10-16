@@ -7,6 +7,8 @@ extends Enemy
 ## От него можно уйти манёвром, а можно сесть ему на хвост во время отворота.
 ## 3.5: видит, что игрок взял его на прицел (нос на нём), и иногда уходит рывком с бочкой.
 ## Элитный — следит за самими очередями и уходит чаще.
+## 3.5: hunt — охотится на наш заправщик вместо игрока; escort — прикрывает транспортник:
+## держит строй рядом с ним, пока игрок не подойдёт ближе 750 пикс. или по нему не откроют огонь.
 
 var _state := "attack"
 var _state_t := 0.0
@@ -17,6 +19,10 @@ var _shots := 0
 var _shot_t := 0.0
 var _evade_cd := 1.5
 var _scan_t := 0.0
+var hunt: Tanker = null          # 3.5: цель — заправщик
+var escort: Enemy = null         # 3.5: кого прикрывает (транспортник)
+var escort_slot := Vector2.ZERO  # место в строю (в осях транспортника)
+var engaged := false
 
 
 func kind() -> String:
@@ -52,7 +58,24 @@ func behave(delta: float) -> void:
 	if p == null or p.hp <= 0.0:
 		position += Vector2.from_angle(heading) * speed() * delta
 		return
-	var to := p.global_position - global_position
+	# 3.5: прикрытие транспортника — держит строй, пока не пора драться
+	if escort != null and not engaged:
+		if not is_instance_valid(escort) or escort.hp <= 0.0 or hp < max_hp \
+				or p.global_position.distance_to(escort.global_position) < 750.0:
+			engaged = true
+		else:
+			var slot := escort.global_position + escort_slot.rotated(escort.heading)
+			var ts := slot - global_position
+			heading = rotate_toward(heading, ts.angle() if ts.length() > 40.0 else escort.heading, deg_to_rad(turn_deg()) * delta)
+			position += Vector2.from_angle(heading) * clampf(ts.length() * 1.5, 120.0, speed() * 1.3) * delta
+			return
+	var tgt_pos := p.global_position
+	var tgt_vel := p.velocity
+	var on_tanker := is_instance_valid(hunt) and hunt.alive() and not hunt.leaving
+	if on_tanker:
+		tgt_pos = hunt.global_position
+		tgt_vel = Vector2.from_angle(hunt.heading) * hunt.speed
+	var to := tgt_pos - global_position
 	var d := to.length()
 	_state_t += delta
 	_burst_cd -= delta
@@ -60,8 +83,8 @@ func behave(delta: float) -> void:
 	match _state:
 		"attack":
 			heading = rotate_toward(heading, to.angle(), deg_to_rad(turn_deg()) * delta)
-			if d > 1100.0:
-				spd = maxf(spd, p.velocity.length() * 1.1) # догоняет, если игрок далеко
+			if d > 1100.0 or on_tanker:
+				spd = maxf(spd, tgt_vel.length() * 1.1) # догоняет, если цель далеко
 			if d < 250.0:
 				_start_break(to)
 		"break":
@@ -76,7 +99,10 @@ func behave(delta: float) -> void:
 	if _shots > 0:
 		_shot_t -= delta
 		if _shot_t <= 0.0:
-			fire_at_player(randf_range(-0.06, 0.06))
+			if on_tanker:
+				_fire_at_tanker(to)
+			else:
+				fire_at_player(randf_range(-0.06, 0.06))
 			_shots -= 1
 			_shot_t = 0.1
 			if _shots == 0:
@@ -92,6 +118,14 @@ func behave(delta: float) -> void:
 	var off := absf(wrapf(to.angle() - heading, -PI, PI))
 	if _state == "attack" and _burst_cd <= 0.0 and d < 650.0 and d > 200.0 and off < 0.4:
 		_aim = 0.35
+
+
+## Очередь по заправщику: пуля летит для вида, попадание — с шансом 55%
+func _fire_at_tanker(to: Vector2) -> void:
+	var dir := to.normalized().rotated(randf_range(-0.05, 0.05))
+	Main.I.projectiles.spawn_enemy_bullet(global_position + dir * (radius + 4.0), dir * Tuning.g("ebullet_speed"), kind())
+	if randf() < 0.55:
+		hunt.take_damage(7.0 * (1.5 if elite else 1.0))
 
 
 ## 3.5: уход из-под огня (не во время своей очереди)

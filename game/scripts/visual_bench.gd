@@ -220,9 +220,6 @@ func _spawn_all_enemies(c: Vector2) -> void:
 	var list: Array = []
 	var d := Drone.new()
 	list.append(d)
-	var k := Drone.new()
-	k.kamikaze = true
-	list.append(k)
 	list.append(Interceptor.new())
 	list.append(MissileCarrier.new())
 	var r := RivalAce.new()

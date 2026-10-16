@@ -8,17 +8,28 @@ var _drone_cd := 3.0
 var _carrier_cd := 25.0
 var _icpt_cd := 40.0
 var boss_wave := 0
-## Активности: с 1:00 каждую минуту (3.5, было 2,5 мин), по очереди «позиция ПВО» и «догфайт».
-## Не стартуют, пока жив ас или идёт прошлая активность.
+## Активности: с 1:00 каждую минуту (3.5, было 2,5 мин), по очереди «позиция ПВО», «догфайт»,
+## «охота на транспорт». Не стартуют, пока жив ас или идёт прошлая активность.
 var next_activity := 60.0
 var activity_i := 0
 var activity_node: Node = null
+var fuel: Fuel = null   # 3.5: топливо и свой заправщик
+const ACTIVITIES := ["ground", "dogfight", "transport"]
+const TRANSPORT_TTK := 12.0
 
 
 func _ready() -> void:
+	fuel = Fuel.new()
+	add_child(fuel)
 	if OS.get_cmdline_user_args().has("--dogfight"):
 		activity_i = 1      # проверка: сразу догфайт
 		next_activity = 20.0
+	if OS.get_cmdline_user_args().has("--transport"):
+		activity_i = 2      # проверка: сразу транспорт
+		next_activity = 20.0
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--fuel="): # проверка: начать с неполным баком (доля 0–1)
+			fuel.left = Fuel.CAPACITY * clampf(float(String(a).substr(7)), 0.0, 1.0)
 var _grid := {}
 const CELL := 90.0
 
@@ -84,8 +95,7 @@ func _process(delta: float) -> void:
 			var ang := randf() * TAU
 			for i in count:
 				var d := Drone.new()
-				# Камикадзе — примерно каждый пятый (с 30-й секунды); остальные заходят цепью
-				d.kamikaze = t > 30.0 and randf() < 0.2
+				# 3.5: камикадзе выведен из игры (разбор каталога 16.10) — все дроны заходят цепью
 				d.lane = (i - (count - 1) / 2.0) * 70.0
 				_place(d, p, ang + randf_range(-0.2, 0.2), t)
 				d.heading = (p.global_position - d.position).angle()
@@ -121,7 +131,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 	if not force and (m_boss() or is_instance_valid(activity_node)):
 		next_activity = t + 15.0
 		return
-	var kind_s := "ground" if activity_i % 2 == 0 else "dogfight"
+	var kind_s: String = ACTIVITIES[activity_i % ACTIVITIES.size()]
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: activity start ", kind_s, " at %.0f" % t)
 	activity_i += 1
@@ -134,6 +144,18 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(site)
 		activity_node = site
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
+	elif kind_s == "transport":
+		var tr := Transport.new()
+		tr.setup(maxf(700.0 * hp_k, recent_dps() * TRANSPORT_TTK))
+		# пересекает район впереди игрока поперёк курса
+		var side := 1.0 if randf() < 0.5 else -1.0
+		var mid := p.global_position + Vector2.from_angle(p.heading) * randf_range(500.0, 800.0)
+		tr.heading = p.heading - side * PI / 2.0 + randf_range(-0.3, 0.3)
+		tr.position = mid - Vector2.from_angle(tr.heading) * 1500.0
+		Main.I.world.add_child(tr)
+		tr.spawn_escort(3 + (1 if t > 480.0 else 0), hp_k)
+		activity_node = tr
+		Main.I.show_banner("Разведка: вражеский транспортник с прикрытием! Сбейте его — груз ваш", 4.0)
 	else:
 		var ace := RivalAce.new()
 		ace.setup(Tuning.g("rival_hp") * hp_k)
@@ -161,6 +183,14 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f)" % [wave, hp, hp_dps, recent_dps()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
 		hp = maxf(hp, hp_dps)
+	# 3.5 (разбор каталога 16.10): третья волна — босс «Крепость» вместо пары асов
+	if wave >= 3 or OS.get_cmdline_user_args().has("--fortress"):
+		var f := Fortress.new()
+		f.setup_fortress(hp * 2.0 * 1.35) # прочность двух асов вместе со щитами; фазы делят её на точки и корпус
+		f.position = p.global_position + Vector2.from_angle(randf() * TAU) * 1100.0
+		f.heading = (p.global_position - f.position).angle() + PI / 2.0
+		Main.I.world.add_child(f)
+		variants = []
 	for v in variants:
 		var b := Boss.new()
 		b.setup(v, hp)
@@ -172,7 +202,7 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 		if n is Drone and (n as Node2D).global_position.distance_to(p.global_position) > 600.0:
 			(n as Enemy).remove_from_group("enemies")
 			(n as Node).queue_free()
-	Main.I.on_boss_wave(wave, variants.size())
+	Main.I.on_boss_wave(wave, maxi(1, variants.size()))
 
 
 ## Сетка для расталкивания: враги держат вокруг себя небольшое пространство и не слипаются
