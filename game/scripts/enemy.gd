@@ -20,6 +20,14 @@ var elite := false
 var silence := 0.0
 var move_vel := Vector2.ZERO   # 3.1: фактическая скорость (для пуль стрелка)
 var _prev_pos := Vector2.INF   # 3.1: ЭМИ «Ласки» — враг молчит
+## 3.5: наземная цель стоит в точке рельефа (anchor). Логическая позиция — проекция этой точки
+## на слой самолётов с камеры, чтобы на наклонной камере цель не «ехала» по земле.
+var anchor := Vector2.INF
+## 3.5: уклонение — рывок вбок с бочкой (видно в 3D), чтобы уйти с линии огня
+var evade_t := 0.0
+var evade_time := 0.7
+var _evade_v := Vector2.ZERO
+var _evade_roll := 1.0
 
 
 func make_elite() -> void:
@@ -88,10 +96,15 @@ func _process(delta: float) -> void:
 	if _prev_pos != Vector2.INF and delta > 0.0:
 		move_vel = move_vel.lerp((global_position - _prev_pos) / delta, 0.3)
 	_prev_pos = global_position
+	if anchor != Vector2.INF:
+		global_position = GroundTarget.air_pos(anchor)
 	if silence > 0.0:
 		silence -= delta
 	else:
 		behave(delta)
+	if evade_t > 0.0:
+		evade_t -= delta
+		position += _evade_v * delta * clampf(evade_t / evade_time * 1.6, 0.0, 1.0)
 	if not is_boss and not is_ground and Main.I.spawner != null:
 		position += Main.I.spawner.separation(self) * 220.0 * delta
 	_check_contact()
@@ -106,6 +119,100 @@ func _process(delta: float) -> void:
 
 func behave(_delta: float) -> void:
 	pass
+
+
+# ---------- 3.5: уклонение и ловушки ----------
+
+## Крен для 3D: полный оборот за время рывка
+func roll_angle() -> float:
+	if evade_t <= 0.0:
+		return 0.0
+	return (1.0 - evade_t / evade_time) * TAU * _evade_roll
+
+
+## Рывок вбок от линии огня threat (направление полёта пуль / ракет). side 0 — выбрать самому.
+func start_evade(threat: Vector2, spd := 300.0, time := 0.7) -> void:
+	if evade_t > 0.0:
+		return
+	var perp := Vector2(-threat.y, threat.x).normalized()
+	var p := Main.I.player
+	# уходим в ту сторону, где мы и так уже от линии огня
+	if p != null and perp.dot(global_position - p.global_position) < 0.0:
+		perp = -perp
+	if randf() < 0.2:
+		perp = -perp # иногда — в неожиданную сторону
+	evade_time = time
+	evade_t = time
+	_evade_v = perp * spd
+	_evade_roll = signf(perp.cross(Vector2.from_angle(heading))) if absf(perp.cross(Vector2.from_angle(heading))) > 0.01 else 1.0
+	Main.I.tele.add("enemy_evades")
+
+
+## Летят ли в нас пули игрока: вернёт направление огня (или ZERO). Дорого — только для асов и элиты.
+func incoming_fire(look := 0.45, min_n := 2) -> Vector2:
+	var n := 0
+	var dir := Vector2.ZERO
+	var pos := global_position
+	var rr := (radius + 45.0) * (radius + 45.0)
+	for b in Main.I.projectiles.bullets:
+		var bp: Vector2 = b["p"]
+		var rel := pos - bp
+		if rel.length_squared() > 360000.0:
+			continue
+		var v: Vector2 = b["v"]
+		var vv := v.length_squared()
+		if vv < 1.0:
+			continue
+		var t := rel.dot(v) / vv
+		if t < 0.0 or t > look:
+			continue
+		if (bp + v * t).distance_squared_to(pos) < rr:
+			n += 1
+			dir += v
+	return dir.normalized() if n >= min_n else Vector2.ZERO
+
+
+## Нос игрока смотрит на нас (дешёвая проверка для обычных врагов)
+func player_aiming(cone_deg := 9.0, dist := 700.0) -> Vector2:
+	var p := Main.I.player
+	if p == null or p.hp <= 0.0:
+		return Vector2.ZERO
+	var to := global_position - p.global_position
+	if to.length() > dist:
+		return Vector2.ZERO
+	if absf(wrapf(to.angle() - p.heading, -PI, PI)) > deg_to_rad(cone_deg):
+		return Vector2.ZERO
+	return to.normalized()
+
+
+## Тепловые ловушки: ракеты игрока, которые идут в нас ближе r, с шансом chance уходят на ловушки и рвутся.
+## Вернёт число уведённых ракет. Ловушки отстреливаются, только если ракета уже близко (видно, что сработало).
+func pop_flares(r := 420.0, trigger_r := 230.0, chance := 0.8) -> int:
+	var pr := Main.I.projectiles
+	var close := false
+	for m in pr.pmissiles:
+		if (m["t"] as WeakRef).get_ref() == self and (m["p"] as Vector2).distance_to(global_position) < trigger_r:
+			close = true
+			break
+	if not close:
+		return 0
+	var fl: Array = Main.I.fx.flare_burst(global_position, heading, 8, move_vel)
+	var n := 0
+	for i in range(pr.pmissiles.size() - 1, -1, -1):
+		var m: Dictionary = pr.pmissiles[i]
+		if (m["t"] as WeakRef).get_ref() != self:
+			continue
+		var mp: Vector2 = m["p"]
+		if mp.distance_to(global_position) > r or randf() > chance:
+			continue
+		var f: Dictionary = fl[n % fl.size()]
+		var at := mp.lerp(f["p"] as Vector2 + (f["v"] as Vector2) * 0.25, 0.6)
+		Main.I.fx.explosion(at, 14.0)
+		pr.pmissiles.remove_at(i)
+		n += 1
+	Main.I.tele.add("enemy_flares")
+	Main.I.tele.add("enemy_flared_missiles", n)
+	return n
 
 
 func _check_contact() -> void:

@@ -216,9 +216,9 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 			var d := int(p.global_position.distance_to(site.global_position))
 			var s: String
 			if site.failed:
-				s = "Позиция ПВО устояла · осталось целей: %d" % site.left()
+				s = "Позиция ПВО устояла · бункер: %d%%" % int(ceil(site.bunker_frac() * 100.0))
 			elif site.active:
-				s = "ПОЗИЦИЯ ПВО: %d с · целей: %d" % [int(ceil(site.timer)), site.left()]
+				s = "ПОЗИЦИЯ ПВО: %d с · уничтожьте бункер: %d%%" % [int(ceil(site.timer)), int(ceil(site.bunker_frac() * 100.0))]
 			else:
 				s = "Позиция ПВО: %d м — подлетите, чтобы начать" % (d / 10)
 			_ctext(276, s, 22, Color(1.0, 0.85, 0.4))

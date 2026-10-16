@@ -7,6 +7,7 @@ extends Enemy
 ##    он проскакивает вперёд («перелёт») и уходит в отворот;
 ##  • в этот момент сесть ему на хвост (бонус «на хвосте» работает и на нём);
 ##  • боевой разворот / бочка — сорвать его атаку.
+## 3.5: сам уходит рывком с бочкой из-под очередей и отстреливает ловушки от ракет — бить нужно с хвоста.
 ## Сбит — гарантированный выбор из редких карточек. Через 90 с ас уходит сам.
 
 const CALLSIGNS := ["Барон", "Шершень", "Граф", "Сокол-7", "Профессор", "Тётя Шура"]
@@ -33,6 +34,9 @@ var _said := {}
 var _speed := 300.0
 var _hp_said := false
 var _tailed_t := 0.0
+var _evade_cd := 1.0
+var _scan_t := 0.0
+var _flare_cd := 0.0
 
 
 func setup(hp_total: float) -> void:
@@ -116,6 +120,19 @@ func behave(delta: float) -> void:
 				_state = "chase"
 				_state_t = 0.0
 	position += Vector2.from_angle(heading) * _speed * delta
+
+	# 3.5: уход из-под огня и ловушки
+	_evade_cd -= delta
+	_scan_t -= delta
+	_flare_cd -= delta
+	if _flare_cd <= 0.0 and pop_flares(380.0, 220.0, 0.7) > 0:
+		_flare_cd = 6.0
+	if _evade_cd <= 0.0 and _scan_t <= 0.0 and evade_t <= 0.0 and _shots == 0:
+		_scan_t = 0.15
+		var threat := incoming_fire(0.4, 3)
+		if threat != Vector2.ZERO:
+			start_evade(threat, 300.0, 0.7)
+			_evade_cd = randf_range(2.2, 3.2)
 
 	# игрок у аса на хвосте?
 	if p.on_tail() and p.tail_target == self:
