@@ -15,7 +15,7 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	"gfx_start", "gfx", "gfx_drops", "plane_shadow", "tris_avg", "tris_max", "draws_avg", "draws_max", "vram_mb",
 	"nodes_max", "enemies_max", "load_ms", "chunks", "chunk_ms_max",
 	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа
-	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx"]
+	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx", "plane_lvl"]
 
 ## T4-04: автоснижение качества — окна по 20 с с 5-й секунды; FPS ниже порога → пресет ниже (до 3 раз за вылет)
 const AUTO_FPS := 35.0
@@ -199,6 +199,7 @@ func row(m: Main) -> PackedStringArray:
 	v["draws_avg"] = g("draws_sum") / maxf(_rs_n, 1)
 	v["msl_air_avg"] = g("msl_air_sum") / maxf(_speed_n, 1)
 	v["crew_rank"] = float(Profile.crew_lvl(m.cls_id))
+	v["plane_lvl"] = float(m.player.plane_lvl) if is_instance_valid(m.player) else 0.0
 	v["crew_xp_lvl"] = float(Profile.xp_lvl(m.cls_id))
 	v["callsign_idx"] = float((Profile.CALLSIGNS[m.cls_id] as Array).find(Profile.cls(m.cls_id)["callsign"]))
 	var out := PackedStringArray()

@@ -1099,24 +1099,9 @@ func has_perk(id: String) -> bool:
 	return Profile.has_perk(cls_id, id)
 
 
+## 3.5: самолёт ур. 2 выбирается в ангаре до вылета (Profile.apply); в вылете модернизации нет
 func check_upgrade() -> void:
-	if plane_lvl == 1 and Main.I.level >= int(Tuning.g("plane_lvl2_at")) and PlaneArt.plane_tex(cls_id, 2) != null:
-		if Profile.meta_k() > 0.0 and not Profile.plane2(cls_id):
-			if not _upgrade_teased:
-				_upgrade_teased = true
-				Main.I.radio("Техник", "Был бы комплект модернизации — сейчас бы перевооружились. Загляни в ангар!")
-			return
-		plane_lvl = 2
-		if Profile.meta_k() > 0.0: # 3.2: модернизация даёт пользу
-			var add := max_hp * 0.2
-			max_hp += add
-			heal(add)
-			mods["speed"] *= 1.05
-			mods["turn"] *= 1.05
-			Main.I.rerolls += 1
-		_upgrade_flash = 1.0
-		Main.I.radio("Техник", "Машину модернизировали — ур. 2! Подвесы переставили.")
-		Main.I.sfx.play("levelup", -6.0, 0.8)
+	pass
 
 
 func _draw_overlays() -> void:

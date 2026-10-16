@@ -18,7 +18,7 @@ const NODES := {
 }
 const NODE_ORDER := ["frame", "engine", "armor", "wing", "pylons", "tank"]
 
-const PLANE2_COST := 800
+const PLANE2_COST := 1500 # 3.5: покупка в ангаре, выбор до вылета (решение 15.10)
 const PLANE2_CREW := 3
 
 const TIER_COST := [400, 1200, 3000]
@@ -106,7 +106,7 @@ func _ready() -> void:
 
 
 func _default_class(cls: String) -> Dictionary:
-	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false,
+	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2,
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": []}
 
@@ -253,6 +253,21 @@ func unlocks_at(c: String, lv: int) -> Array:
 		if int(WING_UNLOCK[t]) == lv:
 			out.append("ведомый %s в карточках" % Prog.WING_TYPES[t]["title"])
 	return out
+
+
+## 3.5: на каком самолёте вылет — ур. 2, если куплен и выбран в ангаре
+func plane_lvl(c: String) -> int:
+	return 2 if plane2(c) and int(cls(c).get("plane_sel", 2)) == 2 else 1
+
+
+func set_plane(c: String, lv: int) -> void:
+	cls(c)["plane_sel"] = clampi(lv, 1, 2)
+	save()
+
+
+## Перебросы сверх стартовых: самолёт ур. 2 — +1
+func extra_rerolls(c: String) -> int:
+	return 1 if plane_lvl(c) == 2 else 0
 
 
 func trait_of(c: String) -> Dictionary:
@@ -503,6 +518,12 @@ func award_run(s: Dictionary) -> Dictionary:
 	if promote_ready(c):
 		out["promote"] = [crew_lvl(c) + 1, promote_cost(crew_lvl(c) + 1)]
 	out["hint_buy"] = hint_buy(c)
+	# 3.5: реплика техника про самолёт ур. 2 — на экране итогов, а не в вылете
+	if meta_k() > 0.0 and not plane2(c):
+		if can_buy_plane2(c):
+			out["tech"] = "Комплект модернизации ждёт — загляни в ангар: самолёт ур. 2 за %d." % PLANE2_COST
+		elif crew_lvl(c) >= PLANE2_CREW:
+			out["tech"] = "Копим на комплект модернизации: самолёт ур. 2 — %d запчастей (есть %d)." % [PLANE2_COST, parts()]
 	save()
 	return out
 
@@ -536,6 +557,12 @@ func apply(p: Player) -> void:
 			p.max_hp *= 1.0 + 0.005 * L * k
 			m["pickup"] *= 1.0 + 0.007 * L * k
 			m["turret_rate"] *= 1.0 + 0.006 * L * k
+	# 3.5: самолёт ур. 2 — с начала вылета (раньше — модернизация в полёте на 10-м уровне пилота)
+	if plane_lvl(c) == 2:
+		p.plane_lvl = 2
+		p.max_hp *= 1.15
+		m["speed"] *= 1.05
+		m["turn"] *= 1.05
 	# черта позывного (плюс и минус)
 	var tr: Dictionary = trait_of(c).get("mods", {})
 	for key in tr:
