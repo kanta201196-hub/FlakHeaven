@@ -54,6 +54,12 @@ const CALLSIGNS := {
 	"attacker": ["Утюг", "Дед", "Молот", "Бульдог", "Кочерга"],
 	"bomber": ["Борода", "Маяк", "Тюлень", "Шкаф", "Дирижабль"],
 }
+## 3.5: портреты (game/art/portraits/<id>.png, ChatGPT по брифу, стиль D)
+const PORTRAITS := {
+	"Шмель": "shmel", "Сокол-2": "sokol2", "Чиж": "chizh", "Барс": "bars", "Искра": "iskra",
+	"Утюг": "utyug", "Дед": "ded", "Молот": "molot", "Бульдог": "buldog", "Кочерга": "kocherga",
+	"Борода": "boroda", "Маяк": "mayak", "Тюлень": "tyulen", "Шкаф": "shkaf", "Дирижабль": "dirizhabl",
+}
 const TRAITS := {
 	"Шмель": {"title": "Торопыга", "plus": "скорость +8%", "minus": "разворот −6%", "mods": {"speed": 1.08, "turn": 0.94}},
 	"Сокол-2": {"title": "Хладнокровие", "plus": "перезарядка навыков −10%", "minus": "скорость −5%", "mods": {"s3_cd": 0.9, "speed": 0.95}},
@@ -268,6 +274,18 @@ func set_plane(c: String, lv: int) -> void:
 ## Перебросы сверх стартовых: самолёт ур. 2 — +1
 func extra_rerolls(c: String) -> int:
 	return 1 if plane_lvl(c) == 2 else 0
+
+
+var _portraits := {}
+
+
+## Портрет позывного класса; null — портрета ещё нет (рисуется силуэт)
+func portrait(c: String) -> Texture2D:
+	var cs: String = cls(c)["callsign"]
+	if not _portraits.has(cs):
+		var path := "res://art/portraits/%s.png" % PORTRAITS.get(cs, "")
+		_portraits[cs] = load(path) if ResourceLoader.exists(path) else null
+	return _portraits[cs]
 
 
 func trait_of(c: String) -> Dictionary:
