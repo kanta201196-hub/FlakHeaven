@@ -207,10 +207,10 @@ static func muzzle_world(p: Player, g: Hardpoint, si: int, aim := NAN) -> Vector
 	var tex1 := PlaneArt.plane_tex(p.cls_id, 1)
 	if gi < 0 or tex == null or tex1 == null:
 		return p.global_position
-	var pts := PlaneArt.slot_points(p.cls_id, p.plane_lvl, gi, g)
+	var pts := mounts(p.cls_id, p.plane_lvl, gi, g)
 	if pts.is_empty():
 		return p.global_position
-	var pt: Vector2 = pts[si % pts.size()]
+	var pt: Vector2 = (pts[si % pts.size()] as Dictionary)["p"]
 	var k := Tuning.g("plane_len") * p.size / float(tex1.get_width())   # пикселей мира на пиксель картинки
 	var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k
 	var mz := muzzle(g.weapon) * len_px
@@ -218,3 +218,34 @@ static func muzzle_world(p: Player, g: Hardpoint, si: int, aim := NAN) -> Vector
 	if not is_nan(aim):   # турель: ствол смотрит на цель
 		local = pt + Vector2(mz.x, 0.0).rotated(aim - p.heading)
 	return p.global_position + (local * k).rotated(p.heading)
+
+
+
+## Точки крепления оружия (пиксели картинки самолёта, центр картинки, нос по +X) и сторона:
+##   "under" — под крылом на пилоне (НАР, ракеты, бомбы, контейнеры — как на настоящих самолётах);
+##   встроенные турели — как у реальных бомбардировщиков и штурмовиков:
+##   "tail" — кормовая установка в хвосте фюзеляжа (стволы назад), "top" — верхняя за кабиной,
+##   "bottom" — нижняя под фюзеляжем. yaw — куда смотрят стволы без цели (0 — вперёд, PI — назад).
+static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
+	var out: Array = []
+	if not g.builtin:
+		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):
+			out.append({"p": pt, "side": "under", "yaw": 0.0})
+		return out
+	var s := PlaneArt.shape_info(cls_id, lvl)
+	if s.is_empty():
+		return out
+	var L: float = s["len"]
+	var tail: float = s["tail"]
+	var nose: float = s["nose"]
+	var order: Array
+	if cls_id == "bomber":
+		# кормовая (главная), верхняя за кабиной, нижняя за крылом
+		order = [["tail", tail + L * 0.035, PI], ["top", nose - L * 0.3, PI], ["bottom", tail + L * 0.3, PI]]
+	else:
+		# штурмовик: стрелок за кабиной (верхняя), вторая — нижняя под фюзеляжем
+		order = [["top", nose - L * 0.36, PI], ["bottom", nose - L * 0.45, PI], ["tail", tail + L * 0.035, PI]]
+	for i in g.slots:
+		var o: Array = order[i % order.size()]
+		out.append({"p": Vector2(o[1], 0.0), "side": o[0], "yaw": o[2]})
+	return out

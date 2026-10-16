@@ -115,6 +115,7 @@ func _build(cls_id: String, lvl: int) -> void:
 		return
 	var model: Node3D = (load(path) as PackedScene).instantiate()
 	pivot.add_child(model)
+	_collect_faces(model)
 	_add_weapons(cls_id, lvl)
 
 
@@ -141,13 +142,78 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		if wt == null:
 			continue
 		var wlen: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) / plane_k
-		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):
+		for mt: Dictionary in WeaponModels.mounts(cls_id, lvl, gi, g):
+			var pt: Vector2 = mt["p"]
+			var side: String = mt["side"]
 			var wmi := WeaponModels.make(g.weapon, weapon_tier)
-			# турели — сверху по фюзеляжу, подвесы — под крылом
-			var y := 0.035 if g.builtin else -0.045
-			wmi.position = Vector3(pt.x / tw, y, pt.y / tw)
-			wmi.basis = Basis().scaled(Vector3(wlen, wlen, wlen))
+			# по настоящей поверхности модели: подвес — под крылом на пилоне, верхняя турель
+			# утоплена в спину фюзеляжа, нижняя — в брюхо, кормовая — в конце фюзеляжа
+			var x := pt.x / tw
+			var z := pt.y / tw
+			var lo := _surface_y(x, z, true)
+			var hi := _surface_y(x, z, false)
+			var y := 0.0
+			match side:
+				"under":
+					y = (lo if not is_nan(lo) else -0.02) - 0.09 * wlen
+				"top":
+					y = hi if not is_nan(hi) else 0.03
+				"bottom":
+					y = lo if not is_nan(lo) else -0.03
+				"tail":
+					# у хвоста сверху киль — берём низ фюзеляжа и поднимаем на радиус башни
+					y = (lo if not is_nan(lo) else 0.0) + 0.12 * wlen
+			wmi.position = Vector3(x, y, z)
+			var bs := Basis(Vector3.UP, float(mt["yaw"]))
+			if side == "bottom":
+				bs = bs * Basis(Vector3.RIGHT, PI)
+			wmi.basis = bs.scaled(Vector3(wlen, wlen, wlen))
 			pivot.add_child(wmi)
+
+
+var _faces := PackedVector3Array()
+
+
+## Треугольники модели (в осях pivot) — чтобы найти поверхность крыла под точкой подвеса
+func _collect_faces(model: Node3D) -> void:
+	_faces = PackedVector3Array()
+	for c in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		var xf := pivot.global_transform.affine_inverse() * mi.global_transform
+		for v in mi.mesh.get_faces():
+			_faces.append(xf * v)
+
+
+## Высота поверхности модели на вертикали (x, z): нижняя (low) или верхняя; NAN — промах
+var _ycache := {}
+
+
+func _surface_y(x: float, z: float, low: bool) -> float:
+	var ck := "%s|%.4f|%.4f|%s" % [_key.get_slice("_", 0) + _key.get_slice("_", 1), x, z, low]
+	if _ycache.has(ck):
+		return _ycache[ck]
+	var best := NAN
+	var p := Vector2(x, z)
+	for i in range(0, _faces.size(), 3):
+		var a := _faces[i]
+		var b := _faces[i + 1]
+		var c := _faces[i + 2]
+		var a2 := Vector2(a.x, a.z)
+		var v0 := Vector2(b.x, b.z) - a2
+		var v1 := Vector2(c.x, c.z) - a2
+		var v2 := p - a2
+		var den := v0.x * v1.y - v1.x * v0.y
+		if absf(den) < 1e-12:
+			continue
+		var u := (v2.x * v1.y - v1.x * v2.y) / den
+		var w := (v0.x * v2.y - v2.x * v0.y) / den
+		if u < 0.0 or w < 0.0 or u + w > 1.0:
+			continue
+		var y := a.y + u * (b.y - a.y) + w * (c.y - a.y)
+		if is_nan(best) or (low and y < best) or (not low and y > best):
+			best = y
+	_ycache[ck] = best
+	return best
 
 
 func _process(delta: float) -> void:

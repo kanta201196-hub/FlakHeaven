@@ -524,7 +524,6 @@ func _turn_bank(u: Dictionary, heading: float, delta: float) -> float:
 func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 	var root: Node3D = u["node"]
 	var want := {}
-	var half := tex.get_size() / 2.0
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
 		if g.is_empty():
@@ -532,7 +531,7 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		var wt := PlaneArt.weapon_tex(g.weapon)
 		if wt == null:
 			continue
-		var pts := PlaneArt.slot_points(p.cls_id, p.plane_lvl, gi, g)
+		var pts := WeaponModels.mounts(p.cls_id, p.plane_lvl, gi, g)
 		var k: float = u["k"]
 		var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k  # в пикселях текстуры самолёта
 		var dim := g.weapon in ["aam", "rockets", "bombs"] and g.cd > 0.3
@@ -546,12 +545,19 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 				wmi = WeaponModels.make(g.weapon, tr)
 				root.add_child(wmi)
 				u["weapons"][key] = wmi
-			var pt: Vector2 = pts[si]
-			wmi.position = Vector3(pt.x, tex.get_width() * 0.03, pt.y)
-			var yaw := 0.0
+			var mt: Dictionary = pts[si]
+			var pt: Vector2 = mt["p"]
+			var tw := float(tex.get_width())
+			# подвесы — под крылом на пилоне (видны на крене и под наклоном камеры), турели — на своих местах
+			var y: float = {"under": -tw * 0.012 - 0.09 * len_px, "top": tw * 0.028, "bottom": -tw * 0.028, "tail": 0.0}.get(mt["side"], 0.0)
+			wmi.position = Vector3(pt.x, y, pt.y)
+			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
-				yaw = _turret_yaw(p, root, wmi.position)
-			wmi.basis = Basis(Vector3.UP, yaw).scaled(Vector3(len_px, len_px, len_px))
+				yaw = _turret_yaw(p, root, wmi.position, yaw)
+			var b := Basis(Vector3.UP, yaw)
+			if mt["side"] == "bottom":
+				b = b * Basis(Vector3.RIGHT, PI)
+			wmi.basis = b.scaled(Vector3(len_px, len_px, len_px))
 			wmi.transparency = 0.6 if dim else 0.0
 	for key in u["weapons"].keys():
 		if not want.has(key):
@@ -712,7 +718,7 @@ func _make_smoke() -> CPUParticles3D:
 
 
 ## Угол турели (в осях самолёта) на ближайшего врага в радиусе 700 px; без цели — вперёд
-func _turret_yaw(p: Player, root: Node3D, local: Vector3) -> float:
+func _turret_yaw(p: Player, root: Node3D, local: Vector3, idle := 0.0) -> float:
 	var wp := root.global_transform * local
 	var best: Node2D = null
 	var bd := 700.0 * 700.0
@@ -725,7 +731,7 @@ func _turret_yaw(p: Player, root: Node3D, local: Vector3) -> float:
 			bd = d
 			best = e
 	if best == null:
-		return 0.0
+		return idle
 	var ang := (best.global_position - Vector2(wp.x, wp.z)).angle() - p.heading
 	return -ang
 

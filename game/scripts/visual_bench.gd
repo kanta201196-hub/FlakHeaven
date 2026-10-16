@@ -193,6 +193,10 @@ func _hangar_bench() -> void:
 	if m.state != "hangar":
 		m.ui_click("menu_hangar")
 		for c in PlaneClasses.LIST:
+			if OS.get_cmdline_user_args().has("--hangarside"):
+				_hq.append([c, 1, 1])
+				_hq.append([c, 2, 1])
+				continue
 			for lv in [1, 2]:
 				_hq.append([c, lv, 1])
 			_hq.append([c, 1, 2])
@@ -210,6 +214,10 @@ func _hangar_bench() -> void:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
 		Hangar3D.I.weapon_tier = cur[2]
+		if OS.get_cmdline_user_args().has("--hangarside"):   # вид сбоку: проверка, где сидят турели и подвесы
+			Hangar3D.I._yaw = PI / 2.0
+			Hangar3D.I._pitch = 0.06
+			Hangar3D.I._idle = 0.0
 	_hf += 1
 	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
 		_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])
