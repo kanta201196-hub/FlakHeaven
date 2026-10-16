@@ -11,6 +11,7 @@ var _fx_at := 0.0
 var _fx_fired := false
 var _autotest_t := 0.0
 var _visual: VisualBench
+var _boom: BoomBench
 
 
 func _init(main: Main) -> void:
@@ -19,6 +20,9 @@ func _init(main: Main) -> void:
 	if OS.get_cmdline_user_args().has("--visual"):
 		VisualBench.seed_world()
 		_visual = VisualBench.new(m)
+	if OS.get_cmdline_user_args().has("--boombench"):   # 3.5: стенд 3D-взрывов (boom_bench.gd)
+		VisualBench.seed_world()
+		_boom = BoomBench.new(m)
 
 
 func process(delta: float) -> void:
@@ -30,6 +34,8 @@ func process(delta: float) -> void:
 		_debug_screenshots(delta)
 	if _visual != null:
 		_visual.process(delta)
+	if _boom != null:
+		_boom.process(delta)
 
 	if m._args.has("--fxtest") and m.state == "playing" and is_instance_valid(m.player):
 		_fx_t += delta
