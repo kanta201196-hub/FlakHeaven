@@ -31,6 +31,7 @@ var _scorch_mat: StandardMaterial3D
 var _flash_mat: StandardMaterial3D
 var _elite_mat: StandardMaterial3D
 var _zoom := 1.0
+var _c2 := Vector2.ZERO        # центр кадра на плоскости боя (для указателей за краем экрана)
 var _shadow_shader: Shader
 var _trails: Contrails       # 3.4-t1 (п. 10, 34): инверсионные следы самолётов и ракет
 var _tid := 0                # номера ракет для их следов
@@ -304,7 +305,19 @@ func mouse_world(fallback: Vector2) -> Vector2:
 func world_to_screen(p: Vector2, fallback: Vector2) -> Vector2:
 	if not _tilt_on:
 		return fallback
-	return cam.unproject_position(Vector3(p.x, 0.0, p.y))
+	var v := Vector3(p.x, 0.0, p.y)
+	if not cam.is_position_behind(v):
+		return cam.unproject_position(v)
+	# Правка 3.5-s4: точка позади камеры (далеко внизу кадра) проецируется зеркально — стрелка эвакуации
+	# показывала вперёд, хотя цель сзади. Берём направление от центра кадра и уводим точку далеко за край.
+	var dir := (p - _c2).normalized()
+	var a := cam.unproject_position(Vector3(_c2.x, 0.0, _c2.y))
+	var b := cam.unproject_position(Vector3(_c2.x + dir.x * 100.0, 0.0, _c2.y + dir.y * 100.0))
+	return a + (b - a).normalized() * 100000.0
+
+
+func tilt_on() -> bool:
+	return _tilt_on
 
 
 # ---------- камера ----------
@@ -346,6 +359,7 @@ func _process(delta: float) -> void:
 	if not (is_finite(c2.x) and is_finite(c2.y) and zoom > 0.001):
 		return
 	_zoom = zoom
+	_c2 = c2
 	var h := _cam_height(zoom)
 	var tilt := deg_to_rad(Tuning.g("cam_tilt"))
 	if tilt > 0.001:
