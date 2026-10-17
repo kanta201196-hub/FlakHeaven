@@ -189,6 +189,8 @@ func _build(cls_id: String, lvl: int) -> void:
 	var mech := WingMech.attach(model, "%s_%d" % [cls_id, lvl])
 	if mech != null and OS.get_cmdline_user_args().has("--mechdown"):
 		WingMech.pose(mech, 1.0)
+	# V-07: свои знаки на крыльях, киле и (у асов) на борту
+	Insignia.attach(model, "%s_%d" % [cls_id, lvl], "player")
 	# тест 3.5-s3: кормовая кабина «Кита» — продолжение фюзеляжа в цвет обшивки
 	_tail = WingMech.attach_tail(model, "%s_%d" % [cls_id, lvl])
 	# Т-5: створки бомбоотсека в ангаре открыты — видно бомбы
