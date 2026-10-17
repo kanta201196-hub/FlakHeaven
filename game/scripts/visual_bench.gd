@@ -320,6 +320,17 @@ func _hangar_bench() -> void:
 					_hq.append([c, 1, wt])
 			_t = 0.0
 			return
+		if OS.get_cmdline_user_args().has("--liveries"):   # п. 35: каждый класс во всех окрасках (ур. 1; --livlvl=2 — ур. 2)
+			var llv := 1
+			for a in OS.get_cmdline_user_args():
+				if a.begins_with("--livlvl="):
+					llv = int(a.get_slice("=", 1))
+			for c in PlaneClasses.LIST:
+				for lv in [llv]:
+					for lv2: Array in Livery.list(c):
+						_hq.append([c, lv, 1, "L", lv2[0]])
+			_t = 0.0
+			return
 		for c in PlaneClasses.LIST:
 			if OS.get_cmdline_user_args().has("--modfront") or OS.get_cmdline_user_args().has("--modrear"):
 				for lv in [1, 2]:
@@ -368,7 +379,9 @@ func _hangar_bench() -> void:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
 		Hangar3D.I.weapon_tier = cur[2]
-		if cur.size() > 3:   # --turretclose: крупный план турели № cur[3]
+		if cur.size() > 4:   # --liveries: окраска из очереди (в профиль без сохранения)
+			Profile.cls(cur[0])["livery"] = cur[4]
+		elif cur.size() > 3:   # --turretclose: крупный план турели № cur[3]
 			var h := Hangar3D.I
 			var tp: Array = h.turret_pos[cur[3]] if cur[3] < h.turret_pos.size() else [Vector3.ZERO, "top"]
 			h.focus = tp[0]
@@ -398,7 +411,9 @@ func _hangar_bench() -> void:
 			Hangar3D.I._idle = 0.0
 	_hf += 1
 	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
-		if cur.size() > 3:
+		if cur.size() > 4:
+			_save("hangar_livery_%s_%d_%s" % [cur[0], cur[1], cur[4]])
+		elif cur.size() > 3:
 			_save("turret_s%d_%s_%d_w%d_v%d" % [WeaponModels.turret_style, cur[0], cur[1], cur[2], cur[3]])
 		else:
 			_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])

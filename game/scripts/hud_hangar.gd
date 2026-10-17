@@ -89,7 +89,8 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		ctrl.draw_rect(tr2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.08))
 		_text(Vector2(tr2.position.x, tr2.position.y + 21), ("ур. %d" % [1, 3, 5][ti]) if ti < 3 else "модерниз.", 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
 		h3.tier_rects.append([tr2, ti + 1])
-	var y := area.position.y + 446.0
+	_hg_livery(c, lx, area.position.y + 432)
+	var y := area.position.y + 486.0
 	if bought:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 15, Color(0.8, 0.85, 0.9))
@@ -123,6 +124,19 @@ func _hg_plane(c: String, area: Rect2) -> void:
 			else:
 				_text(Vector2(rx, yy + 52), "%d (не хватает %d)" % [price, price - Profile.parts()], 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		yy += 102.0
+
+
+## Тест 3.5-s4, п. 35: ряд «Окраска: …» — выбор сохраняется в профиле класса, виден в ангаре и в бою
+func _hg_livery(c: String, lx: float, y: float) -> void:
+	_text(Vector2(lx + 24, y + 21), "Окраска:", 15, Color(0.8, 0.84, 0.9))
+	var cur := Livery.current(c)
+	var lst := Livery.list(c)
+	for i in lst.size():
+		var r := Rect2(lx + 100 + i * 112, y, 106, 30)
+		var on: bool = lst[i][0] == cur
+		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
+		_text(Vector2(r.position.x, r.position.y + 20), String(lst[i][1]), 12, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		_buttons.append([r, "hg:livery:" + String(lst[i][0])])
 
 
 func _hg_weapons(m: Main, area: Rect2) -> void:

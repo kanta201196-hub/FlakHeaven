@@ -494,6 +494,7 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			if kind == "player":   # Т-5: створки бомбоотсека «Кита»
 				u["bay"] = WingMech.attach_bay(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 				u["tail"] = WingMech.attach_tail(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
+				_apply_livery(root.get_child(0) as Node3D, tex)
 		if kind == "enemy" and thick > 0.06:
 			u["shb"] = tex   # оптимизация: тени врагов одного вида — один MultiMesh (_flush_shadows)
 		elif kind != "enemy":   # у наземных целей (thick 0.05) тень настоящая
@@ -505,6 +506,13 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			Perf.peak("r3d.new_model_max", Perf.sub("r3d.new_model", nt) - nt)
 	u["seen"] = true
 	return u
+
+
+## Тест 3.5-s4, п. 35: окраска своего самолёта из ангара (ведомые — в своей, с полосами звена)
+func _apply_livery(model: Node3D, tex: Texture2D) -> void:
+	var key := tex.resource_path.get_file().get_basename()   # «fighter_1»
+	var cls := key.get_slice("_", 0)
+	Livery.apply(model, cls, int(key.get_slice("_", 1)), Livery.current(cls))
 
 
 func _place(u: Dictionary, p: Vector2, heading: float, bank: float, roll: float, y := 0.0, scale_k := 1.0, pitch := 0.0) -> void:

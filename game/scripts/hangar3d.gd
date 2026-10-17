@@ -248,7 +248,7 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	_drawn_frame = Engine.get_process_frames()
 	_fit_vp(r)
 	_set_bg("flight")
-	var k := "%s_%d_%d" % [cls_id, view_lvl, weapon_tier]
+	var k := "%s_%d_%d_%s" % [cls_id, view_lvl, weapon_tier, Livery.current(cls_id)]   # п. 35: и окраска
 	if k != _key:
 		if _key.begins_with("w_"):
 			_dist = DIST0
@@ -360,7 +360,13 @@ func _build(cls_id: String, lvl: int) -> void:
 	var bay := WingMech.attach_bay(model, "%s_%d" % [cls_id, lvl])
 	if bay != null:
 		WingMech.pose_bay(bay, 1.0)
+	_apply_livery(model, cls_id, lvl)
 	_add_weapons(cls_id, lvl)
+
+
+## Тест 3.5-s4, п. 35: выбранная окраска — на модель и подвешенные к ней механизацию, детали, створки, кабину
+func _apply_livery(model: Node3D, cls_id: String, lvl: int) -> void:
+	Livery.apply(model, cls_id, lvl, Livery.current(cls_id))
 
 
 ## Стартовое оружие класса на узлах подвески — под крылом / в бомбоотсеке (те же точки, что в игре)
