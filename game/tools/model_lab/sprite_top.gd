@@ -1,10 +1,12 @@
 extends SceneTree
 ## 3.5: спрайт «вид сверху» из подготовленной модели (после model_lab.gd prep: нос +X, длина 1).
 ## Прозрачный фон, обрезка по силуэту — как спрайты в art/enemies (нос вправо).
-##   xvfb-run godot --path . --rendering-driver opengl3 --script res://tools/model_lab/sprite_top.gd -- <in.glb> <out.png> [px=600]
+##   xvfb-run godot --path . --rendering-driver opengl3 --script res://tools/model_lab/sprite_top.gd -- <in.glb> <out.png> [px=600] [кадр=1.08]
+## Кадр — сторона квадрата в единицах модели: у машин шире 1.08 (транспортник с гондолами) — больше.
 
 var _out := ""
 var _px := 600
+var _size := 1.08
 var _frames := 0
 var _vp: SubViewport
 
@@ -18,6 +20,8 @@ func _initialize() -> void:
 	_out = a[1]
 	if a.size() > 2:
 		_px = int(a[2])
+	if a.size() > 3:
+		_size = float(a[3])
 	var doc := GLTFDocument.new()
 	var st := GLTFState.new()
 	if doc.append_from_file(a[0], st) != OK:
@@ -45,7 +49,7 @@ func _initialize() -> void:
 	_vp.add_child(sun)
 	var cam := Camera3D.new()
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-	cam.size = 1.08
+	cam.size = _size
 	cam.position = Vector3(0, 5, 0)
 	cam.rotation_degrees = Vector3(-90, 0, 0)  # смотрит вниз, верх кадра — −Z
 	_vp.add_child(cam)
