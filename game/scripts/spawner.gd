@@ -85,6 +85,10 @@ func _process(delta: float) -> void:
 	var mult := Tuning.g("spawn_rate_mult") * (0.3 if boss_on else 1.0)
 	mult *= 1.0 + maxf(0.0, t - 300.0) / 60.0 * 0.05 # 2.8: после 5:00 — плотнее (+5% в минуту)
 	var enemies := get_tree().get_nodes_in_group("enemies")
+	# предел врагов в воздухе одновременно (без асов, наземных целей и целей активностей):
+	# больше — экран превращается в кашу и проседает FPS
+	if air_count(enemies) >= int(Tuning.g("enemy_cap")):
+		return
 
 	_drone_cd -= delta * mult
 	if _drone_cd <= 0.0:
@@ -187,22 +191,36 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	if wave >= 3 or OS.get_cmdline_user_args().has("--fortress"):
 		var f := Fortress.new()
 		f.setup_fortress(hp * 2.0 * 1.35) # прочность двух асов вместе со щитами; фазы делят её на точки и корпус
-		f.position = p.global_position + Vector2.from_angle(randf() * TAU) * 1100.0
+		f.position = p.global_position + Vector2.from_angle(randf() * TAU) * boss_dist()
 		f.heading = (p.global_position - f.position).angle() + PI / 2.0
 		Main.I.world.add_child(f)
 		variants = []
 	for v in variants:
 		var b := Boss.new()
 		b.setup(v, hp)
-		b.position = p.global_position + Vector2.from_angle(randf() * TAU) * 1100.0
+		b.position = p.global_position + Vector2.from_angle(randf() * TAU) * boss_dist()
 		b.heading = (p.global_position - b.position).angle()
 		Main.I.world.add_child(b)
-	# мелочь расступается: дальние дроны уходят, освобождая подход к асу
+	# мелочь расступается: дальние дроны разворачиваются и улетают (раньше пропадали на месте)
 	for n in get_tree().get_nodes_in_group("enemies"):
 		if n is Drone and (n as Node2D).global_position.distance_to(p.global_position) > 600.0:
-			(n as Enemy).remove_from_group("enemies")
-			(n as Node).queue_free()
+			(n as Enemy).leave()
 	Main.I.on_boss_wave(wave, maxi(1, variants.size()))
+
+
+func air_count(enemies: Array) -> int:
+	var n := 0
+	for e in enemies:
+		var en := e as Enemy
+		if not en.is_boss and not en.is_ground and not en.no_despawn and not en.leaving:
+			n += 1
+	return n
+
+
+## Ас появляется за краем экрана (с наклоном камеры вверх видно дальше) и подлетает —
+## у края экрана на него указывает стрелка
+func boss_dist() -> float:
+	return 1500.0 * (1.0 + 0.5 * sin(deg_to_rad(Tuning.g("cam_tilt"))))
 
 
 ## Сетка для расталкивания: враги держат вокруг себя небольшое пространство и не слипаются
