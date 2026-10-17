@@ -121,6 +121,13 @@ func _ui_test() -> void:
 		_hud_at = Time.get_ticks_msec()
 	elif _ui_phase == 4 and Time.get_ticks_msec() - _hud_at > 800:
 		_shot("ui_result_build")
+		HudCodex.tab = 3
+		m.codex_back = "menu"
+		m._set_state("codex")
+		_ui_phase = 5
+		_hud_at = Time.get_ticks_msec()
+	elif _ui_phase == 5 and Time.get_ticks_msec() - _hud_at > 800:
+		_shot("ui_codex_info")
 		m.get_tree().quit()
 
 
@@ -209,7 +216,7 @@ func _debug_screenshots(delta: float) -> void:
 	_shot_t += delta / maxf(Engine.time_scale, 0.01)
 	if m._state_t < 0.6:
 		return
-	if m._args.has("--uitest") and m.state in ["playing", "paused", "evac", "levelup"]:
+	if m._args.has("--uitest") and m.state in ["playing", "paused", "evac", "levelup", "codex"]:
 		_ui_test()
 		return
 	if m._args.has("--hudtest") and m.state == "playing":

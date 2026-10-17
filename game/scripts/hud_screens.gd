@@ -27,10 +27,11 @@ func class_select(size: Vector2) -> void:
 		_text(Vector2(x, y), "%d — %s" % [i + 1, d["title"]], 26, d["color"])
 		y += 32.0
 		_text(Vector2(x, y), d["role"], 18, Color(0.8, 0.85, 0.95))
+		y += 24.0 # свежий взгляд: строка экипажа отдельно — раньше наезжала на описание класса
 		var sb: String = Profile.skills(id)[1]
 		_text(Vector2(x, y), "Экипаж ур. %d%s%s" % [Profile.crew_lvl(id), " · самолёт ур. 2 ✓" if Profile.plane_lvl(id) == 2 else "",
-			(" · навык F: " + String(PlaneClasses.SKILL3[sb]["title"])) if sb != "" else ""], 15, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, w - 56.0)
-		y += 44.0
+			(" · навык F: " + String(PlaneClasses.SKILL3[sb]["title"])) if sb != "" else ""], 15, Color(0.6, 1.0, 0.7))
+		y += 32.0
 		_stat_bar(x, y, "Прочность", float(d["hp"]) / 240.0, "%d" % int(d["hp"]))
 		y += 26.0
 		_stat_bar(x, y, "Скорость", float(d["speed"]), "%d%%" % int(float(d["speed"]) * 100.0))
@@ -59,7 +60,9 @@ func class_select(size: Vector2) -> void:
 		var cur: String = Main.I.skill_pick.get(id, Profile.skills(id)[0])
 		for sk in PlaneClasses.CLASS_SKILLS[id]:
 			var sd: Dictionary = PlaneClasses.SKILL3[sk]
-			var sr := Rect2(x - 8, y, w - 40, 58)
+			# высота строки — по описанию: длинное в две строки не вылезает за рамку
+			var ph := ui_font().get_multiline_string_size(sd["short"], HORIZONTAL_ALIGNMENT_LEFT, w - 56.0, 13).y
+			var sr := Rect2(x - 8, y, w - 40, maxf(58.0, 34.0 + ph))
 			var on: bool = sk == cur
 			var sh := sr.has_point(mp)
 			ctrl.draw_rect(sr, Color(0.55, 0.9, 0.55, 0.16) if on else Color(1, 1, 1, 0.05 if sh else 0.02))
@@ -71,8 +74,8 @@ func class_select(size: Vector2) -> void:
 			_text(Vector2(x + 4, y + 20), ("● " if on else "○ ") + "%s · %d с%s%s" % [sd["title"], int(sd["cd"]), "" if unl else "  — экипаж ур. %d" % Profile.SKILL_UNLOCK[si],
 				"  · стоит в слоте 2 [F]" if not on and Profile.skills(id)[1] == sk else ""], 17,
 				Color(0.85, 1.0, 0.85) if on else (Color(0.85, 0.88, 0.95) if unl else Color(0.5, 0.52, 0.56)))
-			_para(Vector2(x + 4, y + 40), sd["short"], w - 40.0, 13, Color(0.75, 0.8, 0.88))
-			y += 62.0
+			_para(Vector2(x + 4, y + 40), sd["short"], w - 56.0, 13, Color(0.75, 0.8, 0.88))
+			y += sr.size.y + 4.0
 		# картинки самолёта: ур. 1 и ур. 2 (покупка в ангаре), носом вверх
 		var area_top := y + 4.0
 		var area_h := r.end.y - area_top - 34.0
@@ -134,6 +137,7 @@ func levelup(m: Main, size: Vector2) -> void:
 		_text(Vector2(r.position.x, r.position.y + 24), c["cat"], 16, cc, HORIZONTAL_ALIGNMENT_RIGHT, w - 16.0)
 		# U-09: значок оружия или раздела слева от названия
 		CardIcons.draw(ctrl, r.position + Vector2(44, 76), 52.0, CardIcons.key(c, m.player), cc)
+		CardIcons.badge(ctrl, r.position + Vector2(44, 76), 52.0, String(c["kind"]), cc)
 		_para(Vector2(r.position.x + 82, r.position.y + 66), c["title"], w - 100.0 - (52.0 if c.get("course", false) else 0.0), 22, Color.WHITE)
 		if c.get("course", false): # 3.2: карточка ведёт к курсу
 			ctrl.draw_colored_polygon(PackedVector2Array([r.position + Vector2(w - 70, 34), r.position + Vector2(w, 34), r.position + Vector2(w, 104)]), Color(1.0, 0.8, 0.25, 0.9))

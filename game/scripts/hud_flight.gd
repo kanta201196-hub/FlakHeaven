@@ -47,13 +47,19 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	if m.run_time > 180.0 and m.state == "playing":
 		return
 	var hint := "Мышь — куда лететь · Space — уклонение · Shift — форсаж · E — навык · Tab — пауза" + (" · F5/F6/F7 — отладка" if Main.DEBUG else "")
-	_text(Vector2(0, size.y - 20), hint, 15, Color(0.75, 0.78, 0.85, 0.8), HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	# свежий взгляд: без плашки строка клавиш терялась на песке
+	var hw := ui_font().get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 32.0
+	ctrl.draw_rect(Rect2((size.x - hw) / 2.0, size.y - 38.0, hw, 28.0), Color(0.02, 0.025, 0.03, 0.62))
+	_text(Vector2(0, size.y - 18), hint, 16, Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 
 
 ## U-02: подсказка новичку — рамка над нижней строкой клавиш
 func _hint_box(s: String, size: Vector2, a: float) -> void:
 	var w := minf(1100.0, size.x - 80.0)
-	var r := Rect2((size.x - w) / 2.0, size.y - 220.0, w, 86.0)
+	# высота по тексту: длинная подсказка в три строки не вылезает из рамки
+	var th := ui_font().get_multiline_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, 18).y
+	var bh := maxf(86.0, th + 44.0)
+	var r := Rect2((size.x - w) / 2.0, size.y - 134.0 - bh, w, bh)
 	ctrl.draw_rect(r, Color(0.04, 0.05, 0.06, 0.82 * a))
 	ctrl.draw_rect(r, Color(1.0, 0.85, 0.4, 0.8 * a), false, 2.0)
 	_text(Vector2(r.position.x + 16, r.position.y + 26), "ПОДСКАЗКА", 13, Color(1.0, 0.85, 0.4, a))
@@ -90,7 +96,7 @@ func _left_panel(m: Main, p: Player) -> void:
 	var x := 20.0
 	var pw := 460.0
 	var y := 18.0
-	var h := 150.0 + (24.0 if p.wingmen.size() > 0 else 0.0) + (30.0 if not p.syn.is_empty() or p.has_course() else 0.0) + (62.0 if p.has_course() else 0.0)
+	var h := 150.0 + (24.0 if p.wingmen.size() > 0 else 0.0) + (30.0 if not p.syn.is_empty() or p.has_course() else 0.0) + (80.0 if p.has_course() else 0.0)
 	_hud_back(Rect2(x - 8, y - 6, pw + 16, h))
 	# прочность — крупная полоса; меньше трети — красная
 	var hk := clampf(p.hp / p.max_hp, 0.0, 1.0)
@@ -128,7 +134,7 @@ func _left_panel(m: Main, p: Player) -> void:
 	if p.s3_cd <= 0.0 and p.s3_active() <= 0.0 and note != "":
 		_text(Vector2(x, y + 12), "E — " + note, 14, Color(0.7, 0.8, 0.9))
 	if p.manual_mode:
-		_text(Vector2(x + pw, y + 12), "Пушка: ручной +%d%% [Q]" % int(round(p.manual_bonus * 100.0)), 14, Color(1.0, 0.82, 0.35), HORIZONTAL_ALIGNMENT_RIGHT, -1)
+		_text(Vector2(x, y + 12), "Пушка: ручной +%d%% [Q]" % int(round(p.manual_bonus * 100.0)), 14, Color(1.0, 0.82, 0.35), HORIZONTAL_ALIGNMENT_RIGHT, pw)
 	y += 20.0
 	if p.wingmen.size() > 0:
 		var wl := PackedStringArray()
@@ -317,7 +323,10 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 		_ctext(size.y / 2.0 + 120.0, "НА ХВОСТЕ: пушка +50%", 22, Color(1.0, 0.9, 0.4))
 	if m.streak >= 3:
 		var a := clampf(m.streak_t, 0.0, 1.0)
-		_text(Vector2(0, 268), "Серия ×%d · опыт ×%.2f" % [m.streak, m.streak_mult()], 20, Color(1.0, 0.75, 0.4, a), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 28.0)
+		var stt := "Серия ×%d · опыт ×%.2f" % [m.streak, m.streak_mult()]
+		var stw := ui_font().get_string_size(stt, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 24.0
+		ctrl.draw_rect(Rect2(size.x - 16.0 - stw, 246.0, stw, 30.0), Color(0.02, 0.025, 0.03, 0.55 * a))
+		_text(Vector2(0, 268), stt, 20, Color(1.0, 0.75, 0.4, a), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 28.0)
 
 
 ## Правка 28: цвета активностей — без жёлтого, он теряется на песке Нагорья
@@ -332,6 +341,8 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	var rect := Rect2(Vector2.ZERO, size).grow(-60.0)
 	var node: Node = m.spawner.activity_node if m.spawner != null else null
 	if is_instance_valid(node):
+		# свежий взгляд: задача активности на песке не читалась — тёмная плашка
+		ctrl.draw_rect(Rect2((size.x - 980.0) / 2.0, 250.0, 980.0, 62.0), Color(0.02, 0.025, 0.03, 0.55))
 		if node is AASite:
 			var site := node as AASite
 			var d := int(p.global_position.distance_to(site.global_position))
@@ -484,7 +495,8 @@ func _course_bar(p: Player, pos: Vector2) -> void:
 	var parts := PackedStringArray()
 	for c in conds:
 		parts.append(("✓" if c[1] else "") + String(c[0]))
-	_text(Vector2(pos.x, y + 36), "Связка придёт в следующем выборе!" if ready else " · ".join(parts), 15,
+	# свежий взгляд: длинный список условий переносится, а не вылезает за панель
+	_para(Vector2(pos.x, y + 36), "Связка придёт в следующем выборе!" if ready else " · ".join(parts), 460.0, 14,
 		Color(1.0, 0.9, 0.4) if ready else Color(0.85, 0.87, 0.92))
 
 

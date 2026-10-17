@@ -45,13 +45,12 @@ func behave(delta: float) -> void:
 	var side := Vector2(-dir.y, dir.x)
 	var slot := p.global_position - dir * _standoff + side * lane
 	var want := (slot - global_position)
-	var desired := want.angle()
+	# к своему месту в цепи, у места — плавно переходит в облёт (без скачка курса на границе)
+	var k := clampf((want.length() - 60.0) / 140.0, 0.0, 1.0)
+	var desired := (want.normalized() * k + side * _orbit * (1.0 - k)).angle()
 	if d < 220.0:
 		# слишком близко — отваливаем в сторону, не тараним
 		desired = (-dir + side * _orbit).angle()
-	elif want.length() < 90.0:
-		# на месте — кружим вокруг игрока
-		desired = (side * _orbit).angle()
 	heading = rotate_toward(heading, desired, deg_to_rad(Tuning.g("drone_turn")) * delta)
 	position += Vector2.from_angle(heading) * spd * delta
 	if _aim > 0.0:

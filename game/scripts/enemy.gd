@@ -33,6 +33,8 @@ var evade_t := 0.0
 var evade_time := 0.7
 var _evade_v := Vector2.ZERO
 var _evade_roll := 1.0
+## правка 3.5-s4 (п. 26): расталкивание сглажено и уходит в курс — враги не дёргаются и не слипаются
+var _sep := Vector2.ZERO
 
 
 func make_elite() -> void:
@@ -131,7 +133,12 @@ func _process(delta: float) -> void:
 		evade_t -= delta
 		position += _evade_v * delta * clampf(evade_t / evade_time * 1.6, 0.0, 1.0)
 	if not is_boss and not is_ground and Main.I.spawner != null:
-		position += Main.I.spawner.separation(self) * 220.0 * delta
+		_sep = _sep.lerp(Main.I.spawner.separation(self), 1.0 - exp(-delta * 5.0))
+		if _sep.length_squared() > 1e-4:
+			position += _sep * 150.0 * delta
+			# отвернуть от соседа, а не скользить боком — курс плавный, крен в 3D без дрожи
+			var fw := Vector2.from_angle(heading)
+			heading = rotate_toward(heading, (fw + _sep * 1.2).angle(), deg_to_rad(50.0) * delta)
 	_check_contact()
 	# Карта бесконечная: отставших далеко позади тихо убираем (без награды)
 	var p := Main.I.player
