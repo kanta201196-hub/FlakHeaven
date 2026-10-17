@@ -17,6 +17,7 @@ func _ready() -> void:
 	_add("dive", [KEY_V], [JOY_BUTTON_RIGHT_STICK], [], [MOUSE_BUTTON_MIDDLE]) # 3.5: «Нырок» (правка 29)
 	_add("sharp_turn", [KEY_E], [JOY_BUTTON_X])
 	_add("skill_2", [KEY_F], [JOY_BUTTON_B])
+	_add("wing_prio", [KEY_G], [])   # правка 3.5-s4: кого звено атакует первым
 	_add("toggle_scheme", [KEY_F2], []) # 3.4: без L3 — нажатие стика в бою случайно меняло схему
 	_add("cycle_tilt", [KEY_F9], []) # B-47: наклон камеры 28° / 35° / 45° / сверху — для теста вариантов
 	_add("toggle_tuning", [KEY_F1], [])

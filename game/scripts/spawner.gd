@@ -45,6 +45,17 @@ var _dealt_hist := PackedFloat32Array()   # сумма урона на кажд�
 var _dealt_tick := 0.0
 ## Сколько секунд ас должен выдерживать сосредоточенный огонь (по номеру волны асов)
 const BOSS_TTK := [25.0, 30.0, 35.0]
+
+## Правка 3.5-s4 «напряжение боя» (лог «Осы» 3.5-s3: урон игрока за минуту вырос в 900 раз, прочность врагов —
+## в 8; после 8-й минуты враги гибли, не долетев, прочность 100%). Спавнер следит, сколько живут сбитые
+## самолёты (с появления до гибели). Живут меньше эталона первых минут — новые прочнее; дольше — слабее (не ниже ×1).
+const PRESSURE_FROM := 240.0      # с 4:00
+const PRESSURE_STEP := 5.0
+const PRESSURE_MAX := 40.0
+var pressure_k := 1.0
+var _lives: Array = []            # [время гибели, сколько жил]
+var _life_ref := 0.0              # эталон: медиана жизни на 2:00–4:00
+var _press_t := 0.0
 const BUNKER_TTK := 9.0
 
 
@@ -77,6 +88,7 @@ func _process(delta: float) -> void:
 		_dealt_hist.append(dealt_total())
 		if _dealt_hist.size() > 120:
 			_dealt_hist = _dealt_hist.slice(_dealt_hist.size() - 61)
+	_pressure(t, delta)
 	# Ас каждые 5 минут
 	var due := int(t / Tuning.g("boss_every"))
 	if due > boss_wave:
@@ -154,6 +166,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(site)
 		activity_node = site
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
+		Hints.show("act_aa", "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости.", 9.0, 2)
 	elif kind_s == "convoy":
 		var cv := Convoy.new()
 		# колонна пересекает курс игрока впереди: маршрут через точку в 1 300 пикс. по курсу
@@ -163,6 +176,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(cv)
 		activity_node = cv
 		Main.I.show_banner("Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш", 4.0)
+		Hints.show("act_convoy", "Конвой: летите по оранжевой стрелке. Подбейте головную машину — колонна встанет. С каждого сожжённого грузовика падает груз: запчасти и ремкомплекты.", 9.0, 2)
 	elif kind_s == "transport":
 		var tr := Transport.new()
 		tr.setup(maxf(700.0 * hp_k, recent_dps() * TRANSPORT_TTK))
@@ -175,6 +189,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		tr.spawn_escort(3 + (1 if t > 480.0 else 0), hp_k)
 		activity_node = tr
 		Main.I.show_banner("Разведка: вражеский транспортник с прикрытием! Сбейте его — груз ваш", 4.0)
+		Hints.show("act_transport", "Транспортник летит через район и скоро уйдёт — розовая стрелка. Прикрытие отвлекает: бейте сам транспортник, груз падает с него.", 8.0, 2)
 	else:
 		var ace := RivalAce.new()
 		ace.setup(Tuning.g("rival_hp") * hp_k)
@@ -184,6 +199,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(ace)
 		activity_node = ace
 		Main.I.show_banner("Дуэль: вражеский ас заходит вам в хвост!", 4.0)
+		Hints.show("act_ace", "Дуэль с асом: он заходит в хвост. Сбросьте газ (S) или сделайте боевой разворот (E) — ас проскочит вперёд под вашу пушку.", 8.0, 2)
 	Main.I.sfx.play("boss", -8.0, 1.4)
 
 
@@ -203,7 +219,8 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	# 3.5: не меньше, чем урон игрока за BOSS_TTK секунд (щит +35% сверху — поэтому делим)
 	var ttk: float = BOSS_TTK[mini(wave - 1, BOSS_TTK.size() - 1)]
 	# U-05: на сложных операциях асы держатся дольше (половина множителя прочности — иначе бой с асом затягивается)
-	var hp_dps := recent_dps() * ttk / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
+	# правка 3.5-s4: ×1,3 — по асу бьёт всё сразу, урон по нему выше среднего за минуту (лог «Осы»: 10–33 с вместо 25–35)
+	var hp_dps := recent_dps() * ttk * 1.3 / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f)" % [wave, hp, hp_dps, recent_dps()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
@@ -282,7 +299,8 @@ func _place(e: Enemy, p: Player, ang: float, t: float) -> void:
 	var far := 1.0 + 0.5 * sin(deg_to_rad(Tuning.g("cam_tilt")))
 	e.position = p.global_position + Vector2.from_angle(ang) * randf_range(1150.0, 1350.0) * far
 	Main.I.world.add_child(e)
-	e.apply_hp_mult(hp_mult() * hp_ramp(t))
+	e.apply_hp_mult(hp_mult() * hp_ramp(t) * pressure_k)
+	e.born_t = t
 	# 2.8: с 10-й минуты — элитные варианты (прочнее ×3, крупнее, больше опыта)
 	# 3.1: элитные — с 6:00 и чаще (до 30%)
 	if t > 360.0 and randf() < clampf((t - 360.0) / 1500.0, 0.0, 0.3):
@@ -292,3 +310,52 @@ func _place(e: Enemy, p: Player, ang: float, t: float) -> void:
 ## 2.8: прочность растёт со временем, после 5:00 — быстрее (+8% в минуту сверху)
 static func hp_ramp(t: float) -> float:
 	return (1.0 + t / 450.0) * (1.0 + maxf(0.0, t - 300.0) / 60.0 * 0.08)
+
+
+## Сбит обычный самолёт — запомнить, сколько он прожил
+func note_kill(e: Enemy) -> void:
+	if e.born_t < 0.0 or e.is_boss or e.is_ground or e.no_despawn:
+		return
+	var t := Main.I.run_time
+	_lives.append([t, t - e.born_t])
+	if _lives.size() > 400:
+		_lives = _lives.slice(_lives.size() - 300)
+
+
+func _median_life(from_t: float, to_t: float) -> float:
+	var a := PackedFloat32Array()
+	for l in _lives:
+		if float(l[0]) >= from_t and float(l[0]) <= to_t:
+			a.append(float(l[1]))
+	if a.size() < 8:
+		return -1.0
+	a.sort()
+	return a[a.size() / 2]
+
+
+func _pressure(t: float, delta: float) -> void:
+	if t < PRESSURE_FROM:
+		return
+	if _life_ref <= 0.0:
+		_life_ref = _median_life(120.0, PRESSURE_FROM)
+		if _life_ref <= 0.0:
+			_life_ref = 6.0
+		_life_ref = clampf(_life_ref, 4.0, 10.0)
+	_press_t -= delta
+	if _press_t > 0.0:
+		return
+	_press_t = PRESSURE_STEP
+	var life := _median_life(t - 30.0, t)
+	if life <= 0.0:
+		return
+	# эталон чуть растёт к концу вылета: поздние враги держатся дольше ранних
+	var target := _life_ref * lerpf(1.0, 1.3, clampf((t - PRESSURE_FROM) / 600.0, 0.0, 1.0))
+	pressure_k = clampf(pressure_k * clampf(pow(target / life, 0.6), 0.9, 1.2), 1.0, PRESSURE_MAX)
+	if OS.get_cmdline_user_args().has("--autotest") and int(t) % 60 < int(PRESSURE_STEP):
+		print("AUTOTEST: pressure %.0f s: life %.1f / target %.1f, k %.2f" % [t, life, target, pressure_k])
+	Main.I.tele.maxv("pressure_max", pressure_k)
+
+
+## Правка 3.5-s4: урон врагов растёт после 7:00 (к 15:00 — ×2, к 20:00 — ×2,6), иначе поздний бой не опасен
+static func dmg_ramp(t: float) -> float:
+	return 1.0 + maxf(0.0, t - 420.0) / 480.0
