@@ -83,7 +83,25 @@ func _process(_delta: float) -> void:
 
 
 ## Объект клетки (или пусто): одинаковый для одной и той же клетки.
+## Тест 3.5-s4 (п. 20): поправка места объекта по рельефу (Terrain3D.fix_object — не в реке);
+## задаёт 3D-рельеф, без него объекты стоят как выпали. Результат с поправкой кэшируется
+var place_filter := Callable()
+var _placed := {}
+
+
 func chunk_object(cx: int, cy: int) -> Dictionary:
+	if not place_filter.is_valid():
+		return _chunk_object_raw(cx, cy)
+	var key := Vector2i(cx, cy)
+	if not _placed.has(key):
+		if _placed.size() > 4000:
+			_placed.clear()
+		var o := _chunk_object_raw(cx, cy)
+		_placed[key] = o if o.is_empty() else place_filter.call(o)
+	return _placed[key]
+
+
+func _chunk_object_raw(cx: int, cy: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(Vector2i(cx, cy)) ^ 0x0b1e
 	if _names.is_empty() or rng.randf() > OBJ_CHANCE:
