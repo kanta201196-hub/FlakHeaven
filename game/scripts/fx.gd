@@ -176,6 +176,11 @@ func zap(from: Vector2, to: Vector2) -> void:
 	zaps.append({"a": from, "b": to, "life": 0.12})
 
 
+## U-08: луч (рельсотрон, прицельная линия): гаснет за life
+func beam(from: Vector2, to: Vector2, color: Color, width: float, life: float) -> void:
+	zaps.append({"a": from, "b": to, "life": life, "max": life, "c": color, "w": width})
+
+
 func text(pos: Vector2, s: String, color := Color(1, 1, 1)) -> void:
 	numbers.append({"p": pos, "t": s, "life": 1.2, "c": color, "size": 22})
 
@@ -310,7 +315,10 @@ func _draw() -> void:
 		c3.a = a2
 		draw_string(Hud.ui_font(), n["p"], n["t"], HORIZONTAL_ALIGNMENT_CENTER, -1, int(n["size"]), c3)
 	for z in zaps:
-		draw_line(z["a"], z["b"], Color(0.8, 0.95, 1.0, 0.9), 2.0)
+		var zc: Color = z.get("c", Color(0.8, 0.95, 1.0, 0.9))
+		if z.has("max"):
+			zc.a *= clampf(float(z["life"]) / float(z["max"]), 0.0, 1.0)
+		draw_line(z["a"], z["b"], zc, float(z.get("w", 2.0)))
 	for fl in flares:
 		var k := clampf(float(fl["life"]) / float(fl["max"]), 0.0, 1.0)
 		var tr: PackedVector2Array = fl["trail"]

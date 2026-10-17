@@ -310,6 +310,8 @@ func _loadout_strip(p: Player, size: Vector2) -> void:
 			ctrl.draw_set_transform(Vector2(x + 26, y + 39), 0.0, Vector2(k, k))
 			ctrl.draw_texture(t, -t.get_size() / 2.0)
 			ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		else:   # U-08: у экспериментального оружия пока нет картинки — значок
+			CardIcons.draw(ctrl, Vector2(x + 26, y + 39), 36.0, hp.weapon, Color(0.6, 0.85, 1.0))
 		_text(Vector2(x + 50, y + 24), Weapons.DEFS[hp.weapon]["short"], 15, Color(0.92, 0.9, 0.84))
 		_text(Vector2(x + 50, y + 42), "×%d" % hp.slots, 13, Color(0.62, 0.62, 0.56))
 		for i in Weapons.MAX_LEVEL:
