@@ -39,7 +39,7 @@ func label() -> String:
 		return "%s: пусто%s" % [name, " (экспериментальное оружие)" if heavy else ""]
 	var s := "%s ×%d: %s ур. %d" % [name, slots, Weapons.DEFS[weapon]["short"], level]
 	if evo:
-		s = "%s ×%d: %s (Э%s)" % [name, slots, Prog.EVOS[weapon]["title"], ("+%d" % evo_plus) if evo_plus > 0 else ""]
+		s = "%s ×%d: %s (Э%s)" % [name, slots, evo_title(), ("+%d" % evo_plus) if evo_plus > 0 else ""]
 	if bonus > 0.0:
 		s += " (+%d%%)" % int(round(bonus * 100.0))
 	if uses_trigger() and trigger == "button":
@@ -54,7 +54,7 @@ func uses_trigger() -> bool:
 func dmg() -> float:
 	var base: float = Weapons.DEFS[weapon]["dmg"] * (1.0 + bonus) * _owner_k()
 	if evo:
-		var ek := (1.0 + bonus) * _owner_k() * (1.0 + 0.08 * evo_plus)
+		var ek := (1.0 + bonus) * _owner_k() * (1.0 + 0.08 * evo_plus) * _evo_k("dmg")
 		match weapon:
 			"aam":
 				return 120.0 * ek # «Шмель»: тяжёлая ракета; при попадании ещё 4 БЧ по 40
@@ -92,7 +92,7 @@ func reload_time(p: Player) -> float:
 				base = 0.12
 			"bombs":
 				base = 4.0
-		k *= pow(0.96, evo_plus)
+		k *= pow(0.96, evo_plus) * _evo_k("cd")
 	match weapon:
 		"aam":
 			if not evo:
@@ -122,6 +122,20 @@ func reload_time(p: Player) -> float:
 	return base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd")
 
 
+## U-07: множитель модернизации от ступени 3 ветки (только самолёт ур. 2)
+func _evo_k(key: String) -> float:
+	var p := Main.I.player if Main.I != null else null
+	if not evo or p == null:
+		return 1.0
+	return Profile.evo_k(weapon, key, p.plane_lvl)
+
+
+func evo_title() -> String:
+	var p := Main.I.player if Main.I != null else null
+	var v := Profile.evo_variant(weapon, p.plane_lvl if p != null else 1)
+	return String(Prog.EVOS[weapon]["title"]) + ("" if v == "" else " · " + v)
+
+
 ## Множители урона от класса самолёта и связок (2.8)
 func _owner_k() -> float:
 	var p := Main.I.player if Main.I != null else null
@@ -138,7 +152,7 @@ func _owner_k() -> float:
 
 
 func range_px() -> float:
-	var base: float = Weapons.DEFS[weapon]["range"]
+	var base: float = Weapons.DEFS[weapon]["range"] * _evo_k("range")
 	var p := Main.I.player if Main.I != null else null
 	if p != null:
 		if weapon == "turret":
@@ -153,9 +167,9 @@ func range_px() -> float:
 		if weapon == "aam":
 			base *= float(p.mods.get("msl_lock", 1.0)) # «Ракетный двигатель»: дальность захвата
 		if evo and weapon == "gunpod":
-			return 520.0 * p.mods["servo_range"]
+			return 520.0 * p.mods["servo_range"] * _evo_k("range")
 		if evo and weapon == "flares":
-			return 360.0
+			return 360.0 * _evo_k("range")
 	match weapon:
 		"flares", "emp", "laser", "plasma":
 			return base * (1.0 + 0.08 * (level - 1))

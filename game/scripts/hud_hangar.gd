@@ -143,10 +143,10 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		_text(Vector2(lx + 60, y + 30), String(Weapons.DEFS[w]["short"]), 18, Color.WHITE if on else Color(0.85, 0.88, 0.95))
 		var marks := ""
-		for tier in [1, 2]:
+		for tier in [1, 2, 3]:
 			var st := Profile.tier_state(w, tier)
 			marks += ("●" if st != "" and st != "?" else "○") + " "
-		_text(Vector2(lx + 60, y + 54), marks + "○", 15, Menu.C_AMBER)
+		_text(Vector2(lx + 60, y + 54), marks, 15, Menu.C_AMBER)
 		y += 80.0
 	var w2 := m.hangar_w
 	var rx := lx + 340.0
@@ -175,15 +175,16 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 	_text(Vector2(rx, area.position.y + 24), "%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)" % Weapons.DEFS[w2]["title"], 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
 	for tier in [1, 2, 3]:
-		_text(Vector2(rx, yy + 20), "Ступень %d" % tier, 18, Color.WHITE)
-		if tier == 3:
-			_panel(Rect2(rx, yy + 32, rw, 90), false)
-			_text(Vector2(rx + 20, yy + 84), "Особенность оружия — в разработке", 17, Color(0.6, 0.62, 0.68))
-			break
+		_text(Vector2(rx, yy + 20), "Ступень %d%s" % [tier, " — вариант модернизации (действует на самолёте ур. 2)" if tier == 3 else ""], 18, Color.WHITE)
 		var st2 := Profile.tier_state(w2, tier)
-		var locked: bool = tier == 2 and Profile.tier_state(w2, 1) == ""
+		var locked: bool = (tier == 2 and Profile.tier_state(w2, 1) == "") or (tier == 3 and not Profile.tier3_open(w2))
+		var why := "сначала выберите ступень %d" % (tier - 1)
+		if tier == 3 and Profile.tier_state(w2, 2) != "" and not Campaign.cleared(1):
+			why = "откроется после операции 2 «Сухое русло»"
+		if tier == 3 and not Profile.WBRANCH3.has(w2):
+			break
 		for oi in 2:
-			var opt: Array = Profile.WBRANCH[w2][tier - 1][oi]
+			var opt: Array = Profile.WBRANCH[w2][tier - 1][oi] if tier < 3 else Profile.WBRANCH3[w2][oi]
 			var key := "a" if oi == 0 else "b"
 			var r2 := Rect2(rx + oi * (rw / 2.0 + 5), yy + 32, rw / 2.0 - 5, 120)
 			var picked := st2 == key
@@ -193,7 +194,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			_text(Vector2(r2.position.x + 18, r2.position.y + 32), String(opt[0]), 19, Color(0.6, 1.0, 0.7) if picked else Color.WHITE)
 			_text(Vector2(r2.position.x + 18, r2.position.y + 60), String(opt[1]), 15, Color(0.8, 0.84, 0.9))
 			if locked:
-				_text(Vector2(r2.position.x + 18, r2.position.y + 98), "сначала выберите ступень 1", 14, Color(0.6, 0.62, 0.68))
+				_text(Vector2(r2.position.x + 18, r2.position.y + 98), why, 14, Color(0.6, 0.62, 0.68))
 			elif st2 == "?":
 				_button(Rect2(r2.position.x + 18, r2.position.y + 74, 200, 38), "ВЫБРАТЬ (оплачено)", "hg:tier:%s:%d:%s" % [w2, tier, key], 14)
 			elif st2 == "":
