@@ -19,7 +19,7 @@ var mods := {
 	"speed": 1.0, "turn": 1.0, "gun_dmg": 1.0, "gun_rate": 1.0, "hp_cd": 1.0, "pickup": 1.0,
 	"roll_cd": 0.0, "roll_time": 0.0, "ab_time": 0.0, "ab_cd": 0.0, "s3_cd": 1.0, "s3_lvl": 0,
 	"dmg_all": 1.0, "hp_dmg": 0.0,
-	"missile_dmg": 1.0, "missile_spd": 1.0, "blast_r": 1.0, "servo_rate": 1.0, "servo_range": 1.0,
+	"missile_dmg": 1.0, "missile_spd": 1.0, "blast_r": 1.0, "servo_rate": 1.0, "servo_range": 1.0, "turret_traverse": 1.0,
 	"wing_dmg": 1.0, "wing_hp": 1.0,
 	"blast_dmg": 1.0, "twin": 0.0, "cluster_dmg": 0.0,
 	"man_cd": 1.0, "taken_k": 1.0, "ground_dmg": 1.0, "turret_dmg": 1.0, "turret_rate": 1.0,
@@ -455,26 +455,40 @@ func on_bullet_miss() -> void:
 
 
 ## 3.5 (правка 29): глубина нырка 0…1 — плавный спуск и подъём (по 40% времени нырка, без рывка)
+## Правка 3.5-s4 (п. 19): нырок плавнее — спуск и подъём по кривой без рывков в начале и в конце
+## (smootherstep), каждый — 45% длительности; тангаж — по скорости спуска, нос опускается и поднимается постепенно
+const DIVE_EDGE := 0.45
+
+
+static func _ss(x: float) -> float:
+	x = clampf(x, 0.0, 1.0)
+	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0)
+
+
+static func _dss(x: float) -> float:   # производная _ss, нормирована к 1 в середине
+	x = clampf(x, 0.0, 1.0)
+	return 16.0 * x * x * (1.0 - x) * (1.0 - x)
+
+
 func dive_k() -> float:
 	if dive_t <= 0.0:
 		return 0.0
 	var dur := Tuning.g("dive_time")
-	var gone := dur - dive_t
-	var edge := dur * 0.4
-	return smoothstep(0.0, edge, gone) * smoothstep(0.0, edge, dive_t)
+	var edge := dur * DIVE_EDGE
+	return _ss((dur - dive_t) / edge) * _ss(dive_t / edge)
 
 
-## Тангаж в нырке: -1 нос вниз на спуске … +1 нос вверх на подъёме
+## Тангаж в нырке: +1 нос вниз на спуске … −1 нос вверх на подъёме
 func dive_pitch() -> float:
 	if dive_t <= 0.0:
 		return 0.0
 	var dur := Tuning.g("dive_time")
+	var edge := dur * DIVE_EDGE
 	var gone := dur - dive_t
-	var edge := dur * 0.4
 	if gone < edge:
-		return sin(gone / edge * PI)
+		return _dss(gone / edge)
 	if dive_t < edge:
-		return -sin(dive_t / edge * PI)
+		return -_dss(dive_t / edge)
 	return 0.0
 
 

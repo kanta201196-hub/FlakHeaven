@@ -303,7 +303,9 @@ func _process(delta: float) -> void:
 		var f := clampf(player.velocity.length() / maxf(player.cruise_speed(), 1.0), 0.5, 1.8)
 		var z := Tuning.g("camera_zoom") / lerpf(1.0, player.size, 0.35) / (1.0 + maxf(0.0, f - 1.0) * 0.3)
 		camera.zoom = camera.zoom.lerp(Vector2(z, z), 1.0 - exp(-delta * 3.0))
-		sfx.set_engine(player.velocity.length() / player.cruise_speed(), player.hp > 0.0 and state == "playing")
+		_ab_snd = move_toward(_ab_snd, 1.0 if player.ab_t > 0.0 else 0.0, delta * 3.0)
+		sfx.set_engine(player.velocity.length() / player.cruise_speed(), player.hp > 0.0 and state == "playing",
+			_ab_snd, player.cls_id == "bomber" and player.plane_lvl <= 1, delta)
 	else:
 		sfx.set_engine(0.0, false)
 
@@ -432,6 +434,7 @@ func change_course() -> void:
 
 
 var _slow_t := 0.0
+var _ab_snd := 0.0   # форсаж для гула двигателя (плавно 0…1)
 
 
 ## Замедление времени (открытие связки) — срабатывает, когда игра снова идёт

@@ -281,12 +281,37 @@ func roller_ring(n: int) -> void:
 	Main.I.sfx.play("rocket_launch", -8.0, 1.4)
 
 
+## Правка 3.5-s4 (п. 12): залп ловушек — каскад: первая волна сразу, ещё 4 волны через 0,3 с,
+## веером то влево, то вправо («крылья ангела»); каждая волна тоже сбивает ракеты рядом.
+const SALVO_TIME := 1.5
+const SALVO_IV := 0.3
+var _salvo_next := -1.0
+
+
+func salvo_waves() -> void:
+	if pl.salvo_t <= 0.0 or _salvo_next < 0.0 or pl.salvo_t > _salvo_next:
+		return
+	_salvo_next -= SALVO_IV
+	if _salvo_next < 0.05:
+		_salvo_next = -1.0
+	var side := 1.0 if int(round(pl.salvo_t / SALVO_IV)) % 2 == 0 else -1.0
+	Main.I.fx.flare_burst(pl.global_position, pl.heading + side * 0.35, 8, pl.velocity, 1.35, 2.6)
+	var n := 0
+	for i in 4:
+		if Main.I.projectiles.intercept_missile_at(pl.global_position, Player.SALVO_R, true) == null:
+			break
+		n += 1
+	Main.I.stats_add_counter("intercepted", n)
+	Main.I.sfx.play("flare", -10.0, 1.2)
+
+
 func _flare_salvo() -> void:
 	pl.roll_cd = maxf(3.0, (Tuning.g("roll_cd") + pl.mods["roll_cd"]) * float(pl.cls.get("roll_cd_k", 1.0)) * float(pl.mods["man_cd"]))
-	pl.salvo_t = 0.6
+	pl.salvo_t = SALVO_TIME
+	_salvo_next = SALVO_TIME - SALVO_IV
 	Main.I.tele.add("roll_uses")
 	Main.I.tele.add("flare_salvos")
-	Main.I.fx.flare_burst(pl.global_position, pl.heading, 14, pl.velocity, 1.6)
+	Main.I.fx.flare_burst(pl.global_position, pl.heading, 16, pl.velocity, 1.6, 2.6)
 	var n := 0
 	for i in 12:
 		if Main.I.projectiles.intercept_missile_at(pl.global_position, Player.SALVO_R, true) == null:

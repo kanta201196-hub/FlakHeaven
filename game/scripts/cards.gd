@@ -380,7 +380,7 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 		"frag":
 			return "+%s радиуса всех взрывов" % _pct(0.1 * k)
 		"servo":
-			return "Гондола и турели: +%s темпа, +%s дальности" % [_pct(0.1 * k), _pct(0.06 * k)]
+			return "Гондола и турели: +%s темпа, +%s дальности; турели наводятся на %s быстрее" % [_pct(0.1 * k), _pct(0.06 * k), _pct(0.25 * k)]
 		"warhead":
 			return "+%s урона всех взрывов (залпы ракет, бомбы, осколки ракет, навыки)" % _pct(0.12 * k)
 		"msl_head":
@@ -740,6 +740,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 				"servo":
 					p.mods["servo_rate"] *= 1.0 + 0.1 * k
 					p.mods["servo_range"] *= 1.0 + 0.06 * k
+					p.mods["turret_traverse"] *= 1.0 + 0.25 * k
 				"warhead":
 					p.mods["blast_dmg"] *= 1.0 + 0.12 * k
 				"msl_head":
