@@ -47,7 +47,10 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	if m.run_time > 180.0 and m.state == "playing":
 		return
 	var hint := "Мышь — куда лететь · Space — уклонение · Shift — форсаж · E — навык · Tab — пауза" + (" · F5/F6/F7 — отладка" if Main.DEBUG else "")
-	_text(Vector2(0, size.y - 20), hint, 15, Color(0.75, 0.78, 0.85, 0.8), HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	# свежий взгляд: без плашки строка клавиш терялась на песке
+	var hw := ui_font().get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 32.0
+	ctrl.draw_rect(Rect2((size.x - hw) / 2.0, size.y - 38.0, hw, 28.0), Color(0.02, 0.025, 0.03, 0.62))
+	_text(Vector2(0, size.y - 18), hint, 16, Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 
 
 ## U-02: подсказка новичку — рамка над нижней строкой клавиш
@@ -128,7 +131,7 @@ func _left_panel(m: Main, p: Player) -> void:
 	if p.s3_cd <= 0.0 and p.s3_active() <= 0.0 and note != "":
 		_text(Vector2(x, y + 12), "E — " + note, 14, Color(0.7, 0.8, 0.9))
 	if p.manual_mode:
-		_text(Vector2(x + pw, y + 12), "Пушка: ручной +%d%% [Q]" % int(round(p.manual_bonus * 100.0)), 14, Color(1.0, 0.82, 0.35), HORIZONTAL_ALIGNMENT_RIGHT, -1)
+		_text(Vector2(x, y + 12), "Пушка: ручной +%d%% [Q]" % int(round(p.manual_bonus * 100.0)), 14, Color(1.0, 0.82, 0.35), HORIZONTAL_ALIGNMENT_RIGHT, pw)
 	y += 20.0
 	if p.wingmen.size() > 0:
 		var wl := PackedStringArray()
