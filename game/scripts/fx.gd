@@ -191,7 +191,15 @@ func hit_spark(pos: Vector2, color := Color(1, 1, 0.8)) -> void:
 
 
 func number(pos: Vector2, dmg: float) -> void:
+	if numbers.size() > 120:   # поздний бой: сотни попаданий в секунду — старые цифры уходят
+		numbers.pop_front()
 	numbers.append({"p": pos, "t": str(int(round(dmg))), "life": 0.6, "c": Color(1, 1, 1), "size": 16})
+
+
+## Правка 3.5-s4: с наклонной камерой цифры и надписи рисует интерфейс (HudFlight._fx_texts) поверх 3D —
+## на плоскости боя они мельчили, мылились текстурой слоя и терялись под моделями
+static func texts_in_hud() -> bool:
+	return Render3D.I != null and Render3D.enabled and Render3D.I.tilt_on()
 
 
 func _tick(arr: Array, delta: float) -> void:
@@ -309,7 +317,7 @@ func _draw() -> void:
 		var p: Vector2 = s3["p"]
 		var v: Vector2 = s3["v"]
 		draw_line(p, p - v * 0.03, c2, 2.0)
-	for n in numbers:
+	for n in ([] if texts_in_hud() else numbers):
 		var a2 := clampf(float(n["life"]) * 2.0, 0.0, 1.0)
 		var c3: Color = n["c"]
 		c3.a = a2

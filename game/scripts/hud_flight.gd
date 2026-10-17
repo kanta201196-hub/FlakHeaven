@@ -22,6 +22,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	_right_panel(m, size)
 	if is_instance_valid(p) and m.state == "playing":
 		_loadout_strip(p, size)
+	_fx_texts(m)
 	_boss_bars(m, size)
 	_threat_markers(size)
 	if m.state == "playing":
@@ -386,3 +387,21 @@ func _course_bar(p: Player, pos: Vector2) -> void:
 ## Мир → экран: с наклонной камерой (B-47) через 3D-камеру, иначе через 2D-трансформ
 func _ws(xf: Transform2D, p: Vector2) -> Vector2:
 	return Render3D.I.world_to_screen(p, xf * p) if Render3D.I != null else xf * p
+
+
+## Правка 3.5-s4: цифры урона и надписи боя («Сбит с хвоста!», «АС СБИТ!») — в экранных координатах
+## над точкой мира, с обводкой; размер не зависит от высоты камеры и качества слоя боя
+func _fx_texts(m: Main) -> void:
+	if m.fx == null or not Fx.texts_in_hud():
+		return
+	var xf := m.get_viewport().get_canvas_transform()
+	var f := Hud.ui_font()
+	for n in m.fx.numbers:
+		var a := clampf(float(n["life"]) * 2.0, 0.0, 1.0)
+		var c: Color = n["c"]
+		c.a = a
+		var sz := int(n["size"]) + 4
+		var s: String = n["t"]
+		var sp := _ws(xf, n["p"]) - Vector2(f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x / 2.0, 0.0)
+		ctrl.draw_string_outline(f, sp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, 4, Color(0, 0, 0, 0.7 * a))
+		ctrl.draw_string(f, sp, s, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, c)
