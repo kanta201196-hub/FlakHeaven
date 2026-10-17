@@ -220,7 +220,7 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	var ttk: float = BOSS_TTK[mini(wave - 1, BOSS_TTK.size() - 1)]
 	# U-05: на сложных операциях асы держатся дольше (половина множителя прочности — иначе бой с асом затягивается)
 	# правка 3.5-s4: ×1,3 — по асу бьёт всё сразу, урон по нему выше среднего за минуту (лог «Осы»: 10–33 с вместо 25–35)
-	var hp_dps := recent_dps() * ttk * 1.3 / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
+	var hp_dps := recent_dps() * ttk * 1.6 / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f)" % [wave, hp, hp_dps, recent_dps()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые

@@ -7,6 +7,16 @@ extends Enemy
 ## 3.5: асы сопротивляются: уходят рывком с бочкой из-под очередей, отстреливают тепловые ловушки
 ## против наших ракет, сбрасывают с хвоста резким отворотом, «Почтальон» сам заходит в атаку.
 ## Прочность — не меньше урона игрока за 25–35 с (считает спавнер), ниже половины — злее (чаще атаки и манёвры).
+## Правка 3.5-s4 (п. 25, отчёт с «Кита»): скорость от крейсерской игрока — ас не отстаёт; «Сквозняк» заходит
+## сбоку-сзади, бьёт на встречном курсе и уходит отворотом с набором скорости (не таранит); «Почтальон» чаще
+## заходит в атаку и после неё уходит; оба чаще уклоняются; живут не меньше 26 с; говорят по радио.
+
+const LINES := {
+	"spawn": ["Вижу цель. Работаем.", "Ты в моём небе, новичок.", "Звено, не мешать — этот мой."],
+	"run": ["Захожу!", "Держись, сейчас прошью!", "Атакую!"],
+	"angry": ["Ах ты… Ну держись!", "Повреждения! Злее будем.", "Теперь без шуток."],
+	"down": ["Подбит! Катапультируюсь!", "Горю… выхожу из боя!"],
+}
 
 var variant := "carrier"
 var title := ""
@@ -20,7 +30,7 @@ var _lock := 0.0
 var _shots := 0
 var _shot_t := 0.0
 var _orbit := 1.0
-var _mode := "attack"   # у «Сквозняка»: заход / отворот
+var _mode := "setup"    # у «Сквозняка»: выход на позицию / атака / отворот
 var _mode_t := 0.0
 var _break_dir := 0.0
 # 3.5: сопротивление
@@ -33,6 +43,9 @@ var _run := false        # «Почтальон»: заход в атаку
 var _run_cd := 6.0
 var _run_t := 0.0
 var _run_shot := 0.0
+var _said_angry := false
+var _say_t := 0.0
+var _side := 1.0          # «Сквозняк»: с какой стороны заходит
 
 
 func setup(v: String, hp_total: float) -> void:
@@ -52,11 +65,30 @@ func setup(v: String, hp_total: float) -> void:
 	title = "Ас «Почтальон»" if v == "carrier" else "Ас «Сквозняк»"
 	_orbit = 1.0 if randf() < 0.5 else -1.0
 	_born = Main.I.run_time
-	min_life = 16.0   # правка 3.5-s4
+	min_life = 26.0   # правка 3.5-s4 (было 16 — в логе «Кита» асы жили 10–47 с)
+	_side = _orbit
 
 
 func kind() -> String:
 	return "асы"
+
+
+func _ready() -> void:
+	super()
+	say("spawn")
+
+
+func say(key: String) -> void:
+	if _say_t > 0.0 and key != "down":
+		return
+	_say_t = 6.0
+	var arr: Array = LINES[key]
+	Main.I.radio(title.trim_prefix("Ас "), arr[randi() % arr.size()])
+
+
+## Скорость аса от крейсерской игрока (k — доля), не ниже base
+func _spd(base: float, k: float, p: Player) -> float:
+	return maxf(base, p.cruise_speed() * k)
 
 
 ## Спавнер не умножает прочность асов — она задаётся в setup().
@@ -82,10 +114,15 @@ func behave(delta: float) -> void:
 	_since_hit += delta
 	if _since_hit > 4.0 and shield < shield_max:
 		shield = minf(shield_max, shield + shield_max * 0.15 * delta)
+	_say_t -= delta
 	var p := Main.I.player
 	if p == null or p.hp <= 0.0:
 		position += Vector2.from_angle(heading) * 200.0 * delta
 		return
+	if not _said_angry and angry() < 1.0:
+		_said_angry = true
+		_say_t = 0.0
+		say("angry")
 	if variant == "carrier":
 		_behave_carrier(delta, p)
 	else:
@@ -111,8 +148,8 @@ func _resist(delta: float, p: Player) -> void:
 	if threat == Vector2.ZERO:
 		threat = player_aiming(7.0, 650.0)
 	if threat != Vector2.ZERO:
-		start_evade(threat, 300.0 if variant == "interceptor" else 280.0, 0.75)
-		_evade_cd = randf_range(1.8, 2.8) * angry()
+		start_evade(threat, 380.0 if variant == "interceptor" else 340.0, 0.75)
+		_evade_cd = randf_range(1.2, 2.0) * angry()
 		return
 	# игрок сел на хвост — резкий отворот с бочкой
 	if p.on_tail() and p.tail_target == self:
@@ -127,6 +164,7 @@ func _resist(delta: float, p: Player) -> void:
 
 
 func _die() -> void:
+	say("down")
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: boss %s down in %.1f s (hp %.0f)" % [variant, Main.I.run_time - _born, max_hp])
 	super()
@@ -141,16 +179,18 @@ func _behave_carrier(delta: float, p: Player) -> void:
 	elif d < 700.0:
 		desired = to.angle() + PI / 2.0 * _orbit
 	# 3.5: заход в атаку — разгон на игрока, очереди крупными пулями в лоб, отворот у 280 пикс.
-	var spd := 230.0
+	var spd := _spd(230.0, 0.9, p)
 	_run_cd -= delta
 	if not _run and _run_cd <= 0.0 and d < 1000.0 and _lock <= 0.0:
 		_run = true
 		_run_t = 0.0
 		Main.I.sfx.play("lock", -6.0, 0.6)
+		say("run")
 	if _run:
 		_run_t += delta
-		desired = to.angle()
-		spd = 380.0
+		# упреждение: заходит туда, где игрок будет
+		desired = (to + p.velocity * clampf(d / 700.0, 0.0, 0.8)).angle()
+		spd = _spd(380.0, 1.3, p)
 		_run_shot -= delta
 		var off := absf(wrapf(to.angle() - heading, -PI, PI))
 		if _run_shot <= 0.0 and off < 0.35 and d < 700.0:
@@ -159,12 +199,13 @@ func _behave_carrier(delta: float, p: Player) -> void:
 				var dj := Vector2.from_angle(heading).rotated((j - 1) * 0.09)
 				Main.I.projectiles.spawn_enemy_bullet(global_position + dj * radius, dj * 480.0, kind(), true)
 			Main.I.sfx.play("enemy_fire", -9.0, 0.5)
-		if d < 280.0 or _run_t > 4.0:
+		if d < 300.0 or _run_t > 4.0:
 			_run = false
-			_run_cd = randf_range(7.0, 9.0) * angry()
+			_run_cd = randf_range(5.0, 7.0) * angry()
 			_orbit = -_orbit
-			heading += _orbit * deg_to_rad(60.0)
-	heading = rotate_toward(heading, desired, deg_to_rad(95.0 if _run else 70.0) * delta)
+			# уход после атаки: рывок с бочкой в сторону от курса игрока
+			start_evade(to, 360.0, 0.8)
+	heading = rotate_toward(heading, desired, deg_to_rad(110.0 if _run else 80.0) * delta)
 	position += Vector2.from_angle(heading) * _speed(spd, d, p) * delta
 	# Залп ракет после захвата
 	if _lock > 0.0:
@@ -196,21 +237,37 @@ func _behave_carrier(delta: float, p: Player) -> void:
 
 
 func _behave_interceptor(delta: float, p: Player) -> void:
-	# Заходы на атаку с отворотом: очередь из 5 пуль → отворот 2,5 с → новый заход.
-	# В отвороте он подставляет хвост — окно, чтобы оторваться или сесть ему на хвост.
+	# Правка 3.5-s4: заход сбоку-сзади («setup») → атака на сближении с упреждением и очередями («attack»)
+	# → отворот с набором скорости («break»), потом заход с другой стороны. Не таранит: отворот за 330 пикс.
 	var to := p.global_position - global_position
 	var d := to.length()
+	var pf := Vector2.from_angle(p.heading)
 	_mode_t += delta
-	if _mode == "attack":
-		heading = rotate_toward(heading, to.angle(), deg_to_rad(80.0) * delta)
-		if d < 300.0:
-			_boss_break(to)
-	else:
-		heading = rotate_toward(heading, _break_dir, deg_to_rad(90.0) * delta)
-		if _mode_t > 2.5:
-			_mode = "attack"
-			_mode_t = 0.0
-	position += Vector2.from_angle(heading) * _speed(320.0, d, p) * delta
+	var spd := _spd(320.0, 1.05, p)
+	match _mode:
+		"setup":
+			var spot := p.global_position + (-pf).rotated(_side * deg_to_rad(50.0)) * 750.0
+			var ts := spot - global_position
+			heading = rotate_toward(heading, ts.angle(), deg_to_rad(100.0) * delta)
+			spd = _spd(320.0, 1.15, p)
+			if ts.length() < 220.0 or _mode_t > 3.5:
+				_mode = "attack"
+				_mode_t = 0.0
+				say("run")
+		"attack":
+			var lead := to + p.velocity * clampf(d / 900.0, 0.0, 0.6)
+			heading = rotate_toward(heading, lead.angle(), deg_to_rad(95.0) * delta)
+			spd = _spd(360.0, 1.35, p)
+			if d < 330.0 or _mode_t > 5.0:
+				_boss_break(to)
+		_:
+			heading = rotate_toward(heading, _break_dir, deg_to_rad(120.0) * delta)
+			spd = _spd(360.0, 1.4, p)
+			if _mode_t > 1.6:
+				_mode = "setup"
+				_mode_t = 0.0
+				_side = -_side
+	position += Vector2.from_angle(heading) * _speed(spd, d, p) * delta
 	if _shots > 0:
 		_shot_t -= delta
 		if _shot_t <= 0.0:
@@ -227,9 +284,9 @@ func _behave_interceptor(delta: float, p: Player) -> void:
 	else:
 		_a_cd -= delta
 		var off := absf(wrapf(to.angle() - heading, -PI, PI))
-		if _mode == "attack" and _a_cd <= 0.0 and d < 700.0 and off < 0.5:
-			_lock = 0.4
-			_a_cd = 1.6 * angry()
+		if _mode == "attack" and _a_cd <= 0.0 and d < 750.0 and off < 0.5:
+			_lock = 0.3
+			_a_cd = 1.2 * angry()
 	# Вызов звена
 	_b_cd -= delta
 	if _b_cd <= 0.0:
