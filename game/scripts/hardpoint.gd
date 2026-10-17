@@ -40,7 +40,7 @@ func label() -> String:
 	if bonus > 0.0:
 		s += " (+%d%%)" % int(round(bonus * 100.0))
 	if uses_trigger() and trigger == "button":
-		s += " [ПКМ]"
+		s += " [прав. кн. мыши]"
 	return s
 
 

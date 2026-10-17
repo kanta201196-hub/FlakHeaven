@@ -87,14 +87,14 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		var tr2 := Rect2(lx + 130 + ti * 100, area.position.y + 392, 92, 30)
 		var on2: bool = h3.weapon_tier == ti + 1
 		ctrl.draw_rect(tr2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.08))
-		_text(Vector2(tr2.position.x, tr2.position.y + 21), ("ур. %d" % [1, 3, 5][ti]) if ti < 3 else "эволюция", 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
+		_text(Vector2(tr2.position.x, tr2.position.y + 21), ("ур. %d" % [1, 3, 5][ti]) if ti < 3 else "модерниз.", 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
 		h3.tier_rects.append([tr2, ti + 1])
 	var y := area.position.y + 446.0
 	if bought:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс", 15, Color(0.8, 0.85, 0.9))
 	else:
-		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — комплект модернизации", 18, Color.WHITE)
+		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
 		_text(Vector2(lx + 24, y + 24), "Требует: экипаж ур. %d (сейчас %d) · %d запчастей" % [Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
 		_text(Vector2(lx + 24, y + 46), "даёт: прочность +15%, скорость и разворот +5%, +1 переброс", 14, Color(0.7, 0.74, 0.8))
 		if Profile.can_buy_plane2(c):
@@ -294,4 +294,4 @@ func _hg_crew(c: String, area: Rect2) -> void:
 			yy += 40.0
 		yy += 16.0
 	_text(Vector2(sx, yy + 10), "Слот 3 — экипаж ур. 12, в разработке", 14, Color(0.55, 0.57, 0.62))
-	_para(Vector2(sx, yy + 40), "Карточки доводки действуют на навык слота 1.", sw, 13, Color(0.7, 0.72, 0.78))
+	_para(Vector2(sx, yy + 40), "Карточки «уровень навыка» улучшают навык слота 1.", sw, 13, Color(0.7, 0.72, 0.78))

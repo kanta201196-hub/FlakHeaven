@@ -37,7 +37,7 @@ func class_select(size: Vector2) -> void:
 		y += 26.0
 		_stat_bar(x, y, "Манёвр", float(d["turn"]), "%d%%" % int(float(d["turn"]) * 100.0))
 		y += 26.0
-		_stat_bar(x, y, "Курсовое", float(d["gun_dmg"]) * float(d["gun_rate"]) / 1.3, "×%.2f" % (float(d["gun_dmg"]) * float(d["gun_rate"])))
+		_stat_bar(x, y, "Пушка", float(d["gun_dmg"]) * float(d["gun_rate"]) / 1.3, "×%.2f" % (float(d["gun_dmg"]) * float(d["gun_rate"])))
 		y += 36.0
 		_text(Vector2(x, y), "Подвесы:", 19, Color.WHITE)
 		y += 26.0
@@ -86,7 +86,7 @@ func class_select(size: Vector2) -> void:
 	_ctext(932, "Управление: %s   [F2 — сменить]" % Hud.SCHEMES[int(Tuning.g("scheme"))], 20, Color(0.75, 0.85, 1.0))
 	_ctext(964, "Опыт с врагов подбирается сам рядом с самолётом. Каждые 5 минут — ас (мини-босс), после него — окно эвакуации.", 18, Color(0.8, 0.85, 0.9))
 	_ctext(992, "Угрозы: дроны — держат дистанцию и бьют парой пуль (мигают жёлтым) · перехватчики — заходы с очередью · ракетоносцы — ракеты после красной линии", 18, Color(0.95, 0.75, 0.75))
-	_ctext(1020, "Мышь — курс · W/S — газ (держаться за целью) · сядь врагу на хвост — курсовое +50% · пролёт на волоске перезаряжает навыки · серия сбитий — больше опыта", 18, Color(0.7, 0.95, 1.0))
+	_ctext(1020, "Мышь — куда лететь · W/S — газ (держаться за целью) · сядь врагу на хвост — пушка +50% · пролёт на волоске перезаряжает навыки · серия сбитий — больше опыта", 18, Color(0.7, 0.95, 1.0))
 
 
 func _stat_bar(x: float, y: float, label: String, frac: float, val: String) -> void:
@@ -127,7 +127,7 @@ func levelup(m: Main, size: Vector2) -> void:
 		if c.get("course", false): # 3.2: карточка ведёт к курсу
 			ctrl.draw_colored_polygon(PackedVector2Array([r.position + Vector2(w - 70, 34), r.position + Vector2(w, 34), r.position + Vector2(w, 104)]), Color(1.0, 0.8, 0.25, 0.9))
 			_text(Vector2(r.position.x + w - 46, r.position.y + 56), "▲", 18, Color(0.15, 0.1, 0.02))
-			_text(Vector2(r.position.x, r.position.y + h - 14), "▲ КУРС +1", 15, Color(1.0, 0.85, 0.35), HORIZONTAL_ALIGNMENT_RIGHT, w - 14.0)
+			_text(Vector2(r.position.x, r.position.y + h - 14), "▲ к специализации", 15, Color(1.0, 0.85, 0.35), HORIZONTAL_ALIGNMENT_RIGHT, w - 14.0)
 		var ty := r.position.y + 136.0
 		if c.get("tags", "") != "":
 			_tag_chips(Vector2(r.position.x + 18, ty), Prog.card_tags(m.player, c), c["kind"] == "evolution")
@@ -145,7 +145,7 @@ func levelup(m: Main, size: Vector2) -> void:
 	if m.rerolls > 0:
 		_button(Rect2(size.x / 2.0 - 370, ry, 360, 46), "Переброс (R) — осталось %d" % m.rerolls, "reroll", 19)
 		if m.player.has_course():
-			_button(Rect2(size.x / 2.0 + 10, ry, 360, 46), "Сменить курс (−1 переброс)", "change_course", 19)
+			_button(Rect2(size.x / 2.0 + 10, ry, 400, 46), "Сменить специализацию (−1 переброс)", "change_course", 19)
 	else:
 		_ctext(ry + 30, "Перебросов не осталось (+1 за каждого аса)", 18, Color(0.6, 0.62, 0.7))
 	_ctext(ry + 76, "Исключений осталось: %d (+1 за аса)%s" % [m.bans, ("   ·   Исключены: " + ", ".join(PackedStringArray(m.banned.values()))) if not m.banned.is_empty() else ""], 16, Color(0.75, 0.75, 0.85))
@@ -153,7 +153,7 @@ func levelup(m: Main, size: Vector2) -> void:
 	var y := ry + 112.0
 	if m.player.has_course():
 		var sd := Cards.syn_def(m.player, m.player.course)
-		_ctext(y, "Курс: «%s» (слот %d из 3) — %s" % [sd["title"], m.player.syn.size() + 1, sd["short"]], 18, Menu.C_AMBER)
+		_ctext(y, "Специализация: «%s» (связка %d из 3) — %s" % [sd["title"], m.player.syn.size() + 1, sd["short"]], 18, Menu.C_AMBER)
 		y += 30.0
 		_cond_line(Vector2(size.x / 2.0, y), {"title": "условия", "conds": Cards.cond_list(m.player, m.player.course)})
 
@@ -194,7 +194,7 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 			elif sd.get("tag2", "") == t:
 				need = int(c["second"])
 			if need > 0:
-				_text(Vector2(r.position.x + 8, r.position.y + 42), "▲ курс: %d/%d" % [n, need], 13, Color(1.0, 0.85, 0.35))
+				_text(Vector2(r.position.x + 8, r.position.y + 42), "▲ к связке: %d/%d" % [n, need], 13, Color(1.0, 0.85, 0.35))
 		x += cw
 	var extra := PackedStringArray()
 	for id in p.syn:
@@ -206,7 +206,7 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 	for wv in p.evo_times:
 		ev.append(Prog.EVOS[wv]["title"])
 	ctrl.draw_rect(Rect2(pos.x, pos.y + 116, w, 96), Color(0.05, 0.055, 0.06, 0.8))
-	_text(Vector2(pos.x + 8, pos.y + 138), "Связки: %s   ·   Эволюции: %s   ·   Навык: %s %s" % [
+	_text(Vector2(pos.x + 8, pos.y + 138), "Связки: %s   ·   Модернизации: %s   ·   Навык: %s, ур. %s" % [
 		", ".join(extra) if not extra.is_empty() else "нет", ", ".join(ev) if not ev.is_empty() else "нет",
 		p.s3_def()["title"], Prog.ROMAN[p.s3_lvl()]], 16, Menu.C_AMBER)
 
@@ -231,10 +231,10 @@ func loadout(m: Main, size: Vector2) -> void:
 			if Weapons.DEFS[g.weapon]["uses_priority"]:
 				_button(Rect2(x + w - 290, y + 12, 270, 40), "Цель: %s" % Weapons.PRIORITY_NAMES[g.priority], "prio:%d" % gi, 18)
 			if g.uses_trigger():
-				_button(Rect2(x + w - 290, y + 12, 270, 40), "Пуск: %s" % ("авто" if g.trigger == "auto" else "по кнопке (ПКМ)"), "trig:%d" % gi, 18)
+				_button(Rect2(x + w - 290, y + 12, 270, 40), "Пуск: %s" % ("авто" if g.trigger == "auto" else "правой кнопкой мыши"), "trig:%d" % gi, 18)
 		y += 76.0
 	y += 10.0
-	_ctext(y + 10, "Курсовое: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f" % [
+	_ctext(y + 10, "Пушка: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f" % [
 		float(p.cls["gun_dmg"]) * p.mods["gun_dmg"], float(p.cls["gun_rate"]) * p.mods["gun_rate"], p.mods["hp_cd"],
 		float(p.cls["speed"]) * p.mods["speed"], float(p.cls["turn"]) * p.mods["turn"], p.mods["pickup"]], 17, Color(0.85, 0.88, 0.95))
 	_tags_panel(p, Vector2(x, y + 36), w)
@@ -242,7 +242,7 @@ func loadout(m: Main, size: Vector2) -> void:
 		_para(Vector2(x + 8, y + 186), "Карточки: " + ", ".join(PackedStringArray(p.cards_log)), w, 15, Color(0.7, 0.75, 0.85))
 	var bx := (size.x - 960) / 2.0
 	_button(Rect2(bx - 165, size.y - 150, 300, 50), "Продолжить (Esc / Tab)", "resume")
-	_button(Rect2(bx + 165, size.y - 150, 300, 50), "Связки и эволюции", "codex")
+	_button(Rect2(bx + 165, size.y - 150, 300, 50), "Связки и модернизации", "codex")
 	_button(Rect2(bx + 495, size.y - 150, 300, 50), "Настройки", "pause_settings")
 	_button(Rect2(bx + 825, size.y - 150, 300, 50), "В главное меню", "to_menu")
 
@@ -284,11 +284,11 @@ func result(m: Main, size: Vector2) -> void:
 	var keys := dealt.keys()
 	keys.sort_custom(func(a, b): return float(dealt[a]) > float(dealt[b]))
 	for k in keys.slice(0, 8):
-		_row(rx, y, colw, k, m.stat("dealt", k), m.total("dealt"), Color(0.45, 0.9, 0.55))
+		_row(rx, y, colw, SRC_NAMES.get(k, k), m.stat("dealt", k), m.total("dealt"), Color(0.45, 0.9, 0.55))
 		y += 30.0
 	y += 12.0
 	var acc := 0.0 if m.shots == 0 else 100.0 * m.hits / m.shots
-	_text(Vector2(rx, y), "Точность курсового: %d%%  ·  пик «оборотов»: +%d%%" % [int(acc), int(round(m.peak_rev * 100.0))], 18, hc)
+	_text(Vector2(rx, y), "Точность пушки: %d%%  ·  пик «оборотов»: +%d%%" % [int(acc), int(round(m.peak_rev * 100.0))], 18, hc)
 	y += 26.0
 	_text(Vector2(rx, y), "Сбито: дроны %d · перехв. %d · ракетон. %d · асы %d" % [m.stat("kills_by", "дроны"), m.stat("kills_by", "перехватчики"), m.stat("kills_by", "ракетоносцы"), m.stat("kills_by", "асы")], 18, hc)
 	y += 26.0
@@ -323,6 +323,13 @@ func result(m: Main, size: Vector2) -> void:
 			_button(Rect2(bx + 1050, size.y - 222, 320, 54), "ОТПРАВИТЬ ОТЧЁТ", "report_open", 22)
 
 
+## U-01: внутренние имена источников урона (их пишет лог l5) → понятные игроку
+const SRC_NAMES := {
+	"курсовое (авто)": "пушка (сама)", "курсовое (ручн.)": "пушка (ручной огонь)",
+	"ракеты В-В": "наводящиеся ракеты", "НАР": "залп ракет",
+}
+
+
 func _row(x: float, y: float, w: float, label: String, v: int, tot: int, col: Color) -> void:
 	var frac := 0.0 if tot <= 0 else float(v) / float(tot)
 	_text(Vector2(x, y), label, 18, Color(0.85, 0.88, 0.95))
@@ -351,9 +358,9 @@ func course_pick(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.72))
 	var p := m.player
 	var slot := p.syn.size() + 1
-	_ctext(150, "ВЫБОР КУРСА — СВЯЗКА %d ИЗ 3" % slot, 40, Menu.C_AMBER)
-	_ctext(192, "Курс — цель вылета: карточки, которые к нему ведут, отмечены «▲ КУРС» и выпадают чаще. Открыть можно только связку курса.", 17, Color(0.8, 0.84, 0.92))
-	_ctext(218, "Пороги растут: слот 1 — %d / слот 2 — %d / слот 3 — %d очков главного тега. Курс можно сменить позже за 1 переброс." % [
+	_ctext(150, "ВЫБОР СПЕЦИАЛИЗАЦИИ — СВЯЗКА %d ИЗ 3" % slot, 40, Menu.C_AMBER)
+	_ctext(192, "Связка — сильный бонус, который меняет оружие или навык. Выберите, какую собирать: карточки к ней отмечены «▲» и выпадают чаще.", 17, Color(0.8, 0.84, 0.92))
+	_ctext(218, "Нужно набрать очки цветных меток на карточках: для 1-й связки — %d, 2-й — %d, 3-й — %d. Сменить специализацию можно позже за 1 переброс." % [
 		Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]], 16, Color(0.7, 0.74, 0.82))
 	var w := 520.0
 	var h := 400.0
@@ -382,8 +389,8 @@ func course_pick(m: Main, size: Vector2) -> void:
 		for c in conds:
 			_cond_chips(Vector2(r.position.x + 18, yy), [c])
 			yy += 28.0
-		_text(Vector2(r.position.x + 18, r.end.y - 16), "≈ %d карточек по курсу" % Cards.cards_left(conds), 16, Menu.C_AMBER)
-	_ctext(690, "1–3 или клик — выбрать курс", 17, Color(0.75, 0.8, 0.9))
+		_text(Vector2(r.position.x + 18, r.end.y - 16), "≈ ещё %d подходящих карточек" % Cards.cards_left(conds), 16, Menu.C_AMBER)
+	_ctext(690, "1–3 или клик — выбрать специализацию", 17, Color(0.75, 0.8, 0.9))
 
 
 # ---------- 3.2: итоги для ангара ----------

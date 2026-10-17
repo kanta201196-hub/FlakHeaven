@@ -18,10 +18,10 @@ const MODULES := {
 	"armor": {"title": "Бронеплиты", "max": 5, "cat": "Модуль"},
 	"engine": {"title": "Форсированный двигатель", "max": 5, "cat": "Модуль"},
 	"wing": {"title": "Механизация крыла", "max": 5, "cat": "Модуль"},
-	"gun_dmg": {"title": "Бронебойные снаряды", "max": 5, "cat": "Курсовое"},
-	"gun_rate": {"title": "Облегчённый затвор", "max": 5, "cat": "Курсовое"},
+	"gun_dmg": {"title": "Бронебойные снаряды", "max": 5, "cat": "Пушка"},
+	"gun_rate": {"title": "Облегчённый затвор", "max": 5, "cat": "Пушка"},
 	"reload": {"title": "Быстрая перезарядка", "max": 5, "cat": "Подвесы"},
-	"seeker": {"title": "ГСН «Глазастик»", "max": 3, "cat": "Подвесы"},
+	"seeker": {"title": "Головка наведения «Глазастик»", "max": 3, "cat": "Подвесы"},
 	"frag": {"title": "Осколочная рубашка", "max": 5, "cat": "Подвесы"},
 	"servo": {"title": "Сервоприводы", "max": 5, "cat": "Подвесы"},
 	"warhead": {"title": "Усиленная БЧ", "max": 5, "cat": "Подвесы"},
@@ -31,8 +31,8 @@ const MODULES := {
 	"launcher": {"title": "Пусковое устройство", "max": 5, "cat": "Подвесы"},
 	"radio": {"title": "Радиостанция «Болтушка»", "max": 5, "cat": "Звено"},
 	"magnet": {"title": "Сборщик трофеев", "max": 3, "cat": "Модуль"},
-	"roll": {"title": "Бочка: тренировка", "max": 3, "cat": "Навык"},
-	"afterburner": {"title": "Форсаж: доводка", "max": 3, "cat": "Навык"},
+	"roll": {"title": "Уклонение: тренировка", "max": 3, "cat": "Навык"},
+	"afterburner": {"title": "Форсаж: тренировка", "max": 3, "cat": "Навык"},
 	"skill3": {"title": "", "max": 3, "cat": "Навык"},
 	"repair": {"title": "Ремонт в воздухе", "max": 99, "cat": "Ремонт"},
 }
@@ -41,13 +41,13 @@ const CAT_COLORS := {
 	"Новое оружие": Color(1.0, 0.75, 0.3),
 	"Оружие": Color(1.0, 0.85, 0.5),
 	"Модуль": Color(0.55, 0.85, 1.0),
-	"Курсовое": Color(0.95, 0.95, 0.6),
+	"Пушка": Color(0.95, 0.95, 0.6),
 	"Подвесы": Color(0.75, 0.8, 1.0),
 	"Навык": Color(0.7, 1.0, 0.7),
 	"Ремонт": Color(0.6, 1.0, 0.8),
 	"Звено": Color(0.85, 0.7, 1.0),
 	"Связка": Color(1.0, 0.82, 0.25),
-	"Эволюция": EVO_COLOR,
+	"Модернизация": EVO_COLOR,
 	"Резерв": Color(0.8, 0.8, 0.75),
 }
 
@@ -63,13 +63,13 @@ const MAX_SYN := 3
 
 const SYNERGIES := {
 	"carousel": {"title": "Карусель", "w": ["aam"], "tag": "missiles", "tag2": "maneuver", "color": Color(1.0, 0.85, 0.3),
-		"desc": "Ракета В-В, сбившая цель, сразу пускает новую в ближайшую (до 4 перепусков, каждый +20% урона)",
+		"desc": "Наводящаяся ракета, сбившая цель, сразу пускает новую в ближайшую (до 4 перепусков, каждый +20% урона)",
 		"short": "сбитие → новая ракета"},
 	"thermobaric": {"title": "Термобарика", "w": ["rockets"], "tag": "blast", "tag2": "missiles", "color": Color(1.0, 0.95, 0.85),
-		"desc": "НАР прилипает и через 0,5 с даёт объёмный взрыв 130 пикс. (урон ×1,5); соседние взрывы сливаются: до ×2",
-		"short": "прилипающие НАР, объёмный взрыв"},
+		"desc": "Ракета залпа прилипает и через 0,5 с даёт объёмный взрыв 130 пикс. (урон ×1,5); соседние взрывы сливаются: до ×2",
+		"short": "прилипающие ракеты, объёмный взрыв"},
 	"salvo": {"title": "Огненный вал", "w": ["rockets"], "tag": "missiles", "tag2": "blast", "color": Color(1.0, 0.45, 0.15),
-		"desc": "Каждый 3-й залп НАР — вал: три линии по 5 взрывов в 250 / 450 / 650 пикс. впереди (урон ×1,3)",
+		"desc": "Каждый 3-й залп ракет — вал: три линии по 5 взрывов в 250 / 450 / 650 пикс. впереди (урон ×1,3)",
 		"short": "каждый 3-й залп — три линии огня"},
 	"carpet_road": {"title": "Ковровая дорожка", "w": ["bombs"], "tag": "blast", "tag2": "armor", "color": Color(1.0, 0.6, 0.2),
 		"desc": "Бомба разбрасывает 4 суббоеприпаса крестом и оставляет горящее пятно на 2,5 с (12 урона/с)",
@@ -81,10 +81,10 @@ const SYNERGIES := {
 		"desc": "Когда вы пускаете ракеты, каждый ведомый дублирует пуск: 2 ракеты в вашу цель (×0,6 урона). +1 к лимиту ведомых",
 		"short": "звено повторяет ваши пуски"},
 	"warm": {"title": "Тёплая компания", "wingmen": true, "tag": "wing", "tag2": "blast", "color": Color(1.0, 0.55, 0.35),
-		"desc": "Раз в 7 с звено выходит вперёд и стелет ряд из 5 бомб поперёк курса (45 урона, 100 пикс.). +1 к лимиту ведомых",
+		"desc": "Раз в 7 с звено выходит вперёд и стелет ряд из 5 бомб поперёк пути самолёта (45 урона, 100 пикс.). +1 к лимиту ведомых",
 		"short": "звено стелет огонь впереди"},
 	"mirror": {"title": "Зеркало", "w": ["flares"], "tag": "maneuver", "tag2": "missiles", "color": Color(0.3, 0.95, 0.85),
-		"desc": "Уведённая ловушкой ракета разворачивается и бьёт ближайшего врага (80 урона, взрыв 90); бочка отстреливает 6 ловушек",
+		"desc": "Уведённая ловушкой ракета разворачивается и бьёт ближайшего врага (80 урона, взрыв 90); уклонение отстреливает 6 ловушек",
 		"short": "вражеские ракеты летят в своих"},
 	"hedgehog": {"title": "Стальной ёж", "w": ["turret"], "tag": "turrets", "tag2": "blast", "color": Color(0.3, 0.85, 0.8),
 		"desc": "Раз в 5 с каждая турель выпускает 3 мини-ракеты по разным целям (22, взрыв 45); турели сбивают ракету раз в 3 с",
@@ -93,10 +93,10 @@ const SYNERGIES := {
 		"desc": "Каждый 6-й снаряд гондолы — фугасный (урон ×4, взрыв 70); все пули гондолы пробивают 1 цель",
 		"short": "фугасные снаряды гондолы"},
 	"roller": {"title": "Каток", "req_mods": ["armor"], "tag": "armor", "tag2": "blast", "color": Color(0.8, 0.82, 0.88),
-		"desc": "Получив удар (раз в 2,5 с), самолёт отвечает кольцом из 10 НАР (18, взрыв 60); ниже 40% прочности — 16 НАР раз в 1,5 с",
-		"short": "удар по вам → кольцо НАР"},
+		"desc": "Получив удар (раз в 2,5 с), самолёт отвечает кольцом из 10 ракет (18, взрыв 60); ниже 40% прочности — 16 ракет раз в 1,5 с",
+		"short": "удар по вам → кольцо ракет"},
 	"jetwash": {"title": "Реактивный след", "req_mods": ["roll", "afterburner"], "tag": "maneuver", "tag2": "blast", "color": Color(0.5, 0.8, 1.0),
-		"desc": "На бочке и форсаже за самолётом каждые 50 пикс. остаётся заряд: через 0,4 с взрыв 70 пикс., 30 урона",
+		"desc": "При уклонении и форсаже за самолётом каждые 50 пикс. остаётся заряд: через 0,4 с взрыв 70 пикс., 30 урона",
 		"short": "огненная дорожка на манёврах"},
 }
 
@@ -151,7 +151,7 @@ static func cond_list(p: Player, id: String) -> Array:
 	out.append(["%s %d/%d" % [Prog.tag_title(s["tag"]), main, int(c["main"])], main >= int(c["main"]), main, int(c["main"])])
 	if s.has("skill"):
 		var lv := p.s3_lvl()
-		out.append(["доводка %s/%s" % [Prog.ROMAN[lv] if lv > 0 else "0", Prog.ROMAN[int(c["s3"])]], lv >= int(c["s3"]), lv, int(c["s3"])])
+		out.append(["уровень навыка %d/%d" % [lv, int(c["s3"])], lv >= int(c["s3"]), lv, int(c["s3"])])
 		return out
 	if s.has("tag2"):
 		var t2 := p.tag(s["tag2"])
@@ -290,8 +290,8 @@ static func course_hint(p: Player, card: Dictionary) -> String:
 	var c := slot_cost(p)
 	var tags := Prog.card_tags(p, card)
 	if tags.has(s["tag"]):
-		return "\n▲ Курс «%s»: %s %d → %d (из %d)" % [s["title"], Prog.tag_title(s["tag"]), p.tag(s["tag"]), p.tag(s["tag"]) + 1, int(c["main"])]
-	return "\n▲ Курс «%s»: условие связки" % s["title"]
+		return "\n▲ К связке «%s»: %s %d → %d (из %d)" % [s["title"], Prog.tag_title(s["tag"]), p.tag(s["tag"]), p.tag(s["tag"]) + 1, int(c["main"])]
+	return "\n▲ К связке «%s»" % s["title"]
 
 
 const NEW_WEAPON_LEVEL := [1, 1, 2, 2, 3]
@@ -332,34 +332,34 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 		"wing":
 			return "+%s скорости разворота" % _pct(0.08 * k)
 		"gun_dmg":
-			return "Курсовое: +%s урона" % _pct(0.15 * k)
+			return "Пушка: +%s урона" % _pct(0.15 * k)
 		"gun_rate":
-			return "Курсовое: +%s скорострельности" % _pct(0.15 * k)
+			return "Пушка: +%s скорострельности" % _pct(0.15 * k)
 		"reload":
 			return "Все подвесы и турели: −%s перезарядки" % _pct(0.1 * k)
 		"seeker":
 			match int(p.taken.get("seeker", 0)):
 				0:
-					return "Ракета, потерявшая цель, наводится на новую (600 пикс., 1 раз). Без ГСН — летит прямо и самоликвидируется"
+					return "Ракета, потерявшая цель, наводится на новую (600 пикс., 1 раз). Без головки наведения — летит прямо и самоликвидируется"
 				1:
 					return "Перенацеливание: поиск 900 пикс., до 2 раз"
 				_:
-					return "После сбития ракета В-В ищет следующую цель (1 раз); ракеты В-В бьют и наземные цели (×1,5)"
+					return "После сбития наводящаяся ракета ищет следующую цель (1 раз); наводящиеся ракеты бьют и наземные цели (×1,5)"
 		"frag":
 			return "+%s радиуса всех взрывов" % _pct(0.1 * k)
 		"servo":
 			return "Гондола и турели: +%s темпа, +%s дальности" % [_pct(0.1 * k), _pct(0.06 * k)]
 		"warhead":
-			return "+%s урона всех взрывов (НАР, бомбы, осколки ракет, навыки)" % _pct(0.12 * k)
+			return "+%s урона всех взрывов (залпы ракет, бомбы, осколки ракет, навыки)" % _pct(0.12 * k)
 		"msl_head":
 			var s := "Ракеты: +%s урона, +%s радиуса разрыва" % [_pct(0.15 * k), _pct(0.08 * k)]
 			if int(p.taken.get("msl_head", 0)) + 1 == 3:
-				s += "; разделяющаяся БЧ: ракета В-В при попадании даёт 3 суббоеприпаса"
+				s += "; разделяющаяся боевая часть: ракета при попадании даёт 3 суббоеприпаса"
 			return s
 		"msl_motor":
 			return "Ракеты: +%s скорости, +%s дальности захвата" % [_pct(0.12 * k), _pct(0.08 * k)]
 		"launcher":
-			return "Ракеты В-В и НАР: −%s перезарядки" % _pct(0.1 * k)
+			return "Все ракеты: −%s перезарядки" % _pct(0.1 * k)
 		"radio":
 			return "Ведомые: +%s урона, +%s прочности" % [_pct(0.2 * k), _pct(0.15 * k)]
 		"magnet":
@@ -367,7 +367,7 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 		"roll":
 			if not p.has_roll():
 				return "Залп ловушек: −%.1f с перезарядки" % [1.0 * k]
-			return "Бочка: −%.1f с перезарядки, +%.2f с неуязвимости" % [1.0 * k, 0.15 * k]
+			return "Уклонение: −%.1f с перезарядки, +%.2f с неуязвимости" % [1.0 * k, 0.15 * k]
 		"afterburner":
 			return "Форсаж: +%.1f с длительности, −%.1f с перезарядки" % [1.0 * k, 2.0 * k]
 		"skill3":
@@ -440,7 +440,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 					continue
 				w = 1.8
 			"skill3":
-				title = "%s: доводка %s" % [PlaneClasses.SKILL3[p.skill3]["title"], Prog.ROMAN[taken + 1]]
+				title = "%s: уровень %d" % [PlaneClasses.SKILL3[p.skill3]["title"], taken + 1]
 				w = 1.2
 			"roll", "afterburner":
 				w = 1.0
@@ -483,7 +483,7 @@ static func _reserve(p: Player, cands: Array) -> void:
 	cands.append([0.8, {"id": "res_kit", "ban": "res_kit", "kind": "reserve", "cat": "Резерв", "title": "Ремкомплект"}])
 	if p.has_course() and int(p.taken.get("res_course", 0)) < 3:
 		cands.append([1.4, {"id": "res_course", "ban": "res_course", "kind": "reserve", "cat": "Резерв",
-			"title": "Наработка: +1 к курсу"}])
+			"title": "Наработка: +1 к специализации"}])
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
 		if g.evo and g.evo_plus < 5:
@@ -500,8 +500,8 @@ static func _evolutions(p: Player, banned: Dictionary) -> Array:
 	for w in Prog.EVOS:
 		if banned.has("evo:" + w) or not Prog.evo_ready(p, w):
 			continue
-		out.append({"id": "evo_" + w, "ban": "evo:" + w, "kind": "evolution", "weapon": w, "cat": "Эволюция",
-			"title": "ЭВОЛЮЦИЯ: %s" % Prog.EVOS[w]["title"]})
+		out.append({"id": "evo_" + w, "ban": "evo:" + w, "kind": "evolution", "weapon": w, "cat": "Модернизация",
+			"title": "МОДЕРНИЗАЦИЯ: %s" % Prog.EVOS[w]["title"]})
 	return out
 
 
@@ -528,7 +528,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			var g: Hardpoint = p.groups[int(card["group"])]
 			card["desc"] = "%s\nНа подвес: %s ×%d\nСтарт с ур. %d" % [Weapons.DEFS[w]["desc"], g.name, g.slots, NEW_WEAPON_LEVEL[r]]
 			if Prog.EVOS.has(w):
-				card["desc"] += "\nЭволюция: ур. 5 + %s" % _cat_text(w)
+				card["desc"] += "\nМодернизация: ур. 5 + %s" % _cat_text(w)
 		"weapon_up":
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			var to := mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
@@ -536,7 +536,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			if r > 0:
 				card["desc"] += "\nБонус редкости: +%s урона группы" % _pct(0.15 * (k - 1.0))
 			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
-				card["desc"] += "\nЭволюция: ур. 5 + %s, с %d:%02d" % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
+				card["desc"] += "\nМодернизация: ур. 5 + %s, с %d:%02d" % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
 			card["desc"] = syn_def(p, card["syn"])["desc"] + "\nОткрывает слот %d из %d. Следующий слот дороже." % [p.syn.size() + 1, MAX_SYN]
 		"evolution":
@@ -559,9 +559,9 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 				_:
 					if card["id"] == "res_course":
 						var cs := syn_def(p, p.course)
-						card["desc"] = "+1 очко «%s» — к курсу «%s» (до 3 за вылет)" % [Prog.tag_title(cs["tag"]), cs["title"]]
+						card["desc"] = "+1 очко «%s» — к связке «%s» (до 3 за вылет)" % [Prog.tag_title(cs["tag"]), cs["title"]]
 					else:
-						card["desc"] = "Эволюция: +8% урона, −4% перезарядки (до 5 раз)"
+						card["desc"] = "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
 		_:
 			card["desc"] = module_desc(p, card["id"], k)
 			if card["kind"] == "module":
@@ -744,7 +744,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 			p.open_synergy(card["syn"])
 		"evolution":
 			p.evolve(card["weapon"])
-			Main.I.show_banner("ЭВОЛЮЦИЯ: %s" % Prog.EVOS[card["weapon"]]["title"], 4.0)
+			Main.I.show_banner("МОДЕРНИЗАЦИЯ: %s" % Prog.EVOS[card["weapon"]]["title"], 4.0)
 		"reserve":
 			var tk: String = String(card["id"])
 			p.taken[tk] = int(p.taken.get(tk, 0)) + 1
