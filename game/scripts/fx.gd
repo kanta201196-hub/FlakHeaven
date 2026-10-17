@@ -153,18 +153,20 @@ func blast(pos: Vector2, radius: float) -> void:
 
 ## 3.1: отстрел тепловых ловушек — веер ярких точек назад-в-стороны, падают и гаснут, дымный след
 ## 3.5 (правка 12): ловушки крупнее и ярче, мерцают, вокруг — вспышка; s — масштаб (залп «Кита» крупнее)
-func flare_burst(pos: Vector2, heading: float, n := 6, vel := Vector2.ZERO, s := 1.0) -> Array:
+## life_k — во сколько раз дольше горят (залп «Кита» — дольше)
+func flare_burst(pos: Vector2, heading: float, n := 6, vel := Vector2.ZERO, s := 1.0, life_k := 1.0) -> Array:
 	var out: Array = []
 	rings.append({"p": pos, "r": 40.0 * s, "max": 70.0 * s, "life": 0.25, "max_life": 0.25, "c": Color(1.0, 0.9, 0.6)})
 	for i in n:
 		var side := -1.0 if i % 2 == 0 else 1.0
 		var a := heading + PI + side * deg_to_rad(randf_range(30.0, 95.0))
-		var f := {"p": pos, "v": vel * 0.4 + Vector2.from_angle(a) * randf_range(180.0, 320.0) * sqrt(s), "life": randf_range(1.3, 1.9),
-			"max": 1.8, "trail": PackedVector2Array([pos]), "s": s, "ph": randf() * TAU}
+		var lf := randf_range(1.3, 1.9) * life_k
+		var f := {"p": pos, "v": vel * 0.4 + Vector2.from_angle(a) * randf_range(180.0, 320.0) * sqrt(s), "life": lf,
+			"max": maxf(1.8, lf), "trail": PackedVector2Array([pos]), "s": s, "ph": randf() * TAU}
 		flares.append(f)
 		out.append(f)
-	if flares.size() > 120:
-		flares = flares.slice(flares.size() - 120)
+	if flares.size() > 160:
+		flares = flares.slice(flares.size() - 160)
 	return out
 
 

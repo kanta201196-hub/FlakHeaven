@@ -51,6 +51,7 @@ SRC = {
     'rocket_shot': ('2018', 'SoundMorph - STEAMPUNK WEAPONS/Steampunk Weapons - Rocket Launcher - Shot - 04'),
     'fw_launch': ('2023', 'InspectorJ - Essentials 03 Fireworks/FRWKComr_InsJ_Fireworks_Launch_Close_01-03'),
     'whistle_down': ('2023', 'SmartSoundFX - Cartoon & Infotainment/WHISTLE Down Long'),
+    'b17_rpm': ('2019', 'Pole Position - Boeing B-17G 1945/Boeing_B17_t20_Ext_Idle_Stationary_on_Ground_Increase_RPMs_Various_Front_XY_DPA4021'),
     'blast_off': ('2026', '344 Audio - Air Designed/AEROJet_Blast Off Clean_344 Audio_Air Designed'),
     'fire_ign': ('2018', 'Gregor Quendel – Designed Fire/Designed Fire - Impacts - Large, ignition 03'),
     'lock_on': ('2019', 'The Chris Alan - Analog Synthesized UI & SFX/Analog Synthesized UI - Lock On Engage'),
@@ -113,7 +114,7 @@ PLAN = {
     'rocket_launch': [('rocket_shot', A, 0.4, 0.25, 1.0)],
     # Вражеская ракета: тот же поджиг, но ниже и тяжелее — слышно, что это не наша
     'missile_enemy': [('jet_ign', 0.075, 0.9, 0.5, 0.82), ('rocket_shot', A, 0.7, 0.4, 0.8)],
-    'bomb_drop': [('whistle_down', A, 1.0, 0.3, 1.0)],
+    # bomb_drop собирается отдельно (build_bomb_drop): щелчок замка держателя + шорох воздуха, без свиста
     # --- Взрывы
     'explode': [('expl_notail', 0.0, 0.7, 0.35, 1.0), ('expl_mortar', 0.0, 0.8, 0.45, 1.0), ('expl_real', 0.01, 0.75, 0.4, 1.0)],
     'explode_big': [('expl_urban', 0.0, 1.6, 0.9, 1.0), ('expl_l07', 0.05, 1.5, 0.8, 1.0), ('expl_l08', 0.44, 1.5, 0.8, 1.0)],
@@ -237,19 +238,61 @@ def write_ogg(y, path):
                     '-c:a', 'libvorbis', '-q:a', '5', path], input=y.astype(np.float32).tobytes(), check=True)
 
 
-def build_engine(out_dir):
-    """Гул двигателя: ровный участок реактивного рёва, шов цикла закрыт кроссфейдом 0,5 с."""
-    x = load(fetch('blast_off'))
-    seg = x[int(1.0 * SR):int(6.5 * SR)].copy()
-    n = int(0.5 * SR)
+def flatten(x, win=0.4):
+    """Ровная громкость: делит на огибающую (скользящее RMS за win с) — без «наплывов» в цикле."""
+    h = int(SR * win)
+    c = np.cumsum(np.concatenate([[0.0], x.astype(np.float64) ** 2]))
+    env = np.sqrt((c[h:] - c[:-h]) / h + 1e-12)
+    env = np.concatenate([np.full(h // 2, env[0]), env, np.full(len(x) - len(env) - h // 2, env[-1])])
+    g = np.clip(np.median(env) / env, 0.25, 4.0)
+    return (x * g).astype(np.float32)
+
+
+def make_loop(seg, xf=0.5):
+    n = int(xf * SR)
     fade = np.linspace(0, 1, n)
     loop = np.concatenate([seg[:n] * fade + seg[-n:] * (1 - fade), seg[n:-n]])
     rms = 10 * np.log10(np.mean(kweight(loop).astype(np.float64) ** 2) + 1e-12)
     loop = loop * 10 ** ((ENGINE_RMS - rms) / 20)
     if np.abs(loop).max() > 0.89:
         loop *= 0.89 / np.abs(loop).max()
+    return loop
+
+
+def build_engine(out_dir):
+    """Гул двигателя: участок реактивного рёва с выровненной громкостью (правка 3.5-s4: в исходнике
+    громкость нарастала на 12 дБ, и цикл «крутился» от тихого к громкому), шов — кроссфейд 0,5 с.
+    engine_prop — четыре поршневых/турбовинтовых мотора на высоких оборотах («Кит 1»)."""
+    x = load(fetch('blast_off'))
+    loop = make_loop(flatten(x[int(1.0 * SR):int(6.5 * SR)]))
     write_ogg(loop, os.path.join(out_dir, 'engine.ogg'))
     print('engine         blast_off    loop %.1f s' % (len(loop) / SR))
+    x = load(fetch('b17_rpm'))
+    loop = make_loop(flatten(x[int(107.5 * SR):int(115.5 * SR)], 0.25), 0.6)
+    write_ogg(loop, os.path.join(out_dir, 'engine_prop.ogg'))
+    print('engine_prop    b17_rpm      loop %.1f s' % (len(loop) / SR))
+
+
+def build_bomb_drop(out_dir):
+    """Сброс бомбы (правка 3.5-s4: вместо мультяшного свиста): глухой щелчок замка держателя,
+    металлический «тук» и короткий шорох воздуха от уходящей бомбы. Два варианта."""
+    latch = load(fetch('latch'))
+    air = load(fetch('whoosh_buffet'))
+    iron = load(fetch('iron_hit'))
+    for f in glob.glob(os.path.join(out_dir, 'bomb_drop*.ogg')):
+        os.remove(f)
+    for i, (lp, ap) in enumerate([(0.85, 1.0), (0.75, 0.9)], 1):
+        a = clip(latch, find_start(latch, 'auto'), 0.35, 0.2, lp)
+        b = clip(iron, find_start(iron, 'auto'), 0.3, 0.25, 0.6) * 0.35
+        c = clip(air, find_start(air, 'loud'), 0.9, 0.5, ap) * 0.5
+        y = np.zeros(int(1.0 * SR), dtype=np.float32)
+        y[:len(a)] += a[:len(y)]
+        y[:len(b)] += b[:len(y)]
+        o = int(0.06 * SR)
+        y[o:o + len(c)] += c[:len(y) - o]
+        y = y * 10 ** ((REF_PUNCH['bomb_drop'] - punch_db(y)) / 20)
+        write_ogg(limit(y), os.path.join(out_dir, 'bomb_drop_%d.ogg' % i))
+    print('bomb_drop      latch+iron+whoosh_buffet (2)')
 
 
 # Музыка «гибрид» (электроника + живые/брейкбит-барабаны), все треки CC0 с OpenGameArt.
@@ -288,6 +331,8 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     if only is None or 'engine' in only:
         build_engine(out_dir)
+    if only is None or 'bomb_drop' in only:
+        build_bomb_drop(out_dir)
     if only is None or 'music' in only:
         build_music(out_dir)
     for event, variants in PLAN.items():

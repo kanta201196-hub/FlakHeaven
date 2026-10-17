@@ -1005,6 +1005,7 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		var dim := g.weapon in ["aam", "rockets", "bombs"] and g.cd > 0.3
 		# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5
 		var tr := WeaponModels.tier(g.level, g.evo)
+		var l_offs: Array = []
 		for si in pts.size():
 			var mt: Dictionary = pts[si]
 			var mtr: int = mt.get("t", tr)   # Т-5: у ловушек модель задаёт точка (кассета / контейнер)
@@ -1038,7 +1039,13 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
 				var idle := yaw
-				yaw = _turret_yaw(p, root, wmi.position, yaw)
+				# правка 3.5-s4 (п. 13): стволы смотрят туда же, куда наведена турель в бою (aim), без цели —
+				# плавно возвращаются в походное положение; поворот с той же ограниченной скоростью
+				var tgt := -wrapf(g.aim - p.heading, -PI, PI) if g.has_aim_target() else idle
+				var cur := float(wmi.get_meta("yaw_cur", idle))
+				cur = rotate_toward(cur, tgt, deg_to_rad(Hardpoint.TURRET_TRAVERSE) * float(p.mods.get("turret_traverse", 1.0)) * get_process_delta_time())
+				wmi.set_meta("yaw_cur", cur)
+				yaw = cur
 				if mt["side"] == "tail":   # кормовая установка — в секторе ±60° назад, как настоящая
 					yaw = idle + clampf(wrapf(yaw - idle, -PI, PI), -1.05, 1.05)
 			var b := Basis(Vector3.UP, yaw)
@@ -1047,9 +1054,17 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			wmi.basis = b.scaled(Vector3(len_px, len_px, len_px))
 			if tail_cab and wmi.get_child_count() > 0:   # кабина стрелка неподвижна, крутится только шар
 				(wmi.get_child(0) as Node3D).basis = Basis(Vector3.UP, float(mt["yaw"]) - yaw)
-			wmi.transparency = 0.6 if dim else 0.0
+			if g.weapon == "aam" or g.weapon == "rockets":
+				# правка 3.5-s4 (п. 27): ракета ушла с пилона — её там нет до перезарядки; пуск — с этой точки
+				wmi.visible = not dim
+				var wp := root.global_transform * wmi.position
+				l_offs.append((Vector2(wp.x, wp.z) - p.global_position).rotated(-p.heading))
+			else:
+				wmi.transparency = 0.6 if dim else 0.0
 			if mt["side"] == "bay":   # в закрытом бомбоотсеке бомб не видно
 				wmi.visible = float(u.get("bay_t", 1.0)) > 0.4
+		if g.weapon == "aam" or g.weapon == "rockets":
+			g.launch_offs = l_offs
 	for key in u["weapons"].keys():
 		if not want.has(key):
 			(u["weapons"][key] as Node).queue_free()

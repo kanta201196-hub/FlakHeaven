@@ -14,6 +14,7 @@ func _tick_timers(delta: float) -> void:
 	pl.roll_t = maxf(0.0, pl.roll_t - delta)
 	pl.roll_inv = maxf(0.0, pl.roll_inv - delta)
 	pl.salvo_t = maxf(0.0, pl.salvo_t - delta)
+	pl.skills.salvo_waves()
 	pl.dive_t = maxf(0.0, pl.dive_t - delta)
 	pl.dive_cd = maxf(0.0, pl.dive_cd - delta)
 	pl.roll_cd = maxf(0.0, pl.roll_cd - delta)

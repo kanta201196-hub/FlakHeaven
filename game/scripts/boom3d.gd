@@ -355,6 +355,18 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 		_air(Vector3(pos.x, 0.0, pos.y), s, true)
 
 
+## Правка 3.5-s4 (п. 27): пуск ракеты с крыла — вспышка двигателя и клуб белого дыма назад
+func launch(pos: Vector2, dir: Vector2, vel: Vector2) -> void:
+	var p := Vector3(pos.x, -2.0, pos.y)
+	var back := Vector3(-dir.x, 0.0, -dir.y)
+	var v := Vector3(vel.x, 0.0, vel.y) * 0.6
+	_flash(p, 14.0, 0.12, Color(1.0, 0.9, 0.65, 0.95))
+	_fire(p, v + back * 60.0, 4.0, 9.0, 0.18, 1.0)
+	for i in _n(2.0):
+		_smoke(p + back * (6.0 + 8.0 * i), v + back * randf_range(40.0, 90.0) + _rdir() * 12.0, 5.0, 16.0,
+			randf_range(0.7, 1.0), Color(0.86, 0.86, 0.88, 0.7), 0.0, 4.0, 2.0, 0.03 * i)
+
+
 func _n(base: float) -> int:
 	return maxi(1, int(round(base * _q)))
 

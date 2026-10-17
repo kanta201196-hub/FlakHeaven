@@ -10,7 +10,8 @@
 
 | Событие | Когда | Замена | Что искать |
 | --- | --- | --- | --- |
-| engine | гул двигателя (цикл, тон = скорость) | — | jet / rocket engine loop |
+| engine | гул двигателя (цикл, тон = скорость, на форсаже выше и громче) | — | jet / rocket engine loop |
+| engine_prop | гул винтовых моторов «Кита 1» (цикл); нет файла — играет engine | engine | prop / radial engine loop |
 | gun_fire | курсовое игрока | shot | machine gun / cannon single shot |
 | gunpod_fire | пушечная гондола | shot | autocannon short |
 | turret_fire | автотурели | shot | turret / light MG |
@@ -19,7 +20,7 @@
 | aam_launch | ракеты В-В | launch | missile launch |
 | rocket_launch | залп НАР | launch | rocket salvo / whoosh |
 | missile_enemy | пуск вражеской ракеты | launch | missile launch (ниже тоном) |
-| bomb_drop | ковровый удар | launch | bomb release / whistle |
+| bomb_drop | сброс бомб (щелчок замка держателя и шорох воздуха) | launch | bomb release / shackle |
 | bomb | взрыв бомбы | — | explosion heavy |
 | explode | взрыв мелкого врага | — | explosion small |
 | explode_big | взрыв крупного врага / аса | explode | explosion large |

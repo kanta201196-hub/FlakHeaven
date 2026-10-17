@@ -9,6 +9,10 @@ const RATE := 22050
 var streams := {}
 var players: Array[AudioStreamPlayer] = []
 var engine: AudioStreamPlayer
+var engine_jet: AudioStream       # гул реактивного двигателя
+var engine_prop: AudioStream      # правка 3.5-s4: четыре винтовых мотора («Кит 1»), если есть файл
+var _eng_pitch := 1.0
+var _eng_db := -22.0
 
 
 func _ready() -> void:
@@ -45,7 +49,7 @@ var variants := {}
 
 
 func _load_overrides() -> void:
-	for name in streams.keys() + FALLBACK.keys() + ["engine"]:
+	for name in streams.keys() + FALLBACK.keys() + ["engine", "engine_prop"]:
 		var found: Array = []
 		for suffix in [""] + range(1, 9).map(func(i): return "_%d" % i):
 			for ext in ["ogg", "wav", "mp3"]:
@@ -56,14 +60,18 @@ func _load_overrides() -> void:
 						found.append(st)
 		if found.is_empty():
 			continue
-		if name == "engine":
+		if name == "engine" or name == "engine_prop":
 			var e = found[0]
 			if e is AudioStreamOggVorbis or e is AudioStreamMP3:
 				e.loop = true
 			elif e is AudioStreamWAV:
 				e.loop_mode = AudioStreamWAV.LOOP_FORWARD
 				e.loop_end = int(e.get_length() * e.mix_rate)
-			engine.stream = e
+			if name == "engine":
+				engine.stream = e
+				engine_jet = e
+			else:
+				engine_prop = e
 		else:
 			variants[name] = found
 	if not variants.is_empty():
@@ -106,15 +114,28 @@ func play(sound: String, db := 0.0, pitch := 1.0) -> void:
 			return
 
 
-func set_engine(speed_ratio: float, alive: bool) -> void:
+## Гул двигателя. speed_ratio — скорость / крейсерская, ab — форсаж 0…1, prop — винтовой самолёт.
+## Правка 3.5-s4: тон и громкость меняются плавно (без скачков на виражах), на форсаже двигатель
+## заметно выше и громче; у винтового — свой звук и узкий диапазон тона (винт не «визжит»).
+func set_engine(speed_ratio: float, alive: bool, ab := 0.0, prop := false, delta := 0.016) -> void:
 	if engine == null:
 		return
 	if not alive:
 		if engine.playing:
 			engine.stop()
 		return
-	engine.pitch_scale = clampf(0.7 + 0.5 * speed_ratio, 0.5, 2.0)
-	engine.volume_db = -22.0 + Tuning.g("sfx_db") + Tuning.g("engine_db")
+	var want: AudioStream = engine_prop if prop and engine_prop != null else engine_jet
+	if want != null and engine.stream != want:
+		engine.stream = want
+		engine.stop()
+	var r := clampf(speed_ratio, 0.3, 2.0)
+	var pitch := (0.9 + 0.18 * r + 0.08 * ab) if prop and engine_prop != null else (0.75 + 0.35 * r + 0.18 * ab)
+	var db := -22.0 + 3.0 * clampf(r - 1.0, -1.0, 0.6) + 4.0 * ab
+	var k := 1.0 - exp(-delta * 3.0)
+	_eng_pitch = lerpf(_eng_pitch, pitch, k)
+	_eng_db = lerpf(_eng_db, db, k)
+	engine.pitch_scale = clampf(_eng_pitch, 0.5, 2.0)
+	engine.volume_db = _eng_db + Tuning.g("sfx_db") + Tuning.g("engine_db")
 	if not engine.playing:
 		engine.play()
 

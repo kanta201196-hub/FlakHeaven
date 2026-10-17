@@ -18,6 +18,15 @@ var evo_plus := 0        # «Э+» из резерва: +8% урона, −4% п
 var _side := 1.0
 var _icd := 0.0          # турели: перехват ракет (зонтик, «Дикобраз», нашивка)
 var _barrel := 0
+## правка 3.5-s4 (п. 13): турель поворачивается к цели с ограниченной скоростью и стреляет, только когда
+## навелась; aim — куда смотрят стволы (угол в мире, NAN — ещё не навели), 3D берёт его же
+var aim := NAN
+## правка 3.5-s4 (п. 27): где на крыле висят ракеты (смещения в осях самолёта, считает 3D) — пуск оттуда
+var launch_offs: Array = []
+var _aim_t: Enemy = null
+var _aim_scan := 0.0
+const TURRET_TRAVERSE := 150.0   # °/с; «Сервоприводы» — +25% за уровень
+const TURRET_GATE := 0.09        # рад — стреляет, когда стволы смотрят на цель точнее
 var _charge := 0.0       # рельсотрон: идёт зарядка
 const RAIL_CHARGE := 0.9
 
@@ -190,6 +199,7 @@ func update(delta: float, p: Player) -> void:
 	if is_empty():
 		return
 	if weapon == "turret":
+		_turret_aim(delta, p)
 		_turret_intercept(delta, p)
 		if p.syn.has("hedgehog"):
 			_hedgehog(delta, p)
@@ -455,6 +465,8 @@ func _wolf(p: Player, t: Enemy, d: float) -> void:
 
 
 func _slot_pos(p: Player, i: int) -> Vector2:
+	if (weapon == "aam" or weapon == "rockets") and not launch_offs.is_empty() and Render3D.enabled:
+		return p.global_position + (launch_offs[i % launch_offs.size()] as Vector2).rotated(p.heading)
 	if slots == 1:
 		return p.global_position
 	var side := -1.0 if i % 2 == 0 else 1.0
@@ -493,6 +505,8 @@ func _fire_aam(p: Player) -> bool:
 		var md := dmg() * Profile.wk("aam", "dmg")
 		opts["spd_k"] = Profile.wk("aam", "spd") * (1.2 if level >= 4 and not evo else 1.0)
 		Main.I.projectiles.spawn_player_missile(pos, vel, t, md, "ракеты В-В", opts)
+		if Boom3D.active():
+			Boom3D.ensure().launch(pos, Vector2.from_angle(p.heading), p.velocity)
 		if i < slots:
 			_wolf(p, t, md)
 	Main.I.sfx.play("aam_launch", -16.0, 1.4)
@@ -562,7 +576,28 @@ func _wall(p: Player, fwd: Vector2, d: float) -> void:
 				{"life": p.global_position.distance_to(target) / spd, "src": "связка: огненный вал"})
 
 
+func has_aim_target() -> bool:
+	return not is_nan(aim) and is_instance_valid(_aim_t) and _aim_t.hp > 0.0
+
+
+func _turret_aim(delta: float, p: Player) -> void:
+	if is_nan(aim):
+		aim = p.heading
+	_aim_scan -= delta
+	if _aim_scan <= 0.0 or not is_instance_valid(_aim_t) or _aim_t.hp <= 0.0:
+		_aim_scan = 0.15
+		_aim_t = null
+		if p.umbrella_t > 0.0:
+			_aim_t = Weapons.pick_target(p.global_position, range_px(), priority, [], true)
+		if _aim_t == null:
+			_aim_t = Weapons.pick_target(p.global_position, range_px(), priority)
+	var want := p.heading if _aim_t == null else (_aim_t.global_position - p.global_position).angle()
+	aim = rotate_toward(aim, want, deg_to_rad(TURRET_TRAVERSE) * float(p.mods.get("turret_traverse", 1.0)) * delta)
+
+
 func _fire_gun(p: Player) -> bool:
+	if weapon == "turret":
+		return _fire_turret(p)
 	var t: Enemy = null
 	if weapon == "turret" and p.umbrella_t > 0.0:
 		t = Weapons.pick_target(p.global_position, range_px(), priority, [], true) # зонтик: сначала самолёты
@@ -597,6 +632,30 @@ func _fire_gun(p: Player) -> bool:
 			Main.I.projectiles.spawn_player_bullet(pos, dir * spd + p.velocity * 0.5, gd, (to.length() + 60.0) / spd, false,
 				"турели" if weapon == "turret" else "гондола", pierce, he)
 	Main.I.sfx.play("turret_fire" if weapon == "turret" else "gunpod_fire", -21.0)
+	return true
+
+
+## Турель: огонь по цели, на которую уже наведены стволы (без мгновенного разворота)
+func _fire_turret(p: Player) -> bool:
+	var t := _aim_t
+	if t == null or not is_instance_valid(t) or t.hp <= 0.0 or is_nan(aim):
+		return false
+	if absf(wrapf((t.global_position - p.global_position).angle() - aim, -PI, PI)) > TURRET_GATE:
+		return false
+	var barrels := 2 if evo else 1
+	for s in slots:
+		for b in barrels:
+			var pos := _slot_pos(p, s)
+			if barrels > 1:
+				pos += Vector2.from_angle(aim + PI / 2.0) * (5.0 if b == 0 else -5.0)
+			var to := t.global_position - pos
+			var spd := 1300.0 * Profile.wk(weapon, "spd")
+			# стволы смотрят по aim; поправка на место турели на крыле — к цели, но не больше зазора наведения
+			var da := clampf(wrapf(to.angle() - aim, -PI, PI), -TURRET_GATE, TURRET_GATE)
+			var dir := Vector2.from_angle(aim + da + randf_range(-0.03, 0.03))
+			Main.I.projectiles.spawn_player_bullet(pos, dir * spd + p.velocity * 0.5, dmg() * Profile.wk(weapon, "dmg"),
+				(to.length() + 60.0) / spd, false, "турели", 0, 0.0)
+	Main.I.sfx.play("turret_fire", -21.0)
 	return true
 
 
