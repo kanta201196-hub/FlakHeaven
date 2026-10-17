@@ -670,6 +670,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var len_w := Tuning.g("plane_len") * 0.85 * float(wt.get_width()) / float(PlaneArt.plane_tex("fighter", 1).get_width())
 			var uw := _ensure(wm.get_instance_id(), "wing", wt, len_w, 0.075, 48)
 			uw["ref"] = weakref(wm)
+			if uw.get("kit") == null and uw["bm"] != null:   # Т-8: полосы звена и подвесы по типу ведомого
+				uw["kit"] = WingMech.attach_wing_kit(uw["node"].get_child(0) as Node3D, wt.resource_path.get_file().get_basename(), wm.type, uw["bm"])
 			var rw := _relief_alt(uw, wm.global_position, Vector2.from_angle(wm.heading) * 300.0, 1.0, sd)
 			_place(uw, wm.global_position, wm.heading, _turn_bank(uw, wm.heading, delta), 0.0, rw[0], _alt_scale(rw[0]), rw[1])
 			if uw.get("mech") != null:

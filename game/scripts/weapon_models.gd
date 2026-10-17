@@ -117,7 +117,7 @@ static func pylon_mesh(weapon: String, top: float) -> Mesh:
 	var key := "pylon_%s_%.3f" % [weapon, top]
 	if _cache.has(key):
 		return _cache[key]
-	var rail := weapon == "aam"
+	var rail := weapon in ["aam", "arm"]
 	var am := ArrayMesh.new()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -147,7 +147,8 @@ static func hang(weapon: String, t: int, evo := false) -> float:
 ## ступени отличаются формой и деталями. Те же оси и длина 1, что у процедурных моделей ниже.
 ## Т-5: кассетные бомбы (балка → держатель на 4 → кассета) и ловушки (кассеты-«соты» в обшивке → контейнер на законцовке)
 const WEAPON_GLB := {"aam": "res://models/weapons/aam_%d.glb", "rockets": "res://models/weapons/rockets_%d.glb",
-	"bombs": "res://models/weapons/bombs_%d.glb", "flares": "res://models/weapons/flares_%d.glb"}
+	"bombs": "res://models/weapons/bombs_%d.glb", "flares": "res://models/weapons/flares_%d.glb",
+	"arm": "res://models/weapons/arm_%d.glb"}   # Т-8: противорадарная ракета «Ласки»
 ## Т-6: эволюция — совсем другая модель (правило владельца): «Шмель», «Ливень», «Салют» (на спине),
 ## «Бабушкин ковёр» (под фюзеляжем, планка поперёк полёта — свой узел крепления, без пилона)
 const EVO_GLB := "res://models/weapons/%s_evo.glb"
