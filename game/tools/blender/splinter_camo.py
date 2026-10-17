@@ -5,23 +5,33 @@
 «Осы 1» (clean_camo.py, k-means). Швы и лючки — множитель из высоких частот исходной яркости; фонарь, сопла,
 ниши (тёмное) и обтекатель носа — исходные. Кили перекрашиваются вместе со всем — становятся в тон.
 Пишет извлечённый *_0.png ангара и, если задан, *_Image_0.jpg боевой модели (та же развёртка).
+Набор цветов — PRESETS: «osa» — голубой «Осы 1»; «kit» — песочный класса «Кит» (цвет класса в интерфейсе
+Color(0.95, 0.85, 0.55), каталог: оба «Кита» голый металл). У «Кита» краска матовая: в карте
+металличности/шероховатости (соседняя картинка *_1 / *_Image_1, glTF: G — шероховатость, B — металл)
+окрашенная обшивка становится менее металлической и более шероховатой.
 
-Запуск (bpy 5.x): python3 splinter_camo.py <модель ангара.glb> <текстура ангара _0.png> [боевая _Image_0.jpg]"""
+Запуск (bpy 5.x): python3 splinter_camo.py <набор osa|kit> <модель ангара.glb> <текстура ангара _0.png> [боевая _Image_0.jpg]"""
 import sys
 import numpy as np
 import bpy
 from PIL import Image, ImageFilter
 
-DARK = np.array([0.264, 0.37, 0.504])    # «Оса 1» после clean_camo.py
-LIGHT = np.array([0.544, 0.662, 0.841])
-DARK_SHARE = 0.38
+# dark / light — цвета областей, nose_x — дальше по носу обшивка исходная (радиопрозрачный обтекатель),
+# matte — (металл не больше, шероховатость не меньше) для окрашенного, None — карту не трогаем
+PRESETS = {
+    "osa": {"dark": [0.264, 0.37, 0.504], "light": [0.544, 0.662, 0.841], "dark_share": 0.38, "nose_x": 0.37,
+            "seed": 4, "matte": None},     # «Оса 1» после clean_camo.py
+    "kit": {"dark": [0.36, 0.3, 0.21], "light": [0.52, 0.45, 0.32], "dark_share": 0.4, "nose_x": 0.44,
+            "seed": 7, "matte": (0.15, 0.5)},
+}
 PLANES = 9            # плоскостей-разрезов
-NOSE_X = 0.37         # дальше — радиопрозрачный обтекатель, остаётся серым
-SEED = 4
 LUMA = np.array([0.299, 0.587, 0.114], np.float32)
 
-glb, tex_f = sys.argv[1], sys.argv[2]
-battle_f = sys.argv[3] if len(sys.argv) > 3 else None
+pr = PRESETS[sys.argv[1]]
+glb, tex_f = sys.argv[2], sys.argv[3]
+battle_f = sys.argv[4] if len(sys.argv) > 4 else None
+DARK, LIGHT = np.array(pr["dark"]), np.array(pr["light"])
+DARK_SHARE, NOSE_X, SEED = pr["dark_share"], pr["nose_x"], pr["seed"]
 
 # --- карта положений: Emission(Position) → запекание в развёртку
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -96,3 +106,21 @@ if battle_f:
     b = Image.open(battle_f)
     out.resize(b.size, Image.LANCZOS).save(battle_f, quality=92)
     print("SAVED", battle_f)
+
+# матовая краска: карта металличности/шероховатости той же развёртки
+if pr["matte"]:
+    metal, rough = pr["matte"]
+    paint = 1 - keep[..., 0]
+    for f in [tex_f.replace("_0.png", "_1.png"), battle_f.replace("Image_0", "Image_1") if battle_f else None]:
+        if not f:
+            continue
+        im = Image.open(f)
+        a = np.asarray(im.convert("RGB"), np.float32) / 255
+        pm = np.asarray(Image.fromarray((paint * 255).astype(np.uint8)).resize(im.size, Image.BILINEAR), np.float32)[..., None] / 255
+        m = a.copy()
+        m[..., 1] = np.maximum(a[..., 1], rough)
+        m[..., 2] = np.minimum(a[..., 2], metal)
+        a = a * (1 - pm) + m * pm
+        o = Image.fromarray((a * 255 + 0.5).astype(np.uint8), "RGB")
+        o.save(f, quality=92) if f.endswith(".jpg") else o.save(f)
+        print("SAVED", f)

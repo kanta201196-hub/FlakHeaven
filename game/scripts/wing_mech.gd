@@ -184,9 +184,10 @@ static func tail_mount(tail: Node3D, base: Node3D) -> Vector3:
 	return (base.global_transform.affine_inverse() * m.global_transform).origin
 
 
-# ---------- Т-2: отличие «Грача 2», видное сверху ----------
-## tools/blender/attacker2_detail.py → models/mech/fh_detail_<класс>_<ур>.glb: ПГО перед кабиной и крупные
-## контейнеры на законцовках; цвет — в материале детали (средний тон обшивки под ней)
+# ---------- Т-2: детали силуэта поверх модели Meshy ----------
+## models/mech/fh_detail_<класс>_<ур>.glb: «Грач 2» — ПГО и контейнеры на законцовках (attacker2_detail.py);
+## «Кит 1» — Н-оперение и баки на законцовках, «Кит 2» — развал-кили, ПГО, винглеты (bomber_detail.py).
+## Цвет — в материале детали (средний тон обшивки под ней)
 static func attach_detail(model: Node3D, key: String) -> Node3D:
 	var path := "res://models/mech/fh_detail_%s.glb" % key
 	if not _scenes.has(path):
