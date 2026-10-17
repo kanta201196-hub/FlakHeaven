@@ -8,8 +8,9 @@
           тонкий корпус с поясками, задние рули с роллеронами;
   aam 3 — тяжёлая: гранёный корпус, скошенный нос с окном головки, большие крылья, сбрасываемый
           ускоритель с медным кольцом;
-  rockets 1 — короткий блок с открытыми трубами; 2 — длинный блок с конусом-обтекателем из лепестков;
-  rockets 3 — спаренные блоки с обтекателями на общей балке. У всех сверху балка-держатель с замками.
+  rockets 1 — короткий блок с открытыми трубами; 2 — длинный блок, обтекатель из лепестков с пусковыми
+  отверстиями, сзади ниша с трубами (фото rockets_1); 3 — один крупный блок с глубокой нишей и пакетом
+  из 20 труб, тупой обтекатель (фото rockets_3; тест 3.5-s3: не спарка «слипшихся бочек»).
 Эволюции (Т-6, plan-after-review раздел 3: эволюция — совсем другая модель, не «ступень 4»):
   aam evo     «Шмель» — толстая ракета-носитель, вокруг корпуса 4 боевые части в открытых отсеках, жёлтые полосы;
   rockets evo «Ливень» — веерная пусковая: три расходящихся пакета труб на поворотной раме;
@@ -24,6 +25,8 @@
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
+from mathutils import Matrix, Vector
+import bmesh
 import turret_lib as L
 
 kind, tier, OUT = sys.argv[-3], sys.argv[-2], sys.argv[-1]
@@ -267,6 +270,97 @@ elif kind == "rockets":
         for x in (x0 + 0.12, x1 - 0.12):
             cyl("hook", (x, 0, z + 0.04), 0.012, 0.03, M_STEEL, "Z", 10)
 
+    def petal_cone(x0, x1, r0, n, holes):
+        """Обтекатель из n лепестков с тёмными щелями между ними и пусковыми отверстиями на лепестках"""
+        cone("petal_core", x0, x1 - 0.01, r0 * 0.9, r0 * 0.05, M_DARK, 24)
+        me = bpy.data.meshes.new("petals")
+        bm = bmesh.new()
+        K, M = 6, 5
+        for k in range(n):
+            a0 = 2 * math.pi * k / n
+            h = math.pi / n * 0.8
+            grid = []
+            for i in range(K + 1):
+                t = i / K
+                x = x0 + (x1 - x0) * t
+                r = r0 * (1 - t) + r0 * 0.04 * t
+                grid.append([bm.verts.new((x, math.cos(a0 - h + 2 * h * j / M) * r, math.sin(a0 - h + 2 * h * j / M) * r))
+                             for j in range(M + 1)])
+            for i in range(K):
+                for j in range(M):
+                    bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.to_mesh(me)
+        bm.free()
+        ob = bpy.data.objects.new("petals", me)
+        bpy.context.scene.collection.objects.link(ob)
+        md = ob.modifiers.new("sol", "SOLIDIFY")
+        md.thickness = 0.006
+        finish(ob, M_OLIVE)
+        slant = Vector((x1 - x0, 0, -r0))
+        for k in range(n):
+            a0 = 2 * math.pi * k / n
+            rad = Vector((0, math.cos(a0), math.sin(a0)))
+            u = (Vector((x1 - x0, 0, 0)) - rad * r0 * 0.96).normalized()
+            w = rad.cross(u).normalized()
+            nn = u.cross(w).normalized()
+            for hi in range(holes):
+                t = 0.16 + 0.34 * hi
+                c = Vector((x0 + (x1 - x0) * t, 0, 0)) + rad * (r0 * (1 - t) + r0 * 0.04 * t)
+                ln = (x1 - x0) * (0.17 if holes > 1 else 0.3)
+                bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=6, radius=1)
+                hole = bpy.context.object
+                hole.name = "launch_hole"
+                hole.scale = (ln * 0.85, r0 * (1 - t) * 0.13, 0.0035)
+                bpy.ops.object.transform_apply(scale=True)
+                hole.matrix_world = Matrix((u, w, nn)).transposed().to_4x4() @ Matrix.Identity(4)
+                hole.location = c
+                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+                finish(hole, M_DARK)
+
+    def pod_ref(x0, x1, x2, R, depth, rings, holes, perf_rows):
+        """Блок по фото: корпус x0…x1, обтекатель x1…x2; сзади открытая ниша глубиной depth с трубами"""
+        cyl("pod", ((x0 + depth + x1) / 2, 0, 0), R, x1 - x0 - depth, M_OLIVE, "X", 32, 0.003)
+        bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=R, depth=depth + 0.004, end_fill_type="NOTHING",
+                                            location=(x0 + depth / 2, 0, 0), rotation=(0, math.pi / 2, 0))
+        lip = bpy.context.object
+        lip.name = "pod_lip"
+        bpy.ops.object.transform_apply(rotation=True)
+        md = lip.modifiers.new("sol", "SOLIDIFY")
+        md.thickness = R * 0.08
+        md.offset = -1
+        finish(lip, M_OLIVE)
+        cyl("cavity", (x0 + depth * 0.5, 0, 0), R * 0.93, depth, M_DARK, "X", 32)
+        for rr, n in rings:
+            for i in range(n):
+                a = 2 * math.pi * i / n + (0.3 if n > 7 else 0.0)
+                y, z = math.cos(a) * rr, math.sin(a) * rr
+                cyl("tube", (x0 + depth * 0.45, y, z), R * 0.12, depth * 0.9, M_STEEL, "X", 12)
+                cyl("bore", (x0 + depth * 0.45 - 0.002, y, z), R * 0.085, depth * 0.9, M_DARK, "X", 10)
+        for x in (x0 + depth + 0.03, (x0 + x1) / 2 + 0.05, x1 - 0.02):
+            cyl("seam", (x, 0, 0), R * 1.008, 0.006, M_DARK, "X", 32)
+        for row in range(perf_rows):   # перфорация у заднего среза, как на фото
+            for i in range(26):
+                a = 2 * math.pi * (i + 0.5 * row) / 26
+                if math.sin(a) > 0.55:
+                    continue   # сверху — пилон
+                bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=4, radius=R * 0.03,
+                                                     location=(x0 + 0.02 + 0.022 * row, math.cos(a) * R, math.sin(a) * R))
+                finish(bpy.context.object, M_DARK)
+        petal_cone(x1, x2, R * 0.98, 8, holes)
+
+    def pylon(x0, x1, R):
+        """Балка-держатель по фото: скосы на концах, замки, упоры к блоку"""
+        z0 = R + 0.012
+        prism("pylon", [(x0, z0), (x1, z0), (x1 - 0.05, z0 + 0.07), (x0 + 0.1, z0 + 0.07)], 0.05, M_OLIVE, 0.004)
+        box("pylon_rail", ((x0 + x1) / 2, 0, z0 + 0.072), ((x1 - x0) * 0.6, 0.03, 0.008), M_DARK, 0.0)
+        for x in (x0 + 0.13, x1 - 0.12):
+            cyl("hook", (x, 0, z0 + 0.08), 0.01, 0.03, M_STEEL, "Z", 10)
+        for x in (x0 + 0.15, x1 - 0.15):
+            for y in (1, -1):
+                tube("sway", [(x, y * 0.02, z0 + 0.01), (x, y * R * 0.45, R * 0.9)], 0.008, M_STEEL)
+            box("latch", (x + 0.06, 0, z0 - 0.004), (0.04, 0.04, 0.014), M_DARK, 0.002)
+
     if tier == 1:
         R = 0.15
         pod(0, -0.36, 0.36, R, 7, False)
@@ -274,19 +368,17 @@ elif kind == "rockets":
         for x in (-0.18, 0.0, 0.18):
             box("latch", (x, 0, R + 0.012), (0.05, 0.05, 0.025), M_DARK, 0.002)
     elif tier == 2:
-        R = 0.16
-        pod(0, -0.5, 0.25, R, 16, True)
-        beam(-0.45, 0.22, R + 0.04, 0.08)
-        for x in (-0.3, -0.1, 0.1):
-            box("latch", (x, 0, R + 0.012), (0.05, 0.05, 0.025), M_DARK, 0.002)
-    else:
+        # по фото rockets_1: длинный блок, обтекатель из лепестков с пусковыми отверстиями, сзади — ниша с трубами
         R = 0.15
-        for y in (0.17, -0.17):
-            pod(y, -0.5, 0.26, R, 16, True)
-            for x in (-0.3, 0.05):
-                tube("strut", [(x, y * 0.4, R + 0.05), (x, y, R * 0.7)], 0.012, M_DARK)
-        beam(-0.45, 0.22, R + 0.06, 0.12)
-        box("crossbar", (-0.12, 0, R + 0.045), (0.5, 0.36, 0.02), M_STEEL, 0.003)
+        pod_ref(-0.48, 0.2, 0.5, R, 0.06, [(0.0, 1), (R * 0.42, 6), (R * 0.76, 9)], 2, 1)
+        pylon(-0.4, 0.14, R)
+    else:
+        # по фото rockets_3: один крупный блок (не спарка), глубокая ниша сзади с пакетом труб, тупой обтекатель
+        R = 0.2
+        pod_ref(-0.5, 0.32, 0.5, R, 0.1, [(0.0, 1), (R * 0.36, 7), (R * 0.68, 12)], 2, 2)
+        pylon(-0.38, 0.2, R)
+        for x in (-0.22, 0.12):   # бандажи
+            cyl("band", (x, 0, 0), R * 1.02, 0.02, M_STEEL, "X", 32)
 
 elif kind == "bombs":
     # Т-5: кассетные бомбы; верх (z > 0) — к пилону, оперение крестом с кольцом
@@ -361,5 +453,8 @@ name = "%s_evo" % kind if EVO else "%s_%d" % (kind, tier)
 root = build(name, OUT)
 root.location.z += 0.35   # для предпросмотра — над полом (в .glb центр остаётся в начале координат)
 if "nopreview" not in sys.argv:
-    preview(OUT, [("iso", (1.3, -1.5, 1.25), (0, 0, 0.35), 60), ("side", (0, -2.4, 0.35), (0, 0, 0.35), 50)])
+    shots = [("iso", (1.3, -1.5, 1.25), (0, 0, 0.35), 60), ("side", (0, -2.4, 0.35), (0, 0, 0.35), 50)]
+    if kind == "rockets":
+        shots.append(("rear", (-1.6, -0.9, 0.6), (0, 0, 0.35), 60))
+    preview(OUT, shots)
 print("DONE")
