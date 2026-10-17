@@ -53,6 +53,11 @@ func _shoot(delta: float) -> void:
 		var t2 := _find_target(deg_to_rad(Tuning.g("auto_cone")), range_px)
 		if pl.on_tail():
 			t2 = pl.tail_target
+		# боевой режим: пушка держится на цели разворота, пока она в дальности и не дальше 40° от носа
+		elif pl.combat_t > 0.0 and pl.lock_ok():
+			var tl := pl.turn_lock.global_position - pl.global_position
+			if tl.length() < range_px and absf(wrapf(tl.angle() - pl.heading, -PI, PI)) < deg_to_rad(40.0):
+				t2 = pl.turn_lock
 		want = t2 != null
 		if t2 and (pl.combat_t > 0.0 or pl.on_tail()):
 			aim = _lead_dir(t2)

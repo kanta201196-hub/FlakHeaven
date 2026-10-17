@@ -175,14 +175,23 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 	_text(Vector2(rx, area.position.y + 24), "%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)" % Weapons.DEFS[w2]["title"], 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
 	for tier in [1, 2, 3]:
-		_text(Vector2(rx, yy + 20), "Ступень %d%s" % [tier, " — вариант модернизации (действует на самолёте ур. 2)" if tier == 3 else ""], 18, Color.WHITE)
+		_text(Vector2(rx, yy + 20), "Ступень %d%s" % [tier, " · модернизация" if tier == 3 else ""], 18, Color.WHITE)
 		var st2 := Profile.tier_state(w2, tier)
 		var locked: bool = (tier == 2 and Profile.tier_state(w2, 1) == "") or (tier == 3 and not Profile.tier3_open(w2))
 		var why := "сначала выберите ступень %d" % (tier - 1)
 		if tier == 3 and Profile.tier_state(w2, 2) != "" and not Campaign.cleared(1):
-			why = "откроется после операции 2 «Сухое русло»"
+			why = "откроется после операции 2 «Сухое русло» (кампания)"
+		elif tier == 3 and Profile.tier_state(w2, 2) == "":
+			why = "сначала выберите ступень 2 выше"
 		if tier == 3 and not Profile.WBRANCH3.has(w2):
 			break
+		# правка 2 (тест 3.5-s4): как открыть ступень 3 — условия галочками прямо над вариантами
+		if tier == 3 and st2 == "":
+			_text(Vector2(rx + 250, yy + 20), "Нужно:", 15, Color(0.8, 0.84, 0.9))
+			_cond_chips(Vector2(rx + 310, yy + 4), [["ступень 2", Profile.tier_state(w2, 2) != ""],
+				["операция 2 «Сухое русло»", Campaign.cleared(1)],
+				["%d запч." % int(Profile.TIER_COST[2]), Profile.parts() >= int(Profile.TIER_COST[2])],
+				["самолёт ур. 2", Profile.plane_lvl(m.hangar_cls) == 2]])
 		for oi in 2:
 			var opt: Array = Profile.WBRANCH[w2][tier - 1][oi] if tier < 3 else Profile.WBRANCH3[w2][oi]
 			var key := "a" if oi == 0 else "b"
@@ -297,23 +306,32 @@ func _hg_crew(c: String, area: Rect2) -> void:
 	var sx := px + pw + 30.0
 	var sw := area.end.x - sx
 	_text(Vector2(sx, area.position.y + 24), "НАВЫКИ КЛАССА", 18, Menu.C_AMBER)
-	var sks: Array = cd["skills"]
+	var sks: Array = Profile.skills(c)
 	var yy := area.position.y + 50.0
 	for slot in 2:
 		var open := slot == 0 or Profile.slot2_open(c)
 		_text(Vector2(sx, yy + 18), "Слот %d [%s]%s" % [slot + 1, "E" if slot == 0 else "F", "" if open else " — экипаж ур. %d" % Profile.SLOT2_LVL], 16, Color.WHITE if open else Color(0.6, 0.62, 0.68))
 		yy += 26.0
 		for sk in PlaneClasses.CLASS_SKILLS[c]:
-			var r3 := Rect2(sx, yy, sw, 36)
+			var r3 := Rect2(sx, yy, sw, 64)
 			var unlocked := Profile.skill_unlocked(c, sk)
-			var sel: bool = sks.size() > slot and sks[slot] == sk
+			var sel: bool = sks[slot] == sk
+			# правка 7: навык из другого слота сюда не ставится — два одинаковых навыка взять нельзя
+			var busy: bool = not sel and sks[1 - slot] == sk
 			ctrl.draw_rect(r3, Color(0.55, 0.9, 0.55, 0.18) if sel else Color(1, 1, 1, 0.04))
-			if open and unlocked:
+			if open and unlocked and not busy:
 				_buttons.append([r3, "hg:slot:%d:%s" % [slot, sk]])
 			var i: int = PlaneClasses.CLASS_SKILLS[c].find(sk)
-			_text(Vector2(sx + 10, yy + 24), ("● " if sel else "○ ") + String(PlaneClasses.SKILL3[sk]["title"]) + ("" if unlocked else " (экипаж ур. %d)" % Profile.SKILL_UNLOCK[i]), 15,
-				Color(0.7, 1.0, 0.7) if sel else (Color(0.85, 0.88, 0.95) if unlocked and open else Color(0.55, 0.57, 0.62)))
-			yy += 40.0
-		yy += 16.0
+			var tail := ""
+			if not unlocked:
+				tail = " (экипаж ур. %d)" % Profile.SKILL_UNLOCK[i]
+			elif busy:
+				tail = " — уже в слоте %d" % (2 - slot)
+			_text(Vector2(sx + 10, yy + 21), ("● " if sel else "○ ") + String(PlaneClasses.SKILL3[sk]["title"]) + tail, 15,
+				Color(0.7, 1.0, 0.7) if sel else (Color(0.85, 0.88, 0.95) if unlocked and open and not busy else Color(0.55, 0.57, 0.62)))
+			# правка 6: что делает навык — строкой под названием
+			_para(Vector2(sx + 22, yy + 39), String(PlaneClasses.SKILL3[sk]["short"]), sw - 28.0, 13, Color(0.72, 0.76, 0.84) if open else Color(0.5, 0.52, 0.58))
+			yy += 68.0
+		yy += 12.0
 	_text(Vector2(sx, yy + 10), "Слот 3 — экипаж ур. 12, в разработке", 14, Color(0.55, 0.57, 0.62))
 	_para(Vector2(sx, yy + 40), "Карточки «уровень навыка» улучшают навык слота 1.", sw, 13, Color(0.7, 0.72, 0.78))

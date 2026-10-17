@@ -164,8 +164,9 @@ func _drive(delta: float, p: Player) -> void:
 		var b: Vector2 = site.bunker.anchor
 		var toward := (p.global_position - site.global_position).angle()
 		var slot := b + Vector2.from_angle(toward + randf_range(-1.1, 1.1)) * randf_range(140.0, 240.0)
-		if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
-			slot = Render3D.I.terrain.find_floor(slot, 110.0)
+		var tr := _terrain()
+		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке
+			slot = tr.find_floor(slot, 110.0, signf(tr.river_field(anchor.x, anchor.y)))
 		_goal = slot
 		return
 	var step := _goal - anchor
@@ -176,7 +177,12 @@ func _drive(delta: float, p: Player) -> void:
 	_body_angle = rotate_toward(_body_angle, step.angle(), deg_to_rad(140.0) * delta)
 	# сначала доворачивает корпус, потом едет
 	var k := clampf(1.0 - absf(wrapf(step.angle() - _body_angle, -PI, PI)) / 1.2, 0.0, 1.0)
-	anchor += Vector2.from_angle(_body_angle) * minf(DRIVE_SPEED * k * delta, step.length())
+	var nxt := anchor + Vector2.from_angle(_body_angle) * minf(DRIVE_SPEED * k * delta, step.length())
+	if _into_water(nxt):   # путь к точке срезает излучину реки — стоим и выбираем другую
+		_goal = Vector2.INF
+		_move_cd = randf_range(1.0, 2.0)
+		return
+	anchor = nxt
 
 
 ## Бункер уничтожен: техника без командования прекращает огонь и уходит от позиции
@@ -185,7 +191,21 @@ func _drive_off(delta: float) -> void:
 		return
 	var away := (anchor - site.anchor).angle()
 	_body_angle = rotate_toward(_body_angle, away, deg_to_rad(90.0) * delta)
-	anchor += Vector2.from_angle(_body_angle) * DRIVE_SPEED * 0.8 * delta
+	var nxt := anchor + Vector2.from_angle(_body_angle) * DRIVE_SPEED * 0.8 * delta
+	if not _into_water(nxt):   # у реки техника останавливается, а не въезжает в воду
+		anchor = nxt
+
+
+func _terrain() -> Terrain3D:
+	if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
+		return Render3D.I.terrain
+	return null
+
+
+## Шаг заводит в русло с берегом (а сейчас техника не в нём)
+func _into_water(nxt: Vector2) -> bool:
+	var tr := _terrain()
+	return tr != null and tr.wet(nxt) and not tr.wet(anchor)
 
 
 ## ПРО позиции: ЗСУ сбивает наши ракеты и НАР в радиусе DEF_R (очередь — 0,5 с перезарядки)
