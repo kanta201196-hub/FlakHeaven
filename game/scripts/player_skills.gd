@@ -133,7 +133,7 @@ func _activate_skill3(id := "", slot := 0) -> void:
 			var n2 := 3 if lvl >= 2 else 2
 			var life := 15.0 if lvl >= 1 else 12.0
 			for i in n2:
-				var keep := pl.syn.has("s_nest") and not pl._nest_done and i == 0 and pl.permanent_wingmen() < Cards.WING_MAX
+				var keep := pl.syn.has("s_nest") and not pl._nest_done and i == 0 and pl.permanent_wingmen() < Cards.wing_limit(pl)
 				if keep:
 					pl._nest_done = true # «Гнездо»: один остаётся насовсем
 				pl.add_wingman("rook", 1.0, not keep, life)

@@ -145,6 +145,7 @@ func _process(delta: float) -> void:
 			velocity = p.velocity
 			Main.I.radio("Ведомый", "Снова в строю!")
 		return
+	_sortie(p, delta)
 	_fly(p, delta)
 	_gun(p, delta)
 	match type:
@@ -164,7 +165,7 @@ func _gun(p: Player, delta: float) -> void:
 	_fire_cd -= delta
 	if _fire_cd > 0.0:
 		return
-	var t := Weapons.pick_target(global_position, 650.0, "ground" if type == "rook" else "nearest", [], type == "swift")
+	var t := _sortie_tgt if _sortie_t > 0.0 and is_instance_valid(_sortie_tgt) else _target(650.0)
 	if t and absf(Vector2.from_angle(heading).angle_to(t.global_position - global_position)) < deg_to_rad(40.0):
 		_fire_cd = 1.0 / (Tuning.g("fire_rate") * 0.6)
 		var dir := (t.global_position - global_position).normalized()
@@ -188,6 +189,9 @@ var _fly_w := 0.0          # 0 — держит строй, 1 — летит с�
 
 
 func _fly(p: Player, delta: float) -> void:
+	if _sortie_t > 0.0 and is_instance_valid(_sortie_tgt):
+		_attack_run(p, delta)
+		return
 	var target := p.global_position + _slot_offset(p)
 	var to := target - global_position
 	var dist := to.length()
@@ -214,7 +218,7 @@ func _swift(p: Player, delta: float) -> void:
 	_aam_cd -= delta
 	if _aam_cd <= 0.0:
 		var wolf := false
-		var tt := Weapons.pick_target(global_position, 900.0, "nearest", [], true)
+		var tt := _target(900.0)
 		if tt != null:
 			_aam_cd = (5.0 if lvl >= 2 else 7.0) * (0.5 if wolf else 1.0) * randf_range(0.9, 1.1)
 			for i in 2:
@@ -235,7 +239,7 @@ func _swift(p: Player, delta: float) -> void:
 func _rook(p: Player, delta: float) -> void:
 	_special_cd -= delta
 	if _special_cd <= 0.0:
-		var t := Weapons.pick_target(global_position, 700.0, "ground")
+		var t := _target(700.0)
 		if t == null:
 			_special_cd = 0.5
 			return
@@ -255,7 +259,7 @@ func _rook(p: Player, delta: float) -> void:
 func _weasel(p: Player, delta: float) -> void:
 	_special_cd -= delta
 	if _special_cd <= 0.0:
-		var t := Weapons.pick_target(global_position, 1000.0, "ground")
+		var t := _target(1000.0)
 		if t == null:
 			_special_cd = 0.5
 		else:
@@ -283,15 +287,80 @@ func _salvos(delta: float) -> void:
 	if _salvo_t > 0.0:
 		return
 	_salvo_t = _salvo_iv
-	var t := Weapons.pick_target(global_position, 900.0, "nearest", [], true)
-	if t == null:
+	var t := _target(900.0)
+	if t == null and type != "swift":   # истребители — только по воздуху (правка 3.5-s4)
 		t = Weapons.pick_target(global_position, 900.0, "nearest")
 	_salvo_left -= 1
+	if t == null:
+		return
 	_missile(Main.I.player, t, _salvo_dmg * dmg_k())
 
 
 var _run_t := 0.0
 var _dropped := false
+
+
+# ---------- Правка 3.5-s4: цель по приоритету звена и самостоятельные заходы ----------
+
+var _sortie_t := 0.0          # > 0 — ведомый вышел из строя и атакует сам
+var _sortie_cd := 4.0
+var _sortie_tgt: Enemy = null
+var _break := 0.0             # направление отворота после атаки (−1 / +1)
+
+
+## Цель с учётом настройки звена (Settings.wing_prio). «Стриж» — истребитель: только воздушные цели.
+func _target(rng: float) -> Enemy:
+	var air := type == "swift"
+	var natural := "nearest" if air else "ground"
+	match Settings.wing_prio:
+		1:
+			var p := Main.I.player
+			var t := Weapons.pick_target(p.global_position, rng * 0.8, "nearest", [], air)
+			if t != null and t.global_position.distance_to(global_position) < rng * 1.3:
+				return t
+			return Weapons.pick_target(global_position, rng, natural, [], air)
+		2:
+			return Weapons.pick_target(global_position, rng, "big", [], air)
+		3:
+			return Weapons.pick_target(global_position, rng, natural if air else "ground", [], air)
+	return Weapons.pick_target(global_position, rng, natural, [], air)
+
+
+## Заход: раз в 3–6 с ведомый отрывается от строя к цели (до 3,5 с), стреляет и отворачивает обратно.
+## Строй держит при «Сомкнуть строй» и когда ведущий далеко (поводок 700 пикс.).
+func _sortie(p: Player, delta: float) -> void:
+	_sortie_cd -= delta
+	var leash := global_position.distance_to(p.global_position)
+	if _sortie_t > 0.0:
+		_sortie_t -= delta
+		if not is_instance_valid(_sortie_tgt) or _sortie_tgt.hp <= 0.0 or leash > 700.0 or p.ranks_t > 0.0:
+			_sortie_t = 0.0
+		if _sortie_t <= 0.0:
+			_sortie_tgt = null
+			_sortie_cd = randf_range(3.0, 6.0)
+		return
+	if _sortie_cd > 0.0 or p.ranks_t > 0.0 or leash > 300.0:
+		return
+	var t := _target(620.0)
+	if t == null or t.is_boss and type != "swift" and not t.is_ground:
+		_sortie_cd = 1.0
+		return
+	_sortie_tgt = t
+	_sortie_t = randf_range(2.5, 3.5)
+	_break = -1.0 if slot % 2 == 0 else 1.0
+	_aam_cd = minf(_aam_cd, 0.4)   # заход начинается с пуска
+
+
+func _attack_run(p: Player, delta: float) -> void:
+	var to_t := _sortie_tgt.global_position + _sortie_tgt.move_vel * 0.4 - global_position
+	var d := to_t.length()
+	var aim := to_t.angle()
+	if d < 170.0:
+		aim += _break * 1.3   # проскочил цель — отворот, не таран
+	heading = rotate_toward(heading, aim, deg_to_rad(WING_TURN * 1.25) * delta)
+	var spd := maxf(p.velocity.length(), 200.0) * 1.3
+	velocity = velocity.lerp(Vector2.from_angle(heading) * spd, 1.0 - exp(-delta * 3.0))
+	position += velocity * delta
 
 
 ## «Тёплая компания»: раз в 7 с — заход вперёд и ряд из 5 бомб поперёк курса
@@ -300,6 +369,13 @@ func _warm(p: Player, delta: float) -> void:
 		_run_t -= delta
 		if not _dropped and _run_t < 0.6:
 			_dropped = true
+			if type == "swift":
+				var at := _target(900.0)
+				if at != null:
+					for i in 2:
+						_missile(p, at, 40.0 * dmg_k())
+					Main.I.sfx.play("aam_launch", -20.0, 1.4)
+				return
 			var fwd := Vector2.from_angle(p.heading)
 			var side := Vector2(-fwd.y, fwd.x)
 			for j in 5:

@@ -243,6 +243,12 @@ func loadout(m: Main, size: Vector2) -> void:
 			if g.uses_trigger():
 				_button(Rect2(x + w - 290, y + 12, 270, 40), "Пуск: %s" % ("авто" if g.trigger == "auto" else "правой кнопкой мыши"), "trig:%d" % gi, 18)
 		y += 76.0
+	if not p.wingmen.is_empty():
+		var wr := Rect2(x, y, w, 52)
+		_panel(wr, false)
+		_text(Vector2(x + 20, y + 33), "Звено — кого атакует первым [G]", 20, Color(0.8, 0.75, 1.0))
+		_button(Rect2(x + w - 330, y + 6, 310, 40), "Цель: %s" % Settings.WING_PRIO[Settings.wing_prio], "wprio", 18)
+		y += 64.0
 	y += 10.0
 	_ctext(y + 10, "Пушка: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f" % [
 		float(p.cls["gun_dmg"]) * p.mods["gun_dmg"], float(p.cls["gun_rate"]) * p.mods["gun_rate"], p.mods["hp_cd"],

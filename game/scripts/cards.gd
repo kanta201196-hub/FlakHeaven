@@ -383,9 +383,9 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 const WING_MAX := 2
 
 
-## Лимит ведомых класса (связки «Волчья стая» и «Тёплая компания» — +1), не больше WING_MAX
+## Лимит ведомых класса (правка 3.5-s4, Kanta: «Оса» — 1, «Грач» и «Кит» — по 2); связки лимит больше не поднимают
 static func wing_limit(p: Player) -> int:
-	return mini(WING_MAX, int(p.cls["wingmen"]) + (1 if (p.syn.has("wolfpack") or p.syn.has("warm")) else 0))
+	return mini(WING_MAX, int(p.cls["wingmen"]))
 
 
 ## Все возможные карточки сейчас: [вес, карточка без редкости]
