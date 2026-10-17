@@ -19,9 +19,11 @@ const LINES := {
 	"hit": ["Ай! Это была новая краска!", "Ну всё, теперь это личное."],
 	"down": ["Катапультируюсь! Увидимся в столовой…", "Хорош… Признаю.", "Передай механику — он был прав про двигатель."],
 	"escape": ["Топливо на нуле. В другой раз, новичок!", "Мне пора на обед. Не скучай!"],
+	"again": ["Снова ты? В прошлый раз тебе повезло.", "Узнаю этот самолёт. Сегодня без поблажек.", "Мы уже встречались. Второй раз не уйдёшь."],
 }
 
 var callsign := ""
+var _again := false   # «Барон» уже встречался в кампании
 var life := 90.0
 var _state := "chase"   # chase — заходит в хвост; break — отворот после перелёта
 var _state_t := 0.0
@@ -40,7 +42,13 @@ var _flare_cd := 0.0
 
 
 func setup(hp_total: float) -> void:
-	callsign = CALLSIGNS[randi() % CALLSIGNS.size()]
+	# U-05: в операциях 2–4 кампании в дуэль выходит «Барон» и помнит прошлые встречи
+	if Campaign.baron():
+		callsign = "Барон"
+		_again = Campaign.baron_met() > 0
+		Campaign.on_baron_met()
+	else:
+		callsign = CALLSIGNS[randi() % CALLSIGNS.size()]
 	hp = hp_total
 	max_hp = hp_total
 	radius = 18.0
@@ -63,7 +71,7 @@ func apply_hp_mult(_m: float) -> void:
 
 func _ready() -> void:
 	super()
-	say("spawn")
+	say("again" if _again else "spawn")
 
 
 func say(key: String, force := false) -> void:

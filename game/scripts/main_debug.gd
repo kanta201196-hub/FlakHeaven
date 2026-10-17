@@ -127,6 +127,8 @@ func _debug_screenshots(delta: float) -> void:
 		_shot("menu")
 	if m.state == "settings":
 		_shot("settings")
+	if m.state == "campaign":
+		_shot("campaign")
 	if m.state == "class_select":
 		_shot("class")
 	if m.state == "levelup" and m.level >= 4:
@@ -253,6 +255,17 @@ func _run_autotest(delta: float) -> void:
 					print("AUTOTEST: promote %d -> %d, parts %d" % [lv0, Profile.crew_lvl("fighter"), Profile.parts()])
 				else:
 					m.input_ctl.hangar_action("back")
+			return
+		"campaign":
+			# U-05: операция кампании — по --op=N (1–4; открывает все), иначе текущая
+			if _bot_wait <= 0.0:
+				_bot_wait = 1.0
+				for a in m._args:
+					if String(a).begins_with("--op="):
+						Campaign.debug_open_all()
+						Campaign.select(clampi(int(String(a).substr(5)) - 1, 0, Campaign.OPS.size() - 1))
+				print("AUTOTEST: operation %d %s" % [Campaign.index() + 1, Campaign.op()["id"]])
+				m.ui_click("op_go")
 			return
 		"class_select":
 			if _bot_wait <= 0.0:

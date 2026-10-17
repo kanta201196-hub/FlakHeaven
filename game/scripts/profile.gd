@@ -170,6 +170,7 @@ func save() -> void:
 func wipe() -> void:
 	reset_data()
 	save()
+	Campaign.wipe()
 
 
 # ---------- запросы ----------
@@ -367,8 +368,9 @@ func buy_node(c: String, id: String) -> bool:
 	return true
 
 
+## U-05/U-06: самолёт ур. 2 продают после операции 1 кампании «Перевал»
 func can_buy_plane2(c: String) -> bool:
-	return not bool(cls(c)["plane2"]) and parts() >= PLANE2_COST and crew_lvl(c) >= PLANE2_CREW
+	return not bool(cls(c)["plane2"]) and parts() >= PLANE2_COST and crew_lvl(c) >= PLANE2_CREW and Campaign.cleared(0)
 
 
 func buy_plane2(c: String) -> bool:
@@ -492,7 +494,7 @@ func award_run(s: Dictionary) -> Dictionary:
 		out["lvl_after"] = out["lvl_before"]
 		return out
 	var wage := WAGE
-	var add := int(s["parts_kept"]) + wage
+	var add := int(s["parts_kept"]) + wage + int(s.get("op_parts", 0)) # U-05: + награда за первый проход операции
 	data["parts"] = parts() + add
 	data["parts_earned_total"] = int(data["parts_earned_total"]) + add
 	data["sorties"] = int(data["sorties"]) + 1
@@ -527,6 +529,7 @@ func award_run(s: Dictionary) -> Dictionary:
 	out["xp_add"] = sum
 	out["xp_before"] = xp_before
 	out["parts_add"] = add
+	out["op_parts"] = int(s.get("op_parts", 0))
 	out["wage"] = wage
 	out["parts_after"] = parts()
 	out["lvl_after"] = crew_lvl(c)
@@ -538,7 +541,9 @@ func award_run(s: Dictionary) -> Dictionary:
 	out["hint_buy"] = hint_buy(c)
 	# 3.5: реплика техника про самолёт ур. 2 — на экране итогов, а не в вылете
 	if meta_k() > 0.0 and not plane2(c):
-		if can_buy_plane2(c):
+		if not Campaign.cleared(0) and crew_lvl(c) >= PLANE2_CREW:
+			out["tech"] = "Самолёт ур. 2 выдадут после операции «Перевал» — пройдите её."
+		elif can_buy_plane2(c):
 			out["tech"] = "Самолёт ур. 2 ждёт — загляни в ангар: %d запчастей." % PLANE2_COST
 		elif crew_lvl(c) >= PLANE2_CREW:
 			out["tech"] = "Копим на самолёт ур. 2: %d запчастей (есть %d)." % [PLANE2_COST, parts()]
