@@ -21,9 +21,10 @@ static func tier(level: int, evo := false) -> int:
 ## Узел с моделью (общий меш из кэша — копировать дёшево)
 ## side — место крепления (mounts): от него зависит вид турели; cls — класс самолёта
 ## (у «Кита» и «Грача» свои турели — модели Blender по фото владельца, 16.10)
-static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3D:
+## evo — эволюция (у турели — «Дикобраз»), plvl — уровень самолёта (окраска турели под обшивку)
+static func make(weapon: String, t: int, side := "", cls := "", evo := false, plvl := 1) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	var tm: Mesh = turret_model(cls, t, side) if weapon == "turret" else weapon_model(weapon, t)
+	var tm: Mesh = turret_model(cls, t, side, evo, plvl) if weapon == "turret" else weapon_model(weapon, t)
 	mi.mesh = tm if tm != null else mesh(weapon, t, side)
 	# разбор каталога 16.10: подвесное — только на пилоне (ракеты — на пусковой рельс), не «приклеено» к крылу
 	if side == "under":
@@ -33,7 +34,7 @@ static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3
 		mi.add_child(pm)
 	# кормовая кабина стрелка неподвижна — поворачивается только шар со стволами (поворот гасит render3d)
 	if weapon == "turret" and side == "tail" and tm != null:
-		var cab := turret_model(cls, t, "cabin")
+		var cab := turret_model(cls, t, "cabin", evo, plvl)
 		if cab != null:
 			var cmi := MeshInstance3D.new()
 			cmi.name = "cabin"
@@ -44,15 +45,20 @@ static func make(weapon: String, t: int, side := "", cls := "") -> MeshInstance3
 
 ## Турели из Blender (game/tools/blender/turret_*.py → models/turrets): стволы +X, основание на y = 0.
 ## Масштаб — под размеры прежней турели (длина корпуса TURRET_MODELS.s), обшивка — в цвет самолёта.
+## Т-4: файл по ступени (%d — 1 / 2 / 3: ур. 1–2 / 3–4 / 5), эволюция — свой файл «evo».
 const TURRET_MODELS := {
-	# стволы укорочены на ~40% (владелец 16.10); ступень 3 — «Дикобраз»: 4 ствола и антенна наведения
-	"bomber": {"file": "res://models/turrets/turret_kit.glb", "file3": "res://models/turrets/turret_kit_quad.glb",
-		"s": 0.3, "muzzle": Vector3(2.09, 0.43, 0.0), "body": Color(0.5, 0.52, 0.54),
+	# стволы укорочены на ~40% (владелец 16.10); ступени: 1 — без тормозов, 2 — тормоза и бронещиток,
+	# 3 — + короба лент и прицельная головка; эволюция «Дикобраз» — 4 ствола и антенна наведения
+	"bomber": {"file": "res://models/turrets/turret_kit_t%d.glb", "evo": "res://models/turrets/turret_kit_quad.glb",
+		"s": 0.3, "muzzle": Vector3(2.09, 0.43, 0.0),
+		# окраска — средний тон обшивки «Кита 1» / «Кита 2» (текстуры models/battle/fh_battle_bomber_*)
+		"body": [Color(0.42, 0.44, 0.48), Color(0.6, 0.61, 0.63)],
 		# корма (пример владельца 16.10): кабина стрелка с фонарём и шаровая установка под килем
-		"tail": "res://models/turrets/turret_kit_tail_ball.glb", "cabin": "res://models/turrets/turret_kit_tail_cabin.glb",
+		"tail": "res://models/turrets/turret_kit_tail_ball_t%d.glb", "cabin": "res://models/turrets/turret_kit_tail_cabin.glb",
 		"muzzle_tail": Vector3(1.36, 0.0, 0.0)},
-	"attacker": {"file": "res://models/turrets/turret_grach.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
-		"body": Color(0.34, 0.37, 0.28)},
+	# ступени: 1 — лёгкая без щитка, 2 — тормоза и щиток, 3 — + короб ленты
+	"attacker": {"file": "res://models/turrets/turret_grach_t%d.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
+		"body": [Color(0.3, 0.3, 0.24), Color(0.31, 0.31, 0.28)]},
 }
 
 
@@ -103,14 +109,22 @@ static func weapon_model(weapon: String, t: int) -> Mesh:
 	return _glb_mesh(file, 1.0, Color(), "glb_%s_%d" % [weapon, t])
 
 
-static func turret_model(cls: String, t := 1, side := "") -> Mesh:
+static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 1) -> Mesh:
 	var spec: Dictionary = TURRET_MODELS.get(cls, {})
-	var file: String = spec.get("file3", "") if t >= 3 and spec.has("file3") else spec.get("file", "")
+	if spec.is_empty():
+		return null
+	var file: String = spec["file"]
 	if side in ["tail", "cabin"] and spec.has(side):
 		file = spec[side]
-	if spec.is_empty() or not ResourceLoader.exists(file):
+	elif evo and spec.has("evo"):
+		file = spec["evo"]
+	if file.contains("%d"):
+		file = file % clampi(t, 1, 3)
+	if not ResourceLoader.exists(file):
 		return null
-	return _glb_mesh(file, float(spec["s"]), spec["body"], "turret_model_%s_%s" % [cls, file.get_file()])
+	var cols: Array = spec["body"]
+	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
+	return _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s" % [cls, file.get_file(), tint.to_html()])
 
 
 ## Меш из GLB: все части в один ArrayMesh с масштабом s; материалы «body» перекрашиваются в tint

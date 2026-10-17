@@ -1,7 +1,8 @@
 """Кормовая установка «Кита» по примеру владельца 16.10 (catalog/refs/tail_turret): кабина стрелка
 в конце фюзеляжа под килем — остеклённый фонарь сверху, под ним сферическая установка со спаренными
 пушками. Две модели, потому что кабина неподвижна, а шар со стволами поворачивается:
-  python3 turret_tail.py ball <out_dir>   → turret_tail_ball.glb  (шар и стволы)
+  python3 turret_tail.py ball [t1|t2|t3] <out_dir>   → turret_tail_ball_t<N>.glb  (шар и стволы)
+     ступени стволов (Т-4): t1 — без тормозов, t2 — дульные тормоза, t3 — тормоза и дырчатый кожух
   python3 turret_tail.py cabin <out_dir>  → turret_tail_cabin.glb (кабина)
 Обе в одних осях: начало координат — центр шара, стволы +X (в игре развёрнуты назад), Z вверх.
 Единицы как у turret_twin.py (длина башни = 1), стволы короткие — как у укороченной турели."""
@@ -10,7 +11,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
 import turret_lib as L
 
-part, OUT = sys.argv[-2], sys.argv[-1]
+OUT = sys.argv[-1]
+part = "ball" if "ball" in sys.argv else "cabin"
+TIER = next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 2)
 L.reset()
 M_BODY = mat("turret_body", (0.36, 0.35, 0.33), 0.25, 0.55)
 M_DARK = mat("turret_dark", (0.12, 0.12, 0.12), 0.5, 0.5)
@@ -37,8 +40,17 @@ if part == "ball":
         cyl("barrel", (0.85, y, 0), 0.026, 0.8, M_BARREL, "X", 16)
         for x in (0.62, 1.05):
             cyl("band", (x, y, 0), 0.034, 0.03, M_BARREL, "X", 16)
-        box("brake", (1.29, y, 0), (0.14, 0.064, 0.064), M_BARREL, 0.006)
-        box("brake_slot", (1.29, y, 0), (0.05, 0.066, 0.04), M_DARK, 0.0)
+        if TIER >= 2:
+            box("brake", (1.29, y, 0), (0.14, 0.064, 0.064), M_BARREL, 0.006)
+            box("brake_slot", (1.29, y, 0), (0.05, 0.066, 0.04), M_DARK, 0.0)
+        else:
+            cyl("tip", (1.29, y, 0), 0.032, 0.14, M_BARREL, "X", 16)
+            cyl("bore", (1.362, y, 0), 0.015, 0.01, M_DARK, "X", 12)
+        if TIER == 3:
+            # дырчатый кожух охлаждения на средней части ствола
+            cyl("jacket", (0.83, y, 0), 0.04, 0.34, M_DARK, "X", 16)
+            for x in (0.72, 0.8, 0.88, 0.96):
+                cyl("jacket_ring", (x, y, 0), 0.044, 0.018, M_BARREL, "X", 16)
     shots = [("iso", (2.4, -2.8, 1.6), (0.4, 0, 0), 50)]
 else:
     # корпус кабины — круглый хвост фюзеляжа, сужается к шару; сверху остеклённый фонарь с переплётами
@@ -67,7 +79,8 @@ else:
     cyl("ball_seat", (-0.14, 0, 0.0), 0.31, 0.06, M_DARK, "X", 28)
     shots = [("iso", (1.6, -2.4, 1.4), (-0.5, 0, 0.1), 50)]
 
-root = build("turret_tail_" + part, OUT)
+root = build("turret_tail_" + part + ("_t%d" % TIER if part == "ball" else ""), OUT)
 root.location.z += 0.6   # предпросмотр над полом
-preview(OUT, [(n, (p[0], p[1], p[2] + 0.6), (t[0], t[1], t[2] + 0.6), l) for n, p, t, l in shots])
+if "nopreview" not in sys.argv:
+    preview(OUT, [(n, (p[0], p[1], p[2] + 0.6), (t[0], t[1], t[2] + 0.6), l) for n, p, t, l in shots])
 print("DONE")

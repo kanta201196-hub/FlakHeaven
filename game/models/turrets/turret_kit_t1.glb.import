@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dgt2u4x1vc3jb"
-path="res://.godot/imported/turret_kit_tail_ball.glb-be51bea7a1c1557964c6d16d9ed0770a.scn"
+uid="uid://xvtxvu11cluk"
+path="res://.godot/imported/turret_kit_t1.glb-8d958d421d7aba55c2998d5df28fc28f.scn"
 
 [deps]
 
-source_file="res://models/turrets/turret_kit_tail_ball.glb"
-dest_files=["res://.godot/imported/turret_kit_tail_ball.glb-be51bea7a1c1557964c6d16d9ed0770a.scn"]
+source_file="res://models/turrets/turret_kit_t1.glb"
+dest_files=["res://.godot/imported/turret_kit_t1.glb-8d958d421d7aba55c2998d5df28fc28f.scn"]
 
 [params]
 
