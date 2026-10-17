@@ -4,6 +4,9 @@ extends HudKit
 ## эвакуация, активности, радио, полоса подвесов, строка курса.
 
 
+var _mini: HudMinimap = null
+
+
 func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	var p := m.player
 	if dmg_flash > 0.0:
@@ -22,6 +25,10 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	_right_panel(m, size)
 	if is_instance_valid(p) and m.state == "playing":
 		_loadout_strip(p, size)
+		if not hide:
+			if _mini == null:
+				_mini = HudMinimap.new(ctrl)
+			_mini.draw(m, size)
 	_fx_texts(m)
 	_boss_bars(m, size)
 	_threat_markers(size)
@@ -262,7 +269,7 @@ func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1
 func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 	if p.hp <= 0.0:
 		return
-	var x := 24.0
+	var x := 24.0 + HudMinimap.rect(size).size.x + (16.0 if Settings.minimap > 0 else 0.0) # газ — правее миникарты
 	var y := size.y - 74.0
 	var sch := int(Tuning.g("scheme"))
 	if sch != 0:
