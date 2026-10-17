@@ -135,7 +135,7 @@ func _left_panel(m: Main, p: Player) -> void:
 			elif not wm.alive():
 				st += " (вернётся %d с)" % int(ceil(wm.dead_t))
 			wl.append(st)
-		_text(Vector2(x, y + 14), "Звено: " + ", ".join(wl), 16, Color(0.82, 0.78, 1.0))
+		_text(Vector2(x, y + 14), "Звено: %s · цель: %s [G]" % [", ".join(wl), Settings.WING_PRIO[Settings.wing_prio]], 16, Color(0.82, 0.78, 1.0))
 		y += 24.0
 	# подвесы — только полосой внизу экрана; здесь связки и специализация
 	if not p.syn.is_empty() or p.has_course():
