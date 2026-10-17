@@ -486,12 +486,12 @@ func on_activity_success(kind: String) -> void:
 	# 3.5: активности стали чаще (раз в минуту) — выбор из редких карточек за каждую вторую,
 	# за остальные — ремонт 20% и запчасти, иначе сила игрока растёт ещё быстрее (лог 3.4-t1: Кит неуязвим с 12-й минуты)
 	var rare := activities_done % 2 == 1
-	var what := "Позиция ПВО уничтожена!" if kind == "ground" else "Ас-соперник сбит!"
+	var what: String = {"ground": "Позиция ПВО уничтожена!", "convoy": "Колонна разбита!"}.get(kind, "Ас-соперник сбит!")
 	player.add_course_pts(1)
 	if rare:
 		pending_levels += 1
 		rare_picks += 1
-		rare_reasons.append("ЗА ПОЗИЦИЮ ПВО" if kind == "ground" else "ЗА АСА")
+		rare_reasons.append({"ground": "ЗА ПОЗИЦИЮ ПВО", "convoy": "ЗА КОЛОННУ"}.get(kind, "ЗА АСА"))
 	else:
 		player.heal(player.max_hp * 0.2)
 	if kind == "ground":

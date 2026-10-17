@@ -260,6 +260,16 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 			_ctext(276, s, 22, Color(1.0, 0.85, 0.4))
 			if not site.failed:
 				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
+		elif node is Convoy:
+			var cv := node as Convoy
+			_edge_arrow(_ws(xf, cv.global_position), rect, size, Color(1.0, 0.7, 0.35), 1.8)
+			var cs: String
+			if cv.alarm:
+				cs = "КОЛОННА: до укрытия %d с · грузовиков: %d из %d" % [int(ceil(maxf(cv.timer, 0.0))), cv.trucks_left(), cv.trucks_total]
+			else:
+				cs = "Колонна снабжения: %d м — подлетите и сожгите грузовики" % (int(p.global_position.distance_to(cv.global_position)) / 10)
+			_ctext(276, cs, 22, Color(1.0, 0.78, 0.45))
+			_ctext(302, "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика", 17, Color(0.85, 0.75, 1.0))
 		elif node is Transport:
 			var tr := node as Transport
 			_edge_arrow(_ws(xf, tr.global_position), rect, size, Color(1.0, 0.6, 0.25), 1.8)

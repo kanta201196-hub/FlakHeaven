@@ -710,9 +710,15 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			# 3.5: у целей с точкой на рельефе (anchor) — ставим ровно туда, иначе проекция с камеры
 			var gp := terrain.surface_fast(e.anchor.x, e.anchor.y) if (e.anchor != Vector2.INF and terrain != null) else ground_under(e.global_position)
 			var hull := ang
-			if ue.get("bm") != null:
+			var tilt := Vector2.ZERO
+			if e is ConvoyVehicle:
+				# A-03: машина конвоя — корпус по курсу, наклон по склону и от разгона, колёса и башня
+				var cr := _convoy_parts(ue, e as ConvoyVehicle, len_px, delta)
+				hull = cr.x
+				tilt = Vector2(cr.y, cr.z)
+			elif ue.get("bm") != null:
 				hull = _ground_parts(ue, e, ang, delta)
-			_place(ue, Vector2(gp.x, gp.z), hull, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
+			_place(ue, Vector2(gp.x, gp.z), hull, tilt.y, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y, tilt.x)
 		else:
 			var re := _relief_alt(ue, e.global_position, Vector2.from_angle(ang) * 250.0, 0.0 if e.is_boss else 1.0, sd)
 			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle(), re[0], _alt_scale(re[0]), re[1]) # 3.5: бочка при уклонении
@@ -724,6 +730,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		else:
 			# модель из картинки (транспортник и др.): подсветка только по силуэту, иначе видна сетка квадратами
 			mi2.material_overlay = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)
+	_sync_wrecks(delta)
 	for id in _units.keys():
 		if not _units[id]["seen"]:
 			if not _start_crash(_units[id]):
@@ -758,6 +765,108 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 		var ln := u["launcher"] as Node3D
 		ln.rotation.z = move_toward(ln.rotation.z, up, delta * 1.2)
 	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher")) else ang
+
+
+## A-03: подвижные части машин конвоя (tools/blender/convoy_models.py): колёса крутятся по пройденному пути
+## (GroundDrive.dist), передние поворачивают по рулю; башня и пулемёт смотрят на самолёт; труба ПЗРК
+## поднимается при захвате. Корпус лежит на склоне (рельеф под носом и кормой, бортами), клюёт носом
+## при торможении и кренится наружу на повороте. Возвращает (курс корпуса, тангаж, крен).
+func _convoy_parts(u: Dictionary, v: ConvoyVehicle, len_px: float, delta: float) -> Vector3:
+	var dr := v.drive
+	var hull := v.heading
+	if dr == null:
+		return Vector3(hull, 0.0, 0.0)
+	if u.get("bm") != null and not u.has("cv"):
+		var inst := (u["node"] as Node3D).get_child(0)
+		var d := {"wheels": [], "front": []}
+		for c in inst.find_children("wheel_*", "Node3D", true, false):
+			(d["wheels"] as Array).append(c)
+			if String(c.name).begins_with("wheel_f"):
+				(d["front"] as Array).append(c)
+		for nm in ["turret", "launcher"]:
+			var n := inst.find_child(nm, true, false)
+			if n != null:
+				d[nm] = n
+		u["cv"] = d
+	if u.has("cv"):
+		var d: Dictionary = u["cv"]
+		# колесо радиусом ~0,07 длины машины: угол = путь / радиус
+		var roll := -dr.dist / (0.072 * len_px)
+		for w in d["wheels"]:
+			(w as Node3D).rotation = Vector3(0.0, 0.0, roll)
+		for w in d["front"]:
+			(w as Node3D).rotation = Vector3(0.0, -dr.steer * 0.45, roll)
+		var p := Main.I.player
+		if d.has("turret") and p != null:
+			var t := d["turret"] as Node3D
+			var aim := (p.global_position - v.global_position).angle()
+			var want := -wrapf(aim - hull, -PI, PI) if v.alarm_on() else 0.0
+			t.rotation.y = lerp_angle(t.rotation.y, want, 1.0 - exp(-delta * 3.0))
+		if d.has("launcher"):
+			var ln := d["launcher"] as Node3D
+			ln.rotation.z = move_toward(ln.rotation.z, deg_to_rad(35.0) if v._lock > 0.0 else 0.0, delta * 1.5)
+	# наклон по рельефу: высоты под носом, кормой и бортами
+	var pitch := 0.0
+	var bank := 0.0
+	if terrain != null and v.anchor != Vector2.INF:
+		var f := Vector2.from_angle(hull) * len_px * 0.45
+		var sd := Vector2(-f.y, f.x) * 0.45
+		var a := v.anchor
+		pitch = atan2(terrain.surface_fast(a.x + f.x, a.y + f.y).y - terrain.surface_fast(a.x - f.x, a.y - f.y).y, len_px * 0.9)
+		bank = atan2(terrain.surface_fast(a.x + sd.x, a.y + sd.y).y - terrain.surface_fast(a.x - sd.x, a.y - sd.y).y, len_px * 0.4)
+	# клевок при торможении, приседание при разгоне; крен наружу на повороте; мелкая раскачка на ходу
+	pitch += clampf(dr.acc_now * 0.0012, -0.06, 0.06)
+	bank += clampf(-dr.yaw_rate * dr.speed * 0.0009, -0.07, 0.07) + sin(dr.dist * 0.09) * 0.006 * clampf(dr.speed / 60.0, 0.0, 1.0)
+	var sm: Vector2 = u.get("tilt", Vector2(pitch, bank))
+	sm = sm.lerp(Vector2(pitch, bank), 1.0 - exp(-delta * 6.0))
+	u["tilt"] = sm
+	return Vector3(hull, sm.x, sm.y)
+
+
+## A-03: остовы машин конвоя — та же модель, обгоревшая: тент и стрелки пропадают, корпус тёмный, дым столбом
+var _burnt_mat: StandardMaterial3D
+
+
+func _sync_wrecks(delta: float) -> void:
+	for n in get_tree().get_nodes_in_group("wrecks3d"):
+		var v := n as ConvoyVehicle
+		if v == null or v.anchor == Vector2.INF:
+			continue
+		var info := v.sprite_info()
+		var t: Texture2D = Enemy.etex(String(info.get("tex", ""))) if not info.is_empty() else null
+		if t == null:
+			continue
+		var len_px: float = float(info["len"]) * Tuning.g("unit_scale")
+		var u := _ensure(v.get_instance_id(), "enemy", t, len_px, 0.05, 40)
+		if not u.has("wreck"):
+			u["wreck"] = true
+			if _burnt_mat == null:
+				_burnt_mat = StandardMaterial3D.new()
+				_burnt_mat.albedo_color = Color(0.03, 0.025, 0.02, 0.78)
+				_burnt_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				_burnt_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			if u.get("bm") != null:
+				var inst := (u["node"] as Node3D).get_child(0)
+				for nm in ["tent", "launcher"]:
+					var hn := inst.find_child(nm, true, false) as Node3D
+					if hn != null:
+						hn.visible = false
+				for c in inst.find_children("*", "GeometryInstance3D", true, false):
+					(c as GeometryInstance3D).material_overlay = _burnt_mat
+			var smoke := _make_smoke()   # создаётся дочерним у Render3D — переносим к остову, чтобы ушёл вместе с ним
+			smoke.get_parent().remove_child(smoke)
+			smoke.top_level = true
+			(u["node"] as Node3D).add_child(smoke)
+			u["wsmoke"] = smoke
+		var gp := terrain.surface_fast(v.anchor.x, v.anchor.y) if terrain != null else ground_under(v.global_position)
+		var tilt: Vector2 = u.get("tilt", Vector2.ZERO)
+		_place(u, Vector2(gp.x, gp.z), v.heading, tilt.y + 0.04, 0.0, gp.y + 0.5, (cam.global_position.y - gp.y) / cam.global_position.y, tilt.x)
+		if u.has("wsmoke"):
+			var sm := u["wsmoke"] as CPUParticles3D
+			sm.global_position = Vector3(gp.x, gp.y + 4.0, gp.z)
+			sm.emitting = v._burn < 12.0
+		if u.get("bm") == null:
+			(u["mi"] as MeshInstance3D).material_overlay = _burnt_mat
 
 
 ## Подвижные части «Крепости» (tools/blender/fortress.py): башни смотрят на игрока, винты крутятся,

@@ -9,12 +9,13 @@ var _carrier_cd := 25.0
 var _icpt_cd := 40.0
 var boss_wave := 0
 ## Активности: с 1:00 каждую минуту (3.5, было 2,5 мин), по очереди «позиция ПВО», «догфайт»,
-## «охота на транспорт». Не стартуют, пока жив ас или идёт прошлая активность.
+## «охота на транспорт», «наземный конвой» (A-03, решение Kanta 17.10: четвёртая в очереди).
+## Не стартуют, пока жив ас или идёт прошлая активность.
 var next_activity := 60.0
 var activity_i := 0
 var activity_node: Node = null
 var fuel: Fuel = null   # 3.5: топливо и свой заправщик
-const ACTIVITIES := ["ground", "dogfight", "transport"]
+const ACTIVITIES := ["ground", "dogfight", "transport", "convoy"]
 const TRANSPORT_TTK := 12.0
 
 
@@ -29,6 +30,9 @@ func _ready() -> void:
 	if OS.get_cmdline_user_args().has("--transport"):
 		activity_i = 2      # проверка: сразу транспорт
 		next_activity = 20.0
+	if OS.get_cmdline_user_args().has("--convoy"):
+		activity_i = 3      # проверка: сразу конвой
+		next_activity = 10.0
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--fuel="): # проверка: начать с неполным баком (доля 0–1)
 			fuel.left = fuel.capacity * clampf(float(String(a).substr(7)), 0.0, 1.0)
@@ -150,6 +154,15 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(site)
 		activity_node = site
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
+	elif kind_s == "convoy":
+		var cv := Convoy.new()
+		# колонна пересекает курс игрока впереди: маршрут через точку в 1 300 пикс. по курсу
+		var mid := p.global_position + Vector2.from_angle(p.heading + randf_range(-0.4, 0.4)) * 1300.0
+		var side := 1.0 if randf() < 0.5 else -1.0
+		cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_k, recent_dps(), t)
+		Main.I.world.add_child(cv)
+		activity_node = cv
+		Main.I.show_banner("Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш", 4.0)
 	elif kind_s == "transport":
 		var tr := Transport.new()
 		tr.setup(maxf(700.0 * hp_k, recent_dps() * TRANSPORT_TTK))

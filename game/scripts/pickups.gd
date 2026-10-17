@@ -1,10 +1,10 @@
 class_name Pickups
 extends Node2D
-## Трофеи: опыт (зелёные ромбы) и ремкомплекты (белый крест).
+## Трофеи: опыт (зелёные ромбы), ремкомплекты (белый крест) и груз конвоя (ящик с запчастями).
 ## Подбираются сами, если пролететь рядом: в радиусе ~4 корпусов самолёта они притягиваются.
 
 var _t := 0.0
-var items: Array[Dictionary] = [] # {"p", "kind": "xp"/"repair", "v": значение, "pull": bool, "spd"}
+var items: Array[Dictionary] = [] # {"p", "kind": "xp"/"repair"/"cargo", "v": значение, "pull": bool, "spd"}
 
 
 func _ready() -> void:
@@ -27,6 +27,11 @@ func drop_xp(pos: Vector2, value: float) -> void:
 
 func drop_repair(pos: Vector2) -> void:
 	items.append({"p": pos, "kind": "repair", "v": 25.0, "pull": false, "spd": 0.0})
+
+
+## A-03: груз сожжённого грузовика конвоя — запчасти, подбираются пролётом
+func drop_cargo(pos: Vector2, value: float) -> void:
+	items.append({"p": pos, "kind": "cargo", "v": value, "pull": false, "spd": 0.0})
 
 
 func _process(delta: float) -> void:
@@ -53,6 +58,10 @@ func _process(delta: float) -> void:
 				if it["kind"] == "xp":
 					Main.I.add_xp(float(it["v"]))
 					any = true
+				elif it["kind"] == "cargo":
+					Main.I.parts += float(it["v"])
+					Main.I.fx.text(pp + Vector2(0, -40), "Груз: +%d запчастей" % int(it["v"]), Color(1.0, 0.85, 0.45))
+					Main.I.sfx.play("pickup", -10.0, 0.8)
 				else:
 					pl.heal(float(it["v"]))
 					Main.I.fx.text(pp + Vector2(0, -40), "+%d прочности" % int(it["v"]), Color(0.6, 1.0, 0.8))
@@ -81,6 +90,13 @@ func _draw() -> void:
 			draw_colored_polygon(PackedVector2Array([Vector2(0, -s), Vector2(s * 0.7, 0), Vector2(0, s), Vector2(-s * 0.7, 0)]), Color(0.35, 1.0, 0.7))
 			draw_colored_polygon(PackedVector2Array([Vector2(0, -s * 0.55), Vector2(s * 0.3, -s * 0.1), Vector2(0, s * 0.1), Vector2(-s * 0.3, -s * 0.1)]), Color(0.9, 1.0, 0.95))
 			draw_set_transform(Vector2.ZERO)
+		elif it["kind"] == "cargo":
+			# ящик груза: доски и обвязка, мягкое золотое свечение — видно на песке
+			if Fx._soft != null:
+				draw_texture_rect(Fx._soft, Rect2(p - Vector2(26, 26), Vector2(52, 52)), false, Color(1.0, 0.8, 0.3, 0.5))
+			draw_rect(Rect2(p - Vector2(10, 7), Vector2(20, 14)), Color(0.15, 0.1, 0.05))
+			draw_rect(Rect2(p - Vector2(9, 6), Vector2(18, 12)), Color(0.62, 0.45, 0.25))
+			draw_line(p + Vector2(-9, 0), p + Vector2(9, 0), Color(0.2, 0.13, 0.07), 2.0)
 		else:
 			draw_circle(p, 11.0, Color(1, 1, 1, 0.25))
 			draw_rect(Rect2(p - Vector2(8, 2.5), Vector2(16, 5)), Color(1, 1, 1))

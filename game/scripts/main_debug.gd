@@ -161,6 +161,8 @@ func _debug_screenshots(delta: float) -> void:
 			_shot("dogfight")
 		if an is Transport and (an as Node2D).global_position.distance_to(m.player.global_position) < 450.0:
 			_shot("transport")
+		if an is Convoy and (an as Convoy).alarm and (an as Node2D).global_position.distance_to(m.player.global_position) < 500.0:
+			_shot("convoy")
 	if m.state == "playing" and m.spawner != null and m.spawner.fuel != null and is_instance_valid(m.spawner.fuel.tanker) and m.spawner.fuel.tanker.filling:
 		_shot("tanker")
 	if (m.state == "evac" or m.state == "dead") and m.result_t > 3.5:
@@ -370,8 +372,8 @@ func _run_autotest(delta: float) -> void:
 		goal = tk.global_position # 3.5: бот идёт за заправщиком (он сам выходит вперёд)
 	elif is_instance_valid(m.evac) and not m._args.has("--noevac"):
 		goal = m.evac.target_pos() # бот летит через ворота эвакуации
-	elif is_instance_valid(m.spawner.activity_node) and (m.spawner.activity_node is AASite or m.spawner.activity_node is Transport):
-		goal = (m.spawner.activity_node as Node2D).global_position # бот летит штурмовать ПВО
+	elif is_instance_valid(m.spawner.activity_node) and (m.spawner.activity_node is AASite or m.spawner.activity_node is Transport or m.spawner.activity_node is Convoy):
+		goal = (m.spawner.activity_node as Node2D).global_position # бот летит штурмовать ПВО (и колонну)
 	elif m.boss_alive():
 		for n in m.get_tree().get_nodes_in_group("enemies"):
 			if (n as Enemy).is_boss:
