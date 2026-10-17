@@ -17,6 +17,7 @@ const SPEC := {
 
 static var _flame_mesh: QuadMesh
 static var _flame_mat: StandardMaterial3D
+static var _flame_blue: StandardMaterial3D
 static var _prop_mesh: QuadMesh
 static var _prop_mat: ShaderMaterial
 
@@ -105,6 +106,17 @@ static func update(u: Dictionary, _delta: float, boost: float, on := true) -> vo
 			q.basis = Basis(Vector3.RIGHT, -PI / 2.0 if i == 0 else 0.0) * Basis.from_scale(Vector3(ln, wd, 1.0))
 
 
+## Т-3: голубой факел (модуль «Форсированный двигатель» ур. 5)
+static func set_blue(u: Dictionary, on: bool) -> void:
+	var fx: Dictionary = u.get("fx", {})
+	if fx.is_empty() or bool(fx.get("blue", false)) == on:
+		return
+	fx["blue"] = on
+	for f: Dictionary in fx["flames"]:
+		for q in (f["n"] as Node3D).get_children():
+			(q as MeshInstance3D).material_override = _flame_blue if on else _flame_mat
+
+
 ## Точки следа в мировых координатах
 static func trail_points(u: Dictionary) -> Array:
 	var out := []
@@ -129,6 +141,8 @@ static func _init_res() -> void:
 	_flame_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_flame_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 	_flame_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_flame_blue = _flame_mat.duplicate()
+	_flame_blue.albedo_texture = _flame_tex(true)
 	_prop_mesh = QuadMesh.new()
 	_prop_mesh.size = Vector2(1, 1)
 	var sh := Shader.new()
@@ -139,7 +153,7 @@ static func _init_res() -> void:
 
 ## Факел: у сопла бело-жёлтый, к хвосту оранжевый и прозрачный; по ширине — мягкий край.
 ## U = 0 — хвост факела, U = 1 — сопло (квад повёрнут носом самолёта к +X).
-static func _flame_tex() -> ImageTexture:
+static func _flame_tex(blue := false) -> ImageTexture:
 	var w := 64
 	var h := 32
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -152,5 +166,7 @@ static func _flame_tex() -> ImageTexture:
 			var edge := clampf(1.0 - v / width, 0.0, 1.0)
 			var a := core * edge * edge
 			var c := Color(1.0, 0.45, 0.15).lerp(Color(1.0, 0.92, 0.7), clampf(core * edge * 1.3, 0.0, 1.0))
+			if blue:   # Т-3: форсированный двигатель ур. 5 — голубой факел
+				c = Color(0.25, 0.45, 1.0).lerp(Color(0.85, 0.95, 1.0), clampf(core * edge * 1.3, 0.0, 1.0))
 			img.set_pixel(x, y, Color(c.r, c.g, c.b, clampf(a * 1.4, 0.0, 1.0)))
 	return ImageTexture.create_from_image(img)
