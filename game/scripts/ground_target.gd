@@ -231,8 +231,10 @@ func _neighbours() -> Array:
 	if site == null:
 		return out
 	for t in site.targets:
+		if not is_instance_valid(t):   # сбитые машины освобождены, но ещё в списке позиции
+			continue
 		var g := t as GroundTarget
-		if g == null or g == self or not is_instance_valid(g) or g.hp <= 0.0:
+		if g == null or g == self or g.hp <= 0.0:
 			continue
 		out.append([g.anchor, AASite.SPACING])
 		if g._goal != Vector2.INF:
