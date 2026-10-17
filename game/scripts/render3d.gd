@@ -574,8 +574,13 @@ func _place_shadow(u: Dictionary, p: Vector2, heading: float, k: float) -> void:
 	var sh: MeshInstance3D = u["sh"]
 	var hi := Tuning.g("plane_shadow") > 0.5 and terrain != null
 	var cs := GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if hi else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	for c in (u["node"] as Node3D).find_children("*", "GeometryInstance3D", true, false):
-		(c as GeometryInstance3D).cast_shadow = cs
+	# поиск по дереву модели — только при смене режима (раньше каждый кадр у каждого самолёта)
+	var n_kids := (u["node"] as Node3D).get_child_count()
+	if u.get("cs") != cs or u.get("cs_n") != n_kids:
+		u["cs"] = cs
+		u["cs_n"] = n_kids
+		for c in (u["node"] as Node3D).find_children("*", "GeometryInstance3D", true, false):
+			(c as GeometryInstance3D).cast_shadow = cs
 	sh.visible = hi
 	if not hi:
 		return

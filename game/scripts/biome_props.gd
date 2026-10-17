@@ -115,13 +115,27 @@ func _find_mesh(n: Node) -> MeshInstance3D:
 
 
 ## Модели для клетки рельефа key; parent — кусок рельефа
+## Высота модели каждого вида (для расчёта в потоке: сами модели грузит только главный поток)
+func mesh_heights() -> Dictionary:
+	var out := {}
+	for kind in KINDS:
+		var mesh := _mesh(kind)
+		out[kind] = mesh.get_aabb().size.y if mesh != null else -1.0
+	return out
+
+
 func build(key: Vector2i, parent: Node3D) -> void:
+	apply(plan(key, _t._ctx(key)), parent)
+
+
+## Расстановка моделей в клетке — чистый расчёт по снимку ctx (Terrain3D._ctx), можно в потоке
+func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(key) ^ 0x5eed41
 	var ox := key.x * Terrain3D.CHUNK
 	var oz := key.y * Terrain3D.CHUNK
 	var put := {}   # вид → Array[Transform3D]
-	var obj: Dictionary = _t._obj(key) if _t._bg != null else {}
+	var obj: Dictionary = (ctx["objs"] as Dictionary).get(key, {})
 	var keep_out := []  # [центр, радиус] — внутри объектов биома не ставим
 	if not obj.is_empty():
 		keep_out.append([obj["pos"], float(obj["size"]) * 0.5])
@@ -133,38 +147,38 @@ func build(key: Vector2i, parent: Node3D) -> void:
 			"o_oasis", "o_village":
 				# сады — на ровном дне у поселения; тополя — рядами вдоль арыков
 				for i in rng.randi_range(5, 9):
-					_ring_zone(rng, put, "orchard", p0, r0 * 0.9, r0 * 1.5, ["floor"])
+					_ring_zone(rng, put, "orchard", p0, r0 * 0.9, r0 * 1.5, ["floor"], ctx)
 				var a0 := rng.randf() * TAU
 				for i in rng.randi_range(5, 8):
 					var q := p0 + Vector2.from_angle(a0) * r0 * 1.15 + Vector2.from_angle(a0 + PI / 2) * (i - 3.5) * 26.0
-					if _zone(q) == "floor":
-						_add(rng, put, "poplar", q, keep_out)
+					if _zone(q, ctx) == "floor":
+						_add(rng, put, "poplar", q, keep_out, ctx)
 				if obj["name"] == "o_village":
 					for i in rng.randi_range(1, 2):
-						_ring_zone(rng, put, "yurt", p0, r0 * 1.2, r0 * 1.7, ["floor", "fan"])
+						_ring_zone(rng, put, "yurt", p0, r0 * 1.2, r0 * 1.7, ["floor", "fan"], ctx)
 			"o_fort":
 				# посты из мешков — у крепости и на дороге рядом (застава)
 				for i in rng.randi_range(2, 3):
-					_ring_zone(rng, put, "sandbag", p0, r0 * 1.05, r0 * 1.35, ["floor", "fan"])
+					_ring_zone(rng, put, "sandbag", p0, r0 * 1.05, r0 * 1.35, ["floor", "fan"], ctx)
 				var rp := _road_point(p0 + Vector2(rng.randf_range(-300, 300), rng.randf_range(-300, 300)))
 				if rp.distance_to(p0) < 700.0:
-					_add_sized(rng, put, "sandbag", rp + Vector2(30, 0).rotated(rng.randf() * TAU), 48.0)
+					_add_sized(rng, put, "sandbag", rp + Vector2(30, 0).rotated(rng.randf() * TAU), 48.0, ctx)
 			"o_rocks_big", "o_rocks_small":
 				# группа скал вместо выдавленной картинки: выход породы и валуны-осыпь вокруг
 				var big: bool = obj["name"] == "o_rocks_big"
-				if _zone(p0) in ["river", "road"]:
+				if _zone(p0, ctx) in ["river", "road"]:
 					p0 += Vector2(r0 * 2.0, 0)
-				_add_sized(rng, put, "outcrop", p0, r0 * (1.1 if big else 0.8))
+				_add_sized(rng, put, "outcrop", p0, r0 * (1.1 if big else 0.8), ctx)
 				for i in rng.randi_range(3, 6):
-					_ring_zone(rng, put, "boulders", p0, r0 * 0.5, r0 * 1.2, ["floor", "fan", "slope"])
+					_ring_zone(rng, put, "boulders", p0, r0 * 0.5, r0 * 1.2, ["floor", "fan", "slope"], ctx)
 				if big and rng.randf() < 0.6:
-					_ring_zone(rng, put, "spire", p0, r0 * 0.6, r0 * 0.9, ["fan", "slope", "crest"])
+					_ring_zone(rng, put, "spire", p0, r0 * 0.6, r0 * 0.9, ["fan", "slope", "crest"], ctx)
 	# по зонам рельефа: каждый вид — там, где он бывает в природе (правила — s4-landscape-rules.md)
 	for i in 90:
 		if Settings.gfx == 0 and i % 2 == 1:   # «Низкое»: мелочи по зонам вдвое реже
 			continue
 		var p := Vector2(ox + rng.randf() * Terrain3D.CHUNK, oz + rng.randf() * Terrain3D.CHUNK)
-		var z := _zone(p)
+		var z := _zone(p, ctx)
 		var roll := rng.randf()
 		var kind := ""
 		match z:
@@ -179,23 +193,28 @@ func build(key: Vector2i, parent: Node3D) -> void:
 			"crest":   # гребень: скальные зубцы
 				kind = "spire" if roll < 0.035 else ""
 		if kind != "":
-			_add(rng, put, kind, p, keep_out)
+			_add(rng, put, kind, p, keep_out, ctx)
 	# сгоревшая техника — только на дороге или у обочины (на гору ей не заехать)
 	if rng.randf() < 0.22:
 		var q := _road_point(Vector2(ox + rng.randf_range(100, 1300), oz + rng.randf_range(100, 1300)))
-		if _zone(q) == "road" and _in_chunk(q, ox, oz):
+		if _zone(q, ctx) == "road" and _in_chunk(q, ox, oz):
 			var n := rng.randi_range(1, 3)   # колонна: машины одна за другой вдоль дороги
 			var dir := _road_dir(q)
 			for i in n:
 				var w := q + dir * (i * 90.0) + dir.orthogonal() * rng.randf_range(-14, 14)
-				_add_vehicle(rng, put, "tank" if rng.randf() < 0.4 else "truck", w, dir)
+				_add_vehicle(rng, put, "tank" if rng.randf() < 0.4 else "truck", w, dir, ctx)
 	# юрты кочевников — летние пастбища: пологие места в стороне от дороги, недалеко от воды
 	if rng.randf() < 0.08:
 		var q := Vector2(ox + rng.randf_range(200, 1200), oz + rng.randf_range(200, 1200))
-		if _zone(q) in ["floor", "fan"] and absf(_t.river_field(q.x, q.y)) > Terrain3D.D_ROAD + 60.0:
-			_add(rng, put, "yurt", q, keep_out)
-			_add(rng, put, "yurt", q + Vector2(60, 25), keep_out)
-			_add(rng, put, "shrub", q + Vector2(-40, 30), keep_out)
+		if _zone(q, ctx) in ["floor", "fan"] and absf(_t.river_field(q.x, q.y)) > Terrain3D.D_ROAD + 60.0:
+			_add(rng, put, "yurt", q, keep_out, ctx)
+			_add(rng, put, "yurt", q + Vector2(60, 25), keep_out, ctx)
+			_add(rng, put, "shrub", q + Vector2(-40, 30), keep_out, ctx)
+	return put
+
+
+## Модели в сцену (главный поток): каждый вид — один MultiMesh
+func apply(put: Dictionary, parent: Node3D) -> void:
 	for kind in put:
 		var mesh := _mesh(kind)
 		if mesh == null:
@@ -216,21 +235,20 @@ func build(key: Vector2i, parent: Node3D) -> void:
 		parent.add_child(mmi)
 
 
-func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, keep_out: Array) -> void:
+func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, keep_out: Array, ctx: Dictionary) -> void:
 	for k in keep_out:
 		if p.distance_to(k[0]) < float(k[1]):
 			return
-	_add_sized(rng, put, kind, p, rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2])))
+	_add_sized(rng, put, kind, p, rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2])), ctx)
 
 
-func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, w: float) -> void:
-	var s := _t.surface(p.x, p.y)
+func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, w: float, ctx: Dictionary) -> void:
+	var s := _t.surface(p.x, p.y, ctx)
 	# высоко в горах модель ближе к камере и кажется крупнее — уменьшаем (вид сверху, перспектива)
 	w *= lerpf(1.0, 0.55, clampf((s.y - _t.base_y) / maxf(_t.ceiling, 1.0), 0.0, 1.0))
 	# модель не выше 30 px до плоскости боя (как объекты биома в render3d.gd)
-	var mesh := _mesh(kind)
-	if mesh != null:
-		var hk := mesh.get_aabb().size.y
+	var hk: float = (ctx["hk"] as Dictionary).get(kind, -1.0)
+	if hk >= 0.0:
 		w = minf(w, (-30.0 - s.y) / maxf(hk, 0.01))
 	if w < 4.0:
 		return
@@ -241,16 +259,16 @@ func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Ve
 	put[kind].append(t)
 
 
-func _slope(p: Vector2) -> float:
+func _slope(p: Vector2, ctx: Dictionary) -> float:
 	var e := 20.0
-	var dx := _t.height(p.x + e, p.y) - _t.height(p.x - e, p.y)
-	var dz := _t.height(p.x, p.y + e) - _t.height(p.x, p.y - e)
+	var dx := _t.height(p.x + e, p.y, ctx) - _t.height(p.x - e, p.y, ctx)
+	var dz := _t.height(p.x, p.y + e, ctx) - _t.height(p.x, p.y - e, ctx)
 	return Vector2(dx, dz).length() / (2.0 * e)
 
 
 ## Зона рельефа в точке: river (русло), road (дорога), bank (берег), floor (дно долины),
 ## fan (конусы выноса и осыпи), slope (склон), crest (гребень)
-func _zone(p: Vector2) -> String:
+func _zone(p: Vector2, ctx: Dictionary) -> String:
 	var v := _t.river_field(p.x, p.y)
 	var a := absf(v)
 	if a < Terrain3D.D_RIVER * 1.3:
@@ -259,9 +277,9 @@ func _zone(p: Vector2) -> String:
 		return "road"
 	if a < Terrain3D.D_RIVER * 3.0:
 		return "bank"
-	var h := _t.height(p.x, p.y) / maxf(_t.ceiling, 1.0)
-	var sl := _slope(p)
-	if absf(_t.valley(p.x, p.y)) < Terrain3D.D_FLOOR and sl < 0.15:
+	var h := _t.height(p.x, p.y, ctx) / maxf(_t.ceiling, 1.0)
+	var sl := _slope(p, ctx)
+	if absf(_t.valley(p.x, p.y, ctx)) < Terrain3D.D_FLOOR and sl < 0.15:
 		return "floor"
 	if h < 0.16 and sl < 0.45:
 		return "fan"
@@ -292,18 +310,18 @@ func _in_chunk(p: Vector2, ox: float, oz: float) -> bool:
 	return p.x >= ox and p.x < ox + Terrain3D.CHUNK and p.y >= oz and p.y < oz + Terrain3D.CHUNK
 
 
-func _ring_zone(rng: RandomNumberGenerator, put: Dictionary, kind: String, c: Vector2, r_min: float, r_max: float, zones: Array) -> void:
+func _ring_zone(rng: RandomNumberGenerator, put: Dictionary, kind: String, c: Vector2, r_min: float, r_max: float, zones: Array, ctx: Dictionary) -> void:
 	for t in 4:
 		var q := c + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(r_min, r_max)
-		if _zone(q) in zones:
-			_add(rng, put, kind, q, [])
+		if _zone(q, ctx) in zones:
+			_add(rng, put, kind, q, [], ctx)
 			return
 
 
 ## Машина стоит вдоль дороги (нос по направлению дороги, лёгкий разворот)
-func _add_vehicle(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, dir: Vector2) -> void:
+func _add_vehicle(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, dir: Vector2, ctx: Dictionary) -> void:
 	var w := rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2]))
-	var s := _t.surface(p.x, p.y)
+	var s := _t.surface(p.x, p.y, ctx)
 	var yaw := -dir.angle() + rng.randf_range(-0.35, 0.35) + (PI if rng.randf() < 0.5 else 0.0)
 	var t := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.03, 0))
 	if not put.has(kind):
