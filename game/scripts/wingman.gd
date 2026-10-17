@@ -102,15 +102,22 @@ func salvo(n: int, dmg: float, over := 0.4) -> void:
 
 func _slot_offset(p: Player) -> Vector2:
 	# 3.5 (правка 23): сначала места по бокам (крыло к крылу), следующие — впереди-сбоку
-	# («Грачата» сверх двух постоянных); «Сомкнуть строй» — вдвое ближе
+	# («Грачата» сверх двух постоянных); «Сомкнуть строй» — ближе.
+	# правка 3.5-s4 (п. 23): просвет считается по размаху моделей — ведомый не залезает в самолёт ведущего
 	var side := -1.0 if slot % 2 == 0 else 1.0
 	var row := slot / 2
-	var tight := 0.5 if p.ranks_t > 0.0 else 1.0
-	var base := Vector2(-10.0, side * 80.0) if row == 0 else Vector2(60.0 + 40.0 * (row - 1), side * (55.0 + 25.0 * row))
-	var off := base.rotated(p.heading) * tight * (1.0 + 0.25 * (p.size - 1.0))
+	var span := clear_r(p)
+	var lat := span + (10.0 if p.ranks_t > 0.0 else 40.0)
+	var base := Vector2(-20.0, side * lat) if row == 0 else Vector2(span * 0.6 + 40.0 * (row - 1), side * (lat + 30.0 * row))
+	var off := base.rotated(p.heading)
 	if _run_t > 0.0: # «Тёплая компания»: заход вперёд
 		off += Vector2.from_angle(p.heading) * 330.0 * sin(clampf(1.0 - _run_t / 1.2, 0.0, 1.0) * PI)
 	return off
+
+
+## Ближе этого (центр к центру) ведомый к ведущему не подходит: половины размахов обоих самолётов
+func clear_r(p: Player) -> float:
+	return Tuning.g("plane_len") * (p.size + 0.85) * 0.5 + 8.0
 
 
 func _leave() -> void:
@@ -139,11 +146,15 @@ func _process(delta: float) -> void:
 	if dead_t > 0.0:
 		dead_t -= delta
 		if dead_t <= 0.0:
+			# правка 3.5-s4 (п. 21): замена прилетает из-за края экрана сзади-сбоку и догоняет строй
 			visible = true
 			hp = max_hp
-			global_position = p.global_position - Vector2.from_angle(p.heading) * 260.0
+			var side := -1.0 if slot % 2 == 0 else 1.0
+			global_position = p.global_position + Vector2(-1250.0, side * 450.0).rotated(p.heading)
+			heading = p.heading
 			velocity = p.velocity
-			Main.I.radio("Ведомый", "Снова в строю!")
+			_fly_w = 1.0
+			Main.I.radio("Ведомый", "Иду к вам, займу место в строю!")
 		return
 	_sortie(p, delta)
 	_fly(p, delta)
@@ -191,6 +202,7 @@ var _fly_w := 0.0          # 0 — держит строй, 1 — летит с�
 func _fly(p: Player, delta: float) -> void:
 	if _sortie_t > 0.0 and is_instance_valid(_sortie_tgt):
 		_attack_run(p, delta)
+		_keep_clear(p, delta)
 		return
 	var target := p.global_position + _slot_offset(p)
 	var to := target - global_position
@@ -208,10 +220,24 @@ func _fly(p: Player, delta: float) -> void:
 	var aim := to + pv * clampf(dist / ps, 0.2, 1.2)
 	heading = rotate_toward(heading, aim.angle() if _fly_w > 0.5 else (p.heading if dist < 80.0 else station.angle()), deg_to_rad(WING_TURN) * delta)
 	var along := to.dot(fwd)
-	var spd := ps * clampf(1.0 + along / 350.0, 0.75, 1.45)
+	var spd := ps * clampf(1.0 + along / 350.0, 0.75, 1.45 if dist < 500.0 else 1.8)
 	var flying := Vector2.from_angle(heading) * spd
 	velocity = velocity.lerp(station.lerp(flying, _fly_w), 1.0 - exp(-delta * 4.0))
 	position += velocity * delta
+	_keep_clear(p, delta)
+
+
+## Не влезать в самолёт ведущего (на подлёте и при «Сомкнуть строй»): мягко отжимает в сторону своего места
+func _keep_clear(p: Player, delta: float) -> void:
+	var rel := global_position - p.global_position
+	var r := clear_r(p)
+	var l := rel.length()
+	if l >= r:
+		return
+	var side := -1.0 if slot % 2 == 0 else 1.0
+	var away := rel / l if l > 1.0 else Vector2.from_angle(p.heading + side * PI / 2.0)
+	position += away * (r - l) * minf(1.0, delta * 10.0)
+	velocity -= away * minf(0.0, velocity.dot(away) - p.velocity.dot(away))
 
 
 func _swift(p: Player, delta: float) -> void:
