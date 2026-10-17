@@ -482,6 +482,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 		return
 	if dodges(source, who):
 		return
+	amount *= Campaign.k("dmg") # U-05: урон врагов по сложности операции
 	if dive_t > 0.0 and who == "ПВО":
 		amount *= Tuning.g("dive_aa_k")
 	if shield_t > 0.0:

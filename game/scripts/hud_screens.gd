@@ -8,8 +8,8 @@ extends HudKit
 func class_select(size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.04, 0.86))
 	_text(Vector2(0, 120), "ВЫБЕРИТЕ САМОЛЁТ", 46, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-	_button(Rect2(64, 60, 220, 46), "‹ Меню (Esc)", "class_back", 18)
-	_ctext(162, "Клавиши 1 / 2 / 3 или клик мышью", 20, Color(0.7, 0.75, 0.85))
+	_button(Rect2(64, 60, 260, 46), "‹ Операция (Esc)", "class_back", 18)
+	_ctext(162, "Операция %d «%s» · сложность «%s» · клавиши 1 / 2 / 3 или клик мышью" % [Campaign.index() + 1, Campaign.op()["title"], Campaign.diff()["title"]], 20, Color(0.7, 0.75, 0.85))
 	var w := 520.0
 	var h := 700.0
 	var gap := 40.0
@@ -267,6 +267,7 @@ func result(m: Main, size: Vector2) -> void:
 	_ctext(top + 44, "%s · время %02d:%02d · уровень %d · сбито %d · асов %d" % [PlaneClasses.DATA[m.cls_id]["title"], t / 60, t % 60, m.level, m.kills, m.bosses_killed], 24, Color.WHITE)
 	var kept_note := "100% — эвакуация" if m.state == "evac" else "50% — гибель без эвакуации"
 	_ctext(top + 80, "Запчасти: %d из %d (%s)" % [m.parts_kept, int(m.parts), kept_note], 22, Color(0.95, 0.85, 0.55))
+	_op_line(m, top + 112)
 
 	var colw := 500.0
 	var lx := 90.0
@@ -400,6 +401,24 @@ func course_pick(m: Main, size: Vector2) -> void:
 	_ctext(690, "1–3 или клик — выбрать специализацию", 17, Color(0.75, 0.8, 0.9))
 
 
+## U-05: итог операции кампании — пройдена (и что открыто) или чего не хватило
+func _op_line(m: Main, y: float) -> void:
+	var o: Dictionary = m.op_result
+	if o.is_empty():
+		return
+	var s := ""
+	var col := Color(0.8, 0.82, 0.88)
+	if o["first"]:
+		s = "Операция %d «%s» пройдена! Открыто: %s" % [int(o["n"]), o["title"], ", ".join(PackedStringArray(o["opens"]))]
+		col = Color(1.0, 0.85, 0.4)
+	elif o["done"]:
+		s = "Операция %d «%s» выполнена (уже была пройдена)" % [int(o["n"]), o["title"]]
+		col = Color(0.5, 1.0, 0.6)
+	else:
+		s = "Операция %d «%s» не засчитана: не удалось %s" % [int(o["n"]), o["title"], ", ".join(PackedStringArray(o["miss"])) if not (o["miss"] as Array).is_empty() else "вернуться на базу"]
+	_ctext(y, s, 19, col)
+
+
 # ---------- 3.2: итоги для ангара ----------
 
 func _meta_panel(m: Main, r: Rect2) -> void:
@@ -417,8 +436,11 @@ func _meta_panel(m: Main, r: Rect2) -> void:
 		return
 	var rows: Array = []
 	rows.append(["ЗАПЧАСТИ", "", Menu.C_AMBER])
-	rows.append(["Добыча вылета (%s)" % ("100%" if m.state == "evac" else "50%"), "+%d" % m.parts_kept, Color(0.95, 0.85, 0.55)])
+	var rk := Campaign.k("reward")
+	rows.append(["Добыча вылета (%s%s)" % ["100%" if m.state == "evac" else "50%", "" if rk <= 1.0 else ", сложность ×" + HudCampaign._k(rk)], "+%d" % m.parts_kept, Color(0.95, 0.85, 0.55)])
 	rows.append(["Жалованье техникам", "+%d" % int(a["wage"]), Color(0.95, 0.85, 0.55)])
+	if int(a.get("op_parts", 0)) > 0:
+		rows.append(["Операция пройдена впервые", "+%d" % int(a["op_parts"]), Color(1.0, 0.85, 0.4)])
 	rows.append(["Итого", "+%d   (всего %d)" % [int(a["parts_add"]), int(a["parts_after"])], Color.WHITE])
 	rows.append(["ОПЫТ ЭКИПАЖА «%s»" % Profile.cls(m.cls_id)["callsign"], "", Color(0.6, 1.0, 0.7)])
 	for l in a["xp_lines"]:

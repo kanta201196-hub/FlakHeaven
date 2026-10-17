@@ -131,12 +131,18 @@ func _right_panel(m: Main, size: Vector2) -> void:
 	var w := size.x - 24.0
 	_backing(Rect2(size.x - 340, 14, 330, 172), true)
 	_text(Vector2(0, 46), "%02d:%02d" % [t / 60, t % 60], 28, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
-	# U-02: цель вылета рядом с таймером
+	# U-02: цель вылета рядом с таймером (U-05: словами операции кампании)
 	var left := maxi(0, 900 - t)
-	if left > 0:
-		_text(Vector2(0, 46), "до конца задания %d:%02d   " % [left / 60, left % 60], 16, Color(0.75, 0.8, 0.9), HORIZONTAL_ALIGNMENT_RIGHT, w - 90.0)
+	var goal := ""
+	if Campaign.goal_done(m.run_time, m.op_flags):
+		goal = "задание выполнено"
+	elif left > 0:
+		goal = "%s %d:%02d" % [Campaign.op()["hud"], left / 60, left % 60]
 	else:
-		_text(Vector2(0, 46), "задание выполнено   ", 16, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, w - 90.0)
+		goal = "сбейте " + ("«Барона»" if not m.op_flags.get("baron", false) and (Campaign.op()["need"] as Array).has("baron") else "«Крепость»")
+	_text(Vector2(0, 46), goal + "   ", 16, Color(0.6, 1.0, 0.7) if goal == "задание выполнено" else Color(0.75, 0.8, 0.9), HORIZONTAL_ALIGNMENT_RIGHT, w - 90.0)
+	if (Campaign.op()["need"] as Array).has("baron"):
+		_text(Vector2(size.x - 326, 174), "«Барон»: %s" % ("сбит ✓" if m.op_flags.get("baron", false) else "не сбит"), 15, Color(0.6, 1.0, 0.7) if m.op_flags.get("baron", false) else Color(1.0, 0.75, 0.6))
 	_text(Vector2(0, 74), "Сбито: %d" % m.kills, 20, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
 	_text(Vector2(0, 100), "Запчасти: %d" % int(m.parts), 20, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, w)
 	var every := Tuning.g("boss_every")

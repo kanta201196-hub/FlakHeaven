@@ -22,7 +22,7 @@ var background: Background
 var clouds: Clouds
 var render3d: Render3D
 
-## Состояния: menu, settings, class_select, playing, levelup, paused, dead, evac
+## Состояния: menu, settings, campaign, class_select, playing, levelup, paused, dead, evac
 var state := "menu"
 var cls_id := "fighter"
 var skill_pick := {}
@@ -88,6 +88,9 @@ var banner := ""
 var banner_t := 0.0
 var levelup_intro := false
 var bosses_killed := 0
+## U-05: что сделано для задачи операции кампании («fortress», «baron») и итог на экране результатов
+var op_flags := {}
+var op_result := {}
 var evac_windows := 0
 
 var _autotest := false
@@ -213,10 +216,12 @@ func start_run() -> void:
 	_fps_acc = 0.0
 	_fps_n = 0
 	banner = ""
-	show_banner("%s · %s" % [Background.BIOME_NAME.to_upper(), Background.BIOME_SUB], 4.0)
-	# U-02: цель вылета — первые 3 вылета
+	op_flags = {}
+	op_result = {}
+	show_banner("%s · ОПЕРАЦИЯ «%s» · %s" % [Background.BIOME_NAME.to_upper(), String(Campaign.op()["title"]).to_upper(), String(Campaign.diff()["title"]).to_upper()], 4.0)
+	# U-02: цель вылета — первые 3 вылета (U-05: задача операции кампании)
 	Hints.clear()
-	Hints.show("goal", "Задача: продержаться 15 минут и улететь через ворота эвакуации. Всех врагов не перебить — они прилетают всё время.", 9.0, 3)
+	Hints.show("goal", "Задача: %s. Всех врагов не перебить — они прилетают всё время." % String(Campaign.op()["task"]).to_lower(), 9.0, 3)
 	# U-03: первый вылет — подсказки по одной вместо стены текста «Как играть»
 	Hints.show("controls", "Мышь — куда лететь: самолёт поворачивает за курсором. Пушка стреляет сама по врагам впереди.", 7.0, 2)
 	Hints.show("xp", "Зелёные ромбы со сбитых врагов — опыт: пролетайте рядом, они притянутся. Новый уровень — выбор улучшения.", 7.0, 2)
@@ -279,7 +284,7 @@ func _process(delta: float) -> void:
 		sfx.music("menu")
 		return
 	# Музыка: меню / бой / ас (если файлы есть в audio/)
-	if state == "class_select":
+	if state in ["campaign", "class_select"]:
 		sfx.music("menu")
 	elif state in ["dead", "evac"]:
 		sfx.music("result")
@@ -549,7 +554,7 @@ func _open_evac() -> void:
 	evac.setup(player.global_position, player.heading)
 	world.add_child(evac)
 	evac_windows += 1
-	show_banner("Эвакуация: пролетите через 3 ворот по порядку", 5.0)
+	show_banner("Эвакуация: пролетите через 3 ворот по порядку" + ("" if Campaign.goal_done(run_time, op_flags) else " · задача операции ещё не выполнена"), 5.0)
 	if run_time < 890.0:
 		Hints.show("evac_early", "Улететь можно уже сейчас — или остаться до 15:00 и заработать больше запчастей.", 8.0, 2)
 	else:
@@ -558,7 +563,8 @@ func _open_evac() -> void:
 
 
 func on_evac_success() -> void:
-	parts_kept = int(parts)
+	parts_kept = int(parts * Campaign.k("reward"))
+	op_result = Campaign.on_evac(run_time, op_flags)
 	_award("evac")
 	RunLog.write(self, "эвакуация")
 	_set_state("evac")
@@ -623,6 +629,11 @@ func on_enemy_killed(e: Enemy) -> void:
 	add_shake(e.kill_shake)
 	if e.big:
 		hitstop()
+	if e is Fortress:
+		op_flags["fortress"] = true
+	if e is RivalAce and (e as RivalAce).callsign == "Барон" and Campaign.baron():
+		op_flags["baron"] = true
+		fx.text(e.global_position + Vector2(0, -60), "«Барон» сбит!", Color(1.0, 0.85, 0.4))
 	if e.is_boss:
 		bosses_killed += 1
 		if e.has_meta("born"):
@@ -651,13 +662,16 @@ var meta_award := {}
 
 func _award(outcome: String) -> void:
 	meta_award = Profile.award_run({"cls": cls_id, "outcome": outcome, "run_time": run_time, "level": level,
-		"bosses": bosses_killed, "activities": activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult()})
+		"bosses": bosses_killed, "activities": activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
+		"op_parts": int(op_result.get("parts", 0))})
 	result_t = 0.0
 
 
 func on_player_dead() -> void:
 	is_dead = true
-	parts_kept = int(parts * 0.5)
+	parts_kept = int(parts * 0.5 * Campaign.k("reward"))
+	op_result = Campaign.result_base(run_time, op_flags)
+	op_result["done"] = false
 	_award("dead")
 	fx.explosion(player.global_position, 40.0)
 	sfx.play("player_explode", 0.0, 0.7)

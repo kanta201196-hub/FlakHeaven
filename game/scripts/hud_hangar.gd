@@ -95,7 +95,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс", 15, Color(0.8, 0.85, 0.9))
 	else:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
-		_text(Vector2(lx + 24, y + 24), "Требует: экипаж ур. %d (сейчас %d) · %d запчастей" % [Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
+		_text(Vector2(lx + 24, y + 24), "Требует: операция «Перевал»%s · экипаж ур. %d (сейчас %d) · %d запчастей" % [" ✓" if Campaign.cleared(0) else "", Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
 		_text(Vector2(lx + 24, y + 46), "даёт: прочность +15%, скорость и разворот +5%, +1 переброс", 14, Color(0.7, 0.74, 0.8))
 		if Profile.can_buy_plane2(c):
 			_button(Rect2(lx + 24, y + 60, 320, 46), "МОДЕРНИЗИРОВАТЬ — %d" % Profile.PLANE2_COST, "hg:plane2", 17)

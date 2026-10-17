@@ -18,6 +18,7 @@ var _flight_ui: HudFlight
 var _screens_ui: HudScreens
 var _codex_ui: HudCodex
 var _hangar_ui: HudHangar
+var _campaign_ui: HudCampaign
 
 
 static func ui_font() -> Font:
@@ -64,6 +65,7 @@ func _ready() -> void:
 	_screens_ui = HudScreens.new(ctrl, _buttons)
 	_codex_ui = HudCodex.new(ctrl, _buttons)
 	_hangar_ui = HudHangar.new(ctrl, _buttons)
+	_campaign_ui = HudCampaign.new(ctrl, _buttons)
 
 
 func flash_damage() -> void:
@@ -104,6 +106,9 @@ func _draw_hud() -> void:
 		return
 	if m.state == "hangar":
 		_hangar_ui.draw(m, size)
+		return
+	if m.state == "campaign":
+		_campaign_ui.draw(size)
 		return
 	if m.state == "class_select":
 		_screens_ui.class_select(size)

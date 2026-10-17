@@ -25,9 +25,21 @@ func handle_global_input() -> void:
 				m.start_run()
 				m._set_state("menu")
 			return
-		"class_select":
+		"campaign":
 			if Input.is_action_just_pressed("pause"):
 				m._set_state("menu")
+			elif Input.is_action_just_pressed("ui_accept"):
+				m._set_state("class_select")
+			elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+				Campaign.select(wrapi(Campaign.index() + (1 if Input.is_action_just_pressed("ui_right") else -1), 0, Campaign.unlocked()))
+			else:
+				for i in Campaign.OPS.size():
+					if Input.is_action_just_pressed("choose_%d" % (i + 1)):
+						Campaign.select(i)
+			return
+		"class_select":
+			if Input.is_action_just_pressed("pause"):
+				m._set_state("campaign")
 				return
 			for i in 3:
 				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
@@ -115,6 +127,12 @@ func _cycle_scheme() -> void:
 
 func ui_click(action: String) -> void:
 	if action == "menu_play":
+		m._set_state("campaign")
+	elif action == "campaign_back":
+		m._set_state("menu")
+	elif action.begins_with("op:"):
+		Campaign.select(int(action.substr(3)))
+	elif action == "op_go":
 		m._set_state("class_select")
 	elif action == "menu_hangar" or action == "to_hangar":
 		m.hangar_back = "menu"
@@ -149,7 +167,7 @@ func ui_click(action: String) -> void:
 		m.start_run()
 		m._set_state("menu")
 	elif action == "class_back":
-		m._set_state("menu")
+		m._set_state("campaign")
 	elif action.begins_with("skill:"):
 		var parts := action.split(":")
 		if not Profile.skill_unlocked(parts[1], parts[2]):

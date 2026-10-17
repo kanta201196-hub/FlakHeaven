@@ -84,7 +84,7 @@ func _process(delta: float) -> void:
 
 	# 3.1: пока жив ас — мелочи втрое меньше, чтобы до него можно было добраться
 	var boss_on := m.boss_alive()
-	var mult := Tuning.g("spawn_rate_mult") * (0.3 if boss_on else 1.0)
+	var mult := Tuning.g("spawn_rate_mult") * Campaign.k("dens") * (0.3 if boss_on else 1.0) # U-05: плотность по сложности
 	mult *= 1.0 + maxf(0.0, t - 300.0) / 60.0 * 0.05 # 2.8: после 5:00 — плотнее (+5% в минуту)
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	# предел врагов в воздухе одновременно (без асов, наземных целей и целей активностей):
@@ -142,7 +142,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		print("AUTOTEST: activity start ", kind_s, " at %.0f" % t)
 	activity_i += 1
 	next_activity = t + Tuning.g("activity_every")
-	var hp_k := Tuning.g("enemy_hp_mult") * hp_ramp(t)
+	var hp_k := hp_mult() * hp_ramp(t)
 	if kind_s == "ground":
 		var site := AASite.new()
 		var dir := p.heading + randf_range(-1.0, 1.0)
@@ -174,6 +174,11 @@ func start_activity(p: Player, t: float, force := false) -> void:
 	Main.I.sfx.play("boss", -8.0, 1.4)
 
 
+## Прочность врагов: настройка × сложность операции кампании (U-05)
+func hp_mult() -> float:
+	return Tuning.g("enemy_hp_mult") * Campaign.k("hp")
+
+
 func m_boss() -> bool:
 	return Main.I.boss_alive()
 
@@ -181,10 +186,11 @@ func m_boss() -> bool:
 func _spawn_bosses(p: Player, wave: int) -> void:
 	var variants: Array = ["carrier"] if wave == 1 else (["interceptor"] if wave == 2 else ["carrier", "interceptor"])
 	# 3.1: асы прочнее и растут вместе со временем вылета (как обычные враги)
-	var hp := Tuning.g("boss_hp") * Tuning.g("enemy_hp_mult") * 0.6 * hp_ramp(Main.I.run_time)
+	var hp := Tuning.g("boss_hp") * hp_mult() * 0.6 * hp_ramp(Main.I.run_time)
 	# 3.5: не меньше, чем урон игрока за BOSS_TTK секунд (щит +35% сверху — поэтому делим)
 	var ttk: float = BOSS_TTK[mini(wave - 1, BOSS_TTK.size() - 1)]
-	var hp_dps := recent_dps() * ttk / 1.35
+	# U-05: на сложных операциях асы держатся дольше (половина множителя прочности — иначе бой с асом затягивается)
+	var hp_dps := recent_dps() * ttk / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f)" % [wave, hp, hp_dps, recent_dps()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
@@ -263,7 +269,7 @@ func _place(e: Enemy, p: Player, ang: float, t: float) -> void:
 	var far := 1.0 + 0.5 * sin(deg_to_rad(Tuning.g("cam_tilt")))
 	e.position = p.global_position + Vector2.from_angle(ang) * randf_range(1150.0, 1350.0) * far
 	Main.I.world.add_child(e)
-	e.apply_hp_mult(Tuning.g("enemy_hp_mult") * hp_ramp(t))
+	e.apply_hp_mult(hp_mult() * hp_ramp(t))
 	# 2.8: с 10-й минуты — элитные варианты (прочнее ×3, крупнее, больше опыта)
 	# 3.1: элитные — с 6:00 и чаще (до 30%)
 	if t > 360.0 and randf() < clampf((t - 360.0) / 1500.0, 0.0, 0.3):
