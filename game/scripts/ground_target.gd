@@ -219,7 +219,7 @@ func _defend(delta: float) -> void:
 	Main.I.fx.zap(global_position, mp)
 	# не каждая очередь попадает: 65%
 	if randf() < 0.65:
-		Main.I.fx.explosion(mp, 12.0)
+		Main.I.fx.explosion(mp, 12.0, true, true, "flak")
 		if arr == "m":
 			pr.pmissiles.remove_at(best)
 		else:

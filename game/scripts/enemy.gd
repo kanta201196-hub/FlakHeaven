@@ -207,7 +207,7 @@ func pop_flares(r := 420.0, trigger_r := 230.0, chance := 0.8) -> int:
 			continue
 		var f: Dictionary = fl[n % fl.size()]
 		var at := mp.lerp(f["p"] as Vector2 + (f["v"] as Vector2) * 0.25, 0.6)
-		Main.I.fx.explosion(at, 14.0)
+		Main.I.fx.explosion(at, 14.0, true, true, "flak")
 		pr.pmissiles.remove_at(i)
 		n += 1
 	Main.I.tele.add("enemy_flares")

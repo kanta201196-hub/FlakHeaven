@@ -82,8 +82,16 @@ func _ready() -> void:
 ## Взрыв (3.2). size — радиус «ядра» (≈ радиус цели или зоны поражения).
 ## Слои: вспышка и ореол (свечение) → огненные клубы с шумом → чёрный и серый дым → искры-угольки с хвостами →
 ## дымящие обломки → двойная ударная волна (яркая + пыльная) → вторичные хлопки у крупных → свет в 3D → пятно на земле.
-func explosion(pos: Vector2, size: float, air := true, secondary := true) -> void:
+## kind — вид 3D-взрыва (Boom3D): "flak" — подрыв ракеты или перехват; пусто — по размеру и air.
+func explosion(pos: Vector2, size: float, air := true, secondary := true, kind := "") -> void:
 	var s := maxf(size, 6.0) * 1.35 # 3.2: взрывы крупнее
+	# 3.5: в 3D взрыв объёмный (boom3d.gd) — 2D-слои не нужны; свет и пятно на земле общие
+	if Boom3D.active():
+		Boom3D.ensure().spawn(pos, s, air, kind)
+		Render3D.I.light_flash(pos, s)
+		if is_instance_valid(ground):
+			ground.scorch(pos, s * (1.6 if not air else 1.1), air)
+		return
 	var n := clampi(int(s / 3.5), 5, 18)
 	# вспышка и ореол — в слое свечения
 	glow.flashes.append({"p": pos, "r0": s * 1.4, "r1": s * 3.0, "life": 0.12, "max": 0.12, "c": Color(1, 0.9, 0.7, 0.8)})
@@ -137,7 +145,9 @@ func explosion(pos: Vector2, size: float, air := true, secondary := true) -> voi
 
 ## Зона поражения (НАР, бомбы, ракеты): кольцо радиуса + взрыв по размеру зоны
 func blast(pos: Vector2, radius: float) -> void:
-	explosion(pos, radius * 0.45, false)
+	explosion(pos, radius * 0.45, false, true, "blast")
+	if Boom3D.active():   # 3.5: в 3D край зоны показывает пыльная волна, плоское кольцо не нужно
+		return
 	rings.append({"p": pos, "r": radius * 0.85, "max": radius, "life": 0.28, "max_life": 0.28, "c": Color(1.0, 0.6, 0.25)})
 
 
