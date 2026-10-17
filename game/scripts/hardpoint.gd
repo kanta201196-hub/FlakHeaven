@@ -79,6 +79,9 @@ func dmg() -> float:
 			return base * (1.0 + 0.25 * (level - 1))
 
 
+const MSL_CD_MIN := {"aam": 3.0, "rockets": 1.8}
+
+
 func reload_time(p: Player) -> float:
 	var base: float = Weapons.DEFS[weapon]["cd"]
 	var k := 1.0
@@ -119,7 +122,12 @@ func reload_time(p: Player) -> float:
 		k /= float(p.mods.get("turret_rate", 1.0))
 	if weapon == "aam" or weapon == "rockets":
 		k *= float(p.mods.get("msl_cd", 1.0)) # модуль «Пусковое устройство»
-	return base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd")
+	var t: float = base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd")
+	if MSL_CD_MIN.has(weapon):
+		# правка 3.5-s4 (лог «Осы»: до 59 ракет в воздухе): карточки перезарядки складывались до ×0,07 —
+		# ракеты шли без перерыва. Нижний предел; «Штурмовой заход» по-прежнему ускоряет втрое
+		t = maxf(t, float(MSL_CD_MIN[weapon]) / (3.0 if p.assault_t > 0.0 and not builtin else 1.0))
+	return t
 
 
 ## U-07: множитель модернизации от ступени 3 ветки (только самолёт ур. 2)

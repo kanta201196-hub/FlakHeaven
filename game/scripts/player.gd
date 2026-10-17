@@ -499,6 +499,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	if dodges(source, who):
 		return
 	amount *= Campaign.k("dmg") # U-05: урон врагов по сложности операции
+	amount *= Spawner.dmg_ramp(Main.I.run_time) # правка 3.5-s4: поздний бой опаснее
 	if dive_t > 0.0 and who == "ПВО":
 		amount *= Tuning.g("dive_aa_k")
 	if shield_t > 0.0:

@@ -627,6 +627,8 @@ func on_enemy_hit(e: Enemy, dmg: float) -> void:
 
 func on_enemy_killed(e: Enemy) -> void:
 	kills += 1
+	if is_instance_valid(spawner):
+		spawner.note_kill(e)
 	if is_instance_valid(player):
 		player.on_kill(e)
 	add_stat("kills_by", e.kind(), 1.0)
