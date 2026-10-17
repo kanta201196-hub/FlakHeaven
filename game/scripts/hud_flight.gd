@@ -201,6 +201,9 @@ func _boss_bars(m: Main, size: Vector2) -> void:
 			continue
 		var w := 560.0
 		var x := (size.x - w) / 2.0
+		if b is Fortress:
+			y = _fortress_bar(b as Fortress, x, y, w)
+			continue
 		ctrl.draw_rect(Rect2(x, y - 16, w, 22), Color(0.02, 0.025, 0.03, 0.55))
 		_text(Vector2(x, y + 2), b.title, 18, Color(1, 0.9, 0.78), HORIZONTAL_ALIGNMENT_CENTER, w)
 		ctrl.draw_rect(Rect2(x, y + 10, w, 14), Color(0, 0, 0, 0.6))
@@ -208,6 +211,32 @@ func _boss_bars(m: Main, size: Vector2) -> void:
 		if b.shield > 0.0:
 			ctrl.draw_rect(Rect2(x, y + 25, w * b.shield / b.shield_max, 5), Color(0.5, 0.8, 1.0))
 		y += 48.0
+
+
+## Правка 3.5-s4: полоса «Крепости» — общая прочность с отметками приёмов (66% и 33%),
+## под ней — значки точек: 4 турели и 2 двигателя, сбитые перечёркнуты
+func _fortress_bar(f: Fortress, x: float, y: float, w: float) -> float:
+	ctrl.draw_rect(Rect2(x, y - 16, w, 22), Color(0.02, 0.025, 0.03, 0.55))
+	_text(Vector2(x, y + 2), f.title, 18, Color(1, 0.9, 0.78), HORIZONTAL_ALIGNMENT_CENTER, w)
+	var fr := f.total_frac()
+	ctrl.draw_rect(Rect2(x, y + 10, w, 16), Color(0, 0, 0, 0.6))
+	ctrl.draw_rect(Rect2(x, y + 10, w * fr, 16), Color(1.0, 0.35, 0.3))
+	for th in [0.66, 0.33]:
+		var tx: float = x + w * th
+		ctrl.draw_line(Vector2(tx, y + 6), Vector2(tx, y + 30), Color(1.0, 0.9, 0.5, 0.9), 2.0)
+	var ix := x + w / 2.0 - 6 * 28.0 / 2.0
+	for pt in f.points:
+		var down := float(pt["hp"]) <= 0.0
+		var r := Rect2(ix, y + 32, 22, 14)
+		var col := Color(1.0, 0.85, 0.3) if pt["kind"] == "turret" else Color(1.0, 0.5, 0.25)
+		ctrl.draw_rect(r, Color(0.2, 0.2, 0.2, 0.7) if down else Color(col, 0.85))
+		if down:
+			ctrl.draw_line(r.position, r.end, Color(1, 0.3, 0.25), 2.0)
+			ctrl.draw_line(Vector2(r.position.x, r.end.y), Vector2(r.end.x, r.position.y), Color(1, 0.3, 0.25), 2.0)
+		else:
+			ctrl.draw_rect(Rect2(ix, y + 44, 22.0 * float(pt["hp"]) / float(pt["max"]), 3), Color(0.4, 1.0, 0.5))
+		ix += 28.0
+	return y + 62.0
 
 
 # ---------- Указатели у края экрана ----------
