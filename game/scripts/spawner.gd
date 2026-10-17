@@ -341,12 +341,12 @@ func _pressure(t: float, delta: float) -> void:
 	if _press_t > 0.0:
 		return
 	_press_t = PRESSURE_STEP
-	var life := _median_life(t - 20.0, t)
+	var life := _median_life(t - 30.0, t)
 	if life <= 0.0:
 		return
 	# эталон чуть растёт к концу вылета: поздние враги держатся дольше ранних
 	var target := _life_ref * lerpf(1.0, 1.3, clampf((t - PRESSURE_FROM) / 600.0, 0.0, 1.0))
-	pressure_k = clampf(pressure_k * clampf(pow(target / life, 0.7), 0.88, 1.3), 1.0, PRESSURE_MAX)
+	pressure_k = clampf(pressure_k * clampf(pow(target / life, 0.6), 0.9, 1.2), 1.0, PRESSURE_MAX)
 	if OS.get_cmdline_user_args().has("--autotest") and int(t) % 60 < int(PRESSURE_STEP):
 		print("AUTOTEST: pressure %.0f s: life %.1f / target %.1f, k %.2f" % [t, life, target, pressure_k])
 	Main.I.tele.maxv("pressure_max", pressure_k)
