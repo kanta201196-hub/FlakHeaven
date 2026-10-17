@@ -190,12 +190,12 @@ func _minute(m: Main) -> void:
 	var main_tag := 0
 	if p.has_course():
 		main_tag = p.tag(Cards.syn_def(p, p.course)["tag"])
-	timeline.append("%d:L%d hp%d fps%d dmg%d tk%d k%d sh%d/%d nm%d inv%.1f v%d syn%d c=%s/%d t%d g%d tr%dk e%d" % [int(m.run_time / 60.0), m.level,
+	timeline.append("%d:L%d hp%d fps%d dmg%d tk%d k%d sh%d/%d nm%d inv%.1f v%d syn%d c=%s/%d t%d g%d tr%dk e%d pk%.1f" % [int(m.run_time / 60.0), m.level,
 		int(round(100.0 * p.hp / maxf(p.max_hp, 1.0))), int(round(fps)), int(d["dealt"]), int(d["taken"]), int(d["kills"]),
 		int(d["shots"]), int(d["hits"]), int(d["nm"]), float(d["inv"]), int(round(p.velocity.length())), p.syn.size(),
 		p.course if p.course != "" else "-", main_tag, int(round(Tuning.g("cam_tilt"))), Settings.gfx,
 		int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1000),
-		m.get_tree().get_nodes_in_group("enemies").size()])
+		m.get_tree().get_nodes_in_group("enemies").size(), m.spawner.pressure_k if is_instance_valid(m.spawner) else 1.0])
 	_snap = now
 
 

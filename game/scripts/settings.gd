@@ -43,6 +43,12 @@ var font := 0              # U-09: шрифт интерфейса — инде�
 ## Правка 3.5-s4: кого звено атакует первым (клавиша G в полёте, кнопка на экране паузы)
 const WING_PRIO := ["по задаче ведомого", "прикрывать меня", "крупные и асы", "наземные цели"]
 var wing_prio := 0
+## Правка 24: миникарта — размер (0 — выключена) и прозрачность
+const MINIMAP_SIZES := [0.0, 180.0, 240.0, 320.0]
+const MINIMAP_NAMES := ["выключена", "малая", "средняя", "большая"]
+const MINIMAP_ALPHA := [0.4, 0.6, 0.8, 1.0]
+var minimap := 2
+var minimap_alpha := 2
 var gfx_auto := true       # автоснижение при низком FPS, пока игрок не выбрал качество сам
 var binds := {}          # действие → physical_keycode (только клавиатура)
 var _defaults := {}      # исходные клавиши (для «Сбросить»)
@@ -126,7 +132,7 @@ func save_settings() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
-		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "font": font, "wing_prio": wing_prio, "binds": binds}, "  "))
+		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "font": font, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds": binds}, "  "))
 	f.close()
 
 
@@ -149,6 +155,8 @@ func load_settings() -> void:
 	gfx_auto = bool(d.get("gfx_auto", gfx_auto))
 	font = clampi(int(d.get("font", font)), 0, FONTS.size() - 1)
 	wing_prio = clampi(int(d.get("wing_prio", wing_prio)), 0, WING_PRIO.size() - 1)
+	minimap = clampi(int(d.get("minimap", minimap)), 0, MINIMAP_SIZES.size() - 1)
+	minimap_alpha = clampi(int(d.get("minimap_alpha", minimap_alpha)), 0, MINIMAP_ALPHA.size() - 1)
 	var b = d.get("binds", {})
 	if b is Dictionary:
 		for a in b:

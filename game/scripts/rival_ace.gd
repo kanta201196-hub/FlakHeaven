@@ -51,6 +51,7 @@ func setup(hp_total: float) -> void:
 		callsign = CALLSIGNS[randi() % CALLSIGNS.size()]
 	hp = hp_total
 	max_hp = hp_total
+	min_life = 14.0   # правка 3.5-s4: не падает за секунды при любой сборке
 	radius = 18.0
 	big = true
 	no_despawn = true
@@ -80,7 +81,7 @@ func say(key: String, force := false) -> void:
 		return
 	_said["_last"] = now
 	var arr: Array = LINES[key]
-	Main.I.radio(callsign, arr[randi() % arr.size()])
+	Main.I.radio(callsign, arr[randi() % arr.size()], true)
 
 
 func take_hit(dmg: float, source := "прочее") -> void:
@@ -133,8 +134,7 @@ func behave(delta: float) -> void:
 	_evade_cd -= delta
 	_scan_t -= delta
 	_flare_cd -= delta
-	if _flare_cd <= 0.0 and pop_flares(380.0, 220.0, 0.7) > 0:
-		_flare_cd = 6.0
+	flare_defense(delta, 400.0, 240.0, 0.8, 2.5, 8.0)
 	if _evade_cd <= 0.0 and _scan_t <= 0.0 and evade_t <= 0.0 and _shots == 0:
 		_scan_t = 0.15
 		var threat := incoming_fire(0.4, 3)

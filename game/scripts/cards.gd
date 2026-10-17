@@ -411,6 +411,40 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 	return ""
 
 
+## Правка 9 (3.5-s4): строка «было → станет» для модуля — сколько сейчас и сколько будет после карточки
+static func module_delta(p: Player, id: String, k: float) -> String:
+	var mul := {"engine": ["speed", 0.06, "Скорость"], "wing": ["turn", 0.08, "Разворот"],
+		"gun_dmg": ["gun_dmg", 0.15, "Урон пушки"], "gun_rate": ["gun_rate", 0.15, "Темп пушки"],
+		"frag": ["blast_r", 0.1, "Радиус взрывов"], "warhead": ["blast_dmg", 0.12, "Урон взрывов"],
+		"msl_head": ["missile_dmg", 0.15, "Урон ракет"], "msl_motor": ["missile_spd", 0.12, "Скорость ракет"],
+		"radio": ["wing_dmg", 0.2, "Урон ведомых"], "magnet": ["pickup", 0.35, "Радиус подбора"],
+		"servo": ["servo_rate", 0.1, "Темп гондолы и турелей"]}
+	if mul.has(id):
+		var d: Array = mul[id]
+		var v := float(p.mods.get(d[0], 1.0))
+		return "%s: %s → %s" % [d[2], _pct(v), _pct(v * (1.0 + float(d[1]) * k))]
+	match id:
+		"armor":
+			return "Прочность: %d → %d" % [int(p.max_hp), int(p.max_hp + float(p.cls["hp"]) * 0.2 * k)]
+		"reload":
+			var r := float(p.mods["hp_cd"])
+			return "Перезарядка подвесов: %s → %s" % [_pct(r), _pct(maxf(0.3, r * (1.0 - 0.1 * k)))]
+		"launcher":
+			var r2 := float(p.mods.get("msl_cd", 1.0))
+			return "Перезарядка ракет: %s → %s" % [_pct(r2), _pct(maxf(0.4, r2 * (1.0 - 0.1 * k)))]
+		"roll":
+			if not p.has_roll():
+				return ""
+			var t := Tuning.g("roll_time") + float(p.mods["roll_time"])
+			return "Неуязвимость уклонения: %.2f → %.2f с" % [t, t + 0.15 * k]
+		"afterburner":
+			var a := Tuning.g("afterburner_time") + float(p.mods["ab_time"])
+			return "Форсаж: %.1f → %.1f с" % [a, a + 1.0 * k]
+		"repair":
+			return "Прочность: %d → %d из %d" % [int(p.hp), int(minf(p.max_hp, p.hp + p.max_hp * minf(0.4 * k, 1.0))), int(p.max_hp)]
+	return ""
+
+
 ## 3.5 (правка 24): больше двух постоянных ведомых не бывает — третий делал звено слишком сильным
 const WING_MAX := 2
 
@@ -597,6 +631,9 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 						card["desc"] = "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
 		_:
 			card["desc"] = module_desc(p, card["id"], k)
+			var dl := module_delta(p, card["id"], k)
+			if dl != "":
+				card["desc"] += "\n" + dl
 			if card["kind"] == "module":
 				card["desc"] += Prog.evo_hint(p, card["id"])
 	card["tags"] = tags_line(p, card)

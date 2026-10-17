@@ -28,6 +28,7 @@ var cls_id := "fighter"
 var skill_pick := {}
 var codex_back := "menu"
 var result_t := 0.0
+var result_tab := 0 # правка 30: вкладка итогов — 0 обзор, 1 урон, 2 сборка
 var hangar_cls := "fighter"
 var hangar_tab := "plane"
 var hangar_w := "aam"
@@ -58,6 +59,7 @@ var activities_done := 0
 var radio_from := ""
 var radio_text := ""
 var radio_t := 0.0
+var radio_enemy := false # перехват вражеского эфира — красная плашка
 var tail_kills := 0
 var level_at_5 := 0   # уровень на 5:00 — для баланса кривой опыта
 var parts := 0.0        # запчасти (валюта ангара), набранные за вылет
@@ -226,6 +228,8 @@ func start_run() -> void:
 	# U-03: первый вылет — подсказки по одной вместо стены текста «Как играть»
 	Hints.show("controls", "Мышь — куда лететь: самолёт поворачивает за курсором. Пушка стреляет сама по врагам впереди.", 7.0, 2)
 	Hints.show("xp", "Зелёные ромбы со сбитых врагов — опыт: пролетайте рядом, они притянутся. Новый уровень — выбор улучшения.", 7.0, 2)
+	if Settings.minimap > 0:
+		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
 	bosses_killed = 0
 	evac_windows = 0
 	rerolls = 2 + Profile.extra_rerolls(cls_id) # 3.5: самолёт ур. 2 — +1 переброс
@@ -480,10 +484,12 @@ func ban_card(i: int) -> void:
 	sfx.play("ui_ban", -14.0, 1.6)
 
 
-func radio(from: String, text: String) -> void:
+func radio(from: String, text: String, enemy := false) -> void:
 	radio_from = from
 	radio_text = text
-	radio_t = 3.5
+	radio_enemy = enemy
+	radio_t = 3.5 + text.length() * 0.03 # длинную фразу держим дольше
+	Hints.show("radio", "Справа внизу — радиоэфир: ведомые отвечают на приказы, штаб предупреждает о задании. Красная рамка — перехват вражеского эфира, жди аса или босса.", 8.0, 2)
 	sfx.play("radio", -18.0, 2.2)
 
 
@@ -540,6 +546,9 @@ func boss_alive() -> bool:
 
 func on_boss_wave(wave: int, n: int) -> void:
 	show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
+	# правка 20: ас выходит в эфир — перехват его переговоров справа внизу
+	radio("Перехват", ["Цель вижу. Захожу с солнца.", "Это наше небо. Уходи, пока цел.", "Звено, прикрыть меня — работаю по одиночке.",
+		"Ещё один охотник? Посмотрим, сколько продержишься."][randi() % 4], true)
 	Hints.show("ace", "Ас — сильный враг. Собьёте его — откроются ворота эвакуации и добавится переброс карточек.", 8.0, 2)
 	# 3.5 (правка 30): время жизни аса — для лога
 	for b in get_tree().get_nodes_in_group("enemies"):
@@ -622,6 +631,8 @@ func on_enemy_hit(e: Enemy, dmg: float) -> void:
 
 func on_enemy_killed(e: Enemy) -> void:
 	kills += 1
+	if is_instance_valid(spawner):
+		spawner.note_kill(e)
 	if is_instance_valid(player):
 		player.on_kill(e)
 	add_stat("kills_by", e.kind(), 1.0)
@@ -674,6 +685,7 @@ func _award(outcome: String) -> void:
 		"bosses": bosses_killed, "activities": activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
 		"op_parts": int(op_result.get("parts", 0))})
 	result_t = 0.0
+	result_tab = 0
 
 
 func on_player_dead() -> void:
