@@ -350,7 +350,7 @@ func _main(m: Main, size: Vector2) -> void:
 	var x0 := 96.0
 	var y := 600.0
 	_menu_button(Rect2(x0, y, 560, 78), "ВЫЛЕТ", "menu_play", true)
-	_menu_button(Rect2(x0, y + 96, 560, 62), "СПРАВОЧНИК СВЯЗОК", "menu_codex")
+	_menu_button(Rect2(x0, y + 96, 560, 62), "СПРАВОЧНИК", "menu_codex")
 	_menu_button(Rect2(x0, y + 172, 560, 62), "АНГАР" + ("  !" if Profile.any_purchase() else ""), "menu_hangar", false, true,
 		"Запчасти: %d · экипажи: Оса %d · Грач %d · Кит %d" % [Profile.parts(), Profile.crew_lvl("fighter"), Profile.crew_lvl("attacker"), Profile.crew_lvl("bomber")])
 	_menu_button(Rect2(x0, y + 256, 272, 62), "НАСТРОЙКИ", "menu_settings")

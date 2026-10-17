@@ -166,6 +166,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(site)
 		activity_node = site
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
+		Hints.show("act_aa", "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости.", 9.0, 2)
 	elif kind_s == "convoy":
 		var cv := Convoy.new()
 		# колонна пересекает курс игрока впереди: маршрут через точку в 1 300 пикс. по курсу
@@ -175,6 +176,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(cv)
 		activity_node = cv
 		Main.I.show_banner("Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш", 4.0)
+		Hints.show("act_convoy", "Конвой: летите по оранжевой стрелке. Подбейте головную машину — колонна встанет. С каждого сожжённого грузовика падает груз: запчасти и ремкомплекты.", 9.0, 2)
 	elif kind_s == "transport":
 		var tr := Transport.new()
 		tr.setup(maxf(700.0 * hp_k, recent_dps() * TRANSPORT_TTK))
@@ -187,6 +189,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		tr.spawn_escort(3 + (1 if t > 480.0 else 0), hp_k)
 		activity_node = tr
 		Main.I.show_banner("Разведка: вражеский транспортник с прикрытием! Сбейте его — груз ваш", 4.0)
+		Hints.show("act_transport", "Транспортник летит через район и скоро уйдёт — розовая стрелка. Прикрытие отвлекает: бейте сам транспортник, груз падает с него.", 8.0, 2)
 	else:
 		var ace := RivalAce.new()
 		ace.setup(Tuning.g("rival_hp") * hp_k)
@@ -196,6 +199,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(ace)
 		activity_node = ace
 		Main.I.show_banner("Дуэль: вражеский ас заходит вам в хвост!", 4.0)
+		Hints.show("act_ace", "Дуэль с асом: он заходит в хвост. Сбросьте газ (S) или сделайте боевой разворот (E) — ас проскочит вперёд под вашу пушку.", 8.0, 2)
 	Main.I.sfx.play("boss", -8.0, 1.4)
 
 
