@@ -62,7 +62,8 @@ func process(delta: float) -> void:
 		_points = _make_points()
 		for a in OS.get_cmdline_user_args():   # --only=model_ground — только точки с этим началом имени
 			if a.begins_with("--only="):
-				_points = _points.filter(func(q: Dictionary) -> bool: return String(q["name"]).begins_with(a.get_slice("=", 1)))
+				var pre := a.get_slice("=", 1).split(",")   # несколько начал через запятую: --only=village,scene
+				_points = _points.filter(func(q: Dictionary) -> bool: return Array(pre).any(func(x: String) -> bool: return String(q["name"]).begins_with(x)))
 		_i = 0
 		_t = 0.0
 	if _i >= _points.size():
@@ -197,6 +198,8 @@ func _make_points() -> Array:
 	var bg := m.background
 	var found := {}
 	var empty := Vector2.INF
+	var near_river := {}   # тест 3.5-s4 (п. 16): поселения ближе всех к реке (кромка у воды): имя → [зазор, объект]
+	var ter: Terrain3D = Render3D.I.terrain if Render3D.I != null else null
 	for r in range(0, 14):
 		for cx in range(-r, r + 1):
 			for cy in range(-r, r + 1):
@@ -206,8 +209,13 @@ func _make_points() -> Array:
 				if o.is_empty():
 					if empty == Vector2.INF:
 						empty = Vector2((cx + 0.5) * Background.CHUNK, (cy + 0.5) * Background.CHUNK)
-				elif not found.has(o["name"]):
-					found[o["name"]] = o["pos"]
+				else:
+					if not found.has(o["name"]):
+						found[o["name"]] = o["pos"]
+					if ter != null and o["name"] in Terrain3D.SETTLE:
+						var gap := absf(ter.river_field(o["pos"].x, o["pos"].y)) - float(o["size"]) * 0.5
+						if gap < float(near_river.get(o["name"], [INF])[0]):
+							near_river[o["name"]] = [gap, o]
 	if empty == Vector2.INF:
 		empty = Vector2.ZERO
 	var pts := [{"name": "desert", "pos": empty}]
@@ -218,6 +226,21 @@ func _make_points() -> Array:
 	pts.append({"name": "mountain", "pos": peak})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
+	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
+	if ter != null:
+		var got := {}
+		for r in range(0, 6):
+			for cx in range(-r, r + 1):
+				for cy in range(-r, r + 1):
+					if maxi(absi(cx), absi(cy)) != r:
+						continue
+					for it in ter.scenes(Vector2i(cx, cy)):
+						if it["k"] in ["plane", "tank", "sandbag"] and not got.has(it["k"]):
+							got[it["k"]] = true
+							pts.append({"name": "scene_" + String(it["k"]), "pos": (it["p"] as Vector2) + Vector2(0, 110), "zoom": 2.5})
+	for nm in ["o_village", "o_oasis"]:
+		if near_river.has(nm):
+			pts.append({"name": "river_" + nm.substr(2), "pos": near_river[nm][1]["pos"]})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	if found.has("o_wreck"):   # тест 3.5-s4 (п. 18): обломки самолёта крупно
 		pts.append({"name": "wreck", "pos": found["o_wreck"], "zoom": 2.5})

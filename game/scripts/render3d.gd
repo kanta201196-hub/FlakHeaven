@@ -1467,10 +1467,15 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 			var mi := MeshInstance3D.new()
 			var k: float = o["size"] / float(maxi(t.get_width(), t.get_height()))
 			var gy := terrain.surface_fast(o["pos"].x, o["pos"].y).y
-			if o["name"] in ["o_fort", "o_village"]:
-				# 3.4-t1 (п. 25): крепость и кишлак — объёмные постройки, а не выдавленная картинка
+			if o["name"] in ["o_fort", "o_village", "o_oasis"]:
+				# 3.4-t1 (п. 25): крепость и кишлак — объёмные постройки, а не выдавленная картинка;
+				# тест 3.5-s4 (п. 17): и оазис — дома, пруд и огороды вместо круглой картинки, зелень — на земле
 				var sz := float(o["size"])
-				mi.mesh = AdobeBuild.fort() if o["name"] == "o_fort" else AdobeBuild.village(absi(hash(key)) % 4)
+				var vr: int = o.get("var", absi(hash(key)) % 4)
+				match o["name"]:
+					"o_fort": mi.mesh = AdobeBuild.fort()
+					"o_village": mi.mesh = AdobeBuild.village(vr)
+					_: mi.mesh = AdobeBuild.oasis(vr)
 				mi.material_override = AdobeBuild.material()
 				mi.position = Vector3(o["pos"].x, gy - sz * 0.01, o["pos"].y)
 				mi.basis = Basis(Vector3.UP, -float(o["rot"])).scaled(Vector3(sz, sz, sz))

@@ -36,6 +36,7 @@ var _hill := FastNoiseLite.new()
 var _warp := FastNoiseLite.new()
 var _valley := FastNoiseLite.new()
 var _plains := FastNoiseLite.new()
+var _scenes := {}              # Vector2i → сцены прошедших боёв клетки (scenes())
 var _side := {}                # Vector2i → боковые долины поселений рядом: [[A, B, ширина], …]
 var _bg: Background
 ## Сборка кусков в фоне (тест 3.5-s3: кусок считался в главном потоке до 77 мс — рывки при полёте).
@@ -103,6 +104,7 @@ func clear() -> void:
 	_spare_order.clear()
 	_objs_cache.clear()
 	_side.clear()
+	_scenes.clear()
 
 
 ## Расстояние до линии реки, px, со знаком берега; боковые долины поселений сводят его к нулю
@@ -264,29 +266,179 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := D_
 	return best
 
 
-## Тест 3.5-s4 (п. 20): объект клетки (кишлак, крепость, оазис, воронка, обломки, скалы) не лежит в реке —
-## если его круг задевает русло с берегом, сдвигаем от реки по наклону поля (поле ≈ расстояние до реки)
+## Тест 3.5-s4 (п. 20): объект клетки (кишлак, крепость, оазис, воронка, обломки, скалы) не лежит в реке.
+## Второй список (п. 16): проверка по кольцам точек на всю площадь объекта (у кишлака — с окраинами,
+## AdobeBuild.footprint), а не одной точкой в центре: на изгибе реки оценка поля в центре врёт.
+## Задетые водой точки толкают объект прочь; не вышло за 10 шагов — объекта в клетке нет
 func fix_object(o: Dictionary) -> Dictionary:
-	var p: Vector2 = o["pos"]
-	var need := float(o["size"]) * 0.45 + D_RIVER * 2.0
-	for i in 4:
-		var v := river_field(p.x, p.y)
-		if absf(v) >= need:
+	var p0: Vector2 = o["pos"]
+	var p := p0
+	var R := float(o["size"]) * AdobeBuild.footprint(o["name"])
+	var clear := D_RIVER * 2.6   # вода и мокрый берег (в шейдере берег темнеет до river_w × 2.4)
+	for it in 10:
+		var push := Vector2.ZERO
+		var worst := 0.0
+		for ring: float in [0.0, 0.35, 0.7, 1.0]:
+			var n := 1 if ring == 0.0 else int(8.0 + ring * 24.0)
+			for i in n:
+				var q := p + Vector2.from_angle(TAU * i / n + ring) * R * ring
+				var v := river_field(q.x, q.y)
+				var w := clear - absf(v)
+				if w <= 0.0:
+					continue
+				worst = maxf(worst, w)
+				if ring == 0.0:
+					var e := 8.0
+					var g := Vector2(river_field(q.x + e, q.y) - river_field(q.x - e, q.y), river_field(q.x, q.y + e) - river_field(q.x, q.y - e))
+					if g.length_squared() > 1e-10:
+						push += g.normalized() * signf(v + 1e-3) * w * 4.0
+				else:
+					push -= (q - p).normalized() * w
+		if worst <= 0.0:
+			var out := o.duplicate()
+			out["pos"] = p
+			return out
+		if push.length_squared() < 1e-8:
+			push = Vector2.from_angle(float(it))
+		p += push.normalized() * clampf(worst + 12.0, R * 0.08, R * 0.5)
+		if p.distance_to(p0) > CHUNK * 0.45:
 			break
-		var e := 8.0
-		var g := Vector2(river_field(p.x + e, p.y) - river_field(p.x - e, p.y), river_field(p.x, p.y + e) - river_field(p.x, p.y - e)) / (2.0 * e)
-		if g.length_squared() < 1e-10:
-			break
-		var sgn := 1.0 if v >= 0.0 else -1.0
-		p += g.normalized() * sgn * (need - absf(v) + 4.0) / maxf(g.length(), 0.3)
-	var out := o.duplicate()
-	out["pos"] = p
-	return out
+	return {}
 
 
 ## Русло с берегом (как в find_floor): сюда наземная техника не заезжает
 func wet(p: Vector2) -> bool:
 	return absf(river_field(p.x, p.y)) < D_RIVER * 3.0
+
+
+## Тест 3.5-s4 (второй список): «сцены прошедших боёв» — у кишлаков, крепостей и местами у дорог группы
+## из 2–5 элементов: подбитый танк с воронками, сгоревший грузовик, упавший самолёт с выгоревшей
+## полосой, брошенная позиция из мешков. Модели ставит BiomeProps (k = truck, tank, plane, sandbag),
+## выгоревшие пятна и воронки рисует шейдер рельефа (k = scorch, crater). Не в воде и не на берегу,
+## не на домах и огородах, не друг в друге; на склон техника не заезжает. Только главный поток (кэш)
+## Элемент: {k, p (Vector2), yaw, w (ширина модели, px), r (радиус занятого места, px)}
+const SCENE_W := {"tank": 64.0, "truck": 60.0, "plane": 120.0, "sandbag": 48.0}
+
+
+func scenes(key: Vector2i) -> Array:
+	if _bg == null:
+		return []
+	if _scenes.has(key):
+		return _scenes[key]
+	if _scenes.size() > 800:
+		_scenes.clear()
+	var out := []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(key) ^ 0xb477e
+	var obj := _obj(key)
+	var near := []   # объекты вокруг — сцены их не задевают
+	for dx in [-1, 0, 1]:
+		for dz in [-1, 0, 1]:
+			var o := _obj(Vector2i(key.x + dx, key.y + dz))
+			if not o.is_empty():
+				near.append(o)
+	var anchors := []   # [центр, радиус от центра объекта]
+	if not obj.is_empty():
+		var sz := float(obj["size"])
+		match obj["name"]:
+			"o_village":
+				if rng.randf() < 0.9:
+					anchors.append([obj["pos"], sz * rng.randf_range(0.66, 0.85)])
+				if rng.randf() < 0.5:
+					anchors.append([obj["pos"], sz * rng.randf_range(0.7, 0.9)])
+			"o_fort":
+				if rng.randf() < 0.6:
+					anchors.append([obj["pos"], sz * rng.randf_range(0.75, 1.0)])
+			"o_oasis":
+				if rng.randf() < 0.25:
+					anchors.append([obj["pos"], sz * rng.randf_range(0.6, 0.75)])
+	if rng.randf() < 0.1:   # засада у дороги
+		var q := Vector2((key.x + rng.randf_range(0.2, 0.8)) * CHUNK, (key.y + rng.randf_range(0.2, 0.8)) * CHUNK)
+		anchors.append([_field_point(q, D_ROAD + rng.randf_range(40.0, 120.0) * (1.0 if rng.randf() < 0.6 else -2.5)), 0.0])
+	for an in anchors:
+		for attempt in 4:
+			var a := rng.randf() * TAU
+			var c: Vector2 = (an[0] as Vector2) + Vector2.from_angle(a) * float(an[1])
+			var items := _scene_items(rng, c, near, out)
+			if items.size() >= 2:
+				out.append_array(items)
+				break
+	_scenes[key] = out
+	return out
+
+
+func _scene_items(rng: RandomNumberGenerator, c: Vector2, near: Array, taken: Array) -> Array:
+	var items := []
+	var dir := Vector2.from_angle(rng.randf() * TAU)
+	var side := dir.orthogonal()
+	var kind := rng.randi() % 3
+	var main: String = ["tank", "plane", "sandbag"][kind]
+	if not _scene_put(items, main, c, dir.angle(), near, taken):
+		return []
+	match kind:
+		0:   # подбитый танк: выгорел на месте, рядом воронки, иногда грузовик колонны
+			# гарь — рядом и шире корпуса (горело топливо), чтобы тёмный остов не терялся в чёрном пятне
+			_scene_put(items, "scorch", c + dir * rng.randf_range(25.0, 40.0), 0.0, near, taken, rng.randf_range(40.0, 52.0))
+			_scene_put(items, "crater", c + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(70.0, 110.0), 0.0, near, taken, rng.randf_range(24.0, 34.0))
+			if rng.randf() < 0.55:
+				var t := c + dir * rng.randf_range(95.0, 130.0) + side * rng.randf_range(-25.0, 25.0)
+				if _scene_put(items, "truck", t, dir.angle() + rng.randf_range(-0.6, 0.6), near, taken):
+					_scene_put(items, "scorch", t - dir * 30.0, 0.0, near, taken, 36.0)
+		1:   # упавший самолёт: выгоревшая полоса юза и воронка от удара
+			_scene_put(items, "scorch", c - dir * 45.0, 0.0, near, taken, 50.0)
+			_scene_put(items, "scorch", c - dir * 105.0, 0.0, near, taken, 40.0)
+			_scene_put(items, "crater", c - dir * rng.randf_range(150.0, 180.0), 0.0, near, taken, rng.randf_range(28.0, 38.0))
+		2:   # брошенная позиция: мешки, воронки от обстрела, сгоревший грузовик
+			_scene_put(items, "sandbag", c + side * rng.randf_range(55.0, 70.0), dir.angle() + 0.4, near, taken)
+			for i in rng.randi_range(1, 2):
+				_scene_put(items, "crater", c + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(80.0, 140.0), 0.0, near, taken, rng.randf_range(22.0, 32.0))
+			if rng.randf() < 0.45:
+				var t := c - side * rng.randf_range(90.0, 120.0)
+				if _scene_put(items, "truck", t, rng.randf() * TAU, near, taken):
+					_scene_put(items, "scorch", t + side * 28.0, 0.0, near, taken, 34.0)
+	return items
+
+
+## Поставить элемент сцены, если место годится; true — поставлен
+func _scene_put(items: Array, k: String, p: Vector2, yaw: float, near: Array, taken: Array, r := 0.0) -> bool:
+	var w: float = SCENE_W.get(k, 0.0)
+	if r <= 0.0:
+		r = w * 0.55
+	var mark := k in ["scorch", "crater"]   # пятна могут лежать под техникой
+	if absf(river_field(p.x, p.y)) < D_RIVER * 2.6 + r:
+		return false
+	if absf(valley(p.x, p.y)) > D_FAN:
+		return false
+	if not mark and absf(river_field(p.x, p.y) - D_ROAD) < 16.0 + r:
+		return false   # на самой дороге — колонны biome_props
+	for o in near:
+		var sz := float(o["size"])
+		var off: Vector2 = p - (o["pos"] as Vector2)
+		if o["name"] in SETTLE:
+			if not AdobeBuild.outside(o["name"], int(o.get("var", 0)), off.rotated(-float(o["rot"])) / sz, r / sz):
+				return false
+		elif off.length() < sz * 0.5 + r:
+			return false
+	for lst in [items, taken]:
+		for it in lst:
+			var both_solid: bool = not mark and not (it["k"] in ["scorch", "crater"])
+			var sep: float = (float(it["r"]) + r) if both_solid else (0.0 if not mark or not (it["k"] in ["scorch", "crater"]) else (float(it["r"]) + r) * 0.6)
+			if p.distance_to(it["p"]) < sep:
+				return false
+	items.append({"k": k, "p": p, "yaw": yaw, "w": w, "r": r})
+	return true
+
+
+## Точка около p, где поле реки равно target (шаги Ньютона): у дороги, у берега
+func _field_point(p: Vector2, target: float) -> Vector2:
+	for i in 5:
+		var v := river_field(p.x, p.y)
+		var e := 8.0
+		var g := Vector2(river_field(p.x + e, p.y) - river_field(p.x - e, p.y), river_field(p.x, p.y + e) - river_field(p.x, p.y - e)) / (2.0 * e)
+		if g.length_squared() < 1e-12:
+			break
+		p -= g * (v - target) / g.length_squared()
+	return p
 
 
 ## Точка мира на поверхности рельефа
@@ -327,9 +479,13 @@ func _flat(x: float, z: float, ctx := {}) -> float:
 			var o: Dictionary = (ctx["objs"] as Dictionary).get(Vector2i(cx + dx, cz + dz), {}) if not ctx.is_empty() else _obj(Vector2i(cx + dx, cz + dz))
 			if o.is_empty() or not FLAT_OBJS.has(o["name"]):
 				continue
-			var r: float = float(o["size"]) * 0.55
-			var d := Vector2(x, z).distance_to(o["pos"])
-			var f := smoothstep(r, r * 2.2, d)
+			# тест 3.5-s4 (п. 17): площадка неровная — по контуру поселения (AdobeBuild.outline), с мягким краем
+			var off := Vector2(x, z) - (o["pos"] as Vector2)
+			var r: float = float(o["size"]) * 0.5
+			if o["name"] in SETTLE:
+				r *= AdobeBuild.outline(int(o.get("var", 0)), off.rotated(-float(o["rot"])).angle()) * (1.15 if o["name"] == "o_village" else 1.0)
+			var d := off.length()
+			var f := smoothstep(r, r * 2.0, d)
 			k = minf(k, lerpf(1.0 - float(FLAT_OBJS[o["name"]]), 1.0, f))
 	return k
 
@@ -448,7 +604,13 @@ func _ctx(key: Vector2i) -> Dictionary:
 		for dz in range(-2, 3):
 			var k := Vector2i(key.x + dx, key.y + dz)
 			sides[k] = _sides((k.x + 0.5) * CHUNK, (k.y + 0.5) * CHUNK)
-	var ctx := {"objs": objs, "sides": sides, "flat": _bg != null}
+	var scn := {}
+	if _bg != null:
+		for dx in range(-1, 2):
+			for dz in range(-1, 2):
+				var k := Vector2i(key.x + dx, key.y + dz)
+				scn[k] = scenes(k)
+	var ctx := {"objs": objs, "sides": sides, "flat": _bg != null, "scenes": scn}
 	if props != null:
 		ctx["hk"] = props.mesh_heights()
 	return ctx
@@ -479,6 +641,25 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
 			vs[j * W + i] = river_field(x, z)
 			hs[j * W + i] = _height_v(x, z, valley(x, z, ctx), ctx)
+	# тест 3.5-s4 (п. 16–17): пятна поселений на земле (утоптанная земля, огороды и сады) — неровные, с мягким
+	# краем, по тому же контуру, что постройки (AdobeBuild.ground_mask); выгоревшие пятна и воронки сцен
+	# прошедших боёв; у воды и на мокром берегу всё это сходит на нет
+	var setl := []
+	var area := Rect2(ox, oz, CHUNK, CHUNK)
+	if ctx.has("objs"):
+		for k in ctx["objs"]:
+			var o: Dictionary = ctx["objs"][k]
+			if o.is_empty() or not (o["name"] in SETTLE):
+				continue
+			if area.grow(float(o["size"])).has_point(o["pos"]):
+				setl.append(o)
+	var burns := []
+	if ctx.has("scenes"):
+		for dx in [-1, 0, 1]:
+			for dz in [-1, 0, 1]:
+				for it in (ctx["scenes"] as Dictionary).get(Vector2i(key.x + dx, key.y + dz), []):
+					if it["k"] in ["scorch", "crater"] and area.grow(float(it["r"])).has_point(it["p"]):
+						burns.append(it)
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
 	var tans := PackedFloat32Array()
@@ -508,8 +689,25 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 			var avg := (hs[gi - 1] + hs[gi + 1] + hs[gi - W] + hs[gi + W]) * 0.25
 			var cav := clampf(0.5 + (hs[gi] - avg) / 30.0, 0.0, 1.0)
 			# поле долин — в UV2: шейдер рисует русло и дорогу
-			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), 0.5, 1.0)
-			uv2[vi] = Vector2(vs[gi], 0.0)
+			var sm := Vector2.ZERO
+			var burn := 0.0
+			if not setl.is_empty() or not burns.is_empty():
+				var pw := Vector2(ox + i * step, oz + j * step)
+				for o in setl:
+					var sz := float(o["size"])
+					var l := (pw - (o["pos"] as Vector2)).rotated(-float(o["rot"])) / sz
+					if l.length_squared() < 1.0:
+						var gm := AdobeBuild.ground_mask(o["name"], int(o.get("var", 0)), l)
+						sm = Vector2(maxf(sm.x, gm.x), maxf(sm.y, gm.y))
+				for it in burns:
+					var r := float(it["r"])
+					var d := pw.distance_to(it["p"])
+					burn = maxf(burn, (1.0 - smoothstep(r * 0.3, r, d)) * (1.0 if it["k"] == "crater" else 0.8))
+				var dry := smoothstep(D_RIVER * 1.4, D_RIVER * 3.2, absf(vs[gi]))
+				sm *= dry
+				burn *= dry
+			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), sm.x, sm.y)
+			uv2[vi] = Vector2(vs[gi], burn)
 	var idx := PackedInt32Array()
 	idx.resize(N * N * 6)
 	var p := 0
