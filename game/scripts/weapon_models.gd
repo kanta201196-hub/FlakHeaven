@@ -179,7 +179,47 @@ static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 
 		return null
 	var cols: Array = spec["body"]
 	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
-	return _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s" % [cls, file.get_file(), tint.to_html()])
+	var m := _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s" % [cls, file.get_file(), tint.to_html()])
+	if cls == "attacker" and side == "top" and m != null:
+		return _with_ring(m as ArrayMesh, float(spec["s"]), tint)
+	return m
+
+
+## Т-2 (каталог: «погон под турель» у «Грача»): кольцевое основание верхней установки — пояс в цвет корпуса
+## чуть шире основания башни (r 0.39 в осях GLB) и тёмный шов погона; нижняя часть уходит в обшивку
+static func _with_ring(src: ArrayMesh, s: float, tint: Color) -> ArrayMesh:
+	var key := "ring_%d_%s" % [src.get_instance_id(), tint.to_html()]
+	if _cache.has(key):
+		return _cache[key]
+	var am := src.duplicate() as ArrayMesh
+	for si in src.get_surface_count():
+		am.surface_set_material(si, src.surface_get_material(si))
+	var collar := CylinderMesh.new()
+	collar.top_radius = 0.47 * s
+	collar.bottom_radius = 0.53 * s
+	collar.height = 0.14 * s
+	collar.radial_segments = 32
+	var seam := TorusMesh.new()
+	seam.inner_radius = 0.41 * s
+	seam.outer_radius = 0.47 * s
+	seam.rings = 32
+	seam.ring_segments = 6
+	var body := StandardMaterial3D.new()
+	body.albedo_color = tint
+	body.roughness = 0.6
+	body.metallic = 0.3
+	var dark := StandardMaterial3D.new()
+	dark.albedo_color = Color(0.08, 0.08, 0.09)
+	dark.roughness = 0.5
+	dark.metallic = 0.5
+	for part: Array in [[collar, Vector3(0, -0.03 * s, 0), body], [seam, Vector3(0, 0.035 * s, 0), dark]]:
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		st.append_from(part[0] as Mesh, 0, Transform3D(Basis.from_scale(Vector3(1, 0.5, 1)) if part[0] is TorusMesh else Basis(), part[1]))
+		st.commit(am)
+		am.surface_set_material(am.get_surface_count() - 1, part[2])
+	_cache[key] = am
+	return am
 
 
 ## Меш из GLB: все части в один ArrayMesh с масштабом s; материалы «body» перекрашиваются в tint
