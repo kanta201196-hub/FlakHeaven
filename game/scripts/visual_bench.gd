@@ -291,6 +291,15 @@ func _hangar_bench() -> void:
 				_hq.append(q)
 			_t = 0.0
 			return
+		if OS.get_cmdline_user_args().has("--hangarevo"):
+			# Т-6: все эволюции — «Шмель» и «Салют» на истребителе, «Ливень» и «Бабушкин ковёр» на штурмовике,
+			# «Бабушкин ковёр» и «Салют» на «Ките»; ступень 3 рядом для сравнения
+			Hangar3D.bench_weapons = {"fighter": ["", "flares"], "attacker": ["", "bombs"], "bomber": ["", "flares"]}
+			for c in PlaneClasses.LIST:
+				_hq.append([c, 1, 3])
+				_hq.append([c, 1, 4])
+			_t = 0.0
+			return
 		for c in PlaneClasses.LIST:
 			if OS.get_cmdline_user_args().has("--hangarside"):
 				_hq.append([c, 1, 1])
