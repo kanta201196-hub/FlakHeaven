@@ -51,8 +51,8 @@ const TURRET_MODELS := {
 	# 3 — + короба лент и прицельная головка; эволюция «Дикобраз» — 4 ствола и антенна наведения
 	"bomber": {"file": "res://models/turrets/turret_kit_t%d.glb", "evo": "res://models/turrets/turret_kit_quad.glb",
 		"s": 0.3, "muzzle": Vector3(2.09, 0.43, 0.0),
-		# окраска — средний тон обшивки «Кита 1» / «Кита 2» (текстуры models/battle/fh_battle_bomber_*)
-		"body": [Color(0.42, 0.44, 0.48), Color(0.6, 0.61, 0.63)],
+		# окраска — средний тон обшивки «Кита 1» / «Кита 2» (Т-2: песочная окраска класса, splinter_camo.py kit)
+		"body": [Color(0.45, 0.39, 0.27), Color(0.46, 0.4, 0.28)],
 		# корма (пример владельца 16.10): кабина стрелка с фонарём и шаровая установка под килем
 		"tail": "res://models/turrets/turret_kit_tail_ball_t%d.glb", "cabin": "res://models/turrets/turret_kit_tail_cabin.glb",
 		"muzzle_tail": Vector3(1.36, 0.0, 0.0)},
