@@ -11,7 +11,7 @@
 Запуск (нужны ffmpeg, numpy, сеть):
   python3 game/tools/build_audio_hybrid.py [--out ПАПКА] [--only событие,событие]
 Результат по умолчанию — сразу в game/audio/. `--only music` — только музыка (CC0, OpenGameArt).
-Интерфейсные звуки и джинглы здесь не трогаются.
+Здесь не трогаются только клики интерфейса и подбор опыта (pickup, card, ui_ban — Kenney).
 """
 import os, subprocess, sys, glob, urllib.parse, urllib.request
 import numpy as np
@@ -29,6 +29,7 @@ REF_PUNCH = {
     'explode': -13.0, 'explode_big': -9.7, 'player_explode': -9.7, 'hit': -12.5, 'pass_hit': -11.2,
     'player_hit': -16.7, 'shield_break': -20.0, 'lock': -7.7, 'radio': -11.1, 'roll': -16.4,
     'near_miss': -13.6, 'combat_turn': -16.4, 'shield': -6.0, 'afterburner': -15.1, 'boss': -12.2, 'evac': -9.5,
+    'levelup': -9.4, 'repair': -11.9, 'gate': -9.9,
 }
 # Новые события 3.5 (PR #33) — громкость того звука, который до сих пор играл вместо них (FALLBACK в sfx.gd)
 for _ev, _fb in {'dive': 'roll', 'synergy': 'boss', 'cargo': 'evac', 'fuel_low': 'lock', 'fuel_empty': 'lock',
@@ -72,6 +73,11 @@ SRC = {
     'confirm': ('2024', 'Rescopic Sound - User Interaction/UIAlert_Confirm Middle 12_RSCPC_USIN'),
     'loot': ('2017', 'Eiravaein Sound - Latchlocker/Latchlocker,design,FutureLoot,score,plunder'),
     'stinger': ('2026', 'Epic Stock Media - Anime Game/DSGNStngr_Power Up Bright Positive Successful Light Saturation Crash Shimmer 05_ESM_AG'),
+    'access_granted': ('2023', 'Justsoundeffects - Futuristic Interface/UIAlert_Confirm Access Granted 02_JSE_FI'),
+    'success_2a': ('2019', 'Chris Logsdon - Ambient Puzzle SFX Pack/Success 2a'),
+    'exo_confirm': ('2018', 'G4F SFX - SFX11 - ExoInterface/G4F SFX11 - ExoInterface - Action Confirm - Long 05'),
+    'synth_confirm': ('2019', 'The Chris Alan - Analog Synthesized UI & SFX/Analog Synthesized UI - Confirm Notification 21'),
+    'retro_alarm': ('2024', 'BluezoneCorp - Retrofuturistic Computer/Bluezone_BC0304_retrofuturistic_computer_alarm_005'),
     'power_up': ('2018', 'Gamemaster Audio - Sci-Fi Sounds and Sci-Fi Weapons/sci-fi_device_item_power_up_flash_01'),
     'flyby': ('2017', 'Gamemaster Audio -  Bullet Impact Sounds/bullet_flyby_fast_05'),
     'whoosh_forceful': ('2019', 'Airborne Sound - Airy Whooshes/Whoosh,Sound Design,Airy,Full,Forceful,Soft'),
@@ -131,6 +137,13 @@ PLAN = {
     'near_miss': [('flyby', A, 0.4, 0.2, 1.0)],
     'combat_turn': [('jet_whip', 'loud', 0.7, 0.4, 1.0)],
     'afterburner': [('fire_ign', A, 1.5, 0.7, 1.0)],
+    # --- Награды и тревога (вместо 8-битных джинглов Kenney)
+    'levelup': [('access_granted', A, 1.0, 0.35, 1.0)],
+    'repair': [('success_2a', A, 0.6, 0.25, 1.0)],
+    'evac': [('exo_confirm', A, 1.2, 0.5, 1.0)],
+    # Ворота эвакуации: короткий тональный сигнал, высота растёт с каждыми воротами (KEEP_PITCH в sfx.gd)
+    'gate': [('synth_confirm', A, 0.45, 0.15, 1.0)],
+    'boss': [('retro_alarm', A, 1.0, 0.4, 1.0)],
     # --- Новые события 3.5
     'dive': [('whoosh_buffet', A, 0.6, 0.35, 0.9)],
     'synergy': [('stinger', A, 1.2, 0.5, 1.0)],
