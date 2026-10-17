@@ -18,6 +18,10 @@ var parts := 1       # запчасти (валюта ангара) за сби�
 var repair_chance := 0.02
 var _flash := 0.0
 var elite := false
+var born_t := -1.0       # правка 3.5-s4: когда появился (для «напряжения боя» в спавнере)
+var min_life := 0.0      # правка 3.5-s4: асы — корпус не быстрее чем за min_life с (предел урона в секунду)
+var _cap_budget := -1.0
+var _cap_t := 0.0
 var silence := 0.0
 var move_vel := Vector2.ZERO   # 3.1: фактическая скорость (для пуль стрелка)
 var _prev_pos := Vector2.INF   # 3.1: ЭМИ «Ласки» — враг молчит
@@ -29,6 +33,8 @@ var evade_t := 0.0
 var evade_time := 0.7
 var _evade_v := Vector2.ZERO
 var _evade_roll := 1.0
+## правка 3.5-s4 (п. 26): расталкивание сглажено и уходит в курс — враги не дёргаются и не слипаются
+var _sep := Vector2.ZERO
 
 
 func make_elite() -> void:
@@ -64,6 +70,8 @@ func take_hit(dmg: float, source := "прочее") -> void:
 		if is_ground:
 			dmg *= float(Main.I.player.mods.get("ground_dmg", 1.0)) # перк «Наводчик»
 	dmg = absorb(dmg)
+	if min_life > 0.0:
+		dmg = _cap_dps(dmg)
 	if dmg <= 0.0:
 		_flash = 0.03
 		return
@@ -73,6 +81,21 @@ func take_hit(dmg: float, source := "прочее") -> void:
 	Main.I.on_enemy_hit(self, dmg)
 	if hp <= 0.0:
 		_die()
+
+
+## Правка 3.5-s4 (лог «Осы»: асы падали за 10 с): корпус аса принимает не больше max_hp / min_life в секунду,
+## с запасом на 1,5 с — короткий мощный залп проходит, но поток урона любой силы не убьёт аса за секунды
+func _cap_dps(dmg: float) -> float:
+	var rate := max_hp / min_life
+	var now := Main.I.run_time
+	if _cap_budget < 0.0:
+		_cap_budget = rate * 1.5
+	else:
+		_cap_budget = minf(rate * 1.5, _cap_budget + rate * maxf(0.0, now - _cap_t))
+	_cap_t = now
+	var d := minf(dmg, _cap_budget)
+	_cap_budget -= d
+	return d
 
 
 ## Щит (у асов): поглощает урон до того, как он дойдёт до корпуса.
@@ -110,7 +133,12 @@ func _process(delta: float) -> void:
 		evade_t -= delta
 		position += _evade_v * delta * clampf(evade_t / evade_time * 1.6, 0.0, 1.0)
 	if not is_boss and not is_ground and Main.I.spawner != null:
-		position += Main.I.spawner.separation(self) * 220.0 * delta
+		_sep = _sep.lerp(Main.I.spawner.separation(self), 1.0 - exp(-delta * 5.0))
+		if _sep.length_squared() > 1e-4:
+			position += _sep * 150.0 * delta
+			# отвернуть от соседа, а не скользить боком — курс плавный, крен в 3D без дрожи
+			var fw := Vector2.from_angle(heading)
+			heading = rotate_toward(heading, (fw + _sep * 1.2).angle(), deg_to_rad(50.0) * delta)
 	_check_contact()
 	# Карта бесконечная: отставших далеко позади тихо убираем (без награды)
 	var p := Main.I.player
@@ -209,6 +237,36 @@ func player_aiming(cone_deg := 9.0, dist := 700.0) -> Vector2:
 	if absf(wrapf(to.angle() - p.heading, -PI, PI)) > deg_to_rad(cone_deg):
 		return Vector2.ZERO
 	return to.normalized()
+
+
+## Правка 3.5-s4: ловушки зарядами. Ракета подошла ближе trigger_r — тратится заряд, и cover секунд
+## вокруг аса горят ловушки: каждая наша ракета ближе r уходит на них с шансом chance.
+## Заряды восстанавливаются по одному за recharge с. Против потока ракет ас держится, пока есть заряды.
+var flare_charges := 3
+var _fl_on := 0.0
+var _fl_tick := 0.0
+var _fl_rech := 0.0
+
+
+func flare_defense(delta: float, r: float, trigger_r: float, chance: float, cover := 2.5, recharge := 7.0, charges_max := 3) -> void:
+	if flare_charges < charges_max:
+		_fl_rech -= delta
+		if _fl_rech <= 0.0:
+			flare_charges += 1
+			_fl_rech = recharge
+	if _fl_on > 0.0:
+		_fl_on -= delta
+		_fl_tick -= delta
+		if _fl_tick <= 0.0:
+			_fl_tick = 0.25
+			pop_flares(r, r, chance)
+		return
+	if flare_charges > 0 and pop_flares(r, trigger_r, chance) > 0:
+		flare_charges -= 1
+		if _fl_rech <= 0.0:
+			_fl_rech = recharge
+		_fl_on = cover
+		_fl_tick = 0.25
 
 
 ## Тепловые ловушки: ракеты игрока, которые идут в нас ближе r, с шансом chance уходят на ловушки и рвутся.

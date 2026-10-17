@@ -20,8 +20,9 @@ const SPEC := {
 }
 const TEX := {"truck": "e_convoy_truck", "light": "e_convoy_pickup_tent", "scout": "e_convoy_scout",
 	"technical": "e_convoy_technical", "manpads": "e_convoy_manpads", "ifv": "e_convoy_ifv"}
-const MARCH := 70.0          # пикс./с по дороге
-const DASH := 100.0          # грузовики при тревоге
+const MARCH := 100.0         # пикс./с по дороге (правка 3.5-s4: было 70 — колонна была мишенью)
+const DASH := 145.0          # грузовики при тревоге (было 100)
+const GAP := 110.0           # просвет между машинами в марше, пикс. (было 30–45)
 const OFFROAD := 150.0       # на сколько охрана съезжает вбок от дороги при тревоге
 
 var role := "truck"
@@ -67,12 +68,16 @@ func place(at_s: float) -> void:
 	drive.max_speed = DASH * 1.15
 	drive.turn_r = float(sp["r"])
 	drive.pivot = float(sp["pivot"])
-	drive.accel = float(sp["acc"])
-	drive.brake = float(sp["acc"]) * 2.0
+	drive.accel = float(sp["acc"]) * 1.6
+	drive.brake = float(sp["acc"]) * 3.2
 	drive.speed = MARCH * 0.6
 	anchor = p
 	heading = h
 	position = p
+
+
+func _half_len() -> float:
+	return float(SPEC[role]["len"]) * 0.5 * Tuning.g("unit_scale")
 
 
 func kind() -> String:
@@ -150,20 +155,23 @@ func behave(delta: float) -> void:
 			want = DASH if s < goal_s - 40.0 else 35.0
 		elif role == "manpads":
 			want = DASH * 0.9
-	# дистанция до впереди идущей машины
+	# дистанция до впереди идущей машины своей полосы (охрана, съехавшая вбок, грузовикам дорогу не держит)
 	var ahead := convoy.ahead_of(self)
 	if ahead != null and not (alarm and (role == "scout" or role == "technical")):
 		var gap := ahead.s - s
-		var need := (float(SPEC[role]["len"]) + float(SPEC[ahead.role]["len"])) * 0.5 * Tuning.g("unit_scale") + 30.0
-		if gap < need * 0.75:
+		var need := _half_len() + ahead._half_len() + GAP * (0.6 if alarm else 1.0)
+		if gap < need * 0.6:
 			want = 0.0
 		elif gap < need * 1.3:
-			want = minf(want, ahead.drive.speed * clampf((gap - need * 0.75) / (need * 0.55), 0.0, 1.0) + 8.0)
-	# остов на дороге впереди — объезд по обочине на малом ходу
-	var jam := convoy.wreck_ahead(s, lane, 140.0)
+			want = minf(want, ahead.drive.speed * clampf((gap - need * 0.6) / (need * 0.7), 0.0, 1.0) + 10.0)
+	# остов на дороге впереди — объезд по обочине; полосу держим, пока корпус не прошёл остов целиком
+	var jam := convoy.wreck_ahead(s, lane, 260.0, _half_len() + 24.0)
 	if jam != INF:
 		goal_lane = jam
-		want = minf(want, 26.0)
+		want = minf(want, 45.0)
+		# ещё не съехали в сторону, а остов уже рядом — встать и довернуть, а не проехать сквозь
+		if absf(convoy.lateral_of(anchor, s) - jam) > 30.0 and convoy.wreck_near(s, convoy.lateral_of(anchor, s), _half_len() * 2.0 + 30.0):
+			want = minf(want, 14.0)
 	# ПЗРК: стрелять только с места
 	if role == "manpads" and alarm and not convoy.ended and not convoy.leaderless and p != null and p.hp > 0.0:
 		if _lock > 0.0 or (_cd <= 0.0 and anchor.distance_to(p.global_position) < 950.0):

@@ -38,7 +38,7 @@ const DATA := {
 			{"name": "Внешняя пара", "slots": 2, "weapon": ""},
 		],
 		"turrets": 1,
-		"wingmen": 0,
+		"wingmen": 2,
 		"skill3": "armor_shield",
 		"color": Color(0.6, 0.95, 0.65),
 	},

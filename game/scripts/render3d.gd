@@ -883,6 +883,10 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				tilt = Vector2(cr.y, cr.z)
 			elif ue.get("bm") != null:
 				hull = _ground_parts(ue, e, ang, delta)
+				var gt := e as GroundTarget
+				if gt != null and gt.drive != null:
+					# правка 3.5-s4: ЗСУ и ЗРК — корпус по курсу машины, наклон по склону и от разгона
+					tilt = _drive_tilt(ue, gt.anchor, hull, gt.drive, len_px, delta)
 			_place(ue, Vector2(gp.x, gp.z), hull, tilt.y, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y, tilt.x)
 		else:
 			var re := _relief_alt(ue, e.global_position, Vector2.from_angle(ang) * 250.0, 0.0 if e.is_boss else 1.0, sd)
@@ -915,12 +919,18 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 			var n := inst.find_child(nm, true, false)
 			if n != null:
 				u[nm] = n
-	# едет — корпус по ходу движения
-	var lp: Vector2 = u.get("lastp", e.global_position)
-	var mv := e.global_position - lp
-	u["lastp"] = e.global_position
-	if mv.length() > 0.3:
-		u["hull"] = lerp_angle(float(u["hull"]), mv.angle(), 1.0 - exp(-delta * 4.0))
+	var gt := e as GroundTarget
+	if gt != null and gt.drive != null:
+		# правка 3.5-s4: курс корпуса — из модуля движения. Раньше брался сдвиг точки на экране,
+		# а она смещается и от движения камеры — корпус «перекатывался» на стоящей машине
+		u["hull"] = gt.drive.heading
+	else:
+		# едет — корпус по ходу движения
+		var lp: Vector2 = u.get("lastp", e.global_position)
+		var mv := e.global_position - lp
+		u["lastp"] = e.global_position
+		if mv.length() > 0.3:
+			u["hull"] = lerp_angle(float(u["hull"]), mv.angle(), 1.0 - exp(-delta * 4.0))
 	var hull: float = u["hull"]
 	if u.has("turret"):
 		(u["turret"] as Node3D).rotation.y = -wrapf(ang - hull, -PI, PI)
@@ -971,22 +981,26 @@ func _convoy_parts(u: Dictionary, v: ConvoyVehicle, len_px: float, delta: float)
 		if d.has("launcher"):
 			var ln := d["launcher"] as Node3D
 			ln.rotation.z = move_toward(ln.rotation.z, deg_to_rad(35.0) if v._lock > 0.0 else 0.0, delta * 1.5)
-	# наклон по рельефу: высоты под носом, кормой и бортами
+	var sm := _drive_tilt(u, v.anchor, hull, dr, len_px, delta)
+	return Vector3(hull, sm.x, sm.y)
+
+
+## Наклон корпуса машины (тангаж, крен): по рельефу под носом, кормой и бортами; клевок при торможении,
+## приседание при разгоне, крен наружу на повороте, мелкая раскачка на ходу. Общее для конвоя и ПВО.
+func _drive_tilt(u: Dictionary, a: Vector2, hull: float, dr: GroundDrive, len_px: float, delta: float) -> Vector2:
 	var pitch := 0.0
 	var bank := 0.0
-	if terrain != null and v.anchor != Vector2.INF:
+	if terrain != null and a != Vector2.INF:
 		var f := Vector2.from_angle(hull) * len_px * 0.45
 		var sd := Vector2(-f.y, f.x) * 0.45
-		var a := v.anchor
 		pitch = atan2(terrain.surface_fast(a.x + f.x, a.y + f.y).y - terrain.surface_fast(a.x - f.x, a.y - f.y).y, len_px * 0.9)
 		bank = atan2(terrain.surface_fast(a.x + sd.x, a.y + sd.y).y - terrain.surface_fast(a.x - sd.x, a.y - sd.y).y, len_px * 0.4)
-	# клевок при торможении, приседание при разгоне; крен наружу на повороте; мелкая раскачка на ходу
 	pitch += clampf(dr.acc_now * 0.0012, -0.06, 0.06)
 	bank += clampf(-dr.yaw_rate * dr.speed * 0.0009, -0.07, 0.07) + sin(dr.dist * 0.09) * 0.006 * clampf(dr.speed / 60.0, 0.0, 1.0)
 	var sm: Vector2 = u.get("tilt", Vector2(pitch, bank))
 	sm = sm.lerp(Vector2(pitch, bank), 1.0 - exp(-delta * 6.0))
 	u["tilt"] = sm
-	return Vector3(hull, sm.x, sm.y)
+	return sm
 
 
 ## A-03: остовы машин конвоя — та же модель, обгоревшая: тент и стрелки пропадают, корпус тёмный, дым столбом
