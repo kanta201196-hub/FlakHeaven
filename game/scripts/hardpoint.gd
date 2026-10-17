@@ -99,7 +99,7 @@ func reload_time(p: Player) -> float:
 				k *= 1.0 - 0.1 * (level - 1)
 		"flares":
 			k *= pow(0.9, level - 1)
-		"railgun", "emp":
+		"railgun", "emp", "laser", "plasma":
 			k *= pow(0.92, level - 1)
 		"bombs":
 			if not evo:
@@ -157,7 +157,7 @@ func range_px() -> float:
 		if evo and weapon == "flares":
 			return 360.0
 	match weapon:
-		"flares", "emp":
+		"flares", "emp", "laser", "plasma":
 			return base * (1.0 + 0.08 * (level - 1))
 		"gunpod", "bombs":
 			return base * (1.0 + 0.1 * (level - 1))
@@ -194,6 +194,10 @@ func update(delta: float, p: Player) -> void:
 			fired = _fire_bombs(p, manual)
 		"emp":
 			fired = _fire_emp(p)
+		"laser":
+			fired = _fire_laser(p)
+		"plasma":
+			fired = _fire_plasma(p)
 	if fired and not manual and weapon in ["aam", "rockets", "bombs"]:
 		Hints.show("auto_launch", "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab).", 8.0, 2)
 	# 3.4: после выстрела переносим опоздание (до 0,05 с) — темп меньше зависит от FPS
@@ -298,6 +302,63 @@ func _fire_emp(p: Player) -> bool:
 	if Main.I._autotest and not Main.I.counters.has("emp_pulses"):
 		print("AUTOTEST: emp pulse at %.0f s, enemies %d, missiles %d" % [Main.I.run_time, near.size(), msl])
 	Main.I.stats_add_counter("emp_pulses", 1)
+	return true
+
+
+## U-08: лазер «Луч» — сжигает до 2 ракет и 2 пуль в радиусе, иначе слабо бьёт ближайшего врага
+func _fire_laser(p: Player) -> bool:
+	var r := range_px()
+	var pos := p.global_position
+	var n := 0
+	for i in 2:
+		if Main.I.projectiles.intercept_missile(pos, r):
+			n += 1
+	var b := 0
+	for eb in Main.I.projectiles.ebullets:
+		if pos.distance_to(eb["p"]) < r:
+			b += 1
+	if b > 0:
+		# по одной ближайшей пуле за выстрел, до трёх
+		for i in mini(2, b):
+			var best := -1
+			var bd := r
+			for j in Main.I.projectiles.ebullets.size():
+				var d := pos.distance_to(Main.I.projectiles.ebullets[j]["p"])
+				if d < bd:
+					bd = d
+					best = j
+			if best >= 0:
+				Main.I.fx.beam(pos, Main.I.projectiles.ebullets[best]["p"], Color(1.0, 0.35, 0.3, 0.9), 2.0, 0.1)
+				Main.I.projectiles.ebullets.remove_at(best)
+				n += 1
+	if n > 0:
+		Main.I.stats_add_counter("laser_burned", n)
+		return true
+	var t := Weapons.pick_target(pos, r, "nearest")
+	if t == null:
+		return false
+	t.take_hit(dmg(), "лазер")
+	Main.I.fx.beam(pos, t.global_position, Color(1.0, 0.35, 0.3, 0.8), 2.5, 0.12)
+	return true
+
+
+## U-08: плазменная бомба — шар плазмы на ближайшей наземной цели в радиусе 600 (жжёт только землю)
+func _fire_plasma(p: Player) -> bool:
+	var best: Enemy = null
+	var bd := 600.0
+	for nd in p.get_tree().get_nodes_in_group("enemies"):
+		var e := nd as Enemy
+		if e == null or e.hp <= 0.0 or not e.is_ground:
+			continue
+		var d := p.global_position.distance_to(e.global_position)
+		if d < bd:
+			bd = d
+			best = e
+	if best == null:
+		return false
+	Main.I.projectiles.spawn_fire(best.global_position, range_px(), dmg(), 4.0, "плазма", true, Color(0.75, 0.4, 1.0))
+	Main.I.fx.ring(best.global_position, range_px(), Color(0.8, 0.5, 1.0))
+	Main.I.sfx.play("bomb", -6.0, 0.8)
 	return true
 
 
