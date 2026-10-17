@@ -35,7 +35,7 @@ func _ready() -> void:
 	engine.volume_db = -22.0
 	add_child(engine)
 	_load_overrides()
-	engine.play()
+	# Гул включается только в полёте (set_engine), в меню и ангаре его нет
 
 
 ## Замена звуков файлами: положите в папку audio/ файл с именем события
@@ -109,8 +109,14 @@ func play(sound: String, db := 0.0, pitch := 1.0) -> void:
 func set_engine(speed_ratio: float, alive: bool) -> void:
 	if engine == null:
 		return
+	if not alive:
+		if engine.playing:
+			engine.stop()
+		return
 	engine.pitch_scale = clampf(0.7 + 0.5 * speed_ratio, 0.5, 2.0)
-	engine.volume_db = (-22.0 + Tuning.g("sfx_db") + Tuning.g("engine_db")) if alive else -80.0
+	engine.volume_db = -22.0 + Tuning.g("sfx_db") + Tuning.g("engine_db")
+	if not engine.playing:
+		engine.play()
 
 
 func _tone(freq: float, dur: float, noise: float, decay: float, vol: float, square := false, loop := false) -> AudioStreamWAV:
@@ -147,6 +153,28 @@ var _music: Array[AudioStreamPlayer] = []
 var _music_cur := 0
 var _music_track := ""
 var _music_streams := {}
+var _music_tw: Tween
+
+
+## Ползунок до упора влево — музыка выключена
+func music_db() -> float:
+	var db := Tuning.g("music_db")
+	return -80.0 if db <= -40.0 else db
+
+
+## Ползунок «Музыка» в настройках: громкость играющего трека меняется сразу
+func apply_music_volume() -> void:
+	if _music.is_empty() or _music_track == "":
+		return
+	if _music_tw != null and _music_tw.is_valid():
+		_music_tw.kill()
+	for i in _music.size():
+		var a := _music[i]
+		if i == _music_cur and a.playing:
+			a.volume_db = music_db()
+		else:
+			a.volume_db = -80.0
+			a.stop()
 
 
 func _init_music() -> void:
@@ -184,7 +212,10 @@ func music(track: String) -> void:
 	var old := _music[_music_cur]
 	_music_cur = 1 - _music_cur
 	var nw := _music[_music_cur]
+	if _music_tw != null and _music_tw.is_valid():
+		_music_tw.kill()
 	var tw := create_tween().set_parallel(true)
+	_music_tw = tw
 	tw.tween_property(old, "volume_db", -80.0, 1.5)
 	if track == "result" and not _music_streams.has("result"):
 		track = "menu"
@@ -192,4 +223,4 @@ func music(track: String) -> void:
 		nw.stream = (_music_streams[track] as Array).pick_random() # несколько треков боя — случайный
 		nw.volume_db = -60.0
 		nw.play()
-		tw.tween_property(nw, "volume_db", Tuning.g("music_db"), 1.5)
+		tw.tween_property(nw, "volume_db", music_db(), 1.5)
