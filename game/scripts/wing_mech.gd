@@ -182,3 +182,19 @@ static func tail_mount(tail: Node3D, base: Node3D) -> Vector3:
 	if m == null:
 		return Vector3.INF
 	return (base.global_transform.affine_inverse() * m.global_transform).origin
+
+
+# ---------- Т-2: отличие «Грача 2», видное сверху ----------
+## tools/blender/attacker2_detail.py → models/mech/fh_detail_<класс>_<ур>.glb: ПГО перед кабиной и крупные
+## контейнеры на законцовках; цвет — в материале детали (средний тон обшивки под ней)
+static func attach_detail(model: Node3D, key: String) -> Node3D:
+	var path := "res://models/mech/fh_detail_%s.glb" % key
+	if not _scenes.has(path):
+		_scenes[path] = load(path) if ResourceLoader.exists(path) else null
+	if _scenes[path] == null:
+		return null
+	var det: Node3D = (_scenes[path] as PackedScene).instantiate()
+	det.name = "detail"
+	model.add_child(det)
+	return det
+
