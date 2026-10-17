@@ -52,6 +52,7 @@ func setup(v: String, hp_total: float) -> void:
 	title = "Ас «Почтальон»" if v == "carrier" else "Ас «Сквозняк»"
 	_orbit = 1.0 if randf() < 0.5 else -1.0
 	_born = Main.I.run_time
+	min_life = 16.0   # правка 3.5-s4
 
 
 func kind() -> String:
@@ -102,8 +103,7 @@ func _resist(delta: float, p: Player) -> void:
 	_evade_cd -= delta
 	_flare_cd -= delta
 	_scan_t -= delta
-	if _flare_cd <= 0.0 and pop_flares(420.0, 230.0, 0.7) > 0:
-		_flare_cd = 4.5 * angry()
+	flare_defense(delta, 440.0, 260.0, 0.85, 2.5 if angry() >= 1.0 else 3.0, 7.0)
 	if _evade_cd > 0.0 or evade_t > 0.0 or _scan_t > 0.0:
 		return
 	_scan_t = 0.12
