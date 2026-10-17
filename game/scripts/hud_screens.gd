@@ -128,7 +128,9 @@ func levelup(m: Main, size: Vector2) -> void:
 		_text(Vector2(r.position.x + 16, r.position.y + 24), "%d · %s" % [i + 1, rar["name"]], 18, rc)
 		var cc: Color = Cards.CAT_COLORS.get(c["cat"], Color.WHITE)
 		_text(Vector2(r.position.x, r.position.y + 24), c["cat"], 16, cc, HORIZONTAL_ALIGNMENT_RIGHT, w - 16.0)
-		_para(Vector2(r.position.x + 18, r.position.y + 66), c["title"], w - 36.0, 22, Color.WHITE)
+		# U-09: значок оружия или раздела слева от названия
+		CardIcons.draw(ctrl, r.position + Vector2(44, 76), 52.0, CardIcons.key(c, m.player), cc)
+		_para(Vector2(r.position.x + 82, r.position.y + 66), c["title"], w - 100.0 - (52.0 if c.get("course", false) else 0.0), 22, Color.WHITE)
 		if c.get("course", false): # 3.2: карточка ведёт к курсу
 			ctrl.draw_colored_polygon(PackedVector2Array([r.position + Vector2(w - 70, 34), r.position + Vector2(w, 34), r.position + Vector2(w, 104)]), Color(1.0, 0.8, 0.25, 0.9))
 			_text(Vector2(r.position.x + w - 46, r.position.y + 56), "▲", 18, Color(0.15, 0.1, 0.02))

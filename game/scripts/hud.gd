@@ -22,10 +22,34 @@ var _hangar_ui: HudHangar
 
 static func ui_font() -> Font:
 	if _font == null:
-		var sf := SystemFont.new()
-		sf.font_names = PackedStringArray(["Segoe UI", "Arial", "Roboto", "Noto Sans", "DejaVu Sans", "Ubuntu", "Helvetica"])
-		_font = sf
+		_font = make_font(false)
 	return _font
+
+
+## U-09: шрифт интерфейса по настройке (Settings.font): встроенные PT Sans / Inter / Exo 2 или системный.
+## Встроенные одинаково выглядят на Windows и Mac; лицензии — game/fonts/README.md.
+static func make_font(bold: bool) -> Font:
+	match Settings.font:
+		0:
+			return load("res://fonts/pt_sans_bold.ttf" if bold else "res://fonts/pt_sans_regular.ttf")
+		1, 2:
+			var fv := FontVariation.new()
+			fv.base_font = load("res://fonts/inter_variable.ttf" if Settings.font == 1 else "res://fonts/exo2_variable.ttf")
+			fv.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 700 if bold else (450 if Settings.font == 1 else 500)}
+			return fv
+	var sf := SystemFont.new()
+	if bold:
+		sf.font_names = PackedStringArray(["Bahnschrift", "Segoe UI", "Arial", "Roboto", "Noto Sans", "DejaVu Sans"])
+		sf.font_weight = 700
+	else:
+		sf.font_names = PackedStringArray(["Segoe UI", "Arial", "Roboto", "Noto Sans", "DejaVu Sans", "Ubuntu", "Helvetica"])
+	return sf
+
+
+## Сменили шрифт в настройках — пересоздать при следующей отрисовке
+static func reset_fonts() -> void:
+	_font = null
+	Menu._bold = null
 
 
 func _ready() -> void:
