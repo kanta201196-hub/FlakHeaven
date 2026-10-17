@@ -6,7 +6,13 @@
 поэтому верх и низ кабины того же тона, что фюзеляж перед ней. Сверху у торца — остеклённый фонарь
 с переплётами, по бокам окна. Узел ball_mount — центр шара со стволами (игра ставит туда турель).
 
-Запуск (bpy 5.x): python3 tail_cabin.py <модель ангара.glb> <класс_ур> <out.glb>"""
+Запуск (bpy 5.x): python3 tail_cabin.py <модель ангара.glb> <класс_ур> <out.glb> [--tex=<извлечённая *_0.png>]
+--tex — цвет обшивки брать с извлечённой текстуры (там окраска splinter_camo.py), а не со встроенной в GLB.
+
+Исправление 3.5-s4 (замечание 33, «непонятный элемент над фюзеляжем»): transform_apply в bpy по умолчанию
+применяет и положение; поворот тора применялся вместе с положением, и следующий scale сжимал его к началу
+координат — швы, погон и переплёты фонаря оказывались над серединой фюзеляжа «спиралью». Теперь применяется
+только то, что нужно (location=False)."""
 import sys, math
 import bpy, bmesh
 import numpy as np
@@ -21,7 +27,9 @@ RINGS, SEG = 10, 28
 GROW = 1.06          # кабина чуть толще конуса фюзеляжа, чтобы его закрыть
 DARK = 0.9
 
-src, key, dst = sys.argv[-3], sys.argv[-2], sys.argv[-1]
+_args = [a for a in sys.argv if not a.startswith("--tex=")]
+_tex = next((a[6:] for a in sys.argv if a.startswith("--tex=")), "")
+src, key, dst = _args[-3], _args[-2], _args[-1]
 X0, X1, TAPER = TAILS[key]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=src)
@@ -32,6 +40,10 @@ _img = next(n.image for n in plane[0].data.materials[0].node_tree.nodes if n.typ
             and any(l.to_socket.name == "Base Color" for l in n.outputs[0].links))
 _W, _H = _img.size
 _PX = np.array(_img.pixels[:], dtype=np.float32).reshape(_H, _W, 4)
+if _tex:
+    from PIL import Image
+    _PX = np.asarray(Image.open(_tex).convert("RGBA"), np.float32)[::-1] / 255.0   # строки снизу вверх, как UV
+    _H, _W = _PX.shape[:2]
 
 
 def ray(o, d):
@@ -165,7 +177,7 @@ cx = (xm + xe) * 0.5
 bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=1, location=(cx, 0, zc + bm_ * 0.62))
 can = bpy.context.object
 can.scale = (abs(xe - xm) * 0.55, am * 0.6, bm_ * 0.5)
-bpy.ops.object.transform_apply(scale=True)
+bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 add(can, M_GLASS)
 for fx in (-0.5, 0.0, 0.5):
     x = cx + fx * abs(xe - xm) * 0.55
@@ -173,9 +185,9 @@ for fx in (-0.5, 0.0, 0.5):
     bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.04, major_segments=24, minor_segments=6,
                                      location=(x, 0, zc + bm_ * 0.62), rotation=(0, math.pi / 2, 0))
     fr = bpy.context.object
-    bpy.ops.object.transform_apply(rotation=True)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
     fr.scale = (0.02, am * 0.6 * k * 1.03, bm_ * 0.5 * k * 1.03)
-    bpy.ops.object.transform_apply(scale=True)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     add(fr, M_DARK)
 # боковые окна
 for sgn in (1, -1):
@@ -183,7 +195,7 @@ for sgn in (1, -1):
                                          location=(xm + (xe - xm) * 0.2, sgn * am * 0.97, zc + bm_ * 0.1))
     w = bpy.context.object
     w.scale = (abs(xe - xm) * 0.22, am * 0.08, bm_ * 0.22)
-    bpy.ops.object.transform_apply(scale=True)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     add(w, M_GLASS)
 # шов на стыке с фюзеляжем и погон шара
 for x, m in ((X0 + (X1 - X0) * 0.08, M_DARK), (X1, M_DARK)):
@@ -191,9 +203,9 @@ for x, m in ((X0 + (X1 - X0) * 0.08, M_DARK), (X1, M_DARK)):
     bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.05, major_segments=SEG, minor_segments=6,
                                      location=(x, 0, zc), rotation=(0, math.pi / 2, 0))
     t = bpy.context.object
-    bpy.ops.object.transform_apply(rotation=True)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
     t.scale = (0.03, a * 1.01, b * 1.01)
-    bpy.ops.object.transform_apply(scale=True)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     add(t, m)
 
 bpy.ops.object.select_all(action="DESELECT")
