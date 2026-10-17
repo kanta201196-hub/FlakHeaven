@@ -96,10 +96,31 @@ func _ui_test() -> void:
 	elif _ui_phase == 1 and m.state == "paused" and m._state_t > 0.8:
 		_shot("ui_pause")
 		m._set_state("playing")
+		# итоги как после длинного вылета: урон по источникам, полученный, сбитые
+		m.run_time = 975.0
+		m.stats["dealt"] = {"ракеты В-В": 263378.0, "турели": 70320.0, "уязвимые точки «Крепости»": 64448.0, "курсовое (авто)": 60960.0,
+			"ведомые: стриж": 41590.0, "связка: стальной ёж": 29627.0, "ведомые: грачонок": 26890.0, "НАР": 15360.0, "бомбы": 9000.0}
+		m.stats["taken"] = {"таран": 292.0, "пули": 1010.0, "ракеты": 75.0}
+		m.stats["taken_by"] = {"дроны": 536.0, "перехватчики": 300.0, "ракетоносцы": 75.0, "ПВО": 21.0, "ас-соперник": 12.0, "асы": 355.0}
+		m.stats["kills_by"] = {"дроны": 2890.0, "перехватчики": 519.0, "ракетоносцы": 43.0, "асы": 3.0}
+		m.kills = 3455
+		m.bosses_killed = 3
+		m.shots = 4000
+		m.hits = 1480
 		m.on_evac_success()
 		_ui_phase = 2
 	elif _ui_phase == 2 and m.state == "evac" and m.result_t > 4.0:
 		_shot("ui_result")
+		m.result_tab = 1
+		_ui_phase = 3
+		_hud_at = Time.get_ticks_msec()
+	elif _ui_phase == 3 and Time.get_ticks_msec() - _hud_at > 800:
+		_shot("ui_result_dmg")
+		m.result_tab = 2
+		_ui_phase = 4
+		_hud_at = Time.get_ticks_msec()
+	elif _ui_phase == 4 and Time.get_ticks_msec() - _hud_at > 800:
+		_shot("ui_result_build")
 		m.get_tree().quit()
 
 

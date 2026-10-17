@@ -65,6 +65,9 @@ func handle_global_input() -> void:
 		"dead", "evac":
 			if Input.is_action_just_pressed("restart") and m.result_t < 0.5:
 				return
+			for i in 3:
+				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
+					m.result_tab = i
 			if Input.is_action_just_pressed("ui_hangar"):
 				ui_click("to_hangar")
 				return
@@ -201,6 +204,8 @@ func ui_click(action: String) -> void:
 		m.reroll()
 	elif action == "resume":
 		m._set_state("playing")
+	elif action.begins_with("rtab:"):
+		m.result_tab = int(action.substr(5))
 	elif action == "restart":
 		m.restart()
 	elif action == "change_class":
