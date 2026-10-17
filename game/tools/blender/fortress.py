@@ -89,6 +89,33 @@ def plate(name, pts, z, thick, m, z_tip=None):
     return ob
 
 
+def wing_solid(name, root, tip, span_y, z0, z1, m, nx=10):
+    """Крыло с профилем (толще к передней трети, тонкая задняя кромка): root/tip — (x передней, x задней кромки),
+    толщина 12% хорды у корня и 9% у законцовки; z0 / z1 — высота корня / конца (поперечное V)"""
+    bm = bmesh.new()
+    def prof(t):   # t 0…1 от передней к задней кромке → полутолщина в долях хорды (NACA-подобный)
+        return 0.6 * (0.2969 * math.sqrt(t) - 0.126 * t - 0.3516 * t * t + 0.2843 * t ** 3 - 0.1036 * t ** 4)
+    secs = []
+    for j, (y, (xl, xt), th, z) in enumerate(((0.0, root, 0.12, z0), (span_y, tip, 0.09, z1))):
+        c = xl - xt
+        up = [bm.verts.new((xl - c * (i / nx) ** 1.6, y, z + prof((i / nx) ** 1.6) * c * th / 0.12)) for i in range(nx + 1)]
+        lo = [bm.verts.new((xl - c * (i / nx) ** 1.6, y, z - prof((i / nx) ** 1.6) * c * th / 0.12 * 0.6)) for i in range(1, nx)]
+        secs.append(up + list(reversed(lo)))
+    a, b = secs
+    n = len(a)
+    for i in range(n):
+        bm.faces.new((a[i], a[(i + 1) % n], b[(i + 1) % n], b[i]))
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    return finish(ob, m)
+
+
 def sphere(name, c, r, sc, m, seg=20):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=seg // 2, radius=r, location=c)
     ob = bpy.context.object
@@ -113,11 +140,35 @@ def turret(n, x, y, z):
 
 
 # --- фюзеляж: длинный, остеклённый нос, на корме сужается под кормовую башню ---
-loft("fuselage", [(0.5, 0.004, 0.004, -0.004), (0.485, 0.022, 0.02, -0.004), (0.46, 0.036, 0.034, -0.002),
-                  (0.42, 0.048, 0.046, 0.0), (0.36, 0.056, 0.054, 0.0), (0.25, FR, FR, 0.0), (-0.22, FR, FR, 0.0),
-                  (-0.34, 0.048, 0.046, 0.004), (-0.44, 0.032, 0.03, 0.01), (-0.5, 0.012, 0.012, 0.014)], M_HULL)
-sphere("nose_glass", (0.47, 0, 0.0), 0.03, (1.1, 1.0, 0.9), M_GLASS)
-sphere("cockpit", (0.36, 0, 0.042), 0.03, (1.8, 1.0, 0.6), M_GLASS)
+loft("fuselage", [(0.5, 0.004, 0.004, -0.004), (0.49, 0.016, 0.015, -0.004), (0.475, 0.027, 0.026, -0.003),
+                  (0.455, 0.037, 0.036, -0.002), (0.43, 0.046, 0.045, -0.001), (0.39, 0.053, 0.053, 0.0),
+                  (0.33, 0.057, 0.058, 0.0), (0.25, FR, FR + 0.002, 0.0), (-0.1, FR, FR + 0.002, 0.0), (-0.22, FR * 0.97, FR, 0.001),
+                  (-0.3, 0.052, 0.051, 0.003), (-0.38, 0.043, 0.041, 0.006), (-0.44, 0.032, 0.03, 0.01), (-0.5, 0.012, 0.012, 0.014)], M_HULL, 36)
+sphere("nose_glass", (0.468, 0, -0.002), 0.031, (1.1, 1.0, 0.9), M_GLASS, 28)
+for k in range(5):   # переплёт остеклённого носа
+    a = math.pi * (k + 1) / 6
+    tube("nose_frame", [(0.452, math.cos(a) * 0.035, -0.002 + math.sin(a) * 0.033), (0.49, math.cos(a) * 0.012, -0.002 + math.sin(a) * 0.011)], 0.0012, M_DARK)
+for x in (0.452, 0.472):
+    cyl("nose_ring", (x, 0, -0.002), 0.036 if x < 0.46 else 0.029, 0.002, M_DARK, "X", 28)
+sphere("cockpit", (0.36, 0, 0.044), 0.03, (1.9, 1.0, 0.6), M_GLASS, 24)
+for x in (0.33, 0.35, 0.37, 0.39):   # переплёт фонаря
+    k = math.sqrt(max(0.0, 1 - ((x - 0.36) / 0.057) ** 2))
+    bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.05, major_segments=24, minor_segments=6,
+                                     location=(x, 0, 0.044), rotation=(0, math.pi / 2, 0))
+    fr = bpy.context.object
+    bpy.ops.object.transform_apply(rotation=True)
+    fr.scale = (0.03, 0.0305 * k, 0.0185 * k)
+    bpy.ops.object.transform_apply(scale=True)
+    finish(fr, M_DARK)
+tube("canopy_spine", [(0.305, 0, 0.0545), (0.415, 0, 0.0545)], 0.0012, M_DARK)
+# панели обшивки: кольцевые швы и продольные линии лючков
+for x in (0.42, 0.2, 0.08, -0.05, -0.17, -0.27, -0.38):
+    r = FR if -0.22 < x < 0.25 else (0.05 if x > 0 else 0.046)
+    cyl("seam", (x, 0, 0.0), r * 1.004, 0.0015, M_DARK, "X", 36)
+for s in (1, -1):
+    box("side_hatch", (0.27, s * FR * 0.99, -0.012), (0.03, 0.002, 0.024), M_DARK, 0.0)
+    box("side_line", (0.0, s * FR * 1.0, 0.018), (0.4, 0.0015, 0.0015), M_DARK, 0.0)
+cyl("antenna", (0.2, 0, FR + 0.012), 0.0015, 0.024, M_STEEL, "Z", 8)
 box("spine", (-0.02, 0, FR + 0.002), (0.5, 0.012, 0.008), M_LIGHT, 0.002)
 for x in (0.3, -0.31):
     cyl("red_band", (x, 0, 0), FR * 1.02 if x > 0 else 0.046, 0.016, M_RED, "X", 24)
@@ -126,7 +177,11 @@ for x in (0.3, -0.31):
 span = 0.48
 wing = [(0.07, 0.0), (-0.02, span), (-0.1, span), (-0.17, 0.0)]   # трапеция: корень шире, лёгкая стреловидность
 for s in (1, -1):
-    plate("wing", [(x, s * y) for x, y in wing], -0.012, 0.016, M_HULL, 0.01)
+    wing_solid("wing", (0.07, -0.17), (-0.02, -0.1), s * span, -0.012, 0.01, M_HULL)
+    for t in (0.3, 0.6, 0.85):   # швы панелей вдоль размаха
+        x0, x1 = 0.07 - 0.09 * t, -0.17 + 0.07 * t
+        y = s * span * t
+        box("wing_seam", ((x0 + x1) / 2, y, -0.012 + 0.022 * t + 0.0075 * (1 - 0.25 * t)), (x0 - x1 - 0.04, 0.0015, 0.001), M_DARK, 0.0)
     plate("tip", [(-0.017, s * (span - 0.005)), (-0.103, s * (span - 0.005)), (-0.103, s * (span + 0.012)), (-0.02, s * (span + 0.012))],
           0.01, 0.016, M_RED)
     plate("flap", [(-0.145, s * 0.07), (-0.115, s * 0.36), (-0.128, s * 0.36), (-0.162, s * 0.07)], -0.004, 0.006, M_DARK, 0.004)
@@ -145,6 +200,10 @@ for nm, (ex, ey) in (("engine_l", at(14, -44)), ("engine_r", at(14, 44))):
     bpy.ops.object.transform_apply(location=True)
     nac.name = nm + "_nacelle"
     cyl("intake", (ex + 0.1, ey, -0.032), 0.009, 0.03, M_DARK, "X", 12)
+    for cx in (ex + 0.12, ex + 0.04):   # кольца капота
+        cyl("cowl_ring", (cx, ey, -0.01), 0.0275, 0.003, M_DARK, "X", 24)
+    for k in range(3):   # патрубки выхлопа
+        cyl("stack", (ex + 0.06 - k * 0.018, ey + (0.026 if ey > 0 else -0.026), 0.006), 0.004, 0.01, M_STEEL, "X", 8)
     cyl("exhaust", (ex - 0.02, ey + (0.024 if ey > 0 else -0.024), 0.004), 0.006, 0.04, M_DARK, "X", 10)
     px = ex + 0.145
     for k, dx in enumerate((0.0, -0.014)):
