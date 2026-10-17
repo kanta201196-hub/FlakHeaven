@@ -79,6 +79,18 @@ static func draw(ctrl: Control, c: Vector2, s: float, k: String, col: Color) -> 
 				var rr := u * (0.45 + 0.28 * i)
 				ctrl.draw_arc(c, rr, -0.7, 0.7, 12, col, lw * 0.9)
 				ctrl.draw_arc(c, rr, PI - 0.7, PI + 0.7, 12, col, lw * 0.9)
+		"laser":
+			# лазер: излучатель и луч с вспышкой
+			ctrl.draw_rect(Rect2(c + Vector2(-u * 0.95, -u * 0.25), Vector2(u * 0.6, u * 0.5)), col)
+			ctrl.draw_line(c + Vector2(-u * 0.35, 0), c + Vector2(u * 0.75, 0), col, lw * 1.2)
+			for i in 4:
+				var a := TAU * i / 4.0 + PI / 4.0
+				ctrl.draw_line(c + Vector2(u * 0.75, 0), c + Vector2(u * 0.75, 0) + Vector2.from_angle(a) * u * 0.3, col, lw * 0.8)
+		"plasma":
+			# плазма: шар с ореолом над землёй
+			ctrl.draw_circle(c + Vector2(0, -u * 0.1), u * 0.45, col)
+			ctrl.draw_arc(c + Vector2(0, -u * 0.1), u * 0.72, 0.0, TAU, 24, col, lw * 0.8)
+			ctrl.draw_line(c + Vector2(-u, u * 0.85), c + Vector2(u, u * 0.85), col, lw)
 		"repair":
 			ctrl.draw_rect(Rect2(c + Vector2(-u * 0.22, -u * 0.8), Vector2(u * 0.44, u * 1.6)), col)
 			ctrl.draw_rect(Rect2(c + Vector2(-u * 0.8, -u * 0.22), Vector2(u * 1.6, u * 0.44)), col)

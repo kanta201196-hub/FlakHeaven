@@ -195,7 +195,7 @@ func _smoke_check() -> void:
 
 
 func _smoke_end(code: int, why: String) -> void:
-	print("SMOKE: dealt %s · rail %d · emp %d" % [str(m.stats["dealt"]), int(m.counters.get("rail_shots", 0)), int(m.counters.get("emp_pulses", 0))])
+	print("SMOKE: dealt %s · rail %d · emp %d · laser burned %d" % [str(m.stats["dealt"]), int(m.counters.get("rail_shots", 0)), int(m.counters.get("emp_pulses", 0)), int(m.counters.get("laser_burned", 0))])
 	print("SMOKE: %s class %s, level %d, kills %d, %s, %.0f s real" % ["ok" if code == 0 else "FAIL", m.cls_id, m.level, m.kills, why, Time.get_ticks_msec() / 1000.0])
 	m.get_tree().quit(code)
 

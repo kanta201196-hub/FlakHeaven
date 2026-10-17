@@ -36,8 +36,8 @@ func spawn_player_missile(pos: Vector2, vel: Vector2, target: Enemy, dmg := 45.0
 	pmissiles.append(m)
 
 
-func spawn_fire(pos: Vector2, r: float, dps: float, time: float, src: String) -> void:
-	fires.append({"p": pos, "r": r, "dps": dps, "t": time, "tick": 0.0, "src": src})
+func spawn_fire(pos: Vector2, r: float, dps: float, time: float, src: String, ground_only := false, col := Color(1.0, 0.45, 0.1)) -> void:
+	fires.append({"p": pos, "r": r, "dps": dps, "t": time, "tick": 0.0, "src": src, "ground": ground_only, "c": col})
 	if fires.size() > 60:
 		fires.pop_front()
 
@@ -210,7 +210,7 @@ func _update_fires(delta: float) -> void:
 			f["tick"] = 0.25
 			for n in get_tree().get_nodes_in_group("enemies"):
 				var e := n as Enemy
-				if e != null and e.hp > 0.0 and (f["p"] as Vector2).distance_to(e.global_position) < float(f["r"]) + e.radius:
+				if e != null and e.hp > 0.0 and (e.is_ground or not f.get("ground", false)) and (f["p"] as Vector2).distance_to(e.global_position) < float(f["r"]) + e.radius:
 					e.take_hit(float(f["dps"]) * 0.25, f["src"])
 		if float(f["t"]) <= 0.0:
 			fires.remove_at(i)
@@ -591,8 +591,9 @@ func _check_near_miss(b: Dictionary, d: float, near: float, pl: Player, kind: St
 func _draw() -> void:
 	for f in fires:
 		var a := clampf(float(f["t"]), 0.0, 1.0)
-		draw_circle(f["p"], float(f["r"]), Color(1.0, 0.45, 0.1, 0.18 * a))
-		draw_circle(f["p"], float(f["r"]) * 0.55, Color(1.0, 0.75, 0.3, 0.22 * a))
+		var fc: Color = f.get("c", Color(1.0, 0.45, 0.1))
+		draw_circle(f["p"], float(f["r"]), Color(fc.r, fc.g, fc.b, 0.18 * a))
+		draw_circle(f["p"], float(f["r"]) * 0.55, Color(lerpf(fc.r, 1.0, 0.5), lerpf(fc.g, 1.0, 0.5), lerpf(fc.b, 1.0, 0.5), 0.22 * a))
 	# 3.1: трассеры игрока — яркое ядро, тёплое свечение и тёмная подложка (читается на светлой земле)
 	for b in bullets:
 		var p: Vector2 = b["p"]
