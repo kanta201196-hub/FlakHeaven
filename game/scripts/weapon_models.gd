@@ -151,11 +151,15 @@ const WEAPON_GLB := {"aam": "res://models/weapons/aam_%d.glb", "rockets": "res:/
 ## Т-6: эволюция — совсем другая модель (правило владельца): «Шмель», «Ливень», «Салют» (на спине),
 ## «Бабушкин ковёр» (под фюзеляжем, планка поперёк полёта — свой узел крепления, без пилона)
 const EVO_GLB := "res://models/weapons/%s_evo.glb"
+## U-08: экспериментальное оружие тяжёлого подвеса — одна модель без ступеней (tools/blender/exp_weapons.py)
+const EXP_GLB := "res://models/weapons/exp_%s.glb"
 
 
 static func weapon_model(weapon: String, t: int, evo := false) -> Mesh:
 	if evo and ResourceLoader.exists(EVO_GLB % weapon):
 		return _glb_mesh(EVO_GLB % weapon, 1.0, Color(), "glb_%s_evo" % weapon)
+	if weapon in Weapons.EXP and ResourceLoader.exists(EXP_GLB % weapon):
+		return _glb_mesh(EXP_GLB % weapon, 1.0, Color(), "glb_exp_%s" % weapon)
 	if not WEAPON_GLB.has(weapon):
 		return null
 	var file: String = WEAPON_GLB[weapon] % t
