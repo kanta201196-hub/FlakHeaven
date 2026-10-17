@@ -119,7 +119,7 @@ func _left_panel(m: Main, p: Player) -> void:
 			elif not wm.alive():
 				st += " (вернётся %d с)" % int(ceil(wm.dead_t))
 			wl.append(st)
-		_text(Vector2(24, y), "Звено: " + ", ".join(wl), 17, Color(0.8, 0.75, 1.0))
+		_text(Vector2(24, y), "Звено: %s · цель: %s [G]" % [", ".join(wl), Settings.WING_PRIO[Settings.wing_prio]], 17, Color(0.8, 0.75, 1.0))
 		y += 22.0
 	_text(Vector2(24, y + 6), "Управление: %s  [F2]" % Hud.SCHEMES[int(Tuning.g("scheme"))], 16, Color(0.7, 0.78, 0.9))
 	_course_bar(p, Vector2(24, y + 22))
