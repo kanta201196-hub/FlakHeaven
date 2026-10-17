@@ -395,19 +395,61 @@ func _unit_mesh(tex: Texture2D, length_px: float, thick: float, grid: int) -> Di
 	return {"mesh": mesh, "mat": ReliefMesh.material(tex), "k": length_px / float(tex.get_width())}
 
 
+## 3.5: бой на 3D-моделях (решение 14.10, подтверждено владельцем 16.10). Облегчённая модель
+## models/battle/fh_battle_<картинка>.glb (tools/blender/battle_lod.py из модели ангара); длина модели 1 =
+## ширина картинки, нос +X — те же оси, что у рельефа из спрайта, поэтому подвесы, сопла и следы на месте.
+## «Низкое» качество графики — прежний рельеф из спрайта (слабые ПК).
+func _battle_model(tex: Texture2D) -> PackedScene:
+	if Settings.gfx == 0:
+		return null
+	var path := "res://models/battle/fh_battle_%s.glb" % tex.resource_path.get_file().get_basename()
+	if not _bm_cache.has(path):
+		_bm_cache[path] = load(path) if ResourceLoader.exists(path) else null
+	return _bm_cache[path]
+
+
+var _bm_cache := {}
+
+
+## Для лога: (самолётов-моделей в бою, их треугольников всего)
+func model_units() -> Vector2:
+	var n := 0
+	var t := 0
+	for id in _units:
+		var u: Dictionary = _units[id]
+		if u.get("bm") != null:
+			n += 1
+			if not u.has("tris"):
+				u["tris"] = (u["mi"] as MeshInstance3D).mesh.get_faces().size() / 3
+			t += int(u["tris"])
+	return Vector2(n, t)
+
+
 func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: float, grid := 56) -> Dictionary:
 	var u: Dictionary = _units.get(id, {})
-	if u.is_empty() or u["tex"] != tex:
+	var bm: PackedScene = _battle_model(tex)   # 3.5 этап 2: враги в воздухе и наземные ПВО (ЗСУ, ЗРК, РЛС)
+	if u.is_empty() or u["tex"] != tex or u.get("bm") != bm:
 		if not u.is_empty():
 			(u["node"] as Node).queue_free()
 		var root := Node3D.new()
-		var mi := MeshInstance3D.new()
-		var d := _unit_mesh(tex, length_px, thick, grid)
-		mi.mesh = d["mesh"]
-		mi.material_override = d["mat"]
-		root.add_child(mi)
+		var mi: MeshInstance3D = null
+		var d := {"k": length_px / float(tex.get_width())}
+		if bm != null:
+			var inst: Node3D = bm.instantiate()
+			inst.scale = Vector3.ONE * float(tex.get_width())
+			root.add_child(inst)
+			for c in inst.find_children("*", "MeshInstance3D", true, false):
+				mi = c
+				break
+		if mi == null:
+			bm = null
+			mi = MeshInstance3D.new()
+			d = _unit_mesh(tex, length_px, thick, grid)
+			mi.mesh = d["mesh"]
+			mi.material_override = d["mat"]
+			root.add_child(mi)
 		add_child(root)
-		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}}
+		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}, "bm": bm}
 		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
 			u["sh"] = _make_shadow(tex, root)
 		if kind != "enemy":
@@ -523,6 +565,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		var ah: float = an.get("heading")
 		_place(ua, an.global_position, ah, _turn_bank(ua, ah, delta), 0.0)
 		PlaneFx.update(ua, sd, 0.0)
+		if ua.get("bm") != null and an.get("boom_len") != null:
+			_tanker_boom(ua, an, float(an.call("ally_len")))
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
 		if e == null or e.hp <= 0.0:
@@ -539,7 +583,10 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		if e.is_ground:
 			# 3.5: у целей с точкой на рельефе (anchor) — ставим ровно туда, иначе проекция с камеры
 			var gp := terrain.surface(e.anchor.x, e.anchor.y) if (e.anchor != Vector2.INF and terrain != null) else ground_under(e.global_position)
-			_place(ue, Vector2(gp.x, gp.z), ang, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
+			var hull := ang
+			if ue.get("bm") != null:
+				hull = _ground_parts(ue, e, ang, delta)
+			_place(ue, Vector2(gp.x, gp.z), hull, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
 		else:
 			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle()) # 3.5: бочка при уклонении
 		var mi2: MeshInstance3D = ue["mi"]
@@ -549,6 +596,61 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			if not _start_crash(_units[id]):
 				(_units[id]["node"] as Node).queue_free()
 			_units.erase(id)
+
+
+## Подвижные части наземных моделей (tools/blender/ground_models.py): корпус стоит, как встал,
+## башня ЗСУ (turret) смотрит на цель, антенна РЛС (antenna) вращается, контейнеры ЗРК (launcher)
+## поднимаются, пока идёт захват цели — предупреждение перед пуском. Возвращает курс корпуса.
+func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
+	if not u.has("hull"):
+		u["hull"] = ang
+		var inst := (u["node"] as Node3D).get_child(0)
+		for nm in ["turret", "antenna", "launcher"]:
+			var n := inst.find_child(nm, true, false)
+			if n != null:
+				u[nm] = n
+	# едет — корпус по ходу движения
+	var lp: Vector2 = u.get("lastp", e.global_position)
+	var mv := e.global_position - lp
+	u["lastp"] = e.global_position
+	if mv.length() > 0.3:
+		u["hull"] = lerp_angle(float(u["hull"]), mv.angle(), 1.0 - exp(-delta * 4.0))
+	var hull: float = u["hull"]
+	if u.has("turret"):
+		(u["turret"] as Node3D).rotation.y = -wrapf(ang - hull, -PI, PI)
+	if u.has("antenna"):
+		(u["antenna"] as Node3D).rotate_y(delta * 1.6)
+	if u.has("launcher"):
+		var up := deg_to_rad(55.0) if float(e.get("_lock") if e.get("_lock") != null else 0.0) > 0.0 else 0.0
+		var ln := u["launcher"] as Node3D
+		ln.rotation.z = move_toward(ln.rotation.z, up, delta * 1.2)
+	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher")) else ang
+
+
+## Штанга заправщика (tools/blender/tanker_boom.py, узлы Boom / BoomTube / BoomTip).
+## Логика заправщика (tanker.gd) считает штангу от точки в BOOM_ROOT пикс. за центром; у модели штанга
+## выходит из-под хвоста — длину и угол пересчитываем так, чтобы наконечник был там же, где в логике.
+const BOOM_PITCH := deg_to_rad(10.0)
+
+
+func _tanker_boom(u: Dictionary, an: Node2D, len_px: float) -> void:
+	if not u.has("boom"):
+		var inst := (u["node"] as Node3D).get_child(0)
+		var b := inst.find_child("Boom", true, false) as Node3D
+		u["boom"] = b
+		u["boom_tube"] = inst.find_child("BoomTube", true, false) if b != null else null
+		u["boom_tip"] = inst.find_child("BoomTip", true, false) if b != null else null
+	var boom := u["boom"] as Node3D
+	if boom == null or u["boom_tube"] == null:
+		return
+	# наконечник в осях заправщика (пикс., x — вперёд), потом в единицы модели (1 = длина модели)
+	var tip := Vector2(-Tanker.BOOM_ROOT, 0.0) + Vector2(-float(an.get("boom_len")), 0.0).rotated(float(an.get("boom_angle")))
+	var v := tip / len_px - Vector2(boom.position.x, boom.position.z)
+	var l := maxf(v.length(), 0.05)
+	boom.rotation.y = atan2(v.y, -v.x)
+	(u["boom_tube"] as Node3D).scale.x = l
+	if u["boom_tip"] != null:
+		(u["boom_tip"] as Node3D).position = Vector3(-cos(BOOM_PITCH), -sin(BOOM_PITCH), 0.0) * l
 
 
 ## Крен от скорости поворота (для врагов и ведомых)
@@ -564,7 +666,6 @@ func _turn_bank(u: Dictionary, heading: float, delta: float) -> float:
 func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 	var root: Node3D = u["node"]
 	var want := {}
-	var half := tex.get_size() / 2.0
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
 		if g.is_empty():
@@ -572,25 +673,41 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		var wt := PlaneArt.weapon_tex(g.weapon)
 		if wt == null:
 			continue
-		var pts := PlaneArt.slot_points(p.cls_id, p.plane_lvl, gi, g)
+		var pts := WeaponModels.mounts(p.cls_id, p.plane_lvl, gi, g)
 		var k: float = u["k"]
 		var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k  # в пикселях текстуры самолёта
 		var dim := g.weapon in ["aam", "rockets", "bombs"] and g.cd > 0.3
+		# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5
+		var tr := WeaponModels.tier(g.level, g.evo)
 		for si in pts.size():
-			var key := "%d_%d_%s" % [gi, si, g.weapon]
+			var key := "%d_%d_%s_%d" % [gi, si, g.weapon, tr]
 			want[key] = true
+			var mt: Dictionary = pts[si]
 			var wmi: MeshInstance3D = u["weapons"].get(key)
 			if wmi == null:
-				wmi = MeshInstance3D.new()
-				wmi.mesh = ReliefMesh.build(wt, wt.get_width() * 0.35, 24)
-				wmi.material_override = ReliefMesh.material(wt, 0.5, 0.4)
+				wmi = WeaponModels.make(g.weapon, tr, mt["side"], p.cls_id)
 				root.add_child(wmi)
 				u["weapons"][key] = wmi
-			var pt: Vector2 = pts[si]
-			var wk := len_px / float(wt.get_height())
-			# текстура оружия носом вверх → поворот на 90°, чтобы нос смотрел по +X
-			wmi.position = Vector3(pt.x, tex.get_width() * 0.03, pt.y)
-			wmi.basis = Basis(Vector3.UP, -PI / 2.0).scaled(Vector3(wk, wk, wk))
+			var pt: Vector2 = mt["p"]
+			var tw := float(tex.get_width())
+			# подвесы — под крылом на пилоне (видны на крене и под наклоном камеры), турели — на своих местах
+			# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
+			var tail_cab: bool = mt["side"] == "tail" and g.weapon == "turret" and (WeaponModels.TURRET_MODELS.get(p.cls_id, {}) as Dictionary).has("tail")
+			var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id) and not tail_cab
+			var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, tr) * len_px, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
+			wmi.position = Vector3(pt.x, y, pt.y)
+			var yaw: float = mt["yaw"]
+			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
+				var idle := yaw
+				yaw = _turret_yaw(p, root, wmi.position, yaw)
+				if mt["side"] == "tail":   # кормовая установка — в секторе ±60° назад, как настоящая
+					yaw = idle + clampf(wrapf(yaw - idle, -PI, PI), -1.05, 1.05)
+			var b := Basis(Vector3.UP, yaw)
+			if mt["side"] == "bottom" or under_tail:
+				b = b * Basis(Vector3.RIGHT, PI)
+			wmi.basis = b.scaled(Vector3(len_px, len_px, len_px))
+			if tail_cab and wmi.get_child_count() > 0:   # кабина стрелка неподвижна, крутится только шар
+				(wmi.get_child(0) as Node3D).basis = Basis(Vector3.UP, float(mt["yaw"]) - yaw)
 			wmi.transparency = 0.6 if dim else 0.0
 	for key in u["weapons"].keys():
 		if not want.has(key):
@@ -748,6 +865,25 @@ func _make_smoke() -> CPUParticles3D:
 	s.emitting = true
 	add_child(s)
 	return s
+
+
+## Угол турели (в осях самолёта) на ближайшего врага в радиусе 700 px; без цели — вперёд
+func _turret_yaw(p: Player, root: Node3D, local: Vector3, idle := 0.0) -> float:
+	var wp := root.global_transform * local
+	var best: Node2D = null
+	var bd := 700.0 * 700.0
+	for n in get_tree().get_nodes_in_group("enemies"):
+		var e := n as Enemy
+		if e == null or e.hp <= 0.0:
+			continue
+		var d := e.global_position.distance_squared_to(Vector2(wp.x, wp.z))
+		if d < bd:
+			bd = d
+			best = e
+	if best == null:
+		return idle
+	var ang := (best.global_position - Vector2(wp.x, wp.z)).angle() - p.heading
+	return -ang
 
 
 # ---------- объекты биома ----------

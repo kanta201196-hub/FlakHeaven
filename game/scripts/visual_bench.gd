@@ -34,22 +34,35 @@ func _init(main: Main) -> void:
 
 func process(delta: float) -> void:
 	_t += delta / maxf(Engine.time_scale, 0.01)
+	if OS.get_cmdline_user_args().has("--hangarbench"):
+		_hangar_bench()
+		return
 	if m.state == "menu" and _i < 0 and _t > 1.0:
-		m.select_class("fighter")
+		var cls := "fighter"
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--cls="):   # 3.5: кадры боя другим классом (3D-модели в бою)
+				cls = a.substr(6)
+				_suffix += "_" + cls
+		m.select_class(cls)
 		_t = 0.0
 		return
 	if m.state != "playing" or not is_instance_valid(m.player):
 		return
 	m.god_mode = true
 	m.spawner.process_mode = Node.PROCESS_MODE_DISABLED
+	var keep: bool = _i >= 0 and _i < _points.size() and (_points[_i] as Dictionary).get("enemies", false)
 	for e in m.get_tree().get_nodes_in_group("enemies"):
-		(e as Node).queue_free()
+		if not keep:
+			(e as Node).queue_free()
 	if m.hud != null:
 		m.hud.visible = false
 	if _i < 0:
 		if _t < 1.0:
 			return
 		_points = _make_points()
+		for a in OS.get_cmdline_user_args():   # --only=model_ground — только точки с этим началом имени
+			if a.begins_with("--only="):
+				_points = _points.filter(func(q: Dictionary) -> bool: return String(q["name"]).begins_with(a.get_slice("=", 1)))
 		_i = 0
 		_t = 0.0
 	if _i >= _points.size():
@@ -57,6 +70,26 @@ func process(delta: float) -> void:
 		m.get_tree().quit()
 		return
 	var p: Dictionary = _points[_i]
+	if p.get("ground", false):
+		if not _g_spawned:
+			_g_spawned = true
+			var site := AASite.new()
+			site.setup(m.player.global_position + Vector2(0, -120), 1.0, 99999.0)
+			m.world.add_child(site)
+			p["pos"] = site.global_position + Vector2(0, 160)
+	elif p.get("tanker", false):
+		if not _spawned:   # заправщик впереди игрока, штанга выдвинута и отклонена (логика стоит)
+			_spawned = true
+			var tk := Tanker.new()
+			tk.heading = 0.0
+			tk.position = (p["pos"] as Vector2) + Vector2(260, 0)
+			tk.process_mode = Node.PROCESS_MODE_DISABLED
+			tk.boom_len = 190.0
+			tk.boom_angle = 0.25
+			tk.docked = true
+			m.world.add_child(tk)
+	elif p.get("enemies", false) and not _spawned:
+		_spawn_all_enemies(m.player.global_position)
 	_hold(p)
 	if _phase == 0 and _t > float(p.get("wait", WAIT)):
 		if p.get("boom", false):
@@ -175,5 +208,107 @@ func _make_points() -> Array:
 		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
 		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
 		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
+	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
+		pts = []
+		for c in ["fighter", "attacker", "bomber"]:
+			for lv in [1, 2]:
+				pts.append({"name": "model_%s_%d" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "wait": 1.0, "zoom": 2.2})
+				pts.append({"name": "model_%s_%d_far" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "fly": true, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "model_roll", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.2, "roll": 0.62})
+		pts.append({"name": "model_tanker", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.5, "tanker": true, "wait": 1.0})
+		pts.append({"name": "model_ground", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.3, "enemies": true, "ground": true, "wait": 2.5})
+		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
 	return pts
 
+
+
+## 3.5: враги всех видов рядом с игроком (стенд 3D-моделей в бою)
+var _spawned := false
+var _g_spawned := false
+
+
+func _spawn_all_enemies(c: Vector2) -> void:
+	_spawned = true
+	var list: Array = []
+	var d := Drone.new()
+	list.append(d)
+	list.append(Interceptor.new())
+	list.append(MissileCarrier.new())
+	var r := RivalAce.new()
+	list.append(r)
+	for v in ["carrier", "interceptor"]:
+		var b := Boss.new()
+		b.setup(v, 99999.0)
+		list.append(b)
+	for i in list.size():
+		var e: Enemy = list[i]
+		e.position = c + Vector2.from_angle(TAU * i / list.size()) * 260.0
+		e.heading = TAU * i / list.size() + PI / 2.0
+		m.world.add_child(e)
+		if e is RivalAce:
+			(e as RivalAce).setup(99999.0)
+
+
+## 3.4-t1 (п. 1): 3D-ангар — вкладка «САМОЛЁТ» каждого класса, ур. 1 и ур. 2 → user://vis_hangar_<класс>_<ур>.png
+var _hq: Array = []
+var _hf := 0
+
+
+func _hangar_bench() -> void:
+	if _t < 1.5:
+		return
+	if m.state != "hangar":
+		m.ui_click("menu_hangar")
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--turretstyle="):
+				WeaponModels.turret_style = int(a.get_slice("=", 1))
+		if OS.get_cmdline_user_args().has("--turretclose"):
+			# крупно турели: штурмовик и бомбардировщик, ступени 1 и 3, два ракурса (сверху-сзади, снизу-сбоку)
+			# [класс, ур., ступень, № турели]
+			for q in [["attacker", 1, 1, 0], ["attacker", 1, 3, 0], ["bomber", 1, 1, 0], ["bomber", 1, 1, 1], ["bomber", 1, 1, 2], ["bomber", 2, 3, 0], ["bomber", 2, 3, 1]]:
+				_hq.append(q)
+			_t = 0.0
+			return
+		for c in PlaneClasses.LIST:
+			if OS.get_cmdline_user_args().has("--hangarside"):
+				_hq.append([c, 1, 1])
+				_hq.append([c, 2, 1])
+				continue
+			for lv in [1, 2]:
+				_hq.append([c, lv, 1])
+			_hq.append([c, 1, 2])
+			_hq.append([c, 1, 3])
+		_t = 0.0
+		return
+	if _hq.is_empty():
+		print("VISUAL done")
+		m.get_tree().quit()
+		return
+	var cur: Array = _hq[0]
+	m.hangar_tab = "plane"
+	m.hangar_cls = cur[0]
+	if Hangar3D.I != null:
+		Hangar3D.I._cls = cur[0]
+		Hangar3D.I.view_lvl = cur[1]
+		Hangar3D.I.weapon_tier = cur[2]
+		if cur.size() > 3:   # --turretclose: крупный план турели № cur[3]
+			var h := Hangar3D.I
+			var tp: Array = h.turret_pos[cur[3]] if cur[3] < h.turret_pos.size() else [Vector3.ZERO, "top"]
+			h.focus = tp[0]
+			h._yaw = 2.2 if tp[1] != "tail" else 2.7
+			h._pitch = {"top": 0.45, "tail": 0.3, "bottom": -0.25}.get(tp[1], 0.3)
+			h._dist = 0.3
+			h._idle = 0.0
+		elif OS.get_cmdline_user_args().has("--hangarside"):   # вид сбоку: проверка, где сидят турели и подвесы
+			Hangar3D.I._yaw = PI / 2.0
+			Hangar3D.I._pitch = 0.06
+			Hangar3D.I._idle = 0.0
+	_hf += 1
+	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
+		if cur.size() > 3:
+			_save("turret_s%d_%s_%d_w%d_v%d" % [WeaponModels.turret_style, cur[0], cur[1], cur[2], cur[3]])
+		else:
+			_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])
+		_hq.pop_front()
+		_t = 0.0
+		_hf = 0
