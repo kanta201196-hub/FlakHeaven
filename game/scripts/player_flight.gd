@@ -52,7 +52,9 @@ func _steer(delta: float) -> void:
 	var accel := tr * float(pl.cls.get("turn_accel", 6.0))
 	var want := 0.0
 	if pl.turn_t > 0.0:
-		# Боевой разворот: рывок носом к цели в 4 раза быстрее обычного
+		# Боевой разворот: рывок носом к цели в 4 раза быстрее обычного; цель движется — догоняем её
+		if pl.lock_ok():
+			pl._turn_target = (pl.turn_lock.global_position - pl.global_position).angle()
 		pl.heading = rotate_toward(pl.heading, pl._turn_target, tr * 4.0 * delta + PI / float(pl.s3_def()["time"]) * delta)
 		pl._turn_vel = 0.0
 	else:

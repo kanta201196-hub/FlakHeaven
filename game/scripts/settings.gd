@@ -25,6 +25,7 @@ const REBIND := [
 	["dive", "Нырок", "Полёт"],
 	["sharp_turn", "Навык класса", "Бой"],
 	["toggle_fire_mode", "Огонь: авто / ручной", "Бой"],
+	["wing_prio", "Цель звена (ведомых)", "Бой"],
 	["fire", "Огонь из пушки (клавиша)", "Бой"],
 	["fire_hardpoint", "Ракеты залпом / бомбы вручную (клавиша)", "Бой"],
 	["loadout", "Подвесы (пауза)", "Интерфейс"],
@@ -39,6 +40,9 @@ var fps_limit := 0
 var hide_hud := false
 var gfx := 2               # «Высокое»; деревья полной детализации — только на «Максимальном»
 var font := 0              # U-09: шрифт интерфейса — индекс в FONTS
+## Правка 3.5-s4: кого звено атакует первым (клавиша G в полёте, кнопка на экране паузы)
+const WING_PRIO := ["по задаче ведомого", "прикрывать меня", "крупные и асы", "наземные цели"]
+var wing_prio := 0
 var gfx_auto := true       # автоснижение при низком FPS, пока игрок не выбрал качество сам
 var binds := {}          # действие → physical_keycode (только клавиатура)
 var _defaults := {}      # исходные клавиши (для «Сбросить»)
@@ -122,7 +126,7 @@ func save_settings() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
-		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "font": font, "binds": binds}, "  "))
+		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "font": font, "wing_prio": wing_prio, "binds": binds}, "  "))
 	f.close()
 
 
@@ -144,6 +148,7 @@ func load_settings() -> void:
 	gfx = clampi(int(d.get("gfx", gfx)), 0, GFX_MAX)
 	gfx_auto = bool(d.get("gfx_auto", gfx_auto))
 	font = clampi(int(d.get("font", font)), 0, FONTS.size() - 1)
+	wing_prio = clampi(int(d.get("wing_prio", wing_prio)), 0, WING_PRIO.size() - 1)
 	var b = d.get("binds", {})
 	if b is Dictionary:
 		for a in b:

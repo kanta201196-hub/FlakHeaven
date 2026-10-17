@@ -137,8 +137,13 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 	var put := {}   # вид → Array[Transform3D]
 	var obj: Dictionary = (ctx["objs"] as Dictionary).get(key, {})
 	var keep_out := []  # [центр, радиус] — внутри объектов биома не ставим
-	if not obj.is_empty():
-		keep_out.append([obj["pos"], float(obj["size"]) * 0.5])
+	# тест 3.5-s4 (п. 20): и объекты соседних клеток (у края клетки, сдвинутые от реки), и с запасом
+	# на размер валуна/дерева — модели не наползают на кишлак, обломки, воронку
+	for dx in [-1, 0, 1]:
+		for dz in [-1, 0, 1]:
+			var no: Dictionary = (ctx["objs"] as Dictionary).get(Vector2i(key.x + dx, key.y + dz), {})
+			if not no.is_empty() and not (no["name"] in ["o_rocks_big", "o_rocks_small"]):
+				keep_out.append([no["pos"], float(no["size"]) * 0.5 + 30.0])
 	# вокруг объектов биома — их окружение (поселения стоят на дне долин — см. terrain3d.gd)
 	if not obj.is_empty():
 		var p0: Vector2 = obj["pos"]

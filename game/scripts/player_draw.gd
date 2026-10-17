@@ -120,6 +120,13 @@ func _draw_overlays() -> void:
 		var tp := pl.to_local(pl.tail_target.global_position)
 		pl.draw_arc(tp, pl.tail_target.radius + 12.0, 0.0, TAU, 32, Color(1.0, 0.9, 0.3, 0.9), 2.0)
 		pl.draw_line(Vector2.from_angle(pl.heading) * 30.0, tp, Color(1.0, 0.9, 0.3, 0.25), 1.0)
+	if pl.combat_t > 0.0 and pl.lock_ok():
+		var lp := pl.to_local(pl.turn_lock.global_position)
+		var lr := pl.turn_lock.radius + 16.0
+		pl.draw_arc(lp, lr, 0.0, TAU, 36, Color(0.6, 0.9, 1.0, 0.9), 3.0)
+		for i in 4:
+			var a := i * PI / 2.0 + pl._blink * 2.0
+			pl.draw_line(lp + Vector2.from_angle(a) * (lr + 4.0), lp + Vector2.from_angle(a) * (lr + 14.0), Color(0.6, 0.9, 1.0, 0.9), 2.0)
 	if pl.combat_t > 0.0:
 		pl.draw_arc(Vector2.ZERO, 24.0 * pl.size, 0.0, TAU, 32, Color(0.6, 0.9, 1.0, 0.5 + 0.3 * sin(pl._blink * 20.0)), 2.0)
 	if pl.shield_t > 0.0:
