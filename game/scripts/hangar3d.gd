@@ -18,6 +18,8 @@ var pivot: Node3D
 var rect := Rect2()          # где на экране (в координатах ctrl) нарисован вид
 var lvl_rects: Array = []    # [Rect2, ур.] — переключатель «Ур. 1 / Ур. 2»
 var view_lvl := 1
+## Стенд --hangarevo: оружие в пустых группах (класс → [оружие по группам]), чтобы показать все эволюции
+static var bench_weapons := {}
 var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5), 4 — эволюция (Т-4)
 var tier_rects: Array = []   # [Rect2, ступень]
 var _ctrl: Control
@@ -143,6 +145,9 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 	var plane_k := float(data["size"]) * tw / float(tex1.get_width())
 	for gi in groups.size():
 		var g: Hardpoint = groups[gi]
+		if bench_weapons.has(cls_id) and gi < (bench_weapons[cls_id] as Array).size() and bench_weapons[cls_id][gi] != "":
+			g.weapon = bench_weapons[cls_id][gi]
+		g.evo = weapon_tier == 4
 		if g.is_empty():
 			continue
 		var wt := PlaneArt.weapon_tex(g.weapon)
@@ -162,7 +167,9 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var y := 0.0
 			match side:
 				"under":
-					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mini(weapon_tier, 3)) * wlen
+					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mini(weapon_tier, 3), weapon_tier == 4) * wlen
+				"belly":   # Т-6: «Бабушкин ковёр» — своим узлом прямо к брюху, без пилона
+					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, 3, true) - WeaponModels.PYLON_H) * wlen
 				"top", "wing":
 					y = hi if not is_nan(hi) else 0.03
 				"bottom":

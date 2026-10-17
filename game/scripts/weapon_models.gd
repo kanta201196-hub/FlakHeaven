@@ -24,7 +24,7 @@ static func tier(level: int, evo := false) -> int:
 ## evo — эволюция (у турели — «Дикобраз»), plvl — уровень самолёта (окраска турели под обшивку)
 static func make(weapon: String, t: int, side := "", cls := "", evo := false, plvl := 1) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	var tm: Mesh = turret_model(cls, t, side, evo, plvl) if weapon == "turret" else weapon_model(weapon, t)
+	var tm: Mesh = turret_model(cls, t, side, evo, plvl) if weapon == "turret" else weapon_model(weapon, t, evo)
 	mi.mesh = tm if tm != null else mesh(weapon, t, side)
 	# разбор каталога 16.10: подвесное — только на пилоне (ракеты — на пусковой рельс), не «приклеено» к крылу
 	if side == "under":
@@ -88,8 +88,9 @@ static func pylon_mesh(weapon: String, top: float) -> Mesh:
 
 
 ## Глубина подвеса (длина 1): насколько ниже крыла центр модели — верх модели плюс пилон
-static func hang(weapon: String, t: int) -> float:
-	var m: Mesh = weapon_model(weapon, t)
+## (у «Бабушкиного ковра» под фюзеляжем пилона нет: свой узел крепления — вычесть PYLON_H)
+static func hang(weapon: String, t: int, evo := false) -> float:
+	var m: Mesh = weapon_model(weapon, t, evo)
 	if m == null:
 		m = mesh(weapon, t)
 	return m.get_aabb().end.y + PYLON_H
@@ -98,9 +99,14 @@ static func hang(weapon: String, t: int) -> float:
 ## Ракеты В-В и блоки НАР из Blender (tools/blender/weapons.py) по примерам владельца 16.10:
 ## ступени отличаются формой и деталями. Те же оси и длина 1, что у процедурных моделей ниже.
 const WEAPON_GLB := {"aam": "res://models/weapons/aam_%d.glb", "rockets": "res://models/weapons/rockets_%d.glb"}
+## Т-6: эволюция — совсем другая модель (правило владельца): «Шмель», «Ливень», «Салют» (на спине),
+## «Бабушкин ковёр» (под фюзеляжем, планка поперёк полёта — свой узел крепления, без пилона)
+const EVO_GLB := "res://models/weapons/%s_evo.glb"
 
 
-static func weapon_model(weapon: String, t: int) -> Mesh:
+static func weapon_model(weapon: String, t: int, evo := false) -> Mesh:
+	if evo and ResourceLoader.exists(EVO_GLB % weapon):
+		return _glb_mesh(EVO_GLB % weapon, 1.0, Color(), "glb_%s_evo" % weapon)
 	if not WEAPON_GLB.has(weapon):
 		return null
 	var file: String = WEAPON_GLB[weapon] % t
@@ -510,6 +516,14 @@ static func wing_point(cls_id: String, lvl: int, side: float) -> Vector2:
 ##   "bottom" — нижняя под фюзеляжем. yaw — куда смотрят стволы без цели (0 — вперёд, PI — назад).
 static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	var out: Array = []
+	# Т-6: «Салют» — одна пусковая на спине за кабиной, «Бабушкин ковёр» — одна планка под фюзеляжем
+	if g.evo and g.weapon in ["flares", "bombs"] and ResourceLoader.exists(EVO_GLB % g.weapon):
+		var sh := PlaneArt.shape_info(cls_id, lvl)
+		if not sh.is_empty():
+			var top := g.weapon == "flares"
+			out.append({"p": Vector2(float(sh["nose"]) - float(sh["len"]) * (0.55 if top else 0.5), 0.0),
+				"side": "top" if top else "belly", "yaw": 0.0})
+			return out
 	if not g.builtin:
 		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):
 			out.append({"p": pt, "side": "under", "yaw": 0.0})
