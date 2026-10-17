@@ -164,7 +164,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		ace.heading = (p.global_position - ace.position).angle()
 		Main.I.world.add_child(ace)
 		activity_node = ace
-		Main.I.show_banner("Догфайт: вражеский ас заходит вам в хвост!", 4.0)
+		Main.I.show_banner("Дуэль: вражеский ас заходит вам в хвост!", 4.0)
 	Main.I.sfx.play("boss", -8.0, 1.4)
 
 

@@ -17,7 +17,7 @@ func _syn_conds(p: Player, s: Dictionary, skill := false) -> Array:
 	var out0: Array = []
 	var c0: Dictionary = Cards.SLOT_COST[0]
 	if skill:
-		out0.append(["доводка I/II/III", false])
+		out0.append(["уровень навыка 1/2/3", false])
 	if s.has("tag"):
 		out0.append(["%s %d/%d/%d" % [Prog.tag_title(s["tag"]), Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]], false])
 	if s.has("tag2"):
@@ -34,9 +34,9 @@ func _syn_conds(p: Player, s: Dictionary, skill := false) -> Array:
 func _syn_conds_old(p: Player, s: Dictionary, skill := false) -> Array:
 	var out: Array = []
 	if skill and p != null:
-		out.append(["доводка навыка ≥ I (сейчас %s)" % (Prog.ROMAN[p.s3_lvl()] if p.s3_lvl() > 0 else "0"), p.s3_lvl() >= 1])
+		out.append(["уровень навыка ≥ 1 (сейчас %d)" % p.s3_lvl(), p.s3_lvl() >= 1])
 	elif skill:
-		out.append(["доводка навыка ≥ I", false])
+		out.append(["уровень навыка ≥ 1", false])
 	if s.has("w"):
 		var lv := 0
 		if p != null:
@@ -92,9 +92,9 @@ func _near_synergies(p: Player, n: int) -> Array:
 func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.035, 0.04, 0.93))
 	var p: Player = m.player if (m.codex_back == "paused" and is_instance_valid(m.player)) else null
-	_text(Vector2(0, 70), "СПРАВОЧНИК: СВЯЗКИ И ЭВОЛЮЦИИ", 36, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-	_ctext(104, "За вылет — до 3 связок. Цель выбирается курсом; пороги растут по слотам (слот 1 / 2 / 3). Полное описание — на экране выбора курса." if p == null
-		else "Зелёное — выполнено (для текущего слота %d). Открыть можно только связку курса; сменить курс — за 1 переброс." % (p.syn.size() + 1), 17, Color(0.75, 0.8, 0.9))
+	_text(Vector2(0, 70), "СПРАВОЧНИК: СВЯЗКИ И МОДЕРНИЗАЦИИ", 36, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	_ctext(104, "Связка — сильный бонус за подходящие карточки, за вылет — до 3. Какую собирать, выбирается на 3-м уровне (специализация)." if p == null
+		else "Зелёное — выполнено (для связки %d из 3). Открыть можно только связку своей специализации; сменить её — за 1 переброс." % (p.syn.size() + 1), 17, Color(0.75, 0.8, 0.9))
 	_button(Rect2(64, 40, 220, 46), "‹ Назад (Esc)", "codex_back", 18)
 	# левая колонка: связки оружия
 	var x := 70.0
@@ -144,12 +144,12 @@ func draw(m: Main, size: Vector2) -> void:
 			_text(Vector2(x + 860, y + 24), _cond_text(sk), 13, Color(0.7, 0.72, 0.78), HORIZONTAL_ALIGNMENT_RIGHT, 0)
 		y += hh
 	y += 20.0
-	_text(Vector2(x, y), "ЭВОЛЮЦИИ (оружие ур. 5 + модуль-катализатор, с 7:00)", 22, Cards.EVO_COLOR)
+	_text(Vector2(x, y), "МОДЕРНИЗАЦИИ (оружие ур. 5 + нужная карточка, с 7:00)", 22, Cards.EVO_COLOR)
 	y += 14.0
 	for w in Prog.EVOS:
 		var ev: Dictionary = Prog.EVOS[w]
 		var conds: Array = []
-		var wname: String = "Курсовое" if w == "gun" else Weapons.DEFS[w]["short"]
+		var wname: String = "Пушка" if w == "gun" else Weapons.DEFS[w]["short"]
 		var done := false
 		if w != "gun":
 			var lv := 0
@@ -172,4 +172,4 @@ func draw(m: Main, size: Vector2) -> void:
 ## 3.2: условие связки навыка — главный (первый) тег навыка по порогам слотов + доводка I/II/III
 func _cond_text(sk: String) -> String:
 	var t: String = PlaneClasses.SKILL3[sk]["tags"][0]
-	return "%s %d/%d/%d + доводка I/II/III" % [Prog.tag_title(t), Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]]
+	return "%s %d/%d/%d + уровень навыка 1/2/3" % [Prog.tag_title(t), Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]]

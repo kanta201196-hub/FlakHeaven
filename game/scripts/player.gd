@@ -179,7 +179,7 @@ func add_course_pts(n: int) -> void:
 	var sd := Cards.syn_def(self, course)
 	add_tags([sd["tag"]], n)
 	course_pts += n
-	Main.I.fx.text(global_position + Vector2(0, -70), "+%d к курсу «%s»" % [n, sd["title"]], Color(1.0, 0.85, 0.35))
+	Main.I.fx.text(global_position + Vector2(0, -70), "+%d к специализации «%s»" % [n, sd["title"]], Color(1.0, 0.85, 0.35))
 
 
 func open_synergy(id: String) -> void:

@@ -31,7 +31,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 		var a := clampf(m.banner_t, 0.0, 1.0)
 		_ctext(170, m.banner, 30, Color(1.0, 0.85, 0.5, a))
 
-	var hint := "Мышь — курс · W/S — газ · ЛКМ — огонь (ручн.) · ПКМ — НАР/бомбы (по кнопке) · Q — авто/ручной · Space — бочка · Shift — форсаж · E — навык класса · Tab/Esc — подвесы · F2 — схема · F9 — наклон камеры" + (" · F5/F6/F7 — отладка" if Main.DEBUG else "")
+	var hint := "Мышь — куда лететь · Space — уклонение · Shift — форсаж · E — навык · Tab — пауза" + (" · F5/F6/F7 — отладка" if Main.DEBUG else "")
 	_text(Vector2(0, size.y - 20), hint, 15, Color(0.75, 0.78, 0.85, 0.8), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 
 
@@ -66,10 +66,10 @@ func _left_panel(m: Main, p: Player) -> void:
 		var fs := "БАК ПУСТ" if fu.empty() else "Топливо %d:%02d" % [int(fu.left) / 60, int(fu.left) % 60]
 		_text(Vector2(356, 58), fs, 15, fc)
 	if p.manual_mode:
-		_text(Vector2(24, 76), "Курсовое: РУЧНОЕ — обороты +%d%% урона  [Q]" % int(round(p.manual_bonus * 100.0)), 19, Color(1.0, 0.82, 0.35))
+		_text(Vector2(24, 76), "Пушка: РУЧНОЙ огонь — разгон +%d%% урона  [Q]" % int(round(p.manual_bonus * 100.0)), 19, Color(1.0, 0.82, 0.35))
 	else:
-		_text(Vector2(24, 76), "Курсовое: АВТО  [Q — ручное, до +50% урона]", 19)
-	_skill(104, "Бочка" if p.has_roll() else "Залп ловушек", "Space", p.roll_cd, p.roll_t if p.has_roll() else p.salvo_t)
+		_text(Vector2(24, 76), "Пушка: стреляет сама  [Q — ручной огонь, до +50% урона]", 19)
+	_skill(104, "Уклонение" if p.has_roll() else "Залп ловушек", "Space", p.roll_cd, p.roll_t if p.has_roll() else p.salvo_t)
 	_skill(128, "Форсаж", "Shift", p.ab_cd, p.ab_t)
 	_skill(152, "Нырок", "V", p.dive_cd, p.dive_t)
 	var s3: Dictionary = p.s3_def()
@@ -207,7 +207,7 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 		var mid := x + w * (1.0 - lo) / (hi - lo)
 		ctrl.draw_line(Vector2(mid, y - 3), Vector2(mid, y + 13), Color.WHITE, 2.0)
 	if p.on_tail():
-		_ctext(size.y / 2.0 + 120.0, "НА ХВОСТЕ: курсовое +50%", 22, Color(1.0, 0.9, 0.4))
+		_ctext(size.y / 2.0 + 120.0, "НА ХВОСТЕ: пушка +50%", 22, Color(1.0, 0.9, 0.4))
 	if m.streak >= 3:
 		var a := clampf(m.streak_t, 0.0, 1.0)
 		_text(Vector2(0, 220), "Серия ×%d · опыт ×%.2f" % [m.streak, m.streak_mult()], 22, Color(1.0, 0.75, 0.4, a), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 24.0)
@@ -329,10 +329,10 @@ func _course_bar(p: Player, pos: Vector2) -> void:
 	var ready := Cards.conds_ok(conds)
 	var y := pos.y + 34.0
 	var col2: Color = sd2.get("color", Menu.C_AMBER)
-	_text(Vector2(pos.x, y + 14), "Курс: «%s»" % sd2["title"], 16, col2.lightened(0.2))
-	ctrl.draw_rect(Rect2(pos.x + 190, y + 2, 220, 14), Color(0, 0, 0, 0.5))
+	_text(Vector2(pos.x, y + 14), "К связке «%s»" % sd2["title"], 14, col2.lightened(0.2), HORIZONTAL_ALIGNMENT_LEFT, 236)
+	ctrl.draw_rect(Rect2(pos.x + 240, y + 2, 170, 14), Color(0, 0, 0, 0.5))
 	var a := 1.0 if not ready else (0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.01))
-	ctrl.draw_rect(Rect2(pos.x + 190, y + 2, 220 * k, 14), Color(col2.r, col2.g, col2.b, a))
+	ctrl.draw_rect(Rect2(pos.x + 240, y + 2, 170 * k, 14), Color(col2.r, col2.g, col2.b, a))
 	var parts := PackedStringArray()
 	for c in conds:
 		parts.append(("✓" if c[1] else "") + String(c[0]))
