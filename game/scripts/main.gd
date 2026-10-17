@@ -190,7 +190,8 @@ func start_run() -> void:
 	world.add_child(spawner)
 	player = Player.new()
 	var sks: Array = Profile.skills(cls_id)
-	player.setup(cls_id, skill_pick.get(cls_id, sks[0]), sks[1])
+	var sk1: String = skill_pick.get(cls_id, sks[0])
+	player.setup(cls_id, sk1, sks[1] if sks[1] != sk1 else (sks[0] if sks[0] != sk1 else ""))
 	world.add_child(player)
 	if Profile.has_perk(cls_id, "b_wing2") and int(player.cls["wingmen"]) > 0:
 		player.add_wingman("swift", 1.0) # перк «Старый знакомый»

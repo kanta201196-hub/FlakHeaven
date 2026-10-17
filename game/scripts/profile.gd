@@ -474,11 +474,19 @@ func set_skill(c: String, slot: int, sk: String) -> void:
 	var s: Array = cls(c)["skills"]
 	while s.size() < 2:
 		s.append("")
-	if slot == 1 and s[0] == sk:
-		s[0] = s[1]
-	if slot == 0 and s[1] == sk:
-		s[1] = s[0]
+	# правка 7 (тест 3.5-s4): один навык не может стоять в обоих слотах — меняем местами,
+	# а если слот 1 остался бы пустым, ставим в него первый открытый навык класса
+	var other := 1 - slot
+	if s[other] == sk:
+		s[other] = s[slot]
 	s[slot] = sk
+	if s[0] == "" or s[0] == s[1]:
+		for alt in PlaneClasses.CLASS_SKILLS[c]:
+			if alt != s[1] and skill_unlocked(c, alt):
+				s[0] = alt
+				break
+	if s[1] == s[0]:
+		s[1] = ""
 	save()
 
 
