@@ -105,8 +105,8 @@ func process(delta: float) -> void:
 		_fort.parts_down = {}
 		for nm in (["turret_1", "turret_2", "turret_3", "turret_4"] if ph >= 2 else []) + (["engine_l", "engine_r"] if ph >= 3 else []):
 			_fort.parts_down[nm] = true
-	elif p.get("enemies", false) and not _spawned:
-		_spawn_all_enemies(m.player.global_position)
+	elif p.get("enemies", false) and (not _spawned or m.get_tree().get_nodes_in_group("enemies").is_empty()):   # смена класса в начале точки очищает мир
+		_spawn_all_enemies(p["pos"])   # точка, а не игрок: в первый кадр игрок ещё не перенесён
 	_hold(p)
 	if _phase == 0 and _t > float(p.get("wait", WAIT)):
 		if p.get("boom", false):
@@ -266,6 +266,9 @@ func _spawn_all_enemies(c: Vector2) -> void:
 		var b := Boss.new()
 		b.setup(v, 99999.0)
 		list.append(b)
+	var tr := Transport.new()   # Т-7: транспортник 3D-моделью
+	tr.setup(99999.0)
+	list.append(tr)
 	for i in list.size():
 		var e: Enemy = list[i]
 		e.position = c + Vector2.from_angle(TAU * i / list.size()) * 260.0
