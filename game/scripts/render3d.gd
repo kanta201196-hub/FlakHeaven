@@ -868,6 +868,10 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			var tail_cab: bool = mt["side"] == "tail" and g.weapon == "turret" and (WeaponModels.TURRET_MODELS.get(p.cls_id, {}) as Dictionary).has("tail")
 			var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id) and not tail_cab
 			var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px, "belly": -tw * 0.028 - (WeaponModels.hang(g.weapon, tr, true) - WeaponModels.PYLON_H) * len_px, "bay": -tw * 0.02 - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
+			if mt["side"] == "under" and u.get("bm") != null:   # пилон — под настоящим крылом модели (тест 3.5-s3)
+				var lo := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
+				if not is_nan(lo):
+					y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
 			wmi.position = Vector3(pt.x, y, pt.y)
 			if tail_cab and u.get("tail") != null:   # кабина — продолжение фюзеляжа модели, шар — у её торца
 				var tpos := WingMech.tail_mount(u["tail"], root)

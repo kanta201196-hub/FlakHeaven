@@ -62,6 +62,53 @@ const TURRET_MODELS := {
 }
 
 
+## Тест 3.5-s3 («ракеты висят в воздухе»): нижняя поверхность модели самолёта на вертикали (x, z) в её осях
+## (длина 1) — в бою пилон ставится под настоящее крыло, как в ангаре; NAN — промах
+static var _faces := {}
+static var _low := {}
+
+
+static func surface_low(scene: PackedScene, x: float, z: float) -> float:
+	var ck := "%s|%.4f|%.4f" % [scene.resource_path, x, z]
+	if _low.has(ck):
+		return _low[ck]
+	if not _faces.has(scene.resource_path):
+		var f := PackedVector3Array()
+		var inst: Node3D = scene.instantiate()
+		for c in inst.find_children("*", "MeshInstance3D", true, false):
+			var mi := c as MeshInstance3D
+			var xf := Transform3D()
+			var n: Node = mi
+			while n != inst and n is Node3D:
+				xf = (n as Node3D).transform * xf
+				n = n.get_parent()
+			for v in mi.mesh.get_faces():
+				f.append(xf * v)
+		inst.free()
+		_faces[scene.resource_path] = f
+	var fs: PackedVector3Array = _faces[scene.resource_path]
+	var best := NAN
+	var p := Vector2(x, z)
+	for i in range(0, fs.size(), 3):
+		var a := fs[i]
+		var a2 := Vector2(a.x, a.z)
+		var v0 := Vector2(fs[i + 1].x, fs[i + 1].z) - a2
+		var v1 := Vector2(fs[i + 2].x, fs[i + 2].z) - a2
+		var v2 := p - a2
+		var den := v0.x * v1.y - v1.x * v0.y
+		if absf(den) < 1e-12:
+			continue
+		var u := (v2.x * v1.y - v1.x * v2.y) / den
+		var w := (v0.x * v2.y - v2.x * v0.y) / den
+		if u < 0.0 or w < 0.0 or u + w > 1.0:
+			continue
+		var y := a.y + u * (fs[i + 1].y - a.y) + w * (fs[i + 2].y - a.y)
+		if is_nan(best) or y < best:
+			best = y
+	_low[ck] = best
+	return best
+
+
 ## Пилон под крылом: высота PYLON_H над верхом модели (top), для ракет — длинный пусковой рельс
 const PYLON_H := 0.07
 
