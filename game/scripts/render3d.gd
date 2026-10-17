@@ -454,6 +454,7 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			u["mech"] = WingMech.attach(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 			if kind == "player":   # Т-5: створки бомбоотсека «Кита»
 				u["bay"] = WingMech.attach_bay(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
+				u["tail"] = WingMech.attach_tail(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
 			u["sh"] = _make_shadow(tex, root)
 		if kind != "enemy":
@@ -868,6 +869,12 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id) and not tail_cab
 			var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px, "belly": -tw * 0.028 - (WeaponModels.hang(g.weapon, tr, true) - WeaponModels.PYLON_H) * len_px, "bay": -tw * 0.02 - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
 			wmi.position = Vector3(pt.x, y, pt.y)
+			if tail_cab and u.get("tail") != null:   # кабина — продолжение фюзеляжа модели, шар — у её торца
+				var tpos := WingMech.tail_mount(u["tail"], root)
+				if tpos != Vector3.INF:
+					wmi.position = tpos
+					if wmi.get_child_count() > 0:
+						(wmi.get_child(0) as Node3D).visible = false
 			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
 				var idle := yaw

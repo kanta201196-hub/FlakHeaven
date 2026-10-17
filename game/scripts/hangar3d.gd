@@ -125,6 +125,8 @@ func _build(cls_id: String, lvl: int) -> void:
 	var mech := WingMech.attach(model, "%s_%d" % [cls_id, lvl])
 	if mech != null and OS.get_cmdline_user_args().has("--mechdown"):
 		WingMech.pose(mech, 1.0)
+	# тест 3.5-s3: кормовая кабина «Кита» — продолжение фюзеляжа в цвет обшивки
+	_tail = WingMech.attach_tail(model, "%s_%d" % [cls_id, lvl])
 	# Т-5: створки бомбоотсека в ангаре открыты — видно бомбы
 	var bay := WingMech.attach_bay(model, "%s_%d" % [cls_id, lvl])
 	if bay != null:
@@ -212,6 +214,13 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 						var l3 := _surface_y(x, 0.0, true)
 						y = l3 if not is_nan(l3) else y
 			wmi.position = Vector3(x, y, z)
+			if side == "tail" and g.weapon == "turret" and _tail != null:
+				var tp := WingMech.tail_mount(_tail, pivot)
+				if tp != Vector3.INF:
+					wmi.position = tp
+					var cab := wmi.find_child("cabin", false, false)
+					if cab != null:
+						cab.visible = false   # своя кабина модели вместо общей
 			if g.weapon == "turret":
 				turret_pos.append([wmi.position, side])
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
@@ -222,6 +231,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 
 
 var _faces := PackedVector3Array()
+var _tail: Node3D = null
 
 
 ## Треугольники модели (в осях pivot) — чтобы найти поверхность крыла под точкой подвеса
