@@ -68,7 +68,8 @@ func class_select(size: Vector2) -> void:
 			if unl:
 				_buttons.append([sr, "skill:%s:%s" % [id, sk]])
 			var si: int = PlaneClasses.CLASS_SKILLS[id].find(sk)
-			_text(Vector2(x + 4, y + 20), ("● " if on else "○ ") + "%s · %d с%s" % [sd["title"], int(sd["cd"]), "" if unl else "  — экипаж ур. %d" % Profile.SKILL_UNLOCK[si]], 17,
+			_text(Vector2(x + 4, y + 20), ("● " if on else "○ ") + "%s · %d с%s%s" % [sd["title"], int(sd["cd"]), "" if unl else "  — экипаж ур. %d" % Profile.SKILL_UNLOCK[si],
+				"  · стоит в слоте 2 [F]" if not on and Profile.skills(id)[1] == sk else ""], 17,
 				Color(0.85, 1.0, 0.85) if on else (Color(0.85, 0.88, 0.95) if unl else Color(0.5, 0.52, 0.56)))
 			_para(Vector2(x + 4, y + 40), sd["short"], w - 40.0, 13, Color(0.75, 0.8, 0.88))
 			y += 62.0

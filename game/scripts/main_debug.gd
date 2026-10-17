@@ -285,7 +285,6 @@ func _run_autotest(delta: float) -> void:
 					m.hangar_tab = "weapons"
 					m.input_ctl.hangar_action("tier:aam:1:a")
 					m.input_ctl.hangar_action("tier:aam:2:b")
-					m.input_ctl.hangar_action("tier:aam:3:a")
 				elif not _shots_done.has("hangar_weapons"):
 					_shot("hangar_weapons")
 					m.hangar_tab = "crew"
