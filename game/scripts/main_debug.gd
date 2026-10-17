@@ -70,6 +70,95 @@ func _shot(name: String) -> void:
 	print("SHOT ", name)
 
 
+var _ui_phase := 0
+
+## Правки 15–16: длинный вылет без боя — 120 карточек в журнале, пауза (Tab) и итоги.
+## godot --path game --rendering-driver opengl3 -- --autotest --shots --uitest
+func _ui_test() -> void:
+	if _ui_phase == 0 and m.state == "playing" and m.run_time > 2.0:
+		var names := ["Ракеты «воздух-воздух»: улучшение", "ГСН «Глазастик»", "Блок НАР: улучшение", "Боевая часть", "Ракетный двигатель",
+			"Форсаж: доводка", "Механизация крыла", "Форсированный двигатель", "Усиленная БЧ", "Пусковое устройство", "Быстрая перезарядка",
+			"Радиостанция «Болтушка»", "Сборщик трофеев", "Осколочная рубашка", "Облегчённый затвор", "Бронебойные снаряды", "Бронеплиты",
+			"Бочка: тренировка", "Звено: слётанность — Стриж 1", "Ведомый: «Стриж» — прикрытие", "СВЯЗКА «Карусель» — слот 1",
+			"МОДЕРНИЗАЦИЯ: «Ливень»", "МОДЕРНИЗАЦИЯ: «Дятел»", "Боевой разворот: тренировка"]
+		var lv := {}
+		for i in 120:
+			var nm: String = names[i % names.size()] if i < 48 else names[randi() % 18]
+			var r: String = Cards.RARITY[randi() % Cards.RARITY.size()]["name"]
+			var l := int(lv.get(nm, 1))
+			if i >= names.size() and l < 5 and not nm.begins_with("МОДЕРНИЗАЦИЯ") and not nm.begins_with("СВЯЗКА"):
+				m.player.cards_log.append("%s (%d → %d) [%s]" % [nm, l, l + 1, r])
+				lv[nm] = l + 1
+			else:
+				m.player.cards_log.append("%s [%s]" % [nm, r])
+		m._set_state("paused")
+		_ui_phase = 1
+	elif _ui_phase == 1 and m.state == "paused" and m._state_t > 0.8:
+		_shot("ui_pause")
+		m._set_state("playing")
+		# итоги как после длинного вылета: урон по источникам, полученный, сбитые
+		m.run_time = 975.0
+		m.stats["dealt"] = {"ракеты В-В": 263378.0, "турели": 70320.0, "уязвимые точки «Крепости»": 64448.0, "курсовое (авто)": 60960.0,
+			"ведомые: стриж": 41590.0, "связка: стальной ёж": 29627.0, "ведомые: грачонок": 26890.0, "НАР": 15360.0, "бомбы": 9000.0}
+		m.stats["taken"] = {"таран": 292.0, "пули": 1010.0, "ракеты": 75.0}
+		m.stats["taken_by"] = {"дроны": 536.0, "перехватчики": 300.0, "ракетоносцы": 75.0, "ПВО": 21.0, "ас-соперник": 12.0, "асы": 355.0}
+		m.stats["kills_by"] = {"дроны": 2890.0, "перехватчики": 519.0, "ракетоносцы": 43.0, "асы": 3.0}
+		m.kills = 3455
+		m.bosses_killed = 3
+		m.shots = 4000
+		m.hits = 1480
+		m.on_evac_success()
+		_ui_phase = 2
+	elif _ui_phase == 2 and m.state == "evac" and m.result_t > 4.0:
+		_shot("ui_result")
+		m.result_tab = 1
+		_ui_phase = 3
+		_hud_at = Time.get_ticks_msec()
+	elif _ui_phase == 3 and Time.get_ticks_msec() - _hud_at > 800:
+		_shot("ui_result_dmg")
+		m.result_tab = 2
+		_ui_phase = 4
+		_hud_at = Time.get_ticks_msec()
+	elif _ui_phase == 4 and Time.get_ticks_msec() - _hud_at > 800:
+		_shot("ui_result_build")
+		m.get_tree().quit()
+
+
+var _hud_phase := 0
+
+## Читаемость HUD: 15-я минута, 80 карточек (подвесы, звено, связки), кадр боя.
+## godot --path game --rendering-driver opengl3 -- --autotest --shots --hudtest
+func _hud_test() -> void:
+	var p := m.player
+	if _hud_phase == 0 and m.run_time > 2.0:
+		seed(7)
+		for i in 80:
+			if Cards.need_course(p):
+				var co := Cards.course_options(p)
+				p.course = co[0] if not co.is_empty() else "-"
+				continue
+			var offs := Cards.offer(p, 3, {}, {}, 0)
+			if offs.is_empty():
+				break
+			Cards.apply(p, offs[randi() % offs.size()])
+		m.level = 84
+		m.kills = 8730
+		m.parts = 38386.0
+		m.run_time = 905.0
+		m.streak = 120
+		m.streak_t = 2.0
+		_hud_phase = 1
+		_hud_at = Time.get_ticks_msec()
+	elif _hud_phase == 1 and Time.get_ticks_msec() - _hud_at > 4500 and m.radio_t <= 0.5:
+		m.radio("Барон", "Ещё один охотник? Посмотрим, сколько продержишься.", true)
+	elif _hud_phase == 1 and Time.get_ticks_msec() - _hud_at > 6000:
+		_shot("hud_late")
+		m.get_tree().quit()
+
+
+var _hud_at := 0
+
+
 var _rep_phase := 0
 
 ## 3.3-t2: отладка — заполнить и отправить отчёт с экрана итогов
@@ -119,6 +208,12 @@ func _mesa_test() -> void:
 func _debug_screenshots(delta: float) -> void:
 	_shot_t += delta / maxf(Engine.time_scale, 0.01)
 	if m._state_t < 0.6:
+		return
+	if m._args.has("--uitest") and m.state in ["playing", "paused", "evac", "levelup"]:
+		_ui_test()
+		return
+	if m._args.has("--hudtest") and m.state == "playing":
+		_hud_test()
 		return
 	if m.state == "menu" and m._state_t > 1.0 and m.menu.howto:
 		_shot("howto")
@@ -249,7 +344,6 @@ func _run_autotest(delta: float) -> void:
 					m.hangar_tab = "weapons"
 					m.input_ctl.hangar_action("tier:aam:1:a")
 					m.input_ctl.hangar_action("tier:aam:2:b")
-					m.input_ctl.hangar_action("tier:aam:3:a")
 				elif not _shots_done.has("hangar_weapons"):
 					_shot("hangar_weapons")
 					m.hangar_tab = "crew"

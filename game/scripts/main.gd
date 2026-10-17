@@ -28,6 +28,7 @@ var cls_id := "fighter"
 var skill_pick := {}
 var codex_back := "menu"
 var result_t := 0.0
+var result_tab := 0 # правка 30: вкладка итогов — 0 обзор, 1 урон, 2 сборка
 var hangar_cls := "fighter"
 var hangar_tab := "plane"
 var hangar_w := "aam"
@@ -58,6 +59,7 @@ var activities_done := 0
 var radio_from := ""
 var radio_text := ""
 var radio_t := 0.0
+var radio_enemy := false # перехват вражеского эфира — красная плашка
 var tail_kills := 0
 var level_at_5 := 0   # уровень на 5:00 — для баланса кривой опыта
 var parts := 0.0        # запчасти (валюта ангара), набранные за вылет
@@ -190,7 +192,8 @@ func start_run() -> void:
 	world.add_child(spawner)
 	player = Player.new()
 	var sks: Array = Profile.skills(cls_id)
-	player.setup(cls_id, skill_pick.get(cls_id, sks[0]), sks[1])
+	var sk1: String = skill_pick.get(cls_id, sks[0])
+	player.setup(cls_id, sk1, sks[1] if sks[1] != sk1 else (sks[0] if sks[0] != sk1 else ""))
 	world.add_child(player)
 	if Profile.has_perk(cls_id, "b_wing2") and int(player.cls["wingmen"]) > 0:
 		player.add_wingman("swift", 1.0) # перк «Старый знакомый»
@@ -351,7 +354,14 @@ func _open_levelup() -> void:
 	offer_rare = rare_picks > 0
 	offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
 	if offers.is_empty():
+		# правка 3.5-s4: все улучшения собраны — награда за уровень и аса не пропадает молча
+		var n := pending_levels
 		pending_levels = 0
+		rare_picks = 0
+		rare_reasons.clear()
+		player.heal(player.max_hp * minf(0.5, 0.1 * n))
+		parts += 30.0 * n * continue_mult()
+		show_banner("Все улучшения собраны — вместо карточки ремонт и +%d запчастей" % int(30.0 * n * continue_mult()), 3.0)
 		return
 	levelup_intro = Hints.bump("levelup_intro") <= 3 # U-03: первые 3 выбора — с объяснением
 	_set_state("levelup")
@@ -472,10 +482,11 @@ func ban_card(i: int) -> void:
 	sfx.play("ui_ban", -14.0, 1.6)
 
 
-func radio(from: String, text: String) -> void:
+func radio(from: String, text: String, enemy := false) -> void:
 	radio_from = from
 	radio_text = text
-	radio_t = 3.5
+	radio_enemy = enemy
+	radio_t = 3.5 + text.length() * 0.03 # длинную фразу держим дольше
 	sfx.play("radio", -18.0, 2.2)
 
 
@@ -485,7 +496,8 @@ func on_activity_success(kind: String) -> void:
 		print("AUTOTEST: activity success ", kind, " at %.0f" % run_time)
 	# 3.5: активности стали чаще (раз в минуту) — выбор из редких карточек за каждую вторую,
 	# за остальные — ремонт 20% и запчасти, иначе сила игрока растёт ещё быстрее (лог 3.4-t1: Кит неуязвим с 12-й минуты)
-	var rare := activities_done % 2 == 1
+	# правка 3.5-s4: ас-соперник — самая трудная активность, выбор из редких карточек за каждого
+	var rare := activities_done % 2 == 1 or kind == "dogfight"
 	var what: String = {"ground": "Позиция ПВО уничтожена!", "convoy": "Колонна разбита!"}.get(kind, "Ас-соперник сбит!")
 	player.add_course_pts(1)
 	if rare:
@@ -531,6 +543,9 @@ func boss_alive() -> bool:
 
 func on_boss_wave(wave: int, n: int) -> void:
 	show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
+	# правка 20: ас выходит в эфир — перехват его переговоров справа внизу
+	radio("Перехват", ["Цель вижу. Захожу с солнца.", "Это наше небо. Уходи, пока цел.", "Звено, прикрыть меня — работаю по одиночке.",
+		"Ещё один охотник? Посмотрим, сколько продержишься."][randi() % 4], true)
 	Hints.show("ace", "Ас — сильный враг. Собьёте его — откроются ворота эвакуации и добавится переброс карточек.", 8.0, 2)
 	# 3.5 (правка 30): время жизни аса — для лога
 	for b in get_tree().get_nodes_in_group("enemies"):
@@ -667,6 +682,7 @@ func _award(outcome: String) -> void:
 		"bosses": bosses_killed, "activities": activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
 		"op_parts": int(op_result.get("parts", 0))})
 	result_t = 0.0
+	result_tab = 0
 
 
 func on_player_dead() -> void:

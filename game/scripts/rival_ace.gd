@@ -81,7 +81,7 @@ func say(key: String, force := false) -> void:
 		return
 	_said["_last"] = now
 	var arr: Array = LINES[key]
-	Main.I.radio(callsign, arr[randi() % arr.size()])
+	Main.I.radio(callsign, arr[randi() % arr.size()], true)
 
 
 func take_hit(dmg: float, source := "прочее") -> void:

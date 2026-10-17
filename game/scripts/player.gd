@@ -94,6 +94,7 @@ var s3_cd := 0.0
 var combat_t := 0.0   # «боевой режим» после боевого разворота
 var shield_t := 0.0   # бронещит
 var _turn_target := 0.0
+var turn_lock: Enemy = null  # цель «Боевого разворота»: нос и пушка держатся на ней весь боевой режим
 var _carpet_left := 0
 var _carpet_tick := 0.0
 var _carpet_i := 0
@@ -330,6 +331,10 @@ func turn_rate() -> float:
 	var f := velocity.length() / maxf(cruise_speed(), 1.0)
 	var k := clampf(1.0 + (1.0 - f) * 0.8, 0.75, 1.4)
 	return deg_to_rad(Tuning.g("turn_rate")) * float(cls["turn"]) * mods["turn"] * k
+
+
+func lock_ok() -> bool:
+	return is_instance_valid(turn_lock) and turn_lock.hp > 0.0
 
 
 func on_tail() -> bool:

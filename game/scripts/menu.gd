@@ -211,6 +211,10 @@ func _option(key: String, dir: int) -> void:
 			Tuning.save_params()
 		"cam_tilt":
 			Main.I.input_ctl.cycle_tilt(dir)
+		"minimap":
+			Settings.minimap = wrapi(Settings.minimap + dir, 0, Settings.MINIMAP_SIZES.size())
+		"minimap_alpha":
+			Settings.minimap_alpha = wrapi(Settings.minimap_alpha + dir, 0, Settings.MINIMAP_ALPHA.size())
 		"font":
 			Settings.font = wrapi(Settings.font + dir, 0, Settings.FONTS.size())
 			Hud.reset_fonts()
@@ -464,6 +468,9 @@ func _settings(size: Vector2) -> void:
 			y = _check(x, y, w2, "Объёмная 3D-картинка (выкл. — старая 2D)", Tuning.g("render3d") > 0.5, "render3d")
 			y = _check(x, y, w2, "Спрайты (выкл. — схематичные фигуры, F4)", Tuning.g("sprites") > 0.5, "sprites")
 			y = _check(x, y, w2, "Круги дальности оружия (пунктир)", Tuning.g("range_rings") > 0.5, "range_rings")
+			y = _section(x, y + 10, w2, "Интерфейс в полёте")
+			y = _opt(x, y, w2, "Миникарта", Settings.MINIMAP_NAMES[Settings.minimap], "minimap")
+			y = _opt(x, y, w2, "Прозрачность миникарты", "%d%%" % int(Settings.MINIMAP_ALPHA[Settings.minimap_alpha] * 100.0), "minimap_alpha")
 		2:
 			y = _section(x, y, w2, "Громкость")
 			y = _slider(x, y, w2, "Общая", "master_db", "", -1.0)

@@ -65,6 +65,9 @@ func handle_global_input() -> void:
 		"dead", "evac":
 			if Input.is_action_just_pressed("restart") and m.result_t < 0.5:
 				return
+			for i in 3:
+				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
+					m.result_tab = i
 			if Input.is_action_just_pressed("ui_hangar"):
 				ui_click("to_hangar")
 				return
@@ -77,6 +80,8 @@ func handle_global_input() -> void:
 			return
 	if Input.is_action_just_pressed("toggle_tuning") and Main.DEBUG:
 		m.tuning_panel.toggle()
+	if Input.is_action_just_pressed("wing_prio") and m.state == "playing" and is_instance_valid(m.player) and not m.player.wingmen.is_empty():
+		cycle_wing_prio()
 	if Input.is_action_just_pressed("toggle_numbers"):
 		Tuning.set_param("damage_numbers", 1.0 - Tuning.g("damage_numbers"))
 	if Input.is_action_just_pressed("toggle_sprites") and Main.DEBUG:
@@ -185,6 +190,8 @@ func ui_click(action: String) -> void:
 		m.choose_card(int(action.substr(5)))
 	elif action.begins_with("prio:"):
 		cycle_priority(int(action.substr(5)))
+	elif action == "wprio":
+		cycle_wing_prio()
 	elif action.begins_with("trig:"):
 		var g: Hardpoint = m.player.groups[int(action.substr(5))]
 		g.trigger = "button" if g.trigger == "auto" else "auto"
@@ -197,6 +204,8 @@ func ui_click(action: String) -> void:
 		m.reroll()
 	elif action == "resume":
 		m._set_state("playing")
+	elif action.begins_with("rtab:"):
+		m.result_tab = int(action.substr(5))
 	elif action == "restart":
 		m.restart()
 	elif action == "change_class":
@@ -247,8 +256,7 @@ func hangar_action(a: String) -> void:
 			Profile.save()
 		"slot":
 			Profile.set_skill(c, int(p[1]), p[2])
-			if int(p[1]) == 0:
-				m.skill_pick[c] = p[2]
+			m.skill_pick[c] = Profile.skills(c)[0] # правка 7: выбор в полёте всегда совпадает с ангаром
 		"callsign":
 			Profile.next_callsign(c)
 		"promote":
@@ -271,3 +279,11 @@ func hangar_action(a: String) -> void:
 		"dbg_wipe":
 			Profile.wipe()
 	m.sfx.play("card" if ok else "ui_ban", -10.0, 1.2 if ok else 0.8)
+
+
+## Правка 3.5-s4: цель звена — по кругу; ведущий слышит ответ по радио
+func cycle_wing_prio() -> void:
+	Settings.wing_prio = wrapi(Settings.wing_prio + 1, 0, Settings.WING_PRIO.size())
+	Settings.save_settings()
+	var t: String = Settings.WING_PRIO[Settings.wing_prio]
+	Main.I.radio("Звено", "Принял: %s!" % (t.left(1).to_upper() + t.substr(1)))

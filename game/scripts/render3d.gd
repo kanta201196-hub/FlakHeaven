@@ -23,7 +23,7 @@ var sun: DirectionalLight3D
 var terrain: Terrain3D
 var _ground_mat: ShaderMaterial
 var _units := {}      # instance_id → {node, kind, prev_heading, bank}
-var _objs := {}       # ключ клетки → MeshInstance3D
+var _objs := {}       # ключ клетки → MeshInstance3D (у обломков o_wreck — сцена модели)
 var _clouds: Array = []
 var _scorch: Array = []
 var _scorch_mesh: QuadMesh
@@ -31,6 +31,7 @@ var _scorch_mat: StandardMaterial3D
 var _flash_mat: StandardMaterial3D
 var _elite_mat: StandardMaterial3D
 var _zoom := 1.0
+var _c2 := Vector2.ZERO        # центр кадра на плоскости боя (для указателей за краем экрана)
 var _shadow_shader: Shader
 var _trails: Contrails       # 3.4-t1 (п. 10, 34): инверсионные следы самолётов и ракет
 var _tid := 0                # номера ракет для их следов
@@ -304,7 +305,19 @@ func mouse_world(fallback: Vector2) -> Vector2:
 func world_to_screen(p: Vector2, fallback: Vector2) -> Vector2:
 	if not _tilt_on:
 		return fallback
-	return cam.unproject_position(Vector3(p.x, 0.0, p.y))
+	var v := Vector3(p.x, 0.0, p.y)
+	if not cam.is_position_behind(v):
+		return cam.unproject_position(v)
+	# Правка 3.5-s4: точка позади камеры (далеко внизу кадра) проецируется зеркально — стрелка эвакуации
+	# показывала вперёд, хотя цель сзади. Берём направление от центра кадра и уводим точку далеко за край.
+	var dir := (p - _c2).normalized()
+	var a := cam.unproject_position(Vector3(_c2.x, 0.0, _c2.y))
+	var b := cam.unproject_position(Vector3(_c2.x + dir.x * 100.0, 0.0, _c2.y + dir.y * 100.0))
+	return a + (b - a).normalized() * 100000.0
+
+
+func tilt_on() -> bool:
+	return _tilt_on
 
 
 # ---------- камера ----------
@@ -346,6 +359,7 @@ func _process(delta: float) -> void:
 	if not (is_finite(c2.x) and is_finite(c2.y) and zoom > 0.001):
 		return
 	_zoom = zoom
+	_c2 = c2
 	var h := _cam_height(zoom)
 	var tilt := deg_to_rad(Tuning.g("cam_tilt"))
 	if tilt > 0.001:
@@ -359,6 +373,7 @@ func _process(delta: float) -> void:
 	# рельеф — куски под видимой областью дна долин (+ запас на тени и сглаживание камеры)
 	if terrain._bg != m.background:
 		terrain._bg = m.background
+		m.background.place_filter = terrain.fix_object   # тест 3.5-s4 (п. 20): объекты клеток не в реке
 		terrain.clear()
 	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
 	_set_tilt_mode(tilt > 0.001, m)
@@ -718,6 +733,10 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				tilt = Vector2(cr.y, cr.z)
 			elif ue.get("bm") != null:
 				hull = _ground_parts(ue, e, ang, delta)
+				var gt := e as GroundTarget
+				if gt != null and gt.drive != null:
+					# правка 3.5-s4: ЗСУ и ЗРК — корпус по курсу машины, наклон по склону и от разгона
+					tilt = _drive_tilt(ue, gt.anchor, hull, gt.drive, len_px, delta)
 			_place(ue, Vector2(gp.x, gp.z), hull, tilt.y, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y, tilt.x)
 		else:
 			var re := _relief_alt(ue, e.global_position, Vector2.from_angle(ang) * 250.0, 0.0 if e.is_boss else 1.0, sd)
@@ -749,12 +768,18 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 			var n := inst.find_child(nm, true, false)
 			if n != null:
 				u[nm] = n
-	# едет — корпус по ходу движения
-	var lp: Vector2 = u.get("lastp", e.global_position)
-	var mv := e.global_position - lp
-	u["lastp"] = e.global_position
-	if mv.length() > 0.3:
-		u["hull"] = lerp_angle(float(u["hull"]), mv.angle(), 1.0 - exp(-delta * 4.0))
+	var gt := e as GroundTarget
+	if gt != null and gt.drive != null:
+		# правка 3.5-s4: курс корпуса — из модуля движения. Раньше брался сдвиг точки на экране,
+		# а она смещается и от движения камеры — корпус «перекатывался» на стоящей машине
+		u["hull"] = gt.drive.heading
+	else:
+		# едет — корпус по ходу движения
+		var lp: Vector2 = u.get("lastp", e.global_position)
+		var mv := e.global_position - lp
+		u["lastp"] = e.global_position
+		if mv.length() > 0.3:
+			u["hull"] = lerp_angle(float(u["hull"]), mv.angle(), 1.0 - exp(-delta * 4.0))
 	var hull: float = u["hull"]
 	if u.has("turret"):
 		(u["turret"] as Node3D).rotation.y = -wrapf(ang - hull, -PI, PI)
@@ -805,22 +830,26 @@ func _convoy_parts(u: Dictionary, v: ConvoyVehicle, len_px: float, delta: float)
 		if d.has("launcher"):
 			var ln := d["launcher"] as Node3D
 			ln.rotation.z = move_toward(ln.rotation.z, deg_to_rad(35.0) if v._lock > 0.0 else 0.0, delta * 1.5)
-	# наклон по рельефу: высоты под носом, кормой и бортами
+	var sm := _drive_tilt(u, v.anchor, hull, dr, len_px, delta)
+	return Vector3(hull, sm.x, sm.y)
+
+
+## Наклон корпуса машины (тангаж, крен): по рельефу под носом, кормой и бортами; клевок при торможении,
+## приседание при разгоне, крен наружу на повороте, мелкая раскачка на ходу. Общее для конвоя и ПВО.
+func _drive_tilt(u: Dictionary, a: Vector2, hull: float, dr: GroundDrive, len_px: float, delta: float) -> Vector2:
 	var pitch := 0.0
 	var bank := 0.0
-	if terrain != null and v.anchor != Vector2.INF:
+	if terrain != null and a != Vector2.INF:
 		var f := Vector2.from_angle(hull) * len_px * 0.45
 		var sd := Vector2(-f.y, f.x) * 0.45
-		var a := v.anchor
 		pitch = atan2(terrain.surface_fast(a.x + f.x, a.y + f.y).y - terrain.surface_fast(a.x - f.x, a.y - f.y).y, len_px * 0.9)
 		bank = atan2(terrain.surface_fast(a.x + sd.x, a.y + sd.y).y - terrain.surface_fast(a.x - sd.x, a.y - sd.y).y, len_px * 0.4)
-	# клевок при торможении, приседание при разгоне; крен наружу на повороте; мелкая раскачка на ходу
 	pitch += clampf(dr.acc_now * 0.0012, -0.06, 0.06)
 	bank += clampf(-dr.yaw_rate * dr.speed * 0.0009, -0.07, 0.07) + sin(dr.dist * 0.09) * 0.006 * clampf(dr.speed / 60.0, 0.0, 1.0)
 	var sm: Vector2 = u.get("tilt", Vector2(pitch, bank))
 	sm = sm.lerp(Vector2(pitch, bank), 1.0 - exp(-delta * 6.0))
 	u["tilt"] = sm
-	return Vector3(hull, sm.x, sm.y)
+	return sm
 
 
 ## A-03: остовы машин конвоя — та же модель, обгоревшая: тент и стрелки пропадают, корпус тёмный, дым столбом
@@ -1205,6 +1234,7 @@ const OBJ_TOP := -30.0
 ## B-26: столовая гора-картинка не нужна — горы теперь настоящие;
 ## B-41: скалы-картинки заменены группами моделей (biome_props.gd)
 const OBJ_SKIP_3D := ["o_mesa", "o_rocks_big", "o_rocks_small"]
+var _wreck_plane: PackedScene = load("res://models/biome/b11_wreck_plane.glb") if ResourceLoader.exists("res://models/biome/b11_wreck_plane.glb") else null
 
 const OBJ_RELIEF := {
 	"o_rocks_big": [0.16, 0.45], "o_rocks_small": [0.18, 0.45], "o_mesa": [0.16, 0.25],
@@ -1243,6 +1273,22 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				mi.basis = Basis(Vector3.UP, -float(o["rot"])).scaled(Vector3(sz, sz, sz))
 				add_child(mi)
 				_objs[key] = mi
+				continue
+			if o["name"] == "o_wreck" and _wreck_plane != null:
+				# тест 3.5-s4 (п. 18): обломки — объёмный остов (tools/blender/plane_wreck.py), лежит по склону;
+				# земля под ним не выравнивается (раньше — выдавленная картинка в круглой площадке)
+				var sw := float(o["size"])
+				var e := sw * 0.35
+				var px: float = o["pos"].x
+				var pz: float = o["pos"].y
+				var nrm := Vector3(terrain.surface_fast(px - e, pz).y - terrain.surface_fast(px + e, pz).y, 2.0 * e,
+					terrain.surface_fast(px, pz - e).y - terrain.surface_fast(px, pz + e).y).normalized()
+				var wn: Node3D = _wreck_plane.instantiate()
+				wn.position = Vector3(px, gy - sw * 0.01, pz)
+				wn.basis = (Basis(Quaternion(Vector3.UP, nrm)) * Basis(Vector3.UP, -float(o["rot"]))).scaled(Vector3(sw, sw, sw))
+				add_child(wn)
+				_objs[key] = wn
+				mi.free()
 				continue
 			if float(rel[0]) > 0.0:
 				# 3.3: самолёт летит над всем (как в Sublight) — рельеф никогда не дотягивается до плоскости боя

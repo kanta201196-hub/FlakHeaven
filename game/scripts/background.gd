@@ -20,7 +20,7 @@ const OBJECTS := {
 	"o_rocks_small": [150.0, 8.0, 5.0, Color(0.92, 0.9, 0.86)],
 	"o_mesa": [560.0, 34.0, 1.2, Color(0.9, 0.86, 0.82)],
 	"o_fort": [380.0, 18.0, 1.0, Color(1, 1, 1)],
-	"o_village": [440.0, 10.0, 1.2, Color(1, 1, 1)],
+	"o_village": [640.0, 10.0, 1.2, Color(1, 1, 1)],   # тест 3.5-s4 (п. 19): разрушенный городок — крупнее (было 440)
 	"o_oasis": [420.0, 16.0, 1.0, Color(1, 1, 1)],
 	"o_crater": [170.0, 0.0, 3.0, Color(1, 1, 1)],
 	"o_wreck": [150.0, 3.0, 1.2, Color(1, 1, 1)],
@@ -83,7 +83,25 @@ func _process(_delta: float) -> void:
 
 
 ## Объект клетки (или пусто): одинаковый для одной и той же клетки.
+## Тест 3.5-s4 (п. 20): поправка места объекта по рельефу (Terrain3D.fix_object — не в реке);
+## задаёт 3D-рельеф, без него объекты стоят как выпали. Результат с поправкой кэшируется
+var place_filter := Callable()
+var _placed := {}
+
+
 func chunk_object(cx: int, cy: int) -> Dictionary:
+	if not place_filter.is_valid():
+		return _chunk_object_raw(cx, cy)
+	var key := Vector2i(cx, cy)
+	if not _placed.has(key):
+		if _placed.size() > 4000:
+			_placed.clear()
+		var o := _chunk_object_raw(cx, cy)
+		_placed[key] = o if o.is_empty() else place_filter.call(o)
+	return _placed[key]
+
+
+func _chunk_object_raw(cx: int, cy: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(Vector2i(cx, cy)) ^ 0x0b1e
 	if _names.is_empty() or rng.randf() > OBJ_CHANCE:
