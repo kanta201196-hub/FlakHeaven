@@ -291,6 +291,13 @@ func _hangar_bench() -> void:
 				_hq.append(q)
 			_t = 0.0
 			return
+		if OS.get_cmdline_user_args().has("--hangarweaptab"):
+			# тест 3.5-s3: вкладка «ОРУЖИЕ» — каждое оружие объёмной моделью, ступени 1 / 3 / 5 и модернизация
+			for w in ["aam", "rockets", "bombs", "flares", "turret"]:
+				for wt in [1, 2, 3, 4]:
+					_hq.append(["W", w, wt])
+			_t = 0.0
+			return
 		var evo_bench := OS.get_cmdline_user_args().has("--hangarevo")
 		if evo_bench or OS.get_cmdline_user_args().has("--hangarweap"):
 			# Т-6 (--hangarevo): все эволюции — «Шмель» и «Салют» на истребителе, «Ливень» и «Бабушкин ковёр»
@@ -326,6 +333,20 @@ func _hangar_bench() -> void:
 		m.get_tree().quit()
 		return
 	var cur: Array = _hq[0]
+	if cur[0] == "W":
+		m.hangar_tab = "weapons"
+		m.hangar_cls = "attacker"
+		m.hangar_w = cur[1]
+		if Hangar3D.I != null:
+			Hangar3D.I.weapon_tier = cur[2]
+			Hangar3D.I._idle = 0.0
+		_hf += 1
+		if _hf > 8 and _t > 1.2:
+			_save("hangar_w_%s_%d" % [cur[1], cur[2]])
+			_hq.pop_front()
+			_t = 0.0
+			_hf = 0
+		return
 	m.hangar_tab = "plane"
 	m.hangar_cls = cur[0]
 	if Hangar3D.I != null:

@@ -150,7 +150,28 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		y += 80.0
 	var w2 := m.hangar_w
 	var rx := lx + 340.0
-	var rw := area.size.x - 340.0
+	var rw := area.size.x - 340.0 - 470.0
+	# тест 3.5-s3: оружие — объёмной моделью справа, как самолёт на вкладке «САМОЛЁТ»
+	var vx := rx + rw + 20.0
+	var vw := 450.0
+	var h3 := Hangar3D.ensure(ctrl)
+	_panel(Rect2(vx, area.position.y + 40, vw, 400), false)
+	var vr := Rect2(vx + 8, area.position.y + 48, vw - 16, 330)
+	if WeaponModels.WEAPON_GLB.has(w2) or w2 == "turret":
+		ctrl.draw_texture_rect(h3.show_weapon(m.hangar_cls, w2, vr), vr, false)
+		_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
+		h3.lvl_rects.clear()
+		h3.tier_rects.clear()
+		for ti in 4:
+			var tr2 := Rect2(vx + 16 + ti * 106, area.position.y + 392, 98, 32)
+			var on2: bool = h3.weapon_tier == ti + 1
+			ctrl.draw_rect(tr2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.08))
+			_text(Vector2(tr2.position.x, tr2.position.y + 22), ("ур. %d" % [1, 3, 5][ti]) if ti < 3 else "модерниз.", 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
+			h3.tier_rects.append([tr2, ti + 1])
+		if w2 == "turret":
+			_text(Vector2(vx + 16, area.position.y + 452), "Турель класса: %s" % PlaneClasses.DATA[m.hangar_cls]["title"], 14, Color(0.7, 0.74, 0.8))
+	else:
+		_text(Vector2(vx + 24, area.position.y + 220), "Встроенное оружие — модель на самолёте", 16, Color(0.7, 0.74, 0.8))
 	_text(Vector2(rx, area.position.y + 24), "%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)" % Weapons.DEFS[w2]["title"], 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
 	for tier in [1, 2, 3]:
