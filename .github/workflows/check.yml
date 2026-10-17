@@ -2,10 +2,13 @@
 # Импорт проекта Godot и быстрый вылет без окна (tools/ci/smoke.sh) за каждый класс.
 name: Проверка игры
 
+# Правки только документов, инструментов отчётов и тестерских инструкций игру не меняют — проверку не гоняем.
 on:
   pull_request:
+    paths-ignore: ['docs/**', '**/*.md', 'tools/reports/**', 'tools/tester/**']
   push:
     branches: [main]
+    paths-ignore: ['docs/**', '**/*.md', 'tools/reports/**', 'tools/tester/**']
   workflow_dispatch:
 
 concurrency:
