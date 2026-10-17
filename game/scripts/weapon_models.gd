@@ -576,8 +576,8 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 		var wr := wing_point(cls_id, lvl, 1.0)
 		order = [["tail", tail + L * 0.035, PI, 0.0], ["wing", wl.x, PI, wl.y], ["wing", wr.x, PI, wr.y]]
 	else:
-		# штурмовик: стрелок за кабиной (верхняя), вторая — нижняя под фюзеляжем
-		order = [["top", nose - L * 0.36, PI, 0.0], ["bottom", nose - L * 0.45, PI, 0.0], ["tail", tail + L * 0.035, PI, 0.0]]
+		# штурмовик: стрелок за кабиной (верхняя; тест 3.5-s3 — на фюзеляже за фонарём, не на нём), вторая — нижняя
+		order = [["top", nose - L * 0.5, PI, 0.0], ["bottom", nose - L * 0.45, PI, 0.0], ["tail", tail + L * 0.035, PI, 0.0]]
 	for i in g.slots:
 		var o: Array = order[i % order.size()]
 		out.append({"p": Vector2(o[1], o[3]), "side": o[0], "yaw": o[2]})
