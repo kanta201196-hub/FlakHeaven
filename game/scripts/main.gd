@@ -58,6 +58,7 @@ var activities_done := 0
 var radio_from := ""
 var radio_text := ""
 var radio_t := 0.0
+var radio_enemy := false # перехват вражеского эфира — красная плашка
 var tail_kills := 0
 var level_at_5 := 0   # уровень на 5:00 — для баланса кривой опыта
 var parts := 0.0        # запчасти (валюта ангара), набранные за вылет
@@ -480,10 +481,11 @@ func ban_card(i: int) -> void:
 	sfx.play("ui_ban", -14.0, 1.6)
 
 
-func radio(from: String, text: String) -> void:
+func radio(from: String, text: String, enemy := false) -> void:
 	radio_from = from
 	radio_text = text
-	radio_t = 3.5
+	radio_enemy = enemy
+	radio_t = 3.5 + text.length() * 0.03 # длинную фразу держим дольше
 	sfx.play("radio", -18.0, 2.2)
 
 
@@ -540,6 +542,9 @@ func boss_alive() -> bool:
 
 func on_boss_wave(wave: int, n: int) -> void:
 	show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
+	# правка 20: ас выходит в эфир — перехват его переговоров справа внизу
+	radio("Перехват", ["Цель вижу. Захожу с солнца.", "Это наше небо. Уходи, пока цел.", "Звено, прикрыть меня — работаю по одиночке.",
+		"Ещё один охотник? Посмотрим, сколько продержишься."][randi() % 4], true)
 	Hints.show("ace", "Ас — сильный враг. Собьёте его — откроются ворота эвакуации и добавится переброс карточек.", 8.0, 2)
 	# 3.5 (правка 30): время жизни аса — для лога
 	for b in get_tree().get_nodes_in_group("enemies"):

@@ -103,6 +103,41 @@ func _ui_test() -> void:
 		m.get_tree().quit()
 
 
+var _hud_phase := 0
+
+## Читаемость HUD: 15-я минута, 80 карточек (подвесы, звено, связки), кадр боя.
+## godot --path game --rendering-driver opengl3 -- --autotest --shots --hudtest
+func _hud_test() -> void:
+	var p := m.player
+	if _hud_phase == 0 and m.run_time > 2.0:
+		seed(7)
+		for i in 80:
+			if Cards.need_course(p):
+				var co := Cards.course_options(p)
+				p.course = co[0] if not co.is_empty() else "-"
+				continue
+			var offs := Cards.offer(p, 3, {}, {}, 0)
+			if offs.is_empty():
+				break
+			Cards.apply(p, offs[randi() % offs.size()])
+		m.level = 84
+		m.kills = 8730
+		m.parts = 38386.0
+		m.run_time = 905.0
+		m.streak = 120
+		m.streak_t = 2.0
+		_hud_phase = 1
+		_hud_at = Time.get_ticks_msec()
+	elif _hud_phase == 1 and Time.get_ticks_msec() - _hud_at > 4500 and m.radio_t <= 0.5:
+		m.radio("Барон", "Ещё один охотник? Посмотрим, сколько продержишься.", true)
+	elif _hud_phase == 1 and Time.get_ticks_msec() - _hud_at > 6000:
+		_shot("hud_late")
+		m.get_tree().quit()
+
+
+var _hud_at := 0
+
+
 var _rep_phase := 0
 
 ## 3.3-t2: отладка — заполнить и отправить отчёт с экрана итогов
@@ -155,6 +190,9 @@ func _debug_screenshots(delta: float) -> void:
 		return
 	if m._args.has("--uitest") and m.state in ["playing", "paused", "evac", "levelup"]:
 		_ui_test()
+		return
+	if m._args.has("--hudtest") and m.state == "playing":
+		_hud_test()
 		return
 	if m.state == "menu" and m._state_t > 1.0 and m.menu.howto:
 		_shot("howto")
