@@ -589,6 +589,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			_place(ue, Vector2(gp.x, gp.z), hull, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
 		else:
 			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle()) # 3.5: бочка при уклонении
+			if ue.get("bm") != null and e is Fortress:
+				_fortress_parts(ue, e as Fortress, ang, delta)
 		var mi2: MeshInstance3D = ue["mi"]
 		mi2.material_overlay = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
 	for id in _units.keys():
@@ -625,6 +627,61 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 		var ln := u["launcher"] as Node3D
 		ln.rotation.z = move_toward(ln.rotation.z, up, delta * 1.2)
 	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher")) else ang
+
+
+## Подвижные части «Крепости» (tools/blender/fortress.py): башни смотрят на игрока, винты крутятся,
+## выбитые точки (Fortress.parts_down) пропадают или останавливаются; с фазы 2 открываются люки
+## и поднимаются ракеты, в фазе 3 откидываются панели обшивки над раскалённым ядром.
+const FORTRESS_NODES := ["turret_1", "turret_2", "turret_3", "turret_4", "engine_l_prop", "engine_l_prop2",
+	"engine_r_prop", "engine_r_prop2", "hatch_l", "hatch_r", "bay_l", "bay_r", "hull_l", "hull_r", "core"]
+
+
+func _fortress_parts(u: Dictionary, f: Fortress, ang: float, delta: float) -> void:
+	if not u.has("fparts"):
+		var inst := (u["node"] as Node3D).get_child(0)
+		var d := {}
+		for nm in FORTRESS_NODES:
+			var n := inst.find_child(nm, true, false) as Node3D
+			if n != null:
+				d[nm] = n
+				d[nm + "@"] = n.position
+		u["fparts"] = d
+	var parts: Dictionary = u["fparts"]
+	var p := Main.I.player
+	for i in 4:
+		var nm := "turret_%d" % (i + 1)
+		if not parts.has(nm):
+			continue
+		var t := parts[nm] as Node3D
+		t.visible = not f.parts_down.has(nm)
+		if t.visible and p != null and i < f.points.size():
+			var to := p.global_position - (f.global_position + (f.points[i]["off"] as Vector2).rotated(ang))
+			t.rotation.y = lerp_angle(t.rotation.y, -wrapf(to.angle() - ang, -PI, PI), 1.0 - exp(-delta * 6.0))
+	for side in ["l", "r"]:
+		var down := f.parts_down.has("engine_" + side)
+		for k in ["", "2"]:
+			var nm: String = "engine_%s_prop%s" % [side, k]
+			if parts.has(nm):
+				var pr := parts[nm] as Node3D
+				if down:   # винт встал, лопасти перекошены
+					pr.rotation.x = lerp_angle(pr.rotation.x, 0.4 if k == "" else -0.3, 1.0 - exp(-delta * 2.0))
+				else:
+					pr.rotate_x(delta * (22.0 if k == "" else -22.0))
+		var s := -1.0 if side == "l" else 1.0   # левая створка (−Z в Godot) открывается против часовой вокруг X
+		if parts.has("hatch_" + side):
+			var h := parts["hatch_" + side] as Node3D
+			h.rotation.x = move_toward(h.rotation.x, s * deg_to_rad(125.0) if f.hatches_open else 0.0, delta * 2.0)
+		if parts.has("bay_" + side):
+			var b := parts["bay_" + side] as Node3D
+			var base: Vector3 = parts["bay_" + side + "@"]
+			b.position.y = move_toward(b.position.y, base.y + (0.012 if f.hatches_open else 0.0), delta * 0.02)
+		if parts.has("hull_" + side):
+			var hp := parts["hull_" + side] as Node3D
+			hp.rotation.x = move_toward(hp.rotation.x, s * deg_to_rad(140.0) if f.hull_open else 0.0, delta * 1.5)
+	if parts.has("core"):
+		var c := parts["core"] as Node3D
+		var pulse := 1.0 + (0.08 * sin(Time.get_ticks_msec() * 0.012) if f.hull_open else 0.0)
+		c.scale = Vector3(1.0, pulse, 1.0)
 
 
 ## Штанга заправщика (tools/blender/tanker_boom.py, узлы Boom / BoomTube / BoomTip).

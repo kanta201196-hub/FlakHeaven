@@ -218,6 +218,29 @@ func _die() -> void:
 	super()
 
 
+## Где рисовать кольцо точки. С 3D-моделью (PR #38) башни и винты стоят выше плоскости боя, и на наклонной
+## камере кольцо по логическому смещению уезжает от них (~25 пикс. при 28°). Поэтому берём узел модели
+## (turret_N, engine_X_prop) и ищем точку плоскости боя (y = 0), которая на экране совпадает с ним.
+func _ring_at(pt: Dictionary, xf: Transform2D) -> Vector2:
+	var fallback := xf * (pt["off"] as Vector2)
+	var r := Render3D.I
+	if not Render3D.enabled or r == null or r.cam == null:
+		return fallback
+	var u: Dictionary = r._units.get(get_instance_id(), {})
+	var parts: Dictionary = u.get("fparts", {})
+	var nm := String(pt["node"]) + ("_prop" if pt["kind"] == "engine" else "")
+	var n := parts.get(nm) as Node3D
+	if n == null or not is_instance_valid(n):
+		return fallback
+	var c := r.cam.global_position
+	var g := n.global_position
+	if c.y - g.y < 1.0:
+		return fallback
+	var k := c.y / (c.y - g.y)   # луч камера → узел до пересечения с y = 0
+	var on_plane := Vector2(c.x + (g.x - c.x) * k, c.z + (g.z - c.z) * k)
+	return to_local(on_plane)
+
+
 func _draw() -> void:
 	var xf := Transform2D(heading, Vector2.ZERO)
 	var tex := "e_fortress" if Enemy.etex("e_fortress") != null else "e_transport"
@@ -228,7 +251,7 @@ func _draw() -> void:
 	# уязвимые точки текущей фазы — мигающие кольца с полоской прочности
 	var want := "turret" if phase == 1 else ("engine" if phase == 2 else "")
 	for pt in points:
-		var at := xf * (pt["off"] as Vector2)
+		var at := _ring_at(pt, xf)
 		if float(pt["hp"]) <= 0.0:
 			draw_circle(at, 9.0, Color(0.15, 0.12, 0.1, 0.9))   # выбитая точка — копоть
 			continue

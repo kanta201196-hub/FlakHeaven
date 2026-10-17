@@ -30,6 +30,7 @@
 | `process/project-instructions.md` | Текст для поля инструкций проекта Claude (по плейбуку «Как мы работаем над игрой») |
 | `owner-checklist/checklist.md` | Чек-лист владельца: Steam, юридическое, финансы, сроки |
 | `team/` | Роли агентов и процесс |
+| `tasks/3d-models-handoff.md` | Оставшиеся задачи по 3D-моделям (Т-1…Т-11) для Kanta: что сделать, где файлы, как проверить |
 | `threads/` | Выжимки тредов из проектов Claude участников (Kirill, Kanta): решения, отклонённое, открытые вопросы. Начать с `threads/README.md`; арт и звук — `threads/art-and-sound-pipeline.md` |
 | `sprint1/` | Спецификации, планы и разборы плейтестов по спринтам |
 | `audience*.md`, `market-analysis.md` | Аудитория и рынок |
