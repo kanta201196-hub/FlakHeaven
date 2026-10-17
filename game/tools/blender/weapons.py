@@ -76,6 +76,14 @@ def lugs(x_list, r):
         box("lug", (x, 0, r + 0.006), (0.03, 0.014, 0.012), M_STEEL, 0.0)
 
 
+def shoe(x0, x1, zb, zt):
+    """Колодка пускового рельса: от корпуса ракеты до верха габарита (кончиков рулей), чтобы рельс пилона
+    лежал на ней, а не висел над корпусом (тест 3.5-s3: «ракеты висят в воздухе без связи с крылом»)"""
+    box("shoe", ((x0 + x1) / 2, 0, (zb + zt) / 2), (x1 - x0, 0.016, zt - zb), M_STEEL, 0.002)
+    for x in (x0 + 0.03, x1 - 0.03):
+        box("shoe_hook", (x, 0, zt - 0.004), (0.03, 0.022, 0.008), M_DARK, 0.0)
+
+
 def sphere(name, c, r, sc, m, seg=20):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=seg // 2, radius=r, location=c)
     ob = bpy.context.object
@@ -188,7 +196,7 @@ elif kind == "aam" and tier == 1:
         a = math.pi / 4 + k * math.pi / 2
         fin("wing", [(-0.1, R * 0.8), (0.06, R * 0.8), (0.02, R + 0.05), (-0.08, R + 0.05)], 0.005, a, M_WHITE)
         fin("tail", [(-0.48, R * 0.8), (-0.37, R * 0.8), (-0.42, R + 0.045), (-0.48, R + 0.045)], 0.005, a, M_WHITE)
-    lugs([0.12, -0.18], R)
+    shoe(-0.22, 0.16, R * 0.85, 0.062)
 
 elif kind == "aam" and tier == 2:
     R = 0.026
@@ -214,7 +222,7 @@ elif kind == "aam" and tier == 2:
         ob.rotation_euler = (a, 0, 0)
         bpy.ops.object.transform_apply(rotation=True)
         finish(ob, M_STEEL)
-    lugs([0.1, -0.2], R)
+    shoe(-0.24, 0.14, R * 0.85, 0.056)
 
 elif kind == "aam" and tier == 3:
     R = 0.048
@@ -240,7 +248,7 @@ elif kind == "aam" and tier == 3:
         a = math.pi / 4 + k * math.pi / 2
         fin("tail", [(-0.33, R * 0.7), (-0.22, R * 0.7), (-0.28, R + 0.05), (-0.33, R + 0.05)], 0.005, a, M_WHITE)
     box("dorsal", (-0.05, 0, R + 0.012), (0.3, 0.012, 0.022), M_WHITE, 0.002)
-    lugs([0.15, -0.2], R + 0.02)
+    shoe(-0.24, 0.19, R * 0.9, 0.08)
 
 elif kind == "rockets":
     def pod(y, x0, x1, R, tubes, petals):

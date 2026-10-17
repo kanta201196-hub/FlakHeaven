@@ -303,6 +303,11 @@ func _hangar_bench() -> void:
 			_t = 0.0
 			return
 		for c in PlaneClasses.LIST:
+			if OS.get_cmdline_user_args().has("--hangarlow"):
+				for lv in [1, 2]:
+					for wt in [1, 2, 3]:
+						_hq.append([c, lv, wt])
+				continue
 			if OS.get_cmdline_user_args().has("--hangarside"):
 				_hq.append([c, 1, 1])
 				_hq.append([c, 2, 1])
@@ -338,6 +343,11 @@ func _hangar_bench() -> void:
 		elif OS.get_cmdline_user_args().has("--hangarside"):   # вид сбоку: проверка, где сидят турели и подвесы
 			Hangar3D.I._yaw = PI / 2.0
 			Hangar3D.I._pitch = 0.06
+			Hangar3D.I._idle = 0.0
+		elif OS.get_cmdline_user_args().has("--hangarlow"):   # снизу сбоку крупно: подвесы под крылом на пилонах
+			Hangar3D.I._yaw = 2.3
+			Hangar3D.I._pitch = -0.12
+			Hangar3D.I._dist = 0.7
 			Hangar3D.I._idle = 0.0
 		elif OS.get_cmdline_user_args().has("--hangartop"):   # вид сверху: турели и подвесы по размаху
 			Hangar3D.I._yaw = PI / 2.0
