@@ -17,6 +17,7 @@ var _probes: Array[Node] = []
 var _prev_us := 0
 var _ft_max := 0.0
 var _spikes := 0
+var _win_len := 10.0
 var _last := 0
 
 
@@ -63,6 +64,9 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--perfwin="):
+			_win_len = float(a.substr(10))
 	# метка перед каждой группой и в самом конце; всё до первой группы — «main и прочее»
 	var names := ["other"]
 	for g in GROUPS:
@@ -115,7 +119,7 @@ func _process(delta: float) -> void:
 		if ft > 33.0:
 			_spikes += 1
 	_prev_us = now
-	if _win < 10.0:
+	if _win < _win_len:
 		return
 	var m := Main.I
 	var line := "PERF t=%d %d кадров макс=%.0fмс рывков>33мс=%d" % [int(m.run_time) if m != null else 0, _frames, _ft_max, _spikes]
@@ -145,6 +149,7 @@ func _process(delta: float) -> void:
 			pc.append((a as Array).size())
 		line += " частицы=%s" % str(pc)
 	print(line)
+	print(_vp_report())
 	print(_tri_report())
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--perfshot=") and m != null:
@@ -152,6 +157,24 @@ func _process(delta: float) -> void:
 	_acc.clear()
 	_frames = 0
 	_win = 0.0
+
+
+## Вызовы отрисовки по вьюпортам: основной и слой боя (наклонная камера), видимые и тени
+func _vp_report() -> String:
+	var out := "VP"
+	var vps: Array = [get_viewport()]
+	if Render3D.I != null and Render3D.I._combat_vp != null:
+		vps.append(Render3D.I._combat_vp)
+	for vp: Viewport in vps:
+		var rid := vp.get_viewport_rid()
+		out += " %s: вид=%d/%dk тени=%d/%dk кадр=%.1fмс" % [vp.name.left(10),
+			RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
+			RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
+			RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
+			RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
+			RenderingServer.viewport_get_measured_render_time_cpu(rid)]
+	out += " | 2D: %d" % int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+	return out
 
 
 static var _mesh_tris := {}
