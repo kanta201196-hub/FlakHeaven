@@ -853,7 +853,8 @@ func _sync_wrecks(delta: float) -> void:
 						hn.visible = false
 				for c in inst.find_children("*", "GeometryInstance3D", true, false):
 					(c as GeometryInstance3D).material_overlay = _burnt_mat
-			var smoke := _make_smoke()
+			var smoke := _make_smoke()   # создаётся дочерним у Render3D — переносим к остову, чтобы ушёл вместе с ним
+			smoke.get_parent().remove_child(smoke)
 			smoke.top_level = true
 			(u["node"] as Node3D).add_child(smoke)
 			u["wsmoke"] = smoke
