@@ -33,10 +33,7 @@ var records := {}
 
 static func bold() -> Font:
 	if _bold == null:
-		var sf := SystemFont.new()
-		sf.font_names = PackedStringArray(["Bahnschrift", "Segoe UI", "Arial", "Roboto", "Noto Sans", "DejaVu Sans"])
-		sf.font_weight = 700
-		_bold = sf
+		_bold = Hud.make_font(true)
 	return _bold
 
 
@@ -214,6 +211,9 @@ func _option(key: String, dir: int) -> void:
 			Tuning.save_params()
 		"cam_tilt":
 			Main.I.input_ctl.cycle_tilt(dir)
+		"font":
+			Settings.font = wrapi(Settings.font + dir, 0, Settings.FONTS.size())
+			Hud.reset_fonts()
 		"gfx":
 			Settings.gfx = wrapi(Settings.gfx + dir, 0, Settings.GFX_MAX + 1)
 			Settings.gfx_auto = false   # выбрал сам — автоснижение больше не трогает
@@ -436,6 +436,7 @@ func _settings(size: Vector2) -> void:
 			y = _check(x, y, w2, "Скрыть интерфейс в полёте", Settings.hide_hud, "hide_hud")
 			y = _opt(x, y, w2, "Схема управления", Hud.SCHEMES[int(Tuning.g("scheme"))], "scheme")
 			y = _opt(x, y, w2, "Язык", "Русский", "lang")
+			y = _opt(x, y, w2, "Шрифт интерфейса", Settings.FONTS[Settings.font], "font")
 			y = _section(x, y + 10, w2, "Камера и масштаб")
 			y = _opt(x, y, w2, "Наклон камеры (F9)", MainInput.tilt_name(), "cam_tilt")
 			y = _slider(x, y, w2, "Масштаб камеры", "camera_zoom", "%.2f")

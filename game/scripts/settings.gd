@@ -10,6 +10,8 @@ const FPS_LIMITS := [0, 60, 120, 144, 165, 240]
 ## T4-04 (B-33, минимум): «Качество графики». Что меняет — Render3D.apply_gfx и BiomeProps
 const GFX := ["Низкое", "Среднее", "Высокое", "Максимальное"]
 const GFX_MAX := 3
+## U-09: шрифты интерфейса (встроенные — game/fonts/, лицензия OFL)
+const FONTS := ["PT Sans", "Inter", "Exo 2", "Системный"]
 
 ## Действия, которые можно переназначить: [действие, подпись, раздел]
 const REBIND := [
@@ -36,6 +38,7 @@ var vsync := true
 var fps_limit := 0
 var hide_hud := false
 var gfx := 2               # «Высокое»; деревья полной детализации — только на «Максимальном»
+var font := 0              # U-09: шрифт интерфейса — индекс в FONTS
 var gfx_auto := true       # автоснижение при низком FPS, пока игрок не выбрал качество сам
 var binds := {}          # действие → physical_keycode (только клавиатура)
 var _defaults := {}      # исходные клавиши (для «Сбросить»)
@@ -119,7 +122,7 @@ func save_settings() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
-		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "binds": binds}, "  "))
+		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "font": font, "binds": binds}, "  "))
 	f.close()
 
 
@@ -140,6 +143,7 @@ func load_settings() -> void:
 	hide_hud = bool(d.get("hide_hud", hide_hud))
 	gfx = clampi(int(d.get("gfx", gfx)), 0, GFX_MAX)
 	gfx_auto = bool(d.get("gfx_auto", gfx_auto))
+	font = clampi(int(d.get("font", font)), 0, FONTS.size() - 1)
 	var b = d.get("binds", {})
 	if b is Dictionary:
 		for a in b:
