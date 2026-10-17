@@ -46,6 +46,25 @@
 | music_menu | меню, итоги | — | calm / title loop |
 | music_battle | бой | — | action loop |
 | music_boss | ас, догфайт | — | intense / boss loop |
+| dive | «нырок» вниз | roll | dive whoosh / engine pitch down |
+| synergy | собрана связка карточек | boss | power chord / stinger |
+| cargo | транспортник сбит, груз | evac | loot / reward stinger |
+| fuel_low | топливо меньше 10% | lock | low fuel warning beep (кабина) |
+| fuel_empty | бак пуст | lock | engine sputter / warning |
+| tanker_call | заправщик на подходе | evac | radio call / chime |
+| tanker_down | заправщик сбит | shield_break | large aircraft explosion |
+| boom_dock | штанга состыковалась | lock | mechanical clunk / latch |
+| boom_undock | расстыковка | lock | release / hiss |
+| refuel_done | бак полный | evac | positive chime |
+| aa_alert | позиция ПВО заметила игрока | lock | radar warning / siren |
+| sam_lock | ЗРК берёт на сопровождение | lock | SAM lock tone |
+| sam_launch | пуск ЗРК | missile_enemy | heavy missile launch |
+| aa_intercept | ЗСУ сбивает ракету игрока | enemy_fire | flak burst |
+| fortress_part | «Крепость»: выбита часть | shield_break | metal explosion / debris |
+| fortress_ring | «Крепость»: залп кольцом | enemy_fire | multi-cannon burst |
+
+## Стиль (решение Kanta 16.10.2026)
+**Гибрид:** эффекты похожи на настоящие (пушки, реактивные двигатели, взрывы, писки систем предупреждения в кабине), музыка — электроника с рок-барабанами. Фантастические лазеры и чиптюн ниже — временные (выбраны 10.10 под 2D-пиксель-арт). Свой огонь — механический и ниже по тону, вражеский — другой по тембру; `missile_enemy`, `lock`, `sam_lock` — самые заметные.
 
 ## Подобранные источники (лицензии проверены 10.10.2026)
 

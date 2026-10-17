@@ -94,7 +94,7 @@ func take_damage(d: float) -> void:
 		Main.I.fx.explosion(global_position, 46.0)
 		Main.I.add_shake(6.0)
 		Main.I.show_banner("Заправщик сбит! Следующий — через 2 минуты", 4.0)
-		Main.I.sfx.play("shield_break", -4.0, 0.6)
+		Main.I.sfx.play("tanker_down", -4.0, 0.6)
 		_finish(false)
 
 
@@ -172,7 +172,7 @@ func _refuel(p: Player, delta: float) -> void:
 	if fuel.frac() >= 0.999:
 		refueled = true
 		Main.I.show_banner("Заправка завершена — бак полный", 3.0)
-		Main.I.sfx.play("evac", -6.0, 1.4)
+		Main.I.sfx.play("refuel_done", -6.0, 1.4)
 		_finish(true)
 
 
@@ -196,10 +196,10 @@ func _boom(p: Player, in_cone: bool, delta: float) -> void:
 		boom_len = move_toward(boom_len, goal, BOOM_SPEED * delta)
 		docked = reach and tip.distance_to(nose) < BOOM_CATCH
 	if docked and not _was_docked:
-		Main.I.sfx.play("lock", -8.0, 1.6)
+		Main.I.sfx.play("boom_dock", -8.0, 1.6)
 		Main.I.tele.add("fuel_docks")
 	elif _was_docked and not docked and not refueled:
-		Main.I.sfx.play("lock", -10.0, 0.7)
+		Main.I.sfx.play("boom_undock", -10.0, 0.7)
 		Main.I.tele.add("fuel_undocks")
 	_was_docked = docked
 
@@ -214,8 +214,9 @@ func _draw() -> void:
 	# штанга: выдвигается к самолёту, при стыковке — огонёк на кончике
 	var root := Vector2(-BOOM_ROOT, 0)
 	var tip := root + Vector2.from_angle(PI + boom_angle) * boom_len
-	draw_line(xf * root, xf * tip, Color(0.3, 0.33, 0.36, 0.95), 7.0)
-	draw_line(xf * root, xf * tip, Color(0.85, 0.9, 0.95, 0.95), 3.5)
+	if not Render3D.enabled or Settings.gfx == 0: # в 3D штангу рисует модель (узел Boom), на «Низком» — линия
+		draw_line(xf * root, xf * tip, Color(0.3, 0.33, 0.36, 0.95), 7.0)
+		draw_line(xf * root, xf * tip, Color(0.85, 0.9, 0.95, 0.95), 3.5)
 	var tc := Color(0.5, 1.0, 0.5) if docked else Color(1.0, 0.85, 0.35)
 	draw_circle(xf * tip, 6.0 + (2.0 * absf(sin(_t * 10.0)) if docked else 0.0), tc)
 	if not Render3D.enabled:

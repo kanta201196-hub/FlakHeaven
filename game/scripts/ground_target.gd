@@ -145,14 +145,14 @@ func behave(delta: float) -> void:
 				_lock -= delta
 				if _lock <= 0.0:
 					Main.I.projectiles.spawn_missile(global_position, to.normalized())
-					Main.I.sfx.play("missile_enemy", -6.0, 0.9)
+					Main.I.sfx.play("sam_launch", -6.0, 0.9)
 			else:
 				_cd -= delta
 				# ЗРК пускает только с места
 				if _cd <= 0.0 and d < _range() and _goal == Vector2.INF:
 					_lock = 1.2
 					_cd = randf_range(5.0, 6.5)
-					Main.I.sfx.play("lock", -6.0, 1.2)
+					Main.I.sfx.play("sam_lock", -6.0, 1.2)
 
 
 ## Переезд: раз в несколько секунд — новая точка между бункером и самолётом (полукольцо 140–240 пикс.)
@@ -219,13 +219,13 @@ func _defend(delta: float) -> void:
 	Main.I.fx.zap(global_position, mp)
 	# не каждая очередь попадает: 65%
 	if randf() < 0.65:
-		Main.I.fx.explosion(mp, 12.0)
+		Main.I.fx.explosion(mp, 12.0, true, true, "flak")
 		if arr == "m":
 			pr.pmissiles.remove_at(best)
 		else:
 			pr.rockets.remove_at(best)
 		Main.I.tele.add("aa_shot_down")
-	Main.I.sfx.play("enemy_fire", -12.0, 1.6)
+	Main.I.sfx.play("aa_intercept", -12.0, 1.6)
 
 
 func _die() -> void:

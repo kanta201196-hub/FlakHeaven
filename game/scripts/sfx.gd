@@ -2,7 +2,7 @@ class_name Sfx
 extends Node
 ## Звуки-заглушки, сгенерированные кодом (без файлов): выстрел, попадание, взрыв,
 ## захват цели ракетой, бочка, форсаж и гул двигателя, который меняется со скоростью.
-## Позже заменяются на звуки от фрилансера — названия событий останутся теми же.
+## Звуки из файлов в audio/ заменяют их по имени события (см. audio/README.md).
 
 const RATE := 22050
 
@@ -79,6 +79,12 @@ const FALLBACK := {
 	"explode_big": "explode", "player_explode": "explode", "shield_break": "explode",
 	"pass_hit": "hit", "near_miss": "roll", "combat_turn": "roll", "shield": "lock", "radio": "lock",
 	"gate": "evac", "repair": "levelup", "ui_ban": "player_hit",
+	# 3.5: свои события для новых механик; пока нет файла — играет прежний звук
+	"dive": "roll", "synergy": "boss", "cargo": "evac",
+	"fuel_low": "lock", "fuel_empty": "lock", "tanker_call": "evac", "tanker_down": "shield_break",
+	"boom_dock": "lock", "boom_undock": "lock", "refuel_done": "evac",
+	"aa_alert": "lock", "sam_lock": "lock", "sam_launch": "missile_enemy", "aa_intercept": "enemy_fire",
+	"fortress_part": "shield_break", "fortress_ring": "enemy_fire",
 }
 
 

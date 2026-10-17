@@ -129,6 +129,8 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 	var lx := area.position.x
 	var y := area.position.y
 	for w in Profile.WEAPON_ORDER:
+		if not Weapons.in_game(w):
+			continue
 		var r := Rect2(lx, y, 300, 70)
 		var on: bool = m.hangar_w == w
 		_panel(r, on)

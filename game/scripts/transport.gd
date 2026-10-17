@@ -106,7 +106,7 @@ func _die() -> void:
 		m.rare_reasons.append("ЗА ГРУЗ ТРАНСПОРТА")
 	m.player.add_course_pts(1)
 	m.show_banner("Транспортник сбит! Груз: +90 запчастей, ремкомплекты" + (" и выбор из редких карточек" if rare else ""), 4.0)
-	m.sfx.play("evac", -4.0, 1.3)
+	m.sfx.play("cargo", -4.0, 1.3)
 	if m.spawner != null and m.spawner.activity_node == self:
 		m.spawner.activity_node = null
 	super()
