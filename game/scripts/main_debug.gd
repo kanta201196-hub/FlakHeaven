@@ -153,7 +153,7 @@ func _debug_screenshots(delta: float) -> void:
 	_shot_t += delta / maxf(Engine.time_scale, 0.01)
 	if m._state_t < 0.6:
 		return
-	if m._args.has("--uitest"):
+	if m._args.has("--uitest") and m.state in ["playing", "paused", "evac", "levelup"]:
 		_ui_test()
 		return
 	if m.state == "menu" and m._state_t > 1.0 and m.menu.howto:

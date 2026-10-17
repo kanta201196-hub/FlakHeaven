@@ -216,9 +216,9 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 	for wv in p.evo_times:
 		ev.append(Prog.EVOS[wv]["title"])
 	ctrl.draw_rect(Rect2(pos.x, pos.y + 116, w, 62), Color(0.05, 0.055, 0.06, 0.8))
-	_para(Vector2(pos.x + 8, pos.y + 138), "Связки: %s   ·   Модернизации: %s   ·   Навык: %s, ур. %s" % [
+	_para(Vector2(pos.x + 8, pos.y + 138), "Связки: %s   ·   Модернизации: %s   ·   Навык: %s%s" % [
 		", ".join(extra) if not extra.is_empty() else "нет", ", ".join(ev) if not ev.is_empty() else "нет",
-		p.s3_def()["title"], Prog.ROMAN[p.s3_lvl()]], w - 16.0, 16, Menu.C_AMBER)
+		p.s3_def()["title"], (", ур. " + Prog.ROMAN[p.s3_lvl()]) if p.s3_lvl() > 0 else ""], w - 16.0, 16, Menu.C_AMBER)
 
 
 # ---------- Подвесы и пауза ----------
