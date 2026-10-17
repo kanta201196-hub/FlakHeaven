@@ -450,6 +450,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			root.add_child(mi)
 		add_child(root)
 		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}, "bm": bm}
+		if bm != null and kind in ["player", "wing"]:   # Т-1: предкрылки и закрылки своих самолётов
+			u["mech"] = WingMech.attach(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
 			u["sh"] = _make_shadow(tex, root)
 		if kind != "enemy":
@@ -541,6 +543,11 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				_trails.emit("p%d" % i, pts[i], st)
 			var mi: MeshInstance3D = u["mi"]
 			mi.transparency = 0.6 if (p.invuln > 0.0 and p.roll_t <= 0.0 and int(p._blink * 20.0) % 2 == 0) else 0.0
+			if u.get("mech") != null:
+				# Т-1: выпуск в крутом вираже и при торможении (РУД меньше крейсерского или сброс газа)
+				var brake := 1.0 if p.throttle_cut_on() else (1.0 - p.throttle) / 0.4
+				WingMech.update(u["mech"], p.bank, brake, int(p.taken.get("wing", 0)), sd)
+				WingMech.set_transparency(u["mech"], mi.transparency)
 			_sync_weapons(u, p, tex)
 		for w in p.wingmen:
 			var wm: Wingman = w
@@ -551,6 +558,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var uw := _ensure(wm.get_instance_id(), "wing", wt, len_w, 0.075, 48)
 			uw["ref"] = weakref(wm)
 			_place(uw, wm.global_position, wm.heading, _turn_bank(uw, wm.heading, delta), 0.0)
+			if uw.get("mech") != null:
+				WingMech.update(uw["mech"], float(uw["bank"]), 0.0, 0, sd)
 			PlaneFx.update(uw, sd, 0.0)
 			var wpts := PlaneFx.trail_points(uw)
 			for i in wpts.size():
