@@ -666,7 +666,7 @@ func _tick_debris(dt: float, R: Render3D) -> void:
 		q["gt"] = float(q["gt"]) - dt
 		if float(q["gt"]) <= 0.0:
 			q["gt"] = 0.2
-			q["gy"] = R.terrain.surface(p.x, p.z).y if R.terrain != null else R.GROUND_Y
+			q["gy"] = R.terrain.surface_fast(p.x, p.z).y if R.terrain != null else R.GROUND_Y
 		q["h"] = maxf(0.0, float(q["h"]) - dt * (0.45 if q["trail"] == "fire" else 1.1))
 		if not q["landed"]:
 			var v: Vector3 = q["v"]
