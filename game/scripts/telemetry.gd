@@ -25,7 +25,9 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа
 	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx", "plane_lvl",
 	# 3.5: бой на 3D-моделях — сколько самолётов в кадре нарисовано моделями (макс.) и их треугольники
-	"units_model_max", "model_tris_max"]
+	"units_model_max", "model_tris_max",
+	# A-03: наземный конвой — сожжено машин и грузовиков, ушло грузовиков, колонн разбито целиком
+	"convoy_vehicles_killed", "convoy_trucks_killed", "convoy_trucks_escaped", "convoy_done"]
 
 ## T4-04: автоснижение качества — окна по 20 с с 5-й секунды; FPS ниже порога → пресет ниже (до 3 раз за вылет)
 const AUTO_FPS := 35.0
