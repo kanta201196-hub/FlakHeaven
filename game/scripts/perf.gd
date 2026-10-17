@@ -14,6 +14,9 @@ const GROUPS := [["spawner", 10], ["enemies", 20], ["projectiles", 30], ["fx", 4
 	["hud", 60], ["render3d", 70], ["boom3d", 80]]
 
 var _probes: Array[Node] = []
+var _prev_us := 0
+var _ft_max := 0.0
+var _spikes := 0
 var _last := 0
 
 
@@ -30,6 +33,14 @@ static func sub(name: String, t0: int) -> int:
 	var now := Time.get_ticks_usec()
 	_acc[name] = int(_acc.get(name, 0)) + now - t0
 	return now
+
+
+## Наибольшее значение за окно (мкс), печатается в мс как «имя=…»
+static func peak(name: String, us: int) -> void:
+	_peaks[name] = maxi(int(_peaks.get(name, 0)), us)
+
+
+static var _peaks := {}
 
 
 static func begin() -> void:
@@ -97,10 +108,19 @@ func _process(delta: float) -> void:
 	# этот узел — с приоритетом по умолчанию 0, отдельно не мерим; печать раз в 10 с
 	_win += delta / maxf(Engine.time_scale, 0.001)
 	_frames += 1
+	var now := Time.get_ticks_usec()
+	if _prev_us > 0:
+		var ft := (now - _prev_us) / 1000.0
+		_ft_max = maxf(_ft_max, ft)
+		if ft > 33.0:
+			_spikes += 1
+	_prev_us = now
 	if _win < 10.0:
 		return
 	var m := Main.I
-	var line := "PERF t=%d %d кадров" % [int(m.run_time) if m != null else 0, _frames]
+	var line := "PERF t=%d %d кадров макс=%.0fмс рывков>33мс=%d" % [int(m.run_time) if m != null else 0, _frames, _ft_max, _spikes]
+	_ft_max = 0.0
+	_spikes = 0
 	line += " fps=%d" % Engine.get_frames_per_second()
 	var keys := _acc.keys()
 	keys.sort_custom(func(a, b): return int(_acc[a]) > int(_acc[b]))
@@ -109,6 +129,9 @@ func _process(delta: float) -> void:
 		var ms := float(_acc[k]) / 1000.0 / _frames
 		tot += ms if not "." in String(k) else 0.0
 		line += " %s=%.2f" % [k, ms]
+	for k in _peaks:
+		line += " %s=%.1fмс" % [k, _peaks[k] / 1000.0]
+	_peaks.clear()
 	line += " | сумма=%.2f мс процесс=%.2f" % [tot, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0]
 	line += " | врагов=%d пуль=%d узлов=%d draws=%d tris=%dk" % [
 		m.get_tree().get_nodes_in_group("enemies").size() if m != null else 0,

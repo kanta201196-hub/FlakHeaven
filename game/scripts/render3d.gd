@@ -454,8 +454,16 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 	var u: Dictionary = _units.get(id, {})
 	var bm: PackedScene = _battle_model(tex)   # 3.5 этап 2: враги в воздухе и наземные ПВО (ЗСУ, ЗРК, РЛС)
 	if u.is_empty() or u["tex"] != tex or u.get("bm") != bm:
+		var nt := Time.get_ticks_usec() if Perf.on else 0
 		if not u.is_empty():
 			(u["node"] as Node).queue_free()
+		var pooled := _pool_take(tex, kind, thick, bm)
+		if not pooled.is_empty():
+			pooled["k"] = length_px / float(tex.get_width())
+			_units[id] = pooled
+			if Perf.on:
+				Perf.sub("r3d.new_model", nt)
+			return pooled
 		var root := Node3D.new()
 		var mi: MeshInstance3D = null
 		var d := {"k": length_px / float(tex.get_width())}
@@ -493,6 +501,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 		if kind != "enemy":
 			PlaneFx.attach(u, tex)
 		_units[id] = u
+		if Perf.on:
+			Perf.peak("r3d.new_model_max", Perf.sub("r3d.new_model", nt) - nt)
 	u["seen"] = true
 	return u
 
@@ -660,6 +670,56 @@ func _place_shadow(u: Dictionary, p: Vector2, heading: float, k: float) -> void:
 		var mat := sh.material_override as ShaderMaterial
 		mat.set_shader_parameter("alpha", al)
 		mat.set_shader_parameter("blur", 0.03 + 0.03 * (1.0 - Tuning.g("shadow_size")))
+
+
+## Оптимизация (финальный проход 3.5): модели сбитых самолётов врага не удаляем, а прячем и отдаём
+## следующему врагу того же вида — создание модели 2–10 мс, волна из шести дронов давала рывок кадра
+const POOL_MAX := 24
+var _pool := {}      # картинка → [скрытые корни моделей]
+
+
+func _poolable(kind: String, thick: float, bm: PackedScene, tex: Texture2D) -> bool:
+	return kind == "enemy" and thick > 0.06 and bm != null and not tex.resource_path.contains("fortress")
+
+
+func _pool_put(u: Dictionary) -> bool:
+	if not u.has("shb") or u.get("bm") == null or u["kind"] != "enemy" or u.has("hull"):
+		return false
+	var tex: Texture2D = u["tex"]
+	if tex.resource_path.contains("fortress"):
+		return false
+	var arr: Array = _pool.get(tex, [])
+	if arr.size() >= POOL_MAX:
+		return false
+	var root: Node3D = u["node"]
+	root.visible = false
+	(u["mi"] as MeshInstance3D).material_overlay = null
+	arr.append(root)
+	_pool[tex] = arr
+	return true
+
+
+func _pool_take(tex: Texture2D, kind: String, thick: float, bm: PackedScene) -> Dictionary:
+	if not _poolable(kind, thick, bm, tex):
+		return {}
+	var arr: Array = _pool.get(tex, [])
+	while not arr.is_empty():
+		var root: Node3D = arr.pop_back()
+		if not is_instance_valid(root) or root.get_child_count() == 0:
+			continue
+		var mi: MeshInstance3D = null
+		for c in root.get_child(0).find_children("*", "MeshInstance3D", true, false):
+			mi = c
+			break
+		if mi == null and root.get_child(0) is MeshInstance3D:
+			mi = root.get_child(0)
+		if mi == null:
+			root.queue_free()
+			continue
+		root.visible = true
+		return {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": 1.0, "ph": 0.0, "bank": 0.0, "seen": true,
+			"weapons": {}, "bm": bm, "shb": tex}
+	return {}
 
 
 var _shb := {}       # картинка врага → [Transform3D] теней за кадр
@@ -839,7 +899,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 	_flush_shadows()
 	for id in _units.keys():
 		if not _units[id]["seen"]:
-			if not _start_crash(_units[id]):
+			if not _start_crash(_units[id]) and not _pool_put(_units[id]):
 				(_units[id]["node"] as Node).queue_free()
 			_units.erase(id)
 
