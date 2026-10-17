@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://r1c6v7man3o3"
-path="res://.godot/imported/turret_grach.glb-ad42c38e09fab62ec152db968f2ebd2a.scn"
+uid="uid://csjiamsavm7s"
+path="res://.godot/imported/turret_kit_tail_ball_t3.glb-01ea656293917dff2e0c48785775c82d.scn"
 
 [deps]
 
-source_file="res://models/turrets/turret_grach.glb"
-dest_files=["res://.godot/imported/turret_grach.glb-ad42c38e09fab62ec152db968f2ebd2a.scn"]
+source_file="res://models/turrets/turret_kit_tail_ball_t3.glb"
+dest_files=["res://.godot/imported/turret_kit_tail_ball_t3.glb-01ea656293917dff2e0c48785775c82d.scn"]
 
 [params]
 

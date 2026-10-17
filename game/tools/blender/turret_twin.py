@@ -1,9 +1,13 @@
 """Спаренная турель «Кита» (по референсу владельца 16.10): основание-погон, бронированная
 башня с плитами сверху, люлька и два ствола с дульными тормозами.
-Запуск (bpy 5.x):  python3 turret_twin.py [quad] <out_dir>
+Запуск (bpy 5.x):  python3 turret_twin.py [t1|t2|t3|quad] [nopreview] <out_dir>
+Ступени (Т-4, plan-after-review 3.6 — меняют форму и детали, не размер; по умолчанию t2):
+  t1 (ур. 1–2) — спарка без дульных тормозов, простой маск;
+  t2 (ур. 3–4) — дульные тормоза и бронещиток перед люлькой;
+  t3 (ур. 5)   — то же + короба лент по бокам и прицельная головка сверху.
 quad — эволюция «Дикобраз» (одобрена 16.10): 4 ствола двумя парами и антенна наведения сверху.
 Стволы укорочены на ~40% по замечанию владельца 16.10 («не слишком ли длинные стволы»).
-Выход: turret_twin.blend, turret_twin.glb (ось стволов +X, верх +Y в Godot, начало — центр погона),
+Выход: turret_twin_t<N>.blend / .glb (quad — turret_twin_quad) (ось стволов +X, верх +Y в Godot, начало — центр погона),
        preview_*.png. Единица — длина башни (без стволов) = 1."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -12,10 +16,12 @@ import turret_lib as L
 
 OUT = sys.argv[-1] if len(sys.argv) > 1 else "."
 QUAD = "quad" in sys.argv
+TIER = 3 if QUAD else next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 2)
 L.reset()
 M_BODY = mat("turret_body", (0.36, 0.35, 0.33), 0.25, 0.55)
 M_DARK = mat("turret_dark", (0.12, 0.12, 0.12), 0.5, 0.5)
 M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.6, 0.4)
+M_GLASS = mat("turret_glass", (0.12, 0.2, 0.24), 0.6, 0.06)
 
 # --- погон и тумба ---
 cyl("ring", (0, 0, 0.04), 0.44, 0.08, M_BODY, bevel=0.015)
@@ -44,6 +50,12 @@ BZ = 0.43
 LEVELS = [BZ + 0.06, BZ - 0.06] if QUAD else [BZ]
 box("cradle", (0.42, 0, BZ), (0.5, 0.17, 0.13 + (0.12 if QUAD else 0)), M_BODY, 0.015)
 box("mantlet", (0.68, 0, BZ), (0.08, 0.26, 0.11 + (0.12 if QUAD else 0)), M_DARK, 0.01)
+if TIER >= 2 and not QUAD:
+    # бронещиток: широкая плита перед люлькой, скошена назад, с вырезами под стволы
+    shield = [(0.7, Z0 + 0.04), (0.76, Z0 + 0.1), (0.76, Z1 - 0.06), (0.7, Z1 + 0.02), (0.64, Z1 + 0.02), (0.64, Z0 + 0.04)]
+    for sgn in (1, -1):
+        prism("shield_%d" % sgn, shield, 0.2, M_BODY, 0.01).location.y = sgn * 0.2
+    box("shield_top", (0.7, 0, Z1 - 0.01), (0.1, 0.2, 0.05), M_BODY, 0.008)
 for bz in LEVELS:
     for sgn in (1, -1):
         y = sgn * 0.075
@@ -53,10 +65,26 @@ for bz in LEVELS:
         cyl("barrel", (1.48, y, bz), 0.028, 0.9, M_BARREL, "X", 16)
         for x in (1.2, 1.26, 1.74, 1.8):
             cyl("band", (x, y, bz), 0.036, 0.03, M_BARREL, "X", 16)
-        # дульный тормоз: короб с двумя окнами
-        box("brake", (2.0, y, bz), (0.17, 0.07, 0.07), M_BARREL, 0.006)
-        for x in (1.96, 2.05):
-            box("brake_slot", (x, y, bz), (0.05, 0.072, 0.045), M_DARK, 0.0)
+        if TIER >= 2:
+            # дульный тормоз: короб с двумя окнами
+            box("brake", (2.0, y, bz), (0.17, 0.07, 0.07), M_BARREL, 0.006)
+            for x in (1.96, 2.05):
+                box("brake_slot", (x, y, bz), (0.05, 0.072, 0.045), M_DARK, 0.0)
+        else:
+            # ступень 1: ствол без тормоза — простой пламегаситель-втулка, срез там же
+            cyl("tip", (2.0, y, bz), 0.034, 0.16, M_BARREL, "X", 16)
+            cyl("bore", (2.085, y, bz), 0.016, 0.01, M_DARK, "X", 12)
+if TIER == 3 and not QUAD:
+    # короба лент по бокам башни с рукавами подачи к люльке
+    for sgn in (1, -1):
+        box("ammo_box", (-0.05, sgn * 0.5, 0.38), (0.34, 0.09, 0.2), M_BODY, 0.01)
+        box("ammo_lid", (-0.05, sgn * 0.5, 0.49), (0.3, 0.07, 0.02), M_DARK, 0.004)
+        tube("feed", [(0.12, sgn * 0.5, 0.42), (0.3, sgn * 0.42, 0.47), (0.42, sgn * 0.12, BZ + 0.05)], 0.025, M_DARK)
+    # прицельная головка: короб на стойке слева сверху, стекло смотрит по стволам
+    cyl("sight_post", (0.05, 0.16, Z1 + 0.06), 0.03, 0.1, M_DARK, "Z", 12)
+    box("sight_head", (0.08, 0.16, Z1 + 0.15), (0.2, 0.1, 0.1), M_BODY, 0.01)
+    box("sight_hood", (0.2, 0.16, Z1 + 0.18), (0.06, 0.11, 0.03), M_DARK, 0.004)
+    cyl("sight_lens", (0.185, 0.16, Z1 + 0.15), 0.035, 0.012, M_GLASS, "X", 16)
 if QUAD:
     # антенна наведения: стойка и тарелка, смотрит вперёд по стволам
     cyl("ant_post", (-0.2, 0, Z1 + 0.08), 0.025, 0.16, M_DARK, "Z", 12)
@@ -72,9 +100,10 @@ for sgn in (1, -1):
 tube("rail_back", [(-0.6, -0.42, Z1 + 0.09), (-0.6, 0.42, Z1 + 0.09)], 0.012, M_DARK)
 
 
-build("turret_twin_quad" if QUAD else "turret_twin", OUT)
-preview(OUT, [("ref", (3.3, -3.9, 2.6), (1.05, 0, 0.35), 50),
-              ("rear", (-2.6, 2.6, 2.0), (0.6, 0, 0.35), 50),
-              ("side", (1.1, -6.2, 0.6), (1.1, 0, 0.35), 40),
-              ("top", (1.1, 0.0, 6.4), None, 40)])
+build("turret_twin_quad" if QUAD else "turret_twin_t%d" % TIER, OUT)
+if "nopreview" not in sys.argv:
+    preview(OUT, [("ref", (3.3, -3.9, 2.6), (1.05, 0, 0.35), 50),
+                  ("rear", (-2.6, 2.6, 2.0), (0.6, 0, 0.35), 50),
+                  ("side", (1.1, -6.2, 0.6), (1.1, 0, 0.35), 40),
+                  ("top", (1.1, 0.0, 6.4), None, 40)])
 print("DONE")

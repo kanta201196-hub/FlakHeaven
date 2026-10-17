@@ -1,6 +1,11 @@
 """Лёгкая турель «Грача» (средний класс; референс владельца 16.10): низкая тумба, компактная башня
 со скошенным лбом, два коротких ствола один над другим. Меньше и слабее турели «Кита».
-Запуск (bpy 5.x):  python3 turret_light.py <out_dir>  → turret_light.blend / .glb / preview_*.png
+Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3] [nopreview] <out_dir>
+  → turret_light_t<N>.blend / .glb / preview_*.png (по умолчанию t1)
+Ступени (Т-4, plan-after-review 3.6 — «те же шаги, что у „Кита“, но легче»):
+  t1 (ур. 1–2) — лёгкая: короткие стволы с простыми втулками, без щитка;
+  t2 (ур. 3–4) — дульные тормоза и небольшой щиток вокруг стволов;
+  t3 (ур. 5)   — то же + короб ленты на борту с рукавом подачи.
 Оси как у turret_twin: стволы +X, начало — центр тумбы, длина башни = 1."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -8,6 +13,7 @@ from turret_lib import *
 import turret_lib as L
 
 OUT = sys.argv[-1] if len(sys.argv) > 1 else "."
+TIER = next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 1)
 L.reset()
 M_BODY = mat("turret_body", (0.4, 0.39, 0.37), 0.35, 0.5)
 M_DARK = mat("turret_dark", (0.1, 0.1, 0.1), 0.5, 0.5)
@@ -41,12 +47,27 @@ for z in (0.27, 0.41):
     cyl("sleeve", (0.38, y, z), 0.04, 0.26, M_BARREL, "X")
     cyl("collar", (0.5, y, z), 0.046, 0.03, M_BARREL, "X")
     cyl("barrel", (0.83, y, z), 0.02, 0.66, M_BARREL, "X", 16)
-    cyl("tip", (1.14, y, z), 0.028, 0.06, M_BARREL, "X", 16)
-    cyl("bore", (1.172, y, z), 0.012, 0.01, M_DARK, "X", 12)
+    if TIER >= 2:
+        # дульный тормоз: короб с прорезью, срез там же, где у втулки
+        box("brake", (1.12, y, z), (0.11, 0.05, 0.05), M_BARREL, 0.005)
+        box("brake_slot", (1.12, y, z), (0.035, 0.052, 0.03), M_DARK, 0.0)
+    else:
+        cyl("tip", (1.14, y, z), 0.028, 0.06, M_BARREL, "X", 16)
+        cyl("bore", (1.172, y, z), 0.012, 0.01, M_DARK, "X", 12)
+if TIER >= 2:
+    # щиток: рамка вокруг стволов на лбу правого блока
+    box("shield", (0.31, y, 0.34), (0.035, 0.22, 0.34), M_BODY, 0.008)
+    box("shield_cap", (0.3, y, 0.52), (0.08, 0.22, 0.025), M_BODY, 0.005)
+if TIER == 3:
+    # короб ленты на левом борту и рукав подачи через верх к стволам
+    box("ammo_box", (-0.12, 0.38, 0.36), (0.28, 0.08, 0.17), M_BODY, 0.008)
+    box("ammo_lid", (-0.12, 0.38, 0.455), (0.24, 0.06, 0.016), M_DARK, 0.003)
+    tube("feed", [(0.0, 0.38, 0.42), (0.1, 0.3, 0.6), (0.18, -0.1, 0.6), (0.24, -0.18, 0.47)], 0.02, M_DARK)
 
-build("turret_light", OUT)
-preview(OUT, [("ref", (2.4, -2.6, 1.4), (0.35, 0, 0.32), 50),
-              ("rear", (-2.0, 2.0, 1.6), (0.3, 0, 0.32), 50),
-              ("side", (0.35, -4.2, 0.45), (0.35, 0, 0.32), 40),
-              ("top", (0.35, 0.0, 4.4), None, 40)])
+build("turret_light_t%d" % TIER, OUT)
+if "nopreview" not in sys.argv:
+    preview(OUT, [("ref", (2.4, -2.6, 1.4), (0.35, 0, 0.32), 50),
+                  ("rear", (-2.0, 2.0, 1.6), (0.3, 0, 0.32), 50),
+                  ("side", (0.35, -4.2, 0.45), (0.35, 0, 0.32), 40),
+                  ("top", (0.35, 0.0, 4.4), None, 40)])
 print("DONE")

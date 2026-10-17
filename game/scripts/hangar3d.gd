@@ -18,7 +18,7 @@ var pivot: Node3D
 var rect := Rect2()          # где на экране (в координатах ctrl) нарисован вид
 var lvl_rects: Array = []    # [Rect2, ур.] — переключатель «Ур. 1 / Ур. 2»
 var view_lvl := 1
-var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5)
+var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5), 4 — эволюция (Т-4)
 var tier_rects: Array = []   # [Rect2, ступень]
 var _ctrl: Control
 var _key := ""
@@ -148,7 +148,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		for mt: Dictionary in WeaponModels.mounts(cls_id, lvl, gi, g):
 			var pt: Vector2 = mt["p"]
 			var side: String = mt["side"]
-			var wmi := WeaponModels.make(g.weapon, weapon_tier, side, cls_id)
+			var wmi := WeaponModels.make(g.weapon, mini(weapon_tier, 3), side, cls_id, weapon_tier == 4, lvl)
 			# по настоящей поверхности модели: подвес — под крылом на пилоне, верхняя турель
 			# утоплена в спину фюзеляжа, нижняя — в брюхо, кормовая — в конце фюзеляжа
 			var x := pt.x / tw
@@ -158,7 +158,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var y := 0.0
 			match side:
 				"under":
-					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, weapon_tier) * wlen
+					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mini(weapon_tier, 3)) * wlen
 				"top", "wing":
 					y = hi if not is_nan(hi) else 0.03
 				"bottom":

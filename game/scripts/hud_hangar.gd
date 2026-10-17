@@ -83,11 +83,11 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	# п. 3: как оружие меняется с уровнем
 	h3.tier_rects.clear()
 	_text(Vector2(lx + 24, area.position.y + 414), "Вид оружия:", 15, Color(0.8, 0.84, 0.9))
-	for ti in 3:
+	for ti in 4:
 		var tr2 := Rect2(lx + 130 + ti * 100, area.position.y + 392, 92, 30)
 		var on2: bool = h3.weapon_tier == ti + 1
 		ctrl.draw_rect(tr2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.08))
-		_text(Vector2(tr2.position.x, tr2.position.y + 21), "ур. %d" % [1, 3, 5][ti], 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
+		_text(Vector2(tr2.position.x, tr2.position.y + 21), ("ур. %d" % [1, 3, 5][ti]) if ti < 3 else "эволюция", 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
 		h3.tier_rects.append([tr2, ti + 1])
 	var y := area.position.y + 446.0
 	if bought:

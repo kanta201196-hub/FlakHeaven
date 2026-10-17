@@ -283,9 +283,11 @@ func _hangar_bench() -> void:
 			if a.begins_with("--turretstyle="):
 				WeaponModels.turret_style = int(a.get_slice("=", 1))
 		if OS.get_cmdline_user_args().has("--turretclose"):
-			# крупно турели: штурмовик и бомбардировщик, ступени 1 и 3, два ракурса (сверху-сзади, снизу-сбоку)
-			# [класс, ур., ступень, № турели]
-			for q in [["attacker", 1, 1, 0], ["attacker", 1, 3, 0], ["bomber", 1, 1, 0], ["bomber", 1, 1, 1], ["bomber", 1, 1, 2], ["bomber", 2, 3, 0], ["bomber", 2, 3, 1]]:
+			# крупно турели: штурмовик и бомбардировщик по ступеням 1 / 2 / 3 и эволюции (4), кормовая установка
+			# [класс, ур., ступень, № турели]; у «Кита» № 0 — корма, 1 и 2 — на крыльях
+			for q in [["attacker", 1, 1, 0], ["attacker", 1, 2, 0], ["attacker", 2, 3, 0],
+					["bomber", 1, 1, 2], ["bomber", 1, 2, 2], ["bomber", 1, 3, 2], ["bomber", 1, 4, 2], ["bomber", 2, 3, 1],
+					["bomber", 1, 1, 0], ["bomber", 1, 2, 0], ["bomber", 2, 3, 0]]:
 				_hq.append(q)
 			_t = 0.0
 			return

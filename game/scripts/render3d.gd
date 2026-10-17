@@ -737,12 +737,12 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5
 		var tr := WeaponModels.tier(g.level, g.evo)
 		for si in pts.size():
-			var key := "%d_%d_%s_%d" % [gi, si, g.weapon, tr]
+			var key := "%d_%d_%s_%d%s" % [gi, si, g.weapon, tr, "e" if g.evo else ""]
 			want[key] = true
 			var mt: Dictionary = pts[si]
 			var wmi: MeshInstance3D = u["weapons"].get(key)
 			if wmi == null:
-				wmi = WeaponModels.make(g.weapon, tr, mt["side"], p.cls_id)
+				wmi = WeaponModels.make(g.weapon, tr, mt["side"], p.cls_id, g.evo, p.plane_lvl)
 				root.add_child(wmi)
 				u["weapons"][key] = wmi
 			var pt: Vector2 = mt["p"]
