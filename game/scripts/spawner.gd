@@ -266,7 +266,8 @@ func separation(e: Enemy) -> Vector2:
 				if o == e or not is_instance_valid(o):
 					continue
 				var d: Vector2 = e.global_position - (o as Enemy).global_position
-				var min_d: float = e.radius + (o as Enemy).radius + 24.0
+				# 3D-модели крупнее хитбокса (unit_scale) — держим просвет по картинке
+				var min_d: float = (e.radius + (o as Enemy).radius) * 1.35 + 34.0
 				var l := d.length()
 				if l < min_d:
 					if l < 0.01:
