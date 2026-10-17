@@ -856,8 +856,8 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		var g: Hardpoint = p.groups[gi]
 		if g.is_empty():
 			continue
-		var wt := PlaneArt.weapon_tex(g.weapon)
-		if wt == null:
+		# U-08: у экспериментального оружия нет плоского значка, но есть 3D-модель (exp_weapons.py)
+		if PlaneArt.weapon_tex(g.weapon) == null and not (g.weapon in Weapons.EXP):
 			continue
 		var pts := WeaponModels.mounts(p.cls_id, p.plane_lvl, gi, g)
 		var k: float = u["k"]
