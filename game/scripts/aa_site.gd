@@ -9,6 +9,7 @@ extends Node2D
 
 const LIMIT := 60.0
 const ACTIVATE_R := 1000.0
+const SPACING := 110.0   # тест 3.5-s4: машины позиции не ближе этого друг к другу (не «слипаются»)
 
 var targets: Array = []
 var active := false     # стреляет ли (после подлёта)
@@ -22,12 +23,16 @@ var anchor := Vector2.ZERO   # 3.5: центр позиции на рельеф�
 ## bunker_hp — нижняя граница прочности бункера (спавнер считает её от текущего урона игрока)
 func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
 	# 3D-рельеф: техника ПВО стоит на дне долины, а не на хребте (правила — s4-landscape-rules.md)
-	if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
-		center = Render3D.I.terrain.find_floor(center)
+	var tr: Terrain3D = Render3D.I.terrain if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null else null
+	if tr != null:
+		# тест 3.5-s4 (п. 20): вся позиция (радиус ~250) — на сухом берегу, а не только её центр
+		center = tr.find_floor(center, 900.0, 0.0, [], 260.0)
+		center = tr.fix_object({"pos": center, "size": 480.0})["pos"]
 	global_position = center
 	anchor = center
 	var layout := [["bunker", Vector2.ZERO], ["zsu", Vector2(-170, -90)], ["zsu", Vector2(170, 110)],
 		["sam", Vector2(140, -150)], ["radar", Vector2(-150, 140)]]
+	var rot := randf() * TAU   # тест 3.5-s4: раскладка поворачивается целиком — машины не съезжаются в кучу
 	for l in layout:
 		var g := GroundTarget.new()
 		g.setup(l[0], self, hp_mult)
@@ -35,9 +40,13 @@ func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
 			bunker = g
 			g.hp = maxf(g.hp, bunker_hp)
 			g.max_hp = g.hp
-		g.position = center + ((l[1] as Vector2).rotated(randf() * TAU) * randf_range(0.9, 1.2) if l[0] != "bunker" else Vector2.ZERO)
-		if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
-			g.position = Render3D.I.terrain.find_floor(g.position, 260.0)
+		g.position = center + ((l[1] as Vector2).rotated(rot) * randf_range(0.9, 1.2) if l[0] != "bunker" else Vector2.ZERO)
+		if tr != null and l[0] != "bunker":
+			# своя точка рядом с назначенной, на том же берегу, не ближе SPACING к другим машинам и бункеру
+			var avoid := []
+			for o in targets:
+				avoid.append([(o as GroundTarget).position, SPACING])
+			g.position = tr.find_floor(g.position, 120.0, signf(tr.river_field(center.x, center.y)), avoid)
 		targets.append(g)
 
 

@@ -185,8 +185,8 @@ func _drive(delta: float, p: Player) -> void:
 		var toward := (p.global_position - site.global_position).angle()
 		var slot := b + Vector2.from_angle(toward + randf_range(-1.1, 1.1)) * randf_range(140.0, 240.0)
 		var tr := _terrain()
-		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке
-			slot = tr.find_floor(slot, 110.0, signf(tr.river_field(anchor.x, anchor.y)))
+		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке, не на соседе
+			slot = tr.find_floor(slot, 110.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours())
 		_goal = slot
 		_drive_t = 0.0
 		return
@@ -214,7 +214,30 @@ func _drive(delta: float, p: Player) -> void:
 
 func _stand(delta: float) -> void:
 	drive.stop(delta)
+	# стоящие машины не налезают друг на друга: если сосед ближе половины интервала — отъезжает медленно
+	for o in _neighbours():
+		var away: Vector2 = anchor - (o[0] as Vector2)
+		var d := away.length()
+		if d < AASite.SPACING * 0.5 and d > 0.01:
+			var nxt := drive.pos + away / d * 25.0 * delta
+			if not _into_water(nxt):
+				drive.pos = nxt
 	_sync_drive()
+
+
+## Другие машины позиции и их точки назначения (для выбора места и расталкивания)
+func _neighbours() -> Array:
+	var out := []
+	if site == null:
+		return out
+	for t in site.targets:
+		var g := t as GroundTarget
+		if g == null or g == self or not is_instance_valid(g) or g.hp <= 0.0:
+			continue
+		out.append([g.anchor, AASite.SPACING])
+		if g._goal != Vector2.INF:
+			out.append([g._goal, AASite.SPACING])
+	return out
 
 
 func _sync_drive() -> void:

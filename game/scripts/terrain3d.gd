@@ -225,7 +225,8 @@ func _v_raw(x: float, z: float) -> float:
 ## вода + полкорпуса машины) и объекты клеток (кишлак, крепость, оазис, воронка, обломки) — запретные;
 ## если вокруг всё запретное, берётся наименее плохая точка — дальше всех от воды и объектов.
 ## side ≠ 0 — только этот берег (знак river_field): переезжающая техника не пересекает реку
-func find_floor(p: Vector2, radius := 900.0, side := 0.0) -> Vector2:
+## avoid — [[точка, радиус]] куда нельзя (другие машины позиции); dry — сколько держаться от линии реки
+func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := D_RIVER * 3.0) -> Vector2:
 	var objs := []
 	if _bg != null:
 		var c := Vector2i(int(floorf(p.x / CHUNK)), int(floorf(p.y / CHUNK)))
@@ -247,11 +248,11 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0) -> Vector2:
 			var ar := absf(rf)
 			# дно долины, но не у воды и не на объекте биома; ближе — лучше
 			var sc := maxf(a - D_FLOOR * 0.8, 0.0) / 100.0 + rr / radius * 0.2
-			if ar < D_RIVER * 3.0:
-				sc += 50.0 + (D_RIVER * 3.0 - ar)
+			if ar < dry:
+				sc += 50.0 + (dry - ar)
 			if side != 0.0 and signf(rf) != side:
 				sc += 50.0 + ar
-			for o in objs:
+			for o in objs + avoid:
 				var d := q.distance_to(o[0])
 				if d < float(o[1]):
 					sc += 50.0 + (float(o[1]) - d)
