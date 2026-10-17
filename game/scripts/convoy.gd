@@ -34,6 +34,7 @@ var smoke_c := Vector2.INF
 var _smoke_used := false
 var on_road := false              # маршрут нашёлся по дороге (иначе — прямая по дну долины)
 var _t := 0.0
+var _dbg := OS.get_cmdline_user_args().has("--convoy") and OS.get_cmdline_user_args().has("--autotest")
 
 
 ## center — точка, через которую пройдёт колонна; dir — примерное направление марша
@@ -45,7 +46,7 @@ func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> 
 	if t >= 660.0:
 		order.append("manpads")   # с 11-й — второй пикап с ПЗРК
 	# машины ставим от головы назад: голова у точки 1 400 пикс. от начала маршрута
-	var at := minf(1400.0, length * 0.35)
+	var at := minf(1700.0, length * 0.4)
 	for i in order.size():
 		var r: String = order[i]
 		var sp: Dictionary = ConvoyVehicle.SPEC[r]
@@ -53,7 +54,7 @@ func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> 
 		v.setup(r, self, maxf(float(sp["hp"]) * hp_k, dps * float(sp["ttk"])))
 		if i > 0:
 			var prev: Dictionary = ConvoyVehicle.SPEC[order[i - 1]]
-			at -= (float(sp["len"]) + float(prev["len"])) * 0.5 * Tuning.g("unit_scale") + 45.0
+			at -= (float(sp["len"]) + float(prev["len"])) * 0.5 * Tuning.g("unit_scale") + ConvoyVehicle.GAP
 		v.place(maxf(at, 0.0))
 		vehicles.append(v)
 		if v.is_truck():
@@ -76,13 +77,13 @@ func _terrain() -> Terrain3D:
 	return null
 
 
-## Маршрут по оси дороги: 1 500 пикс. назад от center и 3 000 вперёд по ходу dir
+## Маршрут по оси дороги: 1 500 пикс. назад от center и до 7 000 вперёд по ходу dir (колонна быстрая — путь длиннее)
 func _build_route(center: Vector2, dir: Vector2) -> void:
 	var tr := _terrain()
 	if tr != null:
 		var c := _to_road(tr, tr.find_floor(center, 900.0))
 		if c != Vector2.INF:
-			var fw := _march(tr, c, dir, 3000.0)
+			var fw := _march(tr, c, dir, 7000.0)
 			var bk := _march(tr, c, -dir, 1500.0)
 			if fw.size() * STEP > 1800.0 and bk.size() * STEP > 900.0:
 				bk.reverse()
@@ -93,7 +94,7 @@ func _build_route(center: Vector2, dir: Vector2) -> void:
 		# рельефа нет (или дорога не нашлась) — прямая
 		pts = PackedVector2Array()
 		var d := dir.normalized()
-		for i in int(4500.0 / STEP) + 1:
+		for i in int(8500.0 / STEP) + 1:
 			pts.append(center + d * (i * STEP - 1500.0))
 	cum = PackedFloat32Array()
 	cum.append(0.0)
@@ -208,12 +209,12 @@ func alive() -> Array:
 	return out
 
 
-## Ближайшая живая машина впереди по маршруту
+## Ближайшая живая машина впереди по маршруту в той же полосе (съехавшая вбок охрана не в счёт)
 func ahead_of(me: ConvoyVehicle) -> ConvoyVehicle:
 	var best: ConvoyVehicle = null
 	for v in alive():
 		var c := v as ConvoyVehicle
-		if c == me or c.s <= me.s:
+		if c == me or c.s <= me.s or absf(c.lane - me.lane) > 45.0:
 			continue
 		if best == null or c.s < best.s:
 			best = c
@@ -231,13 +232,25 @@ func middle_s() -> float:
 	return sum / n if n > 0 else 0.0
 
 
-## Остов на дороге впереди (в пределах look пикс.) рядом с полосой lane → в какую полосу объезжать, иначе INF
-func wreck_ahead(s: float, lane: float, look: float) -> float:
+## Остов на дороге впереди (от −behind до look пикс. по маршруту) поперёк полосы lane → в какую полосу объезжать, иначе INF.
+## behind — пока корпус машины рядом с остовом, объезд держится (иначе она сворачивала обратно и задевала его кормой)
+func wreck_ahead(s: float, lane: float, look: float, behind := 0.0) -> float:
+	var best := INF
+	var best_ds := INF
 	for w in wrecks:
 		var ds: float = float(w[0]) - s
-		if ds > 0.0 and ds < look and absf(float(w[1]) - lane) < 38.0:
-			return float(w[1]) + (-55.0 if float(w[1]) >= 0.0 else 55.0)
-	return INF
+		if ds > -behind and ds < look and absf(float(w[1]) - lane) < 60.0 and ds < best_ds:
+			best_ds = ds
+			best = float(w[1]) + (-70.0 if float(w[1]) >= 0.0 else 70.0)
+	return best
+
+
+## Остов вплотную (|ds| < reach) на этом смещении от оси — нужно сперва довернуть
+func wreck_near(s: float, lat: float, reach: float) -> bool:
+	for w in wrecks:
+		if absf(float(w[0]) - s) < reach and absf(float(w[1]) - lat) < 40.0:
+			return true
+	return false
 
 
 func in_smoke(p: Vector2) -> bool:
@@ -369,6 +382,13 @@ func _process(delta: float) -> void:
 					(v as Node).queue_free()
 			queue_free()
 			return
+	if _dbg and int(_t / 4.0) != int((_t - delta) / 4.0):
+		var row := []
+		for v in vehicles:
+			if is_instance_valid(v):
+				var c := v as ConvoyVehicle
+				row.append("%s:%d/%d%s" % [c.role.left(2), int(c.s), int(c.drive.speed), "x" if c.wreck else ""])
+		print("AUTOTEST: convoy t%d alarm=%s %s" % [int(_t), alarm, " ".join(row)])
 	queue_redraw()
 
 
