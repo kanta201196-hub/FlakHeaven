@@ -450,6 +450,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			root.add_child(mi)
 		add_child(root)
 		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}, "bm": bm}
+		if bm != null and kind == "player":   # Т-3: модули прокачки на модели (до механизации — мерится чистый корпус)
+			u["modp"] = ModuleParts.attach(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 		if bm != null and kind in ["player", "wing"]:   # Т-1: предкрылки и закрылки своих самолётов
 			u["mech"] = WingMech.attach(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 			if kind == "player":   # Т-5: створки бомбоотсека «Кита»
@@ -647,6 +649,10 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 						u[key] = g.cd
 				u["bay_t"] = WingMech.update_bay(u["bay"], dropped, sd)
 				WingMech.set_transparency(u["bay"], mi.transparency)
+			if u.get("modp") != null:
+				ModuleParts.update(u["modp"], p.taken)
+				ModuleParts.set_transparency(u["modp"], mi.transparency)
+				PlaneFx.set_blue(u, bool((u["modp"] as Node3D).get_meta("blue_flame", false)))
 			_sync_weapons(u, p, tex)
 		for w in p.wingmen:
 			var wm: Wingman = w
@@ -854,11 +860,13 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		for si in pts.size():
 			var mt: Dictionary = pts[si]
 			var mtr: int = mt.get("t", tr)   # Т-5: у ловушек модель задаёт точка (кассета / контейнер)
-			var key := "%d_%d_%s_%d%s" % [gi, si, g.weapon, mtr, "e" if g.evo else ""]
+			var seek := ModuleParts.stage(int(p.taken.get("seeker", 0))) if g.weapon == "aam" and not g.evo else 0
+			var key := "%d_%d_%s_%d%s_s%d" % [gi, si, g.weapon, mtr, "e" if g.evo else "", seek]
 			want[key] = true
 			var wmi: MeshInstance3D = u["weapons"].get(key)
 			if wmi == null:
 				wmi = WeaponModels.make(g.weapon, mtr, mt["side"], p.cls_id, g.evo, p.plane_lvl)
+				ModuleParts.seeker_head(wmi, seek, mtr)   # Т-3: «Глазастик»
 				root.add_child(wmi)
 				u["weapons"][key] = wmi
 			var pt: Vector2 = mt["p"]
