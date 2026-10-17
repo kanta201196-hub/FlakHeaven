@@ -49,6 +49,7 @@ func _ready() -> void:
 	vp.size = Vector2i(640, 480)
 	vp.own_world_3d = true
 	vp.msaa_3d = Viewport.MSAA_4X
+	vp.anisotropic_filtering_level = Viewport.ANISOTROPY_16X
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(vp)
 	var we := WorldEnvironment.new()
@@ -100,10 +101,7 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 		view_lvl = 1
 	rect = r
 	_drawn_frame = Engine.get_process_frames()
-	var sz := Vector2i(maxi(64, int(r.size.x)), maxi(64, int(r.size.y)))
-	if vp.size != sz:
-		vp.size = sz
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_fit_vp(r)
 	var k := "%s_%d_%d" % [cls_id, view_lvl, weapon_tier]
 	if k != _key:
 		if _key.begins_with("w_"):
@@ -113,15 +111,26 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	return vp.get_texture()
 
 
+## Тест 3.5-s3 («текстуры в ангаре — идеально»): вид рисуется с запасом по разрешению — в пикселях экрана
+## (при растяжении окна) × SUPERSAMPLE и сжимается в рамку: текстура модели чётче, края без лесенки
+const SUPERSAMPLE := 1.5
+
+
+func _fit_vp(r: Rect2) -> void:
+	var k := SUPERSAMPLE * maxf(1.0, _ctrl.get_viewport().get_final_transform().get_scale().x) if _ctrl != null else SUPERSAMPLE
+	k = minf(k, 3200.0 / maxf(r.size.x, 1.0))
+	var sz := Vector2i(maxi(64, int(r.size.x * k)), maxi(64, int(r.size.y * k)))
+	if vp.size != sz:
+		vp.size = sz
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+
+
 ## Тест 3.5-s3: вкладка «ОРУЖИЕ» — то же оружие объёмной моделью, крупно, со ступенями 1 / 3 / 5 и модернизацией
 ## (подвесное — на пилоне, как под крылом; турель — класса, выбранного в ангаре)
 func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 	rect = r
 	_drawn_frame = Engine.get_process_frames()
-	var sz := Vector2i(maxi(64, int(r.size.x)), maxi(64, int(r.size.y)))
-	if vp.size != sz:
-		vp.size = sz
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_fit_vp(r)
 	var k := "w_%s_%s_%d" % [cls_id, weapon, weapon_tier]
 	if k != _key:
 		if not _key.begins_with("w_"):
@@ -159,6 +168,13 @@ func _build(cls_id: String, lvl: int) -> void:
 	if not ResourceLoader.exists(path):
 		return
 	var model: Node3D = (load(path) as PackedScene).instantiate()
+	# обшивка под углом (крылья, фюзеляж сбоку) — анизотропная фильтрация, иначе текстура «плывёт»
+	for c in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		for si in mi.mesh.get_surface_count():
+			var m := mi.mesh.surface_get_material(si) as BaseMaterial3D
+			if m != null:
+				m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	pivot.add_child(model)
 	turret_pos.clear()
 	_collect_faces(model)
