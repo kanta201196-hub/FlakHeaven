@@ -199,3 +199,68 @@ static func attach_detail(model: Node3D, key: String) -> Node3D:
 	model.add_child(det)
 	return det
 
+
+
+# ---------- Т-8: ведомые — полосы звена и свои подвесы ----------
+## tools/blender/wing_stripes.py → models/mech/fh_stripe_<класс>_<ур>.glb: поперечные полосы на крыльях и киле.
+## Цвет — по типу ведомого (с первого взгляда отличить от игрока). Подвесы: «Ласка» — противорадарная
+## ракета под каждым крылом (weapons.py arm), «Грачонок» — блоки НАР; «Стриж» — без подвесов.
+const STRIPE_COLOR := {"swift": Color(0.98, 0.78, 0.12), "rook": Color(0.95, 0.95, 0.9), "weasel": Color(0.9, 0.28, 0.12)}
+const WING_LOAD := {"weasel": ["arm", 1, 0.36], "rook": ["rockets", 1, 0.24]}   # оружие, ступень, длина (доля самолёта)
+const WING_LOAD_Z := 0.42   # доля полуразмаха — место пилона
+static var _stripe_mats := {}
+
+
+static func attach_wing_kit(model: Node3D, key: String, wtype: String, scene: PackedScene) -> Node3D:
+	var kit := Node3D.new()
+	kit.name = "wing_kit"
+	model.add_child(kit)
+	var path := "res://models/mech/fh_stripe_%s.glb" % key
+	if not _scenes.has(path):
+		_scenes[path] = load(path) if ResourceLoader.exists(path) else null
+	if _scenes[path] != null:
+		var st: Node3D = (_scenes[path] as PackedScene).instantiate()
+		if not _stripe_mats.has(wtype):
+			var m := StandardMaterial3D.new()
+			m.albedo_color = STRIPE_COLOR.get(wtype, Color.WHITE)
+			m.roughness = 0.7
+			_stripe_mats[wtype] = m
+		for c in st.find_children("*", "MeshInstance3D", true, false):
+			(c as MeshInstance3D).material_override = _stripe_mats[wtype]
+			(c as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		kit.add_child(st)
+	if WING_LOAD.has(wtype) and scene != null:
+		var w: String = WING_LOAD[wtype][0]
+		var t: int = WING_LOAD[wtype][1]
+		var wl: float = WING_LOAD[wtype][2]
+		var half := 0.0
+		for c in model.find_children("*", "MeshInstance3D", true, false):
+			var ab := (c as MeshInstance3D).get_aabb()
+			half = maxf(half, maxf(absf(ab.position.z), absf(ab.end.z)))
+		for sd in [-1.0, 1.0]:
+			var z: float = sd * half * WING_LOAD_Z
+			# середина хорды на этой линии: самый длинный отрезок, где под точкой есть крыло
+			var best := []
+			var cur := []
+			var x := 0.4
+			while x > -0.45:
+				if not is_nan(WeaponModels.surface_low(scene, x, z)):
+					cur.append(x)
+				else:
+					if cur.size() > best.size():
+						best = cur
+					cur = []
+				x -= 0.02
+			if cur.size() > best.size():
+				best = cur
+			if best.size() < 2:
+				continue
+			var xm: float = (float(best[0]) + float(best[-1])) * 0.5
+			var lo := WeaponModels.surface_low(scene, xm, z)
+			if is_nan(lo):
+				continue
+			var wmi := WeaponModels.make(w, t, "under")
+			wmi.scale = Vector3.ONE * wl
+			wmi.position = Vector3(xm, lo - WeaponModels.hang(w, t) * wl, z)
+			kit.add_child(wmi)
+	return kit

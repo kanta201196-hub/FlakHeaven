@@ -152,6 +152,11 @@ func _hold(p: Dictionary) -> void:
 		m.camera.global_position = pos
 	if p.get("crash", false) and m.player.wingmen.is_empty():
 		m.player.add_wingman()
+	if p.get("wingmen", false) and m.player.wingmen.is_empty():   # Т-8: звено из трёх типов рядом с игроком
+		for wt in ["swift", "rook", "weasel"]:
+			m.player.add_wingman(wt)
+		for wm: Wingman in m.player.wingmen:
+			wm.global_position = m.player.global_position + wm._slot_offset(m.player)
 	if p.get("crash", false) and _pt > 1.2 and not p.has("_done"):
 		# 3.4-t1 п. 32: ведомый сбит (бессмертие не даёт урон — обнуляем напрямую)
 		p["_done"] = true
@@ -231,6 +236,7 @@ func _make_points() -> Array:
 			for lv in [1, 2]:
 				pts.append({"name": "model_%s_%d" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "wait": 1.0, "zoom": 2.2})
 				pts.append({"name": "model_%s_%d_far" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "fly": true, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "model_wingmen", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.0, "wingmen": true, "wait": 1.0})
 		pts.append({"name": "model_roll", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.2, "roll": 0.62})
 		pts.append({"name": "model_tanker", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.5, "tanker": true, "wait": 1.0})
 		pts.append({"name": "model_ground", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.3, "enemies": true, "ground": true, "wait": 2.5})
