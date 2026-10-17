@@ -9,6 +9,9 @@ extends Enemy
 ##   bunker — командный бункер: прочный, без оружия. 3.5: главная цель — уничтожен бункер, позиция взята.
 ## 3.5: бункер и РЛС стоят на месте; ЗСУ и ЗРК переезжают между позициями вокруг бункера,
 ## встают между ним и самолётом и прикрывают его. Без бункера техника теряет управление и уезжает.
+## Правка 3.5-s4 (Kanta: «тупо перекатываются»): переезды через общий модуль GroundDrive (как у конвоя) —
+## разгон и торможение, ЗСУ на гусеницах доворачивает на месте, ЗРК на колёсах едет по дуге.
+## Корпус в 3D смотрит по курсу машины, а не по сдвигу точки на экране.
 
 var variant := "zsu"
 var site: AASite
@@ -27,6 +30,8 @@ var _def_cd := 0.0
 var _fire_dir := 0.0         # куда смотрит ствол при перехвате (для вспышки)
 var _def_flash := 0.0
 var leaderless := false      # бункер уничтожен
+var drive: GroundDrive = null   # правка 3.5-s4: у ЗСУ и ЗРК
+var _drive_t := 0.0
 
 const DRIVE_SPEED := 70.0
 const DEF_R := 300.0         # радиус перехвата наших ракет
@@ -81,6 +86,18 @@ func _ready() -> void:
 	super()
 	z_index = -2
 	anchor = position # точка рельефа; логическая позиция считается от неё каждый кадр (Enemy._process)
+	if mobile():
+		drive = GroundDrive.new(anchor, _body_angle)
+		if variant == "zsu":   # гусеницы: доворот на месте, короткая дуга
+			drive.max_speed = 80.0
+			drive.turn_r = 40.0
+			drive.pivot = 0.9
+			drive.accel = 40.0
+		else:                  # колёсное шасси ЗРК: только по дуге, плавнее
+			drive.max_speed = 70.0
+			drive.turn_r = 75.0
+			drive.accel = 28.0
+		drive.brake = drive.accel * 2.0
 
 
 ## Проекция точки рельефа на слой самолётов (как её видно с камеры). Без 3D — та же точка.
@@ -116,6 +133,8 @@ func behave(delta: float) -> void:
 		return
 	var p := Main.I.player
 	if p == null or p.hp <= 0.0 or site == null or not site.active:
+		if drive != null:
+			_stand(delta)
 		return
 	if mobile():
 		_drive(delta, p)
@@ -158,6 +177,7 @@ func behave(delta: float) -> void:
 ## Переезд: раз в несколько секунд — новая точка между бункером и самолётом (полукольцо 140–240 пикс.)
 func _drive(delta: float, p: Player) -> void:
 	if _goal == Vector2.INF:
+		_stand(delta)
 		_move_cd -= delta
 		if _move_cd > 0.0 or _lock > 0.0 or site.bunker == null:
 			return
@@ -167,25 +187,43 @@ func _drive(delta: float, p: Player) -> void:
 		if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
 			slot = Render3D.I.terrain.find_floor(slot, 110.0)
 		_goal = slot
+		_drive_t = 0.0
 		return
 	var step := _goal - anchor
-	if step.length() < 6.0:
+	_drive_t += delta
+	# приехал (у колёсной — «почти»: по дуге в точку можно не попасть) — тормозит и встаёт
+	if step.length() < (12.0 if drive.pivot > 0.0 else 30.0) or _drive_t > 9.0:
 		_goal = Vector2.INF
 		_move_cd = randf_range(3.0, 5.5)
 		return
-	_body_angle = rotate_toward(_body_angle, step.angle(), deg_to_rad(140.0) * delta)
-	# сначала доворачивает корпус, потом едет
-	var k := clampf(1.0 - absf(wrapf(step.angle() - _body_angle, -PI, PI)) / 1.2, 0.0, 1.0)
-	anchor += Vector2.from_angle(_body_angle) * minf(DRIVE_SPEED * k * delta, step.length())
+	# к точке подъезжает с замедлением: тормозной путь v²/2a
+	var want := DRIVE_SPEED
+	var stop_d := drive.speed * drive.speed / (2.0 * drive.brake) + 8.0
+	if step.length() < stop_d * 1.5:
+		want = maxf(15.0, DRIVE_SPEED * step.length() / (stop_d * 1.5))
+	drive.drive_to(_goal, want, delta)
+	_sync_drive()
+
+
+func _stand(delta: float) -> void:
+	drive.stop(delta)
+	_sync_drive()
+
+
+func _sync_drive() -> void:
+	anchor = drive.pos
+	_body_angle = drive.heading
 
 
 ## Бункер уничтожен: техника без командования прекращает огонь и уходит от позиции
 func _drive_off(delta: float) -> void:
 	if not mobile() or site == null:
 		return
-	var away := (anchor - site.anchor).angle()
-	_body_angle = rotate_toward(_body_angle, away, deg_to_rad(90.0) * delta)
-	anchor += Vector2.from_angle(_body_angle) * DRIVE_SPEED * 0.8 * delta
+	var away := (anchor - site.anchor).normalized()
+	if away == Vector2.ZERO:
+		away = Vector2.from_angle(_body_angle)
+	drive.drive_to(anchor + away * 400.0, DRIVE_SPEED * 0.9, delta)
+	_sync_drive()
 
 
 ## ПРО позиции: ЗСУ сбивает наши ракеты и НАР в радиусе DEF_R (очередь — 0,5 с перезарядки)
