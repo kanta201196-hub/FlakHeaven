@@ -247,6 +247,8 @@ func _check_contact() -> void:
 	var p := Main.I.player
 	if p == null or p.hp <= 0.0:
 		return
+	if p.dive_t > 0.0:
+		return   # правка 3.5-s4: в нырке игрок проходит под самолётами — ни урона, ни столкновения
 	if global_position.distance_to(p.global_position) < radius + p.radius:
 		if (p.shield_t > 0.0 or p.ram_t > 0.0) and not is_boss:
 			# Бронещит: таран без урона себе

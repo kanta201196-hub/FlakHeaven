@@ -23,7 +23,7 @@ var sun: DirectionalLight3D
 var terrain: Terrain3D
 var _ground_mat: ShaderMaterial
 var _units := {}      # instance_id → {node, kind, prev_heading, bank}
-var _objs := {}       # ключ клетки → MeshInstance3D
+var _objs := {}       # ключ клетки → MeshInstance3D (у обломков o_wreck — сцена модели)
 var _clouds: Array = []
 var _scorch: Array = []
 var _scorch_mesh: QuadMesh
@@ -31,6 +31,7 @@ var _scorch_mat: StandardMaterial3D
 var _flash_mat: StandardMaterial3D
 var _elite_mat: StandardMaterial3D
 var _zoom := 1.0
+var _c2 := Vector2.ZERO        # центр кадра на плоскости боя (для указателей за краем экрана)
 var _shadow_shader: Shader
 var _trails: Contrails       # 3.4-t1 (п. 10, 34): инверсионные следы самолётов и ракет
 var _tid := 0                # номера ракет для их следов
@@ -304,7 +305,19 @@ func mouse_world(fallback: Vector2) -> Vector2:
 func world_to_screen(p: Vector2, fallback: Vector2) -> Vector2:
 	if not _tilt_on:
 		return fallback
-	return cam.unproject_position(Vector3(p.x, 0.0, p.y))
+	var v := Vector3(p.x, 0.0, p.y)
+	if not cam.is_position_behind(v):
+		return cam.unproject_position(v)
+	# Правка 3.5-s4: точка позади камеры (далеко внизу кадра) проецируется зеркально — стрелка эвакуации
+	# показывала вперёд, хотя цель сзади. Берём направление от центра кадра и уводим точку далеко за край.
+	var dir := (p - _c2).normalized()
+	var a := cam.unproject_position(Vector3(_c2.x, 0.0, _c2.y))
+	var b := cam.unproject_position(Vector3(_c2.x + dir.x * 100.0, 0.0, _c2.y + dir.y * 100.0))
+	return a + (b - a).normalized() * 100000.0
+
+
+func tilt_on() -> bool:
+	return _tilt_on
 
 
 # ---------- камера ----------
@@ -346,6 +359,7 @@ func _process(delta: float) -> void:
 	if not (is_finite(c2.x) and is_finite(c2.y) and zoom > 0.001):
 		return
 	_zoom = zoom
+	_c2 = c2
 	var h := _cam_height(zoom)
 	var tilt := deg_to_rad(Tuning.g("cam_tilt"))
 	if tilt > 0.001:
@@ -359,6 +373,7 @@ func _process(delta: float) -> void:
 	# рельеф — куски под видимой областью дна долин (+ запас на тени и сглаживание камеры)
 	if terrain._bg != m.background:
 		terrain._bg = m.background
+		m.background.place_filter = terrain.fix_object   # тест 3.5-s4 (п. 20): объекты клеток не в реке
 		terrain.clear()
 	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
 	_set_tilt_mode(tilt > 0.001, m)
@@ -1219,6 +1234,7 @@ const OBJ_TOP := -30.0
 ## B-26: столовая гора-картинка не нужна — горы теперь настоящие;
 ## B-41: скалы-картинки заменены группами моделей (biome_props.gd)
 const OBJ_SKIP_3D := ["o_mesa", "o_rocks_big", "o_rocks_small"]
+var _wreck_plane: PackedScene = load("res://models/biome/b11_wreck_plane.glb") if ResourceLoader.exists("res://models/biome/b11_wreck_plane.glb") else null
 
 const OBJ_RELIEF := {
 	"o_rocks_big": [0.16, 0.45], "o_rocks_small": [0.18, 0.45], "o_mesa": [0.16, 0.25],
@@ -1257,6 +1273,22 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				mi.basis = Basis(Vector3.UP, -float(o["rot"])).scaled(Vector3(sz, sz, sz))
 				add_child(mi)
 				_objs[key] = mi
+				continue
+			if o["name"] == "o_wreck" and _wreck_plane != null:
+				# тест 3.5-s4 (п. 18): обломки — объёмный остов (tools/blender/plane_wreck.py), лежит по склону;
+				# земля под ним не выравнивается (раньше — выдавленная картинка в круглой площадке)
+				var sw := float(o["size"])
+				var e := sw * 0.35
+				var px: float = o["pos"].x
+				var pz: float = o["pos"].y
+				var nrm := Vector3(terrain.surface_fast(px - e, pz).y - terrain.surface_fast(px + e, pz).y, 2.0 * e,
+					terrain.surface_fast(px, pz - e).y - terrain.surface_fast(px, pz + e).y).normalized()
+				var wn: Node3D = _wreck_plane.instantiate()
+				wn.position = Vector3(px, gy - sw * 0.01, pz)
+				wn.basis = (Basis(Quaternion(Vector3.UP, nrm)) * Basis(Vector3.UP, -float(o["rot"]))).scaled(Vector3(sw, sw, sw))
+				add_child(wn)
+				_objs[key] = wn
+				mi.free()
 				continue
 			if float(rel[0]) > 0.0:
 				# 3.3: самолёт летит над всем (как в Sublight) — рельеф никогда не дотягивается до плоскости боя
