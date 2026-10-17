@@ -356,6 +356,9 @@ func _build(cls_id: String, lvl: int) -> void:
 	Insignia.attach(model, "%s_%d" % [cls_id, lvl], "player")
 	# тест 3.5-s3: кормовая кабина «Кита» — продолжение фюзеляжа в цвет обшивки
 	_tail = WingMech.attach_tail(model, "%s_%d" % [cls_id, lvl])
+	# замечание 31/33 (3.5-s4): свои винты «Кита 1» — 4 одинаковых по 4 лопасти (винты Meshy из модели удалены)
+	var props := WingMech.attach_props(model, "%s_%d" % [cls_id, lvl])
+	_props = WingMech.prop_nodes(props) if props != null else []
 	# Т-5: створки бомбоотсека в ангаре открыты — видно бомбы
 	var bay := WingMech.attach_bay(model, "%s_%d" % [cls_id, lvl])
 	if bay != null:
@@ -469,6 +472,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 
 var _faces := PackedVector3Array()
 var _tail: Node3D = null
+var _props: Array = []       # замечание 31/33: винты «Кита 1» — в ангаре медленно крутятся, как на прогреве
+const PROP_HANGAR := TAU * 0.6   # рад/с
 
 
 ## Треугольники модели (в осях pivot) — чтобы найти поверхность крыла под точкой подвеса
@@ -528,6 +533,7 @@ func _process(delta: float) -> void:
 	else:
 		pivot.position.y = 0.0
 		pivot.rotation = Vector3.ZERO
+	WingMech.spin_props(_props, PROP_HANGAR * delta)
 	if not _drag and _idle > 3.0:
 		_yaw += delta * 0.25
 	_pitch = clampf(_pitch, -0.2, 1.35)

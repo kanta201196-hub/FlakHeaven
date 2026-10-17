@@ -827,6 +827,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				Insignia.set_transparency(u["ins"], mi.transparency)
 			if u.get("detail") != null:
 				WingMech.set_transparency(u["detail"], mi.transparency)
+			if u.get("props") != null:   # винты «Кита 1» мигают вместе с моделью
+				WingMech.set_transparency(u["props"], mi.transparency)
 			if u.get("bay") != null:
 				# Т-5: створки открываются при сбросе бомб (перезарядка группы бомбоотсека скакнула вверх)
 				var dropped := false

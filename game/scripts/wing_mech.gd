@@ -188,6 +188,35 @@ static func tail_mount(tail: Node3D, base: Node3D) -> Vector3:
 ## models/mech/fh_detail_<класс>_<ур>.glb: «Грач 2» — ПГО и контейнеры на законцовках (attacker2_detail.py);
 ## «Кит 1» — Н-оперение и баки на законцовках, «Кит 2» — развал-кили, ПГО, винглеты (bomber_detail.py).
 ## Цвет — в материале детали (средний тон обшивки под ней)
+## Замечание 31/33 (3.5-s4): свои винты «Кита 1» (tools/blender/kit_props.py) вместо винтов Meshy, удалённых
+## из моделей (kit_props_cut.py). Узлы prop_* — origin на оси двигателя, вращение вокруг локальной X.
+## Возвращает узел с винтами или null, если файла для этого самолёта нет.
+static func attach_props(model: Node3D, key: String) -> Node3D:
+	var path := "res://models/mech/fh_prop_%s.glb" % key
+	if not _scenes.has(path):
+		_scenes[path] = load(path) if ResourceLoader.exists(path) else null
+	if _scenes[path] == null:
+		return null
+	var pr: Node3D = (_scenes[path] as PackedScene).instantiate()
+	pr.name = "props"
+	model.add_child(pr)
+	return pr
+
+
+## Все узлы-винты (prop_*) внутри attach_props
+static func prop_nodes(props: Node3D) -> Array:
+	var out := []
+	for c in props.find_children("prop_*", "Node3D", true, false):
+		out.append(c)
+	return out
+
+
+## Поворот винтов на угол (в радианах) вокруг их оси; знак — как вращаются лопасти (передней кромкой вперёд)
+static func spin_props(nodes: Array, angle: float) -> void:
+	for n: Node3D in nodes:
+		n.rotate_object_local(Vector3.RIGHT, -angle)
+
+
 static func attach_detail(model: Node3D, key: String) -> Node3D:
 	var path := "res://models/mech/fh_detail_%s.glb" % key
 	if not _scenes.has(path):
