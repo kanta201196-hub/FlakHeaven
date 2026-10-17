@@ -77,3 +77,32 @@ func _cond_chips(pos: Vector2, conds: Array) -> float:
 		_text(Vector2(x + 8, pos.y + 16), label, 14, col)
 		x += tw + 6.0
 	return x
+
+
+## Правки 15–16: взятые карточки чипами в прямоугольнике (цвет — лучшая редкость), не влезло — «и ещё N»
+func _card_chips(r: Rect2, items: Array, size := 14) -> void:
+	var x := r.position.x
+	var y := r.position.y
+	var h := size + 10.0
+	for i in items.size():
+		var it: Dictionary = items[i]
+		var label := String(it["title"])
+		if int(it["lvl"]) > 0:
+			label += " · ур. %d" % int(it["lvl"])
+		elif int(it["n"]) > 1:
+			label += " ×%d" % int(it["n"])
+		var tw := ui_font().get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 16.0
+		var last_row := y + 2.0 * h + 4.0 > r.end.y
+		# на последней строке оставляем место под «и ещё N»
+		var room := 0.0 if i == items.size() - 1 else 90.0
+		if last_row and x + tw + room > r.end.x:
+			_text(Vector2(x + 4, y + h - 7), "и ещё %d" % (items.size() - i), size, Color(0.75, 0.8, 0.9))
+			return
+		if x + tw > r.end.x and x > r.position.x:
+			x = r.position.x
+			y += h + 4.0
+		var col: Color = Cards.RARITY[int(it["r"])]["color"]
+		ctrl.draw_rect(Rect2(x, y, tw, h), Color(col.r * 0.25, col.g * 0.25, col.b * 0.25, 0.85))
+		ctrl.draw_rect(Rect2(x, y, 3, h), col)
+		_text(Vector2(x + 9, y + h - 7), label, size, col.lightened(0.35))
+		x += tw + 6.0

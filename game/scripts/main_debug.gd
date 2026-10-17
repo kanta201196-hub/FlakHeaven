@@ -70,6 +70,39 @@ func _shot(name: String) -> void:
 	print("SHOT ", name)
 
 
+var _ui_phase := 0
+
+## Правки 15–16: длинный вылет без боя — 120 карточек в журнале, пауза (Tab) и итоги.
+## godot --path game --rendering-driver opengl3 -- --autotest --shots --uitest
+func _ui_test() -> void:
+	if _ui_phase == 0 and m.state == "playing" and m.run_time > 2.0:
+		var names := ["Ракеты «воздух-воздух»: улучшение", "ГСН «Глазастик»", "Блок НАР: улучшение", "Боевая часть", "Ракетный двигатель",
+			"Форсаж: доводка", "Механизация крыла", "Форсированный двигатель", "Усиленная БЧ", "Пусковое устройство", "Быстрая перезарядка",
+			"Радиостанция «Болтушка»", "Сборщик трофеев", "Осколочная рубашка", "Облегчённый затвор", "Бронебойные снаряды", "Бронеплиты",
+			"Бочка: тренировка", "Звено: слётанность — Стриж 1", "Ведомый: «Стриж» — прикрытие", "СВЯЗКА «Карусель» — слот 1",
+			"МОДЕРНИЗАЦИЯ: «Ливень»", "МОДЕРНИЗАЦИЯ: «Дятел»", "Боевой разворот: тренировка"]
+		var lv := {}
+		for i in 120:
+			var nm: String = names[i % names.size()] if i < 48 else names[randi() % 18]
+			var r: String = Cards.RARITY[randi() % Cards.RARITY.size()]["name"]
+			var l := int(lv.get(nm, 1))
+			if i >= names.size() and l < 5 and not nm.begins_with("МОДЕРНИЗАЦИЯ") and not nm.begins_with("СВЯЗКА"):
+				m.player.cards_log.append("%s (%d → %d) [%s]" % [nm, l, l + 1, r])
+				lv[nm] = l + 1
+			else:
+				m.player.cards_log.append("%s [%s]" % [nm, r])
+		m._set_state("paused")
+		_ui_phase = 1
+	elif _ui_phase == 1 and m.state == "paused" and m._state_t > 0.8:
+		_shot("ui_pause")
+		m._set_state("playing")
+		m.on_evac_success()
+		_ui_phase = 2
+	elif _ui_phase == 2 and m.state == "evac" and m.result_t > 4.0:
+		_shot("ui_result")
+		m.get_tree().quit()
+
+
 var _rep_phase := 0
 
 ## 3.3-t2: отладка — заполнить и отправить отчёт с экрана итогов
@@ -119,6 +152,9 @@ func _mesa_test() -> void:
 func _debug_screenshots(delta: float) -> void:
 	_shot_t += delta / maxf(Engine.time_scale, 0.01)
 	if m._state_t < 0.6:
+		return
+	if m._args.has("--uitest") and m.state in ["playing", "paused", "evac", "levelup"]:
+		_ui_test()
 		return
 	if m.state == "menu" and m._state_t > 1.0 and m.menu.howto:
 		_shot("howto")
