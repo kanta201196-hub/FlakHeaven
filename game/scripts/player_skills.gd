@@ -86,10 +86,13 @@ func _activate_skill3(id := "", slot := 0) -> void:
 		"combat_turn":
 			pl.s3_t = float(d["time"])
 			pl.turn_t = pl.s3_t
+			# правка 14 (тест 3.5): разворот носом к ближайшему вражескому самолёту — к курсору он был незаметен,
+			# мышью нос и так смотрит туда. Нет самолётов рядом — как раньше: к курсору или на 180°
+			var want_dir := wrapf(pl.heading + PI, -PI, PI)
 			if int(Tuning.g("scheme")) == 2:
-				pl._turn_target = (Render3D.I.mouse_world(pl.get_global_mouse_position()) - pl.global_position).angle()
-			else:
-				pl._turn_target = wrapf(pl.heading + PI, -PI, PI)
+				want_dir = (Render3D.I.mouse_world(pl.get_global_mouse_position()) - pl.global_position).angle()
+			pl.turn_lock = _combat_target(want_dir)
+			pl._turn_target = (pl.turn_lock.global_position - pl.global_position).angle() if pl.turn_lock != null else want_dir
 			pl.combat_t = pl.s3_t + 3.0 + (1.0 if lvl >= 1 else 0.0)
 			var n := Main.I.projectiles.break_locks(pl.global_position, 1100.0)
 			Main.I.stats_add_counter("locks_broken", n)
@@ -102,8 +105,8 @@ func _activate_skill3(id := "", slot := 0) -> void:
 			Main.I.fx.ring(pl.global_position, 90.0, Color(0.6, 0.9, 1.0))
 			Main.I.fx.ring(pl.global_position, 160.0, Color(0.6, 0.9, 1.0))
 			# U-02: эффект разворота видно сразу — надпись у самолёта и подсказка в первые разы
-			Main.I.fx.text(pl.global_position + Vector2(0, -80), "ПУШКА ×2" + ("  ·  ракеты сбиты с наведения: %d" % n if n > 0 else ""), Color(0.6, 0.9, 1.0))
-			Hints.show("combat_turn", "Боевой разворот: рывок носом к курсору, вражеские ракеты теряют вас, и несколько секунд пушка стреляет вдвое чаще и сильнее.", 8.0, 2)
+			Main.I.fx.text(pl.global_position + Vector2(0, -80), ("РАЗВОРОТ НА ЦЕЛЬ · " if pl.turn_lock != null else "") + "ПУШКА ×2" + ("  ·  ракеты сбиты с наведения: %d" % n if n > 0 else ""), Color(0.6, 0.9, 1.0))
+			Hints.show("combat_turn", "Боевой разворот: самолёт рывком разворачивается носом к ближайшему врагу (синее кольцо), вражеские ракеты теряют вас, и несколько секунд пушка бьёт по этой цели вдвое чаще и сильнее.", 8.0, 2)
 			Main.I.sfx.play("combat_turn", -6.0, 0.7)
 		"yolka":
 			_fire_yolka(lvl)
@@ -314,3 +317,27 @@ func _jetwash() -> void:
 		pl._jet_last = pl.global_position
 		var k := 1.0 + 0.1 * (int(pl.taken.get("roll", 0)) + int(pl.taken.get("afterburner", 0)))
 		Main.I.projectiles.spawn_bomb(pl.global_position, 0.4, 30.0 * k, 70.0, "связка: реактивный след", pl.global_position)
+
+
+## «Боевой разворот»: ближайший вражеский самолёт в 1000 пикс., ближе к нужному направлению — выгоднее.
+## Асы и боссы в приоритете, дроны — только если больше никого нет, наземные не берём.
+func _combat_target(want_dir: float) -> Enemy:
+	var best: Enemy = null
+	var best_s := INF
+	for n in pl.get_tree().get_nodes_in_group("enemies"):
+		var e := n as Enemy
+		if e == null or e.hp <= 0.0 or e.is_ground:
+			continue
+		var to := e.global_position - pl.global_position
+		var d := to.length()
+		if d > 1000.0 or d < 1.0:
+			continue
+		var sc := d * (1.0 + absf(wrapf(to.angle() - want_dir, -PI, PI)) / PI)
+		if e is Boss or e is RivalAce:
+			sc *= 0.5
+		elif e is Drone:
+			sc *= 3.0
+		if sc < best_s:
+			best_s = sc
+			best = e
+	return best

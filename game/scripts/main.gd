@@ -351,7 +351,14 @@ func _open_levelup() -> void:
 	offer_rare = rare_picks > 0
 	offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
 	if offers.is_empty():
+		# правка 3.5-s4: все улучшения собраны — награда за уровень и аса не пропадает молча
+		var n := pending_levels
 		pending_levels = 0
+		rare_picks = 0
+		rare_reasons.clear()
+		player.heal(player.max_hp * minf(0.5, 0.1 * n))
+		parts += 30.0 * n * continue_mult()
+		show_banner("Все улучшения собраны — вместо карточки ремонт и +%d запчастей" % int(30.0 * n * continue_mult()), 3.0)
 		return
 	levelup_intro = Hints.bump("levelup_intro") <= 3 # U-03: первые 3 выбора — с объяснением
 	_set_state("levelup")
@@ -485,7 +492,8 @@ func on_activity_success(kind: String) -> void:
 		print("AUTOTEST: activity success ", kind, " at %.0f" % run_time)
 	# 3.5: активности стали чаще (раз в минуту) — выбор из редких карточек за каждую вторую,
 	# за остальные — ремонт 20% и запчасти, иначе сила игрока растёт ещё быстрее (лог 3.4-t1: Кит неуязвим с 12-й минуты)
-	var rare := activities_done % 2 == 1
+	# правка 3.5-s4: ас-соперник — самая трудная активность, выбор из редких карточек за каждого
+	var rare := activities_done % 2 == 1 or kind == "dogfight"
 	var what: String = {"ground": "Позиция ПВО уничтожена!", "convoy": "Колонна разбита!"}.get(kind, "Ас-соперник сбит!")
 	player.add_course_pts(1)
 	if rare:

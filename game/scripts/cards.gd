@@ -14,6 +14,38 @@ const RARITY := [
 ]
 const EVO_COLOR := Color(1.0, 0.95, 0.75)
 
+
+## Правки 15–16 (тест 3.5): взятые карточки сводкой — одна строка на улучшение с итоговым уровнем
+## и лучшей редкостью вместо сырого списка «(1 → 2), (2 → 3)…». Вход — Player.cards_log.
+## Выход: [{title, lvl (0 — без уровней), n, r}] в порядке первого взятия.
+static func log_summary(log: Array) -> Array:
+	var out: Array = []
+	var idx := {}
+	var re_lvl := RegEx.create_from_string("\\s*\\((\\d+)\\s*→\\s*(\\d+)\\)\\s*$")
+	for entry in log:
+		var s := String(entry)
+		var r := 0
+		var b := s.rfind(" [")
+		if b >= 0 and s.ends_with("]"):
+			var rn := s.substr(b + 2, s.length() - b - 3)
+			for i in RARITY.size():
+				if RARITY[i]["name"] == rn:
+					r = i
+			s = s.substr(0, b)
+		var lvl := 0
+		var mt := re_lvl.search(s)
+		if mt != null:
+			lvl = int(mt.get_string(2))
+			s = s.substr(0, mt.get_start())
+		if not idx.has(s):
+			idx[s] = out.size()
+			out.append({"title": s, "lvl": 0, "n": 0, "r": 0})
+		var it: Dictionary = out[idx[s]]
+		it["n"] = int(it["n"]) + 1
+		it["lvl"] = maxi(int(it["lvl"]), lvl)
+		it["r"] = maxi(int(it["r"]), r)
+	return out
+
 const MODULES := {
 	"armor": {"title": "Бронеплиты", "max": 5, "cat": "Модуль"},
 	"engine": {"title": "Форсированный двигатель", "max": 5, "cat": "Модуль"},
