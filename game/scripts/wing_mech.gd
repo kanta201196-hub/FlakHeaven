@@ -24,19 +24,7 @@ static func attach(model: Node3D, key: String) -> Node3D:
 		return null
 	var mech: Node3D = (_scenes[path] as PackedScene).instantiate()
 	mech.name = "wing_mech"
-	if _skin == null:
-		# цвет пластин — вершинный (снят с текстуры крыла под ними)
-		_skin = StandardMaterial3D.new()
-		_skin.vertex_color_use_as_albedo = true
-		_skin.vertex_color_is_srgb = true
-		_skin.roughness = 0.6
-		_skin.metallic = 0.25
-	for c in mech.find_children("*", "MeshInstance3D", true, false):
-		var mi := c as MeshInstance3D
-		for si in mi.mesh.get_surface_count():
-			var m := mi.mesh.surface_get_material(si)
-			if m != null and String(m.resource_name).begins_with("mech_skin"):
-				mi.set_surface_override_material(si, _skin)
+	attach_skin(mech)   # цвет пластин — вершинный (снят с текстуры крыла под ними)
 	for n in ["slat_l", "slat_r", "flap_l", "flap_r"]:
 		var part := mech.find_child(n, true, false) as Node3D
 		if part != null:
@@ -72,3 +60,65 @@ static func pose(mech: Node3D, t: float) -> void:
 static func set_transparency(mech: Node3D, v: float) -> void:
 	for c in mech.find_children("*", "MeshInstance3D", true, false):
 		(c as MeshInstance3D).transparency = v
+
+
+# ---------- Т-5: створки бомбоотсека «Кита» ----------
+## tools/blender/bay_doors.py → models/mech/fh_bay_<класс>_<ур>.glb: узлы bay_l / bay_r, петля по внешней
+## кромке вдоль локальной X; открытие — поворот вокруг X (левая +угол, правая −угол), ниша bay_well_* под ними.
+const BAY_DEG := 85.0
+const BAY_RATE := 3.0         # доля хода в секунду
+const BAY_HOLD := 1.2         # сколько створки открыты после сброса, с
+
+
+static func attach_bay(model: Node3D, key: String) -> Node3D:
+	var path := "res://models/mech/fh_bay_%s.glb" % key
+	if not _scenes.has(path):
+		_scenes[path] = load(path) if ResourceLoader.exists(path) else null
+	if _scenes[path] == null:
+		return null
+	var bay: Node3D = (_scenes[path] as PackedScene).instantiate()
+	bay.name = "bay_doors"
+	attach_skin(bay)
+	for n in ["bay_l", "bay_r"]:
+		var part := bay.find_child(n, true, false) as Node3D
+		if part != null:
+			part.set_meta("rest", part.transform)
+	bay.set_meta("t", 0.0)
+	bay.set_meta("hold", 0.0)
+	model.add_child(bay)
+	return bay
+
+
+## Створкам — тот же вершинный материал, что у пластин механизации
+static func attach_skin(node: Node3D) -> void:
+	if _skin == null:
+		_skin = StandardMaterial3D.new()
+		_skin.vertex_color_use_as_albedo = true
+		_skin.vertex_color_is_srgb = true
+		_skin.roughness = 0.6
+		_skin.metallic = 0.25
+	for c in node.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		for si in mi.mesh.get_surface_count():
+			var m := mi.mesh.surface_get_material(si)
+			if m != null and String(m.resource_name).begins_with("mech_skin"):
+				mi.set_surface_override_material(si, _skin)
+
+
+## dropped — в этом кадре сброшены бомбы: створки открываются и держатся BAY_HOLD секунд; возвращает выпуск 0…1
+static func update_bay(bay: Node3D, dropped: bool, delta: float) -> float:
+	var hold := BAY_HOLD if dropped else maxf(0.0, float(bay.get_meta("hold", 0.0)) - delta)
+	bay.set_meta("hold", hold)
+	var t := move_toward(float(bay.get_meta("t", 0.0)), 1.0 if hold > 0.0 or _force else 0.0, BAY_RATE * delta)
+	bay.set_meta("t", t)
+	pose_bay(bay, t)
+	return t
+
+
+static func pose_bay(bay: Node3D, t: float) -> void:
+	for n in ["bay_l", "bay_r"]:
+		var part := bay.find_child(n, true, false) as Node3D
+		if part == null or not part.has_meta("rest"):
+			continue
+		var a := deg_to_rad(BAY_DEG) * t * (1.0 if n == "bay_l" else -1.0)
+		part.transform = (part.get_meta("rest") as Transform3D) * Transform3D(Basis(Vector3.RIGHT, a), Vector3.ZERO)
