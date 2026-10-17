@@ -125,6 +125,10 @@ func _build(cls_id: String, lvl: int) -> void:
 	var mech := WingMech.attach(model, "%s_%d" % [cls_id, lvl])
 	if mech != null and OS.get_cmdline_user_args().has("--mechdown"):
 		WingMech.pose(mech, 1.0)
+	# Т-5: створки бомбоотсека в ангаре открыты — видно бомбы
+	var bay := WingMech.attach_bay(model, "%s_%d" % [cls_id, lvl])
+	if bay != null:
+		WingMech.pose_bay(bay, 1.0)
 	_add_weapons(cls_id, lvl)
 
 
@@ -148,6 +152,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		if bench_weapons.has(cls_id) and gi < (bench_weapons[cls_id] as Array).size() and bench_weapons[cls_id][gi] != "":
 			g.weapon = bench_weapons[cls_id][gi]
 		g.evo = weapon_tier == 4
+		g.level = [1, 3, 5][mini(weapon_tier, 3) - 1]   # ступень вида → уровень оружия (ловушки ставятся по уровню)
 		if g.is_empty():
 			continue
 		var wt := PlaneArt.weapon_tex(g.weapon)
@@ -157,7 +162,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		for mt: Dictionary in WeaponModels.mounts(cls_id, lvl, gi, g):
 			var pt: Vector2 = mt["p"]
 			var side: String = mt["side"]
-			var wmi := WeaponModels.make(g.weapon, mini(weapon_tier, 3), side, cls_id, weapon_tier == 4, lvl)
+			var mtr: int = mt.get("t", mini(weapon_tier, 3))
+			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4, lvl)
 			# по настоящей поверхности модели: подвес — под крылом на пилоне, верхняя турель
 			# утоплена в спину фюзеляжа, нижняя — в брюхо, кормовая — в конце фюзеляжа
 			var x := pt.x / tw
@@ -167,11 +173,23 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var y := 0.0
 			match side:
 				"under":
-					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mini(weapon_tier, 3), weapon_tier == 4) * wlen
+					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mtr, weapon_tier == 4) * wlen
 				"belly":   # Т-6: «Бабушкин ковёр» — своим узлом прямо к брюху, без пилона
 					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, 3, true) - WeaponModels.PYLON_H) * wlen
 				"top", "wing":
 					y = hi if not is_nan(hi) else 0.03
+				"bay":   # Т-5: бомбы «Кита» в открытом бомбоотсеке — верх утоплен в фюзеляж
+					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * wlen * 0.6
+				"tip":   # Т-5: контейнер ловушек на законцовке — по оси крыла
+					# законцовка картинки шире модели — ищем крыло ближе к оси и вперёд по хорде
+					var k := 0
+					while is_nan(lo) and k < 30:
+						z *= 0.98
+						x += 0.004
+						lo = _surface_y(x, z, true)
+						hi = _surface_y(x, z, false)
+						k += 1
+					y = (lo + hi) * 0.5 if not is_nan(lo) else 0.0
 				"bottom":
 					y = lo if not is_nan(lo) else -0.03
 				"tail":

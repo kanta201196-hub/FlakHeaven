@@ -98,7 +98,9 @@ static func hang(weapon: String, t: int, evo := false) -> float:
 
 ## Ракеты В-В и блоки НАР из Blender (tools/blender/weapons.py) по примерам владельца 16.10:
 ## ступени отличаются формой и деталями. Те же оси и длина 1, что у процедурных моделей ниже.
-const WEAPON_GLB := {"aam": "res://models/weapons/aam_%d.glb", "rockets": "res://models/weapons/rockets_%d.glb"}
+## Т-5: кассетные бомбы (балка → держатель на 4 → кассета) и ловушки (кассеты-«соты» в обшивке → контейнер на законцовке)
+const WEAPON_GLB := {"aam": "res://models/weapons/aam_%d.glb", "rockets": "res://models/weapons/rockets_%d.glb",
+	"bombs": "res://models/weapons/bombs_%d.glb", "flares": "res://models/weapons/flares_%d.glb"}
 ## Т-6: эволюция — совсем другая модель (правило владельца): «Шмель», «Ливень», «Салют» (на спине),
 ## «Бабушкин ковёр» (под фюзеляжем, планка поперёк полёта — свой узел крепления, без пилона)
 const EVO_GLB := "res://models/weapons/%s_evo.glb"
@@ -476,9 +478,10 @@ const WING_TURRET_Z := {"bomber_1": 0.44, "bomber_2": 0.3}
 static var _wing_pts := {}
 
 
-static func wing_point(cls_id: String, lvl: int, side: float) -> Vector2:
+static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.0) -> Vector2:
 	var key := "%s_%d" % [cls_id, lvl]
-	if not _wing_pts.has(key):
+	var ck := key if zf_override < 0.0 else "%s_%.2f" % [key, zf_override]
+	if not _wing_pts.has(ck):
 		var t := PlaneArt.plane_tex(cls_id, lvl)
 		var s := PlaneArt.shape_info(cls_id, lvl)
 		var res := Vector2.ZERO
@@ -488,24 +491,36 @@ static func wing_point(cls_id: String, lvl: int, side: float) -> Vector2:
 				img.decompress()
 			var w := img.get_width()
 			var h := img.get_height()
-			var zf: float = WING_TURRET_Z.get(key, 0.35)
-			var row := int(h / 2.0 + float(s["half"]) * zf)
-			# самый длинный непрерывный отрезок по строке — хорда крыла (без мотогондол спереди)
+			var zf: float = WING_TURRET_Z.get(key, 0.35) if zf_override < 0.0 else zf_override
+			var row := 0
 			var best0 := 0
 			var best1 := -1
-			var run0 := -1
-			for x in w + 1:
-				var on := x < w and img.get_pixel(x, clampi(row, 0, h - 1)).a > 0.4
-				if on and run0 < 0:
-					run0 = x
-				elif not on and run0 >= 0:
-					if x - run0 > best1 - best0:
-						best0 = run0
-						best1 = x
-					run0 = -1
+			# у законцовки строка может пройти мимо крыла — сдвигаемся к оси, пока не найдём хорду
+			while best1 - best0 < 3 and zf > 0.05:
+				row = int(h / 2.0 + float(s["half"]) * zf)
+				# самый длинный непрерывный отрезок по строке — хорда крыла (без мотогондол спереди)
+				best0 = 0
+				best1 = -1
+				var run0 := -1
+				for x in w + 1:
+					var on := x < w and img.get_pixel(x, clampi(row, 0, h - 1)).a > 0.4
+					if on and run0 < 0:
+						run0 = x
+					elif not on and run0 >= 0:
+						# у законцовки (zf_override > 0.8) — отрезок ближе всего к линии крыла, а не самый длинный:
+						# дальше по строке бывают стабилизаторы
+						var better := x - run0 > best1 - best0
+						if zf_override > 0.8 and best1 >= 0:
+							var wx := float(s["wing_x"]) + w / 2.0
+							better = absf((run0 + x) * 0.5 - wx) < absf((best0 + best1) * 0.5 - wx)
+						if better:
+							best0 = run0
+							best1 = x
+						run0 = -1
+				zf -= 0.02
 			res = Vector2((best0 + best1) / 2.0 - w / 2.0, row - h / 2.0)
-		_wing_pts[key] = res
-	var r: Vector2 = _wing_pts[key]
+		_wing_pts[ck] = res
+	var r: Vector2 = _wing_pts[ck]
 	return Vector2(r.x, absf(r.y) * signf(side))
 
 
@@ -524,9 +539,27 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 			out.append({"p": Vector2(float(sh["nose"]) - float(sh["len"]) * (0.55 if top else 0.5), 0.0),
 				"side": "top" if top else "belly", "yaw": 0.0})
 			return out
+	# Т-5: ловушки встроены в корпус, а не на пилоне: ступень 1 — две кассеты на спине у хвоста,
+	# 2 — крупнее, плюс у корня крыла, 3 — плюс контейнеры на законцовках. «t» — какую модель ставить
+	if g.weapon == "flares" and not g.evo:
+		var fs := PlaneArt.shape_info(cls_id, lvl)
+		if not fs.is_empty():
+			var ft := tier(g.level)
+			var fz: float = maxf(float(fs["fus"]) * 0.55, 3.0)
+			for sd in [-1.0, 1.0]:
+				out.append({"p": Vector2(float(fs["nose"]) - float(fs["len"]) * 0.68, fz * sd), "side": "top", "yaw": 0.0, "t": mini(ft, 2)})
+			if ft >= 2:
+				for sd in [-1.0, 1.0]:
+					out.append({"p": wing_point(cls_id, lvl, sd, 0.2), "side": "wing", "yaw": 0.0, "t": 2})
+			if ft >= 3:
+				for sd in [-1.0, 1.0]:
+					out.append({"p": wing_point(cls_id, lvl, sd, 0.96), "side": "tip", "yaw": 0.0, "t": 3})
+			return out
 	if not g.builtin:
+		# Т-5: у «Кита» бомбы — в бомбоотсеке под створками (render3d / hangar3d открывают их), без пилона
+		var bay := g.weapon == "bombs" and g.name.begins_with("Бомбоотсек") and ResourceLoader.exists("res://models/mech/fh_bay_%s_%d.glb" % [cls_id, lvl])
 		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):
-			out.append({"p": pt, "side": "under", "yaw": 0.0})
+			out.append({"p": pt, "side": "bay" if bay else "under", "yaw": 0.0})
 		return out
 	var s := PlaneArt.shape_info(cls_id, lvl)
 	if s.is_empty():

@@ -452,6 +452,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 		u = {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": d["k"], "ph": 0.0, "bank": 0.0, "seen": true, "weapons": {}, "bm": bm}
 		if bm != null and kind in ["player", "wing"]:   # Т-1: предкрылки и закрылки своих самолётов
 			u["mech"] = WingMech.attach(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
+			if kind == "player":   # Т-5: створки бомбоотсека «Кита»
+				u["bay"] = WingMech.attach_bay(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
 			u["sh"] = _make_shadow(tex, root)
 		if kind != "enemy":
@@ -634,6 +636,16 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				var brake := 1.0 if p.throttle_cut_on() else (1.0 - p.throttle) / 0.4
 				WingMech.update(u["mech"], p.bank, brake, int(p.taken.get("wing", 0)), sd)
 				WingMech.set_transparency(u["mech"], mi.transparency)
+			if u.get("bay") != null:
+				# Т-5: створки открываются при сбросе бомб (перезарядка группы бомбоотсека скакнула вверх)
+				var dropped := false
+				for g: Hardpoint in p.groups:
+					if g.weapon == "bombs":
+						var key := "bay_cd_%s" % g.name
+						dropped = dropped or g.cd > float(u.get(key, g.cd)) + 0.3
+						u[key] = g.cd
+				u["bay_t"] = WingMech.update_bay(u["bay"], dropped, sd)
+				WingMech.set_transparency(u["bay"], mi.transparency)
 			_sync_weapons(u, p, tex)
 		for w in p.wingmen:
 			var wm: Wingman = w
@@ -839,12 +851,13 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5
 		var tr := WeaponModels.tier(g.level, g.evo)
 		for si in pts.size():
-			var key := "%d_%d_%s_%d%s" % [gi, si, g.weapon, tr, "e" if g.evo else ""]
-			want[key] = true
 			var mt: Dictionary = pts[si]
+			var mtr: int = mt.get("t", tr)   # Т-5: у ловушек модель задаёт точка (кассета / контейнер)
+			var key := "%d_%d_%s_%d%s" % [gi, si, g.weapon, mtr, "e" if g.evo else ""]
+			want[key] = true
 			var wmi: MeshInstance3D = u["weapons"].get(key)
 			if wmi == null:
-				wmi = WeaponModels.make(g.weapon, tr, mt["side"], p.cls_id, g.evo, p.plane_lvl)
+				wmi = WeaponModels.make(g.weapon, mtr, mt["side"], p.cls_id, g.evo, p.plane_lvl)
 				root.add_child(wmi)
 				u["weapons"][key] = wmi
 			var pt: Vector2 = mt["p"]
@@ -853,7 +866,7 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
 			var tail_cab: bool = mt["side"] == "tail" and g.weapon == "turret" and (WeaponModels.TURRET_MODELS.get(p.cls_id, {}) as Dictionary).has("tail")
 			var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id) and not tail_cab
-			var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, tr, g.evo) * len_px, "belly": -tw * 0.028 - (WeaponModels.hang(g.weapon, tr, true) - WeaponModels.PYLON_H) * len_px, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
+			var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px, "belly": -tw * 0.028 - (WeaponModels.hang(g.weapon, tr, true) - WeaponModels.PYLON_H) * len_px, "bay": -tw * 0.02 - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
 			wmi.position = Vector3(pt.x, y, pt.y)
 			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
@@ -868,6 +881,8 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			if tail_cab and wmi.get_child_count() > 0:   # кабина стрелка неподвижна, крутится только шар
 				(wmi.get_child(0) as Node3D).basis = Basis(Vector3.UP, float(mt["yaw"]) - yaw)
 			wmi.transparency = 0.6 if dim else 0.0
+			if mt["side"] == "bay":   # в закрытом бомбоотсеке бомб не видно
+				wmi.visible = float(u.get("bay_t", 1.0)) > 0.4
 	for key in u["weapons"].keys():
 		if not want.has(key):
 			(u["weapons"][key] as Node).queue_free()
