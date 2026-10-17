@@ -290,6 +290,8 @@ func _process(delta: float) -> void:
 		var z := Tuning.g("camera_zoom") / lerpf(1.0, player.size, 0.35) / (1.0 + maxf(0.0, f - 1.0) * 0.3)
 		camera.zoom = camera.zoom.lerp(Vector2(z, z), 1.0 - exp(-delta * 3.0))
 		sfx.set_engine(player.velocity.length() / player.cruise_speed(), player.hp > 0.0 and state == "playing")
+	else:
+		sfx.set_engine(0.0, false)
 
 	if shake > 0.0 and state == "playing":
 		camera.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake

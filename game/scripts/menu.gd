@@ -127,6 +127,8 @@ func _set_slider(s: Array, x: float) -> void:
 	Tuning.set_param(key, v)
 	if key == "master_db":
 		Settings.apply_audio()
+	elif key == "music_db":
+		Main.I.sfx.apply_music_volume()
 
 
 func _click(action: String, mp: Vector2, r: Rect2) -> void:
