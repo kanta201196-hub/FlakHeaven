@@ -9,6 +9,7 @@ var weapon := ""      # "" — пустая группа
 var level := 1
 var priority := "nearest"
 var builtin := false  # встроенные турели: оружие не меняется
+var heavy := false    # U-06: тяжёлый подвес самолёта ур. 2 — только экспериментальное оружие
 var cd := 1.5
 var bonus := 0.0         # бонус урона от редкости карточек улучшения
 var trigger := "auto"    # для НАР и бомб: "auto" — сами, "button" — по кнопке (ПКМ / LT)
@@ -17,6 +18,8 @@ var evo_plus := 0        # «Э+» из резерва: +8% урона, −4% п
 var _side := 1.0
 var _icd := 0.0          # турели: перехват ракет (зонтик, «Дикобраз», нашивка)
 var _barrel := 0
+var _charge := 0.0       # рельсотрон: идёт зарядка
+const RAIL_CHARGE := 0.9
 
 
 func _init(p_name: String, p_slots: int, p_weapon: String, p_builtin := false) -> void:
@@ -33,7 +36,7 @@ func is_empty() -> bool:
 
 func label() -> String:
 	if is_empty():
-		return "%s: пусто" % name
+		return "%s: пусто%s" % [name, " (экспериментальное оружие)" if heavy else ""]
 	var s := "%s ×%d: %s ур. %d" % [name, slots, Weapons.DEFS[weapon]["short"], level]
 	if evo:
 		s = "%s ×%d: %s (Э%s)" % [name, slots, Prog.EVOS[weapon]["title"], ("+%d" % evo_plus) if evo_plus > 0 else ""]
@@ -66,6 +69,8 @@ func dmg() -> float:
 	match weapon:
 		"turret":
 			return base * (1.0 + 0.15 * (level - 1))
+		"railgun":
+			return base * (1.0 + 0.3 * (level - 1))
 		"rockets": # 3.5: залп фиксирован, уровень — урон и радиус
 			return base * (1.0 + Tuning.g("rocket_lvl_dmg") * (level - 1))
 		"aam": # 3.5: всегда 1 ракета с точки; ур. 4 вместо второй — урон и скорость
@@ -94,6 +99,8 @@ func reload_time(p: Player) -> float:
 				k *= 1.0 - 0.1 * (level - 1)
 		"flares":
 			k *= pow(0.9, level - 1)
+		"railgun", "emp":
+			k *= pow(0.92, level - 1)
 		"bombs":
 			if not evo:
 				k *= 1.0 - 0.08 * (level - 1)
@@ -150,7 +157,7 @@ func range_px() -> float:
 		if evo and weapon == "flares":
 			return 360.0
 	match weapon:
-		"flares":
+		"flares", "emp":
 			return base * (1.0 + 0.08 * (level - 1))
 		"gunpod", "bombs":
 			return base * (1.0 + 0.1 * (level - 1))
@@ -164,6 +171,9 @@ func update(delta: float, p: Player) -> void:
 		_turret_intercept(delta, p)
 		if p.syn.has("hedgehog"):
 			_hedgehog(delta, p)
+	if weapon == "railgun":
+		_railgun(delta, p)
+		return
 	cd -= delta
 	if cd > 0.0:
 		return
@@ -182,6 +192,8 @@ func update(delta: float, p: Player) -> void:
 			fired = _fire_flares(p)
 		"bombs":
 			fired = _fire_bombs(p, manual)
+		"emp":
+			fired = _fire_emp(p)
 	if fired and not manual and weapon in ["aam", "rockets", "bombs"]:
 		Hints.show("auto_launch", "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab).", 8.0, 2)
 	# 3.4: после выстрела переносим опоздание (до 0,05 с) — темп меньше зависит от FPS
@@ -189,6 +201,104 @@ func update(delta: float, p: Player) -> void:
 	if _quick:
 		_quick = false
 		cd = 0.2
+
+
+## U-08: рельсотрон — цель по носу (конус ±8°) → зарядка RAIL_CHARGE с прицельной линией → пробивающий выстрел
+func _railgun(delta: float, p: Player) -> void:
+	var fwd := Vector2.from_angle(p.heading)
+	var L := range_px()
+	if _charge > 0.0:
+		_charge -= delta
+		Main.I.fx.beam(p.global_position, p.global_position + fwd * L, Color(0.55, 0.85, 1.0, 0.18 + 0.4 * (1.0 - _charge / RAIL_CHARGE)), 1.5, 0.03)
+		if _charge <= 0.0:
+			# прицел по носу с допуском ±12°: луч идёт на цель в этом конусе (иначе за 0,9 с зарядки цель уходит с линии)
+			var best := 12.0
+			for n in p.get_tree().get_nodes_in_group("enemies"):
+				var e := n as Enemy
+				if e == null or e.hp <= 0.0:
+					continue
+				var to := e.global_position - p.global_position
+				var off := rad_to_deg(absf(wrapf(to.angle() - p.heading, -PI, PI)))
+				if to.length() < L and off < best:
+					best = off
+					fwd = to.normalized()
+			_rail_shot(p, fwd, L)
+			cd = reload_time(p)
+		return
+	cd -= delta
+	if cd > 0.0:
+		return
+	for n in p.get_tree().get_nodes_in_group("enemies"):
+		var e := n as Enemy
+		if e == null or e.hp <= 0.0:
+			continue
+		var to := e.global_position - p.global_position
+		if to.length() < L and absf(wrapf(to.angle() - p.heading, -PI, PI)) < deg_to_rad(8.0):
+			_charge = RAIL_CHARGE
+			Main.I.sfx.play("lock", -10.0, 0.7)
+			return
+	cd = 0.2
+
+
+func _rail_shot(p: Player, fwd: Vector2, L: float) -> void:
+	var a := p.global_position
+	var dmg_v := dmg()
+	var hits := 0
+	for n in p.get_tree().get_nodes_in_group("enemies"):
+		var e := n as Enemy
+		if e == null or e.hp <= 0.0:
+			continue
+		var to := e.global_position - a
+		var t := to.dot(fwd)
+		if t < 0.0 or t > L:
+			continue
+		if absf(to.cross(fwd)) < e.radius + 24.0:
+			e.take_hit(dmg_v, "рельсотрон")
+			Main.I.fx.hit_spark(e.global_position, Color(0.6, 0.9, 1.0))
+			hits += 1
+	Main.I.fx.beam(a, a + fwd * L, Color(0.75, 0.92, 1.0, 0.95), 7.0, 0.3)
+	Main.I.fx.beam(a, a + fwd * L, Color(1, 1, 1, 0.9), 2.0, 0.2)
+	Main.I.sfx.play("pass_hit", -6.0, 0.6)
+	Main.I.add_shake(4.0 if hits > 0 else 2.0)
+	if Main.I._autotest and not Main.I.counters.has("rail_shots"):
+		print("AUTOTEST: railgun shot at %.0f s, hits %d, dmg %.0f" % [Main.I.run_time, hits, dmg_v])
+	Main.I.stats_add_counter("rail_shots", 1)
+
+
+## U-08: ЭМИ-заряд — когда рядом 3+ врага или вражеская ракета. Дроны падают, остальные молчат 3 с
+## (асы и «Крепость» — 1 с и половина урона), вражеские ракеты теряют цель.
+func _fire_emp(p: Player) -> bool:
+	var r := range_px()
+	var pos := p.global_position
+	var near: Array = []
+	for n in p.get_tree().get_nodes_in_group("enemies"):
+		var e := n as Enemy
+		if e != null and e.hp > 0.0 and pos.distance_to(e.global_position) - e.radius < r:
+			near.append(e)
+	var msl := 0
+	for m in Main.I.projectiles.missiles:
+		if not m.get("lost", false) and pos.distance_to(m["p"]) < r:
+			msl += 1
+	if near.size() < 3 and msl == 0:
+		return false
+	var d := dmg()
+	for e: Enemy in near:
+		if e is Drone and not e.is_boss:
+			e.take_hit(maxf(d, e.hp + 1.0), "ЭМИ")
+		elif e.is_boss:
+			e.take_hit(d * 0.5, "ЭМИ")
+			e.silence = maxf(e.silence, 1.0)
+		else:
+			e.take_hit(d, "ЭМИ")
+			e.silence = maxf(e.silence, 3.0)
+	Main.I.projectiles.break_locks(pos, r)
+	Main.I.fx.ring(pos, r, Color(0.55, 0.8, 1.0))
+	Main.I.fx.ring(pos, r * 0.6, Color(0.8, 0.95, 1.0))
+	Main.I.sfx.play("shield_break", -6.0, 0.7)
+	if Main.I._autotest and not Main.I.counters.has("emp_pulses"):
+		print("AUTOTEST: emp pulse at %.0f s, enemies %d, missiles %d" % [Main.I.run_time, near.size(), msl])
+	Main.I.stats_add_counter("emp_pulses", 1)
+	return true
 
 
 ## Турели сбивают ракеты: «Зенитный зонтик» (раз в 0,5 с), «Дикобраз» (1,5 с), нашивка «Турели II» (3 с)

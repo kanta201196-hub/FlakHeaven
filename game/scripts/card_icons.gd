@@ -66,6 +66,19 @@ static func draw(ctrl: Control, c: Vector2, s: float, k: String, col: Color) -> 
 		"synergy":
 			ctrl.draw_arc(c + Vector2(-u * 0.35, 0), u * 0.55, 0.0, TAU, 24, col, lw)
 			ctrl.draw_arc(c + Vector2(u * 0.35, 0), u * 0.55, 0.0, TAU, 24, col, lw)
+		"railgun":
+			# рельсотрон: две направляющие и снаряд со вспышкой на конце
+			for sd in [-1.0, 1.0]:
+				ctrl.draw_line(c + Vector2(-u * 0.95, sd * u * 0.32), c + Vector2(u * 0.55, sd * u * 0.32), col, lw * 1.3)
+			ctrl.draw_line(c + Vector2(-u * 0.6, 0), c + Vector2(u * 0.95, 0), col, lw * 0.9)
+			ctrl.draw_circle(c + Vector2(u * 0.95, 0), lw * 1.6, col)
+		"emp":
+			# ЭМИ: точка и расходящиеся дуги-волны в обе стороны
+			ctrl.draw_circle(c, u * 0.2, col)
+			for i in 3:
+				var rr := u * (0.45 + 0.28 * i)
+				ctrl.draw_arc(c, rr, -0.7, 0.7, 12, col, lw * 0.9)
+				ctrl.draw_arc(c, rr, PI - 0.7, PI + 0.7, 12, col, lw * 0.9)
 		"repair":
 			ctrl.draw_rect(Rect2(c + Vector2(-u * 0.22, -u * 0.8), Vector2(u * 0.44, u * 1.6)), col)
 			ctrl.draw_rect(Rect2(c + Vector2(-u * 0.8, -u * 0.22), Vector2(u * 1.6, u * 0.44)), col)

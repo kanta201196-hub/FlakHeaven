@@ -399,7 +399,8 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		var g: Hardpoint = p.groups[gi]
 		if g.builtin or not g.is_empty():
 			continue
-		for w in Weapons.POOL:
+		# U-06/U-08: на тяжёлый подвес — только экспериментальное оружие, открытое кампанией; на остальные — обычное
+		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL):
 			if equipped.has(w) or banned.has("w:" + w):
 				continue
 			cands.append([1.4, {"id": "new_%s_%d" % [w, gi], "ban": "w:" + w, "kind": "weapon_new", "weapon": w, "group": gi, "cat": "Новое оружие",

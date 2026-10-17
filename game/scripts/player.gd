@@ -134,12 +134,23 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 	skill3 = sk if PlaneClasses.CLASS_SKILLS[id].has(sk) else cls["skill3"]
 	for gd in cls["groups"]:
 		groups.append(Hardpoint.new(gd["name"], int(gd["slots"]), gd["weapon"]))
+	# U-06: самолёт ур. 2 — тяжёлый подвес под экспериментальное оружие (после турелей: номера групп моделей не сдвигаются)
+	var heavy: Hardpoint = null
+	if Profile.plane_lvl(id) == 2:
+		heavy = Hardpoint.new("Тяжёлый подвес", 1, "")
+		heavy.heavy = true
+	for arg in OS.get_cmdline_user_args():   # проверка: --heavy=railgun / emp — тяжёлый подвес с оружием сразу
+		if String(arg).begins_with("--heavy="):
+			heavy = Hardpoint.new("Тяжёлый подвес", 1, String(arg).substr(8))
+			heavy.heavy = true
 	var turrets := int(cls["turrets"])
 	if turrets > 0:
 		var tg := Hardpoint.new("Турели", turrets, "turret", true)
 		if id == "bomber":
 			tg.level = 2 # 3.1: «Кит» стартует с турелями ур. 2
 		groups.append(tg)
+	if heavy != null:
+		groups.append(heavy)
 	# стартовое оружие и навык дают очки тегов
 	for g in groups:
 		if not (g as Hardpoint).is_empty():

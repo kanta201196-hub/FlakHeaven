@@ -17,6 +17,7 @@ const TAG_ORDER := ["missiles", "blast", "kinetic", "turrets", "wing", "maneuver
 const WEAPON_TAGS := {
 	"aam": ["missiles"], "rockets": ["missiles", "blast"], "gunpod": ["kinetic"],
 	"turret": ["kinetic", "turrets"], "flares": ["maneuver", "armor"], "bombs": ["blast"],
+	"railgun": ["kinetic"], "emp": ["blast"],
 }
 const MODULE_TAGS := {
 	"reload": ["missiles"], "seeker": ["missiles"], "frag": ["blast"], "warhead": ["blast"],
