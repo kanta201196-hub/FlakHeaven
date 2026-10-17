@@ -3,7 +3,7 @@
 #   стайл-гайда → модель стоит на y = 0, центр по X/Z в нуле, наибольший размер по X/Z = 1
 #   (игра масштабирует под размер в пикселях мира).
 #   python3 -m pip install pymeshlab trimesh   (pymeshlab на Linux нужна libopengl0)
-#   python3 tools/model_lab/biome_prep.py <папка raw> <папка вывода>
+#   python3 tools/model_lab/biome_prep.py <папка raw> <папка вывода> [имена моделей…]   (без имён — все)
 import sys, os, subprocess, tempfile, io
 import numpy as np
 import trimesh
@@ -18,8 +18,8 @@ MODELS = {
     "b04_poplar": (2000, 1024, 0.85, 0.9, (1.0, 1.0, 0.95)),
     "b05_orchard_tree": (2000, 1024, 0.85, 0.9, (1.0, 1.0, 0.95)),
     "b06_shrub": (900, 512, 0.8, 0.88, (1.0, 1.0, 0.94)),
-    "b07_wreck_truck": (4000, 1024, 0.8, 0.85, (1.0, 0.97, 0.94)),
-    "b08_wreck_tank": (4000, 1024, 0.8, 0.85, (1.0, 0.97, 0.94)),
+    "b07_wreck_truck": (7000, 1024, 0.8, 0.85, (1.0, 0.97, 0.94)),   # Т-9: было 4000 — угловатые колёса
+    "b08_wreck_tank": (7000, 1024, 0.8, 0.85, (1.0, 0.97, 0.94)),
     "b09_yurt": (2500, 1024, 0.85, 0.9, (1.0, 0.98, 0.94)),
     "b10_sandbag_post": (2000, 1024, 0.8, 0.88, (1.0, 0.97, 0.92)),
 }
@@ -27,7 +27,10 @@ MODELS = {
 src_dir, dst_dir = sys.argv[1], sys.argv[2]
 os.makedirs(dst_dir, exist_ok=True)
 here = os.path.dirname(os.path.abspath(__file__))
+only = sys.argv[3:]
 for name, (tris, tex, sat, val, tint) in MODELS.items():
+    if only and name not in only:
+        continue
     with tempfile.TemporaryDirectory() as d:
         mid = os.path.join(d, "m.glb")
         subprocess.run([sys.executable, os.path.join(here, "decimate_glb.py"), os.path.join(src_dir, name + ".glb"), mid, str(tris), str(tex)], check=True)
