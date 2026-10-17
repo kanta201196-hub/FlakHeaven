@@ -12,6 +12,7 @@ var heading := 0.0
 var is_boss := false
 var is_ground := false   # наземная цель: не таранит, ракеты В-В по ней не стреляют
 var no_despawn := false  # не исчезает вдали (цели активностей)
+var leaving := false     # уходит с поля (перед асом): не стреляет, не таранит, исчезает за краем экрана
 var xp := 1          # опыт за сбитие
 var parts := 1       # запчасти (валюта ангара) за сбитие
 var repair_chance := 0.02
@@ -98,6 +99,9 @@ func _process(delta: float) -> void:
 	_prev_pos = global_position
 	if anchor != Vector2.INF:
 		global_position = GroundTarget.air_pos(anchor)
+	if leaving:
+		_leave(delta)
+		return
 	if silence > 0.0:
 		silence -= delta
 	else:
@@ -119,6 +123,28 @@ func _process(delta: float) -> void:
 
 func behave(_delta: float) -> void:
 	pass
+
+
+## Уйти с поля: разворот от игрока, разгон и исчезновение, когда уже не видно (без награды)
+func leave() -> void:
+	if is_boss or is_ground or no_despawn:
+		return
+	leaving = true
+
+
+func _leave(delta: float) -> void:
+	var p := Main.I.player
+	var away := Vector2.from_angle(heading)
+	if p != null:
+		away = global_position - p.global_position
+	heading = rotate_toward(heading, away.angle(), deg_to_rad(120.0) * delta)
+	position += Vector2.from_angle(heading) * 380.0 * delta
+	var far := 1500.0 * (1.0 + 0.5 * sin(deg_to_rad(Tuning.g("cam_tilt"))))
+	if p == null or global_position.distance_to(p.global_position) > far:
+		remove_from_group("enemies")
+		queue_free()
+		return
+	queue_redraw()
 
 
 # ---------- 3.5: уклонение и ловушки ----------
