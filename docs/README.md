@@ -26,10 +26,11 @@
 | `hangar3d/plan.md` | План 3D-ангара |
 | `notes/3d-pilot-unblock.md` | Заметка о запуске пилота 3D-моделей |
 | `process/efficiency-review.md` | Разбор процесса: где теряем время и что поменяли |
+| `process/playbook.md` | Плейбук «Как мы работаем над игрой» (выгрузка артефакта Claude, 16.10; раздел про ветку `next` устарел) |
 | `process/project-instructions.md` | Текст для поля инструкций проекта Claude (по плейбуку «Как мы работаем над игрой») |
 | `owner-checklist/checklist.md` | Чек-лист владельца: Steam, юридическое, финансы, сроки |
 | `team/` | Роли агентов и процесс |
-| `threads/` | Выжимки тредов из проектов Claude участников (Kirill, Kanta) |
+| `threads/` | Выжимки тредов из проектов Claude участников (Kirill, Kanta): решения, отклонённое, открытые вопросы. Начать с `threads/README.md`; арт и звук — `threads/art-and-sound-pipeline.md` |
 | `sprint1/` | Спецификации, планы и разборы плейтестов по спринтам |
 | `audience*.md`, `market-analysis.md` | Аудитория и рынок |
 
