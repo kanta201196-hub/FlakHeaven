@@ -247,8 +247,7 @@ func hangar_action(a: String) -> void:
 			Profile.save()
 		"slot":
 			Profile.set_skill(c, int(p[1]), p[2])
-			if int(p[1]) == 0:
-				m.skill_pick[c] = p[2]
+			m.skill_pick[c] = Profile.skills(c)[0] # правка 7: выбор в полёте всегда совпадает с ангаром
 		"callsign":
 			Profile.next_callsign(c)
 		"promote":
