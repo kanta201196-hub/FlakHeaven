@@ -89,7 +89,7 @@ static func air_pos(g: Vector2) -> Vector2:
 	if r == null or not Render3D.enabled or r.cam == null or r.terrain == null:
 		return g
 	var c := r.cam.global_position
-	var y := r.terrain.surface(g.x, g.y).y
+	var y := r.terrain.surface_fast(g.x, g.y).y
 	if c.y <= 1.0 or c.y - y <= 1.0:
 		return g
 	var k := (c.y - y) / c.y

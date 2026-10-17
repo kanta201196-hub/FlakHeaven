@@ -48,6 +48,8 @@ var _gen := 0                  # поколение: после clear() резу
 ## Ушедшие с экрана куски не удаляем сразу: в бою кружат на месте — кусок часто нужен снова
 var _spare := {}               # Vector2i → MeshInstance3D (скрыт)
 var _spare_order: Array[Vector2i] = []
+## Высоты построенных кусков (для быстрого surface_fast: тени, высота полёта, наземные цели)
+var _hgrid := {}               # Vector2i → [hs, W, step]
 const SPARE_MAX := 30
 var props: BiomeProps          # B-41: модели биома на рельефе (null — без них)
 
@@ -97,6 +99,7 @@ func clear() -> void:
 	for k in _spare:
 		(_spare[k] as Node).queue_free()
 	_spare.clear()
+	_hgrid.clear()
 	_spare_order.clear()
 	_objs_cache.clear()
 	_side.clear()
@@ -243,6 +246,27 @@ func surface(x: float, z: float, ctx := {}) -> Vector3:
 	return Vector3(x, base_y + height(x, z, ctx), z)
 
 
+## Точка поверхности по сетке уже построенного куска (как нарисовано, в разы дешевле height());
+## куска нет — точный расчёт
+func surface_fast(x: float, z: float) -> Vector3:
+	var key := Vector2i(int(floorf(x / CHUNK)), int(floorf(z / CHUNK)))
+	var g = _hgrid.get(key)
+	if g == null:
+		return surface(x, z)
+	var hs: PackedFloat32Array = g[0]
+	var W: int = g[1]
+	var step: float = g[2]
+	var fx := (x - key.x * CHUNK) / step
+	var fz := (z - key.y * CHUNK) / step
+	var i := clampi(int(fx), 0, W - 3)
+	var j := clampi(int(fz), 0, W - 3)
+	var tx := fx - i
+	var tz := fz - j
+	var gi := (j + 1) * W + (i + 1)
+	var h := lerpf(lerpf(hs[gi], hs[gi + 1], tx), lerpf(hs[gi + W], hs[gi + W + 1], tx), tz)
+	return Vector3(x, base_y + h, z)
+
+
 ## Под кишлаками, крепостями, оазисами земля ровная (вес 0 — плоско, 1 — рельеф как есть)
 func _flat(x: float, z: float, ctx := {}) -> float:
 	if _bg == null and ctx.is_empty():
@@ -323,6 +347,7 @@ func sync(view: Rect2, budget := 2) -> void:
 		var old: Vector2i = _spare_order.pop_front()
 		(_spare[old] as Node).queue_free()
 		_spare.erase(old)
+		_hgrid.erase(old)
 	# готовые, но уже не нужные куски не копим
 	_mx.lock()
 	for key in _done.keys():
@@ -453,7 +478,8 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 				idx[p + 3] = b; idx[p + 4] = d; idx[p + 5] = c2
 			p += 6
 	var put: Dictionary = props.plan(key, ctx) if props != null else {}
-	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv2": uv2, "idx": idx, "gen": gen, "put": put}
+	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv2": uv2, "idx": idx, "gen": gen, "put": put,
+		"hs": hs, "W": W, "step": step}
 
 
 func _place_chunk(key: Vector2i, r: Dictionary) -> void:
@@ -478,6 +504,7 @@ func _place_chunk(key: Vector2i, r: Dictionary) -> void:
 	if props != null:
 		props.apply(r["put"], mi)
 	_chunks[key] = mi
+	_hgrid[key] = [r["hs"], r["W"], r["step"]]
 	if Main.I != null and Main.I.state == "playing":   # T4-03: рывки от сборки кусков рельефа (главный поток)
 		Main.I.tele.chunk_built((Time.get_ticks_usec() - t0) / 1000.0)
 

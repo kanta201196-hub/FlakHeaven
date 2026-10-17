@@ -325,7 +325,7 @@ func ground_under(p: Vector2) -> Vector3:
 	for i in 3:
 		var k := (h - y) / h
 		g = Vector3(c.x + (p.x - c.x) * k, 0.0, c.z + (p.y - c.z) * k)
-		y = terrain.surface(g.x, g.z).y if terrain != null else GROUND_Y
+		y = terrain.surface_fast(g.x, g.z).y if terrain != null else GROUND_Y
 	g.y = y
 	return g
 
@@ -536,11 +536,11 @@ func _relief_alt(u: Dictionary, p: Vector2, fwd: Vector2, look: float, delta: fl
 	var next: float = float(u.get("alt_next", 0.0)) - delta
 	if next <= 0.0 or u["kind"] == "player":
 		next = randf_range(0.2, 0.3)
-		var top := terrain.surface(p.x, p.y).y
+		var top := terrain.surface_fast(p.x, p.y).y
 		if look > 0.0:
 			for f: float in [0.5, 1.0]:
 				var a: Vector2 = p + fwd * look * f
-				top = maxf(top, terrain.surface(a.x, a.y).y)
+				top = maxf(top, terrain.surface_fast(a.x, a.y).y)
 		target = clampf(top + Tuning.g("relief_clear"), -Tuning.g("relief_down"), Tuning.g("relief_up"))
 		u["alt_to"] = target
 	u["alt_next"] = next
@@ -594,10 +594,10 @@ func _place_shadow(u: Dictionary, p: Vector2, heading: float, k: float) -> void:
 	for i in 3:
 		var t := y / d.y
 		g = p + Vector2(d.x, d.z) * t * off
-		y = terrain.surface(g.x, g.y).y
+		y = terrain.surface_fast(g.x, g.y).y
 	var e := 8.0
-	var n := Vector3(terrain.surface(g.x - e, g.y).y - terrain.surface(g.x + e, g.y).y, 2.0 * e,
-		terrain.surface(g.x, g.y - e).y - terrain.surface(g.x, g.y + e).y).normalized()
+	var n := Vector3(terrain.surface_fast(g.x - e, g.y).y - terrain.surface_fast(g.x + e, g.y).y, 2.0 * e,
+		terrain.surface_fast(g.x, g.y - e).y - terrain.surface_fast(g.x, g.y + e).y).normalized()
 	var s := k * Tuning.g("shadow_size")
 	var yaw := Basis(Vector3.UP, -heading)
 	var tilt := Basis(Quaternion(Vector3.UP, n))
@@ -692,7 +692,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		var ang: float = info.get("angle", e.heading)
 		if e.is_ground:
 			# 3.5: у целей с точкой на рельефе (anchor) — ставим ровно туда, иначе проекция с камеры
-			var gp := terrain.surface(e.anchor.x, e.anchor.y) if (e.anchor != Vector2.INF and terrain != null) else ground_under(e.global_position)
+			var gp := terrain.surface_fast(e.anchor.x, e.anchor.y) if (e.anchor != Vector2.INF and terrain != null) else ground_under(e.global_position)
 			var hull := ang
 			if ue.get("bm") != null:
 				hull = _ground_parts(ue, e, ang, delta)
@@ -960,7 +960,7 @@ func _sync_crashes(m: Main, sd: float) -> void:
 		root.position = Vector3(p.x, c["y"], p.y)
 		root.basis = (Basis(Vector3.UP, -float(c["hd"])) * Basis(Vector3.BACK, -pitch) * Basis(Vector3.RIGHT, c["roll"])).scaled(Vector3(k, k, k))
 		smoke.position = root.position
-		var gy := terrain.surface(p.x, p.y).y if terrain != null else GROUND_Y
+		var gy := terrain.surface_fast(p.x, p.y).y if terrain != null else GROUND_Y
 		if float(c["y"]) > gy + 6.0:
 			continue
 		# удар о землю: взрыв и пятно там, где на экране земля под обломками
@@ -1102,7 +1102,7 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 			var rel: Array = OBJ_RELIEF.get(o["name"], [0.08, 0.3])
 			var mi := MeshInstance3D.new()
 			var k: float = o["size"] / float(maxi(t.get_width(), t.get_height()))
-			var gy := terrain.surface(o["pos"].x, o["pos"].y).y
+			var gy := terrain.surface_fast(o["pos"].x, o["pos"].y).y
 			if o["name"] in ["o_fort", "o_village"]:
 				# 3.4-t1 (п. 25): крепость и кишлак — объёмные постройки, а не выдавленная картинка
 				var sz := float(o["size"])
