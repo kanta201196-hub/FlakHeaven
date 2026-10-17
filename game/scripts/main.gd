@@ -122,6 +122,9 @@ func _ready() -> void:
 		base_ts = 3.0
 	if _args.has("--turbo"):
 		base_ts = 6.0
+	if _args.has("--perf"):
+		Perf.on = true
+		add_child(Perf.new())
 	if _args.has("--shots"):
 		Tuning.set_param("boss_hp", 300.0) # быстрее дойти до эвакуации при проверке сборки
 

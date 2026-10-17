@@ -27,6 +27,9 @@ var _later: Array = []      # отложенные вспышки (цепочк�
 var _lights: Array = []
 var _light_i := 0
 var _cam_f := Vector3.DOWN
+const SMOKE_HALF := 250     # дыма больше — обновляем его через кадр
+var _smoke_dt := 0.0
+var _smoke_skip := false
 var _q := 1.0               # множитель числа частиц по «Качеству графики»
 var stats_peak := 0         # для лога: пик частиц за вылет
 var stats_us := 0           # время последнего кадра обновления, мкс (процессор)
@@ -589,21 +592,35 @@ func _process(delta: float) -> void:
 	var t0 := Time.get_ticks_usec()
 	_cam_f = -R.cam.global_transform.basis.z
 	if dt > 0.0:
+		var bt := t0
 		_tick_later(dt)
 		_tick_emit(dt)
+		if Perf.on: bt = Perf.sub("b.later_emit", bt)
 		_tick_debris(dt, R)
-		for L in [L_SMOKE, L_FIRE, L_CORE, L_SPARK, L_SHOCK, L_FLASH]:
+		if Perf.on: bt = Perf.sub("b.debris", bt)
+		# оптимизация (финальный проход 3.5): дым медленный — в тяжёлых сценах (много дыма) считаем его
+		# через кадр с накопленным временем; на глаз не отличить, а это почти половина времени Boom3D
+		_smoke_dt += dt
+		_smoke_skip = (_parts[L_SMOKE] as Array).size() > SMOKE_HALF and not _smoke_skip
+		if not _smoke_skip:
+			_tick(_parts[L_SMOKE], _smoke_dt)
+			_smoke_dt = 0.0
+		for L in [L_FIRE, L_CORE, L_SPARK, L_SHOCK, L_FLASH]:
 			_tick(_parts[L], dt)
+		if Perf.on: bt = Perf.sub("b.tick", bt)
 		for sl in _lights:
 			if float(sl["t"]) > 0.0:
 				sl["t"] = float(sl["t"]) - dt
 				var k := clampf(float(sl["t"]) / maxf(float(sl["max"]), 0.01), 0.0, 1.0)
 				(sl["l"] as OmniLight3D).light_energy = float(sl["e"]) * k * k
 				(sl["l"] as OmniLight3D).visible = float(sl["t"]) > 0.0
+	var wt := Time.get_ticks_usec()
 	var total := 0
 	for L in 7:
-		_write(L)
+		if not (L == L_SMOKE and _smoke_skip and dt > 0.0):
+			_write(L)
 		total += (_parts[L] as Array).size()
+	if Perf.on: Perf.sub("b.write", wt)
 	stats_peak = maxi(stats_peak, total)
 	stats_us = Time.get_ticks_usec() - t0
 

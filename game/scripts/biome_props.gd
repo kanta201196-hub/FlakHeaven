@@ -233,6 +233,7 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 			mm.set_instance_transform(j, arr[j])
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
+		mmi.name = kind
 		var small: bool = kind in ["shrub", "boulders", "poplar", "orchard"]
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
 		var no_shadow := Settings.gfx == 0 or (Settings.gfx == 1 and small)
