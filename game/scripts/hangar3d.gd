@@ -106,8 +106,49 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	var k := "%s_%d_%d" % [cls_id, view_lvl, weapon_tier]
 	if k != _key:
+		if _key.begins_with("w_"):
+			_dist = DIST0
 		_key = k
 		_build(cls_id, view_lvl)
+	return vp.get_texture()
+
+
+## Тест 3.5-s3: вкладка «ОРУЖИЕ» — то же оружие объёмной моделью, крупно, со ступенями 1 / 3 / 5 и модернизацией
+## (подвесное — на пилоне, как под крылом; турель — класса, выбранного в ангаре)
+func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
+	rect = r
+	_drawn_frame = Engine.get_process_frames()
+	var sz := Vector2i(maxi(64, int(r.size.x)), maxi(64, int(r.size.y)))
+	if vp.size != sz:
+		vp.size = sz
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	var k := "w_%s_%s_%d" % [cls_id, weapon, weapon_tier]
+	if k != _key:
+		if not _key.begins_with("w_"):
+			_yaw = YAW0
+			_pitch = 0.25
+			_dist = 1.0
+			focus = Vector3.ZERO
+		_key = k
+		_cls = ""   # при возврате на «САМОЛЁТ» модель соберётся заново
+		for c in pivot.get_children():
+			c.queue_free()
+		turret_pos.clear()
+		var evo := weapon_tier == 4
+		var t := mini(weapon_tier, 3)
+		var side := "top" if weapon == "turret" else ("" if weapon == "flares" and not evo else "under")
+		if evo and weapon in ["flares"]:
+			side = "top"
+		elif evo and weapon == "bombs":
+			side = ""
+		var wmi := WeaponModels.make(weapon, t, side, cls_id, evo, 1)
+		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
+		var bb := wmi.mesh.get_aabb()
+		var s := (0.62 if weapon != "turret" else 0.9) / maxf(1.0, maxf(bb.size.x, bb.size.z))
+		wmi.scale = Vector3.ONE * s
+		var c := bb.get_center() * s
+		wmi.position = Vector3(-c.x, -0.03 if side == "under" else -0.08, -c.z)
+		pivot.add_child(wmi)
 	return vp.get_texture()
 
 
