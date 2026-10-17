@@ -215,41 +215,52 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 	var ev := PackedStringArray()
 	for wv in p.evo_times:
 		ev.append(Prog.EVOS[wv]["title"])
-	ctrl.draw_rect(Rect2(pos.x, pos.y + 116, w, 96), Color(0.05, 0.055, 0.06, 0.8))
-	_text(Vector2(pos.x + 8, pos.y + 138), "Связки: %s   ·   Модернизации: %s   ·   Навык: %s, ур. %s" % [
+	ctrl.draw_rect(Rect2(pos.x, pos.y + 116, w, 62), Color(0.05, 0.055, 0.06, 0.8))
+	_para(Vector2(pos.x + 8, pos.y + 138), "Связки: %s   ·   Модернизации: %s   ·   Навык: %s, ур. %s" % [
 		", ".join(extra) if not extra.is_empty() else "нет", ", ".join(ev) if not ev.is_empty() else "нет",
-		p.s3_def()["title"], Prog.ROMAN[p.s3_lvl()]], 16, Menu.C_AMBER)
+		p.s3_def()["title"], Prog.ROMAN[p.s3_lvl()]], w - 16.0, 16, Menu.C_AMBER)
 
 
 # ---------- Подвесы и пауза ----------
 
 func loadout(m: Main, size: Vector2) -> void:
-	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.65))
-	_ctext(180, "ПАУЗА · ПОДВЕСЫ", 40, Color.WHITE)
-	_ctext(220, "Клик по приоритету — сменить, по какой цели стреляет группа", 20, Color(0.75, 0.8, 0.9))
+	# правка 15 (тест 3.5): фон плотнее — бой под паузой не мешает читать
+	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.84))
+	_ctext(110, "ПАУЗА · ПОДВЕСЫ", 40, Color.WHITE)
+	_ctext(146, "Клик по приоритету — сменить, по какой цели стреляет группа", 20, Color(0.75, 0.8, 0.9))
 	var p := m.player
+	# слева подвесы и теги, справа — взятые карточки сводкой
 	var w := 1000.0
-	var x := (size.x - w) / 2.0
-	var y := 260.0
+	var x := 90.0
+	var y := 176.0
+	# подвесов бывает до 7 — строки ужимаются, чтобы всё влезло над теговой панелью
+	var rh := clampf(440.0 / maxf(p.groups.size(), 1), 50.0, 64.0)
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
-		var r := Rect2(x, y, w, 64)
+		var r := Rect2(x, y, w, rh)
 		_panel(r, false)
-		_text(Vector2(x + 20, y + 28), g.label(), 22, Color.WHITE if not g.is_empty() else Color(0.6, 0.62, 0.7))
+		_text(Vector2(x + 20, y + rh * 0.44), g.label(), 20, Color.WHITE if not g.is_empty() else Color(0.6, 0.62, 0.7))
 		if not g.is_empty():
-			_text(Vector2(x + 20, y + 52), Weapons.DEFS[g.weapon]["desc"], 15, Color(0.75, 0.8, 0.9))
+			_text(Vector2(x + 20, y + rh * 0.44 + 20), Weapons.DEFS[g.weapon]["desc"], 14, Color(0.75, 0.8, 0.9))
+			var by := y + (rh - 36.0) / 2.0
 			if Weapons.DEFS[g.weapon]["uses_priority"]:
-				_button(Rect2(x + w - 290, y + 12, 270, 40), "Цель: %s" % Weapons.PRIORITY_NAMES[g.priority], "prio:%d" % gi, 18)
+				_button(Rect2(x + w - 290, by, 270, 36), "Цель: %s" % Weapons.PRIORITY_NAMES[g.priority], "prio:%d" % gi, 17)
 			if g.uses_trigger():
-				_button(Rect2(x + w - 290, y + 12, 270, 40), "Пуск: %s" % ("авто" if g.trigger == "auto" else "правой кнопкой мыши"), "trig:%d" % gi, 18)
-		y += 76.0
-	y += 10.0
-	_ctext(y + 10, "Пушка: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f" % [
+				_button(Rect2(x + w - 290, by, 270, 36), "Пуск: %s" % ("авто" if g.trigger == "auto" else "правой кнопкой мыши"), "trig:%d" % gi, 17)
+		y += rh + 8.0
+	y += 4.0
+	_text(Vector2(x, y + 10), "Пушка: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f" % [
 		float(p.cls["gun_dmg"]) * p.mods["gun_dmg"], float(p.cls["gun_rate"]) * p.mods["gun_rate"], p.mods["hp_cd"],
-		float(p.cls["speed"]) * p.mods["speed"], float(p.cls["turn"]) * p.mods["turn"], p.mods["pickup"]], 17, Color(0.85, 0.88, 0.95))
+		float(p.cls["speed"]) * p.mods["speed"], float(p.cls["turn"]) * p.mods["turn"], p.mods["pickup"]], 16, Color(0.85, 0.88, 0.95))
 	_tags_panel(p, Vector2(x, y + 36), w)
-	if not p.cards_log.is_empty():
-		_para(Vector2(x + 8, y + 186), "Карточки: " + ", ".join(PackedStringArray(p.cards_log)), w, 15, Color(0.7, 0.75, 0.85))
+	var cx := x + w + 40.0
+	var cw := size.x - cx - 60.0
+	_text(Vector2(cx, 200), "ВЗЯТЫЕ КАРТОЧКИ (%d)" % p.cards_log.size(), 20, Menu.C_AMBER)
+	_text(Vector2(cx, 222), "цвет — лучшая редкость, «ур.» — до какого уровня улучшено", 14, Color(0.65, 0.7, 0.8))
+	if p.cards_log.is_empty():
+		_text(Vector2(cx, 256), "пока ни одной", 16, Color(0.6, 0.62, 0.7))
+	else:
+		_card_chips(Rect2(cx, 238, cw, size.y - 238 - 180), Cards.log_summary(p.cards_log), 15)
 	var bx := (size.x - 960) / 2.0
 	_button(Rect2(bx - 165, size.y - 150, 300, 50), "Продолжить (Esc / Tab)", "resume")
 	_button(Rect2(bx + 165, size.y - 150, 300, 50), "Связки и модернизации", "codex")
@@ -260,7 +271,8 @@ func loadout(m: Main, size: Vector2) -> void:
 # ---------- Итоги вылета ----------
 
 func result(m: Main, size: Vector2) -> void:
-	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.78))
+	# правка 16 (тест 3.5): фон плотнее — интерфейс боя под итогами не просвечивает
+	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.025, 0.03, 0.93))
 	var t := int(m.run_time)
 	var top := 110.0
 	if m.state == "evac":
@@ -314,24 +326,33 @@ func result(m: Main, size: Vector2) -> void:
 	if not m.player.syn.is_empty():
 		_text(Vector2(rx, y), "Связки:", 19, Menu.C_AMBER)
 		for id in m.player.syn:
+			if y > 740.0: # не залезать на карточки
+				break
 			y += 24.0
 			var sd := Cards.syn_def(m.player, id)
 			var sdmg := m.stat("dealt", "связка: " + String(sd["title"]).to_lower())
 			var tt := int(float(m.player.syn[id]))
 			_text(Vector2(rx + 12, y), "«%s» — %d:%02d · урон %d" % [sd["title"], tt / 60, tt % 60, sdmg], 17, Color(1.0, 0.9, 0.6))
-	_meta_panel(m, Rect2(1220, top + 130, 620, 560))
-	var cy := 780.0
-	_para(Vector2(90, cy), "Карточки: " + (", ".join(PackedStringArray(m.player.cards_log)) if not m.player.cards_log.is_empty() else "—"), 1740.0, 15, Color(0.75, 0.8, 0.9))
-	var bx := size.x / 2.0 - 690.0
-	_button(Rect2(bx, size.y - 150, 320, 54), "R — ещё вылет", "restart", 22)
-	_button(Rect2(bx + 350, size.y - 150, 320, 54), "H — в ангар", "to_hangar", 22)
-	_button(Rect2(bx + 700, size.y - 150, 320, 54), "C — сменить самолёт", "change_class", 22)
-	_button(Rect2(bx + 1050, size.y - 150, 320, 54), "В главное меню", "to_menu", 22)
+	_meta_panel(m, Rect2(1220, top + 130, 620, 535))
+	# правка 16: вместо простыни всех карточек — сводка чипами, одна на улучшение, в отведённой полосе
+	var cy := 806.0
+	_text(Vector2(90, cy), "Карточки вылета: %d" % m.player.cards_log.size(), 18, Menu.C_AMBER)
+	if not m.player.cards_log.is_empty():
+		_card_chips(Rect2(290, cy - 19, size.x - 290 - 80, size.y - 170 - (cy - 19)), Cards.log_summary(m.player.cards_log), 14)
+	# кнопки одной строкой, отчёт — пятой кнопкой, ничего не перекрывает
+	var n_btn := 5 if Main.REPORT_URL != "" and not m.report_sent else 4
+	var bw := 300.0
+	var bx := size.x / 2.0 - (n_btn * bw + (n_btn - 1) * 20.0) / 2.0
+	var by := size.y - 140.0
+	_button(Rect2(bx, by, bw, 54), "R — ещё вылет", "restart", 22)
+	_button(Rect2(bx + 320, by, bw, 54), "H — в ангар", "to_hangar", 22)
+	_button(Rect2(bx + 640, by, bw, 54), "C — сменить самолёт", "change_class", 22)
+	_button(Rect2(bx + 960, by, bw, 54), "В главное меню", "to_menu", 22)
 	if Main.REPORT_URL != "":
 		if m.report_sent:
-			_text(Vector2(bx + 1050, size.y - 172), "✓ Отчёт принят — спасибо!", 19, Color(0.6, 1.0, 0.6))
+			_text(Vector2(0, by + 80), "✓ Отчёт принят — спасибо!", 19, Color(0.6, 1.0, 0.6), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 		else:
-			_button(Rect2(bx + 1050, size.y - 222, 320, 54), "ОТПРАВИТЬ ОТЧЁТ", "report_open", 22)
+			_button(Rect2(bx + 1280, by, bw, 54), "ОТПРАВИТЬ ОТЧЁТ", "report_open", 22)
 
 
 ## U-01: внутренние имена источников урона (их пишет лог l5) → понятные игроку
@@ -466,7 +487,7 @@ func _meta_panel(m: Main, r: Rect2) -> void:
 	var pr := Profile.crew_progress(m.cls_id)
 	var k := clampf((t - rows.size() * 0.18) / 0.6, 0.0, 1.0)
 	ctrl.draw_rect(Rect2(x, y, w, 16), Color(0, 0, 0, 0.5))
-	var frac := float(pr[0]) / maxf(float(pr[1]), 1.0) if int(pr[1]) > 0 else 1.0
+	var frac := clampf(float(pr[0]) / maxf(float(pr[1]), 1.0), 0.0, 1.0) if int(pr[1]) > 0 else 1.0
 	ctrl.draw_rect(Rect2(x, y, w * frac * k, 16), Color(0.5, 1.0, 0.6))
 	y += 40.0
 	_text(Vector2(x, y), "Экипаж ур. %d" % lv, 20, Color.WHITE)

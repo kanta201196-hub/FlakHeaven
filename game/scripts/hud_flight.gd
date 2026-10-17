@@ -47,7 +47,7 @@ func _hint_box(s: String, size: Vector2, a: float) -> void:
 	_para(Vector2(r.position.x + 16, r.position.y + 50), s, w - 32.0, 18, Color(1, 1, 1, a))
 
 
-func _skill(y: float, title: String, key: String, cd: float, active: float) -> void:
+func _skill(y: float, title: String, key: String, cd: float, active: float, note := "") -> void:
 	var s: String
 	var c := Color(0.6, 1.0, 0.7)
 	if active > 0.0:
@@ -59,6 +59,10 @@ func _skill(y: float, title: String, key: String, cd: float, active: float) -> v
 	else:
 		s = "%s [%s]: готово" % [title, key]
 	_text(Vector2(24, y), s, 18, c)
+	# правка 14: что делает навык — коротко, серым, следом за строкой
+	if note != "" and active <= 0.0 and cd <= 0.0:
+		var tw := ui_font().get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+		_text(Vector2(24 + tw + 10, y), "· " + note, 14, Color(0.7, 0.78, 0.88, 0.85))
 
 
 func _left_panel(m: Main, p: Player) -> void:
@@ -85,9 +89,9 @@ func _left_panel(m: Main, p: Player) -> void:
 	_skill(128, "Форсаж", "Shift", p.ab_cd, p.ab_t)
 	_skill(152, "Нырок", "V", p.dive_cd, p.dive_t)
 	var s3: Dictionary = p.s3_def()
-	_skill(176, "%s %s" % [s3["title"], Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active())
+	_skill(176, "%s %s" % [s3["title"], Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active(), String(s3.get("hud", "")))
 	if p.skill_b != "":
-		_skill(200, PlaneClasses.SKILL3[p.skill_b]["title"], "F", p.sb_cd, p.s3_active(p.skill_b))
+		_skill(200, PlaneClasses.SKILL3[p.skill_b]["title"], "F", p.sb_cd, p.s3_active(p.skill_b), String(PlaneClasses.SKILL3[p.skill_b].get("hud", "")))
 	var y := 234.0 if p.skill_b != "" else 210.0
 	for g in p.groups:
 		var h := g as Hardpoint
