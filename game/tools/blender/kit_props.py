@@ -86,7 +86,7 @@ def blade(bm, rot, mi_blade, mi_tip):
         if i == 0:
             r = 0.006          # комель уходит в кок
         # хорда: у комля узкая (ножка), шире к трети, к концу сужается и скругляется
-        chord = 0.004 if i == 0 else 0.0125 * (1.0 - 0.45 * t) * (1.0 - 0.7 * max(0.0, t - 0.85) / 0.15) * min(1.0, 0.55 + 2.2 * t)
+        chord = 0.004 if i == 0 else 0.014 * (1.0 - 0.45 * t) * (1.0 - 0.7 * max(0.0, t - 0.85) / 0.15) * min(1.0, 0.55 + 2.2 * t)
         thick = 0.0032 if i == 0 else 0.0026 * (1.0 - 0.6 * t)
         beta = math.radians(42.0 - 30.0 * t)          # крутка: у комля круче, к концу положе
         ch = Vector((math.sin(beta), math.cos(beta), 0))   # передняя кромка: вперёд (+X) и по вращению (+Y)
@@ -128,7 +128,7 @@ def make_prop(name, R, mats):
 out = sys.argv[1]
 extra = sys.argv[2] if len(sys.argv) > 2 else ""
 bpy.ops.wm.read_factory_settings(use_empty=True)
-mats = [mat("prop_spinner", (0.5, 0.44, 0.33), 0.2, 0.5),       # в тон светлому песку «Кита»
+mats = [mat("prop_spinner", (0.42, 0.36, 0.26), 0.15, 0.6),       # в тон светлому песку «Кита»
         mat("prop_blade", (0.12, 0.12, 0.13), 0.55, 0.45),      # тёмный металл
         mat("prop_tip", (0.95, 0.75, 0.12), 0.1, 0.5)]          # жёлтые законцовки
 root = bpy.data.objects.new("props", None)
