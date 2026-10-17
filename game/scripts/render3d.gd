@@ -454,6 +454,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			u["modp"] = ModuleParts.attach(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 		if bm != null and kind in ["player", "wing"]:   # Т-1: предкрылки и закрылки своих самолётов
 			u["mech"] = WingMech.attach(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
+			# V-07: свои знаки на крыльях, киле и (у асов) на борту
+			u["ins"] = Insignia.attach(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename(), kind)
 			if kind == "player":   # Т-5: створки бомбоотсека «Кита»
 				u["bay"] = WingMech.attach_bay(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 				u["tail"] = WingMech.attach_tail(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
@@ -639,6 +641,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				var brake := 1.0 if p.throttle_cut_on() else (1.0 - p.throttle) / 0.4
 				WingMech.update(u["mech"], p.bank, brake, int(p.taken.get("wing", 0)), sd)
 				WingMech.set_transparency(u["mech"], mi.transparency)
+			if u.get("ins") != null:
+				Insignia.set_transparency(u["ins"], mi.transparency)
 			if u.get("bay") != null:
 				# Т-5: створки открываются при сбросе бомб (перезарядка группы бомбоотсека скакнула вверх)
 				var dropped := false
