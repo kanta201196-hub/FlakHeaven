@@ -28,6 +28,7 @@ var cls_id := "fighter"
 var skill_pick := {}
 var codex_back := "menu"
 var result_t := 0.0
+var result_tab := 0 # правка 30: вкладка итогов — 0 обзор, 1 урон, 2 сборка
 var hangar_cls := "fighter"
 var hangar_tab := "plane"
 var hangar_w := "aam"
@@ -679,6 +680,7 @@ func _award(outcome: String) -> void:
 		"bosses": bosses_killed, "activities": activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
 		"op_parts": int(op_result.get("parts", 0))})
 	result_t = 0.0
+	result_tab = 0
 
 
 func on_player_dead() -> void:
