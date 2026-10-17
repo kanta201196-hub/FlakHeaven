@@ -461,14 +461,93 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 	return u
 
 
-func _place(u: Dictionary, p: Vector2, heading: float, bank: float, roll: float, y := 0.0, scale_k := 1.0) -> void:
+func _place(u: Dictionary, p: Vector2, heading: float, bank: float, roll: float, y := 0.0, scale_k := 1.0, pitch := 0.0) -> void:
 	var root: Node3D = u["node"]
-	root.position = Vector3(p.x, y, p.y)
-	var b := Basis(Vector3.UP, -heading) * Basis(Vector3.RIGHT, bank + roll)
+	var q := p
+	if u.has("alt"):
+		# самолёт выше или ниже плоскости боя — на луче камеры через точку p: на экране он там же,
+		# где его пули и хитбокс, а высоту видно по размеру и по рельефу под ним
+		q = _on_ray(p, y)
+	root.position = Vector3(q.x, y, q.y)
+	var b := Basis(Vector3.UP, -heading) * Basis(Vector3.BACK, pitch) * Basis(Vector3.RIGHT, bank + roll)
 	var k: float = u["k"] * scale_k
 	root.basis = b.scaled(Vector3(k, k, k))
 	if u.has("sh"):
 		_place_shadow(u, p, heading, k)
+
+
+const CUT_OVERLAY_SHADER := """
+shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_never, blend_mix;
+uniform sampler2D tex : source_color, filter_linear;
+uniform vec4 col : source_color;
+void fragment() {
+	ALBEDO = col.rgb;
+	ALPHA = texture(tex, UV).a < 0.45 ? 0.0 : col.a;
+}
+"""
+var _cut_shader: Shader
+var _cut_mats := {}
+
+
+## Подсветка попадания / элиты для модели из картинки: только там, где картинка непрозрачна
+func _cut_overlay(tex: Texture2D, kind: String) -> ShaderMaterial:
+	var key := "%s|%s" % [tex.get_rid(), kind]
+	if _cut_mats.has(key):
+		return _cut_mats[key]
+	if _cut_shader == null:
+		_cut_shader = Shader.new()
+		_cut_shader.code = CUT_OVERLAY_SHADER
+	var m := ShaderMaterial.new()
+	m.shader = _cut_shader
+	m.set_shader_parameter("tex", tex)
+	m.set_shader_parameter("col", Color(1, 1, 1, 0.75) if kind == "flash" else Color(1.0, 0.75, 0.2, 0.28))
+	_cut_mats[key] = m
+	return m
+
+
+## Перспектива и так меняет размер самолёта с высотой — гасим половину, чтобы он не «прыгал»
+func _alt_scale(y: float) -> float:
+	var h := cam.global_position.y
+	return sqrt(maxf(h - y, 1.0) / maxf(h, 1.0))
+
+
+## Точка на высоте y на луче камеры через точку p плоскости боя (x, z)
+func _on_ray(p: Vector2, y: float) -> Vector2:
+	var c := cam.global_position
+	var k := (c.y - y) / maxf(c.y, 1.0)
+	return Vector2(c.x + (p.x - c.x) * k, c.z + (p.y - c.z) * k)
+
+
+## Полёт по рельефу: самолёт плавно поднимается над хребтами и опускается в долины.
+## Высота цели — рельеф под самолётом и впереди по курсу (look — на сколько пикс. вперёд смотреть)
+## плюс запас relief_clear, в пределах relief_up / relief_down от плоскости боя. Возвращает [высота, тангаж].
+func _relief_alt(u: Dictionary, p: Vector2, fwd: Vector2, look: float, delta: float) -> Array:
+	var alt: float = u.get("alt", 0.0)
+	if terrain == null or Tuning.g("relief_follow") < 0.5:
+		u["alt"] = move_toward(alt, 0.0, delta * 60.0)
+		return [float(u["alt"]), 0.0]
+	# высоту рельефа считаем не каждый кадр (дорого для сотни врагов): игрок — каждый кадр,
+	# остальные — раз в ~0,25 с, вразнобой
+	var target: float = u.get("alt_to", 0.0)
+	var next: float = float(u.get("alt_next", 0.0)) - delta
+	if next <= 0.0 or u["kind"] == "player":
+		next = randf_range(0.2, 0.3)
+		var top := terrain.surface(p.x, p.y).y
+		if look > 0.0:
+			for f: float in [0.5, 1.0]:
+				var a: Vector2 = p + fwd * look * f
+				top = maxf(top, terrain.surface(a.x, a.y).y)
+		target = clampf(top + Tuning.g("relief_clear"), -Tuning.g("relief_down"), Tuning.g("relief_up"))
+		u["alt_to"] = target
+	u["alt_next"] = next
+	var nw := lerpf(alt, target, 1.0 - exp(-delta * Tuning.g("relief_rate")))
+	u["alt"] = nw
+	# нос вверх при наборе, вниз при снижении (сглажено, не больше ~15°)
+	var vy := (nw - alt) / maxf(delta, 0.001)
+	var pt := clampf(atan2(vy, 400.0), -0.26, 0.26)
+	u["pitch"] = lerpf(float(u.get("pitch", 0.0)), pt, 1.0 - exp(-delta * 5.0))
+	return [nw, float(u["pitch"])]
 
 
 func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
@@ -531,8 +610,10 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var roll := 0.0
 			if p.roll_t > 0.0:
 				roll = (1.0 - p.roll_t / p.roll_time()) * TAU * p.roll_dir
-			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт ниже и меньше на экране
-			_place(u, p.global_position, p.heading, p.bank * 0.45, roll, -Tuning.g("dive_depth") * dk, 1.0 - 0.3 * dk)
+			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт плавно ниже и меньше на экране
+			var ra := _relief_alt(u, p.global_position, p.velocity, 1.0, sd)
+			var y: float = ra[0] - Tuning.g("dive_depth") * dk
+			_place(u, p.global_position, p.heading, p.bank * 0.45, roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), float(ra[1]) - 0.2 * p.dive_pitch())
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
 			u["ab"] = move_toward(float(u.get("ab", 0.0)), 1.0 if p.ab_t > 0.0 else 0.0, sd * 4.0)
 			var ab: float = u["ab"]
@@ -557,7 +638,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var len_w := Tuning.g("plane_len") * 0.85 * float(wt.get_width()) / float(PlaneArt.plane_tex("fighter", 1).get_width())
 			var uw := _ensure(wm.get_instance_id(), "wing", wt, len_w, 0.075, 48)
 			uw["ref"] = weakref(wm)
-			_place(uw, wm.global_position, wm.heading, _turn_bank(uw, wm.heading, delta), 0.0)
+			var rw := _relief_alt(uw, wm.global_position, Vector2.from_angle(wm.heading) * 300.0, 1.0, sd)
+			_place(uw, wm.global_position, wm.heading, _turn_bank(uw, wm.heading, delta), 0.0, rw[0], _alt_scale(rw[0]), rw[1])
 			if uw.get("mech") != null:
 				WingMech.update(uw["mech"], float(uw["bank"]), 0.0, 0, sd)
 			PlaneFx.update(uw, sd, 0.0)
@@ -572,7 +654,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			continue
 		var ua := _ensure(an.get_instance_id(), "ally", at, float(an.call("ally_len")), 0.075, 56)
 		var ah: float = an.get("heading")
-		_place(ua, an.global_position, ah, _turn_bank(ua, ah, delta), 0.0)
+		var rl := _relief_alt(ua, an.global_position, Vector2.from_angle(ah) * 300.0, 1.0, sd)
+		_place(ua, an.global_position, ah, _turn_bank(ua, ah, delta), 0.0, rl[0], _alt_scale(rl[0]), rl[1])
 		PlaneFx.update(ua, sd, 0.0)
 		if ua.get("bm") != null and an.get("boom_len") != null:
 			_tanker_boom(ua, an, float(an.call("ally_len")))
@@ -597,11 +680,16 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				hull = _ground_parts(ue, e, ang, delta)
 			_place(ue, Vector2(gp.x, gp.z), hull, 0.0, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y)
 		else:
-			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle()) # 3.5: бочка при уклонении
+			var re := _relief_alt(ue, e.global_position, Vector2.from_angle(ang) * 250.0, 0.0 if e.is_boss else 1.0, sd)
+			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle(), re[0], _alt_scale(re[0]), re[1]) # 3.5: бочка при уклонении
 			if ue.get("bm") != null and e is Fortress:
 				_fortress_parts(ue, e as Fortress, ang, delta)
 		var mi2: MeshInstance3D = ue["mi"]
-		mi2.material_overlay = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
+		if ue.get("bm") != null:
+			mi2.material_overlay = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
+		else:
+			# модель из картинки (транспортник и др.): подсветка только по силуэту, иначе видна сетка квадратами
+			mi2.material_overlay = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)
 	for id in _units.keys():
 		if not _units[id]["seen"]:
 			if not _start_crash(_units[id]):

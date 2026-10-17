@@ -438,12 +438,28 @@ func on_bullet_miss() -> void:
 		manual_bonus = maxf(0.0, manual_bonus - Tuning.g("manual_miss"))
 
 
-## 3.5 (правка 29): глубина нырка 0…1 — плавно вниз за 0,25 с, вверх за 0,35 с (для картинки)
+## 3.5 (правка 29): глубина нырка 0…1 — плавный спуск и подъём (по 40% времени нырка, без рывка)
 func dive_k() -> float:
 	if dive_t <= 0.0:
 		return 0.0
-	var gone := Tuning.g("dive_time") - dive_t
-	return clampf(minf(gone / 0.25, dive_t / 0.35), 0.0, 1.0)
+	var dur := Tuning.g("dive_time")
+	var gone := dur - dive_t
+	var edge := dur * 0.4
+	return smoothstep(0.0, edge, gone) * smoothstep(0.0, edge, dive_t)
+
+
+## Тангаж в нырке: -1 нос вниз на спуске … +1 нос вверх на подъёме
+func dive_pitch() -> float:
+	if dive_t <= 0.0:
+		return 0.0
+	var dur := Tuning.g("dive_time")
+	var gone := dur - dive_t
+	var edge := dur * 0.4
+	if gone < edge:
+		return sin(gone / edge * PI)
+	if dive_t < edge:
+		return -sin(dive_t / edge * PI)
+	return 0.0
 
 
 ## В нырке пули и таран вражеских самолётов проходят выше; ПВО, ракеты и земля — бьют
