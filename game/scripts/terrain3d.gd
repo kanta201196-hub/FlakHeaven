@@ -38,6 +38,17 @@ var _valley := FastNoiseLite.new()
 var _plains := FastNoiseLite.new()
 var _side := {}                # Vector2i → боковые долины поселений рядом: [[A, B, ширина], …]
 var _bg: Background
+## Сборка кусков в фоне (тест 3.5-s3: кусок считался в главном потоке до 77 мс — рывки при полёте).
+## Высоты и массивы вершин считает пул потоков по снимку данных (ctx), сетку и модели биома
+## ставим в главном потоке — не больше одного куска за кадр.
+var _pending := {}             # Vector2i → id задачи пула
+var _done := {}                # Vector2i → готовые массивы (под _mx)
+var _mx := Mutex.new()
+var _gen := 0                  # поколение: после clear() результаты старых задач выбрасываем
+## Ушедшие с экрана куски не удаляем сразу: в бою кружат на месте — кусок часто нужен снова
+var _spare := {}               # Vector2i → MeshInstance3D (скрыт)
+var _spare_order: Array[Vector2i] = []
+const SPARE_MAX := 30
 var props: BiomeProps          # B-41: модели биома на рельефе (null — без них)
 
 
@@ -77,18 +88,24 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 
 
 func clear() -> void:
+	_gen += 1
+	_wait_pending()   # потоки читают N — меняем после них
 	N = N_GFX[clampi(Settings.gfx, 0, 3)]
 	for k in _chunks:
 		(_chunks[k] as Node).queue_free()
 	_chunks.clear()
+	for k in _spare:
+		(_spare[k] as Node).queue_free()
+	_spare.clear()
+	_spare_order.clear()
 	_objs_cache.clear()
 	_side.clear()
 
 
 ## Расстояние до линии реки, px, со знаком берега; боковые долины поселений сводят его к нулю
-func valley(x: float, z: float) -> float:
+func valley(x: float, z: float, ctx := {}) -> float:
 	var d := river_field(x, z)
-	for s in _sides(x, z):
+	for s in _sides(x, z, ctx):
 		var dc := maxf(_seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5, 0.0)
 		if dc < absf(d):
 			d = dc
@@ -96,11 +113,11 @@ func valley(x: float, z: float) -> float:
 
 
 ## Высота рельефа над дном долин (0 … ceiling) в точке мира
-func height(x: float, z: float) -> float:
-	return _height_v(x, z, valley(x, z))
+func height(x: float, z: float, ctx := {}) -> float:
+	return _height_v(x, z, valley(x, z, ctx), ctx)
 
 
-func _height_v(x: float, z: float, v: float) -> float:
+func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 	var a := absf(v)
 	# пойма и конусы выноса: вогнутый подъём к подножию
 	var fan := smoothstep(D_FLOOR, D_FAN, a)
@@ -127,7 +144,7 @@ func _height_v(x: float, z: float, v: float) -> float:
 		h = lerpf(h, step, 0.28 * steep)
 	# мелкие бугры на дне и на конусах
 	h += (_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * (0.3 + fan)
-	h *= _flat(x, z)
+	h *= _flat(x, z, ctx)
 	# русло врезано в пойму: вода лежит в ложбине, а не на ровном месте
 	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
 	return clampf(h, -0.03, 1.0) * ceiling
@@ -140,10 +157,12 @@ func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
 
 
 ## Боковые долины поселений, влияющие на клетку точки (от поселения к ближайшей линии реки)
-func _sides(x: float, z: float) -> Array:
+func _sides(x: float, z: float, ctx := {}) -> Array:
+	var key := Vector2i(int(floorf(x / CHUNK)), int(floorf(z / CHUNK)))
+	if not ctx.is_empty():
+		return (ctx["sides"] as Dictionary).get(key, [])
 	if _bg == null:
 		return []
-	var key := Vector2i(int(floorf(x / CHUNK)), int(floorf(z / CHUNK)))
 	if _side.has(key):
 		return _side[key]
 	var out := []
@@ -220,20 +239,20 @@ func find_floor(p: Vector2, radius := 900.0) -> Vector2:
 
 
 ## Точка мира на поверхности рельефа
-func surface(x: float, z: float) -> Vector3:
-	return Vector3(x, base_y + height(x, z), z)
+func surface(x: float, z: float, ctx := {}) -> Vector3:
+	return Vector3(x, base_y + height(x, z, ctx), z)
 
 
 ## Под кишлаками, крепостями, оазисами земля ровная (вес 0 — плоско, 1 — рельеф как есть)
-func _flat(x: float, z: float) -> float:
-	if _bg == null:
+func _flat(x: float, z: float, ctx := {}) -> float:
+	if _bg == null and ctx.is_empty():
 		return 1.0
 	var cx := int(floorf(x / CHUNK))
 	var cz := int(floorf(z / CHUNK))
 	var k := 1.0
 	for dx in [-1, 0, 1]:
 		for dz in [-1, 0, 1]:
-			var o := _obj(Vector2i(cx + dx, cz + dz))
+			var o: Dictionary = (ctx["objs"] as Dictionary).get(Vector2i(cx + dx, cz + dz), {}) if not ctx.is_empty() else _obj(Vector2i(cx + dx, cz + dz))
 			if o.is_empty() or not FLAT_OBJS.has(o["name"]):
 				continue
 			var r: float = float(o["size"]) * 0.55
@@ -249,7 +268,7 @@ func _obj(key: Vector2i) -> Dictionary:
 	return _objs_cache[key]
 
 
-## Держим куски рельефа под видимой областью; новые строим не больше budget за кадр
+## Держим куски рельефа под видимой областью; новые считаем в фоне, ставим не больше budget за кадр
 func sync(view: Rect2, budget := 2) -> void:
 	var want := {}
 	for cx in range(int(floorf(view.position.x / CHUNK)), int(floorf(view.end.x / CHUNK)) + 1):
@@ -263,29 +282,113 @@ func sync(view: Rect2, budget := 2) -> void:
 	# иначе на экране дыра до фона
 	var missing := 0
 	for key in keys:
-		if not _chunks.has(key):
+		if not _chunks.has(key) and not _spare.has(key):
 			missing += 1
-	if missing > 6:
-		budget = missing
+	var now := missing > maxi(6, keys.size() / 2)
 	for key in keys:
 		if _chunks.has(key):
 			continue
-		if budget <= 0:
-			break
-		budget -= 1
-		var t0 := Time.get_ticks_usec()
-		_chunks[key] = _build(key)
-		if Main.I != null and Main.I.state == "playing":   # T4-03: рывки от сборки кусков рельефа
-			Main.I.tele.chunk_built((Time.get_ticks_usec() - t0) / 1000.0)
+		if _spare.has(key):   # кусок уже был — просто показываем
+			var mi: MeshInstance3D = _spare[key]
+			_spare.erase(key)
+			_spare_order.erase(key)
+			mi.visible = true
+			_chunks[key] = mi
+			continue
+		if now:
+			_place_chunk(key, _compute(key, _ctx(key), _gen))
+			continue
+		var res = _take_done(key)
+		if res != null:
+			if budget <= 0:
+				_put_done(key, res)
+				continue
+			budget -= 1
+			_place_chunk(key, res)
+		elif not _pending.has(key) and _pending.size() < 4:
+			_pending[key] = WorkerThreadPool.add_task(_compute_bg.bind(key, _ctx(key), _gen), false, "terrain chunk")
+	# законченные задачи — забираем id (иначе пул держит их до wait)
+	for key in _pending.keys():
+		if WorkerThreadPool.is_task_completed(_pending[key]):
+			WorkerThreadPool.wait_for_task_completion(_pending[key])
+			_pending.erase(key)
 	for key in _chunks.keys():
 		if not want.has(key):
-			(_chunks[key] as Node).queue_free()
+			var mi: MeshInstance3D = _chunks[key]
 			_chunks.erase(key)
+			mi.visible = false
+			_spare[key] = mi
+			_spare_order.append(key)
+	while _spare_order.size() > SPARE_MAX:
+		var old: Vector2i = _spare_order.pop_front()
+		(_spare[old] as Node).queue_free()
+		_spare.erase(old)
+	# готовые, но уже не нужные куски не копим
+	_mx.lock()
+	for key in _done.keys():
+		if not want.has(key):
+			_done.erase(key)
+	_mx.unlock()
 	if _objs_cache.size() > 400:
 		_objs_cache.clear()
 
 
-func _build(key: Vector2i) -> MeshInstance3D:
+func _take_done(key: Vector2i):
+	_mx.lock()
+	var r = _done.get(key)
+	_done.erase(key)
+	_mx.unlock()
+	return r
+
+
+func _put_done(key: Vector2i, res: Dictionary) -> void:
+	_mx.lock()
+	_done[key] = res
+	_mx.unlock()
+
+
+func _wait_pending() -> void:
+	for key in _pending:
+		WorkerThreadPool.wait_for_task_completion(_pending[key])
+	_pending.clear()
+	_mx.lock()
+	_done.clear()
+	_mx.unlock()
+
+
+func _exit_tree() -> void:
+	_wait_pending()
+
+
+## Снимок данных для фонового расчёта куска: объекты биома и боковые долины вокруг
+## (поток только читает их, общие кэши трогает лишь главный поток)
+func _ctx(key: Vector2i) -> Dictionary:
+	var objs := {}
+	var sides := {}
+	for dx in range(-3, 4):
+		for dz in range(-3, 4):
+			var k := Vector2i(key.x + dx, key.y + dz)
+			objs[k] = _obj(k) if _bg != null else {}
+	for dx in range(-2, 3):   # ±2: модели биома у края клетки смотрят и в соседние
+		for dz in range(-2, 3):
+			var k := Vector2i(key.x + dx, key.y + dz)
+			sides[k] = _sides((k.x + 0.5) * CHUNK, (k.y + 0.5) * CHUNK)
+	var ctx := {"objs": objs, "sides": sides, "flat": _bg != null}
+	if props != null:
+		ctx["hk"] = props.mesh_heights()
+	return ctx
+
+
+func _compute_bg(key: Vector2i, ctx: Dictionary, gen: int) -> void:
+	var res := _compute(key, ctx, gen)
+	_mx.lock()
+	if gen == _gen:
+		_done[key] = res
+	_mx.unlock()
+
+
+## Высоты и массивы вершин куска — чистый расчёт, можно в потоке
+func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 	var ox := key.x * CHUNK
 	var oz := key.y * CHUNK
 	var step := CHUNK / N
@@ -300,7 +403,7 @@ func _build(key: Vector2i) -> MeshInstance3D:
 			var z := oz + (j - 1) * step
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
 			vs[j * W + i] = river_field(x, z)
-			hs[j * W + i] = _height_v(x, z, valley(x, z))
+			hs[j * W + i] = _height_v(x, z, valley(x, z, ctx), ctx)
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
 	var tans := PackedFloat32Array()
@@ -349,14 +452,22 @@ func _build(key: Vector2i) -> MeshInstance3D:
 				idx[p] = a; idx[p + 1] = b; idx[p + 2] = c2
 				idx[p + 3] = b; idx[p + 4] = d; idx[p + 5] = c2
 			p += 6
+	var put: Dictionary = props.plan(key, ctx) if props != null else {}
+	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv2": uv2, "idx": idx, "gen": gen, "put": put}
+
+
+func _place_chunk(key: Vector2i, r: Dictionary) -> void:
+	if int(r["gen"]) != _gen:
+		return
+	var t0 := Time.get_ticks_usec()
 	var arr := []
 	arr.resize(Mesh.ARRAY_MAX)
-	arr[Mesh.ARRAY_VERTEX] = verts
-	arr[Mesh.ARRAY_NORMAL] = norms
-	arr[Mesh.ARRAY_TANGENT] = tans
-	arr[Mesh.ARRAY_COLOR] = cols
-	arr[Mesh.ARRAY_TEX_UV2] = uv2
-	arr[Mesh.ARRAY_INDEX] = idx
+	arr[Mesh.ARRAY_VERTEX] = r["verts"]
+	arr[Mesh.ARRAY_NORMAL] = r["norms"]
+	arr[Mesh.ARRAY_TANGENT] = r["tans"]
+	arr[Mesh.ARRAY_COLOR] = r["cols"]
+	arr[Mesh.ARRAY_TEX_UV2] = r["uv2"]
+	arr[Mesh.ARRAY_INDEX] = r["idx"]
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	var mi := MeshInstance3D.new()
@@ -365,8 +476,10 @@ func _build(key: Vector2i) -> MeshInstance3D:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	add_child(mi)
 	if props != null:
-		props.build(key, mi)
-	return mi
+		props.apply(r["put"], mi)
+	_chunks[key] = mi
+	if Main.I != null and Main.I.state == "playing":   # T4-03: рывки от сборки кусков рельефа (главный поток)
+		Main.I.tele.chunk_built((Time.get_ticks_usec() - t0) / 1000.0)
 
 
 ## Самая высокая точка рельефа рядом с p (для стенда скриншотов)
