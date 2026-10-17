@@ -310,6 +310,10 @@ func _hangar_bench() -> void:
 			_t = 0.0
 			return
 		for c in PlaneClasses.LIST:
+			if OS.get_cmdline_user_args().has("--modfront") or OS.get_cmdline_user_args().has("--modrear"):
+				for lv in [1, 2]:
+					_hq.append([c, lv, 1])
+				continue
 			if OS.get_cmdline_user_args().has("--hangarlow"):
 				for lv in [1, 2]:
 					for wt in [1, 2, 3]:
@@ -364,6 +368,13 @@ func _hangar_bench() -> void:
 		elif OS.get_cmdline_user_args().has("--hangarside"):   # вид сбоку: проверка, где сидят турели и подвесы
 			Hangar3D.I._yaw = PI / 2.0
 			Hangar3D.I._pitch = 0.06
+			Hangar3D.I._idle = 0.0
+		elif OS.get_cmdline_user_args().has("--modfront") or OS.get_cmdline_user_args().has("--modrear"):
+			# Т-3: модули крупно — спереди сбоку сверху (броня, пушка, антенны) или сзади (сопла)
+			var front := OS.get_cmdline_user_args().has("--modfront")
+			Hangar3D.I._yaw = -0.9 if front else 2.5
+			Hangar3D.I._pitch = 0.35 if front else 0.2
+			Hangar3D.I._dist = 0.75
 			Hangar3D.I._idle = 0.0
 		elif OS.get_cmdline_user_args().has("--hangarlow"):   # снизу сбоку крупно: подвесы под крылом на пилонах
 			Hangar3D.I._yaw = 2.3

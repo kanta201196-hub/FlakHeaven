@@ -20,6 +20,7 @@ var lvl_rects: Array = []    # [Rect2, ур.] — переключатель «�
 var view_lvl := 1
 ## Стенд --hangarevo: оружие в пустых группах (класс → [оружие по группам]), чтобы показать все эволюции
 static var bench_weapons := {}
+static var bench_seeker := 0   # Т-3: стенд --modules — «Глазастик» на ракетах
 var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5), 4 — эволюция (Т-4)
 var tier_rects: Array = []   # [Rect2, ступень]
 var _ctrl: Control
@@ -178,6 +179,12 @@ func _build(cls_id: String, lvl: int) -> void:
 	pivot.add_child(model)
 	turret_pos.clear()
 	_collect_faces(model)
+	# Т-3: модули прокачки — стенд --modules=N показывает все модули на уровне N
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--modules="):
+			var ml := int(a.get_slice("=", 1))
+			ModuleParts.update(ModuleParts.attach(model, "%s_%d" % [cls_id, lvl]), {"engine": ml, "armor": ml, "gun_dmg": ml, "radio": ml})
+			bench_seeker = ModuleParts.stage(ml)
 	# Т-1: предкрылки и закрылки; в ангаре убраны (стенд --mechdown показывает выпущенными)
 	var mech := WingMech.attach(model, "%s_%d" % [cls_id, lvl])
 	if mech != null and OS.get_cmdline_user_args().has("--mechdown"):
@@ -223,6 +230,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var side: String = mt["side"]
 			var mtr: int = mt.get("t", mini(weapon_tier, 3))
 			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4, lvl)
+			if g.weapon == "aam" and weapon_tier != 4:
+				ModuleParts.seeker_head(wmi, bench_seeker, mtr)
 			# по настоящей поверхности модели: подвес — под крылом на пилоне, верхняя турель
 			# утоплена в спину фюзеляжа, нижняя — в брюхо, кормовая — в конце фюзеляжа
 			var x := pt.x / tw

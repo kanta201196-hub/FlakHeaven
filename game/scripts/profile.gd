@@ -14,7 +14,7 @@ const NODES := {
 	"armor": {"title": "Броня", "step": "прочность +5%", "note": ""},
 	"wing": {"title": "Крыло", "step": "разворот +3%", "note": ""},
 	"pylons": {"title": "Узлы подвеса", "step": "урон подвесов и турелей +4%", "note": "временно: до введения грузоподъёмности"},
-	"tank": {"title": "Топливный бак", "step": "окно эвакуации +6 с, ворота +5%", "note": "временно: до введения топлива"},
+	"tank": {"title": "Топливный бак", "step": "объём бака +8% (≈ +43 с полёта)", "note": ""},
 }
 const NODE_ORDER := ["frame", "engine", "armor", "wing", "pylons", "tank"]
 
@@ -623,13 +623,18 @@ func apply(p: Player) -> void:
 	p.hp = p.max_hp
 
 
-## Окно эвакуации и радиус ворот (узел «Бак» — временный эффект)
-func evac_window(c: String) -> float:
-	return 60.0 + 6.0 * node(c, "tank") * meta_k()
+## Окно эвакуации и радиус ворот. B-06: узел «Бак» больше их не меняет — он увеличивает объём бака
+func evac_window(_c: String) -> float:
+	return 60.0
 
 
-func gate_r_k(c: String) -> float:
-	return 1.0 + 0.05 * node(c, "tank") * meta_k()
+func gate_r_k(_c: String) -> float:
+	return 1.0
+
+
+## B-06: объём бака — +8% за уровень узла «Бак»
+func fuel_k(c: String) -> float:
+	return 1.0 + 0.08 * node(c, "tank") * meta_k()
 
 
 # ---------- отладка (тестовая сборка) ----------

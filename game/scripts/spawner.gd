@@ -20,6 +20,8 @@ const TRANSPORT_TTK := 12.0
 
 func _ready() -> void:
 	fuel = Fuel.new()
+	fuel.capacity = Fuel.CAPACITY * Profile.fuel_k(Main.I.cls_id)
+	fuel.left = fuel.capacity
 	add_child(fuel)
 	if OS.get_cmdline_user_args().has("--dogfight"):
 		activity_i = 1      # проверка: сразу догфайт
@@ -29,7 +31,7 @@ func _ready() -> void:
 		next_activity = 20.0
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--fuel="): # проверка: начать с неполным баком (доля 0–1)
-			fuel.left = Fuel.CAPACITY * clampf(float(String(a).substr(7)), 0.0, 1.0)
+			fuel.left = fuel.capacity * clampf(float(String(a).substr(7)), 0.0, 1.0)
 var _grid := {}
 const CELL := 90.0
 
