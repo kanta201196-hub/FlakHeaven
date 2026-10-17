@@ -166,6 +166,17 @@ func _hold(p: Dictionary) -> void:
 		wm.dead_t = 20.0
 		wm.visible = false
 		m.fx.explosion(wm.global_position, 22.0)
+	if p.get("bombs", false) and m.projectiles.bombs.size() < 8:
+		# бомбы всех ступеней (1–3 и «ковёр») с долгим взрывателем — на кадре видно падение
+		var vt := (int(_pt * 10.0) % 4) + 1
+		var to := pos + Vector2.from_angle(m.player.heading + randf_range(-0.5, 0.5)) * randf_range(420.0, 600.0)
+		m.projectiles.spawn_bomb(pos + Vector2(randf_range(-20, 20), randf_range(-20, 20)), randf_range(4.0, 7.0), 0.0, 120.0, "бомбы", to, true)
+		m.projectiles.bombs[-1]["vt"] = vt
+	if p.get("craters", false) and not p.has("_done"):
+		p["_done"] = true
+		for i in 9:
+			var cp := pos + Vector2.from_angle(i * 0.7) * (140.0 + 45.0 * i)
+			m.fx.ground.crater(cp, [90.0, 120.0, 150.0][i % 3])
 	if p.has("roll"):   # 3.4-t1 п. 6: самолёт в бочке, брюхом к камере
 		m.player.roll_dir = 1
 		m.player.roll_t = m.player.roll_time() * float(p["roll"])
@@ -255,6 +266,10 @@ func _make_points() -> Array:
 		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
 		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
 		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
+	if OS.get_cmdline_user_args().has("--bombbench"):   # тест 3.5-s4 (п. 10, 14): падающие бомбы ступеней и воронки
+		pts = []
+		pts.append({"name": "bomb_drop", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "bombs": true, "wait": 2.5, "zoom": 2.6})
+		pts.append({"name": "bomb_craters", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "craters": true, "wait": 3.0, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
 		pts = []
 		for c in ["fighter", "attacker", "bomber"]:
@@ -327,7 +342,11 @@ func _hangar_bench() -> void:
 			return
 		if OS.get_cmdline_user_args().has("--hangarweaptab"):
 			# тест 3.5-s3: вкладка «ОРУЖИЕ» — каждое оружие объёмной моделью, ступени 1 / 3 / 5 и модернизация
-			for w in ["aam", "rockets", "bombs", "flares", "turret"]:
+			var wl := ["aam", "rockets", "bombs", "flares", "turret"]
+			for a in OS.get_cmdline_user_args():   # --weaplist=bombs,flares — только эти виды
+				if a.begins_with("--weaplist="):
+					wl = Array(a.get_slice("=", 1).split(","))
+			for w in wl:
 				for wt in [1, 2, 3, 4]:
 					_hq.append(["W", w, wt])
 			_t = 0.0

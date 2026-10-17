@@ -156,6 +156,21 @@ const EVO_GLB := "res://models/weapons/%s_evo.glb"
 const EXP_GLB := "res://models/weapons/exp_%s.glb"
 
 
+## Тест 3.5-s4 (п. 10): одна бомба ступени для падения в бою (tools/blender/weapons.py bombdrop <ступень>),
+## длина 1, нос +X. vt: 1–3 — ступень, 4 — «Бабушкин ковёр» (та же малая бомба, что у ступени 1)
+const DROP_GLB := "res://models/weapons/bombdrop_%d.glb"
+## Длина бомбы в долях длины самолёта (как на подвеске: доля стойки бомб × длина бомбы в её модели)
+const DROP_LEN := [0.0, 0.2, 0.12, 0.26, 0.13]
+
+
+static func drop_mesh(vt: int) -> Mesh:
+	var t := clampi(vt, 1, 4)
+	var file := DROP_GLB % (1 if t == 4 else t)
+	if not ResourceLoader.exists(file):
+		return null
+	return _glb_mesh(file, 1.0, Color(), "glb_drop_%d" % (1 if t == 4 else t))
+
+
 static func weapon_model(weapon: String, t: int, evo := false) -> Mesh:
 	if evo and ResourceLoader.exists(EVO_GLB % weapon):
 		return _glb_mesh(EVO_GLB % weapon, 1.0, Color(), "glb_%s_evo" % weapon)

@@ -476,6 +476,9 @@ func _update_bombs(delta: float) -> void:
 					var to: Vector2 = b["p"] + Vector2.from_angle(j * PI / 2.0 + PI / 4.0) * 90.0
 					spawn_bomb(b["p"], 0.35, float(b["dmg"]) * 0.5, float(b["r"]) * 0.7, "связка: ковровая дорожка", to, bool(b.get("ground", false)))
 				spawn_fire(b["p"], 70.0, 12.0, 2.5, "связка: ковровая дорожка")
+			# тест 3.5-s4 (п. 14): на земле остаётся воронка (бомбы падают до земли; БЧ ракеты рвётся в воздухе)
+			if String(b["src"]) != "разделяющаяся БЧ" and is_instance_valid(Main.I.fx.ground):
+				Main.I.fx.ground.crater(b["p"], float(b["r"]))
 			Main.I.sfx.play("bomb", -10.0)
 			Main.I.add_shake(2.0)
 			bombs.remove_at(i)
@@ -616,7 +619,8 @@ func _draw() -> void:
 		_draw_missile(r["p"], r["v"], 14.0, Color(0.85, 0.88, 0.9))
 	for b in bombs:
 		var k := 1.0 - float(b["t"]) / float(b["fuse"])
-		draw_circle(b["p"], 5.0, Color(0.6, 0.62, 0.55))
+		if not Render3D.enabled:   # тест 3.5-s4 (п. 10): в 3D падает модель бомбы (render3d._sync_bombs)
+			draw_circle(b["p"], 5.0, Color(0.6, 0.62, 0.55))
 		# зона поражения: видно, куда упадёт и как далеко достанет
 		draw_arc(b["to"], float(b["r"]), 0.0, TAU, 40, Color(1.0, 0.7, 0.3, 0.12 + 0.3 * k), 2.0)
 		draw_circle(b["to"], float(b["r"]) * 0.35, Color(1.0, 0.55, 0.2, 0.06 + 0.1 * k))

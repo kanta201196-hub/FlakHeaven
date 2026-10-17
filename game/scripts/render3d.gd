@@ -28,6 +28,11 @@ var _clouds: Array = []
 var _scorch_mm: MultiMeshInstance3D
 var _scorch_mesh: QuadMesh
 var _scorch_mat: StandardMaterial3D
+var _crater_mm: MultiMeshInstance3D   # тест 3.5-s4 (п. 14): воронки от бомб (FxGround.craters), один MultiMesh
+var _crater_mat: StandardMaterial3D
+var _crater_mesh: PlaneMesh
+var _bombs3 := {}                  # тест 3.5-s4 (п. 10): падающие бомбы — номер → MeshInstance3D
+var _bid := 0
 var _flash_mat: StandardMaterial3D
 var _elite_mat: StandardMaterial3D
 var _zoom := 1.0
@@ -399,6 +404,8 @@ func _process(delta: float) -> void:
 	if Perf.on: pt = Perf.sub("r3d.objects", pt)
 	_sync_clouds(m, c2, h)
 	_sync_scorch(m)
+	_sync_craters(m)
+	_sync_bombs(m)
 	_sync_lights(delta)
 	if Perf.on: pt = Perf.sub("r3d.clouds_scorch_lights", pt)
 	if OS.get_cmdline_user_args().has("--dbg3") and Engine.get_process_frames() % 30 == 0:
@@ -1666,3 +1673,115 @@ func _sync_scorch(m: Main) -> void:
 	mmx.visible_instance_count = n
 	if n > 0:
 		_scorch_mm.custom_aabb = AABB(lo, hi - lo)
+
+
+# ---------- тест 3.5-s4: падающие бомбы (п. 10) и воронки (п. 14) ----------
+
+## Бомба падает моделью своей ступени: от узла подвески (плоскость боя) по баллистике до той точки
+## рельефа, что на экране под точкой разрыва — по горизонтали равномерно, по вертикали с ускорением,
+## нос по ходу (опускается к земле), лёгкое покачивание. Без теней — дёшево.
+func _sync_bombs(m: Main) -> void:
+	var pr := m.projectiles
+	if pr == null:
+		return
+	var seen := {}
+	var plen := Tuning.g("plane_len")
+	for b: Dictionary in pr.bombs:
+		if not b.has("bid"):
+			_bid += 1
+			b["bid"] = _bid
+		var id: int = b["bid"]
+		seen[id] = true
+		var mi: MeshInstance3D = _bombs3.get(id)
+		var vt := int(b.get("vt", 1))
+		if mi == null:
+			var mesh := WeaponModels.drop_mesh(vt)
+			if mesh == null:
+				continue
+			mi = MeshInstance3D.new()
+			mi.mesh = mesh
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(mi)
+			_bombs3[id] = mi
+			b["wob"] = randf() * TAU
+		var k := 1.0 - clampf(float(b["t"]) / maxf(float(b["fuse"]), 0.01), 0.0, 1.0)
+		var f2: Vector2 = b["from"]
+		var y0 := -6.0
+		var g3 := ground_under(b["to"])
+		var a3 := Vector3(f2.x, y0, f2.y)
+		var pos := Vector3(lerpf(a3.x, g3.x, k), lerpf(y0, g3.y, k * k), lerpf(a3.z, g3.z, k))
+		var vel := Vector3(g3.x - a3.x, (g3.y - y0) * 2.0 * maxf(k, 0.12), g3.z - a3.z)
+		var fwd := vel.normalized() if vel.length() > 0.01 else Vector3.DOWN
+		var ref := Vector3.UP if absf(fwd.y) < 0.95 else Vector3(0, 0, -1)
+		var zx := fwd.cross(ref).normalized()
+		var bs := Basis(fwd, zx.cross(fwd), zx)
+		var w := float(b["wob"]) + k * 14.0
+		bs = bs * Basis(Vector3.BACK, 0.07 * sin(w)) * Basis(Vector3.UP, 0.06 * sin(w * 1.3 + 1.0)) * Basis(Vector3.RIGHT, 0.4 * k)
+		var ln := plen * float(WeaponModels.DROP_LEN[clampi(vt, 1, 4)])
+		mi.global_transform = Transform3D(bs.scaled(Vector3(ln, ln, ln)), pos)
+	for id in _bombs3.keys():
+		if not seen.has(id):
+			(_bombs3[id] as Node).queue_free()
+			_bombs3.erase(id)
+
+
+## Воронки: плоский квадрат по наклону рельефа с общей текстурой и материалом (без теней, без света),
+## размер с поправкой на перспективу — на экране совпадает с зоной разрыва; в конце жизни плавно гаснет
+func _sync_craters(m: Main) -> void:
+	if m.fx == null or not is_instance_valid(m.fx.ground):
+		return
+	var list: Array = m.fx.ground.craters
+	if _crater_mat == null:
+		_crater_mat = StandardMaterial3D.new()
+		_crater_mat.albedo_texture = Fx.crater_tex()
+		_crater_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_crater_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_crater_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		_crater_mat.render_priority = -1   # под пятнами копоти и взрывами
+		_crater_mesh = PlaneMesh.new()
+		_crater_mesh.size = Vector2(2, 2)
+	# как пятна копоти: все воронки — один MultiMesh (один вызов отрисовки), угасание — в цвете экземпляра
+	if _crater_mm == null:
+		_crater_mat.vertex_color_use_as_albedo = true
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.mesh = _crater_mesh
+		mm.instance_count = 48
+		mm.visible_instance_count = 0
+		_crater_mm = MultiMeshInstance3D.new()
+		_crater_mm.multimesh = mm
+		_crater_mm.material_override = _crater_mat
+		_crater_mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_crater_mm)
+	var mmx := _crater_mm.multimesh
+	var cnt := mini(list.size(), mmx.instance_count)
+	var lo := Vector3.INF
+	var hi := -Vector3.INF
+	for i in cnt:
+		var c: Dictionary = list[i]
+		if not c.has("xf"):
+			var g := ground_under(c["p"])
+			var ch := cam.global_position.y
+			var r: float = float(c["r"]) * clampf((ch - g.y) / maxf(ch, 1.0), 0.5, 3.0)
+			var n := Vector3.UP
+			if terrain != null:
+				var d := maxf(r * 0.5, 6.0)
+				n = Vector3(terrain.surface_fast(g.x - d, g.z).y - terrain.surface_fast(g.x + d, g.z).y, 2.0 * d,
+					terrain.surface_fast(g.x, g.z - d).y - terrain.surface_fast(g.x, g.z + d).y).normalized()
+			var rot := float(c["rot"])
+			var x0 := Vector3(cos(rot), 0.0, sin(rot))
+			var xa := (x0 - n * x0.dot(n)).normalized()
+			var za := xa.cross(n)
+			c["xf"] = Transform3D(Basis(xa * r, n, za * r), g + n * maxf(1.5, r * 0.12))   # над изгибом склона
+			c["rr"] = r
+		var xf: Transform3D = c["xf"]
+		var rr := float(c["rr"])
+		mmx.set_instance_transform(i, xf)
+		mmx.set_instance_color(i, Color(1, 1, 1, clampf(float(c["life"]) / Fx.FxGround.CRATER_FADE, 0.0, 1.0)))
+		lo = lo.min(xf.origin - Vector3(rr, rr, rr))
+		hi = hi.max(xf.origin + Vector3(rr, rr, rr))
+	mmx.visible_instance_count = cnt
+	if cnt > 0:
+		_crater_mm.custom_aabb = AABB(lo, hi - lo)
+
