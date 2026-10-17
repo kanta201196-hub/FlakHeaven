@@ -56,7 +56,10 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 ## U-02: подсказка новичку — рамка над нижней строкой клавиш
 func _hint_box(s: String, size: Vector2, a: float) -> void:
 	var w := minf(1100.0, size.x - 80.0)
-	var r := Rect2((size.x - w) / 2.0, size.y - 220.0, w, 86.0)
+	# высота по тексту: длинная подсказка в три строки не вылезает из рамки
+	var th := ui_font().get_multiline_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, 18).y
+	var bh := maxf(86.0, th + 44.0)
+	var r := Rect2((size.x - w) / 2.0, size.y - 134.0 - bh, w, bh)
 	ctrl.draw_rect(r, Color(0.04, 0.05, 0.06, 0.82 * a))
 	ctrl.draw_rect(r, Color(1.0, 0.85, 0.4, 0.8 * a), false, 2.0)
 	_text(Vector2(r.position.x + 16, r.position.y + 26), "ПОДСКАЗКА", 13, Color(1.0, 0.85, 0.4, a))

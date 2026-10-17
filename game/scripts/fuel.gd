@@ -75,6 +75,7 @@ func _call_tanker(p: Player) -> void:
 	tanker.setup(p, self)
 	Main.I.world.add_child(tanker)
 	Main.I.show_banner("Заправщик на подходе! Зайдите ему в хвост и держитесь за ним", 4.0)
+	Hints.show("tanker", "Заправщик: догоните его, зайдите сзади и держитесь рядом — бак наполняется. Газ W/S помогает удержать скорость.", 8.0, 2)
 	Main.I.sfx.play("tanker_call", -8.0, 0.8)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: tanker called at %.0f, fuel %.0f%%" % [Main.I.run_time, frac() * 100.0])
