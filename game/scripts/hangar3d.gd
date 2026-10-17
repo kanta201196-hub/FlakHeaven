@@ -119,6 +119,10 @@ func _build(cls_id: String, lvl: int) -> void:
 	pivot.add_child(model)
 	turret_pos.clear()
 	_collect_faces(model)
+	# Т-1: предкрылки и закрылки; в ангаре убраны (стенд --mechdown показывает выпущенными)
+	var mech := WingMech.attach(model, "%s_%d" % [cls_id, lvl])
+	if mech != null and OS.get_cmdline_user_args().has("--mechdown"):
+		WingMech.pose(mech, 1.0)
 	_add_weapons(cls_id, lvl)
 
 
