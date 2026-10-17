@@ -51,7 +51,7 @@ func _ready() -> void:
 	add_child(ctrl)
 	ctrl.draw.connect(_draw_menu)
 	load_records()
-	howto = not FileAccess.file_exists(HOWTO_FLAG)
+	howto = false # U-03: при первом запуске вместо экрана «Как играть» — подсказки по ходу первого вылета
 
 
 func active() -> bool:
@@ -153,6 +153,9 @@ func _click(action: String, mp: Vector2, r: Rect2) -> void:
 				_wipe_t = 3.0
 		"howto_close":
 			close_howto()
+		"hints_reset":
+			Hints.reset()
+			_saved_t = 2.0
 		"reset_all":
 			Tuning.reset()
 			Tuning.save_params()
@@ -637,6 +640,7 @@ func _howto(size: Vector2) -> void:
 			y += 9.0
 	_txt(Vector2(r.position.x + 48, r.end.y - 40), ("После вылета нажмите «ОТПРАВИТЬ ОТЧЁТ» на экране итогов — это займёт минуту и очень нам поможет." if Main.REPORT_URL != "" else "После 3–5 вылетов: меню → ЛОГИ → отправьте файлы playtest_log_*.csv и logs/godot.log вместе с ответами на анкету."), 17, C_DIM)
 	_menu_button(Rect2(r.end.x - 48 - 300, r.end.y - 96, 300, 62), "ПОНЯТНО", "howto_close", true)
+	_menu_button(Rect2(r.end.x - 48 - 300 - 24 - 420, r.end.y - 96, 420, 62), "ПОДСКАЗКИ ЗАНОВО" if _saved_t <= 0.0 else "ПОДСКАЗКИ ВКЛЮЧЕНЫ", "hints_reset")
 
 
 func _wrap(s: String, width: float, fsize: int) -> PackedStringArray:

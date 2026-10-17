@@ -86,6 +86,7 @@ var _fps_n := 0
 var base_ts := 1.0
 var banner := ""
 var banner_t := 0.0
+var levelup_intro := false
 var bosses_killed := 0
 var evac_windows := 0
 
@@ -213,6 +214,12 @@ func start_run() -> void:
 	_fps_n = 0
 	banner = ""
 	show_banner("%s · %s" % [Background.BIOME_NAME.to_upper(), Background.BIOME_SUB], 4.0)
+	# U-02: цель вылета — первые 3 вылета
+	Hints.clear()
+	Hints.show("goal", "Задача: продержаться 15 минут и улететь через ворота эвакуации. Всех врагов не перебить — они прилетают всё время.", 9.0, 3)
+	# U-03: первый вылет — подсказки по одной вместо стены текста «Как играть»
+	Hints.show("controls", "Мышь — куда лететь: самолёт поворачивает за курсором. Пушка стреляет сама по врагам впереди.", 7.0, 2)
+	Hints.show("xp", "Зелёные ромбы со сбитых врагов — опыт: пролетайте рядом, они притянутся. Новый уровень — выбор улучшения.", 7.0, 2)
 	bosses_killed = 0
 	evac_windows = 0
 	rerolls = 2 + Profile.extra_rerolls(cls_id) # 3.5: самолёт ур. 2 — +1 переброс
@@ -260,6 +267,8 @@ func _process(delta: float) -> void:
 		if pending_levels > 0:
 			_open_levelup()
 	banner_t = maxf(0.0, banner_t - delta / maxf(Engine.time_scale, 0.01))
+	if state == "playing":
+		Hints.tick(delta / maxf(Engine.time_scale, 0.01))
 	radio_t = maxf(0.0, radio_t - delta / maxf(Engine.time_scale, 0.01))
 	_state_t += delta / maxf(Engine.time_scale, 0.01)
 
@@ -339,6 +348,7 @@ func _open_levelup() -> void:
 	if offers.is_empty():
 		pending_levels = 0
 		return
+	levelup_intro = Hints.bump("levelup_intro") <= 3 # U-03: первые 3 выбора — с объяснением
 	_set_state("levelup")
 	sfx.play("levelup", -8.0)
 
@@ -516,6 +526,7 @@ func boss_alive() -> bool:
 
 func on_boss_wave(wave: int, n: int) -> void:
 	show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
+	Hints.show("ace", "Ас — сильный враг. Собьёте его — откроются ворота эвакуации и добавится переброс карточек.", 8.0, 2)
 	# 3.5 (правка 30): время жизни аса — для лога
 	for b in get_tree().get_nodes_in_group("enemies"):
 		if b is Enemy and (b as Enemy).is_boss and not (b as Node).has_meta("born"):
@@ -539,6 +550,10 @@ func _open_evac() -> void:
 	world.add_child(evac)
 	evac_windows += 1
 	show_banner("Эвакуация: пролетите через 3 ворот по порядку", 5.0)
+	if run_time < 890.0:
+		Hints.show("evac_early", "Улететь можно уже сейчас — или остаться до 15:00 и заработать больше запчастей.", 8.0, 2)
+	else:
+		Hints.show("evac_stay", "Задание выполнено! Улетайте через ворота — или оставайтесь: добыча +10% за каждую минуту после 15:00.", 9.0, 3)
 	sfx.play("evac", -6.0)
 
 
@@ -623,6 +638,8 @@ func on_enemy_killed(e: Enemy) -> void:
 
 func on_player_damaged(_amount: float) -> void:
 	add_shake(10.0)
+	if is_instance_valid(player) and player.has_roll():
+		Hints.show("roll", "Space — уклонение: короткий переворот, во время которого пули и ракеты не попадают.", 7.0, 2)
 	hitstop()
 	sfx.play("player_hit", -4.0)
 	hud.flash_damage()

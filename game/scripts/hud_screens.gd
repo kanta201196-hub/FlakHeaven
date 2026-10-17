@@ -104,7 +104,12 @@ func levelup(m: Main, size: Vector2) -> void:
 		_ctext(150, "НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК" % (m.rare_reasons[0] if not m.rare_reasons.is_empty() else ""), 38, Color(0.75, 0.5, 1.0))
 	else:
 		_ctext(150, "НОВЫЙ УРОВЕНЬ: %d" % m.level if m.pending_levels <= 1 else "НОВЫЙ УРОВЕНЬ (ещё выборов: %d)" % m.pending_levels, 40, Color(0.6, 1.0, 0.7))
-	_ctext(190, "1–4 или клик — выбрать · R — переброс · «Закрепить» — будет в следующем выборе · «Исключить» — не выпадет до конца вылета", 17, Color(0.75, 0.8, 0.9))
+	if m.levelup_intro:
+		# U-03: первые выборы — что это и как выбирать
+		_ctext(188, "Выберите одно улучшение — оно действует до конца вылета. Не знаете, что взять? Берите оружие, которое уже стоит на самолёте.", 19, Color(1.0, 0.9, 0.6))
+		_ctext(212, "1–4 или клик — выбрать · «Переброс» — показать другие карточки · «Закрепить» — оставить на следующий раз · «Исключить» — больше не предлагать", 16, Color(0.75, 0.8, 0.9))
+	else:
+		_ctext(190, "1–4 или клик — выбрать · R — переброс · «Закрепить» — будет в следующем выборе · «Исключить» — не выпадет до конца вылета", 17, Color(0.75, 0.8, 0.9))
 	var w := 400.0
 	var h := 330.0
 	var gap := 28.0
@@ -145,7 +150,7 @@ func levelup(m: Main, size: Vector2) -> void:
 	if m.rerolls > 0:
 		_button(Rect2(size.x / 2.0 - 370, ry, 360, 46), "Переброс (R) — осталось %d" % m.rerolls, "reroll", 19)
 		if m.player.has_course():
-			_button(Rect2(size.x / 2.0 + 10, ry, 400, 46), "Сменить специализацию (−1 переброс)", "change_course", 19)
+			_button(Rect2(size.x / 2.0 + 10, ry, 460, 46), "Сменить специализацию (−1 переброс)", "change_course", 19)
 	else:
 		_ctext(ry + 30, "Перебросов не осталось (+1 за каждого аса)", 18, Color(0.6, 0.62, 0.7))
 	_ctext(ry + 76, "Исключений осталось: %d (+1 за аса)%s" % [m.bans, ("   ·   Исключены: " + ", ".join(PackedStringArray(m.banned.values()))) if not m.banned.is_empty() else ""], 16, Color(0.75, 0.75, 0.85))
@@ -155,7 +160,7 @@ func levelup(m: Main, size: Vector2) -> void:
 		var sd := Cards.syn_def(m.player, m.player.course)
 		_ctext(y, "Специализация: «%s» (связка %d из 3) — %s" % [sd["title"], m.player.syn.size() + 1, sd["short"]], 18, Menu.C_AMBER)
 		y += 30.0
-		_cond_line(Vector2(size.x / 2.0, y), {"title": "условия", "conds": Cards.cond_list(m.player, m.player.course)})
+		_cond_line(Vector2(size.x / 2.0, y), {"title": "нужно", "conds": Cards.cond_list(m.player, m.player.course)})
 
 
 ## Чипы тегов карточки: цвет тега, «Ракеты 3 → 4»
@@ -326,7 +331,7 @@ func result(m: Main, size: Vector2) -> void:
 ## U-01: внутренние имена источников урона (их пишет лог l5) → понятные игроку
 const SRC_NAMES := {
 	"курсовое (авто)": "пушка (сама)", "курсовое (ручн.)": "пушка (ручной огонь)",
-	"ракеты В-В": "наводящиеся ракеты", "НАР": "залп ракет",
+	"ракеты В-В": "наводящиеся ракеты", "НАР": "залп ракет", "разделяющаяся БЧ": "разделяющиеся ракеты",
 }
 
 
@@ -384,7 +389,7 @@ func course_pick(m: Main, size: Vector2) -> void:
 		_text(Vector2(r.position.x + 18, r.position.y + 80), String(sd["title"]), 30, Color.WHITE)
 		_para(Vector2(r.position.x + 18, r.position.y + 118), sd["desc"], w - 36.0, 17)
 		var conds := Cards.cond_list(p, id)
-		_text(Vector2(r.position.x + 18, r.position.y + 262), "Условия (слот %d):" % slot, 16, Color(0.8, 0.82, 0.88))
+		_text(Vector2(r.position.x + 18, r.position.y + 262), "Что нужно собрать:", 16, Color(0.8, 0.82, 0.88))
 		var yy := r.position.y + 272.0
 		for c in conds:
 			_cond_chips(Vector2(r.position.x + 18, yy), [c])

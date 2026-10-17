@@ -129,6 +129,10 @@ func ui_click(action: String) -> void:
 		m._set_state("codex")
 	elif action == "codex_back":
 		m._set_state(m.codex_back)
+	elif action.begins_with("cx_tab:"):
+		HudCodex.tab = int(action.substr(7))
+	elif action == "cx_all":
+		HudCodex.show_all = not HudCodex.show_all
 	elif action == "menu_settings":
 		m.menu.open_settings("menu")
 	elif action == "pause_settings":
