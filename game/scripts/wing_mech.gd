@@ -12,7 +12,6 @@ const RATE := 1.6          # доля полного хода в секунду 
 
 static var _scenes := {}
 static var _force := OS.get_cmdline_user_args().has("--mechdown")   # стенд: всё выпущено
-static var _skin: StandardMaterial3D
 
 
 ## Подвесить механизацию к модели (key — «fighter_1» и т. п.); null, если для модели её нет
@@ -24,7 +23,7 @@ static func attach(model: Node3D, key: String) -> Node3D:
 		return null
 	var mech: Node3D = (_scenes[path] as PackedScene).instantiate()
 	mech.name = "wing_mech"
-	attach_skin(mech)   # цвет пластин — вершинный (снят с текстуры крыла под ними)
+	attach_skin(mech, model)   # цвет пластин — вершинный (снят с текстуры крыла под ними)
 	for n in ["slat_l", "slat_r", "flap_l", "flap_r"]:
 		var part := mech.find_child(n, true, false) as Node3D
 		if part != null:
@@ -78,7 +77,7 @@ static func attach_bay(model: Node3D, key: String) -> Node3D:
 		return null
 	var bay: Node3D = (_scenes[path] as PackedScene).instantiate()
 	bay.name = "bay_doors"
-	attach_skin(bay)
+	attach_skin(bay, model)
 	for n in ["bay_l", "bay_r"]:
 		var part := bay.find_child(n, true, false) as Node3D
 		if part != null:
@@ -89,20 +88,57 @@ static func attach_bay(model: Node3D, key: String) -> Node3D:
 	return bay
 
 
-## Створкам — тот же вершинный материал, что у пластин механизации
-static func attach_skin(node: Node3D) -> void:
-	if _skin == null:
-		_skin = StandardMaterial3D.new()
-		_skin.vertex_color_use_as_albedo = true
-		_skin.vertex_color_is_srgb = true
-		_skin.roughness = 0.6
-		_skin.metallic = 0.25
+## Пластины, створки и кабина — вершинный цвет (снят с текстуры самолёта под ними); металл и шероховатость —
+## средние по карте металла самой модели (Meshy: G — шероховатость, B — металл), иначе кабина темнее обшивки
+static func attach_skin(node: Node3D, model: Node3D = null) -> void:
+	var mr := _metal_rough(model)
+	var key := "%.2f_%.2f" % [mr.x, mr.y]
+	if not _skins.has(key):
+		var sm := StandardMaterial3D.new()
+		sm.vertex_color_use_as_albedo = true
+		sm.vertex_color_is_srgb = false   # COLOR_0 в glTF — уже линейный
+		# среднее по атласу занижено пустым фоном Meshy и даёт «чёрный металл» при тёмном альбедо —
+		# металл вдвое слабее, блеск сильнее, альбедо чуть светлее: на вид как обшивка рядом
+		sm.metallic = mr.x * 0.5
+		sm.roughness = mr.y * 0.8
+		sm.albedo_color = Color(1.3, 1.3, 1.3)
+		_skins[key] = sm
 	for c in node.find_children("*", "MeshInstance3D", true, false):
 		var mi := c as MeshInstance3D
 		for si in mi.mesh.get_surface_count():
 			var m := mi.mesh.surface_get_material(si)
 			if m != null and String(m.resource_name).begins_with("mech_skin"):
-				mi.set_surface_override_material(si, _skin)
+				mi.set_surface_override_material(si, _skins[key])
+
+
+static var _skins := {}
+static var _mr_cache := {}
+
+
+static func _metal_rough(model: Node3D) -> Vector2:
+	var res := Vector2(0.25, 0.6)
+	if model == null:
+		return res
+	for c in model.find_children("*", "MeshInstance3D", true, false):
+		var m := (c as MeshInstance3D).mesh.surface_get_material(0) as StandardMaterial3D
+		if m == null or m.metallic_texture == null:
+			continue
+		var tex := m.metallic_texture
+		if not _mr_cache.has(tex):
+			var img := tex.get_image()
+			if img == null:
+				return res
+			if img.is_compressed():
+				img.decompress()
+			img.resize(32, 32)
+			var sum := Vector2.ZERO
+			for y in 32:
+				for x in 32:
+					var px := img.get_pixel(x, y)
+					sum += Vector2(px.b, px.g)
+			_mr_cache[tex] = Vector2(m.metallic, m.roughness) * sum / 1024.0
+		return _mr_cache[tex]
+	return res
 
 
 ## dropped — в этом кадре сброшены бомбы: створки открываются и держатся BAY_HOLD секунд; возвращает выпуск 0…1
@@ -122,3 +158,27 @@ static func pose_bay(bay: Node3D, t: float) -> void:
 			continue
 		var a := deg_to_rad(BAY_DEG) * t * (1.0 if n == "bay_l" else -1.0)
 		part.transform = (part.get_meta("rest") as Transform3D) * Transform3D(Basis(Vector3.RIGHT, a), Vector3.ZERO)
+
+
+# ---------- кормовая кабина «Кита» (тест 3.5-s3) ----------
+## tools/blender/tail_cabin.py → models/mech/fh_tail_<класс>_<ур>.glb: продолжение фюзеляжа в цвет обшивки,
+## узел ball_mount — центр шара со стволами. Вместо общей кабины turret_kit_tail_cabin.glb.
+static func attach_tail(model: Node3D, key: String) -> Node3D:
+	var path := "res://models/mech/fh_tail_%s.glb" % key
+	if not _scenes.has(path):
+		_scenes[path] = load(path) if ResourceLoader.exists(path) else null
+	if _scenes[path] == null:
+		return null
+	var tail: Node3D = (_scenes[path] as PackedScene).instantiate()
+	tail.name = "tail_cabin"
+	attach_skin(tail, model)
+	model.add_child(tail)
+	return tail
+
+
+## Точка шара установки в осях узла base (pivot ангара или корень боевой модели)
+static func tail_mount(tail: Node3D, base: Node3D) -> Vector3:
+	var m := tail.find_child("ball_mount", true, false) as Node3D
+	if m == null:
+		return Vector3.INF
+	return (base.global_transform.affine_inverse() * m.global_transform).origin

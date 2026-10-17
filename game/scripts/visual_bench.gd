@@ -313,6 +313,9 @@ func _hangar_bench() -> void:
 			_hq.append([c, 1, 3])
 		_t = 0.0
 		return
+	for a in OS.get_cmdline_user_args():   # --hangarcls=bomber: только этот класс
+		if a.begins_with("--hangarcls="):
+			_hq = _hq.filter(func(q: Array) -> bool: return q[0] == a.get_slice("=", 1))
 	if _hq.is_empty():
 		print("VISUAL done")
 		m.get_tree().quit()
@@ -335,6 +338,10 @@ func _hangar_bench() -> void:
 		elif OS.get_cmdline_user_args().has("--hangarside"):   # вид сбоку: проверка, где сидят турели и подвесы
 			Hangar3D.I._yaw = PI / 2.0
 			Hangar3D.I._pitch = 0.06
+			Hangar3D.I._idle = 0.0
+		elif OS.get_cmdline_user_args().has("--hangartop"):   # вид сверху: турели и подвесы по размаху
+			Hangar3D.I._yaw = PI / 2.0
+			Hangar3D.I._pitch = 1.45
 			Hangar3D.I._idle = 0.0
 	_hf += 1
 	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
