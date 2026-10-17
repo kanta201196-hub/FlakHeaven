@@ -27,12 +27,24 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	if m.state == "playing":
 		_evac_marker(m, size)
 
+	if Hints.t > 0.0 and Hints.text != "" and m.state == "playing":
+		_hint_box(Hints.text, size, clampf(Hints.t * 2.0, 0.0, 1.0))
 	if m.banner_t > 0.0 and m.state == "playing":
 		var a := clampf(m.banner_t, 0.0, 1.0)
 		_ctext(170, m.banner, 30, Color(1.0, 0.85, 0.5, a))
 
 	var hint := "Мышь — куда лететь · Space — уклонение · Shift — форсаж · E — навык · Tab — пауза" + (" · F5/F6/F7 — отладка" if Main.DEBUG else "")
 	_text(Vector2(0, size.y - 20), hint, 15, Color(0.75, 0.78, 0.85, 0.8), HORIZONTAL_ALIGNMENT_CENTER, size.x)
+
+
+## U-02: подсказка новичку — рамка над нижней строкой клавиш
+func _hint_box(s: String, size: Vector2, a: float) -> void:
+	var w := minf(1100.0, size.x - 80.0)
+	var r := Rect2((size.x - w) / 2.0, size.y - 220.0, w, 86.0)
+	ctrl.draw_rect(r, Color(0.04, 0.05, 0.06, 0.82 * a))
+	ctrl.draw_rect(r, Color(1.0, 0.85, 0.4, 0.8 * a), false, 2.0)
+	_text(Vector2(r.position.x + 16, r.position.y + 26), "ПОДСКАЗКА", 13, Color(1.0, 0.85, 0.4, a))
+	_para(Vector2(r.position.x + 16, r.position.y + 50), s, w - 32.0, 18, Color(1, 1, 1, a))
 
 
 func _skill(y: float, title: String, key: String, cd: float, active: float) -> void:
@@ -119,6 +131,12 @@ func _right_panel(m: Main, size: Vector2) -> void:
 	var w := size.x - 24.0
 	_backing(Rect2(size.x - 340, 14, 330, 172), true)
 	_text(Vector2(0, 46), "%02d:%02d" % [t / 60, t % 60], 28, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
+	# U-02: цель вылета рядом с таймером
+	var left := maxi(0, 900 - t)
+	if left > 0:
+		_text(Vector2(0, 46), "до конца задания %d:%02d   " % [left / 60, left % 60], 16, Color(0.75, 0.8, 0.9), HORIZONTAL_ALIGNMENT_RIGHT, w - 90.0)
+	else:
+		_text(Vector2(0, 46), "задание выполнено   ", 16, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, w - 90.0)
 	_text(Vector2(0, 74), "Сбито: %d" % m.kills, 20, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
 	_text(Vector2(0, 100), "Запчасти: %d" % int(m.parts), 20, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, w)
 	var every := Tuning.g("boss_every")
@@ -128,7 +146,7 @@ func _right_panel(m: Main, size: Vector2) -> void:
 	else:
 		_text(Vector2(0, 126), "Следующий ас через %d:%02d" % [int(next) / 60, int(next) % 60], 18, Color(0.85, 0.8, 0.8), HORIZONTAL_ALIGNMENT_RIGHT, w)
 	if m.run_time > 900.0:
-		_text(Vector2(0, 150), "Продолжение: добыча ×%.1f" % m.continue_mult(), 18, Color(1.0, 0.8, 0.4), HORIZONTAL_ALIGNMENT_RIGHT, w)
+		_text(Vector2(0, 150), "Задержались: добыча ×%.1f" % m.continue_mult(), 18, Color(1.0, 0.8, 0.4), HORIZONTAL_ALIGNMENT_RIGHT, w)
 	_text(Vector2(0, 174), "FPS: %d" % Engine.get_frames_per_second(), 15, Color(0.7, 0.7, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, w)
 
 
@@ -206,6 +224,9 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 		ctrl.draw_rect(Rect2(x, y, w * (p.throttle - lo) / (hi - lo), 10), Color(0.55, 0.8, 1.0) if p.throttle <= 1.0 else Color(1.0, 0.7, 0.35))
 		var mid := x + w * (1.0 - lo) / (hi - lo)
 		ctrl.draw_line(Vector2(mid, y - 3), Vector2(mid, y + 13), Color.WHITE, 2.0)
+	if p.combat_t > 0.0:
+		# U-02: боевой режим после разворота — полоска под самолётом
+		_ctext(size.y / 2.0 + 96.0, "БОЕВОЙ РЕЖИМ: пушка ×2 · %.1f с" % p.combat_t, 20, Color(0.6, 0.9, 1.0))
 	if p.on_tail():
 		_ctext(size.y / 2.0 + 120.0, "НА ХВОСТЕ: пушка +50%", 22, Color(1.0, 0.9, 0.4))
 	if m.streak >= 3:

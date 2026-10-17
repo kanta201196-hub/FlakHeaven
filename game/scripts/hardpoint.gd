@@ -182,6 +182,8 @@ func update(delta: float, p: Player) -> void:
 			fired = _fire_flares(p)
 		"bombs":
 			fired = _fire_bombs(p, manual)
+	if fired and not manual and weapon in ["aam", "rockets", "bombs"]:
+		Hints.show("auto_launch", "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab).", 8.0, 2)
 	# 3.4: после выстрела переносим опоздание (до 0,05 с) — темп меньше зависит от FPS
 	cd = (minf(0.0, maxf(cd, -0.05)) + reload_time(p)) if fired else 0.2
 	if _quick:

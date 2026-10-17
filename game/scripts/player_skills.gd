@@ -100,6 +100,10 @@ func _activate_skill3(id := "", slot := 0) -> void:
 					if (g as Hardpoint).weapon == "aam":
 						(g as Hardpoint).cd = 0.0
 			Main.I.fx.ring(pl.global_position, 90.0, Color(0.6, 0.9, 1.0))
+			Main.I.fx.ring(pl.global_position, 160.0, Color(0.6, 0.9, 1.0))
+			# U-02: эффект разворота видно сразу — надпись у самолёта и подсказка в первые разы
+			Main.I.fx.text(pl.global_position + Vector2(0, -80), "ПУШКА ×2" + ("  ·  ракеты сбиты с наведения: %d" % n if n > 0 else ""), Color(0.6, 0.9, 1.0))
+			Hints.show("combat_turn", "Боевой разворот: рывок носом к курсору, вражеские ракеты теряют вас, и несколько секунд пушка стреляет вдвое чаще и сильнее.", 8.0, 2)
 			Main.I.sfx.play("combat_turn", -6.0, 0.7)
 		"yolka":
 			_fire_yolka(lvl)
