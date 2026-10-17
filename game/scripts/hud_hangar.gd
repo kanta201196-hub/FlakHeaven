@@ -157,8 +157,12 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 	var h3 := Hangar3D.ensure(ctrl)
 	_panel(Rect2(vx, area.position.y + 40, vw, 400), false)
 	var vr := Rect2(vx + 8, area.position.y + 48, vw - 16, 330)
+	# тест 3.5-s4 (п. 5): у «Осы» турелей нет — показываем турель «Грача», а не старую заглушку для истребителя
+	var wcls := m.hangar_cls
+	if w2 == "turret" and int(PlaneClasses.get_data(wcls)["turrets"]) <= 0:
+		wcls = "attacker"
 	if WeaponModels.WEAPON_GLB.has(w2) or w2 == "turret":
-		ctrl.draw_texture_rect(h3.show_weapon(m.hangar_cls, w2, vr), vr, false)
+		ctrl.draw_texture_rect(h3.show_weapon(wcls, w2, vr), vr, false)
 		_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
 		h3.lvl_rects.clear()
 		h3.tier_rects.clear()
@@ -169,7 +173,10 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			_text(Vector2(tr2.position.x, tr2.position.y + 22), ("ур. %d" % [1, 3, 5][ti]) if ti < 3 else "модерниз.", 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
 			h3.tier_rects.append([tr2, ti + 1])
 		if w2 == "turret":
-			_text(Vector2(vx + 16, area.position.y + 452), "Турель класса: %s" % PlaneClasses.DATA[m.hangar_cls]["title"], 14, Color(0.7, 0.74, 0.8))
+			if wcls != m.hangar_cls:
+				_text(Vector2(vx + 16, area.position.y + 452), "%s: турелей нет. Показана турель: %s" % [PlaneClasses.DATA[m.hangar_cls]["title"], PlaneClasses.DATA[wcls]["title"]], 14, Color(0.7, 0.74, 0.8))
+			else:
+				_text(Vector2(vx + 16, area.position.y + 452), "Турель класса: %s" % PlaneClasses.DATA[m.hangar_cls]["title"], 14, Color(0.7, 0.74, 0.8))
 	else:
 		_text(Vector2(vx + 24, area.position.y + 220), "Встроенное оружие — модель на самолёте", 16, Color(0.7, 0.74, 0.8))
 	_text(Vector2(rx, area.position.y + 24), "%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)" % Weapons.DEFS[w2]["title"], 18, Menu.C_AMBER)

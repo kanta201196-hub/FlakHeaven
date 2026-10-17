@@ -10,7 +10,7 @@ static var I: Hangar3D
 
 const YAW0 := -2.3
 const PITCH0 := 0.3
-const DIST0 := 1.4
+const DIST0 := 1.15   # тест 3.5-s4 / Т-10: камера ближе — самолёт ~70% ширины вида (было 1.4)
 
 var vp: SubViewport
 var cam: Camera3D
@@ -34,6 +34,12 @@ var _drawn_frame := -10
 var _cls := ""
 var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
 var turret_pos: Array = []   # [Vector3, сторона] — турели текущей модели
+var _env: Environment
+var _key_light: DirectionalLight3D
+var _flight_bg: Node3D       # п. 32: облака под самолётом плывут назад — «полёт»
+var _store_bg: Node3D        # п. 32: склад вооружения — пол, стеллажи, ящики
+var _bg := ""
+var _t := 0.0
 
 
 static func ensure(ctrl: Control) -> Hangar3D:
@@ -53,38 +59,37 @@ func _ready() -> void:
 	vp.anisotropic_filtering_level = Viewport.ANISOTROPY_16X
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(vp)
+	# тест 3.5-s4 (п. 1, 32): свет без пересвета сверху; фон — полёт в небе (самолёт) или склад (оружие)
 	var we := WorldEnvironment.new()
-	var e := Environment.new()
-	e.background_mode = Environment.BG_COLOR
-	e.background_color = Color(0.09, 0.1, 0.115)
-	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.62, 0.68, 0.8)
-	e.ambient_light_energy = 0.55
-	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	we.environment = e
+	_env = Environment.new()
+	_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	_env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	_env.tonemap_white = 1.6
+	var sky := Sky.new()
+	var skm := ShaderMaterial.new()
+	var sks := Shader.new()
+	sks.code = SKY_SHADER
+	skm.shader = sks
+	sky.sky_material = skm
+	_env.sky = sky
+	we.environment = _env
 	vp.add_child(we)
-	var key := DirectionalLight3D.new()
-	key.light_color = Color(1.0, 0.93, 0.82)
-	key.light_energy = 1.25
-	key.shadow_enabled = true
-	key.basis = Basis.looking_at(Vector3(0.5, -0.8, -0.35).normalized(), Vector3.UP)
-	vp.add_child(key)
+	_key_light = DirectionalLight3D.new()
+	_key_light.light_color = Color(1.0, 0.94, 0.85)
+	_key_light.shadow_enabled = true
+	# сбоку-спереди, а не сверху: верх светлой окраски не выбеливается при взгляде сверху
+	_key_light.basis = Basis.looking_at(Vector3(0.55, -0.55, -0.62).normalized(), Vector3.UP)
+	vp.add_child(_key_light)
 	var rim := DirectionalLight3D.new()
 	rim.light_color = Color(0.6, 0.72, 1.0)
-	rim.light_energy = 0.45
+	rim.light_energy = 0.4
 	rim.basis = Basis.looking_at(Vector3(-0.6, -0.2, 0.75).normalized(), Vector3.UP)
 	vp.add_child(rim)
-	# пол ангара: тёмный бетон, на нём тень
-	var floor_mi := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(40, 40)
-	floor_mi.mesh = pm
-	var fm := StandardMaterial3D.new()
-	fm.albedo_color = Color(0.2, 0.21, 0.22)
-	fm.roughness = 0.9
-	floor_mi.material_override = fm
-	floor_mi.position.y = -0.2
-	vp.add_child(floor_mi)
+	_flight_bg = _make_flight_bg()
+	vp.add_child(_flight_bg)
+	_store_bg = _make_store_bg()
+	vp.add_child(_store_bg)
+	_set_bg("flight")
 	pivot = Node3D.new()
 	vp.add_child(pivot)
 	cam = Camera3D.new()
@@ -95,6 +100,145 @@ func _ready() -> void:
 	cam.current = true
 
 
+## Тест 3.5-s4 (п. 32): небо для вида «полёт» — от дымки у горизонта к синеве в зените, мягкое солнце
+const SKY_SHADER := """
+shader_type sky;
+void sky() {
+	float h = EYEDIR.y;
+	vec3 haze = vec3(0.78, 0.83, 0.88);
+	vec3 zen = vec3(0.30, 0.47, 0.72);
+	vec3 low = vec3(0.42, 0.45, 0.47);   // далеко внизу — земля в дымке, темнее неба: светлый самолёт читается сверху
+	vec3 c = mix(haze, zen, smoothstep(0.0, 0.7, h));
+	c = mix(c, low, smoothstep(-0.02, -0.35, h));
+	vec3 sd = normalize(vec3(-0.55, 0.55, 0.62));
+	float sun = max(dot(EYEDIR, sd), 0.0);
+	c += vec3(1.0, 0.9, 0.7) * (pow(sun, 400.0) * 1.5 + pow(sun, 12.0) * 0.12);
+	COLOR = c;
+}
+"""
+## Слой облаков под самолётом: шумовые клочья плывут назад (самолёт летит носом +X), к краю тают
+const CLOUD_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+uniform float speed = 0.35;
+uniform float scale = 0.55;
+uniform float cover = 0.5;
+uniform float alpha_k = 0.9;
+varying vec3 wp;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+}
+float fbm(vec2 p) {
+	float v = 0.0; float a = 0.5;
+	for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+	return v;
+}
+void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+void fragment() {
+	vec2 p = wp.xz * scale + vec2(TIME * speed, 0.0);
+	float n = fbm(p);
+	float a = smoothstep(cover, cover + 0.22, n);
+	float edge = 1.0 - smoothstep(4.0, 11.0, length(wp.xz));
+	ALBEDO = mix(vec3(0.82, 0.85, 0.9), vec3(1.0), smoothstep(cover, cover + 0.35, n));
+	ALPHA = a * edge * alpha_k;
+}
+"""
+
+
+func _make_flight_bg() -> Node3D:
+	var n := Node3D.new()
+	for l: Array in [[-0.9, 0.42, 0.62, 0.58, 0.55], [-2.2, 0.22, 0.32, 0.55, 0.7]]:   # высота, скорость, масштаб, покрытие, прозрачность
+		var mi := MeshInstance3D.new()
+		var pm := PlaneMesh.new()
+		pm.size = Vector2(24, 24)
+		mi.mesh = pm
+		var sm := ShaderMaterial.new()
+		var sh := Shader.new()
+		sh.code = CLOUD_SHADER
+		sm.shader = sh
+		sm.set_shader_parameter("speed", l[1])
+		sm.set_shader_parameter("scale", l[2])
+		sm.set_shader_parameter("cover", l[3])
+		sm.set_shader_parameter("alpha_k", l[4])
+		mi.material_override = sm
+		mi.position.y = l[0]
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		n.add_child(mi)
+	return n
+
+
+## Склад вооружения: бетонный пол с разметкой, по кругу — стеллажи с ящиками и бомбами (вид с любой стороны)
+func _make_store_bg() -> Node3D:
+	var n := Node3D.new()
+	var mats := {}
+	for k: String in ["floor", "metal", "olive", "wood", "line", "wall"]:
+		var m := StandardMaterial3D.new()
+		m.albedo_color = {"floor": Color(0.23, 0.23, 0.22), "metal": Color(0.3, 0.32, 0.34), "olive": Color(0.28, 0.31, 0.22),
+			"wood": Color(0.42, 0.32, 0.2), "line": Color(0.75, 0.6, 0.12), "wall": Color(0.16, 0.16, 0.17)}[k]
+		m.roughness = 0.85 if k != "metal" else 0.5
+		m.metallic = 0.5 if k == "metal" else 0.0
+		mats[k] = m
+	var fl := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(12, 12)
+	fl.mesh = pm
+	fl.material_override = mats["floor"]
+	fl.position.y = -0.2
+	n.add_child(fl)
+	var add := func(size: Vector3, pos: Vector3, mat: String, rot := 0.0) -> void:
+		var b := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = size
+		b.mesh = bm
+		b.material_override = mats[mat]
+		b.position = pos
+		b.rotation.y = rot
+		n.add_child(b)
+	# разметка: квадрат стоянки под оружием
+	for i in 4:
+		var a := i * PI / 2.0
+		add.call(Vector3(1.3, 0.002, 0.03), Vector3(cos(a) * 0.65, -0.199, sin(a) * 0.65), "line", a + PI / 2.0)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 35
+	for i in 10:
+		var a := TAU * i / 10.0
+		var c := Vector3(cos(a), 0, sin(a)) * 2.9
+		var rot := -a + PI / 2.0
+		var side := Vector3(-sin(a), 0, cos(a))
+		for py: float in [-0.2, 0.25, 0.7, 1.15]:   # полки
+			add.call(Vector3(1.6, 0.035, 0.55), c + Vector3(0, py, 0), "metal", rot)
+		for sx: float in [-0.78, 0.78]:   # стойки
+			for sz: float in [-0.25, 0.25]:
+				add.call(Vector3(0.04, 1.45, 0.04), c + side * sx + Vector3(cos(a), 0, sin(a)) * sz + Vector3(0, 0.5, 0), "metal", rot)
+		for py: float in [-0.2, 0.25, 0.7]:   # ящики на полках
+			var x := -0.65
+			while x < 0.6:
+				var w := rng.randf_range(0.22, 0.42)
+				var h := rng.randf_range(0.14, 0.32)
+				add.call(Vector3(w, h, 0.42), c + side * (x + w / 2.0) + Vector3(0, py + 0.02 + h / 2.0, 0), "olive" if rng.randf() < 0.7 else "wood", rot)
+				x += w + rng.randf_range(0.04, 0.12)
+		add.call(Vector3(0.1, 2.2, 6.0), c * 1.35 + Vector3(0, 0.9, 0), "wall", rot + PI / 2.0)   # стена за стеллажами
+	return n
+
+
+func _set_bg(mode: String) -> void:
+	if mode == _bg:
+		return
+	_bg = mode
+	var fly := mode == "flight"
+	_flight_bg.visible = fly
+	_store_bg.visible = not fly
+	_env.background_mode = Environment.BG_SKY if fly else Environment.BG_COLOR
+	_env.background_color = Color(0.06, 0.06, 0.065)
+	_env.ambient_light_color = Color(0.6, 0.68, 0.82) if fly else Color(0.75, 0.68, 0.58)
+	_env.ambient_light_energy = 0.5 if fly else 0.42
+	_key_light.light_energy = 1.0 if fly else 0.95
+	_key_light.shadow_enabled = not fly   # в полёте тени на «пол» нет — пола нет
+
+
 ## Каждый кадр, пока открыта вкладка «САМОЛЁТ»: какой самолёт показать и где
 func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	if cls_id != _cls:
@@ -103,6 +247,7 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	rect = r
 	_drawn_frame = Engine.get_process_frames()
 	_fit_vp(r)
+	_set_bg("flight")
 	var k := "%s_%d_%d" % [cls_id, view_lvl, weapon_tier]
 	if k != _key:
 		if _key.begins_with("w_"):
@@ -132,6 +277,7 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 	rect = r
 	_drawn_frame = Engine.get_process_frames()
 	_fit_vp(r)
+	_set_bg("store")
 	var k := "w_%s_%s_%d" % [cls_id, weapon, weapon_tier]
 	if k != _key:
 		if not _key.begins_with("w_"):
@@ -159,6 +305,21 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		var c := bb.get_center() * s
 		wmi.position = Vector3(-c.x, -0.03 if side == "under" else -0.08, -c.z)
 		pivot.add_child(wmi)
+		# п. 32: на складе оружие лежит на двух ложементах-подставках от пола до низа модели
+		var bottom := wmi.position.y + bb.position.y * s
+		if weapon != "turret" and bottom > -0.19:
+			var sm := StandardMaterial3D.new()
+			sm.albedo_color = Color(0.32, 0.34, 0.3)
+			sm.metallic = 0.4
+			sm.roughness = 0.6
+			for sx: float in [-0.17, 0.17]:
+				var st := MeshInstance3D.new()
+				var bx := BoxMesh.new()
+				bx.size = Vector3(0.035, bottom + 0.2, minf(0.12, bb.size.z * s * 0.8 + 0.02))
+				st.mesh = bx
+				st.material_override = sm
+				st.position = Vector3(sx, (bottom - 0.2) * 0.5, 0)
+				pivot.add_child(st)
 	return vp.get_texture()
 
 
@@ -353,6 +514,14 @@ func _process(delta: float) -> void:
 			_drag = false
 		return
 	_idle += delta
+	_t += delta
+	# п. 32: в «полёте» самолёт чуть покачивается, как в воздухе; на складе оружие стоит
+	if _bg == "flight":
+		pivot.position.y = sin(_t * 0.9) * 0.012
+		pivot.rotation = Vector3(sin(_t * 0.6) * 0.035, 0.0, sin(_t * 0.75 + 1.0) * 0.02)
+	else:
+		pivot.position.y = 0.0
+		pivot.rotation = Vector3.ZERO
 	if not _drag and _idle > 3.0:
 		_yaw += delta * 0.25
 	_pitch = clampf(_pitch, -0.2, 1.35)
