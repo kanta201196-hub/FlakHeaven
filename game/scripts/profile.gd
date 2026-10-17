@@ -38,6 +38,16 @@ const WBRANCH := {
 	"turret": [[["Крупный калибр", "урон +20%", {"dmg": 1.2}], ["Дальномер", "дальность +15%", {"range": 1.15}]],
 		[["Высокая нач. скорость", "скорость пули +25%", {"spd": 1.25}], ["Скорострельные", "темп +15%", {"cd": 0.87}]]],
 }
+## U-07: ступень 3 — вариант модернизации оружия (только на самолёте ур. 2, после операции 2 «Сухое русло»).
+## Множители действуют на модернизированное оружие: dmg, cd, range
+const WBRANCH3 := {
+	"aam": [["«Тяжёлый Шмель»", "модернизация: урон +35%", {"dmg": 1.35}], ["«Быстрый Шмель»", "модернизация: перезарядка −35%, урон −15%", {"cd": 0.65, "dmg": 0.85}]],
+	"rockets": [["Фугасный залп", "модернизация: урон +30%", {"dmg": 1.3}], ["Частый залп", "модернизация: перезарядка −30%", {"cd": 0.7}]],
+	"gunpod": [["Тяжёлый ствол", "модернизация: урон +30%", {"dmg": 1.3}], ["Дальний ствол", "модернизация: дальность +25%", {"range": 1.25}]],
+	"flares": [["Длинная завеса", "модернизация: радиус +30%", {"range": 1.3}], ["Быстрая завеса", "модернизация: перезарядка −30%", {"cd": 0.7}]],
+	"bombs": [["Тяжёлый ковёр", "модернизация: урон +35%", {"dmg": 1.35}], ["Быстрый сброс", "модернизация: перезарядка −30%", {"cd": 0.7}]],
+	"turret": [["Дальнобойные башни", "модернизация: дальность +25%", {"range": 1.25}], ["Шквал", "модернизация: темп +30%", {"cd": 0.77}]],
+}
 const WEAPON_ORDER := ["aam", "rockets", "gunpod", "flares", "bombs", "turret"]
 
 ## Экипаж: суммарный опыт до уровня (индекс 0 = ур. 1)
@@ -122,7 +132,7 @@ func reset_data() -> void:
 	for c in PlaneClasses.LIST:
 		data["classes"][c] = _default_class(c)
 	for w in WEAPON_ORDER:
-		data["weapons"][w] = {"t1": "", "t2": ""}
+		data["weapons"][w] = {"t1": "", "t2": "", "t3": ""}
 
 
 func load_profile() -> void:
@@ -330,6 +340,28 @@ func wbranch(w: String, tier: int) -> String:
 	return "" if v == "?" else v
 
 
+## U-07: ступень 3 доступна после ступени 2 и операции 2 кампании
+func tier3_open(w: String) -> bool:
+	return WBRANCH3.has(w) and tier_state(w, 2) != "" and Campaign.cleared(1)
+
+
+## U-07: вариант модернизации (ступень 3) — название или "", только на самолёте ур. 2
+func evo_variant(w: String, plane_lvl: int) -> String:
+	var ch := wbranch(w, 3)
+	if ch == "" or plane_lvl < 2 or not WBRANCH3.has(w):
+		return ""
+	return String(WBRANCH3[w][0 if ch == "a" else 1][0])
+
+
+## U-07: множитель модернизированного оружия по ключу (dmg, cd, range) от ступени 3
+func evo_k(w: String, key: String, plane_lvl: int) -> float:
+	var ch := wbranch(w, 3)
+	if ch == "" or plane_lvl < 2 or not WBRANCH3.has(w):
+		return 1.0
+	var eff: Dictionary = WBRANCH3[w][0 if ch == "a" else 1][2]
+	return lerpf(1.0, float(eff.get(key, 1.0)), meta_k())
+
+
 ## Множитель ветки оружия по ключу (dmg, range, cd, spd, blast_r, fuse, auto_r)
 func wk(w: String, key: String) -> float:
 	if not WBRANCH.has(w):
@@ -388,6 +420,8 @@ func tier_state(w: String, tier: int) -> String:
 
 func can_pick_tier(w: String, tier: int) -> bool:
 	if tier == 2 and tier_state(w, 1) == "":
+		return false
+	if tier == 3 and not tier3_open(w):
 		return false
 	return tier_state(w, tier) == "" and parts() >= int(TIER_COST[tier - 1])
 

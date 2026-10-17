@@ -216,7 +216,8 @@ func _run_autotest(delta: float) -> void:
 			if _bot_wait <= 0.0:
 				_bot_wait = 1.5
 				if m._args.has("--shots") and not _shots_done.has("hangar_crew"):
-					Profile.debug_parts(3000)
+					Profile.debug_parts(8000)
+					Campaign.debug_open_all() # U-05/U-07: на скриншотах открыты все операции и ступень 3
 					Profile.debug_level("fighter")
 					Profile.debug_level("fighter")
 					# 3.5: опыта — на звание выше, чтобы на скриншоте была кнопка «Повысить в звании»
@@ -245,6 +246,8 @@ func _run_autotest(delta: float) -> void:
 					_shot("hangar_plane")
 					m.hangar_tab = "weapons"
 					m.input_ctl.hangar_action("tier:aam:1:a")
+					m.input_ctl.hangar_action("tier:aam:2:b")
+					m.input_ctl.hangar_action("tier:aam:3:a")
 				elif not _shots_done.has("hangar_weapons"):
 					_shot("hangar_weapons")
 					m.hangar_tab = "crew"
