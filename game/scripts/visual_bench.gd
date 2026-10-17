@@ -219,6 +219,8 @@ func _make_points() -> Array:
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
+	if found.has("o_wreck"):   # тест 3.5-s4 (п. 18): обломки самолёта крупно
+		pts.append({"name": "wreck", "pos": found["o_wreck"], "zoom": 2.5})
 	pts.append({"name": "closeup", "pos": found.get("o_rocks_big", empty) + Vector2(-260, 0), "zoom": 2.5})
 	pts.append({"name": "roll", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.62})
 	pts.append({"name": "roll90", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.78})

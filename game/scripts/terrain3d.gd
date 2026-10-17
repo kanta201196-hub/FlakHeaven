@@ -15,7 +15,7 @@ const CHUNK := 1400.0          # совпадает с Background.CHUNK: объ�
 const N_GFX := [40, 56, 70, 70]
 var N := 70
 ## Поселения — на дне долин (вес 1); обломки самолёта и воронки могут быть где угодно, под ними лишь вмятина
-const FLAT_OBJS := {"o_village": 1.0, "o_fort": 1.0, "o_oasis": 1.0, "o_crater": 0.3, "o_wreck": 0.3}
+const FLAT_OBJS := {"o_village": 1.0, "o_fort": 1.0, "o_oasis": 1.0, "o_crater": 0.3}   # o_wreck — без площадки (тест 3.5-s4, п. 18)
 const SETTLE := ["o_village", "o_fort", "o_oasis"]
 ## Профиль поперёк долины по расстоянию до линии реки, px (знак — берег: дорога со стороны «+»)
 const D_RIVER := 26.0          # полуширина русла
@@ -220,8 +220,21 @@ func _v_raw(x: float, z: float) -> float:
 	return _valley.get_noise_2d(wx, wz)
 
 
-## Ближайшая точка дна долины (не дальше D_FLOOR от реки) около p — для наземной техники
-func find_floor(p: Vector2, radius := 900.0) -> Vector2:
+## Ближайшая точка дна долины (не дальше D_FLOOR от реки) около p — для наземной техники.
+## Тест 3.5-s4 (п. 20): техника стояла в реке — русло с берегом (D_RIVER × 3, как зона «bank» биома:
+## вода + полкорпуса машины) и объекты клеток (кишлак, крепость, оазис, воронка, обломки) — запретные;
+## если вокруг всё запретное, берётся наименее плохая точка — дальше всех от воды и объектов.
+## side ≠ 0 — только этот берег (знак river_field): переезжающая техника не пересекает реку
+func find_floor(p: Vector2, radius := 900.0, side := 0.0) -> Vector2:
+	var objs := []
+	if _bg != null:
+		var c := Vector2i(int(floorf(p.x / CHUNK)), int(floorf(p.y / CHUNK)))
+		var span := int(ceilf(radius / CHUNK)) + 1
+		for dx in range(-span, span + 1):
+			for dz in range(-span, span + 1):
+				var o := _obj(Vector2i(c.x + dx, c.y + dz))
+				if not o.is_empty():
+					objs.append([o["pos"], float(o["size"]) * 0.6 + 50.0])
 	var best := p
 	var best_s := INF
 	for ring in range(0, 10):
@@ -230,15 +243,49 @@ func find_floor(p: Vector2, radius := 900.0) -> Vector2:
 		for i in n:
 			var q := p + Vector2.from_angle(TAU * i / n) * rr
 			var a := absf(valley(q.x, q.y))
-			var ar := absf(river_field(q.x, q.y))
-			# дно долины, но не в русле; ближе — лучше
-			var sc := maxf(a - D_FLOOR * 0.8, 0.0) / 100.0 + maxf(D_RIVER * 2.0 - ar, 0.0) / 20.0 + rr / radius * 0.2
+			var rf := river_field(q.x, q.y)
+			var ar := absf(rf)
+			# дно долины, но не у воды и не на объекте биома; ближе — лучше
+			var sc := maxf(a - D_FLOOR * 0.8, 0.0) / 100.0 + rr / radius * 0.2
+			if ar < D_RIVER * 3.0:
+				sc += 50.0 + (D_RIVER * 3.0 - ar)
+			if side != 0.0 and signf(rf) != side:
+				sc += 50.0 + ar
+			for o in objs:
+				var d := q.distance_to(o[0])
+				if d < float(o[1]):
+					sc += 50.0 + (float(o[1]) - d)
 			if sc < best_s:
 				best_s = sc
 				best = q
 		if best_s < 0.05 + rr / radius * 0.2:
 			break
 	return best
+
+
+## Тест 3.5-s4 (п. 20): объект клетки (кишлак, крепость, оазис, воронка, обломки, скалы) не лежит в реке —
+## если его круг задевает русло с берегом, сдвигаем от реки по наклону поля (поле ≈ расстояние до реки)
+func fix_object(o: Dictionary) -> Dictionary:
+	var p: Vector2 = o["pos"]
+	var need := float(o["size"]) * 0.45 + D_RIVER * 2.0
+	for i in 4:
+		var v := river_field(p.x, p.y)
+		if absf(v) >= need:
+			break
+		var e := 8.0
+		var g := Vector2(river_field(p.x + e, p.y) - river_field(p.x - e, p.y), river_field(p.x, p.y + e) - river_field(p.x, p.y - e)) / (2.0 * e)
+		if g.length_squared() < 1e-10:
+			break
+		var sgn := 1.0 if v >= 0.0 else -1.0
+		p += g.normalized() * sgn * (need - absf(v) + 4.0) / maxf(g.length(), 0.3)
+	var out := o.duplicate()
+	out["pos"] = p
+	return out
+
+
+## Русло с берегом (как в find_floor): сюда наземная техника не заезжает
+func wet(p: Vector2) -> bool:
+	return absf(river_field(p.x, p.y)) < D_RIVER * 3.0
 
 
 ## Точка мира на поверхности рельефа
@@ -287,6 +334,8 @@ func _flat(x: float, z: float, ctx := {}) -> float:
 
 
 func _obj(key: Vector2i) -> Dictionary:
+	if _bg != null and not _bg.place_filter.is_valid():
+		_bg.place_filter = fix_object
 	if not _objs_cache.has(key):
 		_objs_cache[key] = _bg.chunk_object(key.x, key.y)
 	return _objs_cache[key]
