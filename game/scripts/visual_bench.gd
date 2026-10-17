@@ -88,6 +88,23 @@ func process(delta: float) -> void:
 			tk.boom_angle = 0.25
 			tk.docked = true
 			m.world.add_child(tk)
+	elif p.has("fortress"):
+		if _fort == null:   # «Крепость» стоит перед игроком носом вправо, логика стоит; фаза — из точки
+			_fort = Fortress.new()
+			_fort.setup_fortress(5000.0)
+			_fort.heading = -0.5
+			_fort.position = (p["pos"] as Vector2) + Vector2(0, -40)
+			_fort.process_mode = Node.PROCESS_MODE_DISABLED
+			m.world.add_child(_fort)
+		_fort.hp = _fort.max_hp   # игрок стреляет: без своей логики «Крепость» не гасит вспышку попадания
+		_fort._flash = 0.0
+		var ph: int = p["fortress"]
+		_fort.phase = ph
+		_fort.hatches_open = ph >= 2
+		_fort.hull_open = ph >= 3
+		_fort.parts_down = {}
+		for nm in (["turret_1", "turret_2", "turret_3", "turret_4"] if ph >= 2 else []) + (["engine_l", "engine_r"] if ph >= 3 else []):
+			_fort.parts_down[nm] = true
 	elif p.get("enemies", false) and not _spawned:
 		_spawn_all_enemies(m.player.global_position)
 	_hold(p)
@@ -217,6 +234,8 @@ func _make_points() -> Array:
 		pts.append({"name": "model_roll", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.2, "roll": 0.62})
 		pts.append({"name": "model_tanker", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.5, "tanker": true, "wait": 1.0})
 		pts.append({"name": "model_ground", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.3, "enemies": true, "ground": true, "wait": 2.5})
+		for ph in [1, 2, 3]:
+			pts.append({"name": "model_fortress_%d" % ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "enemies": true, "fortress": ph, "wait": 2.5})
 		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
 	return pts
 
@@ -224,6 +243,7 @@ func _make_points() -> Array:
 
 ## 3.5: враги всех видов рядом с игроком (стенд 3D-моделей в бою)
 var _spawned := false
+var _fort: Fortress = null
 var _g_spawned := false
 
 
