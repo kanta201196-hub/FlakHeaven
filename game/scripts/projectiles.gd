@@ -507,7 +507,7 @@ func _update_missiles(delta: float) -> void:
 			var ang2 := rotate_toward(v.angle(), (fp - p).angle(), deg_to_rad(400.0) * delta)
 			v = Vector2.from_angle(ang2) * v.length()
 			if float(m["life"]) - delta <= 0.0:
-				Main.I.fx.explosion(p, 14.0)
+				Main.I.fx.explosion(p, 14.0, true, true, "flak")
 		elif alive and not m["lost"]:
 			var ang := rotate_toward(v.angle(), (pl.global_position - p).angle(), deg_to_rad(Tuning.g("missile_turn")) * delta)
 			var spd := minf(v.length() + 400.0 * delta, Tuning.g("missile_speed"))
