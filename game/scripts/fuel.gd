@@ -6,12 +6,13 @@ extends Node
 ## Пустой бак: скорость −30% и без форсажа, но самолёт не падает.
 ## Живёт внутри спавнера (новый вылет — новый бак).
 
-const CAPACITY := 540.0        # секунд полёта на полном баке
+const CAPACITY := 540.0        # секунд полёта на полном баке (без улучшений узла «Бак»)
 const AB_BURN := 2.0           # форсаж: расход ×2
 const CALL_AT := 0.2           # доля бака, при которой вызывается заправщик (~7-я минута без форсажа)
 const RETRY := 120.0           # следующий заправщик после промаха, с
 const EMPTY_SPEED := 0.7
 
+var capacity := CAPACITY      # B-06: узел «Бак» в ангаре увеличивает объём (Profile.fuel_k)
 var left := CAPACITY
 var tanker: Tanker = null
 var _retry_t := 0.0
@@ -44,7 +45,7 @@ func _process(delta: float) -> void:
 
 
 func frac() -> float:
-	return left / CAPACITY
+	return left / capacity
 
 
 func empty() -> bool:
@@ -53,7 +54,7 @@ func empty() -> bool:
 
 ## Заправка: amount — доля бака
 func add(amount: float) -> void:
-	left = minf(CAPACITY, left + CAPACITY * amount)
+	left = minf(capacity, left + capacity * amount)
 	if left > 0.0:
 		_empty_said = false
 	if frac() > 0.1:
