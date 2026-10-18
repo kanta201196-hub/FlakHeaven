@@ -596,7 +596,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 		"weapon_new":
 			var w: String = card["weapon"]
 			var g: Hardpoint = p.groups[int(card["group"])]
-			card["desc"] = Loc.t("%s\nНа подвес: %s ×%d\nСтарт с ур. %d") % [Weapons.DEFS[w]["desc"], g.name, g.slots, NEW_WEAPON_LEVEL[r]]
+			card["desc"] = Loc.t("%s\nНа подвес: %s ×%d\nСтарт с ур. %d") % [Loc.t(Weapons.DEFS[w]["desc"]), g.name, g.slots, NEW_WEAPON_LEVEL[r]]
 			if Prog.EVOS.has(w):
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s") % _cat_text(w)
 		"weapon_up":
@@ -612,18 +612,18 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s, с %d:%02d") % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
-			card["desc"] = syn_def(p, card["syn"])["desc"] + Loc.t("\nОткрывает слот %d из %d. Следующий слот дороже.") % [p.syn.size() + 1, MAX_SYN]
+			card["desc"] = Loc.t(syn_def(p, card["syn"])["desc"]) + Loc.t("\nОткрывает слот %d из %d. Следующий слот дороже.") % [p.syn.size() + 1, MAX_SYN]
 		"mastery":
-			card["desc"] = String(PlaneClasses.MASTERY[p.cls_id]["desc"]) + Loc.t("\nОдна на вылет: если отказаться, больше не придёт.")
+			card["desc"] = Loc.t(String(PlaneClasses.MASTERY[p.cls_id]["desc"])) + Loc.t("\nОдна на вылет: если отказаться, больше не придёт.")
 		"evolution":
 			var ew: String = card["weapon"]
-			card["desc"] = Prog.EVOS[ew]["desc"] + Loc.t("\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора.")
+			card["desc"] = Loc.t(Prog.EVOS[ew]["desc"]) + Loc.t("\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора.")
 		"wing_new":
 			var wt: Dictionary = Prog.WING_TYPES[card["wtype"]]
-			card["desc"] = Loc.t("%s\nСила ×%.1f · Ведомых: %d / %d") % [wt["desc"], k, p.permanent_wingmen(), wing_limit(p)]
+			card["desc"] = Loc.t("%s\nСила ×%.1f · Ведомых: %d / %d") % [Loc.t(wt["desc"]), k, p.permanent_wingmen(), wing_limit(p)]
 		"wing_lvl":
 			var wm: Wingman = p.wingmen[int(card["wi"])]
-			card["desc"] = Loc.t("Ур. %d: %s") % [wm.lvl + 1, Prog.WING_TYPES[wm.type]["lv"][wm.lvl]]
+			card["desc"] = Loc.t("Ур. %d: %s") % [wm.lvl + 1, Loc.t(Prog.WING_TYPES[wm.type]["lv"][wm.lvl])]
 		"reserve":
 			match card["id"]:
 				"res_overload":

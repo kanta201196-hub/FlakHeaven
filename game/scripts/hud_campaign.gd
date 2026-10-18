@@ -32,13 +32,13 @@ func draw(size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.04, 0.88))
 	_button(Rect2(64, 60, 220, 46), "‹ Меню (Esc)", "campaign_back", 18)
 	var bio := Campaign.biome_of(Campaign.index())
-	_text(Vector2(0, 100), Loc.t("КАМПАНИЯ: ") + String(Biome.DATA[bio]["name"]).to_upper(), 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	_text(Vector2(0, 100), Loc.t("КАМПАНИЯ: ") + Loc.t(String(Biome.DATA[bio]["name"])).to_upper(), 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	_ctext(140, "Выберите операцию: клавиши 1–4 или клик, биом — вкладки над картой (↑ / ↓). Пройденную можно повторить ради добычи.", 18, Color(0.7, 0.75, 0.85))
 	for j in BIOMES.size():
 		var b: String = BIOMES[j]
 		var on := b == bio
 		var tr := Rect2(80 + j * 452, 162, 440, 40)
-		_button(tr, ("● " if on else "") + String(Biome.DATA[b]["name"]), "biome:" + b, 18)
+		_button(tr, ("● " if on else "") + Loc.t(String(Biome.DATA[b]["name"])), "biome:" + b, 18)
 		if on:
 			ctrl.draw_rect(Rect2(tr.position.x, tr.end.y - 3.0, tr.size.x, 3.0), Menu.C_AMBER)
 	var map := Rect2(80, 214, 900, 726)
@@ -122,7 +122,7 @@ func _points(r: Rect2, mp: Vector2, ids: Array) -> void:
 		_text(Vector2(c.x - 40.0, c.y + 11.0), mark, 30, col, HORIZONTAL_ALIGNMENT_CENTER, 80.0)
 		# подпись под точкой; у последней — над ней, чтобы путь к ней не перечёркивал текст
 		var ly := c.y + (66.0 if j < pos.size() - 1 else -80.0)
-		_text(Vector2(c.x - 160.0, ly), "%d. «%s»" % [j + 1, o["title"]], 19, col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
+		_text(Vector2(c.x - 160.0, ly), "%d. «%s»" % [j + 1, Loc.t(o["title"])], 19, col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
 		var sub := String(Campaign.DIFF[int(o["diff"])]["title"]) if avail else Loc.t("закрыта")
 		var sub_col := Color(col.r, col.g, col.b, 0.8)
 		# открыта, но ещё не пройдена и не выбрана — подсказать, что она новая и сложнее
@@ -143,9 +143,9 @@ func _brief(r: Rect2) -> void:
 	var y := r.position.y + 54.0
 	_text(Vector2(x, y), Loc.t("ОПЕРАЦИЯ %d") % Campaign.num(), 20, Color(0.7, 0.75, 0.85))
 	y += 44.0
-	_text(Vector2(x, y), "«%s»" % String(o["title"]).to_upper(), 36, Menu.C_AMBER)
+	_text(Vector2(x, y), "«%s»" % Loc.t(String(o["title"])).to_upper(), 36, Menu.C_AMBER)
 	y += 44.0
-	var diff_line := Loc.t("Сложность: %s") % d["title"]
+	var diff_line := Loc.t("Сложность: %s") % Loc.t(d["title"])
 	if int(o["diff"]) > 0:
 		diff_line += Loc.t(" — враги прочнее ×%s, бьют сильнее ×%s, волны гуще +%d%%, добыча ×%s") % [_k(d["hp"]), _k(d["dmg"]), int(round((float(d["dens"]) - 1.0) * 100.0)), _k(d["reward"])]
 	else:
@@ -154,11 +154,11 @@ func _brief(r: Rect2) -> void:
 	y += 26.0
 	_text(Vector2(x, y), "БРИФИНГ", 18, Color(0.7, 0.75, 0.85))
 	y += 32.0
-	y += _para(Vector2(x, y), o["brief"], w, 22, Color(0.92, 0.94, 0.98))
+	y += _para(Vector2(x, y), Loc.t(o["brief"]), w, 22, Color(0.92, 0.94, 0.98))
 	y += 24.0
 	_text(Vector2(x, y), "ЗАДАЧА", 18, Color(0.7, 0.75, 0.85))
 	y += 30.0
-	y += _para(Vector2(x, y), "• " + String(o["task"]), w, 20, Color.WHITE)
+	y += _para(Vector2(x, y), "• " + Loc.t(String(o["task"])), w, 20, Color.WHITE)
 	y += 24.0
 	if Campaign.cleared(Campaign.index()):
 		_text(Vector2(x, y), "✓ Операция пройдена — повторный вылет ради запчастей и опыта экипажа", 18, C_DONE)

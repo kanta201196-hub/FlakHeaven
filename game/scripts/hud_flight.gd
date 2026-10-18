@@ -448,7 +448,7 @@ func _loadout_strip(p: Player, size: Vector2) -> void:
 			ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		else:   # U-08: у экспериментального оружия пока нет картинки — значок
 			CardIcons.draw(ctrl, Vector2(x + 26, y + 39), 36.0, hp.weapon, Color(0.6, 0.85, 1.0))
-		_text(Vector2(x + 50, y + 24), Weapons.DEFS[hp.weapon]["short"], 16, Color(0.95, 0.93, 0.88), HORIZONTAL_ALIGNMENT_LEFT, cw - 56.0)
+		_text(Vector2(x + 50, y + 24), Loc.t(Weapons.DEFS[hp.weapon]["short"]), 16, Color(0.95, 0.93, 0.88), HORIZONTAL_ALIGNMENT_LEFT, cw - 56.0)
 		# читаемость HUD: под названием — число и по какой цели бьёт (подвесы больше не дублируются в левой панели)
 		var sub := "×%d" % hp.slots
 		if Weapons.DEFS[hp.weapon]["uses_priority"]:
@@ -487,7 +487,7 @@ func _course_bar(p: Player, pos: Vector2) -> void:
 			var col: Color = sd.get("color", Menu.C_AMBER)
 			ctrl.draw_rect(r, Color(col.r, col.g, col.b, 0.35))
 			ctrl.draw_rect(r, col, false, 2.0)
-			_text(Vector2(x + 6, pos.y + 19), "◆ " + String(sd["title"]), 15, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT, sw - 8.0)
+			_text(Vector2(x + 6, pos.y + 19), "◆ " + Loc.t(String(sd["title"])), 15, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT, sw - 8.0)
 		else:
 			ctrl.draw_rect(r, Color(1, 1, 1, 0.06))
 			ctrl.draw_rect(r, Color(1, 1, 1, 0.2), false, 1.0)
@@ -501,7 +501,7 @@ func _course_bar(p: Player, pos: Vector2) -> void:
 	var ready := Cards.conds_ok(conds)
 	var y := pos.y + 34.0
 	var col2: Color = sd2.get("color", Menu.C_AMBER)
-	_text(Vector2(pos.x, y + 14), Loc.t("К связке «%s»") % sd2["title"], 16, col2.lightened(0.2), HORIZONTAL_ALIGNMENT_LEFT, 236)
+	_text(Vector2(pos.x, y + 14), Loc.t("К связке «%s»") % Loc.t(sd2["title"]), 16, col2.lightened(0.2), HORIZONTAL_ALIGNMENT_LEFT, 236)
 	ctrl.draw_rect(Rect2(pos.x + 240, y + 2, 220, 14), Color(0, 0, 0, 0.5))
 	var a := 1.0 if not ready else (0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.01))
 	ctrl.draw_rect(Rect2(pos.x + 240, y + 2, 220 * k, 14), Color(col2.r, col2.g, col2.b, a))
