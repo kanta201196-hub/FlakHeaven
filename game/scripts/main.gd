@@ -638,7 +638,7 @@ func on_enemy_hit(e: Enemy, dmg: float) -> void:
 	fx.hit_spark(e.global_position)
 	if Tuning.g("damage_numbers") > 0.5:
 		fx.number(e.global_position + Vector2(0, -e.radius), dmg)
-	sfx.play("hit", -18.0)
+	sfx.play("hit", -18.0, 1.0, e.global_position)
 
 
 func on_enemy_killed(e: Enemy) -> void:
@@ -658,7 +658,7 @@ func on_enemy_killed(e: Enemy) -> void:
 	parts += e.parts * continue_mult() * streak_mult() * (1.5 if (e.is_ground and is_instance_valid(player) and player.has_perk("a_grd2")) else 1.0) \
 		* (player.mastery_parts_k(e) if is_instance_valid(player) else 1.0)
 	fx.explosion(e.global_position, e.radius * (1.3 if e.big else 1.0), not e.is_ground)
-	sfx.play("explode_big" if e.big else "explode", -4.0 if e.big else -12.0)
+	sfx.play("explode_big" if e.big else "explode", -4.0 if e.big else -12.0, 1.0, e.global_position)
 	add_shake(e.kill_shake)
 	if e.big:
 		hitstop()

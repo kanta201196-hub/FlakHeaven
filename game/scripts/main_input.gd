@@ -136,6 +136,30 @@ func _cycle_scheme() -> void:
 	Tuning.set_param("scheme", float((int(Tuning.g("scheme")) + 1) % 3))
 
 
+## Короче этого вылет не логируем и анкету при выходе не показываем: случайный старт, не тест
+const ABORT_MIN_S := 20.0
+var _abort_logged := false
+
+
+## Строка лога для вылета, прерванного выходом в меню или закрытием игры (итог «выход»). Один раз за вылет.
+func log_abort(outcome := "выход") -> void:
+	# в меню и ангаре run_time = 0 (start_run его обнуляет), итоги гибели и эвакуации уже записаны
+	if _abort_logged or m.state in ["dead", "evac"] or m.run_time < ABORT_MIN_S:
+		return
+	if not is_instance_valid(m.player) or m.is_dead:
+		return
+	_abort_logged = true
+	RunLog.write(m, outcome)
+
+
+## Выход из вылета в главное меню (из паузы или после анкеты)
+func abort_run() -> void:
+	log_abort()
+	_abort_logged = false
+	m.start_run()
+	m._set_state("menu")
+
+
 func ui_click(action: String) -> void:
 	if action == "menu_play":
 		m._set_state("campaign")
@@ -177,8 +201,11 @@ func ui_click(action: String) -> void:
 	elif action == "menu_quit":
 		m.get_tree().quit()
 	elif action == "to_menu":
-		m.start_run()
-		m._set_state("menu")
+		# досрочный выход из вылета: сначала короткая анкета (с кнопкой «Выйти без отчёта»), иначе данные теряются
+		if m.state == "paused" and m.run_time >= ABORT_MIN_S and Main.REPORT_URL != "" and (not m._autotest or m._args.has("--exittest")):
+			m.report.open(true)
+		else:
+			abort_run()
 	elif action == "class_back":
 		m._set_state("campaign")
 	elif action.begins_with("skill:"):
