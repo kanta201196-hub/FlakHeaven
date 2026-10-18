@@ -42,16 +42,21 @@ var _tr: Terrain3D
 var _t := 0.0
 var _heli_t := -1.0             # отсчёт до вызова вертолётов (−1 — не вызывали)
 var _dbg := OS.get_cmdline_user_args().has("--convoy") and OS.get_cmdline_user_args().has("--autotest")
+## тест 3.5-s7: малая колонна на пути «Кита» (Spawner._patrol) — не активность: без баннеров, таймера и награды за всю колонну
+var patrol := false
 
 
 ## center — точка, через которую пройдёт колонна; dir — примерное направление марша
 func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> void:
 	_build_route(center, dir)
 	var order := ["scout", "technical", "truck", "light", "truck", "ifv", "manpads"]
-	if t >= 480.0:
-		order.append("ifv")       # с 8-й минуты вторая БМП
-	if t >= 660.0:
-		order.append("manpads")   # с 11-й — второй пикап с ПЗРК
+	if patrol:
+		order = ["technical", "truck", "light"]
+	else:
+		if t >= 480.0:
+			order.append("ifv")       # с 8-й минуты вторая БМП
+		if t >= 660.0:
+			order.append("manpads")   # с 11-й — второй пикап с ПЗРК
 	# отступы машин от головы колонны
 	var offs: Array[float] = [0.0]
 	for i in range(1, order.size()):
@@ -398,6 +403,8 @@ func _raise_alarm() -> void:
 	_heli_t = HELI_DELAY
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: convoy alarm")
+	if patrol:
+		return
 	Main.I.show_banner("Колонна обнаружила вас! Грузовики уходят к укрытию — %d с" % int(LIMIT), 3.0)
 	Main.I.sfx.play("aa_alert", -2.0, 0.8)
 
@@ -454,7 +461,9 @@ func _check_trucks() -> void:
 	if trucks_left() > 0:
 		return
 	leaderless = true
-	if trucks_killed == trucks_total and not failed and not done:
+	if patrol:
+		done = trucks_killed == trucks_total
+	elif trucks_killed == trucks_total and not failed and not done:
 		done = true
 		Main.I.tele.add("convoy_done")
 		Main.I.on_activity_success("convoy")
@@ -516,7 +525,8 @@ func _process(delta: float) -> void:
 			timer -= delta
 			if timer <= 0.0:
 				failed = true
-				Main.I.show_banner("Колонна ушла от удара — груз потерян", 3.0)
+				if not patrol:
+					Main.I.show_banner("Колонна ушла от удара — груз потерян", 3.0)
 				_finish()
 		if _heli_t > 0.0:
 			_heli_t -= delta

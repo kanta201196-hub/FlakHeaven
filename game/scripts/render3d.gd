@@ -1504,6 +1504,11 @@ func _weapon_layout(u: Dictionary, p: Player, tex: Texture2D, gi: int, g: Hardpo
 			var lo := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
 			if not is_nan(lo):
 				y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
+		elif mt["side"] == "top" and g.weapon == "turret" and u.get("bm") != null:
+			# тест 3.5-s7: верхняя турель — на настоящей спине фюзеляжа (у «Кита» она выше, чем у «Грача»)
+			var hi := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw, true)
+			if not is_nan(hi):
+				y = hi * tw
 		elif mt["side"] == "bay" and u.get("bm") != null:
 			# тест 3.5-s5 (п. 3): бомбы и кассета «ковра» — от настоящего брюха модели, как в ангаре
 			# (иначе верх кассеты проходил сквозь фюзеляж и был виден сверху)
