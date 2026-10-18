@@ -78,6 +78,7 @@ const SINGLE_K_SECS := 15     # сколько секунд рядом с асо
 var _big_dmg := 0.0
 var _big_hist: Array = []
 var last_single_k := SINGLE_K_DEF
+var _big_boss_seen := false   # в замере уже есть бой с асом волны (не только дуэль)
 
 
 func note_big(d: float, e: Enemy, source: String) -> void:
@@ -98,7 +99,12 @@ func single_k() -> float:
 		s_r += float(e[1])
 	if _big_hist.size() < SINGLE_K_SECS or s_r <= 0.0:
 		return SINGLE_K_DEF
-	return clampf(s_d / s_r, SINGLE_K_MIN, SINGLE_K_DEF)
+	var k := clampf(s_d / s_r, SINGLE_K_MIN, SINGLE_K_DEF)
+	# только дуэль, асов ещё не было: ас-соперник вёрткий и уходит рывками — по нему попадают в разы хуже,
+	# чем по асу волны (бот: 0,35 против 1,3–1,5), поэтому для первого аса — середина между дуэлью и ×1,6
+	if not _big_boss_seen:
+		k = (k + SINGLE_K_DEF) * 0.5
+	return k
 
 
 func _big_tick(p: Player) -> void:
@@ -107,6 +113,8 @@ func _big_tick(p: Player) -> void:
 		var e := n as Enemy
 		if e != null and ((e.is_boss and not e is Fortress) or e is RivalAce) and e.hp > 0.0 and e.global_position.distance_squared_to(p.global_position) < 900.0 * 900.0:
 			near = true
+			if e.is_boss:
+				_big_boss_seen = true
 			break
 	var r := recent_dps()
 	if near and r > 0.0:
