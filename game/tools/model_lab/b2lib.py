@@ -437,3 +437,28 @@ def ring(c, r_out, r_in, h, mat, name='ring', seg=24):
             bm.faces.new((a[i], a[j], b[j], b[i]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return _new(name, bm, mat)
+
+
+def crown(objs, mat, n=10, seed=1, flat=0.75, grow=1.15, seg=8):
+    """Крона из «облаков»: точки листвы делим на n кучек (k-средних), на каждую — сплюснутый шар.
+    С высоты 2–4 км листья по одному не видны — читается масса кроны, а треугольников в десятки раз меньше."""
+    import numpy as np, random
+    pts = np.array([tuple(o.matrix_world @ v.co) for o in objs for v in o.data.vertices])
+    rng = np.random.default_rng(seed)
+    c = pts[rng.choice(len(pts), n, replace=False)]
+    for _ in range(12):
+        lab = np.argmin(((pts[:, None, :] - c[None]) ** 2).sum(-1), axis=1)
+        c = np.array([pts[lab == k].mean(0) if (lab == k).any() else c[k] for k in range(n)])
+    out = []
+    r = random.Random(seed)
+    for k in range(n):
+        p = pts[lab == k]
+        if len(p) < 4:
+            continue
+        sd = p.std(0) * 1.7 * grow
+        rad = float(max(sd[0], sd[1], 0.3))
+        sph = sphere(tuple(c[k]), rad, mat, 'crown', seg=seg, scale=(sd[0] / rad + 0.15, sd[1] / rad + 0.15, max(flat * sd[2] / rad, 0.35)))
+        for v in sph.data.vertices:   # неровный край
+            v.co += Vector((r.uniform(-1, 1), r.uniform(-1, 1), r.uniform(-1, 1))) * rad * 0.12
+        out.append(sph)
+    return out

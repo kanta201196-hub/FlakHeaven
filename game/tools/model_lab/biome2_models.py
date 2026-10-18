@@ -607,9 +607,441 @@ def a11_tower_ruins():
     L.finish(o, scenery('a11_tower_ruins'), target=8000, maxtex=1024, fit='xy')
 
 
+# ---------------- П-1, П-2 дома посёлка (8–14 м, кодом) ----------------
+# Набор «Village on Stilts» оказался деревянными хижинами на сваях с жестяными крышами — к Средиземноморью
+# не подходит, поэтому дома собраны кодом: белёные стены, плоская крыша с террасой или черепичная двускатная/вальмовая.
+WALLS = [(0.93, 0.91, 0.86), (0.90, 0.86, 0.76), (0.92, 0.89, 0.82), (0.86, 0.78, 0.64)]
+SHUT = [(0.22, 0.42, 0.36), (0.45, 0.30, 0.20), (0.30, 0.45, 0.50), (0.55, 0.40, 0.22)]
+
+
+def _windows(o, x0, x1, y0, y1, floors, fh, shut, rng, door_side=None):
+    win = L.flat('fh_window', (0.12, 0.13, 0.15), 0.4)
+    sm = L.flat('fh_shutter_%d' % SHUT.index(shut), shut, 0.8)
+    for f in range(floors):
+        z = f * fh + fh * 0.58
+        for side, (a, b, c, axis) in {'s': (x0, x1, y0, 'x'), 'n': (x0, x1, y1, 'x'), 'w': (y0, y1, x0, 'y'), 'e': (y0, y1, x1, 'y')}.items():
+            n = max(1, int((b - a) / 3.4))
+            for k in range(n):
+                t = a + (b - a) * (k + 0.5) / n
+                if f == 0 and side == door_side and k == n // 2:
+                    if axis == 'x':
+                        o.append(L.box((t, c, 1.1), (1.1, 0.16, 2.2), sm, 'door'))
+                    else:
+                        o.append(L.box((c, t, 1.1), (0.16, 1.1, 2.2), sm, 'door'))
+                    continue
+                if rng.random() < 0.12:
+                    continue
+                if axis == 'x':
+                    o += [L.box((t, c, z), (0.8, 0.14, 1.1), win, 'win'),
+                          L.box((t - 0.62, c, z), (0.4, 0.18, 1.1), sm, 'shut'), L.box((t + 0.62, c, z), (0.4, 0.18, 1.1), sm, 'shut')]
+                else:
+                    o += [L.box((c, t, z), (0.14, 0.8, 1.1), win, 'win'),
+                          L.box((c, t - 0.62, z), (0.18, 0.4, 1.1), sm, 'shut'), L.box((c, t + 0.62, z), (0.18, 0.4, 1.1), sm, 'shut')]
+
+
+def _house(name, w, d, floors, roof, seed, wing=None, extra=()):
+    import random
+    rng = random.Random(seed)
+    L.reset()
+    wall = L.flat('fh_wall_%d' % (seed % len(WALLS)), WALLS[seed % len(WALLS)], 0.9)
+    tile = L.flat('fh_tile', TILE, 0.85)
+    tile2 = L.flat('fh_tile2', (0.62, 0.32, 0.20), 0.85)
+    trim = L.flat('fh_trim', (0.80, 0.77, 0.70), 0.9)
+    shut = SHUT[seed % len(SHUT)]
+    fh = 3.0
+    h = floors * fh
+    o = [L.box((0, 0, h / 2), (w, d, h), wall, 'block'),
+         L.box((0, 0, 0.2), (w + 0.2, d + 0.2, 0.4), trim, 'plinth')]
+    _windows(o, -w / 2 - 0.02, w / 2 + 0.02, -d / 2 - 0.02, d / 2 + 0.02, floors, fh, shut, rng, door_side='s')
+    blocks = [(0, 0, w, d, h)]
+    if wing:   # пристройка ниже на этаж: (dx, dy, w, d, этажей)
+        dx, dy, ww, wd, wf = wing
+        wh = wf * fh
+        o += [L.box((dx, dy, wh / 2), (ww, wd, wh), wall, 'wing'), L.box((dx, dy, 0.2), (ww + 0.2, wd + 0.2, 0.4), trim, 'plinth')]
+        _windows(o, dx - ww / 2 - 0.02, dx + ww / 2 + 0.02, dy - wd / 2 - 0.02, dy + wd / 2 + 0.02, wf, fh, shut, rng)
+        blocks.append((dx, dy, ww, wd, wh))
+    for bi, (cx, cy, bw, bd, bh) in enumerate(blocks):
+        r = roof if bi == 0 else ('flat' if roof == 'flat' else 'flat_terrace')
+        if r in ('flat', 'flat_terrace'):   # плоская крыша с парапетом; на главном — будка лестницы и навес
+            o += [L.box((cx, cy, bh + 0.05), (bw + 0.1, bd + 0.1, 0.1), trim, 'roof')]
+            for sx, sy, lx, ly in ((0, 1, bw + 0.1, 0.3), (0, -1, bw + 0.1, 0.3), (1, 0, 0.3, bd + 0.1), (-1, 0, 0.3, bd + 0.1)):
+                o.append(L.box((cx + sx * bw / 2, cy + sy * bd / 2, bh + 0.45), (lx, ly, 0.7), wall, 'parapet'))
+            if bi == 0:
+                o += [L.box((cx - bw / 2 + 1.5, cy + bd / 2 - 1.5, bh + 1.2), (2.4, 2.4, 2.4), wall, 'stair_hut'),
+                      L.box((cx - bw / 2 + 1.5, cy + bd / 2 - 1.5, bh + 2.45), (2.6, 2.6, 0.12), trim, 'stair_roof'),
+                      L.cyl((cx + bw / 2 - 1.2, cy + bd / 2 - 1.2, bh + 0.75), 0.6, 1.3, L.flat('fh_tank', (0.25, 0.26, 0.27), 0.6), 'water_tank', seg=10)]
+                if rng.random() < 0.7:   # навес-пергола из жердей с виноградом
+                    green = L.flat('fh_vine', (0.36, 0.48, 0.24), 0.95)
+                    o.append(L.box((cx + bw / 4, cy - bd / 4, bh + 2.3), (bw / 2.2, bd / 2.2, 0.15), green, 'pergola'))
+                    for px in (-1, 1):
+                        for py in (-1, 1):
+                            o.append(L.box((cx + bw / 4 + px * bw / 4.6, cy - bd / 4 + py * bd / 4.6, bh + 1.15), (0.15, 0.15, 2.3), L.flat('fh_wood', WOOD, 0.9), 'post'))
+        else:   # черепица: двускатная (gable) или вальмовая (hip), свес 0,4 м
+            ov = 0.45; rh = min(bw, bd) * 0.32
+            x0, x1, y0, y1 = cx - bw / 2 - ov, cx + bw / 2 + ov, cy - bd / 2 - ov, cy + bd / 2 + ov
+            if bw >= bd:
+                ridge = [(x0 if r == 'gable' else cx - bw / 2 + bd / 2, cy, bh + rh), (x1 if r == 'gable' else cx + bw / 2 - bd / 2, cy, bh + rh)]
+            else:
+                ridge = [(cx, y0 if r == 'gable' else cy - bd / 2 + bw / 2, bh + rh), (cx, y1 if r == 'gable' else cy + bd / 2 - bw / 2, bh + rh)]
+            o.append(L.hull([(x0, y0, bh - 0.1), (x1, y0, bh - 0.1), (x0, y1, bh - 0.1), (x1, y1, bh - 0.1)] + ridge,
+                            tile if (seed + bi) % 2 == 0 else tile2, 'roof'))
+            if r == 'gable':   # фронтоны
+                pass
+            if bi == 0:
+                o.append(L.box((cx + bw / 4, cy + bd / 5, bh + rh * 0.8), (0.7, 0.7, rh * 1.4), wall, 'chimney'))
+    for e in extra:
+        e(o, w, d, h, rng)
+    L.finish(o, scenery(name), target=3000, fit='xy')
+
+
+def _balcony(o, w, d, h, rng):
+    o += [L.box((0, -d / 2 - 0.7, 3.0), (w * 0.5, 1.4, 0.15), L.flat('fh_trim', (0.80, 0.77, 0.70), 0.9), 'balcony'),
+          L.box((0, -d / 2 - 1.35, 3.55), (w * 0.5, 0.08, 0.9), L.flat('fh_rail', (0.2, 0.2, 0.22), 0.6), 'rail')]
+
+
+def _yard(o, w, d, h, rng):   # дворик с каменной оградой и деревцем в кадке
+    st = L.flat('fh_stone', STONE, 0.95)
+    o += [L.box((w / 2 + 2.0, 0, 0.6), (0.4, d, 1.2), st, 'yard_wall'),
+          L.box((w / 4 + 1.0, d / 2 - 0.2, 0.6), (w / 2 + 2.0, 0.4, 1.2), st, 'yard_wall'),
+          L.box((w / 4 + 1.0, -d / 2 + 0.2, 0.6), (w / 2 + 2.0, 0.4, 1.2), st, 'yard_wall'),
+          L.sphere((w / 2 + 0.8, d / 4, 2.2), 1.3, L.flat('fh_vine', (0.36, 0.48, 0.24), 0.95), 'tree', seg=8),
+          L.cyl((w / 2 + 0.8, d / 4, 0.8), 0.15, 1.6, L.flat('fh_wood', WOOD, 0.9), 'trunk', seg=6)]
+
+
+def a12_house_1():
+    _house('a12_house_1', 8, 7, 1, 'flat', 1)
+
+
+def a13_house_2():
+    _house('a13_house_2', 10, 8, 2, 'flat', 2, extra=(_balcony,))
+
+
+def a14_house_3():
+    _house('a14_house_3', 9, 7, 2, 'flat', 3, wing=(6.5, -1.0, 4.0, 5.0, 1))
+
+
+def a15_house_4():
+    _house('a15_house_4', 8, 6, 1, 'gable', 4, extra=(_yard,))
+
+
+def a16_house_5():
+    _house('a16_house_5', 11, 8, 2, 'hip', 5, extra=(_balcony,))
+
+
+def a17_house_6():
+    _house('a17_house_6', 9, 8, 2, 'gable', 6, wing=(-6.5, 1.5, 4.0, 5.0, 1))
+
+
+def a18_house_7():
+    _house('a18_house_7', 12, 9, 3, 'hip', 7)
+
+
+def a19_house_8():
+    _house('a19_house_8', 7, 7, 1, 'hip', 8, extra=(_yard,))
+
+
+# ---------------- П-4 стена террасы, сухая кладка (10 м, кодом) ----------------
+def a21_terrace_wall():
+    import random
+    rng = random.Random(21)
+    L.reset()
+    o = []
+    mats = [L.flat('fh_dry_%d' % k, c, 0.95) for k, c in enumerate(((0.74, 0.70, 0.60), (0.68, 0.63, 0.53), (0.80, 0.76, 0.66)))]
+    z = 0.0
+    for row in range(4):   # ряды камней разного размера, с лёгким наклоном внутрь
+        x = -5.0 + rng.random() * 0.4
+        hgt = 0.35 + rng.random() * 0.15
+        while x < 5.0:
+            lw = min(0.5 + rng.random() * 0.7, 5.0 - x)
+            o.append(L.box((x + lw / 2, -row * 0.06, z + hgt / 2), (lw - 0.04, 0.7 - row * 0.05, hgt), rng.choice(mats), 'stone',
+                           rz=(rng.random() - 0.5) * 0.08))
+            x += lw
+        z += hgt
+    o.append(L.box((0, 0.65, z / 2), (10.0, 0.7, z), L.flat('fh_soil', (0.55, 0.45, 0.32), 1.0), 'fill'))
+    L.finish(o, scenery('a21_terrace_wall'), target=1500, fit='xy')
+
+
+# ================= Вода и мелочь =================
+def _hue_map(img, rules):
+    """Перекраска по цвету: rules — [(условие(r,g,b) → маска, новый rgb)], яркость сохраняется."""
+    import numpy as np
+    a = L.pixels(img)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    l = r * 0.3 + g * 0.59 + b * 0.11
+    for cond, rgb in rules:
+        m = cond(r, g, b)
+        k = np.clip(l / max(1e-3, float(l[m].mean()) if m.any() else 0.5), 0.5, 1.4)
+        for i in range(3):
+            a[..., i] = np.where(m, np.clip(rgb[i] * k, 0, 1), a[..., i])
+    L.put_pixels(img, a)
+
+
+# ---------------- М-2 рыбацкие лодки ----------------
+def a24_boat_a():
+    L.reset()
+    o = L.load(src('M-2a_fishing_boat.glb'))
+    L.place(o, bow='+x', length=10)
+    L.xform(o, Matrix.Translation((0, 0, -0.9)))
+    o = L.kill_parts(o, lambda mn, mx, n: mx.z - mn.z > 2.0 and mx.x - mn.x < 0.25 and mx.y - mn.y < 0.25)   # тонкие стрелы-удочки
+    L.matte(o, 0.8)
+    for m in L.mats(o):   # красно-белая окраска → бирюзовый корпус с охристой рубкой (местная гамма)
+        t = L.tex_of(m)
+        if t:
+            _hue_map(t, [(lambda r, g, b: (r > g * 1.6) & (r > b * 1.6) & (r > 0.25), (0.16, 0.48, 0.50))])
+    L.finish(o, scenery('a24_boat_a'), target=4000, maxtex=1024, fit='xy')
+
+
+def a25_boat_b():
+    L.reset()
+    o = L.load(src('M-2b_fishing_boat.glb'))
+    L.place(o, bow='+y', length=5.0)
+    L.xform(o, Matrix.Translation((0, 0, -0.2)))
+    L.matte(o, 0.85)
+    # своё: мачта с убранным парусом — лодка отличается от исходной вёсельной
+    wood = L.flat('fh_wood', WOOD, 0.9)
+    o += [L.cyl((0.9, 0, 1.7), 0.06, 3.0, wood, 'mast', seg=6),
+          L.cyl((0.1, 0, 0.7), 0.12, 1.8, L.flat('fh_sail', (0.86, 0.80, 0.66), 0.95), 'sail_furled', seg=6, axis='X')]
+    L.finish(o, scenery('a25_boat_b'), target=2500, maxtex=1024, fit='xy')
+
+
+# ---------------- М-3 остовы на мели (сканы, сильно упрощены) ----------------
+def a26_wreck_a():
+    L.reset()
+    o = L.load(src('M-3a_wreck_small.glb'))
+    L.place(o, length=30)
+    # песчаное дно под остовом (скан стоит с наклоном): плоскость по всем точкам, грани у самой плоскости — убрать
+    import numpy as np
+    P = np.array([tuple(v.co) for ob in o for v in ob.data.vertices])
+    A = np.c_[P[:, 0], P[:, 1], np.ones(len(P))]
+    k = np.linalg.lstsq(A, P[:, 2], rcond=None)[0]
+    o = L.kill_faces(o, lambda c, n: c.z - (k[0] * c.x + k[1] * c.y + k[2]) < 0.7)
+    o = L.kill_parts(o, lambda mn, mx, n: n < 60)   # оторванные крошки скана
+    L.place(o)
+    L.xform(o, Matrix.Translation((0, 0, -0.6)))
+    L.matte(o, 0.95)
+    for m in L.mats(o):
+        t = L.tex_of(m)
+        if t:
+            t.scale(2048, 2048)
+    L.finish(o, scenery('a26_wreck_a'), target=7000, maxtex=1024, fit='xy')
+
+
+def a27_wreck_b():
+    L.reset()
+    o = L.load(src('M-3b_wreck_ship.glb'))
+    L.place(o, bow='+y', length=80)
+    L.xform(o, Matrix.Translation((0, 0, -2.5)))   # нижняя часть борта под водой
+    L.matte(o, 0.9)
+    for m in L.mats(o):
+        t = L.tex_of(m)
+        if t:
+            t.scale(2048, 2048)
+            L.degraffiti(t, sat=0.35)   # надписи и полосы на борту
+    L.finish(o, scenery('a27_wreck_b'), target=9000, maxtex=1024, fit='xy')
+
+
+# ---------------- М-4 обломки самолёта на воде (из b11 Нагорья) ----------------
+def a28_wreck_plane_sea():
+    L.reset()
+    o = L.load(os.path.join(MODELS, 'biome', 'b11_wreck_plane.glb'))
+    L.place(o, length=15)
+    L.xform(o, Matrix.Translation((0, 0, -0.5)) @ Matrix.Rotation(math.radians(4), 4, 'X'))   # осел в воду, лёгкий крен
+    for m in L.mats(o):   # мокрый — темнее
+        t = L.tex_of(m)
+        if t:
+            import numpy as np
+            a = L.pixels(t); a[..., :3] *= 0.72; L.put_pixels(t, a)
+    L.finish(o, scenery('a28_wreck_plane_sea'), target=4000, maxtex=1024, fit='xy')
+
+
+# ---------------- М-5 противодесантный ёж (2 м) ----------------
+def a29_hedgehog():
+    L.reset()
+    o = L.load(src('M-5_hedgehog.glb'))
+    L.place(o, length=2.0)
+    L.matte(o, 0.8)
+    for m in L.mats(o):
+        t = L.tex_of(m)
+        if t:
+            L.regrade(t, (0.42, 0.26, 0.17), keep=0.8)
+    L.finish(o, scenery('a29_hedgehog'), target=900, maxtex=512, fit='xy')
+
+
+# ---------------- М-6 бон с сетью у входа в бухту (40 м, кодом) ----------------
+def a30_boom_net():
+    L.reset()
+    fl = L.flat('fh_float', (0.86, 0.50, 0.14), 0.7)
+    dark = L.flat('fh_net', (0.18, 0.19, 0.2), 0.8)
+    o = []
+    for k in range(17):   # поплавки-бочки через 2,5 м, трос между ними, сеть уходит под воду
+        x = -20 + k * 2.5
+        o.append(L.cyl((x, 0, 0.05), 0.45, 1.3, fl, 'float', seg=10, axis='Y'))
+    o += [L.box((0, 0, 0.3), (40.0, 0.08, 0.08), dark, 'cable'),
+          L.box((0, 0, -1.0), (40.0, 0.04, 2.0), dark, 'net'),
+          L.cyl((-20.8, 0, 0.6), 0.7, 2.0, L.flat('fh_red', RED, 0.6), 'end_buoy', seg=10),
+          L.cyl((20.8, 0, 0.6), 0.7, 2.0, L.flat('fh_red', RED, 0.6), 'end_buoy', seg=10)]
+    L.finish(o, scenery('a30_boom_net'), target=1500, fit='xy')
+
+
+# ================= Природа: известняк, оливы, сосны =================
+def _limestone(objs, rgb=STONE, keep=0.8):
+    L.matte(objs, 0.95)
+    for m in L.mats(objs):
+        t = L.tex_of(m)
+        if t:
+            if max(t.size) > 2048:
+                t.scale(2048, 2048)
+            L.regrade(t, rgb, keep=keep)
+
+
+def a31_cliff_a():
+    L.reset()
+    o = L.load(src('N-1a_cliff.glb'))
+    L.place(o, length=60)
+    _limestone(o, (0.54, 0.51, 0.44), keep=0.9)   # тёмный базальт → светлый известняк
+    L.finish(o, scenery('a31_cliff_a'), target=5000, maxtex=1024, fit='xy')
+
+
+def a32_cliff_b():
+    L.reset()
+    o = L.load(src('N-1c_cliff_rock.glb'))
+    L.place(o, length=30)
+    L.xform(o, Matrix.Scale(0.55, 4, Vector((0, 0, 1))))   # скала-столб ниже — как обрыв над водой, а не шпиль
+    _limestone(o, (0.68, 0.64, 0.55))
+    L.finish(o, scenery('a32_cliff_b'), target=5000, maxtex=1024, fit='xy')
+
+
+def a33_rock():
+    L.reset()
+    o = L.load(src('N-1b_rock.glb'))
+    L.place(o, bow='-y', length=40)
+    _limestone(o, (0.64, 0.60, 0.52), keep=0.45)
+    L.finish(o, scenery('a33_rock'), target=4000, maxtex=1024, fit='xy')
+
+
+OLIVE = (0.47, 0.53, 0.38)
+
+
+def _tree(name, path, leaf_names, height, n, seed, crown_rgb, trunk_target=900, flat=0.75):
+    L.reset()
+    o = L.load(src(path))
+    L.place(o)
+    mn, mx = L.bounds(o)
+    L.xform(o, Matrix.Scale(height / (mx.z - mn.z), 4))
+    leaves = [ob for ob in o if any(ob.data.materials and ob.data.materials[0].name.startswith(k) for k in leaf_names)]
+    trunk = [ob for ob in o if ob not in leaves]
+    L.matte(trunk, 0.95)
+    for m in L.mats(trunk):
+        t = L.tex_of(m)
+        if t and max(t.size) > 1024:
+            t.scale(1024, 1024)
+    L.budget(trunk, trunk_target)
+    cr = L.crown(leaves, L.flat('fh_crown_' + name, crown_rgb, 0.95), n=n, seed=seed, flat=flat, seg=12)
+    L.smooth(cr, 80)
+    for ob in leaves:
+        bpy.data.objects.remove(ob)
+    L.finish(trunk + cr, scenery(name), target=trunk_target + n * 120, maxtex=1024, fit='xy')
+
+
+def a34_olive_a():
+    _tree('a34_olive_a', 'N-2a_olive.glb', ('OliveSingleLeaf', 'OliveLeaf'), 7.0, 12, 34, OLIVE)
+
+
+def a35_olive_b():
+    _tree('a35_olive_b', 'N-2b_olive_old.glb', ('olive-leaves',), 6.0, 11, 35, (0.50, 0.55, 0.40))
+
+
+def a36_pine_a():
+    """Пиния (сосна «зонтиком», кодом): голый наклонный ствол, плоская широкая крона из нескольких «подушек»."""
+    import random
+    rng = random.Random(36)
+    L.reset()
+    bark = L.flat('fh_pine_bark', (0.42, 0.32, 0.24), 0.95)
+    green = L.flat('fh_pine_crown', (0.27, 0.40, 0.22), 0.95)
+    o = [L.cyl((0.4, 0, 4.0), 0.35, 8.0, bark, 'trunk', seg=8, r2=0.22, rot=Matrix.Rotation(math.radians(6), 3, 'Y')),
+         L.cyl((1.4, 0.4, 7.4), 0.14, 2.6, bark, 'branch', seg=6, rot=Matrix.Rotation(math.radians(50), 3, 'Y')),
+         L.cyl((-0.4, -0.5, 7.6), 0.14, 2.4, bark, 'branch', seg=6, rot=Matrix.Rotation(math.radians(-45), 3, 'X'))]
+    for k in range(7):
+        a = k / 7 * 2 * math.pi + rng.random() * 0.4
+        rr = 0 if k == 0 else 2.6 + rng.random()
+        sph = L.sphere((0.9 + rr * math.cos(a), rr * math.sin(a), 8.6 + rng.random() * 0.6), 2.6, green, 'pad', seg=10,
+                       scale=(1.0, 1.0, 0.38))
+        for v in sph.data.vertices:
+            v.co += Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.5, 0.5))) * 0.25
+        o.append(sph)
+    L.finish(o, scenery('a36_pine_a'), target=2000, fit='xy')
+
+
+def a37_pine_b():
+    """Кипарис из средней ели набора N-3b: уже и темнее."""
+    L.reset()
+    o = L.load(src('N-3b_pine_pack.glb'))
+    L.place(o)
+    mid = [ob for ob in o if abs((L.bounds([ob])[0].x + L.bounds([ob])[1].x) / 2) < 3.0]
+    for ob in o:
+        if ob not in mid:
+            bpy.data.objects.remove(ob)
+    o = mid
+    L.place(o)
+    mn, mx = L.bounds(o)
+    L.xform(o, Matrix.Scale(10.0 / (mx.z - mn.z), 4) )
+    L.xform(o, Matrix.Scale(0.55, 4, Vector((1, 0, 0))) @ Matrix.Scale(0.55, 4, Vector((0, 1, 0))))
+    L.matte(o, 0.95)
+    for m in L.mats(o):
+        t = L.tex_of(m)
+        if t:
+            L.regrade(t, (0.22, 0.33, 0.20), keep=0.8)
+    L.finish(o, scenery('a37_pine_b'), target=600, maxtex=512, fit='xy')
+
+
+def a38_tree_leaf():
+    L.reset()
+    o = L.load(src('N-3a_leaf_tree.glb'))
+    L.place(o)
+    mn, mx = L.bounds(o)
+    L.xform(o, Matrix.Scale(9.0 / (mx.z - mn.z), 4))
+    L.matte(o, 0.95)
+    L.finish(o, scenery('a38_tree_leaf'), target=1800, maxtex=512, fit='xy')
+
+
+# ---------------- Н-4 камыш (кодом) и куст (перекраска b06 Нагорья) ----------------
+def a39_reed():
+    import random
+    rng = random.Random(39)
+    L.reset()
+    mats = [L.flat('fh_reed_%d' % k, c, 0.95) for k, c in enumerate(((0.55, 0.56, 0.32), (0.62, 0.58, 0.36), (0.45, 0.50, 0.28)))]
+    o = []
+    for k in range(26):   # пучок стеблей, наклонённых наружу, метёлки сверху
+        a = rng.random() * 2 * math.pi; r = rng.random() * 0.9
+        h = 1.4 + rng.random() * 0.9
+        tilt = Matrix.Rotation(r * 0.35, 3, Vector((-math.sin(a), math.cos(a), 0)))
+        base = Vector((r * math.cos(a), r * math.sin(a), 0))
+        top = base + tilt @ Vector((0, 0, h))
+        o.append(L.cyl(tuple((base + top) / 2), 0.03, h, rng.choice(mats), 'stem', seg=4, rot=tilt))
+        if rng.random() < 0.6:
+            o.append(L.cyl(tuple(top), 0.06, 0.3, mats[1], 'tuft', seg=4, rot=tilt))
+    L.finish(o, scenery('a39_reed'), target=1200, fit='xy')
+
+
+def a40_shrub():
+    L.reset()
+    o = L.load(os.path.join(MODELS, 'biome', 'b06_shrub.glb'))
+    L.place(o)
+    for m in L.mats(o):   # маквис: серо-зелёный, суше, чем куст Нагорья
+        t = L.tex_of(m)
+        if t:
+            L.regrade(t, (0.45, 0.50, 0.34), keep=0.8)
+    L.finish(o, scenery('a40_shrub'), target=900, maxtex=512, fit='xy')
+
+
 RECIPES = {f.__name__: f for f in [e_ship_escort, e_ship_tanker, e_ship_landing, a22_buoy_red, a23_buoy_green, e_ship_aa, e_ekranoplan, e_seaplane, e_ship_battery, e_drone_sea,
                                     a01_battery_gun, a02_bunker_coast, a03_radar_mast, a04_lighthouse, a20_bell_tower,
-                                    a05_pier_a, a06_pier_b, a07_tetrapod, a08_warehouse_a, a09_warehouse_b, a10_crane, a11_tower_ruins]}
+                                    a05_pier_a, a06_pier_b, a07_tetrapod, a08_warehouse_a, a09_warehouse_b, a10_crane, a11_tower_ruins,
+                                    a12_house_1, a13_house_2, a14_house_3, a15_house_4, a16_house_5, a17_house_6,
+                                    a18_house_7, a19_house_8, a21_terrace_wall,
+                                    a24_boat_a, a25_boat_b, a26_wreck_a, a27_wreck_b, a28_wreck_plane_sea, a29_hedgehog,
+                                    a30_boom_net, a31_cliff_a, a32_cliff_b, a33_rock, a34_olive_a, a35_olive_b, a36_pine_a,
+                                    a37_pine_b, a38_tree_leaf, a39_reed, a40_shrub]}
 
 if __name__ == '__main__':
     names = [a for a in A if not a.startswith('--')]
