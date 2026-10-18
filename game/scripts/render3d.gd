@@ -25,7 +25,7 @@ var _ground_mat: ShaderMaterial
 var _units := {}      # instance_id → {node, kind, prev_heading, bank}
 var _objs := {}       # ключ клетки → MeshInstance3D (у обломков o_wreck — сцена модели)
 var _clouds: Array = []
-var _scorch: Array = []
+var _scorch_mm: MultiMeshInstance3D
 var _scorch_mesh: QuadMesh
 var _scorch_mat: StandardMaterial3D
 var _flash_mat: StandardMaterial3D
@@ -383,17 +383,24 @@ func _process(delta: float) -> void:
 	if tilt > 0.001:
 		# с наклоном видно дальше вперёд (вверх по экрану)
 		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
+	var pt := Time.get_ticks_usec() if Perf.on else 0
 	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1)
 	_fit_shadow()
+	if Perf.on: pt = Perf.sub("r3d.terrain", pt)
 	var sd := 0.0 if get_tree().paused else delta   # время эффектов стоит на паузе
 	_sync_units(m, delta, sd)
+	if Perf.on: pt = Perf.sub("r3d.units", pt)
 	_sync_missiles(m)
+	if Perf.on: pt = Perf.sub("r3d.missiles", pt)
 	_sync_crashes(m, sd)
 	_trails.tick(sd)
+	if Perf.on: pt = Perf.sub("r3d.crash_trails", pt)
 	_sync_objects(c2, h)
+	if Perf.on: pt = Perf.sub("r3d.objects", pt)
 	_sync_clouds(m, c2, h)
 	_sync_scorch(m)
 	_sync_lights(delta)
+	if Perf.on: pt = Perf.sub("r3d.clouds_scorch_lights", pt)
 	if OS.get_cmdline_user_args().has("--dbg3") and Engine.get_process_frames() % 30 == 0:
 		var pp := m.player.global_position if is_instance_valid(m.player) else Vector2.ZERO
 		print("R3D c2=", c2, " ct=", get_viewport().get_canvas_transform(), " cam=", cam.global_position, " zoom=", m.camera.zoom, " player=", pp, " units=", _units.size(), " objs=", _objs.size())
@@ -417,10 +424,13 @@ func _unit_mesh(tex: Texture2D, length_px: float, thick: float, grid: int) -> Di
 func _battle_model(tex: Texture2D) -> PackedScene:
 	if Settings.gfx == 0:
 		return null
+	# оптимизация: кэш по самой картинке — без сборки пути каждый кадр у каждого самолёта
+	var hit = _bm_cache.get(tex)
+	if hit != null or _bm_cache.has(tex):
+		return hit
 	var path := "res://models/battle/fh_battle_%s.glb" % tex.resource_path.get_file().get_basename()
-	if not _bm_cache.has(path):
-		_bm_cache[path] = load(path) if ResourceLoader.exists(path) else null
-	return _bm_cache[path]
+	_bm_cache[tex] = load(path) if ResourceLoader.exists(path) else null
+	return _bm_cache[tex]
 
 
 var _bm_cache := {}
@@ -444,8 +454,16 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 	var u: Dictionary = _units.get(id, {})
 	var bm: PackedScene = _battle_model(tex)   # 3.5 этап 2: враги в воздухе и наземные ПВО (ЗСУ, ЗРК, РЛС)
 	if u.is_empty() or u["tex"] != tex or u.get("bm") != bm:
+		var nt := Time.get_ticks_usec() if Perf.on else 0
 		if not u.is_empty():
 			(u["node"] as Node).queue_free()
+		var pooled := _pool_take(tex, kind, thick, bm)
+		if not pooled.is_empty():
+			pooled["k"] = length_px / float(tex.get_width())
+			_units[id] = pooled
+			if Perf.on:
+				Perf.sub("r3d.new_model", nt)
+			return pooled
 		var root := Node3D.new()
 		var mi: MeshInstance3D = null
 		var d := {"k": length_px / float(tex.get_width())}
@@ -476,11 +494,15 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			if kind == "player":   # Т-5: створки бомбоотсека «Кита»
 				u["bay"] = WingMech.attach_bay(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 				u["tail"] = WingMech.attach_tail(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
-		if kind != "enemy" or thick > 0.06:   # у наземных целей (thick 0.05) тень настоящая
+		if kind == "enemy" and thick > 0.06:
+			u["shb"] = tex   # оптимизация: тени врагов одного вида — один MultiMesh (_flush_shadows)
+		elif kind != "enemy":   # у наземных целей (thick 0.05) тень настоящая
 			u["sh"] = _make_shadow(tex, root)
 		if kind != "enemy":
 			PlaneFx.attach(u, tex)
 		_units[id] = u
+		if Perf.on:
+			Perf.peak("r3d.new_model_max", Perf.sub("r3d.new_model", nt) - nt)
 	u["seen"] = true
 	return u
 
@@ -496,7 +518,7 @@ func _place(u: Dictionary, p: Vector2, heading: float, bank: float, roll: float,
 	var b := Basis(Vector3.UP, -heading) * Basis(Vector3.BACK, pitch) * Basis(Vector3.RIGHT, bank + roll)
 	var k: float = u["k"] * scale_k
 	root.basis = b.scaled(Vector3(k, k, k))
-	if u.has("sh"):
+	if u.has("sh") or u.has("shb"):
 		_place_shadow(u, p, heading, k)
 
 
@@ -595,7 +617,7 @@ func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
 ## Тень самолёта: точка на рельефе по лучу солнца, сдвиг от самолёта укорочен (shadow_off),
 ## силуэт уменьшен (shadow_size) и прижат к склону по нормали рельефа.
 func _place_shadow(u: Dictionary, p: Vector2, heading: float, k: float) -> void:
-	var sh: MeshInstance3D = u["sh"]
+	var sh: MeshInstance3D = u.get("sh")
 	var hi := Tuning.g("plane_shadow") > 0.5 and terrain != null
 	var cs := GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if hi else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	# поиск по дереву модели — только при смене режима (раньше каждый кадр у каждого самолёта)
@@ -605,27 +627,155 @@ func _place_shadow(u: Dictionary, p: Vector2, heading: float, k: float) -> void:
 		u["cs_n"] = n_kids
 		for c in (u["node"] as Node3D).find_children("*", "GeometryInstance3D", true, false):
 			(c as GeometryInstance3D).cast_shadow = cs
-	sh.visible = hi
+	if sh != null:
+		sh.visible = hi
 	if not hi:
 		return
-	var d := -sun.global_transform.basis.z   # куда светит солнце
-	var y := GROUND_Y
-	var g := Vector2.ZERO
-	var off := Tuning.g("shadow_off")
-	for i in 3:
-		var t := y / d.y
-		g = p + Vector2(d.x, d.z) * t * off
-		y = terrain.surface_fast(g.x, g.y).y
-	var e := 8.0
-	var n := Vector3(terrain.surface_fast(g.x - e, g.y).y - terrain.surface_fast(g.x + e, g.y).y, 2.0 * e,
-		terrain.surface_fast(g.x, g.y - e).y - terrain.surface_fast(g.x, g.y + e).y).normalized()
+	# оптимизация (финальный проход 3.5): точку тени на рельефе и наклон склона (8 замеров высоты)
+	# у чужих самолётов считаем раз в 4 кадра вразнобой; между замерами тень едет за самолётом
+	# с тем же сдвигом — на глаз не отличить, рельеф пологий
+	var fr := Engine.get_process_frames()
+	if u["kind"] == "player" or not u.has("sh_n") or (fr + int(u.get("sh_f", 0))) % 4 == 0:
+		if not u.has("sh_f"):
+			u["sh_f"] = randi() % 4
+		var d := -sun.global_transform.basis.z   # куда светит солнце
+		var y := GROUND_Y
+		var g := Vector2.ZERO
+		var off := Tuning.g("shadow_off")
+		for i in 3:
+			var t := y / d.y
+			g = p + Vector2(d.x, d.z) * t * off
+			y = terrain.surface_fast(g.x, g.y).y
+		var e := 8.0
+		u["sh_n"] = Vector3(terrain.surface_fast(g.x - e, g.y).y - terrain.surface_fast(g.x + e, g.y).y, 2.0 * e,
+			terrain.surface_fast(g.x, g.y - e).y - terrain.surface_fast(g.x, g.y + e).y).normalized()
+		u["sh_off"] = g - p
+		u["sh_y"] = y
+	var gp: Vector2 = p + (u["sh_off"] as Vector2)
 	var s := k * Tuning.g("shadow_size")
 	var yaw := Basis(Vector3.UP, -heading)
-	var tilt := Basis(Quaternion(Vector3.UP, n))
-	sh.global_transform = Transform3D((tilt * yaw).scaled(Vector3(s, 1.0, s)), Vector3(g.x, y + 3.0, g.y))
-	var mat := sh.material_override as ShaderMaterial
-	mat.set_shader_parameter("alpha", Tuning.g("shadow_alpha"))
-	mat.set_shader_parameter("blur", 0.03 + 0.03 * (1.0 - Tuning.g("shadow_size")))
+	var tilt := Basis(Quaternion(Vector3.UP, u["sh_n"] as Vector3))
+	var xf := Transform3D((tilt * yaw).scaled(Vector3(s, 1.0, s)), Vector3(gp.x, float(u["sh_y"]) + 3.0, gp.y))
+	if sh == null:
+		var tx: Texture2D = u["shb"]
+		if not _shb.has(tx):
+			_shb[tx] = []
+		(_shb[tx] as Array).append(xf)
+		return
+	sh.global_transform = xf
+	var al := Tuning.g("shadow_alpha")
+	if u.get("sh_a") != al:
+		# параметры материала — только при смене настройки, а не каждый кадр
+		u["sh_a"] = al
+		var mat := sh.material_override as ShaderMaterial
+		mat.set_shader_parameter("alpha", al)
+		mat.set_shader_parameter("blur", 0.03 + 0.03 * (1.0 - Tuning.g("shadow_size")))
+
+
+## Оптимизация (финальный проход 3.5): модели сбитых самолётов врага не удаляем, а прячем и отдаём
+## следующему врагу того же вида — создание модели 2–10 мс, волна из шести дронов давала рывок кадра
+const POOL_MAX := 24
+var _pool := {}      # картинка → [скрытые корни моделей]
+
+
+func _poolable(kind: String, thick: float, bm: PackedScene, tex: Texture2D) -> bool:
+	return kind == "enemy" and thick > 0.06 and bm != null and not tex.resource_path.contains("fortress")
+
+
+func _pool_put(u: Dictionary) -> bool:
+	if not u.has("shb") or u.get("bm") == null or u["kind"] != "enemy" or u.has("hull"):
+		return false
+	var tex: Texture2D = u["tex"]
+	if tex.resource_path.contains("fortress"):
+		return false
+	var arr: Array = _pool.get(tex, [])
+	if arr.size() >= POOL_MAX:
+		return false
+	var root: Node3D = u["node"]
+	root.visible = false
+	(u["mi"] as MeshInstance3D).material_overlay = null
+	arr.append(root)
+	_pool[tex] = arr
+	return true
+
+
+func _pool_take(tex: Texture2D, kind: String, thick: float, bm: PackedScene) -> Dictionary:
+	if not _poolable(kind, thick, bm, tex):
+		return {}
+	var arr: Array = _pool.get(tex, [])
+	while not arr.is_empty():
+		var root: Node3D = arr.pop_back()
+		if not is_instance_valid(root) or root.get_child_count() == 0:
+			continue
+		var mi: MeshInstance3D = null
+		for c in root.get_child(0).find_children("*", "MeshInstance3D", true, false):
+			mi = c
+			break
+		if mi == null and root.get_child(0) is MeshInstance3D:
+			mi = root.get_child(0)
+		if mi == null:
+			root.queue_free()
+			continue
+		root.visible = true
+		return {"node": root, "mi": mi, "kind": kind, "tex": tex, "k": 1.0, "ph": 0.0, "bank": 0.0, "seen": true,
+			"weapons": {}, "bm": bm, "shb": tex}
+	return {}
+
+
+var _shb := {}       # картинка врага → [Transform3D] теней за кадр
+var _shb_mm := {}    # картинка врага → MultiMeshInstance3D
+
+
+## Тени врагов: по одному MultiMesh на вид самолёта (раньше — отдельный объект и вызов отрисовки
+## на каждого врага, 60+ вызовов в тяжёлой сцене)
+func _flush_shadows() -> void:
+	var al := Tuning.g("shadow_alpha")
+	var bl := 0.03 + 0.03 * (1.0 - Tuning.g("shadow_size"))
+	for tx: Texture2D in _shb_mm:
+		if not _shb.has(tx):
+			(_shb_mm[tx] as MultiMeshInstance3D).multimesh.visible_instance_count = 0
+	for tx: Texture2D in _shb:
+		var arr: Array = _shb[tx]
+		var mmi: MultiMeshInstance3D = _shb_mm.get(tx)
+		if mmi == null:
+			if _shadow_shader == null:
+				_shadow_shader = Shader.new()
+				_shadow_shader.code = SHADOW_SHADER
+			var pm := PlaneMesh.new()
+			pm.size = Vector2(tx.get_width(), tx.get_height())
+			var mat := ShaderMaterial.new()
+			mat.shader = _shadow_shader
+			mat.set_shader_parameter("tex", tx)
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = pm
+			mmi = MultiMeshInstance3D.new()
+			mmi.multimesh = mm
+			mmi.material_override = mat
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mmi.top_level = true
+			add_child(mmi)
+			_shb_mm[tx] = mmi
+		var mmx := mmi.multimesh
+		if mmx.instance_count < arr.size():
+			mmx.instance_count = arr.size() + 16
+		var lo := Vector3.INF
+		var hi := -Vector3.INF
+		var r := float(maxi(tx.get_width(), tx.get_height()))
+		for i in arr.size():
+			var xf: Transform3D = arr[i]
+			mmx.set_instance_transform(i, xf)
+			var e := Vector3.ONE * r * xf.basis.get_scale().x
+			lo = lo.min(xf.origin - e)
+			hi = hi.max(xf.origin + e)
+		mmx.visible_instance_count = arr.size()
+		mmi.custom_aabb = AABB(lo, hi - lo)
+		var mat2 := mmi.material_override as ShaderMaterial
+		if mmi.get_meta("al", -1.0) != al:
+			mmi.set_meta("al", al)
+			mat2.set_shader_parameter("alpha", al)
+			mat2.set_shader_parameter("blur", bl)
+	_shb.clear()
 
 
 func _sync_units(m: Main, delta: float, sd: float) -> void:
@@ -750,9 +900,10 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			# модель из картинки (транспортник и др.): подсветка только по силуэту, иначе видна сетка квадратами
 			mi2.material_overlay = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)
 	_sync_wrecks(delta)
+	_flush_shadows()
 	for id in _units.keys():
 		if not _units[id]["seen"]:
-			if not _start_crash(_units[id]):
+			if not _start_crash(_units[id]) and not _pool_put(_units[id]):
 				(_units[id]["node"] as Node).queue_free()
 			_units.erase(id)
 
@@ -992,6 +1143,8 @@ func _turn_bank(u: Dictionary, heading: float, delta: float) -> float:
 func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 	var root: Node3D = u["node"]
 	var want := {}
+	var wc: Dictionary = u.get("wcache", {})   # оптимизация (финальный проход 3.5): раскладка подвесов группы
+	u["wcache"] = wc
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
 		if g.is_empty():
@@ -999,37 +1152,32 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		# U-08: у экспериментального оружия нет плоского значка, но есть 3D-модель (exp_weapons.py)
 		if PlaneArt.weapon_tex(g.weapon) == null and not (g.weapon in Weapons.EXP):
 			continue
-		var pts := WeaponModels.mounts(p.cls_id, p.plane_lvl, gi, g)
-		var k: float = u["k"]
-		var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k  # в пикселях текстуры самолёта
+		var seek := ModuleParts.stage(int(p.taken.get("seeker", 0))) if g.weapon == "aam" and not g.evo else 0
+		var sig := [p.cls_id, p.plane_lvl, g.weapon, g.level, g.evo, g.slots, g.builtin, g.name, seek, u["k"], Tuning.g("plane_len"), u.get("bm")]
+		var ent: Dictionary = wc.get(gi, {})
+		if ent.is_empty() or ent["sig"] != sig:
+			ent = _weapon_layout(u, p, tex, gi, g, seek)
+			ent["sig"] = sig
+			ent["ver"] = int(wc.get("ver", 0)) + 1
+			wc["ver"] = ent["ver"]
+			wc[gi] = ent
 		var dim := g.weapon in ["aam", "rockets", "bombs"] and g.cd > 0.3
-		# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5
-		var tr := WeaponModels.tier(g.level, g.evo)
+		var len_px: float = ent["len_px"]
 		var l_offs: Array = []
-		for si in pts.size():
-			var mt: Dictionary = pts[si]
-			var mtr: int = mt.get("t", tr)   # Т-5: у ловушек модель задаёт точка (кассета / контейнер)
-			var seek := ModuleParts.stage(int(p.taken.get("seeker", 0))) if g.weapon == "aam" and not g.evo else 0
-			var key := "%d_%d_%s_%d%s_s%d" % [gi, si, g.weapon, mtr, "e" if g.evo else "", seek]
+		for mt: Dictionary in ent["mounts"]:
+			var key: String = mt["key"]
 			want[key] = true
 			var wmi: MeshInstance3D = u["weapons"].get(key)
 			if wmi == null:
-				wmi = WeaponModels.make(g.weapon, mtr, mt["side"], p.cls_id, g.evo, p.plane_lvl)
-				ModuleParts.seeker_head(wmi, seek, mtr)   # Т-3: «Глазастик»
+				wmi = WeaponModels.make(g.weapon, mt["t"], mt["side"], p.cls_id, g.evo, p.plane_lvl)
+				ModuleParts.seeker_head(wmi, seek, mt["t"])   # Т-3: «Глазастик»
 				root.add_child(wmi)
 				u["weapons"][key] = wmi
-			var pt: Vector2 = mt["p"]
-			var tw := float(tex.get_width())
-			# подвесы — под крылом на пилоне (видны на крене и под наклоном камеры), турели — на своих местах
-			# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
-			var tail_cab: bool = mt["side"] == "tail" and g.weapon == "turret" and (WeaponModels.TURRET_MODELS.get(p.cls_id, {}) as Dictionary).has("tail")
-			var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id) and not tail_cab
-			var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px, "belly": -tw * 0.028 - (WeaponModels.hang(g.weapon, tr, true) - WeaponModels.PYLON_H) * len_px, "bay": -tw * 0.02 - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
-			if mt["side"] == "under" and u.get("bm") != null:   # пилон — под настоящим крылом модели (тест 3.5-s3)
-				var lo := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
-				if not is_nan(lo):
-					y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
-			wmi.position = Vector3(pt.x, y, pt.y)
+			var tail_cab: bool = mt["tail_cab"]
+			var fresh := int(wmi.get_meta("wver", -1)) != int(ent["ver"])
+			if fresh:
+				wmi.set_meta("wver", ent["ver"])
+				wmi.position = mt["pos"]
 			if tail_cab and u.get("tail") != null:   # кабина — продолжение фюзеляжа модели, шар — у её торца
 				var tpos := WingMech.tail_mount(u["tail"], root)
 				if tpos != Vector3.INF:
@@ -1048,19 +1196,22 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 				yaw = cur
 				if mt["side"] == "tail":   # кормовая установка — в секторе ±60° назад, как настоящая
 					yaw = idle + clampf(wrapf(yaw - idle, -PI, PI), -1.05, 1.05)
-			var b := Basis(Vector3.UP, yaw)
-			if mt["side"] == "bottom" or under_tail:
-				b = b * Basis(Vector3.RIGHT, PI)
-			wmi.basis = b.scaled(Vector3(len_px, len_px, len_px))
-			if tail_cab and wmi.get_child_count() > 0:   # кабина стрелка неподвижна, крутится только шар
-				(wmi.get_child(0) as Node3D).basis = Basis(Vector3.UP, float(mt["yaw"]) - yaw)
+			if fresh or g.weapon == "turret":
+				var b := Basis(Vector3.UP, yaw)
+				if mt["flip"]:
+					b = b * Basis(Vector3.RIGHT, PI)
+				wmi.basis = b.scaled(Vector3(len_px, len_px, len_px))
+				if tail_cab and wmi.get_child_count() > 0:   # кабина стрелка неподвижна, крутится только шар
+					(wmi.get_child(0) as Node3D).basis = Basis(Vector3.UP, float(mt["yaw"]) - yaw)
 			if g.weapon == "aam" or g.weapon == "rockets":
 				# правка 3.5-s4 (п. 27): ракета ушла с пилона — её там нет до перезарядки; пуск — с этой точки
 				wmi.visible = not dim
 				var wp := root.global_transform * wmi.position
 				l_offs.append((Vector2(wp.x, wp.z) - p.global_position).rotated(-p.heading))
 			else:
-				wmi.transparency = 0.6 if dim else 0.0
+				var tr_w := 0.6 if dim else 0.0
+				if wmi.transparency != tr_w:
+					wmi.transparency = tr_w
 			if mt["side"] == "bay":   # в закрытом бомбоотсеке бомб не видно
 				wmi.visible = float(u.get("bay_t", 1.0)) > 0.4
 		if g.weapon == "aam" or g.weapon == "rockets":
@@ -1069,6 +1220,35 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 		if not want.has(key):
 			(u["weapons"][key] as Node).queue_free()
 			u["weapons"].erase(key)
+
+
+## Раскладка подвесов группы: точки, высота пилона, модель — считается при смене оружия, уровня или самолёта,
+## а не каждый кадр (раньше — до 1,7 мс на кадр у «Кита» с полным набором)
+func _weapon_layout(u: Dictionary, p: Player, tex: Texture2D, gi: int, g: Hardpoint, seek: int) -> Dictionary:
+	var pts := WeaponModels.mounts(p.cls_id, p.plane_lvl, gi, g)
+	var k: float = u["k"]
+	var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k  # в пикселях текстуры самолёта
+	# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5
+	var tr := WeaponModels.tier(g.level, g.evo)
+	var tw := float(tex.get_width())
+	var out: Array = []
+	for si in pts.size():
+		var mt: Dictionary = pts[si]
+		var mtr: int = mt.get("t", tr)   # Т-5: у ловушек модель задаёт точка (кассета / контейнер)
+		var pt: Vector2 = mt["p"]
+		# подвесы — под крылом на пилоне (видны на крене и под наклоном камеры), турели — на своих местах
+		# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
+		var tail_cab: bool = mt["side"] == "tail" and g.weapon == "turret" and (WeaponModels.TURRET_MODELS.get(p.cls_id, {}) as Dictionary).has("tail")
+		var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id) and not tail_cab
+		var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px, "belly": -tw * 0.028 - (WeaponModels.hang(g.weapon, tr, true) - WeaponModels.PYLON_H) * len_px, "bay": -tw * 0.02 - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
+		if mt["side"] == "under" and u.get("bm") != null:   # пилон — под настоящим крылом модели (тест 3.5-s3)
+			var lo := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
+			if not is_nan(lo):
+				y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
+		out.append({"key": "%d_%d_%s_%d%s_s%d" % [gi, si, g.weapon, mtr, "e" if g.evo else "", seek], "t": mtr,
+			"side": mt["side"], "yaw": float(mt["yaw"]), "pos": Vector3(pt.x, y, pt.y), "tail_cab": tail_cab,
+			"flip": mt["side"] == "bottom" or under_tail})
+	return {"mounts": out, "len_px": len_px}
 
 
 # ---------- 3.4-t1: следы ракет (п. 34) ----------
@@ -1441,23 +1621,35 @@ func _sync_scorch(m: Main) -> void:
 		if Fx._soft == null:
 			return
 		_scorch_mat.albedo_texture = Fx._soft
-	while _scorch.size() < marks.size():
-		var mi := MeshInstance3D.new()
-		mi.mesh = _scorch_mesh
-		mi.material_override = _scorch_mat
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(mi)
-		_scorch.append(mi)
-	for i in _scorch.size():
-		var mi2: MeshInstance3D = _scorch[i]
-		if i >= marks.size():
-			mi2.visible = false
-			continue
+	# оптимизация (финальный проход 3.5): все пятна — один MultiMesh (один вызов отрисовки вместо
+	# до 160); угасание — в цвете экземпляра
+	if _scorch_mm == null:
+		_scorch_mat.vertex_color_use_as_albedo = true
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.mesh = _scorch_mesh
+		mm.instance_count = 160
+		mm.visible_instance_count = 0
+		_scorch_mm = MultiMeshInstance3D.new()
+		_scorch_mm.multimesh = mm
+		_scorch_mm.material_override = _scorch_mat
+		_scorch_mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_scorch_mm)
+	var mmx := _scorch_mm.multimesh
+	var n := mini(marks.size(), mmx.instance_count)
+	var lo := Vector3.INF
+	var hi := -Vector3.INF
+	for i in n:
 		var mk: Dictionary = marks[i]
 		if not mk.has("g3"):
 			mk["g3"] = ground_under(mk["p"])
 		var r: float = mk["r"] * 1.6
-		mi2.visible = true
-		mi2.transparency = 1.0 - clampf(float(mk["life"]) / 6.0, 0.0, 1.0)
-		mi2.position = mk["g3"] + Vector3(0, 0.8, 0)
-		mi2.basis = Basis(Vector3.RIGHT, -PI / 2.0).scaled(Vector3(r, 1, r))
+		var pos: Vector3 = mk["g3"] + Vector3(0, 0.8, 0)
+		mmx.set_instance_transform(i, Transform3D(Basis(Vector3.RIGHT, -PI / 2.0).scaled(Vector3(r, 1, r)), pos))
+		mmx.set_instance_color(i, Color(1, 1, 1, clampf(float(mk["life"]) / 6.0, 0.0, 1.0)))
+		lo = lo.min(pos - Vector3(r, 1, r))
+		hi = hi.max(pos + Vector3(r, 1, r))
+	mmx.visible_instance_count = n
+	if n > 0:
+		_scorch_mm.custom_aabb = AABB(lo, hi - lo)
