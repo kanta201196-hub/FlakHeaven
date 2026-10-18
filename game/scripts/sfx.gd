@@ -284,6 +284,53 @@ func _tone(freq: float, dur: float, noise: float, decay: float, vol: float, squa
 	return w
 
 
+# ---------- Фон биома ----------
+## Тихий цикл под боем: ветер в Нагорье, прибой над морем (файлы audio/ambient_<биом>.ogg).
+## Биом переключает set_ambient("sea") — например, при старте вылета в «Архипелаге».
+const AMBIENT_DB := -20.0
+var ambient_biome := "highland"
+var _amb: AudioStreamPlayer
+var _amb_name := ""
+var _amb_tw: Tween
+
+
+func set_ambient(biome: String) -> void:
+	ambient_biome = biome
+	if _amb != null and _amb.playing:
+		_amb_name = ""
+		_ambient_on(true)
+
+
+func _ambient_on(on: bool) -> void:
+	var want := ("ambient_" + ambient_biome) if on else ""
+	if want == _amb_name:
+		return
+	_amb_name = want
+	if _amb == null:
+		_amb = AudioStreamPlayer.new()
+		_amb.bus = "SFX"
+		_amb.volume_db = -60.0
+		add_child(_amb)
+	if _amb_tw != null and _amb_tw.is_valid():
+		_amb_tw.kill()
+	_amb_tw = create_tween()
+	if want == "":
+		_amb_tw.tween_property(_amb, "volume_db", -60.0, 1.5)
+		_amb_tw.tween_callback(_amb.stop)
+		return
+	var path := "res://audio/%s.ogg" % want
+	if not ResourceLoader.exists(path):
+		_amb.stop()
+		return
+	var st = load(path)
+	if st is AudioStreamOggVorbis:
+		st.loop = true
+	_amb.stream = st
+	_amb.volume_db = -60.0
+	_amb.play()
+	_amb_tw.tween_property(_amb, "volume_db", AMBIENT_DB + Tuning.g("sfx_db"), 2.0)
+
+
 # ---------- Музыка ----------
 ## Файлы audio/music_menu.*, music_battle.*, music_boss.* (зацикливаются).
 ## Нет файла — тишина. Переключение плавное (кроссфейд 1,5 с).
@@ -345,6 +392,7 @@ func _init_music() -> void:
 func music(track: String) -> void:
 	if _music.is_empty():
 		_init_music()
+	_ambient_on(track == "battle" or track == "boss")
 	if track == _music_track:
 		return
 	_music_track = track

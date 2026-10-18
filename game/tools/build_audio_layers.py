@@ -36,6 +36,11 @@ H.SRC.update({
     'metal_crash': ('2017', 'SoundBits - Just Impacts - Extension II/Metal_Hit_Crash_090'),
     'bimp16': ('2020', 'Olivier Girardot - Hand Guns Sound Effects Pack/Bullet Impact 16 - Light Version'),
     'shell_traj': ('2020', 'Bluezone - Tank - Explosion Sound Effects/Bluezone_BC0271_shell_trajectory_004'),
+    'f22': ('2018', 'Airborne Sound - Variety 1 Sound Effects/Jet,Fighter,F-22,Raptor,By,Slow,Crackle'),
+    'expl_bigsc': ('2020', 'Stefano Cremona - Explosions/BigExplosion02'),
+    'wind_gusty': ('2016', 'Pole Position Production - The Snow & Ice Textures Library/snow_ambience_wind_strong_08_gusty'),
+    'wind_alt': ('2017', 'Charlie Atanasyan - Indonesia sound library by Faunethic/Forest cold wind in alitude the morning_120208_00'),
+    'sea_wash': ('2016', 'Shutter Sound - Worldwide Ambience/South Pacific, Exterior, Atmosphere, Desert Island sea wash light, distant crickets'),
     'mine_far': ('2024', 'Pole Position - The Warfare 2 Library/Tank Mine - EXPLOSION - Mounted on Metal Beam - DISTANT - AMBEO BLD'),
 })
 
@@ -162,6 +167,48 @@ LAYERS = {
         [('flare_shot', 0.0, 0.6, 0.35, 0, 0), ('shell_traj', 'loud', 1.3, 0.9, -8, 0.06, {'af': LO % 5000, 'pitch': 1.1})],
         [('jet_ign', 0.075, 0.6, 0.35, 0, 0, {'pitch': 1.06}), ('fw_launch', A, 1.0, 0.7, -6, 0.05)],
     ],
+    # --- Вторая восьмёрка (18.10)
+    # Гибель игрока: взрыв с металлом, длинный раскат, лом сыплется, глубокий саб — 3 с
+    'player_explode': [
+        [('expl_metal', A, 2.0, 1.0, 0, 0), ('expl_out_large', A, 3.0, 1.8, -7, 0.05),
+         ('metal_debris', 0.0, 2.6, 1.5, -11, 0.2, {'af': HI % 800}), (('sub', 50, 22, 1.2, 2.6), 0, 0, 0, -5, 0)],
+        [('expl_bigsc', A, 3.0, 1.8, 0, 0), ('metal_crash', 'loud', 1.6, 1.0, -9, 0.08, {'af': HI % 700}),
+         ('metal_debris', 1.1, 2.2, 1.3, -12, 0.3, {'af': HI % 900}), (('sub', 48, 22, 1.2, 2.6), 0, 0, 0, -5, 0)],
+    ],
+    # Противоракеты: хлопок пиропатрона и шипение горящей ловушки, 3 варианта
+    'flare': [
+        [('fw_launch', A, 0.5, 0.3, 0, 0), ('air_hiss', 'loud', 0.6, 0.4, -9, 0.03, {'af': HI % 2000})],
+        [('fw_launch', A, 0.5, 0.3, 0, 0, {'pitch': 1.1}), ('air_hiss', 'loud', 0.6, 0.4, -10, 0.03, {'af': HI % 2500, 'pitch': 1.1})],
+        [('flare_shot', 0.0, 0.45, 0.3, 0, 0, {'pitch': 1.15}), ('air_hiss', 'loud', 0.6, 0.4, -9, 0.02, {'af': HI % 2000, 'pitch': 0.92})],
+    ],
+    # Залп НАР: два пуска один за другим и шипение уходящих ракет — слышно, что это залп
+    'rocket_launch': [
+        [('rocket_shot', A, 0.45, 0.25, 0, 0), ('rocket_shot', A, 0.45, 0.25, -4, 0.07, {'pitch': 1.08}),
+         ('shell_traj', 'loud', 0.9, 0.6, -9, 0.05, {'af': LO % 5000})],
+        [('rocket_shot', A, 0.45, 0.25, 0, 0, {'pitch': 0.95}), ('rocket_shot', A, 0.45, 0.25, -5, 0.06, {'pitch': 1.12}),
+         ('shell_traj', 'loud', 0.9, 0.6, -9, 0.05, {'af': LO % 4500, 'pitch': 1.1})],
+    ],
+    # Пуск вражеской ракеты: ниже и тяжелее нашей, с низким толчком — опасность слышна сразу
+    'missile_enemy': [
+        [('jet_ign', 0.075, 0.9, 0.5, 0, 0, {'pitch': 0.82}), ('shell_traj', 'loud', 1.2, 0.8, -6, 0.08, {'pitch': 0.85, 'af': LO % 4000}),
+         (('sub', 80, 40, 0.3, 9), 0, 0, 0, -12, 0)],
+        [('rocket_shot', A, 0.7, 0.4, 0, 0, {'pitch': 0.8}), ('shell_traj', 'loud', 1.2, 0.8, -6, 0.08, {'pitch': 0.8, 'af': LO % 4000}),
+         (('sub', 75, 38, 0.3, 9), 0, 0, 0, -12, 0)],
+    ],
+    # Пуск ЗРК: тяжёлый стартовый ускоритель — глухой удар снизу и долгий рёв ракеты
+    'sam_launch': [
+        [('rocket_shot', A, 1.0, 0.5, 0, 0, {'pitch': 0.68}), ('expl_far', A, 0.5, 0.3, -9, 0.0, {'af': LO % 1500}),
+         ('shell_traj', 'loud', 1.6, 1.0, -5, 0.1, {'pitch': 0.75, 'af': LO % 3500})],
+    ],
+    # Заправщик сбит: большой самолёт — взрыв, раскат, металл и глубокий гул
+    'tanker_down': [
+        [('expl_8', A, 2.2, 1.2, 0, 0), ('expl_bigsc', A, 3.2, 2.0, -5, 0.1), ('metal_crash', 'loud', 1.6, 1.0, -10, 0.25, {'af': HI % 700}),
+         (('sub', 45, 22, 1.4, 2.4), 0, 0, 0, -5, 0)],
+    ],
+    # Форсаж: поджиг и треск реактивной струи
+    'afterburner': [
+        [('fire_ign', A, 1.5, 0.7, 0, 0), ('f22', 'loud', 1.3, 0.8, -7, 0.1, {'af': HI % 300})],
+    ],
 }
 
 
@@ -196,10 +243,67 @@ def write_ogg_st(y, path, mono=False):
                     '-c:a', 'libvorbis', '-q:a', '5', path], input=data.astype(np.float32).tobytes(), check=True)
 
 
+def loop_st(x, xf):
+    """Стерео-цикл: конец плавно переходит в начало (кроссфейд xf с)."""
+    n = int(xf * SR)
+    fade = np.linspace(0, 1, n)[:, None]
+    return np.concatenate([x[:n] * fade + x[-n:] * (1 - fade), x[n:-n]]).astype(np.float32)
+
+
+def krms(y):
+    return 10 * np.log10(np.mean(H.kweight(y.mean(1)).astype(np.float64) ** 2) + 1e-12)
+
+
+def build_engine(out_dir):
+    """Двигатель в стерео: прежний рёв (правка 3.5-s4, ровная громкость) — в левом канале с начала цикла,
+    в правом со сдвигом на полцикла (звучит шире, не «в одной точке») + тихий свист турбины 1,9 и 3,8 кГц
+    (тон в игре растёт со скоростью вместе с рёвом). Громкость — как у прежнего цикла."""
+    x = H.load(H.fetch('blast_off'))
+    m = H.flatten(x[int(1.0 * SR):int(6.5 * SR)])
+    n = int(0.5 * SR)
+    fade = np.linspace(0, 1, n)
+    m = np.concatenate([m[:n] * fade + m[-n:] * (1 - fade), m[n:-n]])
+    t = np.arange(len(m)) / SR
+    k = round(1900 * len(m) / SR) / (len(m) / SR)  # целое число периодов — шов цикла без щелчка
+    whine = (np.sin(2 * np.pi * k * t) + 0.4 * np.sin(4 * np.pi * k * t)) * (1 + 0.15 * np.sin(2 * np.pi * 3 * t / t[-1]))  # лёгкое «плавание», 3 волны за цикл
+    whine *= np.abs(m).mean() * 0.12
+    y = np.stack([m + whine, np.roll(m, len(m) // 2) + whine], 1).astype(np.float32)
+    y *= 10 ** ((H.ENGINE_RMS - krms(y)) / 20)
+    if np.abs(y).max() > 0.89:
+        y *= 0.89 / np.abs(y).max()
+    write_ogg_st(y, os.path.join(out_dir, 'engine.ogg'))
+    print('engine         стерео-цикл %.1f с, K-RMS %.1f dB' % (len(y) / SR, krms(y)))
+
+
+# Фон биома под боем (цикл 30 с, тихо, громкость в sfx.gd): ключ -> слои (источник, начало, уровень дБ, срез низа)
+AMBIENT = {
+    'ambient_highland': [('wind_gusty', 10.0, 0, 120), ('wind_alt', 20.0, -8, 200)],   # Нагорье: порывистый горный ветер
+    'ambient_sea': [('sea_wash', 20.0, 0, 90), ('wind_alt', 40.0, -6, 200)],            # Архипелаг: прибой и ветер над морем
+}
+
+
+def build_ambient(out_dir):
+    for name, layers in AMBIENT.items():
+        y = None
+        for key, start, lvl, hp in layers:
+            x = load_st(H.fetch(key))[int(start * SR):int((start + 33) * SR)]
+            x = ff(x, 'highpass=f=%d' % hp)
+            x = x * 10 ** ((-24 + lvl - krms(x)) / 20)
+            y = x if y is None else y[:len(x)] + x[:len(y)]
+        y = loop_st(y, 3.0)
+        y *= 10 ** ((-24 - krms(y)) / 20)
+        write_ogg_st(y, os.path.join(out_dir, name + '.ogg'))
+        print('%-16s цикл %.1f с, K-RMS %.1f dB' % (name, len(y) / SR, krms(y)))
+
+
 def main():
     out_dir = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else H.AUDIO
     only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else None
     os.makedirs(out_dir, exist_ok=True)
+    if only is None or 'engine' in only:
+        build_engine(out_dir)
+    if only is None or 'ambient' in only:
+        build_ambient(out_dir)
     for event, variants in LAYERS.items():
         if only is not None and event not in only:
             continue
