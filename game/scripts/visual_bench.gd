@@ -242,6 +242,8 @@ func _save(name: String) -> void:
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)])
+	if Render3D.I != null and Render3D.I.terrain != null:   # Р-13: заглушки рельефа сейчас и кадров с ними с начала
+		print("VISUAL %s terrain lods=%d lod_frames=%d" % [name, Render3D.I.terrain._lods.size(), Render3D.I.terrain.lod_frames])
 	if Render3D.I != null:   # облака: сколько вызовов и экземпляров (плоские — по облаку на вызов; клубы — один MultiMesh)
 		var R := Render3D.I
 		var flat := 0

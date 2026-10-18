@@ -247,6 +247,10 @@ func _setup_combat_layer() -> void:
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	# С-2 (аудит 3.5-s6): 2D рисует в прозрачный вьюпорт цвет, уже умноженный на альфу (конус заправки
+	# 0.4·0.16 → 16/255 при альфе 41). Обычное смешение умножало второй раз — полупрозрачное темнело:
+	# зелёный конус за заправщиком лежал вокруг игрока тёмной трапецией, края пуль и вспышек — с серой каймой
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_PREMULT_ALPHA
 	m.no_depth_test = true      # как раньше 2D-слой: пули и вспышки поверх самолётов и облаков
 	m.render_priority = 100
 	m.albedo_texture = _combat_vp.get_texture()
@@ -339,6 +343,21 @@ func world_to_screen(p: Vector2, fallback: Vector2) -> Vector2:
 	return a + (b - a).normalized() * 100000.0
 
 
+## Р-13: земля, которую камера видит прямо сейчас — углы кадра на дне долин (дальние лучи наклона —
+## не дальше 6000), с запасом на тряску и сглаживание камеры
+func _screen_ground(vs: Vector2) -> Rect2:
+	var lo := Vector2(INF, INF)
+	var hi := -lo
+	for c in [Vector2.ZERO, Vector2(vs.x, 0), Vector2(0, vs.y), vs]:
+		var o := cam.project_ray_origin(c)
+		var d := cam.project_ray_normal(c)
+		var t := (GROUND_Y - o.y) / d.y if d.y < -0.01 else 6000.0
+		var q := o + d * minf(t, 6000.0)
+		lo = lo.min(Vector2(q.x, q.z))
+		hi = hi.max(Vector2(q.x, q.z))
+	return Rect2(lo, hi - lo).grow(120.0)
+
+
 func tilt_on() -> bool:
 	return _tilt_on
 
@@ -407,7 +426,7 @@ func _process(delta: float) -> void:
 		# с наклоном видно дальше вперёд (вверх по экрану)
 		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
 	var pt := Time.get_ticks_usec() if Perf.on else 0
-	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1)
+	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1, _screen_ground(vs))
 	_fit_shadow()
 	if Perf.on: pt = Perf.sub("r3d.terrain", pt)
 	var sd := 0.0 if get_tree().paused else delta   # время эффектов стоит на паузе

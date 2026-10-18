@@ -58,6 +58,12 @@ var _spare_order: Array[Vector2i] = []
 ## Высоты построенных кусков (для быстрого surface_fast: тени, высота полёта, наземные цели)
 var _hgrid := {}               # Vector2i → [hs, W, step]
 const SPARE_MAX := 30
+## Р-13 (аудит 3.5-s6): пока полный кусок на экране не готов, на его месте — заглушка: та же земля
+## редкой сеткой (LOD_N ячеек, ~5 мс в главном потоке в облаке против ~100 мс полного куска) с юбкой
+## по краю. Раньше там была дыра до фона.
+const LOD_N := 14
+var _lods := {}                # Vector2i → MeshInstance3D (заглушка до готовности полного куска)
+var lod_frames := 0            # кадров, когда кусок на экране показывали заглушкой (стенд, автотест)
 var props: BiomeProps          # B-41: модели биома на рельефе (null — без них)
 
 
@@ -106,6 +112,9 @@ func clear() -> void:
 	for k in _spare:
 		(_spare[k] as Node).queue_free()
 	_spare.clear()
+	for k in _lods:
+		(_lods[k] as Node).queue_free()
+	_lods.clear()
 	_hgrid.clear()
 	_spare_order.clear()
 	_objs_cache.clear()
@@ -710,14 +719,18 @@ func _obj(key: Vector2i) -> Dictionary:
 	return _objs_cache[key]
 
 
-## Держим куски рельефа под видимой областью; новые считаем в фоне, ставим не больше budget за кадр
-func sync(view: Rect2, budget := 2) -> void:
+## Держим куски рельефа под видимой областью; новые считаем в фоне, ставим не больше budget за кадр.
+## core — земля, видимая на экране прямо сейчас (view — она же с запасом): кусок в core не ждёт очереди —
+## готовый ставится сверх бюджета, неготовый закрывается заглушкой (Р-13)
+func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 	var want := {}
 	for cx in range(int(floorf(view.position.x / CHUNK)), int(floorf(view.end.x / CHUNK)) + 1):
 		for cz in range(int(floorf(view.position.y / CHUNK)), int(floorf(view.end.y / CHUNK)) + 1):
 			want[Vector2i(cx, cz)] = true
 	# сначала ближние к центру
 	var c := view.get_center() / CHUNK
+	if core.has_area():
+		c = core.get_center() / CHUNK
 	var keys := want.keys()
 	keys.sort_custom(func(a, b): return Vector2(a).distance_squared_to(c) < Vector2(b).distance_squared_to(c))
 	# скачок камеры (старт, стенд, телепорт отладки): не хватает многих кусков — строим все сразу,
@@ -727,6 +740,7 @@ func sync(view: Rect2, budget := 2) -> void:
 		if not _chunks.has(key) and not _spare.has(key):
 			missing += 1
 	var now := missing > maxi(6, keys.size() / 2)
+	var hole := false
 	for key in keys:
 		if _chunks.has(key):
 			continue
@@ -736,19 +750,28 @@ func sync(view: Rect2, budget := 2) -> void:
 			_spare_order.erase(key)
 			mi.visible = true
 			_chunks[key] = mi
+			_drop_lod(key)
 			continue
 		if now:
 			_place_chunk(key, _compute(key, _ctx(key), _gen))
 			continue
+		var on_screen := core.has_area() and core.intersects(Rect2(Vector2(key) * CHUNK, Vector2(CHUNK, CHUNK)))
 		var res = _take_done(key)
 		if res != null:
-			if budget <= 0:
+			if budget <= 0 and not (on_screen and not _lods.has(key)):
 				_put_done(key, res)
 				continue
 			budget -= 1
 			_place_chunk(key, res)
-		elif not _pending.has(key) and _pending.size() < 4:
+			continue
+		if not _pending.has(key) and (_pending.size() < 4 or on_screen):
 			_pending[key] = WorkerThreadPool.add_task(_compute_bg.bind(key, _ctx(key), _gen), false, "terrain chunk")
+		if on_screen:
+			hole = true
+			if not _lods.has(key):
+				_place_chunk(key, _compute(key, _ctx(key), _gen, LOD_N))
+	if hole:
+		lod_frames += 1
 	# законченные задачи — забираем id (иначе пул держит их до wait)
 	for key in _pending.keys():
 		if WorkerThreadPool.is_task_completed(_pending[key]):
@@ -761,6 +784,9 @@ func sync(view: Rect2, budget := 2) -> void:
 			mi.visible = false
 			_spare[key] = mi
 			_spare_order.append(key)
+	for key in _lods.keys():
+		if not want.has(key):
+			_drop_lod(key)
 	while _spare_order.size() > SPARE_MAX:
 		var old: Vector2i = _spare_order.pop_front()
 		(_spare[old] as Node).queue_free()
@@ -774,6 +800,13 @@ func sync(view: Rect2, budget := 2) -> void:
 	_mx.unlock()
 	if _objs_cache.size() > 400:
 		_objs_cache.clear()
+
+
+func _drop_lod(key: Vector2i) -> void:
+	var mi: MeshInstance3D = _lods.get(key)
+	if mi != null:
+		mi.queue_free()
+		_lods.erase(key)
 
 
 func _take_done(key: Vector2i):
@@ -837,11 +870,12 @@ func _compute_bg(key: Vector2i, ctx: Dictionary, gen: int) -> void:
 
 
 ## Высоты и массивы вершин куска — чистый расчёт, можно в потоке
-func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
+func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
+	var nn := lod if lod > 0 else N   # Р-13: заглушка — та же сетка, только реже
 	var ox := key.x * CHUNK
 	var oz := key.y * CHUNK
-	var step := CHUNK / N
-	var W := N + 3   # +1 узел и по одному с каждой стороны — нормали на стыках кусков совпадают
+	var step := CHUNK / nn
+	var W := nn + 3   # +1 узел и по одному с каждой стороны — нормали на стыках кусков совпадают
 	var hs := PackedFloat32Array()
 	var vs := PackedFloat32Array()
 	var gs := PackedFloat32Array()   # L-06: зелёная полоса вдоль реки
@@ -883,7 +917,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 	var tans := PackedFloat32Array()
 	var cols := PackedColorArray()
 	var uv2 := PackedVector2Array()   # x — расстояние до реки, px со знаком (цвет вершины — всего 8 бит)
-	var V := N + 1
+	var V := nn + 1
 	verts.resize(V * V)
 	norms.resize(V * V)
 	tans.resize(V * V * 4)
@@ -930,10 +964,10 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), sm.x, sm.y)
 			uv2[vi] = Vector2(vs[gi], burn)
 	var idx := PackedInt32Array()
-	idx.resize(N * N * 6)
+	idx.resize(nn * nn * 6)
 	var p := 0
-	for j in N:
-		for i in N:
+	for j in nn:
+		for i in nn:
 			var a := j * V + i
 			var b := a + 1
 			var c2 := a + V
@@ -946,9 +980,48 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 				idx[p] = a; idx[p + 1] = b; idx[p + 2] = c2
 				idx[p + 3] = b; idx[p + 4] = d; idx[p + 5] = c2
 			p += 6
-	var put: Dictionary = props.plan(key, ctx) if props != null else {}
+	if lod > 0:
+		var sk := _skirt(verts, norms, tans, cols, uv2, idx, V)
+		verts = sk[0]; norms = sk[1]; tans = sk[2]; cols = sk[3]; uv2 = sk[4]; idx = sk[5]
+	var put: Dictionary = props.plan(key, ctx) if props != null and lod == 0 else {}
 	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv2": uv2, "idx": idx, "gen": gen, "put": put,
-		"hs": hs, "W": W, "step": step}
+		"hs": hs, "W": W, "step": step, "lod": lod}
+
+
+## Р-13: юбка заглушки — край куска опущен вниз стенкой: редкая сетка заглушки на стыке с полным
+## соседом не совпадает с его краем, без юбки в щель видно фон
+const SKIRT := 90.0
+
+func _skirt(verts: PackedVector3Array, norms: PackedVector3Array, tans: PackedFloat32Array, cols: PackedColorArray,
+		uv2: PackedVector2Array, idx: PackedInt32Array, V: int) -> Array:
+	var ring: Array[int] = []
+	for i in V - 1:
+		ring.append(i)                          # верхний край
+	for j in V - 1:
+		ring.append(j * V + V - 1)              # правый
+	for i in range(V - 1, 0, -1):
+		ring.append((V - 1) * V + i)            # нижний
+	for j in range(V - 1, 0, -1):
+		ring.append(j * V)                      # левый
+	var base := verts.size()
+	var n := ring.size()
+	for k in n:
+		var a := ring[k]
+		verts.append(verts[a] - Vector3(0.0, SKIRT, 0.0))
+		norms.append(norms[a])
+		for c in 4:
+			tans.append(tans[a * 4 + c])
+		cols.append(cols[a])
+		uv2.append(uv2[a])
+	for k in n:
+		var a := ring[k]
+		var b := ring[(k + 1) % n]
+		var a2 := base + k
+		var b2 := base + (k + 1) % n
+		# обе стороны: стенку видно и снаружи, и изнутри (наклон камеры)
+		for t in [a, b, b2, a, b2, a2, a, b2, b, a, a2, b2]:
+			idx.append(t)
+	return [verts, norms, tans, cols, uv2, idx]
 
 
 func _place_chunk(key: Vector2i, r: Dictionary) -> void:
@@ -970,8 +1043,12 @@ func _place_chunk(key: Vector2i, r: Dictionary) -> void:
 	mi.material_override = material
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	add_child(mi)
+	if int(r.get("lod", 0)) > 0:   # Р-13: заглушка — без моделей биома и без сетки высот (surface_fast считает точно)
+		_lods[key] = mi
+		return
 	if props != null:
 		props.apply(r["put"], mi)
+	_drop_lod(key)
 	_chunks[key] = mi
 	_hgrid[key] = [r["hs"], r["W"], r["step"]]
 	if Main.I != null and Main.I.state == "playing":   # T4-03: рывки от сборки кусков рельефа (главный поток)
