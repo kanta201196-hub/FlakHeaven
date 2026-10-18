@@ -47,14 +47,28 @@ var _dealt_tick := 0.0
 const BOSS_TTK := [25.0, 30.0, 35.0]
 
 ## Правка 3.5-s4 «напряжение боя» (лог «Осы» 3.5-s3: урон игрока за минуту вырос в 900 раз, прочность врагов —
-## в 8; после 8-й минуты враги гибли, не долетев, прочность 100%). Спавнер следит, сколько живут сбитые
-## самолёты (с появления до гибели). Живут меньше эталона первых минут — новые прочнее; дольше — слабее (не ниже ×1).
+## в 8; после 8-й минуты враги гибли, не долетев, прочность 100%): спавнер подстраивает прочность новых врагов.
+## Тест 3.5-s6 («Грач» Kanta): старый замер (медиана жизни сбитых) видел только тех, кого успели сбить, —
+## недобитые толстые в него не попадали, и множитель дошёл до ×24, хотя сбитых в минуту стало втрое меньше.
+## Теперь замер по закону Литтла: время до сбития = (среднее число врагов в воздухе) / (сбитых в секунду) —
+## он учитывает и недобитых. Врагов в воздухе почти всегда у предела (enemy_cap), так что по сути это
+## скорость сбития: сбивают медленнее цели — прочность вниз, быстрее — вверх. Прочнее не больше ×4:
+## дальше сильный билд получает больше врагов (до ×1,5 плотности), а не толще.
 const PRESSURE_FROM := 240.0      # с 4:00
 const PRESSURE_STEP := 5.0
-const PRESSURE_MAX := 40.0
+const PRESSURE_WIN := 30.0        # окно замера, с
+const PRESSURE_MAX := 4.0
+const PRESSURE_UP := 1.1          # за шаг (5 с) не быстрее
+const PRESSURE_DOWN := 0.85
+## Цель: время до сбития 12 с в начале, 15,6 с к 14:00 (поздние враги держатся дольше ранних).
+## При ~60 врагах в воздухе это ~5 сбитых в секунду в начале и ~4 к концу. Эталон по 2–4-й минуте не годится:
+## в начале врагов уже у предела, а сбивают по 0,2–1 в секунду — эталон выходил бы за минуту.
+const TTK_TARGET := 12.0
+const DENS_MAX := 1.5
 var pressure_k := 1.0
+var pressure_dens := 1.0          # множитель плотности волн, когда прочность упёрлась в потолок
 var _lives: Array = []            # [время гибели, сколько жил]
-var _life_ref := 0.0              # эталон: медиана жизни на 2:00–4:00
+var _air_hist: Array = []         # [время, врагов в воздухе] раз в секунду, пока нет аса
 var _press_t := 0.0
 const BUNKER_TTK := 9.0
 
@@ -145,6 +159,10 @@ func _process(delta: float) -> void:
 		_dealt_tick = 0.0
 		_dealt_hist.append(dealt_total())
 		_big_tick(p)
+		if not m.boss_alive():
+			_air_hist.append([t, air_count(get_tree().get_nodes_in_group("enemies"))])
+			if _air_hist.size() > 300:
+				_air_hist = _air_hist.slice(_air_hist.size() - 200)
 		if _dealt_hist.size() > 120:
 			_dealt_hist = _dealt_hist.slice(_dealt_hist.size() - 61)
 	_pressure(t, delta)
@@ -161,6 +179,7 @@ func _process(delta: float) -> void:
 	var boss_on := m.boss_alive()
 	var mult := Tuning.g("spawn_rate_mult") * Campaign.k("dens") * (0.3 if boss_on else 1.0) # U-05: плотность по сложности
 	mult *= 1.0 + maxf(0.0, t - 300.0) / 60.0 * 0.05 # 2.8: после 5:00 — плотнее (+5% в минуту)
+	mult *= pressure_dens
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	# предел врагов в воздухе одновременно (без асов, наземных целей и целей активностей):
 	# больше — экран превращается в кашу и проседает FPS
@@ -384,41 +403,50 @@ func note_kill(e: Enemy) -> void:
 		_lives = _lives.slice(_lives.size() - 300)
 
 
-func _median_life(from_t: float, to_t: float) -> float:
-	var a := PackedFloat32Array()
+## Сбитых в секунду и среднее число врагов в воздухе за [from_t, to_t]; [-1, -1], если окно почти всё шло с асом
+func _flow(from_t: float, to_t: float) -> Vector2:
+	var kills := 0
 	for l in _lives:
 		if float(l[0]) >= from_t and float(l[0]) <= to_t:
-			a.append(float(l[1]))
-	if a.size() < 8:
-		return -1.0
-	a.sort()
-	return a[a.size() / 2]
+			kills += 1
+	var n := 0
+	var sum := 0.0
+	for h in _air_hist:
+		if float(h[0]) >= from_t and float(h[0]) <= to_t:
+			n += 1
+			sum += float(h[1])
+	# окно с асом выпадает (замеры стоят): секунд без аса должно быть хотя бы две трети
+	if n < int((to_t - from_t) * 0.66):
+		return Vector2(-1.0, -1.0)
+	return Vector2(float(kills) / float(n), sum / float(n))
 
 
 func _pressure(t: float, delta: float) -> void:
-	if t < PRESSURE_FROM:
-		return
 	# второй список 3.5-s5, п. 5: пока жив ас, напряжение стоит. В бою с асом мелочи втрое меньше и её сбивают
 	# мимоходом — по такой жизни «Грачу» Kanta за 50 с подняли прочность новых врагов с ×1 до ×3,2
 	if Main.I.boss_alive():
 		return
-	if _life_ref <= 0.0:
-		_life_ref = _median_life(120.0, PRESSURE_FROM)
-		if _life_ref <= 0.0:
-			_life_ref = 6.0
-		_life_ref = clampf(_life_ref, 4.0, 10.0)
 	_press_t -= delta
 	if _press_t > 0.0:
 		return
 	_press_t = PRESSURE_STEP
-	var life := _median_life(t - 30.0, t)
-	if life <= 0.0:
+	if t < PRESSURE_FROM:
 		return
-	# эталон чуть растёт к концу вылета: поздние враги держатся дольше ранних
-	var target := _life_ref * lerpf(1.0, 1.3, clampf((t - PRESSURE_FROM) / 600.0, 0.0, 1.0))
-	pressure_k = clampf(pressure_k * clampf(pow(target / life, 0.6), 0.9, 1.2), 1.0, PRESSURE_MAX)
+	var f := _flow(t - PRESSURE_WIN, t)
+	if f.x < 0.0:
+		return
+	var ttk := f.y / maxf(f.x, 0.01)      # никого не сбили — прочность вниз на полный шаг
+	var target := TTK_TARGET * lerpf(1.0, 1.3, clampf((t - PRESSURE_FROM) / 600.0, 0.0, 1.0))
+	var step := clampf(pow(target / ttk, 0.5), PRESSURE_DOWN, PRESSURE_UP)
+	if step > 1.0 and pressure_k >= PRESSURE_MAX:
+		pressure_dens = minf(pressure_dens * 1.03, DENS_MAX)
+	elif step < 1.0 and pressure_dens > 1.0:
+		pressure_dens = maxf(pressure_dens * step, 1.0)      # сперва убираем добавленную плотность
+		step = 1.0
+	pressure_k = clampf(pressure_k * step, 1.0, PRESSURE_MAX)
 	if OS.get_cmdline_user_args().has("--autotest") and int(t) % 60 < int(PRESSURE_STEP):
-		print("AUTOTEST: pressure %.0f s: life %.1f / target %.1f, k %.2f" % [t, life, target, pressure_k])
+		print("AUTOTEST: pressure %.0f s: ttk %.1f / target %.1f, kills/s %.2f, air %.0f, k %.2f, dens %.2f" % [
+			t, ttk, target, f.x, f.y, pressure_k, pressure_dens])
 	Main.I.tele.maxv("pressure_max", pressure_k)
 
 
