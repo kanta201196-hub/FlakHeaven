@@ -88,7 +88,8 @@ func note_big(d: float, e: Enemy, source: String) -> void:
 		dm[source] = float(dm.get(source, 0.0)) + d
 
 
-## Доля среднего урона, которая ложится в аса (за последние 4 минуты боя с асами)
+## Доля среднего урона, которая ложится в аса (за последние 4 минуты боя с асами и асом-соперником в дуэли:
+## дуэль на 2:00 идёт раньше первого аса, и его прочность тоже считается по силе класса против одиночной цели)
 func single_k() -> float:
 	var s_d := 0.0
 	var s_r := 0.0
@@ -104,7 +105,7 @@ func _big_tick(p: Player) -> void:
 	var near := false
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
-		if e != null and e.is_boss and not e is Fortress and e.hp > 0.0 and e.global_position.distance_squared_to(p.global_position) < 900.0 * 900.0:
+		if e != null and ((e.is_boss and not e is Fortress) or e is RivalAce) and e.hp > 0.0 and e.global_position.distance_squared_to(p.global_position) < 900.0 * 900.0:
 			near = true
 			break
 	var r := recent_dps()
@@ -367,7 +368,7 @@ static func hp_ramp(t: float) -> float:
 
 ## Сбит обычный самолёт — запомнить, сколько он прожил
 func note_kill(e: Enemy) -> void:
-	if e.born_t < 0.0 or e.is_boss or e.is_ground or e.no_despawn:
+	if e.born_t < 0.0 or e.is_boss or e.is_ground or e.no_despawn or Main.I.boss_alive():
 		return
 	var t := Main.I.run_time
 	_lives.append([t, t - e.born_t])
@@ -388,6 +389,10 @@ func _median_life(from_t: float, to_t: float) -> float:
 
 func _pressure(t: float, delta: float) -> void:
 	if t < PRESSURE_FROM:
+		return
+	# второй список 3.5-s5, п. 5: пока жив ас, напряжение стоит. В бою с асом мелочи втрое меньше и её сбивают
+	# мимоходом — по такой жизни «Грачу» Kanta за 50 с подняли прочность новых врагов с ×1 до ×3,2
+	if Main.I.boss_alive():
 		return
 	if _life_ref <= 0.0:
 		_life_ref = _median_life(120.0, PRESSURE_FROM)
