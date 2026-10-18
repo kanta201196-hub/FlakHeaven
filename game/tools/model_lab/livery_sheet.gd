@@ -3,6 +3,7 @@ extends Node
 ## каждый вариант окраски в двух видах (3/4 сверху и сверху), всё на одном листе user://livery_<…>.png.
 ## Быстрее стенда ангара: без интерфейса и сверхвыборки. Из папки game/:
 ##   xvfb-run -a godot --path . --rendering-driver opengl3 res://tools/model_lab/livery_sheet.tscn -- [cls=fighter] [lvl=2] [kind=battle]
+##   [liv=classic,black_gloss] — только эти окраски; [views=0,1,2] — виды: 0 — 3/4 сверху, 1 — сверху, 2 — крупно кабина
 var vp: SubViewport
 var cam: Camera3D
 var holder: Node3D
@@ -16,14 +17,23 @@ func _ready():
 	var classes := ["fighter", "attacker", "bomber"]
 	var lvls := [1]
 	var kind := "hangar"
+	var only: Array = []
+	var views: Array = [0, 1]
 	for a in args:
+		if a.begins_with("liv="): only = Array(a.get_slice("=", 1).split(","))
+		if a.begins_with("views="):
+			views = []
+			for x in a.get_slice("=", 1).split(","):
+				views.append(int(x))
 		if a.begins_with("cls="): classes = [a.get_slice("=", 1)]
 		if a.begins_with("lvl="): lvls = [int(a.get_slice("=", 1))]
 		if a.begins_with("kind="): kind = a.get_slice("=", 1)
 	for c in classes:
 		for l in lvls:
 			for v in Livery.list(c):
-				for view in [0, 1]:
+				if not only.is_empty() and not only.has(v[0]):
+					continue
+				for view in views:
 					queue.append([c, l, v[0], view, kind])
 	vp = SubViewport.new()
 	vp.size = Vector2i(560, 400)
@@ -72,9 +82,14 @@ func _process(_d: float) -> void:
 		if cur[3] == 0:
 			cam.position = Vector3(cos(-2.3), 0.0, sin(-2.3)) * cos(0.45) * 0.95 + Vector3(0, sin(0.45) * 0.95, 0)
 			cam.look_at(Vector3.ZERO, Vector3.UP)
-		else:
+		elif cur[3] == 1:
 			cam.position = Vector3(0, 1.15, 0.001)
 			cam.look_at(Vector3.ZERO, Vector3(1, 0, 0))
+		else:   # крупно кабина: место фонаря — как у модулей прокачки (ModuleParts._measure)
+			ModuleParts.attach(model, k)
+			var cp: Vector3 = (ModuleParts._anchors.get(k, {}) as Dictionary).get("canopy", Vector3(0.2, 0.05, 0))
+			cam.position = cp + Vector3(0.22, 0.17, -0.25)
+			cam.look_at(cp, Vector3.UP)
 		frames = 0
 		return
 	frames += 1
