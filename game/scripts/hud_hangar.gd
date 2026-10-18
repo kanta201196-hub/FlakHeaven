@@ -144,7 +144,7 @@ func _hg_livery(c: String, lx: float, y: float) -> void:
 func _hg_weapons(m: Main, area: Rect2) -> void:
 	var lx := area.position.x
 	var y := area.position.y
-	# правка 5 теста 3.5-s5: только оружие этого самолёта; «конёк» класса отмечен
+	# правка 5 теста 3.5-s5: только оружие этого самолёта; особенность класса (★) отмечена
 	var own: Array = Profile.WEAPON_ORDER.filter(func(x): return Weapons.in_game(x) and PlaneClasses.allows(m.hangar_cls, x))
 	if not own.has(m.hangar_w) and not Weapons.EXP.has(m.hangar_w) and not own.is_empty():
 		m.hangar_w = own[0]
@@ -166,7 +166,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			marks += ("●" if st != "" and st != "?" else "○") + " "
 		_text(Vector2(lx + 60, y + 54), marks, 15, Menu.C_AMBER)
 		if PlaneClasses.signature(m.hangar_cls) == w:
-			_text(Vector2(lx + 60, y + 54), "★ конёк: урон +20%", 13, Color(0.6, 1.0, 0.65), HORIZONTAL_ALIGNMENT_RIGHT, 228.0)
+			_text(Vector2(lx + 60, y + 54), "★ особенность класса: +20%", 13, Color(0.6, 1.0, 0.65), HORIZONTAL_ALIGNMENT_RIGHT, 228.0)
 		y += 80.0
 	var w2 := m.hangar_w
 	var rx := lx + 340.0

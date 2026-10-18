@@ -54,11 +54,12 @@ func class_select(size: Vector2) -> void:
 			y += 24.0
 		_text(Vector2(x + 12, y), "• Ведомые: до %d" % int(d["wingmen"]) if int(d["wingmen"]) > 0 else "• Ведомых нет", 17, Color(0.85, 0.88, 0.95))
 		y += 24.0
-		# правка 5 теста 3.5-s5: какое оружие бывает у самолёта и его «конёк»
+		# правка 5 теста 3.5-s5: какое оружие бывает у самолёта и особенность класса (★)
 		var wl := PackedStringArray()
 		for wid in d["weapons"]:
 			wl.append(String(Weapons.DEFS[wid]["short"]) + (" ★" if wid == d["signature"] else ""))
-		y += _para(Vector2(x + 12, y), "• Оружие: %s  (★ конёк: урон +20%%)" % ", ".join(wl).to_lower(), w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 12.0
+		y += _para(Vector2(x + 12, y), "• Оружие: %s" % ", ".join(wl).to_lower(), w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
+		y += _para(Vector2(x + 12, y), "★ Особенность класса: «%s» +20%% урона" % Weapons.DEFS[d["signature"]]["short"], w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 12.0
 		# 3.1: выбор навыка класса (3 варианта)
 		_text(Vector2(x, y), "Навык класса [E] — выберите:", 18, Color(0.7, 1.0, 0.7))
 		y += 10.0

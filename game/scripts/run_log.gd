@@ -26,7 +26,7 @@ static func write(m: Main, outcome: String) -> void:
 	head += ";skill3;skill3_lvl;skill3_uses;tags;patches;evolutions;wingmen;intercepted;dealt_detail;taken_by"
 	head += ";skill2;course_log;syn_open;course_pts;crew_lvl;crew_xp_gain;parts_total;nodes;plane2;perks;wbranch;meta_k"
 	# 3.4: замеры для анализа правок по кросс-проверке (Telemetry); timeline — последняя колонка
-	head += ";log_ver;" + ";".join(PackedStringArray(Telemetry.COLS)) + ";aces;timeline"
+	head += ";log_ver;" + ";".join(PackedStringArray(Telemetry.COLS)) + ";op;aces;timeline"
 	m.last_log_header = head
 	if exists:
 		f.seek_end()
@@ -58,6 +58,8 @@ static func write(m: Main, outcome: String) -> void:
 	m.tele.v["xp_continue"] = float(m.meta_award.get("xp_continue", 0))
 	row.append(Telemetry.LOG_VER)
 	row.append_array(m.tele.row(m))
+	# тест 3.5-s5: операция и сложность — без них прочность и урон врагов в логе не сравнить
+	row.append("%s/%s" % [Campaign.op()["id"], Campaign.diff()["title"]])
 	row.append(aces(m))
 	row.append(" | ".join(m.tele.timeline))
 	m.last_log_row = ";".join(row)
