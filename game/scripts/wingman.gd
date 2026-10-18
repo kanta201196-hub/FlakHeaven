@@ -273,7 +273,7 @@ func _rook(p: Player, delta: float) -> void:
 		var dir := (t.global_position - global_position).normalized()
 		for i in 6:
 			var d := dir.rotated(deg_to_rad(randf_range(-5.0, 5.0)))
-			Main.I.projectiles.spawn_rocket(global_position, velocity + d * randf_range(820.0, 960.0), 12.0 * dmg_k() * p.missile_k(), 50.0, i * 0.05)
+			Main.I.projectiles.spawn_rocket(global_position, velocity + d * randf_range(820.0, 960.0), 12.0 * dmg_k() * p.missile_k(), 50.0, i * 0.05, {"src": src()})
 		Main.I.sfx.play("rocket_launch", -20.0, 1.8)
 		if lvl >= 3 and t.is_ground and global_position.distance_to(t.global_position) < 320.0:
 			for j in 4:

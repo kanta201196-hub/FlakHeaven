@@ -18,6 +18,7 @@ var parts := 1       # запчасти (валюта ангара) за сби�
 var repair_chance := 0.02
 var _flash := 0.0
 var elite := false
+var last_src := ""        # источник последнего попадания (мастерство «Кита»)
 var born_t := -1.0       # правка 3.5-s4: когда появился (для «напряжения боя» в спавнере)
 var min_life := 0.0      # правка 3.5-s4: асы — корпус не быстрее чем за min_life с (предел урона в секунду)
 var _cap_budget := -1.0
@@ -69,6 +70,11 @@ func take_hit(dmg: float, source := "прочее") -> void:
 		dmg *= float(Main.I.player.mods.get("dmg_all", 1.0))
 		if is_ground:
 			dmg *= float(Main.I.player.mods.get("ground_dmg", 1.0)) # перк «Наводчик»
+		var mk: float = Main.I.player.mastery_k(self, source)
+		if mk > 1.0:
+			dmg *= mk
+			Main.I.tele.add("mastery_dmg", dmg * (1.0 - 1.0 / mk))
+	last_src = source
 	if (is_boss or self is RivalAce) and Main.I.spawner != null:
 		# тест 3.5-s5 (п. 10): урон по асу — мерило прочности следующих асов (Spawner.single_k);
 		# второй список, п. 5: и по асу-сопернику в дуэли — тогда и первый ас по силам классу

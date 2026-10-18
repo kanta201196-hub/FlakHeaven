@@ -652,7 +652,8 @@ func on_enemy_killed(e: Enemy) -> void:
 		tail_kills += 1
 		e.xp = int(ceil(e.xp * 1.5))
 		fx.text(e.global_position + Vector2(0, -30), "Сбит с хвоста!", Color(1.0, 0.9, 0.4))
-	parts += e.parts * continue_mult() * streak_mult() * (1.5 if (e.is_ground and is_instance_valid(player) and player.has_perk("a_grd2")) else 1.0)
+	parts += e.parts * continue_mult() * streak_mult() * (1.5 if (e.is_ground and is_instance_valid(player) and player.has_perk("a_grd2")) else 1.0) \
+		* (player.mastery_parts_k(e) if is_instance_valid(player) else 1.0)
 	fx.explosion(e.global_position, e.radius * (1.3 if e.big else 1.0), not e.is_ground)
 	sfx.play("explode_big" if e.big else "explode", -4.0 if e.big else -12.0)
 	add_shake(e.kill_shake)

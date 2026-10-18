@@ -471,6 +471,9 @@ func _update_bombs(delta: float) -> void:
 		b["p"] = (b["from"] as Vector2).lerp(b["to"], 1.0 - pow(1.0 - k, 2.0))
 		if float(b["t"]) <= 0.0:
 			aoe(b["p"], float(b["r"]), float(b["dmg"]), b["src"], true, null, 0, bool(b.get("ground", false)))
+			var mpl := Main.I.player
+			if String(b["src"]) == "бомбы" and is_instance_valid(mpl) and mpl.mastery and mpl.cls_id == "bomber":
+				spawn_fire(b["p"], float(b["r"]) * 0.6, 15.0, 3.0, PlaneClasses.MASTERY_FIRE_SRC, true) # «Выжженная земля»
 			if b.get("road", false): # «Ковровая дорожка»: крест суббоеприпасов и горящее пятно
 				for j in 4:
 					var to: Vector2 = b["p"] + Vector2.from_angle(j * PI / 2.0 + PI / 4.0) * 90.0

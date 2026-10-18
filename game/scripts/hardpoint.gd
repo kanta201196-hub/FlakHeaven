@@ -208,7 +208,8 @@ func update(delta: float, p: Player) -> void:
 	if weapon == "railgun":
 		_railgun(delta, p)
 		return
-	cd -= delta
+	# мастерство «Охотник»: на хвосте у врага ракеты В-В перезаряжаются вдвое быстрее
+	cd -= delta * (2.0 if weapon == "aam" and p.mastery and p.cls_id == "fighter" and p.on_tail() else 1.0)
 	if cd > 0.0:
 		return
 	var manual := uses_trigger() and trigger == "button"
