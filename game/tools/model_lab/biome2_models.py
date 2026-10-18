@@ -1034,6 +1034,237 @@ def a40_shrub():
     L.finish(o, scenery('a40_shrub'), target=900, maxtex=512, fit='xy')
 
 
+# ================= Боссы =================
+# ---------------- Б-1 летающая лодка «Альбатрос» (45 м): четыре мотора на крыле, турели во все стороны ----------------
+def e_albatross():
+    L.reset()
+    o = L.load(src('B-1_flying_boat.glb'))
+    L.place(o, bow='-x', length=45)
+    # внутренности (ящики, патроны), два винта над корпусом, тросы-расчалки — убрать
+    o = L.drop(o, names=('Cube.016_box_mat*', 'Cube.016_ammo*', 'Cube.019*', 'Cube.020*', 'Icosphere*', 'Cube.015*', 'Cube.014*'))
+    o = L.kill_parts(o, lambda mn, mx, n: sorted(mx - mn)[1] < 0.35)
+    # оставшиеся расчалки от хвоста к крылу: всё между крылом и оперением вне корпуса и балок
+    o = L.kill_faces(o, lambda c, n: -19.5 < c.x < 0.3 and abs(c.y) > 3.2 and not (9.3 < abs(c.y) < 11.3))
+    L.matte(o, 0.7)
+    for m in L.mats(o):
+        t = L.tex_of(m)
+        if t:
+            t.scale(2048, 2048)
+            L.regrade(t, (0.60, 0.62, 0.64), keep=0.25, lo=0.75, hi=1.15)
+    grey = L.flat('fh_alb_grey', (0.52, 0.54, 0.57), 0.65)
+    dark = L.flat('fh_alb_dark', (0.12, 0.13, 0.15), 0.4)
+    red = L.flat('fh_red', RED, 0.6)
+    sup = L.flat('fh_super', SUPER, 0.7)
+    for y in (-16.0, -8.0, 8.0, 16.0):   # мотогондолы на передней кромке крыла
+        o += [L.cyl((6.5, y, 9.4), 1.15, 9.0, grey, 'nacelle', seg=14, r2=0.85, axis='X'),
+              L.cyl((11.3, y, 9.4), 0.6, 0.9, red, 'spinner', seg=10, axis='X', r2=0.08),
+              L.cyl((11.0, y, 9.4), 3.0, 0.08, dark, 'prop_disc', seg=18, axis='X')]
+    # турели: носовая, две на спине, хвостовая между балками
+    o += gun_mount(18.5, 0, 5.6, 1.1, sup, red, barrels=2, blen=2.4, name='nose_turret')
+    o += gun_mount(13.0, 0, 6.6, 1.2, sup, red, barrels=2, blen=2.6, name='dorsal_1', rz=math.radians(30))
+    o += gun_mount(-6.0, 0, 6.6, 1.2, sup, red, barrels=2, blen=2.6, name='dorsal_2', rz=math.radians(160))
+    o += gun_mount(-21.0, 0, 8.6, 1.0, sup, red, barrels=2, blen=2.2, name='tail_turret', rz=math.pi)
+    L.finish(o, battle('e_albatross'), target=15000, maxtex=2048, center=True)
+
+
+# ---------------- Б-3 «Левиафан» (250 м) и Б-5 его разрушаемые детали ----------------
+# Корпус — из модели авианесущего крейсера, силуэт сильно переделан: нос — без ракетных установок, вместо них две
+# площадки башен главного калибра на барбетах; мачта с куполами срезана — на рубке площадка радара; по бортам —
+# шесть площадок ЗСУ, в середине — две площадки ракетных шахт. Сами башни, шахты, ЗСУ и радар — отдельные модели
+# (их выбивают по одному), места установки — game/models/biome2/leviathan_sockets.json.
+LEV_LEN = 250.0
+LEV_DECK = 15.0          # палуба над водой, м
+LEV_SOCKETS = {}
+
+
+def e_leviathan():
+    import json
+    L.reset()
+    o = L.load(src('B-3_carrier.glb'))
+    L.place(o, bow='-y', length=LEV_LEN)
+    L.xform(o, Matrix.Translation((0, 13.0, -9.0)))   # ось корпуса — на y = 0 (палуба-спонсон слева), ватерлиния
+    # нос: всё выше палубы (пусковые, артустановки исходника); самолёты на корме; мачта с куполами
+    o = L.kill_faces(o, lambda c, n: c.x > 42 and c.z > LEV_DECK + 1.2)
+    o = L.kill_faces(o, lambda c, n: c.x < -70 and c.z > LEV_DECK + 0.8)
+    o = L.kill_faces(o, lambda c, n: c.z > 35.0)
+    L.matte(o, 0.8)
+    for m in L.mats(o):   # рыжая палуба → тёмно-серая, остальное — без цвета (номера и знаки тонут в сером)
+        t = L.tex_of(m)
+        if t:
+            _hue_map(t, [(lambda r, g, b: (r > g * 1.35) & (r > b * 1.6) & (r > 0.3), (0.29, 0.30, 0.32)),
+                         (lambda r, g, b: (b > r * 1.15) & (b > 0.25), (0.40, 0.42, 0.44))])
+            import numpy as np
+            a = L.pixels(t); l = a[..., 0] * 0.3 + a[..., 1] * 0.59 + a[..., 2] * 0.11
+            for c in range(3):
+                a[..., c] = a[..., c] * 0.35 + l * 0.65
+            L.put_pixels(t, a)
+    import numpy as np
+    P = np.array([tuple(v.co) for ob in o for v in ob.data.vertices])
+    def edge(x, side):   # край палубы на длине x (борт +1 / −1)
+        m = (abs(P[:, 0] - x) < 4) & (P[:, 2] > LEV_DECK - 2)
+        return float(P[m, 1].max() if side > 0 else P[m, 1].min())
+    hull_m = L.flat('fh_lev_hull', HULL, 0.8)
+    deck_m = L.flat('fh_lev_deck', (0.28, 0.29, 0.31), 0.85)
+    red = L.flat('fh_red', RED, 0.6)
+    dark = L.flat('fh_lev_pad', (0.16, 0.16, 0.17), 0.7)
+    sup = L.flat('fh_super', SUPER, 0.7)
+    sockets = []
+
+    def pad(kind, x, y, z, r, rz=0.0):
+        o.extend([L.cyl((x, y, z + 0.15), r, 0.3, dark, kind + '_pad', seg=20), L.ring((x, y, z + 0.3), r + 0.6, r, 0.5, red, kind + '_ring', seg=20)])
+        sockets.append({'kind': kind, 'm': [round(x, 2), round(y, 2), round(z + 0.3, 2)], 'yaw_deg': round(math.degrees(rz), 1)})
+
+    # нос: бронированный бак-надстройка, два барбета главного калибра (второй выше — стреляет через первый)
+    o += [L.hull([(42, -11.5, LEV_DECK), (112, -7.0, LEV_DECK), (42, 11.5, LEV_DECK), (112, 7.0, LEV_DECK),
+                  (46, -10.5, LEV_DECK + 3.0), (106, -6.0, LEV_DECK + 3.0), (46, 10.5, LEV_DECK + 3.0), (106, 6.0, LEV_DECK + 3.0)], hull_m, 'forecastle'),
+          L.cyl((74, 0, LEV_DECK + 4.5), 8.5, 3.0, hull_m, 'barbette_2', seg=24)]
+    pad('main_turret', 96, 0, LEV_DECK + 3.0, 7.5)
+    pad('main_turret', 74, 0, LEV_DECK + 6.0, 7.5)
+    # шахты ракет — за барбетами, по обе стороны рубки ракетного погреба
+    o += [L.box((52, 0, LEV_DECK + 4.0), (12, 6, 2.0), sup, 'magazine')]
+    pad('launcher', 52, -8.5, LEV_DECK + 3.0, 4.6)
+    pad('launcher', 52, 8.5, LEV_DECK + 3.0, 4.6)
+    # радар — на срезанной рубке
+    isl = (abs(P[:, 0] - 5) < 25) & (P[:, 1] < 0) & (P[:, 2] > LEV_DECK + 5)
+    ix, iy, iz = float(P[isl, 0].mean()), float(P[isl, 1].mean()), float(P[isl, 2].max())
+    pad('radar', ix, iy, iz, 3.2)
+    # ЗСУ по бортам: на спонсонах у края палубы
+    for x in (-95.0, -40.0, 28.0):
+        for sd in (1, -1):
+            y = edge(x, sd) - sd * 3.5
+            o.append(L.box((x, y + sd * 1.0, LEV_DECK - 0.3), (8, 7, 1.2), hull_m, 'sponson'))
+            pad('zsu', x, y, LEV_DECK + 0.3, 2.6, rz=math.radians(90 * sd))
+    # своё по силуэту: вторая дымовая труба-«пилон» у кормы рубки и красные полосы на кромке полётной палубы
+    o += [L.box((-30, iy, LEV_DECK + 7), (10, 6, 14), sup, 'funnel_block'),
+          L.box((-30, iy, LEV_DECK + 14.2), (10.4, 6.4, 0.6), red, 'funnel_cap')]
+    for x in (-118, -60, -2):
+        o.append(L.box((x, edge(x, 1) - 0.4, LEV_DECK + 0.95), (10, 0.6, 0.12), red, 'deck_edge'))
+    L.finish(o, battle('e_leviathan'), target=25000, maxtex=2048)
+    k = 1.0 / LEV_LEN   # нормированные координаты glTF: x вперёд, y вверх, z = −y Blender
+    for sk in sockets:
+        x, y, z = sk['m']
+        sk['norm'] = [round(x * k, 4), round(z * k, 4), round(-y * k, 4)]
+    with open(scenery('leviathan_sockets').replace('.glb', '.json'), 'w') as f:
+        json.dump({'model': 'res://models/battle/fh_battle_e_leviathan.glb', 'length_m': LEV_LEN,
+                   'note': 'm — метры в модели (x вперёд, y влево, z вверх от воды); norm — в единицах модели glTF (длина 1): x, y вверх, z',
+                   'sockets': sockets}, f, ensure_ascii=False, indent=1)
+    print('SOCKETS', len(sockets))
+
+
+def _broken(o, seed):
+    """Разбитый вариант детали: обгоревший, часть кусков снесена, стволы опущены."""
+    import random
+    rng = random.Random(seed)
+    burnt = L.flat('fh_burnt', (0.13, 0.12, 0.11), 0.95)
+    out = []
+    for ob in o:
+        if ob.name.startswith('keep') or rng.random() > 0.3 or len(out) < 2:
+            if 'gun' in ob.name or 'barrel' in ob.name:
+                mn, mx = L.bounds([ob])
+                ob.data.transform(Matrix.Translation((mn.x, 0, mn.z)) @ Matrix.Rotation(math.radians(rng.uniform(8, 25)), 4, 'Y')
+                                  @ Matrix.Translation((-mn.x, 0, -mn.z)))
+            L.assign(ob, burnt) if rng.random() < 0.6 else None
+            out.append(ob)
+        else:
+            bpy.data.objects.remove(ob)
+    for m in L.mats(out):
+        if m.use_nodes:
+            b = L.bsdf(m)
+            c = b.inputs['Base Color'].default_value
+            b.inputs['Base Color'].default_value = (c[0] * 0.35, c[1] * 0.33, c[2] * 0.3, 1)
+            t = L.tex_of(m)
+            if t:
+                import numpy as np
+                a = L.pixels(t); a[..., :3] *= 0.35; L.put_pixels(t, a)
+    out.append(L.box((0, 0, 0.2), (1.0, 1.0, 0.1), burnt, 'scorch'))
+    return out
+
+
+def _lev_turret(broken=False):
+    L.reset()
+    o = L.load(src('T-1_turret_big.glb'))
+    L.place(o, bow='-x', length=26)   # башня главного калибра: Ø ≈ 15 м, стволы ≈ 11 м, стволы — вперёд (+X)
+    L.matte(o, 0.75)
+    for m in L.mats(o):
+        t = L.tex_of(m)
+        if t:
+            t.scale(1024, 1024)
+            L.regrade(t, HULL, keep=0.04, lo=0.9, hi=1.05)   # серый, бортовой номер «67» стирается вместе с контрастом
+    for ob in o:
+        if ob.data.materials and ob.data.materials[0].name.startswith('Guns'):
+            ob.name = 'barrel'
+    mn, mx = L.bounds([ob for ob in o if ob.name != 'barrel'])
+    o.append(L.box((mn.x + 6.0, 0, mx.z + 0.1), (8.0, 8.5, 0.25), L.flat('fh_red', RED, 0.6), 'roof'))
+    # силуэт: дальномерные «уши» исходника заменены одним коробом сверху
+    o = L.drop(o, names=('polySurface44*',))
+    o.append(L.box((mn.x + 2.0, 0, mx.z + 0.9), (2.5, 3.0, 1.6), L.flat('fh_super', SUPER, 0.7), 'rangefinder'))
+    if broken:
+        o = _broken(o, 51)
+    L.finish(o, battle('e_lev_turret' + ('_broken' if broken else '')), target=5000, maxtex=1024)
+
+
+def _lev_launcher(broken=False):
+    L.reset()
+    sup = L.flat('fh_super', SUPER, 0.7); hull_m = L.flat('fh_hull', HULL, 0.8)
+    red = L.flat('fh_red', RED, 0.6); dark = L.flat('fh_lev_pad', (0.16, 0.16, 0.17), 0.7)
+    o = [L.box((0, 0, 1.2), (10, 8, 2.4), hull_m, 'keep_body'),
+         L.box((-0.5, 0, 2.5), (9.0, 7.0, 0.3), sup, 'deck')]
+    for ix in range(4):
+        for iy in range(2):
+            x, y = -3.6 + ix * 2.4, -1.6 + iy * 3.2
+            o += [L.box((x, y, 2.75), (2.0, 2.6, 0.25), dark, 'cell'),
+                  L.box((x - 0.5, y, 2.95), (0.9, 2.5, 0.12), red, 'hatch'), L.box((x + 0.5, y, 2.95), (0.9, 2.5, 0.12), red, 'hatch')]
+    o += [L.box((4.4, 0, 3.6), (1.2, 5.0, 2.0), sup, 'control')]
+    if broken:
+        o = _broken(o, 52)
+    L.finish(o, battle('e_lev_launcher' + ('_broken' if broken else '')), target=1500)
+
+
+def _lev_radar(broken=False):
+    L.reset()
+    sup = L.flat('fh_super', SUPER, 0.7); hull_m = L.flat('fh_hull', HULL, 0.8)
+    red = L.flat('fh_red', RED, 0.6)
+    ant = L.flat('fh_radar', (0.84, 0.85, 0.86), 0.5)
+    o = [L.cyl((0, 0, 1.5), 2.6, 3.0, hull_m, 'keep_base', seg=16),
+         L.cyl((0, 0, 4.0), 0.9, 2.0, sup, 'mast', seg=10),
+         L.box((0, 0, 6.6), (0.8, 9.0, 3.2), ant, 'antenna', rz=math.radians(15)),
+         L.box((-0.55, 0, 6.6), (0.3, 9.2, 3.4), sup, 'antenna_frame', rz=math.radians(15)),
+         L.sphere((1.8, -2.0, 3.6), 1.1, ant, 'dome', seg=12),
+         L.sphere((1.8, 2.0, 3.6), 1.1, ant, 'dome', seg=12),
+         L.cyl((0, 0, 8.6), 0.25, 0.6, red, 'beacon', seg=8)]
+    if broken:
+        o = _broken(o, 53)
+    L.finish(o, battle('e_lev_radar' + ('_broken' if broken else '')), target=1500, fit='xy')
+
+
+def _lev_zsu(broken=False):
+    L.reset()
+    sup = L.flat('fh_super', SUPER, 0.7); red = L.flat('fh_red', RED, 0.6)
+    o = gun_mount(0, 0, 0, 2.2, sup, red, barrels=2, blen=4.0, name='zsu')
+    o[0].name = 'keep_body'
+    o += [L.cyl((-1.6, 0, 2.4), 0.12, 1.4, sup, 'radar_post', seg=6),
+          L.cyl((-1.6, 0, 3.2), 0.9, 0.15, L.flat('fh_radar', (0.84, 0.85, 0.86), 0.5), 'radar_dish', seg=12, axis='X')]
+    if broken:
+        o = _broken(o, 54)
+    L.finish(o, battle('e_lev_zsu' + ('_broken' if broken else '')), target=1200)
+
+
+def e_lev_turret():
+    _lev_turret(); _lev_turret(True)
+
+
+def e_lev_launcher():
+    _lev_launcher(); _lev_launcher(True)
+
+
+def e_lev_radar():
+    _lev_radar(); _lev_radar(True)
+
+
+def e_lev_zsu():
+    _lev_zsu(); _lev_zsu(True)
+
+
 RECIPES = {f.__name__: f for f in [e_ship_escort, e_ship_tanker, e_ship_landing, a22_buoy_red, a23_buoy_green, e_ship_aa, e_ekranoplan, e_seaplane, e_ship_battery, e_drone_sea,
                                     a01_battery_gun, a02_bunker_coast, a03_radar_mast, a04_lighthouse, a20_bell_tower,
                                     a05_pier_a, a06_pier_b, a07_tetrapod, a08_warehouse_a, a09_warehouse_b, a10_crane, a11_tower_ruins,
@@ -1041,7 +1272,8 @@ RECIPES = {f.__name__: f for f in [e_ship_escort, e_ship_tanker, e_ship_landing,
                                     a18_house_7, a19_house_8, a21_terrace_wall,
                                     a24_boat_a, a25_boat_b, a26_wreck_a, a27_wreck_b, a28_wreck_plane_sea, a29_hedgehog,
                                     a30_boom_net, a31_cliff_a, a32_cliff_b, a33_rock, a34_olive_a, a35_olive_b, a36_pine_a,
-                                    a37_pine_b, a38_tree_leaf, a39_reed, a40_shrub]}
+                                    a37_pine_b, a38_tree_leaf, a39_reed, a40_shrub, e_albatross,
+                                    e_leviathan, e_lev_turret, e_lev_launcher, e_lev_radar, e_lev_zsu]}
 
 if __name__ == '__main__':
     names = [a for a in A if not a.startswith('--')]
