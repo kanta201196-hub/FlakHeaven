@@ -153,6 +153,8 @@ func _ready() -> void:
 	sm.set_shader_parameter("seed", float(randi() % 1000))
 	sm.set_shader_parameter("albedo_k", Tuning.g("ground_albedo"))
 	sm.set_shader_parameter("relief", true)
+	sm.set_shader_parameter("river_w", Terrain3D.D_RIVER)
+	sm.set_shader_parameter("river_guard", Terrain3D.RIVER_GUARD)   # M-35: охранная зона реки
 	_ground_mat = sm
 	terrain = Terrain3D.new()
 	add_child(terrain)
@@ -1540,6 +1542,9 @@ func _sync_crashes(m: Main, sd: float) -> void:
 				m.fx.ground.scorch(p2, 38.0, false)
 		light_flash(p2, 30.0)
 		_crashes.remove_at(i)
+		if _on_water(g3, 0.0):   # M-35: упал в реку — остов уходит под воду, на берегу его нет
+			_free_wreck({"n": root, "smoke": smoke})
+			continue
 		# остов: тёмный, приплюснутый, лежит по склону; дымит ещё несколько секунд
 		root.position = g3 + Vector3(0, 2.0, 0)
 		root.basis = (Basis(Vector3.UP, -float(c["hd"]) + randf_range(-0.4, 0.4)) * Basis(Vector3.RIGHT, randf_range(-0.15, 0.15))).scaled(Vector3(k * 0.9, k * 0.4, k * 0.9))
@@ -1560,6 +1565,13 @@ func _sync_crashes(m: Main, sd: float) -> void:
 		if float(w["t"]) <= 0.0:
 			_free_wreck(w)
 			_wrecks.remove_at(i)
+
+
+## M-35: пятно радиуса r с центром g на воде (русло + половина пятна). Копоть и воронки боя в воду не кладём;
+## на мокрый берег — можно: это следы боя на 25–75 с, а не постоянная текстура, и бомбёжка колонны
+## на прибрежной дороге без воронок у обочины выглядела бы пустой
+func _on_water(g: Vector3, r: float) -> bool:
+	return terrain != null and absf(terrain.river_field(g.x, g.z)) < Terrain3D.D_RIVER + r * 0.5
 
 
 func _free_wreck(w: Dictionary) -> void:
@@ -1862,6 +1874,8 @@ func _sync_scorch(m: Main) -> void:
 		var mk: Dictionary = marks[i]
 		if not mk.has("g3"):
 			mk["g3"] = ground_under(mk["p"])
+			if _on_water(mk["g3"], float(mk["r"]) * 1.6):   # M-35: копоть на воде не лежит
+				mk["life"] = 0.0
 		var r: float = mk["r"] * 1.6
 		var pos: Vector3 = mk["g3"] + Vector3(0, 0.8, 0)
 		mmx.set_instance_transform(i, Transform3D(Basis(Vector3.RIGHT, -PI / 2.0).scaled(Vector3(r, 1, r)), pos))
@@ -1973,6 +1987,8 @@ func _sync_craters(m: Main) -> void:
 			var za := xa.cross(n)
 			c["xf"] = Transform3D(Basis(xa * r, n, za * r), g + n * maxf(1.5, r * 0.12))   # над изгибом склона
 			c["rr"] = r
+			if _on_water(g, r):   # M-35: бомба в реке воронки не оставляет
+				c["life"] = 0.0
 		var xf: Transform3D = c["xf"]
 		var rr := float(c["rr"])
 		mmx.set_instance_transform(i, xf)
