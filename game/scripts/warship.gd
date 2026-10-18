@@ -54,6 +54,7 @@ func setup_ship(v: String, hp_total: float, near: Vector2) -> void:
 	position = anchor
 	_hdg = (_route.dir_at(_s) * _dir).angle()
 	heading = _hdg
+	Main.I.sfx.play("ship_horn")   # гудок на подходе (PR #211)
 
 
 func _exit_tree() -> void:
@@ -231,6 +232,7 @@ func aoe_dist(pos: Vector2) -> float:
 func _die() -> void:
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: warship %s sunk" % variant)
+	Main.I.sfx.play("ship_sink", 0.0, 0.85 if variant == "leviathan" else 1.0, global_position)
 	super()
 
 

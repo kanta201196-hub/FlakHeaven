@@ -42,6 +42,7 @@ func _ready() -> void:
 var _heli_test := false
 var _ekr_test := OS.get_cmdline_user_args().has("--ekr")
 var _ekr_cd := 0.0
+var _gull_cd := 6.0
 var _heli_cd := 8.0
 var _grid := {}
 const CELL := 90.0
@@ -217,6 +218,16 @@ func _process(delta: float) -> void:
 			Main.I.world.add_child(ek)
 			ek.apply_hp_mult(hp_mult() * hp_ramp(t) * pressure_k)
 			Main.I.show_banner("Экраноплан «Крачка» идёт по проливу!", 2.5)
+	# «Архипелаг»: чайки над берегом раз в 10–20 с (звуки PR #211)
+	if Biome.sea():
+		_gull_cd -= delta
+		if _gull_cd <= 0.0:
+			_gull_cd = randf_range(10.0, 20.0)
+			var tr := Render3D.I.terrain if Render3D.I != null else null
+			if tr != null:
+				var rf := absf(tr.river_field(p.global_position.x, p.global_position.y))
+				if rf > Terrain3D.SEA_W * 0.5 and rf < Terrain3D.SEA_W + 500.0:
+					Main.I.sfx.play("gulls")
 	_icpt_cd -= delta * mult
 	if _icpt_cd <= 0.0:
 		_icpt_cd = maxf(4.0, 11.0 - t * 0.02)

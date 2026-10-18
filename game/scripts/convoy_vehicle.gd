@@ -347,6 +347,8 @@ func _die() -> void:
 		Main.I.pickups.drop_repair(global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20)))
 	wreck = true
 	add_to_group("wrecks3d")
+	if Biome.sea():
+		Main.I.sfx.play("ship_sink", -4.0, randf_range(0.95, 1.1), global_position)
 	if convoy != null:
 		convoy.on_destroyed(self)
 
