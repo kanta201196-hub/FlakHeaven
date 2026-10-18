@@ -362,19 +362,32 @@ func _main(m: Main, size: Vector2) -> void:
 
 
 func _draw_flight(size: Vector2) -> void:
-	# звено на переднем плане: «Оса» в центре, «Грач» и «Кит» по бокам; лёгкое покачивание
-	var base := Vector2(size.x * 0.66, size.y * 0.66)
-	var items := [["fighter", 1, Vector2(0, 0), 230.0], ["attacker", 1, Vector2(-250, 150), 250.0], ["bomber", 2, Vector2(260, 170), 330.0]]
-	for it in items:
-		var t := PlaneArt.plane_tex(it[0], it[1])
-		if t == null:
+	# Тест 3.5-s5 (п. 1): звено — 3D-модели ангара в сцене (TitleFlight). Картинки — только на «Низком»
+	# качестве графики (или без 3D): повёрнуты по курсу звена, по которому плывёт камера, — летят носом вперёд
+	if TitleFlight.want_3d():
+		return
+	var h := TitleFlight.heading()
+	var fwd := Vector2.from_angle(h)
+	var right := fwd.orthogonal() * -1.0
+	var bank := clampf(TitleFlight.turn_rate() * TitleFlight.BANK_K, -0.35, 0.35)
+	var base := size * TitleFlight.ANCHOR
+	var L := size.y * TitleFlight.LEN_K
+	var t1 := PlaneArt.plane_tex("fighter", 1)
+	for f in TitleFlight.FLIGHT:
+		var lvl: int = Profile.plane_lvl(f[0])
+		var t := PlaneArt.plane_tex(f[0], lvl)
+		var tb := PlaneArt.plane_tex(f[0], 1)
+		if t == null or tb == null or t1 == null:
 			continue
-		var bob := Vector2(sin(_t * 0.9 + it[3]) * 6.0, cos(_t * 0.7 + it[3]) * 8.0)
-		var p: Vector2 = base + it[2] + bob
-		var k: float = float(it[3]) / t.get_width()
-		ctrl.draw_set_transform(p + Vector2(60, 90), -PI / 2.0 - 0.25, Vector2(k, k) * 0.9)
+		var w := TitleFlight.wobble(float(f[3]))
+		var off: Vector2 = f[1]
+		var p: Vector2 = base + fwd * (off.x + w.x) * L + right * (off.y + w.y) * L
+		var k: float = L * float(f[2]) / tb.get_width()
+		# крен на картинке — сужение по размаху
+		var sc := Vector2(k, k * cos(bank + w.z))
+		ctrl.draw_set_transform(p + Vector2(60, 90), h, sc * 0.9)
 		ctrl.draw_texture(t, -t.get_size() / 2.0, Color(0, 0, 0, 0.32))
-		ctrl.draw_set_transform(p, -PI / 2.0 - 0.25, Vector2(k, k))
+		ctrl.draw_set_transform(p, h, sc)
 		ctrl.draw_texture(t, -t.get_size() / 2.0)
 	ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 

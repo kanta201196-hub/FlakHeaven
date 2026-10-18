@@ -26,7 +26,7 @@ static func write(m: Main, outcome: String) -> void:
 	head += ";skill3;skill3_lvl;skill3_uses;tags;patches;evolutions;wingmen;intercepted;dealt_detail;taken_by"
 	head += ";skill2;course_log;syn_open;course_pts;crew_lvl;crew_xp_gain;parts_total;nodes;plane2;perks;wbranch;meta_k"
 	# 3.4: замеры для анализа правок по кросс-проверке (Telemetry); timeline — последняя колонка
-	head += ";log_ver;" + ";".join(PackedStringArray(Telemetry.COLS)) + ";timeline"
+	head += ";log_ver;" + ";".join(PackedStringArray(Telemetry.COLS)) + ";op;aces;timeline"
 	m.last_log_header = head
 	if exists:
 		f.seek_end()
@@ -58,12 +58,29 @@ static func write(m: Main, outcome: String) -> void:
 	m.tele.v["xp_continue"] = float(m.meta_award.get("xp_continue", 0))
 	row.append(Telemetry.LOG_VER)
 	row.append_array(m.tele.row(m))
+	# тест 3.5-s5: операция и сложность — без них прочность и урон врагов в логе не сравнить
+	row.append("%s/%s" % [Campaign.op()["id"], Campaign.diff()["title"]])
+	row.append(aces(m))
 	row.append(" | ".join(m.tele.timeline))
 	m.last_log_row = ";".join(row)
 	m.last_outcome = outcome
 	f.store_line(m.last_log_row)
 	f.close()
 	m.report.queue_run(m.last_log_header, m.last_log_row) # 3.5: строка вылета уходит в таблицу сама
+
+
+## Тест 3.5-s5 (п. 10): асы вылета — «вид@время появления hp=прочность со щитом k=доля урона по одиночной цели
+## жил=с (сбит) или жив=с, урон по оружию» (урон до щита и потолка, не больше остатка прочности)
+static func aces(m: Main) -> String:
+	var out := PackedStringArray()
+	for e: Dictionary in m.ace_log:
+		var life := float(e["life"])
+		var st := ("жил=%d" % int(life)) if life >= 0.0 else ("жив=%d" % int(m.run_time - float(e["t"])))
+		var dsum := 0.0
+		for v in (e["dmg"] as Dictionary).values():
+			dsum += float(v)
+		out.append("%s@%d hp=%d k=%.2f %s урон=%d: %s" % [e["v"], int(e["t"]), int(e["hp"]), float(e["k"]), st, int(dsum), kv(e["dmg"]).replace(" | ", ", ")])
+	return " || ".join(out)
 
 
 static func kv(d: Dictionary) -> String:

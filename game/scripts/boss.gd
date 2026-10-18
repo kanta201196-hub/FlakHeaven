@@ -46,6 +46,7 @@ var _run_shot := 0.0
 var _said_angry := false
 var _say_t := 0.0
 var _side := 1.0          # «Сквозняк»: с какой стороны заходит
+var log_entry := {}       # тест 3.5-s5 (п. 10): строка аса в Main.ace_log
 
 
 func setup(v: String, hp_total: float) -> void:
@@ -67,6 +68,8 @@ func setup(v: String, hp_total: float) -> void:
 	_born = Main.I.run_time
 	min_life = 26.0   # правка 3.5-s4 (было 16 — в логе «Кита» асы жили 10–47 с)
 	_side = _orbit
+	log_entry = {"v": v, "t": _born, "hp": hp_total * 1.35, "k": Main.I.spawner.last_single_k if Main.I.spawner != null else 0.0, "dmg": {}, "life": -1.0}
+	Main.I.ace_log.append(log_entry)
 
 
 func kind() -> String:
@@ -164,6 +167,7 @@ func _resist(delta: float, p: Player) -> void:
 
 
 func _die() -> void:
+	log_entry["life"] = Main.I.run_time - _born
 	say("down")
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: boss %s down in %.1f s (hp %.0f)" % [variant, Main.I.run_time - _born, max_hp])

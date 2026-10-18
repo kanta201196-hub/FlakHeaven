@@ -47,6 +47,7 @@ var _hit_fx := 0.0
 func setup_fortress(total: float) -> void:
 	setup("fortress", total * HULL_SHARE)
 	total_max = total
+	log_entry["hp"] = total
 	min_life = 0.0   # у «Крепости» свой предел — на весь бой (MIN_FIGHT)
 	shield = 0.0
 	shield_max = 0.0

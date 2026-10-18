@@ -69,6 +69,10 @@ func take_hit(dmg: float, source := "прочее") -> void:
 		dmg *= float(Main.I.player.mods.get("dmg_all", 1.0))
 		if is_ground:
 			dmg *= float(Main.I.player.mods.get("ground_dmg", 1.0)) # перк «Наводчик»
+	if is_boss and Main.I.spawner != null:
+		# тест 3.5-s5 (п. 10): урон по асу — мерило прочности следующих асов (Spawner.single_k)
+		var pool := hp + float(get("shield")) if is_boss else hp
+		Main.I.spawner.note_big(minf(dmg, pool), self, source)
 	dmg = absorb(dmg)
 	if min_life > 0.0:
 		dmg = _cap_dps(dmg)

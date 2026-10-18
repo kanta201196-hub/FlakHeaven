@@ -241,7 +241,7 @@ static func _available(p: Player) -> Array:
 		var s: Dictionary = SYNERGIES[id]
 		var ok := true
 		if s.has("w"):
-			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w)):
+			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w)):
 				continue
 			ok = _wlevel(p, s["w"]) > 0 or (free_group and not (s["w"] as Array).has("turret"))
 		if s.get("wingmen", false):
@@ -466,7 +466,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		if g.builtin or not g.is_empty():
 			continue
 		# U-06/U-08: на тяжёлый подвес — только экспериментальное оружие, открытое кампанией; на остальные — обычное
-		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL):
+		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL.filter(func(x): return PlaneClasses.allows(p.cls_id, x))):
 			if equipped.has(w) or banned.has("w:" + w):
 				continue
 			cands.append([1.4, {"id": "new_%s_%d" % [w, gi], "ban": "w:" + w, "kind": "weapon_new", "weapon": w, "group": gi, "cat": "Новое оружие",
@@ -475,7 +475,9 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		var g: Hardpoint = p.groups[gi]
 		if g.is_empty() or g.level >= Weapons.MAX_LEVEL or banned.has("up:%d" % gi):
 			continue
-		cands.append([3.0, {"id": "up_%d" % gi, "ban": "up:%d" % gi, "kind": "weapon_up", "group": gi, "cat": "Оружие",
+		# фишка 1 (Kanta 18.10): в первых трёх выборах улучшение оружия-особенности класса выпадает втрое чаще
+		var uw := 9.0 if p.picks < 3 and g.weapon == PlaneClasses.signature(p.cls_id) else 3.0
+		cands.append([uw, {"id": "up_%d" % gi, "ban": "up:%d" % gi, "kind": "weapon_up", "group": gi, "cat": "Оружие",
 			"title": "%s: улучшение" % Weapons.title(g.weapon)}])
 	for id in MODULES:
 		if banned.has(id):
@@ -602,6 +604,8 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			card["desc"] = "%s: ур. %d → %d\n%s" % [g2.name, g2.level, to, Weapons.DEFS[g2.weapon]["lvl"]]
 			if r > 0:
 				card["desc"] += "\nБонус редкости: +%s урона группы" % _pct(0.15 * (k - 1.0))
+			if g2.weapon == PlaneClasses.signature(p.cls_id):
+				card["desc"] += "\n★ Особенность класса: урон +20%"
 			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
 				card["desc"] += "\nМодернизация: ур. 5 + %s, с %d:%02d" % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":

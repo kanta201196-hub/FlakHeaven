@@ -24,6 +24,7 @@ const DATA := {
 			{"name": "Под фюзеляжем", "slots": 1, "weapon": ""},
 		],
 		"turrets": 0,
+		"weapons": ["aam", "rockets", "flares"], "signature": "aam",
 		"wingmen": 1,
 		"skill3": "combat_turn",
 		"color": Color(0.55, 0.85, 1.0),
@@ -38,6 +39,7 @@ const DATA := {
 			{"name": "Внешняя пара", "slots": 2, "weapon": ""},
 		],
 		"turrets": 1,
+		"weapons": ["aam", "rockets", "flares", "bombs", "turret"], "signature": "rockets",
 		"wingmen": 2,
 		"skill3": "armor_shield",
 		"color": Color(0.6, 0.95, 0.65),
@@ -53,6 +55,7 @@ const DATA := {
 			{"name": "Крылья (пара)", "slots": 2, "weapon": ""},
 		],
 		"turrets": 3,
+		"weapons": ["rockets", "flares", "bombs", "turret"], "signature": "bombs",
 		"wingmen": 2,
 		"skill3": "umbrella",
 		"color": Color(0.95, 0.85, 0.55),
@@ -142,6 +145,19 @@ const SKILL3 := {
 			"desc": "Раз в 20 секунд ведомые повторяют залп ракет и без навыка"},
 	},
 }
+
+
+## Правка 5 теста 3.5-s5 (Kanta): у каждого самолёта свой список оружия — в ангаре и в карточках боя.
+## Экспериментальное оружие тяжёлого подвеса пока общее. Особенность класса (★) — +20% урона одному оружию.
+const SIGNATURE_K := 1.2
+
+
+static func allows(cls_id: String, w: String) -> bool:
+	return Weapons.EXP.has(w) or (DATA[cls_id]["weapons"] as Array).has(w)
+
+
+static func signature(cls_id: String) -> String:
+	return String(DATA[cls_id].get("signature", ""))
 
 
 static func get_data(id: String) -> Dictionary:

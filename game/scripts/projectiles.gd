@@ -625,6 +625,8 @@ func _draw() -> void:
 		draw_arc(b["to"], float(b["r"]), 0.0, TAU, 40, Color(1.0, 0.7, 0.3, 0.12 + 0.3 * k), 2.0)
 		draw_circle(b["to"], float(b["r"]) * 0.35, Color(1.0, 0.55, 0.2, 0.06 + 0.1 * k))
 	for b in ebullets:
+		if Render3D.enabled:   # тест 3.5-s5 (п. 11): в 3D — светящиеся трассеры (render3d._sync_enemy_shots)
+			break
 		var ep: Vector2 = b["p"]
 		if b["big"]:
 			draw_circle(ep, 13.0, Color(1.0, 0.2, 0.5, 0.35))
@@ -641,6 +643,8 @@ func _draw() -> void:
 		var lost: bool = m["lost"]
 		_draw_smoke(m["trail"], m["p"], Color(0.55, 0.5, 0.5), 1.0)
 		var p: Vector2 = m["p"]
+		if Render3D.enabled:   # тест 3.5-s5 (п. 11): в 3D ракета — модель с факелом и ореолом
+			continue
 		if not lost:
 			draw_circle(p, 11.0, Color(1.0, 0.1, 0.05, 0.25)) # вражеская ракета — красный ореол
 		_draw_missile(p, m["v"], 24.0, Color(1.0, 0.45, 0.4) if not lost else Color(0.6, 0.5, 0.5))
