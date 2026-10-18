@@ -334,7 +334,9 @@ func _hg_crew(c: String, area: Rect2) -> void:
 		_text(Vector2(sx, yy + 18), "Слот %d [%s]%s" % [slot + 1, "E" if slot == 0 else "F", "" if open else " — экипаж ур. %d" % Profile.SLOT2_LVL], 16, Color.WHITE if open else Color(0.6, 0.62, 0.68))
 		yy += 26.0
 		for sk in PlaneClasses.CLASS_SKILLS[c]:
-			var r3 := Rect2(sx, yy, sw, 64)
+			# высота по описанию: две строки не наезжают на следующий навык
+			var sh3 := ui_font().get_multiline_string_size(String(PlaneClasses.SKILL3[sk]["short"]), HORIZONTAL_ALIGNMENT_LEFT, sw - 28.0, 13).y
+			var r3 := Rect2(sx, yy, sw, maxf(64.0, 30.0 + sh3))
 			var unlocked := Profile.skill_unlocked(c, sk)
 			var sel: bool = sks[slot] == sk
 			# правка 7: навык из другого слота сюда не ставится — два одинаковых навыка взять нельзя
@@ -352,7 +354,7 @@ func _hg_crew(c: String, area: Rect2) -> void:
 				Color(0.7, 1.0, 0.7) if sel else (Color(0.85, 0.88, 0.95) if unlocked and open and not busy else Color(0.55, 0.57, 0.62)))
 			# правка 6: что делает навык — строкой под названием
 			_para(Vector2(sx + 22, yy + 39), String(PlaneClasses.SKILL3[sk]["short"]), sw - 28.0, 13, Color(0.72, 0.76, 0.84) if open else Color(0.5, 0.52, 0.58))
-			yy += 68.0
+			yy += r3.size.y + 4.0
 		yy += 12.0
 	_text(Vector2(sx, yy + 10), "Слот 3 — экипаж ур. 12, в разработке", 14, Color(0.55, 0.57, 0.62))
 	_para(Vector2(sx, yy + 40), "Карточки «уровень навыка» улучшают навык слота 1.", sw, 13, Color(0.7, 0.72, 0.78))
