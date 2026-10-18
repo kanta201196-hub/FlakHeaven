@@ -1035,6 +1035,12 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				hull = cr.x
 				tilt = Vector2(cr.y, cr.z)
 				_convoy_dust(e as ConvoyVehicle, gp, hull, len_px)
+			elif e is Warship or e is Ekranoplan:
+				# «Архипелаг»: корабли-боссы и экраноплан — курс из маршрута, качка, пенный след
+				hull = e.heading
+				var wt := Time.get_ticks_msec() * 0.001 + float(e.get_instance_id() % 53)
+				tilt = Vector2(sin(wt * 0.6) * 0.012, sin(wt * 0.45 + 1.0) * 0.02) if e is Warship else Vector2.ZERO
+				_sea_wake(e, gp, hull, len_px)
 			elif ue.get("bm") != null:
 				hull = _ground_parts(ue, e, ang, delta)
 				var gt := e as GroundTarget
@@ -1171,6 +1177,12 @@ func _convoy_parts(u: Dictionary, v: ConvoyVehicle, len_px: float, delta: float)
 		if d.has("launcher"):
 			var ln := d["launcher"] as Node3D
 			ln.rotation.z = move_toward(ln.rotation.z, deg_to_rad(35.0) if v._lock > 0.0 else 0.0, delta * 1.5)
+	if Biome.sea():
+		# «Архипелаг»: корабль на воде — качка на волне (длинные корпуса качаются медленнее и меньше), крен на циркуляции
+		var t := Time.get_ticks_msec() * 0.001 + float(v.get_instance_id() % 97)
+		var k := clampf(120.0 / len_px, 0.3, 1.0)
+		var sea := Vector2(sin(t * 0.9 * k) * 0.02 * k, sin(t * 0.7 * k + 1.3) * 0.035 * k - clampf(dr.yaw_rate * dr.speed * 0.0006, -0.05, 0.05))
+		return Vector3(hull, sea.x, sea.y)
 	var sm := _drive_tilt(u, v.anchor, hull, dr, len_px, delta)
 	return Vector3(hull, sm.x, sm.y)
 
@@ -1209,9 +1221,24 @@ func _convoy_dust(v: ConvoyVehicle, gp: Vector3, hull: float, len_px: float) -> 
 		_dust[id] = d
 	d["seen"] = true
 	var ps := d["p"] as CPUParticles3D
-	var back := Vector2(gp.x, gp.z) - Vector2.from_angle(hull) * len_px * 0.5
-	ps.global_position = Vector3(back.x, gp.y + len_px * 0.04, back.y)
-	ps.emitting = v.drive.speed > 18.0
+	var back := Vector2(gp.x, gp.z) - Vector2.from_angle(hull) * len_px * (0.46 if Biome.sea() else 0.5)
+	ps.global_position = Vector3(back.x, gp.y + len_px * (0.005 if Biome.sea() else 0.04), back.y)
+	ps.emitting = v.drive.speed > (8.0 if Biome.sea() else 18.0)
+	d["t"] = 0.0
+
+
+## Пенный след корабля-босса и экраноплана (тот же след, что у судов конвоя, всегда на ходу)
+func _sea_wake(e: Enemy, gp: Vector3, hull: float, len_px: float) -> void:
+	var id := e.get_instance_id()
+	var d: Dictionary = _dust.get(id, {})
+	if d.is_empty():
+		d = {"p": _make_dust(len_px * (0.6 if e is Warship else 1.0)), "t": 0.0}
+		_dust[id] = d
+	d["seen"] = true
+	var ps := d["p"] as CPUParticles3D
+	var back := Vector2(gp.x, gp.z) - Vector2.from_angle(hull) * len_px * 0.46
+	ps.global_position = Vector3(back.x, gp.y + 1.0, back.y)
+	ps.emitting = true
 	d["t"] = 0.0
 
 
@@ -1263,10 +1290,26 @@ func _make_dust(len_px: float) -> CPUParticles3D:
 	var sc := Curve.new()
 	sc.add_point(Vector2(0, 0.5))
 	sc.add_point(Vector2(1, 2.2))
-	s.scale_amount_curve = sc
 	var gr := Gradient.new()
 	gr.offsets = PackedFloat32Array([0.0, 0.15, 1.0])
 	gr.colors = PackedColorArray([Color(0.92, 0.85, 0.72, 0.0), Color(0.9, 0.83, 0.7, 0.55), Color(0.84, 0.78, 0.68, 0.0)])   # светлее песка — видно сверху
+	if Biome.sea():
+		# «Архипелаг»: белый пенный след по воде — плоский, длинный, не поднимается; расходится в стороны «усами»
+		s.amount = [14, 24, 34, 44][clampi(Settings.gfx, 0, 3)]
+		s.lifetime = 3.2
+		s.spread = 180.0
+		s.flatness = 1.0
+		s.initial_velocity_min = 1.0
+		s.initial_velocity_max = 4.0
+		s.gravity = Vector3.ZERO
+		s.emission_sphere_radius = len_px * 0.05
+		s.scale_amount_min = len_px * 0.08
+		s.scale_amount_max = len_px * 0.14
+		sc = Curve.new()
+		sc.add_point(Vector2(0, 0.6))
+		sc.add_point(Vector2(1, 2.6))
+		gr.colors = PackedColorArray([Color(1, 1, 1, 0.0), Color(0.97, 0.99, 1.0, 0.7), Color(0.85, 0.93, 0.95, 0.0)])
+	s.scale_amount_curve = sc
 	s.color_ramp = gr
 	s.emitting = false
 	add_child(s)

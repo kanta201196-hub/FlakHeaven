@@ -169,6 +169,10 @@ func ui_click(action: String) -> void:
 		Campaign.select(int(action.substr(3)))
 	elif action.begins_with("biome:"):
 		HudCampaign.switch_biome(action.substr(6))
+	elif action.begins_with("menu_biome:"):   # заставка: район вылета — мир за меню пересобирается в новом биоме
+		HudCampaign.switch_biome(action.substr(11))
+		m.start_run()
+		m._set_state("menu")
 	elif action == "op_go":
 		m._set_state("class_select")
 	elif action == "menu_hangar" or action == "to_hangar":

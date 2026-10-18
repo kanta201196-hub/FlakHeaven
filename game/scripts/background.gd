@@ -104,7 +104,8 @@ func chunk_object(cx: int, cy: int) -> Dictionary:
 func _chunk_object_raw(cx: int, cy: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(Vector2i(cx, cy)) ^ 0x0b1e
-	if _names.is_empty() or rng.randf() > OBJ_CHANCE:
+	# «Архипелаг»: кишлаков, крепостей и оазисов нет — гавани, маяки и батареи ставит SeaProps по берегу
+	if _names.is_empty() or Biome.sea() or rng.randf() > OBJ_CHANCE:
 		return {}
 	var r := rng.randf() * _total_w
 	var name: String = _names[0]

@@ -24,6 +24,54 @@ const SPEC := {
 }
 const TEX := {"truck": "e_convoy_truck", "light": "e_convoy_pickup_tent", "scout": "e_convoy_scout",
 	"technical": "e_convoy_technical", "manpads": "e_convoy_manpads", "ifv": "e_convoy_ifv"}
+## «Архипелаг» (Biome.sea): морской конвой по фарватеру — те же роли, другие суда (docs/biome2/models-pipeline.md).
+## Длины ≈ 6 px на метр (÷ unit_scale 1,8): сухогруз 60 м, танкер 70 м, баржа 14 м, катер 16 м, катер ПВО «Скат» 30 м.
+## truck — сухогруз/танкер (главная цель), light — десантная баржа с грузом, scout/technical — катера
+## сопровождения, ifv — «Скат» (пушка и дымовая завеса), manpads — «Скат» с ЗРК. Прочность судов — «укрепления»
+const SEA_SPEC := {
+	"truck": {"len": 200.0, "hp": GroundTarget.HP_FORT, "r": 900.0, "pivot": 0.0, "acc": 9.0, "xp": 14, "parts": 14},
+	"light": {"len": 47.0, "hp": GroundTarget.HP_STD, "r": 160.0, "pivot": 0.0, "acc": 22.0, "xp": 5, "parts": 5},
+	"scout": {"len": 53.0, "hp": GroundTarget.HP_ARMOR, "r": 150.0, "pivot": 0.0, "acc": 40.0, "xp": 6, "parts": 6},
+	"technical": {"len": 53.0, "hp": GroundTarget.HP_ARMOR, "r": 150.0, "pivot": 0.0, "acc": 40.0, "xp": 6, "parts": 6},
+	"manpads": {"len": 100.0, "hp": GroundTarget.HP_ARMOR, "r": 300.0, "pivot": 0.0, "acc": 25.0, "xp": 9, "parts": 9},
+	"ifv": {"len": 100.0, "hp": GroundTarget.HP_ARMOR, "r": 300.0, "pivot": 0.0, "acc": 25.0, "xp": 10, "parts": 10},
+}
+const SEA_TEX := {"truck": "e_ship_cargo", "light": "e_ship_landing", "scout": "e_ship_escort",
+	"technical": "e_ship_escort", "manpads": "e_ship_aa", "ifv": "e_ship_aa"}
+const SEA_MARCH := 55.0      # суда медленнее машин, но длиннее: колонна проходит кадр за то же время
+const SEA_DASH := 80.0
+const SEA_GAP := 150.0
+const SEA_OFFROAD := 260.0   # катера уходят от колонны дальше
+
+
+static func spec(r: String) -> Dictionary:
+	return (SEA_SPEC if Biome.sea() else SPEC)[r]
+
+
+## Картинка роли; если модели судна ещё нет — сухогруз (тред «Модели Архипелага» готовит остальные)
+static func tex_of(r: String) -> String:
+	if not Biome.sea():
+		return TEX[r]
+	var t: String = SEA_TEX[r]
+	return t if ResourceLoader.exists("res://art/enemies/%s.png" % t) else "e_ship_cargo"
+
+
+static func march() -> float:
+	return SEA_MARCH if Biome.sea() else MARCH
+
+
+static func dash() -> float:
+	return SEA_DASH if Biome.sea() else DASH
+
+
+static func gap() -> float:
+	return SEA_GAP if Biome.sea() else GAP
+
+
+static func offroad() -> float:
+	return SEA_OFFROAD if Biome.sea() else OFFROAD
+
+
 const MARCH := 100.0         # пикс./с по дороге (правка 3.5-s4: было 70 — колонна была мишенью)
 const DASH := 145.0          # грузовики при тревоге (было 100)
 const GAP := 110.0           # просвет между машинами в марше, пикс. (было 30–45)
@@ -48,7 +96,7 @@ var _burn := 0.0
 func setup(r: String, c: Convoy, hp_v: float) -> void:
 	role = r
 	convoy = c
-	var sp: Dictionary = SPEC[r]
+	var sp: Dictionary = spec(r)
 	hp = hp_v
 	max_hp = hp_v
 	radius = maxf(float(sp["len"]) * 0.5, 9.0)   # A-08: машины меньше, попадание чуть щедрее картинки
@@ -67,14 +115,14 @@ func place(at_s: float) -> void:
 	s = at_s
 	var p := convoy.point_at(s)
 	var h := convoy.dir_at(s).angle()
-	var sp: Dictionary = SPEC[role]
+	var sp: Dictionary = spec(role)
 	drive = GroundDrive.new(p, h)
-	drive.max_speed = DASH * 1.15
+	drive.max_speed = dash() * 1.15
 	drive.turn_r = float(sp["r"])
 	drive.pivot = float(sp["pivot"])
 	drive.accel = float(sp["acc"]) * 1.6
 	drive.brake = float(sp["acc"]) * 3.2
-	drive.speed = MARCH * 0.6
+	drive.speed = march() * 0.6
 	_side = convoy.dry_side(_side)
 	anchor = p
 	heading = h
@@ -82,7 +130,7 @@ func place(at_s: float) -> void:
 
 
 func _half_len() -> float:
-	return float(SPEC[role]["len"]) * 0.5 * Tuning.g("unit_scale")
+	return float(spec(role)["len"]) * 0.5 * Tuning.g("unit_scale")
 
 
 ## Корпус для расталкивания (A-07): отрезок по курсу и радиус — капсула длиной с машину, шириной ~0,45 длины
@@ -123,6 +171,8 @@ func _blocker() -> ConvoyVehicle:
 
 
 func kind() -> String:
+	if Biome.sea():
+		return {"truck": "сухогруз", "light": "баржа", "scout": "катер", "technical": "катер", "manpads": "катер ПВО", "ifv": "катер ПВО"}[role]
 	return {"truck": "грузовик", "light": "грузовик", "scout": "броневик", "technical": "пикап",
 		"manpads": "ПЗРК", "ifv": "БМП"}[role]
 
@@ -173,22 +223,22 @@ func behave(delta: float) -> void:
 		return
 	var p := Main.I.player
 	var alarm := convoy.alarm
-	var want := MARCH
+	var want := march()
 	var goal_s := s + 45.0
 	var goal_lane := 0.0
 	if convoy.leaderless or (convoy.ended and not is_truck()):
 		# грузовиков нет (или время вышло) — охрана уходит по дороге к укрытию, не стреляет
-		want = DASH
+		want = dash()
 	elif alarm:
 		if is_truck():
-			want = DASH
+			want = dash()
 		elif role == "scout" or role == "technical":
 			# съехать с дороги вбок, держаться рядом с серединой колонны и бить с фланга
 			goal_s = convoy.middle_s() + (60.0 if role == "scout" else -40.0)
-			goal_lane = _side * OFFROAD
+			goal_lane = _side * offroad()
 			# съезжает по факту (а не по полосе-цели): иначе ждущая охрана стояла на дороге и запирала грузовики
 			var off_road := absf(convoy.lateral_of(anchor, s) - convoy.safe_lane(goal_lane)) > 30.0
-			want = DASH * 1.1 if off_road or s < goal_s - 80.0 else 40.0
+			want = dash() * 1.1 if off_road or s < goal_s - 80.0 else 40.0
 			if s > goal_s + 60.0 and not off_road:
 				want = 15.0
 			elif off_road:
@@ -198,14 +248,14 @@ func behave(delta: float) -> void:
 			goal_s = convoy.middle_s()
 			if p != null:
 				goal_lane = signf(convoy.lateral_of(p.global_position, s)) * 70.0
-			want = DASH if s < goal_s - 40.0 else 35.0
+			want = dash() if s < goal_s - 40.0 else 35.0
 		elif role == "manpads":
-			want = DASH * 0.9
+			want = dash() * 0.9
 	# дистанция до впереди идущей машины своей полосы (охрана, съехавшая вбок, грузовикам дорогу не держит)
 	var ahead := convoy.ahead_of(self)
 	if ahead != null and not (alarm and (role == "scout" or role == "technical")):
 		var gap := ahead.s - s
-		var need := _half_len() + ahead._half_len() + GAP * (0.6 if alarm else 1.0)
+		var need := _half_len() + ahead._half_len() + gap() * (0.6 if alarm else 1.0)
 		if gap < need * 0.6:
 			want = 0.0
 		elif gap < need * 1.3:
@@ -297,22 +347,26 @@ func _die() -> void:
 		Main.I.pickups.drop_repair(global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20)))
 	wreck = true
 	add_to_group("wrecks3d")
+	if Biome.sea():
+		Main.I.sfx.play("ship_sink", -4.0, randf_range(0.95, 1.1), global_position)
 	if convoy != null:
 		convoy.on_destroyed(self)
 
 
 func _draw() -> void:
-	var tex: String = TEX[role]
+	var tex: String = tex_of(role)
+	if role == "truck" and Biome.sea() and get_instance_id() % 2 == 1:
+		tex = "e_ship_tanker"   # «Архипелаг»: в караване и сухогрузы, и танкеры
 	if wreck:
 		# остов: тёмная картинка, языки огня первые секунды
-		if draw_enemy_sprite(tex, SPEC[role]["len"], Color(0.25, 0.22, 0.2), heading):
+		if draw_enemy_sprite(tex, spec(role)["len"], Color(0.25, 0.22, 0.2), heading):
 			pass
 		else:
 			draw_rect(Rect2(-14, -8, 28, 16), Color(0.15, 0.13, 0.12))
 		if _burn < 7.0 and not Render3D.enabled:
 			draw_circle(Vector2(sin(_burn * 9.0) * 2.0, -2.0), 6.0 + 2.0 * sin(_burn * 13.0), Color(1.0, 0.55, 0.15, 0.8))
 		return
-	if draw_enemy_sprite(tex, SPEC[role]["len"], Color.WHITE, heading):
+	if draw_enemy_sprite(tex, spec(role)["len"], Color.WHITE, heading):
 		if role == "manpads" and _lock > 0.0:
 			var pl := Main.I.player
 			if pl != null and pl.hp > 0.0:
@@ -325,6 +379,6 @@ func _draw() -> void:
 	# без картинки — простая фигура
 	var c := body_color(Color(0.62, 0.52, 0.36))
 	var xf := Transform2D(heading, Vector2.ZERO)
-	var l := float(SPEC[role]["len"]) * 0.5
+	var l := float(spec(role)["len"]) * 0.5
 	draw_colored_polygon(PackedVector2Array([xf * Vector2(-l, -l * 0.4), xf * Vector2(l, -l * 0.4), xf * Vector2(l, l * 0.4), xf * Vector2(-l, l * 0.4)]), c)
 	draw_hp_bar()

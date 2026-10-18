@@ -180,6 +180,12 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 ## sd_in — уже посчитанное stream_field(x, z, ctx) (кусок рельефа считает его сам; проход по оптимизации 3.5-s7)
 func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN) -> Vector3:
 	var a := absf(v)
+	if _sea and a > SEA_W:
+		# «Архипелаг»: берег поднимается в _land_k раз быстрее долины Нагорья — узкий пляж, сразу холмы
+		# с маквисом (острова не плоские «блины» песка шириной в дно долины)
+		# на равнинах (_plains, как «open» ниже) берег остаётся пологим: там пляжи, гавани и позиции ПВО
+		var op := smoothstep(-0.45, 0.25, _plains.get_noise_2d(x, z))
+		a = SEA_W + (a - SEA_W) * lerpf(1.0, _land_k, op)
 	# пойма и конусы выноса: вогнутый подъём к подножию
 	var fan := smoothstep(D_FLOOR, D_FAN, a)
 	var h := 0.1 * fan * fan
@@ -266,6 +272,8 @@ const GREEN_W := 520.0   # в единицах поля реки: вдали о�
 
 
 func green(x: float, z: float, v := NAN) -> float:
+	if _sea:
+		return 0.0   # «Архипелаг»: поливных полей вдоль берега нет (оливы и маквис — SeaProps)
 	if is_nan(v):
 		v = river_field(x, z)
 	var a := absf(v)
@@ -417,6 +425,8 @@ var _isl_thr := 0.38
 var _isl_k := 520.0
 var _isl := FastNoiseLite.new()
 var _relief_k := 1.0
+var _depth := 450.0
+var _land_k := 1.0
 
 
 func _coast(x: float, z: float, r: float) -> float:
@@ -429,7 +439,9 @@ func _coast(x: float, z: float, r: float) -> float:
 	var sg := 1.0 if r >= 0.0 else -1.0
 	if s >= 0.0:
 		return sg * (SEA_W + s)
-	return sg * SEA_W * clampf(1.0 + s / _strait, 0.0, 1.0)
+	# глубина — по расстоянию от берега (_depth px до полной), а не по доле пролива: у островов вдали от оси
+	# вода иначе вся была мелкой и белой от пены
+	return sg * SEA_W * clampf(1.0 + s / _depth, 0.0, 1.0)
 
 
 ## Глубина воды 0 (берег) … 1 (ось пролива) по полю берега; на суше < 0
@@ -440,7 +452,13 @@ static func sea_depth(v: float) -> float:
 ## Биом мира (Biome.cur()): включает поле берега «Архипелага»; кэш кусков сбрасывает clear()
 func set_biome() -> void:
 	_sea = Biome.sea()
+	if _sea:
+		# первое обращение к константам SeaProps — в главном потоке, до параллельной генерации клеток
+		SeaProps.comp_of(Vector2i.ZERO)
+		var _w: Vector2 = SeaProps.SIZE["s_gun"]
 	_relief_k = float(Biome.g("relief_k", 1.0))
+	_depth = float(Biome.g("depth_px", 450.0))
+	_land_k = float(Biome.g("land_k", 1.0))
 	_strait = float(Biome.g("strait", 820.0))
 	_isl_from = float(Biome.g("isl_from", 0.34))
 	_isl_thr = float(Biome.g("isl_thr", 0.38))
@@ -771,7 +789,7 @@ const SCENE_W := {"tank": 64.0, "truck": 60.0, "plane": 120.0, "sandbag": 48.0}
 
 
 func scenes(key: Vector2i) -> Array:
-	if _bg == null:
+	if _bg == null or _sea:   # сцены боёв Нагорья (засады у дороги, техника у кишлаков) — не у моря
 		return []
 	if _scenes.has(key):
 		return _scenes[key]

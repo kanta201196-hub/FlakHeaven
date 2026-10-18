@@ -13,6 +13,7 @@ const LIMIT := 70.0
 const SMOKE_TIME := 8.0
 const SMOKE_R := 170.0
 const SMOKE_CUT := 0.4        # под дымом машины получают на 40% меньше урона
+const FAIRWAY := 260.0         # «Архипелаг»: ось фарватера от оси пролива, пикс. (острова — дальше 340)
 const STEP := 30.0            # шаг точек маршрута, пикс.
 const CARGO := {"truck": 30.0, "light": 15.0}
 const RIVER_SAFE := Terrain3D.RIVER_GUARD + 12.0   # A-07: центр машины вне охранной зоны у реки (M-35, тред «3D-модели») на полкорпуса
@@ -39,6 +40,7 @@ var _smoke_used := false
 var on_road := false              # маршрут нашёлся по дороге (иначе — прямая по дну долины)
 var river_sign := 0.0             # +1: полоса со знаком «+» уходит от реки, −1 — наоборот; 0 — реку не учитываем
 var _tr: Terrain3D
+var _sea := Biome.sea()          # «Архипелаг»: колонна — караван кораблей по фарватеру
 var _t := 0.0
 var _heli_t := -1.0             # отсчёт до вызова вертолётов (−1 — не вызывали)
 var _dbg := OS.get_cmdline_user_args().has("--convoy") and OS.get_cmdline_user_args().has("--autotest")
@@ -60,15 +62,15 @@ func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> 
 	# отступы машин от головы колонны
 	var offs: Array[float] = [0.0]
 	for i in range(1, order.size()):
-		var a: Dictionary = ConvoyVehicle.SPEC[order[i]]
-		var b: Dictionary = ConvoyVehicle.SPEC[order[i - 1]]
-		offs.append(offs[i - 1] + (float(a["len"]) + float(b["len"])) * 0.5 * Tuning.g("unit_scale") + ConvoyVehicle.GAP)
+		var a: Dictionary = ConvoyVehicle.spec(order[i])
+		var b: Dictionary = ConvoyVehicle.spec(order[i - 1])
+		offs.append(offs[i - 1] + (float(a["len"]) + float(b["len"])) * 0.5 * Tuning.g("unit_scale") + ConvoyVehicle.gap())
 	# A-06: голова — у точки маршрута напротив игрока, но вся колонна должна стоять за краем экрана:
 	# отодвигаем её назад по маршруту, пока ни одна машина не видна, — дальше она въезжает в кадр сама
 	var head := _hidden_head(_s_of(_center_road), offs)
 	for i in order.size():
 		var r: String = order[i]
-		var sp: Dictionary = ConvoyVehicle.SPEC[r]
+		var sp: Dictionary = ConvoyVehicle.spec(r)
 		var v := ConvoyVehicle.new()
 		v.setup(r, self, GroundTarget.floor_hp(float(sp["hp"]), hp_k, dps))   # S6-02: мягкая нижняя граница
 		v.place(maxf(head - offs[i], 0.0))
@@ -111,7 +113,8 @@ func _build_route(center: Vector2, dir: Vector2) -> void:
 		var d := dir.normalized()
 		var side := Vector2(-d.y, d.x)
 		for o in [0.0, 500.0, -500.0, 1000.0, -1000.0, 1600.0, -1600.0]:
-			var c := _to_road(tr, tr.find_floor(center + side * float(o), 900.0))
+			var c0: Vector2 = _near_water(tr, center + side * float(o)) if _sea else tr.find_floor(center + side * float(o), 900.0)
+			var c := _to_road(tr, c0, 30 if _sea else 12)
 			if c == Vector2.INF:
 				continue
 			var fw := _march(tr, c, dir, 7000.0)
@@ -137,11 +140,19 @@ func _build_route(center: Vector2, dir: Vector2) -> void:
 	if _center_road == Vector2.INF:
 		_center_road = center
 	# с какой стороны дороги река: смещение «влево по ходу» уводит от реки или к ней
-	if on_road:
+	if on_road and not _sea:
 		var sc := _s_of(_center_road)
 		var c := point_at(sc)
 		var n := normal_at(sc)
 		river_sign = signf(tr.river_field(c.x + n.x * 20.0, c.y + n.y * 20.0) - tr.river_field(c.x - n.x * 20.0, c.y - n.y * 20.0))
+
+
+## «Архипелаг»: маршрут по фарватеру через center для кораблей-боссов (Warship). Узел вне дерева —
+## освобождает владелец (Warship._exit_tree)
+static func sea_route(center: Vector2, dir: Vector2) -> Convoy:
+	var cv := Convoy.new()
+	cv._build_route(center, dir)
+	return cv
 
 
 ## Где на маршруте ближайшая к p точка (по всему маршруту)
@@ -212,6 +223,8 @@ func dry_side(want: float) -> float:
 func keep_dry(p: Vector2) -> Vector2:
 	if _tr == null or not on_road:
 		return p
+	if _sea:
+		return _keep_wet(p)
 	for i in 3:
 		var f := _tr.river_field(p.x, p.y)
 		if f >= RIVER_SAFE:
@@ -223,23 +236,66 @@ func keep_dry(p: Vector2) -> Vector2:
 	return p
 
 
+## Поле маршрута: на суше — river_field (дорога вдоль берега реки), в «Архипелаге» — расстояние от оси пролива
+## без островов (_river_raw): фарватер идёт ровной линией по воде, острова к оси не подходят (Biome isl_from)
+func _rf(tr: Terrain3D, x: float, z: float) -> float:
+	return tr._river_raw(x, z) if _sea else tr.river_field(x, z)
+
+
+func _iso() -> float:
+	return FAIRWAY if _sea else Terrain3D.D_ROAD
+
+
+## «Архипелаг»: ближайшая к p точка пролива (не мелководье) — от неё Ньютоном на фарватер; над сушей
+## поле пролива далеко от воды пологое, и Ньютон из точки над островом не доходил (колонна шла прямой по суше)
+func _near_water(tr: Terrain3D, p: Vector2) -> Vector2:
+	for ring in range(0, 17):
+		var rr := 250.0 * ring
+		var n := maxi(1, ring * 8)
+		var best := Vector2.INF
+		for i in n:
+			var q := p + Vector2.from_angle(TAU * i / n) * rr
+			if absf(tr.river_field(q.x, q.y)) < Terrain3D.SEA_W * 0.6 and (best == Vector2.INF or absf(tr._river_raw(q.x, q.y)) < absf(tr._river_raw(best.x, best.y))):
+				best = q
+		if best != Vector2.INF:
+			return best
+	return p
+
+
+## «Архипелаг»: корабль, съехавший к берегу острова или пролива, возвращаем на воду (к оси пролива)
+func _keep_wet(p: Vector2) -> Vector2:
+	var lim := Terrain3D.SEA_W * 0.55   # глубже полосы прибоя
+	for i in 3:
+		var f := absf(_tr.river_field(p.x, p.y))
+		if f <= lim:
+			return p
+		var g := _rf_grad(_tr, p)
+		if g.length_squared() < 1e-8:
+			return p
+		var r := _tr._river_raw(p.x, p.y)
+		# на суше |river_field| − SEA_W — пикс. от берега; в воде — доля глубины, шаг 40 пикс.
+		var push := (f - Terrain3D.SEA_W) + 40.0 if f > Terrain3D.SEA_W else 40.0
+		p -= g.normalized() * signf(r) * push
+	return p
+
+
 func _rf_grad(tr: Terrain3D, p: Vector2) -> Vector2:
 	var e := 4.0
-	var f := tr.river_field(p.x, p.y)
-	return Vector2(tr.river_field(p.x + e, p.y) - f, tr.river_field(p.x, p.y + e) - f) / e
+	var f := _rf(tr, p.x, p.y)
+	return Vector2(_rf(tr, p.x + e, p.y) - f, _rf(tr, p.x, p.y + e) - f) / e
 
 
-## Ньютоном на линию river_field = +D_ROAD (дорога вдоль одного берега)
+## Ньютоном на линию поля маршрута = _iso() (дорога вдоль одного берега или фарватер)
 func _to_road(tr: Terrain3D, p: Vector2, iters := 12) -> Vector2:
 	for i in iters:
-		var f := tr.river_field(p.x, p.y) - Terrain3D.D_ROAD
+		var f := _rf(tr, p.x, p.y) - _iso()
 		if absf(f) < 1.5:
 			return p
 		var g := _rf_grad(tr, p)
 		if g.length_squared() < 1e-6:
 			return Vector2.INF
 		p -= g * clampf(f, -200.0, 200.0) / g.length_squared()
-	return p if absf(tr.river_field(p.x, p.y) - Terrain3D.D_ROAD) < 8.0 else Vector2.INF
+	return p if absf(_rf(tr, p.x, p.y) - _iso()) < 8.0 else Vector2.INF
 
 
 ## Идти вдоль дороги шагами STEP; точки от p (включительно)
@@ -405,7 +461,7 @@ func _raise_alarm() -> void:
 		print("AUTOTEST: convoy alarm")
 	if patrol:
 		return
-	Main.I.show_banner("Колонна обнаружила вас! Грузовики уходят к укрытию — %d с" % int(LIMIT), 3.0)
+	Main.I.show_banner(("Караван обнаружил вас! Суда уходят в гавань — %d с" if _sea else "Колонна обнаружила вас! Грузовики уходят к укрытию — %d с") % int(LIMIT), 3.0)
 	Main.I.sfx.play("aa_alert", -2.0, 0.8)
 
 
@@ -421,7 +477,7 @@ func _call_helis(p: Player) -> void:
 		var h := Helicopter.new()
 		sp._place(h, p, ang + (i - (n - 1) * 0.5) * 0.5, t)
 		h.heading = (p.global_position - h.position).angle()
-	Main.I.show_banner("Колонна вызвала прикрытие: вертолёт%s «Сарыч»" % ("ы" if n > 1 else ""), 2.5)
+	Main.I.show_banner("%s прикрытие: вертолёт%s «Сарыч»" % ["Караван вызвал" if _sea else "Колонна вызвала", "ы" if n > 1 else ""], 2.5)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: convoy helis %d at %.0f" % [n, t])
 
@@ -469,7 +525,7 @@ func _check_trucks() -> void:
 		Main.I.on_activity_success("convoy")
 	elif not failed and not done:
 		failed = true
-		Main.I.show_banner("Часть колонны ушла в укрытие — груз потерян", 3.0)
+		Main.I.show_banner("Часть каравана ушла в гавань — груз потерян" if _sea else "Часть колонны ушла в укрытие — груз потерян", 3.0)
 	_finish()
 
 
@@ -526,7 +582,7 @@ func _process(delta: float) -> void:
 			if timer <= 0.0:
 				failed = true
 				if not patrol:
-					Main.I.show_banner("Колонна ушла от удара — груз потерян", 3.0)
+					Main.I.show_banner("Караван ушёл от удара — груз потерян" if _sea else "Колонна ушла от удара — груз потерян", 3.0)
 				_finish()
 		if _heli_t > 0.0:
 			_heli_t -= delta
@@ -562,7 +618,7 @@ func _process(delta: float) -> void:
 			if is_instance_valid(v):
 				var c := v as ConvoyVehicle
 				row.append("%s:%d/%d%s" % [c.role.left(2), int(c.s), int(c.drive.speed), "x" if c.wreck else ""])
-				if _tr != null and on_road and _tr.river_field(c.anchor.x, c.anchor.y) < Terrain3D.D_RIVER + 6.0:
+				if _tr != null and on_road and not _sea and _tr.river_field(c.anchor.x, c.anchor.y) < Terrain3D.D_RIVER + 6.0:
 					print("AUTOTEST: convoy WET ", c.role)
 		print("AUTOTEST: convoy t%d alarm=%s %s" % [int(_t), alarm, " ".join(row)])
 	queue_redraw()

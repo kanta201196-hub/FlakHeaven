@@ -447,6 +447,30 @@ func _make_points() -> Array:
 			pts.append({"name": "clouds_%d_under" % i, "pos": cp, "wait": 1.0})
 		if not cl.is_empty():
 			pts.append({"name": "clouds_wide", "pos": (cl[0][0] as Vector2) + Vector2(500, 300), "zoom": 0.6, "wait": 1.0})
+	if OS.get_cmdline_user_args().has("--seabench") and ter != null and ter.props != null:
+		# «Архипелаг» (-- --visual --seabench --op=5): композиции берега крупно и общим планом, по 2 каждого типа
+		pts = []
+		var mark := {"harbor": "s_pier_a", "cape": "s_lighthouse", "battery": "s_gun", "beach": "s_hedgehog", "reef": "s_wreck_a"}
+		var seen := {}
+		for r in range(0, 9):
+			for cx in range(-r, r + 1):
+				for cy in range(-r, r + 1):
+					if maxi(absi(cx), absi(cy)) != r:
+						continue
+					var key := Vector2i(cx, cy)
+					var c := SeaProps.comp_of(key)
+					if c == "" or int(seen.get(c, 0)) >= 2:
+						continue
+					var put := ter.props.plan(key, ter._ctx(key))
+					var arr: Array = put.get(mark[c], put.get("s_wreck_b", [])) if c == "reef" else put.get(mark[c], [])
+					if arr.is_empty():
+						continue
+					var at := Vector2((arr[0] as Transform3D).origin.x, (arr[0] as Transform3D).origin.z)
+					var n := int(seen.get(c, 0))
+					seen[c] = n + 1
+					pts.append({"name": "sea_%s_%d" % [c, n], "pos": at, "zoom": 1.6, "wait": 1.2})
+					pts.append({"name": "sea_%s_%d_wide" % [c, n], "pos": at, "zoom": 0.7, "wait": 1.2})
+		print("VISUAL sea compositions ", seen)
 	if OS.get_cmdline_user_args().has("--terrainbench") and ter != null:
 		# тест 3.5-s6 (аудит визуала): рельеф в разных местах биома крупно / средне / далеко
 		pts = []

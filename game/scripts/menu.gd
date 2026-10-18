@@ -363,7 +363,32 @@ func _main(m: Main, size: Vector2) -> void:
 	_menu_button(Rect2(x0, y + 336, 272, 62), "ЛОГИ", "menu_logs")
 	_menu_button(Rect2(x0 + 288, y + 336, 272, 62), "ВЫХОД", "menu_quit")
 	_records_panel(Rect2(size.x - 64 - 520, 150, 520, 520))
+	_biome_pick(Rect2(size.x - 64 - 520, 700, 520, 150))
 	_txt(Vector2(64, size.y - 32), "ENTER — вылет    ESC — назад    F2 — схема управления", 18, C_DIM)
+
+
+## Тред «Второй биом»: район вылета на заставке. Выбор переключает операцию кампании на первую открытую
+## в биоме и пересобирает мир за меню — видно, куда летим (вода и острова «Архипелага» или ущелья Нагорья)
+const BIOME_CARDS := [["highland", "НАГОРЬЕ", "ущелья, кишлаки, колонны"], ["archipelago", "АРХИПЕЛАГ", "пролив, острова, флот"]]
+
+
+func _biome_pick(r: Rect2) -> void:
+	_txt(Vector2(r.position.x, r.position.y + 18), "РАЙОН ВЫЛЕТА", 18, C_DIM, bold())
+	var cur := Campaign.biome_of(Campaign.index())
+	var w := (r.size.x - 16.0) * 0.5
+	for i in BIOME_CARDS.size():
+		var c: Array = BIOME_CARDS[i]
+		var b := Rect2(r.position.x + i * (w + 16.0), r.position.y + 34, w, r.size.y - 34)
+		var on: bool = c[0] == cur
+		var hover := b.has_point(ctrl.get_local_mouse_position())
+		_panel(b, C_AMBER if on else (C_TEXT if hover else C_LINE), Color(0.1, 0.11, 0.1, 0.85 if on else 0.7))
+		_txt(Vector2(b.position.x + 22, b.position.y + 46), c[1], 26, C_AMBER if on else C_TEXT, bold())
+		_txt(Vector2(b.position.x + 22, b.position.y + 76), c[2], 16, C_DIM)
+		var ops := Campaign.ops_of(c[0])
+		var open := ops.filter(func(k: int) -> bool: return Campaign.is_open(k)).size()
+		_txt(Vector2(b.position.x + 22, b.position.y + 102), TranslationServer.translate("операций открыто: %d из %d") % [open, ops.size()], 15, C_DIM)
+		if not on:
+			_buttons.append([b, "menu_biome:" + String(c[0])])
 
 
 func _records_panel(r: Rect2) -> void:
