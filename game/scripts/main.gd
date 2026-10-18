@@ -35,6 +35,7 @@ var hangar_w := "aam"
 var hangar_back := "menu"        # анимация итогов для ангара   # 3.1: справочник связок — откуда открыт   # 3.1: выбранный навык класса: класс → id
 
 var run_time := 0.0
+var ace_log: Array = []   # тест 3.5-s5 (п. 10): асы вылета — прочность, урон по оружию, время жизни (колонка aces лога)
 var kills := 0
 var restarts := 0
 var level := 1
@@ -214,6 +215,7 @@ func start_run() -> void:
 	parts_kept = 0
 	is_dead = false
 	stats = {"taken": {}, "taken_by": {}, "dealt": {}, "kills_by": {}}
+	ace_log = []
 	counters = {}
 	shots = 0
 	hits = 0

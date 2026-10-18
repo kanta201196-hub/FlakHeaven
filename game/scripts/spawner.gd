@@ -66,6 +66,55 @@ func dealt_total() -> float:
 	return sum
 
 
+## Тест 3.5-s5 (п. 10, лог «Грача 2»): сколько урона игрок на деле кладёт в аса.
+## Средний урон за минуту «Грач» набирает по толпе (залпы НАР, ведомые, связки), а по одному вёрткому асу бьёт
+## в разы слабее — прочность аса от среднего урона выходила ему не по силам. Каждую секунду, пока ас рядом,
+## пишем [урон по асу за секунду, средний урон в секунду]; их отношение — доля урона, которая достаётся асу
+## (у «Осы» с самонаводящимися ракетами ~1,6, у «Грача» меньше). Первый ас — по-старому (×1,6), следующие —
+## по тому, как шёл бой с прошлыми.
+const SINGLE_K_DEF := 1.6     # данных мало — как было (подобрано по логу «Осы»)
+const SINGLE_K_MIN := 0.35
+const SINGLE_K_SECS := 15     # сколько секунд рядом с асом нужно для оценки
+var _big_dmg := 0.0
+var _big_hist: Array = []
+var last_single_k := SINGLE_K_DEF
+
+
+func note_big(d: float, e: Enemy, source: String) -> void:
+	if not e is Fortress:   # у «Крепости» фазы с неуязвимым корпусом и свой предел боя — не мерило
+		_big_dmg += d
+	if e is Boss:
+		var dm: Dictionary = (e as Boss).log_entry.get("dmg", {})
+		dm[source] = float(dm.get(source, 0.0)) + d
+
+
+## Доля среднего урона, которая ложится в аса (за последние 4 минуты боя с асами)
+func single_k() -> float:
+	var s_d := 0.0
+	var s_r := 0.0
+	for e in _big_hist:
+		s_d += float(e[0])
+		s_r += float(e[1])
+	if _big_hist.size() < SINGLE_K_SECS or s_r <= 0.0:
+		return SINGLE_K_DEF
+	return clampf(s_d / s_r, SINGLE_K_MIN, SINGLE_K_DEF)
+
+
+func _big_tick(p: Player) -> void:
+	var near := false
+	for n in get_tree().get_nodes_in_group("enemies"):
+		var e := n as Enemy
+		if e != null and e.is_boss and not e is Fortress and e.hp > 0.0 and e.global_position.distance_squared_to(p.global_position) < 900.0 * 900.0:
+			near = true
+			break
+	var r := recent_dps()
+	if near and r > 0.0:
+		_big_hist.append([_big_dmg, r])
+		if _big_hist.size() > 240:
+			_big_hist.pop_front()
+	_big_dmg = 0.0
+
+
 ## Средний урон игрока в секунду за последние 60 с
 func recent_dps() -> float:
 	var n := _dealt_hist.size()
@@ -86,6 +135,7 @@ func _process(delta: float) -> void:
 	if _dealt_tick >= 1.0 or _dealt_hist.is_empty():
 		_dealt_tick = 0.0
 		_dealt_hist.append(dealt_total())
+		_big_tick(p)
 		if _dealt_hist.size() > 120:
 			_dealt_hist = _dealt_hist.slice(_dealt_hist.size() - 61)
 	_pressure(t, delta)
@@ -219,10 +269,12 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	# 3.5: не меньше, чем урон игрока за BOSS_TTK секунд (щит +35% сверху — поэтому делим)
 	var ttk: float = BOSS_TTK[mini(wave - 1, BOSS_TTK.size() - 1)]
 	# U-05: на сложных операциях асы держатся дольше (половина множителя прочности — иначе бой с асом затягивается)
-	# правка 3.5-s4: ×1,3 — по асу бьёт всё сразу, урон по нему выше среднего за минуту (лог «Осы»: 10–33 с вместо 25–35)
-	var hp_dps := recent_dps() * ttk * 1.6 / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
+	# правка 3.5-s4: ×1,6 — по асу бьёт всё сразу (лог «Осы»: 10–33 с вместо 25–35);
+	# тест 3.5-s5 (п. 10): множитель — доля урона, что реально ложится в одиночную цель (single_k), у каждого свой
+	last_single_k = single_k()
+	var hp_dps := recent_dps() * ttk * last_single_k / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
 	if OS.get_cmdline_user_args().has("--autotest"):
-		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f)" % [wave, hp, hp_dps, recent_dps()])
+		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f из %d с)" % [wave, hp, hp_dps, recent_dps(), last_single_k, _big_hist.size()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
 		hp = maxf(hp, hp_dps)
 	# 3.5 (разбор каталога 16.10): третья волна — босс «Крепость» вместо пары асов
