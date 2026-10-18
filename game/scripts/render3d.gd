@@ -247,6 +247,10 @@ func _setup_combat_layer() -> void:
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	# С-2 (аудит 3.5-s6): 2D рисует в прозрачный вьюпорт цвет, уже умноженный на альфу (конус заправки
+	# 0.4·0.16 → 16/255 при альфе 41). Обычное смешение умножало второй раз — полупрозрачное темнело:
+	# зелёный конус за заправщиком лежал вокруг игрока тёмной трапецией, края пуль и вспышек — с серой каймой
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_PREMULT_ALPHA
 	m.no_depth_test = true      # как раньше 2D-слой: пули и вспышки поверх самолётов и облаков
 	m.render_priority = 100
 	m.albedo_texture = _combat_vp.get_texture()
