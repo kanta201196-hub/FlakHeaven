@@ -69,8 +69,9 @@ func take_hit(dmg: float, source := "прочее") -> void:
 		dmg *= float(Main.I.player.mods.get("dmg_all", 1.0))
 		if is_ground:
 			dmg *= float(Main.I.player.mods.get("ground_dmg", 1.0)) # перк «Наводчик»
-	if is_boss and Main.I.spawner != null:
-		# тест 3.5-s5 (п. 10): урон по асу — мерило прочности следующих асов (Spawner.single_k)
+	if (is_boss or self is RivalAce) and Main.I.spawner != null:
+		# тест 3.5-s5 (п. 10): урон по асу — мерило прочности следующих асов (Spawner.single_k);
+		# второй список, п. 5: и по асу-сопернику в дуэли — тогда и первый ас по силам классу
 		var pool := hp + float(get("shield")) if is_boss else hp
 		Main.I.spawner.note_big(minf(dmg, pool), self, source)
 	dmg = absorb(dmg)
