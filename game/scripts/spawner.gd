@@ -33,7 +33,7 @@ func _ready() -> void:
 	if OS.get_cmdline_user_args().has("--convoy"):
 		activity_i = 3      # проверка: сразу конвой
 		next_activity = 10.0
-	_heli_test = OS.get_cmdline_user_args().has("--heli")   # проверка: вертолёты «Сарыч» (место в игре не решено)
+	_heli_test = OS.get_cmdline_user_args().has("--heli")   # проверка: вертолёты «Сарыч» без конвоя (в игре — прикрытие конвоя, M-41)
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--fuel="): # проверка: начать с неполным баком (доля 0–1)
 			fuel.left = fuel.capacity * clampf(float(String(a).substr(7)), 0.0, 1.0)
