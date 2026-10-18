@@ -10,6 +10,8 @@ extends Enemy
 ## 3.5: сам уходит рывком с бочкой из-под очередей и отстреливает ловушки от ракет — бить нужно с хвоста.
 ## Сбит — гарантированный выбор из редких карточек. Через 90 с ас уходит сам.
 
+## Тест 3.5-s7: ас не крутится на месте — радиус разворота не меньше этого, пикс
+const MIN_R := 130.0
 const CALLSIGNS := ["Барон", "Шершень", "Граф", "Сокол-7", "Профессор", "Тётя Шура"]
 const LINES := {
 	"spawn": ["Ну здравствуй, новичок. Пристегнись.", "Я тебя давно ищу. Потанцуем?", "О, свежий самолёт. Будет что рассказать в столовой."],
@@ -115,7 +117,7 @@ func behave(delta: float) -> void:
 		"chase":
 			var slot := p.global_position - pf * 260.0
 			var want := slot - global_position
-			heading = rotate_toward(heading, want.angle(), deg_to_rad(Tuning.g("turn_rate") * 0.85) * delta)
+			heading = rotate_toward(heading, want.angle(), minf(deg_to_rad(Tuning.g("turn_rate") * 0.85), _speed / MIN_R) * delta)
 			# подстраивает скорость под игрока, но не ниже минимума
 			var target_spd := p.velocity.length() + clampf(want.length() - 60.0, -200.0, 400.0) * 0.8
 			_speed = move_toward(_speed, clampf(target_spd, min_spd, max_spd), 500.0 * delta)
@@ -123,7 +125,7 @@ func behave(delta: float) -> void:
 			if d < 320.0 and pf.dot(-to.normalized()) > 0.3:
 				_start_break()
 		"break":
-			heading = rotate_toward(heading, _break_dir, deg_to_rad(Tuning.g("turn_rate") * 0.7) * delta)
+			heading = rotate_toward(heading, _break_dir, minf(deg_to_rad(Tuning.g("turn_rate") * 0.7), _speed / MIN_R) * delta)
 			_speed = move_toward(_speed, cruise * 1.1, 300.0 * delta)
 			if _state_t > 1.6:
 				_state = "chase"
@@ -135,12 +137,12 @@ func behave(delta: float) -> void:
 	_scan_t -= delta
 	_flare_cd -= delta
 	flare_defense(delta, 400.0, 240.0, 0.8, 2.5, 8.0)
-	if _evade_cd <= 0.0 and _scan_t <= 0.0 and evade_t <= 0.0 and _shots == 0:
+	if _evade_cd <= 0.0 and _scan_t <= 0.0 and not maneuvering() and _shots == 0:
 		_scan_t = 0.15
 		var threat := incoming_fire(0.4, 3)
 		if threat != Vector2.ZERO:
-			start_evade(threat, 300.0, 0.7)
-			_evade_cd = randf_range(2.2, 3.2)
+			start_maneuver(threat, 300.0) # тест 3.5-s7: разные манёвры, бочка — изредка
+			_evade_cd = randf_range(3.0, 4.5)
 
 	# игрок у аса на хвосте?
 	if p.on_tail() and p.tail_target == self:
