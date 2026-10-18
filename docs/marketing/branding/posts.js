@@ -23,3 +23,19 @@ const items = [
   }
   await b.close();
 })();
+
+// Было / стало: node posts.js <папка вывода> <папка кадров> делает и пары ниже (запуск тем же скриптом)
+const pairs = [
+  ['bs_proto1_now', '/mnt/project-files/marketing/content/img/src/proto1.png', '/mnt/project-files/marketing/content/img/src/now_3_5.png', 'Прототип 1', 'Сборка 3.5'],
+];
+(async () => {
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
+  const img = (f) => `data:image/png;base64,${fs.readFileSync(f).toString('base64')}`;
+  const half = (f, label, c) => `<div style="width:622px"><img src="${img(f)}" style="width:622px;height:350px;object-fit:cover;display:block;border-radius:6px"><div style="margin-top:22px;text-align:center;font:800 50px Inter,'Segoe UI',Arial,sans-serif;color:${c}">${label}</div></div>`;
+  for (const [n, a, bb, la, lb] of pairs) {
+    await p.setContent(`<body style="margin:0;background:#10151c"><div style="display:flex;gap:16px;width:1280px;height:720px;box-sizing:border-box;padding:140px 16px 0"><!-- рамка -->${half(a, 'Было: ' + la, TXT)}${half(bb, 'Стало: ' + lb, ACC)}</div></body>`);
+    await p.waitForTimeout(300);
+    await p.screenshot({ path: `${out}/${n}.png` });
+  }
+  await b.close();
+})();
