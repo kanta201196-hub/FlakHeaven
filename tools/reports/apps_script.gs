@@ -16,7 +16,9 @@ const REPORT_COLS = [
   'Получен', 'Сборка', 'Тестер', 'Отправлен из игры', 'Класс', 'Итог', 'Время вылета, с', 'Уровень', 'Сбито',
   'Связки', 'Оценка 1–5', 'Сыграть ещё?', 'Скучно / раздражало', 'Непонятно', 'Комментарий / баги',
   'ОС', 'Видеокарта', 'Экран', 'FPS средн.', 'ID отчёта',
-  'Картинка / камера / пули / тормоза'   // с 3.4; в старой таблице заголовок дописать вручную (ответы есть и в комментарии)
+  'Картинка / камера / пули / тормоза',  // с 3.4; строка «Короткие ответы» (с 3.5 — все ответы кнопками)
+  // с 3.5 (после теста 3.5-s7): новые вопросы; заголовки в старой таблице допишутся сами
+  'Почему вышли раньше', 'Сложность', 'Темп', 'Выбор улучшений', 'Звук 1–5', 'Понравилось'
 ];
 const RUN_COLS = ['Получен', 'Сборка', 'Тестер', 'Отправлен из игры', 'ОС', 'Видеокарта', 'Экран', 'Строка лога вылета', 'Заголовок лога'];
 const LOG_COLS = ['ID отчёта', 'Сборка', 'Тестер', 'Заголовок лога', 'Строка лога вылета', 'Хвост журнала Godot'];
@@ -39,6 +41,10 @@ function sheet_(name, cols) {
     sh.appendRow(cols);
     sh.setFrozenRows(1);
     sh.getRange(1, 1, 1, cols.length).setFontWeight('bold');
+  } else if (sh.getLastColumn() < cols.length) {
+    // новые колонки в новой версии скрипта — дописываем заголовки справа
+    const from = sh.getLastColumn() + 1;
+    sh.getRange(1, from, 1, cols.length - from + 1).setValues([cols.slice(from - 1)]).setFontWeight('bold');
   }
   return sh;
 }
@@ -66,7 +72,8 @@ function doPost(e) {
     sheet_('Отчёты', REPORT_COLS).appendRow([
       new Date(), d.build, d.tester, d.sent_at, d.cls, d.outcome, d.run_seconds, d.level, d.kills,
       d.synergies, d.rating, d.again, cut_(d.boring), cut_(d.unclear), cut_(d.comment),
-      d.os, d.gpu, d.screen, d.fps, id, d.visual
+      d.os, d.gpu, d.screen, d.fps, id, d.visual,
+      d.why, d.diff, d.pace, d.cards, d.sound, cut_(d.liked)
     ].map(v => (typeof v === 'string' ? cut_(v) : v)));
     sheet_('Логи', LOG_COLS).appendRow([id, d.build, d.tester, cut_(d.run_header), cut_(d.run_row), cut_(d.log_tail)]);
     return ContentService.createTextOutput('ok ' + id);
