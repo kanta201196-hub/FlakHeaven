@@ -99,7 +99,8 @@ func _full_mesh(kind: String) -> Mesh:
 		return AdobeBuild.bridge(kind == "footbridge")
 	if not _meshes.has(kind):
 		_meshes[kind] = null
-		var path: String = DIR + KINDS[kind][0] + ".glb"
+		var f: String = _row(kind)[0]
+		var path: String = (f if f.begins_with("res://") else DIR + f) + ".glb"
 		if ResourceLoader.exists(path):
 			var scene := (load(path) as PackedScene).instantiate()
 			var mi := _find_mesh(scene)
@@ -107,6 +108,11 @@ func _full_mesh(kind: String) -> Mesh:
 				_meshes[kind] = _merged(scene) if _count_meshes(scene) > 1 else mi.mesh
 			scene.free()
 	return _meshes[kind]
+
+
+## Строка вида: Нагорье (KINDS) или «Архипелаг» (SeaProps.KINDS, полный путь к модели)
+func _row(kind: String) -> Array:
+	return KINDS[kind] if KINDS.has(kind) else SeaProps.KINDS[kind]
 
 
 func _count_meshes(n: Node) -> int:
@@ -165,7 +171,7 @@ func _find_mesh(n: Node) -> MeshInstance3D:
 ## Высота модели каждого вида (для расчёта в потоке: сами модели грузит только главный поток)
 func mesh_heights() -> Dictionary:
 	var out := {}
-	for kind in KINDS:
+	for kind in (SeaProps.KINDS if Biome.sea() else KINDS):
 		var mesh := _mesh(kind)
 		out[kind] = mesh.get_aabb().size.y if mesh != null else -1.0
 	return out
@@ -177,6 +183,8 @@ func build(key: Vector2i, parent: Node3D) -> void:
 
 ## Расстановка моделей в клетке — чистый расчёт по снимку ctx (Terrain3D._ctx), можно в потоке
 func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
+	if Biome.sea():
+		return SeaProps.new(self).plan(key, ctx)   # «Архипелаг»: свои модели и композиции (sea_props.gd)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(key) ^ 0x5eed41
 	var ox := key.x * Terrain3D.CHUNK
@@ -344,7 +352,7 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.name = kind
-		var small: bool = kind in ["shrub", "boulders", "poplar", "orchard"]
+		var small: bool = kind in ["shrub", "boulders", "poplar", "orchard"] or kind in SeaProps.SMALL
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
 		var no_shadow := Settings.gfx == 0 or (Settings.gfx == 1 and small)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if no_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_ON

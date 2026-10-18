@@ -431,6 +431,6 @@ void fragment() {
 		NORMAL_MAP = normalize(vec3(-g.x, g.y, 1.0)) * 0.5 + 0.5;
 		AO = ao;
 	}
-	ROUGHNESS = mix(0.95, 0.3, wet_out);
-	SPECULAR = mix(0.1, 0.35, wet_out);   // без неба для отражений сильный блеск давал чёрную воду
+	ROUGHNESS = mix(0.95, sea ? 0.62 : 0.3, wet_out);   // «Архипелаг»: широкая вода — без слепящего пятна солнца
+	SPECULAR = mix(0.1, sea ? 0.2 : 0.35, wet_out);   // без неба для отражений сильный блеск давал чёрную воду
 }

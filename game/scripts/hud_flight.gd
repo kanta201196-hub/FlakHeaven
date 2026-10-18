@@ -368,14 +368,16 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
 		elif node is Convoy:
 			var cv := node as Convoy
-			_edge_arrow(_ws(xf, cv.global_position), rect, size, C_CONVOY, 1.8, "колонна %d м" % (int(p.global_position.distance_to(cv.global_position)) / 10))
+			var sea := Biome.sea()
+			var dm := int(p.global_position.distance_to(cv.global_position)) / 10
+			_edge_arrow(_ws(xf, cv.global_position), rect, size, C_CONVOY, 1.8, ("караван %d м" if sea else "колонна %d м") % dm)
 			var cs: String
 			if cv.alarm:
-				cs = "КОЛОННА: до укрытия %d с · грузовиков: %d из %d" % [int(ceil(maxf(cv.timer, 0.0))), cv.trucks_left(), cv.trucks_total]
+				cs = ("КАРАВАН: до гавани %d с · сухогрузов: %d из %d" if sea else "КОЛОННА: до укрытия %d с · грузовиков: %d из %d") % [int(ceil(maxf(cv.timer, 0.0))), cv.trucks_left(), cv.trucks_total]
 			else:
-				cs = "Колонна снабжения: %d м — подлетите и сожгите грузовики" % (int(p.global_position.distance_to(cv.global_position)) / 10)
+				cs = ("Караван снабжения: %d м — подлетите и потопите сухогрузы" if sea else "Колонна снабжения: %d м — подлетите и сожгите грузовики") % dm
 			_ctext(276, cs, 22, Color(1.0, 0.78, 0.45))
-			_ctext(302, "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика", 17, Color(0.85, 0.75, 1.0))
+			_ctext(302, "Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза" if sea else "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика", 17, Color(0.85, 0.75, 1.0))
 		elif node is Transport:
 			var tr := node as Transport
 			_edge_arrow(_ws(xf, tr.global_position), rect, size, C_TRANSPORT, 1.8, "транспортник %d м" % (int(p.global_position.distance_to(tr.global_position)) / 10))

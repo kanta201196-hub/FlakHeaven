@@ -127,7 +127,7 @@ func _draw_river(r: Rect2, pp: Vector2, a: float) -> void:
 			for ix in RIVER_N:
 				var wp := pp + Vector2((ix + 0.5) * step - RANGE, (iy + 0.5) * step - RANGE)
 				var v := absf(Render3D.I.terrain.river_field(wp.x, wp.y))
-				var w := clampf(1.0 - (v - Terrain3D.D_RIVER) / (step * 0.6), 0.0, 1.0)
+				var w := clampf(1.0 - (v - (Terrain3D.SEA_W if Biome.sea() else Terrain3D.D_RIVER)) / (step * 0.6), 0.0, 1.0)
 				img.set_pixel(ix, iy, Color(0.3, 0.6, 0.85, w))
 		_river_tex = ImageTexture.create_from_image(img)
 		_river_at = pp
