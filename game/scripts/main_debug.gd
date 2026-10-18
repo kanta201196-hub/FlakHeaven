@@ -344,8 +344,30 @@ func _smoke_check() -> void:
 	if not _smoke_skipped and m.run_time > SMOKE_WARMUP_S:
 		_smoke_skipped = true
 		m.run_time = maxf(m.run_time, Tuning.g("boss_every") - 5.0)
-	elif _smoke_skipped and m.run_time > Tuning.g("boss_every") + SMOKE_BOSS_S:
+	elif _smoke_skipped and m.run_time > Tuning.g("boss_every") + (SMOKE_FORTRESS_S if m._args.has("--fortress") else SMOKE_BOSS_S):
 		_smoke_end(0, "boss %s" % ("alive" if m.boss_alive() else "killed"))
+	elif _smoke_skipped and m._args.has("--fortress"):
+		_fortress_log()
+
+
+## FB-01: смоук с «--fortress» — бой с «Крепостью» до 180 с, раз в 10 с — фаза, точки, расстояние до базы
+const SMOKE_FORTRESS_S := 180.0
+var _flog_t := 0.0
+
+
+func _fortress_log() -> void:
+	if m.run_time < _flog_t:
+		return
+	_flog_t = m.run_time + 10.0
+	for n in m.get_tree().get_nodes_in_group("enemies"):
+		var f := n as Fortress
+		if f == null:
+			continue
+		var pts := []
+		for pt in f.points:
+			pts.append(int(float(pt["hp"])))
+		print("FORTRESS: t %.0f phase %d total %.2f hull %.0f/%.0f points %s base %.0f hits %d dist_player %.0f" % [m.run_time, f.phase, f.total_frac(), f.hp, f.max_hp, str(pts),
+			f.global_position.distance_to(f.base_pos) if f.base_pos != Vector2.INF else -1.0, f.base_hits, f.global_position.distance_to(m.player.global_position)])
 
 
 func _smoke_end(code: int, why: String) -> void:

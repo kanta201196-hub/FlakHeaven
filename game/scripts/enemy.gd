@@ -146,6 +146,30 @@ func absorb(dmg: float) -> float:
 	return dmg
 
 
+## FB-01: куда пришлось попадание (мировая точка; INF — неизвестно). Ставят пули, ракеты и взрывы перед take_hit;
+## пользуется «Крепость» — урон идёт в ту точку, в которую попали
+var hit_at := Vector2.INF
+
+
+## Попала ли пуля на отрезке a→b. У «Крепости» — своя форма (корпус, крылья, точки)
+func seg_test(a: Vector2, b: Vector2) -> bool:
+	return Projectiles.seg_hit(a, b, global_position, radius)
+
+
+## Расстояние от взрыва до края цели (меньше нуля — внутри)
+func aoe_dist(pos: Vector2) -> float:
+	return pos.distance_to(global_position) - radius
+
+
+## Куда наводится самонаводящаяся ракета, летящая из from, и радиус попадания вокруг этой точки
+func aim_point(_from: Vector2) -> Vector2:
+	return global_position
+
+
+func aim_radius() -> float:
+	return radius
+
+
 func _die() -> void:
 	hp = 0.0
 	remove_from_group("enemies")
