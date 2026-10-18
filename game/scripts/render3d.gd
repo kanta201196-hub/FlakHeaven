@@ -46,12 +46,13 @@ var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые па
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: StandardMaterial3D
 var _smoke_mat: StandardMaterial3D
+var title: TitleFlight       # тест 3.5-s5 (п. 1): звено 3D-моделей на заставке меню
 ## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
 ## настоящая тень размыта полутенью солнца до пятна и лежит далеко в стороне, а крупная чёткая тень
 ## читается как бреющий полёт. Оставляем подсказку «где самолёт над землёй», но в стиле высоты.
 const SHADOW_SHADER := """
 shader_type spatial;
-render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled, fog_disabled;
 uniform sampler2D tex : filter_linear, repeat_disable;
 uniform float alpha = 0.35;
 uniform float blur = 0.03;
@@ -62,7 +63,7 @@ void fragment() {
 		float r = blur * sqrt((float(i) + 0.5) / 12.0);
 		a += texture(tex, UV + vec2(cos(t), sin(t)) * r).a;
 	}
-	ALBEDO = vec3(0.04, 0.05, 0.09);
+	ALBEDO = vec3(1.0);   // тест 3.5-s5 (п. 8): рисуется в карту теней (_psh_vp), густота — в канале R
 	ALPHA = a / 12.0 * alpha;
 }
 """
@@ -70,6 +71,13 @@ void fragment() {
 ## World2D в текстуру, а она лежит в 3D на плоскости боя (y = 0) — совпадает с моделями в любой точке
 ## кадра. В основном вьюпорте слой боя скрыт маской (видимость CanvasItem, бит COMBAT_LAYER).
 const COMBAT_LAYER := 2
+## Тест 3.5-s5 (п. 8): тени самолётов съедались рельефом — пластина тени над землёй, гребни, уступы и кусты
+## прорастали сквозь неё. Теперь силуэты теней (тот же шейдер и те же пластины) видит только камера сверху
+## в отдельном вьюпорте; её картинка — карта густоты тени, шейдер земли затемняет по ней свою точку, как
+## тенями облаков. Тень лежит точно по рельефу; деревья и дома закрывают её как предметы над землёй.
+const PSH_LAYER := 1 << 19        # слой 20: только силуэты теней
+var _psh_vp: SubViewport
+var _psh_cam: Camera3D
 const COMBAT_VP_MAX := 2600.0     # предел стороны текстуры слоя боя, px
 var _combat_vp: SubViewport
 var _combat_quad: MeshInstance3D
@@ -121,6 +129,7 @@ func _ready() -> void:
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	add_child(cam)
 	cam.current = true
+	cam.cull_mask &= ~PSH_LAYER
 
 	GROUND_Y = -Tuning.g("ground_depth")
 	var sm := ShaderMaterial.new()
@@ -149,6 +158,7 @@ func _ready() -> void:
 	add_child(terrain)
 	terrain.setup(-GROUND_Y, sm, null)
 	terrain.props = BiomeProps.new(terrain)
+	_setup_plane_shadows()
 
 	_scorch_mesh = QuadMesh.new()
 	_scorch_mesh.size = Vector2(1, 1)
@@ -171,6 +181,8 @@ func _ready() -> void:
 	_wreck_mat.roughness = 1.0
 	_trails = Contrails.new()
 	add_child(_trails)
+	title = TitleFlight.new(self)
+	add_child(title)
 	apply_gfx(Settings.gfx)
 
 
@@ -401,7 +413,8 @@ func _process(delta: float) -> void:
 	_sync_enemy_shots(m)
 	if Perf.on: pt = Perf.sub("r3d.missiles", pt)
 	_sync_crashes(m, sd)
-	_trails.tick(sd)
+	title.sync(m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu", delta)
+	_trails.tick(delta if title.active() else sd)   # в меню мир на паузе, а следы звена тают в реальном времени
 	if Perf.on: pt = Perf.sub("r3d.crash_trails", pt)
 	_sync_objects(c2, h)
 	if Perf.on: pt = Perf.sub("r3d.objects", pt)
@@ -614,6 +627,59 @@ func _relief_alt(u: Dictionary, p: Vector2, fwd: Vector2, look: float, delta: fl
 	return [nw, float(u["pitch"])]
 
 
+func _setup_plane_shadows() -> void:
+	_psh_vp = SubViewport.new()
+	_psh_vp.name = "PlaneShadows"
+	var n := 1024 if Settings.gfx >= 2 else 512
+	_psh_vp.size = Vector2i(n, n)
+	_psh_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_psh_vp.positional_shadow_atlas_size = 0
+	add_child(_psh_vp)   # мир 3D общий с основным вьюпортом
+	_psh_cam = Camera3D.new()
+	_psh_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+	_psh_cam.cull_mask = PSH_LAYER   # солнце (слой 1) камера не видит — без прохода теней от солнца
+	_psh_cam.near = 10.0
+	_psh_cam.far = 20000.0
+	_psh_cam.rotation = Vector3(-PI / 2.0, 0.0, 0.0)   # вниз; верх кадра — к -Z
+	var ce := Environment.new()
+	ce.background_mode = Environment.BG_COLOR
+	ce.background_color = Color.BLACK
+	ce.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	ce.ambient_light_source = Environment.AMBIENT_SOURCE_DISABLED
+	_psh_cam.environment = ce
+	_psh_vp.add_child(_psh_cam)
+	_psh_cam.current = true
+	_ground_mat.set_shader_parameter("plane_sh", _psh_vp.get_texture())
+
+
+## Камера карты теней — над видимой землёй: углы кадра на плоскости земли, сторона с шагом 64 px,
+## центр по сетке текселей (без мерцания краёв при движении)
+func _sync_plane_shadows() -> void:
+	if _psh_cam == null:
+		return
+	var on := Tuning.g("plane_shadow") > 0.5 and terrain != null
+	_psh_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	if not on:
+		_ground_mat.set_shader_parameter("plane_sh_rect", Vector4(0, 0, 1, 0))
+		return
+	var vs := get_viewport().get_visible_rect().size
+	var lo := Vector2(INF, INF)
+	var hi := -lo
+	for c in [Vector2.ZERO, Vector2(vs.x, 0), Vector2(0, vs.y), vs]:
+		var o := cam.project_ray_origin(c)
+		var d := cam.project_ray_normal(c)
+		var t := (GROUND_Y - o.y) / d.y if d.y < -0.01 else 6000.0
+		var q := o + d * minf(t, 6000.0)
+		lo = lo.min(Vector2(q.x, q.z))
+		hi = hi.max(Vector2(q.x, q.z))
+	var size := ceilf(maxf(hi.x - lo.x, hi.y - lo.y) * 1.1 / 64.0) * 64.0
+	var texel := size / float(_psh_vp.size.x)
+	var ctr := ((lo + hi) * 0.5 / texel).round() * texel
+	_psh_cam.size = size
+	_psh_cam.position = Vector3(ctr.x, 8000.0, ctr.y)
+	_ground_mat.set_shader_parameter("plane_sh_rect", Vector4(ctr.x - size * 0.5, ctr.y - size * 0.5, size, 1.0))
+
+
 func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
 	if _shadow_shader == null:
 		_shadow_shader = Shader.new()
@@ -627,6 +693,7 @@ func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
 	sh.mesh = pm
 	sh.material_override = mat
 	sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	sh.layers = PSH_LAYER
 	root.tree_exiting.connect(sh.queue_free)
 	add_child(sh)
 	return sh
@@ -771,6 +838,7 @@ func _flush_shadows() -> void:
 			mmi.multimesh = mm
 			mmi.material_override = mat
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mmi.layers = PSH_LAYER
 			mmi.top_level = true
 			add_child(mmi)
 			_shb_mm[tx] = mmi
@@ -921,6 +989,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			mi2.material_overlay = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)
 	_sync_wrecks(delta)
 	_flush_shadows()
+	_sync_plane_shadows()
 	for id in _units.keys():
 		if not _units[id]["seen"]:
 			if not _start_crash(_units[id]) and not _pool_put(_units[id]):

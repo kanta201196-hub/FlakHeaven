@@ -94,6 +94,8 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	if bought:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 15, Color(0.8, 0.85, 0.9))
+		# правка 6 теста 3.5-s5: прокачка у каждого самолёта своя
+		_text(Vector2(lx + 24, y + 48), "Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка" % Profile.plane_lvl(c), 14, Menu.C_AMBER)
 	else:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
 		_text(Vector2(lx + 24, y + 24), "Требует: операция «Перевал»%s · экипаж ур. %d (сейчас %d) · %d запчастей" % [" ✓" if Campaign.cleared(0) else "", Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
@@ -112,7 +114,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(rx + 20, yy + 30), String(nd["title"]), 20, Color.WHITE)
 		for i in 5:
 			ctrl.draw_rect(Rect2(rx + 200 + i * 30, yy + 16, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))
-		_text(Vector2(rx + 20, yy + 58), "за уровень: %s · сейчас ур. %d" % [nd["step"], lv2], 15, Color(0.8, 0.84, 0.9))
+		_text(Vector2(rx + 20, yy + 58), "за уровень: %s · сейчас ур. %d%s" % [nd["step"], lv2, (" (самолёт ур. %d)" % Profile.plane_lvl(c)) if bought else ""], 15, Color(0.8, 0.84, 0.9))
 		if String(nd["note"]) != "":
 			_text(Vector2(rx + 20, yy + 80), String(nd["note"]), 12, Color(0.6, 0.62, 0.68))
 		if lv2 >= 5:
@@ -334,7 +336,9 @@ func _hg_crew(c: String, area: Rect2) -> void:
 		_text(Vector2(sx, yy + 18), "Слот %d [%s]%s" % [slot + 1, "E" if slot == 0 else "F", "" if open else " — экипаж ур. %d" % Profile.SLOT2_LVL], 16, Color.WHITE if open else Color(0.6, 0.62, 0.68))
 		yy += 26.0
 		for sk in PlaneClasses.CLASS_SKILLS[c]:
-			var r3 := Rect2(sx, yy, sw, 64)
+			# высота по описанию: две строки не наезжают на следующий навык
+			var sh3 := ui_font().get_multiline_string_size(String(PlaneClasses.SKILL3[sk]["short"]), HORIZONTAL_ALIGNMENT_LEFT, sw - 28.0, 13).y
+			var r3 := Rect2(sx, yy, sw, maxf(64.0, 30.0 + sh3))
 			var unlocked := Profile.skill_unlocked(c, sk)
 			var sel: bool = sks[slot] == sk
 			# правка 7: навык из другого слота сюда не ставится — два одинаковых навыка взять нельзя
@@ -352,7 +356,7 @@ func _hg_crew(c: String, area: Rect2) -> void:
 				Color(0.7, 1.0, 0.7) if sel else (Color(0.85, 0.88, 0.95) if unlocked and open and not busy else Color(0.55, 0.57, 0.62)))
 			# правка 6: что делает навык — строкой под названием
 			_para(Vector2(sx + 22, yy + 39), String(PlaneClasses.SKILL3[sk]["short"]), sw - 28.0, 13, Color(0.72, 0.76, 0.84) if open else Color(0.5, 0.52, 0.58))
-			yy += 68.0
+			yy += r3.size.y + 4.0
 		yy += 12.0
 	_text(Vector2(sx, yy + 10), "Слот 3 — экипаж ур. 12, в разработке", 14, Color(0.55, 0.57, 0.62))
 	_para(Vector2(sx, yy + 40), "Карточки «уровень навыка» улучшают навык слота 1.", sw, 13, Color(0.7, 0.72, 0.78))

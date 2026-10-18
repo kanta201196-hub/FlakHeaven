@@ -165,6 +165,8 @@ func _vp_report() -> String:
 	var vps: Array = [get_viewport()]
 	if Render3D.I != null and Render3D.I._combat_vp != null:
 		vps.append(Render3D.I._combat_vp)
+	if Render3D.I != null and Render3D.I._psh_vp != null:
+		vps.append(Render3D.I._psh_vp)
 	for vp: Viewport in vps:
 		var rid := vp.get_viewport_rid()
 		out += " %s: вид=%d/%dk тени=%d/%dk кадр=%.1fмс" % [vp.name.left(10),
