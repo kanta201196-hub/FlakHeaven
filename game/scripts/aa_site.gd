@@ -23,13 +23,14 @@ var anchor := Vector2.ZERO   # 3.5: центр позиции на рельеф�
 ## bunker_hp — нижняя граница прочности бункера (спавнер считает её от текущего урона игрока)
 func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
 	# 3D-рельеф: техника ПВО стоит на дне долины, а не на хребте (правила — s4-landscape-rules.md)
-	var tr: Terrain3D = Render3D.I.terrain if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null else null
+	var tr := Terrain3D.active()
 	if tr != null:
 		# тест 3.5-s4 (п. 20): вся позиция (радиус ~250) — на сухом берегу, а не только её центр
 		center = tr.find_floor(center, 900.0, 0.0, [], 260.0)
 		var fixed := tr.fix_object({"pos": center, "size": 480.0, "name": "o_aa_site"})
 		if fixed.has("pos"):   # не отвелась от воды — остаётся точка find_floor (сухое дно долины)
 			center = fixed["pos"]
+		center = tr.out_of_river_guard(center, 60.0)   # M-35: бункер с обваловкой — не в охранной зоне реки
 	global_position = center
 	anchor = center
 	var layout := [["bunker", Vector2.ZERO], ["zsu", Vector2(-170, -90)], ["zsu", Vector2(170, 110)],
