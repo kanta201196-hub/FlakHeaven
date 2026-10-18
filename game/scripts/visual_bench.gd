@@ -365,6 +365,22 @@ func _make_points() -> Array:
 			pts.append({"name": "clouds_%d_under" % i, "pos": cp, "wait": 1.0})
 		if not cl.is_empty():
 			pts.append({"name": "clouds_wide", "pos": (cl[0][0] as Vector2) + Vector2(500, 300), "zoom": 0.6, "wait": 1.0})
+	if OS.get_cmdline_user_args().has("--terrainbench") and ter != null:
+		# тест 3.5-s6 (аудит визуала): рельеф в разных местах биома крупно / средне / далеко
+		pts = []
+		var vil: Vector2 = found.get("o_village", empty)
+		var spots := {
+			"peak": peak,
+			"slope": ter._field_point(empty + Vector2(900, 0), 1100.0),
+			"foot": ter._field_point(empty + Vector2(0, 400), 420.0),
+			"valley": ter._field_point(empty, 0.0),
+			"plain": empty,
+			"village": vil,
+			"seam": Vector2(floorf(empty.x / Terrain3D.CHUNK) * Terrain3D.CHUNK, floorf(empty.y / Terrain3D.CHUNK) * Terrain3D.CHUNK),
+		}
+		for k in spots:
+			for zz in [["near", 2.5], ["mid", 1.0], ["far", 0.55]]:
+				pts.append({"name": "ter_%s_%s" % [k, zz[0]], "pos": spots[k], "zoom": zz[1], "wait": 1.2})
 	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
 		pts = []
 		for c in ["fighter", "attacker", "bomber"]:
