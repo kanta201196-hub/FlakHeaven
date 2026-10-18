@@ -40,16 +40,19 @@ var _c2 := Vector2.ZERO        # центр кадра на плоскости �
 var _shadow_shader: Shader
 var _trails: Contrails       # 3.4-t1 (п. 10, 34): инверсионные следы самолётов и ракет
 var _tid := 0                # номера ракет для их следов
+var _eshot_mm: MultiMeshInstance3D   # тест 3.5-s5 (п. 11): ракеты врагов — модели
+var _eglow_mm: MultiMeshInstance3D   # и светящиеся точки: трассеры пуль, ореол и факел ракет
 var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые падают
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: StandardMaterial3D
 var _smoke_mat: StandardMaterial3D
+var title: TitleFlight       # тест 3.5-s5 (п. 1): звено 3D-моделей на заставке меню
 ## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
 ## настоящая тень размыта полутенью солнца до пятна и лежит далеко в стороне, а крупная чёткая тень
 ## читается как бреющий полёт. Оставляем подсказку «где самолёт над землёй», но в стиле высоты.
 const SHADOW_SHADER := """
 shader_type spatial;
-render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled, fog_disabled;
 uniform sampler2D tex : filter_linear, repeat_disable;
 uniform float alpha = 0.35;
 uniform float blur = 0.03;
@@ -60,7 +63,7 @@ void fragment() {
 		float r = blur * sqrt((float(i) + 0.5) / 12.0);
 		a += texture(tex, UV + vec2(cos(t), sin(t)) * r).a;
 	}
-	ALBEDO = vec3(0.04, 0.05, 0.09);
+	ALBEDO = vec3(1.0);   // тест 3.5-s5 (п. 8): рисуется в карту теней (_psh_vp), густота — в канале R
 	ALPHA = a / 12.0 * alpha;
 }
 """
@@ -68,6 +71,13 @@ void fragment() {
 ## World2D в текстуру, а она лежит в 3D на плоскости боя (y = 0) — совпадает с моделями в любой точке
 ## кадра. В основном вьюпорте слой боя скрыт маской (видимость CanvasItem, бит COMBAT_LAYER).
 const COMBAT_LAYER := 2
+## Тест 3.5-s5 (п. 8): тени самолётов съедались рельефом — пластина тени над землёй, гребни, уступы и кусты
+## прорастали сквозь неё. Теперь силуэты теней (тот же шейдер и те же пластины) видит только камера сверху
+## в отдельном вьюпорте; её картинка — карта густоты тени, шейдер земли затемняет по ней свою точку, как
+## тенями облаков. Тень лежит точно по рельефу; деревья и дома закрывают её как предметы над землёй.
+const PSH_LAYER := 1 << 19        # слой 20: только силуэты теней
+var _psh_vp: SubViewport
+var _psh_cam: Camera3D
 const COMBAT_VP_MAX := 2600.0     # предел стороны текстуры слоя боя, px
 var _combat_vp: SubViewport
 var _combat_quad: MeshInstance3D
@@ -119,6 +129,7 @@ func _ready() -> void:
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	add_child(cam)
 	cam.current = true
+	cam.cull_mask &= ~PSH_LAYER
 
 	GROUND_Y = -Tuning.g("ground_depth")
 	var sm := ShaderMaterial.new()
@@ -147,6 +158,7 @@ func _ready() -> void:
 	add_child(terrain)
 	terrain.setup(-GROUND_Y, sm, null)
 	terrain.props = BiomeProps.new(terrain)
+	_setup_plane_shadows()
 
 	_scorch_mesh = QuadMesh.new()
 	_scorch_mesh.size = Vector2(1, 1)
@@ -169,6 +181,8 @@ func _ready() -> void:
 	_wreck_mat.roughness = 1.0
 	_trails = Contrails.new()
 	add_child(_trails)
+	title = TitleFlight.new(self)
+	add_child(title)
 	apply_gfx(Settings.gfx)
 
 
@@ -396,9 +410,11 @@ func _process(delta: float) -> void:
 	_sync_units(m, delta, sd)
 	if Perf.on: pt = Perf.sub("r3d.units", pt)
 	_sync_missiles(m)
+	_sync_enemy_shots(m)
 	if Perf.on: pt = Perf.sub("r3d.missiles", pt)
 	_sync_crashes(m, sd)
-	_trails.tick(sd)
+	title.sync(m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu", delta)
+	_trails.tick(delta if title.active() else sd)   # в меню мир на паузе, а следы звена тают в реальном времени
 	if Perf.on: pt = Perf.sub("r3d.crash_trails", pt)
 	_sync_objects(c2, h)
 	if Perf.on: pt = Perf.sub("r3d.objects", pt)
@@ -611,6 +627,59 @@ func _relief_alt(u: Dictionary, p: Vector2, fwd: Vector2, look: float, delta: fl
 	return [nw, float(u["pitch"])]
 
 
+func _setup_plane_shadows() -> void:
+	_psh_vp = SubViewport.new()
+	_psh_vp.name = "PlaneShadows"
+	var n := 1024 if Settings.gfx >= 2 else 512
+	_psh_vp.size = Vector2i(n, n)
+	_psh_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_psh_vp.positional_shadow_atlas_size = 0
+	add_child(_psh_vp)   # мир 3D общий с основным вьюпортом
+	_psh_cam = Camera3D.new()
+	_psh_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+	_psh_cam.cull_mask = PSH_LAYER   # солнце (слой 1) камера не видит — без прохода теней от солнца
+	_psh_cam.near = 10.0
+	_psh_cam.far = 20000.0
+	_psh_cam.rotation = Vector3(-PI / 2.0, 0.0, 0.0)   # вниз; верх кадра — к -Z
+	var ce := Environment.new()
+	ce.background_mode = Environment.BG_COLOR
+	ce.background_color = Color.BLACK
+	ce.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	ce.ambient_light_source = Environment.AMBIENT_SOURCE_DISABLED
+	_psh_cam.environment = ce
+	_psh_vp.add_child(_psh_cam)
+	_psh_cam.current = true
+	_ground_mat.set_shader_parameter("plane_sh", _psh_vp.get_texture())
+
+
+## Камера карты теней — над видимой землёй: углы кадра на плоскости земли, сторона с шагом 64 px,
+## центр по сетке текселей (без мерцания краёв при движении)
+func _sync_plane_shadows() -> void:
+	if _psh_cam == null:
+		return
+	var on := Tuning.g("plane_shadow") > 0.5 and terrain != null
+	_psh_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	if not on:
+		_ground_mat.set_shader_parameter("plane_sh_rect", Vector4(0, 0, 1, 0))
+		return
+	var vs := get_viewport().get_visible_rect().size
+	var lo := Vector2(INF, INF)
+	var hi := -lo
+	for c in [Vector2.ZERO, Vector2(vs.x, 0), Vector2(0, vs.y), vs]:
+		var o := cam.project_ray_origin(c)
+		var d := cam.project_ray_normal(c)
+		var t := (GROUND_Y - o.y) / d.y if d.y < -0.01 else 6000.0
+		var q := o + d * minf(t, 6000.0)
+		lo = lo.min(Vector2(q.x, q.z))
+		hi = hi.max(Vector2(q.x, q.z))
+	var size := ceilf(maxf(hi.x - lo.x, hi.y - lo.y) * 1.1 / 64.0) * 64.0
+	var texel := size / float(_psh_vp.size.x)
+	var ctr := ((lo + hi) * 0.5 / texel).round() * texel
+	_psh_cam.size = size
+	_psh_cam.position = Vector3(ctr.x, 8000.0, ctr.y)
+	_ground_mat.set_shader_parameter("plane_sh_rect", Vector4(ctr.x - size * 0.5, ctr.y - size * 0.5, size, 1.0))
+
+
 func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
 	if _shadow_shader == null:
 		_shadow_shader = Shader.new()
@@ -624,6 +693,7 @@ func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
 	sh.mesh = pm
 	sh.material_override = mat
 	sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	sh.layers = PSH_LAYER
 	root.tree_exiting.connect(sh.queue_free)
 	add_child(sh)
 	return sh
@@ -768,6 +838,7 @@ func _flush_shadows() -> void:
 			mmi.multimesh = mm
 			mmi.material_override = mat
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mmi.layers = PSH_LAYER
 			mmi.top_level = true
 			add_child(mmi)
 			_shb_mm[tx] = mmi
@@ -918,6 +989,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			mi2.material_overlay = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)
 	_sync_wrecks(delta)
 	_flush_shadows()
+	_sync_plane_shadows()
 	for id in _units.keys():
 		if not _units[id]["seen"]:
 			if not _start_crash(_units[id]) and not _pool_put(_units[id]):
@@ -1284,6 +1356,130 @@ func _sync_missiles(m: Main) -> void:
 			var v: Vector2 = mm["v"]
 			var tail: Vector2 = mm["p"] - (v.normalized() * 9.0 if v.length() > 1.0 else Vector2.ZERO)
 			_trails.emit(int(mm["tid"]), Vector3(tail.x, -2.0, tail.y), arr_st[1])
+
+
+# ---------- тест 3.5-s5 (п. 11): пули и ракеты врагов в 3D ----------
+
+## Ракеты врагов — модель (WeaponModels «enemy_msl») по курсу, пули — светящиеся трассеры с ореолом:
+## красные у обычных врагов, оранжевые у асов, крупные шары — залпы асов и «Крепости». Всё — два MultiMesh
+## (два вызова отрисовки на любое число снарядов). Трассеры и ореолы поверх моделей и облаков, как прежний слой боя.
+const ESHOT_LEN := 30.0              # длина ракеты врага, px (картинка была 24)
+const EGLOW_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled, fog_disabled;
+varying vec4 col;
+void vertex() {
+	col = COLOR;
+}
+void fragment() {
+	vec2 p = UV * 2.0 - 1.0;          // x — вдоль полёта (+1 — голова), y — поперёк
+	float d = length(p);
+	float head = smoothstep(-1.0, 0.5, p.x);   // к хвосту трассер гаснет
+	float halo = smoothstep(1.0, 0.15, d) * head;
+	float core = smoothstep(0.42, 0.08, length(vec2(p.x * 0.8, p.y * 1.6))) * head;
+	ALBEDO = mix(col.rgb, vec3(1.0, 0.96, 0.92), core);
+	ALPHA = clamp(halo * 0.7 * col.a + core, 0.0, 1.0);
+}
+"""
+
+
+func _sync_enemy_shots(m: Main) -> void:
+	var pr := m.projectiles
+	if pr == null:
+		return
+	if _eshot_mm == null:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = WeaponModels.mesh("enemy_msl", 1)
+		mm.instance_count = 32
+		mm.visible_instance_count = 0
+		_eshot_mm = MultiMeshInstance3D.new()
+		_eshot_mm.multimesh = mm
+		_eshot_mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_eshot_mm.top_level = true
+		add_child(_eshot_mm)
+		var sh := Shader.new()
+		sh.code = EGLOW_SHADER
+		var mat := ShaderMaterial.new()
+		mat.shader = sh
+		mat.render_priority = 99   # под слоем боя (взрывы, текст), над моделями
+		var pm := PlaneMesh.new()
+		pm.size = Vector2(2, 2)
+		var gm := MultiMesh.new()
+		gm.transform_format = MultiMesh.TRANSFORM_3D
+		gm.use_colors = true
+		gm.mesh = pm
+		gm.instance_count = 256
+		gm.visible_instance_count = 0
+		_eglow_mm = MultiMeshInstance3D.new()
+		_eglow_mm.multimesh = gm
+		_eglow_mm.material_override = mat
+		_eglow_mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_eglow_mm.top_level = true
+		add_child(_eglow_mm)
+	var mmx := _eshot_mm.multimesh
+	var gmx := _eglow_mm.multimesh
+	var n_m := 0
+	var n_g := 0
+	var need_g := pr.ebullets.size() + pr.missiles.size() * 2
+	if gmx.instance_count < need_g:
+		gmx.instance_count = need_g + 64
+	if mmx.instance_count < pr.missiles.size():
+		mmx.instance_count = pr.missiles.size() + 16
+	var lo := Vector3(INF, INF, INF)
+	var hi := -lo
+	for b: Dictionary in pr.ebullets:
+		var p: Vector2 = b["p"]
+		var v: Vector2 = b["v"]
+		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
+		var ace: bool = b.get("who", "") == "асы"
+		var c: Color
+		var ln: float
+		var w: float
+		if b["big"]:
+			c = Color(1.0, 0.42, 0.18, 1.0)
+			ln = 16.0
+			w = 16.0
+		else:
+			c = Color(1.0, 0.62, 0.15, 1.0) if ace else Color(1.0, 0.18, 0.3, 1.0)
+			ln = 17.0
+			w = 5.5
+		var ctr := Vector3(p.x - dir.x * ln * 0.55, 1.0, p.y - dir.y * ln * 0.55)
+		var xa := Vector3(dir.x, 0, dir.y) * ln
+		var za := Vector3(-dir.y, 0, dir.x) * w
+		gmx.set_instance_transform(n_g, Transform3D(Basis(xa, Vector3.UP, za), ctr))
+		gmx.set_instance_color(n_g, c)
+		lo = lo.min(ctr)
+		hi = hi.max(ctr)
+		n_g += 1
+	for ms: Dictionary in pr.missiles:
+		var p: Vector2 = ms["p"]
+		var v: Vector2 = ms["v"]
+		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
+		var y := 0.0
+		var bs := Basis(Vector3.UP, -dir.angle()).scaled(Vector3.ONE * ESHOT_LEN)
+		var pos := Vector3(p.x, y, p.y)
+		mmx.set_instance_transform(n_m, Transform3D(bs, pos))
+		n_m += 1
+		lo = lo.min(pos)
+		hi = hi.max(pos)
+		var lost: bool = ms["lost"]
+		# факел двигателя у хвоста и красный ореол вокруг (у уведённой ловушкой — без ореола, факел тусклый)
+		var tail := pos - Vector3(dir.x, 0, dir.y) * ESHOT_LEN * 0.55
+		var fl := 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.05 + float(n_m))
+		gmx.set_instance_transform(n_g, Transform3D(Basis(Vector3(-dir.x, 0, -dir.y) * 9.0 * fl, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 4.5), tail + Vector3(0, 1.0, 0)))
+		gmx.set_instance_color(n_g, Color(1.0, 0.7, 0.25, 1.0 if not lost else 0.5))
+		n_g += 1
+		if not lost:
+			gmx.set_instance_transform(n_g, Transform3D(Basis(Vector3(dir.x, 0, dir.y) * 20.0, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 14.0), pos - Vector3(0, 0.5, 0)))
+			gmx.set_instance_color(n_g, Color(1.0, 0.1, 0.05, 0.45))
+			n_g += 1
+	mmx.visible_instance_count = n_m
+	gmx.visible_instance_count = n_g
+	if n_m + n_g > 0:
+		var aabb := AABB(lo - Vector3(40, 40, 40), hi - lo + Vector3(80, 80, 80))
+		_eshot_mm.custom_aabb = aabb
+		_eglow_mm.custom_aabb = aabb
 
 
 # ---------- 3.4-t1: сбитый ведомый падает (п. 32) ----------

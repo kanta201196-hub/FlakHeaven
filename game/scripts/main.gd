@@ -289,7 +289,8 @@ func _process(delta: float) -> void:
 
 	if state in ["menu", "settings"] and menu.back_state == "menu":
 		# фон меню: камера медленно плывёт над биомом
-		camera.global_position += Vector2(70.0, -30.0) * delta / maxf(Engine.time_scale, 0.01)
+		# тест 3.5-s5 (п. 1): по курсу звена заставки — самолёты летят носом вперёд, а не боком
+		camera.global_position += TitleFlight.advance(delta / maxf(Engine.time_scale, 0.01))
 		camera.zoom = camera.zoom.lerp(Vector2(0.75, 0.75), 0.05)
 		sfx.music("menu")
 		return

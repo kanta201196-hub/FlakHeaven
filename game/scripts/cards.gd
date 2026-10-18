@@ -110,10 +110,10 @@ const SYNERGIES := {
 		"desc": "Враг, убитый взрывом, взрывается сам: 30 урона + 10% его прочности, радиус 90; цепь до 5 звеньев",
 		"short": "убитые взрывом рвутся домино"},
 	"wolfpack": {"title": "Волчья стая", "wingmen": true, "tag": "wing", "tag2": "missiles", "color": Color(0.75, 0.52, 1.0),
-		"desc": "Когда вы пускаете ракеты, каждый ведомый дублирует пуск: 2 ракеты в вашу цель (×0,6 урона). +1 к лимиту ведомых",
+		"desc": "Когда вы пускаете ракеты, каждый ведомый дублирует пуск: 2 ракеты в вашу цель (×0,6 урона)",
 		"short": "звено повторяет ваши пуски"},
 	"warm": {"title": "Тёплая компания", "wingmen": true, "tag": "wing", "tag2": "blast", "color": Color(1.0, 0.55, 0.35),
-		"desc": "Раз в 7 с звено выходит вперёд и стелет ряд из 5 бомб поперёк пути самолёта (45 урона, 100 пикс.). +1 к лимиту ведомых",
+		"desc": "Раз в 7 с звено выходит вперёд и стелет ряд из 5 бомб поперёк пути самолёта (45 урона, 100 пикс.)",
 		"short": "звено стелет огонь впереди"},
 	"mirror": {"title": "Зеркало", "w": ["flares"], "tag": "maneuver", "tag2": "missiles", "color": Color(0.3, 0.95, 0.85),
 		"desc": "Уведённая ловушкой ракета разворачивается и бьёт ближайшего врага (80 урона, взрыв 90); уклонение отстреливает 6 ловушек",
@@ -241,7 +241,7 @@ static func _available(p: Player) -> Array:
 		var s: Dictionary = SYNERGIES[id]
 		var ok := true
 		if s.has("w"):
-			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w)):
+			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w)):
 				continue
 			ok = _wlevel(p, s["w"]) > 0 or (free_group and not (s["w"] as Array).has("turret"))
 		if s.get("wingmen", false):
@@ -466,7 +466,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		if g.builtin or not g.is_empty():
 			continue
 		# U-06/U-08: на тяжёлый подвес — только экспериментальное оружие, открытое кампанией; на остальные — обычное
-		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL):
+		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL.filter(func(x): return PlaneClasses.allows(p.cls_id, x))):
 			if equipped.has(w) or banned.has("w:" + w):
 				continue
 			cands.append([1.4, {"id": "new_%s_%d" % [w, gi], "ban": "w:" + w, "kind": "weapon_new", "weapon": w, "group": gi, "cat": "Новое оружие",

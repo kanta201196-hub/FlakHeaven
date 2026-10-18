@@ -279,6 +279,15 @@ static func mesh(weapon: String, t: int, side := "") -> ArrayMesh:
 		return _cache[key]
 	var parts: Array = []   # [меш-примитив, Transform3D, материал]
 	match weapon:
+		"enemy_msl":
+			# тест 3.5-s5 (п. 11): ракета врага — тёмный корпус, красная головка и пояс (не спутать с нашими белыми)
+			var body := 0.78
+			var r := 0.06
+			parts.append([_cyl(r, body), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(-0.05, 0, 0)), "dark"])
+			parts.append([_cone(r, 0.17), Transform3D(Basis(Vector3.BACK, -PI / 2.0), Vector3(body * 0.5 + 0.035, 0, 0)), "band"])
+			parts.append([_cyl(r * 1.04, 0.07), Transform3D(Basis(Vector3.BACK, PI / 2.0), Vector3(body * 0.12, 0, 0)), "band"])
+			for a in 4:
+				parts.append([_box(Vector3(0.14, 0.01, r * 4.2)), Transform3D(Basis(Vector3.RIGHT, a * PI / 4.0 + PI / 4.0), Vector3(-body * 0.5 + 0.03, 0, 0)), "steel"])
 		"aam":
 			# 3.5: ракеты — «качество вместо количества» (1 ракета с точки), поэтому с уровнем ракета
 			# не множится, а тяжелеет: обычная → крупнее, на пилоне → тяжёлая, с ускорителем

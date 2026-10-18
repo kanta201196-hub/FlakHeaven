@@ -53,7 +53,7 @@ static func write(m: Main, outcome: String) -> void:
 	for w in Profile.WEAPON_ORDER:
 		wb.append("%s=%s%s" % [w, Profile.tier_state(w, 1), Profile.tier_state(w, 2)])
 	row.append_array(PackedStringArray([m.player.skill_b, " | ".join(PackedStringArray(m.course_log)), kv(m.player.syn), str(m.player.course_pts),
-		str(Profile.crew_lvl(m.cls_id)), str(int(m.meta_award.get("xp_add", 0))), str(Profile.parts()), kv(Profile.cls(m.cls_id)["nodes"]),
+		str(Profile.crew_lvl(m.cls_id)), str(int(m.meta_award.get("xp_add", 0))), str(Profile.parts()), kv(Profile.nodes_of(m.cls_id)),
 		str(Profile.plane2(m.cls_id)), ",".join(PackedStringArray(Profile.cls(m.cls_id)["perks"])), " ".join(wb), str(Tuning.g("meta_k"))]))
 	m.tele.v["xp_continue"] = float(m.meta_award.get("xp_continue", 0))
 	row.append(Telemetry.LOG_VER)
