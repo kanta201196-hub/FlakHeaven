@@ -66,8 +66,13 @@ func _map(r: Rect2) -> void:
 		# подпись под точкой; у последней — над ней, чтобы путь к ней не перечёркивал текст
 		var ly := c.y + (66.0 if i < pos.size() - 1 else -80.0)
 		_text(Vector2(c.x - 160.0, ly), "%d. «%s»" % [i + 1, o["title"]], 19, col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
-		_text(Vector2(c.x - 160.0, ly + 24.0), String(Campaign.DIFF[int(o["diff"])]["title"]) if avail else "закрыта", 16,
-			Color(col.r, col.g, col.b, 0.8), HORIZONTAL_ALIGNMENT_CENTER, 320.0)
+		var sub := String(Campaign.DIFF[int(o["diff"])]["title"]) if avail else "закрыта"
+		var sub_col := Color(col.r, col.g, col.b, 0.8)
+		# открыта, но ещё не пройдена и не выбрана — подсказать, что она новая и сложнее
+		if avail and not on and not Campaign.cleared(i) and i > 0:
+			sub = "новая · сложнее: " + sub
+			sub_col = Color(1.0, 0.75, 0.55)
+		_text(Vector2(c.x - 160.0, ly + 24.0), sub, 16, sub_col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
 		if avail:
 			_buttons.append([Rect2(c - Vector2(70, 50), Vector2(140, 150)), "op:%d" % i])
 
