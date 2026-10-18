@@ -24,6 +24,12 @@ const D_FLOOR := 260.0         # ровное дно долины
 const D_FAN := 480.0           # конусы выноса и осыпи до подножия склона
 const D_CLIMB := 2200.0        # от подножия до гребня
 const V_SCALE := 0.00028       # перевод поля долин в «пиксели» вдали от реки
+## Тест 3.5-s5 (M-35, решение Kanta 18.10.2026): охранная зона реки — полуширина от оси русла, px мира.
+## Вода (~D_RIVER × 0,8) + мокрый берег шейдера (river_w × 2,4 ± кромка 4 px ≈ 66) + запас 2 px.
+## Внутри — только вода и берег: ни объектов клеток, ни предметов биома, ни садов/полей/утоптанной земли,
+## ни сцен прошедших боёв и гари, ни наземных активностей. Край зоны (68) не задевает дорогу
+## (ось D_ROAD = 85, полоса ±14): колонна едет вдоль реки по дороге, не по воде.
+const RIVER_GUARD := 68.0
 
 var base_y := -500.0
 var ceiling := 470.0           # максимальная высота рельефа над дном долин
@@ -215,6 +221,46 @@ func river_field(x: float, z: float) -> float:
 	return lerpf(near, far, smoothstep(0.03, 0.12, absf(v)))
 
 
+## M-35: насколько точка p за пределами охранной зоны реки, px (< 0 — внутри зоны).
+## margin — полуразмер того, что ставим (радиус объекта, полкорпуса машины): зона расширяется на него
+func river_guard_dist(p: Vector2, margin := 0.0) -> float:
+	return absf(river_field(p.x, p.y)) - RIVER_GUARD - margin
+
+
+## M-35: точка p (с запасом margin) в охранной зоне реки — сюда ничего не ставим и не везём
+func in_river_guard(p: Vector2, margin := 0.0) -> bool:
+	return river_guard_dist(p, margin) < 0.0
+
+
+## M-35: рельеф боя, если он есть (3D-рендер и фон уже связаны), иначе null — для кода вне Terrain3D
+static func active() -> Terrain3D:
+	if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
+		return Render3D.I.terrain
+	return null
+
+
+## M-35: то же из любого кода без ссылки на рельеф: нет рельефа (2D, меню) — зоны нет (INF)
+static func guard_dist_at(p: Vector2, margin := 0.0) -> float:
+	var t := active()
+	return t.river_guard_dist(p, margin) if t != null else INF
+
+
+## M-35: ближайшая к p точка вне охранной зоны (с запасом margin) на том же берегу; p уже вне — p
+func out_of_river_guard(p: Vector2, margin := 0.0) -> Vector2:
+	for i in 4:
+		var v := river_field(p.x, p.y)
+		var need := RIVER_GUARD + margin + 2.0
+		if absf(v) >= need:
+			return p
+		var e := 8.0
+		var g := Vector2(river_field(p.x + e, p.y) - river_field(p.x - e, p.y), river_field(p.x, p.y + e) - river_field(p.x, p.y - e)) / (2.0 * e)
+		if g.length_squared() < 1e-12:
+			break
+		var side := signf(v) if v != 0.0 else 1.0
+		p -= g * (v - side * need) / g.length_squared()
+	return p
+
+
 func _v_raw(x: float, z: float) -> float:
 	# сдвиг умеренный: сильный «складывает» поле и рождает замкнутые петли русла — ямы без стока
 	var wx := x + _warp.get_noise_2d(x, z) * 380.0
@@ -223,12 +269,12 @@ func _v_raw(x: float, z: float) -> float:
 
 
 ## Ближайшая точка дна долины (не дальше D_FLOOR от реки) около p — для наземной техники.
-## Тест 3.5-s4 (п. 20): техника стояла в реке — русло с берегом (D_RIVER × 3, как зона «bank» биома:
-## вода + полкорпуса машины) и объекты клеток (кишлак, крепость, оазис, воронка, обломки) — запретные;
+## Тест 3.5-s4 (п. 20): техника стояла в реке — русло с берегом (M-35: охранная зона RIVER_GUARD
+## + полкорпуса машины) и объекты клеток (кишлак, крепость, оазис, воронка, обломки) — запретные;
 ## если вокруг всё запретное, берётся наименее плохая точка — дальше всех от воды и объектов.
 ## side ≠ 0 — только этот берег (знак river_field): переезжающая техника не пересекает реку
 ## avoid — [[точка, радиус]] куда нельзя (другие машины позиции); dry — сколько держаться от линии реки
-func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := D_RIVER * 3.0) -> Vector2:
+func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RIVER_GUARD + 10.0) -> Vector2:
 	var objs := []
 	if _bg != null:
 		var c := Vector2i(int(floorf(p.x / CHUNK)), int(floorf(p.y / CHUNK)))
@@ -274,7 +320,7 @@ func fix_object(o: Dictionary) -> Dictionary:
 	var p0: Vector2 = o["pos"]
 	var p := p0
 	var R := float(o["size"]) * AdobeBuild.footprint(o["name"])
-	var clear := D_RIVER * 2.6   # вода и мокрый берег (в шейдере берег темнеет до river_w × 2.4)
+	var clear := RIVER_GUARD   # M-35: охранная зона — вода и мокрый берег (в шейдере берег темнеет до river_w × 2.4)
 	for it in 10:
 		var push := Vector2.ZERO
 		var worst := 0.0
@@ -306,9 +352,9 @@ func fix_object(o: Dictionary) -> Dictionary:
 	return {}
 
 
-## Русло с берегом (как в find_floor): сюда наземная техника не заезжает
+## Русло с берегом (как в find_floor): сюда наземная техника не заезжает (M-35: зона + полкорпуса)
 func wet(p: Vector2) -> bool:
-	return absf(river_field(p.x, p.y)) < D_RIVER * 3.0
+	return in_river_guard(p, 10.0)
 
 
 ## Тест 3.5-s4 (второй список): «сцены прошедших боёв» — у кишлаков, крепостей и местами у дорог группы
@@ -405,7 +451,7 @@ func _scene_put(items: Array, k: String, p: Vector2, yaw: float, near: Array, ta
 	if r <= 0.0:
 		r = w * 0.55
 	var mark := k in ["scorch", "crater"]   # пятна могут лежать под техникой
-	if absf(river_field(p.x, p.y)) < D_RIVER * 2.6 + r:
+	if in_river_guard(p, r):   # M-35: ни техники, ни гари, ни воронок в охранной зоне реки
 		return false
 	if absf(valley(p.x, p.y)) > D_FAN:
 		return false
@@ -703,7 +749,9 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 					var r := float(it["r"])
 					var d := pw.distance_to(it["p"])
 					burn = maxf(burn, (1.0 - smoothstep(r * 0.3, r, d)) * (1.0 if it["k"] == "crater" else 0.8))
-				var dry := smoothstep(D_RIVER * 1.4, D_RIVER * 3.2, absf(vs[gi]))
+				# M-35: в охранной зоне масок нет; точный край — в шейдере по расстоянию до реки (river_guard),
+				# здесь лишь гасим вершины глубоко в зоне (вершины через 20 px — край по ним был бы «лесенкой»)
+				var dry := smoothstep(RIVER_GUARD - 30.0, RIVER_GUARD, absf(vs[gi]))
 				sm *= dry
 				burn *= dry
 			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), sm.x, sm.y)
