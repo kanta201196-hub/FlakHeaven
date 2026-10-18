@@ -26,7 +26,8 @@ func _ready() -> void:
 	extra_cull_margin = 16384.0
 
 
-## Точка следа. style: [альфа, ширина у источника, ширина в конце, время жизни, шаг точек]
+## Точка следа. style: [альфа, ширина у источника, ширина в конце, время жизни, шаг точек, (цвет)]
+## M-39 (аудит 3.5-s6 Э-2): цвет — необязательный 6-й элемент (дым ракет светло-серый), без него — белая инверсия
 func emit(key: Variant, pos: Vector3, style: Array) -> void:
 	var t: Dictionary = _tr.get(key, {})
 	if not t.is_empty() and (t["head"] as Vector3).distance_squared_to(pos) > 250.0 * 250.0:
@@ -98,14 +99,18 @@ func tick(delta: float) -> void:
 			var o: Vector3 = pts[i - 1] if i > 0 else p
 			var d := Vector2(q.x - o.x, q.z - o.z)
 			d = d.normalized() if d.length_squared() > 0.01 else Vector2.RIGHT
-			var w: float = lerpf(float(s[1]), float(s[2]), sqrt(k)) * 0.5
+			# ширина растёт со временем (след расплывается), быстрее в начале
+			var w: float = lerpf(float(s[1]), float(s[2]), 1.0 - (1.0 - k) * (1.0 - k)) * 0.5
 			var side := Vector3(-d.y, 0.0, d.x) * w
 			# у источника след проявляется (не начинается резко у сопла), к концу тает
-			var a: float = float(s[0]) * (1.0 - k) * (1.0 - k) * clampf(age / 0.08, 0.0, 1.0) if i < pts.size() else 0.0
+			# M-39: у сопла след плотный (проявление короче), к концу короткой жизни тает
+			var a: float = float(s[0]) * (1.0 - k) * (1.0 - 0.6 * k) * clampf(age / 0.04, 0.0, 1.0) if i < pts.size() else float(s[0]) * 0.5
+			var c: Color = s[5] if s.size() > 5 else Color.WHITE
+			c.a = a
 			verts.append(p - side)
 			verts.append(p + side)
-			cols.append(Color(1, 1, 1, a))
-			cols.append(Color(1, 1, 1, a))
+			cols.append(c)
+			cols.append(c)
 			uvs.append(Vector2(0.5, 0.0))
 			uvs.append(Vector2(0.5, 1.0))
 			if i > 0:
