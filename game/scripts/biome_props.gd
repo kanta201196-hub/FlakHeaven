@@ -273,7 +273,14 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 			var n := rng.randi_range(1, 3)   # колонна: машины одна за другой вдоль дороги
 			var dir := _road_dir(q)
 			for i in n:
-				var w := q + dir * (i * 90.0) + dir.orthogonal() * rng.randf_range(-14, 14)
+				var off := dir.orthogonal() * rng.randf_range(-14, 14)
+				if _t.in_river_guard(q + dir * (i * 90.0) + off, 14.0):   # M-35: к реке не съезжает — к другой обочине
+					off = -off
+				var w := q + dir * (i * 90.0) + off
+				if _t.in_river_guard(w, 14.0):
+					for k in 3:   # как _add_vehicle: остальная клетка — без сдвига случайных чисел
+						rng.randf()
+					continue
 				_add_vehicle(rng, put, "tank" if rng.randf() < 0.4 else "truck", w, dir, ctx)
 	# юрты кочевников — летние пастбища: пологие места в стороне от дороги, недалеко от воды
 	if rng.randf() < 0.08:
@@ -334,6 +341,10 @@ func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2,
 
 
 func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, w: float, ctx: Dictionary) -> void:
+	# M-35: ни один предмет биома (дерево, куст, валун, юрта, мешки) не залезает кроной/краем в охранную зону реки
+	if _t.river_guard_dist(p, w * 0.45) < 0.0:
+		rng.randf()   # как при постановке: остальная клетка расставляется так же, как до зоны
+		return
 	var s := _t.surface(p.x, p.y, ctx)
 	# высоко в горах модель ближе к камере и кажется крупнее — уменьшаем (вид сверху, перспектива)
 	w *= lerpf(1.0, 0.55, clampf((s.y - _t.base_y) / maxf(_t.ceiling, 1.0), 0.0, 1.0))
@@ -357,16 +368,17 @@ func _slope(p: Vector2, ctx: Dictionary) -> float:
 	return Vector2(dx, dz).length() / (2.0 * e)
 
 
-## Зона рельефа в точке: river (русло), road (дорога), bank (берег), floor (дно долины),
+## Зона рельефа в точке: river (русло с мокрым берегом — охранная зона M-35), road (дорога),
+## bank (полоса за охранной зоной), floor (дно долины),
 ## fan (конусы выноса и осыпи), slope (склон), crest (гребень)
 func _zone(p: Vector2, ctx: Dictionary) -> String:
 	var v := _t.river_field(p.x, p.y)
 	var a := absf(v)
-	if a < Terrain3D.D_RIVER * 1.3:
+	if a < Terrain3D.RIVER_GUARD:   # M-35: охранная зона реки (вода и мокрый берег) — сюда ничего не ставим
 		return "river"
 	if absf(v - Terrain3D.D_ROAD) < 16.0:
 		return "road"
-	if a < Terrain3D.D_RIVER * 3.0:
+	if a < Terrain3D.RIVER_GUARD + 40.0:   # прибрежная полоса тополей и кустов — сразу за охранной зоной
 		return "bank"
 	var h := _t.height(p.x, p.y, ctx) / maxf(_t.ceiling, 1.0)
 	var sl := _slope(p, ctx)
