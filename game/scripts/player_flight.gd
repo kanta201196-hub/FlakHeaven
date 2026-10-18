@@ -49,8 +49,9 @@ func _steer(delta: float) -> void:
 	var tr := pl.turn_rate()
 	var prev := pl.heading
 	# 3.5 (правка 13): угловая скорость набирается и гасится с ускорением класса — Оса вертится сразу,
-	# Кит раскачивается и тормозит разворот заранее (без перелёта мимо цели)
-	var accel := tr * float(pl.cls.get("turn_accel", 6.0))
+	# Кит раскачивается и тормозит разворот заранее (без перелёта мимо цели).
+	# Тест 3.5-s7: ускорение — от скорости разворота без предела радиуса, сам предел — в tr
+	var accel := pl.turn_rate_free() * float(pl.cls.get("turn_accel", 6.0))
 	var want := 0.0
 	if pl.turn_t > 0.0:
 		# Боевой разворот: рывок носом к цели в 4 раза быстрее обычного; цель движется — догоняем её
@@ -74,7 +75,8 @@ func _steer(delta: float) -> void:
 		pl.heading += pl._turn_vel * delta
 	pl.heading = wrapf(pl.heading, -PI, PI)
 	var ang_vel := wrapf(pl.heading - prev, -PI, PI) / maxf(delta, 0.0001)
-	pl.bank = lerpf(pl.bank, clampf(ang_vel / tr, -1.0, 1.0), 1.0 - exp(-delta * 12.0))
+	# тест 3.5-s7: тяжёлый самолёт входит в крен и выходит из него медленнее — видно вес
+	pl.bank = lerpf(pl.bank, clampf(ang_vel / tr, -1.0, 1.0), 1.0 - exp(-delta * float(pl.cls.get("bank_rate", 12.0))))
 
 
 ## Желаемая угловая скорость к курсу target: не больше, чем успеем погасить до него (без перелёта)
@@ -165,6 +167,14 @@ func _move(delta: float) -> void:
 		else:
 			pl._straight_t = 0.0
 		speed *= 1.0 + 0.2 * clampf(pl._straight_t - 1.2, 0.0, 1.0)
+	# Тест 3.5-s7 (инерция): крутой разворот съедает скорость (тяжёлый — больше), на прямой она
+	# набирается обратно с разгоном класса: «Оса» быстро, «Кит» долго. Боевой разворот — без потери.
+	var want_e := 1.0 - Tuning.g("turn_bleed") * float(pl.cls.get("bleed_k", 1.0)) * absf(pl.bank)
+	if pl.turn_t > 0.0:
+		want_e = pl._energy
+	var rate := Tuning.g("speed_regain") * float(pl.cls.get("accel_k", 1.0))
+	pl._energy = move_toward(pl._energy, want_e, (rate * 1.5 if want_e < pl._energy else rate) * delta)
+	speed *= pl._energy
 	var target := Vector2.from_angle(pl.heading) * speed
 	var k := 1.0 - exp(-delta / maxf(Tuning.g("inertia") * float(pl.cls.get("inertia_k", 1.0)), 0.001))
 	pl.velocity = pl.velocity.lerp(target, k)

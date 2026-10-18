@@ -11,6 +11,9 @@ const LIMIT := 60.0
 const ACTIVATE_R := 1150.0   # M-37: позиция шире (радиус ~200 → ~330) — обнаружение раньше на столько же
 const SPACING := 150.0   # тест 3.5-s4: машины позиции не ближе этого друг к другу; M-37: 110 → 150, позиция реже
 const SPREAD := 1.6      # M-37 (Kanta 18.10): позиция ПВО шире — раскладка и переезды дальше от бункера
+const FLOOR_MID := 200.0 # тест 3.5-s7: центр позиции — посередине ровного дна долины (px от линии реки)
+const ACROSS := 90.0     # поперёк долины машины не дальше этого от центра — не заезжают на склон
+const RIVER_GUARD_CAR := Terrain3D.RIVER_GUARD + 10.0
 
 var targets: Array = []
 var active := false     # стреляет ли (после подлёта)
@@ -24,30 +27,45 @@ var anchor := Vector2.ZERO   # 3.5: центр позиции на рельеф�
 func setup(center: Vector2, hp_mult: float, dps := 0.0) -> void:
 	# 3D-рельеф: техника ПВО стоит на дне долины, а не на хребте (правила — s4-landscape-rules.md)
 	var tr := Terrain3D.active()
+	var rot := randf() * TAU   # тест 3.5-s4: раскладка поворачивается целиком — машины не съезжаются в кучу
+	var along := Vector2.ZERO
 	if tr != null:
-		# тест 3.5-s4 (п. 20): вся позиция (радиус ~250) — на сухом берегу, а не только её центр
-		center = tr.find_floor(center, 900.0, 0.0, [], 260.0 * SPREAD)
-		var fixed := tr.fix_object({"pos": center, "size": 480.0 * SPREAD, "name": "o_aa_site"})
-		if fixed.has("pos"):   # не отвелась от воды — остаётся точка find_floor (сухое дно долины)
-			center = fixed["pos"]
+		# тест 3.5-s7: вся позиция — на равнине дна долины. Ровная полоса вдоль реки ~300 px шириной,
+		# позиция ~800 px: центр — посередине полосы, раскладка вытянута вдоль долины, поперёк сжата
+		# (раньше центр уводили на 416 px от реки — это уже подножие склона, и машины вставали на склон)
+		var at := tr.find_floor(center, 900.0, 0.0, [], FLOOR_MID, true)
+		if not tr.flat_at(at):   # вокруг одни горы — на ближайшую равнину у реки
+			at = tr.find_floor(tr.floor_near(center, FLOOR_MID + 20.0), 400.0, 0.0, [], FLOOR_MID, true)
+		if not tr.flat_at(at):   # и там ущелье — широкий поиск (редко: ~1 позиция из 100)
+			at = tr.find_floor(center, 2600.0, 0.0, [], FLOOR_MID, true)
+		center = at
 		center = tr.out_of_river_guard(center, 60.0)   # M-35: бункер с обваловкой — не в охранной зоне реки
+		var e := 8.0
+		var g := Vector2(tr.river_field(center.x + e, center.y) - tr.river_field(center.x - e, center.y),
+			tr.river_field(center.x, center.y + e) - tr.river_field(center.x, center.y - e))
+		if g.length_squared() > 1e-10:
+			along = g.normalized().orthogonal()
 	global_position = center
 	anchor = center
 	var layout := [["bunker", Vector2.ZERO], ["zsu", Vector2(-170, -90)], ["zsu", Vector2(170, 110)],
 		["sam", Vector2(140, -150)], ["radar", Vector2(-150, 140)]]
-	var rot := randf() * TAU   # тест 3.5-s4: раскладка поворачивается целиком — машины не съезжаются в кучу
 	for l in layout:
 		var g := GroundTarget.new()
 		g.setup(l[0], self, hp_mult, dps)
 		if l[0] == "bunker":
 			bunker = g
-		g.position = center + ((l[1] as Vector2).rotated(rot) * SPREAD * randf_range(0.9, 1.2) if l[0] != "bunker" else Vector2.ZERO)
+		var off := (l[1] as Vector2).rotated(rot) * SPREAD * randf_range(0.9, 1.2) if l[0] != "bunker" else Vector2.ZERO
+		if along != Vector2.ZERO and l[0] != "bunker":   # вдоль долины — полный разнос, поперёк — в пределах ровной полосы
+			var a := off.dot(along)
+			var c := off.dot(along.orthogonal())
+			off = along * (1.0 if a >= 0.0 else -1.0) * maxf(absf(a), SPACING) * 1.3 + along.orthogonal() * clampf(c * 0.35, -ACROSS, ACROSS)
+		g.position = center + off
 		if tr != null and l[0] != "bunker":
-			# своя точка рядом с назначенной, на том же берегу, не ближе SPACING к другим машинам и бункеру
+			# своя точка рядом с назначенной, на том же берегу, на равнине, не ближе SPACING к другим машинам и бункеру
 			var avoid := []
 			for o in targets:
 				avoid.append([(o as GroundTarget).position, SPACING])
-			g.position = tr.find_floor(g.position, 160.0, signf(tr.river_field(center.x, center.y)), avoid)
+			g.position = tr.find_floor(g.position, 260.0, signf(tr.river_field(center.x, center.y)), avoid, RIVER_GUARD_CAR, true)
 		targets.append(g)
 
 

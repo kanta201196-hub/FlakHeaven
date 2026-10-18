@@ -19,7 +19,7 @@ class_name Livery
 ## Первый вариант — окраска по умолчанию (профиль без выбора, ""); у «Грача» и «Кита» это «Песочный камуфляж»,
 ## исходная окраска модели («Камуфляж» / «Песок», без шейдера) — по своему id, выбор в профиле сохраняется.
 const SAND_CAMO := ["sand_camo", "Песочный камуфляж", Color(0.60, 0.37, 0.18), Color(0.85, 0.77, 0.58), Color(0.91, 0.85, 0.70), 0.7, 0.05, 5,
-	Color(0.19, 0.17, 0.10), Color(0.76, 0.81, 0.84)]
+	Color(0.19, 0.17, 0.10), Color(0.74, 0.72, 0.66)]
 ## «Хаки» на бежевой земле сливается (С-1, п. 2): тёмные законцовки крыльев и стабилизатора, светлое брюхо (узор 6)
 const KHAKI := ["khaki", "Хаки", Color(0.36, 0.35, 0.23), Color(0.45, 0.43, 0.29), Color(0.52, 0.50, 0.35), 0.78, 0.05, 6,
 	Color(0.13, 0.13, 0.09), Color(0.70, 0.73, 0.68)]
@@ -56,6 +56,14 @@ const SRC := {
 	"fighter_1": [0.42, 0.022], "fighter_2": [0.39, 0.022],
 	"attacker_1": [0.056, 0.011], "attacker_2": [0.056, 0.011],
 	"bomber_1": [0.079, 0.013], "bomber_2": [0.078, 0.013],
+}
+## Тест 3.5-s7: хвосты мотогондол (выхлоп) — металл в карте ORM; без отдельного тона они перекрашивались в светлый
+## тон окраски и под небом ангара выходили бело-голубыми «мятыми» пятнами. Темнее тона окраски (×0,7) и металлом —
+## только внутри коробок выхлопа в осях модели (Godot: нос +X, верх +Y, по z — зеркально оба крыла), с мягким краем;
+## одиночные пятна металла Meshy на фюзеляже, носу и коках не трогаются.
+## [порог металла (B карты ORM), [x0, x1, |z|0, |z|1, y0, y1] внутренние, …наружные]; по вершинам с металлом > 0,42
+const EXHAUST := {
+	"bomber_1": [0.36, [-0.16, -0.01, 0.105, 0.19, -0.12, -0.02], [-0.14, 0.04, 0.24, 0.32, -0.13, -0.04]],
 }
 
 static var _shader: Shader
@@ -101,6 +109,7 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 		return
 	var key := "%s_%d" % [cls, lvl]
 	var src: Array = SRC.get(key, [0.1, 0.012])
+	var ex: Array = EXHAUST.get(key, [])
 	# основной меш (текстура Meshy) — по нему габарит модели для узоров
 	var box := AABB()
 	var body: Array = []
@@ -125,7 +134,7 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 			# вид поверхности — по имени материала в GLB (у механизации поверх стоит общий материал WingMech)
 			var m0 := mi.mesh.surface_get_material(si)
 			var m := mi.get_surface_override_material(si)
-			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box)
+			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex)
 			if sm != null:
 				mi.set_surface_override_material(si, sm)
 
@@ -152,7 +161,7 @@ static func _rel(mi: Node3D, model: Node3D) -> Transform3D:
 	return xf
 
 
-static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transform3D, box: AABB) -> ShaderMaterial:
+static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transform3D, box: AABB, ex: Array = []) -> ShaderMaterial:
 	var bm := m as BaseMaterial3D
 	if bm == null or nm == "glass":
 		return null                     # стекло фонаря (ShaderMaterial «glass») — одно на все окраски
@@ -187,6 +196,12 @@ static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transfo
 	sm.set_shader_parameter("vcol_mul", 1.3 if mode == 1 else 1.0)
 	sm.set_shader_parameter("l_base", float(src[0]))
 	sm.set_shader_parameter("l_keep", float(src[1]))
+	if mode == 0 and ex.size() == 3:
+		sm.set_shader_parameter("ex_metal", float(ex[0]))
+		for i in 2:
+			var b: Array = ex[i + 1]
+			sm.set_shader_parameter("ex_min%d" % i, Vector3(b[0], b[4], b[2]))
+			sm.set_shader_parameter("ex_max%d" % i, Vector3(b[1], b[5], b[3]))
 	sm.set_shader_parameter("c_dark", v[2])
 	sm.set_shader_parameter("c_mid", v[3])
 	sm.set_shader_parameter("c_light", v[4])
@@ -218,6 +233,11 @@ uniform float src_rough = 0.6;
 uniform float vcol_mul = 1.0;
 uniform float l_base = 0.1;
 uniform float l_keep = 0.012;
+uniform float ex_metal = 2.0;   // 2 — выхлопа нет
+uniform vec3 ex_min0 = vec3(0.0);
+uniform vec3 ex_max0 = vec3(0.0);
+uniform vec3 ex_min1 = vec3(0.0);
+uniform vec3 ex_max1 = vec3(0.0);
 uniform vec3 c_dark : source_color;
 uniform vec3 c_mid : source_color;
 uniform vec3 c_light : source_color;
@@ -256,6 +276,13 @@ float vnoise(vec2 p) {
 	vec2 i = floor(p); vec2 f = fract(p);
 	vec2 u = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash2(i), hash2(i + vec2(1.0, 0.0)), u.x), mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+// внутри коробки (x, y, |z|) с мягким краем 0,02
+float in_box(vec3 p, vec3 a, vec3 b) {
+	vec3 lo = smoothstep(a - 0.02, a + 0.02, p);
+	vec3 hi = 1.0 - smoothstep(b - 0.02, b + 0.02, p);
+	return lo.x * lo.y * lo.z * hi.x * hi.y * hi.z;
 }
 
 // плоскость узора по преобладающей оси нормали: сверху — (x, z), борт — (x, y), торец — (z, y)
@@ -308,10 +335,13 @@ void vertex() {
 void fragment() {
 	vec3 src;
 	float rough0 = src_rough;
+	float metal0 = 0.0;
 	if (src_mode == 0) {
 		src = texture(albedo_tex, UV).rgb;
 		if (has_orm) {
-			rough0 = texture(orm_tex, UV).g;
+			vec3 orm = texture(orm_tex, UV).rgb;
+			rough0 = orm.g;
+			metal0 = orm.b;
 		}
 		if (has_normal) {
 			NORMAL_MAP = texture(normal_tex, UV).rgb;
@@ -324,6 +354,11 @@ void fragment() {
 	}
 	float l = dot(src, vec3(0.2126, 0.7152, 0.0722));
 	float t = l / l_base;
+	// тест 3.5-s7: вершинный цвет механизации и створок снят с текстуры грубой сеткой — по нему только светлые
+	// пятна камуфляжа, без тёмной полосы (иначе закрылки серые на белой «Классике» и в «квадратиках»)
+	if (src_mode == 1) {
+		t = clamp(t, 1.0, 2.2);
+	}
 	// полосы яркости исходного камуфляжа → тёмный / основной / светлый тон варианта
 	float wd = 1.0 - smoothstep(0.45, 0.75, t);
 	float wl = smoothstep(1.35, 1.8, t);
@@ -331,18 +366,21 @@ void fragment() {
 	// мелкие детали (швы, панели, грязь) — отклонение от середины своей полосы, приглушённо
 	float centre = mix(mix(1.0, 0.3, wd), 2.4, wl);
 	col *= mix(1.0, clamp(t / centre, 0.7, 1.25), 0.5);
+	// низ по нормали — широкий мягкий переход: у ремеша ангара треугольники неровные, узкий порог по
+	// интерполированной нормали давал рваный зубчатый край на гондолах и кромках крыла (тест 3.5-s7)
+	float under_n = smoothstep(-0.08, -0.62, ln.y);
 	vec3 q = (lp - box_min) / box_size;   // 0…1 по габариту: x — хвост→нос, y — низ→верх, z — левое→правое крыло
 	if (pattern == 1) {
 		vec2 lr = leopard(plane_uv(lp, ln));
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), lr.y * 0.8);
 		col = mix(col, pat_a, lr.x);
 	} else if (pattern == 2) {
-		float belly = smoothstep(-0.15, -0.55, ln.y);
+		float belly = under_n;
 		col = mix(col, pat_b, belly);
 		col = mix(col, pat_a, tiger(lp) * (1.0 - belly * 0.85));
 	} else if (pattern == 3) {
 		// бело-голубая «классика»: низ голубой, по борту синяя полоса, киль синий
-		float under = smoothstep(-0.05, -0.4, ln.y);
+		float under = under_n;
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), under);
 		float side = smoothstep(0.55, 0.8, abs(ln.z)) * (1.0 - smoothstep(0.55, 0.8, abs(ln.y)));
 		float band = (1.0 - smoothstep(0.04, 0.05, abs(q.y - 0.5))) * side * step(0.06, q.x);
@@ -366,11 +404,11 @@ void fragment() {
 		float oc = smoothstep(CAMO_OCHRE - bw, CAMO_OCHRE + bw, b);
 		vec3 cam = mix(mix(c_mid, c_dark, oc), pat_a, dk);
 		// светлое брюхо (видно на кренах и разворотах)
-		float belly = smoothstep(-0.18, -0.32, ln.y);
+		float belly = under_n;
 		cam = mix(cam, pat_b, belly);
 		col = cam * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5);
 	} else if (pattern == 6) {
-		float belly = smoothstep(-0.18, -0.32, ln.y);
+		float belly = under_n;
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), belly);
 		float tips = smoothstep(0.375, 0.385, abs(q.z - 0.5));
 		float htail = smoothstep(0.215, 0.225, abs(q.z - 0.5)) * (1.0 - smoothstep(0.12, 0.13, q.x));
@@ -378,8 +416,16 @@ void fragment() {
 	}
 	// очень тёмное (фонарь, сопла, ниши) — исходный цвет
 	float keep = 1.0 - smoothstep(l_keep * 0.6, l_keep, l);
+	// хвосты гондол (выхлоп, см. Livery.EXHAUST) — тон окраски темнее и металлом, плавно, только в коробках выхлопа
+	float mk = 0.0;
+	if (ex_metal < 1.5) {
+		vec3 pa = vec3(lp.x, lp.y, abs(lp.z));
+		float zone = max(in_box(pa, ex_min0, ex_max0), in_box(pa, ex_min1, ex_max1));
+		mk = zone * mix(0.6, 1.0, smoothstep(ex_metal - 0.14, ex_metal + 0.14, metal0));
+	}
+	col *= mix(1.0, 0.7, mk);
 	ALBEDO = mix(col, src, keep);
-	ROUGHNESS = mix(clamp(liv_rough + (rough0 - 0.6) * 0.25, 0.05, 1.0), rough0, keep);
-	METALLIC = liv_metal * (1.0 - keep);
+	ROUGHNESS = mix(mix(clamp(liv_rough + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), rough0, keep);
+	METALLIC = mix(mix(liv_metal, 0.45, mk), 0.0, keep);
 }
 """
