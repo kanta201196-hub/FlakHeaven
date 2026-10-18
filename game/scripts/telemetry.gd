@@ -28,6 +28,10 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	"units_model_max", "model_tris_max",
 	# A-03: наземный конвой — сожжено машин и грузовиков, ушло грузовиков, колонн разбито целиком
 	"convoy_vehicles_killed", "convoy_trucks_killed", "convoy_trucks_escaped", "convoy_done",
+	# фишка 2 (18.10): мастерство класса — секунда вылета, когда взято (0 — нет), и добавленный им урон
+	"mastery_t", "mastery_dmg",
+	# фишка 3: оружие второго подвеса со старта — номер в Weapons.POOL + 1 (0 — пусто)
+	"start2",
 	# M-31 (проход по оптимизации перед 3.5-s6): объёмные облака — клубов в кадре (макс.) и их заливка, % экрана
 	# (сколько «экранов» прозрачной заливки рисует видеокарта: средняя и наибольшая) — нагрузка на слабые видеокарты
 	"cloud_puffs_max", "cloud_fill_avg", "cloud_fill_max"]
@@ -233,6 +237,7 @@ func row(m: Main) -> PackedStringArray:
 	v["scale3d"] = 100.0 * float(Render3D.GFX_SCALE[clampi(Settings.gfx, 0, 3)])
 	v["msl_air_avg"] = g("msl_air_sum") / maxf(_speed_n, 1)
 	v["crew_rank"] = float(Profile.crew_lvl(m.cls_id))
+	v["start2"] = float(Weapons.POOL.find(Profile.start2(m.cls_id)) + 1)
 	v["plane_lvl"] = float(m.player.plane_lvl) if is_instance_valid(m.player) else 0.0
 	v["crew_xp_lvl"] = float(Profile.xp_lvl(m.cls_id))
 	v["callsign_idx"] = float((Profile.CALLSIGNS[m.cls_id] as Array).find(Profile.cls(m.cls_id)["callsign"]))

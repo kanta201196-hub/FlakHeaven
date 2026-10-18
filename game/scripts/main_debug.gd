@@ -299,7 +299,7 @@ func _smoke_check() -> void:
 
 
 func _smoke_end(code: int, why: String) -> void:
-	print("SMOKE: dealt %s · rail %d · emp %d · laser burned %d" % [str(m.stats["dealt"]), int(m.counters.get("rail_shots", 0)), int(m.counters.get("emp_pulses", 0)), int(m.counters.get("laser_burned", 0))])
+	print("SMOKE: dealt %s · rail %d · emp %d · laser burned %d · mastery +%d" % [str(m.stats["dealt"]), int(m.counters.get("rail_shots", 0)), int(m.counters.get("emp_pulses", 0)), int(m.counters.get("laser_burned", 0)), int(m.tele.g("mastery_dmg"))])
 	print("SMOKE: %s class %s, level %d, kills %d, %s, %.0f s real" % ["ok" if code == 0 else "FAIL", m.cls_id, m.level, m.kills, why, Time.get_ticks_msec() / 1000.0])
 	m.get_tree().quit(code)
 
@@ -448,7 +448,8 @@ func _run_autotest(delta: float) -> void:
 		"dead", "evac":
 			if _bot_wait <= 0.0:
 				_bot_wait = 1.0
-				print("AUTOTEST: %s at %.1f s, class %s, level %d, kills %d, bosses %d" % [m.state, m.run_time, m.cls_id, m.level, m.kills, m.bosses_killed])
+				print("AUTOTEST: %s at %.1f s, class %s, level %d, kills %d, bosses %d, mastery t%d +%d" % [m.state, m.run_time, m.cls_id, m.level, m.kills, m.bosses_killed,
+					int(m.tele.g("mastery_t")), int(m.tele.g("mastery_dmg"))])
 				if not m._args.has("--shots"):
 					m.ui_click("change_class") # следующий вылет — другим классом
 			return

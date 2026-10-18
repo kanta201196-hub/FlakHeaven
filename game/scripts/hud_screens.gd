@@ -42,8 +42,12 @@ func class_select(size: Vector2) -> void:
 		y += 36.0
 		_text(Vector2(x, y), "Подвесы:", 19, Color.WHITE)
 		y += 26.0
+		var s2 := Profile.start2(id) # фишка 3: второй подвес, выбранный в ангаре
 		for g in d["groups"]:
 			var wname: String = "пусто — оружие из карточек" if g["weapon"] == "" else Weapons.title(g["weapon"])
+			if g["weapon"] == "" and s2 != "":
+				wname = "%s — выбрано в ангаре" % Weapons.DEFS[s2]["short"]
+				s2 = ""
 			_text(Vector2(x + 12, y), "• %s ×%d: %s" % [g["name"], g["slots"], wname], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if int(d["turrets"]) > 0:
@@ -59,7 +63,8 @@ func class_select(size: Vector2) -> void:
 		for wid in d["weapons"]:
 			wl.append(String(Weapons.DEFS[wid]["short"]) + (" ★" if wid == d["signature"] else ""))
 		y += _para(Vector2(x + 12, y), "• Оружие: %s" % ", ".join(wl).to_lower(), w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
-		y += _para(Vector2(x + 12, y), "★ Особенность класса: «%s» +20%% урона" % Weapons.DEFS[d["signature"]]["short"], w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 12.0
+		y += _para(Vector2(x + 12, y), "★ Особенность класса: «%s» +20%% урона" % Weapons.DEFS[d["signature"]]["short"], w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
+		y += _para(Vector2(x + 12, y), "★ На ур. 5 особенности — мастерство %s" % PlaneClasses.MASTERY[id]["title"], w - 56.0, 15, Color(1.0, 0.92, 0.65)) + 12.0
 		# 3.1: выбор навыка класса (3 варианта)
 		_text(Vector2(x, y), "Навык класса [E] — выберите:", 18, Color(0.7, 1.0, 0.7))
 		y += 10.0
@@ -132,7 +137,7 @@ func levelup(m: Main, size: Vector2) -> void:
 		var c: Dictionary = m.offers[i]
 		var r := Rect2(x0 + i * (w + gap), 220, w, h)
 		var rar: Dictionary = Cards.RARITY[int(c["rarity"])]
-		var rc: Color = Cards.EVO_COLOR if c["kind"] == "evolution" else rar["color"]
+		var rc: Color = Cards.EVO_COLOR if c["kind"] in ["evolution", "mastery"] else rar["color"]
 		var hover := r.has_point(mp)
 		ctrl.draw_rect(r, Color(0.07, 0.09, 0.13, 0.96))
 		ctrl.draw_rect(Rect2(r.position, Vector2(w, 34)), Color(rc.r, rc.g, rc.b, 0.25))

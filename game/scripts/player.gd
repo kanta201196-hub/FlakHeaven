@@ -34,6 +34,8 @@ var _upgrade_teased := false
 var tags := {}             # очки тегов: тег → число
 var patches := {}          # нашивки: тег → 0/1/2
 var picks := 0             # сколько карточек выбрано за вылет
+var mastery := false        # фишка 2: мастерство класса взято
+var mastery_off := false    # от карточки мастерства отказались — больше не придёт
 var evo_wait := {}         # отказ от эволюции: оружие → номер выбора, с которого вернётся
 var evo_times := {}        # когда получены эволюции (лог)
 var patch_times := {}      # когда получены нашивки (лог)
@@ -140,7 +142,9 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 	if Profile.plane_lvl(id) == 2:
 		heavy = Hardpoint.new("Тяжёлый подвес", 1, "")
 		heavy.heavy = true
-	for arg in OS.get_cmdline_user_args():   # проверка: --heavy=railgun / emp — тяжёлый подвес с оружием сразу
+	for arg in OS.get_cmdline_user_args():   # проверка: --heavy=railgun / emp — тяжёлый подвес с оружием сразу; --mastery — мастерство с начала
+		if arg == "--mastery":
+			mastery = true
 		if String(arg).begins_with("--heavy="):
 			heavy = Hardpoint.new("Тяжёлый подвес", 1, String(arg).substr(8))
 			heavy.heavy = true
@@ -152,6 +156,16 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 		groups.append(tg)
 	if heavy != null:
 		groups.append(heavy)
+	# фишка 3: оружие, выбранное в ангаре, — на первый пустой обычный подвес, ур. 1
+	var s2 := Profile.start2(id)
+	if s2 != "":
+		for g in groups:
+			var h: Hardpoint = g
+			if not h.builtin and not h.heavy and h.is_empty():
+				h.weapon = s2
+				h.level = 1
+				h.cd = 0.5
+				break
 	# стартовое оружие и навык дают очки тегов
 	for g in groups:
 		if not (g as Hardpoint).is_empty():
@@ -390,6 +404,8 @@ func pass_damage() -> float:
 
 ## Сбит враг (Main сообщает): «Штурмовой заход» III продлевается за наземные цели
 func on_kill(e: Enemy) -> void:
+	if mastery and cls_id == "attacker" and e.is_ground: # «Штурмовка»
+		s3_cd = maxf(0.0, s3_cd - 1.0)
 	if has_perk("f_tail2") and on_tail() and tail_target == e:
 		roll_cd = maxf(0.0, roll_cd - 1.0)
 		ab_cd = maxf(0.0, ab_cd - 1.0)
@@ -398,6 +414,27 @@ func on_kill(e: Enemy) -> void:
 	if assault_t > 0.0 and e.is_ground and lvl_of("assault") >= 3 and _assault_ext < 3.0:
 		assault_t += 0.5
 		_assault_ext += 0.5
+
+
+## Мастерство класса: множитель урона по цели (src — источник урона, как в статистике)
+func mastery_k(e: Enemy, src: String) -> float:
+	if not mastery:
+		return 1.0
+	match cls_id:
+		"fighter":
+			if src == "ракеты В-В" and (e.is_boss or e is RivalAce or e is Interceptor):
+				return PlaneClasses.MASTERY_K
+		"attacker":
+			if src == "НАР" and e.is_ground:
+				return PlaneClasses.MASTERY_K
+	return 1.0
+
+
+## «Выжженная земля»: запчасти за наземную цель, добитую бомбами или огнём
+func mastery_parts_k(e: Enemy) -> float:
+	if mastery and cls_id == "bomber" and e.is_ground and e.last_src in ["бомбы", PlaneClasses.MASTERY_FIRE_SRC]:
+		return PlaneClasses.MASTERY_K
+	return 1.0
 
 
 func throttle_cut_on() -> bool:
