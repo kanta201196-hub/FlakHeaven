@@ -239,7 +239,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 	if kind_s == "ground":
 		var site := AASite.new()
 		var dir := p.heading + randf_range(-1.0, 1.0)
-		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k)
+		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k, recent_dps())
 		Main.I.world.add_child(site)
 		activity_node = site
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
@@ -249,7 +249,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		# колонна пересекает курс игрока впереди: маршрут через точку в 1 300 пикс. по курсу
 		var mid := p.global_position + Vector2.from_angle(p.heading + randf_range(-0.4, 0.4)) * 1300.0
 		var side := 1.0 if randf() < 0.5 else -1.0
-		cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_k, t)
+		cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_k, recent_dps(), t)
 		Main.I.world.add_child(cv)
 		activity_node = cv
 		Main.I.show_banner("Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш", 4.0)
