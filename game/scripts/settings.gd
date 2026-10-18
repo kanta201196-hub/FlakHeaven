@@ -40,6 +40,9 @@ var fps_limit := 0
 var hide_hud := false
 var gfx := 2               # «Высокое»; деревья полной детализации — только на «Максимальном»
 var font := 0              # U-09: шрифт интерфейса — индекс в FONTS
+## Перевод (docs/localization.md): язык интерфейса; -1 — по языку системы. Названия языков не переводятся
+const LANGS := [["ru", "Русский"], ["en", "English"]]
+var lang := -1
 ## Правка 3.5-s4: кого звено атакует первым (клавиша G в полёте, кнопка на экране паузы)
 const WING_PRIO := ["по задаче ведомого", "прикрывать меня", "крупные и асы", "наземные цели"]
 var wing_prio := 0
@@ -59,6 +62,7 @@ func _ready() -> void:
 	for r in REBIND:
 		_defaults[r[0]] = _first_key(r[0])
 	load_settings()
+	apply_lang()
 	apply()
 
 
@@ -117,6 +121,22 @@ func apply() -> void:
 	apply_audio()
 
 
+## Язык: выбранный или по системе — русский для ru/uk/be/kk, иначе английский
+func lang_index() -> int:
+	if lang >= 0:
+		return lang
+	return 0 if OS.get_locale_language() in ["ru", "uk", "be", "kk"] else 1
+
+
+func lang_name() -> String:
+	var n: String = LANGS[lang_index()][1]
+	return n if lang >= 0 else "%s (%s)" % [n, TranslationServer.translate("авто")]
+
+
+func apply_lang() -> void:
+	TranslationServer.set_locale(LANGS[lang_index()][0])
+
+
 ## Качество графики: свет и тени сразу, модели биома — при пересборке кусков рельефа
 func apply_gfx() -> void:
 	if Render3D.I != null:
@@ -132,7 +152,7 @@ func save_settings() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
-		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "font": font, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds": binds}, "  "))
+		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "font": font, "lang": lang, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds": binds}, "  "))
 	f.close()
 
 
@@ -154,6 +174,7 @@ func load_settings() -> void:
 	gfx = clampi(int(d.get("gfx", gfx)), 0, GFX_MAX)
 	gfx_auto = bool(d.get("gfx_auto", gfx_auto))
 	font = clampi(int(d.get("font", font)), 0, FONTS.size() - 1)
+	lang = clampi(int(d.get("lang", lang)), -1, LANGS.size() - 1)
 	wing_prio = clampi(int(d.get("wing_prio", wing_prio)), 0, WING_PRIO.size() - 1)
 	minimap = clampi(int(d.get("minimap", minimap)), 0, MINIMAP_SIZES.size() - 1)
 	minimap_alpha = clampi(int(d.get("minimap_alpha", minimap_alpha)), 0, MINIMAP_ALPHA.size() - 1)

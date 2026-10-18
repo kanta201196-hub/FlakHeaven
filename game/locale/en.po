@@ -1,0 +1,5898 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: game/scripts/aa_site.gd:131
+msgid "Позиция ПВО обнаружила вас! 60 с на уничтожение"
+msgstr "AA site has spotted you! 60 s to destroy it"
+
+#: game/scripts/aa_site.gd:137
+msgid "Позиция ПВО устояла — награды не будет"
+msgstr "AA site survived — no reward"
+
+#: game/scripts/background.gd:11 game/scripts/biome.gd:14
+msgid "Нагорье Шахрисанг"
+msgstr "Shahrisang Highlands"
+
+#: game/scripts/background.gd:12
+msgid "ущелья, кишлаки, следы боёв"
+msgstr "gorges, villages, scars of war"
+
+#: game/scripts/biome.gd:24
+msgid "Архипелаг Таласора"
+msgstr "Thalasora Archipelago"
+
+#: game/scripts/boss.gd:15
+msgid "Вижу цель. Работаем."
+msgstr "Target in sight. Let's work."
+
+#: game/scripts/boss.gd:15
+msgid "Ты в моём небе, новичок."
+msgstr "You're in my sky, rookie."
+
+#: game/scripts/boss.gd:15
+msgid "Звено, не мешать — этот мой."
+msgstr "Flight, stay out — this one's mine."
+
+#: game/scripts/boss.gd:16
+msgid "Захожу!"
+msgstr "Going in!"
+
+#: game/scripts/boss.gd:16
+msgid "Держись, сейчас прошью!"
+msgstr "Hold still, I'll stitch you!"
+
+#: game/scripts/boss.gd:16
+msgid "Атакую!"
+msgstr "Attacking!"
+
+#: game/scripts/boss.gd:17
+msgid "Ах ты… Ну держись!"
+msgstr "Why you… Hold on!"
+
+#: game/scripts/boss.gd:17
+msgid "Повреждения! Злее будем."
+msgstr "I'm hit! Now I'm angry."
+
+#: game/scripts/boss.gd:17
+msgid "Теперь без шуток."
+msgstr "No more games."
+
+#: game/scripts/boss.gd:18
+msgid "Подбит! Катапультируюсь!"
+msgstr "I'm hit! Ejecting!"
+
+#: game/scripts/boss.gd:18
+msgid "Горю… выхожу из боя!"
+msgstr "On fire… disengaging!"
+
+#: game/scripts/boss.gd:66
+msgid "Ас «Почтальон»"
+msgstr "Ace \"Postman\""
+
+#: game/scripts/boss.gd:66
+msgid "Ас «Сквозняк»"
+msgstr "Ace \"Draft\""
+
+#: game/scripts/boss.gd:76 game/scripts/fortress.gd:92 game/scripts/hud_screens.gd:451 game/scripts/hud_screens.gd:473 game/scripts/render3d.gd:1643
+msgid "асы"
+msgstr "aces"
+
+#: game/scripts/boss.gd:89
+msgid "Ас "
+msgstr "Ace "
+
+#: game/scripts/boss.gd:108 game/scripts/run_log.gd:10
+msgid "щит аса"
+msgstr "ace shield"
+
+#: game/scripts/campaign.gd:12
+msgid "Учебный"
+msgstr "Training"
+
+#: game/scripts/campaign.gd:13
+msgid "Боевой"
+msgstr "Combat"
+
+#: game/scripts/campaign.gd:14
+msgid "Тяжёлый"
+msgstr "Hard"
+
+#: game/scripts/campaign.gd:15
+msgid "Ас"
+msgstr "Ace"
+
+#: game/scripts/campaign.gd:20
+msgid "Перевал"
+msgstr "Mountain Pass"
+
+#: game/scripts/campaign.gd:21
+msgid "Колонна снабжения идёт через перевал Шахрисанг. Держите небо над дорогой 15 минут, потом уходите на базу через ворота эвакуации."
+msgstr "A supply convoy is crossing the Shahrisang pass. Hold the sky over the road for 15 minutes, then return to base through the extraction gate."
+
+#: game/scripts/campaign.gd:22 game/scripts/campaign.gd:43
+msgid "Продержаться до 15:00 и улететь через ворота"
+msgstr "Survive until 15:00 and fly out through the gate"
+
+#: game/scripts/campaign.gd:23
+msgid "колонна пройдёт через"
+msgstr "convoy passes in"
+
+#: game/scripts/campaign.gd:24
+msgid "Операция 2 «Сухое русло»"
+msgstr "Operation 2 \"Dry Riverbed\""
+
+#: game/scripts/campaign.gd:24
+msgid "Покупка самолёта ур. 2 в ангаре: тяжёлый подвес и рельсотрон"
+msgstr "Buy a Lv. 2 plane in the hangar: heavy hardpoint and railgun"
+
+#: game/scripts/campaign.gd:25
+msgid "Сухое русло"
+msgstr "Dry Riverbed"
+
+#: game/scripts/campaign.gd:26
+msgid "Противник ставит ПВО в руслах рек. К 15-й минуте подойдёт «Крепость» — тяжёлый самолёт-штаб. Разведка видела аса с позывным «Барон»."
+msgstr "The enemy is placing AA in the riverbeds. At minute 15 the \"Fortress\" arrives — a heavy command plane. Recon spotted an ace with the callsign \"Baron\"."
+
+#: game/scripts/campaign.gd:27
+msgid "Сбить «Крепость» (появится в 15:00) и улететь"
+msgstr "Shoot down the \"Fortress\" (arrives at 15:00) and fly out"
+
+#: game/scripts/campaign.gd:28 game/scripts/campaign.gd:33 game/scripts/campaign.gd:38
+msgid "«Крепость» через"
+msgstr "\"Fortress\" in"
+
+#: game/scripts/campaign.gd:29
+msgid "Операция 3 «Крепости»"
+msgstr "Operation 3 \"Fortresses\""
+
+#: game/scripts/campaign.gd:29
+msgid "ЭМИ-заряд для тяжёлого подвеса"
+msgstr "EMP charge for the heavy hardpoint"
+
+#: game/scripts/campaign.gd:29
+msgid "Ступень 3 веток оружия для самолёта ур. 2 (готовится)"
+msgstr "Tier 3 weapon branches for the Lv. 2 plane (coming soon)"
+
+#: game/scripts/campaign.gd:30
+msgid "Крепости"
+msgstr "Fortresses"
+
+#: game/scripts/campaign.gd:31
+msgid "Старые горные крепости стали опорными пунктами. «Барон» ищет вас лично: примите дуэль и не дайте ему уйти. В 15:00 — снова «Крепость»."
+msgstr "Old mountain forts have become strongholds. The \"Baron\" is hunting you personally: accept the duel and don't let him escape. At 15:00 — the \"Fortress\" again."
+
+#: game/scripts/campaign.gd:32
+msgid "Сбить «Барона» в дуэли и «Крепость», затем улететь"
+msgstr "Shoot down the \"Baron\" in a duel and the \"Fortress\", then fly out"
+
+#: game/scripts/campaign.gd:34
+msgid "Операция 4 «Небо над Шахрисангом»"
+msgstr "Operation 4 \"Skies over Shahrisang\""
+
+#: game/scripts/campaign.gd:34
+msgid "Лазер «Луч» и плазменная бомба для тяжёлого подвеса"
+msgstr "\"Ray\" laser and plasma bomb for the heavy hardpoint"
+
+#: game/scripts/campaign.gd:35
+msgid "Небо над Шахрисангом"
+msgstr "Skies over Shahrisang"
+
+#: game/scripts/campaign.gd:36
+msgid "Последний рывок: всё, что осталось у противника, поднято в воздух. Сбейте «Крепость» и возвращайтесь."
+msgstr "The final push: everything the enemy has left is in the air. Shoot down the \"Fortress\" and come home."
+
+#: game/scripts/campaign.gd:37
+msgid "Сбить «Крепость» на сложности «Ас» и улететь"
+msgstr "Shoot down the \"Fortress\" on \"Ace\" difficulty and fly out"
+
+#: game/scripts/campaign.gd:39
+msgid "Второй биом (готовится)"
+msgstr "Second biome (coming soon)"
+
+#: game/scripts/campaign.gd:41
+msgid "Пролив"
+msgstr "The Strait"
+
+#: game/scripts/campaign.gd:42
+msgid "Морской конвой противника идёт проливом между островами Таласоры. Береговые батареи и катера ПВО прикрывают фарватер. Держите небо 15 минут и уходите через ворота эвакуации."
+msgstr "An enemy naval convoy is moving through the strait between the Thalasora islands. Shore batteries and AA boats cover the channel. Hold the sky for 15 minutes and leave through the extraction gate."
+
+#: game/scripts/campaign.gd:44
+msgid "конвой пройдёт пролив через"
+msgstr "convoy clears the strait in"
+
+#: game/scripts/campaign.gd:45
+msgid "Операция «Маяк»"
+msgstr "Operation \"Lighthouse\""
+
+#: game/scripts/campaign.gd:46 game/scripts/profile.gd:65 game/scripts/profile.gd:71 game/scripts/profile.gd:85
+msgid "Маяк"
+msgstr "Lighthouse"
+
+#: game/scripts/campaign.gd:47
+msgid "На мысах у входа в бухты противник поставил посты наблюдения и батареи. Над водой ходят экранопланы «Крачка». Продержитесь до 15:00."
+msgstr "On the capes at the bay entrances the enemy has set up lookout posts and batteries. \"Tern\" ekranoplans skim the water. Hold out until 15:00."
+
+#: game/scripts/campaign.gd:48 game/scripts/campaign.gd:53
+msgid "Продержаться до 15:00 и улететь"
+msgstr "Survive until 15:00 and fly out"
+
+#: game/scripts/campaign.gd:49 game/scripts/campaign.gd:54 game/scripts/campaign.gd:59
+msgid "до эвакуации"
+msgstr "extraction in"
+
+#: game/scripts/campaign.gd:50
+msgid "Операция «Затонувший порт»"
+msgstr "Operation \"Sunken Port\""
+
+#: game/scripts/campaign.gd:51
+msgid "Затонувший порт"
+msgstr "Sunken Port"
+
+#: game/scripts/campaign.gd:52
+msgid "Порт в глубине залива — склад и ремонтная база флота противника. Его прикрывает крейсер «Сторож». Продержитесь до 15:00."
+msgstr "A port deep in the gulf — a depot and repair base of the enemy fleet. It is guarded by the cruiser \"Warden\". Hold out until 15:00."
+
+#: game/scripts/campaign.gd:55
+msgid "Операция «Левиафан»"
+msgstr "Operation \"Leviathan\""
+
+#: game/scripts/campaign.gd:56
+msgid "Левиафан"
+msgstr "Leviathan"
+
+#: game/scripts/campaign.gd:57
+msgid "В открытом море — «Левиафан», корабль-носитель противника. Всё, что у него есть, поднято в воздух."
+msgstr "On the open sea — the \"Leviathan\", the enemy carrier. Everything it has is in the air."
+
+#: game/scripts/campaign.gd:58
+msgid "Продержаться до 15:00 на сложности «Ас» и улететь"
+msgstr "Survive until 15:00 on \"Ace\" difficulty and fly out"
+
+#: game/scripts/campaign.gd:63
+msgid "продержаться до 15:00"
+msgstr "survive until 15:00"
+
+#: game/scripts/campaign.gd:63
+msgid "сбить «Крепость»"
+msgstr "shoot down the \"Fortress\""
+
+#: game/scripts/campaign.gd:63
+msgid "сбить «Барона» в дуэли"
+msgstr "shoot down the \"Baron\" in a duel"
+
+#: game/scripts/card_icons.gd:23 game/scripts/cards.gd:53 game/scripts/cards.gd:54 game/scripts/cards.gd:76 game/scripts/hud_codex.gd:238 game/scripts/hud_screens.gd:41
+msgid "Пушка"
+msgstr "Cannon"
+
+#: game/scripts/card_icons.gd:25 game/scripts/cards.gd:64 game/scripts/cards.gd:80 game/scripts/cards.gd:529 game/scripts/cards.gd:535 game/scripts/main_input.gd:328
+msgid "Звено"
+msgstr "Flight"
+
+#: game/scripts/card_icons.gd:27 game/scripts/cards.gd:66 game/scripts/cards.gd:67 game/scripts/cards.gd:68 game/scripts/cards.gd:78
+msgid "Навык"
+msgstr "Skill"
+
+#: game/scripts/card_icons.gd:29 game/scripts/cards.gd:81 game/scripts/cards.gd:680
+msgid "Связка"
+msgstr "Synergy"
+
+#: game/scripts/card_icons.gd:31 game/scripts/cards.gd:84 game/scripts/cards.gd:551 game/scripts/cards.gd:552 game/scripts/cards.gd:553 game/scripts/cards.gd:555
+msgid "Резерв"
+msgstr "Reserve"
+
+#: game/scripts/card_icons.gd:31 game/scripts/cards.gd:69 game/scripts/cards.gd:79
+msgid "Ремонт"
+msgstr "Repair"
+
+#: game/scripts/card_icons.gd:230
+msgid "Н"
+msgstr "N"
+
+#: game/scripts/cards.gd:9
+msgid "Базовая"
+msgstr "Basic"
+
+#: game/scripts/cards.gd:10
+msgid "Обычная"
+msgstr "Common"
+
+#: game/scripts/cards.gd:11
+msgid "Уникальная"
+msgstr "Rare"
+
+#: game/scripts/cards.gd:12
+msgid "Исключительная"
+msgstr "Epic"
+
+#: game/scripts/cards.gd:13
+msgid "Легендарная"
+msgstr "Legendary"
+
+#: game/scripts/cards.gd:50
+msgid "Бронеплиты"
+msgstr "Armor Plates"
+
+#: game/scripts/cards.gd:50 game/scripts/cards.gd:51 game/scripts/cards.gd:52 game/scripts/cards.gd:65 game/scripts/cards.gd:75
+msgid "Модуль"
+msgstr "Module"
+
+#: game/scripts/cards.gd:51
+msgid "Форсированный двигатель"
+msgstr "Boosted Engine"
+
+#: game/scripts/cards.gd:52
+msgid "Механизация крыла"
+msgstr "Wing Flaps"
+
+#: game/scripts/cards.gd:53
+msgid "Бронебойные снаряды"
+msgstr "AP Rounds"
+
+#: game/scripts/cards.gd:54
+msgid "Облегчённый затвор"
+msgstr "Lightened Breech"
+
+#: game/scripts/cards.gd:55 game/scripts/profile.gd:29 game/scripts/profile.gd:31 game/scripts/profile.gd:37
+msgid "Быстрая перезарядка"
+msgstr "Fast Reload"
+
+#: game/scripts/cards.gd:55 game/scripts/cards.gd:56 game/scripts/cards.gd:57 game/scripts/cards.gd:58 game/scripts/cards.gd:59 game/scripts/cards.gd:61
+msgid "Подвесы"
+msgstr "Hardpoints"
+
+#: game/scripts/cards.gd:56
+msgid "Головка наведения «Глазастик»"
+msgstr "\"Bug-Eye\" Seeker"
+
+#: game/scripts/cards.gd:57
+msgid "Осколочная рубашка"
+msgstr "Frag Sleeve"
+
+#: game/scripts/cards.gd:58
+msgid "Сервоприводы"
+msgstr "Servos"
+
+#: game/scripts/cards.gd:59 game/scripts/profile.gd:28
+msgid "Усиленная боевая часть"
+msgstr "Enhanced Warhead"
+
+#: game/scripts/cards.gd:61
+msgid "Боевая часть"
+msgstr "Warhead"
+
+#: game/scripts/cards.gd:62
+msgid "Двигатели ракет"
+msgstr "Rocket Motors"
+
+#: game/scripts/cards.gd:63
+msgid "Пусковое устройство"
+msgstr "Launcher"
+
+#: game/scripts/cards.gd:64
+msgid "Радиостанция «Болтушка»"
+msgstr "\"Chatterbox\" Radio"
+
+#: game/scripts/cards.gd:65
+msgid "Сборщик трофеев"
+msgstr "Loot Collector"
+
+#: game/scripts/cards.gd:66
+msgid "Уклонение: тренировка"
+msgstr "Evade: Training"
+
+#: game/scripts/cards.gd:67
+msgid "Форсаж: тренировка"
+msgstr "Afterburner: Training"
+
+#: game/scripts/cards.gd:69
+msgid "Ремонт в воздухе"
+msgstr "Air Repair"
+
+#: game/scripts/cards.gd:73 game/scripts/cards.gd:473
+msgid "Новое оружие"
+msgstr "New Weapon"
+
+#: game/scripts/cards.gd:74 game/scripts/cards.gd:481
+msgid "Оружие"
+msgstr "Weapon"
+
+#: game/scripts/cards.gd:82 game/scripts/cards.gd:573
+msgid "Модернизация"
+msgstr "Upgrade"
+
+#: game/scripts/cards.gd:83 game/scripts/cards.gd:691
+msgid "Мастерство класса"
+msgstr "Class Mastery"
+
+#: game/scripts/cards.gd:98
+msgid "Карусель"
+msgstr "Carousel"
+
+#: game/scripts/cards.gd:99
+#, c-format
+msgid "Наводящаяся ракета, сбившая цель, сразу пускает новую в ближайшую (до 4 перепусков, каждый +20% урона)"
+msgstr "A homing missile that kills its target instantly fires a new one at the nearest (up to 4 relaunches, +20% damage each)"
+
+#: game/scripts/cards.gd:100
+msgid "сбитие → новая ракета"
+msgstr "kill → new missile"
+
+#: game/scripts/cards.gd:101
+msgid "Термобарика"
+msgstr "Thermobaric"
+
+#: game/scripts/cards.gd:102
+msgid "Ракета залпа прилипает и через 0,5 с даёт объёмный взрыв 130 пикс. (урон ×1,5); соседние взрывы сливаются: до ×2"
+msgstr "Salvo rockets stick and after 0.5 s give a 130 px fuel-air blast (dmg ×1.5); nearby blasts merge: up to ×2"
+
+#: game/scripts/cards.gd:103
+msgid "прилипающие ракеты, объёмный взрыв"
+msgstr "sticky rockets, fuel-air blast"
+
+#: game/scripts/cards.gd:104
+msgid "Огненный вал"
+msgstr "Fire Wall"
+
+#: game/scripts/cards.gd:105
+msgid "Каждый 3-й залп ракет — вал: три линии по 5 взрывов в 250 / 450 / 650 пикс. впереди (урон ×1,3)"
+msgstr "Every 3rd rocket salvo is a barrage: three lines of 5 blasts at 250 / 450 / 650 px ahead (dmg ×1.3)"
+
+#: game/scripts/cards.gd:106
+msgid "каждый 3-й залп — три линии огня"
+msgstr "every 3rd salvo — three lines of fire"
+
+#: game/scripts/cards.gd:107
+msgid "Ковровая дорожка"
+msgstr "Red Carpet"
+
+#: game/scripts/cards.gd:108
+msgid "Бомба разбрасывает 4 суббоеприпаса крестом и оставляет горящее пятно на 2,5 с (12 урона/с)"
+msgstr "A bomb scatters 4 submunitions in a cross and leaves a burning patch for 2.5 s (12 dmg/s)"
+
+#: game/scripts/cards.gd:109
+msgid "кресты взрывов и огонь"
+msgstr "blast crosses and fire"
+
+#: game/scripts/cards.gd:110
+msgid "Цепная реакция"
+msgstr "Chain Reaction"
+
+#: game/scripts/cards.gd:111
+#, c-format
+msgid "Враг, убитый взрывом ракеты залпа или бомбы, взрывается сам: 30 урона + 8% его прочности, радиус 90; цепь до 3 звеньев"
+msgstr "An enemy killed by a salvo rocket or bomb blast explodes too: 30 dmg + 8% of its hull, radius 90; chain up to 3 links"
+
+#: game/scripts/cards.gd:112
+msgid "убитые взрывом рвутся домино"
+msgstr "blast kills go off like dominoes"
+
+#: game/scripts/cards.gd:113
+msgid "Волчья стая"
+msgstr "Wolf Pack"
+
+#: game/scripts/cards.gd:114
+msgid "Когда вы пускаете ракеты, каждый ведомый дублирует пуск: 2 ракеты в вашу цель (×0,6 урона)"
+msgstr "When you fire missiles, each wingman copies the launch: 2 missiles at your target (×0.6 dmg)"
+
+#: game/scripts/cards.gd:115
+msgid "звено повторяет ваши пуски"
+msgstr "flight repeats your launches"
+
+#: game/scripts/cards.gd:116
+msgid "Тёплая компания"
+msgstr "Warm Welcome"
+
+#: game/scripts/cards.gd:117
+msgid "Раз в 7 с звено выходит вперёд и стелет ряд из 5 бомб поперёк пути самолёта (45 урона, 100 пикс.)"
+msgstr "Every 7 s the flight moves ahead and lays a row of 5 bombs across your path (45 dmg, 100 px)"
+
+#: game/scripts/cards.gd:118
+msgid "звено стелет огонь впереди"
+msgstr "flight lays fire ahead"
+
+#: game/scripts/cards.gd:119
+msgid "Зеркало"
+msgstr "Mirror"
+
+#: game/scripts/cards.gd:120
+msgid "Уведённая ловушкой ракета разворачивается и бьёт ближайшего врага (80 урона, взрыв 90); уклонение отстреливает 6 ловушек"
+msgstr "A missile decoyed by flares turns and hits the nearest enemy (80 dmg, blast 90); evade fires 6 flares"
+
+#: game/scripts/cards.gd:121
+msgid "вражеские ракеты летят в своих"
+msgstr "enemy missiles hit their own"
+
+#: game/scripts/cards.gd:122
+msgid "Стальной ёж"
+msgstr "Steel Hedgehog"
+
+#: game/scripts/cards.gd:123
+#, c-format
+msgid "Раз в 5 с каждая турель выпускает 3 мини-ракеты по разным целям (22, взрыв 45); турели раз в 3 с стреляют по ракете (сбивают в 55%)"
+msgstr "Every 5 s each turret fires 3 mini-missiles at different targets (22, blast 45); every 3 s turrets shoot at a missile (55% hit)"
+
+#: game/scripts/cards.gd:124
+msgid "залп мини-ракет из турелей"
+msgstr "turret mini-missile salvo"
+
+#: game/scripts/cards.gd:125
+msgid "Пушкарь"
+msgstr "Gunner"
+
+#: game/scripts/cards.gd:126
+msgid "Каждый 6-й снаряд гондолы — фугасный (урон ×4, взрыв 70); все пули гондолы пробивают 1 цель"
+msgstr "Every 6th gun pod shell is HE (dmg ×4, blast 70); all gun pod bullets pierce 1 target"
+
+#: game/scripts/cards.gd:127
+msgid "фугасные снаряды гондолы"
+msgstr "HE gun pod shells"
+
+#: game/scripts/cards.gd:128
+msgid "Каток"
+msgstr "Steamroller"
+
+#: game/scripts/cards.gd:129
+#, c-format
+msgid "Получив удар (раз в 2,5 с), самолёт отвечает кольцом из 10 ракет (18, взрыв 60); ниже 40% прочности — 16 ракет раз в 1,5 с"
+msgstr "When hit (once per 2.5 s), the plane answers with a ring of 10 rockets (18, blast 60); below 40% hull — 16 rockets every 1.5 s"
+
+#: game/scripts/cards.gd:130
+msgid "удар по вам → кольцо ракет"
+msgstr "hit on you → rocket ring"
+
+#: game/scripts/cards.gd:131
+msgid "Реактивный след"
+msgstr "Jet Wake"
+
+#: game/scripts/cards.gd:132
+msgid "При уклонении и форсаже за самолётом каждые 50 пикс. остаётся заряд: через 0,4 с взрыв 70 пикс., 30 урона"
+msgstr "While evading or on afterburner, a charge is left every 50 px behind the plane: after 0.4 s a 70 px blast, 30 dmg"
+
+#: game/scripts/cards.gd:133
+msgid "огненная дорожка на манёврах"
+msgstr "fire trail on maneuvers"
+
+#: game/scripts/cards.gd:187
+#, c-format
+msgid "уровень навыка %d/%d"
+msgstr "skill level %d/%d"
+
+#: game/scripts/cards.gd:195
+#, c-format
+msgid "%s ур. %d/%d"
+msgstr "%s Lv. %d/%d"
+
+#: game/scripts/cards.gd:205
+#, c-format
+msgid "ведомые %d/%d"
+msgstr "wingmen %d/%d"
+
+#: game/scripts/cards.gd:326
+#, c-format
+msgid "\n▲ К связке «%s»: %s %d → %d (из %d)"
+msgstr "\n▲ To synergy \"%s\": %s %d → %d (of %d)"
+
+#: game/scripts/cards.gd:327
+#, c-format
+msgid "\n▲ К связке «%s»"
+msgstr "\n▲ To synergy \"%s\""
+
+#: game/scripts/cards.gd:362
+#, c-format
+msgid "+%s прочности (и сразу ремонт на эту величину)"
+msgstr "+%s hull (and instant repair by that amount)"
+
+#: game/scripts/cards.gd:364
+#, c-format
+msgid "+%s скорости"
+msgstr "+%s speed"
+
+#: game/scripts/cards.gd:366
+#, c-format
+msgid "+%s скорости разворота"
+msgstr "+%s turn rate"
+
+#: game/scripts/cards.gd:368
+#, c-format
+msgid "Пушка: +%s урона"
+msgstr "Cannon: +%s damage"
+
+#: game/scripts/cards.gd:370
+#, c-format
+msgid "Пушка: +%s скорострельности"
+msgstr "Cannon: +%s fire rate"
+
+#: game/scripts/cards.gd:372
+#, c-format
+msgid "Все подвесы и турели: −%s перезарядки"
+msgstr "All hardpoints and turrets: −%s reload"
+
+#: game/scripts/cards.gd:376
+msgid "Ракета, потерявшая цель, наводится на новую (600 пикс., 1 раз). Без головки наведения — летит прямо и самоликвидируется"
+msgstr "A missile that loses its target homes on a new one (600 px, once). Without a seeker it flies straight and self-destructs"
+
+#: game/scripts/cards.gd:378
+msgid "Перенацеливание: поиск 900 пикс., до 2 раз"
+msgstr "Retargeting: 900 px search, up to 2 times"
+
+#: game/scripts/cards.gd:380
+msgid "После сбития наводящаяся ракета ищет следующую цель (1 раз); наводящиеся ракеты бьют и наземные цели (×1,5)"
+msgstr "After a kill a homing missile seeks the next target (once); homing missiles also hit ground targets (×1.5)"
+
+#: game/scripts/cards.gd:382
+#, c-format
+msgid "+%s радиуса всех взрывов"
+msgstr "+%s radius of all blasts"
+
+#: game/scripts/cards.gd:384
+#, c-format
+msgid "Гондола и турели: +%s темпа, +%s дальности; турели наводятся на %s быстрее"
+msgstr "Gun pod and turrets: +%s rate, +%s range; turrets aim %s faster"
+
+#: game/scripts/cards.gd:386
+#, c-format
+msgid "+%s урона всех взрывов (залпы ракет, бомбы, осколки ракет, навыки)"
+msgstr "+%s damage of all blasts (rocket salvos, bombs, missile fragments, skills)"
+
+#: game/scripts/cards.gd:388
+#, c-format
+msgid "Ракеты: +%s урона, +%s радиуса разрыва"
+msgstr "Missiles: +%s damage, +%s burst radius"
+
+#: game/scripts/cards.gd:390
+msgid "; разделяющаяся боевая часть: ракета при попадании даёт 3 суббоеприпаса"
+msgstr "; cluster warhead: missile releases 3 submunitions on hit"
+
+#: game/scripts/cards.gd:393
+#, c-format
+msgid "Ракеты: +%s скорости, +%s дальности захвата"
+msgstr "Missiles: +%s speed, +%s lock range"
+
+#: game/scripts/cards.gd:395
+#, c-format
+msgid "Все ракеты: −%s перезарядки"
+msgstr "All missiles: −%s reload"
+
+#: game/scripts/cards.gd:397
+#, c-format
+msgid "Ведомые: +%s урона, +%s прочности"
+msgstr "Wingmen: +%s damage, +%s hull"
+
+#: game/scripts/cards.gd:399
+#, c-format
+msgid "+%s радиуса подбора опыта"
+msgstr "+%s XP pickup radius"
+
+#: game/scripts/cards.gd:402
+#, c-format
+msgid "Залп ловушек: −%.1f с перезарядки"
+msgstr "Flare salvo: −%.1f s reload"
+
+#: game/scripts/cards.gd:403
+#, c-format
+msgid "Уклонение: −%.1f с перезарядки, +%.2f с неуязвимости"
+msgstr "Evade: −%.1f s reload, +%.2f s invulnerability"
+
+#: game/scripts/cards.gd:405
+#, c-format
+msgid "Форсаж: +%.1f с длительности, −%.1f с перезарядки"
+msgstr "Afterburner: +%.1f s duration, −%.1f s reload"
+
+#: game/scripts/cards.gd:411
+#, c-format
+msgid "Восстановить %s прочности"
+msgstr "Restore %s hull"
+
+#: game/scripts/cards.gd:417 game/scripts/hud_screens.gd:37
+msgid "Скорость"
+msgstr "Speed"
+
+#: game/scripts/cards.gd:417
+msgid "Разворот"
+msgstr "Turn"
+
+#: game/scripts/cards.gd:418
+msgid "Урон пушки"
+msgstr "Cannon Damage"
+
+#: game/scripts/cards.gd:418
+msgid "Темп пушки"
+msgstr "Cannon Rate"
+
+#: game/scripts/cards.gd:419
+msgid "Радиус взрывов"
+msgstr "Blast Radius"
+
+#: game/scripts/cards.gd:419
+msgid "Урон взрывов"
+msgstr "Blast Damage"
+
+#: game/scripts/cards.gd:420
+msgid "Урон ракет"
+msgstr "Missile Damage"
+
+#: game/scripts/cards.gd:420
+msgid "Скорость ракет"
+msgstr "Missile Speed"
+
+#: game/scripts/cards.gd:421
+msgid "Урон ведомых"
+msgstr "Wingman Damage"
+
+#: game/scripts/cards.gd:421
+msgid "Радиус подбора"
+msgstr "Pickup Radius"
+
+#: game/scripts/cards.gd:422
+msgid "Темп гондолы и турелей"
+msgstr "Gun Pod & Turret Rate"
+
+#: game/scripts/cards.gd:429
+#, c-format
+msgid "Прочность: %d → %d"
+msgstr "Hull: %d → %d"
+
+#: game/scripts/cards.gd:432
+#, c-format
+msgid "Перезарядка подвесов: %s → %s"
+msgstr "Hardpoint reload: %s → %s"
+
+#: game/scripts/cards.gd:435
+#, c-format
+msgid "Перезарядка ракет: %s → %s"
+msgstr "Missile reload: %s → %s"
+
+#: game/scripts/cards.gd:440
+#, c-format
+msgid "Неуязвимость уклонения: %.2f → %.2f с"
+msgstr "Evade invulnerability: %.2f → %.2f s"
+
+#: game/scripts/cards.gd:443
+#, c-format
+msgid "Форсаж: %.1f → %.1f с"
+msgstr "Afterburner: %.1f → %.1f s"
+
+#: game/scripts/cards.gd:445
+#, c-format
+msgid "Прочность: %d → %d из %d"
+msgstr "Hull: %d → %d of %d"
+
+#: game/scripts/cards.gd:482
+#, c-format
+msgid "%s: улучшение"
+msgstr "%s: improvement"
+
+#: game/scripts/cards.gd:513
+#, c-format
+msgid "%s: уровень %d"
+msgstr "%s: level %d"
+
+#: game/scripts/cards.gd:518
+msgid "Залп ловушек: тренировка"
+msgstr "Flare Salvo: Training"
+
+#: game/scripts/cards.gd:530
+#, c-format
+msgid "Ведомый: %s"
+msgstr "Wingman: %s"
+
+#: game/scripts/cards.gd:536
+#, c-format
+msgid "Звено: слётанность — %s %d (ур. %d → %d)"
+msgstr "Flight: teamwork — %s %d (Lv. %d → %d)"
+
+#: game/scripts/cards.gd:551
+msgid "Перегрузка"
+msgstr "Overload"
+
+#: game/scripts/cards.gd:552
+msgid "Премия"
+msgstr "Bonus"
+
+#: game/scripts/cards.gd:553
+msgid "Ремкомплект"
+msgstr "Repair Kit"
+
+#: game/scripts/cards.gd:556
+msgid "Наработка: +1 к специализации"
+msgstr "Experience: +1 to specialization"
+
+#: game/scripts/cards.gd:561
+#, c-format
+msgid "%s Э+ (%d → %d)"
+msgstr "%s E+ (%d → %d)"
+
+#: game/scripts/cards.gd:564
+#, c-format
+msgid "«Дятел» Э+ (%d → %d)"
+msgstr "\"Woodpecker\" E+ (%d → %d)"
+
+#: game/scripts/cards.gd:574 game/scripts/cards.gd:853
+#, c-format
+msgid "МОДЕРНИЗАЦИЯ: %s"
+msgstr "UPGRADE: %s"
+
+#: game/scripts/cards.gd:599
+#, c-format
+msgid "%s\nНа подвес: %s ×%d\nСтарт с ур. %d"
+msgstr "%s\nOn hardpoint: %s ×%d\nStarts at Lv. %d"
+
+#: game/scripts/cards.gd:601
+#, c-format
+msgid "\nМодернизация: ур. 5 + %s"
+msgstr "\nUpgrade: Lv. 5 + %s"
+
+#: game/scripts/cards.gd:605
+#, c-format
+msgid "%s: ур. %d → %d\n%s"
+msgstr "%s: Lv. %d → %d\n%s"
+
+#: game/scripts/cards.gd:607
+msgid "\nВторая турель — сверху на фюзеляже"
+msgstr "\nSecond turret — on top of the fuselage"
+
+#: game/scripts/cards.gd:609
+#, c-format
+msgid "\nБонус редкости: +%s урона группы"
+msgstr "\nRarity bonus: +%s group damage"
+
+#: game/scripts/cards.gd:611
+#, c-format
+msgid "\n★ Особенность класса: урон +20%"
+msgstr "\n★ Class trait: damage +20%"
+
+#: game/scripts/cards.gd:613
+#, c-format
+msgid "\nМодернизация: ур. 5 + %s, с %d:%02d"
+msgstr "\nUpgrade: Lv. 5 + %s, from %d:%02d"
+
+#: game/scripts/cards.gd:615
+#, c-format
+msgid "\nОткрывает слот %d из %d. Следующий слот дороже."
+msgstr "\nUnlocks slot %d of %d. The next slot costs more."
+
+#: game/scripts/cards.gd:617
+msgid "\nОдна на вылет: если отказаться, больше не придёт."
+msgstr "\nOne per sortie: decline it and it won't come back."
+
+#: game/scripts/cards.gd:620
+msgid "\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора."
+msgstr "\nReplaces the weapon on the same hardpoint. Decline — returns after 3 picks."
+
+#: game/scripts/cards.gd:623
+#, c-format
+msgid "%s\nСила ×%.1f · Ведомых: %d / %d"
+msgstr "%s\nPower ×%.1f · Wingmen: %d / %d"
+
+#: game/scripts/cards.gd:626
+#, c-format
+msgid "Ур. %d: %s"
+msgstr "Lv. %d: %s"
+
+#: game/scripts/cards.gd:630
+#, c-format
+msgid "+%s урона всему оружию (можно брать снова)"
+msgstr "+%s damage to all weapons (can be taken again)"
+
+#: game/scripts/cards.gd:632
+#, c-format
+msgid "+%d запчастей сразу"
+msgstr "+%d parts now"
+
+#: game/scripts/cards.gd:634
+#, c-format
+msgid "+%s к максимальной прочности и полный ремонт"
+msgstr "+%s max hull and full repair"
+
+#: game/scripts/cards.gd:638
+#, c-format
+msgid "+1 очко «%s» — к связке «%s» (до 3 за вылет)"
+msgstr "+1 \"%s\" point — to synergy \"%s\" (up to 3 per sortie)"
+
+#: game/scripts/cards.gd:640
+#, c-format
+msgid "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
+msgstr "Upgrade: +8% damage, −4% reload (up to 5 times)"
+
+#: game/scripts/cards.gd:681
+#, c-format
+msgid "СВЯЗКА «%s» — слот %d"
+msgstr "SYNERGY \"%s\" — slot %d"
+
+#: game/scripts/cards.gd:693
+#, c-format
+msgid "МАСТЕРСТВО: %s"
+msgstr "MASTERY: %s"
+
+#: game/scripts/cards.gd:850
+#, c-format
+msgid "МАСТЕРСТВО КЛАССА: %s"
+msgstr "CLASS MASTERY: %s"
+
+#: game/scripts/convoy.gd:408
+#, c-format
+msgid "Колонна обнаружила вас! Грузовики уходят к укрытию — %d с"
+msgstr "The convoy spotted you! Trucks are heading for cover — %d s"
+
+#: game/scripts/convoy.gd:424
+#, c-format
+msgid "Колонна вызвала прикрытие: вертолёт%s «Сарыч»"
+msgstr "The convoy called for cover: \"Buzzard\" helicopter%s"
+
+#: game/scripts/convoy.gd:424
+msgid "ы"
+msgstr "s"
+
+#: game/scripts/convoy.gd:454
+msgid "Грузовик ушёл в укрытие"
+msgstr "A truck reached cover"
+
+#: game/scripts/convoy.gd:472
+msgid "Часть колонны ушла в укрытие — груз потерян"
+msgstr "Part of the convoy reached cover — cargo lost"
+
+#: game/scripts/convoy.gd:529
+msgid "Колонна ушла от удара — груз потерян"
+msgstr "The convoy escaped the strike — cargo lost"
+
+#: game/scripts/convoy_vehicle.gd:126 game/scripts/convoy_vehicle.gd:126
+msgid "грузовик"
+msgstr "truck"
+
+#: game/scripts/convoy_vehicle.gd:126
+msgid "броневик"
+msgstr "armored car"
+
+#: game/scripts/convoy_vehicle.gd:126
+msgid "пикап"
+msgstr "pickup"
+
+#: game/scripts/convoy_vehicle.gd:127
+msgid "ПЗРК"
+msgstr "MANPADS"
+
+#: game/scripts/convoy_vehicle.gd:127
+msgid "БМП"
+msgstr "IFV"
+
+#: game/scripts/drone.gd:17 game/scripts/hud_screens.gd:451 game/scripts/hud_screens.gd:473
+msgid "дроны"
+msgstr "drones"
+
+#: game/scripts/enemy.gd:74
+msgid "враг"
+msgstr "enemy"
+
+#: game/scripts/enemy.gd:77 game/scripts/player.gd:563 game/scripts/rival_ace.gd:89
+msgid "прочее"
+msgstr "other"
+
+#: game/scripts/enemy.gd:473 game/scripts/player_skills.gd:235 game/scripts/player_skills.gd:239 game/scripts/run_log.gd:10
+msgid "бронещит"
+msgstr "armor shield"
+
+#: game/scripts/enemy.gd:477 game/scripts/hud_screens.gd:421 game/scripts/hud_screens.gd:445 game/scripts/player.gd:550 game/scripts/run_log.gd:37
+msgid "таран"
+msgstr "ram"
+
+#: game/scripts/fortress.gd:77
+msgid "турель левого крыла"
+msgstr "left wing turret"
+
+#: game/scripts/fortress.gd:78
+msgid "турель правого крыла"
+msgstr "right wing turret"
+
+#: game/scripts/fortress.gd:79
+msgid "верхняя турель"
+msgstr "top turret"
+
+#: game/scripts/fortress.gd:80
+msgid "кормовая турель"
+msgstr "tail turret"
+
+#: game/scripts/fortress.gd:81
+msgid "левый двигатель"
+msgstr "left engine"
+
+#: game/scripts/fortress.gd:82
+msgid "правый двигатель"
+msgstr "right engine"
+
+#: game/scripts/fortress.gd:97
+#, c-format
+msgid "«Крепость» идёт на базу — сбейте турели: %d из 4"
+msgstr "\"Fortress\" is heading for the base — shoot down the turrets: %d of 4"
+
+#: game/scripts/fortress.gd:98
+#, c-format
+msgid "«Крепость» на боевом курсе — двигатели %d из 2, бейте в открытый люк"
+msgstr "\"Fortress\" on its bombing run — engines %d of 2, hit the open hatch"
+
+#: game/scripts/fortress.gd:99
+msgid "«Крепость» падает и идёт на таран — добивайте!"
+msgstr "\"Fortress\" is going down and ramming — finish it!"
+
+#: game/scripts/fortress.gd:209 game/scripts/hardpoint.gd:693 game/scripts/hardpoint.gd:717 game/scripts/projectiles.gd:364 game/scripts/run_log.gd:9
+msgid "турели"
+msgstr "turrets"
+
+#: game/scripts/fortress.gd:209 game/scripts/hardpoint.gd:693 game/scripts/projectiles.gd:364 game/scripts/run_log.gd:9
+msgid "гондола"
+msgstr "gun pod"
+
+#: game/scripts/fortress.gd:211 game/scripts/hardpoint.gd:565 game/scripts/hud_screens.gd:522 game/scripts/player.gd:441 game/scripts/projectiles.gd:33 game/scripts/projectiles.gd:324
+msgid "ракеты В-В"
+msgstr "AAMs"
+
+#: game/scripts/fortress.gd:211 game/scripts/player_skills.gd:190
+msgid "ёлочка"
+msgstr "fir tree"
+
+#: game/scripts/fortress.gd:211 game/scripts/hardpoint.gd:735 game/scripts/hardpoint.gd:742 game/scripts/run_log.gd:10
+msgid "противоракеты"
+msgstr "anti-missiles"
+
+#: game/scripts/fortress.gd:211 game/scripts/projectiles.gd:118
+msgid "связка: зеркало"
+msgstr "synergy: mirror"
+
+#: game/scripts/fortress.gd:260
+#, c-format
+msgid "Двигатель сбит: %d из 2 — «Крепость» теряет скорость"
+msgstr "Engine destroyed: %d of 2 — the \"Fortress\" is slowing down"
+
+#: game/scripts/fortress.gd:262
+msgid "Командная турель сбита — эскорт больше не придёт"
+msgstr "Command turret down — no more escorts"
+
+#: game/scripts/fortress.gd:264
+#, c-format
+msgid "Турель сбита: %d из 4"
+msgstr "Turret destroyed: %d of 4"
+
+#: game/scripts/fortress.gd:265
+msgid "СБИТА!"
+msgstr "DOWN!"
+
+#: game/scripts/fortress.gd:265
+msgid "СБИТ!"
+msgstr "DOWN!"
+
+#: game/scripts/fortress.gd:270
+msgid "Турели сбиты! «Крепость» на боевом курсе — бейте в открытый люк и по двигателям"
+msgstr "Turrets down! \"Fortress\" on its bombing run — hit the open hatch and the engines"
+
+#: game/scripts/fortress.gd:278
+msgid "Двигатели горят! «Крепость» падает и идёт на таран — добивайте!"
+msgstr "Engines on fire! \"Fortress\" is going down and ramming — finish it!"
+
+#: game/scripts/fortress.gd:340
+msgid "«Крепость» идёт на нашу базу! Перехватите её, пока не дошла"
+msgstr "\"Fortress\" is heading for our base! Intercept it before it gets there"
+
+#: game/scripts/fortress.gd:341
+msgid "«Крепость» летит к нашей базе (стрелка «база»). Турели бьют в свои сектора, нос и хвост — мёртвые зоны. Урон идёт в ту точку, куда попали."
+msgstr "\"Fortress\" is flying to our base (\"base\" arrow). Turrets cover their own sectors; nose and tail are blind spots. Damage goes where you hit."
+
+#: game/scripts/fortress.gd:354
+msgid "«Крепость» отбомбилась по базе — запчастей за неё вдвое меньше. Она заходит на второй круг!"
+msgstr "\"Fortress\" bombed the base — half the parts for it now. It's coming around again!"
+
+#: game/scripts/fortress.gd:356
+msgid "«Крепость» снова над базой! Сбейте её"
+msgstr "\"Fortress\" is over the base again! Shoot it down"
+
+#: game/scripts/fortress.gd:424
+msgid "Люк открыт! Попадание в люк — ×3 урона"
+msgstr "Hatch open! Hits on the hatch deal ×3 damage"
+
+#: game/scripts/fortress.gd:455 game/scripts/hardpoint.gd:787 game/scripts/hardpoint.gd:833 game/scripts/player.gd:451 game/scripts/projectiles.gd:78 game/scripts/projectiles.gd:523
+msgid "бомбы"
+msgstr "bombs"
+
+#: game/scripts/fortress.gd:496
+msgid "«Крепость» сбита!"
+msgstr "\"Fortress\" shot down!"
+
+#: game/scripts/fortress.gd:496
+msgid "«Крепость» сбита! (успела отбомбиться по базе)"
+msgstr "\"Fortress\" down! (after bombing the base)"
+
+#: game/scripts/fortress.gd:565 game/scripts/hud_flight.gd:178
+msgid "«Крепость»"
+msgstr "\"Fortress\""
+
+#: game/scripts/fortress.gd:576
+msgid "НАША БАЗА"
+msgstr "OUR BASE"
+
+#: game/scripts/fuel.gd:36
+#, c-format
+msgid "Бак пуст! Скорость −30%, форсажа нет — ждите заправщик"
+msgstr "Tank empty! Speed −30%, no afterburner — wait for the tanker"
+
+#: game/scripts/fuel.gd:40
+msgid "Топливо на исходе"
+msgstr "Fuel running low"
+
+#: game/scripts/fuel.gd:77
+msgid "Заправщик на подходе! Зайдите ему в хвост и держитесь за ним"
+msgstr "Tanker inbound! Get on its tail and stay behind it"
+
+#: game/scripts/fuel.gd:78
+msgid "Заправщик: догоните его, зайдите сзади и держитесь рядом — бак наполняется. Газ W/S помогает удержать скорость."
+msgstr "Tanker: catch up, get behind it and stay close — the tank fills up. Throttle W/S helps hold speed."
+
+#: game/scripts/ground_target.gd:91 game/scripts/hud_screens.gd:451 game/scripts/player.gd:550 game/scripts/player.gd:570
+msgid "ПВО"
+msgstr "AA"
+
+#: game/scripts/hangar3d.gd:389 game/scripts/player.gd:154 game/scripts/prog.gd:10 game/scripts/weapons.gd:84
+msgid "Турели"
+msgstr "Turrets"
+
+#: game/scripts/hardpoint.gd:51
+#, c-format
+msgid "%s: пусто%s"
+msgstr "%s: empty%s"
+
+#: game/scripts/hardpoint.gd:51
+msgid " (экспериментальное оружие)"
+msgstr " (experimental weapon)"
+
+#: game/scripts/hardpoint.gd:52
+#, c-format
+msgid "%s ×%d: %s ур. %d"
+msgstr "%s ×%d: %s Lv. %d"
+
+#: game/scripts/hardpoint.gd:54
+#, c-format
+msgid "%s ×%d: %s (Э%s)"
+msgstr "%s ×%d: %s (E%s)"
+
+#: game/scripts/hardpoint.gd:58
+msgid " [прав. кн. мыши]"
+msgstr " [right mouse]"
+
+#: game/scripts/hardpoint.gd:242
+msgid "Бомбы падают сами на наземные цели рядом. Бросить вручную: зажмите правую кнопку мыши — на земле появится прицел, отпустите — сброс."
+msgstr "Bombs drop on their own on nearby ground targets. Manual drop: hold the right mouse button — a reticle appears on the ground, release to drop."
+
+#: game/scripts/hardpoint.gd:244
+msgid "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab)."
+msgstr "Missiles and bombs fire on their own when an enemy is near or ahead. Manual fire with the right mouse button — set it in pause (Tab)."
+
+#: game/scripts/hardpoint.gd:258
+msgid "Прицел бомб: держите правую кнопку мыши и ведите прицел, отпустите — бомбы сброшены. Серый прицел — бомбы ещё перезаряжаются."
+msgstr "Bomb sight: hold the right mouse button and steer the reticle, release to drop. Gray reticle — bombs are still reloading."
+
+#: game/scripts/hardpoint.gd:338
+msgid "рельсотрон"
+msgstr "railgun"
+
+#: game/scripts/hardpoint.gd:374 game/scripts/hardpoint.gd:376 game/scripts/hardpoint.gd:379 game/scripts/hud_screens.gd:523
+msgid "ЭМИ"
+msgstr "EMP"
+
+#: game/scripts/hardpoint.gd:383
+msgid "ЭМИ-заряд срабатывает сам, когда в голубом круге вокруг вас 3 врага или вражеская ракета: дроны падают, остальные враги на время глохнут, ракеты теряют цель."
+msgstr "The EMP charge fires on its own when 3 enemies or an enemy missile are in the blue circle around you: drones fall, other enemies stall for a while, missiles lose lock."
+
+#: game/scripts/hardpoint.gd:423 game/scripts/hud_screens.gd:523
+msgid "лазер"
+msgstr "laser"
+
+#: game/scripts/hardpoint.gd:442 game/scripts/hud_screens.gd:523
+msgid "плазма"
+msgstr "plasma"
+
+#: game/scripts/hardpoint.gd:511
+msgid "связка: стальной ёж"
+msgstr "synergy: steel hedgehog"
+
+#: game/scripts/hardpoint.gd:609 game/scripts/projectiles.gd:510
+msgid "связка: термобарика"
+msgstr "synergy: thermobaric"
+
+#: game/scripts/hardpoint.gd:636
+msgid "связка: огненный вал"
+msgstr "synergy: fire wall"
+
+#: game/scripts/hardpoint.gd:803 game/scripts/plane_art.gd:105 game/scripts/plane_classes.gd:62 game/scripts/weapon_models.gd:671
+msgid "Бомбоотсек"
+msgstr "Bomb Bay"
+
+#: game/scripts/helicopter.gd:21
+msgid "вертолёты"
+msgstr "helicopters"
+
+#: game/scripts/hud.gd:8
+msgid "по направлению (WASD / стик)"
+msgstr "by direction (WASD / stick)"
+
+#: game/scripts/hud.gd:8
+msgid "влево / вправо (A / D)"
+msgstr "left / right (A / D)"
+
+#: game/scripts/hud.gd:8
+msgid "мышью (самолёт летит за курсором)"
+msgstr "mouse (plane follows the cursor)"
+
+#: game/scripts/hud_campaign.gd:33 game/scripts/hud_hangar.gd:13
+msgid "‹ Меню (Esc)"
+msgstr "‹ Menu (Esc)"
+
+#: game/scripts/hud_campaign.gd:35
+msgid "КАМПАНИЯ: "
+msgstr "CAMPAIGN: "
+
+#: game/scripts/hud_campaign.gd:36
+msgid "Выберите операцию: клавиши 1–4 или клик, биом — вкладки над картой (↑ / ↓). Пройденную можно повторить ради добычи."
+msgstr "Choose an operation: keys 1–4 or click; biome — tabs above the map (↑ / ↓). Cleared ones can be replayed for loot."
+
+#: game/scripts/hud_campaign.gd:126
+msgid "закрыта"
+msgstr "locked"
+
+#: game/scripts/hud_campaign.gd:130
+msgid "новая · сложнее: "
+msgstr "new · harder: "
+
+#: game/scripts/hud_campaign.gd:144
+#, c-format
+msgid "ОПЕРАЦИЯ %d"
+msgstr "OPERATION %d"
+
+#: game/scripts/hud_campaign.gd:148
+#, c-format
+msgid "Сложность: %s"
+msgstr "Difficulty: %s"
+
+#: game/scripts/hud_campaign.gd:150
+#, c-format
+msgid " — враги прочнее ×%s, бьют сильнее ×%s, волны гуще +%d%%, добыча ×%s"
+msgstr " — enemies tougher ×%s, hit harder ×%s, waves denser +%d%%, loot ×%s"
+
+#: game/scripts/hud_campaign.gd:152
+msgid " — обычные враги и добыча"
+msgstr " — normal enemies and loot"
+
+#: game/scripts/hud_campaign.gd:155
+msgid "БРИФИНГ"
+msgstr "BRIEFING"
+
+#: game/scripts/hud_campaign.gd:159
+msgid "ЗАДАЧА"
+msgstr "OBJECTIVE"
+
+#: game/scripts/hud_campaign.gd:164
+msgid "✓ Операция пройдена — повторный вылет ради запчастей и опыта экипажа"
+msgstr "✓ Operation cleared — replay for parts and crew XP"
+
+#: game/scripts/hud_campaign.gd:167
+msgid "ЗА ПЕРВЫЙ ПРОХОД"
+msgstr "FIRST CLEAR REWARD"
+
+#: game/scripts/hud_campaign.gd:169
+#, c-format
+msgid "• +%d запчастей"
+msgstr "• +%d parts"
+
+#: game/scripts/hud_campaign.gd:172
+msgid "• Откроется: "
+msgstr "• Unlocks: "
+
+#: game/scripts/hud_campaign.gd:174
+msgid "ВЫБРАТЬ САМОЛЁТ ›   (Enter)"
+msgstr "CHOOSE PLANE ›   (Enter)"
+
+#: game/scripts/hud_codex.gd:21
+#, c-format
+msgid "уровень навыка %d"
+msgstr "skill level %d"
+
+#: game/scripts/hud_codex.gd:23 game/scripts/hud_codex.gd:25
+#, c-format
+msgid "%s: %d очков"
+msgstr "%s: %d points"
+
+#: game/scripts/hud_codex.gd:27 game/scripts/hud_codex.gd:47
+#, c-format
+msgid "%s ур. %d"
+msgstr "%s Lv. %d"
+
+#: game/scripts/hud_codex.gd:31
+#, c-format
+msgid "ведомые: %d"
+msgstr "wingmen: %d"
+
+#: game/scripts/hud_codex.gd:38
+#, c-format
+msgid "уровень навыка ≥ 1 (сейчас %d)"
+msgstr "skill level ≥ 1 (now %d)"
+
+#: game/scripts/hud_codex.gd:40
+msgid "уровень навыка ≥ 1"
+msgstr "skill level ≥ 1"
+
+#: game/scripts/hud_codex.gd:49
+msgid " (нет)"
+msgstr " (none)"
+
+#: game/scripts/hud_codex.gd:49
+#, c-format
+msgid " (ур. %d)"
+msgstr " (Lv. %d)"
+
+#: game/scripts/hud_codex.gd:53
+msgid "ведомый"
+msgstr "wingman"
+
+#: game/scripts/hud_codex.gd:82
+msgid "(нет)"
+msgstr "(none)"
+
+#: game/scripts/hud_codex.gd:97
+msgid "Связки оружия"
+msgstr "Weapon Synergies"
+
+#: game/scripts/hud_codex.gd:97
+msgid "Связки навыков"
+msgstr "Skill Synergies"
+
+#: game/scripts/hud_codex.gd:97
+msgid "Модернизации"
+msgstr "Upgrades"
+
+#: game/scripts/hud_codex.gd:97
+msgid "Задания и экран"
+msgstr "Objectives & Screen"
+
+#: game/scripts/hud_codex.gd:101
+msgid "Позиция ПВО (голубая стрелка)"
+msgstr "AA Site (blue arrow)"
+
+#: game/scripts/hud_codex.gd:101
+msgid "Подлетите — пойдёт отсчёт. Разбейте бункер в центре, пока он не кончился; зенитки бьют издалека, заходите на скорости."
+msgstr "Fly close — a countdown starts. Destroy the bunker in the center before it runs out; flak hits from afar, come in fast."
+
+#: game/scripts/hud_codex.gd:101 game/scripts/hud_flight.gd:372
+msgid "Награда: выбор из редких карточек + 40 запчастей"
+msgstr "Reward: pick of rare cards + 40 parts"
+
+#: game/scripts/hud_codex.gd:102
+msgid "Конвой (оранжевая стрелка)"
+msgstr "Convoy (orange arrow)"
+
+#: game/scripts/hud_codex.gd:102
+msgid "Колонна грузовиков идёт к укрытию. Подбейте головную машину — колонна встанет."
+msgstr "A column of trucks heads for cover. Knock out the lead vehicle — the column stops."
+
+#: game/scripts/hud_codex.gd:102
+msgid "Награда: груз с каждого грузовика — запчасти и ремкомплекты"
+msgstr "Reward: cargo from every truck — parts and repair kits"
+
+#: game/scripts/hud_codex.gd:103
+msgid "Транспортник (розовая стрелка)"
+msgstr "Transport (pink arrow)"
+
+#: game/scripts/hud_codex.gd:103
+msgid "Пролетает район с прикрытием и уходит. Бейте сам транспортник, прикрытие только отвлекает."
+msgstr "Crosses the area with escort and leaves. Hit the transport itself; the escort is only a distraction."
+
+#: game/scripts/hud_codex.gd:103 game/scripts/hud_flight.gd:387
+msgid "Награда: груз — запчасти и ремкомплекты"
+msgstr "Reward: cargo — parts and repair kits"
+
+#: game/scripts/hud_codex.gd:104
+msgid "Дуэль с асом (красная стрелка)"
+msgstr "Duel with an ace (red arrow)"
+
+#: game/scripts/hud_codex.gd:104
+msgid "Ас заходит в хвост. Сбросьте газ (S) или сделайте боевой разворот (E) — он проскочит под вашу пушку."
+msgstr "The ace gets on your tail. Cut throttle (S) or do a combat turn (E) — he'll overshoot into your guns."
+
+#: game/scripts/hud_codex.gd:104 game/scripts/hud_flight.gd:392
+msgid "Награда: выбор из редких карточек"
+msgstr "Reward: pick of rare cards"
+
+#: game/scripts/hud_codex.gd:105
+msgid "Ас каждые 5 минут"
+msgstr "Ace every 5 minutes"
+
+#: game/scripts/hud_codex.gd:105
+msgid "Сильный враг с полосой прочности сверху. Собьёте — откроются ворота эвакуации и добавится переброс."
+msgstr "A strong enemy with a hull bar on top. Shoot it down — the extraction gate opens and you get a reroll."
+
+#: game/scripts/hud_codex.gd:105
+#, c-format
+msgid "После 15:00 — добыча +10% за каждую минуту, пока не улетите"
+msgstr "After 15:00 — loot +10% for every minute until you leave"
+
+#: game/scripts/hud_codex.gd:106 game/scripts/tanker.gd:235
+msgid "Заправщик"
+msgstr "Tanker"
+
+#: game/scripts/hud_codex.gd:106
+msgid "Когда бак на исходе, прилетает свой заправщик. Зайдите ему в хвост и держитесь рядом."
+msgstr "When the tank runs low, a friendly tanker arrives. Get on its tail and stay close."
+
+#: game/scripts/hud_codex.gd:106
+#, c-format
+msgid "Без топлива: скорость −30%, форсажа нет"
+msgstr "No fuel: speed −30%, no afterburner"
+
+#: game/scripts/hud_codex.gd:107
+msgid "Миникарта (слева внизу)"
+msgstr "Minimap (bottom left)"
+
+#: game/scripts/hud_codex.gd:107
+msgid "Север сверху. Белая стрелка — вы, красные точки — враги, розовые — асы, ромб — задание, зелёный ромб — ворота, фиолетовые — звено."
+msgstr "North is up. White arrow — you, red dots — enemies, pink — aces, diamond — objective, green diamond — gate, purple — flight."
+
+#: game/scripts/hud_codex.gd:107
+msgid "Размер и прозрачность — «Настройки → Графика»"
+msgstr "Size and opacity — \"Settings → Graphics\""
+
+#: game/scripts/hud_codex.gd:108
+msgid "Радиоэфир (справа внизу)"
+msgstr "Radio (bottom right)"
+
+#: game/scripts/hud_codex.gd:108
+msgid "Ведомые отвечают на приказы, штаб говорит о заданиях. Красная рамка — перехват вражеского эфира: жди аса или босса."
+msgstr "Wingmen answer orders, HQ talks about objectives. Red frame — intercepted enemy radio: expect an ace or a boss."
+
+#: game/scripts/hud_codex.gd:108
+msgid "Цель звена — клавиша G"
+msgstr "Flight target — G key"
+
+#: game/scripts/hud_codex.gd:109
+msgid "Стрелки у края экрана"
+msgstr "Edge-of-screen arrows"
+
+#: game/scripts/hud_codex.gd:109
+msgid "Показывают задание, ворота и заправщик за пределами экрана; на плашке — расстояние."
+msgstr "Shows the task, gates and tanker off-screen; the tag shows distance."
+
+#: game/scripts/hud_codex.gd:109
+msgid "Цвет стрелки = цвет задания"
+msgstr "Arrow color = task color"
+
+#: game/scripts/hud_codex.gd:110
+msgid "Серия сбитий"
+msgstr "Kill streak"
+
+#: game/scripts/hud_codex.gd:110
+msgid "Сбивайте без перерыва — растёт множитель опыта (справа под счётом)."
+msgstr "Keep shooting down enemies non-stop to grow the XP multiplier (right, under the score)."
+
+#: game/scripts/hud_codex.gd:110
+msgid "Перерыв — серия сгорает"
+msgstr "A pause burns the streak"
+
+#: game/scripts/hud_codex.gd:120
+msgid "‹ Назад (Esc)"
+msgstr "‹ Back (Esc)"
+
+#: game/scripts/hud_codex.gd:121 game/scripts/menu.gd:358
+msgid "СПРАВОЧНИК"
+msgstr "CODEX"
+
+#: game/scripts/hud_codex.gd:122
+msgid "Связка — сильный бонус, который открывается, когда собраны подходящие карточки. За вылет — до 3; условия указаны для первой, дальше — выше."
+msgstr "Synergy is a strong bonus unlocked once the right cards are collected. Up to 3 per sortie; conditions shown for the first, later ones need more."
+
+#: game/scripts/hud_codex.gd:123
+msgid "Модернизация — оружие ур. 5 превращается в новое, если взяты нужные карточки (с 7:00 вылета)."
+msgstr "Upgrade: a Lv. 5 weapon turns into a new one if you have the right cards (from 7:00 into the sortie)."
+
+#: game/scripts/hud_codex.gd:124
+msgid "Задания появляются примерно раз в минуту — за них награда. Ниже — что значат элементы экрана в полёте."
+msgstr "Tasks appear about once a minute and give a reward. Below: what the in-flight screen elements mean."
+
+#: game/scripts/hud_codex.gd:162
+#, c-format
+msgid "Показать все (ещё %d)"
+msgstr "Show all (%d more)"
+
+#: game/scripts/hud_codex.gd:162
+msgid "Только доступные"
+msgstr "Available only"
+
+#: game/scripts/hud_codex.gd:164
+msgid "Зелёное — уже выполнено. Открыть можно связку своей специализации; сменить её — за 1 переброс."
+msgstr "Green = already done. You can unlock a synergy of your specialization; changing it costs 1 reroll."
+
+#: game/scripts/hud_codex.gd:186
+msgid "Нужно: "
+msgstr "Needs: "
+
+#: game/scripts/hud_codex.gd:192
+#, c-format
+msgid "%d из %d"
+msgstr "%d of %d"
+
+#: game/scripts/hud_codex.gd:229
+#, c-format
+msgid "«%s» (навык «%s»)"
+msgstr "\"%s\" (skill \"%s\")"
+
+#: game/scripts/hud_codex.gd:248
+#, c-format
+msgid "%s ур. 5%s"
+msgstr "%s Lv. 5%s"
+
+#: game/scripts/hud_codex.gd:248
+#, c-format
+msgid " (сейчас %d)"
+msgstr " (now %d)"
+
+#: game/scripts/hud_codex.gd:261
+#, c-format
+msgid "%s: %d очков + уровень навыка %d"
+msgstr "%s: %d points + skill level %d"
+
+#: game/scripts/hud_flight.gd:49
+msgid "Мышь — куда лететь · Space — уклонение · Shift — форсаж · E — навык · Tab — пауза"
+msgstr "Mouse: steer · Space: evade · Shift: afterburner · E: skill · Tab: pause"
+
+#: game/scripts/hud_flight.gd:49
+msgid " · F5/F6/F7 — отладка"
+msgstr " · F5/F6/F7: debug"
+
+#: game/scripts/hud_flight.gd:65
+msgid "ПОДСКАЗКА"
+msgstr "TIP"
+
+#: game/scripts/hud_flight.gd:73
+msgid "готов"
+msgstr "ready"
+
+#: game/scripts/hud_flight.gd:76
+#, c-format
+msgid "%.1f с"
+msgstr "%.1f s"
+
+#: game/scripts/hud_flight.gd:79
+#, c-format
+msgid "%d с"
+msgstr "%d s"
+
+#: game/scripts/hud_flight.gd:106
+#, c-format
+msgid "Прочность %d / %d"
+msgstr "Hull %d / %d"
+
+#: game/scripts/hud_flight.gd:107 game/scripts/hud_hangar.gd:69
+#, c-format
+msgid "Ур. %d"
+msgstr "Lv. %d"
+
+#: game/scripts/hud_flight.gd:115
+msgid "БАК ПУСТ"
+msgstr "TANK EMPTY"
+
+#: game/scripts/hud_flight.gd:115
+#, c-format
+msgid "Топливо %d:%02d"
+msgstr "Fuel %d:%02d"
+
+#: game/scripts/hud_flight.gd:121
+msgid "Уклонение"
+msgstr "Evade"
+
+#: game/scripts/hud_flight.gd:121 game/scripts/weapons.gd:41
+msgid "Ловушки"
+msgstr "Flares"
+
+#: game/scripts/hud_flight.gd:122 game/scripts/settings.gd:22
+msgid "Форсаж"
+msgstr "Afterburner"
+
+#: game/scripts/hud_flight.gd:123 game/scripts/settings.gd:25
+msgid "Нырок"
+msgstr "Dive"
+
+#: game/scripts/hud_flight.gd:137
+#, c-format
+msgid "Пушка: ручной +%d%% [Q]"
+msgstr "Cannon: manual +%d%% [Q]"
+
+#: game/scripts/hud_flight.gd:147
+#, c-format
+msgid " (%d с)"
+msgstr " (%d s)"
+
+#: game/scripts/hud_flight.gd:149
+#, c-format
+msgid " (вернётся %d с)"
+msgstr " (back in %d s)"
+
+#: game/scripts/hud_flight.gd:151
+#, c-format
+msgid "Звено: %s · цель: %s [G]"
+msgstr "Flight: %s · target: %s [G]"
+
+#: game/scripts/hud_flight.gd:157
+msgid "ОТЛАДКА: неуязвимость (F7)"
+msgstr "DEBUG: invulnerable (F7)"
+
+#: game/scripts/hud_flight.gd:174
+msgid "✓ задание выполнено — к эвакуации"
+msgstr "✓ task complete: head to extraction"
+
+#: game/scripts/hud_flight.gd:178
+msgid "сбейте "
+msgstr "shoot down "
+
+#: game/scripts/hud_flight.gd:178
+msgid "«Барона»"
+msgstr "the \"Baron\""
+
+#: game/scripts/hud_flight.gd:183
+#, c-format
+msgid "«Барон»: %s"
+msgstr "\"Baron\": %s"
+
+#: game/scripts/hud_flight.gd:183
+msgid "сбит ✓"
+msgstr "shot down ✓"
+
+#: game/scripts/hud_flight.gd:183
+msgid "не сбит"
+msgstr "not shot down"
+
+#: game/scripts/hud_flight.gd:188
+msgid "Ас в бою!"
+msgstr "Ace inbound!"
+
+#: game/scripts/hud_flight.gd:190
+#, c-format
+msgid "Ас через %d:%02d"
+msgstr "Ace in %d:%02d"
+
+#: game/scripts/hud_flight.gd:192
+#, c-format
+msgid "Сбито %d"
+msgstr "Kills %d"
+
+#: game/scripts/hud_flight.gd:194
+#, c-format
+msgid "Запчасти %d"
+msgstr "Parts %d"
+
+#: game/scripts/hud_flight.gd:197
+#, c-format
+msgid "Задержались: добыча ×%.1f"
+msgstr "Lingering: loot ×%.1f"
+
+#: game/scripts/hud_flight.gd:244
+#, c-format
+msgid "до базы %d м"
+msgstr "%d m to base"
+
+#: game/scripts/hud_flight.gd:244
+#, c-format
+msgid "отбомбилась · до базы %d м"
+msgstr "bombed · %d m to base"
+
+#: game/scripts/hud_flight.gd:267
+#, c-format
+msgid "база %d м"
+msgstr "base %d m"
+
+#: game/scripts/hud_flight.gd:267
+msgid "база"
+msgstr "base"
+
+#: game/scripts/hud_flight.gd:277
+#, c-format
+msgid "эвакуация %d м"
+msgstr "extraction %d m"
+
+#: game/scripts/hud_flight.gd:278
+#, c-format
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с"
+msgstr "EXTRACTION: gate %d / %d · %d m · window %d s"
+
+#: game/scripts/hud_flight.gd:325
+#, c-format
+msgid "Газ [W/S]: %d%%%s"
+msgstr "Throttle [W/S]: %d%%%s"
+
+#: game/scripts/hud_flight.gd:325
+msgid "  ФОРСАЖ"
+msgstr "  AFTERBURNER"
+
+#: game/scripts/hud_flight.gd:332
+#, c-format
+msgid "БОЕВОЙ РЕЖИМ: пушка ×2 · %.1f с"
+msgstr "COMBAT MODE: cannon ×2 · %.1f s"
+
+#: game/scripts/hud_flight.gd:334
+#, c-format
+msgid "НА ХВОСТЕ: пушка +50%"
+msgstr "ON THEIR TAIL: cannon +50%"
+
+#: game/scripts/hud_flight.gd:337
+#, c-format
+msgid "Серия ×%d · опыт ×%.2f"
+msgstr "Streak ×%d · XP ×%.2f"
+
+#: game/scripts/hud_flight.gd:362
+#, c-format
+msgid "ПВО %d м"
+msgstr "AA %d m"
+
+#: game/scripts/hud_flight.gd:365
+#, c-format
+msgid "Позиция ПВО устояла · бункер: %d%%"
+msgstr "AA site held · bunker: %d%%"
+
+#: game/scripts/hud_flight.gd:367
+#, c-format
+msgid "ПОЗИЦИЯ ПВО: %d с · уничтожьте бункер: %d%%"
+msgstr "AA SITE: %d s · destroy the bunker: %d%%"
+
+#: game/scripts/hud_flight.gd:369
+#, c-format
+msgid "Позиция ПВО: %d м — подлетите, чтобы начать"
+msgstr "AA site: %d m. Fly closer to start"
+
+#: game/scripts/hud_flight.gd:375
+#, c-format
+msgid "колонна %d м"
+msgstr "convoy %d m"
+
+#: game/scripts/hud_flight.gd:378
+#, c-format
+msgid "КОЛОННА: до укрытия %d с · грузовиков: %d из %d"
+msgstr "CONVOY: %d s to cover · trucks: %d of %d"
+
+#: game/scripts/hud_flight.gd:380
+#, c-format
+msgid "Колонна снабжения: %d м — подлетите и сожгите грузовики"
+msgstr "Supply convoy: %d m. Fly in and burn the trucks"
+
+#: game/scripts/hud_flight.gd:382
+msgid "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика"
+msgstr "Hit the lead vehicle to stop the convoy · reward: cargo from each truck"
+
+#: game/scripts/hud_flight.gd:385
+#, c-format
+msgid "транспортник %d м"
+msgstr "transport %d m"
+
+#: game/scripts/hud_flight.gd:386
+#, c-format
+msgid "ОХОТА: транспортник уйдёт через %d с · прочность %d%%"
+msgstr "HUNT: transport escapes in %d s · hull %d%%"
+
+#: game/scripts/hud_flight.gd:390
+#, c-format
+msgid "ас %d м"
+msgstr "ace %d m"
+
+#: game/scripts/hud_flight.gd:391
+#, c-format
+msgid "ДОГФАЙТ: ас «%s» · уйдёт через %d с"
+msgstr "DOGFIGHT: ace \"%s\" · escapes in %d s"
+
+#: game/scripts/hud_flight.gd:394
+msgid "ХВОСТ! Сбрось газ (S) или манёвр"
+msgstr "ON YOUR TAIL! Cut throttle (S) or maneuver"
+
+#: game/scripts/hud_flight.gd:398
+#, c-format
+msgid "заправщик %d м"
+msgstr "tanker %d m"
+
+#: game/scripts/hud_flight.gd:399
+msgid "СТЫКОВКА — ЗАПРАВКА ИДЁТ"
+msgstr "DOCKED: REFUELING"
+
+#: game/scripts/hud_flight.gd:399
+msgid "ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно"
+msgstr "BOOM EXTENDING: hold steady"
+
+#: game/scripts/hud_flight.gd:399
+msgid "ЗАПРАВЩИК: зайдите ему в хвост"
+msgstr "TANKER: get on its tail"
+
+#: game/scripts/hud_flight.gd:400
+#, c-format
+msgid "%s · уйдёт через %d с · прочность %d%%"
+msgstr "%s · leaves in %d s · hull %d%%"
+
+#: game/scripts/hud_flight.gd:423
+#, c-format
+msgid "РАДИОЭФИР · «%s»"
+msgstr "RADIO · \"%s\""
+
+#: game/scripts/hud_flight.gd:457
+msgid " · ПКМ"
+msgstr " · RMB"
+
+#: game/scripts/hud_flight.gd:462
+#, c-format
+msgid "М%s"
+msgstr "U%s"
+
+#: game/scripts/hud_flight.gd:473
+msgid "Связки: "
+msgstr "Synergies: "
+
+#: game/scripts/hud_flight.gd:494
+#, c-format
+msgid "связка %d"
+msgstr "synergy %d"
+
+#: game/scripts/hud_flight.gd:504
+#, c-format
+msgid "К связке «%s»"
+msgstr "Toward \"%s\""
+
+#: game/scripts/hud_flight.gd:512
+msgid "Связка придёт в следующем выборе!"
+msgstr "Synergy comes in the next pick!"
+
+#: game/scripts/hud_hangar.gd:11 game/scripts/menu.gd:359
+msgid "АНГАР"
+msgstr "HANGAR"
+
+#: game/scripts/hud_hangar.gd:12
+#, c-format
+msgid "Запчасти: %d   "
+msgstr "Parts: %d   "
+
+#: game/scripts/hud_hangar.gd:26
+#, c-format
+msgid "Экипаж ур. %d%s"
+msgstr "Crew Lv. %d%s"
+
+#: game/scripts/hud_hangar.gd:26
+#, c-format
+msgid "  · очков перков: %d"
+msgstr "  · perk points: %d"
+
+#: game/scripts/hud_hangar.gd:28
+msgid "САМОЛЁТ"
+msgstr "PLANE"
+
+#: game/scripts/hud_hangar.gd:28
+msgid "ОРУЖИЕ"
+msgstr "WEAPONS"
+
+#: game/scripts/hud_hangar.gd:28
+msgid "ЭКИПАЖ"
+msgstr "CREW"
+
+#: game/scripts/hud_hangar.gd:43
+#, c-format
+msgid "В ВЫЛЕТ — %s"
+msgstr "SORTIE: %s"
+
+#: game/scripts/hud_hangar.gd:46
+msgid "ОТЛАДКА (тестовая сборка):"
+msgstr "DEBUG (test build):"
+
+#: game/scripts/hud_hangar.gd:47
+msgid "+1000 запч."
+msgstr "+1000 parts"
+
+#: game/scripts/hud_hangar.gd:48
+msgid "+1 ур. экипажа"
+msgstr "+1 crew Lv."
+
+#: game/scripts/hud_hangar.gd:49
+msgid "Открыть всё"
+msgstr "Unlock all"
+
+#: game/scripts/hud_hangar.gd:50
+msgid "Сброс профиля"
+msgstr "Reset profile"
+
+#: game/scripts/hud_hangar.gd:63 game/scripts/hud_hangar.gd:214
+msgid "Тяните мышью — вращение, колесо — приближение"
+msgstr "Drag to rotate, wheel to zoom"
+
+#: game/scripts/hud_hangar.gd:78
+#, c-format
+msgid "✓ ур. %d — в вылет"
+msgstr "✓ Lv. %d: in sortie"
+
+#: game/scripts/hud_hangar.gd:80
+#, c-format
+msgid "ЛЕТАТЬ НА УР. %d"
+msgstr "FLY LV. %d"
+
+#: game/scripts/hud_hangar.gd:82
+msgid "не куплен — в вылет недоступен"
+msgstr "not bought: unavailable for sorties"
+
+#: game/scripts/hud_hangar.gd:85
+msgid "Вид оружия:"
+msgstr "Weapon view:"
+
+#: game/scripts/hud_hangar.gd:90 game/scripts/hud_hangar.gd:221
+#, c-format
+msgid "ур. %d"
+msgstr "Lv. %d"
+
+#: game/scripts/hud_hangar.gd:90 game/scripts/hud_hangar.gd:221
+msgid "модерниз."
+msgstr "upgrade"
+
+#: game/scripts/hud_hangar.gd:95
+msgid "Самолёт ур. 2 куплен — выберите, на каком лететь"
+msgstr "Plane Lv. 2 bought: choose which one to fly"
+
+#: game/scripts/hud_hangar.gd:96
+#, c-format
+msgid "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес"
+msgstr "Lv. 2: hull +15%, speed and turn +5%, +1 reroll, heavy hardpoint"
+
+#: game/scripts/hud_hangar.gd:98
+#, c-format
+msgid "Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка"
+msgstr "Upgrades on the right are for the Lv. %d plane; Lv. 1 and Lv. 2 level up separately"
+
+#: game/scripts/hud_hangar.gd:100
+msgid "Самолёт ур. 2 — новая модель"
+msgstr "Plane Lv. 2: new model"
+
+#: game/scripts/hud_hangar.gd:101
+#, c-format
+msgid "Требует: операция «Перевал»%s · экипаж ур. %d (сейчас %d) · %d запчастей"
+msgstr "Requires: operation \"Mountain Pass\"%s · crew Lv. %d (now %d) · %d parts"
+
+#: game/scripts/hud_hangar.gd:102
+#, c-format
+msgid "даёт: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес"
+msgstr "gives: hull +15%, speed and turn +5%, +1 reroll, heavy hardpoint"
+
+#: game/scripts/hud_hangar.gd:104
+#, c-format
+msgid "МОДЕРНИЗИРОВАТЬ — %d"
+msgstr "UPGRADE: %d"
+
+#: game/scripts/hud_hangar.gd:117
+#, c-format
+msgid "за уровень: %s · сейчас ур. %d%s"
+msgstr "per level: %s · now Lv. %d%s"
+
+#: game/scripts/hud_hangar.gd:117
+#, c-format
+msgid " (самолёт ур. %d)"
+msgstr " (plane Lv. %d)"
+
+#: game/scripts/hud_hangar.gd:121
+msgid "МАКС."
+msgstr "MAX"
+
+#: game/scripts/hud_hangar.gd:125
+#, c-format
+msgid "УЛУЧШИТЬ — %d"
+msgstr "IMPROVE: %d"
+
+#: game/scripts/hud_hangar.gd:127
+#, c-format
+msgid "%d (не хватает %d)"
+msgstr "%d (need %d more)"
+
+#: game/scripts/hud_hangar.gd:133
+msgid "Окраска:"
+msgstr "Livery:"
+
+#: game/scripts/hud_hangar.gd:155
+msgid "Второй подвес на старте"
+msgstr "Second hardpoint at start"
+
+#: game/scripts/hud_hangar.gd:157
+#, c-format
+msgid "Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек."
+msgstr "Unlocks at crew Lv. %d. Until then the second hardpoint is empty: weapons come from cards."
+
+#: game/scripts/hud_hangar.gd:166 game/scripts/hud_screens.gd:511
+msgid "пусто"
+msgstr "empty"
+
+#: game/scripts/hud_hangar.gd:168
+msgid "Ставится с ур. 1; улучшения — карточками в бою."
+msgstr "Fitted from Lv. 1; improved by cards in combat."
+
+#: game/scripts/hud_hangar.gd:196
+#, c-format
+msgid "★ особенность класса: +20%"
+msgstr "★ class specialty: +20%"
+
+#: game/scripts/hud_hangar.gd:225
+#, c-format
+msgid "%s: турелей нет. Показана турель: %s"
+msgstr "%s: no turrets. Showing turret: %s"
+
+#: game/scripts/hud_hangar.gd:227
+#, c-format
+msgid "Турель класса: %s"
+msgstr "Class turret: %s"
+
+#: game/scripts/hud_hangar.gd:229
+msgid "Встроенное оружие — модель на самолёте"
+msgstr "Built-in weapon: model on the plane"
+
+#: game/scripts/hud_hangar.gd:230
+#, c-format
+msgid "%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)"
+msgstr "%s: upgrade branches (active while the weapon is mounted; shared by all classes)"
+
+#: game/scripts/hud_hangar.gd:233
+#, c-format
+msgid "Ступень %d%s"
+msgstr "Tier %d%s"
+
+#: game/scripts/hud_hangar.gd:233
+msgid " · модернизация"
+msgstr " · upgrade"
+
+#: game/scripts/hud_hangar.gd:236
+#, c-format
+msgid "сначала выберите ступень %d"
+msgstr "pick tier %d first"
+
+#: game/scripts/hud_hangar.gd:238
+msgid "откроется после операции 2 «Сухое русло» (кампания)"
+msgstr "unlocks after operation 2 \"Dry Riverbed\" (campaign)"
+
+#: game/scripts/hud_hangar.gd:240
+msgid "сначала выберите ступень 2 выше"
+msgstr "pick tier 2 above first"
+
+#: game/scripts/hud_hangar.gd:245
+msgid "Нужно:"
+msgstr "Needs:"
+
+#: game/scripts/hud_hangar.gd:246
+msgid "ступень 2"
+msgstr "tier 2"
+
+#: game/scripts/hud_hangar.gd:247
+msgid "операция 2 «Сухое русло»"
+msgstr "operation 2 \"Dry Riverbed\""
+
+#: game/scripts/hud_hangar.gd:248
+#, c-format
+msgid "%d запч."
+msgstr "%d parts"
+
+#: game/scripts/hud_hangar.gd:249
+msgid "самолёт ур. 2"
+msgstr "plane Lv. 2"
+
+#: game/scripts/hud_hangar.gd:263
+msgid "ВЫБРАТЬ (оплачено)"
+msgstr "SELECT (paid)"
+
+#: game/scripts/hud_hangar.gd:267
+#, c-format
+msgid "ВЗЯТЬ — %d"
+msgstr "TAKE: %d"
+
+#: game/scripts/hud_hangar.gd:269
+#, c-format
+msgid "%d запчастей"
+msgstr "%d parts"
+
+#: game/scripts/hud_hangar.gd:271
+#, c-format
+msgid "переиграть — %d"
+msgstr "reroll: %d"
+
+#: game/scripts/hud_hangar.gd:281
+#, c-format
+msgid "Позывной: «%s»"
+msgstr "Callsign: \"%s\""
+
+#: game/scripts/hud_hangar.gd:282
+msgid "СМЕНИТЬ"
+msgstr "CHANGE"
+
+#: game/scripts/hud_hangar.gd:299
+#, c-format
+msgid "Черта: «%s»"
+msgstr "Trait: \"%s\""
+
+#: game/scripts/hud_hangar.gd:307 game/scripts/hud_screens.gd:654
+#, c-format
+msgid "Экипаж ур. %d"
+msgstr "Crew Lv. %d"
+
+#: game/scripts/hud_hangar.gd:313
+#, c-format
+msgid "опыт для ур. %d набран"
+msgstr "XP for Lv. %d earned"
+
+#: game/scripts/hud_hangar.gd:313
+#, c-format
+msgid "%d / %d опыта до ур. %d"
+msgstr "%d / %d XP to Lv. %d"
+
+#: game/scripts/hud_hangar.gd:320
+#, c-format
+msgid "ПОВЫСИТЬ В ЗВАНИИ — %d запчастей"
+msgstr "PROMOTE: %d parts"
+
+#: game/scripts/hud_hangar.gd:323
+#, c-format
+msgid "Повысить в звании — %d (не хватает запчастей)"
+msgstr "Promote: %d (not enough parts)"
+
+#: game/scripts/hud_hangar.gd:323
+#, c-format
+msgid "Повысить в звании — %d (нужен опыт)"
+msgstr "Promote: %d (need XP)"
+
+#: game/scripts/hud_hangar.gd:326
+msgid "Рост показателей: "
+msgstr "Stat growth: "
+
+#: game/scripts/hud_hangar.gd:328
+msgid "Открытия по уровню экипажа:"
+msgstr "Unlocks by crew level:"
+
+#: game/scripts/hud_hangar.gd:329
+msgid "2-й навык класса; самолёт ур. 2"
+msgstr "2nd class skill; plane Lv. 2"
+
+#: game/scripts/hud_hangar.gd:329
+msgid "ведомый «Ласка»"
+msgstr "wingman \"Weasel\""
+
+#: game/scripts/hud_hangar.gd:329
+msgid "2-й слот навыка [F]"
+msgstr "2nd skill slot [F]"
+
+#: game/scripts/hud_hangar.gd:329 game/scripts/profile.gd:269
+msgid "перки 2-й ступени"
+msgstr "tier 2 perks"
+
+#: game/scripts/hud_hangar.gd:329
+msgid "3-й навык класса"
+msgstr "3rd class skill"
+
+#: game/scripts/hud_hangar.gd:329
+msgid "ведомый «Грачонок»"
+msgstr "wingman \"Rookling\""
+
+#: game/scripts/hud_hangar.gd:332
+#, c-format
+msgid "ур. %d — %s"
+msgstr "Lv. %d: %s"
+
+#: game/scripts/hud_hangar.gd:336
+#, c-format
+msgid "ПЕРКИ — очков: %d (на чётных уровнях)"
+msgstr "PERKS: %d points (on even levels)"
+
+#: game/scripts/hud_hangar.gd:337
+msgid "СБРОСИТЬ ПЕРКИ"
+msgstr "RESET PERKS"
+
+#: game/scripts/hud_hangar.gd:347
+#, c-format
+msgid "ступень %d — в разработке"
+msgstr "tier %d: in development"
+
+#: game/scripts/hud_hangar.gd:359
+#, c-format
+msgid "с экипажа ур. %d"
+msgstr "from crew Lv. %d"
+
+#: game/scripts/hud_hangar.gd:363
+msgid "НАВЫКИ КЛАССА"
+msgstr "CLASS SKILLS"
+
+#: game/scripts/hud_hangar.gd:368
+#, c-format
+msgid "Слот %d [%s]%s"
+msgstr "Slot %d [%s]%s"
+
+#: game/scripts/hud_hangar.gd:368
+#, c-format
+msgid " — экипаж ур. %d"
+msgstr " (crew Lv. %d)"
+
+#: game/scripts/hud_hangar.gd:384
+#, c-format
+msgid " (экипаж ур. %d)"
+msgstr " (crew Lv. %d)"
+
+#: game/scripts/hud_hangar.gd:386
+#, c-format
+msgid " — уже в слоте %d"
+msgstr " (already in slot %d)"
+
+#: game/scripts/hud_hangar.gd:393
+msgid "Слот 3 — экипаж ур. 12, в разработке"
+msgstr "Slot 3: crew Lv. 12, in development"
+
+#: game/scripts/hud_hangar.gd:394
+msgid "Карточки «уровень навыка» улучшают навык слота 1."
+msgstr "\"Skill level\" cards improve the slot 1 skill."
+
+#: game/scripts/hud_kit.gd:93
+#, c-format
+msgid " · ур. %d"
+msgstr " · Lv. %d"
+
+#: game/scripts/hud_kit.gd:101
+#, c-format
+msgid "и ещё %d"
+msgstr "and %d more"
+
+#: game/scripts/hud_minimap.gd:110 game/scripts/hud_minimap.gd:113
+msgid "С"
+msgstr "N"
+
+#: game/scripts/hud_minimap.gd:110
+msgid "В"
+msgstr "E"
+
+#: game/scripts/hud_minimap.gd:110
+msgid "Ю"
+msgstr "S"
+
+#: game/scripts/hud_minimap.gd:110
+msgid "З"
+msgstr "W"
+
+#: game/scripts/hud_screens.gd:10
+msgid "ВЫБЕРИТЕ САМОЛЁТ"
+msgstr "CHOOSE YOUR PLANE"
+
+#: game/scripts/hud_screens.gd:11
+msgid "‹ Операция (Esc)"
+msgstr "‹ Operation (Esc)"
+
+#: game/scripts/hud_screens.gd:12
+#, c-format
+msgid "Операция %d «%s» · сложность «%s» · клавиши 1 / 2 / 3 или клик мышью"
+msgstr "Operation %d \"%s\" · difficulty \"%s\" · keys 1 / 2 / 3 or click"
+
+#: game/scripts/hud_screens.gd:32
+#, c-format
+msgid "Экипаж ур. %d%s%s"
+msgstr "Crew Lv. %d%s%s"
+
+#: game/scripts/hud_screens.gd:32
+msgid " · самолёт ур. 2 ✓"
+msgstr " · plane Lv. 2 ✓"
+
+#: game/scripts/hud_screens.gd:33
+msgid " · навык F: "
+msgstr " · F skill: "
+
+#: game/scripts/hud_screens.gd:35
+msgid "Прочность"
+msgstr "Hull"
+
+#: game/scripts/hud_screens.gd:39 game/scripts/prog.gd:12
+msgid "Манёвр"
+msgstr "Maneuver"
+
+#: game/scripts/hud_screens.gd:43
+msgid "Подвесы:"
+msgstr "Hardpoints:"
+
+#: game/scripts/hud_screens.gd:47
+msgid "пусто — оружие из карточек"
+msgstr "empty: weapons from cards"
+
+#: game/scripts/hud_screens.gd:49
+#, c-format
+msgid "%s — выбрано в ангаре"
+msgstr "%s: chosen in hangar"
+
+#: game/scripts/hud_screens.gd:55
+#, c-format
+msgid "• Автотурели: %d (круговой обстрел)%s"
+msgstr "• Auto-turrets: %d (all-round fire)%s"
+
+#: game/scripts/hud_screens.gd:55
+#, c-format
+msgid ", вторая — с ур. %d"
+msgstr ", second from Lv. %d"
+
+#: game/scripts/hud_screens.gd:58
+msgid "• Тяжёлый подвес ×1: экспериментальное оружие из карточек"
+msgstr "• Heavy hardpoint ×1: experimental weapons from cards"
+
+#: game/scripts/hud_screens.gd:60
+#, c-format
+msgid "• Ведомые: до %d"
+msgstr "• Wingmen: up to %d"
+
+#: game/scripts/hud_screens.gd:60
+msgid "• Ведомых нет"
+msgstr "• No wingmen"
+
+#: game/scripts/hud_screens.gd:66
+#, c-format
+msgid "• Оружие: %s"
+msgstr "• Weapons: %s"
+
+#: game/scripts/hud_screens.gd:67
+#, c-format
+msgid "★ Особенность класса: «%s» +20%% урона"
+msgstr "★ Class specialty: \"%s\" +20%% damage"
+
+#: game/scripts/hud_screens.gd:68
+#, c-format
+msgid "★ На ур. 5 особенности — мастерство %s"
+msgstr "★ At specialty Lv. 5: %s mastery"
+
+#: game/scripts/hud_screens.gd:70
+msgid "Навык класса [E] — выберите:"
+msgstr "Class skill [E]: choose one:"
+
+#: game/scripts/hud_screens.gd:86
+#, c-format
+msgid "%s · %d с%s%s"
+msgstr "%s · %d s%s%s"
+
+#: game/scripts/hud_screens.gd:86
+#, c-format
+msgid "  — экипаж ур. %d"
+msgstr "  (crew Lv. %d)"
+
+#: game/scripts/hud_screens.gd:87
+msgid "  · стоит в слоте 2 [F]"
+msgstr "  · in slot 2 [F]"
+
+#: game/scripts/hud_screens.gd:104
+#, c-format
+msgid "ур. %d%s"
+msgstr "Lv. %d%s"
+
+#: game/scripts/hud_screens.gd:104
+msgid " ✓ в вылет"
+msgstr " ✓ in sortie"
+
+#: game/scripts/hud_screens.gd:104
+msgid " (в ангаре)"
+msgstr " (in hangar)"
+
+#: game/scripts/hud_screens.gd:105
+#, c-format
+msgid "Управление: %s   [F2 — сменить]"
+msgstr "Controls: %s   [F2: change]"
+
+#: game/scripts/hud_screens.gd:106
+msgid "Опыт с врагов подбирается сам рядом с самолётом. Каждые 5 минут — ас (мини-босс), после него — окно эвакуации."
+msgstr "XP from enemies is picked up automatically near the plane. Every 5 minutes an ace (mini-boss) appears, then the extraction window."
+
+#: game/scripts/hud_screens.gd:107
+msgid "Угрозы: дроны — держат дистанцию и бьют парой пуль (мигают жёлтым) · перехватчики — заходы с очередью · ракетоносцы — ракеты после красной линии"
+msgstr "Threats: drones keep distance and fire bullet pairs (flash yellow) · interceptors make strafing runs · missile carriers fire after a red line"
+
+#: game/scripts/hud_screens.gd:108
+#, c-format
+msgid "Мышь — куда лететь · W/S — газ (держаться за целью) · сядь врагу на хвост — пушка +50% · пролёт на волоске перезаряжает навыки · серия сбитий — больше опыта"
+msgstr "Mouse: steer · W/S: throttle (stay behind the target) · get on an enemy's tail: cannon +50% · near misses recharge skills · kill streak: more XP"
+
+#: game/scripts/hud_screens.gd:123
+#, c-format
+msgid "НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК"
+msgstr "REWARD %s: PICK FROM RARE CARDS"
+
+#: game/scripts/hud_screens.gd:125
+#, c-format
+msgid "НОВЫЙ УРОВЕНЬ: %d"
+msgstr "LEVEL UP: %d"
+
+#: game/scripts/hud_screens.gd:125
+#, c-format
+msgid "НОВЫЙ УРОВЕНЬ (ещё выборов: %d)"
+msgstr "LEVEL UP (picks left: %d)"
+
+#: game/scripts/hud_screens.gd:128
+msgid "Выберите одно улучшение — оно действует до конца вылета. Не знаете, что взять? Берите оружие, которое уже стоит на самолёте."
+msgstr "Pick one upgrade; it lasts until the end of the sortie. Not sure? Take a weapon already on your plane."
+
+#: game/scripts/hud_screens.gd:129
+msgid "1–4 или клик — выбрать · «Переброс» — показать другие карточки · «Закрепить» — оставить на следующий раз · «Исключить» — больше не предлагать"
+msgstr "1–4 or click: pick · \"Reroll\": show other cards · \"Lock\": keep for next time · \"Ban\": never offer again"
+
+#: game/scripts/hud_screens.gd:131
+msgid "1–4 или клик — выбрать · R — переброс · «Закрепить» — будет в следующем выборе · «Исключить» — не выпадет до конца вылета"
+msgstr "1–4 or click: pick · R: reroll · \"Lock\": stays for the next pick · \"Ban\": gone for the rest of the sortie"
+
+#: game/scripts/hud_screens.gd:157
+msgid "▲ к специализации"
+msgstr "▲ specialization"
+
+#: game/scripts/hud_screens.gd:165
+msgid "ЗАКРЕПЛЕНА"
+msgstr "LOCKED"
+
+#: game/scripts/hud_screens.gd:168
+msgid "Открепить"
+msgstr "Unlock"
+
+#: game/scripts/hud_screens.gd:168
+msgid "Закрепить"
+msgstr "Lock"
+
+#: game/scripts/hud_screens.gd:170
+msgid "Исключить"
+msgstr "Ban"
+
+#: game/scripts/hud_screens.gd:173
+#, c-format
+msgid "Переброс (R) — осталось %d"
+msgstr "Reroll (R): %d left"
+
+#: game/scripts/hud_screens.gd:175
+msgid "Сменить специализацию (−1 переброс)"
+msgstr "Change specialization (−1 reroll)"
+
+#: game/scripts/hud_screens.gd:177
+msgid "Перебросов не осталось (+1 за каждого аса)"
+msgstr "No rerolls left (+1 per ace)"
+
+#: game/scripts/hud_screens.gd:178
+#, c-format
+msgid "Исключений осталось: %d (+1 за аса)%s"
+msgstr "Bans left: %d (+1 per ace)%s"
+
+#: game/scripts/hud_screens.gd:178
+msgid "   ·   Исключены: "
+msgstr "   ·   Banned: "
+
+#: game/scripts/hud_screens.gd:183
+#, c-format
+msgid "Специализация: «%s» (связка %d из 3) — %s"
+msgstr "Specialization: \"%s\" (synergy %d of 3): %s"
+
+#: game/scripts/hud_screens.gd:185
+msgid "нужно"
+msgstr "needed"
+
+#: game/scripts/hud_screens.gd:224
+#, c-format
+msgid "▲ к связке: %d/%d"
+msgstr "▲ synergy: %d/%d"
+
+#: game/scripts/hud_screens.gd:236
+#, c-format
+msgid "Связки: %s   ·   Модернизации: %s   ·   Навык: %s%s"
+msgstr "Synergies: %s   ·   Upgrades: %s   ·   Skill: %s%s"
+
+#: game/scripts/hud_screens.gd:237 game/scripts/hud_screens.gd:237 game/scripts/hud_screens.gd:492 game/scripts/hud_screens.gd:504
+msgid "нет"
+msgstr "none"
+
+#: game/scripts/hud_screens.gd:238
+msgid ", ур. "
+msgstr ", Lv. "
+
+#: game/scripts/hud_screens.gd:246
+msgid "ПАУЗА · ПОДВЕСЫ"
+msgstr "PAUSE · HARDPOINTS"
+
+#: game/scripts/hud_screens.gd:247
+msgid "Клик по приоритету — сменить, по какой цели стреляет группа"
+msgstr "Click a priority to change what the group targets"
+
+#: game/scripts/hud_screens.gd:264 game/scripts/hud_screens.gd:272
+#, c-format
+msgid "Цель: %s"
+msgstr "Target: %s"
+
+#: game/scripts/hud_screens.gd:266
+#, c-format
+msgid "Пуск: %s"
+msgstr "Fire: %s"
+
+#: game/scripts/hud_screens.gd:266 game/scripts/settings.gd:133
+msgid "авто"
+msgstr "auto"
+
+#: game/scripts/hud_screens.gd:266
+msgid "правой кнопкой мыши"
+msgstr "right mouse button"
+
+#: game/scripts/hud_screens.gd:271
+msgid "Звено — кого атакует первым [G]"
+msgstr "Flight: who it attacks first [G]"
+
+#: game/scripts/hud_screens.gd:275
+#, c-format
+msgid "Пушка: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f"
+msgstr "Cannon: damage ×%.2f · rate ×%.2f   ·   Hardpoints: reload ×%.2f   ·   Speed ×%.2f · Maneuver ×%.2f · Pickup ×%.2f"
+
+#: game/scripts/hud_screens.gd:281
+#, c-format
+msgid "ВЗЯТЫЕ КАРТОЧКИ (%d)"
+msgstr "CARDS TAKEN (%d)"
+
+#: game/scripts/hud_screens.gd:282 game/scripts/hud_screens.gd:514
+msgid "цвет — лучшая редкость, «ур.» — до какого уровня улучшено"
+msgstr "color = best rarity, \"Lv.\" = level reached"
+
+#: game/scripts/hud_screens.gd:284
+msgid "пока ни одной"
+msgstr "none yet"
+
+#: game/scripts/hud_screens.gd:288
+msgid "Продолжить (Esc / Tab)"
+msgstr "Continue (Esc / Tab)"
+
+#: game/scripts/hud_screens.gd:289
+msgid "Связки и модернизации"
+msgstr "Synergies and upgrades"
+
+#: game/scripts/hud_screens.gd:290
+msgid "Настройки"
+msgstr "Settings"
+
+#: game/scripts/hud_screens.gd:291 game/scripts/hud_screens.gd:334
+msgid "В главное меню"
+msgstr "Main menu"
+
+#: game/scripts/hud_screens.gd:302
+msgid "ЭВАКУАЦИЯ УСПЕШНА"
+msgstr "EXTRACTION SUCCESSFUL"
+
+#: game/scripts/hud_screens.gd:304
+msgid "САМОЛЁТ СБИТ"
+msgstr "PLANE SHOT DOWN"
+
+#: game/scripts/hud_screens.gd:305
+#, c-format
+msgid "%s · время %02d:%02d · уровень %d · сбито %d · асов %d"
+msgstr "%s · time %02d:%02d · level %d · kills %d · aces %d"
+
+#: game/scripts/hud_screens.gd:306
+#, c-format
+msgid "100% — эвакуация"
+msgstr "100% with extraction"
+
+#: game/scripts/hud_screens.gd:306
+#, c-format
+msgid "50% — гибель без эвакуации"
+msgstr "50% if lost without extraction"
+
+#: game/scripts/hud_screens.gd:307
+#, c-format
+msgid "Запчасти: %d из %d (%s)"
+msgstr "Parts: %d of %d (%s)"
+
+#: game/scripts/hud_screens.gd:310
+msgid "1 · Обзор"
+msgstr "1 · Overview"
+
+#: game/scripts/hud_screens.gd:310
+msgid "2 · Урон"
+msgstr "2 · Damage"
+
+#: game/scripts/hud_screens.gd:310
+msgid "3 · Сборка"
+msgstr "3 · Build"
+
+#: game/scripts/hud_screens.gd:331
+msgid "R — ещё вылет"
+msgstr "R: fly again"
+
+#: game/scripts/hud_screens.gd:332
+msgid "H — в ангар"
+msgstr "H: to hangar"
+
+#: game/scripts/hud_screens.gd:333
+msgid "C — сменить самолёт"
+msgstr "C: change plane"
+
+#: game/scripts/hud_screens.gd:337
+msgid "✓ Отчёт принят — спасибо!"
+msgstr "✓ Report received. Thank you!"
+
+#: game/scripts/hud_screens.gd:355
+msgid "ОТПРАВИТЬ ОТЧЁТ"
+msgstr "SEND REPORT"
+
+#: game/scripts/hud_screens.gd:356
+msgid "1 минута — очень поможет игре"
+msgstr "1 minute — helps the game a lot"
+
+#: game/scripts/hud_screens.gd:363
+msgid "ГЛАВНОЕ ЗА ВЫЛЕТ"
+msgstr "SORTIE HIGHLIGHTS"
+
+#: game/scripts/hud_screens.gd:375
+msgid "урон в секунду"
+msgstr "damage per second"
+
+#: game/scripts/hud_screens.gd:376
+msgid "получено урона"
+msgstr "damage taken"
+
+#: game/scripts/hud_screens.gd:377
+msgid "сбито в минуту"
+msgstr "kills per minute"
+
+#: game/scripts/hud_screens.gd:378
+msgid "точность пушки"
+msgstr "cannon accuracy"
+
+#: game/scripts/hud_screens.gd:379
+msgid "связок"
+msgstr "synergies"
+
+#: game/scripts/hud_screens.gd:380
+msgid "активностей"
+msgstr "activities"
+
+#: game/scripts/hud_screens.gd:400
+#, c-format
+msgid "Главный урон — %s: %d%% всего урона"
+msgstr "Top damage: %s, %d%% of all damage"
+
+#: game/scripts/hud_screens.gd:402
+#, c-format
+msgid ", дальше %s — %d%%"
+msgstr ", then %s: %d%%"
+
+#: game/scripts/hud_screens.gd:405
+msgid "Почти всё держится на одном оружии. Если его урон просядет, вылет тоже просядет: возьмите второе оружие или связку к нему."
+msgstr "Almost everything rests on one weapon. If its damage drops, so does the sortie: take a second weapon or a synergy for it."
+
+#: game/scripts/hud_screens.gd:418
+#, c-format
+msgid "Больше всего урона вы получили от врагов «%s» (%d%%), в основном — %s."
+msgstr "You took most damage from \"%s\" (%d%%), mainly %s."
+
+#: game/scripts/hud_screens.gd:419 game/scripts/hud_screens.gd:445 game/scripts/projectiles.gd:577 game/scripts/run_log.gd:37
+msgid "ракеты"
+msgstr "missiles"
+
+#: game/scripts/hud_screens.gd:420
+msgid "Ловушки не увели ни одной ракеты. Уклонение (Space) и боевой разворот сбивают захват — жмите, когда слышите сигнал пуска."
+msgstr "Flares didn't decoy a single missile. Evade (Space) and the combat turn break lock: press them when you hear the launch warning."
+
+#: game/scripts/hud_screens.gd:422
+msgid "Много урона от столкновений: не влетайте в строй врагов, уходите уклонением (Space) или берите броню; у «Грача» под «Бронещитом» врезавшиеся враги разбиваются сами."
+msgstr "Lots of collision damage: don't fly into enemy formations, evade (Space) or take armor; the \"Rook\" with \"Armor Shield\" smashes enemies that ram it."
+
+#: game/scripts/hud_screens.gd:424
+msgid "Ни одной связки за вылет. Слева в бою полоса «К связке» показывает, каких карточек не хватает."
+msgstr "No synergies this sortie. In combat, the \"Toward synergy\" bar on the left shows which cards are missing."
+
+#: game/scripts/hud_screens.gd:429
+#, c-format
+msgid "Связок: %d, первая — на %d:%02d."
+msgstr "Synergies: %d, first at %d:%02d."
+
+#: game/scripts/hud_screens.gd:431
+#, c-format
+msgid "Пушка попадала только в %d%% выстрелов: держите нос на цели или включите ручной огонь (Q) — он сильнее."
+msgstr "The cannon hit only %d%% of shots: keep your nose on target or switch to manual fire (Q), which is stronger."
+
+#: game/scripts/hud_screens.gd:433
+msgid "Ни одного сбитого аса — без него не открываются ворота эвакуации."
+msgstr "No aces shot down, and without one the extraction gates won't open."
+
+#: game/scripts/hud_screens.gd:443
+#, c-format
+msgid "ПОЛУЧЕНО УРОНА: %d"
+msgstr "DAMAGE TAKEN: %d"
+
+#: game/scripts/hud_screens.gd:445 game/scripts/player.gd:550 game/scripts/projectiles.gd:609 game/scripts/projectiles.gd:612 game/scripts/run_log.gd:37
+msgid "пули"
+msgstr "bullets"
+
+#: game/scripts/hud_screens.gd:449
+msgid "От кого:"
+msgstr "From:"
+
+#: game/scripts/hud_screens.gd:451 game/scripts/hud_screens.gd:473 game/scripts/interceptor.gd:29
+msgid "перехватчики"
+msgstr "interceptors"
+
+#: game/scripts/hud_screens.gd:451 game/scripts/hud_screens.gd:473 game/scripts/missile_carrier.gd:14 game/scripts/projectiles.gd:577
+msgid "ракетоносцы"
+msgstr "missile carriers"
+
+#: game/scripts/hud_screens.gd:451 game/scripts/rival_ace.gd:68
+msgid "ас-соперник"
+msgstr "rival ace"
+
+#: game/scripts/hud_screens.gd:454
+#, c-format
+msgid "НАНЕСЕНО УРОНА: %d  ·  %d в секунду"
+msgstr "DAMAGE DEALT: %d  ·  %d per second"
+
+#: game/scripts/hud_screens.gd:455
+msgid "доля"
+msgstr "share"
+
+#: game/scripts/hud_screens.gd:456
+msgid "урон · в сек."
+msgstr "dmg · per s"
+
+#: game/scripts/hud_screens.gd:473
+#, c-format
+msgid "Сбито: дроны %d · перехватчики %d · ракетоносцы %d · асы %d"
+msgstr "Kills: drones %d · interceptors %d · missile carriers %d · aces %d"
+
+#: game/scripts/hud_screens.gd:474
+#, c-format
+msgid "Точность пушки: %d%% · пик «оборотов»: +%d%% · сбито с хвоста: %d"
+msgstr "Cannon accuracy: %d%% · peak \"spin-up\": +%d%% · tail kills: %d"
+
+#: game/scripts/hud_screens.gd:475
+#, c-format
+msgid "Уведено ракет ловушками: %d · срывов захвата: %d · на волоске: %d"
+msgstr "Missiles decoyed by flares: %d · locks broken: %d · near misses: %d"
+
+#: game/scripts/hud_screens.gd:476
+#, c-format
+msgid "Лучшая серия: %d · активностей: %d · проход на форсаже: %d урона"
+msgstr "Best streak: %d · activities: %d · afterburner pass: %d damage"
+
+#: game/scripts/hud_screens.gd:476 game/scripts/player_skills.gd:25 game/scripts/run_log.gd:10
+msgid "проход на форсаже"
+msgstr "afterburner pass"
+
+#: game/scripts/hud_screens.gd:490
+msgid "СВЯЗКИ"
+msgstr "SYNERGIES"
+
+#: game/scripts/hud_screens.gd:496
+msgid "связка: "
+msgstr "synergy: "
+
+#: game/scripts/hud_screens.gd:498
+#, c-format
+msgid "«%s» — с %d:%02d · урон %d"
+msgstr "\"%s\" from %d:%02d · damage %d"
+
+#: game/scripts/hud_screens.gd:504
+msgid "МОДЕРНИЗАЦИИ: "
+msgstr "UPGRADES: "
+
+#: game/scripts/hud_screens.gd:510
+#, c-format
+msgid "%s ур. %d ×%d"
+msgstr "%s Lv. %d ×%d"
+
+#: game/scripts/hud_screens.gd:511
+msgid "ПОДВЕСЫ: "
+msgstr "HARDPOINTS: "
+
+#: game/scripts/hud_screens.gd:513
+#, c-format
+msgid "КАРТОЧКИ ВЫЛЕТА: %d"
+msgstr "SORTIE CARDS: %d"
+
+#: game/scripts/hud_screens.gd:521 game/scripts/player_guns.gd:87 game/scripts/projectiles.gd:22 game/scripts/run_log.gd:9
+msgid "курсовое (авто)"
+msgstr "forward guns (auto)"
+
+#: game/scripts/hud_screens.gd:521
+msgid "пушка (сама)"
+msgstr "cannon (auto)"
+
+#: game/scripts/hud_screens.gd:521 game/scripts/player_guns.gd:87 game/scripts/run_log.gd:9
+msgid "курсовое (ручн.)"
+msgstr "forward guns (manual)"
+
+#: game/scripts/hud_screens.gd:521
+msgid "пушка (ручной огонь)"
+msgstr "cannon (manual fire)"
+
+#: game/scripts/hud_screens.gd:522
+msgid "наводящиеся ракеты"
+msgstr "homing missiles"
+
+#: game/scripts/hud_screens.gd:522 game/scripts/player.gd:444 game/scripts/projectiles.gd:58 game/scripts/projectiles.gd:481 game/scripts/run_log.gd:9
+msgid "НАР"
+msgstr "rockets"
+
+#: game/scripts/hud_screens.gd:522
+msgid "залп ракет"
+msgstr "rocket salvo"
+
+#: game/scripts/hud_screens.gd:522 game/scripts/projectiles.gd:329 game/scripts/projectiles.gd:531
+msgid "разделяющаяся БЧ"
+msgstr "cluster warhead"
+
+#: game/scripts/hud_screens.gd:522
+msgid "разделяющиеся ракеты"
+msgstr "cluster missiles"
+
+#: game/scripts/hud_screens.gd:523 game/scripts/weapons.gd:63
+msgid "ЭМИ-заряд"
+msgstr "EMP charge"
+
+#: game/scripts/hud_screens.gd:523
+msgid "лазер «Луч»"
+msgstr "\"Ray\" laser"
+
+#: game/scripts/hud_screens.gd:523
+msgid "плазменная бомба"
+msgstr "plasma bomb"
+
+#: game/scripts/hud_screens.gd:555
+#, c-format
+msgid "ВЫБОР СПЕЦИАЛИЗАЦИИ — СВЯЗКА %d ИЗ 3"
+msgstr "CHOOSE SPECIALIZATION: SYNERGY %d OF 3"
+
+#: game/scripts/hud_screens.gd:556
+msgid "Связка — сильный бонус, который меняет оружие или навык. Выберите, какую собирать: карточки к ней отмечены «▲» и выпадают чаще."
+msgstr "A synergy is a strong bonus that changes a weapon or skill. Choose which to build: its cards are marked \"▲\" and drop more often."
+
+#: game/scripts/hud_screens.gd:557
+#, c-format
+msgid "Нужно набрать очки цветных меток на карточках: для 1-й связки — %d, 2-й — %d, 3-й — %d. Сменить специализацию можно позже за 1 переброс."
+msgstr "Collect points from the colored marks on cards: %d for the 1st synergy, %d for the 2nd, %d for the 3rd. You can change specialization later for 1 reroll."
+
+#: game/scripts/hud_screens.gd:565 game/scripts/hud_screens.gd:576
+msgid "По вашему оружию"
+msgstr "From your weapons"
+
+#: game/scripts/hud_screens.gd:565 game/scripts/hud_screens.gd:576
+msgid "Связка навыка"
+msgstr "Skill synergy"
+
+#: game/scripts/hud_screens.gd:565 game/scripts/hud_screens.gd:576
+msgid "Новый путь"
+msgstr "New path"
+
+#: game/scripts/hud_screens.gd:581
+msgid "Что нужно собрать:"
+msgstr "What to collect:"
+
+#: game/scripts/hud_screens.gd:586
+#, c-format
+msgid "≈ ещё %d подходящих карточек"
+msgstr "≈ %d more matching cards"
+
+#: game/scripts/hud_screens.gd:587
+msgid "1–3 или клик — выбрать специализацию"
+msgstr "1–3 or click: choose specialization"
+
+#: game/scripts/hud_screens.gd:598
+#, c-format
+msgid "Операция %d «%s» пройдена! Открыто: %s"
+msgstr "Operation %d \"%s\" complete! Unlocked: %s"
+
+#: game/scripts/hud_screens.gd:601
+#, c-format
+msgid "Операция %d «%s» выполнена (уже была пройдена)"
+msgstr "Operation %d \"%s\" done (already completed)"
+
+#: game/scripts/hud_screens.gd:604
+#, c-format
+msgid "Операция %d «%s» не засчитана: не удалось %s"
+msgstr "Operation %d \"%s\" failed: could not %s"
+
+#: game/scripts/hud_screens.gd:604
+msgid "вернуться на базу"
+msgstr "return to base"
+
+#: game/scripts/hud_screens.gd:619
+msgid "ИТОГИ ДЛЯ АНГАРА"
+msgstr "HANGAR SUMMARY"
+
+#: game/scripts/hud_screens.gd:621
+msgid "Слишком короткий вылет — без начисления"
+msgstr "Sortie too short: no rewards"
+
+#: game/scripts/hud_screens.gd:624
+msgid "ЗАПЧАСТИ"
+msgstr "PARTS"
+
+#: game/scripts/hud_screens.gd:626
+#, c-format
+msgid "Добыча вылета (%s%s)"
+msgstr "Sortie loot (%s%s)"
+
+#: game/scripts/hud_screens.gd:626
+msgid ", сложность ×"
+msgstr ", difficulty ×"
+
+#: game/scripts/hud_screens.gd:627
+msgid "Жалованье техникам"
+msgstr "Mechanics' pay"
+
+#: game/scripts/hud_screens.gd:629
+msgid "Операция пройдена впервые"
+msgstr "First operation clear"
+
+#: game/scripts/hud_screens.gd:630
+msgid "Итого"
+msgstr "Total"
+
+#: game/scripts/hud_screens.gd:630
+#, c-format
+msgid "+%d   (всего %d)"
+msgstr "+%d   (total %d)"
+
+#: game/scripts/hud_screens.gd:631
+#, c-format
+msgid "ОПЫТ ЭКИПАЖА «%s»"
+msgstr "CREW XP \"%s\""
+
+#: game/scripts/hud_screens.gd:634
+msgid "Итого опыта"
+msgstr "Total XP"
+
+#: game/scripts/hud_screens.gd:656
+#, c-format
+msgid "до ур. %d: %d"
+msgstr "to Lv. %d: %d"
+
+#: game/scripts/hud_screens.gd:661
+#, c-format
+msgid "Опыта хватает на ур. %d: «Повысить в звании» в ангаре — %d"
+msgstr "Enough XP for Lv. %d: \"Promote\" in hangar costs %d"
+
+#: game/scripts/hud_screens.gd:665
+msgid "ОТКРЫТО: "
+msgstr "UNLOCKED: "
+
+#: game/scripts/hud_screens.gd:668
+#, c-format
+msgid "Техник: «%s»"
+msgstr "Mechanic: \"%s\""
+
+#: game/scripts/hud_screens.gd:671
+msgid "Можно купить: "
+msgstr "Can buy: "
+
+#: game/scripts/livery.gd:21
+msgid "Песочный камуфляж"
+msgstr "Desert camo"
+
+#: game/scripts/livery.gd:24
+msgid "Хаки"
+msgstr "Khaki"
+
+#: game/scripts/livery.gd:28 game/scripts/livery.gd:45
+msgid "Классика"
+msgstr "Classic"
+
+#: game/scripts/livery.gd:29 game/scripts/livery.gd:44
+msgid "Песок"
+msgstr "Sand"
+
+#: game/scripts/livery.gd:30
+msgid "Чёрный глянец"
+msgstr "Black Gloss"
+
+#: game/scripts/livery.gd:31
+msgid "Розовый леопард"
+msgstr "Pink Leopard"
+
+#: game/scripts/livery.gd:36
+msgid "Камуфляж"
+msgstr "Camo"
+
+#: game/scripts/livery.gd:38
+msgid "Чёрный мат"
+msgstr "Matte Black"
+
+#: game/scripts/livery.gd:39
+msgid "Тигр"
+msgstr "Tiger"
+
+#: game/scripts/livery.gd:48
+msgid "Чёрный с красным"
+msgstr "Black and Red"
+
+#: game/scripts/main.gd:232
+#, c-format
+msgid "%s · ОПЕРАЦИЯ «%s» · %s"
+msgstr "%s · OPERATION \"%s\" · %s"
+
+#: game/scripts/main.gd:235
+#, c-format
+msgid "Задача: %s. Всех врагов не перебить — они прилетают всё время."
+msgstr "Objective: %s. You can't kill every enemy — they keep coming."
+
+#: game/scripts/main.gd:237
+msgid "Мышь — куда лететь: самолёт поворачивает за курсором. Пушка стреляет сама по врагам впереди."
+msgstr "Mouse — where to fly: the plane turns toward the cursor. The cannon fires on its own at enemies ahead."
+
+#: game/scripts/main.gd:238
+msgid "Зелёные ромбы со сбитых врагов — опыт: пролетайте рядом, они притянутся. Новый уровень — выбор улучшения."
+msgstr "Green diamonds from downed enemies are XP: fly close and they're pulled in. New level — pick an upgrade."
+
+#: game/scripts/main.gd:240
+msgid "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика»."
+msgstr "Bottom left — minimap: north is up, white arrow — you, red dots — enemies, pink — aces, colored diamond — objective, green diamond — extraction gates, purple dots — flight. Size and opacity — in \"Settings → Graphics\"."
+
+#: game/scripts/main.gd:377
+#, c-format
+msgid "Все улучшения собраны — вместо карточки ремонт и +%d запчастей"
+msgstr "All upgrades collected — instead of a card: repairs and +%d parts"
+
+#: game/scripts/main.gd:504
+msgid "Справа внизу — радиоэфир: ведомые отвечают на приказы, штаб предупреждает о задании. Красная рамка — перехват вражеского эфира, жди аса или босса."
+msgstr "Bottom right — radio: wingmen answer orders, HQ warns about objectives. Red frame — intercepted enemy chatter, expect an ace or a boss."
+
+#: game/scripts/main.gd:516
+msgid "Позиция ПВО уничтожена!"
+msgstr "AA site destroyed!"
+
+#: game/scripts/main.gd:516
+msgid "Колонна разбита!"
+msgstr "Convoy wiped out!"
+
+#: game/scripts/main.gd:516
+msgid "Ас-соперник сбит!"
+msgstr "Rival ace shot down!"
+
+#: game/scripts/main.gd:521
+msgid "ЗА ПОЗИЦИЮ ПВО"
+msgstr "FOR THE AA SITE"
+
+#: game/scripts/main.gd:521
+msgid "ЗА КОЛОННУ"
+msgstr "FOR THE CONVOY"
+
+#: game/scripts/main.gd:521
+msgid "ЗА АСА"
+msgstr "FOR THE ACE"
+
+#: game/scripts/main.gd:528
+#, c-format
+msgid "%s Награда: %s"
+msgstr "%s Reward: %s"
+
+#: game/scripts/main.gd:528
+msgid "выбор из редких карточек"
+msgstr "a pick of rare cards"
+
+#: game/scripts/main.gd:528
+msgid " и +40 запчастей"
+msgstr " and +40 parts"
+
+#: game/scripts/main.gd:528
+#, c-format
+msgid "ремонт 20%% и +%d запчастей"
+msgstr "20%% repair and +%d parts"
+
+#: game/scripts/main.gd:536
+#, c-format
+msgid "Ас «%s» ушёл — награды нет"
+msgstr "Ace \"%s\" got away — no reward"
+
+#: game/scripts/main.gd:546
+msgid "На волоске!"
+msgstr "Close call!"
+
+#: game/scripts/main.gd:546 game/scripts/projectiles.gd:615
+msgid "пуля"
+msgstr "bullet"
+
+#: game/scripts/main.gd:546
+msgid "Ракета мимо!"
+msgstr "Missile missed!"
+
+#: game/scripts/main.gd:560
+#, c-format
+msgid "АС НА ПОДХОДЕ!  (%d)"
+msgstr "ACE INBOUND!  (%d)"
+
+#: game/scripts/main.gd:560
+msgid "АС НА ПОДХОДЕ!"
+msgstr "ACE INBOUND!"
+
+#: game/scripts/main.gd:562
+msgid "Перехват"
+msgstr "Intercept"
+
+#: game/scripts/main.gd:562
+msgid "Цель вижу. Захожу с солнца."
+msgstr "Target in sight. Coming out of the sun."
+
+#: game/scripts/main.gd:562
+msgid "Это наше небо. Уходи, пока цел."
+msgstr "This is our sky. Leave while you still can."
+
+#: game/scripts/main.gd:562
+msgid "Звено, прикрыть меня — работаю по одиночке."
+msgstr "Flight, cover me — I'm going solo."
+
+#: game/scripts/main.gd:563
+msgid "Ещё один охотник? Посмотрим, сколько продержишься."
+msgstr "Another hunter? Let's see how long you last."
+
+#: game/scripts/main.gd:564
+msgid "Ас — сильный враг. Собьёте его — откроются ворота эвакуации и добавится переброс карточек."
+msgstr "An ace is a tough enemy. Shoot it down to open the extraction gates and earn a card reroll."
+
+#: game/scripts/main.gd:587
+msgid "Эвакуация: пролетите через 3 ворот по порядку"
+msgstr "Extraction: fly through 3 gates in order"
+
+#: game/scripts/main.gd:587
+msgid " · задача операции ещё не выполнена"
+msgstr " · operation objective not done yet"
+
+#: game/scripts/main.gd:589
+msgid "Улететь можно уже сейчас — или остаться до 15:00 и заработать больше запчастей."
+msgstr "You can leave now — or stay until 15:00 and earn more parts."
+
+#: game/scripts/main.gd:591
+#, c-format
+msgid "Задание выполнено! Улетайте через ворота — или оставайтесь: добыча +10% за каждую минуту после 15:00."
+msgstr "Objective complete! Leave through the gates — or stay: +10% loot for every minute after 15:00."
+
+#: game/scripts/main.gd:599 game/scripts/menu.gd:249 game/scripts/menu.gd:391 game/scripts/report.gd:380
+msgid "эвакуация"
+msgstr "extraction"
+
+#: game/scripts/main.gd:605
+msgid "Окно эвакуации закрыто — следующее после следующего аса"
+msgstr "Extraction window closed — next one after the next ace"
+
+#: game/scripts/main.gd:657
+msgid "Сбит с хвоста!"
+msgstr "Shot down from behind!"
+
+#: game/scripts/main.gd:667 game/scripts/rival_ace.gd:15 game/scripts/rival_ace.gd:49
+msgid "Барон"
+msgstr "Baron"
+
+#: game/scripts/main.gd:669
+msgid "«Барон» сбит!"
+msgstr "\"Baron\" shot down!"
+
+#: game/scripts/main.gd:678
+msgid "АС СБИТ!"
+msgstr "ACE SHOT DOWN!"
+
+#: game/scripts/main.gd:686
+msgid "Space — уклонение: короткий переворот, во время которого пули и ракеты не попадают."
+msgstr "Space — evade: a quick roll during which bullets and missiles can't hit you."
+
+#: game/scripts/main.gd:713 game/scripts/report.gd:380
+msgid "гибель"
+msgstr "death"
+
+#: game/scripts/main_input.gd:99
+#, c-format
+msgid "Наклон камеры: %s  [F9]"
+msgstr "Camera tilt: %s  [F9]"
+
+#: game/scripts/main_input.gd:109
+msgid "Отладка: перемотка к следующему асу"
+msgstr "Debug: skip to next ace"
+
+#: game/scripts/main_input.gd:114
+#, c-format
+msgid "Отладка: неуязвимость %s"
+msgstr "Debug: invulnerability %s"
+
+#: game/scripts/main_input.gd:114
+msgid "ВКЛ"
+msgstr "ON"
+
+#: game/scripts/main_input.gd:114
+msgid "ВЫКЛ"
+msgstr "OFF"
+
+#: game/scripts/main_input.gd:123
+msgid "сверху"
+msgstr "top-down"
+
+#: game/scripts/main_input.gd:145
+msgid "выход"
+msgstr "exit"
+
+#: game/scripts/main_input.gd:328
+#, c-format
+msgid "Принял: %s!"
+msgstr "Roger: %s!"
+
+#: game/scripts/menu.gd:15
+msgid "ИГРА"
+msgstr "GAME"
+
+#: game/scripts/menu.gd:15
+msgid "ГРАФИКА"
+msgstr "GRAPHICS"
+
+#: game/scripts/menu.gd:15
+msgid "ЗВУК"
+msgstr "SOUND"
+
+#: game/scripts/menu.gd:15 game/scripts/menu.gd:585
+msgid "УПРАВЛЕНИЕ"
+msgstr "CONTROLS"
+
+#: game/scripts/menu.gd:332
+msgid "ГЛАВНЫЙ ТЕРМИНАЛ"
+msgstr "MAIN TERMINAL"
+
+#: game/scripts/menu.gd:332 game/scripts/menu.gd:361
+msgid "НАСТРОЙКИ"
+msgstr "SETTINGS"
+
+#: game/scripts/menu.gd:334
+msgid "ВЕРСИЯ: "
+msgstr "VERSION: "
+
+#: game/scripts/menu.gd:354
+msgid "Авиа-roguelike: 15 минут вылета, звено, подвесы и асы"
+msgstr "Air roguelike: 15-minute sorties, flight, hardpoints and aces"
+
+#: game/scripts/menu.gd:357 game/scripts/menu.gd:595
+msgid "ВЫЛЕТ"
+msgstr "SORTIE"
+
+#: game/scripts/menu.gd:360
+#, c-format
+msgid "Запчасти: %d · экипажи: Оса %d · Грач %d · Кит %d"
+msgstr "Parts: %d · crews: Wasp %d · Rook %d · Whale %d"
+
+#: game/scripts/menu.gd:362 game/scripts/menu.gd:619
+msgid "КАК ИГРАТЬ"
+msgstr "HOW TO PLAY"
+
+#: game/scripts/menu.gd:363
+msgid "ЛОГИ"
+msgstr "LOGS"
+
+#: game/scripts/menu.gd:364
+msgid "ВЫХОД"
+msgstr "EXIT"
+
+#: game/scripts/menu.gd:366
+msgid "ENTER — вылет    ESC — назад    F2 — схема управления"
+msgstr "ENTER — sortie    ESC — back    F2 — control scheme"
+
+#: game/scripts/menu.gd:371
+msgid "ЖУРНАЛ ПОЛЁТОВ"
+msgstr "FLIGHT LOG"
+
+#: game/scripts/menu.gd:372
+msgid "лучшие результаты на этом компьютере"
+msgstr "best results on this computer"
+
+#: game/scripts/menu.gd:375
+msgid "Вылетов"
+msgstr "Sorties"
+
+#: game/scripts/menu.gd:375
+msgid "Эвакуаций"
+msgstr "Extractions"
+
+#: game/scripts/menu.gd:376
+msgid "Дольше всего в воздухе"
+msgstr "Longest time in the air"
+
+#: game/scripts/menu.gd:376
+msgid "Лучший уровень пилота"
+msgstr "Best pilot level"
+
+#: game/scripts/menu.gd:377
+msgid "Больше всего сбито"
+msgstr "Most kills"
+
+#: game/scripts/menu.gd:385
+msgid "ПОСЛЕДНИЕ ВЫЛЕТЫ"
+msgstr "RECENT SORTIES"
+
+#: game/scripts/menu.gd:389
+msgid "пока пусто — самое время на взлёт"
+msgstr "empty so far — time to take off"
+
+#: game/scripts/menu.gd:394
+#, c-format
+msgid "%d:%02d · ур. %d · %d сбито"
+msgstr "%d:%02d · Lv. %d · %d kills"
+
+#: game/scripts/menu.gd:425
+msgid "Игра"
+msgstr "Game"
+
+#: game/scripts/menu.gd:426
+msgid "Показывать цифры урона (F3)"
+msgstr "Show damage numbers (F3)"
+
+#: game/scripts/menu.gd:427
+msgid "Скрыть интерфейс в полёте"
+msgstr "Hide HUD in flight"
+
+#: game/scripts/menu.gd:428
+msgid "Схема управления"
+msgstr "Control scheme"
+
+#: game/scripts/menu.gd:429
+msgid "Язык"
+msgstr "Language"
+
+#: game/scripts/menu.gd:430
+msgid "Шрифт интерфейса"
+msgstr "Interface font"
+
+#: game/scripts/menu.gd:431
+msgid "Камера и масштаб"
+msgstr "Camera and zoom"
+
+#: game/scripts/menu.gd:432
+msgid "Наклон камеры (F9)"
+msgstr "Camera tilt (F9)"
+
+#: game/scripts/menu.gd:433
+msgid "Масштаб камеры"
+msgstr "Camera zoom"
+
+#: game/scripts/menu.gd:434
+msgid "Размер самолётов"
+msgstr "Plane size"
+
+#: game/scripts/menu.gd:435
+msgid "Размер врагов"
+msgstr "Enemy size"
+
+#: game/scripts/menu.gd:436
+msgid "Тряска камеры"
+msgstr "Camera shake"
+
+#: game/scripts/menu.gd:437
+msgid "Прогресс"
+msgstr "Progress"
+
+#: game/scripts/menu.gd:441
+msgid "ТОЧНО? Нажмите ещё раз — профиль (ангар, экипажи) будет удалён"
+msgstr "SURE? Press again — profile (hangar, crews) will be deleted"
+
+#: game/scripts/menu.gd:442
+msgid "Сбросить прогресс (ангар, экипажи, запчасти)"
+msgstr "Reset progress (hangar, crews, parts)"
+
+#: game/scripts/menu.gd:446
+msgid "Экран"
+msgstr "Display"
+
+#: game/scripts/menu.gd:447
+msgid "Режим окна"
+msgstr "Window mode"
+
+#: game/scripts/menu.gd:449
+msgid "Размер окна (для режима «В окне»)"
+msgstr "Window size (for \"Windowed\" mode)"
+
+#: game/scripts/menu.gd:450
+msgid "Вертикальная синхронизация"
+msgstr "Vertical sync"
+
+#: game/scripts/menu.gd:452
+msgid "Ограничение кадров"
+msgstr "Frame limit"
+
+#: game/scripts/menu.gd:452
+msgid "без ограничения"
+msgstr "unlimited"
+
+#: game/scripts/menu.gd:452
+#, c-format
+msgid "%d к/с"
+msgstr "%d FPS"
+
+#: game/scripts/menu.gd:453
+msgid "Картинка"
+msgstr "Image"
+
+#: game/scripts/menu.gd:454
+msgid "Качество графики"
+msgstr "Graphics quality"
+
+#: game/scripts/menu.gd:454
+msgid " (авто)"
+msgstr " (auto)"
+
+#: game/scripts/menu.gd:455
+msgid "Объёмная 3D-картинка (выкл. — старая 2D)"
+msgstr "3D graphics (off — old 2D)"
+
+#: game/scripts/menu.gd:456
+msgid "Спрайты (выкл. — схематичные фигуры, F4)"
+msgstr "Sprites (off — simple shapes, F4)"
+
+#: game/scripts/menu.gd:457
+msgid "Круги дальности оружия (пунктир)"
+msgstr "Weapon range circles (dashed)"
+
+#: game/scripts/menu.gd:458
+msgid "Интерфейс в полёте"
+msgstr "In-flight HUD"
+
+#: game/scripts/menu.gd:459
+msgid "Миникарта"
+msgstr "Minimap"
+
+#: game/scripts/menu.gd:460
+msgid "Прозрачность миникарты"
+msgstr "Minimap opacity"
+
+#: game/scripts/menu.gd:462
+msgid "Громкость"
+msgstr "Volume"
+
+#: game/scripts/menu.gd:463
+msgid "Общая"
+msgstr "Master"
+
+#: game/scripts/menu.gd:464
+msgid "Музыка"
+msgstr "Music"
+
+#: game/scripts/menu.gd:465
+msgid "Эффекты"
+msgstr "Effects"
+
+#: game/scripts/menu.gd:466 game/scripts/profile.gd:13
+msgid "Двигатель"
+msgstr "Engine"
+
+#: game/scripts/menu.gd:467 game/scripts/settings.gd:31 game/scripts/settings.gd:32 game/scripts/settings.gd:33
+msgid "Интерфейс"
+msgstr "Interface"
+
+#: game/scripts/menu.gd:469
+msgid "Клавиатура"
+msgstr "Keyboard"
+
+#: game/scripts/menu.gd:484
+msgid "нажмите клавишу…"
+msgstr "press a key…"
+
+#: game/scripts/menu.gd:489
+msgid "Мышь: левая кнопка — огонь из пушки, правая — ракеты и бомбы вручную. Геймпад — стандартная раскладка. Esc — отменить ввод."
+msgstr "Mouse: left button — cannon fire, right — manual rockets and bombs. Gamepad — standard layout. Esc — cancel input."
+
+#: game/scripts/menu.gd:491
+msgid "СБРОСИТЬ КЛАВИШИ"
+msgstr "RESET KEYS"
+
+#: game/scripts/menu.gd:493
+msgid "Esc — назад (сохраняет)    левая кнопка мыши — выбрать / тянуть ползунок    ‹ › — листать вариант"
+msgstr "Esc — back (saves)    left mouse button — select / drag slider    ‹ › — cycle option"
+
+#: game/scripts/menu.gd:494
+msgid "‹  НАЗАД"
+msgstr "‹  BACK"
+
+#: game/scripts/menu.gd:495
+msgid "СОХРАНИТЬ И ПРИМЕНИТЬ"
+msgstr "SAVE AND APPLY"
+
+#: game/scripts/menu.gd:496
+msgid "СБРОСИТЬ ВСЁ"
+msgstr "RESET ALL"
+
+#: game/scripts/menu.gd:498
+msgid "✔ Настройки сохранены"
+msgstr "✔ Settings saved"
+
+#: game/scripts/menu.gd:567
+msgid "выкл."
+msgstr "off"
+
+#: game/scripts/menu.gd:586
+msgid "Мышь — куда лететь, W / S — газ"
+msgstr "Mouse — where to fly, W / S — throttle"
+
+#: game/scripts/menu.gd:587
+#, c-format
+msgid "Пушка стреляет сама; Q — ручной огонь левой кнопкой мыши (до +50% урона)"
+msgstr "Cannon fires on its own; Q — manual fire with left mouse button (up to +50% damage)"
+
+#: game/scripts/menu.gd:588
+msgid "Ракеты и бомбы пускаются сами; правая кнопка мыши — пуск вручную"
+msgstr "Missiles and bombs launch on their own; right mouse button — manual launch"
+
+#: game/scripts/menu.gd:589
+msgid "Space — уклонение (переворот, пули не попадают)"
+msgstr "Space — evade (roll, bullets can't hit)"
+
+#: game/scripts/menu.gd:590
+msgid "Shift — форсаж, E / F — навыки самолёта"
+msgstr "Shift — afterburner, E / F — plane skills"
+
+#: game/scripts/menu.gd:591
+msgid "Tab — оружие на подвесах и пауза"
+msgstr "Tab — hardpoint weapons and pause"
+
+#: game/scripts/menu.gd:592
+msgid "F2 — сменить управление"
+msgstr "F2 — change controls"
+
+#: game/scripts/menu.gd:593
+msgid "Геймпад: только в бою — стик (сначала F2), курки — огонь, A — уклонение, X / B — навыки; меню и ангар — мышью"
+msgstr "Gamepad: combat only — stick (press F2 first), triggers — fire, A — evade, X / B — skills; menu and hangar — mouse"
+
+#: game/scripts/menu.gd:596
+msgid "Цель — продержаться 15 минут и улететь через ворота эвакуации"
+msgstr "Goal — survive 15 minutes and leave through the extraction gates"
+
+#: game/scripts/menu.gd:597
+msgid "Всех врагов не перебить: они прилетают всё время"
+msgstr "You can't kill every enemy: they keep coming"
+
+#: game/scripts/menu.gd:598
+msgid "Сбитые враги дают опыт; новый уровень — выбор 1 из 3 улучшений"
+msgstr "Downed enemies give XP; new level — pick 1 of 3 upgrades"
+
+#: game/scripts/menu.gd:599
+msgid "Каждые 5 минут — вражеский ас, после него можно улететь"
+msgstr "Every 5 minutes — an enemy ace; after it you can leave"
+
+#: game/scripts/menu.gd:600
+#, c-format
+msgid "После 15:00 можно остаться: добыча +10% за каждую минуту"
+msgstr "After 15:00 you can stay: +10% loot for every minute"
+
+#: game/scripts/menu.gd:601
+msgid "Погибли — часть запчастей сохраняется"
+msgstr "Died — you keep some of the parts"
+
+#: game/scripts/menu.gd:603
+msgid "ПРОКАЧКА"
+msgstr "PROGRESSION"
+
+#: game/scripts/menu.gd:604
+msgid "На 3-м уровне выберите специализацию — какую связку собирать"
+msgstr "At level 3 pick a specialization — which synergy to build"
+
+#: game/scripts/menu.gd:605
+msgid "Связка — сильный бонус; подходящие карточки отмечены «▲»"
+msgstr "Synergy — a strong bonus; matching cards are marked \"▲\""
+
+#: game/scripts/menu.gd:606
+msgid "За вылет — до 3 связок; список — в справочнике (меню и пауза)"
+msgstr "Up to 3 synergies per sortie; list — in the codex (menu and pause)"
+
+#: game/scripts/menu.gd:607
+msgid "Между вылетами — АНГАР: самолёт, оружие, экипаж"
+msgstr "Between sorties — HANGAR: plane, weapons, crew"
+
+#: game/scripts/menu.gd:608
+msgid "Экипаж растёт с каждым вылетом и открывает навыки"
+msgstr "Crew grows with every sortie and unlocks skills"
+
+#: game/scripts/menu.gd:620
+msgid "Спасибо, что тестируете Flak Heaven! Это ранний прототип: графика и баланс временные."
+msgstr "Thanks for testing Flak Heaven! This is an early prototype: graphics and balance are placeholders."
+
+#: game/scripts/menu.gd:636
+msgid "После вылета нажмите «ОТПРАВИТЬ ОТЧЁТ» на экране итогов — это займёт минуту и очень нам поможет."
+msgstr "After a sortie press \"SEND REPORT\" on the results screen — it takes a minute and helps us a lot."
+
+#: game/scripts/menu.gd:636
+msgid "После 3–5 вылетов: меню → ЛОГИ → отправьте файлы playtest_log_*.csv и logs/godot.log вместе с ответами на анкету."
+msgstr "After 3–5 sorties: menu → LOGS → send the playtest_log_*.csv and logs/godot.log files along with your survey answers."
+
+#: game/scripts/menu.gd:637
+msgid "ПОНЯТНО"
+msgstr "GOT IT"
+
+#: game/scripts/menu.gd:638
+msgid "ПОДСКАЗКИ ЗАНОВО"
+msgstr "SHOW HINTS AGAIN"
+
+#: game/scripts/menu.gd:638
+msgid "ПОДСКАЗКИ ВКЛЮЧЕНЫ"
+msgstr "HINTS ENABLED"
+
+#: game/scripts/pickups.gd:63
+#, c-format
+msgid "Груз: +%d запчастей"
+msgstr "Cargo: +%d parts"
+
+#: game/scripts/pickups.gd:67
+#, c-format
+msgid "+%d прочности"
+msgstr "+%d hull"
+
+#: game/scripts/plane_classes.gd:23
+msgid "Истребитель «Оса»"
+msgstr "Fighter \"Wasp\""
+
+#: game/scripts/plane_classes.gd:24
+msgid "Лёгкий: скорость, манёвр, уклонение"
+msgstr "Light: speed, agility, evasion"
+
+#: game/scripts/plane_classes.gd:29 game/scripts/plane_classes.gd:63
+msgid "Крылья (пара)"
+msgstr "Wings (pair)"
+
+#: game/scripts/plane_classes.gd:30
+msgid "Под фюзеляжем"
+msgstr "Under fuselage"
+
+#: game/scripts/plane_classes.gd:39
+msgid "Штурмовик «Грач»"
+msgstr "Attacker \"Rook\""
+
+#: game/scripts/plane_classes.gd:40
+msgid "Средний: живучесть, усиленная пушка, турель"
+msgstr "Medium: durability, heavy cannon, turret"
+
+#: game/scripts/plane_classes.gd:45
+msgid "Внутренняя пара"
+msgstr "Inner pair"
+
+#: game/scripts/plane_classes.gd:46
+msgid "Внешняя пара"
+msgstr "Outer pair"
+
+#: game/scripts/plane_classes.gd:55
+msgid "Бомбардировщик «Кит»"
+msgstr "Bomber \"Whale\""
+
+#: game/scripts/plane_classes.gd:56
+msgid "Тяжёлый: прочный, кормовая турель (+ верхняя в бою), бомбы по земле, залп ловушек"
+msgstr "Heavy: tough, tail turret (+ top turret in combat), ground bombs, flare salvo"
+
+#: game/scripts/plane_classes.gd:83
+msgid "Резкий разворот к ближайшему врагу: ракеты за вами теряют цель, 3 секунды пушка бьёт по нему вдвое чаще"
+msgstr "Sharp turn to the nearest enemy: missiles on your tail lose lock, cannon fires twice as fast at it for 3 seconds"
+
+#: game/scripts/plane_classes.gd:84
+msgid "Боевой разворот"
+msgstr "Combat Turn"
+
+#: game/scripts/plane_classes.gd:85
+msgid "разворот к врагу, пушка вдвое чаще"
+msgstr "turn to enemy, cannon ×2 fire rate"
+
+#: game/scripts/plane_classes.gd:86
+#, c-format
+msgid "Самолёт резко разворачивается носом к ближайшему вражескому самолёту (если рядом никого — к курсору). Ракеты, летящие за вами, теряют цель. 3 секунды пушка следит за этим врагом и стреляет вдвое чаще и на 30% сильнее"
+msgstr "The plane snaps its nose toward the nearest enemy plane (if none nearby — toward the cursor). Missiles chasing you lose lock. For 3 seconds the cannon tracks that enemy and fires twice as fast and 30% harder"
+
+#: game/scripts/plane_classes.gd:87
+msgid "пушка следит за врагом 4 секунды"
+msgstr "cannon tracks the enemy for 4 seconds"
+
+#: game/scripts/plane_classes.gd:87
+msgid "перезарядка 7 секунд"
+msgstr "cooldown 7 seconds"
+
+#: game/scripts/plane_classes.gd:87
+msgid "разворот сбивает вражеские пули и ракеты рядом"
+msgstr "the turn shoots down nearby enemy bullets and missiles"
+
+#: game/scripts/plane_classes.gd:88
+msgid "Чёртово колесо"
+msgstr "Ferris Wheel"
+
+#: game/scripts/plane_classes.gd:89
+msgid "Разворот сразу перезаряжает самонаводящиеся ракеты"
+msgstr "The turn instantly reloads homing missiles"
+
+#: game/scripts/plane_classes.gd:92
+msgid "Залп из 10 маленьких ракет: каждая сама находит своего врага вокруг вас"
+msgstr "A salvo of 10 small missiles: each finds its own enemy around you"
+
+#: game/scripts/plane_classes.gd:93
+msgid "Ёлочка"
+msgstr "Fir Tree"
+
+#: game/scripts/plane_classes.gd:93
+msgid "10 ракет по врагам вокруг"
+msgstr "10 missiles at enemies around"
+
+#: game/scripts/plane_classes.gd:94
+msgid "Залп из 10 маленьких самонаводящихся ракет: каждая летит в своего врага вокруг вас (урон 30, небольшой взрыв)"
+msgstr "A salvo of 10 small homing missiles: each flies at its own enemy around you (damage 30, small blast)"
+
+#: game/scripts/plane_classes.gd:95
+msgid "14 ракет в залпе"
+msgstr "14 missiles per salvo"
+
+#: game/scripts/plane_classes.gd:95
+msgid "урон ракет 45"
+msgstr "missile damage 45"
+
+#: game/scripts/plane_classes.gd:95
+msgid "сбив цель, ракета ищет следующую"
+msgstr "after a kill, the missile seeks the next target"
+
+#: game/scripts/plane_classes.gd:96
+msgid "Новогодняя ночь"
+msgstr "New Year's Eve"
+
+#: game/scripts/plane_classes.gd:97
+msgid "Там, где рвутся ракеты «Ёлочки», 3 секунды горит огонь и ранит врагов"
+msgstr "Where \"Fir Tree\" missiles burst, fire burns for 3 seconds and hurts enemies"
+
+#: game/scripts/plane_classes.gd:100
+msgid "Резкий разгон почти вдвое: врагов на пути сбиваете без вреда себе, в конце — ударная волна"
+msgstr "Sudden near-double acceleration: enemies in your path are smashed with no harm to you, ending in a shockwave"
+
+#: game/scripts/plane_classes.gd:101
+msgid "Звуковой удар"
+msgstr "Sonic Boom"
+
+#: game/scripts/plane_classes.gd:101
+msgid "разгон и ударная волна"
+msgstr "burst of speed and shockwave"
+
+#: game/scripts/plane_classes.gd:102
+msgid "1,5 секунды самолёт летит почти вдвое быстрее; врезавшиеся в вас враги разбиваются, а вы не получаете урона. В конце — ударная волна: ранит (60) и отбрасывает врагов рядом"
+msgstr "For 1.5 seconds the plane flies almost twice as fast; enemies that ram you are destroyed and you take no damage. At the end — a shockwave: hurts (60) and knocks back nearby enemies"
+
+#: game/scripts/plane_classes.gd:103
+msgid "волна шире"
+msgstr "wider wave"
+
+#: game/scripts/plane_classes.gd:103
+msgid "волна и в начале разгона"
+msgstr "wave at the start of the dash too"
+
+#: game/scripts/plane_classes.gd:103
+msgid "перезарядка 10 секунд"
+msgstr "cooldown 10 seconds"
+
+#: game/scripts/plane_classes.gd:104
+msgid "Хлопок"
+msgstr "Thunderclap"
+
+#: game/scripts/plane_classes.gd:105
+msgid "Ударная волна стирает вражеские пули и ракеты вокруг"
+msgstr "The shockwave erases enemy bullets and missiles around you"
+
+#: game/scripts/plane_classes.gd:108
+#, c-format
+msgid "4 секунды вы получаете на 70% меньше урона, а врезавшиеся в вас самолёты разбиваются сами"
+msgstr "For 4 seconds you take 70% less damage, and planes that ram you are destroyed"
+
+#: game/scripts/plane_classes.gd:109
+msgid "Бронещит"
+msgstr "Armor Shield"
+
+#: game/scripts/plane_classes.gd:109
+#, c-format
+msgid "урон по вам −70%"
+msgstr "damage taken −70%"
+
+#: game/scripts/plane_classes.gd:110
+#, c-format
+msgid "4 секунды вы получаете на 70% меньше урона. Вражеские самолёты (кроме асов), врезавшиеся в вас, разбиваются сами, а вы не страдаете"
+msgstr "For 4 seconds you take 70% less damage. Enemy planes (except aces) that ram you are destroyed, and you take no harm"
+
+#: game/scripts/plane_classes.gd:111
+msgid "5 секунд"
+msgstr "5 seconds"
+
+#: game/scripts/plane_classes.gd:111
+msgid "щит ранит (60) и отталкивает врагов рядом"
+msgstr "the shield hurts (60) and pushes back nearby enemies"
+
+#: game/scripts/plane_classes.gd:111
+#, c-format
+msgid "в конце щит выпускает волну из 30% поглощённого урона"
+msgstr "at the end the shield releases a wave of 30% of absorbed damage"
+
+#: game/scripts/plane_classes.gd:112 game/scripts/profile.gd:64 game/scripts/profile.gd:70 game/scripts/profile.gd:79
+msgid "Утюг"
+msgstr "Iron"
+
+#: game/scripts/plane_classes.gd:113
+msgid "Пока щит включён, на каждое попадание по вам вылетает ответная ракета в стрелка"
+msgstr "While the shield is up, every hit on you fires a return missile at the shooter"
+
+#: game/scripts/plane_classes.gd:116
+#, c-format
+msgid "3 секунды бомбы и ракеты перезаряжаются в 3 раза быстрее, пушка бьёт по земле на 50% сильнее"
+msgstr "For 3 seconds bombs and missiles reload 3 times faster, cannon hits ground 50% harder"
+
+#: game/scripts/plane_classes.gd:117
+msgid "Штурмовой заход"
+msgstr "Strafing Run"
+
+#: game/scripts/plane_classes.gd:117
+msgid "бомбы и ракеты в 3 раза быстрее"
+msgstr "bombs and missiles 3× faster"
+
+#: game/scripts/plane_classes.gd:118
+#, c-format
+msgid "3 секунды бомбы и ракеты перезаряжаются в 3 раза быстрее, залпы неуправляемых ракет летят без прицеливания, а пушка наносит наземным целям на 50% больше урона"
+msgstr "For 3 seconds bombs and missiles reload 3 times faster, rocket salvos fire without aiming, and the cannon deals 50% more damage to ground targets"
+
+#: game/scripts/plane_classes.gd:119
+msgid "4 секунды"
+msgstr "4 seconds"
+
+#: game/scripts/plane_classes.gd:119
+#, c-format
+msgid "взрывы на 25% шире во время захода"
+msgstr "blasts 25% wider during the run"
+
+#: game/scripts/plane_classes.gd:119
+msgid "уничтоженная наземная цель продлевает заход на 0,5 секунды (до 3)"
+msgstr "a destroyed ground target extends the run by 0.5 seconds (up to 3)"
+
+#: game/scripts/plane_classes.gd:120
+msgid "Конвейер"
+msgstr "Conveyor"
+
+#: game/scripts/plane_classes.gd:121
+msgid "Во время захода залпы неуправляемых ракет двойные"
+msgstr "During the run rocket salvos are doubled"
+
+#: game/scripts/plane_classes.gd:124
+msgid "Вызов двух штурмовиков на помощь на 12 секунд: они атакуют наземные цели"
+msgstr "Call in two attackers for 12 seconds: they strike ground targets"
+
+#: game/scripts/plane_classes.gd:125 game/scripts/player_skills.gd:143
+msgid "Грачата"
+msgstr "Rooklings"
+
+#: game/scripts/plane_classes.gd:125
+msgid "2 штурмовика в помощь"
+msgstr "2 attackers to help"
+
+#: game/scripts/plane_classes.gd:126
+msgid "Прилетают два штурмовика-помощника на 12 секунд: бьют ракетами по наземным целям (прочность у них вдвое меньше, чем у обычных ведомых)"
+msgstr "Two helper attackers arrive for 12 seconds: they hit ground targets with rockets (they have half the hull of regular wingmen)"
+
+#: game/scripts/plane_classes.gd:127
+msgid "помогают 15 секунд"
+msgstr "help for 15 seconds"
+
+#: game/scripts/plane_classes.gd:127
+msgid "прилетают трое"
+msgstr "three arrive"
+
+#: game/scripts/plane_classes.gd:127
+msgid "улетая, каждый сбрасывает 4 бомбы"
+msgstr "when leaving, each drops 4 bombs"
+
+#: game/scripts/plane_classes.gd:128
+msgid "Гнездо"
+msgstr "Nest"
+
+#: game/scripts/plane_classes.gd:129
+msgid "Один из помощников остаётся в вашем звене насовсем"
+msgstr "One of the helpers stays in your flight for good"
+
+#: game/scripts/plane_classes.gd:132
+msgid "5 секунд бортовые пулемёты стреляют вдвое чаще и дальше и сбивают летящие в вас ракеты"
+msgstr "For 5 seconds onboard machine guns fire twice as fast and farther and shoot down incoming missiles"
+
+#: game/scripts/plane_classes.gd:133
+msgid "Зенитный зонтик"
+msgstr "Flak Umbrella"
+
+#: game/scripts/plane_classes.gd:133
+msgid "пулемёты вдвое чаще, сбивают ракеты"
+msgstr "MGs ×2 fire rate, shoot down missiles"
+
+#: game/scripts/plane_classes.gd:134
+#, c-format
+msgid "5 секунд бортовые пулемёты (турели) стреляют вдвое чаще и на 30% дальше, бьют по самолётам и сбивают вражеские ракеты рядом"
+msgstr "For 5 seconds onboard machine guns (turrets) fire twice as fast and 30% farther, hit planes and shoot down nearby enemy missiles"
+
+#: game/scripts/plane_classes.gd:135
+msgid "6 секунд"
+msgstr "6 seconds"
+
+#: game/scripts/plane_classes.gd:135
+msgid "сбивают и вражеские пули"
+msgstr "also shoot down enemy bullets"
+
+#: game/scripts/plane_classes.gd:135
+#, c-format
+msgid "пока включён, урон по вам −20%"
+msgstr "while active, damage taken −20%"
+
+#: game/scripts/plane_classes.gd:136
+msgid "Под одним зонтом"
+msgstr "Under One Umbrella"
+
+#: game/scripts/plane_classes.gd:137
+msgid "Под зонтиком ваши ведомые неуязвимы и пускают по 2 самонаводящиеся ракеты"
+msgstr "Under the umbrella your wingmen are invulnerable and launch 2 homing missiles each"
+
+#: game/scripts/plane_classes.gd:140
+msgid "10 бомб рвутся спиралью вокруг самолёта прямо в воздухе, затем 3 секунды пулемёты стреляют вдвое чаще"
+msgstr "10 bombs burst in a spiral around the plane in mid-air, then machine guns fire twice as fast for 3 seconds"
+
+#: game/scripts/plane_classes.gd:141
+msgid "Огненный ковёр"
+msgstr "Carpet of Fire"
+
+#: game/scripts/plane_classes.gd:141
+msgid "бомбы спиралью вокруг"
+msgstr "bombs in a spiral around"
+
+#: game/scripts/plane_classes.gd:142
+msgid "10 бомб рвутся спиралью вокруг самолёта прямо в воздухе — задевают и самолёты, и наземные цели. После этого 3 секунды бортовые пулемёты стреляют вдвое чаще"
+msgstr "10 bombs burst in a spiral around the plane in mid-air — hitting both planes and ground targets. Then onboard machine guns fire twice as fast for 3 seconds"
+
+#: game/scripts/plane_classes.gd:143
+msgid "14 бомб"
+msgstr "14 bombs"
+
+#: game/scripts/plane_classes.gd:143
+#, c-format
+msgid "бомбы на 40% сильнее и на 20% шире"
+msgstr "bombs 40% stronger and 20% wider"
+
+#: game/scripts/plane_classes.gd:143
+#, c-format
+msgid "3 секунды самолёт летит на 30% быстрее"
+msgstr "for 3 seconds the plane flies 30% faster"
+
+#: game/scripts/plane_classes.gd:144
+msgid "Двойной узор"
+msgstr "Double Pattern"
+
+#: game/scripts/plane_classes.gd:145
+msgid "Через секунду вторая спираль бомб — в обратную сторону"
+msgstr "A second later, another bomb spiral — in the opposite direction"
+
+#: game/scripts/plane_classes.gd:148
+#, c-format
+msgid "6 секунд звено держится рядом и пускает самонаводящиеся ракеты; каждый ведомый рядом: урон по вам −20%"
+msgstr "For 6 seconds the flight stays close and launches homing missiles; each nearby wingman: damage taken −20%"
+
+#: game/scripts/plane_classes.gd:149
+msgid "Сомкнуть строй"
+msgstr "Close Formation"
+
+#: game/scripts/plane_classes.gd:149
+msgid "звено рядом, урон по вам меньше"
+msgstr "flight close, less damage taken"
+
+#: game/scripts/plane_classes.gd:150
+#, c-format
+msgid "6 секунд ведомые прижимаются к вам и пускают по 3 самонаводящиеся ракеты (урон 40). Каждый ведомый рядом снижает урон по вам на 20% (до −60%)"
+msgstr "For 6 seconds wingmen tighten up on you and launch 3 homing missiles each (damage 40). Each nearby wingman cuts damage taken by 20% (up to −60%)"
+
+#: game/scripts/plane_classes.gd:151
+msgid "+1 ракета каждому ведомому"
+msgstr "+1 missile per wingman"
+
+#: game/scripts/plane_classes.gd:151
+msgid "ведомые чинятся наполовину"
+msgstr "wingmen repair halfway"
+
+#: game/scripts/plane_classes.gd:151
+msgid "8 секунд"
+msgstr "8 seconds"
+
+#: game/scripts/plane_classes.gd:152
+msgid "Парад"
+msgstr "Parade"
+
+#: game/scripts/plane_classes.gd:153
+msgid "Раз в 20 секунд ведомые повторяют залп ракет и без навыка"
+msgstr "Every 20 seconds wingmen repeat the missile salvo even without the skill"
+
+#: game/scripts/plane_classes.gd:166
+msgid "«Охотник»"
+msgstr "\"Hunter\""
+
+#: game/scripts/plane_classes.gd:167
+#, c-format
+msgid "Наводящиеся ракеты наносят асам и перехватчикам на 50% больше урона. Пока вы сидите у врага на хвосте, ракеты перезаряжаются вдвое быстрее."
+msgstr "Homing missiles deal 50% more damage to aces and interceptors. While you're on an enemy's tail, missiles reload twice as fast."
+
+#: game/scripts/plane_classes.gd:168
+msgid "«Штурмовка»"
+msgstr "\"Strafing\""
+
+#: game/scripts/plane_classes.gd:169
+#, c-format
+msgid "Залп ракет наносит наземным целям (ПВО, колонна, техника) на 50% больше урона. Каждая уничтоженная наземная цель на 1 с ускоряет перезарядку навыка класса."
+msgstr "Rocket salvos deal 50% more damage to ground targets (AA, convoys, vehicles). Each destroyed ground target speeds up the class skill cooldown by 1 s."
+
+#: game/scripts/plane_classes.gd:170
+msgid "«Выжженная земля»"
+msgstr "\"Scorched Earth\""
+
+#: game/scripts/plane_classes.gd:171
+#, c-format
+msgid "После взрыва бомбы земля горит 3 с и жжёт наземные цели. Наземные цели, уничтоженные бомбами или огнём, дают на 50% больше запчастей."
+msgstr "After a bomb blast the ground burns for 3 s and scorches ground targets. Ground targets destroyed by bombs or fire give 50% more parts."
+
+#: game/scripts/plane_classes.gd:174
+msgid "мастерство: выжженная земля"
+msgstr "mastery: scorched earth"
+
+#: game/scripts/player.gd:144 game/scripts/player.gd:150
+msgid "Тяжёлый подвес"
+msgstr "Heavy pylon"
+
+#: game/scripts/player.gd:210
+#, c-format
+msgid "+%d к специализации «%s»"
+msgstr "+%d to specialization \"%s\""
+
+#: game/scripts/player.gd:219
+#, c-format
+msgid "СВЯЗКА «%s» — СЛОТ %d"
+msgstr "SYNERGY \"%s\" — SLOT %d"
+
+#: game/scripts/player.gd:465 game/scripts/projectiles.gd:581 game/scripts/projectiles.gd:638
+msgid "ракета"
+msgstr "missile"
+
+#: game/scripts/player.gd:594
+msgid "связка: утюг"
+msgstr "synergy: iron"
+
+#: game/scripts/player.gd:601
+msgid "Второе дыхание!"
+msgstr "Second wind!"
+
+#: game/scripts/player_skills.gd:108
+msgid "РАЗВОРОТ НА ЦЕЛЬ · "
+msgstr "TURN ON TARGET · "
+
+#: game/scripts/player_skills.gd:108
+msgid "ПУШКА ×2"
+msgstr "CANNON ×2"
+
+#: game/scripts/player_skills.gd:108
+#, c-format
+msgid "  ·  ракеты сбиты с наведения: %d"
+msgstr "  ·  missiles lost lock: %d"
+
+#: game/scripts/player_skills.gd:109
+msgid "Боевой разворот: самолёт рывком разворачивается носом к ближайшему врагу (синее кольцо), вражеские ракеты теряют вас, и несколько секунд пушка бьёт по этой цели вдвое чаще и сильнее."
+msgstr "Combat turn: the plane snaps its nose to the nearest enemy (blue ring), enemy missiles lose you, and for a few seconds the cannon hits that target twice as fast and harder."
+
+#: game/scripts/player_skills.gd:143
+msgid "Звено на подходе, работаем по земле!"
+msgstr "Flight inbound, working the ground!"
+
+#: game/scripts/player_skills.gd:171
+msgid "Смыкаем строй!"
+msgstr "Closing formation!"
+
+#: game/scripts/player_skills.gd:196
+msgid "звуковой удар"
+msgstr "sonic boom"
+
+#: game/scripts/player_skills.gd:273 game/scripts/run_log.gd:10
+msgid "огненный ковёр"
+msgstr "carpet of fire"
+
+#: game/scripts/player_skills.gd:280
+msgid "связка: каток"
+msgstr "synergy: steamroller"
+
+#: game/scripts/player_skills.gd:344
+msgid "связка: реактивный след"
+msgstr "synergy: jet wake"
+
+#: game/scripts/profile.gd:12
+msgid "Планер"
+msgstr "Airframe"
+
+#: game/scripts/profile.gd:12
+#, c-format
+msgid "перезарядка уклонения и форсажа −4%"
+msgstr "evade and afterburner cooldown −4%"
+
+#: game/scripts/profile.gd:12
+msgid "временно: до введения веса"
+msgstr "temporary: until weight is added"
+
+#: game/scripts/profile.gd:13
+#, c-format
+msgid "скорость +2%"
+msgstr "speed +2%"
+
+#: game/scripts/profile.gd:14 game/scripts/profile.gd:98 game/scripts/prog.gd:13
+msgid "Броня"
+msgstr "Armor"
+
+#: game/scripts/profile.gd:14
+#, c-format
+msgid "прочность +5%"
+msgstr "hull +5%"
+
+#: game/scripts/profile.gd:15
+msgid "Крыло"
+msgstr "Wing"
+
+#: game/scripts/profile.gd:15
+#, c-format
+msgid "разворот +3%"
+msgstr "turn +3%"
+
+#: game/scripts/profile.gd:16
+msgid "Узлы подвеса"
+msgstr "Pylons"
+
+#: game/scripts/profile.gd:16
+#, c-format
+msgid "урон подвесов и турелей +4%"
+msgstr "hardpoint and turret damage +4%"
+
+#: game/scripts/profile.gd:16
+msgid "временно: до введения грузоподъёмности"
+msgstr "temporary: until payload is added"
+
+#: game/scripts/profile.gd:17
+msgid "Топливный бак"
+msgstr "Fuel tank"
+
+#: game/scripts/profile.gd:17
+#, c-format
+msgid "объём бака +8% (≈ +43 с полёта)"
+msgstr "tank capacity +8% (≈ +43 s of flight)"
+
+#: game/scripts/profile.gd:28 game/scripts/profile.gd:30 game/scripts/profile.gd:32 game/scripts/profile.gd:36 game/scripts/profile.gd:38
+#, c-format
+msgid "урон +20%"
+msgstr "damage +20%"
+
+#: game/scripts/profile.gd:28
+msgid "Дальнобойные"
+msgstr "Long-range"
+
+#: game/scripts/profile.gd:28
+#, c-format
+msgid "дальность захвата +25%"
+msgstr "lock range +25%"
+
+#: game/scripts/profile.gd:29
+msgid "Форсированный двигатель ракеты"
+msgstr "Boosted missile motor"
+
+#: game/scripts/profile.gd:29
+#, c-format
+msgid "скорость ракеты +25%"
+msgstr "missile speed +25%"
+
+#: game/scripts/profile.gd:29 game/scripts/profile.gd:31 game/scripts/profile.gd:34 game/scripts/profile.gd:37
+#, c-format
+msgid "перезарядка −15%"
+msgstr "cooldown −15%"
+
+#: game/scripts/profile.gd:30
+msgid "Фугасные"
+msgstr "High-explosive"
+
+#: game/scripts/profile.gd:30
+msgid "Прицел ракет"
+msgstr "Rocket sight"
+
+#: game/scripts/profile.gd:30
+#, c-format
+msgid "автопуск дальше на 25%, конус шире"
+msgstr "auto-launch 25% farther, wider cone"
+
+#: game/scripts/profile.gd:31
+msgid "Скоростные"
+msgstr "High-speed"
+
+#: game/scripts/profile.gd:31
+#, c-format
+msgid "скорость ракеты +20%"
+msgstr "rocket speed +20%"
+
+#: game/scripts/profile.gd:32 game/scripts/profile.gd:38
+msgid "Крупный калибр"
+msgstr "Heavy caliber"
+
+#: game/scripts/profile.gd:32
+msgid "Длинный ствол"
+msgstr "Long barrel"
+
+#: game/scripts/profile.gd:32
+#, c-format
+msgid "дальность +20%"
+msgstr "range +20%"
+
+#: game/scripts/profile.gd:33 game/scripts/profile.gd:39
+msgid "Высокая нач. скорость"
+msgstr "High muzzle velocity"
+
+#: game/scripts/profile.gd:33 game/scripts/profile.gd:39
+#, c-format
+msgid "скорость пули +25%"
+msgstr "bullet speed +25%"
+
+#: game/scripts/profile.gd:33
+msgid "Скорострельная"
+msgstr "Rapid-fire"
+
+#: game/scripts/profile.gd:33 game/scripts/profile.gd:39
+#, c-format
+msgid "темп +15%"
+msgstr "fire rate +15%"
+
+#: game/scripts/profile.gd:34
+msgid "Широкий веер"
+msgstr "Wide spread"
+
+#: game/scripts/profile.gd:34
+#, c-format
+msgid "радиус перехвата +20%"
+msgstr "intercept radius +20%"
+
+#: game/scripts/profile.gd:34
+msgid "Быстрый отстрел"
+msgstr "Quick release"
+
+#: game/scripts/profile.gd:35
+msgid "Ловушка с подрывом"
+msgstr "Detonating flare"
+
+#: game/scripts/profile.gd:35
+msgid "уведённая ракета взрывается (20, 60 пикс.)"
+msgstr "lured missile explodes (20, 60 px)"
+
+#: game/scripts/profile.gd:35
+msgid "Запас ловушек"
+msgstr "Flare stock"
+
+#: game/scripts/profile.gd:35
+#, c-format
+msgid "20%: мгновенная перезарядка"
+msgstr "20%: instant reload"
+
+#: game/scripts/profile.gd:36
+msgid "Тяжёлые"
+msgstr "Heavy"
+
+#: game/scripts/profile.gd:36
+msgid "Рассеивание"
+msgstr "Dispersion"
+
+#: game/scripts/profile.gd:36
+#, c-format
+msgid "радиус +15%"
+msgstr "radius +15%"
+
+#: game/scripts/profile.gd:37
+msgid "Короткий взрыватель"
+msgstr "Short fuse"
+
+#: game/scripts/profile.gd:37
+msgid "подрыв 0,4 с (было 0,55)"
+msgstr "detonation 0.4 s (was 0.55)"
+
+#: game/scripts/profile.gd:38
+msgid "Дальномер"
+msgstr "Rangefinder"
+
+#: game/scripts/profile.gd:38
+#, c-format
+msgid "дальность +15%"
+msgstr "range +15%"
+
+#: game/scripts/profile.gd:39
+msgid "Скорострельные"
+msgstr "Rapid-fire"
+
+#: game/scripts/profile.gd:44
+msgid "«Тяжёлый Шмель»"
+msgstr "\"Heavy Bumblebee\""
+
+#: game/scripts/profile.gd:44 game/scripts/profile.gd:48
+#, c-format
+msgid "модернизация: урон +35%"
+msgstr "upgrade: damage +35%"
+
+#: game/scripts/profile.gd:44
+msgid "«Быстрый Шмель»"
+msgstr "\"Fast Bumblebee\""
+
+#: game/scripts/profile.gd:44
+#, c-format
+msgid "модернизация: перезарядка −35%, урон −15%"
+msgstr "upgrade: cooldown −35%, damage −15%"
+
+#: game/scripts/profile.gd:45
+msgid "Фугасный залп"
+msgstr "HE salvo"
+
+#: game/scripts/profile.gd:45 game/scripts/profile.gd:46
+#, c-format
+msgid "модернизация: урон +30%"
+msgstr "upgrade: damage +30%"
+
+#: game/scripts/profile.gd:45
+msgid "Частый залп"
+msgstr "Rapid salvo"
+
+#: game/scripts/profile.gd:45 game/scripts/profile.gd:47 game/scripts/profile.gd:48
+#, c-format
+msgid "модернизация: перезарядка −30%"
+msgstr "upgrade: cooldown −30%"
+
+#: game/scripts/profile.gd:46
+msgid "Тяжёлый ствол"
+msgstr "Heavy barrel"
+
+#: game/scripts/profile.gd:46
+msgid "Дальний ствол"
+msgstr "Long-range barrel"
+
+#: game/scripts/profile.gd:46 game/scripts/profile.gd:49
+#, c-format
+msgid "модернизация: дальность +25%"
+msgstr "upgrade: range +25%"
+
+#: game/scripts/profile.gd:47
+msgid "Длинная завеса"
+msgstr "Long screen"
+
+#: game/scripts/profile.gd:47
+#, c-format
+msgid "модернизация: радиус +30%"
+msgstr "upgrade: radius +30%"
+
+#: game/scripts/profile.gd:47
+msgid "Быстрая завеса"
+msgstr "Quick screen"
+
+#: game/scripts/profile.gd:48
+msgid "Тяжёлый ковёр"
+msgstr "Heavy carpet"
+
+#: game/scripts/profile.gd:48
+msgid "Быстрый сброс"
+msgstr "Quick drop"
+
+#: game/scripts/profile.gd:49
+msgid "Дальнобойные башни"
+msgstr "Long-range turrets"
+
+#: game/scripts/profile.gd:49
+msgid "Шквал"
+msgstr "Squall"
+
+#: game/scripts/profile.gd:49
+#, c-format
+msgid "модернизация: темп +30%"
+msgstr "upgrade: fire rate +30%"
+
+#: game/scripts/profile.gd:56
+msgid "Пилот"
+msgstr "Pilot"
+
+#: game/scripts/profile.gd:56
+#, c-format
+msgid "разворот +0,6% и перезарядка навыков −0,6% за уровень"
+msgstr "turn +0.6% and skill cooldown −0.6% per level"
+
+#: game/scripts/profile.gd:57
+msgid "Пилот и стрелок"
+msgstr "Pilot and gunner"
+
+#: game/scripts/profile.gd:57
+#, c-format
+msgid "прочность +0,7% и урон турели +0,7% за уровень"
+msgstr "hull +0.7% and turret damage +0.7% per level"
+
+#: game/scripts/profile.gd:58
+msgid "Командир, штурман, стрелки"
+msgstr "Commander, navigator, gunners"
+
+#: game/scripts/profile.gd:58
+#, c-format
+msgid "прочность +0,5%, подбор опыта +0,7%, темп турелей +0,6% за уровень"
+msgstr "hull +0.5%, XP pickup +0.7%, turret rate +0.6% per level"
+
+#: game/scripts/profile.gd:63 game/scripts/profile.gd:69 game/scripts/profile.gd:74
+msgid "Шмель"
+msgstr "Bumblebee"
+
+#: game/scripts/profile.gd:63 game/scripts/profile.gd:69 game/scripts/profile.gd:75
+msgid "Сокол-2"
+msgstr "Falcon-2"
+
+#: game/scripts/profile.gd:63 game/scripts/profile.gd:69 game/scripts/profile.gd:76
+msgid "Чиж"
+msgstr "Siskin"
+
+#: game/scripts/profile.gd:63 game/scripts/profile.gd:69 game/scripts/profile.gd:77
+msgid "Барс"
+msgstr "Leopard"
+
+#: game/scripts/profile.gd:63 game/scripts/profile.gd:69 game/scripts/profile.gd:78
+msgid "Искра"
+msgstr "Spark"
+
+#: game/scripts/profile.gd:64 game/scripts/profile.gd:70 game/scripts/profile.gd:80
+msgid "Дед"
+msgstr "Gramps"
+
+#: game/scripts/profile.gd:64 game/scripts/profile.gd:70 game/scripts/profile.gd:81
+msgid "Молот"
+msgstr "Hammer"
+
+#: game/scripts/profile.gd:64 game/scripts/profile.gd:70 game/scripts/profile.gd:82
+msgid "Бульдог"
+msgstr "Bulldog"
+
+#: game/scripts/profile.gd:64 game/scripts/profile.gd:70 game/scripts/profile.gd:83
+msgid "Кочерга"
+msgstr "Poker"
+
+#: game/scripts/profile.gd:65 game/scripts/profile.gd:71 game/scripts/profile.gd:84
+msgid "Борода"
+msgstr "Beard"
+
+#: game/scripts/profile.gd:65 game/scripts/profile.gd:71 game/scripts/profile.gd:86
+msgid "Тюлень"
+msgstr "Seal"
+
+#: game/scripts/profile.gd:65 game/scripts/profile.gd:71 game/scripts/profile.gd:87
+msgid "Шкаф"
+msgstr "Wardrobe"
+
+#: game/scripts/profile.gd:65 game/scripts/profile.gd:71 game/scripts/profile.gd:88
+msgid "Дирижабль"
+msgstr "Blimp"
+
+#: game/scripts/profile.gd:74
+msgid "Торопыга"
+msgstr "Hasty"
+
+#: game/scripts/profile.gd:74
+#, c-format
+msgid "скорость +8%"
+msgstr "speed +8%"
+
+#: game/scripts/profile.gd:74
+#, c-format
+msgid "разворот −6%"
+msgstr "turn −6%"
+
+#: game/scripts/profile.gd:75
+msgid "Хладнокровие"
+msgstr "Cool Head"
+
+#: game/scripts/profile.gd:75
+#, c-format
+msgid "перезарядка навыков −10%"
+msgstr "skill cooldown −10%"
+
+#: game/scripts/profile.gd:75 game/scripts/profile.gd:87
+#, c-format
+msgid "скорость −5%"
+msgstr "speed −5%"
+
+#: game/scripts/profile.gd:76
+msgid "Новичок-везунчик"
+msgstr "Lucky Rookie"
+
+#: game/scripts/profile.gd:76
+#, c-format
+msgid "подбор опыта +20%"
+msgstr "XP pickup +20%"
+
+#: game/scripts/profile.gd:76
+#, c-format
+msgid "прочность −10%"
+msgstr "hull −10%"
+
+#: game/scripts/profile.gd:77
+msgid "Ветеран"
+msgstr "Veteran"
+
+#: game/scripts/profile.gd:77 game/scripts/profile.gd:84
+#, c-format
+msgid "прочность +10%"
+msgstr "hull +10%"
+
+#: game/scripts/profile.gd:77
+#, c-format
+msgid "перезарядка манёвров +10%"
+msgstr "maneuver cooldown +10%"
+
+#: game/scripts/profile.gd:78
+msgid "Риск"
+msgstr "Risk-Taker"
+
+#: game/scripts/profile.gd:78
+#, c-format
+msgid "наносимый урон +15%"
+msgstr "damage dealt +15%"
+
+#: game/scripts/profile.gd:78
+#, c-format
+msgid "получаемый урон +15%"
+msgstr "damage taken +15%"
+
+#: game/scripts/profile.gd:79
+msgid "Упрямец"
+msgstr "Stubborn"
+
+#: game/scripts/profile.gd:79
+#, c-format
+msgid "получаемый урон −10%"
+msgstr "damage taken −10%"
+
+#: game/scripts/profile.gd:79
+#, c-format
+msgid "скорость −6%"
+msgstr "speed −6%"
+
+#: game/scripts/profile.gd:80
+msgid "Старая школа"
+msgstr "Old School"
+
+#: game/scripts/profile.gd:80
+#, c-format
+msgid "урон пушки +15%"
+msgstr "cannon damage +15%"
+
+#: game/scripts/profile.gd:80
+#, c-format
+msgid "урон ракет −10%"
+msgstr "missile damage −10%"
+
+#: game/scripts/profile.gd:81
+msgid "Кувалда"
+msgstr "Sledgehammer"
+
+#: game/scripts/profile.gd:81
+#, c-format
+msgid "урон взрывов +12%"
+msgstr "blast damage +12%"
+
+#: game/scripts/profile.gd:81
+#, c-format
+msgid "подбор опыта −15%"
+msgstr "XP pickup −15%"
+
+#: game/scripts/profile.gd:82
+msgid "Хватка"
+msgstr "Grip"
+
+#: game/scripts/profile.gd:82
+#, c-format
+msgid "урон по наземным целям +15%"
+msgstr "damage vs ground targets +15%"
+
+#: game/scripts/profile.gd:82
+#, c-format
+msgid "разворот −5%"
+msgstr "turn −5%"
+
+#: game/scripts/profile.gd:83
+msgid "Механик"
+msgstr "Mechanic"
+
+#: game/scripts/profile.gd:83
+#, c-format
+msgid "перезарядка подвесов −8%"
+msgstr "hardpoint cooldown −8%"
+
+#: game/scripts/profile.gd:83
+#, c-format
+msgid "прочность −8%"
+msgstr "hull −8%"
+
+#: game/scripts/profile.gd:84
+msgid "Хозяйственный"
+msgstr "Thrifty"
+
+#: game/scripts/profile.gd:84
+#, c-format
+msgid "наносимый урон −5%"
+msgstr "damage dealt −5%"
+
+#: game/scripts/profile.gd:85
+msgid "Дальнозоркий"
+msgstr "Far-Sighted"
+
+#: game/scripts/profile.gd:85
+#, c-format
+msgid "дальность турелей +12%"
+msgstr "turret range +12%"
+
+#: game/scripts/profile.gd:85
+#, c-format
+msgid "темп турелей −8%"
+msgstr "turret rate −8%"
+
+#: game/scripts/profile.gd:86
+msgid "Флегматик"
+msgstr "Unflappable"
+
+#: game/scripts/profile.gd:86
+#, c-format
+msgid "получаемый урон −8%"
+msgstr "damage taken −8%"
+
+#: game/scripts/profile.gd:86
+#, c-format
+msgid "перезарядка навыков +10%"
+msgstr "skill cooldown +10%"
+
+#: game/scripts/profile.gd:87 game/scripts/profile.gd:104
+msgid "Бомбардир"
+msgstr "Bombardier"
+
+#: game/scripts/profile.gd:87
+#, c-format
+msgid "радиус взрывов +12%"
+msgstr "blast radius +12%"
+
+#: game/scripts/profile.gd:88
+msgid "Азарт"
+msgstr "Thrill-Seeker"
+
+#: game/scripts/profile.gd:88
+#, c-format
+msgid "наносимый урон +12%"
+msgstr "damage dealt +12%"
+
+#: game/scripts/profile.gd:88
+#, c-format
+msgid "прочность −12%"
+msgstr "hull −12%"
+
+#: game/scripts/profile.gd:93
+msgid "Охотник"
+msgstr "Hunter"
+
+#: game/scripts/profile.gd:93
+msgid "Цепкий"
+msgstr "Tenacious"
+
+#: game/scripts/profile.gd:93
+msgid "«на хвосте» срабатывает за 0,15 с, конус 32°"
+msgstr "\"on the tail\" triggers in 0.15 s, 32° cone"
+
+#: game/scripts/profile.gd:93
+msgid "Добивание"
+msgstr "Finisher"
+
+#: game/scripts/profile.gd:93
+msgid "сбитие с хвоста: −1 с перезарядки уклонения, форсажа и навыков"
+msgstr "tail kill: −1 s to evade, afterburner and skill cooldowns"
+
+#: game/scripts/profile.gd:94
+msgid "Ракетчик"
+msgstr "Missileer"
+
+#: game/scripts/profile.gd:94
+msgid "Глазастый"
+msgstr "Sharp-Eyed"
+
+#: game/scripts/profile.gd:94
+#, c-format
+msgid "ракеты +10% урона"
+msgstr "missiles +10% damage"
+
+#: game/scripts/profile.gd:94
+msgid "Форсированный старт"
+msgstr "Boosted Launch"
+
+#: game/scripts/profile.gd:94
+#, c-format
+msgid "ракеты +15% скорости и +10% урона на первой секунде полёта"
+msgstr "missiles +15% speed and +10% damage in the first second of flight"
+
+#: game/scripts/profile.gd:95
+msgid "Акробат"
+msgstr "Acrobat"
+
+#: game/scripts/profile.gd:95
+msgid "На волоске"
+msgstr "Close Shave"
+
+#: game/scripts/profile.gd:95
+msgid "пролёт на волоске снимает вдвое больше перезарядки"
+msgstr "a close-shave pass cuts twice as much cooldown"
+
+#: game/scripts/profile.gd:95
+msgid "Двойное уклонение"
+msgstr "Double Evade"
+
+#: game/scripts/profile.gd:95
+msgid "уклонение +0,2 с неуязвимости, перезарядка −1 с"
+msgstr "evade +0.2 s invulnerability, cooldown −1 s"
+
+#: game/scripts/profile.gd:98
+msgid "Толстокожий"
+msgstr "Thick-Skinned"
+
+#: game/scripts/profile.gd:98
+#, c-format
+msgid "входящий урон −6%"
+msgstr "incoming damage −6%"
+
+#: game/scripts/profile.gd:98
+msgid "Второе дыхание"
+msgstr "Second Wind"
+
+#: game/scripts/profile.gd:98
+#, c-format
+msgid "раз за вылет при прочности < 25%: 2 с неуязвимости и ремонт 20%"
+msgstr "once per sortie at hull < 25%: 2 s invulnerability and 20% repair"
+
+#: game/scripts/profile.gd:99
+msgid "Штурм"
+msgstr "Assault"
+
+#: game/scripts/profile.gd:99
+msgid "Наводчик"
+msgstr "Spotter"
+
+#: game/scripts/profile.gd:99
+#, c-format
+msgid "+15% урона по наземным целям"
+msgstr "+15% damage vs ground targets"
+
+#: game/scripts/profile.gd:99
+msgid "Трофейщик"
+msgstr "Scavenger"
+
+#: game/scripts/profile.gd:99
+msgid "наземные цели дают ×1,5 запчастей"
+msgstr "ground targets give ×1.5 parts"
+
+#: game/scripts/profile.gd:100
+msgid "Стрелок"
+msgstr "Gunner"
+
+#: game/scripts/profile.gd:100
+msgid "Зоркий"
+msgstr "Keen-Eyed"
+
+#: game/scripts/profile.gd:100
+#, c-format
+msgid "турель и гондола +12% дальности"
+msgstr "turret and gun pod +12% range"
+
+#: game/scripts/profile.gd:100
+msgid "Длинная очередь"
+msgstr "Long Burst"
+
+#: game/scripts/profile.gd:100
+#, c-format
+msgid "турель и гондола +15% темпа"
+msgstr "turret and gun pod +15% rate"
+
+#: game/scripts/profile.gd:103
+msgid "Зенитчики"
+msgstr "AA Gunners"
+
+#: game/scripts/profile.gd:103
+msgid "Сектор обстрела"
+msgstr "Field of Fire"
+
+#: game/scripts/profile.gd:103
+#, c-format
+msgid "турели +12% темпа"
+msgstr "turrets +12% rate"
+
+#: game/scripts/profile.gd:103
+msgid "Заградогонь"
+msgstr "Barrage"
+
+#: game/scripts/profile.gd:103
+#, c-format
+msgid "каждая турель раз в 4 с стреляет по ракете (сбивает в 55%)"
+msgstr "each turret fires at a missile every 4 s (55% kill chance)"
+
+#: game/scripts/profile.gd:104
+msgid "Тяжёлые фугасы"
+msgstr "Heavy HE"
+
+#: game/scripts/profile.gd:104
+#, c-format
+msgid "+10% радиуса всех взрывов"
+msgstr "+10% radius of all blasts"
+
+#: game/scripts/profile.gd:104
+msgid "Штурманский расчёт"
+msgstr "Navigator's Plot"
+
+#: game/scripts/profile.gd:104
+#, c-format
+msgid "перезарядка навыков класса −12%"
+msgstr "class skill cooldown −12%"
+
+#: game/scripts/profile.gd:105
+msgid "Слётанность"
+msgstr "Teamwork"
+
+#: game/scripts/profile.gd:105
+#, c-format
+msgid "ведомые +20% прочности, +10% урона"
+msgstr "wingmen +20% hull, +10% damage"
+
+#: game/scripts/profile.gd:105
+msgid "Старый знакомый"
+msgstr "Old Friend"
+
+#: game/scripts/profile.gd:105
+msgid "вылет начинается с ведомым «Стриж»"
+msgstr "sortie starts with wingman \"Swift\""
+
+#: game/scripts/profile.gd:260
+#, c-format
+msgid "очко перка (ур. %d)"
+msgstr "perk point (Lv. %d)"
+
+#: game/scripts/profile.gd:263
+#, c-format
+msgid "навык «%s»"
+msgstr "skill \"%s\""
+
+#: game/scripts/profile.gd:265
+msgid "второй слот навыка [F]"
+msgstr "second skill slot [F]"
+
+#: game/scripts/profile.gd:267
+msgid "можно купить самолёт ур. 2"
+msgstr "can buy a Lv. 2 plane"
+
+#: game/scripts/profile.gd:272
+#, c-format
+msgid "ведомый %s в карточках"
+msgstr "wingman %s in cards"
+
+#: game/scripts/profile.gd:544
+#, c-format
+msgid "%s ур. %d (%d)"
+msgstr "%s Lv. %d (%d)"
+
+#: game/scripts/profile.gd:547
+#, c-format
+msgid "Самолёт ур. 2 (%d)"
+msgstr "Lv. 2 plane (%d)"
+
+#: game/scripts/profile.gd:549
+#, c-format
+msgid "Повысить в звании до ур. %d (%d)"
+msgstr "Promote to Lv. %d (%d)"
+
+#: game/scripts/profile.gd:581
+#, c-format
+msgid "В воздухе %d:%02d"
+msgstr "Airborne %d:%02d"
+
+#: game/scripts/profile.gd:582
+#, c-format
+msgid "Уровень пилота %d"
+msgstr "Pilot level %d"
+
+#: game/scripts/profile.gd:585
+#, c-format
+msgid "Асы ×%d"
+msgstr "Aces ×%d"
+
+#: game/scripts/profile.gd:587
+#, c-format
+msgid "Активности ×%d"
+msgstr "Activities ×%d"
+
+#: game/scripts/profile.gd:593
+msgid "Гибель ×0,75"
+msgstr "Death ×0.75"
+
+#: game/scripts/profile.gd:600
+#, c-format
+msgid "Продолжение ×%.1f"
+msgstr "Continue ×%.1f"
+
+#: game/scripts/profile.gd:602
+msgid "За вылет"
+msgstr "Per sortie"
+
+#: game/scripts/profile.gd:623
+msgid "Самолёт ур. 2 выдадут после операции «Перевал» — пройдите её."
+msgstr "The Lv. 2 plane is granted after operation \"Mountain Pass\" — complete it."
+
+#: game/scripts/profile.gd:625
+#, c-format
+msgid "Самолёт ур. 2 ждёт — загляни в ангар: %d запчастей."
+msgstr "Lv. 2 plane is waiting — visit the hangar: %d parts."
+
+#: game/scripts/profile.gd:627
+#, c-format
+msgid "Копим на самолёт ур. 2: %d запчастей (есть %d)."
+msgstr "Saving for a Lv. 2 plane: %d parts (have %d)."
+
+#: game/scripts/prog.gd:7
+msgid "Ракеты"
+msgstr "Missiles"
+
+#: game/scripts/prog.gd:8
+msgid "Взрыв"
+msgstr "Blast"
+
+#: game/scripts/prog.gd:9
+msgid "Кинетика"
+msgstr "Kinetic"
+
+#: game/scripts/prog.gd:32
+#, c-format
+msgid "+10% урона ракет"
+msgstr "+10% missile damage"
+
+#: game/scripts/prog.gd:32
+#, c-format
+msgid "20% шанс пуска второй ракеты"
+msgstr "20% chance to launch a second missile"
+
+#: game/scripts/prog.gd:33
+#, c-format
+msgid "край взрыва бьёт на 50% (было 35%)"
+msgstr "blast edge hits for 50% (was 35%)"
+
+#: game/scripts/prog.gd:33
+#, c-format
+msgid "враг, убитый взрывом, сам взрывается (30% урона)"
+msgstr "enemy killed by a blast explodes (30% damage)"
+
+#: game/scripts/prog.gd:34
+#, c-format
+msgid "+10% урона по целям с прочностью > 50%"
+msgstr "+10% damage vs targets with hull > 50%"
+
+#: game/scripts/prog.gd:34
+msgid "пули гондолы и турелей пробивают ещё 1 цель"
+msgstr "gun pod and turret bullets pierce 1 more target"
+
+#: game/scripts/prog.gd:35
+#, c-format
+msgid "+10% дальности турелей"
+msgstr "+10% turret range"
+
+#: game/scripts/prog.gd:35
+msgid "каждая турель сбивает ракету раз в 3 с"
+msgstr "each turret shoots down a missile every 3 s"
+
+#: game/scripts/prog.gd:36
+msgid "сбитый ведомый возвращается за 12 с (было 20)"
+msgstr "downed wingman returns in 12 s (was 20)"
+
+#: game/scripts/prog.gd:36
+msgid "+1 ведомый сверх лимита"
+msgstr "+1 wingman over the limit"
+
+#: game/scripts/prog.gd:37
+msgid "перезарядка уклонения −1 с"
+msgstr "evade cooldown −1 s"
+
+#: game/scripts/prog.gd:37
+#, c-format
+msgid "2 с после уклонения или форсажа: +20% урона всему"
+msgstr "2 s after evade or afterburner: +20% all damage"
+
+#: game/scripts/prog.gd:38
+#, c-format
+msgid "−8% входящего урона"
+msgstr "−8% incoming damage"
+
+#: game/scripts/prog.gd:38
+#, c-format
+msgid "раз в 12 с сильный удар (> 10% прочности) даёт 1 с неуязвимости"
+msgstr "every 12 s a heavy hit (> 10% hull) grants 1 s invulnerability"
+
+#: game/scripts/prog.gd:44
+msgid "«Шмель»"
+msgstr "\"Bumblebee\""
+
+#: game/scripts/prog.gd:45
+msgid "2 тяжёлые ракеты каждые 4,5 с, урон 120; при попадании каждая делится на 4 самонаводящиеся боевые части (урон 40)"
+msgstr "2 heavy missiles every 4.5 s, 120 damage; on hit each splits into 4 homing warheads (40 damage)"
+
+#: game/scripts/prog.gd:46
+msgid "«Ливень»"
+msgstr "\"Downpour\""
+
+#: game/scripts/prog.gd:47
+msgid "Залп веером в 3 стороны по 5 ракет с точки, урон 22, радиус 70, перезарядка 3,5 с; цель — в секторе 50°"
+msgstr "Fan salvo in 3 directions, 5 rockets per pylon, 22 damage, radius 70, cooldown 3.5 s; target within a 50° sector"
+
+#: game/scripts/prog.gd:48
+msgid "«Газонокосилка»"
+msgstr "\"Lawnmower\""
+
+#: game/scripts/prog.gd:49
+msgid "Два ствола поочерёдно: урон 7, темп 0,12 с, дальность 520, пуля пробивает 1 цель"
+msgstr "Two barrels in turn: 7 damage, rate 0.12 s, range 520, bullet pierces 1 target"
+
+#: game/scripts/prog.gd:50
+msgid "«Салют»"
+msgstr "\"Fireworks\""
+
+#: game/scripts/prog.gd:51
+msgid "Ловушки уводят 2 ракеты в 360 пикс., пули сбивают сразу; каждый перехват выпускает 3 самонаводящиеся ловушки по врагам (урон 25)"
+msgstr "Flares lure 2 missiles within 360 px, bullets are shot down at once; each intercept fires 3 homing flares at enemies (25 damage)"
+
+#: game/scripts/prog.gd:52
+msgid "«Бабушкин ковёр»"
+msgstr "\"Granny's Carpet\""
+
+#: game/scripts/prog.gd:53
+msgid "Каждые 4 с ряд из 8 бомб поперёк пути самолёта (ширина 600) на ближайшую наземную цель, урон 70, радиус 180"
+msgstr "Every 4 s a row of 8 bombs across the plane's path (width 600) on the nearest ground target, 70 damage, radius 180"
+
+#: game/scripts/prog.gd:54
+msgid "«Дикобраз»"
+msgstr "\"Porcupine\""
+
+#: game/scripts/prog.gd:55
+#, c-format
+msgid "У каждой турели 2 ствола, дальность +40%, каждая турель раз в 1,5 с стреляет по ракете (сбивает в 55%)"
+msgstr "Each turret has 2 barrels, range +40%, each turret fires at a missile every 1.5 s (55% kill chance)"
+
+#: game/scripts/prog.gd:56
+msgid "«Дятел»"
+msgstr "\"Woodpecker\""
+
+#: game/scripts/prog.gd:57
+#, c-format
+msgid "Пушка: каждый 4-й снаряд пробивает всё на линии 900 пикс. с уроном ×2,5; обычные −15% урона"
+msgstr "Cannon: every 4th shell pierces everything on a 900 px line with ×2.5 damage; regular shells −15% damage"
+
+#: game/scripts/prog.gd:62
+msgid "«Стриж» — прикрытие"
+msgstr "\"Swift\" — escort"
+
+#: game/scripts/prog.gd:62
+msgid "Стриж"
+msgstr "Swift"
+
+#: game/scripts/prog.gd:63
+msgid "Держит строй, бьёт самолёты из пушки, 2 наводящиеся ракеты (35) раз в 7 с"
+msgstr "Holds formation, hits planes with its cannon, 2 homing missiles (35) every 7 s"
+
+#: game/scripts/prog.gd:64
+#, c-format
+msgid "+40% урона, ракеты раз в 5 с"
+msgstr "+40% damage, missiles every 5 s"
+
+#: game/scripts/prog.gd:64
+msgid "ракеты с осколками; раз в 6 с сбивает ракету рядом с ведущим"
+msgstr "fragmentation missiles; every 6 s shoots down a missile near the leader"
+
+#: game/scripts/prog.gd:65
+msgid "«Грачонок» — штурмовик"
+msgstr "\"Rookling\" — attacker"
+
+#: game/scripts/prog.gd:65
+msgid "Грачонок"
+msgstr "Rookling"
+
+#: game/scripts/prog.gd:66
+msgid "Приоритет — наземные цели: залп из 6 ракет (12, взрыв 50) раз в 5 с; прочнее ×1,5"
+msgstr "Priority: ground targets — salvo of 6 rockets (12, blast 50) every 5 s; tougher ×1.5"
+
+#: game/scripts/prog.gd:67
+#, c-format
+msgid "+40% урона"
+msgstr "+40% damage"
+
+#: game/scripts/prog.gd:67
+msgid "над позицией ПВО сбрасывает кассету 4 × 30"
+msgstr "drops a 4 × 30 cluster over AA sites"
+
+#: game/scripts/prog.gd:68
+msgid "«Ласка» — подавитель ПВО"
+msgstr "\"Weasel\" — AA suppressor"
+
+#: game/scripts/prog.gd:68
+msgid "Ласка"
+msgstr "Weasel"
+
+#: game/scripts/prog.gd:69
+#, c-format
+msgid "Противорадарная ракета (150, ×2 по наземным) раз в 8 с; помехи — 25% шанс сорвать захват ракеты рядом с ведущим"
+msgstr "Anti-radar missile (150, ×2 vs ground) every 8 s; jamming — 25% chance to break a missile lock near the leader"
+
+#: game/scripts/prog.gd:70
+#, c-format
+msgid "шанс сорвать захват 40%"
+msgstr "lock-break chance 40%"
+
+#: game/scripts/prog.gd:70
+msgid "ЭМИ раз в 15 с: ПВО в 400 пикс. молчит 3 с"
+msgstr "EMP every 15 s: AA within 400 px silenced for 3 s"
+
+#: game/scripts/prog.gd:141
+msgid "пушки"
+msgstr "cannon"
+
+#: game/scripts/prog.gd:142
+#, c-format
+msgid "\nНужно для модернизации: %s → %s (ещё ×%d)"
+msgstr "\nNeeded for upgrade: %s → %s (×%d more)"
+
+#: game/scripts/projectiles.gd:229
+msgid "связка: цепная реакция"
+msgstr "synergy: chain reaction"
+
+#: game/scripts/projectiles.gd:293
+msgid "связка: пушкарь"
+msgstr "synergy: cannoneer"
+
+#: game/scripts/projectiles.gd:298 game/scripts/projectiles.gd:301 game/scripts/projectiles.gd:366 game/scripts/projectiles.gd:368
+msgid "курсовое"
+msgstr "forward guns"
+
+#: game/scripts/projectiles.gd:429
+msgid "связка: карусель"
+msgstr "synergy: carousel"
+
+#: game/scripts/projectiles.gd:528 game/scripts/projectiles.gd:529
+msgid "связка: ковровая дорожка"
+msgstr "synergy: red carpet"
+
+#: game/scripts/report.gd:23
+msgid "Почему закончили раньше?"
+msgstr "Why did you stop early?"
+
+#: game/scripts/report.gd:23
+msgid "Стало скучно"
+msgstr "Got bored"
+
+#: game/scripts/report.gd:23
+msgid "Слишком сложно"
+msgstr "Too hard"
+
+#: game/scripts/report.gd:23
+msgid "Нет времени"
+msgstr "No time"
+
+#: game/scripts/report.gd:23
+msgid "Баг или тормоза"
+msgstr "Bug or lag"
+
+#: game/scripts/report.gd:23
+msgid "Другое"
+msgstr "Other"
+
+#: game/scripts/report.gd:25
+msgid "Как вам вылет? (1 — плохо, 5 — отлично)"
+msgstr "How was the sortie? (1 — bad, 5 — great)"
+
+#: game/scripts/report.gd:26
+msgid "Хочется сразу сыграть ещё?"
+msgstr "Want to play again right away?"
+
+#: game/scripts/report.gd:26 game/scripts/report.gd:29
+msgid "Да"
+msgstr "Yes"
+
+#: game/scripts/report.gd:26
+msgid "Может быть"
+msgstr "Maybe"
+
+#: game/scripts/report.gd:26 game/scripts/report.gd:29 game/scripts/report.gd:35
+msgid "Нет"
+msgstr "No"
+
+#: game/scripts/report.gd:27
+msgid "Сложность"
+msgstr "Difficulty"
+
+#: game/scripts/report.gd:27
+msgid "Легко"
+msgstr "Easy"
+
+#: game/scripts/report.gd:27 game/scripts/report.gd:28
+msgid "В самый раз"
+msgstr "Just right"
+
+#: game/scripts/report.gd:27
+msgid "Сложно"
+msgstr "Hard"
+
+#: game/scripts/report.gd:28
+msgid "Темп вылета"
+msgstr "Sortie pace"
+
+#: game/scripts/report.gd:28
+msgid "Затянуто"
+msgstr "Too slow"
+
+#: game/scripts/report.gd:28
+msgid "Слишком суетно"
+msgstr "Too hectic"
+
+#: game/scripts/report.gd:29
+msgid "Выбор улучшений интересный?"
+msgstr "Are the upgrade choices interesting?"
+
+#: game/scripts/report.gd:29
+msgid "Так себе"
+msgstr "So-so"
+
+#: game/scripts/report.gd:30
+msgid "Звук и музыка (1–5)"
+msgstr "Sound and music (1–5)"
+
+#: game/scripts/report.gd:32
+msgid "Как вам картинка? (1–5)"
+msgstr "How are the graphics? (1–5)"
+
+#: game/scripts/report.gd:33
+msgid "Какой наклон камеры удобнее? (F9)"
+msgstr "Which camera tilt is better? (F9)"
+
+#: game/scripts/report.gd:33
+msgid "Сверху"
+msgstr "Top-down"
+
+#: game/scripts/report.gd:33
+msgid "Не пробовал(а)"
+msgstr "Haven't tried"
+
+#: game/scripts/report.gd:34
+msgid "Пули и ракеты врагов видно?"
+msgstr "Can you see enemy bullets and missiles?"
+
+#: game/scripts/report.gd:34
+msgid "Всегда"
+msgstr "Always"
+
+#: game/scripts/report.gd:34
+msgid "Иногда терялись"
+msgstr "Sometimes lost them"
+
+#: game/scripts/report.gd:34
+msgid "Часто терялись"
+msgstr "Often lost them"
+
+#: game/scripts/report.gd:35
+msgid "Игра тормозила?"
+msgstr "Did the game lag?"
+
+#: game/scripts/report.gd:35
+msgid "Иногда"
+msgstr "Sometimes"
+
+#: game/scripts/report.gd:35
+msgid "Часто"
+msgstr "Often"
+
+#: game/scripts/report.gd:141
+msgid "Что понравилось больше всего?"
+msgstr "What did you like most?"
+
+#: game/scripts/report.gd:141
+msgid "Что было скучно или раздражало?"
+msgstr "What was boring or annoying?"
+
+#: game/scripts/report.gd:142
+msgid "Что было непонятно?"
+msgstr "What was unclear?"
+
+#: game/scripts/report.gd:142
+msgid "Баги, вылеты, тормоза, идеи и всё остальное"
+msgstr "Bugs, crashes, lag, ideas and anything else"
+
+#: game/scripts/report.gd:162
+msgid "Выйти без отчёта"
+msgstr "Exit without report"
+
+#: game/scripts/report.gd:242
+msgid "можно оставить пустым"
+msgstr "can be left empty"
+
+#: game/scripts/report.gd:288
+msgid "ВЫХОД ИЗ ВЫЛЕТА"
+msgstr "LEAVE SORTIE"
+
+#: game/scripts/report.gd:289
+msgid "Пара кнопок перед выходом очень поможет: почему закончили и как было. Можно выйти и без отчёта — строка статистики вылета всё равно уйдёт."
+msgstr "A couple of clicks before you leave help a lot: why you stopped and how it went. You can leave without a report — the sortie stats line is sent anyway."
+
+#: game/scripts/report.gd:290
+msgid "Вернуться в бой"
+msgstr "Back to battle"
+
+#: game/scripts/report.gd:291
+msgid "ОТПРАВИТЬ И ВЫЙТИ"
+msgstr "SEND AND EXIT"
+
+#: game/scripts/report.gd:293
+msgid "ОТЧЁТ ТЕСТЕРА"
+msgstr "TESTER REPORT"
+
+#: game/scripts/report.gd:294
+msgid "Уйдёт организатору теста: ваши ответы, статистика этого вылета, ОС и видеокарта, технический журнал игры. Личных данных нет. Отвечайте только на то, что хочется."
+msgstr "Sent to the test organizer: your answers, this sortie's stats, OS and graphics card, the game's technical log. No personal data. Answer only what you want to."
+
+#: game/scripts/report.gd:295
+msgid "Отмена"
+msgstr "Cancel"
+
+#: game/scripts/report.gd:296
+msgid "ОТПРАВИТЬ"
+msgstr "SEND"
+
+#: game/scripts/report.gd:307
+msgid "закрыл игру"
+msgstr "closed the game"
+
+#: game/scripts/report.gd:362
+#, c-format
+msgid "[Понравилось: %s]"
+msgstr "[Liked: %s]"
+
+#: game/scripts/report.gd:508
+msgid "Спасибо! Отчёт отправляется…"
+msgstr "Thanks! Sending the report…"
+
+#: game/scripts/report.gd:513
+msgid "Отправляем…"
+msgstr "Sending…"
+
+#: game/scripts/report.gd:529
+#, c-format
+msgid "не удалось начать отправку (%d)"
+msgstr "couldn't start sending (%d)"
+
+#: game/scripts/report.gd:540
+#, c-format
+msgid "нет связи с сервером (код %d / %d)"
+msgstr "no connection to server (code %d / %d)"
+
+#: game/scripts/report.gd:552
+msgid "Отправлено — спасибо!"
+msgstr "Sent — thank you!"
+
+#: game/scripts/report.gd:560
+#, c-format
+msgid "Не отправилось: %s. Отчёт сохранён и уйдёт при следующей отправке или запуске игры."
+msgstr "Not sent: %s. The report is saved and will go out on the next send or game launch."
+
+#: game/scripts/rival_ace.gd:15
+msgid "Шершень"
+msgstr "Hornet"
+
+#: game/scripts/rival_ace.gd:15
+msgid "Граф"
+msgstr "Count"
+
+#: game/scripts/rival_ace.gd:15
+msgid "Сокол-7"
+msgstr "Falcon-7"
+
+#: game/scripts/rival_ace.gd:15
+msgid "Профессор"
+msgstr "Professor"
+
+#: game/scripts/rival_ace.gd:15
+msgid "Тётя Шура"
+msgstr "Auntie Shura"
+
+#: game/scripts/rival_ace.gd:17
+msgid "Ну здравствуй, новичок. Пристегнись."
+msgstr "Well hello, rookie. Buckle up."
+
+#: game/scripts/rival_ace.gd:17
+msgid "Я тебя давно ищу. Потанцуем?"
+msgstr "I've been looking for you. Shall we dance?"
+
+#: game/scripts/rival_ace.gd:17
+msgid "О, свежий самолёт. Будет что рассказать в столовой."
+msgstr "Oh, a fresh plane. Something to tell in the mess hall."
+
+#: game/scripts/rival_ace.gd:18
+msgid "Вижу тебя. Ты у меня на мушке!"
+msgstr "I see you. You're in my sights!"
+
+#: game/scripts/rival_ace.gd:18
+msgid "Не верти хвостом — всё равно достану."
+msgstr "Quit wagging your tail — I'll get you anyway."
+
+#: game/scripts/rival_ace.gd:18
+msgid "Сиди смирно, сейчас будет больно."
+msgstr "Sit still, this is going to hurt."
+
+#: game/scripts/rival_ace.gd:19
+msgid "Эй! Тормозить — нечестно!"
+msgstr "Hey! Braking is cheating!"
+
+#: game/scripts/rival_ace.gd:19
+msgid "Проскочил… бывает."
+msgstr "Overshot… it happens."
+
+#: game/scripts/rival_ace.gd:19
+msgid "Ладно, ладно, зайду ещё раз."
+msgstr "Fine, fine, I'll come around again."
+
+#: game/scripts/rival_ace.gd:20
+msgid "Кто это у меня на хвосте?!"
+msgstr "Who's that on my tail?!"
+
+#: game/scripts/rival_ace.gd:20
+msgid "Слезь с хвоста, я тебе не такси!"
+msgstr "Get off my tail, I'm not a taxi!"
+
+#: game/scripts/rival_ace.gd:20
+msgid "Ведомый, помоги! А, у меня нет ведомого…"
+msgstr "Wingman, help! Oh wait, I don't have one…"
+
+#: game/scripts/rival_ace.gd:21
+msgid "Ай! Это была новая краска!"
+msgstr "Ow! That was fresh paint!"
+
+#: game/scripts/rival_ace.gd:21
+msgid "Ну всё, теперь это личное."
+msgstr "That's it, now it's personal."
+
+#: game/scripts/rival_ace.gd:22
+msgid "Катапультируюсь! Увидимся в столовой…"
+msgstr "Ejecting! See you in the mess hall…"
+
+#: game/scripts/rival_ace.gd:22
+msgid "Хорош… Признаю."
+msgstr "Good… I admit it."
+
+#: game/scripts/rival_ace.gd:22
+msgid "Передай механику — он был прав про двигатель."
+msgstr "Tell the mechanic he was right about the engine."
+
+#: game/scripts/rival_ace.gd:23
+msgid "Топливо на нуле. В другой раз, новичок!"
+msgstr "Fuel's at zero. Next time, rookie!"
+
+#: game/scripts/rival_ace.gd:23
+msgid "Мне пора на обед. Не скучай!"
+msgstr "Time for my lunch. Don't miss me!"
+
+#: game/scripts/rival_ace.gd:24
+msgid "Снова ты? В прошлый раз тебе повезло."
+msgstr "You again? You got lucky last time."
+
+#: game/scripts/rival_ace.gd:24
+msgid "Узнаю этот самолёт. Сегодня без поблажек."
+msgstr "I know that plane. No mercy today."
+
+#: game/scripts/rival_ace.gd:24
+msgid "Мы уже встречались. Второй раз не уйдёшь."
+msgstr "We've met before. You won't get away twice."
+
+#: game/scripts/rival_ace.gd:191
+msgid "Перелёт!"
+msgstr "Overshoot!"
+
+#: game/scripts/run_log.gd:10
+msgid "ведомые"
+msgstr "wingmen"
+
+#: game/scripts/run_log.gd:78
+#, c-format
+msgid "жил=%d"
+msgstr "lived=%d"
+
+#: game/scripts/run_log.gd:78
+#, c-format
+msgid "жив=%d"
+msgstr "alive=%d"
+
+#: game/scripts/run_log.gd:82
+#, c-format
+msgid "%s@%d hp=%d k=%.2f %s урон=%d: %s"
+msgstr "%s@%d hp=%d k=%.2f %s dmg=%d: %s"
+
+#: game/scripts/settings.gd:7
+msgid "В окне"
+msgstr "Windowed"
+
+#: game/scripts/settings.gd:7
+msgid "Без рамки (весь экран)"
+msgstr "Borderless (full screen)"
+
+#: game/scripts/settings.gd:7
+msgid "Полный экран"
+msgstr "Fullscreen"
+
+#: game/scripts/settings.gd:11
+msgid "Низкое"
+msgstr "Low"
+
+#: game/scripts/settings.gd:11
+msgid "Среднее"
+msgstr "Medium"
+
+#: game/scripts/settings.gd:11
+msgid "Высокое"
+msgstr "High"
+
+#: game/scripts/settings.gd:11
+msgid "Максимальное"
+msgstr "Maximum"
+
+#: game/scripts/settings.gd:14
+msgid "Системный"
+msgstr "System"
+
+#: game/scripts/settings.gd:18
+msgid "Вверх / газ +"
+msgstr "Up / throttle +"
+
+#: game/scripts/settings.gd:18 game/scripts/settings.gd:19 game/scripts/settings.gd:20 game/scripts/settings.gd:21 game/scripts/settings.gd:22 game/scripts/settings.gd:23
+msgid "Полёт"
+msgstr "Flight"
+
+#: game/scripts/settings.gd:19
+msgid "Вниз / газ −"
+msgstr "Down / throttle −"
+
+#: game/scripts/settings.gd:20
+msgid "Влево"
+msgstr "Left"
+
+#: game/scripts/settings.gd:21
+msgid "Вправо"
+msgstr "Right"
+
+#: game/scripts/settings.gd:23
+msgid "Уклонение (у Кита — залп ловушек)"
+msgstr "Evade (Whale: flare salvo)"
+
+#: game/scripts/settings.gd:24
+msgid "Сброс газа"
+msgstr "Cut throttle"
+
+#: game/scripts/settings.gd:26
+msgid "Навык класса"
+msgstr "Class skill"
+
+#: game/scripts/settings.gd:26 game/scripts/settings.gd:27 game/scripts/settings.gd:28 game/scripts/settings.gd:29 game/scripts/settings.gd:30
+msgid "Бой"
+msgstr "Combat"
+
+#: game/scripts/settings.gd:27
+msgid "Огонь: авто / ручной"
+msgstr "Fire: auto / manual"
+
+#: game/scripts/settings.gd:28
+msgid "Цель звена (ведомых)"
+msgstr "Flight target (wingmen)"
+
+#: game/scripts/settings.gd:29
+msgid "Огонь из пушки (клавиша)"
+msgstr "Fire cannon (key)"
+
+#: game/scripts/settings.gd:30
+msgid "Ракеты залпом / бомбы: держать — прицел, отпустить — сброс"
+msgstr "Rocket salvo / bombs: hold — aim, release — drop"
+
+#: game/scripts/settings.gd:31
+msgid "Подвесы (пауза)"
+msgstr "Hardpoints (pause)"
+
+#: game/scripts/settings.gd:32
+msgid "Перебросить карточки / заново"
+msgstr "Reroll cards / restart"
+
+#: game/scripts/settings.gd:33
+msgid "Сменить схему управления"
+msgstr "Switch control scheme"
+
+#: game/scripts/settings.gd:44
+msgid "Русский"
+msgstr ""
+
+#: game/scripts/settings.gd:47
+msgid "по задаче ведомого"
+msgstr "by wingman role"
+
+#: game/scripts/settings.gd:47
+msgid "прикрывать меня"
+msgstr "cover me"
+
+#: game/scripts/settings.gd:47 game/scripts/weapons.gd:13
+msgid "крупные и асы"
+msgstr "big ones & aces"
+
+#: game/scripts/settings.gd:47 game/scripts/weapons.gd:14
+msgid "наземные цели"
+msgstr "ground targets"
+
+#: game/scripts/settings.gd:51
+msgid "выключена"
+msgstr "off"
+
+#: game/scripts/settings.gd:51
+msgid "малая"
+msgstr "small"
+
+#: game/scripts/settings.gd:51
+msgid "средняя"
+msgstr "medium"
+
+#: game/scripts/settings.gd:51
+msgid "большая"
+msgstr "large"
+
+#: game/scripts/sfx.gd:97
+msgid "Sfx: заменены звуки "
+msgstr "Sfx: replaced sounds "
+
+#: game/scripts/sfx.gd:410
+msgid "Sfx: музыка "
+msgstr "Sfx: music "
+
+#: game/scripts/spawner.gd:289
+msgid "Разведка: позиция ПВО! Награда — выбор из редких карточек"
+msgstr "Recon: AA site! Reward — a pick of rare cards"
+
+#: game/scripts/spawner.gd:290
+msgid "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости."
+msgstr "AA site: follow the blue arrow. Once you're close, a countdown starts — destroy the bunker in the center before it ends. The AA guns hit from afar: come in fast."
+
+#: game/scripts/spawner.gd:299
+msgid "Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш"
+msgstr "Recon: a supply convoy is heading for cover! Burn the trucks — the cargo is yours"
+
+#: game/scripts/spawner.gd:300
+msgid "Конвой: летите по оранжевой стрелке. Подбейте головную машину — колонна встанет. С каждого сожжённого грузовика падает груз: запчасти и ремкомплекты."
+msgstr "Convoy: follow the orange arrow. Hit the lead vehicle and the convoy stops. Every burned truck drops cargo: parts and repair kits."
+
+#: game/scripts/spawner.gd:312
+msgid "Разведка: вражеский транспортник с прикрытием! Сбейте его — груз ваш"
+msgstr "Recon: enemy transport with escort! Shoot it down — the cargo is yours"
+
+#: game/scripts/spawner.gd:313
+msgid "Транспортник летит через район и скоро уйдёт — розовая стрелка. Прикрытие отвлекает: бейте сам транспортник, груз падает с него."
+msgstr "The transport is crossing the area and will leave soon — pink arrow. The escort is a distraction: hit the transport itself, the cargo drops from it."
+
+#: game/scripts/spawner.gd:322
+msgid "Дуэль: вражеский ас заходит вам в хвост!"
+msgstr "Duel: an enemy ace is getting on your tail!"
+
+#: game/scripts/spawner.gd:323
+msgid "Дуэль с асом: он заходит в хвост. Сбросьте газ (S) или сделайте боевой разворот (E) — ас проскочит вперёд под вашу пушку."
+msgstr "Ace duel: he gets on your tail. Cut throttle (S) or do a combat turn (E) — the ace will overshoot into your cannon."
+
+#: game/scripts/spawner.gd:348
+#, c-format
+msgid "AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f из %d с)"
+msgstr "AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f of %d s)"
+
+#: game/scripts/tanker.gd:96
+msgid "Заправщик сбит! Следующий — через 2 минуты"
+msgstr "Tanker shot down! Next one in 2 minutes"
+
+#: game/scripts/tanker.gd:124
+msgid "Заправщик уходит — следующий через 2 минуты"
+msgstr "Tanker is leaving — next one in 2 minutes"
+
+#: game/scripts/tanker.gd:174
+msgid "Заправка завершена — бак полный"
+msgstr "Refueling complete — tank full"
+
+#: game/scripts/telemetry.gd:188
+#, c-format
+msgid "Качество графики снижено до «%s» (%d к/с). Изменить: «Настройки» → «Графика»"
+msgstr "Graphics quality lowered to \"%s\" (%d FPS). Change: \"Settings\" → \"Graphics\""
+
+#: game/scripts/transport.gd:34
+msgid "транспортник"
+msgstr "transport"
+
+#: game/scripts/transport.gd:64
+msgid "Транспортник ушёл — груз потерян"
+msgstr "Transport escaped — cargo lost"
+
+#: game/scripts/transport.gd:106
+msgid "ЗА ГРУЗ ТРАНСПОРТА"
+msgstr "FOR TRANSPORT CARGO"
+
+#: game/scripts/transport.gd:108
+msgid "Транспортник сбит! Груз: +90 запчастей, ремкомплекты"
+msgstr "Transport shot down! Cargo: +90 parts, repair kits"
+
+#: game/scripts/transport.gd:108
+msgid " и выбор из редких карточек"
+msgstr " and a pick of rare cards"
+
+#: game/scripts/transport.gd:123
+msgid "Транспортник"
+msgstr "Transport"
+
+#: game/scripts/weapons.gd:10
+msgid "ближайшие"
+msgstr "nearest"
+
+#: game/scripts/weapons.gd:11
+msgid "самые прочные"
+msgstr "toughest"
+
+#: game/scripts/weapons.gd:12
+msgid "добивать слабых"
+msgstr "weakest first"
+
+#: game/scripts/weapons.gd:19
+msgid "Ракеты «воздух-воздух»"
+msgstr "Air-to-air missiles"
+
+#: game/scripts/weapons.gd:20
+msgid "Наводящиеся ракеты"
+msgstr "Homing missiles"
+
+#: game/scripts/weapons.gd:21
+msgid "Самонаводящиеся ракеты по целям приоритета"
+msgstr "Homing missiles at priority targets"
+
+#: game/scripts/weapons.gd:23
+#, c-format
+msgid "1 ракета с точки; ур. 2–5: +30% урона, −10% перезарядки; ур. 4: ещё +80% урона и +20% скорости"
+msgstr "1 missile per pylon; Lv. 2–5: +30% damage, −10% cooldown; Lv. 4: another +80% damage and +20% speed"
+
+#: game/scripts/weapons.gd:26
+msgid "Неуправляемые ракеты (залп)"
+msgstr "Unguided rockets (salvo)"
+
+#: game/scripts/weapons.gd:27
+msgid "Залп ракет"
+msgstr "Rocket salvo"
+
+#: game/scripts/weapons.gd:28
+msgid "Залп ракет вперёд, взрыв по площади, по наземным целям урон ×3. Пускаются сами, когда враг точно перед носом; в паузе (Tab) можно перевести на правую кнопку мыши"
+msgstr "Forward rocket salvo, area blast, ×3 damage to ground targets. Fires on its own when an enemy is dead ahead; in pause (Tab) can be moved to the right mouse button"
+
+#: game/scripts/weapons.gd:30
+#, c-format
+msgid "залп — 4 ракеты с точки, ур. 3–4 — 5, ур. 5 — 6; ур. 2–5: +25% урона, +10% радиуса; по земле урон ×3"
+msgstr "salvo — 4 rockets per pylon, Lv. 3–4 — 5, Lv. 5 — 6; Lv. 2–5: +25% damage, +10% radius; ×3 damage to ground"
+
+#: game/scripts/weapons.gd:33
+msgid "Пушечная гондола"
+msgstr "Cannon gun pod"
+
+#: game/scripts/weapons.gd:34
+msgid "Гондола"
+msgstr "Gun pod"
+
+#: game/scripts/weapons.gd:35
+msgid "Поворотная пушка: сама наводится на цели приоритета вокруг самолёта"
+msgstr "Swivel cannon: aims itself at priority targets around the plane"
+
+#: game/scripts/weapons.gd:37
+#, c-format
+msgid "ур. 2–5: +25% урона, +10% темпа и дальности"
+msgstr "Lv. 2–5: +25% damage, +10% rate and range"
+
+#: game/scripts/weapons.gd:40
+msgid "Тепловые ловушки"
+msgstr "Heat flares"
+
+#: game/scripts/weapons.gd:42
+msgid "Отстрел тепловых ловушек: ракета, подошедшая близко, уходит на вспышку и рвётся возле неё; с ур. 4 — две ракеты и пули рядом"
+msgstr "Flare release: a missile that gets close goes for the flash and blows up near it; from Lv. 4 — two missiles and nearby bullets"
+
+#: game/scripts/weapons.gd:44
+#, c-format
+msgid "ур. 2–5: −10% перезарядки, +8% радиуса; ур. 4: две ракеты за раз и пули рядом"
+msgstr "Lv. 2–5: −10% cooldown, +8% radius; Lv. 4: two missiles at once and nearby bullets"
+
+#: game/scripts/weapons.gd:47
+msgid "Кассетные бомбы"
+msgstr "Cluster bombs"
+
+#: game/scripts/weapons.gd:48
+msgid "Бомбы"
+msgstr "Bombs"
+
+#: game/scripts/weapons.gd:49
+msgid "Бомбы по наземным целям: взрыв по площади, урон ×2 по земле; самолёты не задевают"
+msgstr "Bombs vs ground targets: area blast, ×2 damage to ground; don't hit planes"
+
+#: game/scripts/weapons.gd:51
+#, c-format
+msgid "ур. 2–5: +25% урона, +10% радиуса, −8% перезарядки"
+msgstr "Lv. 2–5: +25% damage, +10% radius, −8% cooldown"
+
+#: game/scripts/weapons.gd:55
+msgid "Рельсотрон (экспериментальный)"
+msgstr "Railgun (experimental)"
+
+#: game/scripts/weapons.gd:56
+msgid "Рельсотрон"
+msgstr "Railgun"
+
+#: game/scripts/weapons.gd:57
+msgid "Заряжается 0,9 с и бьёт по носу: снаряд пробивает всё на линии 1 200 пикс. Стреляет сам, когда враг впереди"
+msgstr "Charges for 0.9 s and fires forward: the shell pierces everything on a 1,200 px line. Fires on its own when an enemy is ahead"
+
+#: game/scripts/weapons.gd:59
+#, c-format
+msgid "ур. 2–5: +30% урона, −8% перезарядки"
+msgstr "Lv. 2–5: +30% damage, −8% cooldown"
+
+#: game/scripts/weapons.gd:62
+msgid "ЭМИ-заряд (экспериментальный)"
+msgstr "EMP charge (experimental)"
+
+#: game/scripts/weapons.gd:64
+msgid "Импульс вокруг самолёта: дронам — урон ×5, остальные враги и ПВО молчат 3 с (летят по инерции, не стреляют), вражеские ракеты теряют цель. По асам и «Крепости» — слабо"
+msgstr "Pulse around the plane: ×5 damage to drones, other enemies and AA go silent for 3 s (drift, don't fire), enemy missiles lose their target. Weak vs aces and the \"Fortress\""
+
+#: game/scripts/weapons.gd:66
+#, c-format
+msgid "ур. 2–5: +25% урона, +8% радиуса, −8% перезарядки"
+msgstr "Lv. 2–5: +25% damage, +8% radius, −8% cooldown"
+
+#: game/scripts/weapons.gd:69
+msgid "Лазер обороны «Луч» (экспериментальный)"
+msgstr "\"Ray\" defense laser (experimental)"
+
+#: game/scripts/weapons.gd:70
+msgid "Лазер «Луч»"
+msgstr "\"Ray\" laser"
+
+#: game/scripts/weapons.gd:71
+msgid "Сжигает вражеские ракеты и пули рядом с самолётом и подсвечивает ближайшего врага. По самолётам и земле — слабо"
+msgstr "Burns enemy missiles and bullets near the plane and marks the nearest enemy. Weak vs planes and ground"
+
+#: game/scripts/weapons.gd:73
+#, c-format
+msgid "ур. 2–5: +8% радиуса, −8% перезарядки, +25% урона"
+msgstr "Lv. 2–5: +8% radius, −8% cooldown, +25% damage"
+
+#: game/scripts/weapons.gd:76
+msgid "Плазменная бомба (экспериментальная)"
+msgstr "Plasma bomb (experimental)"
+
+#: game/scripts/weapons.gd:77
+msgid "Плазма"
+msgstr "Plasma"
+
+#: game/scripts/weapons.gd:78
+msgid "Шар плазмы на земле 4 с: жжёт наземные цели и прожигает укрытия. Только по земле, долгая перезарядка"
+msgstr "A plasma ball on the ground for 4 s: burns ground targets and burns through cover. Ground only, long cooldown"
+
+#: game/scripts/weapons.gd:80
+#, c-format
+msgid "ур. 2–5: +25% урона в секунду, +8% радиуса, −8% перезарядки"
+msgstr "Lv. 2–5: +25% damage per second, +8% radius, −8% cooldown"
+
+#: game/scripts/weapons.gd:83
+msgid "Автотурели"
+msgstr "Auto-turrets"
+
+#: game/scripts/weapons.gd:85
+msgid "Встроенные турели кругового обстрела"
+msgstr "Built-in all-round turrets"
+
+#: game/scripts/weapons.gd:87
+#, c-format
+msgid "ур. 2–5: +15% урона, +10% темпа"
+msgstr "Lv. 2–5: +15% damage, +10% rate"
+
+#: game/scripts/wingman.gd:67
+msgid "ведомые: "
+msgstr "wingmen: "
+
+#: game/scripts/wingman.gd:157
+msgid "Ведомый"
+msgstr "Wingman"
+
+#: game/scripts/wingman.gd:157
+msgid "Иду к вам, займу место в строю!"
+msgstr "On my way, joining the formation!"
+
+#: game/scripts/wingman.gd:409
+msgid "связка: тёплая компания"
+msgstr "synergy: good company"
+
+#: game/scripts/wingman.gd:423
+msgid "связка: волчья стая"
+msgstr "synergy: wolf pack"
