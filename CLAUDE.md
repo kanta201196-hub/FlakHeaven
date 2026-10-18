@@ -76,6 +76,12 @@ Flak Heaven — roguelike / bullet heaven про боевую авиацию, в
 - Скриншоты экранов: `xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots` (файлы `user://shot_*.png`).
 - Флаги отладки: `--tester` (как тестовая сборка, без отладки), `--report-url=…` (свой приёмник отчётов), `--mesatest`, `--reporttest`, `--turbo`.
 
+## Сайт flakheaven.com
+- Сайт — папка `site/` (Cloudflare Pages, обновляется сам из `main`), адрес https://flakheaven.com. Подробности — `site/README.md`.
+- Тред «Маркетинг и реклама» проверяет сайт раз в час (оба адреса, flakheaven.com и www): если не открывается или нет слова «Flak Heaven», ищет причину; ошибку в `site/` чинит PR, проблему в Cloudflare или у регистратора описывает Kanta (решение Kanta 18.10.2026).
+- Домен куплен у reg.ru 18.10.2026 на год, продление — до 18.10.2027 (напоминание за месяц).
+- Менять `site/` может любой тред, но после слияния проверить, что страница открылась.
+
 ## Сборки
 - Пресеты экспорта — `game/export_presets.cfg`: «Windows Tester», «macOS Tester», «Linux Check». Фича `tester` выключает отладку (F1, F4–F8, отладка ангара).
 - Номер тестовой сборки — `BUILD` в `game/scripts/main.gd`, адрес приёмника отчётов — `REPORT_URL_BUILTIN` там же.
