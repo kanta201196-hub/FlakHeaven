@@ -111,8 +111,56 @@ const V_UNIT := 640.0 / 900.0   # размер o_village — 900 (background.gd)
 const V_EDGE := 0.6             # радиус края застройки, старые единицы (× outline)
 
 
-static func _village_streets(variant: int) -> Vector2:
-	return Vector2((_vr(variant, 1) - 0.5) * 0.3, (_vr(variant, 2) - 0.5) * 0.12)   # x — поперечная, y — главная
+## Правка Kanta 18.10.2026 (L-01): посёлок на 30–50 домов вдоль тропинок, а не сетка улиц.
+## Главная тропа идёт по +x объекта — fix_object разворачивает посёлок так, чтобы +x смотрел к реке:
+## тропа выходит к дороге (за краем застройки) и дальше к воде. От центра — 3–4 боковые тропы.
+## Тропа — ломаная в старых единицах; одинакова для раскладки в любом потоке (без генератора)
+const PATH_W := 0.024        # ширина тропы, старые единицы (~17 px мира)
+const PATH_OUT := 1.02       # главная тропа: до дороги и к воде (центр посёлка — за дорогой, footprint ≈ 0,64)
+static var _paths := {}
+
+
+static func village_paths(variant: int) -> Array:
+	if _paths.has(variant):
+		return _paths[variant]
+	var out := []
+	# главная: к реке, лёгкий изгиб
+	var main := PackedVector2Array()
+	for k in 11:
+		var t := float(k) / 10.0
+		main.append(Vector2(t * PATH_OUT, sin(t * 4.1 + variant * 1.7) * 0.06 * t))
+	out.append(main)
+	var n := 3 + int(_vr(variant, 5) * 2.0)
+	for i in n:
+		var ang := PI * 0.45 + (TAU - PI * 0.9) * (i + 0.3 + _vr(variant, 10 + i) * 0.4) / n
+		var e := V_EDGE * outline(variant, ang) * 1.08
+		var pl := PackedVector2Array()
+		for k in 9:
+			var t := float(k) / 8.0
+			var side := Vector2.from_angle(ang + PI * 0.5)
+			pl.append(Vector2.from_angle(ang) * t * e + side * sin(t * 5.0 + i * 2.3 + variant) * 0.04 * t)
+		out.append(pl)
+	# кольцевая тропа между боковыми на половине радиуса
+	var ring := PackedVector2Array()
+	var a0 := _vr(variant, 30) * TAU
+	for k in 13:
+		var ang := a0 + PI * 1.1 * float(k) / 12.0
+		ring.append(Vector2.from_angle(ang) * V_EDGE * 0.48 * outline(variant, ang))
+	out.append(ring)
+	_paths[variant] = out
+	return out
+
+
+## Расстояние от точки u (старые единицы) до ближайшей тропы посёлка
+static func path_dist(variant: int, u: Vector2) -> float:
+	var best := INF
+	for pl: PackedVector2Array in village_paths(variant):
+		for k in pl.size() - 1:
+			var a := pl[k]
+			var ab := pl[k + 1] - a
+			var t := clampf((u - a).dot(ab) / maxf(ab.length_squared(), 1e-9), 0.0, 1.0)
+			best = minf(best, u.distance_to(a + ab * t))
+	return best
 
 
 ## Маска поселения на земле в точке l (смещение от центра / размер объекта, в осях объекта):
@@ -126,10 +174,10 @@ static func ground_mask(name: String, variant: int, l: Vector2) -> Vector2:
 			var rad := u.length()
 			var e := V_EDGE * o
 			var tr := 1.0 - smoothstep(e * 0.82, e * 1.12, rad)
-			# улицы выходят из города тропами и тают в степи
-			var st := _village_streets(variant)
-			var dl := minf(absf(u.y - st.y), absf(u.x - st.x))
-			tr = maxf(tr, (1.0 - smoothstep(0.012, 0.035, dl)) * (1.0 - smoothstep(e * 1.05, e * 1.55, rad)) * 0.85)
+			# тропы (L-01): между домами и за край — главная к дороге и к воде, боковые тают в степи
+			var dl := path_dist(variant, u)
+			var reach := PATH_OUT if u.x > 0.0 and absf(u.y) < 0.12 else e * 1.3
+			tr = maxf(tr, (1.0 - smoothstep(0.012, 0.03, dl)) * (1.0 - smoothstep(reach * 0.92, reach, rad)) * 0.9)
 			# огороды и сады за домами: кольцо у края, только в части секторов — пятнами, не кругом
 			var sect := smoothstep(-0.15, 0.45, sin(2.0 * ang + 0.5 + variant * 1.3) + 0.6 * sin(5.0 * ang + variant * 0.7))
 			var gr := smoothstep(e * 0.7, e * 0.92, rad) * (1.0 - smoothstep(e * 1.2, e * 1.42, rad)) * sect
@@ -184,93 +232,103 @@ static func village(variant: int) -> ArrayMesh:
 	rng.seed = 7919 * (variant + 1)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var street := 0.055
-	var sts := _village_streets(variant)
-	var cross_x := sts.x    # поперечная улица
-	var main_z := sts.y     # главная улица
-	var lot := 0.105
-	var R := V_EDGE * 1.2 * 1.25
-	var n := int(ceilf(R * 2.0 / lot))
-	for i in n:
-		for j in n:
-			var c := Vector2(-R + (i + 0.5) * lot, -R + (j + 0.5) * lot) + Vector2(rng.randf_range(-0.012, 0.012), rng.randf_range(-0.012, 0.012))
-			var roll0 := rng.randf()
-			var roll := rng.randf()
-			var e := V_EDGE * outline(variant, c.angle())
-			var d := c.length() / e
-			var near_street := minf(absf(c.y - main_z), absf(c.x - cross_x)) < lot * 0.9
-			# середина — плотно; край — реже и неровно; за краем — огороды и редкие дома у дорог
-			var zone := 0
-			if d < 0.72:
-				if roll0 < 0.06:
-					continue   # пустырь, двор
-			elif d < 1.05:
-				zone = 1
-				if roll0 < smoothstep(0.72, 1.05, d) * 0.55:
-					if roll0 < 0.3 and not near_street:
-						_garden(st, c, Vector2(lot, lot) * rng.randf_range(0.85, 1.1), rng)
-					continue
-			elif d < 1.25:
-				zone = 2
-				if near_street and roll0 < 0.3:
-					pass
-				elif roll0 < 0.18 and not near_street:
-					_garden(st, c, Vector2(lot, lot) * rng.randf_range(0.9, 1.25), rng)
-					continue
-				else:
-					continue
-			else:
-				continue
-			var sz := Vector2(lot - rng.randf_range(0.012, 0.03), lot - rng.randf_range(0.012, 0.03))
-			if zone > 0:
-				sz *= rng.randf_range(0.7, 0.9)   # окраина — дома меньше
-			# участок не на улице: дом сдвигается от улицы и сужается, совсем на улице — не ставится
-			for ax in 2:
-				var line := main_z if ax == 0 else cross_x
-				var v := c.y if ax == 0 else c.x
-				var gap := absf(v - line) - street * 0.5
-				var half := (sz.y if ax == 0 else sz.x) * 0.5
-				if gap < half:
-					var keep := half + gap   # от улицы до дальнего края участка
-					if keep < 0.03:
-						sz = Vector2.ZERO
-						break
-					var sgn := 1.0 if v >= line else -1.0
-					var far := v + sgn * half
-					var near := line + sgn * street * 0.5
-					if ax == 0:
-						sz.y = absf(far - near)
-						c.y = (far + near) * 0.5
-					else:
-						sz.x = absf(far - near)
-						c.x = (far + near) * 0.5
-			if sz == Vector2.ZERO:
-				continue
-			if zone == 2:
-				# одинокий дом у дороги: целый или без крыши
-				if roll < 0.55:
-					_house(st, c, sz, rng.randf_range(0.035, 0.05), rng)
-				else:
-					_roofless(st, c, sz, rng.randf_range(0.035, 0.05), rng)
-				continue
-			if roll < 0.3:
-				_house(st, c, sz, rng.randf_range(0.04, 0.065), rng)
-			elif roll < 0.62:
-				_roofless(st, c, sz, rng.randf_range(0.04, 0.07), rng)
-			elif roll < 0.8:
-				_collapsed(st, c, sz, rng)
-			elif roll < 0.92 and zone == 0:
-				_shell(st, c, sz * 1.05, rng.randf_range(0.1, 0.14), rng)
-			else:
-				_rubble(st, c, sz.x * 0.45, 5, rng)
-	# завалы и воронки на улицах
-	for k in 8:
-		var along := rng.randf_range(-V_EDGE * 0.8, V_EDGE * 0.8)
-		var c := Vector2(along, main_z) if k % 2 == 0 else Vector2(cross_x, along)
-		_rubble(st, c, 0.025, 3, rng)
+	var paths := village_paths(variant)
+	var lots := []   # [центр, полуразмер] — дома не наползают друг на друга и на тропы
+	var want := rng.randi_range(34, 48)
+	# дома вдоль троп: по обе стороны, чаще у центра
+	for pl: PackedVector2Array in paths:
+		for k in pl.size() - 1:
+			var a := pl[k]
+			var b := pl[k + 1]
+			var dir := (b - a).normalized()
+			var nrm := dir.orthogonal()
+			var t := 0.0
+			while t < a.distance_to(b):
+				var c0 := a + dir * t
+				t += rng.randf_range(0.075, 0.1)
+				for sgn: float in [-1.0, 1.0]:
+					if lots.size() >= want or rng.randf() < 0.22:
+						continue
+					var sz := Vector2(rng.randf_range(0.05, 0.072), rng.randf_range(0.045, 0.062))
+					var c: Vector2 = c0 + nrm * sgn * (PATH_W * 0.5 + sz.y * 0.5 + rng.randf_range(0.006, 0.02))
+					_put_house(st, c, sz, lots, rng, variant)
+	# двор-кластер у центра, если вдоль троп набралось мало
+	for i in 60:
+		if lots.size() >= want:
+			break
+		var c := Vector2.from_angle(rng.randf() * TAU) * V_EDGE * 0.7 * sqrt(rng.randf())
+		_put_house(st, c, Vector2(rng.randf_range(0.05, 0.075), rng.randf_range(0.045, 0.065)), lots, rng, variant)
+	# тропы — утоптанная полоса чуть над землёй (вне застройки их рисует пятно на рельефе: ground_mask)
+	for pl: PackedVector2Array in paths:
+		for k in pl.size() - 1:
+			var a := pl[k]
+			var b := pl[k + 1]
+			# за краем площадки земля уходит вниз к реке — тропа там приподнята чуть выше
+			_strip(st, a, b, PATH_W * (1.0 if a.length() < V_EDGE else 0.8), PATH, 0.0165 if a.length() < V_EDGE else 0.021)   # меш утоплен на 1 % размера (render3d)
+	# огороды за дувалами — у края, между тропами
+	for i in rng.randi_range(5, 8):
+		var ang := rng.randf() * TAU
+		var c := Vector2.from_angle(ang) * V_EDGE * outline(variant, ang) * rng.randf_range(0.95, 1.15)
+		if path_dist(variant, c) > 0.08:
+			_garden(st, c, Vector2(0.105, 0.105) * rng.randf_range(0.9, 1.25), rng)
 	var m := _scaled(st, V_UNIT)
 	_cache[key] = m
 	return m
+
+
+const PATH := Color(0.9, 0.83, 0.72)   # утоптанная тропа: чуть светлее земли, пыль
+
+
+## Дом посёлка с двором, если место свободно (не на тропе, не на соседе, внутри контура). Война — по
+## уровню 2 стайл-гайда: больше целых домов, часть без крыши, немного обрушенных
+static func _put_house(st: SurfaceTool, c: Vector2, sz: Vector2, lots: Array, rng: RandomNumberGenerator, variant: int) -> void:
+	if c.length() > V_EDGE * outline(variant, c.angle()) * 1.02:
+		return
+	if path_dist(variant, c) < PATH_W * 0.5 + minf(sz.x, sz.y) * 0.5:
+		return
+	for l in lots:
+		if absf(c.x - l[0].x) < (sz.x + l[1].x) * 0.5 + 0.012 and absf(c.y - l[0].y) < (sz.y + l[1].y) * 0.5 + 0.012:
+			return
+	lots.append([c, sz])
+	var roll := rng.randf()
+	var centre := c.length() < V_EDGE * 0.45
+	if roll < 0.56:
+		_house(st, c, sz, rng.randf_range(0.04, 0.065), rng)
+		if rng.randf() < 0.35:   # двор за дувалом со стороны от тропы
+			var yard := c + Vector2(0.0, sz.y * 0.5 + 0.025) * (1.0 if rng.randf() < 0.5 else -1.0)
+			if path_dist(variant, yard) > 0.045:
+				_yard(st, yard, Vector2(sz.x, 0.045), rng)
+	elif roll < 0.78:
+		_roofless(st, c, sz, rng.randf_range(0.04, 0.07), rng)
+	elif roll < 0.9:
+		_collapsed(st, c, sz, rng)
+	elif roll < 0.95 and centre:
+		_shell(st, c, sz * 1.05, rng.randf_range(0.1, 0.14), rng)
+	else:
+		_rubble(st, c, sz.x * 0.45, 5, rng)
+
+
+## Двор: низкий дувал с трёх сторон у дома
+static func _yard(st: SurfaceTool, c: Vector2, s: Vector2, rng: RandomNumberGenerator) -> void:
+	var h := rng.randf_range(0.01, 0.015)
+	var x0 := c.x - s.x * 0.5
+	var x1 := c.x + s.x * 0.5
+	var z0 := c.y - s.y * 0.5
+	var z1 := c.y + s.y * 0.5
+	_wall(st, Vector2(x0, z0), Vector2(x0, z1), 0.005, h, false)
+	_wall(st, Vector2(x1, z0), Vector2(x1, z1), 0.005, h, false)
+	var gate := rng.randf_range(0.3, 0.6)
+	_wall(st, Vector2(x0, z1), Vector2(lerpf(x0, x1, gate - 0.12), z1), 0.005, h, false)
+	_wall(st, Vector2(lerpf(x0, x1, gate + 0.12), z1), Vector2(x1, z1), 0.005, h, false)
+
+
+## Плоская полоса (тропа) от a до b шириной w чуть над землёй
+static func _strip(st: SurfaceTool, a: Vector2, b: Vector2, w: float, col: Color, y := 0.002) -> void:
+	var n := (b - a).normalized().orthogonal() * w * 0.5
+	var ext := (b - a).normalized() * w * 0.5   # стык соседних кусков без щелей
+	var p0 := a - ext
+	var p1 := b + ext
+	_quad(st, Vector3(p0.x - n.x, y, p0.y - n.y), Vector3(p1.x - n.x, y, p1.y - n.y), Vector3(p1.x + n.x, y, p1.y + n.y), Vector3(p0.x + n.x, y, p0.y + n.y), col)
 
 
 ## Огород за дувалом: низкая глинобитная ограда по периметру с проходом

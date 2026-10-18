@@ -331,6 +331,9 @@ func fix_object(o: Dictionary) -> Dictionary:
 		p0 = _settle_spot(o)
 		if not p0.is_finite() or _settle_crowded(o, p0):
 			return {}
+		if o["name"] == "o_village":   # L-01: главная тропа посёлка (+x объекта) — к реке через дорогу
+			o = o.duplicate()
+			o["rot"] = (_river_point(p0) - p0).angle()
 	elif o["name"] == "o_crater" and absf(_v_raw(p0.x, p0.y)) / V_SCALE > D_FAN:
 		return {}   # воронка с площадкой на склоне выглядела ямой в горе: воронки — на дне долин и конусах
 	var p := p0
