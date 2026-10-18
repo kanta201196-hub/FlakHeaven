@@ -141,6 +141,25 @@ func _hg_livery(c: String, lx: float, y: float) -> void:
 		_buttons.append([r, "hg:livery:" + String(lst[i][0])])
 
 
+## Фишка 3 (Kanta 18.10): какое оружие стоит на втором подвесе с начала вылета
+func _hg_start2(m: Main, lx: float, y: float) -> void:
+	var c := m.hangar_cls
+	_text(Vector2(lx, y + 16), "Второй подвес на старте", 17, Color.WHITE)
+	if Profile.crew_lvl(c) < Profile.START2_LVL:
+		_para(Vector2(lx, y + 28), "Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек." % Profile.START2_LVL, 300.0, 14, Color(0.65, 0.68, 0.75))
+		return
+	var cur := Profile.start2(c)
+	var opts: Array = [""] + Profile.start2_options(c)
+	for i in opts.size():
+		var w := String(opts[i])
+		var r := Rect2(lx + (i % 2) * 154.0, y + 28.0 + (i / 2) * 40.0, 146.0, 34.0)
+		var on := cur == w
+		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
+		_text(Vector2(r.position.x, r.position.y + 23), "пусто" if w == "" else String(Weapons.DEFS[w]["short"]), 14, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		_buttons.append([r, "hg:start2:" + w])
+	_para(Vector2(lx, y + 34.0 + ceili(opts.size() / 2.0) * 40.0), "Ставится с ур. 1; улучшения — карточками в бою.", 300.0, 13, Color(0.65, 0.68, 0.75))
+
+
 func _hg_weapons(m: Main, area: Rect2) -> void:
 	var lx := area.position.x
 	var y := area.position.y
@@ -168,6 +187,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		if PlaneClasses.signature(m.hangar_cls) == w:
 			_text(Vector2(lx + 60, y + 54), "★ особенность класса: +20%", 13, Color(0.6, 1.0, 0.65), HORIZONTAL_ALIGNMENT_RIGHT, 228.0)
 		y += 80.0
+	_hg_start2(m, lx, y + 6.0)
 	var w2 := m.hangar_w
 	var rx := lx + 340.0
 	var rw := area.size.x - 340.0 - 470.0

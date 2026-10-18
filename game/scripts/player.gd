@@ -156,6 +156,16 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 		groups.append(tg)
 	if heavy != null:
 		groups.append(heavy)
+	# фишка 3: оружие, выбранное в ангаре, — на первый пустой обычный подвес, ур. 1
+	var s2 := Profile.start2(id)
+	if s2 != "":
+		for g in groups:
+			var h: Hardpoint = g
+			if not h.builtin and not h.heavy and h.is_empty():
+				h.weapon = s2
+				h.level = 1
+				h.cd = 0.5
+				break
 	# стартовое оружие и навык дают очки тегов
 	for g in groups:
 		if not (g as Hardpoint).is_empty():
