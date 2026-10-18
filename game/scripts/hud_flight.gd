@@ -274,15 +274,22 @@ func _evac_marker(m: Main, size: Vector2) -> void:
 	_ctext(246, "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с" % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7))
 
 
-## Правка 28 (тест 3.5-s4): стрелка с тёмной обводкой и подписью — видна и на жёлтой земле
+## Правка 28 (тест 3.5-s4): стрелка с тёмной обводкой и подписью — видна и на жёлтой земле.
+## Отзыв 3.5-s7: стрелки заданий, ворот, заправщика и аса — не у края, а на кольце вокруг центра, где их видно.
 func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1.0, label := "") -> void:
 	if rect.has_point(sp):
 		return
 	var c := size / 2.0
 	var dir := (sp - c).normalized()
-	var tx := INF if absf(dir.x) < 0.001 else (rect.size.x / 2.0) / absf(dir.x)
-	var ty := INF if absf(dir.y) < 0.001 else (rect.size.y / 2.0) / absf(dir.y)
-	var pos := c + dir * minf(tx, ty)
+	var pos: Vector2
+	if label != "" or scale >= 1.6:   # задания, ворота, заправщик и ас
+		var rx := size.x * RING_X
+		var ry := size.y * RING_Y
+		pos = c + dir / sqrt(pow(dir.x / rx, 2.0) + pow(dir.y / ry, 2.0))
+	else:
+		var tx := INF if absf(dir.x) < 0.001 else (rect.size.x / 2.0) / absf(dir.x)
+		var ty := INF if absf(dir.y) < 0.001 else (rect.size.y / 2.0) / absf(dir.y)
+		pos = c + dir * minf(tx, ty)
 	var a := dir.angle()
 	var k := 18.0 * scale
 	var pts := PackedVector2Array([pos + Vector2.from_angle(a) * k, pos + Vector2.from_angle(a + 2.5) * k * 0.8, pos + Vector2.from_angle(a - 2.5) * k * 0.8])
@@ -290,8 +297,8 @@ func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1
 	ctrl.draw_colored_polygon(outl, Color(0.02, 0.025, 0.03, 0.85))
 	ctrl.draw_colored_polygon(pts, col)
 	if label != "":
-		# подпись — внутрь экрана от стрелки, на тёмной плашке
-		var lp := pos - dir * (k + 34.0)
+		# подпись — за остриём стрелки (наружу от самолёта), на тёмной плашке
+		var lp := pos + dir * (k + 30.0)
 		var fs := 15
 		var tw := ui_font().get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var r := Rect2(lp.x - tw / 2.0 - 6.0, lp.y - 11.0, tw + 12.0, 22.0)
@@ -330,6 +337,8 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 
 
 ## Правка 28: цвета активностей — без жёлтого, он теряется на песке Нагорья
+const RING_X := 0.30   # отзыв 3.5-s7: кольцо стрелок заданий — доля ширины и высоты экрана от центра
+const RING_Y := 0.32
 const C_AA := Color(0.35, 0.85, 1.0)
 const C_CONVOY := Color(1.0, 0.5, 0.25)
 const C_TRANSPORT := Color(1.0, 0.55, 0.95)
