@@ -40,6 +40,8 @@ var _c2 := Vector2.ZERO        # центр кадра на плоскости �
 var _shadow_shader: Shader
 var _trails: Contrails       # 3.4-t1 (п. 10, 34): инверсионные следы самолётов и ракет
 var _tid := 0                # номера ракет для их следов
+var _eshot_mm: MultiMeshInstance3D   # тест 3.5-s5 (п. 11): ракеты врагов — модели
+var _eglow_mm: MultiMeshInstance3D   # и светящиеся точки: трассеры пуль, ореол и факел ракет
 var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые падают
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: StandardMaterial3D
@@ -408,6 +410,7 @@ func _process(delta: float) -> void:
 	_sync_units(m, delta, sd)
 	if Perf.on: pt = Perf.sub("r3d.units", pt)
 	_sync_missiles(m)
+	_sync_enemy_shots(m)
 	if Perf.on: pt = Perf.sub("r3d.missiles", pt)
 	_sync_crashes(m, sd)
 	title.sync(m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu", delta)
@@ -1353,6 +1356,130 @@ func _sync_missiles(m: Main) -> void:
 			var v: Vector2 = mm["v"]
 			var tail: Vector2 = mm["p"] - (v.normalized() * 9.0 if v.length() > 1.0 else Vector2.ZERO)
 			_trails.emit(int(mm["tid"]), Vector3(tail.x, -2.0, tail.y), arr_st[1])
+
+
+# ---------- тест 3.5-s5 (п. 11): пули и ракеты врагов в 3D ----------
+
+## Ракеты врагов — модель (WeaponModels «enemy_msl») по курсу, пули — светящиеся трассеры с ореолом:
+## красные у обычных врагов, оранжевые у асов, крупные шары — залпы асов и «Крепости». Всё — два MultiMesh
+## (два вызова отрисовки на любое число снарядов). Трассеры и ореолы поверх моделей и облаков, как прежний слой боя.
+const ESHOT_LEN := 30.0              # длина ракеты врага, px (картинка была 24)
+const EGLOW_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled, fog_disabled;
+varying vec4 col;
+void vertex() {
+	col = COLOR;
+}
+void fragment() {
+	vec2 p = UV * 2.0 - 1.0;          // x — вдоль полёта (+1 — голова), y — поперёк
+	float d = length(p);
+	float head = smoothstep(-1.0, 0.5, p.x);   // к хвосту трассер гаснет
+	float halo = smoothstep(1.0, 0.15, d) * head;
+	float core = smoothstep(0.42, 0.08, length(vec2(p.x * 0.8, p.y * 1.6))) * head;
+	ALBEDO = mix(col.rgb, vec3(1.0, 0.96, 0.92), core);
+	ALPHA = clamp(halo * 0.7 * col.a + core, 0.0, 1.0);
+}
+"""
+
+
+func _sync_enemy_shots(m: Main) -> void:
+	var pr := m.projectiles
+	if pr == null:
+		return
+	if _eshot_mm == null:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = WeaponModels.mesh("enemy_msl", 1)
+		mm.instance_count = 32
+		mm.visible_instance_count = 0
+		_eshot_mm = MultiMeshInstance3D.new()
+		_eshot_mm.multimesh = mm
+		_eshot_mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_eshot_mm.top_level = true
+		add_child(_eshot_mm)
+		var sh := Shader.new()
+		sh.code = EGLOW_SHADER
+		var mat := ShaderMaterial.new()
+		mat.shader = sh
+		mat.render_priority = 99   # под слоем боя (взрывы, текст), над моделями
+		var pm := PlaneMesh.new()
+		pm.size = Vector2(2, 2)
+		var gm := MultiMesh.new()
+		gm.transform_format = MultiMesh.TRANSFORM_3D
+		gm.use_colors = true
+		gm.mesh = pm
+		gm.instance_count = 256
+		gm.visible_instance_count = 0
+		_eglow_mm = MultiMeshInstance3D.new()
+		_eglow_mm.multimesh = gm
+		_eglow_mm.material_override = mat
+		_eglow_mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_eglow_mm.top_level = true
+		add_child(_eglow_mm)
+	var mmx := _eshot_mm.multimesh
+	var gmx := _eglow_mm.multimesh
+	var n_m := 0
+	var n_g := 0
+	var need_g := pr.ebullets.size() + pr.missiles.size() * 2
+	if gmx.instance_count < need_g:
+		gmx.instance_count = need_g + 64
+	if mmx.instance_count < pr.missiles.size():
+		mmx.instance_count = pr.missiles.size() + 16
+	var lo := Vector3(INF, INF, INF)
+	var hi := -lo
+	for b: Dictionary in pr.ebullets:
+		var p: Vector2 = b["p"]
+		var v: Vector2 = b["v"]
+		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
+		var ace: bool = b.get("who", "") == "асы"
+		var c: Color
+		var ln: float
+		var w: float
+		if b["big"]:
+			c = Color(1.0, 0.42, 0.18, 1.0)
+			ln = 16.0
+			w = 16.0
+		else:
+			c = Color(1.0, 0.62, 0.15, 1.0) if ace else Color(1.0, 0.18, 0.3, 1.0)
+			ln = 17.0
+			w = 5.5
+		var ctr := Vector3(p.x - dir.x * ln * 0.55, 1.0, p.y - dir.y * ln * 0.55)
+		var xa := Vector3(dir.x, 0, dir.y) * ln
+		var za := Vector3(-dir.y, 0, dir.x) * w
+		gmx.set_instance_transform(n_g, Transform3D(Basis(xa, Vector3.UP, za), ctr))
+		gmx.set_instance_color(n_g, c)
+		lo = lo.min(ctr)
+		hi = hi.max(ctr)
+		n_g += 1
+	for ms: Dictionary in pr.missiles:
+		var p: Vector2 = ms["p"]
+		var v: Vector2 = ms["v"]
+		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
+		var y := 0.0
+		var bs := Basis(Vector3.UP, -dir.angle()).scaled(Vector3.ONE * ESHOT_LEN)
+		var pos := Vector3(p.x, y, p.y)
+		mmx.set_instance_transform(n_m, Transform3D(bs, pos))
+		n_m += 1
+		lo = lo.min(pos)
+		hi = hi.max(pos)
+		var lost: bool = ms["lost"]
+		# факел двигателя у хвоста и красный ореол вокруг (у уведённой ловушкой — без ореола, факел тусклый)
+		var tail := pos - Vector3(dir.x, 0, dir.y) * ESHOT_LEN * 0.55
+		var fl := 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.05 + float(n_m))
+		gmx.set_instance_transform(n_g, Transform3D(Basis(Vector3(-dir.x, 0, -dir.y) * 9.0 * fl, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 4.5), tail + Vector3(0, 1.0, 0)))
+		gmx.set_instance_color(n_g, Color(1.0, 0.7, 0.25, 1.0 if not lost else 0.5))
+		n_g += 1
+		if not lost:
+			gmx.set_instance_transform(n_g, Transform3D(Basis(Vector3(dir.x, 0, dir.y) * 20.0, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 14.0), pos - Vector3(0, 0.5, 0)))
+			gmx.set_instance_color(n_g, Color(1.0, 0.1, 0.05, 0.45))
+			n_g += 1
+	mmx.visible_instance_count = n_m
+	gmx.visible_instance_count = n_g
+	if n_m + n_g > 0:
+		var aabb := AABB(lo - Vector3(40, 40, 40), hi - lo + Vector3(80, 80, 80))
+		_eshot_mm.custom_aabb = aabb
+		_eglow_mm.custom_aabb = aabb
 
 
 # ---------- 3.4-t1: сбитый ведомый падает (п. 32) ----------
