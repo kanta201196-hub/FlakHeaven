@@ -184,6 +184,7 @@ func start_run() -> void:
 	add_child(world)
 	move_child(world, 0)
 
+	Biome.id = Campaign.biome_of(Campaign.index())   # тред «Второй биом»: биом мира — по операции, до создания фона
 	background = Background.new()
 	world.add_child(background)
 	clouds = Clouds.new()
@@ -228,7 +229,7 @@ func start_run() -> void:
 	banner = ""
 	op_flags = {}
 	op_result = {}
-	show_banner("%s · ОПЕРАЦИЯ «%s» · %s" % [Background.BIOME_NAME.to_upper(), String(Campaign.op()["title"]).to_upper(), String(Campaign.diff()["title"]).to_upper()], 4.0)
+	show_banner("%s · ОПЕРАЦИЯ «%s» · %s" % [Biome.title().to_upper(), String(Campaign.op()["title"]).to_upper(), String(Campaign.diff()["title"]).to_upper()], 4.0)
 	# U-02: цель вылета — первые 3 вылета (U-05: задача операции кампании)
 	Hints.clear()
 	Hints.show("goal", "Задача: %s. Всех врагов не перебить — они прилетают всё время." % String(Campaign.op()["task"]).to_lower(), 9.0, 3)
