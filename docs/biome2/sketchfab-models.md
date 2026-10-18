@@ -2,11 +2,12 @@
 
 ![Кандидаты](img/sketchfab_picks.png)
 
-Подборка 18.10.2026 по просьбе Kanta. Номера — как в `docs/biome2/models-plan.md`. Искал только модели, которые разрешено скачивать, с лицензией **CC BY 4.0** (можно менять и продавать, автора указываем в титрах) или **CC0** (без условий). Лицензию каждой модели перед использованием сверяем ещё раз на её странице.
+Подборка 18.10.2026 по просьбе Kanta. Номера — как в `docs/biome2/models-plan.md`. Искал только модели, которые разрешено скачивать, с лицензией **CC BY 4.0** (можно менять и продавать, автора указываем в титрах) или **CC0** (без условий). **Проверка 18.10:** лицензия и разрешение на скачивание сверены на странице каждой модели (все — CC BY); описания проверены на «ripped / из игры». Две модели автора 42manako (корвет и крейсер-носитель «Kiev-class») убраны: автор пишет, что вытащил их из чужих игр, значит, лицензия CC BY на них недействительна. Перед скачиванием Kanta ещё раз смотрит на странице, что лицензия не поменялась.
 
 **Правила, как с танкером:**
 - Как есть не берём: облегчаем до бюджета боя (2–15 тыс. треугольников), перекрашиваем в наши цвета, убираем названия, номера, флаги и знаки, меняем 2–3 заметные детали силуэта (модели реальной техники — только «по мотивам»).
 - Каждая взятая модель — строка в титрах: автор, название, ссылка, «CC BY 4.0, изменено». Список ведём в `game/models/CREDITS.md` с первой модели.
+- Не берём модели, в описании которых сказано, что они взяты из игр или чужих работ (ripped, extracted), даже если стоит CC BY.
 - Скачивание на Sketchfab требует входа в аккаунт, поэтому файлы скачивает Kanta (формат glTF/GLB или .blend) и присылает в тред с номером модели.
 - Где модели нет или она плохая — собираем кодом, как планировали.
 
@@ -31,14 +32,12 @@
 | К-3 | M21 Patrol Boat | gogiart | CC BY | 253 тыс. | https://sketchfab.com/3d-models/598d3938b4214f2e9f385c29b3a3744a | тяжёлая |
 | К-5 | LCVP Higgins boat (1945) | RedC130 | CC BY | 170 тыс. | https://sketchfab.com/3d-models/92b2ec48991545f7baea8b0954489be8 | десантный бот; баржу проще кодом |
 | В-1 | Type 22 missile boat | dannzjs | CC BY | 18 тыс. | https://sketchfab.com/3d-models/d90464e6ca2e4d23a7a5a9865d220945 | катамаран — хороший силуэт для «Ската» |
-| В-1 | Nanuchka-class corvette | 42manako | CC BY | 10 тыс. | https://sketchfab.com/3d-models/81e24f73ff084a05914767dc3b7774c6 | крупнее, как запасной |
 | В-3 | KM "Caspian Sea Monster" | helijah | CC BY | 22 тыс. | https://sketchfab.com/3d-models/78de2c2921064278a320aa9f5add63fb | экраноплан, вес как раз |
 | В-4 | SeaPlane Cessna 172 | KOG_THORNS | CC BY | 6 тыс. | https://sketchfab.com/3d-models/3924196d2ccf42c0ac8458d8f16a7910 | лёгкий гидросамолёт для «Буревестника» |
 | В-4 | Dornier Do 26 | helijah | CC BY | 47 тыс. | https://sketchfab.com/3d-models/16bcea70c43b4e0198a0cb4240b715d8 | крыло «чайкой», 4 мотора |
 | Б-1 | LM-328 flying boat | TonyWony | CC BY | 40 тыс. | https://sketchfab.com/3d-models/d34a38da8ac6454cbdea645433b8d45b | летающая лодка для «Альбатроса» |
 | Б-1 | Dornier Do X | helijah | CC BY | 235 тыс. | https://sketchfab.com/3d-models/480eff9cea88495ba83bd32aa26eabde | огромная, 12 моторов |
-| Б-3 | Kiev-class aircraft carrier | 42manako | CC BY | 39 тыс. | https://sketchfab.com/3d-models/e1eed3f57d9e413299e3fe6887555764 | крейсер-носитель с ракетами — ближе всего к «Левиафану» |
-| Б-3 | KIEV CLASS AIRCRAFT CARRIER | Muhamad Mirza Arrafi | CC BY | 46 тыс. | https://sketchfab.com/3d-models/f854eda1eab54a40aae8628e6456ae78 | то же, другой автор |
+| Б-3 | KIEV CLASS AIRCRAFT CARRIER | Muhamad Mirza Arrafi | CC BY | 46 тыс. | https://sketchfab.com/3d-models/f854eda1eab54a40aae8628e6456ae78 | крейсер-носитель с ракетами — ближе всего к «Левиафану» |
 | Б-3 | Type-004 Aircraft Carrier | Muhamad Mirza Arrafi | CC BY | 30 тыс. | https://sketchfab.com/3d-models/0953bebe3ae34d7582fe0e2bcff0925f | чистый авианосец |
 | Т-1 | 102 mm/45 QF Mk.XVI | snrnsrk5 | CC BY | 3 тыс. | https://sketchfab.com/3d-models/2389fa9c28024f908eebbb16803450c3 | орудие для дворика батареи |
 | Т-1 | 150 mm/55 SK C/28 | snrnsrk5 | CC BY | 4 тыс. | https://sketchfab.com/3d-models/1a0f08246a0f4ccf832616053b3dc5e4 | башня покрупнее |
