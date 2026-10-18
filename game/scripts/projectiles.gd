@@ -655,6 +655,10 @@ func _draw() -> void:
 
 ## Дымный шлейф: у ракеты тонкий и плотный, к хвосту шире и прозрачнее
 func _draw_smoke(tr: PackedVector2Array, head: Vector2, col: Color, k: float) -> void:
+	# M-39 (аудит 3.5-s6 Э-2): в 3D дым ракет — объёмный светлый след (contrails.gd); плоская 2D-линия
+	# с тёмной серединой давала «тонкие тёмные дуги» поверх него
+	if Render3D.enabled:
+		return
 	var n := tr.size()
 	if n == 0:
 		return
