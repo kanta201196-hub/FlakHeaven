@@ -183,7 +183,7 @@ func _sides(x: float, z: float, ctx := {}) -> Array:
 			if o.is_empty() or not (o["name"] in SETTLE):
 				continue
 			var a: Vector2 = o["pos"]
-			out.append([a, _river_near(a), float(o["size"]) * 0.75])
+			out.append([a, _river_point(a), float(o["size"]) * 0.75])
 	_side[key] = out
 	if _side.size() > 600:
 		_side.clear()
@@ -206,6 +206,15 @@ func _river_near(a: Vector2) -> Vector2:
 		if best_v < 0.01:
 			break
 	return best
+
+
+## Ближайшая точка русла: шаги Ньютона по полю реки, не сошлись — поиск по кольцам (_river_near).
+## Кольца находят точку с самым малым полем, а не самую близкую — боковая долина тянулась вдоль реки
+func _river_point(a: Vector2) -> Vector2:
+	var q := _field_point(a, 0.0)
+	if absf(river_field(q.x, q.y)) <= 4.0 and q.distance_to(a) < 2000.0:
+		return q
+	return _river_near(a)
 
 
 ## Расстояние до линии реки без боковых долин поселений, px со знаком: по нему идут река и дорога.
@@ -318,6 +327,12 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 ## Задетые водой точки толкают объект прочь; не вышло за 10 шагов — объекта в клетке нет
 func fix_object(o: Dictionary) -> Dictionary:
 	var p0: Vector2 = o["pos"]
+	if o["name"] in SETTLE and _bg != null:
+		p0 = _settle_spot(o)
+		if not p0.is_finite() or _settle_crowded(o, p0):
+			return {}
+	elif o["name"] == "o_crater" and absf(_v_raw(p0.x, p0.y)) / V_SCALE > D_FAN:
+		return {}   # воронка с площадкой на склоне выглядела ямой в горе: воронки — на дне долин и конусах
 	var p := p0
 	var R := float(o["size"]) * AdobeBuild.footprint(o["name"])
 	var clear := RIVER_GUARD   # M-35: охранная зона — вода и мокрый берег (в шейдере берег темнеет до river_w × 2.4)
@@ -350,6 +365,47 @@ func fix_object(o: Dictionary) -> Dictionary:
 		if p.distance_to(p0) > CHUNK * 0.45:
 			break
 	return {}
+
+
+## Карта расстановки (тред «Второй биом», 18.10.2026): поселения — у реки, а не где выпала клетка.
+## Кишлак и крепость встают за дорогой (дорога идёт по их краю), оазис — на другом берегу.
+## Нет реки ближе SETTLE_REACH — поселения в клетке нет (раньше к нему прорезалась длинная боковая долина)
+const SETTLE_REACH := 1300.0   # < CHUNK: сдвинутое поселение остаётся в соседней клетке (_flat смотрит ±1)
+const SETTLE_GAP := 2000.0     # между поселениями не ближе
+
+
+## Место поселения у реки (INF — реки рядом нет)
+func _settle_spot(o: Dictionary) -> Vector2:
+	var raw: Vector2 = o["pos"]
+	var q := _river_point(raw)
+	if absf(_v_raw(q.x, q.y)) > 0.01:
+		return Vector2.INF
+	var R := float(o["size"]) * AdobeBuild.footprint(o["name"])
+	var target := D_ROAD + 16.0 + R + 10.0 if o["name"] != "o_oasis" else -(RIVER_GUARD + R + 10.0)
+	var p := _field_point(q + (raw - q).limit_length(40.0), target)
+	if p.distance_to(raw) > SETTLE_REACH:
+		return Vector2.INF
+	return p
+
+
+## Рядом уже есть поселение с большим приоритетом (от хеша клетки) — это не ставим
+func _settle_crowded(o: Dictionary, p: Vector2) -> bool:
+	var key := Vector2i(int(floorf((o["pos"] as Vector2).x / CHUNK)), int(floorf((o["pos"] as Vector2).y / CHUNK)))
+	var mine := hash(key) & 0xffff
+	for dx in range(-3, 4):
+		for dz in range(-3, 4):
+			if dx == 0 and dz == 0:
+				continue
+			var k := Vector2i(key.x + dx, key.y + dz)
+			if (hash(k) & 0xffff) <= mine:
+				continue
+			var n := _bg._chunk_object_raw(k.x, k.y)
+			if n.is_empty() or not (n["name"] in SETTLE):
+				continue
+			var np := _settle_spot(n)
+			if np.is_finite() and np.distance_to(p) < SETTLE_GAP:
+				return true
+	return false
 
 
 ## Русло с берегом (как в find_floor): сюда наземная техника не заезжает (M-35: зона + полкорпуса)

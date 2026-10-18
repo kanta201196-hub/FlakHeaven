@@ -256,15 +256,21 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 		match z:
 			"bank":    # берег: тополя и кусты у воды — зелёная полоса вдоль реки
 				kind = "poplar" if roll < 0.22 else ("shrub" if roll < 0.55 else "")
-			"floor":   # дно долины: редкие кусты и камни, принесённые рекой
-				kind = "shrub" if roll < 0.14 else ("boulders" if roll < 0.17 else "")
-			"fan":     # конусы выноса и осыпи у подножия: валуны, кусты
-				kind = "boulders" if roll < 0.2 else ("shrub" if roll < 0.3 else "")
-			"slope":   # склон: выходы пород, редкие валуны
-				kind = "outcrop" if roll < 0.08 else ("boulders" if roll < 0.13 else "")
+			"floor":   # дно долины: редкие кусты; камни — только те, что принесла река (ближе к руслу)
+				kind = "shrub" if roll < 0.14 else ("boulders" if roll < 0.16 and absf(_t.river_field(p.x, p.y)) < 200.0 else "")
+			"fan":     # конусы выноса и осыпи у подножия: валуны грудами, кусты
+				kind = "boulders" if roll < 0.07 else ("shrub" if roll < 0.17 else "")
+			"slope":   # склон: выходы пород, редкие груды валунов под ними
+				kind = "outcrop" if roll < 0.08 else ("boulders" if roll < 0.1 else "")
 			"crest":   # гребень: скальные зубцы
 				kind = "spire" if roll < 0.035 else ""
-		if kind != "":
+		if kind == "boulders":
+			# карта расстановки (18.10.2026): валуны лежат грудами — осыпь, а не ровная «сыпь» по всей карте
+			for j in rng.randi_range(3, 5):
+				var q := p + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, 70.0) * (0.0 if j == 0 else 1.0)
+				if _zone(q, ctx) in ["floor", "fan", "slope"]:
+					_add(rng, put, kind, q, keep_out, ctx)
+		elif kind != "":
 			_add(rng, put, kind, p, keep_out, ctx)
 	# сгоревшая техника — только на дороге или у обочины (на гору ей не заехать)
 	if rng.randf() < 0.22:
