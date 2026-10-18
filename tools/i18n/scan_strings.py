@@ -9,6 +9,10 @@
 Запуск из корня репозитория:
   python3 tools/i18n/scan_strings.py            # сводка по файлам
   python3 tools/i18n/scan_strings.py --csv out.csv  # таблица строк: файл, строка, текст
+  python3 tools/i18n/scan_strings.py --pot game/locale/messages.pot  # шаблон gettext для перевода
+
+В шаблон не идут отладочные файлы (DEBUG ниже). Ключ перевода — русская фраза
+как в коде, вместе с %d / %s: переводится шаблон, а числа подставляются после.
 """
 import csv
 import re
@@ -19,6 +23,8 @@ ROOT = Path(__file__).resolve().parents[2]
 DIRS = [ROOT / "game" / "scripts", ROOT / "game" / "scenes"]
 STR = re.compile(r'"((?:[^"\\]|\\.)*)"')
 CYR = re.compile(r"[А-Яа-яЁё]")
+# отладка и стенды — игрок их не видит, не переводим
+DEBUG = {"main_debug.gd", "tuning.gd", "tuning_panel.gd", "visual_bench.gd", "boom_bench.gd", "perf.gd"}
 CMP = re.compile(r'(?:==|!=)\s*"((?:[^"\\]|\\.)*)"|"((?:[^"\\]|\\.)*)"\s*(?:==|!=)')
 
 
@@ -41,8 +47,27 @@ def scan():
 	return rows, cmps
 
 
+def write_pot(rows, out: Path):
+	refs: dict[str, list[str]] = {}
+	for f, n, s in rows:
+		if Path(f).name not in DEBUG:
+			refs.setdefault(s, []).append(f"{f}:{n}")
+	lines = ['msgid ""', 'msgstr ""', '"Content-Type: text/plain; charset=UTF-8\\n"', '"Language: ru\\n"', ""]
+	for s, rr in refs.items():
+		lines.append("#: " + " ".join(rr[:6]))
+		if "%" in s:
+			lines.append("#, c-format")
+		lines += [f'msgid "{s}"', 'msgstr ""', ""]
+	out.parent.mkdir(parents=True, exist_ok=True)
+	out.write_text("\n".join(lines), encoding="utf-8")
+	print(f"шаблон: {len(refs)} строк в {out}")
+
+
 def main():
 	rows, cmps = scan()
+	if "--pot" in sys.argv:
+		write_pot(rows, Path(sys.argv[sys.argv.index("--pot") + 1]))
+		return
 	if "--csv" in sys.argv:
 		out = Path(sys.argv[sys.argv.index("--csv") + 1])
 		with out.open("w", encoding="utf-8", newline="") as f:
