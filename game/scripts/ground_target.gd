@@ -13,6 +13,18 @@ extends Enemy
 ## разгон и торможение, ЗСУ на гусеницах доворачивает на месте, ЗРК на колёсах едет по дуге.
 ## Корпус в 3D смотрит по курсу машины, а не по сдвигу точки на экране.
 
+## S6-02: категории прочности наземных целей (до множителя врагов и роста по времени)
+const HP_STD := 90.0
+const HP_ARMOR := 135.0
+const HP_FORT := 270.0
+## Нижняя граница прочности: столько секунд урона игрока цель выдерживает в любом случае (Kanta 18.10:
+## «заметно мягче» прежней — треть: бункер 9 → 3 с, колонна 1,5–5 → 0,6–1 с). Против сильного билда к концу вылета.
+const FLOOR_S := {HP_STD: 0.6, HP_ARMOR: 1.0, HP_FORT: 3.0}
+
+
+## Прочность цели категории base: base × рост врагов, но не меньше FLOOR_S секунд урона игрока
+static func floor_hp(base: float, hp_k: float, dps: float) -> float:
+	return maxf(base * hp_k, dps * float(FLOOR_S.get(base, 0.6)))
 var variant := "zsu"
 var site: AASite
 var _cd := 2.0
@@ -37,35 +49,37 @@ const DRIVE_SPEED := 70.0
 const DEF_R := 300.0         # радиус перехвата наших ракет
 
 
-func setup(v: String, s: AASite, hp_mult: float) -> void:
+func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 	variant = v
 	site = s
 	_body_angle = randf() * TAU
 	is_ground = true
 	no_despawn = true
 	big = v != "zsu"
+	# S6-02 (решение Kanta 18.10): прочность по категориям — стандартная 90 (ЗСУ, радар), бронированная 135 (ЗРК),
+	# укреплённые строения 270 (бункер); × рост врагов
 	match v:
 		"zsu":
-			hp = 90.0
+			hp = GroundTarget.HP_STD
 			radius = 20.0
 			xp = 4
 			parts = 4
 		"sam":
-			hp = 120.0
+			hp = GroundTarget.HP_ARMOR
 			radius = 24.0
 			xp = 5
 			parts = 5
 		"radar":
-			hp = 80.0
+			hp = GroundTarget.HP_STD
 			radius = 22.0
 			xp = 3
 			parts = 3
 		"bunker":
-			hp = 420.0 # 3.5: главная цель позиции
+			hp = GroundTarget.HP_FORT # главная цель позиции
 			radius = 32.0
 			xp = 8
 			parts = 10
-	hp *= hp_mult
+	hp = floor_hp(hp, hp_mult, dps)
 	max_hp = hp
 	repair_chance = 0.15
 	kill_shake = 6.0

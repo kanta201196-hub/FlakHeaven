@@ -178,10 +178,10 @@ func _gun(p: Player, delta: float) -> void:
 		return
 	var t := _sortie_tgt if _sortie_t > 0.0 and is_instance_valid(_sortie_tgt) else _target(650.0)
 	if t and absf(Vector2.from_angle(heading).angle_to(t.global_position - global_position)) < deg_to_rad(40.0):
-		_fire_cd = 1.0 / (Tuning.g("fire_rate") * 0.6)
+		_fire_cd = 1.0 / (Tuning.g("fire_rate") * 0.667)   # S6-02: темп пушки 10 → 9, у ведомых прежние 6 в секунду
 		var dir := (t.global_position - global_position).normalized()
 		Main.I.projectiles.spawn_player_bullet(global_position + dir * 14.0, dir * Tuning.g("bullet_speed") + velocity,
-			Tuning.g("bullet_damage") * 0.7 * dmg_k() * p.mods["gun_dmg"], 0.5, false, src())
+			Tuning.g("bullet_damage") * 0.327 * dmg_k() * p.mods["gun_dmg"], 0.5, false, src())
 
 
 func _missile(p: Player, t: Enemy, dmg: float, opts := {}) -> void:

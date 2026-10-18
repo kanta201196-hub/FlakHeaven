@@ -21,8 +21,7 @@ var bunker: GroundTarget = null
 var anchor := Vector2.ZERO   # 3.5: центр позиции на рельефе (логическая позиция — проекция, см. GroundTarget.air_pos)
 
 
-## bunker_hp — нижняя граница прочности бункера (спавнер считает её от текущего урона игрока)
-func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
+func setup(center: Vector2, hp_mult: float, dps := 0.0) -> void:
 	# 3D-рельеф: техника ПВО стоит на дне долины, а не на хребте (правила — s4-landscape-rules.md)
 	var tr := Terrain3D.active()
 	if tr != null:
@@ -39,11 +38,9 @@ func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
 	var rot := randf() * TAU   # тест 3.5-s4: раскладка поворачивается целиком — машины не съезжаются в кучу
 	for l in layout:
 		var g := GroundTarget.new()
-		g.setup(l[0], self, hp_mult)
+		g.setup(l[0], self, hp_mult, dps)
 		if l[0] == "bunker":
 			bunker = g
-			g.hp = maxf(g.hp, bunker_hp)
-			g.max_hp = g.hp
 		g.position = center + ((l[1] as Vector2).rotated(rot) * SPREAD * randf_range(0.9, 1.2) if l[0] != "bunker" else Vector2.ZERO)
 		if tr != null and l[0] != "bunker":
 			# своя точка рядом с назначенной, на том же берегу, не ближе SPACING к другим машинам и бункеру

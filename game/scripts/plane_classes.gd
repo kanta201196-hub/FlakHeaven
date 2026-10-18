@@ -17,7 +17,7 @@ const DATA := {
 	"fighter": {
 		"title": "Истребитель «Оса»",
 		"role": "Лёгкий: скорость, манёвр, уклонение",
-		"hp": 120.0, "speed": 1.0, "turn": 1.0, "gun_dmg": 1.0, "gun_rate": 1.0, "size": 1.0, "roll_cd_k": 0.75,
+		"hp": 120.0, "speed": 1.0, "turn": 1.0, "gun_dmg": 0.733, "gun_rate": 1.0, "size": 1.0, "roll_cd_k": 0.75,
 		"inertia_k": 0.8, "turn_accel": 9.0, "roll_k": 1.0, "space": "roll",
 		"groups": [
 			{"name": "Крылья (пара)", "slots": 2, "weapon": "aam"},
@@ -32,7 +32,7 @@ const DATA := {
 	"attacker": {
 		"title": "Штурмовик «Грач»",
 		"role": "Средний: живучесть, усиленная пушка, турель",
-		"hp": 160.0, "speed": 0.86, "turn": 0.8, "gun_dmg": 1.4, "gun_rate": 0.9, "size": 1.25,
+		"hp": 160.0, "speed": 0.86, "turn": 0.8, "gun_dmg": 1.0, "gun_rate": 1.0, "size": 1.25,
 		"inertia_k": 1.6, "turn_accel": 3.5, "roll_k": 1.45, "space": "roll",
 		"groups": [
 			{"name": "Внутренняя пара", "slots": 2, "weapon": "rockets"},
@@ -47,7 +47,7 @@ const DATA := {
 	"bomber": {
 		"title": "Бомбардировщик «Кит»",
 		"role": "Тяжёлый: прочный, 3 турели, бомбы по земле, залп ловушек",
-		"hp": 250.0, "speed": 0.82, "turn": 0.62, "gun_dmg": 0.9, "gun_rate": 0.75, "size": 1.6,
+		"hp": 250.0, "speed": 0.82, "turn": 0.62, "gun_dmg": 0.5, "gun_rate": 1.0, "size": 1.6,
 		"turret_k": 1.4, "turret_range_k": 1.2,
 		"inertia_k": 2.6, "turn_accel": 1.8, "roll_k": 1.0, "space": "flares",
 		"groups": [
