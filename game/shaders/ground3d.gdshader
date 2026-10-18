@@ -376,10 +376,11 @@ void fragment() {
 			if (zb.z > 2.5) {
 				// огонь: тлеющие угли с мерцанием, край рваный
 				float n = vnoise(cp / 18.0 + zb.w + vec2(gz_time * 0.7, -gz_time * 0.4));
-				float n2 = vnoise(cp / 7.0 - zb.w + vec2(-gz_time * 1.3, gz_time));
+				float n2 = vnoise(cp / 16.0 - zb.w + vec2(-gz_time * 0.9, gz_time * 0.6)) * 0.65
+					+ vnoise(cp / 6.0 + zb.w + vec2(gz_time * 1.4, 0.0)) * 0.35;
 				float edge = 1.0 - smoothstep(r * (0.55 + 0.35 * n), r * (0.75 + 0.35 * n), d);
 				// гарь с тлеющими прожилками: светятся только «трещины» шума, остальное — тёмная гарь с лёгким жаром
-				float ember = smoothstep(0.5, 0.8, n2) * edge;
+				float ember = smoothstep(0.42, 0.78, n2) * edge;
 				alb = mix(alb, alb * vec3(0.2, 0.18, 0.16), edge * 0.8 * a);
 				gz_e += zc * (ember * 1.1 + edge * 0.1) * a;
 			} else {
