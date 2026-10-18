@@ -662,6 +662,18 @@ func _relief_alt(u: Dictionary, p: Vector2, fwd: Vector2, look: float, delta: fl
 	return [nw, float(u["pitch"])]
 
 
+## Тест 3.5-s7: нижняя граница для самолёта игрока — самая высокая точка земли под ним и вокруг
+## (на полкорпуса во все стороны: крыло в крене и склон между камерой и самолётом) плюс relief_min.
+## В нырке над горами самолёт идёт ниже, но в склон не уходит.
+func _ground_floor(p: Vector2, r: float) -> float:
+	if terrain == null or Tuning.g("relief_follow") < 0.5:
+		return -INF
+	var top := terrain.surface_fast(p.x, p.y).y
+	for o: Vector2 in [Vector2(r, 0), Vector2(-r, 0), Vector2(0, r), Vector2(0, -r)]:
+		top = maxf(top, terrain.surface_fast(p.x + o.x, p.y + o.y).y)
+	return top + Tuning.g("relief_min")
+
+
 func _setup_plane_shadows() -> void:
 	_psh_vp = SubViewport.new()
 	_psh_vp.name = "PlaneShadows"
@@ -912,8 +924,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				roll = (1.0 - p.roll_t / p.roll_time()) * TAU * p.roll_dir
 			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт плавно ниже и меньше на экране
 			var ra := _relief_alt(u, p.global_position, p.velocity, 1.0, sd)
-			var y: float = ra[0] - Tuning.g("dive_depth") * dk
-			_place(u, p.global_position, p.heading, p.bank * 0.45, roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), float(ra[1]) - 0.2 * p.dive_pitch())
+			var y: float = maxf(ra[0] - Tuning.g("dive_depth") * dk, _ground_floor(p.global_position, Tuning.g("plane_len") * p.size * 0.5))
+			_place(u, p.global_position, p.heading, p.bank * 0.55, roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), float(ra[1]) - 0.2 * p.dive_pitch())
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
 			u["ab"] = move_toward(float(u.get("ab", 0.0)), 1.0 if p.ab_t > 0.0 else 0.0, sd * 4.0)
 			var ab: float = u["ab"]

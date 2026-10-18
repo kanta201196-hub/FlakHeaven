@@ -544,7 +544,8 @@ func _find_loops_pass() -> void:
 ## если вокруг всё запретное, берётся наименее плохая точка — дальше всех от воды и объектов.
 ## side ≠ 0 — только этот берег (знак river_field): переезжающая техника не пересекает реку
 ## avoid — [[точка, радиус]] куда нельзя (другие машины позиции); dry — сколько держаться от линии реки
-func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RIVER_GUARD + 10.0) -> Vector2:
+## flat — только равнина (flat_at): тест 3.5-s7, позиции ПВО оказывались на склоне
+func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RIVER_GUARD + 10.0, flat := false) -> Vector2:
 	var objs := []
 	if _bg != null:
 		var c := Vector2i(int(floorf(p.x / CHUNK)), int(floorf(p.y / CHUNK)))
@@ -574,12 +575,41 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 				var d := q.distance_to(o[0])
 				if d < float(o[1]):
 					sc += 50.0 + (float(o[1]) - d)
+			if flat and sc < best_s and not flat_at(q, 0.0):
+				sc += 30.0 + height(q.x, q.y) / 10.0   # склон — штраф меньше воды и соседей, больше дальности
 			if sc < best_s:
 				best_s = sc
 				best = q
 		if best_s < 0.05 + rr / radius * 0.2:
 			break
 	return best
+
+
+## Равнина (тест 3.5-s7: позиции ПВО — только на равнинах): не выше FLAT_H над поймой,
+## наклон не круче FLAT_K (по 4 точкам в FLAT_E), не в русле с берегом (+ margin)
+const FLAT_H := 60.0   # выше — уже не дно долины и не пологий конус выноса, а плечо горы
+const FLAT_K := 0.12
+const FLAT_E := 24.0
+
+
+func flat_at(p: Vector2, margin := 10.0) -> bool:
+	if absf(river_field(p.x, p.y)) < RIVER_GUARD + margin:
+		return false
+	var h := height(p.x, p.y)
+	if h > FLAT_H:
+		return false
+	for d: Vector2 in [Vector2(FLAT_E, 0), Vector2(-FLAT_E, 0), Vector2(0, FLAT_E), Vector2(0, -FLAT_E)]:
+		if absf(height(p.x + d.x, p.y + d.y) - h) > FLAT_K * FLAT_E:
+			return false
+	return true
+
+
+## Точка дна главной долины на off px от линии реки, на том берегу, где p (тест 3.5-s7: позиция ПВО,
+## выпавшая среди гор дальше поиска find_floor, переезжает на ближайшую равнину у реки)
+func floor_near(p: Vector2, off: float) -> Vector2:
+	var side := signf(river_field(p.x, p.y))
+	var q := _river_point(p)
+	return _field_point(q + (p - q).limit_length(40.0), (side if side != 0.0 else 1.0) * off)
 
 
 ## Тест 3.5-s4 (п. 20): объект клетки (кишлак, крепость, оазис, воронка, обломки, скалы) не лежит в реке.

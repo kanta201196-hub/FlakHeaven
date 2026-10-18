@@ -512,6 +512,13 @@ func _spawn_all_enemies(c: Vector2) -> void:
 ## 3.4-t1 (п. 1): 3D-ангар — вкладка «САМОЛЁТ» каждого класса, ур. 1 и ур. 2 → user://vis_hangar_<класс>_<ур>.png
 var _hq: Array = []
 var _hf := 0
+## Тест 3.5-s7 (дефекты окраски в ангаре): --hangarclose вместе с --liveries — крупные планы
+## [фокус, рысканье, тангаж, дальность], как виды 8 и 10 листа окрасок (tools/model_lab/livery_sheet.gd):
+## гондола и правое крыло сзади почти по горизонту (ракурс скриншота Kanta), хвост внутренней гондолы снизу сзади
+var _hclose: Array = ([
+	[Vector3(-0.12, 0.0, 0.2), 2.75, 0.1, 0.34],
+	[Vector3(-0.17, -0.03, 0.145), 2.6, -0.35, 0.2],
+] if OS.get_cmdline_user_args().has("--hangarclose") else [])
 
 
 func _hangar_bench() -> void:
@@ -568,7 +575,11 @@ func _hangar_bench() -> void:
 			for c in PlaneClasses.LIST:
 				for lv in [llv]:
 					for lv2: Array in Livery.list(c):
-						_hq.append([c, lv, 1, "L", lv2[0]])
+						if _hclose.is_empty():
+							_hq.append([c, lv, 1, "L", lv2[0]])
+						else:   # тест 3.5-s7: --hangarclose — крупные планы (гондола и крыло, хвост гондолы)
+							for vi in _hclose.size():
+								_hq.append([c, lv, 1, "L", lv2[0], vi])
 			_t = 0.0
 			return
 		for c in PlaneClasses.LIST:
@@ -621,6 +632,14 @@ func _hangar_bench() -> void:
 		Hangar3D.I.weapon_tier = cur[2]
 		if cur.size() > 4:   # --liveries: окраска из очереди (в профиль без сохранения)
 			Profile.cls(cur[0])["livery"] = cur[4]
+			if cur.size() > 5:   # --hangarclose: [фокус, рысканье, тангаж, дальность]
+				var hv: Array = _hclose[cur[5]]
+				Hangar3D.bench_pitch_min = -0.9
+				Hangar3D.I.focus = hv[0]
+				Hangar3D.I._yaw = hv[1]
+				Hangar3D.I._pitch = hv[2]
+				Hangar3D.I._dist = hv[3]
+				Hangar3D.I._idle = 0.0
 		elif cur.size() > 3:   # --turretclose: крупный план турели № cur[3]
 			var h := Hangar3D.I
 			var tp: Array = h.turret_pos[cur[3]] if cur[3] < h.turret_pos.size() else [Vector3.ZERO, "top"]
@@ -657,7 +676,9 @@ func _hangar_bench() -> void:
 			Hangar3D.I._idle = 0.0
 	_hf += 1
 	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
-		if cur.size() > 4:
+		if cur.size() > 5:
+			_save("hangar_close_%s_%d_%s_v%d" % [cur[0], cur[1], cur[4], cur[5]])
+		elif cur.size() > 4:
 			_save("hangar_livery_%s_%d_%s" % [cur[0], cur[1], cur[4]])
 		elif cur.size() > 3:
 			_save("turret_s%d_%s_%d_w%d_v%d" % [WeaponModels.turret_style, cur[0], cur[1], cur[2], cur[3]])
