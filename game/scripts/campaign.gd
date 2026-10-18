@@ -151,10 +151,8 @@ static func on_evac(run_time: float, flags: Dictionary) -> Dictionary:
 		out["first"] = true
 		out["parts"] = int(o["parts"])
 		out["opens"] = o["opens"]
-		# следующая операция становится выбранной
-		if sel + 1 < OPS.size():
-			sel += 1
-			_cfg.set_value("state", "sel", sel)
+		# тест 3.5-s5: следующая операция сама не выбирается — в меню она отмечена «новая, сложнее».
+		# Раньше после «Перевала» вылет молча шёл на «Боевом», и тест баланса шёл не на той сложности.
 		_save()
 	return out
 
