@@ -25,6 +25,7 @@ var _cap_budget := -1.0
 var _cap_t := 0.0
 var silence := 0.0
 var move_vel := Vector2.ZERO   # 3.1: фактическая скорость (для пуль стрелка)
+var _drift := Vector2.INF      # тест 3.5-s7: скорость, с которой заглушённый ЭМИ самолёт летит по инерции
 var _prev_pos := Vector2.INF   # 3.1: ЭМИ «Ласки» — враг молчит
 ## 3.5: наземная цель стоит в точке рельефа (anchor). Логическая позиция — проекция этой точки
 ## на слой самолётов с камеры, чтобы на наклонной камере цель не «ехала» по земле.
@@ -83,6 +84,8 @@ func take_hit(dmg: float, source := "прочее") -> void:
 	dmg = absorb(dmg)
 	if min_life > 0.0:
 		dmg = _cap_dps(dmg)
+	if is_ground and not is_boss:
+		dmg = _cap_burst(dmg)
 	if dmg <= 0.0:
 		_flash = 0.03
 		return
@@ -92,6 +95,25 @@ func take_hit(dmg: float, source := "прочее") -> void:
 	Main.I.on_enemy_hit(self, dmg)
 	if hp <= 0.0:
 		_die()
+
+
+## Тест 3.5-s7 (Kanta: «ПВО сносится одной бомбой», «наземка — с одного залпа»): за один залп
+## (BURST_WIN с первого попадания) наземная цель теряет не больше GROUND_BURST прочности —
+## позицию ПВО и технику добивает только второй заход
+const GROUND_BURST := 0.7
+const BURST_WIN := 0.6
+var _burst_t := -INF
+var _burst_sum := 0.0
+
+
+func _cap_burst(dmg: float) -> float:
+	var now := Main.I.run_time
+	if now - _burst_t > BURST_WIN:
+		_burst_t = now
+		_burst_sum = 0.0
+	dmg = clampf(dmg, 0.0, maxf(0.0, max_hp * GROUND_BURST - _burst_sum))
+	_burst_sum += dmg
+	return dmg
 
 
 ## Правка 3.5-s4 (лог «Осы»: асы падали за 10 с): корпус аса принимает не больше max_hp / min_life в секунду,
@@ -138,7 +160,14 @@ func _process(delta: float) -> void:
 		return
 	if silence > 0.0:
 		silence -= delta
+		# тест 3.5-s7 («залипание врагов»): ЭМИ глушит оружие и автопилот, но самолёт летит дальше по инерции —
+		# раньше он 3 с висел на месте
+		if not is_ground:
+			if _drift == Vector2.INF:
+				_drift = move_vel
+			position += _drift * delta
 	else:
+		_drift = Vector2.INF
 		behave(delta)
 	if evade_t > 0.0:
 		evade_t -= delta

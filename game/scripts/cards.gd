@@ -108,7 +108,7 @@ const SYNERGIES := {
 		"desc": "Бомба разбрасывает 4 суббоеприпаса крестом и оставляет горящее пятно на 2,5 с (12 урона/с)",
 		"short": "кресты взрывов и огонь"},
 	"chain": {"title": "Цепная реакция", "w": ["rockets", "bombs"], "tag": "blast", "tag2": "armor", "color": Color(1.0, 0.3, 0.2),
-		"desc": "Враг, убитый взрывом, взрывается сам: 30 урона + 10% его прочности, радиус 90; цепь до 5 звеньев",
+		"desc": "Враг, убитый взрывом ракеты залпа или бомбы, взрывается сам: 30 урона + 8% его прочности, радиус 90; цепь до 3 звеньев",
 		"short": "убитые взрывом рвутся домино"},
 	"wolfpack": {"title": "Волчья стая", "wingmen": true, "tag": "wing", "tag2": "missiles", "color": Color(0.75, 0.52, 1.0),
 		"desc": "Когда вы пускаете ракеты, каждый ведомый дублирует пуск: 2 ракеты в вашу цель (×0,6 урона)",
@@ -120,7 +120,7 @@ const SYNERGIES := {
 		"desc": "Уведённая ловушкой ракета разворачивается и бьёт ближайшего врага (80 урона, взрыв 90); уклонение отстреливает 6 ловушек",
 		"short": "вражеские ракеты летят в своих"},
 	"hedgehog": {"title": "Стальной ёж", "w": ["turret"], "tag": "turrets", "tag2": "blast", "color": Color(0.3, 0.85, 0.8),
-		"desc": "Раз в 5 с каждая турель выпускает 3 мини-ракеты по разным целям (22, взрыв 45); турели сбивают ракету раз в 3 с",
+		"desc": "Раз в 5 с каждая турель выпускает 3 мини-ракеты по разным целям (22, взрыв 45); турели раз в 3 с стреляют по ракете (сбивают в 55%)",
 		"short": "залп мини-ракет из турелей"},
 	"gunner": {"title": "Пушкарь", "w": ["gunpod"], "tag": "kinetic", "tag2": "blast", "color": Color(0.95, 0.85, 0.3),
 		"desc": "Каждый 6-й снаряд гондолы — фугасный (урон ×4, взрыв 70); все пули гондолы пробивают 1 цель",
@@ -603,6 +603,8 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			var to := mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
 			card["desc"] = "%s: ур. %d → %d\n%s" % [g2.name, g2.level, to, Weapons.DEFS[g2.weapon]["lvl"]]
+			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to) > g2.slots:
+				card["desc"] += "\nВторая турель — сверху на фюзеляже"
 			if r > 0:
 				card["desc"] += "\nБонус редкости: +%s урона группы" % _pct(0.15 * (k - 1.0))
 			if g2.weapon == PlaneClasses.signature(p.cls_id):
@@ -779,6 +781,8 @@ static func apply(p: Player, card: Dictionary) -> void:
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			g2.level = mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
 			g2.bonus += 0.15 * (k - 1.0)
+			if g2.builtin and g2.weapon == "turret":
+				g2.slots = PlaneClasses.turret_slots(p.cls_id, g2.level)
 		"module":
 			var id: String = card["id"]
 			p.taken[id] = int(p.taken.get(id, 0)) + 1

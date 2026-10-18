@@ -4,7 +4,8 @@ class_name PlaneClasses
 ##
 ## groups — группы подвесов (одна настройка приоритета на группу):
 ##   name — где висит, slots — сколько точек в группе, weapon — стартовое оружие ("" — пусто).
-## turrets — встроенные автотурели (круговой обстрел), отдельная группа без выбора оружия.
+## turrets — встроенные автотурели (круговой обстрел), отдельная группа без выбора оружия: сколько на старте;
+##   turrets_max — сколько можно получить в бою (тест 3.5-s7: «Грач» — 1, «Кит» — 2, корма и фюзеляж).
 ## 3.5 (правки 13, 26, 27) — «ощущение» класса:
 ##   inertia_k — во сколько раз дольше вектор скорости догоняет нос (занос тяжёлой машины);
 ##   turn_accel — как быстро набирается угловая скорость (в долях полной за секунду): Оса — сразу, Кит — медленно;
@@ -46,7 +47,7 @@ const DATA := {
 	},
 	"bomber": {
 		"title": "Бомбардировщик «Кит»",
-		"role": "Тяжёлый: прочный, 3 турели, бомбы по земле, залп ловушек",
+		"role": "Тяжёлый: прочный, кормовая турель (+ верхняя в бою), бомбы по земле, залп ловушек",
 		"hp": 250.0, "speed": 0.82, "turn": 0.62, "gun_dmg": 0.5, "gun_rate": 1.0, "size": 1.6,
 		"turret_k": 1.4, "turret_range_k": 1.2,
 		"inertia_k": 2.6, "turn_accel": 1.8, "roll_k": 1.0, "space": "flares",
@@ -54,7 +55,7 @@ const DATA := {
 			{"name": "Бомбоотсек", "slots": 2, "weapon": "bombs"},
 			{"name": "Крылья (пара)", "slots": 2, "weapon": ""},
 		],
-		"turrets": 3,
+		"turrets": 1, "turrets_max": 2,
 		"weapons": ["rockets", "flares", "bombs", "turret"], "signature": "bombs",
 		"wingmen": 2,
 		"skill3": "umbrella",
@@ -164,6 +165,18 @@ const MASTERY := {
 }
 const MASTERY_K := 1.5
 const MASTERY_FIRE_SRC := "мастерство: выжженная земля"
+
+
+## Тест 3.5-s7 (Kanta): у «Кита» на старте только кормовая турель, верхняя на фюзеляже — с ур. 3 турелей
+const TURRET2_LVL := 3
+
+
+static func turret_slots(cls_id: String, level: int) -> int:
+	var d: Dictionary = DATA[cls_id]
+	var n := int(d["turrets"])
+	if level >= TURRET2_LVL:
+		n = int(d.get("turrets_max", n))
+	return n
 
 
 static func allows(cls_id: String, w: String) -> bool:
