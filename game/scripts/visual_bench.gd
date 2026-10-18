@@ -56,7 +56,8 @@ func process(delta: float) -> void:
 		return
 	m.god_mode = true
 	m.spawner.process_mode = Node.PROCESS_MODE_DISABLED
-	var keep: bool = _i >= 0 and _i < _points.size() and (_points[_i] as Dictionary).get("enemies", false)
+	var cur: Dictionary = _points[_i] if _i >= 0 and _i < _points.size() else {}
+	var keep: bool = cur.get("enemies", false) or cur.get("convoy", false)   # M-36: машины колонны — тоже враги
 	for e in m.get_tree().get_nodes_in_group("enemies"):
 		if not keep:
 			(e as Node).queue_free()
@@ -112,6 +113,24 @@ func process(delta: float) -> void:
 		_fort.parts_down = {}
 		for nm in (["turret_1", "turret_2", "turret_3", "turret_4"] if ph >= 2 else []) + (["engine_l", "engine_r"] if ph >= 3 else []):
 			_fort.parts_down[nm] = true
+	elif p.get("convoy", false):
+		if _convoy == null:
+			_convoy = Convoy.new()
+			_convoy.setup(p["pos"], Vector2.RIGHT, 1.0, 100.0, 0.0)
+			m.world.add_child(_convoy)
+			_convoy.process_mode = Node.PROCESS_MODE_DISABLED
+		if _pt > 0.3 and not p.has("_done"):   # машины уже в мире — ставим подряд по дороге у точки и останавливаем
+			p["_done"] = true
+			var s0: float = _convoy._s_of(p["pos"])
+			var at := s0
+			for v: ConvoyVehicle in _convoy.vehicles:   # середина колонны — у точки
+				at += (float(ConvoyVehicle.SPEC[v.role]["len"]) * Tuning.g("unit_scale") + ConvoyVehicle.GAP) * 0.5
+			for v: ConvoyVehicle in _convoy.vehicles:
+				v.process_mode = Node.PROCESS_MODE_DISABLED
+				v.place(at)
+				at -= float(ConvoyVehicle.SPEC[v.role]["len"]) * Tuning.g("unit_scale") + ConvoyVehicle.GAP
+		for v: ConvoyVehicle in _convoy.vehicles:
+			v.process_mode = Node.PROCESS_MODE_DISABLED
 	elif p.get("enemies", false) and (not _spawned or m.get_tree().get_nodes_in_group("enemies").is_empty()):   # смена класса в начале точки очищает мир
 		_spawn_all_enemies(p["pos"])   # точка, а не игрок: в первый кадр игрок ещё не перенесён
 	_hold(p)
@@ -132,6 +151,7 @@ func process(delta: float) -> void:
 		_i += 1
 
 
+var _convoy: Convoy = null   # M-36: колонна для кадра дороги
 var _pt := 0.0     # время в точке (3.4-t1: эффекты — самолёт летит, за ним тянется след)
 
 
@@ -317,6 +337,8 @@ func _make_points() -> Array:
 		pts.append({"name": "rocks_range", "pos": best_r[1], "zoom": 0.6})
 		pts.append({"name": "rocks_slope", "pos": best_r[1], "zoom": 1.6})
 		pts.append({"name": "rocks_foot", "pos": best_s[1], "zoom": 1.2})
+		# M-36: дорога шире — колонна конвоя стоит на дороге (логика машин выключена)
+		pts.append({"name": "road_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 2.2, "convoy": true, "wait": 1.5})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
