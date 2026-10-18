@@ -124,6 +124,7 @@ func _ready() -> void:
 func _default_class(cls: String) -> Dictionary:
 	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2, "livery": "",
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
+		"nodes2": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": []}
 
 
@@ -321,8 +322,14 @@ func has_perk(c: String, id: String) -> bool:
 	return meta_k() > 0.0 and (cls(c)["perks"] as Array).has(id)
 
 
+## Правка 6 теста 3.5-s5 (Kanta): у самолёта ур. 2 своя прокачка с нуля, прогресс ур. 1 остаётся при нём.
+## Узлы — того самолёта, на котором класс сейчас летает (plane_lvl).
+func nodes_of(c: String) -> Dictionary:
+	return cls(c)["nodes2" if plane_lvl(c) == 2 else "nodes"]
+
+
 func node(c: String, id: String) -> int:
-	return int(cls(c)["nodes"].get(id, 0))
+	return int(nodes_of(c).get(id, 0))
 
 
 func plane2(c: String) -> bool:
@@ -405,7 +412,7 @@ func buy_node(c: String, id: String) -> bool:
 	if not can_buy_node(c, id):
 		return false
 	data["parts"] = parts() - int(NODE_COST[node(c, id)])
-	cls(c)["nodes"][id] = node(c, id) + 1
+	nodes_of(c)[id] = node(c, id) + 1
 	save()
 	return true
 
