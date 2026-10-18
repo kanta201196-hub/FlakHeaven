@@ -73,9 +73,9 @@ func _salvo() -> void:
 	_cd = randf_range(5.0, 7.0)
 	var k := Tuning.g("unit_scale") * LEN / 18.2   # метры модели → пиксели
 	for i in SALVO:
-		# блоки НАР: по три на ферме с каждого борта (1,95 / 2,7 / 3,45 м от оси)
+		# блоки НАР: по три на ферме с каждого борта (2,3 / 2,88 / 3,46 м от оси)
 		var side := -1.0 if i < 3 else 1.0
-		var off := Vector2(3.2 * k, side * [1.95, 2.7, 3.45][i % 3] * k).rotated(heading)
+		var off := Vector2(3.2 * k, side * [2.3, 2.88, 3.46][i % 3] * k).rotated(heading)
 		var a := _aim_dir + (float(i) / (SALVO - 1) - 0.5) * FAN
 		Main.I.projectiles.spawn_enemy_bullet(global_position + off, Vector2.from_angle(a) * 400.0, kind(), true, 1.0, true)
 	Main.I.sfx.play("rocket_launch", -9.0, 0.7)

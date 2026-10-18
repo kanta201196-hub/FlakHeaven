@@ -14,6 +14,8 @@ from mathutils import Vector, Matrix
 CAMO = [(0.62, 0.52, 0.36), (0.50, 0.40, 0.27), (0.36, 0.30, 0.21)]   # решение Kanta 17.10: песок, охра, бурый
 DUST = (0.66, 0.58, 0.45)
 CAMO_SCALE = 1.0    # крупность пятен: у машин длина 1 ≈ 5–8 м; вертолёт (длина 1 ≈ 18 м) задаёт больше
+CAMO_STRETCH = (1, 1, 1)   # вытянутость пятен по осям
+BELLY = None        # цвет низа (снизу смотрящие поверхности камуфляжа), None — без него
 EDGE_K = 1.0        # скругление кромок и затенение углов (в долях длины): у крупных моделей (корабль) меньше
 AO_K = 1.0
 
@@ -152,12 +154,15 @@ def kmat(kind):
     up = _m(nt, "MAXIMUM", nz.outputs["Z"], 0.0)
     side = _m(nt, "SUBTRACT", 1.0, _m(nt, "ABSOLUTE", nz.outputs["Z"]))
     if camo:
-        n1 = _noise(nt, pos, 4.4 * CAMO_SCALE, 3.0)
-        n2 = _noise(nt, pos, 5.0 * CAMO_SCALE, 3.0, (5.3, 1.7, 9.1))
+        n1 = _noise(nt, pos, 4.4 * CAMO_SCALE, 3.0, stretch=tuple(CAMO_STRETCH))
+        n2 = _noise(nt, pos, 5.0 * CAMO_SCALE, 3.0, (5.3, 1.7, 9.1), tuple(CAMO_STRETCH))
         m1 = _band(nt, n1, 0.525, 0.532)
         m2 = _m(nt, "MULTIPLY", _band(nt, n2, 0.56, 0.567), _m(nt, "SUBTRACT", 1.0, m1))
         col = _mix(nt, m1, CAMO[0], CAMO[1])
         col = _mix(nt, m2, col, CAMO[2])
+        if BELLY is not None:
+            # низ (поверхности, смотрящие вниз) — отдельным цветом, как у вертолётов и самолётов
+            col = _mix(nt, _band(nt, _m(nt, "MULTIPLY", nz.outputs["Z"], -1.0), 0.5, 0.62), col, BELLY)
     else:
         col = _sock(nt, base)
     # неровность краски / материала
