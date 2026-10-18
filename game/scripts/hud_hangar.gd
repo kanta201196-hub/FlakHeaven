@@ -25,7 +25,7 @@ func draw(m: Main, size: Vector2) -> void:
 		var pp := Profile.perk_points(id)
 		_text(Vector2(r.position.x + 16, r.position.y + 52), "Экипаж ур. %d%s" % [Profile.crew_lvl(id), ("  · очков перков: %d" % pp) if pp > 0 else ""], 15, Color(0.85, 0.88, 0.95))
 	# вкладки
-	var tabs := [["plane", "САМОЛЁТ"], ["weapons", "ОРУЖИЕ (общее)"], ["crew", "ЭКИПАЖ"]]
+	var tabs := [["plane", "САМОЛЁТ"], ["weapons", "ОРУЖИЕ"], ["crew", "ЭКИПАЖ"]]
 	for i in tabs.size():
 		var r2 := Rect2(size.x / 2.0 - 450 + i * 300.0, 182, 290, 44)
 		var on2: bool = m.hangar_tab == tabs[i][0]
@@ -144,9 +144,11 @@ func _hg_livery(c: String, lx: float, y: float) -> void:
 func _hg_weapons(m: Main, area: Rect2) -> void:
 	var lx := area.position.x
 	var y := area.position.y
-	for w in Profile.WEAPON_ORDER:
-		if not Weapons.in_game(w):
-			continue
+	# правка 5 теста 3.5-s5: только оружие этого самолёта; «конёк» класса отмечен
+	var own: Array = Profile.WEAPON_ORDER.filter(func(x): return Weapons.in_game(x) and PlaneClasses.allows(m.hangar_cls, x))
+	if not own.has(m.hangar_w) and not Weapons.EXP.has(m.hangar_w) and not own.is_empty():
+		m.hangar_w = own[0]
+	for w in own:
 		var r := Rect2(lx, y, 300, 70)
 		var on: bool = m.hangar_w == w
 		_panel(r, on)
@@ -163,6 +165,8 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			var st := Profile.tier_state(w, tier)
 			marks += ("●" if st != "" and st != "?" else "○") + " "
 		_text(Vector2(lx + 60, y + 54), marks, 15, Menu.C_AMBER)
+		if PlaneClasses.signature(m.hangar_cls) == w:
+			_text(Vector2(lx + 60, y + 54), "★ конёк: урон +20%", 13, Color(0.6, 1.0, 0.65), HORIZONTAL_ALIGNMENT_RIGHT, 228.0)
 		y += 80.0
 	var w2 := m.hangar_w
 	var rx := lx + 340.0
