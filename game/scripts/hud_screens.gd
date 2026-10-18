@@ -51,7 +51,8 @@ func class_select(size: Vector2) -> void:
 			_text(Vector2(x + 12, y), "• %s ×%d: %s" % [g["name"], g["slots"], wname], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if int(d["turrets"]) > 0:
-			_text(Vector2(x + 12, y), "• Автотурели: %d (круговой обстрел)" % int(d["turrets"]), 17, Color(0.85, 0.88, 0.95))
+			var tmax := int(d.get("turrets_max", d["turrets"]))
+			_text(Vector2(x + 12, y), "• Автотурели: %d (круговой обстрел)%s" % [int(d["turrets"]), (", вторая — с ур. %d" % PlaneClasses.TURRET2_LVL) if tmax > int(d["turrets"]) else ""], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if Profile.plane_lvl(id) == 2:   # U-06
 			_text(Vector2(x + 12, y), "• Тяжёлый подвес ×1: экспериментальное оружие из карточек", 17, Color(0.6, 0.85, 1.0))

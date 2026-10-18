@@ -27,6 +27,7 @@ var _aim_t: Enemy = null
 var _aim_scan := 0.0
 const TURRET_TRAVERSE := 150.0   # °/с; «Сервоприводы» — +25% за уровень
 const TURRET_GATE := 0.09        # рад — стреляет, когда стволы смотрят на цель точнее
+const TURRET_INTERCEPT := 0.55   # тест 3.5-s7 (Kanta): турели сбивают ракету в 55% случаев (одна попытка на ракету)
 var _charge := 0.0       # рельсотрон: идёт зарядка
 ## тест 3.5-s7: бомбы вручную — пока зажата кнопка (ПКМ / LT / K), на земле прицел; отпустил — сброс
 var aiming := false
@@ -74,7 +75,7 @@ func dmg() -> float:
 			"gunpod":
 				return 7.0 * ek
 			"bombs":
-				return 55.0 * ek
+				return CARPET_DMG * ek
 			"turret":
 				return Weapons.DEFS["turret"]["dmg"] * (1.0 + 0.15 * (level - 1)) * ek
 	match weapon:
@@ -279,7 +280,7 @@ func aim_zones(p: Player) -> Array:
 	if evo:
 		var c := p.global_position + Vector2.from_angle(p.heading) * 220.0 + p.velocity * 0.4   # как в _fire_carpet_row по кнопке
 		var side := Vector2.from_angle(p.heading + PI / 2.0) * 300.0
-		return [[c - side, c + side, 150.0 * Profile.wk("bombs", "blast_r") * aoe_k]]
+		return [[c - side, c + side, CARPET_R * Profile.wk("bombs", "blast_r") * aoe_k]]
 	var to := aim_point(p)
 	return [[to, to, range_px() * Profile.wk("bombs", "blast_r") * aoe_k]]
 
@@ -348,6 +349,9 @@ func _rail_shot(p: Player, fwd: Vector2, L: float) -> void:
 
 ## U-08: ЭМИ-заряд — когда рядом 3+ врага или вражеская ракета. Дроны падают, остальные молчат 3 с
 ## (асы и «Крепость» — 1 с и половина урона), вражеские ракеты теряют цель.
+const EMP_DRONE_K := 5.0
+
+
 func _fire_emp(p: Player) -> bool:
 	var r := range_px()
 	var pos := p.global_position
@@ -365,7 +369,9 @@ func _fire_emp(p: Player) -> bool:
 	var d := dmg()
 	for e: Enemy in near:
 		if e is Drone and not e.is_boss:
-			e.take_hit(maxf(d, e.hp + 1.0), "ЭМИ")
+			# тест 3.5-s7 (Kanta, «бери в работу»): дроны больше не падают сразу при любой прочности
+			# (ЭМИ давал 10% урона «Грача») — урон по ним ×EMP_DRONE_K
+			e.take_hit(d * EMP_DRONE_K, "ЭМИ")
 		elif e.is_boss:
 			e.take_hit(d * 0.5, "ЭМИ")
 			e.silence = maxf(e.silence, 1.0)
@@ -457,13 +463,20 @@ func _turret_intercept(delta: float, p: Player) -> void:
 		return
 	var r := 300.0 if p.umbrella_t > 0.0 else range_px() * 0.75
 	var n := 0
+	var tried := 0
 	for s in slots:
-		if Main.I.projectiles.intercept_missile(p.global_position, r):
-			n += 1
+		var res := Main.I.projectiles.flak_missile(p.global_position, r, TURRET_INTERCEPT)
+		if res < 0:
+			break
+		tried += 1
+		n += res
 	if p.umbrella_t > 0.0 and p.lvl_of("umbrella") >= 2:
-		n += Main.I.projectiles.intercept_bullets(p.global_position, 180.0)
+		var nb := Main.I.projectiles.intercept_bullets(p.global_position, 180.0)
+		n += nb
+		tried += nb
 	if n > 0:
 		Main.I.stats_add_counter("intercepted_turrets", n)
+	if tried > 0:
 		_icd = iv
 	else:
 		_icd = 0.1
@@ -795,19 +808,29 @@ func _bay_release(p: Player, b: Dictionary, stagger: float) -> void:
 
 
 ## «Бабушкин ковёр»: ряд из 8 бомб поперёк курса, ширина 600
+## Тест 3.5-s7 (Kanta: «модернизация бомб слабее 5-го уровня»): у ур. 5 две бомбы по 55 летят прямо в цели,
+## а ряд ковра падал вслепую в 220 пикс. впереди. Теперь ряд ложится на ближайшую наземную цель
+## (поперёк курса, не дальше 460 пикс.), бомба — 70 (ур. 5 — 55), радиус 180 (было 150)
+const CARPET_DMG := 70.0
+const CARPET_R := 180.0
+
+
 func _fire_carpet_row(p: Player, manual: bool) -> bool:
-	if not manual and Weapons.pick_target(p.global_position, 700.0, "nearest", [], false, true) == null:
+	var tgt: Enemy = null if manual else Weapons.pick_target(p.global_position, 700.0, "nearest", [], false, true)
+	if not manual and tgt == null:
 		return false
 	var fwd := Vector2.from_angle(p.heading)
 	var side := Vector2.from_angle(p.heading + PI / 2.0)
 	var c := p.global_position + fwd * 220.0 + p.velocity * 0.4
+	if tgt != null:
+		c = p.global_position + (tgt.global_position - p.global_position).limit_length(460.0)
 	# 3.4: ветки бомб из ангара (урон, радиус, взрыватель) и «Ковровая дорожка» действуют и после эволюции
 	var road := p.syn.has("carpet_road")
 	for i in 8:
 		var off := (float(i) / 7.0 - 0.5) * 600.0
 		# тест 3.5-s5 (п. 3): точка старта — бомба кассеты в отсеке (только вид; куда и когда рвётся — как было)
 		Main.I.projectiles.spawn_bomb(_slot_pos(p, i), (0.5 + 0.04 * i) * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
-			150.0 * Profile.wk("bombs", "blast_r"), "бомбы", c + side * off, true)
+			CARPET_R * Profile.wk("bombs", "blast_r"), "бомбы", c + side * off, true)
 		Main.I.projectiles.bombs[-1]["vt"] = 4
 		_bay_release(p, Main.I.projectiles.bombs[-1], 0.04 * i * Profile.wk("bombs", "fuse"))
 		if road:

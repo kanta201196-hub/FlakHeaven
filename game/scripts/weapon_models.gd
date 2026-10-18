@@ -63,13 +63,13 @@ const TURRET_MODELS := {
 
 
 ## Тест 3.5-s3 («ракеты висят в воздухе»): нижняя поверхность модели самолёта на вертикали (x, z) в её осях
-## (длина 1) — в бою пилон ставится под настоящее крыло, как в ангаре; NAN — промах
+## (длина 1) — в бою пилон ставится под настоящее крыло, как в ангаре; NAN — промах. high — верхняя (спина под турель)
 static var _faces := {}
 static var _low := {}
 
 
-static func surface_low(scene: PackedScene, x: float, z: float) -> float:
-	var ck := "%s|%.4f|%.4f" % [scene.resource_path, x, z]
+static func surface_low(scene: PackedScene, x: float, z: float, high := false) -> float:
+	var ck := "%s|%.4f|%.4f%s" % [scene.resource_path, x, z, "|h" if high else ""]
 	if _low.has(ck):
 		return _low[ck]
 	if not _faces.has(scene.resource_path):
@@ -103,7 +103,7 @@ static func surface_low(scene: PackedScene, x: float, z: float) -> float:
 		if u < 0.0 or w < 0.0 or u + w > 1.0:
 			continue
 		var y := a.y + u * (fs[i + 1].y - a.y) + w * (fs[i + 2].y - a.y)
-		if is_nan(best) or y < best:
+		if is_nan(best) or (y > best if high else y < best):
 			best = y
 	_low[ck] = best
 	return best
@@ -663,6 +663,9 @@ static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.
 ##   встроенные турели — как у реальных бомбардировщиков и штурмовиков:
 ##   "tail" — кормовая установка в хвосте фюзеляжа (стволы назад), "top" — верхняя за кабиной,
 ##   "bottom" — нижняя под фюзеляжем. yaw — куда смотрят стволы без цели (0 — вперёд, PI — назад).
+const KIT_TOP_TURRET := 0.4   # верхняя турель «Кита»: доля длины от носа
+
+
 static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	var out: Array = []
 	var bay_grp := g.weapon == "bombs" and g.name.begins_with("Бомбоотсек") and has_bay(cls_id, lvl)
@@ -713,10 +716,8 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	var nose: float = s["nose"]
 	var order: Array
 	if cls_id == "bomber":
-		# решение владельца 16.10: кормовая — снизу под килем, две — сверху на крыльях
-		var wl := wing_point(cls_id, lvl, -1.0)
-		var wr := wing_point(cls_id, lvl, 1.0)
-		order = [["tail", tail + L * 0.035, PI, 0.0], ["wing", wl.x, PI, wl.y], ["wing", wr.x, PI, wr.y]]
+		# тест 3.5-s7 (Kanta): турели «Кита» только на корпусе — кормовая под килем и верхняя на спине фюзеляжа
+		order = [["tail", tail + L * 0.035, PI, 0.0], ["top", nose - L * KIT_TOP_TURRET, PI, 0.0]]
 	else:
 		# штурмовик: стрелок за кабиной (верхняя; тест 3.5-s3 — на фюзеляже за фонарём, не на нём), вторая — нижняя
 		order = [["top", nose - L * 0.5, PI, 0.0], ["bottom", nose - L * 0.45, PI, 0.0], ["tail", tail + L * 0.035, PI, 0.0]]

@@ -132,6 +132,32 @@ func intercept_missile_at(from: Vector2, r: float, decoy := false) -> Variant:
 	return at
 
 
+## Тест 3.5-s7 (Kanta): турели сбивают ракету с вероятностью chance. По каждой ракете — одна попытка
+## (промах виден очередью мимо): без этого частые повторы попыток давали почти 100%.
+## Вернёт -1 — ракет в радиусе нет, 0 — промах, 1 — сбита
+func flak_missile(from: Vector2, r: float, chance: float) -> int:
+	var best := -1
+	var best_d := r
+	for i in missiles.size():
+		if missiles[i].has("decoy") or missiles[i].has("flak"):
+			continue
+		var d: float = from.distance_to(missiles[i]["p"])
+		if d < best_d:
+			best_d = d
+			best = i
+	if best < 0:
+		return -1
+	var at: Vector2 = missiles[best]["p"]
+	missiles[best]["flak"] = true
+	if randf() >= chance:
+		Main.I.fx.zap(from, at + Vector2.from_angle(randf() * TAU) * 30.0)
+		return 0
+	Main.I.fx.zap(from, at)
+	Main.I.fx.hit_spark(at, Color(1, 0.5, 0.2))
+	missiles.remove_at(best)
+	return 1
+
+
 func intercept_bullets(from: Vector2, r: float) -> int:
 	var n := 0
 	for i in range(ebullets.size() - 1, -1, -1):
@@ -154,7 +180,9 @@ func break_locks(from: Vector2, r: float) -> int:
 
 ## Взрыв по площади (2.8): урон падает от центра к краю — 100% в центре, 35% на границе зоны.
 ## 3.1: радиус × «Осколочная рубашка» (и «Штурмовой заход» II); нашивки «Взрыв» I (край 50%) и II (цепной подрыв).
-func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false, ground_k := 1.0) -> void:
+## chainable — взрыв НАР или бомбы: только он запускает «Цепную реакцию» (тест 3.5-s7: её запускали и мини-ракеты
+## «Стального ежа», и всё подряд — у «Кита» цепь дала 39% урона за вылет)
+func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false, ground_k := 1.0, chainable := false) -> void:
 	var edge := 0.35
 	var pl := Main.I.player
 	var blast2 := false
@@ -165,7 +193,7 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 		if pl.patch("blast") >= 1:
 			edge = 0.5
 		dmg *= float(pl.mods.get("blast_dmg", 1.0))
-		blast2 = pl.syn.has("chain") and chain < 5 # 3.2: «Цепная реакция»
+		blast2 = pl.syn.has("chain") and chain < CHAIN_LINKS and (chainable or chain > 0) # 3.2: «Цепная реакция»
 	var died: Array = []
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
@@ -179,11 +207,16 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 				died.append([e.global_position, e.max_hp])
 	if visual:
 		Main.I.fx.blast(pos, r)
-	for dd in died.slice(0, 6):
-		_chain_q.append({"p": dd[0], "dmg": 30.0 + 0.1 * float(dd[1]), "n": chain + 1, "t": 0.08})
+	for dd in died.slice(0, CHAIN_FAN):
+		_chain_q.append({"p": dd[0], "dmg": 30.0 + CHAIN_HP * float(dd[1]), "n": chain + 1, "t": 0.08})
 
 
 var _chain_q: Array = []   # «Цепная реакция»: взрывы домино с небольшой задержкой
+## тест 3.5-s7 (Kanta: «наносит очень много урона»): цепь до 3 звеньев (было 5), из одного взрыва — до 4 подрывов
+## (было 6), подрыв — 30 + 8% прочности убитого (было 10%)
+const CHAIN_LINKS := 3
+const CHAIN_FAN := 4
+const CHAIN_HP := 0.08
 
 
 func _update_chain(delta: float) -> void:
@@ -441,7 +474,7 @@ func _update_rockets(delta: float) -> void:
 				_sticky.append({"e": weakref(hit_e) if hit_e != null else null, "off": p - (hit_e.global_position if hit_e != null else p),
 					"p": p, "t": 0.5, "dmg": float(r["dmg"]) * 1.5, "ground_k": float(r.get("ground_k", 1.0))})
 			else:
-				aoe(p, float(r["r"]), float(r["dmg"]), r.get("src", "НАР"), true, null, 0, false, float(r.get("ground_k", 1.0)))
+				aoe(p, float(r["r"]), float(r["dmg"]), r.get("src", "НАР"), true, null, 0, false, float(r.get("ground_k", 1.0)), true)
 			rockets.remove_at(i)
 
 
@@ -470,7 +503,7 @@ func _update_thermo(delta: float) -> void:
 					near += 1
 			var k := minf(1.0 + 0.3 * near, 2.0) # слияние соседних взрывов
 			_thermo.append({"p": pos, "t": 0.3})
-			aoe(pos, 130.0 + 20.0 * mini(near, 4), float(s["dmg"]) * k, "связка: термобарика", true, null, 0, false, float(s.get("ground_k", 1.0)))
+			aoe(pos, 130.0 + 20.0 * mini(near, 4), float(s["dmg"]) * k, "связка: термобарика", true, null, 0, false, float(s.get("ground_k", 1.0)), true)
 			Main.I.add_shake(1.5)
 
 
@@ -481,7 +514,7 @@ func _update_bombs(delta: float) -> void:
 		var k := 1.0 - clampf(float(b["t"]) / float(b["fuse"]), 0.0, 1.0)
 		b["p"] = (b["from"] as Vector2).lerp(b["to"], 1.0 - pow(1.0 - k, 2.0))
 		if float(b["t"]) <= 0.0:
-			aoe(b["p"], float(b["r"]), float(b["dmg"]), b["src"], true, null, 0, bool(b.get("ground", false)))
+			aoe(b["p"], float(b["r"]), float(b["dmg"]), b["src"], true, null, 0, bool(b.get("ground", false)), 1.0, true)
 			var mpl := Main.I.player
 			if String(b["src"]) == "бомбы" and is_instance_valid(mpl) and mpl.mastery and mpl.cls_id == "bomber":
 				spawn_fire(b["p"], float(b["r"]) * 0.6, 15.0, 3.0, PlaneClasses.MASTERY_FIRE_SRC, true) # «Выжженная земля»

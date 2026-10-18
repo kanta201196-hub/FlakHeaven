@@ -6,6 +6,7 @@ extends Node2D
 ## съезжает вбок и стреляет, БМП ставит дым над грузовиками, пикап с ПЗРК пускает ракеты с места.
 ## Подбитая машина остаётся остовом: колонна объезжает его медленно — выгодно сначала сжечь голову.
 ## Награда: груз с каждого грузовика (ящик с запчастями на дороге), все грузовики — активность засчитана.
+## M-41: через 6 с после тревоги колонну прикрывает вертолёт «Сарыч» (после 8:00 — пара), заходит со стороны колонны.
 
 const ACTIVATE_R := 1000.0
 const LIMIT := 70.0
@@ -15,6 +16,7 @@ const SMOKE_CUT := 0.4        # под дымом машины получают 
 const STEP := 30.0            # шаг точек маршрута, пикс.
 const CARGO := {"truck": 30.0, "light": 15.0}
 const RIVER_SAFE := Terrain3D.RIVER_GUARD + 12.0   # A-07: центр машины вне охранной зоны у реки (M-35, тред «3D-модели») на полкорпуса
+const HELI_DELAY := 6.0       # M-41: через столько секунд после тревоги колонну прикрывают вертолёты «Сарыч» (решение Kanta 18.10)
 const VIEW_MARGIN := 220.0    # A-06: колонна появляется за краем видимой области с таким запасом
 
 var pts := PackedVector2Array()   # маршрут: точки рельефа по оси дороги
@@ -38,17 +40,23 @@ var on_road := false              # маршрут нашёлся по доро�
 var river_sign := 0.0             # +1: полоса со знаком «+» уходит от реки, −1 — наоборот; 0 — реку не учитываем
 var _tr: Terrain3D
 var _t := 0.0
+var _heli_t := -1.0             # отсчёт до вызова вертолётов (−1 — не вызывали)
 var _dbg := OS.get_cmdline_user_args().has("--convoy") and OS.get_cmdline_user_args().has("--autotest")
+## тест 3.5-s7: малая колонна на пути «Кита» (Spawner._patrol) — не активность: без баннеров, таймера и награды за всю колонну
+var patrol := false
 
 
 ## center — точка, через которую пройдёт колонна; dir — примерное направление марша
 func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> void:
 	_build_route(center, dir)
 	var order := ["scout", "technical", "truck", "light", "truck", "ifv", "manpads"]
-	if t >= 480.0:
-		order.append("ifv")       # с 8-й минуты вторая БМП
-	if t >= 660.0:
-		order.append("manpads")   # с 11-й — второй пикап с ПЗРК
+	if patrol:
+		order = ["technical", "truck", "light"]
+	else:
+		if t >= 480.0:
+			order.append("ifv")       # с 8-й минуты вторая БМП
+		if t >= 660.0:
+			order.append("manpads")   # с 11-й — второй пикап с ПЗРК
 	# отступы машин от головы колонны
 	var offs: Array[float] = [0.0]
 	for i in range(1, order.size()):
@@ -392,10 +400,30 @@ func _raise_alarm() -> void:
 	if alarm:
 		return
 	alarm = true
+	_heli_t = HELI_DELAY
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: convoy alarm")
+	if patrol:
+		return
 	Main.I.show_banner("Колонна обнаружила вас! Грузовики уходят к укрытию — %d с" % int(LIMIT), 3.0)
 	Main.I.sfx.play("aa_alert", -2.0, 0.8)
+
+
+## M-41: колонна вызывает прикрытие — вертолёты «Сарыч» заходят со стороны колонны (после 8:00 — пара)
+func _call_helis(p: Player) -> void:
+	var sp: Spawner = Main.I.spawner
+	if sp == null:
+		return
+	var t: float = Main.I.run_time
+	var n := 2 if t >= 480.0 else 1
+	var ang := (focus() - p.global_position).angle()
+	for i in n:
+		var h := Helicopter.new()
+		sp._place(h, p, ang + (i - (n - 1) * 0.5) * 0.5, t)
+		h.heading = (p.global_position - h.position).angle()
+	Main.I.show_banner("Колонна вызвала прикрытие: вертолёт%s «Сарыч»" % ("ы" if n > 1 else ""), 2.5)
+	if OS.get_cmdline_user_args().has("--autotest"):
+		print("AUTOTEST: convoy helis %d at %.0f" % [n, t])
 
 
 func on_hit() -> void:
@@ -433,7 +461,9 @@ func _check_trucks() -> void:
 	if trucks_left() > 0:
 		return
 	leaderless = true
-	if trucks_killed == trucks_total and not failed and not done:
+	if patrol:
+		done = trucks_killed == trucks_total
+	elif trucks_killed == trucks_total and not failed and not done:
 		done = true
 		Main.I.tele.add("convoy_done")
 		Main.I.on_activity_success("convoy")
@@ -495,8 +525,13 @@ func _process(delta: float) -> void:
 			timer -= delta
 			if timer <= 0.0:
 				failed = true
-				Main.I.show_banner("Колонна ушла от удара — груз потерян", 3.0)
+				if not patrol:
+					Main.I.show_banner("Колонна ушла от удара — груз потерян", 3.0)
 				_finish()
+		if _heli_t > 0.0:
+			_heli_t -= delta
+			if _heli_t <= 0.0 and not ended:
+				_call_helis(p)
 		# БМП ставит дым над серединой колонны один раз за активность
 		if not _smoke_used:
 			for v in alive():

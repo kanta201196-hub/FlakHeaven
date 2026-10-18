@@ -396,6 +396,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			g.weapon = bench_weapons[cls_id][gi]
 		g.evo = weapon_tier == 4
 		g.level = [1, 3, 5][mini(weapon_tier, 3) - 1]   # ступень вида → уровень оружия (ловушки ставятся по уровню)
+		if g.builtin and g.weapon == "turret":   # тест 3.5-s7: верхняя турель «Кита» — с ур. 3
+			g.slots = PlaneClasses.turret_slots(cls_id, g.level)
 		if g.is_empty():
 			continue
 		var wt := PlaneArt.weapon_tex(g.weapon)
