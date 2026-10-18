@@ -8,7 +8,8 @@ extends Node3D
 ## Окраска — выбранная в ангаре (Livery.current), уровень самолёта — выбранный в ангаре (Profile.plane_lvl).
 ## Механизация, детали силуэта, знаки, кормовая кабина и винты «Кита 1» — те же узлы, что в ангаре и в бою.
 ## Тени — дешёвые «высотные» пятна по силуэту (как у своих самолётов в бою), без прохода теней солнца.
-## «Низкое» качество графики: моделей нет, меню рисует картинки art/planes, повёрнутые по heading().
+## С-5 (аудит 3.5-s6): на «Низком» качестве — тоже 3D, облегчённые модели боя (models/battle), а не старые
+## картинки art/planes другой формы и окраски.
 
 const H0 := -PI / 2.0 - 0.2    # курс звена: вверх по экрану (к горизонту наклонной камеры) и чуть влево
 const SPEED := 80.0            # пикс/с по плоскости боя (было 76 в 3.4 — та же неторопливость)
@@ -60,9 +61,9 @@ func _init(render: Render3D) -> void:
 	r3 = render
 
 
-## Звено видно: меню (или настройки из меню), 3D включено, качество не «Низкое»
+## Звено видно: меню (или настройки из меню), 3D включено (на любом качестве графики)
 static func want_3d() -> bool:
-	return Render3D.enabled and Settings.gfx > 0
+	return Render3D.enabled
 
 
 func active() -> bool:
@@ -80,6 +81,7 @@ func sync(on: bool, delta: float) -> void:
 		var key := ""
 		for f in FLIGHT:
 			key += "%s%d%s;" % [f[0], Profile.plane_lvl(f[0]), Livery.current(f[0])]
+		key += "g%d" % mini(Settings.gfx, 1)   # «Низкое» ↔ остальные: другая модель
 		if key != _key:
 			clear()
 			_key = key
@@ -120,6 +122,10 @@ func _build() -> void:
 		var tex := PlaneArt.plane_tex(cls, lvl)
 		var tex1 := PlaneArt.plane_tex(cls, 1)
 		var path := "res://models/hangar/fh_hangar_%s_%d.glb" % [cls, lvl]
+		if Settings.gfx == 0:   # «Низкое»: облегчённая модель боя (те же оси и узлы деталей)
+			var lite := "res://models/battle/fh_battle_%s_%d.glb" % [cls, lvl]
+			if ResourceLoader.exists(lite):
+				path = lite
 		if tex == null or tex1 == null or not ResourceLoader.exists(path):
 			continue
 		var sc := load(path) as PackedScene

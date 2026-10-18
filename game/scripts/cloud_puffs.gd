@@ -9,6 +9,9 @@ extends MultiMeshInstance3D
 ##     и низкие рваные клочья на высоте самолётов (y ≈ −50…+60) — самолёт пролетает над ними и сквозь них.
 ##   • Пуфы над самолётом игрока (между ним и камерой) растворяются — бой читается; у камеры — тоже.
 ##   • Самолёт в низком облаке — белёсая вуаль по краям экрана (центр чистый), плавный вход и выход.
+##     Э-3 (аудит 3.5-s6): вуаль слабее (0,55 → 0,3, уже по краям) и короче: быстрый вход и выход,
+##     а если самолёт задержался в облаке — через ~1 с ослабевает до трети (бой не теряет контраст).
+##     Освещение клубов: светлый верх, серо-голубой низ (тон по высоте внутри облака + шейдер).
 ## Качество графики: «Низкое» — прежние плоские облака (Render3D), «Среднее» — 10 пуфов на облако
 ## без вуали, «Высокое» — 15, «Максимальное» — 22.
 
@@ -27,6 +30,7 @@ var _veil_layer: CanvasLayer
 var _veil: ColorRect
 var _veil_mat: ShaderMaterial
 var immersion := 0.0               # 0…1: насколько самолёт игрока внутри низкого облака
+var _in_t := 0.0                   # сколько секунд самолёт уже в облаке (вуаль слабеет)
 var shown := 0                     # сколько пуфов нарисовано в этом кадре (замер)
 var fill := 0.0                    # их площадь на экране, в долях кадра (≈ сколько «экранов» прозрачной заливки)
 
@@ -69,7 +73,7 @@ uniform float k = 0.0;
 uniform vec2 aspect = vec2(1.78, 1.0);
 void fragment() {
 	float r = length((UV - 0.5) * aspect) * 1.25;
-	COLOR = vec4(0.93, 0.94, 0.96, k * smoothstep(0.22, 1.05, r));
+	COLOR = vec4(0.93, 0.94, 0.96, k * smoothstep(0.4, 1.2, r));
 }
 """
 	_veil_mat.shader = sh
@@ -149,10 +153,10 @@ func _make(it: Array, gfx: int) -> Dictionary:
 		if low:
 			y = base + rng.randf_range(-28.0, 28.0)
 			dia = size * rng.randf_range(0.3, 0.45) * (0.7 + 0.4 * a)
-			tone = rng.randf_range(0.65, 0.95)
+			tone = 0.35 + (y - base + 28.0) / 56.0 * 0.55   # низ клочьев серее, верх светлее
 			al = a0 * rng.randf_range(0.55, 0.75)
 			wisp = 0.45
-		elif puffs.size() < 2:
+		elif puffs.size() < maxi(2, n / 5):
 			# «днище»: широкие плоские тёмные клубы у основания — снизу облако темнее
 			y = base - 12.0
 			dia = size * rng.randf_range(0.42, 0.52)
@@ -164,7 +168,7 @@ func _make(it: Array, gfx: int) -> Dictionary:
 			var lift := a * rng.randf_range(50.0, 150.0)
 			y = base + lift
 			dia = size * rng.randf_range(0.22, 0.36) * (0.65 + 0.45 * a)
-			tone = clampf(0.25 + lift / 150.0 * 0.8, 0.0, 1.0)
+			tone = clampf(0.1 + lift / 150.0 * 0.95, 0.0, 1.0)
 			al = a0 * (0.75 + 0.25 * a)
 			wisp = 0.12
 		hsum += y
@@ -179,6 +183,11 @@ func info(it: Array) -> Dictionary:
 	if it.size() < 5:
 		return {}
 	return _cache.get(int(it[4]), {})
+
+
+## Направление на солнце (мир) — из Render3D, чтобы теневая сторона клубов совпадала с тенями на земле
+func set_sun(sun_to: Vector3) -> void:
+	(material_override as ShaderMaterial).set_shader_parameter("sun_to", sun_to.normalized())
 
 
 ## Каждый кадр из Render3D._sync_clouds. focus — точка, над которой облака растворяются (самолёт игрока
@@ -275,8 +284,9 @@ func sync(its: Array, cam: Camera3D, c2: Vector2, d0: float, focus: Vector3, gfx
 	fill = area / maxf(vs.x * vs.y, 1.0)
 	# вуаль «внутри облака» (Высокое и Максимальное): плавный вход и выход
 	var target := imm if gfx >= 2 else 0.0
-	immersion = move_toward(immersion, target, delta * (2.5 if target > immersion else 1.5))
-	_set_veil(immersion)
+	immersion = move_toward(immersion, target, delta * (4.0 if target > immersion else 3.0))
+	_in_t = _in_t + delta if target > 0.05 else maxf(0.0, _in_t - delta * 2.0)
+	_set_veil(immersion * clampf(1.4 - _in_t * 0.6, 0.35, 1.0))
 
 
 func _set_veil(k: float) -> void:
@@ -285,7 +295,7 @@ func _set_veil(k: float) -> void:
 	_veil.visible = k > 0.005 and visible
 	if _veil.visible:
 		var vs := get_viewport().get_visible_rect().size
-		_veil_mat.set_shader_parameter("k", k * 0.55)
+		_veil_mat.set_shader_parameter("k", k * 0.3)
 		_veil_mat.set_shader_parameter("aspect", Vector2(vs.x / maxf(vs.y, 1.0), 1.0))
 
 
@@ -294,4 +304,5 @@ func hide_all() -> void:
 	multimesh.visible_instance_count = 0
 	shown = 0
 	immersion = 0.0
+	_in_t = 0.0
 	_set_veil(0.0)

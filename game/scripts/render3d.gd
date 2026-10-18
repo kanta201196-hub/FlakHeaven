@@ -1876,6 +1876,7 @@ func _sync_clouds(m: Main, c2: Vector2, h: float) -> void:
 		if _puffs == null:
 			_puffs = CloudPuffs.new()
 			add_child(_puffs)
+			_puffs.set_sun(sun.global_transform.basis.z)   # Э-3: свет клубов — от солнца сцены
 		_puffs.visible = true
 		var focus := Vector3(c2.x, 0.0, c2.y)
 		if title.active():   # заставка: растворяются над ведущим звена
