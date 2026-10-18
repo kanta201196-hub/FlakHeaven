@@ -133,11 +133,19 @@ func _hg_livery(c: String, lx: float, y: float) -> void:
 	_text(Vector2(lx + 24, y + 21), "Окраска:", 15, Color(0.8, 0.84, 0.9))
 	var cur := Livery.current(c)
 	var lst := Livery.list(c)
+	var step := minf(112.0, 452.0 / maxf(lst.size(), 1))   # 5 окрасок (С-1) — кнопки уже, ряд в ширину панели
 	for i in lst.size():
-		var r := Rect2(lx + 100 + i * 112, y, 106, 30)
+		var r := Rect2(lx + 100 + i * step, y, step - 6, 30)
 		var on: bool = lst[i][0] == cur
 		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
-		_text(Vector2(r.position.x, r.position.y + 20), String(lst[i][1]), 12, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		var nm := String(lst[i][1])
+		var tc := Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95)
+		if nm.contains(" ") and ui_font().get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > r.size.x - 6:
+			var sp := nm.find(" ")   # длинное название — в две строки
+			_text(Vector2(r.position.x, r.position.y + 13), nm.substr(0, sp), 11, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+			_text(Vector2(r.position.x, r.position.y + 26), nm.substr(sp + 1), 11, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		else:
+			_text(Vector2(r.position.x, r.position.y + 20), nm, 12, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		_buttons.append([r, "hg:livery:" + String(lst[i][0])])
 
 
