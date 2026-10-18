@@ -26,6 +26,8 @@ func _init(main: Main) -> void:
 
 
 func process(delta: float) -> void:
+	if m._args.has("--exittest") and _exit_test():
+		return
 	if m._autotest:
 		_run_autotest(delta)
 		if m._args.has("--smoke"):
@@ -190,6 +192,46 @@ func _report_test() -> void:
 		_shot("report_done")
 		print("REPORT status: ", m.report._status.text, " sent=", m.report_sent)
 		_rep_phase = 3
+
+
+var _exit_phase := 0
+
+## После теста 3.5-s7: досрочный выход из паузы в меню — анкета, строка лога «выход», главное меню.
+## Запуск: --autotest --exittest --report-url=http://127.0.0.1:PORT (приёмник tools/reports/mock_receiver.py).
+## true — автотест на этом кадре не трогаем (идёт анкета).
+func _exit_test() -> bool:
+	if _exit_phase == 0 and m.state == "playing" and m.run_time > 3.0:
+		m.run_time = maxf(m.run_time, 30.0)   # быстрее порога ABORT_MIN_S, чтобы не ждать в медленном режиме кадров
+		m._set_state("paused")
+		m.ui_click("to_menu")
+		print("EXITTEST: report open=%s exit_mode=%s" % [m.report.visible, m.report._exit_mode])
+		_exit_phase = 1
+		return true
+	if _exit_phase == 1:
+		m.report._set_ans("why", "Стало скучно")
+		m.report._set_ans("diff", "Легко")
+		m.report._set_rating(3)
+		m.report._liked.text = "Тест: взрывы"
+		_exit_phase = 4   # кадр с отмеченными ответами — на следующем шаге
+		return true
+	if _exit_phase == 4:
+		_shot("report_exit")
+		m.report._send()
+		_exit_phase = 2
+		return true
+	if _exit_phase == 2:
+		if m.state == "menu":
+			print("EXITTEST: ok, menu, outcome=%s, row=%d chars" % [m.last_outcome, m.last_log_row.length()])
+			_exit_phase = 3
+			# для кадра: пустой экран итогов с кнопкой отчёта (подсветка первые секунды)
+			m.result_t = 0.0
+			m._set_state("dead")
+		return true
+	if _exit_phase == 3 and m.result_t > 1.0:
+		_shot("results_report_btn")
+		_exit_phase = 5
+		m.get_tree().quit()
+	return _exit_phase >= 3
 
 
 var _mesa_phase := 0

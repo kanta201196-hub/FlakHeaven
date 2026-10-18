@@ -336,7 +336,25 @@ func result(m: Main, size: Vector2) -> void:
 		if m.report_sent:
 			_text(Vector2(0, by + 80), "✓ Отчёт принят — спасибо!", 19, Color(0.6, 1.0, 0.6), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 		else:
-			_button(Rect2(bx + 1280, by, bw, 54), "ОТПРАВИТЬ ОТЧЁТ", "report_open", 22)
+			_report_button(Rect2(bx + 1280, by, bw, 54), m.result_t)
+
+
+## Кнопка отчёта заметнее остальных, но без всплывающих окон и звука (Kanta, 18.10):
+## янтарная заливка, подпись под кнопкой и мягкое «дыхание» рамки первые секунды на экране итогов
+func _report_button(r: Rect2, shown_t: float) -> void:
+	var hover := r.has_point(ctrl.get_local_mouse_position())
+	var cut := minf(14.0, r.size.y * 0.3)
+	var pts := PackedVector2Array([r.position, Vector2(r.end.x - cut, r.position.y), Vector2(r.end.x, r.position.y + cut), r.end, Vector2(r.position.x, r.end.y)])
+	ctrl.draw_colored_polygon(pts, Menu.C_AMBER.lightened(0.15) if hover else Menu.C_AMBER)
+	if shown_t < 6.0:
+		var k := 0.5 + 0.5 * sin(shown_t * 3.0)
+		var g := r.grow(4.0 + 4.0 * k)
+		var gc := minf(18.0, g.size.y * 0.3)
+		var gp := PackedVector2Array([g.position, Vector2(g.end.x - gc, g.position.y), Vector2(g.end.x, g.position.y + gc), g.end, Vector2(g.position.x, g.end.y), g.position])
+		ctrl.draw_polyline(gp, Color(Menu.C_AMBER.r, Menu.C_AMBER.g, Menu.C_AMBER.b, 0.55 * (1.0 - shown_t / 6.0)), 2.0)
+	_text(Vector2(r.position.x, r.position.y + r.size.y / 2.0 + 22 * 0.35), "ОТПРАВИТЬ ОТЧЁТ", 22, Color(0.08, 0.07, 0.05), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+	_text(Vector2(r.position.x, r.end.y + 24), "1 минута — очень поможет игре", 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+	_buttons.append([r, "report_open"])
 
 
 ## «Обзор»: выводы словами и плитки ключевых цифр
