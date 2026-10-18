@@ -20,9 +20,16 @@ const SETTLE := ["o_village", "o_fort", "o_oasis"]
 ## Профиль поперёк долины по расстоянию до линии реки, px (знак — берег: дорога со стороны «+»)
 const D_RIVER := 26.0          # полуширина русла
 const D_ROAD := 85.0           # ось дороги
+## M-36 (решение Kanta 18.10.2026): дорога шире под машины конвоя — полоса в шейдере земли, px от оси D_ROAD.
+## Наружу (от реки) — ROAD_W (было 14, ×1,57); к реке — ROAD_W_IN: край не заходит в охранную зону RIVER_GUARD
+## (85 − 14 = 71 > 68). Видимая ширина ~29 px вместо ~20 (×1,45): ось колонны — по-прежнему D_ROAD
+const ROAD_W := 22.0
+const ROAD_W_IN := 14.0
 const D_FLOOR := 260.0         # ровное дно долины
 const D_FAN := 480.0           # конусы выноса и осыпи до подножия склона
-const D_CLIMB := 2200.0        # от подножия до гребня
+## Тест 3.5-s6 (аудит Р-3, решение Kanta 18.10.2026 — «картографический» масштаб, земля как с 2–4 км):
+## склоны вдвое короче и круче (было 2200), рисунок гребней и оврагов мельче (_ero)
+const D_CLIMB := 1200.0        # от подножия до гребня
 const V_SCALE := 0.00028       # перевод поля долин в «пиксели» вдали от реки
 ## Тест 3.5-s5 (M-35, решение Kanta 18.10.2026): охранная зона реки — полуширина от оси русла, px мира.
 ## Вода (~D_RIVER × 0,8) + мокрый берег шейдера (river_w × 2,4 ± кромка 4 px ≈ 66) + запас 2 px.
@@ -42,6 +49,9 @@ var _hill := FastNoiseLite.new()
 var _warp := FastNoiseLite.new()
 var _valley := FastNoiseLite.new()
 var _plains := FastNoiseLite.new()
+var _crag := FastNoiseLite.new()   # M-36: где на склонах скальные выходы (пятна поясов пород)
+var _strata := FastNoiseLite.new() # M-36: наклон и изгиб слоёв пород, зубцы гребней
+var _ero := FastNoiseLite.new()    # аудит Р-2: сеть острых гребней и оврагов на склонах (не гладкие валы)
 var _scenes := {}              # Vector2i → сцены прошедших боёв клетки (scenes())
 var _side := {}                # Vector2i → боковые долины поселений рядом: [[A, B, ширина], …]
 var _bg: Background
@@ -80,7 +90,7 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 	_mask.fractal_octaves = 2
 	_ridge.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	_ridge.seed = 1291
-	_ridge.frequency = 1.0 / 2100.0
+	_ridge.frequency = 1.0 / 1300.0   # Р-3: мельче (было 1/2100)
 	_ridge.fractal_type = FastNoiseLite.FRACTAL_RIDGED
 	_ridge.fractal_octaves = 5
 	_ridge.fractal_gain = 0.5
@@ -99,6 +109,23 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 	_plains.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	_plains.seed = 8861
 	_plains.frequency = 1.0 / 7000.0
+	_crag.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	_crag.seed = 6151
+	_crag.frequency = 1.0 / 1100.0
+	_crag.fractal_type = FastNoiseLite.FRACTAL_FBM
+	_crag.fractal_octaves = 3
+	_strata.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	_strata.seed = 3389
+	_strata.frequency = 1.0 / 260.0
+	_strata.fractal_type = FastNoiseLite.FRACTAL_RIDGED
+	_strata.fractal_octaves = 2
+	_ero.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	_ero.seed = 2719
+	_ero.frequency = 1.0 / 560.0
+	_ero.fractal_type = FastNoiseLite.FRACTAL_RIDGED
+	_ero.fractal_octaves = 4
+	_ero.fractal_gain = 0.45
+	_ero.fractal_lacunarity = 2.1
 	clear()
 
 
@@ -142,6 +169,14 @@ func height(x: float, z: float, ctx := {}) -> float:
 
 
 func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
+	return _relief(x, z, v, ctx).x
+
+
+## Высота (x, в px над дном) и маски для шейдера земли: y — скальный выход (0…1), z — осыпь у подножия (0…1).
+## M-36 (решение Kanta 18.10.2026): Нагорье — не сплошной песок: на склонах выше дна долины и на гребнях
+## обнажённая порода (слоистые уступы с крутыми гранями), под ними светлые осыпи — видно, откуда камни.
+## Дно долины (до D_FAN − 40), река, дорога и площадки поселений не меняются
+func _relief(x: float, z: float, v: float, ctx := {}) -> Vector3:
 	var a := absf(v)
 	# пойма и конусы выноса: вогнутый подъём к подножию
 	var fan := smoothstep(D_FLOOR, D_FAN, a)
@@ -156,8 +191,17 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 	var top := lerpf(0.3, 1.0, open)
 	var climb := smoothstep(D_FAN - 40.0, D_CLIMB, a)
 	climb = 1.0 - pow(1.0 - climb, 1.6)   # выпуклый склон: круче у подножия плеча, острее у гребня
-	h += (top - 0.1) * climb * 0.85
-	h += r * r * 0.15 * climb * climb * top   # только прибавка: зубцы над склоном, без ям между ними
+	h += (top - 0.1) * climb * 0.55
+	h += r * r * 0.12 * climb * climb * top   # только прибавка: зубцы над склоном, без ям между ними
+	# аудит Р-2: гребни и овраги — гребневой шум средней частоты, сила растёт от подножия к гребню;
+	# квадрат — острые кромки и округлые днища оврагов; на гребне — главная доля высоты хребта
+	var e := clampf((_ero.get_noise_2d(wx * 0.9 + wz * 0.25, wz) + 1.0) * 0.5, 0.0, 1.0)
+	var ew := smoothstep(0.0, 0.55, climb)
+	h += (e * e * 0.3 - 0.02) * ew * lerpf(0.45, 1.0, open)
+	# M-36: скальные выходы — пятна по шуму на склоне (не сплошной пояс) и почти сплошь на гребнях
+	var cr := _crag.get_noise_2d(wx, wz)
+	var up := smoothstep(0.03, 0.2, climb)   # не ниже подножия склона
+	var rock := smoothstep(-0.05, 0.25, cr + climb * 0.3 + e * e * 0.45 + r * r * 0.2 - 0.2) * up * lerpf(0.55, 1.0, open)
 	# уступы пород: горизонтальные слои дают скальные пояса на склонах
 	# только на крутой части склона — на пологих конусах и плато уступы дают полосы «как горизонтали»
 	var steep := smoothstep(0.08, 0.25, climb) * (1.0 - smoothstep(0.7, 0.92, climb))
@@ -165,17 +209,30 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 		var t := h * 7.0
 		var step := (floorf(t) + smoothstep(0.12, 0.88, t - floorf(t))) / 7.0
 		# 3.4-t1 (п. 18): уступы мягче — обрыв в 1/7 высоты с тенью читался чёрной канавой поперёк склона
-		h = lerpf(h, step, 0.28 * steep)
+		h = lerpf(h, step, 0.28 * steep * (1.0 - rock))
+	if rock > 0.0:
+		# слоистые уступы: пласты ~30 px высоты, слегка наклонены и изогнуты; грань пласта круче (уступ),
+		# сверху — полка; в пятне выхода порода выпирает над склоном (только прибавка — без ям)
+		var sn := _strata.get_noise_2d(x, z)
+		var t2 := h * 16.0 + (x * 0.6 + z * 0.8) * 0.00035 + _warp.get_noise_2d(x * 3.0, z * 3.0) * 0.35
+		var f2 := t2 - floorf(t2)
+		var step2 := (floorf(t2) + smoothstep(0.55, 0.85, f2)) / 16.0
+		var dh := step2 - (t2 / 16.0)   # −1/16 … +1/16 вокруг склона
+		h += (dh * 0.6 + 0.016 + (sn + 1.0) * 0.01) * rock
 	# мелкие бугры на дне и на конусах
 	h += (_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * (0.3 + fan)
-	h *= _flat(x, z, ctx)
+	# M-36: осыпи — конусы у подножия скал (по тому же пятну шума, что выходы выше по склону)
+	var foot := smoothstep(D_FAN - 160.0, D_FAN + 40.0, a) * (1.0 - smoothstep(0.12, 0.3, climb))
+	var scree := foot * smoothstep(-0.1, 0.25, cr + 0.1) * lerpf(0.5, 1.0, open)
+	var fl := _flat(x, z, ctx)
+	h *= fl
 	# русло врезано в пойму: вода лежит в ложбине, а не на ровном месте
 	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
 	# L-09: ручей посёлка тоже лежит в ложбинке, мельче реки
 	var sd := absf(stream_field(x, z, ctx))
 	if sd < STREAM_W * 3.0:
 		h -= (1.0 - smoothstep(STREAM_W * 0.6, STREAM_W * 3.0, sd)) * 0.012
-	return clampf(h, -0.03, 1.0) * ceiling
+	return Vector3(clampf(h, -0.03, 1.0) * ceiling, clampf(rock, 0.0, 1.0) * fl, clampf(scree, 0.0, 1.0) * fl)
 
 
 func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
@@ -882,9 +939,11 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 	var hs := PackedFloat32Array()
 	var vs := PackedFloat32Array()
 	var gs := PackedFloat32Array()   # L-06: зелёная полоса вдоль реки
+	var rs := PackedVector2Array()   # M-36: маски скалы и осыпи (шейдер земли, UV)
 	hs.resize(W * W)
 	vs.resize(W * W)
 	gs.resize(W * W)
+	rs.resize(W * W)
 	for j in W:
 		for i in W:
 			var x := ox + (i - 1) * step
@@ -900,7 +959,9 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				var g := sd * STREAM_K if sd < 20.0 else 20.0 * STREAM_K + (sd - 20.0) * 80.0
 				if g < absf(vs[j * W + i]):
 					vs[j * W + i] = g * (1.0 if vs[j * W + i] >= 0.0 else -1.0)
-			hs[j * W + i] = _height_v(x, z, valley(x, z, ctx), ctx)
+			var rl := _relief(x, z, valley(x, z, ctx), ctx)
+			hs[j * W + i] = rl.x
+			rs[j * W + i] = Vector2(rl.y, rl.z)
 	# тест 3.5-s4 (п. 16–17): пятна поселений на земле (утоптанная земля, огороды и сады) — неровные, с мягким
 	# краем, по тому же контуру, что постройки (AdobeBuild.ground_mask); выгоревшие пятна и воронки сцен
 	# прошедших боёв; у воды и на мокром берегу всё это сходит на нет
@@ -924,6 +985,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 	var norms := PackedVector3Array()
 	var tans := PackedFloat32Array()
 	var cols := PackedColorArray()
+	var uv1 := PackedVector2Array()   # M-36: x — скальный выход, y — осыпь
 	var uv2 := PackedVector2Array()   # x — расстояние до реки, px со знаком (цвет вершины — всего 8 бит)
 	var V := nn + 1
 	verts.resize(V * V)
@@ -931,6 +993,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 	tans.resize(V * V * 4)
 	cols.resize(V * V)
 	uv2.resize(V * V)
+	uv1.resize(V * V)
 	for j in V:
 		for i in V:
 			var gi := (j + 1) * W + (i + 1)
@@ -971,6 +1034,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 			sm.y = maxf(sm.y, gs[gi])
 			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), sm.x, sm.y)
 			uv2[vi] = Vector2(vs[gi], burn)
+			uv1[vi] = rs[gi]
 	var idx := PackedInt32Array()
 	idx.resize(nn * nn * 6)
 	var p := 0
@@ -989,10 +1053,10 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				idx[p + 3] = b; idx[p + 4] = d; idx[p + 5] = c2
 			p += 6
 	if lod > 0:
-		var sk := _skirt(verts, norms, tans, cols, uv2, idx, V)
-		verts = sk[0]; norms = sk[1]; tans = sk[2]; cols = sk[3]; uv2 = sk[4]; idx = sk[5]
+		var sk := _skirt(verts, norms, tans, cols, uv1, uv2, idx, V)
+		verts = sk[0]; norms = sk[1]; tans = sk[2]; cols = sk[3]; uv1 = sk[4]; uv2 = sk[5]; idx = sk[6]
 	var put: Dictionary = props.plan(key, ctx) if props != null and lod == 0 else {}
-	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv2": uv2, "idx": idx, "gen": gen, "put": put,
+	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv1": uv1, "uv2": uv2, "idx": idx, "gen": gen, "put": put,
 		"hs": hs, "W": W, "step": step, "lod": lod}
 
 
@@ -1001,7 +1065,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 const SKIRT := 90.0
 
 func _skirt(verts: PackedVector3Array, norms: PackedVector3Array, tans: PackedFloat32Array, cols: PackedColorArray,
-		uv2: PackedVector2Array, idx: PackedInt32Array, V: int) -> Array:
+		uv1: PackedVector2Array, uv2: PackedVector2Array, idx: PackedInt32Array, V: int) -> Array:
 	var ring: Array[int] = []
 	for i in V - 1:
 		ring.append(i)                          # верхний край
@@ -1020,6 +1084,7 @@ func _skirt(verts: PackedVector3Array, norms: PackedVector3Array, tans: PackedFl
 		for c in 4:
 			tans.append(tans[a * 4 + c])
 		cols.append(cols[a])
+		uv1.append(uv1[a])
 		uv2.append(uv2[a])
 	for k in n:
 		var a := ring[k]
@@ -1029,7 +1094,7 @@ func _skirt(verts: PackedVector3Array, norms: PackedVector3Array, tans: PackedFl
 		# обе стороны: стенку видно и снаружи, и изнутри (наклон камеры)
 		for t in [a, b, b2, a, b2, a2, a, b2, b, a, a2, b2]:
 			idx.append(t)
-	return [verts, norms, tans, cols, uv2, idx]
+	return [verts, norms, tans, cols, uv1, uv2, idx]
 
 
 func _place_chunk(key: Vector2i, r: Dictionary) -> void:
@@ -1042,6 +1107,7 @@ func _place_chunk(key: Vector2i, r: Dictionary) -> void:
 	arr[Mesh.ARRAY_NORMAL] = r["norms"]
 	arr[Mesh.ARRAY_TANGENT] = r["tans"]
 	arr[Mesh.ARRAY_COLOR] = r["cols"]
+	arr[Mesh.ARRAY_TEX_UV] = r["uv1"]
 	arr[Mesh.ARRAY_TEX_UV2] = r["uv2"]
 	arr[Mesh.ARRAY_INDEX] = r["idx"]
 	var mesh := ArrayMesh.new()
