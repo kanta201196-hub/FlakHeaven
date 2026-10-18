@@ -323,8 +323,8 @@ static func course_hint(p: Player, card: Dictionary) -> String:
 	var c := slot_cost(p)
 	var tags := Prog.card_tags(p, card)
 	if tags.has(s["tag"]):
-		return "\n▲ К связке «%s»: %s %d → %d (из %d)" % [s["title"], Prog.tag_title(s["tag"]), p.tag(s["tag"]), p.tag(s["tag"]) + 1, int(c["main"])]
-	return "\n▲ К связке «%s»" % s["title"]
+		return Loc.t("\n▲ К связке «%s»: %s %d → %d (из %d)") % [Loc.t(s["title"]), Loc.t(Prog.tag_title(s["tag"])), p.tag(s["tag"]), p.tag(s["tag"]) + 1, int(c["main"])]
+	return Loc.t("\n▲ К связке «%s»") % Loc.t(s["title"])
 
 
 const NEW_WEAPON_LEVEL := [1, 1, 2, 2, 3]
@@ -406,7 +406,7 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 		"skill3":
 			var d: Dictionary = PlaneClasses.SKILL3[p.skill3]
 			var nl := int(p.mods["s3_lvl"]) + 1
-			return "%s %s: %s" % [d["title"], Prog.ROMAN[nl], d["lv"][nl]]
+			return "%s %s: %s" % [Loc.t(d["title"]), Prog.ROMAN[nl], Loc.t(d["lv"][nl])]
 		"repair":
 			return Loc.t("Восстановить %s прочности") % _pct(minf(0.4 * k, 1.0))
 	return ""
@@ -635,7 +635,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 				_:
 					if card["id"] == "res_course":
 						var cs := syn_def(p, p.course)
-						card["desc"] = "+1 очко «%s» — к связке «%s» (до 3 за вылет)" % [Prog.tag_title(cs["tag"]), cs["title"]]
+						card["desc"] = Loc.t("+1 очко «%s» — к связке «%s» (до 3 за вылет)") % [Loc.t(Prog.tag_title(cs["tag"])), Loc.t(cs["title"])]
 					else:
 						card["desc"] = "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
 		_:
@@ -847,10 +847,10 @@ static func apply(p: Player, card: Dictionary) -> void:
 		"mastery":
 			p.mastery = true
 			Main.I.tele.v["mastery_t"] = Main.I.run_time
-			Main.I.show_banner("МАСТЕРСТВО КЛАССА: %s" % PlaneClasses.MASTERY[p.cls_id]["title"], 4.0)
+			Main.I.show_banner(Loc.t("МАСТЕРСТВО КЛАССА: %s") % Loc.t(PlaneClasses.MASTERY[p.cls_id]["title"]), 4.0)
 		"evolution":
 			p.evolve(card["weapon"])
-			Main.I.show_banner("МОДЕРНИЗАЦИЯ: %s" % Prog.EVOS[card["weapon"]]["title"], 4.0)
+			Main.I.show_banner(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(Prog.EVOS[card["weapon"]]["title"]), 4.0)
 		"reserve":
 			var tk: String = String(card["id"])
 			p.taken[tk] = int(p.taken.get(tk, 0)) + 1
