@@ -68,7 +68,7 @@ func _draw() -> void:
 	var c := body_color(Color(0.95, 0.35, 0.3))
 	if _aim > 0.0 and _flash <= 0.0:
 		c = Color(1.0, 0.9, 0.3)
-	if draw_enemy_sprite("e_drone", 34.0, Color(1.6, 1.4, 0.4) if (_aim > 0.0 and int(_aim * 12.0) % 2 == 0) else Color.WHITE):
+	if draw_enemy_sprite("e_drone_sea" if Biome.sea() else "e_drone", 34.0, Color(1.6, 1.4, 0.4) if (_aim > 0.0 and int(_aim * 12.0) % 2 == 0) else Color.WHITE):
 		return
 	var pts := Transform2D(heading, Vector2.ZERO) * PackedVector2Array([Vector2(12, 0), Vector2(0, 8), Vector2(-8, 0), Vector2(0, -8)])
 	draw_colored_polygon(pts, c)
