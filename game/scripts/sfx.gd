@@ -7,7 +7,12 @@ extends Node
 const RATE := 22050
 
 var streams := {}
-var players: Array[AudioStreamPlayer] = []
+## Пилот звука (18.10): голоса — AudioStreamPlayer2D, чтобы звук из точки боя шёл слева или справа
+## (громкость от расстояния не меняется — только панорама). Голосов 24, у частых звуков свой предел.
+var players: Array[AudioStreamPlayer2D] = []
+var _voice_ev: Array[String] = []   # какое событие играет голос
+var _voice_t: Array[float] = []     # когда начал (для замены самого старого)
+var _duck := 0.0                    # приглушение музыки, дБ (возвращается само)
 var engine: AudioStreamPlayer
 var engine_jet: AudioStream       # гул реактивного двигателя
 var engine_prop: AudioStream      # правка 3.5-s4: четыре винтовых мотора («Кит 1»), если есть файл
@@ -30,13 +35,25 @@ func _ready() -> void:
 	streams["boss"] = _tone(110.0, 1.2, 0.3, 2.0, 0.8, true)
 	streams["evac"] = _tone(520.0, 0.6, 0.0, 3.0, 0.5, true)
 	streams["bomb"] = _tone(55.0, 0.5, 0.95, 6.0, 0.9)
-	for i in 12:
-		var a := AudioStreamPlayer.new()
+	_setup_buses()
+	var dk := Ducker.new()
+	dk.sfx = self
+	dk.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(dk)
+	for i in VOICES:
+		var a := AudioStreamPlayer2D.new()
+		a.bus = "SFX"
+		a.attenuation = 0.0          # без затухания: баланс громкости — как в вызовах play()
+		a.max_distance = 100000.0
+		a.panning_strength = 1.6     # заметная, но не жёсткая панорама (общая сила 0,5 в проекте)
 		add_child(a)
 		players.append(a)
+		_voice_ev.append("")
+		_voice_t.append(0.0)
 	engine = AudioStreamPlayer.new()
 	engine.stream = _tone(55.0, 1.0, 0.45, 0.0, 0.4, false, true)
 	engine.volume_db = -22.0
+	engine.bus = "SFX"
 	add_child(engine)
 	_load_overrides()
 	# Гул включается только в полёте (set_engine), в меню и ангаре его нет
@@ -96,22 +113,122 @@ const FALLBACK := {
 }
 
 
-func play(sound: String, db := 0.0, pitch := 1.0) -> void:
+const VOICES := 24
+## Сколько копий звука может звучать одновременно; новая копия сверх предела заменяет самую старую.
+## Остальные события — до 4 копий.
+const VOICE_CAP := {
+	"gun_fire": 3, "gunpod_fire": 2, "turret_fire": 2, "enemy_fire": 4, "hit": 4, "pickup": 3,
+	"explode": 5, "explode_big": 3, "bomb": 4, "aam_launch": 3, "rocket_launch": 3, "card": 2,
+}
+## Важные сигналы: если свободных голосов нет, забирают голос у самого старого обычного звука
+## (раньше в плотном бою писк захвата и попадание по игроку могли просто не прозвучать).
+const PRIORITY := ["lock", "missile_enemy", "sam_lock", "sam_launch", "aa_alert", "player_hit", "player_explode",
+	"fuel_low", "fuel_empty", "boss", "levelup", "evac", "gate", "tanker_down", "shield_break", "radio", "card"]
+## Крупные события ненадолго приглушают музыку (дБ), чтобы удар был слышен
+const DUCK := {"explode_big": 4.0, "bomb": 3.0, "player_hit": 3.0, "player_explode": 8.0, "tanker_down": 6.0,
+	"fortress_part": 4.0, "boss": 4.0}
+
+
+## pos — точка в мире боя: звук смещается влево/вправо по положению на экране. Без pos — по центру.
+func play(sound: String, db := 0.0, pitch := 1.0, pos := Vector2.INF) -> void:
 	if not variants.has(sound) and not streams.has(sound):
 		if FALLBACK.has(sound):
-			play(FALLBACK[sound], db, pitch)
+			play(FALLBACK[sound], db, pitch, pos)
 		return
 	db += Tuning.g("sfx_db")
 	# Для звуков из файлов высоту тона не трогаем (её подбирали под заглушки) — кроме «лесенок»
 	if variants.has(sound) and not KEEP_PITCH.has(sound):
 		pitch = 1.0
-	for a in players:
-		if not a.playing:
-			a.stream = (variants[sound] as Array).pick_random() if variants.has(sound) else streams[sound]
-			a.volume_db = db
-			a.pitch_scale = pitch * randf_range(0.94, 1.06)
-			a.play()
+	var a := _voice(sound)
+	if a == null:
+		return
+	var i := players.find(a)
+	_voice_ev[i] = sound
+	_voice_t[i] = Time.get_ticks_msec() / 1000.0
+	a.stream = (variants[sound] as Array).pick_random() if variants.has(sound) else streams[sound]
+	a.volume_db = db
+	a.pitch_scale = pitch * randf_range(0.94, 1.06)
+	var c := _screen_center()
+	a.global_position = c if pos == Vector2.INF else pos
+	a.play()
+	if DUCK.has(sound):
+		_duck = maxf(_duck, DUCK[sound])
+
+
+## Голос для звука: свободный; сверх предела копий — самый старый того же звука;
+## для важного сигнала — самый старый обычный. Нет голоса — звук пропускается.
+func _voice(sound: String) -> AudioStreamPlayer2D:
+	var cap: int = VOICE_CAP.get(sound, 4)
+	var same := 0
+	var oldest_same := -1
+	var oldest_any := -1
+	var free := -1
+	for i in players.size():
+		if not players[i].playing:
+			if free < 0:
+				free = i
+			continue
+		if _voice_ev[i] == sound:
+			same += 1
+			if oldest_same < 0 or _voice_t[i] < _voice_t[oldest_same]:
+				oldest_same = i
+		elif not PRIORITY.has(_voice_ev[i]) and (oldest_any < 0 or _voice_t[i] < _voice_t[oldest_any]):
+			oldest_any = i
+	if same >= cap and oldest_same >= 0:
+		players[oldest_same].stop()
+		return players[oldest_same]
+	if free >= 0:
+		return players[free]
+	if PRIORITY.has(sound) and oldest_any >= 0:
+		players[oldest_any].stop()
+		return players[oldest_any]
+	return null
+
+
+## Центр экрана в координатах боя (туда ставится звук без точки — он звучит по центру)
+func _screen_center() -> Vector2:
+	var vp := get_viewport()
+	if vp == null:
+		return Vector2.ZERO
+	return vp.get_canvas_transform().affine_inverse() * (vp.get_visible_rect().size * 0.5)
+
+
+## Шины: SFX (лёгкий компрессор) и Music → Master с лимитером, чтобы сумма взрывов не хрипела
+func _setup_buses() -> void:
+	for bus_name in ["SFX", "Music"]:
+		if AudioServer.get_bus_index(bus_name) < 0:
+			AudioServer.add_bus()
+			var b := AudioServer.bus_count - 1
+			AudioServer.set_bus_name(b, bus_name)
+			AudioServer.set_bus_send(b, "Master")
+			if bus_name == "SFX":
+				var comp := AudioEffectCompressor.new()
+				comp.threshold = -14.0
+				comp.ratio = 3.0
+				comp.attack_us = 2000.0
+				comp.release_ms = 180.0
+				AudioServer.add_bus_effect(b, comp)
+	var has_lim := false
+	for e in AudioServer.get_bus_effect_count(0):
+		if AudioServer.get_bus_effect(0, e) is AudioEffectHardLimiter:
+			has_lim = true
+	if not has_lim:
+		var lim := AudioEffectHardLimiter.new()
+		lim.ceiling_db = -1.0
+		lim.release = 0.12
+		AudioServer.add_bus_effect(0, lim)
+
+
+## Приглушение музыки уходит за полсекунды–секунду; считается и на паузе (выбор карточки),
+## иначе музыка осталась бы тише на всё время паузы.
+class Ducker extends Node:
+	var sfx: Sfx
+	func _process(delta: float) -> void:
+		var mb := AudioServer.get_bus_index("Music")
+		if mb < 0:
 			return
+		sfx._duck = move_toward(sfx._duck, 0.0, delta * 6.0)
+		AudioServer.set_bus_volume_db(mb, -sfx._duck)
 
 
 ## Гул двигателя. speed_ratio — скорость / крейсерская, ab — форсаж 0…1, prop — винтовой самолёт.
@@ -202,6 +319,7 @@ func _init_music() -> void:
 	for i in 2:
 		var a := AudioStreamPlayer.new()
 		a.volume_db = -80.0
+		a.bus = "Music"
 		a.process_mode = Node.PROCESS_MODE_ALWAYS
 		add_child(a)
 		_music.append(a)

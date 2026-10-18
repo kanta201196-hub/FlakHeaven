@@ -76,7 +76,7 @@ func spawn_missile(pos: Vector2, dir: Vector2) -> void:
 func spawn_enemy_bullet(pos: Vector2, vel: Vector2, who := "", big := false, dmg_k := 1.0, quiet := false) -> void:
 	ebullets.append({"p": pos, "v": vel, "life": 3.3, "who": who, "big": big, "k": dmg_k})
 	if not big and not quiet:
-		Main.I.sfx.play("enemy_fire", -19.0)
+		Main.I.sfx.play("enemy_fire", -19.0, 1.0, pos)
 
 
 # ---------- Служебные: противоракеты, срыв захвата, урон по площади ----------
@@ -482,7 +482,7 @@ func _update_bombs(delta: float) -> void:
 			# тест 3.5-s4 (п. 14): на земле остаётся воронка (бомбы падают до земли; БЧ ракеты рвётся в воздухе)
 			if String(b["src"]) != "разделяющаяся БЧ" and is_instance_valid(Main.I.fx.ground):
 				Main.I.fx.ground.crater(b["p"], float(b["r"]))
-			Main.I.sfx.play("bomb", -10.0)
+			Main.I.sfx.play("bomb", -10.0, 1.0, b["p"])
 			Main.I.add_shake(2.0)
 			bombs.remove_at(i)
 
