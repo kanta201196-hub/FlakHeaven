@@ -126,6 +126,7 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 	_ero.fractal_octaves = 4
 	_ero.fractal_gain = 0.45
 	_ero.fractal_lacunarity = 2.1
+	_find_loops()
 	clear()
 
 
@@ -446,7 +447,87 @@ func _v_raw(x: float, z: float) -> float:
 	# сдвиг умеренный: сильный «складывает» поле и рождает замкнутые петли русла — ямы без стока
 	var wx := x + _warp.get_noise_2d(x, z) * 380.0
 	var wz := z + _warp.get_noise_2d(x + 913.0, z - 377.0) * 380.0
-	return _valley.get_noise_2d(wx, wz)
+	var v := _valley.get_noise_2d(wx, wz)
+	if not _loops.is_empty():   # L-02: заплатки на мелкие кольца реки
+		for b in _loops.get(Vector2i(floori(x / LOOP_CELL), floori(z / LOOP_CELL)), _NO_LOOPS):
+			var d := Vector2(x, z).distance_to(b[0])
+			if d < float(b[3]):
+				v -= float(b[1]) * 1.25 * (1.0 - smoothstep(float(b[2]), float(b[3]), d))
+	return v
+
+
+## L-02 (правка Kanta 18.10, вариант «2»: заплатка, без перестройки сети): река — нулевая линия поля
+## долин, и местами она замыкалась в кольцо вокруг «острова» поля другого знака. Один раз при запуске
+## ищем такие острова (связные области одного знака, не касающиеся края, меньше LOOP_MAX) на сетке
+## LOOP_STEP и поднимаем поле внутри до знака окружения: кольцо пропадает, снаружи поле только
+## удаляется от нуля (соседние реки не сдвигаются). Остров накрывается целиком (поле в нём по модулю
+## не больше его максимума v_e), край заплатки мягкий
+const LOOP_STEP := 300.0
+const LOOP_HALF := 54000.0     # область поиска вокруг начала мира, px
+const LOOP_MAX := 16.0e6       # площадь острова, px² (~16 км²: на 80 × 80 км таких было ~28)
+const LOOP_FADE := 1400.0
+const LOOP_CELL := 4000.0
+const _NO_LOOPS := []
+var _loops := {}               # Vector2i ячейки LOOP_CELL → [[центр, v_e, R, R + LOOP_FADE], …]; после setup только читается
+
+
+func _find_loops() -> void:
+	_loops = {}
+	_find_loops_pass()
+	_find_loops_pass()   # второй проход по уже залатанному полю: остатки колец у края заплаток
+
+
+func _find_loops_pass() -> void:
+	var n := int(2.0 * LOOP_HALF / LOOP_STEP)
+	var vs := PackedFloat32Array()
+	vs.resize(n * n)
+	for j in n:
+		for i in n:
+			vs[j * n + i] = _v_raw(-LOOP_HALF + i * LOOP_STEP, -LOOP_HALF + j * LOOP_STEP)
+	var lab := PackedInt32Array()
+	lab.resize(n * n)
+	lab.fill(-1)
+	var cmax := int(LOOP_MAX / (LOOP_STEP * LOOP_STEP))
+	var c := 0
+	for s0 in n * n:
+		if lab[s0] >= 0:
+			continue
+		var pos := vs[s0] > 0.0
+		var st: Array[int] = [s0]
+		var cells: Array[int] = []
+		lab[s0] = c
+		var border := false
+		while not st.is_empty():
+			var k: int = st.pop_back()
+			cells.append(k)
+			var i: int = k % n
+			var j: int = k / n
+			if i == 0 or j == 0 or i == n - 1 or j == n - 1:
+				border = true
+			for kk: int in [k - 1 if i > 0 else -1, k + 1 if i < n - 1 else -1, k - n if j > 0 else -1, k + n if j < n - 1 else -1]:
+				if kk >= 0 and lab[kk] < 0 and (vs[kk] > 0.0) == pos:
+					lab[kk] = c
+					st.append(kk)
+		c += 1
+		if border or cells.size() > cmax:
+			continue
+		var best := cells[0]
+		for k in cells:
+			if absf(vs[k]) > absf(vs[best]):
+				best = k
+		var ctr := Vector2(-LOOP_HALF + (best % n) * LOOP_STEP, -LOOP_HALF + (best / n) * LOOP_STEP)
+		var r := 0.0
+		for k in cells:
+			r = maxf(r, ctr.distance_to(Vector2(-LOOP_HALF + (k % n) * LOOP_STEP, -LOOP_HALF + (k / n) * LOOP_STEP)))
+		r += LOOP_STEP * 2.0
+		var b := [ctr, vs[best], r, r + LOOP_FADE]
+		var reach := r + LOOP_FADE
+		for gx in range(floori((ctr.x - reach) / LOOP_CELL), floori((ctr.x + reach) / LOOP_CELL) + 1):
+			for gz in range(floori((ctr.y - reach) / LOOP_CELL), floori((ctr.y + reach) / LOOP_CELL) + 1):
+				var gk := Vector2i(gx, gz)
+				if not _loops.has(gk):
+					_loops[gk] = []
+				_loops[gk].append(b)
 
 
 ## Ближайшая точка дна долины (не дальше D_FLOOR от реки) около p — для наземной техники.
