@@ -122,7 +122,7 @@ func _ready() -> void:
 
 
 func _default_class(cls: String) -> Dictionary:
-	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2,
+	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2, "livery": "",
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": []}
 
@@ -279,6 +279,16 @@ func plane_lvl(c: String) -> int:
 
 func set_plane(c: String, lv: int) -> void:
 	cls(c)["plane_sel"] = clampi(lv, 1, 2)
+	save()
+
+
+## Тест 3.5-s4, п. 35: окраска самолёта класса (Livery.VARIANTS; "" — исходная)
+func livery(c: String) -> String:
+	return String(cls(c).get("livery", ""))
+
+
+func set_livery(c: String, id: String) -> void:
+	cls(c)["livery"] = id
 	save()
 
 

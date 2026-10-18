@@ -19,6 +19,7 @@ const KINDS := {
 	"tank": ["b08_wreck_tank", 58.0, 68.0],
 	"yurt": ["b09_yurt", 34.0, 44.0],
 	"sandbag": ["b10_sandbag_post", 40.0, 55.0],
+	"plane": ["b11_wreck_plane", 110.0, 130.0],   # сцены прошедших боёв (Terrain3D.scenes)
 }
 
 ## T4-05: облегчённые деревья для пресетов ниже «Максимального» (11–14 тыс. треуг. у полной модели).
@@ -99,9 +100,51 @@ func _full_mesh(kind: String) -> Mesh:
 			var scene := (load(path) as PackedScene).instantiate()
 			var mi := _find_mesh(scene)
 			if mi != null:
-				_meshes[kind] = mi.mesh
+				_meshes[kind] = _merged(scene) if _count_meshes(scene) > 1 else mi.mesh
 			scene.free()
 	return _meshes[kind]
+
+
+func _count_meshes(n: Node) -> int:
+	var k := 1 if n is MeshInstance3D else 0
+	for c in n.get_children():
+		k += _count_meshes(c)
+	return k
+
+
+## Модель из многих частей (остов самолёта — 23 детали) — в одну сетку для MultiMesh: части с одним
+## материалом сливаются в одну поверхность
+func _merged(root: Node) -> Mesh:
+	var parts := []
+	_collect(root, Transform3D.IDENTITY, parts)
+	var by_mat := {}
+	for pr in parts:
+		var mesh: Mesh = pr[0]
+		for si in mesh.get_surface_count():
+			var mat: Material = mesh.surface_get_material(si)
+			if pr[2] != null:
+				mat = pr[2]
+			if not by_mat.has(mat):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				by_mat[mat] = st
+			(by_mat[mat] as SurfaceTool).append_from(mesh, si, pr[1])
+	var am := ArrayMesh.new()
+	for mat in by_mat:
+		var st: SurfaceTool = by_mat[mat]
+		st.commit(am)
+		am.surface_set_material(am.get_surface_count() - 1, mat)
+	return am
+
+
+func _collect(n: Node, xf: Transform3D, out: Array) -> void:
+	var t := xf
+	if n is Node3D:
+		t = xf * (n as Node3D).transform
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
+		out.append([(n as MeshInstance3D).mesh, t, (n as MeshInstance3D).material_override])
+	for c in n.get_children():
+		_collect(c, t, out)
 
 
 func _find_mesh(n: Node) -> MeshInstance3D:
@@ -143,21 +186,45 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 		for dz in [-1, 0, 1]:
 			var no: Dictionary = (ctx["objs"] as Dictionary).get(Vector2i(key.x + dx, key.y + dz), {})
 			if not no.is_empty() and not (no["name"] in ["o_rocks_big", "o_rocks_small"]):
-				keep_out.append([no["pos"], float(no["size"]) * 0.5 + 30.0])
+				keep_out.append([no["pos"], float(no["size"]) * maxf(AdobeBuild.footprint(no["name"]), 0.5) + 30.0])
+	# сцены прошедших боёв (Terrain3D.scenes): техника и мешки этой клетки; вокруг них и пятен — без кустов
+	var scn: Dictionary = ctx.get("scenes", {})
+	for dx in [-1, 0, 1]:
+		for dz in [-1, 0, 1]:
+			for it in scn.get(Vector2i(key.x + dx, key.y + dz), []):
+				keep_out.append([it["p"], float(it["r"]) + 12.0])
+	for it in scn.get(key, []):
+		if KINDS.has(it["k"]):
+			_add_scene(rng, put, it, ctx)
 	# вокруг объектов биома — их окружение (поселения стоят на дне долин — см. terrain3d.gd)
 	if not obj.is_empty():
 		var p0: Vector2 = obj["pos"]
 		var r0 := float(obj["size"]) * 0.5
 		match obj["name"]:
 			"o_oasis", "o_village":
-				# сады — на ровном дне у поселения; тополя — рядами вдоль арыков
-				for i in rng.randi_range(5, 9):
-					_ring_zone(rng, put, "orchard", p0, r0 * 0.9, r0 * 1.5, ["floor"], ctx)
+				# тест 3.5-s4 (п. 17): сады — пятнами там, где на земле огороды и сады (AdobeBuild.ground_mask),
+				# а не кольцом вокруг; тополя — рядами по краю садов (вдоль арыков)
+				var vr := int(obj.get("var", 0))
+				var sz0 := float(obj["size"])
+				var trees := 0
+				var want := rng.randi_range(14, 20) if obj["name"] == "o_oasis" else rng.randi_range(10, 16)
+				for i in 70:
+					if trees >= want:
+						break
+					var q := p0 + Vector2.from_angle(rng.randf() * TAU) * sz0 * 0.75 * sqrt(rng.randf())
+					var gm := AdobeBuild.ground_mask(obj["name"], vr, (q - p0).rotated(-float(obj["rot"])) / sz0)
+					if gm.y < 0.45 or gm.x > 0.5 or not (_zone(q, ctx) in ["floor", "fan"]):
+						continue
+					trees += 1
+					_add(rng, put, "orchard", q, [], ctx)
+					if rng.randf() < 0.45:   # сад — группа деревьев
+						_add(rng, put, "orchard", q + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(30.0, 45.0), [], ctx)
 				var a0 := rng.randf() * TAU
+				var rr := sz0 * maxf(AdobeBuild.footprint(obj["name"]), 0.5) * AdobeBuild.outline(vr, a0 - float(obj["rot"])) * 0.95
 				for i in rng.randi_range(5, 8):
-					var q := p0 + Vector2.from_angle(a0) * r0 * 1.15 + Vector2.from_angle(a0 + PI / 2) * (i - 3.5) * 26.0
+					var q := p0 + Vector2.from_angle(a0) * rr + Vector2.from_angle(a0 + PI / 2) * (i - 3.5) * 26.0
 					if _zone(q, ctx) == "floor":
-						_add(rng, put, "poplar", q, keep_out, ctx)
+						_add(rng, put, "poplar", q, [], ctx)
 				if obj["name"] == "o_village":
 					for i in rng.randi_range(1, 2):
 						_ring_zone(rng, put, "yurt", p0, r0 * 1.2, r0 * 1.7, ["floor", "fan"], ctx)
@@ -322,6 +389,23 @@ func _ring_zone(rng: RandomNumberGenerator, put: Dictionary, kind: String, c: Ve
 		if _zone(q, ctx) in zones:
 			_add(rng, put, kind, q, [], ctx)
 			return
+
+
+## Элемент сцены прошедшего боя: модель с заданным поворотом, по склону не кренится (сцены — на дне долин)
+func _add_scene(rng: RandomNumberGenerator, put: Dictionary, it: Dictionary, ctx: Dictionary) -> void:
+	var kind: String = it["k"]
+	var w := float(it["w"]) * rng.randf_range(0.92, 1.08)
+	var p: Vector2 = it["p"]
+	var s := _t.surface(p.x, p.y, ctx)
+	var hk: float = (ctx["hk"] as Dictionary).get(kind, -1.0)
+	if hk >= 0.0:
+		w = minf(w, (-30.0 - s.y) / maxf(hk, 0.01))
+	if w < 4.0:
+		return
+	var t := Transform3D(Basis(Vector3.UP, -float(it["yaw"])).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.03, 0))
+	if not put.has(kind):
+		put[kind] = []
+	put[kind].append(t)
 
 
 ## Машина стоит вдоль дороги (нос по направлению дороги, лёгкий разворот)

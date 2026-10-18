@@ -1,0 +1,98 @@
+extends Node
+## Тест 3.5-s4, п. 35: лист окрасок (Livery) — модель ангара или боя с механизацией и деталями,
+## каждый вариант окраски в двух видах (3/4 сверху и сверху), всё на одном листе user://livery_<…>.png.
+## Быстрее стенда ангара: без интерфейса и сверхвыборки. Из папки game/:
+##   xvfb-run -a godot --path . --rendering-driver opengl3 res://tools/model_lab/livery_sheet.tscn -- [cls=fighter] [lvl=2] [kind=battle]
+var vp: SubViewport
+var cam: Camera3D
+var holder: Node3D
+var queue: Array = []
+var frames := 0
+var shots: Array = []
+var cur: Array
+
+func _ready():
+	var args := OS.get_cmdline_user_args()
+	var classes := ["fighter", "attacker", "bomber"]
+	var lvls := [1]
+	var kind := "hangar"
+	for a in args:
+		if a.begins_with("cls="): classes = [a.get_slice("=", 1)]
+		if a.begins_with("lvl="): lvls = [int(a.get_slice("=", 1))]
+		if a.begins_with("kind="): kind = a.get_slice("=", 1)
+	for c in classes:
+		for l in lvls:
+			for v in Livery.list(c):
+				for view in [0, 1]:
+					queue.append([c, l, v[0], view, kind])
+	vp = SubViewport.new()
+	vp.size = Vector2i(560, 400)
+	vp.own_world_3d = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(vp)
+	var we := WorldEnvironment.new()
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color(0.55, 0.62, 0.7)
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color(0.6, 0.68, 0.82)
+	env.ambient_light_energy = 0.5
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_white = 1.6
+	we.environment = env
+	vp.add_child(we)
+	var key := DirectionalLight3D.new()
+	key.light_color = Color(1.0, 0.94, 0.85)
+	key.basis = Basis.looking_at(Vector3(0.55, -0.55, -0.62).normalized(), Vector3.UP)
+	vp.add_child(key)
+	cam = Camera3D.new()
+	cam.fov = 35.0
+	vp.add_child(cam)
+	holder = Node3D.new()
+	vp.add_child(holder)
+
+func _process(_d: float) -> void:
+	if cur.is_empty():
+		if queue.is_empty():
+			_sheet()
+			get_tree().quit()
+			return
+		cur = queue.pop_front()
+		for c in holder.get_children():
+			c.free()
+		var path := "res://models/%s/fh_%s_%s_%d.glb" % [cur[4], cur[4], cur[0], cur[1]]
+		var model: Node3D = (load(path) as PackedScene).instantiate()
+		holder.add_child(model)
+		var k := "%s_%d" % [cur[0], cur[1]]
+		WingMech.attach(model, k)
+		WingMech.attach_detail(model, k)
+		WingMech.attach_tail(model, k)
+		WingMech.attach_bay(model, k)
+		Livery.apply(model, cur[0], cur[1], cur[2])
+		if cur[3] == 0:
+			cam.position = Vector3(cos(-2.3), 0.0, sin(-2.3)) * cos(0.45) * 0.95 + Vector3(0, sin(0.45) * 0.95, 0)
+			cam.look_at(Vector3.ZERO, Vector3.UP)
+		else:
+			cam.position = Vector3(0, 1.15, 0.001)
+			cam.look_at(Vector3.ZERO, Vector3(1, 0, 0))
+		frames = 0
+		return
+	frames += 1
+	if frames == 3:
+		var img := vp.get_texture().get_image()
+		shots.append([cur.duplicate(), img])
+		cur = []
+
+func _sheet():
+	var w := 560
+	var h := 400
+	var cols := 4
+	var rows := int(ceil(shots.size() / float(cols)))
+	var out := Image.create(w * cols, h * rows, false, Image.FORMAT_RGBA8)
+	for i in shots.size():
+		var img: Image = shots[i][1]
+		img.convert(Image.FORMAT_RGBA8)
+		out.blit_rect(img, Rect2i(0, 0, w, h), Vector2i((i % cols) * w, (i / cols) * h))
+	var name := "user://livery_%s.png" % ("_".join(OS.get_cmdline_user_args()).replace("=", ""))
+	out.save_png(name)
+	print("SHEET ", ProjectSettings.globalize_path(name))

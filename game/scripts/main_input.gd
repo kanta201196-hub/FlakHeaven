@@ -238,6 +238,8 @@ func hangar_action(a: String) -> void:
 			ok = Profile.buy_plane2(c)
 		"plane_sel":
 			Profile.set_plane(c, int(p[1]))
+		"livery":
+			Profile.set_livery(c, p[1])
 		"wsel":
 			m.hangar_w = p[1]
 		"tier":

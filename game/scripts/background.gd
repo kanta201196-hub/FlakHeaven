@@ -20,7 +20,7 @@ const OBJECTS := {
 	"o_rocks_small": [150.0, 8.0, 5.0, Color(0.92, 0.9, 0.86)],
 	"o_mesa": [560.0, 34.0, 1.2, Color(0.9, 0.86, 0.82)],
 	"o_fort": [380.0, 18.0, 1.0, Color(1, 1, 1)],
-	"o_village": [640.0, 10.0, 1.2, Color(1, 1, 1)],   # тест 3.5-s4 (п. 19): разрушенный городок — крупнее (было 440)
+	"o_village": [900.0, 10.0, 1.2, Color(1, 1, 1)],   # тест 3.5-s4 (п. 19): разрушенный городок — крупнее (было 440, потом 640)
 	"o_oasis": [420.0, 16.0, 1.0, Color(1, 1, 1)],
 	"o_crater": [170.0, 0.0, 3.0, Color(1, 1, 1)],
 	"o_wreck": [150.0, 3.0, 1.2, Color(1, 1, 1)],
@@ -116,7 +116,8 @@ func _chunk_object_raw(cx: int, cy: int) -> Dictionary:
 	var size: float = OBJECTS[name][0] * rng.randf_range(0.85, 1.15)
 	var margin := size * 0.5 + 40.0
 	var p := Vector2((cx * CHUNK) + rng.randf_range(margin, CHUNK - margin), (cy * CHUNK) + rng.randf_range(margin, CHUNK - margin))
-	return {"name": name, "pos": p, "size": size, "rot": rng.randf() * TAU, "flip": rng.randf() < 0.5}
+	# var — раскладка построек (AdobeBuild): от клетки, не от rng — остальные поля не сдвигаются
+	return {"name": name, "pos": p, "size": size, "rot": rng.randf() * TAU, "flip": rng.randf() < 0.5, "var": absi(hash(Vector2i(cx, cy))) % 4}
 
 
 func _draw() -> void:

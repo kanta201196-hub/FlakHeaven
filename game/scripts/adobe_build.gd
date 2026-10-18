@@ -9,6 +9,7 @@ extends RefCounted
 const WALL := Color(0.93, 0.85, 0.72)
 const ROOF := Color(1.0, 0.94, 0.82)
 const DARK := Color(0.62, 0.55, 0.47)    # проёмы, бойницы, двери
+const WATER := Color(0.3, 0.4, 0.42)     # вода в пруду оазиса
 
 static var _cache := {}
 static var _mat: StandardMaterial3D
@@ -87,6 +88,94 @@ const BURNT := Color(0.3, 0.27, 0.24)   # копоть
 const RUBBLE := Color(0.82, 0.74, 0.62)  # битая глина
 
 
+## Тест 3.5-s4 (второй список, п. 16–17): у поселения неровный край, как у настоящего: контур — сумма
+## синусов по углу (у каждой раскладки свой), плотная застройка в середине, к краю — реже, дальше —
+## огороды за дувалами и отдельные дома вдоль дорог. Тот же контур задаёт пятно утоптанной земли и
+## полей на рельефе (ground_mask → terrain3d.gd) и площадку под поселением — всё совпадает.
+## Множитель радиуса контура по углу (0.7 … 1.2); variant — номер раскладки
+static func outline(variant: int, ang: float) -> float:
+	var v := float(variant)
+	var o := 1.0 + 0.15 * sin(2.0 * ang + 1.3 + v * 2.1) + 0.1 * sin(3.0 * ang + 0.7 + v * 1.7) \
+		+ 0.06 * sin(5.0 * ang + 2.9 + v * 0.9) + 0.035 * sin(8.0 * ang + 0.4 + v * 2.6)
+	return clampf(o, 0.7, 1.2)
+
+
+## Псевдослучайное 0…1 от раскладки (без генератора — одинаково в любом потоке)
+static func _vr(variant: int, k: int) -> float:
+	var x := sin(float(variant) * 12.9898 + float(k) * 78.233 + 1.0) * 43758.5453
+	return x - floorf(x)
+
+
+## Кишлак строится в «старых» единицах (1 = 640 px, как было до увеличения), потом сжимается под размер
+const V_UNIT := 640.0 / 900.0   # размер o_village — 900 (background.gd)
+const V_EDGE := 0.6             # радиус края застройки, старые единицы (× outline)
+
+
+static func _village_streets(variant: int) -> Vector2:
+	return Vector2((_vr(variant, 1) - 0.5) * 0.3, (_vr(variant, 2) - 0.5) * 0.12)   # x — поперечная, y — главная
+
+
+## Маска поселения на земле в точке l (смещение от центра / размер объекта, в осях объекта):
+## x — утоптанная земля (дворы, улицы, тропы), y — зелень (огороды, сады, поля). 0…1, мягкие края
+static func ground_mask(name: String, variant: int, l: Vector2) -> Vector2:
+	var ang := l.angle()
+	var o := outline(variant, ang)
+	match name:
+		"o_village":
+			var u := l / V_UNIT
+			var rad := u.length()
+			var e := V_EDGE * o
+			var tr := 1.0 - smoothstep(e * 0.82, e * 1.12, rad)
+			# улицы выходят из города тропами и тают в степи
+			var st := _village_streets(variant)
+			var dl := minf(absf(u.y - st.y), absf(u.x - st.x))
+			tr = maxf(tr, (1.0 - smoothstep(0.012, 0.035, dl)) * (1.0 - smoothstep(e * 1.05, e * 1.55, rad)) * 0.85)
+			# огороды и сады за домами: кольцо у края, только в части секторов — пятнами, не кругом
+			var sect := smoothstep(-0.15, 0.45, sin(2.0 * ang + 0.5 + variant * 1.3) + 0.6 * sin(5.0 * ang + variant * 0.7))
+			var gr := smoothstep(e * 0.7, e * 0.92, rad) * (1.0 - smoothstep(e * 1.2, e * 1.42, rad)) * sect
+			return Vector2(tr, gr)
+		"o_oasis":
+			var rad := l.length()
+			var e := 0.36 * o
+			var core := l - Vector2(0.06, -0.05)
+			var tr := 1.0 - smoothstep(0.07, 0.14, core.length() / o)
+			var gr := 1.0 - smoothstep(e * 0.85, e * 1.15, rad)
+			return Vector2(tr, gr)
+		"o_fort":
+			var box := maxf(absf(l.x), absf(l.y))
+			var e := 0.5 + 0.12 * o
+			var tr := 1.0 - smoothstep(e * 0.95, e * 1.3, box)
+			var sect := smoothstep(0.1, 0.6, sin(3.0 * ang + variant * 1.9))
+			var gr := smoothstep(0.55, 0.65, box) * (1.0 - smoothstep(0.78, 0.9, box)) * sect * 0.8
+			return Vector2(tr, gr)
+	return Vector2.ZERO
+
+
+## Точка l (доля размера, в осях объекта) с запасом m — вне построек, огородов и садов поселения
+static func outside(name: String, variant: int, l: Vector2, m: float) -> bool:
+	var o := outline(variant, l.angle())
+	match name:
+		"o_village":
+			return l.length() - m > V_EDGE * o * 1.3 * V_UNIT
+		"o_oasis":
+			return l.length() - m > 0.36 * o * 1.15
+		"o_fort":
+			return maxf(absf(l.x), absf(l.y)) - m > 0.56
+	return l.length() - m > 0.5
+
+
+## Радиус, в который укладываются постройки и поля поселения (доля размера) — для отвода от реки
+static func footprint(name: String) -> float:
+	match name:
+		"o_village":
+			return 1.25 * V_EDGE * 1.2 * V_UNIT   # ≈ 0.64: отдельные дома на окраине
+		"o_oasis":
+			return 0.5
+		"o_fort":
+			return 0.62
+	return 0.45
+
+
 static func village(variant: int) -> ArrayMesh:
 	var key := "village%d" % variant
 	if _cache.has(key):
@@ -95,20 +184,46 @@ static func village(variant: int) -> ArrayMesh:
 	rng.seed = 7919 * (variant + 1)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var R := 0.47
 	var street := 0.055
-	var cross_x := rng.randf_range(-0.15, 0.15)    # поперечная улица
-	var main_z := rng.randf_range(-0.06, 0.06)      # главная улица
+	var sts := _village_streets(variant)
+	var cross_x := sts.x    # поперечная улица
+	var main_z := sts.y     # главная улица
 	var lot := 0.105
+	var R := V_EDGE * 1.2 * 1.25
 	var n := int(ceilf(R * 2.0 / lot))
 	for i in n:
 		for j in n:
-			var c := Vector2(-R + (i + 0.5) * lot, -R + (j + 0.5) * lot) + Vector2(rng.randf_range(-0.01, 0.01), rng.randf_range(-0.01, 0.01))
-			# город — неровное пятно, а не квадрат: к краю участки реже
-			var d := c.length() / R
-			if d > 1.0 or rng.randf() < smoothstep(0.7, 1.0, d) * 0.6:
+			var c := Vector2(-R + (i + 0.5) * lot, -R + (j + 0.5) * lot) + Vector2(rng.randf_range(-0.012, 0.012), rng.randf_range(-0.012, 0.012))
+			var roll0 := rng.randf()
+			var roll := rng.randf()
+			var e := V_EDGE * outline(variant, c.angle())
+			var d := c.length() / e
+			var near_street := minf(absf(c.y - main_z), absf(c.x - cross_x)) < lot * 0.9
+			# середина — плотно; край — реже и неровно; за краем — огороды и редкие дома у дорог
+			var zone := 0
+			if d < 0.72:
+				if roll0 < 0.06:
+					continue   # пустырь, двор
+			elif d < 1.05:
+				zone = 1
+				if roll0 < smoothstep(0.72, 1.05, d) * 0.55:
+					if roll0 < 0.3 and not near_street:
+						_garden(st, c, Vector2(lot, lot) * rng.randf_range(0.85, 1.1), rng)
+					continue
+			elif d < 1.25:
+				zone = 2
+				if near_street and roll0 < 0.3:
+					pass
+				elif roll0 < 0.18 and not near_street:
+					_garden(st, c, Vector2(lot, lot) * rng.randf_range(0.9, 1.25), rng)
+					continue
+				else:
+					continue
+			else:
 				continue
 			var sz := Vector2(lot - rng.randf_range(0.012, 0.03), lot - rng.randf_range(0.012, 0.03))
+			if zone > 0:
+				sz *= rng.randf_range(0.7, 0.9)   # окраина — дома меньше
 			# участок не на улице: дом сдвигается от улицы и сужается, совсем на улице — не ставится
 			for ax in 2:
 				var line := main_z if ax == 0 else cross_x
@@ -131,22 +246,100 @@ static func village(variant: int) -> ArrayMesh:
 						c.x = (far + near) * 0.5
 			if sz == Vector2.ZERO:
 				continue
-			var roll := rng.randf()
+			if zone == 2:
+				# одинокий дом у дороги: целый или без крыши
+				if roll < 0.55:
+					_house(st, c, sz, rng.randf_range(0.035, 0.05), rng)
+				else:
+					_roofless(st, c, sz, rng.randf_range(0.035, 0.05), rng)
+				continue
 			if roll < 0.3:
 				_house(st, c, sz, rng.randf_range(0.04, 0.065), rng)
 			elif roll < 0.62:
 				_roofless(st, c, sz, rng.randf_range(0.04, 0.07), rng)
 			elif roll < 0.8:
 				_collapsed(st, c, sz, rng)
-			elif roll < 0.92:
+			elif roll < 0.92 and zone == 0:
 				_shell(st, c, sz * 1.05, rng.randf_range(0.1, 0.14), rng)
 			else:
 				_rubble(st, c, sz.x * 0.45, 5, rng)
 	# завалы и воронки на улицах
-	for k in 6:
-		var along := rng.randf_range(-R * 0.8, R * 0.8)
+	for k in 8:
+		var along := rng.randf_range(-V_EDGE * 0.8, V_EDGE * 0.8)
 		var c := Vector2(along, main_z) if k % 2 == 0 else Vector2(cross_x, along)
 		_rubble(st, c, 0.025, 3, rng)
+	var m := _scaled(st, V_UNIT)
+	_cache[key] = m
+	return m
+
+
+## Огород за дувалом: низкая глинобитная ограда по периметру с проходом
+static func _garden(st: SurfaceTool, c: Vector2, s: Vector2, rng: RandomNumberGenerator) -> void:
+	var t := 0.006
+	var h := rng.randf_range(0.01, 0.016)
+	var x0 := c.x - s.x * 0.5
+	var x1 := c.x + s.x * 0.5
+	var z0 := c.y - s.y * 0.5
+	var z1 := c.y + s.y * 0.5
+	var gate := rng.randi() % 4
+	var sides := [[Vector2(x0, z0), Vector2(x1, z0)], [Vector2(x1, z0), Vector2(x1, z1)], [Vector2(x1, z1), Vector2(x0, z1)], [Vector2(x0, z1), Vector2(x0, z0)]]
+	for i in 4:
+		var a: Vector2 = sides[i][0]
+		var b: Vector2 = sides[i][1]
+		if i == gate:   # проход: две половинки стены
+			_wall(st, a, a.lerp(b, 0.4), t, h, false)
+			_wall(st, a.lerp(b, 0.6), b, t, h, false)
+		elif rng.randf() < 0.2:   # обвалившийся кусок
+			_wall(st, a, a.lerp(b, 0.55), t, h, false)
+		else:
+			_wall(st, a, b, t, h, false)
+
+
+## Сжать готовую сетку в k раз (кишлак строится в старых единицах)
+static func _scaled(st: SurfaceTool, k: float) -> ArrayMesh:
+	st.generate_normals()
+	var arr := st.commit_to_arrays()
+	var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	for i in vs.size():
+		vs[i] *= k
+	arr[Mesh.ARRAY_VERTEX] = vs
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m
+
+
+## Оазис (тест 3.5-s4, п. 17): вместо круглой картинки-наклейки — несколько глинобитных домов у
+## пруда, огороды за дувалами; зелень (поля, сады) — пятном на земле и деревьями biome_props.
+## Площадка 1 × 1 = размер объекта
+static func oasis(variant: int) -> ArrayMesh:
+	var key := "oasis%d" % variant
+	if _cache.has(key):
+		return _cache[key]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4241 * (variant + 3)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var core := Vector2(0.06, -0.05)
+	# пруд (хауз) с глиняным бортиком
+	var pc := core + Vector2(-0.1, 0.06)
+	_box(st, Vector3(pc.x, 0.0, pc.y), Vector3(0.1, 0.006, 0.075), WALL, WATER)
+	_parapet(st, Vector3(pc.x, 0.0, pc.y), Vector2(0.11, 0.085), 0.008, 0.012)
+	# 3–5 домов вокруг двора
+	for i in rng.randi_range(3, 5):
+		var a := rng.randf() * TAU
+		var c := core + Vector2.from_angle(a) * rng.randf_range(0.06, 0.11)
+		if c.distance_to(pc) < 0.085:
+			continue
+		var s := Vector2(rng.randf_range(0.05, 0.075), rng.randf_range(0.045, 0.065))
+		if rng.randf() < 0.75:
+			_house(st, c, s, rng.randf_range(0.04, 0.06), rng)
+		else:
+			_roofless(st, c, s, rng.randf_range(0.04, 0.06), rng)
+	# огороды за дувалами в зелёном пятне
+	for i in rng.randi_range(4, 7):
+		var a := rng.randf() * TAU
+		var r := rng.randf_range(0.17, 0.28) * outline(variant, a)
+		_garden(st, Vector2.from_angle(a) * r, Vector2(rng.randf_range(0.08, 0.13), rng.randf_range(0.07, 0.11)), rng)
 	st.generate_normals()
 	var m := st.commit()
 	_cache[key] = m

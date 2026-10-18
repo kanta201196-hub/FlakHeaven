@@ -58,6 +58,7 @@ uniform float saturation = 0.8;     // насыщенность земли (фо
 varying vec2 world;
 varying vec3 world3;
 varying vec3 wnorm;
+varying vec3 smask; // тест 3.5-s4 (п. 16–17): x — утоптанная земля поселения, y — огороды и сады, z — гарь и воронки (terrain3d.gd)
 varying vec3 rel;   // x — открытость (впадина < 0.5 < гребень), y — высота 0…1, z — расстояние до реки, px
 
 void vertex() {
@@ -65,6 +66,7 @@ void vertex() {
 	world = world3.xz;
 	wnorm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	rel = relief ? vec3(COLOR.rg, UV2.x) : vec3(0.5, 0.0, 9999.0);
+	smask = relief ? vec3(COLOR.ba, UV2.y) : vec3(0.0);
 }
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + seed) * 43758.5453); }
@@ -163,6 +165,44 @@ void fragment() {
 		ao = mix(0.55, 1.0, smoothstep(0.15, 0.55, rel.x));
 		// 3.4-t1 (п. 18): русло, влажный берег и дорога (B-46 обещал их, но в шейдер они не попали —
 		// русло читалось чёрной канавой). rel.z — расстояние до линии реки со знаком, px
+		// поселения: пятно утоптанной земли и лоскуты полей с неровной кромкой (маска — по вершинам, край — шумом)
+		if (smask.x + smask.y + smask.z > 0.004) {
+			float en = vnoise(world / 55.0 + 11.0) - 0.5 + (vnoise(world / 17.0 - 5.0) - 0.5) * 0.4;
+			float tr = smoothstep(0.2, 0.75, smask.x + en * 0.5);
+			vec3 packed_c = mix(c, vec3(dot(c, vec3(0.333))) * vec3(1.1, 1.0, 0.86), 0.4) * (1.04 + 0.08 * (vnoise(world / 9.0) - 0.5));
+			c = mix(c, packed_c, tr * 0.7);
+			nxy *= 1.0 - 0.5 * tr;
+			float gr = smoothstep(0.25, 0.7, smask.y + en * 0.55);
+			if (gr > 0.001) {
+				// лоскуты: участки ~60–90 px, повёрнутые немного по шуму; посевы, жнивьё, пахота, сад
+				vec2 fq = mat2(vec2(0.96, 0.28), vec2(-0.28, 0.96)) * world;
+				// ряды участков со сдвигом и разной длиной — без «шахматной доски»
+				float row = floor(fq.y / 62.0);
+				float cw = 70.0 + 50.0 * hash(vec2(row, 3.0));
+				vec2 fg = vec2((fq.x + hash(vec2(row, 9.0)) * 200.0) / cw, fq.y / 62.0);
+				vec2 cell = floor(fg);
+				vec2 fr = fract(fg);
+				float pick = hash(cell);
+				// цвета — к палитре земли: приглушённые, поле не «газон»; внутри участка — рядки и пятна
+				vec3 fc = pick < 0.3 ? vec3(0.46, 0.47, 0.3) : (pick < 0.55 ? vec3(0.64, 0.57, 0.4) : (pick < 0.78 ? vec3(0.5, 0.41, 0.31) : vec3(0.38, 0.41, 0.27)));
+				fc = mix(fc, c, 0.25);
+				float rows = 0.9 + 0.1 * sin((pick < 0.5 ? fq.x : fq.y) * 0.9);
+				fc *= rows * (0.86 + 0.28 * vnoise(world / 7.0 + pick * 40.0)) * (0.9 + 0.2 * vnoise(world / 40.0 - pick * 13.0));
+				// межи и арыки — светлые полоски по краю участка
+				float mz = 1.0 - smoothstep(0.0, 0.05, min(min(fr.x, 1.0 - fr.x) * 1.4, min(fr.y, 1.0 - fr.y)));
+				fc = mix(fc, packed_c, mz * 0.8);
+				float keep = step(0.12, hash(cell + 7.0));   // часть участков — пустырь
+				c = mix(c, fc, gr * keep * 0.82);
+				nxy *= 1.0 - 0.6 * gr * keep;
+			}
+			// гарь: тёмное пятно с рваным краем, у воронки — темнее в середине
+			float bn = smoothstep(0.25, 0.75, smask.z + (vnoise(world / 14.0 + 2.0) - 0.5) * 0.6 + (vnoise(world / 4.0) - 0.5) * 0.15);
+			// не сплошная клякса: сажа пятнами, по краю — рыжеватая опалённая земля, в середине темнее
+			float soot = 0.55 + 0.45 * smoothstep(0.3, 0.7, vnoise(world / 6.0 + 21.0));
+			vec3 burnt = mix(c * vec3(0.62, 0.52, 0.44), vec3(0.2, 0.175, 0.155), smoothstep(0.55, 1.0, smask.z) * soot);
+			c = mix(c, burnt, bn * 0.78);
+			nxy *= 1.0 - 0.5 * bn;
+		}
 		float rd = abs(rel.z);
 		float edge = (vnoise(world / 90.0 + 3.0) - 0.5) * 8.0;
 		float bank = 1.0 - smoothstep(river_w, river_w * 2.4, rd + edge);

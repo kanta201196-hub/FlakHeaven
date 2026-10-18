@@ -726,6 +726,7 @@ func _fire_bombs(p: Player, manual := false) -> bool:
 		to += Vector2(randf_range(-20, 20), randf_range(-20, 20))
 		Main.I.projectiles.spawn_bomb(_slot_pos(p, s), fuse * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
 			range_px() * Profile.wk("bombs", "blast_r"), "бомбы", to, true)
+		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.tier(level)   # тест 3.5-s4 (п. 10): падает модель этой ступени
 		if p.syn.has("carpet_road"): # «Ковровая дорожка»: крест суббоеприпасов и огонь
 			Main.I.projectiles.bombs[-1]["road"] = true
 	Main.I.sfx.play("bomb_drop", -14.0, 1.2)
@@ -745,6 +746,7 @@ func _fire_carpet_row(p: Player, manual: bool) -> bool:
 		var off := (float(i) / 7.0 - 0.5) * 600.0
 		Main.I.projectiles.spawn_bomb(p.global_position, (0.5 + 0.04 * i) * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
 			150.0 * Profile.wk("bombs", "blast_r"), "бомбы", c + side * off, true)
+		Main.I.projectiles.bombs[-1]["vt"] = 4
 		if road:
 			Main.I.projectiles.bombs[-1]["road"] = true
 	if road:

@@ -20,6 +20,14 @@ static var _flame_mat: StandardMaterial3D
 static var _flame_blue: StandardMaterial3D
 static var _prop_mesh: QuadMesh
 static var _prop_mat: ShaderMaterial
+static var _blur_mat: ShaderMaterial
+
+## Замечание 31/33 (3.5-s4): у 3D-модели «Кита 1» — свои винты (WingMech.attach_props, 4 × 4 лопасти).
+## Они крутятся узлами; поверх — слабый диск размытия в плоскости вращения (как у настоящего винта).
+## Диск на картинке (горизонтальный эллипс) — только для плоского спрайта («Качество графики» = «Низкое»).
+const PROP_RATE := TAU * 5.5   # рад/с — винты в полёте
+const PROP_IDLE := TAU * 0.4   # авторотация, когда «двигатель выключен» (падение ведомого)
+const PROP_R := 0.066          # радиус винта в длинах модели (kit_props.py R_TIP)
 
 ## Винт: диск, как на картинке самолёта (сплюснутый эллипс перед мотором), по нему крутятся
 ## четыре размытые лопасти. Вращение — в шейдере (TIME), узлы каждый кадр не трогаем.
@@ -27,6 +35,8 @@ const PROP_SHADER := """
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, blend_mix;
 uniform float speed = 14.0;
+uniform float k = 1.0;   // общая плотность: у диска при настоящих лопастях — слабее
+uniform float hub_on = 1.0;
 void fragment() {
 	vec2 p = UV * 2.0 - 1.0;
 	float r = length(p);
@@ -34,9 +44,9 @@ void fragment() {
 	float a = atan(p.y, p.x) + TIME * speed;
 	float blade = pow(abs(cos(2.0 * a)), 22.0) * smoothstep(1.0, 0.86, r) * smoothstep(0.1, 0.25, r);
 	float disc = 0.1 * smoothstep(1.0, 0.9, r);
-	float hub = 1.0 - smoothstep(0.12, 0.17, r);
+	float hub = (1.0 - smoothstep(0.12, 0.17, r)) * hub_on;
 	ALBEDO = mix(vec3(0.1, 0.1, 0.11), vec3(0.55), hub);
-	ALPHA = clamp(max(blade * 0.95, disc) + hub, 0.0, 1.0);
+	ALPHA = clamp((max(blade * 0.95, disc) + hub) * k, 0.0, 1.0);
 }
 """
 
@@ -69,7 +79,24 @@ static func attach(u: Dictionary, tex: Texture2D) -> void:
 		root.add_child(f)
 		fx["flames"].append({"n": f, "r": r, "ph": randf() * 10.0})
 		fx["trail"].append(Vector3(pt.x - r, y, pt.y))
-	for pt: Vector2 in s.get("prop", []):
+	var props: Node3D = null
+	if s.has("prop") and u.get("bm") != null:
+		props = WingMech.attach_props(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
+	if props != null:
+		u["props"] = props
+		fx["blades"] = WingMech.prop_nodes(props)
+		fx["blurs"] = []
+		for n: Node3D in fx["blades"]:
+			var d := MeshInstance3D.new()
+			d.mesh = _prop_mesh
+			d.material_override = _blur_mat
+			d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			# квад в плоскости Y/Z модели (нормаль — ось винта X), в плоскости лопастей
+			d.position = n.position + Vector3(0.009, 0, 0)
+			d.basis = Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3.ONE * PROP_R * 2.0)
+			n.get_parent().add_child(d)   # рядом с винтом: сам диск не вращается, полосы крутит шейдер
+			fx["blurs"].append(d)
+	for pt: Vector2 in (s.get("prop", []) if props == null else []):
 		var pr: float = s["pr"]
 		var d := MeshInstance3D.new()
 		d.mesh = _prop_mesh
@@ -85,11 +112,17 @@ static func attach(u: Dictionary, tex: Texture2D) -> void:
 
 
 ## boost 0…1 — форсаж; винты крутятся всегда, пламя дрожит и вытягивается на форсаже
-static func update(u: Dictionary, _delta: float, boost: float, on := true) -> void:
+static func update(u: Dictionary, delta: float, boost: float, on := true) -> void:
 	var fx: Dictionary = u.get("fx", {})
 	if fx.is_empty():
 		return
 	var t := Time.get_ticks_msec() * 0.001
+	if fx.has("blades"):
+		# шаг за кадр не больше 0,4 промежутка между лопастями — при любом FPS винт крутится вперёд, без «стробоскопа»
+		var step := minf((PROP_RATE if on else PROP_IDLE) * delta, 0.4 * TAU / 4.0)
+		WingMech.spin_props(fx["blades"], step)
+		for d: Node3D in fx["blurs"]:
+			d.visible = on
 	for f: Dictionary in fx["flames"]:
 		var n: Node3D = f["n"]
 		n.visible = on
@@ -149,6 +182,11 @@ static func _init_res() -> void:
 	sh.code = PROP_SHADER
 	_prop_mat = ShaderMaterial.new()
 	_prop_mat.shader = sh
+	_blur_mat = ShaderMaterial.new()
+	_blur_mat.shader = sh
+	_blur_mat.set_shader_parameter("k", 0.45)
+	_blur_mat.set_shader_parameter("hub_on", 0.0)
+	_blur_mat.set_shader_parameter("speed", 30.0)
 
 
 ## Факел: у сопла бело-жёлтый, к хвосту оранжевый и прозрачный; по ширине — мягкий край.

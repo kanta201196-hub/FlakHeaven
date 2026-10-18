@@ -15,6 +15,50 @@ var flares: Array = []   # 3.1: тепловые ловушки — горящи
 var ground: FxGround
 
 static var _soft: Texture2D   # мягкое пятно (дым, вспышка)
+static var _crater: Texture2D
+
+
+## Тест 3.5-s4 (п. 14): текстура воронки — тёмная чаша, светлый вал выброшенного грунта и рваные лучи копоти.
+## Одна на все воронки (общий материал в 3D), строится один раз.
+static func crater_tex() -> Texture2D:
+	if _crater != null:
+		return _crater
+	const N := 160
+	var img := Image.create(N, N, false, Image.FORMAT_RGBA8)
+	var edge := FastNoiseLite.new()   # неровный край: воронка не идеальный круг
+	edge.seed = 3517
+	edge.frequency = 0.9
+	var grain := FastNoiseLite.new()  # комья и пятна грунта
+	grain.seed = 911
+	grain.frequency = 0.09
+	for y in N:
+		for x in N:
+			var d := Vector2(x + 0.5 - N / 2.0, y + 0.5 - N / 2.0) / (N / 2.0)
+			var ang := atan2(d.y, d.x)
+			var wob := edge.get_noise_2d(cos(ang) * 2.0, sin(ang) * 2.0)
+			var r := d.length() / (1.0 + 0.16 * wob)
+			var g := 1.0 + 0.22 * grain.get_noise_2d(x, y)
+			var c: Color
+			var a: float
+			if r < 0.2:       # дно: копоть и горелая земля
+				c = Color(0.06, 0.05, 0.04)
+				a = 0.85
+			elif r < 0.36:    # склон чаши: к валу светлеет
+				var t := (r - 0.2) / 0.16
+				c = Color(0.06, 0.05, 0.04).lerp(Color(0.2, 0.15, 0.11), t)
+				a = lerpf(0.85, 0.78, t)
+			elif r < 0.5:     # вал выброшенного грунта: светлый гребень, темнее песка вокруг
+				var t1 := (r - 0.36) / 0.14
+				c = Color(0.2, 0.15, 0.11).lerp(Color(0.38, 0.3, 0.21), sin(t1 * PI))
+				a = lerpf(0.78, 0.62, t1)
+			else:             # разлёт копоти и комьев — пятнами, гаснет к краю
+				var t2 := clampf((r - 0.5) / 0.5, 0.0, 1.0)
+				c = Color(0.12, 0.09, 0.07)
+				a = 0.62 * (1.0 - t2 * t2) * clampf(0.5 + 1.1 * grain.get_noise_2d(x * 1.7, y * 1.7), 0.15, 1.0)
+			img.set_pixel(x, y, Color(c.r * g, c.g * g, c.b * g, clampf(a, 0.0, 1.0)))
+	img.generate_mipmaps()
+	_crater = ImageTexture.create_from_image(img)
+	return _crater
 static var _fire: Texture2D   # огненный шар: белое ядро → оранжевый → прозрачный край
 static var _fire_n: Array = []  # 3.2: огненные клубы с шумом (неровный край, языки пламени)
 static var _smoke_n: Array = [] # 3.2: клубы дыма с шумом
@@ -352,6 +396,18 @@ class FxGround:
 	func _ready() -> void:
 		z_index = -7
 
+	## Тест 3.5-s4 (п. 14): воронки от бомб — держатся CRATER_LIFE секунд и плавно гаснут; не больше
+	## CRATER_MAX (старые уходят первыми). В 3D их рисует render3d._sync_craters по рельефу.
+	const CRATER_LIFE := 75.0
+	const CRATER_FADE := 20.0
+	const CRATER_MAX := 40
+	var craters: Array = []
+
+	func crater(p: Vector2, r: float) -> void:
+		craters.append({"p": p, "r": clampf(r * 0.75, 30.0, 140.0), "life": CRATER_LIFE, "rot": randf() * TAU})
+		if craters.size() > CRATER_MAX:
+			craters.pop_front()
+
 	func scorch(p: Vector2, r: float, air: bool) -> void:
 		# сбитый в воздухе падает рядом — пятно меньше и смещено «вниз-вправо», как тень
 		var off := Vector2(r * 0.6, r * 0.9) if air else Vector2.ZERO
@@ -364,11 +420,22 @@ class FxGround:
 			marks[i]["life"] = float(marks[i]["life"]) - delta
 			if float(marks[i]["life"]) <= 0.0:
 				marks.remove_at(i)
+		for i in range(craters.size() - 1, -1, -1):
+			craters[i]["life"] = float(craters[i]["life"]) - delta
+			if float(craters[i]["life"]) <= 0.0:
+				craters.remove_at(i)
 		queue_redraw()
 
 	func _draw() -> void:
 		if OS.get_cmdline_user_args().has("--nofx") or Render3D.enabled:
 			return
+		var ct := Fx.crater_tex()
+		for c in craters:
+			var ca := clampf(float(c["life"]) / CRATER_FADE, 0.0, 1.0)
+			var cr: float = c["r"]
+			draw_set_transform(c["p"], float(c["rot"]))
+			draw_texture_rect(ct, Rect2(-Vector2(cr, cr), Vector2(cr, cr) * 2.0), false, Color(1, 1, 1, ca))
+		draw_set_transform(Vector2.ZERO)
 		for m in marks:
 			var a := clampf(float(m["life"]) / 6.0, 0.0, 1.0) * 0.5
 			var r: float = m["r"]

@@ -62,7 +62,8 @@ func process(delta: float) -> void:
 		_points = _make_points()
 		for a in OS.get_cmdline_user_args():   # --only=model_ground — только точки с этим началом имени
 			if a.begins_with("--only="):
-				_points = _points.filter(func(q: Dictionary) -> bool: return String(q["name"]).begins_with(a.get_slice("=", 1)))
+				var pre := a.get_slice("=", 1).split(",")   # несколько начал через запятую: --only=village,scene
+				_points = _points.filter(func(q: Dictionary) -> bool: return Array(pre).any(func(x: String) -> bool: return String(q["name"]).begins_with(x)))
 		_i = 0
 		_t = 0.0
 	if _i >= _points.size():
@@ -165,6 +166,17 @@ func _hold(p: Dictionary) -> void:
 		wm.dead_t = 20.0
 		wm.visible = false
 		m.fx.explosion(wm.global_position, 22.0)
+	if p.get("bombs", false) and m.projectiles.bombs.size() < 8:
+		# бомбы всех ступеней (1–3 и «ковёр») с долгим взрывателем — на кадре видно падение
+		var vt := (int(_pt * 10.0) % 4) + 1
+		var to := pos + Vector2.from_angle(m.player.heading + randf_range(-0.5, 0.5)) * randf_range(420.0, 600.0)
+		m.projectiles.spawn_bomb(pos + Vector2(randf_range(-20, 20), randf_range(-20, 20)), randf_range(4.0, 7.0), 0.0, 120.0, "бомбы", to, true)
+		m.projectiles.bombs[-1]["vt"] = vt
+	if p.get("craters", false) and not p.has("_done"):
+		p["_done"] = true
+		for i in 9:
+			var cp := pos + Vector2.from_angle(i * 0.7) * (140.0 + 45.0 * i)
+			m.fx.ground.crater(cp, [90.0, 120.0, 150.0][i % 3])
 	if p.has("roll"):   # 3.4-t1 п. 6: самолёт в бочке, брюхом к камере
 		m.player.roll_dir = 1
 		m.player.roll_t = m.player.roll_time() * float(p["roll"])
@@ -197,6 +209,8 @@ func _make_points() -> Array:
 	var bg := m.background
 	var found := {}
 	var empty := Vector2.INF
+	var near_river := {}   # тест 3.5-s4 (п. 16): поселения ближе всех к реке (кромка у воды): имя → [зазор, объект]
+	var ter: Terrain3D = Render3D.I.terrain if Render3D.I != null else null
 	for r in range(0, 14):
 		for cx in range(-r, r + 1):
 			for cy in range(-r, r + 1):
@@ -206,8 +220,13 @@ func _make_points() -> Array:
 				if o.is_empty():
 					if empty == Vector2.INF:
 						empty = Vector2((cx + 0.5) * Background.CHUNK, (cy + 0.5) * Background.CHUNK)
-				elif not found.has(o["name"]):
-					found[o["name"]] = o["pos"]
+				else:
+					if not found.has(o["name"]):
+						found[o["name"]] = o["pos"]
+					if ter != null and o["name"] in Terrain3D.SETTLE:
+						var gap := absf(ter.river_field(o["pos"].x, o["pos"].y)) - float(o["size"]) * 0.5
+						if gap < float(near_river.get(o["name"], [INF])[0]):
+							near_river[o["name"]] = [gap, o]
 	if empty == Vector2.INF:
 		empty = Vector2.ZERO
 	var pts := [{"name": "desert", "pos": empty}]
@@ -218,6 +237,21 @@ func _make_points() -> Array:
 	pts.append({"name": "mountain", "pos": peak})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
+	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
+	if ter != null:
+		var got := {}
+		for r in range(0, 6):
+			for cx in range(-r, r + 1):
+				for cy in range(-r, r + 1):
+					if maxi(absi(cx), absi(cy)) != r:
+						continue
+					for it in ter.scenes(Vector2i(cx, cy)):
+						if it["k"] in ["plane", "tank", "sandbag"] and not got.has(it["k"]):
+							got[it["k"]] = true
+							pts.append({"name": "scene_" + String(it["k"]), "pos": (it["p"] as Vector2) + Vector2(0, 110), "zoom": 2.5})
+	for nm in ["o_village", "o_oasis"]:
+		if near_river.has(nm):
+			pts.append({"name": "river_" + nm.substr(2), "pos": near_river[nm][1]["pos"]})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	if found.has("o_wreck"):   # тест 3.5-s4 (п. 18): обломки самолёта крупно
 		pts.append({"name": "wreck", "pos": found["o_wreck"], "zoom": 2.5})
@@ -232,6 +266,10 @@ func _make_points() -> Array:
 		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
 		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
 		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
+	if OS.get_cmdline_user_args().has("--bombbench"):   # тест 3.5-s4 (п. 10, 14): падающие бомбы ступеней и воронки
+		pts = []
+		pts.append({"name": "bomb_drop", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "bombs": true, "wait": 2.5, "zoom": 2.6})
+		pts.append({"name": "bomb_craters", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "craters": true, "wait": 3.0, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
 		pts = []
 		for c in ["fighter", "attacker", "bomber"]:
@@ -304,7 +342,11 @@ func _hangar_bench() -> void:
 			return
 		if OS.get_cmdline_user_args().has("--hangarweaptab"):
 			# тест 3.5-s3: вкладка «ОРУЖИЕ» — каждое оружие объёмной моделью, ступени 1 / 3 / 5 и модернизация
-			for w in ["aam", "rockets", "bombs", "flares", "turret"]:
+			var wl := ["aam", "rockets", "bombs", "flares", "turret"]
+			for a in OS.get_cmdline_user_args():   # --weaplist=bombs,flares — только эти виды
+				if a.begins_with("--weaplist="):
+					wl = Array(a.get_slice("=", 1).split(","))
+			for w in wl:
 				for wt in [1, 2, 3, 4]:
 					_hq.append(["W", w, wt])
 			_t = 0.0
@@ -318,6 +360,17 @@ func _hangar_bench() -> void:
 			for c in PlaneClasses.LIST:
 				for wt in ([3, 4] if evo_bench else [1, 2, 3]):
 					_hq.append([c, 1, wt])
+			_t = 0.0
+			return
+		if OS.get_cmdline_user_args().has("--liveries"):   # п. 35: каждый класс во всех окрасках (ур. 1; --livlvl=2 — ур. 2)
+			var llv := 1
+			for a in OS.get_cmdline_user_args():
+				if a.begins_with("--livlvl="):
+					llv = int(a.get_slice("=", 1))
+			for c in PlaneClasses.LIST:
+				for lv in [llv]:
+					for lv2: Array in Livery.list(c):
+						_hq.append([c, lv, 1, "L", lv2[0]])
 			_t = 0.0
 			return
 		for c in PlaneClasses.LIST:
@@ -368,7 +421,9 @@ func _hangar_bench() -> void:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
 		Hangar3D.I.weapon_tier = cur[2]
-		if cur.size() > 3:   # --turretclose: крупный план турели № cur[3]
+		if cur.size() > 4:   # --liveries: окраска из очереди (в профиль без сохранения)
+			Profile.cls(cur[0])["livery"] = cur[4]
+		elif cur.size() > 3:   # --turretclose: крупный план турели № cur[3]
 			var h := Hangar3D.I
 			var tp: Array = h.turret_pos[cur[3]] if cur[3] < h.turret_pos.size() else [Vector3.ZERO, "top"]
 			h.focus = tp[0]
@@ -398,7 +453,9 @@ func _hangar_bench() -> void:
 			Hangar3D.I._idle = 0.0
 	_hf += 1
 	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
-		if cur.size() > 3:
+		if cur.size() > 4:
+			_save("hangar_livery_%s_%d_%s" % [cur[0], cur[1], cur[4]])
+		elif cur.size() > 3:
 			_save("turret_s%d_%s_%d_w%d_v%d" % [WeaponModels.turret_style, cur[0], cur[1], cur[2], cur[3]])
 		else:
 			_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])
