@@ -300,19 +300,13 @@ def build_bomb_drop(out_dir):
 OGA = 'https://opengameart.org/sites/default/files/'
 MUSIC = {
     'music_menu': (OGA + 'night_club_chill_100bpm.ogg', 120),            # tricksntraps — T&T Free Cyberpunk Pack 2
-    'music_battle_1': (OGA + 'Final-Hour-isaiah658.ogg', None),           # isaiah658 — Final Hour (jungle / drum and bass)
-    'music_battle_2': (OGA + 'Black%20Diamond.mp3', 150),                 # Joth — Black Diamond (drum and bass)
-    'music_battle_3': (OGA + 'system_overload_154bpm.ogg', 150),          # tricksntraps — T&T Free Cyberpunk Pack 2
-    'music_boss': (OGA + 'cybersecutor.mp3', 150),                        # ShggothSlave — Cybersecutor (industrial metal)
     'music_result': (OGA + 'strange_experiments_80bpm.ogg', 90),          # tricksntraps — T&T Free Cyberpunk Pack 2
 }
 
 
 def build_music(out_dir):
     """Громкость -16 LUFS (как у прежней музыки), длинные треки обрезаны с затуханием 4 с."""
-    for f in glob.glob(os.path.join(out_dir, 'music_*.ogg')):
-        os.remove(f)
-    for name, (url, cut) in MUSIC.items():
+    for name, (url, cut) in MUSIC.items():  # бой и ас с 18.10 — build_audio_layers.py --only music_rock
         src = os.path.join(CACHE, 'music_' + os.path.basename(url).replace('%20', '_'))
         if not os.path.exists(src):
             os.makedirs(CACHE, exist_ok=True)
