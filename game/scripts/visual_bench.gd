@@ -320,6 +320,17 @@ func _make_points() -> Array:
 		var rv: Dictionary = near_river.get("o_village", [0, {}])[1]
 		if not rv.is_empty():
 			pts.append({"name": "river_edge", "pos": ter._field_point(rv["pos"], 0.0), "zoom": 2.2})
+	if ter != null:   # L-07: мосты — пешеходный у оазиса, дорожный через ручей посёлка
+		if found.has("o_oasis"):
+			pts.append({"name": "footbridge", "pos": ter._river_point(found["o_oasis"]), "zoom": 2.5})
+		if found.has("o_village"):
+			for sd in ter._sides(found["o_village"].x, found["o_village"].y):
+				if float(sd[2]) < 0.0:
+					var f0: float = ter.river_field(sd[0].x, sd[0].y) - Terrain3D.D_ROAD
+					var f1: float = ter.river_field(sd[1].x, sd[1].y) - Terrain3D.D_ROAD
+					if f0 * f1 <= 0.0 and f0 != f1:
+						pts.append({"name": "road_bridge", "pos": (sd[0] as Vector2).lerp(sd[1], f0 / (f0 - f1)), "zoom": 2.5})
+						break
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	if found.has("o_wreck"):   # тест 3.5-s4 (п. 18): обломки самолёта крупно
 		pts.append({"name": "wreck", "pos": found["o_wreck"], "zoom": 2.5})
