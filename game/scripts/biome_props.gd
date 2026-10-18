@@ -283,6 +283,20 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 				var down := _downhill(p, ctx)
 				for j in rng.randi_range(2, 4):
 					_add(rng, put, "boulders", p + down * rng.randf_range(50.0, 110.0) + down.orthogonal() * rng.randf_range(-35.0, 35.0), keep_out, ctx)
+	# L-06: в зелёной полосе вдоль реки — сады группами и тополя по краю полей
+	for i in 160:
+		if Settings.gfx == 0 and i % 2 == 1:
+			continue
+		var p := Vector2(ox + rng.randf() * Terrain3D.CHUNK, oz + rng.randf() * Terrain3D.CHUNK)
+		var roll := rng.randf()
+		if _t.green(p.x, p.y) < 0.45 or not (_zone(p, ctx) in ["bank", "floor"]):
+			continue
+		if roll < 0.5:
+			_add(rng, put, "orchard", p, keep_out, ctx)
+			if roll < 0.3:
+				_add(rng, put, "orchard", p + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(30.0, 45.0), keep_out, ctx)
+		elif roll < 0.55:
+			_add(rng, put, "poplar", p, keep_out, ctx)
 	# сгоревшая техника — только на дороге или у обочины (на гору ей не заехать)
 	if rng.randf() < 0.22:
 		var q := _road_point(Vector2(ox + rng.randf_range(100, 1300), oz + rng.randf_range(100, 1300)))
