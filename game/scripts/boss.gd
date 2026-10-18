@@ -144,24 +144,24 @@ func _resist(delta: float, p: Player) -> void:
 	_flare_cd -= delta
 	_scan_t -= delta
 	flare_defense(delta, 440.0, 260.0, 0.85, 2.5 if angry() >= 1.0 else 3.0, 7.0)
-	if _evade_cd > 0.0 or evade_t > 0.0 or _scan_t > 0.0:
+	if _evade_cd > 0.0 or maneuvering() or _scan_t > 0.0:
 		return
 	_scan_t = 0.12
 	var threat := incoming_fire()
 	if threat == Vector2.ZERO:
 		threat = player_aiming(7.0, 650.0)
 	if threat != Vector2.ZERO:
-		start_evade(threat, 380.0 if variant == "interceptor" else 340.0, 0.75)
-		_evade_cd = randf_range(1.2, 2.0) * angry()
+		# тест 3.5-s7: разные манёвры и реже (было 1,2–2 с, почти всегда бочка)
+		start_maneuver(threat, 380.0 if variant == "interceptor" else 340.0)
+		_evade_cd = randf_range(2.6, 4.0) * angry()
 		return
-	# игрок сел на хвост — резкий отворот с бочкой
+	# игрок сел на хвост — резкий отворот (раньше — бочка и мгновенный поворот носа на 70°)
 	if p.on_tail() and p.tail_target == self:
 		_tailed += 0.12
 		if _tailed > 0.8:
 			_tailed = 0.0
-			start_evade(Vector2.from_angle(heading), 320.0, 0.8)
-			heading += (1.0 if randf() < 0.5 else -1.0) * deg_to_rad(70.0)
-			_evade_cd = 2.0 * angry()
+			start_maneuver(Vector2.from_angle(heading), 340.0)
+			_evade_cd = 2.5 * angry()
 	else:
 		_tailed = 0.0
 
@@ -207,8 +207,8 @@ func _behave_carrier(delta: float, p: Player) -> void:
 			_run = false
 			_run_cd = randf_range(5.0, 7.0) * angry()
 			_orbit = -_orbit
-			# уход после атаки: рывок с бочкой в сторону от курса игрока
-			start_evade(to, 360.0, 0.8)
+			# уход после атаки: манёвр в сторону от курса игрока
+			start_maneuver(to, 360.0)
 	heading = rotate_toward(heading, desired, deg_to_rad(110.0 if _run else 80.0) * delta)
 	position += Vector2.from_angle(heading) * _speed(spd, d, p) * delta
 	# Залп ракет после захвата
