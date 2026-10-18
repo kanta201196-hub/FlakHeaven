@@ -11,14 +11,16 @@ extends Enemy
 const SPEC := {
 	# len — длина на экране (как у ПВО: × unit_scale). Пропорции по настоящим длинам (решение Kanta 18.10, A-05):
 	# грузовик 7,9 м = 1; БМП 6,8 м ≈ 0,88; пикап 5,2 м ≈ 0,66; броневик 5 м ≈ 0,64; всё меньше прежнего (грузовик 58 → 50)
+	# Тест 3.5-s6 (Kanta 18.10, A-08): масштаб мира «с высоты 2–4 км» — грузовик ≈ 0,5 истребителя (plane_len 100 → 28 × 1,8 = 50 пикс.),
+	# пикапы 0,5 грузовика, БМП 0,9, броневик 0,64
 	# ttk — сколько секунд урона игрока выдерживает,
 	# hp — нижняя граница прочности (× рост врагов), r — радиус поворота, pivot — разворот на месте
-	"truck": {"len": 50.0, "ttk": 3.5, "hp": 160.0, "r": 75.0, "pivot": 0.0, "acc": 32.0, "xp": 6, "parts": 6},
-	"light": {"len": 33.0, "ttk": 2.0, "hp": 90.0, "r": 45.0, "pivot": 0.0, "acc": 50.0, "xp": 4, "parts": 4},
-	"scout": {"len": 32.0, "ttk": 2.0, "hp": 120.0, "r": 50.0, "pivot": 0.0, "acc": 55.0, "xp": 5, "parts": 5},
-	"technical": {"len": 33.0, "ttk": 1.5, "hp": 80.0, "r": 42.0, "pivot": 0.0, "acc": 60.0, "xp": 4, "parts": 4},
-	"manpads": {"len": 33.0, "ttk": 1.5, "hp": 80.0, "r": 42.0, "pivot": 0.0, "acc": 60.0, "xp": 5, "parts": 5},
-	"ifv": {"len": 44.0, "ttk": 5.0, "hp": 260.0, "r": 55.0, "pivot": 1.0, "acc": 38.0, "xp": 8, "parts": 8},
+	"truck": {"len": 28.0, "ttk": 3.5, "hp": 160.0, "r": 75.0, "pivot": 0.0, "acc": 32.0, "xp": 6, "parts": 6},
+	"light": {"len": 14.0, "ttk": 2.0, "hp": 90.0, "r": 45.0, "pivot": 0.0, "acc": 50.0, "xp": 4, "parts": 4},
+	"scout": {"len": 18.0, "ttk": 2.0, "hp": 120.0, "r": 50.0, "pivot": 0.0, "acc": 55.0, "xp": 5, "parts": 5},
+	"technical": {"len": 14.0, "ttk": 1.5, "hp": 80.0, "r": 42.0, "pivot": 0.0, "acc": 60.0, "xp": 4, "parts": 4},
+	"manpads": {"len": 14.0, "ttk": 1.5, "hp": 80.0, "r": 42.0, "pivot": 0.0, "acc": 60.0, "xp": 5, "parts": 5},
+	"ifv": {"len": 25.0, "ttk": 5.0, "hp": 260.0, "r": 55.0, "pivot": 1.0, "acc": 38.0, "xp": 8, "parts": 8},
 }
 const TEX := {"truck": "e_convoy_truck", "light": "e_convoy_pickup_tent", "scout": "e_convoy_scout",
 	"technical": "e_convoy_technical", "manpads": "e_convoy_manpads", "ifv": "e_convoy_ifv"}
@@ -49,7 +51,7 @@ func setup(r: String, c: Convoy, hp_v: float) -> void:
 	var sp: Dictionary = SPEC[r]
 	hp = hp_v
 	max_hp = hp_v
-	radius = float(sp["len"]) * 0.42
+	radius = maxf(float(sp["len"]) * 0.5, 9.0)   # A-08: машины меньше, попадание чуть щедрее картинки
 	is_ground = true
 	no_despawn = true
 	big = r in ["truck", "ifv"]

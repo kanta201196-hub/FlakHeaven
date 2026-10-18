@@ -247,6 +247,10 @@ func _setup_combat_layer() -> void:
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	# С-2 (аудит 3.5-s6): 2D рисует в прозрачный вьюпорт цвет, уже умноженный на альфу (конус заправки
+	# 0.4·0.16 → 16/255 при альфе 41). Обычное смешение умножало второй раз — полупрозрачное темнело:
+	# зелёный конус за заправщиком лежал вокруг игрока тёмной трапецией, края пуль и вспышек — с серой каймой
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_PREMULT_ALPHA
 	m.no_depth_test = true      # как раньше 2D-слой: пули и вспышки поверх самолётов и облаков
 	m.render_priority = 100
 	m.albedo_texture = _combat_vp.get_texture()
@@ -339,6 +343,21 @@ func world_to_screen(p: Vector2, fallback: Vector2) -> Vector2:
 	return a + (b - a).normalized() * 100000.0
 
 
+## Р-13: земля, которую камера видит прямо сейчас — углы кадра на дне долин (дальние лучи наклона —
+## не дальше 6000), с запасом на тряску и сглаживание камеры
+func _screen_ground(vs: Vector2) -> Rect2:
+	var lo := Vector2(INF, INF)
+	var hi := -lo
+	for c in [Vector2.ZERO, Vector2(vs.x, 0), Vector2(0, vs.y), vs]:
+		var o := cam.project_ray_origin(c)
+		var d := cam.project_ray_normal(c)
+		var t := (GROUND_Y - o.y) / d.y if d.y < -0.01 else 6000.0
+		var q := o + d * minf(t, 6000.0)
+		lo = lo.min(Vector2(q.x, q.z))
+		hi = hi.max(Vector2(q.x, q.z))
+	return Rect2(lo, hi - lo).grow(120.0)
+
+
 func tilt_on() -> bool:
 	return _tilt_on
 
@@ -407,7 +426,7 @@ func _process(delta: float) -> void:
 		# с наклоном видно дальше вперёд (вверх по экрану)
 		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
 	var pt := Time.get_ticks_usec() if Perf.on else 0
-	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1)
+	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1, _screen_ground(vs))
 	_fit_shadow()
 	if Perf.on: pt = Perf.sub("r3d.terrain", pt)
 	var sd := 0.0 if get_tree().paused else delta   # время эффектов стоит на паузе
@@ -973,6 +992,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				var cr := _convoy_parts(ue, e as ConvoyVehicle, len_px, delta)
 				hull = cr.x
 				tilt = Vector2(cr.y, cr.z)
+				_convoy_dust(e as ConvoyVehicle, gp, hull, len_px)
 			elif ue.get("bm") != null:
 				hull = _ground_parts(ue, e, ang, delta)
 				var gt := e as GroundTarget
@@ -992,6 +1012,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			# модель из картинки (транспортник и др.): подсветка только по силуэту, иначе видна сетка квадратами
 			mi2.material_overlay = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)
 	_sync_wrecks(delta)
+	_sync_dust(delta)
 	_flush_shadows()
 	_sync_plane_shadows()
 	for id in _units.keys():
@@ -1094,6 +1115,86 @@ func _drive_tilt(u: Dictionary, a: Vector2, hull: float, dr: GroundDrive, len_px
 	sm = sm.lerp(Vector2(pitch, bank), 1.0 - exp(-delta * 6.0))
 	u["tilt"] = sm
 	return sm
+
+
+## A-08: пыльный след за машиной конвоя (тест 3.5-s6): частицы в мировых координатах из-под кормы,
+## гуще на скорости, сносятся ветром и расплываются. Остов и машина за кадром — след гаснет и убирается.
+var _dust := {}      # instance_id → {"p": CPUParticles3D, "seen": bool, "t": сек. после остановки}
+var _dust_mat: StandardMaterial3D
+
+
+func _convoy_dust(v: ConvoyVehicle, gp: Vector3, hull: float, len_px: float) -> void:
+	if v.drive == null:
+		return
+	var id := v.get_instance_id()
+	var d: Dictionary = _dust.get(id, {})
+	if d.is_empty():
+		d = {"p": _make_dust(len_px), "t": 0.0}
+		_dust[id] = d
+	d["seen"] = true
+	var ps := d["p"] as CPUParticles3D
+	var back := Vector2(gp.x, gp.z) - Vector2.from_angle(hull) * len_px * 0.5
+	ps.global_position = Vector3(back.x, gp.y + len_px * 0.04, back.y)
+	ps.emitting = v.drive.speed > 18.0
+	d["t"] = 0.0
+
+
+func _sync_dust(delta: float) -> void:
+	for id in _dust.keys():
+		var d: Dictionary = _dust[id]
+		var ps := d["p"] as CPUParticles3D
+		if not d.get("seen", false):
+			ps.emitting = false
+			d["t"] = float(d["t"]) + delta
+			if float(d["t"]) > ps.lifetime + 0.5:
+				ps.queue_free()
+				_dust.erase(id)
+				continue
+		d["seen"] = false
+
+
+func _make_dust(len_px: float) -> CPUParticles3D:
+	if _dust_mat == null:
+		_dust_mat = StandardMaterial3D.new()
+		_dust_mat.albedo_texture = Fx._smoke_n[0] if not Fx._smoke_n.is_empty() else Fx._soft
+		_dust_mat.vertex_color_use_as_albedo = true
+		_dust_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_dust_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_dust_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+		_dust_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	var q := QuadMesh.new()
+	q.size = Vector2(1, 1)
+	q.material = _dust_mat
+	var s := CPUParticles3D.new()
+	s.mesh = q
+	s.amount = [8, 14, 20, 24][clampi(Settings.gfx, 0, 3)]
+	s.lifetime = 2.2
+	s.local_coords = false
+	s.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	s.direction = Vector3.UP
+	s.spread = 70.0
+	s.initial_velocity_min = 2.0
+	s.initial_velocity_max = 7.0
+	s.damping_min = 1.0
+	s.damping_max = 2.0
+	s.gravity = Vector3(5.0, 2.5, 3.0)   # ветер, как у дыма, но пыль тяжелее — почти не поднимается
+	s.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	s.emission_sphere_radius = len_px * 0.12
+	s.angle_min = 0.0
+	s.angle_max = 360.0
+	s.scale_amount_min = len_px * 0.35
+	s.scale_amount_max = len_px * 0.5
+	var sc := Curve.new()
+	sc.add_point(Vector2(0, 0.5))
+	sc.add_point(Vector2(1, 2.2))
+	s.scale_amount_curve = sc
+	var gr := Gradient.new()
+	gr.offsets = PackedFloat32Array([0.0, 0.15, 1.0])
+	gr.colors = PackedColorArray([Color(0.92, 0.85, 0.72, 0.0), Color(0.9, 0.83, 0.7, 0.55), Color(0.84, 0.78, 0.68, 0.0)])   # светлее песка — видно сверху
+	s.color_ramp = gr
+	s.emitting = false
+	add_child(s)
+	return s
 
 
 ## A-03: остовы машин конвоя — та же модель, обгоревшая: тент и стрелки пропадают, корпус тёмный, дым столбом
