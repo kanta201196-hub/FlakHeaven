@@ -1012,16 +1012,24 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 				_put_done(key, res)
 				continue
 			budget -= 1
+			var tp := Time.get_ticks_usec()
 			_place_chunk(key, res)
+			if Perf.on: Perf.peak("ter.place_max", Perf.sub("ter.place", tp) - tp)
 			continue
 		if not _pending.has(key) and (_pending.size() < 4 or on_screen):
+			var tc := Time.get_ticks_usec()
 			_pending[key] = WorkerThreadPool.add_task(_compute_bg.bind(key, _ctx(key), _gen), false, "terrain chunk")
+			if Perf.on: Perf.sub("ter.ctx", tc)
 		if on_screen:
 			hole = true
 			if not _lods.has(key):
+				var tl := Time.get_ticks_usec()
 				_place_chunk(key, _compute(key, _ctx(key), _gen, LOD_N))
+				if Perf.on: Perf.peak("ter.lod_max", Perf.sub("ter.lod", tl) - tl)
 	if not batch.is_empty():
+		var tb := Time.get_ticks_usec()
 		_build_now(batch)
+		if Perf.on: Perf.peak("ter.now_max", Perf.sub("ter.now", tb) - tb)
 	if hole:
 		lod_frames += 1
 	# законченные задачи — забираем id (иначе пул держит их до wait)
