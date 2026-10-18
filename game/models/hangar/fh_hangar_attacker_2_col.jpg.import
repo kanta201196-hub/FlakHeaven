@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://csmjhmoykskg"
-path="res://.godot/imported/fh_hangar_attacker_1_2.png-c3ba73a767f5458f2fcea8a46b740c9f.ctex"
+uid="uid://b482nmwyebhw1"
+path="res://.godot/imported/fh_hangar_attacker_2_col.jpg-6ce0a8bec82078bc1413550d8c6fde03.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "1739e24899556b77ee5b6c5e3bffd0cc"
 }
 
 [deps]
 
-source_file="res://models/hangar/fh_hangar_attacker_1_2.png"
-dest_files=["res://.godot/imported/fh_hangar_attacker_1_2.png-c3ba73a767f5458f2fcea8a46b740c9f.ctex"]
+source_file="res://models/hangar/fh_hangar_attacker_2_col.jpg"
+dest_files=["res://.godot/imported/fh_hangar_attacker_2_col.jpg-6ce0a8bec82078bc1413550d8c6fde03.ctex"]
 
 [params]
 
@@ -24,7 +21,7 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
