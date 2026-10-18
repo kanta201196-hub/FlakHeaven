@@ -185,6 +185,8 @@ func start_run() -> void:
 	move_child(world, 0)
 
 	Biome.id = Campaign.biome_of(Campaign.index())   # тред «Второй биом»: биом мира — по операции, до создания фона
+	if sfx != null:
+		sfx.set_ambient("sea" if Biome.sea() else "highland")   # фон биома: прибой или горный ветер (PR #186)
 	background = Background.new()
 	world.add_child(background)
 	clouds = Clouds.new()
@@ -229,10 +231,10 @@ func start_run() -> void:
 	banner = ""
 	op_flags = {}
 	op_result = {}
-	show_banner("%s · ОПЕРАЦИЯ «%s» · %s" % [Biome.title().to_upper(), String(Campaign.op()["title"]).to_upper(), String(Campaign.diff()["title"]).to_upper()], 4.0)
+	show_banner(Loc.t("%s · ОПЕРАЦИЯ «%s» · %s") % [Loc.t(Biome.title()).to_upper(), Loc.t(String(Campaign.op()["title"])).to_upper(), Loc.t(String(Campaign.diff()["title"])).to_upper()], 4.0)
 	# U-02: цель вылета — первые 3 вылета (U-05: задача операции кампании)
 	Hints.clear()
-	Hints.show("goal", "Задача: %s. Всех врагов не перебить — они прилетают всё время." % String(Campaign.op()["task"]).to_lower(), 9.0, 3)
+	Hints.show("goal", Loc.t("Задача: %s. Всех врагов не перебить — они прилетают всё время.") % String(Campaign.op()["task"]).to_lower(), 9.0, 3)
 	# U-03: первый вылет — подсказки по одной вместо стены текста «Как играть»
 	Hints.show("controls", "Мышь — куда лететь: самолёт поворачивает за курсором. Пушка стреляет сама по врагам впереди.", 7.0, 2)
 	Hints.show("xp", "Зелёные ромбы со сбитых врагов — опыт: пролетайте рядом, они притянутся. Новый уровень — выбор улучшения.", 7.0, 2)
@@ -374,7 +376,7 @@ func _open_levelup() -> void:
 		rare_reasons.clear()
 		player.heal(player.max_hp * minf(0.5, 0.1 * n))
 		parts += 30.0 * n * continue_mult()
-		show_banner("Все улучшения собраны — вместо карточки ремонт и +%d запчастей" % int(30.0 * n * continue_mult()), 3.0)
+		show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(30.0 * n * continue_mult()), 3.0)
 		return
 	levelup_intro = Hints.bump("levelup_intro") <= 3 # U-03: первые 3 выбора — с объяснением
 	_set_state("levelup")
@@ -525,7 +527,7 @@ func on_activity_success(kind: String) -> void:
 		parts += 40.0 * continue_mult()
 	if not rare:
 		parts += 60.0 * continue_mult()
-	show_banner("%s Награда: %s" % [what, "выбор из редких карточек" + (" и +40 запчастей" if kind == "ground" else "") if rare else "ремонт 20%% и +%d запчастей" % (100 if kind == "ground" else 60)], 4.0)
+	show_banner(Loc.t("%s Награда: %s") % [Loc.t(what), Loc.t("выбор из редких карточек") + (Loc.t(" и +40 запчастей") if kind == "ground" else "") if rare else Loc.t("ремонт 20%% и +%d запчастей") % (100 if kind == "ground" else 60)], 4.0)
 	sfx.play("evac", -4.0, 1.3)
 
 
@@ -533,7 +535,7 @@ func on_activity_failed(kind: String, who := "") -> void:
 	if _autotest:
 		print("AUTOTEST: activity failed ", kind, " at %.0f" % run_time)
 	if kind == "dogfight":
-		show_banner("Ас «%s» ушёл — награды нет" % who, 3.0)
+		show_banner(Loc.t("Ас «%s» ушёл — награды нет") % who, 3.0)
 
 
 func streak_mult() -> float:
@@ -558,9 +560,9 @@ func boss_alive() -> bool:
 
 func on_boss_wave(wave: int, n: int) -> void:
 	if Biome.sea():
-		show_banner(["«АЛЬБАТРОС» НА ПОДХОДЕ!", "КРЕЙСЕР «СТОРОЖ» В ПРОЛИВЕ!", "«ЛЕВИАФАН» В ПРОЛИВЕ!"][clampi(wave - 1, 0, 2)], 4.0)
+		show_banner(Loc.t(["«АЛЬБАТРОС» НА ПОДХОДЕ!", "КРЕЙСЕР «СТОРОЖ» В ПРОЛИВЕ!", "«ЛЕВИАФАН» В ПРОЛИВЕ!"][clampi(wave - 1, 0, 2)]), 4.0)
 	else:
-		show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
+		show_banner(Loc.t("АС НА ПОДХОДЕ!  (%d)") % n if n > 1 else Loc.t("АС НА ПОДХОДЕ!"), 4.0)
 	# правка 20: ас выходит в эфир — перехват его переговоров справа внизу
 	radio("Перехват", ["Цель вижу. Захожу с солнца.", "Это наше небо. Уходи, пока цел.", "Звено, прикрыть меня — работаю по одиночке.",
 		"Ещё один охотник? Посмотрим, сколько продержишься."][randi() % 4], true)
@@ -587,7 +589,7 @@ func _open_evac() -> void:
 	evac.setup(player.global_position, player.heading)
 	world.add_child(evac)
 	evac_windows += 1
-	show_banner("Эвакуация: пролетите через 3 ворот по порядку" + ("" if Campaign.goal_done(run_time, op_flags) else " · задача операции ещё не выполнена"), 5.0)
+	show_banner(Loc.t("Эвакуация: пролетите через 3 ворот по порядку") + ("" if Campaign.goal_done(run_time, op_flags) else Loc.t(" · задача операции ещё не выполнена")), 5.0)
 	if run_time < 890.0:
 		Hints.show("evac_early", "Улететь можно уже сейчас — или остаться до 15:00 и заработать больше запчастей.", 8.0, 2)
 	else:

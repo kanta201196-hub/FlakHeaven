@@ -18,24 +18,24 @@ func _syn_conds(p: Player, s: Dictionary, skill := false) -> Array:
 	var out0: Array = []
 	var c0: Dictionary = Cards.SLOT_COST[0]
 	if skill:
-		out0.append(["уровень навыка %d" % int(c0.get("s3", 1)), false])
+		out0.append([Loc.t("уровень навыка %d") % int(c0.get("s3", 1)), false])
 	if s.has("tag"):
-		out0.append(["%s: %d очков" % [Prog.tag_title(s["tag"]), c0["main"]], false])
+		out0.append([Loc.t("%s: %d очков") % [Prog.tag_title(s["tag"]), c0["main"]], false])
 	if s.has("tag2"):
-		out0.append(["%s: %d очков" % [Prog.tag_title(s["tag2"]), c0["second"]], false])
+		out0.append([Loc.t("%s: %d очков") % [Prog.tag_title(s["tag2"]), c0["second"]], false])
 	if s.has("w") and s["w"] is Array:
-		out0.append(["%s ур. %d" % ["/".join(PackedStringArray((s["w"] as Array).map(func(x): return String(Weapons.DEFS[x]["short"])))), c0["lvl"]], false])
+		out0.append([Loc.t("%s ур. %d") % ["/".join(PackedStringArray((s["w"] as Array).map(func(x): return String(Weapons.DEFS[x]["short"])))), c0["lvl"]], false])
 	if s.has("req_mods"):
 		out0.append(["%s ×%d" % [" + ".join(PackedStringArray((s["req_mods"] as Array).map(func(x): return "«%s»" % Cards.MODULES[x]["title"]))), int(c0.get("mods", 1))], false])
 	if s.get("wingmen", false):
-		out0.append(["ведомые: %d" % int(c0.get("wing", 1)), false])
+		out0.append([Loc.t("ведомые: %d") % int(c0.get("wing", 1)), false])
 	return out0
 
 
 func _syn_conds_old(p: Player, s: Dictionary, skill := false) -> Array:
 	var out: Array = []
 	if skill and p != null:
-		out.append(["уровень навыка ≥ 1 (сейчас %d)" % p.s3_lvl(), p.s3_lvl() >= 1])
+		out.append([Loc.t("уровень навыка ≥ 1 (сейчас %d)") % p.s3_lvl(), p.s3_lvl() >= 1])
 	elif skill:
 		out.append(["уровень навыка ≥ 1", false])
 	if s.has("w"):
@@ -44,7 +44,7 @@ func _syn_conds_old(p: Player, s: Dictionary, skill := false) -> Array:
 			for g in p.groups:
 				if (g as Hardpoint).weapon == s["w"]:
 					lv = maxi(lv, (g as Hardpoint).level)
-		var txt := "%s ур. %d" % [Weapons.DEFS[s["w"]]["short"], int(s["lvl"])]
+		var txt := Loc.t("%s ур. %d") % [Weapons.DEFS[s["w"]]["short"], int(s["lvl"])]
 		if p != null:
 			txt += " (нет)" if lv == 0 else " (ур. %d)" % lv
 		out.append([txt, p != null and lv >= int(s["lvl"])])
@@ -119,9 +119,9 @@ func draw(m: Main, size: Vector2) -> void:
 	var x := (size.x - cw) / 2.0
 	_button(Rect2(40, 34, 200, 46), "‹ Назад (Esc)", "codex_back", 18)
 	_text(Vector2(0, 66), "СПРАВОЧНИК", 34, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-	_ctext(100, "Связка — сильный бонус, который открывается, когда собраны подходящие карточки. За вылет — до 3; условия указаны для первой, дальше — выше." if tab < 2
+	_ctext(100, Loc.t("Связка — сильный бонус, который открывается, когда собраны подходящие карточки. За вылет — до 3; условия указаны для первой, дальше — выше.") if tab < 2
 		else ("Модернизация — оружие ур. 5 превращается в новое, если взяты нужные карточки (с 7:00 вылета)." if tab == 2
-		else "Задания появляются примерно раз в минуту — за них награда. Ниже — что значат элементы экрана в полёте."), 17, Color(0.75, 0.8, 0.9))
+		else Loc.t("Задания появляются примерно раз в минуту — за них награда. Ниже — что значат элементы экрана в полёте.")), 17, Color(0.75, 0.8, 0.9))
 	var tw := (cw - 12.0 * (TABS.size() - 1)) / TABS.size()
 	for i in TABS.size():
 		var r := Rect2(x + i * (tw + 12.0), 122, tw, 44)
@@ -159,7 +159,7 @@ func draw(m: Main, size: Vector2) -> void:
 		_row(Rect2(x, y, cw, rh), row)
 		y += rh + 6.0
 	if p != null and (hidden > 0 or show_all):
-		_button(Rect2(x + cw - 300, y + 6, 300, 40), ("Показать все (ещё %d)" % hidden) if not show_all else "Только доступные", "cx_all", 16)
+		_button(Rect2(x + cw - 300, y + 6, 300, 40), (Loc.t("Показать все (ещё %d)") % hidden) if not show_all else Loc.t("Только доступные"), "cx_all", 16)
 	if p != null:
 		_text(Vector2(x, y + 32), "Зелёное — уже выполнено. Открыть можно связку своей специализации; сменить её — за 1 переброс.", 15, Color(0.65, 0.7, 0.78))
 
@@ -183,13 +183,13 @@ func _row(r: Rect2, row: Array) -> void:
 		if c[1]:
 			ok += 1
 	var live: bool = Main.I != null and Main.I.codex_back == "paused"
-	_para(Vector2(rx, r.position.y + 22), "Нужно: " + " · ".join(parts), rw - (110.0 if live else 0.0), 14, Color(0.8, 0.83, 0.9))
+	_para(Vector2(rx, r.position.y + 22), Loc.t("Нужно: ") + " · ".join(parts), rw - (110.0 if live else 0.0), 14, Color(0.8, 0.83, 0.9))
 	if not conds.is_empty() and live:
 		var k := float(ok) / conds.size()
 		var by := r.end.y - 8.0
 		ctrl.draw_rect(Rect2(rx, by, rw - 110.0, 5), Color(1, 1, 1, 0.08))
 		ctrl.draw_rect(Rect2(rx, by, (rw - 110.0) * k, 5), Color(0.45, 1.0, 0.55) if ok == conds.size() else Menu.C_AMBER)
-		_text(Vector2(rx + rw - 100.0, r.position.y + 22), "%d из %d" % [ok, conds.size()], 15, Color(0.8, 0.83, 0.9), HORIZONTAL_ALIGNMENT_RIGHT, 100.0)
+		_text(Vector2(rx + rw - 100.0, r.position.y + 22), Loc.t("%d из %d") % [ok, conds.size()], 15, Color(0.8, 0.83, 0.9), HORIZONTAL_ALIGNMENT_RIGHT, 100.0)
 
 
 func _weapon_rows(p: Player) -> Array:
@@ -258,4 +258,4 @@ func _evo_rows(p: Player) -> Array:
 ## 3.2: условие связки навыка — главный (первый) тег навыка по порогам слотов + доводка I/II/III
 func _cond_text(sk: String) -> String:
 	var t: String = PlaneClasses.SKILL3[sk]["tags"][0]
-	return "%s: %d очков + уровень навыка %d" % [Prog.tag_title(t), Cards.SLOT_COST[0]["main"], int(Cards.SLOT_COST[0].get("s3", 1))]
+	return Loc.t("%s: %d очков + уровень навыка %d") % [Prog.tag_title(t), Cards.SLOT_COST[0]["main"], int(Cards.SLOT_COST[0].get("s3", 1))]

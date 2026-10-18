@@ -257,10 +257,10 @@ func promote(c: String) -> Array:
 func unlocks_at(c: String, lv: int) -> Array:
 	var out: Array = []
 	if lv % 2 == 0:
-		out.append("очко перка (ур. %d)" % lv)
+		out.append(Loc.t("очко перка (ур. %d)") % lv)
 	for i in SKILL_UNLOCK.size():
 		if int(SKILL_UNLOCK[i]) == lv and i > 0:
-			out.append("навык «%s»" % PlaneClasses.SKILL3[PlaneClasses.CLASS_SKILLS[c][i]]["title"])
+			out.append(Loc.t("навык «%s»") % PlaneClasses.SKILL3[PlaneClasses.CLASS_SKILLS[c][i]]["title"])
 	if lv == SLOT2_LVL:
 		out.append("второй слот навыка [F]")
 	if lv == PLANE2_CREW:
@@ -269,7 +269,7 @@ func unlocks_at(c: String, lv: int) -> Array:
 		out.append("перки 2-й ступени")
 	for t in WING_UNLOCK:
 		if int(WING_UNLOCK[t]) == lv:
-			out.append("ведомый %s в карточках" % Prog.WING_TYPES[t]["title"])
+			out.append(Loc.t("ведомый %s в карточках") % Prog.WING_TYPES[t]["title"])
 	return out
 
 
@@ -541,12 +541,12 @@ func hint_buy(c: String) -> String:
 		var lv := node(c, id)
 		if lv < 5 and int(NODE_COST[lv]) <= parts() and int(NODE_COST[lv]) < price:
 			price = int(NODE_COST[lv])
-			best = "%s ур. %d (%d)" % [NODES[id]["title"], lv + 1, price]
+			best = Loc.t("%s ур. %d (%d)") % [NODES[id]["title"], lv + 1, price]
 	if can_buy_plane2(c) and PLANE2_COST < price:
 		price = PLANE2_COST
-		best = "Самолёт ур. 2 (%d)" % PLANE2_COST
+		best = Loc.t("Самолёт ур. 2 (%d)") % PLANE2_COST
 	if can_promote(c) and promote_cost(crew_lvl(c) + 1) < price:
-		best = "Повысить в звании до ур. %d (%d)" % [crew_lvl(c) + 1, promote_cost(crew_lvl(c) + 1)]
+		best = Loc.t("Повысить в звании до ур. %d (%d)") % [crew_lvl(c) + 1, promote_cost(crew_lvl(c) + 1)]
 	return best
 
 
@@ -578,13 +578,13 @@ func award_run(s: Dictionary) -> Dictionary:
 	data["sorties"] = int(data["sorties"]) + 1
 	var mins := rt / 60.0
 	var lines: Array = [
-		["В воздухе %d:%02d" % [int(rt) / 60, int(rt) % 60], int(round(20.0 * mins))],
-		["Уровень пилота %d" % int(s["level"]), 5 * int(s["level"])],
+		[Loc.t("В воздухе %d:%02d") % [int(rt) / 60, int(rt) % 60], int(round(20.0 * mins))],
+		[Loc.t("Уровень пилота %d") % int(s["level"]), 5 * int(s["level"])],
 	]
 	if int(s["bosses"]) > 0:
-		lines.append(["Асы ×%d" % int(s["bosses"]), 60 * int(s["bosses"])])
+		lines.append([Loc.t("Асы ×%d") % int(s["bosses"]), 60 * int(s["bosses"])])
 	if int(s["activities"]) > 0:
-		lines.append(["Активности ×%d" % int(s["activities"]), 20 * int(s["activities"])])
+		lines.append([Loc.t("Активности ×%d") % int(s["activities"]), 20 * int(s["activities"])])
 	var sum := 0
 	for l in lines:
 		sum += int(l[1])
@@ -597,7 +597,7 @@ func award_run(s: Dictionary) -> Dictionary:
 		# 3.4: множитель продолжения — только к доле опыта, заработанной после 15:00 (раньше — ко всему вылету)
 		var bonus := int(round(sum * (cm - 1.0) * maxf(0.0, rt - 900.0) / maxf(rt, 1.0)))
 		out["xp_continue"] = bonus
-		lines.append(["Продолжение ×%.1f" % cm, bonus])
+		lines.append([Loc.t("Продолжение ×%.1f") % cm, bonus])
 		sum += bonus
 	lines.append(["За вылет", 30])
 	sum += 30
@@ -622,9 +622,9 @@ func award_run(s: Dictionary) -> Dictionary:
 		if not Campaign.cleared(0) and crew_lvl(c) >= PLANE2_CREW:
 			out["tech"] = "Самолёт ур. 2 выдадут после операции «Перевал» — пройдите её."
 		elif can_buy_plane2(c):
-			out["tech"] = "Самолёт ур. 2 ждёт — загляни в ангар: %d запчастей." % PLANE2_COST
+			out["tech"] = Loc.t("Самолёт ур. 2 ждёт — загляни в ангар: %d запчастей.") % PLANE2_COST
 		elif crew_lvl(c) >= PLANE2_CREW:
-			out["tech"] = "Копим на самолёт ур. 2: %d запчастей (есть %d)." % [PLANE2_COST, parts()]
+			out["tech"] = Loc.t("Копим на самолёт ур. 2: %d запчастей (есть %d).") % [PLANE2_COST, parts()]
 	save()
 	return out
 

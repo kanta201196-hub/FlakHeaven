@@ -331,7 +331,7 @@ func _draw_menu() -> void:
 	ctrl.draw_rect(Rect2(0, 0, size.x, 96), Color(0.04, 0.045, 0.04, 0.7))
 	_txt(Vector2(64, 58), "◇ FLAK HEAVEN  //  " + ("ГЛАВНЫЙ ТЕРМИНАЛ" if m.state == "menu" else "НАСТРОЙКИ"), 22, C_TEXT, bold())
 	# С-5: номер версии — из BUILD (main.gd), а не отдельной устаревшей строкой
-	_txt(Vector2(size.x - 64 - 800, 58), "ВЕРСИЯ: " + Main.BUILD, 20, C_DIM, bold(), HORIZONTAL_ALIGNMENT_RIGHT, 800)
+	_txt(Vector2(size.x - 64 - 800, 58), Loc.t("ВЕРСИЯ: ") + Main.BUILD, 20, C_DIM, bold(), HORIZONTAL_ALIGNMENT_RIGHT, 800)
 	ctrl.draw_line(Vector2(64, 96), Vector2(size.x - 64, 96), C_LINE, 1.0)
 	ctrl.draw_line(Vector2(64, size.y - 70), Vector2(size.x - 64, size.y - 70), C_LINE, 1.0)
 	if m.state == "menu":
@@ -356,8 +356,8 @@ func _main(m: Main, size: Vector2) -> void:
 	var y := 600.0
 	_menu_button(Rect2(x0, y, 560, 78), "ВЫЛЕТ", "menu_play", true)
 	_menu_button(Rect2(x0, y + 96, 560, 62), "СПРАВОЧНИК", "menu_codex")
-	_menu_button(Rect2(x0, y + 172, 560, 62), "АНГАР" + ("  !" if Profile.any_purchase() else ""), "menu_hangar", false, true,
-		"Запчасти: %d · экипажи: Оса %d · Грач %d · Кит %d" % [Profile.parts(), Profile.crew_lvl("fighter"), Profile.crew_lvl("attacker"), Profile.crew_lvl("bomber")])
+	_menu_button(Rect2(x0, y + 172, 560, 62), Loc.t("АНГАР") + ("  !" if Profile.any_purchase() else ""), "menu_hangar", false, true,
+		Loc.t("Запчасти: %d · экипажи: Оса %d · Грач %d · Кит %d") % [Profile.parts(), Profile.crew_lvl("fighter"), Profile.crew_lvl("attacker"), Profile.crew_lvl("bomber")])
 	_menu_button(Rect2(x0, y + 256, 272, 62), "НАСТРОЙКИ", "menu_settings")
 	_menu_button(Rect2(x0 + 288, y + 256, 272, 62), "КАК ИГРАТЬ", "menu_howto")
 	_menu_button(Rect2(x0, y + 336, 272, 62), "ЛОГИ", "menu_logs")
@@ -416,7 +416,7 @@ func _records_panel(r: Rect2) -> void:
 		var ok: bool = e["o"] == "эвакуация"
 		var tt := float(e["t"])
 		_txt(Vector2(r.position.x + 28, y), "%s" % e["c"], 17, C_TEXT)
-		_txt(Vector2(r.position.x + 230, y), "%d:%02d · ур. %d · %d сбито" % [int(tt / 60.0), int(tt) % 60, int(e["l"]), int(e["k"])], 16, C_DIM)
+		_txt(Vector2(r.position.x + 230, y), Loc.t("%d:%02d · ур. %d · %d сбито") % [int(tt / 60.0), int(tt) % 60, int(e["l"]), int(e["k"])], 16, C_DIM)
 		_txt(Vector2(r.position.x + 28, y), "✔" if ok else "✖", 18, Color(0.5, 0.9, 0.5) if ok else C_RED, null, HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 56)
 		y += 27.0
 
@@ -463,8 +463,8 @@ func _settings(size: Vector2) -> void:
 			var wr := Rect2(x, y, w2, 46)
 			var hv := wr.has_point(ctrl.get_local_mouse_position())
 			ctrl.draw_rect(wr, Color(C_RED.r, C_RED.g, C_RED.b, 0.35 if (hv or _wipe_t > 0.0) else 0.15))
-			_txt(Vector2(x + 16, y + 30), "ТОЧНО? Нажмите ещё раз — профиль (ангар, экипажи) будет удалён" if _wipe_t > 0.0
-				else "Сбросить прогресс (ангар, экипажи, запчасти)", 18, C_TEXT)
+			_txt(Vector2(x + 16, y + 30), Loc.t("ТОЧНО? Нажмите ещё раз — профиль (ангар, экипажи) будет удалён") if _wipe_t > 0.0
+				else Loc.t("Сбросить прогресс (ангар, экипажи, запчасти)"), 18, C_TEXT)
 			_buttons.append([wr, "wipe"])
 			y += 56.0
 		1:
@@ -476,7 +476,7 @@ func _settings(size: Vector2) -> void:
 			var fl: int = Settings.FPS_LIMITS[Settings.fps_limit]
 			y = _opt(x, y, w2, "Ограничение кадров", "без ограничения" if fl == 0 else "%d к/с" % fl, "fps_limit")
 			y = _section(x, y + 10, w2, "Картинка")
-			y = _opt(x, y, w2, "Качество графики", Settings.GFX[Settings.gfx] + (" (авто)" if Settings.gfx_auto else ""), "gfx")
+			y = _opt(x, y, w2, "Качество графики", Settings.GFX[Settings.gfx] + (Loc.t(" (авто)") if Settings.gfx_auto else ""), "gfx")
 			y = _check(x, y, w2, "Объёмная 3D-картинка (выкл. — старая 2D)", Tuning.g("render3d") > 0.5, "render3d")
 			y = _check(x, y, w2, "Спрайты (выкл. — схематичные фигуры, F4)", Tuning.g("sprites") > 0.5, "sprites")
 			y = _check(x, y, w2, "Круги дальности оружия (пунктир)", Tuning.g("range_rings") > 0.5, "range_rings")
@@ -506,7 +506,7 @@ func _settings(size: Vector2) -> void:
 				var kr := Rect2(cx + col_w * 0.57, yy, col_w * 0.43, 46)
 				var hover := kr.has_point(ctrl.get_local_mouse_position())
 				ctrl.draw_rect(kr, C_AMBER if cap else (Color(0.95, 0.93, 0.88, 0.95) if hover else Color(0.85, 0.83, 0.78, 0.9)))
-				_txt(Vector2(kr.position.x, yy + 31), "нажмите клавишу…" if cap else Settings.key_name(rb[0]), 19, Color(0.08, 0.07, 0.05), bold(),
+				_txt(Vector2(kr.position.x, yy + 31), Loc.t("нажмите клавишу…") if cap else Settings.key_name(rb[0]), 19, Color(0.08, 0.07, 0.05), bold(),
 					HORIZONTAL_ALIGNMENT_CENTER, kr.size.x)
 				_buttons.append([kr, "bind:" + String(rb[0])])
 				yy += 56.0
@@ -589,7 +589,7 @@ func _slider(x: float, y: float, w: float, label: String, key: String, fmt: Stri
 	ctrl.draw_circle(Vector2(r.position.x + r.size.x * k, r.get_center().y), 6.0, C_AMBER_D)
 	var shown: String
 	if mul < 0.0:
-		shown = "выкл." if k <= 0.001 else "%d%%" % int(round(k * 100.0))
+		shown = Loc.t("выкл.") if k <= 0.001 else "%d%%" % int(round(k * 100.0))
 	else:
 		shown = fmt % (v * mul)
 	_txt(Vector2(r.end.x + 20, y), shown, 20, C_AMBER, bold(), HORIZONTAL_ALIGNMENT_RIGHT, 90)
@@ -660,7 +660,7 @@ func _howto(size: Vector2) -> void:
 			y += 9.0
 	_txt(Vector2(r.position.x + 48, r.end.y - 40), ("После вылета нажмите «ОТПРАВИТЬ ОТЧЁТ» на экране итогов — это займёт минуту и очень нам поможет." if Main.REPORT_URL != "" else "После 3–5 вылетов: меню → ЛОГИ → отправьте файлы playtest_log_*.csv и logs/godot.log вместе с ответами на анкету."), 17, C_DIM)
 	_menu_button(Rect2(r.end.x - 48 - 300, r.end.y - 96, 300, 62), "ПОНЯТНО", "howto_close", true)
-	_menu_button(Rect2(r.end.x - 48 - 300 - 24 - 420, r.end.y - 96, 420, 62), "ПОДСКАЗКИ ЗАНОВО" if _saved_t <= 0.0 else "ПОДСКАЗКИ ВКЛЮЧЕНЫ", "hints_reset")
+	_menu_button(Rect2(r.end.x - 48 - 300 - 24 - 420, r.end.y - 96, 420, 62), Loc.t("ПОДСКАЗКИ ЗАНОВО") if _saved_t <= 0.0 else Loc.t("ПОДСКАЗКИ ВКЛЮЧЕНЫ"), "hints_reset")
 
 
 func _wrap(s: String, width: float, fsize: int) -> PackedStringArray:

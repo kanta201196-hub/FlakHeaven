@@ -9,7 +9,7 @@ func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.05, 0.94))
 	var c := m.hangar_cls
 	_text(Vector2(0, 66), "АНГАР", 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-	_text(Vector2(0, 66), "Запчасти: %d   " % Profile.parts(), 26, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 60)
+	_text(Vector2(0, 66), Loc.t("Запчасти: %d   ") % Profile.parts(), 26, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 60)
 	_button(Rect2(60, 34, 200, 46), "‹ Меню (Esc)", "hg:back", 18)
 	# классы
 	var bx := size.x / 2.0 - 3 * 190.0
@@ -23,7 +23,7 @@ func draw(m: Main, size: Vector2) -> void:
 		_buttons.append([r, "hg:cls:" + id])
 		_text(Vector2(r.position.x + 16, r.position.y + 28), String(PlaneClasses.DATA[id]["title"]), 19, col)
 		var pp := Profile.perk_points(id)
-		_text(Vector2(r.position.x + 16, r.position.y + 52), "Экипаж ур. %d%s" % [Profile.crew_lvl(id), ("  · очков перков: %d" % pp) if pp > 0 else ""], 15, Color(0.85, 0.88, 0.95))
+		_text(Vector2(r.position.x + 16, r.position.y + 52), Loc.t("Экипаж ур. %d%s") % [Profile.crew_lvl(id), (Loc.t("  · очков перков: %d") % pp) if pp > 0 else ""], 15, Color(0.85, 0.88, 0.95))
 	# вкладки
 	var tabs := [["plane", "САМОЛЁТ"], ["weapons", "ОРУЖИЕ"], ["crew", "ЭКИПАЖ"]]
 	for i in tabs.size():
@@ -40,7 +40,7 @@ func draw(m: Main, size: Vector2) -> void:
 			_hg_weapons(m, area)
 		"crew":
 			_hg_crew(c, area)
-	_button(Rect2(size.x / 2.0 - 180, size.y - 110, 360, 56), "В ВЫЛЕТ — %s" % PlaneClasses.DATA[c]["title"], "hg:fly", 20)
+	_button(Rect2(size.x / 2.0 - 180, size.y - 110, 360, 56), Loc.t("В ВЫЛЕТ — %s") % PlaneClasses.DATA[c]["title"], "hg:fly", 20)
 	if Main.DEBUG:
 		var dy := size.y - 110
 		_text(Vector2(60, dy - 10), "ОТЛАДКА (тестовая сборка):", 14, Color(0.7, 0.7, 0.7))
@@ -66,7 +66,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		var br := Rect2(lx + 24 + (lv - 1) * 150, area.position.y + 348, 140, 36)
 		var on: bool = h3.view_lvl == lv
 		ctrl.draw_rect(br, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
-		_text(Vector2(br.position.x, br.position.y + 25), "Ур. %d" % lv, 17, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
+		_text(Vector2(br.position.x, br.position.y + 25), Loc.t("Ур. %d") % lv, 17, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
 		h3.lvl_rects.append([br, lv])
 	if bought:
 		# 3.5: выбор самолёта на вылет — для уровня, который сейчас на виде
@@ -75,9 +75,9 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		if h3.view_lvl == sel:
 			_panel(sr, true)
 			ctrl.draw_rect(sr, Color(0.5, 1.0, 0.6), false, 2.0)
-			_text(Vector2(sr.position.x, sr.position.y + 25), "✓ ур. %d — в вылет" % sel, 16, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_CENTER, sr.size.x)
+			_text(Vector2(sr.position.x, sr.position.y + 25), Loc.t("✓ ур. %d — в вылет") % sel, 16, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_CENTER, sr.size.x)
 		else:
-			_button(sr, "ЛЕТАТЬ НА УР. %d" % h3.view_lvl, "hg:plane_sel:%d" % h3.view_lvl, 14)
+			_button(sr, Loc.t("ЛЕТАТЬ НА УР. %d") % h3.view_lvl, "hg:plane_sel:%d" % h3.view_lvl, 14)
 	elif h3.view_lvl == 2:
 		_text(Vector2(lx + 330, area.position.y + 372), "не куплен — в вылет недоступен", 15, Color(1.0, 0.75, 0.45))
 	# п. 3: как оружие меняется с уровнем
@@ -87,7 +87,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		var tr2 := Rect2(lx + 130 + ti * 100, area.position.y + 392, 92, 30)
 		var on2: bool = h3.weapon_tier == ti + 1
 		ctrl.draw_rect(tr2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.08))
-		_text(Vector2(tr2.position.x, tr2.position.y + 21), ("ур. %d" % [1, 3, 5][ti]) if ti < 3 else "модерниз.", 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
+		_text(Vector2(tr2.position.x, tr2.position.y + 21), (Loc.t("ур. %d") % [1, 3, 5][ti]) if ti < 3 else Loc.t("модерниз."), 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
 		h3.tier_rects.append([tr2, ti + 1])
 	_hg_livery(c, lx, area.position.y + 432)
 	var y := area.position.y + 486.0
@@ -95,13 +95,13 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 15, Color(0.8, 0.85, 0.9))
 		# правка 6 теста 3.5-s5: прокачка у каждого самолёта своя
-		_text(Vector2(lx + 24, y + 48), "Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка" % Profile.plane_lvl(c), 14, Menu.C_AMBER)
+		_text(Vector2(lx + 24, y + 48), Loc.t("Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка") % Profile.plane_lvl(c), 14, Menu.C_AMBER)
 	else:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
-		_text(Vector2(lx + 24, y + 24), "Требует: операция «Перевал»%s · экипаж ур. %d (сейчас %d) · %d запчастей" % [" ✓" if Campaign.cleared(0) else "", Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
+		_text(Vector2(lx + 24, y + 24), Loc.t("Требует: операция «Перевал»%s · экипаж ур. %d (сейчас %d) · %d запчастей") % [" ✓" if Campaign.cleared(0) else "", Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
 		_text(Vector2(lx + 24, y + 46), "даёт: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 14, Color(0.7, 0.74, 0.8))
 		if Profile.can_buy_plane2(c):
-			_button(Rect2(lx + 24, y + 60, 320, 46), "МОДЕРНИЗИРОВАТЬ — %d" % Profile.PLANE2_COST, "hg:plane2", 17)
+			_button(Rect2(lx + 24, y + 60, 320, 46), Loc.t("МОДЕРНИЗИРОВАТЬ — %d") % Profile.PLANE2_COST, "hg:plane2", 17)
 	# справа — 6 узлов
 	var rx := lx + lw + 30.0
 	var rw := area.size.x - lw - 30.0
@@ -114,7 +114,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(rx + 20, yy + 30), String(nd["title"]), 20, Color.WHITE)
 		for i in 5:
 			ctrl.draw_rect(Rect2(rx + 200 + i * 30, yy + 16, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))
-		_text(Vector2(rx + 20, yy + 58), "за уровень: %s · сейчас ур. %d%s" % [nd["step"], lv2, (" (самолёт ур. %d)" % Profile.plane_lvl(c)) if bought else ""], 15, Color(0.8, 0.84, 0.9))
+		_text(Vector2(rx + 20, yy + 58), Loc.t("за уровень: %s · сейчас ур. %d%s") % [nd["step"], lv2, (Loc.t(" (самолёт ур. %d)") % Profile.plane_lvl(c)) if bought else ""], 15, Color(0.8, 0.84, 0.9))
 		if String(nd["note"]) != "":
 			_text(Vector2(rx + 20, yy + 80), String(nd["note"]), 12, Color(0.6, 0.62, 0.68))
 		if lv2 >= 5:
@@ -122,9 +122,9 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		else:
 			var price: int = Profile.NODE_COST[lv2]
 			if Profile.can_buy_node(c, id):
-				_button(Rect2(rx + rw - 250, yy + 24, 230, 44), "УЛУЧШИТЬ — %d" % price, "hg:node:" + id, 16)
+				_button(Rect2(rx + rw - 250, yy + 24, 230, 44), Loc.t("УЛУЧШИТЬ — %d") % price, "hg:node:" + id, 16)
 			else:
-				_text(Vector2(rx, yy + 52), "%d (не хватает %d)" % [price, price - Profile.parts()], 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
+				_text(Vector2(rx, yy + 52), Loc.t("%d (не хватает %d)") % [price, price - Profile.parts()], 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		yy += 102.0
 
 
@@ -154,7 +154,7 @@ func _hg_start2(m: Main, lx: float, y: float) -> void:
 	var c := m.hangar_cls
 	_text(Vector2(lx, y + 16), "Второй подвес на старте", 17, Color.WHITE)
 	if Profile.crew_lvl(c) < Profile.START2_LVL:
-		_para(Vector2(lx, y + 28), "Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек." % Profile.START2_LVL, 300.0, 14, Color(0.65, 0.68, 0.75))
+		_para(Vector2(lx, y + 28), Loc.t("Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек.") % Profile.START2_LVL, 300.0, 14, Color(0.65, 0.68, 0.75))
 		return
 	var cur := Profile.start2(c)
 	var opts: Array = [""] + Profile.start2_options(c)
@@ -218,22 +218,22 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			var tr2 := Rect2(vx + 16 + ti * 106, area.position.y + 392, 98, 32)
 			var on2: bool = h3.weapon_tier == ti + 1
 			ctrl.draw_rect(tr2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.08))
-			_text(Vector2(tr2.position.x, tr2.position.y + 22), ("ур. %d" % [1, 3, 5][ti]) if ti < 3 else "модерниз.", 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
+			_text(Vector2(tr2.position.x, tr2.position.y + 22), (Loc.t("ур. %d") % [1, 3, 5][ti]) if ti < 3 else Loc.t("модерниз."), 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
 			h3.tier_rects.append([tr2, ti + 1])
 		if w2 == "turret":
 			if wcls != m.hangar_cls:
-				_text(Vector2(vx + 16, area.position.y + 452), "%s: турелей нет. Показана турель: %s" % [PlaneClasses.DATA[m.hangar_cls]["title"], PlaneClasses.DATA[wcls]["title"]], 14, Color(0.7, 0.74, 0.8))
+				_text(Vector2(vx + 16, area.position.y + 452), Loc.t("%s: турелей нет. Показана турель: %s") % [PlaneClasses.DATA[m.hangar_cls]["title"], PlaneClasses.DATA[wcls]["title"]], 14, Color(0.7, 0.74, 0.8))
 			else:
-				_text(Vector2(vx + 16, area.position.y + 452), "Турель класса: %s" % PlaneClasses.DATA[m.hangar_cls]["title"], 14, Color(0.7, 0.74, 0.8))
+				_text(Vector2(vx + 16, area.position.y + 452), Loc.t("Турель класса: %s") % PlaneClasses.DATA[m.hangar_cls]["title"], 14, Color(0.7, 0.74, 0.8))
 	else:
 		_text(Vector2(vx + 24, area.position.y + 220), "Встроенное оружие — модель на самолёте", 16, Color(0.7, 0.74, 0.8))
-	_text(Vector2(rx, area.position.y + 24), "%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)" % Weapons.DEFS[w2]["title"], 18, Menu.C_AMBER)
+	_text(Vector2(rx, area.position.y + 24), Loc.t("%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)") % Weapons.DEFS[w2]["title"], 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
 	for tier in [1, 2, 3]:
 		_text(Vector2(rx, yy + 20), "Ступень %d%s" % [tier, " · модернизация" if tier == 3 else ""], 18, Color.WHITE)
 		var st2 := Profile.tier_state(w2, tier)
 		var locked: bool = (tier == 2 and Profile.tier_state(w2, 1) == "") or (tier == 3 and not Profile.tier3_open(w2))
-		var why := "сначала выберите ступень %d" % (tier - 1)
+		var why := Loc.t("сначала выберите ступень %d") % (tier - 1)
 		if tier == 3 and Profile.tier_state(w2, 2) != "" and not Campaign.cleared(1):
 			why = "откроется после операции 2 «Сухое русло» (кампания)"
 		elif tier == 3 and Profile.tier_state(w2, 2) == "":
@@ -245,7 +245,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			_text(Vector2(rx + 250, yy + 20), "Нужно:", 15, Color(0.8, 0.84, 0.9))
 			_cond_chips(Vector2(rx + 310, yy + 4), [["ступень 2", Profile.tier_state(w2, 2) != ""],
 				["операция 2 «Сухое русло»", Campaign.cleared(1)],
-				["%d запч." % int(Profile.TIER_COST[2]), Profile.parts() >= int(Profile.TIER_COST[2])],
+				[Loc.t("%d запч.") % int(Profile.TIER_COST[2]), Profile.parts() >= int(Profile.TIER_COST[2])],
 				["самолёт ур. 2", Profile.plane_lvl(m.hangar_cls) == 2]])
 		for oi in 2:
 			var opt: Array = Profile.WBRANCH[w2][tier - 1][oi] if tier < 3 else Profile.WBRANCH3[w2][oi]
@@ -264,11 +264,11 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			elif st2 == "":
 				var price: int = Profile.TIER_COST[tier - 1]
 				if Profile.parts() >= price:
-					_button(Rect2(r2.position.x + 18, r2.position.y + 74, 200, 38), "ВЗЯТЬ — %d" % price, "hg:tier:%s:%d:%s" % [w2, tier, key], 14)
+					_button(Rect2(r2.position.x + 18, r2.position.y + 74, 200, 38), Loc.t("ВЗЯТЬ — %d") % price, "hg:tier:%s:%d:%s" % [w2, tier, key], 14)
 				else:
-					_text(Vector2(r2.position.x + 18, r2.position.y + 98), "%d запчастей" % price, 14, Color(0.65, 0.65, 0.7))
+					_text(Vector2(r2.position.x + 18, r2.position.y + 98), Loc.t("%d запчастей") % price, 14, Color(0.65, 0.65, 0.7))
 		if st2 != "" and st2 != "?":
-			_button(Rect2(rx + rw - 260, yy, 260, 30), "переиграть — %d" % Profile.REDO_COST[tier - 1], "hg:redo:%s:%d" % [w2, tier], 13)
+			_button(Rect2(rx + rw - 260, yy, 260, 30), Loc.t("переиграть — %d") % Profile.REDO_COST[tier - 1], "hg:redo:%s:%d" % [w2, tier], 13)
 		yy += 170.0
 
 
@@ -278,7 +278,7 @@ func _hg_crew(c: String, area: Rect2) -> void:
 	var lw := 460.0
 	_panel(Rect2(lx, area.position.y, lw, area.size.y), false)
 	var y := area.position.y + 40.0
-	_text(Vector2(lx + 24, y), "Позывной: «%s»" % cd["callsign"], 22, Color.WHITE)
+	_text(Vector2(lx + 24, y), Loc.t("Позывной: «%s»") % cd["callsign"], 22, Color.WHITE)
 	_button(Rect2(lx + lw - 150, y - 28, 130, 38), "СМЕНИТЬ", "hg:callsign", 14)
 	# 3.5: портрет (пока нет арта — силуэт)
 	var pr_r := Rect2(lx + lw - 124, y + 18, 100, 150)
@@ -296,7 +296,7 @@ func _hg_crew(c: String, area: Rect2) -> void:
 	var tr := Profile.trait_of(c)
 	if not tr.is_empty():
 		y += 30.0
-		_text(Vector2(lx + 24, y), "Черта: «%s»" % tr["title"], 18, Menu.C_AMBER)
+		_text(Vector2(lx + 24, y), Loc.t("Черта: «%s»") % tr["title"], 18, Menu.C_AMBER)
 		y += 24.0
 		_text(Vector2(lx + 24, y), "+ " + String(tr["plus"]), 15, Color(0.6, 1.0, 0.7))
 		y += 22.0
@@ -304,36 +304,36 @@ func _hg_crew(c: String, area: Rect2) -> void:
 	y = maxf(y + 40.0, pr_r.end.y + 34.0) # под портретом
 	var lv := Profile.crew_lvl(c)
 	var pr := Profile.crew_progress(c)
-	_text(Vector2(lx + 24, y), "Экипаж ур. %d" % lv, 26, Color(0.6, 1.0, 0.7))
+	_text(Vector2(lx + 24, y), Loc.t("Экипаж ур. %d") % lv, 26, Color(0.6, 1.0, 0.7))
 	y += 18.0
 	ctrl.draw_rect(Rect2(lx + 24, y, lw - 48, 14), Color(0, 0, 0, 0.5))
 	if int(pr[1]) > 0:
 		ctrl.draw_rect(Rect2(lx + 24, y, (lw - 48) * minf(1.0, float(pr[0]) / float(pr[1])), 14), Color(0.5, 1.0, 0.6))
 		var ready := Profile.promote_ready(c)
-		_text(Vector2(lx + 24, y + 36), ("опыт для ур. %d набран" % (lv + 1)) if ready else "%d / %d опыта до ур. %d" % [pr[0], pr[1], lv + 1], 15,
+		_text(Vector2(lx + 24, y + 36), (Loc.t("опыт для ур. %d набран") % (lv + 1)) if ready else Loc.t("%d / %d опыта до ур. %d") % [pr[0], pr[1], lv + 1], 15,
 			Color(1.0, 0.9, 0.4) if ready else Color(0.8, 0.84, 0.9))
 		y += 50.0
 		var cost := Profile.promote_cost(lv + 1)
 		var can := Profile.can_promote(c)
 		var br := Rect2(lx + 24, y, lw - 48, 40)
 		if can:
-			_button(br, "ПОВЫСИТЬ В ЗВАНИИ — %d запчастей" % cost, "hg:promote", 15)
+			_button(br, Loc.t("ПОВЫСИТЬ В ЗВАНИИ — %d запчастей") % cost, "hg:promote", 15)
 		else:
 			_panel(br, false)
-			_text(Vector2(br.position.x + 14, br.position.y + 26), ("Повысить в звании — %d (не хватает запчастей)" % cost) if Profile.promote_ready(c) else "Повысить в звании — %d (нужен опыт)" % cost, 14, Color(0.6, 0.62, 0.68))
+			_text(Vector2(br.position.x + 14, br.position.y + 26), (Loc.t("Повысить в звании — %d (не хватает запчастей)") % cost) if Profile.promote_ready(c) else Loc.t("Повысить в звании — %d (нужен опыт)") % cost, 14, Color(0.6, 0.62, 0.68))
 		y += 40.0
 	y += 34.0
-	_para(Vector2(lx + 24, y), "Рост показателей: " + String(Profile.CREW[c]["stats"]), lw - 48, 15)
+	_para(Vector2(lx + 24, y), Loc.t("Рост показателей: ") + String(Profile.CREW[c]["stats"]), lw - 48, 15)
 	y += 56.0
 	_text(Vector2(lx + 24, y), "Открытия по уровню экипажа:", 16, Menu.C_AMBER)
 	var unl := [[3, "2-й навык класса; самолёт ур. 2"], [4, "ведомый «Ласка»"], [5, "2-й слот навыка [F]"], [6, "перки 2-й ступени"], [7, "3-й навык класса"], [8, "ведомый «Грачонок»"]]
 	for u in unl:
 		y += 24.0
-		_text(Vector2(lx + 24, y), ("✓ " if lv >= int(u[0]) else "· ") + "ур. %d — %s" % [u[0], u[1]], 15, Color(0.6, 1.0, 0.7) if lv >= int(u[0]) else Color(0.7, 0.72, 0.78))
+		_text(Vector2(lx + 24, y), ("✓ " if lv >= int(u[0]) else "· ") + Loc.t("ур. %d — %s") % [u[0], u[1]], 15, Color(0.6, 1.0, 0.7) if lv >= int(u[0]) else Color(0.7, 0.72, 0.78))
 	# перки
 	var px := lx + lw + 30.0
 	var pw := 820.0
-	_text(Vector2(px, area.position.y + 24), "ПЕРКИ — очков: %d (на чётных уровнях)" % Profile.perk_points(c), 18, Menu.C_AMBER)
+	_text(Vector2(px, area.position.y + 24), Loc.t("ПЕРКИ — очков: %d (на чётных уровнях)") % Profile.perk_points(c), 18, Menu.C_AMBER)
 	_button(Rect2(px + pw - 200, area.position.y, 200, 34), "СБРОСИТЬ ПЕРКИ", "hg:perk_reset", 13)
 	var cw := pw / 3.0
 	for bi in 3:
@@ -344,7 +344,7 @@ func _hg_crew(c: String, area: Rect2) -> void:
 			var r := Rect2(bxx + 6, area.position.y + 80 + ti * 118, cw - 12, 108)
 			if ti >= 2:
 				_panel(r, false)
-				_text(Vector2(r.position.x + 14, r.position.y + 60), "ступень %d — в разработке" % (ti + 1), 14, Color(0.55, 0.57, 0.62))
+				_text(Vector2(r.position.x + 14, r.position.y + 60), Loc.t("ступень %d — в разработке") % (ti + 1), 14, Color(0.55, 0.57, 0.62))
 				continue
 			var pk: Array = br[1][ti]
 			var has: bool = (cd["perks"] as Array).has(pk[0])
@@ -356,7 +356,7 @@ func _hg_crew(c: String, area: Rect2) -> void:
 			_text(Vector2(r.position.x + 14, r.position.y + 28), ("✓ " if has else "") + String(pk[1]), 17, Color(0.6, 1.0, 0.7) if has else (Color.WHITE if can else Color(0.65, 0.67, 0.72)))
 			_para(Vector2(r.position.x + 14, r.position.y + 50), String(pk[2]), cw - 40, 13, Color(0.8, 0.84, 0.9))
 			if ti == 1 and lv < Profile.PERK_T2_LVL:
-				_text(Vector2(r.position.x + 14, r.end.y - 8), "с экипажа ур. %d" % Profile.PERK_T2_LVL, 12, Color(0.6, 0.62, 0.68))
+				_text(Vector2(r.position.x + 14, r.end.y - 8), Loc.t("с экипажа ур. %d") % Profile.PERK_T2_LVL, 12, Color(0.6, 0.62, 0.68))
 	# слоты навыков
 	var sx := px + pw + 30.0
 	var sw := area.end.x - sx
@@ -381,9 +381,9 @@ func _hg_crew(c: String, area: Rect2) -> void:
 			var i: int = PlaneClasses.CLASS_SKILLS[c].find(sk)
 			var tail := ""
 			if not unlocked:
-				tail = " (экипаж ур. %d)" % Profile.SKILL_UNLOCK[i]
+				tail = Loc.t(" (экипаж ур. %d)") % Profile.SKILL_UNLOCK[i]
 			elif busy:
-				tail = " — уже в слоте %d" % (2 - slot)
+				tail = Loc.t(" — уже в слоте %d") % (2 - slot)
 			_text(Vector2(sx + 10, yy + 21), ("● " if sel else "○ ") + String(PlaneClasses.SKILL3[sk]["title"]) + tail, 15,
 				Color(0.7, 1.0, 0.7) if sel else (Color(0.85, 0.88, 0.95) if unlocked and open and not busy else Color(0.55, 0.57, 0.62)))
 			# правка 6: что делает навык — строкой под названием
