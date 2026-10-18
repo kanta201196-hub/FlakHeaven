@@ -24,7 +24,9 @@ var terrain: Terrain3D
 var _ground_mat: ShaderMaterial
 var _units := {}      # instance_id → {node, kind, prev_heading, bank}
 var _objs := {}       # ключ клетки → MeshInstance3D (у обломков o_wreck — сцена модели)
-var _clouds: Array = []
+var _clouds: Array = []          # «Низкое» качество: прежние плоские облака
+var _puffs: CloudPuffs           # M-31: объёмные облака из клубов (остальные качества)
+var _cloud_shift_v := Vector2.ZERO
 var _scorch_mm: MultiMeshInstance3D
 var _scorch_mesh: QuadMesh
 var _scorch_mat: StandardMaterial3D
@@ -1753,7 +1755,26 @@ func _sync_clouds(m: Main, c2: Vector2, h: float) -> void:
 	var cl: Clouds = m.clouds
 	if cl == null:
 		return
+	cl.title_on = title.active()
 	var its := cl.items()
+	# M-31: объёмные облака из клубов (один MultiMesh) — на всех качествах, кроме «Низкого»
+	if Settings.gfx >= 1 and Tuning.g("cloud3d") > 0.5:
+		for mi0: MeshInstance3D in _clouds:
+			mi0.visible = false
+		if _puffs == null:
+			_puffs = CloudPuffs.new()
+			add_child(_puffs)
+		_puffs.visible = true
+		var focus := Vector3(c2.x, 0.0, c2.y)
+		if title.active():   # заставка: растворяются над ведущим звена
+			focus = (title._units[0]["node"] as Node3D).global_position
+		elif is_instance_valid(m.player):
+			focus = Vector3(m.player.global_position.x, 0.0, m.player.global_position.y)
+		_puffs.sync(its, cam, c2, h, focus, Settings.gfx, get_process_delta_time())
+		_cloud_shadows(cl, its)
+		return
+	if _puffs != null and _puffs.visible:
+		_puffs.hide_all()
 	while _clouds.size() < its.size():
 		var mi := MeshInstance3D.new()
 		var qm := PlaneMesh.new()
@@ -1802,7 +1823,15 @@ func _cloud_shadows(cl: Clouds, its: Array) -> void:
 		if arr.size() >= 12:
 			break
 		var ti := maxi(texs.find(it[3]), 0)
-		arr.append(Vector4(it[0].x, it[0].y, float(it[1]), fposmod(float(it[2]), TAU) + 10.0 * ti))
+		var gp: Vector2 = it[0]
+		var size := float(it[1])
+		var inf: Dictionary = _puffs.info(it) if _puffs != null and _puffs.visible else {}
+		if not inf.is_empty():
+			# M-31: у 3D-облака своя высота (низкие клочья — у самолётов) — тень сдвигается по солнцу
+			# от его высоты, а не от общей CLOUD_Y: точка облака P → P − сдвиг × (высота − CLOUD_Y)
+			gp -= _cloud_shift_v * (float(inf["h"]) - CLOUD_Y)
+			size = float(inf["size"])
+		arr.append(Vector4(gp.x, gp.y, size, fposmod(float(it[2]), TAU) + 10.0 * ti))
 	while arr.size() < 12:
 		arr.append(Vector4.ZERO)
 	_ground_mat.set_shader_parameter("clouds", arr)
@@ -1813,7 +1842,8 @@ func _cloud_shadows(cl: Clouds, its: Array) -> void:
 		_ground_mat.set_shader_parameter("cloud_b", texs[mini(1, texs.size() - 1)])
 		_ground_mat.set_shader_parameter("cloud_y", CLOUD_Y)
 		var dv := -sun.global_transform.basis.z
-		_ground_mat.set_shader_parameter("cloud_shift", Vector2(dv.x, dv.z) / dv.y)   # точка земли → точка облака против луча
+		_cloud_shift_v = Vector2(dv.x, dv.z) / dv.y
+		_ground_mat.set_shader_parameter("cloud_shift", _cloud_shift_v)   # точка земли → точка облака против луча
 
 
 # ---------- 3.2: свет взрывов ----------

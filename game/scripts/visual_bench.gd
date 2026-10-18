@@ -28,6 +28,9 @@ func _init(main: Main) -> void:
 		if a.begins_with("--tilt="):
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
 			_suffix += "_t" + a.substr(7)
+		if a == "--flatclouds":   # M-31: сравнение — прежние плоские облака (vis_<имя>_flat.png)
+			Tuning.set_param("cloud3d", 0.0)
+			_suffix += "_flat"
 		if a.begins_with("--gfx="):   # T4-04: сравнение пресетов качества — vis_<имя>_gN.png
 			_suffix += "_g" + a.substr(6)
 
@@ -233,6 +236,35 @@ func _save(name: String) -> void:
 			if l > 245.0:
 				hot += 1
 	print("VISUAL %s lum=%.1f hot=%.2f%%" % [name, sum / maxf(n, 1), 100.0 * hot / maxf(n, 1)])
+	# M-31: вызовы отрисовки основного вьюпорта (видимые и тени) — сравнение «до/после»
+	var rid := m.get_viewport().get_viewport_rid()
+	print("VISUAL %s draws=%d prims=%dk shadow_draws=%d" % [name,
+		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
+		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
+		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)])
+	if Render3D.I != null:   # облака: сколько вызовов и экземпляров (плоские — по облаку на вызов; клубы — один MultiMesh)
+		var R := Render3D.I
+		var flat := 0
+		var flat_fill := 0.0
+		var planes := R.cam.get_frustum()
+		for mi: MeshInstance3D in R._clouds:   # в кадре камеры (как Perf._tri_report): один вызов на облако
+			if not mi.visible:
+				continue
+			var bb := mi.global_transform * mi.get_aabb()
+			if planes.all(func(pl: Plane) -> bool: return pl.distance_to(bb.get_support(-pl.normal)) <= 0.0):
+				flat += 1
+				var dp := (mi.global_position - R.cam.global_position).dot(-R.cam.global_transform.basis.z)
+				var spx := bb.size.x * m.get_viewport().get_visible_rect().size.y * 0.5 / tan(deg_to_rad(R.cam.fov) * 0.5) / maxf(dp, 1.0)
+				flat_fill += spx * spx / (m.get_viewport().get_visible_rect().size.x * m.get_viewport().get_visible_rect().size.y)
+		var low := 0
+		if R._puffs != null:
+			for c: Dictionary in R._puffs._cache.values():
+				low += 1 if c["low"] else 0
+		print("VISUAL %s clouds: плоских в кадре=%d (заливка %.2f кадра) клубов=%d (вызов %d, заливка %.2f кадра) низких облаков=%d вуаль=%.2f" % [name, flat, flat_fill,
+			R._puffs.shown if R._puffs != null else 0, 1 if R._puffs != null and R._puffs.shown > 0 else 0,
+			R._puffs.fill if R._puffs != null else 0.0, low,
+			R._puffs.immersion if R._puffs != null else 0.0])
+		if R._puffs != null: print("VISUAL  veil ", R._puffs._veil.visible, " ", R._puffs._veil.get_global_rect(), " ", R._puffs._veil.is_visible_in_tree())
 
 
 ## Точки: пустыня, гора, кишлак, оазис, бой со взрывами, крупный план самолёта
@@ -310,6 +342,16 @@ func _make_points() -> Array:
 			pts.append({"name": "carpet_roll_%d" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": true, "wait": 6.5, "zoom": 5.0, "roll": 0.62, "ph": 0.17})
 			pts.append({"name": "baybomb_drop_%d" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": false, "wait": 6.5, "zoom": 5.0})
 		pts.append({"name": "bomb_craters", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "craters": true, "wait": 3.0, "zoom": 1.0})
+	if OS.get_cmdline_user_args().has("--cloudbench"):   # тест 3.5-s5 (M-31): облака — рядом, над игроком, общий план
+		pts = []
+		var cl: Array = m.clouds.items() if m.clouds != null else []
+		cl.sort_custom(func(a: Array, b: Array) -> bool: return (a[0] as Vector2).length() < (b[0] as Vector2).length())
+		for i in mini(cl.size(), 2):
+			var cp: Vector2 = cl[i][0]
+			pts.append({"name": "clouds_%d_near" % i, "pos": cp + Vector2(330, 260), "wait": 1.0})
+			pts.append({"name": "clouds_%d_under" % i, "pos": cp, "wait": 1.0})
+		if not cl.is_empty():
+			pts.append({"name": "clouds_wide", "pos": (cl[0][0] as Vector2) + Vector2(500, 300), "zoom": 0.6, "wait": 1.0})
 	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
 		pts = []
 		for c in ["fighter", "attacker", "bomber"]:
@@ -526,6 +568,9 @@ func _menu_shot() -> void:
 	if m.state != "menu":
 		return
 	var at := [3.0, 6.0, 9.0]
+	for a in OS.get_cmdline_user_args():   # M-31: свои моменты кадров, --menuat=12,20,28
+		if a.begins_with("--menuat="):
+			at = Array(a.substr(9).split(",")).map(func(x: String) -> float: return float(x))
 	if _ms < at.size() and _t >= at[_ms]:
 		_save("menu_%d" % int(at[_ms]))
 		_ms += 1

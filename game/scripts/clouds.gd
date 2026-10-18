@@ -4,11 +4,13 @@ extends Node2D
 ## медленный ветер, тень на земле. Около самолёта игрока становятся прозрачнее — не мешают бою.
 
 const CHUNK := 2200.0
-const CHANCE := 0.45
 const PARALLAX := 0.35   # насколько облака «выше»: 0 — на земле
 const WIND := Vector2(14.0, 6.0)
 
 var _tex: Array = []
+## M-31: на заставке меню облаков больше — звено чаще проходит над ними и сквозь низкие клочья
+var title_on := false
+const title_chance := 0.8
 var _t := 0.0
 var shadows: CloudShadows
 
@@ -40,7 +42,8 @@ func view() -> Rect2:
 	return Rect2(center - half, half * 2.0)
 
 
-## Список облаков вокруг камеры: [мировая точка «на земле», размер, поворот, текстура]
+## Список облаков вокруг камеры: [мировая точка «на земле», размер, поворот, текстура, зерно клетки]
+## (зерно — по нему 3D-облака M-31 строят одну и ту же форму, пока облако в кадре)
 func items() -> Array:
 	var out: Array = []
 	if _tex.is_empty():
@@ -55,10 +58,10 @@ func items() -> Array:
 	for cx in range(int(floorf(g.position.x / CHUNK)), int(floorf(g.end.x / CHUNK)) + 1):
 		for cy in range(int(floorf(g.position.y / CHUNK)), int(floorf(g.end.y / CHUNK)) + 1):
 			rng.seed = hash(Vector2i(cx, cy)) ^ 0xc10d
-			if rng.randf() > CHANCE:
+			if rng.randf() > maxf(Tuning.g("cloud_chance"), title_chance if title_on else 0.0):
 				continue
 			var p := Vector2((cx + rng.randf()) * CHUNK, (cy + rng.randf()) * CHUNK) + drift
-			out.append([p, rng.randf_range(420.0, 700.0), rng.randf() * TAU, _tex[rng.randi() % _tex.size()]])
+			out.append([p, rng.randf_range(420.0, 700.0), rng.randf() * TAU, _tex[rng.randi() % _tex.size()], hash(Vector2i(cx, cy))])
 	return out
 
 
