@@ -151,8 +151,8 @@ func clear() -> void:
 
 
 ## Расстояние до линии реки, px, со знаком берега; боковые долины поселений сводят его к нулю
-func valley(x: float, z: float, ctx := {}) -> float:
-	var d := river_field(x, z)
+func valley(x: float, z: float, ctx := {}, rf := NAN) -> float:
+	var d := river_field(x, z) if is_nan(rf) else rf   # rf — уже посчитанное river_field(x, z) (кусок рельефа)
 	for s in _sides(x, z, ctx):
 		if float(s[2]) < 0.0:
 			continue   # ручей (stream_field)
@@ -177,15 +177,12 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 ## M-36 (решение Kanta 18.10.2026): Нагорье — не сплошной песок: на склонах выше дна долины и на гребнях
 ## обнажённая порода (слоистые уступы с крутыми гранями), под ними светлые осыпи — видно, откуда камни.
 ## Дно долины (до D_FAN − 40), река, дорога и площадки поселений не меняются
-func _relief(x: float, z: float, v: float, ctx := {}) -> Vector3:
+## sd_in — уже посчитанное stream_field(x, z, ctx) (кусок рельефа считает его сам; проход по оптимизации 3.5-s7)
+func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN) -> Vector3:
 	var a := absf(v)
 	# пойма и конусы выноса: вогнутый подъём к подножию
 	var fan := smoothstep(D_FLOOR, D_FAN, a)
 	var h := 0.1 * fan * fan
-	# склон: круто вверх, высота хребта — от гребневого шума (острые гребни) и маски равнин
-	var wx := x + _warp.get_noise_2d(x - 311.0, z + 71.0) * 300.0
-	var wz := z + _warp.get_noise_2d(x + 57.0, z - 919.0) * 300.0
-	var r := clampf((_ridge.get_noise_2d(wx, wz) + 1.0) * 0.5, 0.0, 1.0)
 	var open := smoothstep(-0.45, 0.25, _plains.get_noise_2d(x, z))   # 0 — широкая равнина, 1 — горы
 	# высота хребта растёт монотонно от подножия (иначе между гребнями — замкнутые ямы без стока),
 	# гребневой шум добавляет острые зубцы сверху, а не вычитает долины
@@ -193,14 +190,26 @@ func _relief(x: float, z: float, v: float, ctx := {}) -> Vector3:
 	var climb := smoothstep(D_FAN - 40.0, D_CLIMB, a)
 	climb = 1.0 - pow(1.0 - climb, 1.6)   # выпуклый склон: круче у подножия плеча, острее у гребня
 	h += (top - 0.1) * climb * 0.55
+	# проход по оптимизации 3.5-s7: на дне долины (climb = 0) гребни, овраги и скалы дают ровно 0 —
+	# шум не считаем (кусок рельефа ~в полтора раза быстрее); шум выходов нужен ещё осыпям у подножия
+	var foot := smoothstep(D_FAN - 160.0, D_FAN + 40.0, a) * (1.0 - smoothstep(0.12, 0.3, climb))
+	var r := 0.0
+	var e := 0.0
+	var cr := 0.0
+	if climb > 0.0 or foot > 0.0:
+		# склон: круто вверх, высота хребта — от гребневого шума (острые гребни) и маски равнин
+		var wx := x + _warp.get_noise_2d(x - 311.0, z + 71.0) * 300.0
+		var wz := z + _warp.get_noise_2d(x + 57.0, z - 919.0) * 300.0
+		cr = _crag.get_noise_2d(wx, wz)
+		if climb > 0.0:
+			r = clampf((_ridge.get_noise_2d(wx, wz) + 1.0) * 0.5, 0.0, 1.0)
+			e = clampf((_ero.get_noise_2d(wx * 0.9 + wz * 0.25, wz) + 1.0) * 0.5, 0.0, 1.0)
 	h += r * r * 0.12 * climb * climb * top   # только прибавка: зубцы над склоном, без ям между ними
 	# аудит Р-2: гребни и овраги — гребневой шум средней частоты, сила растёт от подножия к гребню;
 	# квадрат — острые кромки и округлые днища оврагов; на гребне — главная доля высоты хребта
-	var e := clampf((_ero.get_noise_2d(wx * 0.9 + wz * 0.25, wz) + 1.0) * 0.5, 0.0, 1.0)
 	var ew := smoothstep(0.0, 0.55, climb)
 	h += (e * e * 0.3 - 0.02) * ew * lerpf(0.45, 1.0, open)
 	# M-36: скальные выходы — пятна по шуму на склоне (не сплошной пояс) и почти сплошь на гребнях
-	var cr := _crag.get_noise_2d(wx, wz)
 	var up := smoothstep(0.03, 0.2, climb)   # не ниже подножия склона
 	var rock := smoothstep(-0.05, 0.25, cr + climb * 0.3 + e * e * 0.45 + r * r * 0.2 - 0.2) * up * lerpf(0.55, 1.0, open)
 	# уступы пород: горизонтальные слои дают скальные пояса на склонах
@@ -223,14 +232,13 @@ func _relief(x: float, z: float, v: float, ctx := {}) -> Vector3:
 	# мелкие бугры на дне и на конусах
 	h += (_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * (0.3 + fan)
 	# M-36: осыпи — конусы у подножия скал (по тому же пятну шума, что выходы выше по склону)
-	var foot := smoothstep(D_FAN - 160.0, D_FAN + 40.0, a) * (1.0 - smoothstep(0.12, 0.3, climb))
 	var scree := foot * smoothstep(-0.1, 0.25, cr + 0.1) * lerpf(0.5, 1.0, open)
 	var fl := _flat(x, z, ctx)
 	h *= fl
 	# русло врезано в пойму: вода лежит в ложбине, а не на ровном месте
 	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
 	# L-09: ручей посёлка тоже лежит в ложбинке, мельче реки
-	var sd := absf(stream_field(x, z, ctx))
+	var sd := absf(stream_field(x, z, ctx) if is_nan(sd_in) else sd_in)
 	if sd < STREAM_W * 3.0:
 		h -= (1.0 - smoothstep(STREAM_W * 0.6, STREAM_W * 3.0, sd)) * 0.012
 	return Vector3(clampf(h, -0.03, 1.0) * ceiling, clampf(rock, 0.0, 1.0) * fl, clampf(scree, 0.0, 1.0) * fl)
@@ -882,6 +890,7 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 			missing += 1
 	var now := missing > maxi(6, keys.size() / 2)
 	var hole := false
+	var batch: Array[Vector2i] = []
 	for key in keys:
 		if _chunks.has(key):
 			continue
@@ -894,7 +903,7 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 			_drop_lod(key)
 			continue
 		if now:
-			_place_chunk(key, _compute(key, _ctx(key), _gen))
+			batch.append(key)
 			continue
 		var on_screen := core.has_area() and core.intersects(Rect2(Vector2(key) * CHUNK, Vector2(CHUNK, CHUNK)))
 		var res = _take_done(key)
@@ -911,6 +920,8 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 			hole = true
 			if not _lods.has(key):
 				_place_chunk(key, _compute(key, _ctx(key), _gen, LOD_N))
+	if not batch.is_empty():
+		_build_now(batch)
 	if hole:
 		lod_frames += 1
 	# законченные задачи — забираем id (иначе пул держит их до wait)
@@ -941,6 +952,35 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 	_mx.unlock()
 	if _objs_cache.size() > 400:
 		_objs_cache.clear()
+
+
+## Скачок камеры / старт вылета: недостающие куски строим сразу, но всеми ядрами (проход по оптимизации 3.5-s7):
+## раньше — по одному в главном потоке, 64 куска на старте ≈ 64 × 60 мс. Ставим в том же порядке (ближние первыми)
+var _batch_keys: Array[Vector2i] = []
+var _batch_ctx: Array = []
+var _batch_res: Array = []
+
+
+func _build_now(keys: Array[Vector2i]) -> void:
+	_batch_keys = keys
+	_batch_ctx = []
+	_batch_res = []
+	for key in keys:
+		_batch_ctx.append(_ctx(key))
+	_batch_res.resize(keys.size())
+	var gid := WorkerThreadPool.add_group_task(_build_one, keys.size(), -1, true, "terrain now")
+	WorkerThreadPool.wait_for_group_task_completion(gid)
+	for i in keys.size():
+		_place_chunk(keys[i], _batch_res[i])
+	_batch_ctx = []
+	_batch_res = []
+
+
+func _build_one(i: int) -> void:
+	var r := _compute(_batch_keys[i], _batch_ctx[i], _gen)
+	_mx.lock()
+	_batch_res[i] = r
+	_mx.unlock()
 
 
 func _drop_lod(key: Vector2i) -> void:
@@ -1030,17 +1070,19 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 			var x := ox + (i - 1) * step
 			var z := oz + (j - 1) * step
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
-			vs[j * W + i] = river_field(x, z)
-			gs[j * W + i] = green(x, z, vs[j * W + i])
+			var rf := river_field(x, z)
+			vs[j * W + i] = rf
+			gs[j * W + i] = green(x, z, rf)
 			# L-09: ручей — в том же поле, в K раз уже (вода и мокрый берег шейдера). Знак — от реки, иначе
 			# на стыке «ручей / река» поле проходило через 0, и шейдер рисовал там тонкую ложную воду;
 			# за мокрым берегом поле резко растёт — полоса дороги шейдера (85) вдоль ручья не рисуется
-			var sd := absf(stream_field(x, z, ctx))
+			var sf := stream_field(x, z, ctx)
+			var sd := absf(sf)
 			if sd < STREAM_REACH:
 				var g := sd * STREAM_K if sd < 20.0 else 20.0 * STREAM_K + (sd - 20.0) * 80.0
 				if g < absf(vs[j * W + i]):
 					vs[j * W + i] = g * (1.0 if vs[j * W + i] >= 0.0 else -1.0)
-			var rl := _relief(x, z, valley(x, z, ctx), ctx)
+			var rl := _relief(x, z, valley(x, z, ctx, rf), ctx, sf)
 			hs[j * W + i] = rl.x
 			rs[j * W + i] = Vector2(rl.y, rl.z)
 	# тест 3.5-s4 (п. 16–17): пятна поселений на земле (утоптанная земля, огороды и сады) — неровные, с мягким
