@@ -35,6 +35,16 @@ var evade_t := 0.0
 var evade_time := 0.7
 var _evade_v := Vector2.ZERO
 var _evade_roll := 1.0
+## Тест 3.5-s7: манёвры асов разные — отворот с набором скорости, змейка, уход на скорости, изредка бочка.
+## Пока идёт манёвр, курсом управляет он (поведение аса только двигает самолёт).
+var man_kind := ""
+var man_t := 0.0
+var man_time := 1.0
+var _man_h0 := 0.0
+var _man_side := 1.0
+var _man_spd := 0.0
+var _man_last := ""
+var _roll_ready := 0.0
 ## правка 3.5-s4 (п. 26): расталкивание сглажено и уходит в курс — враги не дёргаются и не слипаются
 var _sep := Vector2.ZERO
 
@@ -168,7 +178,11 @@ func _process(delta: float) -> void:
 			position += _drift * delta
 	else:
 		_drift = Vector2.INF
+		var h0 := heading
 		behave(delta)
+		if man_t > 0.0:
+			heading = h0
+			_maneuver(delta)
 	if evade_t > 0.0:
 		evade_t -= delta
 		position += _evade_v * delta * clampf(evade_t / evade_time * 1.6, 0.0, 1.0)
@@ -240,6 +254,86 @@ func start_evade(threat: Vector2, spd := 300.0, time := 0.7) -> void:
 	_evade_v = perp * spd
 	_evade_roll = signf(perp.cross(Vector2.from_angle(heading))) if absf(perp.cross(Vector2.from_angle(heading))) > 0.01 else 1.0
 	Main.I.tele.add("enemy_evades")
+
+
+func maneuvering() -> bool:
+	return man_t > 0.0 or evade_t > 0.0
+
+
+## Тест 3.5-s7: манёвр против угрозы threat (направление огня). Вид выбирается случайно, не тот же, что
+## в прошлый раз; бочка — не чаще раза в 6–9 с (раньше асы крутили её почти без перерыва).
+## spd — сила манёвра, пикс/с (прибавка скорости, у бочки — смещение вбок). Вернёт вид манёвра.
+func start_maneuver(threat: Vector2, spd := 320.0) -> String:
+	if maneuvering():
+		return ""
+	var now := Main.I.run_time
+	var pool := {"break": 3.0, "jink": 3.0, "extend": 2.0}
+	if now >= _roll_ready:
+		pool["roll"] = 2.0
+	pool.erase(_man_last)
+	var sum := 0.0
+	for k in pool:
+		sum += float(pool[k])
+	var pick := randf() * sum
+	var kind := "break"
+	for k in pool:
+		pick -= float(pool[k])
+		if pick <= 0.0:
+			kind = k
+			break
+	_man_last = kind
+	if kind == "roll":
+		_roll_ready = now + randf_range(6.0, 9.0)
+		start_evade(threat, spd, 0.75)
+		return kind
+	# уходим в ту сторону, где мы и так уже от линии огня
+	var perp := Vector2(-threat.y, threat.x)
+	var p := Main.I.player
+	if p != null and perp.dot(global_position - p.global_position) < 0.0:
+		perp = -perp
+	var side := signf(Vector2.from_angle(heading).cross(perp))
+	_man_side = side if side != 0.0 else (1.0 if randf() < 0.5 else -1.0)
+	_man_h0 = heading
+	man_kind = kind
+	match kind:
+		"break":
+			man_time = randf_range(1.1, 1.5)
+			_man_h0 = heading + _man_side * deg_to_rad(randf_range(80.0, 120.0))
+			_man_spd = spd * 0.4
+		"jink":
+			man_time = randf_range(1.4, 1.8)
+			_man_spd = spd * 0.15
+		_:
+			man_time = randf_range(1.4, 1.9)
+			_man_spd = spd * 0.7
+	man_t = man_time
+	Main.I.tele.add("enemy_evades")
+	return kind
+
+
+func _maneuver(delta: float) -> void:
+	man_t -= delta
+	var u := clampf(1.0 - man_t / man_time, 0.0, 1.0)
+	var target := heading
+	var rate := 150.0
+	match man_kind:
+		"break":
+			target = _man_h0
+		"jink":
+			# змейка: ±40° от исходного курса, полтора колебания
+			target = _man_h0 + _man_side * deg_to_rad(40.0) * sin(u * TAU * 1.5)
+			rate = 170.0
+		_:
+			# уход на скорости: от игрока по прямой, разгон и сброс
+			var p := Main.I.player
+			if p != null:
+				target = (global_position - p.global_position).angle()
+			rate = 110.0
+	heading = wrapf(rotate_toward(heading, target, deg_to_rad(rate) * delta), -PI, PI)
+	position += Vector2.from_angle(heading) * _man_spd * sin(PI * u) * delta
+	if man_t <= 0.0:
+		man_t = 0.0
+		man_kind = ""
 
 
 ## Летят ли в нас пули игрока: вернёт направление огня (или ZERO). Дорого — только для асов и элиты.

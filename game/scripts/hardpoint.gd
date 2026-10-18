@@ -185,7 +185,7 @@ func range_px() -> float:
 			base *= p.mods["servo_range"]
 		base *= Profile.wk(weapon, "range")
 		if weapon == "aam":
-			base *= float(p.mods.get("msl_lock", 1.0)) # «Ракетный двигатель»: дальность захвата
+			base *= float(p.mods.get("msl_lock", 1.0)) # «Двигатели ракет»: дальность захвата
 		if evo and weapon == "gunpod":
 			return 520.0 * p.mods["servo_range"] * _evo_k("range")
 		if evo and weapon == "flares":
