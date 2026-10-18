@@ -10,13 +10,13 @@ const DIR := "res://models/biome/"
 ## вид: [файл, ширина в px мира мин, макс]
 const KINDS := {
 	"outcrop": ["b01_rock_outcrop", 70.0, 140.0],
-	"boulders": ["b02_boulders", 22.0, 50.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90)
+	"boulders": ["b02_boulders", 12.0, 30.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90, потом 22–50); масштаб «2–4 км»: валун 2–6 м при истребителе ~100 px
 	"spire": ["b03_rock_spire", 35.0, 60.0],
 	"poplar": ["b04_poplar", 16.0, 24.0],
 	"orchard": ["b05_orchard_tree", 34.0, 50.0],
 	"shrub": ["b06_shrub", 14.0, 30.0],
-	"truck": ["b07_wreck_truck", 55.0, 65.0],
-	"tank": ["b08_wreck_tank", 58.0, 68.0],
+	"truck": ["b07_wreck_truck", 46.0, 52.0],   # масштаб «2–4 км»: как грузовик колонны (50 px)
+	"tank": ["b08_wreck_tank", 40.0, 46.0],
 	"yurt": ["b09_yurt", 34.0, 44.0],
 	"sandbag": ["b10_sandbag_post", 40.0, 55.0],
 	"plane": ["b11_wreck_plane", 110.0, 130.0],   # сцены прошедших боёв (Terrain3D.scenes)
