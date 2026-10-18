@@ -94,6 +94,8 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	if bought:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 15, Color(0.8, 0.85, 0.9))
+		# правка 6 теста 3.5-s5: прокачка у каждого самолёта своя
+		_text(Vector2(lx + 24, y + 48), "Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка" % Profile.plane_lvl(c), 14, Menu.C_AMBER)
 	else:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
 		_text(Vector2(lx + 24, y + 24), "Требует: операция «Перевал»%s · экипаж ур. %d (сейчас %d) · %d запчастей" % [" ✓" if Campaign.cleared(0) else "", Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
@@ -112,7 +114,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(rx + 20, yy + 30), String(nd["title"]), 20, Color.WHITE)
 		for i in 5:
 			ctrl.draw_rect(Rect2(rx + 200 + i * 30, yy + 16, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))
-		_text(Vector2(rx + 20, yy + 58), "за уровень: %s · сейчас ур. %d" % [nd["step"], lv2], 15, Color(0.8, 0.84, 0.9))
+		_text(Vector2(rx + 20, yy + 58), "за уровень: %s · сейчас ур. %d%s" % [nd["step"], lv2, (" (самолёт ур. %d)" % Profile.plane_lvl(c)) if bought else ""], 15, Color(0.8, 0.84, 0.9))
 		if String(nd["note"]) != "":
 			_text(Vector2(rx + 20, yy + 80), String(nd["note"]), 12, Color(0.6, 0.62, 0.68))
 		if lv2 >= 5:
