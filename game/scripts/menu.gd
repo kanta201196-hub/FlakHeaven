@@ -259,7 +259,7 @@ func add_record(cls_title: String, outcome: String, t: float, lvl: int, kills: i
 # ---------- Примитивы стиля ----------
 
 func _txt(pos: Vector2, s: String, size := 20, color := C_TEXT, font: Font = null, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
-	ctrl.draw_string(font if font else Hud.ui_font(), pos, s, align, width, size, color)
+	ctrl.draw_string(font if font else Hud.ui_font(), pos, TranslationServer.translate(s), align, width, size, color)
 
 
 ## Панель со срезанным углом и «заклёпками»
