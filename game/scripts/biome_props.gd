@@ -229,12 +229,19 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 					for i in rng.randi_range(1, 2):
 						_ring_zone(rng, put, "yurt", p0, r0 * 1.2, r0 * 1.7, ["floor", "fan"], ctx)
 			"o_fort":
-				# посты из мешков — у крепости и на дороге рядом (застава)
-				for i in rng.randi_range(2, 3):
-					_ring_zone(rng, put, "sandbag", p0, r0 * 1.05, r0 * 1.35, ["floor", "fan"], ctx)
-				var rp := _road_point(p0 + Vector2(rng.randf_range(-300, 300), rng.randf_range(-300, 300)))
+				# L-08: застава — посты из мешков на дороге по обе стороны крепости (перекрывают проезд)
+				# и 1–2 поста с тыла, со стороны гор; не кольцом наугад
+				var rp := _road_point(p0)
 				if rp.distance_to(p0) < 700.0:
-					_add_sized(rng, put, "sandbag", rp + Vector2(30, 0).rotated(rng.randf() * TAU), 48.0, ctx)
+					var nrm := (p0 - rp).normalized()
+					var tan := nrm.orthogonal()
+					for sg: float in [-1.0, 1.0]:
+						var q := _road_point(rp + tan * sg * r0 * 1.4)
+						_add_sized(rng, put, "sandbag", q + nrm * 34.0, 48.0, ctx)
+					for i in rng.randi_range(1, 2):
+						var q := p0 + nrm.rotated(rng.randf_range(-0.6, 0.6)) * r0 * 1.15
+						if _zone(q, ctx) in ["floor", "fan"]:
+							_add(rng, put, "sandbag", q, [], ctx)
 			"o_rocks_big", "o_rocks_small":
 				# группа скал вместо выдавленной картинки: выход породы и валуны-осыпь вокруг
 				var big: bool = obj["name"] == "o_rocks_big"

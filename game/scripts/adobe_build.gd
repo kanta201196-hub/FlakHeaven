@@ -271,9 +271,100 @@ static func village(variant: int) -> ArrayMesh:
 		var c := Vector2.from_angle(ang) * V_EDGE * outline(variant, ang) * rng.randf_range(0.95, 1.15)
 		if path_dist(variant, c) > 0.08:
 			_garden(st, c, Vector2(0.105, 0.105) * rng.randf_range(0.9, 1.25), rng)
+	_defence(st, variant, rng)
 	var m := _scaled(st, V_UNIT)
 	_cache[key] = m
 	return m
+
+
+## Правка Kanta 18.10.2026 (L-08, схема Kanta): перед посёлком — линия обороны. Дугой со стороны,
+## противоположной реке (−x объекта), окоп с бруствером из мешков соединяет 3 позиции с орудиями;
+## где через линию идёт тропа — проход. На выходах троп с другой стороны — посты из мешков.
+## Остовы подбитой техники перед линией ставит Terrain3D.scenes. Меш посёлка утоплен на 1 % размера
+## (render3d) — всё низкое поднимаем на SINK, иначе уходит под землю
+const BAG := Color(0.8, 0.72, 0.55)
+const TRENCH := Color(0.42, 0.36, 0.29)
+const GUN := Color(0.36, 0.37, 0.34)
+const DEF_R := 1.07   # радиус линии, доля края застройки
+
+
+static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator) -> void:
+	var sink := 0.0101 / V_UNIT
+	var arc := 0.85 + _vr(variant, 40) * 0.25
+	var line := PackedVector2Array()
+	for k in 25:
+		var ang := PI - arc + 2.0 * arc * float(k) / 24.0
+		var r := V_EDGE * outline(variant, ang) * DEF_R + sin(k * 0.9 + variant) * 0.012
+		line.append(Vector2.from_angle(ang) * r)
+	for k in line.size() - 1:
+		var a := line[k]
+		var b := line[k + 1]
+		if path_dist(variant, (a + b) * 0.5) < 0.04:
+			continue   # проход для тропы
+		var inward := -((a + b) * 0.5).normalized() * 0.022
+		_strip(st, a + inward, b + inward, 0.02, TRENCH, sink + 0.003)   # окоп за бруствером
+		_bags(st, a, b, sink, rng)
+	for k in [0, 12, 24]:
+		_gun_pit(st, line[k], line[k].angle(), sink, rng)
+	# посты у выходов троп с остальных сторон
+	for pl: PackedVector2Array in village_paths(variant):
+		var tip: Vector2 = pl[pl.size() - 1]
+		var e := V_EDGE * outline(variant, tip.angle())
+		if tip.length() < e * 0.9 or absf(angle_difference(tip.angle(), PI)) < arc + 0.2:
+			continue
+		var c := tip.normalized() * e * 1.08
+		var side := c.normalized().orthogonal() * 0.045
+		_post(st, c + side, c.angle(), sink, rng)
+		_post(st, c - side, c.angle(), sink, rng)
+
+
+## Ряд мешков с песком от a до b: два ряда внахлёст
+static func _bags(st: SurfaceTool, a: Vector2, b: Vector2, y0: float, rng: RandomNumberGenerator) -> void:
+	var len := a.distance_to(b)
+	var dir := (b - a) / maxf(len, 1e-6)
+	var n := maxi(1, int(len / 0.019))
+	for row in 2:
+		for i in n:
+			var c := a + dir * (len * (i + 0.5 * row + 0.25) / n)
+			var s := Vector3(0.026, 0.011, 0.017) * rng.randf_range(0.9, 1.1)
+			var yaw_c := Vector3(c.x, y0 + row * 0.009, c.y)
+			_box_yaw(st, yaw_c, s, dir.angle(), BAG)
+
+
+## Позиция с орудием: кольцо мешков и ствол наружу
+static func _gun_pit(st: SurfaceTool, c: Vector2, out_ang: float, y0: float, rng: RandomNumberGenerator) -> void:
+	var r := 0.046
+	for i in 9:
+		var a0 := out_ang + PI * 0.25 + TAU * 0.85 * float(i) / 9.0   # проём сзади, к посёлку
+		var p := c + Vector2.from_angle(a0) * r
+		_box_yaw(st, Vector3(p.x, y0, p.y), Vector3(0.03, 0.014, 0.018), a0 + PI * 0.5, BAG)
+	_box_yaw(st, Vector3(c.x, y0, c.y), Vector3(0.03, 0.013, 0.022), out_ang, GUN)   # лафет
+	var tip := c + Vector2.from_angle(out_ang) * 0.03
+	_box_yaw(st, Vector3(tip.x, y0 + 0.009, tip.y), Vector3(0.055, 0.006, 0.006), out_ang, GUN)   # ствол
+
+
+## Пост: подкова из мешков, открытая к посёлку
+static func _post(st: SurfaceTool, c: Vector2, out_ang: float, y0: float, rng: RandomNumberGenerator) -> void:
+	for i in 6:
+		var a0 := out_ang - PI * 0.6 + PI * 1.2 * float(i) / 5.0
+		var p := c + Vector2.from_angle(a0) * 0.026
+		_box_yaw(st, Vector3(p.x, y0, p.y), Vector3(0.024, 0.013, 0.015), a0 + PI * 0.5, BAG)
+
+
+## Коробка, повёрнутая на yaw вокруг вертикали (основание на c.y)
+static func _box_yaw(st: SurfaceTool, c: Vector3, s: Vector3, yaw: float, col: Color) -> void:
+	var ax := Vector2.from_angle(yaw) * s.x * 0.5
+	var az := -Vector2.from_angle(yaw).orthogonal() * s.z * 0.5   # порядок вершин как у _box (лицом наружу)
+	var p := Vector2(c.x, c.z)
+	var q := [p - ax - az, p + ax - az, p + ax + az, p - ax + az]
+	var y0 := c.y
+	var y1 := c.y + s.y
+	var top := col.lightened(0.08)
+	_quad(st, Vector3(q[0].x, y1, q[0].y), Vector3(q[1].x, y1, q[1].y), Vector3(q[2].x, y1, q[2].y), Vector3(q[3].x, y1, q[3].y), top)
+	for i in 4:
+		var a: Vector2 = q[(i + 1) % 4]
+		var b: Vector2 = q[i]
+		_quad(st, Vector3(a.x, y0, a.y), Vector3(b.x, y0, b.y), Vector3(b.x, y1, b.y), Vector3(a.x, y1, a.y), col)
 
 
 const PATH := Color(0.9, 0.83, 0.72)   # утоптанная тропа: чуть светлее земли, пыль
