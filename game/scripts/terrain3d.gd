@@ -234,7 +234,7 @@ func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN) -> Vector3:
 	# M-36: осыпи — конусы у подножия скал (по тому же пятну шума, что выходы выше по склону)
 	var scree := foot * smoothstep(-0.1, 0.25, cr + 0.1) * lerpf(0.5, 1.0, open)
 	var fl := _flat(x, z, ctx)
-	h *= fl
+	h *= fl * _relief_k
 	# русло врезано в пойму: вода лежит в ложбине, а не на ровном месте
 	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
 	# L-09: ручей посёлка тоже лежит в ложбинке, мельче реки
@@ -401,6 +401,58 @@ func _river_point(a: Vector2) -> Vector2:
 ## Расстояние до линии реки без боковых долин поселений, px со знаком: по нему идут река и дорога.
 ## Поле шума делим на его наклон — получается почти настоящее расстояние (ширина русла везде одна)
 func river_field(x: float, z: float) -> float:
+	var r := _river_raw(x, z)
+	return _coast(x, z, r) if _sea else r
+
+
+## «Архипелаг» (Biome.sea): поле берега вместо поля реки. Вода — пролив вокруг бывшей реки (полуширина
+## strait) минус острова; на суше значение = SEA_W + расстояние от кромки воды (как от реки: охранная зона,
+## поселения у «реки», дно долины — всё меряется от берега), в воде — 0 … SEA_W по глубине (0 — ось пролива).
+## Шейдер земли рисует воду при |поле| < SEA_W, глубину — по доле SEA_W. Знак — берег пролива, как у реки
+const SEA_W := D_RIVER * 0.62   # кромка воды в шейдере (smoothstep river_w × 0.45 … 0.8)
+var _sea := false
+var _strait := 820.0
+var _isl_from := 0.34
+var _isl_thr := 0.38
+var _isl_k := 520.0
+var _isl := FastNoiseLite.new()
+var _relief_k := 1.0
+
+
+func _coast(x: float, z: float, r: float) -> float:
+	var a := absf(r)
+	var s := a - _strait
+	var w := smoothstep(_strait * _isl_from, _strait * (_isl_from + 0.15), a)
+	if w > 0.0:
+		var isl := (_isl.get_noise_2d(x, z) - _isl_thr) * _isl_k
+		s = maxf(s, lerpf(-_strait, isl, w))
+	var sg := 1.0 if r >= 0.0 else -1.0
+	if s >= 0.0:
+		return sg * (SEA_W + s)
+	return sg * SEA_W * clampf(1.0 + s / _strait, 0.0, 1.0)
+
+
+## Глубина воды 0 (берег) … 1 (ось пролива) по полю берега; на суше < 0
+static func sea_depth(v: float) -> float:
+	return 1.0 - absf(v) / SEA_W
+
+
+## Биом мира (Biome.cur()): включает поле берега «Архипелага»; кэш кусков сбрасывает clear()
+func set_biome() -> void:
+	_sea = Biome.sea()
+	_relief_k = float(Biome.g("relief_k", 1.0))
+	_strait = float(Biome.g("strait", 820.0))
+	_isl_from = float(Biome.g("isl_from", 0.34))
+	_isl_thr = float(Biome.g("isl_thr", 0.38))
+	_isl_k = float(Biome.g("isl_k", 520.0))
+	_isl.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	_isl.seed = 4093
+	_isl.frequency = float(Biome.g("isl_freq", 1.0 / 950.0))
+	_isl.fractal_type = FastNoiseLite.FRACTAL_FBM
+	_isl.fractal_octaves = 3
+
+
+func _river_raw(x: float, z: float) -> float:
 	var e := 6.0
 	var v := _v_raw(x, z)
 	var g := Vector2(_v_raw(x + e, z) - v, _v_raw(x, z + e) - v) / e

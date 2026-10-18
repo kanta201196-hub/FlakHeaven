@@ -154,6 +154,7 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 		var tg := Hardpoint.new("Турели", turrets, "turret", true)
 		if id == "bomber":
 			tg.level = 2 # 3.1: «Кит» стартует с турелями ур. 2
+		tg.slots = PlaneClasses.turret_slots(id, tg.level)
 		groups.append(tg)
 	if heavy != null:
 		groups.append(heavy)

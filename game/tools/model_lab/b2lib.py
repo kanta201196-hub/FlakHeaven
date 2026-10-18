@@ -25,6 +25,15 @@ def load(path):
     for o in new:
         if o.type != 'MESH':
             bpy.data.objects.remove(o)
+    for m in mats(ms):   # «неосвещённые» материалы сканов (KHR_materials_unlit) → обычные, чтобы был свет и тень
+        if m.use_nodes and not any(n.type == 'BSDF_PRINCIPLED' for n in m.node_tree.nodes):
+            nt = m.node_tree
+            tex = next((n for n in nt.nodes if n.type == 'TEX_IMAGE'), None)
+            out = next(n for n in nt.nodes if n.type == 'OUTPUT_MATERIAL')
+            b = nt.nodes.new('ShaderNodeBsdfPrincipled')
+            if tex:
+                nt.links.new(tex.outputs['Color'], b.inputs['Base Color'])
+            nt.links.new(b.outputs['BSDF'], out.inputs['Surface'])
     return ms
 
 
@@ -353,8 +362,9 @@ def copy_glb(path, mat=None):
 
 # ---------- выход ----------
 
-def finish(objs, out, target=None, maxtex=1024, length=1.0, name='body', center=False):
-    """Склеить, упростить до target, повернуть в glTF (+Y вверх) и сделать длину по X = length, записать GLB."""
+def finish(objs, out, target=None, maxtex=1024, length=1.0, name='body', center=False, fit='x'):
+    """Склеить, упростить до target и записать GLB (glTF: +Y вверх). fit='x' — длина по X = length (корабли, враги),
+    fit='xy' — наибольший размер по горизонтали = length (постройки, природа — как biome_prep.py)."""
     objs = [o for o in objs if o.name in bpy.data.objects and len(o.data.polygons)]
     if target:
         budget(objs, target)
@@ -365,7 +375,8 @@ def finish(objs, out, target=None, maxtex=1024, length=1.0, name='body', center=
     mn, mx = bounds([ob])
     if center:   # самолёты — центр по высоте в нуле (соглашение model_lab.gd)
         ob.data.transform(Matrix.Translation((0, 0, -(mn.z + mx.z) / 2)))
-    ob.data.transform(Matrix.Scale(length / (mx.x - mn.x), 4)); ob.data.update()
+    span = (mx.x - mn.x) if fit == 'x' else max(mx.x - mn.x, mx.y - mn.y)   # 'xy' — постройки и природа Нагорья
+    ob.data.transform(Matrix.Scale(length / span, 4)); ob.data.update()
     shrink(maxtex)
     for o in list(bpy.data.objects):
         if o != ob:
@@ -389,3 +400,65 @@ def matte(objs, rough=0.8, metal=0.0):
                 m.node_tree.links.remove(l)
         b.inputs['Metallic'].default_value = metal
         b.inputs['Roughness'].default_value = rough
+
+
+def degraffiti(img, keep_hues=((20, 75), (75, 160)), sat=0.22, gray=None):
+    """Стереть яркие надписи и граффити на скане: насыщенные пиксели вне «природных» оттенков
+    (песок/охра 20–75°, трава 75–160°) → серый бетон той же яркости."""
+    import numpy as np
+    a = pixels(img)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    mx = np.max(a[..., :3], axis=2); mn = np.min(a[..., :3], axis=2); d = mx - mn + 1e-6
+    h = np.where(mx == r, (g - b) / d % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60
+    s = d / (mx + 1e-6)
+    natural = np.zeros_like(s, dtype=bool)
+    for lo, hi in keep_hues:
+        natural |= (h >= lo) & (h < hi)
+    bad = (s > sat) & ~natural
+    l = r * 0.3 + g * 0.59 + b * 0.11
+    base = gray or (0.62, 0.61, 0.58)
+    k = np.clip(l / 0.6, 0.5, 1.2)
+    for i in range(3):
+        a[..., i] = np.where(bad, base[i] * k, a[..., i])
+    put_pixels(img, a)
+    print("degraffiti: пикселей", int(bad.sum()), "из", bad.size)
+
+
+def ring(c, r_out, r_in, h, mat, name='ring', seg=24):
+    """Кольцевой бруствер / стенка: труба с верхом, без дна."""
+    bm = bmesh.new()
+    def circ(r, z):
+        return [bm.verts.new((c[0] + r * math.cos(2 * math.pi * i / seg), c[1] + r * math.sin(2 * math.pi * i / seg), c[2] + z))
+                for i in range(seg)]
+    ob, ot, it, ib = circ(r_out, 0), circ(r_out, h), circ(r_in, h), circ(r_in, 0)
+    for a, b in ((ob, ot), (ot, it), (it, ib)):
+        for i in range(seg):
+            j = (i + 1) % seg
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _new(name, bm, mat)
+
+
+def crown(objs, mat, n=10, seed=1, flat=0.75, grow=1.15, seg=8):
+    """Крона из «облаков»: точки листвы делим на n кучек (k-средних), на каждую — сплюснутый шар.
+    С высоты 2–4 км листья по одному не видны — читается масса кроны, а треугольников в десятки раз меньше."""
+    import numpy as np, random
+    pts = np.array([tuple(o.matrix_world @ v.co) for o in objs for v in o.data.vertices])
+    rng = np.random.default_rng(seed)
+    c = pts[rng.choice(len(pts), n, replace=False)]
+    for _ in range(12):
+        lab = np.argmin(((pts[:, None, :] - c[None]) ** 2).sum(-1), axis=1)
+        c = np.array([pts[lab == k].mean(0) if (lab == k).any() else c[k] for k in range(n)])
+    out = []
+    r = random.Random(seed)
+    for k in range(n):
+        p = pts[lab == k]
+        if len(p) < 4:
+            continue
+        sd = p.std(0) * 1.7 * grow
+        rad = float(max(sd[0], sd[1], 0.3))
+        sph = sphere(tuple(c[k]), rad, mat, 'crown', seg=seg, scale=(sd[0] / rad + 0.15, sd[1] / rad + 0.15, max(flat * sd[2] / rad, 0.35)))
+        for v in sph.data.vertices:   # неровный край
+            v.co += Vector((r.uniform(-1, 1), r.uniform(-1, 1), r.uniform(-1, 1))) * rad * 0.12
+        out.append(sph)
+    return out

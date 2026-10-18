@@ -12,3 +12,30 @@
 | fh_battle_e_ship_aa (катер ПВО «Скат») | Type 22 Missile Boat | dannzjs | https://sketchfab.com/3d-models/type-22-missile-boat-d90464e6ca2e4d23a7a5a9865d220945 | CC BY 4.0, изменено |
 | fh_battle_e_ekranoplan (экраноплан «Крачка») | KM Caspian Sea Monster | helijah | https://sketchfab.com/3d-models/km-caspian-sea-monster-78de2c2921064278a320aa9f5add63fb | CC BY 4.0, изменено |
 | fh_battle_e_seaplane (гидросамолёт «Буревестник») | Seaplane Cessna 172 | KOG_THORNS | https://sketchfab.com/3d-models/seaplane-cessna-172-3924196d2ccf42c0ac8458d8f16a7910 | CC BY 4.0, изменено |
+| biome2/a01_battery_gun (орудие береговой батареи) | 102 mm/45 QF Mk XVI / Mk XIX | snrnsrk5 | https://sketchfab.com/3d-models/102-mm45-qf-mkxvi-mkxix-2389fa9c28024f908eebbb16803450c3 | CC BY 4.0, изменено |
+| biome2/a02_bunker_coast (береговой бункер) | Devil's Slide Bunker | Azad Balabanian | https://sketchfab.com/3d-models/devils-slide-bunker-pacifica-ca-52982f5a24834be48dab4057d2df1c3d | CC BY 4.0, изменено |
+| biome2/a04_lighthouse (маяк) | Old Lighthouse | Nirved Kamble | https://sketchfab.com/3d-models/old-lighthouse-19e1ff049db74dc8b6173976417c1048 | CC BY 4.0, изменено |
+| biome2/a05_pier_a (причал) | Simple Wooden Pier or Dock | Jungle Jim | https://sketchfab.com/3d-models/simple-wooden-pier-or-dock-5bf117cb734a46559d10971c3098165c | CC BY 4.0, изменено |
+| biome2/a06_pier_b (старый причал) | Old Pier (game ready) | PT34 | https://sketchfab.com/3d-models/old-pier-game-ready-3c21842960a74452a13609a584f38762 | CC BY 4.0, изменено |
+| biome2/a07_tetrapod (тетрапод волнореза) | Tetrapod | Akihiko Tarutani | https://sketchfab.com/3d-models/tetrapod-58cc4e3db5c84bca9ae714b9e116cc04 | CC BY 4.0, изменено |
+| biome2/a08_warehouse_a (склады) | Warehouses | 99.Miles | https://sketchfab.com/3d-models/warehouses-e6e105d35b3f486292c42ffa52f363c0 | CC BY 4.0, изменено |
+| biome2/a09_warehouse_b (склад) | Warehouse Building | rajibkc | https://sketchfab.com/3d-models/warehouse-building-08a4f422bc634033b8023d53beaf8242 | CC BY 4.0, изменено |
+| biome2/a10_crane (портовый кран) | Port Crane | Vitaliy Kovalchuk | https://sketchfab.com/3d-models/port-crane-sokol-4964eaa7634e47c9bac4c2a74fa91c20 | CC BY 4.0, изменено |
+| biome2/a11_tower_ruins (руины крепости) | Pack of Old Towers in Ruins | JB3D | https://sketchfab.com/3d-models/pack-of-old-towers-in-ruins-f213359c6cbb4c29bf8880764faa0fb8 | CC BY 4.0, изменено |
+| biome2/a20_bell_tower (колокольня) | Bell Tower | Eugen Shuklin | https://sketchfab.com/3d-models/bell-tower-2c37ee1b658d45b0a4af9b9b5257d80f | CC BY 4.0, изменено |
+| biome2/a24_boat_a (рыбацкий катер) | Fishing Boat | masterjack20 | https://sketchfab.com/3d-models/fishing-boat-649c006b72e748bf84e7cda011faaff2 | CC BY 4.0, изменено |
+| biome2/a25_boat_b (лодка) | Fishing Boat | Pabooklas | https://sketchfab.com/3d-models/fishing-boat-f4b38ccf5ffb46018aa7931c0e106654 | CC BY 4.0, изменено |
+| biome2/a26_wreck_a (остов катера) | Point Reyes Shipwreck | David Antalek | https://sketchfab.com/3d-models/point-reyes-shipwreck-marin-county-b93140adf486475db064eab7da4a675a | CC BY 4.0, изменено |
+| biome2/a27_wreck_b (остов судна) | Wreck of Cruise Ship | Sircher | https://sketchfab.com/3d-models/wreck-of-cruise-ship-saudi-red-sea-coast-0c3b206157764a358fb2b16e4d90f0b3 | CC BY 4.0, изменено |
+| biome2/a29_hedgehog (противодесантный ёж) | Czech Hedgehog Tank Obstacle | Gerhald | https://sketchfab.com/3d-models/czech-hedgehog-tank-obstacle-fcb063a945c94d71936805e1ddbed288 | CC BY 4.0, изменено |
+| biome2/a31_cliff_a (скала-обрыв) | Cliff | DJMaesen | https://sketchfab.com/3d-models/cliff-082da1166a814c6e9c9e6c1b38159e4e | CC BY 4.0, изменено |
+| biome2/a32_cliff_b (скала) | Free Cliff Rock | Kwinto | https://sketchfab.com/3d-models/free-cliff-rock-75fb6b34dc0d46259dedc8c7cd94e7b7 | CC BY 4.0, изменено |
+| biome2/a33_rock (выход породы) | Stranska Rock 1 | 3dhdscan | https://sketchfab.com/3d-models/stranska-rock-1-4118802ad14243d59f34c2be3fa77cd4 | CC BY 4.0, изменено |
+| biome2/a34_olive_a (олива) | Olive Tree (Portugal) | CeDRI | https://sketchfab.com/3d-models/olive-tree-portugal-e0b57e421ac546c6b7e4cb563f524640 | CC BY 4.0, изменено |
+| biome2/a35_olive_b (старая олива) | Old Olive Tree | massive-graphisme | https://sketchfab.com/3d-models/old-olive-tree-6328df8a0f214143a880a72b86db2ab4 | CC BY 4.0, изменено |
+| biome2/a37_pine_b (кипарис) | Pine Trees Pack (PS1 Low Poly) | Vova Truestory | https://sketchfab.com/3d-models/pine-trees-pack-ps1-low-poly-347d7f6122af4bf684f752df2dd0eb5a | CC BY 4.0, изменено |
+| biome2/a38_tree_leaf (лиственное дерево) | Leaf Tree (PS1 Low Poly) | Wersaus33 | https://sketchfab.com/3d-models/leaf-tree-ps1-low-poly-d799c08100974e1ba352fcd646cb0694 | CC BY 4.0, изменено |
+| battle/e_albatross (босс «Альбатрос») | LM-328 Flying Boat | TonyWony | https://sketchfab.com/3d-models/lm-328-flying-boat-d34a38da8ac6454cbdea645433b8d45b | CC BY 4.0, изменено |
+| battle/e_leviathan (босс «Левиафан») | Kiev-class Aircraft Carrier | Muhamad Mirza Arrafi | https://sketchfab.com/3d-models/kiev-class-aircraft-carrier-f854eda1eab54a40aae8628e6456ae78 | CC BY 4.0, изменено |
+| battle/e_lev_turret (главная башня «Левиафана») | US Mark 15/16 19-inch 45 caliber turret | Peter Primini | https://sketchfab.com/3d-models/us-mark-1516-19-inch-45-caliber-turret-1284145fb0e8419c97ae487cbf08ff16 | CC BY 4.0, изменено |
+| battle/e_ship_bulk (балкер) | Bulk Carrier (референс формы, геометрия собрана кодом заново) | medialog | https://sketchfab.com/3d-models/bulk-carrier-93c076900f004102b78dfac989efae1d | CC BY 4.0, изменено |

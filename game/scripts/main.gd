@@ -47,6 +47,8 @@ const OFFER_COUNT := 4
 const CARD_INVULN := 0.5
 var rerolls := 2        # переброс выбора (базово 2 за вылет, +1 за каждого аса)
 var bans := 2           # исключение карточки до конца вылета (базово 2, +1 за аса)
+## тест 3.5-s7 (Kanta): на время тестов — по 10 перебросов и блоков за вылет (в игре было по 2)
+const TEST_PICKS := 10
 var banned := {}        # ключи исключённых карточек
 var locked: Dictionary = {}  # закреплённая карточка — появится в следующем выборе
 var streak := 0         # серия сбитий без паузы > 2,5 с
@@ -182,6 +184,7 @@ func start_run() -> void:
 	add_child(world)
 	move_child(world, 0)
 
+	Biome.id = Campaign.biome_of(Campaign.index())   # тред «Второй биом»: биом мира — по операции, до создания фона
 	background = Background.new()
 	world.add_child(background)
 	clouds = Clouds.new()
@@ -226,7 +229,7 @@ func start_run() -> void:
 	banner = ""
 	op_flags = {}
 	op_result = {}
-	show_banner("%s · ОПЕРАЦИЯ «%s» · %s" % [Background.BIOME_NAME.to_upper(), String(Campaign.op()["title"]).to_upper(), String(Campaign.diff()["title"]).to_upper()], 4.0)
+	show_banner("%s · ОПЕРАЦИЯ «%s» · %s" % [Biome.title().to_upper(), String(Campaign.op()["title"]).to_upper(), String(Campaign.diff()["title"]).to_upper()], 4.0)
 	# U-02: цель вылета — первые 3 вылета (U-05: задача операции кампании)
 	Hints.clear()
 	Hints.show("goal", "Задача: %s. Всех врагов не перебить — они прилетают всё время." % String(Campaign.op()["task"]).to_lower(), 9.0, 3)
@@ -237,8 +240,8 @@ func start_run() -> void:
 		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
 	bosses_killed = 0
 	evac_windows = 0
-	rerolls = 2 + Profile.extra_rerolls(cls_id) # 3.5: самолёт ур. 2 — +1 переброс
-	bans = 2
+	rerolls = TEST_PICKS + Profile.extra_rerolls(cls_id) # 3.5: самолёт ур. 2 — +1 переброс
+	bans = TEST_PICKS
 	banned = {}
 	locked = {}
 	streak = 0

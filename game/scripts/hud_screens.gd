@@ -9,7 +9,7 @@ func class_select(size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.04, 0.86))
 	_text(Vector2(0, 120), "ВЫБЕРИТЕ САМОЛЁТ", 46, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	_button(Rect2(64, 60, 260, 46), "‹ Операция (Esc)", "class_back", 18)
-	_ctext(162, "Операция %d «%s» · сложность «%s» · клавиши 1 / 2 / 3 или клик мышью" % [Campaign.index() + 1, Campaign.op()["title"], Campaign.diff()["title"]], 20, Color(0.7, 0.75, 0.85))
+	_ctext(162, "Операция %d «%s» · сложность «%s» · клавиши 1 / 2 / 3 или клик мышью" % [Campaign.num(), Campaign.op()["title"], Campaign.diff()["title"]], 20, Color(0.7, 0.75, 0.85))
 	var w := 520.0
 	var h := 700.0
 	var gap := 40.0
@@ -51,7 +51,8 @@ func class_select(size: Vector2) -> void:
 			_text(Vector2(x + 12, y), "• %s ×%d: %s" % [g["name"], g["slots"], wname], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if int(d["turrets"]) > 0:
-			_text(Vector2(x + 12, y), "• Автотурели: %d (круговой обстрел)" % int(d["turrets"]), 17, Color(0.85, 0.88, 0.95))
+			var tmax := int(d.get("turrets_max", d["turrets"]))
+			_text(Vector2(x + 12, y), "• Автотурели: %d (круговой обстрел)%s" % [int(d["turrets"]), (", вторая — с ур. %d" % PlaneClasses.TURRET2_LVL) if tmax > int(d["turrets"]) else ""], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if Profile.plane_lvl(id) == 2:   # U-06
 			_text(Vector2(x + 12, y), "• Тяжёлый подвес ×1: экспериментальное оружие из карточек", 17, Color(0.6, 0.85, 1.0))
