@@ -199,8 +199,8 @@ func _drive(delta: float, p: Player) -> void:
 		var toward := (p.global_position - site.global_position).angle()
 		var slot := b + Vector2.from_angle(toward + randf_range(-1.1, 1.1)) * randf_range(140.0, 240.0) * AASite.SPREAD
 		var tr := _terrain()
-		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке, не на соседе
-			slot = tr.find_floor(slot, 110.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours())
+		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке, не на соседе; 3.5-s7: на равнине
+			slot = tr.find_floor(slot, 220.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours(), AASite.RIVER_GUARD_CAR, true)
 		_goal = slot
 		_drive_t = 0.0
 		return

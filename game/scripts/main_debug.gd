@@ -32,6 +32,9 @@ func process(delta: float) -> void:
 			_smoke_check()
 	if m._args.has("--shots"):
 		_debug_screenshots(delta)
+	if m.state == "playing" and m._args.has("--aaflat") and not _shots_done.has("aaflat") and m.run_time > 3.0:
+		_shots_done["aaflat"] = true
+		_aa_flat_test()
 	if _visual != null:
 		_visual.process(delta)
 	if _boom != null:
@@ -76,7 +79,7 @@ var _ui_phase := 0
 ## godot --path game --rendering-driver opengl3 -- --autotest --shots --uitest
 func _ui_test() -> void:
 	if _ui_phase == 0 and m.state == "playing" and m.run_time > 2.0:
-		var names := ["Ракеты «воздух-воздух»: улучшение", "ГСН «Глазастик»", "Блок НАР: улучшение", "Боевая часть", "Ракетный двигатель",
+		var names := ["Ракеты «воздух-воздух»: улучшение", "ГСН «Глазастик»", "Блок НАР: улучшение", "Боевая часть", "Двигатели ракет",
 			"Форсаж: доводка", "Механизация крыла", "Форсированный двигатель", "Усиленная БЧ", "Пусковое устройство", "Быстрая перезарядка",
 			"Радиостанция «Болтушка»", "Сборщик трофеев", "Осколочная рубашка", "Облегчённый затвор", "Бронебойные снаряды", "Бронеплиты",
 			"Бочка: тренировка", "Звено: слётанность — Стриж 1", "Ведомый: «Стриж» — прикрытие", "СВЯЗКА «Карусель» — слот 1",
@@ -210,6 +213,48 @@ func _mesa_test() -> void:
 	elif _mesa_phase == 1 and m.run_time - _mesa_at > 0.4:
 		_shot("mesa_over")
 		_mesa_phase = 2
+
+
+## --aaflat: есть ли на сетке биома равнины под позицию ПВО и куда встают её машины (правка 3.5-s7).
+## Склон — машина выше дна долины больше чем на AA_FLAT_H или наклон больше AA_FLAT_K
+func _aa_flat_test() -> void:
+	var tr := Terrain3D.active()
+	if tr == null:
+		print("AAFLAT: нет рельефа")
+		m.get_tree().quit()
+		return
+	var flat := 0
+	var all := 0
+	for j in range(-60, 61):
+		for i in range(-60, 61):
+			var q := Vector2(i * 150.0, j * 150.0)
+			all += 1
+			if tr.flat_at(q):
+				flat += 1
+	print("AAFLAT grid: равнина %.1f %% точек (сетка 150 px, 18 × 18 км)" % (100.0 * flat / all))
+	var bad := 0
+	var cars := 0
+	var worst := 0.0
+	var dist := 0.0
+	seed(7)
+	var t0 := Time.get_ticks_usec()
+	for k in 120:
+		var at := Vector2.from_angle(randf() * TAU) * randf_range(0.0, 8000.0)
+		var site := AASite.new()
+		site.setup(at, 1.0)
+		dist += site.anchor.distance_to(at)
+		for g: GroundTarget in site.targets:
+			cars += 1
+			var h := tr.height(g.position.x, g.position.y)
+			worst = maxf(worst, h)
+			if not tr.flat_at(g.position, 0.0):
+				bad += 1
+				if m._args.has("--verbose-bot"):
+					print("AAFLAT bad ", g.variant, " h=%.0f rf=%.0f v=%.0f h0=%.0f" % [h, tr.river_field(g.position.x, g.position.y), tr.valley(g.position.x, g.position.y), tr.height(site.anchor.x, site.anchor.y)])
+			g.free()
+		site.free()
+	print("AAFLAT sites: 120, машин %d, на склоне %d (%.1f %%), макс. высота над дном %.0f px, сдвиг центра в среднем %.0f px, %.1f мс на позицию" % [cars, bad, 100.0 * bad / cars, worst, dist / 120.0, (Time.get_ticks_usec() - t0) / 120000.0])
+	m.get_tree().quit()
 
 
 func _debug_screenshots(delta: float) -> void:
