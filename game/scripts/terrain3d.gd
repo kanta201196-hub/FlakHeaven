@@ -185,6 +185,25 @@ const TRIB_MIN := 420.0    # посёлок глубже в долине-при�
 const TRIB_MAX := 760.0
 
 
+## L-06 (правка Kanta): поливные поля и сады полосой вдоль реки, как зелень вдоль рек в пустыне —
+## участками по 1–3 км с разрывами, на каждом берегу свои; ширина гуляет. 0…1 — доля «огородов» в маске земли
+const GREEN_W := 520.0   # в единицах поля реки: вдали от русла оно растёт быстрее расстояния (~×2)
+
+
+func green(x: float, z: float, v := NAN) -> float:
+	if is_nan(v):
+		v = river_field(x, z)
+	var a := absf(v)
+	if a < RIVER_GUARD - 4.0 or a > RIVER_GUARD + GREEN_W:
+		return 0.0
+	var on := smoothstep(-0.06, 0.04, _plains.get_noise_2d(x * 2.6 + 9100.0 * signf(v), z * 2.6 - 4400.0))
+	if on <= 0.0:
+		return 0.0
+	var w := GREEN_W * (0.55 + 0.45 * (_hill.get_noise_2d(x * 0.3 + 500.0, z * 0.3) + 1.0) * 0.5) * sqrt(on)
+	# поля — на дне долины и пологих конусах, не на склоне
+	return (1.0 - smoothstep(w * 0.75, w, a - RIVER_GUARD)) * smoothstep(RIVER_GUARD - 4.0, RIVER_GUARD + 14.0, a) * (1.0 - smoothstep(D_FLOOR, D_FAN * 0.9, a))
+
+
 ## Расстояние до ручья посёлка, px, со знаком: «+» — к оси долины (там тропа); ручья рядом нет — INF
 func stream_field(x: float, z: float, ctx := {}) -> float:
 	var best := INF
@@ -825,14 +844,17 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 	var W := N + 3   # +1 узел и по одному с каждой стороны — нормали на стыках кусков совпадают
 	var hs := PackedFloat32Array()
 	var vs := PackedFloat32Array()
+	var gs := PackedFloat32Array()   # L-06: зелёная полоса вдоль реки
 	hs.resize(W * W)
 	vs.resize(W * W)
+	gs.resize(W * W)
 	for j in W:
 		for i in W:
 			var x := ox + (i - 1) * step
 			var z := oz + (j - 1) * step
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
 			vs[j * W + i] = river_field(x, z)
+			gs[j * W + i] = green(x, z, vs[j * W + i])
 			var sf := stream_field(x, z, ctx) * STREAM_K   # L-09: ручей — в том же поле, в K раз уже
 			if absf(sf) < absf(vs[j * W + i]):
 				vs[j * W + i] = sf
@@ -904,6 +926,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 				var dry := smoothstep(RIVER_GUARD - 30.0, RIVER_GUARD, absf(vs[gi]))
 				sm *= dry
 				burn *= dry
+			sm.y = maxf(sm.y, gs[gi])
 			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), sm.x, sm.y)
 			uv2[vi] = Vector2(vs[gi], burn)
 	var idx := PackedInt32Array()
