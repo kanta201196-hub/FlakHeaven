@@ -59,7 +59,7 @@ func behave(delta: float) -> void:
 func _draw() -> void:
 	var c := body_color(Color(1.0, 0.6, 0.2))
 	var xf := Transform2D(heading, Vector2.ZERO)
-	if not draw_enemy_sprite("e_carrier", 60.0):
+	if not draw_enemy_sprite("e_seaplane" if Biome.sea() else "e_carrier", 60.0):   # «Архипелаг»: гидросамолёт «Буревестник» (E-07)
 		var body := xf * PackedVector2Array([Vector2(24, 0), Vector2(4, 8), Vector2(-6, 24), Vector2(-14, 8), Vector2(-18, 0), Vector2(-14, -8), Vector2(-6, -24), Vector2(4, -8)])
 		draw_colored_polygon(body, c)
 	draw_hp_bar()

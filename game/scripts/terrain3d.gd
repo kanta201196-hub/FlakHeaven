@@ -452,6 +452,10 @@ static func sea_depth(v: float) -> float:
 ## Биом мира (Biome.cur()): включает поле берега «Архипелага»; кэш кусков сбрасывает clear()
 func set_biome() -> void:
 	_sea = Biome.sea()
+	if _sea:
+		# первое обращение к константам SeaProps — в главном потоке, до параллельной генерации клеток
+		SeaProps.comp_of(Vector2i.ZERO)
+		var _w: Vector2 = SeaProps.SIZE["s_gun"]
 	_relief_k = float(Biome.g("relief_k", 1.0))
 	_depth = float(Biome.g("depth_px", 450.0))
 	_land_k = float(Biome.g("land_k", 1.0))

@@ -54,11 +54,55 @@ const KINDS := {
 	"s_reed": ["res://models/biome2/a39_reed", 14.0, 22.0],
 	"s_shrub": ["res://models/biome2/a40_shrub", 20.0, 34.0],
 }
+## ширины видов (мин, макс) отдельно от KINDS: Vector2 без вложенных Array — таблицу читает поток генерации
+const SIZE := {
+	"s_gun": Vector2(56.0, 64.0),
+	"s_bunker": Vector2(120.0, 140.0),
+	"s_radar": Vector2(30.0, 34.0),
+	"s_lighthouse": Vector2(80.0, 90.0),
+	"s_pier_a": Vector2(160.0, 210.0),
+	"s_pier_b": Vector2(150.0, 200.0),
+	"s_tetrapod": Vector2(20.0, 26.0),
+	"s_store_a": Vector2(140.0, 170.0),
+	"s_store_b": Vector2(90.0, 110.0),
+	"s_crane": Vector2(120.0, 140.0),
+	"s_ruins": Vector2(100.0, 120.0),
+	"s_house_1": Vector2(50.0, 64.0),
+	"s_house_2": Vector2(50.0, 64.0),
+	"s_house_3": Vector2(60.0, 76.0),
+	"s_house_4": Vector2(54.0, 68.0),
+	"s_house_5": Vector2(48.0, 60.0),
+	"s_house_6": Vector2(56.0, 70.0),
+	"s_house_7": Vector2(46.0, 58.0),
+	"s_house_8": Vector2(52.0, 66.0),
+	"s_bell": Vector2(28.0, 32.0),
+	"s_terrace": Vector2(56.0, 70.0),
+	"s_buoy_red": Vector2(11.0, 13.0),
+	"s_buoy_green": Vector2(11.0, 13.0),
+	"s_boat_a": Vector2(52.0, 62.0),
+	"s_boat_b": Vector2(56.0, 66.0),
+	"s_wreck_a": Vector2(70.0, 90.0),
+	"s_wreck_b": Vector2(170.0, 220.0),
+	"s_wreck_plane": Vector2(80.0, 95.0),
+	"s_hedgehog": Vector2(12.0, 15.0),
+	"s_boom": Vector2(200.0, 240.0),
+	"s_cliff_a": Vector2(120.0, 200.0),
+	"s_cliff_b": Vector2(45.0, 70.0),
+	"s_rock": Vector2(16.0, 36.0),
+	"s_olive_a": Vector2(38.0, 50.0),
+	"s_olive_b": Vector2(38.0, 50.0),
+	"s_pine_a": Vector2(44.0, 58.0),
+	"s_pine_b": Vector2(26.0, 34.0),
+	"s_tree": Vector2(40.0, 54.0),
+	"s_reed": Vector2(14.0, 22.0),
+	"s_shrub": Vector2(20.0, 34.0),
+}
 const HOUSES := ["s_house_1", "s_house_2", "s_house_3", "s_house_4", "s_house_5", "s_house_6", "s_house_7", "s_house_8"]
 const SMALL := ["s_shrub", "s_reed", "s_rock", "s_hedgehog", "s_tetrapod", "s_buoy_red", "s_buoy_green", "s_olive_a", "s_olive_b", "s_tree", "s_pine_a", "s_pine_b"]
 
 ## доли клеток по композициям («Сколько чего на одну карту», вариант A): остальное — только природа
-const COMP := [["harbor", 0.2], ["cape", 0.16], ["battery", 0.16], ["beach", 0.05], ["reef", 0.2]]
+const COMP_KEYS: PackedStringArray = ["harbor", "cape", "battery", "beach", "reef"]
+const COMP_SHARE: PackedFloat32Array = [0.2, 0.16, 0.16, 0.05, 0.2]
 
 var _bp: BiomeProps
 var _t: Terrain3D
@@ -75,10 +119,11 @@ func _init(bp: BiomeProps) -> void:
 
 static func comp_of(key: Vector2i) -> String:
 	var r := float(hash(key) % 10007) / 10007.0
-	for c in COMP:
-		if r < float(c[1]):
-			return c[0]
-		r -= float(c[1])
+	# упакованные массивы без вложенных Array: comp_of зовётся и из потока генерации
+	for i in COMP_SHARE.size():
+		if r < COMP_SHARE[i]:
+			return COMP_KEYS[i]
+		r -= COMP_SHARE[i]
 	return ""
 
 
@@ -186,7 +231,8 @@ func put(kind: String, p: Vector2, w: float, yaw: float, r_keep := -1.0, y := NA
 
 
 func size(kind: String) -> float:
-	return _rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2]))
+	var w: Vector2 = SIZE[kind]
+	return _rng.randf_range(w.x, w.y)
 
 
 ## Уровень воды у точки в воде (рельеф под водой ровный — дно пролива и есть поверхность воды в шейдере)

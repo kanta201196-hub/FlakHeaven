@@ -147,6 +147,14 @@ func _build_route(center: Vector2, dir: Vector2) -> void:
 		river_sign = signf(tr.river_field(c.x + n.x * 20.0, c.y + n.y * 20.0) - tr.river_field(c.x - n.x * 20.0, c.y - n.y * 20.0))
 
 
+## «Архипелаг»: маршрут по фарватеру через center для кораблей-боссов (Warship). Узел вне дерева —
+## освобождает владелец (Warship._exit_tree)
+static func sea_route(center: Vector2, dir: Vector2) -> Convoy:
+	var cv := Convoy.new()
+	cv._build_route(center, dir)
+	return cv
+
+
 ## Где на маршруте ближайшая к p точка (по всему маршруту)
 func _s_of(p: Vector2) -> float:
 	var best := 0.0

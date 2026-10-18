@@ -64,6 +64,9 @@ func setup(v: String, hp_total: float) -> void:
 	shield_max = hp_total * 0.35
 	shield = shield_max
 	title = "Ас «Почтальон»" if v == "carrier" else "Ас «Сквозняк»"
+	if Biome.sea() and v == "carrier":   # «Архипелаг»: мини-босс 5:00 — летающая лодка «Альбатрос» (E-07)
+		title = "Ас «Альбатрос»"
+		radius = 58.0
 	_orbit = 1.0 if randf() < 0.5 else -1.0
 	_born = Main.I.run_time
 	min_life = 26.0   # правка 3.5-s4 (было 16 — в логе «Кита» асы жили 10–47 с)
@@ -327,7 +330,8 @@ func _draw() -> void:
 		body = xf * PackedVector2Array([Vector2(44, 0), Vector2(8, 14), Vector2(-10, 44), Vector2(-26, 14), Vector2(-34, 0), Vector2(-26, -14), Vector2(-10, -44), Vector2(8, -14)])
 	else:
 		body = xf * PackedVector2Array([Vector2(40, 0), Vector2(-6, 10), Vector2(-20, 36), Vector2(-30, 8), Vector2(-30, -8), Vector2(-20, -36), Vector2(-6, -10)])
-	if not draw_enemy_sprite("e_postman" if variant == "carrier" else "e_draft", 92.0 if variant == "carrier" else 84.0):
+	var albatross := variant == "carrier" and Biome.sea()
+	if not draw_enemy_sprite("e_albatross" if albatross else ("e_postman" if variant == "carrier" else "e_draft"), 140.0 if albatross else (92.0 if variant == "carrier" else 84.0)):
 		draw_colored_polygon(body, c)
 	draw_arc(Vector2.ZERO, radius + 6.0, 0.0, TAU, 48, Color(1, 0.3, 0.3, 0.5), 2.0)
 	if shield > 0.0:

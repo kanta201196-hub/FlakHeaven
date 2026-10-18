@@ -557,7 +557,10 @@ func boss_alive() -> bool:
 
 
 func on_boss_wave(wave: int, n: int) -> void:
-	show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
+	if Biome.sea():
+		show_banner(["«АЛЬБАТРОС» НА ПОДХОДЕ!", "КРЕЙСЕР «СТОРОЖ» В ПРОЛИВЕ!", "«ЛЕВИАФАН» В ПРОЛИВЕ!"][clampi(wave - 1, 0, 2)], 4.0)
+	else:
+		show_banner("АС НА ПОДХОДЕ!  (%d)" % n if n > 1 else "АС НА ПОДХОДЕ!", 4.0)
 	# правка 20: ас выходит в эфир — перехват его переговоров справа внизу
 	radio("Перехват", ["Цель вижу. Захожу с солнца.", "Это наше небо. Уходи, пока цел.", "Звено, прикрыть меня — работаю по одиночке.",
 		"Ещё один охотник? Посмотрим, сколько продержишься."][randi() % 4], true)
@@ -675,7 +678,7 @@ func on_enemy_killed(e: Enemy) -> void:
 			player.add_course_pts(2) # 3.2: ас — +2 к курсу
 		rerolls += 1
 		bans += 1
-		fx.text(e.global_position, "АС СБИТ!", Color(1.0, 0.8, 0.4))
+		fx.text(e.global_position, "ПОТОПЛЕН!" if e is Warship else "АС СБИТ!", Color(1.0, 0.8, 0.4))
 		if not boss_alive():
 			_open_evac()
 

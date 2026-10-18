@@ -33,11 +33,15 @@ func _ready() -> void:
 	if OS.get_cmdline_user_args().has("--convoy"):
 		activity_i = 3      # проверка: сразу конвой
 		next_activity = 10.0
+	if OS.get_cmdline_user_args().has("--warship"):   # проверка «Архипелага»: корабль-босс на 1:00 (--leviathan — «Левиафан»)
+		Tuning.set_param("boss_every", 60.0)
 	_heli_test = OS.get_cmdline_user_args().has("--heli")   # проверка: вертолёты «Сарыч» без конвоя (в игре — прикрытие конвоя, M-41)
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--fuel="): # проверка: начать с неполным баком (доля 0–1)
 			fuel.left = fuel.capacity * clampf(float(String(a).substr(7)), 0.0, 1.0)
 var _heli_test := false
+var _ekr_test := OS.get_cmdline_user_args().has("--ekr")
+var _ekr_cd := 0.0
 var _heli_cd := 8.0
 var _grid := {}
 const CELL := 90.0
@@ -203,6 +207,16 @@ func _process(delta: float) -> void:
 				_place(d, p, ang + randf_range(-0.2, 0.2), t)
 				d.heading = (p.global_position - d.position).angle()
 
+	# «Архипелаг» (E-07): экраноплан «Крачка» проходит по проливу раз в ~1,5 мин после 2:00 (--ekr — сразу)
+	if Biome.sea() and t > (10.0 if _ekr_test else 110.0) and not Main.I.boss_alive():
+		_ekr_cd -= delta
+		if _ekr_cd <= 0.0:
+			_ekr_cd = 25.0 if _ekr_test else randf_range(70.0, 95.0)
+			var ek := Ekranoplan.new()
+			ek.setup_run(p.global_position)
+			Main.I.world.add_child(ek)
+			ek.apply_hp_mult(hp_mult() * hp_ramp(t) * pressure_k)
+			Main.I.show_banner("Экраноплан «Крачка» идёт по проливу!", 2.5)
 	_icpt_cd -= delta * mult
 	if _icpt_cd <= 0.0:
 		_icpt_cd = maxf(4.0, 11.0 - t * 0.02)
@@ -352,8 +366,15 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f из %d с)" % [wave, hp, hp_dps, recent_dps(), last_single_k, _big_hist.size()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
 		hp = maxf(hp, hp_dps)
+	# «Архипелаг» (E-07, E-08): 10:00 — крейсер «Сторож», 15:00 — «Левиафан»; оба идут по фарватеру
+	if Biome.sea() and (wave >= 2 or OS.get_cmdline_user_args().has("--warship")):
+		var ws := Warship.new()
+		var lev := wave >= 3 or OS.get_cmdline_user_args().has("--leviathan")
+		ws.setup_ship("leviathan" if lev else "cruiser", hp * (2.0 if lev else 1.3) * 1.35, p.global_position)
+		Main.I.world.add_child(ws)
+		variants = []
 	# 3.5 (разбор каталога 16.10): третья волна — босс «Крепость» вместо пары асов
-	if wave >= 3 or OS.get_cmdline_user_args().has("--fortress"):
+	elif wave >= 3 or OS.get_cmdline_user_args().has("--fortress"):
 		var f := Fortress.new()
 		f.setup_fortress(hp * 2.0 * 1.35) # прочность двух асов вместе со щитами; фазы делят её на точки и корпус
 		f.position = p.global_position + Vector2.from_angle(randf() * TAU) * boss_dist()

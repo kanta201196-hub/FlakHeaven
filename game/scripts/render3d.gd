@@ -1035,6 +1035,12 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				hull = cr.x
 				tilt = Vector2(cr.y, cr.z)
 				_convoy_dust(e as ConvoyVehicle, gp, hull, len_px)
+			elif e is Warship or e is Ekranoplan:
+				# «Архипелаг»: корабли-боссы и экраноплан — курс из маршрута, качка, пенный след
+				hull = e.heading
+				var wt := Time.get_ticks_msec() * 0.001 + float(e.get_instance_id() % 53)
+				tilt = Vector2(sin(wt * 0.6) * 0.012, sin(wt * 0.45 + 1.0) * 0.02) if e is Warship else Vector2.ZERO
+				_sea_wake(e, gp, hull, len_px)
 			elif ue.get("bm") != null:
 				hull = _ground_parts(ue, e, ang, delta)
 				var gt := e as GroundTarget
@@ -1218,6 +1224,21 @@ func _convoy_dust(v: ConvoyVehicle, gp: Vector3, hull: float, len_px: float) -> 
 	var back := Vector2(gp.x, gp.z) - Vector2.from_angle(hull) * len_px * (0.46 if Biome.sea() else 0.5)
 	ps.global_position = Vector3(back.x, gp.y + len_px * (0.005 if Biome.sea() else 0.04), back.y)
 	ps.emitting = v.drive.speed > (8.0 if Biome.sea() else 18.0)
+	d["t"] = 0.0
+
+
+## Пенный след корабля-босса и экраноплана (тот же след, что у судов конвоя, всегда на ходу)
+func _sea_wake(e: Enemy, gp: Vector3, hull: float, len_px: float) -> void:
+	var id := e.get_instance_id()
+	var d: Dictionary = _dust.get(id, {})
+	if d.is_empty():
+		d = {"p": _make_dust(len_px * (0.6 if e is Warship else 1.0)), "t": 0.0}
+		_dust[id] = d
+	d["seen"] = true
+	var ps := d["p"] as CPUParticles3D
+	var back := Vector2(gp.x, gp.z) - Vector2.from_angle(hull) * len_px * 0.46
+	ps.global_position = Vector3(back.x, gp.y + 1.0, back.y)
+	ps.emitting = true
 	d["t"] = 0.0
 
 
