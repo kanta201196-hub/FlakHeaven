@@ -9,9 +9,9 @@ extends RefCounted
 const DIR := "res://models/biome/"
 ## вид: [файл, ширина в px мира мин, макс]
 const KINDS := {
-	"outcrop": ["b01_rock_outcrop", 70.0, 140.0],
+	"outcrop": ["b01_rock_outcrop", 40.0, 80.0],
 	"boulders": ["b02_boulders", 12.0, 30.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90, потом 22–50); масштаб «2–4 км»: валун 2–6 м при истребителе ~100 px
-	"spire": ["b03_rock_spire", 35.0, 60.0],
+	"spire": ["b03_rock_spire", 25.0, 45.0],
 	"poplar": ["b04_poplar", 16.0, 24.0],
 	"orchard": ["b05_orchard_tree", 34.0, 50.0],
 	"shrub": ["b06_shrub", 14.0, 30.0],

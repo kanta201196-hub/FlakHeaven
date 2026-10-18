@@ -8,8 +8,9 @@ extends Node2D
 ## Не успел — позиция остаётся и продолжает стрелять, награды нет.
 
 const LIMIT := 60.0
-const ACTIVATE_R := 1000.0
-const SPACING := 110.0   # тест 3.5-s4: машины позиции не ближе этого друг к другу (не «слипаются»)
+const ACTIVATE_R := 1150.0   # M-37: позиция шире (радиус ~200 → ~330) — обнаружение раньше на столько же
+const SPACING := 150.0   # тест 3.5-s4: машины позиции не ближе этого друг к другу; M-37: 110 → 150, позиция реже
+const SPREAD := 1.6      # M-37 (Kanta 18.10): позиция ПВО шире — раскладка и переезды дальше от бункера
 
 var targets: Array = []
 var active := false     # стреляет ли (после подлёта)
@@ -20,14 +21,13 @@ var bunker: GroundTarget = null
 var anchor := Vector2.ZERO   # 3.5: центр позиции на рельефе (логическая позиция — проекция, см. GroundTarget.air_pos)
 
 
-## bunker_hp — нижняя граница прочности бункера (спавнер считает её от текущего урона игрока)
-func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
+func setup(center: Vector2, hp_mult: float, dps := 0.0) -> void:
 	# 3D-рельеф: техника ПВО стоит на дне долины, а не на хребте (правила — s4-landscape-rules.md)
 	var tr := Terrain3D.active()
 	if tr != null:
 		# тест 3.5-s4 (п. 20): вся позиция (радиус ~250) — на сухом берегу, а не только её центр
-		center = tr.find_floor(center, 900.0, 0.0, [], 260.0)
-		var fixed := tr.fix_object({"pos": center, "size": 480.0, "name": "o_aa_site"})
+		center = tr.find_floor(center, 900.0, 0.0, [], 260.0 * SPREAD)
+		var fixed := tr.fix_object({"pos": center, "size": 480.0 * SPREAD, "name": "o_aa_site"})
 		if fixed.has("pos"):   # не отвелась от воды — остаётся точка find_floor (сухое дно долины)
 			center = fixed["pos"]
 		center = tr.out_of_river_guard(center, 60.0)   # M-35: бункер с обваловкой — не в охранной зоне реки
@@ -38,18 +38,16 @@ func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
 	var rot := randf() * TAU   # тест 3.5-s4: раскладка поворачивается целиком — машины не съезжаются в кучу
 	for l in layout:
 		var g := GroundTarget.new()
-		g.setup(l[0], self, hp_mult)
+		g.setup(l[0], self, hp_mult, dps)
 		if l[0] == "bunker":
 			bunker = g
-			g.hp = maxf(g.hp, bunker_hp)
-			g.max_hp = g.hp
-		g.position = center + ((l[1] as Vector2).rotated(rot) * randf_range(0.9, 1.2) if l[0] != "bunker" else Vector2.ZERO)
+		g.position = center + ((l[1] as Vector2).rotated(rot) * SPREAD * randf_range(0.9, 1.2) if l[0] != "bunker" else Vector2.ZERO)
 		if tr != null and l[0] != "bunker":
 			# своя точка рядом с назначенной, на том же берегу, не ближе SPACING к другим машинам и бункеру
 			var avoid := []
 			for o in targets:
 				avoid.append([(o as GroundTarget).position, SPACING])
-			g.position = tr.find_floor(g.position, 120.0, signf(tr.river_field(center.x, center.y)), avoid)
+			g.position = tr.find_floor(g.position, 160.0, signf(tr.river_field(center.x, center.y)), avoid)
 		targets.append(g)
 
 
@@ -131,6 +129,6 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	# площадка позиции и радиус обнаружения
-	draw_circle(Vector2.ZERO, 260.0, Color(0.35, 0.3, 0.2, 0.18))
+	draw_circle(Vector2.ZERO, 260.0 * SPREAD, Color(0.35, 0.3, 0.2, 0.18))
 	if not active and not done:
 		draw_arc(Vector2.ZERO, ACTIVATE_R, 0.0, TAU, 96, Color(1.0, 0.85, 0.3, 0.12), 2.0)

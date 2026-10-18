@@ -13,6 +13,18 @@ extends Enemy
 ## разгон и торможение, ЗСУ на гусеницах доворачивает на месте, ЗРК на колёсах едет по дуге.
 ## Корпус в 3D смотрит по курсу машины, а не по сдвигу точки на экране.
 
+## S6-02: категории прочности наземных целей (до множителя врагов и роста по времени)
+const HP_STD := 90.0
+const HP_ARMOR := 135.0
+const HP_FORT := 270.0
+## Нижняя граница прочности: столько секунд урона игрока цель выдерживает в любом случае (Kanta 18.10:
+## «заметно мягче» прежней — треть: бункер 9 → 3 с, колонна 1,5–5 → 0,6–1 с). Против сильного билда к концу вылета.
+const FLOOR_S := {HP_STD: 0.6, HP_ARMOR: 1.0, HP_FORT: 3.0}
+
+
+## Прочность цели категории base: base × рост врагов, но не меньше FLOOR_S секунд урона игрока
+static func floor_hp(base: float, hp_k: float, dps: float) -> float:
+	return maxf(base * hp_k, dps * float(FLOOR_S.get(base, 0.6)))
 var variant := "zsu"
 var site: AASite
 var _cd := 2.0
@@ -37,35 +49,37 @@ const DRIVE_SPEED := 70.0
 const DEF_R := 300.0         # радиус перехвата наших ракет
 
 
-func setup(v: String, s: AASite, hp_mult: float) -> void:
+func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 	variant = v
 	site = s
 	_body_angle = randf() * TAU
 	is_ground = true
 	no_despawn = true
 	big = v != "zsu"
+	# S6-02 (решение Kanta 18.10): прочность по категориям — стандартная 90 (ЗСУ, радар), бронированная 135 (ЗРК),
+	# укреплённые строения 270 (бункер); × рост врагов
 	match v:
 		"zsu":
-			hp = 90.0
+			hp = GroundTarget.HP_STD
 			radius = 20.0
 			xp = 4
 			parts = 4
 		"sam":
-			hp = 120.0
+			hp = GroundTarget.HP_ARMOR
 			radius = 24.0
 			xp = 5
 			parts = 5
 		"radar":
-			hp = 80.0
+			hp = GroundTarget.HP_STD
 			radius = 22.0
 			xp = 3
 			parts = 3
 		"bunker":
-			hp = 420.0 # 3.5: главная цель позиции
+			hp = GroundTarget.HP_FORT # главная цель позиции
 			radius = 32.0
 			xp = 8
 			parts = 10
-	hp *= hp_mult
+	hp = floor_hp(hp, hp_mult, dps)
 	max_hp = hp
 	repair_chance = 0.15
 	kill_shake = 6.0
@@ -174,7 +188,7 @@ func behave(delta: float) -> void:
 					Main.I.sfx.play("sam_lock", -6.0, 1.2)
 
 
-## Переезд: раз в несколько секунд — новая точка между бункером и самолётом (полукольцо 140–240 пикс.)
+## Переезд: раз в несколько секунд — новая точка между бункером и самолётом (полукольцо 140–240 пикс. × AASite.SPREAD)
 func _drive(delta: float, p: Player) -> void:
 	if _goal == Vector2.INF:
 		_stand(delta)
@@ -183,7 +197,7 @@ func _drive(delta: float, p: Player) -> void:
 			return
 		var b: Vector2 = site.bunker.anchor
 		var toward := (p.global_position - site.global_position).angle()
-		var slot := b + Vector2.from_angle(toward + randf_range(-1.1, 1.1)) * randf_range(140.0, 240.0)
+		var slot := b + Vector2.from_angle(toward + randf_range(-1.1, 1.1)) * randf_range(140.0, 240.0) * AASite.SPREAD
 		var tr := _terrain()
 		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке, не на соседе
 			slot = tr.find_floor(slot, 110.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours())
@@ -320,7 +334,12 @@ func _die() -> void:
 
 func _draw() -> void:
 	# тень-подложка, чтобы наземное читалось «ниже» самолётов
-	var spr := {"zsu": ["e_zsu", 44.0], "sam": ["e_sam", 54.0], "radar": ["e_radar", 50.0], "bunker": ["e_bunker", 66.0]}
+	# M-37 (Kanta 18.10): ПВО меньше на ~35–40% — в масштабе конвоя (грузовик 7,9 м = 28, см. ConvoyVehicle.SPEC).
+	# Ориентиры по настоящим машинам-«мотивам»: ЗСУ на гусеницах 6,5–7,9 м (≈ грузовик) → 27 (было 44);
+	# ЗРК на колёсном шасси ~9 м (1,15 грузовика) → 34 (было 54); РЛС на грузовом шасси 9–10 м → 32 (было 50),
+	# модель ниже по высоте (Render3D.MODEL_H); бункер с обваловкой 10–12 м → 40 (было 66), высота ×0,6.
+	# Хитбоксы (radius) не менялись — попадание чуть щедрее картинки, как у конвоя.
+	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 40.0]}
 	var ba: float = _body_angle
 	if mobile() and not leaderless and _goal == Vector2.INF and site != null and site.active:
 		ba = heading # стоит — разворачивается на цель
@@ -328,7 +347,7 @@ func _draw() -> void:
 		ba = _fire_dir
 	if draw_enemy_sprite(spr[variant][0], spr[variant][1], Color.WHITE, ba):
 		if variant == "zsu" and (_aim > 0.0 or _shots > 0 or _def_flash > 0.0):
-			draw_circle(Vector2.from_angle(ba) * 30.0, 6.0, Color(1.0, 0.9, 0.3))
+			draw_circle(Vector2.from_angle(ba) * 19.0, 5.0, Color(1.0, 0.9, 0.3))   # M-37: у среза ствола меньшей модели
 		if variant == "sam" and _lock > 0.0:
 			var pl := Main.I.player
 			if pl != null and pl.hp > 0.0:

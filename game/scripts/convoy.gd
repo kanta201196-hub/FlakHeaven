@@ -62,7 +62,7 @@ func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> 
 		var r: String = order[i]
 		var sp: Dictionary = ConvoyVehicle.SPEC[r]
 		var v := ConvoyVehicle.new()
-		v.setup(r, self, maxf(float(sp["hp"]) * hp_k, dps * float(sp["ttk"])))
+		v.setup(r, self, GroundTarget.floor_hp(float(sp["hp"]), hp_k, dps))   # S6-02: мягкая нижняя граница
 		v.place(maxf(head - offs[i], 0.0))
 		vehicles.append(v)
 		if v.is_truck():

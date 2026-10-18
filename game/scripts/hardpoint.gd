@@ -533,7 +533,8 @@ func _fire_rockets(p: Player, manual := false) -> bool:
 			break
 	if not ok:
 		return false
-	var per_slot := 4 # 3.5: залп фиксирован — 4 с точки; уровень даёт урон и радиус
+	# S6-02 (решение Kanta 18.10): залп 4 с точки на ур. 1–2, 5 на ур. 3–4, 6 на ур. 5; уровень даёт ещё урон и радиус
+	var per_slot := 4 if level <= 2 else (5 if level <= 4 else 6)
 	var splash := 60.0 * (1.0 + Tuning.g("rocket_lvl_r") * (level - 1))
 	var dirs := [0.0]
 	if evo: # «Ливень»: веер в 3 стороны по 5 ракет
@@ -551,6 +552,7 @@ func _fire_rockets(p: Player, manual := false) -> bool:
 		Main.I.sfx.play("rocket_launch", -10.0, 1.4)
 		return true
 	var ropts := {"sticky": true, "src": "связка: термобарика"} if p.syn.has("thermobaric") else {}
+	ropts["ground_k"] = ROCKET_GROUND_K
 	_wolf(p, Weapons.pick_target(p.global_position + fwd * 300.0, 500.0, "nearest"), rd * 3.0)
 	if p.assault_t > 0.0 and p.syn.has("s_conveyor"):
 		per_slot *= 2 # «Конвейер»
@@ -696,6 +698,8 @@ func _fire_flares(p: Player) -> bool:
 
 ## 3.5 (правка 8): бомбы только по наземным целям, зато вдвое сильнее
 const GROUND_BOMB_K := 2.0
+## S6-02: НАР по земле ×3 (стандартная цель — 3 ракеты «Грача», броня — 5, бункер — 9)
+const ROCKET_GROUND_K := 3.0
 
 
 func _fire_bombs(p: Player, manual := false) -> bool:

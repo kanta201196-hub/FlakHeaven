@@ -8,6 +8,9 @@ extends Node3D
 ## Виды: flak (подрыв ракеты, перехват), air (сбит в воздухе), big (крупная цель, игрок), ground (наземная цель,
 ## падение самолёта), blast (бомбы и НАР по площади). Всё рисуется семью MultiMesh — один вызов отрисовки на слой.
 ## Текстура клубов и сетки строятся кодом — без файлов-ассетов. Fx.explosion() сам выбирает 3D или старый 2D.
+## M-39 (аудит 3.5-s6 Э-1): огненный шар был главным в кадре и выглядел мультяшно. Теперь огня мало и он короткий
+## (ядро ~0,25 с, клубы 0,15–0,3 с): короткая яркая вспышка → у земли пыль цвета Нагорья (серо-бурая) и тёмный дым,
+## кольцо пыли по земле; в воздухе — вспышка, тёмный дым и обломки без пыли. Частиц не больше, чем было.
 
 static var I: Boom3D
 
@@ -18,6 +21,10 @@ const STRIDE := 20
 const BUDGET := [500.0, 800.0, 1200.0, 1600.0]   # частиц, после которых новые взрывы беднеют   # transform 12 + color 4 + custom 4
 
 static var _puff: ImageTexture
+## M-39: пыль цвета земли Нагорья (песок с серым, подсвечена солнцем) и её серо-бурый низ
+const DUST := Color(0.58, 0.51, 0.41)
+const DUST_D := Color(0.42, 0.37, 0.31)
+var _lo := false            # «Низкое» качество: без ударной сферы, света и огня в догорающих очагах
 
 var _mm: Array = []
 var _parts: Array = [[], [], [], [], [], [], []]
@@ -331,6 +338,7 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 	# частиц меньше на слабом пресете и когда их уже много (мясорубка): нагрузка не растёт без предела
 	var gi := clampi(Settings.gfx, 0, 3)
 	_q = [0.45, 0.7, 1.0, 1.25][gi] * clampf(1.25 - float(count()) / BUDGET[gi], 0.3, 1.0)
+	_lo = gi == 0
 	if kind == "":
 		if not air:
 			kind = "ground"
@@ -427,6 +435,8 @@ func _debris(p: Vector3, v: Vector3, size: float, col: Color, heat: float, trail
 
 
 func _light(p: Vector3, energy: float, rng: float, life: float) -> void:
+	if _lo:   # M-39: на «Низком» — без света от взрыва (каждый источник в GL Compatibility — лишний проход)
+		return
 	var slot: Dictionary = _lights[_light_i % _lights.size()]
 	_light_i += 1
 	var l: OmniLight3D = slot["l"]
@@ -444,56 +454,58 @@ func _light(p: Vector3, energy: float, rng: float, life: float) -> void:
 ## Подрыв ракеты, перехват, самоликвидация: короткий огненный хлопок и чёрный клуб, как разрыв зенитного снаряда
 func _flak(p: Vector3, s: float) -> void:
 	s *= 1.25
-	_flash(p, s * 3.2, 0.09)
-	_core(p, s * 0.45, s * 1.25, 0.32, 1.0)
-	for i in _n(4):
+	_flash(p, s * 3.0, 0.08, Color(1.0, 0.93, 0.8, 1.0))
+	_core(p, s * 0.35, s * 0.85, 0.2, 1.0)
+	for i in _n(3):
 		var d := _rdir()
-		_fire(p + d * s * 0.3, d * s * 2.2, s * 0.35, s * 0.85, randf_range(0.25, 0.45), 0.95)
+		_fire(p + d * s * 0.3, d * s * 2.0, s * 0.3, s * 0.65, randf_range(0.12, 0.22), 0.9)
 	for i in _n(5):
 		var d2 := _rdir()
 		_smoke(p + d2 * s * 0.4, d2 * s * 0.9, s * 0.5, s * randf_range(1.6, 2.3), randf_range(1.8, 2.8),
-			Color(0.11, 0.1, 0.095, 0.8), 0.7, 4.0, 1.5, randf_range(0.02, 0.1))
-	_sparks(p, _n(12), 260.0 + s * 10.0, 0.35)
+			Color(0.11, 0.1, 0.095, 0.8), 0.5, 4.0, 1.5, randf_range(0.0, 0.06))
+	_sparks(p, _n(8), 260.0 + s * 10.0, 0.3)
 
 
 ## Сбит в воздухе: огненный шар, клубы, дым, искры, горящие обломки падают на землю, объёмная ударная волна
 func _air(p: Vector3, s: float, debris: bool) -> void:
-	_flash(p, s * 3.6, 0.11)
-	_core(p, s * 0.55, s * 1.65, 0.6, 1.0)
-	_core(p + _rdir() * s * 0.35, s * 0.35, s * 1.1, 0.45, 0.9, 1.0, 0.06)
-	_add(L_SHOCK, {"p": p, "v": Vector3.ZERO, "life": 0.22, "r0": s * 0.8, "r1": s * 4.2, "c": Color(1.0, 0.9, 0.75, 0.3), "seed": randf() * 40.0})
-	var nf := _n(clampf(s / 3.0, 7.0, 14.0))
+	# M-39: вспышка + тёмный дым + обломки; огненное ядро маленькое и гаснет за четверть секунды, пыли нет
+	_flash(p, s * 3.4, 0.09, Color(1.0, 0.93, 0.8, 1.0))
+	_core(p, s * 0.45, s * 1.0, 0.26, 1.0)
+	if not _lo:
+		_add(L_SHOCK, {"p": p, "v": Vector3.ZERO, "life": 0.18, "r0": s * 0.8, "r1": s * 3.6, "c": Color(1.0, 0.92, 0.8, 0.12), "seed": randf() * 40.0})
+	var nf := _n(clampf(s / 6.0, 3.0, 6.0))
 	for i in nf:
 		var d := _rdir()
-		_fire(p + d * s * 0.25, d * s * randf_range(1.8, 3.2), s * randf_range(0.35, 0.55), s * randf_range(0.9, 1.35),
-			randf_range(0.4, 0.8), randf_range(0.6, 0.85), 6.0)
+		_fire(p + d * s * 0.25, d * s * randf_range(1.8, 3.0), s * randf_range(0.3, 0.45), s * randf_range(0.7, 1.0),
+			randf_range(0.15, 0.3), randf_range(0.6, 0.85), 0.0)
 	for i in _n(clampf(s / 2.5, 9.0, 16.0)):
 		var d2 := _rdir()
-		var dark := i % 3 != 2
-		var g := randf_range(0.09, 0.14) if dark else randf_range(0.28, 0.38)
-		_smoke(p + d2 * s * 0.5, d2 * s * randf_range(0.5, 1.2), s * 0.55, s * randf_range(2.0, 2.9), randf_range(2.4, 3.8),
-			Color(g, g * 0.96, g * 0.92, 0.7), 0.9 if dark else 0.3, 8.0, 1.2, randf_range(0.05, 0.25))
-	_sparks(p, _n(clampf(s * 0.8, 14.0, 30.0)), 300.0 + s * 9.0, 0.55)
+		var dark := i % 4 != 3
+		var g := randf_range(0.08, 0.13) if dark else randf_range(0.26, 0.34)
+		_smoke(p + d2 * s * 0.45, d2 * s * randf_range(0.6, 1.3), s * 0.6, s * randf_range(2.0, 2.9), randf_range(2.4, 3.8),
+			Color(g, g * 0.96, g * 0.92, 0.75), 0.45 if dark else 0.1, 8.0, 1.2, randf_range(0.0, 0.12))
+	_sparks(p, _n(clampf(s * 0.4, 6.0, 14.0)), 300.0 + s * 9.0, 0.45)
 	if debris:
 		for i in _n(clampf(s / 6.0, 3.0, 8.0)):
 			var dv := _rdir(0.4) * randf_range(140.0, 320.0)
 			var burning := i == 0 and s > 26.0
 			_debris(p, dv, s * randf_range(0.1, 0.2) * (1.6 if burning else 1.0), Color(0.16, 0.15, 0.14), 1.0,
 				"fire" if burning else "smoke", burning, 0.5)
-	_light(p + Vector3(0, s * 2.0, 0), clampf(s / 9.0, 1.5, 6.0), clampf(s * 12.0, 200.0, 900.0), 0.4)
+	_light(p + Vector3(0, s * 2.0, 0), clampf(s / 9.0, 1.5, 6.0), clampf(s * 12.0, 200.0, 900.0), 0.25)
 
 
 ## Крупная цель или игрок: цепочка взрывов по корпусу, несколько горящих обломков до земли, большая волна
 func _big(p: Vector3, s: float) -> void:
 	_air(p, s, false)
-	_add(L_SHOCK, {"p": p, "v": Vector3.ZERO, "life": 0.4, "r0": s * 1.0, "r1": s * 6.0, "c": Color(1.0, 0.85, 0.65, 0.22), "seed": randf() * 40.0})
+	if not _lo:
+		_add(L_SHOCK, {"p": p, "v": Vector3.ZERO, "life": 0.3, "r0": s * 1.0, "r1": s * 5.0, "c": Color(1.0, 0.88, 0.7, 0.1), "seed": randf() * 40.0})
 	for i in randi_range(3, 4):
 		var off := _rdir() * Vector3(1, 0.3, 1) * s * randf_range(0.6, 1.3)
 		var ss := s * randf_range(0.4, 0.6)
 		_later.append({"t": randf_range(0.08, 0.5), "p": p + off, "s": ss})
 	for i in _n(randf_range(4.0, 6.0)):
 		var dv := _rdir(0.3) * randf_range(120.0, 280.0)
-		_debris(p, dv, s * randf_range(0.12, 0.2), Color(0.14, 0.13, 0.12), 1.0, "fire", true, 0.5)
+		_debris(p, dv, s * randf_range(0.12, 0.2), Color(0.14, 0.13, 0.12), 1.0, "fire" if i < 2 else "smoke", i < 2, 0.5)
 	for i in _n(4):
 		_debris(p, _rdir(0.3) * randf_range(180.0, 360.0), s * randf_range(0.06, 0.12), Color(0.18, 0.17, 0.16), 1.0, "smoke", false, 0.6)
 	for i in _n(8):
@@ -506,21 +518,26 @@ func _big(p: Vector3, s: float) -> void:
 ## по рельефу, комья земли, догорающий очаг
 func _ground(g: Vector3, s: float) -> void:
 	var p := g + Vector3(0, s * 0.25, 0)
-	_flash(p + Vector3(0, s * 0.5, 0), s * 3.4, 0.12)
-	_core(p, s * 0.55, s * 1.6, 0.65, 1.0, 0.85)
-	_core(p + Vector3(randf_range(-0.4, 0.4) * s, s * 0.7, randf_range(-0.4, 0.4) * s), s * 0.3, s * 1.15, 0.6, 0.85, 1.0, 0.1)
-	for i in _n(clampf(s / 3.0, 8.0, 13.0)):
+	# M-39: короткая яркая вспышка, маленькое огненное ядро (~0,25 с), дальше — пыль цвета земли и тёмный дым
+	_flash(p + Vector3(0, s * 0.5, 0), s * 3.2, 0.1, Color(1.0, 0.93, 0.8, 1.0))
+	_core(p, s * 0.4, s * 0.95, 0.24, 1.0, 0.7)
+	for i in _n(clampf(s / 5.0, 3.0, 6.0)):
 		var d := _rdir(0.9)
 		d.y = absf(d.y)
-		_fire(p + d * s * 0.2, Vector3(d.x * 1.4, d.y * 2.6 + 0.8, d.z * 1.4) * s, s * randf_range(0.35, 0.55), s * randf_range(0.9, 1.3),
-			randf_range(0.5, 0.95), randf_range(0.6, 0.85), 30.0)
-	# столб: клубы поднимаются к камере и тормозят — сверху виден растущий «гриб», с наклоном — колонна
+		_fire(p + d * s * 0.2, Vector3(d.x * 1.4, d.y * 2.4 + 0.8, d.z * 1.4) * s, s * randf_range(0.3, 0.45), s * randf_range(0.6, 0.9),
+			randf_range(0.15, 0.32), randf_range(0.6, 0.8), 10.0)
+	# столб: пыль и комья земли, в середине тёмный дым горящей цели. Клубы поднимаются к камере и тормозят —
+	# сверху виден растущий «гриб», с наклоном — колонна
 	for i in _n(clampf(s / 2.5, 10.0, 15.0)):
 		var d2 := _rdir()
-		var up := randf_range(1.2, 3.0)
-		var g2 := randf_range(0.08, 0.14) if i % 4 != 3 else randf_range(0.26, 0.36)
-		_smoke(p + Vector3(d2.x, 0, d2.z) * s * 0.4, Vector3(d2.x * 0.5, up, d2.z * 0.5) * s, s * 0.55, s * randf_range(2.2, 3.1),
-			randf_range(3.5, 5.5), Color(g2, g2 * 0.95, g2 * 0.9, 0.75), 0.9, 6.0, 0.9, randf_range(0.04, 0.3))
+		var dark := i % 5 < 2
+		var up := randf_range(1.2, 3.0) if dark else randf_range(0.8, 2.2)
+		var col := _dust_col(0.85)
+		if dark:
+			var g2 := randf_range(0.09, 0.15)
+			col = Color(g2, g2 * 0.95, g2 * 0.9, 0.75)
+		_smoke(p + Vector3(d2.x, 0, d2.z) * s * (0.25 if dark else 0.5), Vector3(d2.x * 0.6, up, d2.z * 0.6) * s, s * 0.6,
+			s * randf_range(2.2, 3.1), randf_range(3.5, 5.5), col, 0.35 if dark else 0.0, 6.0 if dark else 3.0, 0.9, randf_range(0.0, 0.15))
 	_dust_skirt(g, s, 1.0)
 	for i in _n(clampf(s / 4.0, 5.0, 10.0)):
 		var a := randf() * TAU
@@ -528,34 +545,38 @@ func _ground(g: Vector3, s: float) -> void:
 		_debris(p, dv, s * randf_range(0.08, 0.16), Color(0.24, 0.19, 0.14), 0.25, "dust", false, 0.0)
 	for i in _n(2):
 		var a2 := randf() * TAU
-		_debris(p, Vector3(cos(a2) * 2.0, 5.0, sin(a2) * 2.0) * s, s * 0.14, Color(0.15, 0.14, 0.13), 1.0, "fire", false, 0.5)
-	_sparks(p, _n(clampf(s * 0.6, 10.0, 22.0)), 280.0 + s * 8.0, 0.6, Color(1.0, 0.7, 0.3, 1.0), 0.8)
-	_emit.append({"p": g, "t": 0.0, "life": randf_range(4.0, 6.5), "s": s * 0.55, "acc_f": 0.0, "acc_s": 0.0})
-	_light(g + Vector3(0, s * 2.5, 0), clampf(s / 7.0, 2.0, 7.0), clampf(s * 12.0, 260.0, 1000.0), 0.55)
+		_debris(p, Vector3(cos(a2) * 2.0, 5.0, sin(a2) * 2.0) * s, s * 0.14, Color(0.15, 0.14, 0.13), 1.0, "smoke", false, 0.5)
+	_sparks(p, _n(clampf(s * 0.3, 5.0, 12.0)), 280.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.8)
+	_emit.append({"p": g, "t": 0.0, "life": randf_range(4.0, 6.5), "s": s * 0.55, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 1.4})
+	_light(g + Vector3(0, s * 2.5, 0), clampf(s / 7.0, 2.0, 7.0), clampf(s * 12.0, 260.0, 1000.0), 0.3)
 
 
 ## Бомбы и НАР по площади: меньше огня, больше пыли и земли; пыльная волна доходит до края зоны поражения
 func _blast(g: Vector3, s: float) -> void:
 	var p := g + Vector3(0, s * 0.2, 0)
-	_flash(p + Vector3(0, s * 0.4, 0), s * 3.0, 0.1)
-	_core(p, s * 0.45, s * 1.3, 0.45, 1.0, 0.75)
-	for i in _n(7):
+	_flash(p + Vector3(0, s * 0.4, 0), s * 3.0, 0.09, Color(1.0, 0.93, 0.8, 1.0))
+	_core(p, s * 0.35, s * 0.8, 0.2, 1.0, 0.65)
+	for i in _n(4):
 		var d := _rdir(0.9)
 		d.y = absf(d.y)
-		_fire(p + d * s * 0.2, Vector3(d.x * 1.6, d.y * 2.2 + 0.5, d.z * 1.6) * s, s * 0.35, s * 0.95, randf_range(0.35, 0.65), 0.95, 20.0)
+		_fire(p + d * s * 0.2, Vector3(d.x * 1.6, d.y * 2.2 + 0.5, d.z * 1.6) * s, s * 0.3, s * 0.7, randf_range(0.12, 0.25), 0.9, 10.0)
+	# M-39: столб — пыль цвета земли с тёмной сердцевиной (дым взрывчатки)
 	for i in _n(7):
 		var d2 := _rdir()
-		var g2 := randf_range(0.18, 0.3)
+		var col := _dust_col(0.85)
+		if i % 4 == 0:
+			var g2 := randf_range(0.14, 0.2)
+			col = Color(g2, g2 * 0.95, g2 * 0.88, 0.8)
 		_smoke(p + Vector3(d2.x, 0, d2.z) * s * 0.4, Vector3(d2.x * 0.6, randf_range(1.0, 2.2), d2.z * 0.6) * s, s * 0.5, s * randf_range(1.8, 2.5),
-			randf_range(2.2, 3.5), Color(g2 * 1.15, g2, g2 * 0.82, 0.8), 0.6, 5.0, 1.0, randf_range(0.03, 0.2))
+			randf_range(2.2, 3.5), col, 0.0, 4.0, 1.0, randf_range(0.0, 0.12))
 	_dust_skirt(g, s, 1.35)
 	for i in _n(clampf(s / 3.5, 6.0, 12.0)):
 		var a := randf() * TAU
 		var dv := Vector3(cos(a) * randf_range(2.0, 4.0), randf_range(3.0, 6.0), sin(a) * randf_range(2.0, 4.0)) * s
 		_debris(p, dv, s * randf_range(0.07, 0.14), Color(0.26, 0.2, 0.14), 0.2, "dust", false, 0.0)
 	_sparks(p, _n(12), 260.0 + s * 8.0, 0.5, Color(1.0, 0.7, 0.3, 1.0), 0.8)
-	_emit.append({"p": g, "t": 0.0, "life": 1.8, "s": s * 0.4, "acc_f": 0.0, "acc_s": 0.0})
-	_light(g + Vector3(0, s * 2.0, 0), clampf(s / 8.0, 1.5, 5.0), clampf(s * 10.0, 220.0, 800.0), 0.4)
+	_emit.append({"p": g, "t": 0.0, "life": 1.8, "s": s * 0.4, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 0.5})
+	_light(g + Vector3(0, s * 2.0, 0), clampf(s / 8.0, 1.5, 5.0), clampf(s * 10.0, 220.0, 800.0), 0.25)
 
 
 ## Пыльная волна: клубы песка у самой земли разбегаются кольцом и оседают — объёмная, а не круг на земле
@@ -565,17 +586,25 @@ func _dust_skirt(g: Vector3, s: float, reach: float) -> void:
 		var a := TAU * float(i) / n + randf_range(-0.2, 0.2)
 		var dir := Vector3(cos(a), 0, sin(a))
 		var sh := randf_range(0.88, 1.08)
-		_smoke(g + dir * s * randf_range(0.3, 0.7) + Vector3(0, s * 0.15, 0), dir * s * randf_range(3.5, 6.5) * reach + Vector3(0, s * 0.5, 0),
-			s * 0.5, s * randf_range(1.4, 2.2), randf_range(1.4, 2.4), Color(0.7 * sh, 0.6 * sh, 0.46 * sh, 0.42), 0.0, 2.0, 2.8)
+		var dc := _dust_col(0.55)
+		_smoke(g + dir * s * randf_range(0.3, 0.7) + Vector3(0, s * 0.12, 0), dir * s * randf_range(3.5, 6.5) * reach + Vector3(0, s * 0.3, 0),
+			s * 0.5, s * randf_range(1.5, 2.4), randf_range(1.6, 2.6), Color(dc.r * sh, dc.g * sh, dc.b * sh, dc.a), 0.0, 1.0, 2.8)
+
+
+## M-39: пыль цвета земли Нагорья — между светлым песком и серо-бурым низом, со случайным разбросом
+func _dust_col(a: float) -> Color:
+	var c := DUST_D.lerp(DUST, randf())
+	c.a = a
+	return c
 
 
 ## Отложенный хлопок цепочки у крупных взрывов
 func _sub(p: Vector3, s: float) -> void:
-	_flash(p, s * 2.8, 0.08)
-	_core(p, s * 0.5, s * 1.4, 0.45, 1.0)
-	for i in _n(5):
+	_flash(p, s * 2.8, 0.08, Color(1.0, 0.93, 0.8, 1.0))
+	_core(p, s * 0.4, s * 0.9, 0.22, 1.0)
+	for i in _n(3):
 		var d := _rdir()
-		_fire(p + d * s * 0.3, d * s * 2.4, s * 0.4, s * 1.0, randf_range(0.35, 0.6), 0.95, 6.0)
+		_fire(p + d * s * 0.3, d * s * 2.2, s * 0.35, s * 0.8, randf_range(0.15, 0.28), 0.9, 0.0)
 	for i in _n(4):
 		var d2 := _rdir()
 		_smoke(p + d2 * s * 0.4, d2 * s * 0.7, s * 0.5, s * 2.2, randf_range(2.0, 3.0), Color(0.07, 0.065, 0.06, 0.8), 0.8)
@@ -667,13 +696,15 @@ func _tick_emit(dt: float) -> void:
 			continue
 		var s: float = e["s"]
 		var p: Vector3 = e["p"]
-		e["acc_f"] = float(e["acc_f"]) + dt * 16.0 * _q * k
+		# M-39: огонь у очага короткий (fire_t), дальше только дым; на «Низком» огня в очаге нет
+		var fire_on := not _lo and float(e["t"]) < float(e.get("fire_t", 99.0))
+		e["acc_f"] = float(e["acc_f"]) + (dt * 10.0 * _q * k if fire_on else 0.0)
 		e["acc_s"] = float(e["acc_s"]) + dt * 7.0 * _q * (0.4 + 0.6 * k)
 		while float(e["acc_f"]) >= 1.0:
 			e["acc_f"] = float(e["acc_f"]) - 1.0
 			var o := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * s * 0.6
 			_fire(p + o + Vector3(0, s * 0.2, 0), Vector3(0, s * randf_range(1.2, 2.2), 0), s * 0.35 * (0.5 + k), s * 0.75 * (0.5 + k),
-				randf_range(0.35, 0.6), 0.75 + 0.2 * k, 10.0)
+				randf_range(0.2, 0.4), 0.7 + 0.2 * k, 10.0)
 		while float(e["acc_s"]) >= 1.0:
 			e["acc_s"] = float(e["acc_s"]) - 1.0
 			var o2 := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * s * 0.4
@@ -726,8 +757,9 @@ func _trail(q: Dictionary, p: Vector3) -> void:
 	var sz := (q["sz"] as Vector3).length()
 	match q["trail"]:
 		"fire":
-			q["tt"] = 0.02 / _q
-			_fire(p, Vector3.ZERO, sz * 1.0, sz * 2.0, 0.4, 0.85 * float(q["h"]) + 0.15, 0.0)
+			q["tt"] = 0.025 / _q
+			if float(q["h"]) > 0.45:   # M-39: горит только первые ~1,2 с полёта, дальше лишь дымит
+				_fire(p, Vector3.ZERO, sz * 0.7, sz * 1.4, 0.25, 0.85 * float(q["h"]) + 0.15, 0.0)
 			_smoke(p, Vector3(0, 10, 0), sz * 0.9, sz * 3.2, 1.6, Color(0.11, 0.1, 0.095, 0.65), 0.4, 4.0, 1.0)
 		"smoke":
 			q["tt"] = 0.025 / _q

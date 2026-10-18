@@ -485,6 +485,11 @@ func _battle_model(tex: Texture2D) -> PackedScene:
 
 
 var _bm_cache := {}
+## M-37 (Kanta 18.10): высота модели к её длине ближе к настоящей — при наклоне камеры 28–45° высокая модель
+## «встаёт» над землёй и кажется крупнее. Бункер Meshy вдвое выше настоящего укрытия с обваловкой (0,8 длины
+## против ~0,3), у РЛС антенна на мачте ~1 длины против ~0,8. Сжатие только по вертикали; у РЛС ось вращения
+## антенны вертикальная — сжатие её не перекашивает. ЗСУ и ЗРК в норме (подъём контейнеров ЗРК так не исказится).
+const MODEL_H := {"e_bunker": 0.6, "e_radar": 0.85}
 
 
 ## Для лога: (самолётов-моделей в бою, их треугольников всего)
@@ -521,6 +526,7 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 		if bm != null:
 			var inst: Node3D = bm.instantiate()
 			inst.scale = Vector3.ONE * float(tex.get_width())
+			inst.scale.y *= float(MODEL_H.get(tex.resource_path.get_file().get_basename(), 1.0))
 			root.add_child(inst)
 			for c in inst.find_children("*", "MeshInstance3D", true, false):
 				mi = c
@@ -911,7 +917,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			u["ab"] = move_toward(float(u.get("ab", 0.0)), 1.0 if p.ab_t > 0.0 else 0.0, sd * 4.0)
 			var ab: float = u["ab"]
 			PlaneFx.update(u, sd, ab)
-			var st := [lerpf(0.2, 0.5, ab), lerpf(4.0, 7.0, ab) * p.size, lerpf(12.0, 22.0, ab) * p.size, lerpf(1.8, 3.0, ab), 12.0]
+			# M-39 (Э-2): инверсия белая, у сопла узкая и плотная, расплывается шире и тает быстрее (жизнь короче)
+			var st := [lerpf(0.32, 0.55, ab), lerpf(3.0, 5.0, ab) * p.size, lerpf(18.0, 28.0, ab) * p.size, lerpf(1.2, 1.8, ab), 12.0]
 			var pts := PlaneFx.trail_points(u)
 			for i in pts.size():
 				_trails.emit("p%d" % i, pts[i], st)
@@ -960,7 +967,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			PlaneFx.update(uw, sd, 0.0)
 			var wpts := PlaneFx.trail_points(uw)
 			for i in wpts.size():
-				_trails.emit("w%d_%d" % [wm.get_instance_id(), i], wpts[i], [0.14, 3.0, 10.0, 1.5, 14.0])
+				_trails.emit("w%d_%d" % [wm.get_instance_id(), i], wpts[i], [0.22, 2.5, 14.0, 1.0, 14.0])
 	# 3.5: свои самолёты вне звена (заправщик): ally_tex(), ally_len(), heading
 	for n in get_tree().get_nodes_in_group("allies3d"):
 		var an := n as Node2D
@@ -1503,7 +1510,12 @@ func _sync_missiles(m: Main) -> void:
 	var pr := m.projectiles
 	if pr == null:
 		return
-	for arr_st in [[pr.pmissiles, [0.5, 3.0, 14.0, 1.3, 16.0]], [pr.missiles, [0.42, 3.0, 13.0, 1.2, 16.0]], [pr.rockets, [0.3, 2.0, 8.0, 0.8, 14.0]]]:
+	# M-39 (аудит 3.5-s6 Э-2): дым ракет светло-серый, плотный и широкий у сопла, расплывается и тает быстрее
+	# (жизнь короче — без длинных дуг через полэкрана); на «Низком» точки реже
+	var lo := 1.5 if Settings.gfx == 0 else 1.0
+	for arr_st in [[pr.pmissiles, [0.85, 5.0, 14.0, 1.0, 16.0 * lo, Color(0.9, 0.9, 0.91)]],
+			[pr.missiles, [0.8, 5.0, 13.0, 0.95, 16.0 * lo, Color(0.84, 0.83, 0.82)]],
+			[pr.rockets, [0.7, 3.5, 9.0, 0.6, 14.0 * lo, Color(0.88, 0.88, 0.9)]]]:
 		for mm: Dictionary in arr_st[0]:
 			if float(mm.get("delay", 0.0)) > 0.0:
 				continue
@@ -1512,7 +1524,11 @@ func _sync_missiles(m: Main) -> void:
 				mm["tid"] = _tid
 			var v: Vector2 = mm["v"]
 			var tail: Vector2 = mm["p"] - (v.normalized() * 9.0 if v.length() > 1.0 else Vector2.ZERO)
-			_trails.emit(int(mm["tid"]), Vector3(tail.x, -2.0, tail.y), arr_st[1])
+			var st: Array = arr_st[1]
+			if mm.has("tint"):   # связки: след своего цвета (бирюзовый, золотой…), но светлый
+				st = st.duplicate()
+				st[5] = (mm["tint"] as Color).lerp(Color.WHITE, 0.45)
+			_trails.emit(int(mm["tid"]), Vector3(tail.x, -2.0, tail.y), st)
 
 
 # ---------- тест 3.5-s5 (п. 11): пули и ракеты врагов в 3D ----------
@@ -1904,6 +1920,7 @@ func _sync_clouds(m: Main, c2: Vector2, h: float) -> void:
 		if _puffs == null:
 			_puffs = CloudPuffs.new()
 			add_child(_puffs)
+			_puffs.set_sun(sun.global_transform.basis.z)   # Э-3: свет клубов — от солнца сцены
 		_puffs.visible = true
 		var focus := Vector3(c2.x, 0.0, c2.y)
 		if title.active():   # заставка: растворяются над ведущим звена

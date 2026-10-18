@@ -13,7 +13,6 @@ const C_AMBER := Color(0.95, 0.66, 0.2)
 const C_AMBER_D := Color(0.55, 0.36, 0.1)
 const C_RED := Color(0.85, 0.24, 0.18)
 const TABS := ["ИГРА", "ГРАФИКА", "ЗВУК", "УПРАВЛЕНИЕ"]
-const VERSION := "ПРОТОТИП 3.3"
 const HOWTO_FLAG := "user://howto_seen"
 var howto := false
 
@@ -327,7 +326,8 @@ func _draw_menu() -> void:
 		ctrl.draw_rect(Rect2(grad_w * i / steps, 0, grad_w / steps + 1.0, size.y), Color(0.04, 0.045, 0.04, a))
 	ctrl.draw_rect(Rect2(0, 0, size.x, 96), Color(0.04, 0.045, 0.04, 0.7))
 	_txt(Vector2(64, 58), "◇ FLAK HEAVEN  //  " + ("ГЛАВНЫЙ ТЕРМИНАЛ" if m.state == "menu" else "НАСТРОЙКИ"), 22, C_TEXT, bold())
-	_txt(Vector2(size.x - 64 - 800, 58), "ВЕРСИЯ: " + VERSION + ("" if Main.DEBUG else "  ·  ТЕСТ " + Main.BUILD), 20, C_DIM, bold(), HORIZONTAL_ALIGNMENT_RIGHT, 800)
+	# С-5: номер версии — из BUILD (main.gd), а не отдельной устаревшей строкой
+	_txt(Vector2(size.x - 64 - 800, 58), "ВЕРСИЯ: " + Main.BUILD, 20, C_DIM, bold(), HORIZONTAL_ALIGNMENT_RIGHT, 800)
 	ctrl.draw_line(Vector2(64, 96), Vector2(size.x - 64, 96), C_LINE, 1.0)
 	ctrl.draw_line(Vector2(64, size.y - 70), Vector2(size.x - 64, size.y - 70), C_LINE, 1.0)
 	if m.state == "menu":
@@ -339,7 +339,8 @@ func _draw_menu() -> void:
 
 
 func _main(m: Main, size: Vector2) -> void:
-	_draw_flight(size)
+	# звено на заставке — 3D-модели в сцене (TitleFlight) на любом качестве графики; старые картинки
+	# art/planes (другая форма и окраска) больше не рисуются (С-5, аудит 3.5-s6)
 	# Заголовок
 	_txt(Vector2(100, 290), "FLAK", 150, C_TEXT, bold())
 	_txt(Vector2(100, 430), "HEAVEN", 150, C_AMBER, bold())
@@ -359,37 +360,6 @@ func _main(m: Main, size: Vector2) -> void:
 	_menu_button(Rect2(x0 + 288, y + 336, 272, 62), "ВЫХОД", "menu_quit")
 	_records_panel(Rect2(size.x - 64 - 520, 150, 520, 520))
 	_txt(Vector2(64, size.y - 32), "ENTER — вылет    ESC — назад    F2 — схема управления", 18, C_DIM)
-
-
-func _draw_flight(size: Vector2) -> void:
-	# Тест 3.5-s5 (п. 1): звено — 3D-модели ангара в сцене (TitleFlight). Картинки — только на «Низком»
-	# качестве графики (или без 3D): повёрнуты по курсу звена, по которому плывёт камера, — летят носом вперёд
-	if TitleFlight.want_3d():
-		return
-	var h := TitleFlight.heading()
-	var fwd := Vector2.from_angle(h)
-	var right := fwd.orthogonal() * -1.0
-	var bank := clampf(TitleFlight.turn_rate() * TitleFlight.BANK_K, -0.35, 0.35)
-	var base := size * TitleFlight.ANCHOR
-	var L := size.y * TitleFlight.LEN_K
-	var t1 := PlaneArt.plane_tex("fighter", 1)
-	for f in TitleFlight.FLIGHT:
-		var lvl: int = Profile.plane_lvl(f[0])
-		var t := PlaneArt.plane_tex(f[0], lvl)
-		var tb := PlaneArt.plane_tex(f[0], 1)
-		if t == null or tb == null or t1 == null:
-			continue
-		var w := TitleFlight.wobble(float(f[3]))
-		var off: Vector2 = f[1]
-		var p: Vector2 = base + fwd * (off.x + w.x) * L + right * (off.y + w.y) * L
-		var k: float = L * float(f[2]) / tb.get_width()
-		# крен на картинке — сужение по размаху
-		var sc := Vector2(k, k * cos(bank + w.z))
-		ctrl.draw_set_transform(p + Vector2(60, 90), h, sc * 0.9)
-		ctrl.draw_texture(t, -t.get_size() / 2.0, Color(0, 0, 0, 0.32))
-		ctrl.draw_set_transform(p, h, sc)
-		ctrl.draw_texture(t, -t.get_size() / 2.0)
-	ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _records_panel(r: Rect2) -> void:

@@ -38,7 +38,7 @@ func class_select(size: Vector2) -> void:
 		y += 26.0
 		_stat_bar(x, y, "Манёвр", float(d["turn"]), "%d%%" % int(float(d["turn"]) * 100.0))
 		y += 26.0
-		_stat_bar(x, y, "Пушка", float(d["gun_dmg"]) * float(d["gun_rate"]) / 1.3, "×%.2f" % (float(d["gun_dmg"]) * float(d["gun_rate"])))
+		_stat_bar(x, y, "Пушка", float(d["gun_dmg"]) * float(d["gun_rate"]), "×%.2f" % (float(d["gun_dmg"]) * float(d["gun_rate"])))
 		y += 36.0
 		_text(Vector2(x, y), "Подвесы:", 19, Color.WHITE)
 		y += 26.0
