@@ -176,6 +176,7 @@ func _process(delta: float) -> void:
 
 	if t >= next_activity:
 		start_activity(p, t)
+	_patrol(p, t, delta)
 
 	# 3.1: пока жив ас — мелочи втрое меньше, чтобы до него можно было добраться
 	var boss_on := m.boss_alive()
@@ -240,6 +241,33 @@ func _process(delta: float) -> void:
 				var h := Helicopter.new()
 				_place(h, p, randf() * TAU, t)
 				h.heading = (p.global_position - h.position).angle()
+
+
+## Тест 3.5-s7 (Kanta, «бери в работу»): у «Кита» бомбы давали 1,5% урона — наземных целей на пути мало.
+## Ему вне активностей раз в PATROL_EVERY с курс пересекает малая колонна (пикап, грузовик, техничка) —
+## без баннера и таймера, груз с грузовиков как у конвоя
+const PATROL_EVERY := 35.0
+const PATROL_FROM := 45.0
+var _patrol_cd := PATROL_FROM
+var _patrol_cv: Convoy = null
+
+
+func _patrol(p: Player, t: float, delta: float) -> void:
+	if p.cls_id != "bomber" or m_boss():
+		return
+	_patrol_cd -= delta
+	if _patrol_cd > 0.0 or is_instance_valid(_patrol_cv):
+		return
+	_patrol_cd = PATROL_EVERY
+	var cv := Convoy.new()
+	cv.patrol = true
+	var mid := p.global_position + Vector2.from_angle(p.heading + randf_range(-0.5, 0.5)) * 1100.0
+	var side := 1.0 if randf() < 0.5 else -1.0
+	cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_mult() * hp_ramp(t), recent_dps(), t)
+	Main.I.world.add_child(cv)
+	_patrol_cv = cv
+	if OS.get_cmdline_user_args().has("--autotest"):
+		print("AUTOTEST: patrol column at %.0f" % t)
 
 
 func start_activity(p: Player, t: float, force := false) -> void:

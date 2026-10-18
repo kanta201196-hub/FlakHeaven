@@ -307,6 +307,9 @@ func _rail_shot(p: Player, fwd: Vector2, L: float) -> void:
 
 ## U-08: ЭМИ-заряд — когда рядом 3+ врага или вражеская ракета. Дроны падают, остальные молчат 3 с
 ## (асы и «Крепость» — 1 с и половина урона), вражеские ракеты теряют цель.
+const EMP_DRONE_K := 5.0
+
+
 func _fire_emp(p: Player) -> bool:
 	var r := range_px()
 	var pos := p.global_position
@@ -324,7 +327,9 @@ func _fire_emp(p: Player) -> bool:
 	var d := dmg()
 	for e: Enemy in near:
 		if e is Drone and not e.is_boss:
-			e.take_hit(maxf(d, e.hp + 1.0), "ЭМИ")
+			# тест 3.5-s7 (Kanta, «бери в работу»): дроны больше не падают сразу при любой прочности
+			# (ЭМИ давал 10% урона «Грача») — урон по ним ×EMP_DRONE_K
+			e.take_hit(d * EMP_DRONE_K, "ЭМИ")
 		elif e.is_boss:
 			e.take_hit(d * 0.5, "ЭМИ")
 			e.silence = maxf(e.silence, 1.0)
