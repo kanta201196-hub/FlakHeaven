@@ -13,6 +13,8 @@ var players: Array[AudioStreamPlayer2D] = []
 var _voice_ev: Array[String] = []   # какое событие играет голос
 var _voice_t: Array[float] = []     # когда начал (для замены самого старого)
 var _duck := 0.0                    # приглушение музыки, дБ (возвращается само)
+var _heat := 0.0                    # накал боя 0…1 по звукам боя (взрывы, огонь по нам, захваты), сам остывает
+var _heat_s := 0.0                  # он же, сглаженный: от него открывается музыка боя
 var engine: AudioStreamPlayer
 var engine_jet: AudioStream       # гул реактивного двигателя
 var engine_prop: AudioStream      # правка 3.5-s4: четыре винтовых мотора («Кит 1»), если есть файл
@@ -124,6 +126,14 @@ const VOICE_CAP := {
 ## (раньше в плотном бою писк захвата и попадание по игроку могли просто не прозвучать).
 const PRIORITY := ["lock", "missile_enemy", "sam_lock", "sam_launch", "aa_alert", "player_hit", "player_explode",
 	"fuel_low", "fuel_empty", "boss", "levelup", "evac", "gate", "tanker_down", "shield_break", "radio", "card"]
+## Музыка под накал боя (18.10): каждый звук боя добавляет накала, за ~15 с без боя он остывает.
+## Спокойно — музыка боя глуше (срез верха до ~900 Гц) и на 4 дБ тише, в свалке — полный звук.
+## У аса и в меню музыка всегда полная.
+const HEAT := {"enemy_fire": 0.02, "hit": 0.01, "explode": 0.06, "explode_big": 0.2, "bomb": 0.05,
+	"player_hit": 0.15, "lock": 0.1, "missile_enemy": 0.12, "aa_alert": 0.15, "sam_lock": 0.15, "sam_launch": 0.1}
+const HEAT_COOL := 0.07   # накал в секунду
+const CALM_CUT_HZ := 900.0
+const CALM_DB := -4.0
 ## Крупные события ненадолго приглушают музыку (дБ), чтобы удар был слышен
 const DUCK := {"explode_big": 4.0, "bomb": 3.0, "player_hit": 3.0, "player_explode": 8.0, "tanker_down": 6.0,
 	"fortress_part": 4.0, "boss": 4.0}
@@ -153,6 +163,7 @@ func play(sound: String, db := 0.0, pitch := 1.0, pos := Vector2.INF) -> void:
 	a.play()
 	if DUCK.has(sound):
 		_duck = maxf(_duck, DUCK[sound])
+	_heat = minf(1.0, _heat + HEAT.get(sound, 0.0))
 
 
 ## Голос для звука: свободный; сверх предела копий — самый старый того же звука;
@@ -208,6 +219,10 @@ func _setup_buses() -> void:
 				comp.attack_us = 2000.0
 				comp.release_ms = 180.0
 				AudioServer.add_bus_effect(b, comp)
+			else:
+				var lp := AudioEffectLowPassFilter.new()
+				lp.cutoff_hz = 20000.0
+				AudioServer.add_bus_effect(b, lp)
 	var has_lim := false
 	for e in AudioServer.get_bus_effect_count(0):
 		if AudioServer.get_bus_effect(0, e) is AudioEffectHardLimiter:
@@ -228,7 +243,13 @@ class Ducker extends Node:
 		if mb < 0:
 			return
 		sfx._duck = move_toward(sfx._duck, 0.0, delta * 6.0)
-		AudioServer.set_bus_volume_db(mb, -sfx._duck)
+		sfx._heat = maxf(0.0, sfx._heat - delta * Sfx.HEAT_COOL)
+		sfx._heat_s = lerpf(sfx._heat_s, sfx._heat, 1.0 - exp(-delta * 1.5))
+		var open := 1.0 if sfx._music_track != "battle" else pow(sfx._heat_s, 0.7)
+		var lp := AudioServer.get_bus_effect(mb, 0) as AudioEffectLowPassFilter
+		if lp != null:
+			lp.cutoff_hz = Sfx.CALM_CUT_HZ * pow(20000.0 / Sfx.CALM_CUT_HZ, open)
+		AudioServer.set_bus_volume_db(mb, -sfx._duck + Sfx.CALM_DB * (1.0 - open))
 
 
 ## Гул двигателя. speed_ratio — скорость / крейсерская, ab — форсаж 0…1, prop — винтовой самолёт.
