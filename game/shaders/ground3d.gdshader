@@ -39,6 +39,12 @@ uniform float road_v = 85.0;
 uniform float road_w = 22.0;     // M-36: полуширина дороги наружу от реки (terrain3d.gd ROAD_W; L-03 «Второго биома» — та же 22)
 uniform float road_w_in = 14.0;  // M-36: полуширина к реке (ROAD_W_IN): край не заходит в охранную зону
 uniform vec3 water_color : source_color = vec3(0.3, 0.42, 0.44);
+// «Архипелаг» (Biome.sea): вода пролива — цвет по глубине (поле берега 0 … sea_w), пена у кромки
+uniform bool sea = false;
+uniform float sea_w = 16.12;
+uniform vec3 sea_shallow : source_color = vec3(0.42, 0.74, 0.7);
+uniform vec3 sea_mid : source_color = vec3(0.13, 0.47, 0.57);
+uniform vec3 sea_deep : source_color = vec3(0.07, 0.25, 0.4);
 uniform vec3 road_color : source_color = vec3(0.7, 0.62, 0.5);
 uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к палитре стайл-гайда (фото рыжее)
 uniform float rock_sat = 0.45;
@@ -310,6 +316,18 @@ void fragment() {
 		c = mix(c, c * vec3(0.78, 0.82, 0.7), bank * 0.6);       // сырая земля и зелень у воды
 		float water = 1.0 - smoothstep(river_w * 0.45, river_w * 0.8, rd + edge * 0.5);
 		vec3 wc = water_color * (0.9 + 0.2 * vnoise(world / 60.0));
+		if (sea) {
+			// глубина: у берега бирюзовая отмель, к оси пролива синее; пятна рифов и ряби — шумом
+			float dp = clamp(1.0 - rd / sea_w, 0.0, 1.0);
+			float dp0 = dp;
+			dp = clamp(dp + (vnoise(world / 420.0 + 3.0) - 0.5) * 0.18 * smoothstep(0.05, 0.3, dp0), 0.0, 1.0);
+			wc = mix(sea_shallow, sea_mid, smoothstep(0.02, 0.22, dp));
+			wc = mix(wc, sea_deep, smoothstep(0.3, 0.85, dp));
+			wc *= 0.95 + 0.08 * vnoise(world / 160.0) + 0.03 * vnoise(world / 55.0 + 11.0);
+			float foam = (1.0 - smoothstep(0.0, 0.05, abs(dp0 - 0.03)))
+				* (0.55 + 0.45 * smoothstep(0.3, 0.7, vnoise(world / 75.0 + 4.0)));
+			wc = mix(wc, vec3(0.93, 0.95, 0.94), foam * 0.75);
+		}
 		c = mix(c, wc, water);
 		nxy *= 1.0 - water;
 		wet_out = water;

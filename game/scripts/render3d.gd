@@ -22,6 +22,7 @@ var cam: Camera3D
 var sun: DirectionalLight3D
 var terrain: Terrain3D
 var _ground_mat: ShaderMaterial
+var _env: Environment   # тред «Второй биом»: цвет фона под биом
 var _units := {}      # instance_id → {node, kind, prev_heading, bank}
 var _objs := {}       # ключ клетки → MeshInstance3D (у обломков o_wreck — сцена модели)
 var _clouds: Array = []          # «Низкое» качество: прежние плоские облака
@@ -106,6 +107,7 @@ func _ready() -> void:
 	e.adjustment_saturation = 1.05
 	e.fog_enabled = false
 	env.environment = e
+	_env = e
 	add_child(env)
 
 	sun = DirectionalLight3D.new()
@@ -421,6 +423,7 @@ func _process(delta: float) -> void:
 	if terrain._bg != m.background:
 		terrain._bg = m.background
 		m.background.place_filter = terrain.fix_object   # тест 3.5-s4 (п. 20): объекты клеток не в реке
+		_apply_biome()
 		terrain.clear()
 	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
 	_set_tilt_mode(tilt > 0.001, m)
@@ -672,6 +675,20 @@ func _ground_floor(p: Vector2, r: float) -> float:
 	for o: Vector2 in [Vector2(r, 0), Vector2(-r, 0), Vector2(0, r), Vector2(0, -r)]:
 		top = maxf(top, terrain.surface_fast(p.x + o.x, p.y + o.y).y)
 	return top + Tuning.g("relief_min")
+
+
+## Биом нового мира (Biome.cur(), тред «Второй биом»): поле берега у рельефа, вода и дороги в шейдере земли
+func _apply_biome() -> void:
+	terrain.set_biome()
+	var sea := Biome.sea()
+	_ground_mat.set_shader_parameter("sea", sea)
+	_ground_mat.set_shader_parameter("sea_w", Terrain3D.SEA_W)
+	_ground_mat.set_shader_parameter("road_w", 0.0 if sea else Terrain3D.ROAD_W)   # дороги нет: конвой — по фарватеру
+	_ground_mat.set_shader_parameter("road_w_in", 0.0 if sea else Terrain3D.ROAD_W_IN)
+	for k in (Biome.g("ground", {}) as Dictionary):
+		_ground_mat.set_shader_parameter(k, Biome.g("ground")[k])
+	if _env != null:
+		_env.background_color = Biome.g("bg", Color(0.52, 0.47, 0.4))
 
 
 func _setup_plane_shadows() -> void:

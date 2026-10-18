@@ -31,11 +31,17 @@ func handle_global_input() -> void:
 			elif Input.is_action_just_pressed("ui_accept"):
 				m._set_state("class_select")
 			elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
-				Campaign.select(wrapi(Campaign.index() + (1 if Input.is_action_just_pressed("ui_right") else -1), 0, Campaign.unlocked()))
+				# по открытым операциям биома выбранной операции
+				var ids := Campaign.ops_of(Campaign.biome_of(Campaign.index())).filter(func(i: int) -> bool: return Campaign.is_open(i))
+				var k := ids.find(Campaign.index())
+				Campaign.select(ids[wrapi(k + (1 if Input.is_action_just_pressed("ui_right") else -1), 0, ids.size())])
+			elif Input.is_action_just_pressed("ui_up") or Input.is_action_just_pressed("ui_down"):
+				HudCampaign.switch_biome()
 			else:
-				for i in Campaign.OPS.size():
+				var ids := Campaign.ops_of(Campaign.biome_of(Campaign.index()))
+				for i in ids.size():
 					if Input.is_action_just_pressed("choose_%d" % (i + 1)):
-						Campaign.select(i)
+						Campaign.select(ids[i])
 			return
 		"class_select":
 			if Input.is_action_just_pressed("pause"):
@@ -137,6 +143,8 @@ func ui_click(action: String) -> void:
 		m._set_state("menu")
 	elif action.begins_with("op:"):
 		Campaign.select(int(action.substr(3)))
+	elif action.begins_with("biome:"):
+		HudCampaign.switch_biome(action.substr(6))
 	elif action == "op_go":
 		m._set_state("class_select")
 	elif action == "menu_hangar" or action == "to_hangar":
