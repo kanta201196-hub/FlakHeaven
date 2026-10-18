@@ -269,7 +269,7 @@ func unlocks_at(c: String, lv: int) -> Array:
 		out.append("перки 2-й ступени")
 	for t in WING_UNLOCK:
 		if int(WING_UNLOCK[t]) == lv:
-			out.append(Loc.t("ведомый %s в карточках") % Prog.WING_TYPES[t]["title"])
+			out.append(Loc.t("ведомый %s в карточках") % Loc.t(Prog.WING_TYPES[t]["title"]))
 	return out
 
 
@@ -541,7 +541,7 @@ func hint_buy(c: String) -> String:
 		var lv := node(c, id)
 		if lv < 5 and int(NODE_COST[lv]) <= parts() and int(NODE_COST[lv]) < price:
 			price = int(NODE_COST[lv])
-			best = Loc.t("%s ур. %d (%d)") % [NODES[id]["title"], lv + 1, price]
+			best = Loc.t("%s ур. %d (%d)") % [Loc.t(NODES[id]["title"]), lv + 1, price]
 	if can_buy_plane2(c) and PLANE2_COST < price:
 		price = PLANE2_COST
 		best = Loc.t("Самолёт ур. 2 (%d)") % PLANE2_COST
