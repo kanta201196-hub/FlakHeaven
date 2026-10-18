@@ -88,7 +88,7 @@ func _card_chips(r: Rect2, items: Array, size := 14) -> void:
 	var h := size + 10.0
 	for i in items.size():
 		var it: Dictionary = items[i]
-		var label := String(it["title"])
+		var label := Loc.title(String(it["title"]))
 		if int(it["lvl"]) > 0:
 			label += Loc.t(" · ур. %d") % int(it["lvl"])
 		elif int(it["n"]) > 1:

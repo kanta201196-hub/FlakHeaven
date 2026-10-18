@@ -150,7 +150,7 @@ func levelup(m: Main, size: Vector2) -> void:
 		# U-09: значок оружия или раздела слева от названия
 		CardIcons.draw(ctrl, r.position + Vector2(44, 76), 52.0, CardIcons.key(c, m.player), cc)
 		CardIcons.badge(ctrl, r.position + Vector2(44, 76), 52.0, String(c["kind"]), cc)
-		_para(Vector2(r.position.x + 82, r.position.y + 66), Loc.t(c["title"]), w - 100.0 - (52.0 if c.get("course", false) else 0.0), 22, Color.WHITE)
+		_para(Vector2(r.position.x + 82, r.position.y + 66), Loc.title(c["title"]), w - 100.0 - (52.0 if c.get("course", false) else 0.0), 22, Color.WHITE)
 		if c.get("course", false): # 3.2: карточка ведёт к курсу
 			ctrl.draw_colored_polygon(PackedVector2Array([r.position + Vector2(w - 70, 34), r.position + Vector2(w, 34), r.position + Vector2(w, 104)]), Color(1.0, 0.8, 0.25, 0.9))
 			_text(Vector2(r.position.x + w - 46, r.position.y + 56), "▲", 18, Color(0.15, 0.1, 0.02))
@@ -175,7 +175,7 @@ func levelup(m: Main, size: Vector2) -> void:
 			_button(Rect2(size.x / 2.0 + 10, ry, 460, 46), "Сменить специализацию (−1 переброс)", "change_course", 19)
 	else:
 		_ctext(ry + 30, "Перебросов не осталось (+1 за каждого аса)", 18, Color(0.6, 0.62, 0.7))
-	_ctext(ry + 76, Loc.t("Исключений осталось: %d (+1 за аса)%s") % [m.bans, (Loc.t("   ·   Исключены: ") + ", ".join(PackedStringArray(m.banned.values()))) if not m.banned.is_empty() else ""], 16, Color(0.75, 0.75, 0.85))
+	_ctext(ry + 76, Loc.t("Исключений осталось: %d (+1 за аса)%s") % [m.bans, (Loc.t("   ·   Исключены: ") + ", ".join(PackedStringArray(m.banned.values().map(func(x): return Loc.title(String(x)))))) if not m.banned.is_empty() else ""], 16, Color(0.75, 0.75, 0.85))
 	# 3.1: ближайшие связки — что добрать, чтобы открыть
 	var y := ry + 112.0
 	if m.player.has_course():

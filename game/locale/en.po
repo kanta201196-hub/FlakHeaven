@@ -761,12 +761,12 @@ msgstr "Afterburner: %.1f → %.1f s"
 msgid "Прочность: %d → %d из %d"
 msgstr "Hull: %d → %d of %d"
 
-#: game/scripts/cards.gd:482
+#: game/scripts/cards.gd:482 game/scripts/loc.gd:15
 #, c-format
 msgid "%s: улучшение"
 msgstr "%s: improvement"
 
-#: game/scripts/cards.gd:513
+#: game/scripts/cards.gd:513 game/scripts/loc.gd:15
 #, c-format
 msgid "%s: уровень %d"
 msgstr "%s: level %d"
@@ -775,12 +775,12 @@ msgstr "%s: level %d"
 msgid "Залп ловушек: тренировка"
 msgstr "Flare Salvo: Training"
 
-#: game/scripts/cards.gd:530
+#: game/scripts/cards.gd:530 game/scripts/loc.gd:15
 #, c-format
 msgid "Ведомый: %s"
 msgstr "Wingman: %s"
 
-#: game/scripts/cards.gd:536
+#: game/scripts/cards.gd:536 game/scripts/loc.gd:16
 #, c-format
 msgid "Звено: слётанность — %s %d (ур. %d → %d)"
 msgstr "Flight: teamwork — %s %d (Lv. %d → %d)"
@@ -801,7 +801,7 @@ msgstr "Repair Kit"
 msgid "Наработка: +1 к специализации"
 msgstr "Experience: +1 to specialization"
 
-#: game/scripts/cards.gd:561
+#: game/scripts/cards.gd:561 game/scripts/loc.gd:15
 #, c-format
 msgid "%s Э+ (%d → %d)"
 msgstr "%s E+ (%d → %d)"
@@ -811,7 +811,7 @@ msgstr "%s E+ (%d → %d)"
 msgid "«Дятел» Э+ (%d → %d)"
 msgstr "\"Woodpecker\" E+ (%d → %d)"
 
-#: game/scripts/cards.gd:574 game/scripts/cards.gd:853
+#: game/scripts/cards.gd:574 game/scripts/cards.gd:853 game/scripts/loc.gd:16
 #, c-format
 msgid "МОДЕРНИЗАЦИЯ: %s"
 msgstr "UPGRADE: %s"
@@ -898,12 +898,12 @@ msgstr "+1 \"%s\" point — to synergy \"%s\" (up to 3 per sortie)"
 msgid "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
 msgstr "Upgrade: +8% damage, −4% reload (up to 5 times)"
 
-#: game/scripts/cards.gd:681
+#: game/scripts/cards.gd:681 game/scripts/loc.gd:16
 #, c-format
 msgid "СВЯЗКА «%s» — слот %d"
 msgstr "SYNERGY \"%s\" — slot %d"
 
-#: game/scripts/cards.gd:693
+#: game/scripts/cards.gd:693 game/scripts/loc.gd:16
 #, c-format
 msgid "МАСТЕРСТВО: %s"
 msgstr "MASTERY: %s"
