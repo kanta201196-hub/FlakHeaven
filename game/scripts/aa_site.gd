@@ -27,7 +27,9 @@ func setup(center: Vector2, hp_mult: float, bunker_hp := 0.0) -> void:
 	if tr != null:
 		# тест 3.5-s4 (п. 20): вся позиция (радиус ~250) — на сухом берегу, а не только её центр
 		center = tr.find_floor(center, 900.0, 0.0, [], 260.0)
-		center = tr.fix_object({"pos": center, "size": 480.0})["pos"]
+		var fixed := tr.fix_object({"pos": center, "size": 480.0, "name": "o_aa_site"})
+		if fixed.has("pos"):   # не отвелась от воды — остаётся точка find_floor (сухое дно долины)
+			center = fixed["pos"]
 	global_position = center
 	anchor = center
 	var layout := [["bunker", Vector2.ZERO], ["zsu", Vector2(-170, -90)], ["zsu", Vector2(170, 110)],
