@@ -42,6 +42,17 @@ func spawn_fire(pos: Vector2, r: float, dps: float, time: float, src: String, gr
 		fires.pop_front()
 
 
+## Во сколько раз aoe() расширит зону игрока (для прицела и зон бомб на земле)
+func aoe_r_k() -> float:
+	var pl := Main.I.player
+	if not is_instance_valid(pl):
+		return 1.0
+	var k := float(pl.mods.get("blast_r", 1.0))
+	if pl.assault_t > 0.0 and pl.lvl_of("assault") >= 2:
+		k *= 1.25
+	return k
+
+
 ## opts: src (источник), life (время полёта = точка подрыва), sticky («Термобарика»)
 func spawn_rocket(pos: Vector2, vel: Vector2, dmg: float, splash: float, delay := 0.0, opts := {}) -> void:
 	var r := {"p": pos, "v": vel, "life": 0.9, "dmg": dmg, "r": splash, "delay": delay, "trail": PackedVector2Array(), "src": "НАР"}
@@ -628,7 +639,11 @@ func _check_near_miss(b: Dictionary, d: float, near: float, pl: Player, kind: St
 # ---------- Отрисовка ----------
 
 func _draw() -> void:
+	# тест 3.5-s7: в 3D огонь и зоны бомб рисует земля по рельефу (render3d._sync_ground_zones)
+	var gz := Render3D.I != null and Render3D.I.ground_zones_on()
 	for f in fires:
+		if gz:
+			break
 		var a := clampf(float(f["t"]), 0.0, 1.0)
 		var fc: Color = f.get("c", Color(1.0, 0.45, 0.1))
 		draw_circle(f["p"], float(f["r"]), Color(fc.r, fc.g, fc.b, 0.18 * a))
@@ -658,6 +673,8 @@ func _draw() -> void:
 		if not Render3D.enabled:   # тест 3.5-s4 (п. 10): в 3D падает модель бомбы (render3d._sync_bombs)
 			draw_circle(b["p"], 5.0, Color(0.6, 0.62, 0.55))
 		# зона поражения: видно, куда упадёт и как далеко достанет
+		if gz:
+			continue
 		draw_arc(b["to"], float(b["r"]), 0.0, TAU, 40, Color(1.0, 0.7, 0.3, 0.12 + 0.3 * k), 2.0)
 		draw_circle(b["to"], float(b["r"]) * 0.35, Color(1.0, 0.55, 0.2, 0.06 + 0.1 * k))
 	for b in ebullets:

@@ -16,6 +16,7 @@ var _shot := 0
 var _scenes: Array = []
 var _pos := Vector2.ZERO
 var _suffix := ""
+var _only: PackedStringArray = []
 var _wait := 0   # кадров до взрыва: 3D-камера догоняет 2D (иначе точка на земле считается от старой камеры)
 
 
@@ -25,6 +26,8 @@ func _init(main: Main) -> void:
 		if a.begins_with("--tilt="):
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
 			_suffix += "_t" + a.substr(7)
+		if a.begins_with("--boomonly="):   # только эти сцены через запятую: --boomonly=blast,ground
+			_only = a.substr(11).split(",")
 	_scenes = [
 		{"name": "flak", "boom": [[Vector2(0, 0), 12.0, true, "flak"], [Vector2(170, -60), 6.0, true, ""]]},
 		{"name": "air", "boom": [[Vector2(0, 0), 20.0, true, ""]]},
@@ -35,7 +38,12 @@ func _init(main: Main) -> void:
 			[Vector2(120, 200), 18.0, false, ""], [Vector2(-180, 220), 12.0, true, "flak"], [Vector2(-420, 120), 18.0, false, ""]],
 			"blast": [Vector2(380, 150), 130.0]},
 		{"name": "stress", "times": [0.5, 1.5], "stress": 30},
+		{"name": "zones", "times": [0.5, 1.6], "zones": true},
+		{"name": "emp", "times": [0.08, 0.25, 0.5], "emp": true},
+		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
+	if not _only.is_empty():
+		_scenes = _scenes.filter(func(sc: Dictionary) -> bool: return _only.has(String(sc["name"])))
 
 
 func process(delta: float) -> void:
@@ -75,6 +83,18 @@ func process(delta: float) -> void:
 				m.fx.explosion(_pos + (b[0] as Vector2), b[1], b[2], true, b[3])
 			if sc.has("blast"):
 				m.fx.blast(_pos + (sc["blast"][0] as Vector2), sc["blast"][1])
+			if sc.get("zones", false):   # тест 3.5-s7: прицел бомб, падающие бомбы и огонь — на земле по рельефу
+				var hb := Hardpoint.new("Бомбоотсек", 2, "bombs")
+				hb.trigger = "button"
+				hb.cd = 0.0
+				Input.action_press("fire_hardpoint")   # прицел держится, пока кнопка «зажата»
+				m.player.groups.append(hb)
+				m.projectiles.spawn_bomb(_pos + Vector2(250, -150), 3.0, 0.0, 130.0, "бомбы", _pos + Vector2(250, -150), true)
+				m.projectiles.spawn_bomb(_pos + Vector2(-250, -200), 3.0, 0.0, 130.0, "бомбы", _pos + Vector2(-250, -200), true)
+				m.projectiles.spawn_fire(_pos + Vector2(80, 180), 90.0, 0.0, 4.0, "мастерство: выжженная земля", true)
+				m.projectiles.spawn_fire(_pos + Vector2(420, 120), 70.0, 0.0, 4.0, "связка: ковровая дорожка", true)
+			if sc.get("emp", false):
+				m.fx.emp_wave(m.player.global_position, 380.0)
 			for k in int(sc.get("stress", 0)):   # мясорубка: 30 взрывов разом — замер нагрузки
 				var o := Vector2(randf_range(-700, 700), randf_range(-400, 400))
 				m.fx.explosion(_pos + o, [12.0, 20.0, 46.0, 18.0][k % 4], k % 4 != 3, true, "flak" if k % 4 == 0 else "")
