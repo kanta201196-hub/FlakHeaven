@@ -116,6 +116,8 @@ func process(delta: float) -> void:
 			_fort.heading = -0.5
 			_fort.position = (p["pos"] as Vector2) + Vector2(0, -40)
 			_fort.process_mode = Node.PROCESS_MODE_DISABLED
+			_fort.base_pos = _fort.position + Vector2.from_angle(_fort.heading) * 1400.0   # FB-01: маршрут к базе на кадре
+			_fort._wp = _fort.base_pos
 			m.world.add_child(_fort)
 		_fort.hp = _fort.max_hp   # игрок стреляет: без своей логики «Крепость» не гасит вспышку попадания
 		_fort._flash = 0.0

@@ -35,3 +35,7 @@
 | biome2/a35_olive_b (старая олива) | Old Olive Tree | massive-graphisme | https://sketchfab.com/3d-models/old-olive-tree-6328df8a0f214143a880a72b86db2ab4 | CC BY 4.0, изменено |
 | biome2/a37_pine_b (кипарис) | Pine Trees Pack (PS1 Low Poly) | Vova Truestory | https://sketchfab.com/3d-models/pine-trees-pack-ps1-low-poly-347d7f6122af4bf684f752df2dd0eb5a | CC BY 4.0, изменено |
 | biome2/a38_tree_leaf (лиственное дерево) | Leaf Tree (PS1 Low Poly) | Wersaus33 | https://sketchfab.com/3d-models/leaf-tree-ps1-low-poly-d799c08100974e1ba352fcd646cb0694 | CC BY 4.0, изменено |
+| battle/e_albatross (босс «Альбатрос») | LM-328 Flying Boat | TonyWony | https://sketchfab.com/3d-models/lm-328-flying-boat-d34a38da8ac6454cbdea645433b8d45b | CC BY 4.0, изменено |
+| battle/e_leviathan (босс «Левиафан») | Kiev-class Aircraft Carrier | Muhamad Mirza Arrafi | https://sketchfab.com/3d-models/kiev-class-aircraft-carrier-f854eda1eab54a40aae8628e6456ae78 | CC BY 4.0, изменено |
+| battle/e_lev_turret (главная башня «Левиафана») | US Mark 15/16 19-inch 45 caliber turret | Peter Primini | https://sketchfab.com/3d-models/us-mark-1516-19-inch-45-caliber-turret-1284145fb0e8419c97ae487cbf08ff16 | CC BY 4.0, изменено |
+| battle/e_ship_bulk (балкер) | Bulk Carrier (референс формы, геометрия собрана кодом заново) | medialog | https://sketchfab.com/3d-models/bulk-carrier-93c076900f004102b78dfac989efae1d | CC BY 4.0, изменено |

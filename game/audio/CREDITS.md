@@ -9,7 +9,8 @@
 Авторы пакетов (вежливо указать в титрах): Fascinated Sound, Gamemaster Audio, Pole Position Production, Bluezone Corporation,
 Sound Spark LLC, SoundMorph, InspectorJ, SmartSoundFX, 344 Audio, Gregor Quendel, The Chris Alan, Airborne Sound, David Dumais Audio,
 Articulated Sounds, Sergey Eybog, Olivier Girardot, Gladestock Studios, Justsoundeffects, Mechanical Wave, Epic Stock Media,
-Rescopic Sound, Eiravaein Sound, Stefano Cremona, Double Trouble Audio, Chris Logsdon, G4F SFX.
+Rescopic Sound, Eiravaein Sound, Stefano Cremona, Double Trouble Audio, Chris Logsdon, G4F SFX,
+Alexander Kopeikin, SoundBits (пилот 18.10, `game/tools/build_audio_layers.py`).
 
 ## Музыка (стиль «гибрид», 16.10.2026, все CC0 с OpenGameArt)
 

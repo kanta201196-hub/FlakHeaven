@@ -17,26 +17,42 @@ var _http: HTTPRequest
 var _http_runs: HTTPRequest
 var _runs_busy := false
 var _root: Control
-var _rating := 0
-var _again := ""
-var _rate_btns: Array[Button] = []
-var _again_btns: Array[Button] = []
-## T4-03: вопросы про картинку, камеру, читаемость пуль и тормоза — ключ → ответ / кнопки
-const VIS_Q := [
+## Короткие вопросы кнопками: ключ, вопрос, варианты, ширина кнопки (0 — по тексту).
+## «why» показывается только при досрочном выходе в меню.
+## После теста 3.5-s7 (Kanta, 18.10): добавлены сложность, темп, улучшения, звук и «что понравилось».
+const WHY_Q := ["why", "Почему закончили раньше?", ["Стало скучно", "Слишком сложно", "Нет времени", "Баг или тормоза", "Другое"], 0]
+const CHOICE_Q := [
+	["rating", "Как вам вылет? (1 — плохо, 5 — отлично)", ["1", "2", "3", "4", "5"], 64],
+	["again", "Хочется сразу сыграть ещё?", ["Да", "Может быть", "Нет"], 0],
+	["diff", "Сложность", ["Легко", "В самый раз", "Сложно"], 0],
+	["pace", "Темп вылета", ["Затянуто", "В самый раз", "Слишком суетно"], 0],
+	["cards", "Выбор улучшений интересный?", ["Да", "Так себе", "Нет"], 0],
+	["sound", "Звук и музыка (1–5)", ["1", "2", "3", "4", "5"], 64],
+	# T4-03: картинка, камера, читаемость пуль и тормоза
 	["pic", "Как вам картинка? (1–5)", ["1", "2", "3", "4", "5"], 64],
 	["cam", "Какой наклон камеры удобнее? (F9)", ["28°", "35°", "45°", "Сверху", "Не пробовал(а)"], 0],
 	["bullets", "Пули и ракеты врагов видно?", ["Всегда", "Иногда терялись", "Часто терялись"], 0],
 	["lag", "Игра тормозила?", ["Нет", "Иногда", "Часто"], 0],
 ]
-var _vis := {}
-var _vis_btns := {}
+## ключи, которые уходят и отдельными полями, и строкой «Короткие ответы» (старый приёмник новых полей не знает)
+const SHORT_KEYS := ["why", "diff", "pace", "cards", "sound", "pic", "cam", "bullets", "lag"]
+var _ans := {}
+var _q_btns := {}
+var _why_row: Control
+var _title: Label
+var _sub: Label
+var _liked: TextEdit
 var _boring: TextEdit
 var _unclear: TextEdit
 var _comment: TextEdit
 var _status: Label
+var _cancel_btn: Button
+var _skip_btn: Button
 var _send_btn: Button
 var _busy := false
 var _flush_after_open := false
+## досрочный выход из вылета в меню: анкета перед выходом, после неё — главное меню
+var _exit_mode := false
 
 
 func _ready() -> void:
@@ -80,82 +96,56 @@ func _build() -> void:
 	sb.bg_color = Color(0.11, 0.115, 0.105)
 	sb.border_color = Menu.C_AMBER
 	sb.set_border_width_all(2)
-	sb.set_content_margin_all(36)
+	sb.set_content_margin_all(28)
 	panel.add_theme_stylebox_override("panel", sb)
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(1180, 0)
-	panel.position = Vector2(-590, -500)
-	panel.size = Vector2(1180, 1000)
-	_root.add_child(panel)
+	panel.custom_minimum_size = Vector2(1680, 0)
+	var center := CenterContainer.new()   # высота панели — по содержимому, по центру экрана
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.add_child(panel)
+	_root.add_child(center)
 
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
+	v.add_theme_constant_override("separation", 8)
 	panel.add_child(v)
 
-	var title := Label.new()
-	title.text = "ОТЧЁТ ТЕСТЕРА"
-	title.add_theme_font_size_override("font_size", 34)
-	title.add_theme_color_override("font_color", Menu.C_AMBER)
-	v.add_child(title)
-	var sub := Label.new()
-	sub.text = "Уйдёт организатору теста: ваши ответы, статистика этого вылета, ОС и видеокарта, технический журнал игры. Личных данных нет."
-	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	sub.add_theme_font_size_override("font_size", 17)
-	sub.add_theme_color_override("font_color", Menu.C_DIM)
-	v.add_child(sub)
+	_title = Label.new()
+	_title.add_theme_font_size_override("font_size", 32)
+	_title.add_theme_color_override("font_color", Menu.C_AMBER)
+	v.add_child(_title)
+	_sub = Label.new()
+	_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_sub.add_theme_font_size_override("font_size", 17)
+	_sub.add_theme_color_override("font_color", Menu.C_DIM)
+	v.add_child(_sub)
 
-	v.add_child(_caption("Как вам вылет? (1 — плохо, 5 — отлично)"))
-	var hr := HBoxContainer.new()
-	hr.add_theme_constant_override("separation", 10)
-	for i in 5:
-		var b := _toggle(str(i + 1), Vector2(80, 46))
-		b.pressed.connect(_set_rating.bind(i + 1))
-		_rate_btns.append(b)
-		hr.add_child(b)
-	v.add_child(hr)
-
-	v.add_child(_caption("Хочется сразу сыграть ещё?"))
-	var ha := HBoxContainer.new()
-	ha.add_theme_constant_override("separation", 10)
-	for t in ["Да", "Может быть", "Нет"]:
-		var b := _toggle(t, Vector2(170, 46))
-		b.pressed.connect(_set_again.bind(t))
-		_again_btns.append(b)
-		ha.add_child(b)
-	v.add_child(ha)
-
-	# картинка и камера: по два вопроса в ряд
-	for row in [[0, 1], [2, 3]]:
+	# досрочный выход: причина — отдельной строкой сверху
+	_why_row = _question(WHY_Q)
+	v.add_child(_why_row)
+	# остальные вопросы кнопками — по два в ряд
+	for i in range(0, CHOICE_Q.size(), 2):
 		var hq := HBoxContainer.new()
 		hq.add_theme_constant_override("separation", 30)
-		for qi in row:
-			var q: Array = VIS_Q[qi]
-			var col := VBoxContainer.new()
-			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			col.add_child(_caption(q[1]))
-			var hb2 := HBoxContainer.new()
-			hb2.add_theme_constant_override("separation", 6)
-			var btns: Array[Button] = []
-			for t in q[2]:
-				var b := _toggle(t, Vector2(q[3], 42))
-				b.add_theme_font_size_override("font_size", 17)
-				b.pressed.connect(_set_vis.bind(q[0], t))
-				btns.append(b)
-				hb2.add_child(b)
-			_vis_btns[q[0]] = btns
-			col.add_child(hb2)
-			hq.add_child(col)
+		for q in CHOICE_Q.slice(i, i + 2):
+			hq.add_child(_question(q))
 		v.add_child(hq)
 
-	v.add_child(_caption("Что было скучно или раздражало?"))
+	# свободные ответы — сеткой 2×2
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 30)
+	grid.add_theme_constant_override("v_separation", 4)
+	_liked = _area()
 	_boring = _area()
-	v.add_child(_boring)
-	v.add_child(_caption("Что было непонятно?"))
 	_unclear = _area()
-	v.add_child(_unclear)
-	v.add_child(_caption("Баги, вылеты, тормоза и всё остальное"))
 	_comment = _area()
-	v.add_child(_comment)
+	for pair in [["Что понравилось больше всего?", _liked], ["Что было скучно или раздражало?", _boring],
+			["Что было непонятно?", _unclear], ["Баги, вылеты, тормоза, идеи и всё остальное", _comment]]:
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_child(_caption(pair[0]))
+		col.add_child(pair[1])
+		grid.add_child(col)
+	v.add_child(grid)
 
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 16)
@@ -164,14 +154,17 @@ func _build() -> void:
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.add_theme_font_size_override("font_size", 17)
 	hb.add_child(_status)
-	var cancel := Button.new()
-	cancel.text = "Отмена"
-	cancel.custom_minimum_size = Vector2(170, 54)
-	cancel.pressed.connect(close)
-	hb.add_child(cancel)
+	_cancel_btn = Button.new()
+	_cancel_btn.custom_minimum_size = Vector2(220, 54)
+	_cancel_btn.pressed.connect(close)
+	hb.add_child(_cancel_btn)
+	_skip_btn = Button.new()
+	_skip_btn.text = "Выйти без отчёта"
+	_skip_btn.custom_minimum_size = Vector2(240, 54)
+	_skip_btn.pressed.connect(_exit_to_menu)
+	hb.add_child(_skip_btn)
 	_send_btn = Button.new()
-	_send_btn.text = "ОТПРАВИТЬ"
-	_send_btn.custom_minimum_size = Vector2(240, 54)
+	_send_btn.custom_minimum_size = Vector2(280, 54)
 	var sbs := StyleBoxFlat.new()
 	sbs.bg_color = Menu.C_AMBER
 	_send_btn.add_theme_stylebox_override("normal", sbs)
@@ -185,10 +178,30 @@ func _build() -> void:
 	v.add_child(hb)
 
 
+## Вопрос с кнопками-вариантами: подпись и ряд переключателей
+func _question(q: Array) -> Control:
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 4)
+	col.add_child(_caption(q[1]))
+	var hb2 := HBoxContainer.new()
+	hb2.add_theme_constant_override("separation", 6)
+	var btns: Array[Button] = []
+	for t in q[2]:
+		var b := _toggle(t, Vector2(q[3], 40))
+		b.add_theme_font_size_override("font_size", 17)
+		b.pressed.connect(_set_ans.bind(q[0], t))
+		btns.append(b)
+		hb2.add_child(b)
+	_q_btns[q[0]] = btns
+	col.add_child(hb2)
+	return col
+
+
 func _caption(t: String) -> Label:
 	var l := Label.new()
 	l.text = t
-	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_font_size_override("font_size", 19)
 	return l
 
 
@@ -196,10 +209,25 @@ func _toggle(t: String, sz: Vector2) -> Button:
 	var b := Button.new()
 	b.text = t
 	b.toggle_mode = true
-	b.custom_minimum_size = sz
+	b.custom_minimum_size = Vector2(maxf(sz.x, 64.0), sz.y)
+	# невыбранный вариант — видимая плашка с отступами, чтобы кнопки не сливались в строку текста
+	var off := StyleBoxFlat.new()
+	off.bg_color = Color(1, 1, 1, 0.07)
+	off.border_color = Color(Menu.C_AMBER.r, Menu.C_AMBER.g, Menu.C_AMBER.b, 0.35)
+	off.set_border_width_all(1)
+	off.set_content_margin_all(6)
+	off.content_margin_left = 14
+	off.content_margin_right = 14
+	b.add_theme_stylebox_override("normal", off)
+	var offh := off.duplicate() as StyleBoxFlat
+	offh.bg_color = Color(1, 1, 1, 0.14)
+	offh.border_color = Menu.C_AMBER
+	b.add_theme_stylebox_override("hover", offh)
 	var on := StyleBoxFlat.new()
 	on.bg_color = Menu.C_AMBER
 	on.set_content_margin_all(6)
+	on.content_margin_left = 14
+	on.content_margin_right = 14
 	b.add_theme_stylebox_override("pressed", on)
 	b.add_theme_stylebox_override("hover_pressed", on)
 	b.add_theme_color_override("font_pressed_color", Color(0.08, 0.07, 0.05))
@@ -209,58 +237,85 @@ func _toggle(t: String, sz: Vector2) -> Button:
 
 func _area() -> TextEdit:
 	var te := TextEdit.new()
-	te.custom_minimum_size = Vector2(0, 72)
+	te.custom_minimum_size = Vector2(0, 70)
 	te.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	te.placeholder_text = "можно оставить пустым"
 	return te
 
 
-func _set_rating(n: int) -> void:
-	_rating = n
-	for i in _rate_btns.size():
-		_rate_btns[i].button_pressed = (i + 1 == n)
-
-
-func _set_vis(key: String, t: String) -> void:
-	_vis[key] = t
-	for b in _vis_btns[key]:
+func _set_ans(key: String, t: String) -> void:
+	_ans[key] = t
+	for b in _q_btns[key]:
 		(b as Button).button_pressed = (b.text == t)
 
 
-func _vis_text() -> String:
-	var parts := PackedStringArray()
-	for q in VIS_Q:
-		if _vis.has(q[0]):
-			parts.append("%s: %s" % [q[0], _vis[q[0]]])
-	return "; ".join(parts)
+func _set_rating(n: int) -> void:
+	if n <= 0:
+		_ans.erase("rating")
+		for b in _q_btns["rating"]:
+			(b as Button).button_pressed = false
+	else:
+		_set_ans("rating", str(n))
 
 
 func _set_again(t: String) -> void:
-	_again = t
-	for b in _again_btns:
-		b.button_pressed = (b.text == t)
+	_set_ans("again", t)
 
 
-func open() -> void:
+## Короткие ответы одной строкой: «diff: Сложно; lag: Нет»
+func _short_text() -> String:
+	var parts := PackedStringArray()
+	for k in SHORT_KEYS:
+		if _ans.has(k):
+			parts.append("%s: %s" % [k, _ans[k]])
+	return "; ".join(parts)
+
+
+## exit_mode — открыт из паузы кнопкой «В главное меню»: после анкеты игра уходит в меню.
+func open(exit_mode := false) -> void:
 	if Main.REPORT_URL == "":
 		return
-	_set_rating(0)
-	_set_again("")
-	_vis.clear()
-	for k in _vis_btns:
-		for b in _vis_btns[k]:
+	_exit_mode = exit_mode
+	_ans.clear()
+	for k in _q_btns:
+		for b in _q_btns[k]:
 			(b as Button).button_pressed = false
-	for te in [_boring, _unclear, _comment]:
+	for te in [_liked, _boring, _unclear, _comment]:
 		(te as TextEdit).text = ""
+	_why_row.visible = exit_mode
+	_skip_btn.visible = exit_mode
+	if exit_mode:
+		_title.text = "ВЫХОД ИЗ ВЫЛЕТА"
+		_sub.text = "Пара кнопок перед выходом очень поможет: почему закончили и как было. Можно выйти и без отчёта — строка статистики вылета всё равно уйдёт."
+		_cancel_btn.text = "Вернуться в бой"
+		_send_btn.text = "ОТПРАВИТЬ И ВЫЙТИ"
+	else:
+		_title.text = "ОТЧЁТ ТЕСТЕРА"
+		_sub.text = "Уйдёт организатору теста: ваши ответы, статистика этого вылета, ОС и видеокарта, технический журнал игры. Личных данных нет. Отвечайте только на то, что хочется."
+		_cancel_btn.text = "Отмена"
+		_send_btn.text = "ОТПРАВИТЬ"
 	_status.text = ""
 	_status.remove_theme_color_override("font_color")
 	_send_btn.disabled = false
 	visible = true
-	_boring.grab_focus()
+	_liked.grab_focus()
+
+
+## Закрыли окно посреди вылета: строка лога ложится в очередь и уйдёт при следующем запуске
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and Main.I != null and Main.I.input_ctl != null:
+		Main.I.input_ctl.log_abort("закрыл игру")
 
 
 func close() -> void:
 	visible = false
+
+
+## Досрочный выход: строка лога вылета (итог «выход») и главное меню
+func _exit_to_menu() -> void:
+	visible = false
+	_exit_mode = false
+	Main.I.input_ctl.abort_run()
 
 
 func _input(event: InputEvent) -> void:
@@ -299,6 +354,16 @@ func _log_tail() -> String:
 	return "\n".join(lines.slice(from))
 
 
+func _comment_full() -> String:
+	var pre := PackedStringArray()
+	if _short_text() != "":
+		pre.append("[%s]" % _short_text())
+	if _liked.text.strip_edges() != "":
+		pre.append("[Понравилось: %s]" % _liked.text.strip_edges())
+	pre.append(_comment.text.strip_edges())
+	return " ".join(pre).strip_edges()
+
+
 func _payload() -> Dictionary:
 	var m := Main.I
 	var syn := PackedStringArray()
@@ -317,13 +382,20 @@ func _payload() -> Dictionary:
 		"level": m.level,
 		"kills": m.kills,
 		"synergies": ", ".join(syn),
-		"rating": _rating if _rating > 0 else "",
-		"again": _again,
+		"rating": int(_ans["rating"]) if _ans.has("rating") else "",
+		"again": _ans.get("again", ""),
 		"boring": _boring.text.strip_edges(),
 		"unclear": _unclear.text.strip_edges(),
-		# ответы про картинку — и отдельным полем, и в начале комментария (уже развёрнутый приёмник их не знает)
-		"visual": _vis_text(),
-		"comment": ("[%s] " % _vis_text() if _vis_text() != "" else "") + _comment.text.strip_edges(),
+		"liked": _liked.text.strip_edges(),
+		"why": _ans.get("why", ""),
+		"diff": _ans.get("diff", ""),
+		"pace": _ans.get("pace", ""),
+		"cards": _ans.get("cards", ""),
+		"sound": _ans.get("sound", ""),
+		# короткие ответы — и отдельными полями, и строкой, и в начале комментария вместе с «понравилось»
+		# (уже развёрнутый приёмник новых полей не знает, так ничего не потеряется)
+		"visual": _short_text(),
+		"comment": _comment_full(),
 		"os": "%s %s" % [OS.get_name(), OS.get_version()],
 		"gpu": "%s (%s)" % [RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_vendor()],
 		"screen": "%dx%d" % [scr.x, scr.y],
@@ -423,10 +495,21 @@ func _save_queue(q: Array) -> void:
 func _send() -> void:
 	if _busy:
 		return
+	if _exit_mode:
+		# сначала строка лога вылета (итог «выход») — она нужна отчёту, потом анкета в очередь и сразу в меню;
+		# отправка идёт в фоне, при неудаче отчёт уйдёт при следующем запуске
+		Main.I.input_ctl.log_abort()
 	var q := _load_queue()
 	q.append(_payload())
 	_save_queue(q)
 	_send_btn.disabled = true
+	if _exit_mode:
+		_flush_after_open = false
+		_status.text = "Спасибо! Отчёт отправляется…"
+		_status.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6))
+		_flush()
+		get_tree().create_timer(0.9, true, false, true).timeout.connect(_exit_to_menu)
+		return
 	_status.text = "Отправляем…"
 	_flush_after_open = true
 	_flush()

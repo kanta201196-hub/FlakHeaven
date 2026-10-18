@@ -87,7 +87,7 @@ func spawn_missile(pos: Vector2, dir: Vector2) -> void:
 func spawn_enemy_bullet(pos: Vector2, vel: Vector2, who := "", big := false, dmg_k := 1.0, quiet := false) -> void:
 	ebullets.append({"p": pos, "v": vel, "life": 3.3, "who": who, "big": big, "k": dmg_k})
 	if not big and not quiet:
-		Main.I.sfx.play("enemy_fire", -19.0)
+		Main.I.sfx.play("enemy_fire", -19.0, 1.0, pos)
 
 
 # ---------- Служебные: противоракеты, срыв захвата, урон по площади ----------
@@ -199,9 +199,10 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 		var e := n as Enemy
 		if e == null or e.hp <= 0.0 or e == exclude or (ground_only and not e.is_ground):
 			continue
-		var d := pos.distance_to(e.global_position) - e.radius
+		var d := e.aoe_dist(pos)
 		if d < r:
 			var k := lerpf(1.0, edge, clampf(d / r, 0.0, 1.0))
+			e.hit_at = pos
 			e.take_hit(dmg * k * (ground_k if e.is_ground else 1.0), src)
 			if blast2 and e.hp <= 0.0 and not e.is_boss:
 				died.append([e.global_position, e.max_hp])
@@ -276,7 +277,7 @@ func _update_bullets(delta: float) -> void:
 			if e == null or e.hp <= 0.0:
 				continue
 			# 3.4: попадание по всему отрезку за кадр, а не только по конечной точке (на 30–40 FPS пули пролетали мелких врагов)
-			if seg_hit(p0, p, e.global_position, e.radius):
+			if e.seg_test(p0, p):
 				if b.has("hit") and (b["hit"] as Array).has(e):
 					continue
 				if p.distance_squared_to(e.global_position) >= e.radius * e.radius:
@@ -285,6 +286,8 @@ func _update_bullets(delta: float) -> void:
 					Main.I.tele.add("hits_lead")
 				var manual: bool = b["m"]
 				var src: String = b["src"]
+				if e.hit_at == Vector2.INF:
+					e.hit_at = p
 				e.take_hit(float(b["dmg"]) * _bullet_k(src, e), src)
 				if b.has("he"): # «Пушкарь»: фугасный снаряд
 					aoe(p, float(b["he"]), float(b["dmg"]) * 0.6, "связка: пушкарь", true, e)
@@ -394,7 +397,7 @@ func _update_player_missiles(delta: float) -> void:
 				Main.I.tele.add("msl_lost")
 		var spd := minf(v.length() + 1500.0 * delta, 720.0 * _missile_spd() * float(m.get("spd_k", 1.0)))
 		if t != null:
-			var ang := rotate_toward(v.angle(), (t.global_position - p).angle(), deg_to_rad(320.0) * delta)
+			var ang := rotate_toward(v.angle(), (t.aim_point(p) - p).angle(), deg_to_rad(320.0) * delta)
 			v = Vector2.from_angle(ang) * spd
 		else:
 			v = v.normalized() * spd
@@ -405,7 +408,8 @@ func _update_player_missiles(delta: float) -> void:
 		var done := float(m["life"]) <= 0.0
 		if done and m.get("lost", false):
 			Main.I.fx.explosion(p, 6.0) # самоликвидация
-		if t != null and p.distance_to(t.global_position) < t.radius + 6.0:
+		if t != null and p.distance_to(t.aim_point(p)) < t.aim_radius() + 6.0:
+			t.hit_at = p
 			var dmg := float(m["dmg"]) * (boost if float(m["age"]) < 1.0 else 1.0) # «Форсированный старт»
 			t.take_hit(dmg * (float(m.get("ground_k", 1.0)) if t.is_ground else 1.0), m.get("src", "ракеты В-В"))
 			# 2.8: осколки — задевают соседей (55 пикс., урон падает к краю)
@@ -464,7 +468,7 @@ func _update_rockets(delta: float) -> void:
 		var hit_e: Enemy = null
 		for n in enemies:
 			var e := n as Enemy
-			if e != null and e.hp > 0.0 and p.distance_to(e.global_position) < e.radius + 4.0:
+			if e != null and e.hp > 0.0 and e.aoe_dist(p) < 4.0:
 				boom = true
 				hit_e = e
 				break
@@ -526,7 +530,7 @@ func _update_bombs(delta: float) -> void:
 			# тест 3.5-s4 (п. 14): на земле остаётся воронка (бомбы падают до земли; БЧ ракеты рвётся в воздухе)
 			if String(b["src"]) != "разделяющаяся БЧ" and is_instance_valid(Main.I.fx.ground):
 				Main.I.fx.ground.crater(b["p"], float(b["r"]))
-			Main.I.sfx.play("bomb", -10.0)
+			Main.I.sfx.play("bomb", -10.0, 1.0, b["p"])
 			Main.I.add_shake(2.0)
 			bombs.remove_at(i)
 

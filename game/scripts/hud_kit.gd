@@ -19,7 +19,9 @@ static func ui_font() -> Font:
 # ---------- Примитивы ----------
 
 ## 3.1: у всего текста интерфейса тёмная обводка — читается на светлой земле
+## Перевод: ключ — русская фраза; без таблицы перевода строка выводится как есть
 func _text(pos: Vector2, s: String, size := 20, color := Color(0.92, 0.95, 1.0), align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
+	s = TranslationServer.translate(s)
 	ctrl.draw_string_outline(ui_font(), pos, s, align, width, size, maxi(3, size / 5), Color(0.02, 0.025, 0.03, 0.85 * color.a))
 	ctrl.draw_string(ui_font(), pos, s, align, width, size, color)
 

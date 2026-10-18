@@ -19,7 +19,7 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	"dive_uses", "dive_dodged",
 	# 3.5 (тред «ИИ врагов и активности»): топливо и заправщик (стыковки штанги), фазы босса «Крепость»
 	"fuel_ab_s", "fuel_empty_s", "fuel_fill_s", "fuel_refuels", "fuel_tankers_missed", "fuel_docks", "fuel_undocks",
-	"fortress_points", "fortress_phase2_s", "fortress_phase3_s",
+	"fortress_points", "fortress_phase2_s", "fortress_phase3_s", "fortress_base", "fortress_bay",
 	# 3.5 (тред «ИИ врагов и активности»): уклонения врагов, их ловушки и уведённые ими ракеты, сбитые ПВО наши ракеты
 	"enemy_evades", "enemy_flares", "enemy_flared_missiles", "aa_shot_down",
 	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа

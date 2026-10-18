@@ -219,17 +219,14 @@ func _boss_bars(m: Main, size: Vector2) -> void:
 		y += 48.0
 
 
-## Правка 3.5-s4: полоса «Крепости» — общая прочность с отметками приёмов (66% и 33%),
-## под ней — значки точек: 4 турели и 2 двигателя, сбитые перечёркнуты
+## Правка 3.5-s4: полоса «Крепости» — общая прочность, под ней — значки точек: 4 турели и 2 двигателя, сбитые перечёркнуты.
+## FB-01: справа от значков — сколько осталось до нашей базы
 func _fortress_bar(f: Fortress, x: float, y: float, w: float) -> float:
 	ctrl.draw_rect(Rect2(x, y - 16, w, 22), Color(0.02, 0.025, 0.03, 0.55))
 	_text(Vector2(x, y + 2), f.title, 18, Color(1, 0.9, 0.78), HORIZONTAL_ALIGNMENT_CENTER, w)
 	var fr := f.total_frac()
 	ctrl.draw_rect(Rect2(x, y + 10, w, 16), Color(0, 0, 0, 0.6))
 	ctrl.draw_rect(Rect2(x, y + 10, w * fr, 16), Color(1.0, 0.35, 0.3))
-	for th in [0.66, 0.33]:
-		var tx: float = x + w * th
-		ctrl.draw_line(Vector2(tx, y + 6), Vector2(tx, y + 30), Color(1.0, 0.9, 0.5, 0.9), 2.0)
 	var ix := x + w / 2.0 - 6 * 28.0 / 2.0
 	for pt in f.points:
 		var down := float(pt["hp"]) <= 0.0
@@ -242,6 +239,10 @@ func _fortress_bar(f: Fortress, x: float, y: float, w: float) -> float:
 		else:
 			ctrl.draw_rect(Rect2(ix, y + 44, 22.0 * float(pt["hp"]) / float(pt["max"]), 3), Color(0.4, 1.0, 0.5))
 		ix += 28.0
+	if f.base_pos != Vector2.INF and f.phase < 3:
+		var d := int(f.global_position.distance_to(f.base_pos)) / 10
+		var s := ("до базы %d м" % d) if f.base_hits == 0 else ("отбомбилась · до базы %d м" % d)
+		_text(Vector2(ix + 8, y + 45), s, 15, Color(0.6, 0.9, 1.0) if f.base_hits == 0 else Color(1.0, 0.55, 0.45))
 	return y + 62.0
 
 
@@ -261,6 +262,9 @@ func _threat_markers(size: Vector2) -> void:
 			_edge_arrow(_ws(xf, (n as Node2D).global_position), rect, size, Color(1.0, 0.6, 0.2))
 		elif n is Boss:
 			_edge_arrow(_ws(xf, (n as Node2D).global_position), rect, size, Color(1.0, 0.3, 0.6), 1.6)
+			if n is Fortress and (n as Fortress).base_pos != Vector2.INF and (n as Fortress).phase < 3:
+				var bp: Vector2 = (n as Fortress).base_pos
+				_edge_arrow(_ws(xf, bp), rect, size, Color(0.4, 0.8, 1.0), 1.6, "база %d м" % (int(m.player.global_position.distance_to(bp)) / 10) if is_instance_valid(m.player) else "база")
 
 
 func _evac_marker(m: Main, size: Vector2) -> void:

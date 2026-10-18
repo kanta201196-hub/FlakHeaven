@@ -89,6 +89,10 @@ func draw(m: Main, size: Vector2) -> void:
 		elif node is RivalAce:
 			col = Color(1.0, 0.3, 0.35)
 		_diamond(to_map.call((node as Node2D).global_position), 7.0, Color(col.r, col.g, col.b, a))
+	# FB-01: наша база, к которой идёт «Крепость», — голубой ромб
+	for n in m.get_tree().get_nodes_in_group("enemies"):
+		if n is Fortress and (n as Fortress).base_pos != Vector2.INF and (n as Fortress).phase < 3:
+			_diamond(to_map.call((n as Fortress).base_pos), 7.0, Color(0.4, 0.8, 1.0, a))
 	if is_instance_valid(m.evac):
 		_diamond(to_map.call(m.evac.target_pos()), 7.0, Color(0.4, 1.0, 0.5, a))
 	var tk: Node2D = m.spawner.fuel.tanker if m.spawner != null and m.spawner.fuel != null else null
