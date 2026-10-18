@@ -63,7 +63,7 @@ uniform vec4 clouds[12];
 uniform int cloud_n = 0;
 uniform float cloud_y = 380.0;
 uniform vec2 cloud_shift = vec2(0.0);  // сдвиг тени на 1 px высоты (по солнцу)
-uniform float cloud_dark = 0.2;
+uniform float cloud_dark = 0.28;   // Э-3 (аудит 3.5-s6): тень облака заметнее (было 0,2)
 // тест 3.5-s5 (п. 8): тени самолётов — карта сверху (render3d._psh_vp, канал R — густота тени);
 // rect: x, z левого верхнего угла, сторона, включено
 uniform sampler2D plane_sh : filter_linear, repeat_disable, hint_default_black;
@@ -329,13 +329,14 @@ void fragment() {
 		float r = cl.w - idx * 10.0;
 		vec2 l = vec2(d.x * cos(r) + d.y * sin(r), -d.x * sin(r) + d.y * cos(r)) / cl.z + 0.5;
 		if (l.x > 0.0 && l.y > 0.0 && l.x < 1.0 && l.y < 1.0) {
-			// мягкий край: 5 выборок (у текстур облаков нет мип-уровней)
+			// край: 5 выборок (у текстур облаков нет мип-уровней); Э-3 — разброс вдвое меньше и контраст выше,
+			// тень кучевого облака на земле с чётким краем, а не размытым пятном
 			float acc = 0.0;
 			for (int k = 0; k < 5; k++) {
-				vec2 o = k == 0 ? vec2(0.0) : vec2(cos(float(k) * 1.5708), sin(float(k) * 1.5708)) * 0.05;
+				vec2 o = k == 0 ? vec2(0.0) : vec2(cos(float(k) * 1.5708), sin(float(k) * 1.5708)) * 0.025;
 				acc += idx < 0.5 ? texture(cloud_a, l + o).a : texture(cloud_b, l + o).a;
 			}
-			cs = max(cs, acc / 5.0);
+			cs = max(cs, smoothstep(0.12, 0.55, acc / 5.0));
 		}
 	}
 	alb *= 1.0 - cloud_dark * cs;
