@@ -33,9 +33,12 @@ func _ready() -> void:
 	if OS.get_cmdline_user_args().has("--convoy"):
 		activity_i = 3      # проверка: сразу конвой
 		next_activity = 10.0
+	_heli_test = OS.get_cmdline_user_args().has("--heli")   # проверка: вертолёты «Сарыч» (место в игре не решено)
 	for a in OS.get_cmdline_user_args():
 		if String(a).begins_with("--fuel="): # проверка: начать с неполным баком (доля 0–1)
 			fuel.left = fuel.capacity * clampf(float(String(a).substr(7)), 0.0, 1.0)
+var _heli_test := false
+var _heli_cd := 8.0
 var _grid := {}
 const CELL := 90.0
 
@@ -225,6 +228,19 @@ func _process(delta: float) -> void:
 			var c := MissileCarrier.new()
 			_place(c, p, randf() * TAU, t)
 			c.heading = (p.global_position - c.position).angle()
+
+	if _heli_test:
+		_heli_cd -= delta
+		if _heli_cd <= 0.0:
+			_heli_cd = 14.0
+			var helis := 0
+			for n in enemies:
+				if n is Helicopter:
+					helis += 1
+			if helis < 2:
+				var h := Helicopter.new()
+				_place(h, p, randf() * TAU, t)
+				h.heading = (p.global_position - h.position).angle()
 
 
 func start_activity(p: Player, t: float, force := false) -> void:

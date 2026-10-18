@@ -1010,6 +1010,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle(), re[0], _alt_scale(re[0]), re[1]) # 3.5: бочка при уклонении
 			if ue.get("bm") != null and e is Fortress:
 				_fortress_parts(ue, e as Fortress, ang, delta)
+			elif ue.get("bm") != null and e is Helicopter:
+				_rotors(ue, delta)
 		var mi2: MeshInstance3D = ue["mi"]
 		if ue.get("bm") != null:
 			mi2.material_overlay = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
@@ -1025,6 +1027,38 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			if not _start_crash(_units[id]) and not _pool_put(_units[id]):
 				(_units[id]["node"] as Node).queue_free()
 			_units.erase(id)
+
+
+## Винты вертолёта (tools/blender/helicopter.py): несущий rotor — по часовой сверху, рулевой tail_rotor —
+## вокруг своей оси (в GLB это локальная Z). Под лопастями — полупрозрачный диск, как размытый след винта.
+func _rotors(u: Dictionary, delta: float) -> void:
+	if not u.has("rot"):
+		var inst := (u["node"] as Node3D).get_child(0)
+		var r := inst.find_child("rotor", true, false) as Node3D
+		u["rot"] = [r, inst.find_child("tail_rotor", true, false)]
+		if r != null:
+			var disc := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 0.585
+			cm.bottom_radius = 0.585
+			cm.height = 0.002
+			cm.radial_segments = 32
+			cm.rings = 1
+			var mt := StandardMaterial3D.new()
+			mt.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			mt.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mt.albedo_color = Color(0.12, 0.12, 0.11, 0.18)
+			mt.cull_mode = BaseMaterial3D.CULL_DISABLED
+			cm.material = mt
+			disc.mesh = cm
+			disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			disc.position = Vector3(0, 0.012, 0)
+			r.add_child(disc)
+	var rr: Array = u["rot"]
+	if rr[0] != null:
+		(rr[0] as Node3D).rotate_y(-delta * 9.0)
+	if rr[1] != null:
+		(rr[1] as Node3D).rotate_z(delta * 40.0)
 
 
 ## Подвижные части наземных моделей (tools/blender/ground_models.py): корпус стоит, как встал,

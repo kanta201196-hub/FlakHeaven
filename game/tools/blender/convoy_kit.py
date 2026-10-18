@@ -13,6 +13,9 @@ from mathutils import Vector, Matrix
 
 CAMO = [(0.62, 0.52, 0.36), (0.50, 0.40, 0.27), (0.36, 0.30, 0.21)]   # решение Kanta 17.10: песок, охра, бурый
 DUST = (0.66, 0.58, 0.45)
+CAMO_SCALE = 1.0    # крупность пятен: у машин длина 1 ≈ 5–8 м; вертолёт (длина 1 ≈ 18 м) задаёт больше
+EDGE_K = 1.0        # скругление кромок и затенение углов (в долях длины): у крупных моделей (корабль) меньше
+AO_K = 1.0
 
 parts = []
 group = ""          # пусто — корпус; иначе подвижная часть (узел GLB)
@@ -149,8 +152,8 @@ def kmat(kind):
     up = _m(nt, "MAXIMUM", nz.outputs["Z"], 0.0)
     side = _m(nt, "SUBTRACT", 1.0, _m(nt, "ABSOLUTE", nz.outputs["Z"]))
     if camo:
-        n1 = _noise(nt, pos, 4.4, 3.0)
-        n2 = _noise(nt, pos, 5.0, 3.0, (5.3, 1.7, 9.1))
+        n1 = _noise(nt, pos, 4.4 * CAMO_SCALE, 3.0)
+        n2 = _noise(nt, pos, 5.0 * CAMO_SCALE, 3.0, (5.3, 1.7, 9.1))
         m1 = _band(nt, n1, 0.525, 0.532)
         m2 = _m(nt, "MULTIPLY", _band(nt, n2, 0.56, 0.567), _m(nt, "SUBTRACT", 1.0, m1))
         col = _mix(nt, m1, CAMO[0], CAMO[1])
@@ -173,7 +176,7 @@ def kmat(kind):
         st = _noise(nt, pos, 9.0, 2.0, (0, 0, 0), (6.0, 6.0, 0.6))
         col = _mix(nt, _m(nt, "MULTIPLY", _m(nt, "MULTIPLY", _band(nt, st, 0.56, 0.72), side), 0.22), col, (0.2, 0.17, 0.12))
     # потёртые кромки: нормаль со скруглением отличается от настоящей
-    bev = _n(nt, "ShaderNodeBevel", Radius=0.006)
+    bev = _n(nt, "ShaderNodeBevel", Radius=0.006 * EDGE_K)
     bev.samples = 6
     dot = nt.nodes.new("ShaderNodeVectorMath")
     dot.operation = "DOT_PRODUCT"
@@ -186,7 +189,7 @@ def kmat(kind):
         wc = (0.72, 0.66, 0.55) if kind == "paint" else (0.42, 0.4, 0.37)
         col = _mix(nt, _m(nt, "MULTIPLY", wear, 0.75), col, wc)
     # затенение углов
-    ao = _n(nt, "ShaderNodeAmbientOcclusion", Distance=0.035)
+    ao = _n(nt, "ShaderNodeAmbientOcclusion", Distance=0.035 * AO_K)
     ao.samples = 16
     ao.only_local = False
     # пыль: снизу (колёса, пороги), в углублениях, тонким слоем сверху
@@ -201,7 +204,7 @@ def kmat(kind):
     col = _mix(nt, 1.0, col, occl, "MULTIPLY")
     em = _n(nt, "ShaderNodeEmission", Color=col, Strength=1.0)
     # нормаль: скругление кромок + мелкая фактура
-    nrm = _n(nt, "ShaderNodeBevel", Radius=0.004)
+    nrm = _n(nt, "ShaderNodeBevel", Radius=0.004 * EDGE_K)
     nrm.samples = 8
     bump_str = 0.25 if kind.startswith("canvas") else 0.05 if kind in ("paint", "olive") else 0.0
     nsock = nrm.outputs[0]
