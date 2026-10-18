@@ -73,6 +73,7 @@ func place(at_s: float) -> void:
 	drive.accel = float(sp["acc"]) * 1.6
 	drive.brake = float(sp["acc"]) * 3.2
 	drive.speed = MARCH * 0.6
+	_side = convoy.dry_side(_side)
 	anchor = p
 	heading = h
 	position = p
@@ -80,6 +81,43 @@ func place(at_s: float) -> void:
 
 func _half_len() -> float:
 	return float(SPEC[role]["len"]) * 0.5 * Tuning.g("unit_scale")
+
+
+## Корпус для расталкивания (A-07): отрезок по курсу и радиус — капсула длиной с машину, шириной ~0,45 длины
+func body_r() -> float:
+	return _half_len() * 0.45
+
+
+func body_a() -> Vector2:
+	return anchor + Vector2.from_angle(heading) * (_half_len() - body_r())
+
+
+func body_b() -> Vector2:
+	return anchor - Vector2.from_angle(heading) * (_half_len() - body_r())
+
+
+func nudge(d: Vector2) -> void:
+	if wreck or drive == null or d.length_squared() < 1e-6:
+		return
+	drive.pos = convoy.keep_dry(drive.pos + d)
+	anchor = drive.pos
+
+
+## Впереди по курсу вплотную стоит или едет другая машина (живая или остов) — она, иначе null
+func _blocker() -> ConvoyVehicle:
+	var fwd := Vector2.from_angle(heading)
+	var a := body_a() + fwd * 14.0
+	var b := body_b()
+	for v in convoy.vehicles:
+		if v == self or not is_instance_valid(v):
+			continue
+		var o := v as ConvoyVehicle
+		if o.escaped or o.drive == null or (o.anchor - anchor).dot(fwd) <= 0.0:
+			continue
+		var cp := Geometry2D.get_closest_points_between_segments(a, b, o.body_a(), o.body_b())
+		if cp[0].distance_to(cp[1]) < body_r() + o.body_r():
+			return o
+	return null
 
 
 func kind() -> String:
@@ -146,9 +184,13 @@ func behave(delta: float) -> void:
 			# съехать с дороги вбок, держаться рядом с серединой колонны и бить с фланга
 			goal_s = convoy.middle_s() + (60.0 if role == "scout" else -40.0)
 			goal_lane = _side * OFFROAD
-			want = DASH * 1.1 if absf(lane - goal_lane) > 30.0 or s < goal_s - 80.0 else 40.0
-			if s > goal_s + 60.0:
+			# съезжает по факту (а не по полосе-цели): иначе ждущая охрана стояла на дороге и запирала грузовики
+			var off_road := absf(convoy.lateral_of(anchor, s) - convoy.safe_lane(goal_lane)) > 30.0
+			want = DASH * 1.1 if off_road or s < goal_s - 80.0 else 40.0
+			if s > goal_s + 60.0 and not off_road:
 				want = 15.0
+			elif off_road:
+				goal_s = maxf(goal_s, s + 60.0)
 		elif role == "ifv":
 			# между самолётом и грузовиками: сбоку от дороги со стороны игрока
 			goal_s = convoy.middle_s()
@@ -178,12 +220,27 @@ func behave(delta: float) -> void:
 	if role == "manpads" and alarm and not convoy.ended and not convoy.leaderless and p != null and p.hp > 0.0:
 		if _lock > 0.0 or (_cd <= 0.0 and anchor.distance_to(p.global_position) < 950.0):
 			want = 0.0
-	lane = move_toward(lane, goal_lane, 60.0 * delta)
-	var target := convoy.point_at(goal_s) + convoy.normal_at(goal_s) * lane
+	# A-07: впереди вплотную машина. Едущую ждём; остов или вставшую объезжаем: полоса в сторону от неё (не к реке),
+	# малым ходом, корпуса при этом расталкивает Convoy._separate — сквозь не проедет
+	var bl := _blocker()
+	if bl != null:
+		if bl.wreck or bl.drive.speed < 8.0:
+			var bl_lat := convoy.lateral_of(bl.anchor, s)
+			var off := body_r() + bl.body_r() + 30.0
+			var dside := convoy.dry_side(1.0 if lane >= bl_lat else -1.0)
+			goal_lane = convoy.safe_lane(bl_lat + dside * off)
+			if absf(goal_lane - bl_lat) < off * 0.8:
+				goal_lane = bl_lat - dside * off     # к реке места нет — объезд с другой стороны
+			want = minf(want, 18.0)
+		else:
+			want = 0.0
+	lane = move_toward(lane, convoy.safe_lane(goal_lane), 60.0 * delta)
+	var target := convoy.keep_dry(convoy.point_at(goal_s) + convoy.normal_at(goal_s) * lane)
 	if want <= 0.5:
 		drive.stop(delta)
 	else:
 		drive.drive_to(target, want, delta)
+	drive.pos = convoy.keep_dry(drive.pos)
 	anchor = drive.pos
 	s = convoy.project(anchor, s)
 	heading = drive.heading
