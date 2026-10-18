@@ -6,6 +6,7 @@ const ACC = '#ffb347', TXT = '#e8edf3';
 const bar = (title, sub) => `<div style="position:absolute;left:0;right:0;bottom:0;padding:90px 56px 40px;background:linear-gradient(transparent,rgba(10,14,20,.88));font-family:Inter,'Segoe UI',Arial,sans-serif">
 <div style="font-weight:800;font-size:58px;letter-spacing:.05em;color:${TXT}">${title}</div>${sub ? `<div style="margin-top:8px;font-size:30px;color:#c6d0db">${sub}</div>` : ''}</div>`;
 const items = [
+  ['series2_proto2', null, 'Прототип 2', 'Вместо фигур — картинки: самолёты, дома, земля', '/mnt/project-files/marketing/content/img/src/proto2.png'],
   ['series1_proto1', null, 'Прототип 1', 'Самолёт — треугольник, враги — ромбы', '/mnt/project-files/marketing/content/img/src/proto1.png'],
   ['post1_about', 's4b_biome_river_village_t28_after.png', `FLAK <span style="color:${ACC}">HEAVEN</span>`, 'Roguelike про боевую авиацию'],
   ['post2_testers', 's4b_biome_scene_tank_t28_after.png', 'Ищу тестеров', 'Windows и Mac · 30–60 минут · flakheaven.com'],
