@@ -37,6 +37,9 @@ func process(delta: float) -> void:
 	if OS.get_cmdline_user_args().has("--hangarbench"):
 		_hangar_bench()
 		return
+	if OS.get_cmdline_user_args().has("--menushot"):
+		_menu_shot()
+		return
 	if m.state == "menu" and _i < 0 and _t > 1.0:
 		var cls := "fighter"
 		for a in OS.get_cmdline_user_args():
@@ -462,3 +465,20 @@ func _hangar_bench() -> void:
 		_hq.pop_front()
 		_t = 0.0
 		_hf = 0
+
+
+## Тест 3.5-s5 (п. 1): заставка главного меню — кадры на 3, 6 и 9 с → user://vis_menu_<с>.png
+## (с --gfx=0 — спрайтовый режим «Низкого»)
+var _ms := 0
+
+
+func _menu_shot() -> void:
+	if m.state != "menu":
+		return
+	var at := [3.0, 6.0, 9.0]
+	if _ms < at.size() and _t >= at[_ms]:
+		_save("menu_%d" % int(at[_ms]))
+		_ms += 1
+	if _ms >= at.size():
+		print("VISUAL done")
+		m.get_tree().quit()
