@@ -101,7 +101,7 @@ html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
 
 <script>
 /* Ссылки: впишите адрес — кнопка появится. Пока адрес пустой, кнопка скрыта. */
-var LINKS={steam:"",tester:"",tg:"",vk:"",discord:""};
+var LINKS={steam:"",tester:"https://tally.so/r/7XlO62",tg:"",vk:"",discord:""};
 Object.keys(LINKS).forEach(function(k){var a=document.getElementById("l-"+k);if(a&&LINKS[k]){a.href=LINKS[k];a.hidden=false;}});
 function setLang(l){document.documentElement.lang=l;
   document.getElementById("b-ru").setAttribute("aria-pressed",l==="ru");
