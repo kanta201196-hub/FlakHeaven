@@ -5,7 +5,7 @@ extends RefCounted
 ## timeline — снимок каждой минуты вылета, компактной строкой.
 
 ## Версия набора колонок: меняется — меняется и имя файла лога
-const LOG_VER := "l5"
+const LOG_VER := "l6"   # l6 (тест 3.5-s5): колонка aces перед timeline
 const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_s", "kbm_s", "scheme_changes",
 	"gun_rate_max", "gun_multi_frames", "shots_lead", "hits_lead", "lead_nosol", "swept_hits",
 	"roll_uses", "invuln_s", "invuln_chain_max", "nm_through", "hitstops", "hitstop_in_slowmo",
