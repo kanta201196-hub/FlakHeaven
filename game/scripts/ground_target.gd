@@ -263,12 +263,10 @@ func _drive_off(delta: float) -> void:
 
 
 func _terrain() -> Terrain3D:
-	if Render3D.I != null and Render3D.I.terrain != null and Render3D.I.terrain._bg != null:
-		return Render3D.I.terrain
-	return null
+	return Terrain3D.active()
 
 
-## Шаг заводит в русло с берегом (а сейчас техника не в нём)
+## Шаг заводит в русло с берегом — охранную зону реки M-35 (а сейчас техника не в ней)
 func _into_water(nxt: Vector2) -> bool:
 	var tr := _terrain()
 	return tr != null and tr.wet(nxt) and not tr.wet(anchor)

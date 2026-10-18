@@ -255,6 +255,11 @@ func _make_points() -> Array:
 	for nm in ["o_village", "o_oasis"]:
 		if near_river.has(nm):
 			pts.append({"name": "river_" + nm.substr(2), "pos": near_river[nm][1]["pos"]})
+	if ter != null:   # тест 3.5-s5 (M-35): охранная зона реки крупно — русло, мокрый берег, дорога рядом
+		pts.append({"name": "river_reach", "pos": ter._field_point(empty + Vector2(0, 700), 0.0), "zoom": 1.8})
+		var rv: Dictionary = near_river.get("o_village", [0, {}])[1]
+		if not rv.is_empty():
+			pts.append({"name": "river_edge", "pos": ter._field_point(rv["pos"], 0.0), "zoom": 2.2})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	if found.has("o_wreck"):   # тест 3.5-s4 (п. 18): обломки самолёта крупно
 		pts.append({"name": "wreck", "pos": found["o_wreck"], "zoom": 2.5})
