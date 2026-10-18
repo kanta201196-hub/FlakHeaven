@@ -214,6 +214,10 @@ func _option(key: String, dir: int) -> void:
 			Settings.minimap = wrapi(Settings.minimap + dir, 0, Settings.MINIMAP_SIZES.size())
 		"minimap_alpha":
 			Settings.minimap_alpha = wrapi(Settings.minimap_alpha + dir, 0, Settings.MINIMAP_ALPHA.size())
+		"lang":
+			# по кругу: авто → русский → английский → авто
+			Settings.lang = wrapi(Settings.lang + dir, -1, Settings.LANGS.size())
+			Settings.apply_lang()
 		"font":
 			Settings.font = wrapi(Settings.font + dir, 0, Settings.FONTS.size())
 			Hud.reset_fonts()
@@ -422,7 +426,7 @@ func _settings(size: Vector2) -> void:
 			y = _check(x, y, w2, "Показывать цифры урона (F3)", Tuning.g("damage_numbers") > 0.5, "damage_numbers")
 			y = _check(x, y, w2, "Скрыть интерфейс в полёте", Settings.hide_hud, "hide_hud")
 			y = _opt(x, y, w2, "Схема управления", Hud.SCHEMES[int(Tuning.g("scheme"))], "scheme")
-			y = _opt(x, y, w2, "Язык", "Русский", "lang")
+			y = _opt(x, y, w2, "Язык", Settings.lang_name(), "lang")
 			y = _opt(x, y, w2, "Шрифт интерфейса", Settings.FONTS[Settings.font], "font")
 			y = _section(x, y + 10, w2, "Камера и масштаб")
 			y = _opt(x, y, w2, "Наклон камеры (F9)", MainInput.tilt_name(), "cam_tilt")
