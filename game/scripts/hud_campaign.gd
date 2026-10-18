@@ -32,7 +32,7 @@ func draw(size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.04, 0.88))
 	_button(Rect2(64, 60, 220, 46), "‹ Меню (Esc)", "campaign_back", 18)
 	var bio := Campaign.biome_of(Campaign.index())
-	_text(Vector2(0, 100), "КАМПАНИЯ: " + String(Biome.DATA[bio]["name"]).to_upper(), 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	_text(Vector2(0, 100), Loc.t("КАМПАНИЯ: ") + String(Biome.DATA[bio]["name"]).to_upper(), 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	_ctext(140, "Выберите операцию: клавиши 1–4 или клик, биом — вкладки над картой (↑ / ↓). Пройденную можно повторить ради добычи.", 18, Color(0.7, 0.75, 0.85))
 	for j in BIOMES.size():
 		var b: String = BIOMES[j]
@@ -123,11 +123,11 @@ func _points(r: Rect2, mp: Vector2, ids: Array) -> void:
 		# подпись под точкой; у последней — над ней, чтобы путь к ней не перечёркивал текст
 		var ly := c.y + (66.0 if j < pos.size() - 1 else -80.0)
 		_text(Vector2(c.x - 160.0, ly), "%d. «%s»" % [j + 1, o["title"]], 19, col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
-		var sub := String(Campaign.DIFF[int(o["diff"])]["title"]) if avail else "закрыта"
+		var sub := String(Campaign.DIFF[int(o["diff"])]["title"]) if avail else Loc.t("закрыта")
 		var sub_col := Color(col.r, col.g, col.b, 0.8)
 		# открыта, но ещё не пройдена и не выбрана — подсказать, что она новая и сложнее
 		if avail and not on and not Campaign.cleared(i) and j > 0:
-			sub = "новая · сложнее: " + sub
+			sub = Loc.t("новая · сложнее: ") + sub
 			sub_col = Color(1.0, 0.75, 0.55)
 		_text(Vector2(c.x - 160.0, ly + 24.0), sub, 16, sub_col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
 		if avail:
@@ -141,13 +141,13 @@ func _brief(r: Rect2) -> void:
 	var x := r.position.x + 32.0
 	var w := r.size.x - 64.0
 	var y := r.position.y + 54.0
-	_text(Vector2(x, y), "ОПЕРАЦИЯ %d" % Campaign.num(), 20, Color(0.7, 0.75, 0.85))
+	_text(Vector2(x, y), Loc.t("ОПЕРАЦИЯ %d") % Campaign.num(), 20, Color(0.7, 0.75, 0.85))
 	y += 44.0
 	_text(Vector2(x, y), "«%s»" % String(o["title"]).to_upper(), 36, Menu.C_AMBER)
 	y += 44.0
-	var diff_line := "Сложность: %s" % d["title"]
+	var diff_line := Loc.t("Сложность: %s") % d["title"]
 	if int(o["diff"]) > 0:
-		diff_line += " — враги прочнее ×%s, бьют сильнее ×%s, волны гуще +%d%%, добыча ×%s" % [_k(d["hp"]), _k(d["dmg"]), int(round((float(d["dens"]) - 1.0) * 100.0)), _k(d["reward"])]
+		diff_line += Loc.t(" — враги прочнее ×%s, бьют сильнее ×%s, волны гуще +%d%%, добыча ×%s") % [_k(d["hp"]), _k(d["dmg"]), int(round((float(d["dens"]) - 1.0) * 100.0)), _k(d["reward"])]
 	else:
 		diff_line += " — обычные враги и добыча"
 	y += _para(Vector2(x, y), diff_line, w, 17, Color(1.0, 0.75, 0.55) if int(o["diff"]) > 0 else Color(0.75, 0.9, 0.8))
@@ -166,10 +166,10 @@ func _brief(r: Rect2) -> void:
 	else:
 		_text(Vector2(x, y), "ЗА ПЕРВЫЙ ПРОХОД", 18, Color(0.7, 0.75, 0.85))
 		y += 30.0
-		_text(Vector2(x, y), "• +%d запчастей" % int(o["parts"]), 19, Color(0.95, 0.85, 0.55))
+		_text(Vector2(x, y), Loc.t("• +%d запчастей") % int(o["parts"]), 19, Color(0.95, 0.85, 0.55))
 		y += 28.0
 		for s in o["opens"]:
-			_text(Vector2(x, y), "• Откроется: " + String(s), 19, Color(1.0, 0.85, 0.4))
+			_text(Vector2(x, y), Loc.t("• Откроется: ") + String(s), 19, Color(1.0, 0.85, 0.4))
 			y += 28.0
 	_button(Rect2(r.position.x + 32.0, r.end.y - 100.0, w, 68), "ВЫБРАТЬ САМОЛЁТ ›   (Enter)", "op_go", 24)
 

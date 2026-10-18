@@ -184,7 +184,7 @@ static func cond_list(p: Player, id: String) -> Array:
 	out.append(["%s %d/%d" % [Prog.tag_title(s["tag"]), main, int(c["main"])], main >= int(c["main"]), main, int(c["main"])])
 	if s.has("skill"):
 		var lv := p.s3_lvl()
-		out.append(["уровень навыка %d/%d" % [lv, int(c["s3"])], lv >= int(c["s3"]), lv, int(c["s3"])])
+		out.append([Loc.t("уровень навыка %d/%d") % [lv, int(c["s3"])], lv >= int(c["s3"]), lv, int(c["s3"])])
 		return out
 	if s.has("tag2"):
 		var t2 := p.tag(s["tag2"])
@@ -192,7 +192,7 @@ static func cond_list(p: Player, id: String) -> Array:
 	if s.has("w"):
 		var lv2 := _wlevel(p, s["w"])
 		var wn := "/".join(PackedStringArray((s["w"] as Array).map(func(x): return String(Weapons.DEFS[x]["short"]))))
-		out.append(["%s ур. %d/%d" % [wn, lv2, int(c["lvl"])], lv2 >= int(c["lvl"]), lv2, int(c["lvl"])])
+		out.append([Loc.t("%s ур. %d/%d") % [wn, lv2, int(c["lvl"])], lv2 >= int(c["lvl"]), lv2, int(c["lvl"])])
 	if s.has("req_mods"):
 		var n := 0
 		var names := PackedStringArray()
@@ -202,7 +202,7 @@ static func cond_list(p: Player, id: String) -> Array:
 		out.append(["%s ×%d/%d" % [" + ".join(names), n, int(c["mods"])], n >= int(c["mods"]), n, int(c["mods"])])
 	if s.get("wingmen", false):
 		var wn2 := p.permanent_wingmen()
-		out.append(["ведомые %d/%d" % [wn2, int(c["wing"])], wn2 >= int(c["wing"]), wn2, int(c["wing"])])
+		out.append([Loc.t("ведомые %d/%d") % [wn2, int(c["wing"])], wn2 >= int(c["wing"]), wn2, int(c["wing"])])
 	return out
 
 
@@ -359,17 +359,17 @@ static func _pct(v: float) -> String:
 static func module_desc(p: Player, id: String, k: float) -> String:
 	match id:
 		"armor":
-			return "+%s прочности (и сразу ремонт на эту величину)" % _pct(0.2 * k)
+			return Loc.t("+%s прочности (и сразу ремонт на эту величину)") % _pct(0.2 * k)
 		"engine":
-			return "+%s скорости" % _pct(0.06 * k)
+			return Loc.t("+%s скорости") % _pct(0.06 * k)
 		"wing":
-			return "+%s скорости разворота" % _pct(0.08 * k)
+			return Loc.t("+%s скорости разворота") % _pct(0.08 * k)
 		"gun_dmg":
-			return "Пушка: +%s урона" % _pct(0.15 * k)
+			return Loc.t("Пушка: +%s урона") % _pct(0.15 * k)
 		"gun_rate":
-			return "Пушка: +%s скорострельности" % _pct(0.15 * k)
+			return Loc.t("Пушка: +%s скорострельности") % _pct(0.15 * k)
 		"reload":
-			return "Все подвесы и турели: −%s перезарядки" % _pct(0.1 * k)
+			return Loc.t("Все подвесы и турели: −%s перезарядки") % _pct(0.1 * k)
 		"seeker":
 			match int(p.taken.get("seeker", 0)):
 				0:
@@ -379,36 +379,36 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 				_:
 					return "После сбития наводящаяся ракета ищет следующую цель (1 раз); наводящиеся ракеты бьют и наземные цели (×1,5)"
 		"frag":
-			return "+%s радиуса всех взрывов" % _pct(0.1 * k)
+			return Loc.t("+%s радиуса всех взрывов") % _pct(0.1 * k)
 		"servo":
-			return "Гондола и турели: +%s темпа, +%s дальности; турели наводятся на %s быстрее" % [_pct(0.1 * k), _pct(0.06 * k), _pct(0.25 * k)]
+			return Loc.t("Гондола и турели: +%s темпа, +%s дальности; турели наводятся на %s быстрее") % [_pct(0.1 * k), _pct(0.06 * k), _pct(0.25 * k)]
 		"warhead":
-			return "+%s урона всех взрывов (залпы ракет, бомбы, осколки ракет, навыки)" % _pct(0.12 * k)
+			return Loc.t("+%s урона всех взрывов (залпы ракет, бомбы, осколки ракет, навыки)") % _pct(0.12 * k)
 		"msl_head":
-			var s := "Ракеты: +%s урона, +%s радиуса разрыва" % [_pct(0.15 * k), _pct(0.08 * k)]
+			var s := Loc.t("Ракеты: +%s урона, +%s радиуса разрыва") % [_pct(0.15 * k), _pct(0.08 * k)]
 			if int(p.taken.get("msl_head", 0)) + 1 == 3:
 				s += "; разделяющаяся боевая часть: ракета при попадании даёт 3 суббоеприпаса"
 			return s
 		"msl_motor":
-			return "Ракеты: +%s скорости, +%s дальности захвата" % [_pct(0.12 * k), _pct(0.08 * k)]
+			return Loc.t("Ракеты: +%s скорости, +%s дальности захвата") % [_pct(0.12 * k), _pct(0.08 * k)]
 		"launcher":
-			return "Все ракеты: −%s перезарядки" % _pct(0.1 * k)
+			return Loc.t("Все ракеты: −%s перезарядки") % _pct(0.1 * k)
 		"radio":
-			return "Ведомые: +%s урона, +%s прочности" % [_pct(0.2 * k), _pct(0.15 * k)]
+			return Loc.t("Ведомые: +%s урона, +%s прочности") % [_pct(0.2 * k), _pct(0.15 * k)]
 		"magnet":
-			return "+%s радиуса подбора опыта" % _pct(0.35 * k)
+			return Loc.t("+%s радиуса подбора опыта") % _pct(0.35 * k)
 		"roll":
 			if not p.has_roll():
-				return "Залп ловушек: −%.1f с перезарядки" % [1.0 * k]
-			return "Уклонение: −%.1f с перезарядки, +%.2f с неуязвимости" % [1.0 * k, 0.15 * k]
+				return Loc.t("Залп ловушек: −%.1f с перезарядки") % [1.0 * k]
+			return Loc.t("Уклонение: −%.1f с перезарядки, +%.2f с неуязвимости") % [1.0 * k, 0.15 * k]
 		"afterburner":
-			return "Форсаж: +%.1f с длительности, −%.1f с перезарядки" % [1.0 * k, 2.0 * k]
+			return Loc.t("Форсаж: +%.1f с длительности, −%.1f с перезарядки") % [1.0 * k, 2.0 * k]
 		"skill3":
 			var d: Dictionary = PlaneClasses.SKILL3[p.skill3]
 			var nl := int(p.mods["s3_lvl"]) + 1
 			return "%s %s: %s" % [d["title"], Prog.ROMAN[nl], d["lv"][nl]]
 		"repair":
-			return "Восстановить %s прочности" % _pct(minf(0.4 * k, 1.0))
+			return Loc.t("Восстановить %s прочности") % _pct(minf(0.4 * k, 1.0))
 	return ""
 
 
@@ -426,23 +426,23 @@ static func module_delta(p: Player, id: String, k: float) -> String:
 		return "%s: %s → %s" % [d[2], _pct(v), _pct(v * (1.0 + float(d[1]) * k))]
 	match id:
 		"armor":
-			return "Прочность: %d → %d" % [int(p.max_hp), int(p.max_hp + float(p.cls["hp"]) * 0.2 * k)]
+			return Loc.t("Прочность: %d → %d") % [int(p.max_hp), int(p.max_hp + float(p.cls["hp"]) * 0.2 * k)]
 		"reload":
 			var r := float(p.mods["hp_cd"])
-			return "Перезарядка подвесов: %s → %s" % [_pct(r), _pct(maxf(0.3, r * (1.0 - 0.1 * k)))]
+			return Loc.t("Перезарядка подвесов: %s → %s") % [_pct(r), _pct(maxf(0.3, r * (1.0 - 0.1 * k)))]
 		"launcher":
 			var r2 := float(p.mods.get("msl_cd", 1.0))
-			return "Перезарядка ракет: %s → %s" % [_pct(r2), _pct(maxf(0.4, r2 * (1.0 - 0.1 * k)))]
+			return Loc.t("Перезарядка ракет: %s → %s") % [_pct(r2), _pct(maxf(0.4, r2 * (1.0 - 0.1 * k)))]
 		"roll":
 			if not p.has_roll():
 				return ""
 			var t := Tuning.g("roll_time") + float(p.mods["roll_time"])
-			return "Неуязвимость уклонения: %.2f → %.2f с" % [t, t + 0.15 * k]
+			return Loc.t("Неуязвимость уклонения: %.2f → %.2f с") % [t, t + 0.15 * k]
 		"afterburner":
 			var a := Tuning.g("afterburner_time") + float(p.mods["ab_time"])
-			return "Форсаж: %.1f → %.1f с" % [a, a + 1.0 * k]
+			return Loc.t("Форсаж: %.1f → %.1f с") % [a, a + 1.0 * k]
 		"repair":
-			return "Прочность: %d → %d из %d" % [int(p.hp), int(minf(p.max_hp, p.hp + p.max_hp * minf(0.4 * k, 1.0))), int(p.max_hp)]
+			return Loc.t("Прочность: %d → %d из %d") % [int(p.hp), int(minf(p.max_hp, p.hp + p.max_hp * minf(0.4 * k, 1.0))), int(p.max_hp)]
 	return ""
 
 
@@ -596,42 +596,42 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 		"weapon_new":
 			var w: String = card["weapon"]
 			var g: Hardpoint = p.groups[int(card["group"])]
-			card["desc"] = "%s\nНа подвес: %s ×%d\nСтарт с ур. %d" % [Weapons.DEFS[w]["desc"], g.name, g.slots, NEW_WEAPON_LEVEL[r]]
+			card["desc"] = Loc.t("%s\nНа подвес: %s ×%d\nСтарт с ур. %d") % [Weapons.DEFS[w]["desc"], g.name, g.slots, NEW_WEAPON_LEVEL[r]]
 			if Prog.EVOS.has(w):
-				card["desc"] += "\nМодернизация: ур. 5 + %s" % _cat_text(w)
+				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s") % _cat_text(w)
 		"weapon_up":
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			var to := mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
-			card["desc"] = "%s: ур. %d → %d\n%s" % [g2.name, g2.level, to, Weapons.DEFS[g2.weapon]["lvl"]]
+			card["desc"] = Loc.t("%s: ур. %d → %d\n%s") % [g2.name, g2.level, to, Weapons.DEFS[g2.weapon]["lvl"]]
 			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to) > g2.slots:
 				card["desc"] += "\nВторая турель — сверху на фюзеляже"
 			if r > 0:
-				card["desc"] += "\nБонус редкости: +%s урона группы" % _pct(0.15 * (k - 1.0))
+				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(0.15 * (k - 1.0))
 			if g2.weapon == PlaneClasses.signature(p.cls_id):
 				card["desc"] += "\n★ Особенность класса: урон +20%"
 			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
-				card["desc"] += "\nМодернизация: ур. 5 + %s, с %d:%02d" % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
+				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s, с %d:%02d") % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
-			card["desc"] = syn_def(p, card["syn"])["desc"] + "\nОткрывает слот %d из %d. Следующий слот дороже." % [p.syn.size() + 1, MAX_SYN]
+			card["desc"] = syn_def(p, card["syn"])["desc"] + Loc.t("\nОткрывает слот %d из %d. Следующий слот дороже.") % [p.syn.size() + 1, MAX_SYN]
 		"mastery":
-			card["desc"] = String(PlaneClasses.MASTERY[p.cls_id]["desc"]) + "\nОдна на вылет: если отказаться, больше не придёт."
+			card["desc"] = String(PlaneClasses.MASTERY[p.cls_id]["desc"]) + Loc.t("\nОдна на вылет: если отказаться, больше не придёт.")
 		"evolution":
 			var ew: String = card["weapon"]
-			card["desc"] = Prog.EVOS[ew]["desc"] + "\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора."
+			card["desc"] = Prog.EVOS[ew]["desc"] + Loc.t("\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора.")
 		"wing_new":
 			var wt: Dictionary = Prog.WING_TYPES[card["wtype"]]
-			card["desc"] = "%s\nСила ×%.1f · Ведомых: %d / %d" % [wt["desc"], k, p.permanent_wingmen(), wing_limit(p)]
+			card["desc"] = Loc.t("%s\nСила ×%.1f · Ведомых: %d / %d") % [wt["desc"], k, p.permanent_wingmen(), wing_limit(p)]
 		"wing_lvl":
 			var wm: Wingman = p.wingmen[int(card["wi"])]
-			card["desc"] = "Ур. %d: %s" % [wm.lvl + 1, Prog.WING_TYPES[wm.type]["lv"][wm.lvl]]
+			card["desc"] = Loc.t("Ур. %d: %s") % [wm.lvl + 1, Prog.WING_TYPES[wm.type]["lv"][wm.lvl]]
 		"reserve":
 			match card["id"]:
 				"res_overload":
-					card["desc"] = "+%s урона всему оружию (можно брать снова)" % _pct(0.04 * k)
+					card["desc"] = Loc.t("+%s урона всему оружию (можно брать снова)") % _pct(0.04 * k)
 				"res_bounty":
-					card["desc"] = "+%d запчастей сразу" % int(20 * k)
+					card["desc"] = Loc.t("+%d запчастей сразу") % int(20 * k)
 				"res_kit":
-					card["desc"] = "+%s к максимальной прочности и полный ремонт" % _pct(0.05 * k)
+					card["desc"] = Loc.t("+%s к максимальной прочности и полный ремонт") % _pct(0.05 * k)
 				_:
 					if card["id"] == "res_course":
 						var cs := syn_def(p, p.course)

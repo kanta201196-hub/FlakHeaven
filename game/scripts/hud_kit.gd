@@ -90,7 +90,7 @@ func _card_chips(r: Rect2, items: Array, size := 14) -> void:
 		var it: Dictionary = items[i]
 		var label := String(it["title"])
 		if int(it["lvl"]) > 0:
-			label += " · ур. %d" % int(it["lvl"])
+			label += Loc.t(" · ур. %d") % int(it["lvl"])
 		elif int(it["n"]) > 1:
 			label += " ×%d" % int(it["n"])
 		var tw := ui_font().get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 16.0
@@ -98,7 +98,7 @@ func _card_chips(r: Rect2, items: Array, size := 14) -> void:
 		# на последней строке оставляем место под «и ещё N»
 		var room := 0.0 if i == items.size() - 1 else 90.0
 		if last_row and x + tw + room > r.end.x:
-			_text(Vector2(x + 4, y + h - 7), "и ещё %d" % (items.size() - i), size, Color(0.75, 0.8, 0.9))
+			_text(Vector2(x + 4, y + h - 7), Loc.t("и ещё %d") % (items.size() - i), size, Color(0.75, 0.8, 0.9))
 			return
 		if x + tw > r.end.x and x > r.position.x:
 			x = r.position.x

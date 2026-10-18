@@ -15,6 +15,7 @@ import re
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scan_strings  # noqa: E402
 

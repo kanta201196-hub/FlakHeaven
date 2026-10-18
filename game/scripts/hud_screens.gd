@@ -9,7 +9,7 @@ func class_select(size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.04, 0.86))
 	_text(Vector2(0, 120), "ВЫБЕРИТЕ САМОЛЁТ", 46, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	_button(Rect2(64, 60, 260, 46), "‹ Операция (Esc)", "class_back", 18)
-	_ctext(162, "Операция %d «%s» · сложность «%s» · клавиши 1 / 2 / 3 или клик мышью" % [Campaign.num(), Campaign.op()["title"], Campaign.diff()["title"]], 20, Color(0.7, 0.75, 0.85))
+	_ctext(162, Loc.t("Операция %d «%s» · сложность «%s» · клавиши 1 / 2 / 3 или клик мышью") % [Campaign.num(), Campaign.op()["title"], Campaign.diff()["title"]], 20, Color(0.7, 0.75, 0.85))
 	var w := 520.0
 	var h := 700.0
 	var gap := 40.0
@@ -46,26 +46,26 @@ func class_select(size: Vector2) -> void:
 		for g in d["groups"]:
 			var wname: String = "пусто — оружие из карточек" if g["weapon"] == "" else Weapons.title(g["weapon"])
 			if g["weapon"] == "" and s2 != "":
-				wname = "%s — выбрано в ангаре" % Weapons.DEFS[s2]["short"]
+				wname = Loc.t("%s — выбрано в ангаре") % Weapons.DEFS[s2]["short"]
 				s2 = ""
 			_text(Vector2(x + 12, y), "• %s ×%d: %s" % [g["name"], g["slots"], wname], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if int(d["turrets"]) > 0:
 			var tmax := int(d.get("turrets_max", d["turrets"]))
-			_text(Vector2(x + 12, y), "• Автотурели: %d (круговой обстрел)%s" % [int(d["turrets"]), (", вторая — с ур. %d" % PlaneClasses.TURRET2_LVL) if tmax > int(d["turrets"]) else ""], 17, Color(0.85, 0.88, 0.95))
+			_text(Vector2(x + 12, y), Loc.t("• Автотурели: %d (круговой обстрел)%s") % [int(d["turrets"]), (Loc.t(", вторая — с ур. %d") % PlaneClasses.TURRET2_LVL) if tmax > int(d["turrets"]) else ""], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if Profile.plane_lvl(id) == 2:   # U-06
 			_text(Vector2(x + 12, y), "• Тяжёлый подвес ×1: экспериментальное оружие из карточек", 17, Color(0.6, 0.85, 1.0))
 			y += 24.0
-		_text(Vector2(x + 12, y), "• Ведомые: до %d" % int(d["wingmen"]) if int(d["wingmen"]) > 0 else "• Ведомых нет", 17, Color(0.85, 0.88, 0.95))
+		_text(Vector2(x + 12, y), Loc.t("• Ведомые: до %d") % int(d["wingmen"]) if int(d["wingmen"]) > 0 else Loc.t("• Ведомых нет"), 17, Color(0.85, 0.88, 0.95))
 		y += 24.0
 		# правка 5 теста 3.5-s5: какое оружие бывает у самолёта и особенность класса (★)
 		var wl := PackedStringArray()
 		for wid in d["weapons"]:
 			wl.append(String(Weapons.DEFS[wid]["short"]) + (" ★" if wid == d["signature"] else ""))
-		y += _para(Vector2(x + 12, y), "• Оружие: %s" % ", ".join(wl).to_lower(), w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
-		y += _para(Vector2(x + 12, y), "★ Особенность класса: «%s» +20%% урона" % Weapons.DEFS[d["signature"]]["short"], w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
-		y += _para(Vector2(x + 12, y), "★ На ур. 5 особенности — мастерство %s" % PlaneClasses.MASTERY[id]["title"], w - 56.0, 15, Color(1.0, 0.92, 0.65)) + 12.0
+		y += _para(Vector2(x + 12, y), Loc.t("• Оружие: %s") % ", ".join(wl).to_lower(), w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
+		y += _para(Vector2(x + 12, y), Loc.t("★ Особенность класса: «%s» +20%% урона") % Weapons.DEFS[d["signature"]]["short"], w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
+		y += _para(Vector2(x + 12, y), Loc.t("★ На ур. 5 особенности — мастерство %s") % PlaneClasses.MASTERY[id]["title"], w - 56.0, 15, Color(1.0, 0.92, 0.65)) + 12.0
 		# 3.1: выбор навыка класса (3 варианта)
 		_text(Vector2(x, y), "Навык класса [E] — выберите:", 18, Color(0.7, 1.0, 0.7))
 		y += 10.0
@@ -83,7 +83,7 @@ func class_select(size: Vector2) -> void:
 			if unl:
 				_buttons.append([sr, "skill:%s:%s" % [id, sk]])
 			var si: int = PlaneClasses.CLASS_SKILLS[id].find(sk)
-			_text(Vector2(x + 4, y + 20), ("● " if on else "○ ") + "%s · %d с%s%s" % [sd["title"], int(sd["cd"]), "" if unl else "  — экипаж ур. %d" % Profile.SKILL_UNLOCK[si],
+			_text(Vector2(x + 4, y + 20), ("● " if on else "○ ") + Loc.t("%s · %d с%s%s") % [sd["title"], int(sd["cd"]), "" if unl else Loc.t("  — экипаж ур. %d") % Profile.SKILL_UNLOCK[si],
 				"  · стоит в слоте 2 [F]" if not on and Profile.skills(id)[1] == sk else ""], 17,
 				Color(0.85, 1.0, 0.85) if on else (Color(0.85, 0.88, 0.95) if unl else Color(0.5, 0.52, 0.56)))
 			_para(Vector2(x + 4, y + 40), sd["short"], w - 56.0, 13, Color(0.75, 0.8, 0.88))
@@ -102,7 +102,7 @@ func class_select(size: Vector2) -> void:
 				ctrl.draw_texture(t, -t.get_size() / 2.0)
 				ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 				_text(Vector2(c.x - 130.0, r.end.y - 14.0), "ур. %d%s" % [lv, (" ✓ в вылет" if Profile.plane_lvl(id) == lv else "") if Profile.plane2(id) else ("" if lv == 1 else " (в ангаре)")], 15, Color(0.7, 0.75, 0.85), HORIZONTAL_ALIGNMENT_CENTER, 260.0)
-	_ctext(932, "Управление: %s   [F2 — сменить]" % Hud.SCHEMES[int(Tuning.g("scheme"))], 20, Color(0.75, 0.85, 1.0))
+	_ctext(932, Loc.t("Управление: %s   [F2 — сменить]") % Hud.SCHEMES[int(Tuning.g("scheme"))], 20, Color(0.75, 0.85, 1.0))
 	_ctext(964, "Опыт с врагов подбирается сам рядом с самолётом. Каждые 5 минут — ас (мини-босс), после него — окно эвакуации.", 18, Color(0.8, 0.85, 0.9))
 	_ctext(992, "Угрозы: дроны — держат дистанцию и бьют парой пуль (мигают жёлтым) · перехватчики — заходы с очередью · ракетоносцы — ракеты после красной линии", 18, Color(0.95, 0.75, 0.75))
 	_ctext(1020, "Мышь — куда лететь · W/S — газ (держаться за целью) · сядь врагу на хвост — пушка +50% · пролёт на волоске перезаряжает навыки · серия сбитий — больше опыта", 18, Color(0.7, 0.95, 1.0))
@@ -120,9 +120,9 @@ func _stat_bar(x: float, y: float, label: String, frac: float, val: String) -> v
 func levelup(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.62))
 	if m.offer_rare:
-		_ctext(150, "НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК" % (m.rare_reasons[0] if not m.rare_reasons.is_empty() else ""), 38, Color(0.75, 0.5, 1.0))
+		_ctext(150, Loc.t("НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК") % (m.rare_reasons[0] if not m.rare_reasons.is_empty() else ""), 38, Color(0.75, 0.5, 1.0))
 	else:
-		_ctext(150, "НОВЫЙ УРОВЕНЬ: %d" % m.level if m.pending_levels <= 1 else "НОВЫЙ УРОВЕНЬ (ещё выборов: %d)" % m.pending_levels, 40, Color(0.6, 1.0, 0.7))
+		_ctext(150, Loc.t("НОВЫЙ УРОВЕНЬ: %d") % m.level if m.pending_levels <= 1 else Loc.t("НОВЫЙ УРОВЕНЬ (ещё выборов: %d)") % m.pending_levels, 40, Color(0.6, 1.0, 0.7))
 	if m.levelup_intro:
 		# U-03: первые выборы — что это и как выбирать
 		_ctext(188, "Выберите одно улучшение — оно действует до конца вылета. Не знаете, что взять? Берите оружие, которое уже стоит на самолёте.", 19, Color(1.0, 0.9, 0.6))
@@ -165,22 +165,22 @@ func levelup(m: Main, size: Vector2) -> void:
 			_text(Vector2(r.position.x, r.position.y + h - 14), "ЗАКРЕПЛЕНА", 16, Color(1.0, 0.85, 0.4), HORIZONTAL_ALIGNMENT_CENTER, w)
 		# кнопки под карточкой
 		var by := r.position.y + h + 10
-		_button(Rect2(r.position.x, by, w / 2.0 - 5, 40), "Открепить" if is_locked else "Закрепить", "lock:%d" % i, 17)
+		_button(Rect2(r.position.x, by, w / 2.0 - 5, 40), Loc.t("Открепить") if is_locked else Loc.t("Закрепить"), "lock:%d" % i, 17)
 		if m.bans > 0:
 			_button(Rect2(r.position.x + w / 2.0 + 5, by, w / 2.0 - 5, 40), "Исключить", "ban:%d" % i, 17)
 	var ry := 640.0
 	if m.rerolls > 0:
-		_button(Rect2(size.x / 2.0 - 370, ry, 360, 46), "Переброс (R) — осталось %d" % m.rerolls, "reroll", 19)
+		_button(Rect2(size.x / 2.0 - 370, ry, 360, 46), Loc.t("Переброс (R) — осталось %d") % m.rerolls, "reroll", 19)
 		if m.player.has_course():
 			_button(Rect2(size.x / 2.0 + 10, ry, 460, 46), "Сменить специализацию (−1 переброс)", "change_course", 19)
 	else:
 		_ctext(ry + 30, "Перебросов не осталось (+1 за каждого аса)", 18, Color(0.6, 0.62, 0.7))
-	_ctext(ry + 76, "Исключений осталось: %d (+1 за аса)%s" % [m.bans, ("   ·   Исключены: " + ", ".join(PackedStringArray(m.banned.values()))) if not m.banned.is_empty() else ""], 16, Color(0.75, 0.75, 0.85))
+	_ctext(ry + 76, Loc.t("Исключений осталось: %d (+1 за аса)%s") % [m.bans, (Loc.t("   ·   Исключены: ") + ", ".join(PackedStringArray(m.banned.values()))) if not m.banned.is_empty() else ""], 16, Color(0.75, 0.75, 0.85))
 	# 3.1: ближайшие связки — что добрать, чтобы открыть
 	var y := ry + 112.0
 	if m.player.has_course():
 		var sd := Cards.syn_def(m.player, m.player.course)
-		_ctext(y, "Специализация: «%s» (связка %d из 3) — %s" % [sd["title"], m.player.syn.size() + 1, sd["short"]], 18, Menu.C_AMBER)
+		_ctext(y, Loc.t("Специализация: «%s» (связка %d из 3) — %s") % [sd["title"], m.player.syn.size() + 1, sd["short"]], 18, Menu.C_AMBER)
 		y += 30.0
 		_cond_line(Vector2(size.x / 2.0, y), {"title": "нужно", "conds": Cards.cond_list(m.player, m.player.course)})
 
@@ -221,7 +221,7 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 			elif sd.get("tag2", "") == t:
 				need = int(c["second"])
 			if need > 0:
-				_text(Vector2(r.position.x + 8, r.position.y + 42), "▲ к связке: %d/%d" % [n, need], 13, Color(1.0, 0.85, 0.35))
+				_text(Vector2(r.position.x + 8, r.position.y + 42), Loc.t("▲ к связке: %d/%d") % [n, need], 13, Color(1.0, 0.85, 0.35))
 		x += cw
 	var extra := PackedStringArray()
 	for id in p.syn:
@@ -233,9 +233,9 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 	for wv in p.evo_times:
 		ev.append(Prog.EVOS[wv]["title"])
 	ctrl.draw_rect(Rect2(pos.x, pos.y + 116, w, 62), Color(0.05, 0.055, 0.06, 0.8))
-	_para(Vector2(pos.x + 8, pos.y + 138), "Связки: %s   ·   Модернизации: %s   ·   Навык: %s%s" % [
-		", ".join(extra) if not extra.is_empty() else "нет", ", ".join(ev) if not ev.is_empty() else "нет",
-		p.s3_def()["title"], (", ур. " + Prog.ROMAN[p.s3_lvl()]) if p.s3_lvl() > 0 else ""], w - 16.0, 16, Menu.C_AMBER)
+	_para(Vector2(pos.x + 8, pos.y + 138), Loc.t("Связки: %s   ·   Модернизации: %s   ·   Навык: %s%s") % [
+		", ".join(extra) if not extra.is_empty() else Loc.t("нет"), ", ".join(ev) if not ev.is_empty() else Loc.t("нет"),
+		p.s3_def()["title"], (Loc.t(", ур. ") + Prog.ROMAN[p.s3_lvl()]) if p.s3_lvl() > 0 else ""], w - 16.0, 16, Menu.C_AMBER)
 
 
 # ---------- Подвесы и пауза ----------
@@ -261,7 +261,7 @@ func loadout(m: Main, size: Vector2) -> void:
 			_text(Vector2(x + 20, y + rh * 0.44 + 20), Weapons.DEFS[g.weapon]["desc"], 14, Color(0.75, 0.8, 0.9))
 			var by := y + (rh - 36.0) / 2.0
 			if Weapons.DEFS[g.weapon]["uses_priority"]:
-				_button(Rect2(x + w - 290, by, 270, 36), "Цель: %s" % Weapons.PRIORITY_NAMES[g.priority], "prio:%d" % gi, 17)
+				_button(Rect2(x + w - 290, by, 270, 36), Loc.t("Цель: %s") % Weapons.PRIORITY_NAMES[g.priority], "prio:%d" % gi, 17)
 			if g.uses_trigger():
 				_button(Rect2(x + w - 290, by, 270, 36), "Пуск: %s" % ("авто" if g.trigger == "auto" else "правой кнопкой мыши"), "trig:%d" % gi, 17)
 		y += rh + 8.0
@@ -269,16 +269,16 @@ func loadout(m: Main, size: Vector2) -> void:
 		var wr := Rect2(x, y, w, 48)
 		_panel(wr, false)
 		_text(Vector2(x + 20, y + 31), "Звено — кого атакует первым [G]", 20, Color(0.8, 0.75, 1.0))
-		_button(Rect2(x + w - 330, y + 6, 310, 36), "Цель: %s" % Settings.WING_PRIO[Settings.wing_prio], "wprio", 17)
+		_button(Rect2(x + w - 330, y + 6, 310, 36), Loc.t("Цель: %s") % Settings.WING_PRIO[Settings.wing_prio], "wprio", 17)
 		y += 56.0
 	y += 4.0
-	_text(Vector2(x, y + 10), "Пушка: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f" % [
+	_text(Vector2(x, y + 10), Loc.t("Пушка: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f") % [
 		float(p.cls["gun_dmg"]) * p.mods["gun_dmg"], float(p.cls["gun_rate"]) * p.mods["gun_rate"], p.mods["hp_cd"],
 		float(p.cls["speed"]) * p.mods["speed"], float(p.cls["turn"]) * p.mods["turn"], p.mods["pickup"]], 16, Color(0.85, 0.88, 0.95))
 	_tags_panel(p, Vector2(x, y + 36), w)
 	var cx := x + w + 40.0
 	var cw := size.x - cx - 60.0
-	_text(Vector2(cx, 200), "ВЗЯТЫЕ КАРТОЧКИ (%d)" % p.cards_log.size(), 20, Menu.C_AMBER)
+	_text(Vector2(cx, 200), Loc.t("ВЗЯТЫЕ КАРТОЧКИ (%d)") % p.cards_log.size(), 20, Menu.C_AMBER)
 	_text(Vector2(cx, 222), "цвет — лучшая редкость, «ур.» — до какого уровня улучшено", 14, Color(0.65, 0.7, 0.8))
 	if p.cards_log.is_empty():
 		_text(Vector2(cx, 256), "пока ни одной", 16, Color(0.6, 0.62, 0.7))
@@ -302,9 +302,9 @@ func result(m: Main, size: Vector2) -> void:
 		_ctext(top, "ЭВАКУАЦИЯ УСПЕШНА", 46, Color(0.5, 1.0, 0.6))
 	else:
 		_ctext(top, "САМОЛЁТ СБИТ", 46, Color(1, 0.5, 0.4))
-	_ctext(top + 42, "%s · время %02d:%02d · уровень %d · сбито %d · асов %d" % [PlaneClasses.DATA[m.cls_id]["title"], t / 60, t % 60, m.level, m.kills, m.bosses_killed], 23, Color.WHITE)
+	_ctext(top + 42, Loc.t("%s · время %02d:%02d · уровень %d · сбито %d · асов %d") % [PlaneClasses.DATA[m.cls_id]["title"], t / 60, t % 60, m.level, m.kills, m.bosses_killed], 23, Color.WHITE)
 	var kept_note := "100% — эвакуация" if m.state == "evac" else "50% — гибель без эвакуации"
-	_ctext(top + 74, "Запчасти: %d из %d (%s)" % [m.parts_kept, int(m.parts), kept_note], 21, Color(0.95, 0.85, 0.55))
+	_ctext(top + 74, Loc.t("Запчасти: %d из %d (%s)") % [m.parts_kept, int(m.parts), kept_note], 21, Color(0.95, 0.85, 0.55))
 	_op_line(m, top + 104)
 	# правка 30 (тест 3.5-s4): итоги на вкладках — «Обзор» с выводами, «Урон» с долями и уроном в секунду, «Сборка»
 	var tabs := ["1 · Обзор", "2 · Урон", "3 · Сборка"]
@@ -397,9 +397,9 @@ static func result_insights(m: Main) -> Array:
 		keys.sort_custom(func(a, b): return float(dealt[a]) > float(dealt[b]))
 		var k0: String = keys[0]
 		var share := int(round(100.0 * float(dealt[k0]) / dt))
-		var s := "Главный урон — %s: %d%% всего урона" % [SRC_NAMES.get(k0, k0), share]
+		var s := Loc.t("Главный урон — %s: %d%% всего урона") % [SRC_NAMES.get(k0, k0), share]
 		if keys.size() > 1:
-			s += ", дальше %s — %d%%" % [SRC_NAMES.get(keys[1], keys[1]), int(round(100.0 * float(dealt[keys[1]]) / dt))]
+			s += Loc.t(", дальше %s — %d%%") % [SRC_NAMES.get(keys[1], keys[1]), int(round(100.0 * float(dealt[keys[1]]) / dt))]
 		out.append([s + ".", Color(0.45, 0.9, 0.55)])
 		if share >= 60:
 			out.append(["Почти всё держится на одном оружии. Если его урон просядет, вылет тоже просядет: возьмите второе оружие или связку к нему.", Color(1.0, 0.85, 0.4)])
@@ -415,7 +415,7 @@ static func result_insights(m: Main) -> Array:
 		for k in kind.keys():
 			if kk == "" or float(kind[k]) > float(kind[kk]):
 				kk = k
-		out.append(["Больше всего урона вы получили от врагов «%s» (%d%%), в основном — %s." % [bk, int(round(100.0 * float(by.get(bk, 0)) / tk)), kk], Color(1.0, 0.55, 0.45)])
+		out.append([Loc.t("Больше всего урона вы получили от врагов «%s» (%d%%), в основном — %s.") % [bk, int(round(100.0 * float(by.get(bk, 0)) / tk)), kk], Color(1.0, 0.55, 0.45)])
 		if kk == "ракеты" and int(m.counters.get("intercepted", 0)) == 0:
 			out.append(["Ловушки не увели ни одной ракеты. Уклонение (Space) и боевой разворот сбивают захват — жмите, когда слышите сигнал пуска.", Color(1.0, 0.75, 0.4)])
 		elif kk == "таран":
@@ -426,9 +426,9 @@ static func result_insights(m: Main) -> Array:
 		var first := 1e9
 		for id in m.player.syn:
 			first = minf(first, float(m.player.syn[id]))
-		out.append(["Связок: %d, первая — на %d:%02d." % [m.player.syn.size(), int(first) / 60, int(first) % 60], Menu.C_AMBER])
+		out.append([Loc.t("Связок: %d, первая — на %d:%02d.") % [m.player.syn.size(), int(first) / 60, int(first) % 60], Menu.C_AMBER])
 	if m.shots > 50 and m.hits * 100 < m.shots * 30:
-		out.append(["Пушка попадала только в %d%% выстрелов: держите нос на цели или включите ручной огонь (Q) — он сильнее." % int(100.0 * m.hits / m.shots), Color(0.75, 0.85, 1.0)])
+		out.append([Loc.t("Пушка попадала только в %d%% выстрелов: держите нос на цели или включите ручной огонь (Q) — он сильнее.") % int(100.0 * m.hits / m.shots), Color(0.75, 0.85, 1.0)])
 	if m.bosses_killed == 0 and m.run_time > 200.0:
 		out.append(["Ни одного сбитого аса — без него не открываются ворота эвакуации.", Color(1.0, 0.55, 0.45)])
 	return out.slice(0, 6)
@@ -440,7 +440,7 @@ func _res_damage(m: Main, y0: float, size: Vector2) -> void:
 	var rx := 700.0
 	var hc := Color(0.95, 0.95, 1.0)
 	var rt := maxf(m.run_time, 1.0)
-	_text(Vector2(lx, y0), "ПОЛУЧЕНО УРОНА: %d" % m.total("taken"), 22, Color(1.0, 0.72, 0.68))
+	_text(Vector2(lx, y0), Loc.t("ПОЛУЧЕНО УРОНА: %d") % m.total("taken"), 22, Color(1.0, 0.72, 0.68))
 	var y := y0 + 36.0
 	for k in ["таран", "пули", "ракеты"]:
 		_row(lx, y, 520.0, k, m.stat("taken", k), m.total("taken"), Color(1.0, 0.45, 0.4))
@@ -451,7 +451,7 @@ func _res_damage(m: Main, y0: float, size: Vector2) -> void:
 	for k in ["дроны", "перехватчики", "ракетоносцы", "ПВО", "ас-соперник", "асы"]:
 		_row(lx, y, 520.0, k, m.stat("taken_by", k), m.total("taken"), Color(1.0, 0.6, 0.4))
 		y += 30.0
-	_text(Vector2(rx, y0), "НАНЕСЕНО УРОНА: %d  ·  %d в секунду" % [m.total("dealt"), int(m.total("dealt") / rt)], 22, Color(0.72, 1.0, 0.78))
+	_text(Vector2(rx, y0), Loc.t("НАНЕСЕНО УРОНА: %d  ·  %d в секунду") % [m.total("dealt"), int(m.total("dealt") / rt)], 22, Color(0.72, 1.0, 0.78))
 	_text(Vector2(rx + 300, y0 + 30), "доля", 14, Color(0.65, 0.7, 0.78))
 	_text(Vector2(rx + 940, y0 + 30), "урон · в сек.", 14, Color(0.65, 0.7, 0.78), HORIZONTAL_ALIGNMENT_RIGHT, 160)
 	y = y0 + 58.0
@@ -470,10 +470,10 @@ func _res_damage(m: Main, y0: float, size: Vector2) -> void:
 	y += 16.0
 	var acc := 0.0 if m.shots == 0 else 100.0 * m.hits / m.shots
 	var lines := [
-		"Сбито: дроны %d · перехватчики %d · ракетоносцы %d · асы %d" % [m.stat("kills_by", "дроны"), m.stat("kills_by", "перехватчики"), m.stat("kills_by", "ракетоносцы"), m.stat("kills_by", "асы")],
-		"Точность пушки: %d%% · пик «оборотов»: +%d%% · сбито с хвоста: %d" % [int(acc), int(round(m.peak_rev * 100.0)), m.tail_kills],
-		"Уведено ракет ловушками: %d · срывов захвата: %d · на волоске: %d" % [int(m.counters.get("intercepted", 0)), int(m.counters.get("locks_broken", 0)), m.near_misses],
-		"Лучшая серия: %d · активностей: %d · проход на форсаже: %d урона" % [m.best_streak, m.activities_done, m.stat("dealt", "проход на форсаже")],
+		Loc.t("Сбито: дроны %d · перехватчики %d · ракетоносцы %d · асы %d") % [m.stat("kills_by", "дроны"), m.stat("kills_by", "перехватчики"), m.stat("kills_by", "ракетоносцы"), m.stat("kills_by", "асы")],
+		Loc.t("Точность пушки: %d%% · пик «оборотов»: +%d%% · сбито с хвоста: %d") % [int(acc), int(round(m.peak_rev * 100.0)), m.tail_kills],
+		Loc.t("Уведено ракет ловушками: %d · срывов захвата: %d · на волоске: %d") % [int(m.counters.get("intercepted", 0)), int(m.counters.get("locks_broken", 0)), m.near_misses],
+		Loc.t("Лучшая серия: %d · активностей: %d · проход на форсаже: %d урона") % [m.best_streak, m.activities_done, m.stat("dealt", "проход на форсаже")],
 	]
 	for l in lines:
 		if y > size.y - 150.0:
@@ -493,24 +493,24 @@ func _res_build(m: Main, y0: float, size: Vector2) -> void:
 	for id in p.syn:
 		y += 26.0
 		var sd := Cards.syn_def(p, id)
-		var sdmg := m.stat("dealt", "связка: " + String(sd["title"]).to_lower())
+		var sdmg := m.stat("dealt", Loc.t("связка: ") + String(sd["title"]).to_lower())
 		var tt := int(float(p.syn[id]))
-		_text(Vector2(x + 12, y), "«%s» — с %d:%02d · урон %d" % [sd["title"], tt / 60, tt % 60, sdmg], 18, Color(1.0, 0.9, 0.6))
+		_text(Vector2(x + 12, y), Loc.t("«%s» — с %d:%02d · урон %d") % [sd["title"], tt / 60, tt % 60, sdmg], 18, Color(1.0, 0.9, 0.6))
 	y += 40.0
 	var ev := PackedStringArray()
 	for wv in p.evo_times:
 		var et := int(float(p.evo_times[wv]))
 		ev.append("%s (%d:%02d)" % [Prog.EVOS[wv]["title"], et / 60, et % 60])
-	_text(Vector2(x, y), "МОДЕРНИЗАЦИИ: " + (", ".join(ev) if not ev.is_empty() else "нет"), 18, Cards.EVO_COLOR)
+	_text(Vector2(x, y), Loc.t("МОДЕРНИЗАЦИИ: ") + (", ".join(ev) if not ev.is_empty() else Loc.t("нет")), 18, Cards.EVO_COLOR)
 	y += 34.0
 	var gl := PackedStringArray()
 	for g in p.groups:
 		var h := g as Hardpoint
 		if not h.is_empty():
-			gl.append("%s ур. %d ×%d" % [Weapons.DEFS[h.weapon]["short"], h.level, h.slots])
-	_para(Vector2(x, y), "ПОДВЕСЫ: " + (" · ".join(gl) if not gl.is_empty() else "пусто"), size.x - 2.0 * x, 18, Color(0.85, 0.9, 1.0))
+			gl.append(Loc.t("%s ур. %d ×%d") % [Weapons.DEFS[h.weapon]["short"], h.level, h.slots])
+	_para(Vector2(x, y), Loc.t("ПОДВЕСЫ: ") + (" · ".join(gl) if not gl.is_empty() else Loc.t("пусто")), size.x - 2.0 * x, 18, Color(0.85, 0.9, 1.0))
 	y += 46.0
-	_text(Vector2(x, y), "КАРТОЧКИ ВЫЛЕТА: %d" % p.cards_log.size(), 20, Menu.C_AMBER)
+	_text(Vector2(x, y), Loc.t("КАРТОЧКИ ВЫЛЕТА: %d") % p.cards_log.size(), 20, Menu.C_AMBER)
 	_text(Vector2(x + 300, y), "цвет — лучшая редкость, «ур.» — до какого уровня улучшено", 14, Color(0.65, 0.7, 0.8))
 	if not p.cards_log.is_empty():
 		_card_chips(Rect2(x, y + 16, size.x - 2.0 * x, size.y - 150.0 - (y + 16)), Cards.log_summary(p.cards_log), 16)
@@ -552,9 +552,9 @@ func course_pick(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.72))
 	var p := m.player
 	var slot := p.syn.size() + 1
-	_ctext(150, "ВЫБОР СПЕЦИАЛИЗАЦИИ — СВЯЗКА %d ИЗ 3" % slot, 40, Menu.C_AMBER)
+	_ctext(150, Loc.t("ВЫБОР СПЕЦИАЛИЗАЦИИ — СВЯЗКА %d ИЗ 3") % slot, 40, Menu.C_AMBER)
 	_ctext(192, "Связка — сильный бонус, который меняет оружие или навык. Выберите, какую собирать: карточки к ней отмечены «▲» и выпадают чаще.", 17, Color(0.8, 0.84, 0.92))
-	_ctext(218, "Нужно набрать очки цветных меток на карточках: для 1-й связки — %d, 2-й — %d, 3-й — %d. Сменить специализацию можно позже за 1 переброс." % [
+	_ctext(218, Loc.t("Нужно набрать очки цветных меток на карточках: для 1-й связки — %d, 2-й — %d, 3-й — %d. Сменить специализацию можно позже за 1 переброс.") % [
 		Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]], 16, Color(0.7, 0.74, 0.82))
 	var w := 520.0
 	var h := 400.0
@@ -583,7 +583,7 @@ func course_pick(m: Main, size: Vector2) -> void:
 		for c in conds:
 			_cond_chips(Vector2(r.position.x + 18, yy), [c])
 			yy += 28.0
-		_text(Vector2(r.position.x + 18, r.end.y - 16), "≈ ещё %d подходящих карточек" % Cards.cards_left(conds), 16, Menu.C_AMBER)
+		_text(Vector2(r.position.x + 18, r.end.y - 16), Loc.t("≈ ещё %d подходящих карточек") % Cards.cards_left(conds), 16, Menu.C_AMBER)
 	_ctext(690, "1–3 или клик — выбрать специализацию", 17, Color(0.75, 0.8, 0.9))
 
 
@@ -595,13 +595,13 @@ func _op_line(m: Main, y: float) -> void:
 	var s := ""
 	var col := Color(0.8, 0.82, 0.88)
 	if o["first"]:
-		s = "Операция %d «%s» пройдена! Открыто: %s" % [int(o["n"]), o["title"], ", ".join(PackedStringArray(o["opens"]))]
+		s = Loc.t("Операция %d «%s» пройдена! Открыто: %s") % [int(o["n"]), o["title"], ", ".join(PackedStringArray(o["opens"]))]
 		col = Color(1.0, 0.85, 0.4)
 	elif o["done"]:
-		s = "Операция %d «%s» выполнена (уже была пройдена)" % [int(o["n"]), o["title"]]
+		s = Loc.t("Операция %d «%s» выполнена (уже была пройдена)") % [int(o["n"]), o["title"]]
 		col = Color(0.5, 1.0, 0.6)
 	else:
-		s = "Операция %d «%s» не засчитана: не удалось %s" % [int(o["n"]), o["title"], ", ".join(PackedStringArray(o["miss"])) if not (o["miss"] as Array).is_empty() else "вернуться на базу"]
+		s = Loc.t("Операция %d «%s» не засчитана: не удалось %s") % [int(o["n"]), o["title"], ", ".join(PackedStringArray(o["miss"])) if not (o["miss"] as Array).is_empty() else Loc.t("вернуться на базу")]
 	_ctext(y, s, 19, col)
 
 
@@ -627,8 +627,8 @@ func _meta_panel(m: Main, r: Rect2) -> void:
 	rows.append(["Жалованье техникам", "+%d" % int(a["wage"]), Color(0.95, 0.85, 0.55)])
 	if int(a.get("op_parts", 0)) > 0:
 		rows.append(["Операция пройдена впервые", "+%d" % int(a["op_parts"]), Color(1.0, 0.85, 0.4)])
-	rows.append(["Итого", "+%d   (всего %d)" % [int(a["parts_add"]), int(a["parts_after"])], Color.WHITE])
-	rows.append(["ОПЫТ ЭКИПАЖА «%s»" % Profile.cls(m.cls_id)["callsign"], "", Color(0.6, 1.0, 0.7)])
+	rows.append(["Итого", Loc.t("+%d   (всего %d)") % [int(a["parts_add"]), int(a["parts_after"])], Color.WHITE])
+	rows.append([Loc.t("ОПЫТ ЭКИПАЖА «%s»") % Profile.cls(m.cls_id)["callsign"], "", Color(0.6, 1.0, 0.7)])
 	for l in a["xp_lines"]:
 		rows.append([l[0], ("%+d" % int(l[1])), Color(0.75, 0.95, 0.8)])
 	rows.append(["Итого опыта", "+%d" % int(a["xp_add"]), Color.WHITE])
@@ -651,21 +651,21 @@ func _meta_panel(m: Main, r: Rect2) -> void:
 	var frac := clampf(float(pr[0]) / maxf(float(pr[1]), 1.0), 0.0, 1.0) if int(pr[1]) > 0 else 1.0
 	ctrl.draw_rect(Rect2(x, y, w * frac * k, 16), Color(0.5, 1.0, 0.6))
 	y += 40.0
-	_text(Vector2(x, y), "Экипаж ур. %d" % lv, 20, Color.WHITE)
+	_text(Vector2(x, y), Loc.t("Экипаж ур. %d") % lv, 20, Color.WHITE)
 	if int(pr[1]) > 0 and not a.has("promote"):
-		_text(Vector2(x, y), "до ур. %d: %d" % [lv + 1, int(pr[1]) - int(pr[0])], 16, Color(0.75, 0.8, 0.88), HORIZONTAL_ALIGNMENT_RIGHT, w)
+		_text(Vector2(x, y), Loc.t("до ур. %d: %d") % [lv + 1, int(pr[1]) - int(pr[0])], 16, Color(0.75, 0.8, 0.88), HORIZONTAL_ALIGNMENT_RIGHT, w)
 	# 3.5: уровень покупается в ангаре — «Повысить в звании»
 	if a.has("promote"):
 		y += 28.0
 		var pv: Array = a["promote"]
-		_text(Vector2(x, y), "Опыта хватает на ур. %d: «Повысить в звании» в ангаре — %d" % [int(pv[0]), int(pv[1])], 16,
+		_text(Vector2(x, y), Loc.t("Опыта хватает на ур. %d: «Повысить в звании» в ангаре — %d") % [int(pv[0]), int(pv[1])], 16,
 			Color(1.0, 0.9, 0.4))
 	for u in a["unlocked"]:
 		y += 26.0
-		_text(Vector2(x, y), "ОТКРЫТО: " + String(u), 16, Color(1.0, 0.85, 0.4))
+		_text(Vector2(x, y), Loc.t("ОТКРЫТО: ") + String(u), 16, Color(1.0, 0.85, 0.4))
 	if String(a.get("tech", "")) != "":
 		y += 28.0
-		_text(Vector2(x, y), "Техник: «%s»" % String(a["tech"]), 16, Color(0.95, 0.85, 0.55))
+		_text(Vector2(x, y), Loc.t("Техник: «%s»") % String(a["tech"]), 16, Color(0.95, 0.85, 0.55))
 	if String(a.get("hint_buy", "")) != "":
 		y += 30.0
-		_text(Vector2(x, y), "Можно купить: " + String(a["hint_buy"]), 17, Color(0.6, 0.95, 1.0))
+		_text(Vector2(x, y), Loc.t("Можно купить: ") + String(a["hint_buy"]), 17, Color(0.6, 0.95, 1.0))
