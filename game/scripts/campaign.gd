@@ -37,6 +37,27 @@ const OPS := [
 		"task": "Сбить «Крепость» на сложности «Ас» и улететь",
 		"hud": "«Крепость» через",
 		"opens": ["Второй биом (готовится)"]},
+	# Второй биом «Архипелаг Таласора» (тред «Второй биом», 18.10.2026): своя цепочка операций, первая открыта сразу
+	{"id": "strait", "biome": "archipelago", "title": "Пролив", "diff": 0, "need": ["time"], "parts": 400,
+		"brief": "Морской конвой противника идёт проливом между островами Таласоры. Береговые батареи и катера ПВО прикрывают фарватер. Держите небо 15 минут и уходите через ворота эвакуации.",
+		"task": "Продержаться до 15:00 и улететь через ворота",
+		"hud": "конвой пройдёт пролив через",
+		"opens": ["Операция «Маяк»"]},
+	{"id": "lighthouse", "biome": "archipelago", "title": "Маяк", "diff": 1, "need": ["time"], "parts": 600,
+		"brief": "На мысах у входа в бухты противник поставил посты наблюдения и батареи. Над водой ходят экранопланы «Крачка». Продержитесь до 15:00.",
+		"task": "Продержаться до 15:00 и улететь",
+		"hud": "до эвакуации",
+		"opens": ["Операция «Затонувший порт»"]},
+	{"id": "port", "biome": "archipelago", "title": "Затонувший порт", "diff": 2, "need": ["time"], "parts": 900,
+		"brief": "Порт в глубине залива — склад и ремонтная база флота противника. Его прикрывает крейсер «Сторож». Продержитесь до 15:00.",
+		"task": "Продержаться до 15:00 и улететь",
+		"hud": "до эвакуации",
+		"opens": ["Операция «Левиафан»"]},
+	{"id": "leviathan", "biome": "archipelago", "title": "Левиафан", "diff": 3, "need": ["time"], "parts": 1400,
+		"brief": "В открытом море — «Левиафан», корабль-носитель противника. Всё, что у него есть, поднято в воздух.",
+		"task": "Продержаться до 15:00 на сложности «Ас» и улететь",
+		"hud": "до эвакуации",
+		"opens": []},
 ]
 
 const NEED_TEXT := {"time": "продержаться до 15:00", "fortress": "сбить «Крепость»", "baron": "сбить «Барона» в дуэли"}
@@ -52,7 +73,9 @@ static func _load() -> void:
 	_cfg = ConfigFile.new()
 	_cfg.load(PATH)
 	if sel < 0:
-		sel = clampi(int(_cfg.get_value("state", "sel", 0)), 0, unlocked() - 1)
+		sel = clampi(int(_cfg.get_value("state", "sel", 0)), 0, OPS.size() - 1)
+		if not is_open(sel):
+			sel = 0
 
 
 static func _save() -> void:
@@ -64,14 +87,43 @@ static func cleared(i: int) -> bool:
 	return bool(_cfg.get_value("done", OPS[i]["id"], false))
 
 
-## Сколько операций открыто (первая — всегда)
+## Биом операции i (Biome.HIGHLAND, если не указан)
+static func biome_of(i: int) -> String:
+	return String(OPS[i].get("biome", Biome.HIGHLAND))
+
+
+## Операции биома по порядку (номера в OPS)
+static func ops_of(biome: String) -> Array:
+	var r := []
+	for i in OPS.size():
+		if biome_of(i) == biome:
+			r.append(i)
+	return r
+
+
+## Открыта ли операция: первая в своём биоме — всегда, дальше — после прохождения предыдущей того же биома
+static func is_open(i: int) -> bool:
+	_load()
+	var ids := ops_of(biome_of(i))
+	var k := ids.find(i)
+	return k <= 0 or cleared(ids[k - 1])
+
+
+## Сколько операций открыто подряд в биоме выбранной операции (для старого кода с номерами 0…n−1)
 static func unlocked() -> int:
 	_load()
-	var n := 1
-	for i in OPS.size() - 1:
-		if bool(_cfg.get_value("done", OPS[i]["id"], false)):
-			n = i + 2
+	var n := 0
+	for i in OPS.size():
+		if is_open(i):
+			n = i + 1
 	return n
+
+
+## Номер операции в своём биоме, с 1 (для подписей «Операция N»)
+static func num(i := -1) -> int:
+	if i < 0:
+		i = index()
+	return ops_of(biome_of(i)).find(i) + 1
 
 
 ## Номер выбранной операции (0–3)
@@ -82,7 +134,7 @@ static func index() -> int:
 
 static func select(i: int) -> void:
 	_load()
-	if i < 0 or i >= unlocked():
+	if i < 0 or i >= OPS.size() or not is_open(i):
 		return
 	sel = i
 	_cfg.set_value("state", "sel", i)
@@ -103,9 +155,9 @@ static func k(key: String) -> float:
 	return float(diff()[key])
 
 
-## В операциях 2–4 ас-соперник в дуэли — «Барон»
+## В операциях 2–4 Нагорья ас-соперник в дуэли — «Барон»
 static func baron() -> bool:
-	return index() >= 1
+	return biome_of(index()) == Biome.HIGHLAND and index() >= 1
 
 
 static func baron_met() -> int:

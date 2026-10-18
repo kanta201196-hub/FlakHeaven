@@ -137,8 +137,22 @@ func _draw_overlays() -> void:
 		_dashed_circle(pl.gun_range(), Color(1.0, 0.95, 0.75, 0.26))
 		for g in pl.groups:
 			var h: Hardpoint = g
+			if h.weapon == "emp" and h.cd <= 0.25:   # тест 3.5-s7: заряд готов — видна зона, где он сработает
+				_dashed_circle(h.range_px(), Color(0.55, 0.8, 1.0, 0.3), 2.0, 48)
 			if h.weapon == "aam" or (h.weapon == "turret" and h.slots > 0):
 				_dashed_circle(h.range_px(), Color(1.0, 0.5, 0.4, 0.2) if h.weapon == "aam" else Color(0.4, 0.9, 0.85, 0.16), 2.0, 72 if h.weapon == "aam" else 56)
+	# тест 3.5-s7: прицел бомб без 3D (в 3D его рисует земля по рельефу — render3d._sync_ground_zones)
+	if not (Render3D.I != null and Render3D.I.ground_zones_on()):
+		for g in pl.groups:
+			var hb: Hardpoint = g
+			if hb.aiming:
+				var col := Color(1.0, 0.68, 0.28, 0.85) if hb.cd <= 0.0 else Color(0.8, 0.82, 0.8, 0.5)
+				for z in hb.aim_zones(pl):
+					var a: Vector2 = pl.to_local(z[0])
+					var b: Vector2 = pl.to_local(z[1])
+					pl.draw_arc(a, z[2], 0.0, TAU, 48, col, 2.0)
+					if a != b:
+						pl.draw_arc(b, z[2], 0.0, TAU, 48, col, 2.0)
 	# Радиус подбора опыта — еле заметный круг
 	pl.draw_arc(Vector2.ZERO, pl.pickup_radius(), 0.0, TAU, 64, Color(0.5, 1.0, 0.6, 0.06), 1.0)
 	if pl.manual_mode:

@@ -22,6 +22,7 @@ var cam: Camera3D
 var sun: DirectionalLight3D
 var terrain: Terrain3D
 var _ground_mat: ShaderMaterial
+var _env: Environment   # тред «Второй биом»: цвет фона под биом
 var _units := {}      # instance_id → {node, kind, prev_heading, bank}
 var _objs := {}       # ключ клетки → MeshInstance3D (у обломков o_wreck — сцена модели)
 var _clouds: Array = []          # «Низкое» качество: прежние плоские облака
@@ -106,6 +107,7 @@ func _ready() -> void:
 	e.adjustment_saturation = 1.05
 	e.fog_enabled = false
 	env.environment = e
+	_env = e
 	add_child(env)
 
 	sun = DirectionalLight3D.new()
@@ -421,6 +423,7 @@ func _process(delta: float) -> void:
 	if terrain._bg != m.background:
 		terrain._bg = m.background
 		m.background.place_filter = terrain.fix_object   # тест 3.5-s4 (п. 20): объекты клеток не в реке
+		_apply_biome()
 		terrain.clear()
 	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
 	_set_tilt_mode(tilt > 0.001, m)
@@ -450,6 +453,7 @@ func _process(delta: float) -> void:
 	_sync_scorch(m)
 	_sync_craters(m)
 	_sync_bombs(m)
+	_sync_ground_zones(m)
 	_sync_lights(delta)
 	if Perf.on: pt = Perf.sub("r3d.clouds_scorch_lights", pt)
 	if OS.get_cmdline_user_args().has("--dbg3") and Engine.get_process_frames() % 30 == 0:
@@ -671,6 +675,20 @@ func _ground_floor(p: Vector2, r: float) -> float:
 	for o: Vector2 in [Vector2(r, 0), Vector2(-r, 0), Vector2(0, r), Vector2(0, -r)]:
 		top = maxf(top, terrain.surface_fast(p.x + o.x, p.y + o.y).y)
 	return top + Tuning.g("relief_min")
+
+
+## Биом нового мира (Biome.cur(), тред «Второй биом»): поле берега у рельефа, вода и дороги в шейдере земли
+func _apply_biome() -> void:
+	terrain.set_biome()
+	var sea := Biome.sea()
+	_ground_mat.set_shader_parameter("sea", sea)
+	_ground_mat.set_shader_parameter("sea_w", Terrain3D.SEA_W)
+	_ground_mat.set_shader_parameter("road_w", 0.0 if sea else Terrain3D.ROAD_W)   # дороги нет: конвой — по фарватеру
+	_ground_mat.set_shader_parameter("road_w_in", 0.0 if sea else Terrain3D.ROAD_W_IN)
+	for k in (Biome.g("ground", {}) as Dictionary):
+		_ground_mat.set_shader_parameter(k, Biome.g("ground")[k])
+	if _env != null:
+		_env.background_color = Biome.g("bg", Color(0.52, 0.47, 0.4))
 
 
 func _setup_plane_shadows() -> void:
@@ -1504,6 +1522,11 @@ func _weapon_layout(u: Dictionary, p: Player, tex: Texture2D, gi: int, g: Hardpo
 			var lo := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
 			if not is_nan(lo):
 				y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
+		elif mt["side"] == "top" and g.weapon == "turret" and u.get("bm") != null:
+			# тест 3.5-s7: верхняя турель — на настоящей спине фюзеляжа (у «Кита» она выше, чем у «Грача»)
+			var hi := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw, true)
+			if not is_nan(hi):
+				y = hi * tw
 		elif mt["side"] == "bay" and u.get("bm") != null:
 			# тест 3.5-s5 (п. 3): бомбы и кассета «ковра» — от настоящего брюха модели, как в ангаре
 			# (иначе верх кассеты проходил сквозь фюзеляж и был виден сверху)
@@ -2152,6 +2175,71 @@ func _sync_bombs(m: Main) -> void:
 		if not seen.has(id):
 			(_bombs3[id] as Node).queue_free()
 			_bombs3.erase(id)
+
+
+## Тест 3.5-s7: метки на земле рисует шейдер земли (ground3d.gdshader, gz_*) — они лежат по рельефу.
+## Порядок важности: прицел бомб → падающие бомбы → огонь на земле ближе к центру кадра.
+const GZ_MAX := 24
+const GZ_AIM := Color(1.0, 0.68, 0.28)
+const GZ_WAIT := Color(0.8, 0.82, 0.8)
+var _gz_a := PackedVector4Array()
+var _gz_b := PackedVector4Array()
+var _gz_c := PackedVector4Array()
+
+
+## Земля рисует метки сама (иначе — плоскими кругами в слое боя, projectiles._draw)
+func ground_zones_on() -> bool:
+	return enabled and terrain != null and _ground_mat != null
+
+
+func _gz_add(a: Vector2, b: Vector2, r: float, alpha: float, kind: int, col: Color) -> void:
+	if _gz_a.size() >= GZ_MAX or alpha <= 0.01:
+		return
+	_gz_a.append(Vector4(a.x, a.y, b.x, b.y))
+	_gz_b.append(Vector4(r, alpha, float(kind), fmod(absf(a.x * 0.013 + a.y * 0.007), 50.0)))
+	_gz_c.append(Vector4(col.r, col.g, col.b, 1.0))
+
+
+func _sync_ground_zones(m: Main) -> void:
+	if _ground_mat == null:
+		return
+	_gz_a.clear()
+	_gz_b.clear()
+	_gz_c.clear()
+	var pl := m.player
+	if is_instance_valid(pl) and pl.hp > 0.0:
+		for g in pl.groups:
+			var h: Hardpoint = g
+			if not h.aiming:
+				continue
+			var ready := h.cd <= 0.0
+			for z in h.aim_zones(pl):
+				_gz_add(z[0], z[1], z[2], 1.0 if ready else 0.6, 0 if ready else 1, GZ_AIM if ready else GZ_WAIT)
+	var pr := m.projectiles
+	if pr != null:
+		var rk := pr.aoe_r_k()
+		for i in range(pr.bombs.size() - 1, -1, -1):
+			var b: Dictionary = pr.bombs[i]
+			var k := 1.0 - float(b["t"]) / maxf(float(b["fuse"]), 0.01)
+			_gz_add(b["to"], b["to"], float(b["r"]) * rk, 0.3 + 0.6 * k, 2, GZ_AIM)
+		var fl: Array = pr.fires.duplicate()
+		if fl.size() > GZ_MAX - _gz_a.size():
+			fl.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+				return (x["p"] as Vector2).distance_squared_to(_c2) < (y["p"] as Vector2).distance_squared_to(_c2))
+		for f: Dictionary in fl:
+			var fc: Color = f.get("c", Color(1.0, 0.45, 0.1))
+			_gz_add(f["p"], f["p"], float(f["r"]), clampf(float(f["t"]), 0.0, 1.0), 3, fc)
+	_ground_mat.set_shader_parameter("gz_n", _gz_a.size())
+	if _gz_a.is_empty():
+		return
+	_gz_a.resize(GZ_MAX)
+	_gz_b.resize(GZ_MAX)
+	_gz_c.resize(GZ_MAX)
+	_ground_mat.set_shader_parameter("gz_a", _gz_a)
+	_ground_mat.set_shader_parameter("gz_b", _gz_b)
+	_ground_mat.set_shader_parameter("gz_c", _gz_c)
+	_ground_mat.set_shader_parameter("gz_cam", cam.global_position)
+	_ground_mat.set_shader_parameter("gz_time", Time.get_ticks_msec() * 0.001)
 
 
 ## Воронки: плоский квадрат по наклону рельефа с общей текстурой и материалом (без теней, без света),

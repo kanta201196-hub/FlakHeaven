@@ -214,6 +214,23 @@ func flare_burst(pos: Vector2, heading: float, n := 6, vel := Vector2.ZERO, s :=
 	return out
 
 
+## Тест 3.5-s7: ЭМИ-заряд — волна от самолёта до края радиуса (в 3D — boom3d.emp) и голубые молнии
+## к каждому заглушённому врагу: видно, что сработало и кого задело
+func emp_wave(pos: Vector2, r: float, hit: Array = []) -> void:
+	# волна по плоскости самолётов: от самолёта до края радиуса за 0,4 с, толстая и гаснет к краю
+	rings.append({"p": pos, "r": r * 0.12, "max": r, "life": 0.4, "max_life": 0.4, "c": Color(0.55, 0.82, 1.0), "wave": true})
+	rings.append({"p": pos, "r": r * 0.08, "max": r * 0.9, "life": 0.5, "max_life": 0.5, "c": Color(0.85, 0.95, 1.0), "wave": true})
+	if Boom3D.active():
+		Boom3D.ensure().emp(pos, r)
+	for e in hit.slice(0, 12):
+		if is_instance_valid(e):
+			var to: Vector2 = (e as Node2D).global_position
+			var mid := pos.lerp(to, 0.5) + (to - pos).orthogonal().normalized() * randf_range(-22.0, 22.0)
+			beam(pos, mid, Color(0.6, 0.85, 1.0, 0.9), 2.0, 0.22)
+			beam(mid, to, Color(0.6, 0.85, 1.0, 0.9), 2.0, 0.22)
+			hit_spark(to, Color(0.6, 0.85, 1.0))
+
+
 func ring(pos: Vector2, r: float, color: Color) -> void:
 	rings.append({"p": pos, "r": r * 0.8, "max": r, "life": 0.3, "max_life": 0.3, "c": color})
 
@@ -228,7 +245,7 @@ func beam(from: Vector2, to: Vector2, color: Color, width: float, life: float) -
 
 
 func text(pos: Vector2, s: String, color := Color(1, 1, 1)) -> void:
-	numbers.append({"p": pos, "t": s, "life": 1.2, "c": color, "size": 22})
+	numbers.append({"p": pos, "t": TranslationServer.translate(s), "life": 1.2, "c": color, "size": 22})
 
 
 func hit_spark(pos: Vector2, color := Color(1, 1, 0.8)) -> void:
@@ -351,7 +368,14 @@ func _draw() -> void:
 		var k4 := 1.0 - float(r["life"]) / float(r["max_life"])
 		var c: Color = r["c"]
 		var rad := lerpf(float(r["r"]), float(r["max"]), sqrt(k4) if r.get("dust", false) else k4)
-		if r.get("dust", false):
+		if r.get("wave", false):   # тест 3.5-s7: волна ЭМИ — мягкое свечение и яркий фронт
+			var kw := sqrt(k4)
+			rad = lerpf(float(r["r"]), float(r["max"]), kw)
+			c.a = (1.0 - k4) * 0.3
+			draw_arc(r["p"], rad, 0.0, TAU, 72, c, 6.0 + 16.0 * (1.0 - kw))
+			c.a = (1.0 - k4 * k4) * 0.95
+			draw_arc(r["p"], rad, 0.0, TAU, 72, c, 3.0)
+		elif r.get("dust", false):
 			c.a = (1.0 - k4) * 0.35
 			draw_arc(r["p"], rad, 0.0, TAU, 56, c, 4.0 + 14.0 * (1.0 - k4))
 		else:
