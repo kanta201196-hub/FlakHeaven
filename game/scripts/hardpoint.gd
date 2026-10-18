@@ -166,7 +166,7 @@ func _owner_k() -> float:
 	if weapon == "aam" or weapon == "rockets":
 		k *= p.missile_k()
 	if weapon == String(p.cls.get("signature", "")):
-		k *= PlaneClasses.SIGNATURE_K # правка 5 теста 3.5-s5: «конёк» класса
+		k *= PlaneClasses.SIGNATURE_K # правка 5 теста 3.5-s5: особенность класса (★)
 	return k * (1.0 + float(p.mods.get("hp_dmg", 0.0)))
 
 
