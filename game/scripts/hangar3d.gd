@@ -20,6 +20,7 @@ var lvl_rects: Array = []    # [Rect2, ур.] — переключатель «�
 var view_lvl := 1
 ## Стенд --hangarevo: оружие в пустых группах (класс → [оружие по группам]), чтобы показать все эволюции
 static var bench_weapons := {}
+static var bench_pitch_min := -0.2   # стенд: камера ниже обычного (тест 3.5-s5, п. 3 — открытый бомбоотсек снизу)
 static var bench_seeker := 0   # Т-3: стенд --modules — «Глазастик» на ракетах
 var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5), 4 — эволюция (Т-4)
 var tier_rects: Array = []   # [Rect2, ступень]
@@ -297,6 +298,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 			side = "top"
 		elif evo and weapon == "bombs":
 			side = ""
+			if WeaponModels.has_bay(cls_id, 1):   # тест 3.5-s5 (п. 3): у «Кита» «ковёр» — кассета бомбоотсека
+				t = WeaponModels.CARPET_BAY_T
 		var wmi := WeaponModels.make(weapon, t, side, cls_id, evo, 1)
 		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
 		var bb := wmi.mesh.get_aabb()
@@ -536,7 +539,7 @@ func _process(delta: float) -> void:
 	WingMech.spin_props(_props, PROP_HANGAR * delta)
 	if not _drag and _idle > 3.0:
 		_yaw += delta * 0.25
-	_pitch = clampf(_pitch, -0.2, 1.35)
+	_pitch = clampf(_pitch, bench_pitch_min, 1.35)
 	_dist = clampf(_dist, 0.7 if focus == Vector3.ZERO else 0.2, 3.2)
 	var dir := Vector3(cos(_pitch) * cos(_yaw), sin(_pitch), cos(_pitch) * sin(_yaw))
 	cam.position = focus + dir * _dist
