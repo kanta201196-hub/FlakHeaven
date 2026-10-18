@@ -42,7 +42,21 @@ H.SRC.update({
     'wind_alt': ('2017', 'Charlie Atanasyan - Indonesia sound library by Faunethic/Forest cold wind in alitude the morning_120208_00'),
     'sea_wash': ('2016', 'Shutter Sound - Worldwide Ambience/South Pacific, Exterior, Atmosphere, Desert Island sea wash light, distant crickets'),
     'mine_far': ('2024', 'Pole Position - The Warfare 2 Library/Tank Mine - EXPLOSION - Mounted on Metal Beam - DISTANT - AMBEO BLD'),
+    # Море (Архипелаг): чайки у гавани, гудок, всплеск и скрежет тонущего судна
+    'gulls_harbor': ('2019', 'The Sound Pack Tree - Sonic Seaside/205300 - Crazy Harbor Seagulls - Loop'),
+    'gulls_nest': ('2017', 'SoundHolder -  Cormorants/animals cormorants nest loud seagulls mono DPA4061'),
+    'narrow_horn': ('2019', 'Pole Position - Narrowboat Gardner 4LW 1960/narrowboat_t23_var_sfx_horn_various_XY_RSM191'),
+    'uw_splash': ('2018', 'Soundrangers - Hydrology Underwater/underwater_splash_large_06'),
+    'uw_blast': ('2018', 'Soundrangers - Hydrology Underwater/explosion_underwater_blast_04'),
+    'water_expl': ('2023', 'David Dumais Audio - Magic Sound FX Pack 2/MagicPack2_WaterExplosions_Explosion2-004'),
+    'rock_splash': ('2016', 'Mattia Cellotto - Rocks Momentum/Glacial Lake - Large Size Rock Splashes - 5 Meters. Water,Splash,Large,Rock,Impact,Various_06'),
+    'hull_creak': ('2016', 'Alexander Kopeikin - Black Metal/metal, heavy creaks, shipwreck, submarine deformation under pressure 07'),
+    'hull_scrape': ('2017', 'Alexander Kopeikin - Black Metal/metal, heavy creaks, shipwreck, ship scraping its broadside 02'),
+    'bubbles_deep': ('2015', 'Soundopolis - Underwater/Underwater_Bubbles_Deep_Fienup_016'),
 })
+
+# Новое событие моря: удар как у взрыва крупного врага
+H.REF_PUNCH['ship_sink'] = H.REF_PUNCH['explode_big']
 
 
 def load_st(path):
@@ -205,6 +219,15 @@ LAYERS = {
         [('expl_8', A, 2.2, 1.2, 0, 0), ('expl_bigsc', A, 3.2, 2.0, -5, 0.1), ('metal_crash', 'loud', 1.6, 1.0, -10, 0.25, {'af': HI % 700}),
          (('sub', 45, 22, 1.4, 2.4), 0, 0, 0, -5, 0)],
     ],
+    # Судно тонет (Архипелаг): водяной взрыв, всплеск, стон и скрежет корпуса, пузыри и низкий гул
+    'ship_sink': [
+        [('water_expl', A, 2.4, 1.4, 0, 0), ('uw_splash', A, 2.0, 1.2, -6, 0.08),
+         ('hull_creak', 0.6, 3.2, 1.6, -9, 0.45, {'pitch': 0.8, 'af': LO % 2500}),
+         ('bubbles_deep', 0.0, 3.0, 1.0, -15, 1.7, {'af': LO % 3000}), (('sub', 52, 24, 1.3, 2.6), 0, 0, 0, -7, 0)],
+        [('uw_blast', A, 2.6, 1.5, 0, 0), ('rock_splash', 'loud', 1.6, 1.0, -5, 0.05),
+         ('hull_scrape', 'loud', 3.2, 1.6, -10, 0.55, {'pitch': 0.75, 'af': LO % 2000}),
+         ('bubbles_deep', 0.4, 2.6, 1.0, -15, 1.9, {'af': LO % 3000}), (('sub', 48, 22, 1.3, 2.6), 0, 0, 0, -7, 0)],
+    ],
     # Форсаж: поджиг и треск реактивной струи
     'afterburner': [
         [('fire_ign', A, 1.5, 0.7, 0, 0), ('f22', 'loud', 1.3, 0.8, -7, 0.1, {'af': HI % 300})],
@@ -296,6 +319,64 @@ def build_ambient(out_dir):
         print('%-16s цикл %.1f с, K-RMS %.1f dB' % (name, len(y) / SR, krms(y)))
 
 
+def reverb_st(y, sec, decay, wet):
+    """Простая «даль»: свёртка с затухающим шумом (каналы разные — эхо над водой широкое)."""
+    rng = np.random.default_rng(7)
+    n = int(sec * SR)
+    t = np.arange(n) / SR
+    out = np.pad(y, ((0, n), (0, 0)))
+    for c in (0, 1):
+        ir = rng.standard_normal(n) * np.exp(-t * decay)
+        ir[:int(0.03 * SR)] = 0  # первое отражение — через 30 мс
+        m = len(y) + n
+        w = np.fft.irfft(np.fft.rfft(y[:, c], m) * np.fft.rfft(ir, m), m)[:len(out)]
+        out[:, c] += w * (wet * np.abs(y).max() / (np.abs(w).max() + 1e-9))
+    return out.astype(np.float32)
+
+
+def build_horn():
+    """Гудок корабля: запись гудка катера на две октавы ниже (~90 Гц) + синтез того же тона
+    (гармоники, мягкая атака, лёгкое «плавание»), срез верха и эхо над водой."""
+    x = layer('narrow_horn', 0.3, 3.0, 0.0, 0.25)           # 0,75 с записи -> 3 с, тон 360 -> 90 Гц
+    n = len(x)
+    t = np.arange(n) / SR
+    f = 90.0 * (1 - 0.03 * np.exp(-t * 6)) * (1 + 0.002 * np.sin(2 * np.pi * 4.5 * t))  # чуть ниже на старте
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    tone = sum(np.sin(k * ph) / k ** 0.9 for k in range(1, 30))
+    y = norm_peak(x, -4) + norm_peak(np.stack([tone, tone], 1), -2)
+    env = np.minimum(1, t / 0.18) * np.minimum(1, (t[-1] - t) / 0.35)
+    y = ff(y * env[:, None], 'highpass=f=45,lowpass=f=1800')
+    return reverb_st(y, 2.8, 2.2, 0.35)
+
+
+def build_gulls():
+    """Чайки у гавани: три отрезка по ~7 с из двух записей, без низа (гул порта), с плавным входом и уходом."""
+    out = []
+    for key, start in (('gulls_harbor', 4.0), ('gulls_harbor', 52.0), ('gulls_nest', 20.0)):
+        y = layer(key, start, 7.0, 1.5, af='highpass=f=500')
+        a = int(1.2 * SR)
+        y[:a] *= np.linspace(0, 1, a)[:, None]
+        out.append(y)
+    return out
+
+
+# Звуки моря: громкость удара (как REF_PUNCH). Чайки — фон, тихие сами по себе (play без -дБ)
+SEA_PUNCH = {'ship_horn': -12.0, 'gulls': -24.0}
+
+
+def build_sea(out_dir):
+    for name, ys in (('ship_horn', [build_horn()]), ('gulls', build_gulls())):
+        for f in glob.glob(os.path.join(out_dir, name + '.ogg')) + glob.glob(os.path.join(out_dir, name + '_[0-9].ogg')):
+            os.remove(f)
+        for i, y in enumerate(ys, 1):
+            y = y * 10 ** ((SEA_PUNCH[name] - H.punch_db(y.mean(1))) / 20)
+            if np.abs(y).max() > 0.89:
+                y = limit_st(y)
+            fn = name if len(ys) == 1 else '%s_%d' % (name, i)
+            write_ogg_st(y, os.path.join(out_dir, fn + '.ogg'))
+            print('%-14s %.2f с  got %.1f dB' % (fn, len(y) / SR, H.punch_db(y.mean(1))))
+
+
 def main():
     out_dir = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else H.AUDIO
     only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else None
@@ -304,6 +385,8 @@ def main():
         build_engine(out_dir)
     if only is None or 'ambient' in only:
         build_ambient(out_dir)
+    if only is None or 'sea' in only:
+        build_sea(out_dir)
     for event, variants in LAYERS.items():
         if only is not None and event not in only:
             continue

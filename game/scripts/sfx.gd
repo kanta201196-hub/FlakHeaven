@@ -68,7 +68,7 @@ var variants := {}
 
 
 func _load_overrides() -> void:
-	for name in streams.keys() + FALLBACK.keys() + ["engine", "engine_prop"]:
+	for name in streams.keys() + FALLBACK.keys() + FILE_ONLY + ["engine", "engine_prop"]:
 		var found: Array = []
 		for suffix in [""] + range(1, 9).map(func(i): return "_%d" % i):
 			for ext in ["ogg", "wav", "mp3"]:
@@ -114,6 +114,10 @@ const FALLBACK := {
 	"fortress_part": "shield_break", "fortress_ring": "enemy_fire",
 }
 
+## События только из файлов, без заглушки (нет файла — тишина). Море Архипелага (18.10):
+## гудок корабля перед крупным судном, чайки фоном у гаваней (тихие сами, play без -дБ), потопление судна.
+const FILE_ONLY := ["ship_horn", "gulls", "ship_sink"]
+
 
 const VOICES := 24
 ## Сколько копий звука может звучать одновременно; новая копия сверх предела заменяет самую старую.
@@ -121,6 +125,7 @@ const VOICES := 24
 const VOICE_CAP := {
 	"gun_fire": 3, "gunpod_fire": 2, "turret_fire": 2, "enemy_fire": 4, "hit": 4, "pickup": 3,
 	"explode": 5, "explode_big": 3, "bomb": 4, "aam_launch": 3, "rocket_launch": 3, "card": 2,
+	"ship_horn": 1, "gulls": 1, "ship_sink": 2,
 }
 ## Важные сигналы: если свободных голосов нет, забирают голос у самого старого обычного звука
 ## (раньше в плотном бою писк захвата и попадание по игроку могли просто не прозвучать).
@@ -130,13 +135,14 @@ const PRIORITY := ["lock", "missile_enemy", "sam_lock", "sam_launch", "aa_alert"
 ## Спокойно — музыка боя глуше (срез верха до ~900 Гц) и на 4 дБ тише, в свалке — полный звук.
 ## У аса и в меню музыка всегда полная.
 const HEAT := {"enemy_fire": 0.02, "hit": 0.01, "explode": 0.06, "explode_big": 0.2, "bomb": 0.05,
-	"player_hit": 0.15, "lock": 0.1, "missile_enemy": 0.12, "aa_alert": 0.15, "sam_lock": 0.15, "sam_launch": 0.1}
+	"player_hit": 0.15, "lock": 0.1, "missile_enemy": 0.12, "aa_alert": 0.15, "sam_lock": 0.15, "sam_launch": 0.1,
+	"ship_sink": 0.2}
 const HEAT_COOL := 0.07   # накал в секунду
 const CALM_CUT_HZ := 900.0
 const CALM_DB := -4.0
 ## Крупные события ненадолго приглушают музыку (дБ), чтобы удар был слышен
 const DUCK := {"explode_big": 4.0, "bomb": 3.0, "player_hit": 3.0, "player_explode": 8.0, "tanker_down": 6.0,
-	"fortress_part": 4.0, "boss": 4.0}
+	"fortress_part": 4.0, "boss": 4.0, "ship_horn": 3.0, "ship_sink": 4.0}
 
 
 ## pos — точка в мире боя: звук смещается влево/вправо по положению на экране. Без pos — по центру.
