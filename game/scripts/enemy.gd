@@ -312,14 +312,16 @@ func _check_contact() -> void:
 	if p.dive_t > 0.0:
 		return   # правка 3.5-s4: в нырке игрок проходит под самолётами — ни урона, ни столкновения
 	if global_position.distance_to(p.global_position) < radius + p.radius:
-		if (p.shield_t > 0.0 or p.ram_t > 0.0) and not is_boss:
+		# второй список 3.5-s5, п. 7: ас-соперник в дуэли и транспортник от столкновения не падают, как и асы
+		var tough := is_boss or self is RivalAce or self is Transport
+		if (p.shield_t > 0.0 or p.ram_t > 0.0) and not tough:
 			# Бронещит: таран без урона себе
 			Main.I.add_stat("dealt", "бронещит", hp)
 			_die()
 		elif not p.is_invulnerable():
 			# на форсаже самолёт проходит строй: столкновение бьёт втрое слабее
 			p.damage(contact_damage * (0.3 if p.ab_t > 0.0 else 1.0), "таран", kind())
-			if not is_boss:
+			if not tough:
 				_die()
 
 
