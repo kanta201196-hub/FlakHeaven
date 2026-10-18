@@ -29,8 +29,8 @@ func class_select(size: Vector2) -> void:
 		_text(Vector2(x, y), d["role"], 18, Color(0.8, 0.85, 0.95))
 		y += 24.0 # свежий взгляд: строка экипажа отдельно — раньше наезжала на описание класса
 		var sb: String = Profile.skills(id)[1]
-		_text(Vector2(x, y), "Экипаж ур. %d%s%s" % [Profile.crew_lvl(id), " · самолёт ур. 2 ✓" if Profile.plane_lvl(id) == 2 else "",
-			(" · навык F: " + String(PlaneClasses.SKILL3[sb]["title"])) if sb != "" else ""], 15, Color(0.6, 1.0, 0.7))
+		_text(Vector2(x, y), Loc.t("Экипаж ур. %d%s%s") % [Profile.crew_lvl(id), Loc.t(" · самолёт ур. 2 ✓") if Profile.plane_lvl(id) == 2 else "",
+			(Loc.t(" · навык F: ") + Loc.t(String(PlaneClasses.SKILL3[sb]["title"]))) if sb != "" else ""], 15, Color(0.6, 1.0, 0.7))
 		y += 32.0
 		_stat_bar(x, y, "Прочность", float(d["hp"]) / 240.0, "%d" % int(d["hp"]))
 		y += 26.0
@@ -73,7 +73,7 @@ func class_select(size: Vector2) -> void:
 		for sk in PlaneClasses.CLASS_SKILLS[id]:
 			var sd: Dictionary = PlaneClasses.SKILL3[sk]
 			# высота строки — по описанию: длинное в две строки не вылезает за рамку
-			var ph := ui_font().get_multiline_string_size(sd["short"], HORIZONTAL_ALIGNMENT_LEFT, w - 56.0, 13).y
+			var ph := ui_font().get_multiline_string_size(Loc.out(sd["short"]), HORIZONTAL_ALIGNMENT_LEFT, w - 56.0, 13).y
 			var sr := Rect2(x - 8, y, w - 40, maxf(58.0, 34.0 + ph))
 			var on: bool = sk == cur
 			var sh := sr.has_point(mp)
@@ -192,7 +192,7 @@ func _tag_chips(pos: Vector2, tags: Array, evo := false) -> void:
 	for t in tags:
 		var col: Color = Prog.TAGS[t]["color"]
 		var label := "%s %d → %d" % [Prog.tag_title(t), p.tag(t), p.tag(t) + (2 if evo else 1)]
-		var tw := ui_font().get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 18.0
+		var tw := ui_font().get_string_size(Loc.out(label), HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 18.0
 		ctrl.draw_rect(Rect2(x, pos.y, tw, 22), Color(col.r, col.g, col.b, 0.2))
 		ctrl.draw_rect(Rect2(x, pos.y, 4, 22), col)
 		_text(Vector2(x + 10, pos.y + 16), label, 14, col.lightened(0.3))
@@ -541,11 +541,11 @@ func _cond_line(center: Vector2, e: Dictionary) -> void:
 		parts.append([("✓ " if c[1] else "") + String(c[0]) + "   ", Color(0.5, 1.0, 0.6) if c[1] else Color(0.8, 0.82, 0.88)])
 	var total := 0.0
 	for pt in parts:
-		total += ui_font().get_string_size(pt[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		total += ui_font().get_string_size(Loc.out(pt[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 	var x := center.x - total / 2.0
 	for pt in parts:
 		_text(Vector2(x, center.y), pt[0], 16, pt[1])
-		x += ui_font().get_string_size(pt[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		x += ui_font().get_string_size(Loc.out(pt[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 
 
 func course_pick(m: Main, size: Vector2) -> void:

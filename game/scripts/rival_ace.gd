@@ -205,5 +205,5 @@ func _draw() -> void:
 	draw_arc(Vector2.ZERO, radius + 8.0, 0.0, TAU, 32, Color(1, 0.3, 0.3, 0.6), 2.0)
 	if _aim > 0.0 or _shots > 0:
 		draw_circle(xf * Vector2(32, 0), 6.0, Color(1.0, 0.9, 0.3))
-	draw_string(Hud.ui_font(), Vector2(-100, -radius - 22.0), "«%s»" % callsign, HORIZONTAL_ALIGNMENT_CENTER, 200, 17, Color(1, 0.75, 0.75))
+	draw_string(Hud.ui_font(), Vector2(-100, -radius - 22.0), Loc.out("«%s»" % Loc.t(callsign)), HORIZONTAL_ALIGNMENT_CENTER, 200, 17, Color(1, 0.75, 0.75))
 	draw_hp_bar()

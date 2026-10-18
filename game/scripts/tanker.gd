@@ -232,4 +232,4 @@ func _draw() -> void:
 	draw_rect(Rect2(-w / 2.0, -78, w * hp / max_hp, 6), Color(0.4, 0.9, 1.0))
 	if filling and fuel != null:
 		draw_arc(Vector2.ZERO, 70.0, -PI / 2.0, -PI / 2.0 + TAU * fuel.frac(), 48, Color(0.5, 1.0, 0.5, 0.9), 4.0)
-	draw_string(Hud.ui_font(), Vector2(-90, -88), "Заправщик", HORIZONTAL_ALIGNMENT_CENTER, 180, 16, Color(0.7, 1.0, 0.8))
+	draw_string(Hud.ui_font(), Vector2(-90, -88), Loc.out("Заправщик"), HORIZONTAL_ALIGNMENT_CENTER, 180, 16, Color(0.7, 1.0, 0.8))

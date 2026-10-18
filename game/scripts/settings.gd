@@ -135,6 +135,7 @@ func lang_name() -> String:
 
 func apply_lang() -> void:
 	TranslationServer.set_locale(LANGS[lang_index()][0])
+	Loc._out_cache.clear()
 
 
 ## Качество графики: свет и тени сразу, модели биома — при пересборке кусков рельефа

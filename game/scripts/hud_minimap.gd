@@ -109,8 +109,8 @@ func draw(m: Main, size: Vector2) -> void:
 	var f := Hud.ui_font()
 	for sd in [["С", Vector2(0, -1)], ["В", Vector2(1, 0)], ["Ю", Vector2(0, 1)], ["З", Vector2(-1, 0)]]:
 		var lp: Vector2 = c + (sd[1] as Vector2) * (rad - 10.0) + Vector2(-4, 5)
-		ctrl.draw_string_outline(f, lp, sd[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 3, Color(0, 0, 0, 0.8 * a))
-		ctrl.draw_string(f, lp, sd[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(C_SCOPE.r, C_SCOPE.g, C_SCOPE.b, (1.0 if sd[0] == "С" else 0.6) * a))
+		ctrl.draw_string_outline(f, lp, Loc.out(sd[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 3, Color(0, 0, 0, 0.8 * a))
+		ctrl.draw_string(f, lp, Loc.out(sd[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(C_SCOPE.r, C_SCOPE.g, C_SCOPE.b, (1.0 if sd[0] == "С" else 0.6) * a))
 
 
 func _diamond(p: Vector2, s: float, col: Color) -> void:

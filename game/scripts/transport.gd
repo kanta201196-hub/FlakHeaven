@@ -120,4 +120,4 @@ func _draw() -> void:
 			Vector2(-60, 10), Vector2(-75, 40), Vector2(-85, 40), Vector2(-80, 0), Vector2(-85, -40), Vector2(-75, -40), Vector2(-60, -10),
 			Vector2(-20, -14), Vector2(-18, -95), Vector2(0, -95), Vector2(10, -14), Vector2(50, -12)]), c)
 	draw_hp_bar()
-	draw_string(Hud.ui_font(), Vector2(-120, -radius - 24.0), "Транспортник", HORIZONTAL_ALIGNMENT_CENTER, 240, 18, Color(1, 0.85, 0.6))
+	draw_string(Hud.ui_font(), Vector2(-120, -radius - 24.0), Loc.out("Транспортник"), HORIZONTAL_ALIGNMENT_CENTER, 240, 18, Color(1, 0.85, 0.6))

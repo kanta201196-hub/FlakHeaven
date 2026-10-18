@@ -562,7 +562,7 @@ func _draw() -> void:
 			var target := to_local(p.global_position)
 			draw_line(Vector2.ZERO, target, Color(1, 0.15, 0.1, la), 3.0)
 			draw_arc(target, 30.0, 0.0, TAU, 32, Color(1, 0.15, 0.1, la), 3.0)
-	draw_string(Hud.ui_font(), Vector2(-120, -radius - 24.0), "«Крепость»", HORIZONTAL_ALIGNMENT_CENTER, 240, 18, Color(1, 0.85, 0.7))
+	draw_string(Hud.ui_font(), Vector2(-120, -radius - 24.0), Loc.out("«Крепость»"), HORIZONTAL_ALIGNMENT_CENTER, 240, 18, Color(1, 0.85, 0.7))
 
 
 ## Маршрут к базе — пунктир по земле, база — круг с подписью
@@ -573,7 +573,7 @@ func _draw_route() -> void:
 	draw_dashed_line(Vector2.ZERO, to_local(_wp), Color(1.0, 0.35, 0.25, 0.45), 4.0, 40.0)
 	draw_circle(bl, BASE_R, Color(0.3, 0.7, 1.0, 0.12))
 	draw_arc(bl, BASE_R, 0.0, TAU, 64, Color(0.4, 0.8, 1.0, 0.7), 4.0)
-	draw_string(Hud.ui_font(), bl + Vector2(-120, 8), "НАША БАЗА", HORIZONTAL_ALIGNMENT_CENTER, 240, 28, Color(0.6, 0.9, 1.0))
+	draw_string(Hud.ui_font(), bl + Vector2(-120, 8), Loc.out("НАША БАЗА"), HORIZONTAL_ALIGNMENT_CENTER, 240, 28, Color(0.6, 0.9, 1.0))
 
 
 ## Сектора турелей (фаза 1): красный веер там, где бьёт хоть одна живая турель; мёртвые зоны — зелёные

@@ -245,7 +245,7 @@ func beam(from: Vector2, to: Vector2, color: Color, width: float, life: float) -
 
 
 func text(pos: Vector2, s: String, color := Color(1, 1, 1)) -> void:
-	numbers.append({"p": pos, "t": TranslationServer.translate(s), "life": 1.2, "c": color, "size": 22})
+	numbers.append({"p": pos, "t": Loc.out(s), "life": 1.2, "c": color, "size": 22})
 
 
 func hit_spark(pos: Vector2, color := Color(1, 1, 0.8)) -> void:

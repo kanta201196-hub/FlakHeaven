@@ -21,7 +21,7 @@ static func ui_font() -> Font:
 ## 3.1: у всего текста интерфейса тёмная обводка — читается на светлой земле
 ## Перевод: ключ — русская фраза; без таблицы перевода строка выводится как есть
 func _text(pos: Vector2, s: String, size := 20, color := Color(0.92, 0.95, 1.0), align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
-	s = TranslationServer.translate(s)
+	s = Loc.out(s)
 	ctrl.draw_string_outline(ui_font(), pos, s, align, width, size, maxi(3, size / 5), Color(0.02, 0.025, 0.03, 0.85 * color.a))
 	ctrl.draw_string(ui_font(), pos, s, align, width, size, color)
 
@@ -32,6 +32,7 @@ func _ctext(y: float, s: String, size: int, color: Color) -> void:
 
 ## Многострочный текст с переносом по ширине
 func _para(pos: Vector2, s: String, width: float, size := 18, color := Color(0.85, 0.88, 0.95)) -> float:
+	s = Loc.out(s)
 	ctrl.draw_multiline_string_outline(ui_font(), pos, s, HORIZONTAL_ALIGNMENT_LEFT, width, size, -1, maxi(3, size / 5), Color(0.02, 0.025, 0.03, 0.8 * color.a))
 	ctrl.draw_multiline_string(ui_font(), pos, s, HORIZONTAL_ALIGNMENT_LEFT, width, size, -1, color)
 	var lines := ui_font().get_multiline_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, width, size).y
@@ -71,7 +72,7 @@ func _backing(r: Rect2, right := false) -> void:
 func _cond_chips(pos: Vector2, conds: Array) -> float:
 	var x := pos.x
 	for c in conds:
-		var label := ("✓ " if c[1] else "") + String(c[0])
+		var label := ("✓ " if c[1] else "") + Loc.out(String(c[0]))
 		var tw := ui_font().get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 16.0
 		var col := Color(0.45, 1.0, 0.55) if c[1] else Color(0.75, 0.78, 0.85)
 		ctrl.draw_rect(Rect2(x, pos.y, tw, 22), Color(col.r, col.g, col.b, 0.14))
