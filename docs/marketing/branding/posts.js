@@ -27,6 +27,8 @@ const items = [
 // Было / стало: node posts.js <папка вывода> <папка кадров> делает и пары ниже (запуск тем же скриптом)
 const pairs = [
   ['bs_proto1_now', '/mnt/project-files/marketing/content/img/src/proto1.png', '/mnt/project-files/marketing/content/img/src/now_3_5.png', 'Прототип 1', 'Сборка 3.5'],
+  ['bs_explosions', '/mnt/project-files/marketing/content/img/src/explosions_before.png', '/mnt/project-files/marketing/content/img/src/explosions_now.png', 'вспышка', 'дым и воронки'],
+  ['bs_clouds', '/mnt/project-files/marketing/content/img/src/clouds_before.png', '/mnt/project-files/marketing/content/img/src/clouds_after.png', 'дымка', 'облака'],
 ];
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
