@@ -70,7 +70,6 @@ var pressure_dens := 1.0          # множитель плотности вол
 var _lives: Array = []            # [время гибели, сколько жил]
 var _air_hist: Array = []         # [время, врагов в воздухе] раз в секунду, пока нет аса
 var _press_t := 0.0
-const BUNKER_TTK := 9.0
 
 
 func dealt_total() -> float:
@@ -240,7 +239,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 	if kind_s == "ground":
 		var site := AASite.new()
 		var dir := p.heading + randf_range(-1.0, 1.0)
-		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k, recent_dps() * BUNKER_TTK)
+		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k)
 		Main.I.world.add_child(site)
 		activity_node = site
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
@@ -250,7 +249,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		# колонна пересекает курс игрока впереди: маршрут через точку в 1 300 пикс. по курсу
 		var mid := p.global_position + Vector2.from_angle(p.heading + randf_range(-0.4, 0.4)) * 1300.0
 		var side := 1.0 if randf() < 0.5 else -1.0
-		cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_k, recent_dps(), t)
+		cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_k, t)
 		Main.I.world.add_child(cv)
 		activity_node = cv
 		Main.I.show_banner("Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш", 4.0)
@@ -388,9 +387,10 @@ func _place(e: Enemy, p: Player, ang: float, t: float) -> void:
 		e.make_elite()
 
 
-## 2.8: прочность растёт со временем, после 5:00 — быстрее (+8% в минуту сверху)
+## 2.8: прочность растёт со временем, после 5:00 — быстрее (+4% в минуту сверху).
+## S6-02: было +8% — к 10:00 ×3,27, стало ×2,8 (решение Kanta 18.10)
 static func hp_ramp(t: float) -> float:
-	return (1.0 + t / 450.0) * (1.0 + maxf(0.0, t - 300.0) / 60.0 * 0.08)
+	return (1.0 + t / 450.0) * (1.0 + maxf(0.0, t - 300.0) / 60.0 * 0.04)
 
 
 ## Сбит обычный самолёт — запомнить, сколько он прожил

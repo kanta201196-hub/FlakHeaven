@@ -82,7 +82,9 @@ func process(delta: float) -> void:
 		if not _g_spawned:
 			_g_spawned = true
 			var site := AASite.new()
-			site.setup(m.player.global_position + Vector2(0, -120), 1.0, 99999.0)
+			site.setup(m.player.global_position + Vector2(0, -120), 1.0)
+			site.bunker.hp = 99999.0   # стенд: бункер не должен разбиться
+			site.bunker.max_hp = 99999.0
 			m.world.add_child(site)
 			p["pos"] = site.global_position + Vector2(0, 160)
 	elif p.get("tanker", false):
@@ -116,7 +118,7 @@ func process(delta: float) -> void:
 	elif p.get("convoy", false):
 		if _convoy == null:
 			_convoy = Convoy.new()
-			_convoy.setup(p["pos"], Vector2.RIGHT, 1.0, 100.0, 0.0)
+			_convoy.setup(p["pos"], Vector2.RIGHT, 1.0, 0.0)
 			m.world.add_child(_convoy)
 			_convoy.process_mode = Node.PROCESS_MODE_DISABLED
 		if _pt > 0.3 and not p.has("_done"):   # машины уже в мире — ставим подряд по дороге у точки и останавливаем

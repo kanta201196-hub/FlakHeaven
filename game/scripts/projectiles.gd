@@ -143,7 +143,7 @@ func break_locks(from: Vector2, r: float) -> int:
 
 ## Взрыв по площади (2.8): урон падает от центра к краю — 100% в центре, 35% на границе зоны.
 ## 3.1: радиус × «Осколочная рубашка» (и «Штурмовой заход» II); нашивки «Взрыв» I (край 50%) и II (цепной подрыв).
-func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false) -> void:
+func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false, ground_k := 1.0) -> void:
 	var edge := 0.35
 	var pl := Main.I.player
 	var blast2 := false
@@ -163,7 +163,7 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 		var d := pos.distance_to(e.global_position) - e.radius
 		if d < r:
 			var k := lerpf(1.0, edge, clampf(d / r, 0.0, 1.0))
-			e.take_hit(dmg * k, src)
+			e.take_hit(dmg * k * (ground_k if e.is_ground else 1.0), src)
 			if blast2 and e.hp <= 0.0 and not e.is_boss:
 				died.append([e.global_position, e.max_hp])
 	if visual:
@@ -428,9 +428,9 @@ func _update_rockets(delta: float) -> void:
 			if r.get("sticky", false):
 				# «Термобарика»: заряд прилипает и рвётся через 0,5 с объёмным взрывом
 				_sticky.append({"e": weakref(hit_e) if hit_e != null else null, "off": p - (hit_e.global_position if hit_e != null else p),
-					"p": p, "t": 0.5, "dmg": float(r["dmg"]) * 1.5})
+					"p": p, "t": 0.5, "dmg": float(r["dmg"]) * 1.5, "ground_k": float(r.get("ground_k", 1.0))})
 			else:
-				aoe(p, float(r["r"]), float(r["dmg"]), r.get("src", "НАР"))
+				aoe(p, float(r["r"]), float(r["dmg"]), r.get("src", "НАР"), true, null, 0, false, float(r.get("ground_k", 1.0)))
 			rockets.remove_at(i)
 
 
@@ -459,7 +459,7 @@ func _update_thermo(delta: float) -> void:
 					near += 1
 			var k := minf(1.0 + 0.3 * near, 2.0) # слияние соседних взрывов
 			_thermo.append({"p": pos, "t": 0.3})
-			aoe(pos, 130.0 + 20.0 * mini(near, 4), float(s["dmg"]) * k, "связка: термобарика")
+			aoe(pos, 130.0 + 20.0 * mini(near, 4), float(s["dmg"]) * k, "связка: термобарика", true, null, 0, false, float(s.get("ground_k", 1.0)))
 			Main.I.add_shake(1.5)
 
 

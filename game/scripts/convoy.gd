@@ -42,7 +42,7 @@ var _dbg := OS.get_cmdline_user_args().has("--convoy") and OS.get_cmdline_user_a
 
 
 ## center — точка, через которую пройдёт колонна; dir — примерное направление марша
-func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> void:
+func setup(center: Vector2, dir: Vector2, hp_k: float, t: float) -> void:
 	_build_route(center, dir)
 	var order := ["scout", "technical", "truck", "light", "truck", "ifv", "manpads"]
 	if t >= 480.0:
@@ -62,7 +62,7 @@ func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> 
 		var r: String = order[i]
 		var sp: Dictionary = ConvoyVehicle.SPEC[r]
 		var v := ConvoyVehicle.new()
-		v.setup(r, self, maxf(float(sp["hp"]) * hp_k, dps * float(sp["ttk"])))
+		v.setup(r, self, float(sp["hp"]) * hp_k)   # S6-02: без нижней границы «по урону игрока»
 		v.place(maxf(head - offs[i], 0.0))
 		vehicles.append(v)
 		if v.is_truck():
