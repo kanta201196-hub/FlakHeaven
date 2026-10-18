@@ -149,9 +149,27 @@ func process(delta: float) -> void:
 			m.fx.explosion(c + Vector2(220, -90), 34.0)
 			m.fx.explosion(c + Vector2(-260, 140), 22.0)
 			m.fx.explosion(c + Vector2(60, 230), 16.0, false)
+		if p.has("booms"):   # M-39: взрывы всех видов, кадр в момент shot_t игрового времени (замедлено)
+			var c2: Vector2 = p["pos"]
+			for b in p["booms"]:
+				if b[3] == "blast":
+					m.fx.blast(c2 + (b[0] as Vector2), b[1])
+				else:
+					m.fx.explosion(c2 + (b[0] as Vector2), b[1], b[2], true, b[3])
+			Engine.time_scale = 0.2
+			_bt = 0.0
 		_phase = 1
 		_t = 0.0
 		_pt = 0.0
+	elif _phase == 1 and p.has("booms"):
+		_bt += m.get_process_delta_time()
+		if _bt >= float(p["shot_t"]):
+			Engine.time_scale = 1.0
+			_save(p["name"])
+			_phase = 0
+			_t = 0.0
+			_pt = 0.0
+			_i += 1
 	elif _phase == 1 and _t > (0.25 if p.get("boom", false) else 0.05):
 		_save(p["name"])
 		_phase = 0
@@ -161,6 +179,7 @@ func process(delta: float) -> void:
 
 
 var _convoy: Convoy = null   # M-36: колонна для кадра дороги
+var _bt := 0.0     # M-39: игровое время после взрывов точки «booms»
 var _pt := 0.0     # время в точке (3.4-t1: эффекты — самолёт летит, за ним тянется след)
 
 
@@ -394,6 +413,12 @@ func _make_points() -> Array:
 		pts = []
 		pts.append({"name": "trail", "pos": empty, "fly": true, "wait": 3.0, "zoom": 0.8})
 		pts.append({"name": "trail_ab", "pos": empty, "fly": true, "ab": true, "missiles": true, "wait": 3.0, "zoom": 0.8})
+		# M-39 (аудит 3.5-s6 Э-1): раскадровка взрывов — наземные (ground, blast) слева, воздушные (air, big, flak) справа
+		var bl := [[Vector2(-330, 120), 18.0, false, ""], [Vector2(-120, 230), 130.0, false, "blast"], [Vector2(-360, -170), 14.0, false, ""],
+			[Vector2(220, -110), 22.0, true, ""], [Vector2(330, 170), 46.0, true, ""], [Vector2(80, -230), 12.0, true, "flak"]]
+		for bi in 4:
+			var bt: float = [0.1, 0.45, 1.2, 3.0][bi]
+			pts.append({"name": "boom_%d" % bi, "pos": empty + Vector2(3000.0 * (bi + 1), 0), "booms": bl, "shot_t": bt, "wait": 1.0, "zoom": 1.0})
 		pts.append({"name": "nozzle_ab", "pos": empty, "fly": true, "ab": true, "wait": 1.0, "zoom": 2.2})
 		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
 		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
