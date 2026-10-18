@@ -139,5 +139,5 @@ static func evo_hint(p: Player, module_id: String) -> String:
 		var need := int(cat[module_id]) - int(p.taken.get(module_id, 0))
 		if need > 0:
 			var wn: String = "пушки" if w == "gun" else Weapons.DEFS[w]["short"]
-			return "\nНужно для модернизации: %s → %s (ещё ×%d)" % [wn, EVOS[w]["title"], need]
+			return Loc.t("\nНужно для модернизации: %s → %s (ещё ×%d)") % [Loc.t(wn), Loc.t(EVOS[w]["title"]), need]
 	return ""

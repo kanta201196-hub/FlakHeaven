@@ -191,7 +191,7 @@ static func cond_list(p: Player, id: String) -> Array:
 		out.append(["%s %d/%d" % [Prog.tag_title(s["tag2"]), t2, int(c["second"])], t2 >= int(c["second"]), t2, int(c["second"])])
 	if s.has("w"):
 		var lv2 := _wlevel(p, s["w"])
-		var wn := "/".join(PackedStringArray((s["w"] as Array).map(func(x): return String(Weapons.DEFS[x]["short"]))))
+		var wn := "/".join(PackedStringArray((s["w"] as Array).map(func(x): return Loc.t(String(Weapons.DEFS[x]["short"])))))
 		out.append([Loc.t("%s ур. %d/%d") % [wn, lv2, int(c["lvl"])], lv2 >= int(c["lvl"]), lv2, int(c["lvl"])])
 	if s.has("req_mods"):
 		var n := 0

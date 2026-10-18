@@ -345,4 +345,4 @@ func _draw() -> void:
 			var target := to_local(p.global_position)
 			draw_line(Vector2.ZERO, target, Color(1, 0.15, 0.1, a), 3.0)
 			draw_arc(target, 30.0, 0.0, TAU, 32, Color(1, 0.15, 0.1, a), 3.0)
-	draw_string(Hud.ui_font(), Vector2(-120, -radius - 24.0), title, HORIZONTAL_ALIGNMENT_CENTER, 240, 18, Color(1, 0.85, 0.7))
+	draw_string(Hud.ui_font(), Vector2(-120, -radius - 24.0), Loc.out(title), HORIZONTAL_ALIGNMENT_CENTER, 240, 18, Color(1, 0.85, 0.7))

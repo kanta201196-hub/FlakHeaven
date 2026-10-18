@@ -40,7 +40,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	if m.banner_t > 0.0 and m.state == "playing":
 		var a := clampf(m.banner_t, 0.0, 1.0)
 		# тёмная плашка под баннером — на светлом песке жёлтый текст терялся
-		var bw := ui_font().get_string_size(m.banner, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
+		var bw := ui_font().get_string_size(Loc.out(m.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
 		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, 138, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
 		_ctext(170, m.banner, 30, Color(1.0, 0.85, 0.5, a))
 
@@ -48,7 +48,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 		return
 	var hint := Loc.t("Мышь — куда лететь · Space — уклонение · Shift — форсаж · E — навык · Tab — пауза") + (Loc.t(" · F5/F6/F7 — отладка") if Main.DEBUG else "")
 	# свежий взгляд: без плашки строка клавиш терялась на песке
-	var hw := ui_font().get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 32.0
+	var hw := ui_font().get_string_size(Loc.out(hint), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 32.0
 	ctrl.draw_rect(Rect2((size.x - hw) / 2.0, size.y - 38.0, hw, 28.0), Color(0.02, 0.025, 0.03, 0.62))
 	_text(Vector2(0, size.y - 18), hint, 16, Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 
@@ -57,7 +57,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 func _hint_box(s: String, size: Vector2, a: float) -> void:
 	var w := minf(1100.0, size.x - 80.0)
 	# высота по тексту: длинная подсказка в три строки не вылезает из рамки
-	var th := ui_font().get_multiline_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, 18).y
+	var th := ui_font().get_multiline_string_size(Loc.out(s), HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, 18).y
 	var bh := maxf(86.0, th + 44.0)
 	var r := Rect2((size.x - w) / 2.0, size.y - 134.0 - bh, w, bh)
 	ctrl.draw_rect(r, Color(0.04, 0.05, 0.06, 0.82 * a))
@@ -80,7 +80,7 @@ func _skill(pos: Vector2, w: float, title: String, key: String, cd: float, activ
 	ctrl.draw_rect(r, Color(0.03, 0.04, 0.05, 0.72))
 	ctrl.draw_rect(r, Color(c.r, c.g, c.b, 0.9 if cd <= 0.0 else 0.35), false, 2.0 if cd <= 0.0 else 1.0)
 	# клавиша — светлый квадратик слева
-	var kw := ui_font().get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 12.0
+	var kw := ui_font().get_string_size(Loc.out(key), HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 12.0
 	ctrl.draw_rect(Rect2(pos.x + 4, pos.y + 4, kw, 22), Color(c.r, c.g, c.b, 0.22))
 	_text(Vector2(pos.x + 10, pos.y + 20), key, 14, c.lightened(0.3))
 	_text(Vector2(pos.x + kw + 10, pos.y + 21), title, 16, Color.WHITE if cd <= 0.0 else Color(0.78, 0.8, 0.86), HORIZONTAL_ALIGNMENT_LEFT, w - kw - 58.0)
@@ -304,7 +304,7 @@ func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1
 		# подпись — за остриём стрелки (наружу от самолёта), на тёмной плашке
 		var lp := pos + dir * (k + 30.0)
 		var fs := 15
-		var tw := ui_font().get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var tw := ui_font().get_string_size(Loc.out(label), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var r := Rect2(lp.x - tw / 2.0 - 6.0, lp.y - 11.0, tw + 12.0, 22.0)
 		ctrl.draw_rect(r, Color(0.02, 0.025, 0.03, 0.7))
 		ctrl.draw_rect(Rect2(r.position, Vector2(3, r.size.y)), col)
@@ -335,7 +335,7 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 	if m.streak >= 3:
 		var a := clampf(m.streak_t, 0.0, 1.0)
 		var stt := Loc.t("Серия ×%d · опыт ×%.2f") % [m.streak, m.streak_mult()]
-		var stw := ui_font().get_string_size(stt, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 24.0
+		var stw := ui_font().get_string_size(Loc.out(stt), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 24.0
 		ctrl.draw_rect(Rect2(size.x - 16.0 - stw, 246.0, stw, 30.0), Color(0.02, 0.025, 0.03, 0.55 * a))
 		_text(Vector2(0, 268), stt, 20, Color(1.0, 0.75, 0.4, a), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 28.0)
 
@@ -408,7 +408,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 func _radio_box(m: Main, size: Vector2) -> void:
 	var a := clampf(m.radio_t, 0.0, 1.0)
 	var w := 470.0
-	var lines := ui_font().get_multiline_string_size(m.radio_text, HORIZONTAL_ALIGNMENT_LEFT, w - 92.0, 17).y
+	var lines := ui_font().get_multiline_string_size(Loc.out(m.radio_text), HORIZONTAL_ALIGNMENT_LEFT, w - 92.0, 17).y
 	var h := maxf(70.0, 40.0 + lines)
 	var r := Rect2(size.x - w - 20.0, size.y - h - 40.0, w, h)
 	var col := Color(1.0, 0.5, 0.45) if m.radio_enemy else Color(0.55, 0.95, 0.7)

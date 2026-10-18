@@ -810,7 +810,7 @@ msgstr "Experience: +1 to specialization"
 msgid "%s Э+ (%d → %d)"
 msgstr "%s E+ (%d → %d)"
 
-#: game/scripts/cards.gd:564
+#: game/scripts/cards.gd:564 game/scripts/loc.gd:15
 #, c-format
 msgid "«Дятел» Э+ (%d → %d)"
 msgstr "\"Woodpecker\" E+ (%d → %d)"
@@ -5730,7 +5730,7 @@ msgstr "large"
 msgid "Sfx: заменены звуки "
 msgstr "Sfx: replaced sounds "
 
-#: game/scripts/sfx.gd:410
+#: game/scripts/sfx.gd:420
 msgid "Sfx: музыка "
 msgstr "Sfx: music "
 

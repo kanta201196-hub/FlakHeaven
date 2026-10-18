@@ -230,7 +230,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 	_text(Vector2(rx, area.position.y + 24), Loc.t("%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)") % Loc.t(Weapons.DEFS[w2]["title"]), 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
 	for tier in [1, 2, 3]:
-		_text(Vector2(rx, yy + 20), "Ступень %d%s" % [tier, " · модернизация" if tier == 3 else ""], 18, Color.WHITE)
+		_text(Vector2(rx, yy + 20), Loc.t("Ступень %d%s") % [tier, Loc.t(" · модернизация") if tier == 3 else ""], 18, Color.WHITE)
 		var st2 := Profile.tier_state(w2, tier)
 		var locked: bool = (tier == 2 and Profile.tier_state(w2, 1) == "") or (tier == 3 and not Profile.tier3_open(w2))
 		var why := Loc.t("сначала выберите ступень %d") % (tier - 1)
@@ -369,7 +369,7 @@ func _hg_crew(c: String, area: Rect2) -> void:
 		yy += 26.0
 		for sk in PlaneClasses.CLASS_SKILLS[c]:
 			# высота по описанию: две строки не наезжают на следующий навык
-			var sh3 := ui_font().get_multiline_string_size(String(PlaneClasses.SKILL3[sk]["short"]), HORIZONTAL_ALIGNMENT_LEFT, sw - 28.0, 13).y
+			var sh3 := ui_font().get_multiline_string_size(Loc.out(String(PlaneClasses.SKILL3[sk]["short"])), HORIZONTAL_ALIGNMENT_LEFT, sw - 28.0, 13).y
 			var r3 := Rect2(sx, yy, sw, maxf(64.0, 30.0 + sh3))
 			var unlocked := Profile.skill_unlocked(c, sk)
 			var sel: bool = sks[slot] == sk

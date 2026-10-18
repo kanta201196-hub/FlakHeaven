@@ -234,6 +234,7 @@ static func badge(ctrl: Control, c: Vector2, s: float, kind: String, col: Color)
 	ctrl.draw_circle(p, s * 0.2, col)
 	var f := Hud.ui_font()
 	var fs := int(s * 0.28)
+	t = Loc.out(t)
 	var tw := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	ctrl.draw_string(f, p + Vector2(-tw / 2.0, fs * 0.36), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.07, 0.09, 0.13))
 
