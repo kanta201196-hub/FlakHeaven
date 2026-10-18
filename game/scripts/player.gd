@@ -56,6 +56,7 @@ var roller_t := 0.0        # связка «Каток»
 var _roller_cd := 0.0
 var _armor2_cd := 0.0
 var _straight_t := 0.0     # «Кит»: разбег
+var _energy := 1.0         # тест 3.5-s7: доля скорости — крутой разворот её съедает, на прямой набирается
 var _speed_buff_t := 0.0   # «Огненный ковёр» III
 var _carpet_dir := 1.0
 var _carpet2_delay := 0.0
@@ -341,10 +342,24 @@ func cruise_speed() -> float:
 
 
 func turn_rate() -> float:
+	return minf(turn_rate_free(), turn_cap())
+
+
+## Скорость разворота без предела радиуса: от неё же — как быстро набирается крен (карточки «Крыло» не пропадают)
+func turn_rate_free() -> float:
 	# Чем медленнее летим, тем круче разворот (до ×1,4), на форсаже — шире (до ×0,75)
 	var f := velocity.length() / maxf(cruise_speed(), 1.0)
 	var k := clampf(1.0 + (1.0 - f) * 0.8, 0.75, 1.4)
 	return deg_to_rad(Tuning.g("turn_rate")) * float(cls["turn"]) * mods["turn"] * k
+
+
+## Тест 3.5-s7: предел по радиусу разворота класса — угловая скорость не больше скорость / радиус.
+## Сброс газа и прокачка разворота больше не дают крутиться на месте; «Кит» разворачивается широко.
+func turn_cap() -> float:
+	var r := float(cls.get("min_r", 0.0)) * Tuning.g("turn_radius_k")
+	if r <= 0.0:
+		return INF
+	return maxf(velocity.length(), cruise_speed() * 0.3) / r
 
 
 func lock_ok() -> bool:
