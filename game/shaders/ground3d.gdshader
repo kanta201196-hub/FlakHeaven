@@ -69,6 +69,17 @@ uniform float cloud_dark = 0.28;   // Э-3 (аудит 3.5-s6): тень обл�
 uniform sampler2D plane_sh : filter_linear, repeat_disable, hint_default_black;
 uniform vec4 plane_sh_rect = vec4(0.0, 0.0, 1.0, 0.0);
 uniform vec3 plane_sh_color = vec3(0.04, 0.05, 0.09);
+// Тест 3.5-s7: метки на земле — прицел и зона бомб, огонь на земле. Раньше это были плоские круги в слое боя
+// (над рельефом); теперь земля сама рисует их: точка рельефа проецируется лучом камеры на плоскость боя
+// (как GroundTarget.air_pos) и сравнивается с зоной там — метка ложится по склонам ровно туда, где бьёт.
+// a: отрезок зоны на плоскости боя (x1, y1, x2, y2; круг — точки совпадают); b: радиус, яркость, вид, случайное;
+// c: цвет. Вид 0 — прицел готов, 1 — прицел на перезарядке, 2 — падающая бомба, 3 — огонь на земле
+uniform vec4 gz_a[24];
+uniform vec4 gz_b[24];
+uniform vec4 gz_c[24];
+uniform int gz_n = 0;
+uniform vec3 gz_cam = vec3(0.0, 1000.0, 0.0);
+uniform float gz_time = 0.0;
 
 uniform float tex_world = 460.0;   // мировой размер плитки, px
 uniform float patch_world = 1500.0; // размер пятен материалов, px
@@ -346,9 +357,51 @@ void fragment() {
 			alb = mix(alb, plane_sh_color, texture(plane_sh, suv).r);
 		}
 	}
+	vec3 gz_e = vec3(0.0);
+	if (gz_n > 0) {
+		vec2 cp = gz_cam.xz + (world3.xz - gz_cam.xz) * gz_cam.y / max(gz_cam.y - world3.y, 1.0);
+		for (int zi = 0; zi < 24; zi++) {
+			if (zi >= gz_n) break;
+			vec4 za = gz_a[zi];
+			vec4 zb = gz_b[zi];
+			vec2 ab = za.zw - za.xy;
+			float h = clamp(dot(cp - za.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+			vec2 dv = cp - za.xy - ab * h;
+			float d = length(dv);
+			float r = zb.x;
+			if (d > r * 1.15 + 8.0) continue;
+			float fw = max(fwidth(d), 0.05);
+			vec3 zc = gz_c[zi].rgb;
+			float a = zb.y;
+			if (zb.z > 2.5) {
+				// огонь: тлеющие угли с мерцанием, край рваный
+				float n = vnoise(cp / 18.0 + zb.w + vec2(gz_time * 0.7, -gz_time * 0.4));
+				float n2 = vnoise(cp / 7.0 - zb.w + vec2(-gz_time * 1.3, gz_time));
+				float edge = 1.0 - smoothstep(r * (0.55 + 0.35 * n), r * (0.75 + 0.35 * n), d);
+				// гарь с тлеющими прожилками: светятся только «трещины» шума, остальное — тёмная гарь с лёгким жаром
+				float ember = smoothstep(0.5, 0.8, n2) * edge;
+				alb = mix(alb, alb * vec3(0.2, 0.18, 0.16), edge * 0.8 * a);
+				gz_e += zc * (ember * 1.1 + edge * 0.1) * a;
+			} else {
+				// кольцо постоянной толщины на экране (~3 px) + слабая заливка; у прицела ещё 4 засечки и точка
+				float ring = 1.0 - smoothstep(fw * 1.1, fw * 2.2, abs(d - r));
+				float fill = (1.0 - smoothstep(r - fw * 2.0, r, d)) * 0.16;
+				float m = ring + fill;
+				if (zb.z < 1.5) {
+					vec2 u = dv / max(d, 1e-3);
+					float tick = step(0.985, max(abs(u.x), abs(u.y))) * step(r * 0.72, d) * step(d, r);
+					float dot_c = 1.0 - smoothstep(fw * 2.5, fw * 4.0, d);
+					m = max(m, max(tick * 0.9, dot_c));
+				}
+				m = clamp(m, 0.0, 1.0) * a;
+				alb = mix(alb, zc * 0.6, m * 0.55);
+				gz_e += zc * m * 0.9;
+			}
+		}
+	}
 	ALBEDO = alb;
 	// M-36: отражённый от долины свет на крутых склонах (у GL Compatibility нет GI — тень иначе почти чёрная)
-	EMISSION = alb * slope_fill * smoothstep(0.12, 0.55, 1.0 - wnorm.y);
+	EMISSION = alb * slope_fill * smoothstep(0.12, 0.55, 1.0 - wnorm.y) + gz_e;
 	if (use_nh) {
 		nxy *= normal_k;
 		NORMAL_MAP = normalize(vec3(nxy, 1.0)) * 0.5 + 0.5;

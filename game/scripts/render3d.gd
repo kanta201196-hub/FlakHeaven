@@ -450,6 +450,7 @@ func _process(delta: float) -> void:
 	_sync_scorch(m)
 	_sync_craters(m)
 	_sync_bombs(m)
+	_sync_ground_zones(m)
 	_sync_lights(delta)
 	if Perf.on: pt = Perf.sub("r3d.clouds_scorch_lights", pt)
 	if OS.get_cmdline_user_args().has("--dbg3") and Engine.get_process_frames() % 30 == 0:
@@ -2140,6 +2141,71 @@ func _sync_bombs(m: Main) -> void:
 		if not seen.has(id):
 			(_bombs3[id] as Node).queue_free()
 			_bombs3.erase(id)
+
+
+## Тест 3.5-s7: метки на земле рисует шейдер земли (ground3d.gdshader, gz_*) — они лежат по рельефу.
+## Порядок важности: прицел бомб → падающие бомбы → огонь на земле ближе к центру кадра.
+const GZ_MAX := 24
+const GZ_AIM := Color(1.0, 0.68, 0.28)
+const GZ_WAIT := Color(0.8, 0.82, 0.8)
+var _gz_a := PackedVector4Array()
+var _gz_b := PackedVector4Array()
+var _gz_c := PackedVector4Array()
+
+
+## Земля рисует метки сама (иначе — плоскими кругами в слое боя, projectiles._draw)
+func ground_zones_on() -> bool:
+	return enabled and terrain != null and _ground_mat != null
+
+
+func _gz_add(a: Vector2, b: Vector2, r: float, alpha: float, kind: int, col: Color) -> void:
+	if _gz_a.size() >= GZ_MAX or alpha <= 0.01:
+		return
+	_gz_a.append(Vector4(a.x, a.y, b.x, b.y))
+	_gz_b.append(Vector4(r, alpha, float(kind), fmod(absf(a.x * 0.013 + a.y * 0.007), 50.0)))
+	_gz_c.append(Vector4(col.r, col.g, col.b, 1.0))
+
+
+func _sync_ground_zones(m: Main) -> void:
+	if _ground_mat == null:
+		return
+	_gz_a.clear()
+	_gz_b.clear()
+	_gz_c.clear()
+	var pl := m.player
+	if is_instance_valid(pl) and pl.hp > 0.0:
+		for g in pl.groups:
+			var h: Hardpoint = g
+			if not h.aiming:
+				continue
+			var ready := h.cd <= 0.0
+			for z in h.aim_zones(pl):
+				_gz_add(z[0], z[1], z[2], 1.0 if ready else 0.6, 0 if ready else 1, GZ_AIM if ready else GZ_WAIT)
+	var pr := m.projectiles
+	if pr != null:
+		var rk := pr.aoe_r_k()
+		for i in range(pr.bombs.size() - 1, -1, -1):
+			var b: Dictionary = pr.bombs[i]
+			var k := 1.0 - float(b["t"]) / maxf(float(b["fuse"]), 0.01)
+			_gz_add(b["to"], b["to"], float(b["r"]) * rk, 0.3 + 0.6 * k, 2, GZ_AIM)
+		var fl: Array = pr.fires.duplicate()
+		if fl.size() > GZ_MAX - _gz_a.size():
+			fl.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+				return (x["p"] as Vector2).distance_squared_to(_c2) < (y["p"] as Vector2).distance_squared_to(_c2))
+		for f: Dictionary in fl:
+			var fc: Color = f.get("c", Color(1.0, 0.45, 0.1))
+			_gz_add(f["p"], f["p"], float(f["r"]), clampf(float(f["t"]), 0.0, 1.0), 3, fc)
+	_ground_mat.set_shader_parameter("gz_n", _gz_a.size())
+	if _gz_a.is_empty():
+		return
+	_gz_a.resize(GZ_MAX)
+	_gz_b.resize(GZ_MAX)
+	_gz_c.resize(GZ_MAX)
+	_ground_mat.set_shader_parameter("gz_a", _gz_a)
+	_ground_mat.set_shader_parameter("gz_b", _gz_b)
+	_ground_mat.set_shader_parameter("gz_c", _gz_c)
+	_ground_mat.set_shader_parameter("gz_cam", cam.global_position)
+	_ground_mat.set_shader_parameter("gz_time", Time.get_ticks_msec() * 0.001)
 
 
 ## Воронки: плоский квадрат по наклону рельефа с общей текстурой и материалом (без теней, без света),

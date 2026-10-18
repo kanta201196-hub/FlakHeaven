@@ -28,6 +28,8 @@ var _aim_scan := 0.0
 const TURRET_TRAVERSE := 150.0   # °/с; «Сервоприводы» — +25% за уровень
 const TURRET_GATE := 0.09        # рад — стреляет, когда стволы смотрят на цель точнее
 var _charge := 0.0       # рельсотрон: идёт зарядка
+## тест 3.5-s7: бомбы вручную — пока зажата кнопка (ПКМ / LT / K), на земле прицел; отпустил — сброс
+var aiming := false
 const RAIL_CHARGE := 0.9
 
 
@@ -210,6 +212,8 @@ func update(delta: float, p: Player) -> void:
 		return
 	# мастерство «Охотник»: на хвосте у врага ракеты В-В перезаряжаются вдвое быстрее
 	cd -= delta * (2.0 if weapon == "aam" and p.mastery and p.cls_id == "fighter" and p.on_tail() else 1.0)
+	if weapon == "bombs" and _bomb_aim(p):
+		return
 	if cd > 0.0:
 		return
 	var manual := uses_trigger() and trigger == "button"
@@ -233,13 +237,51 @@ func update(delta: float, p: Player) -> void:
 			fired = _fire_laser(p)
 		"plasma":
 			fired = _fire_plasma(p)
-	if fired and not manual and weapon in ["aam", "rockets", "bombs"]:
+	if fired and not manual and weapon == "bombs":
+		Hints.show("bomb_auto", "Бомбы падают сами на наземные цели рядом. Бросить вручную: зажмите правую кнопку мыши — на земле появится прицел, отпустите — сброс.", 8.0, 2)
+	if fired and not manual and weapon in ["aam", "rockets"]:
 		Hints.show("auto_launch", "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab).", 8.0, 2)
 	# 3.4: после выстрела переносим опоздание (до 0,05 с) — темп меньше зависит от FPS
 	cd = (minf(0.0, maxf(cd, -0.05)) + reload_time(p)) if fired else 0.2
 	if _quick:
 		_quick = false
 		cd = 0.2
+
+
+## Тест 3.5-s7 (предложение Kanta): бомбы по кнопке — зажал, на земле виден прицел (лежит по рельефу,
+## render3d._sync_ground_zones), отпустил — сброс туда. При «авто» тоже: пока кнопка зажата, бомбы сами не падают.
+## true — авто-сброс в этот кадр не нужен.
+func _bomb_aim(p: Player) -> bool:
+	if Input.is_action_pressed("fire_hardpoint"):
+		if not aiming:
+			Hints.show("bomb_aim", "Прицел бомб: держите правую кнопку мыши и ведите прицел, отпустите — бомбы сброшены. Серый прицел — бомбы ещё перезаряжаются.", 8.0, 2)
+		aiming = true
+		return true
+	if aiming:
+		aiming = false
+		if cd <= 0.0 and _fire_bombs(p, true):
+			cd = reload_time(p)
+		return true
+	return trigger == "button"
+
+
+## Куда упадут бомбы по кнопке: к курсору (схема «мышью»), иначе вперёд по курсу
+func aim_point(p: Player) -> Vector2:
+	if int(Tuning.g("scheme")) == 2 and Render3D.I != null:
+		var mp := Render3D.I.mouse_world(p.get_global_mouse_position())
+		return p.global_position + (mp - p.global_position).limit_length(460.0)
+	return p.global_position + Vector2.from_angle(p.heading) * 300.0
+
+
+## Зоны прицела бомб на плоскости боя: [начало, конец, радиус] (круг — начало и конец совпадают)
+func aim_zones(p: Player) -> Array:
+	var aoe_k := Main.I.projectiles.aoe_r_k()
+	if evo:
+		var c := p.global_position + Vector2.from_angle(p.heading) * 220.0 + p.velocity * 0.4   # как в _fire_carpet_row по кнопке
+		var side := Vector2.from_angle(p.heading + PI / 2.0) * 300.0
+		return [[c - side, c + side, 150.0 * Profile.wk("bombs", "blast_r") * aoe_k]]
+	var to := aim_point(p)
+	return [[to, to, range_px() * Profile.wk("bombs", "blast_r") * aoe_k]]
 
 
 ## U-08: рельсотрон — цель по носу (конус ±8°) → зарядка RAIL_CHARGE с прицельной линией → пробивающий выстрел
@@ -331,8 +373,8 @@ func _fire_emp(p: Player) -> bool:
 			e.take_hit(d, "ЭМИ")
 			e.silence = maxf(e.silence, 3.0)
 	Main.I.projectiles.break_locks(pos, r)
-	Main.I.fx.ring(pos, r, Color(0.55, 0.8, 1.0))
-	Main.I.fx.ring(pos, r * 0.6, Color(0.8, 0.95, 1.0))
+	Main.I.fx.emp_wave(pos, r, near)   # тест 3.5-s7: волна и молнии к заглушённым врагам
+	Hints.show("emp", "ЭМИ-заряд срабатывает сам, когда в голубом круге вокруг вас 3 врага или вражеская ракета: дроны падают, остальные враги на время глохнут, ракеты теряют цель.", 9.0, 2)
 	Main.I.sfx.play("shield_break", -6.0, 0.7)
 	if Main.I._autotest and not Main.I.counters.has("emp_pulses"):
 		print("AUTOTEST: emp pulse at %.0f s, enemies %d, missiles %d" % [Main.I.run_time, near.size(), msl])
@@ -725,11 +767,8 @@ func _fire_bombs(p: Player, manual := false) -> bool:
 			var t: Enemy = targets[s % targets.size()]
 			var tv: Vector2 = t.get("velocity") if t.get("velocity") is Vector2 else Vector2.ZERO
 			to = t.global_position + tv * fuse
-		elif int(Tuning.g("scheme")) == 2:
-			var mp := Render3D.I.mouse_world(p.get_global_mouse_position())
-			to = p.global_position + (mp - p.global_position).limit_length(460.0)
 		else:
-			to = p.global_position + Vector2.from_angle(p.heading) * 300.0
+			to = aim_point(p)
 		to += Vector2(randf_range(-20, 20), randf_range(-20, 20))
 		Main.I.projectiles.spawn_bomb(_slot_pos(p, s), fuse * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
 			range_px() * Profile.wk("bombs", "blast_r"), "бомбы", to, true)
