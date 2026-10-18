@@ -526,7 +526,7 @@ func _flush() -> void:
 		HTTPClient.METHOD_POST, JSON.stringify(q[0]))
 	if err != OK:
 		_busy = false
-		_fail("не удалось начать отправку (%d)" % err)
+		_fail(Loc.t("не удалось начать отправку (%d)") % err)
 
 
 func _on_done(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
@@ -537,7 +537,7 @@ func _on_done(result: int, code: int, _headers: PackedStringArray, body: PackedB
 	if ok and txt.begins_with("bad token"):
 		ok = false
 	if not ok:
-		_fail("нет связи с сервером (код %d / %d)" % [result, code])
+		_fail(Loc.t("нет связи с сервером (код %d / %d)") % [result, code])
 		return
 	var q := _load_queue()
 	if not q.is_empty():
@@ -557,6 +557,6 @@ func _on_done(result: int, code: int, _headers: PackedStringArray, body: PackedB
 func _fail(why: String) -> void:
 	if _flush_after_open:
 		_flush_after_open = false
-		_status.text = "Не отправилось: %s. Отчёт сохранён и уйдёт при следующей отправке или запуске игры." % why
+		_status.text = Loc.t("Не отправилось: %s. Отчёт сохранён и уйдёт при следующей отправке или запуске игры.") % why
 		_status.add_theme_color_override("font_color", Color(1.0, 0.7, 0.4))
 		Main.I.report_sent = true   # сохранён в очереди — повторно заполнять не нужно
