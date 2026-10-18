@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flak Heaven</title>
+<meta name="description" content="Flak Heaven — roguelike про боевую авиацию: соберите свой истребитель и продержитесь 15 минут. Ищем тестеров.">
+<meta property="og:title" content="Flak Heaven">
+<meta property="og:description" content="Fighter-jet bullet heaven roguelite. Build your plane, survive 15 minutes.">
+<style>
+:root{--bg:#10151c;--panel:#18202b;--text:#e8edf3;--muted:#9aa7b6;--accent:#ffb347;--line:#263241}
+@media (prefers-color-scheme:light){:root{--bg:#f4f6f8;--panel:#fff;--text:#161c24;--muted:#56626f;--accent:#c46a00;--line:#d9e0e7}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:0 16px 48px}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+.logo{font-weight:800;letter-spacing:.04em;font-size:20px}
+.logo span{color:var(--accent)}
+.lang button{background:none;border:1px solid var(--line);color:var(--muted);padding:4px 10px;border-radius:6px;cursor:pointer;font:inherit;font-size:14px}
+.lang button[aria-pressed="true"]{color:var(--text);border-color:var(--accent)}
+h1{font-size:clamp(34px,8vw,56px);line-height:1.05;margin:28px 0 12px}
+h1 em{font-style:normal;color:var(--accent)}
+.hook{color:var(--muted);font-size:20px;margin:0 0 24px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 8px}
+.btn{display:inline-block;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:600;border:1px solid var(--line);color:var(--text);background:var(--panel)}
+.btn.main{background:var(--accent);color:#1a1100;border-color:var(--accent)}
+.btn[hidden]{display:none}
+section{margin-top:40px}
+h2{font-size:22px;margin:0 0 10px}
+ul{padding-left:20px;margin:0}
+li{margin:6px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.small{color:var(--muted);font-size:14px}
+footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px}
+[data-l]{display:none}
+html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="logo">FLAK <span>HEAVEN</span></div>
+  <div class="lang"><button id="b-ru" aria-pressed="true">RU</button> <button id="b-en" aria-pressed="false">EN</button></div>
+</header>
+
+<h1>Flak <em>Heaven</em></h1>
+<p class="hook" data-l="ru">Roguelike про боевую авиацию: соберите свой истребитель и продержитесь 15 минут.</p>
+<p class="hook" data-l="en">Fighter-jet bullet heaven roguelite. Build your plane, survive 15 minutes.</p>
+
+<div class="btns">
+  <a class="btn main" id="l-steam" href="#" hidden><span data-l="ru">Добавить в список желаемого в Steam</span><span data-l="en">Wishlist on Steam</span></a>
+  <a class="btn main" id="l-tester" href="#" hidden><span data-l="ru">Стать тестером</span><span data-l="en">Become a tester</span></a>
+  <a class="btn" id="l-tg" href="#" hidden>Telegram</a>
+  <a class="btn" id="l-vk" href="#" hidden>VK</a>
+  <a class="btn" id="l-discord" href="#" hidden>Discord</a>
+</div>
+
+<section data-l="ru">
+  <h2>О игре</h2>
+  <ul>
+    <li>Вид сверху, вылет длится 15 минут. Вы летите вперёд и не можете остановиться.</li>
+    <li>Собирайте самолёт из оружия и ведомых, бомбите наземные цели, сбивайте самолёты и ракеты.</li>
+    <li>Три класса: истребитель, штурмовик, бомбардировщик. Разные биомы: сначала горное Нагорье, затем острова Архипелага.</li>
+    <li>Вымышленный мир: техника «по мотивам», без реальных стран и знаков.</li>
+  </ul>
+</section>
+<section data-l="en">
+  <h2>About the game</h2>
+  <ul>
+    <li>Top-down, 15-minute sorties. You fly forward and cannot stop.</li>
+    <li>Build your plane from weapons and wingmen, bomb ground targets, shoot down jets and missiles.</li>
+    <li>Three classes: fighter, attacker, bomber. Different biomes: the mountain Highlands first, then the Archipelago islands.</li>
+    <li>A fictional world: vehicles are "inspired by", with no real countries or insignia.</li>
+  </ul>
+</section>
+
+<section data-l="ru">
+  <h2>Статус</h2>
+  <p>Игра в разработке. Планируем ранний доступ в Steam весной 2027. Сейчас идут закрытые тесты для Windows и Mac.</p>
+</section>
+<section data-l="en">
+  <h2>Status</h2>
+  <p>The game is in development. Steam Early Access is planned for spring 2027. Closed tests for Windows and Mac are running now.</p>
+</section>
+
+<section>
+  <h2 data-l="ru">Тестерам: это безопасно</h2><h2 data-l="en">For testers: it is safe</h2>
+  <div class="card">
+    <p data-l="ru">К каждой тестовой сборке мы даём контрольную сумму (SHA-256), по которой видно, что файл не подменили, и записку о безопасности. Игра отправляет только ответы анкеты, статистику вылета, название системы и видеокарты, FPS и технический журнал. Имён и почты она не собирает.</p>
+    <p data-l="en">Each test build comes with a SHA-256 checksum so you can check the file was not tampered with, and a safety note. The game only sends your survey answers, sortie stats, OS and GPU names, FPS and a technical log. It does not collect names or email.</p>
+    <p class="small" data-l="ru">Заявка на тест: форма просит имя в сети и контакт. Мы используем их только чтобы написать вам про тест и не передаём третьим лицам.</p>
+    <p class="small" data-l="en">The tester form asks for a nickname and a contact. We use them only to write to you about testing and do not share them.</p>
+  </div>
+</section>
+
+<footer class="small">
+  <span data-l="ru">© 2026 Flak Heaven. Все совпадения с реальной техникой и странами случайны.</span>
+  <span data-l="en">© 2026 Flak Heaven. Any resemblance to real vehicles or countries is coincidental.</span>
+</footer>
+</main>
+
+<script>
+/* Ссылки: впишите адрес — кнопка появится. Пока адрес пустой, кнопка скрыта. */
+var LINKS={steam:"",tester:"",tg:"",vk:"",discord:""};
+Object.keys(LINKS).forEach(function(k){var a=document.getElementById("l-"+k);if(a&&LINKS[k]){a.href=LINKS[k];a.hidden=false;}});
+function setLang(l){document.documentElement.lang=l;
+  document.getElementById("b-ru").setAttribute("aria-pressed",l==="ru");
+  document.getElementById("b-en").setAttribute("aria-pressed",l==="en");
+  try{localStorage.setItem("lang",l);}catch(e){}}
+document.getElementById("b-ru").onclick=function(){setLang("ru")};
+document.getElementById("b-en").onclick=function(){setLang("en")};
+var saved=null;try{saved=localStorage.getItem("lang");}catch(e){}
+setLang(saved||((navigator.language||"").toLowerCase().indexOf("ru")===0?"ru":"en"));
+</script>
+</body>
+</html>
