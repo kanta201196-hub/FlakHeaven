@@ -44,6 +44,7 @@ var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые па
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: StandardMaterial3D
 var _smoke_mat: StandardMaterial3D
+var title: TitleFlight       # тест 3.5-s5 (п. 1): звено 3D-моделей на заставке меню
 ## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
 ## настоящая тень размыта полутенью солнца до пятна и лежит далеко в стороне, а крупная чёткая тень
 ## читается как бреющий полёт. Оставляем подсказку «где самолёт над землёй», но в стиле высоты.
@@ -178,6 +179,8 @@ func _ready() -> void:
 	_wreck_mat.roughness = 1.0
 	_trails = Contrails.new()
 	add_child(_trails)
+	title = TitleFlight.new(self)
+	add_child(title)
 	apply_gfx(Settings.gfx)
 
 
@@ -407,7 +410,8 @@ func _process(delta: float) -> void:
 	_sync_missiles(m)
 	if Perf.on: pt = Perf.sub("r3d.missiles", pt)
 	_sync_crashes(m, sd)
-	_trails.tick(sd)
+	title.sync(m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu", delta)
+	_trails.tick(delta if title.active() else sd)   # в меню мир на паузе, а следы звена тают в реальном времени
 	if Perf.on: pt = Perf.sub("r3d.crash_trails", pt)
 	_sync_objects(c2, h)
 	if Perf.on: pt = Perf.sub("r3d.objects", pt)
