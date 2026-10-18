@@ -42,8 +42,12 @@ func class_select(size: Vector2) -> void:
 		y += 36.0
 		_text(Vector2(x, y), "Подвесы:", 19, Color.WHITE)
 		y += 26.0
+		var s2 := Profile.start2(id) # фишка 3: второй подвес, выбранный в ангаре
 		for g in d["groups"]:
 			var wname: String = "пусто — оружие из карточек" if g["weapon"] == "" else Weapons.title(g["weapon"])
+			if g["weapon"] == "" and s2 != "":
+				wname = "%s — выбрано в ангаре" % Weapons.DEFS[s2]["short"]
+				s2 = ""
 			_text(Vector2(x + 12, y), "• %s ×%d: %s" % [g["name"], g["slots"], wname], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if int(d["turrets"]) > 0:

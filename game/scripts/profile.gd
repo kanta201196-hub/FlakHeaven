@@ -125,7 +125,7 @@ func _default_class(cls: String) -> Dictionary:
 	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2, "livery": "",
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"nodes2": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
-		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": []}
+		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start2": ""}
 
 
 func reset_data() -> void:
@@ -286,6 +286,25 @@ func set_plane(c: String, lv: int) -> void:
 ## Тест 3.5-s4, п. 35: окраска самолёта класса (Livery.VARIANTS; "" — исходная)
 func livery(c: String) -> String:
 	return String(cls(c).get("livery", ""))
+
+
+## Фишка 3 (Kanta 18.10): оружие на второй подвес с начала вылета — открывается с ур. экипажа START2_LVL
+const START2_LVL := 5
+
+
+## Что можно поставить на старт: обычное оружие самолёта, кроме особенности (она уже стоит на первом подвесе)
+func start2_options(c: String) -> Array:
+	return Weapons.POOL.filter(func(w): return PlaneClasses.allows(c, w) and w != PlaneClasses.signature(c))
+
+
+func start2(c: String) -> String:
+	var w := String(cls(c).get("start2", ""))
+	return w if crew_lvl(c) >= START2_LVL and start2_options(c).has(w) else ""
+
+
+func set_start2(c: String, w: String) -> void:
+	cls(c)["start2"] = w
+	save()
 
 
 func set_livery(c: String, id: String) -> void:

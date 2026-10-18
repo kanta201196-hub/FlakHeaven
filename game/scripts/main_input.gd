@@ -242,6 +242,8 @@ func hangar_action(a: String) -> void:
 			Profile.set_livery(c, p[1])
 		"wsel":
 			m.hangar_w = p[1]
+		"start2":
+			Profile.set_start2(c, p[1] if p.size() > 1 else "")
 		"tier":
 			var w := p[1]
 			var t := int(p[2])
