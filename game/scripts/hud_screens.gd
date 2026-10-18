@@ -44,7 +44,7 @@ func class_select(size: Vector2) -> void:
 		y += 26.0
 		var s2 := Profile.start2(id) # фишка 3: второй подвес, выбранный в ангаре
 		for g in d["groups"]:
-			var wname: String = "пусто — оружие из карточек" if g["weapon"] == "" else Weapons.title(g["weapon"])
+			var wname: String = Loc.t("пусто — оружие из карточек") if g["weapon"] == "" else Weapons.title(g["weapon"])
 			if g["weapon"] == "" and s2 != "":
 				wname = Loc.t("%s — выбрано в ангаре") % Loc.t(Weapons.DEFS[s2]["short"])
 				s2 = ""
@@ -55,14 +55,14 @@ func class_select(size: Vector2) -> void:
 			_text(Vector2(x + 12, y), Loc.t("• Автотурели: %d (круговой обстрел)%s") % [int(d["turrets"]), (Loc.t(", вторая — с ур. %d") % PlaneClasses.TURRET2_LVL) if tmax > int(d["turrets"]) else ""], 17, Color(0.85, 0.88, 0.95))
 			y += 24.0
 		if Profile.plane_lvl(id) == 2:   # U-06
-			_text(Vector2(x + 12, y), "• Тяжёлый подвес ×1: экспериментальное оружие из карточек", 17, Color(0.6, 0.85, 1.0))
+			_text(Vector2(x + 12, y), Loc.t("• Тяжёлый подвес ×1: экспериментальное оружие из карточек"), 17, Color(0.6, 0.85, 1.0))
 			y += 24.0
 		_text(Vector2(x + 12, y), Loc.t("• Ведомые: до %d") % int(d["wingmen"]) if int(d["wingmen"]) > 0 else Loc.t("• Ведомых нет"), 17, Color(0.85, 0.88, 0.95))
 		y += 24.0
 		# правка 5 теста 3.5-s5: какое оружие бывает у самолёта и особенность класса (★)
 		var wl := PackedStringArray()
 		for wid in d["weapons"]:
-			wl.append(String(Weapons.DEFS[wid]["short"]) + (" ★" if wid == d["signature"] else ""))
+			wl.append(Loc.t(String(Weapons.DEFS[wid]["short"])) + (" ★" if wid == d["signature"] else ""))
 		y += _para(Vector2(x + 12, y), Loc.t("• Оружие: %s") % ", ".join(wl).to_lower(), w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
 		y += _para(Vector2(x + 12, y), Loc.t("★ Особенность класса: «%s» +20%% урона") % Weapons.DEFS[d["signature"]]["short"], w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
 		y += _para(Vector2(x + 12, y), Loc.t("★ На ур. 5 особенности — мастерство %s") % Loc.t(PlaneClasses.MASTERY[id]["title"]), w - 56.0, 15, Color(1.0, 0.92, 0.65)) + 12.0
