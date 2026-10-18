@@ -1265,7 +1265,102 @@ def e_lev_zsu():
     _lev_zsu(); _lev_zsu(True)
 
 
-RECIPES = {f.__name__: f for f in [e_ship_escort, e_ship_tanker, e_ship_landing, a22_buoy_red, a23_buoy_green, e_ship_aa, e_ekranoplan, e_seaplane, e_ship_battery, e_drone_sea,
+# ---------------- К-1 балкер (120 м, кодом по форме K-1: исходник 1,6 млн треуг. из сотен деталей) ----------------
+def _bulk_ring(x, b, zb, z0, z1):
+    """Сечение корпуса между высотами z0..z1: плоское днище zb, скула, борт."""
+    ch = min(1.6, b * 0.45)
+    lo = max(zb, z0)
+    if zb >= z0:
+        return [(x, -b, lo), (x, b, lo), (x, b, z1), (x, -b, z1)]
+    return [(x, -b + ch, zb), (x, b - ch, zb), (x, b, min(zb + ch, z1)), (x, b, z1), (x, -b, z1), (x, -b, min(zb + ch, z1))]
+
+
+def e_ship_bulk():
+    L.reset()
+    black = L.flat('fh_bulk_black', (0.11, 0.11, 0.12), 0.8)
+    bottom = L.flat('fh_bulk_bottom', (0.45, 0.13, 0.10), 0.85)
+    deck_m = L.flat('fh_bulk_deck', (0.42, 0.22, 0.17), 0.9)
+    hatch = L.flat('fh_bulk_hatch', (0.60, 0.50, 0.32), 0.8)      # крышки трюмов охристые, не красные как у исходника
+    coam = L.flat('fh_bulk_coaming', (0.34, 0.20, 0.16), 0.9)
+    hatch_dk = L.flat('fh_bulk_hatch_dk', (0.50, 0.41, 0.26), 0.85)
+    rail = L.flat('fh_bulk_rail', (0.75, 0.75, 0.73), 0.7)
+    white = L.flat('fh_bulk_white', (0.86, 0.86, 0.84), 0.7)
+    win = L.flat('fh_window', (0.12, 0.16, 0.2), 0.3)
+    crane_m = L.flat('fh_bulk_crane', (0.80, 0.62, 0.18), 0.7)   # жёлтые грузовые краны — свои, у исходника их нет
+    red = L.flat('fh_red', RED, 0.6)
+    # станции корпуса: x, полуширина, днище, палуба (нос с подъёмом и развалом, корма — транец)
+    st = [(-60.0, 7.4, 1.2, 9.0), (-58.0, 8.8, -1.5, 8.6), (-52.0, 9.5, -3.0, 8.0), (36.0, 9.5, -3.0, 8.0),
+          (45.0, 9.0, -3.0, 8.2), (51.0, 7.4, -2.9, 8.7), (55.5, 5.0, -2.4, 9.3), (58.5, 2.6, -1.4, 9.9),
+          (60.0, 0.6, 0.0, 10.2)]
+    BOOT = 0.7
+    o = [L.loft([_bulk_ring(x, b, zb, -9, BOOT) for x, b, zb, zd in st if zb < BOOT], bottom, 'hull_low'),
+         L.loft([_bulk_ring(x, b, zb, BOOT, zd) for x, b, zb, zd in st], black, 'hull_top'),
+         L.loft([[(x, -b + 0.35, zd - 0.1), (x, b - 0.35, zd - 0.1), (x, b - 0.35, zd + 0.06), (x, -b + 0.35, zd + 0.06)]
+                 for x, b, zb, zd in st[:-1]], deck_m, 'deck')]
+    # бак: фальшборт и полубак на носу
+    o.append(L.hull([(47, -8.6, 8.0), (47, 8.6, 8.0), (58.6, -2.4, 9.9), (58.6, 2.4, 9.9),
+                     (47, -8.6, 9.6), (47, 8.6, 9.6), (58.6, -2.4, 11.0), (58.6, 2.4, 11.0)], deck_m, 'forecastle'))
+    o.append(L.cyl((53.0, 0, 11.3), 0.7, 0.6, GUNM(), 'windlass', seg=10, axis='Y'))
+    o.append(L.cyl((55.0, 0, 13.5), 0.18, 5.0, white, 'fore_mast', seg=8))
+    # пять трюмов (у исходника семь): комингс + двускатная крышка
+    for i, x in enumerate((36.0, 20.5, 5.0, -10.5, -26.0)):
+        o.append(L.box((x, 0, 8.6), (12.6, 13.0, 1.3), coam, 'coaming'))
+        o.append(L.hull([(x - 6.0, -6.2, 9.25), (x + 6.0, -6.2, 9.25), (x - 6.0, 6.2, 9.25), (x + 6.0, 6.2, 9.25),
+                         (x - 6.0, -5.6, 9.7), (x + 6.0, -5.6, 9.7), (x - 6.0, 5.6, 9.7), (x + 6.0, 5.6, 9.7),
+                         (x - 6.0, 0, 10.3), (x + 6.0, 0, 10.3)], hatch, 'hatch'))
+        o.append(L.box((x, 0, 10.3), (12.0, 0.25, 0.12), coam, 'hatch_seam'))
+        for r in range(-5, 6, 2):                      # рёбра жёсткости поперёк крышки
+            o.append(L.box((x + r * 1.0, 0, 9.85), (0.18, 12.0, 0.5), hatch_dk, 'hatch_rib'))
+        for y in (-7.2, 7.2):                          # вентиляторы трюма у комингса
+            o.append(L.cyl((x + 5.0, y, 8.9), 0.35, 1.6, white, 'vent', seg=8))
+    # четыре палубных крана между трюмами: тумба, кабина, стрела к корме под углом
+    for k, x in enumerate((28.25, 12.75, -2.75, -18.25)):
+        y = 3.2 if k % 2 == 0 else -3.2
+        o += [L.cyl((x, y, 10.0), 1.1, 4.0, crane_m, 'crane_post', seg=10),
+              L.box((x, y, 12.9), (2.8, 2.4, 2.0), crane_m, 'crane_cab'),
+              L.box((x + 0.9, y, 13.2), (0.15, 1.6, 0.8), win, 'crane_win')]
+        ang = math.radians(9)
+        jl = 15.0     # стрела уложена к корме, как у стоящего у причала судна
+        rot = Matrix.Rotation(math.radians(180), 3, 'Z') @ Matrix.Rotation(-ang, 3, 'Y')
+        o.append(L.cyl((x - math.cos(ang) * jl / 2, y, 13.0 + math.sin(ang) * jl / 2), 0.32, jl, crane_m, 'crane_jib', seg=6, axis='X', rot=rot))
+        o.append(L.box((x - 13.0, y, 11.2), (0.4, 0.4, 2.6), crane_m, 'jib_rest'))
+    # кормовая надстройка: 5 ярусов, крылья мостика, своя труба (наклонная, с красным поясом)
+    xs = -47.0
+    for lv in range(5):
+        w = 15.0 if lv < 4 else 18.6
+        o.append(L.box((xs, 0, 10.0 + lv * 2.6), (9.0 - lv * 0.4, w if lv == 4 else w - lv * 0.4, 2.5), white, 'house'))
+        o.append(L.box((xs + 4.55 - lv * 0.2, 0, 10.3 + lv * 2.6), (0.12, w - 2.0 - lv * 0.4, 0.8), win, 'house_win'))
+    o.append(L.box((xs, 0, 22.5), (6.0, 11.0, 0.4), white, 'bridge_roof'))
+    o.append(L.cyl((xs + 1.0, 0, 25.5), 0.2, 6.0, white, 'mast', seg=8))
+    o.append(L.box((xs + 1.0, 0, 26.0), (0.6, 3.4, 0.25), white, 'yard'))
+    o.append(L.box((xs + 1.0, 0, 27.2), (0.9, 2.6, 0.35), GUNM(), 'radar'))
+    o.append(L.hull([(xs - 9.5, -2.0, 10.0), (xs - 9.5, 2.0, 10.0), (xs - 4.5, -2.0, 10.0), (xs - 4.5, 2.0, 10.0),
+                     (xs - 10.5, -1.7, 21.0), (xs - 10.5, 1.7, 21.0), (xs - 7.0, -1.7, 21.0), (xs - 7.0, 1.7, 21.0)], white, 'funnel'))
+    o.append(L.hull([(xs - 10.3, -1.75, 18.0), (xs - 10.3, 1.75, 18.0), (xs - 6.6, -1.75, 18.0), (xs - 6.6, 1.75, 18.0),
+                     (xs - 10.55, -1.8, 19.5), (xs - 10.55, 1.8, 19.5), (xs - 6.95, -1.8, 19.5), (xs - 6.95, 1.8, 19.5)], red, 'funnel_band'))
+    o.append(L.box((xs - 8.75, 0, 21.1), (3.2, 3.1, 0.2), GUNM(), 'funnel_top'))
+    # шлюпки по бортам надстройки (оранжевые), кнехты на корме
+    for y in (-8.2, 8.2):
+        o.append(L.cyl((xs + 1.0, y, 13.2), 1.1, 6.5, L.flat('fh_raft', (0.85, 0.45, 0.12), 0.8), 'lifeboat', seg=10, axis='X'))
+        for x in (-57.0, 44.0):
+            o.append(L.cyl((x, y * 0.95, 8.4), 0.35, 0.8, GUNM(), 'bollard', seg=8))
+    # леера по бортам, трубопровод вдоль палубы, люки и поперечные переходы
+    for x0, x1, b in ((-56.0, 36.0, 9.25), (36.0, 46.5, 8.9)):
+        for y in (-b, b):
+            o.append(L.box(((x0 + x1) / 2, y, 8.55), (x1 - x0, 0.08, 0.08), rail, 'rail'))
+            for xp in range(int(x0), int(x1), 4):
+                o.append(L.box((xp, y, 8.3), (0.08, 0.08, 0.6), rail, 'stanchion'))
+    o.append(L.cyl((4.0, -7.6, 8.35), 0.22, 78.0, L.flat('fh_bulk_pipe', (0.30, 0.42, 0.30), 0.7), 'pipe', seg=6, axis='X'))
+    for x in (28.25, 12.75, -2.75, -18.25):
+        o.append(L.box((x, 0, 8.2), (1.2, 18.0, 0.25), coam, 'walkway'))
+    for lv in range(4):                                # иллюминаторы по бортам надстройки
+        for y in (-7.52 + lv * 0.2, 7.52 - lv * 0.2):
+            o.append(L.box((xs, y, 10.3 + lv * 2.6), (6.0 - lv * 0.4, 0.06, 0.6), win, 'side_win'))
+    L.smooth([ob for ob in o if ob.name.startswith('hull')], 40)
+    L.finish(o, battle('e_ship_bulk'), target=12000, maxtex=1024)
+
+
+RECIPES = {f.__name__: f for f in [e_ship_bulk, e_ship_escort, e_ship_tanker, e_ship_landing, a22_buoy_red, a23_buoy_green, e_ship_aa, e_ekranoplan, e_seaplane, e_ship_battery, e_drone_sea,
                                     a01_battery_gun, a02_bunker_coast, a03_radar_mast, a04_lighthouse, a20_bell_tower,
                                     a05_pier_a, a06_pier_b, a07_tetrapod, a08_warehouse_a, a09_warehouse_b, a10_crane, a11_tower_ruins,
                                     a12_house_1, a13_house_2, a14_house_3, a15_house_4, a16_house_5, a17_house_6,

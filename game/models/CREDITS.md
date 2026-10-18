@@ -38,3 +38,4 @@
 | battle/e_albatross (босс «Альбатрос») | LM-328 Flying Boat | TonyWony | https://sketchfab.com/3d-models/lm-328-flying-boat-d34a38da8ac6454cbdea645433b8d45b | CC BY 4.0, изменено |
 | battle/e_leviathan (босс «Левиафан») | Kiev-class Aircraft Carrier | Muhamad Mirza Arrafi | https://sketchfab.com/3d-models/kiev-class-aircraft-carrier-f854eda1eab54a40aae8628e6456ae78 | CC BY 4.0, изменено |
 | battle/e_lev_turret (главная башня «Левиафана») | US Mark 15/16 19-inch 45 caliber turret | Peter Primini | https://sketchfab.com/3d-models/us-mark-1516-19-inch-45-caliber-turret-1284145fb0e8419c97ae487cbf08ff16 | CC BY 4.0, изменено |
+| battle/e_ship_bulk (балкер) | Bulk Carrier (референс формы, геометрия собрана кодом заново) | medialog | https://sketchfab.com/3d-models/bulk-carrier-93c076900f004102b78dfac989efae1d | CC BY 4.0, изменено |
