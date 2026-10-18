@@ -80,6 +80,7 @@ const CAT_COLORS := {
 	"Звено": Color(0.85, 0.7, 1.0),
 	"Связка": Color(1.0, 0.82, 0.25),
 	"Модернизация": EVO_COLOR,
+	"Мастерство класса": EVO_COLOR,
 	"Резерв": Color(0.8, 0.8, 0.75),
 }
 
@@ -610,6 +611,8 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 				card["desc"] += "\nМодернизация: ур. 5 + %s, с %d:%02d" % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
 			card["desc"] = syn_def(p, card["syn"])["desc"] + "\nОткрывает слот %d из %d. Следующий слот дороже." % [p.syn.size() + 1, MAX_SYN]
+		"mastery":
+			card["desc"] = String(PlaneClasses.MASTERY[p.cls_id]["desc"]) + "\nОдна на вылет: если отказаться, больше не придёт."
 		"evolution":
 			var ew: String = card["weapon"]
 			card["desc"] = Prog.EVOS[ew]["desc"] + "\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора."
@@ -681,6 +684,12 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 			var ev: Dictionary = evos[0].duplicate()
 			ev["rarity"] = 4
 			out.append(finalize(p, ev))
+	# фишка 2: мастерство класса — гарантированное место, если его не заняли связка или модернизация
+	if out.is_empty() and mastery_ready(p, banned):
+		var mc := {"id": "mastery", "ban": "mastery", "kind": "mastery", "cat": "Мастерство класса", "rarity": 4,
+			"weapon": PlaneClasses.signature(p.cls_id),
+			"title": "МАСТЕРСТВО: %s" % PlaneClasses.MASTERY[p.cls_id]["title"]}
+		out.append(finalize(p, mc))
 	# Закреплённая карточка остаётся, если ещё доступна
 	if not locked.is_empty():
 		for c in cands:
@@ -732,9 +741,23 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 	return out
 
 
-## Карточки, от которых отказались: эволюция вернётся через 3 выбора
+## Мастерство класса: оружие-особенность на ур. 5, карточку ещё не брали и от неё не отказывались
+static func mastery_ready(p: Player, banned: Dictionary) -> bool:
+	if p.mastery or p.mastery_off or banned.has("mastery") or not PlaneClasses.MASTERY.has(p.cls_id):
+		return false
+	var sig := PlaneClasses.signature(p.cls_id)
+	for g in p.groups:
+		var h: Hardpoint = g
+		if h.weapon == sig and h.level >= Weapons.MAX_LEVEL:
+			return true
+	return false
+
+
+## Карточки, от которых отказались: эволюция вернётся через 3 выбора, мастерство — больше не придёт
 static func on_declined(p: Player, offers: Array, chosen: Dictionary) -> void:
 	for c in offers:
+		if c["kind"] == "mastery" and c["id"] != chosen.get("id", ""):
+			p.mastery_off = true
 		if c["kind"] == "evolution" and c["id"] != chosen.get("id", ""):
 			p.evo_wait[c["weapon"]] = p.picks + 3
 
@@ -817,6 +840,10 @@ static func apply(p: Player, card: Dictionary) -> void:
 			wm.refresh_hp()
 		"synergy", "skill_syn":
 			p.open_synergy(card["syn"])
+		"mastery":
+			p.mastery = true
+			Main.I.tele.v["mastery_t"] = Main.I.run_time
+			Main.I.show_banner("МАСТЕРСТВО КЛАССА: %s" % PlaneClasses.MASTERY[p.cls_id]["title"], 4.0)
 		"evolution":
 			p.evolve(card["weapon"])
 			Main.I.show_banner("МОДЕРНИЗАЦИЯ: %s" % Prog.EVOS[card["weapon"]]["title"], 4.0)
