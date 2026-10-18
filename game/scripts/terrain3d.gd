@@ -58,6 +58,12 @@ var _spare_order: Array[Vector2i] = []
 ## Высоты построенных кусков (для быстрого surface_fast: тени, высота полёта, наземные цели)
 var _hgrid := {}               # Vector2i → [hs, W, step]
 const SPARE_MAX := 30
+## Р-13 (аудит 3.5-s6): пока полный кусок на экране не готов, на его месте — заглушка: та же земля
+## редкой сеткой (LOD_N ячеек, ~5 мс в главном потоке в облаке против ~100 мс полного куска) с юбкой
+## по краю. Раньше там была дыра до фона.
+const LOD_N := 14
+var _lods := {}                # Vector2i → MeshInstance3D (заглушка до готовности полного куска)
+var lod_frames := 0            # кадров, когда кусок на экране показывали заглушкой (стенд, автотест)
 var props: BiomeProps          # B-41: модели биома на рельефе (null — без них)
 
 
@@ -106,6 +112,9 @@ func clear() -> void:
 	for k in _spare:
 		(_spare[k] as Node).queue_free()
 	_spare.clear()
+	for k in _lods:
+		(_lods[k] as Node).queue_free()
+	_lods.clear()
 	_hgrid.clear()
 	_spare_order.clear()
 	_objs_cache.clear()
@@ -117,7 +126,11 @@ func clear() -> void:
 func valley(x: float, z: float, ctx := {}) -> float:
 	var d := river_field(x, z)
 	for s in _sides(x, z, ctx):
-		var dc := maxf(_seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5, 0.0)
+		if float(s[2]) < 0.0:
+			continue   # ручей (stream_field)
+		# L-08: не ближе края русла — иначе врез русла (_height_v) опускал всю площадку поселения
+		# на 2,5 % высоты, и край посёлка (линия обороны) уходил под землю
+		var dc := maxf(_seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5, D_RIVER * 1.8)
 		if dc < absf(d):
 			d = dc
 	return d
@@ -158,6 +171,10 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 	h *= _flat(x, z, ctx)
 	# русло врезано в пойму: вода лежит в ложбине, а не на ровном месте
 	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
+	# L-09: ручей посёлка тоже лежит в ложбинке, мельче реки
+	var sd := absf(stream_field(x, z, ctx))
+	if sd < STREAM_W * 3.0:
+		h -= (1.0 - smoothstep(STREAM_W * 0.6, STREAM_W * 3.0, sd)) * 0.012
 	return clampf(h, -0.03, 1.0) * ceiling
 
 
@@ -165,6 +182,84 @@ func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var ab := b - a
 	var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 1.0), 0.0, 1.0)
 	return p.distance_to(a + ab * t)
+
+
+## L-09 (вариант 2 Kanta): ручей долины-притока — полуширина воды, сдвиг от оси долины, во сколько раз
+## ручей уже реки в поле шейдера (вода, мокрый берег и колея вдоль ручья рисуются тем же кодом, что у реки)
+const STREAM_W := 7.0
+const STREAM_OFF := 95.0
+const STREAM_K := D_RIVER / 8.5
+const STREAM_REACH := 36.0  # дальше ручей в поле не участвует (колея — в 28 px от воды)
+const TRIB_MIN := 420.0    # посёлок глубже в долине-притоке, чем дорога: + к полю реки, px
+const TRIB_MAX := 760.0
+
+
+## L-06 (правка Kanta): поливные поля и сады полосой вдоль реки, как зелень вдоль рек в пустыне —
+## участками по 1–3 км с разрывами, на каждом берегу свои; ширина гуляет. 0…1 — доля «огородов» в маске земли
+const GREEN_W := 520.0   # в единицах поля реки: вдали от русла оно растёт быстрее расстояния (~×2)
+
+
+func green(x: float, z: float, v := NAN) -> float:
+	if is_nan(v):
+		v = river_field(x, z)
+	var a := absf(v)
+	if a < RIVER_GUARD - 4.0 or a > RIVER_GUARD + GREEN_W:
+		return 0.0
+	var on := smoothstep(-0.06, 0.04, _plains.get_noise_2d(x * 2.6 + 9100.0 * signf(v), z * 2.6 - 4400.0))
+	if on <= 0.0:
+		return 0.0
+	var w := GREEN_W * (0.55 + 0.45 * (_hill.get_noise_2d(x * 0.3 + 500.0, z * 0.3) + 1.0) * 0.5) * sqrt(on)
+	# поля — на дне долины и пологих конусах, не на склоне
+	return (1.0 - smoothstep(w * 0.75, w, a - RIVER_GUARD)) * smoothstep(RIVER_GUARD - 4.0, RIVER_GUARD + 14.0, a) * (1.0 - smoothstep(D_FLOOR, D_FAN * 0.9, a))
+
+
+## Расстояние до ручья посёлка, px, со знаком: «+» — к оси долины (там тропа); ручья рядом нет — INF
+func stream_field(x: float, z: float, ctx := {}) -> float:
+	var best := INF
+	var p := Vector2(x, z)
+	for s in _sides(x, z, ctx):
+		if float(s[2]) >= 0.0:
+			continue
+		var d := _seg_dist(p, s[0], s[1])
+		if d < absf(best):
+			var ab: Vector2 = s[1] - s[0]
+			var sg := signf(ab.cross(p - (s[0] as Vector2)) * ab.cross(-(s[3] as Vector2)) + 1e-6)
+			if s[4] and ab.dot(p - (s[0] as Vector2)) < 0.0:
+				sg = 1.0   # за истоком знак не меняется — иначе от истока тянулась бы «вода»
+			best = d * sg
+	return best if absf(best) < STREAM_REACH else INF
+
+
+## Сглаживание ломаной (срез углов Чайкина), концы на месте
+func _chaikin(pts: PackedVector2Array) -> PackedVector2Array:
+	var out := PackedVector2Array([pts[0]])
+	for i in pts.size() - 1:
+		out.append(pts[i].lerp(pts[i + 1], 0.25))
+		out.append(pts[i].lerp(pts[i + 1], 0.75))
+	out.append(pts[pts.size() - 1])
+	return out
+
+
+## Меандры ручья: мелкие изгибы поперёк течения, у истока и устья — на нет
+func _meander(pts: PackedVector2Array, seed_p: Vector2) -> PackedVector2Array:
+	var ph := float(absi(hash(Vector2i(roundi(seed_p.x), roundi(seed_p.y)))) % 628) / 100.0
+	var n := pts.size()
+	for i in range(1, n - 1):
+		var t := (pts[i + 1] - pts[i - 1]).normalized().orthogonal()
+		var k := sin(PI * float(i) / float(n - 1))
+		pts[i] += t * sin(float(i) * 0.6 + ph) * 30.0 * k
+	return pts
+
+
+## Ломаная долины-притока: от посёлка a к ближайшей точке реки, два изгиба по хешу; детерминирована
+func _trib(a: Vector2) -> PackedVector2Array:
+	var b := _river_point(a)
+	var d := b - a
+	var n := d.orthogonal().normalized() * d.length()
+	var h := hash(Vector2i(roundi(a.x), roundi(a.y)))
+	var w1 := (float(h & 0xff) / 255.0 - 0.5) * 0.45
+	var w2 := (float((h >> 8) & 0xff) / 255.0 - 0.5) * 0.35
+	return PackedVector2Array([a, a + d * 0.35 + n * w1, a + d * 0.7 + n * w2, b])
 
 
 ## Боковые долины поселений, влияющие на клетку точки (от поселения к ближайшей линии реки)
@@ -183,7 +278,24 @@ func _sides(x: float, z: float, ctx := {}) -> Array:
 			if o.is_empty() or not (o["name"] in SETTLE):
 				continue
 			var a: Vector2 = o["pos"]
-			out.append([a, _river_near(a), float(o["size"]) * 0.75])
+			var sz := float(o["size"])
+			if o["name"] != "o_village":
+				out.append([a, _river_point(a), sz * 0.75])
+				continue
+			# L-09: посёлок — в извилистой долине-притоке; вдоль неё — ручей с одной стороны оси
+			var tr := _trib(a)
+			for i in tr.size() - 1:
+				out.append([tr[i], tr[i + 1], sz * (0.75 if i == 0 else 0.5)])
+			var nrm := (tr[tr.size() - 1] - a).orthogonal().normalized()
+			var R := sz * AdobeBuild.footprint("o_village")
+			# исток — сбоку от посёлка, ручей идёт вдоль долины и к устью прижимается к её оси
+			var st := PackedVector2Array([a + nrm * (R * 0.8 + 30.0)])
+			for i in range(1, tr.size() - 1):
+				st.append(tr[i] + nrm * lerpf(R * 0.8 + 30.0, STREAM_OFF, float(i) / float(tr.size() - 1)))
+			st.append(tr[tr.size() - 1])
+			st = _meander(_chaikin(_chaikin(_chaikin(st))), a)
+			for i in st.size() - 1:
+				out.append([st[i], st[i + 1], -1.0, nrm, i == 0])
 	_side[key] = out
 	if _side.size() > 600:
 		_side.clear()
@@ -206,6 +318,15 @@ func _river_near(a: Vector2) -> Vector2:
 		if best_v < 0.01:
 			break
 	return best
+
+
+## Ближайшая точка русла: шаги Ньютона по полю реки, не сошлись — поиск по кольцам (_river_near).
+## Кольца находят точку с самым малым полем, а не самую близкую — боковая долина тянулась вдоль реки
+func _river_point(a: Vector2) -> Vector2:
+	var q := _field_point(a, 0.0)
+	if absf(river_field(q.x, q.y)) <= 4.0 and q.distance_to(a) < 2000.0:
+		return q
+	return _river_near(a)
 
 
 ## Расстояние до линии реки без боковых долин поселений, px со знаком: по нему идут река и дорога.
@@ -318,6 +439,15 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 ## Задетые водой точки толкают объект прочь; не вышло за 10 шагов — объекта в клетке нет
 func fix_object(o: Dictionary) -> Dictionary:
 	var p0: Vector2 = o["pos"]
+	if o["name"] in SETTLE and _bg != null:
+		p0 = _settle_spot(o)
+		if not p0.is_finite() or _settle_crowded(o, p0):
+			return {}
+		if o["name"] == "o_village":   # L-01: главная тропа посёлка (+x объекта) — к реке через дорогу
+			o = o.duplicate()
+			o["rot"] = (_trib(p0)[1] - p0).angle()   # L-09: вниз по долине-притоку
+	elif o["name"] == "o_crater" and absf(_v_raw(p0.x, p0.y)) / V_SCALE > D_FAN:
+		return {}   # воронка с площадкой на склоне выглядела ямой в горе: воронки — на дне долин и конусах
 	var p := p0
 	var R := float(o["size"]) * AdobeBuild.footprint(o["name"])
 	var clear := RIVER_GUARD   # M-35: охранная зона — вода и мокрый берег (в шейдере берег темнеет до river_w × 2.4)
@@ -350,6 +480,49 @@ func fix_object(o: Dictionary) -> Dictionary:
 		if p.distance_to(p0) > CHUNK * 0.45:
 			break
 	return {}
+
+
+## Карта расстановки (тред «Второй биом», 18.10.2026): поселения — у реки, а не где выпала клетка.
+## Кишлак и крепость встают за дорогой (дорога идёт по их краю), оазис — на другом берегу.
+## Нет реки ближе SETTLE_REACH — поселения в клетке нет (раньше к нему прорезалась длинная боковая долина)
+const SETTLE_REACH := 1300.0   # < CHUNK: сдвинутое поселение остаётся в соседней клетке (_flat смотрит ±1)
+const SETTLE_GAP := 2000.0     # между поселениями не ближе
+
+
+## Место поселения у реки (INF — реки рядом нет)
+func _settle_spot(o: Dictionary) -> Vector2:
+	var raw: Vector2 = o["pos"]
+	var q := _river_point(raw)
+	if absf(_v_raw(q.x, q.y)) > 0.01:
+		return Vector2.INF
+	var R := float(o["size"]) * AdobeBuild.footprint(o["name"])
+	var target := D_ROAD + 16.0 + R + 10.0 if o["name"] != "o_oasis" else -(RIVER_GUARD + R + 10.0)
+	if o["name"] == "o_village":   # L-09: посёлок — в глубине долины-притока, за дорогой
+		target += lerpf(TRIB_MIN, TRIB_MAX, float(absi(hash(raw)) % 1000) / 1000.0)
+	var p := _field_point(q + (raw - q).limit_length(40.0), target)
+	if p.distance_to(raw) > SETTLE_REACH:
+		return Vector2.INF
+	return p
+
+
+## Рядом уже есть поселение с большим приоритетом (от хеша клетки) — это не ставим
+func _settle_crowded(o: Dictionary, p: Vector2) -> bool:
+	var key := Vector2i(int(floorf((o["pos"] as Vector2).x / CHUNK)), int(floorf((o["pos"] as Vector2).y / CHUNK)))
+	var mine := hash(key) & 0xffff
+	for dx in range(-3, 4):
+		for dz in range(-3, 4):
+			if dx == 0 and dz == 0:
+				continue
+			var k := Vector2i(key.x + dx, key.y + dz)
+			if (hash(k) & 0xffff) <= mine:
+				continue
+			var n := _bg._chunk_object_raw(k.x, k.y)
+			if n.is_empty() or not (n["name"] in SETTLE):
+				continue
+			var np := _settle_spot(n)
+			if np.is_finite() and np.distance_to(p) < SETTLE_GAP:
+				return true
+	return false
 
 
 ## Русло с берегом (как в find_floor): сюда наземная техника не заезжает (M-35: зона + полкорпуса)
@@ -387,11 +560,9 @@ func scenes(key: Vector2i) -> Array:
 	if not obj.is_empty():
 		var sz := float(obj["size"])
 		match obj["name"]:
-			"o_village":
-				if rng.randf() < 0.9:
-					anchors.append([obj["pos"], sz * rng.randf_range(0.66, 0.85)])
-				if rng.randf() < 0.5:
-					anchors.append([obj["pos"], sz * rng.randf_range(0.7, 0.9)])
+			"o_village":   # L-08 (схема Kanta): остовы техники, подбитой при штурме, — перед линией обороны
+				for i in (2 if rng.randf() < 0.6 else 1):
+					anchors.append([obj["pos"], sz * rng.randf_range(0.62, 0.85), float(obj["rot"]) + PI])
 			"o_fort":
 				if rng.randf() < 0.6:
 					anchors.append([obj["pos"], sz * rng.randf_range(0.75, 1.0)])
@@ -403,9 +574,10 @@ func scenes(key: Vector2i) -> Array:
 		anchors.append([_field_point(q, D_ROAD + rng.randf_range(40.0, 120.0) * (1.0 if rng.randf() < 0.6 else -2.5)), 0.0])
 	for an in anchors:
 		for attempt in 4:
-			var a := rng.randf() * TAU
+			var a := rng.randf() * TAU if an.size() < 3 else float(an[2]) + rng.randf_range(-0.85, 0.85)
 			var c: Vector2 = (an[0] as Vector2) + Vector2.from_angle(a) * float(an[1])
-			var items := _scene_items(rng, c, near, out)
+			# у посёлка — подбитая техника, шедшая на посёлок (без брошенных позиций)
+			var items := _scene_items(rng, c, near, out, (an[0] as Vector2) - c if an.size() >= 3 else Vector2.ZERO)
 			if items.size() >= 2:
 				out.append_array(items)
 				break
@@ -413,11 +585,14 @@ func scenes(key: Vector2i) -> Array:
 	return out
 
 
-func _scene_items(rng: RandomNumberGenerator, c: Vector2, near: Array, taken: Array) -> Array:
+func _scene_items(rng: RandomNumberGenerator, c: Vector2, near: Array, taken: Array, assault := Vector2.ZERO) -> Array:
 	var items := []
 	var dir := Vector2.from_angle(rng.randf() * TAU)
-	var side := dir.orthogonal()
 	var kind := rng.randi() % 3
+	if assault != Vector2.ZERO:
+		dir = assault.normalized().rotated(rng.randf_range(-0.5, 0.5))
+		kind = 0 if rng.randf() < 0.75 else 1
+	var side := dir.orthogonal()
 	var main: String = ["tank", "plane", "sandbag"][kind]
 	if not _scene_put(items, main, c, dir.angle(), near, taken):
 		return []
@@ -544,14 +719,18 @@ func _obj(key: Vector2i) -> Dictionary:
 	return _objs_cache[key]
 
 
-## Держим куски рельефа под видимой областью; новые считаем в фоне, ставим не больше budget за кадр
-func sync(view: Rect2, budget := 2) -> void:
+## Держим куски рельефа под видимой областью; новые считаем в фоне, ставим не больше budget за кадр.
+## core — земля, видимая на экране прямо сейчас (view — она же с запасом): кусок в core не ждёт очереди —
+## готовый ставится сверх бюджета, неготовый закрывается заглушкой (Р-13)
+func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 	var want := {}
 	for cx in range(int(floorf(view.position.x / CHUNK)), int(floorf(view.end.x / CHUNK)) + 1):
 		for cz in range(int(floorf(view.position.y / CHUNK)), int(floorf(view.end.y / CHUNK)) + 1):
 			want[Vector2i(cx, cz)] = true
 	# сначала ближние к центру
 	var c := view.get_center() / CHUNK
+	if core.has_area():
+		c = core.get_center() / CHUNK
 	var keys := want.keys()
 	keys.sort_custom(func(a, b): return Vector2(a).distance_squared_to(c) < Vector2(b).distance_squared_to(c))
 	# скачок камеры (старт, стенд, телепорт отладки): не хватает многих кусков — строим все сразу,
@@ -561,6 +740,7 @@ func sync(view: Rect2, budget := 2) -> void:
 		if not _chunks.has(key) and not _spare.has(key):
 			missing += 1
 	var now := missing > maxi(6, keys.size() / 2)
+	var hole := false
 	for key in keys:
 		if _chunks.has(key):
 			continue
@@ -570,19 +750,28 @@ func sync(view: Rect2, budget := 2) -> void:
 			_spare_order.erase(key)
 			mi.visible = true
 			_chunks[key] = mi
+			_drop_lod(key)
 			continue
 		if now:
 			_place_chunk(key, _compute(key, _ctx(key), _gen))
 			continue
+		var on_screen := core.has_area() and core.intersects(Rect2(Vector2(key) * CHUNK, Vector2(CHUNK, CHUNK)))
 		var res = _take_done(key)
 		if res != null:
-			if budget <= 0:
+			if budget <= 0 and not (on_screen and not _lods.has(key)):
 				_put_done(key, res)
 				continue
 			budget -= 1
 			_place_chunk(key, res)
-		elif not _pending.has(key) and _pending.size() < 4:
+			continue
+		if not _pending.has(key) and (_pending.size() < 4 or on_screen):
 			_pending[key] = WorkerThreadPool.add_task(_compute_bg.bind(key, _ctx(key), _gen), false, "terrain chunk")
+		if on_screen:
+			hole = true
+			if not _lods.has(key):
+				_place_chunk(key, _compute(key, _ctx(key), _gen, LOD_N))
+	if hole:
+		lod_frames += 1
 	# законченные задачи — забираем id (иначе пул держит их до wait)
 	for key in _pending.keys():
 		if WorkerThreadPool.is_task_completed(_pending[key]):
@@ -595,6 +784,9 @@ func sync(view: Rect2, budget := 2) -> void:
 			mi.visible = false
 			_spare[key] = mi
 			_spare_order.append(key)
+	for key in _lods.keys():
+		if not want.has(key):
+			_drop_lod(key)
 	while _spare_order.size() > SPARE_MAX:
 		var old: Vector2i = _spare_order.pop_front()
 		(_spare[old] as Node).queue_free()
@@ -608,6 +800,13 @@ func sync(view: Rect2, budget := 2) -> void:
 	_mx.unlock()
 	if _objs_cache.size() > 400:
 		_objs_cache.clear()
+
+
+func _drop_lod(key: Vector2i) -> void:
+	var mi: MeshInstance3D = _lods.get(key)
+	if mi != null:
+		mi.queue_free()
+		_lods.erase(key)
 
 
 func _take_done(key: Vector2i):
@@ -671,21 +870,28 @@ func _compute_bg(key: Vector2i, ctx: Dictionary, gen: int) -> void:
 
 
 ## Высоты и массивы вершин куска — чистый расчёт, можно в потоке
-func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
+func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
+	var nn := lod if lod > 0 else N   # Р-13: заглушка — та же сетка, только реже
 	var ox := key.x * CHUNK
 	var oz := key.y * CHUNK
-	var step := CHUNK / N
-	var W := N + 3   # +1 узел и по одному с каждой стороны — нормали на стыках кусков совпадают
+	var step := CHUNK / nn
+	var W := nn + 3   # +1 узел и по одному с каждой стороны — нормали на стыках кусков совпадают
 	var hs := PackedFloat32Array()
 	var vs := PackedFloat32Array()
+	var gs := PackedFloat32Array()   # L-06: зелёная полоса вдоль реки
 	hs.resize(W * W)
 	vs.resize(W * W)
+	gs.resize(W * W)
 	for j in W:
 		for i in W:
 			var x := ox + (i - 1) * step
 			var z := oz + (j - 1) * step
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
 			vs[j * W + i] = river_field(x, z)
+			gs[j * W + i] = green(x, z, vs[j * W + i])
+			var sf := stream_field(x, z, ctx) * STREAM_K   # L-09: ручей — в том же поле, в K раз уже
+			if absf(sf) < absf(vs[j * W + i]):
+				vs[j * W + i] = sf
 			hs[j * W + i] = _height_v(x, z, valley(x, z, ctx), ctx)
 	# тест 3.5-s4 (п. 16–17): пятна поселений на земле (утоптанная земля, огороды и сады) — неровные, с мягким
 	# краем, по тому же контуру, что постройки (AdobeBuild.ground_mask); выгоревшие пятна и воронки сцен
@@ -711,7 +917,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 	var tans := PackedFloat32Array()
 	var cols := PackedColorArray()
 	var uv2 := PackedVector2Array()   # x — расстояние до реки, px со знаком (цвет вершины — всего 8 бит)
-	var V := N + 1
+	var V := nn + 1
 	verts.resize(V * V)
 	norms.resize(V * V)
 	tans.resize(V * V * 4)
@@ -754,13 +960,14 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 				var dry := smoothstep(RIVER_GUARD - 30.0, RIVER_GUARD, absf(vs[gi]))
 				sm *= dry
 				burn *= dry
+			sm.y = maxf(sm.y, gs[gi])
 			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), sm.x, sm.y)
 			uv2[vi] = Vector2(vs[gi], burn)
 	var idx := PackedInt32Array()
-	idx.resize(N * N * 6)
+	idx.resize(nn * nn * 6)
 	var p := 0
-	for j in N:
-		for i in N:
+	for j in nn:
+		for i in nn:
 			var a := j * V + i
 			var b := a + 1
 			var c2 := a + V
@@ -773,9 +980,48 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 				idx[p] = a; idx[p + 1] = b; idx[p + 2] = c2
 				idx[p + 3] = b; idx[p + 4] = d; idx[p + 5] = c2
 			p += 6
-	var put: Dictionary = props.plan(key, ctx) if props != null else {}
+	if lod > 0:
+		var sk := _skirt(verts, norms, tans, cols, uv2, idx, V)
+		verts = sk[0]; norms = sk[1]; tans = sk[2]; cols = sk[3]; uv2 = sk[4]; idx = sk[5]
+	var put: Dictionary = props.plan(key, ctx) if props != null and lod == 0 else {}
 	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv2": uv2, "idx": idx, "gen": gen, "put": put,
-		"hs": hs, "W": W, "step": step}
+		"hs": hs, "W": W, "step": step, "lod": lod}
+
+
+## Р-13: юбка заглушки — край куска опущен вниз стенкой: редкая сетка заглушки на стыке с полным
+## соседом не совпадает с его краем, без юбки в щель видно фон
+const SKIRT := 90.0
+
+func _skirt(verts: PackedVector3Array, norms: PackedVector3Array, tans: PackedFloat32Array, cols: PackedColorArray,
+		uv2: PackedVector2Array, idx: PackedInt32Array, V: int) -> Array:
+	var ring: Array[int] = []
+	for i in V - 1:
+		ring.append(i)                          # верхний край
+	for j in V - 1:
+		ring.append(j * V + V - 1)              # правый
+	for i in range(V - 1, 0, -1):
+		ring.append((V - 1) * V + i)            # нижний
+	for j in range(V - 1, 0, -1):
+		ring.append(j * V)                      # левый
+	var base := verts.size()
+	var n := ring.size()
+	for k in n:
+		var a := ring[k]
+		verts.append(verts[a] - Vector3(0.0, SKIRT, 0.0))
+		norms.append(norms[a])
+		for c in 4:
+			tans.append(tans[a * 4 + c])
+		cols.append(cols[a])
+		uv2.append(uv2[a])
+	for k in n:
+		var a := ring[k]
+		var b := ring[(k + 1) % n]
+		var a2 := base + k
+		var b2 := base + (k + 1) % n
+		# обе стороны: стенку видно и снаружи, и изнутри (наклон камеры)
+		for t in [a, b, b2, a, b2, a2, a, b2, b, a, a2, b2]:
+			idx.append(t)
+	return [verts, norms, tans, cols, uv2, idx]
 
 
 func _place_chunk(key: Vector2i, r: Dictionary) -> void:
@@ -797,8 +1043,12 @@ func _place_chunk(key: Vector2i, r: Dictionary) -> void:
 	mi.material_override = material
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	add_child(mi)
+	if int(r.get("lod", 0)) > 0:   # Р-13: заглушка — без моделей биома и без сетки высот (surface_fast считает точно)
+		_lods[key] = mi
+		return
 	if props != null:
 		props.apply(r["put"], mi)
+	_drop_lod(key)
 	_chunks[key] = mi
 	_hgrid[key] = [r["hs"], r["W"], r["step"]]
 	if Main.I != null and Main.I.state == "playing":   # T4-03: рывки от сборки кусков рельефа (главный поток)
