@@ -1,0 +1,22 @@
+FLAK HEAVEN — how to make sure the file is safe
+===============================================
+
+1. Check the checksum (optional, but reliable).
+   Next to the archive there is a file SHA256SUMS.txt with a long code for each archive.
+   Windows: open PowerShell in the folder with the archive and run
+       Get-FileHash .\ARCHIVE_NAME.zip -Algorithm SHA256
+   Mac: in Terminal run
+       shasum -a 256 ARCHIVE_NAME.zip
+   The code must match the one in SHA256SUMS.txt. If it doesn't match, don't run it and contact us.
+
+2. Antivirus check. A VirusTotal link (if there is one) is in the message with the archive
+   and in TESTER_NOTE.txt. You can also upload the archive to https://www.virustotal.com yourself.
+
+3. Why Windows shows "Windows protected your PC".
+   The test build has no paid code signature. That does not mean a virus. If the checksum
+   matched, click "More info" → "Run anyway". On Mac: right-click the app → "Open".
+
+4. What the game sends: your survey answers, sortie stats, OS and graphics card name,
+   screen resolution, average FPS and the game's technical log. The game does not collect
+   or read your name, email or personal files. It needs no admin rights and installs nothing:
+   to remove it, delete the folder.

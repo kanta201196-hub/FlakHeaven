@@ -1,0 +1,81 @@
+FLAK HEAVEN — closed test (Windows)
+===================================
+
+Thanks for agreeing to test! This is an early prototype of an air-combat roguelike:
+graphics, sound and balance are temporary. We value your honest impressions —
+especially what is boring, unclear or annoying.
+
+LAUNCH
+------
+1. Unzip the archive into any folder (for example, the desktop).
+2. Run FlakHeaven.exe.
+3. Windows may show "Windows protected your PC".
+   That's because the test build has no paid code signature.
+   Click "More info" → "Run anyway".
+   If your antivirus complains, add the file to exclusions or contact us.
+   How to check the file is safe: SAFETY_NOTE_en.txt.
+
+Requirements: Windows 10/11 64-bit, any graphics card with OpenGL 3.3
+(integrated is fine), 4 GB RAM. Mouse and keyboard; a gamepad works only in combat (menus and hangar — mouse).
+No installation needed. To remove the game, delete the folder.
+
+WHAT TO TRY (30–60 minutes)
+---------------------------
+• The game picks its language from your system. To switch:
+  Settings → Game → Language (Auto / Русский / English).
+• On first launch the "How to play" screen opens — please read it
+  (it's also available from the menu).
+• Play 3–5 sorties. Try all three planes:
+  "Wasp" (fighter), "Rook" (attacker), "Whale" (bomber).
+• Try at least once to complete a synergy: at level 3 choose a specialization
+  and take cards marked "▲ toward specialization".
+• Between sorties visit the HANGAR and spend your parts.
+• Try to survive until extraction.
+• F9 switches the camera tilt; Settings → Graphics → Graphics quality
+  lowers the load if the game stutters (it may also lower it by itself).
+
+HOW TO SEND RESULTS
+-------------------
+After each sortie the results screen has a "SEND REPORT" button.
+Click it, answer a few short questions and click "SEND" —
+the sortie stats and the technical log are attached automatically.
+A report after every sortie is not required, but it helps a lot.
+The sortie stats themselves (without answers) are sent after every sortie
+even if you don't send a report.
+If you end a sortie early (pause → "Main menu"), the game offers a short
+report before leaving: answer a couple of questions or click
+"Exit without report".
+
+If you're offline, the report is saved and sent with the next report
+or on the next game launch.
+
+What is sent: your answers, sortie stats, OS and graphics card name,
+screen resolution, average FPS and the game's technical log. The game
+does not collect your name, email or other personal data.
+
+Fallback (if the button doesn't work): in the main menu click LOGS —
+the game folder opens; send the organizer the playtest_log_*.csv file
+and the logs folder. The folder is here:
+%APPDATA%\Godot\app_userdata\Flak Heaven - Prototype 3 (3D)
+
+GENERAL SURVEY (at the end of the test, reply in a message to the organizer)
+-----------------------------------------------------------------------------
+1. How many sorties did you play, and which plane did you use most?
+2. Was it clear what to do in the first 2–3 minutes? What was unclear?
+3. What was the most exciting moment?
+4. Where did it get boring or repetitive (roughly at what minute)?
+5. Did you understand how specializations and synergies work? Did you complete one?
+   Did you feel it in combat?
+6. How hard was it? (1 — far too easy, 5 — far too hard) Why?
+7. Was it clear where the damage was coming from?
+8. After a sortie, did you want to start the next one right away? Why or why not?
+9. Did you use the hangar? Were the upgrades noticeable?
+10. What annoyed you the most (controls, UI, camera, ...)?
+11. Any crashes, freezes or FPS drops? On what computer
+    (graphics card, if you know)?
+12. If the game came out on Steam, would you wishlist it? (yes/no/maybe)
+13. What games does it remind you of?
+14. Anything else you'd like to say:
+
+Please don't share the build or screenshots publicly —
+this is a closed test. Thank you!
