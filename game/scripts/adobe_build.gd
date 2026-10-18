@@ -178,9 +178,14 @@ static func ground_mask(name: String, variant: int, l: Vector2) -> Vector2:
 			var dl := path_dist(variant, u)
 			var reach := PATH_OUT if u.x > 0.0 and absf(u.y) < 0.12 else e * 1.3
 			tr = maxf(tr, (1.0 - smoothstep(0.012, 0.03, dl)) * (1.0 - smoothstep(reach * 0.92, reach, rad)) * 0.9)
-			# огороды и сады за домами: кольцо у края, только в части секторов — пятнами, не кругом
+			# L-08: утоптанная полоса вдоль линии обороны (окоп, позиции орудий)
+			var off_arc := smoothstep(def_arc(variant), def_arc(variant) + 0.12, absf(angle_difference(ang, PI)))
+			tr = maxf(tr, (1.0 - off_arc) * (1.0 - smoothstep(0.035, 0.075, absf(rad - e * DEF_R))) * 0.6)
+			# огороды и сады — за домами (не между ними) и не на линии обороны: кольцо за краем застройки,
+			# только в части секторов — пятнами, не кругом (правка Kanta 18.10: поля лезли на позиции и в посёлок)
 			var sect := smoothstep(-0.15, 0.45, sin(2.0 * ang + 0.5 + variant * 1.3) + 0.6 * sin(5.0 * ang + variant * 0.7))
-			var gr := smoothstep(e * 0.7, e * 0.92, rad) * (1.0 - smoothstep(e * 1.2, e * 1.42, rad)) * sect
+			var gr := smoothstep(e * 1.02, e * 1.12, rad) * (1.0 - smoothstep(e * 1.45, e * 1.7, rad)) * sect
+			gr *= smoothstep(def_arc(variant) + 0.1, def_arc(variant) + 0.35, absf(angle_difference(ang, PI)))
 			return Vector2(tr, gr)
 		"o_oasis":
 			var rad := l.length()
@@ -268,8 +273,8 @@ static func village(variant: int) -> ArrayMesh:
 	# огороды за дувалами — у края, между тропами
 	for i in rng.randi_range(5, 8):
 		var ang := rng.randf() * TAU
-		var c := Vector2.from_angle(ang) * V_EDGE * outline(variant, ang) * rng.randf_range(0.95, 1.15)
-		if path_dist(variant, c) > 0.08:
+		var c := Vector2.from_angle(ang) * V_EDGE * outline(variant, ang) * rng.randf_range(1.12, 1.3)
+		if path_dist(variant, c) > 0.08 and absf(angle_difference(ang, PI)) > def_arc(variant) + 0.3:
 			_garden(st, c, Vector2(0.105, 0.105) * rng.randf_range(0.9, 1.25), rng)
 	_defence(st, variant, rng)
 	var m := _scaled(st, V_UNIT)
@@ -288,24 +293,38 @@ const GUN := Color(0.36, 0.37, 0.34)
 const DEF_R := 1.07   # радиус линии, доля края застройки
 
 
+## Полуугол дуги линии обороны (вокруг −x объекта, стороны гор)
+static func def_arc(variant: int) -> float:
+	return 0.85 + _vr(variant, 40) * 0.25
+
+
 static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator) -> void:
 	var sink := 0.0101 / V_UNIT
-	var arc := 0.85 + _vr(variant, 40) * 0.25
+	var arc := def_arc(variant)
 	var line := PackedVector2Array()
 	for k in 25:
 		var ang := PI - arc + 2.0 * arc * float(k) / 24.0
 		var r := V_EDGE * outline(variant, ang) * DEF_R + sin(k * 0.9 + variant) * 0.012
 		line.append(Vector2.from_angle(ang) * r)
+	var pits := [line[0], line[12], line[24]]
 	for k in line.size() - 1:
 		var a := line[k]
 		var b := line[k + 1]
 		if path_dist(variant, (a + b) * 0.5) < 0.04:
 			continue   # проход для тропы
+		# правка Kanta 18.10: бруствер и окоп упираются в позицию орудия, а не идут сквозь неё
+		for pc: Vector2 in pits:
+			if a.distance_to(pc) < PIT_R:
+				a = pc + (a - pc).normalized() * PIT_R if a.distance_to(pc) > 1e-4 else pc + (b - pc).normalized() * PIT_R
+			if b.distance_to(pc) < PIT_R:
+				b = pc + (b - pc).normalized() * PIT_R if b.distance_to(pc) > 1e-4 else pc + (a - pc).normalized() * PIT_R
+		if a.distance_to(b) < 0.006 or _seg_near(a, b, pits, PIT_R * 0.9):
+			continue
 		var inward := -((a + b) * 0.5).normalized() * 0.022
 		_strip(st, a + inward, b + inward, 0.02, TRENCH, sink + 0.003)   # окоп за бруствером
 		_bags(st, a, b, sink, rng)
-	for k in [0, 12, 24]:
-		_gun_pit(st, line[k], line[k].angle(), sink, rng)
+	for pc: Vector2 in pits:
+		_gun_pit(st, pc, pc.angle(), sink, rng)
 	# посты у выходов троп с остальных сторон
 	for pl: PackedVector2Array in village_paths(variant):
 		var tip: Vector2 = pl[pl.size() - 1]
@@ -316,6 +335,18 @@ static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator) 
 		var side := c.normalized().orthogonal() * 0.045
 		_post(st, c + side, c.angle(), sink, rng)
 		_post(st, c - side, c.angle(), sink, rng)
+
+
+const PIT_R := 0.062   # радиус позиции орудия с бруствером (кольцо мешков 0,046 + полмешка + зазор)
+
+
+static func _seg_near(a: Vector2, b: Vector2, pts: Array, r: float) -> bool:
+	for p: Vector2 in pts:
+		var ab := b - a
+		var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 1e-9), 0.0, 1.0)
+		if p.distance_to(a + ab * t) < r:
+			return true
+	return false
 
 
 ## Ряд мешков с песком от a до b: два ряда внахлёст
