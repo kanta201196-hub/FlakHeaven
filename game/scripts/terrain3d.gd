@@ -117,7 +117,9 @@ func clear() -> void:
 func valley(x: float, z: float, ctx := {}) -> float:
 	var d := river_field(x, z)
 	for s in _sides(x, z, ctx):
-		var dc := maxf(_seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5, 0.0)
+		# L-08: не ближе края русла — иначе врез русла (_height_v) опускал всю площадку поселения
+		# на 2,5 % высоты, и край посёлка (линия обороны) уходил под землю
+		var dc := maxf(_seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5, D_RIVER * 1.8)
 		if dc < absf(d):
 			d = dc
 	return d
@@ -446,11 +448,9 @@ func scenes(key: Vector2i) -> Array:
 	if not obj.is_empty():
 		var sz := float(obj["size"])
 		match obj["name"]:
-			"o_village":
-				if rng.randf() < 0.9:
-					anchors.append([obj["pos"], sz * rng.randf_range(0.66, 0.85)])
-				if rng.randf() < 0.5:
-					anchors.append([obj["pos"], sz * rng.randf_range(0.7, 0.9)])
+			"o_village":   # L-08 (схема Kanta): остовы техники, подбитой при штурме, — перед линией обороны
+				for i in (2 if rng.randf() < 0.6 else 1):
+					anchors.append([obj["pos"], sz * rng.randf_range(0.62, 0.85), float(obj["rot"]) + PI])
 			"o_fort":
 				if rng.randf() < 0.6:
 					anchors.append([obj["pos"], sz * rng.randf_range(0.75, 1.0)])
@@ -462,9 +462,10 @@ func scenes(key: Vector2i) -> Array:
 		anchors.append([_field_point(q, D_ROAD + rng.randf_range(40.0, 120.0) * (1.0 if rng.randf() < 0.6 else -2.5)), 0.0])
 	for an in anchors:
 		for attempt in 4:
-			var a := rng.randf() * TAU
+			var a := rng.randf() * TAU if an.size() < 3 else float(an[2]) + rng.randf_range(-0.85, 0.85)
 			var c: Vector2 = (an[0] as Vector2) + Vector2.from_angle(a) * float(an[1])
-			var items := _scene_items(rng, c, near, out)
+			# у посёлка — подбитая техника, шедшая на посёлок (без брошенных позиций)
+			var items := _scene_items(rng, c, near, out, (an[0] as Vector2) - c if an.size() >= 3 else Vector2.ZERO)
 			if items.size() >= 2:
 				out.append_array(items)
 				break
@@ -472,11 +473,14 @@ func scenes(key: Vector2i) -> Array:
 	return out
 
 
-func _scene_items(rng: RandomNumberGenerator, c: Vector2, near: Array, taken: Array) -> Array:
+func _scene_items(rng: RandomNumberGenerator, c: Vector2, near: Array, taken: Array, assault := Vector2.ZERO) -> Array:
 	var items := []
 	var dir := Vector2.from_angle(rng.randf() * TAU)
-	var side := dir.orthogonal()
 	var kind := rng.randi() % 3
+	if assault != Vector2.ZERO:
+		dir = assault.normalized().rotated(rng.randf_range(-0.5, 0.5))
+		kind = 0 if rng.randf() < 0.75 else 1
+	var side := dir.orthogonal()
 	var main: String = ["tank", "plane", "sandbag"][kind]
 	if not _scene_put(items, main, c, dir.angle(), near, taken):
 		return []
