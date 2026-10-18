@@ -353,7 +353,7 @@ def copy_glb(path, mat=None):
 
 # ---------- выход ----------
 
-def finish(objs, out, target=None, maxtex=1024, length=1.0, name='body'):
+def finish(objs, out, target=None, maxtex=1024, length=1.0, name='body', center=False):
     """Склеить, упростить до target, повернуть в glTF (+Y вверх) и сделать длину по X = length, записать GLB."""
     objs = [o for o in objs if o.name in bpy.data.objects and len(o.data.polygons)]
     if target:
@@ -363,6 +363,8 @@ def finish(objs, out, target=None, maxtex=1024, length=1.0, name='body'):
     if target and tris([ob]) > target * 1.05:
         _decimate(ob, target / tris([ob]))
     mn, mx = bounds([ob])
+    if center:   # самолёты — центр по высоте в нуле (соглашение model_lab.gd)
+        ob.data.transform(Matrix.Translation((0, 0, -(mn.z + mx.z) / 2)))
     ob.data.transform(Matrix.Scale(length / (mx.x - mn.x), 4)); ob.data.update()
     shrink(maxtex)
     for o in list(bpy.data.objects):
