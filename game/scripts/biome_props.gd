@@ -20,6 +20,8 @@ const KINDS := {
 	"yurt": ["b09_yurt", 34.0, 44.0],
 	"sandbag": ["b10_sandbag_post", 40.0, 55.0],
 	"plane": ["b11_wreck_plane", 110.0, 130.0],   # сцены прошедших боёв (Terrain3D.scenes)
+	"bridge": ["", 58.0, 66.0],        # L-07: модели кодом (AdobeBuild.bridge): мост дороги через ручей
+	"footbridge": ["", 150.0, 165.0],  # и пешеходный через реку
 }
 
 ## T4-05: облегчённые деревья для пресетов ниже «Максимального» (11–14 тыс. треуг. у полной модели).
@@ -93,6 +95,8 @@ func _card_mat(path: String) -> StandardMaterial3D:
 
 
 func _full_mesh(kind: String) -> Mesh:
+	if kind in ["bridge", "footbridge"]:
+		return AdobeBuild.bridge(kind == "footbridge")
 	if not _meshes.has(kind):
 		_meshes[kind] = null
 		var path: String = DIR + KINDS[kind][0] + ".glb"
@@ -313,6 +317,7 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 						rng.randf()
 					continue
 				_add_vehicle(rng, put, "tank" if rng.randf() < 0.4 else "truck", w, dir, ctx)
+	_bridges(rng, put, obj, key, ctx)
 	# юрты кочевников — летние пастбища: пологие места в стороне от дороги, недалеко от воды
 	if rng.randf() < 0.08:
 		var q := Vector2(ox + rng.randf_range(200, 1200), oz + rng.randf_range(200, 1200))
@@ -387,6 +392,54 @@ func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Ve
 		return
 	# утапливаем на 4 % ширины, чтобы на склоне не висело на краю
 	var t := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.04, 0))
+	if not put.has(kind):
+		put[kind] = []
+	put[kind].append(t)
+
+
+## L-07 (правка Kanta): деревянные мосты — где дорога пересекает ручей посёлка; пешеходный — от оазиса
+## через реку к дороге и изредка там, где поля на обоих берегах (крестьянам ходить на поля)
+func _bridges(rng: RandomNumberGenerator, put: Dictionary, obj: Dictionary, key: Vector2i, ctx: Dictionary) -> void:
+	var ox := key.x * Terrain3D.CHUNK
+	var oz := key.y * Terrain3D.CHUNK
+	for s in (ctx["sides"] as Dictionary).get(key, []):
+		if float(s[2]) >= 0.0:
+			continue
+		var f0 := _t.river_field(s[0].x, s[0].y) - Terrain3D.D_ROAD
+		var f1 := _t.river_field(s[1].x, s[1].y) - Terrain3D.D_ROAD
+		if f0 * f1 > 0.0 or f0 == f1:
+			continue
+		var q: Vector2 = (s[0] as Vector2).lerp(s[1], f0 / (f0 - f1))
+		if _in_chunk(q, ox, oz):
+			_put_bridge(put, "bridge", q, _road_dir(q).angle(), KINDS["bridge"][1], ctx)
+	var spots := []
+	for dx in [-1, 0, 1]:   # точка реки у оазиса может лежать в соседней клетке
+		for dz in [-1, 0, 1]:
+			var o: Dictionary = (ctx["objs"] as Dictionary).get(Vector2i(key.x + dx, key.y + dz), {})
+			if not o.is_empty() and o["name"] == "o_oasis":
+				spots.append(_t._river_point(o["pos"]))
+	if rng.randf() < 0.14:
+		var q := _t._field_point(Vector2(ox + rng.randf_range(200, 1200), oz + rng.randf_range(200, 1200)), 0.0)
+		var n := _river_normal(q)
+		if _t.green(q.x + n.x * 110.0, q.y + n.y * 110.0) > 0.4 and _t.green(q.x - n.x * 110.0, q.y - n.y * 110.0) > 0.4:
+			spots.append(q)
+	for q: Vector2 in spots:
+		if _in_chunk(q, ox, oz) and absf(_t.river_field(q.x, q.y)) < 6.0:
+			_put_bridge(put, "footbridge", q, _river_normal(q).angle(), rng.randf_range(KINDS["footbridge"][1], KINDS["footbridge"][2]), ctx)
+
+
+func _river_normal(q: Vector2) -> Vector2:
+	var e := 8.0
+	var g := Vector2(_t.river_field(q.x + e, q.y) - _t.river_field(q.x - e, q.y), _t.river_field(q.x, q.y + e) - _t.river_field(q.x, q.y - e))
+	return g.normalized() if g.length_squared() > 1e-10 else Vector2.RIGHT
+
+
+## Мост: пролёт вдоль ang, настил — на уровне берегов (концов пролёта), а не дна русла
+func _put_bridge(put: Dictionary, kind: String, q: Vector2, ang: float, span: float, ctx: Dictionary) -> void:
+	var d := Vector2.from_angle(ang) * span * 0.5
+	var y := maxf(_t.surface(q.x + d.x, q.y + d.y, ctx).y, _t.surface(q.x - d.x, q.y - d.y, ctx).y)
+	var lift := 0.015 if kind == "footbridge" else -0.06 + 0.012   # конец настила — на уровне берега
+	var t := Transform3D(Basis(Vector3.UP, -ang).scaled(Vector3(span, span, span)), Vector3(q.x, y + lift * span, q.y))
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)

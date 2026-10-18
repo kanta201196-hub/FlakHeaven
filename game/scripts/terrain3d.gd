@@ -223,7 +223,7 @@ func stream_field(x: float, z: float, ctx := {}) -> float:
 		var d := _seg_dist(p, s[0], s[1])
 		if d < absf(best):
 			var ab: Vector2 = s[1] - s[0]
-			var sg := signf(ab.cross(p - (s[0] as Vector2)) * ab.cross(-(s[3] as Vector2)) + 1e-6)
+			var sg := signf(ab.cross(p - (s[0] as Vector2)) + 1e-6) * float(s[3])
 			if s[4] and ab.dot(p - (s[0] as Vector2)) < 0.0:
 				sg = 1.0   # за истоком знак не меняется — иначе от истока тянулась бы «вода»
 			best = d * sg
@@ -294,8 +294,11 @@ func _sides(x: float, z: float, ctx := {}) -> Array:
 				st.append(tr[i] + nrm * lerpf(R * 0.8 + 30.0, STREAM_OFF, float(i) / float(tr.size() - 1)))
 			st.append(tr[tr.size() - 1])
 			st = _meander(_chaikin(_chaikin(_chaikin(st))), a)
+			# сторона оси долины относительно течения — одна на весь ручей (по сегментам знак «прыгал»
+			# на меандрах, и вдоль ручья тянулась ложная тонкая вода)
+			var side := signf((tr[tr.size() - 1] - a).cross(-nrm))
 			for i in st.size() - 1:
-				out.append([st[i], st[i + 1], -1.0, nrm, i == 0])
+				out.append([st[i], st[i + 1], -1.0, side, i == 0])
 	_side[key] = out
 	if _side.size() > 600:
 		_side.clear()
@@ -889,9 +892,14 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
 			vs[j * W + i] = river_field(x, z)
 			gs[j * W + i] = green(x, z, vs[j * W + i])
-			var sf := stream_field(x, z, ctx) * STREAM_K   # L-09: ручей — в том же поле, в K раз уже
-			if absf(sf) < absf(vs[j * W + i]):
-				vs[j * W + i] = sf
+			# L-09: ручей — в том же поле, в K раз уже (вода и мокрый берег шейдера). Знак — от реки, иначе
+			# на стыке «ручей / река» поле проходило через 0, и шейдер рисовал там тонкую ложную воду;
+			# за мокрым берегом поле резко растёт — полоса дороги шейдера (85) вдоль ручья не рисуется
+			var sd := absf(stream_field(x, z, ctx))
+			if sd < STREAM_REACH:
+				var g := sd * STREAM_K if sd < 20.0 else 20.0 * STREAM_K + (sd - 20.0) * 80.0
+				if g < absf(vs[j * W + i]):
+					vs[j * W + i] = g * (1.0 if vs[j * W + i] >= 0.0 else -1.0)
 			hs[j * W + i] = _height_v(x, z, valley(x, z, ctx), ctx)
 	# тест 3.5-s4 (п. 16–17): пятна поселений на земле (утоптанная земля, огороды и сады) — неровные, с мягким
 	# краем, по тому же контуру, что постройки (AdobeBuild.ground_mask); выгоревшие пятна и воронки сцен
