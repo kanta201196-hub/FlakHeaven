@@ -300,6 +300,23 @@ func _make_points() -> Array:
 	if Render3D.I != null and Render3D.I.terrain != null:
 		peak = Render3D.I.terrain.find_peak(empty)
 	pts.append({"name": "mountain", "pos": peak})
+	if ter != null:   # M-36: скальные выходы на склоне (общий план и крупно) и осыпь у подножия
+		var best_r := [-1.0, empty]
+		var best_s := [-1.0, empty]
+		for gx in range(-24, 25):
+			for gz in range(-24, 25):
+				var q := empty + Vector2(gx, gz) * 200.0
+				var vv := ter.valley(q.x, q.y)
+				var rl := ter._relief(q.x, q.y, vv)
+				var sr := rl.y - absf(absf(vv) - 900.0) / 2000.0
+				if sr > best_r[0]:
+					best_r = [sr, q]
+				if rl.z > best_s[0]:
+					best_s = [rl.z, q]
+		print("VISUAL rocks at ", best_r[1], " foot ", best_s[1])
+		pts.append({"name": "rocks_range", "pos": best_r[1], "zoom": 0.6})
+		pts.append({"name": "rocks_slope", "pos": best_r[1], "zoom": 1.6})
+		pts.append({"name": "rocks_foot", "pos": best_s[1], "zoom": 1.2})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее

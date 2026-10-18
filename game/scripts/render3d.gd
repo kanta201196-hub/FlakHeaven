@@ -157,6 +157,9 @@ func _ready() -> void:
 	sm.set_shader_parameter("relief", true)
 	sm.set_shader_parameter("river_w", Terrain3D.D_RIVER)
 	sm.set_shader_parameter("river_guard", Terrain3D.RIVER_GUARD)   # M-35: охранная зона реки
+	sm.set_shader_parameter("road_v", Terrain3D.D_ROAD)
+	sm.set_shader_parameter("road_w", Terrain3D.ROAD_W)        # M-36: дорога шире под конвой
+	sm.set_shader_parameter("road_w_in", Terrain3D.ROAD_W_IN)
 	_ground_mat = sm
 	terrain = Terrain3D.new()
 	add_child(terrain)
@@ -211,6 +214,8 @@ func apply_gfx(q: int) -> void:
 	get_viewport().msaa_3d = Viewport.MSAA_2X if _gfx >= 3 else Viewport.MSAA_DISABLED
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
 	get_viewport().scaling_3d_scale = GFX_SCALE[_gfx]
+	if _ground_mat != null:   # M-36: скала с трёх проекций — только «Высокое» и «Максимальное»
+		_ground_mat.set_shader_parameter("rock_tri", _gfx >= 2)
 	if terrain != null:
 		terrain.clear()   # куски рельефа пересоберутся с новыми моделями биома и сеткой
 
