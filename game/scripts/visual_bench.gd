@@ -82,9 +82,18 @@ func process(delta: float) -> void:
 		if not _g_spawned:
 			_g_spawned = true
 			var site := AASite.new()
-			site.setup(m.player.global_position + Vector2(0, -120), 1.0, 99999.0)
+			if p.has("site_off"):   # M-37: позиция ПВО рядом с колонной на дороге (камера остаётся на точке)
+				var at: Vector2 = (p["pos"] as Vector2) + (p["site_off"] as Vector2)
+				site.setup(at, 1.0, 99999.0)
+				for g: GroundTarget in site.targets:   # раскладка та же, но ровно у дороги (без поиска дна долины)
+					g.position += at - site.anchor
+				site.anchor = at
+				site.global_position = at
+				site.process_mode = Node.PROCESS_MODE_DISABLED
+			else:
+				site.setup(m.player.global_position + Vector2(0, -120), 1.0, 99999.0)
+				p["pos"] = site.global_position + Vector2(0, 160)
 			m.world.add_child(site)
-			p["pos"] = site.global_position + Vector2(0, 160)
 	elif p.get("tanker", false):
 		if not _spawned:   # заправщик впереди игрока, штанга выдвинута и отклонена (логика стоит)
 			_spawned = true
@@ -113,7 +122,9 @@ func process(delta: float) -> void:
 		_fort.parts_down = {}
 		for nm in (["turret_1", "turret_2", "turret_3", "turret_4"] if ph >= 2 else []) + (["engine_l", "engine_r"] if ph >= 3 else []):
 			_fort.parts_down[nm] = true
-	elif p.get("convoy", false):
+	elif p.get("enemies", false) and (not _spawned or m.get_tree().get_nodes_in_group("enemies").is_empty()):   # смена класса в начале точки очищает мир
+		_spawn_all_enemies(p["pos"])   # точка, а не игрок: в первый кадр игрок ещё не перенесён
+	if p.get("convoy", false):
 		if _convoy == null:
 			_convoy = Convoy.new()
 			_convoy.setup(p["pos"], Vector2.RIGHT, 1.0, 100.0, 0.0)
@@ -131,8 +142,6 @@ func process(delta: float) -> void:
 				at -= float(ConvoyVehicle.SPEC[v.role]["len"]) * Tuning.g("unit_scale") + ConvoyVehicle.GAP
 		for v: ConvoyVehicle in _convoy.vehicles:
 			v.process_mode = Node.PROCESS_MODE_DISABLED
-	elif p.get("enemies", false) and (not _spawned or m.get_tree().get_nodes_in_group("enemies").is_empty()):   # смена класса в начале точки очищает мир
-		_spawn_all_enemies(p["pos"])   # точка, а не игрок: в первый кадр игрок ещё не перенесён
 	_hold(p)
 	if _phase == 0 and _t > float(p.get("wait", WAIT)):
 		if p.get("boom", false):
@@ -339,6 +348,9 @@ func _make_points() -> Array:
 		pts.append({"name": "rocks_foot", "pos": best_s[1], "zoom": 1.2})
 		# M-36: дорога шире — колонна конвоя стоит на дороге (логика машин выключена)
 		pts.append({"name": "road_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 2.2, "convoy": true, "wait": 1.5})
+		# M-37: позиция ПВО целиком и рядом с колонной (размеры ПВО относительно машин конвоя)
+		pts.append({"name": "aa_site", "pos": empty, "zoom": 1.0, "enemies": true, "ground": true, "wait": 2.5})
+		pts.append({"name": "aa_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.3, "convoy": true, "enemies": true, "ground": true, "site_off": Vector2(-380, -40), "wait": 2.5})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
