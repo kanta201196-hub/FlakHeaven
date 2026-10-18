@@ -404,6 +404,11 @@ func _zone(p: Vector2, ctx: Dictionary) -> String:
 		return "road"
 	if a < Terrain3D.RIVER_GUARD + 40.0:   # прибрежная полоса тополей и кустов — сразу за охранной зоной
 		return "bank"
+	var sd := absf(_t.stream_field(p.x, p.y, ctx))   # L-09: ручей посёлка — вода и зелень по берегам
+	if sd < Terrain3D.STREAM_W * 2.5:
+		return "river"
+	if sd < Terrain3D.STREAM_W * 2.5 + 35.0:
+		return "bank"
 	var h := _t.height(p.x, p.y, ctx) / maxf(_t.ceiling, 1.0)
 	var sl := _slope(p, ctx)
 	if absf(_t.valley(p.x, p.y, ctx)) < Terrain3D.D_FLOOR and sl < 0.15:

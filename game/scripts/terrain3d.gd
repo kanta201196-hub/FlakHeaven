@@ -117,6 +117,8 @@ func clear() -> void:
 func valley(x: float, z: float, ctx := {}) -> float:
 	var d := river_field(x, z)
 	for s in _sides(x, z, ctx):
+		if float(s[2]) < 0.0:
+			continue   # ручей (stream_field)
 		# L-08: не ближе края русла — иначе врез русла (_height_v) опускал всю площадку поселения
 		# на 2,5 % высоты, и край посёлка (линия обороны) уходил под землю
 		var dc := maxf(_seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5, D_RIVER * 1.8)
@@ -160,6 +162,10 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 	h *= _flat(x, z, ctx)
 	# русло врезано в пойму: вода лежит в ложбине, а не на ровном месте
 	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
+	# L-09: ручей посёлка тоже лежит в ложбинке, мельче реки
+	var sd := absf(stream_field(x, z, ctx))
+	if sd < STREAM_W * 3.0:
+		h -= (1.0 - smoothstep(STREAM_W * 0.6, STREAM_W * 3.0, sd)) * 0.012
 	return clampf(h, -0.03, 1.0) * ceiling
 
 
@@ -167,6 +173,65 @@ func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var ab := b - a
 	var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 1.0), 0.0, 1.0)
 	return p.distance_to(a + ab * t)
+
+
+## L-09 (вариант 2 Kanta): ручей долины-притока — полуширина воды, сдвиг от оси долины, во сколько раз
+## ручей уже реки в поле шейдера (вода, мокрый берег и колея вдоль ручья рисуются тем же кодом, что у реки)
+const STREAM_W := 7.0
+const STREAM_OFF := 95.0
+const STREAM_K := D_RIVER / 8.5
+const STREAM_REACH := 36.0  # дальше ручей в поле не участвует (колея — в 28 px от воды)
+const TRIB_MIN := 420.0    # посёлок глубже в долине-притоке, чем дорога: + к полю реки, px
+const TRIB_MAX := 760.0
+
+
+## Расстояние до ручья посёлка, px, со знаком: «+» — к оси долины (там тропа); ручья рядом нет — INF
+func stream_field(x: float, z: float, ctx := {}) -> float:
+	var best := INF
+	var p := Vector2(x, z)
+	for s in _sides(x, z, ctx):
+		if float(s[2]) >= 0.0:
+			continue
+		var d := _seg_dist(p, s[0], s[1])
+		if d < absf(best):
+			var ab: Vector2 = s[1] - s[0]
+			var sg := signf(ab.cross(p - (s[0] as Vector2)) * ab.cross(-(s[3] as Vector2)) + 1e-6)
+			if s[4] and ab.dot(p - (s[0] as Vector2)) < 0.0:
+				sg = 1.0   # за истоком знак не меняется — иначе от истока тянулась бы «вода»
+			best = d * sg
+	return best if absf(best) < STREAM_REACH else INF
+
+
+## Сглаживание ломаной (срез углов Чайкина), концы на месте
+func _chaikin(pts: PackedVector2Array) -> PackedVector2Array:
+	var out := PackedVector2Array([pts[0]])
+	for i in pts.size() - 1:
+		out.append(pts[i].lerp(pts[i + 1], 0.25))
+		out.append(pts[i].lerp(pts[i + 1], 0.75))
+	out.append(pts[pts.size() - 1])
+	return out
+
+
+## Меандры ручья: мелкие изгибы поперёк течения, у истока и устья — на нет
+func _meander(pts: PackedVector2Array, seed_p: Vector2) -> PackedVector2Array:
+	var ph := float(absi(hash(Vector2i(roundi(seed_p.x), roundi(seed_p.y)))) % 628) / 100.0
+	var n := pts.size()
+	for i in range(1, n - 1):
+		var t := (pts[i + 1] - pts[i - 1]).normalized().orthogonal()
+		var k := sin(PI * float(i) / float(n - 1))
+		pts[i] += t * sin(float(i) * 0.6 + ph) * 30.0 * k
+	return pts
+
+
+## Ломаная долины-притока: от посёлка a к ближайшей точке реки, два изгиба по хешу; детерминирована
+func _trib(a: Vector2) -> PackedVector2Array:
+	var b := _river_point(a)
+	var d := b - a
+	var n := d.orthogonal().normalized() * d.length()
+	var h := hash(Vector2i(roundi(a.x), roundi(a.y)))
+	var w1 := (float(h & 0xff) / 255.0 - 0.5) * 0.45
+	var w2 := (float((h >> 8) & 0xff) / 255.0 - 0.5) * 0.35
+	return PackedVector2Array([a, a + d * 0.35 + n * w1, a + d * 0.7 + n * w2, b])
 
 
 ## Боковые долины поселений, влияющие на клетку точки (от поселения к ближайшей линии реки)
@@ -185,7 +250,24 @@ func _sides(x: float, z: float, ctx := {}) -> Array:
 			if o.is_empty() or not (o["name"] in SETTLE):
 				continue
 			var a: Vector2 = o["pos"]
-			out.append([a, _river_point(a), float(o["size"]) * 0.75])
+			var sz := float(o["size"])
+			if o["name"] != "o_village":
+				out.append([a, _river_point(a), sz * 0.75])
+				continue
+			# L-09: посёлок — в извилистой долине-притоке; вдоль неё — ручей с одной стороны оси
+			var tr := _trib(a)
+			for i in tr.size() - 1:
+				out.append([tr[i], tr[i + 1], sz * (0.75 if i == 0 else 0.5)])
+			var nrm := (tr[tr.size() - 1] - a).orthogonal().normalized()
+			var R := sz * AdobeBuild.footprint("o_village")
+			# исток — сбоку от посёлка, ручей идёт вдоль долины и к устью прижимается к её оси
+			var st := PackedVector2Array([a + nrm * (R * 0.8 + 30.0)])
+			for i in range(1, tr.size() - 1):
+				st.append(tr[i] + nrm * lerpf(R * 0.8 + 30.0, STREAM_OFF, float(i) / float(tr.size() - 1)))
+			st.append(tr[tr.size() - 1])
+			st = _meander(_chaikin(_chaikin(_chaikin(st))), a)
+			for i in st.size() - 1:
+				out.append([st[i], st[i + 1], -1.0, nrm, i == 0])
 	_side[key] = out
 	if _side.size() > 600:
 		_side.clear()
@@ -335,7 +417,7 @@ func fix_object(o: Dictionary) -> Dictionary:
 			return {}
 		if o["name"] == "o_village":   # L-01: главная тропа посёлка (+x объекта) — к реке через дорогу
 			o = o.duplicate()
-			o["rot"] = (_river_point(p0) - p0).angle()
+			o["rot"] = (_trib(p0)[1] - p0).angle()   # L-09: вниз по долине-притоку
 	elif o["name"] == "o_crater" and absf(_v_raw(p0.x, p0.y)) / V_SCALE > D_FAN:
 		return {}   # воронка с площадкой на склоне выглядела ямой в горе: воронки — на дне долин и конусах
 	var p := p0
@@ -387,6 +469,8 @@ func _settle_spot(o: Dictionary) -> Vector2:
 		return Vector2.INF
 	var R := float(o["size"]) * AdobeBuild.footprint(o["name"])
 	var target := D_ROAD + 16.0 + R + 10.0 if o["name"] != "o_oasis" else -(RIVER_GUARD + R + 10.0)
+	if o["name"] == "o_village":   # L-09: посёлок — в глубине долины-притока, за дорогой
+		target += lerpf(TRIB_MIN, TRIB_MAX, float(absi(hash(raw)) % 1000) / 1000.0)
 	var p := _field_point(q + (raw - q).limit_length(40.0), target)
 	if p.distance_to(raw) > SETTLE_REACH:
 		return Vector2.INF
@@ -749,6 +833,9 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int) -> Dictionary:
 			var z := oz + (j - 1) * step
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
 			vs[j * W + i] = river_field(x, z)
+			var sf := stream_field(x, z, ctx) * STREAM_K   # L-09: ручей — в том же поле, в K раз уже
+			if absf(sf) < absf(vs[j * W + i]):
+				vs[j * W + i] = sf
 			hs[j * W + i] = _height_v(x, z, valley(x, z, ctx), ctx)
 	# тест 3.5-s4 (п. 16–17): пятна поселений на земле (утоптанная земля, огороды и сады) — неровные, с мягким
 	# краем, по тому же контуру, что постройки (AdobeBuild.ground_mask); выгоревшие пятна и воронки сцен
