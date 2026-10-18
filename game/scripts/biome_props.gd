@@ -306,6 +306,24 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		var no_shadow := Settings.gfx == 0 or (Settings.gfx == 1 and small)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if no_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		parent.add_child(mmi)
+		# оптимизация (после #105): на «Максимальном» деревья полной детализации (11–14 тыс. треуг.) тень
+		# отбрасывают «карточками» той же модели (6 треуг.) — в садах у кишлаков это ~0,6 млн треуг. в проходе теней
+		if not no_shadow and LITE.has(kind) and Settings.gfx >= Settings.GFX_MAX:
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var lk: String = kind + "_lite"
+			if not _meshes.has(lk):
+				_meshes[lk] = _lite_tree(kind)
+			var mm2 := MultiMesh.new()
+			mm2.transform_format = MultiMesh.TRANSFORM_3D
+			mm2.mesh = _meshes[lk]
+			mm2.instance_count = arr.size()
+			for j in arr.size():
+				mm2.set_instance_transform(j, arr[j])
+			var sh := MultiMeshInstance3D.new()
+			sh.multimesh = mm2
+			sh.name = kind + "_shadow"
+			sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+			parent.add_child(sh)
 
 
 func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, keep_out: Array, ctx: Dictionary) -> void:
