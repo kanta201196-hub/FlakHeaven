@@ -467,7 +467,7 @@ func _wolf(p: Player, t: Enemy, d: float) -> void:
 
 
 func _slot_pos(p: Player, i: int) -> Vector2:
-	if (weapon == "aam" or weapon == "rockets") and not launch_offs.is_empty() and Render3D.enabled:
+	if weapon in ["aam", "rockets", "bombs"] and not launch_offs.is_empty() and Render3D.enabled:
 		return p.global_position + (launch_offs[i % launch_offs.size()] as Vector2).rotated(p.heading)
 	if slots == 1:
 		return p.global_position
@@ -729,10 +729,25 @@ func _fire_bombs(p: Player, manual := false) -> bool:
 		Main.I.projectiles.spawn_bomb(_slot_pos(p, s), fuse * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
 			range_px() * Profile.wk("bombs", "blast_r"), "бомбы", to, true)
 		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.tier(level)   # тест 3.5-s4 (п. 10): падает модель этой ступени
+		_bay_release(p, Main.I.projectiles.bombs[-1], 0.0)
 		if p.syn.has("carpet_road"): # «Ковровая дорожка»: крест суббоеприпасов и огонь
 			Main.I.projectiles.bombs[-1]["road"] = true
 	Main.I.sfx.play("bomb_drop", -14.0, 1.2)
 	return true
+
+
+## Тест 3.5-s5 (п. 3), только вид: из бомбоотсека бомба уходит, когда створки уже открылись (BAY_OPEN_T),
+## ряд «ковра» — по очереди (stagger); пока она в отсеке, самолёт летит — старт сдвигается вперёд с ним.
+## Место и момент разрыва не меняются (projectiles._update_bombs: к концу взрывателя бомба в точке «to»).
+const BAY_OPEN_T := 0.12
+
+
+func _bay_release(p: Player, b: Dictionary, stagger: float) -> void:
+	if launch_offs.is_empty() or not Render3D.enabled or not name.begins_with("Бомбоотсек"):
+		return
+	var rel := minf(BAY_OPEN_T + stagger, float(b["fuse"]) * 0.6)
+	b["rel"] = rel
+	b["from"] = (b["from"] as Vector2) + p.velocity * rel
 
 
 ## «Бабушкин ковёр»: ряд из 8 бомб поперёк курса, ширина 600
@@ -746,9 +761,11 @@ func _fire_carpet_row(p: Player, manual: bool) -> bool:
 	var road := p.syn.has("carpet_road")
 	for i in 8:
 		var off := (float(i) / 7.0 - 0.5) * 600.0
-		Main.I.projectiles.spawn_bomb(p.global_position, (0.5 + 0.04 * i) * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
+		# тест 3.5-s5 (п. 3): точка старта — бомба кассеты в отсеке (только вид; куда и когда рвётся — как было)
+		Main.I.projectiles.spawn_bomb(_slot_pos(p, i), (0.5 + 0.04 * i) * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
 			150.0 * Profile.wk("bombs", "blast_r"), "бомбы", c + side * off, true)
 		Main.I.projectiles.bombs[-1]["vt"] = 4
+		_bay_release(p, Main.I.projectiles.bombs[-1], 0.04 * i * Profile.wk("bombs", "fuse"))
 		if road:
 			Main.I.projectiles.bombs[-1]["road"] = true
 	if road:

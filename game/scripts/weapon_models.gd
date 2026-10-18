@@ -171,7 +171,23 @@ static func drop_mesh(vt: int) -> Mesh:
 	return _glb_mesh(file, 1.0, Color(), "glb_drop_%d" % (1 if t == 4 else t))
 
 
+## Тест 3.5-s5 (п. 3): «Бабушкин ковёр» у «Кита» — кассета внутри бомбоотсека (weapons.py bombs evobay),
+## а не планка снаружи: своя «ступень» модели CARPET_BAY_T. Точки 8 бомб в осях модели (длина 1 = подвес),
+## по порядку сброса: ряды спереди назад, в ряду левая и правая — отсюда бомбы падают в бою
+const CARPET_BAY_T := 5
+const CARPET_BAY_GLB := "res://models/weapons/bombs_evo_bay.glb"
+const CARPET_BAY_PTS := [Vector3(0.66, 0, -0.072), Vector3(0.66, 0, 0.072), Vector3(0.22, 0, -0.072), Vector3(0.22, 0, 0.072),
+	Vector3(-0.22, 0, -0.072), Vector3(-0.22, 0, 0.072), Vector3(-0.66, 0, -0.072), Vector3(-0.66, 0, 0.072)]
+
+
+## У самолёта есть бомбоотсек со створками (Т-5: tools/blender/bay_doors.py)
+static func has_bay(cls_id: String, lvl: int) -> bool:
+	return ResourceLoader.exists("res://models/mech/fh_bay_%s_%d.glb" % [cls_id, lvl])
+
+
 static func weapon_model(weapon: String, t: int, evo := false) -> Mesh:
+	if weapon == "bombs" and t == CARPET_BAY_T and ResourceLoader.exists(CARPET_BAY_GLB):
+		return _glb_mesh(CARPET_BAY_GLB, 1.0, Color(), "glb_bombs_evo_bay")
 	if evo and ResourceLoader.exists(EVO_GLB % weapon):
 		return _glb_mesh(EVO_GLB % weapon, 1.0, Color(), "glb_%s_evo" % weapon)
 	if weapon in Weapons.EXP and ResourceLoader.exists(EXP_GLB % weapon):
@@ -649,6 +665,17 @@ static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.
 ##   "bottom" — нижняя под фюзеляжем. yaw — куда смотрят стволы без цели (0 — вперёд, PI — назад).
 static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	var out: Array = []
+	var bay_grp := g.weapon == "bombs" and g.name.begins_with("Бомбоотсек") and has_bay(cls_id, lvl)
+	# тест 3.5-s5 (п. 3): «Бабушкин ковёр» в бомбоотсеке — кассета внутри, на месте обычных бомб
+	# (по центру их точек), видна при открытых створках; бомбы сыплются из люка
+	if g.evo and bay_grp and ResourceLoader.exists(CARPET_BAY_GLB):
+		var bp := PlaneArt.slot_points(cls_id, lvl, gi, g)
+		if not bp.is_empty():
+			var c := Vector2.ZERO
+			for q: Vector2 in bp:
+				c += q
+			out.append({"p": c / bp.size(), "side": "bay", "yaw": 0.0, "t": CARPET_BAY_T})
+			return out
 	# Т-6: «Салют» — одна пусковая на спине за кабиной, «Бабушкин ковёр» — одна планка под фюзеляжем
 	if g.evo and g.weapon in ["flares", "bombs"] and ResourceLoader.exists(EVO_GLB % g.weapon):
 		var sh := PlaneArt.shape_info(cls_id, lvl)
@@ -675,9 +702,8 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 			return out
 	if not g.builtin:
 		# Т-5: у «Кита» бомбы — в бомбоотсеке под створками (render3d / hangar3d открывают их), без пилона
-		var bay := g.weapon == "bombs" and g.name.begins_with("Бомбоотсек") and ResourceLoader.exists("res://models/mech/fh_bay_%s_%d.glb" % [cls_id, lvl])
 		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):
-			out.append({"p": pt, "side": "bay" if bay else "under", "yaw": 0.0})
+			out.append({"p": pt, "side": "bay" if bay_grp else "under", "yaw": 0.0})
 		return out
 	var s := PlaneArt.shape_info(cls_id, lvl)
 	if s.is_empty():

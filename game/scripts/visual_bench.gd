@@ -175,6 +175,34 @@ func _hold(p: Dictionary) -> void:
 		var to := pos + Vector2.from_angle(m.player.heading + randf_range(-0.5, 0.5)) * randf_range(420.0, 600.0)
 		m.projectiles.spawn_bomb(pos + Vector2(randf_range(-20, 20), randf_range(-20, 20)), randf_range(4.0, 7.0), 0.0, 120.0, "бомбы", to, true)
 		m.projectiles.bombs[-1]["vt"] = vt
+	if p.has("carpet"):
+		# тест 3.5-s5 (п. 3): сброс из бомбоотсека «Кита» — «ковёр» (true) или бомбы ступени 3 (false);
+		# время замедлено: в облаке кадр идёт ~1 с, а бомба падает полсекунды
+		# (почти стоит); кадр — через 0,21 с после сброса: створки открыты, часть бомб уже падает
+		Engine.time_scale = 0.01 if p.has("_done") else 1.0
+		if not p.has("_done"):   # бомбы прошлой точки не рвутся в кадре этой
+			m.projectiles.bombs.clear()
+		for wm: Wingman in m.player.wingmen:   # ведомые не заслоняют самолёт игрока
+			wm.queue_free()
+		m.player.wingmen.clear()
+		for g: Hardpoint in m.player.groups:
+			if g.name.begins_with("Бомбоотсек"):
+				g.weapon = "bombs"
+				g.level = Weapons.MAX_LEVEL
+				g.evo = bool(p["carpet"])
+				g.cd = 6.0
+				if _t > 3.5 and not p.has("_done"):
+					p["_done"] = true
+					m.projectiles.bombs.clear()
+					g._fire_bombs(m.player, true)
+		if p.has("_done"):
+			for b: Dictionary in m.projectiles.bombs:
+				b["t"] = float(b["fuse"]) - float(p.get("ph", 0.21))
+			for n in Render3D.I.find_children("bay_doors", "", true, false):
+				n.set_meta("t", 1.0)
+				n.set_meta("hold", 1.0)
+	elif Engine.time_scale < 0.05:
+		Engine.time_scale = 1.0
 	if p.get("craters", false) and not p.has("_done"):
 		p["_done"] = true
 		for i in 9:
@@ -277,6 +305,10 @@ func _make_points() -> Array:
 	if OS.get_cmdline_user_args().has("--bombbench"):   # тест 3.5-s4 (п. 10, 14): падающие бомбы ступеней и воронки
 		pts = []
 		pts.append({"name": "bomb_drop", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "bombs": true, "wait": 2.5, "zoom": 2.6})
+		for lv in [1, 2]:
+			pts.append({"name": "carpet_drop_%d" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": true, "wait": 6.5, "zoom": 5.0})
+			pts.append({"name": "carpet_roll_%d" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": true, "wait": 6.5, "zoom": 5.0, "roll": 0.62, "ph": 0.17})
+			pts.append({"name": "baybomb_drop_%d" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": false, "wait": 6.5, "zoom": 5.0})
 		pts.append({"name": "bomb_craters", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "craters": true, "wait": 3.0, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
 		pts = []
@@ -357,6 +389,13 @@ func _hangar_bench() -> void:
 			for w in wl:
 				for wt in [1, 2, 3, 4]:
 					_hq.append(["W", w, wt])
+			_t = 0.0
+			return
+		if OS.get_cmdline_user_args().has("--hangarcarpet"):
+			# тест 3.5-s5 (п. 3): «Кит» ур. 1 и 2 — бомбы ступени 3 и «ковёр» в открытом бомбоотсеке (вид снизу сбоку)
+			for lv in [1, 2]:
+				for wt in [3, 4]:
+					_hq.append(["bomber", lv, wt])
 			_t = 0.0
 			return
 		var evo_bench := OS.get_cmdline_user_args().has("--hangarevo")
@@ -449,6 +488,12 @@ func _hangar_bench() -> void:
 			Hangar3D.I._yaw = -0.9 if front else 2.5
 			Hangar3D.I._pitch = 0.35 if front else 0.2
 			Hangar3D.I._dist = 0.75
+			Hangar3D.I._idle = 0.0
+		elif OS.get_cmdline_user_args().has("--hangarcarpet"):   # снизу сбоку: открытый бомбоотсек
+			Hangar3D.bench_pitch_min = -0.9
+			Hangar3D.I._yaw = PI / 2.0 + 0.5
+			Hangar3D.I._pitch = -0.62
+			Hangar3D.I._dist = 0.9
 			Hangar3D.I._idle = 0.0
 		elif OS.get_cmdline_user_args().has("--hangarlow"):   # снизу сбоку крупно: подвесы под крылом на пилонах
 			Hangar3D.I._yaw = 2.3

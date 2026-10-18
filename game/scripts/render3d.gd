@@ -1300,12 +1300,19 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 				var wp := root.global_transform * wmi.position
 				l_offs.append((Vector2(wp.x, wp.z) - p.global_position).rotated(-p.heading))
 			else:
+				if g.weapon == "bombs":
+					# тест 3.5-s5 (п. 3): бомбы падают с точек подвеса (из бомбоотсека — из открытого люка);
+					# у «ковра» в отсеке — с места каждой из 8 бомб кассеты
+					var bl: Array = WeaponModels.CARPET_BAY_PTS if int(mt["t"]) == WeaponModels.CARPET_BAY_T else [Vector3.ZERO]
+					for lp: Vector3 in bl:
+						var bw := root.global_transform * (wmi.transform * lp)
+						l_offs.append((Vector2(bw.x, bw.z) - p.global_position).rotated(-p.heading))
 				var tr_w := 0.6 if dim else 0.0
 				if wmi.transparency != tr_w:
 					wmi.transparency = tr_w
 			if mt["side"] == "bay":   # в закрытом бомбоотсеке бомб не видно
 				wmi.visible = float(u.get("bay_t", 1.0)) > 0.4
-		if g.weapon == "aam" or g.weapon == "rockets":
+		if g.weapon in ["aam", "rockets", "bombs"]:
 			g.launch_offs = l_offs
 	for key in u["weapons"].keys():
 		if not want.has(key):
@@ -1336,6 +1343,12 @@ func _weapon_layout(u: Dictionary, p: Player, tex: Texture2D, gi: int, g: Hardpo
 			var lo := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
 			if not is_nan(lo):
 				y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
+		elif mt["side"] == "bay" and u.get("bm") != null:
+			# тест 3.5-s5 (п. 3): бомбы и кассета «ковра» — от настоящего брюха модели, как в ангаре
+			# (иначе верх кассеты проходил сквозь фюзеляж и был виден сверху)
+			var lo2 := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
+			if not is_nan(lo2):
+				y = lo2 * tw - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6
 		out.append({"key": "%d_%d_%s_%d%s_s%d" % [gi, si, g.weapon, mtr, "e" if g.evo else "", seek], "t": mtr,
 			"side": mt["side"], "yaw": float(mt["yaw"]), "pos": Vector3(pt.x, y, pt.y), "tail_cab": tail_cab,
 			"flip": mt["side"] == "bottom" or under_tail})
@@ -1916,7 +1929,12 @@ func _sync_bombs(m: Main) -> void:
 			add_child(mi)
 			_bombs3[id] = mi
 			b["wob"] = randf() * TAU
-		var k := 1.0 - clampf(float(b["t"]) / maxf(float(b["fuse"]), 0.01), 0.0, 1.0)
+		# тест 3.5-s5 (п. 3): «rel» — бомба ещё в отсеке (створки открываются, ряд «ковра» уходит по очереди);
+		# падение — за оставшееся до разрыва время, место и момент разрыва прежние
+		var rel := float(b.get("rel", 0.0))
+		var el := float(b["fuse"]) - float(b["t"])
+		mi.visible = el >= rel
+		var k := clampf((el - rel) / maxf(float(b["fuse"]) - rel, 0.01), 0.0, 1.0)
 		var f2: Vector2 = b["from"]
 		var y0 := -6.0
 		var g3 := ground_under(b["to"])
