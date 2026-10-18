@@ -641,6 +641,14 @@ def bake_export(name, out, tex=1024, glass_kinds=("glass", "lamp", "lamp_red", "
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + ".blend"))
     bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format="GLB", use_selection=False,
                               export_image_format="AUTO")
+    # оптимизация перед 3.5-s6: экспорт даёт примитив на каждый слот материала (23–36 на машину), а запечённых
+    # материалов два — склеиваем примитивы одного материала, вызовов отрисовки в 4 раза меньше
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "glb_merge_prims", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "glb_merge_prims.py"))
+    gm = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gm)
+    gm.merge(os.path.join(out, name + ".glb"))
     return root, tris
 
 

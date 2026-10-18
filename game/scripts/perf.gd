@@ -143,6 +143,8 @@ func _process(delta: float) -> void:
 		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
 		int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000.0)]
+	if Render3D.I != null and Render3D.I._puffs != null and Render3D.I._puffs.visible:
+		line += " облака=%d клубов, заливка %.0f%%" % [Render3D.I._puffs.shown, Render3D.I._puffs.fill * 100.0]
 	if Boom3D.I != null:
 		var pc := []
 		for a in Boom3D.I._parts:

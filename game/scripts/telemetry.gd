@@ -5,7 +5,7 @@ extends RefCounted
 ## timeline — снимок каждой минуты вылета, компактной строкой.
 
 ## Версия набора колонок: меняется — меняется и имя файла лога
-const LOG_VER := "l6"   # l6 (тест 3.5-s5): колонка aces перед timeline
+const LOG_VER := "l6"   # l6 (тест 3.5-s5): колонки aces и op перед timeline, облака (cloud_*)
 const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_s", "kbm_s", "scheme_changes",
 	"gun_rate_max", "gun_multi_frames", "shots_lead", "hits_lead", "lead_nosol", "swept_hits",
 	"roll_uses", "invuln_s", "invuln_chain_max", "nm_through", "hitstops", "hitstop_in_slowmo",
@@ -27,7 +27,10 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	# 3.5: бой на 3D-моделях — сколько самолётов в кадре нарисовано моделями (макс.) и их треугольники
 	"units_model_max", "model_tris_max",
 	# A-03: наземный конвой — сожжено машин и грузовиков, ушло грузовиков, колонн разбито целиком
-	"convoy_vehicles_killed", "convoy_trucks_killed", "convoy_trucks_escaped", "convoy_done"]
+	"convoy_vehicles_killed", "convoy_trucks_killed", "convoy_trucks_escaped", "convoy_done",
+	# M-31 (проход по оптимизации перед 3.5-s6): объёмные облака — клубов в кадре (макс.) и их заливка, % экрана
+	# (сколько «экранов» прозрачной заливки рисует видеокарта: средняя и наибольшая) — нагрузка на слабые видеокарты
+	"cloud_puffs_max", "cloud_fill_avg", "cloud_fill_max"]
 
 ## T4-04: автоснижение качества — окна по 20 с с 5-й секунды; FPS ниже порога → пресет ниже (до 3 раз за вылет)
 const AUTO_FPS := 35.0
@@ -145,6 +148,11 @@ func _render_stats(m: Main) -> void:
 		maxv("model_tris_max", mc.y)
 	if _rs_n % 4 == 0:
 		maxv("enemies_max", m.get_tree().get_nodes_in_group("enemies").size())
+	var cp: CloudPuffs = Render3D.I._puffs if Render3D.I != null else null
+	if cp != null and cp.visible:
+		maxv("cloud_puffs_max", cp.shown)
+		add("cloud_fill_sum", cp.fill * 100.0)
+		maxv("cloud_fill_max", cp.fill * 100.0)
 
 
 ## Кусок рельефа с моделями собран за ms (Terrain3D)
@@ -220,6 +228,7 @@ func row(m: Main) -> PackedStringArray:
 	v["plane_shadow"] = Tuning.g("plane_shadow")
 	v["tris_avg"] = g("tris_sum") / maxf(_rs_n, 1)
 	v["draws_avg"] = g("draws_sum") / maxf(_rs_n, 1)
+	v["cloud_fill_avg"] = g("cloud_fill_sum") / maxf(_rs_n, 1)
 	v["boss_life_avg"] = g("boss_life_sum") / maxf(g("boss_n"), 1.0)
 	v["scale3d"] = 100.0 * float(Render3D.GFX_SCALE[clampi(Settings.gfx, 0, 3)])
 	v["msl_air_avg"] = g("msl_air_sum") / maxf(_speed_n, 1)
