@@ -107,3 +107,4 @@
 
 Язык канала (приёмы, словарь, чек-лист) — `docs/marketing/voice.md`; разбор 12 каналов разработчиков и 4 английских девлогов с цифрами — `docs/marketing/content-research.md` (19.10.2026).
 Инструкция по комментариям: `docs/marketing/telegram-comments.md`. Недели: `content/2026-W43.md`, `content/2026-W44.md`, темы «было/стало»: `content/was-now-plan.md`.
+Бесплатные площадки для размещения: `docs/marketing/free-placement.md` (19.10.2026).
