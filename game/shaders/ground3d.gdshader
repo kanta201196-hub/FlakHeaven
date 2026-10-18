@@ -29,7 +29,7 @@ uniform float clay_scale = 5.0;    // аудит Р-4 + Р-3: трещины т�
 // аудит Р-7: цвет по зонам — светлое дно, серые конусы, тёмно-бурые склоны, ещё темнее гребни
 uniform vec3 zone_floor : source_color = vec3(0.92, 0.88, 0.84);
 uniform vec3 zone_fan : source_color = vec3(0.74, 0.71, 0.67);
-uniform vec3 zone_slope : source_color = vec3(0.68, 0.58, 0.5);
+uniform vec3 zone_slope : source_color = vec3(0.76, 0.66, 0.57);
 uniform vec3 zone_crest : source_color = vec3(0.6, 0.56, 0.52);
 uniform vec3 haze_color : source_color = vec3(0.62, 0.68, 0.78);
 // русло и дорога по расстоянию до реки (terrain3d.gd: D_RIVER, D_ROAD; в UV2.x, px со знаком)
@@ -44,13 +44,14 @@ uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к
 uniform float rock_sat = 0.45;
 // M-36: скальные выходы и осыпи (маски — UV, terrain3d.gd _relief). Цвета — сухие горы: бурая и серая порода
 // пластами, светлая серо-бурая осыпь у подножия
-uniform vec3 rock_brown : source_color = vec3(0.55, 0.44, 0.36);
+uniform vec3 rock_brown : source_color = vec3(0.63, 0.51, 0.42);
 uniform vec3 rock_grey : source_color = vec3(0.5, 0.5, 0.49);
 uniform vec3 scree_color : source_color = vec3(0.7, 0.66, 0.6);
 uniform float strata_px = 13.0;   // толщина пласта по высоте, px мира
 // M-36: скала с трёх проекций (3 выборки) — только «Высокое»/«Максимальное»; на «Низком»/«Среднем» —
 // две (сверху и сбоку по склону), меньше, чем было (3)
 uniform bool rock_tri = true;
+uniform float slope_fill = 0.22;   // M-36: подсветка крутых склонов — тень в оврагах не уходит в чёрное
 uniform float hillshade = 0.3;     // отмывка рельефа: склоны от солнца темнее — горы читаются сверху
 uniform vec3 shade_dir = vec3(-0.55, 0.6, -0.58); // откуда «светит» отмывка (как солнце, но ниже)
 uniform bool anti_tile = true;
@@ -345,6 +346,8 @@ void fragment() {
 		}
 	}
 	ALBEDO = alb;
+	// M-36: отражённый от долины свет на крутых склонах (у GL Compatibility нет GI — тень иначе почти чёрная)
+	EMISSION = alb * slope_fill * smoothstep(0.12, 0.55, 1.0 - wnorm.y);
 	if (use_nh) {
 		nxy *= normal_k;
 		NORMAL_MAP = normalize(vec3(nxy, 1.0)) * 0.5 + 0.5;
