@@ -44,6 +44,11 @@ uniform int cloud_n = 0;
 uniform float cloud_y = 380.0;
 uniform vec2 cloud_shift = vec2(0.0);  // сдвиг тени на 1 px высоты (по солнцу)
 uniform float cloud_dark = 0.2;
+// тест 3.5-s5 (п. 8): тени самолётов — карта сверху (render3d._psh_vp, канал R — густота тени);
+// rect: x, z левого верхнего угла, сторона, включено
+uniform sampler2D plane_sh : filter_linear, repeat_disable, hint_default_black;
+uniform vec4 plane_sh_rect = vec4(0.0, 0.0, 1.0, 0.0);
+uniform vec3 plane_sh_color = vec3(0.04, 0.05, 0.09);
 
 uniform float tex_world = 460.0;   // мировой размер плитки, px
 uniform float patch_world = 1500.0; // размер пятен материалов, px
@@ -245,6 +250,12 @@ void fragment() {
 		}
 	}
 	alb *= 1.0 - cloud_dark * cs;
+	if (plane_sh_rect.w > 0.5) {
+		vec2 suv = (world3.xz - plane_sh_rect.xy) / plane_sh_rect.z;
+		if (suv.x > 0.0 && suv.x < 1.0 && suv.y > 0.0 && suv.y < 1.0) {
+			alb = mix(alb, plane_sh_color, texture(plane_sh, suv).r);
+		}
+	}
 	ALBEDO = alb;
 	if (use_nh) {
 		nxy *= normal_k;
