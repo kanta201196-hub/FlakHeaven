@@ -467,7 +467,7 @@ func _zone(p: Vector2, ctx: Dictionary) -> String:
 	var a := absf(v)
 	if a < Terrain3D.RIVER_GUARD:   # M-35: охранная зона реки (вода и мокрый берег) — сюда ничего не ставим
 		return "river"
-	if absf(v - Terrain3D.D_ROAD) < 20.0:   # L-03: дорога шире
+	if v - Terrain3D.D_ROAD > -Terrain3D.ROAD_W_IN and v - Terrain3D.D_ROAD < Terrain3D.ROAD_W:   # L-03: дорога шире наружу от реки (как в шейдере)
 		return "road"
 	if a < Terrain3D.RIVER_GUARD + 40.0:   # прибрежная полоса тополей и кустов — сразу за охранной зоной
 		return "bank"
