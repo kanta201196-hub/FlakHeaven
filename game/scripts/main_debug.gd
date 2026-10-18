@@ -265,6 +265,11 @@ func _debug_screenshots(delta: float) -> void:
 			_shot("transport")
 		if an is Convoy and (an as Convoy).alarm and (an as Node2D).global_position.distance_to(m.player.global_position) < 500.0:
 			_shot("convoy")
+	if m.state == "playing" and m._args.has("--heli") and m._args.has("--shots"):   # вертолёт «Сарыч» вблизи (проверка по флагу --heli)
+		for n in m.get_tree().get_nodes_in_group("enemies"):
+			if n is Helicopter and (n as Node2D).global_position.distance_to(m.player.global_position) < 260.0:
+				_shot("helicopter")
+				break
 	if m.state == "playing" and m.spawner != null and m.spawner.fuel != null and is_instance_valid(m.spawner.fuel.tanker) and m.spawner.fuel.tanker.filling:
 		_shot("tanker")
 	if (m.state == "evac" or m.state == "dead") and m.result_t > 3.5:
