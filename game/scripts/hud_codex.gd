@@ -20,11 +20,11 @@ func _syn_conds(p: Player, s: Dictionary, skill := false) -> Array:
 	if skill:
 		out0.append([Loc.t("уровень навыка %d") % int(c0.get("s3", 1)), false])
 	if s.has("tag"):
-		out0.append([Loc.t("%s: %d очков") % [Prog.tag_title(s["tag"]), c0["main"]], false])
+		out0.append([Loc.t("%s: %d очков") % [Loc.t(Prog.tag_title(s["tag"])), c0["main"]], false])
 	if s.has("tag2"):
-		out0.append([Loc.t("%s: %d очков") % [Prog.tag_title(s["tag2"]), c0["second"]], false])
+		out0.append([Loc.t("%s: %d очков") % [Loc.t(Prog.tag_title(s["tag2"])), c0["second"]], false])
 	if s.has("w") and s["w"] is Array:
-		out0.append([Loc.t("%s ур. %d") % ["/".join(PackedStringArray((s["w"] as Array).map(func(x): return String(Weapons.DEFS[x]["short"])))), c0["lvl"]], false])
+		out0.append([Loc.t("%s ур. %d") % ["/".join(PackedStringArray((s["w"] as Array).map(func(x): return Loc.t(String(Weapons.DEFS[x]["short"]))))), c0["lvl"]], false])
 	if s.has("req_mods"):
 		out0.append(["%s ×%d" % [" + ".join(PackedStringArray((s["req_mods"] as Array).map(func(x): return "«%s»" % Cards.MODULES[x]["title"]))), int(c0.get("mods", 1))], false])
 	if s.get("wingmen", false):
@@ -258,4 +258,4 @@ func _evo_rows(p: Player) -> Array:
 ## 3.2: условие связки навыка — главный (первый) тег навыка по порогам слотов + доводка I/II/III
 func _cond_text(sk: String) -> String:
 	var t: String = PlaneClasses.SKILL3[sk]["tags"][0]
-	return Loc.t("%s: %d очков + уровень навыка %d") % [Prog.tag_title(t), Cards.SLOT_COST[0]["main"], int(Cards.SLOT_COST[0].get("s3", 1))]
+	return Loc.t("%s: %d очков + уровень навыка %d") % [Loc.t(Prog.tag_title(t)), Cards.SLOT_COST[0]["main"], int(Cards.SLOT_COST[0].get("s3", 1))]
