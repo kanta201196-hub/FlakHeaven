@@ -485,6 +485,11 @@ func _battle_model(tex: Texture2D) -> PackedScene:
 
 
 var _bm_cache := {}
+## M-37 (Kanta 18.10): высота модели к её длине ближе к настоящей — при наклоне камеры 28–45° высокая модель
+## «встаёт» над землёй и кажется крупнее. Бункер Meshy вдвое выше настоящего укрытия с обваловкой (0,8 длины
+## против ~0,3), у РЛС антенна на мачте ~1 длины против ~0,8. Сжатие только по вертикали; у РЛС ось вращения
+## антенны вертикальная — сжатие её не перекашивает. ЗСУ и ЗРК в норме (подъём контейнеров ЗРК так не исказится).
+const MODEL_H := {"e_bunker": 0.6, "e_radar": 0.85}
 
 
 ## Для лога: (самолётов-моделей в бою, их треугольников всего)
@@ -521,6 +526,7 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 		if bm != null:
 			var inst: Node3D = bm.instantiate()
 			inst.scale = Vector3.ONE * float(tex.get_width())
+			inst.scale.y *= float(MODEL_H.get(tex.resource_path.get_file().get_basename(), 1.0))
 			root.add_child(inst)
 			for c in inst.find_children("*", "MeshInstance3D", true, false):
 				mi = c
