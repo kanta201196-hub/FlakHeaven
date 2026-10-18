@@ -377,6 +377,41 @@ def build_sea(out_dir):
             print('%-14s %.2f с  got %.1f dB' % (fn, len(y) / SR, H.punch_db(y.mean(1))))
 
 
+# Музыка боя и аса «рок» (выбор Kanta 18.10: бой — треки 1, 3, 5 из предложенных, ас — метал): один автор —
+# nene (OpenGameArt, CC0). Меню и итоги остаются из build_audio_hybrid.py (--only music), для них ищем другие варианты.
+# Трек: части подряд (вступление + петля, петля xN), громкость -16 LUFS, у треков боя затухание 3 с в конце.
+NENE = H.OGA
+MUSIC_ROCK = {
+    'music_battle_1': [('unchained_destiny_opening.wav', 1), ('unchained_destiny_loop.wav', 2)],
+    'music_battle_2': [('boss_battle_8_metal_opening.wav', 1), ('boss_battle_8_metal_loop.wav', 2)],
+    'music_battle_3': [('Short%20Theme%20V2.wav', 1)],
+    'music_boss': [('boss_battle_9_metal_opening.wav', 1), ('boss_battle_9_metal_loop.wav', 3)],
+}
+
+
+def build_music_rock(out_dir):
+    import urllib.parse, urllib.request
+    for f in glob.glob(os.path.join(out_dir, 'music_battle*.ogg')) + glob.glob(os.path.join(out_dir, 'music_boss*.ogg')):
+        os.remove(f)
+    os.makedirs(H.CACHE, exist_ok=True)
+    for name, parts in MUSIC_ROCK.items():
+        y = []
+        for fn, times in parts:
+            src = os.path.join(H.CACHE, 'nene_' + urllib.parse.unquote(fn).replace(' ', '_'))
+            if not os.path.exists(src):
+                urllib.request.urlretrieve(NENE + fn, src)
+            y += [load_st(src)] * times
+        y = np.concatenate(y)
+        if name.startswith('music_battle'):  # треки боя идут подряд, остальные зациклены — им затухание не нужно
+            fo = 3 * SR
+            y[-fo:] *= np.linspace(1, 0, fo)[:, None]
+        r = subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-',
+                            '-af', 'loudnorm=I=-16:TP=-1.5', '-ar', str(SR), '-c:a', 'libvorbis', '-q:a', '4',
+                            os.path.join(out_dir, name + '.ogg')], input=y.astype(np.float32).tobytes())
+        r.check_returncode()
+        print('%-14s %.0f с' % (name, len(y) / SR))
+
+
 def main():
     out_dir = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else H.AUDIO
     only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else None
@@ -385,6 +420,8 @@ def main():
         build_engine(out_dir)
     if only is None or 'ambient' in only:
         build_ambient(out_dir)
+    if only is not None and 'music_rock' in only:  # только по явной команде: заменяет музыку боя и аса
+        build_music_rock(out_dir)
     if only is None or 'sea' in only:
         build_sea(out_dir)
     for event, variants in LAYERS.items():

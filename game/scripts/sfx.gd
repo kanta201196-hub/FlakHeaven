@@ -360,6 +360,8 @@ func _ambient_on(on: bool) -> void:
 
 # ---------- Музыка ----------
 ## Файлы audio/music_menu.*, music_battle.*, music_boss.* (зацикливаются).
+## Треки боя (music_battle_1…5) не зацикливаются, а идут подряд в случайном порядке без повтора
+## подряд (18.10): за 15-минутный вылет слышно весь набор, а не одну петлю.
 ## Нет файла — тишина. Переключение плавное (кроссфейд 1,5 с).
 var _music: Array[AudioStreamPlayer] = []
 var _music_cur := 0
@@ -395,6 +397,7 @@ func _init_music() -> void:
 		a.volume_db = -80.0
 		a.bus = "Music"
 		a.process_mode = Node.PROCESS_MODE_ALWAYS
+		a.finished.connect(_music_next.bind(a))
 		add_child(a)
 		_music.append(a)
 	for t in ["menu", "battle", "boss", "result"]:
@@ -404,10 +407,11 @@ func _init_music() -> void:
 				var path := "res://audio/music_%s%s.%s" % [t, suffix, ext]
 				if ResourceLoader.exists(path):
 					var st = load(path)
+					var lp: bool = t != "battle"
 					if st is AudioStreamOggVorbis or st is AudioStreamMP3:
-						st.loop = true
+						st.loop = lp
 					elif st is AudioStreamWAV:
-						st.loop_mode = AudioStreamWAV.LOOP_FORWARD
+						st.loop_mode = AudioStreamWAV.LOOP_FORWARD if lp else AudioStreamWAV.LOOP_DISABLED
 						st.loop_end = int(st.get_length() * st.mix_rate)
 					found.append(st)
 		if not found.is_empty():
@@ -438,3 +442,14 @@ func music(track: String) -> void:
 		nw.volume_db = -60.0
 		nw.play()
 		tw.tween_property(nw, "volume_db", music_db(), 1.5)
+
+
+## Трек боя закончился — следующий, не тот же самый (если треков больше одного)
+func _music_next(a: AudioStreamPlayer) -> void:
+	if _music_track != "battle" or a != _music[_music_cur] or not _music_streams.has("battle"):
+		return
+	var list: Array = (_music_streams["battle"] as Array).filter(func(st): return st != a.stream)
+	if list.is_empty():
+		list = _music_streams["battle"]
+	a.stream = list.pick_random()
+	a.play()
