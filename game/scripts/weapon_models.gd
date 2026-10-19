@@ -200,10 +200,24 @@ static func weapon_model(weapon: String, t: int, evo := false) -> Mesh:
 	return _glb_mesh(file, 1.0, Color(), "glb_%s_%d" % [weapon, t])
 
 
-static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 1) -> Mesh:
+## part: "" — вся турель (бой), "body" — без люльки со стволами, "guns" — только они в своих осях (шарнир — 0)
+static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 1, part := "") -> Mesh:
+	var file := turret_file(cls, t, side, evo)
+	if file == "":
+		return null
+	var spec: Dictionary = TURRET_MODELS[cls]
+	var cols: Array = spec["body"]
+	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
+	var m := _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s%s" % [cls, file.get_file(), tint.to_html(), part], part)
+	if cls == "attacker" and side == "top" and m != null and part != "guns":
+		return _with_ring(m as ArrayMesh, float(spec["s"]), tint)
+	return m
+
+
+static func turret_file(cls: String, t := 1, side := "", evo := false) -> String:
 	var spec: Dictionary = TURRET_MODELS.get(cls, {})
 	if spec.is_empty():
-		return null
+		return ""
 	var file: String = spec["file"]
 	if side in ["tail", "cabin"] and spec.has(side):
 		file = spec[side]
@@ -211,14 +225,50 @@ static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 
 		file = spec["evo"]
 	if file.contains("%d"):
 		file = file % clampi(t, 1, 3)
-	if not ResourceLoader.exists(file):
+	return file if ResourceLoader.exists(file) else ""
+
+
+## Тест 3.5-s8 (анимация в ангаре): турель из make() делится на корпус и узел «guns» (люлька со стволами,
+## tools/blender/turret_twin.py / turret_light.py) с точкой вращения на цапфах — стволы качаются по углу места
+## (поворот вокруг локальной Z). Только для ангара; в бою турель остаётся одним мешем. null — узла нет.
+static func split_turret(wmi: MeshInstance3D, cls: String, t: int, side: String, evo := false, plvl := 1) -> Node3D:
+	var file := turret_file(cls, t, side, evo)   # кормовой шар «Кита» узла «guns» не имеет — качается целиком
+	if file == "":
 		return null
-	var cols: Array = spec["body"]
-	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
-	var m := _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s" % [cls, file.get_file(), tint.to_html()])
-	if cls == "attacker" and side == "top" and m != null:
-		return _with_ring(m as ArrayMesh, float(spec["s"]), tint)
-	return m
+	var piv: Vector3 = _guns_pivot.get(file, Vector3.INF)
+	if not _guns_pivot.has(file):
+		var root: Node = (load(file) as PackedScene).instantiate()
+		var g := root.find_child("guns", true, false) as Node3D
+		if g != null:
+			piv = _rel_xf(g, root).origin * float(TURRET_MODELS[cls]["s"])
+		root.free()
+		_guns_pivot[file] = piv
+	if piv == Vector3.INF:
+		return null
+	var body := turret_model(cls, t, side, evo, plvl, "body")
+	var guns := turret_model(cls, t, side, evo, plvl, "guns")
+	if body == null or guns == null:
+		return null
+	wmi.mesh = body
+	var gmi := MeshInstance3D.new()
+	gmi.name = "guns"
+	gmi.mesh = guns
+	gmi.position = piv
+	wmi.add_child(gmi)
+	return gmi
+
+
+static var _guns_pivot := {}
+
+
+static func _rel_xf(n: Node3D, root: Node) -> Transform3D:
+	var xf := n.transform
+	var p := n.get_parent()
+	while p != null and p != root:
+		if p is Node3D:
+			xf = (p as Node3D).transform * xf
+		p = p.get_parent()
+	return xf
 
 
 ## Т-2 (каталог: «погон под турель» у «Грача»): кольцевое основание верхней установки — пояс в цвет корпуса
@@ -259,7 +309,8 @@ static func _with_ring(src: ArrayMesh, s: float, tint: Color) -> ArrayMesh:
 
 
 ## Меш из GLB: все части в один ArrayMesh с масштабом s; материалы «body» перекрашиваются в tint
-static func _glb_mesh(file: String, s: float, tint: Color, key: String) -> Mesh:
+## part (турели, тест 3.5-s8): "" — корпус и узел «guns» вместе, "body" — без него, "guns" — только он, в своих осях
+static func _glb_mesh(file: String, s: float, tint: Color, key: String, part := "") -> Mesh:
 	if _cache.has(key):
 		return _cache[key]
 	var root: Node = (load(file) as PackedScene).instantiate()
@@ -270,14 +321,39 @@ static func _glb_mesh(file: String, s: float, tint: Color, key: String) -> Mesh:
 	if src == null:
 		root.free()
 		return null
-	var xf := Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3.ZERO) * src.transform
+	var srcs: Array = []   # [меш, преобразование в оси модели]
+	var guns := root.find_child("guns", true, false) as MeshInstance3D
+	var sc := Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3.ZERO)
+	if part != "guns":
+		srcs.append([src.mesh, sc * _rel_xf(src, root)])
+	if guns != null and guns != src and part != "body":
+		var gx := _rel_xf(guns, root)
+		if part == "guns":
+			gx.origin = Vector3.ZERO
+		srcs.append([guns.mesh, sc * gx])
+	if srcs.is_empty():
+		root.free()
+		return null
+	# по поверхности на материал (корпус и стволы одного материала — одна поверхность, как было до деления)
+	var sts := {}
+	var mats := {}
+	var order: Array = []
+	for sm: Array in srcs:
+		var me: Mesh = sm[0]
+		for si in me.get_surface_count():
+			var m: Material = me.surface_get_material(si)
+			var mk := String(m.resource_name) if m != null else "_%d" % si
+			if not sts.has(mk):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				sts[mk] = st
+				mats[mk] = m
+				order.append(mk)
+			(sts[mk] as SurfaceTool).append_from(me, si, sm[1])
 	var am := ArrayMesh.new()
-	for si in src.mesh.get_surface_count():
-		var st := SurfaceTool.new()
-		st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		st.append_from(src.mesh, si, xf)
-		st.commit(am)
-		var m: Material = src.mesh.surface_get_material(si)
+	for mk: String in order:
+		(sts[mk] as SurfaceTool).commit(am)
+		var m: Material = mats[mk]
 		if tint != Color() and m is StandardMaterial3D and String(m.resource_name).contains("body"):
 			m = (m as StandardMaterial3D).duplicate()
 			(m as StandardMaterial3D).albedo_color = tint
