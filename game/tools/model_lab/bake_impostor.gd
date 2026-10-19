@@ -4,6 +4,7 @@ extends SceneTree
 ## две скрещённые «карточки» с видом сбоку и одна горизонтальная с видом сверху (BiomeProps).
 ##   xvfb-run godot --path game --rendering-driver opengl3 -s res://tools/model_lab/bake_impostor.gd
 ## Результат — game/models/biome/<имя>_side.png и <имя>_top.png (256 × 256).
+## Только некоторые модели: ... -s res://tools/model_lab/bake_impostor.gd -- b05_orchard_tree
 
 const MODELS := ["b04_poplar", "b05_orchard_tree"]
 const SIZE := 256
@@ -38,7 +39,10 @@ func _initialize() -> void:
 	_cam = Camera3D.new()
 	_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	_vp.add_child(_cam)
+	var only := Array(OS.get_cmdline_user_args())
 	for name in MODELS:
+		if not only.is_empty() and not only.has(name):
+			continue
 		_queue.append([name, "side"])
 		_queue.append([name, "top"])
 
