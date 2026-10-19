@@ -40,10 +40,12 @@ li{margin:6px 0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
 .small{color:var(--muted);font-size:14px}
 footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px}
-footer a,.card a{color:var(--accent)}
+footer a,.card a,section a{color:var(--accent)}
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:28px}
 .shots img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;background:var(--panel)}
 .shots img.wide{grid-column:1/-1}
+#tester-frame{width:100%;height:1150px;border:0;border-radius:10px;background:#fff;display:block;margin-top:12px}
+button.btn{font:inherit;cursor:pointer}
 @media (max-width:520px){.shots{grid-template-columns:1fr}}
 [data-l]{display:none}
 html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
@@ -103,6 +105,14 @@ html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
   <p>The game is in development. Steam Early Access is planned for spring 2027. Closed tests for Windows and Mac are running now.</p>
 </section>
 
+<section id="tester" hidden>
+  <h2 data-l="ru">Заявка тестера</h2><h2 data-l="en">Tester sign-up</h2>
+  <p data-l="ru">Тестовые сборки для Windows и Mac: 30–60 минут, 3–5 вылетов и честный отзыв. Форма работает на Яндекс Формах, ответы хранятся в России. Когда форма открыта, Яндекс может ставить свои куки (<a href="privacy.html">подробнее</a>).</p>
+  <p data-l="en">Test builds for Windows and Mac: 30–60 minutes, 3–5 sorties and honest feedback. The form runs on Yandex Forms; answers are stored in Russia. Once opened, Yandex may set its own cookies (<a href="privacy.html">details</a>).</p>
+  <div id="tester-box"><button class="btn main" id="tester-open" type="button"><span data-l="ru">Открыть форму заявки</span><span data-l="en">Open the sign-up form</span></button>
+  <p class="small"><a id="tester-direct" href="#"><span data-l="ru">или открыть форму в новой вкладке</span><span data-l="en">or open the form in a new tab</span></a></p></div>
+</section>
+
 <section>
   <h2 data-l="ru">Тестерам: это безопасно</h2><h2 data-l="en">For testers: it is safe</h2>
   <div class="card">
@@ -125,6 +135,12 @@ html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
 /* Ссылки: впишите адрес — кнопка появится. Пока адрес пустой, кнопка скрыта. */
 var LINKS={steam:"",tester:"https://forms.yandex.ru/u/6ad66df2c45c0770823c7c1e/",tg:"https://t.me/FlakHeaven",vk:"",discord:""};
 Object.keys(LINKS).forEach(function(k){var a=document.getElementById("l-"+k);if(a&&LINKS[k]){a.href=LINKS[k];a.hidden=false;}});
+/* Заявка тестера: форма встраивается на страницу только по нажатию — до этого сайт не грузит чужих скриптов и куки. */
+if(LINKS.tester){document.getElementById("tester").hidden=false;document.getElementById("l-tester").href="#tester";
+  document.getElementById("tester-direct").href=LINKS.tester;
+  document.getElementById("tester-open").onclick=function(){var f=document.createElement("iframe");f.id="tester-frame";
+    f.src=LINKS.tester+(LINKS.tester.indexOf("?")<0?"?":"&")+"iframe=1";f.title="Flak Heaven — заявка тестера";
+    var b=document.getElementById("tester-box");b.replaceWith(f);};}
 function setLang(l){document.documentElement.lang=l;
   document.getElementById("b-ru").setAttribute("aria-pressed",l==="ru");
   document.getElementById("b-en").setAttribute("aria-pressed",l==="en");
