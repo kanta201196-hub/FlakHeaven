@@ -27,8 +27,9 @@ window/stretch/aspect="expand"
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://locale/en.po")
+locale/translations=PackedStringArray("res://locale/en.po", "res://locale/zh_CN.po")
 locale/fallback="ru"
+locale/include_text_server_data=true
 
 [rendering]
 

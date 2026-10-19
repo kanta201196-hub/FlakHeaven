@@ -668,8 +668,13 @@ func _wrap(s: String, width: float, fsize: int) -> PackedStringArray:
 	var out := PackedStringArray()
 	var font := Hud.ui_font()
 	var cur := ""
-	for word in s.split(" "):
-		var t := word if cur == "" else cur + " " + word
+	# L-05: в китайском пробелов нет — переносим между иероглифами
+	var sep := "" if TranslationServer.get_locale().begins_with("zh") else " "
+	var words: Array = _CJK_TOKEN.search_all(s).map(func(m): return m.get_string().strip_edges()) if sep == "" else Array(s.split(" "))
+	for word in words:
+		if word == "":
+			continue
+		var t: String = word if cur == "" else cur + sep + word
 		if font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x > width and cur != "":
 			out.append(cur)
 			cur = word
@@ -678,3 +683,7 @@ func _wrap(s: String, width: float, fsize: int) -> PackedStringArray:
 	if cur != "":
 		out.append(cur)
 	return out
+
+
+## Слово для переноса в китайском: один иероглиф со знаком препинания после него или латинское слово с пробелом
+static var _CJK_TOKEN := RegEx.create_from_string("[\\x{2E80}-\\x{9FFF}\\x{F900}-\\x{FAFF}][\\x{3000}-\\x{303F}\\x{FF00}-\\x{FF65}”’）]*|[^\\x{2E80}-\\x{9FFF}\\x{F900}-\\x{FAFF}]+?(?= |[\\x{2E80}-\\x{9FFF}]|$) ?")

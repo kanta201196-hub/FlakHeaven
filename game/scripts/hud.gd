@@ -30,6 +30,18 @@ static func ui_font() -> Font:
 ## U-09: шрифт интерфейса по настройке (Settings.font): встроенные PT Sans / Inter / Exo 2 или системный.
 ## Встроенные одинаково выглядят на Windows и Mac; лицензии — game/fonts/README.md.
 static func make_font(bold: bool) -> Font:
+	var f := _base_font(bold)
+	f.fallbacks = [_cjk_font()]
+	return f
+
+
+## L-05: иероглифы берутся из урезанного Noto Sans SC (tools/i18n/subset_font.py), если в основном шрифте их нет.
+## Подключён всегда: название «简体中文» в меню видно и на русском
+static func _cjk_font() -> Font:
+	return load("res://fonts/noto_sans_sc_subset.ttf")
+
+
+static func _base_font(bold: bool) -> Font:
 	match Settings.font:
 		0:
 			return load("res://fonts/pt_sans_bold.ttf" if bold else "res://fonts/pt_sans_regular.ttf")
