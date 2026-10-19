@@ -608,7 +608,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			if r > 0:
 				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(0.15 * (k - 1.0))
 			if g2.weapon == PlaneClasses.signature(p.cls_id):
-				card["desc"] += "\n★ Особенность класса: урон +20%"
+				card["desc"] += Loc.t("\n★ Особенность класса: урон +20%")
 			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s, с %d:%02d") % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":

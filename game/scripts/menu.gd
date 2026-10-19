@@ -450,7 +450,7 @@ func _settings(size: Vector2) -> void:
 			y = _section(x, y, w2, "Игра")
 			y = _check(x, y, w2, "Показывать цифры урона (F3)", Tuning.g("damage_numbers") > 0.5, "damage_numbers")
 			y = _check(x, y, w2, "Скрыть интерфейс в полёте", Settings.hide_hud, "hide_hud")
-			y = _opt(x, y, w2, "Схема управления", Hud.SCHEMES[int(Tuning.g("scheme"))], "scheme")
+			y = _opt(x, y, w2, "Схема управления", Loc.t(Hud.SCHEMES[int(Tuning.g("scheme"))]), "scheme")
 			y = _opt(x, y, w2, "Язык", Settings.lang_name(), "lang")
 			y = _opt(x, y, w2, "Шрифт интерфейса", Settings.FONTS[Settings.font], "font")
 			y = _section(x, y + 10, w2, "Камера и масштаб")
@@ -476,7 +476,7 @@ func _settings(size: Vector2) -> void:
 			var fl: int = Settings.FPS_LIMITS[Settings.fps_limit]
 			y = _opt(x, y, w2, "Ограничение кадров", "без ограничения" if fl == 0 else "%d к/с" % fl, "fps_limit")
 			y = _section(x, y + 10, w2, "Картинка")
-			y = _opt(x, y, w2, "Качество графики", Settings.GFX[Settings.gfx] + (Loc.t(" (авто)") if Settings.gfx_auto else ""), "gfx")
+			y = _opt(x, y, w2, "Качество графики", Loc.t(Settings.GFX[Settings.gfx]) + (Loc.t(" (авто)") if Settings.gfx_auto else ""), "gfx")
 			y = _check(x, y, w2, "Объёмная 3D-картинка (выкл. — старая 2D)", Tuning.g("render3d") > 0.5, "render3d")
 			y = _check(x, y, w2, "Спрайты (выкл. — схематичные фигуры, F4)", Tuning.g("sprites") > 0.5, "sprites")
 			y = _check(x, y, w2, "Круги дальности оружия (пунктир)", Tuning.g("range_rings") > 0.5, "range_rings")
