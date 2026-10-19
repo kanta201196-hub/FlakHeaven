@@ -61,6 +61,13 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	var vr := Rect2(lx + 8, area.position.y + 8, lw - 16, 330)
 	ctrl.draw_texture_rect(h3.show_plane(c, vr), vr, false)
 	_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
+	# тест 3.5-s8: показ механизации — закрылки и предкрылки, створки отсека, турели (Hangar3D / HangarAnim)
+	var mr := Rect2(vr.end.x - 196, vr.position.y + 8, 188, 30)
+	var mon := h3.mech_demo
+	ctrl.draw_rect(mr, Menu.C_AMBER if mon else Color(0, 0, 0, 0.45))
+	ctrl.draw_rect(mr, Menu.C_AMBER, false, 1.0)
+	_text(Vector2(mr.position.x, mr.position.y + 21), ("■ " if mon else "▶ ") + Loc.t("Механизация"), 15, Color(0.08, 0.07, 0.05) if mon else Color(0.95, 0.9, 0.75), HORIZONTAL_ALIGNMENT_CENTER, mr.size.x)
+	h3.mech_rect = mr
 	h3.lvl_rects.clear()
 	for lv in [1, 2]:
 		var br := Rect2(lx + 24 + (lv - 1) * 150, area.position.y + 348, 140, 36)
@@ -111,6 +118,8 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		var lv2 := Profile.node(c, id)
 		var r := Rect2(rx, yy, rw, 92)
 		_panel(r, false)
+		if id == "wing" and r.has_point(ctrl.get_local_mouse_position()):
+			h3.mech_hover = true   # тест 3.5-s8: курсор на «Крыле» — на модели идёт показ механизации
 		_text(Vector2(rx + 20, yy + 30), Loc.t(String(nd["title"])), 20, Color.WHITE)
 		for i in 5:
 			ctrl.draw_rect(Rect2(rx + 200 + i * 30, yy + 16, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))

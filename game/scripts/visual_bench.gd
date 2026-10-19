@@ -351,6 +351,7 @@ func _save(name: String) -> void:
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)])
+	print("VISUAL %s nodes=%d" % [name, m.get_tree().get_node_count()])
 	if Render3D.I != null and Render3D.I.terrain != null:   # Р-13: заглушки рельефа сейчас и кадров с ними с начала
 		print("VISUAL %s terrain lods=%d lod_frames=%d" % [name, Render3D.I.terrain._lods.size(), Render3D.I.terrain.lod_frames])
 	if Render3D.I != null:   # облака: сколько вызовов и экземпляров (плоские — по облаку на вызов; клубы — один MultiMesh)
@@ -383,6 +384,7 @@ func _make_points() -> Array:
 	var bg := m.background
 	var found := {}
 	var empty := Vector2.INF
+	var cnt := {}   # 3.5-s8: сколько объектов каждого вида на 29 × 29 клеток (кишлаков стало меньше?)
 	var near_river := {}   # тест 3.5-s4 (п. 16): поселения ближе всех к реке (кромка у воды): имя → [зазор, объект]
 	var ter: Terrain3D = Render3D.I.terrain if Render3D.I != null else null
 	for r in range(0, 14):
@@ -397,10 +399,12 @@ func _make_points() -> Array:
 				else:
 					if not found.has(o["name"]):
 						found[o["name"]] = o["pos"]
+					cnt[o["name"]] = int(cnt.get(o["name"], 0)) + 1
 					if ter != null and o["name"] in Terrain3D.SETTLE:
 						var gap := absf(ter.river_field(o["pos"].x, o["pos"].y)) - float(o["size"]) * 0.5
 						if gap < float(near_river.get(o["name"], [INF])[0]):
 							near_river[o["name"]] = [gap, o]
+	print("VISUAL objects ", cnt)
 	if empty == Vector2.INF:
 		empty = Vector2.ZERO
 	var pts := [{"name": "desert", "pos": empty}]
@@ -433,6 +437,15 @@ func _make_points() -> Array:
 		pts.append({"name": "aa_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.3, "convoy": true, "enemies": true, "ground": true, "site_off": Vector2(-380, -40), "wait": 2.5})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
+	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
+		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
+		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
+		pts.append({"name": "village_close", "pos": found["o_village"] + Vector2(0, 600), "zoom": 2.4})
+		for vr in 4:
+			AdobeBuild._vcache.erase("village%d" % vr)
+			var t0 := Time.get_ticks_usec()
+			var vm := AdobeBuild.village(vr)
+			print("VISUAL village%d mesh tris=%d build=%d ms %s" % [vr, vm.surface_get_array_len(0) / 3, (Time.get_ticks_usec() - t0) / 1000, AdobeBuild._vcache.get("village%d_stats" % vr, {})])
 	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
 	if ter != null:
 		var got := {}
@@ -606,6 +619,17 @@ var _hclose: Array = ([
 ] if OS.get_cmdline_user_args().has("--hangarclose") else [])
 
 
+## Тест 3.5-s8 (--mechanim): ракурсы показа механизации [фокус, рысканье, тангаж, дальность] по классам
+const MECH_FRAMES := 8
+const MECH_DT := 0.75   # с между кадрами: 8 кадров = полный цикл HangarAnim (6 с)
+const _MECH_VIEWS := {
+	# сзади сбоку чуть сверху: закрылки уходят вниз за заднюю кромку — сверху их не видно
+	"fighter": [[Vector3(-0.1, -0.01, 0.0), 2.8, 0.16, 1.0]],
+	"attacker": [[Vector3(-0.08, 0.0, 0.0), 2.75, 0.22, 1.05]],
+	"bomber": [[Vector3(-0.08, 0.0, 0.0), 2.75, 0.2, 1.1], [Vector3(0.0, -0.03, 0.0), 2.0, -0.6, 1.0]],
+}
+
+
 func _hangar_bench() -> void:
 	if _t < 1.5:
 		return
@@ -621,6 +645,16 @@ func _hangar_bench() -> void:
 					["bomber", 1, 1, 1], ["bomber", 1, 2, 1], ["bomber", 1, 3, 1], ["bomber", 1, 4, 1], ["bomber", 2, 3, 1],
 					["bomber", 1, 1, 0], ["bomber", 1, 2, 0], ["bomber", 2, 3, 0]]:
 				_hq.append(q)
+			_t = 0.0
+			return
+		if OS.get_cmdline_user_args().has("--mechanim"):
+			# тест 3.5-s8: показ механизации — кадры анимации подряд (MECH_FRAMES через MECH_DT с) по ракурсам _MECH_VIEWS
+			for c in PlaneClasses.LIST:
+				for vi in (_MECH_VIEWS[c] as Array).size():
+					if OS.get_cmdline_user_args().has("--mechview=%d" % (1 - vi)):   # только один ракурс
+						continue
+					for f in MECH_FRAMES:
+						_hq.append([c, 1, 3 if c == "bomber" else 1, "M", f, vi])
 			_t = 0.0
 			return
 		if OS.get_cmdline_user_args().has("--hangarweaptab"):
@@ -715,7 +749,17 @@ func _hangar_bench() -> void:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
 		Hangar3D.I.weapon_tier = cur[2]
-		if cur.size() > 4:   # --liveries: окраска из очереди (в профиль без сохранения)
+		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "M":   # --mechanim
+			var mv: Array = _MECH_VIEWS[cur[0]][cur[5]]
+			Hangar3D.I.mech_demo = true
+			Hangar3D.anim_time = float(cur[4]) * MECH_DT
+			Hangar3D.bench_pitch_min = -0.9
+			Hangar3D.I.focus = mv[0]
+			Hangar3D.I._yaw = mv[1]
+			Hangar3D.I._pitch = mv[2]
+			Hangar3D.I._dist = mv[3]
+			Hangar3D.I._idle = 0.0
+		elif cur.size() > 4:   # --liveries: окраска из очереди (в профиль без сохранения)
 			Profile.cls(cur[0])["livery"] = cur[4]
 			if cur.size() > 5:   # --hangarclose: [фокус, рысканье, тангаж, дальность]
 				var hv: Array = _hclose[cur[5]]
@@ -760,8 +804,14 @@ func _hangar_bench() -> void:
 			Hangar3D.I._pitch = 1.45
 			Hangar3D.I._idle = 0.0
 	_hf += 1
-	if _hf > 8 and _t > 1.2:   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
-		if cur.size() > 5:
+	var mech_next: bool = cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and int(cur[4]) > 0   # модель уже собрана
+	if (_hf > 8 and _t > 1.2 and (cur.size() < 6 or typeof(cur[3]) != TYPE_STRING or _hf > 14)) or (mech_next and _hf > 2):   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
+		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING:
+			# только сам вид ангара (SubViewport, с запасом по разрешению) — для серии кадров и GIF
+			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_mech_%s_v%d_f%02d.png" % [cur[0], cur[5], cur[4]])
+			if int(cur[4]) == 0 and cur[5] == 0:
+				_save("mech_%s_screen" % cur[0])
+		elif cur.size() > 5:
 			_save("hangar_close_%s_%d_%s_v%d" % [cur[0], cur[1], cur[4], cur[5]])
 		elif cur.size() > 4:
 			_save("hangar_livery_%s_%d_%s" % [cur[0], cur[1], cur[4]])

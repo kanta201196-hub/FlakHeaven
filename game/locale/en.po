@@ -6118,3 +6118,6 @@ msgstr "ace guns"
 #: game/scripts/projectiles.gd
 msgid "крупный калибр"
 msgstr "heavy guns"
+
+msgid "Механизация"
+msgstr "Moving parts"
