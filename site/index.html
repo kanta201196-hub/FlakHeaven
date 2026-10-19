@@ -44,7 +44,16 @@ footer a,.card a,section a{color:var(--accent)}
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:28px}
 .shots img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;background:var(--panel)}
 .shots img.wide{grid-column:1/-1}
-#tester-frame{width:100%;height:1150px;border:0;border-radius:10px;background:#fff;display:block;margin-top:12px}
+.join{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 20px;margin-top:12px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 18px;padding:0;list-style:none;counter-reset:st}
+.steps li{margin:0;padding:12px 12px 12px 46px;position:relative;border:1px solid var(--line);border-radius:10px;font-size:15px;line-height:1.4;counter-increment:st}
+.steps li::before{content:counter(st);position:absolute;left:12px;top:11px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#1a1100;font-weight:700;font-size:14px;display:grid;place-items:center}
+@media (max-width:620px){.steps{grid-template-columns:1fr}.join{padding:14px 12px}}
+.join-cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px}
+.join-cta .btn{font-size:18px;padding:13px 22px}
+.formwrap{background:#fff;border-radius:12px;overflow:hidden;position:relative;min-height:420px}
+.formwrap .loading{position:absolute;inset:0;display:grid;place-items:center;color:#56626f;font-size:15px}
+#tester-frame{width:100%;height:1300px;border:0;display:block;position:relative;transition:height .2s}
 button.btn{font:inherit;cursor:pointer}
 @media (max-width:520px){.shots{grid-template-columns:1fr}}
 [data-l]{display:none}
@@ -106,11 +115,23 @@ html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
 </section>
 
 <section id="tester" hidden>
-  <h2 data-l="ru">Заявка тестера</h2><h2 data-l="en">Tester sign-up</h2>
-  <p data-l="ru">Тестовые сборки для Windows и Mac: 30–60 минут, 3–5 вылетов и честный отзыв. Форма работает на Яндекс Формах, ответы хранятся в России. Когда форма открыта, Яндекс может ставить свои куки (<a href="privacy.html">подробнее</a>).</p>
-  <p data-l="en">Test builds for Windows and Mac: 30–60 minutes, 3–5 sorties and honest feedback. The form runs on Yandex Forms; answers are stored in Russia. Once opened, Yandex may set its own cookies (<a href="privacy.html">details</a>).</p>
-  <div id="tester-box"><button class="btn main" id="tester-open" type="button"><span data-l="ru">Открыть форму заявки</span><span data-l="en">Open the sign-up form</span></button>
-  <p class="small"><a id="tester-direct" href="#"><span data-l="ru">или открыть форму в новой вкладке</span><span data-l="en">or open the form in a new tab</span></a></p></div>
+  <h2 data-l="ru">Стать тестером</h2><h2 data-l="en">Become a tester</h2>
+  <div class="join">
+    <ol class="steps" data-l="ru">
+      <li>Оставьте заявку: ник и контакт, пара вопросов о вашем ПК. Это 1–2 минуты.</li>
+      <li>Мы пришлём сборку для Windows или Mac в Telegram или на почту.</li>
+      <li>Сыграйте 3–5 вылетов и отправьте отчёт кнопкой прямо в игре.</li>
+    </ol>
+    <ol class="steps" data-l="en">
+      <li>Sign up: a nickname, a contact and a couple of questions about your PC. 1–2 minutes.</li>
+      <li>We send you a Windows or Mac build via Telegram or email.</li>
+      <li>Play 3–5 sorties and send a report with the in-game button.</li>
+    </ol>
+    <div id="tester-box" class="join-cta">
+      <button class="btn main" id="tester-open" type="button"><span data-l="ru">Заполнить заявку</span><span data-l="en">Fill in the form</span></button>
+      <span class="small"><span data-l="ru">Форма Яндекса откроется здесь, ответы хранятся в России. Яндекс может ставить свои куки (<a href="privacy.html">подробнее</a>). Не открывается? <a class="tester-direct" href="#">Открыть в новой вкладке</a>.</span><span data-l="en">The Yandex form opens right here; answers are stored in Russia. Yandex may set its own cookies (<a href="privacy.html">details</a>). Not loading? <a class="tester-direct" href="#">Open in a new tab</a>.</span></span>
+    </div>
+  </div>
 </section>
 
 <section>
@@ -136,11 +157,28 @@ html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
 var LINKS={steam:"",tester:"https://forms.yandex.ru/u/6ad66df2c45c0770823c7c1e/",tg:"https://t.me/FlakHeaven",vk:"",discord:""};
 Object.keys(LINKS).forEach(function(k){var a=document.getElementById("l-"+k);if(a&&LINKS[k]){a.href=LINKS[k];a.hidden=false;}});
 /* Заявка тестера: форма встраивается на страницу только по нажатию — до этого сайт не грузит чужих скриптов и куки. */
-if(LINKS.tester){document.getElementById("tester").hidden=false;document.getElementById("l-tester").href="#tester";
-  document.getElementById("tester-direct").href=LINKS.tester;
-  document.getElementById("tester-open").onclick=function(){var f=document.createElement("iframe");f.id="tester-frame";
-    f.src=LINKS.tester+(LINKS.tester.indexOf("?")<0?"?":"&")+"iframe=1";f.title="Flak Heaven — заявка тестера";
-    var b=document.getElementById("tester-box");b.replaceWith(f);};}
+if(LINKS.tester){
+  var T=document.getElementById("tester"),FID=(LINKS.tester.match(/\/u\/([0-9a-f]+)/)||[])[1]||"";
+  T.hidden=false;
+  document.querySelectorAll(".tester-direct").forEach(function(a){a.href=LINKS.tester;a.target="_blank";a.rel="noopener";});
+  var openForm=function(){
+    if(document.getElementById("tester-frame"))return;
+    var w=document.createElement("div");w.className="formwrap";
+    var l=document.createElement("div");l.className="loading";
+    l.textContent=document.documentElement.lang==="en"?"Loading the form…":"Загружаем форму…";
+    var f=document.createElement("iframe");f.id="tester-frame";f.name="ya-form-"+FID;
+    f.src=LINKS.tester+(LINKS.tester.indexOf("?")<0?"?":"&")+"iframe=1";
+    f.title="Flak Heaven — заявка тестера";f.onload=function(){l.remove();};
+    w.appendChild(l);w.appendChild(f);document.getElementById("tester-box").replaceWith(w);};
+  /* Высота формы: Яндекс Формы сообщают её через postMessage {"iframe-height": N}. */
+  window.addEventListener("message",function(e){
+    if(e.origin!=="https://forms.yandex.ru")return;
+    try{var d=JSON.parse(e.data),h=d["iframe-height"],f=document.getElementById("tester-frame");
+      if(f&&h>300){f.style.height=h+"px";}}catch(err){}});
+  document.getElementById("tester-open").onclick=openForm;
+  var top=document.getElementById("l-tester");top.href="#tester";
+  top.onclick=function(e){e.preventDefault();openForm();T.scrollIntoView({behavior:"smooth"});};
+}
 function setLang(l){document.documentElement.lang=l;
   document.getElementById("b-ru").setAttribute("aria-pressed",l==="ru");
   document.getElementById("b-en").setAttribute("aria-pressed",l==="en");
