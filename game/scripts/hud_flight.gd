@@ -122,7 +122,7 @@ func _left_panel(m: Main, p: Player) -> void:
 	sk.append(["Форсаж", "Shift", p.ab_cd, p.ab_t])
 	sk.append(["Нырок", "V", p.dive_cd, p.dive_t])
 	var s3: Dictionary = p.s3_def()
-	sk.append(["%s %s" % [s3["title"], Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active()])
+	sk.append(["%s %s" % [Loc.t(s3["title"]), Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active()])
 	if p.skill_b != "":
 		sk.append([PlaneClasses.SKILL3[p.skill_b]["title"], "F", p.sb_cd, p.s3_active(p.skill_b)])
 	for i in sk.size():

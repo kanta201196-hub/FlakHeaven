@@ -630,6 +630,11 @@ func _run_autotest(delta: float) -> void:
 		Input.action_release("fire")
 	if m._args.has("--shots") and m.run_time < Tuning.g("boss_every") - 20.0 and m.run_time > 110.0:
 		m.run_time = Tuning.g("boss_every") - 20.0
+	# съёмка клипов для канала: --skip=N перематывает время вылета к секунде N один раз (например, к боссу)
+	for a in m._args:
+		if String(a).begins_with("--skip=") and not _shots_done.has("skip") and m.run_time > 3.0:
+			_shots_done["skip"] = true
+			m.run_time = maxf(m.run_time, float(String(a).substr(7)))
 
 
 func _tap(action: String, on: bool) -> void:

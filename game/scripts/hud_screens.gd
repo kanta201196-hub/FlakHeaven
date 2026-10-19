@@ -64,7 +64,7 @@ func class_select(size: Vector2) -> void:
 		for wid in d["weapons"]:
 			wl.append(Loc.t(String(Weapons.DEFS[wid]["short"])) + (" ★" if wid == d["signature"] else ""))
 		y += _para(Vector2(x + 12, y), Loc.t("• Оружие: %s") % ", ".join(wl).to_lower(), w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
-		y += _para(Vector2(x + 12, y), Loc.t("★ Особенность класса: «%s» +20%% урона") % Weapons.DEFS[d["signature"]]["short"], w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
+		y += _para(Vector2(x + 12, y), Loc.t("★ Особенность класса: «%s» +20%% урона") % Loc.t(Weapons.DEFS[d["signature"]]["short"]), w - 56.0, 15, Color(0.6, 1.0, 0.65)) + 4.0
 		y += _para(Vector2(x + 12, y), Loc.t("★ На ур. 5 особенности — мастерство %s") % Loc.t(PlaneClasses.MASTERY[id]["title"]), w - 56.0, 15, Color(1.0, 0.92, 0.65)) + 12.0
 		# 3.1: выбор навыка класса (3 варианта)
 		_text(Vector2(x, y), "Навык класса [E] — выберите:", 18, Color(0.7, 1.0, 0.7))
@@ -102,7 +102,7 @@ func class_select(size: Vector2) -> void:
 				ctrl.draw_texture(t, -t.get_size() / 2.0)
 				ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 				_text(Vector2(c.x - 130.0, r.end.y - 14.0), "ур. %d%s" % [lv, (" ✓ в вылет" if Profile.plane_lvl(id) == lv else "") if Profile.plane2(id) else ("" if lv == 1 else " (в ангаре)")], 15, Color(0.7, 0.75, 0.85), HORIZONTAL_ALIGNMENT_CENTER, 260.0)
-	_ctext(932, Loc.t("Управление: %s   [F2 — сменить]") % Hud.SCHEMES[int(Tuning.g("scheme"))], 20, Color(0.75, 0.85, 1.0))
+	_ctext(932, Loc.t("Управление: %s   [F2 — сменить]") % Loc.t(Hud.SCHEMES[int(Tuning.g("scheme"))]), 20, Color(0.75, 0.85, 1.0))
 	_ctext(964, "Опыт с врагов подбирается сам рядом с самолётом. Каждые 5 минут — ас (мини-босс), после него — окно эвакуации.", 18, Color(0.8, 0.85, 0.9))
 	_ctext(992, "Угрозы: дроны — держат дистанцию и бьют парой пуль (мигают жёлтым) · перехватчики — заходы с очередью · ракетоносцы — ракеты после красной линии", 18, Color(0.95, 0.75, 0.75))
 	_ctext(1020, "Мышь — куда лететь · W/S — газ (держаться за целью) · сядь врагу на хвост — пушка +50% · пролёт на волоске перезаряжает навыки · серия сбитий — больше опыта", 18, Color(0.7, 0.95, 1.0))
