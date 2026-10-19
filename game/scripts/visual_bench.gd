@@ -592,6 +592,8 @@ func _hangar_bench() -> void:
 			# тест 3.5-s8: показ механизации — кадры анимации подряд (MECH_FRAMES через MECH_DT с) по ракурсам _MECH_VIEWS
 			for c in PlaneClasses.LIST:
 				for vi in (_MECH_VIEWS[c] as Array).size():
+					if OS.get_cmdline_user_args().has("--mechview=%d" % (1 - vi)):   # только один ракурс
+						continue
 					for f in MECH_FRAMES:
 						_hq.append([c, 1, 3 if c == "bomber" else 1, "M", f, vi])
 			_t = 0.0

@@ -28,7 +28,7 @@ const DEMO_MECH := 1.6       # в показе ход больше боевог�
 ## Подвижные части текущей модели под pivot ангара. Турели — узлы с метой "turret" ([класс, ступень, сторона,
 ## эволюция, ур. самолёта]); при первом проходе делятся на корпус и узел «guns» (WeaponModels.split_turret)
 static func collect(root: Node3D) -> Dictionary:
-	var d := {"mech": null, "bay": null, "turrets": [], "k": 0.0}
+	var d := {"mech": null, "bay": null, "turrets": [], "load": [], "k": 0.0}
 	for c in root.find_children("*", "Node3D", true, false):
 		var n := c as Node3D
 		if n.is_queued_for_deletion():
@@ -37,6 +37,8 @@ static func collect(root: Node3D) -> Dictionary:
 			d["mech"] = n
 		elif n.name == "bay_doors" and d["bay"] == null:
 			d["bay"] = n
+		elif n.has_meta("bay_load"):
+			d["load"].append(n)
 		elif n.has_meta("turret") and n is MeshInstance3D:
 			var info: Array = n.get_meta("turret")
 			var guns: Node3D = null
@@ -62,7 +64,12 @@ static func step(d: Dictionary, t: float, demo: bool, delta: float) -> void:
 		WingMech.pose(mech, ks * DEMO_MECH * mech_phase(t))
 	var bay: Node3D = d["bay"]
 	if bay != null and is_instance_valid(bay):
-		WingMech.pose_bay(bay, lerpf(1.0, 1.0 - mech_phase(t + MECH_PERIOD * 0.5), ks))
+		var bt := lerpf(1.0, 1.0 - mech_phase(t + MECH_PERIOD * 0.5), ks)
+		WingMech.pose_bay(bay, bt)
+		# бомбы висят ниже створок: пока отсек почти закрыт, их не показываем (иначе «торчат» сквозь створки)
+		for b: Node3D in d["load"]:
+			if is_instance_valid(b):
+				b.visible = bt > 0.55
 	for tr: Dictionary in d["turrets"]:
 		var n: Node3D = tr["node"]
 		if not is_instance_valid(n):

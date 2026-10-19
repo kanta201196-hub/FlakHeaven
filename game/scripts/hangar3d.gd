@@ -478,6 +478,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			if g.weapon == "turret":
 				turret_pos.append([wmi.position, side])
 				wmi.set_meta("turret", [cls_id, mtr, side, weapon_tier == 4, lvl])   # тест 3.5-s8: HangarAnim
+			elif side == "bay":
+				wmi.set_meta("bay_load", true)   # тест 3.5-s8: при закрытых створках бомбы убраны (HangarAnim)
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
 			if side == "bottom" or (side == "tail" and WeaponModels.TURRET_MODELS.has(cls_id) and not (WeaponModels.TURRET_MODELS[cls_id] as Dictionary).has("tail")):
 				bs = bs * Basis(Vector3.RIGHT, PI)
