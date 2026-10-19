@@ -87,12 +87,21 @@ var _combat_quad: MeshInstance3D
 var _tilt_on := false
 
 
+var _prewarm_id := -1   # задача AdobeBuild.prewarm: забрать при выходе (пул не держит её и не обрывает)
+
+
+func _exit_tree() -> void:
+	if _prewarm_id >= 0:
+		WorkerThreadPool.wait_for_task_completion(_prewarm_id)
+		_prewarm_id = -1
+
+
 func _ready() -> void:
 	I = self
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	enabled = Tuning.g("render3d") > 0.5
 	if enabled:   # 3.5-s8: кишлак-городок собирается 0,15–0,4 с — заранее в фоне, без рывка при появлении
-		WorkerThreadPool.add_task(AdobeBuild.prewarm, false, "AdobeBuild.prewarm")
+		_prewarm_id = WorkerThreadPool.add_task(AdobeBuild.prewarm, false, "AdobeBuild.prewarm")
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
@@ -425,8 +434,8 @@ func _process(delta: float) -> void:
 	if terrain._bg != m.background:
 		terrain._bg = m.background
 		m.background.place_filter = terrain.fix_object   # тест 3.5-s4 (п. 20): объекты клеток не в реке
+		terrain.clear()   # сначала дождаться фоновых кусков: set_biome меняет поля, которые читает поток
 		_apply_biome()
-		terrain.clear()
 	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
 	_set_tilt_mode(tilt > 0.001, m)
 	if _tilt_on:
