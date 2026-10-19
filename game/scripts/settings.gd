@@ -41,7 +41,7 @@ var hide_hud := false
 var gfx := 2               # «Высокое»; деревья полной детализации — только на «Максимальном»
 var font := 0              # U-09: шрифт интерфейса — индекс в FONTS
 ## Перевод (docs/localization.md): язык интерфейса; -1 — по языку системы. Названия языков не переводятся
-const LANGS := [["ru", "Русский"], ["en", "English"]]
+const LANGS := [["ru", "Русский"], ["en", "English"], ["zh_CN", "简体中文"]]
 var lang := -1
 ## Правка 3.5-s4: кого звено атакует первым (клавиша G в полёте, кнопка на экране паузы)
 const WING_PRIO := ["по задаче ведомого", "прикрывать меня", "крупные и асы", "наземные цели"]
@@ -125,7 +125,8 @@ func apply() -> void:
 func lang_index() -> int:
 	if lang >= 0:
 		return lang
-	return 0 if OS.get_locale_language() in ["ru", "uk", "be", "kk"] else 1
+	var l := OS.get_locale_language()
+	return 0 if l in ["ru", "uk", "be", "kk"] else (2 if l == "zh" else 1)
 
 
 func lang_name() -> String:
