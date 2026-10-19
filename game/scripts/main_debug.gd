@@ -415,8 +415,8 @@ func _fortress_log() -> void:
 
 ## S8 «eweap»: урон по видам оружия врагов (дошедший и «сырой» с --god) — для замера баланса в автотесте
 func print_taken(tag: String) -> void:
-	print("%s: taken_kind %s · raw_in(god) %s · taken_by %s · decoy_resisted %d · sam_frag %d" % [tag, RunLog.kv(m.stats["taken_kind"]),
-		RunLog.kv(m.stats["raw_in"]), RunLog.kv(m.stats["taken_by"]), int(m.counters.get("decoy_resisted", 0)), int(m.counters.get("sam_frag_hits", 0))])
+	print("%s: taken_kind %s · raw_in(god) %s · taken_by %s · decoy_resisted %d · sam_frag %d · пущено ПЗРК %d / самолёт %d / ЗРК %d" % [tag, RunLog.kv(m.stats["taken_kind"]),
+		RunLog.kv(m.stats["raw_in"]), RunLog.kv(m.stats["taken_by"]), int(m.counters.get("decoy_resisted", 0)), int(m.counters.get("sam_frag_hits", 0)), int(m.counters.get("msl_manpads", 0)), int(m.counters.get("msl_aam", 0)), int(m.counters.get("msl_sam", 0))])
 
 
 func _smoke_end(code: int, why: String) -> void:

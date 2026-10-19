@@ -151,7 +151,7 @@ func process(delta: float) -> void:
 	_hold(p)
 	if p.get("eweap", false):
 		# время замедлено: в облаке кадр идёт ~1 с, а ракета пролетает экран за секунду — так след и трассеры плавные
-		Engine.time_scale = 0.1
+		Engine.time_scale = 0.5
 		_eweap(p)
 		if _pt >= float(p["shot_t"]):
 			Engine.time_scale = 1.0
@@ -486,8 +486,8 @@ func _make_points() -> Array:
 		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
 	if OS.get_cmdline_user_args().has("--eweapbench"):   # S8 «eweap»: ракеты ПЗРК / самолёта / ЗРК и трассеры по видам оружия
 		pts = []
-		pts.append({"name": "eweap", "pos": empty, "eweap": true, "shot_t": 1.9, "zoom": 1.0})
-		pts.append({"name": "eweap_close", "pos": empty, "eweap": true, "shot_t": 1.9, "zoom": 2.0})
+		pts.append({"name": "eweap", "pos": empty, "eweap": true, "shot_t": 1.5, "zoom": 1.0})
+		pts.append({"name": "eweap_close", "pos": empty, "eweap": true, "shot_t": 1.5, "zoom": 2.0})
 	if OS.get_cmdline_user_args().has("--bombbench"):   # тест 3.5-s4 (п. 10, 14): падающие бомбы ступеней и воронки
 		pts = []
 		pts.append({"name": "bomb_drop", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "bombs": true, "wait": 2.5, "zoom": 2.6})

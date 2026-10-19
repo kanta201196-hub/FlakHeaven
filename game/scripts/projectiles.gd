@@ -129,6 +129,7 @@ func spawn_missile(pos: Vector2, dir: Vector2, kind := "aam", who := "ракет
 	var top := msl_p(kind, "speed0") if kind == "sam" else msl_p(kind, "speed")
 	missiles.append({"p": pos, "v": dir * top * float(MSL_V0.get(kind, 0.6)), "life": msl_p(kind, "life"), "lost": false,
 		"trail": PackedVector2Array(), "k": kind, "who": who, "age": 0.0})
+	Main.I.stats_add_counter("msl_" + kind, 1)   # сколько пущено ракет каждого вида (автотест)
 	if kind == "sam" and Boom3D.active():
 		Boom3D.ensure().ground_launch(pos, dir)   # вспышка пуска и клуб дыма у земли
 
