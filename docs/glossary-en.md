@@ -40,6 +40,10 @@
 | «Сторож» (крейсер) | "Warden" |
 | ПВО / позиция ПВО | AA / AA site |
 | ПЗРК | MANPADS |
+| ЗРК / ЗСУ | SAM / SPAAG |
+| пулемёт пикапа / пулемёт броневика / пушка БМП | pickup MG / armored car MG / IFV cannon |
+| пушки истребителей / пушки асов / крупный калибр | fighter guns / ace guns / heavy guns |
+| ракеты самолётов | aircraft missiles |
 | БМП / броневик / грузовик / пикап | IFV / armored car / truck / pickup |
 | колонна / конвой | convoy |
 | заправщик / транспортник | tanker / transport |

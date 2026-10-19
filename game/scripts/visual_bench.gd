@@ -223,13 +223,20 @@ func _eweap(p: Dictionary) -> void:
 		if not _ew_due(g[0], g[2]):
 			continue
 		var at: Vector2 = c + (g[1] as Vector2)
-		var dir := (c - at).normalized().rotated(randf_range(-0.04, 0.04))
-		var big: bool = g[0] == "big"
-		pr.spawn_enemy_bullet(at, dir * (260.0 if big else 400.0), g[3], big, 1.0, true)
+		var gun: String = g[0]
+		var dir := (c - at).normalized().rotated(randf_range(-1.0, 1.0) * Projectiles.gun_spread(gun) * 0.5)
+		var big := gun == "big"
+		var spd := 260.0 if big else Projectiles.gun_speed(gun)
+		if gun == "zsu" or gun == "fighter":   # спаренные: пара параллельных пуль
+			var side := Vector2(-dir.y, dir.x) * (9.0 if gun == "zsu" else 5.0)
+			pr.spawn_enemy_bullet(at + side, dir * spd, g[3], false, 1.0, true, gun)
+			pr.spawn_enemy_bullet(at - side, dir * spd, g[3], false, 1.0, true, gun)
+		else:
+			pr.spawn_enemy_bullet(at, dir * spd, g[3], big, 1.0, true, gun, at.distance_to(c) / spd + 0.1 if gun == "ifv" else 3.3)
 	for ms in EW_MSL:
 		if _ew_due(ms[0], 0.7):
 			var at2: Vector2 = c + (ms[1] as Vector2)
-			pr.spawn_missile(at2, (c - at2).normalized())
+			pr.spawn_missile(at2, (c - at2).normalized(), ms[0])
 
 
 var _convoy: Convoy = null   # M-36: колонна для кадра дороги

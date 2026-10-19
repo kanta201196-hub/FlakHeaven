@@ -410,6 +410,27 @@ func launch(pos: Vector2, dir: Vector2, vel: Vector2) -> void:
 			randf_range(0.7, 1.0), Color(0.86, 0.86, 0.88, 0.7), 0.0, 4.0, 2.0, 0.03 * i)
 
 
+## S8 «eweap»: пуск ЗРК с земли — вспышка стартового двигателя у пусковой, клуб серого дыма и пыль
+## (pos — точка пусковой на слое боя; дым — на рельефе под ней, как его видит камера)
+func ground_launch(pos: Vector2, dir: Vector2) -> void:
+	var R := Render3D.I
+	if R == null or R.cam == null:
+		return
+	var g := R.ground_under(pos)
+	var back := Vector3(-dir.x, 0.0, -dir.y)
+	var p := g + Vector3(0, 4.0, 0)
+	_flash(p + Vector3(0, 6.0, 0), 34.0, 0.14, Color(1.0, 0.88, 0.6, 1.0))
+	_core(p, 4.0, 10.0, 0.16, 1.0, 0.8)
+	_fire(p, back * 40.0 + Vector3(0, 30.0, 0), 4.0, 9.0, 0.22, 1.0, 6.0)
+	for i in _n(6.0):
+		var d := _rdir()
+		var gr := randf_range(0.5, 0.66)
+		_smoke(p + Vector3(d.x, 0, d.z) * 6.0, back * randf_range(20.0, 60.0) + Vector3(d.x * 30.0, randf_range(10.0, 30.0), d.z * 30.0),
+			6.0, randf_range(16.0, 24.0), randf_range(2.2, 3.4), Color(gr, gr * 0.98, gr * 0.95, 0.75), 0.0, 3.0, 1.6, 0.03 * i)
+	_dust_skirt(g, 9.0, 0.8)
+	_light(p + Vector3(0, 20.0, 0), 3.0, 320.0, 0.18)
+
+
 func _n(base: float) -> int:
 	return maxi(1, int(round(base * _q)))
 

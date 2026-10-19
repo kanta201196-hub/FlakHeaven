@@ -500,23 +500,43 @@ func draw_hp_bar() -> void:
 
 ## Выстрел по игроку с упреждением.
 ## twin — спаренная пушка: две параллельные пули по половине урона (3.5, дрон)
+## S8 «eweap»: twin у вида оружия (gun_kind) — каждая пуля с уроном вида (ЗСУ 5 + 5, истребители 3 + 3);
+## у прочих (gun_kind «») — как раньше, по половине ebullet_dmg. Скорость пули — по виду оружия
 func fire_at_player(spread := 0.0, twin := false) -> void:
 	var p := Main.I.player
 	if p == null or p.hp <= 0.0:
 		return
-	var spd := Tuning.g("ebullet_speed")
+	var gun := gun_kind()
+	var spd := Projectiles.gun_speed(gun)
 	var to := p.global_position - global_position
 	var lead := p.global_position + p.velocity * (to.length() / spd) * 0.6
 	var dir := (lead - global_position).normalized().rotated(spread)
 	# 3.1: пуля летит быстрее стрелка — к её скорости добавляется скорость самолёта по курсу
 	var add := maxf(0.0, move_vel.dot(dir)) * 0.6 if not is_ground else 0.0 # 3.2: пуля всё ещё быстрее стрелка, но мягче
 	var at := global_position + dir * (radius + 4.0)
+	var life := 3.3
+	if gun == "zsu" or gun == "ifv":
+		# дистанционный взрыватель: снаряд рвётся чуть дальше точки упреждения (разрыв в воздухе рядом с самолётом)
+		life = clampf((lead - at).length() / (spd + add) + (0.12 if gun == "zsu" else 0.2), 0.3, 3.3)
 	if twin:
-		var side := Vector2(-dir.y, dir.x) * 5.0
-		Main.I.projectiles.spawn_enemy_bullet(at + side, dir * (spd + add), kind(), false, 0.5)
-		Main.I.projectiles.spawn_enemy_bullet(at - side, dir * (spd + add), kind(), false, 0.5, true)
+		var side := Vector2(-dir.y, dir.x) * (9.0 if gun == "zsu" else 5.0)
+		var k := 0.5 if gun == "" else 1.0
+		Main.I.projectiles.spawn_enemy_bullet(at + side, dir * (spd + add), kind(), false, k, false, gun, life)
+		Main.I.projectiles.spawn_enemy_bullet(at - side, dir * (spd + add), kind(), false, k, true, gun, life)
 		return
-	Main.I.projectiles.spawn_enemy_bullet(at, dir * (spd + add), kind())
+	Main.I.projectiles.spawn_enemy_bullet(at, dir * (spd + add), kind(), false, 1.0, false, gun, life)
+
+
+## S8 «eweap»: вид пулемёта или пушки (Projectiles.GUN_NAMES): урон, скорость, разброс и трассер.
+## «» — прочие, как было (ebullet_*)
+func gun_kind() -> String:
+	return ""
+
+
+## Случайный разброс выстрела по виду оружия, рад
+func gun_spread() -> float:
+	var s := Projectiles.gun_spread(gun_kind())
+	return randf_range(-s, s)
 
 
 ## Спрайт врага (2.6): res://art/enemies/<name>.png, нос ВПРАВО. Нет файла — вернёт false (рисуем фигуру).

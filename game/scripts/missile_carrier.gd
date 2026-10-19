@@ -46,7 +46,7 @@ func behave(delta: float) -> void:
 	if _lock > 0.0:
 		_lock -= delta
 		if _lock <= 0.0:
-			Main.I.projectiles.spawn_missile(global_position, to.normalized())
+			Main.I.projectiles.spawn_missile(global_position, to.normalized(), "aam", kind())
 			Main.I.sfx.play("missile_enemy", -8.0)
 			_cd = 4.5
 	else:

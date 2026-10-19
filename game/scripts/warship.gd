@@ -67,6 +67,11 @@ func kind() -> String:
 	return "корабли"
 
 
+## S8 «eweap»: зенитные автоматы кораблей — как раньше (два ствола по половине ebullet_dmg); крупный калибр — big
+func gun_kind() -> String:
+	return ""
+
+
 func say(key: String) -> void:
 	if _say_t > 0.0 and key != "down":
 		return
@@ -161,7 +166,7 @@ func _sam(delta: float, p: Player, d: float) -> void:
 			var to := (p.global_position - global_position).normalized()
 			var n := 4 if variant == "leviathan" and phase() >= 2 else 2
 			for i in n:
-				Main.I.projectiles.spawn_missile(global_position, to.rotated((i - (n - 1) * 0.5) * 0.3))
+				Main.I.projectiles.spawn_missile(global_position, to.rotated((i - (n - 1) * 0.5) * 0.3), "sam", kind())   # S8: ЗУР корабля — как ЗРК
 			Main.I.sfx.play("sam_launch", -4.0, 0.9, global_position)
 			_sam_cd = (7.0 if variant == "cruiser" else 6.0) * angry()
 		return

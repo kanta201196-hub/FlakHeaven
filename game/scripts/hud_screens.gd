@@ -445,10 +445,23 @@ func _res_damage(m: Main, y0: float, size: Vector2) -> void:
 	for k in ["таран", "пули", "ракеты"]:
 		_row(lx, y, 520.0, k, m.stat("taken", k), m.total("taken"), Color(1.0, 0.45, 0.4))
 		y += 30.0
+	# S8 «eweap»: чем — вид оружия врагов (ПЗРК, ЗРК, пулемёт пикапа, пушка БМП…), больше всего урона сверху
+	var tkind: Dictionary = m.stats.get("taken_kind", {})
+	if not tkind.is_empty():
+		y += 14.0
+		_text(Vector2(lx, y), "Чем:", 19, hc)
+		y += 30.0
+		for k in _top_keys(tkind, 5):
+			_row(lx, y, 520.0, k, m.stat("taken_kind", k), m.total("taken"), Color(1.0, 0.52, 0.42))
+			y += 30.0
 	y += 14.0
 	_text(Vector2(lx, y), "От кого:", 19, hc)
 	y += 30.0
-	for k in ["дроны", "перехватчики", "ракетоносцы", "ПВО", "ас-соперник", "асы"]:
+	# S8: кто нанёс урон — по убыванию (с колонной и ПЗРК); пока урона нет — прежний список
+	var by_keys := _top_keys(m.stats["taken_by"], 6)
+	if by_keys.is_empty():
+		by_keys = ["дроны", "перехватчики", "ракетоносцы", "ПВО", "ас-соперник", "асы"]
+	for k in by_keys:
 		_row(lx, y, 520.0, k, m.stat("taken_by", k), m.total("taken"), Color(1.0, 0.6, 0.4))
 		y += 30.0
 	_text(Vector2(rx, y0), Loc.t("НАНЕСЕНО УРОНА: %d  ·  %d в секунду") % [m.total("dealt"), int(m.total("dealt") / rt)], 22, Color(0.72, 1.0, 0.78))
@@ -522,6 +535,13 @@ const SRC_NAMES := {
 	"ракеты В-В": "наводящиеся ракеты", "НАР": "залп ракет", "разделяющаяся БЧ": "разделяющиеся ракеты",
 	"ЭМИ": "ЭМИ-заряд", "лазер": "лазер «Луч»", "плазма": "плазменная бомба",
 }
+
+
+## Ключи словаря по убыванию значения, не больше n (нулевые — нет)
+static func _top_keys(d: Dictionary, n: int) -> Array:
+	var keys := d.keys().filter(func(k) -> bool: return float(d[k]) >= 0.5)
+	keys.sort_custom(func(a, b) -> bool: return float(d[a]) > float(d[b]))
+	return keys.slice(0, n)
 
 
 func _row(x: float, y: float, w: float, label: String, v: int, tot: int, col: Color) -> void:

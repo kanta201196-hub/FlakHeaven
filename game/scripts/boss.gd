@@ -79,6 +79,11 @@ func kind() -> String:
 	return "асы"
 
 
+## S8 «eweap»: пушки асов (веер очередью); у кораблей — свои зенитные автоматы (warship.gd)
+func gun_kind() -> String:
+	return "ace"
+
+
 func _ready() -> void:
 	super()
 	say("spawn")
@@ -220,7 +225,7 @@ func _behave_carrier(delta: float, p: Player) -> void:
 		if _lock <= 0.0:
 			# 3.1: залп из 5 ракет веером
 			for i in 5:
-				Main.I.projectiles.spawn_missile(global_position, to.normalized().rotated((i - 2) * 0.35))
+				Main.I.projectiles.spawn_missile(global_position, to.normalized().rotated((i - 2) * 0.35), "aam", kind())
 			Main.I.sfx.play("missile_enemy", -4.0, 0.8)
 			_a_cd = 4.5 * angry()
 	else:

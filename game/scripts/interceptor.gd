@@ -29,6 +29,11 @@ func kind() -> String:
 	return "перехватчики"
 
 
+## S8 «eweap»: курсовые пушки истребителя — две пули по 3, точно и быстро
+func gun_kind() -> String:
+	return "fighter"
+
+
 func _ready() -> void:
 	super()
 	hp = 30.0
@@ -102,7 +107,7 @@ func behave(delta: float) -> void:
 			if on_tanker:
 				_fire_at_tanker(to)
 			else:
-				fire_at_player(randf_range(-0.06, 0.06))
+				fire_at_player(gun_spread(), true)   # S8: две курсовые пушки
 			_shots -= 1
 			_shot_t = 0.1
 			if _shots == 0:

@@ -434,7 +434,7 @@ func _bay(delta: float, p: Player, to: Vector2, d: float) -> void:
 		_lock -= delta
 		if _lock <= 0.0:
 			for i in 4:
-				Main.I.projectiles.spawn_missile(global_position, to.normalized().rotated((i - 1.5) * 0.4))
+				Main.I.projectiles.spawn_missile(global_position, to.normalized().rotated((i - 1.5) * 0.4), "aam", kind())
 			Main.I.sfx.play("missile_enemy", -4.0, 0.7)
 			_missile_cd = 6.0
 		return

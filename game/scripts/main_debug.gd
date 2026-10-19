@@ -105,8 +105,9 @@ func _ui_test() -> void:
 		m.run_time = 975.0
 		m.stats["dealt"] = {"ракеты В-В": 263378.0, "турели": 70320.0, "уязвимые точки «Крепости»": 64448.0, "курсовое (авто)": 60960.0,
 			"ведомые: стриж": 41590.0, "связка: стальной ёж": 29627.0, "ведомые: грачонок": 26890.0, "НАР": 15360.0, "бомбы": 9000.0}
-		m.stats["taken"] = {"таран": 292.0, "пули": 1010.0, "ракеты": 75.0}
-		m.stats["taken_by"] = {"дроны": 536.0, "перехватчики": 300.0, "ракетоносцы": 75.0, "ПВО": 21.0, "ас-соперник": 12.0, "асы": 355.0}
+		m.stats["taken"] = {"таран": 292.0, "пули": 1010.0, "ракеты": 120.0}
+		m.stats["taken_by"] = {"дроны": 536.0, "перехватчики": 300.0, "ракетоносцы": 45.0, "ПВО": 51.0, "ас-соперник": 12.0, "асы": 355.0, "ПЗРК": 15.0, "пикап": 12.0}
+		m.stats["taken_kind"] = {"пушки истребителей": 836.0, "пушки асов": 162.0, "пулемёт пикапа": 12.0, "ракеты самолётов": 45.0, "ЗРК": 60.0, "ПЗРК": 15.0}
 		m.stats["kills_by"] = {"дроны": 2890.0, "перехватчики": 519.0, "ракетоносцы": 43.0, "асы": 3.0}
 		m.kills = 3455
 		m.bosses_killed = 3
@@ -412,7 +413,14 @@ func _fortress_log() -> void:
 			f.global_position.distance_to(f.base_pos) if f.base_pos != Vector2.INF else -1.0, f.base_hits, f.global_position.distance_to(m.player.global_position)])
 
 
+## S8 «eweap»: урон по видам оружия врагов (дошедший и «сырой» с --god) — для замера баланса в автотесте
+func print_taken(tag: String) -> void:
+	print("%s: taken_kind %s · raw_in(god) %s · taken_by %s · decoy_resisted %d · sam_frag %d" % [tag, RunLog.kv(m.stats["taken_kind"]),
+		RunLog.kv(m.stats["raw_in"]), RunLog.kv(m.stats["taken_by"]), int(m.counters.get("decoy_resisted", 0)), int(m.counters.get("sam_frag_hits", 0))])
+
+
 func _smoke_end(code: int, why: String) -> void:
+	print_taken("SMOKE")
 	print("SMOKE: dealt %s · rail %d · emp %d · laser burned %d · mastery +%d" % [str(m.stats["dealt"]), int(m.counters.get("rail_shots", 0)), int(m.counters.get("emp_pulses", 0)), int(m.counters.get("laser_burned", 0)), int(m.tele.g("mastery_dmg"))])
 	print("SMOKE: %s class %s, level %d, kills %d, %s, %.0f s real" % ["ok" if code == 0 else "FAIL", m.cls_id, m.level, m.kills, why, Time.get_ticks_msec() / 1000.0])
 	m.get_tree().quit(code)
@@ -564,6 +572,7 @@ func _run_autotest(delta: float) -> void:
 				_bot_wait = 1.0
 				print("AUTOTEST: %s at %.1f s, class %s, level %d, kills %d, bosses %d, mastery t%d +%d" % [m.state, m.run_time, m.cls_id, m.level, m.kills, m.bosses_killed,
 					int(m.tele.g("mastery_t")), int(m.tele.g("mastery_dmg"))])
+				print_taken("AUTOTEST")
 				if not m._args.has("--shots"):
 					m.ui_click("change_class") # следующий вылет — другим классом
 			return
