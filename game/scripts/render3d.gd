@@ -91,6 +91,8 @@ func _ready() -> void:
 	I = self
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	enabled = Tuning.g("render3d") > 0.5
+	if enabled:   # 3.5-s8: кишлак-городок собирается 0,15–0,4 с — заранее в фоне, без рывка при появлении
+		WorkerThreadPool.add_task(AdobeBuild.prewarm, false, "AdobeBuild.prewarm")
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
@@ -1055,6 +1057,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				_fortress_parts(ue, e as Fortress, ang, delta)
 			elif ue.get("bm") != null and e is Helicopter:
 				_rotors(ue, delta)
+			elif ue.get("bm") != null and e is Transport:
+				_props(ue, delta)
 		var mi2: MeshInstance3D = ue["mi"]
 		if ue.get("bm") != null:
 			mi2.material_overlay = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
@@ -1102,6 +1106,15 @@ func _rotors(u: Dictionary, delta: float) -> void:
 		(rr[0] as Node3D).rotate_y(-delta * 9.0)
 	if rr[1] != null:
 		(rr[1] as Node3D).rotate_z(delta * 40.0)
+
+
+## 3.5-s8: винты транспортника (tools/blender/enemy_air_big.py, узлы prop_1…prop_4, ось — локальная X)
+func _props(u: Dictionary, delta: float) -> void:
+	if not u.has("props3"):
+		var inst := (u["node"] as Node3D).get_child(0)
+		u["props3"] = inst.find_children("prop_*", "Node3D", true, false)
+	for p in u["props3"]:
+		(p as Node3D).rotate_x(delta * 22.0)
 
 
 ## Подвижные части наземных моделей (tools/blender/ground_models.py): корпус стоит, как встал,
@@ -1915,7 +1928,7 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 	var bg: Background = Main.I.background
 	if bg == null or not bg.biome_ok:
 		return
-	var half := get_viewport().get_visible_rect().size / _zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(900, 900)
+	var half := get_viewport().get_visible_rect().size / _zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(1500, 1500)   # 3.5-s8: кишлак ~2100 px
 	var view := Rect2(c2 - half, half * 2.0)
 	var seen := {}
 	var CH := Background.CHUNK

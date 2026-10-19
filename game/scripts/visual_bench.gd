@@ -296,6 +296,7 @@ func _save(name: String) -> void:
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)])
+	print("VISUAL %s nodes=%d" % [name, m.get_tree().get_node_count()])
 	if Render3D.I != null and Render3D.I.terrain != null:   # Р-13: заглушки рельефа сейчас и кадров с ними с начала
 		print("VISUAL %s terrain lods=%d lod_frames=%d" % [name, Render3D.I.terrain._lods.size(), Render3D.I.terrain.lod_frames])
 	if Render3D.I != null:   # облака: сколько вызовов и экземпляров (плоские — по облаку на вызов; клубы — один MultiMesh)
@@ -328,6 +329,7 @@ func _make_points() -> Array:
 	var bg := m.background
 	var found := {}
 	var empty := Vector2.INF
+	var cnt := {}   # 3.5-s8: сколько объектов каждого вида на 29 × 29 клеток (кишлаков стало меньше?)
 	var near_river := {}   # тест 3.5-s4 (п. 16): поселения ближе всех к реке (кромка у воды): имя → [зазор, объект]
 	var ter: Terrain3D = Render3D.I.terrain if Render3D.I != null else null
 	for r in range(0, 14):
@@ -342,10 +344,12 @@ func _make_points() -> Array:
 				else:
 					if not found.has(o["name"]):
 						found[o["name"]] = o["pos"]
+					cnt[o["name"]] = int(cnt.get(o["name"], 0)) + 1
 					if ter != null and o["name"] in Terrain3D.SETTLE:
 						var gap := absf(ter.river_field(o["pos"].x, o["pos"].y)) - float(o["size"]) * 0.5
 						if gap < float(near_river.get(o["name"], [INF])[0]):
 							near_river[o["name"]] = [gap, o]
+	print("VISUAL objects ", cnt)
 	if empty == Vector2.INF:
 		empty = Vector2.ZERO
 	var pts := [{"name": "desert", "pos": empty}]
@@ -378,6 +382,15 @@ func _make_points() -> Array:
 		pts.append({"name": "aa_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.3, "convoy": true, "enemies": true, "ground": true, "site_off": Vector2(-380, -40), "wait": 2.5})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
+	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
+		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
+		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
+		pts.append({"name": "village_close", "pos": found["o_village"] + Vector2(0, 600), "zoom": 2.4})
+		for vr in 4:
+			AdobeBuild._vcache.erase("village%d" % vr)
+			var t0 := Time.get_ticks_usec()
+			var vm := AdobeBuild.village(vr)
+			print("VISUAL village%d mesh tris=%d build=%d ms %s" % [vr, vm.surface_get_array_len(0) / 3, (Time.get_ticks_usec() - t0) / 1000, AdobeBuild._vcache.get("village%d_stats" % vr, {})])
 	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
 	if ter != null:
 		var got := {}

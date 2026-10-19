@@ -146,6 +146,7 @@ func clear() -> void:
 	_hgrid.clear()
 	_spare_order.clear()
 	_objs_cache.clear()
+	_flats.clear()
 	_side.clear()
 	_scenes.clear()
 
@@ -262,8 +263,10 @@ const STREAM_W := 7.0
 const STREAM_OFF := 95.0
 const STREAM_K := D_RIVER / 8.5
 const STREAM_REACH := 36.0  # дальше ручей в поле не участвует (колея — в 28 px от воды)
-const TRIB_MIN := 420.0    # посёлок глубже в долине-притоке, чем дорога: + к полю реки, px
-const TRIB_MAX := 760.0
+## 3.5-s8: кишлак-городок вдвое шире (R ≈ 1050 вместо 580) — центр и так дальше от дороги на прирост R;
+## глубину в притоке уменьшили (было 420…760), иначе посёлок чаще не находил места (SETTLE_REACH)
+const TRIB_MIN := 220.0    # посёлок глубже в долине-притоке, чем дорога: + к полю реки, px
+const TRIB_MAX := 520.0
 
 
 ## L-06 (правка Kanta): поливные поля и сады полосой вдоль реки, как зелень вдоль рек в пустыне —
@@ -799,9 +802,9 @@ func scenes(key: Vector2i) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(key) ^ 0xb477e
 	var obj := _obj(key)
-	var near := []   # объекты вокруг — сцены их не задевают
-	for dx in [-1, 0, 1]:
-		for dz in [-1, 0, 1]:
+	var near := []   # объекты вокруг — сцены их не задевают (±2: кишлак-городок с окраинами шире клетки)
+	for dx in range(-2, 3):
+		for dz in range(-2, 3):
 			var o := _obj(Vector2i(key.x + dx, key.y + dz))
 			if not o.is_empty():
 				near.append(o)
@@ -937,27 +940,47 @@ func surface_fast(x: float, z: float) -> Vector3:
 	return Vector3(x, base_y + h, z)
 
 
-## Под кишлаками, крепостями, оазисами земля ровная (вес 0 — плоско, 1 — рельеф как есть)
+## Под кишлаками, крепостями, оазисами земля ровная (вес 0 — плоско, 1 — рельеф как есть).
+## 3.5-s8: кишлак-городок крупнее (площадка с краем до ~2600 px) — смотрим объекты ±3 клетки (список
+## площадок заранее: в снимке ctx — «flats», в главном потоке — кэш по клетке)
 func _flat(x: float, z: float, ctx := {}) -> float:
 	if _bg == null and ctx.is_empty():
 		return 1.0
-	var cx := int(floorf(x / CHUNK))
-	var cz := int(floorf(z / CHUNK))
+	var lst: Array = ctx["flats"] if ctx.has("flats") else _flats_near(Vector2i(int(floorf(x / CHUNK)), int(floorf(z / CHUNK))))
 	var k := 1.0
-	for dx in [-1, 0, 1]:
-		for dz in [-1, 0, 1]:
-			var o: Dictionary = (ctx["objs"] as Dictionary).get(Vector2i(cx + dx, cz + dz), {}) if not ctx.is_empty() else _obj(Vector2i(cx + dx, cz + dz))
-			if o.is_empty() or not FLAT_OBJS.has(o["name"]):
-				continue
-			# тест 3.5-s4 (п. 17): площадка неровная — по контуру поселения (AdobeBuild.outline), с мягким краем
-			var off := Vector2(x, z) - (o["pos"] as Vector2)
-			var r: float = float(o["size"]) * 0.5
-			if o["name"] in SETTLE:
-				r *= AdobeBuild.outline(int(o.get("var", 0)), off.rotated(-float(o["rot"])).angle()) * (1.15 if o["name"] == "o_village" else 1.0)
-			var d := off.length()
-			var f := smoothstep(r, r * 2.0, d)
-			k = minf(k, lerpf(1.0 - float(FLAT_OBJS[o["name"]]), 1.0, f))
+	for o: Dictionary in lst:
+		# тест 3.5-s4 (п. 17): площадка неровная — по контуру поселения (AdobeBuild.outline), с мягким краем
+		var off := Vector2(x, z) - (o["pos"] as Vector2)
+		var r: float = float(o["size"]) * 0.5
+		var big := r * (1.2 * 1.15 * 2.0 if o["name"] in SETTLE else 2.0)
+		if off.length_squared() >= big * big:
+			continue
+		if o["name"] in SETTLE:
+			r *= AdobeBuild.outline(int(o.get("var", 0)), off.rotated(-float(o["rot"])).angle()) * (1.15 if o["name"] == "o_village" else 1.0)
+		var d := off.length()
+		var f := smoothstep(r, r * 2.0, d)
+		k = minf(k, lerpf(1.0 - float(FLAT_OBJS[o["name"]]), 1.0, f))
 	return k
+
+
+var _flats := {}
+
+
+## Объекты с площадкой (FLAT_OBJS) в клетках ±3 от key — только главный поток
+func _flats_near(key: Vector2i) -> Array:
+	if _flats.has(key):
+		return _flats[key]
+	var out := []
+	if _bg != null:
+		for dx in range(-3, 4):
+			for dz in range(-3, 4):
+				var o := _obj(Vector2i(key.x + dx, key.y + dz))
+				if not o.is_empty() and FLAT_OBJS.has(o["name"]):
+					out.append(o)
+	if _flats.size() > 2000:
+		_flats.clear()
+	_flats[key] = out
+	return out
 
 
 func _obj(key: Vector2i) -> Dictionary:
@@ -1060,6 +1083,7 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 	_mx.unlock()
 	if _objs_cache.size() > 400:
 		_objs_cache.clear()
+		_flats.clear()
 
 
 ## Скачок камеры / старт вылета: недостающие куски строим сразу, но всеми ядрами (проход по оптимизации 3.5-s7):
@@ -1144,7 +1168,12 @@ func _ctx(key: Vector2i) -> Dictionary:
 			for dz in range(-1, 2):
 				var k := Vector2i(key.x + dx, key.y + dz)
 				scn[k] = scenes(k)
-	var ctx := {"objs": objs, "sides": sides, "flat": _bg != null, "scenes": scn}
+	var flats := []
+	for k in objs:
+		var o: Dictionary = objs[k]
+		if not o.is_empty() and FLAT_OBJS.has(o["name"]):
+			flats.append(o)
+	var ctx := {"objs": objs, "sides": sides, "flat": _bg != null, "scenes": scn, "flats": flats}
 	if props != null:
 		ctx["hk"] = props.mesh_heights()
 	return ctx

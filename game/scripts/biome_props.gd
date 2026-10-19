@@ -194,8 +194,8 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 	var keep_out := []  # [центр, радиус] — внутри объектов биома не ставим
 	# тест 3.5-s4 (п. 20): и объекты соседних клеток (у края клетки, сдвинутые от реки), и с запасом
 	# на размер валуна/дерева — модели не наползают на кишлак, обломки, воронку
-	for dx in [-1, 0, 1]:
-		for dz in [-1, 0, 1]:
+	for dx in range(-2, 3):   # 3.5-s8: кишлак-городок с окраинами — до ~1250 px от центра
+		for dz in range(-2, 3):
 			var no: Dictionary = (ctx["objs"] as Dictionary).get(Vector2i(key.x + dx, key.y + dz), {})
 			if not no.is_empty() and not (no["name"] in ["o_rocks_big", "o_rocks_small"]):
 				keep_out.append([no["pos"], float(no["size"]) * maxf(AdobeBuild.footprint(no["name"]), 0.5) + 30.0])
@@ -219,8 +219,8 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 				var vr := int(obj.get("var", 0))
 				var sz0 := float(obj["size"])
 				var trees := 0
-				var want := rng.randi_range(14, 20) if obj["name"] == "o_oasis" else rng.randi_range(10, 16)
-				for i in 70:
+				var want := rng.randi_range(14, 20) if obj["name"] == "o_oasis" else rng.randi_range(18, 28)   # 3.5-s8: городок крупнее
+				for i in 120:
 					if trees >= want:
 						break
 					var q := p0 + Vector2.from_angle(rng.randf() * TAU) * sz0 * 0.75 * sqrt(rng.randf())
