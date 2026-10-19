@@ -71,7 +71,7 @@ Flak Heaven — roguelike / bullet heaven про боевую авиацию, в
 - Полный автотест (15–30 мин в облаке) — один раз перед тем, как PR станет готовым, только если менялся бой:
   `godot --headless --path game -- --autotest --fast --god` — в выводе не должно быть `SCRIPT ERROR`.
 - Правка только меню, ангара или документов — хватает `smoke.sh` одним классом.
-- GitHub проверяет сам: `.github/workflows/check.yml` гоняет `smoke.sh` за три класса на каждый PR и push в `main`. Красная проверка — исправить до слияния.
+- GitHub-проверка `.github/workflows/check.yml` (`smoke.sh` за три класса) с 19.10.2026 запускается только вручную: бесплатные минуты Actions кончились (решение Kanta). Пока так — перед слиянием `smoke.sh` локально, полный автотест, если менялся бой.
 - После добавления нового скрипта с `class_name` один раз: `godot --headless --path game --import`.
 - Скриншоты экранов: `xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots` (файлы `user://shot_*.png`).
 - Флаги отладки: `--tester` (как тестовая сборка, без отладки), `--report-url=…` (свой приёмник отчётов), `--mesatest`, `--reporttest`, `--turbo`.
