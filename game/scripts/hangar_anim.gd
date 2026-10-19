@@ -22,6 +22,7 @@ const IDLE_PERIOD := 11.0
 const IDLE_YAW := 0.3        # рад, ±17°
 const IDLE_ELEV := 0.08
 const BLEND := 2.0
+const DEMO_MECH := 1.6       # в показе ход больше боевого (закрылки ~35°, как на посадке) — видно издалека
 
 
 ## Подвижные части текущей модели под pivot ангара. Турели — узлы с метой "turret" ([класс, ступень, сторона,
@@ -58,7 +59,7 @@ static func step(d: Dictionary, t: float, demo: bool, delta: float) -> void:
 	var ks := smoothstep(0.0, 1.0, k)
 	var mech: Node3D = d["mech"]
 	if mech != null and is_instance_valid(mech) and not WingMech._force:
-		WingMech.pose(mech, ks * mech_phase(t))
+		WingMech.pose(mech, ks * DEMO_MECH * mech_phase(t))
 	var bay: Node3D = d["bay"]
 	if bay != null and is_instance_valid(bay):
 		WingMech.pose_bay(bay, lerpf(1.0, 1.0 - mech_phase(t + MECH_PERIOD * 0.5), ks))

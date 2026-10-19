@@ -564,9 +564,10 @@ var _hclose: Array = ([
 const MECH_FRAMES := 8
 const MECH_DT := 0.75   # с между кадрами: 8 кадров = полный цикл HangarAnim (6 с)
 const _MECH_VIEWS := {
-	"fighter": [[Vector3(-0.08, 0.0, 0.0), 2.75, 0.62, 1.15]],
-	"attacker": [[Vector3(-0.06, 0.0, 0.0), 2.75, 0.55, 1.2]],
-	"bomber": [[Vector3(-0.06, 0.0, 0.0), 2.75, 0.5, 1.25], [Vector3(0.0, -0.03, 0.0), 2.0, -0.6, 1.1]],
+	# сзади сбоку чуть сверху: закрылки уходят вниз за заднюю кромку — сверху их не видно
+	"fighter": [[Vector3(-0.1, -0.01, 0.0), 2.8, 0.16, 1.0]],
+	"attacker": [[Vector3(-0.08, 0.0, 0.0), 2.75, 0.22, 1.05]],
+	"bomber": [[Vector3(-0.08, 0.0, 0.0), 2.75, 0.2, 1.1], [Vector3(0.0, -0.03, 0.0), 2.0, -0.6, 1.0]],
 }
 
 
@@ -743,7 +744,7 @@ func _hangar_bench() -> void:
 			Hangar3D.I._idle = 0.0
 	_hf += 1
 	var mech_next: bool = cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and int(cur[4]) > 0   # модель уже собрана
-	if (_hf > 8 and _t > 1.2) or (mech_next and _hf > 2):   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
+	if (_hf > 8 and _t > 1.2 and (cur.size() < 6 or typeof(cur[3]) != TYPE_STRING or _hf > 14)) or (mech_next and _hf > 2):   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
 		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING:
 			# только сам вид ангара (SubViewport, с запасом по разрешению) — для серии кадров и GIF
 			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_mech_%s_v%d_f%02d.png" % [cur[0], cur[5], cur[4]])
