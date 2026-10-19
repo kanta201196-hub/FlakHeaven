@@ -307,7 +307,9 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 			side = ""
 			if WeaponModels.has_bay(cls_id, 1):   # тест 3.5-s5 (п. 3): у «Кита» «ковёр» — кассета бомбоотсека
 				t = WeaponModels.CARPET_BAY_T
-		var wmi := WeaponModels.make(weapon, t, side, cls_id, evo, 1)
+		if weapon == "bombs" and not evo:   # тест 3.5-s8: калибр по уровню вкладки (ур. 1 / 3 / 5 → «50» / «250» / «1000»)
+			t = WeaponModels.bomb_t([1, 3, 5][t - 1])
+		var wmi := WeaponModels.make(weapon, t, side, cls_id, evo, 1, true)
 		if weapon == "turret":
 			wmi.set_meta("turret", [cls_id, t, side, evo, 1])   # тест 3.5-s8: турель крутится (HangarAnim)
 		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
@@ -417,7 +419,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var pt: Vector2 = mt["p"]
 			var side: String = mt["side"]
 			var mtr: int = mt.get("t", mini(weapon_tier, 3))
-			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4, lvl)
+			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4, lvl, true)   # тест 3.5-s8: ангарная версия
 			if g.weapon == "aam" and weapon_tier != 4:
 				ModuleParts.seeker_head(wmi, bench_seeker, mtr)
 			# по настоящей поверхности модели: подвес — под крылом на пилоне, верхняя турель

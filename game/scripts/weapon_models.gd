@@ -22,9 +22,10 @@ static func tier(level: int, evo := false) -> int:
 ## side — место крепления (mounts): от него зависит вид турели; cls — класс самолёта
 ## (у «Кита» и «Грача» свои турели — модели Blender по фото владельца, 16.10)
 ## evo — эволюция (у турели — «Дикобраз»), plvl — уровень самолёта (окраска турели под обшивку)
-static func make(weapon: String, t: int, side := "", cls := "", evo := false, plvl := 1) -> MeshInstance3D:
+## hq — ангарная версия (тест 3.5-s8: models/weapons/hq/, те же оси и габарит, детали и запечённая окраска)
+static func make(weapon: String, t: int, side := "", cls := "", evo := false, plvl := 1, hq := false) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	var tm: Mesh = turret_model(cls, t, side, evo, plvl) if weapon == "turret" else weapon_model(weapon, t, evo)
+	var tm: Mesh = turret_model(cls, t, side, evo, plvl) if weapon == "turret" else weapon_model(weapon, t, evo, hq)
 	mi.mesh = tm if tm != null else mesh(weapon, t, side)
 	# разбор каталога 16.10: подвесное — только на пилоне (ракеты — на пусковой рельс), не «приклеено» к крылу
 	if side == "under":
@@ -156,25 +157,32 @@ const EVO_GLB := "res://models/weapons/%s_evo.glb"
 const EXP_GLB := "res://models/weapons/exp_%s.glb"
 
 
-## Тест 3.5-s4 (п. 10): одна бомба ступени для падения в бою (tools/blender/weapons.py bombdrop <ступень>),
-## длина 1, нос +X. vt: 1–3 — ступень, 4 — «Бабушкин ковёр» (та же малая бомба, что у ступени 1)
-const DROP_GLB := "res://models/weapons/bombdrop_%d.glb"
-## Длина бомбы в долях длины самолёта (как на подвеске: доля стойки бомб × длина бомбы в её модели)
-const DROP_LEN := [0.0, 0.2, 0.12, 0.26, 0.13]
+## Тест 3.5-s8 (Kanta: «эволюция бомб нелогична — в конце они меньше и слабее»): шкала калибров по уровню
+## оружия — на пилоне одна бомба, та же, что падает: ур. 1 «50» → 2 «100» → 3 «250» → 4 «500» → 5 «1000»
+## (tools/blender/weapons_hq.py bombs 1…5, LADDER); модернизация — 8 бомб «250» («ковёр»). Урон не меняется.
+static func bomb_t(level: int) -> int:
+	return clampi(level, 1, 5)
+
+
+## Падающая бомба (тест 3.5-s4, п. 10): vt 1–5 — модель калибра с подвеса (bombs_<vt>.glb, тот же масштаб,
+## что на пилоне: доля PlaneArt.WEAPON_FRAC), BOMB_EVO_VT — бомба «ковра» (bombdrop_evo.glb, длина 1)
+const BOMB_EVO_VT := 6
+const DROP_EVO_GLB := "res://models/weapons/bombdrop_evo.glb"
+## Длина модели в долях длины самолёта: калибры — как на подвеске (0,27), бомба «ковра» — 0,27 × 0,62
+const DROP_LEN := [0.0, 0.27, 0.27, 0.27, 0.27, 0.27, 0.167]
 
 
 static func drop_mesh(vt: int) -> Mesh:
-	var t := clampi(vt, 1, 4)
-	var file := DROP_GLB % (1 if t == 4 else t)
-	if not ResourceLoader.exists(file):
-		return null
-	return _glb_mesh(file, 1.0, Color(), "glb_drop_%d" % (1 if t == 4 else t))
+	var t := clampi(vt, 1, BOMB_EVO_VT)
+	if t == BOMB_EVO_VT:
+		return _glb_mesh(DROP_EVO_GLB, 1.0, Color(), "glb_drop_evo") if ResourceLoader.exists(DROP_EVO_GLB) else null
+	return weapon_model("bombs", t)
 
 
 ## Тест 3.5-s5 (п. 3): «Бабушкин ковёр» у «Кита» — кассета внутри бомбоотсека (weapons.py bombs evobay),
 ## а не планка снаружи: своя «ступень» модели CARPET_BAY_T. Точки 8 бомб в осях модели (длина 1 = подвес),
 ## по порядку сброса: ряды спереди назад, в ряду левая и правая — отсюда бомбы падают в бою
-const CARPET_BAY_T := 5
+const CARPET_BAY_T := 9   # тест 3.5-s8: 1–5 — калибры бомб
 const CARPET_BAY_GLB := "res://models/weapons/bombs_evo_bay.glb"
 const CARPET_BAY_PTS := [Vector3(0.66, 0, -0.072), Vector3(0.66, 0, 0.072), Vector3(0.22, 0, -0.072), Vector3(0.22, 0, 0.072),
 	Vector3(-0.22, 0, -0.072), Vector3(-0.22, 0, 0.072), Vector3(-0.66, 0, -0.072), Vector3(-0.66, 0, 0.072)]
@@ -185,19 +193,27 @@ static func has_bay(cls_id: String, lvl: int) -> bool:
 	return ResourceLoader.exists("res://models/mech/fh_bay_%s_%d.glb" % [cls_id, lvl])
 
 
-static func weapon_model(weapon: String, t: int, evo := false) -> Mesh:
+## Тест 3.5-s8 (Kanta: «для ангара — супер качественные модели, они показываются близко»): ангарные версии
+## тех же файлов — фаски, заклёпки, швы, ушки, трафарет, запечённые AO и грязь (tools/blender/weapons_hq.py).
+## Оси и габарит как у боевых — подвес (hang) считается по боевой модели.
+const HQ_DIR := "res://models/weapons/hq/"
+
+
+static func weapon_model(weapon: String, t: int, evo := false, hq := false) -> Mesh:
+	var file := ""
 	if weapon == "bombs" and t == CARPET_BAY_T and ResourceLoader.exists(CARPET_BAY_GLB):
-		return _glb_mesh(CARPET_BAY_GLB, 1.0, Color(), "glb_bombs_evo_bay")
-	if evo and ResourceLoader.exists(EVO_GLB % weapon):
-		return _glb_mesh(EVO_GLB % weapon, 1.0, Color(), "glb_%s_evo" % weapon)
-	if weapon in Weapons.EXP and ResourceLoader.exists(EXP_GLB % weapon):
-		return _glb_mesh(EXP_GLB % weapon, 1.0, Color(), "glb_exp_%s" % weapon)
-	if not WEAPON_GLB.has(weapon):
+		file = CARPET_BAY_GLB
+	elif evo and ResourceLoader.exists(EVO_GLB % weapon):
+		file = EVO_GLB % weapon
+	elif weapon in Weapons.EXP and ResourceLoader.exists(EXP_GLB % weapon):
+		file = EXP_GLB % weapon
+	elif WEAPON_GLB.has(weapon):
+		file = WEAPON_GLB[weapon] % t
+	if file == "" or not ResourceLoader.exists(file):
 		return null
-	var file: String = WEAPON_GLB[weapon] % t
-	if not ResourceLoader.exists(file):
-		return null
-	return _glb_mesh(file, 1.0, Color(), "glb_%s_%d" % [weapon, t])
+	if hq and ResourceLoader.exists(HQ_DIR + file.get_file()):
+		file = HQ_DIR + file.get_file()
+	return _glb_mesh(file, 1.0, Color(), "glb_" + file.get_file().get_basename() + ("_hq" if file.begins_with(HQ_DIR) else ""))
 
 
 ## part: "" — вся турель (бой), "body" — без люльки со стволами, "guns" — только они в своих осях (шарнир — 0)
@@ -782,7 +798,10 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	if not g.builtin:
 		# Т-5: у «Кита» бомбы — в бомбоотсеке под створками (render3d / hangar3d открывают их), без пилона
 		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):
-			out.append({"p": pt, "side": "bay" if bay_grp else "under", "yaw": 0.0})
+			var mt := {"p": pt, "side": "bay" if bay_grp else "under", "yaw": 0.0}
+			if g.weapon == "bombs":   # тест 3.5-s8: калибр бомбы — по уровню (1–5), а не по ступени вида
+				mt["t"] = bomb_t(g.level)
+			out.append(mt)
 		return out
 	var s := PlaneArt.shape_info(cls_id, lvl)
 	if s.is_empty():

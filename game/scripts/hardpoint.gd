@@ -789,7 +789,7 @@ func _fire_bombs(p: Player, manual := false) -> bool:
 		to += Vector2(randf_range(-20, 20), randf_range(-20, 20))
 		Main.I.projectiles.spawn_bomb(_slot_pos(p, s), fuse * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
 			range_px() * Profile.wk("bombs", "blast_r"), "бомбы", to, true)
-		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.tier(level)   # тест 3.5-s4 (п. 10): падает модель этой ступени
+		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.bomb_t(level)   # тест 3.5-s4 (п. 10), 3.5-s8: падает бомба калибра с подвеса
 		_bay_release(p, Main.I.projectiles.bombs[-1], 0.0)
 		if p.syn.has("carpet_road"): # «Ковровая дорожка»: крест суббоеприпасов и огонь
 			Main.I.projectiles.bombs[-1]["road"] = true
@@ -835,7 +835,7 @@ func _fire_carpet_row(p: Player, manual: bool) -> bool:
 		# тест 3.5-s5 (п. 3): точка старта — бомба кассеты в отсеке (только вид; куда и когда рвётся — как было)
 		Main.I.projectiles.spawn_bomb(_slot_pos(p, i), (0.5 + 0.04 * i) * Profile.wk("bombs", "fuse"), dmg() * Profile.wk("bombs", "dmg") * GROUND_BOMB_K,
 			CARPET_R * Profile.wk("bombs", "blast_r"), "бомбы", c + side * off, true)
-		Main.I.projectiles.bombs[-1]["vt"] = 4
+		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.BOMB_EVO_VT
 		_bay_release(p, Main.I.projectiles.bombs[-1], 0.04 * i * Profile.wk("bombs", "fuse"))
 		if road:
 			Main.I.projectiles.bombs[-1]["road"] = true

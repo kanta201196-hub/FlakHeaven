@@ -69,7 +69,8 @@ static func set_transparency(holder: Node3D, v: float) -> void:
 static func seeker_head(wmi: Node3D, st: int, tier: int) -> void:
 	if st <= 0:
 		return
-	var r: float = [0.034, 0.026, 0.048][clampi(tier, 1, 3) - 1] * [1.0, 1.0, 1.25, 1.45][st]
+	# тест 3.5-s8: ракета с каждой ступенью толще (weapons_hq.py aam: R 0,030 → 0,038 → 0,048)
+	var r: float = [0.03, 0.038, 0.048][clampi(tier, 1, 3) - 1] * [1.0, 1.0, 1.25, 1.45][st]
 	var nose_x: float = [0.36, 0.44, 0.47][clampi(tier, 1, 3) - 1]
 	var g := _sphere(r, r * 1.5, _mat("glass"))
 	g.position = Vector3(nose_x, 0, 0)
