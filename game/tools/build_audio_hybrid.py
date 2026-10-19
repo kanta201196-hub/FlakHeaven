@@ -295,12 +295,12 @@ def build_bomb_drop(out_dir):
     print('bomb_drop      latch+iron+whoosh_buffet (2)')
 
 
-# Музыка «гибрид» (электроника + живые/брейкбит-барабаны), все треки CC0 с OpenGameArt.
+# Музыка меню и итогов (бой и ас — build_audio_layers.py --only music_rock), треки с OpenGameArt.
 # имя файла -> (URL, обрезать до, с; None — целиком)
 OGA = 'https://opengameart.org/sites/default/files/'
 MUSIC = {
-    'music_menu': (OGA + 'night_club_chill_100bpm.ogg', 120),            # tricksntraps — T&T Free Cyberpunk Pack 2
-    'music_result': (OGA + 'strange_experiments_80bpm.ogg', 90),          # tricksntraps — T&T Free Cyberpunk Pack 2
+    'music_menu': (OGA + 'Heart%20of%20Machine.ogg', None),              # Alexandr Zhelanov — Heart of Machine (CC-BY 3.0), выбор Kanta 19.10
+    'music_result': (OGA + 'rememberance_2025_-_loop.ogg', None),         # bobjt — Remembrance (CC0), выбор Kanta 19.10
 }
 
 

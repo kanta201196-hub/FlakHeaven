@@ -17,14 +17,14 @@ The Sound Pack Tree, SoundHolder, Soundrangers, Mattia Cellotto, Soundopolis (м
 
 | Файл | Трек | Автор | Лицензия |
 | --- | --- | --- | --- |
-| music_menu | Night Club Chill (T&T Free Cyberpunk Pack 2) — https://opengameart.org/content/t-t-free-cyberpunk-pack-2 | tricksntraps | CC0 |
+| music_menu | Heart of Machine — https://opengameart.org/content/heart-of-machine | Alexandr Zhelanov | **CC-BY 3.0 — автора указать в титрах** |
 | music_battle_1 | Unchained Destiny (rock) — https://opengameart.org/content/unchained-destiny-rock | nene | CC0 |
 | music_battle_2 | Boss Battle #8 (metal) — https://opengameart.org/content/boss-battle-8-metal | nene | CC0 |
 | music_battle_3 | Short Theme (rock/metal) — https://opengameart.org/content/short-theme-rockmetal | nene | CC0 |
 | music_boss | Boss Battle #9 (metal) — https://opengameart.org/content/boss-battle-9-metal | nene | CC0 |
-| music_result | Strange Experiments (T&T Free Cyberpunk Pack 2) — https://opengameart.org/content/t-t-free-cyberpunk-pack-2 | tricksntraps | CC0 |
+| music_result | Remembrance — https://opengameart.org/content/remembrance-0 | bobjt | CC0 |
 
-Бой и ас — выбор Kanta 18.10 (рок одного автора), сборка `game/tools/build_audio_layers.py --only music_rock`. Меню и итоги — `game/tools/build_audio_hybrid.py --only music`. Обработка меню и итогов: обрезка длинных треков с затуханием, громкость −16 LUFS.
+Меню и итоги — выбор Kanta 19.10. Бой и ас — выбор Kanta 18.10 (рок одного автора), сборка `game/tools/build_audio_layers.py --only music_rock`. Меню и итоги — `game/tools/build_audio_hybrid.py --only music`. Обработка меню и итогов: обрезка длинных треков с затуханием, громкость −16 LUFS.
 
 ## Интерфейс (CC0, с 10.10.2026)
 Все файлы — CC0 (общественное достояние): указывать авторов не обязательно, но вежливо — укажем в титрах игры.
