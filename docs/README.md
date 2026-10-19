@@ -14,6 +14,7 @@
 | --- | --- |
 | `game-context.md` | Решения по игре, журнал решений |
 | `backlog.md`, `status-log.md` | Бэклог, спринты, отчёты по сборкам |
+| `demo-next-fest.md` | Демо для Steam Next Fest 2027: правила Valve, варианты состава, сроки и задачи DM-01…DM-12 |
 | `concept/game-concept.md` | Концепция игры и её логика |
 | `catalog/catalog.md` (+ `catalog.pdf`) | Каталог техники и оружия с картинками (`catalog/img/`) |
 | `catalog/plan-after-review.md` | Ответы владельца по каталогу и план работ (§10 — ответы и референсы) |
