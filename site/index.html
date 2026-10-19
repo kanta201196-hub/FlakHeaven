@@ -6,7 +6,15 @@
 <title>Flak Heaven</title>
 <meta name="description" content="Flak Heaven — roguelike про боевую авиацию: соберите свой истребитель и продержитесь 15 минут. Ищем тестеров.">
 <meta property="og:title" content="Flak Heaven">
-<meta property="og:description" content="Fighter-jet bullet heaven roguelite. Build your plane, survive 15 minutes.">
+<meta property="og:description" content="Roguelike про боевую авиацию: соберите свой самолёт и продержитесь 15 минут. Fighter-jet bullet heaven roguelite.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://flakheaven.com/">
+<meta property="og:image" content="https://flakheaven.com/img/og_cover.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://flakheaven.com/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
 :root{--bg:#10151c;--panel:#18202b;--text:#e8edf3;--muted:#9aa7b6;--accent:#ffb347;--line:#263241}
 @media (prefers-color-scheme:light){:root{--bg:#f4f6f8;--panel:#fff;--text:#161c24;--muted:#56626f;--accent:#c46a00;--line:#d9e0e7}}
@@ -32,6 +40,11 @@ li{margin:6px 0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
 .small{color:var(--muted);font-size:14px}
 footer{margin-top:48px;border-top:1px solid var(--line);padding-top:16px}
+footer a,.card a{color:var(--accent)}
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:28px}
+.shots img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;background:var(--panel)}
+.shots img.wide{grid-column:1/-1}
+@media (max-width:520px){.shots{grid-template-columns:1fr}}
 [data-l]{display:none}
 html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
 </style>
@@ -55,8 +68,15 @@ html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
   <a class="btn" id="l-discord" href="#" hidden>Discord</a>
 </div>
 
+<div class="shots">
+  <img class="wide" src="img/shot_battle.jpg" width="1280" height="720" alt="Бой над Нагорьем: истребитель и ведомый, задание «Крепость» / Battle over the Highlands">
+  <img src="img/shot_explosions.jpg" width="800" height="450" loading="lazy" alt="Взрывы на земле после бомбового удара / Ground explosions after a bombing run">
+  <img src="img/shot_village.jpg" width="1280" height="720" loading="lazy" alt="Кишлак у реки и облака / A village by the river under clouds">
+  <img class="wide" src="img/shot_cards.jpg" width="1280" height="710" loading="lazy" alt="Выбор улучшения на новом уровне / Choosing an upgrade on level up">
+</div>
+
 <section data-l="ru">
-  <h2>О игре</h2>
+  <h2>Об игре</h2>
   <ul>
     <li>Вид сверху, вылет длится 15 минут. Вы летите вперёд и не можете остановиться.</li>
     <li>Собирайте самолёт из оружия и ведомых, бомбите наземные цели, сбивайте самолёты и ракеты.</li>
@@ -88,12 +108,14 @@ html[lang="ru"] [data-l="ru"],html[lang="en"] [data-l="en"]{display:revert}
   <div class="card">
     <p data-l="ru">К каждой тестовой сборке мы даём контрольную сумму (SHA-256), по которой видно, что файл не подменили, и записку о безопасности. Игра отправляет только ответы анкеты, статистику вылета, название системы и видеокарты, FPS и технический журнал. Имён и почты она не собирает.</p>
     <p data-l="en">Each test build comes with a SHA-256 checksum so you can check the file was not tampered with, and a safety note. The game only sends your survey answers, sortie stats, OS and GPU names, FPS and a technical log. It does not collect names or email.</p>
-    <p class="small" data-l="ru">Заявка на тест: форма просит имя в сети и контакт. Мы используем их только чтобы написать вам про тест и не передаём третьим лицам.</p>
-    <p class="small" data-l="en">The tester form asks for a nickname and a contact. We use them only to write to you about testing and do not share them.</p>
+    <p class="small" data-l="ru">Заявка на тест: форма просит имя в сети и контакт. Мы используем их только чтобы написать вам про тест. Как и где хранятся данные — в <a href="privacy.html">политике конфиденциальности</a>.</p>
+    <p class="small" data-l="en">The tester form asks for a nickname and a contact. We use them only to write to you about testing. How and where the data is stored is in the <a href="privacy.html">privacy policy</a>.</p>
   </div>
 </section>
 
 <footer class="small">
+  <p data-l="ru">Сайт не использует куки и счётчики посещений. <a href="privacy.html">Политика конфиденциальности</a> · Связь: <a href="https://t.me/FlakHeaven">Telegram</a></p>
+  <p data-l="en">This site uses no cookies or visitor tracking. <a href="privacy.html">Privacy policy</a> · Contact: <a href="https://t.me/FlakHeaven">Telegram</a></p>
   <span data-l="ru">© 2026 Flak Heaven. Все совпадения с реальной техникой и странами случайны.</span>
   <span data-l="en">© 2026 Flak Heaven. Any resemblance to real vehicles or countries is coincidental.</span>
 </footer>
