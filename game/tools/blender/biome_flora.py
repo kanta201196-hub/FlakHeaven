@@ -300,15 +300,18 @@ def sandbag():
     rng = np.random.default_rng(5)
     B = Builder()
     # единицы — метры: окоп ~4,4 м внутри, стенка в 2 мешка, высота ~0,75 м; вал вокруг — до ~8 м
-    sand = [(0.63, 0.58, 0.47), (0.58, 0.55, 0.46), (0.55, 0.52, 0.45), (0.66, 0.6, 0.48), (0.5, 0.48, 0.42)]
+    sand = [(0.74, 0.69, 0.57), (0.68, 0.65, 0.55), (0.64, 0.61, 0.53), (0.77, 0.7, 0.57), (0.6, 0.58, 0.51)]
     L, W, H = 0.36, 0.2, 0.085     # полуразмеры мешка (0,72 × 0,4 × 0,17 м)
     gap = math.radians(70)        # проход в тыл (−X)
+    # всё стоит на насыпи высотой BASE: игра утапливает модель на 4 % ширины и рельеф неровный —
+    # без насыпи низкий пост уходил в землю (кадр игры 19.10)
+    BASE = 0.42
     a_lo, a_hi = math.pi + gap / 2 - 2 * math.pi, math.pi - gap / 2
     for row, (r, courses) in enumerate([(2.75, 3), (2.35, 3), (1.98, 2)]):
         n = int((a_hi - a_lo) * r / (2 * L * 0.98))
         for cz in range(courses):
             off = 0.5 if cz % 2 else 0.0          # кладка вперевязку
-            z = 0.05 + H + cz * H * 1.75
+            z = BASE + 0.05 + H + cz * H * 1.75
             r_c = r - cz * 0.04                    # стенка чуть заваливается внутрь
             for i in range(n + (0 if off else 1)):
                 a = a_lo + (i + off) * (a_hi - a_lo) / n
@@ -322,8 +325,8 @@ def sandbag():
                     (L * rng.uniform(0.95, 1.05), W, H), srgb(col), tilt=rng.uniform(-0.06, 0.06))
     # земляной вал снаружи (выброшенный из окопа грунт) — кольцо от стенки к земле
     seg = 40
-    ring_r = [(2.92, 0.06), (3.0, 0.2), (3.2, 0.12), (3.5, -0.02)]
-    earth = [(0.5, 0.45, 0.36), (0.58, 0.51, 0.39), (0.62, 0.53, 0.4), (0.64, 0.54, 0.4)]
+    ring_r = [(2.92, BASE + 0.06), (3.0, BASE + 0.2), (3.25, BASE + 0.08), (3.6, 0.22), (3.85, -0.02)]
+    earth = [(0.6, 0.55, 0.45), (0.7, 0.63, 0.5), (0.72, 0.64, 0.5), (0.7, 0.61, 0.47), (0.72, 0.62, 0.47)]
     vs = [[B.bm.verts.new((math.cos(2 * math.pi * k / seg) * r * (1 + 0.04 * noise.noise((k * 0.4, r, 0))),
                            math.sin(2 * math.pi * k / seg) * r * (1 + 0.04 * noise.noise((k * 0.4, r, 0))), z)) for k in range(seg)] for r, z in ring_r]
     for j in range(len(ring_r) - 1):
@@ -331,11 +334,11 @@ def sandbag():
             k2 = (k + 1) % seg
             B.face([vs[j][k], vs[j + 1][k], vs[j + 1][k2], vs[j][k2]], [srgb(earth[j]), srgb(earth[j + 1]), srgb(earth[j + 1]), srgb(earth[j])])
     # окоп: тёмное дно, к стенкам светлее (тень бруствера)
-    rings = [(0.0, (0.28, 0.24, 0.19)), (1.0, (0.3, 0.26, 0.2)), (1.6, (0.36, 0.31, 0.24)), (2.95, (0.5, 0.45, 0.36))]
-    cen = B.bm.verts.new((0, 0, 0.02))
+    rings = [(0.0, (0.33, 0.29, 0.23)), (1.0, (0.36, 0.31, 0.25)), (1.6, (0.42, 0.37, 0.29)), (2.95, (0.58, 0.52, 0.42))]
+    cen = B.bm.verts.new((0, 0, BASE + 0.02))
     prev = None
     for r, col in rings[1:]:
-        cur = [B.bm.verts.new((math.cos(2 * math.pi * k / seg) * r, math.sin(2 * math.pi * k / seg) * r, 0.02 + 0.04 * min(1.0, r / 2.0) ** 2)) for k in range(seg)]
+        cur = [B.bm.verts.new((math.cos(2 * math.pi * k / seg) * r, math.sin(2 * math.pi * k / seg) * r, BASE + 0.02 + 0.04 * min(1.0, r / 2.0) ** 2)) for k in range(seg)]
         for k in range(seg):
             k2 = (k + 1) % seg
             if prev is None:
@@ -345,13 +348,13 @@ def sandbag():
         prev = (cur, col)
     # пулемёт на бруствере (смотрит вперёд, +X): сошки, короб, ствол; рядом ящик с лентами
     gun = srgb((0.16, 0.16, 0.15))
-    zt = 0.05 + H + 2 * H * 1.75 + H
+    zt = BASE + 0.05 + H + 2 * H * 1.75 + H
     B.box((2.55, 0.0, zt + 0.07), (0.2, 0.06, 0.06), 0.0, gun)
     B.sweep([(2.7, 0.0, zt + 0.08), (3.35, 0.0, zt + 0.1)], [0.025, 0.02], lambda t, a: gun, sides=6)
     B.sweep([(2.95, 0.0, zt + 0.07), (3.05, 0.15, zt - 0.02)], [0.015, 0.015], lambda t, a: gun, sides=4)
     B.sweep([(2.95, 0.0, zt + 0.07), (3.05, -0.15, zt - 0.02)], [0.015, 0.015], lambda t, a: gun, sides=4)
-    B.box((1.55, -0.45, 0.14), (0.2, 0.12, 0.12), 0.4, srgb((0.3, 0.32, 0.22)))
-    B.box((-1.0, 1.0, 0.14), (0.28, 0.17, 0.12), -0.6, srgb((0.3, 0.32, 0.22)))
+    B.box((1.55, -0.45, BASE + 0.14), (0.2, 0.12, 0.12), 0.4, srgb((0.3, 0.32, 0.22)))
+    B.box((-1.0, 1.0, BASE + 0.14), (0.28, 0.17, 0.12), -0.6, srgb((0.3, 0.32, 0.22)))
     ob = B.finish("b10_sandbag_post", material("sandbag"))
     normalize_export(ob, "b10_sandbag_post")
 
