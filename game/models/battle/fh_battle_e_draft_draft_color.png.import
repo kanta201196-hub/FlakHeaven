@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cy3yeqwjwgqfa"
-path="res://.godot/imported/fh_battle_e_interceptor_Image_2.jpg-a9ce61aa38deb53210e24dad8cb6ce9a.ctex"
+uid="uid://cguktgeghlhwl"
+path="res://.godot/imported/fh_battle_e_draft_draft_color.png-2679beebae2080967955bc7d1806ebd4.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "59ed9e733a9521074907de4c5659fab7"
+"md5": "9d4bfde1fc5b3438d37630a341044966"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_interceptor_Image_2.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_interceptor_Image_2.jpg-a9ce61aa38deb53210e24dad8cb6ce9a.ctex"]
+source_file="res://models/battle/fh_battle_e_draft_draft_color.png"
+dest_files=["res://.godot/imported/fh_battle_e_draft_draft_color.png-2679beebae2080967955bc7d1806ebd4.ctex"]
 
 [params]
 

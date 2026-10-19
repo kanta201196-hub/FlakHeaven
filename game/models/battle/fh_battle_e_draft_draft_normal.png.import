@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://romj63jgt8ia"
-path="res://.godot/imported/fh_battle_e_rival_Image_1.jpg-c37e1df232d760eae17590f227e88587.ctex"
+uid="uid://o8ovxf2hj54e"
+path="res://.godot/imported/fh_battle_e_draft_draft_normal.png-ee07c42722ca07f70e2e73f1cdfed03a.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "ea6b1a88850159c0afea6655d373e3b3"
+"md5": "b6c8789ef130ed52058b779090ac123b"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_rival_Image_1.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_rival_Image_1.jpg-c37e1df232d760eae17590f227e88587.ctex"]
+source_file="res://models/battle/fh_battle_e_draft_draft_normal.png"
+dest_files=["res://.godot/imported/fh_battle_e_draft_draft_normal.png-ee07c42722ca07f70e2e73f1cdfed03a.ctex"]
 
 [params]
 

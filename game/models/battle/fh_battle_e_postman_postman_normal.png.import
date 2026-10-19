@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bfnmcjt3h6fgd"
-path="res://.godot/imported/fh_battle_e_draft_Image_0.jpg-18b7c9f5abd723ab16b9591b6dee0ecf.ctex"
+uid="uid://cpfbm43t0sbbo"
+path="res://.godot/imported/fh_battle_e_postman_postman_normal.png-970b5cf69db0dbf9d4ce64a3a725d688.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "856a03545bd2eec1287da8d243249dc3"
+"md5": "7a5ee9f9c72a6d8164422df9eeff68c1"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_draft_Image_0.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_draft_Image_0.jpg-18b7c9f5abd723ab16b9591b6dee0ecf.ctex"]
+source_file="res://models/battle/fh_battle_e_postman_postman_normal.png"
+dest_files=["res://.godot/imported/fh_battle_e_postman_postman_normal.png-970b5cf69db0dbf9d4ce64a3a725d688.ctex"]
 
 [params]
 
