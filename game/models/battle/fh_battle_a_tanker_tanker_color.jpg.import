@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://fd7x0qhn5xe6"
-path="res://.godot/imported/fh_battle_e_drone_Image_2.jpg-71beff5eba3b6208ec97cd5b7fe9c48b.ctex"
+uid="uid://chfnonojwisx"
+path="res://.godot/imported/fh_battle_a_tanker_tanker_color.jpg-0bb7080b47e0e6a2992750b9281c9d47.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "53e036f77d6523694573ceae6496eb24"
+"md5": "b6bd93db60f043b85f0599b538702ec1"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_drone_Image_2.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_drone_Image_2.jpg-71beff5eba3b6208ec97cd5b7fe9c48b.ctex"]
+source_file="res://models/battle/fh_battle_a_tanker_tanker_color.jpg"
+dest_files=["res://.godot/imported/fh_battle_a_tanker_tanker_color.jpg-0bb7080b47e0e6a2992750b9281c9d47.ctex"]
 
 [params]
 

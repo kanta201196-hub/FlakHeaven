@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dfab4ondyhu14"
-path="res://.godot/imported/fh_battle_e_kamikaze_Image_1.jpg-a4417e97f82e7791de7c5b9c8bf5fd97.ctex"
+uid="uid://dcim6i7hlnapp"
+path="res://.godot/imported/fh_battle_e_drone_drone_color.png-e3a764b6ef6ce3e0feece999cbcc2184.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "56692578586368a361f78f6af37ccf10"
+"md5": "33ad9830fea20cff1047ced7381d8156"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_kamikaze_Image_1.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_kamikaze_Image_1.jpg-a4417e97f82e7791de7c5b9c8bf5fd97.ctex"]
+source_file="res://models/battle/fh_battle_e_drone_drone_color.png"
+dest_files=["res://.godot/imported/fh_battle_e_drone_drone_color.png-e3a764b6ef6ce3e0feece999cbcc2184.ctex"]
 
 [params]
 

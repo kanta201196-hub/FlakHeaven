@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cb152ngunx5vu"
-path="res://.godot/imported/fh_battle_e_transport_Image_2.jpg-e5fc8a91d635094ee09af9b531d49786.ctex"
+uid="uid://twq18x51ym3o"
+path="res://.godot/imported/fh_battle_e_carrier_carrier_normal.png-d2d03a2129821c5abf3d73f9907cab74.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "919fa840504842d2aa5501455b23ba6e"
+"md5": "88fba3d47b466733731f4d67f668aec8"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_transport_Image_2.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_transport_Image_2.jpg-e5fc8a91d635094ee09af9b531d49786.ctex"]
+source_file="res://models/battle/fh_battle_e_carrier_carrier_normal.png"
+dest_files=["res://.godot/imported/fh_battle_e_carrier_carrier_normal.png-d2d03a2129821c5abf3d73f9907cab74.ctex"]
 
 [params]
 

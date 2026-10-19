@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ciqeos6usk8ek"
-path="res://.godot/imported/fh_battle_e_kamikaze_Image_0.jpg-7065de3da4fbc97e9fce929f89d95ac7.ctex"
+uid="uid://bh6ee2dfqdqb5"
+path="res://.godot/imported/fh_battle_e_transport_transport_normal.png-ce722cb00170f2fa4425f5ba2ffc864b.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "2b93c3ab846e100d181e207016857d4d"
+"md5": "307337024072989c1866060e28cf6f07"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_kamikaze_Image_0.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_kamikaze_Image_0.jpg-7065de3da4fbc97e9fce929f89d95ac7.ctex"]
+source_file="res://models/battle/fh_battle_e_transport_transport_normal.png"
+dest_files=["res://.godot/imported/fh_battle_e_transport_transport_normal.png-ce722cb00170f2fa4425f5ba2ffc864b.ctex"]
 
 [params]
 
