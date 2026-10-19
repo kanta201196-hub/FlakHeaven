@@ -87,12 +87,21 @@ var _combat_quad: MeshInstance3D
 var _tilt_on := false
 
 
+var _prewarm_id := -1   # задача AdobeBuild.prewarm: забрать при выходе (пул не держит её и не обрывает)
+
+
+func _exit_tree() -> void:
+	if _prewarm_id >= 0:
+		WorkerThreadPool.wait_for_task_completion(_prewarm_id)
+		_prewarm_id = -1
+
+
 func _ready() -> void:
 	I = self
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	enabled = Tuning.g("render3d") > 0.5
 	if enabled:   # 3.5-s8: кишлак-городок собирается 0,15–0,4 с — заранее в фоне, без рывка при появлении
-		WorkerThreadPool.add_task(AdobeBuild.prewarm, false, "AdobeBuild.prewarm")
+		_prewarm_id = WorkerThreadPool.add_task(AdobeBuild.prewarm, false, "AdobeBuild.prewarm")
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
@@ -425,8 +434,8 @@ func _process(delta: float) -> void:
 	if terrain._bg != m.background:
 		terrain._bg = m.background
 		m.background.place_filter = terrain.fix_object   # тест 3.5-s4 (п. 20): объекты клеток не в реке
+		terrain.clear()   # сначала дождаться фоновых кусков: set_biome меняет поля, которые читает поток
 		_apply_biome()
-		terrain.clear()
 	var half_g := vs / zoom * 0.5 * ((h - GROUND_Y) / h) + Vector2(700, 700)
 	_set_tilt_mode(tilt > 0.001, m)
 	if _tilt_on:
@@ -1597,6 +1606,14 @@ func _weapon_layout(u: Dictionary, p: Player, tex: Texture2D, gi: int, g: Hardpo
 
 # ---------- 3.4-t1: следы ракет (п. 34) ----------
 
+## S8 «eweap»: след вражеской ракеты по виду (стиль Contrails.emit: альфа, ширина у сопла, ширина в конце, жизнь, шаг, цвет).
+## ПЗРК — тонкий белый дымок, быстро тает; ракета самолёта — как была; ЗРК — толстый серый дымный след, держится дольше
+const MSL_TRAIL := {
+	"manpads": [0.7, 2.2, 6.5, 0.6, 12.0, Color(0.97, 0.97, 0.96)],
+	"aam": [0.8, 5.0, 13.0, 0.95, 16.0, Color(0.84, 0.83, 0.82)],
+	"sam": [0.92, 9.0, 30.0, 1.9, 16.0, Color(0.6, 0.59, 0.57)],
+}
+
 func _sync_missiles(m: Main) -> void:
 	var pr := m.projectiles
 	if pr == null:
@@ -1616,6 +1633,9 @@ func _sync_missiles(m: Main) -> void:
 			var v: Vector2 = mm["v"]
 			var tail: Vector2 = mm["p"] - (v.normalized() * 9.0 if v.length() > 1.0 else Vector2.ZERO)
 			var st: Array = arr_st[1]
+			if mm.has("k") and MSL_TRAIL.has(mm["k"]):   # S8 «eweap»: след по виду вражеской ракеты
+				var mts: Array = MSL_TRAIL[mm["k"]]
+				st = [mts[0], mts[1], mts[2], mts[3], float(mts[4]) * lo, mts[5]]
 			if mm.has("tint"):   # связки: след своего цвета (бирюзовый, золотой…), но светлый
 				st = st.duplicate()
 				st[5] = (mm["tint"] as Color).lerp(Color.WHITE, 0.45)
@@ -1696,18 +1716,11 @@ func _sync_enemy_shots(m: Main) -> void:
 		var p: Vector2 = b["p"]
 		var v: Vector2 = b["v"]
 		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
-		var ace: bool = b.get("who", "") == "асы"
-		var c: Color
-		var ln: float
-		var w: float
-		if b["big"]:
-			c = Color(1.0, 0.42, 0.18, 1.0)
-			ln = 16.0
-			w = 16.0
-		else:
-			c = Color(1.0, 0.62, 0.15, 1.0) if ace else Color(1.0, 0.18, 0.3, 1.0)
-			ln = 17.0
-			w = 5.5
+		# S8 «eweap»: цвет, длина и толщина трассера — по виду оружия (Projectiles.eb_look)
+		var lk := Projectiles.eb_look(b)
+		var c: Color = lk[0]
+		var ln: float = lk[1]
+		var w: float = lk[2]
 		var ctr := Vector3(p.x - dir.x * ln * 0.55, 1.0, p.y - dir.y * ln * 0.55)
 		var xa := Vector3(dir.x, 0, dir.y) * ln
 		var za := Vector3(-dir.y, 0, dir.x) * w
@@ -1721,7 +1734,10 @@ func _sync_enemy_shots(m: Main) -> void:
 		var v: Vector2 = ms["v"]
 		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
 		var y := 0.0
-		var bs := Basis(Vector3.UP, -dir.angle()).scaled(Vector3.ONE * ESHOT_LEN)
+		# S8 «eweap»: размер по виду ракеты — ПЗРК ×0,6, ракета самолёта ×1, ЗРК ×1,5 (модель, факел, ореол)
+		var sk := float(Projectiles.MSL_SIZE.get(ms.get("k", "aam"), 1.0))
+		var ln := ESHOT_LEN * sk
+		var bs := Basis(Vector3.UP, -dir.angle()).scaled(Vector3.ONE * ln)
 		var pos := Vector3(p.x, y, p.y)
 		mmx.set_instance_transform(n_m, Transform3D(bs, pos))
 		n_m += 1
@@ -1729,13 +1745,14 @@ func _sync_enemy_shots(m: Main) -> void:
 		hi = hi.max(pos)
 		var lost: bool = ms["lost"]
 		# факел двигателя у хвоста и красный ореол вокруг (у уведённой ловушкой — без ореола, факел тусклый)
-		var tail := pos - Vector3(dir.x, 0, dir.y) * ESHOT_LEN * 0.55
+		var tail := pos - Vector3(dir.x, 0, dir.y) * ln * 0.55
 		var fl := 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.05 + float(n_m))
-		gmx.set_instance_transform(n_g, Transform3D(Basis(Vector3(-dir.x, 0, -dir.y) * 9.0 * fl, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 4.5), tail + Vector3(0, 1.0, 0)))
+		var fk := sqrt(sk)   # факел и ореол растут медленнее корпуса: маленькая ракета ПЗРК всё равно заметна
+		gmx.set_instance_transform(n_g, Transform3D(Basis(Vector3(-dir.x, 0, -dir.y) * 9.0 * fl * fk, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 4.5 * fk), tail + Vector3(0, 1.0, 0)))
 		gmx.set_instance_color(n_g, Color(1.0, 0.7, 0.25, 1.0 if not lost else 0.5))
 		n_g += 1
 		if not lost:
-			gmx.set_instance_transform(n_g, Transform3D(Basis(Vector3(dir.x, 0, dir.y) * 20.0, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 14.0), pos - Vector3(0, 0.5, 0)))
+			gmx.set_instance_transform(n_g, Transform3D(Basis(Vector3(dir.x, 0, dir.y) * 20.0 * fk, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 14.0 * fk), pos - Vector3(0, 0.5, 0)))
 			gmx.set_instance_color(n_g, Color(1.0, 0.1, 0.05, 0.45))
 			n_g += 1
 	mmx.visible_instance_count = n_m

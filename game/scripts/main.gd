@@ -219,7 +219,7 @@ func start_run() -> void:
 	parts = 0.0
 	parts_kept = 0
 	is_dead = false
-	stats = {"taken": {}, "taken_by": {}, "dealt": {}, "kills_by": {}}
+	stats = {"taken": {}, "taken_by": {}, "dealt": {}, "kills_by": {}, "taken_kind": {}, "raw_in": {}}   # S8: taken_kind — урон по видам оружия врагов, raw_in — «сырой» урон с --god
 	ace_log = []
 	counters = {}
 	shots = 0

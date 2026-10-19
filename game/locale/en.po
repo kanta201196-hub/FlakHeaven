@@ -6079,5 +6079,45 @@ msgstr "synergy: good company"
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
 
+#: game/scripts/hud_screens.gd
+msgid "Чем:"
+msgstr "By weapon:"
+
+#: game/scripts/projectiles.gd
+msgid "ЗРК"
+msgstr "SAM"
+
+#: game/scripts/projectiles.gd
+msgid "ракеты самолётов"
+msgstr "aircraft missiles"
+
+#: game/scripts/projectiles.gd
+msgid "пулемёт пикапа"
+msgstr "pickup MG"
+
+#: game/scripts/projectiles.gd
+msgid "пулемёт броневика"
+msgstr "armored car MG"
+
+#: game/scripts/projectiles.gd
+msgid "пушка БМП"
+msgstr "IFV cannon"
+
+#: game/scripts/projectiles.gd
+msgid "ЗСУ"
+msgstr "SPAAG"
+
+#: game/scripts/projectiles.gd
+msgid "пушки истребителей"
+msgstr "fighter guns"
+
+#: game/scripts/projectiles.gd
+msgid "пушки асов"
+msgstr "ace guns"
+
+#: game/scripts/projectiles.gd
+msgid "крупный калибр"
+msgstr "heavy guns"
+
 msgid "Механизация"
 msgstr "Moving parts"

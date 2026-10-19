@@ -17,6 +17,11 @@ func kind() -> String:
 	return "дроны"
 
 
+## S8 «eweap»: курсовые пушки истребителя (спаренная пушка: две пули по 3)
+func gun_kind() -> String:
+	return "fighter"
+
+
 func _ready() -> void:
 	super()
 	hp = 12.0
@@ -56,7 +61,7 @@ func behave(delta: float) -> void:
 	if _aim > 0.0:
 		_aim -= delta
 		if _aim <= 0.0:
-			fire_at_player(0.0, true) # спаренная пушка: две пули по половине урона
+			fire_at_player(gun_spread(), true) # спаренная пушка: две пули (S8: по eb_fighter_dmg)
 			_gun_cd = randf_range(3.0, 5.0)
 	else:
 		_gun_cd -= delta

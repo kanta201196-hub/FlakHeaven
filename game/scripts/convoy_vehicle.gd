@@ -177,6 +177,16 @@ func kind() -> String:
 		"manpads": "ПЗРК", "ifv": "БМП"}[role]
 
 
+## S8 «eweap»: пикап — крупнокалиберный пулемёт, броневик — пулемёт в башенке, БМП — автоматическая пушка
+func gun_kind() -> String:
+	return {"scout": "apc", "technical": "pickup", "ifv": "ifv"}.get(role, "pickup")
+
+
+## Вид ракеты: пикап с ПЗРК; на море «Скат» с ЗРК
+func msl_kind() -> String:
+	return "sam" if Biome.sea() else "manpads"
+
+
 func is_truck() -> bool:
 	return role == "truck" or role == "light"
 
@@ -314,27 +324,36 @@ func _fight(delta: float, p: Player) -> void:
 			if _shots > 0:
 				_shot_t -= delta
 				if _shot_t <= 0.0:
-					fire_at_player(randf_range(-0.08, 0.08))
+					fire_at_player(gun_spread())
 					_shots -= 1
-					_shot_t = 0.16 if role == "ifv" else 0.09
+					# S8: пикап — часто, броневик — ровно, БМП — редкие выстрелы
+					_shot_t = {"ifv": 0.22, "scout": 0.11}.get(role, 0.08)
 			else:
 				_cd -= delta
 				if _cd <= 0.0 and d < rng:
-					_shots = 3 if role == "ifv" else 4
+					_shots = int(Tuning.g("eb_%s_burst" % gun_kind()))
 					_cd = randf_range(2.0, 2.8) if role == "ifv" else randf_range(1.6, 2.4)
 					Main.I.sfx.play("aa_alert", -18.0, 1.6)
 		"manpads":
 			if _lock > 0.0:
 				_lock -= delta
 				if _lock <= 0.0:
-					Main.I.projectiles.spawn_missile(global_position, (p.global_position - global_position).normalized())
-					Main.I.sfx.play("sam_launch", -6.0, 1.1)
+					var mk := msl_kind()
+					Main.I.projectiles.spawn_missile(global_position, (p.global_position - global_position).normalized(), mk, kind())
+					if mk == "manpads":
+						Main.I.sfx.play("missile_enemy", -7.0, 1.35)   # S8: лёгкая труба — короткий резкий пуск
+					else:
+						Main.I.sfx.play("sam_launch", -6.0, 1.1)
 			else:
 				_cd -= delta
 				if _cd <= 0.0 and d < 950.0 and drive.speed < 3.0:
-					_lock = 1.2
+					var mk2 := msl_kind()
+					_lock = Projectiles.msl_p(mk2, "lock")
 					_cd = randf_range(7.0, 8.0)
-					Main.I.sfx.play("sam_lock", -6.0, 1.3)
+					if mk2 == "manpads":
+						Main.I.sfx.play("lock", -7.0, 1.9)   # S8: ПЗРК — короткий высокий щелчок захвата
+					else:
+						Main.I.sfx.play("sam_lock", -6.0, 1.3)
 
 
 ## Подбит: награда как у наземной цели, но машина остаётся остовом (горит, мешает колонне)

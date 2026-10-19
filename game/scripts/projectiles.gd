@@ -80,14 +80,97 @@ func spawn_bomb(pos: Vector2, fuse: float, dmg: float, radius: float, src := "б
 	bombs.append({"p": pos, "from": pos, "to": dest, "t": fuse, "fuse": fuse, "dmg": dmg, "r": radius, "src": src, "ground": ground_only})
 
 
-func spawn_missile(pos: Vector2, dir: Vector2) -> void:
-	missiles.append({"p": pos, "v": dir * Tuning.g("missile_speed") * 0.6, "life": 4.5, "lost": false, "trail": PackedVector2Array()})
+# ---------- S8 «eweap»: виды оружия врагов (решение Kanta 19.10, docs/proposals/enemy-weapons-s8.md, вариант 1) ----------
+
+## Виды ракет: manpads — ПЗРК (пикап; быстрая «оса», ближняя, ловушки уводят почти всегда),
+## aam — ракета самолёта (ракетоносец, экраноплан, асы; как была), sam — ЗРК (позиция ПВО, ЗУР кораблей;
+## тяжёлая, дальняя, медленный разгон, осколки при подрыве рядом, ловушки уводят реже).
+## Название вида — источник урона в отчёте после вылета и в логе (taken_kind)
+const MSL_NAMES := {"manpads": "ПЗРК", "aam": "ракеты самолётов", "sam": "ЗРК"}
+const MSL_SIZE := {"manpads": 0.6, "aam": 1.0, "sam": 1.5}   # длина 3D-модели и ореола × ESHOT_LEN
+const MSL_V0 := {"manpads": 0.5, "aam": 0.6, "sam": 0.3}     # скорость схода с направляющей (доля скорости)
+## Виды пуль (кто стреляет — Enemy.gun_kind()): «» — прочие (как было: ebullet_*), big — крупный калибр (как было)
+const GUN_NAMES := {"pickup": "пулемёт пикапа", "apc": "пулемёт броневика", "ifv": "пушка БМП", "zsu": "ЗСУ",
+	"fighter": "пушки истребителей", "ace": "пушки асов", "big": "крупный калибр", "": "пули"}
+const GUN_PITCH := {"pickup": 1.2, "apc": 1.08, "ifv": 0.78, "zsu": 0.92, "fighter": 1.0, "ace": 0.95}
 
 
-func spawn_enemy_bullet(pos: Vector2, vel: Vector2, who := "", big := false, dmg_k := 1.0, quiet := false) -> void:
-	ebullets.append({"p": pos, "v": vel, "life": 3.3, "who": who, "big": big, "k": dmg_k})
+## Параметр ракеты вида kind: dmg, speed, acc, turn, life, decoy, jam, flak (+ lock у ПЗРК и ЗРК)
+static func msl_p(kind: String, key: String) -> float:
+	match kind:
+		"manpads":
+			return Tuning.g("msl_mp_" + key)
+		"sam":
+			return Tuning.g("msl_sam_" + key)
+	return Tuning.g("missile_" + key)
+
+
+## Урон одной пули вида gun (до множителя стрелка dmg_k)
+static func gun_dmg(gun: String) -> float:
+	match gun:
+		"", "big":
+			return Tuning.g("ebullet_dmg") * (2.0 if gun == "big" else 1.0)
+		"ace":
+			return Tuning.g("ebullet_dmg") * Tuning.g("eb_ace_k")
+	return Tuning.g("eb_%s_dmg" % gun)
+
+
+static func gun_speed(gun: String) -> float:
+	return Tuning.g("ebullet_speed") if gun == "" or gun == "big" else Tuning.g("eb_%s_speed" % gun)
+
+
+## Разброс вида, рад (±); у прочих — прежние ±0,07
+static func gun_spread(gun: String) -> float:
+	return 0.07 if gun == "" or gun == "big" else deg_to_rad(Tuning.g("eb_%s_spread" % gun))
+
+
+## kind — вид ракеты (MSL_NAMES), who — кто пустил (для отчёта «от кого»)
+func spawn_missile(pos: Vector2, dir: Vector2, kind := "aam", who := "ракетоносцы") -> void:
+	var top := msl_p(kind, "speed0") if kind == "sam" else msl_p(kind, "speed")
+	missiles.append({"p": pos, "v": dir * top * float(MSL_V0.get(kind, 0.6)), "life": msl_p(kind, "life"), "lost": false,
+		"trail": PackedVector2Array(), "k": kind, "who": who, "age": 0.0})
+	Main.I.stats_add_counter("msl_" + kind, 1)   # сколько пущено ракет каждого вида (автотест)
+	if kind == "sam" and Boom3D.active():
+		Boom3D.ensure().ground_launch(pos, dir)   # вспышка пуска и клуб дыма у земли
+
+
+## gun — вид оружия (GUN_NAMES); life — время полёта (у ЗСУ и БМП — дистанционный взрыватель у цели)
+func spawn_enemy_bullet(pos: Vector2, vel: Vector2, who := "", big := false, dmg_k := 1.0, quiet := false, gun := "", life := 3.3) -> void:
+	var g := "big" if big else gun
+	var b := {"p": pos, "v": vel, "life": life, "who": who, "big": big, "k": dmg_k, "g": g, "d": gun_dmg(g) * dmg_k}
+	if quiet:
+		b["quiet"] = true
+	ebullets.append(b)
 	if not big and not quiet:
-		Main.I.sfx.play("enemy_fire", -19.0, 1.0, pos)
+		Main.I.sfx.play("enemy_fire", -19.0, float(GUN_PITCH.get(g, 1.0)), pos)
+
+
+## Попадание в игрока: урон идёт в отчёт и по виду оружия (taken_kind — сколько урона дошло на самом деле)
+func _hit_player(pl: Player, dmg: float, source: String, who: String, wk: String) -> void:
+	var tk: Dictionary = Main.I.stats["taken"]
+	var t0 := float(tk.get(source, 0.0))
+	pl.damage(dmg, source, who)
+	var got := float(tk.get(source, 0.0)) - t0
+	if got > 0.0:
+		Main.I.add_stat("taken_kind", wk, got)
+
+
+## Автотест с --god: урон не проходит, поэтому считаем «сырой» (до брони и сложности) урон по видам — для замера баланса
+func _raw_hit(pl: Player, b: Dictionary, dmg: float, wk: String) -> void:
+	if Main.I.god_mode and pl.roll_inv <= 0.0 and not b.has("raw"):
+		b["raw"] = true
+		Main.I.add_stat("raw_in", wk, dmg)
+
+
+## Маленький разрыв снаряда (БМП, ЗСУ) — только рядом с игроком, где его видно
+func _puff(p: Vector2, s: float) -> void:
+	var pl := Main.I.player
+	if not is_instance_valid(pl) or p.distance_to(pl.global_position) > 420.0:
+		return
+	if Boom3D.active():
+		Boom3D.ensure().spawn(p, s, true, "flak")
+	else:
+		Main.I.fx.hit_spark(p, Color(1.0, 0.6, 0.2))
 
 
 # ---------- Служебные: противоракеты, срыв захвата, урон по площади ----------
@@ -97,18 +180,27 @@ func intercept_missile(from: Vector2, r: float) -> bool:
 
 
 ## Сбить ближайшую вражескую ракету в радиусе; вернёт точку перехвата или null
+## S8 «eweap»: ловушка уводит ракету с шансом её вида (msl_*_decoy); не повёвшаяся ракета на ловушки больше
+## не смотрит (одна попытка на ракету) — ищется следующая ближайшая
 func intercept_missile_at(from: Vector2, r: float, decoy := false) -> Variant:
 	var best := -1
-	var best_d := r
-	for i in missiles.size():
-		if missiles[i].has("decoy"):
+	while true:
+		best = -1
+		var best_d := r
+		for i in missiles.size():
+			if missiles[i].has("decoy") or (decoy and missiles[i].has("nodecoy")):
+				continue
+			var d: float = from.distance_to(missiles[i]["p"])
+			if d < best_d:
+				best_d = d
+				best = i
+		if best < 0:
+			return null
+		if decoy and randf() >= msl_p(String(missiles[best].get("k", "aam")), "decoy"):
+			missiles[best]["nodecoy"] = true
+			Main.I.stats_add_counter("decoy_resisted", 1)
 			continue
-		var d: float = from.distance_to(missiles[i]["p"])
-		if d < best_d:
-			best_d = d
-			best = i
-	if best < 0:
-		return null
+		break
 	var at: Vector2 = missiles[best]["p"]
 	if decoy and is_instance_valid(Main.I.player) and Main.I.player.syn.has("mirror"):
 		# «Зеркало»: уведённая ракета разворачивается и летит во врага как своя
@@ -149,7 +241,7 @@ func flak_missile(from: Vector2, r: float, chance: float) -> int:
 		return -1
 	var at: Vector2 = missiles[best]["p"]
 	missiles[best]["flak"] = true
-	if randf() >= chance:
+	if randf() >= chance * msl_p(String(missiles[best].get("k", "aam")), "flak"):
 		Main.I.fx.zap(from, at + Vector2.from_angle(randf() * TAU) * 30.0)
 		return 0
 	Main.I.fx.zap(from, at)
@@ -546,13 +638,15 @@ func _update_missiles(delta: float) -> void:
 	var jam := pl.jam_chance() if alive else 0.0
 	for i in range(missiles.size() - 1, -1, -1):
 		var m := missiles[i]
+		var kind: String = m.get("k", "aam")
 		m["life"] = float(m["life"]) - delta
+		m["age"] = float(m.get("age", 0.0)) + delta
 		var v: Vector2 = m["v"]
 		var p: Vector2 = m["p"]
-		# «Ласка»: помехи — ракета рядом с ведущим может потерять захват (проверка один раз)
+		# «Ласка»: помехи — ракета рядом с ведущим может потерять захват (проверка один раз); S8: × по виду ракеты
 		if alive and jam > 0.0 and not m["lost"] and not m.get("jam", false) and p.distance_to(pl.global_position) < 350.0:
 			m["jam"] = true
-			if randf() < jam:
+			if randf() < jam * msl_p(kind, "jam"):
 				m["lost"] = true
 				m["life"] = minf(float(m["life"]), 1.2)
 				Main.I.stats_add_counter("jammed", 1)
@@ -563,25 +657,59 @@ func _update_missiles(delta: float) -> void:
 			if float(m["life"]) - delta <= 0.0:
 				Main.I.fx.explosion(p, 14.0, true, true, "flak")
 		elif alive and not m["lost"]:
-			var ang := rotate_toward(v.angle(), (pl.global_position - p).angle(), deg_to_rad(Tuning.g("missile_turn")) * delta)
-			var spd := minf(v.length() + 400.0 * delta, Tuning.g("missile_speed"))
+			var ang := rotate_toward(v.angle(), (pl.global_position - p).angle(), deg_to_rad(msl_p(kind, "turn")) * delta)
+			# ЗРК: медленный разгон до крейсерской, через msl_sam_boost с — вторая ступень
+			var top := msl_p(kind, "speed")
+			if kind == "sam" and float(m["age"]) < Tuning.g("msl_sam_boost"):
+				top = Tuning.g("msl_sam_speed0")
+			var spd := minf(v.length() + msl_p(kind, "acc") * delta, top)
 			v = Vector2.from_angle(ang) * spd
 		p += v * delta
 		m["v"] = v
 		m["p"] = p
 		_trail_push(m, p, 30)
 		var done := float(m["life"]) <= 0.0
+		var wk: String = MSL_NAMES.get(kind, "ракеты самолётов")
+		var who: String = m.get("who", "ракетоносцы")
+		var boom := false
 		if alive:
 			var dm := p.distance_to(pl.global_position)
-			if not m["lost"] and dm < pl.radius + 6.0 and not pl.is_invulnerable():
-				pl.damage(Tuning.g("missile_dmg"), "ракеты", "ракетоносцы")
+			var hit: bool = not m["lost"] and dm < pl.radius + 6.0
+			if hit and pl.is_invulnerable():
+				_raw_hit(pl, m, msl_p(kind, "dmg"), wk)
+			if hit and not pl.is_invulnerable():
+				_hit_player(pl, msl_p(kind, "dmg"), "ракеты", who, wk)
 				Main.I.stats_add_counter("missile_hits", 1)
 				done = true
+				boom = kind == "sam"
+			elif kind == "sam" and not m["lost"] and not m.has("raw") and _sam_frag(m, dm, pl, done, wk, who):
+				done = true   # ЗРК: подрыв рядом (неконтактный взрыватель) — осколки
+				boom = true
 			else:
 				_check_near_miss(m, dm, pl.radius + 50.0, pl, "ракета", pl.radius + 6.0)
 		if done:
-			Main.I.fx.hit_spark(p, Color(1, 0.5, 0.2))
+			if boom:
+				Main.I.fx.explosion(p, 13.0, true, true, "flak")
+			else:
+				Main.I.fx.hit_spark(p, Color(1, 0.5, 0.2))
 			missiles.remove_at(i)
+
+
+## ЗРК: ракета прошла рядом и начала удаляться (или кончилось время) в радиусе осколков — подрыв,
+## игрок получает msl_sam_frag_k урона. Вернёт true, если ракета взорвалась
+func _sam_frag(m: Dictionary, dm: float, pl: Player, ending: bool, wk: String, who: String) -> bool:
+	var fr := Tuning.g("msl_sam_frag_r") + pl.radius
+	var prev: float = m.get("fd", INF)
+	m["fd"] = dm
+	if dm >= fr or (dm <= prev and not ending):
+		return false
+	var dmg := msl_p("sam", "dmg") * Tuning.g("msl_sam_frag_k")
+	if pl.is_invulnerable():
+		_raw_hit(pl, m, dmg, wk)
+	else:
+		_hit_player(pl, dmg, "ракеты", who, wk)
+		Main.I.stats_add_counter("sam_frag_hits", 1)
+	return true
 
 
 func _update_enemy_bullets(delta: float) -> void:
@@ -594,13 +722,17 @@ func _update_enemy_bullets(delta: float) -> void:
 		var p: Vector2 = p0 + b["v"] * delta
 		b["p"] = p
 		var done := float(b["life"]) <= 0.0
-		var r := 9.0 if b["big"] else 5.0
+		var g: String = b.get("g", "")
+		var r := 9.0 if b["big"] else (6.0 if g == "ifv" else 5.0)
+		var dmg := float(b.get("d", Tuning.g("ebullet_dmg") * float(b["k"])))
+		var hit := false
 		if not done:
 			for w in (pl.wingmen if alive else []):
 				var wm: Wingman = w
 				if wm.alive() and p.distance_to(wm.global_position) < 14.0 + r:
-					wm.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0) * float(b["k"]))
+					wm.damage(dmg)
 					done = true
+					hit = true
 					break
 		if alive and not done:
 			var d := p.distance_to(pl.global_position)
@@ -609,11 +741,19 @@ func _update_enemy_bullets(delta: float) -> void:
 			if rel_hit and pl.dodges("пули", str(b["who"])):
 				Main.I.tele.add("dive_dodged") # 3.5: «Нырок» — пуля прошла над самолётом
 			elif not pl.is_invulnerable() and rel_hit:
-				pl.damage(Tuning.g("ebullet_dmg") * (2.0 if b["big"] else 1.0) * float(b["k"]), "пули", str(b["who"]))
+				_hit_player(pl, dmg, "пули", str(b["who"]), GUN_NAMES.get(g, "пули"))
 				done = true
+				hit = true
 			else:
+				if rel_hit:
+					_raw_hit(pl, b, dmg, GUN_NAMES.get(g, "пули"))
 				_check_near_miss(b, d, pl.radius + r + 30.0, pl, "пуля", pl.radius + r)
 		if done:
+			# S8: снаряд БМП рвётся у точки попадания и в конце полёта, ЗСУ — разрывы в воздухе рядом с самолётом
+			if g == "ifv":
+				_puff(p, 4.5)
+			elif g == "zsu" and not hit and not b.has("quiet"):
+				_puff(p, 5.5)
 			ebullets.remove_at(i)
 
 
@@ -690,21 +830,51 @@ func _draw() -> void:
 			draw_circle(ep, 7.0, Color(1.0, 0.35, 0.6))
 			draw_circle(ep, 3.2, Color(1.0, 0.9, 0.95))
 			continue
-		# 3.1: вражеский трассер — красно-розовый, с ярким наконечником
+		# 3.1: вражеский трассер — с ярким наконечником; S8: цвет, длина и толщина — по виду оружия (eb_look)
+		var lk := eb_look(b)
+		var ec: Color = lk[0]
+		var ln: float = float(lk[1]) * 1.5
+		var wd: float = float(lk[2]) * 0.8
 		var ed := (b["v"] as Vector2).normalized()
-		draw_line(ep - ed * 26.0, ep, Color(0.2, 0.0, 0.05, 0.35), 6.0)
-		draw_line(ep - ed * 26.0, ep, Color(1.0, 0.2, 0.35, 0.55), 4.5)
-		draw_line(ep - ed * 14.0, ep, Color(1.0, 0.75, 0.8), 2.0)
-		draw_circle(ep, 3.5, Color(1.0, 0.9, 0.95))
+		draw_line(ep - ed * ln, ep, Color(0.2, 0.0, 0.05, 0.35), wd + 1.5)
+		draw_line(ep - ed * ln, ep, Color(ec.r, ec.g, ec.b, 0.55), wd)
+		draw_line(ep - ed * ln * 0.55, ep, ec.lerp(Color.WHITE, 0.6), maxf(1.2, wd * 0.45))
+		draw_circle(ep, wd * 0.75, Color(1.0, 0.95, 0.9))
 	for m in missiles:
 		var lost: bool = m["lost"]
-		_draw_smoke(m["trail"], m["p"], Color(0.55, 0.5, 0.5), 1.0)
+		var mk: String = m.get("k", "aam")
+		var sk := float(MSL_SIZE.get(mk, 1.0))
+		_draw_smoke(m["trail"], m["p"], Color(0.85, 0.85, 0.85) if mk == "manpads" else Color(0.55, 0.5, 0.5), sk)
 		var p: Vector2 = m["p"]
 		if Render3D.enabled:   # тест 3.5-s5 (п. 11): в 3D ракета — модель с факелом и ореолом
 			continue
 		if not lost:
-			draw_circle(p, 11.0, Color(1.0, 0.1, 0.05, 0.25)) # вражеская ракета — красный ореол
-		_draw_missile(p, m["v"], 24.0, Color(1.0, 0.45, 0.4) if not lost else Color(0.6, 0.5, 0.5))
+			draw_circle(p, 11.0 * sk, Color(1.0, 0.1, 0.05, 0.25)) # вражеская ракета — красный ореол
+		_draw_missile(p, m["v"], 24.0 * sk, Color(1.0, 0.45, 0.4) if not lost else Color(0.6, 0.5, 0.5))
+
+
+## S8 «eweap»: вид трассера вражеской пули — [цвет, длина, полуширина], общий для 2D и 3D (render3d._sync_enemy_shots).
+## Пикап — тонкий жёлтый, броневик — жёлтый, БМП — толстый оранжевый, ЗСУ — оранжевые парами,
+## истребители — красные длинные, асы — оранжевые, крупный калибр — оранжевые шары. Прочие — как было (асы оранжевые, остальные красные)
+static func eb_look(b: Dictionary) -> Array:
+	match String(b.get("g", "")):
+		"big":
+			return [Color(1.0, 0.42, 0.18, 1.0), 16.0, 16.0]
+		"pickup":
+			return [Color(1.0, 0.86, 0.22, 1.0), 13.0, 3.2]
+		"apc":
+			return [Color(1.0, 0.8, 0.2, 1.0), 17.0, 5.0]
+		"ifv":
+			return [Color(1.0, 0.48, 0.08, 1.0), 20.0, 8.5]
+		"zsu":
+			return [Color(1.0, 0.56, 0.12, 1.0), 15.0, 5.0]
+		"fighter":
+			return [Color(1.0, 0.16, 0.26, 1.0), 30.0, 4.6]
+		"ace":
+			return [Color(1.0, 0.62, 0.15, 1.0), 17.0, 5.5]
+	if b.get("who", "") == "асы":
+		return [Color(1.0, 0.62, 0.15, 1.0), 17.0, 5.5]
+	return [Color(1.0, 0.18, 0.3, 1.0), 17.0, 5.5]
 
 
 ## Дымный шлейф: у ракеты тонкий и плотный, к хвосту шире и прозрачнее

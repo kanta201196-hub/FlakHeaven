@@ -91,6 +91,11 @@ func kind() -> String:
 	return "ПВО"
 
 
+## S8 «eweap»: ЗСУ — спаренные зенитные автоматы
+func gun_kind() -> String:
+	return "zsu"
+
+
 ## Наземные цели не масштабируются спавнером
 func apply_hp_mult(_m: float) -> void:
 	pass
@@ -161,13 +166,13 @@ func behave(delta: float) -> void:
 			if _shots > 0:
 				_shot_t -= delta
 				if _shot_t <= 0.0:
-					fire_at_player(randf_range(-0.07, 0.07))
+					fire_at_player(gun_spread(), true)   # S8: пара снарядов, очередь плотная
 					_shots -= 1
-					_shot_t = 0.09
+					_shot_t = 0.07
 			elif _aim > 0.0:
 				_aim -= delta
 				if _aim <= 0.0:
-					_shots = 4
+					_shots = int(Tuning.g("eb_zsu_burst"))
 			else:
 				_cd -= delta
 				if _cd <= 0.0 and d < _range():
@@ -177,13 +182,13 @@ func behave(delta: float) -> void:
 			if _lock > 0.0:
 				_lock -= delta
 				if _lock <= 0.0:
-					Main.I.projectiles.spawn_missile(global_position, to.normalized())
+					Main.I.projectiles.spawn_missile(global_position, to.normalized(), "sam", kind())
 					Main.I.sfx.play("sam_launch", -6.0, 0.9)
 			else:
 				_cd -= delta
 				# ЗРК пускает только с места
 				if _cd <= 0.0 and d < _range() and _goal == Vector2.INF:
-					_lock = 1.2
+					_lock = Tuning.g("msl_sam_lock")
 					_cd = randf_range(5.0, 6.5)
 					Main.I.sfx.play("sam_lock", -6.0, 1.2)
 

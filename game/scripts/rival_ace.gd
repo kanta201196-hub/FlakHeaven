@@ -68,6 +68,11 @@ func kind() -> String:
 	return "ас-соперник"
 
 
+## S8 «eweap»: пушки аса — как у истребителей, сильнее и точнее
+func gun_kind() -> String:
+	return "ace"
+
+
 func apply_hp_mult(_m: float) -> void:
 	pass
 
@@ -155,7 +160,7 @@ func behave(delta: float) -> void:
 	if _shots > 0:
 		_shot_t -= delta
 		if _shot_t <= 0.0:
-			fire_at_player(randf_range(-0.05, 0.05))
+			fire_at_player(gun_spread())
 			_shots -= 1
 			_shot_t = 0.09
 		return
