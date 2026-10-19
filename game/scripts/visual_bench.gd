@@ -149,6 +149,21 @@ func process(delta: float) -> void:
 		for v: ConvoyVehicle in _convoy.vehicles:
 			v.process_mode = Node.PROCESS_MODE_DISABLED
 	_hold(p)
+	if p.get("eweap", false):
+		# время замедлено: в облаке кадр идёт ~1 с, а ракета пролетает экран за секунду — так след и трассеры плавные
+		Engine.time_scale = 0.1
+		_eweap(p)
+		if _pt >= float(p["shot_t"]):
+			Engine.time_scale = 1.0
+			_save(p["name"])
+			m.projectiles.missiles.clear()
+			m.projectiles.ebullets.clear()
+			_phase = 0
+			_t = 0.0
+			_pt = 0.0
+			_ew_t = {}
+			_i += 1
+		return
 	if _phase == 0 and _t > float(p.get("wait", WAIT)):
 		if p.get("boom", false):
 			var c: Vector2 = p["pos"]
@@ -182,6 +197,39 @@ func process(delta: float) -> void:
 		_t = 0.0
 		_pt = 0.0
 		_i += 1
+
+
+var _ew_t := {}   # S8 «eweap»: когда в точке последний раз стрелял каждый вид оружия
+
+
+## S8 «eweap»: вокруг игрока стреляют все виды оружия врагов — ракеты трёх видов с разных сторон и очереди по видам пуль
+const EW_GUNS := [["pickup", Vector2(-470, -160), 0.09, "пикап"], ["apc", Vector2(-320, 360), 0.12, "броневик"],
+	["ifv", Vector2(330, -380), 0.2, "БМП"], ["zsu", Vector2(470, -60), 0.08, "ПВО"], ["fighter", Vector2(160, 430), 0.1, "перехватчики"],
+	["ace", Vector2(-170, -460), 0.1, "асы"], ["big", Vector2(440, 280), 0.3, "корабли"]]
+const EW_MSL := [["manpads", Vector2(-560, 260)], ["aam", Vector2(560, 330)], ["sam", Vector2(-60, -600)]]
+
+
+func _ew_due(key: String, iv: float) -> bool:
+	if _pt - float(_ew_t.get(key, -INF)) < iv:
+		return false
+	_ew_t[key] = _pt
+	return true
+
+
+func _eweap(p: Dictionary) -> void:
+	var c: Vector2 = p["pos"]
+	var pr := m.projectiles
+	for g in EW_GUNS:
+		if not _ew_due(g[0], g[2]):
+			continue
+		var at: Vector2 = c + (g[1] as Vector2)
+		var dir := (c - at).normalized().rotated(randf_range(-0.04, 0.04))
+		var big: bool = g[0] == "big"
+		pr.spawn_enemy_bullet(at, dir * (260.0 if big else 400.0), g[3], big, 1.0, true)
+	for ms in EW_MSL:
+		if _ew_due(ms[0], 0.7):
+			var at2: Vector2 = c + (ms[1] as Vector2)
+			pr.spawn_missile(at2, (c - at2).normalized())
 
 
 var _convoy: Convoy = null   # M-36: колонна для кадра дороги
@@ -429,6 +477,10 @@ func _make_points() -> Array:
 		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
 		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
 		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
+	if OS.get_cmdline_user_args().has("--eweapbench"):   # S8 «eweap»: ракеты ПЗРК / самолёта / ЗРК и трассеры по видам оружия
+		pts = []
+		pts.append({"name": "eweap", "pos": empty, "eweap": true, "shot_t": 1.9, "zoom": 1.0})
+		pts.append({"name": "eweap_close", "pos": empty, "eweap": true, "shot_t": 1.9, "zoom": 2.0})
 	if OS.get_cmdline_user_args().has("--bombbench"):   # тест 3.5-s4 (п. 10, 14): падающие бомбы ступеней и воронки
 		pts = []
 		pts.append({"name": "bomb_drop", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "bombs": true, "wait": 2.5, "zoom": 2.6})
