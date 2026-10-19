@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b8rhga5cusapi"
-path="res://.godot/imported/b11_wreck_plane_Image_1.jpg-844be901110c43ecd3a73eb726f0ecc6.ctex"
+uid="uid://cafsk4fv3ovxk"
+path="res://.godot/imported/b11_wreck_plane_c_Image_2.jpg-4a62be2fe503c3d11694c22533511776.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "ab849903c6365bfb1e69e743ac8ad6a2"
+"md5": "2b093c5c5e8435fe6f5394934527cbcb"
 }
 
 [deps]
 
-source_file="res://models/biome/b11_wreck_plane_Image_1.jpg"
-dest_files=["res://.godot/imported/b11_wreck_plane_Image_1.jpg-844be901110c43ecd3a73eb726f0ecc6.ctex"]
+source_file="res://models/biome/b11_wreck_plane_c_Image_2.jpg"
+dest_files=["res://.godot/imported/b11_wreck_plane_c_Image_2.jpg-4a62be2fe503c3d11694c22533511776.ctex"]
 
 [params]
 

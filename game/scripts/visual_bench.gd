@@ -475,7 +475,7 @@ func _make_points() -> Array:
 	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
 	if ter != null:
 		var got := {}
-		for r in range(0, 6):
+		for r in range(0, 10):   # тест 3.5-s8: дальше — чтобы нашлась сцена с упавшим самолётом
 			for cx in range(-r, r + 1):
 				for cy in range(-r, r + 1):
 					if maxi(absi(cx), absi(cy)) != r:

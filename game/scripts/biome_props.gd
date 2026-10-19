@@ -20,6 +20,10 @@ const KINDS := {
 	"yurt": ["b09_yurt", 34.0, 44.0],
 	"sandbag": ["b10_sandbag_post", 40.0, 55.0],
 	"plane": ["b11_wreck_plane", 110.0, 130.0],   # сцены прошедших боёв (Terrain3D.scenes)
+	# тест 3.5-s8 (правка Kanta 19.10): варианты обломков — сцена «plane» берёт один из них по месту (plane_kind)
+	"plane_b": ["b11_wreck_plane_b", 110.0, 130.0],   # хвост оторван в начале борозды
+	"plane_c": ["b11_wreck_plane_c", 110.0, 130.0],   # фюзеляж переломлен пополам
+	"heli": ["b11_wreck_heli", 110.0, 130.0],         # вертолёт на боку, лопасти в стороны
 	"bridge": ["", 58.0, 66.0],        # L-07: модели кодом (AdobeBuild.bridge): мост дороги через ручей
 	"footbridge": ["", 150.0, 165.0],  # и пешеходный через реку
 }
@@ -28,6 +32,22 @@ const KINDS := {
 ## 3.4-t1 (п. 17): вместо зелёного шара — «карточки» из картинок той же модели Meshy: две скрещённые
 ## с видом сбоку и одна горизонтальная с видом сверху (tools/model_lab/bake_impostor.gd), 6 треугольников.
 const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree"}
+
+## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
+const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
+static var _force_plane := -2
+
+
+## Вариант обломков по месту (детерминированно, без случайных чисел клетки — расстановка не меняется);
+## стенд: --wreckvar=N — всем обломкам вариант N (0 — a, 1 — b, 2 — c, 3 — вертолёт)
+static func plane_kind(p: Vector2) -> String:
+	if _force_plane == -2:
+		_force_plane = -1
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--wreckvar="):
+				_force_plane = clampi(int(a.get_slice("=", 1)), 0, PLANE_KINDS.size() - 1)
+	var i := _force_plane if _force_plane >= 0 else absi(hash(Vector2i(roundi(p.x), roundi(p.y)))) % PLANE_KINDS.size()
+	return PLANE_KINDS[i]
 
 var _meshes := {}   # вид → Mesh (или null, если модели нет)
 var _t: Terrain3D
@@ -528,6 +548,8 @@ func _ring_zone(rng: RandomNumberGenerator, put: Dictionary, kind: String, c: Ve
 ## Элемент сцены прошедшего боя: модель с заданным поворотом, по склону не кренится (сцены — на дне долин)
 func _add_scene(rng: RandomNumberGenerator, put: Dictionary, it: Dictionary, ctx: Dictionary) -> void:
 	var kind: String = it["k"]
+	if kind == "plane":
+		kind = plane_kind(it["p"])
 	var w := float(it["w"]) * rng.randf_range(0.92, 1.08)
 	var p: Vector2 = it["p"]
 	var s := _t.surface(p.x, p.y, ctx)

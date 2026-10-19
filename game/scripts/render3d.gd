@@ -1942,7 +1942,15 @@ const OBJ_TOP := -30.0
 ## B-26: столовая гора-картинка не нужна — горы теперь настоящие;
 ## B-41: скалы-картинки заменены группами моделей (biome_props.gd)
 const OBJ_SKIP_3D := ["o_mesa", "o_rocks_big", "o_rocks_small"]
-var _wreck_plane: PackedScene = load("res://models/biome/b11_wreck_plane.glb") if ResourceLoader.exists("res://models/biome/b11_wreck_plane.glb") else null
+var _wreck_scenes := {}   # вид обломков (BiomeProps.PLANE_KINDS) → PackedScene или null
+
+
+func _wreck_scene(p: Vector2) -> PackedScene:
+	var kind := BiomeProps.plane_kind(p)
+	if not _wreck_scenes.has(kind):
+		var path := BiomeProps.DIR + String(BiomeProps.KINDS[kind][0]) + ".glb"
+		_wreck_scenes[kind] = load(path) if ResourceLoader.exists(path) else null
+	return _wreck_scenes[kind]
 
 const OBJ_RELIEF := {
 	"o_rocks_big": [0.16, 0.45], "o_rocks_small": [0.18, 0.45], "o_mesa": [0.16, 0.25],
@@ -1987,7 +1995,8 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				add_child(mi)
 				_objs[key] = mi
 				continue
-			if o["name"] == "o_wreck" and _wreck_plane != null:
+			var wreck_ps: PackedScene = _wreck_scene(o["pos"]) if o["name"] == "o_wreck" else null
+			if wreck_ps != null:
 				# тест 3.5-s4 (п. 18): обломки — объёмный остов (tools/blender/plane_wreck.py), лежит по склону;
 				# земля под ним не выравнивается (раньше — выдавленная картинка в круглой площадке)
 				var sw := float(o["size"])
@@ -1996,7 +2005,7 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				var pz: float = o["pos"].y
 				var nrm := Vector3(terrain.surface_fast(px - e, pz).y - terrain.surface_fast(px + e, pz).y, 2.0 * e,
 					terrain.surface_fast(px, pz - e).y - terrain.surface_fast(px, pz + e).y).normalized()
-				var wn: Node3D = _wreck_plane.instantiate()
+				var wn: Node3D = wreck_ps.instantiate()
 				wn.position = Vector3(px, gy - sw * 0.01, pz)
 				wn.basis = (Basis(Quaternion(Vector3.UP, nrm)) * Basis(Vector3.UP, -float(o["rot"]))).scaled(Vector3(sw, sw, sw))
 				add_child(wn)
