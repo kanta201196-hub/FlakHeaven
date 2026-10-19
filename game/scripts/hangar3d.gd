@@ -35,6 +35,13 @@ var _drawn_frame := -10
 var _cls := ""
 var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
 var turret_pos: Array = []   # [Vector3, сторона] — турели текущей модели
+## Тест 3.5-s8: показ механизации (HangarAnim) — кнопка на виде самолёта или курсор на узле «Крыло»
+var mech_demo := false
+var mech_hover := false      # HudHangar ставит каждый кадр, пока курсор на узле «Крыло»
+var mech_rect := Rect2()     # кнопка «Механизация» на виде (в координатах ctrl)
+static var anim_time := -1.0   # стенд --mechanim: момент анимации задан (≥ 0), а не по часам
+var _anim := {}
+var _anim_key := ""
 var _env: Environment
 var _key_light: DirectionalLight3D
 var _flight_bg: Node3D       # п. 32: облака под самолётом плывут назад — «полёт»
@@ -301,6 +308,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 			if WeaponModels.has_bay(cls_id, 1):   # тест 3.5-s5 (п. 3): у «Кита» «ковёр» — кассета бомбоотсека
 				t = WeaponModels.CARPET_BAY_T
 		var wmi := WeaponModels.make(weapon, t, side, cls_id, evo, 1)
+		if weapon == "turret":
+			wmi.set_meta("turret", [cls_id, t, side, evo, 1])   # тест 3.5-s8: турель крутится (HangarAnim)
 		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
 		var bb := wmi.mesh.get_aabb()
 		var s := (0.62 if weapon != "turret" else 0.9) / maxf(1.0, maxf(bb.size.x, bb.size.z))
@@ -468,6 +477,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 						cab.visible = false   # своя кабина модели вместо общей
 			if g.weapon == "turret":
 				turret_pos.append([wmi.position, side])
+				wmi.set_meta("turret", [cls_id, mtr, side, weapon_tier == 4, lvl])   # тест 3.5-s8: HangarAnim
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
 			if side == "bottom" or (side == "tail" and WeaponModels.TURRET_MODELS.has(cls_id) and not (WeaponModels.TURRET_MODELS[cls_id] as Dictionary).has("tail")):
 				bs = bs * Basis(Vector3.RIGHT, PI)
@@ -533,12 +543,19 @@ func _process(delta: float) -> void:
 	_t += delta
 	# п. 32: в «полёте» самолёт чуть покачивается, как в воздухе; на складе оружие стоит
 	if _bg == "flight":
-		pivot.position.y = sin(_t * 0.9) * 0.012
-		pivot.rotation = Vector3(sin(_t * 0.6) * 0.035, 0.0, sin(_t * 0.75 + 1.0) * 0.02)
+		var st := anim_time if anim_time >= 0.0 else _t   # стенд --mechanim: покачивание тоже по заданному моменту
+		pivot.position.y = sin(st * 0.9) * 0.012
+		pivot.rotation = Vector3(sin(st * 0.6) * 0.035, 0.0, sin(st * 0.75 + 1.0) * 0.02)
 	else:
 		pivot.position.y = 0.0
 		pivot.rotation = Vector3.ZERO
 	WingMech.spin_props(_props, PROP_HANGAR * delta)
+	# тест 3.5-s8: механизация, створки и турели (на вкладке «ОРУЖИЕ» турель показывается всегда)
+	if _anim_key != _key:
+		_anim_key = _key
+		_anim = HangarAnim.collect(pivot)
+	HangarAnim.step(_anim, anim_time if anim_time >= 0.0 else _t, mech_demo or mech_hover or _key.begins_with("w_"), delta)
+	mech_hover = false
 	if not _drag and _idle > 3.0:
 		_yaw += delta * 0.25
 	_pitch = clampf(_pitch, bench_pitch_min, 1.35)
@@ -556,6 +573,10 @@ func _input(event: InputEvent) -> void:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
+				if mech_rect.has_point(mp) and not _key.begins_with("w_"):
+					mech_demo = not mech_demo
+					get_viewport().set_input_as_handled()
+					return
 				for lr in lvl_rects:
 					if (lr[0] as Rect2).has_point(mp):
 						view_lvl = int(lr[1])

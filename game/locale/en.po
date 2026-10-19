@@ -6078,3 +6078,6 @@ msgstr "synergy: good company"
 #: game/scripts/wingman.gd:423
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
+
+msgid "Механизация"
+msgstr "Moving parts"
