@@ -15,9 +15,10 @@ OUT = sys.argv[-1]
 part = "ball" if "ball" in sys.argv else "cabin"
 TIER = next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 2)
 L.reset()
-M_BODY = mat("turret_body", (0.36, 0.35, 0.33), 0.25, 0.55)
-M_DARK = mat("turret_dark", (0.12, 0.12, 0.12), 0.5, 0.5)
-M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.6, 0.4)
+# окраска матовая (Kanta 19.10): краска без блеска, металл — только стволы и мелкие детали
+M_BODY = mat("turret_body", (0.36, 0.35, 0.33), 0.08, 0.86)
+M_DARK = mat("turret_dark", (0.12, 0.12, 0.12), 0.15, 0.8)
+M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.45, 0.6)
 M_GLASS = mat("turret_glass", (0.12, 0.2, 0.24), 0.6, 0.06)
 
 

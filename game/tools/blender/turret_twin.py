@@ -18,9 +18,10 @@ OUT = sys.argv[-1] if len(sys.argv) > 1 else "."
 QUAD = "quad" in sys.argv
 TIER = 3 if QUAD else next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 2)
 L.reset()
-M_BODY = mat("turret_body", (0.36, 0.35, 0.33), 0.25, 0.55)
-M_DARK = mat("turret_dark", (0.12, 0.12, 0.12), 0.5, 0.5)
-M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.6, 0.4)
+# окраска матовая (Kanta 19.10): краска без блеска, металл — только стволы и мелкие детали
+M_BODY = mat("turret_body", (0.36, 0.35, 0.33), 0.08, 0.86)
+M_DARK = mat("turret_dark", (0.12, 0.12, 0.12), 0.15, 0.8)
+M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.45, 0.6)
 M_GLASS = mat("turret_glass", (0.12, 0.2, 0.24), 0.6, 0.06)
 
 # --- погон и тумба ---
@@ -47,15 +48,21 @@ box("bridge_floor", (0.0, 0, 0.24), (0.9, 0.2, 0.08), M_BODY, 0.01)
 
 # --- люлька и стволы ---
 BZ = 0.43
+# тест 3.5-s8 (анимация в ангаре): люлька и стволы — отдельный узел «guns», шарнир — цапфы люльки
+# (качание стволами по углу места вокруг оси Y Blender); бронещиток, короба и рукава остаются на башне
+L.group = "guns"
+L.pivots["guns"] = (0.3, 0, BZ)
 LEVELS = [BZ + 0.06, BZ - 0.06] if QUAD else [BZ]
 box("cradle", (0.42, 0, BZ), (0.5, 0.17, 0.13 + (0.12 if QUAD else 0)), M_BODY, 0.015)
 box("mantlet", (0.68, 0, BZ), (0.08, 0.26, 0.11 + (0.12 if QUAD else 0)), M_DARK, 0.01)
+L.group = ""
 if TIER >= 2 and not QUAD:
     # бронещиток: широкая плита перед люлькой, скошена назад, с вырезами под стволы
     shield = [(0.7, Z0 + 0.04), (0.76, Z0 + 0.1), (0.76, Z1 - 0.06), (0.7, Z1 + 0.02), (0.64, Z1 + 0.02), (0.64, Z0 + 0.04)]
     for sgn in (1, -1):
         prism("shield_%d" % sgn, shield, 0.2, M_BODY, 0.01).location.y = sgn * 0.2
     box("shield_top", (0.7, 0, Z1 - 0.01), (0.1, 0.2, 0.05), M_BODY, 0.008)
+L.group = "guns"
 for bz in LEVELS:
     for sgn in (1, -1):
         y = sgn * 0.075
@@ -74,6 +81,7 @@ for bz in LEVELS:
             # ступень 1: ствол без тормоза — простой пламегаситель-втулка, срез там же
             cyl("tip", (2.0, y, bz), 0.034, 0.16, M_BARREL, "X", 16)
             cyl("bore", (2.085, y, bz), 0.016, 0.01, M_DARK, "X", 12)
+L.group = ""
 if TIER == 3 and not QUAD:
     # короба лент по бокам башни с рукавами подачи к люльке
     for sgn in (1, -1):
