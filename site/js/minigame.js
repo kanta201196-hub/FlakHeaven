@@ -39,7 +39,7 @@ function makeGround(){
 var S=null,raf=0,last=0,running=false,inView=true;
 function active(){return inView&&!document.hidden;}
 function reset(){
-  S={t:0,score:0,hp:3,inv:0,px:W/2,py:H*.8,tx:W/2,ty:H*.8,fire:0,scroll:0,
+  S={t:0,score:0,hp:3,inv:0,px:W/2,py:H*.8,tx:W/2,ty:H*.8,fire:0,scroll:0,bank:0,msl:[],mslT:1.5,mslSide:1,
      bullets:[],foes:[],eb:[],flak:[],fx:[],clouds:[],spawn:1,flakT:2,shake:0,kills:0};
   for(var i=0;i<5;i++)S.clouds.push({x:rnd(0,W),y:rnd(-H,H),r:rnd(40,80),v:rnd(70,110)});
 }
@@ -73,9 +73,20 @@ function step(dt){
   var kx=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0),ky=(keys.arrowdown||keys.s?1:0)-(keys.arrowup||keys.w?1:0);
   if(kx||ky){S.tx=S.px+kx*240*dt*3;S.ty=S.py+ky*240*dt*3;}
   S.tx=Math.max(18,Math.min(W-18,S.tx));S.ty=Math.max(H*.3,Math.min(H-24,S.ty));
-  var k=Math.min(1,dt*12);S.px+=(S.tx-S.px)*k;S.py+=(S.ty-S.py)*k;
+  var k=Math.min(1,dt*12),ox=S.px;S.px+=(S.tx-S.px)*k;S.py+=(S.ty-S.py)*k;
+  /* крен: от скорости по горизонтали, плавно */
+  var vx=(S.px-ox)/Math.max(dt,1e-3),bt=Math.max(-1,Math.min(1,vx/260));S.bank+=(bt-S.bank)*Math.min(1,dt*8);
   if(S.inv>0)S.inv-=dt;
   S.fire-=dt;if(S.fire<=0){S.fire=.11;S.bullets.push({x:S.px-7,y:S.py-22},{x:S.px+7,y:S.py-22});}
+  /* ракеты: раз в ~2 с с крыла, наводятся на ближайшего врага */
+  S.mslT-=dt;if(S.mslT<=0){S.mslT=rnd(1.8,2.6);S.mslSide=-S.mslSide;S.msl.push({x:S.px+S.mslSide*10,y:S.py-4,vx:S.mslSide*60,vy:-60,a:-Math.PI/2,t:0,sm:0});}
+  S.msl.forEach(function(m){m.t+=dt;var tg=null,bd=1e9;S.foes.forEach(function(f){if(f.hp>0&&f.y<m.y+20){var dd=Math.hypot(f.x-m.x,f.y-m.y);if(dd<bd){bd=dd;tg=f;}}});
+    var want=tg?Math.atan2(tg.y-m.y,tg.x-m.x):-Math.PI/2,da=Math.atan2(Math.sin(want-m.a),Math.cos(want-m.a));
+    if(m.t>.25)m.a+=Math.max(-4*dt,Math.min(4*dt,da));var sp=Math.min(420,80+m.t*600);m.vx=Math.cos(m.a)*sp;m.vy=Math.sin(m.a)*sp;m.x+=m.vx*dt;m.y+=m.vy*dt;
+    m.sm-=dt;if(m.sm<=0){m.sm=.025;S.fx.push({x:m.x-Math.cos(m.a)*7,y:m.y-Math.sin(m.a)*7,vx:rnd(-8,8),vy:rnd(-8,8),l:.5,m:.5,r:rnd(2,3.5),c:"rgba(235,235,230,.8)",smoke:1});}
+    S.foes.forEach(function(f){if(!m.dead&&f.hp>0&&Math.hypot(f.x-m.x,f.y-m.y)<f.w*.5){m.dead=1;f.hp-=4;f.flash=.08;boom(m.x,m.y,10,false);
+      if(f.hp<=0){S.score+=f.heavy?250:100;S.kills++;boom(f.x,f.y,f.heavy?22:12,f.heavy);}}});});
+  S.msl=S.msl.filter(function(m){return !m.dead&&m.t<3&&m.y>-20&&m.x>-20&&m.x<W+20;});
   S.bullets.forEach(function(b){b.y-=560*dt;});S.bullets=S.bullets.filter(function(b){return b.y>-10;});
   /* враги */
   S.spawn-=dt;if(S.spawn<=0){S.spawn=Math.max(.32,1.1-d*.8)*rnd(.7,1.2);
@@ -96,12 +107,15 @@ function step(dt){
   S.flak.forEach(function(f){f.t+=dt;if(!f.done&&f.t>=f.T){f.done=1;boom(f.x,f.y,10,false);S.shake=Math.max(S.shake,.15);if(Math.hypot(S.px-f.x,S.py-f.y)<f.r)hit();}});
   S.flak=S.flak.filter(function(f){return f.t<f.T+.25;});
   /* эффекты, облака, прокрутка */
-  S.fx.forEach(function(p){p.x+=p.vx*dt;p.y+=p.vy*dt+40*dt;p.vx*=.96;p.vy*=.96;p.l-=dt;});S.fx=S.fx.filter(function(p){return p.l>0;});
+  S.fx.forEach(function(p){p.x+=p.vx*dt;p.y+=p.vy*dt+(p.smoke?60:40)*dt;p.vx*=.96;p.vy*=.96;p.l-=dt;});S.fx=S.fx.filter(function(p){return p.l>0;});
   S.clouds.forEach(function(c){c.y+=c.v*dt;if(c.y-c.r>H){c.y=-c.r-rnd(0,200);c.x=rnd(0,W);}});
   S.scroll=(S.scroll+60*dt)%GH;if(S.shake>0)S.shake-=dt;
   S.score+=dt*10;
   if(S.t>=ROUND){S.score+=S.hp*500;end(true);}
 }
+/* самолёт игрока с креном: сужается по ширине и чуть поворачивается в сторону манёвра */
+function drawPlayer(x,y){var pw=28,ph=pw*img.player.height/img.player.width,b=S.bank;
+  ctx.save();ctx.translate(x,y);ctx.rotate(b*.12);ctx.scale(1-Math.abs(b)*.38,1);ctx.drawImage(img.player,-pw/2,-ph/2,pw,ph);ctx.restore();}
 function draw(){
   ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
   if(!ground)makeGround();
@@ -112,7 +126,7 @@ function draw(){
   /* тени самолётов */
   ctx.globalAlpha=.25;
   S.foes.forEach(function(f){var i=f.heavy?img.heavy:img.enemy;if(i.complete)ctx.drawImage(i,f.x-f.w*.5+14,f.y-f.w*.5+18,f.w,f.w*i.height/i.width);});
-  if(img.player.complete)ctx.drawImage(img.player,S.px-14+14,S.py-26+18,28,28*img.player.height/img.player.width);
+  if(img.player.complete)drawPlayer(S.px+14,S.py+18);
   ctx.globalAlpha=1;
   /* зенитки */
   S.flak.forEach(function(f){if(f.done)return;var k=f.t/f.T;ctx.strokeStyle="rgba(255,215,90,"+(.35+k*.6)+")";ctx.lineWidth=2;
@@ -120,11 +134,14 @@ function draw(){
   /* враги */
   S.foes.forEach(function(f){var i=f.heavy?img.heavy:img.enemy;if(!i.complete)return;var h=f.w*i.height/i.width;
     ctx.drawImage(i,f.x-f.w/2,f.y-h/2,f.w,h);if(f.flash>0){ctx.fillStyle="rgba(255,255,255,.5)";ctx.beginPath();ctx.arc(f.x,f.y,f.w*.3,0,7);ctx.fill();}});
+  /* ракеты */
+  S.msl.forEach(function(m){ctx.save();ctx.translate(m.x,m.y);ctx.rotate(m.a);ctx.fillStyle="#e8e4d8";ctx.fillRect(-6,-1.5,11,3);ctx.fillStyle="#c0392b";ctx.fillRect(4,-1.5,2,3);
+    ctx.fillStyle="rgba(255,200,90,"+(.6+Math.random()*.4)+")";ctx.beginPath();ctx.arc(-7,0,2.2,0,7);ctx.fill();ctx.restore();});
   /* пули */
   ctx.fillStyle="#fff3c4";S.bullets.forEach(function(b){ctx.fillRect(b.x-1,b.y-6,2,8);});
   ctx.fillStyle="#ff5a3c";S.eb.forEach(function(b){ctx.beginPath();ctx.arc(b.x,b.y,3.2,0,7);ctx.fill();});
   /* игрок */
-  if(img.player.complete&&!(S.inv>0&&Math.floor(S.inv*14)%2)){var pw=28,ph=pw*img.player.height/img.player.width;ctx.drawImage(img.player,S.px-pw/2,S.py-ph/2,pw,ph);}
+  if(img.player.complete&&!(S.inv>0&&Math.floor(S.inv*14)%2))drawPlayer(S.px,S.py);
   /* взрывы */
   S.fx.forEach(function(p){var a=Math.max(0,p.l/p.m);if(p.ring){ctx.strokeStyle="rgba(255,220,150,"+a+")";ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,p.r*(1.4-a),0,7);ctx.stroke();return;}
     ctx.fillStyle=p.c;ctx.globalAlpha=a;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();ctx.globalAlpha=1;});
