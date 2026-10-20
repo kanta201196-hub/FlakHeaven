@@ -11,7 +11,7 @@ var L=function(ru,en){return document.documentElement.lang==="en"?en:ru;};
 var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 var ROUND=45,W=360,H=480,scale=1,dpr=1;
-var img={};["player","enemy","heavy"].forEach(function(n){var i=new Image();i.src="img/mg_"+n+".webp";img[n]=i;});
+var img={};["player_roll","enemy","heavy"].forEach(function(n){var i=new Image();i.src="img/mg_"+n+".webp";img[n]=i;});img.player=img.player_roll;
 
 /* ---------- земля: длинная полоса Нагорья, рисуется один раз ---------- */
 var ground=null,GH=1600;
@@ -71,7 +71,7 @@ function step(dt){
   S.t+=dt;var d=diff();
   /* игрок */
   var kx=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0),ky=(keys.arrowdown||keys.s?1:0)-(keys.arrowup||keys.w?1:0);
-  if(kx||ky){S.tx=S.px+kx*240*dt*3;S.ty=S.py+ky*240*dt*3;}
+  if(kx||ky){S.tx=S.px+kx*24;S.ty=S.py+ky*24;}
   S.tx=Math.max(18,Math.min(W-18,S.tx));S.ty=Math.max(H*.3,Math.min(H-24,S.ty));
   var k=Math.min(1,dt*12),ox=S.px;S.px+=(S.tx-S.px)*k;S.py+=(S.ty-S.py)*k;
   /* крен: от скорости по горизонтали, плавно */
@@ -113,16 +113,14 @@ function step(dt){
   S.score+=dt*10;
   if(S.t>=ROUND){S.score+=S.hp*500;end(true);}
 }
-/* крен как 3D-поворот вокруг продольной оси: кадры заранее, ширина = cos(угла),
-   одно крыло светлеет, другое темнеет; плюс лёгкое покачивание, чтобы самолёт не «застывал» */
-var bankFr=null,BF=8,BMAX=1.1;
-function bankFrames(){var i=img.player,pw=56,ph=Math.round(pw*i.height/i.width);bankFr=[];
-  for(var n=-BF;n<=BF;n++){var a=n/BF*BMAX,c=document.createElement("canvas"),w=Math.max(8,Math.round(pw*Math.cos(a)));c.width=pw;c.height=ph;var g=c.getContext("2d");
-    g.drawImage(i,(pw-w)/2,0,w,ph);if(n){g.globalCompositeOperation="source-atop";var gr=g.createLinearGradient((pw-w)/2,0,(pw+w)/2,0),k=Math.abs(a)/BMAX*.6;
-      gr.addColorStop(0,n>0?"rgba(255,255,255,"+k*.6+")":"rgba(0,0,0,"+k+")");gr.addColorStop(.5,"rgba(0,0,0,0)");gr.addColorStop(1,n>0?"rgba(0,0,0,"+k+")":"rgba(255,255,255,"+k*.6+")");
-      g.fillStyle=gr;g.fillRect(0,0,pw,ph);}bankFr.push(c);}}
-function drawPlayer(x,y,shadow){if(!bankFr)bankFrames();var b=Math.max(-1,Math.min(1,S.bank+Math.sin(S.t*2.3)*.07)),f=bankFr[Math.round(b*BF)+BF],pw=28,ph=pw*f.height/f.width;
-  ctx.save();ctx.translate(x,y);ctx.rotate(b*.1);ctx.drawImage(f,-pw/2,-ph/2,pw,ph);ctx.restore();}
+/* крен: 17 кадров из 3D-модели истребителя, поворот вокруг продольной оси от -60° до +60° (img/mg_player_roll.webp) */
+var BF=8,FW=80,FH=104,silC={};
+/* тень — тёмный силуэт, а не полупрозрачная копия самолёта */
+function sil(key,src,sx,sw,sh){if(silC[key])return silC[key];var c=document.createElement("canvas");c.width=sw;c.height=sh;var g=c.getContext("2d");
+  g.drawImage(src,sx,0,sw,sh,0,0,sw,sh);g.globalCompositeOperation="source-in";g.fillStyle="#1a1408";g.fillRect(0,0,sw,sh);return silC[key]=c;}
+function rollFrame(){return Math.round(Math.max(-1,Math.min(1,S.bank+Math.sin(S.t*2.3)*.06))*BF)+BF;}
+function drawPlayer(x,y,shadow){var n=rollFrame(),pw=32,ph=pw*FH/FW;
+  if(shadow)ctx.drawImage(sil("p"+n,img.player,n*FW,FW,FH),x-pw/2,y-ph/2,pw,ph);else ctx.drawImage(img.player,n*FW,0,FW,FH,x-pw/2,y-ph/2,pw,ph);}
 function draw(){
   ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
   if(!ground)makeGround();
@@ -131,9 +129,9 @@ function draw(){
   var off=S?S.scroll:0;ctx.drawImage(ground,0,-GH+off);ctx.drawImage(ground,0,off);if(off<H)ctx.drawImage(ground,0,off-GH);
   if(!S){ctx.restore();return;}
   /* тени самолётов */
-  ctx.globalAlpha=.25;
-  S.foes.forEach(function(f){var i=f.heavy?img.heavy:img.enemy;if(i.complete)ctx.drawImage(i,f.x-f.w*.5+14,f.y-f.w*.5+18,f.w,f.w*i.height/i.width);});
-  if(img.player.complete)drawPlayer(S.px+14,S.py+18);
+  ctx.globalAlpha=.3;
+  S.foes.forEach(function(f){var i=f.heavy?img.heavy:img.enemy;if(i.complete)ctx.drawImage(sil(f.heavy?"h":"e",i,0,i.width,i.height),f.x-f.w*.5+12,f.y-f.w*.5+16,f.w,f.w*i.height/i.width);});
+  if(img.player.complete)drawPlayer(S.px+12,S.py+16,true);
   ctx.globalAlpha=1;
   /* зенитки */
   S.flak.forEach(function(f){if(f.done)return;var k=f.t/f.T;ctx.strokeStyle="rgba(255,215,90,"+(.35+k*.6)+")";ctx.lineWidth=2;
