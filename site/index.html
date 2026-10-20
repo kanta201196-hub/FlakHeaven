@@ -20,7 +20,7 @@
 <meta name="twitter:title" content="Flak Heaven — roguelike про боевую авиацию">
 <meta name="twitter:description" content="Каждый вылет вы собираете новый самолёт из оружия, модулей и ведомых. Продержитесь 15 минут.">
 <meta name="twitter:image" content="https://flakheaven.com/img/og_v2.jpg">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Flak Heaven", "url": "https://flakheaven.com/", "image": "https://flakheaven.com/img/og_v2.jpg", "description": "Roguelike про боевую авиацию: каждый вылет вы собираете новый самолёт из оружия, модулей и ведомых и держитесь 15 минут против зениток, асов и ракет.", "genre": ["Roguelike", "Shoot 'em up"], "gamePlatform": ["Windows", "macOS"], "inLanguage": ["ru", "en"], "sameAs": ["https://t.me/FlakHeaven", "https://kanta2011.itch.io/flak-heaven"]}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Flak Heaven", "url": "https://flakheaven.com/", "image": "https://flakheaven.com/img/og_v2.jpg", "description": "Roguelike про боевую авиацию: каждый вылет вы собираете новый самолёт из оружия, модулей и ведомых и держитесь 15 минут против зениток, асов и ракет.", "genre": ["Roguelike", "Shoot 'em up"], "gamePlatform": ["Windows", "macOS"], "inLanguage": ["ru", "en"], "sameAs": ["https://t.me/FlakHeaven", "https://discord.gg/VmSepr2Wge", "https://kanta2011.itch.io/flak-heaven"]}</script>
 <meta name="theme-color" content="#dfe7ef">
 <link rel="canonical" href="https://flakheaven.com/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -82,7 +82,7 @@ html:not([lang="en"]) [data-l="en"],html[lang="en"] [data-l="ru"]{display:none!i
 .snd[aria-pressed="true"] .bars i:nth-child(2){animation-delay:.2s}.snd[aria-pressed="true"] .bars i:nth-child(3){animation-delay:.4s}
 @keyframes eq{0%,100%{height:4px}50%{height:12px}}
 @media (max-width:560px){.snd .t{display:none}.tools{gap:6px}.top .pill.sm{padding:9px 12px;font-size:13px}}
-.top .sh{display:none}@media (max-width:400px){.top .lg{display:none}.top .sh{display:inline}.tools{gap:4px}.lang button{padding:8px 7px}.top{gap:6px}}
+.top .sh{display:none}@media (max-width:400px){.snd{display:none}.top .lg{display:none}.top .sh{display:inline}.tools{gap:4px}.lang button{padding:8px 7px}.top{gap:6px}}
 
 /* Первый экран: облака, бледное слово, самолёт */
 .sky{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--sky1) 0%,#e9eff5 55%,var(--sky2) 100%)}
@@ -206,6 +206,7 @@ footer p{margin:0 0 8px}
       <button class="snd" id="snd" type="button" aria-pressed="false" title="Музыка из игры / Game music"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span><span class="t" data-l="ru">Звук</span><span class="t" data-l="en">Sound</span></button>
       <div class="lang"><button id="b-ru" aria-pressed="true">RU</button><button id="b-en" aria-pressed="false">EN</button></div>
       <a class="tg" href="https://t.me/FlakHeaven" aria-label="Telegram" title="Telegram"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.4 4.2 2.9 11.3c-1.3.5-1.3 1.2-.2 1.6l4.7 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.4l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.9-1.4-1.5zM8.6 14l9.2-5.8c.4-.3.8-.1.5.2l-7.6 6.9-.3 3.2z"/></svg></a>
+      <a class="tg" href="https://discord.gg/VmSepr2Wge" aria-label="Discord" title="Discord"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.61 1.25a18.27 18.27 0 0 0-5.49 0 12.6 12.6 0 0 0-.62-1.25.08.08 0 0 0-.08-.04 19.74 19.74 0 0 0-4.88 1.52.07.07 0 0 0-.03.03C.53 9.05-.32 13.58.1 18.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-1.99a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.89.08.08 0 0 1-.01-.13l.37-.29a.07.07 0 0 1 .08-.01c3.93 1.79 8.18 1.79 12.06 0a.07.07 0 0 1 .08.01l.37.29a.08.08 0 0 1-.01.13c-.6.35-1.22.65-1.87.89a.08.08 0 0 0-.04.11c.36.7.77 1.36 1.22 1.99a.08.08 0 0 0 .08.03 19.84 19.84 0 0 0 6-3.03.08.08 0 0 0 .03-.06c.5-5.18-.84-9.67-3.55-13.66a.06.06 0 0 0-.03-.03zM8.02 15.33c-1.18 0-2.16-1.09-2.16-2.42s.96-2.42 2.16-2.42c1.21 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42zm7.97 0c-1.18 0-2.15-1.09-2.15-2.42s.95-2.42 2.15-2.42c1.21 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42z"/></svg></a>
       <a class="pill dark sm" id="top-tester" href="#tester" hidden><span data-l="ru"><span class="lg">Стать тестером</span><span class="sh">В тестеры</span></span><span data-l="en"><span class="lg">Become a tester</span><span class="sh">Join test</span></span></a>
     </div>
   </header>
@@ -326,7 +327,7 @@ footer p{margin:0 0 8px}
 
 <section class="sec in" id="tester" hidden>
   <div class="t-head"><h2 class="h2" data-l="ru">Стать тестером</h2><h2 class="h2" data-l="en">Become a tester</h2>
-    <div class="t-btns"><a class="pill" href="https://kanta2011.itch.io/flak-heaven" target="_blank" rel="noopener"><span data-l="ru">Скачать на itch.io</span><span data-l="en">Download on itch.io</span></a><a class="pill acc" href="#tester" id="wide-tester" hidden><span data-l="ru">Заполнить заявку</span><span data-l="en">Sign up</span></a></div></div>
+    <div class="t-btns"><a class="pill" href="https://discord.gg/VmSepr2Wge" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.61 1.25a18.27 18.27 0 0 0-5.49 0 12.6 12.6 0 0 0-.62-1.25.08.08 0 0 0-.08-.04 19.74 19.74 0 0 0-4.88 1.52.07.07 0 0 0-.03.03C.53 9.05-.32 13.58.1 18.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-1.99a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.89.08.08 0 0 1-.01-.13l.37-.29a.07.07 0 0 1 .08-.01c3.93 1.79 8.18 1.79 12.06 0a.07.07 0 0 1 .08.01l.37.29a.08.08 0 0 1-.01.13c-.6.35-1.22.65-1.87.89a.08.08 0 0 0-.04.11c.36.7.77 1.36 1.22 1.99a.08.08 0 0 0 .08.03 19.84 19.84 0 0 0 6-3.03.08.08 0 0 0 .03-.06c.5-5.18-.84-9.67-3.55-13.66a.06.06 0 0 0-.03-.03zM8.02 15.33c-1.18 0-2.16-1.09-2.16-2.42s.96-2.42 2.16-2.42c1.21 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42zm7.97 0c-1.18 0-2.15-1.09-2.15-2.42s.95-2.42 2.15-2.42c1.21 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42z"/></svg>Discord</a><a class="pill" href="https://kanta2011.itch.io/flak-heaven" target="_blank" rel="noopener"><span data-l="ru">Скачать на itch.io</span><span data-l="en">Download on itch.io</span></a><a class="pill acc" href="#tester" id="wide-tester" hidden><span data-l="ru">Заполнить заявку</span><span data-l="en">Sign up</span></a></div></div>
   <div class="t-media"><video data-src="video/convoy.mp4" poster="video/convoy.jpg" muted loop playsinline preload="none" aria-label="Атака на колонну / Attacking a convoy"></video></div>
   <h3 class="t-sub" data-l="ru">Закрытый тест идёт сейчас</h3><h3 class="t-sub" data-l="en">The closed test is on now</h3>
   <div class="join">
@@ -361,8 +362,8 @@ footer p{margin:0 0 8px}
 </main>
 
 <footer class="in small">
-  <p data-l="ru">Сайт не использует куки и счётчики посещений. <a href="privacy.html">Политика конфиденциальности</a> · Связь: <a href="mailto:hello@flakheaven.com">hello@flakheaven.com</a>, <a href="https://t.me/FlakHeaven">Telegram</a> · Тестовая сборка: <a href="https://kanta2011.itch.io/flak-heaven">itch.io</a></p>
-  <p data-l="en">This site uses no cookies or visitor tracking. <a href="privacy.html">Privacy policy</a> · Contact: <a href="mailto:hello@flakheaven.com">hello@flakheaven.com</a>, <a href="https://t.me/FlakHeaven">Telegram</a> · Test build: <a href="https://kanta2011.itch.io/flak-heaven">itch.io</a></p>
+  <p data-l="ru">Сайт не использует куки и счётчики посещений. <a href="privacy.html">Политика конфиденциальности</a> · Связь: <a href="mailto:hello@flakheaven.com">hello@flakheaven.com</a>, <a href="https://t.me/FlakHeaven">Telegram</a>, <a href="https://discord.gg/VmSepr2Wge">Discord</a> · Тестовая сборка: <a href="https://kanta2011.itch.io/flak-heaven">itch.io</a></p>
+  <p data-l="en">This site uses no cookies or visitor tracking. <a href="privacy.html">Privacy policy</a> · Contact: <a href="mailto:hello@flakheaven.com">hello@flakheaven.com</a>, <a href="https://t.me/FlakHeaven">Telegram</a>, <a href="https://discord.gg/VmSepr2Wge">Discord</a> · Test build: <a href="https://kanta2011.itch.io/flak-heaven">itch.io</a></p>
   <p data-l="ru">Музыка: «Heart of Machine» — Alexandr Zhelanov (CC BY 3.0). Шрифты Unbounded, Manrope, Russo One (SIL OFL). 3D-просмотр — model-viewer (Apache 2.0).</p>
   <p data-l="en">Music: “Heart of Machine” by Alexandr Zhelanov (CC BY 3.0). Fonts Unbounded, Manrope, Russo One (SIL OFL). 3D viewer: model-viewer (Apache 2.0).</p>
   <span data-l="ru">© 2026 Flak Heaven. Все совпадения с реальной техникой и странами случайны.</span>
@@ -371,7 +372,7 @@ footer p{margin:0 0 8px}
 
 <script>
 /* Ссылки: впишите адрес — кнопка появится. Пока адрес пустой, кнопка скрыта. */
-var LINKS={steam:"",tester:"https://forms.yandex.ru/u/6ad66df2c45c0770823c7c1e/",tg:"https://t.me/FlakHeaven",vk:"",discord:""};
+var LINKS={steam:"",tester:"https://forms.yandex.ru/u/6ad66df2c45c0770823c7c1e/",tg:"https://t.me/FlakHeaven",vk:"",discord:"https://discord.gg/VmSepr2Wge"};
 Object.keys(LINKS).forEach(function(k){var a=document.getElementById("l-"+k);if(a&&LINKS[k]){if(k!=="tester")a.href=LINKS[k];a.hidden=false;}});
 if(LINKS.steam)document.getElementById("cta").hidden=false;
 var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
