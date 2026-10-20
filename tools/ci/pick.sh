@@ -19,7 +19,7 @@ if [ -z "$code" ]; then
 	echo "pick: только ассеты (модели/текстуры/звук) — один раз: tools/ci/smoke.sh fighter (импорт + вылет). Полный автотест и кадры не нужны"; exit 0
 fi
 echo "pick: после каждой правки — tools/ci/smoke.sh fighter (один класс). Остальные два класса не гонять: их проверит GitHub."
-[ -n "$combat" ] && echo "pick: менялся бой (файлы ниже) — перед готовым PR ОДИН раз полный автотест:" && echo "$combat" | sed 's/^/   /'
+[ -n "$combat" ] && echo "pick: менялся бой (файлы ниже) — перед готовым PR ОДИН раз полный автотест tools/ci/full.sh:" && echo "$combat" | sed 's/^/   /'
 [ -n "$view" ] && echo "pick: менялся вид — кадры: xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots (только если нужен скриншот в PR)"
 [ -n "$combat" ] || echo "pick: бой не менялся — полный автотест не нужен"
 exit 0
