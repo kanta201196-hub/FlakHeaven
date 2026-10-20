@@ -75,7 +75,7 @@ function step(dt){
   S.tx=Math.max(18,Math.min(W-18,S.tx));S.ty=Math.max(H*.3,Math.min(H-24,S.ty));
   var k=Math.min(1,dt*12),ox=S.px;S.px+=(S.tx-S.px)*k;S.py+=(S.ty-S.py)*k;
   /* крен: от скорости по горизонтали, плавно */
-  var vx=(S.px-ox)/Math.max(dt,1e-3),bt=Math.max(-1,Math.min(1,vx/260));S.bank+=(bt-S.bank)*Math.min(1,dt*8);
+  var vx=(S.px-ox)/Math.max(dt,1e-3),bt=Math.max(-1,Math.min(1,vx/320));S.bank+=(bt-S.bank)*Math.min(1,dt*6);
   if(S.inv>0)S.inv-=dt;
   S.fire-=dt;if(S.fire<=0){S.fire=.11;S.bullets.push({x:S.px-7,y:S.py-22},{x:S.px+7,y:S.py-22});}
   /* ракеты: раз в ~2 с с крыла, наводятся на ближайшего врага */
@@ -113,9 +113,16 @@ function step(dt){
   S.score+=dt*10;
   if(S.t>=ROUND){S.score+=S.hp*500;end(true);}
 }
-/* самолёт игрока с креном: сужается по ширине и чуть поворачивается в сторону манёвра */
-function drawPlayer(x,y){var pw=28,ph=pw*img.player.height/img.player.width,b=S.bank;
-  ctx.save();ctx.translate(x,y);ctx.rotate(b*.12);ctx.scale(1-Math.abs(b)*.38,1);ctx.drawImage(img.player,-pw/2,-ph/2,pw,ph);ctx.restore();}
+/* крен как 3D-поворот вокруг продольной оси: кадры заранее, ширина = cos(угла),
+   одно крыло светлеет, другое темнеет; плюс лёгкое покачивание, чтобы самолёт не «застывал» */
+var bankFr=null,BF=8,BMAX=1.1;
+function bankFrames(){var i=img.player,pw=56,ph=Math.round(pw*i.height/i.width);bankFr=[];
+  for(var n=-BF;n<=BF;n++){var a=n/BF*BMAX,c=document.createElement("canvas"),w=Math.max(8,Math.round(pw*Math.cos(a)));c.width=pw;c.height=ph;var g=c.getContext("2d");
+    g.drawImage(i,(pw-w)/2,0,w,ph);if(n){g.globalCompositeOperation="source-atop";var gr=g.createLinearGradient((pw-w)/2,0,(pw+w)/2,0),k=Math.abs(a)/BMAX*.6;
+      gr.addColorStop(0,n>0?"rgba(255,255,255,"+k*.6+")":"rgba(0,0,0,"+k+")");gr.addColorStop(.5,"rgba(0,0,0,0)");gr.addColorStop(1,n>0?"rgba(0,0,0,"+k+")":"rgba(255,255,255,"+k*.6+")");
+      g.fillStyle=gr;g.fillRect(0,0,pw,ph);}bankFr.push(c);}}
+function drawPlayer(x,y,shadow){if(!bankFr)bankFrames();var b=Math.max(-1,Math.min(1,S.bank+Math.sin(S.t*2.3)*.07)),f=bankFr[Math.round(b*BF)+BF],pw=28,ph=pw*f.height/f.width;
+  ctx.save();ctx.translate(x,y);ctx.rotate(b*.1);ctx.drawImage(f,-pw/2,-ph/2,pw,ph);ctx.restore();}
 function draw(){
   ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
   if(!ground)makeGround();
