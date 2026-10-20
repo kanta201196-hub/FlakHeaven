@@ -14,3 +14,5 @@ __pycache__/
 # логи быстрой проверки (tools/ci/smoke.sh)
 import.log
 smoke_*.log
+full_op*.log
+smoke_*.out

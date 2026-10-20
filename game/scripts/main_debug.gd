@@ -429,6 +429,7 @@ func _smoke_end(code: int, why: String) -> void:
 # ---------- Автотест (-- --autotest): бот летает, берёт карточки, умирает/эвакуируется и начинает заново ----------
 
 var _bot_wait := 0.0
+var _runs_done := 0
 var _loadout_opened := false
 
 
@@ -573,6 +574,12 @@ func _run_autotest(delta: float) -> void:
 				print("AUTOTEST: %s at %.1f s, class %s, level %d, kills %d, bosses %d, mastery t%d +%d" % [m.state, m.run_time, m.cls_id, m.level, m.kills, m.bosses_killed,
 					int(m.tele.g("mastery_t")), int(m.tele.g("mastery_dmg"))])
 				print_taken("AUTOTEST")
+				_runs_done += 1
+				for a in m._args:   # --runs=N: полный автотест заканчивается сам после N вылетов (tools/ci/full.sh)
+					if String(a).begins_with("--runs=") and _runs_done >= int(String(a).substr(7)):
+						print("AUTOTEST: done %d runs, %.0f s real" % [_runs_done, Time.get_ticks_msec() / 1000.0])
+						m.get_tree().quit(0)
+						return
 				if not m._args.has("--shots"):
 					m.ui_click("change_class") # следующий вылет — другим классом
 			return
