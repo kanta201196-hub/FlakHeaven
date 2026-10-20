@@ -694,6 +694,11 @@ func _apply_biome() -> void:
 	var sea := Biome.sea()
 	_ground_mat.set_shader_parameter("sea", sea)
 	_ground_mat.set_shader_parameter("sea_w", Terrain3D.SEA_W)
+	var look := 3   # E-13: вид воды 3 (прозрачная отмель) — рекомендация, ждёт выбора Kanta
+	for arg in OS.get_cmdline_user_args():   # сравнение вариантов воды на кадрах: --sealook=0…3
+		if arg.begins_with("--sealook="):
+			look = int(arg.substr(10))
+	_ground_mat.set_shader_parameter("sea_look", look)
 	_ground_mat.set_shader_parameter("road_w", 0.0 if sea else Terrain3D.ROAD_W)   # дороги нет: конвой — по фарватеру
 	_ground_mat.set_shader_parameter("road_w_in", 0.0 if sea else Terrain3D.ROAD_W_IN)
 	for k in (Biome.g("ground", {}) as Dictionary):
