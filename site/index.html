@@ -79,15 +79,12 @@ html:not([lang="en"]) [data-l="en"],html[lang="en"] [data-l="ru"]{display:none!i
 @keyframes drift{from{transform:translateX(-5%)}to{transform:translateX(5%)}}
 .hero{position:relative;text-align:center;padding-top:clamp(20px,5vw,48px);padding-bottom:20px}
 .kicker{position:relative;z-index:2;font:600 12px/1.3 var(--f-body);letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin:0 0 14px}
-.logo{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:clamp(14px,3vw,40px);margin:0 auto 26px;text-align:left;color:var(--ink)}
-.logo .emb{flex:none;width:clamp(96px,17vw,232px);height:auto;color:var(--ink);filter:drop-shadow(0 14px 22px rgb(30 50 80 / .2))}
-.logo .txt{min-width:0}
-.logo .kicker{margin:0 0 10px}
-h1{margin:0 0 12px;font:600 clamp(40px,6.6vw,96px)/.95 var(--f-head);letter-spacing:.01em;white-space:nowrap}
+.logo{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:clamp(12px,2.4vw,32px);margin:0 auto 22px;color:var(--ink)}
+.logo .emb{flex:none;width:clamp(84px,12vw,170px);height:auto;color:var(--ink);filter:drop-shadow(0 14px 22px rgb(30 50 80 / .2))}
+h1{margin:0;font:600 clamp(40px,7.6vw,110px)/.95 var(--f-head);letter-spacing:.01em;white-space:nowrap;text-align:left}
 h1 i{font-style:normal;color:var(--acc)}
-.slogan{position:relative;z-index:2;font:300 clamp(20px,2.7vw,36px)/1.15 var(--f-head);margin:0;letter-spacing:-.01em}
-.slogan b{font-weight:600}
-@media (max-width:640px){.logo{gap:14px}.logo .emb{width:92px}h1{white-space:normal;font-size:clamp(34px,11vw,48px)}h1 i{display:block}.logo .kicker{letter-spacing:.14em;font-size:11px}.slogan{font-size:19px}}
+.slogan{position:relative;z-index:2;font:600 clamp(22px,3.4vw,42px)/1.15 var(--f-head);margin:0 0 12px;letter-spacing:-.01em;white-space:nowrap}
+@media (max-width:640px){.logo .emb{width:84px}h1{white-space:normal;font-size:clamp(36px,11.5vw,50px)}h1 i{display:block}.kicker{letter-spacing:.14em;font-size:11px}.slogan{font-size:clamp(15px,5.1vw,24px)}}
 .sub{position:relative;z-index:2;max-width:48ch;margin:0 auto 24px;color:var(--dim);font-size:18px}
 .cta{position:relative;z-index:4;display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 @keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-12px) rotate(1deg)}}
@@ -187,15 +184,13 @@ footer p{margin:0 0 8px}
     <img class="bubble" src="video/convoy.jpg" alt="" style="right:5%;top:52%;animation-delay:-5s">
     <img class="bubble" src="img/shot_explosions.jpg" alt="" style="right:12%;top:78%;width:88px;animation-delay:-2s">
     <div class="in">
-      <div class="logo"><svg class="emb" viewBox="0 0 100 100" aria-hidden="true"><g stroke="#e9a43c" stroke-width="3.2" stroke-linecap="round"><path d="M50 6v24M50 70v24M6 50h24M70 50h24M19 19l15 15M66 66l15 15M81 19L66 34M34 66L19 81"/><path d="M50 22l-3 8M78 50l-8-3M50 78l3-8M22 50l8 3M30 33l7 5M70 67l-7-5M67 30l-5 7M33 70l5-7" stroke-width="2.4" opacity=".8"/></g><path transform="rotate(35 50 50)" d="M50 18l6 20 18 10v5l-18-4-2 14 7 5v4l-11-2-11 2v-4l7-5-2-14-18 4v-5l18-10z" fill="currentColor"/></svg><div class="txt">
-        <div class="kicker" data-l="ru">Roguelike про боевую авиацию</div>
-        <div class="kicker" data-l="en">Fighter-jet bullet heaven roguelite</div>
-        <h1>FLAK <i>HEAVEN</i></h1>
-        <p class="slogan" id="slogan-ru" data-l="ru">Небо, полное зениток.<br><b>Продержитесь 15&nbsp;минут.</b></p>
-        <p class="slogan" id="slogan-en" data-l="en">A sky full of flak.<br><b>Survive 15&nbsp;minutes.</b></p>
-      </div></div>
-      <p class="sub" data-l="ru">Вид сверху, вылет на 15 минут. Каждый вылет вы собираете новый самолёт из оружия, модулей и ведомых.</p>
-      <p class="sub" data-l="en">Top-down, 15-minute sorties. Every run you build a new plane from weapons, modules and wingmen.</p>
+      <div class="logo"><svg class="emb" viewBox="0 0 100 100" aria-hidden="true"><g stroke="#e9a43c" stroke-width="3.2" stroke-linecap="round"><path d="M50 6v24M50 70v24M6 50h24M70 50h24M19 19l15 15M66 66l15 15M81 19L66 34M34 66L19 81"/><path d="M50 22l-3 8M78 50l-8-3M50 78l3-8M22 50l8 3M30 33l7 5M70 67l-7-5M67 30l-5 7M33 70l5-7" stroke-width="2.4" opacity=".8"/></g><path transform="rotate(35 50 50)" d="M50 18l6 20 18 10v5l-18-4-2 14 7 5v4l-11-2-11 2v-4l7-5-2-14-18 4v-5l18-10z" fill="currentColor"/></svg><h1>FLAK <i>HEAVEN</i></h1></div>
+      <div class="kicker" data-l="ru">Roguelike про боевую авиацию</div>
+      <div class="kicker" data-l="en">Fighter-jet bullet heaven roguelite</div>
+      <p class="slogan" data-l="ru">Продержитесь 15&nbsp;минут.</p>
+      <p class="slogan" data-l="en">Survive 15&nbsp;minutes.</p>
+      <p class="sub" data-l="ru">Каждый вылет вы собираете новый самолёт из оружия, модулей и ведомых.</p>
+      <p class="sub" data-l="en">Every run you build a new plane from weapons, modules and wingmen.</p>
       <div class="cta">
         <a class="pill acc" id="l-steam" href="#" hidden><span data-l="ru">В список желаемого в Steam</span><span data-l="en">Wishlist on Steam</span></a>
         <a class="pill dark" id="l-tester" href="#tester" hidden><span data-l="ru">Стать тестером</span><span data-l="en">Become a tester</span></a>
@@ -224,21 +219,21 @@ footer p{margin:0 0 8px}
         <h3 data-l="ru">Истребитель</h3><h3 data-l="en">Fighter</h3>
         <p data-l="ru">Быстрый и вёрткий. Сбивает асов и ракеты, уходит от огня бочкой.</p>
         <p data-l="en">Fast and agile. Shoots down aces and missiles, rolls out of fire.</p>
-        <span class="tag" data-l="ru">воздух</span><span class="tag" data-l="en">air</span>
+        <span class="tag" data-l="ru">манёвр</span><span class="tag" data-l="en">agility</span>
       </article>
       <article class="cls">
         <model-viewer class="mv" data-src="models/attacker.glb" alt="3D-модель штурмовика / Attacker 3D model"><img slot="poster" src="img/plane_attacker.webp" alt="Штурмовик / Attacker" loading="lazy"></model-viewer>
         <h3 data-l="ru">Штурмовик</h3><h3 data-l="en">Attacker</h3>
         <p data-l="ru">Пушки и НАР по наземным целям. Держит удар, ломает колонны.</p>
         <p data-l="en">Cannons and rockets against ground targets. Takes hits, breaks convoys.</p>
-        <span class="tag" data-l="ru">земля</span><span class="tag" data-l="en">ground</span>
+        <span class="tag" data-l="ru">баланс</span><span class="tag" data-l="en">balance</span>
       </article>
       <article class="cls">
         <model-viewer class="mv" data-src="models/bomber.glb" alt="3D-модель бомбардировщика / Bomber 3D model"><img slot="poster" src="img/plane_bomber.webp" alt="Бомбардировщик / Bomber" loading="lazy"></model-viewer>
         <h3 data-l="ru">Бомбардировщик</h3><h3 data-l="en">Bomber</h3>
         <p data-l="ru">Тяжёлый, с турелями. Ковровый удар по укреплениям.</p>
         <p data-l="en">Heavy, with turrets. Carpet strikes on fortifications.</p>
-        <span class="tag" data-l="ru">бомбы</span><span class="tag" data-l="en">bombs</span>
+        <span class="tag" data-l="ru">выживаемость</span><span class="tag" data-l="en">durability</span>
       </article>
     </div>
     <p class="hint"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg><span data-l="ru">Покрутите модель мышью или пальцем.</span><span data-l="en">Drag a model to rotate it.</span></p>
@@ -368,14 +363,6 @@ document.getElementById("b-en").onclick=function(){setLang("en")};
 var saved=null;try{saved=localStorage.getItem("lang");}catch(e){}
 setLang(saved||((navigator.language||"").toLowerCase().indexOf("ru")===0?"ru":"en"));
 
-/* Превью вариантов заголовка: ?h=1…5 (только для выбора, после выбора убрать). */
-(function(){var n=+(new URLSearchParams(location.search).get("h")||0);var H=[null,
-  ["Взлетайте выше.<br><b>Держитесь дольше.</b>","Fly higher.<br><b>Hold out longer.</b>"],
-  ["Небо, полное зениток.<br><b>Продержитесь 15&nbsp;минут.</b>","A sky full of flak.<br><b>Survive 15&nbsp;minutes.</b>"],
-  ["15 минут<br><b>под зенитным огнём.</b>","15 minutes<br><b>under flak fire.</b>"],
-  ["Соберите самолёт<br><b>прямо в бою.</b>","Build your plane<br><b>mid-fight.</b>"],
-  ["Прорвитесь<br><b>сквозь зенитный огонь.</b>","Break through<br><b>the flak.</b>"]];
-  if(H[n]){document.getElementById("slogan-ru").innerHTML=H[n][0];document.getElementById("slogan-en").innerHTML=H[n][1];}})();
 
 /* Музыка из меню игры — только по кнопке (браузеры не дают включать звук сами). */
 (function(){var b=document.getElementById("snd"),a=document.getElementById("music");a.volume=.5;
