@@ -59,7 +59,7 @@ html:not([lang="en"]) [data-l="en"],html[lang="en"] [data-l="ru"]{display:none!i
 /* Шапка */
 .top{position:relative;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:18px;padding-bottom:18px}
 .brand{font:600 16px/1 var(--f-head);letter-spacing:.06em;color:var(--ink);text-decoration:none;white-space:nowrap}
-.brand i{font-style:normal;color:var(--acc)}
+.brand .emb{width:40px;height:40px;display:block;color:var(--ink)}
 .tools{display:flex;align-items:center;gap:8px}
 .lang{display:flex;background:rgb(255 255 255 / .6);border-radius:999px;padding:3px}
 .lang button{font:600 13px/1 var(--f-body);border:0;background:none;color:var(--dim);padding:8px 10px;border-radius:999px;cursor:pointer}
@@ -78,13 +78,15 @@ html:not([lang="en"]) [data-l="en"],html[lang="en"] [data-l="ru"]{display:none!i
 .cloud{position:absolute;border-radius:50%;background:radial-gradient(closest-side,#fff 0%,rgb(255 255 255 / .85) 45%,rgb(255 255 255 / 0) 100%);filter:blur(2px);animation:drift 40s ease-in-out infinite alternate;pointer-events:none}
 @keyframes drift{from{transform:translateX(-5%)}to{transform:translateX(5%)}}
 .hero{position:relative;text-align:center;padding-top:clamp(20px,5vw,48px);padding-bottom:20px}
-.ghost{position:absolute;left:50%;top:64%;transform:translate(-50%,-50%);font:600 clamp(64px,15vw,210px)/1 var(--f-head);color:rgb(21 26 33 / .05);white-space:nowrap;pointer-events:none;z-index:1}
-.kicker{position:relative;z-index:2;font:600 12px/1.3 var(--f-body);letter-spacing:.24em;text-transform:uppercase;color:var(--dim)}
-h1{position:relative;z-index:2;font:300 clamp(34px,7vw,80px)/1.02 var(--f-head);margin:14px 0 14px;letter-spacing:-.02em;text-wrap:balance}
-h1 b{font-weight:600;display:block}
+.kicker{position:relative;z-index:2;font:600 12px/1.3 var(--f-body);letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin:0 0 14px}
+.logo{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;margin:0 0 18px;color:var(--ink)}
+.logo .emb{width:clamp(72px,10vw,104px);height:auto;color:var(--ink);filter:drop-shadow(0 10px 16px rgb(30 50 80 / .18))}
+h1{margin:0;font:600 clamp(42px,9.5vw,118px)/.95 var(--f-head);letter-spacing:.01em;white-space:nowrap}
+h1 i{font-style:normal;color:var(--acc)}
+.slogan{position:relative;z-index:2;font:300 clamp(22px,3.6vw,40px)/1.15 var(--f-head);margin:0 0 14px;letter-spacing:-.01em;text-wrap:balance}
+.slogan b{font-weight:600}
 .sub{position:relative;z-index:2;max-width:48ch;margin:0 auto 24px;color:var(--dim);font-size:18px}
 .cta{position:relative;z-index:4;display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
-.plane{position:relative;z-index:3;width:min(640px,88%);margin:10px auto 0;filter:drop-shadow(0 40px 30px rgb(30 50 80 / .28));animation:bob 6s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-12px) rotate(1deg)}}
 .facts{position:relative;z-index:4;display:flex;justify-content:center;flex-wrap:wrap;gap:10px 28px;margin:18px 0 0;padding:0;list-style:none}
 .facts li{font:600 14px/1.2 var(--f-body);color:var(--dim)}
@@ -168,7 +170,7 @@ footer p{margin:0 0 8px}
   <div class="cloud" style="width:760px;height:240px;left:12%;bottom:-70px;animation-duration:56s"></div>
 
   <header class="in top">
-    <a class="brand" href="/">FLAK <i>HEAVEN</i></a>
+    <a class="brand" href="/" aria-label="Flak Heaven"><svg class="emb sm" viewBox="0 0 100 100" aria-hidden="true"><g stroke="#e9a43c" stroke-width="3.2" stroke-linecap="round"><path d="M50 6v24M50 70v24M6 50h24M70 50h24M19 19l15 15M66 66l15 15M81 19L66 34M34 66L19 81"/><path d="M50 22l-3 8M78 50l-8-3M50 78l3-8M22 50l8 3M30 33l7 5M70 67l-7-5M67 30l-5 7M33 70l5-7" stroke-width="2.4" opacity=".8"/></g><path transform="rotate(35 50 50)" d="M50 18l6 20 18 10v5l-18-4-2 14 7 5v4l-11-2-11 2v-4l7-5-2-14-18 4v-5l18-10z" fill="currentColor"/></svg></a>
     <div class="tools">
       <button class="snd" id="snd" type="button" aria-pressed="false" title="Музыка из игры / Game music"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span><span class="t" data-l="ru">Звук</span><span class="t" data-l="en">Sound</span></button>
       <div class="lang"><button id="b-ru" aria-pressed="true">RU</button><button id="b-en" aria-pressed="false">EN</button></div>
@@ -177,16 +179,16 @@ footer p{margin:0 0 8px}
   </header>
 
   <section class="hero">
-    <div class="ghost" aria-hidden="true">FLAK HEAVEN</div>
     <img class="bubble" src="video/sea.jpg" alt="" style="left:4%;top:56%">
     <img class="bubble" src="img/shot_village.jpg" alt="" style="left:11%;top:80%;width:92px;animation-delay:-3s">
     <img class="bubble" src="video/convoy.jpg" alt="" style="right:5%;top:52%;animation-delay:-5s">
     <img class="bubble" src="img/shot_explosions.jpg" alt="" style="right:12%;top:78%;width:88px;animation-delay:-2s">
     <div class="in">
+      <div class="logo"><svg class="emb" viewBox="0 0 100 100" aria-hidden="true"><g stroke="#e9a43c" stroke-width="3.2" stroke-linecap="round"><path d="M50 6v24M50 70v24M6 50h24M70 50h24M19 19l15 15M66 66l15 15M81 19L66 34M34 66L19 81"/><path d="M50 22l-3 8M78 50l-8-3M50 78l3-8M22 50l8 3M30 33l7 5M70 67l-7-5M67 30l-5 7M33 70l5-7" stroke-width="2.4" opacity=".8"/></g><path transform="rotate(35 50 50)" d="M50 18l6 20 18 10v5l-18-4-2 14 7 5v4l-11-2-11 2v-4l7-5-2-14-18 4v-5l18-10z" fill="currentColor"/></svg><h1>FLAK <i>HEAVEN</i></h1></div>
       <div class="kicker" data-l="ru">Roguelike про боевую авиацию</div>
       <div class="kicker" data-l="en">Fighter-jet bullet heaven roguelite</div>
-      <h1 data-l="ru">Взлетайте выше.<b>Держитесь дольше.</b></h1>
-      <h1 data-l="en">Fly higher.<b>Hold out longer.</b></h1>
+      <p class="slogan" id="slogan-ru" data-l="ru">Небо, полное зениток.<br><b>Продержитесь 15 минут.</b></p>
+      <p class="slogan" id="slogan-en" data-l="en">A sky full of flak.<br><b>Survive 15 minutes.</b></p>
       <p class="sub" data-l="ru">Вид сверху, вылет на 15 минут. Каждый вылет вы собираете новый самолёт из оружия, модулей и ведомых.</p>
       <p class="sub" data-l="en">Top-down, 15-minute sorties. Every run you build a new plane from weapons, modules and wingmen.</p>
       <div class="cta">
@@ -197,7 +199,6 @@ footer p{margin:0 0 8px}
         <a class="pill" id="l-discord" href="#" hidden>Discord</a>
       </div>
     </div>
-    <img class="plane" src="img/plane_fighter.webp" width="845" height="429" alt="Истребитель из Flak Heaven / A Flak Heaven fighter">
     <ul class="facts in">
       <li><b>3</b><span data-l="ru">класса самолётов</span><span data-l="en">plane classes</span></li>
       <li><b>2</b><span data-l="ru">биома</span><span data-l="en">biomes</span></li>
@@ -362,6 +363,15 @@ document.getElementById("b-en").onclick=function(){setLang("en")};
 var saved=null;try{saved=localStorage.getItem("lang");}catch(e){}
 setLang(saved||((navigator.language||"").toLowerCase().indexOf("ru")===0?"ru":"en"));
 
+/* Превью вариантов заголовка: ?h=1…5 (только для выбора, после выбора убрать). */
+(function(){var n=+(new URLSearchParams(location.search).get("h")||0);var H=[null,
+  ["Взлетайте выше.<br><b>Держитесь дольше.</b>","Fly higher.<br><b>Hold out longer.</b>"],
+  ["Небо, полное зениток.<br><b>Продержитесь 15 минут.</b>","A sky full of flak.<br><b>Survive 15 minutes.</b>"],
+  ["15 минут<br><b>под зенитным огнём.</b>","15 minutes<br><b>under flak fire.</b>"],
+  ["Соберите самолёт<br><b>прямо в бою.</b>","Build your plane<br><b>mid-fight.</b>"],
+  ["Прорвитесь<br><b>сквозь зенитный огонь.</b>","Break through<br><b>the flak.</b>"]];
+  if(H[n]){document.getElementById("slogan-ru").innerHTML=H[n][0];document.getElementById("slogan-en").innerHTML=H[n][1];}})();
+
 /* Музыка из меню игры — только по кнопке (браузеры не дают включать звук сами). */
 (function(){var b=document.getElementById("snd"),a=document.getElementById("music");a.volume=.5;
   b.onclick=function(){if(a.paused){a.play().then(function(){b.setAttribute("aria-pressed","true");}).catch(function(){});}
@@ -382,7 +392,7 @@ setLang(saved||((navigator.language||"").toLowerCase().indexOf("ru")===0?"ru":"e
       m.setAttribute("camera-controls","");m.setAttribute("disable-zoom","");m.setAttribute("disable-pan","");
       m.setAttribute("touch-action","pan-y");m.setAttribute("interaction-prompt","none");
       m.setAttribute("camera-orbit","35deg 60deg 85%");m.setAttribute("field-of-view","22deg");
-      m.setAttribute("environment-image","neutral");m.setAttribute("exposure","1.05");m.setAttribute("shadow-intensity","0");
+      m.setAttribute("environment-image","neutral");m.setAttribute("autoplay","");m.setAttribute("exposure","1.05");m.setAttribute("shadow-intensity","0");
       if(!reduce){m.setAttribute("auto-rotate","");m.setAttribute("auto-rotate-delay","1500");m.setAttribute("rotation-per-second","18deg");}
       var pb=document.createElement("div");pb.setAttribute("slot","progress-bar");m.appendChild(pb);
       m.setAttribute("src",m.dataset.src);});
