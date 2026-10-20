@@ -45,6 +45,9 @@ uniform float sea_w = 16.12;
 uniform vec3 sea_shallow : source_color = vec3(0.42, 0.74, 0.7);
 uniform vec3 sea_mid : source_color = vec3(0.13, 0.47, 0.57);
 uniform vec3 sea_deep : source_color = vec3(0.07, 0.25, 0.4);
+// вид воды (замечание Kanta 20.10 «вода плохо выглядит»): 0 — как было; 1 — ровные цвета без зубцов;
+// 2 — + рябь, блики и накат пены; 3 — + прозрачная отмель (видно песок и камни под водой)
+uniform int sea_look = 0;
 uniform vec3 road_color : source_color = vec3(0.7, 0.62, 0.5);
 uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к палитре стайл-гайда (фото рыжее)
 uniform float rock_sat = 0.45;
@@ -185,6 +188,8 @@ void fragment() {
 	}
 	float ao = 1.0;
 	float wet_out = 0.0;  // вода в русле: блестит (ниже шероховатость)
+	vec3 sea_e = vec3(0.0);  // «Архипелаг»: блики солнца на ряби — в EMISSION (без неба отражений нет)
+	vec2 sea_n = vec2(0.0);  // «Архипелаг»: нормаль ряби
 	float hs = 1.0;  // отмывка — в цвет, а не в AO (AO в Godot гасит только рассеянный свет)
 	if (relief) {
 		// скала на крутых склонах: три проекции, на стенах слои пород горизонтальны
@@ -315,8 +320,56 @@ void fragment() {
 		float bank = 1.0 - smoothstep(river_w, river_w * 2.4, rd + edge);
 		c = mix(c, c * vec3(0.78, 0.82, 0.7), bank * 0.6);       // сырая земля и зелень у воды
 		float water = 1.0 - smoothstep(river_w * 0.45, river_w * 0.8, rd + edge * 0.5);
+		if (sea && sea_look > 0) {
+			// у моря поле по воде растянуто (1 ед. ≈ depth_px / sea_w px), у реки — нет: кромка резкая, ~15 px
+			water = 1.0 - smoothstep(sea_w - 0.5, sea_w + 2.5, rd + edge * 0.3);
+		}
 		vec3 wc = water_color * (0.9 + 0.2 * vnoise(world / 60.0));
-		if (sea) {
+		if (sea && sea_look > 0) {
+			// глубина по полю берега: оно линейно у кромки и обрезано у оси пролива — переходы цвета держим
+			// в линейной части (иначе по треугольникам сетки идут зубцы), а дальше глубину рисует крупный шум
+			float dp0 = clamp(1.0 - rd / sea_w, 0.0, 1.0);
+			vec2 wq = world + vec2(vnoise(world / 230.0 + 5.0), vnoise(world / 230.0 - 9.0)) * 120.0;
+			float big = vnoise(wq / 520.0 + 3.0) * 0.65 + vnoise(wq / 190.0 - 4.0) * 0.35;
+			float dp = clamp(dp0 + (big - 0.5) * 0.22 * smoothstep(0.04, 0.25, dp0), 0.0, 1.0);
+			vec3 sh = vec3(0.4, 0.66, 0.6), md = vec3(0.13, 0.4, 0.47), dpc = vec3(0.06, 0.2, 0.3);
+			wc = mix(sh, md, smoothstep(0.03, 0.3, dp));
+			// глубокое — по смеси поля и шума: у оси узкого пролива поле ломается по треугольникам, шум прячет излом
+			wc = mix(wc, dpc, smoothstep(0.3, 0.55, dp * 0.55 + big * 0.45 + 0.08));
+			wc *= 0.96 + 0.06 * vnoise(wq / 70.0 + 11.0);
+			float t = TIME;
+			if (sea_look >= 3) {
+				// отмель прозрачная: под водой песок и камни берега, с глубиной уходят в цвет воды
+				vec3 bed = c * vec3(0.7, 0.9, 0.86) + vec3(0.02, 0.07, 0.07);
+				wc = mix(bed, wc, smoothstep(0.01, 0.3, dp0) * 0.85 + 0.15);
+				// блики-каустика на дне отмели
+				float ca = vnoise(world / 11.0 + vec2(t * 0.35, t * 0.2)) * vnoise(world / 14.0 - vec2(t * 0.25, -t * 0.3));
+				sea_e += vec3(0.9, 1.0, 0.95) * smoothstep(0.32, 0.5, ca) * 0.1 * (1.0 - smoothstep(0.0, 0.15, dp));
+			}
+			// пена: тонкая рваная линия у кромки
+			float brk = smoothstep(0.35, 0.7, vnoise(world / 38.0 + 4.0)) * 0.6 + 0.4;
+			float foam = (1.0 - smoothstep(0.012, 0.03, dp0)) * brk;
+			if (sea_look >= 2) {
+				// накат: полоса пены идёт от отмели к берегу и тает
+				float ph = fract(t * 0.11 + vnoise(world / 260.0) * 0.6);
+				float wv = (1.0 - smoothstep(0.0, 0.01, abs(dp0 - 0.02 - (1.0 - ph) * 0.1))) * ph * smoothstep(0.4, 0.7, vnoise(world / 30.0 + t * 0.05));
+				foam = max(foam, wv * 0.8);
+				// рябь: две бегущие волны шума — в нормаль и в блики солнца
+				vec2 r1 = world / 26.0 + vec2(t * 0.6, t * 0.25);
+				vec2 r2 = world / 41.0 - vec2(t * 0.2, -t * 0.45);
+				float e1 = 0.6;
+				sea_n = vec2(vnoise(r1 + vec2(e1, 0.0)) - vnoise(r1 - vec2(e1, 0.0)), vnoise(r1 + vec2(0.0, e1)) - vnoise(r1 - vec2(0.0, e1)))
+					+ vec2(vnoise(r2 + vec2(e1, 0.0)) - vnoise(r2 - vec2(e1, 0.0)), vnoise(r2 + vec2(0.0, e1)) - vnoise(r2 - vec2(0.0, e1))) * 0.7;
+				sea_n *= 0.6 * smoothstep(0.02, 0.15, dp0);
+				// блики: произведение трёх шумов под углом к сетке — редкие искры без квадратов
+				vec2 g1 = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * world;
+				float gl = vnoise(g1 / 13.0 + vec2(t * 0.9, -t * 0.4)) * vnoise(world / 17.0 - vec2(t * 0.5, t * 0.7)) * vnoise(world / 90.0 + t * 0.05);
+				sea_e += vec3(1.0, 0.98, 0.9) * smoothstep(0.36, 0.55, gl) * 0.16 * smoothstep(0.1, 0.4, dp0);
+				wc *= 0.95 + 0.1 * vnoise(r1 * 0.5);
+			}
+			wc = mix(wc, vec3(0.9, 0.93, 0.92), foam * 0.8);
+			sea_e *= water;
+		} else if (sea) {
 			// глубина: у берега бирюзовая отмель, к оси пролива синее; пятна рифов и ряби — шумом
 			float dp = clamp(1.0 - rd / sea_w, 0.0, 1.0);
 			float dp0 = dp;
@@ -328,8 +381,14 @@ void fragment() {
 				* (0.55 + 0.45 * smoothstep(0.3, 0.7, vnoise(world / 75.0 + 4.0)));
 			wc = mix(wc, vec3(0.93, 0.95, 0.94), foam * 0.75);
 		}
+		if (sea && sea_look > 0) {
+			// мокрый песок у кромки вместо сухой рыжей полосы
+			float wet = (1.0 - smoothstep(river_w * 0.8, river_w * 1.6, rd + edge)) * (1.0 - water);
+			c = mix(c, c * vec3(0.7, 0.72, 0.7), wet * 0.7);
+		}
 		c = mix(c, wc, water);
 		nxy *= 1.0 - water;
+		nxy += sea_n * water;
 		wet_out = water;
 		ao = mix(ao, 1.0, water);
 		// M-36: дорога шире — наружу (от реки) road_w, к реке road_w_in (край вне охранной зоны);
@@ -423,7 +482,7 @@ void fragment() {
 	}
 	ALBEDO = alb;
 	// M-36: отражённый от долины свет на крутых склонах (у GL Compatibility нет GI — тень иначе почти чёрная)
-	EMISSION = alb * slope_fill * smoothstep(0.12, 0.55, 1.0 - wnorm.y) + gz_e;
+	EMISSION = alb * slope_fill * smoothstep(0.12, 0.55, 1.0 - wnorm.y) + gz_e + sea_e;
 	if (use_nh) {
 		nxy *= normal_k;
 		NORMAL_MAP = normalize(vec3(nxy, 1.0)) * 0.5 + 0.5;
