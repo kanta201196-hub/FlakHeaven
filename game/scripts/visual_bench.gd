@@ -287,6 +287,23 @@ func _hold(p: Dictionary) -> void:
 		var to := pos + Vector2.from_angle(m.player.heading + randf_range(-0.5, 0.5)) * randf_range(420.0, 600.0)
 		m.projectiles.spawn_bomb(pos + Vector2(randf_range(-20, 20), randf_range(-20, 20)), randf_range(4.0, 7.0), 0.0, 120.0, "бомбы", to, true)
 		m.projectiles.bombs[-1]["vt"] = vt
+	if p.has("skill_carpet") and _t > float(p["skill_carpet"]) and not p.has("_sk"):
+		# Kanta 20.10 (BM-01): умение «Огненный ковёр» — метки падения бомб должны лежать на земле
+		p["_sk"] = true
+		m.player._carpet_left = 14
+		m.player._carpet_i = 0
+		m.player._carpet_tick = 0.0
+		m.player._carpet_dir = 1.0
+		Engine.time_scale = 0.03   # в облаке кадр идёт ~1 с, а спираль ложится за секунду
+	if p.has("_sk") and m.player._carpet_left <= 6:
+		Engine.time_scale = 1.0
+		_save(p["name"])
+		m.projectiles.bombs.clear()
+		_phase = 0
+		_t = 0.0
+		_pt = 0.0
+		_i += 1
+		return
 	if p.has("carpet"):
 		# тест 3.5-s5 (п. 3): сброс из бомбоотсека «Кита» — «ковёр» (true) или бомбы ступени 3 (false);
 		# время замедлено: в облаке кадр идёт ~1 с, а бомба падает полсекунды
@@ -501,6 +518,9 @@ func _make_points() -> Array:
 		pts = []
 		pts.append({"name": "eweap", "pos": empty, "eweap": true, "shot_t": 1.5, "zoom": 1.0})
 		pts.append({"name": "eweap_close", "pos": empty, "eweap": true, "shot_t": 1.5, "zoom": 2.0})
+	if OS.get_cmdline_user_args().has("--carpetskill"):   # BM-01: умение «Огненный ковёр» — метки бомб
+		pts = []
+		pts.append({"name": "carpet_skill", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "skill_carpet": 2.5, "wait": 99.0, "zoom": 1.6})
 	if OS.get_cmdline_user_args().has("--bombbench"):   # тест 3.5-s4 (п. 10, 14): падающие бомбы ступеней и воронки
 		pts = []
 		pts.append({"name": "bomb_drop", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "bombs": true, "wait": 2.5, "zoom": 2.6})

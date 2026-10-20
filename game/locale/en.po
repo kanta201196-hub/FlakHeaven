@@ -1205,8 +1205,8 @@ msgid " [прав. кн. мыши]"
 msgstr " [right mouse]"
 
 #: game/scripts/hardpoint.gd:242
-msgid "Бомбы падают сами на наземные цели рядом. Бросить вручную: зажмите правую кнопку мыши — на земле появится прицел, отпустите — сброс."
-msgstr "Bombs drop on their own on nearby ground targets. Manual drop: hold the right mouse button — a reticle appears on the ground, release to drop."
+msgid "Бомбы падают сами на наземные цели рядом. Бросать вручную с прицелом: в паузе (Tab) переключите бомбы на «Пуск: правой кнопкой мыши»."
+msgstr "Bombs drop on their own on nearby ground targets. To drop manually with a reticle: in the pause menu (Tab), switch bombs to “Fire: right mouse button”."
 
 #: game/scripts/hardpoint.gd:244
 msgid "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab)."

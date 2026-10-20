@@ -382,9 +382,12 @@ void fragment() {
 			if (zi >= gz_n) break;
 			vec4 za = gz_a[zi];
 			vec4 zb = gz_b[zi];
+			// BM-01 (Kanta 20.10): w = 0 — зона задана в координатах мира (точка падения на рельефе) и ложится
+			// по склонам; w = 1 — в координатах плоскости боя (проекция из камеры)
+			vec2 q = gz_c[zi].w > 0.5 ? cp : world3.xz;
 			vec2 ab = za.zw - za.xy;
-			float h = clamp(dot(cp - za.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
-			vec2 dv = cp - za.xy - ab * h;
+			float h = clamp(dot(q - za.xy, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+			vec2 dv = q - za.xy - ab * h;
 			float d = length(dv);
 			float r = zb.x;
 			if (d > r * 1.15 + 8.0) continue;
