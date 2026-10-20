@@ -2265,12 +2265,23 @@ func ground_zones_on() -> bool:
 	return enabled and terrain != null and _ground_mat != null
 
 
-func _gz_add(a: Vector2, b: Vector2, r: float, alpha: float, kind: int, col: Color) -> void:
+## on_ground (BM-01, Kanta 20.10): метка прицела и падения бомб — в точке рельефа под a/b (как взрыв бомбы,
+## Boom3D: ground_under) и в мировых координатах: кольцо лежит по склонам, а не висит плоским кругом на высоте боя
+func _gz_add(a: Vector2, b: Vector2, r: float, alpha: float, kind: int, col: Color, on_ground := false) -> void:
 	if _gz_a.size() >= GZ_MAX or alpha <= 0.01:
 		return
+	var w := 1.0
+	if on_ground:
+		var ga := ground_under(a)
+		var gb := ga if b == a else ground_under(b)
+		var ch := cam.global_position.y
+		r *= clampf((ch - ga.y) / maxf(ch, 1.0), 0.5, 3.0)
+		a = Vector2(ga.x, ga.z)
+		b = Vector2(gb.x, gb.z)
+		w = 0.0
 	_gz_a.append(Vector4(a.x, a.y, b.x, b.y))
 	_gz_b.append(Vector4(r, alpha, float(kind), fmod(absf(a.x * 0.013 + a.y * 0.007), 50.0)))
-	_gz_c.append(Vector4(col.r, col.g, col.b, 1.0))
+	_gz_c.append(Vector4(col.r, col.g, col.b, w))
 
 
 func _sync_ground_zones(m: Main) -> void:
@@ -2287,14 +2298,14 @@ func _sync_ground_zones(m: Main) -> void:
 				continue
 			var ready := h.cd <= 0.0
 			for z in h.aim_zones(pl):
-				_gz_add(z[0], z[1], z[2], 1.0 if ready else 0.6, 0 if ready else 1, GZ_AIM if ready else GZ_WAIT)
+				_gz_add(z[0], z[1], z[2], 1.0 if ready else 0.6, 0 if ready else 1, GZ_AIM if ready else GZ_WAIT, true)
 	var pr := m.projectiles
 	if pr != null:
 		var rk := pr.aoe_r_k()
 		for i in range(pr.bombs.size() - 1, -1, -1):
 			var b: Dictionary = pr.bombs[i]
 			var k := 1.0 - float(b["t"]) / maxf(float(b["fuse"]), 0.01)
-			_gz_add(b["to"], b["to"], float(b["r"]) * rk, 0.3 + 0.6 * k, 2, GZ_AIM)
+			_gz_add(b["to"], b["to"], float(b["r"]) * rk, 0.3 + 0.6 * k, 2, GZ_AIM, true)
 		var fl: Array = pr.fires.duplicate()
 		if fl.size() > GZ_MAX - _gz_a.size():
 			fl.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
