@@ -239,7 +239,7 @@ func update(delta: float, p: Player) -> void:
 		"plasma":
 			fired = _fire_plasma(p)
 	if fired and not manual and weapon == "bombs":
-		Hints.show("bomb_auto", "Бомбы падают сами на наземные цели рядом. Бросить вручную: зажмите правую кнопку мыши — на земле появится прицел, отпустите — сброс.", 8.0, 2)
+		Hints.show("bomb_auto", "Бомбы падают сами на наземные цели рядом. Бросать вручную с прицелом: в паузе (Tab) переключите бомбы на «Пуск: правой кнопкой мыши».", 8.0, 2)
 	if fired and not manual and weapon in ["aam", "rockets"]:
 		Hints.show("auto_launch", "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab).", 8.0, 2)
 	# 3.4: после выстрела переносим опоздание (до 0,05 с) — темп меньше зависит от FPS
@@ -250,9 +250,13 @@ func update(delta: float, p: Player) -> void:
 
 
 ## Тест 3.5-s7 (предложение Kanta): бомбы по кнопке — зажал, на земле виден прицел (лежит по рельефу,
-## render3d._sync_ground_zones), отпустил — сброс туда. При «авто» тоже: пока кнопка зажата, бомбы сами не падают.
+## render3d._sync_ground_zones), отпустил — сброс туда. Kanta 20.10 (BM-02): прицел и сброс по кнопке — только
+## в режиме «по кнопке»; при «авто» бомбы падают сами, ПКМ прицел не показывает.
 ## true — авто-сброс в этот кадр не нужен.
 func _bomb_aim(p: Player) -> bool:
+	if trigger != "button":
+		aiming = false
+		return false
 	if Input.is_action_pressed("fire_hardpoint"):
 		if not aiming:
 			Hints.show("bomb_aim", "Прицел бомб: держите правую кнопку мыши и ведите прицел, отпустите — бомбы сброшены. Серый прицел — бомбы ещё перезаряжаются.", 8.0, 2)
@@ -263,7 +267,7 @@ func _bomb_aim(p: Player) -> bool:
 		if cd <= 0.0 and _fire_bombs(p, true):
 			cd = reload_time(p)
 		return true
-	return trigger == "button"
+	return true
 
 
 ## Куда упадут бомбы по кнопке: к курсору (схема «мышью»), иначе вперёд по курсу
