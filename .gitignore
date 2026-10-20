@@ -16,3 +16,4 @@ import.log
 smoke_*.log
 full_op*.log
 smoke_*.out
+tools/telegram/sent.log
