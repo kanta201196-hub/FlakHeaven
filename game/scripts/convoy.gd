@@ -13,7 +13,7 @@ const LIMIT := 70.0
 const SMOKE_TIME := 8.0
 const SMOKE_R := 170.0
 const SMOKE_CUT := 0.4        # под дымом машины получают на 40% меньше урона
-const FAIRWAY := 260.0         # «Архипелаг»: ось фарватера от оси пролива, пикс. (острова — дальше 340)
+const FAIRWAY := 0.0           # «Архипелаг»: фарватер — по оси пролива, посередине воды (замечание Kanta 21.10: караван «плыл» по суше); острова — дальше 280 пикс. от оси
 const STEP := 30.0            # шаг точек маршрута, пикс.
 const CARGO := {"truck": 30.0, "light": 15.0}
 const RIVER_SAFE := Terrain3D.RIVER_GUARD + 12.0   # A-07: центр машины вне охранной зоны у реки (M-35, тред «3D-модели») на полкорпуса
@@ -83,8 +83,8 @@ func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> 
 		for v in vehicles:
 			if pl != null:
 				near = minf(near, GroundTarget.air_pos((v as ConvoyVehicle).anchor).distance_to(pl.global_position))
-		print("AUTOTEST: convoy route on_road=%s len=%d vehicles=%d trucks=%d head=%d nearest=%d hidden=%s" % [on_road, int(length),
-			vehicles.size(), trucks_total, int(head), int(near), _all_hidden(head, offs)])
+		print("AUTOTEST: convoy route on_road=%s len=%d vehicles=%d trucks=%d head=%d nearest=%d hidden=%s dry=%d" % [on_road, int(length),
+			vehicles.size(), trucks_total, int(head), int(near), _all_hidden(head, offs), dry_points()])
 
 
 func _ready() -> void:
@@ -112,7 +112,10 @@ func _build_route(center: Vector2, dir: Vector2) -> void:
 	if tr != null:
 		var d := dir.normalized()
 		var side := Vector2(-d.y, d.x)
-		for o in [0.0, 500.0, -500.0, 1000.0, -1000.0, 1600.0, -1600.0]:
+		var offs := [0.0, 500.0, -500.0, 1000.0, -1000.0, 1600.0, -1600.0]
+		if _sea:
+			offs.append_array([2400.0, -2400.0, 3200.0, -3200.0])   # у моря прямая по суше недопустима — ищем дальше
+		for o in offs:
 			var c0: Vector2 = _near_water(tr, center + side * float(o)) if _sea else tr.find_floor(center + side * float(o), 900.0)
 			var c := _to_road(tr, c0, 30 if _sea else 12)
 			if c == Vector2.INF:
@@ -145,6 +148,17 @@ func _build_route(center: Vector2, dir: Vector2) -> void:
 		var c := point_at(sc)
 		var n := normal_at(sc)
 		river_sign = signf(tr.river_field(c.x + n.x * 20.0, c.y + n.y * 20.0) - tr.river_field(c.x - n.x * 20.0, c.y - n.y * 20.0))
+
+
+## «Архипелаг»: сколько точек маршрута не на глубокой воде (для автотеста; на суше — 0)
+func dry_points() -> int:
+	if not _sea or _tr == null:
+		return 0
+	var n := 0
+	for q in pts:
+		if absf(_tr.river_field(q.x, q.y)) > Terrain3D.SEA_W * 0.5:
+			n += 1
+	return n
 
 
 ## «Архипелаг»: маршрут по фарватеру через center для кораблей-боссов (Warship). Узел вне дерева —

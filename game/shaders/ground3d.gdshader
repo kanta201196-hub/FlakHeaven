@@ -48,6 +48,9 @@ uniform vec3 sea_deep : source_color = vec3(0.07, 0.25, 0.4);
 // вид воды (замечание Kanta 20.10 «вода плохо выглядит»): 0 — как было; 1 — ровные цвета без зубцов;
 // 2 — + рябь, блики и накат пены; 3 — + прозрачная отмель (видно песок и камни под водой)
 uniform int sea_look = 0;
+// поле берега в сетке (terrain3d.gd _shore_u): первые shore_a пикс. воды — шаг 1 ед./пикс., дальше до оси
+uniform float shore_a = 12.0;
+uniform float sea_depth_px = 450.0;
 uniform vec3 road_color : source_color = vec3(0.7, 0.62, 0.5);
 uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к палитре стайл-гайда (фото рыжее)
 uniform float rock_sat = 0.45;
@@ -56,6 +59,7 @@ uniform float rock_sat = 0.45;
 uniform vec3 rock_brown : source_color = vec3(0.63, 0.51, 0.42);
 uniform vec3 rock_grey : source_color = vec3(0.5, 0.5, 0.49);
 uniform vec3 scree_color : source_color = vec3(0.7, 0.66, 0.6);
+uniform float scree_k = 0.75;   // сила осыпей; «Архипелаг» — слабее, у воды их нет (рваные серые полосы вдоль берега)
 uniform float strata_px = 13.0;   // толщина пласта по высоте, px мира
 // M-36: скала с трёх проекций (3 выборки) — только «Высокое»/«Максимальное»; на «Низком»/«Среднем» —
 // две (сверху и сбоку по склону), меньше, чем было (3)
@@ -252,7 +256,10 @@ void fragment() {
 		if (sc > 0.001) {
 			vec3 grit = mix(vec3(dot(s2.a.rgb, vec3(0.333))), s2.a.rgb, 0.35);
 			vec3 scc = scree_color * (0.7 + 0.45 * grit) * (0.93 + 0.12 * vnoise(world / 6.0));
-			c = mix(c, scc, sc * 0.75);
+			if (sea) {
+				sc *= smoothstep(sea_w + 25.0, sea_w + 110.0, abs(rel.z));
+			}
+			c = mix(c, scc, sc * scree_k);
 			nxy = mix(nxy, s2.n.rg * 2.0 - 1.0, sc * 0.6);
 		}
 		// снег на высоких пологих гребнях
@@ -322,13 +329,18 @@ void fragment() {
 		float water = 1.0 - smoothstep(river_w * 0.45, river_w * 0.8, rd + edge * 0.5);
 		if (sea && sea_look > 0) {
 			// у моря поле по воде растянуто (1 ед. ≈ depth_px / sea_w px), у реки — нет: кромка резкая, ~15 px
-			water = 1.0 - smoothstep(sea_w - 0.5, sea_w + 2.5, rd + edge * 0.3);
+			// поле у кромки — 1 ед./пикс. по обе стороны: край ровный, неровность — шумом в пикселях
+			float sh_n = (vnoise(world / 23.0 + 7.0) - 0.5) * 7.0 + (vnoise(world / 7.0 - 3.0) - 0.5) * 2.5;
+			water = 1.0 - smoothstep(sea_w - 1.5, sea_w + 1.0, rd + sh_n);
 		}
 		vec3 wc = water_color * (0.9 + 0.2 * vnoise(world / 60.0));
 		if (sea && sea_look > 0) {
 			// глубина по полю берега: оно линейно у кромки и обрезано у оси пролива — переходы цвета держим
 			// в линейной части (иначе по треугольникам сетки идут зубцы), а дальше глубину рисует крупный шум
-			float dp0 = clamp(1.0 - rd / sea_w, 0.0, 1.0);
+			// глубина 0 (берег) … 1 (ось) из поля сетки (обратно к terrain3d.gd _shore_u)
+			float u0 = sea_w - shore_a;
+			float dpx = rd >= u0 ? sea_w - rd : shore_a + (1.0 - rd / max(u0, 0.01)) * (sea_depth_px - shore_a);
+			float dp0 = clamp(dpx / sea_depth_px, 0.0, 1.0);
 			vec2 wq = world + vec2(vnoise(world / 230.0 + 5.0), vnoise(world / 230.0 - 9.0)) * 120.0;
 			float big = vnoise(wq / 520.0 + 3.0) * 0.65 + vnoise(wq / 190.0 - 4.0) * 0.35;
 			float dp = clamp(dp0 + (big - 0.5) * 0.22 * smoothstep(0.04, 0.25, dp0), 0.0, 1.0);
@@ -383,7 +395,7 @@ void fragment() {
 		}
 		if (sea && sea_look > 0) {
 			// мокрый песок у кромки вместо сухой рыжей полосы
-			float wet = (1.0 - smoothstep(river_w * 0.8, river_w * 1.6, rd + edge)) * (1.0 - water);
+			float wet = (1.0 - smoothstep(sea_w + 2.0, sea_w + 16.0, rd + edge)) * (1.0 - water);
 			c = mix(c, c * vec3(0.7, 0.72, 0.7), wet * 0.7);
 		}
 		c = mix(c, wc, water);

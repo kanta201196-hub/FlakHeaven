@@ -1,8 +1,8 @@
 class_name Warship
 extends Boss
-## «Архипелаг Таласора» (задачи E-07, E-08): корабли-боссы идут по фарватеру пролива (маршрут — Convoy.sea_route),
-## держатся на воде и ходят взад-вперёд по проливу, догоняя игрока вдоль маршрута. Цель наземная (is_ground):
-## по ним работают бомбы, НАР и пушка; ракеты В-В — нет.
+## «Архипелаг Таласора» (задачи E-07, E-08): корабли-боссы идут по оси пролива (маршрут — Convoy.sea_route)
+## на прорыв — в гавань в конце фарватера, не разворачиваясь (замечание Kanta 21.10: корабль вертелся и задевал
+## сушу). Дошёл — прорвался: уходит без награды. Цель наземная (is_ground): бомбы, НАР и пушка; ракеты В-В — нет.
 ##   «Сторож» (cruiser, 10:00) — лёгкий крейсер: зенитные очереди с двух башен, пуск ЗУР с захватом,
 ##     на 70 % и 35 % прочности поднимает с палубы вертолёт «Сарыч» (решение Kanta 18.10, M-41).
 ##   «Левиафан» (leviathan, 15:00) — корабль-носитель (docs/biome2/archipelago.md): фаза 1 — ЗСУ по бортам,
@@ -11,8 +11,8 @@ extends Boss
 
 const SPEC := {
 	# len — длина на экране до unit_scale; speed — ход, пикс./с; w — полуширина корпуса для попаданий
-	"cruiser": {"tex": "e_cruiser", "len": 300.0, "speed": 62.0, "w": 0.09, "title": "Крейсер «Сторож»"},
-	"leviathan": {"tex": "e_leviathan", "len": 450.0, "speed": 44.0, "w": 0.11, "title": "«Левиафан»"},
+	"cruiser": {"tex": "e_cruiser", "len": 180.0, "speed": 62.0, "w": 0.09, "title": "Крейсер «Сторож»"},
+	"leviathan": {"tex": "e_leviathan", "len": 240.0, "speed": 44.0, "w": 0.11, "title": "«Левиафан»"},
 }
 const SHIP_LINES := {
 	"spawn": ["Крейсер на позиции. Воздух — ваш.", "Всем башням: цель воздушная, огонь по готовности.", "Пролив наш. Сбейте его."],
@@ -44,12 +44,11 @@ func setup_ship(v: String, hp_total: float, near: Vector2) -> void:
 	is_ground = true
 	contact_damage = 0.0
 	min_life = 40.0 if v == "leviathan" else 30.0
-	# фарватер через точку у игрока; корабль — в 1 600 пикс. по маршруту, идёт навстречу
+	# фарватер через точку у игрока; корабль входит в 1 700 пикс. позади игрока и идёт к дальнему концу маршрута
 	_route = Convoy.sea_route(near, Vector2.from_angle(randf() * TAU))
 	var s0 := _route._s_of(near)
-	var back := s0 > _route.length * 0.5
-	_s = clampf(s0 + (-1700.0 if back else 1700.0), 0.0, _route.length)
-	_dir = 1.0 if back else -1.0
+	_dir = 1.0 if s0 < _route.length * 0.5 else -1.0
+	_s = clampf(s0 - _dir * 1700.0, 0.0, _route.length)
 	anchor = _route.point_at(_s)
 	position = anchor
 	_hdg = (_route.dir_at(_s) * _dir).angle()
@@ -120,23 +119,33 @@ func behave(delta: float) -> void:
 				_main_battery()
 
 
-## Ход по фарватеру: к игроку вдоль маршрута, у конца маршрута — разворот; курс плавный, циркуляция широкая
+## Ход по фарватеру к гавани: курс плавный по маршруту, без разворотов; дошёл до конца — прорвался
 func _sail(delta: float, p: Player) -> void:
 	if _route == null:
 		return
-	if p != null:
-		var sp := _route._s_of(p.global_position) if Engine.get_process_frames() % 20 == 0 else -1.0
-		if sp >= 0.0 and absf(sp - _s) > 900.0:
-			_dir = signf(sp - _s)
-	if _s <= 10.0:
-		_dir = 1.0
-	elif _s >= _route.length - 10.0:
-		_dir = -1.0
 	var spd := float(SPEC[variant]["speed"]) * (1.3 if variant == "leviathan" and phase() == 3 else 1.0)
 	_s = clampf(_s + _dir * spd * delta, 0.0, _route.length)
 	anchor = _route.point_at(_s)
-	_hdg = rotate_toward(_hdg, (_route.dir_at(_s) * _dir).angle(), deg_to_rad(9.0) * delta)
+	_hdg = rotate_toward(_hdg, (_route.dir_at(_s) * _dir).angle(), deg_to_rad(20.0) * delta)
 	heading = _hdg
+	if left_px() <= 40.0:
+		_broke_through()
+
+
+## Сколько пикс. осталось до гавани
+func left_px() -> float:
+	if _route == null:
+		return 0.0
+	return _route.length - _s if _dir > 0.0 else _s
+
+
+func _broke_through() -> void:
+	Main.I.show_banner(Loc.t("%s прорвался в гавань — награда потеряна") % title, 3.5)
+	if OS.get_cmdline_user_args().has("--autotest"):
+		print("AUTOTEST: warship %s broke through" % variant)
+	anchor = Vector2.INF
+	remove_from_group("enemies")
+	queue_free()
 
 
 ## Зенитные башни: очереди по 4 пули с носовой и кормовой башни, упреждение как у остальных врагов
@@ -253,3 +262,4 @@ func _draw() -> void:
 			var a := 0.35 + 0.5 * absf(sin(_t * 30.0))
 			draw_line(Vector2.ZERO, to_local(p.global_position), Color(1, 0.15, 0.1, a), 3.0)
 	draw_string(Hud.ui_font(), Vector2(-140, -radius - 30.0), title, HORIZONTAL_ALIGNMENT_CENTER, 280, 18, Color(1, 0.85, 0.7))
+	draw_string(Hud.ui_font(), Vector2(-140, -radius - 10.0), Loc.t("до гавани %.1f км") % (left_px() / 1000.0), HORIZONTAL_ALIGNMENT_CENTER, 280, 15, Color(1, 0.75, 0.55))
