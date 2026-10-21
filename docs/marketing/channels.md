@@ -109,3 +109,12 @@
 Язык канала (приёмы, словарь, чек-лист) — `docs/marketing/voice.md`; разбор 12 каналов разработчиков и 4 английских девлогов с цифрами — `docs/marketing/content-research.md` (19.10.2026).
 Инструкция по комментариям: `docs/marketing/telegram-comments.md`. Недели: `content/2026-W43.md`, `content/2026-W44.md`, темы «было/стало»: `content/was-now-plan.md`.
 Бесплатные площадки для размещения: `docs/marketing/free-placement.md` (19.10.2026).
+
+## Отправка файлов Kanta в личку через бота (21.10.2026)
+Нужна, когда картинка или файл должны дойти в оригинале: карточка в треде сжимает картинки и не скачивается с телефона.
+- Бот @flakheaven_bot, токен в переменной среды `TELEGRAM_BOT_TOKEN` (токен не печатаем).
+- Личный chat_id Kanta лежит в памяти команды (`reference-telegram-bot-kanta-chat`), в репозиторий его не пишем. Если памяти нет: Kanta пишет боту любое сообщение, затем `getUpdates` показывает `message.chat.id`.
+- Файлы отправлять документом (`sendDocument`), тогда Telegram не пережимает. Лимит бота 50 МБ.
+- Команда: `curl --cacert /root/.ccr/ca-bundle.crt https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument --form-string chat_id=<id> -F document=@файл --form-string "caption=подпись"`. Числовой chat_id без `@`; `chat_id=@имя_канала` всегда только через `--form-string`, иначе curl читает его как файл (ошибка 26).
+- Файл сначала скопировать из `/mnt/attach/project-files/...` в локальную папку.
+- Отправка в личку Kanta разрешена (решение Kanta 20.10); в каналы и чужие чаты бот пишет только по плану публикаций.
