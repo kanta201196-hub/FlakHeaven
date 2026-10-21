@@ -242,6 +242,7 @@ func start_run() -> void:
 		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
 	bosses_killed = 0
 	evac_windows = 0
+	evac_lost = false
 	rerolls = TEST_PICKS + Profile.extra_rerolls(cls_id) # 3.5: самолёт ур. 2 — +1 переброс
 	bans = TEST_PICKS
 	banned = {}
@@ -606,6 +607,19 @@ func on_evac_success() -> void:
 	sfx.play("evac", -2.0, 1.2)
 
 
+## «Левиафан» разбил точку эвакуации (5 залпов): открытое окно закрывается, после его гибели — не откроется
+var evac_lost := false
+
+func on_evac_point_lost(who: String) -> void:
+	evac_lost = true
+	if is_instance_valid(evac):
+		evac.queue_free()
+		evac = null
+	show_banner(Loc.t("%s разбил точку эвакуации — эвакуация закрыта до следующего аса") % who, 4.5)
+	if OS.get_cmdline_user_args().has("--autotest"):
+		print("AUTOTEST: evac point lost")
+
+
 func on_evac_closed() -> void:
 	show_banner("Окно эвакуации закрыто — следующее после следующего аса", 4.0)
 
@@ -682,7 +696,12 @@ func on_enemy_killed(e: Enemy) -> void:
 		bans += 1
 		fx.text(e.global_position, "ПОТОПЛЕН!" if e is Warship else "АС СБИТ!", Color(1.0, 0.8, 0.4))
 		if not boss_alive():
-			_open_evac()
+			if evac_lost and e is Warship:
+				evac_lost = false   # точку разбил этот корабль: окна нет до следующего аса
+				show_banner(Loc.t("Точка эвакуации разбита — окно откроется после следующего аса"), 4.0)
+			else:
+				evac_lost = false
+				_open_evac()
 
 
 func on_player_damaged(_amount: float) -> void:

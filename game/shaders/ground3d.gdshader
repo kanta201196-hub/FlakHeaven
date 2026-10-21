@@ -46,7 +46,8 @@ uniform vec3 sea_shallow : source_color = vec3(0.42, 0.74, 0.7);
 uniform vec3 sea_mid : source_color = vec3(0.13, 0.47, 0.57);
 uniform vec3 sea_deep : source_color = vec3(0.07, 0.25, 0.4);
 // вид воды (замечание Kanta 20.10 «вода плохо выглядит»): 0 — как было; 1 — ровные цвета без зубцов;
-// 2 — + рябь, блики и накат пены; 3 — + прозрачная отмель (видно песок и камни под водой)
+// 2 — + рябь, блики и накат пены; 3 — + прозрачная отмель (видно песок и камни под водой);
+// 4 — по фото Kanta 21.10: приглушённая вода, широкая отмель с косами, узкий пляж и зелень у воды, без белой обводки
 uniform int sea_look = 0;
 // поле берега в сетке (terrain3d.gd _shore_u): первые shore_a пикс. воды — шаг 1 ед./пикс., дальше до оси
 uniform float shore_a = 12.0;
@@ -349,11 +350,29 @@ void fragment() {
 			// глубокое — по смеси поля и шума: у оси узкого пролива поле ломается по треугольникам, шум прячет излом
 			wc = mix(wc, dpc, smoothstep(0.3, 0.55, dp * 0.55 + big * 0.45 + 0.08));
 			wc *= 0.96 + 0.06 * vnoise(wq / 70.0 + 11.0);
+			if (sea_look >= 4) {
+				// вид 4 (по фото Kanta 21.10): приглушённая серо-бирюзовая вода, отмель широкая и плавная
+				// оба перехода — по смеси поля и шума: у оси узкого пролива поле ломается по треугольникам
+				float dd = dp * 0.6 + big * 0.4;
+				wc = mix(vec3(0.34, 0.64, 0.62), vec3(0.15, 0.47, 0.55), smoothstep(0.02, 0.42, min(dp, dd + 0.12)));
+				wc = mix(wc, vec3(0.09, 0.27, 0.4), smoothstep(0.32, 0.78, dd));
+				wc *= 0.97 + 0.05 * vnoise(wq / 90.0 + 11.0);
+			}
 			float t = TIME;
 			if (sea_look >= 3) {
 				// отмель прозрачная: под водой песок и камни берега, с глубиной уходят в цвет воды
 				vec3 bed = c * vec3(0.7, 0.9, 0.86) + vec3(0.02, 0.07, 0.07);
-				wc = mix(bed, wc, smoothstep(0.01, 0.3, dp0) * 0.85 + 0.15);
+				if (sea_look >= 4) {
+					// дно: светлые песчаные косы и тёмные пятна водорослей, видны далеко от берега
+					float bar = smoothstep(0.45, 0.75, vnoise(vec2(world.x * 0.6 + world.y * 0.8, world.y * 0.6 - world.x * 0.8) / vec2(140.0, 45.0)));
+					float weed = smoothstep(0.55, 0.8, vnoise(wq / 55.0 - 6.0)) * (0.6 + 0.4 * vnoise(world / 12.0));
+					// под водой красный гаснет: дно в бирюзу, светлее только косы
+					bed = mix(vec3(0.42, 0.66, 0.6), vec3(0.58, 0.76, 0.66), bar);
+					bed = mix(bed, vec3(0.18, 0.34, 0.32), weed * 0.7);
+					wc = mix(bed, wc, smoothstep(0.0, 0.45, dp0) * 0.75 + 0.25);
+				} else {
+					wc = mix(bed, wc, smoothstep(0.01, 0.3, dp0) * 0.85 + 0.15);
+				}
 				// блики-каустика на дне отмели
 				float ca = vnoise(world / 11.0 + vec2(t * 0.35, t * 0.2)) * vnoise(world / 14.0 - vec2(t * 0.25, -t * 0.3));
 				sea_e += vec3(0.9, 1.0, 0.95) * smoothstep(0.32, 0.5, ca) * 0.1 * (1.0 - smoothstep(0.0, 0.15, dp));
@@ -379,6 +398,18 @@ void fragment() {
 				sea_e += vec3(1.0, 0.98, 0.9) * smoothstep(0.36, 0.55, gl) * 0.16 * smoothstep(0.1, 0.4, dp0);
 				wc *= 0.95 + 0.1 * vnoise(r1 * 0.5);
 			}
+			if (sea_look >= 4) {
+				// без обводки: прибой — слабая рваная полоса лишь на части берега, вместо искр — широкий мягкий отблеск
+				foam *= 0.35 * smoothstep(0.45, 0.7, vnoise(world / 160.0 + 2.0));
+				// прибой на кромке рифа в море (фото 2): рваные белые дуги вдоль берега на части отмели
+				float rn = vnoise(world / 120.0 + 13.0);
+				float sd = abs(dp0 - 0.16 - rn * 0.12);
+				float surf = ((1.0 - smoothstep(0.0, 0.03, sd)) * 0.7 + (1.0 - smoothstep(0.0, 0.08, sd)) * 0.3)
+					* smoothstep(0.55, 0.75, vnoise(world / 260.0 - 5.0))
+					* smoothstep(0.35, 0.65, vnoise(world / 22.0 + vec2(t * 0.15, 0.0)));
+				foam = max(foam, surf * 0.85);
+				sea_e = sea_e * 0.25 + vec3(0.06, 0.065, 0.06) * smoothstep(0.4, 0.8, vnoise(world / 420.0 + vec2(t * 0.01, 0.0))) * smoothstep(0.2, 0.6, dp0);
+			}
 			wc = mix(wc, vec3(0.9, 0.93, 0.92), foam * 0.8);
 			sea_e *= water;
 		} else if (sea) {
@@ -396,6 +427,18 @@ void fragment() {
 		if (sea && sea_look > 0) {
 			// мокрый песок у кромки вместо сухой рыжей полосы
 			float wet = (1.0 - smoothstep(sea_w + 2.0, sea_w + 16.0, rd + edge)) * (1.0 - water);
+			if (sea_look >= 4) {
+				// берег по фото: узкий светлый пляж переменной ширины (местами нет), за ним — зелень до воды;
+				// рыжей полосы дна долины у воды нет
+				float sl = rd - sea_w;   // пикс. от кромки по суше
+				float bw = 22.0 * smoothstep(0.3, 0.65, vnoise(world / 210.0 + 8.0)) + 3.0 * vnoise(world / 9.0);
+				float beach = (1.0 - smoothstep(bw - 3.0, bw + 1.0, sl)) * (1.0 - water);
+				float veg = (1.0 - smoothstep(60.0, 190.0, sl + (vnoise(world / 70.0) - 0.5) * 80.0)) * (1.0 - beach);
+				vec3 vc = mix(vec3(0.25, 0.39, 0.19), vec3(0.37, 0.47, 0.25), vnoise(world / 24.0)) * (0.85 + 0.3 * vnoise(world / 6.0));
+				c = mix(c, vc, veg * 0.8 * smoothstep(0.3, 0.6, vnoise(world / 90.0 + 4.0) * 0.6 + 0.4));
+				c = mix(c, vec3(0.88, 0.76, 0.55) * (0.94 + 0.1 * vnoise(world / 5.0)), beach * 0.92);
+				wet *= 0.25;
+			}
 			c = mix(c, c * vec3(0.7, 0.72, 0.7), wet * 0.7);
 		}
 		c = mix(c, wc, water);

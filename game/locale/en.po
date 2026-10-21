@@ -3093,169 +3093,178 @@ msgstr "Green diamonds from downed enemies are XP: fly close and they're pulled 
 msgid "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика»."
 msgstr "Bottom left — minimap: north is up, white arrow — you, red dots — enemies, pink — aces, colored diamond — objective, green diamond — extraction gates, purple dots — flight. Size and opacity — in \"Settings → Graphics\"."
 
-#: game/scripts/main.gd:379
+#: game/scripts/main.gd:380
 #, c-format
 msgid "Все улучшения собраны — вместо карточки ремонт и +%d запчастей"
 msgstr "All upgrades collected — instead of a card: repairs and +%d parts"
 
-#: game/scripts/main.gd:506
+#: game/scripts/main.gd:507
 msgid "Справа внизу — радиоэфир: ведомые отвечают на приказы, штаб предупреждает о задании. Красная рамка — перехват вражеского эфира, жди аса или босса."
 msgstr "Bottom right — radio: wingmen answer orders, HQ warns about objectives. Red frame — intercepted enemy chatter, expect an ace or a boss."
 
-#: game/scripts/main.gd:518
+#: game/scripts/main.gd:519
 msgid "Позиция ПВО уничтожена!"
 msgstr "AA site destroyed!"
 
-#: game/scripts/main.gd:518
+#: game/scripts/main.gd:519
 msgid "Колонна разбита!"
 msgstr "Convoy wiped out!"
 
-#: game/scripts/main.gd:518
+#: game/scripts/main.gd:519
 msgid "Ас-соперник сбит!"
 msgstr "Rival ace shot down!"
 
-#: game/scripts/main.gd:523
+#: game/scripts/main.gd:524
 msgid "ЗА ПОЗИЦИЮ ПВО"
 msgstr "FOR THE AA SITE"
 
-#: game/scripts/main.gd:523
+#: game/scripts/main.gd:524
 msgid "ЗА КОЛОННУ"
 msgstr "FOR THE CONVOY"
 
-#: game/scripts/main.gd:523
+#: game/scripts/main.gd:524
 msgid "ЗА АСА"
 msgstr "FOR THE ACE"
 
-#: game/scripts/main.gd:530
+#: game/scripts/main.gd:531
 #, c-format
 msgid "%s Награда: %s"
 msgstr "%s Reward: %s"
 
-#: game/scripts/main.gd:530
+#: game/scripts/main.gd:531
 msgid "выбор из редких карточек"
 msgstr "a pick of rare cards"
 
-#: game/scripts/main.gd:530
+#: game/scripts/main.gd:531
 msgid " и +40 запчастей"
 msgstr " and +40 parts"
 
-#: game/scripts/main.gd:530
+#: game/scripts/main.gd:531
 #, c-format
 msgid "ремонт 20%% и +%d запчастей"
 msgstr "20%% repair and +%d parts"
 
-#: game/scripts/main.gd:538
+#: game/scripts/main.gd:539
 #, c-format
 msgid "Ас «%s» ушёл — награды нет"
 msgstr "Ace \"%s\" got away — no reward"
 
-#: game/scripts/main.gd:548
+#: game/scripts/main.gd:549
 msgid "На волоске!"
 msgstr "Close call!"
 
-#: game/scripts/main.gd:548 game/scripts/projectiles.gd:750
+#: game/scripts/main.gd:549 game/scripts/projectiles.gd:750
 msgid "пуля"
 msgstr "bullet"
 
-#: game/scripts/main.gd:548
+#: game/scripts/main.gd:549
 msgid "Ракета мимо!"
 msgstr "Missile missed!"
 
-#: game/scripts/main.gd:563
+#: game/scripts/main.gd:564
 msgid "«АЛЬБАТРОС» НА ПОДХОДЕ!"
 msgstr "\"ALBATROSS\" INBOUND!"
 
-#: game/scripts/main.gd:563
+#: game/scripts/main.gd:564
 msgid "КРЕЙСЕР «СТОРОЖ» В ПРОЛИВЕ!"
 msgstr "CRUISER \"WARDEN\" IN THE STRAIT!"
 
-#: game/scripts/main.gd:563
+#: game/scripts/main.gd:564
 msgid "«ЛЕВИАФАН» В ПРОЛИВЕ!"
 msgstr "\"LEVIATHAN\" IN THE STRAIT!"
 
-#: game/scripts/main.gd:565
+#: game/scripts/main.gd:566
 #, c-format
 msgid "АС НА ПОДХОДЕ!  (%d)"
 msgstr "ACE INBOUND!  (%d)"
 
-#: game/scripts/main.gd:565
+#: game/scripts/main.gd:566
 msgid "АС НА ПОДХОДЕ!"
 msgstr "ACE INBOUND!"
 
-#: game/scripts/main.gd:567
+#: game/scripts/main.gd:568
 msgid "Перехват"
 msgstr "Intercept"
 
-#: game/scripts/main.gd:567
+#: game/scripts/main.gd:568
 msgid "Цель вижу. Захожу с солнца."
 msgstr "Target in sight. Coming out of the sun."
 
-#: game/scripts/main.gd:567
+#: game/scripts/main.gd:568
 msgid "Это наше небо. Уходи, пока цел."
 msgstr "This is our sky. Leave while you still can."
 
-#: game/scripts/main.gd:567
+#: game/scripts/main.gd:568
 msgid "Звено, прикрыть меня — работаю по одиночке."
 msgstr "Flight, cover me — I'm going solo."
 
-#: game/scripts/main.gd:568
+#: game/scripts/main.gd:569
 msgid "Ещё один охотник? Посмотрим, сколько продержишься."
 msgstr "Another hunter? Let's see how long you last."
 
-#: game/scripts/main.gd:569
+#: game/scripts/main.gd:570
 msgid "Ас — сильный враг. Собьёте его — откроются ворота эвакуации и добавится переброс карточек."
 msgstr "An ace is a tough enemy. Shoot it down to open the extraction gates and earn a card reroll."
 
-#: game/scripts/main.gd:592
+#: game/scripts/main.gd:593
 msgid "Эвакуация: пролетите через 3 ворот по порядку"
 msgstr "Extraction: fly through 3 gates in order"
 
-#: game/scripts/main.gd:592
+#: game/scripts/main.gd:593
 msgid " · задача операции ещё не выполнена"
 msgstr " · operation objective not done yet"
 
-#: game/scripts/main.gd:594
+#: game/scripts/main.gd:595
 msgid "Улететь можно уже сейчас — или остаться до 15:00 и заработать больше запчастей."
 msgstr "You can leave now — or stay until 15:00 and earn more parts."
 
-#: game/scripts/main.gd:596
+#: game/scripts/main.gd:597
 #, c-format
 msgid "Задание выполнено! Улетайте через ворота — или оставайтесь: добыча +10% за каждую минуту после 15:00."
 msgstr "Objective complete! Leave through the gates — or stay: +10% loot for every minute after 15:00."
 
-#: game/scripts/main.gd:604 game/scripts/menu.gd:249 game/scripts/menu.gd:416 game/scripts/report.gd:380
+#: game/scripts/main.gd:605 game/scripts/menu.gd:249 game/scripts/menu.gd:416 game/scripts/report.gd:380
 msgid "эвакуация"
 msgstr "extraction"
 
-#: game/scripts/main.gd:610
+#: game/scripts/main.gd:618
+#, c-format
+msgid "%s разбил точку эвакуации — эвакуация закрыта до следующего аса"
+msgstr "%s destroyed the extraction point — no extraction until the next ace"
+
+#: game/scripts/main.gd:624
 msgid "Окно эвакуации закрыто — следующее после следующего аса"
 msgstr "Extraction window closed — next one after the next ace"
 
-#: game/scripts/main.gd:662
+#: game/scripts/main.gd:676
 msgid "Сбит с хвоста!"
 msgstr "Shot down from behind!"
 
-#: game/scripts/main.gd:672 game/scripts/rival_ace.gd:15 game/scripts/rival_ace.gd:49
+#: game/scripts/main.gd:686 game/scripts/rival_ace.gd:15 game/scripts/rival_ace.gd:49
 msgid "Барон"
 msgstr "Baron"
 
-#: game/scripts/main.gd:674
+#: game/scripts/main.gd:688
 msgid "«Барон» сбит!"
 msgstr "\"Baron\" shot down!"
 
-#: game/scripts/main.gd:683
+#: game/scripts/main.gd:697
 msgid "ПОТОПЛЕН!"
 msgstr "SUNK!"
 
-#: game/scripts/main.gd:683
+#: game/scripts/main.gd:697
 msgid "АС СБИТ!"
 msgstr "ACE SHOT DOWN!"
 
-#: game/scripts/main.gd:691
+#: game/scripts/main.gd:701
+msgid "Точка эвакуации разбита — окно откроется после следующего аса"
+msgstr "Extraction point destroyed — the window opens after the next ace"
+
+#: game/scripts/main.gd:710
 msgid "Space — уклонение: короткий переворот, во время которого пули и ракеты не попадают."
 msgstr "Space — evade: a quick roll during which bullets and missiles can't hit you."
 
-#: game/scripts/main.gd:718 game/scripts/report.gd:380
+#: game/scripts/main.gd:737 game/scripts/report.gd:380
 msgid "гибель"
 msgstr "death"
 
@@ -5268,7 +5277,7 @@ msgstr "fighter guns"
 msgid "пушки асов"
 msgstr "ace guns"
 
-#: game/scripts/projectiles.gd:94
+#: game/scripts/projectiles.gd:94 game/scripts/warship.gd:217
 msgid "крупный калибр"
 msgstr "heavy guns"
 
@@ -5873,80 +5882,108 @@ msgstr " and a pick of rare cards"
 msgid "Транспортник"
 msgstr "Transport"
 
-#: game/scripts/warship.gd:14
+#: game/scripts/warship.gd:18
 msgid "Крейсер «Сторож»"
 msgstr "Cruiser \"Warden\""
 
-#: game/scripts/warship.gd:15
+#: game/scripts/warship.gd:19
 msgid "«Левиафан»"
 msgstr "\"Leviathan\""
 
-#: game/scripts/warship.gd:18
+#: game/scripts/warship.gd:27
 msgid "Крейсер на позиции. Воздух — ваш."
 msgstr "Cruiser in position. The sky is yours."
 
-#: game/scripts/warship.gd:18
+#: game/scripts/warship.gd:27
 msgid "Всем башням: цель воздушная, огонь по готовности."
 msgstr "All turrets: air target, fire when ready."
 
-#: game/scripts/warship.gd:18
+#: game/scripts/warship.gd:27
 msgid "Пролив наш. Сбейте его."
 msgstr "The strait is ours. Shoot him down."
 
-#: game/scripts/warship.gd:19
+#: game/scripts/warship.gd:28
 msgid "Зенитчики, заградительный!"
 msgstr "Flak crews, barrage fire!"
 
-#: game/scripts/warship.gd:19
+#: game/scripts/warship.gd:28
 msgid "Пуск! Пуск!"
 msgstr "Launch! Launch!"
 
-#: game/scripts/warship.gd:19
+#: game/scripts/warship.gd:28
 msgid "Держать его в секторе!"
 msgstr "Keep him in the sector!"
 
-#: game/scripts/warship.gd:20
+#: game/scripts/warship.gd:29
 msgid "Пробоина! Аварийные партии на палубу!"
 msgstr "Hull breach! Damage control to the deck!"
 
-#: game/scripts/warship.gd:20
+#: game/scripts/warship.gd:29
 msgid "Крен на борт… продолжать огонь!"
 msgstr "We're listing… keep firing!"
 
-#: game/scripts/warship.gd:20
+#: game/scripts/warship.gd:29
 msgid "Поднять вертолёт!"
 msgstr "Launch the helicopter!"
 
-#: game/scripts/warship.gd:21
+#: game/scripts/warship.gd:30
 msgid "Корабль тонет! Все наверх!"
 msgstr "The ship is sinking! All hands on deck!"
 
-#: game/scripts/warship.gd:21
+#: game/scripts/warship.gd:30
 msgid "Пожар в погребах… покинуть корабль!"
 msgstr "Fire in the magazines… abandon ship!"
 
-#: game/scripts/warship.gd:66
+#: game/scripts/warship.gd:83
 msgid "корабли"
 msgstr "ships"
 
-#: game/scripts/warship.gd:143
+#: game/scripts/warship.gd:170
+#, c-format
+msgid "%s встал на якорь и бьёт по точке эвакуации — потопите его за %d залпов"
+msgstr "%s dropped anchor and is shelling the extraction point — sink it within %d salvos"
+
+#: game/scripts/warship.gd:171
+msgid "Якорь! Главный калибр — по берегу."
+msgstr "Anchor down! Main battery — at the shore."
+
+#: game/scripts/warship.gd:203
+#, c-format
+msgid "Залп по точке эвакуации: %d из %d"
+msgstr "Salvo on the extraction point: %d of %d"
+
+#: game/scripts/warship.gd:229
 #, c-format
 msgid "%s прорвался в гавань — награда потеряна"
 msgstr "%s broke through to the harbor — reward lost"
 
-#: game/scripts/warship.gd:196
+#: game/scripts/warship.gd:282
 #, c-format
 msgid "%s поднял вертолёт «Сарыч»"
 msgstr "%s launched a \"Buzzard\" helicopter"
 
-#: game/scripts/warship.gd:207
+#: game/scripts/warship.gd:293
 msgid "С палубы «Левиафана» взлетают «Чайки»!"
 msgstr "\"Gulls\" take off from the \"Leviathan\" deck!"
 
-#: game/scripts/warship.gd:265
+#: game/scripts/warship.gd:351
 #, c-format
 msgid "до гавани %.1f км"
 msgstr "to harbor %.1f km"
+
+#: game/scripts/warship.gd:353
+#, c-format
+msgid "залпов по берегу: %d из %d"
+msgstr "shore salvos: %d of %d"
+
+#: game/scripts/warship.gd:353
+#, c-format
+msgid "до огневой позиции %.1f км"
+msgstr "%.1f km to firing position"
+
+#: game/scripts/warship.gd:360
+msgid "Точка эвакуации"
+msgstr "Extraction point"
 
 #: game/scripts/weapons.gd:10
 msgid "ближайшие"
