@@ -41,7 +41,7 @@ const SEA_TEX := {"truck": "e_ship_cargo", "light": "e_ship_landing", "scout": "
 const SEA_MARCH := 55.0      # суда медленнее машин, но длиннее: колонна проходит кадр за то же время
 const SEA_DASH := 80.0
 const SEA_GAP := 150.0
-const SEA_OFFROAD := 260.0   # катера уходят от колонны дальше
+const SEA_OFFROAD := 150.0   # катера уходят вбок от фарватера, но не к островам (острова — дальше 280 пикс. от оси)
 
 
 static func spec(r: String) -> Dictionary:

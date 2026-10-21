@@ -17,7 +17,7 @@ const DATA := {
 		# цвета зон земли (shaders/ground3d.gdshader, значения по умолчанию)
 		"ground": {"zone_floor": Color(0.92, 0.88, 0.84), "zone_fan": Color(0.74, 0.71, 0.67),
 			"zone_slope": Color(0.76, 0.66, 0.57), "zone_crest": Color(0.6, 0.56, 0.52),
-			"rock_tint": Color(0.74, 0.66, 0.58), "scree_color": Color(0.7, 0.66, 0.6), "saturation": 0.8},
+			"rock_tint": Color(0.74, 0.66, 0.58), "scree_color": Color(0.7, 0.66, 0.6), "scree_k": 0.75, "saturation": 0.8},
 		"bg": Color(0.52, 0.47, 0.4),
 	},
 	ARCHIPELAGO: {
@@ -35,7 +35,7 @@ const DATA := {
 		# дно «долины» у моря — сухая трава и песок, конусы и склоны — зелёный маквис, гребни — известняк
 		"ground": {"zone_floor": Color(0.8, 0.8, 0.62), "zone_fan": Color(0.58, 0.66, 0.42),
 			"zone_slope": Color(0.54, 0.6, 0.42), "zone_crest": Color(0.76, 0.75, 0.68),
-			"rock_tint": Color(0.8, 0.78, 0.72), "scree_color": Color(0.74, 0.72, 0.64), "saturation": 0.95},
+			"rock_tint": Color(0.8, 0.78, 0.72), "scree_color": Color(0.7, 0.66, 0.56), "scree_k": 0.4, "saturation": 0.95},
 		"bg": Color(0.2, 0.42, 0.52),
 	},
 }

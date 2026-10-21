@@ -447,6 +447,20 @@ func _coast(x: float, z: float, r: float) -> float:
 	return sg * SEA_W * clampf(1.0 + s / _depth, 0.0, 1.0)
 
 
+## «Архипелаг», только для сетки (UV2.x → шейдер): у кромки поле берега в воде меняется в ~28 раз медленнее,
+## чем на суше, и при линейной интерполяции по треугольникам берег выходил ломаной («рваный» край, замечание
+## Kanta 21.10). Здесь первые SHORE_A пикс. воды идут с тем же шагом 1 ед./пикс., что и суша, дальше — до оси.
+## Обратный пересчёт в глубину — в шейдере (ground3d.gdshader, shore_a / sea_depth_px)
+const SHORE_A := 12.0
+func _shore_u(v: float) -> float:
+	var a := absf(v)
+	if a >= SEA_W:
+		return v
+	var d := (1.0 - a / SEA_W) * _depth   # пикс. от берега
+	var u := SEA_W - d if d < SHORE_A else (SEA_W - SHORE_A) * clampf(1.0 - (d - SHORE_A) / (_depth - SHORE_A), 0.0, 1.0)
+	return u if v >= 0.0 else -u
+
+
 ## Глубина воды 0 (берег) … 1 (ось пролива) по полю берега; на суше < 0
 static func sea_depth(v: float) -> float:
 	return 1.0 - absf(v) / SEA_W
@@ -1293,7 +1307,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				burn *= dry
 			sm.y = maxf(sm.y, gs[gi] * (1.0 - smoothstep(0.05, 0.35, sm.x)))   # поля вдоль реки не лезут в посёлок и на линию обороны
 			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), sm.x, sm.y)
-			uv2[vi] = Vector2(vs[gi], burn)
+			uv2[vi] = Vector2(_shore_u(vs[gi]) if _sea else vs[gi], burn)
 			uv1[vi] = rs[gi]
 	var idx := PackedInt32Array()
 	idx.resize(nn * nn * 6)
