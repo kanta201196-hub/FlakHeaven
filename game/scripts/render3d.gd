@@ -696,7 +696,7 @@ func _apply_biome() -> void:
 	_ground_mat.set_shader_parameter("sea_w", Terrain3D.SEA_W)
 	_ground_mat.set_shader_parameter("shore_a", Terrain3D.SHORE_A)
 	_ground_mat.set_shader_parameter("sea_depth_px", float(Biome.g("depth_px", 450.0)))
-	var look := 3   # E-13: вид воды 3 (прозрачная отмель) — выбор Kanta 21.10
+	var look := 4   # E-13: вид воды 3 (прозрачная отмель) — выбор Kanta 21.10; 4 — тот же вид с берегом по фото Kanta 21.10
 	for arg in OS.get_cmdline_user_args():   # сравнение вариантов воды на кадрах: --sealook=0…3
 		if arg.begins_with("--sealook="):
 			look = int(arg.substr(10))

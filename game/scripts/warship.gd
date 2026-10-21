@@ -8,12 +8,21 @@ extends Boss
 ##   «Левиафан» (leviathan, 15:00) — корабль-носитель (docs/biome2/archipelago.md): фаза 1 — ЗСУ по бортам,
 ##     фаза 2 (< 2/3) — взлёт «Чаек» (дроны) и ракетные залпы, фаза 3 (< 1/3) — главный калибр (кольца снарядов),
 ##     ход быстрее, пенный след длиннее.
+##     Обстрел берега (решение Kanta 21.10, «поведение босса 5»): «Левиафан» не идёт в гавань, а выходит на огневую
+##     позицию (STATION_PX по фарватеру), встаёт на якорь и раз в SALVO_CD с главным калибром бьёт по точке
+##     эвакуации на берегу — круги падения видны заранее. Не потопили за SALVOS залпов — точка разбита:
+##     окно эвакуации закрыто (и после его гибели не откроется) до следующего аса.
 
 const SPEC := {
 	# len — длина на экране до unit_scale; speed — ход, пикс./с; w — полуширина корпуса для попаданий
 	"cruiser": {"tex": "e_cruiser", "len": 180.0, "speed": 62.0, "w": 0.09, "title": "Крейсер «Сторож»"},
 	"leviathan": {"tex": "e_leviathan", "len": 240.0, "speed": 44.0, "w": 0.11, "title": "«Левиафан»"},
 }
+const STATION_PX := 2200.0   # «Левиафан»: огневая позиция — столько пикс. по фарватеру от входа
+const SALVO_CD := 9.0
+const SALVOS := 5
+const SHELL_R := 200.0       # радиус круга падения
+const SHELL_T := 2.5         # от метки до разрыва, с
 const SHIP_LINES := {
 	"spawn": ["Крейсер на позиции. Воздух — ваш.", "Всем башням: цель воздушная, огонь по готовности.", "Пролив наш. Сбейте его."],
 	"run": ["Зенитчики, заградительный!", "Пуск! Пуск!", "Держать его в секторе!"],
@@ -33,6 +42,12 @@ var _heli_at := [0.7, 0.35]
 var _drone_cd := 6.0
 var _ring_cd := 3.0
 var _hdg := 0.0
+var _station_s := -1.0        # «Левиафан»: где встать (s по маршруту); < 0 — идёт на прорыв, как крейсер
+var _on_station := false
+var _salvo_cd := 3.0
+var _salvos := 0
+var evac_pt := Vector2.INF    # точка эвакуации на берегу (цель главного калибра)
+var _shells: Array = []       # {"p": Vector2, "t": float}
 
 
 func setup_ship(v: String, hp_total: float, near: Vector2) -> void:
@@ -53,6 +68,8 @@ func setup_ship(v: String, hp_total: float, near: Vector2) -> void:
 	position = anchor
 	_hdg = (_route.dir_at(_s) * _dir).angle()
 	heading = _hdg
+	if v == "leviathan":
+		_station_s = clampf(_s + _dir * STATION_PX, 0.0, _route.length)
 	Main.I.sfx.play("ship_horn")   # гудок на подходе (PR #211)
 
 
@@ -92,8 +109,14 @@ func behave(delta: float) -> void:
 	_say_t -= delta
 	var p := Main.I.player
 	_sail(delta, p)
+	_tick_shells(delta, p)
 	if p == null or p.hp <= 0.0:
 		return
+	if _on_station:
+		_salvo_cd -= delta
+		if _salvo_cd <= 0.0:
+			_salvo_cd = SALVO_CD
+			_shore_salvo(p)
 	if not _said_angry and angry() < 1.0:
 		_said_angry = true
 		_say_t = 0.0
@@ -121,15 +144,78 @@ func behave(delta: float) -> void:
 
 ## Ход по фарватеру к гавани: курс плавный по маршруту, без разворотов; дошёл до конца — прорвался
 func _sail(delta: float, p: Player) -> void:
-	if _route == null:
+	if _route == null or _on_station:
 		return
 	var spd := float(SPEC[variant]["speed"]) * (1.3 if variant == "leviathan" and phase() == 3 else 1.0)
 	_s = clampf(_s + _dir * spd * delta, 0.0, _route.length)
 	anchor = _route.point_at(_s)
 	_hdg = rotate_toward(_hdg, (_route.dir_at(_s) * _dir).angle(), deg_to_rad(20.0) * delta)
 	heading = _hdg
-	if left_px() <= 40.0:
+	if _station_s >= 0.0 and (_s - _station_s) * _dir >= 0.0:
+		_take_station()
+	elif left_px() <= 40.0:
 		_broke_through()
+
+
+## «Левиафан» на позиции: якорь, точка эвакуации — на ближнем берегу сбоку от корабля
+func _take_station() -> void:
+	_on_station = true
+	var fw := _route.dir_at(_s) * _dir
+	var best := Vector2.INF
+	for side in [1.0, -1.0]:
+		var q := _shore_from(anchor, fw.orthogonal() * side)
+		if q != Vector2.INF and (best == Vector2.INF or anchor.distance_to(q) < anchor.distance_to(best)):
+			best = q
+	evac_pt = best if best != Vector2.INF else anchor + fw.orthogonal() * 900.0
+	Main.I.show_banner(Loc.t("%s встал на якорь и бьёт по точке эвакуации — потопите его за %d залпов") % [title, SALVOS], 4.0)
+	Main.I.radio(title, "Якорь! Главный калибр — по берегу.")
+	if OS.get_cmdline_user_args().has("--autotest"):
+		print("AUTOTEST: warship %s on station, evac point %.0f px" % [variant, anchor.distance_to(evac_pt)])
+
+
+## Первая суша по лучу от точки на воде (+80 пикс. вглубь, чтобы точка стояла на берегу, а не у кромки)
+func _shore_from(from: Vector2, dir: Vector2) -> Vector2:
+	var tr := _route._tr
+	if tr == null:
+		return Vector2.INF
+	for i in range(1, 60):
+		var q := from + dir * (i * 40.0)
+		if absf(tr.river_field(q.x, q.y)) > Terrain3D.SEA_W:
+			return q + dir * 80.0
+	return Vector2.INF
+
+
+## Залп главного калибра: три круга падения у точки эвакуации (точка разбита — по игроку)
+func _shore_salvo(p: Player) -> void:
+	var lost := _salvos >= SALVOS
+	var c := p.global_position if lost else evac_pt
+	for i in 3:
+		var q := c + (Vector2.ZERO if i == 0 else Vector2.from_angle(randf() * TAU) * randf_range(150.0, 300.0))
+		_shells.append({"p": q, "t": SHELL_T + i * 0.35})
+	if not lost:
+		_salvos += 1
+	Main.I.sfx.play("explode_big", -8.0, 0.5, global_position)
+	if lost:
+		return
+	if _salvos >= SALVOS:
+		Main.I.on_evac_point_lost(title)
+	else:
+		Main.I.show_banner(Loc.t("Залп по точке эвакуации: %d из %d") % [_salvos, SALVOS], 2.0)
+
+
+func _tick_shells(delta: float, p: Player) -> void:
+	for i in range(_shells.size() - 1, -1, -1):
+		var sh: Dictionary = _shells[i]
+		sh["t"] = float(sh["t"]) - delta
+		if float(sh["t"]) > 0.0:
+			continue
+		var q: Vector2 = sh["p"]
+		Main.I.fx.explosion(q, SHELL_R * 0.6, false)
+		Main.I.sfx.play("explode_big", -6.0, 0.8, q)
+		Main.I.add_shake(6.0)
+		if p != null and p.hp > 0.0 and p.global_position.distance_to(q) < SHELL_R + p.radius:
+			Main.I.projectiles._hit_player(p, Projectiles.gun_dmg("big") * 2.5, "пули", kind(), "крупный калибр")
+		_shells.remove_at(i)
 
 
 ## Сколько пикс. осталось до гавани
@@ -262,4 +348,20 @@ func _draw() -> void:
 			var a := 0.35 + 0.5 * absf(sin(_t * 30.0))
 			draw_line(Vector2.ZERO, to_local(p.global_position), Color(1, 0.15, 0.1, a), 3.0)
 	draw_string(Hud.ui_font(), Vector2(-140, -radius - 30.0), title, HORIZONTAL_ALIGNMENT_CENTER, 280, 18, Color(1, 0.85, 0.7))
-	draw_string(Hud.ui_font(), Vector2(-140, -radius - 10.0), Loc.t("до гавани %.1f км") % (left_px() / 1000.0), HORIZONTAL_ALIGNMENT_CENTER, 280, 15, Color(1, 0.75, 0.55))
+	var sub := Loc.t("до гавани %.1f км") % (left_px() / 1000.0)
+	if _station_s >= 0.0:
+		sub = (Loc.t("залпов по берегу: %d из %d") % [_salvos, SALVOS]) if _on_station else (Loc.t("до огневой позиции %.1f км") % (absf(_station_s - _s) / 1000.0))
+	draw_string(Hud.ui_font(), Vector2(-140, -radius - 10.0), sub, HORIZONTAL_ALIGNMENT_CENTER, 280, 15, Color(1, 0.75, 0.55))
+	# точка эвакуации и круги падения — в мировых координатах, поворот корабля не нужен
+	draw_set_transform_matrix(get_global_transform().affine_inverse())
+	if evac_pt != Vector2.INF and _salvos < SALVOS:
+		var pu := 0.5 + 0.5 * sin(_t * 4.0)
+		draw_arc(evac_pt, 110.0, 0.0, TAU, 40, Color(0.4, 1.0, 0.6, 0.5 + 0.3 * pu), 4.0)
+		draw_string(Hud.ui_font(), evac_pt + Vector2(-120, -124), Loc.t("Точка эвакуации"), HORIZONTAL_ALIGNMENT_CENTER, 240, 18, Color(0.7, 1.0, 0.75))
+	for sh in _shells:
+		var k := clampf(1.0 - float(sh["t"]) / SHELL_T, 0.0, 1.0)
+		var q: Vector2 = sh["p"]
+		draw_circle(q, SHELL_R, Color(1.0, 0.25, 0.1, 0.06 + 0.12 * k))
+		draw_arc(q, SHELL_R, 0.0, TAU, 40, Color(1.0, 0.35, 0.15, 0.6), 3.0)
+		draw_arc(q, SHELL_R * k, 0.0, TAU, 40, Color(1.0, 0.6, 0.2, 0.8), 2.0)
+	draw_set_transform_matrix(Transform2D.IDENTITY)
