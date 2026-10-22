@@ -2526,16 +2526,10 @@ msgstr "1–4或点击：选择 · R：重抽 · “锁定”：保留到下次�
 
 #: game/scripts/hud_screens.gd:135
 #, c-format
-msgid "Модули: %d из %d"
-msgstr "模块：%d / %d"
 
 #: game/scripts/hud_screens.gd:161
-msgid "▲ к специализации"
-msgstr "▲ 专精"
 
 #: game/scripts/hud_screens.gd:169
-msgid "ЗАКРЕПЛЕНА"
-msgstr "已锁定"
 
 #: game/scripts/hud_screens.gd:172
 msgid "Открепить"
@@ -2577,8 +2571,6 @@ msgid "Специализация: «%s» (связка %d из 3) — %s"
 msgstr "专精：“%s”（羁绊%d/3）：%s"
 
 #: game/scripts/hud_screens.gd:189
-msgid "нужно"
-msgstr "需要"
 
 #: game/scripts/hud_screens.gd:228
 #, c-format
@@ -6283,14 +6275,9 @@ msgstr "羁绊：狼群"
 msgid "Механизация"
 msgstr "可动部件"
 
-msgid "\nЗаймёт место модуля %d из %d"
-msgstr "\n占用模块槽位 %d / %d"
-
 msgid "\nЗаймёт последнее место модуля (%d из %d): дальше — только улучшения взятых"
 msgstr "\n占用最后一个模块槽位（%d / %d）：之后只能升级已有模块"
 
-msgid "Модули: %d из %d"
-msgstr "模块：%d / %d"
 
 msgid "Жёлтые шевроны — манёвренный враг: уходит от взрывов и НАР. Бейте его пушкой, лучше с хвоста."
 msgstr "黄色箭头表示敌机灵活：会躲开爆炸和火箭。用机炮攻击，最好从后方。"
@@ -6375,3 +6362,42 @@ msgstr "机型任务：时间已到"
 
 msgid "✓ задание класса выполнено"
 msgstr "✓ 机型任务完成"
+
+msgid "Возьмите оружие — здесь появятся его модернизации и что для них нужно"
+msgstr "拿起武器——这里会显示它的改装和所需条件"
+
+msgid "МОДЕРНИЗАЦИИ"
+msgstr "改装"
+
+msgid "МОДЕРНИЗАЦИЯ"
+msgstr "改装"
+
+msgid "МОДУЛИ"
+msgstr "模块"
+
+msgid "ОСНАЩЕНИЕ"
+msgstr "装备"
+
+msgid "ПОДВЕСЫ"
+msgstr "挂架"
+
+msgid "все связки — Tab"
+msgstr "全部羁绊——Tab"
+
+msgid "готова — ждите карточку"
+msgstr "已就绪——等待卡牌"
+
+msgid "нужно: "
+msgstr "需要："
+
+msgid "оружие ур. 5"
+msgstr "武器 5 级"
+
+msgid "ур. %d → %d"
+msgstr "%d → %d 级"
+
+msgid "▲ к %s: %d → %d из %d"
+msgstr "▲ 通往 %s：%d → %d / %d"
+
+msgid "▲ ур. 5 откроет %s"
+msgstr "▲ 5 级解锁 %s"

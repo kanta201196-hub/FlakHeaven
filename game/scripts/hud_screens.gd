@@ -118,75 +118,278 @@ func _stat_bar(x: float, y: float, label: String, frac: float, val: String) -> v
 # ---------- Карточки ----------
 
 func levelup(m: Main, size: Vector2) -> void:
-	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.62))
+	# EX-12 (вариант «Яркая аркада», Kanta 22.10): сочные карточки 2×2 слева, справа — «Оснащение» (EX-02)
+	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.03, 0.025, 0.88))
+	var right_w := 440.0
+	var lx := 48.0
+	var lw := size.x - right_w - lx - 40.0
 	if m.offer_rare:
-		_ctext(150, Loc.t("НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК") % (m.rare_reasons[0] if not m.rare_reasons.is_empty() else ""), 38, Color(0.75, 0.5, 1.0))
+		_text(Vector2(lx, 120), Loc.t("НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК") % (m.rare_reasons[0] if not m.rare_reasons.is_empty() else ""), 38, Color(0.8, 0.55, 1.0))
 	else:
-		_ctext(150, Loc.t("НОВЫЙ УРОВЕНЬ: %d") % m.level if m.pending_levels <= 1 else Loc.t("НОВЫЙ УРОВЕНЬ (ещё выборов: %d)") % m.pending_levels, 40, Color(0.6, 1.0, 0.7))
+		_text(Vector2(lx, 120), Loc.t("НОВЫЙ УРОВЕНЬ: %d") % m.level if m.pending_levels <= 1 else Loc.t("НОВЫЙ УРОВЕНЬ (ещё выборов: %d)") % m.pending_levels, 40, Color(1.0, 0.82, 0.29))
 	if m.levelup_intro:
 		# U-03: первые выборы — что это и как выбирать
-		_ctext(188, "Выберите одно улучшение — оно действует до конца вылета. Не знаете, что взять? Берите оружие, которое уже стоит на самолёте.", 19, Color(1.0, 0.9, 0.6))
-		_ctext(212, "1–4 или клик — выбрать · «Переброс» — показать другие карточки · «Закрепить» — оставить на следующий раз · «Исключить» — больше не предлагать", 16, Color(0.75, 0.8, 0.9))
+		_text(Vector2(lx, 156), "Выберите одно улучшение — оно действует до конца вылета. Не знаете, что взять? Берите оружие, которое уже стоит на самолёте.", 16, Color(1.0, 0.9, 0.6))
+		_text(Vector2(lx, 178), "1–4 или клик — выбрать · «Переброс» — показать другие карточки · «Закрепить» — оставить на следующий раз · «Исключить» — больше не предлагать", 14, Color(0.75, 0.8, 0.9))
 	else:
-		_ctext(190, "1–4 или клик — выбрать · R — переброс · «Закрепить» — будет в следующем выборе · «Исключить» — не выпадет до конца вылета", 17, Color(0.75, 0.8, 0.9))
-	# EX-01: сколько мест модулей занято
-	if m.player != null:
-		var used := Cards.mod_slots_used(m.player)
-		_text(Vector2(size.x - 360, 150), Loc.t("Модули: %d из %d") % [used, Cards.MOD_SLOTS], 20, Color(1.0, 0.75, 0.4) if used >= Cards.MOD_SLOTS else Color(0.55, 0.85, 1.0))
-	var w := 400.0
-	var h := 330.0
-	var gap := 28.0
-	var x0 := (size.x - (w * 4 + gap * 3)) / 2.0
+		_text(Vector2(lx, 158), "1–4 или клик — выбрать · R — переброс · «Закрепить» — будет в следующем выборе · «Исключить» — не выпадет до конца вылета", 16, Color(0.75, 0.8, 0.9))
+	var n := m.offers.size()
+	var rows := maxi(1, int(ceil(n / 2.0)))
+	var gap := 18.0
+	var top := 196.0
+	var cw := (lw - gap) / 2.0
+	var ch := minf(290.0, (size.y - top - 120.0 - gap * (rows - 1)) / rows)
 	var mp := ctrl.get_local_mouse_position()
-	for i in m.offers.size():
-		var c: Dictionary = m.offers[i]
-		var r := Rect2(x0 + i * (w + gap), 220, w, h)
-		var rar: Dictionary = Cards.RARITY[int(c["rarity"])]
-		var rc: Color = Cards.EVO_COLOR if c["kind"] in ["evolution", "mastery"] else rar["color"]
-		var hover := r.has_point(mp)
-		ctrl.draw_rect(r, Color(0.07, 0.09, 0.13, 0.96))
-		ctrl.draw_rect(Rect2(r.position, Vector2(w, 34)), Color(rc.r, rc.g, rc.b, 0.25))
-		ctrl.draw_rect(r, rc if hover else Color(rc.r, rc.g, rc.b, 0.7), false, 4.0 if hover else 3.0)
-		_buttons.append([r, "card:%d" % i])
-		_text(Vector2(r.position.x + 16, r.position.y + 24), "%d · %s" % [i + 1, Loc.t(rar["name"])], 18, rc)
-		var cc: Color = Cards.CAT_COLORS.get(c["cat"], Color.WHITE)
-		_text(Vector2(r.position.x, r.position.y + 24), c["cat"], 16, cc, HORIZONTAL_ALIGNMENT_RIGHT, w - 16.0)
-		# U-09: значок оружия или раздела слева от названия
-		CardIcons.draw(ctrl, r.position + Vector2(44, 76), 52.0, CardIcons.key(c, m.player), cc)
-		CardIcons.badge(ctrl, r.position + Vector2(44, 76), 52.0, String(c["kind"]), cc)
-		_para(Vector2(r.position.x + 82, r.position.y + 66), Loc.title(c["title"]), w - 100.0 - (52.0 if c.get("course", false) else 0.0), 22, Color.WHITE)
-		if c.get("course", false): # 3.2: карточка ведёт к курсу
-			ctrl.draw_colored_polygon(PackedVector2Array([r.position + Vector2(w - 70, 34), r.position + Vector2(w, 34), r.position + Vector2(w, 104)]), Color(1.0, 0.8, 0.25, 0.9))
-			_text(Vector2(r.position.x + w - 46, r.position.y + 56), "▲", 18, Color(0.15, 0.1, 0.02))
-			_text(Vector2(r.position.x, r.position.y + h - 14), "▲ к специализации", 15, Color(1.0, 0.85, 0.35), HORIZONTAL_ALIGNMENT_RIGHT, w - 14.0)
-		var ty := r.position.y + 136.0
-		if c.get("tags", "") != "":
-			_tag_chips(Vector2(r.position.x + 18, ty), Prog.card_tags(m.player, c), c["kind"] == "evolution")
-			ty += 26.0
-		_para(Vector2(r.position.x + 18, ty + 8), Loc.t(c["desc"]), w - 36.0, 16)
-		var is_locked: bool = not m.locked.is_empty() and m.locked["id"] == c["id"]
-		if is_locked:
-			_text(Vector2(r.position.x, r.position.y + h - 14), "ЗАКРЕПЛЕНА", 16, Color(1.0, 0.85, 0.4), HORIZONTAL_ALIGNMENT_CENTER, w)
-		# кнопки под карточкой
-		var by := r.position.y + h + 10
-		_button(Rect2(r.position.x, by, w / 2.0 - 5, 40), Loc.t("Открепить") if is_locked else Loc.t("Закрепить"), "lock:%d" % i, 17)
-		if m.bans > 0:
-			_button(Rect2(r.position.x + w / 2.0 + 5, by, w / 2.0 - 5, 40), "Исключить", "ban:%d" % i, 17)
-	var ry := 640.0
+	for i in n:
+		var r := Rect2(lx + (i % 2) * (cw + gap), top + (i / 2) * (ch + gap), cw, ch)
+		_card(m, i, r, r.has_point(mp))
+	var ry := top + rows * (ch + gap) + 4.0
 	if m.rerolls > 0:
-		_button(Rect2(size.x / 2.0 - 370, ry, 360, 46), Loc.t("Переброс (R) — осталось %d") % m.rerolls, "reroll", 19)
+		_button(Rect2(lx, ry, 330, 46), Loc.t("Переброс (R) — осталось %d") % m.rerolls, "reroll", 18)
 		if m.player.has_course():
-			_button(Rect2(size.x / 2.0 + 10, ry, 460, 46), "Сменить специализацию (−1 переброс)", "change_course", 19)
+			_button(Rect2(lx + 344, ry, 420, 46), "Сменить специализацию (−1 переброс)", "change_course", 18)
 	else:
-		_ctext(ry + 30, "Перебросов не осталось (+1 за каждого аса)", 18, Color(0.6, 0.62, 0.7))
-	_ctext(ry + 76, Loc.t("Исключений осталось: %d (+1 за аса)%s") % [m.bans, (Loc.t("   ·   Исключены: ") + ", ".join(PackedStringArray(m.banned.values().map(func(x): return Loc.title(String(x)))))) if not m.banned.is_empty() else ""], 16, Color(0.75, 0.75, 0.85))
-	# 3.1: ближайшие связки — что добрать, чтобы открыть
-	var y := ry + 112.0
-	if m.player.has_course():
-		var sd := Cards.syn_def(m.player, m.player.course)
-		_ctext(y, Loc.t("Специализация: «%s» (связка %d из 3) — %s") % [Loc.t(sd["title"]), m.player.syn.size() + 1, Loc.t(sd["short"])], 18, Menu.C_AMBER)
-		y += 30.0
-		_cond_line(Vector2(size.x / 2.0, y), {"title": "нужно", "conds": Cards.cond_list(m.player, m.player.course)})
+		_text(Vector2(lx, ry + 30), "Перебросов не осталось (+1 за каждого аса)", 17, Color(0.6, 0.62, 0.7))
+	_para(Vector2(lx, ry + 74), Loc.t("Исключений осталось: %d (+1 за аса)%s") % [m.bans, (Loc.t("   ·   Исключены: ") + ", ".join(PackedStringArray(m.banned.values().map(func(x): return Loc.title(String(x)))))) if not m.banned.is_empty() else ""], lw, 15, Color(0.75, 0.75, 0.85))
+	_kit_panel(m, Rect2(size.x - right_w - 24.0, 96.0, right_w, size.y - 130.0))
+
+
+## EX-12: одна карточка — заливка по редкости, свечение, полоса редкости, медаль со значком, деления уровня, путь к модернизации
+func _card(m: Main, i: int, r: Rect2, hover: bool) -> void:
+	var c: Dictionary = m.offers[i]
+	var rar: Dictionary = Cards.RARITY[int(c["rarity"])]
+	var evo: bool = c["kind"] in ["evolution", "mastery"]
+	var rc: Color = Color(1.0, 0.82, 0.29) if evo else rar["color"]
+	var dark := rc.darkened(0.45)
+	var lift := -6.0 if hover else 0.0
+	r.position.y += lift
+	# свечение: несколько рамок с убывающей прозрачностью
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.004) if (hover or evo) else 0.35
+	for k in 4:
+		var g := 3.0 + k * 4.0
+		ctrl.draw_rect(r.grow(g), Color(rc.r, rc.g, rc.b, (0.16 - k * 0.035) * (0.6 + pulse)), false, 4.0)
+	# заливка: сверху цвет редкости, книзу графит
+	var base := Color(0.09, 0.11, 0.09, 0.97)
+	ctrl.draw_polygon(PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]),
+		PackedColorArray([Color(dark, 0.98), Color(dark.lerp(base, 0.3), 0.98), base.lerp(dark, 0.25), base]))
+	ctrl.draw_rect(r, rc, false, 3.0)
+	_buttons.append([r, "card:%d" % i])
+	# полоса редкости
+	ctrl.draw_rect(Rect2(r.position, Vector2(r.size.x, 32)), rc)
+	_text(Vector2(r.position.x + 16, r.position.y + 23), "%d · %s" % [i + 1, Loc.t("МОДЕРНИЗАЦИЯ") if c["kind"] == "evolution" else Loc.t(rar["name"]).to_upper()], 17, Color(0.06, 0.08, 0.06))
+	_text(Vector2(r.position.x, r.position.y + 23), Loc.t(String(c["cat"])).to_upper(), 15, Color(0.06, 0.08, 0.06), HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 16.0)
+	# медаль со значком
+	var mc := r.position + Vector2(62, 92)
+	ctrl.draw_circle(mc, 46.0, Color(rc.r, rc.g, rc.b, 0.25 + 0.15 * pulse))
+	ctrl.draw_circle(mc, 40.0, dark)
+	ctrl.draw_circle(mc + Vector2(-8, -10), 26.0, Color(rc.r, rc.g, rc.b, 0.45))
+	ctrl.draw_arc(mc, 40.0, 0.0, TAU, 48, Color(1, 1, 1, 0.35), 2.5)
+	CardIcons.draw(ctrl, mc, 44.0, CardIcons.key(c, m.player), Color.WHITE)
+	CardIcons.badge(ctrl, mc, 44.0, String(c["kind"]), rc)
+	# название и уровень делениями
+	var tx := r.position.x + 124.0
+	var tw := r.size.x - 140.0
+	var th := _para(Vector2(tx, r.position.y + 70), Loc.title(c["title"]), tw, 23, Color.WHITE)
+	var lv := _card_level(m.player, c)
+	var py := r.position.y + 70 + maxf(th, 26.0) + 2.0
+	if lv.y > 0:
+		for k in int(lv.y):
+			var pr := Rect2(tx + k * 28.0, py - 8, 22, 8)
+			ctrl.draw_rect(pr, rc if k < int(lv.x) else Color(1, 1, 1, 0.18))
+			if k == int(lv.x):
+				ctrl.draw_rect(pr.grow(1.5), Color.WHITE, false, 2.0)
+		_text(Vector2(tx + lv.y * 28.0 + 6.0, py), Loc.t("ур. %d → %d") % [lv.x, mini(int(lv.x) + 1, int(lv.y))], 14, Color(0.9, 0.88, 0.8))
+	var ty := maxf(py + 14.0, r.position.y + 146.0)
+	if c.get("tags", "") != "":
+		_tag_chips(Vector2(r.position.x + 18, ty), Prog.card_tags(m.player, c), c["kind"] == "evolution")
+		ty += 28.0
+	# путь к модернизации — жёлтая плашка внизу; длинное описание ужимаем, чтобы не залезало на неё
+	var path := _card_path(m.player, c)
+	var bottom := r.end.y - 40.0
+	var desc := Loc.out(Loc.t(c["desc"]))
+	var fs := 15
+	while fs > 12 and ui_font().get_multiline_string_size(desc, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 36.0, fs).y > bottom - ty - 8.0:
+		fs -= 1
+	_para(Vector2(r.position.x + 18, ty + 12), desc, r.size.x - 36.0, fs, Color(1.0, 0.98, 0.9))
+	if path != "":
+		ctrl.draw_rect(Rect2(r.position.x + 14, bottom, r.size.x - 250, 28), Color(1.0, 0.82, 0.29, 0.18))
+		_text(Vector2(r.position.x + 24, bottom + 20), path, 15, Color(1.0, 0.85, 0.35))
+	var is_locked: bool = not m.locked.is_empty() and m.locked["id"] == c["id"]
+	_button(Rect2(r.end.x - 226, bottom - 2, 104, 32), Loc.t("Открепить") if is_locked else Loc.t("Закрепить"), "lock:%d" % i, 14)
+	if m.bans > 0:
+		_button(Rect2(r.end.x - 116, bottom - 2, 104, 32), "Исключить", "ban:%d" % i, 14)
+
+
+## Уровень карточки: x — сейчас, y — максимум (0 — без уровней)
+func _card_level(p: Player, c: Dictionary) -> Vector2:
+	match String(c["kind"]):
+		"weapon_up":
+			return Vector2((p.groups[int(c["group"])] as Hardpoint).level, Weapons.MAX_LEVEL)
+		"weapon_new":
+			return Vector2(0, Weapons.MAX_LEVEL)
+		"module":
+			var id := String(c["id"])
+			if id == "repair" or not Cards.MODULES.has(id):
+				return Vector2.ZERO
+			return Vector2(int(p.taken.get(id, 0)), int(Cards.MODULES[id]["max"]))
+	return Vector2.ZERO
+
+
+## EX-02: куда ведёт карточка — «▲ к «Шмель»: перезарядка 1 → 2 из 2»
+func _card_path(p: Player, c: Dictionary) -> String:
+	match String(c["kind"]):
+		"module":
+			var id := String(c["id"])
+			for w in Prog.EVOS:
+				var cat: Dictionary = Prog.EVOS[w]["cat"]
+				if not cat.has(id) or not (w == "gun" or _has_weapon(p, w)) or (w == "gun" and p.gun_evo):
+					continue
+				var have := int(p.taken.get(id, 0))
+				if have < int(cat[id]):
+					return Loc.t("▲ к %s: %d → %d из %d") % [Loc.t(Prog.EVOS[w]["title"]), have, have + 1, int(cat[id])]
+		"weapon_up":
+			var g: Hardpoint = p.groups[int(c["group"])]
+			if Prog.EVOS.has(g.weapon) and not g.evo:
+				return Loc.t("▲ ур. 5 откроет %s") % Loc.t(Prog.EVOS[g.weapon]["title"])
+	return ""
+
+
+func _has_weapon(p: Player, w: String) -> bool:
+	for g in p.groups:
+		if (g as Hardpoint).weapon == w and not (g as Hardpoint).evo:
+			return true
+	return false
+
+
+## EX-02: «Оснащение» — подвесы, места модулей, модернизации «оружие + модуль = результат»
+func _kit_panel(m: Main, r: Rect2) -> void:
+	var p := m.player
+	ctrl.draw_rect(r, Color(0.04, 0.055, 0.05, 0.86))
+	ctrl.draw_rect(r, Color(0.24, 0.3, 0.23), false, 2.0)
+	var x := r.position.x + 20.0
+	var w := r.size.x - 40.0
+	var y := r.position.y + 34.0
+	var amber := Color(1.0, 0.82, 0.29)
+	_text(Vector2(x, y), "ОСНАЩЕНИЕ", 21, amber)
+	y += 26.0
+	_text(Vector2(x, y), "ПОДВЕСЫ", 14, Color(0.72, 0.77, 0.7))
+	y += 8.0
+	var gn := p.groups.size()
+	var per := maxi(4, gn)
+	var tw := (w - 8.0 * (per - 1)) / per
+	for gi in gn:
+		var g: Hardpoint = p.groups[gi]
+		var tr := Rect2(x + gi * (tw + 8.0), y, tw, 62)
+		if g.is_empty():
+			ctrl.draw_rect(tr, Color(1, 1, 1, 0.04))
+			ctrl.draw_rect(tr, Color(0.35, 0.4, 0.33), false, 1.5)
+			_text(Vector2(tr.position.x, tr.end.y - 10), "пусто", 12, Color(0.55, 0.6, 0.55), HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
+		else:
+			var col: Color = Cards.EVO_COLOR if g.evo else Cards.RARITY[mini(g.level - 1, 4)]["color"]
+			ctrl.draw_rect(tr, Color(col.r, col.g, col.b, 0.22))
+			ctrl.draw_rect(tr, col, false, 2.0)
+			CardIcons.draw(ctrl, tr.get_center() + Vector2(0, -8), minf(30.0, tw - 10.0), g.weapon, Color.WHITE)
+			_text(Vector2(tr.position.x, tr.end.y - 6), ("★" if g.evo else Loc.t("ур. %d") % g.level), 12, Color(1.0, 0.92, 0.66), HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
+	y += 86.0
+	var used := Cards.mod_slots_used(p)
+	_text(Vector2(x, y), "МОДУЛИ", 14, Color(0.72, 0.77, 0.7))
+	_text(Vector2(x, y), Loc.t("%d из %d") % [used, Cards.MOD_SLOTS], 15, Color(1.0, 0.7, 0.4) if used >= Cards.MOD_SLOTS else Color(0.5, 0.82, 1.0), HORIZONTAL_ALIGNMENT_RIGHT, w)
+	y += 8.0
+	var mods: Array = []
+	for id in Cards.MODULES:
+		if not Cards.SLOT_FREE.has(id) and int(p.taken.get(id, 0)) > 0:
+			mods.append(id)
+	var mw := (w - 6.0 * (Cards.MOD_SLOTS - 1)) / Cards.MOD_SLOTS
+	for k in Cards.MOD_SLOTS:
+		var mr := Rect2(x + k * (mw + 6.0), y, mw, 58)
+		if k < mods.size():
+			var id: String = mods[k]
+			var cc: Color = Cards.CAT_COLORS.get(Cards.MODULES[id]["cat"], Color.WHITE)
+			ctrl.draw_rect(mr, Color(cc.r, cc.g, cc.b, 0.22))
+			ctrl.draw_rect(mr, cc, false, 2.0)
+			CardIcons.draw(ctrl, mr.get_center() + Vector2(0, -7), minf(26.0, mw - 10.0), id, Color.WHITE)
+			var lvl := int(p.taken.get(id, 0))
+			var mx := int(Cards.MODULES[id]["max"])
+			for d in mx:
+				ctrl.draw_circle(Vector2(mr.get_center().x - (mx - 1) * 3.5 + d * 7.0, mr.end.y - 7), 2.4, cc if d < lvl else Color(1, 1, 1, 0.2))
+		else:
+			ctrl.draw_rect(mr, Color(1, 1, 1, 0.03))
+			ctrl.draw_rect(mr, Color(0.33, 0.38, 0.31), false, 1.5)
+	y += 84.0
+	ctrl.draw_line(Vector2(x, y - 10), Vector2(x + w, y - 10), Color(0.24, 0.3, 0.23), 1.0)
+	_text(Vector2(x, y + 10), "МОДЕРНИЗАЦИИ", 19, amber)
+	_text(Vector2(x, y + 10), "все связки — Tab", 13, Color(0.65, 0.7, 0.64), HORIZONTAL_ALIGNMENT_RIGHT, w)
+	y += 24.0
+	var shown := 0
+	for wv in Prog.EVOS:
+		if shown >= 4 or not (wv == "gun" and not p.gun_evo or wv != "gun" and _has_weapon(p, wv)):
+			continue
+		shown += 1
+		y = _evo_row(p, wv, Vector2(x, y), w) + 6.0
+	if shown == 0:
+		y += _para(Vector2(x, y + 18), "Возьмите оружие — здесь появятся его модернизации и что для них нужно", w, 15, Color(0.7, 0.74, 0.7))
+	if p.has_course():
+		var sd := Cards.syn_def(p, p.course)
+		var by := r.end.y - 52.0
+		ctrl.draw_line(Vector2(x, by - 14), Vector2(x + w, by - 14), Color(0.24, 0.3, 0.23), 1.0)
+		_para(Vector2(x, by + 4), Loc.t("Специализация: «%s» (связка %d из 3) — %s") % [Loc.t(sd["title"]), p.syn.size() + 1, Loc.t(sd["short"])], w, 14, amber)
+
+
+## Строка «оружие + модуль = модернизация»: заполненный квадрат — есть, пунктир — нужно
+func _evo_row(p: Player, wv: String, pos: Vector2, w: float) -> float:
+	var ready := Prog.evo_ready(p, wv)
+	var h := 52.0
+	if ready:
+		ctrl.draw_rect(Rect2(pos, Vector2(w, h)), Color(1.0, 0.82, 0.29, 0.13))
+	var bx := pos.x + 6.0
+	var by := pos.y + 6.0
+	var s := 38.0
+	var lvl_ok := wv == "gun" or _weapon_max(p, wv)
+	_evo_box(Vector2(bx, by), s, "gun" if wv == "gun" else wv, Color(1.0, 0.75, 0.3), lvl_ok)
+	bx += s + 4.0
+	var cat: Dictionary = Prog.EVOS[wv]["cat"]
+	var need := PackedStringArray()
+	if wv != "gun" and not lvl_ok:
+		need.append(Loc.t("оружие ур. 5"))
+	for mid in cat:
+		_text(Vector2(bx, by + 27), "+", 18, Color(0.7, 0.75, 0.7))
+		bx += 14.0
+		var have := int(p.taken.get(mid, 0))
+		_evo_box(Vector2(bx, by), s, mid, Cards.CAT_COLORS.get(Cards.MODULES[mid]["cat"], Color.WHITE), have >= int(cat[mid]))
+		bx += s + 4.0
+		if have < int(cat[mid]):
+			need.append("%s %d/%d" % [Loc.t(Cards.MODULES[mid]["title"]), have, int(cat[mid])])
+	_text(Vector2(bx, by + 27), "=", 18, Color(0.7, 0.75, 0.7))
+	bx += 16.0
+	var rr := Rect2(bx, by, s, s)
+	if ready:
+		ctrl.draw_rect(rr, Color(1.0, 0.82, 0.29))
+		_text(Vector2(rr.position.x, rr.position.y + 25), "✓", 20, Color(0.1, 0.08, 0.02), HORIZONTAL_ALIGNMENT_CENTER, s)
+	else:
+		ctrl.draw_rect(rr, Color(0.45, 0.5, 0.43), false, 2.0)
+	bx += s + 10.0
+	var tx := maxf(bx, pos.x + w * 0.55)
+	_text(Vector2(tx, by + 15), Loc.t(Prog.EVOS[wv]["title"]), 15, Color(1.0, 0.98, 0.9))
+	_para(Vector2(tx, by + 32), Loc.t("готова — ждите карточку") if ready else Loc.t("нужно: ") + ", ".join(need), pos.x + w - tx, 12, Color(0.72, 0.77, 0.7))
+	return pos.y + h
+
+
+func _evo_box(pos: Vector2, s: float, icon: String, col: Color, have: bool) -> void:
+	var r := Rect2(pos, Vector2(s, s))
+	if have:
+		ctrl.draw_rect(r, Color(col.r, col.g, col.b, 0.75))
+		ctrl.draw_rect(r, Color(1, 1, 1, 0.4), false, 1.5)
+	else:
+		ctrl.draw_rect(r, Color(col.r, col.g, col.b, 0.08))
+		ctrl.draw_rect(r, Color(col.r, col.g, col.b, 0.55), false, 1.5)
+	CardIcons.draw(ctrl, r.get_center(), s - 12.0, icon, Color.WHITE if have else Color(1, 1, 1, 0.5))
+
+
+func _weapon_max(p: Player, w: String) -> bool:
+	for g in p.groups:
+		if (g as Hardpoint).weapon == w and (g as Hardpoint).level >= Weapons.MAX_LEVEL:
+			return true
+	return false
 
 
 ## Чипы тегов карточки: цвет тега, «Ракеты 3 → 4»

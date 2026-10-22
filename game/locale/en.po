@@ -2526,16 +2526,10 @@ msgstr "1–4 or click: pick · R: reroll · \"Lock\": stays for the next pick �
 
 #: game/scripts/hud_screens.gd:135
 #, c-format
-msgid "Модули: %d из %d"
-msgstr "Modules: %d of %d"
 
 #: game/scripts/hud_screens.gd:161
-msgid "▲ к специализации"
-msgstr "▲ specialization"
 
 #: game/scripts/hud_screens.gd:169
-msgid "ЗАКРЕПЛЕНА"
-msgstr "LOCKED"
 
 #: game/scripts/hud_screens.gd:172
 msgid "Открепить"
@@ -2577,8 +2571,6 @@ msgid "Специализация: «%s» (связка %d из 3) — %s"
 msgstr "Specialization: \"%s\" (synergy %d of 3): %s"
 
 #: game/scripts/hud_screens.gd:189
-msgid "нужно"
-msgstr "needed"
 
 #: game/scripts/hud_screens.gd:228
 #, c-format
@@ -6280,14 +6272,9 @@ msgstr "synergy: good company"
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
 
-msgid "\nЗаймёт место модуля %d из %d"
-msgstr "\nTakes module slot %d of %d"
-
 msgid "\nЗаймёт последнее место модуля (%d из %d): дальше — только улучшения взятых"
 msgstr "\nTakes the last module slot (%d of %d): after this, only upgrades to modules you have"
 
-msgid "Модули: %d из %d"
-msgstr "Modules: %d of %d"
 
 msgid "Жёлтые шевроны — манёвренный враг: уходит от взрывов и НАР. Бейте его пушкой, лучше с хвоста."
 msgstr "Yellow chevrons mean an agile enemy: it dodges explosions and rockets. Use the cannon, best from behind."
@@ -6372,3 +6359,42 @@ msgstr "class task: time is up"
 
 msgid "✓ задание класса выполнено"
 msgstr "✓ class task complete"
+
+msgid "Возьмите оружие — здесь появятся его модернизации и что для них нужно"
+msgstr "Take a weapon: its upgrades and what they need will show up here"
+
+msgid "МОДЕРНИЗАЦИИ"
+msgstr "UPGRADES"
+
+msgid "МОДЕРНИЗАЦИЯ"
+msgstr "UPGRADE"
+
+msgid "МОДУЛИ"
+msgstr "MODULES"
+
+msgid "ОСНАЩЕНИЕ"
+msgstr "LOADOUT"
+
+msgid "ПОДВЕСЫ"
+msgstr "HARDPOINTS"
+
+msgid "все связки — Tab"
+msgstr "all synergies: Tab"
+
+msgid "готова — ждите карточку"
+msgstr "ready: wait for the card"
+
+msgid "нужно: "
+msgstr "needs: "
+
+msgid "оружие ур. 5"
+msgstr "weapon lv. 5"
+
+msgid "ур. %d → %d"
+msgstr "lv. %d → %d"
+
+msgid "▲ к %s: %d → %d из %d"
+msgstr "▲ to %s: %d → %d of %d"
+
+msgid "▲ ур. 5 откроет %s"
+msgstr "▲ lv. 5 unlocks %s"

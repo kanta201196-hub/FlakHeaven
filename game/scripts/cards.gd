@@ -675,8 +675,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			if dl != "":
 				card["desc"] += "\n" + dl
 			if card["kind"] == "module":
-				card["desc"] += slot_hint(p, card["id"])
-				card["desc"] += Prog.evo_hint(p, card["id"])
+				card["desc"] += slot_hint(p, card["id"])   # EX-02: путь к модернизации — плашкой на карточке
 	card["tags"] = tags_line(p, card)
 	card["course"] = advances_course(p, card)
 	card["desc"] += course_hint(p, card)
