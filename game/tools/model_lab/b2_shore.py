@@ -14,17 +14,17 @@ from mathutils import Vector, Matrix
 import b2lib as L
 
 # ---------------- цвета (sRGB): приглушённые, выгоревшие ----------------
-PLASTER = [(0.86, 0.83, 0.76), (0.84, 0.78, 0.66), (0.80, 0.74, 0.62), (0.85, 0.80, 0.70)]   # побелка, охра, песок
+PLASTER = [(0.58, 0.53, 0.44), (0.60, 0.50, 0.37), (0.52, 0.50, 0.45), (0.57, 0.51, 0.40)]   # охра, серая, песочная (не белее песка пляжа)
 TILE_C = (0.62, 0.36, 0.25)       # терракота, выгоревшая
 TILE_C2 = (0.55, 0.33, 0.24)
-CONC = (0.54, 0.52, 0.48)         # бетон, серо-бежевый
-LIME = (0.74, 0.70, 0.61)         # известняк кладки
+CONC = (0.38, 0.355, 0.31)        # бетон, выветренный серо-бежевый (тёплый: серый рядом с песком читается белым)
+LIME = (0.58, 0.54, 0.46)         # известняк кладки
 WOOD_C = (0.43, 0.35, 0.26)       # серое выгоревшее дерево
 WOOD_DARK = (0.30, 0.25, 0.20)
-GUNPAINT = (0.46, 0.46, 0.38)     # орудие: выгоревший хаки
+GUNPAINT = (0.36, 0.37, 0.29)     # орудие: выгоревший тёмный хаки
 DIRT = (0.42, 0.36, 0.28)
-EARTH = (0.52, 0.45, 0.34)
-DRYGRASS = (0.55, 0.52, 0.36)
+EARTH = (0.46, 0.40, 0.30)
+DRYGRASS = (0.44, 0.44, 0.28)
 IRON = (0.24, 0.23, 0.22)
 RUST = (0.42, 0.27, 0.18)
 
@@ -97,7 +97,7 @@ def weather(base, P, N, seed=0, stain=0.16, grain=0.07, streak=0.12, grime_h=1.2
     g = np.clip(1 - (P[:, 2] - z0) / max(grime_h, 1e-3), 0, 1) ** 1.6
     g = g * (0.7 + 0.6 * fbm(P, 0.9, 2, seed + 3))
     c = mix(c, col(DIRT, n), grime * g)
-    c = mix(c, col((0.72, 0.68, 0.58), n), dust * np.clip(up - 0.6, 0, 1) * 2.5 * fbm(P, 0.6, 2, seed + 7))
+    c = mix(c, col((0.56, 0.52, 0.43), n), dust * np.clip(up - 0.6, 0, 1) * 2.5 * fbm(P, 0.6, 2, seed + 7))
     return c
 
 
@@ -285,6 +285,12 @@ def bake(ob, shade, size=1024, name=None, rough=0.92, unwrap_angle=60, margin=0.
             base[sel] = (s[iy0, ix0] * (1 - fx) * (1 - fy) + s[iy0, ix1] * fx * (1 - fy) + s[iy1, ix0] * (1 - fx) * fy + s[iy1, ix1] * fx * fy)
     names = [m.name if m else '' for m in mats]
     out = np.clip(shade(base, P, Nn, M, names), 0, 1)
+    # потолок яркости: в игре солнце 1,15 + небо 0,5 — всё светлее ~0,45 выгорает в белое на фоне песка пляжа.
+    # Выше колена яркость сжимается (оттенок сохраняется): ни одна крупная поверхность не светлее песка.
+    lum = out @ np.array([0.3, 0.59, 0.11])
+    knee = 0.36
+    k = np.where(lum > knee, (knee + (lum - knee) * 0.35) / np.maximum(lum, 1e-4), 1.0)
+    out = out * k[:, None]
     img = np.zeros((H * W, 3)); filled = np.zeros(H * W, dtype=bool)
     img[idx] = out; filled[idx] = True
     img = img.reshape(H, W, 3); filled = filled.reshape(H, W)
@@ -416,7 +422,139 @@ def tear(o, up, depth, seed=0, cuts=5):
             v.co -= up * d * k
 
 
-SAND_C = (0.66, 0.60, 0.46)
+SAND_C = (0.52, 0.47, 0.37)       # мешковина, пыльная
+
+
+# ================= мешки с песком (как пост Нагорья, game/tools/blender/biome_flora.py → bag) =================
+def bags(items, mat, name='sandbag', seed=0, size=(0.4, 0.23, 0.1), ns=4, nt=6):
+    """Мешки-подушки одной сеткой. items — [(центр, yaw)]. Сечение — суперэллипс, к завязанным концам уже и тоньше,
+    на концах «ушки», верх просел. size — полуразмеры (0,8 × 0,46 × 0,2 м). ns×nt×2 + 2nt треугольников на мешок."""
+    rng = random.Random(seed)
+    Lh, Wh, Hh = size
+    bm = bmesh.new()
+    for c, yaw in items:
+        R = Matrix.Rotation(yaw, 3, 'Z') @ Matrix.Rotation(rng.uniform(-0.06, 0.06), 3, 'X') @ Matrix.Rotation(rng.uniform(-0.04, 0.04), 3, 'Y')
+        c = Vector(c)
+        sx = rng.uniform(0.92, 1.08)
+        rows = []
+        for i in range(ns):
+            s = (-1 + 2 * i / (ns - 1)) * 0.86
+            fw = 1 - 0.32 * abs(s) ** 3
+            fh = 1 - 0.45 * abs(s) ** 2.5
+            row = []
+            for k in range(nt):
+                t = 2 * math.pi * k / nt + math.pi / nt
+                ct, st = math.cos(t), math.sin(t)
+                y = math.copysign(abs(ct) ** 0.55, ct) * Wh * fw
+                z = math.copysign(abs(st) ** 0.6, st) * Hh * fh
+                z = z * (1 - 0.18 * (1 - abs(s))) if z > 0 else z * 0.85
+                row.append(bm.verts.new(c + R @ Vector((s * Lh * sx, y, z))))
+            rows.append(row)
+        for i in range(ns - 1):
+            for k in range(nt):
+                j = (k + 1) % nt
+                bm.faces.new((rows[i][k], rows[i][j], rows[i + 1][j], rows[i + 1][k]))
+        for end, row in ((-1, rows[0]), (1, rows[-1])):
+            tip = bm.verts.new(c + R @ Vector((end * Lh * sx * 1.04, rng.uniform(-0.3, 0.3) * Wh, Hh * 0.1)))
+            for k in range(nt):
+                j = (k + 1) % nt
+                bm.faces.new((row[k], row[j], tip) if end > 0 else (row[j], row[k], tip))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    o = L._new(name, bm, mat)
+    L.smooth([o], 80)
+    return o
+
+
+def bag_row(p0, p1, z, layers=2, size=(0.4, 0.23, 0.1)):
+    """Мешки вдоль отрезка p0→p1 в layers рядов, вперевязку."""
+    p0, p1 = Vector(p0), Vector(p1)
+    d = p1 - p0; n = max(1, int(d.length / (size[0] * 1.9))); yaw = math.atan2(d.y, d.x)
+    out = []
+    for lay in range(layers):
+        off = 0.5 if lay % 2 else 0.0
+        for k in range(n - (1 if off else 0)):
+            t = (k + 0.5 + off) / n
+            p = p0 + d * t
+            out.append(((p.x, p.y, z + size[2] * 0.85 + lay * size[2] * 1.75), yaw))
+    return out
+
+
+def f_burlap(seed=0):
+    """Мешковина: пыльный бежево-серый, у каждого мешка свой тон, тёмные складки и щели снизу, пыль сверху."""
+    def f(b, P, N):
+        n = len(P)
+        c = b * (1 + 0.22 * (vnoise(P, 1.3, seed) - 0.5) * 2)[:, None]          # мешки разного тона
+        c = c * (1 + 0.10 * (vnoise(P, 9.0, seed + 1) - 0.5) * 2)[:, None]      # складки ткани
+        under = np.clip(-N[:, 2] * 1.5, 0, 1)
+        c = c * (1 - 0.55 * under)[:, None]                                     # тень в щелях между мешками
+        c = mix(c, col((0.40, 0.35, 0.27), n), 0.35 * np.clip((fbm(P, 0.7, 3, seed + 2) - 0.5) * 3, 0, 1))   # сырые и грязные
+        return mix(c, col((0.55, 0.51, 0.42), n), 0.25 * np.clip(N[:, 2], 0, 1) * fbm(P, 1.1, 2, seed + 3))
+    return f
+
+
+def cut(ob, cutters):
+    """Булев вырез (амбразуры, ниши): cutters удаляются."""
+    for c in cutters:
+        m = ob.modifiers.new('cut', 'BOOLEAN'); m.operation = 'DIFFERENCE'; m.object = c; m.solver = 'EXACT'
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    ob.modifiers.clear()
+    old = ob.data; ob.data = me; bpy.data.meshes.remove(old)
+    for c in cutters:
+        bpy.data.objects.remove(c)
+    return ob
+
+
+def mound(c, r_in, r_rim, r_out, h, mat, name='mound', seg=28, seed=0, floor=0.03):
+    """Воронка: дно чуть над землёй (z=floor), вал высотой h на r_rim, к r_out сходит в ноль; край рваный."""
+    rng = random.Random(seed)
+    bm = bmesh.new()
+    rad = [0.0, r_in * 0.5, r_in, (r_in + r_rim) / 2, r_rim, (r_rim + r_out) / 2, r_out]
+    zz = [floor, floor, floor + 0.05, h * 0.75, h, h * 0.35, 0.0]
+    jit = [1 + rng.uniform(-0.18, 0.18) for _ in range(seg)]
+    rings = []
+    for r, z in zip(rad, zz):
+        if r == 0:
+            rings.append([bm.verts.new((c[0], c[1], z))])
+            continue
+        ring = []
+        for i in range(seg):
+            a = 2 * math.pi * i / seg
+            rr = r * jit[i] * (1 + rng.uniform(-0.05, 0.05))
+            ring.append(bm.verts.new((c[0] + rr * math.cos(a), c[1] + rr * math.sin(a), z * (1 + rng.uniform(-0.2, 0.2)) if z > 0.05 else z)))
+        rings.append(ring)
+    for i in range(seg):
+        j = (i + 1) % seg
+        bm.faces.new((rings[0][0], rings[1][i], rings[1][j]))
+    for a, b in zip(rings[1:], rings[2:]):
+        for i in range(seg):
+            j = (i + 1) % seg
+            bm.faces.new((a[i], b[i], b[j], a[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for f in bm.faces:
+        if f.normal.z < 0:
+            f.normal_flip()
+    o = L._new(name, bm, mat)
+    L.smooth([o], 70)
+    return o
+
+
+def scorch_patch(c, r, mat, name='scorch', seg=24, seed=0, z=0.025):
+    """Выжженная земля: плоское пятно с рваным краем чуть над землёй."""
+    rng = random.Random(seed)
+    bm = bmesh.new()
+    cv = bm.verts.new((c[0], c[1], z))
+    mid, out = [], []
+    for i in range(seg):
+        a = 2 * math.pi * i / seg
+        k = rng.uniform(0.6, 1.15)
+        mid.append(bm.verts.new((c[0] + r * 0.55 * k * math.cos(a), c[1] + r * 0.55 * k * math.sin(a), z)))
+        out.append(bm.verts.new((c[0] + r * k * math.cos(a), c[1] + r * k * math.sin(a), z * 0.4)))
+    for i in range(seg):
+        j = (i + 1) % seg
+        bm.faces.new((cv, mid[i], mid[j]))
+        bm.faces.new((mid[i], out[i], out[j], mid[j]))
+    return L._new(name, bm, mat)
 
 
 # ================= Т-1 береговая батарея: орудие в бетонном дворике (целое и разбитое) =================
@@ -446,15 +584,22 @@ def _gun_site(broken):
     for k in range(5):   # снаряды в стойке у задней стенки
         o.append(L.cyl((-4.9, -1.0 + k * 0.28, 0.42), 0.11, 0.9, brass, 'shell', seg=8, axis='X'))
     o.append(L.box((-4.9, -0.45, 0.28), (1.1, 1.6, 0.08), iron, 'rack'))
-    # мешки с песком по гребню бруствера спереди
-    n = 15
-    for k in range(n):
-        a = -1.05 + 2.1 * k / (n - 1)
-        if broken and 0.05 < a < 0.85:
-            continue
-        for lay in range(2):
-            aa = a + (0.07 if lay else 0)
-            o.append(L.box((6.3 * math.cos(aa), 6.3 * math.sin(aa), 1.32 + lay * 0.26), (0.5, 0.85, 0.28), sand, 'sandbag', rz=aa))
+    # мешки с песком по гребню бруствера спереди: два ряда понизу, один поверх вперевязку (подушки, как у поста Нагорья)
+    items = []
+    for lay, rr in ((0, 6.0), (0, 6.42), (1, 6.21)):
+        step = 0.80 / rr
+        a = -1.1 + (step / 2 if lay else 0)
+        while a < 1.1:
+            if not (broken and 0.0 < a < 0.9):
+                z = (1.21 if rr < 6.1 else 1.27) + 0.085 + lay * 0.175
+                items.append(((rr * math.cos(a), rr * math.sin(a), z), a + math.pi / 2))
+            a += step
+    o.append(bags(items, sand, 'sandbag', seed=3))
+    if broken:   # мешки, сброшенные взрывом: лежат вразброс у пролома, внутри и снаружи
+        r2 = random.Random(21)
+        spill = [((r * math.cos(a), r * math.sin(a), 0.33 if r < 5.9 else 0.085), r2.uniform(0, 3))
+                 for a, r in [(r2.uniform(0.0, 0.9), r2.uniform(5.0, 8.4)) for _ in range(14)]]
+        o.append(bags(spill, sand, 'sandbag', seed=4))
     # тумба, погон, щит, ствол
     o += [L.cyl((0, 0, 0.55), 1.0, 0.6, iron, 'pedestal', seg=24),
           L.cyl((0, 0, 0.95), 2.0, 0.22, gun, 'turntable', seg=36)]
@@ -510,14 +655,62 @@ def _gun_site(broken):
             b = L.box((0, 0, 0), (s, s * 0.7, 0.05), gun if k % 2 else iron, 'shard')
             b.data.transform(Matrix.Translation(c) @ Matrix.Rotation(rng.uniform(0, 3), 4, 'Z') @ Matrix.Rotation(rng.uniform(-0.5, 0.5), 4, 'X'))
             o.append(b)
+        # воронка от попадания перед проломом, выжженная земля вокруг пролома и орудия
+        earth_m = L.flat('earth', EARTH, 1.0); scorch_m = L.flat('scorch', (0.20, 0.18, 0.16), 1.0)
+        crater_c = (8.6 * math.cos(0.42), 8.6 * math.sin(0.42))
+        o.append(mound(crater_c, 1.5, 2.4, 3.6, 0.55, earth_m, 'crater', seed=5))
+        o.append(scorch_patch((7.4 * math.cos(0.45), 7.4 * math.sin(0.45)), 5.2, scorch_m, 'scorch', seed=6))
+        # кусок бруствера вывален наружу: сегмент стенки опрокинут и сдвинут от пролома, края рваные, торчит арматура
+        chunk = arc_wall((0, 0, 0), 5.9, 6.8, 1.2, 1.3, 0.28, 0.58, conc, 'parapet_chunk', seg=56)
+        subdiv(chunk, 2); jag(chunk, 0.12, seed=11)
+        ca = 0.43
+        chunk.data.transform(Matrix.Translation((8.0 * math.cos(ca), 8.0 * math.sin(ca), 0.45)) @ Matrix.Rotation(ca, 4, 'Z')
+                             @ Matrix.Rotation(math.radians(68), 4, "Y") @ Matrix.Rotation(-ca, 4, 'Z')
+                             @ Matrix.Translation((-6.35 * math.cos(ca), -6.35 * math.sin(ca), -0.6)))
+        o.append(chunk)
+        for a_end in (0.15, 0.75):   # арматура из торцов пролома
+            for k in range(3):
+                r = 6.0 + 0.3 * k; zb = 0.4 + 0.3 * k
+                p0 = Vector((r * math.cos(a_end), r * math.sin(a_end), zb))
+                d = Vector((math.cos(a_end + (0.9 if a_end < 0.4 else -0.9) * math.pi / 2), math.sin(a_end + (0.9 if a_end < 0.4 else -0.9) * math.pi / 2),
+                            rng.uniform(-0.2, 0.5))).normalized()
+                ln = rng.uniform(0.5, 0.9)
+                rod = L.cyl((0, 0, 0), 0.025, ln, iron, 'rebar', seg=4)
+                rod.data.transform(Matrix.Translation(p0 + d * ln / 2) @ d.to_track_quat('Z', 'Y').to_matrix().to_4x4())
+                o.append(rod)
+        for k in range(16):   # глыбы бетона, выброшенные наружу
+            a = rng.uniform(0.0, 0.95); r = rng.uniform(6.9, 11.5); s = rng.uniform(0.3, 1.0)
+            b = L.box((r * math.cos(a), r * math.sin(a), s * 0.25), (s, s * rng.uniform(0.6, 0.9), s * 0.55), conc, 'rubble', rz=rng.uniform(0, 3))
+            subdiv(b, 1); jag(b, s * 0.15, seed=40 + k); o.append(b)
     chamfer([b for b in o if b.name.startswith(('parapet', 'pier', 'niche', 'locker', 'breech', 'cradle'))], 0.04)
     L.smooth([b for b in o if b.name.startswith(('barrel', 'muzzle', 'mantlet', 'recoil', 'pedestal', 'turntable', 'shell', 'floor'))], 50)
     L.smooth([b for b in o if b.name.startswith(('shield', 'sandbag'))], 30)
 
     def concrete(b, P, N):
-        c = weather(b, P, N, seed=11, grime_h=0.5, grime=0.35, streak=0.18)
-        lines = np.where((np.abs(N[:, 2]) < 0.5) & (np.mod(P[:, 2], 0.45) < 0.025), 0.9, 1.0)   # следы опалубки
-        return c * lines[:, None]
+        n = len(P)
+        c = weather(b, P, N, seed=11, stain=0.22, grain=0.1, grime_h=0.8, grime=0.55, streak=0.32)
+        lines = np.where((np.abs(N[:, 2]) < 0.5) & (np.mod(P[:, 2], 0.45) < 0.025), 0.88, 1.0)   # следы опалубки
+        c = c * lines[:, None]
+        chip = np.clip((vnoise(P, 3.0, 61) - 0.80) * 6, 0, 1)                # сколы: свежий излом чуть светлее, с тёмной кромкой
+        rim = np.clip((vnoise(P, 3.0, 61) - 0.74) * 6, 0, 1) - chip
+        c = mix(c, c * 1.12, chip); c = mix(c, c * 0.7, np.clip(rim, 0, 1))
+        moss = np.clip((fbm(P, 0.6, 3, 62) - 0.55) * 4, 0, 1) * np.clip(1 - P[:, 2] / 0.6, 0, 1)
+        return mix(c, col((0.30, 0.31, 0.22), n), 0.45 * moss)              # зелёный налёт у основания
+
+    def scorch_f(b, P, N):
+        n = len(P)
+        r = np.linalg.norm(P[:, :2] - np.array([7.4 * math.cos(0.45), 7.4 * math.sin(0.45)]), axis=1)
+        burnt = np.clip(1.25 - r / 4.2, 0, 1) * (0.55 + 0.6 * fbm(P, 0.8, 4, 63))
+        c = mix(col(EARTH, n) * 0.85, col((0.09, 0.085, 0.08), n), np.clip(burnt, 0, 1))
+        return c * (1 + 0.15 * (vnoise(P, 4.0, 64) - 0.5))[:, None]
+
+    def crater_f(b, P, N):
+        n = len(P)
+        c = f_earth(65)(b, P, N)
+        r = np.linalg.norm(P[:, :2] - np.array([8.6 * math.cos(0.42), 8.6 * math.sin(0.42)]), axis=1)
+        burnt = np.clip(1.4 - r / 1.9, 0, 1) * (0.6 + 0.5 * fbm(P, 1.2, 3, 66))
+        c = mix(c, col((0.10, 0.09, 0.085), n), np.clip(burnt, 0, 1))
+        return mix(c, col((0.36, 0.30, 0.22), n), 0.4 * np.clip((r - 2.0) / 1.2, 0, 1))   # свежий выброс грунта на валу
 
     def paint(b, P, N):
         c = weather(b, P, N, seed=12, stain=0.12, grime_h=1.6, grime=0.3, streak=0.15)
@@ -528,8 +721,8 @@ def _gun_site(broken):
         c = weather(b, P, N, seed=14, stain=0.2)
         return mix(c, col(EARTH, len(P)), 0.55 * np.clip((fbm(P, 0.35, 3, 15) - 0.45) * 3, 0, 1))   # нанесённый песок
 
-    table = {'conc': concrete, 'gun': paint, 'floor': floor_f,
-             'sand': lambda b, P, N: weather(b, P, N, seed=16, stain=0.22, grain=0.12, grime_h=1.0, grime=0.25),
+    table = {'conc': concrete, 'gun': paint, 'floor': floor_f, 'scorch': scorch_f, 'earth': crater_f,
+             'sand': f_burlap(16),
              'iron': lambda b, P, N: weather(b, P, N, seed=17, grime=0.2), 'brass': lambda b, P, N: weather(b, P, N, seed=18)}
     sh = by_mat(table)
     if broken:
@@ -538,7 +731,7 @@ def _gun_site(broken):
         def sh(base, P, N, M, names):
             c = base_sh(base, P, N, M, names)
             c = mix(c, col(RUST, len(P)), 0.35 * np.clip(1 - np.linalg.norm(P - np.array([0, 0, 2.0]), axis=1) / 4.5, 0, 1))   # окалина от огня
-            return soot(c, P, [((0.3, 0.2, 2.2), 3.4), ((0.8, 0.9, 0.3), 3.2), ((4.6, 2.5, 0.8), 2.0), ((-3.0, -2.6, 0.6), 1.6)], seed=19)
+            return soot(c, P, [((0.3, 0.2, 2.2), 3.4), ((0.8, 0.9, 0.3), 3.2), ((4.6, 2.5, 0.8), 2.0), ((-3.0, -2.6, 0.6), 1.6), ((6.0, 2.9, 0.9), 2.4)], seed=19)
     name = 'a01_battery_gun' + ('_broken' if broken else '')
     return join_bake(o, sh, name, size=1024), name
 
@@ -554,12 +747,12 @@ GUN_REF = 13.95   # длина целого орудия по X (брустве�
 
 def a01_battery_gun(scenery, src=None):
     ob, name = _gun_site(False)
-    finish_ref(ob, scenery(name), GUN_REF, target=6000, maxtex=1024)
+    finish_ref(ob, scenery(name), GUN_REF, target=9000, maxtex=1024)
 
 
 def a01_battery_gun_broken(scenery, src=None):
     ob, name = _gun_site(True)
-    finish_ref(ob, scenery(name), GUN_REF, target=6000, maxtex=1024)
+    finish_ref(ob, scenery(name), GUN_REF, target=9000, maxtex=1024)
 
 
 # ================= общие фактуры построек =================
@@ -577,8 +770,9 @@ def f_earth(seed=0):
         c = weather(b, P, N, seed=seed, stain=0.25, grain=0.12, streak=0.0, grime=0.0)
         g = np.clip((fbm(P, 0.25, 4, seed + 1) - 0.42) * 3.0, 0, 1) * np.clip(N[:, 2], 0, 1)
         c = mix(c, col(DRYGRASS, n) * (0.85 + 0.3 * vnoise(P, 3.0, seed + 2))[:, None], 0.75 * g)
-        stones = vnoise(P, 2.2, seed + 3) > 0.83
-        return np.where(stones[:, None], col(LIME, n) * 0.85, c)
+        # камешки — не белые крапины, а чуть темнее земли, с мягким краем
+        st = np.clip((vnoise(P, 2.2, seed + 3) - 0.80) * 8, 0, 1)
+        return mix(c, c * 0.78, st)
     return f
 
 
@@ -609,62 +803,145 @@ def f_paint(seed=0):
     return f
 
 
+def f_roof_flat(seed=0):
+    """Плоская крыша: серая стяжка, заплаты битума, ржавые потёки, нанесённая пыль и грязь у парапета."""
+    def f(b, P, N):
+        n = len(P)
+        c = weather(b, P, N, seed=seed, stain=0.25, grain=0.1, streak=0.0, grime=0.0, dust=0.0)
+        tar = np.clip((fbm(P, 0.45, 4, seed + 1) - 0.60) * 6, 0, 1)
+        c = mix(c, col((0.17, 0.16, 0.15), n), 0.85 * tar)
+        dirt = np.clip((fbm(P, 0.8, 3, seed + 2) - 0.45) * 3, 0, 1)
+        return mix(c, col(DIRT, n), 0.45 * dirt)
+    return f
+
+
 def f_plain(seed=0, **kw):
     return lambda b, P, N: weather(b, P, N, seed=seed, **kw)
 
 
 # ================= Т-1 дот на берегу (25 м, кодом): чёткая бетонная форма вместо скана =================
 def a02_bunker_coast(scenery, src=None):
+    """Дот 25 м кодом. Каземат врыт в обваловку: земля с травой обнимает его с боков, сзади и сверху, наружу
+    смотрит только бетонный лоб с козырьком. Амбразуры — настоящие проёмы (вырезаны) глубиной ~1 м с тёмной
+    глубиной. Вход справа — по траншее со ступенями, стенки траншеи из мешков. Бетон — тёмный выветренный,
+    камуфляжные пятна, потёки, грязь снизу."""
     L.reset()
-    conc = L.flat('conc', CONC, 0.95); roof_m = L.flat('roofc', CONC, 0.95); earth = L.flat('earth', EARTH, 1.0)
-    void = L.flat('void', (0.06, 0.06, 0.06), 1.0); iron = L.flat('iron', IRON, 0.9); sand = L.flat('sand', SAND_C, 1.0)
+    conc = L.flat('conc', CONC, 0.95); earth = L.flat('earth', EARTH, 1.0); trench = L.flat('trench', DIRT, 1.0)
+    void = L.flat('void', (0.03, 0.03, 0.03), 1.0); iron = L.flat('iron', IRON, 0.9); sand = L.flat('sand', SAND_C, 1.0)
     o = []
-    # насыпь с боков и сзади: каземат выступает лицом к морю (−Y)
-    o.append(L.hull([(-12.5, -3.6, 0), (12.5, -3.6, 0), (-12.5, 8.6, 0), (12.5, 8.6, 0),
-                     (-7.6, -2.6, 3.0), (7.6, -2.6, 3.0), (-7.6, 3.4, 3.15), (7.6, 3.4, 3.15)], earth, 'berm'))
-    # каземат, лобовой козырёк над амбразурой, плита крыши
-    o += [L.box((0, -1.0, 1.7), (14.0, 9.0, 3.4), conc, 'casemate'),
-          L.box((0, -1.0, 3.7), (14.8, 9.8, 0.6), roof_m, 'roof'),
-          L.box((0, -5.75, 2.75), (14.8, 1.5, 0.5), conc, 'visor'),
-          L.box((0, -5.62, 0.08), (16.0, 2.2, 0.16), conc, 'apron')]
-    # амбразуры: широкая по центру и две боковые, ниши тёмные, с откосами
-    for x, w in ((0.0, 6.0), (-5.0, 1.6), (5.0, 1.6)):
-        o.append(L.box((x, -5.46, 1.95), (w, 0.12, 0.62), void, 'embrasure'))
-        o.append(L.box((x, -5.62, 1.6), (w + 0.6, 0.35, 0.12), conc, 'sill'))
-    # вход справа: стальная дверь, Г-образная стенка из мешков перед ней
-    o.append(L.box((6.2, -5.47, 1.05), (1.1, 0.1, 2.1), iron, 'door'))
-    for k in range(4):
-        for lay in range(3):
-            o.append(L.box((5.0 + k * 0.62 + (0.3 if lay % 2 else 0), -7.3, 0.17 + lay * 0.3), (0.6, 0.42, 0.3), sand, 'sandbag'))
-    for k in range(3):
-        for lay in range(3):
-            o.append(L.box((7.75, -6.9 + k * 0.62 + (0.3 if lay % 2 else 0), 0.17 + lay * 0.3), (0.42, 0.6, 0.3), sand, 'sandbag'))
-    # на крыше: наблюдательный колпак, перископ, вентиляция, антенна
-    cup = L.sphere((3.4, 0.4, 4.0), 1.0, iron, 'cupola', seg=16, scale=(1, 1, 0.62))
-    o += [cup, L.cyl((3.4, 0.4, 4.05), 1.08, 0.12, conc, 'cupola_ring', seg=20),
-          L.box((3.4, -0.55, 4.25), (0.9, 0.1, 0.12), void, 'cupola_slit'),
-          L.cyl((-2.5, 1.8, 4.4), 0.14, 0.8, iron, 'periscope', seg=8),
-          L.cyl((-5.0, 2.2, 4.25), 0.25, 0.5, iron, 'vent', seg=10), L.cyl((-5.0, 2.2, 4.55), 0.36, 0.1, iron, 'vent_cap', seg=10),
-          L.cyl((0.5, 2.6, 4.25), 0.25, 0.5, iron, 'vent', seg=10), L.cyl((0.5, 2.6, 4.55), 0.36, 0.1, iron, 'vent_cap', seg=10),
-          L.cyl((-6.0, 2.6, 6.5), 0.06, 5.0, iron, 'antenna', seg=6), L.box((-6.0, 2.6, 4.12), (0.5, 0.5, 0.25), conc, 'antenna_base')]
+    FRONT = -5.5                      # лицо каземата (к морю −Y)
+    # каземат и плита крыши, козырёк над амбразурами, отмостка
+    # под насыпью ничего не прячем: скрытые плиты в 0,7 м под землёй на дальности 2–4 км «пробивают» её (z-fighting)
+    cas = L.box((0, FRONT + 1.5, 1.7), (14.0, 3.0, 3.4), conc, 'casemate')
+    cutters = []
+    EMB = ((0.0, 5.6), (-4.9, 1.6), (4.0, 1.6))
+    for x, w in EMB:   # проём с откосами: снаружи шире, вглубь сужается
+        cutters.append(L.hull([(x - w / 2 - 0.35, FRONT - 0.2, 1.55), (x + w / 2 + 0.35, FRONT - 0.2, 1.55),
+                               (x - w / 2 - 0.35, FRONT - 0.2, 2.45), (x + w / 2 + 0.35, FRONT - 0.2, 2.45),
+                               (x - w / 2, FRONT + 1.0, 1.7), (x + w / 2, FRONT + 1.0, 1.7),
+                               (x - w / 2, FRONT + 1.0, 2.25), (x + w / 2, FRONT + 1.0, 2.25)], None, 'cutter'))
+    cutters.append(L.box((6.0, FRONT + 0.5, 1.15), (1.3, 1.4, 2.3), None, 'cutter'))   # ниша входа
+    cut(cas, cutters)
+    o.append(cas)
+    for x, w in EMB:   # тёмная глубина амбразуры (задняя стенка и ствол пулемёта в глубине)
+        o.append(L.box((x, FRONT + 1.0, 1.98), (w + 0.1, 0.06, 0.7), void, 'embrasure_back'))
+    o.append(L.box((6.0, FRONT + 1.18, 1.1), (1.1, 0.08, 2.1), iron, 'door'))
+    o += [L.box((0, FRONT + 0.175, 3.7), (14.8, 1.15, 0.6), conc, 'roof'),   # видимая полоса плиты над лбом
+          L.box((0, FRONT - 0.3, 2.78), (14.8, 1.3, 0.42), conc, 'visor'),
+          L.box((0, FRONT - 0.9, 0.06), (15.0, 1.8, 0.12), conc, 'apron')]
+    # обваловка: тело насыпи вокруг каземата; спереди уходит в землю по сторонам от лба
+    rng = random.Random(23)
+    # высоты по сетке: плато над плитой (+0,7 м земли), к краям — плавный откос до нуля за ~6 м, бугры;
+    # спереди насыпь обрезана по лбу каземата (лоб открыт), у боков от лба сходит в ноль за 1,2 м
+    top, fall = 4.7, 5.1
+    xs = np.linspace(-12.6, 12.6, 39); ys = np.concatenate([np.linspace(-7.0, FRONT, 5)[:-1], [FRONT, FRONT + 0.7], np.linspace(FRONT + 1.4, 9.1, 22)])
+    bm = bmesh.new(); grid = []
+    for y in ys:
+        row = []
+        for x in xs:
+            dx = max(0.0, abs(x) - 7.4); dy = max(0.0, y - 3.9, (FRONT + 0.7) - y if abs(x) > 7.4 else 0.0)
+            d = math.hypot(dx, dy)
+            t = min(1.0, d / fall); h = top * (1 - t * t * (3 - 2 * t)) + 0.35 * max(0.0, 1 - (x / 9.0) ** 2 - ((y + 0.5) / 7.0) ** 2)   # купол, не плато
+            if y < FRONT + 0.7:
+                h = 0.0 if abs(x) < 7.4 else h * max(0.0, 1 - (FRONT + 0.7 - y) / 1.9)
+            nz = vnoise(np.array([[x, y, 0.0]]), 0.32, 24)[0] - 0.5
+            h = max(0.0, h + nz * 0.45 * min(1.0, h / 1.2))
+            row.append(bm.verts.new((x + rng.uniform(-0.12, 0.12), y + rng.uniform(-0.12, 0.12), h if h > 0.02 else -0.05)))
+        grid.append(row)
+    for j in range(len(ys) - 1):
+        for i in range(len(xs) - 1):
+            q = (grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i])
+            if all(v.co.z < 0 for v in q):
+                continue
+            bm.faces.new(q)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    berm = L._new('berm', bm, earth)
+    o.append(berm)
+    # траншея ко входу: от ниши двери вправо вдоль лба, стенки из мешков, на выходе ступени
+    tz = 0.03
+    o.append(L.box((8.4, FRONT - 1.05, tz / 2), (7.6, 1.5, tz), trench, 'trench_floor'))
+    items = bag_row((4.6, FRONT - 1.95), (11.0, FRONT - 1.95), 0.0, layers=3)       # бруствер траншеи со стороны моря
+    items += bag_row((7.4, FRONT - 0.25), (11.0, FRONT - 0.25), 0.0, layers=2)      # подпорная стенка у подошвы насыпи
+    o.append(bags(items, sand, 'sandbag', seed=7))
+    for k in range(4):   # ступени выхода из траншеи на восток
+        o.append(L.box((10.75 + k * 0.45, FRONT - 1.05, 0.08 + k * 0.09), (0.45, 1.4, 0.16 + k * 0.18), conc, 'step'))
+    # на насыпи: наблюдательный колпак, перископ, вентиляция, антенна
+    top = 5.0                          # верх обваловки (4,7 м + купол)
+    o += [L.sphere((3.4, 0.6, top - 0.1), 1.0, iron, 'cupola', seg=16, scale=(1, 1, 0.62)),
+          L.cyl((3.4, 0.6, top - 0.05), 1.1, 0.25, conc, 'cupola_ring', seg=20),
+          L.box((3.4, -0.35, top + 0.2), (0.9, 0.12, 0.12), void, 'cupola_slit'),
+          L.cyl((-2.5, 1.8, top + 0.3), 0.14, 1.2, iron, 'periscope', seg=8),
+          L.cyl((-5.0, 2.2, top + 0.15), 0.25, 0.8, iron, 'vent', seg=10), L.cyl((-5.0, 2.2, top + 0.6), 0.36, 0.1, iron, 'vent_cap', seg=10),
+          L.cyl((0.5, 3.0, top + 0.15), 0.25, 0.8, iron, 'vent', seg=10), L.cyl((0.5, 3.0, top + 0.6), 0.36, 0.1, iron, 'vent_cap', seg=10),
+          L.cyl((-6.0, 2.6, top + 2.4), 0.06, 5.0, iron, 'antenna', seg=6), L.box((-6.0, 2.6, top), (0.6, 0.6, 0.35), conc, 'antenna_base')]
     # колья с проволокой перед дотом
     for k in range(7):
         x = -9.0 + k * 3.0
-        o.append(L.box((x, -9.2 + (k % 2) * 0.4, 0.6), (0.08, 0.08, 1.2), WOOD_post(), 'post'))
-    o.append(L.box((0, -9.0, 0.95), (18.4, 0.03, 0.03), iron, 'wire'))
-    o.append(L.box((0, -9.0, 0.45), (18.4, 0.03, 0.03), iron, 'wire'))
-    chamfer([b for b in o if b.name.startswith(('casemate', 'roof', 'visor', 'sill', 'apron', 'antenna_base'))], 0.08)
-    L.smooth([b for b in o if b.name.startswith(('cupola', 'vent', 'periscope', 'sandbag'))], 40)
-    L.smooth([b for b in o if b.name.startswith('berm')], 30)
+        o.append(L.box((x, -9.6 + (k % 2) * 0.4, 0.6), (0.08, 0.08, 1.2), WOOD_post(), 'post'))
+    o.append(L.box((0, -9.4, 0.95), (18.4, 0.03, 0.03), iron, 'wire'))
+    o.append(L.box((0, -9.4, 0.45), (18.4, 0.03, 0.03), iron, 'wire'))
+    chamfer([b for b in o if b.name.startswith(('roof', 'visor', 'apron', 'antenna_base', 'step'))], 0.08)
+    L.smooth([cas], 40)
+    L.smooth([b for b in o if b.name.startswith(('cupola', 'vent', 'periscope'))], 40)
+    L.smooth([berm], 75)
 
-    def roof_f(b, P, N):
-        c = f_concrete(21)(b, P, N)
-        return mix(c, col(EARTH, len(P)), 0.6 * np.clip((fbm(P, 0.3, 4, 22) - 0.5) * 3, 0, 1))   # наметённый песок на крыше
+    emb_boxes = [(x - w / 2 - 0.4, x + w / 2 + 0.4) for x, w in EMB]
 
-    sh = by_mat({'conc': f_concrete(20), 'roofc': roof_f, 'earth': f_earth(23), 'void': f_plain(24, grime=0),
-                 'iron': f_paint(25), 'sand': f_plain(26, stain=0.22, grain=0.12, grime_h=0.9, grime=0.3), 'wood': f_wood(27)})
+    def conc_f(b, P, N):
+        n = len(P)
+        c = f_concrete(20, grime_h=1.2)(b, P, N)
+        # камуфляж: крупные пятна охры и оливы, края размыты, полустёртые
+        m1 = np.clip((fbm(P, 0.16, 3, 25) - 0.52) * 7, 0, 1)
+        m2 = np.clip((fbm(P, 0.16, 3, 26) - 0.55) * 7, 0, 1) * (1 - m1)
+        wear = 0.55 + 0.35 * fbm(P, 1.2, 2, 27)
+        c = mix(c, col((0.40, 0.36, 0.27), n), 0.75 * m1 * wear)
+        c = mix(c, col((0.30, 0.31, 0.25), n), 0.75 * m2 * wear)
+        # наметённый песок и земля на плите и козырьке, глубина амбразур и ниши темнее
+        c = mix(c, col(EARTH, n), 0.5 * np.clip(N[:, 2], 0, 1) * np.clip((fbm(P, 0.4, 3, 28) - 0.4) * 3, 0, 1))
+        inside = np.zeros(n, dtype=bool)
+        for x0, x1 in emb_boxes:
+            inside |= (P[:, 0] > x0) & (P[:, 0] < x1) & (P[:, 1] > FRONT - 0.05) & (P[:, 2] > 1.5) & (P[:, 2] < 2.5)
+        inside |= (P[:, 0] > 5.3) & (P[:, 0] < 6.7) & (P[:, 1] > FRONT - 0.05) & (P[:, 2] < 2.35)
+        depth = np.clip((P[:, 1] - FRONT + 0.05) / 1.0, 0, 1)
+        c = np.where(inside[:, None], c * (0.55 - 0.4 * depth)[:, None], c)
+        return c
+
+    def berm_f(b, P, N):
+        n = len(P)
+        c = weather(b, P, N, seed=30, stain=0.25, grain=0.14, streak=0.0, grime=0.0, dust=0.0)
+        grass = np.clip((fbm(P, 0.22, 4, 31) - 0.12) * 2.6, 0, 1) * np.clip(N[:, 2] * 1.3, 0, 1)
+        tuft = 0.8 + 0.4 * vnoise(P, 3.5, 32)
+        c = mix(c, col((0.31, 0.41, 0.18), n) * tuft[:, None], 0.95 * grass)        # трава Архипелага (как у земли рельефа; насыщенность с запасом на natural())
+        c = mix(c, col((0.39, 0.45, 0.22), n) * tuft[:, None], 0.5 * grass * np.clip((fbm(P, 0.5, 3, 33) - 0.5) * 3, 0, 1))
+        steep = np.clip((0.75 - N[:, 2]) * 3, 0, 1)                                    # осыпи на крутых местах — голая земля
+        c = mix(c, col(DIRT, n) * (0.9 + 0.2 * vnoise(P, 2.0, 34))[:, None], 0.6 * steep)
+        st = np.clip((vnoise(P, 2.4, 35) - 0.82) * 8, 0, 1)
+        return mix(c, c * 0.75, st)
+
+    sh = by_mat({'conc': conc_f, 'earth': berm_f, 'trench': f_earth(29), 'void': lambda b, P, N: b,
+                 'iron': f_paint(25), 'sand': f_burlap(26), 'wood': f_wood(27)})
     ob = join_bake(o, sh, 'a02_bunker_coast', size=1024)
-    L.finish([ob], scenery('a02_bunker_coast'), target=6000, maxtex=1024, fit='xy')
+    L.finish([ob], scenery('a02_bunker_coast'), target=8000, maxtex=1024, fit='xy')
 
 
 def WOOD_post():
@@ -683,7 +960,7 @@ def a07_tetrapod(scenery, src):
     def sh(base, P, N, M, names):
         n = len(P)
         l = np.clip(lum_norm(base), 0.6, 1.4) ** 0.8
-        c = col((0.56, 0.54, 0.49), n) * l[:, None]
+        c = col((0.47, 0.45, 0.41), n) * l[:, None]
         c = weather(c, P, N, seed=31, stain=0.22, grain=0.1, streak=0.12, grime=0.0)
         pits = vnoise(P, 6.0, 32) > 0.8                                   # раковины в бетоне
         c = np.where(pits[:, None], c * 0.75, c)
@@ -693,7 +970,7 @@ def a07_tetrapod(scenery, src):
         alg = np.clip((1.1 - z) / 0.6, 0, 1) * np.clip((fbm(P, 1.3, 3, 33) - 0.35) * 2.5, 0, 1)
         c = mix(c, col((0.24, 0.27, 0.17), n), 0.7 * alg)                 # водоросли и налёт у воды
         salt = np.clip((z - 1.5) / 0.3, 0, 1) * np.clip(1 - (z - 1.8) / 0.4, 0, 1) * vnoise(P, 4, 34)
-        return mix(c, col((0.74, 0.72, 0.66), n), 0.35 * salt)            # соляная кромка над водой
+        return mix(c, col((0.60, 0.58, 0.53), n), 0.35 * salt)            # соляная кромка над водой
     bake(ob, sh, size=512, name='a07_tetrapod')
     L.finish([ob], scenery('a07_tetrapod'), target=1000, maxtex=512, fit='xy')
 
@@ -704,10 +981,10 @@ def house_parts(o, cx, cy, w, d, floors, roof, wall_rgb, seed, rz=0.0, shutters=
     """Дом w×d, этажей floors, крыша 'flat' | 'gable' | 'hip'. Детали — с материалами по типу (стены, черепица, ставни...)."""
     rng = random.Random(seed)
     wall = L.flat('plaster_%d' % seed, wall_rgb, 0.95)
-    trim = L.flat('plaster_trim', (0.80, 0.78, 0.72), 0.95)
-    plinth = L.flat('stone_plinth', (0.62, 0.58, 0.50), 0.95)
+    trim = L.flat('plaster_trim', (0.60, 0.57, 0.50), 0.95)
+    plinth = L.flat('stone_plinth', (0.47, 0.44, 0.38), 0.95)
     tile = L.flat('tile_%d' % (seed % 2), TILE_C if seed % 2 == 0 else TILE_C2, 0.9)
-    glass = L.flat('glass', (0.10, 0.11, 0.12), 0.9)
+    glass = L.flat('glass', (0.05, 0.05, 0.06), 0.9)
     shut = L.flat('shutter_%d' % seed, shutters, 0.95)
     wood = L.flat('wood', WOOD_DARK, 1.0)
     fh = 3.0
@@ -759,10 +1036,12 @@ def house_parts(o, cx, cy, w, d, floors, roof, wall_rgb, seed, rz=0.0, shutters=
                                     parts.append(L.box((x + nx * 0.05, y + sg * ww / 4, wz), (0.05, ww / 2 - 0.02, wh), shut, 'shutter'))
     ov = 0.45
     if roof == 'flat':
-        conc_r = L.flat('roofflat', (0.70, 0.67, 0.60), 0.95)
-        parts.append(L.box((cx, cy, h + 0.05), (w - 0.2, d - 0.2, 0.1), conc_r, 'roof'))
+        conc_r = L.flat('roofflat', (0.45, 0.42, 0.37), 0.95)
+        # стены ниже на 0,3 м, крыша — толстая плита: нет двух близких параллельных граней (мерцание на дальности)
+        parts[0].data.transform(Matrix.Translation((cx, cy, 0)) @ Matrix.Scale((h - 0.3) / h, 4, Vector((0, 0, 1))) @ Matrix.Translation((-cx, -cy, 0)))
+        parts.append(L.box((cx, cy, h - 0.1), (w - 0.2, d - 0.2, 0.4), conc_r, 'roof'))
         for sx, sy, lx, ly in ((0, 1, w + 0.1, 0.25), (0, -1, w + 0.1, 0.25), (1, 0, 0.25, d + 0.1), (-1, 0, 0.25, d + 0.1)):
-            parts.append(L.box((cx + sx * (w / 2 - 0.075), cy + sy * (d / 2 - 0.075), h + 0.4), (lx, ly, 0.8), wall, 'parapet'))
+            parts.append(L.box((cx + sx * (w / 2 - 0.075), cy + sy * (d / 2 - 0.075), h + 0.25), (lx, ly, 1.1), wall, 'parapet'))
             parts.append(L.box((cx + sx * (w / 2 - 0.075), cy + sy * (d / 2 - 0.075), h + 0.84), (lx + 0.06, ly + 0.08, 0.08), trim, 'coping'))
         if flat_extras:
             sx_, sy_ = cx - w / 2 + 1.6, cy + d / 2 - 1.6
@@ -832,7 +1111,7 @@ def house_parts(o, cx, cy, w, d, floors, roof, wall_rgb, seed, rz=0.0, shutters=
 def town_shade(seed=0):
     return by_mat({'plaster': f_plaster(seed), 'tile': f_tiles(seed + 1), 'stone': f_stone(seed + 2, row=0.3, blen=0.5),
                    'shutter': f_wood(seed + 3, along='z', width=0.12), 'wood': f_wood(seed + 4), 'glass': f_plain(seed + 5, grime=0.0),
-                   'roofflat': f_plain(seed + 6, stain=0.2, streak=0.0, grime=0.0), 'iron': f_paint(seed + 7),
+                   'roofflat': f_roof_flat(seed + 6), 'iron': f_paint(seed + 7),
                    'vine': f_plain(seed + 8, stain=0.3, grain=0.2, streak=0.0, grime=0.0), 'yard': f_earth(seed + 9),
                    'drystone': f_stone(seed + 10, row=0.32, blen=0.55), 'soil': f_earth(seed + 11), 'tree': f_plain(seed + 12, stain=0.3, grain=0.2, grime=0.0),
                    'conc': f_concrete(seed + 13)})
@@ -865,7 +1144,7 @@ def _house(scenery, name, w, d, floors, roof, seed, wing=None, extra=()):
 
 
 def _balcony(o, w, d, h, seed):
-    trim = L.flat('plaster_trim', (0.80, 0.78, 0.72), 0.95); iron = L.flat('iron', (0.20, 0.20, 0.20), 0.9)
+    trim = L.flat('plaster_trim', (0.60, 0.57, 0.50), 0.95); iron = L.flat('iron', (0.20, 0.20, 0.20), 0.9)
     o.append(L.box((0, -d / 2 - 0.65, 3.0), (w * 0.5, 1.3, 0.15), trim, 'balcony'))
     o.append(L.box((0, -d / 2 - 1.28, 3.95), (w * 0.5, 0.05, 0.05), iron, 'rail'))
     for k in range(int(w * 0.5 / 0.25) + 1):
@@ -930,8 +1209,8 @@ def a04_lighthouse(scenery, src):
     o.append(L.sphere((0, 0, tower_top + 1.05), 0.28, red_m, 'vent_ball', seg=10))
     L.smooth([b for b in o if b.name in ('dome', 'vent_ball')], 60)
     # домик смотрителя и двор с оградой
-    house_parts(o, 10.5, 0.0, 8.0, 6.0, 1, 'gable', (0.78, 0.72, 0.60), 41, shutters=(0.32, 0.40, 0.44), door_side='n')
-    yard = L.flat('yard', (0.62, 0.56, 0.44), 1.0)
+    house_parts(o, 10.5, 0.0, 8.0, 6.0, 1, 'gable', (0.57, 0.50, 0.39), 41, shutters=(0.32, 0.40, 0.44), door_side='n')
+    yard = L.flat('yard', (0.46, 0.41, 0.32), 1.0)
     o.append(L.box((8.0, 0, 0.04), (22.0, 14.0, 0.08), yard, 'yard'))
     for y in (6.8, -6.8):
         yard_wall(o, (-3.0, y), (19.0, y), 1.1, 41)
@@ -949,9 +1228,13 @@ def a04_lighthouse(scenery, src):
                 continue
             b, p, nn = base[sel], P[sel], N[sel]
             if nm.startswith(stone_names):   # кладка исходника: свой серо-бежевый камень с потёками, красный верх фонаря
-                l = np.clip(lum_norm(b), 0.55, 1.5) ** 0.85
-                c = col((0.70, 0.67, 0.60), len(p)) * l[:, None]
-                c = weather(c, p, nn, seed=44, stain=0.14, streak=0.22, grime_h=2.5, grime=0.45)
+                # ствол — серо-охристая кладка из тёсаного камня (не побелка): камни разного тона, тёмные швы,
+                # ржавые и сырые потёки сверху вниз, грязь и мох у основания
+                l = np.clip(lum_norm(b), 0.7, 1.3) ** 0.6
+                c = col((0.54, 0.49, 0.40), len(p)) * l[:, None]
+                c = masonry(c, p, nn, row=0.55, blen=0.95, mortar=0.04, seed=44, var=0.22)
+                c = mix(c, col((0.46, 0.44, 0.40), len(p)), 0.5 * np.clip((fbm(p, 0.3, 3, 49) - 0.45) * 3, 0, 1))   # серые выветренные участки
+                c = weather(c, p, nn, seed=44, stain=0.16, streak=0.30, grime_h=3.0, grime=0.5)
                 top = p[:, 2] > glass_top - 0.1
                 c = np.where(top[:, None], weather(col((0.60, 0.20, 0.16), len(p)), p, nn, seed=45, streak=0.1, grime=0), c)
                 out[sel] = c
@@ -969,7 +1252,7 @@ def a04_lighthouse(scenery, src):
 
 
 # ================= Т-8 руины крепости (20 м): три башни скана и стены кладкой с обломанным верхом =================
-RUIN = (0.70, 0.66, 0.56)
+RUIN = (0.56, 0.52, 0.44)
 
 
 def ruin_wall(a, b, h, th, mat, seed, broken_ends=(False, False), step=0.7):
@@ -1322,6 +1605,20 @@ def _scan(scenery, src, name, path, shade, target, place=None, drop=(), keep=Non
     L.finish([ob], scenery(name), target=target, maxtex=size, fit='xy')
 
 
+def rusty_roof(c, base, P, N, seed=0):
+    """Кровля складов (грани, смотрящие вверх): старое железо — тёмно-серое с бурой ржавчиной полосами по скату и пятнами,
+    рисунок волны исходника сохраняется через его яркость."""
+    n = len(P)
+    roof = np.clip((N[:, 2] - 0.3) / 0.25, 0, 1)
+    l = np.clip(lum_norm(base), 0.6, 1.4) ** 0.7
+    iron = col((0.30, 0.29, 0.27), n) * l[:, None]
+    r = np.clip((fbm(P * np.array([1.0, 1.0, 0.3]), 0.5, 4, seed) - 0.42) * 2.5, 0, 1)
+    r = np.maximum(r, np.clip((vnoise(P * np.array([0.15, 1.0, 1.0]), 1.6, seed + 1) - 0.55) * 3, 0, 1) * 0.7)   # потёки вдоль ската
+    roofc = mix(iron, col(RUST, n) * l[:, None], 0.8 * r)
+    roofc = roofc * (1 + 0.12 * (fbm(P, 2.5, 2, seed + 2) - 0.5))[:, None]
+    return mix(c, roofc, roof)
+
+
 def a08_warehouse_a(scenery, src):
     """Ряд складов 30 м: кирпич → охристая штукатурка, крыша — выгоревший серый шифер; потёки, грязь снизу; бочки и ящики."""
     def pre(o):
@@ -1350,17 +1647,19 @@ def a08_warehouse_a(scenery, src):
                 l = b @ np.array([0.3, 0.59, 0.11])
                 lr = l / max(1e-3, float(np.median(l[red])) if red.any() else 0.5)
                 lg = l / max(1e-3, float(np.median(l[~red])) if (~red).any() else 0.5)
-                c = np.where(red[:, None], col((0.78, 0.66, 0.50), len(p)) * np.clip(lr, 0.6, 1.4)[:, None] ** 0.6,
-                             col((0.52, 0.51, 0.48), len(p)) * np.clip(lg, 0.5, 1.6)[:, None] ** 0.8)
-                out[sel] = weather(c, p, nn, seed=103, stain=0.15, streak=0.2, grime_h=1.0, grime=0.4)
+                c = np.where(red[:, None], col((0.60, 0.49, 0.36), len(p)) * np.clip(lr, 0.6, 1.4)[:, None] ** 0.6,
+                             col((0.44, 0.43, 0.40), len(p)) * np.clip(lg, 0.5, 1.6)[:, None] ** 0.8)
+                c = weather(c, p, nn, seed=103, stain=0.15, streak=0.2, grime_h=1.0, grime=0.4)
+                out[sel] = rusty_roof(c, b, p, nn, seed=104)
         return out
     _scan(scenery, src, 'a08_warehouse_a', 'T-6a_warehouses.glb', sh, 3500, place={'length': 30}, pre=pre)
 
 
 def a09_warehouse_b(scenery, src):
     def sh(base, P, N, M, names):
-        c = retone(base, (0.66, 0.62, 0.54), 0.9)
-        return weather(c, P, N, seed=111, stain=0.15, streak=0.22, grime_h=1.2, grime=0.4)
+        c = retone(base, (0.50, 0.47, 0.41), 0.9)
+        c = weather(c, P, N, seed=111, stain=0.15, streak=0.22, grime_h=1.2, grime=0.4)
+        return rusty_roof(c, base, P, N, seed=112)
     _scan(scenery, src, 'a09_warehouse_b', 'T-6b_warehouse.glb', sh, 3500, place={'length': 24}, drop=('Object_3',))
 
 
@@ -1395,9 +1694,9 @@ def a20_bell_tower(scenery, src):
         return o + [s]
 
     def sh(base, P, N, M, names):
-        c = col((0.70, 0.66, 0.56), len(P)) * (np.clip(lum_norm(base), 0.5, 1.4) ** 0.85)[:, None]   # тон — по яркости: исходник голубовато-серый
+        c = col((0.56, 0.52, 0.44), len(P)) * (np.clip(lum_norm(base), 0.5, 1.4) ** 0.85)[:, None]   # тон — по яркости: исходник голубовато-серый
         fin = np.array([nm.startswith('finial') for nm in names])[M]
-        c = np.where(fin[:, None], col((0.66, 0.62, 0.52), len(P)), c)
+        c = np.where(fin[:, None], col((0.52, 0.48, 0.41), len(P)), c)
         return weather(c, P, N, seed=131, stain=0.16, streak=0.25, grime_h=1.5, grime=0.4)
     _scan(scenery, src, 'a20_bell_tower', 'P-3_bell_tower.glb', sh, 5000, place={'length': 4.3}, pre=pre)
 
@@ -1421,7 +1720,7 @@ def a24_boat_a(scenery, src):
 
     def sh(base, P, N, M, names):
         c = _hue_rules(base, [(lambda r, g, b: (r > g * 1.6) & (r > b * 1.6) & (r > 0.25), (0.22, 0.42, 0.42)),
-                              (lambda r, g, b: (r > 0.75) & (g > 0.75) & (b > 0.75), (0.74, 0.72, 0.66))])
+                              (lambda r, g, b: (r > 0.75) & (g > 0.75) & (b > 0.75), (0.62, 0.60, 0.55))])
         c = weather(c, P, N, seed=141, stain=0.14, streak=0.25, grime=0.0, dust=0.0)
         return waterline(c, P, 0.35, 0.15)
     _scan(scenery, src, 'a24_boat_a', 'M-2a_fishing_boat.glb', sh, 4000, place={'bow': '+x', 'length': 10}, pre=pre)
@@ -1432,7 +1731,7 @@ def a25_boat_b(scenery, src):
         L.xform(o, Matrix.Translation((0, 0, -0.2)))
         wood = L.flat('mast', WOOD_C, 1.0)
         return o + [L.cyl((0.9, 0, 1.7), 0.06, 3.0, wood, 'mast', seg=8),
-                    L.cyl((0.1, 0, 0.7), 0.12, 1.8, L.flat('sail', (0.78, 0.73, 0.62), 1.0), 'sail_furled', seg=8, axis='X')]
+                    L.cyl((0.1, 0, 0.7), 0.12, 1.8, L.flat('sail', (0.62, 0.58, 0.49), 1.0), 'sail_furled', seg=8, axis='X')]
 
     def sh(base, P, N, M, names):
         c = retone(base, (0.48, 0.38, 0.28), 0.9)
