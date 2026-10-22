@@ -45,6 +45,9 @@ func process(delta: float) -> void:
 	if OS.get_cmdline_user_args().has("--menushot"):
 		_menu_shot()
 		return
+	if OS.get_cmdline_user_args().has("--levbench"):
+		_lev_bench(delta)
+		return
 	if m.state == "menu" and _i < 0 and _t > 1.0:
 		var cls := "fighter"
 		for a in OS.get_cmdline_user_args():
@@ -871,3 +874,126 @@ func _menu_shot() -> void:
 	if _ms >= at.size():
 		print("VISUAL done")
 		m.get_tree().quit()
+
+
+# ---------- «Левиафан» крупно (-- --visual --levbench [--tilt=35]) ----------
+# Операция «Левиафан», корабль подходит к игроку (бессмертие); кадры vis_lev_*.png: целый (общий план и нос),
+# серия пуска ракет (время замедлено: в облаке кадр ~1 с), половина частей выбита, всё выбито.
+var _lev: Warship = null
+var _lev_step := 0
+var _lev_t := 0.0
+var _lev_n := 0
+var _lev_launch := -1
+var _lev_post := -1
+
+
+func _lev_bench(delta: float) -> void:
+	if m.state == "menu":
+		if _t > 1.0 and _lev_step == 0:
+			_lev_step = 1
+			Campaign.debug_open_all()
+			for i in Campaign.OPS.size():
+				if Campaign.OPS[i]["id"] == "leviathan":
+					Campaign.select(i)
+			m.select_class("fighter")
+		return
+	if m.state != "playing" or not is_instance_valid(m.player):
+		return
+	m.god_mode = true
+	m.spawner.process_mode = Node.PROCESS_MODE_DISABLED
+	if m.hud != null:
+		m.hud.visible = false
+	for e in m.get_tree().get_nodes_in_group("enemies"):
+		if e != _lev:
+			(e as Node).queue_free()
+	if _lev == null or not is_instance_valid(_lev):
+		_lev_t += delta
+		if _lev_t > 1.0:
+			_lev = Warship.new()
+			_lev.setup_ship("leviathan", 1.0e7, m.player.global_position)
+			m.world.add_child(_lev)
+			_lev_t = 0.0
+		return
+	_lev_t += delta
+	var c := _lev.global_position
+	var fw := Vector2.from_angle(_lev.heading)
+	var ln := 450.0 * Tuning.g("unit_scale")
+	var cam := c
+	var zoom := 1.0
+	match _lev_step:
+		1:
+			if _lev_t > 4.0:
+				_save("lev_full")
+				_lev_step = 2
+				_lev_t = 0.0
+		2:
+			cam = c + fw * ln * 0.25
+			zoom = 2.4
+			if _lev_t > 1.0:
+				_save("lev_bow")
+				_lev_step = 3
+				_lev_t = 0.0
+		3:
+			cam = c + fw * ln * 0.21
+			zoom = 4.5
+			m.player.visible = false   # самолёт игрока не закрывает пусковые; вспышку попаданий гасим
+			_lev._flash = 0.0
+			# запускать с --fixed-fps 30: шаг времени ровный, кадр не «проскакивает» выход ракеты, пока сохраняется снимок
+			if _lev_launch == -1 and _lev._sam_lock > 0.0:
+				_lev_launch = _lev.fx_launch
+				_lev_t = 0.0
+			if _lev_launch != -1:
+				var fired := _lev.fx_launch != _lev_launch
+				if _lev_n == 0 and _lev_t > 0.15:   # крышки начали открываться
+					_save("lev_launch_%02d" % _lev_n)
+					_lev_n += 1
+				elif _lev_n > 0 and (fired or _lev._sam_lock < 0.35):
+					_lev_post += 1
+					if _lev_post % 2 == 0:   # каждый второй кадр (1/15 с)
+						_save("lev_launch_%02d" % _lev_n)
+						_lev_n += 1
+				if _lev_n > 24:
+					Engine.time_scale = 1.0
+					m.player.visible = true
+					if OS.get_cmdline_user_args().has("--levlaunch"):   # только серия пуска
+						print("VISUAL done")
+						m.get_tree().quit()
+					_lev.hp = _lev.max_hp * 0.5
+					_lev_step = 4
+					_lev_t = 0.0
+		4:
+			if _lev_t > 6.0:
+				_save("lev_half")
+				_lev_step = 5
+				_lev_t = 0.0
+		5:
+			cam = c - fw * ln * 0.05
+			zoom = 2.2
+			if _lev_t > 1.0:
+				_save("lev_half_close")
+				_lev.hp = _lev.max_hp * 0.02
+				_lev_step = 6
+				_lev_t = 0.0
+		6:
+			if _lev_t > 6.0:
+				_save("lev_broken")
+				_lev_step = 7
+				_lev_t = 0.0
+		7:
+			cam = c + fw * ln * 0.25
+			zoom = 2.4
+			if _lev_t > 1.0:
+				_save("lev_broken_bow")
+				_lev_step = 8
+				_lev_t = 0.0
+		8:
+			cam = c - fw * ln * 0.12
+			zoom = 2.4
+			if _lev_t > 1.0:
+				_save("lev_broken_mid")
+				print("VISUAL done")
+				m.get_tree().quit()
+	m.player.global_position = cam   # камера боя идёт за самолётом игрока (бессмертие)
+	m.camera.global_position = cam
+	m.camera.zoom = Vector2.ONE * zoom
+	m.camera.reset_smoothing()

@@ -48,6 +48,9 @@ var _salvo_cd := 3.0
 var _salvos := 0
 var evac_pt := Vector2.INF    # точка эвакуации на берегу (цель главного калибра)
 var _shells: Array = []       # {"p": Vector2, "t": float}
+## Для вида «Левиафана» (LeviathanParts): счётчики пусков ЗУР и залпов главного калибра — только картинка
+var fx_launch := 0
+var fx_salvo := 0
 
 
 func setup_ship(v: String, hp_total: float, near: Vector2) -> void:
@@ -195,6 +198,7 @@ func _shore_salvo(p: Player) -> void:
 	if not lost:
 		_salvos += 1
 	Main.I.sfx.play("explode_big", -8.0, 0.5, global_position)
+	fx_salvo += 1   # вид: вспышки у стволов башен (LeviathanParts)
 	if lost:
 		return
 	if _salvos >= SALVOS:
@@ -259,9 +263,11 @@ func _sam(delta: float, p: Player, d: float) -> void:
 		_sam_lock -= delta
 		if _sam_lock <= 0.0:
 			var to := (p.global_position - global_position).normalized()
-			var n := 4 if variant == "leviathan" and phase() >= 2 else 2
+			var n := fx_salvo_size()
 			for i in n:
 				Main.I.projectiles.spawn_missile(global_position, to.rotated((i - (n - 1) * 0.5) * 0.3), "sam", kind())   # S8: ЗУР корабля — как ЗРК
+				Main.I.projectiles.missiles.back()["lev_k"] = i   # вид: ракета выходит из своего контейнера
+			fx_launch += 1
 			Main.I.sfx.play("sam_launch", -4.0, 0.9, global_position)
 			_sam_cd = (7.0 if variant == "cruiser" else 6.0) * angry()
 		return
@@ -271,6 +277,10 @@ func _sam(delta: float, p: Player, d: float) -> void:
 		Main.I.sfx.play("sam_lock", -4.0)
 		if _say_t <= 0.0:
 			say("run")
+
+
+func fx_salvo_size() -> int:
+	return 4 if variant == "leviathan" and phase() >= 2 else 2
 
 
 func _launch_heli(p: Player) -> void:
@@ -305,6 +315,7 @@ func _main_battery() -> void:
 		for j in 3:
 			Main.I.projectiles.spawn_enemy_bullet(global_position + to * radius, to.rotated((j - 1) * 0.1) * 420.0, kind(), true)
 	Main.I.sfx.play("explode_big", -10.0, 0.6, global_position)
+	fx_salvo += 1
 
 
 # ---------- попадания: корпус — вытянутая капсула вдоль курса ----------

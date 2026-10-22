@@ -1049,6 +1049,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var gp := terrain.surface_fast(e.anchor.x, e.anchor.y) if (e.anchor != Vector2.INF and terrain != null) else ground_under(e.global_position)
 			var hull := ang
 			var tilt := Vector2.ZERO
+			var lev := false
 			if e is ConvoyVehicle:
 				# A-03: машина конвоя — корпус по курсу, наклон по склону и от разгона, колёса и башня
 				var cr := _convoy_parts(ue, e as ConvoyVehicle, len_px, delta)
@@ -1061,6 +1062,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				var wt := Time.get_ticks_msec() * 0.001 + float(e.get_instance_id() % 53)
 				tilt = Vector2(sin(wt * 0.6) * 0.012, sin(wt * 0.45 + 1.0) * 0.02) if e is Warship else Vector2.ZERO
 				_sea_wake(e, gp, hull, len_px)
+				lev = e is Warship and (e as Warship).variant == "leviathan" and ue.get("bm") != null
 			elif ue.get("bm") != null:
 				hull = _ground_parts(ue, e, ang, delta)
 				var gt := e as GroundTarget
@@ -1068,6 +1070,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 					# правка 3.5-s4: ЗСУ и ЗРК — корпус по курсу машины, наклон по склону и от разгона
 					tilt = _drive_tilt(ue, gt.anchor, hull, gt.drive, len_px, delta)
 			_place(ue, Vector2(gp.x, gp.z), hull, tilt.y, 0.0, gp.y + 1.0, (cam.global_position.y - gp.y) / cam.global_position.y, tilt.x)
+			if lev:   # «Левиафан»: башни, пусковые, РЛС, ЗСУ — наведение, пуски, разрушение (замечания Kanta 19.10)
+				LeviathanParts.update(ue, e as Warship, delta)
 		else:
 			var re := _relief_alt(ue, e.global_position, Vector2.from_angle(ang) * 250.0, 0.0 if e.is_boss else 1.0, sd)
 			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle(), re[0], _alt_scale(re[0]), re[1]) # 3.5: бочка при уклонении
@@ -1635,7 +1639,7 @@ func _sync_missiles(m: Main) -> void:
 			[pr.missiles, [0.8, 5.0, 13.0, 0.95, 16.0 * lo, Color(0.84, 0.83, 0.82)]],
 			[pr.rockets, [0.7, 3.5, 9.0, 0.6, 14.0 * lo, Color(0.88, 0.88, 0.9)]]]:
 		for mm: Dictionary in arr_st[0]:
-			if float(mm.get("delay", 0.0)) > 0.0:
+			if float(mm.get("delay", 0.0)) > 0.0 or float(mm.get("lev_hold", 0.0)) > 0.0:
 				continue
 			if not mm.has("tid"):
 				_tid += 1
@@ -1740,6 +1744,8 @@ func _sync_enemy_shots(m: Main) -> void:
 		hi = hi.max(ctr)
 		n_g += 1
 	for ms: Dictionary in pr.missiles:
+		if float(ms.get("lev_hold", 0.0)) > 0.0:   # «Левиафан»: ракета ещё выходит из контейнера (LeviathanParts)
+			continue
 		var p: Vector2 = ms["p"]
 		var v: Vector2 = ms["v"]
 		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
