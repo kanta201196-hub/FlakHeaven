@@ -904,8 +904,8 @@ msgstr "立即获得 +%d 零件"
 
 #: game/scripts/cards.gd:665
 #, c-format
-msgid "+%s к максимальной прочности и полный ремонт"
-msgstr "+%s 最大耐久并完全修复"
+msgid "+%s к максимальной прочности и ремонт половины"
+msgstr "+%s 最大耐久并修复一半"
 
 #: game/scripts/cards.gd:669
 #, c-format

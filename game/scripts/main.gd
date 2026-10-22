@@ -375,7 +375,7 @@ func _open_levelup() -> void:
 		pending_levels = 0
 		rare_picks = 0
 		rare_reasons.clear()
-		player.heal(player.max_hp * minf(0.5, 0.1 * n))
+		player.heal(player.max_hp * minf(0.5, 0.1 * n), "allcards")
 		parts += 30.0 * n * continue_mult()
 		show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(30.0 * n * continue_mult()), 3.0)
 		return
@@ -523,7 +523,7 @@ func on_activity_success(kind: String) -> void:
 		rare_picks += 1
 		rare_reasons.append({"ground": "ЗА ПОЗИЦИЮ ПВО", "convoy": "ЗА КОЛОННУ"}.get(kind, "ЗА АСА"))
 	else:
-		player.heal(player.max_hp * 0.2)
+		player.heal(player.max_hp * 0.2, "activity")
 	if kind == "ground":
 		parts += 40.0 * continue_mult()
 	if not rare:

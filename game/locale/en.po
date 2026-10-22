@@ -904,8 +904,8 @@ msgstr "+%d parts now"
 
 #: game/scripts/cards.gd:665
 #, c-format
-msgid "+%s к максимальной прочности и полный ремонт"
-msgstr "+%s max hull and full repair"
+msgid "+%s к максимальной прочности и ремонт половины"
+msgstr "+%s max hull and half repair"
 
 #: game/scripts/cards.gd:669
 #, c-format
