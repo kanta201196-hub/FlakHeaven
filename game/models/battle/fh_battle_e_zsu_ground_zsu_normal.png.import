@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://roonh6b50brf"
-path="res://.godot/imported/fh_battle_e_bunker_Image_2.jpg-8847718ee049b3d8dfdbc2db2eedd84b.ctex"
+uid="uid://dkuwt3611ybui"
+path="res://.godot/imported/fh_battle_e_zsu_ground_zsu_normal.png-119b11a701f26b6d4f93b133db3d47fb.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "dc367a85f70eccf467835987e44d3264"
+"md5": "da2f09acfeaf445aae0558e436a56568"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_bunker_Image_2.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_bunker_Image_2.jpg-8847718ee049b3d8dfdbc2db2eedd84b.ctex"]
+source_file="res://models/battle/fh_battle_e_zsu_ground_zsu_normal.png"
+dest_files=["res://.godot/imported/fh_battle_e_zsu_ground_zsu_normal.png-119b11a701f26b6d4f93b133db3d47fb.ctex"]
 
 [params]
 
