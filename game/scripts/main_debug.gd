@@ -81,9 +81,14 @@ func _evo_pick(w: String) -> int:
 			rank = 2
 		elif o["kind"] == "module" and cat.has(String(o["id"])) and int(p.taken.get(String(o["id"]), 0)) < int(cat[String(o["id"])]):
 			rank = 3
+		elif o["kind"] != "weapon_new":
+			rank = 50   # чужое оружие не берём: займёт подвес, нужный под модернизацию
 		if rank < best_rank:
 			best_rank = rank
 			best = ci
+	if best_rank >= 50 and m.rerolls > 0:
+		m.reroll()
+		return -2
 	return best
 
 
@@ -582,6 +587,8 @@ func _run_autotest(delta: float) -> void:
 				for a in m._args:
 					if String(a).begins_with("--bot=evo:"):
 						var ci := _evo_pick(String(a).substr(10))
+						if ci == -2:
+							return
 						if ci >= 0:
 							m.choose_card(ci)
 							return
@@ -620,7 +627,7 @@ func _run_autotest(delta: float) -> void:
 				print_taken("AUTOTEST")
 				print("AUTOTEST: modules %d/%d %s, hp_cd %.2f" % [Cards.mod_slots_used(m.player), Cards.MOD_SLOTS, m.player.taken, float(m.player.mods["hp_cd"])])
 				print("AUTOTEST: heal box %d card %d kit %d allcards %d activity %d armor %d other %d, max_hp %d, taken %d, would-die %d" % [int(m.tele.g("heal_box")), int(m.tele.g("heal_card")), int(m.tele.g("heal_kit")), int(m.tele.g("heal_allcards")), int(m.tele.g("heal_activity")), int(m.tele.g("heal_armor")), int(m.tele.g("heal_прочее")) + int(m.tele.g("heal_perk")), int(m.player.max_hp), int(m.total("taken")), int(m.tele.g("nodie"))])
-				print("AUTOTEST: evo times %s, level %d" % [str(m.player.evo_times), m.level])
+				print("AUTOTEST: evo times %s, level %d, groups %s" % [str(m.player.evo_times), m.level, ", ".join(PackedStringArray(m.player.groups.map(func(g): return "%s %d" % [(g as Hardpoint).weapon, (g as Hardpoint).level])))])
 				if m.class_task != null:
 					print("AUTOTEST: class task %s %d/%d %s" % [m.class_task.cls, m.class_task.n, m.class_task.need(), m.class_task.state])
 				print("AUTOTEST: defense hits armor %d agile %d ecm %d front %d, run bonus dmg %d, bombers down %d" % [int(m.tele.g("def_armor")), int(m.tele.g("def_agile")), int(m.tele.g("def_ecm")), int(m.tele.g("def_front")), int(m.tele.g("run_dmg")), int(m.tele.g("bomber_kills"))])
