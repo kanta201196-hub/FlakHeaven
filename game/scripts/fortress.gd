@@ -268,6 +268,7 @@ func _point_down(pt: Dictionary) -> void:
 		phase = 2
 		_bay_t = 1.5
 		Main.I.show_banner("Турели сбиты! «Крепость» на боевом курсе — бейте в открытый люк и по двигателям", 3.5)
+		Main.I.radio("Штаб", "Турели молчат! Ждите, когда откроется люк, — бейте в брюхо. Двигатели — с задней полусферы.")
 		Main.I.tele.add("fortress_phase2_s", Main.I.run_time - _born)
 		_missile_cd = 3.0
 	elif phase == 2 and _alive("engine") == 0:
@@ -276,6 +277,7 @@ func _point_down(pt: Dictionary) -> void:
 		hatches_open = false
 		_zones.clear()
 		Main.I.show_banner("Двигатели горят! «Крепость» падает и идёт на таран — добивайте!", 3.5)
+		Main.I.radio("Штаб", "Она падает и идёт на таран! Не подставляйтесь под нос — добивайте сбоку.")
 		Main.I.tele.add("fortress_phase3_s", Main.I.run_time - _born)
 		contact_damage = 40.0
 	_set_title()
@@ -338,6 +340,7 @@ func _start_route(p: Player) -> void:
 	_wp = base_pos
 	_to_base = true
 	Main.I.show_banner("«Крепость» идёт на нашу базу! Перехватите её, пока не дошла", 4.0)
+	Main.I.radio("Штаб", "«Крепость» на подходе. Сначала турели — у каждой свой сектор, заходите с носа или с хвоста, там мёртвые зоны.")
 	Hints.show("fortress", "«Крепость» летит к нашей базе (стрелка «база»). Турели бьют в свои сектора, нос и хвост — мёртвые зоны. Урон идёт в ту точку, куда попали.", 10.0, 2)
 
 

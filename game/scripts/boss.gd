@@ -68,6 +68,8 @@ func setup(v: String, hp_total: float) -> void:
 		title = "Ас «Альбатрос»"
 		radius = 58.0
 	_orbit = 1.0 if randf() < 0.5 else -1.0
+	if v == "interceptor":
+		defense = "agile"   # EX-06: «Сквозняк» манёвренный; «Почтальон» ставит помехи (behave)
 	_born = Main.I.run_time
 	min_life = 26.0   # правка 3.5-s4 (было 16 — в логе «Кита» асы жили 10–47 с)
 	_side = _orbit
@@ -107,10 +109,25 @@ func apply_hp_mult(_m: float) -> void:
 	pass
 
 
+## EX-06 (отзывы внешних тестеров: «боссы — жирные болваны, щит сбивается моментально»): щит аса держит
+## обычный урон втрое лучше; пробивают его пушка «на хвосте» у этого аса, ЭМИ и лазер (×1,5).
+func shield_k(src: String) -> float:
+	var p := Main.I.player
+	if src_class(src) == "energy":
+		return 1.5
+	if src_class(src) == "gun" and src.begins_with("курсовое") and is_instance_valid(p) and p.on_tail() and p.tail_target == self:
+		return 1.5
+	return 0.35
+
+
 func absorb(dmg: float) -> float:
 	_since_hit = 0.0
 	if shield <= 0.0:
 		return dmg
+	var sk := shield_k(last_src)
+	if sk < 1.0:
+		Hints.show("ace_shield", "Щит аса держит обычный урон втрое лучше. Пробивают его пушка «на хвосте» у аса, ЭМИ и лазер.", 9.0, 2)
+	dmg *= sk
 	var s := minf(shield, dmg)
 	shield -= s
 	Main.I.add_stat("dealt", "щит аса", s)
@@ -135,6 +152,7 @@ func behave(delta: float) -> void:
 		_say_t = 0.0
 		say("angry")
 	if variant == "carrier":
+		ecm_t = 1.0
 		_behave_carrier(delta, p)
 	else:
 		_behave_interceptor(delta, p)
