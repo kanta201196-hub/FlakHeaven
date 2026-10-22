@@ -88,6 +88,8 @@ func draw(m: Main, size: Vector2) -> void:
 			col = HudFlight.C_TRANSPORT
 		elif node is RivalAce:
 			col = Color(1.0, 0.3, 0.35)
+		elif node is Rescue:
+			col = HudFlight.C_RESCUE
 		_diamond(to_map.call((node as Node2D).global_position), 7.0, Color(col.r, col.g, col.b, a))
 	# FB-01: наша база, к которой идёт «Крепость», — голубой ромб
 	for n in m.get_tree().get_nodes_in_group("enemies"):

@@ -206,8 +206,7 @@ func start_run() -> void:
 	player.setup(cls_id, sk1, sks[1] if sks[1] != sk1 else (sks[0] if sks[0] != sk1 else ""))
 	world.add_child(player)
 	class_task = ClassTask.new(cls_id)
-	if class_task.cls != "":
-		radio("Штаб", Loc.t("Задание для вас: %s.") % Loc.t(String(ClassTask.DEFS[cls_id]["brief"])))
+	Story.start(self)   # EX-09: «Купол», задание класса, в финале — «Гром» в звене
 	if Profile.has_perk(cls_id, "b_wing2") and int(player.cls["wingmen"]) > 0:
 		player.add_wingman("swift", 1.0) # перк «Старый знакомый»
 	projectiles = Projectiles.new()
@@ -286,6 +285,7 @@ func _process(delta: float) -> void:
 		run_time += delta
 		if class_task != null:
 			class_task.update(self)
+		Story.tick(self)
 		if level_at_5 == 0 and run_time >= 300.0:
 			level_at_5 = level
 		streak_t -= delta
@@ -506,6 +506,8 @@ func ban_card(i: int) -> void:
 
 
 func radio(from: String, text: String, enemy := false) -> void:
+	if _autotest:
+		print("RADIO %.0f %s: %s" % [run_time, from, text])
 	radio_from = from
 	radio_text = text
 	radio_enemy = enemy
@@ -534,6 +536,7 @@ func on_activity_success(kind: String) -> void:
 		parts += 40.0 * continue_mult()
 	if not rare:
 		parts += 60.0 * continue_mult()
+	Story.say(Story.DISPATCH, "Чисто сработано. Награда ваша.")
 	show_banner(Loc.t("%s Награда: %s") % [Loc.t(what), Loc.t("выбор из редких карточек") + (Loc.t(" и +40 запчастей") if kind == "ground" else "") if rare else Loc.t("ремонт 20%% и +%d запчастей") % (100 if kind == "ground" else 60)], 4.0)
 	sfx.play("evac", -4.0, 1.3)
 
@@ -541,6 +544,8 @@ func on_activity_success(kind: String) -> void:
 func on_activity_failed(kind: String, who := "") -> void:
 	if _autotest:
 		print("AUTOTEST: activity failed ", kind, " at %.0f" % run_time)
+	if kind != "rescue":
+		Story.say(Story.DISPATCH, "Ушли. Ничего, следующих встретим.")
 	if kind == "dogfight":
 		show_banner(Loc.t("Ас «%s» ушёл — награды нет") % who, 3.0)
 
@@ -693,6 +698,7 @@ func on_enemy_killed(e: Enemy) -> void:
 		op_flags["fortress"] = true
 	if e is RivalAce and (e as RivalAce).callsign == "Барон" and Campaign.baron():
 		op_flags["baron"] = true
+		Story.on_baron_down()
 		fx.text(e.global_position + Vector2(0, -60), "«Барон» сбит!", Color(1.0, 0.85, 0.4))
 	if e.is_boss:
 		bosses_killed += 1

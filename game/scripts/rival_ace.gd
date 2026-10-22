@@ -24,6 +24,13 @@ const LINES := {
 	"again": ["Снова ты? В прошлый раз тебе повезло.", "Узнаю этот самолёт. Сегодня без поблажек.", "Мы уже встречались. Второй раз не уйдёшь."],
 }
 
+## EX-09: «Барон» — сквозной злодей линии «Где Гром?»
+const BARON_LINES := {
+	"spawn": ["Один на один. Без ваших нянек."],
+	"again": ["Снова вы? Неделю назад ваш «Гром» тоже был уверен в себе.", "Один на один. Без ваших нянек."],
+	"down": ["…Неплохо. Для новичка."],
+}
+
 var callsign := ""
 var _again := false   # «Барон» уже встречался в кампании
 var life := 90.0
@@ -88,7 +95,7 @@ func say(key: String, force := false) -> void:
 	if not force and now - float(_said.get("_last", -99.0)) < 4.0:
 		return
 	_said["_last"] = now
-	var arr: Array = LINES[key]
+	var arr: Array = BARON_LINES[key] if callsign == "Барон" and BARON_LINES.has(key) else LINES[key]
 	Main.I.radio(callsign, arr[randi() % arr.size()], true)
 
 
