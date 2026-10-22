@@ -1,12 +1,10 @@
 class_name HudCampaign
 extends HudKit
-## U-05: экран кампании — карта Нагорья с 4 операциями, брифинг выбранной, сложность и что откроет первый проход.
-## Порядок: «Вылет» в меню → кампания → выбор самолёта → бой.
+## U-05 → EX-08: экран «В вылет» — операции района, задача, самолёт и навык, кнопка вылета на одном экране.
+## Порядок: «Вылет» в меню → «В ВЫЛЕТ ▶» → бой.
 
 const C_DONE := Color(0.5, 1.0, 0.6)
 const C_LOCK := Color(0.45, 0.47, 0.5)
-## Точки операций на карте (доли области карты): путь снизу слева вверх направо — вглубь гор
-const POINTS := [Vector2(0.14, 0.78), Vector2(0.38, 0.56), Vector2(0.62, 0.66), Vector2(0.84, 0.28)]
 
 
 ## Тред «Второй биом»: вкладки биомов над картой — у каждого своя цепочка операций (Campaign.OPS, поле "biome")
@@ -28,162 +26,197 @@ static func switch_biome(to := "") -> void:
 		Campaign.select(pick)
 
 
+## EX-08 (макет «В вылет», Kanta 22.10): операция, самолёт и кнопка на одном экране.
+## От запуска до боя — два нажатия: «ВЫЛЕТ» в меню и «В ВЫЛЕТ ▶» здесь. Самолёт и навык выбираются кликом,
+## ангар — по кнопке «Улучшить самолёт». Характеристики — честные: скорость, манёвр и прочность из PlaneClasses,
+## урон по воздуху и по земле — замер 22.10 (10-минутные вылеты, по 2 на класс), доли от лучшего.
+const DMG := {"fighter": [63.0, 5.2], "attacker": [53.0, 5.3], "bomber": [42.0, 5.8]}
+
+const C_TITLE := Color(1.0, 0.82, 0.29)
+const C_SUB := Color(0.78, 0.82, 0.76)
+
+
 func draw(size: Vector2) -> void:
-	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.04, 0.88))
-	_button(Rect2(64, 60, 220, 46), "‹ Меню (Esc)", "campaign_back", 18)
+	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.035, 0.04, 0.032, 0.9))
+	var m := Main.I
+	_button(Rect2(64, 32, 200, 42), "‹ Меню (Esc)", "campaign_back", 17)
+	_text(Vector2(64, 134), "В ВЫЛЕТ", 50, C_TITLE)
+	_text(Vector2(330, 132), "Выберите операцию и самолёт — и в бой. Всё остальное по желанию.", 19, C_SUB)
 	var bio := Campaign.biome_of(Campaign.index())
-	_text(Vector2(0, 100), Loc.t("КАМПАНИЯ: ") + Loc.t(String(Biome.DATA[bio]["name"])).to_upper(), 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-	_ctext(140, "Выберите операцию: клавиши 1–4 или клик, биом — вкладки над картой (↑ / ↓). Пройденную можно повторить ради добычи.", 18, Color(0.7, 0.75, 0.85))
 	for j in BIOMES.size():
 		var b: String = BIOMES[j]
-		var on := b == bio
-		var tr := Rect2(80 + j * 452, 162, 440, 40)
-		var tab_name := ("● " if on else "") + Loc.t(String(Biome.DATA[b]["name"]))
-		if Demo.biome_ok(b):
-			_button(tr, tab_name, "biome:" + b, 18)
-		else:   # демо: второй биом виден, но закрыт
-			_panel(tr, false)
-			_text(Vector2(tr.position.x, tr.position.y + 27), tab_name + " · " + Loc.t(Demo.LOCKED), 17, C_LOCK, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
-		if on:
-			ctrl.draw_rect(Rect2(tr.position.x, tr.end.y - 3.0, tr.size.x, 3.0), Menu.C_AMBER)
-	var map := Rect2(80, 214, 900, 726)
-	_map(map, bio)
-	_brief(Rect2(1020, 180, size.x - 1020 - 80, 760))
-
-
-func _map(r: Rect2, bio: String) -> void:
-	_panel(r, false, Color(0.6, 0.62, 0.55))
-	var mp := ctrl.get_local_mouse_position()
-	if bio == Biome.ARCHIPELAGO:
-		_map_sea(r, mp)
-		return
-	# хребты: ломаные линии-горизонтали
-	for j in 7:
-		var pts := PackedVector2Array()
-		var base := r.position.y + r.size.y * (0.18 + j * 0.12)
-		for i in 25:
-			var x := r.position.x + 20.0 + (r.size.x - 40.0) * i / 24.0
-			var hgt := sin(i * 0.9 + j * 1.7) * 18.0 + sin(i * 2.3 + j) * 9.0 - (30.0 if (i + j * 3) % 7 == 0 else 0.0)
-			pts.append(Vector2(x, base + hgt))
-		ctrl.draw_polyline(pts, Color(0.75, 0.72, 0.6, 0.10 + 0.03 * (j % 3)), 1.5)
-	# сухое русло
-	var river := PackedVector2Array()
-	for i in 30:
-		var t := i / 29.0
-		river.append(r.position + Vector2(r.size.x * t, r.size.y * (0.92 - 0.55 * t) + sin(t * 11.0) * 24.0))
-	ctrl.draw_polyline(river, Color(0.55, 0.65, 0.75, 0.18), 6.0)
-	_points(r, mp, Campaign.ops_of(bio))
-
-
-## Карта Архипелага: пролив с островами по диагонали, бухты
-func _map_sea(r: Rect2, mp: Vector2) -> void:
-	ctrl.draw_rect(r.grow(-6.0), Color(0.1, 0.3, 0.4, 0.55))
-	var strait := PackedVector2Array()
-	for i in 30:
-		var t := i / 29.0
-		strait.append(r.position + Vector2(r.size.x * t, r.size.y * (0.92 - 0.6 * t) + sin(t * 7.0) * 30.0))
-	# суша — два берега пролива, острова — пятна
-	for side in [-1.0, 1.0]:
-		var land := PackedVector2Array()
-		for q in strait:
-			land.append(Vector2(q.x, clampf(q.y + side * 150.0, r.position.y + 6.0, r.end.y - 6.0)))
-		land.append(Vector2(r.end.x - 6.0, r.position.y + 6.0) if side < 0.0 else r.end - Vector2(6, 6))
-		land.append(r.position + Vector2(6, 6) if side < 0.0 else Vector2(r.position.x + 6.0, r.end.y - 6.0))
-		ctrl.draw_colored_polygon(land, Color(0.55, 0.58, 0.45, 0.35))
-	for k in 9:
-		var c: Vector2 = strait[3 + k * 3] + Vector2(sin(k * 2.7) * 60.0, cos(k * 1.9) * 70.0)
-		ctrl.draw_circle(c, 14.0 + (k % 3) * 7.0, Color(0.6, 0.62, 0.48, 0.45))
-	ctrl.draw_polyline(strait, Color(0.6, 0.85, 0.95, 0.25), 3.0)
-	_points(r, mp, Campaign.ops_of(Biome.ARCHIPELAGO))
-
-
-func _points(r: Rect2, mp: Vector2, ids: Array) -> void:
-	var pos: Array = []
-	for p in POINTS:
-		pos.append(r.position + r.size * (p as Vector2))
-	# путь между точками: пройденный — сплошной, дальше — пунктир
-	for j in mini(pos.size(), ids.size()) - 1:
-		var i: int = ids[j]
-		var a: Vector2 = pos[j]
-		var b: Vector2 = pos[j + 1]
-		var col := C_DONE if Campaign.cleared(i) else C_LOCK
-		if Campaign.cleared(i):
-			ctrl.draw_line(a, b, Color(col.r, col.g, col.b, 0.6), 3.0)
+		var tr := Rect2(size.x - 64 - (BIOMES.size() - j) * 290 + 10, 32, 280, 42)
+		var bname := Loc.t(String(Biome.DATA[b]["name"]))
+		if not Demo.biome_ok(b):   # демо: второй биом виден, но закрыт
+			_panel(tr, false, C_LOCK)
+			_text(Vector2(tr.position.x, tr.position.y + 27), bname + " · " + Loc.t(Demo.LOCKED), 15, C_LOCK, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
+			continue
+		if b == bio:
+			ctrl.draw_rect(tr, Color(C_TITLE, 0.9))
+			_text(Vector2(tr.position.x, tr.position.y + 28), bname, 18, Color(0.1, 0.08, 0.02), HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
 		else:
-			ctrl.draw_dashed_line(a, b, Color(col.r, col.g, col.b, 0.6), 2.0, 12.0)
-	for j in mini(pos.size(), ids.size()):
+			_button(tr, bname, "biome:" + b, 17)
+	_ops(Rect2(64, 170, 470, 840), bio)
+	_planes(m, Rect2(566, 170, size.x - 64 - 300 - 44 - 566, 840))
+	_go(m, Rect2(size.x - 64 - 300, 170, 300, 840))
+	_text(Vector2(64, size.y - 26), Loc.t("Enter — в вылет · ↑ / ↓ — операция · 1 / 2 / 3 — самолёт · Esc — меню · управление: %s [F2]") % Loc.t(Hud.SCHEMES[int(Tuning.g("scheme"))]), 17, C_SUB)
+
+
+## Колонка 1: операции района и задача выбранной
+func _ops(r: Rect2, bio: String) -> void:
+	_text(r.position + Vector2(0, 22), "1 · ОПЕРАЦИЯ", 19, C_SUB)
+	var mp := ctrl.get_local_mouse_position()
+	var y := r.position.y + 40.0
+	var ids := Campaign.ops_of(bio)
+	for j in ids.size():
 		var i: int = ids[j]
-		var c: Vector2 = pos[j]
 		var o: Dictionary = Campaign.OPS[i]
 		var avail := Campaign.is_open(i)
 		var on := i == Campaign.index()
-		var hover := avail and c.distance_to(mp) < 60.0
-		var col := Menu.C_AMBER if on else (C_DONE if Campaign.cleared(i) else (Color(0.85, 0.88, 0.95) if avail else C_LOCK))
-		if on:
-			ctrl.draw_arc(c, 46.0 + sin(Time.get_ticks_msec() / 300.0) * 3.0, 0.0, TAU, 40, Color(col.r, col.g, col.b, 0.5), 2.0)
-		ctrl.draw_circle(c, 32.0, Color(0.06, 0.07, 0.06, 0.95))
-		ctrl.draw_arc(c, 32.0, 0.0, TAU, 40, col, 4.0 if (on or hover) else 2.5)
-		var mark := "✓" if Campaign.cleared(i) else ("%d" % (j + 1) if avail else "—")
-		_text(Vector2(c.x - 40.0, c.y + 11.0), mark, 30, col, HORIZONTAL_ALIGNMENT_CENTER, 80.0)
-		# подпись под точкой; у последней — над ней, чтобы путь к ней не перечёркивал текст
-		var ly := c.y + (66.0 if j < pos.size() - 1 else -80.0)
-		_text(Vector2(c.x - 160.0, ly), "%d. «%s»" % [j + 1, Loc.t(o["title"])], 19, col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
-		var sub := String(Campaign.DIFF[int(o["diff"])]["title"]) if avail else Loc.t("закрыта" if Demo.op_ok(i) else Demo.LOCKED)
-		var sub_col := Color(col.r, col.g, col.b, 0.8)
-		# открыта, но ещё не пройдена и не выбрана — подсказать, что она новая и сложнее
-		if avail and not on and not Campaign.cleared(i) and j > 0:
-			sub = Loc.t("новая · сложнее: ") + sub
-			sub_col = Color(1.0, 0.75, 0.55)
-		_text(Vector2(c.x - 160.0, ly + 24.0), sub, 16, sub_col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
+		var row := Rect2(r.position.x, y, r.size.x, 72)
+		var hover := avail and row.has_point(mp)
+		var a := 1.0 if avail else 0.5
+		ctrl.draw_rect(row, Color(1.0, 0.82, 0.29, 0.2) if on else Color(0.05, 0.06, 0.05, 0.75))
+		ctrl.draw_rect(row, Color(C_TITLE, a) if on or hover else Color(0.3, 0.36, 0.28, a), false, 2.0)
+		var c := row.position + Vector2(36, 36)
+		ctrl.draw_circle(c, 19.0, Color(C_TITLE, a) if on else Color(0.17, 0.21, 0.16, a))
+		_text(Vector2(c.x - 20, c.y + 8), "%d" % (j + 1), 20, Color(0.1, 0.08, 0.02) if on else Color(0.85, 0.83, 0.75, a), HORIZONTAL_ALIGNMENT_CENTER, 40)
+		_text(Vector2(row.position.x + 70, y + 31), "«%s»" % Loc.t(String(o["title"])), 21, Color(1, 1, 1, a))
+		var sub := Loc.t(String(Campaign.DIFF[int(o["diff"])]["title"])) if avail else Loc.t("закрыта" if Demo.op_ok(i) else Demo.LOCKED)
+		_text(Vector2(row.position.x + 70, y + 56), sub, 15, Color(0.85, 0.83, 0.75, a))
+		_text(Vector2(row.end.x - 50, y + 46), "✓" if Campaign.cleared(i) else ("" if avail else "🔒"), 24, C_DONE if Campaign.cleared(i) else C_LOCK, HORIZONTAL_ALIGNMENT_CENTER, 40)
 		if avail:
-			_buttons.append([Rect2(c - Vector2(70, 50), Vector2(140, 150)), "op:%d" % i])
-
-
-func _brief(r: Rect2) -> void:
-	_panel(r, false)
+			_buttons.append([row, "op:%d" % i])
+		y += 82.0
+	# задача операции, задание класса и награда за первый проход
+	var box := Rect2(r.position.x, y + 8.0, r.size.x, r.end.y - y - 8.0)
+	ctrl.draw_rect(box, Color(0.04, 0.055, 0.045, 0.75))
+	ctrl.draw_rect(box, Color(0.24, 0.3, 0.23), false, 2.0)
 	var o := Campaign.op()
 	var d := Campaign.diff()
-	var x := r.position.x + 32.0
-	var w := r.size.x - 64.0
-	var y := r.position.y + 54.0
-	_text(Vector2(x, y), Loc.t("ОПЕРАЦИЯ %d") % Campaign.num(), 20, Color(0.7, 0.75, 0.85))
-	y += 44.0
-	_text(Vector2(x, y), "«%s»" % Loc.t(String(o["title"])).to_upper(), 36, Menu.C_AMBER)
-	y += 44.0
-	var diff_line := Loc.t("Сложность: %s") % Loc.t(d["title"])
+	var x := box.position.x + 20.0
+	var w := box.size.x - 40.0
+	y = box.position.y + 18.0
+	y += _para(Vector2(x, y + 14.0), Loc.t(String(o["brief"])), w, 16, Color(0.86, 0.88, 0.84)) + 26.0
+	_text(Vector2(x, y), "ЗАДАЧА", 16, C_TITLE)
+	y += 12.0
+	y += _para(Vector2(x, y + 14.0), Loc.t(String(o["task"])), w, 18, Color.WHITE) + 8.0
 	if int(o["diff"]) > 0:
-		diff_line += Loc.t(" — враги прочнее ×%s, бьют сильнее ×%s, волны гуще +%d%%, добыча ×%s") % [_k(d["hp"]), _k(d["dmg"]), int(round((float(d["dens"]) - 1.0) * 100.0)), _k(d["reward"])]
-	else:
-		diff_line += " — обычные враги и добыча"
-	y += _para(Vector2(x, y), diff_line, w, 17, Color(1.0, 0.75, 0.55) if int(o["diff"]) > 0 else Color(0.75, 0.9, 0.8))
+		y += _para(Vector2(x, y + 14.0), Loc.t("Сложность «%s»: враги прочнее ×%s, бьют сильнее ×%s, добыча ×%s") % [Loc.t(d["title"]), _k(d["hp"]), _k(d["dmg"]), _k(d["reward"])], w, 15, Color(1.0, 0.75, 0.55)) + 8.0
 	y += 26.0
-	_text(Vector2(x, y), "БРИФИНГ", 18, Color(0.7, 0.75, 0.85))
-	y += 32.0
-	y += _para(Vector2(x, y), Loc.t(o["brief"]), w, 22, Color(0.92, 0.94, 0.98))
-	y += 24.0
-	_text(Vector2(x, y), "ЗАДАЧА", 18, Color(0.7, 0.75, 0.85))
-	y += 30.0
-	y += _para(Vector2(x, y), "• " + Loc.t(String(o["task"])), w, 20, Color.WHITE)
-	y += 24.0
-	# EX-07: задание класса — выбор из редких карточек и запчасти
-	_text(Vector2(x, y), "ЗАДАНИЕ КЛАССА (награда — выбор из редких карточек)", 18, Color(0.7, 0.75, 0.85))
-	y += 30.0
-	for cid in ["fighter", "attacker", "bomber"]:
-		_text(Vector2(x, y), "• " + Loc.t(String(ClassTask.DEFS[cid]["brief"])), 19, Color(1.0, 0.85, 0.45))
-		y += 26.0
-	y += 8.0
+	_text(Vector2(x, y), "ЗАДАНИЕ КЛАССА · награда — редкая карточка", 16, C_TITLE)
+	y += 12.0
+	y += _para(Vector2(x, y + 14.0), Loc.t(String(ClassTask.DEFS[Main.I.cls_id]["brief"])), w, 18, Color(1.0, 0.88, 0.55)) + 8.0
+	y += 26.0
 	if Campaign.cleared(Campaign.index()):
-		_text(Vector2(x, y), "✓ Операция пройдена — повторный вылет ради запчастей и опыта экипажа", 18, C_DONE)
-		y += 30.0
-	else:
-		_text(Vector2(x, y), "ЗА ПЕРВЫЙ ПРОХОД", 18, Color(0.7, 0.75, 0.85))
-		y += 30.0
-		_text(Vector2(x, y), Loc.t("• +%d запчастей") % int(o["parts"]), 19, Color(0.95, 0.85, 0.55))
-		y += 28.0
-		for s in Demo.opens(o):
-			_text(Vector2(x, y), Loc.t("• Откроется: ") + String(s), 19, Color(1.0, 0.85, 0.4))
-			y += 28.0
-	_button(Rect2(r.position.x + 32.0, r.end.y - 100.0, w, 68), "ВЫБРАТЬ САМОЛЁТ ›   (Enter)", "op_go", 24)
+		_para(Vector2(x, y), "✓ Пройдена — повторный вылет ради запчастей и опыта экипажа", w, 16, C_DONE)
+		return
+	_text(Vector2(x, y), "ЗА ПЕРВЫЙ ПРОХОД", 16, C_TITLE)
+	y += 26.0
+	_text(Vector2(x, y), Loc.t("• +%d запчастей") % int(o["parts"]), 16, Color(0.95, 0.85, 0.55))
+	y += 4.0
+	for s in Demo.opens(o):
+		if y > box.end.y - 30.0:
+			break
+		y += _para(Vector2(x, y + 18.0), Loc.t("• Откроется: ") + Loc.t(String(s)), w, 16, Color(1.0, 0.85, 0.4)) + 2.0
+
+
+## Колонка 2: три самолёта, выбранный подсвечен; у выбранного — выбор навыка класса
+func _planes(m: Main, r: Rect2) -> void:
+	_text(r.position + Vector2(0, 22), "2 · САМОЛЁТ", 19, C_SUB)
+	var gap := 18.0
+	var w := (r.size.x - gap * 2.0) / 3.0
+	var mp := ctrl.get_local_mouse_position()
+	var best := {"hp": 0.0, "speed": 0.0, "turn": 0.0, "air": 0.0, "ground": 0.0}
+	for id in PlaneClasses.LIST:
+		var dd: Dictionary = PlaneClasses.DATA[id]
+		best["hp"] = maxf(best["hp"], float(dd["hp"]))
+		best["speed"] = maxf(best["speed"], float(dd["speed"]))
+		best["turn"] = maxf(best["turn"], float(dd["turn"]))
+		best["air"] = maxf(best["air"], DMG[id][0])
+		best["ground"] = maxf(best["ground"], DMG[id][1])
+	for i in 3:
+		var id: String = PlaneClasses.LIST[i]
+		var d: Dictionary = PlaneClasses.DATA[id]
+		var col: Color = d["color"]
+		var on := id == m.cls_id
+		var card := Rect2(r.position.x + i * (w + gap), r.position.y + 40.0 - (8.0 if on else 0.0), w, r.size.y - 40.0)
+		var hover := card.has_point(mp)
+		if on:
+			for k in 4:   # свечение выбранного
+				ctrl.draw_rect(card.grow(4.0 + k * 4.0), Color(col, 0.08), false, 4.0)
+		ctrl.draw_rect(card, Color(col.r * 0.22, col.g * 0.22, col.b * 0.22, 0.95 if on else 0.8))
+		ctrl.draw_rect(card, Color(col, 1.0 if on or hover else 0.55), false, 3.0)
+		var band := Rect2(card.position, Vector2(w, 36))
+		ctrl.draw_rect(band, col if on else Color(col, 0.6))
+		var full: String = Loc.t(String(d["title"]))
+		var cut := full.find(" «")
+		var role := full.substr(0, cut) if cut > 0 else full
+		var pname := full.substr(cut + 1) if cut > 0 else ""
+		_text(Vector2(band.position.x + 14, band.position.y + 25), "%d · %s" % [i + 1, role.to_upper()], 15, Color(0.06, 0.08, 0.06))
+		_text(Vector2(band.position.x, band.position.y + 25), Loc.t("самолёт ур. %d") % Profile.plane_lvl(id), 14, Color(0.06, 0.08, 0.06), HORIZONTAL_ALIGNMENT_RIGHT, w - 14.0)
+		_buttons.append([card, "class:" + id])
+		# картинка самолёта носом вверх
+		var t := PlaneArt.plane_tex(id, Profile.plane_lvl(id))
+		var pic := Rect2(card.position.x, band.end.y + 6.0, w, 170.0)
+		if t != null:
+			var k := minf(pic.size.y / t.get_width(), (w * 0.8) / t.get_height())
+			ctrl.draw_set_transform(pic.get_center(), -PI / 2.0, Vector2(k, k))
+			ctrl.draw_texture(t, -t.get_size() / 2.0)
+			ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var x := card.position.x + 18.0
+		var tw := w - 36.0
+		var y := pic.end.y + 30.0
+		_text(Vector2(x, y), pname if pname != "" else full, 30, Color.WHITE)
+		y += 8.0
+		y += _para(Vector2(x, y + 16.0), Loc.t(String(d["role"])), tw, 15, Color(0.9, 0.88, 0.8)) + 14.0
+		var rows := [["Скорость", float(d["speed"]) / best["speed"]], ["Манёвр", float(d["turn"]) / best["turn"]],
+			["Прочность", float(d["hp"]) / best["hp"]], ["Урон по воздуху", DMG[id][0] / best["air"]], ["Урон по земле", DMG[id][1] / best["ground"]]]
+		for row in rows:
+			_text(Vector2(x, y + 14.0), row[0], 15, C_SUB)
+			var bar := Rect2(x + 132.0, y + 4.0, tw - 132.0, 10.0)
+			ctrl.draw_rect(bar, Color(1, 1, 1, 0.12))
+			ctrl.draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(float(row[1]), 0.0, 1.0), bar.size.y)), col)
+			y += 24.0
+		y += 10.0
+		y += _para(Vector2(x, y + 12.0), Loc.t("Экипаж ур. %d · ★ %s +20%%") % [Profile.crew_lvl(id), Loc.t(String(Weapons.DEFS[d["signature"]]["short"]))], tw, 15, Color(0.65, 1.0, 0.72)) + 10.0
+		# навык класса [E]: у выбранного самолёта — три варианта, у остальных — текущий
+		var cur: String = m.skill_pick.get(id, Profile.skills(id)[0])
+		if not on:
+			_para(Vector2(x, y + 12.0), Loc.t("Навык [E]: %s") % Loc.t(String(PlaneClasses.SKILL3[cur]["title"])), tw, 15, C_SUB)
+			continue
+		_text(Vector2(x, y + 12.0), "Навык класса [E]:", 15, Color(0.7, 1.0, 0.7))
+		y += 22.0
+		for sk in PlaneClasses.CLASS_SKILLS[id]:
+			var sd: Dictionary = PlaneClasses.SKILL3[sk]
+			var sr := Rect2(x - 6.0, y, tw + 12.0, 34.0)
+			if sr.end.y > card.end.y - 6.0:
+				break
+			var sel: bool = sk == cur
+			var unl := Profile.skill_unlocked(id, sk)
+			ctrl.draw_rect(sr, Color(0.55, 0.9, 0.55, 0.2) if sel else Color(1, 1, 1, 0.08 if sr.has_point(mp) else 0.03))
+			ctrl.draw_rect(sr, Color(0.6, 1.0, 0.6, 0.9) if sel else Color(1, 1, 1, 0.18), false, 1.5)
+			var si: int = PlaneClasses.CLASS_SKILLS[id].find(sk)
+			_text(Vector2(sr.position.x + 10, sr.position.y + 23), ("● " if sel else "○ ") + Loc.t(String(sd["title"])) + (Loc.t(" · %d с") % int(sd["cd"]) if unl else Loc.t("  — экипаж ур. %d") % Profile.SKILL_UNLOCK[si]),
+				15, Color(0.85, 1.0, 0.85) if sel else (Color(0.88, 0.9, 0.95) if unl else Color(0.5, 0.52, 0.56)))
+			if unl:
+				_buttons.append([sr, "skill:%s:%s" % [id, sk]])
+			y += 40.0
+
+
+## Колонка 3: что откроется, ангар и большая кнопка вылета
+func _go(m: Main, r: Rect2) -> void:
+	var by := r.end.y - 110.0
+	_buttons.append([Rect2(r.position.x, by, r.size.x, 110.0), "op_go"])
+	var hot := Rect2(r.position.x, by, r.size.x, 110.0).has_point(ctrl.get_local_mouse_position())
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.004)
+	for k in 4:
+		ctrl.draw_rect(Rect2(r.position.x, by, r.size.x, 110.0).grow(3.0 + k * 4.0), Color(1.0, 0.65, 0.15, 0.06 + 0.04 * pulse), false, 4.0)
+	for k in 10:   # градиент сверху вниз: жёлтый → оранжевый
+		ctrl.draw_rect(Rect2(r.position.x, by + k * 11.0, r.size.x, 11.0), Color(1.0, 0.82, 0.29).lerp(Color(1.0, 0.6, 0.12), k / 9.0).lightened(0.1 if hot else 0.0))
+	ctrl.draw_string(ui_font(), Vector2(r.position.x, by + 70.0), Loc.out("В ВЫЛЕТ ▶"), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 36, Color(0.1, 0.08, 0.02))
+	_button(Rect2(r.position.x, by - 80.0, r.size.x, 64.0), Loc.t("Улучшить самолёт (ангар)") + ("  !" if Profile.any_purchase() else ""), "sortie_hangar", 18)
+	_text(Vector2(r.position.x, by - 94.0), Loc.t("Запчасти: %d") % Profile.parts(), 16, C_SUB, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 
 
 static func _k(v) -> String:
