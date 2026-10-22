@@ -2,22 +2,23 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bdg8mn2iyb71n"
-path.s3tc="res://.godot/imported/fh_battle_e_convoy_scout_convoy_scout_color.png-490e01b62aa0de3385db2316cce810ff.s3tc.ctex"
-path.etc2="res://.godot/imported/fh_battle_e_convoy_scout_convoy_scout_color.png-490e01b62aa0de3385db2316cce810ff.etc2.ctex"
+uid="uid://s1igbx4ur7xf"
+path="res://.godot/imported/fh_battle_e_convoy_scout_convoy_scout_color.png-490e01b62aa0de3385db2316cce810ff.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc", "etc2_astc"],
-"vram_texture": true
+"vram_texture": false
+}
+generator_parameters={
+"md5": "f0d68eeddba8a174d731dd49ee881353"
 }
 
 [deps]
 
 source_file="res://models/battle/fh_battle_e_convoy_scout_convoy_scout_color.png"
-dest_files=["res://.godot/imported/fh_battle_e_convoy_scout_convoy_scout_color.png-490e01b62aa0de3385db2316cce810ff.s3tc.ctex", "res://.godot/imported/fh_battle_e_convoy_scout_convoy_scout_color.png-490e01b62aa0de3385db2316cce810ff.etc2.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_convoy_scout_convoy_scout_color.png-490e01b62aa0de3385db2316cce810ff.ctex"]
 
 [params]
 
-compress/mode=2
+compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
@@ -33,4 +34,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1

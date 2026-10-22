@@ -398,6 +398,27 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 		_air(Vector3(pos.x, 0.0, pos.y), s, true)
 
 
+## Тест 3.5-s8 (дым БМП «не видно»): клубы дымовой завесы над колонной — плотные белёсые облака у земли,
+## медленно растут и поднимаются. pos — точка на экране над землёй (как у spawn), r — радиус клуба, пикс. экрана;
+## burst — первый залп гранат (больше клубов и шире)
+func smoke_screen(pos: Vector2, r: float, burst := false) -> void:
+	var R := Render3D.I
+	if R == null or R.cam == null:
+		return
+	var gi := clampi(Settings.gfx, 0, 3)
+	_q = [0.45, 0.7, 1.0, 1.25][gi] * clampf(1.25 - float(count()) / BUDGET[gi], 0.3, 1.0)
+	var g := R.ground_under(pos)
+	var ch := R.cam.global_position.y
+	var k := clampf((ch - g.y) / maxf(ch, 1.0), 0.5, 3.0)
+	var s := r * k
+	for i in _n(4.0 if burst else 1.0):
+		var d := _rdir()
+		var c := Color(0.86, 0.85, 0.81, 0.8) if i % 3 else Color(0.74, 0.73, 0.69, 0.8)
+		_smoke(g + Vector3(d.x, 0, d.z) * s * (0.8 if burst else 0.3) + Vector3(0, s * 0.2, 0),
+			Vector3(d.x * 0.25, randf_range(0.15, 0.35), d.z * 0.25) * s, s * 0.45, s * randf_range(1.0, 1.3),
+			randf_range(3.5, 5.0), c, 0.0, 1.5, 1.2, randf_range(0.0, 0.2))
+
+
 ## Правка 3.5-s4 (п. 27): пуск ракеты с крыла — вспышка двигателя и клуб белого дыма назад
 func launch(pos: Vector2, dir: Vector2, vel: Vector2) -> void:
 	var p := Vector3(pos.x, -2.0, pos.y)

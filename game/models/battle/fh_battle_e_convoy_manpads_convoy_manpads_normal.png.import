@@ -2,10 +2,13 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://wlvkx32hhlhs"
+uid="uid://b61rt8p7j4erg"
 path="res://.godot/imported/fh_battle_e_convoy_manpads_convoy_manpads_normal.png-ec056e15f9ecede8893d4572f55ac4bb.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "999acb76829479be9dfa54b77b3ed8e4"
 }
 
 [deps]
@@ -31,4 +34,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1
