@@ -36,6 +36,8 @@ func _init(main: Main) -> void:
 
 
 func process(delta: float) -> void:
+	if m.state == "levelup":   # тест 3.5-s8: игрок сбивает цели стенда и набирает уровень — карточка останавливала кадры
+		m.choose_card(0)
 	_t += delta / maxf(Engine.time_scale, 0.01)
 	if OS.get_cmdline_user_args().has("--hangarbench"):
 		_hangar_bench()
@@ -148,6 +150,12 @@ func process(delta: float) -> void:
 				at -= float(ConvoyVehicle.SPEC[v.role]["len"]) * Tuning.g("unit_scale") + ConvoyVehicle.GAP
 		for v: ConvoyVehicle in _convoy.vehicles:
 			v.process_mode = Node.PROCESS_MODE_DISABLED
+		if p.get("smoke", false) and p.has("_done"):   # тест 3.5-s8: дымовая завеса БМП над колонной (как при тревоге)
+			var first := _convoy.smoke_t <= 0.0
+			_convoy.smoke_t = Convoy.SMOKE_TIME - minf(_pt, 3.0)
+			_convoy.smoke_c = _convoy.point_at(_convoy.middle_s())
+			_convoy.smoke_fx(delta, first)
+			_convoy.queue_redraw()
 	_hold(p)
 	if p.get("eweap", false):
 		# время замедлено: в облаке кадр идёт ~1 с, а ракета пролетает экран за секунду — так след и трассеры плавные
@@ -449,6 +457,7 @@ func _make_points() -> Array:
 		pts.append({"name": "rocks_foot", "pos": best_s[1], "zoom": 1.2})
 		# M-36: дорога шире — колонна конвоя стоит на дороге (логика машин выключена)
 		pts.append({"name": "road_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 2.2, "convoy": true, "wait": 1.5})
+		pts.append({"name": "road_smoke", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.0, "convoy": true, "smoke": true, "wait": 3.0})
 		# M-37: позиция ПВО целиком и рядом с колонной (размеры ПВО относительно машин конвоя)
 		pts.append({"name": "aa_site", "pos": empty, "zoom": 1.0, "enemies": true, "ground": true, "wait": 2.5})
 		pts.append({"name": "aa_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.3, "convoy": true, "enemies": true, "ground": true, "site_off": Vector2(-380, -40), "wait": 2.5})

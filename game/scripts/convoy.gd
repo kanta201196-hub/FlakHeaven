@@ -613,7 +613,9 @@ func _process(delta: float) -> void:
 	if smoke_t > 0.0:
 		smoke_t -= delta
 		var mid := point_at(middle_s())
-		smoke_c = mid if smoke_c == Vector2.INF else smoke_c.lerp(mid, 1.0 - exp(-delta * 0.8))
+		var first := smoke_c == Vector2.INF
+		smoke_c = mid if first else smoke_c.lerp(mid, 1.0 - exp(-delta * 0.8))
+		smoke_fx(delta, first)
 	# ушли далеко после конца — убираем всё, включая остовы
 	if ended and (alive().is_empty() or f.distance_to(p.global_position) > 2600.0):
 		var far := true
@@ -638,9 +640,28 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## Тест 3.5-s8: в 3D дымовая завеса — объёмные клубы у земли (Boom3D.smoke_screen): плоские пятна на слое боя
+## над песком почти не читались. Клубы живут ~4 с, поэтому выпуск кончается за 3 с до конца завесы.
+## Логика не меняется: под завесой (in_smoke, радиус SMOKE_R) машины по-прежнему получают на 40% меньше урона.
+var _smoke_acc := 0.0
+
+
+func smoke_fx(delta: float, burst := false) -> void:
+	if not Boom3D.active() or smoke_c == Vector2.INF or (smoke_t < 3.0 and not burst):
+		return
+	_smoke_acc -= delta
+	if _smoke_acc > 0.0 and not burst:
+		return
+	_smoke_acc = 0.25
+	var b := Boom3D.ensure()
+	for i in (7 if burst else 2):
+		var o := Vector2.from_angle(randf() * TAU) * SMOKE_R * sqrt(randf()) * 0.85
+		b.smoke_screen(GroundTarget.air_pos(smoke_c + o), SMOKE_R * 0.45, burst)
+
+
 func _draw() -> void:
-	# дымовая завеса — мягкие пятна над серединой колонны (на плоскости боя, видно и в 3D)
-	if smoke_t > 0.0 and smoke_c != Vector2.INF and Fx._soft != null:
+	# дымовая завеса без 3D-эффектов — мягкие пятна над серединой колонны на плоскости боя
+	if smoke_t > 0.0 and smoke_c != Vector2.INF and Fx._soft != null and not Boom3D.active():
 		var a := clampf(smoke_t / 1.5, 0.0, 1.0) * clampf((SMOKE_TIME - smoke_t) / 0.8, 0.0, 1.0)
 		var loc := GroundTarget.air_pos(smoke_c) - global_position
 		for i in 7:
