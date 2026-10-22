@@ -18,6 +18,9 @@ CAMO_STRETCH = (1, 1, 1)   # вытянутость пятен по осям
 BELLY = None        # цвет низа (снизу смотрящие поверхности камуфляжа), None — без него
 EDGE_K = 1.0        # скругление кромок и затенение углов (в долях длины): у крупных моделей (корабль) меньше
 AO_K = 1.0
+# итоговая краска (Kanta 19.10: окраска реалистичная и матовая, «без блеска и пластика»): корпус и стекло/фары
+BODY_ROUGH, BODY_METAL = 0.9, 0.0
+GLASS_ROUGH, GLASS_METAL = 0.35, 0.05
 
 parts = []
 group = ""          # пусто — корпус; иначе подвижная часть (узел GLB)
@@ -133,6 +136,13 @@ KINDS = {
     "lamp_amber": ((0.8, 0.45, 0.08), 0.2, 0.3, 0.3, False),
     "olive": ((0.32, 0.31, 0.22), 0.1, 0.7, 0.8, False),       # ящики, канистры, трубы ПЗРК
     "black": ((0.025, 0.025, 0.025), 0.2, 0.6, 0.3, False),    # провалы, бойницы, стволы изнутри
+    # позиция ПВО (ground_models.py): земля и глина Нагорья, бетон, мешки, маскировочная сеть
+    "earth": ((0.52, 0.45, 0.34), 0.0, 1.0, 0.6, False),
+    "earth_dark": ((0.4, 0.33, 0.24), 0.0, 1.0, 0.5, False),   # утоптанное дно траншеи
+    "concrete": ((0.47, 0.44, 0.38), 0.0, 0.95, 0.9, False),   # выгоревший бетон в пыли
+    "sandbag": ((0.6, 0.52, 0.38), 0.0, 1.0, 0.5, False),
+    "net": ((0.43, 0.38, 0.27), 0.0, 1.0, 0.3, False),
+    "net2": ((0.5, 0.44, 0.3), 0.0, 1.0, 0.3, False),
 }
 
 
@@ -174,6 +184,16 @@ def kmat(kind):
         col = _mix(nt, _m(nt, "MULTIPLY", _band(nt, bl, 0.45, 0.7), 0.35), col, (0.6, 0.55, 0.44))
         dk = _noise(nt, pos, 9.0, 3.0, (8.0, 1.0, 3.0))
         col = _mix(nt, _m(nt, "MULTIPLY", _band(nt, dk, 0.55, 0.75), 0.3), col, (0.25, 0.22, 0.17))
+    if kind in ("earth", "earth_dark", "concrete", "sandbag", "net", "net2"):
+        # земля и бетон: крупные пятна светлее и темнее (выгорание, сырость, разводы), сеть — лоскутами
+        big = _noise(nt, pos, 5.0 if kind != "net" else 14.0, 3.0, (4.0, 2.0, 7.0))
+        col = _mix(nt, _m(nt, "MULTIPLY", _band(nt, big, 0.42, 0.62), 0.45), col, tuple(min(1.0, c * 1.18) for c in base))
+        dk = _noise(nt, pos, 11.0 if kind != "net" else 24.0, 3.0, (9.0, 3.0, 1.0))
+        col = _mix(nt, _m(nt, "MULTIPLY", _band(nt, dk, 0.55, 0.72), 0.4), col, tuple(c * 0.72 for c in base))
+    if kind == "concrete":
+        # подтёки на стенках
+        st = _noise(nt, pos, 9.0, 2.0, (0, 0, 0), (6.0, 6.0, 0.6))
+        col = _mix(nt, _m(nt, "MULTIPLY", _m(nt, "MULTIPLY", _band(nt, st, 0.56, 0.72), side), 0.25), col, (0.33, 0.3, 0.25))
     if camo:
         # выгорание сверху на солнце
         col = _mix(nt, _m(nt, "MULTIPLY", up, 0.12), col, (0.8, 0.74, 0.62))
@@ -211,10 +231,10 @@ def kmat(kind):
     # нормаль: скругление кромок + мелкая фактура
     nrm = _n(nt, "ShaderNodeBevel", Radius=0.004 * EDGE_K)
     nrm.samples = 8
-    bump_str = 0.25 if kind.startswith("canvas") else 0.05 if kind in ("paint", "olive") else 0.0
+    bump_str = 0.25 if kind.startswith("canvas") or kind in ("earth", "sandbag", "net", "net2") else 0.12 if kind == "concrete" else 0.05 if kind in ("paint", "olive") else 0.0
     nsock = nrm.outputs[0]
     if bump_str > 0:
-        h = _noise(nt, pos, 40.0 if kind.startswith("canvas") else 120.0, 6.0)
+        h = _noise(nt, pos, 40.0 if kind.startswith("canvas") or kind in ("earth", "sandbag", "net", "net2") else 120.0, 6.0)
         bp = _n(nt, "ShaderNodeBump", Strength=bump_str, Distance=0.002, Height=h, Normal=nsock)
         nsock = bp.outputs[0]
     bs = _n(nt, "ShaderNodeBsdfPrincipled", Normal=nsock)
@@ -616,7 +636,7 @@ def bake_export(name, out, tex=1024, glass_kinds=("glass", "lamp", "lamp_red", "
         img.save()
     # итоговые материалы: корпус и стекло/фары (глянец)
     fin = {}
-    for key, rough, metal in (("body", 0.72, 0.05), ("glass", 0.12, 0.25)):
+    for key, rough, metal in (("body", BODY_ROUGH, BODY_METAL), ("glass", GLASS_ROUGH, GLASS_METAL)):
         m = bpy.data.materials.new("%s_%s" % (name, key))
         m.use_nodes = True
         nt = m.node_tree
@@ -662,6 +682,8 @@ def bake_export(name, out, tex=1024, glass_kinds=("glass", "lamp", "lamp_red", "
 
 def preview(out, name, size=1.0):
     """Кадры: изометрия, сбоку, сверху и как в игре (наклон 28°); фон — песок"""
+    if os.environ.get("NOPREVIEW"):   # кадры смотрим в игре (tools/model_lab/gallery) — без долгого рендера Cycles
+        return []
     sc = bpy.context.scene
     w = bpy.data.worlds.new("w")
     w.use_nodes = True
