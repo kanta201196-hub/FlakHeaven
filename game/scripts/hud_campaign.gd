@@ -38,7 +38,12 @@ func draw(size: Vector2) -> void:
 		var b: String = BIOMES[j]
 		var on := b == bio
 		var tr := Rect2(80 + j * 452, 162, 440, 40)
-		_button(tr, ("● " if on else "") + Loc.t(String(Biome.DATA[b]["name"])), "biome:" + b, 18)
+		var tab_name := ("● " if on else "") + Loc.t(String(Biome.DATA[b]["name"]))
+		if Demo.biome_ok(b):
+			_button(tr, tab_name, "biome:" + b, 18)
+		else:   # демо: второй биом виден, но закрыт
+			_panel(tr, false)
+			_text(Vector2(tr.position.x, tr.position.y + 27), tab_name + " · " + Loc.t(Demo.LOCKED), 17, C_LOCK, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
 		if on:
 			ctrl.draw_rect(Rect2(tr.position.x, tr.end.y - 3.0, tr.size.x, 3.0), Menu.C_AMBER)
 	var map := Rect2(80, 214, 900, 726)
@@ -123,7 +128,7 @@ func _points(r: Rect2, mp: Vector2, ids: Array) -> void:
 		# подпись под точкой; у последней — над ней, чтобы путь к ней не перечёркивал текст
 		var ly := c.y + (66.0 if j < pos.size() - 1 else -80.0)
 		_text(Vector2(c.x - 160.0, ly), "%d. «%s»" % [j + 1, Loc.t(o["title"])], 19, col, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
-		var sub := String(Campaign.DIFF[int(o["diff"])]["title"]) if avail else Loc.t("закрыта")
+		var sub := String(Campaign.DIFF[int(o["diff"])]["title"]) if avail else Loc.t("закрыта" if Demo.op_ok(i) else Demo.LOCKED)
 		var sub_col := Color(col.r, col.g, col.b, 0.8)
 		# открыта, но ещё не пройдена и не выбрана — подсказать, что она новая и сложнее
 		if avail and not on and not Campaign.cleared(i) and j > 0:
@@ -168,7 +173,7 @@ func _brief(r: Rect2) -> void:
 		y += 30.0
 		_text(Vector2(x, y), Loc.t("• +%d запчастей") % int(o["parts"]), 19, Color(0.95, 0.85, 0.55))
 		y += 28.0
-		for s in o["opens"]:
+		for s in Demo.opens(o):
 			_text(Vector2(x, y), Loc.t("• Откроется: ") + String(s), 19, Color(1.0, 0.85, 0.4))
 			y += 28.0
 	_button(Rect2(r.position.x + 32.0, r.end.y - 100.0, w, 68), "ВЫБРАТЬ САМОЛЁТ ›   (Enter)", "op_go", 24)

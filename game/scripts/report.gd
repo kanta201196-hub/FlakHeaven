@@ -373,7 +373,7 @@ func _payload() -> Dictionary:
 	var scr := DisplayServer.screen_get_size()
 	return {
 		"token": TOKEN,
-		"build": Main.BUILD,
+		"build": Demo.tag(Main.BUILD),
 		"tester": _tester_id(),
 		"sent_at": Time.get_datetime_string_from_system(),
 		"cls": String(PlaneClasses.DATA[m.cls_id]["title"]) if PlaneClasses.DATA.has(m.cls_id) else m.cls_id,
@@ -417,7 +417,7 @@ func queue_run(header: String, row: String) -> void:
 	q.append({
 		"token": RUN_TOKEN,
 		"kind": "run",
-		"build": Main.BUILD,
+		"build": Demo.tag(Main.BUILD),
 		"tester": _tester_id(),
 		"sent_at": Time.get_datetime_string_from_system(),
 		"os": "%s %s" % [OS.get_name(), OS.get_version()],

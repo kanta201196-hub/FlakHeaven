@@ -298,6 +298,9 @@ func loadout(m: Main, size: Vector2) -> void:
 # ---------- Итоги вылета ----------
 
 func result(m: Main, size: Vector2) -> void:
+	if Demo.end_open:
+		_demo_end(size)
+		return
 	# правка 16 (тест 3.5): фон плотнее — интерфейс боя под итогами не просвечивает
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.025, 0.03, 0.93))
 	var t := int(m.run_time)
@@ -341,6 +344,36 @@ func result(m: Main, size: Vector2) -> void:
 			_text(Vector2(0, by + 80), "✓ Отчёт принят — спасибо!", 19, Color(0.6, 1.0, 0.6), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 		else:
 			_report_button(Rect2(bx + 1280, by, bw, 54), m.result_t)
+
+
+## M-07: «Конец демо» поверх итогов после первого прохода «Сухого русла» — что дальше в полной игре и кнопка
+## списка желаемого. Итоги вылета под ним не теряются: «К итогам вылета» (Enter / Esc) закрывает окно.
+const DEMO_NEXT := [
+	["Операция 3 «Крепости»", "«Барон» ищет вас лично: дуэль с асом-соперником и снова «Крепость»."],
+	["Самолёты ур. 2", "Новая модель у каждого класса: тяжёлый подвес, прочность и манёвр выше."],
+	["Экспериментальное оружие", "Рельсотрон, ЭМИ-заряд, лазер «Луч» и плазменная бомба."],
+	["Архипелаг Таласора", "Второй район: пролив, острова, морские конвои и крейсер «Сторож»."],
+	["Полная прокачка", "Узлы самолёта до ур. 5, три ступени веток оружия, экипаж до ур. 20."],
+]
+
+
+func _demo_end(size: Vector2) -> void:
+	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.025, 0.03, 0.9))
+	var r := Rect2(size.x / 2.0 - 640, 180, 1280, 660)
+	_panel(r, false, Menu.C_AMBER)
+	_ctext(r.position.y + 80, "КОНЕЦ ДЕМО", 54, Menu.C_AMBER)
+	_ctext(r.position.y + 126, "«Сухое русло» пройдено, «Крепость» сбита. Спасибо, что сыграли!", 24, Color.WHITE)
+	_ctext(r.position.y + 162, "Обе операции демо можно повторять любым классом. В полной игре дальше:", 19, Color(0.75, 0.8, 0.9))
+	var y := r.position.y + 220.0
+	for row in DEMO_NEXT:
+		_text(Vector2(r.position.x + 90, y), "• " + Loc.t(String(row[0])), 22, Color(1.0, 0.85, 0.4))
+		_text(Vector2(r.position.x + 470, y), Loc.t(String(row[1])), 18, Color(0.85, 0.88, 0.95))
+		y += 56.0
+	var bw := 520.0
+	var by := r.end.y - 130.0
+	_button(Rect2(size.x / 2.0 - bw - 20, by, bw, 70), "В СПИСОК ЖЕЛАЕМОГО", "wishlist", 26)
+	_button(Rect2(size.x / 2.0 + 20, by, bw, 70), "К итогам вылета (Enter)", "demo_end_close", 22)
+	_ctext(by + 104, "Прогресс демо переносится в полную игру", 17, Color(0.6, 1.0, 0.7))
 
 
 ## Кнопка отчёта заметнее остальных, но без всплывающих окон и звука (Kanta, 18.10):
