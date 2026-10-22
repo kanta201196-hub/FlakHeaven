@@ -331,7 +331,7 @@ func _draw_menu() -> void:
 	ctrl.draw_rect(Rect2(0, 0, size.x, 96), Color(0.04, 0.045, 0.04, 0.7))
 	_txt(Vector2(64, 58), "◇ FLAK HEAVEN  //  " + ("ГЛАВНЫЙ ТЕРМИНАЛ" if m.state == "menu" else "НАСТРОЙКИ"), 22, C_TEXT, bold())
 	# С-5: номер версии — из BUILD (main.gd), а не отдельной устаревшей строкой
-	_txt(Vector2(size.x - 64 - 800, 58), Loc.t("ВЕРСИЯ: ") + Main.BUILD, 20, C_DIM, bold(), HORIZONTAL_ALIGNMENT_RIGHT, 800)
+	_txt(Vector2(size.x - 64 - 800, 58), Loc.t("ВЕРСИЯ: ") + Demo.tag(Main.BUILD), 20, C_DIM, bold(), HORIZONTAL_ALIGNMENT_RIGHT, 800)
 	ctrl.draw_line(Vector2(64, 96), Vector2(size.x - 64, 96), C_LINE, 1.0)
 	ctrl.draw_line(Vector2(64, size.y - 70), Vector2(size.x - 64, size.y - 70), C_LINE, 1.0)
 	if m.state == "menu":
@@ -364,6 +364,8 @@ func _main(m: Main, size: Vector2) -> void:
 	_menu_button(Rect2(x0 + 288, y + 336, 272, 62), "ВЫХОД", "menu_quit")
 	_records_panel(Rect2(size.x - 64 - 520, 150, 520, 520))
 	_biome_pick(Rect2(size.x - 64 - 520, 700, 520, 150))
+	if Demo.on:   # M-07: демо — кнопка списка желаемого под выбором района
+		_menu_button(Rect2(size.x - 64 - 520, 868, 520, 70), "В СПИСОК ЖЕЛАЕМОГО", "wishlist", true, true, "Полная игра: Архипелаг, самолёты ур. 2, ещё 2 операции")
 	_txt(Vector2(64, size.y - 32), "ENTER — вылет    ESC — назад    F2 — схема управления", 18, C_DIM)
 
 
@@ -386,6 +388,9 @@ func _biome_pick(r: Rect2) -> void:
 		_txt(Vector2(b.position.x + 22, b.position.y + 76), c[2], 16, C_DIM)
 		var ops := Campaign.ops_of(c[0])
 		var open := ops.filter(func(k: int) -> bool: return Campaign.is_open(k)).size()
+		if not Demo.biome_ok(c[0]):   # демо: второй биом виден, но закрыт
+			_txt(Vector2(b.position.x + 22, b.position.y + 102), Loc.t(Demo.LOCKED), 15, C_AMBER)
+			continue
 		_txt(Vector2(b.position.x + 22, b.position.y + 102), TranslationServer.translate("операций открыто: %d из %d") % [open, ops.size()], 15, C_DIM)
 		if not on:
 			_buttons.append([b, "menu_biome:" + String(c[0])])

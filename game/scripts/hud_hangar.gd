@@ -103,6 +103,10 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 15, Color(0.8, 0.85, 0.9))
 		# правка 6 теста 3.5-s5: прокачка у каждого самолёта своя
 		_text(Vector2(lx + 24, y + 48), Loc.t("Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка") % Profile.plane_lvl(c), 14, Menu.C_AMBER)
+	elif Demo.on:
+		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
+		_text(Vector2(lx + 24, y + 24), Loc.t("Покупка — ") + Loc.t(Demo.LOCKED), 15, Menu.C_AMBER)
+		_text(Vector2(lx + 24, y + 46), "даёт: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 14, Color(0.7, 0.74, 0.8))
 	else:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
 		_text(Vector2(lx + 24, y + 24), Loc.t("Требует: операция «Перевал»%s · экипаж ур. %d (сейчас %d) · %d запчастей") % [" ✓" if Campaign.cleared(0) else "", Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
@@ -128,6 +132,8 @@ func _hg_plane(c: String, area: Rect2) -> void:
 			_text(Vector2(rx + 20, yy + 80), Loc.t(String(nd["note"])), 12, Color(0.6, 0.62, 0.68))
 		if lv2 >= 5:
 			_text(Vector2(rx, yy + 52), "МАКС.", 18, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
+		elif lv2 >= Demo.node_cap():
+			_text(Vector2(rx, yy + 52), Loc.t("ур. %d–5 — ") % (lv2 + 1) + Loc.t(Demo.LOCKED), 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		else:
 			var price: int = Profile.NODE_COST[lv2]
 			if Profile.can_buy_node(c, id):
@@ -249,8 +255,13 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			why = "сначала выберите ступень 2 выше"
 		if tier == 3 and not Profile.WBRANCH3.has(w2):
 			break
+		var demo_lock: bool = tier > Demo.tier_cap()   # демо: ступени 2–3 закрыты
+		if demo_lock:
+			locked = true
+			why = Loc.t("Ступень %d — ") % tier + Loc.t(Demo.LOCKED)
+			st2 = ""
 		# правка 2 (тест 3.5-s4): как открыть ступень 3 — условия галочками прямо над вариантами
-		if tier == 3 and st2 == "":
+		if tier == 3 and st2 == "" and not demo_lock:
 			_text(Vector2(rx + 250, yy + 20), "Нужно:", 15, Color(0.8, 0.84, 0.9))
 			_cond_chips(Vector2(rx + 310, yy + 4), [["ступень 2", Profile.tier_state(w2, 2) != ""],
 				["операция 2 «Сухое русло»", Campaign.cleared(1)],
@@ -276,7 +287,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 					_button(Rect2(r2.position.x + 18, r2.position.y + 74, 200, 38), Loc.t("ВЗЯТЬ — %d") % price, "hg:tier:%s:%d:%s" % [w2, tier, key], 14)
 				else:
 					_text(Vector2(r2.position.x + 18, r2.position.y + 98), Loc.t("%d запчастей") % price, 14, Color(0.65, 0.65, 0.7))
-		if st2 != "" and st2 != "?":
+		if st2 != "" and st2 != "?" and not demo_lock:
 			_button(Rect2(rx + rw - 260, yy, 260, 30), Loc.t("переиграть — %d") % Profile.REDO_COST[tier - 1], "hg:redo:%s:%d" % [w2, tier], 13)
 		yy += 170.0
 
@@ -331,6 +342,9 @@ func _hg_crew(c: String, area: Rect2) -> void:
 			_panel(br, false)
 			_text(Vector2(br.position.x + 14, br.position.y + 26), (Loc.t("Повысить в звании — %d (не хватает запчастей)") % cost) if Profile.promote_ready(c) else Loc.t("Повысить в звании — %d (нужен опыт)") % cost, 14, Color(0.6, 0.62, 0.68))
 		y += 40.0
+	elif Demo.on and lv >= Demo.crew_cap():
+		y += 36.0
+		_text(Vector2(lx + 24, y), Loc.t("Следующие звания — ") + Loc.t(Demo.LOCKED), 15, Color(0.6, 0.62, 0.68))
 	y += 34.0
 	_para(Vector2(lx + 24, y), Loc.t("Рост показателей: ") + String(Profile.CREW[c]["stats"]), lw - 48, 15)
 	y += 56.0

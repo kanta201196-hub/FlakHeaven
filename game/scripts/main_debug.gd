@@ -360,6 +360,14 @@ func _debug_screenshots(delta: float) -> void:
 				break
 	if m.state == "playing" and m.spawner != null and m.spawner.fuel != null and is_instance_valid(m.spawner.fuel.tanker) and m.spawner.fuel.tanker.filling:
 		_shot("tanker")
+	# M-07: демо (--demo) — кадр экрана «Конец демо» перед кадром итогов
+	if (m.state == "evac" or m.state == "dead") and m.result_t > 3.5 and Demo.on and not _shots_done.has("demo_end"):
+		if Demo.end_open:
+			_shot("demo_end")
+			Demo.end_open = false
+		else:
+			Demo.end_open = true
+		return
 	if (m.state == "evac" or m.state == "dead") and m.result_t > 3.5:
 		_shot("result")
 		m.get_tree().quit()
@@ -442,6 +450,7 @@ func _run_autotest(delta: float) -> void:
 		"menu":
 			if _bot_wait <= 0.0:
 				_bot_wait = 1.5
+				_shot("menu")
 				if m._args.has("--shots") and not _shots_done.has("hangar_crew"):
 					Profile.debug_parts(8000)
 					Campaign.debug_open_all() # U-05/U-07: на скриншотах открыты все операции и ступень 3
