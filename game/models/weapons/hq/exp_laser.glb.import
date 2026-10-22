@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bm1o5sjpvf8lg"
-path="res://.godot/imported/bombdrop_3.glb-94ddd1fdd1c9b2f0a687ba60c01964b6.scn"
+uid="uid://bvfsffatw3fhv"
+path="res://.godot/imported/exp_laser.glb-25261dd841eba568fdd1c025bbd28dc9.scn"
 
 [deps]
 
-source_file="res://models/weapons/bombdrop_3.glb"
-dest_files=["res://.godot/imported/bombdrop_3.glb-94ddd1fdd1c9b2f0a687ba60c01964b6.scn"]
+source_file="res://models/weapons/hq/exp_laser.glb"
+dest_files=["res://.godot/imported/exp_laser.glb-25261dd841eba568fdd1c025bbd28dc9.scn"]
 
 [params]
 

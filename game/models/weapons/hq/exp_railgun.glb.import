@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://c5cv0kk5r88ib"
-path="res://.godot/imported/bombdrop_1.glb-6cc3426a9d38bcffcb2033d42cbeb18e.scn"
+uid="uid://bfmvlpmdq2hm4"
+path="res://.godot/imported/exp_railgun.glb-3247c9a6f8282a31a4c6a8d640e120b2.scn"
 
 [deps]
 
-source_file="res://models/weapons/bombdrop_1.glb"
-dest_files=["res://.godot/imported/bombdrop_1.glb-6cc3426a9d38bcffcb2033d42cbeb18e.scn"]
+source_file="res://models/weapons/hq/exp_railgun.glb"
+dest_files=["res://.godot/imported/exp_railgun.glb-3247c9a6f8282a31a4c6a8d640e120b2.scn"]
 
 [params]
 

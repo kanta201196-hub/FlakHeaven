@@ -2260,7 +2260,7 @@ func _sync_bombs(m: Main) -> void:
 		var bs := Basis(fwd, zx.cross(fwd), zx)
 		var w := float(b["wob"]) + k * 14.0
 		bs = bs * Basis(Vector3.BACK, 0.07 * sin(w)) * Basis(Vector3.UP, 0.06 * sin(w * 1.3 + 1.0)) * Basis(Vector3.RIGHT, 0.4 * k)
-		var ln := plen * float(WeaponModels.DROP_LEN[clampi(vt, 1, 4)])
+		var ln := plen * float(WeaponModels.DROP_LEN[clampi(vt, 1, WeaponModels.BOMB_EVO_VT)])
 		mi.global_transform = Transform3D(bs.scaled(Vector3(ln, ln, ln)), pos)
 	for id in _bombs3.keys():
 		if not seen.has(id):

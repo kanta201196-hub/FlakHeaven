@@ -290,8 +290,8 @@ func _hold(p: Dictionary) -> void:
 		wm.visible = false
 		m.fx.explosion(wm.global_position, 22.0)
 	if p.get("bombs", false) and m.projectiles.bombs.size() < 8:
-		# бомбы всех ступеней (1–3 и «ковёр») с долгим взрывателем — на кадре видно падение
-		var vt := (int(_pt * 10.0) % 4) + 1
+		# бомбы всех калибров (1–5 и «ковёр», тест 3.5-s8) с долгим взрывателем — на кадре видно падение
+		var vt := (int(_pt * 10.0) % WeaponModels.BOMB_EVO_VT) + 1
 		var to := pos + Vector2.from_angle(m.player.heading + randf_range(-0.5, 0.5)) * randf_range(420.0, 600.0)
 		m.projectiles.spawn_bomb(pos + Vector2(randf_range(-20, 20), randf_range(-20, 20)), randf_range(4.0, 7.0), 0.0, 120.0, "бомбы", to, true)
 		m.projectiles.bombs[-1]["vt"] = vt

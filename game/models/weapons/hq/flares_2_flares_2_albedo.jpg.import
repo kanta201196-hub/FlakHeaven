@@ -1,0 +1,37 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://cf84awwxkax57"
+path="res://.godot/imported/flares_2_flares_2_albedo.jpg-bf7d3d5a1157e691e24c2b73be2f0426.ctex"
+metadata={
+"vram_texture": false
+}
+generator_parameters={
+"md5": "01f1b17e730ef43faa47613773081104"
+}
+
+[deps]
+
+source_file="res://models/weapons/hq/flares_2_flares_2_albedo.jpg"
+dest_files=["res://.godot/imported/flares_2_flares_2_albedo.jpg-bf7d3d5a1157e691e24c2b73be2f0426.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1
