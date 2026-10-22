@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b8rhga5cusapi"
-path="res://.godot/imported/b11_wreck_plane_Image_1.jpg-844be901110c43ecd3a73eb726f0ecc6.ctex"
+uid="uid://dbwf5mgcb5hdv"
+path="res://.godot/imported/b06_shrub_shrub_bark_normal.jpg-0dda8d0a9c9b9b93b87a799b6bf2a54e.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "ab849903c6365bfb1e69e743ac8ad6a2"
+"md5": "65f1ddb2b7b46be5e880c194e2016889"
 }
 
 [deps]
 
-source_file="res://models/biome/b11_wreck_plane_Image_1.jpg"
-dest_files=["res://.godot/imported/b11_wreck_plane_Image_1.jpg-844be901110c43ecd3a73eb726f0ecc6.ctex"]
+source_file="res://models/biome/b06_shrub_shrub_bark_normal.jpg"
+dest_files=["res://.godot/imported/b06_shrub_shrub_bark_normal.jpg-0dda8d0a9c9b9b93b87a799b6bf2a54e.ctex"]
 
 [params]
 

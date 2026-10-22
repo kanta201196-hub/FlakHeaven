@@ -1,0 +1,37 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://cd66co4itf75d"
+path="res://.godot/imported/b10_sandbag_post_sandbag_earth_normal.jpg-211d4ffe9ef96611c050fb5d4fe254ef.ctex"
+metadata={
+"vram_texture": false
+}
+generator_parameters={
+"md5": "070594347a9de87a668becf3655b5ab2"
+}
+
+[deps]
+
+source_file="res://models/biome/b10_sandbag_post_sandbag_earth_normal.jpg"
+dest_files=["res://.godot/imported/b10_sandbag_post_sandbag_earth_normal.jpg-211d4ffe9ef96611c050fb5d4fe254ef.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1
