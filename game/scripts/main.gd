@@ -22,7 +22,7 @@ var background: Background
 var clouds: Clouds
 var render3d: Render3D
 
-## Состояния: menu, settings, campaign, class_select, playing, levelup, paused, dead, evac
+## Состояния: menu, settings, campaign («В вылет»), playing, levelup, paused, dead, evac
 var state := "menu"
 var cls_id := "fighter"
 var skill_pick := {}
@@ -307,7 +307,7 @@ func _process(delta: float) -> void:
 		sfx.music("menu")
 		return
 	# Музыка: меню / бой / ас (если файлы есть в audio/)
-	if state in ["campaign", "class_select"]:
+	if state == "campaign":
 		sfx.music("menu")
 	elif state in ["dead", "evac"]:
 		sfx.music("result")

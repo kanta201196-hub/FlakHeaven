@@ -350,8 +350,6 @@ func _debug_screenshots(delta: float) -> void:
 		_shot("settings")
 	if m.state == "campaign":
 		_shot("campaign")
-	if m.state == "class_select":
-		_shot("class")
 	if m.state == "levelup" and m.level >= 4:
 		_shot("levelup")
 	if m.state == "levelup" and m.level >= 10:
@@ -537,11 +535,6 @@ func _run_autotest(delta: float) -> void:
 						Campaign.debug_open_all()
 						Campaign.select(clampi(int(String(a).substr(5)) - 1, 0, Campaign.OPS.size() - 1))
 				print("AUTOTEST: operation %d %s" % [Campaign.index() + 1, Campaign.op()["id"]])
-				m.ui_click("op_go")
-			return
-		"class_select":
-			if _bot_wait <= 0.0:
-				_bot_wait = 1.5
 				var forced := ""
 				for a in m._args:
 					if String(a).begins_with("--class="):
@@ -555,7 +548,8 @@ func _run_autotest(delta: float) -> void:
 					sk = PlaneClasses.CLASS_SKILLS[cid][randi() % 3]
 				m.skill_pick[cid] = sk
 				print("AUTOTEST: class %s skill %s" % [cid, sk])
-				m.select_class(cid)
+				m.cls_id = cid
+				m.ui_click("op_go")
 			return
 		"course_pick":
 			if _bot_wait <= 0.0:

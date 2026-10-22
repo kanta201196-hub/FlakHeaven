@@ -122,9 +122,6 @@ func _draw_hud() -> void:
 	if m.state == "campaign":
 		_campaign_ui.draw(size)
 		return
-	if m.state == "class_select":
-		_screens_ui.class_select(size)
-		return
 
 	_flight_ui.draw(m, size, _dmg_flash)
 

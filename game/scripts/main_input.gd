@@ -23,36 +23,29 @@ func handle_global_input() -> void:
 		"hangar":
 			if Input.is_action_just_pressed("pause"):
 				m.start_run()
-				m._set_state("menu")
+				m._set_state(m.hangar_back)
 			return
 		"campaign":
+			# EX-08: экран «В вылет». Enter — в бой (не тем же нажатием, что открыло экран из меню),
+			# ↑ / ↓ — операция, 1 / 2 / 3 и ← / → — самолёт
 			if Input.is_action_just_pressed("pause"):
 				m._set_state("menu")
-			elif Input.is_action_just_pressed("ui_accept"):
-				m._set_state("class_select")
-			elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+			elif Input.is_action_just_pressed("ui_accept") and m._state_t > 0.25:
+				m.select_class(m.cls_id)
+			elif Input.is_action_just_pressed("ui_up") or Input.is_action_just_pressed("ui_down"):
 				# по открытым операциям биома выбранной операции
 				var ids := Campaign.ops_of(Campaign.biome_of(Campaign.index())).filter(func(i: int) -> bool: return Campaign.is_open(i))
 				var k := ids.find(Campaign.index())
-				Campaign.select(ids[wrapi(k + (1 if Input.is_action_just_pressed("ui_right") else -1), 0, ids.size())])
-			elif Input.is_action_just_pressed("ui_up") or Input.is_action_just_pressed("ui_down"):
-				HudCampaign.switch_biome()
-			else:
-				var ids := Campaign.ops_of(Campaign.biome_of(Campaign.index()))
-				for i in ids.size():
-					if Input.is_action_just_pressed("choose_%d" % (i + 1)):
-						Campaign.select(ids[i])
-			return
-		"class_select":
-			if Input.is_action_just_pressed("pause"):
-				m._set_state("campaign")
-				return
-			for i in 3:
-				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
-					m.select_class(PlaneClasses.LIST[i])
-					return
-			if Input.is_action_just_pressed("toggle_scheme"):
+				Campaign.select(ids[wrapi(k + (1 if Input.is_action_just_pressed("ui_down") else -1), 0, ids.size())])
+			elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+				var k := PlaneClasses.LIST.find(m.cls_id)
+				m.cls_id = PlaneClasses.LIST[wrapi(k + (1 if Input.is_action_just_pressed("ui_right") else -1), 0, 3)]
+			elif Input.is_action_just_pressed("toggle_scheme"):
 				_cycle_scheme()
+			else:
+				for i in 3:
+					if Input.is_action_just_pressed("choose_%d" % (i + 1)):
+						m.cls_id = PlaneClasses.LIST[i]
 			return
 		"course_pick":
 			for i in m.course_offers.size():
@@ -86,7 +79,7 @@ func handle_global_input() -> void:
 			elif Input.is_action_just_pressed("change_class"):
 				m.restarts += 1
 				m.start_run()
-				m._set_state("class_select")
+				m._set_state("campaign")
 			return
 	if Input.is_action_just_pressed("toggle_tuning") and Main.DEBUG:
 		m.tuning_panel.toggle()
@@ -177,8 +170,12 @@ func ui_click(action: String) -> void:
 		HudCampaign.switch_biome(action.substr(11))
 		m.start_run()
 		m._set_state("menu")
-	elif action == "op_go":
-		m._set_state("class_select")
+	elif action == "op_go":   # EX-08: «В ВЫЛЕТ ▶» — выбранный самолёт сразу в бой
+		m.select_class(m.cls_id)
+	elif action == "sortie_hangar":   # «Улучшить самолёт» с экрана вылета — и обратно на него
+		m.hangar_back = "campaign"
+		m.hangar_cls = m.cls_id
+		m._set_state("hangar")
 	elif action == "menu_hangar" or action == "to_hangar":
 		m.hangar_back = "menu"
 		if m.state in ["dead", "evac"]:
@@ -218,8 +215,6 @@ func ui_click(action: String) -> void:
 			m.report.open(true)
 		else:
 			abort_run()
-	elif action == "class_back":
-		m._set_state("campaign")
 	elif action.begins_with("skill:"):
 		var parts := action.split(":")
 		if not Profile.skill_unlocked(parts[1], parts[2]):
@@ -227,8 +222,8 @@ func ui_click(action: String) -> void:
 		m.skill_pick[parts[1]] = parts[2]
 		Profile.set_skill(parts[1], 0, parts[2])
 		m.sfx.play("card", -12.0, 1.4)
-	elif action.begins_with("class:"):
-		m.select_class(action.substr(6))
+	elif action.begins_with("class:"):   # экран «В вылет»: клик по карточке выбирает самолёт, в бой — кнопкой
+		m.cls_id = action.substr(6)
 	elif action.begins_with("course:"):
 		m.choose_course(int(action.substr(7)))
 	elif action == "change_course":
@@ -258,7 +253,7 @@ func ui_click(action: String) -> void:
 	elif action == "change_class":
 		m.restarts += 1
 		m.start_run()
-		m._set_state("class_select")
+		m._set_state("campaign")
 
 
 func cycle_priority(gi: int) -> void:
@@ -319,7 +314,7 @@ func hangar_action(a: String) -> void:
 			return
 		"back":
 			m.start_run()
-			m._set_state("menu")
+			m._set_state(m.hangar_back)
 			return
 		"dbg_parts":
 			Profile.debug_parts(1000)
