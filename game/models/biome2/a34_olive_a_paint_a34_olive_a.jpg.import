@@ -1,0 +1,37 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://dy73s2dnhe5k"
+path="res://.godot/imported/a34_olive_a_paint_a34_olive_a.jpg-a5365dcc6a63697e9aaf9ebc0c6c9205.ctex"
+metadata={
+"vram_texture": false
+}
+generator_parameters={
+"md5": "9c9b18ec0c943a4873cb4da5d2ff15ed"
+}
+
+[deps]
+
+source_file="res://models/biome2/a34_olive_a_paint_a34_olive_a.jpg"
+dest_files=["res://.godot/imported/a34_olive_a_paint_a34_olive_a.jpg-a5365dcc6a63697e9aaf9ebc0c6c9205.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1
