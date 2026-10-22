@@ -96,6 +96,11 @@ func defense_k(src: String) -> float:
 	return k
 
 
+## EX-04 Б2: урон в зависимости от того, откуда заходит игрок (лобовая броня у бомбардировщиков)
+func aspect_k(_src: String) -> float:
+	return 1.0
+
+
 func make_elite() -> void:
 	elite = true
 	if defense == "":
@@ -147,6 +152,7 @@ func take_hit(dmg: float, source := "прочее") -> void:
 		var dkind := defense if DEF_K.has(defense) and DEF_K[defense].get(src_class(source), 1.0) != 1.0 else "ecm"
 		Main.I.tele.add("def_" + dkind, 1.0)
 		Hints.show("def_" + dkind, DEF_HINT[dkind], 9.0, 2)
+	dmg *= aspect_k(source)
 	if source == "ЭМИ":
 		ecm_off_t = ECM_OFF
 	if (is_boss or self is RivalAce) and Main.I.spawner != null:

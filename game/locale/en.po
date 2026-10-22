@@ -6318,3 +6318,12 @@ msgstr "HQ"
 
 msgid "Щит аса держит обычный урон втрое лучше. Пробивают его пушка «на хвосте» у аса, ЭМИ и лазер."
 msgstr "An ace's shield shrugs off normal damage three times better. Your cannon from the ace's tail, an EMP or a laser breaks it."
+
+msgid "Звено бомбардировщиков! Броня спереди, турель сзади — заходите сбоку"
+msgstr "Bomber flight! Armor in front, turret at the rear — attack from the side"
+
+msgid "Синяя дуга у носа бомбардировщика — лобовая броня: спереди урон вдвое меньше. Сзади бьёт турель (красный сектор). Заходите сбоку."
+msgstr "The blue arc at a bomber's nose is frontal armor: hits from the front deal half damage. A turret covers the rear (red sector). Attack from the side."
+
+msgid "бомбардировщики"
+msgstr "bombers"
