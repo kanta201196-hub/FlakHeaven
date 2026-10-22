@@ -6327,3 +6327,48 @@ msgstr "The blue arc at a bomber's nose is frontal armor: hits from the front de
 
 msgid "бомбардировщики"
 msgstr "bombers"
+
+msgid " до %d:00"
+msgstr " by %d:00"
+
+msgid "«Грач»: подавить 8 установок ПВО"
+msgstr "\"Rook\": suppress 8 air-defense units"
+
+msgid "«Кит»: сжечь 10 машин колонн"
+msgstr "\"Whale\": burn 10 convoy vehicles"
+
+msgid "«Оса»: сбить 4 бомбардировщика до 12:00"
+msgstr "\"Wasp\": shoot down 4 bombers by 12:00"
+
+msgid "Бомбардировщики %d из %d"
+msgstr "Bombers %d of %d"
+
+msgid "ЗА ЗАДАНИЕ КЛАССА"
+msgstr "FOR THE CLASS TASK"
+
+msgid "ЗАДАНИЕ КЛАССА (награда — выбор из редких карточек)"
+msgstr "CLASS TASK (reward: a pick of rare cards)"
+
+msgid "Задание выполнено, отличная работа. Награда ваша."
+msgstr "Task complete, great work. The reward is yours."
+
+msgid "Задание для вас: %s."
+msgstr "Your task: %s."
+
+msgid "Задание класса выполнено! Награда: выбор из редких карточек и +%d запчастей"
+msgstr "Class task complete! Reward: a pick of rare cards and +%d parts"
+
+msgid "Задание класса не выполнено — срок вышел"
+msgstr "Class task failed: time is up"
+
+msgid "Машины колонн %d из %d"
+msgstr "Convoy vehicles %d of %d"
+
+msgid "Установки ПВО %d из %d"
+msgstr "Air-defense units %d of %d"
+
+msgid "задание класса: срок вышел"
+msgstr "class task: time is up"
+
+msgid "✓ задание класса выполнено"
+msgstr "✓ class task complete"
