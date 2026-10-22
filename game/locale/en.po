@@ -747,8 +747,8 @@ msgstr "Hull: %d → %d"
 
 #: game/scripts/cards.gd:432
 #, c-format
-msgid "Перезарядка подвесов: %s → %s"
-msgstr "Hardpoint reload: %s → %s"
+msgid "Перезарядка подвесов: %s → %s (предел %s)"
+msgstr "Hardpoint reload: %s → %s (limit %s)"
 
 #: game/scripts/cards.gd:435
 #, c-format
@@ -6174,3 +6174,12 @@ msgstr "synergy: good company"
 #: game/scripts/wingman.gd:423
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
+
+msgid "\nЗаймёт место модуля %d из %d"
+msgstr "\nTakes module slot %d of %d"
+
+msgid "\nЗаймёт последнее место модуля (%d из %d): дальше — только улучшения взятых"
+msgstr "\nTakes the last module slot (%d of %d): after this, only upgrades to modules you have"
+
+msgid "Модули: %d из %d"
+msgstr "Modules: %d of %d"

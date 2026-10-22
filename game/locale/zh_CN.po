@@ -742,8 +742,8 @@ msgstr "耐久：%d → %d"
 
 #: game/scripts/cards.gd:432
 #, c-format
-msgid "Перезарядка подвесов: %s → %s"
-msgstr "挂架装填：%s → %s"
+msgid "Перезарядка подвесов: %s → %s (предел %s)"
+msgstr "挂架装填：%s → %s（上限 %s）"
 
 #: game/scripts/cards.gd:435
 #, c-format
@@ -6081,3 +6081,12 @@ msgstr "羁绊：狼群"
 
 msgid "Механизация"
 msgstr "可动部件"
+
+msgid "\nЗаймёт место модуля %d из %d"
+msgstr "\n占用模块槽位 %d / %d"
+
+msgid "\nЗаймёт последнее место модуля (%d из %d): дальше — только улучшения взятых"
+msgstr "\n占用最后一个模块槽位（%d / %d）：之后只能升级已有模块"
+
+msgid "Модули: %d из %d"
+msgstr "模块：%d / %d"
