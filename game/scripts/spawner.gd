@@ -16,6 +16,9 @@ var activity_i := 0
 var activity_node: Node = null
 var fuel: Fuel = null   # 3.5: топливо и свой заправщик
 const ACTIVITIES := ["ground", "dogfight", "transport", "convoy"]
+## EX-03 (отзывы внешних тестеров 21.10): «очередь на атаку» — одновременно заходят не больше attack_slots()
+## дронов и ракетоносцев, остальные ждут поодаль и не стреляют. Толпа вокруг игрока не кружит «вальс».
+var _attackers: Array = []
 const TRANSPORT_TTK := 12.0
 
 
@@ -533,3 +536,23 @@ func _pressure(t: float, delta: float) -> void:
 ## Правка 3.5-s4: урон врагов растёт после 7:00 (к 15:00 — ×2, к 20:00 — ×2,6), иначе поздний бой не опасен
 static func dmg_ramp(t: float) -> float:
 	return 1.0 + maxf(0.0, t - 420.0) / 480.0
+
+
+## EX-03: сколько врагов заходят в атаку одновременно (4 в начале, 8 к 10-й минуте)
+func attack_slots() -> int:
+	return 4 + mini(int(Main.I.run_time / 150.0), 4)
+
+
+## EX-03: враг просит разрешения на заход; true — можно атаковать
+func request_attack(e: Enemy) -> bool:
+	_attackers = _attackers.filter(func(x): return is_instance_valid(x) and (x as Enemy).hp > 0.0)
+	if _attackers.has(e):
+		return true
+	if _attackers.size() >= attack_slots():
+		return false
+	_attackers.append(e)
+	return true
+
+
+func release_attack(e: Enemy) -> void:
+	_attackers.erase(e)

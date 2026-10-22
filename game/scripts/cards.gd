@@ -69,6 +69,33 @@ const MODULES := {
 	"repair": {"title": "Ремонт в воздухе", "max": 99, "cat": "Ремонт"},
 }
 
+## EX-01 (отзывы внешних тестеров, решение Kanta 21.10): за вылет — не больше MOD_SLOTS разных модулей.
+## Места заняты — выпадают только улучшения уже взятых. Ремонт и уровни навыка класса места не занимают.
+const MOD_SLOTS := 6
+const SLOT_FREE := ["repair", "skill3"]
+## EX-01: «Быстрая перезарядка» — не ниже этой доли исходной (было 0,3: брали её и забывали о скорострельности)
+const RELOAD_FLOOR := 0.6
+
+
+## Сколько мест модулей занято
+static func mod_slots_used(p: Player) -> int:
+	var n := 0
+	for id in MODULES:
+		if not SLOT_FREE.has(id) and int(p.taken.get(id, 0)) > 0:
+			n += 1
+	return n
+
+
+## Строка на карточке нового модуля: какое место он займёт
+static func slot_hint(p: Player, id: String) -> String:
+	if SLOT_FREE.has(id) or int(p.taken.get(id, 0)) > 0:
+		return ""
+	var n := mod_slots_used(p) + 1
+	if n >= MOD_SLOTS:
+		return Loc.t("\nЗаймёт последнее место модуля (%d из %d): дальше — только улучшения взятых") % [n, MOD_SLOTS]
+	return Loc.t("\nЗаймёт место модуля %d из %d") % [n, MOD_SLOTS]
+
+
 const CAT_COLORS := {
 	"Новое оружие": Color(1.0, 0.75, 0.3),
 	"Оружие": Color(1.0, 0.85, 0.5),
@@ -429,7 +456,7 @@ static func module_delta(p: Player, id: String, k: float) -> String:
 			return Loc.t("Прочность: %d → %d") % [int(p.max_hp), int(p.max_hp + float(p.cls["hp"]) * 0.2 * k)]
 		"reload":
 			var r := float(p.mods["hp_cd"])
-			return Loc.t("Перезарядка подвесов: %s → %s") % [_pct(r), _pct(maxf(0.3, r * (1.0 - 0.1 * k)))]
+			return Loc.t("Перезарядка подвесов: %s → %s (предел %s)") % [_pct(r), _pct(maxf(RELOAD_FLOOR, r * (1.0 - 0.1 * k))), _pct(RELOAD_FLOOR)]
 		"launcher":
 			var r2 := float(p.mods.get("msl_cd", 1.0))
 			return Loc.t("Перезарядка ракет: %s → %s") % [_pct(r2), _pct(maxf(0.4, r2 * (1.0 - 0.1 * k)))]
@@ -486,6 +513,10 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		var m: Dictionary = MODULES[id]
 		var taken := int(p.taken.get(id, 0))
 		if taken >= int(m["max"]):
+			continue
+		if taken == 0 and not SLOT_FREE.has(id) and mod_slots_used(p) >= MOD_SLOTS:
+			continue
+		if id == "reload" and float(p.mods["hp_cd"]) <= RELOAD_FLOOR + 0.001:
 			continue
 		var w := 1.5
 		var title: String = m["title"]
@@ -644,6 +675,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			if dl != "":
 				card["desc"] += "\n" + dl
 			if card["kind"] == "module":
+				card["desc"] += slot_hint(p, card["id"])
 				card["desc"] += Prog.evo_hint(p, card["id"])
 	card["tags"] = tags_line(p, card)
 	card["course"] = advances_course(p, card)
@@ -800,7 +832,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 				"gun_rate":
 					p.mods["gun_rate"] *= 1.0 + 0.15 * k
 				"reload":
-					p.mods["hp_cd"] = maxf(0.3, p.mods["hp_cd"] * (1.0 - 0.1 * k))
+					p.mods["hp_cd"] = maxf(RELOAD_FLOOR, p.mods["hp_cd"] * (1.0 - 0.1 * k))
 				"seeker":
 					pass # уровни ГСН читаются из p.taken (projectiles.gd)
 				"frag":

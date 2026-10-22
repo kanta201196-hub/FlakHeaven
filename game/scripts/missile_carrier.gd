@@ -3,6 +3,8 @@ extends Enemy
 ## Ракетоносец: держит дистанцию, кружит вокруг игрока.
 ## Перед пуском — предупреждение (красная линия захвата + звук), затем самонаводящаяся ракета.
 ## Тест уклонения: бочка (неуязвимость), форсаж (оторваться), резкий разворот (ракета проскакивает).
+## EX-03 (отзывы внешних тестеров 21.10): держится дальше (520–850 пикс.) и пускает ракету только по очереди
+## на атаку (спавнер), а не все разом.
 
 var _cd := 3.0
 var _lock := 0.0
@@ -36,9 +38,9 @@ func behave(delta: float) -> void:
 	var to := p.global_position - global_position
 	var d := to.length()
 	var desired := to.angle()
-	if d < 420.0:
+	if d < 520.0:
 		desired = to.angle() + PI
-	elif d < 650.0:
+	elif d < 850.0:
 		desired = to.angle() + PI / 2.0 * _orbit
 	heading = rotate_toward(heading, desired, deg_to_rad(90.0) * delta)
 	position += Vector2.from_angle(heading) * 200.0 * delta
@@ -49,11 +51,16 @@ func behave(delta: float) -> void:
 			Main.I.projectiles.spawn_missile(global_position, to.normalized(), "aam", kind())
 			Main.I.sfx.play("missile_enemy", -8.0)
 			_cd = 4.5
+			if Main.I.spawner != null:
+				Main.I.spawner.release_attack(self)
 	else:
 		_cd -= delta
-		if _cd <= 0.0 and d < 900.0:
-			_lock = Tuning.g("missile_telegraph")
-			Main.I.sfx.play("lock", -6.0)
+		if _cd <= 0.0 and d < 1000.0 and not leaving:
+			if Main.I.spawner == null or Main.I.spawner.request_attack(self):
+				_lock = Tuning.g("missile_telegraph")
+				Main.I.sfx.play("lock", -6.0)
+			else:
+				_cd = randf_range(0.5, 1.0)
 
 
 func _draw() -> void:
