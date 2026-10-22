@@ -69,6 +69,10 @@ func handle_global_input() -> void:
 				m.reroll()
 			return
 		"dead", "evac":
+			if Demo.end_open:   # экран «Конец демо» поверх итогов: Enter / Esc — к итогам
+				if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("ui_cancel"):
+					Demo.end_open = false
+				return
 			if Input.is_action_just_pressed("restart") and m.result_t < 0.5:
 				return
 			for i in 3:
@@ -202,6 +206,10 @@ func ui_click(action: String) -> void:
 		OS.shell_open(ProjectSettings.globalize_path("user://"))
 	elif action == "menu_howto":
 		m.menu.howto = true
+	elif action == "wishlist":   # M-07: демо — страница игры в Steam
+		Demo.open_store()
+	elif action == "demo_end_close":
+		Demo.end_open = false
 	elif action == "menu_quit":
 		m.get_tree().quit()
 	elif action == "to_menu":

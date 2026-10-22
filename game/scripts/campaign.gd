@@ -84,6 +84,8 @@ static func _save() -> void:
 
 static func cleared(i: int) -> bool:
 	_load()
+	if not Demo.op_ok(i):   # демо: операции полной игры не показываются пройденными (сохранение не трогаем)
+		return false
 	return bool(_cfg.get_value("done", OPS[i]["id"], false))
 
 
@@ -104,6 +106,8 @@ static func ops_of(biome: String) -> Array:
 ## Открыта ли операция: первая в своём биоме — всегда, дальше — после прохождения предыдущей того же биома
 static func is_open(i: int) -> bool:
 	_load()
+	if not Demo.op_ok(i):
+		return false
 	var ids := ops_of(biome_of(i))
 	var k := ids.find(i)
 	return k <= 0 or cleared(ids[k - 1])
@@ -202,7 +206,8 @@ static func on_evac(run_time: float, flags: Dictionary) -> Dictionary:
 		_cfg.set_value("done", o["id"], true)
 		out["first"] = true
 		out["parts"] = int(o["parts"])
-		out["opens"] = o["opens"]
+		out["opens"] = Demo.opens(o)
+		Demo.on_op_cleared(String(o["id"]))
 		# тест 3.5-s5: следующая операция сама не выбирается — в меню она отмечена «новая, сложнее».
 		# Раньше после «Перевала» вылет молча шёл на «Боевом», и тест баланса шёл не на той сложности.
 		_save()

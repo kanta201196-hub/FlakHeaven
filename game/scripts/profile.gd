@@ -200,7 +200,7 @@ func parts() -> int:
 
 ## Уровень (звание) экипажа — то, что действует на самолёт. Повышается кнопкой «Повысить в звании».
 func crew_lvl(c: String) -> int:
-	return clampi(int(cls(c).get("crew_rank", 1)), 1, CREW_CUM.size())
+	return clampi(int(cls(c).get("crew_rank", 1)), 1, Demo.crew_cap())
 
 
 func xp_lvl_of(xp: int) -> int:
@@ -219,7 +219,7 @@ func xp_lvl(c: String) -> int:
 ## Опыт к следующему званию: [набрано, нужно] (может быть набрано > нужно; на ур. 20 — [0, 0])
 func crew_progress(c: String) -> Array:
 	var lv := crew_lvl(c)
-	if lv >= CREW_CUM.size():
+	if lv >= Demo.crew_cap():
 		return [0, 0]
 	var xp := int(cls(c)["crew_xp"])
 	return [xp - int(CREW_CUM[lv - 1]), int(CREW_CUM[lv]) - int(CREW_CUM[lv - 1])]
@@ -235,7 +235,7 @@ func promote_cost(lv: int) -> int:
 
 ## Опыта хватает на следующее звание
 func promote_ready(c: String) -> bool:
-	return crew_lvl(c) < CREW_CUM.size() and xp_lvl(c) > crew_lvl(c)
+	return crew_lvl(c) < Demo.crew_cap() and xp_lvl(c) > crew_lvl(c)
 
 
 func can_promote(c: String) -> bool:
@@ -348,11 +348,11 @@ func nodes_of(c: String) -> Dictionary:
 
 
 func node(c: String, id: String) -> int:
-	return int(nodes_of(c).get(id, 0))
+	return mini(int(nodes_of(c).get(id, 0)), Demo.node_cap())   # демо: сохранение полной игры не выше потолка
 
 
 func plane2(c: String) -> bool:
-	return meta_k() > 0.0 and bool(cls(c)["plane2"])
+	return meta_k() > 0.0 and not Demo.on and bool(cls(c)["plane2"])
 
 
 func skill_unlocked(c: String, sk: String) -> bool:
@@ -371,6 +371,8 @@ func wing_ok(c: String, t: String) -> bool:
 ## Выбор в ветке оружия: "a" / "b" / ""
 func wbranch(w: String, tier: int) -> String:
 	if meta_k() <= 0.0 or not data["weapons"].has(w):
+		return ""
+	if tier > Demo.tier_cap():
 		return ""
 	var v := String(data["weapons"][w].get("t%d" % tier, ""))
 	return "" if v == "?" else v
@@ -424,7 +426,7 @@ func skills(c: String) -> Array:
 
 func can_buy_node(c: String, id: String) -> bool:
 	var lv := node(c, id)
-	return lv < 5 and parts() >= int(NODE_COST[lv])
+	return lv < Demo.node_cap() and parts() >= int(NODE_COST[lv])
 
 
 func buy_node(c: String, id: String) -> bool:
@@ -438,7 +440,7 @@ func buy_node(c: String, id: String) -> bool:
 
 ## U-05/U-06: самолёт ур. 2 продают после операции 1 кампании «Перевал»
 func can_buy_plane2(c: String) -> bool:
-	return not bool(cls(c)["plane2"]) and parts() >= PLANE2_COST and crew_lvl(c) >= PLANE2_CREW and Campaign.cleared(0)
+	return not Demo.on and not bool(cls(c)["plane2"]) and parts() >= PLANE2_COST and crew_lvl(c) >= PLANE2_CREW and Campaign.cleared(0)
 
 
 func buy_plane2(c: String) -> bool:
@@ -455,6 +457,8 @@ func tier_state(w: String, tier: int) -> String:
 
 
 func can_pick_tier(w: String, tier: int) -> bool:
+	if tier > Demo.tier_cap():
+		return false
 	if tier == 2 and tier_state(w, 1) == "":
 		return false
 	if tier == 3 and not tier3_open(w):
