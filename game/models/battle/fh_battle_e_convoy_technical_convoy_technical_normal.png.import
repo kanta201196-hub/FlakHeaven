@@ -2,10 +2,13 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bo25nm43xcqo0"
+uid="uid://dc03kfhtmfoy"
 path="res://.godot/imported/fh_battle_e_convoy_technical_convoy_technical_normal.png-4808d78cef15e92046913e98fd7496e1.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "b787a6dcdc4e2a3d17b65ffe9173fb7d"
 }
 
 [deps]
@@ -31,4 +34,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1

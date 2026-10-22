@@ -2,10 +2,13 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://obajb7hdjmbq"
+uid="uid://hkp7rmvae2yy"
 path="res://.godot/imported/fh_battle_e_convoy_scout_convoy_scout_normal.png-85684c451e74a42eb199c9bbcf7c98ea.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "57c290c0e1f0d33c7ce678d3805a06e3"
 }
 
 [deps]
@@ -31,4 +34,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1
