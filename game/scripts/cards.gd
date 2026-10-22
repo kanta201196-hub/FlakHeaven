@@ -662,7 +662,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 				"res_bounty":
 					card["desc"] = Loc.t("+%d запчастей сразу") % int(20 * k)
 				"res_kit":
-					card["desc"] = Loc.t("+%s к максимальной прочности и полный ремонт") % _pct(0.05 * k)
+					card["desc"] = Loc.t("+%s к максимальной прочности и ремонт половины") % _pct(0.05 * k)
 				_:
 					if card["id"] == "res_course":
 						var cs := syn_def(p, p.course)
@@ -822,7 +822,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 				"armor":
 					var add: float = float(p.cls["hp"]) * 0.2 * k
 					p.max_hp += add
-					p.heal(add)
+					p.heal(add, "armor")
 				"engine":
 					p.mods["speed"] *= 1.0 + 0.06 * k
 				"wing":
@@ -867,7 +867,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 				"skill3":
 					p.mods["s3_lvl"] = mini(int(p.mods["s3_lvl"]) + 1, 3)
 				"repair":
-					p.heal(p.max_hp * minf(0.4 * k, 1.0))
+					p.heal(p.max_hp * minf(0.4 * k, 1.0), "card")
 		"wing_new":
 			p.add_wingman(card["wtype"], k)
 		"wing_lvl":
@@ -893,7 +893,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 					Main.I.parts += 20.0 * k
 				"res_kit":
 					p.max_hp *= 1.0 + 0.05 * k
-					p.heal(p.max_hp)
+					p.heal(p.max_hp * 0.5, "kit")   # EX-10: было полное восстановление
 				_:
 					if card["id"] == "res_course":
 						p.add_course_pts(1)

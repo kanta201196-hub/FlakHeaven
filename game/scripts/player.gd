@@ -572,10 +572,11 @@ func is_invulnerable() -> bool:
 	return roll_inv > 0.0 or invuln > 0.0 or Main.I.god_mode
 
 
-func heal(amount: float) -> void:
+func heal(amount: float, src := "прочее") -> void:
 	var before := hp
 	hp = minf(max_hp, hp + amount)
 	Main.I.stats_add_counter("healed", int(round(hp - before)))
+	Main.I.tele.add("heal_" + src, hp - before)   # EX-10: откуда приходит ремонт
 
 
 func damage(amount: float, source := "прочее", who := "") -> void:
@@ -615,7 +616,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	hp -= amount
 	if has_perk("a_arm2") and not _second_wind and hp > 0.0 and hp < max_hp * 0.25:
 		_second_wind = true # перк «Второе дыхание»
-		heal(max_hp * 0.2)
+		heal(max_hp * 0.2, "perk")
 		Main.I.fx.text(global_position + Vector2(0, -60), "Второе дыхание!", Color(0.6, 1.0, 0.7))
 		invuln = 2.0
 		Main.I.on_player_damaged(amount)
@@ -630,6 +631,10 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	if manual_mode:
 		manual_bonus = maxf(0.0, manual_bonus - Tuning.g("manual_hit_penalty"))
 	Main.I.on_player_damaged(amount)
+	if hp <= 0.0 and OS.is_debug_build() and Main.I._args.has("--nodie"):
+		hp = 1.0   # EX-10: долгий тест живучести — смерть считается, вылет идёт дальше
+		Main.I.tele.add("nodie", 1)
+		return
 	if hp <= 0.0:
 		hp = 0.0
 		visible = false

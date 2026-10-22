@@ -25,7 +25,18 @@ func drop_xp(pos: Vector2, value: float) -> void:
 			Main.I.add_xp(float(old["v"]))
 
 
+## EX-10: поздний бой без бессмертия — с 10:00 ремкомплекты падают реже, к 20:00 — 40% от прежнего
+const REPAIR_LATE_FROM := 600.0
+const REPAIR_LATE_MIN := 0.4
+
+
+static func repair_late_k(t: float) -> float:
+	return lerpf(1.0, REPAIR_LATE_MIN, clampf((t - REPAIR_LATE_FROM) / 600.0, 0.0, 1.0))
+
+
 func drop_repair(pos: Vector2) -> void:
+	if randf() > repair_late_k(Main.I.run_time):
+		return
 	items.append({"p": pos, "kind": "repair", "v": 25.0, "pull": false, "spd": 0.0})
 
 
@@ -63,7 +74,7 @@ func _process(delta: float) -> void:
 					Main.I.fx.text(pp + Vector2(0, -40), "Груз: +%d запчастей" % int(it["v"]), Color(1.0, 0.85, 0.45))
 					Main.I.sfx.play("pickup", -10.0, 0.8)
 				else:
-					pl.heal(float(it["v"]))
+					pl.heal(float(it["v"]), "box")
 					Main.I.fx.text(pp + Vector2(0, -40), "+%d прочности" % int(it["v"]), Color(0.6, 1.0, 0.8))
 					Main.I.sfx.play("repair", -12.0, 1.5)
 				items.remove_at(i)
