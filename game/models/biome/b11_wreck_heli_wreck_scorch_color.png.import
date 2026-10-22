@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cojoi2mfu5wkp"
-path="res://.godot/imported/b11_wreck_plane_Image_2.jpg-b785b82ea1c667cc61aa6ada461b1437.ctex"
+uid="uid://c2hjaac0aq374"
+path="res://.godot/imported/b11_wreck_heli_wreck_scorch_color.png-1077b8848ffa62861e4f421d95e4ab05.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "59ed9e733a9521074907de4c5659fab7"
+"md5": "2db96f794c5feda46d2ffa464ff481f5"
 }
 
 [deps]
 
-source_file="res://models/biome/b11_wreck_plane_Image_2.jpg"
-dest_files=["res://.godot/imported/b11_wreck_plane_Image_2.jpg-b785b82ea1c667cc61aa6ada461b1437.ctex"]
+source_file="res://models/biome/b11_wreck_heli_wreck_scorch_color.png"
+dest_files=["res://.godot/imported/b11_wreck_heli_wreck_scorch_color.png-1077b8848ffa62861e4f421d95e4ab05.ctex"]
 
 [params]
 

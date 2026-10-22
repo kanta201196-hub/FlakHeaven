@@ -558,7 +558,9 @@ func _add_scene(rng: RandomNumberGenerator, put: Dictionary, it: Dictionary, ctx
 		w = minf(w, (-30.0 - s.y) / maxf(hk, 0.01))
 	if w < 4.0:
 		return
-	var t := Transform3D(Basis(Vector3.UP, -float(it["yaw"])).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.03, 0))
+	# обломки самолётов (PLANE_KINDS) — с пятном гари и бороздой в модели: утапливаем меньше, чтобы их было видно
+	var sink := 0.01 if kind in PLANE_KINDS else 0.03
+	var t := Transform3D(Basis(Vector3.UP, -float(it["yaw"])).scaled(Vector3(w, w, w)), s - Vector3(0, w * sink, 0))
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)
