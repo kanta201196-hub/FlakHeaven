@@ -627,6 +627,7 @@ func _run_autotest(delta: float) -> void:
 				print_taken("AUTOTEST")
 				print("AUTOTEST: modules %d/%d %s, hp_cd %.2f" % [Cards.mod_slots_used(m.player), Cards.MOD_SLOTS, m.player.taken, float(m.player.mods["hp_cd"])])
 				print("AUTOTEST: heal box %d card %d kit %d allcards %d activity %d armor %d other %d, max_hp %d, taken %d, would-die %d" % [int(m.tele.g("heal_box")), int(m.tele.g("heal_card")), int(m.tele.g("heal_kit")), int(m.tele.g("heal_allcards")), int(m.tele.g("heal_activity")), int(m.tele.g("heal_armor")), int(m.tele.g("heal_прочее")) + int(m.tele.g("heal_perk")), int(m.player.max_hp), int(m.total("taken")), int(m.tele.g("nodie"))])
+				print("AUTOTEST: dealt air %d ground %d" % [int(m.tele.g("dealt_air")), int(m.tele.g("dealt_ground"))])
 				print("AUTOTEST: evo times %s, level %d, groups %s" % [str(m.player.evo_times), m.level, ", ".join(PackedStringArray(m.player.groups.map(func(g): return "%s %d" % [(g as Hardpoint).weapon, (g as Hardpoint).level])))])
 				if m.class_task != null:
 					print("AUTOTEST: class task %s %d/%d %s" % [m.class_task.cls, m.class_task.n, m.class_task.need(), m.class_task.state])
@@ -672,7 +673,7 @@ func _run_autotest(delta: float) -> void:
 		goal = tk.global_position # 3.5: бот идёт за заправщиком (он сам выходит вперёд)
 	elif is_instance_valid(m.evac) and not m._args.has("--noevac"):
 		goal = m.evac.target_pos() # бот летит через ворота эвакуации
-	elif is_instance_valid(m.spawner.activity_node) and (m.spawner.activity_node is AASite or m.spawner.activity_node is Transport or m.spawner.activity_node is Convoy):
+	elif is_instance_valid(m.spawner.activity_node) and (m.spawner.activity_node is AASite or m.spawner.activity_node is Transport or m.spawner.activity_node is Convoy or m.spawner.activity_node is Rescue):
 		goal = (m.spawner.activity_node as Node2D).global_position # бот летит штурмовать ПВО (и колонну)
 	elif m.boss_alive():
 		for n in m.get_tree().get_nodes_in_group("enemies"):

@@ -302,6 +302,7 @@ func spawn_bombers(p: Player, t: float) -> void:
 		if lead == null:
 			lead = b
 	Main.I.show_banner("Звено бомбардировщиков! Броня спереди, турель сзади — заходите сбоку", 3.0)
+	Story.say(Story.DISPATCH, "Бомбардировщики идут к колонне! Броня спереди — заходите сбоку.")
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: bombers at %.0f" % t)
 
@@ -338,18 +339,30 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		next_activity = t + 15.0
 		return
 	var kind_s: String = ACTIVITIES[activity_i % ACTIVITIES.size()]
+	if Story.wants_rescue():
+		kind_s = "rescue"   # EX-09: «Сухое русло» — первая активность вылета: сбитый пилот
+		Story.rescue_done = true
+		activity_i -= 1
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: activity start ", kind_s, " at %.0f" % t)
 	activity_i += 1
 	next_activity = t + Tuning.g("activity_every")
 	var hp_k := hp_mult() * hp_ramp(t)
-	if kind_s == "ground":
+	if kind_s == "rescue":
+		var rs := Rescue.new()
+		rs.setup(p.global_position + Vector2.from_angle(p.heading + randf_range(-0.8, 0.8)) * 1500.0)
+		Main.I.world.add_child(rs)
+		activity_node = rs
+		Main.I.show_banner("Аварийный маяк! Наш пилот внизу — летите к нему", 4.0)
+		Hints.show("act_rescue", "Сбитый пилот: летите по зелёной стрелке к маяку. Держитесь рядом 30 с, пока вертолёт его забирает. Отлетите — отсчёт встанет.", 9.0, 2)
+	elif kind_s == "ground":
 		var site := AASite.new()
 		var dir := p.heading + randf_range(-1.0, 1.0)
 		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k, recent_dps())
 		Main.I.world.add_child(site)
 		activity_node = site
 		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
+		Story.say(Story.DISPATCH, "Позиция ПВО ожила. Подавите — и небо станет тише.")
 		Hints.show("act_aa", "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости.", 9.0, 2)
 	elif kind_s == "convoy":
 		var cv := Convoy.new()
@@ -364,6 +377,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 			Hints.show("act_convoy_sea", "Караван: летите по оранжевой стрелке. Подбейте головное судно — караван встанет. С каждого потопленного сухогруза всплывает груз: запчасти и ремкомплекты.", 9.0, 2)
 		else:
 			Main.I.show_banner("Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш", 4.0)
+			Story.say(Story.DISPATCH, "Колонна противника на дороге. Сожгите грузовики — груз наш.")
 			Hints.show("act_convoy", "Конвой: летите по оранжевой стрелке. Подбейте головную машину — колонна встанет. С каждого сожжённого грузовика падает груз: запчасти и ремкомплекты.", 9.0, 2)
 	elif kind_s == "transport":
 		var tr := Transport.new()

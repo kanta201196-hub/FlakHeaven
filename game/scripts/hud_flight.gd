@@ -355,6 +355,7 @@ const RING_Y := 0.32
 const C_AA := Color(0.35, 0.85, 1.0)
 const C_CONVOY := Color(1.0, 0.5, 0.25)
 const C_TRANSPORT := Color(1.0, 0.55, 0.95)
+const C_RESCUE := Color(0.45, 1.0, 0.55)
 
 
 ## Активности: указатели на позицию ПВО и аса-соперника, радиопереговоры, «ХВОСТ!»
@@ -378,6 +379,22 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				s = Loc.t("Позиция ПВО: %d м — подлетите, чтобы начать") % (d / 10)
 			_ctext(276, s, 22, Color(1.0, 0.85, 0.4))
 			if not site.failed:
+				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
+		elif node is Rescue:
+			var rs := node as Rescue
+			var dr := int(p.global_position.distance_to(rs.global_position)) / 10
+			_edge_arrow(_ws(xf, rs.global_position), rect, size, C_RESCUE, 1.8, Loc.t("маяк %d м") % dr)
+			var rt: String
+			if rs.done:
+				rt = Loc.t("Пилот спасён!")
+			elif rs.failed:
+				rt = Loc.t("Вертолёт ушёл без пилота")
+			elif rs.active:
+				rt = Loc.t("СБИТЫЙ ПИЛОТ: держите небо над маяком ещё %d с") % int(ceil(rs.timer)) + ("" if p.global_position.distance_to(rs.global_position) < Rescue.HOLD_R else Loc.t(" · вернитесь к маяку!"))
+			else:
+				rt = Loc.t("Аварийный маяк: %d м · вертолёт ждёт ещё %d с") % [dr, int(ceil(rs.life))]
+			_ctext(276, rt, 22, Color(0.55, 1.0, 0.65))
+			if not rs.done and not rs.failed:
 				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
 		elif node is Convoy:
 			var cv := node as Convoy

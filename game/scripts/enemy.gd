@@ -169,6 +169,7 @@ func take_hit(dmg: float, source := "прочее") -> void:
 		_flash = 0.03
 		return
 	Main.I.add_stat("dealt", source, minf(dmg, hp))
+	Main.I.tele.add("dealt_ground" if is_ground else "dealt_air", minf(dmg, hp))   # EX-08: урон по земле и по воздуху
 	hp -= dmg
 	_flash = 0.06
 	Main.I.on_enemy_hit(self, dmg)

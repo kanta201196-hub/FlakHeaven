@@ -118,8 +118,6 @@ msgid "Перевал"
 msgstr "Mountain Pass"
 
 #: game/scripts/campaign.gd:21
-msgid "Колонна снабжения идёт через перевал Шахрисанг. Держите небо над дорогой 15 минут, потом уходите на базу через ворота эвакуации."
-msgstr "A supply convoy is crossing the Shahrisang pass. Hold the sky over the road for 15 minutes, then return to base through the extraction gate."
 
 #: game/scripts/campaign.gd:22 game/scripts/campaign.gd:43
 msgid "Продержаться до 15:00 и улететь через ворота"
@@ -6398,3 +6396,105 @@ msgstr "▲ to %s: %d → %d of %d"
 
 msgid "▲ ур. 5 откроет %s"
 msgstr "▲ lv. 5 unlocks %s"
+
+msgid " · вернитесь к маяку!"
+msgstr " · get back to the beacon!"
+
+msgid "Аварийный маяк! Наш пилот внизу — летите к нему"
+msgstr "Distress beacon! Our pilot is down — fly to him"
+
+msgid "Аварийный маяк: %d м · вертолёт ждёт ещё %d с"
+msgstr "Distress beacon: %d m · the helicopter waits %d more s"
+
+msgid "Бомбардировщики идут к колонне! Броня спереди — заходите сбоку."
+msgstr "Bombers heading for the convoy! Armor up front — come in from the side."
+
+msgid "Ваш ведущий падал красиво. Посмотрим, как упадёте вы."
+msgstr "Your flight lead went down beautifully. Let's see how you fall."
+
+msgid "Вертолёт ушёл без пилота"
+msgstr "The helicopter left without the pilot"
+
+msgid "Вертолёт ушёл без пилота. Ищем дальше."
+msgstr "The helicopter left without the pilot. We keep searching."
+
+msgid "Гром"
+msgstr "Thunder"
+
+msgid "ЗА СПАСЁННОГО ПИЛОТА"
+msgstr "FOR THE RESCUED PILOT"
+
+msgid "Забираем! Держите небо ещё полминуты."
+msgstr "Picking him up! Hold the sky for half a minute more."
+
+msgid "Звено, небо ваше. Колонна идёт по графику — не дайте её тронуть."
+msgstr "Flight, the sky is yours. The convoy is on schedule — don't let anyone touch it."
+
+msgid "Звено, я снова в строю. Должок за мной."
+msgstr "Flight, I'm back in formation. I owe you one."
+
+msgid "Колонна противника на дороге. Сожгите грузовики — груз наш."
+msgstr "Enemy convoy on the road. Burn the trucks — the cargo is ours."
+
+msgid "Купол"
+msgstr "Dome"
+
+msgid "Небо над Шахрисангом наше. Спасибо, что не бросили."
+msgstr "The sky over Shahrisang is ours. Thanks for not leaving me behind."
+
+msgid "Неделю назад над перевалом пропал ведущий звена «Гром». Последнее, что слышали, — позывной «Барон». Колонна снабжения идёт через перевал Шахрисанг. Держите небо над дорогой 15 минут, потом уходите на базу через ворота эвакуации."
+msgstr "A week ago flight lead \"Thunder\" went missing over the pass. The last thing we heard was the callsign \"Baron\". A supply convoy is crossing the Shahrisang pass. Hold the sky over the road for 15 minutes, then return to base through the extraction gate."
+
+msgid "Один на один. Без ваших нянек."
+msgstr "One on one. No babysitters."
+
+msgid "Перехват из крепости: «Гром» жив! Наземные идут за ним."
+msgstr "Intercept from the fortress: \"Thunder\" is alive! Ground forces are going in for him."
+
+msgid "Пилот спасён!"
+msgstr "Pilot rescued!"
+
+msgid "Пилот спасён! Награда: выбор из редких карточек и +40 запчастей"
+msgstr "Pilot rescued! Reward: a pick of rare cards and +40 parts"
+
+msgid "Позиция ПВО ожила. Подавите — и небо станет тише."
+msgstr "The AA site is live. Suppress it and the sky gets quieter."
+
+msgid "Разведка видит движение у перевала. Держитесь выше хребта."
+msgstr "Recon sees movement near the pass. Stay above the ridge."
+
+msgid "СБИТЫЙ ПИЛОТ: держите небо над маяком ещё %d с"
+msgstr "DOWNED PILOT: hold the sky over the beacon for %d more s"
+
+msgid "Сбитый пилот: держите небо над маяком 30 с"
+msgstr "Downed pilot: hold the sky over the beacon for 30 s"
+
+msgid "Сбитый пилот: летите по зелёной стрелке к маяку. Держитесь рядом 30 с, пока вертолёт его забирает. Отлетите — отсчёт встанет."
+msgstr "Downed pilot: follow the green arrow to the beacon. Stay close for 30 s while the helicopter picks him up. Fly off and the countdown stops."
+
+msgid "Слышу аварийный маяк! Наш пилот внизу — прикройте вертолёт."
+msgstr "I hear a distress beacon! Our pilot is down there — cover the helicopter."
+
+msgid "Снова вы? Неделю назад ваш «Гром» тоже был уверен в себе."
+msgstr "You again? A week ago your \"Thunder\" was confident too."
+
+msgid "Спасатель"
+msgstr "Rescuer"
+
+msgid "Спасибо, звено. Я видел парашют «Грома» — у старых крепостей."
+msgstr "Thanks, flight. I saw \"Thunder's\" parachute — near the old fortresses."
+
+msgid "Спасённый"
+msgstr "Rescued pilot"
+
+msgid "Ушли. Ничего, следующих встретим."
+msgstr "They got away. Never mind, we'll meet the next ones."
+
+msgid "Чисто сработано. Награда ваша."
+msgstr "Clean work. The reward is yours."
+
+msgid "маяк %d м"
+msgstr "beacon %d m"
+
+msgid "…Неплохо. Для новичка."
+msgstr "…Not bad. For a rookie."
