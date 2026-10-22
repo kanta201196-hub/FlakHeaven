@@ -1179,6 +1179,9 @@ RECIPES = {f.__name__: f for f in [e_ship_bulk, e_ship_escort, e_ship_tanker, e_
 # катер «Скат», экраноплан «Крачка», «Буревестник», «Чайка» — переделаны кодом (замечания Kanta 19.10): b2_sea_craft.py
 import b2_sea_craft
 RECIPES.update(b2_sea_craft.RECIPES)
+import b2_shore as S   # берег начисто (замечания Kanta 19.10): рецепты b2_shore.py заменяют прежние
+for _n in S.SHORE:
+    RECIPES[_n] = (lambda f: (lambda: f(scenery, src)))(getattr(S, _n))
 
 if __name__ == '__main__':
     names = [a for a in A if not a.startswith('--')]
