@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dgx2amjd55yh8"
-path="res://.godot/imported/fh_battle_e_seaplane_Image_0.png-c906fd0d53e366817cf3f7955650d71b.ctex"
+uid="uid://c8tyyal1bare"
+path="res://.godot/imported/fh_battle_e_ship_aa_e_ship_aa_normal.jpg-b74a1046048c82e5b928471cd7205d6e.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "ce0e4aef7df796cb0afb766353193c81"
+"md5": "d554d2ecc7421edd6d561b402920850c"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_seaplane_Image_0.png"
-dest_files=["res://.godot/imported/fh_battle_e_seaplane_Image_0.png-c906fd0d53e366817cf3f7955650d71b.ctex"]
+source_file="res://models/battle/fh_battle_e_ship_aa_e_ship_aa_normal.jpg"
+dest_files=["res://.godot/imported/fh_battle_e_ship_aa_e_ship_aa_normal.jpg-b74a1046048c82e5b928471cd7205d6e.ctex"]
 
 [params]
 

@@ -1075,7 +1075,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				_fortress_parts(ue, e as Fortress, ang, delta)
 			elif ue.get("bm") != null and e is Helicopter:
 				_rotors(ue, delta)
-			elif ue.get("bm") != null and e is Transport:
+			elif ue.get("bm") != null:   # винты prop_* (транспортник, «Буревестник», «Чайка»); нет узлов — нет работы
 				_props(ue, delta)
 		var mi2: MeshInstance3D = ue["mi"]
 		if ue.get("bm") != null:
@@ -1126,7 +1126,8 @@ func _rotors(u: Dictionary, delta: float) -> void:
 		(rr[1] as Node3D).rotate_z(delta * 40.0)
 
 
-## 3.5-s8: винты транспортника (tools/blender/enemy_air_big.py, узлы prop_1…prop_4, ось — локальная X)
+## 3.5-s8: винты транспортника (tools/blender/enemy_air_big.py, узлы prop_1…prop_4, ось — локальная X);
+## так же — винты «Буревестника» и «Чайки» (tools/model_lab/b2_sea_craft.py)
 func _props(u: Dictionary, delta: float) -> void:
 	if not u.has("props3"):
 		var inst := (u["node"] as Node3D).get_child(0)

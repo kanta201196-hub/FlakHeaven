@@ -24,7 +24,7 @@ def battle(name):
 
 # ---------- палитра (sRGB): флот противника — серый «шаровый», красные метки врага приглушены ----------
 NAVY = (0.40, 0.42, 0.43)        # борт и надстройки
-NAVY_LT = (0.47, 0.49, 0.50)     # надстройки светлее (выгорели)
+NAVY_LT = (0.44, 0.46, 0.47)     # надстройки светлее (выгорели)
 NAVY_DK = (0.31, 0.33, 0.34)     # борт у воды, в потёках
 DECK = (0.26, 0.27, 0.27)        # палуба (противоскользящая, тёмная)
 BOOT = (0.13, 0.13, 0.13)        # ватерлинийная полоса
@@ -34,7 +34,7 @@ RED = (0.58, 0.21, 0.16)         # метка врага: крыши башен,
 GLASS = (0.10, 0.12, 0.14)
 SOOT = (0.27, 0.27, 0.27)
 AIR_UP = (0.36, 0.39, 0.41)      # самолёты: верх тёмно-серый морской
-AIR_LO = (0.50, 0.52, 0.52)      # низ светлее
+AIR_LO = (0.45, 0.47, 0.47)      # низ светлее
 FLOAT_LO = (0.34, 0.35, 0.35)    # низ поплавков и днище — в грязи и потёках
 INTAKE = (0.07, 0.07, 0.08)
 
@@ -241,6 +241,8 @@ def mirror_y(objs):
     for o in objs:
         c = o.copy(); c.data = o.data.copy(); bpy.context.scene.collection.objects.link(c)
         c.data.transform(Matrix.Scale(-1, 4, Vector((0, 1, 0)))); c.data.flip_normals(); c.data.update()
+        if 'hub' in o:
+            h = list(o['hub']); c['hub'] = [h[0], -h[1], h[2]]
         out.append(c)
     return out
 
@@ -280,25 +282,267 @@ def prop(center, R, blades, mat_blade, mat_spinner, name='prop', pusher=False, s
         for o in parts:
             o.data.flip_normals()
     xf(parts, Matrix.Translation(Vector(center)))
+    for o in parts:
+        o['hub'] = list(center)
     return parts
 
 
-def finish(objs, name, center=False, budget=15000):
-    """Склеить (нормали деталей сохраняются), длина по X = 1, записать GLB (+Y вверх)."""
+# ---------- запекание окраски (цвет + нормали) ----------
+# Как у колонны и вражеских самолётов (convoy_kit.bake_export): у каждой детали свой материал-«вид» с процедурным
+# шейдером (пятна краски, выгорание сверху, панельные швы и лючки, потёки соли и ржавчины у воды, копоть за соплами
+# мягким градиентом, грязное днище, затенение углов, потёртые кромки), всё запекается в две текстуры на общую
+# развёртку. В игре — два материала: матовый корпус и тёмное стекло с лёгким отражением.
+
+def _n(nt, typ, **kw):
+    n = nt.nodes.new(typ)
+    for k, v in kw.items():
+        if k.startswith('_'):
+            setattr(n, k[1:], v); continue
+        s = n.inputs[k]
+        if isinstance(v, bpy.types.NodeSocket):
+            nt.links.new(v, s)
+        else:
+            s.default_value = v
+    return n
+
+
+def _s(nt, v):
+    """Число или цвет (sRGB) → сокет."""
+    if isinstance(v, bpy.types.NodeSocket):
+        return v
+    if isinstance(v, (tuple, list)):
+        n = nt.nodes.new('ShaderNodeRGB'); n.outputs[0].default_value = (*L.lin(v), 1); return n.outputs[0]
+    n = nt.nodes.new('ShaderNodeValue'); n.outputs[0].default_value = v; return n.outputs[0]
+
+
+def _m(nt, op, a, b=0.0, clamp=False):
+    n = nt.nodes.new('ShaderNodeMath'); n.operation = op; n.use_clamp = clamp
+    nt.links.new(_s(nt, a), n.inputs[0]); nt.links.new(_s(nt, b), n.inputs[1])
+    return n.outputs[0]
+
+
+def _mix(nt, fac, a, b, blend='MIX'):
+    n = nt.nodes.new('ShaderNodeMix'); n.data_type = 'RGBA'; n.blend_type = blend
+    ins = [s for s in n.inputs if s.type == 'RGBA']
+    nt.links.new(_s(nt, fac), n.inputs[0]); nt.links.new(_s(nt, a), ins[0]); nt.links.new(_s(nt, b), ins[1])
+    return [s for s in n.outputs if s.type == 'RGBA'][0]
+
+
+def _vec(nt, op, a, b=None):
+    n = nt.nodes.new('ShaderNodeVectorMath'); n.operation = op
+    nt.links.new(a, n.inputs[0])
+    if isinstance(b, bpy.types.NodeSocket):
+        nt.links.new(b, n.inputs[1])
+    elif b is not None:
+        n.inputs[1].default_value = b
+    return n.outputs['Value'] if op in ('LENGTH', 'DOT_PRODUCT') else n.outputs['Vector']
+
+
+def _noise(nt, pos, scale, detail=2.0, off=(0, 0, 0), stretch=(1, 1, 1)):
+    v = pos
+    if stretch != (1, 1, 1):
+        v = _vec(nt, 'MULTIPLY', v, stretch)
+    if off != (0, 0, 0):
+        v = _vec(nt, 'ADD', v, off)
+    return _n(nt, 'ShaderNodeTexNoise', Vector=v, Scale=scale, Detail=detail).outputs['Fac']
+
+
+def _band(nt, x, lo, hi):
+    n = nt.nodes.new('ShaderNodeMapRange'); n.interpolation_type = 'SMOOTHSTEP'
+    nt.links.new(_s(nt, x), n.inputs['Value'])
+    n.inputs['From Min'].default_value = lo; n.inputs['From Max'].default_value = hi
+    return n.outputs['Result']
+
+
+def _seams(nt, pos, nrm, P):
+    """Панельные швы: линии пересечения поверхности с плоскостями x = k·Lx, y = k·Ly, z = k·Lz (метры).
+    Плоскость, почти параллельная поверхности, шва не даёт (иначе вместо линии — пятно). Плюс редкие лючки."""
+    w = P['seam_w']
+    ps = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(pos, ps.inputs[0])
+    ns = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(nrm, ns.inputs[0])
+    out = None
+    for ax, Lx, off in zip('XYZ', P['seam'], (0.31, 0.5, 0.27)):
+        if not Lx:
+            continue
+        f = _m(nt, 'FRACT', _m(nt, 'ADD', _m(nt, 'DIVIDE', ps.outputs[ax], Lx), off))
+        d = _m(nt, 'MULTIPLY', _m(nt, 'MINIMUM', f, _m(nt, 'SUBTRACT', 1.0, f)), Lx)
+        line = _m(nt, 'SUBTRACT', 1.0, _band(nt, d, w * 0.35, w))
+        wt = _band(nt, _m(nt, 'SUBTRACT', 1.0, _m(nt, 'ABSOLUTE', ns.outputs[ax])), 0.3, 0.6)
+        line = _m(nt, 'MULTIPLY', line, wt)
+        out = line if out is None else _m(nt, 'MAXIMUM', out, line)
+    hs = P['hatch']
+    hv = _n(nt, 'ShaderNodeTexVoronoi', Vector=pos, Scale=1.0 / hs, Randomness=0.0)
+    hv.feature = 'DISTANCE_TO_EDGE'
+    hc = _n(nt, 'ShaderNodeTexVoronoi', Vector=pos, Scale=1.0 / hs, Randomness=0.0)
+    sel = _band(nt, _n(nt, 'ShaderNodeSeparateColor', Color=hc.outputs['Color']).outputs[0], 0.86, 0.87)
+    a0 = 0.12; dw = w / hs
+    ring = _m(nt, 'MULTIPLY', _band(nt, hv.outputs['Distance'], a0 - dw, a0 - dw * 0.4),
+              _m(nt, 'SUBTRACT', 1.0, _band(nt, hv.outputs['Distance'], a0 + dw * 0.4, a0 + dw)))
+    return _m(nt, 'MAXIMUM', out, _m(nt, 'MULTIPLY', ring, sel), True)
+
+
+def bake_mat(m, P):
+    """Шейдер вида для запекания по материалу детали: базовый цвет — из материала рецепта."""
+    b = L.bsdf(m)
+    base = tuple(b.inputs['Base Color'].default_value[:3])
+    srgb = tuple(((x ** (1 / 2.4)) * 1.055 - 0.055) if x > 0.0031308 else x * 12.92 for x in base)
+    nm = m.name
+    role = 'glass' if 'glass' in nm else 'dark' if any(k in nm for k in ('intake', 'blade', 'soot', 'gun', 'boot', '_dark')) \
+        else 'paint'
+    nt = m.node_tree; nt.nodes.clear()
+    geo = nt.nodes.new('ShaderNodeNewGeometry')
+    pos, nrm = geo.outputs['Position'], geo.outputs['Normal']
+    sz = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(pos, sz.inputs[0])
+    sn = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(nrm, sn.inputs[0])
+    up = _m(nt, 'MAXIMUM', sn.outputs['Z'], 0.0)
+    down = _m(nt, 'MAXIMUM', _m(nt, 'MULTIPLY', sn.outputs['Z'], -1.0), 0.0)
+    side = _m(nt, 'SUBTRACT', 1.0, _m(nt, 'ABSOLUTE', sn.outputs['Z']))
+    k = P['k']   # масштаб шумов (метр модели)
+    col = _s(nt, srgb)
+    # неровность краски: крупные пятна подкраски и мелкая зернистость
+    col = _mix(nt, 1.0, col, _m(nt, 'ADD', 0.9, _m(nt, 'MULTIPLY', _noise(nt, pos, 0.35 / k, 3.0), 0.2)), 'MULTIPLY')
+    col = _mix(nt, 1.0, col, _m(nt, 'ADD', 0.94, _m(nt, 'MULTIPLY', _noise(nt, pos, 9.0 / k, 4.0), 0.12)), 'MULTIPLY')
+    seam = None
+    if role == 'paint':
+        # выгорание сверху: светлее и серее, пятнами (не светлее ~0,47)
+        bl = _band(nt, _noise(nt, pos, 0.5 / k, 3.0, (3.1, 1.2, 0.4)), 0.35, 0.75)
+        g = sum(srgb) / 3
+        col = _mix(nt, _m(nt, 'MULTIPLY', _m(nt, 'MULTIPLY', up, bl), 0.4), col, (min(0.47, g * 1.12 + 0.03),) * 3)
+        seam = _seams(nt, pos, nrm, P)
+        col = _mix(nt, _m(nt, 'MULTIPLY', seam, P.get('seam_k', 0.5)), col, _mix(nt, 1.0, col, (0.45, 0.45, 0.45), 'MULTIPLY'))
+        # потёки по бортам — вытянуты по вертикали
+        st = _band(nt, _noise(nt, pos, 2.2 / k, 3.0, (0, 0, 0), (1.0, 1.0, 0.12)), 0.55, 0.78)
+        col = _mix(nt, _m(nt, 'MULTIPLY', _m(nt, 'MULTIPLY', st, side), 0.22), col, (0.2, 0.2, 0.19))
+        # у воды и внизу: соль и ржавые потёки
+        lo, hi = P['wl']
+        low = _m(nt, 'SUBTRACT', 1.0, _band(nt, sz.outputs['Z'], lo, hi))
+        rs = _band(nt, _noise(nt, pos, 3.0 / k, 4.0, (7.0, 2.0, 5.0), (1.0, 1.0, 0.15)), 0.58, 0.8)
+        col = _mix(nt, _m(nt, 'MULTIPLY', _m(nt, 'MULTIPLY', rs, low), 0.55), col, (0.36, 0.22, 0.14))
+        sl = _band(nt, _noise(nt, pos, 1.6 / k, 3.0, (1.0, 9.0, 4.0), (1.0, 1.0, 0.3)), 0.5, 0.72)
+        col = _mix(nt, _m(nt, 'MULTIPLY', _m(nt, 'MULTIPLY', sl, low), 0.3), col, (0.6, 0.6, 0.57))
+        # грязное днище / низ
+        dn = _m(nt, 'ADD', 0.35, _m(nt, 'MULTIPLY', _noise(nt, pos, 1.2 / k, 3.0, (4.0, 4.0, 4.0)), 0.5))
+        col = _mix(nt, _m(nt, 'MULTIPLY', _m(nt, 'MULTIPLY', down, down), _m(nt, 'MULTIPLY', dn, 0.7), True), col, (0.2, 0.2, 0.18))
+    # копоть за соплами / выхлопом — мягкий эллипсоидный градиент, рваный шумом
+    if role != 'glass':
+        for c, r in P.get('soot', ()):
+            d = _vec(nt, 'LENGTH', _vec(nt, 'DIVIDE', _vec(nt, 'SUBTRACT', pos, c), r))
+            s_ = _m(nt, 'SUBTRACT', 1.0, _band(nt, d, 0.15, 1.0))
+            s_ = _m(nt, 'MULTIPLY', s_, _m(nt, 'ADD', 0.45, _m(nt, 'MULTIPLY', _noise(nt, pos, 2.5 / k, 3.0, (2.0, 5.0, 1.0)), 0.6)))
+            col = _mix(nt, _m(nt, 'MULTIPLY', s_, 0.75, True), col, (0.09, 0.085, 0.08))
+    # потёртые кромки (краска) и затенение углов
+    bev = _n(nt, 'ShaderNodeBevel', Radius=P['bev']); bev.samples = 6
+    if role == 'paint':
+        dot = _vec(nt, 'DOT_PRODUCT', bev.outputs[0], geo.outputs['True Normal'])
+        edge = _band(nt, _m(nt, 'SUBTRACT', 1.0, dot), 0.02, 0.1)
+        wear = _m(nt, 'MULTIPLY', edge, _band(nt, _noise(nt, pos, 6.0 / k, 3.0, (3.3, 0.0, 1.1)), 0.4, 0.62))
+        col = _mix(nt, _m(nt, 'MULTIPLY', wear, 0.5), col, (0.5, 0.49, 0.46))
+    ao = _n(nt, 'ShaderNodeAmbientOcclusion', Distance=P['ao']); ao.samples = 12; ao.only_local = False
+    col = _mix(nt, 1.0, col, _m(nt, 'ADD', 0.5, _m(nt, 'MULTIPLY', ao.outputs['AO'], 0.5)), 'MULTIPLY')
+    em = _n(nt, 'ShaderNodeEmission', Color=col, Strength=1.0)
+    # нормаль: скругление кромок + утопленные швы и лючки + мелкая фактура краски
+    nb = _n(nt, 'ShaderNodeBevel', Radius=P['bev'] * 0.7); nb.samples = 8
+    ns = nb.outputs[0]
+    if seam is not None:
+        h = _m(nt, 'SUBTRACT', _m(nt, 'MULTIPLY', _noise(nt, pos, 30.0 / k, 4.0), 0.12), seam)
+        ns = _n(nt, 'ShaderNodeBump', Strength=0.6, Distance=P['seam_w'] * 0.5, Height=h, Normal=ns).outputs[0]
+    bs = _n(nt, 'ShaderNodeBsdfPrincipled', Normal=ns); bs.name = 'bsdf'
+    out = nt.nodes.new('ShaderNodeOutputMaterial'); out.name = 'out'
+    nt.links.new(em.outputs[0], out.inputs[0])
+    m['emit'] = em.name
+    m['role'] = role
+
+
+def bake(obs, name, P):
+    """Развёртка, запекание цвета и нормалей, два итоговых материала. obs — корпус и винты (метры), общий лист."""
+    sc = bpy.context.scene
+    for o in list(sc.objects):
+        o.select_set(o in obs)
+    bpy.context.view_layer.objects.active = obs[0]
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=math.radians(62), island_margin=0.003, area_weight=0.0, scale_to_bounds=False)
+    bpy.ops.uv.pack_islands(margin=0.003, rotate=True, scale=True)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    mats = list({m for ob in obs for m in ob.data.materials if m})
+    for m in mats:
+        bake_mat(m, P)
+    sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'; sc.cycles.samples = 8; sc.cycles.use_denoising = False
+    tex = P['tex']
+    img_c = bpy.data.images.new(name + '_color', tex, tex)
+    img_n = bpy.data.images.new(name + '_normal', tex, tex); img_n.colorspace_settings.name = 'Non-Color'
+    for m in mats:
+        t = m.node_tree.nodes.new('ShaderNodeTexImage'); t.name = 'bake_target'
+    for img, typ in ((img_c, 'EMIT'), (img_n, 'NORMAL')):
+        for m in mats:
+            nt = m.node_tree; t = nt.nodes['bake_target']; t.image = img; nt.nodes.active = t
+            src = nt.nodes[m['emit']] if typ == 'EMIT' else nt.nodes['bsdf']
+            nt.links.new(src.outputs[0], nt.nodes['out'].inputs[0])
+        sc.render.bake.margin = 4
+        bpy.ops.object.bake(type=typ, normal_space='TANGENT', margin=4, use_clear=True)
+        img.pack()
+        if OPT.get('dump'):
+            img.save_render(os.path.join(OPT['dump'], img.name + '.png'))
+    fin = {}
+    for key, rough in (('body', 0.9), ('glass', 0.22)):   # корпус матовый, стекло тёмное с лёгким бликом
+        fm = bpy.data.materials.new('%s_%s' % (name, key)); fm.use_nodes = True
+        nt = fm.node_tree; b = nt.nodes['Principled BSDF']
+        tc = nt.nodes.new('ShaderNodeTexImage'); tc.image = img_c
+        nt.links.new(tc.outputs['Color'], b.inputs['Base Color'])
+        tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = img_n
+        nmap = nt.nodes.new('ShaderNodeNormalMap')
+        nt.links.new(tn.outputs['Color'], nmap.inputs['Color']); nt.links.new(nmap.outputs['Normal'], b.inputs['Normal'])
+        b.inputs['Roughness'].default_value = rough; b.inputs['Metallic'].default_value = 0.0
+        fin[key] = fm
+    for ob in obs:
+        role = [m.get('role') if m else 'paint' for m in ob.data.materials]
+        keys = [1 if role[p.material_index] == 'glass' else 0 for p in ob.data.polygons]
+        ob.data.materials.clear()
+        ob.data.materials.append(fin['body'])
+        if any(keys):
+            ob.data.materials.append(fin['glass'])
+        for pl, kk in zip(ob.data.polygons, keys):
+            pl.material_index = kk
+
+
+def finish(objs, name, center=False, budget=15000, P=None):
+    """Склеить корпус (нормали деталей сохраняются), винты — отдельными узлами prop_1… (ось — локальная X, их крутит
+    render3d._props), запечь окраску на общий лист, длина по X = 1, записать GLB (+Y вверх)."""
     objs = [o for o in objs if o.name in bpy.data.objects and o.type == 'MESH' and len(o.data.polygons)]
-    ob = L.join(objs, 'body')
-    mn, mx = L.bounds([ob])
-    # центр по X и Y в нуле; по высоте — ватерлиния z = 0 (корабли) или середина (самолёты, center)
-    ob.data.transform(Matrix.Translation((-(mn.x + mx.x) / 2, -(mn.y + mx.y) / 2, -(mn.z + mx.z) / 2 if center else 0.0)))
-    ob.data.transform(Matrix.Scale(1.0 / (mx.x - mn.x), 4)); ob.data.update()
+    groups = {}
+    for o in objs:
+        groups.setdefault(tuple(round(v, 3) for v in o['hub']) if 'hub' in o else None, []).append(o)
+    ob = L.join(groups.pop(None), 'body')
+    props = []
+    for i, (hub, g) in enumerate(sorted(groups.items())):
+        pr = L.join(g, 'prop_%d' % (i + 1))
+        pr['hub'] = list(hub)
+        props.append(pr)
+    keep = [ob] + props
     for o in list(bpy.data.objects):
-        if o != ob:
+        if o not in keep:
             bpy.data.objects.remove(o)
-    mn, mx = L.bounds([ob]); t = L.tris([ob])
-    print("FINISH", name, "tris", t, "size", tuple(round(v, 3) for v in (mx - mn)), "min", tuple(round(v, 3) for v in mn),
-          "mats", [m.name for m in ob.data.materials])
+    t = L.tris(keep)
     assert t <= budget, "бюджет треугольников превышен: %d > %d" % (t, budget)
-    bpy.ops.export_scene.gltf(filepath=battle(name), export_format='GLB', use_selection=False, export_yup=True)
+    if P is not None:
+        bake(keep, name, P)
+    mn, mx = L.bounds(keep)
+    # центр по X и Y в нуле; по высоте — ватерлиния z = 0 (корабли) или середина (самолёты, center)
+    T = Matrix.Scale(1.0 / (mx.x - mn.x), 4) @ Matrix.Translation(
+        (-(mn.x + mx.x) / 2, -(mn.y + mx.y) / 2, -(mn.z + mx.z) / 2 if center else 0.0))
+    for o in keep:
+        o.data.transform(T); o.data.update()
+    for pr in props:   # начало узла — во втулке винта
+        c = T @ Vector(pr['hub'])
+        pr.data.transform(Matrix.Translation(-c)); pr.data.update()
+        pr.location = c
+        pr.parent = ob
+    bpy.context.view_layer.update()
+    mn, mx = L.bounds(keep)
+    print("FINISH", name, "tris", t, "size", tuple(round(v, 3) for v in (mx - mn)), "min", tuple(round(v, 3) for v in mn),
+          "props", len(props), "mats", [m.name for m in ob.data.materials])
+    bpy.ops.export_scene.gltf(filepath=battle(name), export_format='GLB', use_selection=False, export_yup=True,
+                              export_image_format='JPEG', export_jpeg_quality=90)
     return ob
 
 
@@ -419,7 +663,9 @@ def e_ship_aa():
     for s in (-1, 1):
         o.append(lathe([(0.1, 0), (0.1, 0.32), (-0.25, 0.32), (-0.25, 0.22), (0.0, 0)], soot, 'exhaust_port', seg=14,
                        c=(-15.0, s * 1.4, 1.1)))
-    finish(o, 'e_ship_aa', budget=12000)
+    finish(o, 'e_ship_aa', budget=12000, P=dict(k=1.0, tex=2048, seam=(2.4, 1.8, 1.1), seam_w=0.035, hatch=1.3, wl=(0.1, 1.6),
+           bev=0.03, ao=0.6, soot=[((-6.4, 1.6, 2.7), (2.2, 0.9, 0.9)), ((-6.4, -1.6, 2.7), (2.2, 0.9, 0.9)),
+                                     ((-15.3, 1.4, 1.2), (0.9, 0.7, 0.9)), ((-15.3, -1.4, 1.2), (0.9, 0.7, 0.9))]))
 
 
 # ======================= В-3 экраноплан «Крачка» (70 м) =======================
@@ -529,7 +775,8 @@ def e_ekranoplan():
                  up, 'tail_ball', seg=24, c=(-29.6, 0, 18.3))
     paint(ball, lambda c, n: red if c.x < -32.6 else None)
     o.append(ball)
-    finish(o, 'e_ekranoplan', budget=15000)
+    finish(o, 'e_ekranoplan', budget=15000, P=dict(k=2.2, tex=2048, seam=(4.2, 3.6, 2.6), seam_w=0.05, seam_k=0.33, hatch=2.4, wl=(0.6, 3.0),
+           bev=0.06, ao=1.4, soot=[((16.0, 6.5, 7.4), (6.5, 3.6, 1.6)), ((16.0, -6.5, 7.4), (6.5, 3.6, 1.6))]))
 
 
 # ======================= В-4 гидросамолёт-ракетоносец «Буревестник» (14 м) =======================
@@ -628,7 +875,8 @@ def e_seaplane():
         o.append(st)
     # антенна-штырь и турельный купол сверху за крылом
     o.append(lathe([(0, 0.22), (0.12, 0.21), (0.22, 0.15), (0.26, 0)], glass, 'astrodome', seg=16, c=(-0.8, 0, 0.84), axis='Z'))
-    finish(o, 'e_seaplane', center=True, budget=12000)
+    finish(o, 'e_seaplane', center=True, budget=12000, P=dict(k=0.5, tex=1024, seam=(0.9, 0.75, 0.5), seam_w=0.016, hatch=0.6,
+           wl=(-2.1, -1.5), bev=0.015, ao=0.3, soot=[((2.9, 3.6, 1.0), (1.4, 0.75, 0.75)), ((2.9, -3.6, 1.0), (1.4, 0.75, 0.75))]))
 
 
 # ======================= В-5 дрон «Чайка» (3 м) =======================
@@ -638,7 +886,7 @@ def e_seaplane():
 def e_drone_sea():
     L.reset()
     grey = M('drone_grey', (0.42, 0.44, 0.45))
-    lo = M('drone_lo', (0.52, 0.53, 0.53))
+    lo = M('drone_lo', (0.45, 0.46, 0.46))
     dark = M('drone_dark', (0.18, 0.18, 0.19))
     red = M('red', RED)
     glass = M('glass', GLASS, 0.5)
@@ -659,7 +907,8 @@ def e_drone_sea():
     o.append(lathe([(0.0, 0.075), (-0.08, 0.06), (-0.08, 0)], dark, 'motor_cap', seg=12, c=(-1.25, 0, 0)))
     o += prop((-1.36, 0, 0), 0.5, 2, dark, dark, 'prop', pusher=True, r_hub=0.07, spinner_len=0.17, chord=0.11,
               phase=math.radians(70))
-    finish(o, 'e_drone_sea', center=True, budget=3000)
+    finish(o, 'e_drone_sea', center=True, budget=3000, P=dict(k=0.12, tex=512, seam=(0.45, 0.4, 0.0), seam_w=0.008, hatch=0.22,
+           wl=(-0.3, -0.12), bev=0.005, ao=0.08, soot=[((-1.15, 0.0, 0.0), (0.3, 0.2, 0.2))]))
 
 
 RECIPES = {f.__name__: f for f in (e_ship_aa, e_ekranoplan, e_seaplane, e_drone_sea)}
