@@ -585,7 +585,7 @@ func _run_autotest(delta: float) -> void:
 				print_taken("AUTOTEST")
 				print("AUTOTEST: modules %d/%d %s, hp_cd %.2f" % [Cards.mod_slots_used(m.player), Cards.MOD_SLOTS, m.player.taken, float(m.player.mods["hp_cd"])])
 				print("AUTOTEST: heal box %d card %d kit %d allcards %d activity %d armor %d other %d, max_hp %d, taken %d, would-die %d" % [int(m.tele.g("heal_box")), int(m.tele.g("heal_card")), int(m.tele.g("heal_kit")), int(m.tele.g("heal_allcards")), int(m.tele.g("heal_activity")), int(m.tele.g("heal_armor")), int(m.tele.g("heal_прочее")) + int(m.tele.g("heal_perk")), int(m.player.max_hp), int(m.total("taken")), int(m.tele.g("nodie"))])
-				print("AUTOTEST: defense hits armor %d agile %d ecm %d, run bonus dmg %d" % [int(m.tele.g("def_armor")), int(m.tele.g("def_agile")), int(m.tele.g("def_ecm")), int(m.tele.g("run_dmg"))])
+				print("AUTOTEST: defense hits armor %d agile %d ecm %d front %d, run bonus dmg %d, bombers down %d" % [int(m.tele.g("def_armor")), int(m.tele.g("def_agile")), int(m.tele.g("def_ecm")), int(m.tele.g("def_front")), int(m.tele.g("run_dmg")), int(m.tele.g("bomber_kills"))])
 				_runs_done += 1
 				for a in m._args:   # --runs=N: полный автотест заканчивается сам после N вылетов (tools/ci/full.sh)
 					if String(a).begins_with("--runs=") and _runs_done >= int(String(a).substr(7)):
@@ -604,6 +604,12 @@ func _run_autotest(delta: float) -> void:
 		if String(a).begins_with("--until=") and m.run_time >= float(String(a).substr(8)) and m.state == "playing":
 			m.on_evac_success()
 			return
+	# EX-04 Б2: кадр со звеном бомбардировщиков рядом (--bombers --shots)
+	if m._args.has("--bombers") and is_instance_valid(m.player):
+		for n in m.get_tree().get_nodes_in_group("enemies"):
+			if n is Bomber and (n as Bomber).global_position.distance_to(m.player.global_position) < 450.0:
+				_shot("bombers")
+				break
 	# Короткая проверка РУД в схеме «влево/вправо»: 20–22 с держим W
 	if m.run_time > 20.0 and m.run_time < 22.0:
 		Tuning.set_param("scheme", 1)

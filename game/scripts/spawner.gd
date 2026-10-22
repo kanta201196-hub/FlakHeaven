@@ -245,6 +245,12 @@ func _process(delta: float) -> void:
 				_place(f, p, ang2 + randf_range(-0.2, 0.2), t)
 				f.heading = (p.global_position - f.position).angle()
 
+	# EX-04 Б2: звено бомбардировщиков проходит район раз в 100–130 с после 3:00 (--bombers — сразу)
+	_bomber_cd -= delta
+	if _bomber_cd <= 0.0 and t > (5.0 if _bomber_test else BOMBER_FROM) and not boss_on:
+		_bomber_cd = 40.0 if _bomber_test else randf_range(100.0, 130.0)
+		spawn_bombers(p, t)
+
 	_carrier_cd -= delta * mult
 	if _carrier_cd <= 0.0:
 		_carrier_cd = 12.0
@@ -269,6 +275,35 @@ func _process(delta: float) -> void:
 				var h := Helicopter.new()
 				_place(h, p, randf() * TAU, t)
 				h.heading = (p.global_position - h.position).angle()
+
+
+const BOMBER_FROM := 180.0
+var _bomber_cd := 0.0
+var _bomber_test := OS.get_cmdline_user_args().has("--bombers")
+
+
+## EX-04 Б2: клин из трёх «Буйволов» проходит мимо игрока по прямой
+func spawn_bombers(p: Player, t: float) -> void:
+	var ang := randf() * TAU
+	var far := 1.0 + 0.5 * sin(deg_to_rad(Tuning.g("cam_tilt")))
+	var start := p.global_position + Vector2.from_angle(ang) * 1300.0 * far
+	var aim := p.global_position + Vector2.from_angle(ang + PI / 2.0) * randf_range(-350.0, 350.0)
+	var hd := (aim - start).angle()
+	var lead: Bomber = null
+	for slot in [Vector2.ZERO, Vector2(-170, -180), Vector2(-170, 180)]:
+		var b := Bomber.new()
+		b.heading = hd
+		b.slot = slot
+		b.lead = lead
+		b.position = start + (slot as Vector2).rotated(hd)
+		Main.I.world.add_child(b)
+		b.apply_hp_mult(hp_mult() * hp_ramp(t) * pressure_k)
+		b.born_t = t
+		if lead == null:
+			lead = b
+	Main.I.show_banner("Звено бомбардировщиков! Броня спереди, турель сзади — заходите сбоку", 3.0)
+	if OS.get_cmdline_user_args().has("--autotest"):
+		print("AUTOTEST: bombers at %.0f" % t)
 
 
 ## Тест 3.5-s7 (Kanta, «бери в работу»): у «Кита» бомбы давали 1,5% урона — наземных целей на пути мало.
