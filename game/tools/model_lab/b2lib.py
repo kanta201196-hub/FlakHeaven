@@ -378,6 +378,7 @@ def finish(objs, out, target=None, maxtex=1024, length=1.0, name='body', center=
     span = (mx.x - mn.x) if fit == 'x' else max(mx.x - mn.x, mx.y - mn.y)   # 'xy' — постройки и природа Нагорья
     ob.data.transform(Matrix.Scale(length / span, 4)); ob.data.update()
     shrink(maxtex)
+    natural([ob])
     for o in list(bpy.data.objects):
         if o != ob:
             bpy.data.objects.remove(o)
@@ -387,6 +388,41 @@ def finish(objs, out, target=None, maxtex=1024, length=1.0, name='body', center=
     bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', export_image_format='JPEG',
                               export_jpeg_quality=88, use_selection=False, export_yup=True)
     return ob
+
+
+def natural(objs, rough=0.88, vmax=0.72, sat=0.80):
+    """Реалистичная окраска (правило Kanta 19.10): без блеска и металла, без чисто белого и кислотных цветов.
+    Шероховатость не ниже rough, металл 0; яркость цвета не выше vmax, насыщенность × sat — и у заливок, и у текстур."""
+    import colorsys
+    import numpy as np
+    done = set()
+    for m in mats(objs):
+        if not m.use_nodes:
+            continue
+        b = bsdf(m)
+        r = b.inputs['Roughness'].default_value if not b.inputs['Roughness'].links else rough
+        for k in ('Metallic', 'Roughness'):
+            for l in list(b.inputs[k].links):
+                m.node_tree.links.remove(l)
+        b.inputs['Metallic'].default_value = 0.0
+        b.inputs['Roughness'].default_value = max(r, rough)
+        img = tex_of(m)
+        if img is None:
+            c = b.inputs['Base Color'].default_value
+            srgb = [x * 12.92 if x <= 0.0031308 else 1.055 * x ** (1 / 2.4) - 0.055 for x in c[:3]]
+            h, sv, v = colorsys.rgb_to_hsv(*srgb)
+            b.inputs['Base Color'].default_value = (*lin(colorsys.hsv_to_rgb(h, sv * sat, min(v, vmax))), 1)
+        elif img.name not in done:
+            done.add(img.name)
+            a = pixels(img)
+            rgb = a[..., :3]
+            mx = rgb.max(axis=-1, keepdims=True); mn = rgb.min(axis=-1, keepdims=True)
+            rgb = mx - (mx - rgb) * sat                       # насыщенность × sat при той же яркости
+            hi = float(np.percentile(mx, 98))
+            if hi > vmax:                                     # самые светлые места — не выше vmax
+                rgb = rgb * (vmax / hi)
+            a[..., :3] = np.clip(rgb, 0, 1)
+            put_pixels(img, a)
 
 
 def matte(objs, rough=0.8, metal=0.0):

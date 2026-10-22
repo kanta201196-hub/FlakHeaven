@@ -14,6 +14,7 @@ extends RefCounted
 ## ≈ 6 px на метр (docs/biome2/models-pipeline.md)
 const KINDS := {
 	"s_gun": ["res://models/biome2/a01_battery_gun", 56.0, 64.0],
+	"s_gun_broken": ["res://models/biome2/a01_battery_gun_broken", 56.0, 64.0],
 	"s_bunker": ["res://models/biome2/a02_bunker_coast", 120.0, 140.0],
 	"s_radar": ["res://models/biome2/a03_radar_mast", 30.0, 34.0],
 	"s_lighthouse": ["res://models/biome2/a04_lighthouse", 80.0, 90.0],
@@ -44,7 +45,6 @@ const KINDS := {
 	"s_hedgehog": ["res://models/biome2/a29_hedgehog", 12.0, 15.0],
 	"s_boom": ["res://models/biome2/a30_boom_net", 200.0, 240.0],
 	"s_cliff_a": ["res://models/biome2/a31_cliff_a", 120.0, 200.0],
-	"s_cliff_b": ["res://models/biome2/a32_cliff_b", 45.0, 70.0],
 	"s_rock": ["res://models/biome2/a33_rock", 16.0, 36.0],
 	"s_olive_a": ["res://models/biome2/a34_olive_a", 38.0, 50.0],
 	"s_olive_b": ["res://models/biome2/a35_olive_b", 38.0, 50.0],
@@ -57,6 +57,7 @@ const KINDS := {
 ## ширины видов (мин, макс) отдельно от KINDS: Vector2 без вложенных Array — таблицу читает поток генерации
 const SIZE := {
 	"s_gun": Vector2(56.0, 64.0),
+	"s_gun_broken": Vector2(56.0, 64.0),
 	"s_bunker": Vector2(120.0, 140.0),
 	"s_radar": Vector2(30.0, 34.0),
 	"s_lighthouse": Vector2(80.0, 90.0),
@@ -87,7 +88,6 @@ const SIZE := {
 	"s_hedgehog": Vector2(12.0, 15.0),
 	"s_boom": Vector2(200.0, 240.0),
 	"s_cliff_a": Vector2(120.0, 200.0),
-	"s_cliff_b": Vector2(45.0, 70.0),
 	"s_rock": Vector2(16.0, 36.0),
 	"s_olive_a": Vector2(38.0, 50.0),
 	"s_olive_b": Vector2(38.0, 50.0),
@@ -403,7 +403,9 @@ func _battery(o: Vector2) -> void:
 		var a := (i - 1) * 0.55
 		var q := p + face.rotated(a) * 80.0
 		if slope(q) < 0.3:
-			put("s_gun", q, size("s_gun"), face.rotated(a).angle(), 34.0)
+			# орудие бывает разбитым (Kanta 19.10: «целое и разбитое», как башни «Левиафана») — след прежних налётов
+			var gk := "s_gun_broken" if _rng.randf() < 0.3 else "s_gun"
+			put(gk, q, size(gk), face.rotated(a).angle(), 34.0)
 	var bq := p - face * 90.0
 	if slope(bq) < 0.35:
 		put("s_bunker", bq, size("s_bunker"), side.angle(), 70.0)
@@ -441,7 +443,7 @@ func _beach(o: Vector2) -> void:
 	for sg: float in [-1.0, 1.0]:
 		var q := p + n * 150.0 + t * sg * 170.0
 		if shore(q) > 100.0 and slope(q) < 0.3 and room(q, 60.0):
-			put("s_bunker", q, size("s_bunker") * 0.8, t.angle(), 60.0)
+			put("s_bunker", q, size("s_bunker") * 0.8, t.angle() + PI, 60.0)   # амбразуры (ось +Z модели) — к морю
 	# остовы десантных барж и самолёта на мели перед пляжем — следы неудачной высадки
 	for i in _rng.randi_range(2, 3):
 		_wreck_near(p + sea * _rng.randf_range(80.0, 150.0) + t * _rng.randf_range(-220.0, 220.0), 80.0, "s_wreck_a")
@@ -507,7 +509,8 @@ func _nature(o: Vector2) -> void:
 		elif h > 0.55:
 			kind = "s_rock" if roll < 0.06 else ("s_pine_b" if roll < 0.09 else "")
 		elif h > 0.18 or sl > 0.3:
-			kind = "s_pine_a" if roll < 0.08 else ("s_pine_b" if roll < 0.14 else ("s_shrub" if roll < 0.22 else ("s_cliff_b" if roll < 0.235 and sl > 0.45 else "")))
+			# скала-столб (a32) убрана по замечанию Kanta 19.10: на круче — обычная скала
+			kind = "s_pine_a" if roll < 0.08 else ("s_pine_b" if roll < 0.14 else ("s_shrub" if roll < 0.22 else ("s_rock" if roll < 0.235 and sl > 0.45 else "")))
 			n = 3 if kind in ["s_pine_a", "s_pine_b"] else 1
 		else:
 			kind = "s_olive_a" if roll < 0.06 else ("s_olive_b" if roll < 0.11 else ("s_shrub" if roll < 0.24 else ("s_tree" if roll < 0.27 else "")))
