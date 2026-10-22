@@ -165,6 +165,13 @@ func _brief(r: Rect2) -> void:
 	y += 30.0
 	y += _para(Vector2(x, y), "• " + Loc.t(String(o["task"])), w, 20, Color.WHITE)
 	y += 24.0
+	# EX-07: задание класса — выбор из редких карточек и запчасти
+	_text(Vector2(x, y), "ЗАДАНИЕ КЛАССА (награда — выбор из редких карточек)", 18, Color(0.7, 0.75, 0.85))
+	y += 30.0
+	for cid in ["fighter", "attacker", "bomber"]:
+		_text(Vector2(x, y), "• " + Loc.t(String(ClassTask.DEFS[cid]["brief"])), 19, Color(1.0, 0.85, 0.45))
+		y += 26.0
+	y += 8.0
 	if Campaign.cleared(Campaign.index()):
 		_text(Vector2(x, y), "✓ Операция пройдена — повторный вылет ради запчастей и опыта экипажа", 18, C_DONE)
 		y += 30.0

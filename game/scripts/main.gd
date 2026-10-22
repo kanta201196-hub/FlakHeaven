@@ -57,6 +57,7 @@ var best_streak := 0
 var near_misses := 0
 var rare_picks := 0        # выборы из редких карточек (награда за аса-соперника)
 var offer_rare := false
+var class_task: ClassTask = null   # EX-07: задание класса на вылет
 var rare_reasons: Array = []  # 3.1: за что награда («ЗА ПОЗИЦИЮ ПВО», «ЗА АСА»)
 var activities_done := 0
 var radio_from := ""
@@ -204,6 +205,9 @@ func start_run() -> void:
 	var sk1: String = skill_pick.get(cls_id, sks[0])
 	player.setup(cls_id, sk1, sks[1] if sks[1] != sk1 else (sks[0] if sks[0] != sk1 else ""))
 	world.add_child(player)
+	class_task = ClassTask.new(cls_id)
+	if class_task.cls != "":
+		radio("Штаб", Loc.t("Задание для вас: %s.") % Loc.t(String(ClassTask.DEFS[cls_id]["brief"])))
 	if Profile.has_perk(cls_id, "b_wing2") and int(player.cls["wingmen"]) > 0:
 		player.add_wingman("swift", 1.0) # перк «Старый знакомый»
 	projectiles = Projectiles.new()
@@ -280,6 +284,8 @@ func _process(delta: float) -> void:
 		_fps_acc += Engine.get_frames_per_second()
 		_fps_n += 1
 		run_time += delta
+		if class_task != null:
+			class_task.update(self)
 		if level_at_5 == 0 and run_time >= 300.0:
 			level_at_5 = level
 		streak_t -= delta
@@ -667,6 +673,8 @@ func on_enemy_killed(e: Enemy) -> void:
 	if is_instance_valid(player):
 		player.on_kill(e)
 	add_stat("kills_by", e.kind(), 1.0)
+	if class_task != null:
+		class_task.on_kill(self, e)
 	streak += 1
 	streak_t = 2.5
 	best_streak = maxi(best_streak, streak)

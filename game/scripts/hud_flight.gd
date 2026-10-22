@@ -164,7 +164,8 @@ func _left_panel(m: Main, p: Player) -> void:
 func _right_panel(m: Main, size: Vector2) -> void:
 	var t := int(m.run_time)
 	var w := size.x - 28.0
-	var rows := 4 + (1 if m.run_time > 900.0 else 0) + (1 if (Campaign.op()["need"] as Array).has("baron") else 0)
+	var task := m.class_task.hud_line() if m.class_task != null else ""
+	var rows := 4 + (1 if m.run_time > 900.0 else 0) + (1 if (Campaign.op()["need"] as Array).has("baron") else 0) + (1 if task != "" else 0)
 	_hud_back(Rect2(size.x - 320, 12, 308, 64 + rows * 26))
 	_text(Vector2(0, 50), "%02d:%02d" % [t / 60, t % 60], 34, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
 	# U-02: цель вылета под таймером (U-05: словами операции кампании)
@@ -181,6 +182,10 @@ func _right_panel(m: Main, size: Vector2) -> void:
 	y += 26.0
 	if (Campaign.op()["need"] as Array).has("baron"):
 		_text(Vector2(0, y), Loc.t("«Барон»: %s") % (Loc.t("сбит ✓") if m.op_flags.get("baron", false) else Loc.t("не сбит")), 17, Color(0.6, 1.0, 0.7) if m.op_flags.get("baron", false) else Color(1.0, 0.75, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, w)
+		y += 26.0
+	if task != "":
+		var tc := Color(0.6, 1.0, 0.7) if m.class_task.state == "done" else (Color(0.75, 0.75, 0.75) if m.class_task.state == "failed" else Color(1.0, 0.85, 0.45))
+		_text(Vector2(0, y), task, 17, tc, HORIZONTAL_ALIGNMENT_RIGHT, w)
 		y += 26.0
 	var every := Tuning.g("boss_every")
 	var next := (floorf(m.run_time / every) + 1.0) * every - m.run_time
