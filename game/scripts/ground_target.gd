@@ -65,6 +65,7 @@ func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 			xp = 4
 			parts = 4
 		"sam":
+			defense = "armor"   # EX-04
 			hp = GroundTarget.HP_ARMOR
 			radius = 24.0
 			xp = 5

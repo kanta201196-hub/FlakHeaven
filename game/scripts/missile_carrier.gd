@@ -29,8 +29,21 @@ func _ready() -> void:
 	_cd = randf_range(2.0, 4.0)
 
 
+## EX-04: постановщик помех — свои помехи и у соседей в радиусе ECM_R
+const ECM_R := 280.0
+var _ecm_tick := 0.0
+
+
 func behave(delta: float) -> void:
 	_t += delta
+	ecm_t = 1.0
+	_ecm_tick -= delta
+	if _ecm_tick <= 0.0:
+		_ecm_tick = 0.4
+		for n in get_tree().get_nodes_in_group("enemies"):
+			var e := n as Enemy
+			if e != null and not e.is_ground and e.global_position.distance_squared_to(global_position) < ECM_R * ECM_R:
+				e.ecm_t = maxf(e.ecm_t, 0.6)
 	var p := Main.I.player
 	if p == null or p.hp <= 0.0:
 		position += Vector2.from_angle(heading) * 200.0 * delta

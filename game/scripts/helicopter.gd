@@ -25,6 +25,7 @@ func _ready() -> void:
 	super()
 	hp = 110.0
 	radius = 26.0
+	defense = "armor"   # EX-04
 	big = true
 	xp = 10
 	parts = 6

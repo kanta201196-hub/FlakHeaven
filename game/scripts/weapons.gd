@@ -114,7 +114,7 @@ static func title(id: String) -> String:
 
 
 ## Выбор цели по приоритету группы.
-static func pick_target(from: Vector2, max_dist: float, prio: String, skip: Array = [], air_only := false, ground_only := false) -> Enemy:
+static func pick_target(from: Vector2, max_dist: float, prio: String, skip: Array = [], air_only := false, ground_only := false, homing := false) -> Enemy:
 	var best: Enemy = null
 	var best_score := INF
 	for n in Main.I.get_tree().get_nodes_in_group("enemies"):
@@ -134,6 +134,8 @@ static func pick_target(from: Vector2, max_dist: float, prio: String, skip: Arra
 				score = d - (5000.0 if e.big else 0.0) - (20000.0 if e.is_boss else 0.0)
 			"ground":
 				score = d - (20000.0 if e.is_ground else 0.0)
+		if homing and e.jammed():
+			score += 100000.0   # EX-04: помехи — самонаводящиеся берут такую цель последней
 		if score < best_score:
 			best_score = score
 			best = e

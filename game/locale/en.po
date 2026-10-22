@@ -6279,3 +6279,28 @@ msgstr "synergy: good company"
 #: game/scripts/wingman.gd:423
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
+
+msgid "\nЗаймёт место модуля %d из %d"
+msgstr "\nTakes module slot %d of %d"
+
+msgid "\nЗаймёт последнее место модуля (%d из %d): дальше — только улучшения взятых"
+msgstr "\nTakes the last module slot (%d of %d): after this, only upgrades to modules you have"
+
+msgid "Модули: %d из %d"
+msgstr "Modules: %d of %d"
+
+msgid "Жёлтые шевроны — манёвренный враг: уходит от взрывов и НАР. Бейте его пушкой, лучше с хвоста."
+msgstr "Yellow chevrons mean an agile enemy: it dodges explosions and rockets. Use the cannon, best from behind."
+
+msgid "ЗАХОД: пушка и взрывы +%d%%"
+msgstr "ATTACK RUN: cannon and explosions +%d%%"
+
+msgid "Заход на атаку: летите прямо секунду — пушка, НАР и бомбы бьют до +30% сильнее. На крутом вираже бонус пропадает."
+msgstr "Attack run: fly straight for a second and your cannon, rockets and bombs hit up to 30% harder. A hard turn cancels the bonus."
+
+msgid "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, рельсотрон и лазер — сильнее."
+msgstr "A grey shield above an enemy means armor: cannon and turrets do half damage, while rockets, bombs, railgun and laser hit harder."
+
+msgid "Фиолетовые дуги — помехи ракетоносца: самонаводящиеся ракеты почти не попадают. Сбейте ракетоносец пушкой или снимите помехи ЭМИ."
+msgstr "Purple arcs mean jamming from a missile carrier: homing missiles barely hit. Shoot the carrier down with your cannon or clear the jamming with an EMP."
+

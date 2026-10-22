@@ -79,6 +79,7 @@ func apply_hp_mult(_m: float) -> void:
 
 func _ready() -> void:
 	super()
+	defense = "agile"   # EX-04
 	say("again" if _again else "spawn")
 
 

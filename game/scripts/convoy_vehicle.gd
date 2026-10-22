@@ -103,6 +103,8 @@ func setup(r: String, c: Convoy, hp_v: float) -> void:
 	is_ground = true
 	no_despawn = true
 	big = r in ["truck", "ifv"]
+	if float(sp["hp"]) >= GroundTarget.HP_ARMOR:
+		defense = "armor"   # EX-04: бронетехника конвоя
 	xp = int(sp["xp"])
 	parts = int(sp["parts"])
 	repair_chance = 0.1

@@ -544,7 +544,7 @@ func _fire_aam(p: Player) -> bool:
 	var targets: Array = []
 	var skip: Array = []
 	for i in slots * per_slot:
-		var t := Weapons.pick_target(p.global_position, range_px(), priority if hunter else ("nearest" if priority == "ground" else priority), skip, not hunter)
+		var t := Weapons.pick_target(p.global_position, range_px(), priority if hunter else ("nearest" if priority == "ground" else priority), skip, not hunter, false, true)
 		if t == null:
 			break
 		targets.append(t)
