@@ -45,12 +45,61 @@ var _man_side := 1.0
 var _man_spd := 0.0
 var _man_last := ""
 var _roll_ready := 0.0
+## EX-04 (отзывы внешних тестеров 21.10, решение Kanta: А1): защита врага — против неё одно оружие слабее,
+## другое сильнее, но в ноль не режется ничего («игрок не преодолевает, а кайфует»).
+##   "armor" — броня (вертолёты, бронетехника, элитные): пушки и турели ×0,5, взрывы, рельсотрон, лазер ×1,3;
+##   "agile" — манёвренный (перехватчики, асы): от взрывов и НАР уходит (×0,6), пушка ×1,15, лазер ×1,3;
+##   помехи (ecm_t > 0) — их ставит ракетоносец вокруг себя: самонаводящиеся ракеты ×0,4 и цель выбирают
+##   в последнюю очередь; ЭМИ снимает помехи на ECM_OFF секунд.
+var defense := ""
+var ecm_t := 0.0
+var ecm_off_t := 0.0
+const ECM_OFF := 8.0
+const DEF_K := {
+	"armor": {"gun": 0.5, "blast": 1.3, "homing": 1.0, "energy": 1.3},
+	"agile": {"gun": 1.15, "blast": 0.6, "homing": 1.0, "energy": 1.3},
+}
+const DEF_HINT := {
+	"armor": "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, рельсотрон и лазер — сильнее.",
+	"agile": "Жёлтые шевроны — манёвренный враг: уходит от взрывов и НАР. Бейте его пушкой, лучше с хвоста.",
+	"ecm": "Фиолетовые дуги — помехи ракетоносца: самонаводящиеся ракеты почти не попадают. Сбейте ракетоносец пушкой или снимите помехи ЭМИ.",
+}
 ## правка 3.5-s4 (п. 26): расталкивание сглажено и уходит в курс — враги не дёргаются и не слипаются
 var _sep := Vector2.ZERO
 
 
+## EX-04: вид оружия по источнику урона (строки источников — как в статистике урона)
+static func src_class(src: String) -> String:
+	if src in ["ЭМИ", "лазер", "рельсотрон"]:
+		return "energy"
+	if src in ["ракеты В-В", "ёлочка", "противоракеты"]:
+		return "homing"
+	if src.begins_with("курсовое") or src in ["гондола", "турели"] or src.begins_with("ведом"):
+		return "gun"
+	if src in ["проход на форсаже", "бронещит", "прочее"]:
+		return ""
+	return "blast"   # НАР, бомбы, ковровые, плазма, связки со взрывом
+
+
+func jammed() -> bool:
+	return ecm_t > 0.0 and ecm_off_t <= 0.0
+
+
+## EX-04: множитель урона от защиты
+func defense_k(src: String) -> float:
+	var c := src_class(src)
+	var k := 1.0
+	if DEF_K.has(defense):
+		k = float(DEF_K[defense].get(c, 1.0))
+	if c == "homing" and jammed():
+		k *= 0.4
+	return k
+
+
 func make_elite() -> void:
 	elite = true
+	if defense == "":
+		defense = "armor"   # EX-04: элитный — бронированный
 	hp *= 3.0
 	max_hp = hp
 	xp *= 3
@@ -86,6 +135,20 @@ func take_hit(dmg: float, source := "прочее") -> void:
 			dmg *= mk
 			Main.I.tele.add("mastery_dmg", dmg * (1.0 - 1.0 / mk))
 	last_src = source
+	var rc := src_class(source)
+	if (rc == "gun" or rc == "blast") and is_instance_valid(Main.I.player) and not source.begins_with("ведом"):
+		var rk: float = Main.I.player.run_k()
+		if rk > 1.0:
+			dmg *= rk
+			Main.I.tele.add("run_dmg", dmg * (1.0 - 1.0 / rk))
+	var dk := defense_k(source)
+	if dk != 1.0:
+		dmg *= dk
+		var dkind := defense if DEF_K.has(defense) and DEF_K[defense].get(src_class(source), 1.0) != 1.0 else "ecm"
+		Main.I.tele.add("def_" + dkind, 1.0)
+		Hints.show("def_" + dkind, DEF_HINT[dkind], 9.0, 2)
+	if source == "ЭМИ":
+		ecm_off_t = ECM_OFF
 	if (is_boss or self is RivalAce) and Main.I.spawner != null:
 		# тест 3.5-s5 (п. 10): урон по асу — мерило прочности следующих асов (Spawner.single_k);
 		# второй список, п. 5: и по асу-сопернику в дуэли — тогда и первый ас по силам классу
@@ -184,6 +247,8 @@ func _process(delta: float) -> void:
 	if hp <= 0.0:
 		return
 	_flash = maxf(0.0, _flash - delta)
+	ecm_t = maxf(0.0, ecm_t - delta)
+	ecm_off_t = maxf(0.0, ecm_off_t - delta)
 	if _prev_pos != Vector2.INF and delta > 0.0:
 		move_vel = move_vel.lerp((global_position - _prev_pos) / delta, 0.3)
 	_prev_pos = global_position
@@ -563,6 +628,7 @@ func draw_enemy_sprite(tex_name: String, length: float, tint := Color.WHITE, ang
 		return false
 	var ang := heading if angle == INF else angle
 	_spr = {"tex": tex_name, "len": length, "angle": ang}
+	draw_defense_mark()
 	if Render3D.enabled:
 		return true
 	var k := length * Tuning.g("unit_scale") * (1.2 if elite else 1.0) / float(t.get_width())
@@ -577,3 +643,20 @@ func draw_enemy_sprite(tex_name: String, length: float, tint := Color.WHITE, ang
 	draw_texture(t, -half, Color(4, 4, 4, 1) if _flash > 0.0 else tint)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true
+
+
+## EX-04: значок защиты над врагом — броня (серый щит), манёвренный (жёлтые шевроны), помехи (фиолетовые дуги)
+func draw_defense_mark() -> void:
+	var y := -radius - 16.0
+	match defense:
+		"armor":
+			var sh := PackedVector2Array([Vector2(-6, y - 6), Vector2(6, y - 6), Vector2(6, y), Vector2(0, y + 6), Vector2(-6, y)])
+			draw_colored_polygon(sh, Color(0.75, 0.8, 0.88, 0.95))
+			draw_polyline(sh + PackedVector2Array([sh[0]]), Color(0.15, 0.17, 0.2, 0.9), 1.5)
+		"agile":
+			for i in 2:
+				var yy := y - 4.0 + i * 6.0
+				draw_polyline(PackedVector2Array([Vector2(-6, yy + 3), Vector2(0, yy - 2), Vector2(6, yy + 3)]), Color(1.0, 0.85, 0.2, 0.95), 2.5)
+	if jammed():
+		for i in 2:
+			draw_arc(Vector2(0, y - 2.0 if defense != "" else y + 4.0), 6.0 + i * 5.0, -PI * 0.8, -PI * 0.2, 8, Color(0.8, 0.45, 1.0, 0.9), 2.0)

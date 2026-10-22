@@ -332,6 +332,10 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 		_ctext(size.y / 2.0 + 96.0, Loc.t("БОЕВОЙ РЕЖИМ: пушка ×2 · %.1f с") % p.combat_t, 20, Color(0.6, 0.9, 1.0))
 	if p.on_tail():
 		_ctext(size.y / 2.0 + 120.0, "НА ХВОСТЕ: пушка +50%", 22, Color(1.0, 0.9, 0.4))
+	var rk := p.run_k()
+	if rk > 1.05:
+		# EX-04: заход на атаку — прямой полёт усиливает пушку, НАР и бомбы
+		_ctext(size.y / 2.0 + 144.0, Loc.t("ЗАХОД: пушка и взрывы +%d%%") % int(round((rk - 1.0) * 100.0)), 20, Color(1.0, 0.75, 0.4, clampf((rk - 1.0) / Player.RUN_BONUS, 0.4, 1.0)))
 	if m.streak >= 3:
 		var a := clampf(m.streak_t, 0.0, 1.0)
 		var stt := Loc.t("Серия ×%d · опыт ×%.2f") % [m.streak, m.streak_mult()]

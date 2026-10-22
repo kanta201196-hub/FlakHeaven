@@ -575,6 +575,7 @@ func _run_autotest(delta: float) -> void:
 					int(m.tele.g("mastery_t")), int(m.tele.g("mastery_dmg"))])
 				print_taken("AUTOTEST")
 				print("AUTOTEST: modules %d/%d %s, hp_cd %.2f" % [Cards.mod_slots_used(m.player), Cards.MOD_SLOTS, m.player.taken, float(m.player.mods["hp_cd"])])
+				print("AUTOTEST: defense hits armor %d agile %d ecm %d, run bonus dmg %d" % [int(m.tele.g("def_armor")), int(m.tele.g("def_agile")), int(m.tele.g("def_ecm")), int(m.tele.g("run_dmg"))])
 				_runs_done += 1
 				for a in m._args:   # --runs=N: полный автотест заканчивается сам после N вылетов (tools/ci/full.sh)
 					if String(a).begins_with("--runs=") and _runs_done >= int(String(a).substr(7)):

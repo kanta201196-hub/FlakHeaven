@@ -103,6 +103,11 @@ var _carpet_tick := 0.0
 var _carpet_i := 0
 
 var throttle := 1.0    # РУД: W/S в схемах «мышь» и «влево/вправо», 55%…130% крейсерской
+## EX-04 (Б1, отзывы внешних тестеров: «можно крутиться на месте»): заход на атаку — после ~1 с прямого
+## полёта пушка, НАР и бомбы бьют сильнее (до +30%); крутой вираж бонус сбрасывает
+var straight_t := 0.0
+var _h_prev := INF
+const RUN_BONUS := 0.3
 var tail_target: Enemy = null # враг, у которого мы «на хвосте»
 var tail_t := 0.0
 var _near_miss_cd := 0.0
@@ -367,6 +372,11 @@ func lock_ok() -> bool:
 	return is_instance_valid(turn_lock) and turn_lock.hp > 0.0
 
 
+## EX-04: множитель урона «заход на атаку» (1,0…1,3)
+func run_k() -> float:
+	return 1.0 + RUN_BONUS * clampf((straight_t - 0.5) / 0.7, 0.0, 1.0)
+
+
 func on_tail() -> bool:
 	return tail_t >= (0.15 if has_perk("f_tail1") else 0.3) and is_instance_valid(tail_target)
 
@@ -397,6 +407,14 @@ func _process(delta: float) -> void:
 	check_upgrade()
 	flight._throttle(delta)
 	flight._track_tail(delta)
+	if _h_prev != INF and delta > 0.0:
+		if absf(angle_difference(_h_prev, heading)) / delta < 0.6:
+			straight_t += delta
+		else:
+			straight_t = maxf(0.0, minf(straight_t, 1.2) - delta * 3.0)
+	_h_prev = heading
+	if straight_t > 1.3 and Main.I.run_time > 40.0:
+		Hints.show("run", "Заход на атаку: летите прямо секунду — пушка, НАР и бомбы бьют до +30% сильнее. На крутом вираже бонус пропадает.", 8.0, 2)
 	skills._handle_skills()
 	flight._steer(delta)
 	flight._move(delta)

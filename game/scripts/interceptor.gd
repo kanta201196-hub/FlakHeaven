@@ -38,6 +38,7 @@ func _ready() -> void:
 	super()
 	hp = 30.0
 	radius = 15.0
+	defense = "agile"   # EX-04
 	contact_damage = 8.0
 	xp = 4
 	parts = 3
