@@ -6304,3 +6304,17 @@ msgstr "A grey shield above an enemy means armor: cannon and turrets do half dam
 msgid "Фиолетовые дуги — помехи ракетоносца: самонаводящиеся ракеты почти не попадают. Сбейте ракетоносец пушкой или снимите помехи ЭМИ."
 msgstr "Purple arcs mean jamming from a missile carrier: homing missiles barely hit. Shoot the carrier down with your cannon or clear the jamming with an EMP."
 
+msgid "«Крепость» на подходе. Сначала турели — у каждой свой сектор, заходите с носа или с хвоста, там мёртвые зоны."
+msgstr "The Fortress is inbound. Take out the turrets first: each covers its own sector, so come in from the nose or the tail, where they can't reach."
+
+msgid "Она падает и идёт на таран! Не подставляйтесь под нос — добивайте сбоку."
+msgstr "She's going down and trying to ram! Stay off her nose and finish her from the side."
+
+msgid "Турели молчат! Ждите, когда откроется люк, — бейте в брюхо. Двигатели — с задней полусферы."
+msgstr "Turrets are silent! Wait for the bomb bay to open and hit her belly. Hit the engines from behind."
+
+msgid "Штаб"
+msgstr "HQ"
+
+msgid "Щит аса держит обычный урон втрое лучше. Пробивают его пушка «на хвосте» у аса, ЭМИ и лазер."
+msgstr "An ace's shield shrugs off normal damage three times better. Your cannon from the ace's tail, an EMP or a laser breaks it."
