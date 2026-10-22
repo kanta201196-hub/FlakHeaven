@@ -1370,6 +1370,10 @@ RECIPES = {f.__name__: f for f in [e_ship_bulk, e_ship_escort, e_ship_tanker, e_
                                     a37_pine_b, a38_tree_leaf, a39_reed, a40_shrub, e_albatross,
                                     e_leviathan, e_lev_turret, e_lev_launcher, e_lev_radar, e_lev_zsu]}
 
+# катер «Скат», экраноплан «Крачка», «Буревестник», «Чайка» — переделаны кодом (замечания Kanta 19.10): b2_sea_craft.py
+import b2_sea_craft
+RECIPES.update(b2_sea_craft.RECIPES)
+
 if __name__ == '__main__':
     names = [a for a in A if not a.startswith('--')]
     for n in (RECIPES if names == ['all'] else names):

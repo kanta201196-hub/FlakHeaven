@@ -9,9 +9,6 @@
 | fh_battle_e_ship_escort (катер сопровождения) | Patrol Boat PBR MK2 | Savy | https://sketchfab.com/3d-models/patrol-boat-pbr-mk2-dbd87172b2934063aa93ffd0c6f85750 | CC BY 4.0, изменено |
 | fh_battle_e_ship_landing (десантная баржа) | LCVP Higgins Boat 1945 | RedC130 | https://sketchfab.com/3d-models/lcvp-higgins-boat-1945-92b2ec48991545f7baea8b0954489be8 | CC BY 4.0, изменено |
 | biome2/a22_buoy_red, a23_buoy_green (буи) | Red Marine Navigation Buoy | Muyaya Concept | https://sketchfab.com/3d-models/red-marine-navigation-buoy-game-ready-519c88ea6d464e29988515af989a96e6 | CC BY 4.0, изменено |
-| fh_battle_e_ship_aa (катер ПВО «Скат») | Type 22 Missile Boat | dannzjs | https://sketchfab.com/3d-models/type-22-missile-boat-d90464e6ca2e4d23a7a5a9865d220945 | CC BY 4.0, изменено |
-| fh_battle_e_ekranoplan (экраноплан «Крачка») | KM Caspian Sea Monster | helijah | https://sketchfab.com/3d-models/km-caspian-sea-monster-78de2c2921064278a320aa9f5add63fb | CC BY 4.0, изменено |
-| fh_battle_e_seaplane (гидросамолёт «Буревестник») | Seaplane Cessna 172 | KOG_THORNS | https://sketchfab.com/3d-models/seaplane-cessna-172-3924196d2ccf42c0ac8458d8f16a7910 | CC BY 4.0, изменено |
 | biome2/a01_battery_gun (орудие береговой батареи) | 102 mm/45 QF Mk XVI / Mk XIX | snrnsrk5 | https://sketchfab.com/3d-models/102-mm45-qf-mkxvi-mkxix-2389fa9c28024f908eebbb16803450c3 | CC BY 4.0, изменено |
 | biome2/a02_bunker_coast (береговой бункер) | Devil's Slide Bunker | Azad Balabanian | https://sketchfab.com/3d-models/devils-slide-bunker-pacifica-ca-52982f5a24834be48dab4057d2df1c3d | CC BY 4.0, изменено |
 | biome2/a04_lighthouse (маяк) | Old Lighthouse | Nirved Kamble | https://sketchfab.com/3d-models/old-lighthouse-19e1ff049db74dc8b6173976417c1048 | CC BY 4.0, изменено |
