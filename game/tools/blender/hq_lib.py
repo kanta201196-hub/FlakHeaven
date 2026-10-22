@@ -132,6 +132,28 @@ def lathe(prof, seg=48, cap0=True, cap1=True):
     return bm
 
 
+def lathe_sector(prof, a0, a1, seg=24, wall=None):
+    """Сектор тела вращения (лепесток обтекателя) от угла a0 до a1; wall — доля радиуса: боковые стенки
+    до r × wall (толщина лепестка видна в щели)"""
+    if prof[-1][0] < prof[0][0]:
+        prof = prof[::-1]
+    bm = bmesh.new()
+    n = max(2, S(seg, 3))
+    ang = [a0 + (a1 - a0) * k / n for k in range(n + 1)]
+    rings = [[bm.verts.new((x, math.cos(a) * r, math.sin(a) * r)) for a in ang] for x, r in prof]
+    for a, b in zip(rings, rings[1:]):
+        for k in range(n):
+            bm.faces.new((a[k], a[k + 1], b[k + 1], b[k]))
+    if wall:
+        inner = [[bm.verts.new((x, math.cos(a) * r * wall, math.sin(a) * r * wall)) for a in (a0, a1)] for x, r in prof]
+        for i in range(len(prof) - 1):
+            if prof[i][1] < 1e-6 or prof[i + 1][1] < 1e-6:
+                continue
+            bm.faces.new((inner[i][0], rings[i][0], rings[i + 1][0], inner[i + 1][0]))
+            bm.faces.new((inner[i][1], inner[i + 1][1], rings[i + 1][n], rings[i][n]))
+    return bm
+
+
 def ogive(x0, x1, r0, r_tip=0.0, k=8, power=0.62):
     """Оживальный нос: профиль от (x0, r0) к (x1, r_tip)"""
     out = []

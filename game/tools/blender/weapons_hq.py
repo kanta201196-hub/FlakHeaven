@@ -333,51 +333,126 @@ def arm():
 
 
 # ======================= БЛОКИ НАР =======================
-def rocket_tip(x, y, z, r, m=M_OLIVE):
-    """Головная часть НАР в трубе: оживальный обтекатель с взрывателем"""
-    emit(lathe([(x - r * 2.2, r)] + ogive(x - r * 0.9, x + r * 0.9, r, r * 0.15, 6)[0:] + [(x + r * 1.05, r * 0.12), (x + r * 1.05, 0)], 16, False, True), m, T(0, y, z))
+# Тест 3.5-s8, вторая версия (правки по кадру weapons_rockets_after): блок — окрашенный матовым хаки корпус,
+# металл только на крепеже и соплах; лепестки обтекателя — отдельная геометрия того же цвета (шов — щель между
+# лепестками и их торцы), без тёмных накладок. Габарит и верх (место крепления к пилону) — как у прежних.
+M_RKT = paint("rocket_grey", (0.3, 0.31, 0.28), 0.72, ao=0.45, grime=0.15, dust=0.2)
 
 
-def tube_set(x, depth, rings, rt, front, R):
-    """Трубы пакета: стенки, тёмный канал, внутри — головки НАР (спереди) или сопла (сзади)"""
-    for rr, n in rings:
+def ring_pts(rings):
+    """Центры труб пакета: rings = [(радиус круга, число труб, сдвиг угла)]"""
+    out = []
+    for rr, n, ph in rings:
         for i in range(n):
-            a = 2 * math.pi * i / n + (0.3 if n > 7 else 0.0)
-            y, z = math.cos(a) * rr, math.sin(a) * rr
-            emit(tube_shell(rt, rt * 0.8, depth, 20), M_STEEL, T(x, y, z))
-            sd = 1 if front else -1
-            emit(cyl(rt * 0.8, 0.002, 16), M_DARK, T(x - sd * depth * 0.45, y, z))
-            if HQ:
-                if front:
-                    rocket_tip(x + depth * 0.3, y, z, rt * 0.62)
-                else:
-                    emit(lathe([(x - depth * 0.15, rt * 0.3), (x - depth * 0.15, rt * 0.55), (x + depth * 0.2, rt * 0.62)], 14, False, False), M_NOZZLE, T(0, y, z))
+            a = ph + 2 * math.pi * i / n
+            out.append((math.cos(a) * rr, math.sin(a) * rr))
+    return out
 
 
-def pod_simple(R, x0, x1, tubes7):
-    # ступень 1: короткий блок с открытыми трубами спереди и сзади
-    b = 0.008
-    seams = [x0 + 0.06, (x0 + x1) / 2, x1 - 0.06]
-    prof = [(x0, R * 0.9), (x0 + b * 0.3, R - b * 0.3), (x0 + b, R)] + grooves(x0 + b, x1 - b, R, seams)[1:] + [(x1 - b * 0.3, R - b * 0.3), (x1, R * 0.9)]
-    emit(lathe(prof, 56), M_OLIVE)
-    rings = [(0.0, 1), (R * 0.4, 6)]
-    for xf_, front in ((x1, True), (x0, False)):
-        emit(cyl(R * 0.9, 0.004, 48), M_DARK, T(xf_ + (0.001 if front else -0.001), 0, 0))
-        tube_set(xf_ + (0.004 if front else -0.004), 0.016, rings, R * 0.13, front, R)
+def tube_fronts(x_face, pts, rt, depth):
+    """Передний срез: торцы труб выступают из переборки на depth, в каждой — головка НАР с взрывателем"""
+    for y, z in pts:
+        emit(tube_shell(rt, rt * 0.84, depth, 20), M_OLIVE, T(x_face + depth / 2, y, z))
+        emit(cyl(rt * 0.84, 0.002, 16), M_DARK, T(x_face + 0.0012, y, z))
+        if HQ:
+            rn = rt * 0.72
+            prof = [(x_face + 0.001, rn)] + ogive(x_face + depth * 0.2, x_face + depth * 0.82, rn, rn * 0.16, 7)
+            emit(lathe(prof, 16, False, True), M_RKT, T(0, y, z))
+            emit(lathe([(x_face + depth * 0.8, rn * 0.17), (x_face + depth * 0.9, rn * 0.12), (x_face + depth * 0.92, 0)], 10, True, False), M_STEEL, T(0, y, z))
+        else:
+            emit(cyl(rt * 0.6, depth * 0.6, 8), M_RKT, T(x_face + depth * 0.3, y, z))
+
+
+def tube_rears(x_face, pts, rt, depth=0.006):
+    """Задний срез: сопловые отверстия — короткий раструб из переборки и тёмный канал"""
+    for y, z in pts:
+        emit(cyl(rt * 0.82, 0.002, 16), M_DARK, T(x_face - depth * 0.6, y, z))
+        if HQ:
+            emit(tube_shell(rt, rt * 0.82, depth, 20), M_NOZZLE, T(x_face - depth / 2, y, z))
+            emit(torus(rt * 0.5, rt * 0.07, 14, 6), M_NOZZLE, T(x_face - depth * 0.55, y, z))
+        else:
+            emit(tube_shell(rt, rt * 0.8, depth, 10), M_NOZZLE, T(x_face - depth / 2, y, z))
+
+
+def grille(x, r, step):
+    """Защитная решётка заднего среза: тонкие прутья крест-накрест и обод"""
+    k = int(r / step)
+    for i in range(-k, k + 1):
+        c = i * step
+        h = 2 * math.sqrt(max(r * r - c * c, 0.0))
+        if h < 0.01:
+            continue
+        emit(box((0.003, 0.0032, h), 0.0008 if HQ else 0.0), M_OLIVE, T(x, c, 0))
+        emit(box((0.003, h, 0.0032), 0.0008 if HQ else 0.0), M_OLIVE, T(x - 0.0034, 0, c))
+    emit(lathe([(x - 0.006, r * 0.96), (x - 0.006, r * 1.02), (x + 0.002, r * 1.02), (x + 0.002, r * 0.96)], 48, False, False), M_OLIVE)
+
+
+def petal_nose(xb, xf, R, n, a0=math.pi / 2):
+    """Разрушаемый обтекатель из n лепестков: каждый лепесток — отдельный сектор с торцами, между ними узкая
+    щель; под щелью — внутренний конус того же цвета (шов читается тенью, не краской)"""
+    gap = 0.024 if HQ else 0.04
+    prof = ogive(xb, xf, R, R * 0.035, 12)
+    emit(lathe(ogive(xb, xf - 0.004, R * 0.94, 0.0, 12), 48), M_OLIVE)
+    for k in range(n):
+        ac = a0 + 2 * math.pi * k / n
+        h = math.pi / n - gap / 2
+        emit(lathe_sector(prof, ac - h, ac + h, 14, 0.94), M_OLIVE)
+        # петля лепестка у основания и прижимная планка по шву
+        rivets(xb + 0.008, R * 0.995, 3, M_STEEL, 0.0016, arc=(ac - h * 0.55, ac + h * 0.55))
+        if HQ:
+            emit(box((0.003, 0.012, 0.006), 0.001), M_STEEL, surf(xb + 0.006, ac + math.pi / n, R, 0.0012) @ RZ(0))
+
+
+def pod_shell(x0, xb, R, seams, rear):
+    """Корпус блока от заднего среза x0 до основания обтекателя xb. rear = ("flat", r_face) — плоский
+    срез с кромкой, ("cone", r_face, длина) — хвостовой конус. Возвращает x и радиус задней переборки"""
+    b = 0.006
+    if rear[0] == "flat":
+        rf, xr = rear[1], x0 + 0.012
+        prof = [(xr, rf), (x0, rf), (x0, R * 0.95), (x0 + b * 0.3, R - b * 0.3), (x0 + b, R)]
+        body0 = x0 + b
+    else:
+        rf, ln = rear[1], rear[2]
+        xr = x0 + 0.01
+        prof = [(xr, rf * 0.94), (x0, rf * 0.94), (x0, rf), (x0 + 0.003, rf * 1.02), (x0 + ln, R)]
+        body0 = x0 + ln
+    prof += grooves(body0, xb - 0.004, R, seams)[1:] + [(xb - 0.002, R * 0.985), (xb, R * 0.985)]
+    emit(lathe(prof, 64, True, True), M_OLIVE)
     for x in seams:
-        rivets(x - 0.006, R, 44, M_STEEL, 0.0016, skip_top=True)
-        rivets(x + 0.006, R, 44, M_STEEL, 0.0016, skip_top=True)
-    # стяжные ленты с замками снизу
-    for x in (-0.2, 0.2):
-        ring_band(x - 0.012, x + 0.012, R, M_STEEL, 0.0025)
-        emit(box((0.03, 0.02, 0.012), 0.002), M_STEEL, T(x, 0, -R - 0.006))
-    stencil(-0.15, 0.1, 0.05, R, M_STENCIL, 3, 0.006, seed=21)
-    stencil(-0.15, 0.1, math.pi - 0.05, R, M_STENCIL, 3, 0.006, seed=22)
+        rivets(x - 0.006, R, 48, M_STEEL, 0.0016, skip_top=True)
+        rivets(x + 0.006, R, 48, M_STEEL, 0.0016, skip_top=True)
+    return xr, rf
+
+
+def strap(x, R, w=0.022, lift=0.003):
+    """Бандаж: окрашенная лента поверх корпуса, стяжной замок снизу (металл)"""
+    ring_band(x - w / 2, x + w / 2, R, M_OLIVE, lift)
+    emit(box((w * 1.3, 0.026, 0.012), 0.002), M_STEEL, T(x, 0, -R - 0.006))
+    if HQ:
+        for sy in (1, -1):
+            screw(T(x, sy * 0.009, -R - 0.012) @ RY(math.pi / 2), 0.0026, M_STEEL)
+        rivets(x, R + lift, 40, M_STEEL, 0.0013, skip_top=True)
+
+
+def cable_box(x0, x1, R, a, breaks=()):
+    """Кабельный короб вдоль борта (крашеный, с хомутами) с разрывами под бандажи"""
+    hgt, w = 0.011, 0.02
+    pts = [x0] + [v for x in sorted(breaks) for v in (x - 0.018, x + 0.018)] + [x1]
+    for s0, s1 in zip(pts[0::2], pts[1::2]):
+        emit(box((hgt, s1 - s0, w), 0.002), M_OLIVE, surf((s0 + s1) / 2, a, R, hgt / 2 - 0.001))
+        if HQ:
+            k = max(1, int((s1 - s0) / 0.07))
+            for i in range(k + 1):
+                x = s0 + 0.012 + (s1 - s0 - 0.024) * i / k
+                emit(box((0.003, 0.006, w + 0.008), 0.001), M_STEEL, surf(x, a, R, hgt))
+    # разъёмы на концах короба
+    for x in (x0 - 0.008, x1 + 0.008):
+        emit(cyl(0.009, 0.016, 16, 0.002), M_DARK, surf(x, a, R, 0.007) @ RZ(math.pi / 2))
 
 
 def beam(x0, x1, z, w):
-    """Балка-держатель с замками-крюками"""
-    emit(box((x1 - x0, w, 0.045), 0.006), M_STEEL, T((x0 + x1) / 2, 0, z))
+    """Балка-держатель (окрашена) с замками-крюками и винтами (металл)"""
+    emit(box((x1 - x0, w, 0.045), 0.006), M_OLIVE, T((x0 + x1) / 2, 0, z))
     emit(box(((x1 - x0) * 0.9, w * 0.6, 0.008), 0.002), M_DARK, T((x0 + x1) / 2, 0, z + 0.025))
     for x in (x0 + 0.12, x1 - 0.12):
         if HQ:
@@ -391,58 +466,8 @@ def beam(x0, x1, z, w):
                 screw(T(x, sy * w / 2, z) @ RZ(sy * math.pi / 2), 0.0022, M_STEEL)
 
 
-def petal_cone(x0, x1, r0, n, holes):
-    """Обтекатель из n лепестков с тёмными щелями между ними и пусковыми отверстиями на лепестках"""
-    emit(lathe([(x0, r0 * 0.9), (x1 - 0.01, r0 * 0.05), (x1 - 0.01, 0)], 32), M_DARK)
-    rf = lambda x: r0 * (1 - (x - x0) / (x1 - x0)) + r0 * 0.04 * ((x - x0) / (x1 - x0))
-    for k in range(n):
-        a0 = 2 * math.pi * k / n
-        h = math.pi / n * (0.86 if HQ else 0.8)
-        patch(x0, x1, a0 - h, a0 + h, rf, M_OLIVE, 0.0, 8 if HQ else 4, 6 if HQ else 3)
-        patch(x0, x1, a0 + h, a0 - h, lambda x: rf(x) - 0.004, M_OLIVE, 0.0, 6 if HQ else 3, 4 if HQ else 2)
-        for hi in range(holes):
-            t = 0.16 + 0.34 * hi
-            xa = x0 + (x1 - x0) * (t - (0.085 if holes > 1 else 0.15))
-            xb = x0 + (x1 - x0) * (t + (0.085 if holes > 1 else 0.15))
-            ha = h * 0.42
-            patch(xa, xb, a0 - ha, a0 + ha, rf, M_DARK, 0.0008, 3, 3)
-        # петли лепестка у основания
-        rivets(x0 + 0.01, r0, 3, M_STEEL, 0.0016, arc=(a0 - h * 0.6, a0 + h * 0.6))
-
-
-def pod_ref(x0, x1, x2, R, depth, rings, holes, perf_rows):
-    """Блок по фото: корпус x0…x1, обтекатель x1…x2; сзади открытая ниша глубиной depth с трубами"""
-    b = 0.006
-    seams = [x0 + depth + 0.03, (x0 + x1) / 2 + 0.05, x1 - 0.02]
-    prof = [(x0 + depth, R * 0.92), (x0 + 0.003, R * 0.92), (x0, R * 0.95), (x0 + b * 0.3, R - b * 0.3), (x0 + b, R)]
-    prof += grooves(x0 + b, x1, R, seams)[1:]
-    emit(lathe(prof, 64, False, True), M_OLIVE)
-    emit(cyl(R * 0.92, 0.004, 48), M_DARK, T(x0 + depth, 0, 0))   # дно ниши
-    for rr, n in rings:
-        for i in range(n):
-            a = 2 * math.pi * i / n + (0.3 if n > 7 else 0.0)
-            y, z = math.cos(a) * rr, math.sin(a) * rr
-            emit(tube_shell(R * 0.12, R * 0.095, depth * 0.9, 20), M_STEEL, T(x0 + depth * 0.45, y, z))
-            emit(cyl(R * 0.095, 0.002, 14), M_DARK, T(x0 + depth * 0.8, y, z))
-            if HQ:
-                emit(lathe([(x0 + depth * 0.5, R * 0.03), (x0 + depth * 0.5, R * 0.06), (x0 + depth * 0.75, R * 0.085)], 12, False, False), M_NOZZLE, T(0, y, z))
-    for x in seams:
-        rivets(x - 0.006, R, 48, M_STEEL, 0.0016, skip_top=True)
-        rivets(x + 0.006, R, 48, M_STEEL, 0.0016, skip_top=True)
-    if HQ:
-        for row in range(perf_rows):   # перфорация у заднего среза
-            for i in range(26):
-                a = 2 * math.pi * (i + 0.5 * row) / 26
-                if math.sin(a) > 0.55:
-                    continue
-                emit(cyl(R * 0.03, 0.002, 10), M_DARK, surf(x0 + 0.02 + 0.022 * row, a, R, 0.0002) @ RZ(0))
-        stencil(x0 + depth + 0.06, x0 + depth + 0.3, 0.05, R, M_STENCIL, 3, 0.006, seed=23)
-        stencil(x0 + depth + 0.06, x0 + depth + 0.3, math.pi - 0.05, R, M_STENCIL, 3, 0.006, seed=24)
-    petal_cone(x1, x2, R * 0.98, 8, holes)
-
-
 def pylon(x0, x1, R):
-    """Балка-держатель по фото: скосы на концах, замки, упоры к блоку"""
+    """Балка-держатель: скосы на концах, замки, упоры к блоку"""
     z0 = R + 0.012
     emit(prism([(x0, z0), (x1, z0), (x1 - 0.05, z0 + 0.07), (x0 + 0.1, z0 + 0.07)], 0.05, 0.006), M_OLIVE)
     emit(box(((x1 - x0) * 0.6, 0.03, 0.008), 0.002), M_DARK, T((x0 + x1) / 2, 0, z0 + 0.072))
@@ -454,8 +479,8 @@ def pylon(x0, x1, R):
     for x in (x0 + 0.15, x1 - 0.15):
         for y in (1, -1):
             rod((x, y * 0.02, z0 + 0.01), (x, y * R * 0.45, R * 0.9), 0.008, M_STEEL)
-            emit(box((0.022, 0.018, 0.006), 0.002), M_DARK, T(x, y * R * 0.45, R * 0.9) @ RX(-y * 0.45))
-        emit(box((0.04, 0.04, 0.014), 0.003), M_DARK, T(x + 0.06, 0, z0 - 0.004))
+            emit(box((0.022, 0.018, 0.006), 0.002), M_STEEL, T(x, y * R * 0.45, R * 0.9) @ RX(-y * 0.45))
+        emit(box((0.04, 0.04, 0.014), 0.003), M_OLIVE, T(x + 0.06, 0, z0 - 0.004))
     if HQ:
         for i in range(10):
             x = x0 + 0.06 + i * (x1 - x0 - 0.11) / 9
@@ -463,54 +488,118 @@ def pylon(x0, x1, R):
                 screw(T(x, y * 0.025, z0 + 0.035) @ RZ(y * math.pi / 2), 0.002, M_STEEL)
 
 
+def petal_pod(x0, xb, xf, R, petals, rear, rings, rt, seams):
+    """Блок с лепестковым обтекателем: корпус, хвостовой срез с соплами, нос из лепестков"""
+    xr, rf = pod_shell(x0, xb, R, seams, rear)
+    tube_rears(xr, ring_pts(rings), rt)
+    petal_nose(xb, xf, R, petals)
+    return xr, rf
+
+
 def rockets(t):
     if t == 1:
-        R = 0.15
-        pod_simple(R, -0.36, 0.36, True)
-        beam(-0.32, 0.32, R + 0.04, 0.07)
-        for x in (-0.18, 0.0, 0.18):
-            emit(box((0.05, 0.05, 0.025), 0.004), M_DARK, T(x, 0, R + 0.012))
+        # малый блок: цилиндр с утолщённым оживальным носом-обтекателем; спереди — торцы труб с головками НАР,
+        # сзади — сопловые отверстия под защитной решёткой
+        R, Rb = 0.135, 0.15
+        x0, xb, xf = -0.37, 0.19, 0.385
+        xr, rf = pod_shell(x0, xb, R, [-0.25, -0.05, 0.12], ("flat", R * 0.9))
+        # носовой обтекатель: утолщение-бурт, затем оживало к переднему срезу
+        prof = [(xb - 0.002, R * 0.985), (xb + 0.004, R * 1.01), (xb + 0.022, Rb * 0.99), (xb + 0.034, Rb),
+                (xb + 0.07, Rb)] + ogive(xb + 0.07, xf, Rb, R * 0.68, 10)[1:] + [(xf, R * 0.66), (xf - 0.02, R * 0.66)]
+        emit(lathe(prof, 64, False, True), M_OLIVE)
+        if HQ:
+            rivets(xb + 0.052, Rb, 44, M_STEEL, 0.0016, skip_top=True)
+            for k in range(4):   # лючки замков обтекателя
+                a = -math.pi / 2 + (k - 1.5) * 0.7
+                patch(xb + 0.04, xb + 0.064, a - 0.09, a + 0.09, Rb, M_OLIVE, 0.0008, 1, 2)
+                rivets(xb + 0.052, Rb + 0.0008, 2, M_STEEL, 0.0013, arc=(a - 0.07, a + 0.07))
+        pts = ring_pts([(0.0, 1, 0.0), (R * 0.4, 6, math.pi / 2)])
+        tube_fronts(xf - 0.02, pts, R * 0.13, 0.017)
+        tube_rears(xr, pts, R * 0.13)
+        grille(x0 + 0.004, rf, 0.016)
+        for x in (-0.2, 0.06):
+            strap(x, R)
+        beam(-0.3, 0.26, Rb + 0.04, 0.07)
+        for x in (-0.18, 0.0, 0.16):   # упоры между корпусом и балкой
+            emit(box((0.045, 0.05, 0.036), 0.004), M_OLIVE, T(x, 0, R + 0.016))
         if HQ:   # электроразъём с кабелем к балке
-            put_z(0.012, 0.02, M_DARK, 0.26, 0.02, R + 0.008, 16, 0.002)
-            rod((0.26, 0.02, R + 0.018), (0.29, 0.02, R + 0.03), 0.004, M_DARK)
+            put_z(0.012, 0.02, M_DARK, 0.1, 0.03, R + 0.006, 16, 0.002)
+            rod((0.1, 0.03, R + 0.016), (0.12, 0.03, Rb + 0.02), 0.004, M_DARK)
+            stencil(-0.16, 0.08, 0.05, R, M_STENCIL, 3, 0.006, seed=21)
+            stencil(-0.16, 0.08, math.pi - 0.05, R, M_STENCIL, 3, 0.006, seed=22)
     elif t == 2:
+        # средний блок: длиннее и толще, нос из 6 лепестков, сзади хвостовой конус с соплами
         R = 0.15
-        pod_ref(-0.48, 0.2, 0.5, R, 0.06, [(0.0, 1), (R * 0.42, 6), (R * 0.76, 9)], 2, 1)
+        petal_pod(-0.48, 0.16, 0.5, R, 6, ("cone", R * 0.72, 0.08),
+                  [(0.0, 1, 0.0), (R * 0.3, 6, math.pi / 2), (R * 0.56, 10, math.pi / 2 + 0.31)], R * 0.085,
+                  [-0.36, -0.12, 0.08])
+        for x in (-0.3, 0.0):
+            strap(x, R)
         pylon(-0.4, 0.14, R)
+        if HQ:
+            stencil(-0.24, -0.04, 0.05, R, M_STENCIL, 3, 0.006, seed=23)
+            stencil(-0.24, -0.04, math.pi - 0.05, R, M_STENCIL, 3, 0.006, seed=24)
     else:
+        # большой блок: ещё крупнее, 21 труба, два силовых бандажа, нос из 8 лепестков, кабельный короб по борту
         R = 0.2
-        pod_ref(-0.5, 0.32, 0.5, R, 0.1, [(0.0, 1), (R * 0.36, 7), (R * 0.68, 12)], 2, 2)
+        petal_pod(-0.5, 0.2, 0.5, R, 8, ("cone", R * 0.8, 0.07),
+                  [(0.0, 1, 0.0), (R * 0.28, 7, math.pi / 2), (R * 0.54, 13, math.pi / 2 + 0.24)], R * 0.075,
+                  [-0.38, -0.12, 0.1])
+        for x in (-0.25, 0.0):
+            strap(x, R, 0.03, 0.004)
+        cable_box(-0.42, 0.17, R, 0.62, (-0.25, 0.0))
         pylon(-0.38, 0.2, R)
-        for x in (-0.22, 0.12):
-            ring_band(x - 0.01, x + 0.01, R, M_STEEL, 0.004)
-            emit(box((0.034, 0.03, 0.016), 0.003), M_STEEL, T(x, 0, -R - 0.008))
-            rivets(x, R + 0.004, 40, M_STEEL, 0.0016, skip_top=True)
+        if HQ:
+            stencil(-0.2, -0.04, -0.15, R, M_STENCIL, 3, 0.007, seed=25)
+            stencil(0.04, 0.16, math.pi + 0.15, R, M_STENCIL, 3, 0.007, seed=26)
 
 
 def rockets_evo():
-    # «Ливень»: поворотная рама с тремя пакетами труб веером (центр прямо, бока ±22°)
-    put_z(0.16, 0.04, M_STEEL, 0.0, 0, 0.2, 64, 0.006)
-    put_z(0.18, 0.015, M_DARK, 0.0, 0, 0.17, 64, 0.003)
+    # «Ливень»: тройка блоков с лепестковыми обтекателями на общем переходнике-балке; между блоками — обтекатели,
+    # сверху — узел крепления к пилону (тот же верх габарита, что у прежней модели)
+    R, sp = 0.095, 0.25
+    x0, xb, xn = -0.38, 0.17, 0.43
+    rings = [(0.0, 1, 0.0), (R * 0.42, 6, math.pi / 2)]
+    for y in (-sp, 0.0, sp):
+        with xf(T(0, y, 0)):
+            petal_pod(x0, xb, xn, R, 6, ("cone", R * 0.74, 0.06), rings, R * 0.13, [-0.26, -0.02])
+            for x in (-0.2, 0.08):
+                strap(x, R, 0.018, 0.0025)
+    # обтекатели между блоками: клин, утопленный в соседние корпуса; нос скошен вниз
+    for y in (-sp / 2, sp / 2):
+        out = [(x0 + 0.04, R * 0.1), (xb + 0.06, R * 0.1), (xb - 0.04, R + 0.02), (x0 + 0.08, R + 0.02)]
+        emit(prism(out, sp - 1.4 * R, 0.004), M_OLIVE, T(0, y, 0))
+        if HQ:
+            for x in [x0 + 0.1 + i * 0.06 for i in range(8)]:
+                screw(T(x, y, R + 0.02) @ RY(-math.pi / 2), 0.0022, M_STEEL)
+    # переходник-балка поперёк блоков с ложементами и стяжками
+    zb = R + 0.032
+    for xc in (-0.17, 0.09):
+        emit(box((0.07, 2 * sp + 0.12, 0.03), 0.005), M_OLIVE, T(xc, 0, zb))
+        for y in (-sp, 0.0, sp):
+            emit(box((0.06, 0.07, 0.02), 0.004), M_OLIVE, T(xc, y, R + 0.008))
+            if HQ:
+                for sy in (1, -1):
+                    screw(T(xc, y + sy * 0.036, zb) @ RZ(sy * math.pi / 2), 0.0024, M_STEEL)
+    emit(box((0.33, 0.06, 0.028), 0.005), M_OLIVE, T(-0.04, 0, zb))
+    # узел крепления к пилону: короб с замками-крюками и упорами
+    zt = zb + 0.015
+    emit(prism([(-0.26, zt), (0.18, zt), (0.13, zt + 0.055), (-0.2, zt + 0.055)], 0.05, 0.006), M_OLIVE)
+    emit(box((0.26, 0.03, 0.006), 0.002), M_DARK, T(-0.04, 0, zt + 0.057))
+    for x in (-0.15, 0.07):
+        if HQ:
+            emit(torus(0.009, 0.0028, 20, 8), M_STEEL, T(x, 0, zt + 0.064) @ RZ(math.pi / 2))
+        else:
+            put_z(0.009, 0.024, M_STEEL, x, 0, zt + 0.064, 10)
+        for y in (1, -1):
+            rod((x + 0.02, y * 0.02, zt + 0.03), (x + 0.02, y * 0.11, zt), 0.006, M_STEEL)
     if HQ:
-        for k in range(24):
-            a = 2 * math.pi * k / 24
-            screw(T(math.cos(a) * 0.14, math.sin(a) * 0.14, 0.22) @ RY(-math.pi / 2), 0.0035, M_STEEL)
-    emit(box((0.3, 0.62, 0.05), 0.008), M_OLIVE, T(-0.02, 0, 0.12))
-    for ang, y in ((0.0, 0.0), (0.38, 0.27), (-0.38, -0.27)):
-        with xf(T(0.05 - abs(y) * 0.25, y, 0) @ RZ(ang)):
-            R, ln = 0.085, 0.62
-            b = 0.006
-            prof = [(-ln / 2, R * 0.9), (-ln / 2 + b, R)] + grooves(-ln / 2 + b, ln / 2 - b, R, [-0.12, 0.12])[1:] + [(ln / 2, R * 0.9)]
-            emit(lathe(prof, 48), M_OLIVE)
-            for x in (-ln / 2 + 0.05, ln / 2 - 0.05):
-                ring_band(x - 0.01, x + 0.01, R, M_DARK, 0.0035)
-            emit(cyl(R * 0.9, 0.004, 40), M_DARK, T(ln / 2 + 0.001, 0, 0))
-            tube_set(ln / 2 + 0.006, 0.014, [(0.0, 1), (R * 0.52, 6)], R * 0.2, True, R)
-            emit(cyl(R * 0.9, 0.004, 40), M_DARK, T(-ln / 2 - 0.001, 0, 0))
-            tube_set(-ln / 2 - 0.006, 0.014, [(0.0, 1), (R * 0.52, 6)], R * 0.2, False, R)
-            rivets(-0.12, R, 30, M_STEEL, 0.0013, skip_top=True)
-            rivets(0.12, R, 30, M_STEEL, 0.0013, skip_top=True)
-        emit(box((0.08, 0.04 + abs(y) * 0.5, 0.05), 0.005), M_STEEL, T(-0.05 - abs(y) * 0.2, y * 0.6, 0.06))
+        for i in range(8):
+            x = -0.22 + i * 0.05
+            for y in (1, -1):
+                screw(T(x, y * 0.025, zt + 0.028) @ RZ(y * math.pi / 2), 0.002, M_STEEL)
+        for y in (-sp, sp):
+            stencil(-0.2, -0.04, math.pi / 2 + (0.9 if y > 0 else -0.9), R, M_STENCIL, 2, 0.005, yz=(y, 0), seed=27)
 
 
 # ======================= ЛОВУШКИ =======================
