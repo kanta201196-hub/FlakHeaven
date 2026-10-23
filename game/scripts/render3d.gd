@@ -1106,30 +1106,16 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 
 
 ## Винты вертолёта (tools/blender/helicopter.py): несущий rotor — по часовой сверху, рулевой tail_rotor —
-## вокруг своей оси (в GLB это локальная Z). Под лопастями — полупрозрачный диск, как размытый след винта.
+## вокруг своей оси (в GLB это локальная Z). S9-22: лопасти в бою — светлый полупрозрачный диск размытия
+## с полосами (RotorBlur), от модели остаются втулка и комли лопастей.
 func _rotors(u: Dictionary, delta: float) -> void:
 	if not u.has("rot"):
 		var inst := (u["node"] as Node3D).get_child(0)
-		var r := inst.find_child("rotor", true, false) as Node3D
-		u["rot"] = [r, inst.find_child("tail_rotor", true, false)]
-		if r != null:
-			var disc := MeshInstance3D.new()
-			var cm := CylinderMesh.new()
-			cm.top_radius = 0.585
-			cm.bottom_radius = 0.585
-			cm.height = 0.002
-			cm.radial_segments = 32
-			cm.rings = 1
-			var mt := StandardMaterial3D.new()
-			mt.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			mt.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			mt.albedo_color = Color(0.12, 0.12, 0.11, 0.18)
-			mt.cull_mode = BaseMaterial3D.CULL_DISABLED
-			cm.material = mt
-			disc.mesh = cm
-			disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			disc.position = Vector3(0, 0.012, 0)
-			r.add_child(disc)
+		var r := inst.find_child("rotor", true, false) as MeshInstance3D
+		var tr := inst.find_child("tail_rotor", true, false) as MeshInstance3D
+		u["rot"] = [r, tr]
+		RotorBlur.attach(r, 0.565, 5, 0.046, false)
+		RotorBlur.attach(tr, 0.102, 3, 0.012, true)
 	var rr: Array = u["rot"]
 	if rr[0] != null:
 		(rr[0] as Node3D).rotate_y(-delta * 9.0)
