@@ -430,26 +430,32 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 		_radio_box(m, size)
 
 
-## Правка 20 (тест 3.5-s4): радиоэфир — справа внизу, значок рации, позывной, полупрозрачная плашка
+## Правка 20 (тест 3.5-s4): радиоэфир — справа внизу, значок рации, позывной, полупрозрачная плашка.
+## S9-14 (Kanta: «почти незаметна»): крупнее — шрифт 22/17 вместо 17/14, плотнее фон, рамка цветом эфира,
+## новое сообщение въезжает справа и вспыхивает
 func _radio_box(m: Main, size: Vector2) -> void:
 	var a := clampf(m.radio_t, 0.0, 1.0)
-	var w := 470.0
-	var lines := ui_font().get_multiline_string_size(Loc.out(m.radio_text), HORIZONTAL_ALIGNMENT_LEFT, w - 92.0, 17).y
-	var h := maxf(70.0, 40.0 + lines)
-	var r := Rect2(size.x - w - 20.0, size.y - h - 40.0, w, h)
+	var w := 620.0
+	var lines := ui_font().get_multiline_string_size(Loc.out(m.radio_text), HORIZONTAL_ALIGNMENT_LEFT, w - 112.0, 22).y
+	var h := maxf(96.0, 54.0 + lines)
+	var age := m.radio_age()
+	var slide := 1.0 - clampf(age / 0.25, 0.0, 1.0)
+	var r := Rect2(size.x - w - 20.0 + slide * slide * 160.0, size.y - h - 40.0, w, h)
 	var col := Color(1.0, 0.5, 0.45) if m.radio_enemy else Color(0.55, 0.95, 0.7)
-	ctrl.draw_rect(r, Color(0.03, 0.04, 0.05, 0.72 * a))
-	ctrl.draw_rect(Rect2(r.position, Vector2(4, r.size.y)), Color(col.r, col.g, col.b, a))
+	var flash := 1.0 - clampf(age / 0.6, 0.0, 1.0)
+	ctrl.draw_rect(r, Color(0.02, 0.03, 0.035, 0.86 * a))
+	ctrl.draw_rect(r, Color(col.r, col.g, col.b, (0.45 + 0.5 * flash) * a), false, 2.0 + 2.0 * flash)
+	ctrl.draw_rect(Rect2(r.position, Vector2(6, r.size.y)), Color(col.r, col.g, col.b, a))
 	# значок рации: корпус, антенна и волны эфира (мигают, пока сообщение свежее)
-	var ic := r.position + Vector2(38, 36)
-	ctrl.draw_rect(Rect2(ic.x - 12, ic.y - 8, 24, 30), Color(col.r, col.g, col.b, 0.85 * a))
-	ctrl.draw_rect(Rect2(ic.x - 7, ic.y - 3, 14, 8), Color(0.03, 0.04, 0.05, a))
-	ctrl.draw_line(Vector2(ic.x + 7, ic.y - 8), Vector2(ic.x + 7, ic.y - 22), Color(col.r, col.g, col.b, a), 2.0)
+	var ic := r.position + Vector2(48, 50)
+	ctrl.draw_rect(Rect2(ic.x - 16, ic.y - 10, 32, 40), Color(col.r, col.g, col.b, 0.9 * a))
+	ctrl.draw_rect(Rect2(ic.x - 10, ic.y - 4, 20, 10), Color(0.03, 0.04, 0.05, a))
+	ctrl.draw_line(Vector2(ic.x + 9, ic.y - 10), Vector2(ic.x + 9, ic.y - 28), Color(col.r, col.g, col.b, a), 2.5)
 	var blink := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
 	for i in 2:
-		ctrl.draw_arc(Vector2(ic.x + 7, ic.y - 22), 6.0 + i * 6.0, -PI * 0.85, -PI * 0.15, 8, Color(col.r, col.g, col.b, a * blink * (1.0 - i * 0.3)), 1.5)
-	_text(Vector2(r.position.x + 72, r.position.y + 22), Loc.t("РАДИОЭФИР · «%s»") % m.radio_from, 14, Color(col.r, col.g, col.b, a))
-	_para(Vector2(r.position.x + 72, r.position.y + 44), m.radio_text, w - 92.0, 17, Color(1, 1, 1, a))
+		ctrl.draw_arc(Vector2(ic.x + 9, ic.y - 28), 8.0 + i * 8.0, -PI * 0.85, -PI * 0.15, 8, Color(col.r, col.g, col.b, a * blink * (1.0 - i * 0.3)), 2.0)
+	_text(Vector2(r.position.x + 92, r.position.y + 28), Loc.t("РАДИОЭФИР · «%s»") % m.radio_from, 18, Color(col.r, col.g, col.b, a))
+	_para(Vector2(r.position.x + 92, r.position.y + 56), m.radio_text, w - 112.0, 22, Color(1, 1, 1, a))
 
 
 ## 2.8: полоса подвесов внизу экрана — картинка оружия, уровень, перезарядка, связки

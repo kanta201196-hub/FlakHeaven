@@ -738,6 +738,14 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 					tc["rarity"] = roll_rarity(Main.I.level, min_r)
 					out.append(finalize(p, tc))
 				break
+	# S9-18: перк «Старый знакомый» — вылет без ведомых, но пока звено пустое, в выборе всегда есть ведомый
+	if Profile.has_perk(p.cls_id, "b_wing2") and p.permanent_wingmen() == 0 and out.size() < count:
+		for c in cands:
+			if c[1]["kind"] == "wing_new" and not out.any(func(o): return o["id"] == c[1]["id"]):
+				var wc: Dictionary = (c[1] as Dictionary).duplicate()
+				wc["rarity"] = roll_rarity(Main.I.level, min_r)
+				out.append(finalize(p, wc))
+				break
 	var taken_ids: Array = out.map(func(c): return c["id"])
 	cands = cands.filter(func(c): return not taken_ids.has(c[1]["id"]))
 	var late: bool = Main.I != null and Main.I.run_time >= 480.0

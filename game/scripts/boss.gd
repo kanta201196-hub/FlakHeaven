@@ -47,6 +47,8 @@ var _said_angry := false
 var _say_t := 0.0
 var _side := 1.0          # «Сквозняк»: с какой стороны заходит
 var log_entry := {}       # тест 3.5-s5 (п. 10): строка аса в Main.ace_log
+var _wave := 0             # какой волной пришёл (1 — 5:00)
+var _taken0 := 0.0        # S9-24: урон по игроку от асов к появлению — в автотесте видно, сколько снял этот ас
 
 
 func setup(v: String, hp_total: float) -> void:
@@ -71,6 +73,8 @@ func setup(v: String, hp_total: float) -> void:
 	if v == "interceptor":
 		defense = "agile"   # EX-06: «Сквозняк» манёвренный; «Почтальон» ставит помехи (behave)
 	_born = Main.I.run_time
+	_wave = Main.I.spawner.boss_wave if Main.I.spawner != null else 0
+	_taken0 = float((Main.I.stats["taken_by"] as Dictionary).get("асы", 0.0))
 	min_life = 26.0   # правка 3.5-s4 (было 16 — в логе «Кита» асы жили 10–47 с)
 	_side = _orbit
 	log_entry = {"v": v, "t": _born, "hp": hp_total * 1.35, "k": Main.I.spawner.last_single_k if Main.I.spawner != null else 0.0, "dmg": {}, "life": -1.0}
@@ -110,13 +114,20 @@ func apply_hp_mult(_m: float) -> void:
 
 
 ## EX-06 (отзывы внешних тестеров: «боссы — жирные болваны, щит сбивается моментально»): щит аса держит
-## обычный урон втрое лучше; пробивают его пушка «на хвосте» у этого аса, ЭМИ и лазер (×1,5).
+## обычный урон втрое лучше; пробивают его пушка «на хвосте» у этого аса, ЭМИ и лазер (×1,5), турели бьют как по корпусу.
 func shield_k(src: String) -> float:
 	var p := Main.I.player
 	if src_class(src) == "energy":
 		return 1.5
 	if src_class(src) == "gun" and src.begins_with("курсовое") and is_instance_valid(p) and p.on_tail() and p.tail_target == self:
 		return 1.5
+	# S9-24: турели — единственное оружие «Кита» по воздуху, а сесть асу на хвост он не успевает: щит их не держит
+	if src == "турели":
+		return 1.0
+	# S9-24: у «Осы» главное оружие — ракеты В-В, на хвосте у вёрткого аса она долго не держится:
+	# её ракеты щит тоже не держит (у других классов ракеты по щиту — как раньше)
+	if src == "ракеты В-В" and is_instance_valid(p) and p.cls_id == "fighter":
+		return 1.0
 	return 0.35
 
 
@@ -126,7 +137,7 @@ func absorb(dmg: float) -> float:
 		return dmg
 	var sk := shield_k(last_src)
 	if sk < 1.0:
-		Hints.show("ace_shield", "Щит аса держит обычный урон втрое лучше. Пробивают его пушка «на хвосте» у аса, ЭМИ и лазер.", 9.0, 2)
+		Hints.show("ace_shield", "Щит аса держит обычный урон втрое лучше. Пробивают его пушка «на хвосте» у аса, ЭМИ и лазер; турели и ракеты «Осы» бьют сквозь него.", 9.0, 2)
 	dmg *= sk
 	var s := minf(shield, dmg)
 	shield -= s
@@ -196,7 +207,9 @@ func _die() -> void:
 	log_entry["life"] = Main.I.run_time - _born
 	say("down")
 	if OS.get_cmdline_user_args().has("--autotest"):
-		print("AUTOTEST: boss %s down in %.1f s (hp %.0f)" % [variant, Main.I.run_time - _born, max_hp])
+		var p := Main.I.player
+		print("AUTOTEST: boss %s down in %.1f s (hp %.0f), took from aces %.0f of max_hp %.0f" % [variant, Main.I.run_time - _born, max_hp,
+			float((Main.I.stats["taken_by"] as Dictionary).get("асы", 0.0)) - _taken0, p.max_hp if p != null else 0.0])
 	super()
 
 
@@ -241,9 +254,14 @@ func _behave_carrier(delta: float, p: Player) -> void:
 	if _lock > 0.0:
 		_lock -= delta
 		if _lock <= 0.0:
-			# 3.1: залп из 5 ракет веером
-			for i in 5:
-				Main.I.projectiles.spawn_missile(global_position, to.normalized().rotated((i - 2) * 0.35), "aam", kind())
+			# 3.1: залп из 5 ракет веером. S9-23: пуск вперёд по курсу аса, 0,5 с прямо, потом доворот —
+			# сидящий на хвосте не получает залп в лоб; одна-две ракеты — по ведомым, если они есть
+			var wl: Array = p.wingmen.filter(func(w): return is_instance_valid(w) and (w as Wingman).alive())
+			# S9-24: у первого аса (5:00) залп из 3 ракет — «Оса» теряла за бой с ним до 190% прочности
+			var n := 3 if _wave == 1 else 5
+			for i in n:
+				var wt: Node2D = wl[i % wl.size()] if not wl.is_empty() and (i == 0 or i == n - 1) else null
+				Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading) * 30.0, Vector2.from_angle(heading + (i - (n - 1) * 0.5) * 0.22), "aam", kind(), 0.5, wt)
 			Main.I.sfx.play("missile_enemy", -4.0, 0.8)
 			_a_cd = 4.5 * angry()
 	else:

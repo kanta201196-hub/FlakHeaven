@@ -117,6 +117,7 @@ func _activate_skill3(id := "", slot := 0) -> void:
 			if lvl >= 2:
 				_sonic_wave()
 			Main.I.sfx.play("afterburner", -4.0, 1.4)
+			Main.I.sfx.play("afterburner", -6.0, 0.8)   # S9-16: низкий рёв двигателя на разгоне
 		"armor_shield":
 			pl.s3_t = float(d["time"]) + (1.0 if lvl >= 1 else 0.0)
 			pl.shield_t = pl.s3_t
@@ -197,7 +198,11 @@ func _sonic_wave() -> void:
 	_knockback(r, 90.0)
 	if pl.syn.has("s_clap"):
 		_intercept_all(r)
-	Main.I.fx.ring(pl.global_position, r, Color(0.75, 0.9, 1.0))
+	if Boom3D.active():
+		Boom3D.ensure().sonic(pl.global_position, r)   # S9-16: рябь по воздуху вместо круга
+	else:
+		Main.I.fx.ring(pl.global_position, r, Color(0.75, 0.9, 1.0))
+	Main.I.sfx.play("explode_big", -10.0, 1.6)
 	Main.I.add_shake(4.0)
 
 

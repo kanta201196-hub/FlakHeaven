@@ -5,8 +5,13 @@ extends HudKit
 
 # ---------- Карточки ----------
 
+## S9-05: подсказки при наведении на значки «Оснащения» — [Rect2, заголовок, текст]
+var _tips: Array = []
+
+
 func levelup(m: Main, size: Vector2) -> void:
 	# EX-12 (вариант «Яркая аркада», Kanta 22.10): сочные карточки 2×2 слева, справа — «Оснащение» (EX-02)
+	_tips.clear()
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.03, 0.025, 0.88))
 	var right_w := 440.0
 	var lx := 48.0
@@ -40,6 +45,29 @@ func levelup(m: Main, size: Vector2) -> void:
 		_text(Vector2(lx, ry + 30), "Перебросов не осталось (+1 за каждого аса)", 17, Color(0.6, 0.62, 0.7))
 	_para(Vector2(lx, ry + 74), Loc.t("Исключений осталось: %d (+1 за аса)%s") % [m.bans, (Loc.t("   ·   Исключены: ") + ", ".join(PackedStringArray(m.banned.values().map(func(x): return Loc.title(String(x)))))) if not m.banned.is_empty() else ""], lw, 15, Color(0.75, 0.75, 0.85))
 	_kit_panel(m, Rect2(size.x - right_w - 24.0, 96.0, right_w, size.y - 130.0))
+	_tooltip(mp, size)
+
+
+## S9-05: плашка подсказки у курсора — что это за оружие, модуль или модернизация
+func _tooltip(mp: Vector2, size: Vector2) -> void:
+	for t in _tips:
+		if not (t[0] as Rect2).has_point(mp):
+			continue
+		var w := 380.0
+		var body := Loc.out(String(t[2]))
+		var bh := ui_font().get_multiline_string_size(body, HORIZONTAL_ALIGNMENT_LEFT, w - 28.0, 15).y
+		var r := Rect2(mp + Vector2(-w - 18.0, 18.0), Vector2(w, 50.0 + bh))
+		r.position.x = maxf(12.0, r.position.x)
+		r.position.y = minf(r.position.y, size.y - r.size.y - 12.0)
+		ctrl.draw_rect(r, Color(0.03, 0.04, 0.035, 0.96))
+		ctrl.draw_rect(r, Color(1.0, 0.82, 0.29), false, 2.0)
+		_text(Vector2(r.position.x + 14, r.position.y + 28), String(t[1]), 18, Color(1.0, 0.86, 0.45))
+		_para(Vector2(r.position.x + 14, r.position.y + 50), String(t[2]), w - 28.0, 15, Color(0.9, 0.92, 0.88))
+		return
+
+
+func _weapon_tip(w: String) -> String:
+	return Loc.t(String(Weapons.DEFS[w].get("desc", ""))) if Weapons.DEFS.has(w) else ""
 
 
 ## EX-12: одна карточка — заливка по редкости, свечение, полоса редкости, медаль со значком, деления уровня, путь к модернизации
@@ -178,6 +206,7 @@ func _kit_panel(m: Main, r: Rect2) -> void:
 			ctrl.draw_rect(tr, col, false, 2.0)
 			CardIcons.draw(ctrl, tr.get_center() + Vector2(0, -8), minf(30.0, tw - 10.0), g.weapon, Color.WHITE)
 			_text(Vector2(tr.position.x, tr.end.y - 6), ("★" if g.evo else Loc.t("ур. %d") % g.level), 12, Color(1.0, 0.92, 0.66), HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
+			_tips.append([tr, g.label(), (Loc.t(String(Prog.EVOS[g.weapon]["desc"])) if g.evo and Prog.EVOS.has(g.weapon) else _weapon_tip(g.weapon))])
 	y += 86.0
 	var used := Cards.mod_slots_used(p)
 	_text(Vector2(x, y), "МОДУЛИ", 14, Color(0.72, 0.77, 0.7))
@@ -200,6 +229,7 @@ func _kit_panel(m: Main, r: Rect2) -> void:
 			var mx := int(Cards.MODULES[id]["max"])
 			for d in mx:
 				ctrl.draw_circle(Vector2(mr.get_center().x - (mx - 1) * 3.5 + d * 7.0, mr.end.y - 7), 2.4, cc if d < lvl else Color(1, 1, 1, 0.2))
+			_tips.append([mr, Loc.t("%s · ур. %d из %d") % [Loc.t(String(Cards.MODULES[id]["title"])), lvl, mx], Cards.module_desc(p, id, 1.0) + Loc.t(" за уровень")])
 		else:
 			ctrl.draw_rect(mr, Color(1, 1, 1, 0.03))
 			ctrl.draw_rect(mr, Color(0.33, 0.38, 0.31), false, 1.5)
@@ -234,6 +264,10 @@ func _evo_row(p: Player, wv: String, pos: Vector2, w: float) -> float:
 	var s := 38.0
 	var lvl_ok := wv == "gun" or _weapon_max(p, wv)
 	_evo_box(Vector2(bx, by), s, "gun" if wv == "gun" else wv, Color(1.0, 0.75, 0.3), lvl_ok)
+	if wv != "gun":
+		_tips.append([Rect2(bx, by, s, s), Loc.t(Weapons.title(wv)) + (Loc.t(" · нужен ур. 5") if not lvl_ok else " ✓"), _weapon_tip(wv)])
+	else:
+		_tips.append([Rect2(bx, by, s, s), Loc.t("Курсовая пушка"), Loc.t("Встроенная пушка самолёта — есть всегда")])
 	bx += s + 4.0
 	var cat: Dictionary = Prog.EVOS[wv]["cat"]
 	var need := PackedStringArray()
@@ -244,12 +278,14 @@ func _evo_row(p: Player, wv: String, pos: Vector2, w: float) -> float:
 		bx += 14.0
 		var have := int(p.taken.get(mid, 0))
 		_evo_box(Vector2(bx, by), s, mid, Cards.CAT_COLORS.get(Cards.MODULES[mid]["cat"], Color.WHITE), have >= int(cat[mid]))
+		_tips.append([Rect2(bx, by, s, s), Loc.t("%s · %d из %d") % [Loc.t(String(Cards.MODULES[mid]["title"])), have, int(cat[mid])], Cards.module_desc(p, mid, 1.0) + Loc.t(" за уровень")])
 		bx += s + 4.0
 		if have < int(cat[mid]):
 			need.append("%s %d/%d" % [Loc.t(Cards.MODULES[mid]["title"]), have, int(cat[mid])])
 	_text(Vector2(bx, by + 27), "=", 18, Color(0.7, 0.75, 0.7))
 	bx += 16.0
 	var rr := Rect2(bx, by, s, s)
+	_tips.append([Rect2(rr.position.x, pos.y, pos.x + w - rr.position.x, h), Loc.t("Модернизация %s") % Loc.t(Prog.EVOS[wv]["title"]), Loc.t(String(Prog.EVOS[wv]["desc"]))])
 	if ready:
 		ctrl.draw_rect(rr, Color(1.0, 0.82, 0.29))
 		_text(Vector2(rr.position.x, rr.position.y + 25), "✓", 20, Color(0.1, 0.08, 0.02), HORIZONTAL_ALIGNMENT_CENTER, s)
@@ -294,18 +330,21 @@ func _tag_chips(pos: Vector2, tags: Array, evo := false) -> void:
 		x += tw + 8.0
 
 
-## Пауза: очки тегов, прогресс курса, связки, эволюции
-func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
-	var x := pos.x
-	var cw := w / Prog.TAG_ORDER.size()
-	for t in Prog.TAG_ORDER:
+## Пауза: очки тегов сеткой 4 × 2 (S9-10: раньше 7 узких колонок в строку), прогресс курса, связки, эволюции.
+## Вернёт высоту панели
+func _tags_panel(p: Player, pos: Vector2, w: float) -> float:
+	var cols := 4
+	var cw := w / cols
+	var chh := 58.0
+	for i in Prog.TAG_ORDER.size():
+		var t: String = Prog.TAG_ORDER[i]
 		var col: Color = Prog.TAGS[t]["color"]
 		var n := p.tag(t)
-		var r := Rect2(x + 4, pos.y, cw - 8, 112)
+		var r := Rect2(pos.x + (i % cols) * cw + 3, pos.y + (i / cols) * (chh + 6.0), cw - 6, chh)
 		ctrl.draw_rect(r, Color(0.05, 0.055, 0.06, 0.88))
 		ctrl.draw_rect(r, Color(col.r, col.g, col.b, 0.12 if n > 0 else 0.04))
-		ctrl.draw_rect(Rect2(r.position, Vector2(r.size.x, 3)), col if n > 0 else Color(1, 1, 1, 0.1))
-		_text(Vector2(r.position.x + 8, r.position.y + 22), "%s  %d" % [Loc.t(Prog.tag_title(t)), n], 16, col.lightened(0.25) if n > 0 else Color(0.5, 0.52, 0.58))
+		ctrl.draw_rect(Rect2(r.position, Vector2(3, r.size.y)), col if n > 0 else Color(1, 1, 1, 0.1))
+		_text(Vector2(r.position.x + 12, r.position.y + 24), "%s  %d" % [Loc.t(Prog.tag_title(t)), n], 17, col.lightened(0.25) if n > 0 else Color(0.5, 0.52, 0.58))
 		# 3.2: нашивок нет — под тегом курса показываем прогресс к связке
 		if p.has_course():
 			var sd := Cards.syn_def(p, p.course)
@@ -316,8 +355,9 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 			elif sd.get("tag2", "") == t:
 				need = int(c["second"])
 			if need > 0:
-				_text(Vector2(r.position.x + 8, r.position.y + 42), Loc.t("▲ к связке: %d/%d") % [n, need], 13, Color(1.0, 0.85, 0.35))
-		x += cw
+				_text(Vector2(r.position.x + 12, r.position.y + 46), Loc.t("▲ к связке: %d/%d") % [n, need], 14, Color(1.0, 0.85, 0.35))
+	var rows := int(ceil(Prog.TAG_ORDER.size() / float(cols)))
+	var y := pos.y + rows * (chh + 6.0) + 6.0
 	var extra := PackedStringArray()
 	for id in p.syn:
 		if Cards.SYNERGIES.has(id):
@@ -327,63 +367,85 @@ func _tags_panel(p: Player, pos: Vector2, w: float) -> void:
 	var ev := PackedStringArray()
 	for wv in p.evo_times:
 		ev.append(Prog.EVOS[wv]["title"])
-	ctrl.draw_rect(Rect2(pos.x, pos.y + 116, w, 62), Color(0.05, 0.055, 0.06, 0.8))
-	_para(Vector2(pos.x + 8, pos.y + 138), Loc.t("Связки: %s   ·   Модернизации: %s   ·   Навык: %s%s") % [
-		", ".join(extra) if not extra.is_empty() else Loc.t("нет"), ", ".join(ev) if not ev.is_empty() else Loc.t("нет"),
-		Loc.t(p.s3_def()["title"]), (Loc.t(", ур. ") + Prog.ROMAN[p.s3_lvl()]) if p.s3_lvl() > 0 else ""], w - 16.0, 16, Menu.C_AMBER)
+	var lines := [Loc.t("Связки: %s") % (", ".join(extra) if not extra.is_empty() else Loc.t("нет")),
+		Loc.t("Модернизации: %s") % (", ".join(ev) if not ev.is_empty() else Loc.t("нет")),
+		Loc.t("Навык: %s%s") % [Loc.t(p.s3_def()["title"]), (Loc.t(", ур. ") + Prog.ROMAN[p.s3_lvl()]) if p.s3_lvl() > 0 else ""]]
+	for l in lines:
+		y += _para(Vector2(pos.x + 4, y + 18), l, w - 8.0, 16, Menu.C_AMBER) + 4.0
+	return y - pos.y
 
 
 # ---------- Подвесы и пауза ----------
 
+## S9-10 (скриншот Kanta: текст налезал): слева подвесы — описание оружия переносится в своей строке и не заходит
+## под кнопку цели, высота строк по месту над кнопками; справа — характеристики, теги сеткой, связки и карточки
 func loadout(m: Main, size: Vector2) -> void:
 	# правка 15 (тест 3.5): фон плотнее — бой под паузой не мешает читать
-	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.84))
-	_ctext(110, "ПАУЗА · ПОДВЕСЫ", 40, Color.WHITE)
-	_ctext(146, "Клик по приоритету — сменить, по какой цели стреляет группа", 20, Color(0.75, 0.8, 0.9))
+	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.86))
+	_ctext(96, "ПАУЗА · ПОДВЕСЫ", 40, Color.WHITE)
+	_ctext(132, "Клик по приоритету — сменить, по какой цели стреляет группа", 19, Color(0.75, 0.8, 0.9))
 	var p := m.player
-	# слева подвесы и теги, справа — взятые карточки сводкой
-	var w := 1000.0
-	var x := 90.0
-	var y := 176.0
-	# подвесов бывает до 7 — строки ужимаются, чтобы всё влезло над теговой панелью
-	var rh := clampf(440.0 / maxf(p.groups.size(), 1), 50.0, 64.0)
+	var bottom := size.y - 176.0
+	var w := 940.0
+	var x := 70.0
+	var y := 160.0
+	var tw := w - 340.0   # текст строки — левее кнопки
+	var room := bottom - y - (56.0 if not p.wingmen.is_empty() else 0.0)
+	var rh := clampf(room / maxf(p.groups.size(), 1) - 8.0, 52.0, 84.0)
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
 		var r := Rect2(x, y, w, rh)
 		_panel(r, false)
-		_text(Vector2(x + 20, y + rh * 0.44), g.label(), 20, Color.WHITE if not g.is_empty() else Color(0.6, 0.62, 0.7))
+		_para(Vector2(x + 18, y + 24), g.label(), tw, 18, Color.WHITE if not g.is_empty() else Color(0.6, 0.62, 0.7))
 		if not g.is_empty():
-			_text(Vector2(x + 20, y + rh * 0.44 + 20), Loc.t(Weapons.DEFS[g.weapon]["desc"]), 14, Color(0.75, 0.8, 0.9))
-			var by := y + (rh - 36.0) / 2.0
+			var dsz := 14 if rh >= 64.0 else 13
+			var desc := Loc.t(Weapons.DEFS[g.weapon]["desc"])
+			# описание — сколько влезает строк под названием
+			var maxh := rh - 34.0
+			if ui_font().get_multiline_string_size(Loc.out(desc), HORIZONTAL_ALIGNMENT_LEFT, tw, dsz).y <= maxh:
+				_para(Vector2(x + 18, y + 46), desc, tw, dsz, Color(0.75, 0.8, 0.9))
+			else:
+				_text(Vector2(x + 18, y + 46), _fit(desc, tw, dsz), dsz, Color(0.75, 0.8, 0.9))
+			var by := y + (rh - 38.0) / 2.0
 			if Weapons.DEFS[g.weapon]["uses_priority"]:
-				_button(Rect2(x + w - 290, by, 270, 36), Loc.t("Цель: %s") % Weapons.PRIORITY_NAMES[g.priority], "prio:%d" % gi, 17)
+				_button(Rect2(x + w - 316, by, 300, 38), Loc.t("Цель: %s") % Weapons.PRIORITY_NAMES[g.priority], "prio:%d" % gi, 16)
 			if g.uses_trigger():
-				_button(Rect2(x + w - 290, by, 270, 36), "Пуск: %s" % ("авто" if g.trigger == "auto" else "правой кнопкой мыши"), "trig:%d" % gi, 17)
+				_button(Rect2(x + w - 316, by, 300, 38), "Пуск: %s" % ("авто" if g.trigger == "auto" else "правой кнопкой мыши"), "trig:%d" % gi, 16)
 		y += rh + 8.0
 	if not p.wingmen.is_empty():
 		var wr := Rect2(x, y, w, 48)
 		_panel(wr, false)
-		_text(Vector2(x + 20, y + 31), "Звено — кого атакует первым [G]", 20, Color(0.8, 0.75, 1.0))
-		_button(Rect2(x + w - 330, y + 6, 310, 36), Loc.t("Цель: %s") % Settings.WING_PRIO[Settings.wing_prio], "wprio", 17)
-		y += 56.0
-	y += 4.0
-	_text(Vector2(x, y + 10), Loc.t("Пушка: урон ×%.2f · темп ×%.2f   ·   Подвесы: перезарядка ×%.2f   ·   Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f") % [
-		float(p.cls["gun_dmg"]) * p.mods["gun_dmg"], float(p.cls["gun_rate"]) * p.mods["gun_rate"], p.mods["hp_cd"],
-		float(p.cls["speed"]) * p.mods["speed"], float(p.cls["turn"]) * p.mods["turn"], p.mods["pickup"]], 16, Color(0.85, 0.88, 0.95))
-	_tags_panel(p, Vector2(x, y + 36), w)
+		_text(Vector2(x + 18, y + 31), "Звено — кого атакует первым [G]", 19, Color(0.8, 0.75, 1.0))
+		_button(Rect2(x + w - 316, y + 5, 300, 38), Loc.t("Цель: %s") % Settings.WING_PRIO[Settings.wing_prio], "wprio", 16)
+	# справа: характеристики, теги, связки, взятые карточки
 	var cx := x + w + 40.0
 	var cw := size.x - cx - 60.0
-	_text(Vector2(cx, 200), Loc.t("ВЗЯТЫЕ КАРТОЧКИ (%d)") % p.cards_log.size(), 20, Menu.C_AMBER)
-	_text(Vector2(cx, 222), "цвет — лучшая редкость, «ур.» — до какого уровня улучшено", 14, Color(0.65, 0.7, 0.8))
+	var cy := 160.0
+	cy += _para(Vector2(cx, cy + 16), Loc.t("Пушка: урон ×%.2f · темп ×%.2f · Подвесы: перезарядка ×%.2f · Скорость ×%.2f · Манёвр ×%.2f · Подбор ×%.2f") % [
+		float(p.cls["gun_dmg"]) * p.mods["gun_dmg"], float(p.cls["gun_rate"]) * p.mods["gun_rate"], p.mods["hp_cd"],
+		float(p.cls["speed"]) * p.mods["speed"], float(p.cls["turn"]) * p.mods["turn"], p.mods["pickup"]], cw, 16, Color(0.85, 0.88, 0.95)) + 10.0
+	cy += _tags_panel(p, Vector2(cx, cy), cw) + 18.0
+	_text(Vector2(cx, cy + 20), Loc.t("ВЗЯТЫЕ КАРТОЧКИ (%d)") % p.cards_log.size(), 20, Menu.C_AMBER)
+	_text(Vector2(cx, cy + 42), "цвет — лучшая редкость, «ур.» — до какого уровня улучшено", 14, Color(0.65, 0.7, 0.8))
 	if p.cards_log.is_empty():
-		_text(Vector2(cx, 256), "пока ни одной", 16, Color(0.6, 0.62, 0.7))
-	else:
-		_card_chips(Rect2(cx, 238, cw, size.y - 238 - 180), Cards.log_summary(p.cards_log), 15)
-	var bx := (size.x - 960) / 2.0
-	_button(Rect2(bx - 165, size.y - 150, 300, 50), "Продолжить (Esc / Tab)", "resume")
-	_button(Rect2(bx + 165, size.y - 150, 300, 50), "Связки и модернизации", "codex")
-	_button(Rect2(bx + 495, size.y - 150, 300, 50), "Настройки", "pause_settings")
-	_button(Rect2(bx + 825, size.y - 150, 300, 50), "В главное меню", "to_menu")
+		_text(Vector2(cx, cy + 76), "пока ни одной", 16, Color(0.6, 0.62, 0.7))
+	elif bottom - cy - 58.0 > 30.0:
+		_card_chips(Rect2(cx, cy + 58, cw, bottom - cy - 58.0), Cards.log_summary(p.cards_log), 15)
+	var bx := (size.x - 1280) / 2.0
+	_button(Rect2(bx, size.y - 140, 300, 52), "Продолжить (Esc / Tab)", "resume")
+	_button(Rect2(bx + 326, size.y - 140, 300, 52), "Связки и модернизации", "codex")
+	_button(Rect2(bx + 652, size.y - 140, 300, 52), "Настройки", "pause_settings")
+	_button(Rect2(bx + 978, size.y - 140, 300, 52), "В главное меню", "to_menu")
+
+
+## Строка, обрезанная многоточием по ширине
+func _fit(s: String, width: float, fsize: int) -> String:
+	s = Loc.out(s)
+	if ui_font().get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x <= width:
+		return s
+	while s.length() > 1 and ui_font().get_string_size(s + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x > width:
+		s = s.substr(0, s.length() - 1)
+	return s + "…"
 
 
 # ---------- Итоги вылета ----------

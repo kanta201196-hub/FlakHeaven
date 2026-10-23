@@ -207,8 +207,6 @@ func start_run() -> void:
 	world.add_child(player)
 	class_task = ClassTask.new(cls_id)
 	Story.start(self)   # EX-09: «Купол», задание класса, в финале — «Гром» в звене
-	if Profile.has_perk(cls_id, "b_wing2") and int(player.cls["wingmen"]) > 0:
-		player.add_wingman("swift", 1.0) # перк «Старый знакомый»
 	projectiles = Projectiles.new()
 	world.add_child(projectiles)
 	fx = Fx.new()
@@ -320,6 +318,12 @@ func _process(delta: float) -> void:
 	if is_instance_valid(player):
 		var target := player.global_position + player.velocity * Tuning.g("camera_lookahead")
 		camera.global_position = target
+		# S9-09 (Ж1 «показать вес», числа полёта те же): камера догоняет тяжёлый самолёт медленнее —
+		# «Оса» 7,6, «Грач» 5,8, «Кит» 4,8; в крутом вираже тяжёлого потряхивает (бафтинг)
+		var ik := float(player.cls.get("inertia_k", 1.0))
+		camera.position_smoothing_speed = 7.0 / pow(maxf(ik, 0.5), 0.4)
+		if state == "playing" and ik > 1.0 and absf(player.bank) > 0.75 and player.ab_t <= 0.0:
+			shake = maxf(shake, (absf(player.bank) - 0.75) * 4.0 * (ik - 1.0))
 		# сглаживание камеры расходится при низком FPS (шаг > 1) — тогда без сглаживания
 		camera.position_smoothing_enabled = delta * camera.position_smoothing_speed < 0.5
 		# Камера чуть отъезжает на скорости — ощущение разгона
@@ -505,6 +509,14 @@ func ban_card(i: int) -> void:
 	sfx.play("ui_ban", -14.0, 1.6)
 
 
+var _radio_at := 0
+
+
+## Сколько секунд назад пришло текущее сообщение радио (въезд и вспышка плашки)
+func radio_age() -> float:
+	return (Time.get_ticks_msec() - _radio_at) / 1000.0
+
+
 func radio(from: String, text: String, enemy := false) -> void:
 	if _autotest:
 		print("RADIO %.0f %s: %s" % [run_time, from, text])
@@ -512,6 +524,7 @@ func radio(from: String, text: String, enemy := false) -> void:
 	radio_text = text
 	radio_enemy = enemy
 	radio_t = 3.5 + text.length() * 0.03 # длинную фразу держим дольше
+	_radio_at = Time.get_ticks_msec()
 	Hints.show("radio", "Справа внизу — радиоэфир: ведомые отвечают на приказы, штаб предупреждает о задании. Красная рамка — перехват вражеского эфира, жди аса или босса.", 8.0, 2)
 	sfx.play("radio", -18.0, 2.2)
 

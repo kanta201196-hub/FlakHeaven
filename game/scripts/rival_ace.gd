@@ -12,6 +12,13 @@ extends Enemy
 
 ## Тест 3.5-s7: ас не крутится на месте — радиус разворота не меньше этого, пикс
 const MIN_R := 130.0
+## S9-11 (Kanta: на 7-й минуте ас «убился» о игрока, пока тот улетал): ас висел в 260 пикс. за хвостом и прямо
+## в секторе кормовых турелей и автоматики — сгорал, не стреляя. Теперь держится дальше, сближение ближе
+## TOO_CLOSE — отворот, под плотным огнём (HIT_BREAK от прочности за секунду) — уход с курса; очередь длиннее
+const CHASE_D := 380.0
+const TOO_CLOSE := 190.0
+const HIT_BREAK := 0.08
+var _hit_win := 0.0
 const CALLSIGNS := ["Барон", "Шершень", "Граф", "Сокол-7", "Профессор", "Тётя Шура"]
 const LINES := {
 	"spawn": ["Ну здравствуй, новичок. Пристегнись.", "Я тебя давно ищу. Потанцуем?", "О, свежий самолёт. Будет что рассказать в столовой."],
@@ -100,7 +107,9 @@ func say(key: String, force := false) -> void:
 
 
 func take_hit(dmg: float, source := "прочее") -> void:
+	var h0 := hp
 	super(dmg, source)
+	_hit_win += maxf(0.0, h0 - hp)
 	if hp > 0.0 and hp < max_hp * 0.5 and not _hp_said:
 		_hp_said = true
 		say("hit", true)
@@ -128,7 +137,7 @@ func behave(delta: float) -> void:
 	var max_spd := cruise * 1.35
 	match _state:
 		"chase":
-			var slot := p.global_position - pf * 260.0
+			var slot := p.global_position - pf * CHASE_D
 			var want := slot - global_position
 			heading = rotate_toward(heading, want.angle(), minf(deg_to_rad(Tuning.g("turn_rate") * 0.85), _speed / MIN_R) * delta)
 			# подстраивает скорость под игрока, но не ниже минимума
@@ -137,6 +146,8 @@ func behave(delta: float) -> void:
 			# перелёт: ас оказался впереди игрока
 			if d < 320.0 and pf.dot(-to.normalized()) > 0.3:
 				_start_break()
+			elif d < TOO_CLOSE or _hit_win > max_hp * HIT_BREAK:
+				_start_break(false)
 		"break":
 			heading = rotate_toward(heading, _break_dir, minf(deg_to_rad(Tuning.g("turn_rate") * 0.7), _speed / MIN_R) * delta)
 			_speed = move_toward(_speed, cruise * 1.1, 300.0 * delta)
@@ -144,6 +155,7 @@ func behave(delta: float) -> void:
 				_state = "chase"
 				_state_t = 0.0
 	position += Vector2.from_angle(heading) * _speed * delta
+	_hit_win = maxf(0.0, _hit_win - max_hp * HIT_BREAK * delta)
 
 	# 3.5: уход из-под огня и ловушки
 	_evade_cd -= delta
@@ -175,11 +187,11 @@ func behave(delta: float) -> void:
 	if _aim > 0.0:
 		_aim -= delta
 		if _aim <= 0.0:
-			_shots = 4
+			_shots = 5
 		return
 	_burst_cd -= delta
 	var off := absf(wrapf(to.angle() - heading, -PI, PI))
-	if _state == "chase" and _burst_cd <= 0.0 and d < 560.0 and off < deg_to_rad(14.0):
+	if _state == "chase" and _burst_cd <= 0.0 and d < 620.0 and off < deg_to_rad(14.0):
 		_aim = 0.35
 		_burst_cd = 1.6
 		say("behind")
@@ -194,14 +206,16 @@ func threatening() -> bool:
 	return _state == "chase" and to.length() < 650.0 and Vector2.from_angle(p.heading).dot(to.normalized()) > 0.3
 
 
-func _start_break() -> void:
+func _start_break(overshoot := true) -> void:
 	_state = "break"
 	_state_t = 0.0
-	_break_dir = heading + (1.0 if randf() < 0.5 else -1.0) * deg_to_rad(110.0)
+	_break_dir = heading + (1.0 if randf() < 0.5 else -1.0) * deg_to_rad(110.0 if overshoot else 70.0)
 	_shots = 0
 	_aim = 0.0
-	say("overshoot")
-	Main.I.fx.text(global_position + Vector2(0, -40), "Перелёт!", Color(0.6, 0.95, 1.0))
+	_hit_win = 0.0
+	if overshoot:
+		say("overshoot")
+		Main.I.fx.text(global_position + Vector2(0, -40), "Перелёт!", Color(0.6, 0.95, 1.0))
 
 
 func _die() -> void:
