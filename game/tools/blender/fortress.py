@@ -8,7 +8,7 @@
   turret_1 левое крыло (−6, −78), turret_2 правое крыло (−6, 78), turret_3 верхняя (48, 0),
   turret_4 кормовая (−112, 0), engine_l (14, −44), engine_r (14, 44).
 Подвижные узлы GLB:
-  turret_1…turret_4 — башни, поворот вокруг вертикали (стволы по +X);
+  turret_1…turret_4 — башни (спаренные турели из turret_twin.py, S8-K1), поворот вокруг вертикали (стволы по +X);
   engine_l/r_prop  — соосные винты двигателей, вращаются вокруг оси X;
   hatch_l/r        — створки люков на спине (фаза 2), открываются поворотом вокруг оси X;
   bay_l/r          — ракеты под люками, приподнимаются, когда люки открыты;
@@ -18,21 +18,31 @@ import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
 import turret_lib as L
+from turret_twin import twin
+from mathutils import Matrix
 
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 OUT = args[0]
 SPRITE = args[args.index("--sprite") + 1] if "--sprite" in args else ""
 L.reset()
-M_HULL = mat("enemy_hull", (0.13, 0.14, 0.13), 0.45, 0.5)
-M_LIGHT = mat("enemy_hull_light", (0.22, 0.23, 0.22), 0.4, 0.5)
-M_DARK = mat("enemy_dark", (0.06, 0.06, 0.07), 0.4, 0.6)
-M_RED = mat("enemy_red", (0.55, 0.07, 0.05), 0.2, 0.5)
-M_STEEL = mat("enemy_steel", (0.34, 0.35, 0.36), 0.7, 0.35)
+# корпус матовый (правило Kanta 19.10, S8-K1): краска без блеска, тон приглушён, полосы — тусклый сурик;
+# лёгкая грязь — множитель цвета по вершинам (атрибут Col → glTF COLOR_0, см. grime() перед сборкой)
+M_HULL = mat("enemy_hull", (0.115, 0.12, 0.112), 0.08, 0.9)
+M_LIGHT = mat("enemy_hull_light", (0.17, 0.175, 0.165), 0.08, 0.88)
+M_DARK = mat("enemy_dark", (0.05, 0.05, 0.055), 0.1, 0.9)
+M_RED = mat("enemy_red", (0.3, 0.075, 0.045), 0.05, 0.9)
+M_STEEL = mat("enemy_steel", (0.2, 0.205, 0.21), 0.15, 0.85)
 M_GLASS = mat("enemy_glass", (0.05, 0.08, 0.1), 0.8, 0.1)
 M_CORE = mat("enemy_core", (0.9, 0.3, 0.05), 0.0, 0.4)
 _b = M_CORE.node_tree.nodes["Principled BSDF"]
 _b.inputs["Emission Color"].default_value = (1.0, 0.35, 0.05, 1)
 _b.inputs["Emission Strength"].default_value = 0.6
+# башни — матовая краска врага (как у турелей игрока после решения Kanta 19.10: без блеска)
+M_T_BODY = mat("enemy_turret", (0.12, 0.13, 0.12), 0.1, 0.85)
+M_T_DARK = mat("enemy_turret_dark", (0.05, 0.05, 0.055), 0.1, 0.88)
+M_T_BARREL = mat("enemy_turret_barrel", (0.16, 0.165, 0.17), 0.15, 0.8)
+M_T_GLASS = mat("enemy_turret_glass", (0.05, 0.08, 0.1), 0.0, 0.8)
+TS = 0.062          # масштаб турели turret_twin (длина башни 1) в оси «Крепости» (длина самолёта 1)
 
 PX = 270.0
 FR = 0.058          # радиус фюзеляжа
@@ -125,17 +135,24 @@ def sphere(name, c, r, sc, m, seg=20):
     return finish(ob, m)
 
 
-def turret(n, x, y, z):
-    """Башня со спаркой: основание в корпусе, поворотная часть — узел turret_n"""
+def turret(n, x, y, z, tier):
+    """Башня — спаренная турель из turret_twin.py (решение Kanta 23.10, S8-K1: «используй имеющиеся модели»)
+    в окраске врага, масштаб TS: погон Ø ≈ 0,055 длины самолёта. Основание-кольцо в корпусе неподвижно,
+    вся башня со стволами — узел turret_n (поворот вокруг вертикали, стволы по +X)."""
     L.group = ""
     cyl("turret_ring", (x, y, z), 0.034, 0.008, M_DARK, "Z", 24)
-    L.group = "turret_%d" % n
-    L.pivots[L.group] = (x, y, z)
-    sphere("dome", (x, y, z + 0.004), 0.028, (1.0, 1.0, 0.7), M_LIGHT)
-    box("mantlet", (x + 0.022, y, z + 0.01), (0.02, 0.03, 0.016), M_DARK, 0.002)
-    for s in (1, -1):
-        cyl("barrel", (x + 0.06, y + s * 0.009, z + 0.01), 0.0045, 0.07, M_STEEL, "X", 10)
-        box("brake", (x + 0.096, y + s * 0.009, z + 0.01), (0.01, 0.009, 0.009), M_STEEL, 0.0)
+    g = "turret_%d" % n
+    L.pivots[g] = (x, y, z)
+    k = len(L.parts)
+    twin(tier, False, M_T_BODY, M_T_DARK, M_T_BARREL, M_T_GLASS, base=g, guns=g, seg=0.5)
+    m = Matrix.Translation((x, y, z)) @ Matrix.Scale(TS, 4)
+    for ob in L.parts[k:]:
+        # фаски — в единицах турели, потом перенос в оси «Крепости»
+        bpy.context.view_layer.objects.active = ob
+        for md in list(ob.modifiers):
+            bpy.ops.object.modifier_apply(modifier=md.name)
+        ob.data.transform(m @ ob.matrix_basis)
+        ob.matrix_basis = Matrix.Identity(4)
     L.group = ""
 
 
@@ -232,7 +249,7 @@ for s in (1, -1):
 # --- башни ---
 for n, (x, y) in enumerate([at(-6, -78), at(-6, 78), at(48, 0), at(-112, 0)], 1):
     z = 0.008 if n <= 2 else (FR + 0.006 if n == 3 else 0.042)
-    turret(n, x, y, z)
+    turret(n, x, y, z, 3 if n == 3 else 2)   # верхняя — ступень 3 (короба лент, прицел), остальные — 2
 
 # --- люки на спине (фаза 2): ракеты под створками ---
 HX0, HX1, HY = -0.0, 0.12, 0.034
@@ -265,6 +282,42 @@ for s, side in ((1, "l"), (-1, "r")):
         box("rivet_strip", (x, s * 0.018, FR + 0.0085), (0.004, 0.032, 0.001), M_DARK, 0.0)
 L.group = ""
 
+
+
+def grime():
+    """Лёгкая грязь и потёртости: пятна шумом (±8%), брюхо и корма темнее (копоть, пыль). Множитель пишется
+    в sRGB (Godot читает COLOR_0 как sRGB) и умножается на цвет материала узлом Multiply — glTF его понимает."""
+    from mathutils import noise
+    for m in (M_HULL, M_LIGHT, M_DARK, M_RED):
+        nt = m.node_tree
+        b = nt.nodes["Principled BSDF"]
+        ca = nt.nodes.new("ShaderNodeVertexColor")
+        ca.layer_name = "Col"
+        mx = nt.nodes.new("ShaderNodeMix")
+        mx.data_type = "RGBA"
+        mx.blend_type = "MULTIPLY"
+        mx.inputs["Factor"].default_value = 1.0
+        mx.inputs["A"].default_value = b.inputs["Base Color"].default_value[:]
+        nt.links.new(ca.outputs["Color"], mx.inputs["B"])
+        nt.links.new(mx.outputs["Result"], b.inputs["Base Color"])
+    for ob in L.parts:
+        me = ob.data
+        a = me.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
+        if me.materials[0] not in (M_HULL, M_LIGHT, M_DARK, M_RED):
+            for d in a.data:   # турели, стекло, сталь, ядро — без грязи (множитель 1)
+                d.color = (1.0, 1.0, 1.0, 1.0)
+            continue
+        mb = ob.matrix_basis
+        for i, v in enumerate(me.vertices):
+            p = mb @ v.co
+            k = 1.0 + 0.08 * noise.noise(p * 22.0) + 0.04 * noise.noise(p * 70.0)
+            k *= 1.0 - 0.14 * min(1.0, max(0.0, -p.z / 0.04))          # брюхо
+            k *= 1.0 - 0.1 * min(1.0, max(0.0, (-p.x - 0.25) / 0.2))   # корма
+            k = max(0.0, min(1.0, k)) ** (1 / 2.2)
+            a.data[i].color = (k, k, k * 0.98, 1.0)
+
+
+grime()
 root = build("fortress", OUT)
 
 if SPRITE:
