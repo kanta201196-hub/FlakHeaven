@@ -2,7 +2,7 @@
 
 Version 1, 2026-10-23. Kanta's decisions of 2026-10-23: balance is measured on the demo player profile (GD-01); Kanta's task: "build a system of balance changes on sortie data, run as many sorties as it needs". Background and the first diagnosis: `docs/playtest/gd-review-2026-10-23.md`. The game designer skill (`flak-heaven-game-design`) applies on top of this document.
 
-**Status: corridors in section 3 are a proposal waiting for Kanta's "yes".** Until then they are a reference, not a rule.
+**Status: approved by Kanta on 2026-10-23** — corridors (section 3) and the decision rule (section 4).
 
 ## 1. Data: three sources, one table
 
@@ -28,7 +28,7 @@ All three go through `tools/ci/balance_table.py`, so the numbers are comparable.
 
 M2, M3 and M7 are not in the table script yet (computed by hand in this version). They go into `balance_table.py` with the next tools change.
 
-## 3. Corridors (proposal, bot on the demo profile)
+## 3. Corridors (approved by Kanta 2026-10-23, bot on the demo profile)
 
 The bot's baseline of 2026-10-23 is below (section 6). A corridor is the range we want for the class median. The proposal starts from Kanta's goals ("enjoy, not overcome", last core cards by minute 12–13, a dangerous but forgiving first ace) and from the baseline.
 
@@ -55,7 +55,7 @@ The bot dies more than a human, so M5 is compared between classes and with "befo
 7. **PR** with both tables and one line "was → became" per number, then the usual checks (`smoke.sh`; `full.sh` if combat changed).
 8. **After the build**: human logs from the sheet through the same table. Bot and humans agree → a line in the decision log; they disagree → humans win, and the bot method is corrected.
 
-Who decides: Kanta approves the corridors once (section 3) and every change of rules. A number change that brings a metric back into its corridor follows section 4 and goes in the PR with "was → became"; Kanta sees it in the build (proposal, waiting for Kanta's answer).
+Who decides (Kanta, 2026-10-23): Kanta approves the corridors (section 3), any change of a corridor and every change of rules. A number change that brings a metric back into its corridor is made by Claude without asking: it follows section 4, one per build, with "was → became" in the PR; Kanta sees it in the build.
 
 ## 5. Commands
 
