@@ -485,7 +485,7 @@ func on_near_miss(kind: String) -> void:
 	roll_cd = maxf(0.0, roll_cd - cut)
 	ab_cd = maxf(0.0, ab_cd - cut)
 	s3_cd = maxf(0.0, s3_cd - cut)
-	Main.I.on_near_miss(kind)
+	Events.near_miss.emit(&"bullet" if kind == "пуля" else &"missile")
 
 
 const GUN_LIFE := 0.8 # 3.1: дальность курсового +33% (было 0,6 с полёта пули)
@@ -619,7 +619,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 		heal(max_hp * 0.2, "perk")
 		Main.I.fx.text(global_position + Vector2(0, -60), "Второе дыхание!", Color(0.6, 1.0, 0.7))
 		invuln = 2.0
-		Main.I.on_player_damaged(amount)
+		Events.player_damaged.emit(amount)
 		return
 	Main.I.add_stat("taken", source, amount)
 	if who != "":
@@ -630,7 +630,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 		_armor2_cd = 12.0
 	if manual_mode:
 		manual_bonus = maxf(0.0, manual_bonus - Tuning.g("manual_hit_penalty"))
-	Main.I.on_player_damaged(amount)
+	Events.player_damaged.emit(amount)
 	if hp <= 0.0 and OS.is_debug_build() and Main.I._args.has("--nodie"):
 		hp = 1.0   # EX-10: долгий тест живучести — смерть считается, вылет идёт дальше
 		Main.I.tele.add("nodie", 1)
@@ -642,7 +642,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 			if is_instance_valid(w):
 				w.queue_free()
 		wingmen.clear()
-		Main.I.on_player_dead()
+		Events.player_died.emit()
 
 
 ## «Каток»: кольцо НАР во все стороны

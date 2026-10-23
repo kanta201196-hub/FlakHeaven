@@ -18,6 +18,7 @@ func _init() -> void:
 	_test_xp_levels()
 	_test_rare_queue()
 	_test_all_cards_taken()
+	_test_kill_streak()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -82,6 +83,9 @@ func _test_continue_mult_once() -> void:
 	var res := r.award_activity(&"transport")
 	_check(is_equal_approx(res["parts"], r.parts), "paid amount is what the banner shows")
 	_check(RunState.new().continue_mult() == 1.0, "no bonus before 15:00")
+	var c := RunState.new()
+	c.run_time = s.run_time
+	_check(is_equal_approx(c.grant_parts(50.0, &"cargo", false), 50.0), "no bonus when already applied")
 
 
 ## XP: a known sum gives the expected levels; leftover XP stays below the next need.
@@ -118,3 +122,21 @@ func _test_all_cards_taken() -> void:
 	_check(r["levels"] == 2 and s.pending_levels == 0 and s.rare_picks == 0, "queue cleared")
 	_check(is_equal_approx(r["parts"], 2 * Rewards.ALL_CARDS_PARTS_PER_LEVEL), "parts per level")
 	_check(r["heal"] <= Rewards.ALL_CARDS_HEAL_MAX, "heal capped")
+
+
+## Kills build a streak that raises kill parts; it ends when the timer runs out; a near miss
+## holds it.
+func _test_kill_streak() -> void:
+	var s := RunState.new()
+	var first := s.on_kill(10.0)
+	var second := s.on_kill(10.0, true)
+	_check(s.kills == 2 and s.streak == 2 and s.tail_kills == 1, "kills, streak, tail kill counted")
+	_check(second > first, "streak raises kill parts")
+	s.tick(Rewards.STREAK_WINDOW + 0.1)
+	_check(s.streak == 0 and s.best_streak == 2, "streak ends, best kept")
+	s.on_kill(0.0)
+	s.tick(Rewards.STREAK_WINDOW - 0.1)
+	s.on_near_miss()
+	s.tick(Rewards.NEAR_MISS_HOLD - 0.1)
+	_check(s.streak == 1 and s.near_misses == 1, "near miss holds the streak")
+	_check(s.streak_mult() <= 1.0 + Rewards.STREAK_CAP * Rewards.STREAK_STEP, "streak mult capped")

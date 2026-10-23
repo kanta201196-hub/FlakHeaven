@@ -42,6 +42,14 @@ const ALL_CARDS_PARTS_PER_LEVEL := 30.0
 const ALL_CARDS_HEAL_PER_LEVEL := 0.1
 const ALL_CARDS_HEAL_MAX := 0.5
 
+## Kill streak: each kill within `STREAK_WINDOW` s of the previous one adds `STREAK_STEP` to the
+## parts and XP multiplier, up to `STREAK_CAP` kills. A near miss keeps the streak for at least
+## `NEAR_MISS_HOLD` s.
+const STREAK_WINDOW := 2.5
+const STREAK_STEP := 0.03
+const STREAK_CAP := 30
+const NEAR_MISS_HOLD := 1.5
+
 ## Sortie length, s: after it every reward grows by `LATE_BONUS_PER_MIN` per minute.
 const SORTIE_LENGTH := 900.0
 const LATE_BONUS_PER_MIN := 0.1

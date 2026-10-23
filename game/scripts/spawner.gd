@@ -460,7 +460,7 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	for n in get_tree().get_nodes_in_group("enemies"):
 		if n is Drone and (n as Node2D).global_position.distance_to(p.global_position) > 600.0:
 			(n as Enemy).leave()
-	Main.I.on_boss_wave(wave, maxi(1, variants.size()))
+	Events.boss_wave.emit(wave, maxi(1, variants.size()))
 
 
 func air_count(enemies: Array) -> int:

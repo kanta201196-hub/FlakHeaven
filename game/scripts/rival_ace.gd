@@ -123,7 +123,7 @@ func behave(delta: float) -> void:
 	life -= delta
 	if life <= 0.0:
 		say("escape", true)
-		Main.I.on_activity_failed("dogfight", callsign)
+		Events.activity_failed.emit(&"dogfight", callsign)
 		remove_from_group("enemies")
 		queue_free()
 		return
@@ -220,7 +220,7 @@ func _start_break(overshoot := true) -> void:
 
 func _die() -> void:
 	say("down", true)
-	Main.I.on_activity_success("dogfight")
+	Events.activity_succeeded.emit(&"dogfight")
 	super()
 
 

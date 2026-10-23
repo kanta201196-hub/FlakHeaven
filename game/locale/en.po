@@ -3430,8 +3430,8 @@ msgid "выбор из редких карточек"
 msgstr "a pick of rare cards"
 
 #: game/scripts/main.gd:555
-msgid " и +40 запчастей"
-msgstr " and +40 parts"
+msgid " и +%d запчастей"
+msgstr " and +%d parts"
 
 #: game/scripts/main.gd:555
 #, c-format
@@ -5845,8 +5845,8 @@ msgid "ЗА СПАСЁННОГО ПИЛОТА"
 msgstr "FOR THE RESCUED PILOT"
 
 #: game/scripts/rescue.gd:81
-msgid "Пилот спасён! Награда: выбор из редких карточек и +40 запчастей"
-msgstr "Pilot rescued! Reward: a pick of rare cards and +40 parts"
+msgid "Пилот спасён! Награда: выбор из редких карточек и +%d запчастей"
+msgstr "Pilot rescued! Reward: a pick of rare cards and +%d parts"
 
 #: game/scripts/rescue.gd:82
 msgid "Спасённый"
@@ -6283,8 +6283,8 @@ msgid "ЗА ГРУЗ ТРАНСПОРТА"
 msgstr "FOR TRANSPORT CARGO"
 
 #: game/scripts/transport.gd:108
-msgid "Транспортник сбит! Груз: +90 запчастей, ремкомплекты"
-msgstr "Transport shot down! Cargo: +90 parts, repair kits"
+msgid "Транспортник сбит! Груз: +%d запчастей, ремкомплекты"
+msgstr "Transport shot down! Cargo: +%d parts, repair kits"
 
 #: game/scripts/transport.gd:108
 msgid " и выбор из редких карточек"

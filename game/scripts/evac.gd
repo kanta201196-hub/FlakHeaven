@@ -48,11 +48,11 @@ func _process(delta: float) -> void:
 			Main.I.sfx.play("gate", -8.0, 1.0 + passed * 0.15)
 			time_left += 5.0 # каждые пройденные ворота дают немного времени
 			if passed >= GATES:
-				Main.I.on_evac_success()
+				Events.evac_reached.emit()
 				queue_free()
 				return
 	if time_left <= 0.0:
-		Main.I.on_evac_closed()
+		Events.evac_closed.emit()
 		queue_free()
 		return
 	queue_redraw()

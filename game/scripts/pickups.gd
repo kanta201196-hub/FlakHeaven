@@ -70,7 +70,7 @@ func _process(delta: float) -> void:
 					Main.I.add_xp(float(it["v"]))
 					any = true
 				elif it["kind"] == "cargo":
-					Main.I.parts += float(it["v"])
+					Main.I.run.grant_parts(float(it["v"]), &"cargo", false)   # late bonus applied at drop
 					Main.I.fx.text(pp + Vector2(0, -40), "Груз: +%d запчастей" % int(it["v"]), Color(1.0, 0.85, 0.45))
 					Main.I.sfx.play("pickup", -10.0, 0.8)
 				else:

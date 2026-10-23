@@ -62,7 +62,7 @@ func behave(delta: float) -> void:
 		if not _escaped:
 			_escaped = true
 			Main.I.show_banner("Транспортник ушёл — груз потерян", 3.0)
-			Main.I.on_activity_failed("transport")
+			Events.activity_failed.emit(&"transport", "")
 			if Main.I.spawner != null and Main.I.spawner.activity_node == self:
 				Main.I.spawner.activity_node = null
 		if p == null or global_position.distance_to(p.global_position) > 2600.0:
@@ -92,21 +92,10 @@ func behave(delta: float) -> void:
 
 func _die() -> void:
 	var m := Main.I
-	m.activities_done += 1
-	if OS.get_cmdline_user_args().has("--autotest"):
-		print("AUTOTEST: activity success transport at %.0f" % m.run_time)
-	# груз: запчасти и ремкомплекты; через раз — выбор из редких карточек (как у других активностей)
-	m.parts += 90.0 * m.continue_mult()
-	for i in 3:
+	# cargo: parts and a rare pick are paid by RunState (Rewards.ACTIVITY), repair kits drop here
+	Events.activity_succeeded.emit(&"transport")
+	for i in Rewards.TRANSPORT_REPAIR_KITS:
 		m.pickups.drop_repair(global_position + Vector2(randf_range(-60, 60), randf_range(-60, 60)))
-	var rare := m.activities_done % 2 == 1
-	if rare:
-		m.pending_levels += 1
-		m.rare_picks += 1
-		m.rare_reasons.append("ЗА ГРУЗ ТРАНСПОРТА")
-	m.player.add_course_pts(1)
-	m.show_banner("Транспортник сбит! Груз: +90 запчастей, ремкомплекты" + (" и выбор из редких карточек" if rare else ""), 4.0)
-	m.sfx.play("cargo", -4.0, 1.3)
 	if m.spawner != null and m.spawner.activity_node == self:
 		m.spawner.activity_node = null
 	super()

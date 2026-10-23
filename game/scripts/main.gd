@@ -90,56 +90,57 @@ var dbg: MainDebug         # автотест, скриншоты, отладо�
 var tele := Telemetry.new() # 3.4: замеры для анализа правок (колонки в конце лога)
 
 ## State of the current sortie (CS-03). The fields below forward to it until every reader
-## uses `run.*` directly; new code changes them only through `RunState` methods.
+## uses `run.*` directly. All but `run_time` and `parts_kept` are read-only and change only
+## through `RunState` methods; `tools/ci/smoke.sh` fails on direct writes.
 var run := RunState.new()
 var run_time: float:
 	get: return run.run_time
 	set(v): run.run_time = v
 var kills: int:
 	get: return run.kills
-	set(v): run.kills = v
+	set(_v): push_error("Main.kills is read-only: change it through RunState (CS-03)")
 var level: int:
 	get: return run.level
-	set(v): run.level = v
+	set(_v): push_error("Main.level is read-only: change it through RunState (CS-03)")
 var xp: float:
 	get: return run.xp
-	set(v): run.xp = v
+	set(_v): push_error("Main.xp is read-only: change it through RunState (CS-03)")
 var pending_levels: int:
 	get: return run.pending_levels
-	set(v): run.pending_levels = v
+	set(_v): push_error("Main.pending_levels is read-only: change it through RunState (CS-03)")
 var streak: int:
 	get: return run.streak
-	set(v): run.streak = v
+	set(_v): push_error("Main.streak is read-only: change it through RunState (CS-03)")
 var streak_t: float:
 	get: return run.streak_t
-	set(v): run.streak_t = v
+	set(_v): push_error("Main.streak_t is read-only: change it through RunState (CS-03)")
 var best_streak: int:
 	get: return run.best_streak
-	set(v): run.best_streak = v
+	set(_v): push_error("Main.best_streak is read-only: change it through RunState (CS-03)")
 var near_misses: int:
 	get: return run.near_misses
-	set(v): run.near_misses = v
+	set(_v): push_error("Main.near_misses is read-only: change it through RunState (CS-03)")
 var rare_picks: int:
 	get: return run.rare_picks
-	set(v): run.rare_picks = v
+	set(_v): push_error("Main.rare_picks is read-only: change it through RunState (CS-03)")
 var rare_reasons: Array:
 	get: return run.rare_reasons
-	set(v): run.rare_reasons = v
+	set(_v): push_error("Main.rare_reasons is read-only: change it through RunState (CS-03)")
 var activities_done: int:
 	get: return run.activities_done
-	set(v): run.activities_done = v
+	set(_v): push_error("Main.activities_done is read-only: change it through RunState (CS-03)")
 var tail_kills: int:
 	get: return run.tail_kills
-	set(v): run.tail_kills = v
+	set(_v): push_error("Main.tail_kills is read-only: change it through RunState (CS-03)")
 var parts: float:
 	get: return run.parts
-	set(v): run.parts = v
+	set(_v): push_error("Main.parts is read-only: change it through RunState (CS-03)")
 var parts_kept: int:
 	get: return run.parts_kept
 	set(v): run.parts_kept = v
 var bosses_killed: int:
 	get: return run.bosses_killed
-	set(v): run.bosses_killed = v
+	set(_v): push_error("Main.bosses_killed is read-only: change it through RunState (CS-03)")
 
 
 func _ready() -> void:
@@ -158,6 +159,17 @@ func _ready() -> void:
 		if a.begins_with("--tilt="):   # B-47: наклон камеры, град (проба; 0 — строго сверху)
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
 	DEBUG = not (OS.has_feature("tester") or _args.has("--tester"))
+	Events.activity_succeeded.connect(_on_activity_succeeded)
+	Events.activity_failed.connect(_on_activity_failed)
+	Events.enemy_hit.connect(_on_enemy_hit)
+	Events.enemy_killed.connect(_on_enemy_killed)
+	Events.player_damaged.connect(_on_player_damaged)
+	Events.player_died.connect(_on_player_died)
+	Events.near_miss.connect(_on_near_miss)
+	Events.boss_wave.connect(_on_boss_wave)
+	Events.evac_reached.connect(_on_evac_reached)
+	Events.evac_closed.connect(_on_evac_closed)
+	Events.evac_point_lost.connect(_on_evac_point_lost)
 	_autotest = _args.has("--autotest")
 	god_mode = _args.has("--god")
 	if _args.has("--fast"):
@@ -307,9 +319,7 @@ func _process(delta: float) -> void:
 		Story.tick(self)
 		if level_at_5 == 0 and run_time >= 300.0:
 			level_at_5 = level
-		streak_t -= delta
-		if streak_t <= 0.0:
-			streak = 0
+		run.tick(delta)
 		if pending_levels > 0:
 			_open_levelup()
 	banner_t = maxf(0.0, banner_t - delta / maxf(Engine.time_scale, 0.01))
@@ -416,13 +426,9 @@ func refill_offers() -> bool:
 	if not offers.is_empty():
 		return true
 	# правка 3.5-s4: все улучшения собраны — награда за уровень и аса не пропадает молча
-	var n := pending_levels
-	pending_levels = 0
-	rare_picks = 0
-	rare_reasons.clear()
-	player.heal(player.max_hp * minf(0.5, 0.1 * n), "allcards")
-	parts += 30.0 * n * continue_mult()
-	show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(30.0 * n * continue_mult()), 3.0)
+	var r := run.pay_all_cards_taken()
+	player.heal(player.max_hp * float(r["heal"]), "allcards")
+	show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(r["parts"]), 3.0)
 	return false
 
 
@@ -441,11 +447,7 @@ func choose_card(i: int) -> void:
 	Cards.on_declined(player, offers, c)
 	Cards.apply(player, c)
 	sfx.play("card", -8.0)
-	pending_levels -= 1
-	if offer_rare:
-		rare_picks -= 1
-		if not rare_reasons.is_empty():
-			rare_reasons.pop_front()
+	run.take_pick(offer_rare)
 	if Cards.need_course(player):
 		_open_course()
 	elif pending_levels <= 0 or not refill_offers():
@@ -565,48 +567,65 @@ func radio(from: String, text: String, enemy := false) -> void:
 	sfx.play("radio", -18.0, 2.2)
 
 
-func on_activity_success(kind: String) -> void:
-	activities_done += 1
+## Banner headline per activity kind; the reward part is built from what `RunState` paid.
+const ACTIVITY_TITLE := {
+	&"ground": "Позиция ПВО уничтожена!", &"convoy": "Колонна разбита!", &"dogfight": "Ас-соперник сбит!",
+}
+
+
+## `Events.activity_succeeded`: pays the reward through `RunState.award_activity` (the only
+## place that changes parts and the card queue for activities), then repair, course points,
+## banner and sound. Activity-specific lines (story, radio, pickups) stay in the activity.
+func _on_activity_succeeded(kind: StringName) -> void:
 	if _autotest:
 		print("AUTOTEST: activity success ", kind, " at %.0f" % run_time)
-	# 3.5: активности стали чаще (раз в минуту) — выбор из редких карточек за каждую вторую,
-	# за остальные — ремонт 20% и запчасти, иначе сила игрока растёт ещё быстрее (лог 3.4-t1: Кит неуязвим с 12-й минуты)
-	# правка 3.5-s4: ас-соперник — самая трудная активность, выбор из редких карточек за каждого
-	var rare := activities_done % 2 == 1 or kind == "dogfight"
-	var what: String = {"ground": "Позиция ПВО уничтожена!", "convoy": "Колонна разбита!"}.get(kind, "Ас-соперник сбит!")
-	player.add_course_pts(1)
-	if rare:
-		pending_levels += 1
-		rare_picks += 1
-		rare_reasons.append({"ground": "ЗА ПОЗИЦИЮ ПВО", "convoy": "ЗА КОЛОННУ"}.get(kind, "ЗА АСА"))
-	else:
-		player.heal(player.max_hp * 0.2, "activity")
-	if kind == "ground":
-		parts += 40.0 * continue_mult()
-	if not rare:
-		parts += 60.0 * continue_mult()
-	Story.say(Story.DISPATCH, "Чисто сработано. Награда ваша.")
-	show_banner(Loc.t("%s Награда: %s") % [Loc.t(what), Loc.t("выбор из редких карточек") + (Loc.t(" и +40 запчастей") if kind == "ground" else "") if rare else Loc.t("ремонт 20%% и +%d запчастей") % (100 if kind == "ground" else 60)], 4.0)
-	sfx.play("evac", -4.0, 1.3)
+	var r := run.award_activity(kind)
+	if r.is_empty():
+		return
+	var rare: bool = r["rare"]
+	var paid := int(r["parts"])
+	if is_instance_valid(player):
+		player.add_course_pts(int(r["course_pts"]))
+		if float(r["heal"]) > 0.0:
+			player.heal(player.max_hp * float(r["heal"]), "activity")
+	match kind:
+		&"transport":
+			show_banner(Loc.t("Транспортник сбит! Груз: +%d запчастей, ремкомплекты") % paid
+				+ (Loc.t(" и выбор из редких карточек") if rare else ""), 4.0)
+			sfx.play("cargo", -4.0, 1.3)
+		&"rescue":
+			show_banner(Loc.t("Пилот спасён! Награда: выбор из редких карточек и +%d запчастей") % paid, 4.0)
+			sfx.play("evac", -4.0, 1.3)
+		&"class_task":
+			show_banner(Loc.t("Задание класса выполнено! Награда: выбор из редких карточек и +%d запчастей") % paid, 4.0)
+			sfx.play("evac", -4.0, 1.3)
+		_:
+			Story.say(Story.DISPATCH, "Чисто сработано. Награда ваша.")
+			var reward := (Loc.t("выбор из редких карточек") + (Loc.t(" и +%d запчастей") % paid if paid > 0 else "")) \
+				if rare else Loc.t("ремонт 20%% и +%d запчастей") % paid
+			show_banner(Loc.t("%s Награда: %s") % [Loc.t(ACTIVITY_TITLE.get(kind, "")), reward], 4.0)
+			sfx.play("evac", -4.0, 1.3)
 
 
-func on_activity_failed(kind: String, who := "") -> void:
+## `Events.activity_failed`: dispatcher line and, for an escaped ace, a banner. No reward.
+func _on_activity_failed(kind: StringName, who: String) -> void:
 	if _autotest:
 		print("AUTOTEST: activity failed ", kind, " at %.0f" % run_time)
-	if kind != "rescue":
+	if kind != &"rescue":
 		Story.say(Story.DISPATCH, "Ушли. Ничего, следующих встретим.")
-	if kind == "dogfight":
+	if kind == &"dogfight":
 		show_banner(Loc.t("Ас «%s» ушёл — награды нет") % who, 3.0)
 
 
+## Streak multiplier for kill parts and XP (`RunState.streak_mult`).
 func streak_mult() -> float:
-	return 1.0 + minf(streak, 30) * 0.03
+	return run.streak_mult()
 
 
-func on_near_miss(kind: String) -> void:
-	near_misses += 1
-	streak_t = maxf(streak_t, 1.5) # пролёт на волоске поддерживает серию
-	fx.text(player.global_position + Vector2(0, -50), "На волоске!" if kind == "пуля" else "Ракета мимо!", Color(0.6, 0.95, 1.0))
+## `Events.near_miss`: counts it (keeps the streak) and shows the "close call" text.
+func _on_near_miss(kind: StringName) -> void:
+	run.on_near_miss()
+	fx.text(player.global_position + Vector2(0, -50), "На волоске!" if kind == &"bullet" else "Ракета мимо!", Color(0.6, 0.95, 1.0))
 	sfx.play("near_miss", -16.0, 1.6)
 
 
@@ -619,7 +638,8 @@ func boss_alive() -> bool:
 	return false
 
 
-func on_boss_wave(wave: int, n: int) -> void:
+## `Events.boss_wave`: banner, enemy radio, hint, boss birth time for the log, sound and shake.
+func _on_boss_wave(wave: int, n: int) -> void:
 	if Biome.sea():
 		show_banner(Loc.t(["«АЛЬБАТРОС» НА ПОДХОДЕ!", "КРЕЙСЕР «СТОРОЖ» В ПРОЛИВЕ!", "«ЛЕВИАФАН» В ПРОЛИВЕ!"][clampi(wave - 1, 0, 2)]), 4.0)
 	else:
@@ -658,8 +678,9 @@ func _open_evac() -> void:
 	sfx.play("evac", -6.0)
 
 
-func on_evac_success() -> void:
-	parts_kept = int(parts * Campaign.k("reward"))
+## `Events.evac_reached`: the sortie ends with evacuation; parts kept, profile award, log.
+func _on_evac_reached() -> void:
+	parts_kept = int(run.parts * Campaign.k("reward"))
 	op_result = Campaign.on_evac(run_time, op_flags)
 	_award("evac")
 	RunLog.write(self, "эвакуация")
@@ -670,7 +691,8 @@ func on_evac_success() -> void:
 ## «Левиафан» разбил точку эвакуации (5 залпов): открытое окно закрывается, после его гибели — не откроется
 var evac_lost := false
 
-func on_evac_point_lost(who: String) -> void:
+## `Events.evac_point_lost`: a boss destroyed the evacuation point; the open window closes.
+func _on_evac_point_lost(who: String) -> void:
 	evac_lost = true
 	if is_instance_valid(evac):
 		evac.queue_free()
@@ -680,7 +702,8 @@ func on_evac_point_lost(who: String) -> void:
 		print("AUTOTEST: evac point lost")
 
 
-func on_evac_closed() -> void:
+## `Events.evac_closed`: the window ran out.
+func _on_evac_closed() -> void:
 	show_banner("Окно эвакуации закрыто — следующее после следующего аса", 4.0)
 
 
@@ -713,15 +736,18 @@ func total(group: String) -> int:
 
 # ---------- События боя ----------
 
-func on_enemy_hit(e: Enemy, dmg: float) -> void:
+## `Events.enemy_hit`: spark, damage number, hit sound.
+func _on_enemy_hit(e: Enemy, dmg: float) -> void:
 	fx.hit_spark(e.global_position)
 	if Tuning.g("damage_numbers") > 0.5:
 		fx.number(e.global_position + Vector2(0, -e.radius), dmg)
 	sfx.play("hit", -18.0, 1.0, e.global_position)
 
 
-func on_enemy_killed(e: Enemy) -> void:
-	kills += 1
+## `Events.enemy_killed`: the one handler that changes state on a kill, in a fixed order —
+## spawner flow, player perks, class task, then `RunState.on_kill` (kills, streak, parts) before
+## the enemy drops XP; then effects, operation flags and boss handling.
+func _on_enemy_killed(e: Enemy) -> void:
 	if is_instance_valid(spawner):
 		spawner.note_kill(e)
 	if is_instance_valid(player):
@@ -729,15 +755,12 @@ func on_enemy_killed(e: Enemy) -> void:
 	add_stat("kills_by", e.kind(), 1.0)
 	if class_task != null:
 		class_task.on_kill(self, e)
-	streak += 1
-	streak_t = 2.5
-	best_streak = maxi(best_streak, streak)
-	if is_instance_valid(player) and player.on_tail() and player.tail_target == e:
-		tail_kills += 1
+	var from_tail := is_instance_valid(player) and player.on_tail() and player.tail_target == e
+	if from_tail:
 		e.xp = int(ceil(e.xp * 1.5))
 		fx.text(e.global_position + Vector2(0, -30), "Сбит с хвоста!", Color(1.0, 0.9, 0.4))
-	parts += e.parts * continue_mult() * streak_mult() * (1.5 if (e.is_ground and is_instance_valid(player) and player.has_perk("a_grd2")) else 1.0) \
-		* (player.mastery_parts_k(e) if is_instance_valid(player) else 1.0)
+	run.on_kill(e.parts * (1.5 if (e.is_ground and is_instance_valid(player) and player.has_perk("a_grd2")) else 1.0) \
+		* (player.mastery_parts_k(e) if is_instance_valid(player) else 1.0), from_tail)
 	fx.explosion(e.global_position, e.radius * (1.3 if e.big else 1.0), not e.is_ground)
 	sfx.play("explode_big" if e.big else "explode", -4.0 if e.big else -12.0, 1.0, e.global_position)
 	add_shake(e.kill_shake)
@@ -750,7 +773,7 @@ func on_enemy_killed(e: Enemy) -> void:
 		Story.on_baron_down()
 		fx.text(e.global_position + Vector2(0, -60), "«Барон» сбит!", Color(1.0, 0.85, 0.4))
 	if e.is_boss:
-		bosses_killed += 1
+		run.on_boss_killed()
 		if e.has_meta("born"):
 			tele.boss_killed(run_time - float(e.get_meta("born")))
 		if is_instance_valid(player):
@@ -767,7 +790,8 @@ func on_enemy_killed(e: Enemy) -> void:
 				_open_evac()
 
 
-func on_player_damaged(_amount: float) -> void:
+## `Events.player_damaged`: shake, hint, hit-stop, sound, red flash.
+func _on_player_damaged(_amount: float) -> void:
 	add_shake(10.0)
 	if is_instance_valid(player) and player.has_roll():
 		Hints.show("roll", "Space — уклонение: короткий переворот, во время которого пули и ракеты не попадают.", 7.0, 2)
@@ -788,9 +812,10 @@ func _award(outcome: String) -> void:
 	result_tab = 0
 
 
-func on_player_dead() -> void:
+## `Events.player_died`: the sortie ends; half the parts kept, profile award, log.
+func _on_player_died() -> void:
 	is_dead = true
-	parts_kept = int(parts * 0.5 * Campaign.k("reward"))
+	parts_kept = int(run.parts * 0.5 * Campaign.k("reward"))
 	op_result = Campaign.result_base(run_time, op_flags)
 	op_result["done"] = false
 	_award("dead")

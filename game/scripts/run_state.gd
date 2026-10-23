@@ -57,10 +57,46 @@ func continue_mult() -> float:
 	return 1.0 + Rewards.LATE_BONUS_PER_MIN * maxf(0.0, (run_time - Rewards.SORTIE_LENGTH) / 60.0)
 
 
-## Pays `amount` spare parts with the post-15:00 multiplier applied once.
-## Returns the amount actually paid, for banners and the log. `reason` is for the log.
-func grant_parts(amount: float, _reason: StringName = &"") -> float:
-	var paid := amount * continue_mult()
+## Streak multiplier for kill parts and XP.
+func streak_mult() -> float:
+	return 1.0 + minf(streak, Rewards.STREAK_CAP) * Rewards.STREAK_STEP
+
+
+## Counts a kill: kills, streak, tail kills; pays `base_parts` times the streak multiplier
+## (and the late bonus). Returns the parts paid.
+func on_kill(base_parts: float, from_tail := false) -> float:
+	kills += 1
+	streak += 1
+	streak_t = Rewards.STREAK_WINDOW
+	best_streak = maxi(best_streak, streak)
+	if from_tail:
+		tail_kills += 1
+	return grant_parts(base_parts * streak_mult(), &"kill") if base_parts > 0.0 else 0.0
+
+
+## A projectile passed close: counts it and keeps the streak alive a little longer.
+func on_near_miss() -> void:
+	near_misses += 1
+	streak_t = maxf(streak_t, Rewards.NEAR_MISS_HOLD)
+
+
+## A boss (ace, warship) was destroyed.
+func on_boss_killed() -> void:
+	bosses_killed += 1
+
+
+## Advances the streak timer by `delta` s of game time; the streak ends when it runs out.
+func tick(delta: float) -> void:
+	streak_t -= delta
+	if streak_t <= 0.0:
+		streak = 0
+
+
+## Pays `amount` spare parts with the post-15:00 multiplier applied once (`late_bonus` false —
+## the amount already includes it, e.g. cargo valued when dropped). Returns the amount actually
+## paid, for banners and the log. `reason` is for the log.
+func grant_parts(amount: float, _reason: StringName = &"", late_bonus := true) -> float:
+	var paid := amount * (continue_mult() if late_bonus else 1.0)
 	parts += paid
 	return paid
 
@@ -112,3 +148,9 @@ func pay_all_cards_taken() -> Dictionary:
 	var paid := grant_parts(Rewards.ALL_CARDS_PARTS_PER_LEVEL * n, &"all_cards")
 	return {"levels": n, "parts": paid,
 		"heal": minf(Rewards.ALL_CARDS_HEAL_MAX, Rewards.ALL_CARDS_HEAL_PER_LEVEL * n)}
+
+
+## Debug and screenshot setups only (`main_debug.gd`, F-keys): sets a field directly.
+func debug_set(field: StringName, value: Variant) -> void:
+	assert(field in self, "RunState has no field %s" % field)
+	set(field, value)

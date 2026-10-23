@@ -172,7 +172,7 @@ func take_hit(dmg: float, source := "прочее") -> void:
 	Main.I.tele.add("dealt_ground" if is_ground else "dealt_air", minf(dmg, hp))   # EX-08: урон по земле и по воздуху
 	hp -= dmg
 	_flash = 0.06
-	Main.I.on_enemy_hit(self, dmg)
+	Events.enemy_hit.emit(self, dmg)
 	if hp <= 0.0:
 		_die()
 
@@ -243,11 +243,18 @@ func aim_radius() -> float:
 func _die() -> void:
 	hp = 0.0
 	remove_from_group("enemies")
-	Main.I.on_enemy_killed(self)
-	Main.I.pickups.drop_xp(global_position, xp * Main.I.streak_mult() * (1.0 if is_boss else Main.I.kill_xp_k()))   # S10-13: асы и боссы — полный опыт
+	_grant_rewards()
+	queue_free()
+
+
+## Reports the kill (`Events.enemy_killed`: kills, streak, parts) and drops XP and maybe a repair
+## kit. XP drops after the event, so a tail kill's bonus XP is included. Bosses get full XP
+## after 5:00 (S10-13). Shared by `ConvoyVehicle._die`.
+func _grant_rewards() -> void:
+	Events.enemy_killed.emit(self)
+	Main.I.pickups.drop_xp(global_position, xp * Main.I.streak_mult() * (1.0 if is_boss else Main.I.kill_xp_k()))
 	if randf() < repair_chance:
 		Main.I.pickups.drop_repair(global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20)))
-	queue_free()
 
 
 func _process(delta: float) -> void:

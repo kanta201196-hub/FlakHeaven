@@ -980,7 +980,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 				"res_overload":
 					p.mods["dmg_all"] *= 1.0 + 0.04 * k
 				"res_bounty":
-					Main.I.parts += 20.0 * k
+					Main.I.run.grant_parts(20.0 * k, &"card_bounty", false)
 				"res_kit":
 					p.max_hp *= 1.0 + 0.05 * k
 					p.heal(p.max_hp * 0.5, "kit")   # EX-10: было полное восстановление
