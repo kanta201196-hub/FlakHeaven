@@ -12,7 +12,7 @@ ERR_RE="SCRIPT ERROR|Parse Error"
 
 # CS-03: состояние вылета меняется только методами RunState — прямые записи в Main не пропускаем
 if [ -z "${SMOKE_SKIP_IMPORT:-}" ]; then
-	RS_RE='\b(m|Main\.I)\.(parts|pending_levels|rare_picks|rare_reasons|activities_done|kills|level|xp)\s*([-+*/]?=[^=]|\.(append|clear|pop_front|erase))'
+	RS_RE='\b(m|Main\.I)\.(parts|pending_levels|rare_picks|rare_reasons|activities_done|kills|level|xp|streak|streak_t|best_streak|near_misses|tail_kills|bosses_killed)\s*([-+*/]?=[^=]|\.(append|clear|pop_front|erase))'
 	if grep -rnE "$RS_RE" game/scripts --include=*.gd | grep -v "game/scripts/run_state.gd"; then
 		echo "smoke: прямая запись в состояние вылета — используйте методы RunState (docs/standards/code.md §6)"; exit 1
 	fi

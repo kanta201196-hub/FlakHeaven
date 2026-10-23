@@ -202,7 +202,7 @@ func _shore_salvo(p: Player) -> void:
 	if lost:
 		return
 	if _salvos >= SALVOS:
-		Main.I.on_evac_point_lost(title)
+		Events.evac_point_lost.emit(title)
 	else:
 		Main.I.show_banner(Loc.t("Залп по точке эвакуации: %d из %d") % [_salvos, SALVOS], 2.0)
 

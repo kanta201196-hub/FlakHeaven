@@ -142,10 +142,10 @@ func _ui_test() -> void:
 		m.stats["taken_kind"] = {"пушки истребителей": 836.0, "пушки асов": 162.0, "пулемёт пикапа": 12.0, "ракеты самолётов": 45.0, "ЗРК": 60.0, "ПЗРК": 15.0}
 		m.stats["kills_by"] = {"дроны": 2890.0, "перехватчики": 519.0, "ракетоносцы": 43.0, "асы": 3.0}
 		m.run.debug_set(&"kills", 3455)
-		m.bosses_killed = 3
+		m.run.debug_set(&"bosses_killed", 3)
 		m.shots = 4000
 		m.hits = 1480
-		m.on_evac_success()
+		Events.evac_reached.emit()
 		_ui_phase = 2
 	elif _ui_phase == 2 and m.state == "evac" and m.result_t > 4.0:
 		_shot("ui_result")
@@ -190,8 +190,8 @@ func _hud_test() -> void:
 		m.run.debug_set(&"kills", 8730)
 		m.run.debug_set(&"parts", 38386.0)
 		m.run_time = 905.0
-		m.streak = 120
-		m.streak_t = 2.0
+		m.run.debug_set(&"streak", 120)
+		m.run.debug_set(&"streak_t", 2.0)
 		_hud_phase = 1
 		_hud_at = Time.get_ticks_msec()
 	elif _hud_phase == 1 and Time.get_ticks_msec() - _hud_at > 4500 and m.radio_t <= 0.5:
@@ -663,7 +663,7 @@ func _run_autotest(delta: float) -> void:
 	# EX-10: долгий тест живучести — --noevac --until=1200: вылет кончается эвакуацией на заданной секунде
 	for a in m._args:
 		if String(a).begins_with("--until=") and m.run_time >= float(String(a).substr(8)) and m.state == "playing":
-			m.on_evac_success()
+			Events.evac_reached.emit()
 			return
 	# EX-04 Б2: кадр со звеном бомбардировщиков рядом (--bombers --shots)
 	if m._args.has("--bombers") and is_instance_valid(m.player):
