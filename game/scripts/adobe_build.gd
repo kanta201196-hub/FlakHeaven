@@ -339,7 +339,7 @@ static func def_arc(variant: int) -> float:
 	return 0.85 + _vr(variant, 40) * 0.25
 
 
-static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator) -> void:
+static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator, water := {}) -> void:
 	var sink := SINK
 	var arc := def_arc(variant)
 	var line := PackedVector2Array()
@@ -347,7 +347,14 @@ static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator) 
 		var ang := PI - arc + 2.0 * arc * float(k) / 24.0
 		var r := V_EDGE * outline(variant, ang) * DEF_R + sin(k * 0.9 + variant) * 0.012
 		line.append(Vector2.from_angle(ang) * r)
-	var pits := [line[0], line[12], line[24]]
+	var pits := []
+	for k0: int in [0, 12, 24]:
+		# S9-08: позиция орудия на ручье — ближайшая сухая точка линии (к середине дуги); нет такой — позиции нет
+		for d in 7:
+			var k := k0 + (d if k0 < 12 else -d if k0 > 12 else ceili(d * 0.5) * (1 if d % 2 == 1 else -1))
+			if not _wet_box(water, line[k], Vector2(PIT_R, PIT_R), 0.0, 0.0):
+				pits.append(line[k])
+				break
 	for k in line.size() - 1:
 		var a := line[k]
 		var b := line[k + 1]
@@ -361,11 +368,17 @@ static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator) 
 				b = pc + (b - pc).normalized() * PIT_R if b.distance_to(pc) > 1e-4 else pc + (a - pc).normalized() * PIT_R
 		if a.distance_to(b) < 0.006 or _seg_near(a, b, pits, PIT_R * 0.9):
 			continue
+		if _wet_seg(water, a, b, 0.05):
+			continue   # S9-08: над ручьём окоп и бруствер прерываются (с запасом на окоп за бруствером)
 		var inward := -((a + b) * 0.5).normalized() * 0.022
 		_strip(st, a + inward, b + inward, 0.02, TRENCH, sink + 0.003)   # окоп за бруствером
+		if edge_log_on:
+			edge_log.append(["trench", a, b])
 		_bags(st, a, b, sink, rng)
 	for pc: Vector2 in pits:
 		_gun_pit(st, pc, pc.angle(), sink, rng)
+		if edge_log_on:
+			edge_log.append(["pit", pc])
 	# посты у выходов троп с остальных сторон
 	for p in village_paths(variant):
 		var pl: PackedVector2Array = p[0]
@@ -377,8 +390,12 @@ static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator) 
 			continue
 		var c := tip.normalized() * e * 1.08
 		var side := c.normalized().orthogonal() * 0.045
+		if _wet_box(water, c, Vector2(0.075, 0.03), c.angle() + PI * 0.5, 0.0):
+			continue   # S9-08: пост у тропы не на ручье
 		_post(st, c + side, c.angle(), sink, rng)
 		_post(st, c - side, c.angle(), sink, rng)
+		if edge_log_on:
+			edge_log.append(["post", c])
 
 
 const PIT_R := 0.062   # радиус позиции орудия с бруствером (кольцо мешков 0,046 + полмешка + зазор)
@@ -884,24 +901,6 @@ static func village(variant: int) -> ArrayMesh:
 			_t_ruin(st, c, h, yaw, rng.randf_range(0.025, 0.04), rng)
 		else:
 			_heap(st, c, h.x * 0.9, rng)
-	# 5) по краю: сады за дувалами с рядами деревьев и поля с межами — в секторах зелени, не на линии обороны
-	var gardens := rng.randi_range(9, 14)
-	for i in 120:
-		if gardens <= 0:
-			break
-		var ang := rng.randf() * TAU
-		if absf(angle_difference(ang, PI)) < def_arc(variant) + 0.3 or _sect(variant, ang) < 0.5:
-			continue
-		var c := Vector2.from_angle(ang) * V_EDGE * outline(variant, ang) * rng.randf_range(1.12, 1.4)
-		var h := Vector2(rng.randf_range(0.06, 0.11), rng.randf_range(0.05, 0.09))
-		var yaw := ang + rng.randf_range(-0.3, 0.3)
-		if not _place(c, h, yaw, lots, variant, 0.02, true):
-			continue
-		gardens -= 1
-		if rng.randf() < 0.55:
-			_orchard(st, c, h, yaw, rng)
-		else:
-			_field(st, c, h, yaw, rng)
 	# улицы — утоптанная полоса чуть над землёй внутри города (за краем их рисует пятно на рельефе: ground_mask)
 	for p in paths:
 		var pl: PackedVector2Array = p[0]
@@ -911,8 +910,17 @@ static func village(variant: int) -> ArrayMesh:
 			if a.length() > V_EDGE * outline(variant, a.angle()) * 1.02:
 				continue
 			_strip(st, a, b, float(p[1]), PATH, SINK + 0.0025)
-	_defence(st, variant, rng)
+	# S9-07/S9-08: окраина (сады, поля, линия обороны) — отдельной сеткой на каждый посёлок (village_edge):
+	# ручей долины-притока и река у каждого посёлка свои, а эта сетка общая для раскладки
 	var m := _scaled(st, V_UNIT)
+	# центры треугольников (старые единицы, x–z) — village_core вырезает по ним дворы на воде
+	var vs: PackedVector3Array = m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var cen := PackedVector2Array()
+	cen.resize(vs.size() / 3)
+	for ti in cen.size():
+		var q := (vs[ti * 3] + vs[ti * 3 + 1] + vs[ti * 3 + 2]) / (3.0 * V_UNIT)
+		cen[ti] = Vector2(q.x, q.z)
+	var edge := [lots.duplicate(), rng.state, cen]
 	print_verbose("AdobeBuild village%d: дворов %d, домов %d, треугольников %d" % [variant, stats["yards"], stats["houses"], m.surface_get_array_len(0) / 3])
 	_cmx.lock()
 	if _vcache.has(key):   # параллельно собрал другой поток — берём его сетку
@@ -920,8 +928,177 @@ static func village(variant: int) -> ArrayMesh:
 	else:
 		_vcache[key] = m
 		_vcache[key + "_stats"] = stats
+		_vcache[key + "_edge"] = edge
 	_cmx.unlock()
 	return m
+
+
+## S9-07/S9-08 (правка Kanta 23.10): кишлак на месте — у каждого посёлка свой ручей долины-притока (протока)
+## и своя река, а сетка застройки общая для раскладки. water — вода у посёлка в осях сетки, старые единицы
+## (Terrain3D.village_water): {"id" — ключ посёлка, "segs": [[a, b], …] — оси ручья, "w": полуширина его
+## охранной полосы, "river": Callable(u) -> запас до охранной зоны реки (< 0 — в ней)}.
+## Возвращает [застройка, окраина]: дворы и дома, задетые водой, вырезаны из общей сетки (village_core);
+## сады, поля и линия обороны собраны заново с учётом воды (village_edge). Последние посёлки — в кэше
+static var _icache := {}
+static var ignore_water := false   # стенд (visual_bench --nowater): кадр «до» S9-07/S9-08
+
+
+## Кишлак на месте уже собран (render3d собирает его заранее в фоне)
+static func has_at(variant: int, water: Dictionary) -> bool:
+	_cmx.lock()
+	var ok := _icache.has(_at_key(variant, {} if ignore_water else water))
+	_cmx.unlock()
+	return ok
+
+
+static func _at_key(variant: int, water: Dictionary) -> String:
+	return "%d@%s" % [variant, str(water.get("id", ""))]
+
+
+static func village_at(variant: int, water: Dictionary) -> Array:
+	if ignore_water:
+		water = {}
+	var key := _at_key(variant, water)
+	_cmx.lock()
+	var have: Array = _icache.get(key, [])
+	_cmx.unlock()
+	if not have.is_empty():
+		return have
+	var out := [village_core(variant, water), village_edge(variant, water)]
+	_cmx.lock()
+	if _icache.size() > 12:
+		_icache.clear()
+	_icache[key] = out
+	_cmx.unlock()
+	return out
+
+
+## S9-07: общая сетка застройки без дворов и домов, задетых водой посёлка (вырезаются треугольники с центром
+## в их участке: участки не пересекаются друг с другом и с улицами — _place). Сухо — сама общая сетка
+static func village_core(variant: int, water := {}) -> ArrayMesh:
+	var base := village(variant)
+	if water.is_empty():
+		return base
+	_cmx.lock()
+	var edge: Array = _vcache.get("village%d_edge" % variant, [[], 0, PackedVector2Array()])
+	_cmx.unlock()
+	var cut := []
+	for l in edge[0]:
+		if _wet_box(water, l[0], l[1], l[2], 0.004):
+			var hh: Vector2 = l[1] + Vector2.ONE * 0.004
+			cut.append([l[0], hh, l[2], hh.length_squared()])
+	if cut.is_empty():
+		return base
+	var arr := base.surface_get_arrays(0)
+	var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var cen: PackedVector2Array = edge[2]
+	var runs := PackedInt32Array()   # оставляемые отрезки вершин [начало, конец)
+	var start := 0
+	for ti in cen.size():
+		var q := cen[ti]
+		var hit := false
+		for l in cut:
+			var d: Vector2 = q - (l[0] as Vector2)
+			if d.length_squared() > float(l[3]):
+				continue
+			var lc := d.rotated(-float(l[2]))
+			if absf(lc.x) <= l[1].x and absf(lc.y) <= l[1].y:
+				hit = true
+				break
+		if hit:
+			if ti * 3 > start:
+				runs.append_array([start, ti * 3])
+			start = ti * 3 + 3
+	if vs.size() > start:
+		runs.append_array([start, vs.size()])
+	for ai in arr.size():
+		var a = arr[ai]
+		if a == null or not (a is PackedVector3Array or a is PackedColorArray or a is PackedVector2Array or a is PackedFloat32Array):
+			continue
+		var per := roundi(float(a.size()) / vs.size())   # тангенсы — по 4 числа на вершину
+		var b = a.slice(0, 0)
+		for ri in runs.size() / 2:
+			b.append_array(a.slice(runs[ri * 2] * per, runs[ri * 2 + 1] * per))
+		arr[ai] = b
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m
+
+
+## S9-07/S9-08: окраина кишлака — сады за дувалами, поля с межами, линия обороны. Сады и поля на воду
+## не встают, окоп и бруствер прерываются над ручьём (как проход для тропы), позиция орудия сдвигается
+## по линии на сухое, пост у тропы на воде не ставится. Без воды (water пуст) — прежняя раскладка:
+## генератор продолжает с того же состояния, что после застройки (village)
+static var edge_log_on := false   # проверка S9-07/S9-08 (tools/village_water): что поставлено на окраине
+static var edge_log := []         # ["garden", c, h, yaw] | ["trench", a, b] | ["pit", c] | ["post", c], старые единицы
+
+
+static func village_edge(variant: int, water := {}) -> ArrayMesh:
+	var key := "village%d" % variant
+	village(variant)
+	_cmx.lock()
+	var edge: Array = _vcache.get(key + "_edge", [])
+	var dry: ArrayMesh = _vcache.get(key + "_edge_dry") if water.is_empty() else null
+	_cmx.unlock()
+	if dry != null and not edge_log_on:
+		return dry
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7919 * (variant + 1)
+	rng.state = int(edge[1])
+	var lots: Array = (edge[0] as Array).duplicate()
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# 5) по краю: сады за дувалами с рядами деревьев и поля с межами — в секторах зелени, не на линии обороны
+	var gardens := rng.randi_range(9, 14)
+	for i in (120 if water.is_empty() else 240):   # S9-07: часть мест у ручья отпадает — попыток вдвое больше
+		if gardens <= 0:
+			break
+		var ang := rng.randf() * TAU
+		if absf(angle_difference(ang, PI)) < def_arc(variant) + 0.3 or _sect(variant, ang) < 0.5:
+			continue
+		var c := Vector2.from_angle(ang) * V_EDGE * outline(variant, ang) * rng.randf_range(1.12, 1.4)
+		var h := Vector2(rng.randf_range(0.06, 0.11), rng.randf_range(0.05, 0.09))
+		var yaw := ang + rng.randf_range(-0.3, 0.3)
+		if _wet_box(water, c, h, yaw, 0.01) or not _place(c, h, yaw, lots, variant, 0.02, true):
+			continue   # S9-07: не на ручье и не в охранной зоне реки
+		gardens -= 1
+		if edge_log_on:
+			edge_log.append(["garden", c, h, yaw])
+		if rng.randf() < 0.55:
+			_orchard(st, c, h, yaw, rng)
+		else:
+			_field(st, c, h, yaw, rng)
+	_defence(st, variant, rng, water)
+	var m := _scaled(st, V_UNIT)
+	if water.is_empty():
+		_cmx.lock()
+		_vcache[key + "_edge_dry"] = m
+		_cmx.unlock()
+	return m
+
+
+## S9-07/S9-08: повёрнутый прямоугольник (центр c, полуразмер h, старые единицы) с запасом m задевает воду
+static func _wet_box(water: Dictionary, c: Vector2, h: Vector2, yaw: float, m: float) -> bool:
+	if water.is_empty():
+		return false
+	var e := h + Vector2.ONE * (float(water["w"]) + m)
+	for s in water["segs"]:
+		if _seg_box(((s[0] as Vector2) - c).rotated(-yaw), ((s[1] as Vector2) - c).rotated(-yaw), e):
+			return true
+	var rv: Callable = water.get("river", Callable())
+	if rv.is_valid():
+		var ax := Vector2.from_angle(yaw)
+		var az := ax.orthogonal()
+		for cx: float in [-1.0, 0.0, 1.0]:
+			for cz: float in [-1.0, 0.0, 1.0]:
+				if float(rv.call(c + ax * h.x * cx + az * h.y * cz)) < m:
+					return true
+	return false
+
+
+## S9-08: отрезок a–b (ряд мешков, окоп) с запасом m задевает воду
+static func _wet_seg(water: Dictionary, a: Vector2, b: Vector2, m: float) -> bool:
+	return _wet_box(water, (a + b) * 0.5, Vector2(a.distance_to(b) * 0.5, 0.0), (b - a).angle(), m)
 
 
 ## Высота оси главной улицы над x (в осях посёлка) и её направление — как в _build_paths
