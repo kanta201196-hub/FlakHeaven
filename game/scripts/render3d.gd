@@ -1620,6 +1620,7 @@ const MSL_TRAIL := {
 	"manpads": [0.7, 2.2, 6.5, 0.6, 12.0, Color(0.97, 0.97, 0.96)],
 	"aam": [0.8, 5.0, 13.0, 0.95, 16.0, Color(0.84, 0.83, 0.82)],
 	"sam": [0.92, 9.0, 30.0, 1.9, 16.0, Color(0.6, 0.59, 0.57)],
+	"hnar": [0.7, 2.5, 7.0, 0.55, 10.0, Color(0.9, 0.89, 0.86)],   # S9-25: НАР вертолёта
 }
 
 func _sync_missiles(m: Main) -> void:
@@ -2339,6 +2340,49 @@ func _gz_add(a: Vector2, b: Vector2, r: float, alpha: float, kind: int, col: Col
 	_gz_c.append(Vector4(col.r, col.g, col.b, w))
 
 
+## S9-26: пунктир от самолёта вниз к метке прицела — видно, что метка на земле, далеко под самолётом
+## (штрихи в метрах мира: к земле мельчают с перспективой)
+var _drop_mesh: ImmediateMesh
+var _drop_mi: MeshInstance3D
+
+
+func _drop_lines(lines: Array) -> void:
+	if _drop_mi == null:
+		_drop_mesh = ImmediateMesh.new()
+		_drop_mi = MeshInstance3D.new()
+		_drop_mi.mesh = _drop_mesh
+		_drop_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.vertex_color_use_as_albedo = true
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_drop_mi.material_override = mat
+		add_child(_drop_mi)
+	_drop_mesh.clear_surfaces()
+	if lines.is_empty():
+		return
+	_drop_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for ln in lines:
+		var a: Vector3 = ln[0]
+		var b: Vector3 = ln[1]
+		var col: Color = ln[2]
+		var L := a.distance_to(b)
+		var dir := (b - a) / maxf(L, 0.01)
+		var dash := 14.0
+		var t := 0.0
+		while t < L:
+			var p0 := a + dir * t
+			var p1 := a + dir * minf(t + dash * 0.55, L)
+			var side := dir.cross(cam.global_position - p0).normalized() * 2.2
+			var c := Color(col, col.a * (0.35 + 0.5 * t / L))   # к земле ярче
+			for v in [p0 - side, p0 + side, p1 + side, p0 - side, p1 + side, p1 - side]:
+				_drop_mesh.surface_set_color(c)
+				_drop_mesh.surface_add_vertex(v)
+			t += dash
+	_drop_mesh.surface_end()
+
+
 func _sync_ground_zones(m: Main) -> void:
 	if _ground_mat == null:
 		return
@@ -2346,6 +2390,7 @@ func _sync_ground_zones(m: Main) -> void:
 	_gz_b.clear()
 	_gz_c.clear()
 	var pl := m.player
+	var drops: Array = []
 	if is_instance_valid(pl) and pl.hp > 0.0:
 		for g in pl.groups:
 			var h: Hardpoint = g
@@ -2354,6 +2399,9 @@ func _sync_ground_zones(m: Main) -> void:
 			var ready := h.cd <= 0.0
 			for z in h.aim_zones(pl):
 				_gz_add(z[0], z[1], z[2], 1.0 if ready else 0.6, 0 if ready else 1, GZ_AIM if ready else GZ_WAIT, true)
+				var zc: Vector2 = ((z[0] as Vector2) + (z[1] as Vector2)) * 0.5
+				drops.append([Vector3(pl.global_position.x, 0.0, pl.global_position.y), ground_under(zc), Color(GZ_AIM if ready else GZ_WAIT, 0.8)])
+	_drop_lines(drops)
 	var pr := m.projectiles
 	if pr != null:
 		var rk := pr.aoe_r_k()

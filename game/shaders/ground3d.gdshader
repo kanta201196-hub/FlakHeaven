@@ -519,19 +519,27 @@ void fragment() {
 				alb = mix(alb, alb * vec3(0.2, 0.18, 0.16), edge * 0.8 * a);
 				gz_e += zc * (ember * 1.1 + edge * 0.1) * a;
 			} else {
-				// кольцо постоянной толщины на экране (~3 px) + слабая заливка; у прицела ещё 4 засечки и точка
-				float ring = 1.0 - smoothstep(fw * 1.1, fw * 2.2, abs(d - r));
-				float fill = (1.0 - smoothstep(r - fw * 2.0, r, d)) * 0.16;
-				float m = ring + fill;
+				// S9-26 (Kanta: «прицел всё ещё как будто в воздухе»): метка нарисована краской на земле — толщина
+				// кольца в метрах мира (сжимается на склонах и с перспективой), цвет — в альбедо под светом и тенями
+				// рельефа; свечение слабое, только чтобы метку было видно в тени. Было: кольцо постоянной толщины
+				// на экране и яркое свечение — читалось как наклейка интерфейса над землёй.
+				float rw = max(r * 0.022, fw * 1.2);
+				float ring = 1.0 - smoothstep(rw * 0.5, rw * 0.5 + fw * 1.2, abs(d - r));
+				float fill = (1.0 - smoothstep(r - fw * 2.0, r, d)) * 0.22;
+				float m = ring;
 				if (zb.z < 1.5) {
 					vec2 u = dv / max(d, 1e-3);
-					float tick = step(0.985, max(abs(u.x), abs(u.y))) * step(r * 0.72, d) * step(d, r);
-					float dot_c = 1.0 - smoothstep(fw * 2.5, fw * 4.0, d);
+					float tick = step(0.993, max(abs(u.x), abs(u.y))) * step(r * 0.8, d) * step(d, r);
+					float dot_c = 1.0 - smoothstep(rw * 0.9, rw * 0.9 + fw * 1.5, d);
 					m = max(m, max(tick * 0.9, dot_c));
 				}
 				m = clamp(m, 0.0, 1.0) * a;
-				alb = mix(alb, zc * 0.6, m * 0.55);
-				gz_e += zc * m * 0.9;
+				// заливка — притенение земли внутри зоны (как пятно), кольцо и засечки — краска цвета метки
+				alb *= 1.0 - fill * a;
+				// краска пропускает рисунок земли: камни и трещины видны сквозь метку
+				float lum = dot(alb, vec3(0.333));
+				alb = mix(alb, zc * (0.45 + lum * 1.6), m * 0.85);
+				gz_e += zc * m * 0.18;
 			}
 		}
 	}

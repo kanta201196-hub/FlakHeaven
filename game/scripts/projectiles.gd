@@ -86,9 +86,13 @@ func spawn_bomb(pos: Vector2, fuse: float, dmg: float, radius: float, src := "б
 ## aam — ракета самолёта (ракетоносец, экраноплан, асы; как была), sam — ЗРК (позиция ПВО, ЗУР кораблей;
 ## тяжёлая, дальняя, медленный разгон, осколки при подрыве рядом, ловушки уводят реже).
 ## Название вида — источник урона в отчёте после вылета и в логе (taken_kind)
-const MSL_NAMES := {"manpads": "ПЗРК", "aam": "ракеты самолётов", "sam": "ЗРК"}
-const MSL_SIZE := {"manpads": 0.6, "aam": 1.0, "sam": 1.5}   # длина 3D-модели и ореола × ESHOT_LEN
-const MSL_V0 := {"manpads": 0.5, "aam": 0.6, "sam": 0.3}     # скорость схода с направляющей (доля скорости)
+## S9-25 (Kanta 23.10): hnar — НАР вертолёта «Сарыч»: неуправляемая, летит прямо, ловушки и помехи её не уводят,
+## в конце полёта рвётся; «Нырок» проводит её над самолётом, как пули
+const MSL_NAMES := {"manpads": "ПЗРК", "aam": "ракеты самолётов", "sam": "ЗРК", "hnar": "НАР вертолётов"}
+const MSL_SIZE := {"manpads": 0.6, "aam": 1.0, "sam": 1.5, "hnar": 0.5}   # длина 3D-модели и ореола × ESHOT_LEN
+const MSL_V0 := {"manpads": 0.5, "aam": 0.6, "sam": 0.3, "hnar": 0.55}     # скорость схода с направляющей (доля скорости)
+## Урон — как у прежнего залпа «крупным калибром» (ebullet_dmg ×2); скорость — от 310 до 560 за полсекунды
+const HNAR := {"speed": 560.0, "acc": 500.0, "turn": 0.0, "life": 2.2, "decoy": 0.0, "jam": 0.0}
 ## Виды пуль (кто стреляет — Enemy.gun_kind()): «» — прочие (как было: ebullet_*), big — крупный калибр (как было)
 const GUN_NAMES := {"pickup": "пулемёт пикапа", "apc": "пулемёт броневика", "ifv": "пушка БМП", "zsu": "ЗСУ",
 	"fighter": "пушки истребителей", "ace": "пушки асов", "big": "крупный калибр", "": "пули"}
@@ -98,6 +102,8 @@ const GUN_PITCH := {"pickup": 1.2, "apc": 1.08, "ifv": 0.78, "zsu": 0.92, "fight
 ## Параметр ракеты вида kind: dmg, speed, acc, turn, life, decoy, jam, flak (+ lock у ПЗРК и ЗРК)
 static func msl_p(kind: String, key: String) -> float:
 	match kind:
+		"hnar":
+			return Tuning.g("ebullet_dmg") * 2.0 if key == "dmg" else float(HNAR.get(key, 0.0))
 		"manpads":
 			return Tuning.g("msl_mp_" + key)
 		"sam":
@@ -193,7 +199,7 @@ func intercept_missile_at(from: Vector2, r: float, decoy := false) -> Variant:
 		best = -1
 		var best_d := r
 		for i in missiles.size():
-			if missiles[i].has("decoy") or (decoy and missiles[i].has("nodecoy")):
+			if missiles[i].has("decoy") or (decoy and (missiles[i].has("nodecoy") or missiles[i].get("k", "") == "hnar")):
 				continue
 			var d: float = from.distance_to(missiles[i]["p"])
 			if d < best_d:
@@ -649,7 +655,7 @@ func _update_missiles(delta: float) -> void:
 		var v: Vector2 = m["v"]
 		var p: Vector2 = m["p"]
 		# «Ласка»: помехи — ракета рядом с ведущим может потерять захват (проверка один раз); S8: × по виду ракеты
-		if alive and jam > 0.0 and not m["lost"] and not m.get("jam", false) and p.distance_to(pl.global_position) < 350.0:
+		if alive and jam > 0.0 and kind != "hnar" and not m["lost"] and not m.get("jam", false) and p.distance_to(pl.global_position) < 350.0:
 			m["jam"] = true
 			if randf() < jam * msl_p(kind, "jam"):
 				m["lost"] = true
@@ -690,22 +696,25 @@ func _update_missiles(delta: float) -> void:
 			continue
 		if alive:
 			var dm := p.distance_to(pl.global_position)
-			var hit: bool = not m["lost"] and dm < pl.radius + 6.0
+			var hit: bool = not m["lost"] and dm < pl.radius + (12.0 if kind == "hnar" else 6.0)
+			if hit and kind == "hnar" and pl.dodges("пули", who):
+				hit = false
+				Main.I.tele.add("dive_dodged")
 			if hit and pl.is_invulnerable():
 				_raw_hit(pl, m, msl_p(kind, "dmg"), wk)
 			if hit and not pl.is_invulnerable():
 				_hit_player(pl, msl_p(kind, "dmg"), "ракеты", who, wk)
 				Main.I.stats_add_counter("missile_hits", 1)
 				done = true
-				boom = kind == "sam"
+				boom = kind == "sam" or kind == "hnar"
 			elif kind == "sam" and not m["lost"] and not m.has("raw") and _sam_frag(m, dm, pl, done, wk, who):
 				done = true   # ЗРК: подрыв рядом (неконтактный взрыватель) — осколки
 				boom = true
 			else:
 				_check_near_miss(m, dm, pl.radius + 50.0, pl, "ракета", pl.radius + 6.0)
 		if done:
-			if boom:
-				Main.I.fx.explosion(p, 13.0, true, true, "flak")
+			if boom or kind == "hnar":
+				Main.I.fx.explosion(p, 10.0 if kind == "hnar" else 13.0, true, true, "flak")
 			else:
 				Main.I.fx.hit_spark(p, Color(1, 0.5, 0.2))
 			missiles.remove_at(i)

@@ -292,6 +292,14 @@ func _hold(p: Dictionary) -> void:
 		m.player.global_position = pos
 		m.player.heading = -PI / 4.0
 		m.camera.global_position = pos
+	if p.get("aim", false):
+		for g in m.player.groups:
+			var h: Hardpoint = g
+			if h.weapon == "bombs" or (h.is_empty() and not h.builtin and not m.player.groups.any(func(x): return (x as Hardpoint).weapon == "bombs")):
+				h.weapon = "bombs"
+				h.level = maxi(h.level, 3)
+				h.trigger = "button"
+		Input.action_press("fire_hardpoint")
 	if p.get("crash", false) and m.player.wingmen.is_empty():
 		m.player.add_wingman()
 	if p.get("wingmen", false) and m.player.wingmen.is_empty():   # Т-8: звено из трёх типов рядом с игроком
@@ -545,6 +553,10 @@ func _make_points() -> Array:
 		pts = []
 		pts.append({"name": "eweap", "pos": empty, "eweap": true, "shot_t": 1.5, "zoom": 1.0})
 		pts.append({"name": "eweap_close", "pos": empty, "eweap": true, "shot_t": 1.5, "zoom": 2.0})
+	if OS.get_cmdline_user_args().has("--bombaim"):   # S9-26: прицел бомб «Кита» по кнопке — должен лежать на земле
+		pts = []
+		pts.append({"name": "bomb_aim", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "aim": true, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "bomb_aim_hill", "pos": empty + Vector2(-900, 700), "cls": ["bomber", 1], "aim": true, "wait": 1.5, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--carpetskill"):   # BM-01: умение «Огненный ковёр» — метки бомб
 		pts = []
 		pts.append({"name": "carpet_skill", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "skill_carpet": 2.5, "wait": 99.0, "zoom": 1.6})
