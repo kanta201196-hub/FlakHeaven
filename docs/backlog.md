@@ -281,11 +281,11 @@ Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standar
 
 | ID | Task | Thread / owner | Status |
 | --- | --- | --- | --- |
-| CR-01 | Clicking "Pin"/"Ban" picks the card: search buttons from the end of the list (`hud.gd:98`, `hud_screens.gd:103,147`) + an autotest check that clicks | "Бой: правки по 3.5-s10" (cycle 3.5-s10, Kanta 2026-10-23) | to do |
-| CR-02 | Empty card offer after pick, course, ban, reroll — screen with no exit: one `refill_offers` with the "repair and parts" branch (`main.gd:425,455,505`) | "Бой: правки по 3.5-s10" (cycle 3.5-s10, Kanta 2026-10-23) | to do |
+| CR-01 | Clicking "Pin"/"Ban" picks the card: search buttons from the end of the list (`hud.gd:98`, `hud_screens.gd:103,147`) + an autotest check that clicks | "Бой: правки по 3.5-s10" (cycle 3.5-s10, Kanta 2026-10-23) | to verify in the next build (PR #341) |
+| CR-02 | Empty card offer after pick, course, ban, reroll — screen with no exit: one `refill_offers` with the "repair and parts" branch (`main.gd:425,455,505`) | "Бой: правки по 3.5-s10" (cycle 3.5-s10, Kanta 2026-10-23) | to verify in the next build (PR #341) |
 | CR-03 | Profile can be lost: check `rename`, look for `.tmp`/`.bak`, never overwrite a broken file (part of CS-02) | — | idea |
 | CR-04 | Sortie row uploaded without player consent (demo too) — consent per DM-07 before the demo | "Демо для Next Fest" | idea |
-| CR-05 | Gamepad: 0.3 s input delay on level-up and specialization screens (small, now — "Бой: правки по 3.5-s10", cycle 3.5-s10, Kanta 2026-10-23); focus in menu and screens (CS-11c) | delay: "Бой: правки по 3.5-s10"; focus: not assigned | delay: to do; focus: idea |
+| CR-05 | Gamepad: 0.3 s input delay on level-up and specialization screens (small, now — "Бой: правки по 3.5-s10", cycle 3.5-s10, Kanta 2026-10-23); focus in menu and screens (CS-11c) | delay: "Бой: правки по 3.5-s10"; focus: not assigned | delay: to verify in the next build (PR #341); focus: idea |
 | CR-06 | Report receiver: text starting with `= + - @` gets a `'` prefix (`tools/reports/apps_script.gs`), then Kanta updates the script in the sheet | Kanta (together with RP-4) | idea |
 | CS-01 | GDScript type warnings: enable, clean up, raise to errors | — | idea |
 | CS-02 | `SaveIO`: atomic write, `.bak`, version, test folder override; `custom_user_dir_name="FlakHeaven"` before any rename | — | idea |
