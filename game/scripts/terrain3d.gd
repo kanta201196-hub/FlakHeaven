@@ -538,6 +538,44 @@ func out_of_river_guard(p: Vector2, margin := 0.0) -> Vector2:
 	return p
 
 
+## S9-07/S9-08 (правка Kanta 23.10): охранная полоса ручья посёлка (протоки долины-притока) — полуширина
+## от оси, px мира. Вода и мокрый берег ручья рисуются полем stream_field × STREAM_K тем же кодом, что у реки,
+## и доходят до охранной зоны реки (RIVER_GUARD) при ~RIVER_GUARD / STREAM_K ≈ 22 px. river_field ручьёв
+## не видит — расстановка у посёлков проверяет их отдельно (in_water, village_water)
+const STREAM_GUARD := RIVER_GUARD / STREAM_K
+
+
+## S9-07/S9-08: расстояние до оси ближайшего ручья посёлка, px (без отсечки STREAM_REACH); ручьёв рядом нет — INF
+func stream_dist(p: Vector2, ctx := {}) -> float:
+	var best := INF
+	for s in _sides(p.x, p.y, ctx):
+		if float(s[2]) < 0.0:
+			best = minf(best, _seg_dist(p, s[0], s[1]))
+	return best
+
+
+## S9-07/S9-08: точка p (с запасом margin) в охранной зоне реки или ручья посёлка — сюда ничего не ставим.
+## Для расстановки, не для езды: ручей пересекает дорогу под мостом (wet() его не учитывает)
+func in_water(p: Vector2, margin := 0.0, ctx := {}) -> bool:
+	return in_river_guard(p, margin) or stream_dist(p, ctx) < STREAM_GUARD + margin
+
+
+## S9-07/S9-08: вода у посёлка o в осях его сетки (старые единицы AdobeBuild) — для AdobeBuild.village_edge:
+## оси ручьёв в радиусе окраины, полуширина их охранной полосы и запас до охранной зоны реки
+func village_water(o: Dictionary) -> Dictionary:
+	var c: Vector2 = o["pos"]
+	var rot := float(o["rot"])
+	var k := float(o["size"]) * AdobeBuild.V_UNIT   # px мира в одной старой единице
+	var reach := k * (AdobeBuild.V_EDGE * 1.2 * 1.5 + 0.2) + STREAM_GUARD
+	var segs := []
+	for s in _sides(c.x, c.y):
+		if float(s[2]) < 0.0 and _seg_dist(c, s[0], s[1]) < reach:
+			segs.append([((s[0] as Vector2) - c).rotated(-rot) / k, ((s[1] as Vector2) - c).rotated(-rot) / k])
+	var river := func(u: Vector2) -> float: return river_guard_dist(c + (u * k).rotated(rot)) / k
+	# id — ключ кэша AdobeBuild.village_at: место, биом (своя река) и ручьи
+	return {"id": "%s:%d,%d:%d" % [str(Biome.id), roundi(c.x), roundi(c.y), hash(segs)], "segs": segs, "w": STREAM_GUARD / k, "river": river}
+
+
 func _v_raw(x: float, z: float) -> float:
 	# сдвиг умеренный: сильный «складывает» поле и рождает замкнутые петли русла — ямы без стока
 	var wx := x + _warp.get_noise_2d(x, z) * 380.0
@@ -892,7 +930,7 @@ func _scene_put(items: Array, k: String, p: Vector2, yaw: float, near: Array, ta
 	if r <= 0.0:
 		r = w * 0.55
 	var mark := k in ["scorch", "crater"]   # пятна могут лежать под техникой
-	if in_river_guard(p, r):   # M-35: ни техники, ни гари, ни воронок в охранной зоне реки
+	if in_water(p, r):   # M-35, S9-08: ни техники, ни гари, ни воронок в охранной зоне реки и ручья посёлка
 		return false
 	if absf(valley(p.x, p.y)) > D_FAN:
 		return false

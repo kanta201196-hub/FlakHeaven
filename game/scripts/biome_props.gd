@@ -406,7 +406,8 @@ func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2,
 
 func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, w: float, ctx: Dictionary) -> void:
 	# M-35: ни один предмет биома (дерево, куст, валун, юрта, мешки) не залезает кроной/краем в охранную зону реки
-	if _t.river_guard_dist(p, w * 0.45) < 0.0:
+	# S9-07: и в охранную полосу ручья посёлка (протоки) — river_field её не видит
+	if _t.river_guard_dist(p, w * 0.45) < 0.0 or _t.stream_dist(p, ctx) < Terrain3D.STREAM_GUARD + w * 0.45:
 		rng.randf()   # как при постановке: остальная клетка расставляется так же, как до зоны
 		return
 	var s := _t.surface(p.x, p.y, ctx)

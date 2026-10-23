@@ -90,10 +90,17 @@ var _tilt_on := false
 var _prewarm_id := -1   # задача AdobeBuild.prewarm: забрать при выходе (пул не держит её и не обрывает)
 
 
+## S9-07/S9-08: кишлак на месте (AdobeBuild.village_at, 20–40 мс) — в фоне, за клетку до появления: клетка → задача
+var _vtasks := {}
+
+
 func _exit_tree() -> void:
 	if _prewarm_id >= 0:
 		WorkerThreadPool.wait_for_task_completion(_prewarm_id)
 		_prewarm_id = -1
+	for key in _vtasks:
+		WorkerThreadPool.wait_for_task_completion(_vtasks[key])
+	_vtasks.clear()
 
 
 func _ready() -> void:
@@ -1965,6 +1972,27 @@ const OBJ_RELIEF := {
 }
 
 
+## S9-07/S9-08: кишлаки вокруг области объектов собираем на месте в фоне (вода посёлка — в главном потоке)
+func _prefetch_villages(bg: Background, area: Rect2) -> void:
+	for key in _vtasks.keys():
+		if WorkerThreadPool.is_task_completed(_vtasks[key]):
+			WorkerThreadPool.wait_for_task_completion(_vtasks[key])
+			_vtasks.erase(key)
+	var CH := Background.CHUNK
+	for cx in range(int(floorf(area.position.x / CH)), int(floorf(area.end.x / CH)) + 1):
+		for cy in range(int(floorf(area.position.y / CH)), int(floorf(area.end.y / CH)) + 1):
+			var key := Vector2i(cx, cy)
+			if _objs.has(key) or _vtasks.has(key):
+				continue
+			var o := bg.chunk_object(cx, cy)
+			if o.is_empty() or o["name"] != "o_village":
+				continue
+			var vr: int = o.get("var", absi(hash(key)) % 4)
+			var water := terrain.village_water(o)
+			if not AdobeBuild.has_at(vr, water):
+				_vtasks[key] = WorkerThreadPool.add_task(AdobeBuild.village_at.bind(vr, water), false, "village_at")
+
+
 func _sync_objects(c2: Vector2, h: float) -> void:
 	var bg: Background = Main.I.background
 	if bg == null or not bg.biome_ok:
@@ -1973,6 +2001,7 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 	var view := Rect2(c2 - half, half * 2.0)
 	var seen := {}
 	var CH := Background.CHUNK
+	_prefetch_villages(bg, view.grow(CH))
 	for cx in range(int(floorf(view.position.x / CH)), int(floorf(view.end.x / CH)) + 1):
 		for cy in range(int(floorf(view.position.y / CH)), int(floorf(view.end.y / CH)) + 1):
 			var key := Vector2i(cx, cy)
@@ -1994,7 +2023,17 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				var vr: int = o.get("var", absi(hash(key)) % 4)
 				match o["name"]:
 					"o_fort": mi.mesh = AdobeBuild.fort()
-					"o_village": mi.mesh = AdobeBuild.village(vr)
+					"o_village":
+						# S9-07/S9-08: застройка без дворов на воде, сады, поля и линия обороны — по ручью и реке посёлка
+						if _vtasks.has(key):
+							WorkerThreadPool.wait_for_task_completion(_vtasks[key])
+							_vtasks.erase(key)
+						var vm := AdobeBuild.village_at(vr, terrain.village_water(o))
+						mi.mesh = vm[0]
+						var em := MeshInstance3D.new()
+						em.mesh = vm[1]
+						em.material_override = AdobeBuild.material()
+						mi.add_child(em)
 					_: mi.mesh = AdobeBuild.oasis(vr)
 				mi.material_override = AdobeBuild.material()
 				mi.position = Vector3(o["pos"].x, gy - sz * 0.01, o["pos"].y)
