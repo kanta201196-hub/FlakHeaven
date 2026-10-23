@@ -36,7 +36,14 @@ var trucks_killed := 0
 var trucks_escaped := 0
 var smoke_t := 0.0
 var smoke_c := Vector2.INF
-var _smoke_used := false
+## Решение Kanta 23.10 (вариант 1): дым по угрозе — игрок ближе SMOKE_THREAT_R к грузовику или по грузовику попали;
+## до SMOKE_MAX раз за активность, между завесами SMOKE_CD с
+const SMOKE_THREAT_R := 500.0
+const SMOKE_MAX := 2
+const SMOKE_CD := 20.0
+var _smoke_n := 0
+var _smoke_cd := 0.0
+var _truck_hp := -1.0
 var on_road := false              # маршрут нашёлся по дороге (иначе — прямая по дну долины)
 var river_sign := 0.0             # +1: полоса со знаком «+» уходит от реки, −1 — наоборот; 0 — реку не учитываем
 var _tr: Terrain3D
@@ -602,13 +609,19 @@ func _process(delta: float) -> void:
 			_heli_t -= delta
 			if _heli_t <= 0.0 and not ended:
 				_call_helis(p)
-		# БМП ставит дым над серединой колонны один раз за активность
-		if not _smoke_used:
+		# БМП ставит дым над серединой колонны по угрозе грузовикам (_smoke_threat)
+		_smoke_cd = maxf(_smoke_cd - delta, 0.0)
+		var threat := _smoke_threat(p)
+		if threat and _smoke_n < SMOKE_MAX and _smoke_cd <= 0.0 and smoke_t <= 0.0:
 			for v in alive():
 				if (v as ConvoyVehicle).role == "ifv":
-					_smoke_used = true
+					_smoke_n += 1
+					_smoke_cd = SMOKE_CD
 					smoke_t = SMOKE_TIME
+					smoke_c = Vector2.INF
 					Main.I.sfx.play("aa_intercept", -8.0, 0.6)
+					if OS.get_cmdline_user_args().has("--autotest"):
+						print("AUTOTEST: convoy smoke %d at %.0f" % [_smoke_n, _t])
 					break
 	if smoke_t > 0.0:
 		smoke_t -= delta
@@ -638,6 +651,23 @@ func _process(delta: float) -> void:
 					print("AUTOTEST: convoy WET ", c.role)
 		print("AUTOTEST: convoy t%d alarm=%s %s" % [int(_t), alarm, " ".join(row)])
 	queue_redraw()
+
+
+## Угроза грузовикам: игрок ближе SMOKE_THREAT_R к живому грузовику или грузовики потеряли прочность
+## с прошлой проверки (попадание)
+func _smoke_threat(p: Node2D) -> bool:
+	var near := false
+	var hp := 0.0
+	for v in alive():
+		var c := v as ConvoyVehicle
+		if not c.is_truck():
+			continue
+		hp += c.hp
+		if c.global_position.distance_to(p.global_position) < SMOKE_THREAT_R:
+			near = true
+	var hit := _truck_hp >= 0.0 and hp < _truck_hp - 0.01
+	_truck_hp = hp
+	return near or hit
 
 
 ## Тест 3.5-s8: в 3D дымовая завеса — объёмные клубы у земли (Boom3D.smoke_screen): плоские пятна на слое боя
