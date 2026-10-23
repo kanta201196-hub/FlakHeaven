@@ -10,6 +10,16 @@ const SCHEMES := ["по направлению (WASD / стик)", "влево /
 static var _font: Font
 
 var ctrl: Control
+## Top banner (`Events.banner`) and seconds of real time it stays on screen.
+var banner := ""
+var banner_t := 0.0
+## Radio panel (`Events.radio`): sender, text, real seconds left, enemy chatter (red frame).
+var radio_from := ""
+var radio_text := ""
+var radio_t := 0.0
+var radio_enemy := false
+var _radio_at := 0
+var _autotest := false
 var _dmg_flash := 0.0
 var _buttons: Array = [] # [Rect2, action]
 
@@ -78,6 +88,42 @@ func _ready() -> void:
 	_codex_ui = HudCodex.new(ctrl, _buttons)
 	_hangar_ui = HudHangar.new(ctrl, _buttons)
 	_campaign_ui = HudCampaign.new(ctrl, _buttons)
+	_autotest = OS.get_cmdline_user_args().has("--autotest")
+	Events.banner.connect(_on_banner)
+	Events.radio.connect(_on_radio)
+
+
+## Clears the banner and radio panel (new sortie).
+func clear_messages() -> void:
+	banner = ""
+	banner_t = 0.0
+	radio_t = 0.0
+
+
+## Seconds since the current radio message arrived (panel slide-in and flash).
+func radio_age() -> float:
+	return (Time.get_ticks_msec() - _radio_at) / 1000.0
+
+
+## `Events.banner`: shows `text` for `dur` real seconds; the autotest log gets a BANNER line.
+func _on_banner(text: String, dur: float) -> void:
+	if _autotest:
+		print("BANNER %.0f: %s" % [Main.I.run_time, text])
+	banner = text
+	banner_t = dur
+
+
+## `Events.radio`: shows the message (longer text stays longer), first-time hint and sound.
+func _on_radio(from: String, text: String, enemy: bool) -> void:
+	if _autotest:
+		print("RADIO %.0f %s: %s" % [Main.I.run_time, from, text])
+	radio_from = from
+	radio_text = text
+	radio_enemy = enemy
+	radio_t = 3.5 + text.length() * 0.03
+	_radio_at = Time.get_ticks_msec()
+	Hints.show("radio", "Справа внизу — радиоэфир: ведомые отвечают на приказы, штаб предупреждает о задании. Красная рамка — перехват вражеского эфира, жди аса или босса.", 8.0, 2)
+	Main.I.sfx.play("radio", -18.0, 2.2)
 
 
 func flash_damage() -> void:
@@ -86,6 +132,9 @@ func flash_damage() -> void:
 
 func _process(delta: float) -> void:
 	_dmg_flash = maxf(0.0, _dmg_flash - delta)
+	var real := delta / maxf(Engine.time_scale, 0.01)   # messages count real time (slow-mo, hit-stop)
+	banner_t = maxf(0.0, banner_t - real)
+	radio_t = maxf(0.0, radio_t - real)
 	ctrl.queue_redraw()
 
 

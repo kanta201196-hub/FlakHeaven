@@ -482,7 +482,7 @@ func _raise_alarm() -> void:
 		print("AUTOTEST: convoy alarm")
 	if patrol:
 		return
-	Main.I.show_banner(("Караван обнаружил вас! Суда уходят в гавань — %d с" if _sea else "Колонна обнаружила вас! Грузовики уходят к укрытию — %d с") % int(LIMIT), 3.0)
+	Events.banner.emit(("Караван обнаружил вас! Суда уходят в гавань — %d с" if _sea else "Колонна обнаружила вас! Грузовики уходят к укрытию — %d с") % int(LIMIT), 3.0)
 	Main.I.sfx.play("aa_alert", -2.0, 0.8)
 
 
@@ -498,7 +498,7 @@ func _call_helis(p: Player) -> void:
 		var h := Helicopter.new()
 		sp._place(h, p, ang + (i - (n - 1) * 0.5) * 0.5, t)
 		h.heading = (p.global_position - h.position).angle()
-	Main.I.show_banner("%s прикрытие: вертолёт%s «Сарыч»" % ["Караван вызвал" if _sea else "Колонна вызвала", "ы" if n > 1 else ""], 2.5)
+	Events.banner.emit("%s прикрытие: вертолёт%s «Сарыч»" % ["Караван вызвал" if _sea else "Колонна вызвала", "ы" if n > 1 else ""], 2.5)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: convoy helis %d at %.0f" % [n, t])
 
@@ -546,7 +546,7 @@ func _check_trucks() -> void:
 		Events.activity_succeeded.emit(&"convoy")
 	elif not failed and not done:
 		failed = true
-		Main.I.show_banner("Часть каравана ушла в гавань — груз потерян" if _sea else "Часть колонны ушла в укрытие — груз потерян", 3.0)
+		Events.banner.emit("Часть каравана ушла в гавань — груз потерян" if _sea else "Часть колонны ушла в укрытие — груз потерян", 3.0)
 	_finish()
 
 
@@ -603,7 +603,7 @@ func _process(delta: float) -> void:
 			if timer <= 0.0:
 				failed = true
 				if not patrol:
-					Main.I.show_banner("Караван ушёл от удара — груз потерян" if _sea else "Колонна ушла от удара — груз потерян", 3.0)
+					Events.banner.emit("Караван ушёл от удара — груз потерян" if _sea else "Колонна ушла от удара — груз потерян", 3.0)
 				_finish()
 		if _heli_t > 0.0:
 			_heli_t -= delta

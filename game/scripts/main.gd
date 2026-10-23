@@ -48,10 +48,6 @@ var banned := {}        # ключи исключённых карточек
 var locked: Dictionary = {}  # закреплённая карточка — появится в следующем выборе
 var offer_rare := false
 var class_task: ClassTask = null   # EX-07: задание класса на вылет
-var radio_from := ""
-var radio_text := ""
-var radio_t := 0.0
-var radio_enemy := false # перехват вражеского эфира — красная плашка
 var level_at_5 := 0   # уровень на 5:00 — для баланса кривой опыта
 var stats := {}
 var counters := {}
@@ -75,8 +71,6 @@ var report_sent := false
 var _fps_acc := 0.0
 var _fps_n := 0
 var base_ts := 1.0
-var banner := ""
-var banner_t := 0.0
 var levelup_intro := false
 ## U-05: что сделано для задачи операции кампании («fortress», «baron») и итог на экране результатов
 var op_flags := {}
@@ -89,58 +83,16 @@ var input_ctl: MainInput   # глобальные клавиши, клики и�
 var dbg: MainDebug         # автотест, скриншоты, отладочные проверки
 var tele := Telemetry.new() # 3.4: замеры для анализа правок (колонки в конце лога)
 
-## State of the current sortie (CS-03). The fields below forward to it until every reader
-## uses `run.*` directly. All but `run_time` and `parts_kept` are read-only and change only
-## through `RunState` methods; `tools/ci/smoke.sh` fails on direct writes.
+## State of the current sortie (CS-03): read `run.*`, change it only through `RunState` methods
+## (`tools/ci/smoke.sh` fails on direct writes). `run_time` (the sortie clock, read everywhere)
+## and `parts_kept` (set at the end of the sortie) forward to it.
 var run := RunState.new()
 var run_time: float:
 	get: return run.run_time
 	set(v): run.run_time = v
-var kills: int:
-	get: return run.kills
-	set(_v): push_error("Main.kills is read-only: change it through RunState (CS-03)")
-var level: int:
-	get: return run.level
-	set(_v): push_error("Main.level is read-only: change it through RunState (CS-03)")
-var xp: float:
-	get: return run.xp
-	set(_v): push_error("Main.xp is read-only: change it through RunState (CS-03)")
-var pending_levels: int:
-	get: return run.pending_levels
-	set(_v): push_error("Main.pending_levels is read-only: change it through RunState (CS-03)")
-var streak: int:
-	get: return run.streak
-	set(_v): push_error("Main.streak is read-only: change it through RunState (CS-03)")
-var streak_t: float:
-	get: return run.streak_t
-	set(_v): push_error("Main.streak_t is read-only: change it through RunState (CS-03)")
-var best_streak: int:
-	get: return run.best_streak
-	set(_v): push_error("Main.best_streak is read-only: change it through RunState (CS-03)")
-var near_misses: int:
-	get: return run.near_misses
-	set(_v): push_error("Main.near_misses is read-only: change it through RunState (CS-03)")
-var rare_picks: int:
-	get: return run.rare_picks
-	set(_v): push_error("Main.rare_picks is read-only: change it through RunState (CS-03)")
-var rare_reasons: Array:
-	get: return run.rare_reasons
-	set(_v): push_error("Main.rare_reasons is read-only: change it through RunState (CS-03)")
-var activities_done: int:
-	get: return run.activities_done
-	set(_v): push_error("Main.activities_done is read-only: change it through RunState (CS-03)")
-var tail_kills: int:
-	get: return run.tail_kills
-	set(_v): push_error("Main.tail_kills is read-only: change it through RunState (CS-03)")
-var parts: float:
-	get: return run.parts
-	set(_v): push_error("Main.parts is read-only: change it through RunState (CS-03)")
 var parts_kept: int:
 	get: return run.parts_kept
 	set(v): run.parts_kept = v
-var bosses_killed: int:
-	get: return run.bosses_killed
-	set(_v): push_error("Main.bosses_killed is read-only: change it through RunState (CS-03)")
 
 
 func _ready() -> void:
@@ -271,10 +223,10 @@ func start_run() -> void:
 	report_sent = false
 	_fps_acc = 0.0
 	_fps_n = 0
-	banner = ""
+	hud.clear_messages()
 	op_flags = {}
 	op_result = {}
-	show_banner(Loc.t("%s · ОПЕРАЦИЯ «%s» · %s") % [Loc.t(Biome.title()).to_upper(), Loc.t(String(Campaign.op()["title"])).to_upper(), Loc.t(String(Campaign.diff()["title"])).to_upper()], 4.0)
+	Events.banner.emit(Loc.t("%s · ОПЕРАЦИЯ «%s» · %s") % [Loc.t(Biome.title()).to_upper(), Loc.t(String(Campaign.op()["title"])).to_upper(), Loc.t(String(Campaign.diff()["title"])).to_upper()], 4.0)
 	# U-02: цель вылета — первые 3 вылета (U-05: задача операции кампании)
 	Hints.clear()
 	Hints.show("goal", Loc.t("Задача: %s. Всех врагов не перебить — они прилетают всё время.") % String(Campaign.op()["task"]).to_lower(), 9.0, 3)
@@ -293,7 +245,6 @@ func start_run() -> void:
 	meta_award = {}
 	_slow_t = 0.0
 	offer_rare = false
-	radio_t = 0.0
 	level_at_5 = 0
 	tele.reset()
 	camera.global_position = Vector2.ZERO
@@ -318,14 +269,12 @@ func _process(delta: float) -> void:
 			class_task.update(self)
 		Story.tick(self)
 		if level_at_5 == 0 and run_time >= 300.0:
-			level_at_5 = level
+			level_at_5 = run.level
 		run.tick(delta)
-		if pending_levels > 0:
+		if run.pending_levels > 0:
 			_open_levelup()
-	banner_t = maxf(0.0, banner_t - delta / maxf(Engine.time_scale, 0.01))
 	if state == "playing":
 		Hints.tick(delta / maxf(Engine.time_scale, 0.01))
-	radio_t = maxf(0.0, radio_t - delta / maxf(Engine.time_scale, 0.01))
 	_state_t += delta / maxf(Engine.time_scale, 0.01)
 
 	if state in ["menu", "settings"] and menu.back_state == "menu":
@@ -420,7 +369,7 @@ func _open_levelup() -> void:
 ## pending level as repair + spare parts and returns false (CR-02: an empty offer after a pick,
 ## course choice, reroll or ban used to leave the game stuck on an empty level-up screen).
 func refill_offers() -> bool:
-	offer_rare = rare_picks > 0
+	offer_rare = run.rare_picks > 0
 	offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
 	_state_t = 0.0   # CR-05: new cards on screen restart the input delay
 	if not offers.is_empty():
@@ -428,7 +377,7 @@ func refill_offers() -> bool:
 	# правка 3.5-s4: все улучшения собраны — награда за уровень и аса не пропадает молча
 	var r := run.pay_all_cards_taken()
 	player.heal(player.max_hp * float(r["heal"]), "allcards")
-	show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(r["parts"]), 3.0)
+	Events.banner.emit(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(r["parts"]), 3.0)
 	return false
 
 
@@ -450,7 +399,7 @@ func choose_card(i: int) -> void:
 	run.take_pick(offer_rare)
 	if Cards.need_course(player):
 		_open_course()
-	elif pending_levels <= 0 or not refill_offers():
+	elif run.pending_levels <= 0 or not refill_offers():
 		_resume_after_cards()
 
 
@@ -476,7 +425,7 @@ func choose_course(i: int) -> void:
 	player.course = course_offers[i]
 	course_log.append("%d:%s>%s" % [int(run_time), "/".join(PackedStringArray(course_offers)), course_offers[i]])
 	sfx.play("card", -8.0, 0.9)
-	if pending_levels > 0 and refill_offers():
+	if run.pending_levels > 0 and refill_offers():
 		_set_state("levelup")
 	else:
 		_resume_after_cards()
@@ -547,26 +496,6 @@ func ban_card(i: int) -> void:
 		_resume_after_cards()
 
 
-var _radio_at := 0
-
-
-## Сколько секунд назад пришло текущее сообщение радио (въезд и вспышка плашки)
-func radio_age() -> float:
-	return (Time.get_ticks_msec() - _radio_at) / 1000.0
-
-
-func radio(from: String, text: String, enemy := false) -> void:
-	if _autotest:
-		print("RADIO %.0f %s: %s" % [run_time, from, text])
-	radio_from = from
-	radio_text = text
-	radio_enemy = enemy
-	radio_t = 3.5 + text.length() * 0.03 # длинную фразу держим дольше
-	_radio_at = Time.get_ticks_msec()
-	Hints.show("radio", "Справа внизу — радиоэфир: ведомые отвечают на приказы, штаб предупреждает о задании. Красная рамка — перехват вражеского эфира, жди аса или босса.", 8.0, 2)
-	sfx.play("radio", -18.0, 2.2)
-
-
 ## Banner headline per activity kind; the reward part is built from what `RunState` paid.
 const ACTIVITY_TITLE := {
 	&"ground": "Позиция ПВО уничтожена!", &"convoy": "Колонна разбита!", &"dogfight": "Ас-соперник сбит!",
@@ -590,20 +519,20 @@ func _on_activity_succeeded(kind: StringName) -> void:
 			player.heal(player.max_hp * float(r["heal"]), "activity")
 	match kind:
 		&"transport":
-			show_banner(Loc.t("Транспортник сбит! Груз: +%d запчастей, ремкомплекты") % paid
+			Events.banner.emit(Loc.t("Транспортник сбит! Груз: +%d запчастей, ремкомплекты") % paid
 				+ (Loc.t(" и выбор из редких карточек") if rare else ""), 4.0)
 			sfx.play("cargo", -4.0, 1.3)
 		&"rescue":
-			show_banner(Loc.t("Пилот спасён! Награда: выбор из редких карточек и +%d запчастей") % paid, 4.0)
+			Events.banner.emit(Loc.t("Пилот спасён! Награда: выбор из редких карточек и +%d запчастей") % paid, 4.0)
 			sfx.play("evac", -4.0, 1.3)
 		&"class_task":
-			show_banner(Loc.t("Задание класса выполнено! Награда: выбор из редких карточек и +%d запчастей") % paid, 4.0)
+			Events.banner.emit(Loc.t("Задание класса выполнено! Награда: выбор из редких карточек и +%d запчастей") % paid, 4.0)
 			sfx.play("evac", -4.0, 1.3)
 		_:
 			Story.say(Story.DISPATCH, "Чисто сработано. Награда ваша.")
 			var reward := (Loc.t("выбор из редких карточек") + (Loc.t(" и +%d запчастей") % paid if paid > 0 else "")) \
 				if rare else Loc.t("ремонт 20%% и +%d запчастей") % paid
-			show_banner(Loc.t("%s Награда: %s") % [Loc.t(ACTIVITY_TITLE.get(kind, "")), reward], 4.0)
+			Events.banner.emit(Loc.t("%s Награда: %s") % [Loc.t(ACTIVITY_TITLE.get(kind, "")), reward], 4.0)
 			sfx.play("evac", -4.0, 1.3)
 
 
@@ -614,7 +543,7 @@ func _on_activity_failed(kind: StringName, who: String) -> void:
 	if kind != &"rescue":
 		Story.say(Story.DISPATCH, "Ушли. Ничего, следующих встретим.")
 	if kind == &"dogfight":
-		show_banner(Loc.t("Ас «%s» ушёл — награды нет") % who, 3.0)
+		Events.banner.emit(Loc.t("Ас «%s» ушёл — награды нет") % who, 3.0)
 
 
 ## Streak multiplier for kill parts and XP (`RunState.streak_mult`).
@@ -641,11 +570,11 @@ func boss_alive() -> bool:
 ## `Events.boss_wave`: banner, enemy radio, hint, boss birth time for the log, sound and shake.
 func _on_boss_wave(wave: int, n: int) -> void:
 	if Biome.sea():
-		show_banner(Loc.t(["«АЛЬБАТРОС» НА ПОДХОДЕ!", "КРЕЙСЕР «СТОРОЖ» В ПРОЛИВЕ!", "«ЛЕВИАФАН» В ПРОЛИВЕ!"][clampi(wave - 1, 0, 2)]), 4.0)
+		Events.banner.emit(Loc.t(["«АЛЬБАТРОС» НА ПОДХОДЕ!", "КРЕЙСЕР «СТОРОЖ» В ПРОЛИВЕ!", "«ЛЕВИАФАН» В ПРОЛИВЕ!"][clampi(wave - 1, 0, 2)]), 4.0)
 	else:
-		show_banner(Loc.t("АС НА ПОДХОДЕ!  (%d)") % n if n > 1 else Loc.t("АС НА ПОДХОДЕ!"), 4.0)
+		Events.banner.emit(Loc.t("АС НА ПОДХОДЕ!  (%d)") % n if n > 1 else Loc.t("АС НА ПОДХОДЕ!"), 4.0)
 	# правка 20: ас выходит в эфир — перехват его переговоров справа внизу
-	radio("Перехват", ["Цель вижу. Захожу с солнца.", "Это наше небо. Уходи, пока цел.", "Звено, прикрыть меня — работаю по одиночке.",
+	Events.radio.emit("Перехват", ["Цель вижу. Захожу с солнца.", "Это наше небо. Уходи, пока цел.", "Звено, прикрыть меня — работаю по одиночке.",
 		"Ещё один охотник? Посмотрим, сколько продержишься."][randi() % 4], true)
 	Hints.show("ace", "Ас — сильный враг. Собьёте его — откроются ворота эвакуации и добавится переброс карточек.", 8.0, 2)
 	# 3.5 (правка 30): время жизни аса — для лога
@@ -656,13 +585,6 @@ func _on_boss_wave(wave: int, n: int) -> void:
 	add_shake(6.0)
 
 
-func show_banner(text: String, dur := 3.0) -> void:
-	if _autotest:
-		print("BANNER %.0f: %s" % [run_time, text])
-	banner = text
-	banner_t = dur
-
-
 func _open_evac() -> void:
 	if is_instance_valid(evac):
 		return
@@ -670,7 +592,7 @@ func _open_evac() -> void:
 	evac.setup(player.global_position, player.heading)
 	world.add_child(evac)
 	evac_windows += 1
-	show_banner(Loc.t("Эвакуация: пролетите через 3 ворот по порядку") + ("" if Campaign.goal_done(run_time, op_flags) else Loc.t(" · задача операции ещё не выполнена")), 5.0)
+	Events.banner.emit(Loc.t("Эвакуация: пролетите через 3 ворот по порядку") + ("" if Campaign.goal_done(run_time, op_flags) else Loc.t(" · задача операции ещё не выполнена")), 5.0)
 	if run_time < 890.0:
 		Hints.show("evac_early", "Улететь можно уже сейчас — или остаться до 15:00 и заработать больше запчастей.", 8.0, 2)
 	else:
@@ -697,14 +619,14 @@ func _on_evac_point_lost(who: String) -> void:
 	if is_instance_valid(evac):
 		evac.queue_free()
 		evac = null
-	show_banner(Loc.t("%s разбил точку эвакуации — эвакуация закрыта до следующего аса") % who, 4.5)
+	Events.banner.emit(Loc.t("%s разбил точку эвакуации — эвакуация закрыта до следующего аса") % who, 4.5)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: evac point lost")
 
 
 ## `Events.evac_closed`: the window ran out.
 func _on_evac_closed() -> void:
-	show_banner("Окно эвакуации закрыто — следующее после следующего аса", 4.0)
+	Events.banner.emit("Окно эвакуации закрыто — следующее после следующего аса", 4.0)
 
 
 ## Reward multiplier for staying after 15:00 (`RunState.continue_mult`).
@@ -784,7 +706,7 @@ func _on_enemy_killed(e: Enemy) -> void:
 		if not boss_alive():
 			if evac_lost and e is Warship:
 				evac_lost = false   # точку разбил этот корабль: окна нет до следующего аса
-				show_banner(Loc.t("Точка эвакуации разбита — окно откроется после следующего аса"), 4.0)
+				Events.banner.emit(Loc.t("Точка эвакуации разбита — окно откроется после следующего аса"), 4.0)
 			else:
 				evac_lost = false
 				_open_evac()
@@ -805,8 +727,8 @@ var meta_award := {}
 
 
 func _award(outcome: String) -> void:
-	meta_award = Profile.award_run({"cls": cls_id, "outcome": outcome, "run_time": run_time, "level": level,
-		"bosses": bosses_killed, "activities": activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
+	meta_award = Profile.award_run({"cls": cls_id, "outcome": outcome, "run_time": run_time, "level": run.level,
+		"bosses": run.bosses_killed, "activities": run.activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
 		"op_parts": int(op_result.get("parts", 0))})
 	result_t = 0.0
 	result_tab = 0

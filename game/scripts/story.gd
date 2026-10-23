@@ -57,9 +57,9 @@ static func tick(m: Main) -> void:
 		_finale = true
 		say("Гром", "Небо над Шахрисангом наше. Спасибо, что не бросили.")
 	# строка ждёт конца предыдущей, но не дольше 3 с — болтовня ведомых её не перебивает
-	if not _queue.is_empty() and (m.radio_t <= 0.3 or Time.get_ticks_msec() - int(_queue[0][3]) > 3000):
+	if not _queue.is_empty() and (m.hud.radio_t <= 0.3 or Time.get_ticks_msec() - int(_queue[0][3]) > 3000):
 		var l: Array = _queue.pop_front()
-		m.radio(l[0], l[1], l[2])
+		Events.radio.emit(l[0], l[1], l[2])
 
 
 ## Сбит «Барон» в «Крепостях» — «Гром» жив, в финальной операции он летит в звене

@@ -103,7 +103,7 @@ func say(key: String, force := false) -> void:
 		return
 	_said["_last"] = now
 	var arr: Array = BARON_LINES[key] if callsign == "Барон" and BARON_LINES.has(key) else LINES[key]
-	Main.I.radio(callsign, arr[randi() % arr.size()], true)
+	Events.radio.emit(callsign, arr[randi() % arr.size()], true)
 
 
 func take_hit(dmg: float, source := "прочее") -> void:

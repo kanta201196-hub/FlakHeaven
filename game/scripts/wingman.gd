@@ -157,7 +157,7 @@ func _process(delta: float) -> void:
 			heading = p.heading
 			velocity = p.velocity
 			_fly_w = 1.0
-			Main.I.radio("Ведомый", "Иду к вам, займу место в строю!")
+			Events.radio.emit("Ведомый", "Иду к вам, займу место в строю!", false)
 		return
 	_sortie(p, delta)
 	_fly(p, delta)

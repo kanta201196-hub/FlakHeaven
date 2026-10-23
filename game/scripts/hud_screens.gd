@@ -21,9 +21,9 @@ func levelup(m: Main, size: Vector2) -> void:
 		# S9-15: мастерство оружия «или-или»
 		_text(Vector2(lx, 120), Loc.t("МАСТЕРСТВО ОРУЖИЯ: ИЛИ-ИЛИ"), 40, Color(1.0, 0.82, 0.29))
 	elif m.offer_rare:
-		_text(Vector2(lx, 120), Loc.t("НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК") % (m.rare_reasons[0] if not m.rare_reasons.is_empty() else ""), 38, Color(0.8, 0.55, 1.0))
+		_text(Vector2(lx, 120), Loc.t("НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК") % (m.run.rare_reasons[0] if not m.run.rare_reasons.is_empty() else ""), 38, Color(0.8, 0.55, 1.0))
 	else:
-		_text(Vector2(lx, 120), Loc.t("НОВЫЙ УРОВЕНЬ: %d") % m.level if m.pending_levels <= 1 else Loc.t("НОВЫЙ УРОВЕНЬ (ещё выборов: %d)") % m.pending_levels, 40, Color(1.0, 0.82, 0.29))
+		_text(Vector2(lx, 120), Loc.t("НОВЫЙ УРОВЕНЬ: %d") % m.run.level if m.run.pending_levels <= 1 else Loc.t("НОВЫЙ УРОВЕНЬ (ещё выборов: %d)") % m.run.pending_levels, 40, Color(1.0, 0.82, 0.29))
 	if pair:
 		_text(Vector2(lx, 158), "Выберите одну ветку для этого оружия — вторая закроется до конца вылета. 1 или 2 — выбрать", 16, Color(1.0, 0.9, 0.6))
 	elif m.levelup_intro:
@@ -477,9 +477,9 @@ func result(m: Main, size: Vector2) -> void:
 		_ctext(top, "ЭВАКУАЦИЯ УСПЕШНА", 46, Color(0.5, 1.0, 0.6))
 	else:
 		_ctext(top, "САМОЛЁТ СБИТ", 46, Color(1, 0.5, 0.4))
-	_ctext(top + 42, Loc.t("%s · время %02d:%02d · уровень %d · сбито %d · асов %d") % [Loc.t(PlaneClasses.DATA[m.cls_id]["title"]), t / 60, t % 60, m.level, m.kills, m.bosses_killed], 23, Color.WHITE)
+	_ctext(top + 42, Loc.t("%s · время %02d:%02d · уровень %d · сбито %d · асов %d") % [Loc.t(PlaneClasses.DATA[m.cls_id]["title"]), t / 60, t % 60, m.run.level, m.run.kills, m.run.bosses_killed], 23, Color.WHITE)
 	var kept_note := "100% — эвакуация" if m.state == "evac" else "50% — гибель без эвакуации"
-	_ctext(top + 74, Loc.t("Запчасти: %d из %d (%s)") % [m.parts_kept, int(m.parts), kept_note], 21, Color(0.95, 0.85, 0.55))
+	_ctext(top + 74, Loc.t("Запчасти: %d из %d (%s)") % [m.parts_kept, int(m.run.parts), kept_note], 21, Color(0.95, 0.85, 0.55))
 	_op_line(m, top + 104)
 	# правка 30 (тест 3.5-s4): итоги на вкладках — «Обзор» с выводами, «Урон» с долями и уроном в секунду, «Сборка»
 	var tabs := ["1 · Обзор", "2 · Урон", "3 · Сборка"]
@@ -579,10 +579,10 @@ func _res_overview(m: Main, y: float) -> void:
 	var tiles := [
 		["урон в секунду", "%d" % int(m.total("dealt") / rt), Color(0.6, 1.0, 0.7)],
 		["получено урона", "%d" % m.total("taken"), Color(1.0, 0.7, 0.65)],
-		["сбито в минуту", "%.0f" % (m.kills / rt * 60.0), Color.WHITE],
+		["сбито в минуту", "%.0f" % (m.run.kills / rt * 60.0), Color.WHITE],
 		["точность пушки", "%d%%" % acc, Color(0.85, 0.9, 1.0)],
 		["связок", "%d" % m.player.syn.size(), Menu.C_AMBER],
-		["активностей", "%d" % m.activities_done, Color(0.7, 0.95, 1.0)],
+		["активностей", "%d" % m.run.activities_done, Color(0.7, 0.95, 1.0)],
 	]
 	var ty := y + 50.0
 	for i in tiles.size():
@@ -634,7 +634,7 @@ static func result_insights(m: Main) -> Array:
 		out.append([Loc.t("Связок: %d, первая — на %d:%02d.") % [m.player.syn.size(), int(first) / 60, int(first) % 60], Menu.C_AMBER])
 	if m.shots > 50 and m.hits * 100 < m.shots * 30:
 		out.append([Loc.t("Пушка попадала только в %d%% выстрелов: держите нос на цели или включите ручной огонь (Q) — он сильнее.") % int(100.0 * m.hits / m.shots), Color(0.75, 0.85, 1.0)])
-	if m.bosses_killed == 0 and m.run_time > 200.0:
+	if m.run.bosses_killed == 0 and m.run_time > 200.0:
 		out.append(["Ни одного сбитого аса — без него не открываются ворота эвакуации.", Color(1.0, 0.55, 0.45)])
 	return out.slice(0, 6)
 
@@ -689,9 +689,9 @@ func _res_damage(m: Main, y0: float, size: Vector2) -> void:
 	var acc := 0.0 if m.shots == 0 else 100.0 * m.hits / m.shots
 	var lines := [
 		Loc.t("Сбито: дроны %d · перехватчики %d · ракетоносцы %d · асы %d") % [m.stat("kills_by", "дроны"), m.stat("kills_by", "перехватчики"), m.stat("kills_by", "ракетоносцы"), m.stat("kills_by", "асы")],
-		Loc.t("Точность пушки: %d%% · пик «оборотов»: +%d%% · сбито с хвоста: %d") % [int(acc), int(round(m.peak_rev * 100.0)), m.tail_kills],
-		Loc.t("Уведено ракет ловушками: %d · срывов захвата: %d · на волоске: %d") % [int(m.counters.get("intercepted", 0)), int(m.counters.get("locks_broken", 0)), m.near_misses],
-		Loc.t("Лучшая серия: %d · активностей: %d · проход на форсаже: %d урона") % [m.best_streak, m.activities_done, m.stat("dealt", "проход на форсаже")],
+		Loc.t("Точность пушки: %d%% · пик «оборотов»: +%d%% · сбито с хвоста: %d") % [int(acc), int(round(m.peak_rev * 100.0)), m.run.tail_kills],
+		Loc.t("Уведено ракет ловушками: %d · срывов захвата: %d · на волоске: %d") % [int(m.counters.get("intercepted", 0)), int(m.counters.get("locks_broken", 0)), m.run.near_misses],
+		Loc.t("Лучшая серия: %d · активностей: %d · проход на форсаже: %d урона") % [m.run.best_streak, m.run.activities_done, m.stat("dealt", "проход на форсаже")],
 	]
 	for l in lines:
 		if y > size.y - 150.0:

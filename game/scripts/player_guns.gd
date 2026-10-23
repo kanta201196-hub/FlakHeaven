@@ -18,7 +18,7 @@ func gun_damage() -> float:
 	var d := Tuning.g("bullet_damage") * float(pl.cls["gun_dmg"]) * float(pl.mods["gun_dmg"])
 	# 2.4: курсовое растёт вместе с пилотом (+3% за уровень); S6-02: потолок снова +60% (в 2.8 был +40%) —
 	# иначе к 10:00 пушке нужно 5 выстрелов на перехватчик вместо 4
-	d *= minf(1.0 + 0.03 * (Main.I.level - 1), 1.6)
+	d *= minf(1.0 + 0.03 * (Main.I.run.level - 1), 1.6)
 	if pl.manual_mode:
 		d *= 1.0 + pl.manual_bonus
 	if pl.combat_t > 0.0:

@@ -47,7 +47,7 @@ func on_kill(m: Main, e: Enemy) -> void:
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: class task done at %.0f" % m.run_time)
 	Events.activity_succeeded.emit(&"class_task")   # reward, banner and sound: Main / RunState
-	m.radio("Штаб", "Задание выполнено, отличная работа. Награда ваша.")
+	Events.radio.emit("Штаб", "Задание выполнено, отличная работа. Награда ваша.", false)
 
 
 func update(m: Main) -> void:
@@ -56,7 +56,7 @@ func update(m: Main) -> void:
 	var until := float(DEFS[cls]["until"])
 	if until > 0.0 and m.run_time >= until:
 		state = "failed"
-		m.show_banner("Задание класса не выполнено — срок вышел", 3.0)
+		Events.banner.emit("Задание класса не выполнено — срок вышел", 3.0)
 
 
 ## Строка для правой панели в бою

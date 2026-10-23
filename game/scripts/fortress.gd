@@ -263,18 +263,18 @@ func _point_down(pt: Dictionary) -> void:
 	Main.I.sfx.play("fortress_part", -4.0, 0.8)
 	Main.I.tele.add("fortress_points")
 	if pt["kind"] == "engine":
-		Main.I.show_banner("Двигатель сбит: %d из 2 — «Крепость» теряет скорость" % (2 - _alive("engine")), 2.5)
+		Events.banner.emit("Двигатель сбит: %d из 2 — «Крепость» теряет скорость" % (2 - _alive("engine")), 2.5)
 	elif pt["node"] == "turret_3":
-		Main.I.show_banner("Командная турель сбита — эскорт больше не придёт", 2.5)
+		Events.banner.emit("Командная турель сбита — эскорт больше не придёт", 2.5)
 	else:
-		Main.I.show_banner("Турель сбита: %d из 4" % (4 - _alive("turret")), 2.0)
+		Events.banner.emit("Турель сбита: %d из 4" % (4 - _alive("turret")), 2.0)
 	Main.I.fx.text(at + Vector2(0, -40), "СБИТА!" if pt["kind"] == "turret" else "СБИТ!", Color(1.0, 0.8, 0.4))
 	Main.I.fx.ring(at, 70.0, Color(1.0, 0.6, 0.25))
 	if phase == 1 and _alive("turret") == 0:
 		phase = 2
 		_bay_t = 1.5
-		Main.I.show_banner("Турели сбиты! «Крепость» на боевом курсе — бейте в открытый люк и по двигателям", 3.5)
-		Main.I.radio("Штаб", "Турели молчат! Ждите, когда откроется люк, — бейте в брюхо. Двигатели — с задней полусферы.")
+		Events.banner.emit("Турели сбиты! «Крепость» на боевом курсе — бейте в открытый люк и по двигателям", 3.5)
+		Events.radio.emit("Штаб", "Турели молчат! Ждите, когда откроется люк, — бейте в брюхо. Двигатели — с задней полусферы.", false)
 		Main.I.tele.add("fortress_phase2_s", Main.I.run_time - _born)
 		_missile_cd = 3.0
 	elif phase == 2 and _alive("engine") == 0:
@@ -282,8 +282,8 @@ func _point_down(pt: Dictionary) -> void:
 		hull_open = true
 		hatches_open = false
 		_zones.clear()
-		Main.I.show_banner("Двигатели горят! «Крепость» дымит и уходит — догоните и добейте!", 3.5)
-		Main.I.radio("Штаб", "Она горит и уходит! Догоняйте, пока не скрылась, — кормовые кольца бьют назад, заходите сбоку.")
+		Events.banner.emit("Двигатели горят! «Крепость» дымит и уходит — догоните и добейте!", 3.5)
+		Events.radio.emit("Штаб", "Она горит и уходит! Догоняйте, пока не скрылась, — кормовые кольца бьют назад, заходите сбоку.", false)
 		Main.I.tele.add("fortress_phase3_s", Main.I.run_time - _born)
 	_set_title()
 
@@ -356,8 +356,8 @@ func _start_route(p: Player) -> void:
 	base_pos = global_position + dir * ROUTE_LEN
 	_wp = base_pos
 	_to_base = true
-	Main.I.show_banner("«Крепость» идёт на нашу базу! Перехватите её, пока не дошла", 4.0)
-	Main.I.radio("Штаб", "«Крепость» на подходе. Сначала турели — у каждой свой сектор, заходите с носа или с хвоста, там мёртвые зоны.")
+	Events.banner.emit("«Крепость» идёт на нашу базу! Перехватите её, пока не дошла", 4.0)
+	Events.radio.emit("Штаб", "«Крепость» на подходе. Сначала турели — у каждой свой сектор, заходите с носа или с хвоста, там мёртвые зоны.", false)
 	Hints.show("fortress", "«Крепость» летит к нашей базе (стрелка «база»). Турели бьют в свои сектора, нос и хвост — мёртвые зоны. Урон идёт в ту точку, куда попали.", 10.0, 2)
 
 
@@ -371,9 +371,9 @@ func _bomb_base() -> void:
 	Main.I.add_shake(6.0)
 	if base_hits == 1:
 		parts = int(parts * 0.5)
-		Main.I.show_banner("«Крепость» отбомбилась по базе — запчастей за неё вдвое меньше. Она заходит на второй круг!", 4.0)
+		Events.banner.emit("«Крепость» отбомбилась по базе — запчастей за неё вдвое меньше. Она заходит на второй круг!", 4.0)
 	else:
-		Main.I.show_banner("«Крепость» снова над базой! Сбейте её", 3.0)
+		Events.banner.emit("«Крепость» снова над базой! Сбейте её", 3.0)
 
 
 ## Турели: очередь из 3 пуль ближе SECTOR_R, только в свой сектор; в мёртвых зонах (нос, хвост) не бьют
@@ -441,7 +441,7 @@ func _bay(delta: float, p: Player, to: Vector2, d: float) -> void:
 		hatches_open = not hatches_open
 		_bay_t = BAY_OPEN if hatches_open else BAY_CLOSED
 		if hatches_open:
-			Main.I.show_banner("Люк открыт! Попадание в люк — ×3 урона", 2.0)
+			Events.banner.emit("Люк открыт! Попадание в люк — ×3 урона", 2.0)
 			Main.I.sfx.play("lock", -6.0, 0.6)
 	if hatches_open:
 		_drop_t -= delta
@@ -516,9 +516,9 @@ const ZONE_R := 80.0
 
 func _die() -> void:
 	if _flee_t >= FLEE_T:
-		Main.I.show_banner("«Крепость» не дотянула и рухнула сама — запчастей за неё вдвое меньше", 4.0)
+		Events.banner.emit("«Крепость» не дотянула и рухнула сама — запчастей за неё вдвое меньше", 4.0)
 	else:
-		Main.I.show_banner("«Крепость» сбита!" if base_hits == 0 else "«Крепость» сбита! (успела отбомбиться по базе)", 4.0)
+		Events.banner.emit("«Крепость» сбита!" if base_hits == 0 else "«Крепость» сбита! (успела отбомбиться по базе)", 4.0)
 	for i in 4:
 		Main.I.fx.explosion(global_position + Vector2(randf_range(-90, 90), randf_range(-60, 60)), 50.0)
 	super()

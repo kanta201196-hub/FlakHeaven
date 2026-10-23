@@ -96,7 +96,7 @@ func say(key: String) -> void:
 		return
 	_say_t = 6.0
 	var arr: Array = SHIP_LINES[key]
-	Main.I.radio(title, arr[randi() % arr.size()])
+	Events.radio.emit(title, arr[randi() % arr.size()], false)
 
 
 func phase() -> int:
@@ -170,8 +170,8 @@ func _take_station() -> void:
 		if q != Vector2.INF and (best == Vector2.INF or anchor.distance_to(q) < anchor.distance_to(best)):
 			best = q
 	evac_pt = best if best != Vector2.INF else anchor + fw.orthogonal() * 900.0
-	Main.I.show_banner(Loc.t("%s встал на якорь и бьёт по точке эвакуации — потопите его за %d залпов") % [title, SALVOS], 4.0)
-	Main.I.radio(title, "Якорь! Главный калибр — по берегу.")
+	Events.banner.emit(Loc.t("%s встал на якорь и бьёт по точке эвакуации — потопите его за %d залпов") % [title, SALVOS], 4.0)
+	Events.radio.emit(title, "Якорь! Главный калибр — по берегу.", false)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: warship %s on station, evac point %.0f px" % [variant, anchor.distance_to(evac_pt)])
 
@@ -204,7 +204,7 @@ func _shore_salvo(p: Player) -> void:
 	if _salvos >= SALVOS:
 		Events.evac_point_lost.emit(title)
 	else:
-		Main.I.show_banner(Loc.t("Залп по точке эвакуации: %d из %d") % [_salvos, SALVOS], 2.0)
+		Events.banner.emit(Loc.t("Залп по точке эвакуации: %d из %d") % [_salvos, SALVOS], 2.0)
 
 
 func _tick_shells(delta: float, p: Player) -> void:
@@ -230,7 +230,7 @@ func left_px() -> float:
 
 
 func _broke_through() -> void:
-	Main.I.show_banner(Loc.t("%s прорвался в гавань — награда потеряна") % title, 3.5)
+	Events.banner.emit(Loc.t("%s прорвался в гавань — награда потеряна") % title, 3.5)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: warship %s broke through" % variant)
 	anchor = Vector2.INF
@@ -289,7 +289,7 @@ func _launch_heli(p: Player) -> void:
 	h.heading = (p.global_position - global_position).angle()
 	Main.I.world.add_child(h)
 	h.apply_hp_mult(Main.I.spawner.hp_mult() * Spawner.hp_ramp(Main.I.run_time))
-	Main.I.show_banner("%s поднял вертолёт «Сарыч»" % title, 2.5)
+	Events.banner.emit("%s поднял вертолёт «Сарыч»" % title, 2.5)
 
 
 func _launch_drones(p: Player, n: int) -> void:
@@ -300,7 +300,7 @@ func _launch_drones(p: Player, n: int) -> void:
 		dr.heading = (p.global_position - dr.position).angle()
 		Main.I.world.add_child(dr)
 		dr.apply_hp_mult(Main.I.spawner.hp_mult() * Spawner.hp_ramp(Main.I.run_time))
-	Main.I.show_banner("С палубы «Левиафана» взлетают «Чайки»!", 2.0)
+	Events.banner.emit("С палубы «Левиафана» взлетают «Чайки»!", 2.0)
 
 
 ## Главный калибр: кольцо крупных снарядов и прицельная тройка

@@ -185,13 +185,13 @@ func _auto_gfx(real: float, m: Main) -> void:
 	Settings.save_settings()
 	Settings.apply_gfx()
 	add("gfx_drops")
-	m.show_banner("Качество графики снижено до «%s» (%d к/с). Изменить: «Настройки» → «Графика»" % [Settings.GFX[Settings.gfx], int(fps)], 5.0)
+	Events.banner.emit("Качество графики снижено до «%s» (%d к/с). Изменить: «Настройки» → «Графика»" % [Settings.GFX[Settings.gfx], int(fps)], 5.0)
 
 
 func _minute(m: Main) -> void:
 	var p := m.player
-	var now := {"dealt": m.total("dealt"), "taken": m.total("taken"), "kills": m.kills, "shots": m.shots, "hits": m.hits,
-		"nm": m.near_misses, "inv": g("invuln_s"), "frames": _frames.size()}
+	var now := {"dealt": m.total("dealt"), "taken": m.total("taken"), "kills": m.run.kills, "shots": m.shots, "hits": m.hits,
+		"nm": m.run.near_misses, "inv": g("invuln_s"), "frames": _frames.size()}
 	var d := {}
 	for k in now:
 		d[k] = float(now[k]) - float(_snap.get(k, 0.0))
@@ -202,7 +202,7 @@ func _minute(m: Main) -> void:
 	var main_tag := 0
 	if p.has_course():
 		main_tag = p.tag(Cards.syn_def(p, p.course)["tag"])
-	timeline.append("%d:L%d hp%d fps%d dmg%d tk%d k%d sh%d/%d nm%d inv%.1f v%d syn%d c=%s/%d t%d g%d tr%dk e%d pk%.1f pd%.2f" % [int(m.run_time / 60.0), m.level,
+	timeline.append("%d:L%d hp%d fps%d dmg%d tk%d k%d sh%d/%d nm%d inv%.1f v%d syn%d c=%s/%d t%d g%d tr%dk e%d pk%.1f pd%.2f" % [int(m.run_time / 60.0), m.run.level,
 		int(round(100.0 * p.hp / maxf(p.max_hp, 1.0))), int(round(fps)), int(d["dealt"]), int(d["taken"]), int(d["kills"]),
 		int(d["shots"]), int(d["hits"]), int(d["nm"]), float(d["inv"]), int(round(p.velocity.length())), p.syn.size(),
 		p.course if p.course != "" else "-", main_tag, int(round(Tuning.g("cam_tilt"))), Settings.gfx,
