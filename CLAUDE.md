@@ -16,7 +16,7 @@ Engine: **Godot 4.4.1**, renderer **GL Compatibility**. Game logic is 2D; visual
 | --- | --- |
 | `game/` | Godot project (`game/project.godot`). Balance numbers: F1 sliders in `game/scripts/tuning.gd`, the rest in `game/scripts/balance/<system>.gd` (`code.md` §5) |
 | `game/tools/model_lab/` | 3D model pipeline (commands at the top of `model_lab.gd`) |
-| `tools/ci/` | `pick.sh` (which checks to run), `smoke.sh`, `full.sh` |
+| `tools/ci/` | `pick.sh` (which checks to run), `unit.sh`, `smoke.sh`, `full.sh` |
 | `tools/reports/`, `tools/tester/` | Tester report intake; tester instructions and kit script |
 | `site/` | flakheaven.com (Cloudflare Pages, deploys from `main`) |
 | `docs/` | All working documents; the source of truth |
@@ -46,6 +46,7 @@ English for code, comments, docstrings, commits, PRs and internal docs. Russian 
 
 ## Checks (Godot 4.4.1 as `godot` or in `$GODOT`)
 - `tools/ci/pick.sh` — prints which checks your diff needs (runs nothing).
+- Pure logic changed (`run_state.gd`, `balance/`): `tools/ci/unit.sh` (~5 s, tests in `game/tests/`).
 - After every change: `tools/ci/smoke.sh fighter` (`attacker`, `bomber`, `all` ≈ 40 s). Fails on the first `SCRIPT ERROR`.
 - Combat code changed: run `tools/ci/full.sh` once before the PR is ready (~4 min). Unrelated failure: rerun once, then log "flaky test" in the backlog.
 - Long tests and balance measurements: only after agreeing the method with the user.
@@ -62,7 +63,7 @@ Project rules override skills. Small, clear changes (one file, a number, text): 
 - **verification-before-completion** before saying "done": run the checks above and show the output.
 - **requesting-code-review** (or the Engineering plugin's **code-review**) before merging a code PR.
 - Engineering plugin **architecture** / **system-design** when a change touches the structure in `architecture.md` (new ADR, new system boundary).
-- **test-driven-development** for any new non-visual logic: formulas, progression, saves, rewards, card selection (unit tests; mandatory once the test framework is in `main`). Combat feel, graphics and menus: `smoke.sh` / `full.sh`.
+- **test-driven-development** for any new non-visual logic: formulas, progression, saves, rewards, card selection (unit tests in `game/tests/*_test.gd`, run by `tools/ci/unit.sh`). Combat feel, graphics and menus: `smoke.sh` / `full.sh`.
 - Docs, site, marketing and builds: no skill chain.
 
 ## Library docs (Context7)
