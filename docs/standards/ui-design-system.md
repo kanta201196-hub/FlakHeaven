@@ -51,7 +51,7 @@ They live in one file `game/scripts/ui_style.gd` (`class_name UiStyle`, constant
 
 | Token | Value | Role |
 | --- | --- | --- |
-| `ACCENT` | `(0.95, 0.66, 0.2)` **[Kanta to decide: which amber is primary]** | Primary button, selected tab, hover border |
+| `ACCENT` | `(0.95, 0.66, 0.2)` (Kanta 2026-10-23: orange is primary, gold `ACCENT_SOFT` only for headings) | Primary button, selected tab, hover border |
 | `ACCENT_SOFT` | `(1.0, 0.82, 0.29)` | Screen and section headings on dark |
 | `ACCENT_DIM` | `(0.55, 0.36, 0.1)` | Inactive accent, selected background |
 | `ON_ACCENT` | `(0.08, 0.07, 0.05)` | Text on amber fill |
