@@ -21,5 +21,6 @@ fi
 echo "pick: после каждой правки — tools/ci/smoke.sh fighter (один класс). Остальные два класса не гонять: их проверит GitHub."
 [ -n "$combat" ] && echo "pick: менялся бой (файлы ниже) — перед готовым PR ОДИН раз полный автотест tools/ci/full.sh:" && echo "$combat" | sed 's/^/   /'
 [ -n "$view" ] && echo "pick: менялся вид — кадры: xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots (только если нужен скриншот в PR)"
+echo "$code" | grep -qE 'demo\.gd|export_presets' && echo "pick: менялось демо — ещё: godot --headless --path game -- --autotest --smoke --turbo --god --class=fighter --demo"
 [ -n "$combat" ] || echo "pick: бой не менялся — полный автотест не нужен"
 exit 0

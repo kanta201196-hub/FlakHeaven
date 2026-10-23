@@ -3,6 +3,9 @@ name: using-superpowers
 description: Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions
 ---
 
+> **Правила проекта главнее (Flak Heaven, 23.10.2026):** мелкое и ясное делаем сразу, без этого навыка; документы, сайт, маркетинг, планёрка и сборки идут без цепочки; меню вариантов и worktrees — только по просьбе Kanta; PR сливает Claude сам. См. `CLAUDE.md`, раздел «Навыки superpowers».
+
+
 <SUBAGENT-STOP>
 If you were dispatched as a subagent to execute a specific task, ignore this skill.
 </SUBAGENT-STOP>

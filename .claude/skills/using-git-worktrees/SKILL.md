@@ -3,6 +3,9 @@ name: using-git-worktrees
 description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback
 ---
 
+> **Правила проекта главнее (Flak Heaven, 23.10.2026):** мелкое и ясное делаем сразу, без этого навыка; документы, сайт, маркетинг, планёрка и сборки идут без цепочки; меню вариантов и worktrees — только по просьбе Kanta; PR сливает Claude сам. См. `CLAUDE.md`, раздел «Навыки superpowers».
+
+
 # Using Git Worktrees
 
 ## Overview

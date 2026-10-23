@@ -3,6 +3,9 @@ name: requesting-code-review
 description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 ---
 
+> **Правила проекта главнее (Flak Heaven, 23.10.2026):** мелкое и ясное делаем сразу, без этого навыка; документы, сайт, маркетинг, планёрка и сборки идут без цепочки; меню вариантов и worktrees — только по просьбе Kanta; PR сливает Claude сам. См. `CLAUDE.md`, раздел «Навыки superpowers».
+
+
 # Requesting Code Review
 
 Dispatch a code reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history.

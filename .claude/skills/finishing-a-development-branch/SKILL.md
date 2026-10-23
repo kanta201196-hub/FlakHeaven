@@ -3,6 +3,9 @@ name: finishing-a-development-branch
 description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work
 ---
 
+> **Правила проекта главнее (Flak Heaven, 23.10.2026):** мелкое и ясное делаем сразу, без этого навыка; документы, сайт, маркетинг, планёрка и сборки идут без цепочки; меню вариантов и worktrees — только по просьбе Kanta; PR сливает Claude сам. См. `CLAUDE.md`, раздел «Навыки superpowers».
+
+
 # Finishing a Development Branch
 
 ## Overview
