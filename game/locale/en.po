@@ -6607,3 +6607,17 @@ msgstr "Bright Flares"
 #, c-format
 msgid "+10% радиуса отстрела и +10% шанса увести ЗРК за ранг"
 msgstr "+10% release radius and +10% chance to decoy SAMs per rank"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ВЕТКА %s · СТУПЕНЬ %d"
+msgstr "BRANCH %s · TIER %d"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "МОДЕРНИЗАЦИЯ · ВЕТКА %s"
+msgstr "UPGRADE · BRANCH %s"
+
+#: game/scripts/hud_hangar.gd
+msgid "ВЫБРАНО"
+msgstr "CHOSEN"
