@@ -10,6 +10,7 @@ var _fx_t := 0.0
 var _fx_at := 0.0
 var _fx_fired := false
 var _autotest_t := 0.0
+var _demo_profile_set := false
 var _visual: VisualBench
 var _boom: BoomBench
 
@@ -510,6 +511,10 @@ func _run_autotest(delta: float) -> void:
 					m.menu.tab = 1
 					m.menu.open_settings("menu")
 				else:
+					if m._args.has("--profile=demo") and not _demo_profile_set:
+						_demo_profile_set = true   # GD-01: demo player profile, see Profile.debug_demo_profile
+						Profile.debug_demo_profile()
+						print("AUTOTEST: demo profile, nodes %d, crew %d" % [Demo.node_cap(), Demo.crew_cap()])
 					m.ui_click("menu_play")
 			return
 		"settings":
@@ -648,6 +653,7 @@ func _run_autotest(delta: float) -> void:
 						m.get_tree().quit(0)
 						return
 				if not m._args.has("--shots"):
+					Demo.end_open = false   # GD-01: the "end of demo" screen must not stop a --demo balance run
 					m.ui_click("change_class") # следующий вылет — другим классом
 			return
 	if int(_autotest_t * 10.0) % 100 == 0 and m._args.has("--verbose-bot"):
