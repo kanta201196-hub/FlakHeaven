@@ -106,7 +106,7 @@ func handle_global_input() -> void:
 	if m.state == "playing" and Main.DEBUG:
 		# Отладка для плейтеста
 		if Input.is_action_just_pressed("debug_level"):
-			m.pending_levels += 1
+			m.run.debug_set(&"pending_levels", m.pending_levels + 1)
 		if Input.is_action_just_pressed("debug_skip"):
 			var nb := (floorf(m.run_time / Tuning.g("boss_every")) + 1.0) * Tuning.g("boss_every")
 			m.run_time = maxf(m.run_time, nb - 10.0)

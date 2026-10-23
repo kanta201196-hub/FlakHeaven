@@ -141,7 +141,7 @@ func _ui_test() -> void:
 		m.stats["taken_by"] = {"дроны": 536.0, "перехватчики": 300.0, "ракетоносцы": 45.0, "ПВО": 51.0, "ас-соперник": 12.0, "асы": 355.0, "ПЗРК": 15.0, "пикап": 12.0}
 		m.stats["taken_kind"] = {"пушки истребителей": 836.0, "пушки асов": 162.0, "пулемёт пикапа": 12.0, "ракеты самолётов": 45.0, "ЗРК": 60.0, "ПЗРК": 15.0}
 		m.stats["kills_by"] = {"дроны": 2890.0, "перехватчики": 519.0, "ракетоносцы": 43.0, "асы": 3.0}
-		m.kills = 3455
+		m.run.debug_set(&"kills", 3455)
 		m.bosses_killed = 3
 		m.shots = 4000
 		m.hits = 1480
@@ -186,9 +186,9 @@ func _hud_test() -> void:
 			if offs.is_empty():
 				break
 			Cards.apply(p, offs[randi() % offs.size()])
-		m.level = 84
-		m.kills = 8730
-		m.parts = 38386.0
+		m.run.debug_set(&"level", 84)
+		m.run.debug_set(&"kills", 8730)
+		m.run.debug_set(&"parts", 38386.0)
 		m.run_time = 905.0
 		m.streak = 120
 		m.streak_t = 2.0

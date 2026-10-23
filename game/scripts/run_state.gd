@@ -57,10 +57,11 @@ func continue_mult() -> float:
 	return 1.0 + Rewards.LATE_BONUS_PER_MIN * maxf(0.0, (run_time - Rewards.SORTIE_LENGTH) / 60.0)
 
 
-## Pays `amount` spare parts with the post-15:00 multiplier applied once.
-## Returns the amount actually paid, for banners and the log. `reason` is for the log.
-func grant_parts(amount: float, _reason: StringName = &"") -> float:
-	var paid := amount * continue_mult()
+## Pays `amount` spare parts with the post-15:00 multiplier applied once (`late_bonus` false —
+## the amount already includes it, e.g. cargo valued when dropped). Returns the amount actually
+## paid, for banners and the log. `reason` is for the log.
+func grant_parts(amount: float, _reason: StringName = &"", late_bonus := true) -> float:
+	var paid := amount * (continue_mult() if late_bonus else 1.0)
 	parts += paid
 	return paid
 
@@ -112,3 +113,9 @@ func pay_all_cards_taken() -> Dictionary:
 	var paid := grant_parts(Rewards.ALL_CARDS_PARTS_PER_LEVEL * n, &"all_cards")
 	return {"levels": n, "parts": paid,
 		"heal": minf(Rewards.ALL_CARDS_HEAL_MAX, Rewards.ALL_CARDS_HEAL_PER_LEVEL * n)}
+
+
+## Debug and screenshot setups only (`main_debug.gd`, F-keys): sets a field directly.
+func debug_set(field: StringName, value: Variant) -> void:
+	assert(field in self, "RunState has no field %s" % field)
+	set(field, value)

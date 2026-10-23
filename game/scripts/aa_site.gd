@@ -105,7 +105,7 @@ func on_target_destroyed(g: GroundTarget) -> void:
 			if is_instance_valid(t) and t != g:
 				(t as GroundTarget).leaderless = true
 		if not failed:
-			Main.I.on_activity_success("ground")
+			Events.activity_succeeded.emit(&"ground")
 		# активность закончена: следующая может начаться, остатки позиции убираются сами
 		if Main.I.spawner != null and Main.I.spawner.activity_node == self:
 			Main.I.spawner.activity_node = null

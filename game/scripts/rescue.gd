@@ -71,25 +71,16 @@ func _wave(p: Player) -> void:
 
 func _success(m: Main) -> void:
 	done = true
-	m.activities_done += 1
 	Campaign.set_flag("rescued")
-	m.pending_levels += 1
-	m.rare_picks += 1
-	m.rare_reasons.append("ЗА СПАСЁННОГО ПИЛОТА")
-	m.parts += 40.0 * m.continue_mult()
-	m.player.add_course_pts(1)
-	m.show_banner("Пилот спасён! Награда: выбор из редких карточек и +40 запчастей", 4.0)
+	Events.activity_succeeded.emit(&"rescue")   # reward, banner and sound: Main / RunState
 	Story.say("Спасённый", "Спасибо, звено. Я видел парашют «Грома» — у старых крепостей.")
-	m.sfx.play("evac", -4.0, 1.3)
-	if OS.get_cmdline_user_args().has("--autotest"):
-		print("AUTOTEST: activity success rescue at %.0f" % m.run_time)
 	_finish(m)
 
 
 func _fail(m: Main) -> void:
 	failed = true
 	Story.say(Story.DISPATCH, "Вертолёт ушёл без пилота. Ищем дальше.")
-	m.on_activity_failed("rescue")
+	Events.activity_failed.emit(&"rescue", "")
 	_finish(m)
 
 

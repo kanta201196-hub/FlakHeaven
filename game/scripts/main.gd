@@ -90,7 +90,8 @@ var dbg: MainDebug         # автотест, скриншоты, отладо�
 var tele := Telemetry.new() # 3.4: замеры для анализа правок (колонки в конце лога)
 
 ## State of the current sortie (CS-03). The fields below forward to it until every reader
-## uses `run.*` directly; new code changes them only through `RunState` methods.
+## uses `run.*` directly. Read-only ones (level, XP, card queue, parts, activities) change only
+## through `RunState` methods; `tools/ci/smoke.sh` fails on direct writes.
 var run := RunState.new()
 var run_time: float:
 	get: return run.run_time
@@ -100,13 +101,13 @@ var kills: int:
 	set(v): run.kills = v
 var level: int:
 	get: return run.level
-	set(v): run.level = v
+	set(_v): push_error("Main.level is read-only: change it through RunState (CS-03)")
 var xp: float:
 	get: return run.xp
-	set(v): run.xp = v
+	set(_v): push_error("Main.xp is read-only: change it through RunState (CS-03)")
 var pending_levels: int:
 	get: return run.pending_levels
-	set(v): run.pending_levels = v
+	set(_v): push_error("Main.pending_levels is read-only: change it through RunState (CS-03)")
 var streak: int:
 	get: return run.streak
 	set(v): run.streak = v
@@ -121,19 +122,19 @@ var near_misses: int:
 	set(v): run.near_misses = v
 var rare_picks: int:
 	get: return run.rare_picks
-	set(v): run.rare_picks = v
+	set(_v): push_error("Main.rare_picks is read-only: change it through RunState (CS-03)")
 var rare_reasons: Array:
 	get: return run.rare_reasons
-	set(v): run.rare_reasons = v
+	set(_v): push_error("Main.rare_reasons is read-only: change it through RunState (CS-03)")
 var activities_done: int:
 	get: return run.activities_done
-	set(v): run.activities_done = v
+	set(_v): push_error("Main.activities_done is read-only: change it through RunState (CS-03)")
 var tail_kills: int:
 	get: return run.tail_kills
 	set(v): run.tail_kills = v
 var parts: float:
 	get: return run.parts
-	set(v): run.parts = v
+	set(_v): push_error("Main.parts is read-only: change it through RunState (CS-03)")
 var parts_kept: int:
 	get: return run.parts_kept
 	set(v): run.parts_kept = v
@@ -158,6 +159,8 @@ func _ready() -> void:
 		if a.begins_with("--tilt="):   # B-47: наклон камеры, град (проба; 0 — строго сверху)
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
 	DEBUG = not (OS.has_feature("tester") or _args.has("--tester"))
+	Events.activity_succeeded.connect(_on_activity_succeeded)
+	Events.activity_failed.connect(_on_activity_failed)
 	_autotest = _args.has("--autotest")
 	god_mode = _args.has("--god")
 	if _args.has("--fast"):
@@ -416,13 +419,9 @@ func refill_offers() -> bool:
 	if not offers.is_empty():
 		return true
 	# правка 3.5-s4: все улучшения собраны — награда за уровень и аса не пропадает молча
-	var n := pending_levels
-	pending_levels = 0
-	rare_picks = 0
-	rare_reasons.clear()
-	player.heal(player.max_hp * minf(0.5, 0.1 * n), "allcards")
-	parts += 30.0 * n * continue_mult()
-	show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(30.0 * n * continue_mult()), 3.0)
+	var r := run.pay_all_cards_taken()
+	player.heal(player.max_hp * float(r["heal"]), "allcards")
+	show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(r["parts"]), 3.0)
 	return false
 
 
@@ -441,11 +440,7 @@ func choose_card(i: int) -> void:
 	Cards.on_declined(player, offers, c)
 	Cards.apply(player, c)
 	sfx.play("card", -8.0)
-	pending_levels -= 1
-	if offer_rare:
-		rare_picks -= 1
-		if not rare_reasons.is_empty():
-			rare_reasons.pop_front()
+	run.take_pick(offer_rare)
 	if Cards.need_course(player):
 		_open_course()
 	elif pending_levels <= 0 or not refill_offers():
@@ -565,37 +560,53 @@ func radio(from: String, text: String, enemy := false) -> void:
 	sfx.play("radio", -18.0, 2.2)
 
 
-func on_activity_success(kind: String) -> void:
-	activities_done += 1
+## Banner headline per activity kind; the reward part is built from what `RunState` paid.
+const ACTIVITY_TITLE := {
+	&"ground": "Позиция ПВО уничтожена!", &"convoy": "Колонна разбита!", &"dogfight": "Ас-соперник сбит!",
+}
+
+
+## `Events.activity_succeeded`: pays the reward through `RunState.award_activity` (the only
+## place that changes parts and the card queue for activities), then repair, course points,
+## banner and sound. Activity-specific lines (story, radio, pickups) stay in the activity.
+func _on_activity_succeeded(kind: StringName) -> void:
 	if _autotest:
 		print("AUTOTEST: activity success ", kind, " at %.0f" % run_time)
-	# 3.5: активности стали чаще (раз в минуту) — выбор из редких карточек за каждую вторую,
-	# за остальные — ремонт 20% и запчасти, иначе сила игрока растёт ещё быстрее (лог 3.4-t1: Кит неуязвим с 12-й минуты)
-	# правка 3.5-s4: ас-соперник — самая трудная активность, выбор из редких карточек за каждого
-	var rare := activities_done % 2 == 1 or kind == "dogfight"
-	var what: String = {"ground": "Позиция ПВО уничтожена!", "convoy": "Колонна разбита!"}.get(kind, "Ас-соперник сбит!")
-	player.add_course_pts(1)
-	if rare:
-		pending_levels += 1
-		rare_picks += 1
-		rare_reasons.append({"ground": "ЗА ПОЗИЦИЮ ПВО", "convoy": "ЗА КОЛОННУ"}.get(kind, "ЗА АСА"))
-	else:
-		player.heal(player.max_hp * 0.2, "activity")
-	if kind == "ground":
-		parts += 40.0 * continue_mult()
-	if not rare:
-		parts += 60.0 * continue_mult()
-	Story.say(Story.DISPATCH, "Чисто сработано. Награда ваша.")
-	show_banner(Loc.t("%s Награда: %s") % [Loc.t(what), Loc.t("выбор из редких карточек") + (Loc.t(" и +40 запчастей") if kind == "ground" else "") if rare else Loc.t("ремонт 20%% и +%d запчастей") % (100 if kind == "ground" else 60)], 4.0)
-	sfx.play("evac", -4.0, 1.3)
+	var r := run.award_activity(kind)
+	if r.is_empty():
+		return
+	var rare: bool = r["rare"]
+	var paid := int(r["parts"])
+	if is_instance_valid(player):
+		player.add_course_pts(int(r["course_pts"]))
+		if float(r["heal"]) > 0.0:
+			player.heal(player.max_hp * float(r["heal"]), "activity")
+	match kind:
+		&"transport":
+			show_banner(Loc.t("Транспортник сбит! Груз: +%d запчастей, ремкомплекты") % paid
+				+ (Loc.t(" и выбор из редких карточек") if rare else ""), 4.0)
+			sfx.play("cargo", -4.0, 1.3)
+		&"rescue":
+			show_banner(Loc.t("Пилот спасён! Награда: выбор из редких карточек и +%d запчастей") % paid, 4.0)
+			sfx.play("evac", -4.0, 1.3)
+		&"class_task":
+			show_banner(Loc.t("Задание класса выполнено! Награда: выбор из редких карточек и +%d запчастей") % paid, 4.0)
+			sfx.play("evac", -4.0, 1.3)
+		_:
+			Story.say(Story.DISPATCH, "Чисто сработано. Награда ваша.")
+			var reward := (Loc.t("выбор из редких карточек") + (Loc.t(" и +%d запчастей") % paid if paid > 0 else "")) \
+				if rare else Loc.t("ремонт 20%% и +%d запчастей") % paid
+			show_banner(Loc.t("%s Награда: %s") % [Loc.t(ACTIVITY_TITLE.get(kind, "")), reward], 4.0)
+			sfx.play("evac", -4.0, 1.3)
 
 
-func on_activity_failed(kind: String, who := "") -> void:
+## `Events.activity_failed`: dispatcher line and, for an escaped ace, a banner. No reward.
+func _on_activity_failed(kind: StringName, who: String) -> void:
 	if _autotest:
 		print("AUTOTEST: activity failed ", kind, " at %.0f" % run_time)
-	if kind != "rescue":
+	if kind != &"rescue":
 		Story.say(Story.DISPATCH, "Ушли. Ничего, следующих встретим.")
-	if kind == "dogfight":
+	if kind == &"dogfight":
 		show_banner(Loc.t("Ас «%s» ушёл — награды нет") % who, 3.0)
 
 
@@ -736,8 +747,8 @@ func on_enemy_killed(e: Enemy) -> void:
 		tail_kills += 1
 		e.xp = int(ceil(e.xp * 1.5))
 		fx.text(e.global_position + Vector2(0, -30), "Сбит с хвоста!", Color(1.0, 0.9, 0.4))
-	parts += e.parts * continue_mult() * streak_mult() * (1.5 if (e.is_ground and is_instance_valid(player) and player.has_perk("a_grd2")) else 1.0) \
-		* (player.mastery_parts_k(e) if is_instance_valid(player) else 1.0)
+	run.grant_parts(e.parts * streak_mult() * (1.5 if (e.is_ground and is_instance_valid(player) and player.has_perk("a_grd2")) else 1.0) \
+		* (player.mastery_parts_k(e) if is_instance_valid(player) else 1.0), &"kill")
 	fx.explosion(e.global_position, e.radius * (1.3 if e.big else 1.0), not e.is_ground)
 	sfx.play("explode_big" if e.big else "explode", -4.0 if e.big else -12.0, 1.0, e.global_position)
 	add_shake(e.kill_shake)

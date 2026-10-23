@@ -10,6 +10,14 @@ GODOT="${GODOT:-godot}"
 LOG="${SMOKE_LOG:-smoke_${CLS}.log}"
 ERR_RE="SCRIPT ERROR|Parse Error"
 
+# CS-03: состояние вылета меняется только методами RunState — прямые записи в Main не пропускаем
+if [ -z "${SMOKE_SKIP_IMPORT:-}" ]; then
+	RS_RE='\b(m|Main\.I)\.(parts|pending_levels|rare_picks|rare_reasons|activities_done|kills|level|xp)\s*([-+*/]?=[^=]|\.(append|clear|pop_front|erase))'
+	if grep -rnE "$RS_RE" game/scripts --include=*.gd | grep -v "game/scripts/run_state.gd"; then
+		echo "smoke: прямая запись в состояние вылета — используйте методы RunState (docs/standards/code.md §6)"; exit 1
+	fi
+fi
+
 if [ -z "${SMOKE_SKIP_IMPORT:-}" ]; then
 	"$GODOT" --headless --path game --import >import.log 2>&1
 	if grep -E "$ERR_RE" import.log; then

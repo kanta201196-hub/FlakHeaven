@@ -543,7 +543,7 @@ func _check_trucks() -> void:
 	elif trucks_killed == trucks_total and not failed and not done:
 		done = true
 		Main.I.tele.add("convoy_done")
-		Main.I.on_activity_success("convoy")
+		Events.activity_succeeded.emit(&"convoy")
 	elif not failed and not done:
 		failed = true
 		Main.I.show_banner("Часть каравана ушла в гавань — груз потерян" if _sea else "Часть колонны ушла в укрытие — груз потерян", 3.0)

@@ -82,6 +82,9 @@ func _test_continue_mult_once() -> void:
 	var res := r.award_activity(&"transport")
 	_check(is_equal_approx(res["parts"], r.parts), "paid amount is what the banner shows")
 	_check(RunState.new().continue_mult() == 1.0, "no bonus before 15:00")
+	var c := RunState.new()
+	c.run_time = s.run_time
+	_check(is_equal_approx(c.grant_parts(50.0, &"cargo", false), 50.0), "no bonus when already applied")
 
 
 ## XP: a known sum gives the expected levels; leftover XP stays below the next need.

@@ -2,7 +2,8 @@ class_name ClassTask
 extends RefCounted
 ## EX-07: задание класса в брифинге операции (вариант 2, решение Kanta 21.10).
 ## У каждого класса своя задача на вылет: «Оса» перехватывает бомбардировщики до 12:00,
-## «Грач» давит ПВО, «Кит» жжёт колонны. Выполнил — выбор из редких карточек и запчасти.
+## «Грач» давит ПВО, «Кит» жжёт колонны. Выполнил — выбор из редких карточек и запчасти
+## (`Rewards.ACTIVITY[&"class_task"]`, платит `RunState`).
 ## Видно в брифинге (все три) и в бою (строка в правой панели).
 
 const DEFS := {
@@ -10,7 +11,6 @@ const DEFS := {
 	"attacker": {"brief": "«Грач»: подавить 8 установок ПВО", "hud": "Установки ПВО %d из %d", "need": 8, "until": 0.0},
 	"bomber": {"brief": "«Кит»: сжечь 10 машин колонн", "hud": "Машины колонн %d из %d", "need": 10, "until": 0.0},
 }
-const PARTS := 80.0
 
 var cls := ""
 var n := 0
@@ -43,16 +43,11 @@ func on_kill(m: Main, e: Enemy) -> void:
 	if n < need():
 		return
 	state = "done"
-	m.pending_levels += 1
-	m.rare_picks += 1
-	m.rare_reasons.append("ЗА ЗАДАНИЕ КЛАССА")
-	m.parts += PARTS * m.continue_mult()
 	m.tele.v["class_task_t"] = m.run_time
-	m.show_banner(Loc.t("Задание класса выполнено! Награда: выбор из редких карточек и +%d запчастей") % int(PARTS), 4.0)
-	m.radio("Штаб", "Задание выполнено, отличная работа. Награда ваша.")
-	m.sfx.play("evac", -4.0, 1.3)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: class task done at %.0f" % m.run_time)
+	Events.activity_succeeded.emit(&"class_task")   # reward, banner and sound: Main / RunState
+	m.radio("Штаб", "Задание выполнено, отличная работа. Награда ваша.")
 
 
 func update(m: Main) -> void:
