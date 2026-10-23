@@ -737,6 +737,25 @@ func debug_level(c: String) -> void:
 	save()
 
 
+## GD-01: balance autotest as a demo player (run with --demo): every node at the demo cap, crew at the demo cap,
+## weapon tier 1 picked (option "a"), perks in the first step of the first branches the crew level allows
+func debug_demo_profile() -> void:
+	for c in PlaneClasses.LIST:
+		var d := cls(c)
+		for k in (d["nodes"] as Dictionary).keys():
+			d["nodes"][k] = Demo.node_cap()
+		d["crew_rank"] = Demo.crew_cap()
+		d["crew_xp"] = int(CREW_CUM[Demo.crew_cap() - 1])
+		d["perks"] = []
+		for br in PERKS[c]:
+			if perk_points(c) <= 0:
+				break
+			(d["perks"] as Array).append(br[1][0][0])
+	for w in WEAPON_ORDER:
+		data["weapons"][w]["t1"] = "a"
+	save()
+
+
 func debug_all() -> void:
 	for c in PlaneClasses.LIST:
 		cls(c)["crew_xp"] = int(CREW_CUM[CREW_CUM.size() - 1])
