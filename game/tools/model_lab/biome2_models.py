@@ -118,7 +118,21 @@ def e_ship_tanker():
           L.box((32.0, 0, 10.6), (0.3, 4.0, 0.25), cream, 'fore_yard'),
           L.box((38.5, 0, 3.7), (5.0, 7.0, 2.2), rust, 'forecastle'),
           L.box((-12.0, 0, 3.4), (3.0, 7.0, 1.6), cream, 'pump_house')]
-    L.finish(o, battle('e_ship_tanker'), target=16000, maxtex=1024)
+    # окраска (Kanta 23.10: «более естественная»): грязный тёмно-зелёный борт, тёмная палуба, грязно-кремовая надстройка
+    import random
+    import b2_ships as SH
+    rng = random.Random(2)
+    roles = {'*': 'metal', 'fh_tanker_hull': 'hull', 'Material.002': 'hull', 'fh_tanker_rust': 'hull', 'Material.001': 'bottom',
+             'Material.003': 'deck', 'fh_tanker_deck': 'deck', 'Material': 'pipe', 'material_0': 'pipe',
+             'Material.004': 'super', 'Material.007': 'super', 'Material.016': 'super', 'Material.017': 'super',
+             'fh_tanker_cream': 'super', 'Material.015': 'win', 'fh_window': 'win', 'fh_tanker_band': 'band',
+             'fh_tanker_dark': 'soot', 'Material.018': 'bronze'}
+    pal = dict(hull=(0.25, 0.29, 0.25), deck=(0.25, 0.20, 0.18), cream=(0.62, 0.59, 0.50), z_deck=2.6,
+               boot=(-0.25, 0.45), salt=0.45, z_house=2.6, soot=[((-39.8, 0, 13.6), 2.2)],
+               band=(0.52, 0.42, 0.26), pipe=(0.40, 0.40, 0.36), bronze=(0.38, 0.32, 0.22), rust_pipe=0.5,
+               streaks=[(41.6, 2.0, 0.6, 1.9, 1.0)] + [(x + rng.uniform(-1, 1), 2.45, 0.35, rng.uniform(0.8, 2.1), rng.uniform(0.6, 1.0))
+                                                     for x in range(-40, 38, 5)])
+    SH.paint_finish(o, battle('e_ship_tanker'), roles, pal, seed=212, target=16000)
 
 
 # ---------------- К-5 десантная баржа с грузом (14 м) ----------------
@@ -1076,8 +1090,8 @@ def _bulk_ring(x, b, zb, z0, z1):
     """Сечение корпуса между высотами z0..z1: плоское днище zb, скула, борт."""
     ch = min(1.6, b * 0.45)
     lo = max(zb, z0)
-    if zb >= z0:
-        return [(x, -b, lo), (x, b, lo), (x, b, z1), (x, -b, z1)]
+    if zb >= z0:   # те же 6 точек, что у кольца со скулой (иначе loft терял правый борт у кормы — дыра в борту)
+        return [(x, -b, lo), (x, b, lo), (x, b, lo), (x, b, z1), (x, -b, z1), (x, -b, lo)]
     return [(x, -b + ch, zb), (x, b - ch, zb), (x, b, min(zb + ch, z1)), (x, b, z1), (x, -b, z1), (x, -b, min(zb + ch, z1))]
 
 
@@ -1163,7 +1177,22 @@ def e_ship_bulk():
         for y in (-7.52 + lv * 0.2, 7.52 - lv * 0.2):
             o.append(L.box((xs, y, 10.3 + lv * 2.6), (6.0 - lv * 0.4, 0.06, 0.6), win, 'side_win'))
     L.smooth([ob for ob in o if ob.name.startswith('hull')], 40)
-    L.finish(o, battle('e_ship_bulk'), target=12000, maxtex=1024)
+    # окраска (Kanta 23.10: «более естественная»): выгоревший сине-серый борт, тёмная палуба в грязи, крышки трюмов
+    # и краны — приглушённые, надстройка грязно-кремовая
+    import random
+    import b2_ships as SH
+    rng = random.Random(1)
+    roles = {'*': 'metal', 'fh_bulk_black': 'hull', 'fh_bulk_bottom': 'bottom', 'fh_bulk_deck': 'deck',
+             'fh_bulk_hatch': 'hatch', 'fh_bulk_hatch_dk': 'hatch', 'fh_bulk_coaming': 'coaming', 'fh_bulk_rail': 'rail',
+             'fh_bulk_white': 'super', 'fh_window': 'win', 'fh_bulk_crane': 'crane', 'fh_red': 'band', 'fh_raft': 'raft',
+             'fh_bulk_pipe': 'pipe'}
+    pal = dict(hull=(0.31, 0.315, 0.31), deck=(0.24, 0.20, 0.17), cream=(0.62, 0.59, 0.50), z_deck=8.0,
+               boot=(-0.4, 1.0), salt=0.9, z_house=8.0, hidden_caps=('fh_bulk_black', 'fh_bulk_bottom'), soot=[((xs - 8.75, 0, 21.4), 3.2)],
+               hatch=(0.39, 0.35, 0.27), coaming=(0.27, 0.21, 0.18), rail=(0.50, 0.49, 0.45), crane=(0.54, 0.46, 0.27),
+               band=(0.45, 0.22, 0.17), raft=(0.60, 0.38, 0.22), pipe=(0.31, 0.34, 0.30), rust_crane=0.6, rust_hatch=0.5,
+               streaks=[(54.0, 7.6, 0.9, 6.4, 1.0), (-49.0, 4.6, 0.3, 3.4, 0.8)] +
+                       [(x + rng.uniform(-1.5, 1.5), 7.75, 0.6, rng.uniform(2.5, 6.5), rng.uniform(0.7, 1.0)) for x in range(-56, 47, 6)])
+    SH.paint_finish(o, battle('e_ship_bulk'), roles, pal, seed=111, target=12000)
 
 
 RECIPES = {f.__name__: f for f in [e_ship_bulk, e_ship_escort, e_ship_tanker, e_ship_landing, a22_buoy_red, a23_buoy_green, e_ship_aa, e_ekranoplan, e_seaplane, e_ship_battery, e_drone_sea,

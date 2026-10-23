@@ -214,8 +214,9 @@ def bake(ob, shade, size=1024, name=None, rough=0.92, unwrap_angle=60, margin=0.
     shade(base, P, N, mat_names[idx]) → цвет (n,3) sRGB; base — цвет детали (заливка или текстура исходника по старой UV),
     P — точка (м, рабочие оси), N — нормаль грани, idx — номер материала. Старые материалы и UV убираются."""
     me = ob.data
-    old_uv = me.uv_layers[0].name if len(me.uv_layers) else None
-    unwrap(ob, margin, unwrap_angle)
+    old_uv = next((u.name for u in me.uv_layers if u.name != 'paint'), None)
+    if 'paint' not in me.uv_layers:   # развёртку 'paint' можно сделать заранее (b2_ships: мельче под водой)
+        unwrap(ob, margin, unwrap_angle)
     me.calc_loop_triangles()
     nl = len(me.loops)
     uvn = np.zeros(nl * 2); me.uv_layers['paint'].data.foreach_get('uv', uvn); uvn = uvn.reshape(-1, 2)
