@@ -6594,3 +6594,17 @@ msgstr "synergy: good company"
 #: game/scripts/wingman.gd:442
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ВЕТКА %s · СТУПЕНЬ %d"
+msgstr "BRANCH %s · TIER %d"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "МОДЕРНИЗАЦИЯ · ВЕТКА %s"
+msgstr "UPGRADE · BRANCH %s"
+
+#: game/scripts/hud_hangar.gd
+msgid "ВЫБРАНО"
+msgstr "CHOSEN"
