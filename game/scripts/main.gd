@@ -494,6 +494,8 @@ func ban_card(i: int) -> void:
 	if state != "levelup" or bans <= 0 or i < 0 or i >= offers.size():
 		return
 	var c: Dictionary = offers[i]
+	if c["kind"] == "branch" and bool(c["first"]):
+		return   # S9-15: «или-или» не исключается
 	banned[c["ban"]] = c["title"]
 	bans -= 1
 	if not locked.is_empty() and locked["id"] == c["id"]:

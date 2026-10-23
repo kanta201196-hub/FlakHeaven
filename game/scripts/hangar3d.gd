@@ -283,7 +283,7 @@ func _set_bg(mode: String) -> void:
 func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	if cls_id != _cls:
 		_cls = cls_id
-		view_lvl = 1
+		view_lvl = Profile.plane_lvl(cls_id)   # S9-02: открываем тот самолёт, на котором летаем
 	rect = r
 	_drawn_frame = Engine.get_process_frames()
 	_fit_vp(r)

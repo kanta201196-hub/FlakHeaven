@@ -343,12 +343,13 @@ func has_perk(c: String, id: String) -> bool:
 
 ## Правка 6 теста 3.5-s5 (Kanta): у самолёта ур. 2 своя прокачка с нуля, прогресс ур. 1 остаётся при нём.
 ## Узлы — того самолёта, на котором класс сейчас летает (plane_lvl).
-func nodes_of(c: String) -> Dictionary:
-	return cls(c)["nodes2" if plane_lvl(c) == 2 else "nodes"]
+## S9-02: lv — самолёт явно (ангар прокачивает тот, что на виде); 0 — тот, на котором класс летает
+func nodes_of(c: String, lv := 0) -> Dictionary:
+	return cls(c)["nodes2" if (plane_lvl(c) if lv <= 0 else lv) == 2 else "nodes"]
 
 
-func node(c: String, id: String) -> int:
-	return mini(int(nodes_of(c).get(id, 0)), Demo.node_cap())   # демо: сохранение полной игры не выше потолка
+func node(c: String, id: String, lv := 0) -> int:
+	return mini(int(nodes_of(c, lv).get(id, 0)), Demo.node_cap())   # демо: сохранение полной игры не выше потолка
 
 
 func plane2(c: String) -> bool:
@@ -424,16 +425,18 @@ func skills(c: String) -> Array:
 
 # ---------- покупки ----------
 
-func can_buy_node(c: String, id: String) -> bool:
-	var lv := node(c, id)
+func can_buy_node(c: String, id: String, pl := 0) -> bool:
+	if pl == 2 and not plane2(c):
+		return false
+	var lv := node(c, id, pl)
 	return lv < Demo.node_cap() and parts() >= int(NODE_COST[lv])
 
 
-func buy_node(c: String, id: String) -> bool:
-	if not can_buy_node(c, id):
+func buy_node(c: String, id: String, pl := 0) -> bool:
+	if not can_buy_node(c, id, pl):
 		return false
-	data["parts"] = parts() - int(NODE_COST[node(c, id)])
-	nodes_of(c)[id] = node(c, id) + 1
+	data["parts"] = parts() - int(NODE_COST[node(c, id, pl)])
+	nodes_of(c, pl)[id] = node(c, id, pl) + 1
 	save()
 	return true
 
