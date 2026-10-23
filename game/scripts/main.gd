@@ -34,13 +34,8 @@ var hangar_tab := "plane"
 var hangar_w := "aam"
 var hangar_back := "menu"        # анимация итогов для ангара   # 3.1: справочник связок — откуда открыт   # 3.1: выбранный навык класса: класс → id
 
-var run_time := 0.0
 var ace_log: Array = []   # тест 3.5-s5 (п. 10): асы вылета — прочность, урон по оружию, время жизни (колонка aces лога)
-var kills := 0
 var restarts := 0
-var level := 1
-var xp := 0.0
-var pending_levels := 0
 var offers: Array = []
 const OFFER_COUNT := 4
 ## 3.5: неуязвимость после выбора карточки (было 1 с — к 15-й минуте набегало больше минуты)
@@ -51,23 +46,13 @@ var bans := 2           # исключение карточки до конца 
 const TEST_PICKS := 10
 var banned := {}        # ключи исключённых карточек
 var locked: Dictionary = {}  # закреплённая карточка — появится в следующем выборе
-var streak := 0         # серия сбитий без паузы > 2,5 с
-var streak_t := 0.0
-var best_streak := 0
-var near_misses := 0
-var rare_picks := 0        # выборы из редких карточек (награда за аса-соперника)
 var offer_rare := false
 var class_task: ClassTask = null   # EX-07: задание класса на вылет
-var rare_reasons: Array = []  # 3.1: за что награда («ЗА ПОЗИЦИЮ ПВО», «ЗА АСА»)
-var activities_done := 0
 var radio_from := ""
 var radio_text := ""
 var radio_t := 0.0
 var radio_enemy := false # перехват вражеского эфира — красная плашка
-var tail_kills := 0
 var level_at_5 := 0   # уровень на 5:00 — для баланса кривой опыта
-var parts := 0.0        # запчасти (валюта ангара), набранные за вылет
-var parts_kept := 0     # сколько сохранено по итогам (100% при эвакуации, 50% при гибели)
 var stats := {}
 var counters := {}
 var shots := 0
@@ -93,7 +78,6 @@ var base_ts := 1.0
 var banner := ""
 var banner_t := 0.0
 var levelup_intro := false
-var bosses_killed := 0
 ## U-05: что сделано для задачи операции кампании («fortress», «baron») и итог на экране результатов
 var op_flags := {}
 var op_result := {}
@@ -104,6 +88,58 @@ var _args: PackedStringArray
 var input_ctl: MainInput   # глобальные клавиши, клики интерфейса, действия ангара
 var dbg: MainDebug         # автотест, скриншоты, отладочные проверки
 var tele := Telemetry.new() # 3.4: замеры для анализа правок (колонки в конце лога)
+
+## State of the current sortie (CS-03). The fields below forward to it until every reader
+## uses `run.*` directly; new code changes them only through `RunState` methods.
+var run := RunState.new()
+var run_time: float:
+	get: return run.run_time
+	set(v): run.run_time = v
+var kills: int:
+	get: return run.kills
+	set(v): run.kills = v
+var level: int:
+	get: return run.level
+	set(v): run.level = v
+var xp: float:
+	get: return run.xp
+	set(v): run.xp = v
+var pending_levels: int:
+	get: return run.pending_levels
+	set(v): run.pending_levels = v
+var streak: int:
+	get: return run.streak
+	set(v): run.streak = v
+var streak_t: float:
+	get: return run.streak_t
+	set(v): run.streak_t = v
+var best_streak: int:
+	get: return run.best_streak
+	set(v): run.best_streak = v
+var near_misses: int:
+	get: return run.near_misses
+	set(v): run.near_misses = v
+var rare_picks: int:
+	get: return run.rare_picks
+	set(v): run.rare_picks = v
+var rare_reasons: Array:
+	get: return run.rare_reasons
+	set(v): run.rare_reasons = v
+var activities_done: int:
+	get: return run.activities_done
+	set(v): run.activities_done = v
+var tail_kills: int:
+	get: return run.tail_kills
+	set(v): run.tail_kills = v
+var parts: float:
+	get: return run.parts
+	set(v): run.parts = v
+var parts_kept: int:
+	get: return run.parts_kept
+	set(v): run.parts_kept = v
+var bosses_killed: int:
+	get: return run.bosses_killed
+	set(v): run.bosses_killed = v
 
 
 func _ready() -> void:
@@ -212,13 +248,7 @@ func start_run() -> void:
 	fx = Fx.new()
 	world.add_child(fx)
 
-	run_time = 0.0
-	kills = 0
-	level = 1
-	xp = 0.0
-	pending_levels = 0
-	parts = 0.0
-	parts_kept = 0
+	run = RunState.new()
 	is_dead = false
 	stats = {"taken": {}, "taken_by": {}, "dealt": {}, "kills_by": {}, "taken_kind": {}, "raw_in": {}}   # S8: taken_kind — урон по видам оружия врагов, raw_in — «сырой» урон с --god
 	ace_log = []
@@ -241,26 +271,17 @@ func start_run() -> void:
 	Hints.show("xp", "Зелёные ромбы со сбитых врагов — опыт: пролетайте рядом, они притянутся. Новый уровень — выбор улучшения.", 7.0, 2)
 	if Settings.minimap > 0:
 		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
-	bosses_killed = 0
 	evac_windows = 0
 	evac_lost = false
 	rerolls = TEST_PICKS + Profile.extra_rerolls(cls_id) # 3.5: самолёт ур. 2 — +1 переброс
 	bans = TEST_PICKS
 	banned = {}
 	locked = {}
-	streak = 0
-	streak_t = 0.0
-	best_streak = 0
-	near_misses = 0
-	rare_picks = 0
-	rare_reasons = []
 	course_log = []
 	meta_award = {}
 	_slow_t = 0.0
 	offer_rare = false
-	activities_done = 0
 	radio_t = 0.0
-	tail_kills = 0
 	level_at_5 = 0
 	tele.reset()
 	camera.global_position = Vector2.ZERO
@@ -356,32 +377,21 @@ func restart() -> void:
 
 # ---------- Опыт и карточки ----------
 
+## XP needed for the next level (`XpCurve`).
 func xp_need() -> float:
-	# 2.8: кривая круче — к 15:00 ~35-й уровень (было 60–70)
-	# 3.1: мягче — к 15:00 ~35-й уровень и больше выборов в первой половине (было 4 + 3k + 0,25k²)
-	return 4.0 + (level - 1) * 2.0 + 0.07 * pow(level - 1, 2.0)
+	return run.xp_need()
 
 
-## S10-13 (решение Kanta 23.10, вариант 1): после 5:00 опыт за убийство убывает и к 7:00 — половина.
-## Лог «Осы» в 3.5-s10: 59-й уровень к 10:00 (кривая рассчитана на ~35-й к 15:00) — к 10-й минуте всё прокачано;
-## цель — последние основные карточки к 12–13-й минуте
-const KILL_XP_FROM := 300.0
-const KILL_XP_TO := 420.0
-const KILL_XP_LATE := 0.5
-
-
+## Kill XP multiplier at the current sortie time (S10-13, `XpCurve`).
 func kill_xp_k() -> float:
-	return lerpf(1.0, KILL_XP_LATE, clampf((run_time - KILL_XP_FROM) / (KILL_XP_TO - KILL_XP_FROM), 0.0, 1.0))
+	return run.kill_xp_k()
 
 
+## Adds XP from pickups (times the F1 `xp_mult` slider); nothing after death.
 func add_xp(v: float) -> void:
 	if is_dead:
 		return
-	xp += v * Tuning.g("xp_mult")
-	while xp >= xp_need():
-		xp -= xp_need()
-		level += 1
-		pending_levels += 1
+	run.add_xp(v * Tuning.g("xp_mult"))
 
 
 func _open_levelup() -> void:
@@ -674,9 +684,9 @@ func on_evac_closed() -> void:
 	show_banner("Окно эвакуации закрыто — следующее после следующего аса", 4.0)
 
 
+## Reward multiplier for staying after 15:00 (`RunState.continue_mult`).
 func continue_mult() -> float:
-	# Продолжение после 15-й минуты: +10% к добыче за каждую минуту
-	return 1.0 + 0.1 * maxf(0.0, (run_time - 900.0) / 60.0)
+	return run.continue_mult()
 
 
 # ---------- Статистика ----------
