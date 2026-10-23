@@ -482,6 +482,43 @@ static func wing_limit(p: Player) -> int:
 	return mini(WING_MAX, int(p.cls["wingmen"]))
 
 
+## S9-15 (решение Kanta 23.10, вариант 1+2): с 35-го уровня у оружия ур. 5 — мастерство оружия на выбор
+## «или-или»: выбор из двух карточек, взятая ветка закрывает вторую до конца вылета; дальше ранги взятой.
+## Обычные «+%» (модули, «Перегрузка») с 35-го уровня выпадают реже
+const BRANCH_LEVEL := 35
+const BRANCH_MAX := 5
+const BRANCH_PLUS_K := 0.4
+const BRANCHES := {
+	"rate": {"title": "Скорострел", "desc": "−10% перезарядки за ранг"},
+	"power": {"title": "Калибр", "desc": "+18% урона за ранг"},
+}
+
+
+static func branch_on() -> bool:
+	return Main.I != null and Main.I.level >= BRANCH_LEVEL
+
+
+## Подвес, которому пора выбрать ветку: оружие ур. 5, ветки ещё нет (−1 — нет такого)
+static func branch_group(p: Player, banned: Dictionary) -> int:
+	if not branch_on():
+		return -1
+	for gi in p.groups.size():
+		var g: Hardpoint = p.groups[gi]
+		if not g.is_empty() and g.level >= Weapons.MAX_LEVEL and g.branch == "" and not banned.has("br:%d" % gi):
+			return gi
+	return -1
+
+
+static func _branch_card(p: Player, gi: int, b: String, first: bool) -> Dictionary:
+	var g: Hardpoint = p.groups[gi]
+	var wt := g.evo_title() if g.evo else Weapons.title(g.weapon)
+	var title := "%s: %s" % [wt, BRANCHES[b]["title"]]
+	if not first:
+		title += " (ранг %d → %d)" % [g.branch_rank, g.branch_rank + 1]
+	return {"id": "br_%s_%d" % [b, gi], "ban": "br:%d" % gi, "kind": "branch", "branch": b, "group": gi, "first": first,
+		"cat": "Мастерство оружия", "title": title}
+
+
 ## Все возможные карточки сейчас: [вес, карточка без редкости]
 static func _candidates(p: Player, banned: Dictionary) -> Array:
 	var cands: Array = []
@@ -565,6 +602,11 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 			continue
 		cands.append([1.2, {"id": "wing_lvl_%d" % wi, "ban": "wl:%d" % wi, "kind": "wing_lvl", "wi": wi, "cat": "Звено",
 			"title": "Звено: слётанность — %s %d (ур. %d → %d)" % [Prog.WING_TYPES[wm.type]["short"], wi + 1, wm.lvl, wm.lvl + 1]}])
+	# S9-15: ранги взятой ветки мастерства оружия
+	for gi in p.groups.size():
+		var gb: Hardpoint = p.groups[gi]
+		if gb.branch != "" and gb.branch_rank < BRANCH_MAX and not banned.has("br:%d" % gi):
+			cands.append([3.0, _branch_card(p, gi, gb.branch, false)])
 	# 3.2: вес ×1,8 карточкам курса; катализаторам эволюций — ×1,5
 	for c in cands:
 		if advances_course(p, c[1]):
@@ -574,6 +616,10 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 	# Резерв v1: когда кандидатов мало или после 15:00
 	if cands.size() < 10 or (Main.I != null and Main.I.run_time >= 900.0):
 		_reserve(p, cands)
+	if branch_on():
+		for c in cands:
+			if (c[1]["kind"] == "module" and not c[1]["id"] in ["repair", "skill3"]) or c[1]["id"] == "res_overload":
+				c[0] = float(c[0]) * BRANCH_PLUS_K
 	return cands
 
 
@@ -644,6 +690,13 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s, с %d:%02d") % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
 			card["desc"] = Loc.t(syn_def(p, card["syn"])["desc"]) + Loc.t("\nОткрывает слот %d из %d. Следующий слот дороже.") % [p.syn.size() + 1, MAX_SYN]
+		"branch":
+			var bd: Dictionary = BRANCHES[card["branch"]]
+			var bgr: Hardpoint = p.groups[int(card["group"])]
+			card["desc"] = Loc.t("%s: %s, до %d рангов") % [bgr.name, Loc.t(bd["desc"]), BRANCH_MAX]
+			if card["first"]:
+				var other := "power" if card["branch"] == "rate" else "rate"
+				card["desc"] += Loc.t("\nИли-или: «%s» для этого оружия закроется до конца вылета") % Loc.t(BRANCHES[other]["title"])
 		"mastery":
 			card["desc"] = Loc.t(String(PlaneClasses.MASTERY[p.cls_id]["desc"])) + Loc.t("\nОдна на вылет: если отказаться, больше не придёт.")
 		"evolution":
@@ -723,6 +776,15 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 			"weapon": PlaneClasses.signature(p.cls_id),
 			"title": "МАСТЕРСТВО: %s" % PlaneClasses.MASTERY[p.cls_id]["title"]}
 		out.append(finalize(p, mc))
+	# S9-15: мастерство оружия — выбор только из двух веток (если место не заняли связка, модернизация, мастерство класса)
+	if out.is_empty():
+		var bg := branch_group(p, banned)
+		if bg >= 0:
+			for b in BRANCHES:
+				var bc := _branch_card(p, bg, b, true)
+				bc["rarity"] = 3
+				out.append(finalize(p, bc))
+			return out
 	# Закреплённая карточка остаётся, если ещё доступна
 	if not locked.is_empty():
 		for c in cands:
@@ -883,6 +945,12 @@ static func apply(p: Player, card: Dictionary) -> void:
 			wm.refresh_hp()
 		"synergy", "skill_syn":
 			p.open_synergy(card["syn"])
+		"branch":
+			var hb: Hardpoint = p.groups[int(card["group"])]
+			hb.branch = card["branch"]
+			hb.branch_rank = mini(hb.branch_rank + 1, BRANCH_MAX)
+			if card["first"]:
+				Main.I.show_banner(Loc.t("МАСТЕРСТВО ОРУЖИЯ: %s") % Loc.t(card["title"]), 3.0)
 		"mastery":
 			p.mastery = true
 			Main.I.tele.v["mastery_t"] = Main.I.run_time

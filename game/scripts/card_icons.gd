@@ -224,7 +224,7 @@ static func badge(ctrl: Control, c: Vector2, s: float, kind: String, col: Color)
 	match kind:
 		"weapon_up":
 			t = "+"
-		"evolution", "mastery":
+		"evolution", "mastery", "branch":
 			t = "★"
 		"weapon_new":
 			t = "Н"

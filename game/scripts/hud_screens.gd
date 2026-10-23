@@ -16,11 +16,17 @@ func levelup(m: Main, size: Vector2) -> void:
 	var right_w := 440.0
 	var lx := 48.0
 	var lw := size.x - right_w - lx - 40.0
-	if m.offer_rare:
+	var pair: bool = not m.offers.is_empty() and m.offers[0]["kind"] == "branch" and bool(m.offers[0]["first"])
+	if pair:
+		# S9-15: мастерство оружия «или-или»
+		_text(Vector2(lx, 120), Loc.t("МАСТЕРСТВО ОРУЖИЯ: ИЛИ-ИЛИ"), 40, Color(1.0, 0.82, 0.29))
+	elif m.offer_rare:
 		_text(Vector2(lx, 120), Loc.t("НАГРАДА %s: ВЫБОР ИЗ РЕДКИХ КАРТОЧЕК") % (m.rare_reasons[0] if not m.rare_reasons.is_empty() else ""), 38, Color(0.8, 0.55, 1.0))
 	else:
 		_text(Vector2(lx, 120), Loc.t("НОВЫЙ УРОВЕНЬ: %d") % m.level if m.pending_levels <= 1 else Loc.t("НОВЫЙ УРОВЕНЬ (ещё выборов: %d)") % m.pending_levels, 40, Color(1.0, 0.82, 0.29))
-	if m.levelup_intro:
+	if pair:
+		_text(Vector2(lx, 158), "Выберите одну ветку для этого оружия — вторая закроется до конца вылета. 1 или 2 — выбрать", 16, Color(1.0, 0.9, 0.6))
+	elif m.levelup_intro:
 		# U-03: первые выборы — что это и как выбирать
 		_text(Vector2(lx, 156), "Выберите одно улучшение — оно действует до конца вылета. Не знаете, что взять? Берите оружие, которое уже стоит на самолёте.", 16, Color(1.0, 0.9, 0.6))
 		_text(Vector2(lx, 178), "1–4 или клик — выбрать · «Переброс» — показать другие карточки · «Закрепить» — оставить на следующий раз · «Исключить» — больше не предлагать", 14, Color(0.75, 0.8, 0.9))
@@ -36,6 +42,11 @@ func levelup(m: Main, size: Vector2) -> void:
 	for i in n:
 		var r := Rect2(lx + (i % 2) * (cw + gap), top + (i / 2) * (ch + gap), cw, ch)
 		_card(m, i, r, r.has_point(mp))
+	if pair and n == 2:
+		var oc := Vector2(lx + cw + gap * 0.5, top + ch * 0.5)
+		ctrl.draw_circle(oc, 34.0, Color(0.06, 0.08, 0.06))
+		ctrl.draw_arc(oc, 34.0, 0.0, TAU, 40, Color(1.0, 0.82, 0.29), 3.0)
+		_text(Vector2(oc.x - 34.0, oc.y + 8.0), Loc.t("ИЛИ"), 22, Color(1.0, 0.86, 0.45), HORIZONTAL_ALIGNMENT_CENTER, 68.0)
 	var ry := top + rows * (ch + gap) + 4.0
 	if m.rerolls > 0:
 		_button(Rect2(lx, ry, 330, 46), Loc.t("Переброс (R) — осталось %d") % m.rerolls, "reroll", 18)
@@ -130,6 +141,8 @@ func _card(m: Main, i: int, r: Rect2, hover: bool) -> void:
 	if path != "":
 		ctrl.draw_rect(Rect2(r.position.x + 14, bottom, r.size.x - 250, 28), Color(1.0, 0.82, 0.29, 0.18))
 		_text(Vector2(r.position.x + 24, bottom + 20), path, 15, Color(1.0, 0.85, 0.35))
+	if c["kind"] == "branch" and bool(c["first"]):
+		return   # «или-или»: закреплять и исключать нечего — выбор из двух веток одного оружия
 	var is_locked: bool = not m.locked.is_empty() and m.locked["id"] == c["id"]
 	_button(Rect2(r.end.x - 226, bottom - 2, 104, 32), Loc.t("Открепить") if is_locked else Loc.t("Закрепить"), "lock:%d" % i, 14)
 	if m.bans > 0:
@@ -148,6 +161,8 @@ func _card_level(p: Player, c: Dictionary) -> Vector2:
 			if id == "repair" or not Cards.MODULES.has(id):
 				return Vector2.ZERO
 			return Vector2(int(p.taken.get(id, 0)), int(Cards.MODULES[id]["max"]))
+		"branch":
+			return Vector2((p.groups[int(c["group"])] as Hardpoint).branch_rank, Cards.BRANCH_MAX)
 	return Vector2.ZERO
 
 

@@ -58,6 +58,8 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	var bought: bool = bool(Profile.cls(c)["plane2"])
 	# 3.4-t1 (п. 1): объёмная модель — тянуть мышью, колесо — приближение; ур. 2 виден и не купленным
 	var h3 := Hangar3D.ensure(ctrl)
+	# S9-02: узлы того самолёта, что на виде (раньше — того, что выбран в вылет: смотрели ур. 1, а улучшался ур. 2)
+	var vl: int = h3.view_lvl if bought else 1
 	var vr := Rect2(lx + 8, area.position.y + 8, lw - 16, 330)
 	ctrl.draw_texture_rect(h3.show_plane(c, vr), vr, false)
 	_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
@@ -102,7 +104,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 15, Color(0.8, 0.85, 0.9))
 		# правка 6 теста 3.5-s5: прокачка у каждого самолёта своя
-		_text(Vector2(lx + 24, y + 48), Loc.t("Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка") % Profile.plane_lvl(c), 14, Menu.C_AMBER)
+		_text(Vector2(lx + 24, y + 48), Loc.t("Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка") % vl, 14, Menu.C_AMBER)
 	elif Demo.on:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
 		_text(Vector2(lx + 24, y + 24), Loc.t("Покупка — ") + Loc.t(Demo.LOCKED), 15, Menu.C_AMBER)
@@ -119,7 +121,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	var yy := area.position.y
 	for id in Profile.NODE_ORDER:
 		var nd: Dictionary = Profile.NODES[id]
-		var lv2 := Profile.node(c, id)
+		var lv2 := Profile.node(c, id, vl)
 		var r := Rect2(rx, yy, rw, 92)
 		_panel(r, false)
 		if id == "wing" and r.has_point(ctrl.get_local_mouse_position()):
@@ -127,7 +129,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(rx + 20, yy + 30), Loc.t(String(nd["title"])), 20, Color.WHITE)
 		for i in 5:
 			ctrl.draw_rect(Rect2(rx + 200 + i * 30, yy + 16, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))
-		_text(Vector2(rx + 20, yy + 58), Loc.t("за уровень: %s · сейчас ур. %d%s") % [nd["step"], lv2, (Loc.t(" (самолёт ур. %d)") % Profile.plane_lvl(c)) if bought else ""], 15, Color(0.8, 0.84, 0.9))
+		_text(Vector2(rx + 20, yy + 58), Loc.t("за уровень: %s · сейчас ур. %d%s") % [nd["step"], lv2, (Loc.t(" (самолёт ур. %d)") % vl) if bought else ""], 15, Color(0.8, 0.84, 0.9))
 		if String(nd["note"]) != "":
 			_text(Vector2(rx + 20, yy + 80), Loc.t(String(nd["note"])), 12, Color(0.6, 0.62, 0.68))
 		if lv2 >= 5:
@@ -136,8 +138,8 @@ func _hg_plane(c: String, area: Rect2) -> void:
 			_text(Vector2(rx, yy + 52), Loc.t("ур. %d–5 — ") % (lv2 + 1) + Loc.t(Demo.LOCKED), 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		else:
 			var price: int = Profile.NODE_COST[lv2]
-			if Profile.can_buy_node(c, id):
-				_button(Rect2(rx + rw - 250, yy + 24, 230, 44), Loc.t("УЛУЧШИТЬ — %d") % price, "hg:node:" + id, 16)
+			if Profile.can_buy_node(c, id, vl):
+				_button(Rect2(rx + rw - 250, yy + 24, 230, 44), Loc.t("УЛУЧШИТЬ — %d") % price, "hg:node:%s:%d" % [id, vl], 16)
 			else:
 				_text(Vector2(rx, yy + 52), Loc.t("%d (не хватает %d)") % [price, price - Profile.parts()], 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		yy += 102.0

@@ -15,6 +15,8 @@ var bonus := 0.0         # бонус урона от редкости карт�
 var trigger := "auto"    # для НАР и бомб: "auto" — сами, "button" — по кнопке (ПКМ / LT)
 var evo := false         # 3.1: эволюция (оружие ур. 5 + катализатор)
 var evo_plus := 0        # «Э+» из резерва: +8% урона, −4% перезарядки
+var branch := ""         # S9-15: ветка мастерства с 35-го уровня — "rate" («Скорострел») или "power" («Калибр»); вторая закрыта
+var branch_rank := 0
 var _side := 1.0
 var _icd := 0.0          # турели: перехват ракет (зонтик, «Дикобраз», нашивка)
 var _barrel := 0
@@ -54,6 +56,8 @@ func label() -> String:
 		s = "%s ×%d: %s (Э%s)" % [name, slots, evo_title(), ("+%d" % evo_plus) if evo_plus > 0 else ""]
 	if bonus > 0.0:
 		s += " (+%d%%)" % int(round(bonus * 100.0))
+	if branch != "":
+		s += " · %s %d" % [Cards.BRANCHES[branch]["title"], branch_rank]
 	if uses_trigger() and trigger == "button":
 		s += " [прав. кн. мыши]"
 	return s
@@ -64,6 +68,19 @@ func uses_trigger() -> bool:
 
 
 func dmg() -> float:
+	return _dmg() * branch_dmg_k()
+
+
+## S9-15: «Калибр» — +18% урона за ранг, «Скорострел» — −10% перезарядки за ранг (до 5 рангов)
+func branch_dmg_k() -> float:
+	return 1.0 + 0.18 * branch_rank if branch == "power" else 1.0
+
+
+func branch_cd_k() -> float:
+	return pow(0.9, branch_rank) if branch == "rate" else 1.0
+
+
+func _dmg() -> float:
 	var base: float = Weapons.DEFS[weapon]["dmg"] * (1.0 + bonus) * _owner_k()
 	if evo:
 		var ek := (1.0 + bonus) * _owner_k() * (1.0 + 0.08 * evo_plus) * _evo_k("dmg")
@@ -134,11 +151,11 @@ func reload_time(p: Player) -> float:
 		k /= float(p.mods.get("turret_rate", 1.0))
 	if weapon == "aam" or weapon == "rockets":
 		k *= float(p.mods.get("msl_cd", 1.0)) # модуль «Пусковое устройство»
-	var t: float = base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd")
+	var t: float = base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd") * branch_cd_k()
 	if MSL_CD_MIN.has(weapon):
 		# правка 3.5-s4 (лог «Осы»: до 59 ракет в воздухе): карточки перезарядки складывались до ×0,07 —
 		# ракеты шли без перерыва. Нижний предел; «Штурмовой заход» по-прежнему ускоряет втрое
-		t = maxf(t, float(MSL_CD_MIN[weapon]) / (3.0 if p.assault_t > 0.0 and not builtin else 1.0))
+		t = maxf(t, float(MSL_CD_MIN[weapon]) * branch_cd_k() / (3.0 if p.assault_t > 0.0 and not builtin else 1.0))
 	return t
 
 

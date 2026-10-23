@@ -275,7 +275,7 @@ func hangar_action(a: String) -> void:
 		"tab":
 			m.hangar_tab = p[1]
 		"node":
-			ok = Profile.buy_node(c, p[1])
+			ok = Profile.buy_node(c, p[1], int(p[2]) if p.size() > 2 else 0)
 		"plane2":
 			ok = Profile.buy_plane2(c)
 		"plane_sel":
