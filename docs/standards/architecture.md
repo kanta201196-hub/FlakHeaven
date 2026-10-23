@@ -120,7 +120,8 @@ Recommended order before the demo: CR bugs → CS-05, CS-08 (small) → CS-02, C
 **Consequences:** + deterministic autotest, visuals change without touching combat rules. − Anything logic needs from the terrain goes through inverse projections; the 3D → 2D link must be a narrow interface (`View`), not `Render3D.I` from logic.
 
 ### ADR-02. Event bus + RunState instead of writing into `Main`
-**Status:** accepted (Kanta 2026-10-23: signals, approach 1 "event bus + RunState"). Design — `docs/superpowers/specs/2026-10-23-events-run-state-design.md`, plan — `docs/superpowers/plans/2026-10-23-events-run-state.md` (4 PRs, code starts after Kanta's "yes" on the plan).
+**Status:** accepted and done (Kanta 2026-10-23: signals, approach 1 "event bus + RunState"; PRs #344, #345, #346). Design — `docs/superpowers/specs/2026-10-23-events-run-state-design.md`, plan — `docs/superpowers/plans/2026-10-23-events-run-state.md`.
+**As built:** `Events` autoload (`game/scripts/events.gd`), `RunState` (`game/scripts/run_state.gd`, `Main.run`), reward table `game/scripts/balance/rewards.gd`, XP curve `balance/xp.gd`, banner and radio state in `Hud`. One difference from the design: for each event that changes state, `Main` has one handler that calls `RunState`, spawner, player and class task in a fixed order (kill: streak and parts before the XP drop), so results do not depend on connection order. Listeners that only react (HUD, sound, hints, telemetry) may connect themselves. `Main` still forwards `run_time` and `parts_kept`.
 **Context:** 657 `Main.I` uses; ~85 % are service calls (sound, player, projectiles, fx, telemetry) and stay direct. The problems are events and state writes: rewards in five places, sortie state written from outside (CR-02).
 
 | Option | Complexity | Risk | Benefit |

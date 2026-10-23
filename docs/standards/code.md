@@ -85,6 +85,8 @@ Regardless of the choice:
 3. 2D logic does not call `Render3D.I` directly; whatever logic needs from the view (`ground_under`, `mouse_world`) goes through a narrow interface.
 4. Gameplay events (enemy killed, player damaged, activity done, banner, radio) are emitted on the `Events` bus (ADR-02): `Events.activity_succeeded.emit(&"transport")`, not calls into `Main`. Listeners connect via Callable: `Events.enemy_killed.connect(_on_enemy_killed)`.
 5. One rule — one place. Rewards, XP and card offers are not copied across files (change S10-13 had to be made in two places by hand).
+6. Sortie state is read as `Main.I.run.*` (`run.level`, `run.parts`, `run.kills`) and changed only by `RunState` methods (`grant_parts`, `grant_rare_pick`, `award_activity`, `on_kill`; debug tools — `debug_set`). `tools/ci/smoke.sh` fails on a direct write such as `m.parts += …`. A new activity is a row in `balance/rewards.gd` plus `Events.activity_succeeded.emit(&"kind")`.
+7. Pure logic (`RunState`, reward and XP formulas) has unit tests in `game/tests/*_test.gd` (`extends SceneTree`, plain checks), run by `tools/ci/unit.sh` (~5 s) before every code PR.
 
 ## 7. Performance (bullet heaven)
 

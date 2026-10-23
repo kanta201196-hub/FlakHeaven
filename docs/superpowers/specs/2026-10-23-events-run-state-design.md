@@ -1,6 +1,6 @@
 # Design: event bus and RunState (ADR-02)
 
-Date: 2026-10-23. Status: **accepted by Kanta 2026-10-23, in progress**. Kanta chose signals (review question 2) and approach 1 "event bus + RunState" (thread "Ревью кода и стандарты разработки", 2026-10-23). Plan — [../plans/2026-10-23-events-run-state.md](../plans/2026-10-23-events-run-state.md).
+Date: 2026-10-23. Status: **accepted by Kanta 2026-10-23, built** (as-built differences — `docs/standards/architecture.md`, ADR-02). Kanta chose signals (review question 2) and approach 1 "event bus + RunState" (thread "Ревью кода и стандарты разработки", 2026-10-23). Plan — [../plans/2026-10-23-events-run-state.md](../plans/2026-10-23-events-run-state.md).
 
 ## Problem
 

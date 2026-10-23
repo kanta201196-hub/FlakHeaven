@@ -294,7 +294,7 @@ Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standar
 | CR-06 | Report receiver: text starting with `= + - @` gets a `'` prefix (`tools/reports/apps_script.gs`), then Kanta updates the script in the sheet | Kanta (together with RP-4) | idea |
 | CS-01 | GDScript type warnings: enable, clean up, raise to errors | — | idea |
 | CS-02 | `SaveIO`: atomic write, `.bak`, version, test folder override; `custom_user_dir_name="FlakHeaven"` before any rename | — | idea |
-| CS-03 | Event bus `Events` + `RunState` (ADR-02, Kanta 2026-10-23: signals, approach 1): 4 PRs per `docs/superpowers/plans/2026-10-23-events-run-state.md` | thread "Ревью кода и стандарты разработки" | in progress: Kanta said "yes" 2026-10-23 |
+| CS-03 | Event bus `Events` + `RunState` (ADR-02, Kanta 2026-10-23: signals, approach 1): 4 PRs per `docs/superpowers/plans/2026-10-23-events-run-state.md` | thread "Ревью кода и стандарты разработки" | done 2026-10-23: PR #344, #345, #346 |
 | CS-04 | One enemy list per frame + shared hit grid | — | idea |
 | CS-05 | `DebugFlags`: launch flags read once, cheats only in debug | — | idea |
 | CS-06 | Ids instead of Russian strings in logic (damage source, weapon, state, button actions) | — | idea |

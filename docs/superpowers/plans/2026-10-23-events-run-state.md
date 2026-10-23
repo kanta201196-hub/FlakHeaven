@@ -1,6 +1,6 @@
 # Plan: event bus and RunState
 
-Date: 2026-10-23. Design — [../specs/2026-10-23-events-run-state-design.md](../specs/2026-10-23-events-run-state-design.md). Status: **accepted by Kanta 2026-10-23, in progress**. Executor: thread "Ревью кода и стандарты разработки". Each task is one PR, merged before the next starts. All new code follows `docs/standards/code.md` (English docstrings, typed).
+Date: 2026-10-23. Design — [../specs/2026-10-23-events-run-state-design.md](../specs/2026-10-23-events-run-state-design.md). Status: **done 2026-10-23** (PR #344 — step 1, #345 — steps 2–3, #346 — step 4). Executor: thread "Ревью кода и стандарты разработки". Each task is one PR, merged before the next starts. All new code follows `docs/standards/code.md` (English docstrings, typed).
 
 Checks for every PR: `tools/ci/smoke.sh all`, `tools/ci/full.sh` once (combat files change), `tools/ci/unit.sh` from PR 1 on; results and the before/after `AUTOTEST:` summary in the PR description. Run tests with a temporary `XDG_DATA_HOME` so the real profile is untouched.
 
