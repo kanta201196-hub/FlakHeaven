@@ -15,6 +15,7 @@ InputSetup="*res://scripts/input_setup.gd"
 Tuning="*res://scripts/tuning.gd"
 Settings="*res://scripts/settings.gd"
 Profile="*res://scripts/profile.gd"
+Events="*res://scripts/events.gd"
 
 [display]
 
