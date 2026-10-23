@@ -272,26 +272,67 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		for oi in 2:
 			var opt: Array = Profile.WBRANCH[w2][tier - 1][oi] if tier < 3 else Profile.WBRANCH3[w2][oi]
 			var key := "a" if oi == 0 else "b"
-			var r2 := Rect2(rx + oi * (rw / 2.0 + 5), yy + 32, rw / 2.0 - 5, 120)
-			var picked := st2 == key
-			_panel(r2, picked)
-			if picked:
-				ctrl.draw_rect(r2, Color(0.5, 1.0, 0.6), false, 3.0)
-			_text(Vector2(r2.position.x + 18, r2.position.y + 32), String(opt[0]), 19, Color(0.6, 1.0, 0.7) if picked else Color.WHITE)
-			_text(Vector2(r2.position.x + 18, r2.position.y + 60), String(opt[1]), 15, Color(0.8, 0.84, 0.9))
-			if locked:
-				_text(Vector2(r2.position.x + 18, r2.position.y + 98), why, 14, Color(0.6, 0.62, 0.68))
-			elif st2 == "?":
-				_button(Rect2(r2.position.x + 18, r2.position.y + 74, 200, 38), "ВЫБРАТЬ (оплачено)", "hg:tier:%s:%d:%s" % [w2, tier, key], 14)
-			elif st2 == "":
-				var price: int = Profile.TIER_COST[tier - 1]
-				if Profile.parts() >= price:
-					_button(Rect2(r2.position.x + 18, r2.position.y + 74, 200, 38), Loc.t("ВЗЯТЬ — %d") % price, "hg:tier:%s:%d:%s" % [w2, tier, key], 14)
-				else:
-					_text(Vector2(r2.position.x + 18, r2.position.y + 98), Loc.t("%d запчастей") % price, 14, Color(0.65, 0.65, 0.7))
+			var r2 := Rect2(rx + oi * (rw / 2.0 + 5), yy + 32, rw / 2.0 - 5, 128)
+			_tier_card(r2, w2, tier, oi, opt, st2, key, locked, why, demo_lock)
 		if st2 != "" and st2 != "?" and not demo_lock:
 			_button(Rect2(rx + rw - 260, yy, 260, 30), Loc.t("переиграть — %d") % Profile.REDO_COST[tier - 1], "hg:redo:%s:%d" % [w2, tier], 13)
-		yy += 170.0
+		yy += 176.0
+
+
+## S10-01: вариант ветки оружия — карточкой, как на экране повышения уровня (полоса ступени, медаль со значком, свечение)
+func _tier_card(r: Rect2, w: String, tier: int, oi: int, opt: Array, st: String, key: String, locked: bool, why: String, demo_lock: bool) -> void:
+	var picked := st == key
+	var can_pick := not locked and (st == "?" or st == "") and not demo_lock
+	var price: int = Profile.TIER_COST[tier - 1]
+	var can_pay := st == "?" or Profile.parts() >= price
+	var rc: Color = Cards.EVO_COLOR if tier == 3 else Cards.RARITY[tier]["color"]
+	if picked:
+		rc = Color(0.5, 1.0, 0.6)
+	var dim := locked or demo_lock or (st != "" and st != "?" and not picked)   # закрыто или выбран другой вариант
+	var hover := can_pick and can_pay and r.has_point(ctrl.get_local_mouse_position())
+	if dim:
+		rc = rc.lerp(Color(0.5, 0.52, 0.55), 0.55)
+	var dark := rc.darkened(0.45)
+	var r0 := r
+	r.position.y += -5.0 if hover else 0.0
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.004) if (hover or picked) else 0.35
+	if not dim:
+		for k in 3:
+			ctrl.draw_rect(r.grow(2.0 + k * 3.0), Color(rc.r, rc.g, rc.b, (0.16 - k * 0.04) * (0.6 + pulse)), false, 3.0)
+	var base := Color(0.09, 0.11, 0.09, 0.97)
+	ctrl.draw_polygon(PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]),
+		PackedColorArray([Color(dark, 0.98), Color(dark.lerp(base, 0.3), 0.98), base.lerp(dark, 0.25), base]))
+	ctrl.draw_rect(r, rc, false, 3.0 if picked else 2.0)
+	# полоса ступени
+	ctrl.draw_rect(Rect2(r.position, Vector2(r.size.x, 26)), rc)
+	var head := Loc.t("ВЕТКА %s · СТУПЕНЬ %d") % ["A" if oi == 0 else "B", tier] if tier < 3 else Loc.t("МОДЕРНИЗАЦИЯ · ВЕТКА %s") % ("A" if oi == 0 else "B")
+	_text(Vector2(r.position.x + 12, r.position.y + 19), head, 14, Color(0.06, 0.08, 0.06))
+	if picked:
+		_text(Vector2(r.position.x, r.position.y + 19), "✓ " + Loc.t("ВЫБРАНО"), 14, Color(0.06, 0.08, 0.06), HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 12.0)
+	# медаль со значком оружия
+	var mc := r.position + Vector2(44, 66)
+	ctrl.draw_circle(mc, 34.0, Color(rc.r, rc.g, rc.b, 0.25 + 0.15 * pulse))
+	ctrl.draw_circle(mc, 29.0, dark)
+	ctrl.draw_circle(mc + Vector2(-6, -7), 19.0, Color(rc.r, rc.g, rc.b, 0.45))
+	ctrl.draw_arc(mc, 29.0, 0.0, TAU, 40, Color(1, 1, 1, 0.35), 2.0)
+	CardIcons.draw(ctrl, mc, 32.0, w, Color(1, 1, 1, 0.55 if dim else 1.0))
+	if tier == 3:
+		CardIcons.badge(ctrl, mc, 32.0, "evolution", rc)
+	var tx := r.position.x + 90.0
+	var tw := r.size.x - 102.0
+	var th := _para(Vector2(tx, r.position.y + 52), Loc.out(String(opt[0])), tw, 19, Color(1, 1, 1, 0.6 if dim else 1.0))
+	_para(Vector2(tx, r.position.y + 52 + maxf(th, 22.0) + 6.0), Loc.out(String(opt[1])), tw, 15, Color(1.0, 0.98, 0.9, 0.6 if dim else 1.0))
+	# низ карточки: кнопка или причина
+	var by := r.end.y - 34.0
+	if locked or demo_lock:
+		_text(Vector2(r.position.x + 14, by + 22), why, 13, Color(0.6, 0.62, 0.68))
+	elif st == "?":
+		_button(Rect2(r.end.x - 214, by - 2, 200, 30), "ВЫБРАТЬ (оплачено)", "hg:tier:%s:%d:%s" % [w, tier, key], 14)
+	elif st == "":
+		if can_pay:
+			_button(Rect2(r.end.x - 214, by - 2, 200, 30), Loc.t("ВЗЯТЬ — %d") % price, "hg:tier:%s:%d:%s" % [w, tier, key], 14)
+		else:
+			_text(Vector2(r.end.x - 214, by + 22), Loc.t("%d запчастей") % price, 14, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, 200.0)
 
 
 func _hg_crew(c: String, area: Rect2) -> void:

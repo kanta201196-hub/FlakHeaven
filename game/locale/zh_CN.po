@@ -6594,3 +6594,17 @@ msgstr "羁绊：热闹伙伴"
 #: game/scripts/wingman.gd:442
 msgid "связка: волчья стая"
 msgstr "羁绊：狼群"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ВЕТКА %s · СТУПЕНЬ %d"
+msgstr "分支 %s · 第 %d 阶"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "МОДЕРНИЗАЦИЯ · ВЕТКА %s"
+msgstr "改装 · 分支 %s"
+
+#: game/scripts/hud_hangar.gd
+msgid "ВЫБРАНО"
+msgstr "已选择"
