@@ -494,6 +494,21 @@ const BRANCHES := {
 }
 
 
+## S10-09 (Kanta: «как у тепловых ловушек может быть "Калибр"? урон там откуда?»): у ловушек урона нет —
+## свои ветки: «Быстрый отстрел» (перезарядка, как «Скорострел») и «Яркие ловушки» (радиус и шанс увести ЗРК)
+const BRANCHES_W := {
+	"flares": {
+		"rate": {"title": "Быстрый отстрел", "desc": "−10% перезарядки за ранг"},
+		"power": {"title": "Яркие ловушки", "desc": "+10% радиуса отстрела и +10% шанса увести ЗРК за ранг"},
+	},
+}
+
+
+## Название и описание ветки b мастерства для оружия weapon
+static func branch_def(weapon: String, b: String) -> Dictionary:
+	return BRANCHES_W[weapon][b] if BRANCHES_W.has(weapon) else BRANCHES[b]
+
+
 static func branch_on() -> bool:
 	return Main.I != null and Main.I.level >= BRANCH_LEVEL
 
@@ -512,7 +527,7 @@ static func branch_group(p: Player, banned: Dictionary) -> int:
 static func _branch_card(p: Player, gi: int, b: String, first: bool) -> Dictionary:
 	var g: Hardpoint = p.groups[gi]
 	var wt := g.evo_title() if g.evo else Weapons.title(g.weapon)
-	var title := "%s: %s" % [wt, BRANCHES[b]["title"]]
+	var title := "%s: %s" % [wt, branch_def(g.weapon, b)["title"]]
 	if not first:
 		title += " (ранг %d → %d)" % [g.branch_rank, g.branch_rank + 1]
 	return {"id": "br_%s_%d" % [b, gi], "ban": "br:%d" % gi, "kind": "branch", "branch": b, "group": gi, "first": first,
@@ -691,12 +706,12 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 		"synergy", "skill_syn":
 			card["desc"] = Loc.t(syn_def(p, card["syn"])["desc"]) + Loc.t("\nОткрывает слот %d из %d. Следующий слот дороже.") % [p.syn.size() + 1, MAX_SYN]
 		"branch":
-			var bd: Dictionary = BRANCHES[card["branch"]]
 			var bgr: Hardpoint = p.groups[int(card["group"])]
+			var bd: Dictionary = branch_def(bgr.weapon, card["branch"])
 			card["desc"] = Loc.t("%s: %s, до %d рангов") % [bgr.name, Loc.t(bd["desc"]), BRANCH_MAX]
 			if card["first"]:
 				var other := "power" if card["branch"] == "rate" else "rate"
-				card["desc"] += Loc.t("\nИли-или: «%s» для этого оружия закроется до конца вылета") % Loc.t(BRANCHES[other]["title"])
+				card["desc"] += Loc.t("\nИли-или: «%s» для этого оружия закроется до конца вылета") % Loc.t(branch_def(bgr.weapon, other)["title"])
 		"mastery":
 			card["desc"] = Loc.t(String(PlaneClasses.MASTERY[p.cls_id]["desc"])) + Loc.t("\nОдна на вылет: если отказаться, больше не придёт.")
 		"evolution":

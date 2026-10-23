@@ -30,8 +30,13 @@ func spawn_player_bullet(pos: Vector2, vel: Vector2, dmg: float, life: float, ma
 
 
 ## opts: splash (радиус осколков, 55), bounce (сколько раз искать новую цель после сбития), fire (огонь на земле)
+## S10-05 (Kanta): ракета сначала сходит с пилона по курсу пуска (free с, по умолчанию PM_FREE) и только потом
+## доворачивает на цель — раньше сразу разворачивалась к цели и «вылетала» вбок или назад
+const PM_FREE := 0.22
+
+
 func spawn_player_missile(pos: Vector2, vel: Vector2, target: Enemy, dmg := 45.0, src := "ракеты В-В", opts := {}) -> void:
-	var m := {"p": pos, "v": vel, "life": 2.8, "t": weakref(target), "dmg": dmg, "trail": PackedVector2Array(), "src": src}
+	var m := {"p": pos, "v": vel, "life": 2.8, "t": weakref(target), "dmg": dmg, "trail": PackedVector2Array(), "src": src, "free": PM_FREE}
 	m.merge(opts, true)
 	pmissiles.append(m)
 
@@ -58,6 +63,10 @@ func spawn_rocket(pos: Vector2, vel: Vector2, dmg: float, splash: float, delay :
 	var r := {"p": pos, "v": vel, "life": 0.9, "dmg": dmg, "r": splash, "delay": delay, "trail": PackedVector2Array(), "src": "НАР"}
 	r.merge(opts, true)
 	rockets.append(r)
+
+
+## S10-08: цвет пятна плазмы — холодный бело-голубой жар в трещинах гари (было фиолетовое «желе»)
+const PLASMA_COL := Color(0.45, 0.75, 1.0)
 
 
 var _thermo: Array = []   # последние объёмные взрывы «Термобарики»: [{p, t}] — для слияния
@@ -133,6 +142,13 @@ static func gun_spread(gun: String) -> float:
 ## kind — вид ракеты (MSL_NAMES), who — кто пустил (для отчёта «от кого»)
 ## free — сколько секунд ракета летит прямо, без наведения (S9-23: залп аса уходит вперёд, потом доворачивает);
 ## tgt — цель-ведомый (иначе — игрок)
+## S10-13: упреждение вражеских ракет — не дальше чем на MSL_LEAD с полёта игрока вперёд
+const MSL_LEAD := 0.9
+## S10-04: ракеты самолётов (ракетоносец, экраноплан, «Крепость») сходят вперёд по курсу носителя и летят
+## прямо MSL_FREE с, потом доворачивают — как залп аса (S9-23)
+const MSL_FREE := 0.4
+
+
 func spawn_missile(pos: Vector2, dir: Vector2, kind := "aam", who := "ракетоносцы", free := 0.0, tgt: Node2D = null) -> void:
 	var top := msl_p(kind, "speed0") if kind == "sam" else msl_p(kind, "speed")
 	var m := {"p": pos, "v": dir * top * float(MSL_V0.get(kind, 0.6)), "life": msl_p(kind, "life") + free, "lost": false,
@@ -193,7 +209,8 @@ func intercept_missile(from: Vector2, r: float) -> bool:
 ## Сбить ближайшую вражескую ракету в радиусе; вернёт точку перехвата или null
 ## S8 «eweap»: ловушка уводит ракету с шансом её вида (msl_*_decoy); не повёвшаяся ракета на ловушки больше
 ## не смотрит (одна попытка на ракету) — ищется следующая ближайшая
-func intercept_missile_at(from: Vector2, r: float, decoy := false) -> Variant:
+## decoy_add — прибавка к шансу увода у ракет, которые уводятся не всегда (ЗРК; ветка «Яркие ловушки», S10-09)
+func intercept_missile_at(from: Vector2, r: float, decoy := false, decoy_add := 0.0) -> Variant:
 	var best := -1
 	while true:
 		best = -1
@@ -207,7 +224,7 @@ func intercept_missile_at(from: Vector2, r: float, decoy := false) -> Variant:
 				best = i
 		if best < 0:
 			return null
-		if decoy and randf() >= msl_p(String(missiles[best].get("k", "aam")), "decoy"):
+		if decoy and randf() >= msl_p(String(missiles[best].get("k", "aam")), "decoy") + decoy_add:
 			missiles[best]["nodecoy"] = true
 			Main.I.stats_add_counter("decoy_resisted", 1)
 			continue
@@ -218,16 +235,19 @@ func intercept_missile_at(from: Vector2, r: float, decoy := false) -> Variant:
 		var mm := missiles[best]
 		var tgt := Weapons.pick_target(at, 900.0, "nearest")
 		Main.I.fx.flare_burst(from, (at - from).angle() + PI, 2)
-		spawn_player_missile(at, -(mm["v"] as Vector2) * 0.6, tgt, 80.0, "связка: зеркало", {"splash": 90.0, "tint": Color(0.4, 1.0, 0.9)})
+		spawn_player_missile(at, -(mm["v"] as Vector2) * 0.6, tgt, 80.0, "связка: зеркало", {"splash": 90.0, "tint": Color(0.4, 1.0, 0.9), "free": 0.0})
 		missiles.remove_at(best)
 		return at
 	if decoy:
 		# 3.1: ракета уходит на тепловую ловушку и рвётся рядом с ней
 		var m := missiles[best]
+		# S10-03 (Kanta: ракеты должны уходить в ловушки и взрываться): ловушка летит навстречу ракете, ракета
+		# доворачивает и рвётся прямо на ней; время жизни — с запасом на подлёт (раньше 0,35–0,55 с — дальняя
+		# ракета рвалась в воздухе, не долетев)
 		var fl: Array = Main.I.fx.flare_burst(from, (at - from).angle() + PI, 2, Vector2.ZERO)
 		m["decoy"] = fl[0]
 		m["lost"] = true
-		m["life"] = randf_range(0.35, 0.55)
+		m["life"] = clampf(at.distance_to(from) / maxf((m["v"] as Vector2).length(), 300.0) + 0.5, 0.6, 1.6)
 	else:
 		Main.I.fx.zap(from, missiles[best]["p"])
 		Main.I.fx.hit_spark(missiles[best]["p"], Color(1, 0.5, 0.2))
@@ -452,7 +472,7 @@ func _split(p: Vector2, m: Dictionary, hit: Enemy) -> void:
 			spare += 1 # целей рядом нет — эта БЧ рвётся на месте
 			continue
 		skip.append(nt)
-		spawn_player_missile(p, Vector2.from_angle(TAU * i / n + randf() * 0.4) * 260.0, nt, float(m["split_dmg"]), "ракеты В-В", {"sub": true, "life": 1.1})
+		spawn_player_missile(p, Vector2.from_angle(TAU * i / n + randf() * 0.4) * 260.0, nt, float(m["split_dmg"]), "ракеты В-В", {"sub": true, "life": 1.1, "free": 0.0})
 	if spare > 0:
 		aoe(p, 90.0, float(m["split_dmg"]) * 0.5 * spare, "ракеты В-В", false)
 
@@ -499,7 +519,7 @@ func _update_player_missiles(delta: float) -> void:
 				m["life"] = minf(float(m["life"]), 0.5)
 				Main.I.tele.add("msl_lost")
 		var spd := minf(v.length() + 1500.0 * delta, 720.0 * _missile_spd() * float(m.get("spd_k", 1.0)))
-		if t != null:
+		if t != null and float(m["age"]) >= float(m.get("free", 0.0)):
 			var ang := rotate_toward(v.angle(), (t.aim_point(p) - p).angle(), deg_to_rad(320.0) * delta)
 			v = Vector2.from_angle(ang) * spd
 		else:
@@ -528,7 +548,7 @@ func _update_player_missiles(delta: float) -> void:
 				var nt2 := Weapons.pick_target(pl2.global_position, 900.0, "nearest", [t], true)
 				if nt2 != null:
 					var o2 := {"carousel": int(m["carousel"]) + 1, "tint": Color(1.0, 0.95 - 0.12 * int(m["carousel"]), 0.4)}
-					spawn_player_missile(pl2.global_position, pl2.velocity + Vector2.from_angle(pl2.heading + randf_range(-0.6, 0.6)) * 200.0,
+					spawn_player_missile(pl2.global_position, pl2.velocity + Vector2.from_angle(pl2.heading + randf_range(-0.25, 0.25)) * 200.0,
 						nt2, float(m["dmg"]) * 1.2, "связка: карусель", o2)
 			if m.get("fire", false):
 				spawn_fire(p, 55.0, 12.0, 3.0, m.get("src", "ракеты В-В"))
@@ -620,7 +640,17 @@ func _update_bombs(delta: float) -> void:
 		b["t"] = float(b["t"]) - delta
 		var k := 1.0 - clampf(float(b["t"]) / float(b["fuse"]), 0.0, 1.0)
 		b["p"] = (b["from"] as Vector2).lerp(b["to"], 1.0 - pow(1.0 - k, 2.0))
-		if float(b["t"]) <= 0.0:
+		if float(b["t"]) <= 0.0 and b.has("plasma"):
+			# S10-08: плазменная бомба — разрыв на земле и горящее пятно (урон — только от пятна, как было)
+			var pz: Dictionary = b["plasma"]
+			spawn_fire(b["p"], float(b["r"]), float(pz["dps"]), float(pz["t"]), "плазма", true, PLASMA_COL)
+			Main.I.fx.explosion(b["p"], float(b["r"]) * 0.45, false, true, "plasma")
+			if is_instance_valid(Main.I.fx.ground):
+				Main.I.fx.ground.crater(b["p"], float(b["r"]) * 0.7)
+			Main.I.sfx.play("bomb", -6.0, 0.8, b["p"])
+			Main.I.add_shake(1.5)
+			bombs.remove_at(i)
+		elif float(b["t"]) <= 0.0:
 			aoe(b["p"], float(b["r"]), float(b["dmg"]), b["src"], true, null, 0, bool(b.get("ground", false)), 1.0, true)
 			var mpl := Main.I.player
 			if String(b["src"]) == "бомбы" and is_instance_valid(mpl) and mpl.mastery and mpl.cls_id == "bomber":
@@ -662,9 +692,14 @@ func _update_missiles(delta: float) -> void:
 				m["life"] = minf(float(m["life"]), 1.2)
 				Main.I.stats_add_counter("jammed", 1)
 		if m.has("decoy"):
-			var fp: Vector2 = (m["decoy"] as Dictionary)["p"]
-			var ang2 := rotate_toward(v.angle(), (fp - p).angle(), deg_to_rad(400.0) * delta)
-			v = Vector2.from_angle(ang2) * v.length()
+			var fd: Dictionary = m["decoy"]
+			var fp: Vector2 = fd["p"]
+			var ang2 := rotate_toward(v.angle(), (fp - p).angle(), deg_to_rad(540.0) * delta)
+			v = Vector2.from_angle(ang2) * maxf(v.length(), 380.0)
+			if p.distance_to(fp) < 16.0 + v.length() * delta:
+				m["life"] = 0.0   # дошла до ловушки — подрыв на ней, ловушка гаснет
+				p = fp
+				fd["life"] = minf(float(fd["life"]), 0.05)
 			if float(m["life"]) - delta <= 0.0:
 				Main.I.fx.explosion(p, 14.0, true, true, "flak")
 		elif alive and not m["lost"]:
@@ -672,6 +707,11 @@ func _update_missiles(delta: float) -> void:
 			var wt: Wingman = m.get("tgt") as Wingman if is_instance_valid(m.get("tgt")) else null
 			if wt != null and wt.alive():
 				aim = wt.global_position
+			elif kind != "hnar":
+				# S10-13 (Kanta 23.10, вариант 3: ракеты умнее, а не сильнее): упреждение — ракета ведёт в точку встречи,
+				# а не гонится за хвостом; на прямой её уже не перегнать, уходить надо манёвром или ловушкой
+				var tgo := clampf(p.distance_to(aim) / maxf(v.length(), 200.0), 0.0, MSL_LEAD)
+				aim += pl.velocity * tgo
 			# S9-23: первые free с — прямо по курсу пуска, затем доворот на цель
 			var ang := v.angle() if float(m["age"]) < float(m.get("free", 0.0)) else rotate_toward(v.angle(), (aim - p).angle(), deg_to_rad(msl_p(kind, "turn")) * delta)
 			# ЗРК: медленный разгон до крейсерской, через msl_sam_boost с — вторая ступень
