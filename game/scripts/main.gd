@@ -362,6 +362,18 @@ func xp_need() -> float:
 	return 4.0 + (level - 1) * 2.0 + 0.07 * pow(level - 1, 2.0)
 
 
+## S10-13 (решение Kanta 23.10, вариант 1): после 5:00 опыт за убийство убывает и к 7:00 — половина.
+## Лог «Осы» в 3.5-s10: 59-й уровень к 10:00 (кривая рассчитана на ~35-й к 15:00) — к 10-й минуте всё прокачано;
+## цель — последние основные карточки к 12–13-й минуте
+const KILL_XP_FROM := 300.0
+const KILL_XP_TO := 420.0
+const KILL_XP_LATE := 0.5
+
+
+func kill_xp_k() -> float:
+	return lerpf(1.0, KILL_XP_LATE, clampf((run_time - KILL_XP_FROM) / (KILL_XP_TO - KILL_XP_FROM), 0.0, 1.0))
+
+
 func add_xp(v: float) -> void:
 	if is_dead:
 		return

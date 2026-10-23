@@ -83,7 +83,7 @@ func behave(delta: float) -> void:
 	if _cd <= 0.0 and to.length() < 800.0 and ahead:
 		_cd = 5.5
 		for i in FAN:
-			Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading) * 40.0, to.normalized().rotated((i - (FAN - 1) * 0.5) * 0.28), "aam", kind())
+			Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading) * 40.0, Vector2.from_angle(heading + (i - (FAN - 1) * 0.5) * 0.2), "aam", kind(), Projectiles.MSL_FREE)
 		Main.I.sfx.play("missile_enemy", -5.0, 1.1, global_position)
 
 

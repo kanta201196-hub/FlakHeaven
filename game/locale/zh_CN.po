@@ -6594,3 +6594,30 @@ msgstr "羁绊：热闹伙伴"
 #: game/scripts/wingman.gd:442
 msgid "связка: волчья стая"
 msgstr "羁绊：狼群"
+
+#: game/scripts/cards.gd
+msgid "Быстрый отстрел"
+msgstr "快速投放"
+
+#: game/scripts/cards.gd
+msgid "Яркие ловушки"
+msgstr "强光诱饵"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "+10% радиуса отстрела и +10% шанса увести ЗРК за ранг"
+msgstr "每阶投放半径 +10%，诱离防空导弹几率 +10%"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ВЕТКА %s · СТУПЕНЬ %d"
+msgstr "分支 %s · 第 %d 阶"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "МОДЕРНИЗАЦИЯ · ВЕТКА %s"
+msgstr "改装 · 分支 %s"
+
+#: game/scripts/hud_hangar.gd
+msgid "ВЫБРАНО"
+msgstr "已选择"

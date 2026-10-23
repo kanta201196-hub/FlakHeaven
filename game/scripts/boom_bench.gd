@@ -40,6 +40,7 @@ func _init(main: Main) -> void:
 		{"name": "stress", "times": [0.5, 1.5], "stress": 30},
 		{"name": "zones", "times": [0.5, 1.6], "zones": true},
 		{"name": "emp", "times": [0.08, 0.25, 0.5], "emp": true},
+		{"name": "plasma", "times": [0.5, 0.7, 0.9, 1.4, 3.0], "plasma": true},   # S10-08: плазменная бомба падает и рвётся на земле
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
 	if not _only.is_empty():
@@ -93,6 +94,9 @@ func process(delta: float) -> void:
 				m.projectiles.spawn_bomb(_pos + Vector2(-250, -200), 3.0, 0.0, 130.0, "бомбы", _pos + Vector2(-250, -200), true)
 				m.projectiles.spawn_fire(_pos + Vector2(80, 180), 90.0, 0.0, 4.0, "мастерство: выжженная земля", true)
 				m.projectiles.spawn_fire(_pos + Vector2(420, 120), 70.0, 0.0, 4.0, "связка: ковровая дорожка", true)
+			if sc.get("plasma", false):
+				m.projectiles.spawn_bomb(m.player.global_position, Hardpoint.PLASMA_FUSE, 0.0, 160.0, "плазма", _pos, true)
+				m.projectiles.bombs.back()["plasma"] = {"dps": 0.0, "t": 4.0}
 			if sc.get("emp", false):
 				m.fx.emp_wave(m.player.global_position, 380.0)
 			for k in int(sc.get("stress", 0)):   # мясорубка: 30 взрывов разом — замер нагрузки

@@ -55,13 +55,15 @@ func behave(delta: float) -> void:
 		desired = to.angle() + PI
 	elif d < 850.0:
 		desired = to.angle() + PI / 2.0 * _orbit
+	if _lock > 0.0:
+		desired = to.angle()   # S10-04: на захвате разворачивается к цели — ракета уходит вперёд, а не назад
 	heading = rotate_toward(heading, desired, deg_to_rad(90.0) * delta)
 	position += Vector2.from_angle(heading) * 200.0 * delta
 
 	if _lock > 0.0:
 		_lock -= delta
 		if _lock <= 0.0:
-			Main.I.projectiles.spawn_missile(global_position, to.normalized(), "aam", kind())
+			Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading) * 20.0, Vector2.from_angle(heading), "aam", kind(), Projectiles.MSL_FREE)
 			Main.I.sfx.play("missile_enemy", -8.0)
 			_cd = 4.5
 			if Main.I.spawner != null:
