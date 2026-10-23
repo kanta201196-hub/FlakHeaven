@@ -2,7 +2,8 @@ class_name Helicopter
 extends Enemy
 ## Вертолёт огневой поддержки «Сарыч» (модель — tools/blender/helicopter.py): медленный и прочный.
 ## Подходит на дистанцию залпа, зависает и разворачивается носом к игроку, скользя вбок.
-## Перед залпом — предупреждение (веер красных линий + звук захвата), затем залп НАР веером из шести блоков.
+## Перед залпом — предупреждение (веер красных линий + звук захвата), затем залп НАР веером из шести блоков
+## (S9-25: настоящие неуправляемые ракеты с дымным следом, по две с интервалом 0,12 с, вместо пуль крупного калибра).
 ## Где появляется (решение Kanta 18.10, M-41): прикрытие конвоя в Нагорье (convoy.gd, после тревоги) и во втором
 ## биоме — взлёт с кораблей (задача E-07). Флаг --heli — проверка: вертолёты каждые 14 с.
 
@@ -15,6 +16,8 @@ var _aim_dir := 0.0
 var _side := 1.0
 var _t := 0.0
 var _vel := Vector2.ZERO
+var _ripple := 0          # сколько ракет залпа ещё не сошло
+var _ripple_t := 0.0
 
 
 func kind() -> String:
@@ -59,6 +62,11 @@ func behave(delta: float) -> void:
 	if randf() < delta * 0.08:
 		_side = -_side
 
+	if _ripple > 0:
+		_ripple_t -= delta
+		if _ripple_t <= 0.0:
+			_ripple_t = 0.12
+			_launch_pair()
 	if _aim > 0.0:
 		_aim -= delta
 		if _aim <= 0.0:
@@ -73,16 +81,24 @@ func behave(delta: float) -> void:
 
 func _salvo() -> void:
 	_cd = randf_range(5.0, 7.0)
-	var k := Tuning.g("unit_scale") * LEN / 18.2   # метры модели → пиксели
-	for i in SALVO:
-		# блоки НАР: по три на ферме с каждого борта (2,3 / 2,88 / 3,46 м от оси)
-		var side := -1.0 if i < 3 else 1.0
-		var off := Vector2(3.2 * k, side * [2.3, 2.88, 3.46][i % 3] * k).rotated(heading)
-		var a := _aim_dir + (float(i) / (SALVO - 1) - 0.5) * FAN
-		Main.I.projectiles.spawn_enemy_bullet(global_position + off, Vector2.from_angle(a) * 400.0, kind(), true, 1.0, true)
-	Main.I.sfx.play("rocket_launch", -9.0, 0.7)
+	_ripple = SALVO
+	_ripple_t = 0.0
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: heli salvo at %.0f" % Main.I.run_time)
+
+
+## Пара ракет залпа — по одной с каждого борта, от внутренних блоков к внешним; веер — как раньше
+func _launch_pair() -> void:
+	var k := Tuning.g("unit_scale") * LEN / 18.2   # метры модели → пиксели
+	var j := (SALVO - _ripple) / 2   # 0, 1, 2 — номер блока на ферме
+	for side in [-1.0, 1.0]:
+		# блоки НАР: по три на ферме с каждого борта (2,3 / 2,88 / 3,46 м от оси)
+		var off := Vector2(3.2 * k, side * [2.3, 2.88, 3.46][j] * k).rotated(heading)
+		var i := (2 - j) if side < 0.0 else (3 + j)   # место в веере слева направо
+		var a := _aim_dir + (float(i) / (SALVO - 1) - 0.5) * FAN
+		Main.I.projectiles.spawn_missile(global_position + off, Vector2.from_angle(a), "hnar", kind())
+	_ripple -= 2
+	Main.I.sfx.play("rocket_launch", -10.0, 0.75 + 0.05 * j, global_position)
 
 
 func _draw() -> void:
