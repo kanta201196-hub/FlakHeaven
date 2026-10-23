@@ -1,6 +1,6 @@
 # Balance method (R-10, GD-01)
 
-Version 1, 2026-10-23. Kanta's decisions of 2026-10-23: balance is measured on the demo player profile (GD-01); Kanta's task: "build a system of balance changes on sortie data, run as many sorties as it needs". Background and the first diagnosis: `docs/playtest/gd-review-2026-10-23.md`. The game designer skill (`flak-heaven-game-design`) applies on top of this document.
+Version 1.1, 2026-10-24 (noise rule replaced after the A/A check, section 6). Kanta's decisions of 2026-10-23: balance is measured on the demo player profile (GD-01); Kanta's task: "build a system of balance changes on sortie data, run as many sorties as it needs". Background and the first diagnosis: `docs/playtest/gd-review-2026-10-23.md`. The game designer skill (`flak-heaven-game-design`) applies on top of this document.
 
 **Status: approved by Kanta on 2026-10-23** — corridors (section 3) and the decision rule (section 4).
 
@@ -26,7 +26,7 @@ All three go through `tools/ci/balance_table.py`, so the numbers are comparable.
 | M6 | Repair / damage taken | `healed` / `taken_*` | is there a threat at all |
 | M7 | Signature weapon share of damage, % | `dealt_*` («Оса» A2A missiles, «Грач» rockets, «Кит» bombs + carpet) | does the class role show |
 
-M2, M3 and M7 are not in the table script yet (computed by hand in this version). They go into `balance_table.py` with the next tools change.
+All seven are computed by `tools/ci/balance_table.py` (PR #347), with a per-class summary and the corridor check.
 
 ## 3. Corridors (approved by Kanta 2026-10-23, bot on the demo profile)
 
@@ -49,8 +49,8 @@ The bot dies more than a human, so M5 is compared between classes and with "befo
 1. **Pick one problem**: the metric furthest outside its corridor, in this order — M2/M3 (early deaths), M4, M5, M7, M1, M6. Danger first: a player who dies at minute 4 never sees the rest.
 2. **Find the cause in the mechanics** (skill: double counting, unlimited bonuses, a role that does not show), not "make the weak stronger" blindly. Write it down as a hypothesis with the metric and the run it comes from.
 3. **One change per build**, step 10–20 % (skill rule). Balance is never changed together with a new mechanic.
-4. **"Before" and "after" on the same `main` commit**: 24 sorties each (`OPS="1 2" PAR=2 RUNS=6`, 8 per class, ~1 h each in the cloud).
-5. **The change counts** when the class median moved toward the corridor by more than half of the "before" interquartile range. Otherwise it is noise: 24 more sorties for both, or drop the change.
+4. **"Before" and "after" on the same `main` commit**: at least 24 sorties each (`OPS="1 2" PAR=2 RUNS=6`, 8 per class, 1–2 h each in the cloud). For the HP metrics (M2, M3, M5) 48 each (16 per class): with 8 their interval is about ±50 points and almost nothing shows.
+5. **The change counts** when the bootstrap 90 % interval of the median difference excludes 0 (`balance_table.py <after> --before <before>` marks it **counts**). Otherwise it is noise: 24 more sorties for both, or drop the change. A change aimed at one metric must "count" on that metric; about 1 in 20 other cells will "count" by chance.
 6. **Check the neighbours**: the change must not push another metric out of its corridor (for example, less ace damage → M5 still within 2× between classes).
 7. **PR** with both tables and one line "was → became" per number, then the usual checks (`smoke.sh`; `full.sh` if combat changed).
 8. **After the build**: human logs from the sheet through the same table. Bot and humans agree → a line in the decision log; they disagree → humans win, and the bot method is corrected.
@@ -86,3 +86,12 @@ What the baseline adds to the review:
 - With the demo hangar XP is in its corridor (S10-13 works): level 40–43 at 15:00.
 - **«Кит» is the weakest for the bot**: most "would die" and the longest ace fight. This agrees with Kanta's s9 note (S9-24: «Кит» lacks air damage) and supports GD-03.
 - The signature weapon is weak for all three classes (M7), not only for «Кит».
+
+## 7. Noise check (A/A), 2026-10-24
+
+A second baseline of the same profile (18 sorties, `main` after the RunState refactor PR #344–#346, no balance change) compared with the first (20 sorties):
+- The first rule ("median moved by more than half the IQR") called 9 of 21 metric × class cells a shift — it is too strict to tell noise from a change, so it is replaced (section 4, item 5).
+- The bootstrap 90 % interval flags 1 of 21 («Грач» signature share 8 → 18 %; about 2 of 21 are expected by chance). The refactor itself may also have moved it — it is watched in the next baseline.
+- Detectable with 6–8 sorties per class: level ±5, ace fight ±10–20 s, repair / taken ±0.2, signature share ±10 points. HP metrics (M2, M3) and "would die" (M5) need 16 per class.
+- Both baselines agree on the problems: «Оса» and «Кит» are outside M2/M3/M4/M5, the signature share is below 20 % for all three, levels and repair are inside. From now on the two baselines are pooled (38 sorties) as "before" for the next change.
+- 2 of 24 sorties of the second run hung at minute 9–11 (process asleep on a lock, no CPU, no error) at about the same real time; killed after 1.5 h. Guess: something outside the game (both at once); if it repeats, it goes to the backlog as a bug.
