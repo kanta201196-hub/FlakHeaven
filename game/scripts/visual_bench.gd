@@ -57,6 +57,9 @@ func process(delta: float) -> void:
 			if a.begins_with("--cls="):   # 3.5: кадры боя другим классом (3D-модели в бою)
 				cls = a.substr(6)
 				_suffix += "_" + cls
+			if a.begins_with("--op="):   # S10-06: район стенда по операции (--op=5 — «Архипелаг»), а не последняя из campaign.cfg
+				Campaign.debug_open_all()
+				Campaign.select(clampi(int(a.substr(5)) - 1, 0, Campaign.OPS.size() - 1))
 		m.select_class(cls)
 		_t = 0.0
 		return
@@ -65,7 +68,7 @@ func process(delta: float) -> void:
 	m.god_mode = true
 	m.spawner.process_mode = Node.PROCESS_MODE_DISABLED
 	var cur: Dictionary = _points[_i] if _i >= 0 and _i < _points.size() else {}
-	var keep: bool = cur.get("enemies", false) or cur.get("convoy", false)   # M-36: машины колонны — тоже враги
+	var keep: bool = cur.get("enemies", false) or cur.get("convoy", false) or cur.has("live")   # M-36: машины колонны — тоже враги
 	for e in m.get_tree().get_nodes_in_group("enemies"):
 		if not keep:
 			(e as Node).queue_free()
@@ -86,6 +89,9 @@ func process(delta: float) -> void:
 		m.get_tree().quit()
 		return
 	var p: Dictionary = _points[_i]
+	if p.has("live"):
+		_live(p)
+		return
 	if p.get("ground", false):
 		if not _g_spawned:
 			_g_spawned = true
@@ -602,6 +608,14 @@ func _make_points() -> Array:
 					pts.append({"name": "sea_%s_%d" % [c, n], "pos": at, "zoom": 1.6, "wait": 1.2})
 					pts.append({"name": "sea_%s_%d_wide" % [c, n], "pos": at, "zoom": 0.7, "wait": 1.2})
 		print("VISUAL sea compositions ", seen)
+	if OS.get_cmdline_user_args().has("--wakebench") and ter != null:
+		# S10-07, S10-10: караван (у моря) или колонна на ходу — след на воде, затем подбитые суда и остовы
+		var at := ter._river_point(empty if empty != Vector2.INF else Vector2.ZERO)
+		if Biome.sea():
+			pts = [{"name": "wake", "pos": at, "live": [[7.0, "shot", "wake_near", 1.4], [8.5, "shot", "wake_wide", 0.8],
+				[9.0, "kill", 2], [11.0, "shot", "sink_start", 1.6], [13.0, "shot", "sink_mid", 1.6], [16.5, "shot", "sink_after", 1.6]]}]
+		else:
+			pts = [{"name": "wreck", "pos": at, "live": [[1.5, "kill", 2], [6.0, "shot", "wreck_land", 3.2], [9.0, "shot", "wreck_land_far", 1.6]]}]
 	if OS.get_cmdline_user_args().has("--terrainbench") and ter != null:
 		# тест 3.5-s6 (аудит визуала): рельеф в разных местах биома крупно / средне / далеко
 		pts = []
@@ -639,6 +653,75 @@ func _make_points() -> Array:
 			pts = [{"name": "village_water", "pos": Vector2(float(v[0]), float(v[1])), "zoom": float(v[2]) if v.size() > 2 else 1.0, "wait": 1.5}]
 	return pts
 
+
+
+## S10-07, S10-10 (--wakebench): живая колонна / караван у точки — идёт своим ходом, камера над серединой;
+## по расписанию p["live"] = [[время, "shot", имя, зум] | [время, "kill", сколько]] — кадры и подбитые машины
+var _live_cv: Convoy = null
+var _live_t := 0.0
+var _live_k := 0
+
+
+func _live(p: Dictionary) -> void:
+	if _live_cv == null:
+		m.player.process_mode = Node.PROCESS_MODE_DISABLED   # не стреляет: кадр следа и остовов без дыма попаданий
+		_live_cv = Convoy.new()
+		_live_cv.setup(p["pos"], Vector2.RIGHT, 50.0, 0.0, 0.0)
+		m.world.add_child(_live_cv)
+		_live_t = 0.0
+		_live_k = 0
+		return
+	_live_t += m.get_process_delta_time()
+	if _live_t > 0.3 and not p.has("_placed"):   # машины уже в мире — ставим у точки, дальше едут сами
+		p["_placed"] = true
+		var at: float = _live_cv._s_of(p["pos"]) + 300.0
+		for v: ConvoyVehicle in _live_cv.vehicles:
+			v.place(at)
+			at -= float(ConvoyVehicle.spec(v.role)["len"]) * Tuning.g("unit_scale") + ConvoyVehicle.gap()
+	var vs: Array = _live_cv.vehicles.filter(func(v: Variant) -> bool: return is_instance_valid(v))
+	var focus: Vector2 = p["pos"]
+	if not vs.is_empty() and p.has("_placed"):
+		focus = (vs[mini(2, vs.size() - 1)] as Node2D).global_position
+		if p.has("_wreck") and is_instance_valid(p["_wreck"]):   # после подбития камера — над остовом
+			focus = (p["_wreck"] as Node2D).global_position
+	var seq: Array = p["live"]
+	var zoom := 1.0
+	for st: Array in seq:
+		if st[1] == "shot":
+			zoom = float(st[3])
+			if _live_t < float(st[0]):
+				break
+	m.player.global_position = focus + Vector2(380, 260) / zoom
+	m.player.heading = -PI / 4.0
+	m.camera.global_position = focus
+	m.camera.zoom = Vector2.ONE * zoom
+	m.camera.reset_smoothing()
+	if _live_k >= seq.size():
+		_live_cv.queue_free()
+		for v in vs:
+			(v as Node).queue_free()
+		_live_cv = null
+		_i += 1
+		_t = 0.0
+		return
+	var cur: Array = seq[_live_k]
+	if _live_t < float(cur[0]):
+		return
+	_live_k += 1
+	if cur[1] == "kill":   # подбить машины с середины колонны (не головную — колонна идёт дальше)
+		var n := 0
+		for v: ConvoyVehicle in vs:
+			if v != vs[0] and not v.wreck and n < int(cur[2]):
+				n += 1
+				# как ConvoyVehicle._die, но без взрыва: его дым закрывает кадр остова
+				v.hp = 0.0
+				v.remove_from_group("enemies")
+				v.wreck = true
+				v.add_to_group("wrecks3d")
+				if n == 1:
+					p["_wreck"] = v
+	else:
+		_save(String(cur[2]))
 
 
 ## 3.5: враги всех видов рядом с игроком (стенд 3D-моделей в бою)

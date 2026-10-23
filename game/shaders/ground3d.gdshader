@@ -52,6 +52,8 @@ uniform int sea_look = 0;
 // поле берега в сетке (terrain3d.gd _shore_u): первые shore_a пикс. воды — шаг 1 ед./пикс., дальше до оси
 uniform float shore_a = 12.0;
 uniform float sea_depth_px = 450.0;
+// S10-06: откуда светит солнце сцены (render3d.gd sun) — блики и светлые склоны волн
+uniform vec3 sea_sun = vec3(-0.48, 0.658, -0.58);
 uniform vec3 road_color : source_color = vec3(0.7, 0.62, 0.5);
 uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к палитре стайл-гайда (фото рыжее)
 uniform float rock_sat = 0.45;
@@ -409,6 +411,63 @@ void fragment() {
 					* smoothstep(0.35, 0.65, vnoise(world / 22.0 + vec2(t * 0.15, 0.0)));
 				foam = max(foam, surf * 0.85);
 				sea_e = sea_e * 0.25 + vec3(0.06, 0.065, 0.06) * smoothstep(0.4, 0.8, vnoise(world / 420.0 + vec2(t * 0.01, 0.0))) * smoothstep(0.2, 0.6, dp0);
+			}
+			if (sea_look >= 5 && water > 0.0) {   // на суше не считаем (дорого: 9 волн на пиксель)
+				// S10-06 (Kanta 23.10: «у воды очень плохое качество»): вместо мягких пятен шума — мелкие волны.
+				// Семь бегущих волн 5…70 px в разные стороны от ветра, гребни заострены (exp(sin)), путь волн
+				// слегка искривлён шумом; волны мельче пикселя гасятся (без муара). Из наклона — нормаль,
+				// светлые склоны к солнцу, тёмные ложбины, искры бликов и редкие барашки на глубине
+				float fw = max(length(dFdx(world)), length(dFdy(world)));
+				vec2 wp = world + vec2(vnoise(world / 95.0 + 1.3), vnoise(world / 95.0 - 4.1)) * 22.0;
+				vec2 g = vec2(0.0);
+				float hh = 0.0;
+				float hn = 0.0;
+				for (int i = 0; i < 9; i++) {
+					float fi = float(i);
+					float L = 2.6 * pow(1.5, fi);   // 2,6 … 67 px
+					float ang = 0.6 + sin(fi * 3.7 + 0.5) * 1.1;   // направления вразброс вокруг ветра
+					vec2 dir = vec2(cos(ang), sin(ang));
+					float k = 6.2832 / L;
+					// у каждой волны свой изгиб пути и свои пятна силы: иначе пересечения дают ровную сетку ромбов
+					vec2 wi = vec2(vnoise(world / (L * 4.0) + fi * 7.1), vnoise(world / (L * 4.0) - fi * 5.3)) - 0.5;
+					float ph = dot(dir, wp + wi * L * 1.2) * k - t * sqrt(k) * 2.2 + fi * 1.7;
+					// крупные волны положе (иначе ровные полосы на весь пролив), мелкие круче
+					float st = (0.22 - 0.014 * fi) * (0.3 + 1.4 * vnoise(world / (L * 7.0) + fi * 13.0));
+					float a = st / k * (1.0 - smoothstep(L * 0.18, L * 0.42, fw));
+					float ex = exp(sin(ph) - 1.0);
+					hh += a * ex;
+					hn += (0.22 - 0.014 * fi) / k;
+					g += dir * (a * k * cos(ph) * ex);
+				}
+				float hk = hh / max(hn, 1e-3);   // высота 0…1
+				float calm = smoothstep(0.02, 0.18, dp0);   // у самого берега вода гладкая
+				g *= calm;
+				vec3 nn = normalize(vec3(-g.x, 1.0, -g.y));
+				vec3 sl = normalize(sea_sun);
+				// склоны к солнцу светлее, ложбины темнее: рисунок волн виден и без отражений неба
+				float lit = dot(nn, sl) - sl.y;
+				wc *= 1.0 + clamp(lit * 1.7, -0.3, 0.3);
+				wc = mix(wc * 0.93, wc * 1.04, smoothstep(0.2, 0.7, hk) * calm);
+				// блики солнца: зеркальное отражение для камеры сверху (с небольшим наклоном), пятнами по проливу
+				vec3 hv = normalize(sl + vec3(0.0, 1.0, 0.25));
+				float sp = pow(clamp(dot(nn, hv), 0.0, 1.0), 350.0);
+				float spm = smoothstep(0.35, 0.75, vnoise(world / 260.0 + vec2(t * 0.02, 1.0)));
+				sea_e += vec3(1.0, 0.95, 0.82) * sp * 1.1 * calm * spm;
+				// барашки: редкие белые гребни больших волн, только на глубине и пятнами
+				float cap = smoothstep(0.8, 0.95, hk) * smoothstep(0.6, 0.85, vnoise(world / 170.0 + vec2(t * 0.05, 3.0)))
+					* smoothstep(0.3, 0.55, dp0);
+				foam = max(foam, cap * 0.6);
+				// отмель: рябь песка на дне и сетка каустики (тонкие светлые линии) — гаснут с глубиной
+				float shal = 1.0 - smoothstep(0.03, 0.3, dp0);
+				vec2 bd = vec2(world.x * 0.8 + world.y * 0.6, world.y * 0.8 - world.x * 0.6);
+				float rip = sin(bd.x / 7.0 * 6.2832 + vnoise(world / 40.0) * 6.0) * (1.0 - smoothstep(1.2, 2.5, fw));
+				wc *= 1.0 + rip * 0.05 * shal;
+				vec2 cq = world / 16.0 + g * 1.5;
+				float r1 = 1.0 - abs(vnoise(cq + vec2(t * 0.3, t * 0.2)) * 2.0 - 1.0);
+				float r2 = 1.0 - abs(vnoise(cq * 1.37 - vec2(t * 0.25, -t * 0.32) + 5.0) * 2.0 - 1.0);
+				float cs = pow(r1 * r2, 5.0) * (1.0 - smoothstep(0.6, 1.6, fw));
+				sea_e += vec3(0.85, 1.0, 0.95) * cs * 0.18 * shal;
+				sea_n = g * 0.9;
 			}
 			wc = mix(wc, vec3(0.9, 0.93, 0.92), foam * 0.8);
 			sea_e *= water;

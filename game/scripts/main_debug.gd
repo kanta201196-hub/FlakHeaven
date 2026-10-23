@@ -308,6 +308,9 @@ func _aa_flat_test() -> void:
 	print("AAFLAT grid: равнина %.1f %% точек (сетка 150 px, 18 × 18 км)" % (100.0 * flat / all))
 	var bad := 0
 	var cars := 0
+	var wet := 0   # S10-02: машины в воде (у моря «Архипелага» — тоже)
+	var moves := 0
+	var wet_moves := 0
 	var worst := 0.0
 	var dist := 0.0
 	seed(7)
@@ -321,6 +324,17 @@ func _aa_flat_test() -> void:
 			cars += 1
 			var h := tr.height(g.position.x, g.position.y)
 			worst = maxf(worst, h)
+			if tr.wet(g.position):
+				wet += 1
+				if m._args.has("--verbose-bot"):
+					print("AAFLAT wet ", g.variant, " rf=%.0f at=%s" % [tr.river_field(g.position.x, g.position.y), str(g.position)])
+			# S10-02: переезды по позиции — точки, которые выбирает GroundTarget._drive
+			for n in 4:
+				var slot := site.anchor + Vector2.from_angle(randf() * TAU) * randf_range(140.0, 240.0) * AASite.SPREAD
+				slot = tr.find_floor(slot, 220.0, signf(tr.river_field(g.position.x, g.position.y)), [], AASite.RIVER_GUARD_CAR, true)
+				moves += 1
+				if tr.wet(slot):
+					wet_moves += 1
 			if not tr.flat_at(g.position, 0.0):
 				bad += 1
 				if m._args.has("--verbose-bot"):
@@ -328,6 +342,7 @@ func _aa_flat_test() -> void:
 			g.free()
 		site.free()
 	print("AAFLAT sites: 120, машин %d, на склоне %d (%.1f %%), макс. высота над дном %.0f px, сдвиг центра в среднем %.0f px, %.1f мс на позицию" % [cars, bad, 100.0 * bad / cars, worst, dist / 120.0, (Time.get_ticks_usec() - t0) / 120000.0])
+	print("AAFLAT water: машин в воде %d из %d, точек переезда в воде %d из %d" % [wet, cars, wet_moves, moves])
 	m.get_tree().quit()
 
 
