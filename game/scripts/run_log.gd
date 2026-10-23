@@ -11,7 +11,7 @@ const LOG_DEALT := ["курсовое (авто)", "курсовое (ручн.)
 
 
 static func write(m: Main, outcome: String) -> void:
-	m.menu.add_record(PlaneClasses.DATA[m.cls_id]["title"], outcome, m.run_time, m.level, m.kills)
+	m.menu.add_record(PlaneClasses.DATA[m.cls_id]["title"], outcome, m.run_time, m.run.level, m.run.kills)
 	# 3.4: новые колонки — новый файл (версия набора колонок в имени), чтобы не смешивать заголовки
 	var path := "user://playtest_log_%s_%s.csv" % [Main.BUILD, Telemetry.LOG_VER]
 	var exists := FileAccess.file_exists(path)
@@ -34,13 +34,13 @@ static func write(m: Main, outcome: String) -> void:
 	else:
 		f.store_line(head)
 	var row := PackedStringArray([Time.get_datetime_string_from_system(), m.cls_id, str(int(Tuning.g("scheme"))), outcome,
-		"%.1f" % m.run_time, str(m.level), str(m.level_at_5), str(m.kills), str(m.bosses_killed), str(m.activities_done), str(m.parts_kept), str(m.restarts),
+		"%.1f" % m.run_time, str(m.run.level), str(m.level_at_5), str(m.run.kills), str(m.run.bosses_killed), str(m.run.activities_done), str(m.parts_kept), str(m.restarts),
 		str(m.stat("taken", "таран")), str(m.stat("taken", "пули")), str(m.stat("taken", "ракеты")),
 		str(int(m.counters.get("missile_hits", 0))), str(int(m.counters.get("healed", 0))), str(m.total("dealt"))])
 	for k in LOG_DEALT:
 		row.append(str(m.stat("dealt", k)))
-	row.append_array(PackedStringArray([str(m.shots), str(m.hits), str(int(round(m.peak_rev * 100.0))), str(m.near_misses), str(m.best_streak),
-		str(m.tail_kills), " | ".join(PackedStringArray(m.banned.values())), " | ".join(PackedStringArray(m.player.cards_log)),
+	row.append_array(PackedStringArray([str(m.shots), str(m.hits), str(int(round(m.peak_rev * 100.0))), str(m.run.near_misses), str(m.run.best_streak),
+		str(m.run.tail_kills), " | ".join(PackedStringArray(m.banned.values())), " | ".join(PackedStringArray(m.player.cards_log)),
 		kv(m.player.syn), str(int(m.player.max_hp))]))
 	# 3.1: навык, теги, нашивки (время), эволюции (время), ведомые, перехваты, урон по всем источникам
 	var wl := PackedStringArray()

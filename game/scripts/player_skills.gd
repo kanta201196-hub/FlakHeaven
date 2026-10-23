@@ -141,7 +141,7 @@ func _activate_skill3(id := "", slot := 0) -> void:
 				if keep:
 					pl._nest_done = true # «Гнездо»: один остаётся насовсем
 				pl.add_wingman("rook", 1.0, not keep, life)
-			Main.I.radio("Грачата", "Звено на подходе, работаем по земле!")
+			Events.radio.emit("Грачата", "Звено на подходе, работаем по земле!", false)
 		"umbrella":
 			pl.umbrella_t = float(d["time"]) + (1.0 if lvl >= 1 else 0.0)
 			pl.s3_t = pl.umbrella_t
@@ -169,7 +169,7 @@ func _activate_skill3(id := "", slot := 0) -> void:
 				wm.salvo(4 if lvl >= 1 else 3, 40.0, pl.ranks_t * 0.6)
 				if lvl >= 2:
 					wm.repair(0.5)
-			Main.I.radio("Звено", "Смыкаем строй!")
+			Events.radio.emit("Звено", "Смыкаем строй!", false)
 
 
 ## «Ёлочка»: мини-ракеты по разным целям

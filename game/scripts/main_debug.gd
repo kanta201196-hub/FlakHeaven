@@ -194,8 +194,8 @@ func _hud_test() -> void:
 		m.run.debug_set(&"streak_t", 2.0)
 		_hud_phase = 1
 		_hud_at = Time.get_ticks_msec()
-	elif _hud_phase == 1 and Time.get_ticks_msec() - _hud_at > 4500 and m.radio_t <= 0.5:
-		m.radio("Барон", "Ещё один охотник? Посмотрим, сколько продержишься.", true)
+	elif _hud_phase == 1 and Time.get_ticks_msec() - _hud_at > 4500 and m.hud.radio_t <= 0.5:
+		Events.radio.emit("Барон", "Ещё один охотник? Посмотрим, сколько продержишься.", true)
 	elif _hud_phase == 1 and Time.get_ticks_msec() - _hud_at > 6000:
 		_shot("hud_late")
 		m.get_tree().quit()
@@ -366,9 +366,9 @@ func _debug_screenshots(delta: float) -> void:
 		_shot("settings")
 	if m.state == "campaign":
 		_shot("campaign")
-	if m.state == "levelup" and m.level >= 4:
+	if m.state == "levelup" and m.run.level >= 4:
 		_shot("levelup")
-	if m.state == "levelup" and m.level >= 10:
+	if m.state == "levelup" and m.run.level >= 10:
 		_shot("levelup_late")
 	if m.state == "paused":
 		_shot("loadout")
@@ -477,7 +477,7 @@ func print_taken(tag: String) -> void:
 func _smoke_end(code: int, why: String) -> void:
 	print_taken("SMOKE")
 	print("SMOKE: dealt %s · rail %d · emp %d · laser burned %d · mastery +%d" % [str(m.stats["dealt"]), int(m.counters.get("rail_shots", 0)), int(m.counters.get("emp_pulses", 0)), int(m.counters.get("laser_burned", 0)), int(m.tele.g("mastery_dmg"))])
-	print("SMOKE: %s class %s, level %d, kills %d, %s, %.0f s real" % ["ok" if code == 0 else "FAIL", m.cls_id, m.level, m.kills, why, Time.get_ticks_msec() / 1000.0])
+	print("SMOKE: %s class %s, level %d, kills %d, %s, %.0f s real" % ["ok" if code == 0 else "FAIL", m.cls_id, m.run.level, m.run.kills, why, Time.get_ticks_msec() / 1000.0])
 	m.get_tree().quit(code)
 
 
@@ -606,18 +606,18 @@ func _run_autotest(delta: float) -> void:
 						if ci >= 0:
 							m.choose_card(ci)
 							return
-				if m._args.has("--shots") and m.level >= 6 and not _shots_done.has("loadout") and not _loadout_opened:
+				if m._args.has("--shots") and m.run.level >= 6 and not _shots_done.has("loadout") and not _loadout_opened:
 					_loadout_opened = true
 					# один раз заглянуть в подвесы для скриншота
 					m.choose_card(randi() % m.offers.size())
 					m._set_state("paused")
 					return
 				# проверка переброса / закрепления / исключения
-				if m.level == 3 and m.bans > 0:
+				if m.run.level == 3 and m.bans > 0:
 					_click_ban_check()
-				elif m.level == 4 and m.rerolls > 0:
+				elif m.run.level == 4 and m.rerolls > 0:
 					m.reroll()
-				elif m.level == 5:
+				elif m.run.level == 5:
 					m.lock_card(1)
 				m.choose_card(randi() % m.offers.size())
 			return
@@ -636,13 +636,13 @@ func _run_autotest(delta: float) -> void:
 		"dead", "evac":
 			if _bot_wait <= 0.0:
 				_bot_wait = 1.0
-				print("AUTOTEST: %s at %.1f s, class %s, level %d, kills %d, bosses %d, mastery t%d +%d" % [m.state, m.run_time, m.cls_id, m.level, m.kills, m.bosses_killed,
+				print("AUTOTEST: %s at %.1f s, class %s, level %d, kills %d, bosses %d, mastery t%d +%d" % [m.state, m.run_time, m.cls_id, m.run.level, m.run.kills, m.run.bosses_killed,
 					int(m.tele.g("mastery_t")), int(m.tele.g("mastery_dmg"))])
 				print_taken("AUTOTEST")
 				print("AUTOTEST: modules %d/%d %s, hp_cd %.2f" % [Cards.mod_slots_used(m.player), Cards.MOD_SLOTS, m.player.taken, float(m.player.mods["hp_cd"])])
 				print("AUTOTEST: heal box %d card %d kit %d allcards %d activity %d armor %d other %d, max_hp %d, taken %d, would-die %d" % [int(m.tele.g("heal_box")), int(m.tele.g("heal_card")), int(m.tele.g("heal_kit")), int(m.tele.g("heal_allcards")), int(m.tele.g("heal_activity")), int(m.tele.g("heal_armor")), int(m.tele.g("heal_прочее")) + int(m.tele.g("heal_perk")), int(m.player.max_hp), int(m.total("taken")), int(m.tele.g("nodie"))])
 				print("AUTOTEST: dealt air %d ground %d" % [int(m.tele.g("dealt_air")), int(m.tele.g("dealt_ground"))])
-				print("AUTOTEST: evo times %s, level %d, groups %s" % [str(m.player.evo_times), m.level, ", ".join(PackedStringArray(m.player.groups.map(func(g): return "%s %d" % [(g as Hardpoint).weapon, (g as Hardpoint).level])))])
+				print("AUTOTEST: evo times %s, level %d, groups %s" % [str(m.player.evo_times), m.run.level, ", ".join(PackedStringArray(m.player.groups.map(func(g): return "%s %d" % [(g as Hardpoint).weapon, (g as Hardpoint).level])))])
 				if m.class_task != null:
 					print("AUTOTEST: class task %s %d/%d %s" % [m.class_task.cls, m.class_task.n, m.class_task.need(), m.class_task.state])
 				print("AUTOTEST: defense hits armor %d agile %d ecm %d front %d, run bonus dmg %d, bombers down %d" % [int(m.tele.g("def_armor")), int(m.tele.g("def_agile")), int(m.tele.g("def_ecm")), int(m.tele.g("def_front")), int(m.tele.g("run_dmg")), int(m.tele.g("bomber_kills"))])

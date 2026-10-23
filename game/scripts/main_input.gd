@@ -100,22 +100,22 @@ func handle_global_input() -> void:
 		_cycle_scheme()
 	if Input.is_action_just_pressed("cycle_tilt"):
 		cycle_tilt(1)
-		m.show_banner("Наклон камеры: %s  [F9]" % tilt_name())
+		Events.banner.emit("Наклон камеры: %s  [F9]" % tilt_name(), 3.0)
 	if (Input.is_action_just_pressed("pause") or Input.is_action_just_pressed("loadout")) and not m.tuning_panel.visible:
 		m._set_state("paused" if m.state == "playing" else "playing")
 	if m.state == "playing" and Main.DEBUG:
 		# Отладка для плейтеста
 		if Input.is_action_just_pressed("debug_level"):
-			m.run.debug_set(&"pending_levels", m.pending_levels + 1)
+			m.run.debug_set(&"pending_levels", m.run.pending_levels + 1)
 		if Input.is_action_just_pressed("debug_skip"):
 			var nb := (floorf(m.run_time / Tuning.g("boss_every")) + 1.0) * Tuning.g("boss_every")
 			m.run_time = maxf(m.run_time, nb - 10.0)
-			m.show_banner("Отладка: перемотка к следующему асу")
+			Events.banner.emit("Отладка: перемотка к следующему асу", 3.0)
 		if Input.is_action_just_pressed("debug_activity"):
 			m.spawner.start_activity(m.player, m.run_time, true)
 		if Input.is_action_just_pressed("debug_god"):
 			m.god_mode = not m.god_mode
-			m.show_banner("Отладка: неуязвимость %s" % ("ВКЛ" if m.god_mode else "ВЫКЛ"))
+			Events.banner.emit("Отладка: неуязвимость %s" % ("ВКЛ" if m.god_mode else "ВЫКЛ"), 3.0)
 
 
 ## B-47: варианты наклона камеры для тестовой сборки (решение владельца — после теста)
@@ -339,4 +339,4 @@ func cycle_wing_prio() -> void:
 	Settings.wing_prio = wrapi(Settings.wing_prio + 1, 0, Settings.WING_PRIO.size())
 	Settings.save_settings()
 	var t: String = Settings.WING_PRIO[Settings.wing_prio]
-	Main.I.radio("Звено", "Принял: %s!" % (t.left(1).to_upper() + t.substr(1)))
+	Events.radio.emit("Звено", "Принял: %s!" % (t.left(1).to_upper() + t.substr(1)), false)

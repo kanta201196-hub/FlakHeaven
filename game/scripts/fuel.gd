@@ -33,11 +33,11 @@ func _process(delta: float) -> void:
 		m.tele.add("fuel_empty_s", delta)
 		if not _empty_said:
 			_empty_said = true
-			m.show_banner("Бак пуст! Скорость −30%, форсажа нет — ждите заправщик", 4.0)
+			Events.banner.emit("Бак пуст! Скорость −30%, форсажа нет — ждите заправщик", 4.0)
 			m.sfx.play("fuel_empty", -4.0, 0.5)
 	elif frac() < 0.1 and not _warned:
 		_warned = true
-		m.show_banner("Топливо на исходе", 3.0)
+		Events.banner.emit("Топливо на исходе", 3.0)
 		m.sfx.play("fuel_low", -8.0, 0.8)
 	_retry_t -= delta
 	if not is_instance_valid(tanker) and frac() <= CALL_AT and _retry_t <= 0.0:
@@ -74,7 +74,7 @@ func _call_tanker(p: Player) -> void:
 	tanker = Tanker.new()
 	tanker.setup(p, self)
 	Main.I.world.add_child(tanker)
-	Main.I.show_banner("Заправщик на подходе! Зайдите ему в хвост и держитесь за ним", 4.0)
+	Events.banner.emit("Заправщик на подходе! Зайдите ему в хвост и держитесь за ним", 4.0)
 	Hints.show("tanker", "Заправщик: догоните его, зайдите сзади и держитесь рядом — бак наполняется. Газ W/S помогает удержать скорость.", 8.0, 2)
 	Main.I.sfx.play("tanker_call", -8.0, 0.8)
 	if OS.get_cmdline_user_args().has("--autotest"):

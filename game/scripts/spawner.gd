@@ -226,7 +226,7 @@ func _process(delta: float) -> void:
 			ek.setup_run(p.global_position)
 			Main.I.world.add_child(ek)
 			ek.apply_hp_mult(hp_mult() * hp_ramp(t) * pressure_k)
-			Main.I.show_banner("Экраноплан «Крачка» идёт по проливу!", 2.5)
+			Events.banner.emit("Экраноплан «Крачка» идёт по проливу!", 2.5)
 	# «Архипелаг»: чайки над берегом раз в 10–20 с (звуки PR #211)
 	if Biome.sea():
 		_gull_cd -= delta
@@ -307,7 +307,7 @@ func spawn_bombers(p: Player, t: float) -> void:
 		b.born_t = t
 		if lead == null:
 			lead = b
-	Main.I.show_banner("Звено бомбардировщиков! Броня спереди, турель сзади — заходите сбоку", 3.0)
+	Events.banner.emit("Звено бомбардировщиков! Броня спереди, турель сзади — заходите сбоку", 3.0)
 	Story.say(Story.DISPATCH, "Бомбардировщики идут к колонне! Броня спереди — заходите сбоку.")
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: bombers at %.0f" % t)
@@ -359,7 +359,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		rs.setup(p.global_position + Vector2.from_angle(p.heading + randf_range(-0.8, 0.8)) * 1500.0)
 		Main.I.world.add_child(rs)
 		activity_node = rs
-		Main.I.show_banner("Аварийный маяк! Наш пилот внизу — летите к нему", 4.0)
+		Events.banner.emit("Аварийный маяк! Наш пилот внизу — летите к нему", 4.0)
 		Hints.show("act_rescue", "Сбитый пилот: летите по зелёной стрелке к маяку. Держитесь рядом 30 с, пока вертолёт его забирает. Отлетите — отсчёт встанет.", 9.0, 2)
 	elif kind_s == "ground":
 		var site := AASite.new()
@@ -367,7 +367,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k, recent_dps())
 		Main.I.world.add_child(site)
 		activity_node = site
-		Main.I.show_banner("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
+		Events.banner.emit("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
 		Story.say(Story.DISPATCH, "Позиция ПВО ожила. Подавите — и небо станет тише.")
 		Hints.show("act_aa", "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости.", 9.0, 2)
 	elif kind_s == "convoy":
@@ -379,10 +379,10 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(cv)
 		activity_node = cv
 		if Biome.sea():
-			Main.I.show_banner("Разведка: караван снабжения идёт в гавань! Топите сухогрузы — груз ваш", 4.0)
+			Events.banner.emit("Разведка: караван снабжения идёт в гавань! Топите сухогрузы — груз ваш", 4.0)
 			Hints.show("act_convoy_sea", "Караван: летите по оранжевой стрелке. Подбейте головное судно — караван встанет. С каждого потопленного сухогруза всплывает груз: запчасти и ремкомплекты.", 9.0, 2)
 		else:
-			Main.I.show_banner("Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш", 4.0)
+			Events.banner.emit("Разведка: колонна снабжения идёт к укрытию! Сожгите грузовики — груз ваш", 4.0)
 			Story.say(Story.DISPATCH, "Колонна противника на дороге. Сожгите грузовики — груз наш.")
 			Hints.show("act_convoy", "Конвой: летите по оранжевой стрелке. Подбейте головную машину — колонна встанет. С каждого сожжённого грузовика падает груз: запчасти и ремкомплекты.", 9.0, 2)
 	elif kind_s == "transport":
@@ -396,7 +396,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Main.I.world.add_child(tr)
 		tr.spawn_escort(3 + (1 if t > 480.0 else 0), hp_k)
 		activity_node = tr
-		Main.I.show_banner("Разведка: вражеский транспортник с прикрытием! Сбейте его — груз ваш", 4.0)
+		Events.banner.emit("Разведка: вражеский транспортник с прикрытием! Сбейте его — груз ваш", 4.0)
 		Hints.show("act_transport", "Транспортник летит через район и скоро уйдёт — розовая стрелка. Прикрытие отвлекает: бейте сам транспортник, груз падает с него.", 8.0, 2)
 	else:
 		var ace := RivalAce.new()
@@ -406,7 +406,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		ace.heading = (p.global_position - ace.position).angle()
 		Main.I.world.add_child(ace)
 		activity_node = ace
-		Main.I.show_banner("Дуэль: вражеский ас заходит вам в хвост!", 4.0)
+		Events.banner.emit("Дуэль: вражеский ас заходит вам в хвост!", 4.0)
 		Hints.show("act_ace", "Дуэль с асом: он заходит в хвост. Сбросьте газ (S) или сделайте боевой разворот (E) — ас проскочит вперёд под вашу пушку.", 8.0, 2)
 	Main.I.sfx.play("boss", -8.0, 1.4)
 

@@ -510,7 +510,7 @@ static func branch_def(weapon: String, b: String) -> Dictionary:
 
 
 static func branch_on() -> bool:
-	return Main.I != null and Main.I.level >= BRANCH_LEVEL
+	return Main.I != null and Main.I.run.level >= BRANCH_LEVEL
 
 
 ## Подвес, которому пора выбрать ветку: оружие ур. 5, ветки ещё нет (−1 — нет такого)
@@ -812,7 +812,7 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 			if c[1]["kind"] == "weapon_up" and (p.groups[int(c[1]["group"])] as Hardpoint).weapon == "turret":
 				if not out.any(func(o): return o["id"] == c[1]["id"]):
 					var tc: Dictionary = (c[1] as Dictionary).duplicate()
-					tc["rarity"] = roll_rarity(Main.I.level, min_r)
+					tc["rarity"] = roll_rarity(Main.I.run.level, min_r)
 					out.append(finalize(p, tc))
 				break
 	# S9-18: перк «Старый знакомый» — вылет без ведомых, но пока звено пустое, в выборе всегда есть ведомый
@@ -820,7 +820,7 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 		for c in cands:
 			if c[1]["kind"] == "wing_new" and not out.any(func(o): return o["id"] == c[1]["id"]):
 				var wc: Dictionary = (c[1] as Dictionary).duplicate()
-				wc["rarity"] = roll_rarity(Main.I.level, min_r)
+				wc["rarity"] = roll_rarity(Main.I.run.level, min_r)
 				out.append(finalize(p, wc))
 				break
 	var taken_ids: Array = out.map(func(c): return c["id"])
@@ -852,7 +852,7 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 			if aliens >= 2:
 				continue
 			aliens += 1
-		card["rarity"] = 4 if card["kind"] in ["synergy", "skill_syn"] else roll_rarity(Main.I.level, min_r)
+		card["rarity"] = 4 if card["kind"] in ["synergy", "skill_syn"] else roll_rarity(Main.I.run.level, min_r)
 		out.append(finalize(p, card))
 		var wpn: String = card.get("weapon", "")
 		cands = cands.filter(func(c): return c[1]["id"] != cid and c[1]["ban"] != cban and (wpn == "" or c[1].get("weapon", "") != wpn))
@@ -965,14 +965,14 @@ static func apply(p: Player, card: Dictionary) -> void:
 			hb.branch = card["branch"]
 			hb.branch_rank = mini(hb.branch_rank + 1, BRANCH_MAX)
 			if card["first"]:
-				Main.I.show_banner(Loc.t("МАСТЕРСТВО ОРУЖИЯ: %s") % Loc.t(card["title"]), 3.0)
+				Events.banner.emit(Loc.t("МАСТЕРСТВО ОРУЖИЯ: %s") % Loc.t(card["title"]), 3.0)
 		"mastery":
 			p.mastery = true
 			Main.I.tele.v["mastery_t"] = Main.I.run_time
-			Main.I.show_banner(Loc.t("МАСТЕРСТВО КЛАССА: %s") % Loc.t(PlaneClasses.MASTERY[p.cls_id]["title"]), 4.0)
+			Events.banner.emit(Loc.t("МАСТЕРСТВО КЛАССА: %s") % Loc.t(PlaneClasses.MASTERY[p.cls_id]["title"]), 4.0)
 		"evolution":
 			p.evolve(card["weapon"])
-			Main.I.show_banner(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(Prog.EVOS[card["weapon"]]["title"]), 4.0)
+			Events.banner.emit(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(Prog.EVOS[card["weapon"]]["title"]), 4.0)
 		"reserve":
 			var tk: String = String(card["id"])
 			p.taken[tk] = int(p.taken.get(tk, 0)) + 1

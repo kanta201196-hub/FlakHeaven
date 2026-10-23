@@ -61,7 +61,7 @@ func behave(delta: float) -> void:
 	if life <= 0.0:
 		if not _escaped:
 			_escaped = true
-			Main.I.show_banner("Транспортник ушёл — груз потерян", 3.0)
+			Events.banner.emit("Транспортник ушёл — груз потерян", 3.0)
 			Events.activity_failed.emit(&"transport", "")
 			if Main.I.spawner != null and Main.I.spawner.activity_node == self:
 				Main.I.spawner.activity_node = null

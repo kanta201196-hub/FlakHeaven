@@ -42,7 +42,7 @@ func _process(delta: float) -> void:
 			active = true
 			Story.say(Story.DISPATCH, "Слышу аварийный маяк! Наш пилот внизу — прикройте вертолёт.")
 			Story.say("Спасатель", "Забираем! Держите небо ещё полминуты.")
-			m.show_banner("Сбитый пилот: держите небо над маяком 30 с", 3.0)
+			Events.banner.emit("Сбитый пилот: держите небо над маяком 30 с", 3.0)
 	else:
 		if d < HOLD_R:
 			timer -= delta

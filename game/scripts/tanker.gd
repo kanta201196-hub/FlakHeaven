@@ -93,7 +93,7 @@ func take_damage(d: float) -> void:
 	if hp <= 0.0:
 		Main.I.fx.explosion(global_position, 46.0)
 		Main.I.add_shake(6.0)
-		Main.I.show_banner("Заправщик сбит! Следующий — через 2 минуты", 4.0)
+		Events.banner.emit("Заправщик сбит! Следующий — через 2 минуты", 4.0)
 		Main.I.sfx.play("tanker_down", -4.0, 0.6)
 		_finish(false)
 
@@ -121,7 +121,7 @@ func _process(delta: float) -> void:
 	if not leaving and (life <= 0.0 or refueled):
 		leaving = true
 		if not refueled:
-			Main.I.show_banner("Заправщик уходит — следующий через 2 минуты", 3.0)
+			Events.banner.emit("Заправщик уходит — следующий через 2 минуты", 3.0)
 			_finish(false)
 		docked = false
 	var fwd := Vector2.from_angle(p.heading)
@@ -171,7 +171,7 @@ func _refuel(p: Player, delta: float) -> void:
 	Main.I.tele.add("fuel_fill_s", delta)
 	if fuel.frac() >= 0.999:
 		refueled = true
-		Main.I.show_banner("Заправка завершена — бак полный", 3.0)
+		Events.banner.emit("Заправка завершена — бак полный", 3.0)
 		Main.I.sfx.play("refuel_done", -6.0, 1.4)
 		_finish(true)
 

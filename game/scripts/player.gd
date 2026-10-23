@@ -221,7 +221,7 @@ func open_synergy(id: String) -> void:
 	if course == id:
 		course = ""
 	var sd := Cards.syn_def(self, id)
-	Main.I.show_banner("СВЯЗКА «%s» — СЛОТ %d" % [String(sd["title"]).to_upper(), syn.size()], 4.5)
+	Events.banner.emit("СВЯЗКА «%s» — СЛОТ %d" % [String(sd["title"]).to_upper(), syn.size()], 4.5)
 	Main.I.sfx.play("synergy", -6.0, 1.6)
 	Main.I.slowmo(0.6)
 	Main.I.fx.ring(global_position, 260.0, sd.get("color", Color(1, 0.85, 0.3)))
@@ -433,7 +433,7 @@ func _process(delta: float) -> void:
 ## Проход на форсаже: врезаясь в строй, самолёт бьёт каждого врага, через которого прошёл.
 ## Урон растёт с уровнем и размером самолёта (бомбардировщик — «таран»), асы и наземные не в счёт.
 func pass_damage() -> float:
-	return Tuning.g("pass_dmg") * (1.0 + 0.06 * (Main.I.level - 1)) * size
+	return Tuning.g("pass_dmg") * (1.0 + 0.06 * (Main.I.run.level - 1)) * size
 
 
 ## Сбит враг (Main сообщает): «Штурмовой заход» III продлевается за наземные цели

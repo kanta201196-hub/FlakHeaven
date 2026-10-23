@@ -14,7 +14,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 
 	# Опыт и уровень — полоса во всю ширину сверху
 	ctrl.draw_rect(Rect2(0, 0, size.x, 10), Color(0, 0, 0, 0.6))
-	ctrl.draw_rect(Rect2(0, 0, size.x * clampf(m.xp / m.xp_need(), 0.0, 1.0), 10), Color(0.4, 1.0, 0.55))
+	ctrl.draw_rect(Rect2(0, 0, size.x * clampf(m.run.xp / m.xp_need(), 0.0, 1.0), 10), Color(0.4, 1.0, 0.55))
 
 	var hide := Settings.hide_hud and m.state == "playing"
 	if is_instance_valid(p) and not hide:
@@ -37,12 +37,12 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 
 	if Hints.t > 0.0 and Hints.text != "" and m.state == "playing":
 		_hint_box(Hints.text, size, clampf(Hints.t * 2.0, 0.0, 1.0))
-	if m.banner_t > 0.0 and m.state == "playing":
-		var a := clampf(m.banner_t, 0.0, 1.0)
+	if m.hud.banner_t > 0.0 and m.state == "playing":
+		var a := clampf(m.hud.banner_t, 0.0, 1.0)
 		# тёмная плашка под баннером — на светлом песке жёлтый текст терялся
-		var bw := ui_font().get_string_size(Loc.out(m.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
+		var bw := ui_font().get_string_size(Loc.out(m.hud.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
 		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, 138, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
-		_ctext(170, m.banner, 30, Color(1.0, 0.85, 0.5, a))
+		_ctext(170, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
 
 	if m.run_time > 180.0 and m.state == "playing":
 		return
@@ -104,7 +104,7 @@ func _left_panel(m: Main, p: Player) -> void:
 	ctrl.draw_rect(Rect2(x, y, 300, 24), Color(0, 0, 0, 0.6))
 	ctrl.draw_rect(Rect2(x, y, 300.0 * hk, 24), hc)
 	_text(Vector2(x + 8, y + 18), Loc.t("Прочность %d / %d") % [int(p.hp), int(p.max_hp)], 17, Color.WHITE)
-	_text(Vector2(x + 312, y + 19), Loc.t("Ур. %d") % m.level, 20, Color(0.6, 1.0, 0.7))
+	_text(Vector2(x + 312, y + 19), Loc.t("Ур. %d") % m.run.level, 20, Color(0.6, 1.0, 0.7))
 	y += 30.0
 	# 3.5: топливо — полоска под прочностью и остаток в минутах
 	var fu := Fuel.current()
@@ -194,9 +194,9 @@ func _right_panel(m: Main, size: Vector2) -> void:
 	else:
 		_text(Vector2(0, y), Loc.t("Ас через %d:%02d") % [int(next) / 60, int(next) % 60], 18, Color(0.9, 0.85, 0.85), HORIZONTAL_ALIGNMENT_RIGHT, w)
 	y += 26.0
-	_text(Vector2(0, y), Loc.t("Сбито %d") % m.kills, 18, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
+	_text(Vector2(0, y), Loc.t("Сбито %d") % m.run.kills, 18, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
 	y += 26.0
-	_text(Vector2(0, y), Loc.t("Запчасти %d") % int(m.parts), 18, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, w)
+	_text(Vector2(0, y), Loc.t("Запчасти %d") % int(m.run.parts), 18, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, w)
 	y += 26.0
 	if m.run_time > 900.0:
 		_text(Vector2(0, y), Loc.t("Задержались: добыча ×%.1f") % m.continue_mult(), 18, Color(1.0, 0.8, 0.4), HORIZONTAL_ALIGNMENT_RIGHT, w)
@@ -341,9 +341,9 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 	if rk > 1.05:
 		# EX-04: заход на атаку — прямой полёт усиливает пушку, НАР и бомбы
 		_ctext(size.y / 2.0 + 144.0, Loc.t("ЗАХОД: пушка и взрывы +%d%%") % int(round((rk - 1.0) * 100.0)), 20, Color(1.0, 0.75, 0.4, clampf((rk - 1.0) / Player.RUN_BONUS, 0.4, 1.0)))
-	if m.streak >= 3:
-		var a := clampf(m.streak_t, 0.0, 1.0)
-		var stt := Loc.t("Серия ×%d · опыт ×%.2f") % [m.streak, m.streak_mult()]
+	if m.run.streak >= 3:
+		var a := clampf(m.run.streak_t, 0.0, 1.0)
+		var stt := Loc.t("Серия ×%d · опыт ×%.2f") % [m.run.streak, m.streak_mult()]
 		var stw := ui_font().get_string_size(Loc.out(stt), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 24.0
 		ctrl.draw_rect(Rect2(size.x - 16.0 - stw, 246.0, stw, 30.0), Color(0.02, 0.025, 0.03, 0.55 * a))
 		_text(Vector2(0, 268), stt, 20, Color(1.0, 0.75, 0.4, a), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 28.0)
@@ -426,7 +426,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8, Loc.t("заправщик %d м") % (int(p.global_position.distance_to(tk.global_position)) / 10))
 		var ts := Loc.t("СТЫКОВКА — ЗАПРАВКА ИДЁТ") if tk.filling else (Loc.t("ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно") if tk.in_cone else Loc.t("ЗАПРАВЩИК: зайдите ему в хвост"))
 		_ctext(328, Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
-	if m.radio_t > 0.0:
+	if m.hud.radio_t > 0.0:
 		_radio_box(m, size)
 
 
@@ -434,14 +434,14 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 ## S9-14 (Kanta: «почти незаметна»): крупнее — шрифт 22/17 вместо 17/14, плотнее фон, рамка цветом эфира,
 ## новое сообщение въезжает справа и вспыхивает
 func _radio_box(m: Main, size: Vector2) -> void:
-	var a := clampf(m.radio_t, 0.0, 1.0)
+	var a := clampf(m.hud.radio_t, 0.0, 1.0)
 	var w := 620.0
-	var lines := ui_font().get_multiline_string_size(Loc.out(m.radio_text), HORIZONTAL_ALIGNMENT_LEFT, w - 112.0, 22).y
+	var lines := ui_font().get_multiline_string_size(Loc.out(m.hud.radio_text), HORIZONTAL_ALIGNMENT_LEFT, w - 112.0, 22).y
 	var h := maxf(96.0, 54.0 + lines)
-	var age := m.radio_age()
+	var age := m.hud.radio_age()
 	var slide := 1.0 - clampf(age / 0.25, 0.0, 1.0)
 	var r := Rect2(size.x - w - 20.0 + slide * slide * 160.0, size.y - h - 40.0, w, h)
-	var col := Color(1.0, 0.5, 0.45) if m.radio_enemy else Color(0.55, 0.95, 0.7)
+	var col := Color(1.0, 0.5, 0.45) if m.hud.radio_enemy else Color(0.55, 0.95, 0.7)
 	var flash := 1.0 - clampf(age / 0.6, 0.0, 1.0)
 	ctrl.draw_rect(r, Color(0.02, 0.03, 0.035, 0.86 * a))
 	ctrl.draw_rect(r, Color(col.r, col.g, col.b, (0.45 + 0.5 * flash) * a), false, 2.0 + 2.0 * flash)
@@ -454,8 +454,8 @@ func _radio_box(m: Main, size: Vector2) -> void:
 	var blink := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
 	for i in 2:
 		ctrl.draw_arc(Vector2(ic.x + 9, ic.y - 28), 8.0 + i * 8.0, -PI * 0.85, -PI * 0.15, 8, Color(col.r, col.g, col.b, a * blink * (1.0 - i * 0.3)), 2.0)
-	_text(Vector2(r.position.x + 92, r.position.y + 28), Loc.t("РАДИОЭФИР · «%s»") % m.radio_from, 18, Color(col.r, col.g, col.b, a))
-	_para(Vector2(r.position.x + 92, r.position.y + 56), m.radio_text, w - 112.0, 22, Color(1, 1, 1, a))
+	_text(Vector2(r.position.x + 92, r.position.y + 28), Loc.t("РАДИОЭФИР · «%s»") % m.hud.radio_from, 18, Color(col.r, col.g, col.b, a))
+	_para(Vector2(r.position.x + 92, r.position.y + 56), m.hud.radio_text, w - 112.0, 22, Color(1, 1, 1, a))
 
 
 ## 2.8: полоса подвесов внизу экрана — картинка оружия, уровень, перезарядка, связки

@@ -100,7 +100,7 @@ func say(key: String) -> void:
 		return
 	_say_t = 6.0
 	var arr: Array = LINES[key]
-	Main.I.radio(title.trim_prefix("Ас "), arr[randi() % arr.size()])
+	Events.radio.emit(title.trim_prefix("Ас "), arr[randi() % arr.size()], false)
 
 
 ## Скорость аса от крейсерской игрока (k — доля), не ниже base
