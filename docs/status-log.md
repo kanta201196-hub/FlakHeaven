@@ -193,3 +193,8 @@
 - Состав: `main` на `c6efad7` — всё из 3.5-s8 плюс #237…#319: правки по отзывам внешних тестеров (EX-01…EX-10, EX-12), демо-режим (выключен), радио «Где Гром?», экран «В вылет» (EX-08). `BUILD = "3.5-s9"` — только в экспорте, лог `playtest_log_3.5-s9_l7.csv`.
 - Проверено: `smoke.sh all` до экспорта — ok за три класса; экспорт «Linux Check» с `--autotest --smoke --turbo --god` (fighter) — ok, 0 `SCRIPT ERROR`. Полный автотест в сборке не гоняли. Mac-сборка не подписана и на Mac не запускалась.
 - Архивы: `/mnt/project-files/builds/3.5-s9/` (zip Windows и Mac, `WHATS_NEW.md`, суммы, комплект тестера через `make_kit.sh`).
+
+## 23.10.2026 — сборка 3.5-s10 (Windows и Mac, по команде Kanta)
+- Состав: `main` на `8dd9ab2` — всё из 3.5-s9 плюс правки по отзывам s9 (S9-01…S9-26, PR #329–#334; S9-19 отложен Kanta). `BUILD = "3.5-s10"` — только в экспорте, лог `playtest_log_3.5-s10_l7.csv`. Открытых PR по S9 не было.
+- Проверено: `smoke.sh all` до экспорта — ok за три класса; экспорт «Linux Check» с `--autotest --smoke --turbo --god` (fighter) — ok, 0 `SCRIPT ERROR`. Полный автотест в сборке не гоняли. Mac-сборка не подписана и на Mac не запускалась.
+- Архивы: `/mnt/project-files/builds/3.5-s10/` (zip Windows и Mac, `WHATS_NEW.md`, суммы, комплект тестера через `make_kit.sh`). Godot 4.4.1 и шаблоны экспорта пришлось поставить в облако заново (скачаны с github.com/godotengine/godot).
