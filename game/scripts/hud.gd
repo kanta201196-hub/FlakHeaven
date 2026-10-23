@@ -94,12 +94,27 @@ func _input(event: InputEvent) -> void:
 		var m := Main.I
 		if m == null or m.state == "playing" or m.tuning_panel.visible or m.report.visible:
 			return
-		var mp := ctrl.get_local_mouse_position()
-		for b in _buttons:
-			if (b[0] as Rect2).has_point(mp):
-				get_viewport().set_input_as_handled()
-				m.ui_click(b[1])
-				return
+		var act := button_at(ctrl.get_local_mouse_position())
+		if act != "":
+			get_viewport().set_input_as_handled()
+			m.ui_click(act)
+
+
+## Action of the topmost button under `pos` ("" if none). Buttons drawn later sit on top, so the
+## search runs from the end (CR-01: "Pin"/"Ban" inside a level-up card used to pick the card).
+func button_at(pos: Vector2) -> String:
+	for i in range(_buttons.size() - 1, -1, -1):
+		if (_buttons[i][0] as Rect2).has_point(pos):
+			return _buttons[i][1]
+	return ""
+
+
+## Screen rect of the button with this action (empty Rect2 if it is not on screen).
+func button_rect(action: String) -> Rect2:
+	for b in _buttons:
+		if b[1] == action:
+			return b[0]
+	return Rect2()
 
 
 # ---------- Главная отрисовка ----------
