@@ -3,7 +3,8 @@
 две версии: боевую (HQ = False — мало сегментов, без мелочи) и ангарную (HQ = True — фаски, заклёпки, швы,
 трафареты, ушки; окраска с запечённым AO и грязью в текстуре).
 Оси как у WeaponModels: длина 1 вдоль +X (нос вперёд), центр в начале координат, верх (+Z в Blender) —
-сторона крепления к пилону. Окраска (Kanta 19.10): матовая краска roughness 0.6–0.85, металл — только голые детали."""
+сторона крепления к пилону. Окраска (Kanta 19.10, S9-03 23.10): матовая краска roughness 0.84–0.88, metallic 0,
+металл — только голые детали."""
 import math, os, random
 import bpy, bmesh
 from mathutils import Vector, Matrix
@@ -31,7 +32,7 @@ def S(n: int, lo: int = 8) -> int:
 
 
 # ---------- материалы ----------
-def paint(name, rgb, rough=0.78, metal=0.0, ao=0.55, grime=0.18, dust=0.3):
+def paint(name, rgb, rough=0.86, metal=0.0, ao=0.55, grime=0.18, dust=0.3):
     """Краска: матовая, с AO, пятнами грязи и пылью снизу (запекается в текстуру ангарной версии)"""
     SPEC[name] = dict(rgb=rgb, rough=rough, metal=metal, ao=ao, grime=grime, dust=dust, emit=0.0)
     return name
