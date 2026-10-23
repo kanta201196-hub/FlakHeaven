@@ -275,30 +275,31 @@
 
 R-05, R-07, R-12, R-15 тоже закрыты 22.10 — строки доживают до ближайшего ревью 30.10 и уйдут в архив. R-01, R-02, R-06, R-08, R-11 — правила, действуют с 22.10, закрыты (строка в конце архива). Отзыв внешних тестеров: план — `docs/playtest/external-2/plan.md`, задачи EX-01…EX-12 разложены выше по системам.
 
-## Ревью кода (23.10.2026)
+## Code review (2026-10-23)
 
-Итоги — `docs/review/code-2026-10-23/README.md`, стандарты — `docs/standards/` (`code.md`, `architecture.md`, `ui-design-system.md`). Тред «Ревью кода и стандарты разработки». Исполнителей назначает координатор после ответа Kanta на вопросы треда; до этого — идея.
+Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standards/` (`code.md`, `architecture.md`, `ui-design-system.md`). Thread "Ревью кода и стандарты разработки". Owners are assigned by the coordinator after Kanta answers the thread's questions; until then — idea.
 
-| ID | Задача | Тред / владелец | Статус |
+| ID | Task | Thread / owner | Status |
 | --- | --- | --- | --- |
-| CR-01 | Клик по «Закрепить»/«Исключить» берёт карточку: перебор кнопок с конца списка (`hud.gd:98`, `hud_screens.gd:103,147`) + проверка в автотесте кликом | предложено: «Бой: правки по 3.5-s10» | идея |
-| CR-02 | Пустой набор карточек после выбора, курса, исключения, переброса — экран без выхода: одна функция `refill_offers` с веткой «ремонт и запчасти» (`main.gd:425,455,505`) | предложено: «Бой: правки по 3.5-s10» | идея |
-| CR-03 | Профиль может пропасть: проверка `rename`, поиск `.tmp`/`.bak`, битый файл не затирать (часть CS-02) | — | идея |
-| CR-04 | Строка вылета уходит без согласия игрока (в демо тоже) — согласие по DM-07 до демо | «Демо для Next Fest» | идея |
-| CR-05 | Геймпад: задержка ввода 0,3 с на экранах уровня и специализации (малое, сразу); фокус в меню и на экранах (CS-11в) | предложено: «Понятность игры для новичков» | идея |
-| CR-06 | Приём отчётов: текст с `= + - @` в начале — с префиксом `'` (`tools/reports/apps_script.gs`), после — Kanta обновляет скрипт в таблице | Kanta (вместе с RP-4) | идея |
-| CS-01 | Предупреждения GDScript о типах: включить, вычистить, поднять до ошибок | — | идея |
-| CS-02 | `SaveIO`: атомарная запись, `.bak`, версия, подмена папки для тестов; `custom_user_dir_name="FlakHeaven"` до смены названия | — | идея |
-| CS-03 | `RunState` из полей `Main`, запись только через методы; награды за активности в одном месте | — | идея |
-| CS-04 | Один список врагов на кадр + общая сетка попаданий | — | идея |
-| CS-05 | `DebugFlags`: флаги запуска читаются один раз, читы только в отладке | — | идея |
-| CS-06 | id вместо русских строк в логике (источник урона, оружие, состояние, действия кнопок) | — | идея |
-| CS-07 | Python: `pyproject.toml` с ruff, `requirements.txt` с версиями | — | идея |
-| CS-08 | CI: `pick.sh` «всё боевое, кроме списка», smoke ловит `ERROR:`/`SHADER ERROR`, `check_po` и `.gd`-инструменты в smoke; тесты в отдельной папке `user://` | — | идея |
-| CS-09 | Предзагрузка боя: модели операции фоном, прогрев `Boom3D` и материалов на старте вылета | — | идея |
-| CS-10 | Разбить `render3d.gd` (после Next Fest) | — | идея (после демо) |
-| CS-11 | Дизайн-система интерфейса: `UiStyle`, кегль ≥ 14, общие кнопки и вкладки, фокус геймпада (`docs/standards/ui-design-system.md` §6) | — | идея |
-| CS-12 | Важные находки ревью без отдельной строки: спавнер на пределе морозит бомбардировщиков, упреждение бомб (`move_vel`), «Сквозняк» без предела, подсказки сгорают на заставке, `TEST_PICKS` → 2, громкость пишет баланс в `tuning.json`, настройки не помещаются на 1080, шейдер земли (13 сэмплеров, `dFdx` в ветвлении), двойной свет взрывов, `.import` новых моделей, 334 МБ `models/pilot` в git, JPEG 4:2:0 у карты нормалей. Подробно — README ревью | разложить по тредам систем | идея |
+| CR-01 | Clicking "Pin"/"Ban" picks the card: search buttons from the end of the list (`hud.gd:98`, `hud_screens.gd:103,147`) + an autotest check that clicks | proposed: "Бой: правки по 3.5-s10" | idea |
+| CR-02 | Empty card offer after pick, course, ban, reroll — screen with no exit: one `refill_offers` with the "repair and parts" branch (`main.gd:425,455,505`) | proposed: "Бой: правки по 3.5-s10" | idea |
+| CR-03 | Profile can be lost: check `rename`, look for `.tmp`/`.bak`, never overwrite a broken file (part of CS-02) | — | idea |
+| CR-04 | Sortie row uploaded without player consent (demo too) — consent per DM-07 before the demo | "Демо для Next Fest" | idea |
+| CR-05 | Gamepad: 0.3 s input delay on level-up and specialization screens (small, now); focus in menu and screens (CS-11c) | proposed: "Понятность игры для новичков" | idea |
+| CR-06 | Report receiver: text starting with `= + - @` gets a `'` prefix (`tools/reports/apps_script.gs`), then Kanta updates the script in the sheet | Kanta (together with RP-4) | idea |
+| CS-01 | GDScript type warnings: enable, clean up, raise to errors | — | idea |
+| CS-02 | `SaveIO`: atomic write, `.bak`, version, test folder override; `custom_user_dir_name="FlakHeaven"` before any rename | — | idea |
+| CS-03 | `RunState` out of `Main` fields, writes only through methods; activity rewards in one place | — | idea |
+| CS-04 | One enemy list per frame + shared hit grid | — | idea |
+| CS-05 | `DebugFlags`: launch flags read once, cheats only in debug | — | idea |
+| CS-06 | Ids instead of Russian strings in logic (damage source, weapon, state, button actions) | — | idea |
+| CS-07 | Python: `pyproject.toml` with ruff, `requirements.txt` with versions | — | idea |
+| CS-08 | CI: `pick.sh` "all combat except list", smoke catches `ERROR:`/`SHADER ERROR`, `check_po` and `.gd` tools in smoke; tests in a temp `user://` | — | idea |
+| CS-09 | Combat preload: operation models in the background, `Boom3D` and materials warmed up at sortie start | — | idea |
+| CS-10 | Split `render3d.gd` (after Next Fest) | — | idea (after the demo) |
+| CS-11 | UI design system: `UiStyle`, font size ≥ 14, shared buttons and tabs, gamepad focus (`docs/standards/ui-design-system.md` §6) | — | idea |
+| CS-12 | Important review findings without their own row: spawner freezes bombers at the cap, bomb lead (`move_vel`), "Skvoznyak" summons without a cap, hints spent on the title screen, `TEST_PICKS` → 2, volume writes balance into `tuning.json`, settings do not fit at 1080, ground shader (13 samplers, `dFdx` in a branch), double explosion lights, `.import` for new models, 334 MB `models/pilot` in git, JPEG 4:2:0 normal map. Details — review README | split across system threads | idea |
+| LANG-01 | Move internal text to English (Kanta 2026-10-23, option 2): new code, comments, commits and docs in English right away; existing files translated when touched; a separate pass over key documents — CLAUDE.md, `docs/game-context.md` ("Rules now" section), `docs/backlog.md` header, `docs/process/` | coordinator assigns; CLAUDE.md — thread "Короткий CLAUDE.md" | in progress (standards done 2026-10-23) |
 
 ## После Next Fest (процесс, 23.10.2026)
 

@@ -1,162 +1,162 @@
-# Архитектура Flak Heaven
+# Flak Heaven architecture
 
-Версия 1 от 23.10.2026. Сделано навыком `engineering:architecture` по итогам [ревью кода 23.10](../review/code-2026-10-23/README.md). Описывает, **как игра устроена сейчас**, куда её вести и какие решения за этим стоят (записи ADR в конце). Правила написания кода — в [code.md](code.md), интерфейс — в [ui-design-system.md](ui-design-system.md).
+Version 1, 2026-10-23. Produced with the `engineering:architecture` skill from the [code review of 2026-10-23](../review/code-2026-10-23/README.md). Describes **how the game is built today**, where to take it, and the decisions behind that (ADRs at the end). Coding rules — [code.md](code.md); UI — [ui-design-system.md](ui-design-system.md).
 
-## 1. Ограничения, которые определяют архитектуру
+## 1. Constraints that shape the architecture
 
-- **Godot 4.4.1, GL Compatibility** — ради Steam Deck, слабых ПК и Mac. Нет compute-шейдеров, до 8 источников света на меш, шейдеры компилируются при первой отрисовке.
-- **Bullet heaven:** десятки врагов в воздухе (предел `enemy_cap` = 70), сотни снарядов, вылет 15 минут.
-- **Код пишут в основном агенты Claude**, в разных тредах, без общей памяти. Значит, правила должны быть простыми, проверяемыми и записанными, а связи — явными: агент видит только то, что прочитал.
-- **Сроки:** демо Next Fest к 15.12.2026, ранний доступ потом. Большие переделки «ради чистоты» не делаем — улучшаем по ходу правок.
+- **Godot 4.4.1, GL Compatibility** — for Steam Deck, weak PCs and Mac. No compute shaders, at most 8 lights per mesh, shaders compile on first draw.
+- **Bullet heaven:** dozens of air enemies (cap `enemy_cap` = 70), hundreds of projectiles, 15-minute sorties.
+- **Most code is written by Claude agents** in separate threads with no shared memory. Rules must be simple, checkable and written down; coupling must be explicit, because an agent only knows what it has read.
+- **Deadlines:** Next Fest demo by 2026-12-15, Early Access after. No big rewrites "for cleanliness" — improve along the way.
 
-## 2. Как устроено сейчас
+## 2. How it works today
 
-### 2.1. Слои
+### 2.1. Layers
 
 ```
-Автозагрузки (живут всю игру)
-  InputSetup — действия ввода · Tuning — параметры баланса (F1) · Settings — настройки игрока · Profile — прогресс, ангар
+Autoloads (live for the whole game)
+  InputSetup — input actions · Tuning — balance parameters (F1) · Settings — player settings · Profile — progression, hangar
 
-Статические модули (class_name + static var/func, без узлов)
+Static modules (class_name + static var/func, no nodes)
   Campaign, Story, Hints, Demo, Loc, Prog, PlaneClasses, Cards, Weapons, Biome …
 
-Main (Node2D, main.tscn) — корень, Main.I
-├─ интерфейс (CanvasLayer): Hud (+ модули HudFlight / HudScreens / HudHangar / HudCampaign / HudCodex / HudMinimap),
-│                            Menu, TuningPanel (F1), ReportPanel, Sfx, Camera2D
-├─ world (Node2D, пересоздаётся на каждый вылет)
-│    Background, Clouds, Pickups, Spawner, Player, Projectiles, Fx, враги и цели (Enemy и наследники)
-├─ Render3D (Node3D) — 3D-отражение мира: камера сверху, Terrain3D, модели, тени, облака, Boom3D, свет
-└─ Hangar3D — модель самолёта в ангаре (свой SubViewport)
+Main (Node2D, main.tscn) — root, Main.I
+├─ UI (CanvasLayer): Hud (+ HudFlight / HudScreens / HudHangar / HudCampaign / HudCodex / HudMinimap),
+│                    Menu, TuningPanel (F1), ReportPanel, Sfx, Camera2D
+├─ world (Node2D, recreated every sortie)
+│    Background, Clouds, Pickups, Spawner, Player, Projectiles, Fx, enemies and targets (Enemy and subclasses)
+├─ Render3D (Node3D) — 3D mirror of the world: top-down camera, Terrain3D, models, shadows, clouds, Boom3D, lights
+└─ Hangar3D — hangar plane model (own SubViewport)
 
-Помощники Main (RefCounted с полем m): MainInput (ввод и клики), MainDebug (автотест, скриншоты), RunLog, Telemetry
-Помощники Player (RefCounted): PlayerFlight, PlayerGuns, PlayerSkills, PlayerDraw, Hardpoint (подвесы)
+Main helpers (RefCounted with field m): MainInput (input and clicks), MainDebug (autotest, screenshots), RunLog, Telemetry
+Player helpers (RefCounted): PlayerFlight, PlayerGuns, PlayerSkills, PlayerDraw, Hardpoint (weapon mounts)
 ```
 
-### 2.2. Главная идея: логика в 2D, картинка в 3D
+### 2.2. Core idea: logic in 2D, picture in 3D
 
-Вся игровая логика живёт в 2D (пиксели, `Vector2`): полёт, снаряды, попадания, спавн. `Render3D` каждый кадр отражает её в 3D по правилу `(x, y) → (x, высота, y)`; плоскость боя y = 0 совпадает с 2D пиксель в пиксель, поэтому пули и интерфейс остаются 2D. Это хорошее решение: логика проста и детерминирована, автотест идёт без видеокарты, а картинку можно менять, не трогая правила.
+All game logic lives in 2D (pixels, `Vector2`): flight, projectiles, hits, spawning. Every frame `Render3D` mirrors it into 3D with `(x, y) → (x, height, y)`; the combat plane y = 0 matches 2D pixel for pixel, so bullets and UI stay 2D. This is a good decision: logic is simple and deterministic, the autotest runs without a GPU, and visuals change without touching rules.
 
-### 2.3. Данные и их владельцы
+### 2.3. Data and owners
 
-| Данные | Владелец | Где на диске |
+| Data | Owner | On disk |
 | --- | --- | --- |
-| Прогресс, ангар, экипаж | `Profile` | `user://profile.json` (атомарная запись) |
-| Настройки игрока | `Settings` | `user://settings.json` |
-| Параметры баланса F1 | `Tuning` | `user://tuning.json` (сейчас туда же пишется громкость — ошибка) |
-| Кампания, подсказки | `Campaign`, `Hints` | `user://campaign.cfg`, `hints.cfg` |
-| Состояние вылета (уровень, опыт, запчасти, карточки) | `Main` (поля) | не сохраняется |
-| Отчёты и строки вылетов | `ReportPanel` | очереди в `user://`, отправка в Google Таблицу |
+| Progression, hangar, crew | `Profile` | `user://profile.json` (atomic write) |
+| Player settings | `Settings` | `user://settings.json` |
+| F1 balance parameters | `Tuning` | `user://tuning.json` (volume is written there too — a bug) |
+| Campaign, hints | `Campaign`, `Hints` | `user://campaign.cfg`, `hints.cfg` |
+| Sortie state (level, XP, parts, cards) | `Main` (fields) | not saved |
+| Reports and sortie rows | `ReportPanel` | queues in `user://`, upload to a Google Sheet |
 
-### 2.4. Как части общаются
+### 2.4. How parts talk
 
-- **Сервис-локатор `Main.I`:** 657 обращений в 46 файлах. Сущности берут через него игрока, снаряды, эффекты, звук, телеметрию — и **меняют поля вылета напрямую** (`m.parts += …`, `m.pending_levels += 1`).
-- **Синглтоны картинки** `Render3D.I`, `Boom3D.I`, `Hangar3D.I`; 2D-логика местами зовёт `Render3D.I` (зависимость не в ту сторону).
-- **Группы** (`enemies`, `allies3d`) и утиная типизация (`get("…")`, `call("…")`).
-- **Сигналов почти нет** (в бою ноль), таймеры — `float -= delta`.
-- **Интерфейс — immediate mode:** каждый кадр `_draw` рисует всё заново и собирает список кнопок `[Rect2, "действие:параметр"]`; клик → `Main.ui_click(action)` → разбор строки в `MainInput`.
-- **Состояние игры — строка** `Main.state` (`menu`, `playing`, `levelup`, `course_pick`, `paused`, `dead`, `evac`, `hangar`, `campaign`, `codex`, `settings`).
+- **Service locator `Main.I`:** 657 uses in 46 files. Entities get the player, projectiles, effects, sound and telemetry through it — and **write sortie fields directly** (`m.parts += …`, `m.pending_levels += 1`).
+- **View singletons** `Render3D.I`, `Boom3D.I`, `Hangar3D.I`; 2D logic sometimes calls `Render3D.I` (dependency in the wrong direction).
+- **Groups** (`enemies`, `allies3d`) and duck typing (`get("…")`, `call("…")`).
+- **Almost no signals** (zero in combat); timers are `float -= delta`.
+- **UI is immediate mode:** every frame `_draw` redraws everything and rebuilds a button list `[Rect2, "action:param"]`; click → `Main.ui_click(action)` → string parsing in `MainInput`.
+- **Game state is a string** `Main.state` (`menu`, `playing`, `levelup`, `course_pick`, `paused`, `dead`, `evac`, `hangar`, `campaign`, `codex`, `settings`).
 
-## 3. Оценка
+## 3. Assessment
 
-### Что сделано хорошо и что сохраняем
-1. Логика 2D отдельно от картинки 3D (§2.2).
-2. Снаряды без узлов: массивы + один `_draw`/MultiMesh; попадания по отрезку; темп стрельбы не зависит от FPS.
-3. Детерминированные таймеры — автотест с фиксированным шагом и `--turbo` воспроизводим.
-4. MultiMesh для массовых объектов, пул моделей врагов, фоновая сборка рельефа с номером поколения.
-5. Атомарная запись профиля, покупки через пары `can_*`/`*`, демо-режим одной точкой (`demo.gd`).
-6. Телеметрия и лог `l7` с реальных ПК — основа решений по производительности и балансу.
-7. Всё создаётся кодом — агентам проще, чем править `.tscn`.
+### What works and stays
+1. 2D logic separated from the 3D view (§2.2).
+2. Node-less projectiles: arrays + one `_draw`/MultiMesh; segment-based hits; fire rate independent of FPS.
+3. Deterministic timers — the fixed-step autotest and `--turbo` are reproducible.
+4. MultiMesh for mass objects, enemy model pool, background terrain build with a generation counter.
+5. Atomic profile write, purchases through `can_*`/`*` pairs, demo mode in one place (`demo.gd`).
+6. Telemetry and the `l7` log from real PCs — the basis for performance and balance decisions.
+7. Everything is built in code — easier for agents than editing `.tscn`.
 
-### Где архитектура мешает (по ревью)
-| Проблема | Чем грозит | Пример из ревью |
+### Where the architecture hurts (from the review)
+| Problem | Risk | Example |
 | --- | --- | --- |
-| Состояние вылета размазано: пишут 46 файлов | Правило выдачи карточек повторено в 4 местах → экран без выхода | CR-02 |
-| Механика на русских строках | Опечатка ломает баланс без ошибки | защита врагов, бонусы |
-| Одно правило в нескольких местах | Правка S10-13 вносилась в два места руками | награды, `_die` |
-| Нет общего слоя сохранений | Профиль может пропасть, тесты портят профиль участника | CR-03 |
-| Нет списка врагов кадра и общей сетки | 45 вызовов `get_nodes_in_group` в бою, нет запаса на рост | производительность |
-| Файлы-«боги» и чтение чужих `_полей` | Правка в одном месте ломает другое незаметно | `render3d.gd` 2565 строк |
-| Состояние экрана строкой без таблицы переходов | Экран без выхода, ввод геймпада пересекается с боем | CR-02, CR-05 |
-| Флаги запуска читаются в 34 местах | Читы в тестерской сборке, лишние выделения памяти | §11 code.md |
+| Sortie state spread out: 46 files write it | Card-offer rule repeated in 4 places → screen with no exit | CR-02 |
+| Mechanics keyed on Russian strings | A typo breaks balance with no error | enemy armor, bonuses |
+| One rule in several places | S10-13 had to be applied in two places by hand | rewards, `_die` |
+| No shared save layer | Profile can be lost; tests corrupt the developer's profile | CR-03 |
+| No per-frame enemy list or shared grid | 45 `get_nodes_in_group` calls in combat, no headroom | performance |
+| God files and reading other classes' `_fields` | A change in one place silently breaks another | `render3d.gd`, 2565 lines |
+| Screen state as a string with no transition table | Screen with no exit; gamepad input collides with combat | CR-02, CR-05 |
+| Launch flags read in 34 places | Cheats in tester builds, per-frame garbage | code.md §11 |
 
-## 4. Целевая архитектура (куда ведём, по шагам)
+## 4. Target architecture (step by step)
 
-Принцип: **не переписываем, а выделяем по ходу правок**. Каждый шаг — отдельная небольшая задача (CS-…), которую можно сделать в цикле сборки рядом с другими правками.
+Principle: **extract along the way, don't rewrite**. Each step is a separate small task (CS-…) that fits into a build cycle next to other changes.
 
 ```
-Автозагрузки:   InputSetup · Settings (+ согласие на отчёты) · Profile · Tuning (только F1) · DebugFlags · SaveIO (функции)
-Main            — сборка узлов и переходы состояний (таблица переходов), больше ничего
-RunState        — состояние вылета и его операции: add_xp, grant_parts, grant_rare_pick, refill_offers, award_activity
-Сервисы вылета  — Projectiles, Fx, Sfx, Telemetry, EnemyRegistry (список врагов кадра + сетка)
-Сущности        — читают RunState, вызывают сервисы, сообщают события сигналами (died, reward_granted)
-View (картинка) — Render3D разбит на UnitViews / VehicleParts / GroundMarks / CrashFx; логике даёт узкий интерфейс View
-UI              — Hud + Menu на общих примитивах UiStyle/HudKit, модель фокуса для геймпада
+Autoloads:       InputSetup · Settings (+ report consent) · Profile · Tuning (F1 only) · DebugFlags · SaveIO (functions)
+Main             — node assembly and state transitions (transition table), nothing else
+RunState         — sortie state and its operations: add_xp, grant_parts, grant_rare_pick, refill_offers, award_activity
+Sortie services  — Projectiles, Fx, Sfx, Telemetry, EnemyRegistry (per-frame enemy list + grid)
+Entities         — read RunState, call services, report events via signals (died, reward_granted)
+View             — Render3D split into UnitViews / VehicleParts / GroundMarks / CrashFx; logic sees a narrow View interface
+UI               — Hud + Menu on shared UiStyle/HudKit primitives, gamepad focus model
 ```
 
-### Шаги (задачи для бэклога)
+### Steps (backlog tasks)
 
-| № | Шаг | Что даёт | Размер |
+| # | Step | Gain | Size |
 | --- | --- | --- | --- |
-| CS-01 | Предупреждения о типах: включить как предупреждения, вычистить, поднять до ошибок | Агенты не смогут писать нетипизированный код | средний, по частям |
-| CS-02 | `SaveIO`: атомарная запись, `.bak`, восстановление, версия и миграции, подмена папки для тестов; `custom_user_dir_name` | Закрывает CR-03, тесты не портят профиль, перенос «демо → игра» | средний |
-| CS-03 | `RunState` из полей `Main`; запись только через методы; одна функция `refill_offers` | Закрывает CR-02 и дубли наград | средний |
-| CS-04 | `EnemyRegistry`: один список врагов на кадр + сетка попаданий | Запас производительности, −45 обходов группы | средний |
-| CS-05 | `DebugFlags`: флаги читаются один раз, читы только в отладке | Нет читов в сборках, меньше мусора в кадре | малый |
-| CS-06 | id вместо русских строк: источник урона, вид оружия, состояние, действие кнопки | Перевод и переименование не ломают баланс | средний |
-| CS-07 | Python: `pyproject.toml` с ruff, `requirements.txt`, шаблон инструмента | Единый стиль инструментов | малый |
-| CS-08 | CI: `pick.sh` «всё боевое, кроме списка», smoke ловит `ERROR:`/`SHADER ERROR`, `check_po` и компиляция `.gd`-инструментов в smoke | Проверки перестают пропускать ошибки | малый |
-| CS-09 | Предзагрузка боя: модели операции через `load_threaded_request`, `Boom3D` и материалы прогреваются на старте | Нет рывков в первой сессии демо | средний |
-| CS-10 | Разбить `render3d.gd`; юниты — класс `UnitView`; приватные поля закрыть | Безопасные правки картинки | крупный, после демо |
-| CS-11 | `UiStyle` и общие примитивы интерфейса, модель фокуса геймпада | Закрывает CR-05, Steam Deck | крупный, частями |
+| CS-01 | Type warnings: enable as warnings, clean up, raise to errors | Agents cannot write untyped code | medium, in parts |
+| CS-02 | `SaveIO`: atomic write, `.bak`, recovery, version and migrations, test folder override; `custom_user_dir_name` | Closes CR-03, tests stop corrupting profiles, demo → full game transfer | medium |
+| CS-03 | `RunState` out of `Main` fields; writes only through methods; one `refill_offers` | Closes CR-02 and duplicated rewards | medium |
+| CS-04 | `EnemyRegistry`: one enemy list per frame + hit grid | Performance headroom, −45 group scans | medium |
+| CS-05 | `DebugFlags`: flags read once, cheats only in debug | No cheats in builds, less per-frame garbage | small |
+| CS-06 | Ids instead of Russian strings: damage source, weapon kind, state, button action | Translation and renames cannot break balance | medium |
+| CS-07 | Python: `pyproject.toml` with ruff, `requirements.txt` | One style for tools | small |
+| CS-08 | CI: `pick.sh` "all combat except list", smoke catches `ERROR:`/`SHADER ERROR`, `check_po` and `.gd` tools in smoke; tests in a temp `user://` | Checks stop letting errors through | small |
+| CS-09 | Combat preload: operation models in the background, `Boom3D` and materials warmed up at sortie start | No hitches in the demo's first session | medium |
+| CS-10 | Split `render3d.gd`; unit records become a `UnitView` class; private fields closed | Safe visual changes | large, after the demo |
+| CS-11 | `UiStyle` and shared UI primitives, gamepad focus model | Closes CR-05, Steam Deck | large, in parts |
 
-Порядок до демо (рекомендация): CR-баги → CS-05, CS-08 (малые) → CS-02, CS-03 → CS-09, CS-11 (фокус и задержка ввода) → остальное после Next Fest.
+Recommended order before the demo: CR bugs → CS-05, CS-08 (small) → CS-02, CS-03 → CS-09, CS-11 (focus and input delay) → the rest after Next Fest.
 
-## 5. Решения (ADR)
+## 5. Decisions (ADR)
 
-### ADR-01. Логика в 2D, картинка в 3D
-**Статус:** принято (с 3.0, план `docs/sprint1/s3-3d-cloud-plan.md`). **Дата записи:** 23.10.2026.
-**Контекст:** нужен объём и рельеф, но правила, автотест без видеокарты и баланс уже были в 2D.
-**Решение:** логика остаётся в 2D; `Render3D` отражает её в 3D-сцене с камерой сверху.
-**Последствия:** + детерминированный автотест, картинку меняем без правил боя. − Всё, что нужно логике от рельефа, идёт через обратные проекции; связь 3D → 2D должна быть узким интерфейсом (`View`), а не `Render3D.I` из логики.
+### ADR-01. Logic in 2D, picture in 3D
+**Status:** accepted (since 3.0, plan `docs/sprint1/s3-3d-cloud-plan.md`). **Recorded:** 2026-10-23.
+**Context:** we needed depth and terrain, but rules, the GPU-less autotest and balance were already 2D.
+**Decision:** logic stays 2D; `Render3D` mirrors it into a 3D scene with a top-down camera.
+**Consequences:** + deterministic autotest, visuals change without touching combat rules. − Anything logic needs from the terrain goes through inverse projections; the 3D → 2D link must be a narrow interface (`View`), not `Render3D.I` from logic.
 
-### ADR-02. Сервис-локатор `Main.I` оставляем, но с правилами
-**Статус:** предложено. **Решает:** Kanta (структура кода, не правила игры — можно принять вместе со стандартом).
-**Контекст:** 657 обращений, полный переход на сигналы и внедрение зависимостей — недели работы до демо.
+### ADR-02. Keep the `Main.I` service locator, with rules
+**Status:** proposed. **Decides:** Kanta (code structure, not game rules — can be accepted together with the standard).
+**Context:** 657 uses; a full move to signals and dependency injection would take weeks before the demo.
 
-| Вариант | Сложность | Риск | Польза |
+| Option | Complexity | Risk | Benefit |
 | --- | --- | --- | --- |
-| А. Переписать на сигналы и явные зависимости | высокая | регрессии перед демо | максимальная, но поздно |
-| **Б. Оставить `Main.I` для чтения и сервисов, запись — только через методы, состояние вылета — в `RunState`** | низкая, по частям | малый | закрывает реальные баги (CR-02, дубли наград) |
-| В. Ничего не менять | нет | баги повторяются | нет |
+| A. Rewrite to signals and explicit dependencies | high | regressions before the demo | maximal, but too late |
+| **B. Keep `Main.I` for reads and services; writes only through methods; sortie state in `RunState`** | low, incremental | small | fixes real bugs (CR-02, duplicated rewards) |
+| C. Change nothing | none | bugs repeat | none |
 
-**Решение (рекомендую Б):** чтение и вызов сервисов через `Main.I` разрешены; запись полей `Main` из чужого кода запрещена; новое состояние вылета — в `RunState`; события для нескольких слушателей — сигналы.
-**Последствия:** + постепенно, без большой переделки; + `RunState` можно проверить тестом без сцены. − Связность через глобальную точку остаётся.
+**Decision (B recommended):** reads and service calls through `Main.I` are allowed; writing `Main` fields from other code is forbidden; new sortie state goes to `RunState`; events with several listeners are signals.
+**Consequences:** + incremental, no big rewrite; + `RunState` can be unit-tested without a scene. − Coupling through a global access point remains.
 
-### ADR-03. Снаряды и массовые эффекты — данные, а не узлы
-**Статус:** принято де-факто, записываем. Массивы + один `_draw`/MultiMesh, пределы у каждого пула. Следующий шаг при нехватке процессора на Deck — плотные массивы (`PackedVector2Array`/`PackedFloat32Array`) вместо словарей; решать по логам `perf.gd`, не заранее.
+### ADR-03. Projectiles and mass effects are data, not nodes
+**Status:** accepted de facto, now recorded. Arrays + one `_draw`/MultiMesh, a cap on every pool. Next step if the Deck runs short on CPU — packed arrays (`PackedVector2Array`/`PackedFloat32Array`) instead of dictionaries; decide from `perf.gd` logs, not in advance.
 
-### ADR-04. Где живут числа баланса
-**Статус:** ждёт решения Kanta. Варианты и рекомендация — [code.md §5](code.md). После решения — строка в журнале `docs/game-context.md` и правка правила в CLAUDE.md.
+### ADR-04. Where balance numbers live
+**Status:** awaiting Kanta's decision. Options and recommendation — [code.md §5](code.md). After the decision — a decision-log line in `docs/game-context.md` and a CLAUDE.md rule update.
 
-### ADR-05. Интерфейс рисуется кодом (immediate mode), а не узлами Control
-**Статус:** принято де-факто, записываем с условиями.
-**Контекст:** Godot предлагает Control + Theme (фокус геймпада из коробки). У нас весь интерфейс рисуется `_draw`.
+### ADR-05. UI is drawn in code (immediate mode), not with Control nodes
+**Status:** accepted de facto, recorded with conditions.
+**Context:** Godot offers Control + Theme (gamepad focus out of the box). All our UI is drawn in `_draw`.
 
-| Вариант | Плюсы | Минусы |
+| Option | Pros | Cons |
 | --- | --- | --- |
-| А. Перейти на Control + Theme | фокус, якоря, Theme Type Variation | переписать ~3800 строк интерфейса до демо — нереально |
-| **Б. Оставить рисование кодом + своя модель фокуса + `UiStyle`** | постепенно, стиль не меняется | фокус и раскладку пишем сами |
+| A. Move to Control + Theme | focus, anchors, Theme Type Variations | rewriting ~3800 lines of UI before the demo is unrealistic |
+| **B. Keep drawing in code + own focus model + `UiStyle`** | incremental, look unchanged | focus and layout are ours to write |
 
-**Решение (рекомендую Б):** до раннего доступа — Б. Новые сложные формы (ввод текста, длинные списки с прокруткой) можно делать на Control, как форма отчёта. Пересмотреть после Next Fest.
+**Decision (B recommended):** B until Early Access. New complex forms (text input, long scrolling lists) may use Control, like the report form. Revisit after Next Fest.
 
-### ADR-06. Отправка данных игрока — только с согласия
-**Статус:** решение DM-07 уже есть («отчёт с согласием игрока»), код ему не соответствует (CR-04). Технически: флаг согласия в `Settings`, по умолчанию выключен вне тестерских сборок; отдельный адрес приёмника или его отсутствие в демо и релизе.
+### ADR-06. Player data is uploaded only with consent
+**Status:** decision DM-07 already exists ("report with player consent"); the code does not match it (CR-04). Technically: a consent flag in `Settings`, off by default outside tester builds; a separate receiver URL, or none, in demo and release.
 
-### ADR-07. Сохранения через общий слой
-**Статус:** предложено (CS-02). Один модуль `SaveIO` для всех файлов `user://`: атомарная запись, `.bak`, версия, миграции, подмена папки для тестов. Папка `user://` не зависит от названия проекта. Список файлов готов для Steam Cloud.
+### ADR-07. Saves through one layer
+**Status:** proposed (CS-02). One `SaveIO` module for every `user://` file: atomic write, `.bak`, version, migrations, test folder override. The `user://` folder does not depend on the project name. The file list is ready for Steam Cloud.
 
-## 6. Что пересмотреть позже
+## 6. Revisit later
 
-- После Next Fest: ADR-05 (Control + Theme для меню и ангара), CS-10 (разбиение `render3d.gd`).
-- Если на Steam Deck не хватит процессора — ADR-03, следующий шаг (плотные массивы, RenderingServer для снарядов).
-- Тесты логики (TDD для формул урона и опыта) — GUT 9.4.0 или gdUnit4 5.x (обе под 4.4); выбор вместе с первой задачей TDD.
+- After Next Fest: ADR-05 (Control + Theme for menu and hangar), CS-10 (split `render3d.gd`).
+- If the Steam Deck is CPU-bound — ADR-03 next step (packed arrays, RenderingServer for projectiles).
+- Logic tests (TDD for damage and XP formulas) — GUT 9.4.0 or gdUnit4 5.x (both support 4.4); choose with the first TDD task.

@@ -30,10 +30,10 @@
 | `process/efficiency-review.md` | Разбор процесса: где теряем время и что поменяли |
 | `owner-checklist/kanta-now.md` | Что может сделать только Kanta, с датами; первый пункт планёрки |
 | `review/2026-10-22-work-review.md` | Ревью работы Kanta и Claude за 16–22.10: процесс, состояние игры, 14 предложений, проект инструкций |
-| `review/code-2026-10-23/` | Ревью кода 23.10 (5 областей + лучшие практики Godot 4.4 и Python): главные находки CR-01…CR-06 в `README.md`, полные отчёты r1–r6 |
-| `standards/code.md` | **Стандарты кода:** язык (параметр), GDScript, типы, документация, данные, производительность, сохранения, Python, CI, чек-лист автора PR |
-| `standards/architecture.md` | **Архитектура:** как игра устроена сейчас, целевая схема, шаги CS-01…CS-11, решения ADR-01…07 |
-| `standards/ui-design-system.md` | **Дизайн-система интерфейса:** аудит, токены (цвет, кегли, отступы), компоненты, состояния, фокус геймпада |
+| `review/code-2026-10-23/` | Code review 2026-10-23 (5 areas + Godot 4.4 and Python best practices): key findings CR-01…CR-06 in `README.md`, full reports r1–r6 (in Russian) |
+| `standards/code.md` | **Coding standards:** language (parameter), GDScript, types, docstrings, data, performance, saves, Python, CI, PR author checklist |
+| `standards/architecture.md` | **Architecture:** how the game is built now, target layout, steps CS-01…CS-11, decisions ADR-01…07 |
+| `standards/ui-design-system.md` | **UI design system:** audit, tokens (color, type, spacing), components, states, gamepad focus |
 | `process/playbook.md` | Плейбук «Как мы работаем над игрой» (выгрузка артефакта Claude, 16.10; раздел про ветку `next` устарел) |
 | `process/project-instructions.md` | Текст для поля инструкций проекта Claude (по плейбуку «Как мы работаем над игрой») |
 | `owner-checklist/checklist.md` | Чек-лист владельца: Steam, юридическое, финансы, сроки |

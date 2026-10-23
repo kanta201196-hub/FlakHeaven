@@ -1,151 +1,151 @@
-# Дизайн-система интерфейса Flak Heaven
+# Flak Heaven UI design system
 
-Версия 1 от 23.10.2026. Сделано навыком `design:design-system` (режим «аудит» + «как должно быть») по [ревью интерфейса](../review/code-2026-10-23/r4-ui.md) — там полный инвентарь со ссылками на строки кода. Значения токенов взяты из того, что **уже чаще всего используется в игре**: стиль не меняется, его только собирают в одно место. Где нужен выбор — помечено **[решение Kanta]**.
+Version 1, 2026-10-23. Produced with the `design:design-system` skill (audit + target) from the [UI review](../review/code-2026-10-23/r4-ui.md), which holds the full inventory with line references. Token values are taken from **what the game already uses most**: the look does not change, it is only gathered in one place. Items marked **[Kanta to decide]** need his choice.
 
-Как интерфейс устроен технически (рисование кодом, а не узлами Control) — [architecture.md, ADR-05](architecture.md). Правила кода — [code.md §12](code.md).
+How the UI is built technically (drawn in code, not Control nodes) — [architecture.md, ADR-05](architecture.md). Coding rules — [code.md §12](code.md).
 
-## 1. Аудит (23.10.2026)
+## 1. Audit (2026-10-23)
 
-**Просмотрено:** 10 файлов интерфейса (~3800 строк), все экраны: бой, карточки, пауза, итоги, ангар, «В вылет», справочник, меню, настройки. **Оценка:** 45/100 — внешний вид цельный «на глаз», но держится на ручной точности, а не на системе.
+**Reviewed:** 10 UI files (~3800 lines), every screen: combat HUD, cards, pause, results, hangar, sortie setup, codex, menu, settings. **Score:** 45/100 — the look is coherent "by eye", but it rests on manual precision rather than a system.
 
-### Покрытие токенами
+### Token coverage
 
-| Категория | Определено | Литералов в коде |
+| Category | Defined | Literals in code |
 | --- | --- | --- |
-| Цвета | 8 констант в `Menu`, 4 в `HudCampaign`, 4 в `HudFlight` — в трёх разных местах, в `HudKit` ни одной | 426 `Color(...)`, 214 разных |
-| Кегли | шкалы нет | 11–54, рядом 14/15/16/17 для одной роли |
-| Отступы | шкалы нет | поля экрана 16–120, шаги строк 22–118, зазоры 6–36 |
-| Срез угла панели | 3 значения (14, 18, 22) | — |
-| Состояния | hover — по-разному на каждом экране; pressed и focus — нет | — |
+| Colors | 8 constants in `Menu`, 4 in `HudCampaign`, 4 in `HudFlight` — three places; none in `HudKit` | 426 `Color(...)`, 214 distinct |
+| Font sizes | no scale | 11–54; 14/15/16/17 used for the same role |
+| Spacing | no scale | screen margins 16–120, row steps 22–118, gaps 6–36 |
+| Panel corner cut | 3 values (14, 18, 22) | — |
+| States | hover differs per screen; no pressed or focus | — |
 
-### Одна роль — разные значения (главное)
+### Same role, different values (main issues)
 
-| Роль | Сейчас | Сколько вариантов |
+| Role | Today | Variants |
 | --- | --- | --- |
-| Акцент / заголовок (янтарь) | `(0.95, 0.66, 0.2)` — 69 обращений; `(1.0, 0.82, 0.29)` — 11; ещё 6 близких оттенков | 8 |
-| Тёмный текст на янтаре | `(0.08, 0.07, 0.05)`, `(0.06, 0.08, 0.06)`, `(0.1, 0.08, 0.02)` | 3 |
-| Подложка плашки HUD | `(0.02, 0.025, 0.03, 0.55…0.86)` и др. | 12 |
-| Основной текст | холодный `(0.92, 0.95, 1.0)` в бою и тёплый `(0.92, 0.9, 0.84)` в меню | 3 |
-| «Готово / успех» | `(0.6, 1.0, 0.7)`, `(0.5, 1.0, 0.6)` и ещё 4 | 6 |
-| Вкладки | настройки, ангар, итоги, справочник — 4 разных стиля | 4 |
-| Кнопки | три набора: `HudKit`, `Menu`, свои по месту | 3 |
+| Accent / heading (amber) | `(0.95, 0.66, 0.2)` — 69 uses; `(1.0, 0.82, 0.29)` — 11; 6 more close shades | 8 |
+| Dark text on amber | `(0.08, 0.07, 0.05)`, `(0.06, 0.08, 0.06)`, `(0.1, 0.08, 0.02)` | 3 |
+| HUD text backdrop | `(0.02, 0.025, 0.03, 0.55…0.86)` and others | 12 |
+| Primary text | cool `(0.92, 0.95, 1.0)` in combat, warm `(0.92, 0.9, 0.84)` in menu | 3 |
+| Done / success | `(0.6, 1.0, 0.7)`, `(0.5, 1.0, 0.6)` and 4 more | 6 |
+| Tabs | settings, hangar, results, codex — 4 different styles | 4 |
+| Buttons | three sets: `HudKit`, `Menu`, ad hoc | 3 |
 
-### Главные дефекты (из ревью)
-1. Клик по «Закрепить»/«Исключить» берёт карточку (CR-01) — нет правила «кто сверху, тот ловит клик».
-2. Нет фокуса и навигации с геймпада (CR-05) — блокер Steam Deck.
-3. ~25 мест с кеглем 11–13 — на Deck меньше 9 px.
-4. Настройки не помещаются на 1920×1080 — нет раскладки по высоте.
-5. Подписи клавиш захардкожены — не меняются после переназначения и при геймпаде.
+### Main defects (from the review)
+1. Clicking "Pin"/"Ban" on a card picks the card (CR-01) — no "topmost gets the click" rule.
+2. No focus and no gamepad navigation (CR-05) — Steam Deck blocker.
+3. ~25 places with font size 11–13 — under 9 px on the Deck.
+4. Settings do not fit at 1920×1080 — no height-aware layout.
+5. Hardcoded key labels — they ignore rebinding and gamepad.
 
-### Приоритет
-1. Правило клика и задержка ввода на экранах поверх боя (малое, сразу).
-2. `UiStyle` с токенами + минимальный кегль 14.
-3. Модель фокуса для геймпада на экранах карточек, итогов, меню (до демо).
-4. Слить примитивы в один набор, вкладки — один компонент.
+### Priorities
+1. Click rule and input delay on screens opened over combat (small, now).
+2. `UiStyle` tokens + minimum font size 14.
+3. Gamepad focus model on the cards, results and main menu screens (before the demo).
+4. Merge primitives into one set; tabs become one component.
 
-## 2. Токены
+## 2. Tokens
 
-Живут в одном файле `game/scripts/ui_style.gd` (`class_name UiStyle`, только константы). `Menu.C_*`, `HudCampaign.C_*` и литералы постепенно заменяются ссылками на него.
+They live in one file `game/scripts/ui_style.gd` (`class_name UiStyle`, constants only). `Menu.C_*`, `HudCampaign.C_*` and literals are gradually replaced by references to it.
 
-### 2.1. Цвет
+### 2.1. Color
 
-| Токен | Значение | Роль |
+| Token | Value | Role |
 | --- | --- | --- |
-| `ACCENT` | `(0.95, 0.66, 0.2)` **[решение Kanta: какой янтарь главный]** | Главная кнопка, выбранная вкладка, рамка в hover |
-| `ACCENT_SOFT` | `(1.0, 0.82, 0.29)` | Заголовки экранов и разделов на тёмном |
-| `ACCENT_DIM` | `(0.55, 0.36, 0.1)` | Неактивный акцент, подложка выбранного |
-| `ON_ACCENT` | `(0.08, 0.07, 0.05)` | Текст на янтарной заливке |
-| `TEXT` | `(0.92, 0.95, 1.0)` | Основной текст в бою и на экранах |
-| `TEXT_WARM` | `(0.92, 0.9, 0.84)` | Основной текст в главном меню (тёплая тема заставки) |
-| `TEXT_2` | `(0.75, 0.8, 0.9)` | Второстепенный текст, подписи |
-| `TEXT_OFF` | `(0.6, 0.62, 0.68)` | Неактивное, закрыто |
-| `OK` | `(0.6, 1.0, 0.7)` | Готово, куплено, ✓ |
-| `DANGER` | `(1.0, 0.35, 0.3)` | Прочность, угроза, босс |
-| `BRAND_RED` | `(0.85, 0.24, 0.18)` | Полоса кнопок меню, фирменный красный |
-| `PARTS` | `(0.95, 0.85, 0.55)` | Запчасти (валюта) |
-| `PANEL` | `(0.085, 0.095, 0.085, 0.95)` | Заливка панели |
-| `BACKDROP` | `(0.02, 0.025, 0.03, a)` — функция `backdrop(a)` | Плашка под текстом HUD на светлой земле |
-| `SCRIM` | `(0.02, 0.03, 0.025, 0.88)` | Затемнение экрана под окном |
-| `OUTLINE` | `(0.02, 0.025, 0.03, 0.85)` | Обводка текста HUD |
+| `ACCENT` | `(0.95, 0.66, 0.2)` **[Kanta to decide: which amber is primary]** | Primary button, selected tab, hover border |
+| `ACCENT_SOFT` | `(1.0, 0.82, 0.29)` | Screen and section headings on dark |
+| `ACCENT_DIM` | `(0.55, 0.36, 0.1)` | Inactive accent, selected background |
+| `ON_ACCENT` | `(0.08, 0.07, 0.05)` | Text on amber fill |
+| `TEXT` | `(0.92, 0.95, 1.0)` | Primary text in combat and screens |
+| `TEXT_WARM` | `(0.92, 0.9, 0.84)` | Primary text in the main menu (warm title theme) |
+| `TEXT_2` | `(0.75, 0.8, 0.9)` | Secondary text, captions |
+| `TEXT_OFF` | `(0.6, 0.62, 0.68)` | Disabled, locked |
+| `OK` | `(0.6, 1.0, 0.7)` | Done, bought, ✓ |
+| `DANGER` | `(1.0, 0.35, 0.3)` | HP, threat, boss |
+| `BRAND_RED` | `(0.85, 0.24, 0.18)` | Menu button stripe, brand red |
+| `PARTS` | `(0.95, 0.85, 0.55)` | Parts (currency) |
+| `PANEL` | `(0.085, 0.095, 0.085, 0.95)` | Panel fill |
+| `BACKDROP` | `(0.02, 0.025, 0.03, a)` — function `backdrop(a)` | Plate under HUD text on bright ground |
+| `SCRIM` | `(0.02, 0.03, 0.025, 0.88)` | Screen dim under a dialog |
+| `OUTLINE` | `(0.02, 0.025, 0.03, 0.85)` | HUD text outline |
 
-Игровые цвета (редкость карточек `Cards.RARITY`, теги `Prog.TAGS`, классы `PlaneClasses`, активности `HudFlight.C_*`) остаются в своих данных — это смысловые цвета, не стиль. Правило: один смысл — один цвет на всех экранах (как уже сделано у активностей и редкости).
+Gameplay colors (card rarity `Cards.RARITY`, tags `Prog.TAGS`, classes `PlaneClasses`, activities `HudFlight.C_*`) stay in their data — they carry meaning, not style. Rule: one meaning — one color on every screen (already true for activities and rarity).
 
-### 2.2. Шрифт
+### 2.2. Type
 
-Гарнитура — по настройке игрока (`Settings.font`: PT Sans, Inter, Exo 2, системный) + запасной Noto Sans SC для китайского. Жирный — для заголовков и кнопок **на всех экранах**, не только в меню.
+Typeface follows the player's setting (`Settings.font`: PT Sans, Inter, Exo 2, system) + Noto Sans SC fallback for Chinese. Bold for headings and buttons **on every screen**, not only the menu.
 
-| Токен | Кегль | Роль |
+| Token | Size | Role |
 | --- | --- | --- |
-| `FS_MIN` | 14 | Нижняя граница для любого текста (Deck: 14 × 0,667 ≈ 9,3 px) |
-| `FS_CAPTION` | 14 | Мелкие подписи, «нужно: …», чипы |
-| `FS_BODY` | 16 | Описания, подсказки внизу экрана |
-| `FS_LABEL` | 18 | Строки списков, значения, кнопки обычные |
-| `FS_H3` | 22 | Заголовок блока, крупная кнопка |
-| `FS_H2` | 28 | Заголовок раздела |
-| `FS_H1` | 40 | Заголовок экрана (АНГАР, ПАУЗА, НОВЫЙ УРОВЕНЬ, В ВЫЛЕТ, СПРАВОЧНИК, итоги) |
-| `FS_HERO` | 54 | Особые экраны (конец демо) |
+| `FS_MIN` | 14 | Floor for any text (Deck: 14 × 0.667 ≈ 9.3 px) |
+| `FS_CAPTION` | 14 | Small captions, "requires: …", chips |
+| `FS_BODY` | 16 | Descriptions, bottom-of-screen hints |
+| `FS_LABEL` | 18 | List rows, values, regular buttons |
+| `FS_H3` | 22 | Block heading, large button |
+| `FS_H2` | 28 | Section heading |
+| `FS_H1` | 40 | Screen title (HANGAR, PAUSE, LEVEL UP, SORTIE, CODEX, results) |
+| `FS_HERO` | 54 | Special screens (end of demo) |
 
-`HudKit._text`/`_para` и `Menu._txt` поднимают кегль до `FS_MIN` сами. Настройка «Масштаб интерфейса» (множитель кеглей 0,9–1,3) — задача после демо.
+`HudKit._text`/`_para` and `Menu._txt` clamp the size to `FS_MIN` themselves. A "UI scale" setting (font multiplier 0.9–1.3) — after the demo.
 
-### 2.3. Отступы и форма
+### 2.3. Spacing and shape
 
-| Токен | Значение |
+| Token | Value |
 | --- | --- |
-| Шкала отступов `SP_*` | 4, 8, 12, 16, 24, 32, 48, 64 |
-| Поле экрана `MARGIN` | 64 (бой — 20, миникарта — 16) |
-| Внутренний отступ панели `PAD` | 16 (крупная панель — 24) |
-| Шаг строки списка | 28 (плотный — 24, строка настроек — 50) |
-| Срез угла `CUT` | 14 (малые кнопки — 12) |
-| Рамка | 1,5 px обычная, 2,5 px в hover/focus |
+| Spacing scale `SP_*` | 4, 8, 12, 16, 24, 32, 48, 64 |
+| Screen margin `MARGIN` | 64 (combat — 20, minimap — 16) |
+| Panel padding `PAD` | 16 (large panel — 24) |
+| List row step | 28 (dense — 24, settings row — 50) |
+| Corner cut `CUT` | 14 (small buttons — 12) |
+| Border | 1.5 px normal, 2.5 px hover/focus |
 
-## 3. Компоненты
+## 3. Components
 
-Один набор примитивов в `HudKit` (меню переходит на него же). Каждый компонент регистрирует прямоугольник для клика и получает фокус.
+One primitive set in `HudKit` (the menu moves onto it too). Every component registers its click rect and can take focus.
 
-| Компонент | Варианты | Состояния | Сейчас |
+| Component | Variants | States | Today |
 | --- | --- | --- | --- |
-| `button` | primary (янтарная заливка), secondary (панель + рамка), danger (красная полоса), small | default, hover, focus, pressed, disabled | `_button`, `_menu_button`, `_small_button`, свои по месту |
-| `panel` | обычная, с акцентом, со «заклёпками» (меню) | default, hover | `HudKit._panel`, `Menu._panel` |
-| `tabs` | — | default, selected, hover, focus | 4 разных стиля → один `_tabs(rects, labels, current, prefix)` |
-| `card_frame` | карточка уровня, ступень ангара | default, hover (подъём 6 px), focus, locked | две почти копии → один компонент |
-| `chip` | условие, тег, награда | default, done | `_cond_chips`, `_card_chips` |
-| `check`, `option «‹ значение ›»`, `slider` | — | default, hover, focus, disabled | только в меню → общие |
-| `text`, `para` | с обводкой (HUD) / без (меню) | — | `HudKit._text/_para`, `Menu._txt` |
+| `button` | primary (amber fill), secondary (panel + border), danger (red stripe), small | default, hover, focus, pressed, disabled | `_button`, `_menu_button`, `_small_button`, ad hoc |
+| `panel` | plain, accented, riveted (menu) | default, hover | `HudKit._panel`, `Menu._panel` |
+| `tabs` | — | default, selected, hover, focus | 4 styles → one `_tabs(rects, labels, current, prefix)` |
+| `card_frame` | level-up card, hangar tier | default, hover (lift 6 px), focus, locked | two near copies → one component |
+| `chip` | condition, tag, reward | default, done | `_cond_chips`, `_card_chips` |
+| `check`, `option «‹ value ›»`, `slider` | — | default, hover, focus, disabled | menu only → shared |
+| `text`, `para` | outlined (HUD) / plain (menu) | — | `HudKit._text/_para`, `Menu._txt` |
 
-### Состояния (одинаково везде)
+### States (identical everywhere)
 
-| Состояние | Вид | Поведение |
+| State | Look | Behavior |
 | --- | --- | --- |
-| default | панель `PANEL`, рамка `ACCENT` 40 % | — |
-| hover / focus | рамка `ACCENT` 100 %, 2,5 px; у primary — светлее заливка | focus = hover для геймпада |
-| pressed | заливка `ACCENT_DIM` на 0,1 с | срабатывание — по отпусканию |
-| disabled | текст `TEXT_OFF`, без рамки; причина — подписью рядом | кнопка не регистрируется для клика и фокуса |
-| selected | заливка `ACCENT`, текст `ON_ACCENT` | — |
+| default | `PANEL` fill, `ACCENT` border at 40 % | — |
+| hover / focus | `ACCENT` border at 100 %, 2.5 px; primary gets a lighter fill | focus = hover for gamepad |
+| pressed | `ACCENT_DIM` fill for 0.1 s | fires on release |
+| disabled | `TEXT_OFF` text, no border; the reason as a caption next to it | not registered for click or focus |
+| selected | `ACCENT` fill, `ON_ACCENT` text | — |
 
-## 4. Паттерны
+## 4. Patterns
 
-1. **Клик:** список кнопок перебирается с конца — что нарисовано последним (сверху), то и ловит клик. Прямоугольник клика — без «подъёма» при hover.
-2. **Фокус и геймпад:** у каждого экрана есть фокус по умолчанию; `ui_up/down/left/right` двигают его к ближайшей кнопке по направлению, `ui_accept` = клик, `ui_cancel` = назад. Экран, который открывается поверх боя (новый уровень, специализация), первые 0,3 с не принимает ввод. Кнопки геймпада для переброса и исключения карточки — отдельные, не боевые.
-3. **Подписи клавиш:** `HudKit.key_label(action)` — по последнему устройству ввода (клавиатура или геймпад) и с учётом переназначения.
-4. **Выход из любого экрана:** у каждого состояния есть путь назад (Esc/B), пустой экран без кнопки «Продолжить» недопустим.
-5. **Раскладка по высоте:** вертикальные списки считают доступную высоту и при нехватке переносятся во вторую колонку или прокручиваются. Проверка — скриншоты `--shots` на 1920×1080 и 1920×1200 (Deck).
-6. **Текст на светлой земле:** в бою — обводка `OUTLINE` или плашка `BACKDROP`; жёлтый и янтарный на песке не использовать для важного (уже принято для активностей).
-7. **Числа в текстах** берутся из констант правил, не пишутся в строку.
+1. **Click:** the button list is searched from the end — what is drawn last (on top) gets the click. The click rect does not include the hover lift.
+2. **Focus and gamepad:** every screen has a default focus; `ui_up/down/left/right` move focus to the nearest button in that direction, `ui_accept` = click, `ui_cancel` = back. A screen opened over combat (level up, specialization) ignores input for the first 0.3 s. Gamepad buttons for reroll and ban are separate from combat buttons.
+3. **Key labels:** `HudKit.key_label(action)` — by the last input device (keyboard or gamepad) and respecting rebinding.
+4. **Exit from every screen:** every state has a way back (Esc/B); an empty screen without a "Continue" button is not allowed.
+5. **Height-aware layout:** vertical lists compute available height and wrap into a second column or scroll. Check with `--shots` screenshots at 1920×1080 and 1920×1200 (Deck).
+6. **Text on bright ground:** in combat — `OUTLINE` or a `BACKDROP` plate; no yellow or amber for important text on sand (already done for activities).
+7. **Numbers in text** come from rule constants, never typed into strings.
 
-## 5. Делай / не делай
+## 5. Do / don't
 
-| ✅ Делай | ❌ Не делай |
+| ✅ Do | ❌ Don't |
 | --- | --- |
-| `UiStyle.ACCENT`, `UiStyle.FS_LABEL` | `Color(1.0, 0.85, 0.4)` «на глаз» |
-| Новый экран — из `button`, `panel`, `tabs` | Новый стиль кнопок для одного экрана |
-| Проверить экран с геймпада и на 1920×1200 | Считать, что «мышью работает — значит готово» |
-| `Loc.t("+%d запчастей") % n` | `"+40 запчастей"` строкой |
-| Кегль ≥ 14 | Кегль 11–13 «для подписи» |
+| `UiStyle.ACCENT`, `UiStyle.FS_LABEL` | `Color(1.0, 0.85, 0.4)` "by eye" |
+| Build a new screen from `button`, `panel`, `tabs` | A new button style for one screen |
+| Check the screen with a gamepad and at 1920×1200 | Assume "works with the mouse — done" |
+| `Loc.t("+%d запчастей") % n` | `"+40 запчастей"` as a literal |
+| Font size ≥ 14 | Size 11–13 "for a caption" |
 
-## 6. Как переходить (без переделки всего сразу)
+## 6. Migration (no big-bang rewrite)
 
-1. CS-11а (малое): правило клика с конца списка, задержка ввода на `levelup`/`course_pick`, `FS_MIN` в примитивах.
-2. CS-11б: файл `ui_style.gd` с токенами; `Menu.C_*` и `HudCampaign.C_*` становятся ссылками на него; литералы заменяются, когда экран трогают.
-3. CS-11в: модель фокуса в `HudKit`/`Menu`, начиная с экранов карточек, итогов и главного меню.
-4. CS-11г: общие `tabs` и `card_frame`, меню на примитивах `HudKit`.
-5. После Next Fest: «Масштаб интерфейса», пересмотр ADR-05 (Control + Theme для меню и ангара).
+1. CS-11a (small): click rule from the end of the list, input delay on `levelup`/`course_pick`, `FS_MIN` in the primitives.
+2. CS-11b: `ui_style.gd` with tokens; `Menu.C_*` and `HudCampaign.C_*` become references to it; literals are replaced when a screen is touched.
+3. CS-11c: focus model in `HudKit`/`Menu`, starting with cards, results and main menu.
+4. CS-11d: shared `tabs` and `card_frame`, menu on `HudKit` primitives.
+5. After Next Fest: "UI scale", revisit ADR-05 (Control + Theme for menu and hangar).

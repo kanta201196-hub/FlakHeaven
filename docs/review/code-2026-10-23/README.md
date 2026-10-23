@@ -1,89 +1,91 @@
-# Ревью кода Flak Heaven — 23.10.2026
+# Flak Heaven code review — 2026-10-23
 
-Сделано навыком superpowers `requesting-code-review` по всему репозиторию (коммит `f9edc3e`, ветка `main`), а не по одному PR: пять проверяющих по областям и шестой — сбор лучших практик Godot 4.4 и Python. Код игры не менялся. Игру проверяющие не запускали: выводы о раскладке экранов — расчёт по координатам, о производительности — по коду (правило проекта: FPS мерим только на реальных ПК).
+Done with the superpowers `requesting-code-review` skill over the whole repository (commit `f9edc3e`, branch `main`) rather than a single PR: five reviewers by area plus a sixth collecting Godot 4.4 and Python best practices. No game code was changed. Reviewers did not run the game: screen-layout findings are computed from coordinates, performance findings come from reading code (project rule: FPS is measured only on real PCs).
 
-Самые важные находки проверены вручную по коду (отмечены ✔).
+The most important findings were re-checked by hand against the code (marked ✔).
 
-| Файл | Область |
+| File | Area |
 | --- | --- |
-| [r1-core.md](r1-core.md) | Ядро: `main.gd`, состояния, профиль и сохранения, отчёты, настройки, кампания |
-| [r2-combat.md](r2-combat.md) | Бой: игрок, оружие, снаряды, враги, спавнер, боссы, активности |
-| [r3-render.md](r3-render.md) | 3D-картинка: `render3d.gd`, рельеф, взрывы, шейдеры, звук |
-| [r4-ui.md](r4-ui.md) | Интерфейс: HUD, меню, экраны, перевод + инвентарь визуального языка |
-| [r5-tools.md](r5-tools.md) | Инструменты: CI-скрипты, Python, Blender, приём отчётов |
-| [r6-practices.md](r6-practices.md) | Лучшие практики отрасли с источниками (Godot 4.4, GDScript, Steam Deck, Python, Blender) |
+| [r1-core.md](r1-core.md) | Core: `main.gd`, states, profile and saves, reports, settings, campaign |
+| [r2-combat.md](r2-combat.md) | Combat: player, weapons, projectiles, enemies, spawner, bosses, activities |
+| [r3-render.md](r3-render.md) | 3D view: `render3d.gd`, terrain, explosions, shaders, sound |
+| [r4-ui.md](r4-ui.md) | UI: HUD, menu, screens, localization + visual language inventory |
+| [r5-tools.md](r5-tools.md) | Tooling: CI scripts, Python, Blender, report receiver |
+| [r6-practices.md](r6-practices.md) | Industry best practices with sources (Godot 4.4, GDScript, Steam Deck, Python, Blender) |
 
-Итоговые документы, которые выросли из ревью:
-- [Стандарты кода](../../standards/code.md)
-- [Архитектура](../../standards/architecture.md)
-- [Дизайн-система интерфейса](../../standards/ui-design-system.md)
+The detailed reports r1–r6 are in Russian (written before the 2026-10-23 language decision); they are translated only if someone works from them.
 
-## Общая оценка
+Standards that grew out of the review:
+- [Coding standards](../../standards/code.md)
+- [Architecture](../../standards/architecture.md)
+- [UI design system](../../standards/ui-design-system.md)
 
-Для прототипа, который пишут в основном агенты, код в хорошем состоянии: снаряды без узлов, попадания по отрезку, детерминированные таймеры, аккуратная работа с освобождёнными объектами, MultiMesh и пулы в 3D, фоновая сборка рельефа, атомарная запись профиля, богатая телеметрия, секреты не в репозитории. Падений в бою не найдено.
+## Overall
 
-**Документация кода слабая:** докстринг `##` есть у 43 % функций (665 из 1549 в `game/scripts`), строк-комментариев около 9 % от строк кода, и это чаще история правок («было → стало», чьё замечание), чем объяснение, что и зачем делает код. Агент, который приходит в файл впервые, восстанавливает смысл по коду. Правило — [code.md §2](../../standards/code.md); язык комментариев и документов — один параметр (§0), выбор за Kanta.
+For a prototype written mostly by agents, the code is in good shape: node-less projectiles, segment-based hits, deterministic timers, careful handling of freed objects, MultiMesh and pools in 3D, background terrain build, atomic profile writes, rich telemetry, no secrets in the repo. No combat crashes found.
 
-Главный долг — не качество отдельных функций, а **связность**: `Main.I` как общий объект для 46 файлов (657 обращений), механика на русских строках, числа баланса в десятках мест, три набора кнопок и 214 разных цветов в интерфейсе. Это и есть то, что стандарты должны остановить.
+**Code documentation is weak:** 43 % of functions have a `##` docstring (665 of 1549 in `game/scripts`), full-line comments are about 9 % of code lines, and they are mostly change history ("was → now", whose feedback) rather than an explanation of what the code does and why. An agent opening a file for the first time reconstructs meaning from the code. Rule — [code.md §2](../../standards/code.md); comment language — one parameter (§0).
 
-## Находки по важности
+The main debt is not the quality of individual functions but **coupling**: `Main.I` as a shared object for 46 files (657 uses), mechanics keyed on Russian strings, balance numbers in dozens of places, three button sets and 214 distinct colors in the UI. That is what the standards must stop.
 
-### Критические — чинить до демо (15.12)
+## Findings by severity
 
-| № | Что | Где | Проверено |
+### Critical — fix before the demo (2026-12-15)
+
+| # | What | Where | Checked |
 | --- | --- | --- | --- |
-| CR-01 | Клик по «Закрепить» или «Исключить» на карточке **берёт саму карточку**: прямоугольник карточки стоит в списке кнопок раньше вложенных, клик ищет первое совпадение. Автотест не видит — вызывает `ban_card` напрямую | `hud_screens.gd:103,147-149`, `hud.gd:98-102` | ✔ |
-| CR-02 | Игра может **застрять на пустом экране выбора карточек** (Esc и пауза там не работают): пустой набор обработан только при открытии экрана, но не после выбора, курса и исключения | `main.gd:425-427, 455-458, 505-522` | ✔ |
-| CR-03 | **Профиль может пропасть**: результат `rename` не проверяется, `.tmp` при загрузке не ищется, битый JSON молча обнуляет профиль, и следующее сохранение его затирает | `profile.gd:139-178` | — |
-| CR-04 | **Строка каждого вылета уходит в Google Таблицу без согласия игрока**, в демо тоже (ОС, видеокарта, постоянный `tester_id`). Расходится с решением DM-07 «отчёт с согласием» | `report.gd:412-432`, `main.gd:83,115` | — |
-| CR-05 | **Геймпад**: меню, настройки, ангар недоступны; A/X/B/Y одновременно боевые и «выбрать карточку 1–4», а у экрана уровня нет задержки ввода — уклонение в момент нового уровня берёт первую карточку вслепую. Блокер для Steam Deck | `input_setup.gd:14,37`, `main_input.gd:33,47-58`, `menu.gd:68-113` | ✔ |
-| CR-06 | Подстановка формул в таблицу отчётов: текст тестера, начинающийся с `=`, становится формулой | `tools/reports/apps_script.gs:61-77` | — |
+| CR-01 | Clicking "Pin" or "Ban" on a level-up card **picks the card**: the card rect is registered before the nested buttons and the click takes the first match. The autotest misses it — it calls `ban_card` directly | `hud_screens.gd:103,147-149`, `hud.gd:98-102` | ✔ |
+| CR-02 | The game can **get stuck on an empty card screen** (Esc and pause do nothing there): an empty offer is handled only when the screen opens, not after a pick, course choice or ban | `main.gd:425-427, 455-458, 505-522` | ✔ |
+| CR-03 | **The profile can be lost**: the `rename` result is not checked, `.tmp` is not looked for on load, broken JSON silently resets the profile and the next save overwrites it | `profile.gd:139-178` | — |
+| CR-04 | **Every sortie row is uploaded to a Google Sheet without player consent**, demo included (OS, GPU, persistent `tester_id`). Contradicts decision DM-07 "report with player consent" | `report.gd:412-432`, `main.gd:83,115` | — |
+| CR-05 | **Gamepad**: menu, settings and hangar are unreachable; A/X/B/Y are both combat actions and "pick card 1–4", and the level-up screen has no input delay — a dodge at the moment of level-up blindly takes the first card. Steam Deck blocker | `input_setup.gd:14,37`, `main_input.gd:33,47-58`, `menu.gd:68-113` | ✔ |
+| CR-06 | Formula injection in the reports sheet: tester text starting with `=` becomes a formula | `tools/reports/apps_script.gs:61-77` | — |
 
-### Важные — в ближайшие циклы
+### Important — next cycles
 
-**Бой и правила**
-- Спавнер на пределе врагов делает `return` и замораживает таймеры бомбардировщиков, экраноплана и чаек — в позднем бою они почти не появляются (`spawner.gd:203`) ✔.
-- Упреждение бомб всегда ноль: `t.get("velocity")`, а у врага поле `move_vel` (`hardpoint.gd:823`) ✔. Правка меняет баланс — по правилу R-10.
-- «Сквозняк» призывает по 3 перехватчика каждые 10 с без предела и рядом с собой (`boss.gd:339-347`).
-- Механику решают русские подписи урона («курсовое…», «турели»): опечатка или переименование ломает защиту и бонусы без ошибки (`enemy.gd:72-81`, `boss.gd:120-131`, `projectiles.gd:421`).
-- Награды за активности скопированы в три места (`main.gd:546`, `transport.gd:93`, `rescue.gd:72`).
-- Подсказки новичку тратятся на фоне меню до первого вылета (`main.gd:237-243`, `hints.gd:172`).
-- `TEST_PICKS = 10` перебросов и исключений «на время тестов» — вернуть к 2 до демо (`main.gd:51`).
-- Читерские флаги запуска (`--mastery`, `--heavy=`, `--god`, `--turbo`) работают и в тестерской сборке.
+**Combat and rules**
+- At the enemy cap the spawner `return`s and freezes the bomber, ekranoplan and gull timers — late in a sortie they almost never appear (`spawner.gd:203`) ✔.
+- Bomb lead is always zero: `t.get("velocity")`, but enemies have `move_vel` (`hardpoint.gd:823`) ✔. The fix changes balance — per R-10.
+- The "Skvoznyak" boss summons 3 interceptors every 10 s with no cap, right next to itself (`boss.gd:339-347`).
+- Mechanics depend on Russian damage labels ("курсовое…", "турели"): a typo or rename breaks armor and bonuses with no error (`enemy.gd:72-81`, `boss.gd:120-131`, `projectiles.gd:421`).
+- Activity rewards are copied into three places (`main.gd:546`, `transport.gd:93`, `rescue.gd:72`).
+- Newcomer hints are spent on the menu background before the first sortie (`main.gd:237-243`, `hints.gd:172`).
+- `TEST_PICKS = 10` rerolls and bans "for testing" — revert to 2 before the demo (`main.gd:51`).
+- Cheat launch flags (`--mastery`, `--heavy=`, `--god`, `--turbo`) work in tester builds too.
 
-**Данные и сохранения**
-- Папка `user://` строится из названия «Flak Heaven - Prototype 3 (3D)»: переименование под релиз потеряет все сохранения и сломает перенос «демо → игра». Нужен `custom_user_dir_name` сейчас (`project.godot:8`).
-- Смена громкости пишет в `tuning.json` весь баланс, туда же утекают отладочные значения (`tuning.gd:186-213`).
-- `smoke.sh`, `full.sh` и `--shots` работают с настоящим профилем участника (`--shots` добавляет 8000 запчастей).
-- `BUILD := "3.4-t1"` в коде, номер меняют руками при экспорте (`main.gd:81`).
-- Очередь анкет может навсегда встать на одном сообщении; ответ 3xx считается успехом.
-- Переназначение клавиши стирает дублирующую клавишу (стрелки).
+**Data and saves**
+- The `user://` folder is derived from the name "Flak Heaven - Prototype 3 (3D)": renaming for release loses all saves and breaks demo → full game transfer. Set `custom_user_dir_name` now (`project.godot:8`).
+- Changing the volume writes all balance to `tuning.json`, debug values leak there too (`tuning.gd:186-213`).
+- `smoke.sh`, `full.sh` and `--shots` run against the developer's real profile (`--shots` adds 8000 parts).
+- `BUILD := "3.4-t1"` in code; the number is changed by hand at export (`main.gd:81`).
+- The report queue can get stuck forever on one message; any 3xx counts as success.
+- Rebinding a key removes the duplicate key (arrow keys).
 
-**Интерфейс**
-- Настройки не помещаются на 1920×1080: «Сбросить прогресс» за краем, «Миникарта» перекрывает «Сохранить» (`menu.gd:448-526`).
-- Около 25 мест с кеглем 11–13: на Steam Deck это меньше 9 px (минимум Valve). Настройки масштаба интерфейса нет.
-- Подписи клавиш в HUD захардкожены («Space», «Shift»), не учитывают переназначение и геймпад.
-- В EN и ZH `Loc.out` каждый кадр разбирает строки, где числа подставлены до перевода.
+**UI**
+- Settings do not fit at 1920×1080: "Reset progress" is off screen, "Minimap" overlaps "Save" (`menu.gd:448-526`).
+- About 25 places with font size 11–13: under 9 px on the Steam Deck (Valve's minimum). No UI scale setting.
+- HUD key labels are hardcoded ("Space", "Shift"), ignoring rebinding and gamepad.
+- In EN and ZH `Loc.out` re-parses strings every frame where numbers were inserted before translation.
 
-**Картинка и производительность**
-- Модели и шейдеры грузятся синхронно в бою при первом появлении (`load()` в главном потоке, ни одного `preload`/`load_threaded_request`, `Boom3D` создаётся на первом взрыве) — рывки ровно в первой сессии демо.
-- У шейдера земли 13 сэмплеров: на macOS риск чёрной земли (не проверено на Mac).
-- `dFdx`/`fwidth` внутри ветвлений по пикселю в шейдере земли — мерцание на Mesa (Deck) и Apple.
-- Двойной свет взрывов: два пула, до 14 точечных источников при пределе 8 на объект.
-- `get_nodes_in_group("enemies")` — 45 вызовов в бою, в том числе на каждый взрыв; пули проверяются против всех врагов.
-- `render3d.gd` — 2565 строк, юниты в словарях с ~40 строковыми ключами, чужие классы читают его приватные поля.
-- У 20 новых моделей боя нет `.import` в репозитории (импорт по умолчанию на чистом клоне).
+**View and performance**
+- Models and shaders load synchronously in combat on first appearance (`load()` on the main thread, no `preload`/`load_threaded_request`, `Boom3D` created on the first explosion) — hitches exactly in the demo's first session.
+- The ground shader uses 13 samplers: risk of black ground on macOS (not tested on a Mac).
+- `dFdx`/`fwidth` inside per-pixel branches in the ground shader — shimmering on Mesa (Deck) and Apple.
+- Double explosion lights: two pools, up to 14 point lights against a limit of 8 per object.
+- `get_nodes_in_group("enemies")` — 45 calls in combat, including one per explosion; bullets are tested against every enemy.
+- `render3d.gd` is 2565 lines, unit records are dictionaries with ~40 string keys, other classes read its private fields.
+- 20 new combat models have no `.import` in the repo (default import on a clean clone).
 
-**Инструменты**
-- `pick.sh` не считает боевыми `projectiles.gd`, `cards.gd`, `fortress.gd` и ещё ~15 файлов и пишет «полный автотест не нужен».
-- `smoke.sh` ловит только `SCRIPT ERROR|Parse Error`: «не найден ресурс» и `SHADER ERROR` проходят как ok.
-- `check_po.py --sync` молча сотрёт многострочные переводы (если переводчик откроет `.po` в Poedit).
-- `game/models/pilot/` — 334 МБ сырых моделей в git, игра их не использует.
-- Карта нормалей и высот земли в JPEG с субдискретизацией 4:2:0 (`prep_ground.py:37`).
+**Tooling**
+- `pick.sh` does not treat `projectiles.gd`, `cards.gd`, `fortress.gd` and ~15 more as combat and says "full autotest not needed".
+- `smoke.sh` catches only `SCRIPT ERROR|Parse Error`: "resource not found" and `SHADER ERROR` pass as ok.
+- `check_po.py --sync` silently erases multi-line translations (if a translator opens the `.po` in Poedit).
+- `game/models/pilot/` — 334 MB of raw generator models in git, unused by the game.
+- The ground normal/height map is JPEG with 4:2:0 chroma subsampling (`prep_ground.py:37`).
 
-### Мелкие
-Около 50 пунктов — в отчётах r1–r5 (разделы «Мелкие»): мёртвый код, номер операции Архипелага «5–8», баннеры с числом без `continue_mult`, `clamp` полосы босса, сброс состояния 3D между вылетами и т. п.
+### Minor
+About 50 items in r1–r5 ("Мелкие" sections): dead code, Archipelago operation number shown as "5–8", banners showing a number without `continue_mult`, boss bar without `clamp`, 3D state not reset between sorties, etc.
 
-## Что дальше
+## Next
 
-Решения по пунктам, которые меняют правила или структуру, — у Kanta (вопросы цифрами в треде «Ревью кода и стандарты разработки»). Задачи CR-01…CR-06 и важные пункты — в `docs/backlog.md`, раздел «Ревью кода 23.10».
+Decisions that change rules or structure belong to Kanta (numbered questions in the thread "Ревью кода и стандарты разработки"). Tasks CR-01…CR-06 and CS-01…CS-12 are in `docs/backlog.md`, section "Code review (2026-10-23)".

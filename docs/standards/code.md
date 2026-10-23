@@ -1,187 +1,185 @@
-# Стандарты кода Flak Heaven
+# Flak Heaven coding standards
 
-Версия 1 от 23.10.2026. Основа — [ревью кода 23.10](../review/code-2026-10-23/README.md) (как пишем сейчас и где ломается) и [лучшие практики Godot 4.4 и Python](../review/code-2026-10-23/r6-practices.md) (с источниками).
+Version 1, 2026-10-23. Based on the [code review of 2026-10-23](../review/code-2026-10-23/README.md) (how the code is written today and where it breaks) and on [Godot 4.4 and Python best practices](../review/code-2026-10-23/r6-practices.md) (with sources).
 
-Кому: любой Claude и человек, который пишет код в репозитории. CLAUDE.md ссылается сюда и не дублирует. Процесс (ветки, PR, smoke, полный автотест, размер задачи) — в CLAUDE.md; здесь — **как писать код**.
+Audience: every Claude and every person who writes code in this repository. CLAUDE.md links here and does not repeat it. Process (branches, PRs, smoke test, full autotest, task size) lives in CLAUDE.md; this file says **how to write the code**.
 
-**Как применять.** Правила обязательны для нового кода и для строк, которые меняешь. Старый код переписывать ради стандарта не нужно: «трогаешь — приведи в порядок» в пределах своей правки. Пункты с пометкой **[решение Kanta]** ждут его выбора и до тех пор — рекомендация.
-
+**How to apply.** Rules are mandatory for new code and for the lines you change. Do not rewrite old code just to match the standard: "touch it, tidy it" within the scope of your change. Items marked **[Kanta to decide]** are recommendations until Kanta decides.
 
 ---
 
-## 0. Язык — один параметр [решение Kanta]
+## 0. Language (one parameter)
 
-> **ЯЗЫК_КОДА = русский** *(сейчас; Kanta выбирает: русский или английский)*
+> **CODE_LANGUAGE = English** *(Kanta's decision of 2026-10-23, option 2)*
 
-Везде ниже «на языке кода» значит этот параметр. Поменять язык — поменять одну строку здесь.
+Everywhere below, "in CODE_LANGUAGE" refers to this parameter. To switch languages, change this one line.
 
-| Что | Язык |
+| What | Language |
 | --- | --- |
-| Имена в коде (классы, функции, переменные, файлы) | всегда английский, латиницей |
-| Комментарии и докстринги `##`, сообщения коммитов, описания PR | ЯЗЫК_КОДА |
-| Внутренние документы `docs/`, планы, спецификации | ЯЗЫК_КОДА |
-| Строки для игрока (ключи перевода) | русский — ключ перевода в `.po` (не зависит от параметра) |
-| Документы для игроков и тестеров, сайт, маркетинг | язык аудитории |
-| Чат с Kanta, треды | русский |
+| Identifiers (classes, functions, variables, files, folders) | always English, ASCII only |
+| Comments, `##` docstrings, commit messages, PR descriptions | CODE_LANGUAGE |
+| Internal documents in `docs/`, plans, specs, backlog, decision log, CLAUDE.md | CODE_LANGUAGE |
+| Player-facing strings (translation keys) | Russian phrase as the `.po` key (independent of this parameter) |
+| Player and tester documents, website, marketing | the audience's language |
+| Chat with Kanta, thread replies | Russian |
 
-Если выбран английский: новый код и новые документы пишутся по-английски сразу; старые комментарии и документы переводятся, когда их трогают (не отдельной большой задачей). Довод «за»: комментарии читают в первую очередь агенты, а кириллица в токенах обходится примерно в 2–4 раза дороже латиницы (оценка из совета, не замер). Довод «против»: Kanta читает документы сам, перевод — через Claude.
----
+Migration: new code and new documents are written in English right away. Existing comments and documents are translated when a file is touched (no mass rewrite), plus a separate pass over key documents (backlog task LANG-01). Why: comments and docs are read mostly by agents, and Cyrillic costs roughly 2–4× more tokens than Latin text (an estimate, not measured). Kanta reads documents through Claude when needed.
 
-## 1. Движок и версии
+## 1. Engine and versions
 
-1. Godot **4.4.1**, рендер **GL Compatibility**. Не использовать то, чего в 4.4 нет: `@abstract`, вариативные аргументы `...args`, `duplicate_deep()` (это 4.5). Типизированные словари `Dictionary[K, V]` в 4.4 есть — пользоваться.
-2. В GL Compatibility нет SSAO, SSR, объёмного тумана, декалей, DOF, TAA, FXAA, compute-шейдеров. Есть MSAA, glow, туман по глубине и высоте. До 8 omni/spot-источников на меш — лишние молча пропадают.
-3. Файлы `.uid` коммитить всегда и переносить вместе со скриптом или шейдером.
+1. Godot **4.4.1**, **GL Compatibility** renderer. Do not use what 4.4 lacks: `@abstract`, variadic `...args`, `duplicate_deep()` (all 4.5). Typed dictionaries `Dictionary[K, V]` exist in 4.4 — use them.
+2. GL Compatibility has no SSAO, SSR, volumetric fog, decals, DOF, TAA, FXAA or compute shaders. It has MSAA, glow, depth and height fog. At most 8 omni/spot lights per mesh — extra lights are silently dropped.
+3. Always commit `.uid` files and move them together with their script or shader.
 
-## 2. GDScript: оформление
+## 2. GDScript: style and documentation
 
-Основа — официальный style guide Godot. Отступ — таб, строка до 100 символов (лучше до 80 для комментариев).
+Based on the official Godot style guide. Indent with tabs; lines under 100 characters (under 80 for comments).
 
-| Что | Как | Пример |
+| What | How | Example |
 | --- | --- | --- |
-| Файл | `snake_case.gd` | `convoy_vehicle.gd` |
-| Класс | `class_name` в PascalCase у каждого файла, кроме автозагрузок | `class_name ConvoyVehicle` |
-| Функция, поле, переменная | `snake_case`, по-английски, осмысленно | `pending_levels`, не `pl`, `L`, `k` |
-| Константа, значение enum | `UPPER_CASE` | `OFFER_COUNT`, `State.LEVELUP` |
-| Сигнал | прошедшее время | `enemy_died`, `reward_granted` |
-| Приватное | префикс `_` — **снаружи не читать и не писать** | `_grid`, `_units` |
-| Локальная переменная | короткое имя только в цикле на 3–5 строк (`i`, `e`) | — |
+| File | `snake_case.gd` | `convoy_vehicle.gd` |
+| Class | PascalCase `class_name` in every file except autoloads | `class_name ConvoyVehicle` |
+| Function, field, variable | `snake_case`, English, meaningful | `pending_levels`, not `pl`, `L`, `k` |
+| Constant, enum value | `UPPER_CASE` | `OFFER_COUNT`, `State.LEVELUP` |
+| Signal | past tense | `enemy_died`, `reward_granted` |
+| Private | `_` prefix — **never read or write it from outside** | `_grid`, `_units` |
+| Local variable | short names only in 3–5 line loops (`i`, `e`) | — |
 
-**Порядок в файле:** `class_name` → `extends` → `##` описание класса → сигналы → enum → константы → `static var` → `@export` → поля → `@onready` → `_init`/`_ready`/`_process` → публичные методы → приватные (`_…`) → внутренние классы.
+**Member order:** `class_name` → `extends` → `##` class docstring → signals → enums → constants → `static var` → `@export` → fields → `@onready` → `_init`/`_ready`/`_process` → public methods → private methods (`_…`) → inner classes.
 
-**Документация и комментарии — на ЯЗЫКЕ_КОДА (§0).** Сейчас докстринг `##` есть у 43 % функций (665 из 1549), а строк-комментариев около 9 % от строк кода; где комментарии есть, это чаще история правок, чем объяснение.
-- **Докстринг `##` обязателен** у каждого класса (первые строки после `extends`: зачем класс, кто его создаёт, с кем связан) и у каждой публичной функции (что делает, что значат параметры и результат, побочные эффекты: пишет на диск, меняет состояние вылета, создаёт узлы). Однострочник допустим, если имя и типы уже всё объясняют.
-- **Приватная функция** — докстринг, если она длиннее ~15 строк или неочевидна.
-- **Комментарий внутри кода** объясняет «почему», а не «что»: правило игры, ограничение движка, обход бага, неочевидное число. Формулы и пороги баланса — с пояснением смысла.
-- **Константа или поле с неочевидным смыслом** — `##` над ним (в редакторе Godot это видно в подсказке).
-- Номер задачи или решения — одной ссылкой в конце: `## Air enemy cap (EX-04)` / `## Предел врагов в воздухе (EX-04)`.
-- История правок («было 1 с, стало 0,5», «тест 3.5-s7, Kanta») — в описании коммита и в журнале решений `docs/game-context.md`, **не в коде**. Старые исторические комментарии сокращать, когда трогаешь строку.
-- Новый или изменённый в PR код без докстрингов — замечание ревью (уровень «важное»).
+**Documentation and comments — in CODE_LANGUAGE (§0).** Today 43 % of functions have a `##` docstring (665 of 1549 in `game/scripts`), full-line comments are about 9 % of code lines, and most existing comments are change history rather than explanation.
+- **A `##` docstring is mandatory** for every class (right after `extends`: why the class exists, who creates it, what it talks to) and every public function (what it does, what parameters and result mean, side effects: writes to disk, changes run state, creates nodes). A one-liner is fine when the name and types already say everything.
+- **Private functions** get a docstring when longer than ~15 lines or non-obvious.
+- **Inline comments explain why, not what:** a game rule, an engine limitation, a bug workaround, a non-obvious number. Balance formulas and thresholds explain their meaning.
+- **Non-obvious constants and fields** get a `##` line (Godot shows it as a tooltip in the editor).
+- Task or decision id — one reference at the end: `## Air enemy cap (EX-04)`.
+- Change history ("was 1 s, now 0.5", "test 3.5-s7, Kanta") goes to the commit message and the decision log in `docs/game-context.md`, **not into code**. Shorten old history comments when you touch the line.
+- New or changed code in a PR without docstrings is a review finding (severity "important").
 
-## 3. GDScript: типы
+## 3. GDScript: types
 
-1. Типизировать всё: поля, параметры, возвраты, локальные (`:=` — только когда тип очевиден справа), `Array[T]`, `Dictionary[K, V]`, переменную цикла (`for e: Enemy in enemies`). Типизированный код ловит ошибки до запуска и быстрее.
-2. Нетипизированный `var x = …` — только для данных из JSON до проверки типа.
-3. Предупреждения движка включаем по шагам (задача CS-01): сначала `debug/gdscript/warnings/untyped_declaration`, `unsafe_property_access`, `unsafe_method_access`, `unsafe_call_argument` как предупреждения; когда код вычищен — как ошибки, тогда `smoke.sh` будет падать на нетипизированном коде.
-4. Глушить предупреждение — точечно `@warning_ignore("имя")` с комментарием почему.
+1. Type everything: fields, parameters, return values, locals (`:=` only when the type is obvious on the right), `Array[T]`, `Dictionary[K, V]`, loop variables (`for e: Enemy in enemies`). Typed code catches errors before running and runs faster.
+2. Untyped `var x = …` only for JSON data before its type is checked.
+3. Engine warnings are switched on in steps (task CS-01): first `debug/gdscript/warnings/untyped_declaration`, `unsafe_property_access`, `unsafe_method_access`, `unsafe_call_argument` as warnings; once the code is clean, as errors, so `smoke.sh` fails on untyped code.
+4. Silence a warning locally with `@warning_ignore("name")` and a comment explaining why.
 
-## 4. Данные: словари, enum, id
+## 4. Data: dictionaries, enums, ids
 
-1. **Логика — на id, не на тексте.** Состояние игры, вид оружия, источник урона, тип врага, действие кнопки — `enum` или `StringName` (`&"gun_auto"`). Русская подпись — только в таблице «id → подпись», которая идёт в интерфейс и отчёт через перевод. Сравнивать в логике строки для игрока (`"курсовое (авто)"`) запрещено. *Почему:* сейчас защита врагов и бонусы держатся на русских подписях, опечатка ломает баланс без ошибки.
-2. **То, что живёт дольше кадра** (юнит 3D, запись врага, частица с полями), — маленький класс `extends RefCounted` с типизированными полями, а не `Dictionary` со строковыми ключами. Словарь допустим для JSON, для таблиц-констант и для снарядов в массивах (там, где важна скорость, — см. §7).
-3. **Массив как кортеж** — не больше двух полей (`[rect, action]`). Больше — класс или словарь с именованными ключами. Таблицы данных с позиционными индексами (`br[1][1][0]`) не заводить.
+1. **Logic uses ids, not text.** Game state, weapon kind, damage source, enemy type, button action — `enum` or `StringName` (`&"gun_auto"`). The Russian label lives only in an "id → label" table used by UI and reports through translation. Comparing player-facing strings in logic (`"курсовое (авто)"`) is forbidden. *Why:* today enemy armor and bonuses depend on Russian labels; a typo breaks balance with no error.
+2. **Anything that lives longer than a frame** (3D unit view, enemy record, particle with fields) is a small `extends RefCounted` class with typed fields, not a `Dictionary` with string keys. Dictionaries are fine for JSON, constant tables and projectile arrays where speed matters (§7).
+3. **Array as a tuple** — at most two fields (`[rect, action]`). More than that — a class or a dictionary with named keys. No data tables with positional indices (`br[1][1][0]`).
 
-## 5. Где живут числа баланса — [решение Kanta]
+## 5. Where balance numbers live [Kanta to decide]
 
-Сейчас правило CLAUDE.md «все параметры баланса — в `tuning.gd`» в коде не соблюдается: прочность врагов, оружие, эволюции, награды, формулы волн лежат константами у места применения. Варианты:
-1. Всё в `tuning.gd` с разделами по системам.
-2. **(рекомендую)** `tuning.gd` — только то, что крутят ползунком в панели F1; остальные числа баланса — в файлах `game/scripts/balance/<система>.gd` (константы с `##` описанием); в коде классов — только геометрия и вид.
+The CLAUDE.md rule "all balance parameters in `tuning.gd`" is not followed by the code: enemy HP, weapons, evolutions, rewards and wave formulas are constants next to where they are used. Options:
+1. Everything in `tuning.gd`, with sections per system.
+2. **(recommended)** `tuning.gd` holds only what is tuned with sliders in the F1 panel; other balance numbers live in `game/scripts/balance/<system>.gd` (constants with `##` docstrings); class code keeps only geometry and visuals.
 
-Независимо от выбора:
-- Число из правил игры, которое видит игрок в тексте («+40 запчастей», «15 минут»), подставляется из той же константы, а не пишется в строку.
-- Длительность вылета (900 с) — одна константа.
-- Временные значения для тестов (`TEST_PICKS`) — в `tuning.gd` с пометкой «вернуть до …» и строкой в бэклоге.
+Regardless of the choice:
+- A rule number the player sees in text ("+40 parts", "15 minutes") is formatted from the same constant, never typed into the string.
+- Sortie length (900 s) is one constant.
+- Temporary test values (`TEST_PICKS`) live in `tuning.gd`, marked "revert by …", with a backlog line.
 
-## 6. Связи между частями (подробно — [architecture.md](architecture.md))
+## 6. Coupling between parts (details — [architecture.md](architecture.md))
 
-1. `Main.I` — точка доступа к сервисам вылета. Из сущностей **можно**: читать (`Main.I.player`, `run_time`) и вызывать сервисы (`projectiles.spawn_*`, `fx`, `sfx`, `tele`). **Нельзя**: писать поля `Main` напрямую (`Main.I.parts += …`, `m.pending_levels += 1`) — только через метод `Main` (или будущего `RunState`) с понятным именем: `grant_parts(n, reason)`.
-2. Чужие поля и методы с `_` не трогать. Нужен доступ — сделать публичный метод (для инструментов — с префиксом `debug_`).
-3. 2D-логика не вызывает `Render3D.I` напрямую; нужное логике от картинки (`ground_under`, `mouse_world`) — через узкий интерфейс.
-4. Событие, которое слушают двое и больше (смерть врага, награда, урон игроку), — сигнал. Подключение через Callable: `enemy.died.connect(_on_enemy_died)`.
-5. Одно правило — одно место. Награды, начисление опыта, выдача карточек не копируются по файлам: правка S10-13 пришлось вносить в два места руками.
+1. `Main.I` is the access point to sortie services. Entities **may** read (`Main.I.player`, `run_time`) and call services (`projectiles.spawn_*`, `fx`, `sfx`, `tele`). Entities **may not** write `Main` fields directly (`Main.I.parts += …`, `m.pending_levels += 1`) — only through a named method on `Main` (or the future `RunState`): `grant_parts(n, reason)`.
+2. Never touch another class's `_` fields and methods. Need access — add a public method (for tools — with a `debug_` prefix).
+3. 2D logic does not call `Render3D.I` directly; whatever logic needs from the view (`ground_under`, `mouse_world`) goes through a narrow interface.
+4. An event with two or more listeners (enemy death, reward, player damage) is a signal, connected via Callable: `enemy.died.connect(_on_enemy_died)`.
+5. One rule — one place. Rewards, XP and card offers are not copied across files (change S10-13 had to be made in two places by hand).
 
-## 7. Производительность (bullet heaven)
+## 7. Performance (bullet heaven)
 
-1. **Один список врагов на кадр.** `get_tree().get_nodes_in_group(...)` в боевом коде и в отрисовке HUD не вызывать — брать общий список кадра (задача CS-04). Попадания и `aoe` — через сетку `Spawner._grid` (будущий `EnemyGrid`).
-2. **Снаряды и массовые эффекты — без узлов:** массивы данных + один `_draw` или MultiMesh. У каждого пула есть предел (старые убираются). Удаление из середины — «поменять с последним и `pop_back()`».
-3. **В `_process` и горячих циклах не выделять память:** не собирать строки-ключи (`"p%d" % i`, `"eb_%s_dmg"`), не создавать временные `Packed*Array([...])`, не делать `duplicate()`, не вызывать `find_child`/`find_children`, не читать `OS.get_cmdline_user_args()`. Всё это — кэшировать при создании.
-4. **`_draw` только рисует.** Состояние, которое нужно другим (например, 3D-модели), в `_draw` не вычисляется.
-5. **Загрузка ресурсов.** То, что нужно в бою, грузится на старте вылета (`preload` для постоянного, `ResourceLoader.load_threaded_request` для моделей операции). `load()` посреди боя запрещён. Новый шейдер или материал — прогреть одним кадром при старте вылета.
-6. **Свет.** Новый `OmniLight3D` — только через общий пул вспышек. Массовые огни — эмиссия и glow, не источники света.
-7. **Шейдеры.** Не больше 8 своих сэмплеров (macOS). `dFdx`/`dFdy`/`fwidth` — до любых ветвлений по пикселю. Общий код шума — в `shaders/common.gdshaderinc` через `#include`.
-8. Производительность оцениваем только по логам с реальных ПК (`perf.gd`, лог `l7`), не по FPS в облаке.
+1. **One enemy list per frame.** Do not call `get_tree().get_nodes_in_group(...)` in combat code or HUD drawing — use the shared per-frame list (task CS-04). Hits and `aoe` go through the `Spawner._grid` grid (future `EnemyGrid`).
+2. **Projectiles and mass effects have no nodes:** data arrays + one `_draw` or a MultiMesh. Every pool has a cap (oldest removed). Remove from the middle with "swap with last and `pop_back()`".
+3. **No allocations in `_process` and hot loops:** no string keys (`"p%d" % i`, `"eb_%s_dmg"`), no temporary `Packed*Array([...])`, no `duplicate()`, no `find_child`/`find_children`, no `OS.get_cmdline_user_args()`. Cache all of these at creation.
+4. **`_draw` only draws.** State that others need (e.g. 3D models) is not computed inside `_draw`.
+5. **Resource loading.** Everything combat needs is loaded at sortie start (`preload` for permanent resources, `ResourceLoader.load_threaded_request` for the operation's models). No `load()` in the middle of combat. New shaders and materials are warmed up for one frame at sortie start.
+6. **Lights.** A new `OmniLight3D` only through the shared flash pool. Mass fires use emission and glow, not lights.
+7. **Shaders.** At most 8 custom samplers (macOS). `dFdx`/`dFdy`/`fwidth` before any per-pixel branch. Shared noise code goes to `shaders/common.gdshaderinc` via `#include`.
+8. Performance is judged only from real-PC logs (`perf.gd`, log `l7`), never from cloud FPS.
 
-## 8. Узлы и жизненный цикл
+## 8. Nodes and lifecycle
 
-1. Сущности создаются кодом в одном порядке: `X.new()` → `setup(params)` (все характеристики, включая прочность с множителями) → `add_child()`. В `_ready` — только группы и визуал; базовые числа не перезаписывать.
-2. Ссылку на узел, который может исчезнуть, проверять `is_instance_valid(x)`, а не `x != null`. Цели, которые живут дольше кадра, — `weakref`.
-3. Перед `queue_free()` враг убирает себя из группы `enemies` и ставит `hp <= 0` (как сейчас).
-4. Долгоживущий узел картинки или системы, который переживает вылет, имеет `reset_run()`, и `Main.start_run()` его вызывает.
-5. Таймеры — `float -= delta` (как сейчас): работает с паузой, `--turbo` и фиксированным шагом автотеста. `await` и `Timer` на сущностях не использовать.
-6. Размер файла — ориентир до ~800 строк. Больше — делить по подсистемам при следующей крупной правке (кандидаты: `render3d.gd`, `adobe_build.gd`, `terrain3d.gd`, `cards.gd`, `projectiles.gd`).
+1. Entities are created in code in one order: `X.new()` → `setup(params)` (all stats, including HP with multipliers) → `add_child()`. `_ready` only joins groups and sets up visuals; it does not overwrite base numbers.
+2. A reference to a node that may disappear is checked with `is_instance_valid(x)`, not `x != null`. Targets kept longer than a frame use `weakref`.
+3. Before `queue_free()` an enemy leaves the `enemies` group and sets `hp <= 0` (as today).
+4. A long-lived view or system node that survives a sortie has `reset_run()`, and `Main.start_run()` calls it.
+5. Timers are `float -= delta` (as today): this works with pause, `--turbo` and the autotest's fixed step. No `await` or `Timer` on entities.
+6. File size guideline: up to ~800 lines. Larger files are split by subsystem at the next major change (candidates: `render3d.gd`, `adobe_build.gd`, `terrain3d.gd`, `cards.gd`, `projectiles.gd`).
 
-## 9. Сохранения и данные игрока
+## 9. Saves and player data
 
-1. Все файлы игрока — только в `user://` и только через общий слой `SaveIO` (задача CS-02): запись во временный файл → проверка → `rename`; копия `.bak`; при загрузке порядок `файл → .tmp → .bak`; битый файл переименовать в `*.broken-<время>.json`, а не затирать; поле `version` и миграции.
-2. Папка `user://` не зависит от названия проекта: `application/config/use_custom_user_dir=true`, `custom_user_dir_name="FlakHeaven"`.
-3. Личные настройки (громкость, клавиши, графика) и баланс — в разных файлах. Баланс на диск пишет только панель F1 в отладочной сборке.
-4. Тесты (`smoke.sh`, `full.sh`, `--shots`) работают в отдельной временной папке `user://`, не в профиле участника.
-5. Из недоверенных файлов объекты не грузить (`get_var(allow_objects=true)` не использовать). Тип каждого поля из JSON проверять (`d.get("x") is Array`); целые из JSON приходят как `float`.
+1. All player files live in `user://` and go through one `SaveIO` layer (task CS-02): write to a temp file → verify → `rename`; keep a `.bak`; load order `file → .tmp → .bak`; rename a corrupt file to `*.broken-<time>.json` instead of overwriting it; a `version` field and migrations.
+2. The `user://` folder does not depend on the project name: `application/config/use_custom_user_dir=true`, `custom_user_dir_name="FlakHeaven"`.
+3. Personal settings (volume, keys, graphics) and balance live in different files. Only the F1 panel in a debug build writes balance to disk.
+4. Tests (`smoke.sh`, `full.sh`, `--shots`) run in a separate temporary `user://`, never in a developer's real profile.
+5. Never load objects from untrusted files (no `get_var(allow_objects=true)`). Check the type of every JSON field (`d.get("x") is Array`); JSON integers arrive as `float`.
 
-## 10. Сеть и приватность
+## 10. Network and privacy
 
-1. Любая отправка данных игрока — только с его согласия (флаг в `Settings`, по умолчанию выключен вне тестерских сборок). Постоянный `tester_id` — только в тестерских сборках.
-2. Успех отправки — только по ответу приёмника (`ok`), не по коду 3xx. Очередь отправки ограничена по размеру и попыткам.
-3. Токен в игре — фильтр случайного мусора, не защита: всё, что приходит в таблицу, считать недоверенным (текст с `=`, `+`, `-`, `@` в начале — с префиксом `'`).
-4. Ключи и пароли — только в «Сетевых секретах (Network secrets)» среды и переменных окружения. В репозиторий и логи — никогда.
+1. Any upload of player data requires the player's consent (a flag in `Settings`, off by default outside tester builds). A persistent `tester_id` only in tester builds.
+2. Upload success is decided by the receiver's response body (`ok`), not by a 3xx code. The upload queue is capped by size and attempts.
+3. The token in the game is a junk filter, not authentication: everything arriving in the sheet is untrusted (text starting with `=`, `+`, `-`, `@` gets a `'` prefix).
+4. Keys and passwords only in the environment's "Network secrets" and environment variables. Never in the repository or logs.
 
-## 11. Отладка и флаги запуска
+## 11. Debugging and launch flags
 
-1. Флаги командной строки читаются **один раз** при старте в одном месте (`DebugFlags`/`Main.flags`, задача CS-05). В коде — `DebugFlags.has("--x")`, а не `OS.get_cmdline_user_args()`.
-2. Флаги, которые меняют игру (`--god`, `--mastery`, `--heavy=`, `--turbo`, `--warship`), работают только при `Main.DEBUG`; в тестерской и релизной сборке — нет.
-3. Отладочные значения от флагов в `tuning.json` не попадают.
-4. Номер сборки — одно место в репозитории, меняется коммитом перед экспортом; скрипт сборки проверяет, что номер новый.
+1. Command-line flags are read **once** at startup in one place (`DebugFlags`/`Main.flags`, task CS-05). Code calls `DebugFlags.has("--x")`, not `OS.get_cmdline_user_args()`.
+2. Flags that change gameplay (`--god`, `--mastery`, `--heavy=`, `--turbo`, `--warship`) work only when `Main.DEBUG` is on; not in tester or release builds.
+3. Debug values set by flags never reach `tuning.json`.
+4. The build number lives in one place in the repository and changes by commit before export; the build script checks that it is new.
 
-## 12. Интерфейс в коде (подробно — [ui-design-system.md](ui-design-system.md))
+## 12. UI in code (details — [ui-design-system.md](ui-design-system.md))
 
-1. Цвета, кегли, отступы — только из `UiStyle` (токены по ролям). Литерал `Color(...)` в `hud_*`/`menu.gd` — только для одноразового декора, с комментарием.
-2. Минимальный кегль — 14 (Steam Deck: ≥ 9 px при 1280×800).
-3. Кнопка регистрируется так, что «нарисована последней — ловит клик» (поиск в списке кнопок с конца).
-4. Каждая кнопка доступна с геймпада (фокус), экран поверх боя игнорирует ввод первые 0,3 с.
-5. Подписи клавиш — только через `key_label(action)`, никаких «Space»/«Shift» в строках.
+1. Colors, font sizes and spacing come only from `UiStyle` (role tokens). A `Color(...)` literal in `hud_*`/`menu.gd` only for one-off decoration, with a comment.
+2. Minimum font size is 14 (Steam Deck: ≥ 9 px at 1280×800).
+3. Buttons are hit-tested so that "drawn last — gets the click" (search the button list from the end).
+4. Every button is reachable with a gamepad (focus); a screen opened over combat ignores input for the first 0.3 s.
+5. Key labels only via `key_label(action)` — no "Space"/"Shift" inside strings.
 
-## 13. Перевод
+## 13. Localization
 
-1. Ключ — русская фраза; `.po` (gettext) в git, `*.translation` — в `.gitignore`.
-2. Строка с числом: **сначала перевод шаблона, потом подстановка** — `Loc.t("до базы %d м") % d`. Наоборот (`Loc.t("до базы %d м" % d)`) — запрещено: ломает перевод и нагружает кадр.
-3. Множественное число — через `tr_n`/`Loc.n` (в русском три формы), не «1 подходящих карточек».
-4. Перевод вызывается одной функцией (`Loc.t`), не `TranslationServer.translate` напрямую.
-5. После правки строк — `python3 tools/i18n/scan_strings.py` и `check_po.py` (ловят расхождения подстановок).
+1. The key is the Russian phrase; `.po` (gettext) files are in git, `*.translation` in `.gitignore`.
+2. Strings with numbers: **translate the template first, then format** — `Loc.t("до базы %d м") % d`. The reverse (`Loc.t("до базы %d м" % d)`) is forbidden: it breaks translation and costs time every frame.
+3. Plurals via `tr_n`/`Loc.n` (Russian has three forms), not "1 подходящих карточек".
+4. Translation goes through one function (`Loc.t`), not `TranslationServer.translate` directly.
+5. After changing strings run `python3 tools/i18n/scan_strings.py` and `check_po.py` (they catch placeholder mismatches).
 
-## 14. Python-инструменты (`tools/`, `game/tools/`)
+## 14. Python tools (`tools/`, `game/tools/`)
 
-1. В начале файла — шапка-докстринг на ЯЗЫКЕ_КОДА: зачем, команда запуска, зависимости, решение и дата (как сейчас, это лучшая часть инструментов). Публичные функции библиотек — с докстрингом.
-2. Шаблон: `argparse` с `--help`; `def main() -> int`; `if __name__ == "__main__": sys.exit(main())`; пути — `pathlib` от `__file__` (`ROOT = Path(__file__).resolve().parents[N]`); `encoding="utf-8"` при чтении и записи текста.
-3. PEP 8, 4 пробела, подсказки типов у публичных функций. Форматирование и проверка — `ruff format` и `ruff check` (настройка в `pyproject.toml`, задача CS-07).
-4. **Вход ≠ выход.** Инструмент не перезаписывает свой вход; `--in-place` — только явно и с `.bak`. Цепочка команд для каждого ассета записывается (рецепт в `game/models/CREDITS.md` или `docs/tasks/`).
-5. Загрузки — через одну функцию: запись в `.part` → `os.replace`; URL закреплён за версией или коммитом, по возможности с SHA-256.
-6. Зависимости — `requirements.txt` с точными версиями (`tools/` и `game/tools/` отдельно); версия `bpy`/Blender записана.
-7. Одна библиотека на задачу: геометрия Blender — `hq_lib` (детали) или `convoy_kit` (техника с запеканием); GLB — `blender/glb_io.py`. Новые копии `box`/`cyl` не заводить.
-8. Blender: предпочитать data API и `bmesh` операторам `bpy.ops` (в фоне они падают на `poll()`); фиксированный seed для процедурного.
-9. `.gd`-инструменты (`game/tools/**`) вызывают только публичный API игры.
+1. Each file starts with a docstring header in CODE_LANGUAGE: purpose, run command, dependencies, decision and date (as today — the best part of the tooling). Public library functions have docstrings.
+2. Template: `argparse` with `--help`; `def main() -> int`; `if __name__ == "__main__": sys.exit(main())`; paths via `pathlib` relative to `__file__` (`ROOT = Path(__file__).resolve().parents[N]`); `encoding="utf-8"` for text I/O.
+3. PEP 8, 4 spaces, type hints on public functions. Formatting and linting with `ruff format` and `ruff check` (config in `pyproject.toml`, task CS-07).
+4. **Input ≠ output.** A tool never overwrites its input; `--in-place` only explicitly and with a `.bak`. The command chain for every asset is recorded (recipe in `game/models/CREDITS.md` or `docs/tasks/`).
+5. Downloads go through one function: write to `.part` → `os.replace`; the URL is pinned to a version or commit, with SHA-256 where possible.
+6. Dependencies in `requirements.txt` with exact versions (`tools/` and `game/tools/` separately); the `bpy`/Blender version is recorded.
+7. One library per job: Blender geometry — `hq_lib` (details) or `convoy_kit` (vehicles with baking); GLB — `blender/glb_io.py`. No new copies of `box`/`cyl`.
+8. Blender: prefer the data API and `bmesh` over `bpy.ops` (operators fail on `poll()` in background mode); fixed seed for anything procedural.
+9. `.gd` tools (`game/tools/**`) call only the game's public API.
 
-## 15. Bash и CI
+## 15. Bash and CI
 
-1. `#!/usr/bin/env bash`, `set -euo pipefail` (в CI-скриптах с ручной проверкой кодов — `set -uo pipefail`), переменные в кавычках, запуск из корня с проверкой `[ -f game/project.godot ]`.
-2. Проверка игры ловит не только `SCRIPT ERROR|Parse Error`, но и `^ERROR:`, `SHADER ERROR`, `USER ERROR` (известный шум — в белом списке `tools/ci/known_errors.txt`).
-3. `pick.sh` считает боевым всё в `game/scripts/*.gd`, кроме явного списка небоевых (интерфейс, меню, ангар, настройки, перевод, профиль, отчёт, стенды).
-4. Новый сценарий, который ломался руками (пустой набор карточек, клик по вложенной кнопке), — проверка в автотесте.
+1. `#!/usr/bin/env bash`, `set -euo pipefail` (CI scripts that check exit codes manually: `set -uo pipefail`), quoted variables, run from the repo root with a `[ -f game/project.godot ]` check.
+2. The game check catches not only `SCRIPT ERROR|Parse Error` but also `^ERROR:`, `SHADER ERROR`, `USER ERROR` (known noise in an allowlist `tools/ci/known_errors.txt`).
+3. `pick.sh` treats every `game/scripts/*.gd` as combat except an explicit non-combat list (UI, menu, hangar, settings, localization, profile, report, benches).
+4. Every scenario that broke by hand (empty card offer, click on a nested button) gets an autotest check.
 
-## 16. Репозиторий
+## 16. Repository
 
-1. В git: код, `.uid`, `.import` всех ассетов в `game/` (одинаковые настройки импорта у всех и в CI), `.tscn/.tres`, `project.godot`, `export_presets.cfg`, `.po`.
-2. Не в git: `.godot/`, сборки, `*.translation`, `.blend`/`.blend1`, сырые выходы генераторов, `.venv/`, `node_modules/`, `.env`, `*.session`, логи. Папка с рабочими файлами внутри `game/`, которую Godot не должен импортировать, — с пустым `.gdignore`.
-3. Имена файлов и папок — только латиницей (CLAUDE.md, правило 7).
-4. Коммит — маленький, на ЯЗЫКЕ_КОДА: что и зачем.
+1. In git: code, `.uid`, `.import` for every asset in `game/` (same import settings for everyone and in CI), `.tscn/.tres`, `project.godot`, `export_presets.cfg`, `.po`.
+2. Not in git: `.godot/`, builds, `*.translation`, `.blend`/`.blend1`, raw generator outputs, `.venv/`, `node_modules/`, `.env`, `*.session`, logs. A work folder inside `game/` that Godot must not import gets an empty `.gdignore`.
+3. File and folder names — ASCII only (CLAUDE.md, rule 7).
+4. Commits are small, in CODE_LANGUAGE: what and why.
 
-## 17. Проверка своей правки перед PR (чек-лист автора)
+## 17. Author checklist before a PR
 
-- [ ] Типы указаны, `untyped`-предупреждений нет.
-- [ ] У новых и изменённых классов и публичных функций есть докстринг `##` на ЯЗЫКЕ_КОДА.
-- [ ] Логика не сравнивает русские строки; новые id — enum или `StringName`.
-- [ ] Новые числа баланса — в положенном месте (§5), текст для игрока берёт число оттуда же.
-- [ ] Нет записи в чужие поля и `_`-поля других классов.
-- [ ] В `_process` нет новых выделений памяти, `get_nodes_in_group`, `load()`.
-- [ ] Строки для игрока переводятся по правилу «шаблон → `Loc.t` → `%`».
-- [ ] Новая кнопка работает мышью и с геймпада; кегль ≥ 14.
-- [ ] `tools/ci/pick.sh` → нужные проверки пройдены, результат в описании PR.
+- [ ] Everything is typed; no `untyped` warnings.
+- [ ] New and changed classes and public functions have a `##` docstring in CODE_LANGUAGE.
+- [ ] Logic does not compare Russian strings; new ids are enums or `StringName`.
+- [ ] New balance numbers are where §5 says; player-facing text takes the number from there.
+- [ ] No writes to foreign fields or other classes' `_` fields.
+- [ ] No new allocations, `get_nodes_in_group` or `load()` in `_process`.
+- [ ] Player strings follow "template → `Loc.t` → `%`".
+- [ ] New buttons work with mouse and gamepad; font size ≥ 14.
+- [ ] `tools/ci/pick.sh` → required checks passed, results in the PR description.
