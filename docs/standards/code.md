@@ -80,10 +80,10 @@ Regardless of the choice:
 
 ## 6. Coupling between parts (details — [architecture.md](architecture.md))
 
-1. `Main.I` is the access point to sortie services. Entities **may** read (`Main.I.player`, `run_time`) and call services (`projectiles.spawn_*`, `fx`, `sfx`, `tele`). Entities **may not** write `Main` fields directly (`Main.I.parts += …`, `m.pending_levels += 1`) — only through a named method on `Main` (or the future `RunState`): `grant_parts(n, reason)`.
+1. `Main.I` is the access point to sortie services. Entities **may** read (`Main.I.player`, `run_time`) and call services (`projectiles.spawn_*`, `fx`, `sfx`, `tele`). Entities **may not** write `Main` fields directly (`Main.I.parts += …`, `m.pending_levels += 1`) — only through a named `RunState` method: `run.grant_parts(n, reason)` (ADR-02).
 2. Never touch another class's `_` fields and methods. Need access — add a public method (for tools — with a `debug_` prefix).
 3. 2D logic does not call `Render3D.I` directly; whatever logic needs from the view (`ground_under`, `mouse_world`) goes through a narrow interface.
-4. An event with two or more listeners (enemy death, reward, player damage) is a signal, connected via Callable: `enemy.died.connect(_on_enemy_died)`.
+4. Gameplay events (enemy killed, player damaged, activity done, banner, radio) are emitted on the `Events` bus (ADR-02): `Events.activity_succeeded.emit(&"transport")`, not calls into `Main`. Listeners connect via Callable: `Events.enemy_killed.connect(_on_enemy_killed)`.
 5. One rule — one place. Rewards, XP and card offers are not copied across files (change S10-13 had to be made in two places by hand).
 
 ## 7. Performance (bullet heaven)

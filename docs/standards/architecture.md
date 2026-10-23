@@ -119,18 +119,17 @@ Recommended order before the demo: CR bugs → CS-05, CS-08 (small) → CS-02, C
 **Decision:** logic stays 2D; `Render3D` mirrors it into a 3D scene with a top-down camera.
 **Consequences:** + deterministic autotest, visuals change without touching combat rules. − Anything logic needs from the terrain goes through inverse projections; the 3D → 2D link must be a narrow interface (`View`), not `Render3D.I` from logic.
 
-### ADR-02. Keep the `Main.I` service locator, with rules
-**Status:** proposed. **Decides:** Kanta (code structure, not game rules — can be accepted together with the standard).
-**Context:** 657 uses; a full move to signals and dependency injection would take weeks before the demo.
+### ADR-02. Event bus + RunState instead of writing into `Main`
+**Status:** accepted (Kanta 2026-10-23: signals, approach 1 "event bus + RunState"). Design — `docs/superpowers/specs/2026-10-23-events-run-state-design.md`, plan — `docs/superpowers/plans/2026-10-23-events-run-state.md` (4 PRs, code starts after Kanta's "yes" on the plan).
+**Context:** 657 `Main.I` uses; ~85 % are service calls (sound, player, projectiles, fx, telemetry) and stay direct. The problems are events and state writes: rewards in five places, sortie state written from outside (CR-02).
 
 | Option | Complexity | Risk | Benefit |
 | --- | --- | --- | --- |
-| A. Rewrite to signals and explicit dependencies | high | regressions before the demo | maximal, but too late |
-| **B. Keep `Main.I` for reads and services; writes only through methods; sortie state in `RunState`** | low, incremental | small | fixes real bugs (CR-02, duplicated rewards) |
-| C. Change nothing | none | bugs repeat | none |
+| **1. One `Events` autoload with typed signals + `RunState`; services stay direct calls** | low–medium, 4 PRs | small | one place for rewards and state; new listeners without editing `Main` |
+| 2. Signals on each entity, wired by the spawner | medium | forgotten connections lose events silently | same result, more wiring |
+| 3. Remove `Main.I` entirely, inject services | high, 2–3 weeks | regressions before the demo | cleanest |
 
-**Decision (B recommended):** reads and service calls through `Main.I` are allowed; writing `Main` fields from other code is forbidden; new sortie state goes to `RunState`; events with several listeners are signals.
-**Consequences:** + incremental, no big rewrite; + `RunState` can be unit-tested without a scene. − Coupling through a global access point remains.
+**Consequences:** + rewards and state in one place, guarded by a smoke check; + `RunState` is unit-tested. − A global bus hides who listens; mitigated by the signal table in the design doc.
 
 ### ADR-03. Projectiles and mass effects are data, not nodes
 **Status:** accepted de facto, now recorded. Arrays + one `_draw`/MultiMesh, a cap on every pool. Next step if the Deck runs short on CPU — packed arrays (`PackedVector2Array`/`PackedFloat32Array`) instead of dictionaries; decide from `perf.gd` logs, not in advance.
