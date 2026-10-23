@@ -136,6 +136,18 @@ func process(delta: float) -> void:
 		_fort.parts_down = {}
 		for nm in (["turret_1", "turret_2", "turret_3", "turret_4"] if ph >= 2 else []) + (["engine_l", "engine_r"] if ph >= 3 else []):
 			_fort.parts_down[nm] = true
+	elif p.get("heli", false):
+		if _heli == null:   # S9-22: «Сарыч» висит рядом с игроком, логика стоит (винты крутит render3d)
+			_spawned = true
+			_heli = Helicopter.new()
+			_heli.position = (p["pos"] as Vector2) + Vector2(-120, 90)   # за хвостом игрока: пушки не попадают
+			_heli.heading = -0.6
+			_heli.process_mode = Node.PROCESS_MODE_DISABLED
+			m.world.add_child(_heli)
+			m.player.process_mode = Node.PROCESS_MODE_DISABLED   # не стреляет: дым попаданий не закрывает винт
+		_heli.max_hp = 99999.0
+		_heli.hp = 99999.0
+		_heli._flash = 0.0
 	elif p.get("enemies", false) and (not _spawned or m.get_tree().get_nodes_in_group("enemies").is_empty()):   # смена класса в начале точки очищает мир
 		_spawn_all_enemies(p["pos"])   # точка, а не игрок: в первый кадр игрок ещё не перенесён
 	if p.get("convoy", false):
@@ -607,6 +619,8 @@ func _make_points() -> Array:
 		for ph in [1, 2, 3]:
 			pts.append({"name": "model_fortress_%d" % ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "enemies": true, "fortress": ph, "wait": 2.5})
 		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
+		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
+		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--vat="):   # S9-07/S9-08: кишлак у протоки: --vat=x,z[,zoom] (координаты — tools/village_water)
 			var v := a.substr(6).split(",")
@@ -618,6 +632,7 @@ func _make_points() -> Array:
 ## 3.5: враги всех видов рядом с игроком (стенд 3D-моделей в бою)
 var _spawned := false
 var _fort: Fortress = null
+var _heli: Helicopter = null
 var _g_spawned := false
 
 
