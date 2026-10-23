@@ -44,6 +44,8 @@ var _anim := {}
 var _anim_key := ""
 var _env: Environment
 var _key_light: DirectionalLight3D
+var _rim_light: DirectionalLight3D
+var _fill_light: DirectionalLight3D   # S9-03: заполняющий свет склада (только вкладка «ОРУЖИЕ»)
 var _flight_bg: Node3D       # п. 32: облака под самолётом плывут назад — «полёт»
 var _store_bg: Node3D        # п. 32: склад вооружения — пол, стеллажи, ящики
 var _bg := ""
@@ -88,11 +90,17 @@ func _ready() -> void:
 	# сбоку-спереди, а не сверху: верх светлой окраски не выбеливается при взгляде сверху
 	_key_light.basis = Basis.looking_at(Vector3(0.55, -0.55, -0.62).normalized(), Vector3.UP)
 	vp.add_child(_key_light)
-	var rim := DirectionalLight3D.new()
-	rim.light_color = Color(0.6, 0.72, 1.0)
-	rim.light_energy = 0.4
-	rim.basis = Basis.looking_at(Vector3(-0.6, -0.2, 0.75).normalized(), Vector3.UP)
-	vp.add_child(rim)
+	_rim_light = DirectionalLight3D.new()
+	_rim_light.light_color = Color(0.6, 0.72, 1.0)
+	_rim_light.light_energy = 0.4
+	_rim_light.basis = Basis.looking_at(Vector3(-0.6, -0.2, 0.75).normalized(), Vector3.UP)
+	vp.add_child(_rim_light)
+	# S9-03: с противоположной от ключевого стороны, сверху, без теней — теневая сторона оружия не проваливается
+	_fill_light = DirectionalLight3D.new()
+	_fill_light.light_color = Color(0.92, 0.94, 1.0)
+	_fill_light.light_specular = 0.0   # без бликов: только мягко поднимает тень
+	_fill_light.basis = Basis.looking_at(Vector3(-0.5, -0.75, 0.45).normalized(), Vector3.UP)
+	vp.add_child(_fill_light)
 	_flight_bg = _make_flight_bg()
 	vp.add_child(_flight_bg)
 	_store_bg = _make_store_bg()
@@ -232,6 +240,14 @@ func _make_store_bg() -> Node3D:
 	return n
 
 
+## S9-03: свет склада (вкладка «ОРУЖИЕ»)
+const STORE_KEY := 0.62
+const STORE_FILL := 0.25
+const STORE_AMBIENT := 0.36
+const STORE_WHITE := 4.0
+const STORE_EXPOSURE := 1.0
+
+
 func _set_bg(mode: String) -> void:
 	if mode == _bg:
 		return
@@ -241,10 +257,24 @@ func _set_bg(mode: String) -> void:
 	_store_bg.visible = not fly
 	_env.background_mode = Environment.BG_SKY if fly else Environment.BG_COLOR
 	_env.background_color = Color(0.06, 0.06, 0.065)
-	_env.ambient_light_color = Color(0.6, 0.68, 0.82) if fly else Color(0.75, 0.68, 0.58)
-	_env.ambient_light_energy = 0.5 if fly else 0.42
-	_key_light.light_energy = 1.0 if fly else 0.95
+	# S9-03: на складе окружающий свет нейтральный (тёплый 0,75/0,68/0,58 желтил оливковую краску до кремовой)
+	_env.ambient_light_color = Color(0.6, 0.68, 0.82) if fly else Color(0.66, 0.66, 0.66)
+	_env.ambient_light_energy = 0.5 if fly else STORE_AMBIENT
+	_key_light.light_color = Color(1.0, 0.94, 0.85) if fly else Color(1.0, 0.96, 0.91)
+	_key_light.light_energy = 1.0 if fly else STORE_KEY
 	_key_light.shadow_enabled = not fly   # в полёте тени на «пол» нет — пола нет
+	# S9-03 (Kanta 23.10: «оружие засвечено, выглядит неестественно»): на складе засвет давал свет, а не материал —
+	# ключевой 0,95 скользящим лучом при «белой точке» тонемаппера 1,6 выбеливал освещённые грани (олива → крем),
+	# холодный контровой 0,4 давал голубые блики на металле пилона, а теневая сторона проваливалась в черноту.
+	# Теперь: ключевой слабее, мягкий заполняющий без бликов, контровой слабый и нейтральный,
+	# окружающий нейтральный, тонемаппер с запасом по светам (белая точка 4 вместо 1,6 — света не «выгорают»)
+	_rim_light.light_energy = 0.4 if fly else 0.12
+	_rim_light.light_color = Color(0.6, 0.72, 1.0) if fly else Color(0.85, 0.88, 0.95)
+	_rim_light.light_specular = 0.5 if fly else 0.2
+	_fill_light.visible = not fly
+	_fill_light.light_energy = STORE_FILL
+	_env.tonemap_white = 1.6 if fly else STORE_WHITE
+	_env.tonemap_exposure = 1.0 if fly else STORE_EXPOSURE
 
 
 ## Каждый кадр, пока открыта вкладка «САМОЛЁТ»: какой самолёт показать и где
@@ -324,8 +354,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		if weapon != "turret" and bottom > -0.19:
 			var sm := StandardMaterial3D.new()
 			sm.albedo_color = Color(0.32, 0.34, 0.3)
-			sm.metallic = 0.4
-			sm.roughness = 0.6
+			sm.metallic = 0.1   # S9-03: крашеные ложементы — матовые
+			sm.roughness = 0.88
 			for sx: float in [-0.17, 0.17]:
 				var st := MeshInstance3D.new()
 				var bx := BoxMesh.new()

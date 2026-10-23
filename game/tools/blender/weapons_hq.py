@@ -31,19 +31,19 @@ BLEND = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--blend=")),
 H.reset(not BATTLE)
 
 # Kanta 19.10: окраска реалистичная, матовая; металл — только голые детали (сопла, крепёж, ушки)
-M_MSL = paint("msl_white", (0.43, 0.44, 0.43), 0.7, ao=0.5, grime=0.12, dust=0.22)
-M_MSL_DARK = paint("msl_dark", (0.07, 0.07, 0.075), 0.68)
-M_BOMB = paint("bomb_olive", (0.12, 0.14, 0.085), 0.8, ao=0.5, grime=0.2, dust=0.35)
-M_OLIVE = paint("pod_olive", (0.19, 0.2, 0.145), 0.8, ao=0.55, grime=0.2, dust=0.3)
-M_CASE = paint("flare_case", (0.24, 0.26, 0.22), 0.78)
-M_HULL = paint("exp_hull", (0.225, 0.238, 0.217), 0.74)
-M_BAND = paint("band_yellow", (0.51, 0.38, 0.082), 0.72, ao=0.4, grime=0.12)
-M_YELLOW = paint("yellow", (0.56, 0.43, 0.045), 0.7, ao=0.4, grime=0.12)
-M_BROWN = paint("band_brown", (0.33, 0.2, 0.09), 0.72, ao=0.4, grime=0.1)
-M_RED = paint("mark_red", (0.5, 0.09, 0.06), 0.72, ao=0.35, grime=0.1)
-M_STENCIL = paint("stencil", (0.78, 0.76, 0.68), 0.8, ao=0.25, grime=0.12, dust=0.1)
-M_STENCIL_D = paint("stencil_dark", (0.05, 0.05, 0.05), 0.8, ao=0.2, grime=0.0, dust=0.05)
-M_DARK = paint("dark", (0.045, 0.045, 0.05), 0.75, ao=0.4, grime=0.05, dust=0.05)
+M_MSL = paint("msl_white", (0.43, 0.44, 0.43), 0.84, ao=0.5, grime=0.12, dust=0.22)
+M_MSL_DARK = paint("msl_dark", (0.07, 0.07, 0.075), 0.84)
+M_BOMB = paint("bomb_olive", (0.12, 0.14, 0.085), 0.88, ao=0.5, grime=0.2, dust=0.35)
+M_OLIVE = paint("pod_olive", (0.19, 0.2, 0.145), 0.88, ao=0.55, grime=0.2, dust=0.3)
+M_CASE = paint("flare_case", (0.24, 0.26, 0.22), 0.86)
+M_HULL = paint("exp_hull", (0.225, 0.238, 0.217), 0.85)
+M_BAND = paint("band_yellow", (0.51, 0.38, 0.082), 0.84, ao=0.4, grime=0.12)
+M_YELLOW = paint("yellow", (0.56, 0.43, 0.045), 0.84, ao=0.4, grime=0.12)
+M_BROWN = paint("band_brown", (0.33, 0.2, 0.09), 0.84, ao=0.4, grime=0.1)
+M_RED = paint("mark_red", (0.5, 0.09, 0.06), 0.84, ao=0.35, grime=0.1)
+M_STENCIL = paint("stencil", (0.78, 0.76, 0.68), 0.86, ao=0.25, grime=0.12, dust=0.1)
+M_STENCIL_D = paint("stencil_dark", (0.05, 0.05, 0.05), 0.86, ao=0.2, grime=0.0, dust=0.05)
+M_DARK = paint("dark", (0.045, 0.045, 0.05), 0.86, ao=0.4, grime=0.05, dust=0.05)
 M_STEEL = metal("steel", (0.36, 0.36, 0.37), 0.48, 0.7)
 M_NOZZLE = metal("nozzle", (0.13, 0.12, 0.11), 0.6, 0.55)
 M_BRASS = metal("brass", (0.66, 0.5, 0.22), 0.5, 0.5)
@@ -336,7 +336,7 @@ def arm():
 # Тест 3.5-s8, вторая версия (правки по кадру weapons_rockets_after): блок — окрашенный матовым хаки корпус,
 # металл только на крепеже и соплах; лепестки обтекателя — отдельная геометрия того же цвета (шов — щель между
 # лепестками и их торцы), без тёмных накладок. Габарит и верх (место крепления к пилону) — как у прежних.
-M_RKT = paint("rocket_grey", (0.3, 0.31, 0.28), 0.72, ao=0.45, grime=0.15, dust=0.2)
+M_RKT = paint("rocket_grey", (0.3, 0.31, 0.28), 0.85, ao=0.45, grime=0.15, dust=0.2)
 
 
 def ring_pts(rings):

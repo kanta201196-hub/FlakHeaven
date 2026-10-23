@@ -308,12 +308,12 @@ static func _with_ring(src: ArrayMesh, s: float, tint: Color) -> ArrayMesh:
 	seam.ring_segments = 6
 	var body := StandardMaterial3D.new()
 	body.albedo_color = tint
-	body.roughness = 0.6
-	body.metallic = 0.3
+	body.roughness = 0.86   # S9-03: краска матовая, как у самой турели (turret_light.py)
+	body.metallic = 0.08
 	var dark := StandardMaterial3D.new()
 	dark.albedo_color = Color(0.08, 0.08, 0.09)
-	dark.roughness = 0.5
-	dark.metallic = 0.5
+	dark.roughness = 0.85
+	dark.metallic = 0.12
 	for part: Array in [[collar, Vector3(0, -0.03 * s, 0), body], [seam, Vector3(0, 0.035 * s, 0), dark]]:
 		var st := SurfaceTool.new()
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -659,10 +659,11 @@ static func _mat(n: String) -> StandardMaterial3D:
 		"white":
 			m.albedo_color = Color(0.88, 0.89, 0.9)
 			m.roughness = 0.45
-		"hull":   # металл обшивки: нейтральный серый, не спорит с окраской самолёта
-			m.albedo_color = Color(0.52, 0.54, 0.55)
-			m.metallic = 0.55
-			m.roughness = 0.45
+		"hull":   # окраска пилонов: нейтральный серый, не спорит с окраской самолёта
+			# S9-03: матовая краска (было metallic 0,55 / roughness 0,45 — в ангаре пилон отсвечивал голубым)
+			m.albedo_color = Color(0.42, 0.43, 0.43)
+			m.metallic = 0.1
+			m.roughness = 0.86
 		"glass":  # остекление: тёмное, с бликом
 			m.albedo_color = Color(0.4, 0.55, 0.62, 0.45)
 			m.metallic = 0.85
