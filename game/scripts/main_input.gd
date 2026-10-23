@@ -4,6 +4,9 @@ extends RefCounted
 ## смена приоритета/пуска подвесов, действия ангара. Состояние вылета живёт в Main.
 
 var m: Main
+## CR-05: A/X/B/Y are both combat actions and "pick card 1–4"; a press held from the fight must not
+## blindly pick a card on the level-up or course screen, so input waits this long after it opens.
+const CARD_INPUT_DELAY := 0.3
 
 
 func _init(main: Main) -> void:
@@ -48,12 +51,16 @@ func handle_global_input() -> void:
 						m.cls_id = PlaneClasses.LIST[i]
 			return
 		"course_pick":
+			if m._state_t < CARD_INPUT_DELAY:
+				return
 			for i in m.course_offers.size():
 				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
 					m.choose_course(i)
 					return
 			return
 		"levelup":
+			if m._state_t < CARD_INPUT_DELAY:
+				return
 			for i in m.offers.size():
 				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
 					m.choose_card(i)

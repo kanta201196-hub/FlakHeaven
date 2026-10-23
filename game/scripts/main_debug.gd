@@ -609,7 +609,7 @@ func _run_autotest(delta: float) -> void:
 					return
 				# проверка переброса / закрепления / исключения
 				if m.level == 3 and m.bans > 0:
-					m.ban_card(0)
+					_click_ban_check()
 				elif m.level == 4 and m.rerolls > 0:
 					m.reroll()
 				elif m.level == 5:
@@ -727,3 +727,18 @@ func _tap(action: String, on: bool) -> void:
 		Input.action_press(action)
 	else:
 		Input.action_release(action)
+
+
+## CR-01: ban the first card through a real hit-test of the "Ban" button. The click must hit the
+## button, not the card under it; a wrong hit fails smoke and the full autotest.
+func _click_ban_check() -> void:
+	var r := m.hud.button_rect("ban:0") if m.hud != null else Rect2()
+	if r.size == Vector2.ZERO:
+		print("AUTOTEST: ban click check skipped (screen not drawn)")
+		m.ban_card(0)
+		return
+	var act := m.hud.button_at(r.get_center())
+	if act != "ban:0":
+		printerr("SCRIPT ERROR: CR-01 click on Ban hit '%s'" % act)
+	print("AUTOTEST: ban click -> %s" % act)
+	m.ui_click(act)

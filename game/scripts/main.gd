@@ -389,21 +389,37 @@ func _open_levelup() -> void:
 	if Cards.need_course(player):
 		_open_course()
 		return
-	offer_rare = rare_picks > 0
-	offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
-	if offers.is_empty():
-		# правка 3.5-s4: все улучшения собраны — награда за уровень и аса не пропадает молча
-		var n := pending_levels
-		pending_levels = 0
-		rare_picks = 0
-		rare_reasons.clear()
-		player.heal(player.max_hp * minf(0.5, 0.1 * n), "allcards")
-		parts += 30.0 * n * continue_mult()
-		show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(30.0 * n * continue_mult()), 3.0)
+	if not refill_offers():
 		return
 	levelup_intro = Hints.bump("levelup_intro") <= 3 # U-03: первые 3 выбора — с объяснением
 	_set_state("levelup")
 	sfx.play("levelup", -8.0)
+
+
+## Deals cards for the next pending level into `offers`. When nothing is left to offer, pays every
+## pending level as repair + spare parts and returns false (CR-02: an empty offer after a pick,
+## course choice, reroll or ban used to leave the game stuck on an empty level-up screen).
+func refill_offers() -> bool:
+	offer_rare = rare_picks > 0
+	offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
+	_state_t = 0.0   # CR-05: new cards on screen restart the input delay
+	if not offers.is_empty():
+		return true
+	# правка 3.5-s4: все улучшения собраны — награда за уровень и аса не пропадает молча
+	var n := pending_levels
+	pending_levels = 0
+	rare_picks = 0
+	rare_reasons.clear()
+	player.heal(player.max_hp * minf(0.5, 0.1 * n), "allcards")
+	parts += 30.0 * n * continue_mult()
+	show_banner(Loc.t("Все улучшения собраны — вместо карточки ремонт и +%d запчастей") % int(30.0 * n * continue_mult()), 3.0)
+	return false
+
+
+## Leaves a card screen back to the fight with the usual short invulnerability.
+func _resume_after_cards() -> void:
+	_set_state("playing")
+	player.invuln = maxf(player.invuln, CARD_INVULN)
 
 
 func choose_card(i: int) -> void:
@@ -422,12 +438,8 @@ func choose_card(i: int) -> void:
 			rare_reasons.pop_front()
 	if Cards.need_course(player):
 		_open_course()
-	elif pending_levels > 0:
-		offer_rare = rare_picks > 0
-		offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
-	else:
-		_set_state("playing")
-		player.invuln = maxf(player.invuln, CARD_INVULN)
+	elif pending_levels <= 0 or not refill_offers():
+		_resume_after_cards()
 
 
 # ---------- 3.2: курс ----------
@@ -452,13 +464,10 @@ func choose_course(i: int) -> void:
 	player.course = course_offers[i]
 	course_log.append("%d:%s>%s" % [int(run_time), "/".join(PackedStringArray(course_offers)), course_offers[i]])
 	sfx.play("card", -8.0, 0.9)
-	if pending_levels > 0:
-		offer_rare = rare_picks > 0
-		offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
+	if pending_levels > 0 and refill_offers():
 		_set_state("levelup")
 	else:
-		_set_state("playing")
-		player.invuln = maxf(player.invuln, CARD_INVULN)
+		_resume_after_cards()
 
 
 # ---------- 3.2: ангар ----------
@@ -485,8 +494,9 @@ func reroll() -> void:
 	if state != "levelup" or rerolls <= 0:
 		return
 	rerolls -= 1
-	offers = Cards.offer(player, OFFER_COUNT, banned, locked, 2 if offer_rare else 0)
 	sfx.play("card", -10.0, 0.8)
+	if not refill_offers():
+		_resume_after_cards()
 
 
 ## Закрепить карточку: она гарантированно будет в следующем выборе (и переживёт переброс).
@@ -521,6 +531,8 @@ func ban_card(i: int) -> void:
 			offers.insert(i, e)
 			break
 	sfx.play("ui_ban", -14.0, 1.6)
+	if offers.is_empty() and not refill_offers():   # CR-02: the banned card was the last one
+		_resume_after_cards()
 
 
 var _radio_at := 0

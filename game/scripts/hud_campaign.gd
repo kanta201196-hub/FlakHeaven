@@ -203,8 +203,8 @@ func _planes(m: Main, r: Rect2) -> void:
 				15, Color(0.85, 1.0, 0.85) if sel else (Color(0.88, 0.9, 0.95) if unl else Color(0.5, 0.52, 0.56)))
 			_para(Vector2(sr.position.x + 10, sr.position.y + 40), Loc.t(String(sd["short"])), tw - 8.0, 13, Color(0.75, 0.8, 0.86) if unl else Color(0.5, 0.52, 0.56))
 			if unl:
-				# S9-01: кнопка навыка раньше карточки самолёта — клик берёт первое совпадение, и карточка его перехватывала
-				_buttons.push_front([sr, "skill:%s:%s" % [id, sk]])
+				# S9-01: the skill button sits on top of the plane card; Hud.button_at picks the last-added match (CR-01)
+				_buttons.append([sr, "skill:%s:%s" % [id, sk]])
 			y += sr.size.y + 6.0
 
 
