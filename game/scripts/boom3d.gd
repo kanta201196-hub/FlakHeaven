@@ -487,6 +487,15 @@ func _fire(p: Vector3, v: Vector3, r0: float, r1: float, life: float, heat := 1.
 		"rot": randf() * TAU, "spin": randf_range(-1.5, 1.5), "tile": randi() % 4, "t": -delay, "c": Color(1, 1, 1, 1)})
 
 
+## S9-20: клуб чёрного дыма из подбитого двигателя в воздухе (pos — точка плоскости боя, s — размер)
+func black_smoke(pos: Vector2, s: float) -> void:
+	if Render3D.I == null or Render3D.I.cam == null:
+		return
+	var d := _rdir()
+	_smoke(Vector3(pos.x, 0.0, pos.y) + d * s * 0.15, Vector3(d.x * 0.15, 0.25, d.z * 0.15) * s, s * 0.35, s * randf_range(1.1, 1.5),
+		randf_range(2.2, 3.0), Color(0.07, 0.07, 0.07, 0.8), 0.0, 3.0, 1.0)
+
+
 func _smoke(p: Vector3, v: Vector3, r0: float, r1: float, life: float, col: Color, glow := 0.0, buoy := 10.0, drag := 1.2, delay := 0.0) -> void:
 	_add(L_SMOKE, {"p": p, "v": v, "life": life, "r0": r0, "r1": r1, "glow": glow, "b": buoy, "drag": drag, "g": 0.0,
 		"rot": randf() * TAU, "spin": randf_range(-0.5, 0.5), "tile": randi() % 4, "t": -delay, "c": col, "wind": 1.0,
@@ -705,6 +714,15 @@ func emp(pos: Vector2, r: float) -> void:
 		var a := TAU * float(i) / 14.0 + randf_range(-0.15, 0.15)
 		_add(L_SPARK, {"p": p, "v": Vector3(cos(a), 0.0, sin(a)) * r * randf_range(1.6, 2.2), "life": 0.4, "g": 0.0, "drag": 2.2,
 			"c": Color(0.6, 0.85, 1.0, 1.0), "w": randf_range(1.6, 2.6)})
+
+
+## S9-16 (Kanta: «Звуковой удар» — рябью по воздуху, а не кругом): три прозрачные плоские оболочки одна за другой,
+## бледные, почти бесцветные — читается как дрожь воздуха, расходящаяся от самолёта
+func sonic(pos: Vector2, r: float) -> void:
+	var p := Vector3(pos.x, 0.0, pos.y)
+	for i in 3:
+		_add(L_SHOCK, {"p": p, "v": Vector3.ZERO, "life": 0.55 + i * 0.08, "r0": r * 0.1, "r1": r * (1.0 - i * 0.12),
+			"c": Color(0.85, 0.93, 1.0, 0.32 - i * 0.08), "seed": randf() * 40.0, "sq": 0.06, "t": -0.07 * i})
 
 
 # ---------- каждый кадр ----------

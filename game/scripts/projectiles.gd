@@ -125,10 +125,15 @@ static func gun_spread(gun: String) -> float:
 
 
 ## kind — вид ракеты (MSL_NAMES), who — кто пустил (для отчёта «от кого»)
-func spawn_missile(pos: Vector2, dir: Vector2, kind := "aam", who := "ракетоносцы") -> void:
+## free — сколько секунд ракета летит прямо, без наведения (S9-23: залп аса уходит вперёд, потом доворачивает);
+## tgt — цель-ведомый (иначе — игрок)
+func spawn_missile(pos: Vector2, dir: Vector2, kind := "aam", who := "ракетоносцы", free := 0.0, tgt: Node2D = null) -> void:
 	var top := msl_p(kind, "speed0") if kind == "sam" else msl_p(kind, "speed")
-	missiles.append({"p": pos, "v": dir * top * float(MSL_V0.get(kind, 0.6)), "life": msl_p(kind, "life"), "lost": false,
-		"trail": PackedVector2Array(), "k": kind, "who": who, "age": 0.0})
+	var m := {"p": pos, "v": dir * top * float(MSL_V0.get(kind, 0.6)), "life": msl_p(kind, "life") + free, "lost": false,
+		"trail": PackedVector2Array(), "k": kind, "who": who, "age": 0.0, "free": free}
+	if tgt != null:
+		m["tgt"] = tgt
+	missiles.append(m)
 	Main.I.stats_add_counter("msl_" + kind, 1)   # сколько пущено ракет каждого вида (автотест)
 	if kind == "sam" and Boom3D.active():
 		Boom3D.ensure().ground_launch(pos, dir)   # вспышка пуска и клуб дыма у земли
@@ -657,7 +662,12 @@ func _update_missiles(delta: float) -> void:
 			if float(m["life"]) - delta <= 0.0:
 				Main.I.fx.explosion(p, 14.0, true, true, "flak")
 		elif alive and not m["lost"]:
-			var ang := rotate_toward(v.angle(), (pl.global_position - p).angle(), deg_to_rad(msl_p(kind, "turn")) * delta)
+			var aim := pl.global_position
+			var wt: Wingman = m.get("tgt") as Wingman if is_instance_valid(m.get("tgt")) else null
+			if wt != null and wt.alive():
+				aim = wt.global_position
+			# S9-23: первые free с — прямо по курсу пуска, затем доворот на цель
+			var ang := v.angle() if float(m["age"]) < float(m.get("free", 0.0)) else rotate_toward(v.angle(), (aim - p).angle(), deg_to_rad(msl_p(kind, "turn")) * delta)
 			# ЗРК: медленный разгон до крейсерской, через msl_sam_boost с — вторая ступень
 			var top := msl_p(kind, "speed")
 			if kind == "sam" and float(m["age"]) < Tuning.g("msl_sam_boost"):
@@ -672,6 +682,12 @@ func _update_missiles(delta: float) -> void:
 		var wk: String = MSL_NAMES.get(kind, "ракеты самолётов")
 		var who: String = m.get("who", "ракетоносцы")
 		var boom := false
+		var wt2: Wingman = m.get("tgt") as Wingman if is_instance_valid(m.get("tgt")) else null
+		if wt2 != null and wt2.alive() and not m["lost"] and p.distance_to(wt2.global_position) < 26.0:
+			wt2.damage(msl_p(kind, "dmg"))
+			Main.I.fx.hit_spark(p, Color(1, 0.5, 0.2))
+			missiles.remove_at(i)
+			continue
 		if alive:
 			var dm := p.distance_to(pl.global_position)
 			var hit: bool = not m["lost"] and dm < pl.radius + 6.0

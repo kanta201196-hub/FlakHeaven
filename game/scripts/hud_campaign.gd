@@ -189,19 +189,23 @@ func _planes(m: Main, r: Rect2) -> void:
 		y += 22.0
 		for sk in PlaneClasses.CLASS_SKILLS[id]:
 			var sd: Dictionary = PlaneClasses.SKILL3[sk]
-			var sr := Rect2(x - 6.0, y, tw + 12.0, 34.0)
+			# S9-01: под названием — что делает навык; высота строки — по описанию
+			var ph := ui_font().get_multiline_string_size(Loc.out(Loc.t(String(sd["short"]))), HORIZONTAL_ALIGNMENT_LEFT, tw - 8.0, 13).y
+			var sr := Rect2(x - 6.0, y, tw + 12.0, 30.0 + ph)
 			if sr.end.y > card.end.y - 6.0:
 				break
 			var sel: bool = sk == cur
 			var unl := Profile.skill_unlocked(id, sk)
-			ctrl.draw_rect(sr, Color(0.55, 0.9, 0.55, 0.2) if sel else Color(1, 1, 1, 0.08 if sr.has_point(mp) else 0.03))
+			ctrl.draw_rect(sr, Color(0.55, 0.9, 0.55, 0.2) if sel else Color(1, 1, 1, 0.08 if sr.has_point(mp) and unl else 0.03))
 			ctrl.draw_rect(sr, Color(0.6, 1.0, 0.6, 0.9) if sel else Color(1, 1, 1, 0.18), false, 1.5)
 			var si: int = PlaneClasses.CLASS_SKILLS[id].find(sk)
-			_text(Vector2(sr.position.x + 10, sr.position.y + 23), ("● " if sel else "○ ") + Loc.t(String(sd["title"])) + (Loc.t(" · %d с") % int(sd["cd"]) if unl else Loc.t("  — экипаж ур. %d") % Profile.SKILL_UNLOCK[si]),
+			_text(Vector2(sr.position.x + 10, sr.position.y + 21), ("● " if sel else "○ ") + Loc.t(String(sd["title"])) + (Loc.t(" · %d с") % int(sd["cd"]) if unl else Loc.t("  — экипаж ур. %d") % Profile.SKILL_UNLOCK[si]),
 				15, Color(0.85, 1.0, 0.85) if sel else (Color(0.88, 0.9, 0.95) if unl else Color(0.5, 0.52, 0.56)))
+			_para(Vector2(sr.position.x + 10, sr.position.y + 40), Loc.t(String(sd["short"])), tw - 8.0, 13, Color(0.75, 0.8, 0.86) if unl else Color(0.5, 0.52, 0.56))
 			if unl:
-				_buttons.append([sr, "skill:%s:%s" % [id, sk]])
-			y += 40.0
+				# S9-01: кнопка навыка раньше карточки самолёта — клик берёт первое совпадение, и карточка его перехватывала
+				_buttons.push_front([sr, "skill:%s:%s" % [id, sk]])
+			y += sr.size.y + 6.0
 
 
 ## Колонка 3: что откроется, ангар и большая кнопка вылета

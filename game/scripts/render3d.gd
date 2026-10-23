@@ -971,7 +971,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var y: float = maxf(ra[0] - Tuning.g("dive_depth") * dk, _ground_floor(p.global_position, Tuning.g("plane_len") * p.size * 0.5))
 			_place(u, p.global_position, p.heading, p.bank * 0.55, roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), float(ra[1]) - 0.2 * p.dive_pitch())
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
-			u["ab"] = move_toward(float(u.get("ab", 0.0)), 1.0 if p.ab_t > 0.0 else 0.0, sd * 4.0)
+			# S9-16: на «Звуковом ударе» (ram_t) — тот же огонь и плотный след, что на форсаже
+			u["ab"] = move_toward(float(u.get("ab", 0.0)), 1.0 if p.ab_t > 0.0 or p.ram_t > 0.0 else 0.0, sd * 4.0)
 			var ab: float = u["ab"]
 			PlaneFx.update(u, sd, ab)
 			# M-39 (Э-2): инверсия белая, у сопла узкая и плотная, расплывается шире и тает быстрее (жизнь короче)
@@ -1646,7 +1647,11 @@ func _sync_missiles(m: Main) -> void:
 			if mm.has("tint"):   # связки: след своего цвета (бирюзовый, золотой…), но светлый
 				st = st.duplicate()
 				st[5] = (mm["tint"] as Color).lerp(Color.WHITE, 0.45)
-			_trails.emit(int(mm["tid"]), Vector3(tail.x, -2.0, tail.y), st)
+			# S9-13: у своего самолёта след идёт ниже крыла (пуск — с пилонов под ним), выше — по мере удаления
+			var ty := -2.0
+			if arr_st[0] != pr.missiles and is_instance_valid(m.player):
+				ty = lerpf(-12.0, -2.0, clampf(tail.distance_to(m.player.global_position) / 160.0, 0.0, 1.0))
+			_trails.emit(int(mm["tid"]), Vector3(tail.x, ty, tail.y), st)
 
 
 # ---------- тест 3.5-s5 (п. 11): пули и ракеты врагов в 3D ----------

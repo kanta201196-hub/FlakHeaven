@@ -7,7 +7,9 @@ extends Boss
 ##      пополняется, пока цела верхняя (командная) турель.
 ##   2. «Боевой курс» — люки открываются циклами (6 с из 14) и кладут за собой ковровую дорожку; попадание
 ##      в открытый люк — ×3 урона по корпусу. Двигатели бьются с задней полусферы; каждый — минус 20% скорости.
-##   3. «Падение» — корпус открыт, горит, бросает маршрут и идёт на таран, кольца пуль и ловушки.
+##   3. «Падение» — корпус открыт, двигатели чадят чёрным дымом; бросает маршрут и тянет прочь от игрока
+##      (S9-20: не кружит), огрызается кольцами пуль и ловушками. Не добили за FLEE_T с — падает сама,
+##      запчастей за неё вдвое меньше.
 ## Урон по точке — только попаданием в неё (своя форма: корпус, крылья, точки — seg_test/aoe_dist);
 ## автотурели игрока бьют по «Крепости» ×0,35, самонаводящиеся ракеты ×0,6 (тест 3.5-s7: на «Ките» 82% урона — турели).
 
@@ -35,6 +37,8 @@ const TAIL_DEAD := 0.35
 const SECTOR_R := 750.0
 const ESCORT_N := 4
 const MIN_FIGHT := 45.0          # предел урона: бой не короче 45 с при любой сборке
+const FLEE_SPEED := 0.75         # фаза 3: доля BASE_SPEED — игрок догоняет
+const FLEE_T := 50.0
 
 var phase := 1
 var points: Array = []           # [{name, node, kind, off (в осях самолёта: x — вперёд), hp, max, cd, shots, st, sec: [центр, полуширина]}]
@@ -58,6 +62,8 @@ var _drop_t := 0.0
 var _escorts: Array = []
 var _escort_t := 0.0
 var _hit_fx := 0.0
+var _flee_t := 0.0
+var _smoke_t := 0.0
 
 
 func setup_fortress(total: float) -> void:
@@ -276,10 +282,9 @@ func _point_down(pt: Dictionary) -> void:
 		hull_open = true
 		hatches_open = false
 		_zones.clear()
-		Main.I.show_banner("Двигатели горят! «Крепость» падает и идёт на таран — добивайте!", 3.5)
-		Main.I.radio("Штаб", "Она падает и идёт на таран! Не подставляйтесь под нос — добивайте сбоку.")
+		Main.I.show_banner("Двигатели горят! «Крепость» дымит и уходит — догоните и добейте!", 3.5)
+		Main.I.radio("Штаб", "Она горит и уходит! Догоняйте, пока не скрылась, — кормовые кольца бьют назад, заходите сбоку.")
 		Main.I.tele.add("fortress_phase3_s", Main.I.run_time - _born)
-		contact_damage = 40.0
 	_set_title()
 
 
@@ -298,9 +303,21 @@ func behave(delta: float) -> void:
 	var to := p.global_position - global_position
 	var d := to.length()
 	if phase >= 3:
-		# падение: бросает маршрут и идёт на таран широкой дугой
-		heading = rotate_toward(heading, to.angle(), deg_to_rad(40.0) * delta)
-		position += Vector2.from_angle(heading) * BASE_SPEED * 1.1 * delta
+		# S9-20: подбитая — бросает маршрут и тянет прочь от игрока, за двигателями чёрный дым
+		heading = rotate_toward(heading, (-to).angle(), deg_to_rad(25.0) * delta)
+		position += Vector2.from_angle(heading) * BASE_SPEED * FLEE_SPEED * delta
+		_flee_t += delta
+		_smoke_t -= delta
+		if _smoke_t <= 0.0 and Boom3D.active():
+			_smoke_t = 0.07
+			for pt in points:
+				if pt["kind"] == "engine":
+					Boom3D.ensure().black_smoke(_world(pt), 46.0)
+		if _flee_t >= FLEE_T and hp > 0.0:
+			parts = int(parts * 0.5)
+			hp = 0.0
+			_die()
+			return
 	else:
 		heading = rotate_toward(heading, (_wp - global_position).angle(), deg_to_rad(22.0) * delta)
 		position += Vector2.from_angle(heading) * spd * delta
@@ -496,7 +513,10 @@ const ZONE_R := 80.0
 
 
 func _die() -> void:
-	Main.I.show_banner("«Крепость» сбита!" if base_hits == 0 else "«Крепость» сбита! (успела отбомбиться по базе)", 4.0)
+	if _flee_t >= FLEE_T:
+		Main.I.show_banner("«Крепость» не дотянула и рухнула сама — запчастей за неё вдвое меньше", 4.0)
+	else:
+		Main.I.show_banner("«Крепость» сбита!" if base_hits == 0 else "«Крепость» сбита! (успела отбомбиться по базе)", 4.0)
 	for i in 4:
 		Main.I.fx.explosion(global_position + Vector2(randf_range(-90, 90), randf_range(-60, 60)), 50.0)
 	super()

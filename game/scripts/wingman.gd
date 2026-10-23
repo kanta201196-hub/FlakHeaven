@@ -88,6 +88,9 @@ func damage(amount: float) -> void:
 			return
 		dead_t = 20.0
 		visible = false
+		# S9-12: потеря ведомого — в эфир (очередью, не перебивая), замена — через 20 с
+		Story.say(String(Prog.WING_TYPES[type]["short"]), "Подбит, выхожу из боя! Замена через 20 секунд.")
+		Story.say(Story.DISPATCH, "Ведомый сбит. Держитесь, замена на подходе.")
 
 
 ## Залп ракет В-В: n ракет за время over (навыки «Сомкнуть строй», «Под одним зонтом», «Парад»)
@@ -109,7 +112,7 @@ func _slot_offset(p: Player) -> Vector2:
 	var span := clear_r(p)
 	var lat := span + (10.0 if p.ranks_t > 0.0 else 40.0)
 	var base := Vector2(-20.0, side * lat) if row == 0 else Vector2(span * 0.6 + 40.0 * (row - 1), side * (lat + 30.0 * row))
-	var off := base.rotated(p.heading)
+	var off := base.rotated(_form_h if not is_nan(_form_h) else p.heading)
 	if _run_t > 0.0: # «Тёплая компания»: заход вперёд
 		off += Vector2.from_angle(p.heading) * 330.0 * sin(clampf(1.0 - _run_t / 1.2, 0.0, 1.0) * PI)
 	return off
@@ -197,6 +200,11 @@ func _missile(p: Player, t: Enemy, dmg: float, opts := {}) -> void:
 ## и заходит на место сзади.
 const WING_TURN := 160.0   # °/с
 var _fly_w := 0.0          # 0 — держит строй, 1 — летит сам (плавный переход)
+## S9-06 (Kanta: на резком вираже ведомый замирает и втыкается носом в ведущего): строй поворачивается
+## вслед за ведущим не мгновенно, а FORM_TURN °/с — ведомый проходит вираж по своей, более широкой дуге;
+## путь к месту в строю огибает ведущего; нос смотрит туда, куда ведомый летит
+const FORM_TURN := 75.0
+var _form_h := NAN
 
 
 func _fly(p: Player, delta: float) -> void:
@@ -204,7 +212,17 @@ func _fly(p: Player, delta: float) -> void:
 		_attack_run(p, delta)
 		_keep_clear(p, delta)
 		return
+	_form_h = p.heading if is_nan(_form_h) else rotate_toward(_form_h, p.heading, deg_to_rad(FORM_TURN) * delta)
 	var target := p.global_position + _slot_offset(p)
+	# путь к месту проходит сквозь ведущего — заходим в обход, с внешней стороны
+	var seg := target - global_position
+	var t_c := clampf((p.global_position - global_position).dot(seg) / maxf(seg.length_squared(), 1.0), 0.0, 1.0)
+	var near := global_position + seg * t_c
+	var gap := clear_r(p) * 1.7
+	var nd := near.distance_to(p.global_position)
+	if nd < gap and t_c > 0.05 and t_c < 0.95:
+		var out := (near - p.global_position) / nd if nd > 1.0 else Vector2.from_angle(p.heading + (PI / 2.0 if slot % 2 else -PI / 2.0))
+		target += out * (gap - nd) * 1.5
 	var to := target - global_position
 	var dist := to.length()
 	var pv := p.velocity
@@ -218,7 +236,8 @@ func _fly(p: Player, delta: float) -> void:
 	var station := pv + to * 3.0
 	# точка захода — место в строю с упреждением по движению ведущего
 	var aim := to + pv * clampf(dist / ps, 0.2, 1.2)
-	heading = rotate_toward(heading, aim.angle() if _fly_w > 0.5 else (p.heading if dist < 80.0 else station.angle()), deg_to_rad(WING_TURN) * delta)
+	var face := p.heading if velocity.length() < 40.0 else velocity.angle()
+	heading = rotate_toward(heading, aim.angle() if _fly_w > 0.5 else face, deg_to_rad(WING_TURN) * delta)
 	var along := to.dot(fwd)
 	var spd := ps * clampf(1.0 + along / 350.0, 0.75, 1.45 if dist < 500.0 else 1.8)
 	var flying := Vector2.from_angle(heading) * spd
