@@ -57,8 +57,12 @@ const TURRET_MODELS := {
 		# корма (пример владельца 16.10): кабина стрелка с фонарём и шаровая установка под килем
 		"tail": "res://models/turrets/turret_kit_tail_ball_t%d.glb", "cabin": "res://models/turrets/turret_kit_tail_cabin.glb",
 		"muzzle_tail": Vector3(1.36, 0.0, 0.0)},
-	# ступени: 1 — лёгкая без щитка, 2 — тормоза и щиток, 3 — + короб ленты
+	# S9-04 (Kanta 23.10: «каждый уровень заметно отличается»): 1 — малая (×0,88), один ствол без щитка;
+	# 2 — два ствола один над другим, тормоза, рамка-щиток, короб ленты; 3 — крупная (×1,12), два ствола рядом
+	# в кожухах, сплошной бронещиток, два короба, экраны, прицел. muzzle_t — дульный срез по ступени, k — размер
 	"attacker": {"file": "res://models/turrets/turret_grach_t%d.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
+		"muzzle_t": [Vector3(0.792, 0.282, 0.0), Vector3(1.17, 0.34, 0.18), Vector3(1.16, 0.403, 0.0)],
+		"k": [0.88, 1.0, 1.12],
 		"body": [Color(0.3, 0.3, 0.24), Color(0.31, 0.31, 0.28)]},
 }
 
@@ -226,7 +230,8 @@ static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 
 	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
 	var m := _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s%s" % [cls, file.get_file(), tint.to_html(), part], part)
 	if cls == "attacker" and side == "top" and m != null and part != "guns":
-		return _with_ring(m as ArrayMesh, float(spec["s"]), tint)
+		var ks: Array = spec.get("k", [1.0, 1.0, 1.0])
+		return _with_ring(m as ArrayMesh, float(spec["s"]) * float(ks[clampi(t, 1, 3) - 1]), tint)
 	return m
 
 
@@ -242,39 +247,6 @@ static func turret_file(cls: String, t := 1, side := "", evo := false) -> String
 	if file.contains("%d"):
 		file = file % clampi(t, 1, 3)
 	return file if ResourceLoader.exists(file) else ""
-
-
-## Тест 3.5-s8 (анимация в ангаре): турель из make() делится на корпус и узел «guns» (люлька со стволами,
-## tools/blender/turret_twin.py / turret_light.py) с точкой вращения на цапфах — стволы качаются по углу места
-## (поворот вокруг локальной Z). Только для ангара; в бою турель остаётся одним мешем. null — узла нет.
-static func split_turret(wmi: MeshInstance3D, cls: String, t: int, side: String, evo := false, plvl := 1) -> Node3D:
-	var file := turret_file(cls, t, side, evo)   # кормовой шар «Кита» узла «guns» не имеет — качается целиком
-	if file == "":
-		return null
-	var piv: Vector3 = _guns_pivot.get(file, Vector3.INF)
-	if not _guns_pivot.has(file):
-		var root: Node = (load(file) as PackedScene).instantiate()
-		var g := root.find_child("guns", true, false) as Node3D
-		if g != null:
-			piv = _rel_xf(g, root).origin * float(TURRET_MODELS[cls]["s"])
-		root.free()
-		_guns_pivot[file] = piv
-	if piv == Vector3.INF:
-		return null
-	var body := turret_model(cls, t, side, evo, plvl, "body")
-	var guns := turret_model(cls, t, side, evo, plvl, "guns")
-	if body == null or guns == null:
-		return null
-	wmi.mesh = body
-	var gmi := MeshInstance3D.new()
-	gmi.name = "guns"
-	gmi.mesh = guns
-	gmi.position = piv
-	wmi.add_child(gmi)
-	return gmi
-
-
-static var _guns_pivot := {}
 
 
 static func _rel_xf(n: Node3D, root: Node) -> Transform3D:
@@ -463,9 +435,11 @@ static func mesh(weapon: String, t: int, side := "") -> ArrayMesh:
 
 
 ## Точка вылета снаряда в координатах модели (длина 1): для ракет и бомб — центр, для стволов — дульный срез
-static func muzzle(weapon: String, cls := "", side := "") -> Vector3:
+static func muzzle(weapon: String, cls := "", side := "", t := 0) -> Vector3:
 	if weapon == "turret" and TURRET_MODELS.has(cls):
 		var spec: Dictionary = TURRET_MODELS[cls]
+		if t > 0 and spec.has("muzzle_t") and not (side == "tail" and spec.has("tail")):   # S9-04: срез по ступени
+			return (spec["muzzle_t"][clampi(t, 1, 3) - 1] as Vector3) * float(spec["s"])
 		return (spec.get("muzzle_tail" if side == "tail" and spec.has("tail") else "muzzle") as Vector3) * float(spec["s"])
 	match weapon:
 		"gunpod":
@@ -689,7 +663,7 @@ static func muzzle_world(p: Player, g: Hardpoint, si: int, aim := NAN) -> Vector
 	var side: String = (pts[si % pts.size()] as Dictionary)["side"]
 	var k := Tuning.g("plane_len") * p.size / float(tex1.get_width())   # пикселей мира на пиксель картинки
 	var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k
-	var mz := muzzle(g.weapon, p.cls_id, side) * len_px
+	var mz := muzzle(g.weapon, p.cls_id, side, tier(g.level, g.evo)) * len_px
 	var local := pt + Vector2(mz.x, mz.z)
 	if not is_nan(aim):   # турель: ствол смотрит на цель
 		local = pt + Vector2(mz.x, 0.0).rotated(aim - p.heading)

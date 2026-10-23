@@ -246,6 +246,8 @@ const STORE_FILL := 0.25
 const STORE_AMBIENT := 0.36
 const STORE_WHITE := 4.0
 const STORE_EXPOSURE := 1.0
+## S9-04: поворот турели на вкладке «ОРУЖИЕ» (рад): при виде по умолчанию (YAW0) стволы — к зрителю под ~55°
+const TURRET_SHOW_YAW := 1.35
 
 
 func _set_bg(mode: String) -> void:
@@ -340,14 +342,15 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		if weapon == "bombs" and not evo:   # тест 3.5-s8: калибр по уровню вкладки (ур. 1 / 3 / 5 → «50» / «250» / «1000»)
 			t = WeaponModels.bomb_t([1, 3, 5][t - 1])
 		var wmi := WeaponModels.make(weapon, t, side, cls_id, evo, 1, true)
-		if weapon == "turret":
-			wmi.set_meta("turret", [cls_id, t, side, evo, 1])   # тест 3.5-s8: турель крутится (HangarAnim)
 		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
 		var bb := wmi.mesh.get_aabb()
-		var s := (0.62 if weapon != "turret" else 0.9) / maxf(1.0, maxf(bb.size.x, bb.size.z))
-		wmi.scale = Vector3.ONE * s
-		var c := bb.get_center() * s
-		wmi.position = Vector3(-c.x, -0.03 if side == "under" else -0.08, -c.z)
+		var s := (0.62 if weapon != "turret" else 1.05) / maxf(1.0, maxf(bb.size.x, bb.size.z))
+		# турель — в одном масштабе на всех ступенях (модель меньше 1 — множитель не зависит от габарита),
+		# поэтому рост ступени виден; S9-04: стоит неподвижно, стволами вперёд-вбок к камере (3/4 спереди)
+		var rot := TURRET_SHOW_YAW if weapon == "turret" else 0.0
+		wmi.basis = Basis(Vector3.UP, rot).scaled(Vector3.ONE * s)
+		var c := Basis(Vector3.UP, rot) * (bb.get_center() * s)
+		wmi.position = Vector3(-c.x, -0.03 if side == "under" else (-0.15 if weapon == "turret" else -0.08), -c.z)
 		pivot.add_child(wmi)
 		# п. 32: на складе оружие лежит на двух ложементах-подставках от пола до низа модели
 		var bottom := wmi.position.y + bb.position.y * s
@@ -508,8 +511,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 					if cab != null:
 						cab.visible = false   # своя кабина модели вместо общей
 			if g.weapon == "turret":
-				turret_pos.append([wmi.position, side])
-				wmi.set_meta("turret", [cls_id, mtr, side, weapon_tier == 4, lvl])   # тест 3.5-s8: HangarAnim
+				turret_pos.append([wmi.position, side])   # S9-04: в ангаре турель неподвижна (HangarAnim её не трогает)
 			elif side == "bay":
 				wmi.set_meta("bay_load", true)   # тест 3.5-s8: при закрытых створках бомбы убраны (HangarAnim)
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
@@ -584,7 +586,7 @@ func _process(delta: float) -> void:
 		pivot.position.y = 0.0
 		pivot.rotation = Vector3.ZERO
 	WingMech.spin_props(_props, PROP_HANGAR * delta)
-	# тест 3.5-s8: механизация, створки и турели (на вкладке «ОРУЖИЕ» турель показывается всегда)
+	# тест 3.5-s8: механизация и створки (турели в ангаре неподвижны — S9-04)
 	if _anim_key != _key:
 		_anim_key = _key
 		_anim = HangarAnim.collect(pivot)
