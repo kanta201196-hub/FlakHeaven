@@ -189,7 +189,7 @@ func _gun(p: Player, delta: float) -> void:
 
 func _missile(p: Player, t: Enemy, dmg: float, opts := {}) -> void:
 	var side := -1.0 if slot % 2 == 0 else 1.0
-	Main.I.projectiles.spawn_player_missile(global_position, velocity + Vector2.from_angle(heading + side * 0.5) * 150.0, t,
+	Main.I.projectiles.spawn_player_missile(global_position, velocity + Vector2.from_angle(heading + side * 0.2) * 150.0, t,
 		dmg * p.missile_k(), src(), opts)
 
 

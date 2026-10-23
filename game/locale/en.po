@@ -6595,6 +6595,19 @@ msgstr "synergy: good company"
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
 
+#: game/scripts/cards.gd
+msgid "Быстрый отстрел"
+msgstr "Quick Release"
+
+#: game/scripts/cards.gd
+msgid "Яркие ловушки"
+msgstr "Bright Flares"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "+10% радиуса отстрела и +10% шанса увести ЗРК за ранг"
+msgstr "+10% release radius and +10% chance to decoy SAMs per rank"
+
 #: game/scripts/hud_hangar.gd
 #, c-format
 msgid "ВЕТКА %s · СТУПЕНЬ %d"

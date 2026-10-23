@@ -57,7 +57,7 @@ func label() -> String:
 	if bonus > 0.0:
 		s += " (+%d%%)" % int(round(bonus * 100.0))
 	if branch != "":
-		s += " · %s %d" % [Cards.BRANCHES[branch]["title"], branch_rank]
+		s += " · %s %d" % [Cards.branch_def(weapon, branch)["title"], branch_rank]
 	if uses_trigger() and trigger == "button":
 		s += " [прав. кн. мыши]"
 	return s
@@ -209,6 +209,8 @@ func range_px() -> float:
 			return 520.0 * p.mods["servo_range"] * _evo_k("range")
 		if evo and weapon == "flares":
 			return 360.0 * _evo_k("range")
+	if weapon == "flares" and branch == "power":
+		base *= 1.0 + 0.1 * branch_rank   # S10-09: «Яркие ловушки»
 	match weapon:
 		"flares", "emp", "laser", "plasma":
 			return base * (1.0 + 0.08 * (level - 1))
@@ -446,23 +448,42 @@ func _fire_laser(p: Player) -> bool:
 	return true
 
 
-## U-08: плазменная бомба — шар плазмы на ближайшей наземной цели в радиусе 600 (жжёт только землю)
+## U-08: плазменная бомба — шар плазмы на наземной цели в радиусе 600 (жжёт только землю)
+## S10-12 (Kanta: «часто промахивается»): раньше шар вставал там, где цель была в момент пуска, и движущаяся
+## техника выезжала из него. Теперь бомба летит PLASMA_FUSE с, точка — с упреждением по скорости цели, и
+## выбирается цель, рядом с которой больше всего наземных врагов (на ту же минуту упреждения)
+## S10-08: бомба падает до земли и рвётся на рельефе (Boom3D «plasma»), а не кольцом в воздухе
+const PLASMA_FUSE := 0.6
+
+
 func _fire_plasma(p: Player) -> bool:
-	var best: Enemy = null
-	var bd := 600.0
+	var ground: Array = []
 	for nd in p.get_tree().get_nodes_in_group("enemies"):
 		var e := nd as Enemy
-		if e == null or e.hp <= 0.0 or not e.is_ground:
+		if e != null and e.hp > 0.0 and e.is_ground:
+			ground.append([e, e.global_position + e.move_vel * PLASMA_FUSE])
+	var r := range_px()
+	var best := Vector2.INF
+	var best_n := 0
+	var best_d := INF
+	for c in ground:
+		var at: Vector2 = c[1]
+		var d := p.global_position.distance_to(at)
+		if d > 600.0:
 			continue
-		var d := p.global_position.distance_to(e.global_position)
-		if d < bd:
-			bd = d
-			best = e
-	if best == null:
+		var n := 0
+		for o in ground:
+			if at.distance_to(o[1]) < r * 0.8 + (o[0] as Enemy).radius:
+				n += 1
+		if n > best_n or (n == best_n and d < best_d):
+			best_n = n
+			best_d = d
+			best = at
+	if best_n == 0:
 		return false
-	Main.I.projectiles.spawn_fire(best.global_position, range_px(), dmg(), 4.0, "плазма", true, Color(0.75, 0.4, 1.0))
-	Main.I.fx.ring(best.global_position, range_px(), Color(0.8, 0.5, 1.0))
-	Main.I.sfx.play("bomb", -6.0, 0.8)
+	Main.I.projectiles.spawn_bomb(p.global_position, PLASMA_FUSE, 0.0, r, "плазма", best, true)
+	Main.I.projectiles.bombs.back()["plasma"] = {"dps": dmg(), "t": 4.0}
+	Main.I.sfx.play("bomb_drop", -10.0, 0.7)
 	return true
 
 
@@ -573,7 +594,7 @@ func _fire_aam(p: Player) -> bool:
 		var t: Enemy = targets[i % targets.size()]
 		var side := -1.0 if i % 2 == 0 else 1.0
 		var pos := _slot_pos(p, i)
-		var vel := p.velocity + Vector2.from_angle(p.heading + side * 0.5) * 150.0
+		var vel := p.velocity + Vector2.from_angle(p.heading + side * 0.2) * 150.0   # S10-05: сход вперёд по курсу
 		var opts := {}
 		if evo:
 			opts = {"split": 4, "split_dmg": 40.0 * (1.0 + bonus) * _owner_k() * (1.0 + 0.08 * evo_plus), "big": true}
@@ -748,7 +769,7 @@ func _fire_flares(p: Player) -> bool:
 	var per := (2 if level >= 4 else 1) + (1 if evo else 0)
 	var any := false
 	for s in per:
-		var mp = Main.I.projectiles.intercept_missile_at(p.global_position, r, true)
+		var mp = Main.I.projectiles.intercept_missile_at(p.global_position, r, true, 0.1 * branch_rank if branch == "power" else 0.0)
 		if mp != null:
 			killed += 1
 			any = true

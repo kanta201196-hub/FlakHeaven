@@ -244,7 +244,7 @@ func _die() -> void:
 	hp = 0.0
 	remove_from_group("enemies")
 	Main.I.on_enemy_killed(self)
-	Main.I.pickups.drop_xp(global_position, xp * Main.I.streak_mult())
+	Main.I.pickups.drop_xp(global_position, xp * Main.I.streak_mult() * (1.0 if is_boss else Main.I.kill_xp_k()))   # S10-13: асы и боссы — полный опыт
 	if randf() < repair_chance:
 		Main.I.pickups.drop_repair(global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20)))
 	queue_free()

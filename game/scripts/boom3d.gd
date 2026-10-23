@@ -21,6 +21,11 @@ static var I: Boom3D
 enum { L_SMOKE, L_FIRE, L_CORE, L_DEBRIS, L_SPARK, L_SHOCK, L_FLASH }
 const CAP := [1800, 1000, 140, 420, 1000, 60, 90]
 const WIND := Vector3(22.0, 0.0, -6.0)
+## S10-11 (Kanta 23.10: «уменьшить размер взрывов и дыма, закрывают весь экран»): взрыв цели × BOOM_K,
+## клуб дыма × SMOKE_K по размеру (и короче живёт)
+const BOOM_K := 0.75
+const SMOKE_K := 0.65
+var _smk := SMOKE_K
 const STRIDE := 20
 const BUDGET := [500.0, 800.0, 1200.0, 1600.0]   # частиц, после которых новые взрывы беднеют   # transform 12 + color 4 + custom 4
 
@@ -380,7 +385,11 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 			kind = "big"
 		else:
 			kind = "air"
-	if kind == "ground" or kind == "blast":
+	# S10-11 (Kanta: взрывы и дым закрывают весь экран): взрывы целей мельче на BOOM_K; бомбы и НАР — по зоне
+	# поражения, как были, у них меньше только дым (SMOKE_K в _smoke)
+	if kind != "blast" and kind != "plasma":
+		s *= BOOM_K
+	if kind == "ground" or kind == "blast" or kind == "plasma":
 		# на земле: та точка рельефа, что на экране под pos; размер — с поправкой на перспективу,
 		# чтобы на экране взрыв совпадал с зоной поражения
 		var g := R.ground_under(pos)
@@ -388,6 +397,8 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 		var k := clampf((ch - g.y) / maxf(ch, 1.0), 0.5, 3.0)
 		if kind == "ground":
 			_ground(g, s * k * 1.3)
+		elif kind == "plasma":
+			_plasma(g, s * k)
 		else:
 			_blast(g, s * k)
 	elif kind == "flak":
@@ -411,12 +422,14 @@ func smoke_screen(pos: Vector2, r: float, burst := false) -> void:
 	var ch := R.cam.global_position.y
 	var k := clampf((ch - g.y) / maxf(ch, 1.0), 0.5, 3.0)
 	var s := r * k
+	_smk = 1.0   # дымовая завеса — укрытие колонны, её не уменьшаем
 	for i in _n(4.0 if burst else 1.0):
 		var d := _rdir()
 		var c := Color(0.86, 0.85, 0.81, 0.8) if i % 3 else Color(0.74, 0.73, 0.69, 0.8)
 		_smoke(g + Vector3(d.x, 0, d.z) * s * (0.8 if burst else 0.3) + Vector3(0, s * 0.2, 0),
 			Vector3(d.x * 0.25, randf_range(0.15, 0.35), d.z * 0.25) * s, s * 0.45, s * randf_range(1.0, 1.3),
 			randf_range(3.5, 5.0), c, 0.0, 1.5, 1.2, randf_range(0.0, 0.2))
+	_smk = SMOKE_K
 
 
 ## Правка 3.5-s4 (п. 27): пуск ракеты с крыла — вспышка двигателя и клуб белого дыма назад
@@ -497,6 +510,8 @@ func black_smoke(pos: Vector2, s: float) -> void:
 
 
 func _smoke(p: Vector3, v: Vector3, r0: float, r1: float, life: float, col: Color, glow := 0.0, buoy := 10.0, drag := 1.2, delay := 0.0) -> void:
+	r1 *= _smk
+	life *= lerpf(1.0, _smk, 0.6)
 	_add(L_SMOKE, {"p": p, "v": v, "life": life, "r0": r0, "r1": r1, "glow": glow, "b": buoy, "drag": drag, "g": 0.0,
 		"rot": randf() * TAU, "spin": randf_range(-0.5, 0.5), "tile": randi() % 4, "t": -delay, "c": col, "wind": 1.0,
 		"fade": 0.4 if col.r < 0.18 else 0.0})
@@ -666,6 +681,24 @@ func _blast(g: Vector3, s: float) -> void:
 	_sparks(p, _n(8), 260.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.15, 0.3)
 	_emit.append({"p": g, "t": 0.0, "life": 1.6, "s": s * 0.35, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 0.4})
 	_light(g + Vector3(0, s * 1.2, 0), clampf(s / 8.0, 1.5, 5.0), clampf(s * 9.0, 220.0, 800.0), 0.22)
+
+
+## S10-08 (Kanta: взрыв плазменной бомбы «как будто в воздухе» и «фиолетовое желе»): разрыв у самой земли —
+## бело-голубая вспышка на рельефе, низкий купол плазмы, голубые искры стелются по земле, волна пыли до края
+## зоны и короткий холодный свет; дальше на земле остаётся выжженное пятно с голубыми прожилками (огонь «плазма»)
+func _plasma(g: Vector3, s: float) -> void:
+	var p := g + Vector3(0, s * 0.05, 0)
+	_flash(p + Vector3(0, s * 0.15, 0), s * 2.4, 0.12, Color(0.8, 0.92, 1.0, 1.0))
+	_flash(p + Vector3(0, s * 0.05, 0), s * 1.2, 0.35, Color(0.55, 0.8, 1.0, 1.0))   # без огненного ядра: плазма — холодный свет
+	if not _lo:
+		_add(L_SHOCK, {"p": g, "v": Vector3.ZERO, "life": 0.22, "r0": s * 0.4, "r1": s * 2.0, "c": Color(0.6, 0.85, 1.0, 0.14), "seed": randf() * 40.0})
+	_sparks(p, _n(14), 280.0 + s * 8.0, 0.5, Color(0.55, 0.82, 1.0, 1.0), 0.1, 0.25)
+	for i in _n(4):
+		var d2 := _rdir()
+		_smoke(p + Vector3(d2.x, 0, d2.z) * s * 0.35, Vector3(d2.x * 0.5, randf_range(0.4, 0.8), d2.z * 0.5) * s, s * 0.35, s * randf_range(0.9, 1.2),
+			randf_range(1.6, 2.4), _dust_col(0.7), 0.0, 2.0, 1.4, randf_range(0.0, 0.1))
+	_dust_skirt(g, s, 1.0)
+	_light(g + Vector3(0, s * 1.2, 0), clampf(s / 7.0, 1.5, 5.0), clampf(s * 9.0, 220.0, 800.0), 0.3)
 
 
 ## Пыльная волна: клубы песка у самой земли разбегаются кольцом и оседают — объёмная, а не круг на земле
