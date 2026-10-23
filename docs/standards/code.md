@@ -167,7 +167,7 @@ Regardless of the choice:
 
 1. In git: code, `.uid`, `.import` for every asset in `game/` (same import settings for everyone and in CI), `.tscn/.tres`, `project.godot`, `export_presets.cfg`, `.po`.
 2. Not in git: `.godot/`, builds, `*.translation`, `.blend`/`.blend1`, raw generator outputs, `.venv/`, `node_modules/`, `.env`, `*.session`, logs. A work folder inside `game/` that Godot must not import gets an empty `.gdignore`.
-3. File and folder names — ASCII only (CLAUDE.md, rule 7).
+3. File and folder names — ASCII only (CLAUDE.md, hard rule 6).
 4. Commits are small, in CODE_LANGUAGE: what and why.
 
 ## 17. Author checklist before a PR

@@ -1,116 +1,69 @@
-# Flak Heaven — правила для Claude (читать первым)
+# Flak Heaven — CLAUDE.md
 
-Этот файл читает любой Claude, который работает с репозиторием: у Kirill, у Kanta и у других участников. Здесь — как устроен проект и чего нельзя делать.
+Top-down roguelike / bullet heaven about combat aviation, 15-minute sorties. Target: Steam early access.
+Engine: **Godot 4.4.1**, renderer **GL Compatibility**. Game logic is 2D; visuals are a 3D scene with a top-down camera.
 
-## Что это
-Flak Heaven — roguelike / bullet heaven про боевую авиацию, вид сверху, вылет 15 минут. Цель — ранний доступ в Steam.
-Движок — **Godot 4.4.1**, рендер **GL Compatibility**. Логика игры 2D, картинка — 3D-сцена (камера сверху).
+## Read before coding
+- How to write code: `docs/standards/code.md` (GDScript style, types, ids, performance, saves, debug flags, Python, Bash/CI, PR author checklist).
+- Architecture: `docs/standards/architecture.md` (game map, target architecture, ADRs).
+- UI: `docs/standards/ui-design-system.md` (tokens, components, gamepad focus).
+- Code review findings and best practices behind the standards: `docs/review/code-2026-10-23/README.md`, `r6-practices.md` (Godot 4.4 and Python, with sources).
+- Game rules in force and decision log: `docs/game-context.md` (read before any gameplay/balance change).
+- Process outside code (decisions, art pipeline, site, builds): `docs/process/working-rules.md`.
 
-## Где что лежит
-| Путь | Что |
+## Repository map
+| Path | What |
 | --- | --- |
-| `game/` | Проект Godot (открывать `game/project.godot`). Все параметры баланса — `game/scripts/tuning.gd` |
-| `game/README.md` | История версий прототипа (что нового в каждой сборке) |
-| `docs/game-context.md` | **Главный документ:** раздел «Правила игры сейчас» (действующие правила) и журнал решений. Читать перед любой задачей по геймдизайну |
-| `docs/backlog.md` | Бэклог по системам игры, 5 статусов, шапка «Где мы сейчас». Закрытое и прошлые спринты — `docs/backlog-archive.md` |
-| `docs/status-log.md` | Отчёты по сборкам и спринтам |
-| `docs/team/` | Роли агентов (продюсер, геймдизайнер, арт, аналитик, программист, PM) и процесс |
-| `docs/README.md` | Указатель документов: концепт (`docs/concept/`), каталог техники и фото-референсы (`docs/catalog/`), дорожная карта (`docs/roadmap/`), правки по тестам (`docs/playtest/`), прокачка, полёт, чек-лист владельца |
-| `docs/sprint1/` | Спецификации, планы, разборы плейтестов (в т.ч. `s3-3d-cloud-plan.md` — план перехода на 3D) |
-| `game/tools/model_lab/` | Конвейер 3D-моделей в облаке: подготовка GLB, предпросмотр сверху рядом со спрайтом, модели кодом (команды — в начале `model_lab.gd`) |
-| `tools/reports/` | Приём отчётов тестеров: Apps Script для Google Таблицы, тестовый приёмник |
-| `docs/threads/` | Выжимки тредов из проектов Claude участников: решения, открытые вопросы, как делаются модели и звук |
-| `docs/review/` | Еженедельные ревью работы (по пятницам): что мешает, предложения, решения Kanta. Первое — `2026-10-22-work-review.md` |
-| `docs/owner-checklist/kanta-now.md` | Короткий список того, что может сделать только Kanta, с датами; первый пункт планёрки |
-| `tools/tester/` | Инструкции для внешних тестеров: `INSTRUCTIONS_windows.txt`, `INSTRUCTIONS_mac.txt` |
+| `game/` | Godot project (`game/project.godot`). Balance numbers: F1 sliders in `game/scripts/tuning.gd`, the rest in `game/scripts/balance/<system>.gd` (`code.md` §5) |
+| `game/tools/model_lab/` | 3D model pipeline (commands at the top of `model_lab.gd`) |
+| `tools/ci/` | `pick.sh` (which checks to run), `smoke.sh`, `full.sh` |
+| `tools/reports/`, `tools/tester/` | Tester report intake; tester instructions and kit script |
+| `site/` | flakheaven.com (Cloudflare Pages, deploys from `main`) |
+| `docs/` | All working documents; the source of truth |
 
-## Правила (обязательные)
-1. **Решения принимают Kirill и Kanta.** Геймдизайн, арт, звук, деньги, юридические вопросы, состав команды — только с «да» одного из них. Каждый решает без согласования с другим; решение записывается в журнал решений с именем того, кто его принял. Агенты готовят варианты и рекомендацию.
-2. **Новую сборку (архив / exe / app) делаем только по прямой задаче** и только когда закрыт и проверен в игре список правок по предыдущей сборке; между сборками не меньше дня (решение Kanta 22.10.2026, ревью). Если задачи на сборку не было — сначала спросить.
-3. **Без затрат на людей.** Деньги — только на инструменты и подписки, решение за Kirill или Kanta. Ограничения сервисов и регионов не обходим.
-4. **Вымышленный мир:** без реальных стран, флагов, опознавательных знаков, названий реальных самолётов и конфликтов. Техника — «по мотивам». Биом 1 — «Нагорье Шахрисанг» (вымышленное, с отсылкой к горам Гиндукуша).
-5. **Документы — источник правды.** Важное решение → запись в `docs/game-context.md` (журнал решений), задача → `docs/backlog.md`, итог сборки → `docs/status-log.md` и `game/README.md`. Все рабочие документы проекта лежат в `docs/` репозитория (с 16.10.2026): меняешь документ — меняешь его здесь, через PR. Копии в файлах проекта Claude (`/mnt/project-files`) больше не основные; тяжёлые файлы (сборки, сырые модели, .blend) остаются там.
-6. **Удаление файлов на компьютере участника — только с его разрешения.**
-7. **Имена файлов и папок в репозитории — только латиницей** (без кириллицы и других не-ASCII символов): кириллица в именах ломается в zip-архивах и на разных ОС. Содержимое файлов может быть на русском.
+## Hard rules
+1. **Fictional world.** No real countries, flags, insignia, real aircraft names or real conflicts. Hardware is "inspired by". Applies to code, assets, strings and docs.
+2. **No game-rule, balance, art, audio, money or legal changes without the user's explicit "yes".** Balance at most once per build cycle.
+3. **Never build or export a test build (zip/exe/app) unless the user asks for it directly.**
+4. **No spending** (paid services, generator credits) and **no writes to external services** without the user's "yes". Do not bypass service or region restrictions or captchas.
+5. **Secrets** live only in environment secrets. Never print, log or commit tokens, keys, passwords.
+6. **File and folder names: ASCII only** (Cyrillic breaks zip archives and some OSes). File contents may be in any language.
+7. **Never delete files on a user's machine** without their permission.
+8. Do not commit: `.godot/`, `export/`, `builds/`, `.blend`, raw generator output, personal logs, secrets (full list: `code.md` §16).
 
-## Кто чем занимается
-- **Kirill отошёл от дел с 18.10.2026**: решения принимает Kanta, тредам ответов Kirill не ждать; если вернётся — спросить Kanta. Ниже — как было задумано на двоих.
-- **Kirill** и **Kanta** — оба ведут проект и принимают решения. У каждого свой проект Claude; общий контекст между ними — только репозиторий (`docs/`), переписку в тредах другой Claude не видит. Важное из треда — в `docs/game-context.md` или `docs/threads/`.
-- **Kanta** со своим Claude — в первую очередь визуальная часть (модели, текстуры, эффекты, ангар, интерфейс) и звук. Задачи бывают и другие: владелец системы указывается в задаче бэклога.
-- Оставшиеся задачи по 3D-моделям (с 17.10.2026) ведёт Kanta: `docs/tasks/3d-models-handoff.md`.
+## Must-do in every code change
+- `##` docstring for every new or changed class and public function (`code.md` §2); explain why, not change history.
+- Run through the PR author checklist (`code.md` §17).
 
-## Как общаемся и ведём работу
-Текст для поля инструкций проекта Claude — `docs/process/project-instructions.md`.
-- **Всё по-русски:** ответы, статусы, названия тредов, пункты меню игры. Кнопки GitHub — как на экране: «Merge pull request», «Confirm merge».
-- **Правки пачками.** Участник присылает замечания частями; Claude собирает их в пронумерованный список и начинает работу после слова «готово».
-- **Вопросы — текстом с номерами** и рекомендацией: «1 — …, 2 — … (рекомендую 1)», чтобы ответить цифрами. Карточка с выбором — только дополнение.
-- **Ответ начинается с того, что нужно от человека**, дальше результат без пересказа хода работы. Каждое действие человека — с прямой ссылкой (PR, файл, настройки), иначе — где нажать. Готовый PR Claude сливает сам (см. «Как работать вдвоём»); если GitHub не даёт слить — ссылка на PR и кнопки «Merge pull request» → «Confirm merge».
-- **Сначала предложение, потом изменение** для крупных правок правил, структуры и настроек. Обратимую мелочь (черновик, ветка, файл) Claude делает сам и пишет, какой вариант выбрал.
-- **Автоматизация в приоритете:** если задачу можно сделать без участника или автоматизировать, Claude предлагает этот вариант первым и сначала проверяет, что может сделать сам, и только потом спрашивает (решил Kanta, 20.10.2026).
-- **У каждого решения — исполнитель:** запись в журнал решений (дата, что, почему, кто решил) → задача в `docs/backlog.md` с номером (номер — в запись журнала) → тред-исполнитель сразу, он пишется в задаче.
-- **Мало тредов:** один тред — одна система или тема; новая задача по теме — в существующий тред; тред закрывается, когда его работа слита. Не больше 3 тредов с кодом одновременно, остальное ждёт в бэклоге.
-- **Планёрка** раз в день в 17:00 МСК отдельным тредом, ультракоротко: что сделано, что ждёт участника (со ссылками), решения без исполнителя. Раз в неделю — чек-лист владельца (`docs/owner-checklist/`) с дедлайнами.
-- **Ресурсы Claude:** сильная модель — код, геймдизайн, 3D; лёгкая — статусы, сводки, документы, сборки архивов. Claude сам выбирает и переключает модель под конкретную задачу, чтобы экономить лимиты, и пишет, на какую переключил (решение Kirill 17.10.2026). Длинные процессы (полный автотест, экспорт, генерация) — в фоне; тяжёлую работу — днём, чтобы к вечеру оставался лимит.
-- **Второе мнение** (GPT, Gemini) — совет, не решение: выводы разбираются по пунктам и идут на решение участнику.
+## Language
+English for code, comments, docstrings, commits, PRs and internal docs. Russian for chat with the user. Player-facing text goes through translation keys (`.po`); player/tester docs and the site use the audience's language.
 
-## Арт и 3D
-- **Инструмент по типу объекта:** сложные формы (самолёты, крупная техника, скалы) — генератор 3D (Meshy); простые и точные детали (турели, оружие, ракеты, ПВО) — Blender кодом по референсам участника; портреты и концепты — ChatGPT или Gemini по промптам Claude, выбирает участник; текстуры земли и камня — CC0 (Poly Haven, ambientCG).
-- **Каталог до моделей:** сначала список техники и оружия с картинками, замечания и референсы участника, потом модели.
-- **Кредиты генератора бережём:** входную картинку (вид, силуэт «по мотивам», без опознавательных знаков) и пакет генерации с расходом кредитов утверждает Kirill или Kanta до траты.
-- **Два уровня качества:** в бою облегчённые модели (~5–15 тыс. треугольников), в ангаре и крупных планах — максимальные. Исходники храним всегда (в файлах проекта, не в репозитории).
-- **Предпросмотр из игровой камеры:** каждая модель показывается скриншотом так, как её увидит игрок.
-- Производительность оцениваем только по логам с реальных ПК (FPS в облаке без видеокарты ничего не значит).
+## Git
+- Code: branch `name/task`, PR into `main`. Claude merges its own PR when there are no conflicts, required checks passed, and the PR body says what was checked.
+- Docs, `tools/tester/`, `site/` (except mini-game code): commit straight to `main`, no PR.
+- `git pull` before starting. Don't edit a system another open task owns (owner is in `docs/backlog.md`).
+- Small commits: what and why.
 
-## Как работать вдвоём (Git)
-- **Документы и сайт — без PR** (решение Kanta 22.10.2026): правки `docs/`, `tools/tester/` и `site/` (кроме кода мини-игры) коммитим прямо в `main` одним коммитом. PR — для кода игры и всего, что требует проверки smoke.
-- Ветка `main` — то, что собирается и работает. Новую работу по коду — в отдельной ветке `имя/задача` (например `alex/terrain-chunks`) и через Pull Request в `main`. Claude сливает PR в `main` сам, когда автопроверка зелёная, конфликтов нет и пройден полный автотест (если менялся бой), и пишет в планёрке, что слил (решение Kanta 17.10.2026). Если GitHub не даёт слить, присылает ссылку на PR.
-- PR считается готовым к слиянию, когда автопроверка на GitHub зелёная, конфликтов с `main` нет (если есть — автор сливает `main` в свою ветку и решает их сам) и в описании написано, что проверено.
-- Слитые за день PR — списком в планёрке. После каждого слияния остальные PR, если появился конфликт, автор обновляет сам.
-- Перед началом работы: `git pull`. Одну и ту же систему (файл) параллельно не меняем — договариваемся в задаче бэклога, кто владелец.
-- Коммит — маленький и с понятным описанием на русском: что и зачем.
-- Не коммитить: `.godot/`, экспорт и сборки (`export/`, `builds/`), личные логи плейтестов, ключи и пароли.
+## Checks (Godot 4.4.1 as `godot` or in `$GODOT`)
+- `tools/ci/pick.sh` — prints which checks your diff needs (runs nothing).
+- After every change: `tools/ci/smoke.sh fighter` (`attacker`, `bomber`, `all` ≈ 40 s). Fails on the first `SCRIPT ERROR`.
+- Combat code changed: run `tools/ci/full.sh` once before the PR is ready (~4 min). Unrelated failure: rerun once, then log "flaky test" in the backlog.
+- Long tests and balance measurements: only after agreeing the method with the user.
+- GitHub Actions are off (no minutes left): run checks locally and paste results in the PR.
+- After adding a script with `class_name`: `godot --headless --path game --import` once.
+- Screenshots: `xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots` (`user://shot_*.png`).
+- The cloud has no GPU: FPS here means nothing; judge performance only from logs on real PCs.
 
-## Проверка перед коммитом кода
-- После каждой правки — быстрая проверка (~30 с на класс, нужен Godot 4.4.1 как `godot` или в `GODOT`):
-  `tools/ci/smoke.sh fighter` (или `attacker`, `bomber`; `all` — три класса одновременно, ~40 с) — импорт, один вылет с перемоткой к боссу, падает на первой `SCRIPT ERROR`.
-- Полный автотест (~4 мин в облаке: Нагорье и Архипелаг одновременно по 3 вылета, фиксированный шаг кадра; сам заканчивается и падает на первой `SCRIPT ERROR`) — один раз перед тем, как PR станет готовым, только если менялся бой:
-  `tools/ci/full.sh` (настройки `RUNS`, `OPS`, `FIXED_FPS` — в начале скрипта).
-- Долгие тесты (больше вылетов, другие операции, замеры баланса) — только после обсуждения методики с Kanta, отдельным запуском (решение Kanta 20.10.2026).
-- Правки баланса — не чаще раза в сборку, по методике `docs/balance-method.md` (задача R-10, пока методики нет — по показателям лога `l7` с «было → стало» в PR).
-- Правка только меню, ангара или документов — хватает `smoke.sh` одним классом.
-- GitHub-проверка `.github/workflows/check.yml` (`smoke.sh` за три класса) с 19.10.2026 запускается только вручную: бесплатные минуты Actions кончились (решение Kanta). Пока так — перед слиянием `smoke.sh` локально, полный автотест, если менялся бой.
-- После добавления нового скрипта с `class_name` один раз: `godot --headless --path game --import`.
-- Скриншоты экранов: `xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots` (файлы `user://shot_*.png`).
-- Флаги отладки: `--tester` (как тестовая сборка, без отладки), `--report-url=…` (свой приёмник отчётов), `--mesatest`, `--reporttest`, `--turbo`.
+## Skills (superpowers in `.claude/skills/`)
+Project rules override skills. Small, clear changes (one file, a number, text): just do them. Mandatory:
+- **flak-heaven-game-design** (account skill) before any change to game rules, combat numbers, XP/damage, upgrade cards, classes or meta-progression; it goes before brainstorming.
+- **brainstorming → writing-plans** before a new scene, system or screen, or any change to game rules. Plan goes to `docs/superpowers/plans/`; large work waits for the user's "yes".
+- **systematic-debugging** on any error or failing check: find the cause before fixing.
+- **verification-before-completion** before saying "done": run the checks above and show the output.
+- **requesting-code-review** (or the Engineering plugin's **code-review**) before merging a code PR.
+- Engineering plugin **architecture** / **system-design** when a change touches the structure in `architecture.md` (new ADR, new system boundary).
+- **test-driven-development** for any new non-visual logic: formulas, progression, saves, rewards, card selection (unit tests; mandatory once the test framework is in `main`). Combat feel, graphics and menus: `smoke.sh` / `full.sh`.
+- Docs, site, marketing and builds: no skill chain.
 
-## Сайт flakheaven.com
-- Сайт — папка `site/` (Cloudflare Pages, обновляется сам из `main`), адрес https://flakheaven.com. Подробности — `site/README.md`.
-- Тред «Маркетинг и реклама» проверяет сайт раз в час (оба адреса, flakheaven.com и www): если не открывается или нет слова «Flak Heaven», ищет причину; ошибку в `site/` чинит PR, проблему в Cloudflare или у регистратора описывает Kanta (решение Kanta 18.10.2026).
-- Доступ к Cloudflare: узкий API-токен (Pages: правка, DNS: правка, зона flakheaven.com: чтение) лежит в «Сетевых секретах» среды для хоста api.cloudflare.com и подставляется в запросы сам; токен не печатаем и не коммитим. Им можно смотреть сборки Pages и DNS и перезапускать сборку (решение Kanta 18.10.2026).
-- Домен куплен у reg.ru 18.10.2026 на год, продление — до 18.10.2027 (напоминание за месяц).
-- Менять `site/` может любой тред, но после слияния проверить, что страница открылась.
-
-## Сборки
-- Пресеты экспорта — `game/export_presets.cfg`: «Windows Tester», «macOS Tester», «Linux Check». Фича `tester` выключает отладку (F1, F4–F8, отладка ангара).
-- Номер тестовой сборки — `BUILD` в `game/scripts/main.gd`, адрес приёмника отчётов — `REPORT_URL_BUILTIN` там же.
-
-## Навыки superpowers (эксперимент с 23.10.2026, решение Kanta)
-В `.claude/skills/` лежат 15 навыков набора superpowers (TDD, планы, субагенты, ревью, отладка и др.). Бэкап прежних правил — `docs/process/backup-2026-10-23/` (там же шаги возврата). Через неделю проверяем: быстрее или дороже по лимитам, меньше ли ошибок (еженедельное ревью по пятницам).
-Правила проекта главнее навыков, если они расходятся:
-- **Размер задачи решает цепочка.** Мелкое и ясное (правка текста, числа, один файл) делаем сразу, без вопросов и плана. Новая система или заметная переделка кода: brainstorming → writing-plans (план в `docs/superpowers/plans/`, дата-имя) → исполнение (executing-plans, а для плана с независимыми задачами — subagent-driven-development; параллельные агенты — dispatching-parallel-agents). Вопросы Kanta по-прежнему цифрами с рекомендацией.
-- **Размер пункта (с 23.10.2026, подробно — `docs/process/early-access.md`):** малый (один файл, число, текст) — сразу; средний (несколько файлов одной системы, правила игры не меняются) — короткий план в описании PR; крупный (новая система или экран, изменение правил, затронуто больше трёх систем или около 500 строк; любое изменение правил игры — всегда крупное) — brainstorming → план → «да» Kanta. Навык геймдизайнера (когда будет готов) идёт перед brainstorming для задач про правила, баланс и прокачку.
-- **Цикл закрыт**, когда каждый пункт списка по сборке проверен в игре, отложен решением Kanta или перенесён с причиной. Только тогда сборка (правило 2).
-- **Критический путь** к Next Fest (01.11 Steamworks, 10.11 взнос, 30.11 страница, 15.12 демо, 10.01 регистрация, 25.01 проверка Valve): сильная модель сначала берёт то, что на нём.
-- Падение полного автотеста без связи с правкой: один перезапуск, потом запись «нестабильный тест» в бэклог; при зелёном smoke PR не блокируем.
-- **Документы, сайт, маркетинг, планёрка, сборки архивов** — без цепочки и без using-superpowers: объявлять «использую навык» не нужно.
-- **Субагенты** разрешены для задач из плана; тяжёлые модели на них только по ограничению «не больше двух тредов на Opus».
-- **TDD** — для чистой логики (формулы урона, опыта, прокачки) после того, как Kanta утвердил числа; тест фиксирует правило (минимум, максимум, порядок), а не каждое число. Бой, графика, меню — проверка `smoke.sh` и полный автотест, как раньше.
-- **Проверка перед «готово»** (verification-before-completion): `smoke.sh` / `full.sh` по правилам ниже, результат показываем в PR. Ошибки — сначала причина (systematic-debugging).
-- **Ветки и слияние** — по разделу «Как работать вдвоём (Git)»: ветка и PR, PR сливает Claude; меню вариантов из finishing-a-development-branch и worktrees не используем без просьбы Kanta.
-- Навык не должен тратить деньги, ставить сервисы и делать записи вовне: это только с «да» Kanta (правило 1).
-
-## Текущее состояние (обновлять)
-- Тестовая сборка 3.5-s8 (18.10.2026, Windows и Mac, `/mnt/project-files/builds/3.5-s8/`): два района — «Нагорье Шахрисанг» и «Архипелаг Таласора», кампания с операциями, конвой, вертолёт «Сарыч», босс «Прорыв», объёмные облака, перевод EN (+ черновой ZH), отчёт тестера с логом `l7` (`taken_kind` — урон по видам оружия).
-- Дальше: задачи по отзывам внешних тестеров EX-01…EX-12 (`docs/playtest/external-2/plan.md`), демо для Next Fest (`docs/demo-next-fest.md`, DM-02…DM-05 до 15.12), модели Нагорья и Архипелага (тред «3D-модели», S8-M1…M13, на паузе), страница Steam к концу ноября.
-- Процесс с 22.10.2026 — по ревью `docs/review/2026-10-22-work-review.md` (решения Kanta: одна сборка — один цикл, документы без PR, бэклог по системам R-03, инструкции проекта — 15 правил).
-- С 23.10.2026 эксперимент с навыками superpowers (`.claude/skills/`), откат — `docs/process/backup-2026-10-23/`.
+## Library docs (Context7)
+Use Context7 (`resolve-library-id` → `query-docs`) before writing or changing code that relies on a Godot, GDScript or Python library API you are not sure about, and when debugging engine behaviour. Godot: library `/godotengine/godot`, version `4.4.1-stable` (the docs repo has only 4.5+, which has APIs 4.4 lacks — see `code.md` §1). If Context7 is not available in the session, use the official docs via web search.
