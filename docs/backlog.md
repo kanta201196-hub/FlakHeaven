@@ -281,11 +281,11 @@ Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standar
 
 | ID | Task | Thread / owner | Status |
 | --- | --- | --- | --- |
-| CR-01 | Clicking "Pin"/"Ban" picks the card: search buttons from the end of the list (`hud.gd:98`, `hud_screens.gd:103,147`) + an autotest check that clicks | proposed: "Бой: правки по 3.5-s10" | idea |
-| CR-02 | Empty card offer after pick, course, ban, reroll — screen with no exit: one `refill_offers` with the "repair and parts" branch (`main.gd:425,455,505`) | proposed: "Бой: правки по 3.5-s10" | idea |
+| CR-01 | Clicking "Pin"/"Ban" picks the card: search buttons from the end of the list (`hud.gd:98`, `hud_screens.gd:103,147`) + an autotest check that clicks | "Бой: правки по 3.5-s10" (cycle 3.5-s10, Kanta 2026-10-23) | to do |
+| CR-02 | Empty card offer after pick, course, ban, reroll — screen with no exit: one `refill_offers` with the "repair and parts" branch (`main.gd:425,455,505`) | "Бой: правки по 3.5-s10" (cycle 3.5-s10, Kanta 2026-10-23) | to do |
 | CR-03 | Profile can be lost: check `rename`, look for `.tmp`/`.bak`, never overwrite a broken file (part of CS-02) | — | idea |
 | CR-04 | Sortie row uploaded without player consent (demo too) — consent per DM-07 before the demo | "Демо для Next Fest" | idea |
-| CR-05 | Gamepad: 0.3 s input delay on level-up and specialization screens (small, now); focus in menu and screens (CS-11c) | proposed: "Понятность игры для новичков" | idea |
+| CR-05 | Gamepad: 0.3 s input delay on level-up and specialization screens (small, now — "Бой: правки по 3.5-s10", cycle 3.5-s10, Kanta 2026-10-23); focus in menu and screens (CS-11c) | delay: "Бой: правки по 3.5-s10"; focus: not assigned | delay: to do; focus: idea |
 | CR-06 | Report receiver: text starting with `= + - @` gets a `'` prefix (`tools/reports/apps_script.gs`), then Kanta updates the script in the sheet | Kanta (together with RP-4) | idea |
 | CS-01 | GDScript type warnings: enable, clean up, raise to errors | — | idea |
 | CS-02 | `SaveIO`: atomic write, `.bak`, version, test folder override; `custom_user_dir_name="FlakHeaven"` before any rename | — | idea |
@@ -298,6 +298,7 @@ Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standar
 | CS-09 | Combat preload: operation models in the background, `Boom3D` and materials warmed up at sortie start | — | idea |
 | CS-10 | Split `render3d.gd` (after Next Fest) | — | idea (after the demo) |
 | CS-11 | UI design system: `UiStyle`, font size ≥ 14, shared buttons and tabs, gamepad focus (`docs/standards/ui-design-system.md` §6) | — | idea |
+| CS-13 | Balance numbers: `tuning.gd` keeps only F1 sliders, others go to `game/scripts/balance/<system>.gd` when files are touched; update the CLAUDE.md rule (Kanta 2026-10-23, option 2) | every code thread; CLAUDE.md — "Короткий CLAUDE.md" | rule in force |
 | CS-12 | Important review findings without their own row: spawner freezes bombers at the cap, bomb lead (`move_vel`), "Skvoznyak" summons without a cap, hints spent on the title screen, `TEST_PICKS` → 2, volume writes balance into `tuning.json`, settings do not fit at 1080, ground shader (13 samplers, `dFdx` in a branch), double explosion lights, `.import` for new models, 334 MB `models/pilot` in git, JPEG 4:2:0 normal map. Details — review README | split across system threads | idea |
 | LANG-01 | Move internal text to English (Kanta 2026-10-23, option 2): new code, comments, commits and docs in English right away; existing files translated when touched; a separate pass over key documents — CLAUDE.md, `docs/game-context.md` ("Rules now" section), `docs/backlog.md` header, `docs/process/` | coordinator assigns; CLAUDE.md — thread "Короткий CLAUDE.md" | in progress (standards done 2026-10-23) |
 

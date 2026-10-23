@@ -69,11 +69,9 @@ Based on the official Godot style guide. Indent with tabs; lines under 100 chara
 2. **Anything that lives longer than a frame** (3D unit view, enemy record, particle with fields) is a small `extends RefCounted` class with typed fields, not a `Dictionary` with string keys. Dictionaries are fine for JSON, constant tables and projectile arrays where speed matters (§7).
 3. **Array as a tuple** — at most two fields (`[rect, action]`). More than that — a class or a dictionary with named keys. No data tables with positional indices (`br[1][1][0]`).
 
-## 5. Where balance numbers live [Kanta to decide]
+## 5. Where balance numbers live
 
-The CLAUDE.md rule "all balance parameters in `tuning.gd`" is not followed by the code: enemy HP, weapons, evolutions, rewards and wave formulas are constants next to where they are used. Options:
-1. Everything in `tuning.gd`, with sections per system.
-2. **(recommended)** `tuning.gd` holds only what is tuned with sliders in the F1 panel; other balance numbers live in `game/scripts/balance/<system>.gd` (constants with `##` docstrings); class code keeps only geometry and visuals.
+**Decision (Kanta 2026-10-23, option 2):** `tuning.gd` holds only what is tuned with sliders in the F1 panel; all other balance numbers live in `game/scripts/balance/<system>.gd` (e.g. `balance/enemies.gd`, `balance/weapons.gd`, `balance/rewards.gd`) as constants with `##` docstrings; class code keeps only geometry and visuals. Existing constants move there when their file is touched (no mass move).
 
 Regardless of the choice:
 - A rule number the player sees in text ("+40 parts", "15 minutes") is formatted from the same constant, never typed into the string.

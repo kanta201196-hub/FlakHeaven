@@ -136,7 +136,7 @@ Recommended order before the demo: CR bugs → CS-05, CS-08 (small) → CS-02, C
 **Status:** accepted de facto, now recorded. Arrays + one `_draw`/MultiMesh, a cap on every pool. Next step if the Deck runs short on CPU — packed arrays (`PackedVector2Array`/`PackedFloat32Array`) instead of dictionaries; decide from `perf.gd` logs, not in advance.
 
 ### ADR-04. Where balance numbers live
-**Status:** awaiting Kanta's decision. Options and recommendation — [code.md §5](code.md). After the decision — a decision-log line in `docs/game-context.md` and a CLAUDE.md rule update.
+**Status:** accepted (Kanta 2026-10-23, option 2). `tuning.gd` — only F1 slider parameters; other balance numbers in `game/scripts/balance/<system>.gd`; class code keeps geometry and visuals. Moved when files are touched. Details — [code.md §5](code.md).
 
 ### ADR-05. UI is drawn in code (immediate mode), not with Control nodes
 **Status:** accepted de facto, recorded with conditions.
