@@ -8,7 +8,7 @@
   turret_1 левое крыло (−6, −78), turret_2 правое крыло (−6, 78), turret_3 верхняя (48, 0),
   turret_4 кормовая (−112, 0), engine_l (14, −44), engine_r (14, 44).
 Подвижные узлы GLB:
-  turret_1…turret_4 — башни, поворот вокруг вертикали (стволы по +X);
+  turret_1…turret_4 — башни (спаренные турели из turret_twin.py, S8-K1), поворот вокруг вертикали (стволы по +X);
   engine_l/r_prop  — соосные винты двигателей, вращаются вокруг оси X;
   hatch_l/r        — створки люков на спине (фаза 2), открываются поворотом вокруг оси X;
   bay_l/r          — ракеты под люками, приподнимаются, когда люки открыты;
@@ -18,6 +18,8 @@ import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
 import turret_lib as L
+from turret_twin import twin
+from mathutils import Matrix
 
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 OUT = args[0]
@@ -33,6 +35,12 @@ M_CORE = mat("enemy_core", (0.9, 0.3, 0.05), 0.0, 0.4)
 _b = M_CORE.node_tree.nodes["Principled BSDF"]
 _b.inputs["Emission Color"].default_value = (1.0, 0.35, 0.05, 1)
 _b.inputs["Emission Strength"].default_value = 0.6
+# башни — матовая краска врага (как у турелей игрока после решения Kanta 19.10: без блеска)
+M_T_BODY = mat("enemy_turret", (0.12, 0.13, 0.12), 0.1, 0.85)
+M_T_DARK = mat("enemy_turret_dark", (0.05, 0.05, 0.055), 0.1, 0.88)
+M_T_BARREL = mat("enemy_turret_barrel", (0.16, 0.165, 0.17), 0.15, 0.8)
+M_T_GLASS = mat("enemy_turret_glass", (0.05, 0.08, 0.1), 0.0, 0.8)
+TS = 0.062          # масштаб турели turret_twin (длина башни 1) в оси «Крепости» (длина самолёта 1)
 
 PX = 270.0
 FR = 0.058          # радиус фюзеляжа
@@ -125,17 +133,24 @@ def sphere(name, c, r, sc, m, seg=20):
     return finish(ob, m)
 
 
-def turret(n, x, y, z):
-    """Башня со спаркой: основание в корпусе, поворотная часть — узел turret_n"""
+def turret(n, x, y, z, tier):
+    """Башня — спаренная турель из turret_twin.py (решение Kanta 23.10, S8-K1: «используй имеющиеся модели»)
+    в окраске врага, масштаб TS: погон Ø ≈ 0,055 длины самолёта. Основание-кольцо в корпусе неподвижно,
+    вся башня со стволами — узел turret_n (поворот вокруг вертикали, стволы по +X)."""
     L.group = ""
     cyl("turret_ring", (x, y, z), 0.034, 0.008, M_DARK, "Z", 24)
-    L.group = "turret_%d" % n
-    L.pivots[L.group] = (x, y, z)
-    sphere("dome", (x, y, z + 0.004), 0.028, (1.0, 1.0, 0.7), M_LIGHT)
-    box("mantlet", (x + 0.022, y, z + 0.01), (0.02, 0.03, 0.016), M_DARK, 0.002)
-    for s in (1, -1):
-        cyl("barrel", (x + 0.06, y + s * 0.009, z + 0.01), 0.0045, 0.07, M_STEEL, "X", 10)
-        box("brake", (x + 0.096, y + s * 0.009, z + 0.01), (0.01, 0.009, 0.009), M_STEEL, 0.0)
+    g = "turret_%d" % n
+    L.pivots[g] = (x, y, z)
+    k = len(L.parts)
+    twin(tier, False, M_T_BODY, M_T_DARK, M_T_BARREL, M_T_GLASS, base=g, guns=g, seg=0.5)
+    m = Matrix.Translation((x, y, z)) @ Matrix.Scale(TS, 4)
+    for ob in L.parts[k:]:
+        # фаски — в единицах турели, потом перенос в оси «Крепости»
+        bpy.context.view_layer.objects.active = ob
+        for md in list(ob.modifiers):
+            bpy.ops.object.modifier_apply(modifier=md.name)
+        ob.data.transform(m @ ob.matrix_basis)
+        ob.matrix_basis = Matrix.Identity(4)
     L.group = ""
 
 
@@ -232,7 +247,7 @@ for s in (1, -1):
 # --- башни ---
 for n, (x, y) in enumerate([at(-6, -78), at(-6, 78), at(48, 0), at(-112, 0)], 1):
     z = 0.008 if n <= 2 else (FR + 0.006 if n == 3 else 0.042)
-    turret(n, x, y, z)
+    turret(n, x, y, z, 3 if n == 3 else 2)   # верхняя — ступень 3 (короба лент, прицел), остальные — 2
 
 # --- люки на спине (фаза 2): ракеты под створками ---
 HX0, HX1, HY = -0.0, 0.12, 0.034

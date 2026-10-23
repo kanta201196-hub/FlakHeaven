@@ -14,104 +14,115 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
 import turret_lib as L
 
-OUT = sys.argv[-1] if len(sys.argv) > 1 else "."
-QUAD = "quad" in sys.argv
-TIER = 3 if QUAD else next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 2)
-L.reset()
-# окраска матовая (Kanta 19.10): краска без блеска, металл — только стволы и мелкие детали
-M_BODY = mat("turret_body", (0.36, 0.35, 0.33), 0.08, 0.86)
-M_DARK = mat("turret_dark", (0.12, 0.12, 0.12), 0.15, 0.8)
-M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.45, 0.6)
-M_GLASS = mat("turret_glass", (0.12, 0.2, 0.24), 0.6, 0.06)
 
-# --- погон и тумба ---
-cyl("ring", (0, 0, 0.04), 0.44, 0.08, M_BODY, bevel=0.015)
-cyl("ring_top", (0, 0, 0.09), 0.36, 0.03, M_DARK, bevel=0.005)
-cyl("pedestal", (-0.02, 0, 0.15), 0.25, 0.12, M_BODY, bevel=0.01)
-box("bracket_l", (0.18, 0.2, 0.17), (0.12, 0.05, 0.12), M_BODY, 0.01)
-box("bracket_r", (0.18, -0.2, 0.17), (0.12, 0.05, 0.12), M_BODY, 0.01)
+def twin(TIER=2, QUAD=False, M_BODY=None, M_DARK=None, M_BARREL=None, M_GLASS=None, base="", guns="guns", seg=1.0):
+    """Геометрия спаренной турели в своих единицах (длина башни = 1, начало — центр погона).
+    base — группа неподвижной части (у «Крепости» — узел turret_N), guns — группа люльки со стволами
+    (может совпадать с base); seg — множитель числа граней цилиндров (для облегчённой модели боя)."""
+    def c(name, cc, r, h, m, axis="Z", verts=24, bevel=0.0):
+        return cyl(name, cc, r, h, m, axis, max(8, int(round(verts * seg))), bevel)
+    L.group = base
+    # --- погон и тумба ---
+    c("ring", (0, 0, 0.04), 0.44, 0.08, M_BODY, bevel=0.015)
+    c("ring_top", (0, 0, 0.09), 0.36, 0.03, M_DARK, bevel=0.005)
+    c("pedestal", (-0.02, 0, 0.15), 0.25, 0.12, M_BODY, bevel=0.01)
+    box("bracket_l", (0.18, 0.2, 0.17), (0.12, 0.05, 0.12), M_BODY, 0.01)
+    box("bracket_r", (0.18, -0.2, 0.17), (0.12, 0.05, 0.12), M_BODY, 0.01)
 
-# --- башня: две бронированные половины с проёмом под люльку посередине ---
-Z0, Z1 = 0.2, 0.62
-side = [(-0.58, Z0), (0.26, Z0), (0.44, Z0 + 0.14), (0.44, Z1 - 0.04), (0.38, Z1), (-0.58, Z1)]
-for sgn in (1, -1):
-    prism("hull_%d" % sgn, side, 0.36, M_BODY).location.y = sgn * 0.27
-    # плиты сверху 2×1 на половину
-    for x in (-0.33, 0.12):
-        box("plate", (x, sgn * 0.27, Z1 + 0.012), (0.4, 0.3, 0.03), M_BODY, 0.008)
-    # боковые накладки с фаской
-    box("side_panel", (-0.1, sgn * 0.455, 0.42), (0.6, 0.02, 0.2), M_BODY, 0.01)
-    box("side_panel2", (0.25, sgn * 0.452, 0.36), (0.18, 0.02, 0.14), M_BODY, 0.008)
-# перемычка сзади и снизу (единый корпус)
-box("bridge_back", (-0.3, 0, 0.41), (0.56, 0.14, 0.42), M_BODY, 0.01)
-box("bridge_floor", (0.0, 0, 0.24), (0.9, 0.2, 0.08), M_BODY, 0.01)
-
-# --- люлька и стволы ---
-BZ = 0.43
-# тест 3.5-s8 (анимация в ангаре): люлька и стволы — отдельный узел «guns», шарнир — цапфы люльки
-# (качание стволами по углу места вокруг оси Y Blender); бронещиток, короба и рукава остаются на башне
-L.group = "guns"
-L.pivots["guns"] = (0.3, 0, BZ)
-LEVELS = [BZ + 0.06, BZ - 0.06] if QUAD else [BZ]
-box("cradle", (0.42, 0, BZ), (0.5, 0.17, 0.13 + (0.12 if QUAD else 0)), M_BODY, 0.015)
-box("mantlet", (0.68, 0, BZ), (0.08, 0.26, 0.11 + (0.12 if QUAD else 0)), M_DARK, 0.01)
-L.group = ""
-if TIER >= 2 and not QUAD:
-    # бронещиток: широкая плита перед люлькой, скошена назад, с вырезами под стволы
-    shield = [(0.7, Z0 + 0.04), (0.76, Z0 + 0.1), (0.76, Z1 - 0.06), (0.7, Z1 + 0.02), (0.64, Z1 + 0.02), (0.64, Z0 + 0.04)]
+    # --- башня: две бронированные половины с проёмом под люльку посередине ---
+    Z0, Z1 = 0.2, 0.62
+    side = [(-0.58, Z0), (0.26, Z0), (0.44, Z0 + 0.14), (0.44, Z1 - 0.04), (0.38, Z1), (-0.58, Z1)]
     for sgn in (1, -1):
-        prism("shield_%d" % sgn, shield, 0.2, M_BODY, 0.01).location.y = sgn * 0.2
-    box("shield_top", (0.7, 0, Z1 - 0.01), (0.1, 0.2, 0.05), M_BODY, 0.008)
-L.group = "guns"
-for bz in LEVELS:
-    for sgn in (1, -1):
-        y = sgn * 0.075
-        cyl("sleeve", (0.86, y, bz), 0.05, 0.36, M_BARREL, "X")
-        for x in (0.74, 0.86, 1.02):
-            cyl("collar", (x, y, bz), 0.058, 0.035, M_BARREL, "X")
-        cyl("barrel", (1.48, y, bz), 0.028, 0.9, M_BARREL, "X", 16)
-        for x in (1.2, 1.26, 1.74, 1.8):
-            cyl("band", (x, y, bz), 0.036, 0.03, M_BARREL, "X", 16)
-        if TIER >= 2:
-            # дульный тормоз: короб с двумя окнами
-            box("brake", (2.0, y, bz), (0.17, 0.07, 0.07), M_BARREL, 0.006)
-            for x in (1.96, 2.05):
-                box("brake_slot", (x, y, bz), (0.05, 0.072, 0.045), M_DARK, 0.0)
-        else:
-            # ступень 1: ствол без тормоза — простой пламегаситель-втулка, срез там же
-            cyl("tip", (2.0, y, bz), 0.034, 0.16, M_BARREL, "X", 16)
-            cyl("bore", (2.085, y, bz), 0.016, 0.01, M_DARK, "X", 12)
-L.group = ""
-if TIER == 3 and not QUAD:
-    # короба лент по бокам башни с рукавами подачи к люльке
-    for sgn in (1, -1):
-        box("ammo_box", (-0.05, sgn * 0.5, 0.38), (0.34, 0.09, 0.2), M_BODY, 0.01)
-        box("ammo_lid", (-0.05, sgn * 0.5, 0.49), (0.3, 0.07, 0.02), M_DARK, 0.004)
-        tube("feed", [(0.12, sgn * 0.5, 0.42), (0.3, sgn * 0.42, 0.47), (0.42, sgn * 0.12, BZ + 0.05)], 0.025, M_DARK)
-    # прицельная головка: короб на стойке слева сверху, стекло смотрит по стволам
-    cyl("sight_post", (0.05, 0.16, Z1 + 0.06), 0.03, 0.1, M_DARK, "Z", 12)
-    box("sight_head", (0.08, 0.16, Z1 + 0.15), (0.2, 0.1, 0.1), M_BODY, 0.01)
-    box("sight_hood", (0.2, 0.16, Z1 + 0.18), (0.06, 0.11, 0.03), M_DARK, 0.004)
-    cyl("sight_lens", (0.185, 0.16, Z1 + 0.15), 0.035, 0.012, M_GLASS, "X", 16)
-if QUAD:
-    # антенна наведения: стойка и тарелка, смотрит вперёд по стволам
-    cyl("ant_post", (-0.2, 0, Z1 + 0.08), 0.025, 0.16, M_DARK, "Z", 12)
-    cyl("ant_dish", (-0.17, 0, Z1 + 0.25), 0.16, 0.025, M_BODY, "X", 28, 0.006)
-    cyl("ant_feed", (-0.08, 0, Z1 + 0.25), 0.018, 0.16, M_DARK, "X", 10)
-    for sgn in (1, -1):
-        box("ammo_box", (-0.05, sgn * 0.47, 0.36), (0.3, 0.07, 0.16), M_BODY, 0.01)
+        prism("hull_%d" % sgn, side, 0.36, M_BODY).location.y = sgn * 0.27
+        # плиты сверху 2×1 на половину
+        for x in (-0.33, 0.12):
+            box("plate", (x, sgn * 0.27, Z1 + 0.012), (0.4, 0.3, 0.03), M_BODY, 0.008)
+        # боковые накладки с фаской
+        box("side_panel", (-0.1, sgn * 0.455, 0.42), (0.6, 0.02, 0.2), M_BODY, 0.01)
+        box("side_panel2", (0.25, sgn * 0.452, 0.36), (0.18, 0.02, 0.14), M_BODY, 0.008)
+    # перемычка сзади и снизу (единый корпус)
+    box("bridge_back", (-0.3, 0, 0.41), (0.56, 0.14, 0.42), M_BODY, 0.01)
+    box("bridge_floor", (0.0, 0, 0.24), (0.9, 0.2, 0.08), M_BODY, 0.01)
 
-# --- поручни сзади сверху ---
-for sgn in (1, -1):
-    y = sgn * 0.42
-    tube("rail", [(-0.58, y, Z1), (-0.6, y, Z1 + 0.09), (-0.2, y, Z1 + 0.09), (-0.16, y, Z1 + 0.03)], 0.012, M_DARK)
-tube("rail_back", [(-0.6, -0.42, Z1 + 0.09), (-0.6, 0.42, Z1 + 0.09)], 0.012, M_DARK)
+    # --- люлька и стволы ---
+    BZ = 0.43
+    # тест 3.5-s8 (анимация в ангаре): люлька и стволы — отдельный узел «guns», шарнир — цапфы люльки
+    # (качание стволами по углу места вокруг оси Y Blender); бронещиток, короба и рукава остаются на башне
+    L.group = guns
+    L.pivots[guns] = (0.3, 0, BZ)
+    LEVELS = [BZ + 0.06, BZ - 0.06] if QUAD else [BZ]
+    box("cradle", (0.42, 0, BZ), (0.5, 0.17, 0.13 + (0.12 if QUAD else 0)), M_BODY, 0.015)
+    box("mantlet", (0.68, 0, BZ), (0.08, 0.26, 0.11 + (0.12 if QUAD else 0)), M_DARK, 0.01)
+    L.group = base
+    if TIER >= 2 and not QUAD:
+        # бронещиток: широкая плита перед люлькой, скошена назад, с вырезами под стволы
+        shield = [(0.7, Z0 + 0.04), (0.76, Z0 + 0.1), (0.76, Z1 - 0.06), (0.7, Z1 + 0.02), (0.64, Z1 + 0.02), (0.64, Z0 + 0.04)]
+        for sgn in (1, -1):
+            prism("shield_%d" % sgn, shield, 0.2, M_BODY, 0.01).location.y = sgn * 0.2
+        box("shield_top", (0.7, 0, Z1 - 0.01), (0.1, 0.2, 0.05), M_BODY, 0.008)
+    L.group = guns
+    for bz in LEVELS:
+        for sgn in (1, -1):
+            y = sgn * 0.075
+            c("sleeve", (0.86, y, bz), 0.05, 0.36, M_BARREL, "X")
+            for x in (0.74, 0.86, 1.02):
+                c("collar", (x, y, bz), 0.058, 0.035, M_BARREL, "X")
+            c("barrel", (1.48, y, bz), 0.028, 0.9, M_BARREL, "X", 16)
+            for x in (1.2, 1.26, 1.74, 1.8):
+                c("band", (x, y, bz), 0.036, 0.03, M_BARREL, "X", 16)
+            if TIER >= 2:
+                # дульный тормоз: короб с двумя окнами
+                box("brake", (2.0, y, bz), (0.17, 0.07, 0.07), M_BARREL, 0.006)
+                for x in (1.96, 2.05):
+                    box("brake_slot", (x, y, bz), (0.05, 0.072, 0.045), M_DARK, 0.0)
+            else:
+                # ступень 1: ствол без тормоза — простой пламегаситель-втулка, срез там же
+                c("tip", (2.0, y, bz), 0.034, 0.16, M_BARREL, "X", 16)
+                c("bore", (2.085, y, bz), 0.016, 0.01, M_DARK, "X", 12)
+    L.group = base
+    if TIER == 3 and not QUAD:
+        # короба лент по бокам башни с рукавами подачи к люльке
+        for sgn in (1, -1):
+            box("ammo_box", (-0.05, sgn * 0.5, 0.38), (0.34, 0.09, 0.2), M_BODY, 0.01)
+            box("ammo_lid", (-0.05, sgn * 0.5, 0.49), (0.3, 0.07, 0.02), M_DARK, 0.004)
+            tube("feed", [(0.12, sgn * 0.5, 0.42), (0.3, sgn * 0.42, 0.47), (0.42, sgn * 0.12, BZ + 0.05)], 0.025, M_DARK)
+        # прицельная головка: короб на стойке слева сверху, стекло смотрит по стволам
+        c("sight_post", (0.05, 0.16, Z1 + 0.06), 0.03, 0.1, M_DARK, "Z", 12)
+        box("sight_head", (0.08, 0.16, Z1 + 0.15), (0.2, 0.1, 0.1), M_BODY, 0.01)
+        box("sight_hood", (0.2, 0.16, Z1 + 0.18), (0.06, 0.11, 0.03), M_DARK, 0.004)
+        c("sight_lens", (0.185, 0.16, Z1 + 0.15), 0.035, 0.012, M_GLASS, "X", 16)
+    if QUAD:
+        # антенна наведения: стойка и тарелка, смотрит вперёд по стволам
+        c("ant_post", (-0.2, 0, Z1 + 0.08), 0.025, 0.16, M_DARK, "Z", 12)
+        c("ant_dish", (-0.17, 0, Z1 + 0.25), 0.16, 0.025, M_BODY, "X", 28, 0.006)
+        c("ant_feed", (-0.08, 0, Z1 + 0.25), 0.018, 0.16, M_DARK, "X", 10)
+        for sgn in (1, -1):
+            box("ammo_box", (-0.05, sgn * 0.47, 0.36), (0.3, 0.07, 0.16), M_BODY, 0.01)
+
+    # --- поручни сзади сверху ---
+    for sgn in (1, -1):
+        y = sgn * 0.42
+        tube("rail", [(-0.58, y, Z1), (-0.6, y, Z1 + 0.09), (-0.2, y, Z1 + 0.09), (-0.16, y, Z1 + 0.03)], 0.012, M_DARK)
+    tube("rail_back", [(-0.6, -0.42, Z1 + 0.09), (-0.6, 0.42, Z1 + 0.09)], 0.012, M_DARK)
+    L.group = ""
 
 
-build("turret_twin_quad" if QUAD else "turret_twin_t%d" % TIER, OUT)
-if "nopreview" not in sys.argv:
-    preview(OUT, [("ref", (3.3, -3.9, 2.6), (1.05, 0, 0.35), 50),
-                  ("rear", (-2.6, 2.6, 2.0), (0.6, 0, 0.35), 50),
-                  ("side", (1.1, -6.2, 0.6), (1.1, 0, 0.35), 40),
-                  ("top", (1.1, 0.0, 6.4), None, 40)])
-print("DONE")
+if __name__ == "__main__":
+    OUT = sys.argv[-1] if len(sys.argv) > 1 else "."
+    QUAD = "quad" in sys.argv
+    TIER = 3 if QUAD else next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 2)
+    L.reset()
+    # окраска матовая (Kanta 19.10): краска без блеска, металл — только стволы и мелкие детали
+    M_BODY = mat("turret_body", (0.36, 0.35, 0.33), 0.08, 0.86)
+    M_DARK = mat("turret_dark", (0.12, 0.12, 0.12), 0.15, 0.8)
+    M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.45, 0.6)
+    M_GLASS = mat("turret_glass", (0.12, 0.2, 0.24), 0.6, 0.06)
+
+    twin(TIER, QUAD, M_BODY, M_DARK, M_BARREL, M_GLASS)
+    build("turret_twin_quad" if QUAD else "turret_twin_t%d" % TIER, OUT)
+    if "nopreview" not in sys.argv:
+        preview(OUT, [("ref", (3.3, -3.9, 2.6), (1.05, 0, 0.35), 50),
+                      ("rear", (-2.6, 2.6, 2.0), (0.6, 0, 0.35), 50),
+                      ("side", (1.1, -6.2, 0.6), (1.1, 0, 0.35), 40),
+                      ("top", (1.1, 0.0, 6.4), None, 40)])
+    print("DONE")
