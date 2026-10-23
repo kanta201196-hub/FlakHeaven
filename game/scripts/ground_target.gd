@@ -207,6 +207,9 @@ func _drive(delta: float, p: Player) -> void:
 		var tr := _terrain()
 		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке, не на соседе; 3.5-s7: на равнине
 			slot = tr.find_floor(slot, 220.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours(), AASite.RIVER_GUARD_CAR, true)
+			if tr.wet(slot) or slot.distance_to(b) > 900.0:   # S10-02: сухой точки рядом нет — стоит на месте, в воду не едет
+				_move_cd = randf_range(1.5, 3.0)
+				return
 		_goal = slot
 		_drive_t = 0.0
 		return

@@ -524,7 +524,7 @@ static func guard_dist_at(p: Vector2, margin := 0.0) -> float:
 
 ## M-35: ближайшая к p точка вне охранной зоны (с запасом margin) на том же берегу; p уже вне — p
 func out_of_river_guard(p: Vector2, margin := 0.0) -> Vector2:
-	for i in 4:
+	for i in 10:   # S10-02: у изрезанного берега «Архипелага» 4 шагов не хватало — бункер оставался у воды
 		var v := river_field(p.x, p.y)
 		var need := RIVER_GUARD + margin + 2.0
 		if absf(v) >= need:
@@ -670,6 +670,7 @@ func _find_loops_pass() -> void:
 ## side ≠ 0 — только этот берег (знак river_field): переезжающая техника не пересекает реку
 ## avoid — [[точка, радиус]] куда нельзя (другие машины позиции); dry — сколько держаться от линии реки
 ## flat — только равнина (flat_at): тест 3.5-s7, позиции ПВО оказывались на склоне
+## S10-02: вода (wet) запретна всегда — у моря ПВО вставала в пролив; суши в радиусе нет — радиус шире
 func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RIVER_GUARD + 10.0, flat := false) -> Vector2:
 	var objs := []
 	if _bg != null:
@@ -694,6 +695,8 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 			var sc := maxf(a - D_FLOOR * 0.8, 0.0) / 100.0 + rr / radius * 0.2
 			if ar < dry:
 				sc += 50.0 + (dry - ar)
+			if ar < RIVER_GUARD + 10.0:   # S10-02: в воде (wet) — хуже склона, чужого берега и соседей: у моря воды много
+				sc += 1000.0
 			if side != 0.0 and signf(rf) != side:
 				sc += 50.0 + ar
 			for o in objs + avoid:
@@ -707,6 +710,8 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 				best = q
 		if best_s < 0.05 + rr / radius * 0.2:
 			break
+	if wet(best) and radius < 6000.0:   # S10-02: вокруг одна вода (пролив «Архипелага») — ищем сушу шире
+		return find_floor(p, radius * 2.5, side, avoid, dry, flat)
 	return best
 
 

@@ -42,12 +42,14 @@ var _zoom := 1.0
 var _c2 := Vector2.ZERO        # центр кадра на плоскости боя (для указателей за краем экрана)
 var _shadow_shader: Shader
 var _trails: Contrails       # 3.4-t1 (п. 10, 34): инверсионные следы самолётов и ракет
+var _wakes: SeaWakes         # S10-10: кильватерный след судов «Архипелага» на воде
 var _tid := 0                # номера ракет для их следов
 var _eshot_mm: MultiMeshInstance3D   # тест 3.5-s5 (п. 11): ракеты врагов — модели
 var _eglow_mm: MultiMeshInstance3D   # и светящиеся точки: трассеры пуль, ореол и факел ракет
 var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые падают
 var _wrecks: Array = []      # и остаются обломками на земле
-var _wreck_mat: StandardMaterial3D
+var _wreck_mat: Material
+var _burnt_sprite_mat: StandardMaterial3D   # остов без 3D-модели (картинка): тёмная заливка, как раньше
 var _smoke_mat: StandardMaterial3D
 var title: TitleFlight       # тест 3.5-s5 (п. 1): звено 3D-моделей на заставке меню
 ## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
@@ -202,12 +204,11 @@ func _ready() -> void:
 	_elite_mat.albedo_color = Color(1.0, 0.75, 0.2, 0.28)
 	_elite_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_elite_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_wreck_mat = StandardMaterial3D.new()
-	_wreck_mat.albedo_color = Color(0.07, 0.06, 0.05, 0.82)
-	_wreck_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_wreck_mat.roughness = 1.0
+	_wreck_mat = _make_burnt_mat()   # S10-07: остов самолёта — закопчённый металл, а не чёрная заливка
 	_trails = Contrails.new()
 	add_child(_trails)
+	_wakes = SeaWakes.new()
+	add_child(_wakes)
 	title = TitleFlight.new(self)
 	add_child(title)
 	apply_gfx(Settings.gfx)
@@ -464,6 +465,7 @@ func _process(delta: float) -> void:
 	_sync_crashes(m, sd)
 	title.sync(m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu", delta)
 	_trails.tick(delta if title.active() else sd)   # в меню мир на паузе, а следы звена тают в реальном времени
+	_wakes.tick(sd)
 	if Perf.on: pt = Perf.sub("r3d.crash_trails", pt)
 	_sync_objects(c2, h)
 	if Perf.on: pt = Perf.sub("r3d.objects", pt)
@@ -705,7 +707,7 @@ func _apply_biome() -> void:
 	_ground_mat.set_shader_parameter("sea_w", Terrain3D.SEA_W)
 	_ground_mat.set_shader_parameter("shore_a", Terrain3D.SHORE_A)
 	_ground_mat.set_shader_parameter("sea_depth_px", float(Biome.g("depth_px", 450.0)))
-	var look := 4   # E-13: вид воды 3 (прозрачная отмель) — выбор Kanta 21.10; 4 — тот же вид с берегом по фото Kanta 21.10
+	var look := 5   # S10-06: 5 — вид 4 с мелкими волнами, бликами и каустикой (замечание Kanta 23.10). E-13: вид воды 3 (прозрачная отмель) — выбор Kanta 21.10; 4 — тот же вид с берегом по фото Kanta 21.10
 	for arg in OS.get_cmdline_user_args():   # сравнение вариантов воды на кадрах: --sealook=0…3
 		if arg.begins_with("--sealook="):
 			look = int(arg.substr(10))
@@ -1251,6 +1253,8 @@ func _convoy_dust(v: ConvoyVehicle, gp: Vector3, hull: float, len_px: float) -> 
 		_dust[id] = d
 	d["seen"] = true
 	var ps := d["p"] as CPUParticles3D
+	if Biome.sea():   # S10-10: судно каравана оставляет на воде кильватерный след
+		_wakes.emit(id, Vector3(gp.x, gp.y + 0.6, gp.z), hull, len_px, len_px * 0.085)
 	var back := Vector2(gp.x, gp.z) - Vector2.from_angle(hull) * len_px * (0.46 if Biome.sea() else 0.5)
 	ps.global_position = Vector3(back.x, gp.y + len_px * (0.005 if Biome.sea() else 0.04), back.y)
 	ps.emitting = v.drive.speed > (8.0 if Biome.sea() else 18.0)
@@ -1266,6 +1270,7 @@ func _sea_wake(e: Enemy, gp: Vector3, hull: float, len_px: float) -> void:
 		_dust[id] = d
 	d["seen"] = true
 	var ps := d["p"] as CPUParticles3D
+	_wakes.emit(id, Vector3(gp.x, gp.y + 0.6, gp.z), hull, len_px, len_px * (0.14 if e is Ekranoplan else 0.085))   # S10-10
 	var back := Vector2(gp.x, gp.z) - Vector2.from_angle(hull) * len_px * 0.46
 	ps.global_position = Vector3(back.x, gp.y + 1.0, back.y)
 	ps.emitting = true
@@ -1347,7 +1352,43 @@ func _make_dust(len_px: float) -> CPUParticles3D:
 
 
 ## A-03: остовы машин конвоя — та же модель, обгоревшая: тент и стрелки пропадают, корпус тёмный, дым столбом
-var _burnt_mat: StandardMaterial3D
+var _burnt_mat: Material
+
+
+## S10-07 (Kanta 23.10: «уничтоженная техника лежит как кусок тёмного чего-то»): было — непрозрачная почти чёрная
+## заливка без света поверх модели. Стало — умножение поверх своего цвета модели: свет, тени и детали корпуса
+## остаются, металл пятнами в саже, пепельно-серый и рыжий от окалины (по мировым координатам — у каждой машины свой)
+const BURNT_SHADER := """
+shader_type spatial;
+render_mode blend_mul, unshaded, depth_draw_never, shadows_disabled, cull_back;
+varying vec3 wp;
+float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vn(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h(i), h(i + vec2(1, 0)), u.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), u.x), u.y);
+}
+void vertex() {
+	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+void fragment() {
+	vec2 q = wp.xz + wp.y * 0.7;
+	float n = vn(q / 5.0) * 0.6 + vn(q / 2.0 + 7.0) * 0.4;
+	vec3 soot = vec3(0.24, 0.23, 0.22);
+	vec3 ash = vec3(0.5, 0.49, 0.47);
+	vec3 rust = vec3(0.62, 0.44, 0.34);
+	vec3 c = mix(soot, ash, smoothstep(0.5, 0.75, n));
+	c = mix(c, rust, smoothstep(0.68, 0.82, vn(q / 3.0 + 3.0)) * 0.6);
+	ALBEDO = c;
+}
+"""
+
+
+func _make_burnt_mat() -> ShaderMaterial:
+	var sh := Shader.new()
+	sh.code = BURNT_SHADER
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	return m
 
 
 func _sync_wrecks(delta: float) -> void:
@@ -1364,10 +1405,7 @@ func _sync_wrecks(delta: float) -> void:
 		if not u.has("wreck"):
 			u["wreck"] = true
 			if _burnt_mat == null:
-				_burnt_mat = StandardMaterial3D.new()
-				_burnt_mat.albedo_color = Color(0.03, 0.025, 0.02, 0.78)
-				_burnt_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-				_burnt_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+				_burnt_mat = _wreck_mat
 			if u.get("bm") != null:
 				var inst := (u["node"] as Node3D).get_child(0)
 				for nm in ["tent", "launcher"]:
@@ -1383,13 +1421,47 @@ func _sync_wrecks(delta: float) -> void:
 			u["wsmoke"] = smoke
 		var gp := terrain.surface_fast(v.anchor.x, v.anchor.y) if terrain != null else ground_under(v.global_position)
 		var tilt: Vector2 = u.get("tilt", Vector2.ZERO)
-		_place(u, Vector2(gp.x, gp.z), v.heading, tilt.y + 0.04, 0.0, gp.y + 0.5, (cam.global_position.y - gp.y) / cam.global_position.y, tilt.x)
+		var sink := 0.0
+		if Biome.sea():
+			# S10-07: подбитое судно не лежит на воде тёмным куском — кренится, оседает кормой и уходит под воду
+			# (вода «Архипелага» — поверхность рельефа: ниже неё модель скрыта); пока тонет — пена вокруг
+			var st := minf(float(u.get("sink_t", 0.0)) + delta, SINK_TIME + 1.0)
+			u["sink_t"] = st
+			sink = smoothstep(0.0, SINK_TIME, st)
+			tilt += Vector2(sink * 0.35, -sink * 0.18) * (1.0 if v.get_instance_id() % 2 == 0 else -1.0)
+			_sink_foam(v.get_instance_id(), gp, len_px, st < SINK_TIME)
+			(u["node"] as Node3D).visible = st < SINK_TIME
+		_place(u, Vector2(gp.x, gp.z), v.heading, tilt.y + 0.04, 0.0, gp.y + 0.5 - sink * len_px * 0.3, (cam.global_position.y - gp.y) / cam.global_position.y, tilt.x)
 		if u.has("wsmoke"):
 			var sm := u["wsmoke"] as CPUParticles3D
 			sm.global_position = Vector3(gp.x, gp.y + 4.0, gp.z)
-			sm.emitting = v._burn < 12.0
+			sm.emitting = v._burn < 12.0 and sink < 0.7
 		if u.get("bm") == null:
-			(u["mi"] as MeshInstance3D).material_overlay = _burnt_mat
+			if _burnt_sprite_mat == null:
+				_burnt_sprite_mat = StandardMaterial3D.new()
+				_burnt_sprite_mat.albedo_color = Color(0.03, 0.025, 0.02, 0.78)
+				_burnt_sprite_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				_burnt_sprite_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			(u["mi"] as MeshInstance3D).material_overlay = _burnt_sprite_mat
+
+
+const SINK_TIME := 6.0   # S10-07: за сколько секунд подбитое судно каравана уходит под воду
+
+
+## S10-07: пена и брызги вокруг тонущего судна (те же частицы, что у пенного следа)
+func _sink_foam(id: int, gp: Vector3, len_px: float, on: bool) -> void:
+	var d: Dictionary = _dust.get(id, {})
+	if d.is_empty():
+		if not on:
+			return
+		d = {"p": _make_dust(len_px), "t": 0.0}
+		_dust[id] = d
+	d["seen"] = true
+	var ps := d["p"] as CPUParticles3D
+	ps.global_position = Vector3(gp.x, gp.y + 1.0, gp.z)
+	ps.emission_sphere_radius = len_px * 0.3
+	ps.emitting = on
+	d["t"] = 0.0
 
 
 ## Подвижные части «Крепости» (tools/blender/fortress.py): башни смотрят на игрока, винты крутятся,
