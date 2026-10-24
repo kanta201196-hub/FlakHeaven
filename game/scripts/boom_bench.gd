@@ -49,6 +49,8 @@ func _init(main: Main) -> void:
 		{"name": "trails", "times": [0.3, 0.6, 1.0, 1.6], "trails": true},   # VFX-03: missile and rocket smoke
 		{"name": "wreck", "times": [1.0, 2.0, 3.0], "wreck": true},   # VFX-03: smoke of a wreck on the ground and of a falling plane
 		{"name": "screen", "times": [0.5, 1.5, 3.0, 5.0], "screen": true},   # VFX-03: convoy smoke screen (as Convoy.smoke_fx)
+		{"name": "marks", "times": [2.0, 5.0, 9.0], "blasts": [[Vector2(-220, -60), 130.0], [Vector2(260, 90), 130.0],
+			[Vector2(470, -170), 100.0], [Vector2(60, 230), 90.0]]},   # VFX-06: craters and scorch on the relief
 		{"name": "guns", "times": [0.3, 0.52, 0.71, 0.93, 1.12], "guns": true, "slow": 0.02, "pl": Vector2(-220, 120)},   # VFX-04: muzzle flashes, tracers, hit sparks
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
@@ -127,6 +129,8 @@ func process(delta: float) -> void:
 					var ws := Render3D.I._make_smoke()
 					ws.global_position = Render3D.I.ground_under(_pos + (w[0] as Vector2)) + Vector3(0, 6, 0)
 					ws.amount = w[1]
+			for bl: Array in sc.get("blasts", []):
+				m.fx.blast(_pos + (bl[0] as Vector2), bl[1])
 			if sc.get("emp", false):
 				m.fx.emp_wave(m.player.global_position, 380.0)
 			for k in int(sc.get("stress", 0)):   # мясорубка: 30 взрывов разом — замер нагрузки
