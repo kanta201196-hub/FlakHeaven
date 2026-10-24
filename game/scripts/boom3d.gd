@@ -785,6 +785,11 @@ func _light(p: Vector3, energy: float, rng: float, life: float) -> void:
 func _flak(p: Vector3, s: float) -> void:
 	s *= 1.25
 	_flash(p, s * 3.0, 0.08, Color(1.0, 0.93, 0.8, 1.0))
+	# VFX-02: in Forward+ the burst is our own black-grey bake of the mid-air set (GpuFx.FLIPS "flak");
+	# flash and fragments stay particles, Compatibility keeps the particle puff below
+	if _gpu != null and _gpu.flip("flak", p, s):
+		_sparks(p, _n(8), 260.0 + s * 10.0, 0.3)
+		return
 	_core(p, s * 0.35, s * 0.85, 0.2, 1.0)
 	for i in _n(3):
 		var d := _rdir()

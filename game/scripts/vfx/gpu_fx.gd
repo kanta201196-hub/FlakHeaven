@@ -33,6 +33,9 @@ const FLIPS := {
 	"ground": {"tex": "res://art/vfx/blast_ground.png", "frames": 64, "cols": 8, "size": 6.0, "lift": 0.20, "life": 3.0, "glow": 0.4},
 	# air kill: CC0 mid-air set seen from above, centred on the kill point (no lift); 63 frames + 1 empty
 	"air": {"tex": "res://art/vfx/blast_air.png", "frames": 63, "cols": 8, "size": 9.0, "lift": 0.0, "life": 3.0, "glow": 0.4},
+	# flak burst: the same mid-air set baked again with black-grey smoke and a short dull flame
+	# (game/tools/vfx_bake/render_vdb.py, see its header); the white flash in front is Boom3D's particle
+	"flak": {"tex": "res://art/vfx/blast_flak.png", "frames": 63, "cols": 8, "size": 6.0, "lift": 0.0, "life": 3.0, "glow": 0.5},
 }
 
 ## Draw shader of the flipbook layer: camera-facing quad (like Boom3D.BILLBOARD, without rotation), frame from

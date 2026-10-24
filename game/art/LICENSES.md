@@ -26,6 +26,7 @@
 | --- | --- | --- | --- |
 | `vfx/blast_ground.png` | Ground Explosion | JangaFX | https://jangafx.com/software/embergen/download/free-vdb-animations |
 | `vfx/blast_air.png` | Mid-Air Explosion (Midair_Explosion_01, every 2nd frame) | JangaFX | https://jangafx.com/software/embergen/download/free-vdb-animations |
+| `vfx/blast_flak.png` | Mid-Air Explosion (same frames, black-grey smoke and a dull flame, VFX-02 flak burst) | JangaFX | https://jangafx.com/software/embergen/download/free-vdb-animations |
 
 ## Копоть от взрывов (`game/art/vfx/scorch.png`), Poly Haven — CC0
 
