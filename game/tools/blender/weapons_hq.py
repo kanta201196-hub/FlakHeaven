@@ -7,7 +7,7 @@
 «По мотивам»: без надписей, номеров и эмблем; цветные пояса — только маркировка.
 Запуск (bpy 5.x): python3 weapons_hq.py <вид> <ступень> <out_dir> [--battle] [--blend=<папка .blend>]
   aam 1|2|3|evo, arm 1, rockets 1|2|3|evo, flares 1|2|3|evo, bombs 1…5|evo|evobay, bombdrop evo,
-  exp railgun|emp|laser|plasma
+  exp railgun|emp|laser|plasma, srm 1|2|3, agm 1|2|3, hebomb 1|2|3 (PG-01)
 Ангарные версии — в models/weapons/hq/ (WeaponModels.weapon_model(..., hq = true)), боевые — в models/weapons/.
 
 Шкала бомб (тест 3.5-s8, Kanta: «эволюция бомб нелогична — в конце они меньше и слабее»): на пилоне одна бомба —
@@ -791,6 +791,113 @@ def exp(kind):
         raise SystemExit("неизвестное оружие " + kind)
 
 
+# ======================= PG-01: новые стандартные орудия =======================
+# Ракеты ближнего боя (srm), управляемая ракета «воздух-земля» (agm) и фугасная бомба (hebomb), ступени 1–3
+# (вид меняется на ур. 3 и 5, как у остальных). «По мотивам»: без надписей и эмблем, пояса — только маркировка.
+M_AGM = paint("agm_grey", (0.26, 0.28, 0.25), 0.86, ao=0.5, grime=0.16, dust=0.25)
+M_HEB = paint("hebomb_grey", (0.085, 0.09, 0.088), 0.88, ao=0.5, grime=0.22, dust=0.35)
+
+
+def srm(t):
+    """Лёгкая ракета с тепловой головкой: короче и тоньше В-В, стеклянный купол, передние уголки-рули.
+    Ступень 2 — длинные наплывы вдоль корпуса и газовые рули за соплом; ступень 3 — толще, тёмный отсек
+    головки, двойной жёлтый пояс и медное кольцо двухрежимного двигателя"""
+    R = 0.03 + 0.003 * (t - 1)
+    xn = 0.36
+    prof = [(-0.49, R * 0.8), (-0.485, R)] + grooves(-0.485, xn, R, [-0.3, 0.02, 0.24])[1:] + [(xn, R)]
+    missile_body(prof, M_MSL, 40)
+    seek_len = 0.03 if t < 3 else 0.07
+    emit(lathe([(xn, R), (xn + seek_len, R * 0.97)], 40, False, False), M_MSL_DARK)
+    emit(lathe(dome_prof(xn + seek_len, R * 0.97, 0.5 - xn - seek_len, 10), 40, True, False), M_GLASS)
+    if HQ:
+        emit(sphere(R * 0.45, 16), M_DARK, T(xn + seek_len + 0.02, 0, 0))
+    nozzle(-0.49, R * 0.78)
+    if t == 3:
+        emit(lathe([(-0.12, R * 1.012), (-0.1, R * 1.012)], 40, False, False), M_COPPER)
+    ring_band(0.2, 0.222, R, M_BAND)
+    if t == 3:
+        ring_band(0.236, 0.258, R, M_BAND)
+    ring_band(-0.22, -0.2, R, M_BROWN)
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        fin([(xn - 0.11, R * 0.8), (xn - 0.03, R * 0.8), (xn - 0.075, R + 0.03)], 0.004, a, M_MSL)
+        if t == 1:
+            fin([(-0.48, R * 0.8), (-0.36, R * 0.8), (-0.43, R + 0.04), (-0.48, R + 0.04)], 0.0045, a, M_MSL)
+        else:
+            fin([(-0.36, R * 0.8), (0.18, R * 0.8), (0.14, R + 0.017), (-0.32, R + 0.017)], 0.003, a, M_MSL_DARK if t == 3 else M_MSL)
+            fin([(-0.48, R * 0.8), (-0.39, R * 0.8), (-0.44, R + 0.034), (-0.48, R + 0.034)], 0.0045, a, M_MSL)
+            # газовый руль за соплом: тёмная лопатка на коротком кронштейне
+            emit(box((0.03, 0.003, R * 0.55), 0.0008), M_NOZZLE, T(-0.5, 0, 0) @ RX(a) @ T(0, 0, R * 0.62))
+    rivets(xn - 0.02, R, 20, M_STEEL, 0.0009, skip_top=True)
+    rivets(-0.3, R, 20, M_STEEL, 0.0009, skip_top=True)
+    raceway(-0.42, 0.3, R, -math.pi / 2, M_MSL)
+    stencil(-0.08, 0.12, 0.1, R, M_STENCIL_D, 2, 0.0026, seed=41 + t)
+    shoe(-0.2, 0.14, R * 0.85, R * 0.85 + 0.034)
+
+
+def agm(t):
+    """Управляемая ракета «воздух-земля»: толстый серый корпус, длинные крылья малого размаха посередине,
+    рули у сопла, два жёлтых пояса боевой части. Ступень 1 — тупой стеклянный нос (телевизионная головка);
+    ступень 2 — тёмный нос с окном и передние рули; ступень 3 — гранёная боевая часть, крылья с изломом,
+    обтекатель линии связи вдоль спины"""
+    R = 0.046 + 0.004 * (t - 1)
+    xn = 0.3 if t < 3 else 0.26
+    prof = [(-0.475, R * 0.82), (-0.47, R)] + grooves(-0.47, xn, R, [-0.3, -0.05, 0.12])[1:] + [(xn, R)]
+    missile_body(prof, M_AGM, 40)
+    if t == 1:
+        emit(lathe([(xn, R), (xn + 0.06, R)], 40, False, False), M_MSL_DARK)
+        emit(lathe(dome_prof(xn + 0.06, R, 0.5 - xn - 0.06, 10, R * 0.15), 40, True, False), M_GLASS)
+        if HQ:
+            emit(sphere(R * 0.5, 16), M_DARK, T(xn + 0.1, 0, 0))
+    elif t == 2:
+        emit(lathe(ogive(xn, 0.5, R, R * 0.2, 12) + [(0.5, 0)], 40, False, True), M_MSL_DARK)
+        emit(cyl(R * 0.19, 0.004, 24), M_GLASS, T(0.499, 0, 0))
+        for k in range(4):
+            a = math.pi / 4 + k * math.pi / 2
+            fin([(0.36, R * 0.55), (0.43, R * 0.45), (0.38, R + 0.03)], 0.004, a, M_AGM)
+    else:
+        emit(lathe([(xn - 0.001, R), (0.42, R)], 8), M_AGM)
+        emit(prism([(0.42, -R * 0.9), (0.5, -R * 0.45), (0.5, R * 0.3), (0.42, R * 0.9)], R * 1.8, 0.004), M_MSL_DARK)
+        emit(box((0.004, R * 1.0, R * 0.5), 0.0008), M_GLASS, T(0.4995, 0, -R * 0.08))
+        emit(box((0.5, 0.016, 0.02), 0.004), M_AGM, T(-0.08, 0, R + 0.008))
+    nozzle(-0.475, R * 0.72, ln=0.02)
+    for x in ((0.14, 0.17) if t < 3 else (0.3, 0.34)):
+        ring_band(x, x + 0.018, R if t < 3 else R * 1.01, M_YELLOW)
+    ring_band(-0.27, -0.25, R, M_BROWN)
+    span = R + (0.06 if t == 1 else 0.075)
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        if t < 3:
+            fin([(-0.24, R * 0.8), (0.1, R * 0.8), (0.04, span), (-0.2, span)], 0.006, a, M_AGM)
+        else:
+            fin([(-0.26, R * 0.8), (0.12, R * 0.8), (0.0, R + 0.04), (-0.08, span), (-0.22, span)], 0.006, a, M_AGM)
+        fin([(-0.47, R * 0.8), (-0.37, R * 0.8), (-0.42, R + 0.045), (-0.47, R + 0.045)], 0.0055, a, M_AGM)
+    rivets(xn - 0.02, R, 28, M_STEEL, 0.0012, skip_top=True)
+    rivets(-0.3, R, 28, M_STEEL, 0.0012, skip_top=True)
+    raceway(-0.4, 0.24, R, -math.pi / 2, M_AGM)
+    stencil(-0.14, 0.08, 0.1, R, M_STENCIL, 3, 0.0032, seed=51 + t)
+    if HQ:
+        for a in (0.0, math.pi):
+            emit(box((0.003, 0.05, 0.03), 0.0008), M_AGM, surf(-0.02, a, R, 0.0008))
+    shoe(-0.22, 0.16, R * 0.85, R * 0.85 + 0.036)
+
+
+HEBOMB_LADDER = {1: (0.8, 0.075), 2: (0.88, 0.09), 3: (0.96, 0.11)}
+
+
+def hebomb(t):
+    """Фугасная бомба: тёмно-серый корпус (кассетные — оливковые), длиннее кассетной того же уровня.
+    Ступень 1 — обтекаемая с коробчатым хвостом; ступень 2 — толще, штанга-удлинитель взрывателя (рвёт над
+    землёй); ступень 3 — самая крупная, кольцевой стабилизатор, кольцо на носу и та же штанга"""
+    L, R = HEBOMB_LADDER[t]
+    bomb(L, R, 3 if t < 3 else 5, body=M_HEB)
+    if t >= 2:   # штанга-удлинитель с диском на конце, перед носовым взрывателем
+        x0 = L / 2 - 0.01
+        x1 = x0 + 0.12
+        rod((x0, 0, 0), (x1, 0, 0), R * 0.09, M_STEEL, 16)
+        emit(cyl(R * 0.28, 0.008, 24, 0.0015), M_STEEL, T(x1, 0, 0))
+
+
 # ======================= сборка =======================
 name = None
 if kind == "bombs":
@@ -841,6 +948,9 @@ elif kind == "rockets":
 elif kind == "flares":
     flares_evo() if tier == "evo" else flares(int(tier))
     name = "flares_" + tier
+elif kind in ("srm", "agm", "hebomb"):
+    {"srm": srm, "agm": agm, "hebomb": hebomb}[kind](int(tier))
+    name = "%s_%s" % (kind, tier)
 elif kind == "exp":
     exp(tier)
     name = "exp_" + tier

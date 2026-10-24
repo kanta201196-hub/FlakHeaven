@@ -35,6 +35,9 @@ var tags := {}             # очки тегов: тег → число
 var patches := {}          # нашивки: тег → 0/1/2
 var picks := 0             # сколько карточек выбрано за вылет
 var mastery := false        # фишка 2: мастерство класса взято
+## PG-01: course gun variant for this sortie (`WeaponBalance.GUNS` id), chosen in the hangar
+var gun_variant := "std"
+var ammo := "std"   # PG-01 (Kanta 24.10): course gun ammo type (`WeaponBalance.AMMO`)
 var mastery_off := false    # от карточки мастерства отказались — больше не придёт
 var evo_wait := {}         # отказ от эволюции: оружие → номер выбора, с которого вернётся
 var evo_times := {}        # когда получены эволюции (лог)
@@ -135,12 +138,23 @@ func _init() -> void:
 
 func setup(id: String, sk := "", sk2 := "") -> void:
 	cls_id = id
-	cls = PlaneClasses.get_data(id)
+	cls = PlaneClasses.plane(id, Profile.plane_lvl(id))   # Kanta 24.10: weapons, ★ bonus, turrets, wingmen per plane
+	for arg in OS.get_cmdline_user_args():   # check flag --bonus=<weapon>:<k>, e.g. --bonus=agm:1.0 (A/B of a plane bonus)
+		if String(arg).begins_with("--bonus=") and String(arg).contains(":"):
+			var kv := String(arg).substr(8).split(":")
+			cls["bonus"][kv[0]] = float(kv[1])
 	size = float(cls["size"])
 	radius = 12.0 * size
 	max_hp = float(cls["hp"])
 	hp = max_hp
 	skill3 = sk if PlaneClasses.CLASS_SKILLS[id].has(sk) else cls["skill3"]
+	gun_variant = Profile.gun(id)
+	ammo = Profile.ammo(id)
+	for arg in OS.get_cmdline_user_args():   # PG-01 check flags --gun=twin|heavy, --ammo=ap|he|inc
+		if String(arg).begins_with("--gun=") and WeaponBalance.GUNS.has(String(arg).substr(6)):
+			gun_variant = String(arg).substr(6)
+		if String(arg).begins_with("--ammo=") and WeaponBalance.AMMO.has(String(arg).substr(7)):
+			ammo = String(arg).substr(7)
 	for gd in cls["groups"]:
 		groups.append(Hardpoint.new(gd["name"], int(gd["slots"]), gd["weapon"]))
 	# U-06: самолёт ур. 2 — тяжёлый подвес под экспериментальное оружие (после турелей: номера групп моделей не сдвигаются)
@@ -159,10 +173,17 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 		var tg := Hardpoint.new("Турели", turrets, "turret", true)
 		if id == "bomber":
 			tg.level = 2 # 3.1: «Кит» стартует с турелями ур. 2
-		tg.slots = PlaneClasses.turret_slots(id, tg.level)
+		tg.slots = PlaneClasses.turret_slots(id, tg.level, int(cls["plane_lvl"]))
 		groups.append(tg)
 	if heavy != null:
 		groups.append(heavy)
+	# PG-01: third group (hangar node «Узлы подвеса» lvl 2) goes last, so no other group index shifts;
+	# check flag --group3 opens it without the node
+	if Profile.third_group(id) or OS.get_cmdline_user_args().has("--group3"):
+		var g3: Dictionary = PlaneClasses.GROUP3[id]
+		var h3 := Hardpoint.new(g3["name"], int(g3["slots"]), g3["weapon"])
+		h3.mount_frac = float(g3.get("frac", 0.0))
+		groups.append(h3)
 	# фишка 3: оружие, выбранное в ангаре, — на первый пустой обычный подвес, ур. 1
 	var s2 := Profile.start2(id)
 	if s2 != "":
@@ -173,6 +194,17 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 				h.level = 1
 				h.cd = 0.5
 				break
+	# PG-01 check flag --weapon=<id>: that weapon on the last empty normal group from the start
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--weapon="):
+			var w0 := String(arg).substr(9)
+			for gi in range(groups.size() - 1, -1, -1):
+				var h0: Hardpoint = groups[gi]
+				if Weapons.DEFS.has(w0) and not h0.builtin and not h0.heavy and h0.is_empty():
+					h0.weapon = w0
+					h0.level = 1
+					h0.cd = 0.5
+					break
 	# стартовое оружие и навык дают очки тегов
 	for g in groups:
 		if not (g as Hardpoint).is_empty():

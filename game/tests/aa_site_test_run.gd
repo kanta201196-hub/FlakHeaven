@@ -32,6 +32,11 @@ func _ready() -> void:
 		t.relief_style = style
 		_check_style(t, style)
 		t.queue_free()
+	var td: Terrain3D = load("res://scripts/terrain3d.gd").new()
+	add_child(td)
+	td.setup(500.0, StandardMaterial3D.new(), bg)
+	_check_drawn(td)
+	td.queue_free()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -105,3 +110,38 @@ func _check_style(t: Terrain3D, style: int) -> void:
 	_check(near_b == 0, "relief %d: bunkers closer than %d px to the river: %d" % [style, AASite.RIVER_REAL, near_b])
 	_check(near_c == 0, "relief %d: vehicles closer than %d px to the river: %d" % [style, AASite.CAR_RIVER_REAL, near_c])
 	_check(wet == 0, "relief %d: AA points in water: %d" % [style, wet])
+
+
+## RV-03: in the game the site is placed over built chunks, and the flatness checks read the drawn
+## grid (Terrain3D.height_drawn) instead of the exact height: the rules must hold there too, and it
+## must be cheaper than the exact path (it is the main-thread hitch when a site appears).
+func _check_drawn(t: Terrain3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2024
+	var cs := []
+	var keys: Array[Vector2i] = []
+	for i in 4:
+		var c := Vector2(rng.randf_range(-30000.0, 30000.0), rng.randf_range(-30000.0, 30000.0))
+		cs.append(c)
+		var k := Vector2i(int(floorf(c.x / Terrain3D.CHUNK)), int(floorf(c.y / Terrain3D.CHUNK)))
+		for dx in range(-2, 3):
+			for dz in range(-2, 3):
+				if not keys.has(k + Vector2i(dx, dz)):
+					keys.append(k + Vector2i(dx, dz))
+	t._build_now(keys)
+	var bad := 0
+	var us := [0, 0]
+	for pass_i in 2:   # 0 — over the drawn grid, 1 — exact heights (grid dropped)
+		for c: Vector2 in cs:
+			var u0 := Time.get_ticks_usec()
+			var spots := AASite.place(t, c, 0.7)
+			us[pass_i] += Time.get_ticks_usec() - u0
+			if pass_i == 0:
+				for k in spots.size():
+					var need := AASite.RIVER_REAL if k == 0 else AASite.CAR_RIVER_REAL
+					if not t.river_clear(spots[k], need) or t.in_water(spots[k], 10.0):
+						bad += 1
+		t._hgrid.clear()
+	print("UNIT: AA place over built chunks %.1f ms avg, exact heights %.1f ms avg" % [us[0] / 1000.0 / cs.size(), us[1] / 1000.0 / cs.size()])
+	_check(bad == 0, "AA points over built chunks too close to the river or in water: %d" % bad)
+	_check(us[0] < us[1], "placement over built chunks is cheaper than with exact heights")

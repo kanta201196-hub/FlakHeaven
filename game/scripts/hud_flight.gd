@@ -71,8 +71,9 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 		var a := clampf(m.hud.banner_t, 0.0, 1.0)
 		# dark plate under the banner: yellow text on bright sand is unreadable without it
 		var bw := ui_font().get_string_size(Loc.out(m.hud.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
-		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, 186, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
-		_ctext(218, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
+		var by := maxf(186.0, _boss_bottom + 12.0)   # under the boss bars when an ace is up
+		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, by, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
+		_ctext(by + 32.0, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
 
 	if m.run_time > 180.0 or m.state != "playing":
 		return
@@ -111,14 +112,14 @@ func _hud_back(r: Rect2) -> void:
 	ctrl.draw_rect(r, Color(0.02, 0.025, 0.03, 0.58))
 
 
-## Top-left: hull and fuel bars; under them wingmen, manual fire, synergy slots and course.
+## Top-left: hull and fuel bars only (Sublight reference: the corner panel is just the
+## hull). Synergy slots and the course progress sit in a small plate under it; manual fire
+## and wingmen moved to the bottom bar.
 func _left_panel(m: Main, p: Player) -> void:
 	var x := 20.0
 	var pw := 440.0
 	var y := 20.0
-	var extra := (26.0 if p.wingmen.size() > 0 else 0.0) + (24.0 if p.manual_mode else 0.0) \
-		+ (34.0 if not p.syn.is_empty() or p.has_course() else 0.0) + (80.0 if p.has_course() else 0.0)
-	UiStyle.panel(ctrl, Rect2(x, y, pw, 84.0 + extra), Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.72))
+	UiStyle.panel(ctrl, Rect2(x, y, pw, 84.0), Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.72))
 	var bx := x + 40.0
 	var bw := pw - 56.0
 	# hull: big bar with the numbers on it; red under a third
@@ -139,27 +140,13 @@ func _left_panel(m: Main, p: Player) -> void:
 		var fs := Loc.t("БАК ПУСТ") if fu.empty() else Loc.t("ТОПЛИВО %d:%02d") % [int(fu.left) / 60, int(fu.left) % 60]
 		UiStyle.text(ctrl, UiStyle.head_font(600, 2), Vector2(bx, y + 65), fs, UiStyle.FS_CAPTION, fc, HORIZONTAL_ALIGNMENT_RIGHT, bw)
 	y += 92.0
-	if p.manual_mode:
-		_text(Vector2(x + 14, y + 4), Loc.t("Пушка: ручной огонь +%d%% [%s]") % [int(round(p.manual_bonus * 100.0)), key_label("toggle_fire_mode")], 15, Color(1.0, 0.82, 0.35))
-		y += 24.0
-	if p.wingmen.size() > 0:
-		var wl := PackedStringArray()
-		for w in p.wingmen:
-			if not is_instance_valid(w):
-				continue
-			var wm: Wingman = w
-			var st: String = "%s %d" % [Loc.t(Prog.WING_TYPES[wm.type]["short"]), wm.lvl]
-			if wm.temp:
-				st += Loc.t(" (%d с)") % int(ceil(wm.life))
-			elif not wm.alive():
-				st += Loc.t(" (вернётся %d с)") % int(ceil(wm.dead_t))
-			wl.append(st)
-		_text(Vector2(x + 14, y + 6), Loc.t("Звено: %s · цель: %s [%s]") % [", ".join(wl), Loc.t(Settings.WING_PRIO[Settings.wing_prio]), key_label("wing_prio")], 15, Prog.TAGS["wing"]["color"].lightened(0.3))
-		y += 26.0
+	var extra := 0.0
 	if not p.syn.is_empty() or p.has_course():
-		_course_bar(p, Vector2(x + 14, y - 4))
+		extra = 42.0 + (30.0 if p.has_course() else 0.0)
+		UiStyle.panel(ctrl, Rect2(x, y, pw, extra), Color(1, 1, 1, 0.08), Color(0.03, 0.035, 0.035, 0.6))
+		_course_bar(p, Vector2(x + 14, y + 8))
 	if m.god_mode:
-		_text(Vector2(x, y + extra + 20), "ОТЛАДКА: неуязвимость (F7)", 16, Color(1, 0.5, 0.5))
+		_text(Vector2(x, y + extra + 24), "ОТЛАДКА: неуязвимость (F7)", 16, Color(1, 0.5, 0.5))
 	if int(Tuning.g("scheme")) == 2 and m.state == "playing":
 		var mp := ctrl.get_local_mouse_position()
 		ctrl.draw_arc(mp, 12.0, 0.0, TAU, 24, Color(1, 1, 1, 0.7), 2.0)
@@ -209,13 +196,14 @@ static func grouped(n: int) -> String:
 	return ("-" if n < 0 else "") + s + out
 
 
-## Top-right: parts and kills counters, the sortie goals panel under them, FPS in the corner.
+## Top-right: parts and kills counters, the sortie goals panel under them, FPS in the corner (setting «Счётчик кадров»).
 func _top_right(m: Main, size: Vector2) -> void:
 	var x := size.x - 20.0
 	x = _counter(Rect2(x, 20.0, 0.0, 56.0), grouped(m.run.kills), Loc.t("СБИТО"), Color.WHITE) - 10.0
 	_counter(Rect2(x, 20.0, 0.0, 56.0), grouped(int(m.run.parts)), Loc.t("ЗАПЧАСТИ"), UiStyle.PARTS)
 	_goals(m, Rect2(size.x - 460.0, 88.0, 440.0, 0.0))
-	_text(Vector2(0, size.y - 6), "FPS %d" % Engine.get_frames_per_second(), 14, Color(0.7, 0.7, 0.7, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 8.0)
+	if Settings.show_fps:
+		_text(Vector2(0, size.y - 6), "FPS %d" % Engine.get_frames_per_second(), 14, Color(0.7, 0.7, 0.7, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 8.0)
 
 
 ## Counter box right-aligned at r.position.x: big number and a caption. Returns its left x.
@@ -289,7 +277,8 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 		if not (g as Hardpoint).is_empty():
 			weps.append(g)
 	var skills := _skill_list(p)
-	var w := (weps.size() + skills.size()) * BAR_COL + (24.0 if not weps.is_empty() else 0.0) + 20.0
+	var extras := _extra_list(p)
+	var w := (weps.size() + extras.size() + skills.size()) * BAR_COL + (24.0 if not weps.is_empty() else 0.0) + 20.0
 	var r := Rect2((size.x - w) / 2.0, size.y - 184.0, w, 172.0)
 	bar_top = r.position.y
 	_bar_rect = r
@@ -298,6 +287,9 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 	var ty := r.position.y + 30.0
 	for g in weps:
 		_weapon_col(p, g as Hardpoint, Vector2(x, ty))
+		x += BAR_COL
+	for ex: Dictionary in extras:
+		_skill_col(ex, Vector2(x, ty))
 		x += BAR_COL
 	if not weps.is_empty():
 		ctrl.draw_line(Vector2(x + 12.0, r.position.y + 18.0), Vector2(x + 12.0, r.end.y - 18.0), Color(1, 1, 1, 0.16), 1.5)
@@ -333,6 +325,32 @@ func _weapon_col(p: Player, hp: Hardpoint, pos: Vector2) -> void:
 	if sub != "":
 		UiStyle.text(ctrl, UiStyle.head_font(600, 0), Vector2(pos.x, ny + (nl.size() - 1) * 17.0 + 20.0), _fit(sub, BAR_COL - 4.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 0)),
 			UiStyle.FS_CAPTION, fc.lightened(0.2), HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+
+
+## Course gun and wingmen as bar columns next to the weapons (they used to be text lines in
+## the corner panel): same shape as skills, the key cap is the toggle key.
+func _extra_list(p: Player) -> Array:
+	var out: Array = []
+	var mode := (Loc.t("ручной +%d%%") % int(round(p.manual_bonus * 100.0))) if p.manual_mode else Loc.t("огонь: авто")
+	out.append({"key": "gun_dmg", "action": "toggle_fire_mode", "title": Loc.t("Пушка"), "hint": mode,
+		"desc": Loc.t("Курсовая пушка стреляет сама. Клавиша переключает ручной огонь: стреляете сами, и урон растёт до +%d%%.") % int(round(Tuning.g("manual_max") * 100.0)),
+		"cd": 0.0, "full": 1.0, "active": 0.0, "fam": "kinetic"})
+	if p.wingmen.is_empty():
+		return out
+	var wl := PackedStringArray()
+	var back := 0.0
+	for w in p.wingmen:
+		if not is_instance_valid(w):
+			continue
+		var wm: Wingman = w
+		wl.append("%s %d" % [Loc.t(Prog.WING_TYPES[wm.type]["short"]), wm.lvl])
+		if not wm.temp and not wm.alive():
+			back = maxf(back, wm.dead_t)
+	var hint := (Loc.t("вернётся %d с") % int(ceil(back))) if back > 0.0 else (Loc.t("цель: %s") % Loc.t(Settings.WING_PRIO[Settings.wing_prio]))
+	out.append({"key": "wingman", "action": "wing_prio", "title": Loc.t("Звено"), "hint": hint,
+		"desc": Loc.t("В звене: %s. Ведомые держат строй и бьют сами. Клавиша меняет, кого они атакуют первым.") % ", ".join(wl),
+		"cd": 0.0, "full": 1.0, "active": 0.0, "fam": "wing"})
+	return out
 
 
 ## Skills on the bar: [{key (icon), action, title, hint, desc, cd, full, active, fam}].
@@ -456,34 +474,57 @@ func _skill_tooltip(size: Vector2) -> void:
 		return
 
 
+## Boss bars under the level and timer frame, Sublight-style (reference frames 24.10): the
+## boss name in big heading letters over a thick red bar with the hull numbers inside, the
+## shield as a blue strip under it. Several bosses stack downwards.
 func _boss_bars(m: Main, size: Vector2) -> void:
-	var y := 134.0   # under the level and timer frame
+	var y := 116.0
+	_boss_bottom = 0.0
 	for n in m.get_tree().get_nodes_in_group("enemies"):
 		var b := n as Boss
 		if b == null:
 			continue
-		var w := 560.0
+		var w := BOSS_W
 		var x := (size.x - w) / 2.0
 		if b is Fortress:
 			y = _fortress_bar(b as Fortress, x, y, w)
+			_boss_bottom = y
 			continue
-		ctrl.draw_rect(Rect2(x, y - 16, w, 22), Color(0.02, 0.025, 0.03, 0.55))
-		_text(Vector2(x, y + 2), b.title, 18, Color(1, 0.9, 0.78), HORIZONTAL_ALIGNMENT_CENTER, w)
-		ctrl.draw_rect(Rect2(x, y + 10, w, 14), Color(0, 0, 0, 0.6))
-		ctrl.draw_rect(Rect2(x, y + 10, w * b.hp / b.max_hp, 14), Color(1.0, 0.35, 0.3))
+		var hp := minf(b.hp, b.max_hp)
+		_boss_head(b.title, hp / b.max_hp, "%s / %s" % [grouped(int(ceil(hp))), grouped(int(ceil(b.max_hp)))], x, y, w)
 		if b.shield > 0.0:
-			ctrl.draw_rect(Rect2(x, y + 25, w * b.shield / b.shield_max, 5), Color(0.5, 0.8, 1.0))
-		y += 48.0
+			ctrl.draw_rect(Rect2(x, y + BOSS_BAR_Y + BOSS_BAR_H + 3.0, w * b.shield / b.shield_max, 6), Color(0.5, 0.8, 1.0))
+		_boss_bottom = y + BOSS_BAR_Y + BOSS_BAR_H + 9.0
+		y += BOSS_STEP
+
+
+const BOSS_W := 760.0
+## Lowest y of this frame's boss bars (0 with no boss), so the banner goes under them
+var _boss_bottom := 0.0
+## Bar offset under the boss name, bar height and the step to the next boss
+const BOSS_BAR_Y := 42.0
+const BOSS_BAR_H := 30.0
+const BOSS_STEP := 94.0
+
+
+## Boss name and its thick hull bar with `value` written inside; `frac` is the hull left.
+func _boss_head(title: String, frac: float, value: String, x: float, y: float, w: float) -> void:
+	var hf := UiStyle.head_font(800, 2)
+	UiStyle.text(ctrl, hf, Vector2(x - 2.0, y + 34.0), Loc.out(title).to_upper(), 40, Color(0, 0, 0, 0.6), HORIZONTAL_ALIGNMENT_CENTER, w)
+	UiStyle.text(ctrl, hf, Vector2(x, y + 32.0), Loc.out(title).to_upper(), 40, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, w)
+	var bar := Rect2(x, y + BOSS_BAR_Y, w, BOSS_BAR_H)
+	ctrl.draw_rect(bar.grow(2.0), Color(0, 0, 0, 0.6))
+	ctrl.draw_rect(Rect2(bar.position, Vector2(w * clampf(frac, 0.0, 1.0), BOSS_BAR_H)), UiStyle.DANGER.darkened(0.3))
+	ctrl.draw_rect(Rect2(bar.position, Vector2(w * clampf(frac, 0.0, 1.0), 4.0)), UiStyle.DANGER.lightened(0.3))
+	UiStyle.text(ctrl, hf, Vector2(x, y + BOSS_BAR_Y + 24.0), value, UiStyle.FS_H3, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, w)
 
 
 ## Правка 3.5-s4: полоса «Крепости» — общая прочность, под ней — значки точек: 4 турели и 2 двигателя, сбитые перечёркнуты.
 ## FB-01: справа от значков — сколько осталось до нашей базы
 func _fortress_bar(f: Fortress, x: float, y: float, w: float) -> float:
-	ctrl.draw_rect(Rect2(x, y - 16, w, 22), Color(0.02, 0.025, 0.03, 0.55))
-	_text(Vector2(x, y + 2), f.title, 18, Color(1, 0.9, 0.78), HORIZONTAL_ALIGNMENT_CENTER, w)
 	var fr := f.total_frac()
-	ctrl.draw_rect(Rect2(x, y + 10, w, 16), Color(0, 0, 0, 0.6))
-	ctrl.draw_rect(Rect2(x, y + 10, w * fr, 16), Color(1.0, 0.35, 0.3))
+	_boss_head(f.title, fr, "%d%%" % int(ceil(fr * 100.0)), x, y, w)
+	y += BOSS_BAR_Y + BOSS_BAR_H - 6.0   # point icons and the base distance go under the bar
 	var ix := x + w / 2.0 - 6 * 28.0 / 2.0
 	for pt in f.points:
 		var down := float(pt["hp"]) <= 0.0
@@ -714,7 +755,8 @@ func _radio_box(m: Main, size: Vector2) -> void:
 
 # ---------- 3.2: курс ----------
 
-## Строка курса в левой панели: слоты связок и прогресс к курсу
+## Course plate under the hull panel: synergy slots, then one line with the progress to the
+## course synergy (its conditions are on the pause screen, tag points).
 func _course_bar(p: Player, pos: Vector2, width := 412.0) -> void:
 	var x := pos.x
 	var sw := (width - 8.0 * (Cards.MAX_SYN - 1)) / Cards.MAX_SYN
@@ -738,19 +780,15 @@ func _course_bar(p: Player, pos: Vector2, width := 412.0) -> void:
 	var conds := Cards.cond_list(p, p.course)
 	var k := Cards._progress(conds)
 	var ready := Cards.conds_ok(conds)
-	var y := pos.y + 34.0
+	var y := pos.y + 32.0
 	var col2: Color = sd2.get("color", Menu.C_AMBER)
 	_text(Vector2(pos.x, y + 14), Loc.t("К связке «%s»") % Loc.t(sd2["title"]), 16, col2.lightened(0.2), HORIZONTAL_ALIGNMENT_LEFT, width * 0.5)
 	var bw := width * 0.45
 	ctrl.draw_rect(Rect2(pos.x + width - bw, y + 2, bw, 14), Color(0, 0, 0, 0.5))
 	var a := 1.0 if not ready else (0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.01))
 	ctrl.draw_rect(Rect2(pos.x + width - bw, y + 2, bw * k, 14), Color(col2.r, col2.g, col2.b, a))
-	var parts := PackedStringArray()
-	for c in conds:
-		parts.append(("✓" if c[1] else "") + String(c[0]))
-	# свежий взгляд: длинный список условий переносится, а не вылезает за панель
-	_para(Vector2(pos.x, y + 36), Loc.t("Связка придёт в следующем выборе!") if ready else " · ".join(parts), width, 14,
-		Color(1.0, 0.9, 0.4) if ready else Color(0.85, 0.87, 0.92))
+	if ready:
+		_text(Vector2(pos.x + width - bw, y + 15), Loc.t("в следующем выборе!"), 14, Color(1.0, 0.9, 0.4), HORIZONTAL_ALIGNMENT_CENTER, bw)
 
 
 ## Мир → экран: с наклонной камерой (B-47) через 3D-камеру, иначе через 2D-трансформ

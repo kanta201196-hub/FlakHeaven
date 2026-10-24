@@ -33,10 +33,30 @@ static func key(c: Dictionary, p: Player = null) -> String:
 	return "module"
 
 
+## PG-01 (Kanta 24.10 «Значки ок»): volumetric weapon icons rendered from the hangar models
+## (game/tools/model_lab/card_icons.py); a key without a picture keeps its line drawing
+static var _tex := {}
+
+
+## Picture of icon k (res://art/icons/<k>.png) or null; cached, including misses
+static func tex(k: String) -> Texture2D:
+	if not _tex.has(k):
+		var path := "res://art/icons/%s.png" % k
+		_tex[k] = load(path) if ResourceLoader.exists(path) else null
+	return _tex[k]
+
+
 ## Icon `k` in an `s`-sized square centred at `c`. `boxed` draws the tinted square behind it;
 ## icon tiles (HudIcons) pass false and draw their own glow and frame.
+## A volumetric picture (tex) is drawn without the square and a quarter larger: it has its own family glow
+## and the model does not fill the frame; col sets only its transparency.
 static func draw(ctrl: Control, c: Vector2, s: float, k: String, col: Color, boxed := true) -> void:
 	var h := s / 2.0
+	var t := tex(k)
+	if t != null:
+		var ts := s * 1.25
+		ctrl.draw_texture_rect(t, Rect2(c - Vector2(ts, ts) / 2.0, Vector2(ts, ts)), false, Color(1, 1, 1, col.a))
+		return
 	if boxed:
 		ctrl.draw_rect(Rect2(c - Vector2(h, h), Vector2(s, s)), Color(col.r, col.g, col.b, 0.14))
 		ctrl.draw_rect(Rect2(c - Vector2(h, h), Vector2(s, s)), Color(col.r, col.g, col.b, 0.6), false, 1.5)
@@ -68,6 +88,26 @@ static func draw(ctrl: Control, c: Vector2, s: float, k: String, col: Color, box
 			ctrl.draw_circle(c + Vector2(0, u * 0.15), u * 0.6, col)
 			ctrl.draw_colored_polygon(PackedVector2Array([c + Vector2(-u * 0.35, -u * 0.35), c + Vector2(u * 0.35, -u * 0.35),
 				c + Vector2(u * 0.5, -u * 0.95), c + Vector2(-u * 0.5, -u * 0.95)]), col)
+		"srm":
+			# PG-01: short heat missile and the heat «waves» of its target
+			_missile(ctrl, c + Vector2(-u * 0.3, u * 0.2), u * 1.25, col, lw * 0.9)
+			for i in 3:
+				ctrl.draw_arc(c + Vector2(u * 0.75, -u * 0.6), u * (0.15 + 0.17 * i), PI * 0.6, PI * 1.4, 8, col, lw * 0.7)
+		"agm":
+			# PG-01: heavy guided missile over a ground target in a sight
+			_missile(ctrl, c + Vector2(-u * 0.35, -u * 0.1), u * 1.7, col, lw * 1.3)
+			var tg := c + Vector2(u * 0.6, u * 0.6)
+			ctrl.draw_rect(Rect2(tg - Vector2(u * 0.22, u * 0.13), Vector2(u * 0.44, u * 0.26)), col)
+			ctrl.draw_arc(tg, u * 0.38, 0.0, TAU, 16, col, lw * 0.7)
+			ctrl.draw_line(c + Vector2(-u * 0.05, u * 0.95), c + Vector2(u * 1.0, u * 0.95), col, lw * 0.8)
+		"hebomb":
+			# PG-01: heavy bomb with blast rays below it
+			ctrl.draw_circle(c + Vector2(0, -u * 0.05), u * 0.5, col)
+			ctrl.draw_colored_polygon(PackedVector2Array([c + Vector2(-u * 0.3, -u * 0.45), c + Vector2(u * 0.3, -u * 0.45),
+				c + Vector2(u * 0.45, -u * 1.0), c + Vector2(-u * 0.45, -u * 1.0)]), col)
+			for i in 5:
+				var a := PI * (0.15 + 0.175 * i)
+				ctrl.draw_line(c + Vector2(0, u * 0.35) + Vector2.from_angle(a) * u * 0.35, c + Vector2(0, u * 0.35) + Vector2.from_angle(a) * u * 0.7, col, lw * 0.8)
 		"wing":
 			for o in [Vector2(-u * 0.55, u * 0.35), Vector2(u * 0.55, u * 0.35), Vector2(0, -u * 0.45)]:
 				_plane(ctrl, c + o, u * 0.55, col)

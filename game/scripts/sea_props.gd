@@ -489,7 +489,7 @@ func _wreck_near(c: Vector2, r: float, kind := "") -> void:
 ## оливы, кусты, лиственные; выше — сосны (пинии), на гребнях — камни. Ровной сыпи нет — группами
 func _nature(o: Vector2) -> void:
 	for i in 200:
-		if Settings.gfx == 0 and i % 2 == 1:
+		if Settings.gopt("props") == 0 and i % 2 == 1:
 			continue
 		var p := o + Vector2(_rng.randf() * Terrain3D.CHUNK, _rng.randf() * Terrain3D.CHUNK)
 		var roll := _rng.randf()

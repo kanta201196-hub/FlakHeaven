@@ -73,6 +73,28 @@ static var _faces := {}
 static var _low := {}
 
 
+## Gap from the wing-tip edge to a wing-tip missile's axis, as a fraction of the weapon length
+## (missile radius plus the launch rail), so the body sits beside the tip instead of over the wing
+const TIP_GAP := 0.06
+
+
+## Wing-tip launch rail on the real model (model units, plane length 1): returns Vector2(z of the tip edge, wing
+## mid-height there), or NAN when the chord line misses the wing. The sprite's tip row can lie outside the thinner
+## model tip, so first walk inward until the wing is hit, then outward to its edge.
+static func tip_rail(scene: PackedScene, x: float, z: float) -> Vector2:
+	var step := absf(z) * 0.01
+	var k := 0
+	while is_nan(surface_low(scene, x, z)) and k < 40:
+		z -= signf(z) * step
+		k += 1
+	if is_nan(surface_low(scene, x, z)):
+		return Vector2(NAN, NAN)
+	while not is_nan(surface_low(scene, x, z + signf(z) * step)) and k < 80:
+		z += signf(z) * step
+		k += 1
+	return Vector2(z, (surface_low(scene, x, z) + surface_low(scene, x, z, true)) * 0.5)
+
+
 static func surface_low(scene: PackedScene, x: float, z: float, high := false) -> float:
 	var ck := "%s|%.4f|%.4f%s" % [scene.resource_path, x, z, "|h" if high else ""]
 	if _low.has(ck):
@@ -153,7 +175,9 @@ static func hang(weapon: String, t: int, evo := false) -> float:
 ## Т-5: кассетные бомбы (балка → держатель на 4 → кассета) и ловушки (кассеты-«соты» в обшивке → контейнер на законцовке)
 const WEAPON_GLB := {"aam": "res://models/weapons/aam_%d.glb", "rockets": "res://models/weapons/rockets_%d.glb",
 	"bombs": "res://models/weapons/bombs_%d.glb", "flares": "res://models/weapons/flares_%d.glb",
-	"arm": "res://models/weapons/arm_%d.glb"}   # Т-8: противорадарная ракета «Ласки»
+	"arm": "res://models/weapons/arm_%d.glb",   # Т-8: противорадарная ракета «Ласки»
+	# PG-01: new standard weapons, tiers 1–3 (tools/blender/weapons_hq.py srm|agm|hebomb)
+	"srm": "res://models/weapons/srm_%d.glb", "agm": "res://models/weapons/agm_%d.glb", "hebomb": "res://models/weapons/hebomb_%d.glb"}
 ## Т-6: эволюция — совсем другая модель (правило владельца): «Шмель», «Ливень», «Салют» (на спине),
 ## «Бабушкин ковёр» (под фюзеляжем, планка поперёк полёта — свой узел крепления, без пилона)
 const EVO_GLB := "res://models/weapons/%s_evo.glb"
@@ -176,7 +200,21 @@ const DROP_EVO_GLB := "res://models/weapons/bombdrop_evo.glb"
 const DROP_LEN := [0.0, 0.27, 0.27, 0.27, 0.27, 0.27, 0.167]
 
 
+## Length of a falling bomb of kind `vt` as a share of plane length
+static func drop_len(vt: int) -> float:
+	if vt > HEBOMB_VT0:
+		return float(PlaneArt.WEAPON_FRAC["hebomb"])
+	return float(DROP_LEN[clampi(vt, 1, BOMB_EVO_VT)])
+
+
+## PG-01: falling HE bomb — vt `HEBOMB_VT0` + model tier (hebomb_<t>.glb, the same length as on the pylon)
+const HEBOMB_VT0 := 10
+
+
+## Mesh of a falling bomb of kind `vt` (calibres 1–5, carpet bomb, HE bomb tiers)
 static func drop_mesh(vt: int) -> Mesh:
+	if vt > HEBOMB_VT0:
+		return weapon_model("hebomb", clampi(vt - HEBOMB_VT0, 1, 3))
 	var t := clampi(vt, 1, BOMB_EVO_VT)
 	if t == BOMB_EVO_VT:
 		return _glb_mesh(DROP_EVO_GLB, 1.0, Color(), "glb_drop_evo") if ResourceLoader.exists(DROP_EVO_GLB) else null
@@ -679,6 +717,10 @@ const WING_TURRET_Z := {"bomber_1": 0.65, "bomber_2": 0.62}
 static var _wing_pts := {}
 
 
+## Mount fraction of the half-span from which a group hangs on the wing tips (side "tip")
+const TIP_FRAC := 0.95
+
+
 static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.0) -> Vector2:
 	var key := "%s_%d" % [cls_id, lvl]
 	var ck := key if zf_override < 0.0 else "%s_%.2f" % [key, zf_override]
@@ -770,6 +812,12 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 				for sd in [-1.0, 1.0]:
 					out.append({"p": wing_point(cls_id, lvl, sd, 0.96), "side": "tip", "yaw": 0.0, "t": 3})
 			return out
+	# Kanta 24.10: wing-tip pair («Оса» third group) hangs beside the tip at wing level, not under the swept wing
+	# (from above it looked as if the missiles lay on top of the wing)
+	if not g.builtin and g.mount_frac >= TIP_FRAC:
+		for sd in [-1.0, 1.0]:
+			out.append({"p": wing_point(cls_id, lvl, sd, 0.98), "side": "tip", "yaw": 0.0, "rail": true})
+		return out
 	if not g.builtin:
 		# Т-5: у «Кита» бомбы — в бомбоотсеке под створками (render3d / hangar3d открывают их), без пилона
 		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):

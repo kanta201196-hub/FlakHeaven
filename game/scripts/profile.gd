@@ -13,7 +13,7 @@ const NODES := {
 	"engine": {"title": "Двигатель", "step": "скорость +2%", "note": ""},
 	"armor": {"title": "Броня", "step": "прочность +5%", "note": ""},
 	"wing": {"title": "Крыло", "step": "разворот +3%", "note": ""},
-	"pylons": {"title": "Узлы подвеса", "step": "урон подвесов и турелей +4%", "note": "временно: до введения грузоподъёмности"},
+	"pylons": {"title": "Узлы подвеса", "step": "урон подвесов и турелей +4%", "note": "ур. 2 — третья группа подвеса"},
 	"tank": {"title": "Топливный бак", "step": "объём бака +8% (≈ +43 с полёта)", "note": ""},
 }
 const NODE_ORDER := ["frame", "engine", "armor", "wing", "pylons", "tank"]
@@ -114,18 +114,31 @@ const WAGE := 50
 const PROMOTE_COST := [[5, 100], [10, 300], [15, 700], [20, 1200]]
 
 var data := {}
+## Where the profile is stored; unit tests point it to a test file so a real profile is never touched.
+var path := PATH
+## Check flag --plane=1|2: every class flies that plane (balance runs of plane 2 under --demo); 0 — off
+var debug_plane := 0
 
 
 func _ready() -> void:
 	reset_data()
 	load_profile()
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--plane="):
+			debug_plane = clampi(int(String(arg).substr(8)), 1, 2)
 
 
 func _default_class(cls: String) -> Dictionary:
 	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2, "livery": "",
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"nodes2": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
-		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start2": ""}
+		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start2": "",
+		"kit1": _default_kit(), "kit2": _default_kit()}
+
+
+## PG-01 (Kanta 24.10): course gun and ammo of one plane — bought per plane, not per class
+func _default_kit() -> Dictionary:
+	return {"gun": "std", "guns": ["std"], "ammo": "std", "ammos": ["std"]}
 
 
 func reset_data() -> void:
@@ -137,9 +150,9 @@ func reset_data() -> void:
 
 
 func load_profile() -> void:
-	if not FileAccess.file_exists(PATH):
+	if not FileAccess.file_exists(path):
 		return
-	var f := FileAccess.open(PATH, FileAccess.READ)
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return
 	var d = JSON.parse_string(f.get_as_text())
@@ -169,13 +182,13 @@ func load_profile() -> void:
 
 
 func save() -> void:
-	var tmp := PATH + ".tmp"
+	var tmp := path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
 		return
 	f.store_string(JSON.stringify(data, "  "))
 	f.close()
-	DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(PATH))
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(path))
 
 
 func wipe() -> void:
@@ -275,6 +288,8 @@ func unlocks_at(c: String, lv: int) -> Array:
 
 ## 3.5: на каком самолёте вылет — ур. 2, если куплен и выбран в ангаре
 func plane_lvl(c: String) -> int:
+	if debug_plane > 0:
+		return debug_plane
 	return 2 if plane2(c) and int(cls(c).get("plane_sel", 2)) == 2 else 1
 
 
@@ -300,6 +315,94 @@ func start2_options(c: String) -> Array:
 func start2(c: String) -> String:
 	var w := String(cls(c).get("start2", ""))
 	return w if crew_lvl(c) >= START2_LVL and start2_options(c).has(w) else ""
+
+
+## PG-01 (Kanta 24.10): what plane `lv` of class `c` carries — course gun and ammo; lv 0 = the plane it flies now
+func kit(c: String, lv := 0) -> Dictionary:
+	var key := "kit2" if (plane_lvl(c) if lv <= 0 else lv) == 2 else "kit1"
+	if not (cls(c).get(key) is Dictionary):
+		cls(c)[key] = _default_kit()
+	return cls(c)[key]
+
+
+## Course gun of plane `lv` for the next sortie (`WeaponBalance.GUNS` id)
+func gun(c: String, lv := 0) -> String:
+	return _kit_pick(c, lv, "gun", "guns", WeaponBalance.GUNS)
+
+
+## Course guns plane `lv` owns (always has "std")
+func guns(c: String, lv := 0) -> Array:
+	return _kit_owned(c, lv, "guns", WeaponBalance.GUNS)
+
+
+## Buy course gun `id` for plane `lv` once, for `WeaponBalance.GUN_PRICE`; selects it. False if owned or too few parts
+func buy_gun(c: String, id: String, lv := 0) -> bool:
+	return _kit_buy(c, lv, id, "gun", "guns", WeaponBalance.GUNS, WeaponBalance.GUN_PRICE)
+
+
+## Select an owned course gun; switching is free, an unowned id is ignored
+func set_gun(c: String, id: String, lv := 0) -> void:
+	_kit_set(c, lv, id, "gun", "guns", WeaponBalance.GUNS)
+
+
+## Ammo of plane `lv` for the next sortie (`WeaponBalance.AMMO` id)
+func ammo(c: String, lv := 0) -> String:
+	return _kit_pick(c, lv, "ammo", "ammos", WeaponBalance.AMMO)
+
+
+## Ammo types plane `lv` owns (always has "std")
+func ammos(c: String, lv := 0) -> Array:
+	return _kit_owned(c, lv, "ammos", WeaponBalance.AMMO)
+
+
+## Buy ammo type `id` for plane `lv` once, for `WeaponBalance.AMMO_PRICE`; selects it
+func buy_ammo(c: String, id: String, lv := 0) -> bool:
+	return _kit_buy(c, lv, id, "ammo", "ammos", WeaponBalance.AMMO, WeaponBalance.AMMO_PRICE)
+
+
+## Select an owned ammo type; switching is free
+func set_ammo(c: String, id: String, lv := 0) -> void:
+	_kit_set(c, lv, id, "ammo", "ammos", WeaponBalance.AMMO)
+
+
+func _kit_owned(c: String, lv: int, list_key: String, known: Dictionary) -> Array:
+	var out: Array = ["std"]
+	for g in kit(c, lv).get(list_key, []):
+		if known.has(String(g)) and not out.has(String(g)):
+			out.append(String(g))
+	return out
+
+
+func _kit_pick(c: String, lv: int, key: String, list_key: String, known: Dictionary) -> String:
+	var g := String(kit(c, lv).get(key, "std"))
+	return g if _kit_owned(c, lv, list_key, known).has(g) else "std"
+
+
+func _kit_buy(c: String, lv: int, id: String, key: String, list_key: String, known: Dictionary, price: Dictionary) -> bool:
+	var owned := _kit_owned(c, lv, list_key, known)
+	if not known.has(id) or owned.has(id) or parts() < int(price[id]):
+		return false
+	data["parts"] = parts() - int(price[id])
+	owned.append(id)
+	kit(c, lv)[list_key] = owned
+	kit(c, lv)[key] = id
+	save()
+	return true
+
+
+func _kit_set(c: String, lv: int, id: String, key: String, list_key: String, known: Dictionary) -> void:
+	if not _kit_owned(c, lv, list_key, known).has(id):
+		return
+	kit(c, lv)[key] = id
+	save()
+
+
+## PG-01 (Kanta 24.10, answer 3a): the third hardpoint group opens at node «Узлы подвеса» lvl 2 of plane `lv`
+const GROUP3_PYLONS := 2
+
+
+func third_group(c: String, lv := 0) -> bool:
+	return node(c, "pylons", lv) >= GROUP3_PYLONS
 
 
 func set_start2(c: String, w: String) -> void:

@@ -51,6 +51,8 @@ func _init(main: Main) -> void:
 		{"name": "screen", "times": [0.5, 1.5, 3.0, 5.0], "screen": true},   # VFX-03: convoy smoke screen (as Convoy.smoke_fx)
 		{"name": "marks", "times": [2.0, 5.0, 9.0], "blasts": [[Vector2(-220, -60), 130.0], [Vector2(260, 90), 130.0],
 			[Vector2(470, -170), 100.0], [Vector2(60, 230), 90.0]]},   # VFX-06: craters and scorch on the relief
+		{"name": "fires", "times": [0.15, 0.6, 1.2, 1.8], "boom": [[Vector2(-260, -40), 18.0, false, ""], [Vector2(240, 120), 18.0, false, ""],
+			[Vector2(30, -170), 46.0, true, ""], [Vector2(-60, 210), 18.0, false, ""]], "blast": [Vector2(380, -120), 130.0]},   # VFX-06: light of blasts and burning spots
 		{"name": "guns", "times": [0.3, 0.52, 0.71, 0.93, 1.12], "guns": true, "slow": 0.02, "pl": Vector2(-220, 120)},   # VFX-04: muzzle flashes, tracers, hit sparks
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
@@ -65,6 +67,14 @@ func process(delta: float) -> void:
 			if a.begins_with("--op="):   # same area in every run (campaign.cfg remembers the last operation played)
 				Campaign.debug_open_all()
 				Campaign.select(clampi(int(a.substr(5)) - 1, 0, Campaign.OPS.size() - 1))
+		# the cloud's software GPU makes auto-quality drop the saved preset to «Низкое» (no fire light, fewer
+		# particles), so the bench pins the quality players see: «Высокое», or --gfx=N; not saved
+		Settings.gfx_auto = false
+		Settings.set_preset(2)
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--gfx="):
+				Settings.set_preset(int(a.substr(6)))
+		Settings.apply_gfx()
 		m.select_class("fighter")
 		_t = 0.0
 		return

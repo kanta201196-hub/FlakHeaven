@@ -41,3 +41,7 @@
 | battle/e_helicopter (вертолёт) | Hind Attack Helicopter | Ashley Aslett | https://sketchfab.com/3d-models/hind-attack-helicopter-bb65bdfde2c54007a52dfbe1d91d930d | CC BY 4.0, изменено |
 | battle/e_interceptor (перехватчик) | Sukhoi Su-15TM | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/sukhoi-su-15tm-3403b6f0f47d428eb2dd098f864d9ae1 | CC BY 4.0, изменено |
 | battle/fighter_2, hangar/fighter_2 («Оса 2») | Meshy (paid plan), own generation; image reference — a render of Sketchfab #63 (view-only), Kanta 24.10, `docs/game-context.md` | own generation (Meshy) | — | Meshy paid plan, commercial rights |
+| weapons/srm_*, weapons/hq/srm_* (ракета ближнего боя) | AIM-9 missile | rickslash | https://sketchfab.com/3d-models/caaf15b49bac4144b6c6be577c2b872a | CC BY 4.0, изменено |
+| weapons/agm_*, weapons/hq/agm_* (управляемая ракета «воздух-земля») | AGM 65 MAVERICK | XARYA | https://sketchfab.com/3d-models/5447a415b21840568fbfa01cf6dd166a | CC BY 4.0, изменено |
+| weapons/hebomb_*, weapons/hq/hebomb_* (фугасная авиабомба) | Vintage Bomb | MauriceBaxter | https://sketchfab.com/3d-models/0d1a55bdfd484bcf8091f9d3b0f090ca | CC BY 4.0, изменено |
+| hangar/stand_cart (тележка для бомб в ангаре) | ODAB-500 vacuum bombs transport cart | Tiltow | https://sketchfab.com/3d-models/7ace1edae3664f888e8cd6a5ceb29b74 | CC BY 4.0, изменено |

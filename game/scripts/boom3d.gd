@@ -43,6 +43,15 @@ var _mm: Array = []
 var _parts: Array = [[], [], [], [], [], [], []]
 var _buf: Array = []
 var _emit: Array = []       # догорающие очаги
+const FLASH_LIGHTS_FWD := 24
+const FIRE_LIGHTS := 16
+## Physical 1/d falloff with the old energies left blast lights invisible on sunlit ground; in Forward+ the
+## falloff is 1/d^0.5 and flashes are FLASH_GAIN_FWD times brighter, so a blast and a fire throw a warm pool
+## of light on the ground and models around them (Compatibility keeps its look and cost)
+const LIGHT_FALLOFF_FWD := 0.5
+const FLASH_GAIN_FWD := 8.0
+var _fire_lights: Array = []   # VFX-06: flickering lights of burning spots, Forward+ only (see _fire_glow)
+var _fire_clock := 0.0
 var _later: Array = []      # отложенные вспышки (цепочки у крупных)
 var _lights: Array = []
 var _light_i := 0
@@ -332,13 +341,26 @@ func _ready() -> void:
 		add_child(_gpu)
 		_gpu.build(meshes, mats, CAP)
 		_gpu.build_screen(quad, _screen_mat())
-	for i in 6:
+	# VFX-06: Forward+ shades lights in clusters, so many short flashes at once cost little there; in
+	# Compatibility every light is one more pass over the lit meshes, so it keeps 6
+	for i in (FLASH_LIGHTS_FWD if _gpu != null else 6):
 		var l := OmniLight3D.new()
 		l.light_color = Color(1.0, 0.6, 0.25)
 		l.shadow_enabled = false
 		l.visible = false
+		if _gpu != null:
+			l.omni_attenuation = LIGHT_FALLOFF_FWD
 		add_child(l)
 		_lights.append({"l": l, "t": 0.0, "max": 0.0, "e": 0.0})
+	if _gpu != null:
+		for i in FIRE_LIGHTS:
+			var fl := OmniLight3D.new()
+			fl.light_color = Color(1.0, 0.52, 0.2)
+			fl.shadow_enabled = false
+			fl.visible = false
+			fl.omni_attenuation = LIGHT_FALLOFF_FWD
+			add_child(fl)
+			_fire_lights.append({"l": fl, "owner": null, "used": false, "ph": randf() * 50.0})
 
 
 # ---------- текстура и сетки ----------
@@ -464,8 +486,8 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 	if R == null or R.cam == null:
 		return
 	# частиц меньше на слабом пресете и когда их уже много (мясорубка): нагрузка не растёт без предела
-	_q = FxMath.quality(Settings.gfx, count())
-	_lo = clampi(Settings.gfx, 0, 3) == 0
+	_q = FxMath.quality(Settings.gopt("effects"), count())
+	_lo = Settings.gopt("effects") == 0
 	kind = FxMath.kind_for(s, air, kind)
 	# S10-11 (Kanta: взрывы и дым закрывают весь экран): взрывы целей мельче на BOOM_K; бомбы и НАР — по зоне
 	# поражения, как были, у них меньше только дым (SMOKE_K в _smoke)
@@ -498,7 +520,7 @@ func smoke_screen(pos: Vector2, r: float, burst := false) -> void:
 	var R := Render3D.I
 	if R == null or R.cam == null:
 		return
-	_q = FxMath.quality(Settings.gfx, count())
+	_q = FxMath.quality(Settings.gopt("effects"), count())
 	var g := R.ground_under(pos)
 	var ch := R.cam.global_position.y
 	var k := clampf((ch - g.y) / maxf(ch, 1.0), 0.5, 3.0)
@@ -667,6 +689,8 @@ func _light(p: Vector3, energy: float, rng: float, life: float) -> void:
 	var l: OmniLight3D = slot["l"]
 	l.position = p
 	l.omni_range = rng
+	if _gpu != null:
+		energy *= FLASH_GAIN_FWD
 	slot["e"] = energy
 	slot["t"] = life
 	slot["max"] = life
@@ -984,6 +1008,9 @@ func _tick_later(dt: float) -> void:
 
 ## Догорающие очаги: языки огня и столб дыма, слабеют к концу
 func _tick_emit(dt: float) -> void:
+	_fire_clock += dt
+	for fl in _fire_lights:
+		fl["used"] = false
 	for i in range(_emit.size() - 1, -1, -1):
 		var e: Dictionary = _emit[i]
 		e["t"] = float(e["t"]) + dt
@@ -995,6 +1022,10 @@ func _tick_emit(dt: float) -> void:
 		var p: Vector3 = e["p"]
 		# M-39: огонь у очага короткий (fire_t), дальше только дым; на «Низком» огня в очаге нет
 		var fire_on := not _lo and float(e["t"]) < float(e.get("fire_t", 99.0))
+		if not _fire_lights.is_empty():
+			# the glow outlives the flames by 0.6 s: embers, then out
+			var after := float(e["t"]) - float(e.get("fire_t", float(e["life"])))
+			_fire_glow(e, p, s, k * clampf(1.0 - after / 0.6, 0.0, 1.0) if not _lo else 0.0)
 		e["acc_f"] = float(e["acc_f"]) + (dt * 10.0 * _q * k if fire_on else 0.0)
 		e["acc_s"] = float(e["acc_s"]) + dt * 7.0 * _q * (0.4 + 0.6 * k)
 		while float(e["acc_f"]) >= 1.0:
@@ -1008,6 +1039,41 @@ func _tick_emit(dt: float) -> void:
 			var gg := randf_range(0.09, 0.15)
 			_smoke(p + o2 + Vector3(0, s * 0.6, 0), Vector3(0, s * randf_range(1.6, 2.6), 0), s * 0.6, s * randf_range(2.2, 3.2),
 				randf_range(2.8, 4.0), Color(gg, gg * 0.95, gg * 0.9, 0.7 * (0.4 + 0.6 * k)), 0.5 * k, 4.0, 0.5)
+
+	for fl in _fire_lights:
+		if not fl["used"]:
+			fl["owner"] = null
+			(fl["l"] as OmniLight3D).visible = false
+
+
+## VFX-06: holds a flickering light over burning spot e while glow > 0, so flames light the ground, craters
+## and models around them as in the reference games; slots are taken first come and freed when the spot
+## stops glowing, so with more fires than FIRE_LIGHTS the newest ones simply burn without light
+func _fire_glow(e: Dictionary, p: Vector3, s: float, glow: float) -> void:
+	if glow <= 0.0:
+		return
+	var slot: Dictionary = {}
+	var li := int(e.get("li", -1))
+	if li >= 0 and is_same(_fire_lights[li]["owner"], e):
+		slot = _fire_lights[li]
+	else:
+		for j in _fire_lights.size():
+			var fl: Dictionary = _fire_lights[j]
+			if fl["owner"] == null and not fl["used"]:
+				fl["owner"] = e
+				e["li"] = j
+				slot = fl
+				break
+	if slot.is_empty():
+		return
+	slot["used"] = true
+	var t := _fire_clock + float(slot["ph"])
+	var flicker := 0.72 + 0.16 * sin(t * 17.0) + 0.12 * sin(t * 41.0 + 1.3) * sin(t * 7.0)
+	var l: OmniLight3D = slot["l"]
+	l.position = p + Vector3(0, s * 0.9 + 8.0, 0)
+	l.omni_range = clampf(s * 10.0, 130.0, 420.0)
+	l.light_energy = clampf(s * 2.5, 18.0, 40.0) * glow * flicker
+	l.visible = true
 
 
 ## Обломки: баллистика, кувыркание, след; на рельефе останавливаются, лежат и гаснут

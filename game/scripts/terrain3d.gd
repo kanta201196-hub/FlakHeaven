@@ -84,7 +84,7 @@ var props: BiomeProps          # B-41: модели биома на рельеф
 func setup(depth: float, mat: Material, bg: Background) -> void:
 	base_y = -depth
 	_pick_style()
-	N = N_GFX[clampi(Settings.gfx, 0, 3)]
+	N = N_GFX[Settings.gopt("terrain")]
 	ceiling = maxf(depth - 30.0, 0.0)   # запас на крен и толщину моделей у плоскости боя
 	material = mat
 	_bg = bg
@@ -138,7 +138,7 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 func clear() -> void:
 	_gen += 1
 	_wait_pending()   # потоки читают N — меняем после них
-	N = N_GFX[clampi(Settings.gfx, 0, 3)]
+	N = N_GFX[Settings.gopt("terrain")]
 	for k in _chunks:
 		(_chunks[k] as Node).queue_free()
 	_chunks.clear()
@@ -266,11 +266,13 @@ func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector
 
 ## Which relief to build: F1 slider relief_variety (0 — before RV-01) or --relief0 (lab frames);
 ## RV-02 gullies: slider relief_gullies or --gullies0 (frames without them).
+## RV-04 landforms (pillars, terraces, gorges): slider relief_landforms or --landforms0.
 func _pick_style() -> void:
 	var args := OS.get_cmdline_user_args()
 	var on := Tuning.g("relief_variety") >= 0.5 and not args.has("--relief0")
 	relief_style = 1 if on else 0
 	gullies = Tuning.g("relief_gullies") >= 0.5 and not args.has("--gullies0")
+	_prov.landforms = Tuning.g("relief_landforms") >= 0.5 and not args.has("--landforms0")
 
 
 var gullies := true   # RV-02: gullies on the RV-01 relief (see _pick_style)
@@ -812,7 +814,7 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 				if d < float(o[1]):
 					sc += 50.0 + (float(o[1]) - d)
 			if flat and sc < best_s and not flat_at(q, 0.0, max_h):
-				sc += 30.0 + height(q.x, q.y) / 10.0   # склон — штраф меньше воды и соседей, больше дальности
+				sc += 30.0 + height_drawn(q.x, q.y) / 10.0   # склон — штраф меньше воды и соседей, больше дальности
 			if sc < best_s:
 				best_s = sc
 				best = q
@@ -831,16 +833,25 @@ const FLAT_E := 24.0
 
 
 ## max_h: highest ground that still counts (FLAT_H — valley floor and fans; INF — any level ground).
+## Main thread only (reads the built chunk grid through height_drawn).
 func flat_at(p: Vector2, margin := 10.0, max_h := FLAT_H) -> bool:
 	if absf(river_field(p.x, p.y)) < RIVER_GUARD + margin:
 		return false
-	var h := height(p.x, p.y)
+	var h := height_drawn(p.x, p.y)
 	if h > max_h:
 		return false
 	for d: Vector2 in [Vector2(FLAT_E, 0), Vector2(-FLAT_E, 0), Vector2(0, FLAT_E), Vector2(0, -FLAT_E)]:
-		if absf(height(p.x + d.x, p.y + d.y) - h) > FLAT_K * FLAT_E:
+		if absf(height_drawn(p.x + d.x, p.y + d.y) - h) > FLAT_K * FLAT_E:
 			return false
 	return true
+
+
+## RV-03: height as the ground is drawn (built chunk grid, the same surface vehicles stand on through
+## surface_fast); no chunk there yet — the exact height(). The grid is a lookup, height() with the
+## RV-02 gullies is ~70 µs, and site searches (AASite.place at spawn) check hundreds of points on
+## the main thread. Main thread only: _hgrid is filled by _place_chunk there.
+func height_drawn(x: float, z: float) -> float:
+	return surface_fast(x, z).y - base_y
 
 
 ## Точка дна главной долины на off px от линии реки, на том берегу, где p (тест 3.5-s7: позиция ПВО,

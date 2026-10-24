@@ -269,7 +269,7 @@ static func _available(p: Player) -> Array:
 		var s: Dictionary = SYNERGIES[id]
 		var ok := true
 		if s.has("w"):
-			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w)):
+			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w, int(p.cls["plane_lvl"]))):
 				continue
 			ok = _wlevel(p, s["w"]) > 0 or (free_group and not (s["w"] as Array).has("turret"))
 		if s.get("wingmen", false):
@@ -439,14 +439,22 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 	return ""
 
 
+## Multiplier modules: id → [mods key, step per card, stat name]. Same numbers as the effects
+## in `module_desc`; used only for the texts on the card (totals: `CardText.total_pct`).
+const MODULE_MUL := {"engine": ["speed", 0.06, "Скорость"], "wing": ["turn", 0.08, "Разворот"],
+	"gun_dmg": ["gun_dmg", 0.15, "Урон пушки"], "gun_rate": ["gun_rate", 0.15, "Темп пушки"],
+	"frag": ["blast_r", 0.1, "Радиус взрывов"], "warhead": ["blast_dmg", 0.12, "Урон взрывов"],
+	"msl_head": ["missile_dmg", 0.15, "Урон ракет"], "msl_motor": ["missile_spd", 0.12, "Скорость ракет"],
+	"radio": ["wing_dmg", 0.2, "Урон ведомых"], "magnet": ["pickup", 0.35, "Радиус подбора"],
+	"servo": ["servo_rate", 0.1, "Темп гондолы и турелей"]}
+## Modules whose card effect is one percentage: their card shows «+6% скорости (всего +34%)»
+## instead of the "now → after" line (Sublight reference, Kanta 24.10).
+const MODULE_TOTAL := ["engine", "wing", "gun_dmg", "gun_rate", "frag", "warhead", "magnet"]
+
+
 ## Правка 9 (3.5-s4): строка «было → станет» для модуля — сколько сейчас и сколько будет после карточки
 static func module_delta(p: Player, id: String, k: float) -> String:
-	var mul := {"engine": ["speed", 0.06, "Скорость"], "wing": ["turn", 0.08, "Разворот"],
-		"gun_dmg": ["gun_dmg", 0.15, "Урон пушки"], "gun_rate": ["gun_rate", 0.15, "Темп пушки"],
-		"frag": ["blast_r", 0.1, "Радиус взрывов"], "warhead": ["blast_dmg", 0.12, "Урон взрывов"],
-		"msl_head": ["missile_dmg", 0.15, "Урон ракет"], "msl_motor": ["missile_spd", 0.12, "Скорость ракет"],
-		"radio": ["wing_dmg", 0.2, "Урон ведомых"], "magnet": ["pickup", 0.35, "Радиус подбора"],
-		"servo": ["servo_rate", 0.1, "Темп гондолы и турелей"]}
+	var mul := MODULE_MUL
 	if mul.has(id):
 		var d: Array = mul[id]
 		var v := float(p.mods.get(d[0], 1.0))
@@ -546,7 +554,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		if g.builtin or not g.is_empty():
 			continue
 		# U-06/U-08: на тяжёлый подвес — только экспериментальное оружие, открытое кампанией; на остальные — обычное
-		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL.filter(func(x): return PlaneClasses.allows(p.cls_id, x))):
+		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL.filter(func(x): return PlaneClasses.allows(p.cls_id, x, int(p.cls["plane_lvl"])))):
 			if equipped.has(w) or banned.has("w:" + w):
 				continue
 			cands.append([1.4, {"id": "new_%s_%d" % [w, gi], "ban": "w:" + w, "kind": "weapon_new", "weapon": w, "group": gi, "cat": "Новое оружие",
@@ -607,7 +615,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 	# ведомые: новый ведомый выбранного типа (до лимита) и «слётанность» (+1 уровень конкретному)
 	if p.permanent_wingmen() < wing_limit(p):
 		for t in Prog.WING_TYPES:
-			if banned.has("wn:" + t) or not Profile.wing_ok(p.cls_id, t):
+			if banned.has("wn:" + t) or not Profile.wing_ok(p.cls_id, t) or not PlaneClasses.wing_type_ok(p.cls_id, int(p.cls["plane_lvl"]), t):
 				continue
 			cands.append([1.3, {"id": "wing_new_" + t, "ban": "wn:" + t, "kind": "wing_new", "wtype": t, "cat": "Звено",
 				"title": "Ведомый: %s" % Prog.WING_TYPES[t]["title"]}])
@@ -695,12 +703,13 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			var to := mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
 			card["desc"] = Loc.t("%s: ур. %d → %d\n%s") % [g2.name, g2.level, to, Weapons.DEFS[g2.weapon]["lvl"]]
-			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to) > g2.slots:
-				card["desc"] += "\nВторая турель — сверху на фюзеляже"
+			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to, int(p.cls["plane_lvl"])) > g2.slots:
+				card["desc"] += "\nВторая турель — сверху на фюзеляже" if g2.slots == 1 else "\nЕщё одна турель"
 			if r > 0:
 				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(0.15 * (k - 1.0))
-			if g2.weapon == PlaneClasses.signature(p.cls_id):
-				card["desc"] += Loc.t("\n★ Особенность класса: урон +20%")
+			var bk := PlaneClasses.bonus_k(p.cls_id, int(p.cls["plane_lvl"]), g2.weapon)
+			if bk > 1.0:
+				card["desc"] += Loc.t("\n★ Бонус самолёта: урон +%d%%") % roundi((bk - 1.0) * 100.0)
 			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s, с %d:%02d") % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
@@ -739,9 +748,13 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 						card["desc"] = "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
 		_:
 			card["desc"] = module_desc(p, card["id"], k)
-			var dl := module_delta(p, card["id"], k)
-			if dl != "":
-				card["desc"] += "\n" + dl
+			if MODULE_TOTAL.has(String(card["id"])):
+				var d: Array = MODULE_MUL[card["id"]]
+				card["desc"] += " " + Loc.t("(всего %s)") % CardText.total_pct(float(p.mods.get(d[0], 1.0)), float(d[1]), k)
+			else:
+				var dl := module_delta(p, card["id"], k)
+				if dl != "":
+					card["desc"] += "\n" + dl
 			if card["kind"] == "module":
 				card["desc"] += slot_hint(p, card["id"])   # EX-02: путь к модернизации — плашкой на карточке
 	card["tags"] = tags_line(p, card)
@@ -898,7 +911,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 			g2.level = mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
 			g2.bonus += 0.15 * (k - 1.0)
 			if g2.builtin and g2.weapon == "turret":
-				g2.slots = PlaneClasses.turret_slots(p.cls_id, g2.level)
+				g2.slots = PlaneClasses.turret_slots(p.cls_id, g2.level, int(p.cls["plane_lvl"]))
 		"module":
 			var id: String = card["id"]
 			p.taken[id] = int(p.taken.get(id, 0)) + 1

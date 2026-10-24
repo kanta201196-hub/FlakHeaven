@@ -214,7 +214,7 @@ func _draw() -> void:
 	# штанга: выдвигается к самолёту, при стыковке — огонёк на кончике
 	var root := Vector2(-BOOM_ROOT, 0)
 	var tip := root + Vector2.from_angle(PI + boom_angle) * boom_len
-	if not Render3D.enabled or Settings.gfx == 0: # в 3D штангу рисует модель (узел Boom), на «Низком» — линия
+	if not Render3D.enabled or Settings.gopt("props") == 0: # в 3D штангу рисует модель (узел Boom), на «Низком» — линия
 		draw_line(xf * root, xf * tip, Color(0.3, 0.33, 0.36, 0.95), 7.0)
 		draw_line(xf * root, xf * tip, Color(0.85, 0.9, 0.95, 0.95), 3.5)
 	var tc := Color(0.5, 1.0, 0.5) if docked else Color(1.0, 0.85, 0.35)
