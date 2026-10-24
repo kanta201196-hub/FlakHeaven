@@ -14,6 +14,12 @@ Bomb blast (game/art/vfx/blast_ground.png, set "Ground Explosion"):
       --first 1 --step 3 --count 64 --res 512 --samples 32 --emission 2.0 --fire-scale 0.2 \
       --size 330 --centre 0,-41,58 --rot 0,0,180
   python3 game/tools/vfx_bake/pack_atlas.py frames/ game/art/vfx/blast_ground.png
+Air kill (game/art/vfx/blast_air.png, set "Mid-Air Explosion"): every 2nd .vdb linked as seq/m_000..062.vdb
+(Blender reads a sequence by consecutive numbers), seen from above as simulated; a blank f999.png makes 64 cells:
+  blender -b --python game/tools/vfx_bake/render_vdb.py -- seq/ frames/ \
+      --first 1 --step 1 --count 63 --res 512 --samples 32 --emission 4.0 --fire-scale 0.5 \
+      --size 440 --centre 0,0,0 --rot 0,0,0
+  python3 game/tools/vfx_bake/pack_atlas.py frames/ game/art/vfx/blast_air.png --clip-x 142,370
 """
 import argparse
 import math

@@ -1977,7 +1977,8 @@ func _wreck_smoke_mat() -> Material:
 
 ## Шлейф дыма с огнём у падающего самолёта: частицы в мировых координатах, поднимаются и расплываются
 func _make_smoke() -> CPUParticles3D:
-	if _smoke_mat == null and GpuFx.active() and Boom3D._puff != null:
+	# also replaces the flat material cached by a wreck that came before Boom3D made its puff texture
+	if not _smoke_mat is ShaderMaterial and GpuFx.active() and Boom3D._puff != null:
 		_smoke_mat = _wreck_smoke_mat()
 	if _smoke_mat == null:
 		var sm := StandardMaterial3D.new()
