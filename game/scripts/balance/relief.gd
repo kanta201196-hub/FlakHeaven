@@ -35,14 +35,14 @@ const RUN_HIGH := 800.0
 ## Hills start further from the river: wide valleys with fields where hills meet the river.
 const HILLS_FOOT := 250.0
 ## Crest height share: lowest hills … highest range (the old relief: 0.3 … 1.0 everywhere).
-const TOP_LOW := 0.3
+const TOP_LOW := 0.38
 const TOP_HIGH := 1.0
 ## Main crests and spurs of high ranges (ridged noise wavelength and strength).
 const SPINE_WAVE := 3400.0
 const SPINE_K := 0.4
 ## Rounded knolls of hill regions and lone peaks rising from them.
 const ROLL_WAVE := 1300.0
-const ROLL_K := 0.4
+const ROLL_K := 0.55
 const CONE_WAVE := 2100.0
 const CONE_K := 0.7
 ## Mesa: cliff run above the floor, px; plateau top share (low … high elevation); levels.

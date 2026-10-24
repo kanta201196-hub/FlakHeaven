@@ -96,11 +96,14 @@ static func kind(w: Vector4) -> String:
 ## Relief at a point a px from the valley line (a = |v|): x — height share of the ceiling,
 ## y — bare rock mask, z — scree mask at the foot (both 0…1, for the ground shader).
 ## Terrain3D then applies settlement flats, the river bed and streams.
-func relief(x: float, z: float, a: float, v: float) -> Vector3:
+## pv: weights(x, z, v) when the caller already has them (chunk build needs them for the
+## shader too); x < 0 means "compute here".
+func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0, 0.0)) -> Vector3:
 	if a <= ReliefBalance.D_FLOOR:
 		# valley floor (river, road, fields): only the small bumps; no region noise (cheaper)
 		return Vector3((_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * 0.3, 0.0, 0.0)
-	var pv := weights(x, z, v)
+	if pv.x < 0.0:
+		pv = weights(x, z, v)
 	var e := pv.x
 	var mesa := pv.y
 	var hill := pv.w

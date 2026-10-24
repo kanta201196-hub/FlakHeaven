@@ -184,9 +184,10 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 ## обнажённая порода (слоистые уступы с крутыми гранями), под ними светлые осыпи — видно, откуда камни.
 ## Дно долины (до D_FAN − 40), река, дорога и площадки поселений не меняются
 ## sd_in — уже посчитанное stream_field(x, z, ctx) (кусок рельефа считает его сам; проход по оптимизации 3.5-s7)
-func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN) -> Vector3:
+## pv — landform weights already computed for this point (RV-01 chunk build), x < 0 — none.
+func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector4(-1.0, 0.0, 0.0, 0.0)) -> Vector3:
 	if relief_style == 1 and not _sea:
-		return _relief_prov(x, z, v, ctx, sd_in)
+		return _relief_prov(x, z, v, ctx, sd_in, pv)
 	var a := absf(v)
 	if _sea and a > SEA_W:
 		# «Архипелаг»: берег поднимается в _land_k раз быстрее долины Нагорья — узкий пляж, сразу холмы
@@ -273,9 +274,9 @@ func province(x: float, z: float, v := 0.0) -> Vector4:
 
 ## RV-01 relief: mountains by region from ReliefProvinces; settlement flats, the river bed and
 ## streams cut in here exactly as in the old relief.
-func _relief_prov(x: float, z: float, v: float, ctx := {}, sd_in := NAN) -> Vector3:
+func _relief_prov(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector4(-1.0, 0.0, 0.0, 0.0)) -> Vector3:
 	var a := absf(v)
-	var r := _prov.relief(x, z, a, v)
+	var r := _prov.relief(x, z, a, v, pv)
 	var fl := _flat(x, z, ctx)
 	var h := r.x * fl
 	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
@@ -705,7 +706,10 @@ func _find_loops_pass() -> void:
 ## avoid — [[точка, радиус]] куда нельзя (другие машины позиции); dry — сколько держаться от линии реки
 ## flat — только равнина (flat_at): тест 3.5-s7, позиции ПВО оказывались на склоне
 ## S10-02: вода (wet) запретна всегда — у моря ПВО вставала в пролив; суши в радиусе нет — радиус шире
-func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RIVER_GUARD + 10.0, flat := false) -> Vector2:
+## max_h — highest ground still counted as "flat" when flat is on (AA sites: any level ground,
+## also hill flats and mesa tops away from the river; others: valley floor only, FLAT_H).
+func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RIVER_GUARD + 10.0, flat := false,
+		max_h := FLAT_H) -> Vector2:
 	var objs := []
 	if _bg != null:
 		var c := Vector2i(int(floorf(p.x / CHUNK)), int(floorf(p.y / CHUNK)))
@@ -731,13 +735,15 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 				sc += 50.0 + (dry - ar)
 			if ar < RIVER_GUARD + 10.0:   # S10-02: в воде (wet) — хуже склона, чужого берега и соседей: у моря воды много
 				sc += 1000.0
+			elif stream_dist(q) < STREAM_GUARD + 10.0:   # ручей посёлка — тоже вода (Kanta 24.10: бункер в воде)
+				sc += 1000.0
 			if side != 0.0 and signf(rf) != side:
 				sc += 50.0 + ar
 			for o in objs + avoid:
 				var d := q.distance_to(o[0])
 				if d < float(o[1]):
 					sc += 50.0 + (float(o[1]) - d)
-			if flat and sc < best_s and not flat_at(q, 0.0):
+			if flat and sc < best_s and not flat_at(q, 0.0, max_h):
 				sc += 30.0 + height(q.x, q.y) / 10.0   # склон — штраф меньше воды и соседей, больше дальности
 			if sc < best_s:
 				best_s = sc
@@ -745,7 +751,7 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 		if best_s < 0.05 + rr / radius * 0.2:
 			break
 	if wet(best) and radius < 6000.0:   # S10-02: вокруг одна вода (пролив «Архипелага») — ищем сушу шире
-		return find_floor(p, radius * 2.5, side, avoid, dry, flat)
+		return find_floor(p, radius * 2.5, side, avoid, dry, flat, max_h)
 	return best
 
 
@@ -756,11 +762,12 @@ const FLAT_K := 0.12
 const FLAT_E := 24.0
 
 
-func flat_at(p: Vector2, margin := 10.0) -> bool:
+## max_h: highest ground that still counts (FLAT_H — valley floor and fans; INF — any level ground).
+func flat_at(p: Vector2, margin := 10.0, max_h := FLAT_H) -> bool:
 	if absf(river_field(p.x, p.y)) < RIVER_GUARD + margin:
 		return false
 	var h := height(p.x, p.y)
-	if h > FLAT_H:
+	if h > max_h:
 		return false
 	for d: Vector2 in [Vector2(FLAT_E, 0), Vector2(-FLAT_E, 0), Vector2(0, FLAT_E), Vector2(0, -FLAT_E)]:
 		if absf(height(p.x + d.x, p.y + d.y) - h) > FLAT_K * FLAT_E:
@@ -1289,10 +1296,13 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 	var vs := PackedFloat32Array()
 	var gs := PackedFloat32Array()   # L-06: зелёная полоса вдоль реки
 	var rs := PackedVector2Array()   # M-36: маски скалы и осыпи (шейдер земли, UV)
+	var ps := PackedVector4Array()   # RV-01: landform weights per grid point (shader CUSTOM0)
+	var with_prov := relief_style == 1 and not _sea
 	hs.resize(W * W)
 	vs.resize(W * W)
 	gs.resize(W * W)
 	rs.resize(W * W)
+	ps.resize(W * W)
 	for j in W:
 		for i in W:
 			var x := ox + (i - 1) * step
@@ -1310,7 +1320,10 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				var g := sd * STREAM_K if sd < 20.0 else 20.0 * STREAM_K + (sd - 20.0) * 80.0
 				if g < absf(vs[j * W + i]):
 					vs[j * W + i] = g * (1.0 if vs[j * W + i] >= 0.0 else -1.0)
-			var rl := _relief(x, z, valley(x, z, ctx, rf), ctx, sf)
+			var vv := valley(x, z, ctx, rf)
+			var pv := _prov.weights(x, z, vv) if with_prov else Vector4(-1.0, 0.0, 0.0, 0.0)
+			ps[j * W + i] = pv
+			var rl := _relief(x, z, vv, ctx, sf, pv)
 			hs[j * W + i] = rl.x
 			rs[j * W + i] = Vector2(rl.y, rl.z)
 	# тест 3.5-s4 (п. 16–17): пятна поселений на земле (утоптанная земля, огороды и сады) — неровные, с мягким
@@ -1345,6 +1358,10 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 	cols.resize(V * V)
 	uv2.resize(V * V)
 	uv1.resize(V * V)
+	# RV-01: CUSTOM0 RGBA float — elevation class, mesa, hills, 1 = has regions. Float, not RGBA8:
+	# in GL Compatibility (Godot 4.4.1) RGBA8_UNORM custom data reaches the shader garbled (only R)
+	var c0 := PackedFloat32Array()
+	c0.resize(V * V * 4)
 	for j in V:
 		for i in V:
 			var gi := (j + 1) * W + (i + 1)
@@ -1386,6 +1403,12 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 			cols[vi] = Color(cav, hs[gi] / maxf(ceiling, 1.0), sm.x, sm.y)
 			uv2[vi] = Vector2(_shore_u(vs[gi]) if _sea else vs[gi], burn)
 			uv1[vi] = rs[gi]
+			var pw4 := ps[gi]
+			if pw4.x >= 0.0:
+				c0[vi * 4] = pw4.x
+				c0[vi * 4 + 1] = pw4.y
+				c0[vi * 4 + 2] = pw4.w
+				c0[vi * 4 + 3] = 1.0
 	var idx := PackedInt32Array()
 	idx.resize(nn * nn * 6)
 	var p := 0
@@ -1404,10 +1427,10 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				idx[p + 3] = b; idx[p + 4] = d; idx[p + 5] = c2
 			p += 6
 	if lod > 0:
-		var sk := _skirt(verts, norms, tans, cols, uv1, uv2, idx, V)
-		verts = sk[0]; norms = sk[1]; tans = sk[2]; cols = sk[3]; uv1 = sk[4]; uv2 = sk[5]; idx = sk[6]
+		var sk := _skirt(verts, norms, tans, cols, uv1, uv2, idx, V, c0)
+		verts = sk[0]; norms = sk[1]; tans = sk[2]; cols = sk[3]; uv1 = sk[4]; uv2 = sk[5]; idx = sk[6]; c0 = sk[7]
 	var put: Dictionary = props.plan(key, ctx) if props != null and lod == 0 else {}
-	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv1": uv1, "uv2": uv2, "idx": idx, "gen": gen, "put": put,
+	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv1": uv1, "uv2": uv2, "c0": c0, "idx": idx, "gen": gen, "put": put,
 		"hs": hs, "W": W, "step": step, "lod": lod}
 
 
@@ -1416,7 +1439,8 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 const SKIRT := 90.0
 
 func _skirt(verts: PackedVector3Array, norms: PackedVector3Array, tans: PackedFloat32Array, cols: PackedColorArray,
-		uv1: PackedVector2Array, uv2: PackedVector2Array, idx: PackedInt32Array, V: int) -> Array:
+		uv1: PackedVector2Array, uv2: PackedVector2Array, idx: PackedInt32Array, V: int,
+		c0: PackedFloat32Array) -> Array:
 	var ring: Array[int] = []
 	for i in V - 1:
 		ring.append(i)                          # верхний край
@@ -1437,6 +1461,8 @@ func _skirt(verts: PackedVector3Array, norms: PackedVector3Array, tans: PackedFl
 		cols.append(cols[a])
 		uv1.append(uv1[a])
 		uv2.append(uv2[a])
+		for c in 4:
+			c0.append(c0[a * 4 + c])
 	for k in n:
 		var a := ring[k]
 		var b := ring[(k + 1) % n]
@@ -1445,7 +1471,7 @@ func _skirt(verts: PackedVector3Array, norms: PackedVector3Array, tans: PackedFl
 		# обе стороны: стенку видно и снаружи, и изнутри (наклон камеры)
 		for t in [a, b, b2, a, b2, a2, a, b2, b, a, a2, b2]:
 			idx.append(t)
-	return [verts, norms, tans, cols, uv1, uv2, idx]
+	return [verts, norms, tans, cols, uv1, uv2, idx, c0]
 
 
 func _place_chunk(key: Vector2i, r: Dictionary) -> void:
@@ -1460,9 +1486,12 @@ func _place_chunk(key: Vector2i, r: Dictionary) -> void:
 	arr[Mesh.ARRAY_COLOR] = r["cols"]
 	arr[Mesh.ARRAY_TEX_UV] = r["uv1"]
 	arr[Mesh.ARRAY_TEX_UV2] = r["uv2"]
+	arr[Mesh.ARRAY_CUSTOM0] = r["c0"]
 	arr[Mesh.ARRAY_INDEX] = r["idx"]
 	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	# RV-01: CUSTOM0 holds 4 floats per vertex (landform weights for ground3d.gdshader)
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {},
+		Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = material

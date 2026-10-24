@@ -103,10 +103,7 @@ func process(delta: float) -> void:
 				site.setup(at, 1.0)
 				site.bunker.hp = 99999.0   # стенд: бункер не должен разбиться
 				site.bunker.max_hp = 99999.0
-				for g: GroundTarget in site.targets:   # раскладка та же, но ровно у дороги (без поиска дна долины)
-					g.position += at - site.anchor
-				site.anchor = at
-				site.global_position = at
+				# Kanta 24.10: the site stands where the game puts it (off the river), not moved onto the road
 				site.process_mode = Node.PROCESS_MODE_DISABLED
 			else:
 				site.setup(m.player.global_position + Vector2(0, -120), 1.0)
