@@ -171,7 +171,7 @@ func _hg_start2(m: Main, lx: float, y: float) -> void:
 	var c := m.hangar_cls
 	_text(Vector2(lx, y + 16), "Второй подвес на старте", 17, Color.WHITE)
 	if Profile.crew_lvl(c) < Profile.START2_LVL:
-		_para(Vector2(lx, y + 28), Loc.t("Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек.") % Profile.START2_LVL, 300.0, 14, Color(0.65, 0.68, 0.75))
+		_para(Vector2(lx, y + 40), Loc.t("Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек.") % Profile.START2_LVL, 300.0, 14, Color(0.65, 0.68, 0.75))
 		return
 	var cur := Profile.start2(c)
 	var opts: Array = [""] + Profile.start2_options(c)
@@ -214,8 +214,8 @@ func _hg_gun(m: Main, lx: float, y: float) -> float:
 		_text(Vector2(r.position.x, r.position.y + 37), sub, 12, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		if can:
 			_buttons.append([r, "hg:gun:" + g])
-	_para(Vector2(lx, y + 80.0), Loc.t(String(GUN_HINT[cur])), 300.0, 13, Color(0.65, 0.68, 0.75))
-	return y + 122.0
+	_para(Vector2(lx, y + 92.0), Loc.t(String(GUN_HINT[cur])), 300.0, 13, Color(0.65, 0.68, 0.75))
+	return y + 140.0
 
 
 func _hg_weapons(m: Main, area: Rect2) -> void:
