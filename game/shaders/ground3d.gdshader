@@ -226,7 +226,8 @@ void fragment() {
 		float flat_k = 1.0 - smoothstep(0.08, 0.25, slope);
 		float on_land = smoothstep(0.03, 0.1, zh);
 		c = mix(c, c * hills_tint, prov.z * prov.w * hills_k * flat_k * on_land);
-		c = mix(c, c * mesa_top_tint, prov.y * prov.w * mesa_k * flat_k * smoothstep(0.1, 0.2, zh));
+		float ledge_k = 1.0 - smoothstep(0.2, 0.45, slope);   // mesa ledges are rolling now (Kanta 24.10), not dead flat
+		c = mix(c, c * mesa_top_tint, prov.y * prov.w * mesa_k * ledge_k * smoothstep(0.1, 0.2, zh));
 		float rk = smoothstep(0.2, 0.5, slope + (hgt - 0.5) * 0.15);   // 3.4-t1 (п. 18): переход к скале шире
 		// M-36: скальный выход по маске рельефа — порода и на полках уступов (там с каменной крошкой),
 		// край пятна рваный по высоте текстуры и шуму

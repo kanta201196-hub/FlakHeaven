@@ -147,18 +147,31 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 	# mesa: cliff right above a narrow fan, flat tops in steps, rock only on the cliff faces
 	var ms := 0.0
 	var mr := 0.0
+	var apron := 0.0   # mesa talus band (scree in the shader)
 	if mesa_on:
 		var cl := smoothstep(ReliefBalance.D_FLOOR + 40.0, ReliefBalance.D_FLOOR + 40.0 + ReliefBalance.MESA_CLIFF * pv.z, a)
 		var q := cl * lerpf(ReliefBalance.MESA_TOP_LOW, ReliefBalance.MESA_TOP_HIGH, e) + (er - 0.5) * 0.1 * cl + (rl - 0.5) * 0.35 * cl
 		# side canyons cut the plateau down to its first ledge (dry gorges with sheer walls)
 		var cy := absf(_canyon.get_noise_2d(wx, wz))
 		var cut := 1.0 - smoothstep(ReliefBalance.CANYON_W, ReliefBalance.CANYON_W * 2.5, cy)
-		q = lerpf(q, minf(q, 0.3 / ReliefBalance.MESA_LEVELS + (rl - 0.5) * 0.04), cut * cl)
+		# the gorge floor is a wash rising away from the valley, below the first ledge (no dead-flat bottom)
+		var wash_q := (0.14 + 0.36 * smoothstep(ReliefBalance.D_FLOOR + 40.0, ReliefBalance.D_FLOOR + 1400.0, a)) / ReliefBalance.MESA_LEVELS
+		q = lerpf(q, minf(q, wash_q + (rl - 0.5) * 0.04), cut * cl)
 		var lv := q * ReliefBalance.MESA_LEVELS
-		var st := (floorf(lv) + smoothstep(0.62, 0.82, lv - floorf(lv))) / ReliefBalance.MESA_LEVELS
-		ms = maxf(st, 0.0) + r * r * 0.015 * cl
 		var fr := lv - floorf(lv)
-		mr = smoothstep(0.5, 0.62, fr) * (1.0 - smoothstep(0.84, 0.95, fr)) * smoothstep(0.02, 0.1, q)
+		# a step: the wall on top, a concave scree apron under it (talus), not one sheer drop
+		var tal := smoothstep(0.18, 0.84, fr)
+		var w0 := 0.64 + (er - 0.5) * 0.16   # the rim is eaten by gullies, not a ruled line
+		var rise := lerpf(smoothstep(w0, w0 + 0.2, fr), tal * tal, ReliefBalance.MESA_TALUS)
+		var st := (floorf(lv) + rise) / ReliefBalance.MESA_LEVELS
+		# ledges keep part of the ground's rise and roll, plus hummocks and shallow gullies: never a dead-flat table
+		# (only added: clipping at the floor level would flatten the low ledges again); gorge floors get more
+		var hum := (_hill.get_noise_2d(wx * 1.7, wz * 1.7) + 1.0) * ReliefBalance.MESA_HUMMOCK * (1.0 + cut)
+		var knob := (_hill.get_noise_2d(wx * 3.6 + 913.0, wz * 3.6 - 377.0) + 1.0) * ReliefBalance.MESA_KNOB   # ~180 px mounds: they catch the light
+		st = maxf(lerpf(st, q, ReliefBalance.MESA_TREAD), 0.0) + (er * 0.07 + hum + knob) * cl
+		ms = st + r * r * 0.015 * cl
+		mr = smoothstep(0.56, 0.68, fr) * (1.0 - smoothstep(0.86, 0.95, fr)) * smoothstep(0.02, 0.1, q)
+		apron = smoothstep(0.46, 0.56, fr) * (1.0 - smoothstep(0.62, 0.7, fr)) * smoothstep(0.02, 0.1, q)
 	h += lerpf(mt, ms, mesa)
 	var climb_r := lerpf(climb, smoothstep(ReliefBalance.D_FLOOR + 40.0, ReliefBalance.D_FLOOR + 300.0, a), mesa)
 	var up := smoothstep(0.03, 0.2, climb_r)
@@ -180,4 +193,5 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 	# small bumps on the floor and fans (as the old relief)
 	h += (_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * (0.3 + fan)
 	var scree := foot * smoothstep(-0.1, 0.25, cr + 0.1) * lerpf(0.5, 1.0, maxf(e, mesa))
+	scree = maxf(scree, apron * mesa)
 	return Vector3(clampf(h, -0.03, 1.0), clampf(rock, 0.0, 1.0), clampf(scree, 0.0, 1.0))

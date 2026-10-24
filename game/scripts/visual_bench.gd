@@ -386,6 +386,8 @@ func _hold(p: Dictionary) -> void:
 
 
 func _save(name: String) -> void:
+	if _i >= 0 and _i < _points.size():   # relief lab: where the frame is, to reshoot it with --pts=
+		print("VISUAL point %s at %s" % [name, str(_points[_i]["pos"])])
 	var img := m.get_viewport().get_texture().get_image()
 	img.save_png("user://vis_%s%s.png" % [name, _suffix])
 	if Render3D.I != null and Render3D.I._tilt_on:   # отладка B-47: что попало в текстуру слоя боя
