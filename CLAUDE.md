@@ -1,7 +1,7 @@
 # Flak Heaven — CLAUDE.md
 
 Top-down roguelike / bullet heaven about combat aviation, 15-minute sorties. Target: Steam early access.
-Engine: **Godot 4.4.1**, renderer **GL Compatibility**. Game logic is 2D; visuals are a 3D scene with a top-down camera.
+Engine: **Godot 4.4.1**, renderer **Forward+** (since 24.10.2026; Godot falls back to GL Compatibility on PCs without Vulkan/D3D12). Game logic is 2D; visuals are a 3D scene with a top-down camera.
 
 ## Read before coding
 - How to write code: `docs/standards/code.md` (GDScript style, types, ids, performance, saves, debug flags, Python, Bash/CI, PR author checklist).
@@ -52,7 +52,8 @@ English for code, comments, docstrings, commits, PRs and internal docs. Russian 
 - Long tests and balance measurements: only after agreeing the method with the user.
 - GitHub Actions are off (no minutes left): run checks locally and paste results in the PR.
 - After adding a script with `class_name`: `godot --headless --path game --import` once.
-- Screenshots: `xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots` (`user://shot_*.png`).
+- Screenshots: `xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots` (`user://shot_*.png`) draws the Compatibility fallback, fast. Forward+ (what players see): `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json xvfb-run godot --path game --rendering-method forward_plus -- ...` (lavapipe, ~7 min per `--visual` run; `apt-get install mesa-vulkan-drivers` once). Graphics preset for a capture: `--gfx=0..3`.
+- Colour constants in shaders: wrap in `SRGB()` from `game/shaders/srgb.gdshaderinc` or use `source_color` (Compatibility shows raw values, Forward+ treats them as linear).
 - The cloud has no GPU: FPS here means nothing; judge performance only from logs on real PCs.
 
 ## Skills (superpowers in `.claude/skills/`)

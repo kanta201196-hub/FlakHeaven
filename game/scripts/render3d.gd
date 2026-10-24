@@ -100,6 +100,14 @@ var _prewarm_id := -1   # задача AdobeBuild.prewarm: забрать при
 var _vtasks := {}
 
 
+## Forward+ exposure gain, saturation, contrast and sky fill that bring its frame to the Compatibility
+## look (see _ready): there shadows came out lighter and the frame flatter
+const FP_EXPOSURE_K := 1.5
+const FP_SATURATION := 1.05
+const FP_CONTRAST := 1.18
+const FP_AMBIENT := 0.38
+
+
 func _exit_tree() -> void:
 	if _prewarm_id >= 0:
 		WorkerThreadPool.wait_for_task_completion(_prewarm_id)
@@ -133,6 +141,12 @@ func _ready() -> void:
 	# Forward+ only settings in one place (agreed between the effects and 3D-models threads, 24.10): Compatibility
 	# keeps today's look. VFX-01: HDR glow, so fire, flashes and tracers above 1.0 bloom; tonemap stays as above.
 	if RenderingServer.get_current_rendering_method() == "forward_plus":
+		# Forward+ switch (24.10): linear lighting draws the same scene darker and flatter than Compatibility
+		# (frame means 18-22 % lower, contrast a quarter lower on the --visual bench), so they are lifted to match
+		e.tonemap_exposure = Tuning.g("light_exposure") * FP_EXPOSURE_K
+		e.adjustment_saturation = FP_SATURATION
+		e.adjustment_contrast = FP_CONTRAST
+		e.ambient_light_energy = FP_AMBIENT
 		e.glow_enabled = true
 		e.glow_intensity = 0.9
 		e.glow_bloom = 0.0

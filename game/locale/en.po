@@ -7328,3 +7328,11 @@ msgstr "How far the stick must tilt before the plane responds. Raise it if the p
 #: game/scripts/menu_settings.gd (UI-01 step 4)
 msgid "Какие значки кнопок показывать: по подключённому геймпаду или всегда одного вида."
 msgstr "Which button icons to show: matching the connected gamepad, or always one style."
+
+#: game/scripts/menu_settings.gd (Forward+ switch)
+msgid "Часть значений недоступна: видеокарта не поддерживает Vulkan, и игра работает в режиме совместимости."
+msgstr "Some values are unavailable: the graphics card does not support Vulkan, so the game runs in compatibility mode."
+
+#: game/scripts/menu_settings.gd (Forward+ switch)
+msgid "Недоступно: видеокарта не поддерживает Vulkan, и игра работает в режиме совместимости. Выбранное значение сохранится."
+msgstr "Unavailable: the graphics card does not support Vulkan, so the game runs in compatibility mode. The chosen value is kept."
