@@ -6767,3 +6767,143 @@ msgstr "更新内容"
 #: game/scripts/menu_main.gd (UI-01)
 msgid "ЭВАКУАЦИЙ"
 msgstr "撤离"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "В окне, без рамки на весь экран или полный экран."
+msgstr "窗口、无边框全屏或独占全屏。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Вернуть все клавиши, как было по умолчанию."
+msgstr "将所有按键恢复为默认设置。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Верхний предел кадров в секунду: меньше нагрев и шум видеокарты."
+msgstr "每秒帧数上限：降低显卡发热和噪音。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Выстрелы, взрывы, попадания."
+msgstr "射击、爆炸、命中。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Громкость всей игры."
+msgstr "整个游戏的音量。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Громкость музыки."
+msgstr "音乐音量。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Гул двигателя вашего самолёта."
+msgstr "你的飞机引擎的轰鸣声。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ЗНАЧЕНИЕ"
+msgstr "数值"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ИНТЕРФЕЙС"
+msgstr "界面"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Как самолёт слушается клавиш и мыши: летит по направлению, поворачивает влево-вправо или следует за курсором."
+msgstr "飞机如何响应按键和鼠标：朝按下的方向飞、左右转向，或跟随光标。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Картинки самолётов и техники. Если выключить, будут схематичные фигуры (F4)."
+msgstr "飞机和载具的图像。关闭后显示示意图形（F4）。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Мышь и геймпад"
+msgstr "鼠标和手柄"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Нажмите Enter или щёлкните, затем нужную клавишу. Esc — отмена."
+msgstr "按 Enter 或点击，然后按下想要的按键。Esc 取消。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Наклон камеры над полем боя. В полёте — клавиша F9."
+msgstr "镜头在战场上方的倾角。飞行中按 F9。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Насколько далеко камера. Меньше — видно больше поля."
+msgstr "镜头的远近。数值越小，能看到的战场越多。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Насколько миникарта закрывает поле боя."
+msgstr "小地图遮挡战场的程度。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Объёмная 3D-картинка. Если выключить, вернётся старая плоская 2D."
+msgstr "立体 3D 画面。关闭后恢复旧的平面 2D。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ПО УМОЛЧАНИЮ"
+msgstr "恢复默认"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ПРИМЕНИТЬ"
+msgstr "应用"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ПУНКТ"
+msgstr "选项"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Пунктирные круги дальности вашего оружия."
+msgstr "你的武器射程的虚线圆圈。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "РАЗДЕЛ"
+msgstr "分类"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Размер вашего самолёта на экране."
+msgstr "你的飞机在屏幕上的大小。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Размер врагов и наземных целей на экране."
+msgstr "敌人和地面目标在屏幕上的大小。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Размер миникарты в углу экрана."
+msgstr "屏幕角落小地图的大小。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Размер окна в режиме «В окне»."
+msgstr "窗口模式下的窗口大小。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Тени, сглаживание, детали рельефа и растительность разом. Если выбрать вручную, игра перестанет снижать качество сама."
+msgstr "一次性调整阴影、抗锯齿、地形细节和植被。手动选择后，游戏将不再自动降低画质。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Тряска камеры от взрывов и попаданий. 0 — без тряски."
+msgstr "爆炸和命中引起的镜头震动。0 为不震动。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Убирает интерфейс в полёте — для красивых кадров и видео."
+msgstr "隐藏飞行中的界面，便于截图和录像。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Убирает разрывы картинки, но может добавить небольшую задержку управления."
+msgstr "消除画面撕裂，但可能略微增加操作延迟。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Удаляет ангар, экипажи и запчасти. Отменить нельзя, поэтому нужно нажать два раза."
+msgstr "删除机库、机组和零件。此操作无法撤销，因此需要按两次。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Цифры урона над целями. В полёте переключается клавишей F3."
+msgstr "在目标上方显示伤害数字。飞行中按 F3 切换。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Шрифт подсказок и текста интерфейса."
+msgstr "提示和界面文字的字体。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Щелчки меню и сигналы интерфейса."
+msgstr "菜单点击声和界面提示音。"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Язык меню и подсказок. «Авто» берёт язык системы."
+msgstr "菜单和提示的语言。“自动”使用系统语言。"

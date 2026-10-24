@@ -117,17 +117,14 @@ var _menu_phase := 0
 ## «Что нового» and «Отзыв» overlays, codex «Как играть»; then quits.
 ## godot --path game --rendering-driver opengl3 -- --autotest --shots --menutest
 func _menu_test() -> void:
-	if _bot_wait > 0.0 or not m.state in ["menu", "codex"] or m._state_t < 4.0:
+	if _bot_wait > 0.0 or not m.state in ["menu", "codex", "settings"] or m._state_t < 4.0:
 		return
 	_bot_wait = 0.8
 	var ms := m.menu.main_screen
 	match _menu_phase:
 		0:
 			_shot("menu_v2")
-			var ev := InputEventAction.new()
-			ev.action = "ui_down"
-			ev.pressed = true
-			Input.parse_input_event(ev)
+			_press("ui_down")
 		1:
 			_shot("menu_v2_hangar")
 			ms.overlay = &"whats_new"
@@ -140,9 +137,45 @@ func _menu_test() -> void:
 			m.ui_click("menu_howto")
 		4:
 			_shot("codex_howto")
+			m.menu.open_settings("menu")
+		5:
+			_shot("settings_game")
+			_press_key(KEY_E)
+		6:
+			_shot("settings_gfx")
+			for i in 3:
+				_press("ui_down")
+		7:
+			_shot("settings_gfx_focus")
+			_press_key(KEY_E)
+			_press_key(KEY_E)
+		8:
+			_shot("settings_controls")
+			for i in 15:
+				_press("ui_down")
+		9:
+			_shot("settings_controls_scrolled")
+			_press_key(KEY_E)
+		10:
+			_shot("settings_ui")
 			print("MENUTEST: ok")
 			m.get_tree().quit()
 	_menu_phase += 1
+
+
+## Sends a real action press through the input pipeline (menus see it like a player's key).
+func _press(action: StringName) -> void:
+	var ev := InputEventAction.new()
+	ev.action = action
+	ev.pressed = true
+	Input.parse_input_event(ev)
+
+
+func _press_key(key: Key) -> void:
+	var ev := InputEventKey.new()
+	ev.physical_keycode = key
+	ev.pressed = true
+	Input.parse_input_event(ev)
 
 
 ## Правки 15–16: длинный вылет без боя — 120 карточек в журнале, пауза (Tab) и итоги.
