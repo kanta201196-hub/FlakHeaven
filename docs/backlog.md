@@ -143,7 +143,7 @@
 | U-08, U-10, U-11, U-12, U-13, U-18 | Экспериментальное оружие; боевой разворот и подписи навыков; пауза и итоги; описания навыков в ангаре; боевой интерфейс; подсказки механик ночи (17.10) | Понятность игры для новичков | на проверке в сборке 3.5-s8 |
 | DM-06 | Первые 90 секунд демо понятны новичку (проверка на внешних тестерах) | Понятность игры для новичков | идея (до 15.12) |
 | UI-01 | Main menu and settings redesign after Sublight (Kanta 24.10): style «Прицел», 5 menu items, «Что нового»/«Отзыв» cards, compact flight log, flexible graphics, controls with rebinding and gamepad; plan `docs/superpowers/plans/2026-10-24-main-menu-settings.md` steps 1–5; Kenney Input Prompts + UI Audio (CC0) approved | Переделать главное меню и настройки | in progress: step 1 (UiStyle + UiFocus merged, PR #367) |
-| UI-02 | Combat UI: HUD, pause variant В «Чертёж самолёта», card pick, results (plan steps 6–9), in parallel (Kanta 24.10) | Переделать интерфейс боя | in progress |
+| UI-02 | Combat UI: HUD, pause variant В «Чертёж самолёта», card pick, results (plan steps 6–9), in parallel (Kanta 24.10) | Переделать интерфейс боя | merged 24.10 (PR #372); waiting: frames from the Sublight video on Kanta's PC. Left from review: colour literals → tokens, HUD skill list per-frame allocations, pause DPS by source prefix, 3rd nested term tooltip overlap |
 
 ## Нагорье
 
@@ -303,6 +303,7 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | R-15 | Еженедельное ревью работы: пятница 18:00 МСК, отдельный тред, сильная модель; первое 30.10 (23.10 пропускаем); запланированная задача trig_019ogc72sDgnqvRSKPUvjrXY (пятница 17:43 МСК, новый тред) | координатор | 22.10 | готово 22.10, первое ревью 30.10 |
 | R-16 | Review 2026-10-30: Superpowers — keep in the repo or install as an account plugin. For the plugin: updates itself, works in every project. Against: the "project rules override skills" lines added to 4 skills are lost on plugin update; not verified whether cloud threads see account plugins (check before the review). Also assess the new short CLAUDE.md (5.9 KB instead of 25.5 KB) | coordinator (review) | 2026-10-30 | idea |
 | T4-06, B-35 | Замер производительности: FPS и треугольники по логам реальных ПК (в облаке рендер программный — FPS не показателен); режим `--bench` в игре есть | Бой, звук и производительность | — | на проверке в сборке 3.5-s8 (колонки лога; прогон на ПК Kanta — по желанию) |
+| CI-FLAKY-01 | Flaky test: `village_thread_test.gd` failed once in `unit.sh` on 24.10 after merging main into PR #372, then passed 3 of 3 reruns (threaded village build, timing?) | — | — | flaky test, watch |
 | EX-11 | После демо: перки, меняющие правила (Е1), вес самолётов (Ж1), новые боссы (Г2), карта кампании (И2) | — | после демо | идея (отложено) |
 
 R-05, R-07, R-12, R-15 тоже закрыты 22.10 — строки доживают до ближайшего ревью 30.10 и уйдут в архив. R-01, R-02, R-06, R-08, R-11 — правила, действуют с 22.10, закрыты (строка в конце архива). Отзыв внешних тестеров: план — `docs/playtest/external-2/plan.md`, задачи EX-01…EX-12 разложены выше по системам.
