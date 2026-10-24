@@ -77,7 +77,7 @@ func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 			parts = 3
 		"bunker":
 			hp = GroundTarget.HP_FORT # главная цель позиции
-			radius = 32.0
+			radius = 43.0   # hitbox follows the +35% bunker model (Kanta 24.10)
 			xp = 8
 			parts = 10
 	hp = floor_hp(hp, hp_mult, dps)
@@ -350,7 +350,7 @@ func _draw() -> void:
 	# Хитбоксы (radius) не менялись — попадание чуть щедрее картинки, как у конвоя.
 	# Тест 3.5-s8 (Kanta: «бункер — улучшить качество и размер»): новый бункер кодом, 44 (~13 м с обваловкой) —
 	# заметно крупнее машин ПВО, читается как командный пункт позиции
-	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 44.0]}
+	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 59.0]}   # Kanta 24.10: bunker +35% (44 -> 59)
 	var ba: float = _body_angle
 	if mobile() and not leaderless and _goal == Vector2.INF and site != null and site.active:
 		ba = heading # стоит — разворачивается на цель

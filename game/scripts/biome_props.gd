@@ -24,7 +24,8 @@ const KINDS := {
 	"plane_b": ["b11_wreck_plane_b", 110.0, 130.0],   # хвост оторван в начале борозды
 	"plane_c": ["b11_wreck_plane_c", 110.0, 130.0],   # фюзеляж переломлен пополам
 	"heli": ["b11_wreck_heli", 110.0, 130.0],         # вертолёт на боку, лопасти в стороны
-	"bridge": ["", 58.0, 66.0],        # L-07: модели кодом (AdobeBuild.bridge): мост дороги через ручей
+	"bridge": ["", 84.0, 95.0],        # L-07: модели кодом (AdobeBuild.bridge): мост дороги через ручей
+	# Kanta 24.10: the road bridge was smaller than the AA vehicles crossing it; span 58 -> 84 (deck width scales with it)
 	"footbridge": ["", 150.0, 165.0],  # и пешеходный через реку
 }
 
