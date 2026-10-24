@@ -7212,3 +7212,119 @@ msgstr "Shadow sharpness. 8192 gives the cleanest shadows but needs a strong gra
 #: game/scripts/gfx_presets.gd (UI-01 step 3)
 msgid "на максимуме"
 msgstr "at maximum"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Второй навык"
+msgstr "Second skill"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Закрепить карточку"
+msgstr "Lock card"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Убрать карточку"
+msgstr "Ban card"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Ракеты залпом / бомбы"
+msgstr "Missile salvo / bombs"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ОЧИСТИТЬ"
+msgstr "CLEAR"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ОТМЕНА"
+msgstr "CANCEL"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ПОМЕНЯТЬ МЕСТАМИ"
+msgstr "SWAP"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ОСТАВИТЬ"
+msgstr "KEEP"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ЯЧЕЙКА"
+msgstr "SLOT"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "НАЗНАЧИТЬ"
+msgstr "ASSIGN"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Геймпад"
+msgstr "Gamepad"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Мёртвая зона стиков"
+msgstr "Stick dead zone"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Значки кнопок геймпада"
+msgstr "Gamepad button icons"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Автоматически"
+msgstr "Automatic"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "КЛАВИША"
+msgstr "KEY"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ЗАПАСНАЯ"
+msgstr "ALTERNATE"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ГЕЙМПАД"
+msgstr "GAMEPAD"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "нажмите…"
+msgstr "press…"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Мышь %d"
+msgstr "Mouse %d"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ENTER · ПОМЕНЯТЬ"
+msgstr "ENTER · SWAP"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ESC · ОСТАВИТЬ"
+msgstr "ESC · KEEP"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "«%s» уже у действия «%s»"
+msgstr "“%s” is already used by “%s”"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Курсор в меню и полёт мышью работают всегда. Стрелки и крестовина в меню не переназначаются."
+msgstr "The menu cursor and mouse flight always work. Arrow keys and the d-pad in menus cannot be rebound."
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Три способа нажать одно действие: клавиша, запасная клавиша (или кнопка мыши) и кнопка геймпада. Выберите ячейку стрелками ←→, нажмите Enter или щёлкните, затем нужную клавишу. Backspace — очистить ячейку, Esc — отмена."
+msgstr "Three ways to trigger one action: a key, an alternate key (or a mouse button) and a gamepad button. Pick a slot with ←→, press Enter or click, then press the key you want. Backspace clears the slot, Esc cancels."
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Держать — прицел, отпустить — пуск ракет залпом или сброс бомб. Выберите ячейку стрелками ←→, нажмите Enter или щёлкните, затем нужную клавишу. Backspace — очистить, Esc — отмена."
+msgstr "Hold to aim, release to fire a missile salvo or drop bombs. Pick a slot with ←→, press Enter or click, then press the key you want. Backspace clears, Esc cancels."
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Эта клавиша уже назначена другому действию. Enter — поменять местами: другое действие получит прежнюю клавишу. Esc — оставить как было."
+msgstr "This key is already assigned to another action. Enter swaps them: the other action gets the previous key. Esc keeps things as they were."
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Вернуть все клавиши и кнопки геймпада, как было по умолчанию."
+msgstr "Restore all keys and gamepad buttons to their defaults."
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Насколько нужно наклонить стик, чтобы самолёт отозвался. Больше — если самолёт сам уплывает в сторону."
+msgstr "How far the stick must tilt before the plane responds. Raise it if the plane drifts on its own."
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Какие значки кнопок показывать: по подключённому геймпаду или всегда одного вида."
+msgstr "Which button icons to show: matching the connected gamepad, or always one style."

@@ -5,7 +5,9 @@ extends RefCounted
 ## hints and two buttons at the bottom. Created and drawn by `Menu` while the game is in state
 ## "settings". Mouse, keyboard and gamepad all work: ↑↓ row, ←→ value, Enter/A toggles or
 ## starts rebinding, Q/E or the shoulder buttons switch section, Esc/B goes back (saves).
-## Options are the same as before step 2; graphics presets and full rebinding come in steps 3–4.
+## Controls tab (step 4): each action has three cells — key, alternative key, gamepad — picked
+## with ←→; a key already used by another action shows a warning row right under the edited
+## row (Kanta, 24.10) offering to swap.
 
 const TABS := ["ИГРА", "ГРАФИКА", "ЗВУК", "УПРАВЛЕНИЕ", "ИНТЕРФЕЙС"]
 const TAB_H := 76.0
@@ -16,6 +18,16 @@ const SEC_H := 66.0
 const CTL_W := 330.0
 const DESC_W := 404.0
 const LIST_PAD := 36.0
+## Bind cells: two key cells and the gamepad cell, gap between them
+const KEY_CELL_W := 140.0
+const PAD_CELL_W := 112.0
+const CELL_GAP := 8.0
+## Seconds after starting a capture during which input is ignored (the click or Enter that started it)
+const CAPTURE_GUARD := 0.15
+## A capture nobody answers ends by itself (a gamepad has no Esc)
+const CAPTURE_TIMEOUT := 6.0
+## Stick deflection that counts as a press when binding a stick direction or trigger
+const CAPTURE_AXIS := 0.6
 
 ## Row descriptions for the right panel, by row id (bind rows share «bind»)
 const DESCS := {
@@ -59,8 +71,12 @@ const DESCS := {
 	"sfx_db": "Выстрелы, взрывы, попадания.",
 	"engine_db": "Гул двигателя вашего самолёта.",
 	"ui_db": "Щелчки меню и сигналы интерфейса.",
-	"bind": "Нажмите Enter или щёлкните, затем нужную клавишу. Esc — отмена.",
-	"reset_binds": "Вернуть все клавиши, как было по умолчанию.",
+	"bind": "Три способа нажать одно действие: клавиша, запасная клавиша (или кнопка мыши) и кнопка геймпада. Выберите ячейку стрелками ←→, нажмите Enter или щёлкните, затем нужную клавишу. Backspace — очистить ячейку, Esc — отмена.",
+	"bind:fire_hardpoint": "Держать — прицел, отпустить — пуск ракет залпом или сброс бомб. Выберите ячейку стрелками ←→, нажмите Enter или щёлкните, затем нужную клавишу. Backspace — очистить, Esc — отмена.",
+	"conflict": "Эта клавиша уже назначена другому действию. Enter — поменять местами: другое действие получит прежнюю клавишу. Esc — оставить как было.",
+	"reset_binds": "Вернуть все клавиши и кнопки геймпада, как было по умолчанию.",
+	"deadzone": "Насколько нужно наклонить стик, чтобы самолёт отозвался. Больше — если самолёт сам уплывает в сторону.",
+	"glyphs": "Какие значки кнопок показывать: по подключённому геймпаду или всегда одного вида.",
 }
 
 var menu: Menu
@@ -80,6 +96,14 @@ var _drag := ""
 var _wipe_t := 0.0
 var _saved_t := 0.0
 var _want_follow := false
+## Focused cell of a bind row: Binds.KEY1, KEY2 or PAD
+var _slot := 0
+## Action waiting for an input ("" = none), its cell and how long it has waited
+var _cap := ""
+var _cap_slot := 0
+var _cap_t := 0.0
+## Conflict waiting for an answer: {action, slot, token, with: [[action, slot]]}, empty when none
+var _pending := {}
 
 
 func _init(owner: Menu) -> void:
@@ -98,11 +122,22 @@ func reset() -> void:
 	_focus = ""
 	_scroll = 0.0
 	_drag = ""
+	cancel_capture()
+
+
+## Drops a capture or a conflict question in progress (leaving the screen keeps the old keys).
+func cancel_capture() -> void:
+	_cap = ""
+	_pending = {}
 
 
 func process(delta: float) -> void:
 	_saved_t = maxf(0.0, _saved_t - delta)
 	_wipe_t = maxf(0.0, _wipe_t - delta)
+	if _cap != "":
+		_cap_t += delta
+		if _cap_t > CAPTURE_TIMEOUT:
+			_cap = ""
 	for i in TABS.size():
 		_tab_anim[i] = move_toward(_tab_anim[i], 1.0 if i == tab else 0.0, delta / UiStyle.WIPE_S)
 	list.queue_redraw()
@@ -110,14 +145,21 @@ func process(delta: float) -> void:
 
 ## Handles one input event; returns true when it was used.
 func handle_input(event: InputEvent) -> bool:
+	if _cap != "":
+		return _capture_input(event)
+	if not _pending.is_empty() and _pending_input(event):
+		return true
 	var mp := ctrl.get_local_mouse_position()
 	if event is InputEventMouseMotion:
 		if _drag != "":
 			_drag_to(mp.x)
 			return true
 		var h := _hit(mp)
-		if not h.is_empty() and h[1] != &"tab" and h[1] != &"button":
+		if not h.is_empty() and h[1] in [&"row", &"track"]:
 			_focus = h[2]
+		elif not h.is_empty() and h[1] == &"cell":
+			_focus = String(h[2]).get_slice("|", 0)
+			_slot = int(String(h[2]).get_slice("|", 1))
 		return false
 	if event is InputEventMouseButton:
 		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and event.pressed:
@@ -189,10 +231,20 @@ func draw(size: Vector2) -> void:
 	# bottom: hints and buttons
 	var hx := float(UiStyle.MARGIN)
 	var hy := size.y - 32.0
-	hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "↑↓", Loc.t("ПУНКТ"))
-	hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "←→", Loc.t("ЗНАЧЕНИЕ"))
-	hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "Q E", Loc.t("РАЗДЕЛ"))
-	UiStyle.key_hint(ctrl, Vector2(hx, hy), "ESC", Loc.t("НАЗАД"))
+	if _cap != "":
+		hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "BACKSPACE", Loc.t("ОЧИСТИТЬ"))
+		UiStyle.key_hint(ctrl, Vector2(hx, hy), "ESC", Loc.t("ОТМЕНА"))
+	elif not _pending.is_empty():
+		hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "ENTER", Loc.t("ПОМЕНЯТЬ МЕСТАМИ"))
+		UiStyle.key_hint(ctrl, Vector2(hx, hy), "ESC", Loc.t("ОСТАВИТЬ"))
+	else:
+		var bind_row: bool = _row(_focus).get("kind", &"") == &"bind"
+		hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "↑↓", Loc.t("ПУНКТ"))
+		hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "←→", Loc.t("ЯЧЕЙКА") if bind_row else Loc.t("ЗНАЧЕНИЕ"))
+		if bind_row:
+			hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "ENTER", Loc.t("НАЗНАЧИТЬ"))
+		hx = UiStyle.key_hint(ctrl, Vector2(hx, hy), "Q E", Loc.t("РАЗДЕЛ"))
+		UiStyle.key_hint(ctrl, Vector2(hx, hy), "ESC", Loc.t("НАЗАД"))
 	var br := Rect2(size.x - UiStyle.MARGIN - 200.0, size.y - 64.0 - 8.0, 200.0, 52.0)
 	_button(br, "ПРИМЕНИТЬ", "save_apply", true)
 	_button(Rect2(br.position.x - 24.0 - 250.0, br.position.y, 250.0, 52.0), "ПО УМОЛЧАНИЮ", "reset_all", false)
@@ -274,11 +326,15 @@ func _build() -> Array:
 			for rb: Array in Settings.REBIND:
 				if rb[2] != sec:
 					sec = rb[2]
-					_sec(rows, sec)
-				rows.append({kind = &"bind", id = String(rb[0]), label = rb[1],
-					value = "нажмите клавишу…" if menu.capturing == rb[0] else Settings.key_name(rb[0])})
-			_sec(rows, "Мышь и геймпад")
-			rows.append({kind = &"note", id = "", label = "Мышь: левая кнопка — огонь из пушки, правая — ракеты и бомбы вручную. Геймпад — стандартная раскладка. Esc — отменить ввод."})
+					rows.append({kind = &"sec", id = "", label = sec, cols = true})
+				var a := String(rb[0])
+				rows.append({kind = &"bind", id = a, label = rb[1]})
+				if _pending.get("action", "") == a:
+					rows.append({kind = &"conflict", id = "conflict", label = _conflict_text()})
+			_sec(rows, "Геймпад")
+			_opt(rows, "deadzone", "Мёртвая зона стиков", "%d %%" % int(round(Settings.DEADZONES[Settings.deadzone] * 100.0)))
+			_opt(rows, "glyphs", "Значки кнопок геймпада", Settings.GLYPH_SETS[Settings.glyphs])
+			rows.append({kind = &"note", id = "", label = "Курсор в меню и полёт мышью работают всегда. Стрелки и крестовина в меню не переназначаются."})
 			rows.append({kind = &"button", id = "reset_binds", label = "СБРОСИТЬ КЛАВИШИ"})
 		4:
 			_sec(rows, "Интерфейс в полёте")
@@ -431,7 +487,16 @@ func _change(r: Dictionary, dir: int) -> void:
 			Tuning.save_params()
 		&"bind":
 			if dir == 0:
-				menu.capturing = id
+				_start_capture(id, _slot)
+				return
+			else:
+				_slot = clampi(_slot + dir, Binds.KEY1, Binds.PAD)
+				Main.I.sfx.play("card", -24.0 + Tuning.g("ui_db"), 1.6)
+				return
+		&"conflict":
+			if dir == 0:
+				_resolve(true)
+			return
 		&"button":
 			if dir == 0:
 				Settings.reset_binds()
@@ -443,6 +508,106 @@ func _change(r: Dictionary, dir: int) -> void:
 				else:
 					_wipe_t = 3.0
 	Main.I.sfx.play("card", -16.0 + Tuning.g("ui_db"), 1.3)
+
+
+# ---------- Rebinding ----------
+
+func _start_capture(action: String, slot: int) -> void:
+	_pending = {}
+	_cap = action
+	_cap_slot = slot
+	_cap_t = 0.0
+	Main.I.sfx.play("card", -16.0 + Tuning.g("ui_db"), 1.3)
+
+
+## Input while a cell waits for a new key. Key cells take keyboard keys and mouse buttons, the
+## gamepad cell takes gamepad buttons, triggers and stick directions. Esc cancels (B on a key
+## cell too), Backspace/Delete clears the cell. Always eats the event.
+func _capture_input(event: InputEvent) -> bool:
+	if _cap_t < CAPTURE_GUARD or not event.is_pressed() or event.is_echo():
+		return true
+	var pad := _cap_slot == Binds.PAD
+	var token := ""
+	if event is InputEventKey:
+		match (event as InputEventKey).physical_keycode:
+			KEY_ESCAPE:
+				_cap = ""
+				return true
+			KEY_BACKSPACE, KEY_DELETE:
+				_bind(_cap, _cap_slot, "")
+				return true
+		if pad:
+			return true
+		token = Binds.token_of(event)
+	elif event is InputEventMouseButton:
+		var b := (event as InputEventMouseButton).button_index
+		if pad or b in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN, MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT]:
+			return true
+		token = Binds.token_of(event)
+	elif event is InputEventJoypadButton:
+		if not pad:
+			if (event as InputEventJoypadButton).button_index == JOY_BUTTON_B:
+				_cap = ""
+			return true
+		token = Binds.token_of(event)
+	elif event is InputEventJoypadMotion:
+		if not pad or absf((event as InputEventJoypadMotion).axis_value) < CAPTURE_AXIS:
+			return true
+		token = Binds.token_of(event)
+	if token != "":
+		_bind(_cap, _cap_slot, token)
+	return true
+
+
+## Puts `token` into the cell, or asks first when another action already has it.
+func _bind(action: String, slot: int, token: String) -> void:
+	_cap = ""
+	var clash := Binds.conflicts(Settings.binds, action, slot, token)
+	if clash.is_empty():
+		Settings.set_bind(action, slot, token)
+		Main.I.sfx.play("card", -16.0 + Tuning.g("ui_db"), 1.1)
+		return
+	_pending = {action = action, slot = slot, token = token, with = clash}
+	_focus = "conflict"
+	_want_follow = true
+	Main.I.sfx.play("card", -14.0 + Tuning.g("ui_db"), 0.8)
+
+
+## Enter/Esc while the conflict row is shown; other keys drop the question and act as usual.
+func _pending_input(event: InputEvent) -> bool:
+	if event.is_action_pressed("ui_accept") and _focus == "conflict":
+		_resolve(true)
+		return true
+	if event.is_action_pressed("ui_cancel"):
+		_resolve(false)
+		return true
+	if event is InputEventMouseMotion or event is InputEventMouseButton:
+		return false
+	if event.is_pressed() and not event.is_echo():
+		_resolve(false)
+	return false
+
+
+## Answers the conflict row: swap hands the other action this cell's old key, keep changes nothing.
+func _resolve(swap: bool) -> void:
+	if _pending.is_empty():
+		return
+	var a: String = _pending["action"]
+	if swap:
+		Settings.set_bind(a, _pending["slot"], _pending["token"], true)
+	_pending = {}
+	_focus = a
+	Main.I.sfx.play("card", -16.0 + Tuning.g("ui_db"), 1.3 if swap else 1.0)
+
+
+## «Key X is already used by Y» for the conflict row.
+func _conflict_text() -> String:
+	var other: Array = (_pending["with"] as Array)[0]
+	var name := String(other[0])
+	for rb: Array in Settings.REBIND:
+		if rb[0] == name:
+			name = Loc.t(rb[1])
+	return Loc.t("«%s» уже у действия «%s»") % [Settings.token_text(_pending["token"]), name]
 
 
 func _set_param(key: String, v: float) -> void:
@@ -516,6 +681,11 @@ func _option(key: String, dir: int) -> void:
 			Main.I.input_ctl.cycle_tilt(dir)
 		"minimap":
 			Settings.minimap = wrapi(Settings.minimap + dir, 0, Settings.MINIMAP_SIZES.size())
+		"deadzone":
+			Settings.deadzone = clampi(Settings.deadzone + dir, 0, Settings.DEADZONES.size() - 1)
+			Settings.apply_binds()
+		"glyphs":
+			Settings.glyphs = wrapi(Settings.glyphs + dir, 0, Settings.GLYPH_SETS.size())
 		"minimap_alpha":
 			Settings.minimap_alpha = wrapi(Settings.minimap_alpha + dir, 0, Settings.MINIMAP_ALPHA.size())
 		"lang":
@@ -579,11 +749,16 @@ func _click(h: Array, mp: Vector2) -> void:
 						_change(r, 1 if mp.x > ctl.get_center().x else -1)
 					else:
 						_change(r, 0)
-				&"bind":
-					if ctl.has_point(mp):
-						_change(r, 0)
 				&"button", &"danger":
 					_change(r, 0)
+		&"cell":
+			_focus = id.get_slice("|", 0)
+			_slot = int(id.get_slice("|", 1))
+			_start_capture(_focus, _slot)
+		&"swap":
+			_resolve(true)
+		&"keep":
+			_resolve(false)
 
 
 ## Value control rect at the right end of a row rect.
@@ -601,10 +776,34 @@ func _collect_hits() -> void:
 		if not view.intersects(rr):
 			continue
 		_hits.append([rr.intersection(view), &"row", r["id"]])
+		if r["kind"] == &"bind":
+			for sl in 3:
+				var cr := _cell_rect(rr, sl)
+				if view.has_point(cr.get_center()):
+					_hits.append([cr, &"cell", "%s|%d" % [r["id"], sl]])
+		elif r["kind"] == &"conflict":
+			var bs := _conflict_buttons(rr)
+			if view.has_point(bs[0].get_center()):
+				_hits.append([bs[0], &"swap", ""])
+				_hits.append([bs[1], &"keep", ""])
 		if r["kind"] == &"slider":
 			var tr := _track_rect(_ctl_rect(rr))
 			if view.has_point(tr.get_center()):
 				_hits.append([tr.grow_individual(10, 14, 10, 14), &"track", r["id"]])
+
+
+## Cell `slot` (Binds.KEY1/KEY2/PAD) of a bind row rect: three cells flush right.
+func _cell_rect(row: Rect2, slot: int) -> Rect2:
+	var right := row.end.x - 14.0
+	var x := right - PAD_CELL_W - 2.0 * (KEY_CELL_W + CELL_GAP) + slot * (KEY_CELL_W + CELL_GAP)
+	return Rect2(x, row.position.y + 4.0, PAD_CELL_W if slot == Binds.PAD else KEY_CELL_W, row.size.y - 8.0)
+
+
+## «Swap» and «keep» buttons at the right end of the conflict row.
+func _conflict_buttons(row: Rect2) -> Array[Rect2]:
+	var keep := Rect2(row.end.x - 14.0 - 180.0, row.position.y + 6.0, 180.0, row.size.y - 12.0)
+	var swap := Rect2(keep.position.x - 10.0 - 210.0, keep.position.y, 210.0, keep.size.y)
+	return [swap, keep]
 
 
 func _track_rect(ctl: Rect2) -> Rect2:
@@ -628,6 +827,14 @@ func _draw_list() -> void:
 		if kind == &"sec":
 			UiStyle.text(list, UiStyle.head_font(800, 4), Vector2(0, y + 34), Loc.t(r["label"]).to_upper(), UiStyle.FS_LABEL + 2, UiStyle.ACCENT)
 			list.draw_line(Vector2(0, y + 46), Vector2(w, y + 46), UiStyle.LINE, 1.0)
+			if r.get("cols", false):
+				var hf := UiStyle.head_font(700, 3)
+				var heads := ["КЛАВИША", "ЗАПАСНАЯ", "ГЕЙМПАД"]
+				for sl in 3:
+					var cr := _cell_rect(Rect2(0, y, w, ROW_H), sl)
+					var cap: String = heads[sl]
+					UiStyle.text(list, hf, Vector2(cr.position.x, y + 34), cap,
+						_fit(hf, cap, UiStyle.FS_CAPTION, cr.size.x), UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
 			continue
 		if kind == &"note":
 			var ly := y + 18.0
@@ -646,22 +853,31 @@ func _draw_list() -> void:
 			list.draw_rect(rr, Color(UiStyle.DANGER.r, UiStyle.DANGER.g, UiStyle.DANGER.b, 0.1))
 		var off: bool = r.get("off", false)
 		var lc := UiStyle.TEXT_OFF if off else UiStyle.TEXT_WARM
+		if kind == &"conflict":
+			_draw_conflict(rr, r, on)
+			continue
 		if kind == &"button":
 			UiStyle.text(list, UiStyle.head_font(700, 3), Vector2(14, y + 30), r["label"], UiStyle.FS_BODY, UiStyle.ACCENT if on else lc)
 			UiStyle.text(list, UiStyle.head_font(700, 3), Vector2(w - 40, y + 30), "›", UiStyle.FS_LABEL, UiStyle.ACCENT if on else lc)
 			continue
-		var lw := w - CTL_W - 48.0 if kind != &"danger" else w - 28.0
+		var lw := w - CTL_W - 48.0
+		if kind == &"danger":
+			lw = w - 28.0
+		elif kind == &"bind":
+			lw = _cell_rect(rr, 0).position.x - 28.0
 		UiStyle.text(list, body, Vector2(14, y + 30), r["label"], _fit(body, r["label"], UiStyle.FS_LABEL, lw), lc)
 		var ctl := _ctl_rect(rr)
 		match kind:
-			&"opt", &"bind":
-				var capt: bool = kind == &"bind" and menu.capturing == r["id"]
-				var lit := (on or capt) and not off
+			&"bind":
+				for sl in 3:
+					_draw_cell(_cell_rect(rr, sl), r["id"], sl, on and sl == _slot)
+			&"opt":
+				var lit := on and not off
 				list.draw_rect(ctl, UiStyle.ACCENT if lit else Color(0.03, 0.035, 0.03, 0.7))
 				if on and off:
 					list.draw_rect(ctl, UiStyle.ACCENT, false, 1.5)
 				var tc := UiStyle.ON_ACCENT if lit else (UiStyle.TEXT_OFF if off else UiStyle.TEXT_WARM)
-				if kind == &"opt" and not off:
+				if not off:
 					UiStyle.text(list, bold, Vector2(ctl.position.x + 14, y + 30), "‹", UiStyle.FS_LABEL, tc)
 					UiStyle.text(list, bold, Vector2(ctl.end.x - 24, y + 30), "›", UiStyle.FS_LABEL, tc)
 				UiStyle.text(list, bold, Vector2(ctl.position.x + 30, y + 30), r["value"],
@@ -687,6 +903,51 @@ func _draw_list() -> void:
 				list.draw_rect(Rect2(kx - 4.0, tr.get_center().y - 11.0, 8.0, 22.0), UiStyle.TEXT_WARM if not on else UiStyle.ACCENT_SOFT)
 				UiStyle.text(list, bold, Vector2(tr.end.x + 12.0, y + 30), r["value"], UiStyle.FS_BODY + 1,
 					UiStyle.ACCENT_SOFT if on else UiStyle.TEXT_WARM, HORIZONTAL_ALIGNMENT_RIGHT, ctl.end.x - tr.end.x - 12.0)
+
+
+## One bind cell: key name, gamepad glyph, «—» when empty, a prompt while it waits for input.
+func _draw_cell(cr: Rect2, action: String, slot: int, on: bool) -> void:
+	var capt := _cap == action and _cap_slot == slot
+	var bold := Menu.bold()
+	if capt:
+		var pulse := 0.55 + 0.45 * sin(_cap_t * 7.0)
+		list.draw_rect(cr, Color(UiStyle.ACCENT, pulse))
+		var msg := Loc.t("нажмите…")
+		UiStyle.text(list, bold, Vector2(cr.position.x, cr.position.y + 26.0), msg, _fit(bold, msg, UiStyle.FS_BODY, cr.size.x - 12.0),
+			UiStyle.ON_ACCENT, HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
+		return
+	list.draw_rect(cr, UiStyle.ACCENT if on else Color(0.03, 0.035, 0.03, 0.7))
+	var t := str(Settings.binds.get(action, ["", "", ""])[slot])
+	var tc := UiStyle.ON_ACCENT if on else (UiStyle.TEXT_DIM if t == "" else UiStyle.TEXT_WARM)
+	if slot == Binds.PAD and t != "":
+		var icon := Settings.pad_icon(t)
+		if icon != null:
+			var sz := cr.size.y - 6.0
+			list.draw_texture_rect(icon, Rect2(cr.get_center() - Vector2(sz, sz) * 0.5, Vector2(sz, sz)), false, tc)
+			return
+	var s := Settings.token_text(t)
+	UiStyle.text(list, bold, Vector2(cr.position.x, cr.position.y + 26.0), s, _fit(bold, s, UiStyle.FS_BODY + 1, cr.size.x - 14.0),
+		tc, HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
+
+
+## Warning row under the edited bind row: what clashes, and the swap / keep buttons.
+func _draw_conflict(rr: Rect2, r: Dictionary, on: bool) -> void:
+	list.draw_rect(rr, Color(UiStyle.DANGER, 0.16))
+	list.draw_rect(Rect2(rr.position.x, rr.position.y, 4.0, rr.size.y), UiStyle.DANGER)
+	var bs := _conflict_buttons(rr)
+	var body := Hud.ui_font()
+	var tw := bs[0].position.x - 40.0
+	UiStyle.text(list, body, Vector2(18, rr.position.y + 29.0), "⚠ " + r["label"], _fit(body, "⚠ " + r["label"], UiStyle.FS_BODY + 1, tw),
+		UiStyle.DANGER.lerp(UiStyle.TEXT_WARM, 0.35))
+	var hf := UiStyle.head_font(700, 3)
+	for i in 2:
+		var b: Rect2 = bs[i]
+		var lit := i == 0 and on
+		list.draw_rect(b, UiStyle.ACCENT if lit else Color(0.03, 0.035, 0.03, 0.8))
+		list.draw_rect(b, UiStyle.ACCENT if i == 0 else UiStyle.LINE, false, 1.5)
+		var cap := "ENTER · ПОМЕНЯТЬ" if i == 0 else "ESC · ОСТАВИТЬ"
+		UiStyle.text(list, hf, Vector2(b.position.x, b.position.y + 23.0), cap, _fit(hf, cap, UiStyle.FS_CAPTION, b.size.x - 24.0),
+			UiStyle.ON_ACCENT if lit else UiStyle.TEXT_WARM, HORIZONTAL_ALIGNMENT_CENTER, b.size.x)
 
 
 ## Largest size from `size` down to FS_MIN at which `s` fits in `w` (long translations).
@@ -731,7 +992,9 @@ func _description(r: Rect2) -> void:
 		ctrl.draw_rect(cr, UiStyle.ACCENT, false, 1.5)
 		UiStyle.text(ctrl, cf, Vector2(x, y + 11.0), sec, UiStyle.FS_CAPTION, UiStyle.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, cw)
 		y += 52.0
-	var key: String = "bind" if row["kind"] == &"bind" else row["id"]
+	var key: String = row["id"]
+	if row["kind"] == &"bind":
+		key = "bind:" + key if DESCS.has("bind:" + key) else "bind"
 	var desc: String = DESCS.get(key, "")
 	var body := Hud.ui_font()
 	if desc != "":

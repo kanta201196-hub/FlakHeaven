@@ -7212,3 +7212,119 @@ msgstr "阴影清晰度。8192 的阴影最精细，但需要强劲的显卡。"
 #: game/scripts/gfx_presets.gd (UI-01 step 3)
 msgid "на максимуме"
 msgstr "最高档时"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Второй навык"
+msgstr "第二技能"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Закрепить карточку"
+msgstr "锁定卡牌"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Убрать карточку"
+msgstr "排除卡牌"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Ракеты залпом / бомбы"
+msgstr "导弹齐射 / 炸弹"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ОЧИСТИТЬ"
+msgstr "清除"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ОТМЕНА"
+msgstr "取消"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ПОМЕНЯТЬ МЕСТАМИ"
+msgstr "交换"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ОСТАВИТЬ"
+msgstr "保留"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ЯЧЕЙКА"
+msgstr "栏位"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "НАЗНАЧИТЬ"
+msgstr "设置"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Геймпад"
+msgstr "手柄"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Мёртвая зона стиков"
+msgstr "摇杆死区"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Значки кнопок геймпада"
+msgstr "手柄按键图标"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Автоматически"
+msgstr "自动"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "КЛАВИША"
+msgstr "按键"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ЗАПАСНАЯ"
+msgstr "备用"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ГЕЙМПАД"
+msgstr "手柄"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "нажмите…"
+msgstr "请按键…"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Мышь %d"
+msgstr "鼠标 %d"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ENTER · ПОМЕНЯТЬ"
+msgstr "ENTER · 交换"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "ESC · ОСТАВИТЬ"
+msgstr "ESC · 保留"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "«%s» уже у действия «%s»"
+msgstr "“%s”已被“%s”使用"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Курсор в меню и полёт мышью работают всегда. Стрелки и крестовина в меню не переназначаются."
+msgstr "菜单光标和鼠标飞行始终可用。菜单中的方向键和十字键不能更改。"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Три способа нажать одно действие: клавиша, запасная клавиша (или кнопка мыши) и кнопка геймпада. Выберите ячейку стрелками ←→, нажмите Enter или щёлкните, затем нужную клавишу. Backspace — очистить ячейку, Esc — отмена."
+msgstr "每个动作有三种触发方式：按键、备用按键（或鼠标按键）和手柄按键。用 ←→ 选择栏位，按 Enter 或点击，然后按下想要的按键。Backspace 清除栏位，Esc 取消。"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Держать — прицел, отпустить — пуск ракет залпом или сброс бомб. Выберите ячейку стрелками ←→, нажмите Enter или щёлкните, затем нужную клавишу. Backspace — очистить, Esc — отмена."
+msgstr "按住瞄准，松开发射导弹齐射或投弹。用 ←→ 选择栏位，按 Enter 或点击，然后按下想要的按键。Backspace 清除，Esc 取消。"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Эта клавиша уже назначена другому действию. Enter — поменять местами: другое действие получит прежнюю клавишу. Esc — оставить как было."
+msgstr "该按键已分配给其他动作。按 Enter 交换：另一个动作将获得原来的按键。按 Esc 保持不变。"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Вернуть все клавиши и кнопки геймпада, как было по умолчанию."
+msgstr "将所有按键和手柄按键恢复为默认设置。"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Насколько нужно наклонить стик, чтобы самолёт отозвался. Больше — если самолёт сам уплывает в сторону."
+msgstr "摇杆需要推动多少飞机才会响应。如果飞机自己漂移，请调高。"
+
+#: game/scripts/menu_settings.gd (UI-01 step 4)
+msgid "Какие значки кнопок показывать: по подключённому геймпаду или всегда одного вида."
+msgstr "显示哪种按键图标：跟随已连接的手柄，或始终使用同一种。"

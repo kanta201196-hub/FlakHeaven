@@ -14,7 +14,6 @@ static var _bold: Font
 
 var ctrl: Control
 var back_state := "menu"
-var capturing := ""        # действие, ждущее новую клавишу
 var _t := 0.0
 var records := {}
 var main_screen: MenuMain
@@ -69,13 +68,6 @@ func _input(event: InputEvent) -> void:
 	if not active():
 		return
 	var m := Main.I
-	if capturing != "":
-		if event is InputEventKey and event.pressed and not event.echo:
-			if event.physical_keycode != KEY_ESCAPE:
-				Settings.rebind(capturing, event.physical_keycode)
-			capturing = ""
-			get_viewport().set_input_as_handled()
-		return
 	if m.state == "menu":
 		if m.report != null and m.report.visible:
 			return   # the tester report form takes the keys
@@ -95,7 +87,7 @@ func open_settings(from: String) -> void:
 func close_settings() -> void:
 	Tuning.save_params()
 	Settings.save_settings()
-	capturing = ""
+	settings_screen.cancel_capture()
 	settings_screen.list.visible = false
 	Main.I._set_state(back_state)
 

@@ -24,12 +24,15 @@ const REBIND := [
 	["throttle_cut", "Сброс газа", "Полёт"],
 	["dive", "Нырок", "Полёт"],
 	["sharp_turn", "Навык класса", "Бой"],
+	["skill_2", "Второй навык", "Бой"],
 	["toggle_fire_mode", "Огонь: авто / ручной", "Бой"],
 	["wing_prio", "Цель звена (ведомых)", "Бой"],
 	["fire", "Огонь из пушки (клавиша)", "Бой"],
-	["fire_hardpoint", "Ракеты залпом / бомбы: держать — прицел, отпустить — сброс", "Бой"],
+	["fire_hardpoint", "Ракеты залпом / бомбы", "Бой"],
 	["loadout", "Подвесы (пауза)", "Интерфейс"],
 	["reroll", "Перебросить карточки / заново", "Интерфейс"],
+	["card_lock", "Закрепить карточку", "Интерфейс"],
+	["card_ban", "Убрать карточку", "Интерфейс"],
 	["toggle_scheme", "Сменить схему управления", "Интерфейс"],
 ]
 
@@ -58,52 +61,124 @@ var gfx_auto := true       # автоснижение при низком FPS, �
 var gfx_opts := GfxPresets.preset(2)
 ## FPS counter in the corner of the flight screen
 var show_fps := true
-var binds := {}          # действие → physical_keycode (только клавиатура)
-var _defaults := {}      # исходные клавиши (для «Сбросить»)
+## UI-01 step 4: action → [key, alternative key, gamepad] tokens (`Binds`); `_defaults` is the
+## same table read from InputSetup's events, for «reset» and for broken saves
+var binds := {}
+var _defaults := {}
+## Stick dead zone for every action (InputMap deadzone), index into DEADZONES
+const DEADZONES := [0.1, 0.15, 0.2, 0.25, 0.3, 0.4]
+var deadzone := 3
+## Gamepad glyphs: 0 by the connected controller, then a fixed family
+const GLYPH_SETS := ["Автоматически", "Xbox", "PlayStation", "Steam Deck"]
+const GLYPH_FAMILIES := ["", "xbox", "ps", "deck"]
+var glyphs := 0
+## Glyph textures by path, loaded in `_ready`: a texture first loaded inside a draw call came out
+## as a plain white square under GL Compatibility (seen in the controls tab shots)
+var _glyph_tex := {}
 
 
 func _ready() -> void:
-	# запоминаем раскладку по умолчанию (InputSetup уже добавил действия — он раньше в автозагрузке)
+	# InputSetup is earlier in autoload, so its events are the defaults
 	for r in REBIND:
-		_defaults[r[0]] = _first_key(r[0])
+		var a: String = r[0]
+		_defaults[a] = Binds.from_events(InputMap.action_get_events(a)) if InputMap.has_action(a) else ["", "", ""]
+		# three slots hold two keys and one gamepad input; more defaults would be dropped by apply_binds
+		var kept := 3 - (_defaults[a] as Array).count("")
+		if InputMap.has_action(a) and InputMap.action_get_events(a).size() > kept:
+			push_warning("Settings: %s has more default inputs than the controls tab can show" % a)
+	binds = _defaults.duplicate(true)
+	for fam: String in GLYPH_FAMILIES:
+		if fam == "":
+			continue
+		for g: String in Binds.glyph_names():
+			var path := "res://art/glyphs/%s/%s.png" % [fam, g]
+			_glyph_tex[path] = load(path) as Texture2D if ResourceLoader.exists(path) else null
 	load_settings()
+	apply_binds()
 	apply_lang()
 	apply()
 
 
-func _first_key(action: String) -> int:
-	if not InputMap.has_action(action):
-		return 0
-	for e in InputMap.action_get_events(action):
-		if e is InputEventKey:
-			return (e as InputEventKey).physical_keycode
-	return 0
+## Controller family whose glyphs and names to show ("xbox", "ps", "deck").
+func pad_family() -> String:
+	if glyphs > 0:
+		return GLYPH_FAMILIES[glyphs]
+	var pads := Input.get_connected_joypads()
+	return Binds.family_of(Input.get_joy_name(pads[0]) if pads.size() > 0 else "")
 
 
-func key_name(action: String) -> String:
-	var k := _first_key(action)
-	if k == 0:
+## Readable name of a token (keyboard layout aware for keys).
+func token_text(t: String) -> String:
+	if t == "":
 		return "—"
-	return OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(k))
+	if Binds.is_pad(t):
+		return Binds.pad_text(t, pad_family())
+	var ev := Binds.event_of(t)
+	if ev is InputEventKey:
+		var k := ev as InputEventKey
+		match k.physical_keycode:
+			KEY_UP:
+				return "↑"
+			KEY_DOWN:
+				return "↓"
+			KEY_LEFT:
+				return "←"
+			KEY_RIGHT:
+				return "→"
+		return OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(k.physical_keycode)).to_upper()
+	if ev is InputEventMouseButton:
+		match (ev as InputEventMouseButton).button_index:
+			MOUSE_BUTTON_LEFT:
+				return Loc.t("ЛКМ")
+			MOUSE_BUTTON_RIGHT:
+				return Loc.t("ПКМ")
+			MOUSE_BUTTON_MIDDLE:
+				return Loc.t("СКМ")
+		return Loc.t("Мышь %d") % (ev as InputEventMouseButton).button_index
+	return "?"
 
 
-func rebind(action: String, physical: int) -> void:
-	for e in InputMap.action_get_events(action):
-		if e is InputEventKey:
-			InputMap.action_erase_event(action, e)
-	var ev := InputEventKey.new()
-	ev.physical_keycode = physical
-	InputMap.action_add_event(action, ev)
-	binds[action] = physical
+## Glyph texture for a gamepad token in the current family, null when there is none.
+func pad_icon(t: String) -> Texture2D:
+	var g := Binds.pad_glyph(t)
+	if g == "":
+		return null
+	var path := "res://art/glyphs/%s/%s.png" % [pad_family(), g]
+	if not _glyph_tex.has(path):
+		_glyph_tex[path] = load(path) as Texture2D if ResourceLoader.exists(path) else null
+	return _glyph_tex[path]
+
+
+## Sets one slot, without resolving conflicts (the controls tab asks first).
+func set_bind(action: String, slot: int, token: String, swap := false) -> void:
+	binds = Binds.swapped(binds, action, slot, token) if swap else Binds.with(binds, action, slot, token)
+	apply_binds()
 	save_settings()
 
 
+## All bindings back to InputSetup's layout.
 func reset_binds() -> void:
-	for a in _defaults:
-		if int(_defaults[a]) != 0:
-			rebind(a, int(_defaults[a]))
-	binds.clear()
+	binds = _defaults.duplicate(true)
+	apply_binds()
 	save_settings()
+
+
+## Writes the table into InputMap: each rebindable action loses its key, mouse and gamepad events
+## and gets the slot events back. The dead zone applies to every action.
+func apply_binds() -> void:
+	for a: String in binds:
+		if not InputMap.has_action(a):
+			continue
+		for e in InputMap.action_get_events(a):
+			InputMap.action_erase_event(a, e)
+		for t: String in binds[a]:
+			var ev := Binds.event_of(t)
+			if ev != null:
+				InputMap.action_add_event(a, ev)
+	var dz: float = DEADZONES[deadzone]
+	for a in InputMap.get_actions():
+		if not String(a).begins_with("ui_"):
+			InputMap.action_set_deadzone(a, dz)
 
 
 func apply() -> void:
@@ -181,7 +256,7 @@ func save_settings() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
-		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "gfx_opts": gfx_opts, "show_fps": show_fps, "font": font, "lang": lang, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds": binds}, "  "))
+		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "gfx_opts": gfx_opts, "show_fps": show_fps, "font": font, "lang": lang, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds_v2": binds, "deadzone": deadzone, "glyphs": glyphs}, "  "))
 	f.close()
 
 
@@ -210,8 +285,11 @@ func load_settings() -> void:
 	wing_prio = clampi(int(d.get("wing_prio", wing_prio)), 0, WING_PRIO.size() - 1)
 	minimap = clampi(int(d.get("minimap", minimap)), 0, MINIMAP_SIZES.size() - 1)
 	minimap_alpha = clampi(int(d.get("minimap_alpha", minimap_alpha)), 0, MINIMAP_ALPHA.size() - 1)
-	var b = d.get("binds", {})
-	if b is Dictionary:
-		for a in b:
-			if InputMap.has_action(a):
-				rebind(a, int(b[a]))
+	deadzone = clampi(int(d.get("deadzone", deadzone)), 0, DEADZONES.size() - 1)
+	glyphs = clampi(int(d.get("glyphs", glyphs)), 0, GLYPH_SETS.size() - 1)
+	var b2 = d.get("binds_v2", null)
+	var b1 = d.get("binds", null)
+	if b2 is Dictionary:
+		binds = Binds.sanitize(b2, _defaults)
+	elif b1 is Dictionary:
+		binds = Binds.migrate(_defaults, b1)   # saves before step 4: one key per action
