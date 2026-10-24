@@ -1,0 +1,96 @@
+# Main menu and settings redesign — plan
+
+Status: **draft, waiting for Kanta's "yes"** (large work: new UI component set, settings system, rebinding). Thread «Переделать главное меню и настройки». Reference: Sublight screenshots sent by Kanta 2026-10-24 (cleaner, easier to read; ours is overloaded). Mockups (1920×1080, real background from the game): gallery artifact linked in the thread.
+
+## Goal
+1. Main menu: fewer items, more air, one clear selection style that also works as gamepad focus.
+2. Graphics settings: flexible per-option control (antialiasing, shadows, shadow distance/resolution, ambient occlusion and more) on top of quality presets, ready for Forward+ (Kanta 2026-10-24) with a working fallback in Compatibility.
+3. Controls tab: full rebinding (two keys + gamepad per action), conflict handling, gamepad options.
+
+## What is wrong today (checked 2026-10-24, build 3.5-s10 code)
+- Main menu has 7 buttons of 3 sizes + flight log panel + theater cards + tagline; three visual weights compete (`menu.gd` `_main`).
+- Version label reads `3.4-t1` (`Main.BUILD` is stale).
+- Settings content overflows the panel at 1600×900 (the default window): last rows sit under the bottom buttons (no scroll, no height-aware layout — design-system defect #4).
+- Graphics has one quality switch (4 levels) mixing shadows, MSAA, render scale and terrain density (`Render3D.apply_gfx`); the player cannot turn one thing off.
+- Rebinding: keyboard only, one key per action, no conflict check, `skill_2` (F) and mouse buttons not rebindable; HUD hints use hardcoded key names.
+- No gamepad focus in menu/settings (CR-05 / CS-11c, Steam Deck blocker).
+
+## Design (mockups)
+### Main menu
+- Items: **ВЫЛЕТ, АНГАР, СПРАВОЧНИК, НАСТРОЙКИ, ВЫХОД**. «Как играть» becomes a tab in the codex; «Логи» moves to the «Отзыв» card (opens the log folder / report).
+- Item = text row, Exo 2 Bold 40 px, letter spacing 0.17 em, hairline dividers, chevron. Parts line from PR #352 stays as a caption under АНГАР, red dot when something can be bought.
+- Right column: two cards «Что нового» (build notes, from `WHATS_NEW`) and «Отзыв»; theater as a two-way segmented switch; compact flight log (4 numbers + last sortie).
+- Bottom: key/gamepad hints from the real bindings.
+- Logo «FLAK HEAVEN» in one line with the red hazard stripe; tagline removed.
+### Selection style — Kanta picks one (mockup "three variants")
+1. «Форсаж»: orange slanted plate, red tick left, hatch on the right, chevrons slide (recommended).
+2. «Прицел»: no fill, gunsight corner brackets, orange text, underline.
+3. «Трафарет»: dark plate, orange border, hazard stripes.
+Same component for hover, gamepad focus, pressed (0.1 s darker), disabled; 0.12 s wipe-in, off with reduced motion.
+### Settings
+- Left: tabs as the same menu items (ИГРА, ГРАФИКА, ЗВУК, УПРАВЛЕНИЕ, ИНТЕРФЕЙС). New ИНТЕРФЕЙС tab takes minimap, font, HUD options out of ИГРА/ГРАФИКА.
+- Centre: scrolling list (mouse wheel, stick, scrollbar), sections, row = label + control (selector `‹ value ›`, ВКЛ/ВЫКЛ switch, slider).
+- Right: description of the focused row: what it does, which renderer, GPU cost bars, before/after frame (rendered by us with `--shots`).
+- Most options apply instantly; window mode/resolution show a 10 s "keep these settings?" revert.
+
+## Graphics options (Godot 4.4.1)
+F+ = Forward+ only (hidden or shown disabled with a reason under Compatibility). "verify" = check against 4.4.1 docs/engine before coding.
+
+| Section | Option | Values | Engine |
+| --- | --- | --- | --- |
+| Экран | Режим окна, Разрешение, VSync, Ограничение кадров | as today | DisplayServer, Engine.max_fps |
+| Экран | Масштаб отрисовки | 50–100 % | `Viewport.scaling_3d_scale` |
+| Экран | Апскейл | Билинейный / FSR 1 / FSR 2 (F+) | `scaling_3d_mode` (FSR 1 in Compatibility: verify) |
+| Качество | Общее качество | Низкое / Среднее / Высокое / Максимальное / Своё | preset table |
+| Качество | Сглаживание | Выкл / FXAA / MSAA 2×/4×/8× / TAA (F+) | `msaa_3d`, `screen_space_aa` (FXAA in Compatibility: verify), `use_taa` |
+| Качество | Снижать качество при низком FPS | ВКЛ/ВЫКЛ | existing `gfx_auto` |
+| Тени и свет | Тени | Выкл / Низкие / Средние / Высокие / Ультра | soft shadow filter quality + atlas; "Выкл" only in F+ (Compatibility frame gets darker, see `apply_gfx` note) |
+| Тени и свет | Дальность теней | Ближе / Весь экран | multiplier on `_fit_shadow` distance |
+| Тени и свет | Разрешение теней | 1024 / 2048 / 4096 / 8192 | `directional_shadow_atlas_set_size` |
+| Тени и свет | Фоновое затенение (SSAO) | Выкл / Низкое / Среднее / Высокое (F+) | `Environment.ssao_*`, `RenderingServer.environment_set_ssao_quality` |
+| Тени и свет | Отражённый свет (SSIL) | Выкл / Вкл (F+) | `ssil_enabled` |
+| Тени и свет | Свечение | ВКЛ/ВЫКЛ | `glow_enabled` (with the VFX thread's glow) |
+| Тени и свет | Дымка / объёмный туман | Выкл / Низкая / Высокая (F+) | `volumetric_fog_*` (only if VIS-01 uses it) |
+| Детали мира | Детализация рельефа | 4 levels | `Terrain3D.N_GFX` |
+| Детали мира | Растительность и камни | 4 levels | `BiomeProps` density |
+| Детали мира | Фильтрация текстур | 2× … 16× | project setting anisotropic level (verify runtime change) |
+| Эффекты | Качество эффектов | Низкое … Максимальное | caps from `balance/vfx.gd` (thread «Улучшить эффекты боя») |
+| Эффекты | Следы и воронки | Мало / Много | decal pool cap (same thread) |
+| Эффекты | Резкость | 0–1 (F+ with TAA/FSR) | `Environment`/viewport sharpening (verify) |
+| Экран | Счётчик кадров | ВКЛ/ВЫКЛ | existing perf overlay |
+
+Presets are a pure table (`game/scripts/gfx_presets.gd`); changing any option after a preset shows «Своё». Preset numbers get tuned from fps measured on Kanta's PC (RTX 4060) once Forward+ is in the project.
+
+## Controls
+- Columns: action · key · alternative key · gamepad. Sections Полёт / Бой / Интерфейс. All gameplay actions from `InputSetup`, including `skill_2`, mouse buttons as keys.
+- Capture: Enter/A starts, Esc cancels, Backspace clears. Conflict: inline warning "X is already «…» — Enter swaps".
+- Gamepad: rebind buttons/triggers, stick dead zone, vibration on/off, glyph set (auto / Xbox / PlayStation / Steam Deck).
+- Saved in `settings.json` as `binds_v2` (action → list of events); old `binds` migrated once.
+- `HudKit.key_label(action)` everywhere a key is shown (design system pattern 3).
+
+## Architecture
+- `game/scripts/ui_style.gd` — tokens (CS-11b) + `menu_item` component (the selection style) + focus helper (CS-11c). The hangar and codex adopt it later, not in this work.
+- `menu.gd` split: `menu_main.gd`, `menu_settings.gd`, `settings_rows.gd` (row widgets + scroll + focus). Still drawn in code (ADR-05).
+- `settings.gd`: data-driven option list `{id, section, values, default, needs (renderer), apply}`; save/load with migration.
+- Pure logic with unit tests first (TDD): preset → options, «Своё» detection, binding conflicts and swap, settings migration, focus navigation (nearest item in a direction).
+- Renderer check: `RenderingServer.get_current_rendering_method()`. Switching the project to Forward+ stays with thread «3D-модели по плану Kirill» (VIS-01); this work runs under both renderers.
+- Localization: every new string into `en.po` and `zh_CN.po`, then `subset_font.py`.
+
+## Steps (PRs)
+1. `UiStyle` tokens + `menu_item` + focus model; new main menu; version label fix; «Как играть» into the codex. Checks: unit, `smoke.sh fighter`, `--shots` frames at 1920×1080 and 1280×800 (Deck).
+2. Settings frame: left tabs, scrolling list, description panel, gamepad, ИНТЕРФЕЙС tab; existing options moved over unchanged.
+3. Graphics options + presets (both renderers), before/after frames for the description panel (Forward+ frames on lavapipe in the cloud).
+4. Controls: two keys + gamepad, conflicts, migration, key labels in HUD.
+5. Remote Control on Kanta's PC: fps per preset in Forward+, tune the preset table, one gallery of results.
+Combat code is not touched; `full.sh` only if step 4 changes combat input handling.
+
+## Needs from outside (asked up front)
+1. Gamepad button glyphs: Kenney «Input Prompts» (CC0, free) — art asset, needs Kanta's "yes".
+2. UI sounds (hover, click, back): Kenney «UI Audio» (CC0, free) or keep silent — audio, needs Kanta's "yes".
+3. Fonts: none — Exo 2 (already in the game, OFL) covers headings and menu items.
+4. Kanta's PC (Remote Control): only at step 5, after Forward+ is in the project.
+
+## Open questions for Kanta
+1. Selection style: 1 «Форсаж» (recommended), 2 «Прицел», 3 «Трафарет».
+2. Menu items and moves («Как играть» → codex, «Логи» → «Отзыв» card): yes/no.
+3. Flight log on the main screen: compact card (recommended) or only in the codex.
