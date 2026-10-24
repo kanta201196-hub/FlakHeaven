@@ -29,6 +29,8 @@ const FLIP_SLOTS := 64
 ## Visual numbers only, no gameplay effect.
 const FLIPS := {
 	"blast": {"tex": "res://art/vfx/blast_ground.png", "frames": 64, "cols": 8, "size": 4.0, "lift": 0.20, "life": 3.4, "glow": 0.4},
+	# destroyed ground target: same bake; its particle cloud was about 6 s across (fireball 1.9 s), so larger per s
+	"ground": {"tex": "res://art/vfx/blast_ground.png", "frames": 64, "cols": 8, "size": 6.0, "lift": 0.20, "life": 3.0, "glow": 0.4},
 }
 
 ## Draw shader of the flipbook layer: camera-facing quad (like Boom3D.BILLBOARD, without rotation), frame from
@@ -124,11 +126,11 @@ func flip(fx_id: String, g: Vector3, s: float) -> bool:
 	if fl == null or fl.alive() >= FLIP_SLOTS:
 		return false
 	var f: Dictionary = FLIPS[fx_id]
-	var side := float(f["size"]) * s
+	var side := float(f["size"]) * s * randf_range(0.9, 1.1)   # a little variety: the same bake plays every time
 	var up := Vector3.UP
 	if Render3D.I != null and Render3D.I.cam != null:
 		up = Render3D.I.cam.global_transform.basis.y
-	fl.emit({"p": g + up * side * float(f["lift"]), "life": float(f["life"]),
+	fl.emit({"p": g + up * side * float(f["lift"]), "life": float(f["life"]) * randf_range(0.9, 1.1),
 		"r0": side * 0.5, "r1": side * 0.5, "glow": float(f["glow"]), "c": Color(1, 1, 1, 1)})
 	return true
 
