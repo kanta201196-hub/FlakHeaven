@@ -1724,6 +1724,11 @@ func _weapon_layout(u: Dictionary, p: Player, tex: Texture2D, gi: int, g: Hardpo
 			var lo := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
 			if not is_nan(lo):
 				y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
+		elif mt.get("rail", false) and u.get("bm") != null:   # Kanta 24.10: missile beside the real wing tip, at wing level
+			var tr2 := WeaponModels.tip_rail(u["bm"], pt.x / tw, pt.y / tw)
+			if not is_nan(tr2.x):
+				pt.y = tr2.x * tw + signf(pt.y) * WeaponModels.TIP_GAP * len_px
+				y = tr2.y * tw
 		elif mt["side"] == "top" and g.weapon == "turret" and u.get("bm") != null:
 			# тест 3.5-s7: верхняя турель — на настоящей спине фюзеляжа (у «Кита» она выше, чем у «Грача»)
 			var hi := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw, true)

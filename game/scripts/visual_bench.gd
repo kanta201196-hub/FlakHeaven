@@ -284,6 +284,10 @@ func _hold(p: Dictionary) -> void:
 	if p.has("cls"):   # 3.4-t1 п. 9, 19: другой самолёт (винты «Кита 1», сопла)
 		m.player.cls_id = p["cls"][0]
 		m.player.plane_lvl = p["cls"][1]
+	if OS.get_cmdline_user_args().has("--holdfire"):   # PG-01: missiles stay on their rails for weapon close-ups
+		for g: Hardpoint in m.player.groups:
+			if g.weapon in Hardpoint.MISSILES:
+				g.cd = 0.29   # above zero — no launch; below 0.3 — render3d still shows it
 	if p.get("fly", false):
 		# летим по кругу: след и огонь форсажа видны, камера над самолётом
 		var a := _pt * 0.9

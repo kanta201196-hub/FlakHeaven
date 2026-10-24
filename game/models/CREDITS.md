@@ -34,3 +34,7 @@
 | battle/e_ship_bulk (балкер) | Bulk Carrier (референс формы, геометрия собрана кодом заново) | medialog | https://sketchfab.com/3d-models/bulk-carrier-93c076900f004102b78dfac989efae1d | CC BY 4.0, изменено |
 | battle/e_sam (ЗРК: пусковая на шасси 8x8) | Anti-Aircraft Missile System | M1RON | https://sketchfab.com/3d-models/anti-aircraft-missile-system-578f3acbd1a44e72996c9b7b48772018 | CC BY 4.0, изменено |
 | battle/fighter_2, hangar/fighter_2 («Оса 2») | Meshy (paid plan), own generation; image reference — a render of Sketchfab #63 (view-only), Kanta 24.10, `docs/game-context.md` | own generation (Meshy) | — | Meshy paid plan, commercial rights |
+| weapons/srm_*, weapons/hq/srm_* (ракета ближнего боя) | AIM-9 missile | rickslash | https://sketchfab.com/3d-models/caaf15b49bac4144b6c6be577c2b872a | CC BY 4.0, изменено |
+| weapons/agm_*, weapons/hq/agm_* (управляемая ракета «воздух-земля») | AGM 65 MAVERICK | XARYA | https://sketchfab.com/3d-models/5447a415b21840568fbfa01cf6dd166a | CC BY 4.0, изменено |
+| weapons/hebomb_*, weapons/hq/hebomb_* (фугасная авиабомба) | Vintage Bomb | MauriceBaxter | https://sketchfab.com/3d-models/0d1a55bdfd484bcf8091f9d3b0f090ca | CC BY 4.0, изменено |
+| hangar/stand_cart (тележка для бомб в ангаре) | ODAB-500 vacuum bombs transport cart | Tiltow | https://sketchfab.com/3d-models/7ace1edae3664f888e8cd6a5ceb29b74 | CC BY 4.0, изменено |

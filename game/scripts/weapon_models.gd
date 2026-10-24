@@ -73,6 +73,28 @@ static var _faces := {}
 static var _low := {}
 
 
+## Gap from the wing-tip edge to a wing-tip missile's axis, as a fraction of the weapon length
+## (missile radius plus the launch rail), so the body sits beside the tip instead of over the wing
+const TIP_GAP := 0.06
+
+
+## Wing-tip launch rail on the real model (model units, plane length 1): returns Vector2(z of the tip edge, wing
+## mid-height there), or NAN when the chord line misses the wing. The sprite's tip row can lie outside the thinner
+## model tip, so first walk inward until the wing is hit, then outward to its edge.
+static func tip_rail(scene: PackedScene, x: float, z: float) -> Vector2:
+	var step := absf(z) * 0.01
+	var k := 0
+	while is_nan(surface_low(scene, x, z)) and k < 40:
+		z -= signf(z) * step
+		k += 1
+	if is_nan(surface_low(scene, x, z)):
+		return Vector2(NAN, NAN)
+	while not is_nan(surface_low(scene, x, z + signf(z) * step)) and k < 80:
+		z += signf(z) * step
+		k += 1
+	return Vector2(z, (surface_low(scene, x, z) + surface_low(scene, x, z, true)) * 0.5)
+
+
 static func surface_low(scene: PackedScene, x: float, z: float, high := false) -> float:
 	var ck := "%s|%.4f|%.4f%s" % [scene.resource_path, x, z, "|h" if high else ""]
 	if _low.has(ck):
@@ -794,7 +816,7 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	# (from above it looked as if the missiles lay on top of the wing)
 	if not g.builtin and g.mount_frac >= TIP_FRAC:
 		for sd in [-1.0, 1.0]:
-			out.append({"p": wing_point(cls_id, lvl, sd, 0.98), "side": "tip", "yaw": 0.0})
+			out.append({"p": wing_point(cls_id, lvl, sd, 0.98), "side": "tip", "yaw": 0.0, "rail": true})
 		return out
 	if not g.builtin:
 		# Т-5: у «Кита» бомбы — в бомбоотсеке под створками (render3d / hangar3d открывают их), без пилона
