@@ -455,6 +455,8 @@ func _save(name: String) -> void:
 ## and the Fortress this far from the player, so that none of the three covers another
 const SIZE_PLAYER_OFF := Vector2(280, 120)
 const SIZE_FORT_OFF := Vector2(-560, -330)
+## Size bench at the ground fort: the camera and the player sit this far from the road point beside the fort
+const SIZE_FORT_PLAYER_OFF := Vector2(240, 180)
 
 
 ## Size bench: prints the on-screen length (frame pixels, nose to tail through the 3D camera,
@@ -489,6 +491,29 @@ func _print_sizes(name: String) -> void:
 		var b2 := r3.cam.unproject_position(root.global_transform * Vector3(box.end.x, c.y, c.z))
 		print("VISUAL %s size %s: %.0f px on screen (model %s)" % [name, row[0], a2.distance_to(b2) * px_k,
 			"GLB" if u.get("bm") != null else "relief"])
+	var fp: Variant = _points[_i].get("fort_obj")
+	if fp != null:
+		_print_fort_size(name, fp as Vector2, px_k)
+
+
+## Size bench: on-screen and world length of the side of the ground fort (Highland o_fort) whose
+## centre is at fp — the 3D building render3d placed for that chunk object, not the boss bomber
+func _print_fort_size(name: String, fp: Vector2, px_k: float) -> void:
+	var r3 := Render3D.I
+	for mi: Node in r3._objs.values():
+		if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh != AdobeBuild.fort():
+			continue
+		var n3 := mi as MeshInstance3D
+		if Vector2(n3.global_position.x, n3.global_position.z).distance_to(fp) > 5.0:
+			continue
+		var box := n3.mesh.get_aabb()
+		var c := box.get_center()
+		var a2 := r3.cam.unproject_position(n3.global_transform * Vector3(box.position.x, 0.0, c.z))
+		var b2 := r3.cam.unproject_position(n3.global_transform * Vector3(box.end.x, 0.0, c.z))
+		print("VISUAL %s size o_fort side: %.0f px on screen, %.0f world px (object size %.0f)" % [name,
+			a2.distance_to(b2) * px_k, box.size.x * n3.basis.get_scale().x, n3.basis.get_scale().x])
+		return
+	print("VISUAL %s size o_fort: no 3D fort at %s" % [name, fp])
 
 
 ## Точки: пустыня, гора, кишлак, оазис, бой со взрывами, крупный план самолёта
@@ -715,6 +740,14 @@ func _make_points() -> Array:
 		pts.append({"name": "size_trio", "pos": road + SIZE_PLAYER_OFF, "convoy": true, "convoy_at": road,
 			"fortress": 1, "fort_off": SIZE_FORT_OFF, "cls": ["fighter", 1], "zoom": 1.0, "wait": 2.5,
 			"sizes": true})
+		# VIS-01 (Kanta 24.10): the same at the ground fort (Highland o_fort) — the fighter, the fort and
+		# a convoy on the road past it; the log adds the fort side's on-screen length
+		if found.has("o_fort"):
+			var fp: Vector2 = found["o_fort"]
+			var rd := ter._field_point(fp, Terrain3D.D_ROAD)
+			print("VISUAL size_fort fort at ", fp, " road ", rd)
+			pts.append({"name": "size_fort", "pos": rd + SIZE_FORT_PLAYER_OFF, "convoy": true, "convoy_at": rd,
+				"fort_obj": fp, "cls": ["fighter", 1], "zoom": 1.0, "wait": 2.5, "sizes": true})
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--pts="):   # relief lab: --pts=name:x:z:zoom,name2:x:z:zoom — arbitrary camera points
 			pts = []
