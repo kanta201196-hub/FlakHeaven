@@ -435,6 +435,8 @@ func _update_bullets(delta: float) -> void:
 		if hit or float(b["life"]) <= 0.0:
 			if not hit and b["m"] and is_instance_valid(Main.I.player):
 				Main.I.player.on_bullet_miss()
+			if not hit and randf() < 0.5 and Boom3D.active():   # VFX-04: a round that missed lands in the dirt
+				Boom3D.ensure().ground_hit(p)
 			bullets.remove_at(i)
 
 
