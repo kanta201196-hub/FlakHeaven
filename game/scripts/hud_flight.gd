@@ -71,8 +71,9 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 		var a := clampf(m.hud.banner_t, 0.0, 1.0)
 		# dark plate under the banner: yellow text on bright sand is unreadable without it
 		var bw := ui_font().get_string_size(Loc.out(m.hud.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
-		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, 186, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
-		_ctext(218, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
+		var by := maxf(186.0, _boss_bottom + 12.0)   # under the boss bars when an ace is up
+		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, by, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
+		_ctext(by + 32.0, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
 
 	if m.run_time > 180.0 or m.state != "playing":
 		return
@@ -456,34 +457,57 @@ func _skill_tooltip(size: Vector2) -> void:
 		return
 
 
+## Boss bars under the level and timer frame, Sublight-style (reference frames 24.10): the
+## boss name in big heading letters over a thick red bar with the hull numbers inside, the
+## shield as a blue strip under it. Several bosses stack downwards.
 func _boss_bars(m: Main, size: Vector2) -> void:
-	var y := 134.0   # under the level and timer frame
+	var y := 116.0
+	_boss_bottom = 0.0
 	for n in m.get_tree().get_nodes_in_group("enemies"):
 		var b := n as Boss
 		if b == null:
 			continue
-		var w := 560.0
+		var w := BOSS_W
 		var x := (size.x - w) / 2.0
 		if b is Fortress:
 			y = _fortress_bar(b as Fortress, x, y, w)
+			_boss_bottom = y
 			continue
-		ctrl.draw_rect(Rect2(x, y - 16, w, 22), Color(0.02, 0.025, 0.03, 0.55))
-		_text(Vector2(x, y + 2), b.title, 18, Color(1, 0.9, 0.78), HORIZONTAL_ALIGNMENT_CENTER, w)
-		ctrl.draw_rect(Rect2(x, y + 10, w, 14), Color(0, 0, 0, 0.6))
-		ctrl.draw_rect(Rect2(x, y + 10, w * b.hp / b.max_hp, 14), Color(1.0, 0.35, 0.3))
+		var hp := minf(b.hp, b.max_hp)
+		_boss_head(b.title, hp / b.max_hp, "%s / %s" % [grouped(int(ceil(hp))), grouped(int(ceil(b.max_hp)))], x, y, w)
 		if b.shield > 0.0:
-			ctrl.draw_rect(Rect2(x, y + 25, w * b.shield / b.shield_max, 5), Color(0.5, 0.8, 1.0))
-		y += 48.0
+			ctrl.draw_rect(Rect2(x, y + BOSS_BAR_Y + BOSS_BAR_H + 3.0, w * b.shield / b.shield_max, 6), Color(0.5, 0.8, 1.0))
+		_boss_bottom = y + BOSS_BAR_Y + BOSS_BAR_H + 9.0
+		y += BOSS_STEP
+
+
+const BOSS_W := 760.0
+## Lowest y of this frame's boss bars (0 with no boss), so the banner goes under them
+var _boss_bottom := 0.0
+## Bar offset under the boss name, bar height and the step to the next boss
+const BOSS_BAR_Y := 42.0
+const BOSS_BAR_H := 30.0
+const BOSS_STEP := 94.0
+
+
+## Boss name and its thick hull bar with `value` written inside; `frac` is the hull left.
+func _boss_head(title: String, frac: float, value: String, x: float, y: float, w: float) -> void:
+	var hf := UiStyle.head_font(800, 2)
+	UiStyle.text(ctrl, hf, Vector2(x - 2.0, y + 34.0), Loc.out(title).to_upper(), 40, Color(0, 0, 0, 0.6), HORIZONTAL_ALIGNMENT_CENTER, w)
+	UiStyle.text(ctrl, hf, Vector2(x, y + 32.0), Loc.out(title).to_upper(), 40, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, w)
+	var bar := Rect2(x, y + BOSS_BAR_Y, w, BOSS_BAR_H)
+	ctrl.draw_rect(bar.grow(2.0), Color(0, 0, 0, 0.6))
+	ctrl.draw_rect(Rect2(bar.position, Vector2(w * clampf(frac, 0.0, 1.0), BOSS_BAR_H)), UiStyle.DANGER.darkened(0.3))
+	ctrl.draw_rect(Rect2(bar.position, Vector2(w * clampf(frac, 0.0, 1.0), 4.0)), UiStyle.DANGER.lightened(0.3))
+	UiStyle.text(ctrl, hf, Vector2(x, y + BOSS_BAR_Y + 24.0), value, UiStyle.FS_H3, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, w)
 
 
 ## Правка 3.5-s4: полоса «Крепости» — общая прочность, под ней — значки точек: 4 турели и 2 двигателя, сбитые перечёркнуты.
 ## FB-01: справа от значков — сколько осталось до нашей базы
 func _fortress_bar(f: Fortress, x: float, y: float, w: float) -> float:
-	ctrl.draw_rect(Rect2(x, y - 16, w, 22), Color(0.02, 0.025, 0.03, 0.55))
-	_text(Vector2(x, y + 2), f.title, 18, Color(1, 0.9, 0.78), HORIZONTAL_ALIGNMENT_CENTER, w)
 	var fr := f.total_frac()
-	ctrl.draw_rect(Rect2(x, y + 10, w, 16), Color(0, 0, 0, 0.6))
-	ctrl.draw_rect(Rect2(x, y + 10, w * fr, 16), Color(1.0, 0.35, 0.3))
+	_boss_head(f.title, fr, "%d%%" % int(ceil(fr * 100.0)), x, y, w)
+	y += BOSS_BAR_Y + BOSS_BAR_H - 6.0   # point icons and the base distance go under the bar
 	var ix := x + w / 2.0 - 6 * 28.0 / 2.0
 	for pt in f.points:
 		var down := float(pt["hp"]) <= 0.0
