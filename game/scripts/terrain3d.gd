@@ -84,7 +84,7 @@ var props: BiomeProps          # B-41: модели биома на рельеф
 func setup(depth: float, mat: Material, bg: Background) -> void:
 	base_y = -depth
 	_pick_style()
-	N = N_GFX[clampi(Settings.gfx, 0, 3)]
+	N = N_GFX[Settings.gopt("terrain")]
 	ceiling = maxf(depth - 30.0, 0.0)   # запас на крен и толщину моделей у плоскости боя
 	material = mat
 	_bg = bg
@@ -138,7 +138,7 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 func clear() -> void:
 	_gen += 1
 	_wait_pending()   # потоки читают N — меняем после них
-	N = N_GFX[clampi(Settings.gfx, 0, 3)]
+	N = N_GFX[Settings.gopt("terrain")]
 	for k in _chunks:
 		(_chunks[k] as Node).queue_free()
 	_chunks.clear()
@@ -266,11 +266,13 @@ func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector
 
 ## Which relief to build: F1 slider relief_variety (0 — before RV-01) or --relief0 (lab frames);
 ## RV-02 gullies: slider relief_gullies or --gullies0 (frames without them).
+## RV-04 landforms (pillars, terraces, gorges): slider relief_landforms or --landforms0.
 func _pick_style() -> void:
 	var args := OS.get_cmdline_user_args()
 	var on := Tuning.g("relief_variety") >= 0.5 and not args.has("--relief0")
 	relief_style = 1 if on else 0
 	gullies = Tuning.g("relief_gullies") >= 0.5 and not args.has("--gullies0")
+	_prov.landforms = Tuning.g("relief_landforms") >= 0.5 and not args.has("--landforms0")
 
 
 var gullies := true   # RV-02: gullies on the RV-01 relief (see _pick_style)

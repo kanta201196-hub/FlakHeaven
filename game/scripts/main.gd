@@ -109,7 +109,7 @@ func _ready() -> void:
 		if a.begins_with("--report-url="):
 			REPORT_URL = a.substr(13)
 		if a.begins_with("--gfx="):    # T4-04: качество графики 0–3 на этот запуск (стенд, сравнение пресетов)
-			Settings.gfx = clampi(int(a.substr(6)), 0, Settings.GFX_MAX)
+			Settings.set_preset(int(a.substr(6)))
 			Settings.gfx_auto = false
 		if a.begins_with("--tilt="):   # B-47: наклон камеры, град (проба; 0 — строго сверху)
 			Tuning.set_param("cam_tilt", float(a.substr(7)))

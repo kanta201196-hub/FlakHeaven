@@ -32,7 +32,21 @@ const DESCS := {
 	"resolution": "Размер окна в режиме «В окне».",
 	"vsync": "Убирает разрывы картинки, но может добавить небольшую задержку управления.",
 	"fps_limit": "Верхний предел кадров в секунду: меньше нагрев и шум видеокарты.",
-	"gfx": "Тени, сглаживание, детали рельефа и растительность разом. Если выбрать вручную, игра перестанет снижать качество сама.",
+	"gfx": "Набор всех пунктов ниже разом. Если поменять любой пункт, здесь будет «Своё». Если выбрать вручную, игра перестанет снижать качество сама.",
+	"gfx_auto": "Если в вылете мало кадров, игра сама выберет набор попроще. Выключается, как только вы меняете графику вручную.",
+	"show_fps": "Число кадров в секунду в углу экрана в полёте.",
+	"g:scale": "В каком разрешении рисуется 3D-картинка. Меньше — больше кадров, но картинка мягче. Интерфейс всегда чёткий.",
+	"g:upscale": "Как растянуть картинку до размера экрана при масштабе меньше 100 %. FSR сохраняет чёткость лучше.",
+	"g:aa": "Убирает «лесенку» на краях самолётов, построек и гор. MSAA 4× и 8× заметно нагружают видеокарту.",
+	"g:shadows": "Мягкость краёв теней. «Низкие» — резкие края, «Ультра» — самые мягкие.",
+	"g:shadow_dist": "«Весь экран» — тени до края кадра. «Ближе» — тени только у центра, зато они чётче.",
+	"g:shadow_res": "Чёткость теней. 8192 — самые аккуратные тени, но нужна мощная видеокарта.",
+	"g:ssao": "Мягкая тень в ущельях, у стен построек и под техникой. Рельеф выглядит объёмнее.",
+	"g:ssil": "Цветной отражённый свет от земли и стен: склоны подсвечивают друг друга.",
+	"g:glow": "Свечение огня, вспышек и трассеров.",
+	"g:terrain": "Сколько мелких деталей у гор и склонов, скалы с трёх сторон — с уровня «Высокая».",
+	"g:props": "Сколько деревьев, камней и мелочей на земле и какие из них отбрасывают тень. Меняется при следующей сборке участков карты.",
+	"g:effects": "Сколько частиц у взрывов, дыма и облаков. Если в бою проседают кадры, снизьте этот пункт первым.",
 	"render3d": "Объёмная 3D-картинка. Если выключить, вернётся старая плоская 2D.",
 	"sprites": "Картинки самолётов и техники. Если выключить, будут схематичные фигуры (F4).",
 	"range_rings": "Пунктирные круги дальности вашего оружия.",
@@ -224,8 +238,28 @@ func _build() -> Array:
 			_chk(rows, "vsync", "Вертикальная синхронизация", Settings.vsync)
 			var fl: int = Settings.FPS_LIMITS[Settings.fps_limit]
 			_opt(rows, "fps_limit", "Ограничение кадров", "без ограничения" if fl == 0 else "%d к/с" % fl)
+			_gopt(rows, "scale", "Масштаб отрисовки")
+			_gopt(rows, "upscale", "Повышение чёткости (апскейл)")
+			_chk(rows, "show_fps", "Счётчик кадров", Settings.show_fps)
+			_sec(rows, "Качество")
+			var pn := Settings.preset_now()
+			_opt(rows, "gfx", "Общее качество", (Loc.t(Settings.GFX[pn]) if pn >= 0 else Loc.t("Своё"))
+				+ (Loc.t(" (авто)") if Settings.gfx_auto else ""))
+			_gopt(rows, "aa", "Сглаживание")
+			_chk(rows, "gfx_auto", "Снижать качество при низком FPS", Settings.gfx_auto)
+			_sec(rows, "Тени и свет")
+			_gopt(rows, "shadows", "Тени")
+			_gopt(rows, "shadow_dist", "Дальность теней")
+			_gopt(rows, "shadow_res", "Разрешение теней")
+			_gopt(rows, "ssao", "Фоновое затенение (SSAO)")
+			_gopt(rows, "ssil", "Отражённый свет (SSIL)")
+			_gopt(rows, "glow", "Свечение огня и вспышек")
+			_sec(rows, "Детали мира")
+			_gopt(rows, "terrain", "Детализация рельефа")
+			_gopt(rows, "props", "Растительность и постройки")
+			_sec(rows, "Эффекты")
+			_gopt(rows, "effects", "Качество эффектов")
 			_sec(rows, "Картинка")
-			_opt(rows, "gfx", "Качество графики", Loc.t(Settings.GFX[Settings.gfx]) + (Loc.t(" (авто)") if Settings.gfx_auto else ""))
 			_chk(rows, "render3d", "Объёмная 3D-картинка (выкл. — старая 2D)", Tuning.g("render3d") > 0.5)
 			_chk(rows, "sprites", "Спрайты (выкл. — схематичные фигуры, F4)", Tuning.g("sprites") > 0.5)
 		2:
@@ -264,6 +298,20 @@ func _sec(rows: Array, title: String) -> void:
 
 func _opt(rows: Array, id: String, label: String, value: String) -> void:
 	rows.append({kind = &"opt", id = id, label = label, value = value})
+
+
+## Graphics option row (GfxPresets): selector over the option's values. A row whose every value
+## but the first needs Forward+ is shown greyed under Compatibility; its value is kept for later.
+func _gopt(rows: Array, id: String, label: String) -> void:
+	var v := int(Settings.gfx_opts[id])
+	var fp := Settings.forward_plus()
+	var can := 0
+	for i in GfxPresets.count(id):
+		if GfxPresets.supported(id, i, fp):
+			can += 1
+	var off := can <= 1
+	var shown := Loc.t(GfxPresets.LABELS[id][GfxPresets.fallback(id, v, fp)])
+	rows.append({kind = &"opt", id = "g:" + id, label = label, value = shown, off = off})
 
 
 func _chk(rows: Array, id: String, label: String, on: bool) -> void:
@@ -367,6 +415,8 @@ func _tab_key(event: InputEvent) -> int:
 ## Applies one press to a row: `dir` −1/+1 from ←→ or a click on a side, 0 from Enter/A.
 func _change(r: Dictionary, dir: int) -> void:
 	var id: String = r["id"]
+	if r.get("off", false):
+		return
 	match r["kind"]:
 		&"opt":
 			_option(id, dir if dir != 0 else 1)
@@ -413,8 +463,27 @@ func _drag_to(x: float) -> void:
 			return
 
 
+## Next value of graphics option `id` in direction `dir`, skipping values the renderer cannot
+## draw; the overall quality then reads «Своё» unless the mix equals a preset.
+func _gfx_step(id: String, dir: int) -> void:
+	var n := GfxPresets.count(id)
+	var v := int(Settings.gfx_opts[id])
+	for i in n:
+		v = wrapi(v + dir, 0, n)
+		if GfxPresets.supported(id, v, Settings.forward_plus()):
+			break
+	Settings.gfx_opts[id] = v
+	Settings.gfx_auto = false
+	Settings.apply_gfx()
+	Settings.save_settings()
+
+
 func _toggle(key: String) -> void:
 	match key:
+		"show_fps":
+			Settings.show_fps = not Settings.show_fps
+		"gfx_auto":
+			Settings.gfx_auto = not Settings.gfx_auto
 		"hide_hud":
 			Settings.hide_hud = not Settings.hide_hud
 		"vsync":
@@ -427,6 +496,9 @@ func _toggle(key: String) -> void:
 
 
 func _option(key: String, dir: int) -> void:
+	if key.begins_with("g:"):
+		_gfx_step(key.substr(2), dir)
+		return
 	match key:
 		"window_mode":
 			Settings.window_mode = wrapi(Settings.window_mode + dir, 0, Settings.WINDOW_MODES.size())
@@ -454,7 +526,7 @@ func _option(key: String, dir: int) -> void:
 			Settings.font = wrapi(Settings.font + dir, 0, Settings.FONTS.size())
 			Hud.reset_fonts()
 		"gfx":
-			Settings.gfx = wrapi(Settings.gfx + dir, 0, Settings.GFX_MAX + 1)
+			Settings.set_preset(wrapi(Settings.gfx + dir, 0, Settings.GFX_MAX + 1))
 			Settings.gfx_auto = false   # picked by hand: auto-lowering stops touching it
 			Settings.apply_gfx()
 	Settings.save_settings()
@@ -572,7 +644,8 @@ func _draw_list() -> void:
 			list.draw_rect(Rect2(0, y, 4, ROW_H), c)
 		elif danger:
 			list.draw_rect(rr, Color(UiStyle.DANGER.r, UiStyle.DANGER.g, UiStyle.DANGER.b, 0.1))
-		var lc := UiStyle.TEXT_WARM
+		var off: bool = r.get("off", false)
+		var lc := UiStyle.TEXT_OFF if off else UiStyle.TEXT_WARM
 		if kind == &"button":
 			UiStyle.text(list, UiStyle.head_font(700, 3), Vector2(14, y + 30), r["label"], UiStyle.FS_BODY, UiStyle.ACCENT if on else lc)
 			UiStyle.text(list, UiStyle.head_font(700, 3), Vector2(w - 40, y + 30), "›", UiStyle.FS_LABEL, UiStyle.ACCENT if on else lc)
@@ -583,9 +656,12 @@ func _draw_list() -> void:
 		match kind:
 			&"opt", &"bind":
 				var capt: bool = kind == &"bind" and menu.capturing == r["id"]
-				list.draw_rect(ctl, UiStyle.ACCENT if (on or capt) else Color(0.03, 0.035, 0.03, 0.7))
-				var tc := UiStyle.ON_ACCENT if (on or capt) else UiStyle.TEXT_WARM
-				if kind == &"opt":
+				var lit := (on or capt) and not off
+				list.draw_rect(ctl, UiStyle.ACCENT if lit else Color(0.03, 0.035, 0.03, 0.7))
+				if on and off:
+					list.draw_rect(ctl, UiStyle.ACCENT, false, 1.5)
+				var tc := UiStyle.ON_ACCENT if lit else (UiStyle.TEXT_OFF if off else UiStyle.TEXT_WARM)
+				if kind == &"opt" and not off:
 					UiStyle.text(list, bold, Vector2(ctl.position.x + 14, y + 30), "‹", UiStyle.FS_LABEL, tc)
 					UiStyle.text(list, bold, Vector2(ctl.end.x - 24, y + 30), "›", UiStyle.FS_LABEL, tc)
 				UiStyle.text(list, bold, Vector2(ctl.position.x + 30, y + 30), r["value"],
@@ -646,6 +722,8 @@ func _description(r: Rect2) -> void:
 		y += 34.0
 	# section chip
 	var sec := Loc.t(_section_of(row)).to_upper()
+	if String(row["id"]).begins_with("g:") and GfxPresets.needs_forward_plus(String(row["id"]).substr(2)):
+		sec += " · FORWARD+"
 	if sec != "":
 		var cf := UiStyle.head_font(700, 3)
 		var cw := UiStyle.text_w(cf, sec, UiStyle.FS_CAPTION) + 20.0
@@ -655,11 +733,30 @@ func _description(r: Rect2) -> void:
 		y += 52.0
 	var key: String = "bind" if row["kind"] == &"bind" else row["id"]
 	var desc: String = DESCS.get(key, "")
+	var body := Hud.ui_font()
 	if desc != "":
-		var body := Hud.ui_font()
 		for line in menu.wrap(Loc.t(desc), w, UiStyle.FS_BODY + 1):
 			ctrl.draw_string(body, Vector2(x, y), line, HORIZONTAL_ALIGNMENT_LEFT, -1, UiStyle.FS_BODY + 1, UiStyle.TEXT_2)
 			y += 26.0
+	if not key.begins_with("g:"):
+		return
+	var gid := key.substr(2)
+	var cf2 := UiStyle.head_font(700, 3)
+	y += 22.0
+	UiStyle.text(ctrl, cf2, Vector2(x, y), "НАГРУЗКА НА ВИДЕОКАРТУ", UiStyle.FS_CAPTION, UiStyle.TEXT_DIM)
+	var cost: int = GfxPresets.COST[gid]
+	for i in 5:
+		ctrl.draw_rect(Rect2(x + i * 58.0, y + 12.0, 52.0, 8.0), UiStyle.ACCENT if i < cost else Color(UiStyle.TEXT_WARM, 0.12))
+	y += 40.0
+	UiStyle.text(ctrl, cf2, Vector2(x, y + 8.0), "на максимуме", UiStyle.FS_CAPTION, UiStyle.TEXT_DIM)
+	y += 40.0
+	if GfxPresets.needs_forward_plus(gid) and not Settings.forward_plus():
+		var msg := "Часть значений заработает после перехода игры на рендер Forward+. Сейчас игра на Compatibility."
+		if row.get("off", false):
+			msg = "Заработает после перехода игры на рендер Forward+. Сейчас игра на Compatibility, выбранное значение сохранится."
+		for line in menu.wrap(Loc.t(msg), w, UiStyle.FS_BODY):
+			ctrl.draw_string(body, Vector2(x, y), line, HORIZONTAL_ALIGNMENT_LEFT, -1, UiStyle.FS_BODY, UiStyle.ACCENT_SOFT)
+			y += 24.0
 
 
 func _section_of(row: Dictionary) -> String:

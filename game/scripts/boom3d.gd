@@ -486,8 +486,8 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 	if R == null or R.cam == null:
 		return
 	# частиц меньше на слабом пресете и когда их уже много (мясорубка): нагрузка не растёт без предела
-	_q = FxMath.quality(Settings.gfx, count())
-	_lo = clampi(Settings.gfx, 0, 3) == 0
+	_q = FxMath.quality(Settings.gopt("effects"), count())
+	_lo = Settings.gopt("effects") == 0
 	kind = FxMath.kind_for(s, air, kind)
 	# S10-11 (Kanta: взрывы и дым закрывают весь экран): взрывы целей мельче на BOOM_K; бомбы и НАР — по зоне
 	# поражения, как были, у них меньше только дым (SMOKE_K в _smoke)
@@ -520,7 +520,7 @@ func smoke_screen(pos: Vector2, r: float, burst := false) -> void:
 	var R := Render3D.I
 	if R == null or R.cam == null:
 		return
-	_q = FxMath.quality(Settings.gfx, count())
+	_q = FxMath.quality(Settings.gopt("effects"), count())
 	var g := R.ground_under(pos)
 	var ch := R.cam.global_position.y
 	var k := clampf((ch - g.y) / maxf(ch, 1.0), 0.5, 3.0)

@@ -81,7 +81,7 @@ func sync(on: bool, delta: float) -> void:
 		var key := ""
 		for f in FLIGHT:
 			key += "%s%d%s;" % [f[0], Profile.plane_lvl(f[0]), Livery.current(f[0])]
-		key += "g%d" % mini(Settings.gfx, 1)   # «Низкое» ↔ остальные: другая модель
+		key += "g%d" % mini(Settings.gopt("props"), 1)   # «Низкое» ↔ остальные: другая модель
 		if key != _key:
 			clear()
 			_key = key
@@ -122,7 +122,7 @@ func _build() -> void:
 		var tex := PlaneArt.plane_tex(cls, lvl)
 		var tex1 := PlaneArt.plane_tex(cls, 1)
 		var path := "res://models/hangar/fh_hangar_%s_%d.glb" % [cls, lvl]
-		if Settings.gfx == 0:   # «Низкое»: облегчённая модель боя (те же оси и узлы деталей)
+		if Settings.gopt("props") == 0:   # «Низкое»: облегчённая модель боя (те же оси и узлы деталей)
 			var lite := "res://models/battle/fh_battle_%s_%d.glb" % [cls, lvl]
 			if ResourceLoader.exists(lite):
 				path = lite

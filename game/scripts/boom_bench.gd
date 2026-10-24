@@ -70,10 +70,10 @@ func process(delta: float) -> void:
 		# the cloud's software GPU makes auto-quality drop the saved preset to «Низкое» (no fire light, fewer
 		# particles), so the bench pins the quality players see: «Высокое», or --gfx=N; not saved
 		Settings.gfx_auto = false
-		Settings.gfx = 2
+		Settings.set_preset(2)
 		for a in OS.get_cmdline_user_args():
 			if a.begins_with("--gfx="):
-				Settings.gfx = clampi(int(a.substr(6)), 0, Settings.GFX_MAX)
+				Settings.set_preset(int(a.substr(6)))
 		Settings.apply_gfx()
 		m.select_class("fighter")
 		_t = 0.0

@@ -181,7 +181,7 @@ func _auto_gfx(real: float, m: Main) -> void:
 	if fps >= AUTO_FPS or (cap > 0.0 and cap < AUTO_FPS + 5.0):
 		_auto_win = 3   # FPS в норме — больше не проверяем в этом вылете
 		return
-	Settings.gfx -= 1
+	Settings.set_preset(Settings.gfx - 1)
 	Settings.save_settings()
 	Settings.apply_gfx()
 	add("gfx_drops")
@@ -235,7 +235,7 @@ func row(m: Main) -> PackedStringArray:
 	v["draws_avg"] = g("draws_sum") / maxf(_rs_n, 1)
 	v["cloud_fill_avg"] = g("cloud_fill_sum") / maxf(_rs_n, 1)
 	v["boss_life_avg"] = g("boss_life_sum") / maxf(g("boss_n"), 1.0)
-	v["scale3d"] = 100.0 * float(Render3D.GFX_SCALE[clampi(Settings.gfx, 0, 3)])
+	v["scale3d"] = float(GfxPresets.SCALES[Settings.gopt("scale")])
 	v["msl_air_avg"] = g("msl_air_sum") / maxf(_speed_n, 1)
 	v["crew_rank"] = float(Profile.crew_lvl(m.cls_id))
 	v["start2"] = float(Weapons.POOL.find(Profile.start2(m.cls_id)) + 1)

@@ -147,16 +147,20 @@ func _menu_test() -> void:
 				_press("ui_down")
 		7:
 			_shot("settings_gfx_focus")
-			_press_key(KEY_E)
-			_press_key(KEY_E)
+			for i in 11:
+				_press("ui_down")
 		8:
+			_shot("settings_gfx_ssao")
+			_press_key(KEY_E)
+			_press_key(KEY_E)
+		9:
 			_shot("settings_controls")
 			for i in 15:
 				_press("ui_down")
-		9:
+		10:
 			_shot("settings_controls_scrolled")
 			_press_key(KEY_E)
-		10:
+		11:
 			_shot("settings_ui")
 			print("MENUTEST: ok")
 			m.get_tree().quit()
