@@ -20,7 +20,8 @@ static func ui_font() -> Font:
 
 ## Player-facing name of the key bound to `action` (design system pattern 3): the first
 ## keyboard key, else the mouse button. Follows rebinding because it reads InputMap.
-## Gamepad glyphs come with the controls tab (menu plan step 4).
+## Keyboard only on purpose: no gamepad glyphs in hint bars (Kanta, 24.10); the gamepad
+## column lives in the controls tab.
 static func key_label(action: String) -> String:
 	if not InputMap.has_action(action):
 		return "?"

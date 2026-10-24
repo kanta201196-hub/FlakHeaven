@@ -34,3 +34,13 @@
 | Файл | Набор | Автор | Страница |
 | --- | --- | --- | --- |
 | `vfx/scorch.png` | Burned Ground 01 (`burned_ground_01`, diffuse 1K) | Rob Tuytel | https://polyhaven.com/a/burned_ground_01 |
+
+## Значки кнопок геймпада (`game/art/glyphs/`), Kenney Input Prompts 1.5 — CC0
+
+Белые значки 64×64 из папок `Default` наборов Xbox Series, PlayStation Series и Steam Deck, переименованы в общие имена (`a`, `b`, `lb`, `rt`, `dup`, `l_left`…), чтобы одна таблица кнопок работала для всех трёх наборов. Решение — Kanta, 24.10.2026 (тред «Переделать главное меню и настройки», UI-01 шаг 4).
+
+| Папка | Набор | Автор | Страница |
+| --- | --- | --- | --- |
+| `glyphs/xbox/` | Input Prompts — Xbox Series | Kenney | https://kenney.nl/assets/input-prompts |
+| `glyphs/ps/` | Input Prompts — PlayStation Series | Kenney | https://kenney.nl/assets/input-prompts |
+| `glyphs/deck/` | Input Prompts — Steam Deck | Kenney | https://kenney.nl/assets/input-prompts |

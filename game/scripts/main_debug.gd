@@ -155,12 +155,20 @@ func _menu_test() -> void:
 			_press_key(KEY_E)
 		9:
 			_shot("settings_controls")
-			for i in 15:
-				_press("ui_down")
+			_press("ui_right")
+			_press("ui_accept")
 		10:
+			_shot("settings_controls_capture")
+			_press_key(KEY_SHIFT)   # afterburner's key: the conflict row appears
+		11:
+			_shot("settings_controls_conflict")
+			_press("ui_cancel")
+			for i in 22:
+				_press("ui_down")
+		12:
 			_shot("settings_controls_scrolled")
 			_press_key(KEY_E)
-		11:
+		13:
 			_shot("settings_ui")
 			print("MENUTEST: ok")
 			m.get_tree().quit()
