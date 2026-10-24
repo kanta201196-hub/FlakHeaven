@@ -46,6 +46,8 @@ func _init(main: Main) -> void:
 		{"name": "zones", "times": [0.5, 1.6], "zones": true},
 		{"name": "emp", "times": [0.08, 0.25, 0.5], "emp": true},
 		{"name": "plasma", "times": [0.5, 0.7, 0.9, 1.4, 3.0], "plasma": true},   # S10-08: плазменная бомба падает и рвётся на земле
+		{"name": "trails", "times": [0.3, 0.6, 1.0, 1.6], "trails": true},   # VFX-03: missile and rocket smoke
+		{"name": "wreck", "times": [1.0, 2.0, 3.0], "wreck": true},   # VFX-03: smoke of a wreck on the ground and of a falling plane
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
 	if not _only.is_empty():
@@ -106,6 +108,19 @@ func process(delta: float) -> void:
 			if sc.get("plasma", false):
 				m.projectiles.spawn_bomb(m.player.global_position, Hardpoint.PLASMA_FUSE, 0.0, 160.0, "плазма", _pos, true)
 				m.projectiles.bombs.back()["plasma"] = {"dps": 0.0, "t": 4.0}
+			if sc.get("trails", false):
+				var pp := m.player.global_position
+				for src: Array in [[Vector2(420, -260), "sam"], [Vector2(380, 180), "aam"], [Vector2(-60, -330), "manpads"]]:
+					var a: Vector2 = _pos + (src[0] as Vector2)
+					m.projectiles.spawn_missile(a, (pp - a).normalized(), src[1])
+				for k in 3:
+					m.projectiles.spawn_rocket(pp + Vector2(0, -20 * k), Vector2(520, -300).rotated(0.08 * k), 0.0, 40.0, 0.0)
+			if sc.get("wreck", false) and Render3D.I != null:
+				Boom3D.ensure()   # the lit smoke takes Boom3D's puff texture
+				for w: Array in [[Vector2.ZERO, 16], [Vector2(300, -120), 36]]:   # a wreck on the ground; a crash still smoking hard
+					var ws := Render3D.I._make_smoke()
+					ws.global_position = Render3D.I.ground_under(_pos + (w[0] as Vector2)) + Vector3(0, 6, 0)
+					ws.amount = w[1]
 			if sc.get("emp", false):
 				m.fx.emp_wave(m.player.global_position, 380.0)
 			for k in int(sc.get("stress", 0)):   # мясорубка: 30 взрывов разом — замер нагрузки

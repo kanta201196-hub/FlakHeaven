@@ -12,18 +12,70 @@ var _am := ArrayMesh.new()
 var _mat := StandardMaterial3D.new()
 var _count := 0
 var _dead := 0
+var _fancy := false   # VFX-03: Forward+ draws missile smoke with SMOKE_SH; Compatibility keeps the flat soft ribbon
+
+## VFX-03 (Forward+): plane contrails look as before (soft texture across the ribbon); missile smoke (a style with
+## a colour, UV2.y = 1) is a lit tube of billowing smoke: world-anchored noise erodes the edges more with age,
+## the sun side is brighter, and a short hot glow sits at the nozzle. UV.y = across, UV2.x = age 0..1,
+## NORMAL = ribbon side direction.
+const SMOKE_SH := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+uniform sampler2D soft : source_color, filter_linear_mipmap;
+uniform vec3 to_sun = vec3(-0.46, 0.63, -0.56);
+%s
+varying vec3 wp;
+varying vec3 sd;
+void vertex() {
+	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	sd = NORMAL;
+}
+void fragment() {
+	if (UV2.y < 0.5) {
+		vec4 t = texture(soft, vec2(0.5, UV.y));
+		ALBEDO = COLOR.rgb * t.rgb;
+		ALPHA = COLOR.a * t.a;
+	} else {
+		float x = UV.y * 2.0 - 1.0;
+		float k = UV2.x;
+		float prof = 1.0 - x * x;
+		vec3 drift = vec3(0.7, 1.3, 0.4) * k;
+		float big = fbm(wp * 0.05 + drift);
+		vec3 qf = wp * 0.17 + drift * 1.6;
+		float fine = fbm(qf);
+		float fine2 = fbm(qf + to_sun * 0.6);
+		float d = prof * (0.25 + 1.25 * (big * 0.5 + fine * 0.5)) - k * 0.45;
+		float a = smoothstep(0.1, 0.38, d);
+		vec3 nrm = normalize(normalize(sd) * x + vec3(0.0, sqrt(max(prof, 0.0)), 0.0));
+		float lit = 0.62 + 0.38 * max(dot(nrm, to_sun), 0.0) + (fine - fine2) * 1.6;
+		vec3 col = min(COLOR.rgb * clamp(lit, 0.35, 1.3), vec3(0.97));
+		float heat = (1.0 - smoothstep(0.0, 0.07, k)) * prof;
+		col = mix(col, vec3(2.6, 1.35, 0.42), heat);
+		ALBEDO = col;
+		ALPHA = clamp(COLOR.a * a * (1.0 + heat), 0.0, 1.0);
+	}
+}
+"""
 
 
 func _ready() -> void:
 	mesh = _am
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	extra_cull_margin = 16384.0
+	_fancy = GpuFx.active()
+	if _fancy:
+		var sh := Shader.new()
+		sh.code = SMOKE_SH % Boom3D.COMMON
+		var sm := ShaderMaterial.new()
+		sm.shader = sh
+		material_override = sm
+		return
 	_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_mat.vertex_color_use_as_albedo = true
 	_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 	_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material_override = _mat
-	extra_cull_margin = 16384.0
 
 
 ## Точка следа. style: [альфа, ширина у источника, ширина в конце, время жизни, шаг точек, (цвет)]
@@ -56,10 +108,14 @@ func emit(key: Variant, pos: Vector3, style: Array) -> void:
 func tick(delta: float) -> void:
 	if _mat.albedo_texture == null and Fx._soft != null:
 		_mat.albedo_texture = Fx._soft
+		if _fancy:
+			(material_override as ShaderMaterial).set_shader_parameter("soft", Fx._soft)
 	_time += delta
 	var verts := PackedVector3Array()
 	var cols := PackedColorArray()
 	var uvs := PackedVector2Array()
+	var uv2s := PackedVector2Array()
+	var nrms := PackedVector3Array()
 	var idx := PackedInt32Array()
 	_count = 0
 	for key in _tr.keys():
@@ -101,6 +157,9 @@ func tick(delta: float) -> void:
 			d = d.normalized() if d.length_squared() > 0.01 else Vector2.RIGHT
 			# ширина растёт со временем (след расплывается), быстрее в начале
 			var w: float = lerpf(float(s[1]), float(s[2]), 1.0 - (1.0 - k) * (1.0 - k)) * 0.5
+			var smoke := s.size() > 5
+			if _fancy and smoke:
+				w *= 1.5   # the noise eats the edges, so the tube is drawn wider than its visible smoke
 			var side := Vector3(-d.y, 0.0, d.x) * w
 			# у источника след проявляется (не начинается резко у сопла), к концу тает
 			# M-39: у сопла след плотный (проявление короче), к концу короткой жизни тает
@@ -113,6 +172,13 @@ func tick(delta: float) -> void:
 			cols.append(c)
 			uvs.append(Vector2(0.5, 0.0))
 			uvs.append(Vector2(0.5, 1.0))
+			if _fancy:
+				var fl := 1.0 if smoke else 0.0
+				uv2s.append(Vector2(k, fl))
+				uv2s.append(Vector2(k, fl))
+				var sn := Vector3(-d.y, 0.0, d.x)
+				nrms.append(sn)
+				nrms.append(sn)
 			if i > 0:
 				var v := base + (i - 1) * 2
 				idx.append_array(PackedInt32Array([v, v + 1, v + 2, v + 1, v + 3, v + 2]))
@@ -124,6 +190,9 @@ func tick(delta: float) -> void:
 	arr[Mesh.ARRAY_VERTEX] = verts
 	arr[Mesh.ARRAY_COLOR] = cols
 	arr[Mesh.ARRAY_TEX_UV] = uvs
+	if _fancy:
+		arr[Mesh.ARRAY_TEX_UV2] = uv2s
+		arr[Mesh.ARRAY_NORMAL] = nrms
 	arr[Mesh.ARRAY_INDEX] = idx
 	_am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 
