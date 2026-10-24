@@ -44,15 +44,38 @@ func _fresh_profile() -> Node:
 	return p
 
 
-## Each class gets its own new weapons; the others never show up in its card pool.
+## Kanta 24.10: weapon sets, class bonus, turrets and wingmen are per plane (class + plane level).
 func _test_class_lists() -> void:
-	_check(PlaneClasses.allows("fighter", "srm"), "fighter: srm")
-	_check(PlaneClasses.allows("fighter", "agm"), "fighter: agm (Kanta 24.10, ground option without bombs)")
-	_check(not PlaneClasses.allows("fighter", "hebomb"), "fighter: no hebomb")
-	_check(PlaneClasses.allows("attacker", "srm") and PlaneClasses.allows("attacker", "agm"), "attacker: srm, agm")
-	_check(not PlaneClasses.allows("attacker", "hebomb"), "attacker: no hebomb")
-	_check(PlaneClasses.allows("bomber", "agm") and PlaneClasses.allows("bomber", "hebomb"), "bomber: agm, hebomb")
-	_check(not PlaneClasses.allows("bomber", "srm"), "bomber: no srm")
+	var f1 := ["aam", "agm", "rockets", "flares"]
+	var a1 := ["rockets", "aam", "agm", "bombs", "turret", "flares"]
+	var b1 := ["bombs", "hebomb", "rockets", "turret", "flares"]
+	var want := {"fighter": [f1, f1 + ["srm"]], "attacker": [a1, a1], "bomber": [b1, b1]}
+	for c in want:
+		for lv in [1, 2]:
+			var got: Array = PlaneClasses.plane(c, lv)["weapons"]
+			var need: Array = want[c][lv - 1]
+			_check(got.size() == need.size() and need.all(func(w): return got.has(w)), "%s %d: weapon set" % [c, lv])
+			for w in Weapons.POOL:
+				_check(PlaneClasses.allows(c, w, lv) == need.has(w), "%s %d allows %s" % [c, lv, w])
+	_check(not PlaneClasses.allows("fighter", "srm", 1) and PlaneClasses.allows("fighter", "srm", 2), "srm unique to fighter 2")
+	_check(not PlaneClasses.allows("bomber", "agm", 1), "bomber: no agm")
+	# class bonus 15 % on plane 1, 20 % on plane 2; fighter 2 also +5 % on agm (test with and without)
+	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 1, "aam"), 1.15), "fighter 1 aam +15%")
+	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 2, "aam"), 1.2), "fighter 2 aam +20%")
+	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 2, "agm"), 1.05), "fighter 2 agm +5%")
+	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 1, "agm"), 1.0), "fighter 1 agm no bonus")
+	_check(is_equal_approx(PlaneClasses.bonus_k("attacker", 1, "rockets"), 1.15) and is_equal_approx(PlaneClasses.bonus_k("attacker", 2, "rockets"), 1.2), "attacker rockets 15/20")
+	_check(is_equal_approx(PlaneClasses.bonus_k("bomber", 1, "bombs"), 1.15) and is_equal_approx(PlaneClasses.bonus_k("bomber", 2, "bombs"), 1.2), "bomber bombs 15/20")
+	# turrets: start 1, +1 at turret lvl 3 and lvl 5, up to the plane's max
+	_check(PlaneClasses.turret_slots("attacker", 5, 1) == 1 and PlaneClasses.turret_slots("attacker", 3, 2) == 2, "attacker turrets 1 / 2")
+	_check(PlaneClasses.turret_slots("attacker", 2, 2) == 1, "attacker 2: second turret from lvl 3")
+	_check(PlaneClasses.turret_slots("bomber", 2, 1) == 1 and PlaneClasses.turret_slots("bomber", 3, 1) == 2 and PlaneClasses.turret_slots("bomber", 5, 1) == 2, "bomber 1 turrets up to 2")
+	_check(PlaneClasses.turret_slots("bomber", 3, 2) == 2 and PlaneClasses.turret_slots("bomber", 5, 2) == 3, "bomber 2 turrets up to 3")
+	# wingmen: count and types
+	_check(PlaneClasses.plane("fighter", 1)["wingmen"] == 1 and PlaneClasses.wing_type_ok("fighter", 1, "swift") and not PlaneClasses.wing_type_ok("fighter", 1, "rook"), "fighter 1: 1 fighter wingman")
+	_check(PlaneClasses.wing_type_ok("fighter", 2, "rook"), "fighter 2: fighter or attacker")
+	_check(PlaneClasses.plane("attacker", 1)["wingmen"] == 1 and PlaneClasses.plane("attacker", 2)["wingmen"] == 1, "attacker: 1 wingman")
+	_check(PlaneClasses.plane("bomber", 2)["wingmen"] == 2 and not PlaneClasses.wing_type_ok("bomber", 2, "rook"), "bomber: 2 fighters only")
 	for c in PlaneClasses.LIST:
 		_check(PlaneClasses.signature(c) in ["aam", "rockets", "bombs"], "signature unchanged for %s" % c)
 

@@ -116,11 +116,16 @@ const PROMOTE_COST := [[5, 100], [10, 300], [15, 700], [20, 1200]]
 var data := {}
 ## Where the profile is stored; unit tests point it to a test file so a real profile is never touched.
 var path := PATH
+## Check flag --plane=1|2: every class flies that plane (balance runs of plane 2 under --demo); 0 — off
+var debug_plane := 0
 
 
 func _ready() -> void:
 	reset_data()
 	load_profile()
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--plane="):
+			debug_plane = clampi(int(String(arg).substr(8)), 1, 2)
 
 
 func _default_class(cls: String) -> Dictionary:
@@ -283,6 +288,8 @@ func unlocks_at(c: String, lv: int) -> Array:
 
 ## 3.5: на каком самолёте вылет — ур. 2, если куплен и выбран в ангаре
 func plane_lvl(c: String) -> int:
+	if debug_plane > 0:
+		return debug_plane
 	return 2 if plane2(c) and int(cls(c).get("plane_sel", 2)) == 2 else 1
 
 

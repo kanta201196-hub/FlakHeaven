@@ -138,7 +138,11 @@ func _init() -> void:
 
 func setup(id: String, sk := "", sk2 := "") -> void:
 	cls_id = id
-	cls = PlaneClasses.get_data(id)
+	cls = PlaneClasses.plane(id, Profile.plane_lvl(id))   # Kanta 24.10: weapons, ★ bonus, turrets, wingmen per plane
+	for arg in OS.get_cmdline_user_args():   # check flag --bonus=<weapon>:<k>, e.g. --bonus=agm:1.0 (A/B of a plane bonus)
+		if String(arg).begins_with("--bonus=") and String(arg).contains(":"):
+			var kv := String(arg).substr(8).split(":")
+			cls["bonus"][kv[0]] = float(kv[1])
 	size = float(cls["size"])
 	radius = 12.0 * size
 	max_hp = float(cls["hp"])
@@ -169,7 +173,7 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 		var tg := Hardpoint.new("Турели", turrets, "turret", true)
 		if id == "bomber":
 			tg.level = 2 # 3.1: «Кит» стартует с турелями ур. 2
-		tg.slots = PlaneClasses.turret_slots(id, tg.level)
+		tg.slots = PlaneClasses.turret_slots(id, tg.level, int(cls["plane_lvl"]))
 		groups.append(tg)
 	if heavy != null:
 		groups.append(heavy)

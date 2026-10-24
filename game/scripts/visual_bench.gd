@@ -830,7 +830,7 @@ func _hangar_bench() -> void:
 			return
 		if OS.get_cmdline_user_args().has("--hangarnew"):
 			# PG-01: the new standard weapons on each plane, tiers 1 / 2 / 3 (hangar models)
-			Hangar3D.bench_weapons = {"fighter": ["srm", ""], "attacker": ["srm", "agm"], "bomber": ["hebomb", "agm"]}
+			Hangar3D.bench_weapons = {"fighter": ["srm", ""], "attacker": ["srm", "agm"], "bomber": ["hebomb", ""]}
 			for c in PlaneClasses.LIST:
 				for wt in [1, 2, 3]:
 					_hq.append([c, 1, wt])

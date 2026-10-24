@@ -905,6 +905,9 @@ msgstr "%s：Lv.%d → %d\n%s"
 msgid "\nВторая турель — сверху на фюзеляже"
 msgstr "\n第二座炮塔——位于机身顶部"
 
+msgid "\nЕщё одна турель"
+msgstr "\n再加一座炮塔"
+
 #: game/scripts/cards.gd:686
 #, c-format
 msgid "\nБонус редкости: +%s урона группы"
@@ -912,8 +915,8 @@ msgstr "\n稀有度加成：+%s 组伤害"
 
 #: game/scripts/cards.gd:688
 #, c-format
-msgid "\n★ Особенность класса: урон +20%"
-msgstr "\n★ 机型特性：伤害 +20%"
+msgid "\n★ Бонус самолёта: урон +%d%%"
+msgstr "\n★ 机型加成：伤害 +%d%%"
 
 #: game/scripts/cards.gd:690
 #, c-format
@@ -1528,8 +1531,8 @@ msgstr "对地伤害"
 
 #: game/scripts/hud_campaign.gd:182
 #, c-format
-msgid "Экипаж ур. %d · ★ %s +20%%"
-msgstr "机组 %d 级 · ★ %s +20%%"
+msgid "Экипаж ур. %d · ★ %s +%d%%"
+msgstr "机组 %d 级 · ★ %s +%d%%"
 
 #: game/scripts/hud_campaign.gd:186
 #, c-format
@@ -2344,8 +2347,8 @@ msgstr "Lv.1起装备；战斗中通过卡牌强化。"
 
 #: game/scripts/hud_hangar.gd:213
 #, c-format
-msgid "★ особенность класса: +20%"
-msgstr "★ 机型专长：+20%"
+msgid "★ бонус самолёта: +%d%%"
+msgstr "★ 机型加成：+%d%%"
 
 #: game/scripts/hud_hangar.gd:242
 #, c-format

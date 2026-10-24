@@ -905,6 +905,9 @@ msgstr "%s: Lv. %d → %d\n%s"
 msgid "\nВторая турель — сверху на фюзеляже"
 msgstr "\nSecond turret — on top of the fuselage"
 
+msgid "\nЕщё одна турель"
+msgstr "\nOne more turret"
+
 #: game/scripts/cards.gd:686
 #, c-format
 msgid "\nБонус редкости: +%s урона группы"
@@ -912,8 +915,8 @@ msgstr "\nRarity bonus: +%s group damage"
 
 #: game/scripts/cards.gd:688
 #, c-format
-msgid "\n★ Особенность класса: урон +20%"
-msgstr "\n★ Class trait: damage +20%"
+msgid "\n★ Бонус самолёта: урон +%d%%"
+msgstr "\n★ Plane bonus: damage +%d%%"
 
 #: game/scripts/cards.gd:690
 #, c-format
@@ -1528,8 +1531,8 @@ msgstr "Ground damage"
 
 #: game/scripts/hud_campaign.gd:182
 #, c-format
-msgid "Экипаж ур. %d · ★ %s +20%%"
-msgstr "Crew lv. %d · ★ %s +20%%"
+msgid "Экипаж ур. %d · ★ %s +%d%%"
+msgstr "Crew lv. %d · ★ %s +%d%%"
 
 #: game/scripts/hud_campaign.gd:186
 #, c-format
@@ -2344,8 +2347,8 @@ msgstr "Fitted from Lv. 1; improved by cards in combat."
 
 #: game/scripts/hud_hangar.gd:213
 #, c-format
-msgid "★ особенность класса: +20%"
-msgstr "★ class specialty: +20%"
+msgid "★ бонус самолёта: +%d%%"
+msgstr "★ plane bonus: +%d%%"
 
 #: game/scripts/hud_hangar.gd:242
 #, c-format

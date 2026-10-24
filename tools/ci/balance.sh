@@ -11,6 +11,7 @@
 #   UNTIL=900       sortie length, s (no evacuation; deaths are counted, the sortie goes on)
 #   OUT=balance_out folder for logs and per-process user:// data
 #   WALL=14400      real-time limit per process, s
+#   EXTRA=""        extra game flags, e.g. EXTRA="--class=fighter --plane=2 --weapon=agm --bonus=agm:1.0"
 set -uo pipefail
 GODOT="${GODOT:-godot}"
 OPS="${OPS:-1 2}"
@@ -23,6 +24,8 @@ PAR="${PAR:-1}"
 ERR_RE="SCRIPT ERROR|Parse Error"
 extra=()
 [ "$PROFILE" = "demo" ] && extra=(--demo --profile=demo)
+read -r -a more <<<"${EXTRA:-}"
+extra+=("${more[@]}")
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"   # absolute: XDG_DATA_HOME must not depend on the working folder
 # The game runs from a copy: switching branches or pulling in the repository while Godot runs from it froze

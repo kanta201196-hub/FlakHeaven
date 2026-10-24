@@ -267,8 +267,9 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			var st := Profile.tier_state(w, tier)
 			marks += ("●" if st != "" and st != "?" else "○") + " "
 		_text(Vector2(lx + 60, y + 54), marks, 15, Menu.C_AMBER)
-		if PlaneClasses.signature(m.hangar_cls) == w:
-			_text(Vector2(lx + 60, y + 54), "★ особенность класса: +20%", 13, Color(0.6, 1.0, 0.65), HORIZONTAL_ALIGNMENT_RIGHT, 228.0)
+		var bk := PlaneClasses.bonus_k(m.hangar_cls, 0, w)
+		if bk > 1.0:
+			_text(Vector2(lx + 60, y + 54), Loc.t("★ бонус самолёта: +%d%%") % roundi((bk - 1.0) * 100.0), 13, Color(0.6, 1.0, 0.65), HORIZONTAL_ALIGNMENT_RIGHT, 228.0)
 		y += 80.0
 	_hg_start2(m, lx, y + 6.0)
 	var w2 := m.hangar_w
