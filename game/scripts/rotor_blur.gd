@@ -7,8 +7,7 @@ class_name RotorBlur
 ## Лопасти и втулка в GLB — один меш (tools/blender/helicopter.py), поэтому срез шейдером, а не скрытие узла;
 ## разделять модель на два меша ради этого не нужно.
 
-## Несущий винт: радиус лопастей 10,65 м · 0,0526 (масштаб GLB) ≈ 0,56; втулка с комлями — до 0,046.
-## Рулевой: лопасти 1,95 м ≈ 0,10; втулка — до 0,012.
+## Sizes (radius, hub) come from the caller: Render3D.ROTOR_R / TAIL_R, measured on the battle model (VIS-01).
 
 static var _disc_shader: Shader
 static var _hub_shader: Shader

@@ -222,8 +222,12 @@ RECIPES = {
         "root": "convoy_scout", "rot": (0, 0, -90), "ground": True, "split": "(?i)tyre|rim|nut|gauge",
         "wheels": {"steer": 2, "rmax": 0.12, "match": "(?i)tyre"},
         "materials": [(r".", OLIVE)],
-        "groups": {"turret": [("name", r"(?i)^turret|camera|lenses")]},
-        "pivots": {"turret": "base"},
+        # turret = the remote weapon station on the roof only. The first build took "camera|lenses" too: the
+        # head lamps and the driver's cameras at both ends went into the turret and would swing round with it,
+        # while the gun stayed on the hull. The installed GLB was re-split by part with this box and pivot
+        # (VIS-01, 24.10); the source now lives on Kanta's PC, so this rule has not been re-run in Blender.
+        "groups": {"turret": [("box", (-0.11, 0.2, -0.135, 0.01, 0.33, 0.47))]},
+        "pivots": {"turret": (0.024, -0.064, 0.337)},
         "paint": SAND, "tris": 13000,
     },
     "e_convoy_technical": {
