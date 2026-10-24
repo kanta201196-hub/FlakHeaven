@@ -33,11 +33,13 @@ static func key(c: Dictionary, p: Player = null) -> String:
 	return "module"
 
 
-## Значок в квадрате со стороной s с центром в c
-static func draw(ctrl: Control, c: Vector2, s: float, k: String, col: Color) -> void:
+## Icon `k` in an `s`-sized square centred at `c`. `boxed` draws the tinted square behind it;
+## icon tiles (HudIcons) pass false and draw their own glow and frame.
+static func draw(ctrl: Control, c: Vector2, s: float, k: String, col: Color, boxed := true) -> void:
 	var h := s / 2.0
-	ctrl.draw_rect(Rect2(c - Vector2(h, h), Vector2(s, s)), Color(col.r, col.g, col.b, 0.14))
-	ctrl.draw_rect(Rect2(c - Vector2(h, h), Vector2(s, s)), Color(col.r, col.g, col.b, 0.6), false, 1.5)
+	if boxed:
+		ctrl.draw_rect(Rect2(c - Vector2(h, h), Vector2(s, s)), Color(col.r, col.g, col.b, 0.14))
+		ctrl.draw_rect(Rect2(c - Vector2(h, h), Vector2(s, s)), Color(col.r, col.g, col.b, 0.6), false, 1.5)
 	var u := s * 0.36   # «единица» рисунка
 	var lw := maxf(2.0, s / 18.0)
 	match k:
