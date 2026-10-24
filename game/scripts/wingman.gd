@@ -265,7 +265,7 @@ func _swift(p: Player, delta: float) -> void:
 		var wolf := false
 		var tt := _target(900.0)
 		if tt != null:
-			_aam_cd = (5.0 if lvl >= 2 else 7.0) * (0.5 if wolf else 1.0) * randf_range(0.9, 1.1)
+			_aam_cd = (7.0 if lvl >= 2 else 10.0) * (0.5 if wolf else 1.0) * randf_range(0.9, 1.1)   # Kanta 24.10: 10 s (was 7), lvl 2 — 7 s (was 5)
 			for i in 2:
 				_missile(p, tt, 35.0 * dmg_k() * (1.5 if wolf else 1.0), {"splash": 70.0} if lvl >= 3 else {})
 			Main.I.sfx.play("aam_launch", -20.0, 1.5)
@@ -288,7 +288,7 @@ func _rook(p: Player, delta: float) -> void:
 		if t == null:
 			_special_cd = 0.5
 			return
-		_special_cd = 5.0 * randf_range(0.9, 1.1)
+		_special_cd = 7.0 * randf_range(0.9, 1.1)   # Kanta 24.10: salvo every 7 s (was 5)
 		var dir := (t.global_position - global_position).normalized()
 		for i in 6:
 			var d := dir.rotated(deg_to_rad(randf_range(-5.0, 5.0)))

@@ -5483,13 +5483,13 @@ msgid "Стриж"
 msgstr "Swift"
 
 #: game/scripts/prog.gd:63
-msgid "Держит строй, бьёт самолёты из пушки, 2 наводящиеся ракеты (35) раз в 7 с"
-msgstr "Holds formation, hits planes with its cannon, 2 homing missiles (35) every 7 s"
+msgid "Держит строй, бьёт самолёты из пушки, 2 наводящиеся ракеты (35) раз в 10 с"
+msgstr "Holds formation, hits planes with its cannon, 2 homing missiles (35) every 10 s"
 
 #: game/scripts/prog.gd:64
 #, c-format
-msgid "+40% урона, ракеты раз в 5 с"
-msgstr "+40% damage, missiles every 5 s"
+msgid "+40% урона, ракеты раз в 7 с"
+msgstr "+40% damage, missiles every 7 s"
 
 #: game/scripts/prog.gd:64
 msgid "ракеты с осколками; раз в 6 с сбивает ракету рядом с ведущим"
@@ -5504,8 +5504,8 @@ msgid "Грачонок"
 msgstr "Rookling"
 
 #: game/scripts/prog.gd:66
-msgid "Приоритет — наземные цели: залп из 6 ракет (12, взрыв 50) раз в 5 с; прочнее ×1,5"
-msgstr "Priority: ground targets — salvo of 6 rockets (12, blast 50) every 5 s; tougher ×1.5"
+msgid "Приоритет — наземные цели: залп из 6 ракет (12, взрыв 50) раз в 7 с; прочнее ×1,5"
+msgstr "Priority: ground targets — salvo of 6 rockets (12, blast 50) every 7 s; tougher ×1.5"
 
 #: game/scripts/prog.gd:67
 #, c-format
