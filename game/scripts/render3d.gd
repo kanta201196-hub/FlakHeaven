@@ -1126,17 +1126,25 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			_units.erase(id)
 
 
-## Винты вертолёта (tools/blender/helicopter.py): несущий rotor — по часовой сверху, рулевой tail_rotor —
-## вокруг своей оси (в GLB это локальная Z). S9-22: лопасти в бою — светлый полупрозрачный диск размытия
-## с полосами (RotorBlur), от модели остаются втулка и комли лопастей.
+## Helicopter rotors: the main rotor turns clockwise seen from above, the tail rotor about its own axis (local Z
+## in the GLB). S9-22: in battle the blades are a light translucent blur disc with streaks (RotorBlur); the model
+## keeps only the hub and blade roots. Sizes follow the model (VIS-01, sf_recipes.py "e_helicopter", measured on the
+## GLB vertices, fuselage length = 1): main rotor 5 blades, tips at r 0.474, hub kept inside 0.05 (the blade cuffs
+## past it read as light spikes over the disc); tail rotor 3 blades, r 0.116, hub kept inside 0.03.
+const ROTOR_R := 0.474
+const ROTOR_HUB := 0.05
+const TAIL_R := 0.116
+const TAIL_HUB := 0.03
+
+
 func _rotors(u: Dictionary, delta: float) -> void:
 	if not u.has("rot"):
 		var inst := (u["node"] as Node3D).get_child(0)
 		var r := inst.find_child("rotor", true, false) as MeshInstance3D
 		var tr := inst.find_child("tail_rotor", true, false) as MeshInstance3D
 		u["rot"] = [r, tr]
-		RotorBlur.attach(r, 0.565, 5, 0.046, false)
-		RotorBlur.attach(tr, 0.102, 3, 0.012, true)
+		RotorBlur.attach(r, ROTOR_R, 5, ROTOR_HUB, false)
+		RotorBlur.attach(tr, TAIL_R, 3, TAIL_HUB, true)
 	var rr: Array = u["rot"]
 	if rr[0] != null:
 		(rr[0] as Node3D).rotate_y(-delta * 9.0)
@@ -1243,11 +1251,13 @@ func _convoy_parts(u: Dictionary, v: ConvoyVehicle, len_px: float, delta: float)
 		return Vector3(hull, 0.0, 0.0)
 	if u.get("bm") != null and not u.has("cv"):
 		var inst := (u["node"] as Node3D).get_child(0)
-		var d := {"wheels": [], "front": []}
+		var d := {"wheels": [], "front": [], "r": 0.072}
 		for c in inst.find_children("wheel_*", "Node3D", true, false):
 			(d["wheels"] as Array).append(c)
-			if String(c.name).begins_with("wheel_f"):
+			if String(c.name).begins_with("wheel_f"):   # wheel_fl / wheel_f2l: both steered axles of an 8x8
 				(d["front"] as Array).append(c)
+			if c is MeshInstance3D:   # VIS-01: rolling radius from the model's own wheel (length-1 units)
+				d["r"] = maxf((c as MeshInstance3D).get_aabb().size.y * 0.5, 0.02)
 		for nm in ["turret", "launcher"]:
 			var n := inst.find_child(nm, true, false)
 			if n != null:
@@ -1255,8 +1265,8 @@ func _convoy_parts(u: Dictionary, v: ConvoyVehicle, len_px: float, delta: float)
 		u["cv"] = d
 	if u.has("cv"):
 		var d: Dictionary = u["cv"]
-		# колесо радиусом ~0,07 длины машины: угол = путь / радиус
-		var roll := -dr.dist / (0.072 * len_px)
+		# angle = distance / wheel radius (a share of the vehicle length, from the model; 0.072 without one)
+		var roll := -dr.dist / (float(d["r"]) * len_px)
 		for w in d["wheels"]:
 			(w as Node3D).rotation = Vector3(0.0, 0.0, roll)
 		for w in d["front"]:

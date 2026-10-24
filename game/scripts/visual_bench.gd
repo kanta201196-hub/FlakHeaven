@@ -70,7 +70,7 @@ func process(delta: float) -> void:
 	m.god_mode = true
 	m.spawner.process_mode = Node.PROCESS_MODE_DISABLED
 	var cur: Dictionary = _points[_i] if _i >= 0 and _i < _points.size() else {}
-	var keep: bool = cur.get("enemies", false) or cur.get("convoy", false) or cur.has("live") or cur.has("sam_poses")   # M-36: машины колонны — тоже враги
+	var keep: bool = cur.get("enemies", false) or cur.get("convoy", false) or cur.has("live") or cur.has("sam_poses") or cur.has("unit_poses")   # M-36: машины колонны — тоже враги
 	for e in m.get_tree().get_nodes_in_group("enemies"):
 		if not keep:
 			(e as Node).queue_free()
@@ -143,6 +143,8 @@ func process(delta: float) -> void:
 			_fort.parts_down[nm] = true
 	elif p.has("sam_poses"):
 		_sam_poses(p)
+	elif p.has("unit_poses"):
+		_unit_poses(p)
 	elif p.get("heli", false):
 		if _heli == null:   # S9-22: «Сарыч» висит рядом с игроком, логика стоит (винты крутит render3d)
 			_spawned = true
@@ -650,6 +652,9 @@ func _make_points() -> Array:
 		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
 		for ph in ["march", "track", "launch"]:   # Kanta 24.10: SAM launcher folded, raised and tracking, launching
 			pts.append({"name": "sam_" + ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 9.0, "sam_poses": ph, "wait": 2.5})
+		# VIS-01: each reworked enemy model alone and close, moving parts posed (turret turned, wheels steered)
+		for k in UNIT_POSES:
+			pts.append({"name": "unit_" + k, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": UNIT_POSES[k][2], "unit_poses": k, "wait": 3.5})
 		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
 		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
 	for a in OS.get_cmdline_user_args():
@@ -795,6 +800,94 @@ func _sam_poses(p: Dictionary) -> void:
 		m.projectiles.spawn_missile(sam.launch_at, to.normalized(), "sam", "ЗРК")
 		sam.launches = 1
 var _g_spawned := false
+
+
+## VIS-01 unit close-ups: kind -> [enemy texture, sprite length, camera zoom]. Lengths are the game's own
+## (GroundTarget._draw, ConvoyVehicle.SPEC, Helicopter.LEN, Interceptor._draw); zoom brings each to ~40 % of the frame.
+const UNIT_POSES := {
+	"zsu": ["e_zsu", 27.0, 20.0], "truck": ["e_convoy_truck", 28.0, 20.0], "ifv": ["e_convoy_ifv", 25.0, 22.0],
+	"scout": ["e_convoy_scout", 18.0, 28.0], "technical": ["e_convoy_technical", 14.0, 34.0],
+	"heli": ["e_helicopter", 60.0, 9.0], "interceptor": ["e_interceptor", 46.0, 11.0],
+}
+var _unit: Enemy = null
+var _unit_cv: Convoy = null
+
+
+## VIS-01: one enemy model alone and centred, logic frozen, the player's plane hidden (as _sam_poses).
+## Ground units get their moving parts posed through the same fields Render3D reads in a battle: the turret
+## turns off the hull (ZSU: sprite angle ~65° after the first second; convoy: alarm on, so it aims at the
+## player, who stays on the camera point off the vehicle's quarter),
+## convoy wheels have rolled and the front axles steer. The camera steers until the 3D model sits mid-frame.
+func _unit_poses(p: Dictionary) -> void:
+	if _pt < 0.3:   # the class switch at the start of a point clears the world
+		return
+	var kind: String = p["unit_poses"]
+	if not p.has("_unit"):   # a new point: only this unit in the world (earlier points keep their enemies)
+		p["_unit"] = true
+		for e in m.get_tree().get_nodes_in_group("enemies"):
+			(e as Node).queue_free()
+		m.projectiles.missiles.clear()
+		m.projectiles.ebullets.clear()
+		_unit = null
+	if _unit != null and not is_instance_valid(_unit):
+		_unit = null
+	var spec: Array = UNIT_POSES[kind]
+	var body := 0.4
+	if _unit == null:
+		var tr := Terrain3D.active()
+		var at: Vector2 = tr.find_floor(p["pos"], 2600.0, 0.0, [], AASite.FLOOR_MID, true) if tr != null else p["pos"]
+		p["pos"] = at + Vector2(-60, -48)
+		_spawned = true
+		m.player.process_mode = Node.PROCESS_MODE_DISABLED
+		match kind:
+			"zsu":
+				var g := GroundTarget.new()
+				g.setup("zsu", AASite.new(), 1.0)
+				g.position = at
+				g.anchor = at
+				g._body_angle = body
+				_unit = g
+			"heli":
+				_unit = Helicopter.new()
+			"interceptor":
+				_unit = Interceptor.new()
+			_:
+				if _unit_cv == null:
+					_unit_cv = Convoy.new()   # never enters the tree: only carries the alarm flag the turret reads
+					_unit_cv.alarm = true
+				var v := ConvoyVehicle.new()
+				v.setup(kind, _unit_cv, 99999.0)
+				v.drive = GroundDrive.new(at, body)
+				v.drive.dist = 40.0     # wheels rolled off their modelled pose
+				v.drive.steer = 0.6     # front axles turned
+				v.anchor = at
+				v.heading = body
+				v.position = at
+				_unit = v
+		if not (_unit is GroundTarget or _unit is ConvoyVehicle):
+			_unit.position = at
+			_unit.heading = body
+		_unit.process_mode = Node.PROCESS_MODE_DISABLED
+		m.world.add_child(_unit)
+	var aim := body + (1.15 if _pt > 1.0 else 0.0)
+	_unit.hp = maxf(_unit.hp, 99999.0)
+	_unit.max_hp = maxf(_unit.max_hp, 99999.0)
+	_unit._flash = 0.0
+	_unit._spr = {"tex": spec[0], "len": spec[1], "angle": aim if kind == "zsu" else body}
+	var r3 := Render3D.I
+	if r3 == null:
+		return
+	var u: Dictionary = r3._units.get(_unit.get_instance_id(), {})
+	if u.has("node"):
+		var vs := m.get_viewport().get_visible_rect().size
+		var scr := r3.cam.unproject_position((u["node"] as Node3D).global_position)
+		var step := (scr - vs * Vector2(0.5, 0.5)) / (8.0 * float(p.get("zoom", 1.0)) / 9.0) * 2.0
+		p["pos"] = Vector2(p["pos"]) + step.limit_length(200.0)   # software GL in the cloud runs a few frames a second
+	var pu: Dictionary = r3._units.get(m.player.get_instance_id(), {})
+	if pu.has("node"):
+		(pu["node"] as Node3D).visible = false
+		if pu.get("sh") != null:
+			(pu["sh"] as Node3D).visible = false
 
 
 func _spawn_all_enemies(c: Vector2) -> void:

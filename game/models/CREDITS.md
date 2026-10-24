@@ -33,4 +33,11 @@
 | battle/e_lev_turret (главная башня «Левиафана») | US Mark 15/16 19-inch 45 caliber turret | Peter Primini | https://sketchfab.com/3d-models/us-mark-1516-19-inch-45-caliber-turret-1284145fb0e8419c97ae487cbf08ff16 | CC BY 4.0, изменено |
 | battle/e_ship_bulk (балкер) | Bulk Carrier (референс формы, геометрия собрана кодом заново) | medialog | https://sketchfab.com/3d-models/bulk-carrier-93c076900f004102b78dfac989efae1d | CC BY 4.0, изменено |
 | battle/e_sam (ЗРК: пусковая на шасси 8x8) | Anti-Aircraft Missile System | M1RON | https://sketchfab.com/3d-models/anti-aircraft-missile-system-578f3acbd1a44e72996c9b7b48772018 | CC BY 4.0, изменено |
+| battle/e_zsu (ЗСУ) | ZSU-23-4M | voron335 | https://sketchfab.com/3d-models/zsu-23-4m-e9e3ca1a5ee7455f90886de220519e42 | CC BY 4.0, изменено |
+| battle/e_convoy_truck (грузовик колонны) | Ural 4320 | javanilga | https://sketchfab.com/3d-models/ural-4320-79a1b82fcc594ed1ab4a1f01129d504d | CC BY 4.0, изменено |
+| battle/e_convoy_ifv (БМП колонны, колёсная 8x8) | Patria AMV | bunny | https://sketchfab.com/3d-models/patria-amv-5dcd4a541cd34059b0268379636fca3b | CC BY 4.0, изменено |
+| battle/e_convoy_scout (броневик колонны) | M1126 Infantry Carrier Vehicle | cenobyte | https://sketchfab.com/3d-models/m1126-infantry-carrier-vehicle-b0c559a02c1842b0976a241c9a998360 | CC BY 4.0, изменено |
+| battle/e_convoy_technical (пикап с пулемётом; пулемёт собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
+| battle/e_helicopter (вертолёт) | Hind Attack Helicopter | Ashley Aslett | https://sketchfab.com/3d-models/hind-attack-helicopter-bb65bdfde2c54007a52dfbe1d91d930d | CC BY 4.0, изменено |
+| battle/e_interceptor (перехватчик) | Sukhoi Su-15TM | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/sukhoi-su-15tm-3403b6f0f47d428eb2dd098f864d9ae1 | CC BY 4.0, изменено |
 | battle/fighter_2, hangar/fighter_2 («Оса 2») | Meshy (paid plan), own generation; image reference — a render of Sketchfab #63 (view-only), Kanta 24.10, `docs/game-context.md` | own generation (Meshy) | — | Meshy paid plan, commercial rights |
