@@ -172,7 +172,7 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | VFX-02 | Own flipbooks baked in Blender from above (fire, smoke, Нагорье dust, plasma, flak) with smoke lighting | Улучшить эффекты боя | сделано: бомба #357, наземная цель #358, взрыв в воздухе #360 (Forward+); зенитный разрыв — позже |
 | VFX-03 | Smoke: ribbon missile trails, smoke columns over burning targets, damaged-plane smoke, convoy smoke screen | Улучшить эффекты боя | сделано: дым ракет и дым обломков #360, дымовая завеса колонны #363 (Kanta ок 24.10) |
 | VFX-04 | Gunfire: muzzle flash, glowing tracers, hit sparks, dust from ground hits | Улучшить эффекты боя | сделано: вспышки у стволов, трассеры, искры попаданий #368 (Kanta ок 24.10); пыль от попаданий в землю #387 (Kanta ок 24.10) |
-| VFX-05 | Water: splashes and ripple rings on the river | Улучшить эффекты боя | после VFX-01 |
+| VFX-05 | Water: splashes and ripple rings on the river | Улучшить эффекты боя | сделано: всплески бомб, пуль и обломков в реке #389 (24.10, влито по «делай» Kanta, ждёт его взгляда утром) |
 | VFX-06 | Decal craters and scorch on slopes, light pool, sparks/debris collide with relief; final fps check | Улучшить эффекты боя | воронки и копоть — декали, новая копоть (#374); свет взрывов и мерцающий свет очагов (#378), Kanta ок 24.10; осталось: fps на ПК Kanta |
 
 ## Архипелаг
