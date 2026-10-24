@@ -11,7 +11,8 @@
   python3 tools/i18n/scan_strings.py --csv out.csv  # таблица строк: файл, строка, текст
   python3 tools/i18n/scan_strings.py --pot game/locale/messages.pot  # шаблон gettext для перевода
 
-В шаблон не идут отладочные файлы (DEBUG ниже). Ключ перевода — русская фраза
+В шаблон не идут отладочные файлы (DEBUG ниже) и строки с пометкой `# i18n-skip`
+(внутренние ключи по-русски: формы слов для поиска терминов, префиксы источников урона). Ключ перевода — русская фраза
 как в коде, вместе с %d / %s: переводится шаблон, а числа подставляются после.
 """
 import csv
@@ -35,7 +36,7 @@ def scan():
 			rel = p.relative_to(ROOT).as_posix()
 			for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
 				code = line.split("#", 1)[0] if p.suffix == ".gd" and not line.lstrip().startswith('"') else line
-				if line.lstrip().startswith("#"):
+				if line.lstrip().startswith("#") or "# i18n-skip" in line:
 					continue
 				for m in STR.finditer(code):
 					if CYR.search(m.group(1)):

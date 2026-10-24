@@ -31,12 +31,12 @@ const DISC := {
 }
 ## Damage source prefix → icon key and family, checked in order (`source_icon`)
 const SOURCE_ICONS := [
-	["ракеты в-в", "aam", "missiles"], ["нар", "rockets", "missiles"], ["разделяющаяся", "aam", "missiles"],
-	["бомбы", "bombs", "blast"], ["связка: ковров", "bombs", "blast"], ["курсовое", "gun_dmg", "kinetic"],
-	["гондола", "gunpod", "kinetic"], ["турел", "turret", "turrets"], ["ведом", "wingman", "wing"],
-	["эми", "emp", "blast"], ["лазер", "laser", "turrets"], ["рельсотрон", "railgun", "kinetic"],
-	["плазма", "plasma", "blast"], ["ёлочка", "skill", "skill"], ["проход на форсаже", "afterburner", "maneuver_skill"],
-	["бронещит", "armor", "skill"], ["связка", "synergy", "skill"],
+	["ракеты в-в", "aam", "missiles"], ["нар", "rockets", "missiles"], ["разделяющаяся", "aam", "missiles"],  # i18n-skip
+	["бомбы", "bombs", "blast"], ["связка: ковров", "bombs", "blast"], ["курсовое", "gun_dmg", "kinetic"],  # i18n-skip
+	["гондола", "gunpod", "kinetic"], ["турел", "turret", "turrets"], ["ведом", "wingman", "wing"],  # i18n-skip
+	["эми", "emp", "blast"], ["лазер", "laser", "turrets"], ["рельсотрон", "railgun", "kinetic"],  # i18n-skip
+	["плазма", "plasma", "blast"], ["ёлочка", "skill", "skill"], ["проход на форсаже", "afterburner", "maneuver_skill"],  # i18n-skip
+	["бронещит", "armor", "skill"], ["связка", "synergy", "skill"],  # i18n-skip
 ]
 ## Tile background under the glow (mockup #1b1c19)
 const TILE_BG := Color(0.106, 0.11, 0.098)
