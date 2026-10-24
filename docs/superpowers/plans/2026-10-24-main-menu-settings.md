@@ -92,6 +92,7 @@ Icons: the 3D weapon icon style from thread «Углубить прокачку 
 - Pause: too close to Sublight. v2: weapon hardpoints with target-mode selectors in the left panel, pause menu under them, no tabs. Stats and damage are always visible (v1 hid them behind Q/E tabs that were not obvious). Wingmen and skills sit under the inventory. Three variants for the inventory/stats block: А «Приборная доска» (round gauges, cards grouped by family, dps in weapon rows), Б «Планшет пилота» (kneeboard list with each card's effect, stat strip, damage-share bar), В «Чертёж самолёта» (modules on leader lines to the part of the airframe they affect, wingmen in formation, stats table and damage list). Kanta picks one.
 - Card pick: rarity outline continues along the bevelled corners; schematic icons for non-weapon cards.
 - Results: «Эвакуация» is the title at the top with the operation line under it; the blocks moved lower.
+- Second round (2026-10-24 ~11:00): pause variant В chosen. Every bevelled corner (cards, panels, build-grid tiles) carries the outline along the cut. Card family tag starts exactly where the bottom-left cut ends. «Сборка · 27 карточек» caption removed from results. Icons get volume (light from top-left, specular, cast shadow) and are centred in the tile.
 
 | Screen | Today (3.5-s10) | Proposed |
 | --- | --- | --- |
@@ -104,7 +105,7 @@ Data needed (no rule changes): dps over the last 60 s per source (pause damage b
 
 Steps (after step 4 above, or in parallel by a second thread if Kanta wants):
 6. Video frames from Kanta's PC; HUD rebuild (combat code: `full.sh` once).
-7. Pause screen in the variant Kanta picks (А/Б/В).
+7. Pause screen, variant В «Чертёж самолёта» (Kanta chose it on 2026-10-24): modules on leader lines to the airframe part they affect, wingmen next to the drawing, stats table and damage list on the right.
 8. Card pick screen with terms and tooltips (unit tests for term markup parsing).
 9. Results screen.
 
@@ -115,7 +116,6 @@ Steps (after step 4 above, or in parallel by a second thread if Kanta wants):
 4. Kanta's PC (Remote Control): step 5 (fps per preset, after Forward+) and step 6 (frames from the Sublight video).
 
 ## Open questions for Kanta
-1. Pause inventory/stats block: А «Приборная доска», Б «Планшет пилота» (recommended: most readable, every card says what it gives), В «Чертёж самолёта».
 2. Menu items and moves («Как играть» → codex, «Логи» → «Отзыв» card): yes/no.
 3. Flight log on the main screen: compact card (recommended) or only in the codex.
 4. Combat UI order: after the menu and settings (recommended) or in parallel in a separate thread.
