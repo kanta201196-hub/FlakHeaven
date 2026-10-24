@@ -1,6 +1,6 @@
 extends RefCounted
 ## Unit tests for the deeper upgrades of stage 1 (PG-01): class weapon lists, level scaling of the
-## new weapons, course gun variants, the third hardpoint group and the profile keys behind them.
+## new weapons, course gun variants and ammo types, the third hardpoint group and the profile keys behind them.
 ## Same style as `run_state_test.gd`: each check prints FAIL with a message, exit code 1 on failure.
 ## The profile is a fresh instance writing to a test file, so a player's real profile is never touched.
 ## Loaded by `progression_test.gd` after the first frame: game scripts use autoloads (`Tuning`,
@@ -19,9 +19,11 @@ func run() -> Array:
 	_test_pool_and_bombs()
 	_test_level_scaling()
 	_test_gun_variants()
+	_test_ammo_types()
 	_test_group_defs()
 	_test_defence_classes()
 	_test_profile_guns()
+	_test_profile_ammo()
 	_test_profile_third_group()
 	_test_profile_round_trip()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
@@ -94,6 +96,25 @@ func _test_gun_variants() -> void:
 
 
 ## The third group is appended after everything else: old indices never shift.
+## Ammo types (Kanta 24.10, numbers are his first guess): AP — single target, HE — groups, incendiary — bosses.
+func _test_ammo_types() -> void:
+	var ap := WeaponBalance.ammo_k("ap")
+	var he := WeaponBalance.ammo_k("he")
+	var inc := WeaponBalance.ammo_k("inc")
+	_check(WeaponBalance.ammo_k("nope") == WeaponBalance.ammo_k("std"), "unknown ammo → std")
+	_check(is_equal_approx(ap["dmg"], 0.75) and is_equal_approx(ap["speed"], 1.0) and ap["ap"], "AP numbers")
+	_check(is_equal_approx(he["dmg"], 1.0) and is_equal_approx(he["speed"], 0.75) and float(he["splash_r"]) > 0.0, "HE numbers")
+	_check(is_equal_approx(inc["dmg"], 0.85) and is_equal_approx(inc["speed"], 0.8) and float(inc["burn"]) > 0.0, "incendiary numbers")
+	_check(WeaponBalance.AMMO_ORDER == ["std", "ap", "he", "inc"] and WeaponBalance.AMMO_PRICE["std"] == 0, "ammo list")
+	# burn: one stack per hit up to the cap, damage per second grows with stacks, time refreshes
+	var b := {}
+	for i in 8:
+		b = WeaponBalance.burn_add(b, 10.0)
+	_check(int(b["n"]) == WeaponBalance.BURN_STACKS, "burn stacks are capped")
+	_check(is_equal_approx(float(b["dps"]), 10.0 * float(inc["burn"]) / WeaponBalance.BURN_TIME * WeaponBalance.BURN_STACKS), "burn dps at cap")
+	_check(is_equal_approx(float(b["t"]), WeaponBalance.BURN_TIME), "burn time refreshed")
+
+
 func _test_group_defs() -> void:
 	for c in PlaneClasses.LIST:
 		var base: Array = PlaneClasses.group_defs(c, false)
@@ -105,14 +126,15 @@ func _test_group_defs() -> void:
 
 func _test_defence_classes() -> void:
 	_check(Enemy.src_class("УР В-З") == "ap", "guided missile is armor-piercing")
-	_check(Enemy.course_class("gun", "курсовое (авто)", true) == "gun_ap", "heavy gun class")
-	_check(Enemy.course_class("gun", "курсовое (ручн.)", false) == "gun", "standard gun unchanged")
+	_check(Enemy.course_class("gun", "курсовое (авто)", true) == "gun_ap", "armor-piercing ammo class")
+	_check(Enemy.course_class("gun", "курсовое (ручн.)", false) == "gun", "standard ammo unchanged")
 	_check(Enemy.course_class("gun", "турели", true) == "gun", "turrets are not the course gun")
+	_check(Enemy.src_class("горение") == "", "burning ignores defences")
 	_check(Enemy.src_class("курсовое (авто)") == "gun", "course gun source class")
 	_check(Enemy.src_class("ракеты ближнего боя") == "homing", "short-range missile is homing")
 	_check(Enemy.src_class("фугасные бомбы") == "blast", "HE bomb is blast")
-	_check(is_equal_approx(Enemy.DEF_K["armor"]["ap"], 1.3) and is_equal_approx(Enemy.DEF_K["armor"]["gun_ap"], 0.8), "armor factors")
-	_check(is_equal_approx(Enemy.DEF_K["agile"]["gun_ap"], 1.15), "agile vs heavy gun")
+	_check(is_equal_approx(Enemy.DEF_K["armor"]["ap"], 1.3) and is_equal_approx(Enemy.DEF_K["armor"]["gun_ap"], 1.0), "armor factors")
+	_check(is_equal_approx(Enemy.DEF_K["agile"]["gun_ap"], 1.15), "agile vs armor-piercing ammo")
 
 
 func _test_profile_guns() -> void:
@@ -128,7 +150,26 @@ func _test_profile_guns() -> void:
 	_check(not p.buy_gun("fighter", "twin"), "cannot buy twice")
 	p.set_gun("fighter", "std")
 	_check(p.gun("fighter") == "std", "switch back is free")
-	_check(p.gun("bomber") == "std", "guns are per class")
+	_check(p.gun("bomber") == "std", "other classes keep their own guns")
+	_check(p.gun("fighter", 2) == "std" and p.guns("fighter", 2) == ["std"], "plane lvl 2 buys its own guns (Kanta 24.10)")
+	p.data["parts"] = WeaponBalance.GUN_PRICE["heavy"]
+	_check(p.buy_gun("fighter", "heavy", 2) and p.gun("fighter", 2) == "heavy", "buy for plane lvl 2")
+	_check(not p.guns("fighter", 1).has("heavy"), "plane lvl 1 does not get it")
+	p.free()
+
+
+## PG-01 (Kanta 24.10): ammo of the course gun, bought per plane like the guns.
+func _test_profile_ammo() -> void:
+	var p := _fresh_profile()
+	_check(p.ammo("attacker") == "std" and p.ammos("attacker") == ["std"], "ammo defaults")
+	p.set_ammo("attacker", "he")
+	_check(p.ammo("attacker") == "std", "unowned ammo cannot be selected")
+	p.data["parts"] = WeaponBalance.AMMO_PRICE["he"] - 1
+	_check(not p.buy_ammo("attacker", "he"), "not enough parts for ammo")
+	p.data["parts"] = WeaponBalance.AMMO_PRICE["he"]
+	_check(p.buy_ammo("attacker", "he") and p.parts() == 0 and p.ammo("attacker") == "he", "ammo bought and selected")
+	_check(p.ammo("attacker", 2) == "std", "ammo is per plane")
+	_check(not p.buy_ammo("attacker", "nope"), "unknown ammo")
 	p.free()
 
 
@@ -148,19 +189,21 @@ func _test_profile_round_trip() -> void:
 	var p := _fresh_profile()
 	p.data["parts"] = 1000
 	p.buy_gun("bomber", "heavy")
+	p.buy_ammo("bomber", "inc")
 	p.save()
 	var q := _fresh_profile()
 	q.load_profile()
 	_check(q.gun("bomber") == "heavy" and q.guns("bomber").has("heavy"), "gun survives save/load")
+	_check(q.ammo("bomber") == "inc", "ammo survives save/load")
 	var old: Dictionary = q.data.duplicate(true)
 	for c in old["classes"]:
-		old["classes"][c].erase("gun")
-		old["classes"][c].erase("guns")
+		old["classes"][c].erase("kit1")
+		old["classes"][c].erase("kit2")
 	var f := FileAccess.open(TEST_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(old))
 	f.close()
 	var r := _fresh_profile()
 	r.load_profile()
-	_check(r.gun("bomber") == "std" and r.guns("bomber") == ["std"], "old save → defaults")
+	_check(r.gun("bomber") == "std" and r.guns("bomber") == ["std"] and r.ammo("bomber") == "std", "old save → defaults")
 	for x in [p, q, r]:
 		x.free()

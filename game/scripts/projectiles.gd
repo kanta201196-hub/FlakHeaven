@@ -11,6 +11,8 @@ var bombs: Array[Dictionary] = []     # бомбы игрока (взрыв по
 var missiles: Array[Dictionary] = []  # вражеские ракеты
 var ebullets: Array[Dictionary] = []  # вражеские пули
 var fires: Array[Dictionary] = []     # 3.1: огонь на земле («Новогодняя ночь»)
+var burning: Array = []   # PG-01: enemies set on fire by incendiary course ammo (state in meta "burn")
+var _burn_tick := 0.0
 
 
 func _ready() -> void:
@@ -358,6 +360,7 @@ func _update_chain(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_update_bullets(delta)
+	_update_burning(delta)
 	_update_player_missiles(delta)
 	_update_rockets(delta)
 	_update_bombs(delta)
@@ -412,6 +415,7 @@ func _update_bullets(delta: float) -> void:
 				if e.hit_at == Vector2.INF:
 					e.hit_at = p
 				e.take_hit(float(b["dmg"]) * _bullet_k(src, e), src)
+				_ammo_effects(b, p, e)
 				if b.has("he"): # «Пушкарь»: фугасный снаряд
 					aoe(p, float(b["he"]), float(b["dmg"]) * 0.6, "связка: пушкарь", true, e)
 					b.erase("he")
@@ -431,6 +435,44 @@ func _update_bullets(delta: float) -> void:
 			if not hit and b["m"] and is_instance_valid(Main.I.player):
 				Main.I.player.on_bullet_miss()
 			bullets.remove_at(i)
+
+
+## PG-01: effect of the course gun ammo on a hit — HE splash around `p`, incendiary burn on `e`
+func _ammo_effects(b: Dictionary, p: Vector2, e: Enemy) -> void:
+	if b.has("splash"):
+		var sp: Array = b["splash"]   # [radius, share of damage]
+		aoe(p, float(sp[0]), float(b["dmg"]) * float(sp[1]), "курсовое: осколки", false, e)
+	if b.has("inc") and e.hp > 0.0:
+		var st: Dictionary = e.get_meta("burn", {})
+		if st.is_empty():
+			burning.append(weakref(e))
+		e.set_meta("burn", WeaponBalance.burn_add(st, float(b["dmg"])))
+
+
+## PG-01: burning enemies take damage 4 times a second until the fire goes out
+const BURN_STEP := 0.25
+
+
+func _update_burning(delta: float) -> void:
+	if burning.is_empty():
+		return
+	_burn_tick += delta
+	if _burn_tick < BURN_STEP:
+		return
+	var dt := _burn_tick
+	_burn_tick = 0.0
+	for i in range(burning.size() - 1, -1, -1):
+		var e := (burning[i] as WeakRef).get_ref() as Enemy
+		if e == null or e.hp <= 0.0 or not e.has_meta("burn"):
+			burning.remove_at(i)
+			continue
+		var st: Dictionary = e.get_meta("burn")
+		var step := minf(dt, float(st["t"]))
+		e.take_hit(float(st["dps"]) * step, "горение")
+		st["t"] = float(st["t"]) - dt
+		if float(st["t"]) <= 0.0:
+			e.remove_meta("burn")
+			burning.remove_at(i)
 
 
 ## Отрезок a→b проходит через круг (c, r)

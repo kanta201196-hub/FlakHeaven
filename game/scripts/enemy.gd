@@ -56,11 +56,11 @@ var ecm_t := 0.0
 var ecm_off_t := 0.0
 const ECM_OFF := 8.0
 const DEF_K := {
-	"armor": {"gun": 0.5, "blast": 1.3, "homing": 1.0, "energy": 1.3, "ap": 1.3, "gun_ap": 0.8},
+	"armor": {"gun": 0.5, "blast": 1.3, "homing": 1.0, "energy": 1.3, "ap": 1.3, "gun_ap": 1.0},
 	"agile": {"gun": 1.15, "blast": 0.6, "homing": 1.0, "energy": 1.3, "ap": 1.0, "gun_ap": 1.15},
 }
 const DEF_HINT := {
-	"armor": "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, ракета «воздух-земля», рельсотрон и лазер — сильнее. Крупнокалиберная пушка броню почти пробивает.",
+	"armor": "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, ракета «воздух-земля», рельсотрон и лазер — сильнее. Бронебойные снаряды пушки броню пробивают.",
 	"agile": "Жёлтые шевроны — манёвренный враг: уходит от взрывов и НАР. Бейте его пушкой, лучше с хвоста.",
 	"ecm": "Фиолетовые дуги — помехи ракетоносца: самонаводящиеся ракеты почти не попадают. Сбейте ракетоносец пушкой или снимите помехи ЭМИ.",
 }
@@ -69,7 +69,8 @@ var _sep := Vector2.ZERO
 
 
 ## EX-04: вид оружия по источнику урона (строки источников — как в статистике урона).
-## PG-01: "ap" — guided air-to-ground missile (armor-piercing); the heavy course gun — see `course_class`.
+## PG-01: "ap" — guided air-to-ground missile (armor-piercing); armor-piercing course ammo — see `course_class`;
+## burning from incendiary ammo ignores defences.
 static func src_class(src: String) -> String:
 	if src in ["ЭМИ", "лазер", "рельсотрон"]:
 		return "energy"
@@ -79,19 +80,19 @@ static func src_class(src: String) -> String:
 		return "homing"
 	if src.begins_with("курсовое") or src in ["гондола", "турели"] or src.begins_with("ведом"):
 		return "gun"
-	if src in ["проход на форсаже", "бронещит", "прочее"]:
+	if src in ["проход на форсаже", "бронещит", "прочее", "горение"]:
 		return ""
 	return "blast"   # НАР, бомбы, ковровые, плазма, связки со взрывом
 
 
-## PG-01: bullets of the heavy course gun are "gun_ap" (armor ×0.8 instead of ×0.5). The source name stays
-## «курсовое (…)», so logs, the damage report and the ace "on the tail" rule do not change.
-static func course_class(c: String, src: String, heavy_gun: bool) -> String:
-	return "gun_ap" if heavy_gun and c == "gun" and src.begins_with("курсовое") else c
+## PG-01 (Kanta 24.10): bullets with armor-piercing ammo are "gun_ap" (armor does not halve them). The source
+## name stays «курсовое (…)», so logs, the damage report and the ace "on the tail" rule do not change.
+static func course_class(c: String, src: String, ap_ammo: bool) -> String:
+	return "gun_ap" if ap_ammo and c == "gun" and src.begins_with("курсовое") else c
 
 
-static func _heavy_gun() -> bool:
-	return Main.I != null and is_instance_valid(Main.I.player) and Main.I.player.gun_variant == "heavy"
+static func _ap_ammo() -> bool:
+	return Main.I != null and is_instance_valid(Main.I.player) and Main.I.player.ammo == "ap"
 
 
 func jammed() -> bool:
@@ -100,7 +101,7 @@ func jammed() -> bool:
 
 ## EX-04: множитель урона от защиты
 func defense_k(src: String) -> float:
-	var c := course_class(src_class(src), src, _heavy_gun())
+	var c := course_class(src_class(src), src, _ap_ammo())
 	var k := 1.0
 	if DEF_K.has(defense):
 		k = float(DEF_K[defense].get(c, 1.0))

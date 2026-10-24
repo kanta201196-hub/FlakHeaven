@@ -334,7 +334,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		turret_pos.clear()
 		var evo := weapon_tier == 4
 		var t := mini(weapon_tier, 3)
-		var side := "top" if weapon == "turret" else ("" if weapon == "flares" and not evo else "under")
+		# Kanta 24.10: the weapon itself on the stands, without the pylon that holds it on the wing
+		var side := "top" if weapon == "turret" else ""
 		if evo and weapon in ["flares"]:
 			side = "top"
 		elif evo and weapon == "bombs":

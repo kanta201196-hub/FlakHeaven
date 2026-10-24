@@ -21,13 +21,18 @@ func variant() -> Dictionary:
 	return WeaponBalance.gun_k(pl.gun_variant)
 
 
-## Bullet speed of the course gun, px/s (the heavy gun is faster)
+## PG-01 (Kanta 24.10): multipliers and effect of the ammo chosen in the hangar (`WeaponBalance.AMMO`)
+func ammo_k() -> Dictionary:
+	return WeaponBalance.ammo_k(pl.ammo)
+
+
+## Bullet speed of the course gun, px/s: the heavy gun is faster, HE and incendiary ammo slower
 func bullet_speed() -> float:
-	return Tuning.g("bullet_speed") * float(variant()["speed"])
+	return Tuning.g("bullet_speed") * float(variant()["speed"]) * float(ammo_k()["speed"])
 
 
 func gun_damage() -> float:
-	var d := Tuning.g("bullet_damage") * float(pl.cls["gun_dmg"]) * float(pl.mods["gun_dmg"]) * float(variant()["dmg"])
+	var d := Tuning.g("bullet_damage") * float(pl.cls["gun_dmg"]) * float(pl.mods["gun_dmg"]) * float(variant()["dmg"]) * float(ammo_k()["dmg"])
 	# 2.4: курсовое растёт вместе с пилотом (+3% за уровень); S6-02: потолок снова +60% (в 2.8 был +40%) —
 	# иначе к 10:00 пушке нужно 5 выстрелов на перехватчик вместо 4
 	d *= minf(1.0 + 0.03 * (Main.I.run.level - 1), 1.6)
@@ -110,6 +115,13 @@ func _fire_one(fwd: Vector2, aim: Vector2, lead: bool, age := 0.0) -> void:
 	var bl: Dictionary = Main.I.projectiles.bullets[-1]
 	if pl.gun_variant != "std":
 		bl["gun"] = pl.gun_variant   # PG-01: tracer look by variant (projectiles / render3d)
+	var ak := ammo_k()
+	if float(ak["splash_r"]) > 0.0:   # PG-01: HE ammo — splash around the hit
+		bl["splash"] = [float(ak["splash_r"]), float(ak["splash_k"])]
+	if float(ak["burn"]) > 0.0:   # PG-01: incendiary ammo — sets the target on fire
+		bl["inc"] = true
+	if pl.ammo != "std":
+		bl["ammo"] = pl.ammo
 	if age > 0.0: # выстрел «опоздал» на часть кадра — первый шаг пули длиннее на это время
 		bl["lag"] = age
 	if lead:

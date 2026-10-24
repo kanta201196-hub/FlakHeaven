@@ -6649,8 +6649,8 @@ msgid "Ракеты ближнего боя"
 msgstr "Short-range missiles"
 
 #: PG-01
-msgid "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, ракета «воздух-земля», рельсотрон и лазер — сильнее. Крупнокалиберная пушка броню почти пробивает."
-msgstr "A grey shield above an enemy means armor: cannon and turrets do half damage, while rockets, bombs, the air-to-ground missile, railgun and laser hit harder. The heavy cannon nearly pierces armor."
+msgid "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, ракета «воздух-земля», рельсотрон и лазер — сильнее. Бронебойные снаряды пушки броню пробивают."
+msgstr "A grey shield above an enemy means armor: cannon and turrets do half damage, while rockets, bombs, the air-to-ground missile, railgun and laser hit harder. Armor-piercing cannon shells go through armor."
 
 #: PG-01
 msgid "Спарка"
@@ -6661,8 +6661,8 @@ msgid "Стандартная"
 msgstr "Standard"
 
 #: PG-01
-msgid "Темп ×0,55, урон ×2, снаряд быстрее; броню почти пробивает (×0,8 вместо ×0,5)."
-msgstr "Rate ×0.55, damage ×2, faster shell; nearly pierces armor (×0.8 instead of ×0.5)."
+msgid "Темп ×0,55, урон ×2, снаряд быстрее."
+msgstr "Rate ×0.55, damage ×2, faster shell."
 
 #: PG-01
 msgid "Темп ×1,6, урон ×0,65, лёгкий разброс — против роя дронов, быстрее разгоняет «обороты»."
@@ -6710,4 +6710,60 @@ msgstr "HE bombs"
 
 #: PG-01
 msgid "✓ выбрана"
+msgstr "✓ selected"
+
+#: PG-01
+msgid "Курсовая пушка этого самолёта"
+msgstr "Course gun of this plane"
+
+#: PG-01
+msgid "Снаряды"
+msgstr "Shells"
+
+#: PG-01
+msgid "Обычные"
+msgstr "Standard"
+
+#: PG-01
+msgid "Бронебойные"
+msgstr "Armor-piercing"
+
+#: PG-01
+msgid "Осколочные"
+msgstr "High-explosive"
+
+#: PG-01
+msgid "Зажигательные"
+msgstr "Incendiary"
+
+#: PG-01
+msgid "Обычные снаряды: полный урон и скорость."
+msgstr "Standard shells: full damage and speed."
+
+#: PG-01
+msgid "Бронебойные: урон ×0,75, скорость ×1; пробивают броню. Лучше всего по одной крепкой цели."
+msgstr "Armor-piercing: damage ×0.75, speed ×1; pierce armor. Best against one tough target."
+
+#: PG-01
+msgid "Осколочно-фугасные: урон ×1, скорость ×0,75; осколки задевают соседей. Лучше всего по группе."
+msgstr "High-explosive: damage ×1, speed ×0.75; fragments hit nearby enemies. Best against groups."
+
+#: PG-01
+msgid "Зажигательные: урон ×0,85, скорость ×0,8; цель горит, огонь копится. Лучше всего по боссам."
+msgstr "Incendiary: damage ×0.85, speed ×0.8; the target burns and fire stacks. Best against bosses."
+
+#: PG-01
+msgid "горение"
+msgstr "burning"
+
+#: PG-01
+msgid "курсовое: осколки"
+msgstr "Course gun: fragments"
+
+#: PG-01
+msgid "НАР вертолётов"
+msgstr "Helicopter rockets"
+
+#: PG-01
+msgid "✓ выбраны"
 msgstr "✓ selected"

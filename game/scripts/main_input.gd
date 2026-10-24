@@ -298,6 +298,11 @@ func hangar_action(a: String) -> void:
 				Profile.set_gun(c, p[1])
 			else:
 				ok = Profile.buy_gun(c, p[1])
+		"ammo":   # PG-01: same rule as the gun
+			if Profile.ammos(c).has(p[1]):
+				Profile.set_ammo(c, p[1])
+			else:
+				ok = Profile.buy_ammo(c, p[1])
 		"tier":
 			var w := p[1]
 			var t := int(p[2])

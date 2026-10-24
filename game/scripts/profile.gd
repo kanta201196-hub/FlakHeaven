@@ -128,7 +128,12 @@ func _default_class(cls: String) -> Dictionary:
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"nodes2": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start2": "",
-		"gun": "std", "guns": ["std"]}
+		"kit1": _default_kit(), "kit2": _default_kit()}
+
+
+## PG-01 (Kanta 24.10): course gun and ammo of one plane — bought per plane, not per class
+func _default_kit() -> Dictionary:
+	return {"gun": "std", "guns": ["std"], "ammo": "std", "ammos": ["std"]}
 
 
 func reset_data() -> void:
@@ -305,39 +310,83 @@ func start2(c: String) -> String:
 	return w if crew_lvl(c) >= START2_LVL and start2_options(c).has(w) else ""
 
 
-## PG-01: course gun of class `c` for the next sortie (`WeaponBalance.GUNS` id)
-func gun(c: String) -> String:
-	var g := String(cls(c).get("gun", "std"))
-	return g if guns(c).has(g) else "std"
+## PG-01 (Kanta 24.10): what plane `lv` of class `c` carries — course gun and ammo; lv 0 = the plane it flies now
+func kit(c: String, lv := 0) -> Dictionary:
+	var key := "kit2" if (plane_lvl(c) if lv <= 0 else lv) == 2 else "kit1"
+	if not (cls(c).get(key) is Dictionary):
+		cls(c)[key] = _default_kit()
+	return cls(c)[key]
 
 
-## PG-01: course guns class `c` owns (always has "std")
-func guns(c: String) -> Array:
+## Course gun of plane `lv` for the next sortie (`WeaponBalance.GUNS` id)
+func gun(c: String, lv := 0) -> String:
+	return _kit_pick(c, lv, "gun", "guns", WeaponBalance.GUNS)
+
+
+## Course guns plane `lv` owns (always has "std")
+func guns(c: String, lv := 0) -> Array:
+	return _kit_owned(c, lv, "guns", WeaponBalance.GUNS)
+
+
+## Buy course gun `id` for plane `lv` once, for `WeaponBalance.GUN_PRICE`; selects it. False if owned or too few parts
+func buy_gun(c: String, id: String, lv := 0) -> bool:
+	return _kit_buy(c, lv, id, "gun", "guns", WeaponBalance.GUNS, WeaponBalance.GUN_PRICE)
+
+
+## Select an owned course gun; switching is free, an unowned id is ignored
+func set_gun(c: String, id: String, lv := 0) -> void:
+	_kit_set(c, lv, id, "gun", "guns", WeaponBalance.GUNS)
+
+
+## Ammo of plane `lv` for the next sortie (`WeaponBalance.AMMO` id)
+func ammo(c: String, lv := 0) -> String:
+	return _kit_pick(c, lv, "ammo", "ammos", WeaponBalance.AMMO)
+
+
+## Ammo types plane `lv` owns (always has "std")
+func ammos(c: String, lv := 0) -> Array:
+	return _kit_owned(c, lv, "ammos", WeaponBalance.AMMO)
+
+
+## Buy ammo type `id` for plane `lv` once, for `WeaponBalance.AMMO_PRICE`; selects it
+func buy_ammo(c: String, id: String, lv := 0) -> bool:
+	return _kit_buy(c, lv, id, "ammo", "ammos", WeaponBalance.AMMO, WeaponBalance.AMMO_PRICE)
+
+
+## Select an owned ammo type; switching is free
+func set_ammo(c: String, id: String, lv := 0) -> void:
+	_kit_set(c, lv, id, "ammo", "ammos", WeaponBalance.AMMO)
+
+
+func _kit_owned(c: String, lv: int, list_key: String, known: Dictionary) -> Array:
 	var out: Array = ["std"]
-	for g in cls(c).get("guns", []):
-		if WeaponBalance.GUNS.has(String(g)) and not out.has(String(g)):
+	for g in kit(c, lv).get(list_key, []):
+		if known.has(String(g)) and not out.has(String(g)):
 			out.append(String(g))
 	return out
 
 
-## PG-01: buy course gun `id` for class `c` once, for `WeaponBalance.GUN_PRICE`; selects it. False if owned or too few parts
-func buy_gun(c: String, id: String) -> bool:
-	if not WeaponBalance.GUNS.has(id) or guns(c).has(id) or parts() < int(WeaponBalance.GUN_PRICE[id]):
+func _kit_pick(c: String, lv: int, key: String, list_key: String, known: Dictionary) -> String:
+	var g := String(kit(c, lv).get(key, "std"))
+	return g if _kit_owned(c, lv, list_key, known).has(g) else "std"
+
+
+func _kit_buy(c: String, lv: int, id: String, key: String, list_key: String, known: Dictionary, price: Dictionary) -> bool:
+	var owned := _kit_owned(c, lv, list_key, known)
+	if not known.has(id) or owned.has(id) or parts() < int(price[id]):
 		return false
-	data["parts"] = parts() - int(WeaponBalance.GUN_PRICE[id])
-	var owned := guns(c)
+	data["parts"] = parts() - int(price[id])
 	owned.append(id)
-	cls(c)["guns"] = owned
-	cls(c)["gun"] = id
+	kit(c, lv)[list_key] = owned
+	kit(c, lv)[key] = id
 	save()
 	return true
 
 
-## PG-01: select an owned course gun; switching is free, an unowned id is ignored
-func set_gun(c: String, id: String) -> void:
-	if not guns(c).has(id):
+func _kit_set(c: String, lv: int, id: String, key: String, list_key: String, known: Dictionary) -> void:
+	if not _kit_owned(c, lv, list_key, known).has(id):
 		return
-	cls(c)["gun"] = id
+	kit(c, lv)[key] = id
 	save()
 
 
