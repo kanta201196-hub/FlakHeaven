@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bf0ef4ya06igq"
-path="res://.godot/imported/fh_battle_fighter_2_Image_0.jpg-1ca6a62343dabbd27a668215e1617086.ctex"
+uid="uid://cblvlpaj1vwbu"
+path="res://.godot/imported/fh_battle_fighter_2_orm.jpg-e0b9a08b8807c9a0d76882aceaaa529f.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "f1a64a81c9fed3f7f74c7169f5e6f2cf"
+"md5": "3eb23310720ae800331ab871b87694c4"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_fighter_2_Image_0.jpg"
-dest_files=["res://.godot/imported/fh_battle_fighter_2_Image_0.jpg-1ca6a62343dabbd27a668215e1617086.ctex"]
+source_file="res://models/battle/fh_battle_fighter_2_orm.jpg"
+dest_files=["res://.godot/imported/fh_battle_fighter_2_orm.jpg-e0b9a08b8807c9a0d76882aceaaa529f.ctex"]
 
 [params]
 
