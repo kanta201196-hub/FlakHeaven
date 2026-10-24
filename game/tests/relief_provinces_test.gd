@@ -19,6 +19,9 @@ func _init() -> void:
 	_test_regional_contrast()
 	_test_no_border_walls()
 	_test_mesa_ledges_not_flat()
+	_test_gullies_floor_and_range()
+	_test_gullies_no_seams()
+	_test_gullies_run_downhill()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -28,6 +31,11 @@ func _check(ok: bool, what: String) -> void:
 	if not ok:
 		_failed += 1
 		print("FAIL: ", what)
+
+
+## Gradient of _v (per px): ±1 across the river, pointing away from it.
+func _gv(x: float, z: float) -> Vector2:
+	return Vector2(0.0, (_v(x, z + 1.0) - _v(x, z - 1.0)) * 0.5)
 
 
 ## Synthetic valley field for tests: distance to a river along z = 0 every 9 km, with sign.
@@ -164,3 +172,62 @@ func _test_mesa_ledges_not_flat() -> void:
 	var share := float(flat) / maxf(n, 1.0)
 	_check(n > 200, "enough mesa samples (%d)" % n)
 	_check(share < 0.04, "dead-flat mesa ground under 4 %% (%.3f of %d)" % [share, n])
+
+
+## RV-02: the gullies leave the valley floor and the fan alone, keep heights in range and
+## do change the slopes (else the gradient never reached them).
+func _test_gullies_floor_and_range() -> void:
+	var worst := 0.0
+	var ok := true
+	var moved := 0.0
+	var n := 0
+	for i in 400:
+		var x := -20000.0 + i * 97.0
+		var z := 3000.0 + i * 53.0
+		for a in [0.0, 85.0, 300.0, ReliefBalance.D_FAN]:
+			worst = maxf(worst, absf(_p.relief(x, z, a, a, Vector4(-1, 0, 0, 0), Vector2(0.0, 1.0)).x - _p.relief(x, z, a, a).x))
+	for j in 60:
+		for i in 60:
+			var x := -40000.0 + i * 1333.0
+			var z := -40000.0 + j * 1333.0 + 0.5
+			var v := _v(x, z)
+			var r := _p.relief(x, z, absf(v), v, Vector4(-1, 0, 0, 0), _gv(x, z))
+			ok = ok and r.x >= -0.03 and r.x <= 1.0 and r.y >= 0.0 and r.y <= 1.0 and r.z >= 0.0 and r.z <= 1.0
+			if absf(v) > 900.0:
+				# against a slope too gentle for gullies (same wrinkle switch): only the gullies differ
+				moved += absf(r.x - _p.relief(x, z, absf(v), v, Vector4(-1, 0, 0, 0), _gv(x, z) * 1e-6).x)
+				n += 1
+	_check(worst <= 1e-6, "gullies leave the floor and fan alone (diff %.5f)" % worst)
+	_check(ok, "relief with gullies in range")
+	_check(moved / maxf(n, 1.0) > 0.002, "gullies change the slopes (mean %.4f)" % (moved / maxf(n, 1.0)))
+
+
+## The gully field is smooth: no jumps at cell borders (a kernel wider than the cells looked at
+## would leave seams). Half a pixel apart a smooth field changes by thousandths of the ceiling; a
+## seam still jumps (a too-wide kernel gave 0.02 here).
+func _test_gullies_no_seams() -> void:
+	var worst := 0.0
+	for j in 20:
+		var g := Vector2(cos(j * 0.7), sin(j * 0.7)) * 0.0008
+		var z := 1700.0 + j * 211.0
+		var prev := _p._gullies(-3000.0, z, g)
+		for i in range(1, 2400):   # a run of 1200 px crosses several cell borders of every layer
+			var h := _p._gullies(-3000.0 + i * 0.5, z, g)
+			worst = maxf(worst, absf(h - prev))
+			prev = h
+	_check(worst < 0.01, "gully field without seams (worst 0.5 px step %.4f)" % worst)
+
+
+## Gullies run down the slope: across it the ground changes more than along it.
+func _test_gullies_run_downhill() -> void:
+	var across := 0.0
+	var along := 0.0
+	var g := Vector2(0.0, 0.0008)   # uphill is +z
+	for j in 60:
+		for i in 60:
+			var x := i * 37.0 + 0.3
+			var z := j * 41.0 + 0.7
+			var h := _p._gullies(x, z, g)
+			across += absf(_p._gullies(x + 6.0, z, g) - h)
+			along += absf(_p._gullies(x, z + 6.0, g) - h)
+	_check(across > along * 1.5, "gullies follow the slope (across %.3f, along %.3f)" % [across, along])

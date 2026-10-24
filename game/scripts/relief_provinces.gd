@@ -7,6 +7,8 @@ extends RefCounted
 ## class only shapes the mountains, has no autoload dependencies and is unit-tested
 ## (game/tests/relief_provinces_test.gd). Pure function of the point, safe on worker threads
 ## (FastNoiseLite reads only). Numbers live in ReliefBalance.
+## RV-02: gullies and spurs from our own per-point "erosion filter" (_gullies) instead of one
+## uniform wrinkle pattern; it needs the valley field's gradient, passed in by Terrain3D.
 
 
 
@@ -98,7 +100,9 @@ static func kind(w: Vector4) -> String:
 ## Terrain3D then applies settlement flats, the river bed and streams.
 ## pv: weights(x, z, v) when the caller already has them (chunk build needs them for the
 ## shader too); x < 0 means "compute here".
-func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0, 0.0)) -> Vector3:
+## gv: gradient of the valley field v at the point (per px) for the RV-02 gullies; Vector2.INF —
+## no gullies (old look, or a caller without the gradient).
+func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0, 0.0), gv := Vector2.INF) -> Vector3:
 	if a <= ReliefBalance.D_FLOOR:
 		# valley floor (river, road, fields): only the small bumps; no region noise (cheaper)
 		return Vector3((_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * 0.3, 0.0, 0.0)
@@ -138,12 +142,37 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 	mt += sp * sp * sp * ReliefBalance.SPINE_K * smoothstep(0.3, 0.8, e) * cv
 	mt += r * r * lerpf(0.02, 0.2, e) * climb * climb * top
 	var ew := smoothstep(0.0, 0.55, climb)
-	mt += (er * er * lerpf(0.06, 0.38, e) - 0.02) * ew * lerpf(0.4, 1.0, e)
+	var gully_on := gv.is_finite() and a > ReliefBalance.D_FAN and mesa < 1.0
+	# with gullies on, the uniform wrinkle keeps ERO_KEEP of its swing around its mean (0.3), so
+	# the ranges keep their height (and snow) and the gullies carry the slope pattern
+	var wr := lerpf(0.3, er * er, ReliefBalance.ERO_KEEP) if gully_on else er * er
+	mt += (wr * lerpf(0.06, 0.38, e) - 0.02) * ew * lerpf(0.4, 1.0, e)
 	mt += (rl * rl * ReliefBalance.ROLL_K - 0.04) * ew * hill
+	var cone_g := Vector2.ZERO   # slope of the hill knolls and lone peaks, for the gullies
 	if hill > 0.0:
 		var cd := _cone.get_noise_2d(x, z)   # about −1 at a cell's feature point
 		var cone := 1.0 - smoothstep(-1.0, -0.4, cd)
-		mt += cone * cone * ReliefBalance.CONE_K * hill * smoothstep(ReliefBalance.D_FAN, ReliefBalance.D_FAN + 600.0, a)
+		var cone_k := ReliefBalance.CONE_K * hill * smoothstep(ReliefBalance.D_FAN, ReliefBalance.D_FAN + 600.0, a)
+		mt += cone * cone * cone_k
+		if gully_on:
+			var tc := clampf((cd + 1.0) / 0.6, 0.0, 1.0)
+			cone_g = _noise_grad(_cone, x, z) * (-2.0 * cone * 6.0 * tc * (1.0 - tc) / 0.6 * cone_k)
+			if rl > 0.0:
+				cone_g += _noise_grad(_roll, wx, wz) * (rl * ReliefBalance.ROLL_K * ew * hill)
+	if gully_on:
+		# slope of the big shape (profile across the valley + main crests), share of the ceiling per px
+		var p_exp := lerpf(1.1, 2.0, e)
+		var t := clampf((a - start) / maxf(run, 1.0), 0.0, 1.0)
+		var dcv := p_exp * pow(1.0 - climb, p_exp - 1.0) * 6.0 * t * (1.0 - t) / maxf(run, 1.0)
+		var sp_k := ReliefBalance.SPINE_K * smoothstep(0.3, 0.8, e)
+		var g := gv * (signf(v) * ((top - 0.1) * lerpf(0.75, 0.45, e) + sp * sp * sp * sp_k) * dcv) + cone_g
+		if sp > 0.0:
+			g += _noise_grad(_spine, wx, wz) * (1.5 * sp * sp * sp_k * cv)
+		var slope_k := smoothstep(ReliefBalance.GULLY_SLOPE_FROM, ReliefBalance.GULLY_SLOPE_TO, g.length())
+		# the highest crests keep their gentle snow fields (the ground shader puts snow only on gentle slopes)
+		slope_k *= 1.0 - smoothstep(0.5, 0.75, mt)
+		if slope_k > 0.0:
+			mt += _gullies(x, z, g) * slope_k * smoothstep(ReliefBalance.D_FAN, ReliefBalance.D_FAN + 300.0, a) * lerpf(0.6, 1.0, e) * sqrt(top) * lerpf(1.0, 0.6, hill)
 	# mesa: cliff right above a narrow fan, flat tops in steps, rock only on the cliff faces
 	var ms := 0.0
 	var mr := 0.0
@@ -195,3 +224,80 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 	var scree := foot * smoothstep(-0.1, 0.25, cr + 0.1) * lerpf(0.5, 1.0, maxf(e, mesa))
 	scree = maxf(scree, apron * mesa)
 	return Vector3(clampf(h, -0.03, 1.0), clampf(rock, 0.0, 1.0), clampf(scree, 0.0, 1.0))
+
+
+## Gradient of a noise (per px) by central differences 120 px apart: smooth enough to steer the
+## gullies (a short step follows the kinks of cellular noise and crumples the stripes).
+## The warp is left out: it bends the noise slowly, its share of the slope is small.
+func _noise_grad(n: FastNoiseLite, x: float, z: float) -> Vector2:
+	var dd := 120.0
+	return Vector2(n.get_noise_2d(x + dd, z) - n.get_noise_2d(x - dd, z),
+		n.get_noise_2d(x, z + dd) - n.get_noise_2d(x, z - dd)) / (2.0 * dd)
+
+
+## RV-02: our own per-point "erosion filter". g is the slope of the big shape (uphill, share of the
+## ceiling per px). Each layer lays stripes across the slope direction around jittered cell
+## points, blended with a smooth kernel of 1.5 cells (4×4 nearest cells: exact, no seams), so the
+## troughs run downhill (gullies) and the crests between them are spurs. Each finer layer follows
+## the slope plus the coarser layers' own slope, so small gullies bend into the big ones
+## (branching), and it fades where those layers flattened the ground (gully floors, spur tops).
+## Result: height offset, share of the ceiling, about ±GULLY_AMP·(1 + GAIN + GAIN²), deeper than
+## high on average (erosion removes ground). Pure function of the point. Kernel and neighbourhood
+## match on purpose: a kernel wider than the cells looked at leaves seams on cell borders, a random
+## phase per cell crumples the stripes (both seen on a numpy mock-up with cones).
+func _gullies(x: float, z: float, g: Vector2) -> float:
+	var h := 0.0
+	var amp := ReliefBalance.GULLY_AMP
+	var cell := ReliefBalance.GULLY_CELL
+	var g0 := g.length()
+	if g0 < 1e-9:
+		return 0.0
+	for k in ReliefBalance.GULLY_OCTAVES:
+		var gl := g.length()
+		if gl < 1e-9:
+			break
+		var fade := minf(gl / g0, 1.0)
+		var ax := -g.y / gl
+		var az := g.x / gl
+		var f := TAU / cell
+		var ux := x / cell
+		var uz := z / cell
+		var ci := floorf(ux)
+		var cj := floorf(uz)
+		# the 4×4 cells whose points can be within 1.5 cells: two on the near side, one beyond
+		var i0 := ci - (2.0 if ux - ci < 0.5 else 1.0)
+		var j0 := cj - (2.0 if uz - cj < 0.5 else 1.0)
+		var sum := 0.0
+		var dsum := 0.0
+		var wsum := 0.0
+		var hk := k * 74.7
+		for oj in 4:
+			var cz := j0 + oj
+			var dz := maxf(maxf(cz - uz, uz - cz - 1.0), 0.0)   # from the point to this cell row
+			if dz >= 1.5:
+				continue
+			var hz := cz * 311.7 + hk
+			for oi in 4:
+				var cx := i0 + oi
+				var dx := maxf(maxf(cx - ux, ux - cx - 1.0), 0.0)
+				if dx * dx + dz * dz >= 2.25:
+					continue   # no point of this cell can be within reach
+				var hh := sin(cx * 127.1 + hz) * 43758.5453
+				var ox := ux - cx - fposmod(hh, 1.0)
+				var oz := uz - cz - fposmod(hh * 31.7, 1.0)
+				var w := 1.0 - (ox * ox + oz * oz) / 2.25
+				if w <= 0.0:
+					continue
+				w *= w
+				var cs := Vector2.from_angle((ox * ax + oz * az) * TAU)
+				sum += w * cs.x
+				dsum += w * cs.y
+				wsum += w
+		if wsum <= 0.0:
+			break
+		h += amp * (sum / wsum - ReliefBalance.GULLY_BIAS) * fade
+		var dk := -dsum / wsum * f * amp * fade
+		g += Vector2(ax, az) * dk
+		amp *= ReliefBalance.GULLY_GAIN
+		cell *= 0.5
+	return h
