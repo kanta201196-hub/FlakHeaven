@@ -221,8 +221,10 @@ func _drive(delta: float, p: Player) -> void:
 		var slot := b + Vector2.from_angle(toward + randf_range(-1.1, 1.1)) * randf_range(140.0, 240.0) * AASite.SPREAD
 		var tr := _terrain()
 		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке, не на соседе; 3.5-s7: на равнине
-			slot = tr.find_floor(slot, 220.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours(), AASite.CAR_RIVER_MIN, true, INF)
-			if tr.wet(slot) or slot.distance_to(b) > 900.0:   # S10-02: сухой точки рядом нет — стоит на месте, в воду не едет
+			slot = tr.find_floor(slot, 220.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours(), AASite.CAR_RIVER_MIN, true, INF, true)
+			# S10-02: сухой точки рядом нет — стоит на месте, в воду не едет; Kanta 24.10: и к реке и на дорогу колонны
+			# не едет (настоящее расстояние до реки, не поле)
+			if tr.wet(slot) or slot.distance_to(b) > 900.0 or not tr.river_clear(slot, AASite.CAR_RIVER_REAL):
 				_move_cd = randf_range(1.5, 3.0)
 				return
 		_goal = slot

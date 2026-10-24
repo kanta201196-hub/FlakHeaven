@@ -13,10 +13,14 @@ const SPACING := 150.0   # тест 3.5-s4: машины позиции не б�
 const SPREAD := 1.6      # M-37 (Kanta 18.10): позиция ПВО шире — раскладка и переезды дальше от бункера
 const FLOOR_MID := 200.0 # тест 3.5-s7: середина ровного дна долины, px от линии реки (точка спасения пилота)
 const ACROSS := 90.0     # поперёк долины машины не дальше этого от центра — не заезжают на склон
-## Kanta 24.10 (repeated rule): by the river only the convoy on its road. The bunker stands at least
-## RIVER_MIN px from the river line (valley floor ends at 260, road edge at 107), vehicles and their
-## moves at least CAR_RIVER_MIN; never in a river or a village stream. Level ground at any height
-## counts: wide fans, hill flats, mesa tops (RV-01 relief).
+## Kanta 24.10 (repeated rule): by the river only the convoy on its road. Real distance to the river
+## line (Terrain3D.river_clear): the bunker at least RIVER_REAL px, vehicles and their moves at least
+## CAR_RIVER_REAL (road edge is ~107 px, so a clear ~60 px strip beyond it); never in a river or a
+## village stream. Level ground at any height counts: wide fans, hill flats, mesa tops (RV-01 relief).
+## RIVER_MIN / CAR_RIVER_MIN — the same in river_field units, only to steer find_floor's search
+## (the field overstates distance near bends, so it is never the final check).
+const RIVER_REAL := 260.0
+const CAR_RIVER_REAL := 170.0
 const RIVER_MIN := 430.0
 const CAR_RIVER_MIN := 320.0
 
@@ -47,18 +51,12 @@ func setup(center: Vector2, hp_mult: float, dps := 0.0) -> void:
 
 ## Where the site stands: [bunker, zsu, zsu, sam, radar] world points (pure placement, unit-tested
 ## in game/tests/aa_site_test.gd). tr null (2D) — layout around center as is.
-## Bunker: level ground at least RIVER_MIN from the river, nearest to center; vehicles around it
-## along the valley, on the same bank, at least CAR_RIVER_MIN from the river, not in water.
+## Bunker: level dry ground at least RIVER_REAL from the river, near center; vehicles around it
+## along the valley, on the same bank, at least CAR_RIVER_REAL from the river, not in water.
 static func place(tr: Terrain3D, center: Vector2, rot: float, spread_k := 1.0) -> PackedVector2Array:
 	var along := Vector2.ZERO
 	if tr != null:
-		var at := tr.find_floor(center, 900.0, 0.0, [], RIVER_MIN, true, INF)
-		if not tr.flat_at(at, 0.0, INF) or absf(tr.river_field(at.x, at.y)) < RIVER_MIN:
-			# around center only slopes or the river: off the valley floor on the nearest bank
-			at = tr.find_floor(tr.floor_near(center, RIVER_MIN + 40.0), 600.0, 0.0, [], RIVER_MIN, true, INF)
-		if not tr.flat_at(at, 0.0, INF) or absf(tr.river_field(at.x, at.y)) < RIVER_MIN:
-			at = tr.find_floor(center, 2600.0, 0.0, [], RIVER_MIN, true, INF)   # rare: wide search
-		center = tr.out_of_river_guard(at, RIVER_MIN - Terrain3D.RIVER_GUARD)
+		center = spot(tr, center, 900.0, 0.0, [], RIVER_REAL, RIVER_MIN)
 		var e := 8.0
 		var g := Vector2(tr.river_field(center.x + e, center.y) - tr.river_field(center.x - e, center.y),
 			tr.river_field(center.x, center.y + e) - tr.river_field(center.x, center.y - e))
@@ -79,13 +77,56 @@ static func place(tr: Terrain3D, center: Vector2, rot: float, spread_k := 1.0) -
 			var avoid := []
 			for t in out:
 				avoid.append([t, SPACING])
-			var want := q
-			q = tr.find_floor(want, 260.0, side, avoid, CAR_RIVER_MIN, true, INF)
-			if absf(tr.river_field(q.x, q.y)) < CAR_RIVER_MIN:   # canyon or cliff around: look wider
-				q = tr.find_floor(want, 700.0, side, avoid, CAR_RIVER_MIN, true, INF)
-			q = tr.out_of_river_guard(q, CAR_RIVER_MIN - Terrain3D.RIVER_GUARD)   # never toward the river
+			q = spot(tr, q, 260.0, side, avoid, CAR_RIVER_REAL, CAR_RIVER_MIN, center)
 		out.append(q)
 	return out
+
+
+## A point for one piece of the site near want: level, dry (no river, no village stream), on bank
+## side (0 — any), not within avoid ([point, radius] pairs) and at least min_real px from the river
+## line. find_floor proposes the spot (field_min steers it off the valley floor); if the real check
+## fails, rings of candidates up to ~2.9 km around want are tried, nearest first, then (vehicles) a
+## ring right around home — the bunker, which is farther from the river than any vehicle needs.
+## Nothing fits — the level dry candidate with the largest river field (cheap guess of the farthest).
+static func spot(tr: Terrain3D, want: Vector2, radius: float, side: float, avoid: Array,
+		min_real: float, field_min: float, home := Vector2.INF) -> Vector2:
+	var q := tr.find_floor(want, radius, side, avoid, field_min, true, INF, true)
+	if _fits(tr, q, side, avoid) and tr.river_clear(q, min_real):
+		return q
+	var best := q
+	var best_f := absf(tr.river_field(q.x, q.y)) if _fits(tr, q, side, avoid) else -1.0
+	for ring in range(1, 25):
+		var r := ring * 120.0
+		var n := 6 + ring * 2
+		var a0 := float(ring) * 0.7   # rings turned against each other: no radial gaps
+		for i in n:
+			var c := want + Vector2.from_angle(a0 + TAU * i / n) * r
+			if not _fits(tr, c, side, avoid):
+				continue
+			if tr.river_clear(c, min_real):
+				return c
+			var f := absf(tr.river_field(c.x, c.y))
+			if f > best_f:
+				best_f = f
+				best = c
+	if home.is_finite():
+		for r: float in [SPACING * 1.05, SPACING * 1.4, SPACING * 1.8]:
+			for i in 16:
+				var c := home + Vector2.from_angle(TAU * i / 16.0) * r
+				if _fits(tr, c, side, avoid) and tr.river_clear(c, min_real):
+					return c
+	return best
+
+
+## Cheap part of the site spot check: level ground at any height, out of river and stream water,
+## on the given bank, clear of the avoid circles
+static func _fits(tr: Terrain3D, p: Vector2, side: float, avoid: Array) -> bool:
+	if side != 0.0 and signf(tr.river_field(p.x, p.y)) != side:
+		return false
+	for k in avoid:
+		if p.distance_to(k[0]) < float(k[1]):
+			return false
+	return tr.flat_at(p, 0.0, INF) and not tr.in_water(p, 10.0)
 
 
 func _ready() -> void:

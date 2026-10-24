@@ -539,6 +539,47 @@ func river_guard_dist(p: Vector2, margin := 0.0) -> float:
 	return absf(river_field(p.x, p.y)) - RIVER_GUARD - margin
 
 
+const RIVER_STEP := 12.0   # river_clear: arc between samples, px (the river bed is 2 × D_RIVER = 52 px wide)
+const RIVER_RING := 40.0   # river_clear: gap between circles, px
+
+
+## Kanta 24.10: true when no river water line passes within d px (real distance) of p. river_field is
+## not a distance far from the river (field 400 can be 80 px from the water or 1200 px), so the check
+## looks for the river itself: its line splits the field sign, so a line closer than d crosses one of
+## the circles around p. Circles every RIVER_RING px out to d: the zero line also makes small closed
+## loops (ponds in bends) that would slip between two far-apart circles.
+## Cost: ~TAU·(sum of radii)/RIVER_STEP field samples (~210 for d = 170, ~560 for d = 260)
+func river_clear(p: Vector2, d: float) -> bool:
+	if _sea:   # «Архипелаг»: the coast field is already SEA_W + distance from the water edge
+		return absf(river_field(p.x, p.y)) >= d
+	var s := signf(river_field(p.x, p.y))
+	var k := maxi(1, ceili(d / RIVER_RING))
+	for j in range(1, k + 1):
+		var r := d * j / k
+		var n := maxi(8, ceili(TAU * r / RIVER_STEP))
+		for i in n:
+			var q := p + Vector2.from_angle(TAU * i / n) * r
+			if signf(river_field(q.x, q.y)) != s:
+				return false
+	return true
+
+
+## Real distance from p to the river line, px, capped at cap (bisection over river_clear, to cap/1024).
+## For checks and tests; placement uses river_clear directly
+func river_dist(p: Vector2, cap := 1000.0) -> float:
+	if river_clear(p, cap):
+		return cap
+	var lo := 0.0
+	var hi := cap
+	for i in 10:
+		var mid := (lo + hi) * 0.5
+		if river_clear(p, mid):
+			lo = mid
+		else:
+			hi = mid
+	return lo
+
+
 ## M-35: точка p (с запасом margin) в охранной зоне реки — сюда ничего не ставим и не везём
 func in_river_guard(p: Vector2, margin := 0.0) -> bool:
 	return river_guard_dist(p, margin) < 0.0
@@ -708,8 +749,10 @@ func _find_loops_pass() -> void:
 ## S10-02: вода (wet) запретна всегда — у моря ПВО вставала в пролив; суши в радиусе нет — радиус шире
 ## max_h — highest ground still counted as "flat" when flat is on (AA sites: any level ground,
 ## also hill flats and mesa tops away from the river; others: valley floor only, FLAT_H).
+## dry_streams — also keep out of village streams (AA sites). Off by default: settlements are
+## placed with find_floor and streams come from settlements, so checking them there recurses.
 func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RIVER_GUARD + 10.0, flat := false,
-		max_h := FLAT_H) -> Vector2:
+		max_h := FLAT_H, dry_streams := false) -> Vector2:
 	var objs := []
 	if _bg != null:
 		var c := Vector2i(int(floorf(p.x / CHUNK)), int(floorf(p.y / CHUNK)))
@@ -735,7 +778,7 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 				sc += 50.0 + (dry - ar)
 			if ar < RIVER_GUARD + 10.0:   # S10-02: в воде (wet) — хуже склона, чужого берега и соседей: у моря воды много
 				sc += 1000.0
-			elif stream_dist(q) < STREAM_GUARD + 10.0:   # ручей посёлка — тоже вода (Kanta 24.10: бункер в воде)
+			elif dry_streams and stream_dist(q) < STREAM_GUARD + 10.0:   # ручей посёлка — тоже вода (Kanta 24.10: бункер в воде)
 				sc += 1000.0
 			if side != 0.0 and signf(rf) != side:
 				sc += 50.0 + ar
@@ -751,7 +794,7 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 		if best_s < 0.05 + rr / radius * 0.2:
 			break
 	if wet(best) and radius < 6000.0:   # S10-02: вокруг одна вода (пролив «Архипелага») — ищем сушу шире
-		return find_floor(p, radius * 2.5, side, avoid, dry, flat, max_h)
+		return find_floor(p, radius * 2.5, side, avoid, dry, flat, max_h, dry_streams)
 	return best
 
 
