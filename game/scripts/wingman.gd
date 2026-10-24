@@ -115,7 +115,7 @@ func _slot_offset(p: Player) -> Vector2:
 	var row := slot / 2
 	var span := clear_r(p)
 	var lat := span + (10.0 if p.ranks_t > 0.0 else 40.0)
-	# S10-15 (Kanta: "Rooklings" overlapped the escort): the next row stood only 30 px further out, less than a
+	# S10-16 (Kanta: "Rooklings" overlapped the escort): the next row stood only 30 px further out, less than a
 	# wingman's own size, so a front-side Rookling sat on the side wingman. Each row now steps out by a full
 	# wingman size plus a gap.
 	var step := Tuning.g("plane_len") * WING_SIZE + 14.0
