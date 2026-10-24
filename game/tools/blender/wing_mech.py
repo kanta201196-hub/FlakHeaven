@@ -20,7 +20,8 @@ from mathutils import Vector, geometry
 # edge under a top-down ray, so the flaps start at 0.21.
 # Предкрылки — внешние 50–70% консоли, закрылки — внутренние, без элеронов на законцовке.
 SPANS = {
-    "fighter_1": {"slat": [(0.15, 0.30, -0.13, -0.22)], "flap": [(0.13, 0.24, -0.15, -0.19)]},
+    # fighter_1 «Оса» (Sketchfab model, VIS-01, 24.10): swing wing from the glove (y 0.09) to the tip (0.225)
+    "fighter_1": {"slat": [(0.14, 0.205, -0.21, -0.334)], "flap": [(0.10, 0.17, -0.153, -0.276)]},
     "fighter_2": {"slat": [(0.20, 0.37, -0.165, -0.238)], "flap": [(0.21, 0.32, -0.174, -0.218)]},
     "attacker_1": {"slat": [(0.20, 0.42, -0.12, -0.17)], "flap": [(0.12, 0.32, -0.10, -0.14)]},
     "attacker_2": {"slat": [(0.20, 0.44, -0.16, -0.20)], "flap": [(0.15, 0.33, -0.15, -0.18)]},
@@ -90,14 +91,24 @@ _img = next(n.image for n in plane[0].data.materials[0].node_tree.nodes if n.typ
 _W, _H = _img.size
 _PX = np.array(_img.pixels[:], dtype=np.float32).reshape(_H, _W, 4)
 DARK = 0.86
+# Planes whose COLOR_0 carries the texture's sRGB value instead of its linear one. In the game (WingMech.attach_skin)
+# linear values come out much darker than the skin around them: on the light-grey fighter_1 (VIS-01) the slats and
+# flaps were near-black bands (checked in Godot 24.10). The other planes keep the colours they were tuned with.
+SRGB_OUT = {"fighter_1"}
 
 
 def tex_color(uv):
     x = int((uv[0] % 1.0) * (_W - 1))
     y = int((uv[1] % 1.0) * (_H - 1))
     r = max(2, _W // 256)
-    c = _PX[max(0, y - r):y + r + 1, max(0, x - r):x + r + 1, :3].reshape(-1, 3).mean(axis=0)
-    return (*(c * DARK), 1.0)
+    c = _PX[max(0, y - r):y + r + 1, max(0, x - r):x + r + 1, :3].reshape(-1, 3)
+    # empty atlas texels (black, past a UV island edge near the wing edge) would darken the plate: skip them
+    lit = c[c.sum(axis=1) > 0.06]
+    c = (lit if len(lit) > 0 else c).mean(axis=0) * DARK
+    if key in SRGB_OUT:
+        # the exporter turns this byte colour layer (sRGB) into linear COLOR_0; pre-encoding keeps the sRGB value
+        c = np.where(c <= 0.0031308, c * 12.92, 1.055 * np.power(np.maximum(c, 0.0031308), 1 / 2.4) - 0.055)
+    return (*c, 1.0)
 
 
 mat_skin = bpy.data.materials.new("mech_skin")    # в игре — материал с вершинным цветом

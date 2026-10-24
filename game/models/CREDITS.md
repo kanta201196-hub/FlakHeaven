@@ -4,6 +4,7 @@
 
 | Модель в игре | Исходник | Автор | Ссылка | Лицензия |
 | --- | --- | --- | --- | --- |
+| fh_battle_fighter_1, fh_hangar_fighter_1 («Оса» ур. 1) | Mig-23 MLD | citizensnip | https://sketchfab.com/3d-models/7a13c91f07e042a685b4d265644fdc06 | CC BY 4.0, изменено |
 | fh_battle_e_ship_cargo (сухогруз) | Small Cargo Ship | Styx | https://sketchfab.com/3d-models/small-cargo-ship-6362d3e9b11e4396aaafa854c3aa6f06 | CC BY 4.0, изменено |
 | fh_battle_e_ship_tanker (танкер) | Tanker Ship | KoreanNavy | https://sketchfab.com/3d-models/tanker-ship-96ebf61af42b4062ae98a6ad848e1a25 | CC BY 4.0, изменено |
 | fh_battle_e_ship_escort (катер сопровождения) | Patrol Boat PBR MK2 | Savy | https://sketchfab.com/3d-models/patrol-boat-pbr-mk2-dbd87172b2934063aa93ffd0c6f85750 | CC BY 4.0, изменено |

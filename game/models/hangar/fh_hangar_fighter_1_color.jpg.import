@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dmrfon3piu044"
-path="res://.godot/imported/fh_battle_fighter_1_Image_0.jpg-a5dc165dba6ed63620d17ce6f825b038.ctex"
+uid="uid://c37bqxhk87d27"
+path="res://.godot/imported/fh_hangar_fighter_1_color.jpg-a7bd9a7670bef0b8cbae7b2b1d5e8601.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "d5ee45d1ad7a4d26d018e1c161c3be88"
+"md5": "fcadabb585c1a2e30ae122896066715a"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_fighter_1_Image_0.jpg"
-dest_files=["res://.godot/imported/fh_battle_fighter_1_Image_0.jpg-a5dc165dba6ed63620d17ce6f825b038.ctex"]
+source_file="res://models/hangar/fh_hangar_fighter_1_color.jpg"
+dest_files=["res://.godot/imported/fh_hangar_fighter_1_color.jpg-a7bd9a7670bef0b8cbae7b2b1d5e8601.ctex"]
 
 [params]
 

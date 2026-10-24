@@ -2,10 +2,13 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://couc3c45ctu2y"
+uid="uid://bk38n6pnpjifu"
 path="res://.godot/imported/fh_hangar_fighter_1_orm.jpg-c28b1d910c34897763d78da9f9ea5435.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "eaf7694c283dfd3207748ca128ecb458"
 }
 
 [deps]
@@ -21,7 +24,7 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
