@@ -62,9 +62,10 @@ const MESA_KNOB := 0.022
 const CANYON_WAVE := 2600.0
 const CANYON_W := 0.05
 ## RV-02 gullies (own "erosion filter", Kanta 2026-10-24): stripes running down the slope in
-## cells of GULLY_CELL px, GULLY_OCTAVES finer layers that follow the slope plus the coarser
-## gullies (so they branch). GULLY_AMP — depth of the coarsest layer in shares of the ceiling,
-## each finer layer GULLY_GAIN of the previous; GULLY_BIAS — how much deeper than high (0…1). GULLY_SLOPE_* — base slope (share per px) where
+## cells of GULLY_CELL px; GULLY_OCTAVES layers in all, the coarsest included, each finer one with
+## half the cell, following the slope plus the coarser gullies (so they branch). GULLY_AMP — depth
+## of the coarsest layer in shares of the ceiling, each finer layer GULLY_GAIN of the previous;
+## GULLY_BIAS — how much deeper than high (0…1). GULLY_SLOPE_* — base slope (share per px) where
 ## gullies start and reach full depth: none on flat ground. ERO_KEEP — share of the old uniform
 ## "wrinkle" noise swing kept on slopes once gullies are on (its mean stays, so peaks keep their height).
 const GULLY_CELL := 420.0

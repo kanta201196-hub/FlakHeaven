@@ -274,17 +274,17 @@ func _pick_style() -> void:
 
 
 var gullies := true   # RV-02: gullies on the RV-01 relief (see _pick_style)
-## RV-02: step of the valley-field gradient for a single point, px (= the chunk grid step at the
-## default graphics level, so the mesh and height() agree there; lower levels differ by a hair).
-const GV_E := 20.0
 ## gv value that turns the gullies off for one call: a placeholder chunk (LOD_N grid, ~100 px) cannot show
 ## them (the finest are ~100 px wide) and is built on the main thread, where their cost is a frame spike.
 const NO_GULLIES := Vector2(-INF, -INF)
 
 
-## Gradient of the valley field at a point (per px), central differences GV_E apart.
+## Gradient of the valley field at a point (per px), central differences one chunk grid step apart:
+## the same step the chunk build uses (_compute), so height() and the mesh agree at every graphics level
+## (the field has kinks where valleys meet, and there a different step gives a different direction).
 func valley_grad(x: float, z: float, ctx := {}) -> Vector2:
-	return Vector2(valley(x + GV_E, z, ctx) - valley(x - GV_E, z, ctx), valley(x, z + GV_E, ctx) - valley(x, z - GV_E, ctx)) / (2.0 * GV_E)
+	var e := CHUNK / N
+	return Vector2(valley(x + e, z, ctx) - valley(x - e, z, ctx), valley(x, z + e, ctx) - valley(x, z - e, ctx)) / (2.0 * e)
 
 
 ## Landform weights at a point (see ReliefProvinces.weights): maps, bench frames, shader masks.
@@ -1375,17 +1375,23 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 	var with_gv := with_prov and gullies and lod == 0
 	var W2 := W + 2
 	var vg := PackedFloat32Array()
+	var rg := PackedFloat32Array()   # river_field on the same ring, reused below (it is not cheap)
 	if with_gv:
 		vg.resize(W2 * W2)
+		rg.resize(W2 * W2)
 		for j in W2:
 			for i in W2:
-				vg[j * W2 + i] = valley(ox + (i - 2) * step, oz + (j - 2) * step, ctx)
+				var gx := ox + (i - 2) * step
+				var gz := oz + (j - 2) * step
+				rg[j * W2 + i] = river_field(gx, gz)
+				vg[j * W2 + i] = valley(gx, gz, ctx, rg[j * W2 + i])
 	for j in W:
 		for i in W:
 			var x := ox + (i - 1) * step
 			var z := oz + (j - 1) * step
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
-			var rf := river_field(x, z)
+			var c := (j + 1) * W2 + i + 1
+			var rf := rg[c] if with_gv else river_field(x, z)
 			vs[j * W + i] = rf
 			gs[j * W + i] = green(x, z, rf)
 			# L-09: ручей — в том же поле, в K раз уже (вода и мокрый берег шейдера). Знак — от реки, иначе
@@ -1397,7 +1403,6 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				var g := sd * STREAM_K if sd < 20.0 else 20.0 * STREAM_K + (sd - 20.0) * 80.0
 				if g < absf(vs[j * W + i]):
 					vs[j * W + i] = g * (1.0 if vs[j * W + i] >= 0.0 else -1.0)
-			var c := (j + 1) * W2 + i + 1
 			var vv := vg[c] if with_gv else valley(x, z, ctx, rf)
 			var pv := _prov.weights(x, z, vv) if with_prov else Vector4(-1.0, 0.0, 0.0, 0.0)
 			ps[j * W + i] = pv

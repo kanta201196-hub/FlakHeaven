@@ -155,15 +155,10 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 		var cone_k := ReliefBalance.CONE_K * hill * smoothstep(ReliefBalance.D_FAN, ReliefBalance.D_FAN + 600.0, a)
 		mt += cone * cone * cone_k
 		if gully_on:
-			var dd := 120.0
 			var tc := clampf((cd + 1.0) / 0.6, 0.0, 1.0)
-			var dcone := -2.0 * cone * 6.0 * tc * (1.0 - tc) / 0.6 * cone_k
-			cone_g = Vector2(_cone.get_noise_2d(x + dd, z) - _cone.get_noise_2d(x - dd, z),
-				_cone.get_noise_2d(x, z + dd) - _cone.get_noise_2d(x, z - dd)) * (dcone / (2.0 * dd))
+			cone_g = _noise_grad(_cone, x, z) * (-2.0 * cone * 6.0 * tc * (1.0 - tc) / 0.6 * cone_k)
 			if rl > 0.0:
-				var dr := (2.0 * rl * ReliefBalance.ROLL_K * ew * hill) * (0.5 / (2.0 * dd))
-				cone_g += Vector2(_roll.get_noise_2d(wx + dd, wz) - _roll.get_noise_2d(wx - dd, wz),
-					_roll.get_noise_2d(wx, wz + dd) - _roll.get_noise_2d(wx, wz - dd)) * dr
+				cone_g += _noise_grad(_roll, wx, wz) * (rl * ReliefBalance.ROLL_K * ew * hill)
 	if gully_on:
 		# slope of the big shape (profile across the valley + main crests), share of the ceiling per px
 		var p_exp := lerpf(1.1, 2.0, e)
@@ -172,10 +167,7 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 		var sp_k := ReliefBalance.SPINE_K * smoothstep(0.3, 0.8, e)
 		var g := gv * (signf(v) * ((top - 0.1) * lerpf(0.75, 0.45, e) + sp * sp * sp * sp_k) * dcv) + cone_g
 		if sp > 0.0:
-			var dd := 120.0
-			var gs := Vector2(_spine.get_noise_2d(wx + dd, wz) - _spine.get_noise_2d(wx - dd, wz),
-				_spine.get_noise_2d(wx, wz + dd) - _spine.get_noise_2d(wx, wz - dd)) * (0.5 / (2.0 * dd))
-			g += gs * 3.0 * sp * sp * sp_k * cv
+			g += _noise_grad(_spine, wx, wz) * (1.5 * sp * sp * sp_k * cv)
 		var slope_k := smoothstep(ReliefBalance.GULLY_SLOPE_FROM, ReliefBalance.GULLY_SLOPE_TO, g.length())
 		# the highest crests keep their gentle snow fields (the ground shader puts snow only on gentle slopes)
 		slope_k *= 1.0 - smoothstep(0.5, 0.75, mt)
@@ -232,6 +224,15 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 	var scree := foot * smoothstep(-0.1, 0.25, cr + 0.1) * lerpf(0.5, 1.0, maxf(e, mesa))
 	scree = maxf(scree, apron * mesa)
 	return Vector3(clampf(h, -0.03, 1.0), clampf(rock, 0.0, 1.0), clampf(scree, 0.0, 1.0))
+
+
+## Gradient of a noise (per px) by central differences 120 px apart: smooth enough to steer the
+## gullies (a short step follows the kinks of cellular noise and crumples the stripes).
+## The warp is left out: it bends the noise slowly, its share of the slope is small.
+func _noise_grad(n: FastNoiseLite, x: float, z: float) -> Vector2:
+	var dd := 120.0
+	return Vector2(n.get_noise_2d(x + dd, z) - n.get_noise_2d(x - dd, z),
+		n.get_noise_2d(x, z + dd) - n.get_noise_2d(x, z - dd)) / (2.0 * dd)
 
 
 ## RV-02: our own per-point "erosion filter". g is the slope of the big shape (uphill, share of the
@@ -295,7 +296,7 @@ func _gullies(x: float, z: float, g: Vector2) -> float:
 		if wsum <= 0.0:
 			break
 		h += amp * (sum / wsum - ReliefBalance.GULLY_BIAS) * fade
-		var dk := -dsum / wsum * f * amp
+		var dk := -dsum / wsum * f * amp * fade
 		g += Vector2(ax, az) * dk
 		amp *= ReliefBalance.GULLY_GAIN
 		cell *= 0.5

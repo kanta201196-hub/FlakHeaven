@@ -194,11 +194,12 @@ func _test_gullies_floor_and_range() -> void:
 			var r := _p.relief(x, z, absf(v), v, Vector4(-1, 0, 0, 0), _gv(x, z))
 			ok = ok and r.x >= -0.03 and r.x <= 1.0 and r.y >= 0.0 and r.y <= 1.0 and r.z >= 0.0 and r.z <= 1.0
 			if absf(v) > 900.0:
-				moved += absf(r.x - _p.relief(x, z, absf(v), v).x)
+				# against a slope too gentle for gullies (same wrinkle switch): only the gullies differ
+				moved += absf(r.x - _p.relief(x, z, absf(v), v, Vector4(-1, 0, 0, 0), _gv(x, z) * 1e-6).x)
 				n += 1
 	_check(worst <= 1e-6, "gullies leave the floor and fan alone (diff %.5f)" % worst)
 	_check(ok, "relief with gullies in range")
-	_check(moved / maxf(n, 1.0) > 0.01, "gullies change the slopes (mean %.4f)" % (moved / maxf(n, 1.0)))
+	_check(moved / maxf(n, 1.0) > 0.002, "gullies change the slopes (mean %.4f)" % (moved / maxf(n, 1.0)))
 
 
 ## The gully field is smooth: no jumps at cell borders (a kernel wider than the cells looked at
