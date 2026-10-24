@@ -495,15 +495,22 @@ static func _garden(st: SurfaceTool, c: Vector2, s: Vector2, rng: RandomNumberGe
 
 ## Сжать готовую сетку в k раз (кишлак строится в старых единицах)
 static func _scaled(st: SurfaceTool, k: float) -> ArrayMesh:
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _scaled_arrays(st, k))
+	return m
+
+
+## Surface arrays of st (normals generated, vertices scaled by k). Callers that need the arrays again keep
+## this copy: ArrayMesh.surface_get_arrays on a worker thread waits for the main thread's RenderingServer
+## flush, and deadlocks when the main thread is itself waiting for that worker (village_at in the background)
+static func _scaled_arrays(st: SurfaceTool, k: float) -> Array:
 	st.generate_normals()
 	var arr := st.commit_to_arrays()
 	var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 	for i in vs.size():
 		vs[i] *= k
 	arr[Mesh.ARRAY_VERTEX] = vs
-	var m := ArrayMesh.new()
-	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	return m
+	return arr
 
 
 ## Оазис (тест 3.5-s4, п. 17): вместо круглой картинки-наклейки — несколько глинобитных домов у
@@ -912,9 +919,11 @@ static func village(variant: int) -> ArrayMesh:
 			_strip(st, a, b, float(p[1]), PATH, SINK + 0.0025)
 	# S9-07/S9-08: окраина (сады, поля, линия обороны) — отдельной сеткой на каждый посёлок (village_edge):
 	# ручей долины-притока и река у каждого посёлка свои, а эта сетка общая для раскладки
-	var m := _scaled(st, V_UNIT)
+	var marr := _scaled_arrays(st, V_UNIT)
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, marr)
 	# центры треугольников (старые единицы, x–z) — village_core вырезает по ним дворы на воде
-	var vs: PackedVector3Array = m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var vs: PackedVector3Array = marr[Mesh.ARRAY_VERTEX]
 	var cen := PackedVector2Array()
 	cen.resize(vs.size() / 3)
 	for ti in cen.size():
@@ -929,6 +938,7 @@ static func village(variant: int) -> ArrayMesh:
 		_vcache[key] = m
 		_vcache[key + "_stats"] = stats
 		_vcache[key + "_edge"] = edge
+		_vcache[key + "_arrays"] = marr   # village_core cuts wet yards from these (no surface_get_arrays off the main thread)
 	_cmx.unlock()
 	return m
 
@@ -989,7 +999,9 @@ static func village_core(variant: int, water := {}) -> ArrayMesh:
 			cut.append([l[0], hh, l[2], hh.length_squared()])
 	if cut.is_empty():
 		return base
-	var arr := base.surface_get_arrays(0)
+	_cmx.lock()
+	var arr: Array = (_vcache["village%d_arrays" % variant] as Array).duplicate()
+	_cmx.unlock()
 	var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 	var cen: PackedVector2Array = edge[2]
 	var runs := PackedInt32Array()   # оставляемые отрезки вершин [начало, конец)

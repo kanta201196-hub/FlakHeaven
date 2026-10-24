@@ -33,6 +33,8 @@ func _init(main: Main) -> void:
 			_suffix += "_flat"
 		if a.begins_with("--gfx="):   # T4-04: сравнение пресетов качества — vis_<имя>_gN.png
 			_suffix += "_g" + a.substr(6)
+		if a == "--relief0":   # relief lab: frames of the current relief (vis_<name>_before.png)
+			_suffix += "_before"
 		if a == "--nowater":   # S9-07/S9-08: «до» — кишлак без учёта ручья и реки у посёлка (vis_<имя>_dry.png)
 			AdobeBuild.ignore_water = true
 			_suffix += "_dry"
@@ -101,10 +103,7 @@ func process(delta: float) -> void:
 				site.setup(at, 1.0)
 				site.bunker.hp = 99999.0   # стенд: бункер не должен разбиться
 				site.bunker.max_hp = 99999.0
-				for g: GroundTarget in site.targets:   # раскладка та же, но ровно у дороги (без поиска дна долины)
-					g.position += at - site.anchor
-				site.anchor = at
-				site.global_position = at
+				# Kanta 24.10: the site stands where the game puts it (off the river), not moved onto the road
 				site.process_mode = Node.PROCESS_MODE_DISABLED
 			else:
 				site.setup(m.player.global_position + Vector2(0, -120), 1.0)
@@ -652,6 +651,11 @@ func _make_points() -> Array:
 		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
 		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
 	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--pts="):   # relief lab: --pts=name:x:z:zoom,name2:x:z:zoom — arbitrary camera points
+			pts = []
+			for q in a.substr(6).split(","):
+				var f := q.split(":")
+				pts.append({"name": f[0], "pos": Vector2(float(f[1]), float(f[2])), "zoom": float(f[3]) if f.size() > 3 else 1.0, "wait": 1.2})
 		if a.begins_with("--vat="):   # S9-07/S9-08: кишлак у протоки: --vat=x,z[,zoom] (координаты — tools/village_water)
 			var v := a.substr(6).split(",")
 			pts = [{"name": "village_water", "pos": Vector2(float(v[0]), float(v[1])), "zoom": float(v[2]) if v.size() > 2 else 1.0, "wait": 1.5}]

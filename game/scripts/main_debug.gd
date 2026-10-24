@@ -352,11 +352,11 @@ func _aa_flat_test() -> void:
 			# S10-02: переезды по позиции — точки, которые выбирает GroundTarget._drive
 			for n in 4:
 				var slot := site.anchor + Vector2.from_angle(randf() * TAU) * randf_range(140.0, 240.0) * AASite.SPREAD
-				slot = tr.find_floor(slot, 220.0, signf(tr.river_field(g.position.x, g.position.y)), [], AASite.RIVER_GUARD_CAR, true)
+				slot = tr.find_floor(slot, 220.0, signf(tr.river_field(g.position.x, g.position.y)), [], AASite.CAR_RIVER_MIN, true, INF, true)
 				moves += 1
 				if tr.wet(slot):
 					wet_moves += 1
-			if not tr.flat_at(g.position, 0.0):
+			if not tr.flat_at(g.position, 0.0, INF):
 				bad += 1
 				if m._args.has("--verbose-bot"):
 					print("AAFLAT bad ", g.variant, " h=%.0f rf=%.0f v=%.0f h0=%.0f" % [h, tr.river_field(g.position.x, g.position.y), tr.valley(g.position.x, g.position.y), tr.height(site.anchor.x, site.anchor.y)])
