@@ -439,14 +439,22 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 	return ""
 
 
+## Multiplier modules: id → [mods key, step per card, stat name]. Same numbers as the effects
+## in `module_desc`; used only for the texts on the card (totals: `CardText.total_pct`).
+const MODULE_MUL := {"engine": ["speed", 0.06, "Скорость"], "wing": ["turn", 0.08, "Разворот"],
+	"gun_dmg": ["gun_dmg", 0.15, "Урон пушки"], "gun_rate": ["gun_rate", 0.15, "Темп пушки"],
+	"frag": ["blast_r", 0.1, "Радиус взрывов"], "warhead": ["blast_dmg", 0.12, "Урон взрывов"],
+	"msl_head": ["missile_dmg", 0.15, "Урон ракет"], "msl_motor": ["missile_spd", 0.12, "Скорость ракет"],
+	"radio": ["wing_dmg", 0.2, "Урон ведомых"], "magnet": ["pickup", 0.35, "Радиус подбора"],
+	"servo": ["servo_rate", 0.1, "Темп гондолы и турелей"]}
+## Modules whose card effect is one percentage: their card shows «+6% скорости (всего +34%)»
+## instead of the "now → after" line (Sublight reference, Kanta 24.10).
+const MODULE_TOTAL := ["engine", "wing", "gun_dmg", "gun_rate", "frag", "warhead", "magnet"]
+
+
 ## Правка 9 (3.5-s4): строка «было → станет» для модуля — сколько сейчас и сколько будет после карточки
 static func module_delta(p: Player, id: String, k: float) -> String:
-	var mul := {"engine": ["speed", 0.06, "Скорость"], "wing": ["turn", 0.08, "Разворот"],
-		"gun_dmg": ["gun_dmg", 0.15, "Урон пушки"], "gun_rate": ["gun_rate", 0.15, "Темп пушки"],
-		"frag": ["blast_r", 0.1, "Радиус взрывов"], "warhead": ["blast_dmg", 0.12, "Урон взрывов"],
-		"msl_head": ["missile_dmg", 0.15, "Урон ракет"], "msl_motor": ["missile_spd", 0.12, "Скорость ракет"],
-		"radio": ["wing_dmg", 0.2, "Урон ведомых"], "magnet": ["pickup", 0.35, "Радиус подбора"],
-		"servo": ["servo_rate", 0.1, "Темп гондолы и турелей"]}
+	var mul := MODULE_MUL
 	if mul.has(id):
 		var d: Array = mul[id]
 		var v := float(p.mods.get(d[0], 1.0))
@@ -739,9 +747,13 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 						card["desc"] = "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
 		_:
 			card["desc"] = module_desc(p, card["id"], k)
-			var dl := module_delta(p, card["id"], k)
-			if dl != "":
-				card["desc"] += "\n" + dl
+			if MODULE_TOTAL.has(String(card["id"])):
+				var d: Array = MODULE_MUL[card["id"]]
+				card["desc"] += " " + Loc.t("(всего %s)") % CardText.total_pct(float(p.mods.get(d[0], 1.0)), float(d[1]), k)
+			else:
+				var dl := module_delta(p, card["id"], k)
+				if dl != "":
+					card["desc"] += "\n" + dl
 			if card["kind"] == "module":
 				card["desc"] += slot_hint(p, card["id"])   # EX-02: путь к модернизации — плашкой на карточке
 	card["tags"] = tags_line(p, card)
