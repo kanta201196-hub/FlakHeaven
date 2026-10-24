@@ -52,6 +52,14 @@ var _plains := FastNoiseLite.new()
 var _crag := FastNoiseLite.new()   # M-36: где на склонах скальные выходы (пятна поясов пород)
 var _strata := FastNoiseLite.new() # M-36: наклон и изгиб слоёв пород, зубцы гребней
 var _ero := FastNoiseLite.new()    # аудит Р-2: сеть острых гребней и оврагов на склонах (не гладкие валы)
+## Relief variety spike (thread "Разнообразить рельеф Нагорья"): 0 — current relief, 1 — landform provinces.
+var relief_style := 1
+var _prov_e := FastNoiseLite.new()   # province elevation: 0 low rolling hills … 1 high sharp range
+var _prov_m := FastNoiseLite.new()   # mesa-ness: plateaus with cliffs and canyons
+var _asym := FastNoiseLite.new()     # per-bank valley asymmetry (one wall steep, the other long)
+var _roll := FastNoiseLite.new()     # rounded hills of low provinces
+var _cone := FastNoiseLite.new()     # lone peaks rising from low provinces
+var _spine := FastNoiseLite.new()    # main crest lines with spurs in high ranges (not one uniform wrinkle)
 var _scenes := {}              # Vector2i → сцены прошедших боёв клетки (scenes())
 var _side := {}                # Vector2i → боковые долины поселений рядом: [[A, B, ширина], …]
 var _bg: Background
@@ -79,6 +87,7 @@ var props: BiomeProps          # B-41: модели биома на рельеф
 
 func setup(depth: float, mat: Material, bg: Background) -> void:
 	base_y = -depth
+	relief_style = 0 if OS.get_cmdline_user_args().has("--relief0") else 1   # relief lab: "before" frames
 	N = N_GFX[clampi(Settings.gfx, 0, 3)]
 	ceiling = maxf(depth - 30.0, 0.0)   # запас на крен и толщину моделей у плоскости боя
 	material = mat
@@ -126,6 +135,25 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 	_ero.fractal_octaves = 4
 	_ero.fractal_gain = 0.45
 	_ero.fractal_lacunarity = 2.1
+	for nz: Array in [[_prov_e, 4243, 9000.0], [_prov_m, 6607, 7000.0], [_asym, 1879, 3800.0], [_roll, 3301, 1300.0]]:
+		var fn: FastNoiseLite = nz[0]
+		fn.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		fn.seed = nz[1]
+		fn.frequency = 1.0 / float(nz[2])
+		fn.fractal_type = FastNoiseLite.FRACTAL_FBM
+		fn.fractal_octaves = 2 if nz[0] != _roll else 3
+	_cone.noise_type = FastNoiseLite.TYPE_CELLULAR
+	_cone.seed = 5557
+	_cone.frequency = 1.0 / 2100.0
+	_cone.cellular_distance_function = FastNoiseLite.DISTANCE_EUCLIDEAN
+	_cone.cellular_return_type = FastNoiseLite.RETURN_DISTANCE
+	_cone.cellular_jitter = 0.8
+	_spine.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	_spine.seed = 8017
+	_spine.frequency = 1.0 / 3400.0
+	_spine.fractal_type = FastNoiseLite.FRACTAL_RIDGED
+	_spine.fractal_octaves = 3
+	_spine.fractal_gain = 0.45
 	_find_loops()
 	clear()
 
@@ -180,6 +208,8 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 ## Дно долины (до D_FAN − 40), река, дорога и площадки поселений не меняются
 ## sd_in — уже посчитанное stream_field(x, z, ctx) (кусок рельефа считает его сам; проход по оптимизации 3.5-s7)
 func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN) -> Vector3:
+	if relief_style == 1 and not _sea:
+		return _relief_prov(x, z, v, ctx, sd_in)
 	var a := absf(v)
 	if _sea and a > SEA_W:
 		# «Архипелаг»: берег поднимается в _land_k раз быстрее долины Нагорья — узкий пляж, сразу холмы
@@ -250,6 +280,101 @@ func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN) -> Vector3:
 		h -= (1.0 - smoothstep(STREAM_W * 0.6, STREAM_W * 3.0, sd)) * 0.012
 	return Vector3(clampf(h, -0.03, 1.0) * ceiling, clampf(rock, 0.0, 1.0) * fl, clampf(scree, 0.0, 1.0) * fl)
 
+
+
+## Landform weights at a point: x — elevation class (0 hills … 1 high range), y — mesa share (0…1),
+## z — asymmetry factor for this bank (0.55 … 1.7, multiplies the slope run), w — rounded-hill share.
+## Why: one valley profile everywhere made every massif the same height and texture (thread «Разнообразить рельеф»).
+func province(x: float, z: float, v := 0.0) -> Vector4:
+	var e := smoothstep(-0.38, 0.38, _prov_e.get_noise_2d(x, z))
+	var m := smoothstep(0.0, 0.3, _prov_m.get_noise_2d(x + 7000.0, z - 3000.0)) * smoothstep(0.2, 0.45, e)
+	var s := _asym.get_noise_2d(x + 900.0 * signf(v), z - 1300.0 * signf(v))
+	var asym := lerpf(0.55, 1.7, smoothstep(-0.45, 0.45, s))
+	var hill := (1.0 - smoothstep(0.2, 0.55, e)) * (1.0 - m)
+	return Vector4(e, m, asym, hill)
+
+
+## Relief with landform provinces: valley floor, river, road and settlements as before; what rises above
+## the fan differs by region — rolling hills, mid ridges, high sharp ranges, mesas with canyon walls, lone peaks.
+func _relief_prov(x: float, z: float, v: float, ctx := {}, sd_in := NAN) -> Vector3:
+	var a := absf(v)
+	var pv := province(x, z, v)
+	var e := pv.x
+	var mesa := pv.y
+	var hill := pv.w
+	var fan := smoothstep(D_FLOOR, D_FAN, a)
+	var h := 0.1 * fan * fan * (1.0 - mesa * 0.7)
+	# slope run: long and gentle in hills, short and steep in high ranges; per bank asymmetry
+	var run := lerpf(2600.0, 800.0, e) * pv.z
+	var start := lerpf(D_FAN - 40.0, D_FAN + 250.0, hill)
+	var climb := smoothstep(start, start + run, a)
+	var top := lerpf(0.3, 1.0, pow(e, 1.3))
+	var wx := x + _warp.get_noise_2d(x - 311.0, z + 71.0) * 300.0
+	var wz := z + _warp.get_noise_2d(x + 57.0, z - 919.0) * 300.0
+	var foot := smoothstep(D_FAN - 160.0, D_FAN + 40.0, a) * (1.0 - smoothstep(0.12, 0.3, climb))
+	var r := 0.0
+	var er := 0.0
+	var cr := 0.0
+	var rl := 0.0
+	var sp := 0.0
+	if climb > 0.0 or foot > 0.0:
+		cr = _crag.get_noise_2d(wx, wz)
+		if climb > 0.0:
+			r = clampf((_ridge.get_noise_2d(wx, wz) + 1.0) * 0.5, 0.0, 1.0)
+			er = clampf((_ero.get_noise_2d(wx * 0.9 + wz * 0.25, wz) + 1.0) * 0.5, 0.0, 1.0)
+			rl = (_roll.get_noise_2d(wx, wz) + 1.0) * 0.5
+			if e > 0.3:
+				sp = clampf((_spine.get_noise_2d(wx, wz) + 1.0) * 0.5, 0.0, 1.0)
+	# 1) mountains (hills … high range): convex profile, sharpness and gullies grow with elevation
+	var cv := 1.0 - pow(1.0 - climb, lerpf(1.1, 2.0, e))
+	var mt := (top - 0.1) * cv * lerpf(0.75, 0.45, e)
+	mt += sp * sp * sp * 0.4 * smoothstep(0.3, 0.8, e) * cv   # main crests and spurs of a high range
+	mt += r * r * lerpf(0.02, 0.2, e) * climb * climb * top
+	var ew := smoothstep(0.0, 0.55, climb)
+	mt += (er * er * lerpf(0.06, 0.38, e) - 0.02) * ew * lerpf(0.4, 1.0, e)
+	mt += (rl * rl * 0.4 - 0.04) * ew * hill   # rounded knolls instead of sharp gullies
+	# lone peaks in low country: cone around cellular feature points
+	if hill > 0.0:
+		var cd := _cone.get_noise_2d(x, z)   # ~ -1 at a feature point
+		var cone := 1.0 - smoothstep(-1.0, -0.4, cd)
+		mt += cone * cone * 0.7 * hill * smoothstep(D_FAN, D_FAN + 600.0, a)
+	# 2) mesa: cliff right above a narrow fan, flat tops in two or three levels, talus at the foot
+	var ms := 0.0
+	var mr := 0.0   # mesa rock: cliff faces only, flat tops stay sand
+	if mesa > 0.0:
+		var cl := smoothstep(D_FLOOR + 40.0, D_FLOOR + 40.0 + 260.0 * pv.z, a)
+		var q := cl * lerpf(0.35, 0.62, e) + (er - 0.5) * 0.1 * cl + (rl - 0.5) * 0.35 * cl
+		var lv := q * 4.0
+		var st := (floorf(lv) + smoothstep(0.62, 0.82, lv - floorf(lv))) / 4.0
+		ms = maxf(st, 0.0) + r * r * 0.015 * cl
+		var fr := lv - floorf(lv)
+		mr = smoothstep(0.5, 0.62, fr) * (1.0 - smoothstep(0.84, 0.95, fr)) * smoothstep(0.02, 0.1, q)
+	h += lerpf(mt, ms, mesa)
+	var climb_r := lerpf(climb, smoothstep(D_FLOOR + 40.0, D_FLOOR + 300.0, a), mesa)
+	var up := smoothstep(0.03, 0.2, climb_r)
+	var rock := smoothstep(-0.05, 0.25, cr + climb_r * 0.3 + er * er * 0.45 * e + r * r * 0.2 - 0.2) * up * lerpf(0.25, 1.0, e)
+	rock = lerpf(rock * (1.0 - hill * 0.7), mr, mesa)
+	var steep := smoothstep(0.08, 0.25, climb) * (1.0 - smoothstep(0.7, 0.92, climb)) * (1.0 - mesa) * e
+	if h > 0.16 and steep > 0.0:
+		var t := h * 7.0
+		var step := (floorf(t) + smoothstep(0.12, 0.88, t - floorf(t))) / 7.0
+		h = lerpf(h, step, 0.28 * steep * (1.0 - rock))
+	if rock > 0.0:
+		var sn := _strata.get_noise_2d(x, z)
+		var t2 := h * 16.0 + (x * 0.6 + z * 0.8) * 0.00035 + _warp.get_noise_2d(x * 3.0, z * 3.0) * 0.35
+		var f2 := t2 - floorf(t2)
+		var step2 := (floorf(t2) + smoothstep(0.55, 0.85, f2)) / 16.0
+		var dh := step2 - (t2 / 16.0)
+		h += (dh * lerpf(0.6, 0.9, mesa) + 0.016 + (sn + 1.0) * 0.01) * rock
+	h += (_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * (0.3 + fan)
+	var scree := foot * smoothstep(-0.1, 0.25, cr + 0.1) * lerpf(0.5, 1.0, maxf(e, mesa))
+	var fl := _flat(x, z, ctx)
+	h *= fl
+	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
+	var sd := absf(stream_field(x, z, ctx) if is_nan(sd_in) else sd_in)
+	if sd < STREAM_W * 3.0:
+		h -= (1.0 - smoothstep(STREAM_W * 0.6, STREAM_W * 3.0, sd)) * 0.012
+	return Vector3(clampf(h, -0.03, 1.0) * ceiling, clampf(rock, 0.0, 1.0) * fl, clampf(scree, 0.0, 1.0) * fl)
 
 func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var ab := b - a
