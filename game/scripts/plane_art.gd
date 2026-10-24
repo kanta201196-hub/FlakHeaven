@@ -113,6 +113,8 @@ static func slot_points(cls_id: String, lvl: int, group_index: int, group: Hardp
 		return [Vector2(wx + 2.0, 0.0)]
 	# пары на крыле: первая группа ближе к фюзеляжу, вторая — дальше
 	var frac := 0.38 if group_index == 0 else 0.62
+	if group.mount_frac > 0.0:
+		frac = group.mount_frac   # PG-01: third group on the wing tips / outer pair
 	var off := maxf(fus + 5.0, half * frac)
 	for i in group.slots / 2:
 		var o := off + i * half * 0.14

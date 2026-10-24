@@ -10,6 +10,8 @@ var level := 1
 var priority := "nearest"
 var builtin := false  # встроенные турели: оружие не меняется
 var heavy := false    # U-06: тяжёлый подвес самолёта ур. 2 — только экспериментальное оружие
+## PG-01: where a wing pair hangs along the half-span (0 — by group index, as before)
+var mount_frac := 0.0
 var cd := 1.5
 var bonus := 0.0         # бонус урона от редкости карточек улучшения
 var trigger := "auto"    # для НАР и бомб: "auto" — сами, "button" — по кнопке (ПКМ / LT)
@@ -104,11 +106,16 @@ func _dmg() -> float:
 			return base * (1.0 + Tuning.g("rocket_lvl_dmg") * (level - 1))
 		"aam": # 3.5: всегда 1 ракета с точки; ур. 4 вместо второй — урон и скорость
 			return base * (1.0 + Tuning.g("aam_lvl_dmg") * (level - 1)) * (1.0 + Tuning.g("aam_l4_dmg") if level >= 4 else 1.0)
+		"srm", "agm", "hebomb":   # PG-01: growth in WeaponBalance
+			return base * WeaponBalance.dmg_k(weapon, level)
 		_:
 			return base * (1.0 + 0.25 * (level - 1))
 
 
 const MSL_CD_MIN := {"aam": 3.0, "rockets": 1.8}
+## Hardpoint missiles: missile modules («Боевая часть», «Двигатели ракет», «Пусковое устройство») and
+## crew missile damage act on them (PG-01 adds `srm`, `agm`)
+const MISSILES := ["aam", "rockets", "srm", "agm"]
 
 
 func reload_time(p: Player) -> float:
@@ -136,6 +143,8 @@ func reload_time(p: Player) -> float:
 		"bombs":
 			if not evo:
 				k *= 1.0 - 0.08 * (level - 1)
+		"srm", "agm", "hebomb":
+			k *= WeaponBalance.cd_k(weapon, level)
 		"gunpod", "turret":
 			if not (evo and weapon == "gunpod"):
 				k *= 1.0 / (1.0 + 0.1 * (level - 1))
@@ -149,13 +158,15 @@ func reload_time(p: Player) -> float:
 		k /= 3.0 # «Штурмовой заход»: подвесы перезаряжаются втрое быстрее
 	if weapon == "turret":
 		k /= float(p.mods.get("turret_rate", 1.0))
-	if weapon == "aam" or weapon == "rockets":
+	if weapon in MISSILES:
 		k *= float(p.mods.get("msl_cd", 1.0)) # модуль «Пусковое устройство»
 	var t: float = base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd") * branch_cd_k()
 	if MSL_CD_MIN.has(weapon):
 		# правка 3.5-s4 (лог «Осы»: до 59 ракет в воздухе): карточки перезарядки складывались до ×0,07 —
 		# ракеты шли без перерыва. Нижний предел; «Штурмовой заход» по-прежнему ускоряет втрое
 		t = maxf(t, float(MSL_CD_MIN[weapon]) * branch_cd_k() / (3.0 if p.assault_t > 0.0 and not builtin else 1.0))
+	elif WeaponBalance.cd_floor(weapon) > 0.0:
+		t = maxf(t, WeaponBalance.cd_floor(weapon) * branch_cd_k() / (3.0 if p.assault_t > 0.0 and not builtin else 1.0))
 	return t
 
 
@@ -183,7 +194,7 @@ func _owner_k() -> float:
 		k *= float(p.cls.get("turret_k", 1.0))
 	if weapon == "turret":
 		k *= float(p.mods.get("turret_dmg", 1.0))
-	if weapon == "aam" or weapon == "rockets":
+	if weapon in MISSILES:
 		k *= p.missile_k()
 	if weapon == String(p.cls.get("signature", "")):
 		k *= PlaneClasses.SIGNATURE_K # правка 5 теста 3.5-s5: особенность класса (★)
@@ -216,6 +227,8 @@ func range_px() -> float:
 			return base * (1.0 + 0.08 * (level - 1))
 		"gunpod", "bombs":
 			return base * (1.0 + 0.1 * (level - 1))
+		"srm", "agm", "hebomb":
+			return base * WeaponBalance.range_k(weapon, level)
 	return base
 
 
@@ -232,7 +245,7 @@ func update(delta: float, p: Player) -> void:
 		return
 	# мастерство «Охотник»: на хвосте у врага ракеты В-В перезаряжаются вдвое быстрее
 	cd -= delta * (2.0 if weapon == "aam" and p.mastery and p.cls_id == "fighter" and p.on_tail() else 1.0)
-	if weapon == "bombs" and _bomb_aim(p):
+	if Weapons.is_bomb(weapon) and _bomb_aim(p):
 		return
 	if cd > 0.0:
 		return
@@ -251,15 +264,21 @@ func update(delta: float, p: Player) -> void:
 			fired = _fire_flares(p)
 		"bombs":
 			fired = _fire_bombs(p, manual)
+		"srm":
+			fired = WeaponFire.fire_srm(self, p)
+		"agm":
+			fired = WeaponFire.fire_agm(self, p)
+		"hebomb":
+			fired = WeaponFire.fire_hebomb(self, p, manual)
 		"emp":
 			fired = _fire_emp(p)
 		"laser":
 			fired = _fire_laser(p)
 		"plasma":
 			fired = _fire_plasma(p)
-	if fired and not manual and weapon == "bombs":
+	if fired and not manual and Weapons.is_bomb(weapon):
 		Hints.show("bomb_auto", "Бомбы падают сами на наземные цели рядом. Бросать вручную с прицелом: в паузе (Tab) переключите бомбы на «Пуск: правой кнопкой мыши».", 8.0, 2)
-	if fired and not manual and weapon in ["aam", "rockets"]:
+	if fired and not manual and weapon in MISSILES:
 		Hints.show("auto_launch", "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab).", 8.0, 2)
 	# 3.4: после выстрела переносим опоздание (до 0,05 с) — темп меньше зависит от FPS
 	cd = (minf(0.0, maxf(cd, -0.05)) + reload_time(p)) if fired else 0.2
@@ -283,7 +302,7 @@ func _bomb_aim(p: Player) -> bool:
 		return true
 	if aiming:
 		aiming = false
-		if cd <= 0.0 and _fire_bombs(p, true):
+		if cd <= 0.0 and (_fire_bombs(p, true) if weapon == "bombs" else WeaponFire.fire_hebomb(self, p, true)):
 			cd = reload_time(p)
 		return true
 	return true
@@ -305,7 +324,7 @@ func aim_zones(p: Player) -> Array:
 		var side := Vector2.from_angle(p.heading + PI / 2.0) * 300.0
 		return [[c - side, c + side, CARPET_R * Profile.wk("bombs", "blast_r") * aoe_k]]
 	var to := aim_point(p)
-	return [[to, to, range_px() * Profile.wk("bombs", "blast_r") * aoe_k]]
+	return [[to, to, range_px() * Profile.wk(weapon, "blast_r") * aoe_k]]
 
 
 ## U-08: рельсотрон — цель по носу (конус ±8°) → зарядка RAIL_CHARGE с прицельной линией → пробивающий выстрел
@@ -564,8 +583,13 @@ func _wolf(p: Player, t: Enemy, d: float) -> void:
 			wm.mirror_launch(t, d * 0.6)
 
 
+## Where shot `i` of this group leaves the plane (world) — for `WeaponFire`
+func slot_pos(p: Player, i: int) -> Vector2:
+	return _slot_pos(p, i)
+
+
 func _slot_pos(p: Player, i: int) -> Vector2:
-	if weapon in ["aam", "rockets", "bombs"] and not launch_offs.is_empty() and Render3D.enabled:
+	if weapon in ["aam", "rockets", "bombs", "srm", "agm", "hebomb"] and not launch_offs.is_empty() and Render3D.enabled:
 		return p.global_position + (launch_offs[i % launch_offs.size()] as Vector2).rotated(p.heading)
 	if slots == 1:
 		return p.global_position
@@ -839,6 +863,11 @@ func _fire_bombs(p: Player, manual := false) -> bool:
 ## ряд «ковра» — по очереди (stagger); пока она в отсеке, самолёт летит — старт сдвигается вперёд с ним.
 ## Место и момент разрыва не меняются (projectiles._update_bombs: к концу взрывателя бомба в точке «to»).
 const BAY_OPEN_T := 0.12
+
+
+## Bomb `b` leaves through open bay doors (only the look) — for `WeaponFire`
+func bay_release(p: Player, b: Dictionary, stagger: float) -> void:
+	_bay_release(p, b, stagger)
 
 
 func _bay_release(p: Player, b: Dictionary, stagger: float) -> void:

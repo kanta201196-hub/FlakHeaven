@@ -16,6 +16,14 @@ const LEVEL := {
 ## Reload never goes below this, s: reload cards stack (the same reason as `Hardpoint.MSL_CD_MIN`).
 const CD_FLOOR := {"srm": 2.0, "agm": 3.5}
 
+## `srm` turns this much faster than `aam` (320°/s): short range, agile targets.
+const SRM_TURN_K := 1.4
+## `agm` hits ground targets only; ground factor like other anti-ground weapons (rockets ×3, bombs ×2).
+const AGM_GROUND_K := 2.0
+## `hebomb`: fuse, s, and screen shake on the blast.
+const HEBOMB_FUSE := 0.6
+const HEBOMB_SHAKE := 5.0
+
 ## Course gun variants: multipliers on rate, damage and bullet speed, spread half-angle in degrees and
 ## the defence class of its bullets (`Enemy.src_class`). DPS stays within ±15 % of the standard gun,
 ## so the choice is about feel and targets, not raw power.

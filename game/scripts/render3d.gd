@@ -999,7 +999,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				# Т-5: створки открываются при сбросе бомб (перезарядка группы бомбоотсека скакнула вверх)
 				var dropped := false
 				for g: Hardpoint in p.groups:
-					if g.weapon == "bombs":
+					if Weapons.is_bomb(g.weapon):
 						var key := "bay_cd_%s" % g.name
 						dropped = dropped or g.cd > float(u.get(key, g.cd)) + 0.3
 						u[key] = g.cd

@@ -163,6 +163,13 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 		groups.append(tg)
 	if heavy != null:
 		groups.append(heavy)
+	# PG-01: third group (hangar node «Узлы подвеса» lvl 2) goes last, so no other group index shifts;
+	# check flag --group3 opens it without the node
+	if Profile.third_group(id) or OS.get_cmdline_user_args().has("--group3"):
+		var g3: Dictionary = PlaneClasses.GROUP3[id]
+		var h3 := Hardpoint.new(g3["name"], int(g3["slots"]), g3["weapon"])
+		h3.mount_frac = float(g3.get("frac", 0.0))
+		groups.append(h3)
 	# фишка 3: оружие, выбранное в ангаре, — на первый пустой обычный подвес, ур. 1
 	var s2 := Profile.start2(id)
 	if s2 != "":
@@ -173,6 +180,17 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 				h.level = 1
 				h.cd = 0.5
 				break
+	# PG-01 check flag --weapon=<id>: that weapon on the last empty normal group from the start
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--weapon="):
+			var w0 := String(arg).substr(9)
+			for gi in range(groups.size() - 1, -1, -1):
+				var h0: Hardpoint = groups[gi]
+				if Weapons.DEFS.has(w0) and not h0.builtin and not h0.heavy and h0.is_empty():
+					h0.weapon = w0
+					h0.level = 1
+					h0.cd = 0.5
+					break
 	# стартовое оружие и навык дают очки тегов
 	for g in groups:
 		if not (g as Hardpoint).is_empty():

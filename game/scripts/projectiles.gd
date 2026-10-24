@@ -520,7 +520,7 @@ func _update_player_missiles(delta: float) -> void:
 				Main.I.tele.add("msl_lost")
 		var spd := minf(v.length() + 1500.0 * delta, 720.0 * _missile_spd() * float(m.get("spd_k", 1.0)))
 		if t != null and float(m["age"]) >= float(m.get("free", 0.0)):
-			var ang := rotate_toward(v.angle(), (t.aim_point(p) - p).angle(), deg_to_rad(320.0) * delta)
+			var ang := rotate_toward(v.angle(), (t.aim_point(p) - p).angle(), deg_to_rad(320.0 * float(m.get("turn_k", 1.0))) * delta)
 			v = Vector2.from_angle(ang) * spd
 		else:
 			v = v.normalized() * spd
@@ -663,8 +663,8 @@ func _update_bombs(delta: float) -> void:
 			# тест 3.5-s4 (п. 14): на земле остаётся воронка (бомбы падают до земли; БЧ ракеты рвётся в воздухе)
 			if String(b["src"]) != "разделяющаяся БЧ" and is_instance_valid(Main.I.fx.ground):
 				Main.I.fx.ground.crater(b["p"], float(b["r"]))
-			Main.I.sfx.play("bomb", -10.0, 1.0, b["p"])
-			Main.I.add_shake(2.0)
+			Main.I.sfx.play("bomb", -10.0 + (4.0 if b.has("shake") else 0.0), 0.8 if b.has("shake") else 1.0, b["p"])
+			Main.I.add_shake(float(b.get("shake", 2.0)))   # PG-01: the HE bomb shakes harder
 			bombs.remove_at(i)
 
 
