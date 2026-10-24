@@ -238,7 +238,7 @@ static func turret_slots(cls_id: String, level: int, lv := 0) -> int:
 ## Appended after all other groups (turrets, heavy), so card ids, saves and 3D layout keep their indices.
 ## frac — where a wing pair hangs along the half-span (0 — the default by group index).
 const GROUP3 := {
-	"fighter": {"name": "Законцовки крыла (пара)", "slots": 2, "weapon": "", "frac": 0.85},
+	"fighter": {"name": "Законцовки крыла (пара)", "slots": 2, "weapon": "", "frac": 1.0},
 	"attacker": {"name": "Под фюзеляжем", "slots": 1, "weapon": ""},
 	"bomber": {"name": "Внешняя пара", "slots": 2, "weapon": "", "frac": 0.82},
 }

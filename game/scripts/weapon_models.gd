@@ -695,6 +695,10 @@ const WING_TURRET_Z := {"bomber_1": 0.65, "bomber_2": 0.62}
 static var _wing_pts := {}
 
 
+## Mount fraction of the half-span from which a group hangs on the wing tips (side "tip")
+const TIP_FRAC := 0.95
+
+
 static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.0) -> Vector2:
 	var key := "%s_%d" % [cls_id, lvl]
 	var ck := key if zf_override < 0.0 else "%s_%.2f" % [key, zf_override]
@@ -786,6 +790,12 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 				for sd in [-1.0, 1.0]:
 					out.append({"p": wing_point(cls_id, lvl, sd, 0.96), "side": "tip", "yaw": 0.0, "t": 3})
 			return out
+	# Kanta 24.10: wing-tip pair («Оса» third group) hangs beside the tip at wing level, not under the swept wing
+	# (from above it looked as if the missiles lay on top of the wing)
+	if not g.builtin and g.mount_frac >= TIP_FRAC:
+		for sd in [-1.0, 1.0]:
+			out.append({"p": wing_point(cls_id, lvl, sd, 0.98), "side": "tip", "yaw": 0.0})
+		return out
 	if not g.builtin:
 		# Т-5: у «Кита» бомбы — в бомбоотсеке под створками (render3d / hangar3d открывают их), без пилона
 		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):
