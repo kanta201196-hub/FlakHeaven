@@ -13,6 +13,8 @@ func _init(main: Main) -> void:
 	m = main
 
 
+## Per-frame keys and gamepad buttons outside flight control, dispatched by game state:
+## menus, card pick, pause, results, global toggles and debug keys.
 func handle_global_input() -> void:
 	if m.report != null and m.report.visible:
 		return
@@ -61,12 +63,22 @@ func handle_global_input() -> void:
 		"levelup":
 			if m._state_t < CARD_INPUT_DELAY:
 				return
+			# Enter / gamepad A take the focused card (A is also "choose_1": focus starts on card 1)
+			if _accept_pressed():
+				m.choose_card(HudCards.focus)
+				return
 			for i in m.offers.size():
 				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
 					m.choose_card(i)
 					return
 			if Input.is_action_just_pressed("reroll"):
 				m.reroll()
+			elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
+				HudCards.move_focus(1 if Input.is_action_just_pressed("ui_right") else -1, m.offers.size())
+			elif Input.is_action_just_pressed("card_lock"):
+				m.lock_card(HudCards.focus)
+			elif Input.is_action_just_pressed("card_ban"):
+				m.ban_card(HudCards.focus)
 			return
 		"dead", "evac":
 			if Demo.end_open:   # экран «Конец демо» поверх итогов: Enter / Esc — к итогам
@@ -75,7 +87,16 @@ func handle_global_input() -> void:
 				return
 			if Input.is_action_just_pressed("restart") and m.result_t < 0.5:
 				return
-			for i in 3:
+			# Enter / gamepad A press the focused button (A is also "choose_1", so it goes first)
+			if _accept_pressed():
+				var a := HudResult.accept()
+				if a != "":
+					ui_click(a)
+				return
+			for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+				if Input.is_action_just_pressed(_DIR_ACTIONS[d]):
+					HudResult.move_focus(d)
+			for i in 2:
 				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
 					m.result_tab = i
 			if Input.is_action_just_pressed("ui_hangar"):
@@ -101,6 +122,8 @@ func handle_global_input() -> void:
 	if Input.is_action_just_pressed("cycle_tilt"):
 		cycle_tilt(1)
 		Events.banner.emit("Наклон камеры: %s  [F9]" % tilt_name(), 3.0)
+	if m.state == "paused" and not m.tuning_panel.visible:
+		_pause_nav()
 	if (Input.is_action_just_pressed("pause") or Input.is_action_just_pressed("loadout")) and not m.tuning_panel.visible:
 		m._set_state("paused" if m.state == "playing" else "playing")
 	if m.state == "playing" and Main.DEBUG:
@@ -116,6 +139,37 @@ func handle_global_input() -> void:
 		if Input.is_action_just_pressed("debug_god"):
 			m.god_mode = not m.god_mode
 			Events.banner.emit("Отладка: неуязвимость %s" % ("ВКЛ" if m.god_mode else "ВЫКЛ"), 3.0)
+
+
+## Pause screen keys and gamepad: ↑/↓ walk hardpoint rows and menu items, ←/→ change the
+## focused row's target, Enter/A activates (focus lives in HudPause).
+func _pause_nav() -> void:
+	for d: Vector2i in [Vector2i.UP, Vector2i.DOWN]:
+		if Input.is_action_just_pressed("ui_up" if d == Vector2i.UP else "ui_down"):
+			HudPause.move_focus(d)
+	for dir: int in [-1, 1]:
+		if Input.is_action_just_pressed("ui_left" if dir < 0 else "ui_right"):
+			var a := HudPause.side(dir)
+			if a != "":
+				ui_click(a)
+	if _accept_pressed():
+		var a := HudPause.accept()
+		if a != "":
+			ui_click(a)
+
+
+const _DIR_ACTIONS := {Vector2i.UP: "ui_up", Vector2i.DOWN: "ui_down", Vector2i.LEFT: "ui_left", Vector2i.RIGHT: "ui_right"}
+
+
+## Enter / gamepad A on screens over combat. Space is left out although Godot puts it in
+## `ui_accept`: it is the roll key players mash in a fight, and must not pick a card or press
+## «Покинуть вылет». The press is also taken off "roll" (A is both), so leaving the screen in
+## this frame does not start a barrel roll.
+func _accept_pressed() -> bool:
+	if not Input.is_action_just_pressed("ui_accept") or Input.is_physical_key_pressed(KEY_SPACE):
+		return false
+	Input.action_release("roll")
+	return true
 
 
 ## B-47: варианты наклона камеры для тестовой сборки (решение владельца — после теста)
@@ -245,8 +299,12 @@ func ui_click(action: String) -> void:
 		m.choose_card(int(action.substr(5)))
 	elif action.begins_with("prio:"):
 		cycle_priority(int(action.substr(5)))
+	elif action.begins_with("prioback:"):
+		cycle_priority(int(action.substr(9)), -1)
 	elif action == "wprio":
 		cycle_wing_prio()
+	elif action == "wprioback":
+		cycle_wing_prio(-1)
 	elif action.begins_with("trig:"):
 		var g: Hardpoint = m.player.groups[int(action.substr(5))]
 		g.trigger = "button" if g.trigger == "auto" else "auto"
@@ -269,12 +327,16 @@ func ui_click(action: String) -> void:
 		m._set_state("campaign")
 
 
-func cycle_priority(gi: int) -> void:
+## Steps the target mode of hardpoint group `gi` forward (`dir` 1) or back (-1); the pause
+## screen's `‹ ›` selector and ←/→ use both directions.
+func cycle_priority(gi: int, dir := 1) -> void:
+	if gi < 0 or gi >= m.player.groups.size():
+		return
 	var g: Hardpoint = m.player.groups[gi]
 	if g.is_empty() or not Weapons.DEFS[g.weapon]["uses_priority"]:
 		return
 	var i := Weapons.PRIORITIES.find(g.priority)
-	g.priority = Weapons.PRIORITIES[(i + 1) % Weapons.PRIORITIES.size()]
+	g.priority = Weapons.PRIORITIES[wrapi(i + dir, 0, Weapons.PRIORITIES.size())]
 	m.sfx.play("card", -14.0, 1.3)
 
 
@@ -351,8 +413,9 @@ func hangar_action(a: String) -> void:
 
 
 ## Правка 3.5-s4: цель звена — по кругу; ведущий слышит ответ по радио
-func cycle_wing_prio() -> void:
-	Settings.wing_prio = wrapi(Settings.wing_prio + 1, 0, Settings.WING_PRIO.size())
+## Steps the wingmen's target forward (`dir` 1) or back (-1) and says it on the radio.
+func cycle_wing_prio(dir := 1) -> void:
+	Settings.wing_prio = wrapi(Settings.wing_prio + dir, 0, Settings.WING_PRIO.size())
 	Settings.save_settings()
 	var t: String = Settings.WING_PRIO[Settings.wing_prio]
 	Events.radio.emit("Звено", "Принял: %s!" % (t.left(1).to_upper() + t.substr(1)), false)

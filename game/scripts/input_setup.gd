@@ -27,7 +27,11 @@ func _ready() -> void:
 	_add("restart", [KEY_R], [JOY_BUTTON_START])
 	_add("loadout", [KEY_TAB], [])
 	_add("fire_hardpoint", [KEY_K], [], [[JOY_AXIS_TRIGGER_LEFT, 1.0]], [MOUSE_BUTTON_RIGHT])
-	_add("reroll", [KEY_R], [])
+	# card pick: gamepad buttons apart from combat ones (design system §3.2); the card pick
+	# ignores Start's "restart" and the d-pad's up/down
+	_add("reroll", [KEY_R], [JOY_BUTTON_START])
+	_add("card_lock", [KEY_Z], [JOY_BUTTON_DPAD_UP])   # combat UI v2: lock / ban the focused card
+	_add("card_ban", [KEY_X], [JOY_BUTTON_DPAD_DOWN])
 	_add("change_class", [KEY_C], [])
 	_add("ui_hangar", [KEY_H], [])
 	_add("debug_level", [KEY_F5], [])

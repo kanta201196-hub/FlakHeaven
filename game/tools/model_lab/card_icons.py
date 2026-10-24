@@ -1,6 +1,7 @@
 # Volumetric card icons of weapons (PG-01, Kanta 24.10 «Значки ок»): Blender render of the hangar model
 # + glow in the weapon family colour + a round chip with the family glyph, so look-alike missiles differ
-# even at medal size. Output: game/art/icons/<id>.png (256 px, RGBA), drawn by CardIcons.draw.
+# even at medal size. Output: game/art/icons/<id>.png (256 px, RGBA), drawn by CardIcons.draw, and the bare
+# model render game/art/icons/model_<id>.png for HudIcons tiles, which draw their own glow and family disc.
 #   python3 -I game/tools/model_lab/card_icons.py [id ...]       (bpy 5.2 as a module, PIL)
 # Run from the repository root. Without ids — all of FAM.
 import math, os, sys, subprocess, tempfile
@@ -89,6 +90,9 @@ def render(key: str, tmp: str) -> Image.Image:
 	out = Image.new("RGBA", sq.size)
 	out.alpha_composite(sh, (int(side * 0.015), int(side * 0.025)))
 	out.alpha_composite(sq)
+	if key == "turret":   # the turret model is white: the game paints it in the plane's colour at run time
+		r_, g_, b_, a_ = out.split()
+		out = Image.merge("RGBA", (r_.point(lambda v: int(v * .62)), g_.point(lambda v: int(v * .64)), b_.point(lambda v: int(v * .5)), a_))
 	return out
 
 
@@ -134,9 +138,6 @@ def glyph(dr: ImageDraw.ImageDraw, c, r: float, kind: str, col) -> None:
 def icon(key: str, model: Image.Image, S: int = 256) -> Image.Image:
 	"""Glow plate in the family colour, the rendered weapon over it, family chip bottom-left."""
 	_, rgb, g = FAM[key][:3]
-	if key == "turret":   # the turret model is white: the game paints it in the plane's colour at run time
-		r_, g_, b_, a_ = model.split()
-		model = Image.merge("RGBA", (r_.point(lambda v: int(v * .62)), g_.point(lambda v: int(v * .64)), b_.point(lambda v: int(v * .5)), a_))
 	im = Image.new("RGBA", (S, S))
 	plate = Image.new("RGBA", (S, S))
 	ImageDraw.Draw(plate).ellipse((S * .1, S * .1, S * .9, S * .9), fill=rgb + (150,))
@@ -155,5 +156,7 @@ if __name__ == "__main__":
 	os.makedirs(OUT, exist_ok=True)
 	with tempfile.TemporaryDirectory() as tmp:
 		for k in keys:
-			icon(k, render(k, tmp)).save(OUT + k + ".png")
+			model = render(k, tmp)
+			icon(k, model).save(OUT + k + ".png")
+			model.resize((256, 256), Image.LANCZOS).save(OUT + "model_" + k + ".png")
 			print("icon", k)

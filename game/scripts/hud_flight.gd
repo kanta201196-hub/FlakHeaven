@@ -1,20 +1,45 @@
 class_name HudFlight
 extends HudKit
-## Интерфейс в полёте: опыт, прочность, навыки, подвесы, время и асы, указатели угроз,
-## эвакуация, активности, радио, полоса подвесов, строка курса.
+## In-flight HUD (combat UI v2, Sublight-style, Kanta 2026-10-24): XP line on top, hull and
+## fuel top-left, level and timer framed top centre, parts and kills with sortie goals
+## top-right, bottom bar with weapon groups and skills as icon tiles (key, cooldown, name,
+## one-line hint, tooltip on hover). Also threat and task arrows, activities, radio, hints.
 
 
 var _mini: HudMinimap = null
+## Skill columns of this frame for the hover tooltip: [Rect2, title, body, action]
+var _skill_tips: Array = []
+## Top of the bottom bar this frame (hints and radio sit above it)
+var bar_top := 0.0
+## Hint box of this frame and of the last one (the radio is drawn before the hint and steps
+## above last frame's box instead of covering it)
+var _hint_rect := Rect2()
+var _hint_prev := Rect2()
+## Bottom bar rect this frame (empty when not drawn)
+var _bar_rect := Rect2()
+## Bottom of the goals panel this frame (streak line sits under it)
+var _goals_bottom := 0.0
+
+## Size of icon tiles in the bottom bar and the column each tile takes
+const BAR_TILE := 72.0
+const BAR_COL := 132.0
 
 
+## Draws the in-flight HUD: hull and fuel, goals and currency, the weapon and skill bar with
+## cooldowns, radio, hints and the skill tooltip last so nothing covers it.
 func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	var p := m.player
+	_skill_tips.clear()
+	_hint_prev = _hint_rect
+	_hint_rect = Rect2()
+	bar_top = size.y - 12.0
+	_bar_rect = Rect2()
 	if dmg_flash > 0.0:
 		ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(1, 0, 0, dmg_flash * 0.5))
 
-	# Опыт и уровень — полоса во всю ширину сверху
-	ctrl.draw_rect(Rect2(0, 0, size.x, 10), Color(0, 0, 0, 0.6))
-	ctrl.draw_rect(Rect2(0, 0, size.x * clampf(m.run.xp / m.xp_need(), 0.0, 1.0), 10), Color(0.4, 1.0, 0.55))
+	# XP: thin amber line across the top
+	ctrl.draw_rect(Rect2(0, 0, size.x, 6), Color(0, 0, 0, 0.55))
+	ctrl.draw_rect(Rect2(0, 0, size.x * clampf(m.run.xp / m.xp_need(), 0.0, 1.0), 6), UiStyle.ACCENT)
 
 	var hide := Settings.hide_hud and m.state == "playing"
 	if is_instance_valid(p) and not hide:
@@ -22,9 +47,10 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 		_flight_panel(m, p, size)
 		if m.state == "playing":
 			_activity_panel(m, p, size)
-	_right_panel(m, size)
+	_top_center(m, size)
+	_top_right(m, size)
 	if is_instance_valid(p) and m.state == "playing":
-		_loadout_strip(p, size)
+		_action_bar(m, p, size)
 		if not hide:
 			if _mini == null:
 				_mini = HudMinimap.new(ctrl)
@@ -34,23 +60,36 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	_threat_markers(size)
 	if m.state == "playing":
 		_evac_marker(m, size)
+		if m.hud.radio_t > 0.0 and is_instance_valid(p) and not hide:
+			_radio_box(m, size)
 
 	if Hints.t > 0.0 and Hints.text != "" and m.state == "playing":
 		_hint_box(Hints.text, size, clampf(Hints.t * 2.0, 0.0, 1.0))
+	if m.state == "playing":
+		_skill_tooltip(size)   # last: the hovered skill's explanation covers hints and radio
 	if m.hud.banner_t > 0.0 and m.state == "playing":
 		var a := clampf(m.hud.banner_t, 0.0, 1.0)
-		# тёмная плашка под баннером — на светлом песке жёлтый текст терялся
+		# dark plate under the banner: yellow text on bright sand is unreadable without it
 		var bw := ui_font().get_string_size(Loc.out(m.hud.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
-		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, 138, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
-		_ctext(170, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
+		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, 186, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
+		_ctext(218, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
 
-	if m.run_time > 180.0 and m.state == "playing":
+	if m.run_time > 180.0 or m.state != "playing":
 		return
-	var hint := Loc.t("Мышь — куда лететь · Space — уклонение · Shift — форсаж · E — навык · Tab — пауза") + (Loc.t(" · F5/F6/F7 — отладка") if Main.DEBUG else "")
-	# свежий взгляд: без плашки строка клавиш терялась на песке
-	var hw := ui_font().get_string_size(Loc.out(hint), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 32.0
-	ctrl.draw_rect(Rect2((size.x - hw) / 2.0, size.y - 38.0, hw, 28.0), Color(0.02, 0.025, 0.03, 0.62))
-	_text(Vector2(0, size.y - 18), hint, 16, Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	# first minutes: how to steer and pause (skill keys are on the bar tiles)
+	var hx := size.x / 2.0
+	var tw := 0.0
+	var pairs := [[Loc.t("МЫШЬ"), Loc.t("куда лететь")], [key_label("pause"), Loc.t("пауза")]]
+	if Main.DEBUG:
+		pairs.append(["F5–F7", Loc.t("отладка")])
+	for pr: Array in pairs:
+		tw += UiStyle.text_w(UiStyle.head_font(700, 1), String(pr[0]), UiStyle.FS_CAPTION) + 18.0 + 10.0 \
+			+ UiStyle.text_w(UiStyle.head_font(600, 3), String(pr[1]), UiStyle.FS_BODY) + 34.0
+	var hy := bar_top - 14.0
+	ctrl.draw_rect(Rect2(hx - tw / 2.0 - 12.0, hy - 28.0, tw + 0.0, 38.0), Color(0.02, 0.025, 0.03, 0.62))
+	var kx := hx - tw / 2.0
+	for pr: Array in pairs:
+		kx = UiStyle.key_hint(ctrl, Vector2(kx, hy), String(pr[0]), String(pr[1]))
 
 
 ## U-02: подсказка новичку — рамка над нижней строкой клавиш
@@ -59,153 +98,366 @@ func _hint_box(s: String, size: Vector2, a: float) -> void:
 	# высота по тексту: длинная подсказка в три строки не вылезает из рамки
 	var th := ui_font().get_multiline_string_size(Loc.out(s), HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, 18).y
 	var bh := maxf(86.0, th + 44.0)
-	var r := Rect2((size.x - w) / 2.0, size.y - 134.0 - bh, w, bh)
+	var r := Rect2((size.x - w) / 2.0, bar_top - 70.0 - bh, w, bh)
+	_hint_rect = r
 	ctrl.draw_rect(r, Color(0.04, 0.05, 0.06, 0.82 * a))
 	ctrl.draw_rect(r, Color(1.0, 0.85, 0.4, 0.8 * a), false, 2.0)
 	_text(Vector2(r.position.x + 16, r.position.y + 26), "ПОДСКАЗКА", 13, Color(1.0, 0.85, 0.4, a))
 	_para(Vector2(r.position.x + 16, r.position.y + 50), s, w - 32.0, 18, Color(1, 1, 1, a))
 
 
-## Читаемость HUD (17.10): навык — плашка с клавишей; готов — зелёная рамка, действует — янтарная, перезарядка — серая с секундами
-func _skill(pos: Vector2, w: float, title: String, key: String, cd: float, active: float) -> void:
-	var r := Rect2(pos, Vector2(w, 30))
-	var c := Color(0.55, 1.0, 0.65)
-	var state := "готов"
-	if active > 0.0:
-		c = Color(1.0, 0.82, 0.35)
-		state = Loc.t("%.1f с") % active
-	elif cd > 0.0:
-		c = Color(0.62, 0.65, 0.72)
-		state = Loc.t("%d с") % int(ceil(cd))
-	ctrl.draw_rect(r, Color(0.03, 0.04, 0.05, 0.72))
-	ctrl.draw_rect(r, Color(c.r, c.g, c.b, 0.9 if cd <= 0.0 else 0.35), false, 2.0 if cd <= 0.0 else 1.0)
-	# клавиша — светлый квадратик слева
-	var kw := ui_font().get_string_size(Loc.out(key), HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 12.0
-	ctrl.draw_rect(Rect2(pos.x + 4, pos.y + 4, kw, 22), Color(c.r, c.g, c.b, 0.22))
-	_text(Vector2(pos.x + 10, pos.y + 20), key, 14, c.lightened(0.3))
-	_text(Vector2(pos.x + kw + 10, pos.y + 21), title, 16, Color.WHITE if cd <= 0.0 else Color(0.78, 0.8, 0.86), HORIZONTAL_ALIGNMENT_LEFT, w - kw - 58.0)
-	_text(Vector2(pos.x, pos.y + 21), state + " ", 15, c, HORIZONTAL_ALIGNMENT_RIGHT, w - 4.0)
-
-
-## Тёмная подложка панели HUD: текст читается и на светлой земле
+## Dark plate under HUD text so it reads on bright ground.
 func _hud_back(r: Rect2) -> void:
 	ctrl.draw_rect(r, Color(0.02, 0.025, 0.03, 0.58))
 
 
+## Top-left: hull and fuel bars; under them wingmen, manual fire, synergy slots and course.
 func _left_panel(m: Main, p: Player) -> void:
 	var x := 20.0
-	var pw := 460.0
-	var y := 18.0
-	var h := 150.0 + (24.0 if p.wingmen.size() > 0 else 0.0) + (30.0 if not p.syn.is_empty() or p.has_course() else 0.0) + (80.0 if p.has_course() else 0.0)
-	_hud_back(Rect2(x - 8, y - 6, pw + 16, h))
-	# прочность — крупная полоса; меньше трети — красная
+	var pw := 440.0
+	var y := 20.0
+	var extra := (26.0 if p.wingmen.size() > 0 else 0.0) + (24.0 if p.manual_mode else 0.0) \
+		+ (34.0 if not p.syn.is_empty() or p.has_course() else 0.0) + (80.0 if p.has_course() else 0.0)
+	UiStyle.panel(ctrl, Rect2(x, y, pw, 84.0 + extra), Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.72))
+	var bx := x + 40.0
+	var bw := pw - 56.0
+	# hull: big bar with the numbers on it; red under a third
 	var hk := clampf(p.hp / p.max_hp, 0.0, 1.0)
-	var hc := Color(0.4, 0.9, 0.5) if hk > 0.33 else Color(1.0, 0.35, 0.3)
-	ctrl.draw_rect(Rect2(x, y, 300, 24), Color(0, 0, 0, 0.6))
-	ctrl.draw_rect(Rect2(x, y, 300.0 * hk, 24), hc)
-	_text(Vector2(x + 8, y + 18), Loc.t("Прочность %d / %d") % [int(p.hp), int(p.max_hp)], 17, Color.WHITE)
-	_text(Vector2(x + 312, y + 19), Loc.t("Ур. %d") % m.run.level, 20, Color(0.6, 1.0, 0.7))
-	y += 30.0
-	# 3.5: топливо — полоска под прочностью и остаток в минутах
+	var hc := Color(0.4, 0.85, 0.45) if hk > 0.33 else UiStyle.DANGER
+	_glyph_plus(Vector2(x + 20.0, y + 27.0), hc)
+	ctrl.draw_rect(Rect2(bx, y + 16, bw, 22), Color(0, 0, 0, 0.6))
+	ctrl.draw_rect(Rect2(bx, y + 16, bw * hk, 22), hc)
+	UiStyle.text(ctrl, UiStyle.head_font(700, 1), Vector2(bx, y + 33), Loc.t("КОРПУС %d / %d") % [int(p.hp), int(p.max_hp)],
+		UiStyle.FS_BODY, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, bw)
+	# fuel: thin bar, minutes left on the right
 	var fu := Fuel.current()
 	if fu != null:
-		var fc := Color(1.0, 0.35, 0.3) if fu.frac() < 0.1 else (Color(1.0, 0.8, 0.35) if fu.frac() <= Fuel.CALL_AT else Color(0.95, 0.85, 0.55))
-		ctrl.draw_rect(Rect2(x, y + 2, 300, 10), Color(0, 0, 0, 0.6))
-		ctrl.draw_rect(Rect2(x, y + 2, 300.0 * fu.frac(), 10), fc)
-		var fs := Loc.t("БАК ПУСТ") if fu.empty() else Loc.t("Топливо %d:%02d") % [int(fu.left) / 60, int(fu.left) % 60]
-		_text(Vector2(x + 312, y + 13), fs, 15, fc)
-	y += 22.0
-	# навыки — плашки в две колонки
-	var cw := (pw - 8.0) / 2.0
-	var sk: Array = []
-	sk.append([Loc.t("Уклонение") if p.has_roll() else Loc.t("Ловушки"), "Space", p.roll_cd, p.roll_t if p.has_roll() else p.salvo_t])
-	sk.append(["Форсаж", "Shift", p.ab_cd, p.ab_t])
-	sk.append(["Нырок", "V", p.dive_cd, p.dive_t])
-	var s3: Dictionary = p.s3_def()
-	sk.append(["%s %s" % [Loc.t(s3["title"]), Prog.ROMAN[p.s3_lvl()]], "E", p.s3_cd, p.s3_active()])
-	if p.skill_b != "":
-		sk.append([PlaneClasses.SKILL3[p.skill_b]["title"], "F", p.sb_cd, p.s3_active(p.skill_b)])
-	for i in sk.size():
-		var it: Array = sk[i]
-		_skill(Vector2(x + (i % 2) * (cw + 8.0), y + (i / 2) * 34.0), cw, it[0], it[1], it[2], it[3])
-	y += ceil(sk.size() / 2.0) * 34.0
-	# правка 14: что делает навык E — коротко, пока он готов
-	var note := String(s3.get("hud", ""))
-	if p.s3_cd <= 0.0 and p.s3_active() <= 0.0 and note != "":
-		_text(Vector2(x, y + 12), "E — " + note, 14, Color(0.7, 0.8, 0.9))
+		var fc := UiStyle.DANGER if fu.frac() < 0.1 else (Color(1.0, 0.8, 0.35) if fu.frac() <= Fuel.CALL_AT else Color(0.95, 0.85, 0.4))
+		UiStyle.text(ctrl, UiStyle.head_font(800, 0), Vector2(x + 14.0, y + 66.0), "F", UiStyle.FS_BODY, fc)
+		ctrl.draw_rect(Rect2(bx, y + 54, bw - 130.0, 10), Color(0, 0, 0, 0.6))
+		ctrl.draw_rect(Rect2(bx, y + 54, (bw - 130.0) * fu.frac(), 10), fc)
+		var fs := Loc.t("БАК ПУСТ") if fu.empty() else Loc.t("ТОПЛИВО %d:%02d") % [int(fu.left) / 60, int(fu.left) % 60]
+		UiStyle.text(ctrl, UiStyle.head_font(600, 2), Vector2(bx, y + 65), fs, UiStyle.FS_CAPTION, fc, HORIZONTAL_ALIGNMENT_RIGHT, bw)
+	y += 92.0
 	if p.manual_mode:
-		_text(Vector2(x, y + 12), Loc.t("Пушка: ручной +%d%% [Q]") % int(round(p.manual_bonus * 100.0)), 14, Color(1.0, 0.82, 0.35), HORIZONTAL_ALIGNMENT_RIGHT, pw)
-	y += 20.0
+		_text(Vector2(x + 14, y + 4), Loc.t("Пушка: ручной огонь +%d%% [%s]") % [int(round(p.manual_bonus * 100.0)), key_label("toggle_fire_mode")], 15, Color(1.0, 0.82, 0.35))
+		y += 24.0
 	if p.wingmen.size() > 0:
 		var wl := PackedStringArray()
 		for w in p.wingmen:
 			if not is_instance_valid(w):
 				continue
 			var wm: Wingman = w
-			var st: String = "%s %d" % [Prog.WING_TYPES[wm.type]["short"], wm.lvl]
+			var st: String = "%s %d" % [Loc.t(Prog.WING_TYPES[wm.type]["short"]), wm.lvl]
 			if wm.temp:
 				st += Loc.t(" (%d с)") % int(ceil(wm.life))
 			elif not wm.alive():
 				st += Loc.t(" (вернётся %d с)") % int(ceil(wm.dead_t))
 			wl.append(st)
-		_text(Vector2(x, y + 14), Loc.t("Звено: %s · цель: %s [G]") % [", ".join(wl), Settings.WING_PRIO[Settings.wing_prio]], 16, Color(0.82, 0.78, 1.0))
-		y += 24.0
-	# подвесы — только полосой внизу экрана; здесь связки и специализация
+		_text(Vector2(x + 14, y + 6), Loc.t("Звено: %s · цель: %s [%s]") % [", ".join(wl), Loc.t(Settings.WING_PRIO[Settings.wing_prio]), key_label("wing_prio")], 15, Prog.TAGS["wing"]["color"].lightened(0.3))
+		y += 26.0
 	if not p.syn.is_empty() or p.has_course():
-		_course_bar(p, Vector2(x, y + 2))
+		_course_bar(p, Vector2(x + 14, y - 4))
 	if m.god_mode:
-		_text(Vector2(x, 18 + h + 14), "ОТЛАДКА: неуязвимость (F7)", 16, Color(1, 0.5, 0.5))
+		_text(Vector2(x, y + extra + 20), "ОТЛАДКА: неуязвимость (F7)", 16, Color(1, 0.5, 0.5))
 	if int(Tuning.g("scheme")) == 2 and m.state == "playing":
 		var mp := ctrl.get_local_mouse_position()
 		ctrl.draw_arc(mp, 12.0, 0.0, TAU, 24, Color(1, 1, 1, 0.7), 2.0)
 		ctrl.draw_circle(mp, 2.0, Color(1, 1, 1, 0.9))
 
 
-func _right_panel(m: Main, size: Vector2) -> void:
+## Green "+" of the hull row
+func _glyph_plus(c: Vector2, col: Color) -> void:
+	ctrl.draw_rect(Rect2(c.x - 8, c.y - 2.5, 16, 5), col)
+	ctrl.draw_rect(Rect2(c.x - 2.5, c.y - 8, 5, 16), col)
+
+
+## Top centre: pilot level over the sortie timer in a bevelled frame.
+func _top_center(m: Main, size: Vector2) -> void:
+	var cx := size.x / 2.0
 	var t := int(m.run_time)
-	var w := size.x - 28.0
-	var task := m.class_task.hud_line() if m.class_task != null else ""
-	var rows := 4 + (1 if m.run_time > 900.0 else 0) + (1 if (Campaign.op()["need"] as Array).has("baron") else 0) + (1 if task != "" else 0)
-	_hud_back(Rect2(size.x - 320, 12, 308, 64 + rows * 26))
-	_text(Vector2(0, 50), "%02d:%02d" % [t / 60, t % 60], 34, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
-	# U-02: цель вылета под таймером (U-05: словами операции кампании)
+	var lf := UiStyle.head_font(700, 3)
+	var lv := Loc.t("УР %d") % m.run.level
+	var lw := UiStyle.text_w(lf, lv, UiStyle.FS_LABEL)
+	ctrl.draw_rect(Rect2(cx - lw / 2.0 - 26.0, 16.0, lw + 44.0, 28.0), Color(0.02, 0.025, 0.03, 0.6))
+	_diamond(Vector2(cx - lw / 2.0 - 12.0, 30.0), 6.0, UiStyle.ACCENT)
+	UiStyle.text(ctrl, lf, Vector2(cx - lw / 2.0 + 2.0, 37.0), lv, UiStyle.FS_LABEL, UiStyle.ACCENT)
+	var r := Rect2(cx - 92.0, 46.0, 184.0, 56.0)
+	var k := 14.0
+	var hexa := PackedVector2Array([Vector2(r.position.x + k, r.position.y), Vector2(r.end.x - k, r.position.y),
+		Vector2(r.end.x, r.position.y + r.size.y / 2.0), Vector2(r.end.x - k, r.end.y), Vector2(r.position.x + k, r.end.y),
+		Vector2(r.position.x, r.position.y + r.size.y / 2.0)])
+	ctrl.draw_colored_polygon(hexa, Color(0.03, 0.035, 0.035, 0.82))
+	hexa.append(hexa[0])
+	ctrl.draw_polyline(hexa, UiStyle.ACCENT, 2.0)
+	var tf := UiStyle.head_font(700, 4)
+	var ts := "%02d:%02d" % [t / 60, t % 60]
+	ctrl.draw_string(tf, Vector2(r.position.x, r.end.y - 13.0), ts, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 40, UiStyle.ACCENT_SOFT)
+
+
+func _diamond(c: Vector2, s: float, col: Color) -> void:
+	ctrl.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -s), c + Vector2(s, 0), c + Vector2(0, s), c + Vector2(-s, 0)]), col)
+
+
+## Number with thin-space thousands groups: 1284 → "1 284".
+static func grouped(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = " " + s.right(3) + out
+		s = s.left(s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
+
+
+## Top-right: parts and kills counters, the sortie goals panel under them, FPS in the corner.
+func _top_right(m: Main, size: Vector2) -> void:
+	var x := size.x - 20.0
+	x = _counter(Rect2(x, 20.0, 0.0, 56.0), grouped(m.run.kills), Loc.t("СБИТО"), Color.WHITE) - 10.0
+	_counter(Rect2(x, 20.0, 0.0, 56.0), grouped(int(m.run.parts)), Loc.t("ЗАПЧАСТИ"), UiStyle.PARTS)
+	_goals(m, Rect2(size.x - 460.0, 88.0, 440.0, 0.0))
+	_text(Vector2(0, size.y - 6), "FPS %d" % Engine.get_frames_per_second(), 14, Color(0.7, 0.7, 0.7, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 8.0)
+
+
+## Counter box right-aligned at r.position.x: big number and a caption. Returns its left x.
+func _counter(r: Rect2, value: String, caption: String, col: Color) -> float:
+	var nf := UiStyle.head_font(800, 1)
+	var cf := UiStyle.head_font(600, 3)
+	var w := UiStyle.text_w(nf, value, 34) + UiStyle.text_w(cf, caption, UiStyle.FS_CAPTION) + 44.0
+	var box := Rect2(r.position.x - w, r.position.y, w, r.size.y)
+	UiStyle.panel(ctrl, box, Color(1, 1, 1, 0.14), Color(0.03, 0.035, 0.035, 0.78), 10.0)
+	UiStyle.text(ctrl, nf, Vector2(box.position.x + 16.0, box.end.y - 15.0), value, 34, col)
+	UiStyle.text(ctrl, cf, Vector2(box.position.x + 16.0, box.end.y - 22.0), caption, UiStyle.FS_CAPTION, UiStyle.TEXT_2,
+		HORIZONTAL_ALIGNMENT_RIGHT, box.size.x - 30.0)
+	return box.position.x
+
+
+## Sortie goals: operation goal, «Барон», class task, next ace, late bonus. A row is
+## [done, text, reward] — reward shows only numbers the game really pays.
+func _goal_rows(m: Main) -> Array:
+	var rows: Array = []
+	var t := int(m.run_time)
 	var left := maxi(0, 900 - t)
-	var goal := ""
+	var op := Campaign.op()
+	var op_reward := "" if Campaign.cleared(Campaign.index()) else "+%d" % int(op.get("parts", 0))
 	if Campaign.goal_done(m.run_time, m.op_flags):
-		goal = "✓ задание выполнено — к эвакуации"
+		rows.append([true, Loc.t("задание выполнено — к эвакуации"), op_reward])
 	elif left > 0:
-		goal = "%s %d:%02d" % [Campaign.op()["hud"], left / 60, left % 60]
+		rows.append([false, "%s %d:%02d" % [Loc.t(op["hud"]), left / 60, left % 60], op_reward])
 	else:
-		goal = Loc.t("сбейте ") + (Loc.t("«Барона»") if not m.op_flags.get("baron", false) and (Campaign.op()["need"] as Array).has("baron") else Loc.t("«Крепость»"))
-	var y := 80.0
-	_text(Vector2(0, y), goal, 17, Color(0.6, 1.0, 0.7) if goal.begins_with("✓") else Color(0.9, 0.92, 0.98), HORIZONTAL_ALIGNMENT_RIGHT, w)
-	y += 26.0
-	if (Campaign.op()["need"] as Array).has("baron"):
-		_text(Vector2(0, y), Loc.t("«Барон»: %s") % (Loc.t("сбит ✓") if m.op_flags.get("baron", false) else Loc.t("не сбит")), 17, Color(0.6, 1.0, 0.7) if m.op_flags.get("baron", false) else Color(1.0, 0.75, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, w)
-		y += 26.0
+		rows.append([false, Loc.t("сбейте ") + (Loc.t("«Барона»") if not m.op_flags.get("baron", false) and (op["need"] as Array).has("baron") else Loc.t("«Крепость»")), op_reward])
+	if (op["need"] as Array).has("baron"):
+		var bd: bool = m.op_flags.get("baron", false)
+		rows.append([bd, Loc.t("«Барон»: %s") % (Loc.t("сбит") if bd else Loc.t("не сбит")), ""])
+	var task := m.class_task.hud_line() if m.class_task != null else ""
 	if task != "":
-		var tc := Color(0.6, 1.0, 0.7) if m.class_task.state == "done" else (Color(0.75, 0.75, 0.75) if m.class_task.state == "failed" else Color(1.0, 0.85, 0.45))
-		_text(Vector2(0, y), task, 17, tc, HORIZONTAL_ALIGNMENT_RIGHT, w)
-		y += 26.0
+		rows.append([m.class_task.state == "done", task.trim_prefix("✓ "), "+%d" % int(Rewards.ACTIVITY[&"class_task"]["parts"])])
 	var every := Tuning.g("boss_every")
 	var next := (floorf(m.run_time / every) + 1.0) * every - m.run_time
-	if m.boss_alive():
-		_text(Vector2(0, y), "Ас в бою!", 19, Color(1.0, 0.5, 0.4), HORIZONTAL_ALIGNMENT_RIGHT, w)
-	else:
-		_text(Vector2(0, y), Loc.t("Ас через %d:%02d") % [int(next) / 60, int(next) % 60], 18, Color(0.9, 0.85, 0.85), HORIZONTAL_ALIGNMENT_RIGHT, w)
-	y += 26.0
-	_text(Vector2(0, y), Loc.t("Сбито %d") % m.run.kills, 18, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT, w)
-	y += 26.0
-	_text(Vector2(0, y), Loc.t("Запчасти %d") % int(m.run.parts), 18, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, w)
-	y += 26.0
+	rows.append([false, Loc.t("ас в бою!") if m.boss_alive() else Loc.t("ас через %d:%02d") % [int(next) / 60, int(next) % 60], ""])
 	if m.run_time > 900.0:
-		_text(Vector2(0, y), Loc.t("Задержались: добыча ×%.1f") % m.continue_mult(), 18, Color(1.0, 0.8, 0.4), HORIZONTAL_ALIGNMENT_RIGHT, w)
-	# FPS — мелко в углу, не в панели
-	_text(Vector2(0, size.y - 6), "FPS %d" % Engine.get_frames_per_second(), 12, Color(0.7, 0.7, 0.7, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 8.0)
+		rows.append([false, Loc.t("задержались: добыча ×%.1f") % m.continue_mult(), ""])
+	return rows
+
+
+func _goals(m: Main, r: Rect2) -> void:
+	var rows := _goal_rows(m)
+	r.size.y = 46.0 + rows.size() * 28.0
+	UiStyle.panel(ctrl, r, Color(1, 1, 1, 0.14), Color(0.03, 0.035, 0.035, 0.78))
+	UiStyle.text(ctrl, UiStyle.head_font(700, 4), Vector2(r.position.x + 20, r.position.y + 30), Loc.t("ЦЕЛИ ВЫЛЕТА"), UiStyle.FS_BODY, UiStyle.ACCENT_SOFT)
+	var y := r.position.y + 58.0
+	var f := UiStyle.head_font(700, 1)
+	for row: Array in rows:
+		var done: bool = row[0]
+		var col := UiStyle.OK if done else UiStyle.TEXT
+		var box := Rect2(r.position.x + 20, y - 12, 11, 11)
+		if done:
+			ctrl.draw_rect(box, UiStyle.OK)
+		else:
+			ctrl.draw_rect(box, Color(col, 0.8), false, 1.5)
+		UiStyle.text(ctrl, f, Vector2(r.position.x + 40, y), String(row[1]).to_upper(), UiStyle.FS_CAPTION + 1, col, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 120.0)
+		if String(row[2]) != "":
+			UiStyle.text(ctrl, f, Vector2(r.position.x, y), String(row[2]), UiStyle.FS_CAPTION + 1, UiStyle.ACCENT_SOFT, HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 20.0)
+		y += 28.0
+	_goals_bottom = r.end.y
+
+
+## Bottom centre bar: weapon groups (picture, level, reload, target mode), a divider, then
+## skills (key cap, cooldown, name, hint). Hovering a skill shows its tooltip.
+func _action_bar(m: Main, p: Player, size: Vector2) -> void:
+	var weps: Array = []
+	for g in p.groups:
+		if not (g as Hardpoint).is_empty():
+			weps.append(g)
+	var skills := _skill_list(p)
+	var w := (weps.size() + skills.size()) * BAR_COL + (24.0 if not weps.is_empty() else 0.0) + 20.0
+	var r := Rect2((size.x - w) / 2.0, size.y - 184.0, w, 172.0)
+	bar_top = r.position.y
+	_bar_rect = r
+	UiStyle.panel(ctrl, r, Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.8))
+	var x := r.position.x + 10.0
+	var ty := r.position.y + 30.0
+	for g in weps:
+		_weapon_col(p, g as Hardpoint, Vector2(x, ty))
+		x += BAR_COL
+	if not weps.is_empty():
+		ctrl.draw_line(Vector2(x + 12.0, r.position.y + 18.0), Vector2(x + 12.0, r.end.y - 18.0), Color(1, 1, 1, 0.16), 1.5)
+		x += 24.0
+	for sk: Dictionary in skills:
+		_skill_col(sk, Vector2(x, ty))
+		x += BAR_COL
+
+
+## One weapon group column: tile with level frame, reload bar in family colour, name, target.
+func _weapon_col(p: Player, hp: Hardpoint, pos: Vector2) -> void:
+	var tr := Rect2(pos.x + (BAR_COL - BAR_TILE) / 2.0, pos.y, BAR_TILE, BAR_TILE)
+	var fam := HudIcons.weapon_family(hp.weapon)
+	var fc := HudIcons.family_color(fam)
+	var frame: Color = Cards.EVO_COLOR if hp.evo else Cards.RARITY[clampi(hp.level - 1, 0, 4)]["color"]
+	HudIcons.tile(ctrl, tr, hp.weapon, fam, frame, hp.level if not hp.evo else -1)
+	if hp.evo:
+		HudIcons.number(ctrl, Vector2(tr.end.x - 6.0, tr.position.y + 22.0), "★", 20)
+	var full := maxf(hp.reload_time(p), 0.01)
+	var k := 1.0 - clampf(hp.cd / full, 0.0, 1.0)
+	ctrl.draw_rect(Rect2(tr.position.x, tr.end.y + 5.0, tr.size.x, 4.0), Color(1, 1, 1, 0.12))
+	ctrl.draw_rect(Rect2(tr.position.x, tr.end.y + 5.0, tr.size.x * k, 4.0), fc if k >= 1.0 else fc.darkened(0.25))
+	var nf := UiStyle.head_font(700, 1)
+	var nl := _lines(Loc.t(Weapons.DEFS[hp.weapon]["short"]).to_upper(), BAR_COL - 6.0, UiStyle.FS_CAPTION, nf)
+	var ny := tr.end.y + 30.0 - (8.0 if nl.size() > 1 else 0.0)
+	for i in nl.size():
+		UiStyle.text(ctrl, nf, Vector2(pos.x, ny + i * 17.0), nl[i], UiStyle.FS_CAPTION, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+	var sub := ""
+	if Weapons.DEFS[hp.weapon]["uses_priority"]:
+		sub = Loc.t("цель: %s") % Loc.t(Weapons.PRIORITY_NAMES[hp.priority])
+	elif hp.uses_trigger():
+		sub = Loc.t("пуск: %s") % (Loc.t("авто") if hp.trigger == "auto" else key_label("fire_hardpoint"))
+	if sub != "":
+		UiStyle.text(ctrl, UiStyle.head_font(600, 0), Vector2(pos.x, ny + (nl.size() - 1) * 17.0 + 20.0), _fit(sub, BAR_COL - 4.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 0)),
+			UiStyle.FS_CAPTION, fc.lightened(0.2), HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+
+
+## Skills on the bar: [{key (icon), action, title, hint, desc, cd, full, active, fam}].
+func _skill_list(p: Player) -> Array:
+	var out: Array = []
+	if p.has_roll():
+		out.append({"key": "roll", "action": "roll", "title": Loc.t("Уклонение"), "hint": Loc.t("бочка: уход от ракет"),
+			"desc": Loc.t("Бочка вбок: на время манёвра по вам не попадают, ракеты за вами теряют цель. Перезарядка %d с.") % int(round(p.roll_cd_full())),
+			"cd": p.roll_cd, "full": p.roll_cd_full(), "active": p.roll_t, "fam": "maneuver_skill"})
+	else:
+		out.append({"key": "flares", "action": "roll", "title": Loc.t("Ловушки"), "hint": Loc.t("уводят ракеты"),
+			"desc": Loc.t("Залп тепловых ловушек: уводит ракеты, летящие к вам. Перезарядка %d с.") % int(round(p.salvo_cd_full())),
+			"cd": p.roll_cd, "full": p.salvo_cd_full(), "active": p.salvo_t, "fam": "maneuver_skill"})
+	out.append({"key": "afterburner", "action": "afterburner", "title": Loc.t("Форсаж"), "hint": Loc.t("рывок вперёд"),
+		"desc": Loc.t("Рывок на скорости %.1f с, таранит мелких врагов на пути. Тратит топливо. Перезарядка %d с.") % [p.ab_time_full(), int(round(p.ab_cd_full()))],
+		"cd": p.ab_cd, "full": p.ab_cd_full(), "active": p.ab_t, "fam": "maneuver_skill"})
+	out.append({"key": "dive", "action": "dive", "title": Loc.t("Нырок"), "hint": Loc.t("вниз, под огнём ПВО"),
+		"desc": Loc.t("Самолёт уходит к земле на %.1f с: ПВО и ракеты его теряют. Перезарядка %d с.") % [Tuning.g("dive_time"), int(round(p.dive_cd_full()))],
+		"cd": p.dive_cd, "full": p.dive_cd_full(), "active": p.dive_t, "fam": "maneuver_skill"})
+	var s3: Dictionary = p.s3_def()
+	out.append({"key": p.skill3, "action": "sharp_turn", "title": Loc.t(s3["title"]) + ("" if p.s3_lvl() <= 0 else " " + Prog.ROMAN[p.s3_lvl()]),
+		"hint": Loc.t(String(s3.get("hud", ""))), "desc": Loc.t(String(s3.get("short", ""))) + Loc.t(". Перезарядка %d с.") % int(round(p.cd_of(p.skill3))),
+		"cd": p.s3_cd, "full": p.cd_of(p.skill3), "active": p.s3_active(), "fam": "skill"})
+	if p.skill_b != "":
+		var sb: Dictionary = PlaneClasses.SKILL3[p.skill_b]
+		out.append({"key": p.skill_b, "action": "skill_2", "title": Loc.t(sb["title"]), "hint": Loc.t(String(sb.get("hud", ""))),
+			"desc": Loc.t(String(sb.get("short", ""))) + Loc.t(". Перезарядка %d с.") % int(round(p.cd_of(p.skill_b))),
+			"cd": p.sb_cd, "full": p.cd_of(p.skill_b), "active": p.s3_active(p.skill_b), "fam": "skill"})
+	return out
+
+
+## One skill column: key cap over the tile, cooldown sweep and seconds, name and hint.
+## Active — amber frame with glow; ready — family frame; cooling down — dimmed.
+func _skill_col(sk: Dictionary, pos: Vector2) -> void:
+	var tr := Rect2(pos.x + (BAR_COL - BAR_TILE) / 2.0, pos.y, BAR_TILE, BAR_TILE)
+	var cd: float = sk["cd"]
+	var active: float = sk["active"]
+	var full: float = maxf(float(sk["full"]), 0.01)
+	var fam: String = sk["fam"]
+	var frame := Color(1, 1, 1, 0.35)
+	if active > 0.0:
+		frame = UiStyle.ACCENT
+		for i in 3:
+			ctrl.draw_rect(tr.grow(3.0 + i * 3.0), Color(UiStyle.ACCENT, 0.22 - i * 0.06), false, 3.0)
+	elif cd <= 0.0 and fam == "skill":
+		frame = UiStyle.ACCENT
+	HudIcons.tile(ctrl, tr, String(sk["key"]), fam, frame, -1, 0.0, cd > 0.0 and active <= 0.0)
+	if cd > 0.0 and active <= 0.0:
+		# sweep: the part still cooling down stays dark, clockwise from 12 o'clock
+		var c := tr.get_center()
+		var pts := PackedVector2Array([c])
+		var frac := clampf(cd / full, 0.0, 1.0)
+		var steps := 24
+		for i in steps + 1:
+			var a := -PI / 2.0 + TAU * (1.0 - frac) + TAU * frac * float(i) / steps
+			var d := Vector2.from_angle(a)
+			var t := minf(tr.size.x / 2.0 / maxf(absf(d.x), 0.001), tr.size.y / 2.0 / maxf(absf(d.y), 0.001))
+			pts.append(c + d * t)
+		ctrl.draw_colored_polygon(pts, Color(0, 0, 0, 0.45))
+		var cs := ("%.1f" % cd) if cd < 10.0 else str(int(ceil(cd)))
+		var f := UiStyle.head_font(800, 0)
+		ctrl.draw_string_outline(f, Vector2(tr.position.x, c.y + 11.0), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 30, 5, Color(0, 0, 0, 0.9))
+		ctrl.draw_string(f, Vector2(tr.position.x, c.y + 11.0), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 30, Color.WHITE)
+	elif active > 0.0:
+		var f2 := UiStyle.head_font(800, 0)
+		var as_ := "%.1f" % active
+		ctrl.draw_string_outline(f2, Vector2(tr.position.x, tr.position.y + 22.0), as_, HORIZONTAL_ALIGNMENT_RIGHT, tr.size.x - 5.0, 20, 4, Color(0, 0, 0, 0.9))
+		ctrl.draw_string(f2, Vector2(tr.position.x, tr.position.y + 22.0), as_, HORIZONTAL_ALIGNMENT_RIGHT, tr.size.x - 5.0, 20, UiStyle.ACCENT_SOFT)
+	# key cap on the top-left corner of the tile
+	var kf := UiStyle.head_font(700, 1)
+	var key := key_label(String(sk["action"]))
+	var kw := maxf(28.0, UiStyle.text_w(kf, key, UiStyle.FS_CAPTION) + 14.0)
+	var kr := Rect2(tr.position.x - 6.0, tr.position.y - 16.0, kw, 24.0)
+	ctrl.draw_rect(kr, Color(0.05, 0.055, 0.05, 0.95))
+	ctrl.draw_rect(kr, Color(1, 1, 1, 0.55), false, 1.5)
+	UiStyle.text(ctrl, kf, Vector2(kr.position.x, kr.end.y - 6.0), key, UiStyle.FS_CAPTION, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, kw)
+	var nc := UiStyle.ACCENT if fam == "skill" else UiStyle.TEXT
+	var title := String(sk["title"]).to_upper()
+	var nf := UiStyle.head_font(700, 1)
+	var ny := tr.end.y + 30.0
+	if UiStyle.text_w(nf, title, UiStyle.FS_CAPTION) > BAR_COL - 6.0 and title.contains(" "):
+		# two-word names («БОЕВОЙ РАЗВОРОТ») go on two lines rather than shrink
+		var sp := title.find(" ")
+		UiStyle.text(ctrl, nf, Vector2(pos.x, ny - 8.0), title.left(sp), UiStyle.FS_CAPTION, nc, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+		UiStyle.text(ctrl, nf, Vector2(pos.x, ny + 9.0), title.substr(sp + 1), UiStyle.FS_CAPTION, nc, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+		ny += 9.0
+	else:
+		UiStyle.text(ctrl, nf, Vector2(pos.x, ny), title, UiStyle.FS_CAPTION, nc, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+	var hint := String(sk["hint"])
+	if hint != "":
+		# two-line names leave room for one hint line inside the bar
+		var hl := _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION, null, 1 if ny > tr.end.y + 30.0 else 2)
+		for i in hl.size():
+			UiStyle.text(ctrl, ui_font(), Vector2(pos.x, ny + 19.0 + i * 16.0), hl[i], UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+	_skill_tips.append([Rect2(pos.x, tr.position.y - 16.0, BAR_COL, 150.0), "%s · %s" % [String(sk["title"]).to_upper(), key], String(sk["desc"]), String(sk["action"])])
+
+
+## Rect of the skill column bound to `action` in the last frame (empty if not drawn).
+func skill_rect(action: String) -> Rect2:
+	for t: Array in _skill_tips:
+		if String(t[3]) == action:
+			return t[0]
+	return Rect2()
+
+
+## Tooltip over the bar for the skill under the mouse (hover only: holding a key fires it).
+func _skill_tooltip(size: Vector2) -> void:
+	var mp := ctrl.get_local_mouse_position()
+	for t: Array in _skill_tips:
+		var r0: Rect2 = t[0]
+		if not r0.has_point(mp):
+			continue
+		var w := 380.0
+		var body := Loc.out(String(t[2]))
+		var bh := ui_font().get_multiline_string_size(body, HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, UiStyle.FS_BODY).y
+		var r := Rect2(clampf(r0.get_center().x - w / 2.0, 12.0, size.x - w - 12.0), bar_top - bh - 64.0, w, bh + 52.0)
+		UiStyle.panel(ctrl, r, Color(UiStyle.ACCENT, 0.6), Color(0.04, 0.045, 0.04, 0.95))
+		ctrl.draw_rect(Rect2(r.position, Vector2(4, r.size.y)), UiStyle.ACCENT)
+		UiStyle.text(ctrl, UiStyle.head_font(700, 3), Vector2(r.position.x + 18, r.position.y + 28), String(t[1]), UiStyle.FS_BODY, UiStyle.ACCENT_SOFT)
+		ctrl.draw_multiline_string(ui_font(), Vector2(r.position.x + 18, r.position.y + 52), body, HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, UiStyle.FS_BODY, -1, UiStyle.TEXT)
+		return
 
 
 func _boss_bars(m: Main, size: Vector2) -> void:
-	var y := 30.0
+	var y := 134.0   # under the level and timer frame
 	for n in m.get_tree().get_nodes_in_group("enemies"):
 		var b := n as Boss
 		if b == null:
@@ -345,8 +597,8 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 		var a := clampf(m.run.streak_t, 0.0, 1.0)
 		var stt := Loc.t("Серия ×%d · опыт ×%.2f") % [m.run.streak, m.streak_mult()]
 		var stw := ui_font().get_string_size(Loc.out(stt), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 24.0
-		ctrl.draw_rect(Rect2(size.x - 16.0 - stw, 246.0, stw, 30.0), Color(0.02, 0.025, 0.03, 0.55 * a))
-		_text(Vector2(0, 268), stt, 20, Color(1.0, 0.75, 0.4, a), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 28.0)
+		ctrl.draw_rect(Rect2(size.x - 20.0 - stw, _goals_bottom + 10.0, stw, 30.0), Color(0.02, 0.025, 0.03, 0.55 * a))
+		_text(Vector2(0, _goals_bottom + 32.0), stt, 20, Color(1.0, 0.75, 0.4, a), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 32.0)
 
 
 ## Правка 28: цвета активностей — без жёлтого, он теряется на песке Нагорья
@@ -426,8 +678,6 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8, Loc.t("заправщик %d м") % (int(p.global_position.distance_to(tk.global_position)) / 10))
 		var ts := Loc.t("СТЫКОВКА — ЗАПРАВКА ИДЁТ") if tk.filling else (Loc.t("ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно") if tk.in_cone else Loc.t("ЗАПРАВЩИК: зайдите ему в хвост"))
 		_ctext(328, Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
-	if m.hud.radio_t > 0.0:
-		_radio_box(m, size)
 
 
 ## Правка 20 (тест 3.5-s4): радиоэфир — справа внизу, значок рации, позывной, полупрозрачная плашка.
@@ -441,6 +691,10 @@ func _radio_box(m: Main, size: Vector2) -> void:
 	var age := m.hud.radio_age()
 	var slide := 1.0 - clampf(age / 0.25, 0.0, 1.0)
 	var r := Rect2(size.x - w - 20.0 + slide * slide * 160.0, size.y - h - 40.0, w, h)
+	if _bar_rect.size.x > 0.0 and r.position.x < _bar_rect.end.x + 12.0:
+		r.position.y = minf(r.position.y, _bar_rect.position.y - h - 12.0)
+	if _hint_prev.size.x > 0.0 and r.intersects(_hint_prev):
+		r.position.y = _hint_prev.position.y - h - 12.0
 	var col := Color(1.0, 0.5, 0.45) if m.hud.radio_enemy else Color(0.55, 0.95, 0.7)
 	var flash := 1.0 - clampf(age / 0.6, 0.0, 1.0)
 	ctrl.draw_rect(r, Color(0.02, 0.03, 0.035, 0.86 * a))
@@ -458,61 +712,12 @@ func _radio_box(m: Main, size: Vector2) -> void:
 	_para(Vector2(r.position.x + 92, r.position.y + 56), m.hud.radio_text, w - 112.0, 22, Color(1, 1, 1, a))
 
 
-## 2.8: полоса подвесов внизу экрана — картинка оружия, уровень, перезарядка, связки
-func _loadout_strip(p: Player, size: Vector2) -> void:
-	var items: Array = []
-	for g in p.groups:
-		if not g.is_empty():
-			items.append(g)
-	if items.is_empty():
-		return
-	var cw := 212.0
-	var total := cw * items.size() + 12.0 * (items.size() - 1)
-	var x := (size.x - total) / 2.0
-	var y := size.y - 118.0
-	for g in items:
-		var hp: Hardpoint = g
-		var r := Rect2(x, y, cw, 78)
-		_panel(r, false)
-		var t := PlaneArt.weapon_tex(hp.weapon)
-		if t != null:
-			var k := 60.0 / t.get_height()
-			ctrl.draw_set_transform(Vector2(x + 26, y + 39), 0.0, Vector2(k, k))
-			ctrl.draw_texture(t, -t.get_size() / 2.0)
-			ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		else:   # U-08: у экспериментального оружия пока нет картинки — значок
-			CardIcons.draw(ctrl, Vector2(x + 26, y + 39), 36.0, hp.weapon, Color(0.6, 0.85, 1.0))
-		_text(Vector2(x + 50, y + 24), Loc.t(Weapons.DEFS[hp.weapon]["short"]), 16, Color(0.95, 0.93, 0.88), HORIZONTAL_ALIGNMENT_LEFT, cw - 56.0)
-		# читаемость HUD: под названием — число и по какой цели бьёт (подвесы больше не дублируются в левой панели)
-		var sub := "×%d" % hp.slots
-		if Weapons.DEFS[hp.weapon]["uses_priority"]:
-			sub += " · " + String(Weapons.PRIORITY_NAMES[hp.priority])
-		if hp.uses_trigger() and hp.trigger != "auto":
-			sub += " · ПКМ"
-		_text(Vector2(x + 50, y + 42), sub, 13, Color(0.72, 0.72, 0.66), HORIZONTAL_ALIGNMENT_LEFT, cw - 56.0)
-		for i in Weapons.MAX_LEVEL:
-			ctrl.draw_rect(Rect2(x + 50 + i * 17, y + 52, 13, 6), (Cards.EVO_COLOR if hp.evo else Menu.C_AMBER) if i < hp.level else Color(1, 1, 1, 0.12))
-		if hp.evo:
-			_text(Vector2(x + 50 + Weapons.MAX_LEVEL * 17 + 4, y + 59), Loc.t("М%s") % (("+%d" % hp.evo_plus) if hp.evo_plus > 0 else ""), 14, Cards.EVO_COLOR)
-		# перезарядка
-		var full := maxf(hp.reload_time(p), 0.01)
-		var k2 := 1.0 - clampf(hp.cd / full, 0.0, 1.0)
-		ctrl.draw_rect(Rect2(x + 50, y + 66, cw - 62.0, 5), Color(1, 1, 1, 0.1))
-		ctrl.draw_rect(Rect2(x + 50, y + 66, (cw - 62.0) * k2, 5), Color(0.5, 0.95, 0.6) if k2 >= 1.0 else Color(0.85, 0.83, 0.78))
-		x += cw + 12.0
-	if not p.syn.is_empty():
-		var names := PackedStringArray()
-		for id in p.syn:
-			names.append(Cards.SYNERGIES[id]["title"] if Cards.SYNERGIES.has(id) else PlaneClasses.SKILL3[p.skill3]["syn"]["title"])
-		_text(Vector2(0, y - 10), Loc.t("Связки: ") + ", ".join(names), 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-
-
 # ---------- 3.2: курс ----------
 
 ## Строка курса в левой панели: слоты связок и прогресс к курсу
-func _course_bar(p: Player, pos: Vector2) -> void:
+func _course_bar(p: Player, pos: Vector2, width := 412.0) -> void:
 	var x := pos.x
-	var sw := 148.0
+	var sw := (width - 8.0 * (Cards.MAX_SYN - 1)) / Cards.MAX_SYN
 	for i in Cards.MAX_SYN:
 		var r := Rect2(x, pos.y, sw, 26)
 		var ids: Array = p.syn.keys()
@@ -535,15 +740,16 @@ func _course_bar(p: Player, pos: Vector2) -> void:
 	var ready := Cards.conds_ok(conds)
 	var y := pos.y + 34.0
 	var col2: Color = sd2.get("color", Menu.C_AMBER)
-	_text(Vector2(pos.x, y + 14), Loc.t("К связке «%s»") % Loc.t(sd2["title"]), 16, col2.lightened(0.2), HORIZONTAL_ALIGNMENT_LEFT, 236)
-	ctrl.draw_rect(Rect2(pos.x + 240, y + 2, 220, 14), Color(0, 0, 0, 0.5))
+	_text(Vector2(pos.x, y + 14), Loc.t("К связке «%s»") % Loc.t(sd2["title"]), 16, col2.lightened(0.2), HORIZONTAL_ALIGNMENT_LEFT, width * 0.5)
+	var bw := width * 0.45
+	ctrl.draw_rect(Rect2(pos.x + width - bw, y + 2, bw, 14), Color(0, 0, 0, 0.5))
 	var a := 1.0 if not ready else (0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.01))
-	ctrl.draw_rect(Rect2(pos.x + 240, y + 2, 220 * k, 14), Color(col2.r, col2.g, col2.b, a))
+	ctrl.draw_rect(Rect2(pos.x + width - bw, y + 2, bw * k, 14), Color(col2.r, col2.g, col2.b, a))
 	var parts := PackedStringArray()
 	for c in conds:
 		parts.append(("✓" if c[1] else "") + String(c[0]))
 	# свежий взгляд: длинный список условий переносится, а не вылезает за панель
-	_para(Vector2(pos.x, y + 36), Loc.t("Связка придёт в следующем выборе!") if ready else " · ".join(parts), 460.0, 14,
+	_para(Vector2(pos.x, y + 36), Loc.t("Связка придёт в следующем выборе!") if ready else " · ".join(parts), width, 14,
 		Color(1.0, 0.9, 0.4) if ready else Color(0.85, 0.87, 0.92))
 
 

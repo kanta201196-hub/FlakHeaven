@@ -43,7 +43,7 @@ func _handle_skills() -> void:
 		pl.roll_t = pl.roll_time()
 		pl.roll_inv = Tuning.g("roll_time") + pl.mods["roll_time"]
 		# 3.4: перезарядка не короче бочки + 1 с — без непрерывной неуязвимости при прокачке
-		pl.roll_cd = maxf(maxf(2.0, pl.roll_t + 1.0), (Tuning.g("roll_cd") + pl.mods["roll_cd"]) * float(pl.cls.get("roll_cd_k", 1.0)) * float(pl.mods["man_cd"]))
+		pl.roll_cd = pl.roll_cd_full()
 		Main.I.tele.add("roll_uses")
 		pl.roll_dir = _turn_side()
 		if pl.syn.has("mirror"):
@@ -53,13 +53,13 @@ func _handle_skills() -> void:
 		Main.I.sfx.play("roll", -10.0)
 	if Input.is_action_just_pressed("dive") and pl.dive_cd <= 0.0 and pl.dive_t <= 0.0:
 		pl.dive_t = Tuning.g("dive_time")
-		pl.dive_cd = maxf(pl.dive_t + 1.0, Tuning.g("dive_cd") * float(pl.mods["man_cd"]))
+		pl.dive_cd = pl.dive_cd_full()
 		Main.I.tele.add("dive_uses")
 		Main.I.sfx.play("dive", -12.0, 0.6)
 	if Input.is_action_just_pressed("afterburner") and pl.ab_cd <= 0.0 and Fuel.can_afterburn(): # 3.5: без топлива форсажа нет
-		pl.ab_t = Tuning.g("afterburner_time") + pl.mods["ab_time"]
+		pl.ab_t = pl.ab_time_full()
 		pl._pass_hit.clear()
-		pl.ab_cd = maxf(4.0, (Tuning.g("afterburner_cd") + pl.mods["ab_cd"]) * float(pl.mods["man_cd"]))
+		pl.ab_cd = pl.ab_cd_full()
 		if pl.patch("maneuver") >= 2:
 			pl.man_buff_t = 2.0
 		Main.I.sfx.play("afterburner", -8.0)
@@ -311,7 +311,7 @@ func salvo_waves() -> void:
 
 
 func _flare_salvo() -> void:
-	pl.roll_cd = maxf(3.0, (Tuning.g("roll_cd") + pl.mods["roll_cd"]) * float(pl.cls.get("roll_cd_k", 1.0)) * float(pl.mods["man_cd"]))
+	pl.roll_cd = pl.salvo_cd_full()
 	pl.salvo_t = SALVO_TIME
 	_salvo_next = SALVO_TIME - SALVO_IV
 	Main.I.tele.add("roll_uses")

@@ -422,6 +422,32 @@ func roll_time() -> float:
 	return (Tuning.g("roll_time") + mods["roll_time"]) * float(cls.get("roll_k", 1.0))
 
 
+## Cooldown the barrel roll gets when used now. Never shorter than the roll + 1 s, so
+## upgrades cannot chain rolls into permanent invulnerability. Also shown by the HUD.
+func roll_cd_full() -> float:
+	return maxf(maxf(2.0, roll_time() + 1.0), (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+
+
+## Cooldown of the flare salvo that replaces the roll on «Кит» (same upgrades as the roll).
+func salvo_cd_full() -> float:
+	return maxf(3.0, (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+
+
+## Cooldown of the dive when used now (at least the dive + 1 s).
+func dive_cd_full() -> float:
+	return maxf(Tuning.g("dive_time") + 1.0, Tuning.g("dive_cd") * float(mods["man_cd"]))
+
+
+## Afterburner duration with upgrades.
+func ab_time_full() -> float:
+	return Tuning.g("afterburner_time") + mods["ab_time"]
+
+
+## Afterburner cooldown when used now (at least 4 s).
+func ab_cd_full() -> float:
+	return maxf(4.0, (Tuning.g("afterburner_cd") + mods["ab_cd"]) * float(mods["man_cd"]))
+
+
 ## 3.5: на «Пробеле» у «Кита» залп ловушек вместо бочки
 func has_roll() -> bool:
 	return String(cls.get("space", "roll")) == "roll"

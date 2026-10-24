@@ -812,7 +812,7 @@ func find_floor(p: Vector2, radius := 900.0, side := 0.0, avoid := [], dry := RI
 				if d < float(o[1]):
 					sc += 50.0 + (float(o[1]) - d)
 			if flat and sc < best_s and not flat_at(q, 0.0, max_h):
-				sc += 30.0 + height(q.x, q.y) / 10.0   # склон — штраф меньше воды и соседей, больше дальности
+				sc += 30.0 + height_drawn(q.x, q.y) / 10.0   # склон — штраф меньше воды и соседей, больше дальности
 			if sc < best_s:
 				best_s = sc
 				best = q
@@ -831,16 +831,25 @@ const FLAT_E := 24.0
 
 
 ## max_h: highest ground that still counts (FLAT_H — valley floor and fans; INF — any level ground).
+## Main thread only (reads the built chunk grid through height_drawn).
 func flat_at(p: Vector2, margin := 10.0, max_h := FLAT_H) -> bool:
 	if absf(river_field(p.x, p.y)) < RIVER_GUARD + margin:
 		return false
-	var h := height(p.x, p.y)
+	var h := height_drawn(p.x, p.y)
 	if h > max_h:
 		return false
 	for d: Vector2 in [Vector2(FLAT_E, 0), Vector2(-FLAT_E, 0), Vector2(0, FLAT_E), Vector2(0, -FLAT_E)]:
-		if absf(height(p.x + d.x, p.y + d.y) - h) > FLAT_K * FLAT_E:
+		if absf(height_drawn(p.x + d.x, p.y + d.y) - h) > FLAT_K * FLAT_E:
 			return false
 	return true
+
+
+## RV-03: height as the ground is drawn (built chunk grid, the same surface vehicles stand on through
+## surface_fast); no chunk there yet — the exact height(). The grid is a lookup, height() with the
+## RV-02 gullies is ~70 µs, and site searches (AASite.place at spawn) check hundreds of points on
+## the main thread. Main thread only: _hgrid is filled by _place_chunk there.
+func height_drawn(x: float, z: float) -> float:
+	return surface_fast(x, z).y - base_y
 
 
 ## Точка дна главной долины на off px от линии реки, на том берегу, где p (тест 3.5-s7: позиция ПВО,
