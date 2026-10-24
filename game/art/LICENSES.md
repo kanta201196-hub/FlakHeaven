@@ -17,3 +17,11 @@
 
 ## Портреты экипажа (`portraits/*.png`)
 Сгенерированы владельцем проекта в ChatGPT по промптам из `/mnt/project-files/progression/portraits_chatgpt_prompts.md` (2026-10-16). Уменьшены до 256×384. Оригиналы (1024×1536; «Оса» v2 — 1448×1086, обрезка по центру 2:3) хранятся в общей папке проекта (`progression/portraits/`).
+
+## Эффекты боя (`game/art/vfx/`), JangaFX free VDB animations — CC0
+
+Объёмные симуляции JangaFX (сделаны в EmberGen), лицензия CC0 (текст в архиве набора: «You are free to use these VDBs in any project however you please, both commercially and non-commercially»). Раскадровки отрендерены нами в Blender с камерой и солнцем игры: `game/tools/vfx_bake/render_vdb.py` → `pack_atlas.py` (VFX-02, 2026-10-24).
+
+| Файлы | Набор | Автор | Страница |
+| --- | --- | --- | --- |
+| `vfx/blast_ground.png` | Ground Explosion | JangaFX | https://jangafx.com/software/embergen/download/free-vdb-animations |

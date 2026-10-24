@@ -660,6 +660,22 @@ func _ground(g: Vector3, s: float) -> void:
 func _blast(g: Vector3, s: float) -> void:
 	var p := g + Vector3(0, s * 0.05, 0)
 	_flash(p + Vector3(0, s * 0.15, 0), s * 2.0, 0.08, Color(1.0, 0.93, 0.8, 1.0))
+	# in Forward+ the fireball, smoke column and dust are one pre-rendered flipbook (VFX-02): detail that
+	# procedural puffs cannot give; flash, debris, sparks, light and the burning spot stay particles
+	if _gpu == null or not _gpu.flip("blast", g, s):
+		_blast_body(g, p, s)
+		_dust_skirt(g, s, 1.15)
+	for i in _n(clampf(s / 8.0, 4.0, 8.0)):
+		var a := randf() * TAU
+		var dv := Vector3(cos(a) * randf_range(1.8, 3.2), randf_range(1.2, 2.4), sin(a) * randf_range(1.8, 3.2)) * s
+		_debris(p, dv, s * randf_range(0.05, 0.09), Color(0.26, 0.2, 0.14), 0.2, "dust", false, 0.0)
+	_sparks(p, _n(8), 260.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.15, 0.3)
+	_emit.append({"p": g, "t": 0.0, "life": 1.6, "s": s * 0.35, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 0.4})
+	_light(g + Vector3(0, s * 1.2, 0), clampf(s / 8.0, 1.5, 5.0), clampf(s * 9.0, 220.0, 800.0), 0.22)
+
+
+## Fireball and smoke column of the bomb blast built from particles (Compatibility, or no flipbook)
+func _blast_body(g: Vector3, p: Vector3, s: float) -> void:
 	_core(g, s * 0.35, s * 0.75, 0.2, 1.0, 0.5)
 	for i in _n(4):
 		var d := _rdir(0.3)
@@ -674,14 +690,6 @@ func _blast(g: Vector3, s: float) -> void:
 			col = Color(g2, g2 * 0.95, g2 * 0.88, 0.8)
 		_smoke(p + Vector3(d2.x, 0, d2.z) * s * 0.35, Vector3(d2.x * 0.5, randf_range(0.5, 1.1), d2.z * 0.5) * s, s * 0.4, s * randf_range(1.1, 1.5),
 			randf_range(2.0, 3.0), col, 0.0, 2.0, 1.4, randf_range(0.0, 0.1))
-	_dust_skirt(g, s, 1.15)
-	for i in _n(clampf(s / 8.0, 4.0, 8.0)):
-		var a := randf() * TAU
-		var dv := Vector3(cos(a) * randf_range(1.8, 3.2), randf_range(1.2, 2.4), sin(a) * randf_range(1.8, 3.2)) * s
-		_debris(p, dv, s * randf_range(0.05, 0.09), Color(0.26, 0.2, 0.14), 0.2, "dust", false, 0.0)
-	_sparks(p, _n(8), 260.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.15, 0.3)
-	_emit.append({"p": g, "t": 0.0, "life": 1.6, "s": s * 0.35, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 0.4})
-	_light(g + Vector3(0, s * 1.2, 0), clampf(s / 8.0, 1.5, 5.0), clampf(s * 9.0, 220.0, 800.0), 0.22)
 
 
 ## S10-08 (Kanta: взрыв плазменной бомбы «как будто в воздухе» и «фиолетовое желе»): разрыв у самой земли —
