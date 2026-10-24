@@ -6611,3 +6611,155 @@ msgstr "每阶投放半径 +10%，诱离防空导弹几率 +10%"
 #: game/scripts/hud_screens.gd
 msgid "ВЕТКА МАСТЕРСТВА"
 msgstr "精通分支"
+
+#: game/scripts/menu_main.gd (UI-01)
+#, c-format
+msgid " · %d:%02d · ур. %d · %d сбито · "
+msgstr " · %d:%02d · %d级 · 击落%d · "
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Ас в догфайте больше не таранит игрока"
+msgstr "缠斗中的王牌不再撞向玩家"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ВЕРСИЯ"
+msgstr "版本"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ВЫБОР"
+msgstr "选择"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ВЫЛЕТОВ"
+msgstr "出击"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Ведомые «Осы» и «Кита» присоединяются по ходу вылета и больше не врезаются в вас на вираже"
+msgstr "“黄蜂”和“鲸”的僚机在出击中途加入，急转弯时不再撞上你"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Вертолёт «Сарыч» стреляет ракетами с дымным следом, прицел бомб — метка на земле"
+msgstr "“鵟鹰”直升机发射带烟迹的火箭弹；炸弹瞄准点显示为地面标记"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Геймпад: стик (сначала F2), курки — огонь, A — уклонение, X / B — навыки; главное меню — крестовиной и A, ангар — мышью"
+msgstr "手柄：摇杆（先按F2），扳机开火，A闪避，X / B技能；主菜单用十字键和A，机库用鼠标"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ЕСТЬ ЧТО КУПИТЬ"
+msgstr "有可购买项"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ЗАКРЫТЬ"
+msgstr "关闭"
+
+#: game/scripts/menu_main.gd (UI-01)
+#, c-format
+msgid "ЗАПЧАСТИ %d"
+msgstr "零件 %d"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Как играть"
+msgstr "玩法"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Коротко: управление, вылет и прокачка. Нашли ошибку — главное меню → «Отзыв»."
+msgstr "简要说明：操作、出击与升级。发现问题？主菜单 → “反馈”。"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "НАЗАД"
+msgstr "返回"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "На экране вылета можно сменить навык класса и прочитать, что он делает"
+msgstr "在出击界面可以更换职业技能并查看其效果"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Нашли ошибку или есть идея — напишите нам"
+msgstr "发现问题或有想法？请告诉我们"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ОТЗЫВ"
+msgstr "反馈"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ОТКРЫТЬ"
+msgstr "打开"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ОТКРЫТЬ ПАПКУ С ЛОГАМИ"
+msgstr "打开日志文件夹"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Отчёт уходит организатору теста вместе со статистикой последнего вылета; личных данных нет"
+msgstr "报告会连同上一次出击的统计发给测试组织者；不含个人数据"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Первый босс «Крепость» проходим на любом самолёте и иначе ведёт себя с подбитыми двигателями"
+msgstr "首个首领“堡垒”任何飞机都能击败，引擎受损后行为会改变"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Подсказки в вылете заново"
+msgstr "重新显示出击提示"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Подсказки включены"
+msgstr "提示已开启"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Подсказки на карточках улучшений, новая панель паузы, крупнее радиоэфир"
+msgstr "升级卡提示、新的暂停面板、更大的无线电面板"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Пока пусто — самое время на взлёт"
+msgstr "暂无记录——是时候起飞了"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Последний: "
+msgstr "最近："
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Почта hello@flakheaven.com, сервер Discord — ссылка на flakheaven.com"
+msgstr "邮箱 hello@flakheaven.com；Discord 服务器链接见 flakheaven.com"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "РЕКОРД"
+msgstr "纪录"
+
+#: game/scripts/menu_main.gd (UI-01)
+#, c-format
+msgid "СБОРКА %s · СПИСОК ИЗМЕНЕНИЙ"
+msgstr "版本 %s · 更新内容"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "СООБЩИТЬ О ПРОБЛЕМЕ · ЛОГИ"
+msgstr "报告问题 · 日志"
+
+#: game/scripts/menu_main.gd (UI-01)
+#, c-format
+msgid "Сборка %s"
+msgstr "版本 %s"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ТЕСТ"
+msgstr "测试"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "У самолётов ур. 1 и ур. 2 свои уровни, после 35-го уровня открывается мастерство оружия"
+msgstr "1级和2级飞机分别升级；35级后解锁武器专精"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "УР. ПИЛОТА"
+msgstr "飞行员等级"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Файлы логов лежат в папке игры: приложите playtest_log_*.csv и logs/godot.log к письму"
+msgstr "日志文件在游戏文件夹中：请将 playtest_log_*.csv 和 logs/godot.log 附在邮件里"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ЧТО НОВОГО"
+msgstr "更新内容"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ЭВАКУАЦИЙ"
+msgstr "撤离"
