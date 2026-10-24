@@ -34,19 +34,19 @@ func levelup(m: Main, size: Vector2) -> void:
 		_text(Vector2(lx, 158), "1–4 или клик — выбрать · R — переброс · «Закрепить» — будет в следующем выборе · «Исключить» — не выпадет до конца вылета", 16, Color(0.75, 0.8, 0.9))
 	var n := m.offers.size()
 	var rows := maxi(1, int(ceil(n / 2.0)))
-	var gap := 18.0
+	var gap := 60.0 if pair else 18.0
 	var top := 196.0
 	var cw := (lw - gap) / 2.0
-	var ch := minf(290.0, (size.y - top - 120.0 - gap * (rows - 1)) / rows)
+	var ch := minf(360.0 if pair else 290.0, (size.y - top - 120.0 - gap * (rows - 1)) / rows)
 	var mp := ctrl.get_local_mouse_position()
 	for i in n:
 		var r := Rect2(lx + (i % 2) * (cw + gap), top + (i / 2) * (ch + gap), cw, ch)
 		_card(m, i, r, r.has_point(mp))
 	if pair and n == 2:
 		var oc := Vector2(lx + cw + gap * 0.5, top + ch * 0.5)
-		ctrl.draw_circle(oc, 34.0, Color(0.06, 0.08, 0.06))
-		ctrl.draw_arc(oc, 34.0, 0.0, TAU, 40, Color(1.0, 0.82, 0.29), 3.0)
-		_text(Vector2(oc.x - 34.0, oc.y + 8.0), Loc.t("ИЛИ"), 22, Color(1.0, 0.86, 0.45), HORIZONTAL_ALIGNMENT_CENTER, 68.0)
+		ctrl.draw_circle(oc, 27.0, Color(0.06, 0.08, 0.06))
+		ctrl.draw_arc(oc, 27.0, 0.0, TAU, 40, Color(1.0, 0.82, 0.29), 3.0)
+		_text(Vector2(oc.x - 27.0, oc.y + 7.0), Loc.t("ИЛИ"), 18, Color(1.0, 0.86, 0.45), HORIZONTAL_ALIGNMENT_CENTER, 54.0)
 	var ry := top + rows * (ch + gap) + 4.0
 	if m.rerolls > 0:
 		_button(Rect2(lx, ry, 330, 46), Loc.t("Переброс (R) — осталось %d") % m.rerolls, "reroll", 18)
@@ -87,6 +87,10 @@ func _card(m: Main, i: int, r: Rect2, hover: bool) -> void:
 	var rar: Dictionary = Cards.RARITY[int(c["rarity"])]
 	var evo: bool = c["kind"] in ["evolution", "mastery"]
 	var rc: Color = Color(1.0, 0.82, 0.29) if evo else rar["color"]
+	# S10-01: «или-или» — каждая ветка своего цвета: скорострел синий, калибр оранжевый
+	var either: bool = c["kind"] == "branch" and bool(c["first"])
+	if either:
+		rc = Color(0.4, 0.75, 1.0) if c["branch"] == "rate" else Color(1.0, 0.6, 0.2)
 	var dark := rc.darkened(0.45)
 	var lift := -6.0 if hover else 0.0
 	r.position.y += lift
@@ -103,7 +107,7 @@ func _card(m: Main, i: int, r: Rect2, hover: bool) -> void:
 	_buttons.append([r, "card:%d" % i])
 	# полоса редкости
 	ctrl.draw_rect(Rect2(r.position, Vector2(r.size.x, 32)), rc)
-	_text(Vector2(r.position.x + 16, r.position.y + 23), "%d · %s" % [i + 1, Loc.t("МОДЕРНИЗАЦИЯ") if c["kind"] == "evolution" else Loc.t(rar["name"]).to_upper()], 17, Color(0.06, 0.08, 0.06))
+	_text(Vector2(r.position.x + 16, r.position.y + 23), "%d · %s" % [i + 1, Loc.t("ВЕТКА МАСТЕРСТВА") if either else Loc.t("МОДЕРНИЗАЦИЯ") if c["kind"] == "evolution" else Loc.t(rar["name"]).to_upper()], 17, Color(0.06, 0.08, 0.06))
 	_text(Vector2(r.position.x, r.position.y + 23), Loc.t(String(c["cat"])).to_upper(), 15, Color(0.06, 0.08, 0.06), HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 16.0)
 	# медаль со значком
 	var mc := r.position + Vector2(62, 92)
@@ -134,6 +138,17 @@ func _card(m: Main, i: int, r: Rect2, hover: bool) -> void:
 	var path := _card_path(m.player, c)
 	var bottom := r.end.y - 40.0
 	var desc := Loc.out(Loc.t(c["desc"]))
+	if either:
+		# главное — крупно, «вторая ветка закроется» — красной плашкой внизу
+		var main_txt := desc.get_slice("\n", 0)
+		var warn := desc.substr(main_txt.length()).strip_edges()
+		_para(Vector2(r.position.x + 18, ty + 18), main_txt, r.size.x - 36.0, 22, Color(1.0, 0.98, 0.9))
+		if warn != "":
+			var wr := Rect2(r.position.x + 14, r.end.y - 74.0, r.size.x - 28.0, 58.0)
+			ctrl.draw_rect(wr, Color(0.85, 0.2, 0.15, 0.22))
+			ctrl.draw_rect(wr, Color(1.0, 0.45, 0.35, 0.8), false, 2.0)
+			_para(Vector2(wr.position.x + 12, wr.position.y + 22), warn, wr.size.x - 24.0, 16, Color(1.0, 0.78, 0.7))
+		return
 	var fs := 15
 	while fs > 12 and ui_font().get_multiline_string_size(desc, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 36.0, fs).y > bottom - ty - 8.0:
 		fs -= 1

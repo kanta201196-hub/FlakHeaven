@@ -6607,3 +6607,7 @@ msgstr "Bright Flares"
 #, c-format
 msgid "+10% радиуса отстрела и +10% шанса увести ЗРК за ранг"
 msgstr "+10% release radius and +10% chance to decoy SAMs per rank"
+
+#: game/scripts/hud_screens.gd
+msgid "ВЕТКА МАСТЕРСТВА"
+msgstr "BRANCH MASTERY"
