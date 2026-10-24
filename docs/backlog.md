@@ -94,6 +94,7 @@
 | GD-02 | First ace (5:00): first-wave ace deals ×0.7 damage to the player, HP unchanged. One balance change per build: after S10-13/EX-10 are checked and measured on the demo profile (GD-01) | Бой: правки по 3.5-s10 | идея (Kanta 23.10, option 1) |
 | GD-03 | «Кит» bombs: damage +25 % and more ground targets on «Кит»'s path (convoys more often) — bombs give 1.5–9 % of «Кит» damage without modernization. After GD-02, one change per build | Бой: правки по 3.5-s10 | идея (Kanta 23.10, option 1) |
 | GD-04 | Late combat for a strong player: threats to dodge instead of thicker enemies (SAM salvos with a warning, bomber wedges, elite waves); the ×4 cap stays (see S7-10) | — | после демо (Kanta 23.10, option 1) |
+| GD-05 | Scout (convoy 8×8) to true model scale: length 18 → ~25 px, so its hit zone grows ~40 % and it gets easier to hit. Balance change: after GD-02, one change per build | 3D-модели по плану Kirill | идея (Kanta 24.10) |
 
 **Слито и ждёт проверки Kanta в сборке 3.5-s8** (подробности в архиве, раздел «После теста 3.5-s4: бой»): S4-01, S4-02, S4-03, S4-05…S4-08, S4-10…S4-12 — нырок под самолётами, ловушки асов, цифры урона, ведомые и цель звена, перезарядка ракет, «Крепость», выбор карточки; P5-01…P5-03, P5-05…P5-12, P5-33 — тормоза, тени, бомбы «Кита», ощущение классов, нырок, объёмные взрывы. Статус «на проверке (PR)» в старых таблицах означает, что PR слит до 18.10 (сборка 3.5-s8 собрана из `main` после PR #236); как слияние проверено в игре — не сверялось, это догадка.
 
