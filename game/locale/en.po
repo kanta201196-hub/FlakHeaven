@@ -3336,6 +3336,10 @@ msgstr "Classic"
 msgid "Песок"
 msgstr "Sand"
 
+#: game/scripts/livery.gd
+msgid "Серый"
+msgstr "Grey"
+
 #: game/scripts/livery.gd:37
 msgid "Чёрный глянец"
 msgstr "Black Gloss"
@@ -6591,10 +6595,6 @@ msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
 
 #: game/scripts/cards.gd
-msgid "Быстрый отстрел"
-msgstr "Quick Release"
-
-#: game/scripts/cards.gd
 msgid "Яркие ловушки"
 msgstr "Bright Flares"
 
@@ -6770,3 +6770,155 @@ msgstr "Helicopter rockets"
 #: PG-01
 msgid "✓ выбраны"
 msgstr "✓ selected"
+
+#: game/scripts/menu_main.gd (UI-01)
+#, c-format
+msgid " · %d:%02d · ур. %d · %d сбито · "
+msgstr " · %d:%02d · lv. %d · %d kills · "
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Ас в догфайте больше не таранит игрока"
+msgstr "Aces in a dogfight no longer ram the player"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ВЕРСИЯ"
+msgstr "VERSION"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ВЫБОР"
+msgstr "SELECT"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ВЫЛЕТОВ"
+msgstr "SORTIES"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Ведомые «Осы» и «Кита» присоединяются по ходу вылета и больше не врезаются в вас на вираже"
+msgstr "Wingmen of the \"Wasp\" and \"Whale\" join during the sortie and no longer crash into you in tight turns"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Вертолёт «Сарыч» стреляет ракетами с дымным следом, прицел бомб — метка на земле"
+msgstr "The \"Buzzard\" helicopter fires rockets with smoke trails; the bomb sight is a mark on the ground"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Геймпад: стик (сначала F2), курки — огонь, A — уклонение, X / B — навыки; главное меню — крестовиной и A, ангар — мышью"
+msgstr "Gamepad: stick (press F2 first), triggers fire, A dodges, X / B skills; main menu with the d-pad and A, hangar with the mouse"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ЕСТЬ ЧТО КУПИТЬ"
+msgstr "UPGRADES AVAILABLE"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ЗАКРЫТЬ"
+msgstr "CLOSE"
+
+#: game/scripts/menu_main.gd (UI-01)
+#, c-format
+msgid "ЗАПЧАСТИ %d"
+msgstr "PARTS %d"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Как играть"
+msgstr "How to play"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Коротко: управление, вылет и прокачка. Нашли ошибку — главное меню → «Отзыв»."
+msgstr "In short: controls, sorties and upgrades. Found a bug? Main menu → \"Feedback\"."
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "НАЗАД"
+msgstr "BACK"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "На экране вылета можно сменить навык класса и прочитать, что он делает"
+msgstr "On the sortie screen you can switch the class skill and read what it does"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Нашли ошибку или есть идея — напишите нам"
+msgstr "Found a bug or have an idea? Tell us"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ОТЗЫВ"
+msgstr "FEEDBACK"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ОТКРЫТЬ"
+msgstr "OPEN"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ОТКРЫТЬ ПАПКУ С ЛОГАМИ"
+msgstr "OPEN LOG FOLDER"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Отчёт уходит организатору теста вместе со статистикой последнего вылета; личных данных нет"
+msgstr "The report goes to the test organizer with stats of your last sortie; no personal data"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Первый босс «Крепость» проходим на любом самолёте и иначе ведёт себя с подбитыми двигателями"
+msgstr "The first boss, the \"Fortress\", can be beaten with any plane and behaves differently once its engines are hit"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Подсказки в вылете заново"
+msgstr "Show sortie hints again"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Подсказки включены"
+msgstr "Hints are on"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Подсказки на карточках улучшений, новая панель паузы, крупнее радиоэфир"
+msgstr "Hints on upgrade cards, a new pause panel, a larger radio panel"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Пока пусто — самое время на взлёт"
+msgstr "Nothing yet — time to take off"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Последний: "
+msgstr "Last: "
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Почта hello@flakheaven.com, сервер Discord — ссылка на flakheaven.com"
+msgstr "Mail hello@flakheaven.com; the Discord server link is on flakheaven.com"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "РЕКОРД"
+msgstr "RECORD"
+
+#: game/scripts/menu_main.gd (UI-01)
+#, c-format
+msgid "СБОРКА %s · СПИСОК ИЗМЕНЕНИЙ"
+msgstr "BUILD %s · CHANGELOG"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "СООБЩИТЬ О ПРОБЛЕМЕ · ЛОГИ"
+msgstr "REPORT A PROBLEM · LOGS"
+
+#: game/scripts/menu_main.gd (UI-01)
+#, c-format
+msgid "Сборка %s"
+msgstr "Build %s"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ТЕСТ"
+msgstr "TEST"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "У самолётов ур. 1 и ур. 2 свои уровни, после 35-го уровня открывается мастерство оружия"
+msgstr "Tier 1 and tier 2 planes level up separately; weapon mastery unlocks after level 35"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "УР. ПИЛОТА"
+msgstr "PILOT LV."
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "Файлы логов лежат в папке игры: приложите playtest_log_*.csv и logs/godot.log к письму"
+msgstr "Log files are in the game folder: attach playtest_log_*.csv and logs/godot.log to your email"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ЧТО НОВОГО"
+msgstr "WHAT'S NEW"
+
+#: game/scripts/menu_main.gd (UI-01)
+msgid "ЭВАКУАЦИЙ"
+msgstr "EXTRACTIONS"

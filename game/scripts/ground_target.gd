@@ -43,6 +43,10 @@ var _fire_dir := 0.0         # куда смотрит ствол при пер�
 var _def_flash := 0.0
 var leaderless := false      # бункер уничтожен
 var drive: GroundDrive = null   # правка 3.5-s4: у ЗСУ и ЗРК
+## SAM launcher (Kanta 24.10): missiles fired so far — picks the next cell of the launch box
+var launches := 0
+## Combat-plane point of the next cell mouth, set by Render3D from the 3D launcher; INF — no 3D model
+var launch_at := Vector2.INF
 var _drive_t := 0.0
 
 const DRIVE_SPEED := 70.0
@@ -77,7 +81,7 @@ func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 			parts = 3
 		"bunker":
 			hp = GroundTarget.HP_FORT # главная цель позиции
-			radius = 32.0
+			radius = 43.0   # hitbox follows the +35% bunker model (Kanta 24.10)
 			xp = 8
 			parts = 10
 	hp = floor_hp(hp, hp_mult, dps)
@@ -183,7 +187,11 @@ func behave(delta: float) -> void:
 			if _lock > 0.0:
 				_lock -= delta
 				if _lock <= 0.0:
-					Main.I.projectiles.spawn_missile(global_position, to.normalized(), "sam", kind())
+					# the missile leaves its own cell of the raised box when the 3D model is on (Kanta 24.10)
+					# (a stale point from a model that stopped updating is ignored by the distance check)
+					var from := launch_at if launch_at.is_finite() and launch_at.distance_to(global_position) < 60.0 else global_position
+					Main.I.projectiles.spawn_missile(from, to.normalized(), "sam", kind())
+					launches += 1
 					Main.I.sfx.play("sam_launch", -6.0, 0.9)
 			else:
 				_cd -= delta
@@ -192,6 +200,13 @@ func behave(delta: float) -> void:
 					_lock = Tuning.g("msl_sam_lock")
 					_cd = randf_range(5.0, 6.5)
 					Main.I.sfx.play("sam_lock", -6.0, 1.2)
+
+
+## SAM launcher pose for the 3D model (Kanta 24.10): the box rides folded and is raised only while the
+## launcher stands at a live site or is locking on — the same moments it may fire, so the animation never
+## changes when a missile leaves.
+func launcher_up() -> bool:
+	return variant == "sam" and (_lock > 0.0 or (_goal == Vector2.INF and site != null and site.active and not leaderless))
 
 
 ## Переезд: раз в несколько секунд — новая точка между бункером и самолётом (полукольцо 140–240 пикс. × AASite.SPREAD)
@@ -206,8 +221,10 @@ func _drive(delta: float, p: Player) -> void:
 		var slot := b + Vector2.from_angle(toward + randf_range(-1.1, 1.1)) * randf_range(140.0, 240.0) * AASite.SPREAD
 		var tr := _terrain()
 		if tr != null:   # тест 3.5-s4 (п. 20): новая точка — на своём берегу, не в реке, не на соседе; 3.5-s7: на равнине
-			slot = tr.find_floor(slot, 220.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours(), AASite.RIVER_GUARD_CAR, true)
-			if tr.wet(slot) or slot.distance_to(b) > 900.0:   # S10-02: сухой точки рядом нет — стоит на месте, в воду не едет
+			slot = tr.find_floor(slot, 220.0, signf(tr.river_field(anchor.x, anchor.y)), _neighbours(), AASite.CAR_RIVER_MIN, true, INF, true)
+			# S10-02: сухой точки рядом нет — стоит на месте, в воду не едет; Kanta 24.10: и к реке и на дорогу колонны
+			# не едет (настоящее расстояние до реки, не поле)
+			if tr.wet(slot) or slot.distance_to(b) > 900.0 or not tr.river_clear(slot, AASite.CAR_RIVER_REAL):
 				_move_cd = randf_range(1.5, 3.0)
 				return
 		_goal = slot
@@ -350,7 +367,7 @@ func _draw() -> void:
 	# Хитбоксы (radius) не менялись — попадание чуть щедрее картинки, как у конвоя.
 	# Тест 3.5-s8 (Kanta: «бункер — улучшить качество и размер»): новый бункер кодом, 44 (~13 м с обваловкой) —
 	# заметно крупнее машин ПВО, читается как командный пункт позиции
-	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 44.0]}
+	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 59.0]}   # Kanta 24.10: bunker +35% (44 -> 59)
 	var ba: float = _body_angle
 	if mobile() and not leaderless and _goal == Vector2.INF and site != null and site.active:
 		ba = heading # стоит — разворачивается на цель

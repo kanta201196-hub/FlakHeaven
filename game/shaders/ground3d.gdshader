@@ -106,12 +106,22 @@ uniform float bump_k = 6.0;         // псевдорельеф по яркос�
 uniform float normal_k = 1.0;       // сила карт нормалей
 uniform float height_blend = 0.55;  // ширина перехода по высоте (меньше — резче)
 uniform float saturation = 0.8;     // насыщенность земли (фото CC0 ярче палитры стайл-гайда)
+// --- RV-01 landform regions (thread «Разнообразить рельеф Нагорья»; CUSTOM1 is reserved for the Forward+ work) ---
+// CUSTOM0 = elevation class (0 hills … 1 high range), mesa share, hill share, 1 if the mesh has regions.
+uniform vec3 hills_tint : source_color = vec3(0.78, 0.92, 0.52);  // steppe grass on rolling hills (EVERSPACE-bright)
+uniform float hills_k = 0.65;
+uniform vec3 mesa_top_tint : source_color = vec3(1.14, 0.9, 0.68); // warm caprock on flat mesa tops
+uniform float mesa_k = 0.7;
+uniform vec3 mesa_cliff_tint : source_color = vec3(1.25, 0.82, 0.62); // red-ochre cliff bands
+uniform float mesa_cliff_k = 0.75;
+// --- end RV-01 ---
 
 varying vec2 world;
 varying vec3 world3;
 varying vec3 wnorm;
 varying vec3 smask; // тест 3.5-s4 (п. 16–17): x — утоптанная земля поселения, y — огороды и сады, z — гарь и воронки (terrain3d.gd)
 varying vec2 rmask; // M-36: x — скальный выход, y — осыпь у подножия (terrain3d.gd _relief)
+varying vec4 prov;  // RV-01: landform weights (CUSTOM0, see uniforms above)
 varying vec3 rel;   // x — открытость (впадина < 0.5 < гребень), y — высота 0…1, z — расстояние до реки, px
 
 void vertex() {
@@ -121,6 +131,7 @@ void vertex() {
 	rel = relief ? vec3(COLOR.rg, UV2.x) : vec3(0.5, 0.0, 9999.0);
 	smask = relief ? vec3(COLOR.ba, UV2.y) : vec3(0.0);
 	rmask = relief ? UV : vec2(0.0);
+	prov = relief ? CUSTOM0 : vec4(0.0);   // RV-01
 }
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + seed) * 43758.5453); }
@@ -211,6 +222,12 @@ void fragment() {
 		zc = mix(zc, mix(vec3(lum), c, 0.6) * 1.85 * zone_slope, smoothstep(0.1, 0.22, zh));
 		zc = mix(zc, vec3(lum) * 1.9 * zone_crest, smoothstep(0.55, 0.85, zh));
 		c = zc;
+		// RV-01: region tone — grass on gentle hills, warm caprock on flat mesa tops
+		float flat_k = 1.0 - smoothstep(0.08, 0.25, slope);
+		float on_land = smoothstep(0.03, 0.1, zh);
+		c = mix(c, c * hills_tint, prov.z * prov.w * hills_k * flat_k * on_land);
+		float ledge_k = 1.0 - smoothstep(0.2, 0.45, slope);   // mesa ledges are rolling now (Kanta 24.10), not dead flat
+		c = mix(c, c * mesa_top_tint, prov.y * prov.w * mesa_k * ledge_k * smoothstep(0.1, 0.2, zh));
 		float rk = smoothstep(0.2, 0.5, slope + (hgt - 0.5) * 0.15);   // 3.4-t1 (п. 18): переход к скале шире
 		// M-36: скальный выход по маске рельефа — порода и на полках уступов (там с каменной крошкой),
 		// край пятна рваный по высоте текстуры и шуму
@@ -232,7 +249,11 @@ void fragment() {
 				float by = pow(clamp(wnorm.y, 0.0, 1.0), 4.0);
 				float bs = pow(1.0 - clamp(wnorm.y, 0.0, 1.0), 2.0) * 2.0;
 				vec3 ry = texture(t_rock, world3.xz / rock_world).rgb;
-				vec3 rs = texture(t_rock, vec2(dot(world3.xz, vec2(-hn.y, hn.x)), -world3.y) / rock_world).rgb;
+				// Kanta 24.10 («что за полоски»): v ran along world height, so on a slope that is not a wall the
+				// texture stretched down the slope into streaks; now u/v lie in the slope plane (no stretch)
+				vec3 ct = vec3(-hn.y, 0.0, hn.x);
+				vec3 dt = cross(wnorm, ct);
+				vec3 rs = texture(t_rock, vec2(dot(world3, ct), dot(world3, dt)) / rock_world).rgb;
 				rc = (ry * by + rs * bs) / (by + bs);
 			}
 			// аудит Р-5: тёмные трещины фото скалы читались мазками копоти — контраст рисунка мягче
@@ -242,11 +263,14 @@ void fragment() {
 			float sy = world3.y / strata_px + dot(world3.xz, vec2(0.0021, 0.0013)) + vnoise(world / 240.0) * 1.6;
 			float band = vnoise(vec2(floor(sy), 3.7) * 0.73);
 			vec3 tint = mix(rock_brown, rock_grey, band) * 1.8;
-			float lip = 1.0 - 0.18 * smoothstep(0.75, 1.0, fract(sy)) * smoothstep(0.15, 0.45, slope);
-			rc = mix(rc, rl * tint, 0.7) * lip;
+			// Kanta 24.10: on slopes under ~50° the layers and their dark lips read as map contour lines,
+			// so they show on steep walls only (bands from ~35°, lips from ~50°)
+			float lip = 1.0 - 0.18 * smoothstep(0.75, 1.0, fract(sy)) * smoothstep(0.35, 0.6, slope);
+			rc = mix(rc, rl * tint, 0.7 * smoothstep(0.2, 0.45, slope)) * lip;
 			// на полках уступов — каменная крошка (текстура щебня уже выбрана выше)
 			float shelf = rg * (1.0 - smoothstep(0.12, 0.3, slope));
 			rc = mix(rc, mix(s2.a.rgb, vec3(dot(s2.a.rgb, vec3(0.333))), 0.5) * 1.05, shelf * 0.45);
+			rc = mix(rc, rc * mesa_cliff_tint, prov.y * prov.w * mesa_cliff_k);   // RV-01
 			c = mix(c, rc, rk);
 			nxy = mix(nxy, (texture(n_rock, world3.xz / rock_world).rg * 2.0 - 1.0) * max(1.0 - slope, 0.4), rk);
 		}
@@ -276,7 +300,8 @@ void fragment() {
 		float gully = clamp((0.5 - rel.x) * 3.0, -1.0, 1.0);
 		float sfrom = snow_from - snow_north * clamp(shade_face * 0.7 + gully * 0.5, -0.6, 1.0);
 		float snow = smoothstep(sfrom, sfrom + 0.05, rel.y + (hgt - 0.5) * 0.05 + patch)
-			* (1.0 - smoothstep(0.3, 0.55, slope)) * (1.0 - 0.8 * rg);
+			* (1.0 - smoothstep(0.3, 0.55, slope)) * (1.0 - 0.8 * rg)
+			* mix(1.0, smoothstep(0.55, 0.8, prov.x) * (1.0 - prov.y), prov.w);   // RV-01: snow only in high ranges
 		vec3 snow_c = vec3(0.64, 0.67, 0.72) * (0.93 + 0.1 * vnoise(world / 160.0 - 4.0));
 		c = mix(c, snow_c, snow);
 		nxy *= 1.0 - snow;

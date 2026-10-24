@@ -110,6 +110,40 @@ func _shot(name: String) -> void:
 
 
 var _ui_phase := 0
+var _menu_phase := 0
+
+
+## Main menu frames (UI-01): default focus, focus moved down by a real ui_down press,
+## «Что нового» and «Отзыв» overlays, codex «Как играть»; then quits.
+## godot --path game --rendering-driver opengl3 -- --autotest --shots --menutest
+func _menu_test() -> void:
+	if _bot_wait > 0.0 or not m.state in ["menu", "codex"] or m._state_t < 4.0:
+		return
+	_bot_wait = 0.8
+	var ms := m.menu.main_screen
+	match _menu_phase:
+		0:
+			_shot("menu_v2")
+			var ev := InputEventAction.new()
+			ev.action = "ui_down"
+			ev.pressed = true
+			Input.parse_input_event(ev)
+		1:
+			_shot("menu_v2_hangar")
+			ms.overlay = &"whats_new"
+		2:
+			_shot("menu_v2_whats_new")
+			ms.overlay = &"feedback"
+		3:
+			_shot("menu_v2_feedback")
+			ms.overlay = &""
+			m.ui_click("menu_howto")
+		4:
+			_shot("codex_howto")
+			print("MENUTEST: ok")
+			m.get_tree().quit()
+	_menu_phase += 1
+
 
 ## Правки 15–16: длинный вылет без боя — 120 карточек в журнале, пауза (Tab) и итоги.
 ## godot --path game --rendering-driver opengl3 -- --autotest --shots --uitest
@@ -352,11 +386,11 @@ func _aa_flat_test() -> void:
 			# S10-02: переезды по позиции — точки, которые выбирает GroundTarget._drive
 			for n in 4:
 				var slot := site.anchor + Vector2.from_angle(randf() * TAU) * randf_range(140.0, 240.0) * AASite.SPREAD
-				slot = tr.find_floor(slot, 220.0, signf(tr.river_field(g.position.x, g.position.y)), [], AASite.RIVER_GUARD_CAR, true)
+				slot = tr.find_floor(slot, 220.0, signf(tr.river_field(g.position.x, g.position.y)), [], AASite.CAR_RIVER_MIN, true, INF, true)
 				moves += 1
 				if tr.wet(slot):
 					wet_moves += 1
-			if not tr.flat_at(g.position, 0.0):
+			if not tr.flat_at(g.position, 0.0, INF):
 				bad += 1
 				if m._args.has("--verbose-bot"):
 					print("AAFLAT bad ", g.variant, " h=%.0f rf=%.0f v=%.0f h0=%.0f" % [h, tr.river_field(g.position.x, g.position.y), tr.valley(g.position.x, g.position.y), tr.height(site.anchor.x, site.anchor.y)])
@@ -377,10 +411,7 @@ func _debug_screenshots(delta: float) -> void:
 	if m._args.has("--hudtest") and m.state == "playing":
 		_hud_test()
 		return
-	if m.state == "menu" and m._state_t > 1.0 and m.menu.howto:
-		_shot("howto")
-		m.menu.close_howto()
-	elif m.state == "menu" and m._state_t > 1.0:
+	if m.state == "menu" and m._state_t > 1.0:
 		_shot("menu")
 	if m.state == "settings":
 		_shot("settings")
@@ -511,6 +542,9 @@ var _loadout_opened := false
 func _run_autotest(delta: float) -> void:
 	_autotest_t += delta
 	_bot_wait -= delta / maxf(Engine.time_scale, 0.01)
+	if m._args.has("--menutest"):
+		_menu_test()
+		return
 	if m._args.has("--shots") and m.state != "playing" and m._state_t < 1.0:
 		return # в режиме скриншотов даём экрану постоять
 	match m.state:

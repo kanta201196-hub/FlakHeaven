@@ -1,20 +1,18 @@
 class_name Menu
 extends CanvasLayer
-## Главное меню и настройки (2.8). Свой стиль Flak Heaven — «приборная панель»:
-## графит, янтарная подсветка шкал, красные метки как на вражеских машинах, трафаретные заголовки.
-## За меню — живой биом с медленно плывущей камерой и звено самолётов на переднем плане.
+## Canvas layer for the main menu and the settings screen. The main screen itself is
+## `MenuMain` (UI-01); settings are still drawn here until plan step 2. Behind the menu
+## runs the live biome with a slow camera and the title flight of three planes.
 
-const C_BG := Color(0.07, 0.08, 0.07, 0.92)
+## Colour names kept for the settings screen and other HUD files; values come from UiStyle.
 const C_PANEL := Color(0.11, 0.12, 0.105, 0.94)
-const C_LINE := Color(0.85, 0.82, 0.72, 0.22)
-const C_TEXT := Color(0.92, 0.9, 0.84)
-const C_DIM := Color(0.62, 0.62, 0.56)
-const C_AMBER := Color(0.95, 0.66, 0.2)
-const C_AMBER_D := Color(0.55, 0.36, 0.1)
-const C_RED := Color(0.85, 0.24, 0.18)
+const C_LINE := UiStyle.LINE
+const C_TEXT := UiStyle.TEXT_WARM
+const C_DIM := UiStyle.TEXT_DIM
+const C_AMBER := UiStyle.ACCENT
+const C_AMBER_D := UiStyle.ACCENT_DIM
+const C_RED := UiStyle.BRAND_RED
 const TABS := ["ИГРА", "ГРАФИКА", "ЗВУК", "УПРАВЛЕНИЕ"]
-const HOWTO_FLAG := "user://howto_seen"
-var howto := false
 
 static var _bold: Font
 
@@ -28,6 +26,8 @@ var _drag := ""
 var _t := 0.0
 var _saved_t := 0.0
 var records := {}
+var main_screen: MenuMain
+var _was_menu := false
 
 
 static func bold() -> Font:
@@ -46,8 +46,8 @@ func _ready() -> void:
 	ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ctrl)
 	ctrl.draw.connect(_draw_menu)
+	main_screen = MenuMain.new(self)
 	load_records()
-	howto = false # U-03: при первом запуске вместо экрана «Как играть» — подсказки по ходу первого вылета
 
 
 func active() -> bool:
@@ -59,6 +59,12 @@ func _process(delta: float) -> void:
 	_saved_t = maxf(0.0, _saved_t - delta)
 	_wipe_t = maxf(0.0, _wipe_t - delta)
 	ctrl.visible = active()
+	var on_main := ctrl.visible and Main.I.state == "menu"
+	if on_main and not _was_menu:
+		main_screen.reset()
+	_was_menu = on_main
+	if on_main:
+		main_screen.process(delta)
 	if ctrl.visible:
 		ctrl.queue_redraw()
 
@@ -76,19 +82,15 @@ func _input(event: InputEvent) -> void:
 			capturing = ""
 			get_viewport().set_input_as_handled()
 		return
-	if howto and m.state == "menu" and event is InputEventKey and event.pressed and not event.echo \
-			and event.physical_keycode in [KEY_ESCAPE, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
-		get_viewport().set_input_as_handled()
-		close_howto()
+	if m.state == "menu":
+		if m.report != null and m.report.visible:
+			return   # the tester report form takes the keys
+		if main_screen.handle_input(event):
+			get_viewport().set_input_as_handled()
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_ESCAPE:
-			get_viewport().set_input_as_handled()
-			if m.state == "settings":
-				close_settings()
-		elif event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE] and m.state == "menu":
-			get_viewport().set_input_as_handled()
-			m.ui_click("menu_play")
+	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+		get_viewport().set_input_as_handled()
+		close_settings()
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var mp := ctrl.get_local_mouse_position()
 		if event.pressed:
@@ -147,11 +149,6 @@ func _click(action: String, mp: Vector2, r: Rect2) -> void:
 				_wipe_t = 0.0
 			else:
 				_wipe_t = 3.0
-		"howto_close":
-			close_howto()
-		"hints_reset":
-			Hints.reset()
-			_saved_t = 2.0
 		"reset_all":
 			Tuning.reset()
 			Tuning.save_params()
@@ -277,42 +274,6 @@ func _panel(r: Rect2, accent := C_LINE, fill := C_PANEL, cut := 18.0) -> void:
 		ctrl.draw_circle(c, 2.0, Color(accent.r, accent.g, accent.b, 0.6))
 
 
-## Кнопка главного меню: янтарная при наведении, слева — полоса-индикатор
-func _menu_button(r: Rect2, label: String, action: String, primary := false, enabled := true, note := "") -> void:
-	var hover := enabled and r.has_point(ctrl.get_local_mouse_position())
-	var cut := 22.0
-	var pts := PackedVector2Array([r.position, Vector2(r.end.x - cut, r.position.y), Vector2(r.end.x, r.position.y + cut), r.end, Vector2(r.position.x, r.end.y)])
-	if primary or hover:
-		ctrl.draw_colored_polygon(pts, C_AMBER if (hover or primary) else C_PANEL)
-		if primary and not hover:
-			ctrl.draw_colored_polygon(pts, Color(C_AMBER.r, C_AMBER.g, C_AMBER.b, 0.85))
-	else:
-		ctrl.draw_colored_polygon(pts, Color(0.1, 0.11, 0.1, 0.75))
-	ctrl.draw_rect(Rect2(r.position.x, r.position.y, 6, r.size.y), C_RED if enabled else C_DIM)
-	var tc := Color(0.08, 0.07, 0.05) if (hover or primary) else (C_TEXT if enabled else C_DIM)
-	var fs := 34 if r.size.x > 400.0 else 26
-	_txt(Vector2(r.position.x + 34, r.position.y + r.size.y * 0.66), label, fs, tc, bold())
-	if fs == 34:
-		_txt(Vector2(r.end.x - 50, r.position.y + r.size.y * 0.66), "›", fs, tc, bold())
-	if note != "":
-		_txt(Vector2(r.position.x + 34, r.end.y + 20), note, 15, C_DIM)
-	if enabled:
-		_buttons.append([r, action])
-
-
-## Линейка-шкала (как на приборе) — декор
-func _ruler(x: float, y: float, w: float) -> void:
-	ctrl.draw_line(Vector2(x, y), Vector2(x + w, y), C_LINE, 1.0)
-	var i := 0
-	var step := 12.0
-	var xx := x
-	while xx < x + w:
-		var h := 10.0 if i % 5 == 0 else 5.0
-		ctrl.draw_line(Vector2(xx, y), Vector2(xx, y - h), C_LINE, 1.0)
-		xx += step
-		i += 1
-
-
 # ---------- Отрисовка ----------
 
 func _draw_menu() -> void:
@@ -324,106 +285,28 @@ func _draw_menu() -> void:
 	var size := ctrl.size
 	# затемнение слева — читаемость кнопок; справа видно биом и звено
 	var grad_w := size.x * 0.55
-	var steps := int(grad_w / 4.0)
-	for i in steps:
-		var a := 0.75 * (1.0 - float(i) / steps)
-		ctrl.draw_rect(Rect2(grad_w * i / steps, 0, grad_w / steps + 1.0, size.y), Color(0.04, 0.045, 0.04, a))
-	ctrl.draw_rect(Rect2(0, 0, size.x, 96), Color(0.04, 0.045, 0.04, 0.7))
-	_txt(Vector2(64, 58), "◇ FLAK HEAVEN  //  " + ("ГЛАВНЫЙ ТЕРМИНАЛ" if m.state == "menu" else "НАСТРОЙКИ"), 22, C_TEXT, bold())
-	# С-5: номер версии — из BUILD (main.gd), а не отдельной устаревшей строкой
-	_txt(Vector2(size.x - 64 - 800, 58), Loc.t("ВЕРСИЯ: ") + Demo.tag(Main.BUILD), 20, C_DIM, bold(), HORIZONTAL_ALIGNMENT_RIGHT, 800)
+	var shade := Color(0.04, 0.045, 0.04, 0.75)
+	ctrl.draw_polygon(PackedVector2Array([Vector2.ZERO, Vector2(grad_w, 0), Vector2(grad_w, size.y), Vector2(0, size.y)]),
+		PackedColorArray([shade, Color(shade, 0.0), Color(shade, 0.0), shade]))
+	ctrl.draw_rect(Rect2(0, 0, size.x, 96), Color(0.04, 0.045, 0.04, 0.55))
+	var hf := UiStyle.head_font(700, 5)
+	var crumb := "◇ FLAK HEAVEN "
+	UiStyle.text(ctrl, hf, Vector2(64, 58), crumb, UiStyle.FS_LABEL + 2, UiStyle.TEXT_WARM)
+	var cx := 64.0 + UiStyle.text_w(hf, crumb, UiStyle.FS_LABEL + 2)
+	UiStyle.text(ctrl, hf, Vector2(cx, 58), "// ", UiStyle.FS_LABEL + 2, UiStyle.ACCENT)
+	cx += UiStyle.text_w(hf, "// ", UiStyle.FS_LABEL + 2)
+	UiStyle.text(ctrl, hf, Vector2(cx, 58), "ГЛАВНЫЙ ТЕРМИНАЛ" if m.state == "menu" else "НАСТРОЙКИ", UiStyle.FS_LABEL + 2, UiStyle.TEXT_WARM)
+	# build number comes only from Main.BUILD
+	UiStyle.text(ctrl, UiStyle.head_font(600, 4), Vector2(size.x - 64 - 600, 46), "ВЕРСИЯ", UiStyle.FS_CAPTION, UiStyle.TEXT_DIM,
+		HORIZONTAL_ALIGNMENT_RIGHT, 600)
+	UiStyle.text(ctrl, UiStyle.head_font(800, 2), Vector2(size.x - 64 - 600, 72), Demo.tag(Main.BUILD), UiStyle.FS_LABEL + 2, UiStyle.TEXT_WARM,
+		HORIZONTAL_ALIGNMENT_RIGHT, 600)
 	ctrl.draw_line(Vector2(64, 96), Vector2(size.x - 64, 96), C_LINE, 1.0)
 	ctrl.draw_line(Vector2(64, size.y - 70), Vector2(size.x - 64, size.y - 70), C_LINE, 1.0)
 	if m.state == "menu":
-		_main(m, size)
-		if howto:
-			_howto(size)
+		main_screen.draw(size)
 	else:
 		_settings(size)
-
-
-func _main(m: Main, size: Vector2) -> void:
-	# звено на заставке — 3D-модели в сцене (TitleFlight) на любом качестве графики; старые картинки
-	# art/planes (другая форма и окраска) больше не рисуются (С-5, аудит 3.5-s6)
-	# Заголовок
-	_txt(Vector2(100, 290), "FLAK", 150, C_TEXT, bold())
-	_txt(Vector2(100, 430), "HEAVEN", 150, C_AMBER, bold())
-	for i in 14:
-		var x := 106.0 + i * 26.0
-		ctrl.draw_colored_polygon(PackedVector2Array([Vector2(x, 462), Vector2(x + 14, 462), Vector2(x + 6, 476), Vector2(x - 8, 476)]), C_RED)
-	_txt(Vector2(106, 512), "Авиа-roguelike: 15 минут вылета, звено, подвесы и асы", 20, C_DIM)
-	var x0 := 96.0
-	var y := 600.0
-	_menu_button(Rect2(x0, y, 560, 78), "ВЫЛЕТ", "menu_play", true)
-	_menu_button(Rect2(x0, y + 96, 560, 62), "СПРАВОЧНИК", "menu_codex")
-	_menu_button(Rect2(x0, y + 172, 560, 62), Loc.t("АНГАР") + ("  !" if Profile.any_purchase() else ""), "menu_hangar", false, true,
-		Loc.t("Запчасти: %d · экипажи: Оса %d · Грач %d · Кит %d") % [Profile.parts(), Profile.crew_lvl("fighter"), Profile.crew_lvl("attacker"), Profile.crew_lvl("bomber")])
-	_menu_button(Rect2(x0, y + 256, 272, 62), "НАСТРОЙКИ", "menu_settings")
-	_menu_button(Rect2(x0 + 288, y + 256, 272, 62), "КАК ИГРАТЬ", "menu_howto")
-	_menu_button(Rect2(x0, y + 336, 272, 62), "ЛОГИ", "menu_logs")
-	_menu_button(Rect2(x0 + 288, y + 336, 272, 62), "ВЫХОД", "menu_quit")
-	_records_panel(Rect2(size.x - 64 - 520, 150, 520, 520))
-	_biome_pick(Rect2(size.x - 64 - 520, 700, 520, 150))
-	if Demo.on:   # M-07: демо — кнопка списка желаемого под выбором района
-		_menu_button(Rect2(size.x - 64 - 520, 868, 520, 70), "В СПИСОК ЖЕЛАЕМОГО", "wishlist", true, true, "Полная игра: Архипелаг, самолёты ур. 2, ещё 2 операции")
-	_txt(Vector2(64, size.y - 32), "ENTER — вылет    ESC — назад    F2 — схема управления", 18, C_DIM)
-
-
-## Тред «Второй биом»: район вылета на заставке. Выбор переключает операцию кампании на первую открытую
-## в биоме и пересобирает мир за меню — видно, куда летим (вода и острова «Архипелага» или ущелья Нагорья)
-const BIOME_CARDS := [["highland", "НАГОРЬЕ", "ущелья, кишлаки, колонны"], ["archipelago", "АРХИПЕЛАГ", "пролив, острова, флот"]]
-
-
-func _biome_pick(r: Rect2) -> void:
-	_txt(Vector2(r.position.x, r.position.y + 18), "РАЙОН ВЫЛЕТА", 18, C_DIM, bold())
-	var cur := Campaign.biome_of(Campaign.index())
-	var w := (r.size.x - 16.0) * 0.5
-	for i in BIOME_CARDS.size():
-		var c: Array = BIOME_CARDS[i]
-		var b := Rect2(r.position.x + i * (w + 16.0), r.position.y + 34, w, r.size.y - 34)
-		var on: bool = c[0] == cur
-		var hover := b.has_point(ctrl.get_local_mouse_position())
-		_panel(b, C_AMBER if on else (C_TEXT if hover else C_LINE), Color(0.1, 0.11, 0.1, 0.85 if on else 0.7))
-		_txt(Vector2(b.position.x + 22, b.position.y + 46), c[1], 26, C_AMBER if on else C_TEXT, bold())
-		_txt(Vector2(b.position.x + 22, b.position.y + 76), c[2], 16, C_DIM)
-		var ops := Campaign.ops_of(c[0])
-		var open := ops.filter(func(k: int) -> bool: return Campaign.is_open(k)).size()
-		if not Demo.biome_ok(c[0]):   # демо: второй биом виден, но закрыт
-			_txt(Vector2(b.position.x + 22, b.position.y + 102), Loc.t(Demo.LOCKED), 15, C_AMBER)
-			continue
-		_txt(Vector2(b.position.x + 22, b.position.y + 102), TranslationServer.translate("операций открыто: %d из %d") % [open, ops.size()], 15, C_DIM)
-		if not on:
-			_buttons.append([b, "menu_biome:" + String(c[0])])
-
-
-func _records_panel(r: Rect2) -> void:
-	_panel(r)
-	_txt(r.position + Vector2(28, 44), "ЖУРНАЛ ПОЛЁТОВ", 28, C_TEXT, bold())
-	_txt(r.position + Vector2(28, 72), "лучшие результаты на этом компьютере", 15, C_DIM)
-	var y := r.position.y + 120.0
-	var bt := float(records["best_time"])
-	var rows := [["Вылетов", str(int(records["sorties"]))], ["Эвакуаций", str(int(records["evacs"]))],
-		["Дольше всего в воздухе", "%d:%02d" % [int(bt / 60.0), int(bt) % 60]], ["Лучший уровень пилота", str(int(records["best_level"]))],
-		["Больше всего сбито", str(int(records["best_kills"]))]]
-	for row in rows:
-		_txt(Vector2(r.position.x + 28, y), row[0], 19, C_DIM)
-		_txt(Vector2(r.position.x + 28, y), row[1], 21, C_AMBER, bold(), HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 56)
-		y += 34.0
-	y += 10.0
-	_ruler(r.position.x + 28, y, r.size.x - 56)
-	y += 34.0
-	_txt(Vector2(r.position.x + 28, y), "ПОСЛЕДНИЕ ВЫЛЕТЫ", 17, C_TEXT, bold())
-	y += 30.0
-	var last: Array = records["last"]
-	if last.is_empty():
-		_txt(Vector2(r.position.x + 28, y), "пока пусто — самое время на взлёт", 17, C_DIM)
-	for e in last.slice(0, 6):
-		var ok: bool = e["o"] == "эвакуация"
-		var tt := float(e["t"])
-		_txt(Vector2(r.position.x + 28, y), "%s" % e["c"], 17, C_TEXT)
-		_txt(Vector2(r.position.x + 230, y), Loc.t("%d:%02d · ур. %d · %d сбито") % [int(tt / 60.0), int(tt) % 60, int(e["l"]), int(e["k"])], 16, C_DIM)
-		_txt(Vector2(r.position.x + 28, y), "✔" if ok else "✖", 18, Color(0.5, 0.9, 0.5) if ok else C_RED, null, HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 56)
-		y += 27.0
 
 
 # ---------- Настройки ----------
@@ -602,73 +485,9 @@ func _slider(x: float, y: float, w: float, label: String, key: String, fmt: Stri
 	return y + 58.0
 
 
-# ---------- «Как играть» (3.3-t1: показывается при первом запуске, потом — из меню) ----------
-
-func close_howto() -> void:
-	howto = false
-	var f := FileAccess.open(HOWTO_FLAG, FileAccess.WRITE)
-	if f:
-		f.store_string("1")
-
-
-const HOWTO_COLS := [
-	["УПРАВЛЕНИЕ", [
-		"Мышь — куда лететь, W / S — газ",
-		"Пушка стреляет сама; Q — ручной огонь левой кнопкой мыши (до +50% урона)",
-		"Ракеты и бомбы пускаются сами; правая кнопка мыши — пуск вручную",
-		"Space — уклонение (переворот, пули не попадают)",
-		"Shift — форсаж, E / F — навыки самолёта",
-		"Tab — оружие на подвесах и пауза",
-		"F2 — сменить управление",
-		"Геймпад: только в бою — стик (сначала F2), курки — огонь, A — уклонение, X / B — навыки; меню и ангар — мышью",
-	]],
-	["ВЫЛЕТ", [
-		"Цель — продержаться 15 минут и улететь через ворота эвакуации",
-		"Всех врагов не перебить: они прилетают всё время",
-		"Сбитые враги дают опыт; новый уровень — выбор 1 из 3 улучшений",
-		"Каждые 5 минут — вражеский ас, после него можно улететь",
-		"После 15:00 можно остаться: добыча +10% за каждую минуту",
-		"Погибли — часть запчастей сохраняется",
-	]],
-	["ПРОКАЧКА", [
-		"На 3-м уровне выберите специализацию — какую связку собирать",
-		"Связка — сильный бонус; подходящие карточки отмечены «▲»",
-		"За вылет — до 3 связок; список — в справочнике (меню и пауза)",
-		"Между вылетами — АНГАР: самолёт, оружие, экипаж",
-		"Экипаж растёт с каждым вылетом и открывает навыки",
-	]],
-]
-
-
-func _howto(size: Vector2) -> void:
-	_buttons.clear()
-	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.025, 0.02, 0.82))
-	var w := minf(1500.0, size.x - 120.0)
-	var r := Rect2((size.x - w) / 2.0, 120, w, size.y - 220)
-	_panel(r, C_AMBER)
-	_txt(r.position + Vector2(48, 70), "КАК ИГРАТЬ", 40, C_AMBER, bold())
-	_txt(r.position + Vector2(48, 108), "Спасибо, что тестируете Flak Heaven! Это ранний прототип: графика и баланс временные.", 18, C_DIM)
-	var cw := (r.size.x - 96.0 - 64.0) / 3.0
-	for i in HOWTO_COLS.size():
-		var col: Array = HOWTO_COLS[i]
-		var x := r.position.x + 48.0 + i * (cw + 32.0)
-		var y := r.position.y + 170.0
-		_txt(Vector2(x, y), col[0], 24, C_TEXT, bold())
-		ctrl.draw_line(Vector2(x, y + 14), Vector2(x + cw, y + 14), C_LINE, 1.0)
-		y += 52.0
-		for line in col[1]:
-			var lines := _wrap(String(line), cw - 24.0, 19)
-			_txt(Vector2(x, y), "•", 19, C_AMBER)
-			for ln in lines:
-				_txt(Vector2(x + 20, y), ln, 19, C_TEXT)
-				y += 27.0
-			y += 9.0
-	_txt(Vector2(r.position.x + 48, r.end.y - 40), ("После вылета нажмите «ОТПРАВИТЬ ОТЧЁТ» на экране итогов — это займёт минуту и очень нам поможет." if Main.REPORT_URL != "" else "После 3–5 вылетов: меню → ЛОГИ → отправьте файлы playtest_log_*.csv и logs/godot.log вместе с ответами на анкету."), 17, C_DIM)
-	_menu_button(Rect2(r.end.x - 48 - 300, r.end.y - 96, 300, 62), "ПОНЯТНО", "howto_close", true)
-	_menu_button(Rect2(r.end.x - 48 - 300 - 24 - 420, r.end.y - 96, 420, 62), Loc.t("ПОДСКАЗКИ ЗАНОВО") if _saved_t <= 0.0 else Loc.t("ПОДСКАЗКИ ВКЛЮЧЕНЫ"), "hints_reset")
-
-
-func _wrap(s: String, width: float, fsize: int) -> PackedStringArray:
+## Splits text into lines that fit `width` at font size `fsize` (Chinese breaks between
+## characters, other languages between words).
+func wrap(s: String, width: float, fsize: int) -> PackedStringArray:
 	s = Loc.out(s)
 	var out := PackedStringArray()
 	var font := Hud.ui_font()

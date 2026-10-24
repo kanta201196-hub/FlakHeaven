@@ -21,6 +21,7 @@ func _ready() -> void:
 
 # ---------- Создание ----------
 
+## Bullet of the player, a turret, a gun pod or a wingman; in Forward+ also the muzzle flash at pos
 func spawn_player_bullet(pos: Vector2, vel: Vector2, dmg: float, life: float, manual := false, src := "курсовое (авто)", pierce := 0, he := 0.0) -> void:
 	var b := {"p": pos, "v": vel, "life": life, "dmg": dmg, "m": manual, "src": src}
 	if he > 0.0:
@@ -29,6 +30,8 @@ func spawn_player_bullet(pos: Vector2, vel: Vector2, dmg: float, life: float, ma
 		b["pierce"] = pierce
 		b["hit"] = []
 	bullets.append(b)
+	if Boom3D.active():
+		Boom3D.ensure().muzzle(pos, vel, false)
 
 
 ## opts: splash (радиус осколков, 55), bounce (сколько раз искать новую цель после сбития), fire (огонь на земле)
@@ -170,6 +173,8 @@ func spawn_enemy_bullet(pos: Vector2, vel: Vector2, who := "", big := false, dmg
 	if quiet:
 		b["quiet"] = true
 	ebullets.append(b)
+	if not big and not quiet and Boom3D.active():
+		Boom3D.ensure().muzzle(pos, vel, true, g)
 	if not big and not quiet:
 		Main.I.sfx.play("enemy_fire", -19.0, float(GUN_PITCH.get(g, 1.0)), pos)
 
@@ -904,7 +909,7 @@ func _draw() -> void:
 		draw_circle(f["p"], float(f["r"]), Color(fc.r, fc.g, fc.b, 0.18 * a))
 		draw_circle(f["p"], float(f["r"]) * 0.55, Color(lerpf(fc.r, 1.0, 0.5), lerpf(fc.g, 1.0, 0.5), lerpf(fc.b, 1.0, 0.5), 0.22 * a))
 	# 3.1: трассеры игрока — яркое ядро, тёплое свечение и тёмная подложка (читается на светлой земле)
-	for b in bullets:
+	for b in ([] if Render3D.I != null and Render3D.I.tracers_3d() else bullets):   # VFX-04: Forward+ draws them in 3D
 		var p: Vector2 = b["p"]
 		var dir := (b["v"] as Vector2).normalized()
 		var l := 34.0 if b.has("pierce") else 24.0

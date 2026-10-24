@@ -50,7 +50,7 @@ var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые па
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: Material
 var _burnt_sprite_mat: StandardMaterial3D   # остов без 3D-модели (картинка): тёмная заливка, как раньше
-var _smoke_mat: StandardMaterial3D
+var _smoke_mat: Material
 var title: TitleFlight       # тест 3.5-s5 (п. 1): звено 3D-моделей на заставке меню
 ## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
 ## настоящая тень размыта полутенью солнца до пятна и лежит далеко в стороне, а крупная чёткая тень
@@ -126,6 +126,14 @@ func _ready() -> void:
 	e.adjustment_contrast = 1.08
 	e.adjustment_saturation = 1.05
 	e.fog_enabled = false
+	# Forward+ only settings in one place (agreed between the effects and 3D-models threads, 24.10): Compatibility
+	# keeps today's look. VFX-01: HDR glow, so fire, flashes and tracers above 1.0 bloom; tonemap stays as above.
+	if RenderingServer.get_current_rendering_method() == "forward_plus":
+		e.glow_enabled = true
+		e.glow_intensity = 0.9
+		e.glow_bloom = 0.0
+		e.glow_hdr_threshold = 1.0
+		e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.environment = e
 	_env = e
 	add_child(env)
@@ -386,6 +394,12 @@ func _screen_ground(vs: Vector2) -> Rect2:
 
 func tilt_on() -> bool:
 	return _tilt_on
+
+
+## VFX-04: player tracers are 3D glow strips (with HDR bloom) instead of lines on the 2D combat layer; Forward+ only,
+## Compatibility keeps the 2D lines it was tuned with
+func tracers_3d() -> bool:
+	return enabled and GpuFx.active()
 
 
 # ---------- камера ----------
@@ -1143,10 +1157,18 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 	if not u.has("hull"):
 		u["hull"] = ang
 		var inst := (u["node"] as Node3D).get_child(0)
-		for nm in ["turret", "antenna", "launcher"]:
+		for nm in ["turret", "antenna", "launcher", "launcher_yaw", "launcher_pitch"]:
 			var n := inst.find_child(nm, true, false)
 			if n != null:
 				u[nm] = n
+		if u.has("launcher_pitch"):
+			var cells := []
+			for i in 64:
+				var c := (u["launcher_pitch"] as Node3D).find_child("cell_%d" % i, false, false)
+				if c == null:
+					break
+				cells.append(c)
+			u["cells"] = cells
 	var gt := e as GroundTarget
 	if gt != null and gt.drive != null:
 		# правка 3.5-s4: курс корпуса — из модуля движения. Раньше брался сдвиг точки на экране,
@@ -1168,7 +1190,42 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 		var up := deg_to_rad(55.0) if float(e.get("_lock") if e.get("_lock") != null else 0.0) > 0.0 else 0.0
 		var ln := u["launcher"] as Node3D
 		ln.rotation.z = move_toward(ln.rotation.z, up, delta * 1.2)
-	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher")) else ang
+	if u.has("launcher_pitch") and gt != null:
+		_sam_launcher(u, gt, hull, delta)
+	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher") or u.has("launcher_pitch")) else ang
+
+
+## SAM launcher (Kanta 24.10, model tools/blender/sf_recipes.py "e_sam"): the box rides folded flat over the
+## deck; when the launcher stands at a live site it rises, then the turntable turns it after the plane and
+## keeps tracking through the lock; a launch kicks the box. Folding runs the other way round — turn back
+## first, then lower — because a folded box swung sideways would cut through the cab.
+const SAM_UP := deg_to_rad(30.0)     # raised elevation of the source model
+const SAM_RAISE := deg_to_rad(70.0)  # elevation rate, °/s: ~0.45 s to raise, inside the 1.2 s lock
+const SAM_TRAVERSE := deg_to_rad(120.0)
+const SAM_KICK := deg_to_rad(4.0)    # box dips on each launch, settles back
+
+
+func _sam_launcher(u: Dictionary, gt: GroundTarget, hull: float, delta: float) -> void:
+	var yaw := u["launcher_yaw"] as Node3D
+	var pitch := u["launcher_pitch"] as Node3D
+	var up := gt.launcher_up()
+	var raised: float = u.get("sam_el", 0.0)
+	var want_yaw := 0.0
+	var pl := Main.I.player
+	if up and raised > SAM_UP * 0.8 and pl != null:
+		want_yaw = -wrapf((pl.global_position - gt.global_position).angle() - hull, -PI, PI)
+	yaw.rotation.y = rotate_toward(yaw.rotation.y, want_yaw, SAM_TRAVERSE * delta)
+	var want_el := SAM_UP if up else (SAM_UP if absf(yaw.rotation.y) > 0.05 else 0.0)
+	raised = move_toward(raised, want_el, SAM_RAISE * delta)
+	u["sam_el"] = raised
+	if gt.launches != int(u.get("sam_n", 0)):
+		u["sam_n"] = gt.launches
+		u["sam_kick"] = SAM_KICK
+	var kick: float = u.get("sam_kick", 0.0)
+	u["sam_kick"] = move_toward(kick, 0.0, SAM_KICK * 3.0 * delta)
+	pitch.rotation.z = raised - kick
+	var cells: Array = u.get("cells", [])
+	gt.launch_at = _ground_to_combat((cells[gt.launches % cells.size()] as Node3D).global_position) if not cells.is_empty() else Vector2.INF
 
 
 ## A-03: подвижные части машин конвоя (tools/blender/convoy_models.py): колёса крутятся по пройденному пути
@@ -1736,6 +1793,8 @@ const ESHOT_LEN := 30.0              # длина ракеты врага, px (�
 const EGLOW_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled, fog_disabled;
+// VFX-04: in Forward+ the white core goes above 1.0 (and the halo a little), so the HDR glow blooms tracers
+uniform float hdr = 1.0;
 varying vec4 col;
 void vertex() {
 	col = COLOR;
@@ -1746,7 +1805,8 @@ void fragment() {
 	float head = smoothstep(-1.0, 0.5, p.x);   // к хвосту трассер гаснет
 	float halo = smoothstep(1.0, 0.15, d) * head;
 	float core = smoothstep(0.42, 0.08, length(vec2(p.x * 0.8, p.y * 1.6))) * head;
-	ALBEDO = mix(col.rgb, vec3(1.0, 0.96, 0.92), core);
+	float lift = col.a > 0.99 ? 1.0 + (hdr - 1.0) * 0.3 : 1.0;   // dark underlays (alpha < 1) do not glow
+	ALBEDO = mix(col.rgb * lift, vec3(1.0, 0.96, 0.92) * hdr, core * step(0.6, col.r + col.g));
 	ALPHA = clamp(halo * 0.7 * col.a + core, 0.0, 1.0);
 }
 """
@@ -1772,6 +1832,7 @@ func _sync_enemy_shots(m: Main) -> void:
 		var mat := ShaderMaterial.new()
 		mat.shader = sh
 		mat.render_priority = 99   # под слоем боя (взрывы, текст), над моделями
+		mat.set_shader_parameter("hdr", 2.6 if GpuFx.active() else 1.0)
 		var pm := PlaneMesh.new()
 		pm.size = Vector2(2, 2)
 		var gm := MultiMesh.new()
@@ -1790,7 +1851,8 @@ func _sync_enemy_shots(m: Main) -> void:
 	var gmx := _eglow_mm.multimesh
 	var n_m := 0
 	var n_g := 0
-	var need_g := pr.ebullets.size() + pr.missiles.size() * 2
+	var mine := tracers_3d()
+	var need_g := pr.ebullets.size() + pr.missiles.size() * 2 + (pr.bullets.size() * 2 if mine else 0)
 	if gmx.instance_count < need_g:
 		gmx.instance_count = need_g + 64
 	if mmx.instance_count < pr.missiles.size():
@@ -1814,6 +1876,23 @@ func _sync_enemy_shots(m: Main) -> void:
 		lo = lo.min(ctr)
 		hi = hi.max(ctr)
 		n_g += 1
+	# VFX-04: player tracers (Projectiles._draw look: dark underlay, warm glow, white core) drawn here in Forward+
+	for b: Dictionary in (pr.bullets if mine else []):
+		var p: Vector2 = b["p"]
+		var v: Vector2 = b["v"]
+		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
+		var ln := 34.0 if b.has("pierce") else 24.0
+		var ctr := Vector3(p.x - dir.x * ln * 0.5, 1.2, p.y - dir.y * ln * 0.5)
+		# long thin needle: the player's fire must not read like the short fat enemy tracers next to it
+		var xa := Vector3(dir.x, 0, dir.y) * ln * 0.85
+		gmx.set_instance_transform(n_g, Transform3D(Basis(xa, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 3.6), ctr))
+		gmx.set_instance_color(n_g, Color(0.1, 0.07, 0.03, 0.5))
+		n_g += 1
+		gmx.set_instance_transform(n_g, Transform3D(Basis(xa, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 2.4), ctr + Vector3(0, 0.1, 0)))
+		gmx.set_instance_color(n_g, Color(1.0, 0.62, 0.15, 1.0))
+		n_g += 1
+		lo = lo.min(ctr)
+		hi = hi.max(ctr)
 	for ms: Dictionary in pr.missiles:
 		if float(ms.get("lev_hold", 0.0)) > 0.0:   # «Левиафан»: ракета ещё выходит из контейнера (LeviathanParts)
 			continue
@@ -1953,16 +2032,34 @@ func _ground_to_combat(g3: Vector3) -> Vector2:
 	return Vector2(c.x + (g3.x - c.x) * k, c.z + (g3.z - c.z) * k)
 
 
+## VFX-03 (Forward+): burning wrecks and falling planes smoke with Boom3D's lit smoke (self-shadowed puffs, fire
+## glow from below while fresh) instead of the flat unlit quad. CPUParticles3D gives INSTANCE_CUSTOM = (angle, phase),
+## so only the tile (by instance) and the heat (first ~20 % of life) are filled in here.
+func _wreck_smoke_mat() -> Material:
+	var bb := Boom3D.BILLBOARD.replace("cd = INSTANCE_CUSTOM;",
+		"cd = vec4(INSTANCE_CUSTOM.x, INSTANCE_CUSTOM.y, float(INSTANCE_ID % 4), (1.0 - smoothstep(0.0, 0.2, INSTANCE_CUSTOM.y)) * 0.9);")
+	var sh := Shader.new()
+	sh.code = Boom3D.SMOKE_SH % [Boom3D.COMMON, bb]
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	mat.set_shader_parameter("puff", Boom3D._puff)
+	return mat
+
+
 ## Шлейф дыма с огнём у падающего самолёта: частицы в мировых координатах, поднимаются и расплываются
 func _make_smoke() -> CPUParticles3D:
+	# also replaces the flat material cached by a wreck that came before Boom3D made its puff texture
+	if not _smoke_mat is ShaderMaterial and GpuFx.active() and Boom3D._puff != null:
+		_smoke_mat = _wreck_smoke_mat()
 	if _smoke_mat == null:
-		_smoke_mat = StandardMaterial3D.new()
-		_smoke_mat.albedo_texture = Fx._smoke_n[0] if not Fx._smoke_n.is_empty() else Fx._soft
-		_smoke_mat.vertex_color_use_as_albedo = true
-		_smoke_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_smoke_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_smoke_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-		_smoke_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		var sm := StandardMaterial3D.new()
+		sm.albedo_texture = Fx._smoke_n[0] if not Fx._smoke_n.is_empty() else Fx._soft
+		sm.vertex_color_use_as_albedo = true
+		sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+		sm.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		_smoke_mat = sm
 	var q := QuadMesh.new()
 	q.size = Vector2(1, 1)
 	q.material = _smoke_mat
@@ -1989,6 +2086,12 @@ func _make_smoke() -> CPUParticles3D:
 	gr.offsets = PackedFloat32Array([0.0, 0.06, 0.2, 1.0])
 	gr.colors = PackedColorArray([Color(1.0, 0.75, 0.3, 0.95), Color(0.9, 0.4, 0.12, 0.8), Color(0.18, 0.17, 0.16, 0.6), Color(0.3, 0.3, 0.3, 0.0)])
 	s.color_ramp = gr
+	if _smoke_mat is ShaderMaterial:
+		# VFX-03: lit smoke reads as a dark column only when it is taller and denser than the old flat quads
+		s.lifetime = 3.2
+		s.scale_amount_min = 34.0
+		s.scale_amount_max = 56.0
+		gr.colors = PackedColorArray([Color(1.0, 0.7, 0.3, 0.9), Color(0.6, 0.25, 0.08, 0.85), Color(0.1, 0.095, 0.09, 0.8), Color(0.22, 0.21, 0.2, 0.0)])
 	s.emitting = true
 	add_child(s)
 	return s

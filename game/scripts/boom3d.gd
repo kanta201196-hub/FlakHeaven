@@ -27,9 +27,13 @@ const BOOM_K := 0.75
 const SMOKE_K := 0.65
 var _smk := SMOKE_K
 const STRIDE := 20
-const BUDGET := [500.0, 800.0, 1200.0, 1600.0]   # частиц, после которых новые взрывы беднеют   # transform 12 + color 4 + custom 4
+# transform 12 + color 4 + custom 4 floats per instance; particle budgets per preset — FxMath.BUDGET
 
 static var _puff: ImageTexture
+## Smooth seamless noise of the smoke screen puffs (R large billows, G fine), Forward+ only
+static var _soft: ImageTexture
+## While smoke_screen() builds its puffs: smoke goes to the GPU smoke screen layer when it exists
+var _to_screen := false
 ## M-39: пыль цвета земли Нагорья (песок с серым, подсвечена солнцем) и её серо-бурый низ
 const DUST := Color(0.58, 0.51, 0.41)
 const DUST_D := Color(0.42, 0.37, 0.31)
@@ -47,6 +51,8 @@ const SMOKE_HALF := 250     # дыма больше — обновляем ег�
 var _smoke_dt := 0.0
 var _smoke_skip := false
 var _q := 1.0               # множитель числа частиц по «Качеству графики»
+## VFX-01: in Forward+ the light particle layers run on the GPU (GpuFx); null in Compatibility
+var _gpu: GpuFx
 var stats_peak := 0         # для лога: пик частиц за вылет
 var stats_us := 0           # время последнего кадра обновления, мкс (процессор)
 
@@ -126,6 +132,50 @@ void fragment() {
 	col += ramp(cd.w * (0.4 + d * 0.8)) * cd.w * smoothstep(0.2, 0.8, d);
 	ALBEDO = col;
 	ALPHA = a * COLOR.a;
+}
+"""
+
+## VFX-03 convoy smoke screen (Forward+ only, GpuFx.screen): the shared puff tile has cellular clumps and a hard
+## erosion edge, which on large overlapping screen puffs read as faceted white blobs cut straight by the slopes
+## (bench frames 24.10). Here the puff is a soft ball: smooth seamless noise drifts through it with age, a sphere
+## normal lit by the game sun gives it volume (shadow side cool, sun side warm), and it fades where it meets the
+## ground instead of being clipped by it.
+const SCREEN_SH := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+uniform sampler2D soft : filter_linear_mipmap, repeat_enable;
+uniform sampler2D depth_tex : hint_depth_texture, filter_linear;
+uniform vec3 to_sun = vec3(-0.46, 0.63, -0.56);
+%s
+void fragment() {
+	vec2 q = UV * 2.0 - 1.0;
+	float r2 = dot(q, q);
+	float age = cd.y;
+	vec2 o = vec2(cd.z * 0.37 + cd.x * 0.11, cd.z * 0.61 - cd.x * 0.07) + vec2(age * 0.06, -age * 0.04);
+	float big = texture(soft, UV * 0.45 + o).r;
+	float fine = texture(soft, UV * 1.25 + o * 1.7 + vec2(0.5, 0.21)).g;
+	float n = big * 0.68 + fine * 0.32;
+	float d = (1.0 - r2) * 1.15 + (n - 0.5) * 1.25 - age * 0.3;
+	float a = smoothstep(0.0, 0.6, d);
+	// sphere normal of the puff: quad axes in view space are the billboard's rotated x and y
+	float c = cos(cd.x); float s = sin(cd.x);
+	vec2 v2 = q.x * vec2(c, -s) - q.y * vec2(s, c);
+	vec3 nv = normalize(vec3(v2, sqrt(max(1.0 - r2, 0.0)) + 0.35));
+	vec3 nw = normalize((INV_VIEW_MATRIX * vec4(nv, 0.0)).xyz);
+	vec3 ls = normalize(to_sun);
+	float sun = max(dot(nw, ls), 0.0);
+	// self-shadow: billow density a step towards the sun on screen, denser there = this pixel is in its shade
+	vec2 sv = (VIEW_MATRIX * vec4(ls, 0.0)).xy;
+	vec2 su = vec2(dot(sv, vec2(c, -s)), -dot(sv, vec2(s, c)));
+	float ahead = texture(soft, (UV + su * 0.06) * 0.45 + o).r;
+	float lit = clamp(0.4 + 0.7 * sun + (big - ahead) * 4.0 + (fine - 0.5) * 0.35, 0.15, 1.2);
+	vec3 shade = COLOR.rgb * vec3(0.5, 0.55, 0.66);
+	vec3 col = mix(shade, COLOR.rgb * vec3(1.06, 1.0, 0.9), lit);
+	float z = texture(depth_tex, SCREEN_UV).r;
+	vec4 vp = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, z, 1.0);
+	float gap = VERTEX.z - vp.z / vp.w;
+	ALBEDO = col;
+	ALPHA = a * COLOR.a * clamp(gap / max(side * 0.5, 1.0), 0.0, 1.0);
 }
 """
 
@@ -249,6 +299,7 @@ func _ready() -> void:
 	var codes := [SMOKE_SH % [COMMON, BILLBOARD], FIRE_SH % [COMMON, BILLBOARD], CORE_SH % COMMON, DEBRIS_SH % COMMON,
 		SPARK_SH, SHOCK_SH % COMMON, FLASH_SH % BILLBOARD]
 	var prio := [1, 3, 2, 0, 5, 4, 6]
+	var mats: Array = []
 	for L in 7:
 		var sh := Shader.new()
 		sh.code = codes[L]
@@ -261,6 +312,7 @@ func _ready() -> void:
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
 		mm.use_custom_data = true
+		mats.append(mat)
 		mm.mesh = meshes[L]
 		mm.instance_count = CAP[L]
 		mm.visible_instance_count = 0
@@ -275,6 +327,11 @@ func _ready() -> void:
 		var b := PackedFloat32Array()
 		b.resize(CAP[L] * STRIDE)
 		_buf.append(b)
+	if GpuFx.active():
+		_gpu = GpuFx.new()
+		add_child(_gpu)
+		_gpu.build(meshes, mats, CAP)
+		_gpu.build_screen(quad, _screen_mat())
 	for i in 6:
 		var l := OmniLight3D.new()
 		l.light_color = Color(1.0, 0.6, 0.25)
@@ -285,6 +342,40 @@ func _ready() -> void:
 
 
 # ---------- текстура и сетки ----------
+
+## Draw material of the GPU smoke screen layer (SCREEN_SH over two octave bands of seamless noise)
+static func _screen_mat() -> ShaderMaterial:
+	if _soft == null:
+		var n := FastNoiseLite.new()
+		n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		n.fractal_type = FastNoiseLite.FRACTAL_FBM
+		n.fractal_octaves = 4
+		n.seed = 311
+		n.frequency = 0.012
+		var img := n.get_seamless_image(256, 256)
+		img.convert(Image.FORMAT_RGBA8)
+		n.seed = 517
+		n.frequency = 0.035
+		var fine := n.get_seamless_image(256, 256)
+		fine.convert(Image.FORMAT_RGBA8)
+		# G carries the fine band: copy it channel by channel (blit would overwrite R)
+		for y in 256:
+			for x in 256:
+				var c := img.get_pixel(x, y)
+				c.g = fine.get_pixel(x, y).r
+				img.set_pixel(x, y, c)
+		img.generate_mipmaps()
+		_soft = ImageTexture.create_from_image(img)
+	var sh := Shader.new()
+	# the fragment needs the puff size for the ground fade; MODEL_MATRIX there is not the particle's
+	sh.code = SCREEN_SH % BILLBOARD.replace("varying vec4 cd;", "varying vec4 cd;\nvarying float side;") \
+		.replace("float sc = length(MODEL_MATRIX[0].xyz);", "float sc = length(MODEL_MATRIX[0].xyz);\n\tside = sc;")
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	mat.render_priority = 1
+	mat.set_shader_parameter("soft", _soft)
+	return mat
+
 
 ## Атлас 2×2 клубов 128 px: R — плотность (круг × шум, рваный «живой» край), G — мелкий шум для выгорания
 static func _make_puff() -> ImageTexture:
@@ -373,18 +464,9 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 	if R == null or R.cam == null:
 		return
 	# частиц меньше на слабом пресете и когда их уже много (мясорубка): нагрузка не растёт без предела
-	var gi := clampi(Settings.gfx, 0, 3)
-	_q = [0.45, 0.7, 1.0, 1.25][gi] * clampf(1.25 - float(count()) / BUDGET[gi], 0.3, 1.0)
-	_lo = gi == 0
-	if kind == "":
-		if not air:
-			kind = "ground"
-		elif s < 18.0:
-			kind = "flak"
-		elif s >= 50.0:
-			kind = "big"
-		else:
-			kind = "air"
+	_q = FxMath.quality(Settings.gfx, count())
+	_lo = clampi(Settings.gfx, 0, 3) == 0
+	kind = FxMath.kind_for(s, air, kind)
 	# S10-11 (Kanta: взрывы и дым закрывают весь экран): взрывы целей мельче на BOOM_K; бомбы и НАР — по зоне
 	# поражения, как были, у них меньше только дым (SMOKE_K в _smoke)
 	if kind != "blast" and kind != "plasma":
@@ -416,13 +498,13 @@ func smoke_screen(pos: Vector2, r: float, burst := false) -> void:
 	var R := Render3D.I
 	if R == null or R.cam == null:
 		return
-	var gi := clampi(Settings.gfx, 0, 3)
-	_q = [0.45, 0.7, 1.0, 1.25][gi] * clampf(1.25 - float(count()) / BUDGET[gi], 0.3, 1.0)
+	_q = FxMath.quality(Settings.gfx, count())
 	var g := R.ground_under(pos)
 	var ch := R.cam.global_position.y
 	var k := clampf((ch - g.y) / maxf(ch, 1.0), 0.5, 3.0)
 	var s := r * k
 	_smk = 1.0   # дымовая завеса — укрытие колонны, её не уменьшаем
+	_to_screen = true
 	for i in _n(4.0 if burst else 1.0):
 		var d := _rdir()
 		var c := Color(0.86, 0.85, 0.81, 0.8) if i % 3 else Color(0.74, 0.73, 0.69, 0.8)
@@ -430,6 +512,42 @@ func smoke_screen(pos: Vector2, r: float, burst := false) -> void:
 			Vector3(d.x * 0.25, randf_range(0.15, 0.35), d.z * 0.25) * s, s * 0.45, s * randf_range(1.0, 1.3),
 			randf_range(3.5, 5.0), c, 0.0, 1.5, 1.2, randf_range(0.0, 0.2))
 	_smk = SMOKE_K
+	_to_screen = false
+
+
+## VFX-04: muzzle flash size per enemy gun kind (Projectiles.GUN_NAMES ids; missing = 1)
+const MUZZLE := {"pickup": 0.8, "apc": 1.0, "zsu": 1.2, "ifv": 1.5, "fighter": 1.0, "ace": 1.1}
+
+
+## VFX-04: muzzle flash where a gun fires, Forward+ only (GPU particles; Compatibility never had one, so it stays
+## as it was): a short bright disc and three flame tongues along the shot. pos is the muzzle on the combat plane,
+## vel the bullet velocity; enemy flashes are sized by gun kind
+func muzzle(pos: Vector2, vel: Vector2, enemy: bool, gun := "") -> void:
+	if _gpu == null or vel.length_squared() < 1.0:
+		return
+	var s := float(MUZZLE.get(gun, 1.0)) if enemy else 1.0
+	var d := vel.normalized()
+	var d3 := Vector3(d.x, 0.0, d.y)
+	# above the wings: the flash is depth-tested and the gun sits inside the plane model
+	var p := Vector3(pos.x, 8.0, pos.y) + d3 * 5.0 * s
+	_flash(p, 15.0 * s, 0.06, Color(1.0, 0.78, 0.42, 0.95))
+	_add(L_SPARK, {"p": p, "v": d3 * 700.0 * s, "life": 0.06, "c": Color(1.0, 0.85, 0.5, 1.0), "w": 3.6 * s})
+	for k in [-1.0, 1.0]:
+		_add(L_SPARK, {"p": p, "v": d3.rotated(Vector3.UP, 0.6 * k) * 420.0 * s, "life": 0.05,
+			"c": Color(1.0, 0.7, 0.35, 1.0), "w": 2.0 * s})
+
+
+## VFX-04: bullet hit on a plane or armour in Forward+: a small flash and a few sparks flying flat; false in
+## Compatibility, where Fx.hit_spark keeps its 2D sparks
+func hit(pos: Vector2, color: Color) -> bool:
+	if _gpu == null:
+		return false
+	var p := Vector3(pos.x, 8.0, pos.y)
+	var c := color.lerp(Color(1.0, 0.8, 0.45), 0.5)
+	_flash(p, 18.0, 0.07, Color(c.r, c.g, c.b, 0.9))
+	c.a = 1.0
+	_sparks(p, 6, 340.0, 0.22, c, 0.0, 0.35)
+	return true
 
 
 ## Правка 3.5-s4 (п. 27): пуск ракеты с крыла — вспышка двигателя и клуб белого дыма назад
@@ -479,6 +597,12 @@ const DEFAULTS := {"t": 0.0, "b": 0.0, "g": 0.0, "drag": 0.0, "wind": 0.0, "rot"
 
 
 func _add(L: int, q: Dictionary) -> void:
+	if _to_screen and L == L_SMOKE and _gpu != null and _gpu.screen != null:
+		_gpu.screen.emit(q)
+		return
+	if _gpu != null and _gpu.has_layer(L):
+		_gpu.emit(L, q)   # FxLayer.emit reads every field with its default, no merge needed
+		return
 	var arr: Array = _parts[L]
 	if arr.size() >= CAP[L]:
 		arr.pop_front()
@@ -571,9 +695,24 @@ func _flak(p: Vector3, s: float) -> void:
 func _air(p: Vector3, s: float, debris: bool) -> void:
 	# M-39: вспышка + тёмный дым + обломки; огненное ядро маленькое и гаснет за четверть секунды, пыли нет
 	_flash(p, s * 3.4, 0.09, Color(1.0, 0.93, 0.8, 1.0))
-	_core(p, s * 0.45, s * 1.0, 0.26, 1.0)
 	if not _lo:
 		_add(L_SHOCK, {"p": p, "v": Vector3.ZERO, "life": 0.18, "r0": s * 0.8, "r1": s * 3.6, "c": Color(1.0, 0.92, 0.8, 0.12), "seed": randf() * 40.0})
+	# in Forward+ fireball and smoke cloud are the pre-rendered mid-air flipbook (VFX-02)
+	if _gpu == null or not _gpu.flip("air", p, s):
+		_air_body(p, s)
+	_sparks(p, _n(clampf(s * 0.4, 6.0, 14.0)), 300.0 + s * 9.0, 0.45)
+	if debris:
+		for i in _n(clampf(s / 8.0, 2.0, 5.0)):
+			var dv := _rdir(0.4) * randf_range(140.0, 320.0)
+			var burning := i == 0 and s > 26.0
+			_debris(p, dv, s * randf_range(0.1, 0.2) * (1.6 if burning else 1.0), Color(0.16, 0.15, 0.14), 1.0,
+				"fire" if burning else "smoke", burning, 0.5)
+	_light(p + Vector3(0, s * 2.0, 0), clampf(s / 9.0, 1.5, 6.0), clampf(s * 12.0, 200.0, 900.0), 0.25)
+
+
+## Fireball, fire tongues and smoke cloud of an air kill from particles (Compatibility, no flipbook)
+func _air_body(p: Vector3, s: float) -> void:
+	_core(p, s * 0.45, s * 1.0, 0.26, 1.0)
 	var nf := _n(clampf(s / 6.0, 3.0, 6.0))
 	for i in nf:
 		var d := _rdir()
@@ -585,14 +724,6 @@ func _air(p: Vector3, s: float, debris: bool) -> void:
 		var g := randf_range(0.08, 0.13) if dark else randf_range(0.26, 0.34)
 		_smoke(p + d2 * s * 0.45, d2 * s * randf_range(0.6, 1.3), s * 0.6, s * randf_range(2.0, 2.9), randf_range(2.4, 3.8),
 			Color(g, g * 0.96, g * 0.92, 0.75), 0.45 if dark else 0.1, 8.0, 1.2, randf_range(0.0, 0.12))
-	_sparks(p, _n(clampf(s * 0.4, 6.0, 14.0)), 300.0 + s * 9.0, 0.45)
-	if debris:
-		for i in _n(clampf(s / 8.0, 2.0, 5.0)):
-			var dv := _rdir(0.4) * randf_range(140.0, 320.0)
-			var burning := i == 0 and s > 26.0
-			_debris(p, dv, s * randf_range(0.1, 0.2) * (1.6 if burning else 1.0), Color(0.16, 0.15, 0.14), 1.0,
-				"fire" if burning else "smoke", burning, 0.5)
-	_light(p + Vector3(0, s * 2.0, 0), clampf(s / 9.0, 1.5, 6.0), clampf(s * 12.0, 200.0, 900.0), 0.25)
 
 
 ## Крупная цель или игрок: цепочка взрывов по корпусу, несколько горящих обломков до земли, большая волна
@@ -621,6 +752,24 @@ func _ground(g: Vector3, s: float) -> void:
 	var p := g + Vector3(0, s * 0.25, 0)
 	# M-39: короткая яркая вспышка, маленькое огненное ядро (~0,25 с), дальше — пыль цвета земли и тёмный дым
 	_flash(p + Vector3(0, s * 0.5, 0), s * 3.2, 0.1, Color(1.0, 0.93, 0.8, 1.0))
+	# in Forward+ fireball, column and dust are the pre-rendered flipbook, as for bombs (VFX-02)
+	if _gpu == null or not _gpu.flip("ground", g, s):
+		_ground_body(g, p, s)
+	# тест 3.5-s7: комья и обломки — низко и в стороны (раньше до 7 s вверх: летели в камеру и росли на экране)
+	for i in _n(clampf(s / 6.0, 4.0, 7.0)):
+		var a := randf() * TAU
+		var dv := Vector3(cos(a) * randf_range(1.6, 3.2), randf_range(1.4, 2.8), sin(a) * randf_range(1.6, 3.2)) * s
+		_debris(p, dv, s * randf_range(0.06, 0.11), Color(0.24, 0.19, 0.14), 0.25, "dust", false, 0.0)
+	for i in _n(2):
+		var a2 := randf() * TAU
+		_debris(p, Vector3(cos(a2) * 2.0, 2.6, sin(a2) * 2.0) * s, s * 0.1, Color(0.15, 0.14, 0.13), 1.0, "smoke", false, 0.5)
+	_sparks(p, _n(clampf(s * 0.2, 4.0, 9.0)), 280.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.2, 0.35)
+	_emit.append({"p": g, "t": 0.0, "life": randf_range(4.0, 6.5), "s": s * 0.55, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 1.4})
+	_light(g + Vector3(0, s * 2.5, 0), clampf(s / 7.0, 2.0, 7.0), clampf(s * 12.0, 260.0, 1000.0), 0.3)
+
+
+## Fireball, smoke column and dust wave of a destroyed ground target from particles (Compatibility, no flipbook)
+func _ground_body(g: Vector3, p: Vector3, s: float) -> void:
 	_core(p, s * 0.4, s * 0.95, 0.24, 1.0, 0.7)
 	for i in _n(clampf(s / 5.0, 3.0, 6.0)):
 		var d := _rdir(0.9)
@@ -640,17 +789,6 @@ func _ground(g: Vector3, s: float) -> void:
 		_smoke(p + Vector3(d2.x, 0, d2.z) * s * (0.25 if dark else 0.5), Vector3(d2.x * 0.6, up, d2.z * 0.6) * s, s * 0.6,
 			s * randf_range(2.2, 3.1), randf_range(3.5, 5.5), col, 0.35 if dark else 0.0, 6.0 if dark else 3.0, 0.9, randf_range(0.0, 0.15))
 	_dust_skirt(g, s, 1.0)
-	# тест 3.5-s7: комья и обломки — низко и в стороны (раньше до 7 s вверх: летели в камеру и росли на экране)
-	for i in _n(clampf(s / 6.0, 4.0, 7.0)):
-		var a := randf() * TAU
-		var dv := Vector3(cos(a) * randf_range(1.6, 3.2), randf_range(1.4, 2.8), sin(a) * randf_range(1.6, 3.2)) * s
-		_debris(p, dv, s * randf_range(0.06, 0.11), Color(0.24, 0.19, 0.14), 0.25, "dust", false, 0.0)
-	for i in _n(2):
-		var a2 := randf() * TAU
-		_debris(p, Vector3(cos(a2) * 2.0, 2.6, sin(a2) * 2.0) * s, s * 0.1, Color(0.15, 0.14, 0.13), 1.0, "smoke", false, 0.5)
-	_sparks(p, _n(clampf(s * 0.2, 4.0, 9.0)), 280.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.2, 0.35)
-	_emit.append({"p": g, "t": 0.0, "life": randf_range(4.0, 6.5), "s": s * 0.55, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 1.4})
-	_light(g + Vector3(0, s * 2.5, 0), clampf(s / 7.0, 2.0, 7.0), clampf(s * 12.0, 260.0, 1000.0), 0.3)
 
 
 ## Бомбы и НАР по площади: меньше огня, больше пыли и земли; пыльная волна доходит до края зоны поражения
@@ -659,6 +797,22 @@ func _ground(g: Vector3, s: float) -> void:
 func _blast(g: Vector3, s: float) -> void:
 	var p := g + Vector3(0, s * 0.05, 0)
 	_flash(p + Vector3(0, s * 0.15, 0), s * 2.0, 0.08, Color(1.0, 0.93, 0.8, 1.0))
+	# in Forward+ the fireball, smoke column and dust are one pre-rendered flipbook (VFX-02): detail that
+	# procedural puffs cannot give; flash, debris, sparks, light and the burning spot stay particles
+	if _gpu == null or not _gpu.flip("blast", g, s):
+		_blast_body(g, p, s)
+		_dust_skirt(g, s, 1.15)
+	for i in _n(clampf(s / 8.0, 4.0, 8.0)):
+		var a := randf() * TAU
+		var dv := Vector3(cos(a) * randf_range(1.8, 3.2), randf_range(1.2, 2.4), sin(a) * randf_range(1.8, 3.2)) * s
+		_debris(p, dv, s * randf_range(0.05, 0.09), Color(0.26, 0.2, 0.14), 0.2, "dust", false, 0.0)
+	_sparks(p, _n(8), 260.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.15, 0.3)
+	_emit.append({"p": g, "t": 0.0, "life": 1.6, "s": s * 0.35, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 0.4})
+	_light(g + Vector3(0, s * 1.2, 0), clampf(s / 8.0, 1.5, 5.0), clampf(s * 9.0, 220.0, 800.0), 0.22)
+
+
+## Fireball and smoke column of the bomb blast built from particles (Compatibility, or no flipbook)
+func _blast_body(g: Vector3, p: Vector3, s: float) -> void:
 	_core(g, s * 0.35, s * 0.75, 0.2, 1.0, 0.5)
 	for i in _n(4):
 		var d := _rdir(0.3)
@@ -673,14 +827,6 @@ func _blast(g: Vector3, s: float) -> void:
 			col = Color(g2, g2 * 0.95, g2 * 0.88, 0.8)
 		_smoke(p + Vector3(d2.x, 0, d2.z) * s * 0.35, Vector3(d2.x * 0.5, randf_range(0.5, 1.1), d2.z * 0.5) * s, s * 0.4, s * randf_range(1.1, 1.5),
 			randf_range(2.0, 3.0), col, 0.0, 2.0, 1.4, randf_range(0.0, 0.1))
-	_dust_skirt(g, s, 1.15)
-	for i in _n(clampf(s / 8.0, 4.0, 8.0)):
-		var a := randf() * TAU
-		var dv := Vector3(cos(a) * randf_range(1.8, 3.2), randf_range(1.2, 2.4), sin(a) * randf_range(1.8, 3.2)) * s
-		_debris(p, dv, s * randf_range(0.05, 0.09), Color(0.26, 0.2, 0.14), 0.2, "dust", false, 0.0)
-	_sparks(p, _n(8), 260.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.15, 0.3)
-	_emit.append({"p": g, "t": 0.0, "life": 1.6, "s": s * 0.35, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 0.4})
-	_light(g + Vector3(0, s * 1.2, 0), clampf(s / 8.0, 1.5, 5.0), clampf(s * 9.0, 220.0, 800.0), 0.22)
 
 
 ## S10-08 (Kanta: взрыв плазменной бомбы «как будто в воздухе» и «фиолетовое желе»): разрыв у самой земли —
@@ -767,6 +913,8 @@ func _process(delta: float) -> void:
 		return
 	var t0 := Time.get_ticks_usec()
 	_cam_f = -R.cam.global_transform.basis.z
+	if _gpu != null:
+		_gpu.tick(dt, _cam_f)
 	if dt > 0.0:
 		var bt := t0
 		_tick_later(dt)
@@ -793,11 +941,13 @@ func _process(delta: float) -> void:
 	var wt := Time.get_ticks_usec()
 	var total := 0
 	for L in 7:
+		if _gpu != null and _gpu.has_layer(L):
+			continue   # drawn by GpuFx, the MultiMesh stays empty
 		if not (L == L_SMOKE and _smoke_skip and dt > 0.0):
 			_write(L)
 		total += (_parts[L] as Array).size()
 	if Perf.on: Perf.sub("b.write", wt)
-	stats_peak = maxi(stats_peak, total)
+	stats_peak = maxi(stats_peak, total if _gpu == null else count())
 	stats_us = Time.get_ticks_usec() - t0
 
 
@@ -991,7 +1141,7 @@ func _write(L: int) -> void:
 
 ## Для лога: частиц сейчас
 func count() -> int:
-	var t := 0
+	var t := 0 if _gpu == null else _gpu.alive()
 	for a in _parts:
 		t += (a as Array).size()
 	return t

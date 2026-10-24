@@ -1,0 +1,2 @@
+# game/tools Python dependencies (code.md 14.6); Blender scripts use the Blender 4.2.3 bundled Python
+Pillow==12.3.0
