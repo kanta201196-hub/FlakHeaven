@@ -84,13 +84,34 @@ Presets are a pure table (`game/scripts/gfx_presets.gd`); changing any option af
 5. Remote Control on Kanta's PC: fps per preset in Forward+, tune the preset table, one gallery of results.
 Combat code is not touched; `full.sh` only if step 4 changes combat input handling.
 
+## Combat UI: HUD, pause, card pick, results (added 2026-10-24)
+More Sublight references from Kanta: large colored skill icons, grid of taken cards with levels, stats tab, per-weapon damage tab (dps with bars), level and timer, mission goals and currency, weapons with target mode ("boss first / optimal"), card descriptions with highlighted terms and nested term tooltips, final screen (damage summary with shares, kills/time, build grid, currency rewards by line). Kanta also recorded a Sublight session (`C:\Users\Kirill-Dom\Videos\Captures\Sublight 2026-10-24 12-41-39.mp4`, 2.2 GB, folder access granted); key frames get extracted on his PC with ffmpeg (Remote Control) at the start of this stage. The video never goes to the cloud.
+
+Icons: the 3D weapon icon style from thread «Углубить прокачку для демо» (weapon model on family-colored glow + family symbol disc). Non-weapon cards (modules, skills, wingmen) need the same treatment from that thread; mockups use placeholders.
+
+| Screen | Today (3.5-s10) | Proposed |
+| --- | --- | --- |
+| HUD | text skill panels top-left, level small, timer top-right with goal lines, weapon chip bottom | thin XP bar on top; level + timer framed top centre; hull/fuel top-left; parts and kills counters top-right with mission goals and rewards under them; bottom centre bar: weapon groups (big icon, level, reload, target mode) + skills (icon, key, cooldown) |
+| Pause | text list of hardpoints, tag grid, 120 colored text chips | menu items left (Continue / Settings / Codex / Leave sortie); centre: plane with weapon group cards around it, each with icon, level pips and a target-mode selector; right: tabs Inventory (icon grid with levels, rarity border) / Stats / Damage (dps bars per source); goals and wingmen top-left |
+| Card pick | 2×2 wide cards, small icon, long text | 4 tall cards in a row: rarity header, big icon, name in rarity color, level pips, 2-line text with highlighted terms; hovering a term opens a tooltip (term → explanation, can nest); reroll/lock/ban below; gamepad focus = selected card lifted |
+| Results | title + 3 tabs (overview / damage / build) | one screen: damage summary (numbered, icon, share, value, family-colored bar) left; result title + kills/time/level/aces centre; build grid + parts reward lines + total + crew XP bar right; "details" opens damage taken |
+
+Data needed (no rule changes): dps over the last 60 s per source (pause Damage tab), term dictionary for tooltips (`game/scripts/terms.gd`, keys in `.po`), icon id per card. Rewards and goals show the numbers the game already computes.
+
+Steps (after step 4 above, or in parallel by a second thread if Kanta wants):
+6. Video frames from Kanta's PC; HUD rebuild (combat code: `full.sh` once).
+7. Pause screen with weapon cards and the three tabs.
+8. Card pick screen with terms and tooltips (unit tests for term markup parsing).
+9. Results screen.
+
 ## Needs from outside (asked up front)
 1. Gamepad button glyphs: Kenney «Input Prompts» (CC0, free) — art asset, needs Kanta's "yes".
 2. UI sounds (hover, click, back): Kenney «UI Audio» (CC0, free) or keep silent — audio, needs Kanta's "yes".
 3. Fonts: none — Exo 2 (already in the game, OFL) covers headings and menu items.
-4. Kanta's PC (Remote Control): only at step 5, after Forward+ is in the project.
+4. Kanta's PC (Remote Control): step 5 (fps per preset, after Forward+) and step 6 (frames from the Sublight video).
 
 ## Open questions for Kanta
 1. Selection style: 1 «Форсаж» (recommended), 2 «Прицел», 3 «Трафарет».
 2. Menu items and moves («Как играть» → codex, «Логи» → «Отзыв» card): yes/no.
 3. Flight log on the main screen: compact card (recommended) or only in the codex.
+4. Combat UI order: after the menu and settings (recommended) or in parallel in a separate thread.
