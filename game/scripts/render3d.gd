@@ -126,6 +126,12 @@ func _ready() -> void:
 	e.adjustment_contrast = 1.08
 	e.adjustment_saturation = 1.05
 	e.fog_enabled = false
+	if Boom3D.proto or OS.get_cmdline_user_args().has("--vfx2"):   # VFX probe: HDR glow so fire and flashes bloom
+		e.glow_enabled = true
+		e.glow_intensity = 0.9
+		e.glow_bloom = 0.0
+		e.glow_hdr_threshold = 1.0
+		e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.environment = e
 	_env = e
 	add_child(env)

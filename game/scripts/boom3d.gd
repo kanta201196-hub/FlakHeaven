@@ -18,8 +18,11 @@ extends Node3D
 
 static var I: Boom3D
 
-enum { L_SMOKE, L_FIRE, L_CORE, L_DEBRIS, L_SPARK, L_SHOCK, L_FLASH }
-const CAP := [1800, 1000, 140, 420, 1000, 60, 90]
+enum { L_SMOKE, L_FIRE, L_CORE, L_DEBRIS, L_SPARK, L_SHOCK, L_FLASH, L_FLIP }
+const CAP := [1800, 1000, 140, 420, 1000, 60, 90, 160]
+## VFX probe (thread «Улучшить эффекты боя», not for release): `-- --vfx2` swaps procedural fire and smoke
+## for pre-rendered CC0 flipbooks (Unity Labs VFX pack) and adds one hero flipbook per explosion.
+static var proto := false
 const WIND := Vector3(22.0, 0.0, -6.0)
 ## S10-11 (Kanta 23.10: «уменьшить размер взрывов и дыма, закрывают весь экран»): взрыв цели × BOOM_K,
 ## клуб дыма × SMOKE_K по размеру (и короче живёт)
@@ -36,7 +39,7 @@ const DUST_D := Color(0.42, 0.37, 0.31)
 var _lo := false            # «Низкое» качество: без ударной сферы, света и огня в догорающих очагах
 
 var _mm: Array = []
-var _parts: Array = [[], [], [], [], [], [], []]
+var _parts: Array = [[], [], [], [], [], [], [], []]
 var _buf: Array = []
 var _emit: Array = []       # догорающие очаги
 var _later: Array = []      # отложенные вспышки (цепочки у крупных)
@@ -126,6 +129,46 @@ void fragment() {
 	col += ramp(cd.w * (0.4 + d * 0.8)) * cd.w * smoothstep(0.2, 0.8, d);
 	ALBEDO = col;
 	ALPHA = a * COLOR.a;
+}
+"""
+
+## VFX probe: hero explosion played from a 5×5 flipbook, blended between frames; bright pixels go HDR so glow picks them up
+const FLIP_SH := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+uniform sampler2D flip : source_color, filter_linear_mipmap, repeat_disable;
+uniform float grid = 5.0;
+%s
+vec2 fuv(vec2 uv, float f) { return (uv + vec2(mod(f, grid), floor(f / grid))) / grid; }
+void fragment() {
+	float n = grid * grid - 1.0;
+	float fr = clamp(cd.y, 0.0, 0.999) * n;
+	vec4 a = texture(flip, fuv(UV, floor(fr)));
+	vec4 b = texture(flip, fuv(UV, min(floor(fr) + 1.0, n)));
+	vec4 t = mix(a, b, fract(fr));
+	float hot = smoothstep(0.45, 1.0, max(t.r, max(t.g * 1.2, t.b))) * (1.0 - cd.y);
+	ALBEDO = t.rgb * COLOR.rgb * (1.0 + hot * cd.w);
+	ALPHA = t.a * COLOR.a;
+}
+"""
+
+## VFX probe: smoke puff from an 8×8 flipbook (lighting baked in by the offline render), tinted by COLOR
+const SMOKE_FLIP_SH := """
+shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+uniform sampler2D flip : source_color, filter_linear_mipmap, repeat_disable;
+uniform float grid = 8.0;
+%s
+vec2 fuv(vec2 uv, float f) { return (uv + vec2(mod(f, grid), floor(f / grid))) / grid; }
+void fragment() {
+	float n = grid * grid - 1.0;
+	float fr = clamp(12.0 + cd.z * 6.0 + cd.y * 40.0, 0.0, n);
+	vec4 t = mix(texture(flip, fuv(UV, floor(fr))), texture(flip, fuv(UV, min(floor(fr) + 1.0, n))), fract(fr));
+	float l = dot(t.rgb, vec3(0.33));
+	vec3 col = COLOR.rgb * (0.3 + l * 0.75);
+	col += vec3(1.6, 0.6, 0.15) * cd.w * smoothstep(0.3, 0.9, t.a) * (1.0 - l);
+	ALBEDO = col;
+	ALPHA = t.a * COLOR.a * 0.8;
 }
 """
 
@@ -245,11 +288,14 @@ func _ready() -> void:
 	shock.height = 2.0
 	shock.radial_segments = 32
 	shock.rings = 16
-	var meshes := [quad, quad, sphere, _make_shard(), quad, shock, quad]
+	proto = OS.get_cmdline_user_args().has("--vfx2")
+	var meshes := [quad, quad, sphere, _make_shard(), quad, shock, quad, quad]
 	var codes := [SMOKE_SH % [COMMON, BILLBOARD], FIRE_SH % [COMMON, BILLBOARD], CORE_SH % COMMON, DEBRIS_SH % COMMON,
-		SPARK_SH, SHOCK_SH % COMMON, FLASH_SH % BILLBOARD]
-	var prio := [1, 3, 2, 0, 5, 4, 6]
-	for L in 7:
+		SPARK_SH, SHOCK_SH % COMMON, FLASH_SH % BILLBOARD, FLIP_SH % BILLBOARD]
+	if proto:
+		codes[L_SMOKE] = SMOKE_FLIP_SH % BILLBOARD
+	var prio := [1, 3, 2, 0, 5, 4, 6, 3]
+	for L in 8:
 		var sh := Shader.new()
 		sh.code = codes[L]
 		var mat := ShaderMaterial.new()
@@ -257,6 +303,10 @@ func _ready() -> void:
 		mat.render_priority = prio[L]
 		if L == L_SMOKE or L == L_FIRE:
 			mat.set_shader_parameter("puff", _puff)
+		if L == L_FLIP:
+			mat.set_shader_parameter("flip", _flip_tex("explosion01_5x5.png"))
+		if L == L_SMOKE and proto:
+			mat.set_shader_parameter("flip", _flip_tex("cloud02_8x8.png"))
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
@@ -285,6 +335,14 @@ func _ready() -> void:
 
 
 # ---------- текстура и сетки ----------
+
+## VFX probe: flipbook loaded straight from the PNG (no import step needed for the probe), with mipmaps
+static func _flip_tex(file: String) -> Texture2D:
+	var img := Image.load_from_file(ProjectSettings.globalize_path("res://assets/vfx_proto/" + file))
+	if img == null:
+		return null
+	img.generate_mipmaps()
+	return ImageTexture.create_from_image(img)
 
 ## Атлас 2×2 клубов 128 px: R — плотность (круг × шум, рваный «живой» край), G — мелкий шум для выгорания
 static func _make_puff() -> ImageTexture:
@@ -407,6 +465,16 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 		_big(Vector3(pos.x, 0.0, pos.y), s)
 	else:
 		_air(Vector3(pos.x, 0.0, pos.y), s, true)
+	if proto and kind != "plasma":
+		var hp := Vector3(pos.x, 0.0, pos.y)
+		var hs := s
+		if kind == "ground" or kind == "blast":
+			hp = R.ground_under(pos)
+			hs = s * (1.3 if kind == "ground" else 0.8)
+			hp.y += hs * 0.6
+		var big := kind == "big" or kind == "ground"
+		_add(L_FLIP, {"p": hp, "v": Vector3.ZERO, "life": 1.9 if big else 1.4, "r0": hs * 1.6, "r1": hs * (3.2 if kind == "flak" else 2.8),
+			"rot": randf() * TAU, "spin": randf_range(-0.2, 0.2), "tile": 0, "h": 2.5, "c": Color(1, 1, 1, 1), "wind": 0.4, "b": 4.0})
 
 
 ## Тест 3.5-s8 (дым БМП «не видно»): клубы дымовой завесы над колонной — плотные белёсые облака у земли,
@@ -781,7 +849,7 @@ func _process(delta: float) -> void:
 		if not _smoke_skip:
 			_tick(_parts[L_SMOKE], _smoke_dt)
 			_smoke_dt = 0.0
-		for L in [L_FIRE, L_CORE, L_SPARK, L_SHOCK, L_FLASH]:
+		for L in [L_FIRE, L_CORE, L_SPARK, L_SHOCK, L_FLASH, L_FLIP]:
 			_tick(_parts[L], dt)
 		if Perf.on: bt = Perf.sub("b.tick", bt)
 		for sl in _lights:
@@ -792,7 +860,7 @@ func _process(delta: float) -> void:
 				(sl["l"] as OmniLight3D).visible = float(sl["t"]) > 0.0
 	var wt := Time.get_ticks_usec()
 	var total := 0
-	for L in 7:
+	for L in 8:
 		if not (L == L_SMOKE and _smoke_skip and dt > 0.0):
 			_write(L)
 		total += (_parts[L] as Array).size()
@@ -946,6 +1014,11 @@ func _write(L: int) -> void:
 						var gk := smoothstep(0.1, 0.9, k) * 0.75
 						c.r = lerpf(c.r, grey, gk); c.g = lerpf(c.g, grey * 0.97, gk); c.b = lerpf(c.b, grey * 0.93, gk)
 					cd = Color(q["rot"], k, q["tile"], float(q["glow"]) * maxf(0.0, 1.0 - k * 3.5))
+				L_FLIP:
+					var rf := lerpf(q["r0"], q["r1"], 1.0 - pow(1.0 - k, 2.4))
+					b = Basis.from_scale(Vector3.ONE * rf * 2.0)
+					c.a *= 1.0 - smoothstep(0.75, 1.0, k)
+					cd = Color(q["rot"], k, 0, q["h"])
 				L_FIRE:
 					var r2 := lerpf(q["r0"], q["r1"], 1.0 - pow(1.0 - k, 2.0))
 					b = Basis.from_scale(Vector3.ONE * r2 * 2.0)
