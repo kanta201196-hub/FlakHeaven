@@ -26,3 +26,11 @@
 | --- | --- | --- | --- |
 | `vfx/blast_ground.png` | Ground Explosion | JangaFX | https://jangafx.com/software/embergen/download/free-vdb-animations |
 | `vfx/blast_air.png` | Mid-Air Explosion (Midair_Explosion_01, every 2nd frame) | JangaFX | https://jangafx.com/software/embergen/download/free-vdb-animations |
+
+## Копоть от взрывов (`game/art/vfx/scorch.png`), Poly Haven — CC0
+
+Цвет и мелкая фактура — фото выжженной земли; маска (тёмная середина, рваный край, лучи сажи) построена скриптом `game/tools/vfx_bake/make_scorch.py` (VFX-06, 2026-10-24).
+
+| Файл | Набор | Автор | Страница |
+| --- | --- | --- | --- |
+| `vfx/scorch.png` | Burned Ground 01 (`burned_ground_01`, diffuse 1K) | Rob Tuytel | https://polyhaven.com/a/burned_ground_01 |

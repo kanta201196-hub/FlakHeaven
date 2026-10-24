@@ -35,6 +35,7 @@ var _crater_mm: MultiMeshInstance3D   # тест 3.5-s4 (п. 14): воронки
 var _crater_mat: StandardMaterial3D
 ## VFX-06: Forward+ decal pools for scorch marks and craters (see marks_as_decals)
 var _scorch_decals: Array[Decal] = []
+var _scorch_decal_tex: Texture2D
 var _crater_decals: Array[Decal] = []
 var _crater_mesh: PlaneMesh
 var _bombs3 := {}                  # тест 3.5-s4 (п. 10): падающие бомбы — номер → MeshInstance3D
@@ -2423,8 +2424,10 @@ func _sync_scorch(m: Main) -> void:
 		var pos: Vector3 = mk["g3"] + Vector3(0, 0.8, 0)
 		var fade := clampf(float(mk["life"]) / 6.0, 0.0, 1.0)
 		if dm:
-			_place_decal(_scorch_decals, i, Transform3D(Basis.IDENTITY, pos), Vector3(r, r * 1.2 + 16.0, r), Fx._soft,
-				Color(0.04, 0.03, 0.02, 0.55 * fade))
+			# baked mark (dark core, ragged rim, soot rays), turned at random so neighbours differ
+			var sr := r * 2.0
+			_place_decal(_scorch_decals, i, Transform3D(Basis(Vector3.UP, float(mk.get("rot", 0.0))), pos),
+				Vector3(sr, r * 1.2 + 16.0, sr), _scorch_tex(), Color(1, 1, 1, 0.95 * fade))
 			continue
 		mmx.set_instance_transform(i, Transform3D(Basis(Vector3.RIGHT, -PI / 2.0).scaled(Vector3(r, 1, r)), pos))
 		mmx.set_instance_color(i, Color(1, 1, 1, fade))
@@ -2707,6 +2710,14 @@ func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex:
 	if dc.texture_albedo != tex:
 		dc.texture_albedo = tex
 	dc.modulate = col
+
+
+## VFX-06: blast scorch decal baked by game/tools/vfx_bake/make_scorch.py: near-black middle fading to burnt
+## soil, ragged rim and soot rays, so a mark reads as a blast and not as a soft round shadow
+func _scorch_tex() -> Texture2D:
+	if _scorch_decal_tex == null:
+		_scorch_decal_tex = load("res://art/vfx/scorch.png")
+	return _scorch_decal_tex
 
 
 ## Hides decals of pool from index `from` on (marks that ended)
