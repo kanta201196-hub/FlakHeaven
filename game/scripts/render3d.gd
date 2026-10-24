@@ -223,7 +223,7 @@ func _ready() -> void:
 	add_child(_wakes)
 	title = TitleFlight.new(self)
 	add_child(title)
-	apply_gfx(Settings.gfx)
+	apply_gfx()
 
 
 ## T4-04: «Качество графики».
@@ -235,22 +235,53 @@ func _ready() -> void:
 ## Деревья полной детализации (11–14 тыс. треуг.) — только на «Максимальном» (BiomeProps).
 ## Правка 16: дальность теней теперь по видимой земле (углы кадра), а не по пресету — тень не обрывается
 ## полосой посреди экрана при наклоне камеры; грубость слабых пресетов — размером атласа.
-const GFX_SCALE := [0.6, 0.8, 1.0, 1.0]
-const GFX_COMBAT_MAX := [1400.0, 2000.0, 2600.0, 2600.0]
-var _gfx := 2
+## UI-01 step 3: each part of «Качество графики» is its own option (GfxPresets); the presets
+## keep the numbers above. Shadow soft-filter levels per GfxPresets.SHADOWS_* (off → no sun shadow).
+const SHADOW_FILTER := [RenderingServer.SHADOW_QUALITY_HARD, RenderingServer.SHADOW_QUALITY_HARD,
+	RenderingServer.SHADOW_QUALITY_SOFT_VERY_LOW, RenderingServer.SHADOW_QUALITY_SOFT_LOW, RenderingServer.SHADOW_QUALITY_SOFT_HIGH]
+## «Дальность теней»: «Ближе» covers this share of the visible ground
+const SHADOW_NEAR := 0.6
+## Combat layer size cap (px) follows the render scale: 60 % → 1400, 80 % → 2000, 100 % → 2600
+var _combat_max := 2600.0
+var _shadow_k := 1.0
+## Terrain and props levels the current terrain chunks were built with (rebuild only on change)
+var _built := Vector2i(-1, -1)
 
 
-func apply_gfx(q: int) -> void:
-	_gfx = clampi(q, 0, 3)
-	# тени не выключаем: в GL Compatibility без теней солнца кадр темнее и рыжее (замер стенда: яркость 104 против 144)
-	RenderingServer.directional_shadow_atlas_set_size([1024, 2048, 4096, 4096][_gfx], true)
-	get_viewport().msaa_3d = Viewport.MSAA_2X if _gfx >= 3 else Viewport.MSAA_DISABLED
-	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-	get_viewport().scaling_3d_scale = GFX_SCALE[_gfx]
+## Applies every graphics option (Settings.gopt: values the renderer can draw). Light, shadows,
+## antialiasing and render scale change at once; terrain and props rebuild only when theirs change.
+func apply_gfx() -> void:
+	var vp := get_viewport()
+	var sh := Settings.gopt("shadows")
+	# в GL Compatibility без теней солнца кадр темнее и рыжее (замер стенда: яркость 104 против 144) — там «Выкл» недоступно
+	sun.shadow_enabled = sh != GfxPresets.SHADOWS_OFF
+	RenderingServer.directional_soft_shadow_filter_set_quality(SHADOW_FILTER[sh])
+	RenderingServer.directional_shadow_atlas_set_size(GfxPresets.SHADOW_RES[Settings.gopt("shadow_res")], true)
+	_shadow_k = 1.0 if Settings.gopt("shadow_dist") == 1 else SHADOW_NEAR
+	var aa := Settings.gopt("aa")
+	vp.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X,
+		Viewport.MSAA_8X, Viewport.MSAA_DISABLED][aa]
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if aa == GfxPresets.AA_FXAA else Viewport.SCREEN_SPACE_AA_DISABLED
+	vp.use_taa = aa == GfxPresets.AA_TAA
+	vp.scaling_3d_mode = [Viewport.SCALING_3D_MODE_BILINEAR, Viewport.SCALING_3D_MODE_FSR, Viewport.SCALING_3D_MODE_FSR2][Settings.gopt("upscale")]
+	var pct: int = GfxPresets.SCALES[Settings.gopt("scale")]
+	vp.scaling_3d_scale = pct / 100.0
+	_combat_max = 1400.0 + (pct - 60) * 30.0
+	if _env != null and Settings.forward_plus():
+		var ao := Settings.gopt("ssao")
+		_env.ssao_enabled = ao > 0
+		if ao > 0:
+			RenderingServer.environment_set_ssao_quality([RenderingServer.ENV_SSAO_QUALITY_LOW, RenderingServer.ENV_SSAO_QUALITY_LOW,
+				RenderingServer.ENV_SSAO_QUALITY_MEDIUM, RenderingServer.ENV_SSAO_QUALITY_HIGH][ao], true, 0.5, 2, 50.0, 300.0)
+		_env.ssil_enabled = Settings.gopt("ssil") > 0
+		_env.glow_enabled = Settings.gopt("glow") > 0
+	var t := Settings.gopt("terrain")
 	if _ground_mat != null:   # M-36: скала с трёх проекций — только «Высокое» и «Максимальное»
-		_ground_mat.set_shader_parameter("rock_tri", _gfx >= 2)
-	if terrain != null:
+		_ground_mat.set_shader_parameter("rock_tri", t >= 2)
+	var built := Vector2i(t, Settings.gopt("props"))
+	if terrain != null and built != _built:
 		terrain.clear()   # куски рельефа пересоберутся с новыми моделями биома и сеткой
+	_built = built
 
 
 ## Правка 16: тени — на всю видимую землю. Лучи из углов кадра до дна долин → самая дальняя точка.
@@ -264,7 +295,7 @@ func _fit_shadow() -> void:
 			d.y = -0.05
 		var t := (GROUND_Y - o.y) / d.y
 		far = maxf(far, t)
-	sun.directional_shadow_max_distance = clampf(far * 1.1 + 300.0, 1500.0, 12000.0)
+	sun.directional_shadow_max_distance = clampf((far * 1.1 + 300.0) * _shadow_k, 1500.0, 12000.0)
 
 
 # ---------- слой боя для наклонной камеры (B-47) ----------
@@ -343,7 +374,7 @@ func _sync_combat_layer() -> void:
 	var base := vs / _zoom
 	r = r.intersection(Rect2(r.get_center() - base * 1.5, base * 3.0))   # не тянуть текстуру до горизонта
 	var px := r.size * _zoom
-	var k := minf(1.0, minf(COMBAT_VP_MAX, GFX_COMBAT_MAX[_gfx]) / maxf(px.x, px.y))
+	var k := minf(1.0, minf(COMBAT_VP_MAX, _combat_max) / maxf(px.x, px.y))
 	var size := Vector2i(maxi(16, int(px.x * k)), maxi(16, int(px.y * k)))
 	if _combat_vp.size != size:
 		_combat_vp.size = size
@@ -515,7 +546,7 @@ func _unit_mesh(tex: Texture2D, length_px: float, thick: float, grid: int) -> Di
 ## ширина картинки, нос +X — те же оси, что у рельефа из спрайта, поэтому подвесы, сопла и следы на месте.
 ## «Низкое» качество графики — прежний рельеф из спрайта (слабые ПК).
 func _battle_model(tex: Texture2D) -> PackedScene:
-	if Settings.gfx == 0:
+	if Settings.gopt("terrain") == 0:
 		return null
 	# оптимизация: кэш по самой картинке — без сборки пути каждый кадр у каждого самолёта
 	var hit = _bm_cache.get(tex)
@@ -741,7 +772,7 @@ func _apply_biome() -> void:
 func _setup_plane_shadows() -> void:
 	_psh_vp = SubViewport.new()
 	_psh_vp.name = "PlaneShadows"
-	var n := 1024 if Settings.gfx >= 2 else 512
+	var n := 1024 if Settings.gopt("shadow_res") >= 2 else 512
 	_psh_vp.size = Vector2i(n, n)
 	_psh_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_psh_vp.positional_shadow_atlas_size = 0
@@ -1366,7 +1397,7 @@ func _make_dust(len_px: float) -> CPUParticles3D:
 	q.material = _dust_mat
 	var s := CPUParticles3D.new()
 	s.mesh = q
-	s.amount = [8, 14, 20, 24][clampi(Settings.gfx, 0, 3)]
+	s.amount = [8, 14, 20, 24][Settings.gopt("effects")]
 	s.lifetime = 2.2
 	s.local_coords = false
 	s.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1391,7 +1422,7 @@ func _make_dust(len_px: float) -> CPUParticles3D:
 	gr.colors = PackedColorArray([Color(0.92, 0.85, 0.72, 0.0), Color(0.9, 0.83, 0.7, 0.55), Color(0.84, 0.78, 0.68, 0.0)])   # светлее песка — видно сверху
 	if Biome.sea():
 		# «Архипелаг»: белый пенный след по воде — плоский, длинный, не поднимается; расходится в стороны «усами»
-		s.amount = [14, 24, 34, 44][clampi(Settings.gfx, 0, 3)]
+		s.amount = [14, 24, 34, 44][Settings.gopt("effects")]
 		s.lifetime = 3.2
 		s.spread = 180.0
 		s.flatness = 1.0
@@ -1762,7 +1793,7 @@ func _sync_missiles(m: Main) -> void:
 		return
 	# M-39 (аудит 3.5-s6 Э-2): дым ракет светло-серый, плотный и широкий у сопла, расплывается и тает быстрее
 	# (жизнь короче — без длинных дуг через полэкрана); на «Низком» точки реже
-	var lo := 1.5 if Settings.gfx == 0 else 1.0
+	var lo := 1.5 if Settings.gopt("effects") == 0 else 1.0
 	for arr_st in [[pr.pmissiles, [0.85, 5.0, 14.0, 1.0, 16.0 * lo, Color(0.9, 0.9, 0.91)]],
 			[pr.missiles, [0.8, 5.0, 13.0, 0.95, 16.0 * lo, Color(0.84, 0.83, 0.82)]],
 			[pr.rockets, [0.7, 3.5, 9.0, 0.6, 14.0 * lo, Color(0.88, 0.88, 0.9)]]]:
@@ -2257,7 +2288,7 @@ func _sync_clouds(m: Main, c2: Vector2, h: float) -> void:
 	cl.title_on = title.active()
 	var its := cl.items()
 	# M-31: объёмные облака из клубов (один MultiMesh) — на всех качествах, кроме «Низкого»
-	if Settings.gfx >= 1 and Tuning.g("cloud3d") > 0.5:
+	if Settings.gopt("effects") >= 1 and Tuning.g("cloud3d") > 0.5:
 		for mi0: MeshInstance3D in _clouds:
 			mi0.visible = false
 		if _puffs == null:
@@ -2270,7 +2301,7 @@ func _sync_clouds(m: Main, c2: Vector2, h: float) -> void:
 			focus = (title._units[0]["node"] as Node3D).global_position
 		elif is_instance_valid(m.player):
 			focus = Vector3(m.player.global_position.x, 0.0, m.player.global_position.y)
-		_puffs.sync(its, cam, c2, h, focus, Settings.gfx, get_process_delta_time())
+		_puffs.sync(its, cam, c2, h, focus, Settings.gopt("effects"), get_process_delta_time())
 		_cloud_shadows(cl, its)
 		return
 	if _puffs != null and _puffs.visible:

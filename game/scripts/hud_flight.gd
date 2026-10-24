@@ -196,13 +196,14 @@ static func grouped(n: int) -> String:
 	return ("-" if n < 0 else "") + s + out
 
 
-## Top-right: parts and kills counters, the sortie goals panel under them, FPS in the corner.
+## Top-right: parts and kills counters, the sortie goals panel under them, FPS in the corner (setting «Счётчик кадров»).
 func _top_right(m: Main, size: Vector2) -> void:
 	var x := size.x - 20.0
 	x = _counter(Rect2(x, 20.0, 0.0, 56.0), grouped(m.run.kills), Loc.t("СБИТО"), Color.WHITE) - 10.0
 	_counter(Rect2(x, 20.0, 0.0, 56.0), grouped(int(m.run.parts)), Loc.t("ЗАПЧАСТИ"), UiStyle.PARTS)
 	_goals(m, Rect2(size.x - 460.0, 88.0, 440.0, 0.0))
-	_text(Vector2(0, size.y - 6), "FPS %d" % Engine.get_frames_per_second(), 14, Color(0.7, 0.7, 0.7, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 8.0)
+	if Settings.show_fps:
+		_text(Vector2(0, size.y - 6), "FPS %d" % Engine.get_frames_per_second(), 14, Color(0.7, 0.7, 0.7, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 8.0)
 
 
 ## Counter box right-aligned at r.position.x: big number and a caption. Returns its left x.

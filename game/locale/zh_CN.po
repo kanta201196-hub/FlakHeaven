@@ -6836,3 +6836,223 @@ msgstr "羁绊：热闹伙伴"
 #: game/scripts/wingman.gd:450
 msgid "связка: волчья стая"
 msgstr "羁绊：狼群"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "«Весь экран» — тени до края кадра. «Ближе» — тени только у центра, зато они чётче."
+msgstr "“全屏”：阴影延伸到画面边缘。“较近”：只在中央显示阴影，但更清晰。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Билинейный"
+msgstr "双线性"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Ближе"
+msgstr "较近"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "В каком разрешении рисуется 3D-картинка. Меньше — больше кадров, но картинка мягче. Интерфейс всегда чёткий."
+msgstr "3D 画面的渲染分辨率。越低帧数越高，但画面更柔和。界面始终清晰。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Весь экран"
+msgstr "全屏"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Вкл"
+msgstr "开"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Выкл"
+msgstr "关"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Высокая"
+msgstr "高"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Высокие"
+msgstr "高"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Дальность теней"
+msgstr "阴影距离"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Детали мира"
+msgstr "世界细节"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Детализация рельефа"
+msgstr "地形细节"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Если в вылете мало кадров, игра сама выберет набор попроще. Выключается, как только вы меняете графику вручную."
+msgstr "如果出击时帧数过低，游戏会自动选择更低的预设。手动更改画面设置后此项即关闭。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Заработает после перехода игры на рендер Forward+. Сейчас игра на Compatibility, выбранное значение сохранится."
+msgstr "游戏切换到 Forward+ 渲染器后生效。目前使用 Compatibility，你的选择会被保存。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Как растянуть картинку до размера экрана при масштабе меньше 100 %. FSR сохраняет чёткость лучше."
+msgstr "渲染比例低于 100 % 时如何将画面拉伸到屏幕大小。FSR 能更好地保持清晰度。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Качество"
+msgstr "画质"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Качество эффектов"
+msgstr "特效质量"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Максимальная"
+msgstr "最高"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Максимум"
+msgstr "最多"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Мало"
+msgstr "少"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Масштаб отрисовки"
+msgstr "渲染比例"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Много"
+msgstr "多"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Мягкая тень в ущельях, у стен построек и под техникой. Рельеф выглядит объёмнее."
+msgstr "峡谷中、建筑墙边和载具下方的柔和阴影，让地形更有立体感。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Мягкость краёв теней. «Низкие» — резкие края, «Ультра» — самые мягкие."
+msgstr "阴影边缘的柔和度。“低”边缘锐利，“极致”最柔和。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "НАГРУЗКА НА ВИДЕОКАРТУ"
+msgstr "显卡负载"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Набор всех пунктов ниже разом. Если поменять любой пункт, здесь будет «Своё». Если выбрать вручную, игра перестанет снижать качество сама."
+msgstr "一次性设置下方所有选项。更改任一选项后此处显示“自定义”。手动选择后，游戏将不再自动降低画质。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Низкая"
+msgstr "低"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Низкие"
+msgstr "低"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Общее качество"
+msgstr "整体画质"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Отражённый свет (SSIL)"
+msgstr "间接光照（SSIL）"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Повышение чёткости (апскейл)"
+msgstr "超分辨率"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Разрешение теней"
+msgstr "阴影分辨率"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Растительность и постройки"
+msgstr "植被和建筑"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Свечение огня и вспышек"
+msgstr "火光和闪光辉光"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Свечение огня, вспышек и трассеров."
+msgstr "火焰、闪光和曳光弹的辉光。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Своё"
+msgstr "自定义"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Сглаживание"
+msgstr "抗锯齿"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Сколько деревьев, камней и мелочей на земле и какие из них отбрасывают тень. Меняется при следующей сборке участков карты."
+msgstr "地面上树木、岩石和小物件的数量，以及哪些会投下阴影。在地图区块下次重建时生效。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Сколько мелких деталей у гор и склонов, скалы с трёх сторон — с уровня «Высокая»."
+msgstr "山脉和山坡的细节多少；从“高”开始岩石三面贴图。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Сколько частиц у взрывов, дыма и облаков. Если в бою проседают кадры, снизьте этот пункт первым."
+msgstr "爆炸、烟雾和云的粒子数量。如果战斗中掉帧，请先降低此项。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Снижать качество при низком FPS"
+msgstr "低帧率时降低画质"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Средне"
+msgstr "中"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Средние"
+msgstr "中"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Средняя"
+msgstr "中"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Счётчик кадров"
+msgstr "帧数显示"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Тени"
+msgstr "阴影"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Тени и свет"
+msgstr "阴影和光照"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Убирает «лесенку» на краях самолётов, построек и гор. MSAA 4× и 8× заметно нагружают видеокарту."
+msgstr "消除飞机、建筑和山脉边缘的锯齿。MSAA 4× 和 8× 对显卡负担较大。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Ультра"
+msgstr "极致"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Фоновое затенение (SSAO)"
+msgstr "环境光遮蔽（SSAO）"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Цветной отражённый свет от земли и стен: склоны подсвечивают друг друга."
+msgstr "地面和墙壁反射的彩色光：山坡相互照亮。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Часть значений заработает после перехода игры на рендер Forward+. Сейчас игра на Compatibility."
+msgstr "部分数值在游戏切换到 Forward+ 渲染器后生效。目前使用 Compatibility。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Число кадров в секунду в углу экрана в полёте."
+msgstr "飞行时在屏幕角落显示每秒帧数。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Чёткость теней. 8192 — самые аккуратные тени, но нужна мощная видеокарта."
+msgstr "阴影清晰度。8192 的阴影最精细，但需要强劲的显卡。"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "на максимуме"
+msgstr "最高档时"

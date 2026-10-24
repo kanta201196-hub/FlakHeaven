@@ -59,7 +59,7 @@ func _init(terrain: Terrain3D) -> void:
 
 
 func _mesh(kind: String) -> Mesh:
-	if LITE.has(kind) and Settings.gfx < Settings.GFX_MAX:
+	if LITE.has(kind) and Settings.gopt("props") < Settings.GFX_MAX:
 		var lk := kind + "_lite"
 		if not _meshes.has(lk):
 			_meshes[lk] = _lite_tree(kind)
@@ -287,7 +287,7 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 					_ring_zone(rng, put, "spire", p0, r0 * 0.6, r0 * 0.9, ["fan", "slope", "crest"], ctx)
 	# по зонам рельефа: каждый вид — там, где он бывает в природе (правила — s4-landscape-rules.md)
 	for i in 90:
-		if Settings.gfx == 0 and i % 2 == 1:   # «Низкое»: мелочи по зонам вдвое реже
+		if Settings.gopt("props") == 0 and i % 2 == 1:   # «Низкое»: мелочи по зонам вдвое реже
 			continue
 		var p := Vector2(ox + rng.randf() * Terrain3D.CHUNK, oz + rng.randf() * Terrain3D.CHUNK)
 		var z := _zone(p, ctx)
@@ -318,7 +318,7 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 					_add(rng, put, "boulders", p + down * rng.randf_range(50.0, 110.0) + down.orthogonal() * rng.randf_range(-35.0, 35.0), keep_out, ctx)
 	# L-06: в зелёной полосе вдоль реки — сады группами и тополя по краю полей
 	for i in 160:
-		if Settings.gfx == 0 and i % 2 == 1:
+		if Settings.gopt("props") == 0 and i % 2 == 1:
 			continue
 		var p := Vector2(ox + rng.randf() * Terrain3D.CHUNK, oz + rng.randf() * Terrain3D.CHUNK)
 		var roll := rng.randf()
@@ -375,12 +375,12 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		mmi.name = kind
 		var small: bool = kind in ["shrub", "boulders", "poplar", "orchard"] or kind in SeaProps.SMALL
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
-		var no_shadow := Settings.gfx == 0 or (Settings.gfx == 1 and small)
+		var no_shadow := Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if no_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		parent.add_child(mmi)
 		# оптимизация (после #105): на «Максимальном» деревья полной детализации (11–14 тыс. треуг.) тень
 		# отбрасывают «карточками» той же модели (6 треуг.) — в садах у кишлаков это ~0,6 млн треуг. в проходе теней
-		if not no_shadow and LITE.has(kind) and Settings.gfx >= Settings.GFX_MAX:
+		if not no_shadow and LITE.has(kind) and Settings.gopt("props") >= Settings.GFX_MAX:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			var lk: String = kind + "_lite"
 			if not _meshes.has(lk):

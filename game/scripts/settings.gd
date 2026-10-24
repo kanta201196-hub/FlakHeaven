@@ -53,6 +53,11 @@ const MINIMAP_ALPHA := [0.4, 0.6, 0.8, 1.0]
 var minimap := 2
 var minimap_alpha := 2
 var gfx_auto := true       # автоснижение при низком FPS, пока игрок не выбрал качество сам
+## UI-01 step 3: per-option graphics (GfxPresets.IDS → value index). `gfx` stays the last preset
+## picked; the options equal that preset until the player changes one («Своё»)
+var gfx_opts := GfxPresets.preset(2)
+## FPS counter in the corner of the flight screen
+var show_fps := true
 var binds := {}          # действие → physical_keycode (только клавиатура)
 var _defaults := {}      # исходные клавиши (для «Сбросить»)
 
@@ -139,10 +144,32 @@ func apply_lang() -> void:
 	Loc._out_cache.clear()
 
 
+## True under the Forward+ renderer; Forward+-only graphics values fall back otherwise.
+static func forward_plus() -> bool:
+	return RenderingServer.get_current_rendering_method() == "forward_plus"
+
+
+## Effective value of graphics option `id` (GfxPresets.IDS) for the running renderer. Systems
+## read this instead of `gfx`, so a custom mix (say, low effects with high terrain) works.
+func gopt(id: String) -> int:
+	return GfxPresets.fallback(id, int(gfx_opts.get(id, 0)), forward_plus())
+
+
+## Picks quality preset `i`: every option takes its value (also used by the low-FPS auto-drop).
+func set_preset(i: int) -> void:
+	gfx = clampi(i, 0, GFX_MAX)
+	gfx_opts = GfxPresets.preset(gfx)
+
+
+## Index of the preset the options match, −1 for «Своё».
+func preset_now() -> int:
+	return GfxPresets.preset_of(gfx_opts)
+
+
 ## Качество графики: свет и тени сразу, модели биома — при пересборке кусков рельефа
 func apply_gfx() -> void:
 	if Render3D.I != null:
-		Render3D.I.apply_gfx(gfx)
+		Render3D.I.apply_gfx()
 
 
 func apply_audio() -> void:
@@ -154,7 +181,7 @@ func save_settings() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
-		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "font": font, "lang": lang, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds": binds}, "  "))
+		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "gfx_opts": gfx_opts, "show_fps": show_fps, "font": font, "lang": lang, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds": binds}, "  "))
 	f.close()
 
 
@@ -175,6 +202,9 @@ func load_settings() -> void:
 	hide_hud = bool(d.get("hide_hud", hide_hud))
 	gfx = clampi(int(d.get("gfx", gfx)), 0, GFX_MAX)
 	gfx_auto = bool(d.get("gfx_auto", gfx_auto))
+	var go = d.get("gfx_opts", null)
+	gfx_opts = GfxPresets.sanitize(go if go is Dictionary else {}, gfx)   # older saves: the preset of «gfx»
+	show_fps = bool(d.get("show_fps", show_fps))
 	font = clampi(int(d.get("font", font)), 0, FONTS.size() - 1)
 	lang = clampi(int(d.get("lang", lang)), -1, LANGS.size() - 1)
 	wing_prio = clampi(int(d.get("wing_prio", wing_prio)), 0, WING_PRIO.size() - 1)
