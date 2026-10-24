@@ -45,3 +45,6 @@
 | weapons/agm_*, weapons/hq/agm_* (управляемая ракета «воздух-земля») | AGM 65 MAVERICK | XARYA | https://sketchfab.com/3d-models/5447a415b21840568fbfa01cf6dd166a | CC BY 4.0, изменено |
 | weapons/hebomb_*, weapons/hq/hebomb_* (фугасная авиабомба) | Vintage Bomb | MauriceBaxter | https://sketchfab.com/3d-models/0d1a55bdfd484bcf8091f9d3b0f090ca | CC BY 4.0, изменено |
 | hangar/stand_cart (тележка для бомб в ангаре) | ODAB-500 vacuum bombs transport cart | Tiltow | https://sketchfab.com/3d-models/7ace1edae3664f888e8cd6a5ceb29b74 | CC BY 4.0, изменено |
+| weapons/aam_1..3, weapons/hq/aam_1..3 (наводящиеся ракеты, ступени 1–3) | Russian weapon pack | Rhine_Lab_Muelsyse | https://sketchfab.com/3d-models/af00b7135a184ecfb2812a0e54458a8a | CC BY 4.0, изменено |
+| hangar/stand_missile_cart (тележка для ракет «воздух-воздух» в ангаре) | cart with "R-27ET" A-A soviet missiles | Tiltow | https://sketchfab.com/3d-models/fadb1f9ef8cd4425aeada7d918255200 | CC BY 4.0, изменено |
+| hangar/stand_loader (самоходный погрузчик для ракет «воздух-земля» в ангаре) | Weapons Loader | Sengchor | https://sketchfab.com/3d-models/016ca0f9b98b4ffbbe0e55f235bef496 | CC BY 4.0, изменено |
