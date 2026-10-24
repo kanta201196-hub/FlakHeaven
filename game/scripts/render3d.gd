@@ -544,10 +544,10 @@ func _unit_mesh(tex: Texture2D, length_px: float, thick: float, grid: int) -> Di
 ## 3.5: бой на 3D-моделях (решение 14.10, подтверждено владельцем 16.10). Облегчённая модель
 ## models/battle/fh_battle_<картинка>.glb (tools/blender/battle_lod.py из модели ангара); длина модели 1 =
 ## ширина картинки, нос +X — те же оси, что у рельефа из спрайта, поэтому подвесы, сопла и следы на месте.
-## «Низкое» качество графики — прежний рельеф из спрайта (слабые ПК).
+## Used on every graphics preset, «Низкое» included: a sprite relief looks flat next to the 3D
+## world. The battle model is already the cheap LOD (~9k triangles, 1K textures); no lighter one
+## exists. Returns null only when the picture has no GLB: then ReliefMesh is the fallback (VIS-01).
 func _battle_model(tex: Texture2D) -> PackedScene:
-	if Settings.gopt("terrain") == 0:
-		return null
 	# оптимизация: кэш по самой картинке — без сборки пути каждый кадр у каждого самолёта
 	var hit = _bm_cache.get(tex)
 	if hit != null or _bm_cache.has(tex):
