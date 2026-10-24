@@ -1,7 +1,7 @@
 extends Node
 ## Relief lab, working part (loaded by relief_dump.gd once autoloads exist): dumps terrain heights (float32) and rock/zone masks over an area for offline before/after maps.
 ## Why: biome_map stores 8-bit heights, too coarse for hillshade comparisons of relief variants.
-## Output: <out> raw float32 W*H (px above valley floor), <out>.json with size, ceiling and rock mask (base64 bytes).
+## Output: <out> raw float32 W*H (px above valley floor), <out>.v the valley field (float32), <out>.json with size, ceiling and rock mask (base64 bytes).
 
 
 ## Builds the terrain like the game does (same seed and functions) and samples it on a regular grid.
@@ -34,6 +34,8 @@ func _ready() -> void:
 	pe.resize(W * H)
 	var pm := PackedByteArray()   # province mesa share 0…255
 	pm.resize(W * H)
+	var vs := PackedFloat32Array()   # valley field (distance-like, from the river and side valleys)
+	vs.resize(W * H)
 	var prov := t.has_method("province")
 	var t0 := Time.get_ticks_msec()
 	for kz in ch:
@@ -48,6 +50,7 @@ func _ready() -> void:
 					var r := t._relief(x, z, v, ctx)
 					var gi := (kz * per + j) * W + kx * per + i
 					hs[gi] = r.x
+					vs[gi] = v
 					rock[gi] = clampi(int(r.y * 255.0), 0, 255)
 					if prov:
 						var pv: Vector4 = t.call("province", x, z, v)
@@ -57,6 +60,9 @@ func _ready() -> void:
 	var f := FileAccess.open(out, FileAccess.WRITE)
 	f.store_buffer(hs.to_byte_array())
 	f.close()
+	var fv := FileAccess.open(out + ".v", FileAccess.WRITE)
+	fv.store_buffer(vs.to_byte_array())
+	fv.close()
 	var j := FileAccess.open(out + ".json", FileAccess.WRITE)
 	j.store_string(JSON.stringify({"W": W, "H": H, "step": step, "x0": cx0 * C, "z0": cz0 * C,
 		"ceiling": t.ceiling, "ms": ms, "us_per_sample": 1000.0 * ms / float(W * H),
