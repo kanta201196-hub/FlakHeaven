@@ -2355,10 +2355,13 @@ var _light_i := 0
 ## Вспышка света в точке взрыва: подсвечивает модели и землю, гаснет за ~0,35 с
 func light_flash(p: Vector2, size: float) -> void:
 	if _lights.is_empty():
-		for i in 8:
+		# VFX-06: Forward+ shades lights in clusters, so it affords 3x the flashes of Compatibility
+		for i in (24 if GpuFx.active() else 8):
 			var l := OmniLight3D.new()
 			l.light_color = Color(1.0, 0.62, 0.28)
 			l.shadow_enabled = false
+			if GpuFx.active():
+				l.omni_attenuation = Boom3D.LIGHT_FALLOFF_FWD
 			l.visible = false
 			add_child(l)
 			_lights.append({"l": l, "t": 0.0, "e": 0.0})
@@ -2367,7 +2370,7 @@ func light_flash(p: Vector2, size: float) -> void:
 	var l2: OmniLight3D = slot["l"]
 	l2.position = Vector3(p.x, 60.0, p.y)
 	l2.omni_range = clampf(size * 9.0, 140.0, 900.0)
-	slot["e"] = clampf(size / 12.0, 1.5, 6.0)
+	slot["e"] = clampf(size / 12.0, 1.5, 6.0) * (Boom3D.FLASH_GAIN_FWD if GpuFx.active() else 1.0)
 	slot["t"] = 0.35
 	l2.light_energy = slot["e"]
 	l2.visible = true
