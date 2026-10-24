@@ -95,3 +95,26 @@ A second baseline of the same profile (18 sorties, `main` after the RunState ref
 - Detectable with 6–8 sorties per class: level ±5, ace fight ±10–20 s, repair / taken ±0.2, signature share ±10 points. HP metrics (M2, M3) and "would die" (M5) need 16 per class.
 - Both baselines agree on the problems: «Оса» and «Кит» are outside M2/M3/M4/M5, the signature share is below 20 % for all three, levels and repair are inside. From now on the two baselines are pooled (38 sorties) as "before" for the next change.
 - 2 of 24 sorties of the second run hung at minute 9–11 (process asleep on a lock, no CPU, no error) at about the same real time; killed after 1.5 h. Guess: something outside the game (both at once); if it repeats, it goes to the backlog as a bug.
+
+## 8. Pooled baseline and the floor, 2026-10-24
+
+"Before" for the next change — demo profile, both baselines pooled (38 sorties; commits 359d42c and ce7ad98, no balance change between them). Floor — fresh profile (empty hangar, crew lvl 1), 29 sorties, same operations. Median [min–max], ✗ outside the corridor:
+
+| Metric | Corridor | Demo «Оса» (13) | Demo «Грач» (13) | Demo «Кит» (12) | Fresh «Оса» (10) | Fresh «Грач» (10) | Fresh «Кит» (9) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Lvl 5 / 10 / 15:00 | 20–26 / 30–38 / 38–48 | 24 / 34 / 40 | 25 / 36 / 44 | 26 / 35 / 42 | 24 / 34 / 43 | 24 / 34 / 42 | 22 / 32 / 39 |
+| HP ≤ 5:00, % | ≥ 35 | 37 | 47 | 53 | 40 | 34 ✗ | 37 |
+| HP 5–7:00, % | ≥ 35 | 22 ✗ | 55 | 28 ✗ | 2 ✗ | 30 ✗ | 18 ✗ |
+| Ace fight, s | 20–45 | 49 ✗ | 38 | 62 ✗ | 57 ✗ | 45 | 91 ✗ |
+| Would die | ≤ 30 | 41 ✗ | 16 | 66 ✗ | 57 ✗ | 64 ✗ | 119 ✗ |
+| Repair / taken | 0.6–0.95 | 0.69 | 0.83 | 0.64 | 0.71 | 0.69 | 0.61 |
+| Signature, % | ≥ 20 | 19 ✗ | 12 ✗ | 7 ✗ | 16 ✗ | 9 ✗ | 10 ✗ |
+
+Reading by section 4, item 1 (danger first):
+1. **M3 — the first ace window** is the furthest outside: «Оса» 22 %, «Кит» 28 % on the demo profile; on the fresh profile all three. Together with M4 (ace fight 49 / 62 s) this points at the first ace — GD-02 (first-wave ace ×0.7 damage, Kanta's decision) is the first change by the method.
+2. **M7 — signature weapons** below 20 % for all three classes: GD-03 for «Кит», then «Грач» (rockets 12 %).
+3. Levels (M1) and repair (M6) are inside on both profiles: S10-13 and EX-10 do not need a follow-up by these numbers.
+4. «Грач» is the strongest class on the demo profile (inside on everything but M7). The hangar helps «Грач» much more than the others (would die 64 → 16), «Кит» barely (119 → 66).
+
+Order: GD-02 goes into the next build cycle (this one already carries S10-13 and EX-10), measured "before → after" against this pooled baseline, 48 sorties.
+
