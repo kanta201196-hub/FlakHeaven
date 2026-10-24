@@ -115,7 +115,10 @@ Steps (after step 4 above, or in parallel by a second thread if Kanta wants):
 3. Fonts: none — Exo 2 (already in the game, OFL) covers headings and menu items.
 4. Kanta's PC (Remote Control): step 5 (fps per preset, after Forward+) and step 6 (frames from the Sublight video).
 
-## Open questions for Kanta
+## Decisions (Kanta, 2026-10-24 16:18)
+Plan accepted. Menu items and moves: yes. Flight log: compact card on the main screen. Kenney Input Prompts and UI Audio (CC0): yes. Combat UI runs in parallel in thread «Переделать интерфейс боя» (backlog UI-02); this thread keeps steps 1–5 (UI-01).
+
+## Open questions for Kanta (answered, kept for history)
 2. Menu items and moves («Как играть» → codex, «Логи» → «Отзыв» card): yes/no.
 3. Flight log on the main screen: compact card (recommended) or only in the codex.
 4. Combat UI order: after the menu and settings (recommended) or in parallel in a separate thread.

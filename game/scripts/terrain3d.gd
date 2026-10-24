@@ -185,9 +185,12 @@ func _height_v(x: float, z: float, v: float, ctx := {}) -> float:
 ## Дно долины (до D_FAN − 40), река, дорога и площадки поселений не меняются
 ## sd_in — уже посчитанное stream_field(x, z, ctx) (кусок рельефа считает его сам; проход по оптимизации 3.5-s7)
 ## pv — landform weights already computed for this point (RV-01 chunk build), x < 0 — none.
-func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector4(-1.0, 0.0, 0.0, 0.0)) -> Vector3:
+## gv — gradient of the valley field at the point when the caller has it (chunk grid), INF — computed here,
+## NO_GULLIES — relief without the RV-02 gullies (coarse placeholder chunks).
+func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector4(-1.0, 0.0, 0.0, 0.0),
+		gv := Vector2.INF) -> Vector3:
 	if relief_style == 1 and not _sea:
-		return _relief_prov(x, z, v, ctx, sd_in, pv)
+		return _relief_prov(x, z, v, ctx, sd_in, pv, gv)
 	var a := absf(v)
 	if _sea and a > SEA_W:
 		# «Архипелаг»: берег поднимается в _land_k раз быстрее долины Нагорья — узкий пляж, сразу холмы
@@ -261,10 +264,27 @@ func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector
 
 
 
-## Which relief to build: F1 slider relief_variety (0 — before RV-01) or --relief0 (lab frames).
+## Which relief to build: F1 slider relief_variety (0 — before RV-01) or --relief0 (lab frames);
+## RV-02 gullies: slider relief_gullies or --gullies0 (frames without them).
 func _pick_style() -> void:
-	var on := Tuning.g("relief_variety") >= 0.5 and not OS.get_cmdline_user_args().has("--relief0")
+	var args := OS.get_cmdline_user_args()
+	var on := Tuning.g("relief_variety") >= 0.5 and not args.has("--relief0")
 	relief_style = 1 if on else 0
+	gullies = Tuning.g("relief_gullies") >= 0.5 and not args.has("--gullies0")
+
+
+var gullies := true   # RV-02: gullies on the RV-01 relief (see _pick_style)
+## gv value that turns the gullies off for one call: a placeholder chunk (LOD_N grid, ~100 px) cannot show
+## them (the finest are ~100 px wide) and is built on the main thread, where their cost is a frame spike.
+const NO_GULLIES := Vector2(-INF, -INF)
+
+
+## Gradient of the valley field at a point (per px), central differences one chunk grid step apart:
+## the same step the chunk build uses (_compute), so height() and the mesh agree at every graphics level
+## (the field has kinks where valleys meet, and there a different step gives a different direction).
+func valley_grad(x: float, z: float, ctx := {}) -> Vector2:
+	var e := CHUNK / N
+	return Vector2(valley(x + e, z, ctx) - valley(x - e, z, ctx), valley(x, z + e, ctx) - valley(x, z - e, ctx)) / (2.0 * e)
 
 
 ## Landform weights at a point (see ReliefProvinces.weights): maps, bench frames, shader masks.
@@ -274,9 +294,14 @@ func province(x: float, z: float, v := 0.0) -> Vector4:
 
 ## RV-01 relief: mountains by region from ReliefProvinces; settlement flats, the river bed and
 ## streams cut in here exactly as in the old relief.
-func _relief_prov(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector4(-1.0, 0.0, 0.0, 0.0)) -> Vector3:
+func _relief_prov(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector4(-1.0, 0.0, 0.0, 0.0),
+		gv := Vector2.INF) -> Vector3:
 	var a := absf(v)
-	var r := _prov.relief(x, z, a, v, pv)
+	if not gullies or gv == NO_GULLIES:
+		gv = Vector2.INF
+	elif not gv.is_finite() and a > ReliefBalance.D_FAN:   # floor and fan have no gullies: skip the cost there
+		gv = valley_grad(x, z, ctx)
+	var r := _prov.relief(x, z, a, v, pv, gv)
 	var fl := _flat(x, z, ctx)
 	var h := r.x * fl
 	h -= (1.0 - smoothstep(D_RIVER * 0.5, D_RIVER * 1.8, a)) * 0.025
@@ -1346,12 +1371,27 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 	gs.resize(W * W)
 	rs.resize(W * W)
 	ps.resize(W * W)
+	# RV-02: valley field with one more ring of nodes — its gradient (central differences) steers the gullies
+	var with_gv := with_prov and gullies and lod == 0
+	var W2 := W + 2
+	var vg := PackedFloat32Array()
+	var rg := PackedFloat32Array()   # river_field on the same ring, reused below (it is not cheap)
+	if with_gv:
+		vg.resize(W2 * W2)
+		rg.resize(W2 * W2)
+		for j in W2:
+			for i in W2:
+				var gx := ox + (i - 2) * step
+				var gz := oz + (j - 2) * step
+				rg[j * W2 + i] = river_field(gx, gz)
+				vg[j * W2 + i] = valley(gx, gz, ctx, rg[j * W2 + i])
 	for j in W:
 		for i in W:
 			var x := ox + (i - 1) * step
 			var z := oz + (j - 1) * step
 			# русло и дорога — по «чистому» полю (река не огибает кишлаки кольцом), высота — с боковыми долинами
-			var rf := river_field(x, z)
+			var c := (j + 1) * W2 + i + 1
+			var rf := rg[c] if with_gv else river_field(x, z)
 			vs[j * W + i] = rf
 			gs[j * W + i] = green(x, z, rf)
 			# L-09: ручей — в том же поле, в K раз уже (вода и мокрый берег шейдера). Знак — от реки, иначе
@@ -1363,10 +1403,13 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				var g := sd * STREAM_K if sd < 20.0 else 20.0 * STREAM_K + (sd - 20.0) * 80.0
 				if g < absf(vs[j * W + i]):
 					vs[j * W + i] = g * (1.0 if vs[j * W + i] >= 0.0 else -1.0)
-			var vv := valley(x, z, ctx, rf)
+			var vv := vg[c] if with_gv else valley(x, z, ctx, rf)
 			var pv := _prov.weights(x, z, vv) if with_prov else Vector4(-1.0, 0.0, 0.0, 0.0)
 			ps[j * W + i] = pv
-			var rl := _relief(x, z, vv, ctx, sf, pv)
+			var gv := NO_GULLIES
+			if with_gv:
+				gv = Vector2(vg[c + 1] - vg[c - 1], vg[c + W2] - vg[c - W2]) / (2.0 * step)
+			var rl := _relief(x, z, vv, ctx, sf, pv, gv)
 			hs[j * W + i] = rl.x
 			rs[j * W + i] = Vector2(rl.y, rl.z)
 	# тест 3.5-s4 (п. 16–17): пятна поселений на земле (утоптанная земля, огороды и сады) — неровные, с мягким

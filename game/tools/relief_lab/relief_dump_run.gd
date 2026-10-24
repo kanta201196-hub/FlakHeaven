@@ -47,7 +47,7 @@ func _ready() -> void:
 					var x := key.x * C + (i + 0.5) * step
 					var z := key.y * C + (j + 0.5) * step
 					var v := t.valley(x, z, ctx)
-					var r := t._relief(x, z, v, ctx)
+					var r := t._relief(x, z, v, ctx)   # single-point path: gullies take the valley gradient themselves
 					var gi := (kz * per + j) * W + kx * per + i
 					hs[gi] = r.x
 					vs[gi] = v

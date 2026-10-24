@@ -80,6 +80,11 @@ var _layers := {}
 var _flips := {}
 ## Same layers as a typed list, so per-frame loops do not build an Array from the dictionary
 var _list: Array[FxLayer] = []
+## VFX-03 convoy smoke screen: smoke-layer simulation with its own soft draw material (Boom3D.SCREEN_SH);
+## null until build_screen()
+var screen: FxLayer
+## Smoke screen slots: a burst is about 28 puffs and the screen adds 8 a second for up to 5 s each, per convoy
+const SCREEN_SLOTS := 512
 
 
 ## True when the GPU path can run: Forward+ renderer and no `--oldfx` (CPU path forced for comparisons)
@@ -114,6 +119,14 @@ func build(meshes: Array, mats: Array, caps: Array) -> void:
 		add_child(fl)
 		_flips[fx_id] = fl
 		_list.append(fl)
+
+
+## Creates the smoke screen layer: same rules as Boom3D smoke (size, fade, drift), drawn with `mat`
+func build_screen(quad: Mesh, mat: Material) -> void:
+	screen = FxLayer.new()
+	screen.setup(Boom3D.L_SMOKE, SCREEN_SLOTS, quad, mat)
+	add_child(screen)
+	_list.append(screen)
 
 
 ## True if this Boom3D layer is drawn on the GPU
@@ -161,5 +174,5 @@ func counts() -> Array:
 	var pc := [0, 0, 0, 0, 0, 0, 0]
 	for fl in _list:
 		if fl.layer < pc.size():
-			pc[fl.layer] = fl.alive()
+			pc[fl.layer] += fl.alive()   # the smoke screen adds to smoke
 	return pc

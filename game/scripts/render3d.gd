@@ -396,6 +396,12 @@ func tilt_on() -> bool:
 	return _tilt_on
 
 
+## VFX-04: player tracers are 3D glow strips (with HDR bloom) instead of lines on the 2D combat layer; Forward+ only,
+## Compatibility keeps the 2D lines it was tuned with
+func tracers_3d() -> bool:
+	return enabled and GpuFx.active()
+
+
 # ---------- камера ----------
 
 func _cam_height(zoom: float) -> float:
@@ -1787,6 +1793,8 @@ const ESHOT_LEN := 30.0              # длина ракеты врага, px (�
 const EGLOW_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled, fog_disabled;
+// VFX-04: in Forward+ the white core goes above 1.0 (and the halo a little), so the HDR glow blooms tracers
+uniform float hdr = 1.0;
 varying vec4 col;
 void vertex() {
 	col = COLOR;
@@ -1797,7 +1805,8 @@ void fragment() {
 	float head = smoothstep(-1.0, 0.5, p.x);   // к хвосту трассер гаснет
 	float halo = smoothstep(1.0, 0.15, d) * head;
 	float core = smoothstep(0.42, 0.08, length(vec2(p.x * 0.8, p.y * 1.6))) * head;
-	ALBEDO = mix(col.rgb, vec3(1.0, 0.96, 0.92), core);
+	float lift = col.a > 0.99 ? 1.0 + (hdr - 1.0) * 0.3 : 1.0;   // dark underlays (alpha < 1) do not glow
+	ALBEDO = mix(col.rgb * lift, vec3(1.0, 0.96, 0.92) * hdr, core * step(0.6, col.r + col.g));
 	ALPHA = clamp(halo * 0.7 * col.a + core, 0.0, 1.0);
 }
 """
@@ -1823,6 +1832,7 @@ func _sync_enemy_shots(m: Main) -> void:
 		var mat := ShaderMaterial.new()
 		mat.shader = sh
 		mat.render_priority = 99   # под слоем боя (взрывы, текст), над моделями
+		mat.set_shader_parameter("hdr", 2.6 if GpuFx.active() else 1.0)
 		var pm := PlaneMesh.new()
 		pm.size = Vector2(2, 2)
 		var gm := MultiMesh.new()
@@ -1841,7 +1851,8 @@ func _sync_enemy_shots(m: Main) -> void:
 	var gmx := _eglow_mm.multimesh
 	var n_m := 0
 	var n_g := 0
-	var need_g := pr.ebullets.size() + pr.missiles.size() * 2
+	var mine := tracers_3d()
+	var need_g := pr.ebullets.size() + pr.missiles.size() * 2 + (pr.bullets.size() * 2 if mine else 0)
 	if gmx.instance_count < need_g:
 		gmx.instance_count = need_g + 64
 	if mmx.instance_count < pr.missiles.size():
@@ -1865,6 +1876,23 @@ func _sync_enemy_shots(m: Main) -> void:
 		lo = lo.min(ctr)
 		hi = hi.max(ctr)
 		n_g += 1
+	# VFX-04: player tracers (Projectiles._draw look: dark underlay, warm glow, white core) drawn here in Forward+
+	for b: Dictionary in (pr.bullets if mine else []):
+		var p: Vector2 = b["p"]
+		var v: Vector2 = b["v"]
+		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
+		var ln := 34.0 if b.has("pierce") else 24.0
+		var ctr := Vector3(p.x - dir.x * ln * 0.5, 1.2, p.y - dir.y * ln * 0.5)
+		# long thin needle: the player's fire must not read like the short fat enemy tracers next to it
+		var xa := Vector3(dir.x, 0, dir.y) * ln * 0.85
+		gmx.set_instance_transform(n_g, Transform3D(Basis(xa, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 3.6), ctr))
+		gmx.set_instance_color(n_g, Color(0.1, 0.07, 0.03, 0.5))
+		n_g += 1
+		gmx.set_instance_transform(n_g, Transform3D(Basis(xa, Vector3.UP, Vector3(-dir.y, 0, dir.x) * 2.4), ctr + Vector3(0, 0.1, 0)))
+		gmx.set_instance_color(n_g, Color(1.0, 0.62, 0.15, 1.0))
+		n_g += 1
+		lo = lo.min(ctr)
+		hi = hi.max(ctr)
 	for ms: Dictionary in pr.missiles:
 		if float(ms.get("lev_hold", 0.0)) > 0.0:   # «Левиафан»: ракета ещё выходит из контейнера (LeviathanParts)
 			continue
