@@ -37,6 +37,7 @@ var _to_screen := false
 ## M-39: пыль цвета земли Нагорья (песок с серым, подсвечена солнцем) и её серо-бурый низ
 const DUST := Color(0.58, 0.51, 0.41)
 const DUST_D := Color(0.42, 0.37, 0.31)
+const WATER := Color(0.62, 0.72, 0.74)   # VFX-05: spray tint, the river's grey-green lit white
 var _lo := false            # «Низкое» качество: без ударной сферы, света и огня в догорающих очагах
 
 var _mm: Array = []
@@ -499,7 +500,11 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 		var g := R.ground_under(pos)
 		var ch := R.cam.global_position.y
 		var k := clampf((ch - g.y) / maxf(ch, 1.0), 0.5, 3.0)
-		if kind == "ground":
+		if R.is_water(g, 0.0) and _gpu != null and not _lo:
+			# VFX-05: a bomb or a crash in the river raises a white water column, spray and rings;
+			# the earth flipbook, dust, clods and the burning spot belong to dry land
+			_water_blast(g, s * k * (1.3 if kind == "ground" else 1.0))
+		elif kind == "ground":
 			_ground(g, s * k * 1.3)
 		elif kind == "plasma":
 			_plasma(g, s * k)
@@ -572,6 +577,49 @@ func hit(pos: Vector2, color: Color) -> bool:
 	return true
 
 
+## VFX-05: water column of a bomb or a crash in the river: flash, a white column that falls back, spray
+## in all directions, foam and a ring on the surface (the river is ~50 px wide, so they stay small)
+func _water_blast(g: Vector3, s: float) -> void:
+	var p := g + Vector3(0, 1.0, 0)
+	_flash(p + Vector3(0, s * 0.15, 0), s * 1.6, 0.07, Color(1.0, 0.95, 0.85, 1.0))
+	for i in _n(clampf(s / 4.0, 9.0, 16.0)):
+		var d := _rdir()
+		var up := randf_range(2.6, 4.2) if i % 3 == 0 else randf_range(1.2, 2.4)
+		var c := WATER.lerp(Color(1, 1, 1), randf() * 0.35)
+		c.a = 0.6
+		_smoke(p + Vector3(d.x, 0, d.z) * s * 0.15, Vector3(d.x * 0.8, up, d.z * 0.8) * s, s * 0.3, s * randf_range(0.6, 0.9),
+			randf_range(0.9, 1.3), c, 0.0, -s * 3.5, 0.9, randf_range(0.0, 0.08))
+	_splash(g, minf(s * 0.5, 9.0))   # foam and one ring kept inside the narrow river bed
+	_sparks(p, _n(10), 240.0 + s * 6.0, 0.6, Color(0.9, 0.95, 1.0, 1.0), 0.6, 0.8)
+	_light(g + Vector3(0, s * 1.2, 0), clampf(s / 10.0, 1.0, 4.0), clampf(s * 8.0, 200.0, 700.0), 0.15)
+
+
+## VFX-05: small splash of size s on the water at g: a spout that falls back, white foam and one ring
+## (a round in the river, debris landing in it); _water_blast uses it for its foam
+func _splash(g: Vector3, s: float) -> void:
+	var p := g + Vector3(0, 1.0, 0)
+	for i in 2:
+		var c := WATER.lerp(Color(1, 1, 1), 0.4 + 0.3 * randf())
+		c.a = 0.8
+		_smoke(p, Vector3(randf_range(-0.6, 0.6), randf_range(4.0, 7.0), randf_range(-0.6, 0.6)) * s, s * 0.4, s * randf_range(1.6, 2.2),
+			randf_range(0.5, 0.8), c, 0.0, -s * 9.0, 1.2)
+	var f := Color(0.92, 0.95, 0.96, 0.7)
+	_smoke(p, Vector3.ZERO, s * 0.8, s * randf_range(3.0, 3.8), randf_range(0.9, 1.3), f, 0.0, 0.0, 3.0)
+	_ring(g, s * 0.6, s * 4.5, 1.1, 0.0)
+
+
+## A ripple ring on the water: pale foam puffs sliding outward over the surface from radius r0 towards r1
+## over life seconds, after delay (a flat shell cut into the river banks and showed as glass panes)
+func _ring(g: Vector3, r0: float, r1: float, life: float, delay: float) -> void:
+	var n := int(_n(10.0))
+	var a0 := randf() * TAU
+	for i in n:
+		var a := a0 + TAU * float(i) / float(n)
+		var d := Vector3(cos(a), 0.0, sin(a))
+		_smoke(g + d * r0 + Vector3(0, r0 * 0.4 + 1.0, 0), d * (r1 - r0) / life * 1.6, r0 * 0.3, r0 * 0.5, life,
+			Color(0.9, 0.95, 0.97, 0.3), 0.0, 0.0, 1.6, delay)
+
+
 ## VFX-04: a bullet that ends on the ground kicks up a small dust puff and a dark spray of dirt where it lands,
 ## so strafing a column reads as rounds hitting the earth (Forward+ only; nothing on water or on «Низкое»).
 ## At most DUST_RATE puffs a second: a fighter's guns fire faster than the eye can follow.
@@ -581,8 +629,8 @@ var _dust_t := 0
 
 
 func ground_hit(pos: Vector2) -> void:
-	# the preset is read here, not from _lo: _lo is refreshed only when an explosion spawns
-	if _gpu == null or Settings.gfx <= 0 or Render3D.I == null or Render3D.I.cam == null:
+	# the effects option is read here, not from _lo: _lo is refreshed only when an explosion spawns
+	if _gpu == null or Settings.gopt("effects") == 0 or Render3D.I == null or Render3D.I.cam == null:
 		return
 	var now := Time.get_ticks_msec()
 	_dust_budget = minf(DUST_RATE, _dust_budget + float(now - _dust_t) * 0.001 * DUST_RATE)
@@ -590,9 +638,10 @@ func ground_hit(pos: Vector2) -> void:
 	if _dust_budget < 1.0:
 		return
 	var g := Render3D.I.ground_under(pos)
-	if Render3D.I.is_water(g, 4.0):
-		return
 	_dust_budget -= 1.0
+	if Render3D.I.is_water(g, 0.0):   # VFX-05: a round in the river throws up a small spout instead of dust
+		_splash(g, 5.0)
+		return
 	var p := g + Vector3(0, 2.0, 0)
 	# light dust reads against the red-brown ground; the dark spray under it is the thrown-up earth
 	var dc := _dust_col(0.8).lerp(Color(0.74, 0.66, 0.55, 0.8), 0.3)
@@ -1138,10 +1187,14 @@ func _tick_debris(dt: float, R: Render3D) -> void:
 				q["landed"] = true
 				q["life"] = float(q["t"]) + (6.0 if q["trail"] != "dust" else 3.0)
 				var sz := (q["sz"] as Vector3).length()
-				_smoke(p, Vector3(0, sz * 2.0, 0), sz * 0.8, sz * 3.0, 1.4, Color(0.62, 0.53, 0.4, 0.55), 0.0, 2.0, 2.0)
-				if q["burn"]:
-					_emit.append({"p": p, "t": 0.0, "life": randf_range(2.5, 4.0), "s": sz * 1.2, "acc_f": 0.0, "acc_s": 0.0})
-					_flak(p + Vector3(0, sz, 0), sz * 1.4)
+				if _gpu != null and R.is_water(p, 0.0):   # VFX-05: sinks with a splash, no dust and no fire
+					_splash(p, sz * 0.8)
+					q["life"] = float(q["t"])
+				else:
+					_smoke(p, Vector3(0, sz * 2.0, 0), sz * 0.8, sz * 3.0, 1.4, Color(0.62, 0.53, 0.4, 0.55), 0.0, 2.0, 2.0)
+					if q["burn"]:
+						_emit.append({"p": p, "t": 0.0, "life": randf_range(2.5, 4.0), "s": sz * 1.2, "acc_f": 0.0, "acc_s": 0.0})
+						_flak(p + Vector3(0, sz, 0), sz * 1.4)
 		q["p"] = p
 		arr[w] = q
 		w += 1
