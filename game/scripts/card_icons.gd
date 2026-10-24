@@ -33,9 +33,28 @@ static func key(c: Dictionary, p: Player = null) -> String:
 	return "module"
 
 
-## Значок в квадрате со стороной s с центром в c
+## PG-01 (Kanta 24.10 «Значки ок»): volumetric weapon icons rendered from the hangar models
+## (game/tools/model_lab/card_icons.py); a key without a picture keeps its line drawing
+static var _tex := {}
+
+
+## Picture of icon k (res://art/icons/<k>.png) or null; cached, including misses
+static func tex(k: String) -> Texture2D:
+	if not _tex.has(k):
+		var path := "res://art/icons/%s.png" % k
+		_tex[k] = load(path) if ResourceLoader.exists(path) else null
+	return _tex[k]
+
+
+## Значок в квадрате со стороной s с центром в c. Объёмный значок (tex) рисуется без рамки и на четверть
+## крупнее квадрата: у него своё цветное свечение, а модель занимает не весь кадр; col задаёт только прозрачность
 static func draw(ctrl: Control, c: Vector2, s: float, k: String, col: Color) -> void:
 	var h := s / 2.0
+	var t := tex(k)
+	if t != null:
+		var ts := s * 1.25
+		ctrl.draw_texture_rect(t, Rect2(c - Vector2(ts, ts) / 2.0, Vector2(ts, ts)), false, Color(1, 1, 1, col.a))
+		return
 	ctrl.draw_rect(Rect2(c - Vector2(h, h), Vector2(s, s)), Color(col.r, col.g, col.b, 0.14))
 	ctrl.draw_rect(Rect2(c - Vector2(h, h), Vector2(s, s)), Color(col.r, col.g, col.b, 0.6), false, 1.5)
 	var u := s * 0.36   # «единица» рисунка

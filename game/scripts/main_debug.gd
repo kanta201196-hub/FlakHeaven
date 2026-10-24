@@ -33,7 +33,7 @@ func process(delta: float) -> void:
 		_run_autotest(delta)
 		if m._args.has("--smoke"):
 			_smoke_check()
-	if m._args.has("--pairtest"):
+	if m._args.has("--pairtest") or m._args.has("--cardtest"):
 		_pair_test()
 	if m._args.has("--shots"):
 		_debug_screenshots(delta)
@@ -209,16 +209,21 @@ var _pair_phase := 0
 
 ## S10-01: экран выбора мастерства в бою («или-ИЛИ», 35-й уровень) — кадр для проверки
 ## godot --path game --rendering-driver opengl3 -- --autotest --smoke --god --class=fighter --pairtest
+## --cardtest instead of --pairtest: an ordinary level-5 card pick (PG-01, shot_levelup_cards.png)
 func _pair_test() -> void:
+	var cards := m._args.has("--cardtest")   # PG-01: an ordinary card pick at level 5 (volumetric card icons)
 	if _pair_phase == 0 and m.state == "playing" and m.run_time > 2.0:
-		m.player.mastery = true
-		m.run.level = 35
-		(m.player.groups[0] as Hardpoint).level = Weapons.MAX_LEVEL
+		if cards:
+			m.run.level = 5
+		else:
+			m.player.mastery = true
+			m.run.level = 35
+			(m.player.groups[0] as Hardpoint).level = Weapons.MAX_LEVEL
 		m.run.pending_levels = 1
 		m._open_levelup()
 		_pair_phase = 1
 	elif _pair_phase == 1 and m.state == "levelup" and m._state_t > 1.0:
-		m.get_viewport().get_texture().get_image().save_png("user://shot_levelup_pair.png")
+		m.get_viewport().get_texture().get_image().save_png("user://shot_levelup_%s.png" % ("cards" if cards else "pair"))
 		print("SHOT levelup_pair")
 		m.get_tree().quit()
 
@@ -633,7 +638,7 @@ func _run_autotest(delta: float) -> void:
 				m.choose_course(0)
 			return
 		"levelup":
-			if m._args.has("--pairtest"):
+			if m._args.has("--pairtest") or m._args.has("--cardtest"):
 				return   # S10-01: экран выбора держим для кадра
 			if _bot_wait <= 0.0:
 				_bot_wait = 0.3
