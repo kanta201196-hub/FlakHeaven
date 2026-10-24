@@ -15,17 +15,20 @@ const SLOTS := 2
 
 ## Flipbook layer index (after Boom3D's seven): one camera-facing quad per effect plays a pre-rendered sequence
 const L_FLIP := 7
+## Flipbooks in flight per effect: a blast plays 3.4 s, so 64 covers a carpet of bombs; when all are busy,
+## flip() says no and Boom3D builds that blast from particles
 const FLIP_SLOTS := 64
 
 ## VFX-02 flipbooks: atlas of FRAMES pictures in COLS columns, rendered from the combat camera (28 deg tilt) and
 ## lit by the game sun with game/tools/vfx_bake/render_vdb.py. size = quad side per unit of the effect size s
 ## (Boom3D blast: the fireball at its widest about today's core, 1.5 s); lift = how far up the screen the quad
-## centre sits above the ground point, per quad side (in the bake the ground point is 0.31 of the frame below
+## centre sits above the ground point, per quad side (in the bake the ground point is 0.20 of the frame below
 ## the centre); it is applied along the camera's up vector, as the bake is a picture, not a world object;
 ## life = seconds the whole sequence plays (the simulation is 6.7 s at 30 fps, played about twice as fast).
+## The bake matches cam_tilt 28 (F9 also offers 35, 45 and top-down: there the picture leans a little off).
 ## Visual numbers only, no gameplay effect.
 const FLIPS := {
-	"blast": {"tex": "res://art/vfx/blast_ground.png", "frames": 64, "cols": 8, "size": 4.0, "lift": 0.31, "life": 3.4, "glow": 0.4},
+	"blast": {"tex": "res://art/vfx/blast_ground.png", "frames": 64, "cols": 8, "size": 4.0, "lift": 0.20, "life": 3.4, "glow": 0.4},
 }
 
 ## Draw shader of the flipbook layer: camera-facing quad (like Boom3D.BILLBOARD, without rotation), frame from
@@ -39,12 +42,15 @@ uniform sampler2D atlas : source_color, filter_linear_mipmap, repeat_disable;
 uniform float frames = 64.0;
 uniform float cols = 8.0;
 // pulled towards the camera by this share of the quad side, so the slope under a ground blast does not cut the
-// picture; the soft fade hides what is left of the cut
+// picture; the soft fade (share of the side) hides what is left of the cut
 uniform float pull = 0.5;
+uniform float soft = 0.08;
+varying float side;
 varying vec4 cd;
 void vertex() {
 	cd = INSTANCE_CUSTOM;
 	float sc = length(MODEL_MATRIX[0].xyz);
+	side = sc;
 	// slide the quad along the ray to the camera and shrink it by the same ratio: same place and size on screen
 	vec3 c = (VIEW_MATRIX * vec4(MODEL_MATRIX[3].xyz, 1.0)).xyz;
 	float L = length(c);
@@ -61,11 +67,12 @@ void fragment() {
 	float z = texture(depth_tex, SCREEN_UV).r;
 	vec4 v = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, z, 1.0);
 	float gap = VERTEX.z - v.z / v.w;   // distance in front of the scene behind this pixel
-	ALPHA = a.a * COLOR.a * clamp(gap / 40.0, 0.0, 1.0);
+	ALPHA = a.a * COLOR.a * clamp(gap / max(side * soft, 1.0), 0.0, 1.0);
 }
 """
 
 var _layers := {}
+## Flipbook layers by effect id (FLIPS keys); only those whose atlas loaded
 var _flips := {}
 ## Same layers as a typed list, so per-frame loops do not build an Array from the dictionary
 var _list: Array[FxLayer] = []
@@ -85,8 +92,8 @@ func build(meshes: Array, mats: Array, caps: Array) -> void:
 		add_child(fl)
 		_layers[L] = fl
 		_list.append(fl)
-	for name in FLIPS:
-		var f: Dictionary = FLIPS[name]
+	for fx_id in FLIPS:
+		var f: Dictionary = FLIPS[fx_id]
 		var tex := load(String(f["tex"])) as Texture2D
 		if tex == null:
 			continue   # atlas not imported yet: Boom3D keeps the particle recipe for this effect
@@ -101,7 +108,7 @@ func build(meshes: Array, mats: Array, caps: Array) -> void:
 		var fl := FxLayer.new()
 		fl.setup(L_FLIP, FLIP_SLOTS, meshes[Boom3D.L_FLASH], mat)
 		add_child(fl)
-		_flips[name] = fl
+		_flips[fx_id] = fl
 		_list.append(fl)
 
 
@@ -110,17 +117,18 @@ func has_layer(L: int) -> bool:
 	return _layers.has(L)
 
 
-## Plays flipbook `name` on the ground point g for an effect of size s (Boom3D units); false if there is no
-## such flipbook, so the caller builds the effect from particles instead
-func flip(name: String, g: Vector3, s: float) -> bool:
-	if not _flips.has(name):
+## Plays flipbook `fx_id` on the ground point g for an effect of size s (Boom3D units); false if there is no
+## such flipbook or all its slots are busy, so the caller builds the effect from particles instead
+func flip(fx_id: String, g: Vector3, s: float) -> bool:
+	var fl: FxLayer = _flips.get(fx_id)
+	if fl == null or fl.alive() >= FLIP_SLOTS:
 		return false
-	var f: Dictionary = FLIPS[name]
+	var f: Dictionary = FLIPS[fx_id]
 	var side := float(f["size"]) * s
 	var up := Vector3.UP
 	if Render3D.I != null and Render3D.I.cam != null:
 		up = Render3D.I.cam.global_transform.basis.y
-	(_flips[name] as FxLayer).emit({"p": g + up * side * float(f["lift"]), "life": float(f["life"]),
+	fl.emit({"p": g + up * side * float(f["lift"]), "life": float(f["life"]),
 		"r0": side * 0.5, "r1": side * 0.5, "glow": float(f["glow"]), "c": Color(1, 1, 1, 1)})
 	return true
 
@@ -144,7 +152,7 @@ func alive() -> int:
 	return n
 
 
-## Estimated particles alive per Boom3D layer (0 for CPU layers), for the perf log
+## Estimated particles alive per Boom3D layer (0 for CPU layers), for the perf log; flipbooks are not listed
 func counts() -> Array:
 	var pc := [0, 0, 0, 0, 0, 0, 0]
 	for fl in _list:

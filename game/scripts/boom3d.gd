@@ -660,8 +660,8 @@ func _ground(g: Vector3, s: float) -> void:
 func _blast(g: Vector3, s: float) -> void:
 	var p := g + Vector3(0, s * 0.05, 0)
 	_flash(p + Vector3(0, s * 0.15, 0), s * 2.0, 0.08, Color(1.0, 0.93, 0.8, 1.0))
-	# VFX-02 (Kanta 24.10: the blast looked "textured and dirty"): in Forward+ the fireball and smoke column are
-	# one pre-rendered flipbook with its own dust; flash, debris, sparks, light and the burning spot stay particles
+	# in Forward+ the fireball, smoke column and dust are one pre-rendered flipbook (VFX-02): detail that
+	# procedural puffs cannot give; flash, debris, sparks, light and the burning spot stay particles
 	if _gpu == null or not _gpu.flip("blast", g, s):
 		_blast_body(g, p, s)
 		_dust_skirt(g, s, 1.15)
