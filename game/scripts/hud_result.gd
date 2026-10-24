@@ -428,7 +428,8 @@ static func result_insights(m: Main) -> Array:
 		for k in kind.keys():
 			if kk == "" or float(kind[k]) > float(kind[kk]):
 				kk = k
-		out.append([Loc.t("Больше всего урона вы получили от врагов «%s» (%d%%), в основном — %s.") % [bk, int(round(100.0 * float(by.get(bk, 0)) / tk)), kk], Color(1.0, 0.55, 0.45)])
+		if bk != "":
+			out.append([Loc.t("Больше всего урона вы получили от врагов «%s» (%d%%), в основном — %s.") % [bk, int(round(100.0 * float(by.get(bk, 0)) / tk)), kk], Color(1.0, 0.55, 0.45)])
 		if kk == "ракеты" and int(m.counters.get("intercepted", 0)) == 0:
 			out.append(["Ловушки не увели ни одной ракеты. Уклонение (Space) и боевой разворот сбивают захват — жмите, когда слышите сигнал пуска.", Color(1.0, 0.75, 0.4)])
 		elif kk == "таран":

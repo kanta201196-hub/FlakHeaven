@@ -263,6 +263,13 @@ func _combat_ui_test() -> void:
 		_cu_phase = 3
 	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.8:
 		_shot("cu_levelup")
+		# last-minute damage for the pause block and the hardpoint DPS
+		for k in 50:
+			var t := m.run_time - 50.0 + k
+			m.dps.add(&"ракеты В-В", 140.0, t)
+			m.dps.add(&"НАР", 95.0, t)
+			m.dps.add(&"курсовое (авто)", 60.0, t)
+			m.dps.add(&"ведомые: стриж", 35.0, t)
 		m._set_state("paused")
 		_cu_phase = 4
 	elif _cu_phase == 4 and m.state == "paused" and m._state_t > 0.8:
@@ -272,6 +279,7 @@ func _combat_ui_test() -> void:
 		m.stats["dealt"] = {"ракеты В-В": 263378.0, "турели": 70320.0, "уязвимые точки «Крепости»": 64448.0, "курсовое (авто)": 60960.0,
 			"ведомые: стриж": 41590.0, "НАР": 15360.0}
 		m.stats["taken"] = {"таран": 292.0, "пули": 1010.0, "ракеты": 120.0}
+		m.stats["taken_by"] = {"дроны": 536.0, "перехватчики": 300.0, "асы": 355.0, "ПВО": 51.0}
 		m.run.debug_set(&"kills", 3455)
 		m.run.debug_set(&"bosses_killed", 3)
 		Events.evac_reached.emit()

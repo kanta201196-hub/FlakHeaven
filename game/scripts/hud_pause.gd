@@ -286,10 +286,10 @@ func _module_column(p: Player, box: Rect2, ids: Array, x: float) -> void:
 		var key := p.skill3 if id == "skill3" else id
 		HudIcons.tile(ctrl, r, key, fam, Cards.RARITY[clampi(lvl - 1, 0, 4)]["color"], lvl)
 		var title := Loc.t(String(Cards.MODULES[id]["title"])) if id != "skill3" else Loc.t(PlaneClasses.SKILL3[p.skill3]["title"])
-		var lines := _lines(title, MOD_TILE + 56.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 1))
+		var lines := _lines(title, MOD_TILE + 80.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 1))
 		for li in lines.size():
-			UiStyle.text(ctrl, UiStyle.head_font(600, 1), Vector2(r.position.x - 28.0, r.end.y + 18.0 + li * 16.0), lines[li], UiStyle.FS_CAPTION,
-				UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, MOD_TILE + 56.0)
+			UiStyle.text(ctrl, UiStyle.head_font(600, 1), Vector2(r.position.x - 40.0, r.end.y + 18.0 + li * 16.0), lines[li], UiStyle.FS_CAPTION,
+				UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, MOD_TILE + 80.0)
 
 
 ## Wingmen in formation under the wings, outside the drawing.

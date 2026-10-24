@@ -13,6 +13,10 @@ var _cd_full := {}
 var _skill_tips: Array = []
 ## Top of the bottom bar this frame (hints and radio sit above it)
 var bar_top := 0.0
+## Hint box of this frame and of the last one (the radio is drawn before the hint and steps
+## above last frame's box instead of covering it)
+var _hint_rect := Rect2()
+var _hint_prev := Rect2()
 ## Bottom bar rect this frame (empty when not drawn)
 var _bar_rect := Rect2()
 ## Bottom of the goals panel this frame (streak line sits under it)
@@ -26,6 +30,8 @@ const BAR_COL := 132.0
 func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	var p := m.player
 	_skill_tips.clear()
+	_hint_prev = _hint_rect
+	_hint_rect = Rect2()
 	bar_top = size.y - 12.0
 	_bar_rect = Rect2()
 	if dmg_flash > 0.0:
@@ -56,10 +62,11 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 		_evac_marker(m, size)
 		if m.hud.radio_t > 0.0 and is_instance_valid(p) and not hide:
 			_radio_box(m, size)
-		_skill_tooltip(size)
 
 	if Hints.t > 0.0 and Hints.text != "" and m.state == "playing":
 		_hint_box(Hints.text, size, clampf(Hints.t * 2.0, 0.0, 1.0))
+	if m.state == "playing":
+		_skill_tooltip(size)   # last: the hovered skill's explanation covers hints and radio
 	if m.hud.banner_t > 0.0 and m.state == "playing":
 		var a := clampf(m.hud.banner_t, 0.0, 1.0)
 		# dark plate under the banner: yellow text on bright sand is unreadable without it
@@ -92,6 +99,7 @@ func _hint_box(s: String, size: Vector2, a: float) -> void:
 	var th := ui_font().get_multiline_string_size(Loc.out(s), HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, 18).y
 	var bh := maxf(86.0, th + 44.0)
 	var r := Rect2((size.x - w) / 2.0, bar_top - 70.0 - bh, w, bh)
+	_hint_rect = r
 	ctrl.draw_rect(r, Color(0.04, 0.05, 0.06, 0.82 * a))
 	ctrl.draw_rect(r, Color(1.0, 0.85, 0.4, 0.8 * a), false, 2.0)
 	_text(Vector2(r.position.x + 16, r.position.y + 26), "ПОДСКАЗКА", 13, Color(1.0, 0.85, 0.4, a))
@@ -415,7 +423,8 @@ func _skill_col(sk: Dictionary, pos: Vector2) -> void:
 		UiStyle.text(ctrl, nf, Vector2(pos.x, ny), title, UiStyle.FS_CAPTION, nc, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
 	var hint := String(sk["hint"])
 	if hint != "":
-		var hl := _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION)
+		# two-line names leave room for one hint line inside the bar
+		var hl := _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION, null, 1 if ny > tr.end.y + 30.0 else 2)
 		for i in hl.size():
 			UiStyle.text(ctrl, ui_font(), Vector2(pos.x, ny + 19.0 + i * 16.0), hl[i], UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
 	_skill_tips.append([Rect2(pos.x, tr.position.y - 16.0, BAR_COL, 150.0), "%s · %s" % [String(sk["title"]).to_upper(), key], String(sk["desc"]), String(sk["action"])])
@@ -684,6 +693,8 @@ func _radio_box(m: Main, size: Vector2) -> void:
 	var r := Rect2(size.x - w - 20.0 + slide * slide * 160.0, size.y - h - 40.0, w, h)
 	if _bar_rect.size.x > 0.0 and r.position.x < _bar_rect.end.x + 12.0:
 		r.position.y = minf(r.position.y, _bar_rect.position.y - h - 12.0)
+	if _hint_prev.size.x > 0.0 and r.intersects(_hint_prev):
+		r.position.y = _hint_prev.position.y - h - 12.0
 	var col := Color(1.0, 0.5, 0.45) if m.hud.radio_enemy else Color(0.55, 0.95, 0.7)
 	var flash := 1.0 - clampf(age / 0.6, 0.0, 1.0)
 	ctrl.draw_rect(r, Color(0.02, 0.03, 0.035, 0.86 * a))
