@@ -1108,12 +1108,20 @@ func _hangar_bench() -> void:
 		m.hangar_cls = "attacker"
 		m.hangar_w = cur[1]
 		Hangar3D.bench_tab_w = cur[1]
+		var wcam := ""
 		if Hangar3D.I != null:
 			Hangar3D.I.weapon_tier = cur[2]
 			Hangar3D.I._idle = 0.0
+			for a in OS.get_cmdline_user_args():   # --wcam=yaw,pitch,dist: close-up of the weapon on its stand
+				if a.begins_with("--wcam="):
+					var cv := a.get_slice("=", 1).split(",")
+					Hangar3D.I._yaw = float(cv[0])
+					Hangar3D.I._pitch = float(cv[1])
+					Hangar3D.I._dist = float(cv[2])
+					wcam = "_cam"
 		_hf += 1
 		if _hf > 8 and _t > 1.2:
-			_save("hangar_w_%s_%d" % [cur[1], cur[2]])
+			_save("hangar_w_%s_%d%s" % [cur[1], cur[2], wcam])
 			_hq.pop_front()
 			_t = 0.0
 			_hf = 0

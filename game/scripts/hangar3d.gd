@@ -36,17 +36,21 @@ var _idle := 0.0             # секунд без мыши — потом ме�
 var _drawn_frame := -10
 var _cls := ""
 var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
-## Kanta 24.10: real stands from Sketchfab (CC BY, CREDITS.md) instead of box stands. Per weapon:
-## len — stand length per weapon length; x — weapon centre from the stand centre, y — weapon bottom over the floor
-## (with mid — the weapon axis, for missiles held in rings), as shares of the stand length / height measured on the
-## stand model; view — weapon scale so the stand fits the view.
+## Kanta 24.10: real stands from Sketchfab (CC BY, CREDITS.md) instead of box stands. Per weapon, shares of the stand
+## model (measured on it): x — weapon centre from the stand centre (of its length), y — weapon bottom over the floor
+## (of its height). Size: len — stand length per weapon length, or ring — inner radius of the stand's rings (of its
+## length), so the missile body fills them. slots — across offsets (of its length) of the missiles it holds, one
+## missile in each; mid — y is the missile axis; cradle — beam the weapon is strapped to (of the weapon length);
+## view — weapon scale so the stand fits the view.
 const STAND_CART := "res://models/hangar/stand_cart.glb"
 const STAND_BOMB := {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 1.0}
+const MISSILE_CART := {"path": "res://models/hangar/stand_missile_cart.glb", "ring": 0.052, "x": 0.0, "y": 0.863,
+	"mid": true, "slots": [-0.2317, 0.2475], "view": 0.8}
 const STANDS := {
 	"hebomb": {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 0.72},
-	"aam": {"path": "res://models/hangar/stand_missile_cart.glb", "len": 1.32, "x": 0.287, "y": 0.865, "mid": true, "view": 0.8},
-	"srm": {"path": "res://models/hangar/stand_missile_cart.glb", "len": 1.32, "x": 0.287, "y": 0.865, "mid": true, "view": 0.8},
-	"agm": {"path": "res://models/hangar/stand_loader.glb", "len": 1.2, "x": 0.42, "y": 0.855, "view": 0.6},
+	"aam": MISSILE_CART,
+	"srm": MISSILE_CART,
+	"agm": {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.5, "view": 0.5},
 }
 ## Floor of the weapon store in the weapon view (box stands went from here up to the weapon)
 const FLOOR_Y := -0.2
@@ -376,23 +380,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		# п. 32: на складе оружие лежит на двух ложементах-подставках от пола до низа модели
 		var bottom := wmi.position.y + bb.position.y * s
 		var on_cart := false
-		# Kanta 24.10: the weapon lies on its real stand (bomb cart, missile cart, loader), sitting on the cradle
 		if not stand.is_empty():
-			var cart := WeaponModels._glb_mesh(stand["path"], 1.0, Color(), stand["path"].get_file().get_basename())
-			if cart != null:
-				var cb := cart.get_aabb()
-				var ck: float = bb.size.x * s * stand["len"] / cb.size.x
-				var cm := MeshInstance3D.new()
-				cm.mesh = cart
-				cm.basis = Basis.from_scale(Vector3.ONE * ck)
-				# the pair is centred in the view: weapon and stand move apart by half the cradle offset each
-				var dx: float = cb.size.x * stand["x"] * ck
-				cm.position = Vector3(-cb.get_center().x * ck - dx * 0.5, FLOOR_Y - cb.position.y * ck, 0)
-				pivot.add_child(cm)
-				wmi.position.x += dx * 0.5
-				var low := bottom if not stand.get("mid", false) else wmi.position.y + bb.get_center().y * s
-				wmi.position.y += FLOOR_Y + cb.size.y * ck * stand["y"] - low
-				on_cart = true
+			on_cart = _place_on_stand(wmi, bb, s, bottom, stand)
 		if weapon != "turret" and not on_cart and bottom > -0.19:
 			var sm := StandardMaterial3D.new()
 			sm.albedo_color = Color(0.32, 0.34, 0.3)
@@ -407,6 +396,105 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 				st.position = Vector3(sx, (bottom - 0.2) * 0.5, 0)
 				pivot.add_child(st)
 	return vp.get_texture()
+
+
+## Puts the stand under the weapon `wmi` (mesh box `bb`, scale `s`, lowest point `bottom`) as `stand` describes
+## (STANDS): on the cradle, in the rings (a second missile in the next ring pair) or strapped to the loader plate.
+## The weapon and the stand move apart by half the cradle offset each, so the pair is centred in the view.
+func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, stand: Dictionary) -> bool:
+	var cart := WeaponModels._glb_mesh(stand["path"], 1.0, Color(), stand["path"].get_file().get_basename())
+	if cart == null:
+		return false
+	var cb := cart.get_aabb()
+	var body := _body_radius(wmi.mesh) * s
+	var ck: float = (body / stand["ring"] if stand.has("ring") else bb.size.x * s * stand["len"]) / cb.size.x
+	var cm := MeshInstance3D.new()
+	cm.mesh = cart
+	cm.basis = Basis.from_scale(Vector3.ONE * ck)
+	var dx: float = cb.size.x * stand["x"] * ck
+	cm.position = Vector3(-cb.get_center().x * ck - dx * 0.5, FLOOR_Y - cb.position.y * ck, -cb.get_center().z * ck)
+	pivot.add_child(cm)
+	wmi.position.x += dx * 0.5
+	var axis := wmi.position.y + bb.get_center().y * s
+	var low := bottom
+	if stand.get("mid", false):
+		low = axis
+	elif stand.has("cradle"):
+		low = axis - body * 1.6   # beam 0.35 and saddles 0.25 of the body radius between the plate and the body
+	var lift: float = FLOOR_Y + cb.size.y * ck * stand["y"] - low
+	wmi.position.y += lift
+	axis += lift
+	var slots: Array = stand.get("slots", [])
+	for i in slots.size():
+		var w := wmi if i == 0 else wmi.duplicate() as MeshInstance3D
+		w.position.z += float(slots[i]) * cb.size.x * ck
+		if i > 0:
+			pivot.add_child(w)
+	if stand.has("cradle"):
+		_cradle(Vector3(wmi.position.x + bb.get_center().x * s, axis, wmi.position.z + bb.get_center().z * s),
+			body, float(stand["cradle"]) * bb.size.x * s)
+	return true
+
+
+## Cradle on the loader plate (Kanta 24.10: the missile is held, not laid): a beam `span` long under the weapon
+## body (radius `r`, axis at `axis`), a saddle at each end and a strap round the body over each saddle.
+func _cradle(axis: Vector3, r: float, span: float) -> void:
+	var sm := StandardMaterial3D.new()
+	sm.albedo_color = Color(0.58, 0.62, 0.66)   # the loader's own grey: the cradle reads as part of it
+	sm.metallic = 0.3   # painted steel, matte (Kanta 19.10)
+	sm.roughness = 0.8
+	var beam := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(span, r * 0.35, r * 0.9)
+	beam.mesh = bm
+	beam.material_override = sm
+	beam.position = axis + Vector3(0, -r * 1.425, 0)
+	pivot.add_child(beam)
+	for sx: float in [-0.45, 0.45]:
+		var band := MeshInstance3D.new()
+		var tm := TorusMesh.new()
+		tm.inner_radius = r * 1.0
+		tm.outer_radius = r * 1.16
+		band.mesh = tm
+		band.material_override = sm
+		band.basis = Basis(Vector3.BACK, PI / 2.0)
+		band.position = axis + Vector3(sx * span, 0, 0)
+		pivot.add_child(band)
+		var sad := MeshInstance3D.new()
+		var bx := BoxMesh.new()
+		bx.size = Vector3(r * 0.6, r * 0.45, r * 1.5)
+		sad.mesh = bx
+		sad.material_override = sm
+		sad.position = axis + Vector3(sx * span, -r * 1.03, 0)
+		pivot.add_child(sad)
+
+
+static var _radius_cache := {}
+
+## Body radius of a weapon mesh lying along X: the thinnest of the widest cross-sections over the middle 60 %
+## (wings and fins widen some slices, the body is in every one); cached per mesh.
+static func _body_radius(m: Mesh) -> float:
+	if _radius_cache.has(m):
+		return _radius_cache[m]
+	var bb := m.get_aabb()
+	var c := bb.get_center()
+	var step := bb.size.x * 0.05
+	var wide := PackedFloat32Array()
+	wide.resize(13)
+	for si in m.get_surface_count():
+		var vs: PackedVector3Array = m.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]
+		for v in vs:
+			var i := roundi((v.x - c.x) / step)
+			if absi(i) <= 6 and absf(v.x - c.x - i * step) < step * 0.4:
+				wide[i + 6] = maxf(wide[i + 6], Vector2(v.y - c.y, v.z - c.z).length())
+	var r := INF
+	for w in wide:
+		if w > 0.0:
+			r = minf(r, w)
+	if r == INF:
+		r = minf(bb.size.y, bb.size.z) * 0.5
+	_radius_cache[m] = r
+	return r
 
 
 func _build(cls_id: String, lvl: int) -> void:
