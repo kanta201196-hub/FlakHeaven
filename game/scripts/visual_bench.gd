@@ -455,8 +455,9 @@ func _save(name: String) -> void:
 ## and the Fortress this far from the player, so that none of the three covers another
 const SIZE_PLAYER_OFF := Vector2(280, 120)
 const SIZE_FORT_OFF := Vector2(-560, -330)
-## Size bench at the ground fort: the camera and the player sit this far from the road point beside the fort
-const SIZE_FORT_PLAYER_OFF := Vector2(240, 180)
+## Size bench at the ground fort: the player (and camera) sits this far south of the fort's centre (y)
+## and this far east of the road there (x)
+const SIZE_FORT_PLAYER_OFF := Vector2(100, 350)
 
 
 ## Size bench: prints the on-screen length (frame pixels, nose to tail through the 3D camera,
@@ -746,7 +747,10 @@ func _make_points() -> Array:
 			var fp: Vector2 = found["o_fort"]
 			var rd := ter._field_point(fp, Terrain3D.D_ROAD)
 			print("VISUAL size_fort fort at ", fp, " road ", rd)
-			pts.append({"name": "size_fort", "pos": rd + SIZE_FORT_PLAYER_OFF, "convoy": true, "convoy_at": rd,
+			# the tilted camera sees the ground north of the player: the player flies past the road south
+			# of the fort, so a fort twice as big still fits in the frame
+			var pp := ter._field_point(Vector2(rd.x, fp.y + SIZE_FORT_PLAYER_OFF.y), Terrain3D.D_ROAD) + Vector2(SIZE_FORT_PLAYER_OFF.x, 0)
+			pts.append({"name": "size_fort", "pos": pp, "convoy": true, "convoy_at": rd,
 				"fort_obj": fp, "cls": ["fighter", 1], "zoom": 1.0, "wait": 2.5, "sizes": true})
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--pts="):   # relief lab: --pts=name:x:z:zoom,name2:x:z:zoom — arbitrary camera points
