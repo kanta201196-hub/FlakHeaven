@@ -7,8 +7,17 @@ extends SceneTree
 var _failed := 0
 var _checks := 0
 var _p := ReliefProvinces.new()
+## RV-01 region shape tests read the relief without the RV-04 point landforms: a lone pillar would
+## become a window's peak and a pillar wall a "region border wall"; landforms have their own tests.
+var _p0 := _no_landforms()
 ## Valley floor edge used by Terrain3D (D_FAN − 40): below it the relief must stay flat.
 const FLOOR := 440.0
+
+
+static func _no_landforms() -> ReliefProvinces:
+	var p := ReliefProvinces.new()
+	p.landforms = false
+	return p
 
 
 func _init() -> void:
@@ -22,6 +31,9 @@ func _init() -> void:
 	_test_gullies_floor_and_range()
 	_test_gullies_no_seams()
 	_test_gullies_run_downhill()
+	_test_pillars()
+	_test_landforms_off_is_old()
+	_test_gorges_share()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -119,7 +131,7 @@ func _test_regional_contrast() -> void:
 				for i in 20:
 					var x := -16000.0 + wi * 4000.0 + i * 200.0
 					var z := -16000.0 + wj * 4000.0 + j * 200.0
-					mx = maxf(mx, _p.relief(x, z, 1600.0, 1600.0).x)
+					mx = maxf(mx, _p0.relief(x, z, 1600.0, 1600.0).x)
 			peaks.append(mx)
 	var mean := 0.0
 	for p in peaks:
@@ -140,11 +152,11 @@ func _test_no_border_walls() -> void:
 		for i in 120:
 			var x := -24000.0 + i * 400.0
 			var z := -24000.0 + j * 400.0
-			var w := _p.weights(x, z, 1500.0)
+			var w := _p0.weights(x, z, 1500.0)
 			if w.y > 0.05 or w.x < 0.15 or w.x > 0.85:
 				continue
-			var h0 := _p.relief(x, z, 1500.0, 1500.0).x
-			var h1 := _p.relief(x + 20.0, z, 1500.0, 1500.0).x
+			var h0 := _p0.relief(x, z, 1500.0, 1500.0).x
+			var h1 := _p0.relief(x + 20.0, z, 1500.0, 1500.0).x
 			worst = maxf(worst, absf(h1 - h0))
 	_check(worst <= 0.12, "no walls at region borders (worst step %.3f)" % worst)
 
@@ -231,3 +243,57 @@ func _test_gullies_run_downhill() -> void:
 			across += absf(_p._gullies(x + 6.0, z, g) - h)
 			along += absf(_p._gullies(x, z + 6.0, g) - h)
 	_check(across > along * 1.5, "gullies follow the slope (across %.3f, along %.3f)" % [across, along])
+
+
+## RV-04: pillars are rare, never reach the combat plane, and stay off the valley floor.
+func _test_pillars() -> void:
+	var n := 0
+	var inside := 0
+	var worst := 0.0
+	for j in 200:
+		for i in 200:
+			var x := -30000.0 + i * 300.0 + 0.3
+			var z := -30000.0 + j * 300.0 + 0.7
+			var pl := _p._pillar(x, z)
+			n += 1
+			if pl.y > 0.5:
+				inside += 1
+				var v := _v(x, z)
+				var h := _p.relief(x, z, absf(v), v).x
+				var w := _p.weights(x, z, v)
+				# the pillar is what stands here (pillars only on mesa land and in hills; gorges raise crests elsewhere)
+				if maxf(w.y, w.w) > 0.5 and h > _p0.relief(x, z, absf(v), v).x + 0.05:
+					worst = maxf(worst, h)
+	var share := float(inside) / n
+	_check(share > 0.002 and share < 0.03, "pillars cover 0.2–3 %% of the map (%.4f)" % share)
+	_check(worst <= ReliefBalance.PILLAR_CAP_MAX + 0.03, "pillar tops under the cap (%.3f)" % worst)
+
+
+## RV-04 switch: landforms off gives the RV-02 relief exactly (the F1 slider and --landforms0 frames).
+func _test_landforms_off_is_old() -> void:
+	var q := ReliefProvinces.new()
+	q.landforms = false
+	var r := ReliefProvinces.new()
+	r.landforms = false
+	var same := true
+	var differs := 0
+	for i in 400:
+		var x := -20000.0 + i * 97.0
+		var z := 3000.0 + i * 53.0
+		var v := _v(x, z)
+		same = same and q.relief(x, z, absf(v), v) == r.relief(x, z, absf(v), v)
+		if q.relief(x, z, absf(v), v).x != _p.relief(x, z, absf(v), v).x:
+			differs += 1
+	_check(same, "landforms off is deterministic")
+	_check(differs > 10, "landforms change the relief somewhere (%d of 400)" % differs)
+
+
+## RV-04 gorges: the marking noise covers some stretches, not the whole map.
+func _test_gorges_share() -> void:
+	var on := 0
+	for j in 100:
+		for i in 100:
+			if _p._gorge.get_noise_2d(-50000.0 + i * 1000.0, -50000.0 + j * 1000.0) > ReliefBalance.GORGE_FROM:
+				on += 1
+	var share := on / 10000.0
+	_check(share > 0.05 and share < 0.35, "gorge stretches 5–35 %% of the map (%.3f)" % share)

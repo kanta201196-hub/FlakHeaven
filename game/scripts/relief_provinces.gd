@@ -245,7 +245,7 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 			var pl := _pillar(x, z)
 			if pl.x > 0.0:
 				var cap := minf(h + pl.x * pk, maxf(h, ReliefBalance.PILLAR_CAP_MAX))
-				h = maxf(h, lerpf(h, cap, pl.y)) + pl.z * pk
+				h = maxf(h, lerpf(h, cap, pl.y)) + pl.z * pk * (1.0 - pl.y)   # skirt only around the foot
 				rock = maxf(rock, pl.y * pk)
 	# small bumps on the floor and fans (as the old relief)
 	h += (_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * (0.3 + fan)
