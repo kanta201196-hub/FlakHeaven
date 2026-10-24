@@ -487,6 +487,7 @@ func _click(h: Array, mp: Vector2) -> void:
 				Tuning.reset()
 				Tuning.save_params()
 				Settings.apply_audio()
+				Main.I.sfx.apply_music_volume()
 		&"track":
 			_focus = id
 			_drag = id
