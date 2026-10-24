@@ -572,6 +572,38 @@ func hit(pos: Vector2, color: Color) -> bool:
 	return true
 
 
+## VFX-04: a bullet that ends on the ground kicks up a small dust puff and a dark spray of dirt where it lands,
+## so strafing a column reads as rounds hitting the earth (Forward+ only; nothing on water or on «Низкое»).
+## At most DUST_RATE puffs a second: a fighter's guns fire faster than the eye can follow.
+const DUST_RATE := 30.0
+var _dust_budget := DUST_RATE
+var _dust_t := 0
+
+
+func ground_hit(pos: Vector2) -> void:
+	# the preset is read here, not from _lo: _lo is refreshed only when an explosion spawns
+	if _gpu == null or Settings.gfx <= 0 or Render3D.I == null or Render3D.I.cam == null:
+		return
+	var now := Time.get_ticks_msec()
+	_dust_budget = minf(DUST_RATE, _dust_budget + float(now - _dust_t) * 0.001 * DUST_RATE)
+	_dust_t = now
+	if _dust_budget < 1.0:
+		return
+	var g := Render3D.I.ground_under(pos)
+	if Render3D.I.is_water(g, 4.0):
+		return
+	_dust_budget -= 1.0
+	var p := g + Vector3(0, 2.0, 0)
+	# light dust reads against the red-brown ground; the dark spray under it is the thrown-up earth
+	var dc := _dust_col(0.8).lerp(Color(0.74, 0.66, 0.55, 0.8), 0.3)
+	_smoke(p, Vector3(randf_range(-12, 12), randf_range(22.0, 38.0), randf_range(-12, 12)), 5.0, randf_range(20.0, 28.0),
+		randf_range(1.0, 1.4), dc, 0.0, 1.0, 2.0)
+	var dk := randf_range(0.16, 0.22)
+	for i in 2:
+		_smoke(p, Vector3(randf_range(-14, 14), randf_range(50.0, 75.0), randf_range(-14, 14)), 2.5, randf_range(9.0, 13.0),
+			randf_range(0.45, 0.6), Color(dk, dk * 0.85, dk * 0.7, 0.85), 0.0, -8.0, 3.0)
+
+
 ## Правка 3.5-s4 (п. 27): пуск ракеты с крыла — вспышка двигателя и клуб белого дыма назад
 func launch(pos: Vector2, dir: Vector2, vel: Vector2) -> void:
 	var p := Vector3(pos.x, -2.0, pos.y)

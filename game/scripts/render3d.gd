@@ -2069,6 +2069,11 @@ func _on_water(g: Vector3, r: float) -> bool:
 	return terrain != null and absf(terrain.river_field(g.x, g.z)) < Terrain3D.D_RIVER + r * 0.5
 
 
+## Whether ground point g lies on a river (with margin r): effects that belong to dry land skip it
+func is_water(g: Vector3, r: float) -> bool:
+	return _on_water(g, r)
+
+
 func _free_wreck(w: Dictionary) -> void:
 	(w["n"] as Node).queue_free()
 	if is_instance_valid(w["smoke"]):

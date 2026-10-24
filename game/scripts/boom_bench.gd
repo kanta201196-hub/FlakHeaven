@@ -195,7 +195,8 @@ func _guns(delta: float) -> void:
 	var aim := _pos + Vector2(120, -120)
 	for k in [-1.0, 1.0]:
 		var mz: Vector2 = pl.global_position + fwd * 16.0 * pl.size + side * k
-		pr.spawn_player_bullet(mz, (aim - mz).normalized() * Tuning.g("bullet_speed"), 0.0, 0.5)
+		# rounds end at the aim point, as when they miss there: VFX-04 dust shows where they land
+		pr.spawn_player_bullet(mz, (aim - mz).normalized() * Tuning.g("bullet_speed"), 0.0, mz.distance_to(aim) / Tuning.g("bullet_speed"))
 	m.fx.hit_spark(aim + Vector2(randf_range(-18, 18), randf_range(-18, 18)))
 	for g: Array in [[Vector2(180, 200), "zsu"], [Vector2(-120, -160), "ifv"], [Vector2(320, -220), "fighter"]]:
 		var a: Vector2 = _pos + (g[0] as Vector2)

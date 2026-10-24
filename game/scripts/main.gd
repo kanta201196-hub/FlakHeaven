@@ -675,6 +675,8 @@ func total(group: String) -> int:
 ## `Events.enemy_hit`: spark, damage number, hit sound.
 func _on_enemy_hit(e: Enemy, dmg: float) -> void:
 	fx.hit_spark(e.global_position)
+	if e.is_ground and randf() < 0.35 and Boom3D.active():   # VFX-04: rounds around a ground target throw up dirt
+		Boom3D.ensure().ground_hit(e.global_position + Vector2(randf_range(-1, 1), randf_range(-1, 1)) * e.radius * 1.4)
 	if Tuning.g("damage_numbers") > 0.5:
 		fx.number(e.global_position + Vector2(0, -e.radius), dmg)
 	sfx.play("hit", -18.0, 1.0, e.global_position)
