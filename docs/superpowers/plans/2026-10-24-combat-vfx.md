@@ -49,6 +49,8 @@ Files: new `game/scripts/vfx/gpu_fx.gd`, `game/scripts/vfx/fx_layer.gd`, `game/s
 - [ ] Boom bench `--boomonly=air,ground,blast,battle,stress` with `--zoom=4`: Compatibility, Forward+ old path (`--oldfx`), Forward+ GpuFx; gallery to Kanta.
 - [ ] Checks: unit, `smoke.sh all` (Compatibility) and `SMOKE_RENDER=forward_plus smoke.sh fighter`, `full.sh` once; fps on Kanta's PC vs baseline. PR, merge after checks and Kanta's look.
 
+Status 2026-10-24 (PR #351): VFX-01 was done as a parity-first port. Boom3D keeps its recipes and draw shaders, and the GPU layers (`FxLayer` particle shader) reproduce `Boom3D._tick`/`_write`, so the change can be compared frame to frame with `--oldfx`. Tested helpers: `FxMath.kind_for`, `FxMath.quality`, `FxCounter`. Moved to VFX-02: `FxMath.flip_uv`/`frame_at`/`layer_amount` tests, `balance/vfx.gd`, flipbook draw material with proximity fade (the temporary CC0 sheet is skipped, own bakes go straight in). Debris, burning spots and lights stay on the CPU until VFX-06.
+
 ### Task 2 — VFX-02 Own flipbooks (bake pipeline)
 Files: new `game/tools/vfx_bake/` (`bake_fire.py`, `bake_smoke.py` for Blender `--background --python`, `pack_atlas.py`), `game/assets/vfx/*.png` + `.import` (VRAM compressed).
 - [ ] Blender bake scenes: fireball with soot, dark smoke puff, dust burst in Нагорье colour (`Boom3D.DUST`/`DUST_D`), plasma burst (blue-white), small flak burst; orthographic camera at 28° tilt, transparent background, 64 frames.
