@@ -493,6 +493,10 @@ func _bullet_k(src: String, e: Enemy) -> float:
 	return k
 
 
+## PG-01: tracer width factor by course gun variant (bullet key "gun")
+const TRACER_W := {"std": 1.0, "twin": 0.75, "heavy": 1.6}
+
+
 func _update_player_missiles(delta: float) -> void:
 	var sk := _seeker()
 	var pl := Main.I.player
@@ -862,9 +866,10 @@ func _draw() -> void:
 		var p: Vector2 = b["p"]
 		var dir := (b["v"] as Vector2).normalized()
 		var l := 34.0 if b.has("pierce") else 24.0
-		draw_line(p - dir * l, p, Color(0.1, 0.07, 0.03, 0.5), 6.0)
-		draw_line(p - dir * l, p, Color(1.0, 0.62, 0.15, 0.75), 4.0)
-		draw_line(p - dir * l * 0.6, p, Color(1.0, 0.97, 0.8), 1.6)
+		var w := float(TRACER_W.get(b.get("gun", "std"), 1.0))   # PG-01: twin — thinner, heavy — thicker
+		draw_line(p - dir * l, p, Color(0.1, 0.07, 0.03, 0.5), 6.0 * w)
+		draw_line(p - dir * l, p, Color(1.0, 0.62, 0.15, 0.75), 4.0 * w)
+		draw_line(p - dir * l * 0.6, p, Color(1.0, 0.97, 0.8), 1.6 * w)
 	for m in pmissiles:
 		var tc: Color = m.get("tint", Color(0.86, 0.86, 0.9))
 		_draw_smoke(m["trail"], m["p"], tc, 1.0)

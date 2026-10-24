@@ -4,6 +4,8 @@ extends RefCounted
 ## Вынесено из player.gd без изменения поведения: состояние (переменные) живёт в Player, здесь только код.
 
 var pl: Player
+## PG-01: shot sound pitch by course gun variant (twin higher, heavy lower)
+const GUN_PITCH := {"std": 1.0, "twin": 1.25, "heavy": 0.7}
 
 
 func _init(p: Player) -> void:
@@ -11,11 +13,21 @@ func _init(p: Player) -> void:
 
 
 func gun_range() -> float:
-	return Tuning.g("bullet_speed") * Player.GUN_LIFE
+	return bullet_speed() * Player.GUN_LIFE
+
+
+## PG-01: multipliers of the course gun variant chosen in the hangar (`WeaponBalance.GUNS`)
+func variant() -> Dictionary:
+	return WeaponBalance.gun_k(pl.gun_variant)
+
+
+## Bullet speed of the course gun, px/s (the heavy gun is faster)
+func bullet_speed() -> float:
+	return Tuning.g("bullet_speed") * float(variant()["speed"])
 
 
 func gun_damage() -> float:
-	var d := Tuning.g("bullet_damage") * float(pl.cls["gun_dmg"]) * float(pl.mods["gun_dmg"])
+	var d := Tuning.g("bullet_damage") * float(pl.cls["gun_dmg"]) * float(pl.mods["gun_dmg"]) * float(variant()["dmg"])
 	# 2.4: курсовое растёт вместе с пилотом (+3% за уровень); S6-02: потолок снова +60% (в 2.8 был +40%) —
 	# иначе к 10:00 пушке нужно 5 выстрелов на перехватчик вместо 4
 	d *= minf(1.0 + 0.03 * (Main.I.run.level - 1), 1.6)
@@ -31,7 +43,7 @@ func gun_damage() -> float:
 
 
 func gun_rate() -> float:
-	var r := Tuning.g("fire_rate") * float(pl.cls["gun_rate"]) * float(pl.mods["gun_rate"])
+	var r := Tuning.g("fire_rate") * float(pl.cls["gun_rate"]) * float(pl.mods["gun_rate"]) * float(variant()["rate"])
 	if pl.combat_t > 0.0:
 		r *= 2.0
 	return r
@@ -86,26 +98,31 @@ func _fire_one(fwd: Vector2, aim: Vector2, lead: bool, age := 0.0) -> void:
 	pl._gun_n += 1
 	var src := "курсовое (ручн.)" if pl.manual_mode else "курсовое (авто)"
 	var every := 3 if (pl.manual_mode and pl.manual_bonus >= 0.4) else 4
+	var spread := float(variant()["spread"])
+	if spread > 0.0:   # PG-01: the twin gun scatters a little
+		aim = aim.rotated(deg_to_rad(randf_range(-spread, spread)))
 	if pl.gun_evo and pl._gun_n % every == 0:
 		# «Дятел»: пробивающий снаряд — всё на линии 900 пикс., урон ×2,5
-		var spd := Tuning.g("bullet_speed") * 1.3
+		var spd := bullet_speed() * 1.3
 		Main.I.projectiles.spawn_player_bullet(muzzle, aim * spd + pl.velocity, gun_damage() / 0.85 * 2.5, 900.0 / spd, pl.manual_mode, src, 99)
 	else:
-		Main.I.projectiles.spawn_player_bullet(muzzle, aim * Tuning.g("bullet_speed") + pl.velocity, gun_damage(), Player.GUN_LIFE, pl.manual_mode, src)
+		Main.I.projectiles.spawn_player_bullet(muzzle, aim * bullet_speed() + pl.velocity, gun_damage(), Player.GUN_LIFE, pl.manual_mode, src)
 	var bl: Dictionary = Main.I.projectiles.bullets[-1]
+	if pl.gun_variant != "std":
+		bl["gun"] = pl.gun_variant   # PG-01: tracer look by variant (projectiles / render3d)
 	if age > 0.0: # выстрел «опоздал» на часть кадра — первый шаг пули длиннее на это время
 		bl["lag"] = age
 	if lead:
 		bl["lead"] = true
 		Main.I.tele.add("shots_lead")
-	if pl._gun_side > 0.0:
-		Main.I.sfx.play("gun_fire", -15.0)
+	if pl._gun_side > 0.0 or pl.gun_variant == "heavy":
+		Main.I.sfx.play("gun_fire", -15.0, GUN_PITCH.get(pl.gun_variant, 1.0))
 
 
 ## Направление с упреждением: куда стрелять, чтобы снаряд встретил цель
 ## 3.4: учитывает скорость самолёта, которую наследует пуля, и решает время встречи (ближайшее t > 0 в пределах жизни пули)
 func _lead_dir(t: Enemy) -> Vector2:
-	var s := Tuning.g("bullet_speed")
+	var s := bullet_speed()
 	var r := t.global_position - pl.global_position
 	var w := t.move_vel - pl.velocity # движение цели относительно точки вылета пули
 	# |r + w·τ| = s·τ  →  (w·w − s²)τ² + 2(r·w)τ + r·r = 0

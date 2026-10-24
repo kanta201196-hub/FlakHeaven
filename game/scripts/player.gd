@@ -35,6 +35,8 @@ var tags := {}             # очки тегов: тег → число
 var patches := {}          # нашивки: тег → 0/1/2
 var picks := 0             # сколько карточек выбрано за вылет
 var mastery := false        # фишка 2: мастерство класса взято
+## PG-01: course gun variant for this sortie (`WeaponBalance.GUNS` id), chosen in the hangar
+var gun_variant := "std"
 var mastery_off := false    # от карточки мастерства отказались — больше не придёт
 var evo_wait := {}         # отказ от эволюции: оружие → номер выбора, с которого вернётся
 var evo_times := {}        # когда получены эволюции (лог)
@@ -141,6 +143,10 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 	max_hp = float(cls["hp"])
 	hp = max_hp
 	skill3 = sk if PlaneClasses.CLASS_SKILLS[id].has(sk) else cls["skill3"]
+	gun_variant = Profile.gun(id)
+	for arg in OS.get_cmdline_user_args():   # PG-01 check flag --gun=twin|heavy
+		if String(arg).begins_with("--gun=") and WeaponBalance.GUNS.has(String(arg).substr(6)):
+			gun_variant = String(arg).substr(6)
 	for gd in cls["groups"]:
 		groups.append(Hardpoint.new(gd["name"], int(gd["slots"]), gd["weapon"]))
 	# U-06: самолёт ур. 2 — тяжёлый подвес под экспериментальное оружие (после турелей: номера групп моделей не сдвигаются)

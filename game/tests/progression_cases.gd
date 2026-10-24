@@ -105,8 +105,10 @@ func _test_group_defs() -> void:
 
 func _test_defence_classes() -> void:
 	_check(Enemy.src_class("УР В-З") == "ap", "guided missile is armor-piercing")
-	_check(Enemy.src_class("курсовое: крупнокалиберная (авто)") == "gun_ap", "heavy gun class")
-	_check(Enemy.src_class("курсовое (авто)") == "gun", "standard gun unchanged")
+	_check(Enemy.course_class("gun", "курсовое (авто)", true) == "gun_ap", "heavy gun class")
+	_check(Enemy.course_class("gun", "курсовое (ручн.)", false) == "gun", "standard gun unchanged")
+	_check(Enemy.course_class("gun", "турели", true) == "gun", "turrets are not the course gun")
+	_check(Enemy.src_class("курсовое (авто)") == "gun", "course gun source class")
 	_check(Enemy.src_class("ракеты ближнего боя") == "homing", "short-range missile is homing")
 	_check(Enemy.src_class("фугасные бомбы") == "blast", "HE bomb is blast")
 	_check(is_equal_approx(Enemy.DEF_K["armor"]["ap"], 1.3) and is_equal_approx(Enemy.DEF_K["armor"]["gun_ap"], 0.8), "armor factors")
