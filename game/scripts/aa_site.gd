@@ -87,7 +87,8 @@ static func place(tr: Terrain3D, center: Vector2, rot: float, spread_k := 1.0) -
 ## line. find_floor proposes the spot (field_min steers it off the valley floor); if the real check
 ## fails, rings of candidates up to ~2.9 km around want are tried, nearest first, then (vehicles) a
 ## ring right around home — the bunker, which is farther from the river than any vehicle needs.
-## Nothing fits — the level dry candidate with the largest river field (cheap guess of the farthest).
+## Nothing fits — the level dry candidate with the largest river field (cheap guess of the farthest);
+## none level and dry at all — the find_floor point pushed out of the river.
 static func spot(tr: Terrain3D, want: Vector2, radius: float, side: float, avoid: Array,
 		min_real: float, field_min: float, home := Vector2.INF) -> Vector2:
 	var q := tr.find_floor(want, radius, side, avoid, field_min, true, INF, true)
@@ -115,6 +116,8 @@ static func spot(tr: Terrain3D, want: Vector2, radius: float, side: float, avoid
 				var c := home + Vector2.from_angle(TAU * i / 16.0) * r
 				if _fits(tr, c, side, avoid) and tr.river_clear(c, min_real):
 					return c
+	if best_f < 0.0:   # nothing level and dry anywhere around: at least out of the river (old behaviour)
+		return tr.out_of_river_guard(q, field_min - Terrain3D.RIVER_GUARD)
 	return best
 
 
