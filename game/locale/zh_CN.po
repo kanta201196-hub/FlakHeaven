@@ -321,11 +321,11 @@ msgstr "击落“堡垒”"
 msgid "сбить «Барона» в дуэли"
 msgstr "在决斗中击落“男爵”"
 
-#: game/scripts/card_icons.gd:23 game/scripts/cards.gd:53 game/scripts/cards.gd:54 game/scripts/cards.gd:103 game/scripts/hud_codex.gd:292
+#: game/scripts/card_icons.gd:23 game/scripts/cards.gd:53 game/scripts/cards.gd:54 game/scripts/cards.gd:103 game/scripts/hud_codex.gd:292 game/scripts/hud_flight.gd:334
 msgid "Пушка"
 msgstr "机炮"
 
-#: game/scripts/card_icons.gd:25 game/scripts/cards.gd:64 game/scripts/cards.gd:107 game/scripts/cards.gd:612 game/scripts/cards.gd:618 game/scripts/main_input.gd:411
+#: game/scripts/card_icons.gd:25 game/scripts/cards.gd:64 game/scripts/cards.gd:107 game/scripts/cards.gd:620 game/scripts/cards.gd:626 game/scripts/hud_flight.gd:349
 msgid "Звено"
 msgstr "编队"
 
@@ -333,11 +333,11 @@ msgstr "编队"
 msgid "Навык"
 msgstr "技能"
 
-#: game/scripts/card_icons.gd:29 game/scripts/cards.gd:108 game/scripts/cards.gd:779 game/scripts/terms.gd:30
+#: game/scripts/card_icons.gd:29 game/scripts/cards.gd:108 game/scripts/cards.gd:791 game/scripts/terms.gd:30
 msgid "Связка"
 msgstr "羁绊"
 
-#: game/scripts/card_icons.gd:31 game/scripts/cards.gd:111 game/scripts/cards.gd:643 game/scripts/cards.gd:644 game/scripts/cards.gd:645 game/scripts/cards.gd:647
+#: game/scripts/card_icons.gd:31 game/scripts/cards.gd:111 game/scripts/cards.gd:651 game/scripts/cards.gd:652 game/scripts/cards.gd:653 game/scripts/cards.gd:655
 msgid "Резерв"
 msgstr "预备"
 
@@ -459,19 +459,19 @@ msgstr "\n占用最后一个模块槽位（%d / %d）：之后只能升级已有
 msgid "\nЗаймёт место модуля %d из %d"
 msgstr "\n占用模块槽位 %d / %d"
 
-#: game/scripts/cards.gd:100 game/scripts/cards.gd:552
+#: game/scripts/cards.gd:100 game/scripts/cards.gd:560
 msgid "Новое оружие"
 msgstr "新武器"
 
-#: game/scripts/cards.gd:101 game/scripts/cards.gd:560
+#: game/scripts/cards.gd:101 game/scripts/cards.gd:568
 msgid "Оружие"
 msgstr "武器"
 
-#: game/scripts/cards.gd:109 game/scripts/cards.gd:665 game/scripts/terms.gd:28
+#: game/scripts/cards.gd:109 game/scripts/cards.gd:673 game/scripts/terms.gd:28
 msgid "Модернизация"
 msgstr "改装"
 
-#: game/scripts/cards.gd:110 game/scripts/cards.gd:790
+#: game/scripts/cards.gd:110 game/scripts/cards.gd:802
 msgid "Мастерство класса"
 msgstr "机型精通"
 
@@ -798,147 +798,147 @@ msgstr "拾取半径"
 msgid "Темп гондолы и турелей"
 msgstr "吊舱和炮塔射速"
 
-#: game/scripts/cards.gd:456
+#: game/scripts/cards.gd:464
 #, c-format
 msgid "Прочность: %d → %d"
 msgstr "耐久：%d → %d"
 
-#: game/scripts/cards.gd:459
+#: game/scripts/cards.gd:467
 #, c-format
 msgid "Перезарядка подвесов: %s → %s (предел %s)"
 msgstr "挂架装填：%s → %s（上限 %s）"
 
-#: game/scripts/cards.gd:462
+#: game/scripts/cards.gd:470
 #, c-format
 msgid "Перезарядка ракет: %s → %s"
 msgstr "导弹装填：%s → %s"
 
-#: game/scripts/cards.gd:467
+#: game/scripts/cards.gd:475
 #, c-format
 msgid "Неуязвимость уклонения: %.2f → %.2f с"
 msgstr "闪避无敌：%.2f → %.2f 秒"
 
-#: game/scripts/cards.gd:470
+#: game/scripts/cards.gd:478
 #, c-format
 msgid "Форсаж: %.1f → %.1f с"
 msgstr "加力：%.1f → %.1f 秒"
 
-#: game/scripts/cards.gd:472
+#: game/scripts/cards.gd:480
 #, c-format
 msgid "Прочность: %d → %d из %d"
 msgstr "耐久：%d → %d（共 %d）"
 
-#: game/scripts/cards.gd:492
+#: game/scripts/cards.gd:500
 msgid "Скорострел"
 msgstr "速射"
 
-#: game/scripts/cards.gd:492 game/scripts/cards.gd:501
+#: game/scripts/cards.gd:500 game/scripts/cards.gd:509
 #, c-format
 msgid "−10% перезарядки за ранг"
 msgstr "每阶装填时间 −10%"
 
-#: game/scripts/cards.gd:493
+#: game/scripts/cards.gd:501
 msgid "Калибр"
 msgstr "重口径"
 
-#: game/scripts/cards.gd:493
+#: game/scripts/cards.gd:501
 #, c-format
 msgid "+18% урона за ранг"
 msgstr "每阶伤害 +18%"
 
-#: game/scripts/cards.gd:501 game/scripts/profile.gd:34
+#: game/scripts/cards.gd:509 game/scripts/profile.gd:34
 msgid "Быстрый отстрел"
 msgstr "快速投放"
 
-#: game/scripts/cards.gd:502
+#: game/scripts/cards.gd:510
 msgid "Яркие ловушки"
 msgstr "强光诱饵"
 
-#: game/scripts/cards.gd:502
+#: game/scripts/cards.gd:510
 #, c-format
 msgid "+10% радиуса отстрела и +10% шанса увести ЗРК за ранг"
 msgstr "每阶投放半径 +10%，诱离防空导弹几率 +10%"
 
-#: game/scripts/cards.gd:532
+#: game/scripts/cards.gd:540
 #, c-format
 msgid " (ранг %d → %d)"
 msgstr "（阶 %d → %d）"
 
-#: game/scripts/cards.gd:534
+#: game/scripts/cards.gd:542
 msgid "Мастерство оружия"
 msgstr "武器精通"
 
-#: game/scripts/cards.gd:561 game/scripts/loc.gd:104
+#: game/scripts/cards.gd:569 game/scripts/loc.gd:104
 #, c-format
 msgid "%s: улучшение"
 msgstr "%s：提升"
 
-#: game/scripts/cards.gd:596 game/scripts/loc.gd:104
+#: game/scripts/cards.gd:604 game/scripts/loc.gd:104
 #, c-format
 msgid "%s: уровень %d"
 msgstr "%s：等级 %d"
 
-#: game/scripts/cards.gd:601
+#: game/scripts/cards.gd:609
 msgid "Залп ловушек: тренировка"
 msgstr "干扰弹齐射：训练"
 
-#: game/scripts/cards.gd:613 game/scripts/loc.gd:104
+#: game/scripts/cards.gd:621 game/scripts/loc.gd:104
 #, c-format
 msgid "Ведомый: %s"
 msgstr "僚机：%s"
 
-#: game/scripts/cards.gd:619 game/scripts/loc.gd:105
+#: game/scripts/cards.gd:627 game/scripts/loc.gd:105
 #, c-format
 msgid "Звено: слётанность — %s %d (ур. %d → %d)"
 msgstr "编队：默契——%s %d（Lv.%d → %d）"
 
-#: game/scripts/cards.gd:643
+#: game/scripts/cards.gd:651
 msgid "Перегрузка"
 msgstr "过载"
 
-#: game/scripts/cards.gd:644
+#: game/scripts/cards.gd:652
 msgid "Премия"
 msgstr "奖金"
 
-#: game/scripts/cards.gd:645
+#: game/scripts/cards.gd:653
 msgid "Ремкомплект"
 msgstr "维修包"
 
-#: game/scripts/cards.gd:648
+#: game/scripts/cards.gd:656
 msgid "Наработка: +1 к специализации"
 msgstr "经验积累：专精 +1"
 
-#: game/scripts/cards.gd:653 game/scripts/loc.gd:104
+#: game/scripts/cards.gd:661 game/scripts/loc.gd:104
 #, c-format
 msgid "%s Э+ (%d → %d)"
 msgstr "%s 进+（%d → %d）"
 
-#: game/scripts/cards.gd:656 game/scripts/loc.gd:104
+#: game/scripts/cards.gd:664 game/scripts/loc.gd:104
 #, c-format
 msgid "«Дятел» Э+ (%d → %d)"
 msgstr "“啄木鸟”进+（%d → %d）"
 
-#: game/scripts/cards.gd:666 game/scripts/cards.gd:975 game/scripts/loc.gd:105
+#: game/scripts/cards.gd:674 game/scripts/cards.gd:987 game/scripts/loc.gd:105
 #, c-format
 msgid "МОДЕРНИЗАЦИЯ: %s"
 msgstr "改装：%s"
 
-#: game/scripts/cards.gd:691
+#: game/scripts/cards.gd:699
 #, c-format
 msgid "%s\nНа подвес: %s ×%d\nСтарт с ур. %d"
 msgstr "%s\n挂载：%s ×%d\n起始 Lv.%d"
 
-#: game/scripts/cards.gd:693
+#: game/scripts/cards.gd:701
 #, c-format
 msgid "\nМодернизация: ур. 5 + %s"
 msgstr "\n改装：Lv.5 + %s"
 
-#: game/scripts/cards.gd:697
+#: game/scripts/cards.gd:705
 #, c-format
 msgid "%s: ур. %d → %d\n%s"
 msgstr "%s：Lv.%d → %d\n%s"
 
-#: game/scripts/cards.gd:699
+#: game/scripts/cards.gd:707
 msgid "\nВторая турель — сверху на фюзеляже"
 msgstr "\n第二座炮塔——位于机身顶部"
 
@@ -947,94 +947,100 @@ msgstr "\n再加一座炮塔"
 
 #: game/scripts/cards.gd:686
 #: game/scripts/cards.gd:701
+#: game/scripts/cards.gd:709
 #, c-format
 msgid "\nБонус редкости: +%s урона группы"
 msgstr "\n稀有度加成：+%s 组伤害"
 
-#: game/scripts/cards.gd:703
+#: game/scripts/cards.gd:711
 #, c-format
 msgid "\n★ Бонус самолёта: урон +%d%%"
 msgstr "\n★ 机型加成：伤害 +%d%%"
 
-#: game/scripts/cards.gd:705
+#: game/scripts/cards.gd:713
 #, c-format
 msgid "\nМодернизация: ур. 5 + %s, с %d:%02d"
 msgstr "\n改装：Lv.5 + %s，%d:%02d 起"
 
-#: game/scripts/cards.gd:707
+#: game/scripts/cards.gd:715
 #, c-format
 msgid "\nОткрывает слот %d из %d. Следующий слот дороже."
 msgstr "\n解锁槽位 %d/%d。下一个槽位更贵。"
 
-#: game/scripts/cards.gd:711
+#: game/scripts/cards.gd:719
 #, c-format
 msgid "%s: %s, до %d рангов"
 msgstr "%s：%s，最多 %d 阶"
 
-#: game/scripts/cards.gd:714
+#: game/scripts/cards.gd:722
 #, c-format
 msgid "\nИли-или: «%s» для этого оружия закроется до конца вылета"
 msgstr "\n二选一：此武器的「%s」将关闭至本次出击结束"
 
-#: game/scripts/cards.gd:716
+#: game/scripts/cards.gd:724
 msgid "\nОдна на вылет: если отказаться, больше не придёт."
 msgstr "\n每次出击仅一次：拒绝后不会再出现。"
 
-#: game/scripts/cards.gd:719
+#: game/scripts/cards.gd:727
 msgid "\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора."
 msgstr "\n替换同一挂架上的武器。拒绝后——3 次选择后再出现。"
 
-#: game/scripts/cards.gd:722
+#: game/scripts/cards.gd:730
 #, c-format
 msgid "%s\nСила ×%.1f · Ведомых: %d / %d"
 msgstr "%s\n威力 ×%.1f · 僚机：%d / %d"
 
-#: game/scripts/cards.gd:725
+#: game/scripts/cards.gd:733
 #, c-format
 msgid "Ур. %d: %s"
 msgstr "Lv.%d：%s"
 
-#: game/scripts/cards.gd:729
+#: game/scripts/cards.gd:737
 #, c-format
 msgid "+%s урона всему оружию (можно брать снова)"
 msgstr "+%s 全武器伤害（可重复选取）"
 
-#: game/scripts/cards.gd:731
+#: game/scripts/cards.gd:739
 #, c-format
 msgid "+%d запчастей сразу"
 msgstr "立即获得 +%d 零件"
 
-#: game/scripts/cards.gd:733
+#: game/scripts/cards.gd:741
 #, c-format
 msgid "+%s к максимальной прочности и ремонт половины"
 msgstr "+%s 最大耐久并修复一半"
 
-#: game/scripts/cards.gd:737
+#: game/scripts/cards.gd:745
 #, c-format
 msgid "+1 очко «%s» — к связке «%s» (до 3 за вылет)"
 msgstr "+1 点“%s”——计入羁绊“%s”（每次出击最多 3 次）"
 
-#: game/scripts/cards.gd:739
+#: game/scripts/cards.gd:747
 #, c-format
 msgid "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
 msgstr "改装：+8% 伤害，−4% 装填（最多 5 次）"
 
-#: game/scripts/cards.gd:780 game/scripts/loc.gd:105
+#: game/scripts/cards.gd:752
+#, c-format
+msgid "(всего %s)"
+msgstr "（合计 %s）"
+
+#: game/scripts/cards.gd:792 game/scripts/loc.gd:105
 #, c-format
 msgid "СВЯЗКА «%s» — слот %d"
 msgstr "羁绊“%s”——槽位 %d"
 
-#: game/scripts/cards.gd:792 game/scripts/loc.gd:105
+#: game/scripts/cards.gd:804 game/scripts/loc.gd:105
 #, c-format
 msgid "МАСТЕРСТВО: %s"
 msgstr "精通：%s"
 
-#: game/scripts/cards.gd:968
+#: game/scripts/cards.gd:980
 #, c-format
 msgid "МАСТЕРСТВО ОРУЖИЯ: %s"
 msgstr "武器精通：%s"
 
-#: game/scripts/cards.gd:972
+#: game/scripts/cards.gd:984
 #, c-format
 msgid "МАСТЕРСТВО КЛАССА: %s"
 msgstr "机型精通：%s"
@@ -1370,7 +1376,7 @@ msgstr "“堡垒”已击落！"
 msgid "«Крепость» сбита! (успела отбомбиться по базе)"
 msgstr "“堡垒”已击落！（已轰炸过基地）"
 
-#: game/scripts/fortress.gd:590 game/scripts/hud_flight.gd:247
+#: game/scripts/fortress.gd:590 game/scripts/hud_flight.gd:234
 msgid "«Крепость»"
 msgstr "“堡垒”"
 
@@ -1607,7 +1613,7 @@ msgstr "或"
 msgid "НОВЫЙ УРОВЕНЬ"
 msgstr "新等级"
 
-#: game/scripts/hud_cards.gd:80 game/scripts/hud_flight.gd:180
+#: game/scripts/hud_cards.gd:80 game/scripts/hud_flight.gd:167
 #, c-format
 msgid "УР %d"
 msgstr "等级 %d"
@@ -1888,7 +1894,7 @@ msgstr "防空阵地（蓝色箭头）"
 msgid "Подлетите — пойдёт отсчёт. Разбейте бункер в центре, пока он не кончился; зенитки бьют издалека, заходите на скорости."
 msgstr "靠近后开始倒计时。在倒计时结束前摧毁中央的掩体；高射炮射程远，要高速切入。"
 
-#: game/scripts/hud_codex.gd:134 game/scripts/hud_flight.gd:634 game/scripts/hud_flight.gd:650
+#: game/scripts/hud_codex.gd:134 game/scripts/hud_flight.gd:674 game/scripts/hud_flight.gd:690
 msgid "Награда: выбор из редких карточек + 40 запчастей"
 msgstr "奖励：从稀有卡牌中选择 + 40 零件"
 
@@ -1912,7 +1918,7 @@ msgstr "运输机（粉色箭头）"
 msgid "Пролетает район с прикрытием и уходит. Бейте сам транспортник, прикрытие только отвлекает."
 msgstr "在护航下飞越该区域后离开。直接攻击运输机，护航只是干扰。"
 
-#: game/scripts/hud_codex.gd:136 game/scripts/hud_flight.gd:667
+#: game/scripts/hud_codex.gd:136 game/scripts/hud_flight.gd:707
 msgid "Награда: груз — запчасти и ремкомплекты"
 msgstr "奖励：货物——零件和维修包"
 
@@ -1924,7 +1930,7 @@ msgstr "与王牌决斗（红色箭头）"
 msgid "Ас заходит в хвост. Сбросьте газ (S) или сделайте боевой разворот (E) — он проскочит под вашу пушку."
 msgstr "王牌会咬住你的尾部。收油门（S）或战斗转弯（E）——他会冲到你的机炮前方。"
 
-#: game/scripts/hud_codex.gd:137 game/scripts/hud_flight.gd:672
+#: game/scripts/hud_codex.gd:137 game/scripts/hud_flight.gd:712
 msgid "Награда: выбор из редких карточек"
 msgstr "奖励：从稀有卡牌中选择"
 
@@ -2076,393 +2082,397 @@ msgstr " （当前 %d）"
 msgid "%s: %d очков + уровень навыка %d"
 msgstr "%s：%d 点 + 技能等级 %d"
 
-#: game/scripts/hud_flight.gd:82
+#: game/scripts/hud_flight.gd:83
 msgid "МЫШЬ"
 msgstr "鼠标"
 
-#: game/scripts/hud_flight.gd:82
+#: game/scripts/hud_flight.gd:83
 msgid "куда лететь"
 msgstr "飞行方向"
 
-#: game/scripts/hud_flight.gd:82
+#: game/scripts/hud_flight.gd:83
 msgid "пауза"
 msgstr "暂停"
 
-#: game/scripts/hud_flight.gd:84
+#: game/scripts/hud_flight.gd:85
 msgid "отладка"
 msgstr "调试"
 
-#: game/scripts/hud_flight.gd:105
+#: game/scripts/hud_flight.gd:106
 msgid "ПОДСКАЗКА"
 msgstr "提示"
 
-#: game/scripts/hud_flight.gd:130
+#: game/scripts/hud_flight.gd:131
 #, c-format
 msgid "КОРПУС %d / %d"
 msgstr "耐久 %d / %d"
 
-#: game/scripts/hud_flight.gd:139
+#: game/scripts/hud_flight.gd:140
 msgid "БАК ПУСТ"
 msgstr "油箱已空"
 
-#: game/scripts/hud_flight.gd:139
+#: game/scripts/hud_flight.gd:140
 #, c-format
 msgid "ТОПЛИВО %d:%02d"
 msgstr "燃油 %d:%02d"
 
-#: game/scripts/hud_flight.gd:143
-#, c-format
-msgid "Пушка: ручной огонь +%d%% [%s]"
-msgstr "机炮：手动射击 +%d%% [%s]"
-
-#: game/scripts/hud_flight.gd:153
-#, c-format
-msgid " (%d с)"
-msgstr " （%d 秒）"
-
-#: game/scripts/hud_flight.gd:155
-#, c-format
-msgid " (вернётся %d с)"
-msgstr " （%d 秒后恢复）"
-
-#: game/scripts/hud_flight.gd:157
-#, c-format
-msgid "Звено: %s · цель: %s [%s]"
-msgstr "编队：%s · 目标：%s [%s]"
-
-#: game/scripts/hud_flight.gd:162
+#: game/scripts/hud_flight.gd:149
 msgid "ОТЛАДКА: неуязвимость (F7)"
 msgstr "调试：无敌（F7）"
 
-#: game/scripts/hud_flight.gd:215 game/scripts/hud_result.gd:167
+#: game/scripts/hud_flight.gd:202 game/scripts/hud_result.gd:167
 msgid "СБИТО"
 msgstr "击落"
 
-#: game/scripts/hud_flight.gd:216 game/scripts/hud_result.gd:256
+#: game/scripts/hud_flight.gd:203 game/scripts/hud_result.gd:256
 msgid "ЗАПЧАСТИ"
 msgstr "零件"
 
-#: game/scripts/hud_flight.gd:243
+#: game/scripts/hud_flight.gd:230
 msgid "задание выполнено — к эвакуации"
 msgstr "任务完成——前往撤离"
 
-#: game/scripts/hud_flight.gd:247
+#: game/scripts/hud_flight.gd:234
 msgid "сбейте "
 msgstr "击落 "
 
-#: game/scripts/hud_flight.gd:247
+#: game/scripts/hud_flight.gd:234
 msgid "«Барона»"
 msgstr "“男爵”"
 
-#: game/scripts/hud_flight.gd:250
+#: game/scripts/hud_flight.gd:237
 #, c-format
 msgid "«Барон»: %s"
 msgstr "“男爵”：%s"
 
-#: game/scripts/hud_flight.gd:250
+#: game/scripts/hud_flight.gd:237
 msgid "сбит"
 msgstr "已击落"
 
-#: game/scripts/hud_flight.gd:250
+#: game/scripts/hud_flight.gd:237
 msgid "не сбит"
 msgstr "未击落"
 
-#: game/scripts/hud_flight.gd:256
+#: game/scripts/hud_flight.gd:243
 msgid "ас в бою!"
 msgstr "王牌来袭！"
 
-#: game/scripts/hud_flight.gd:256
+#: game/scripts/hud_flight.gd:243
 #, c-format
 msgid "ас через %d:%02d"
 msgstr "王牌 %d:%02d 后出现"
 
-#: game/scripts/hud_flight.gd:258
+#: game/scripts/hud_flight.gd:245
 #, c-format
 msgid "задержались: добыча ×%.1f"
 msgstr "滞留：战利品 ×%.1f"
 
-#: game/scripts/hud_flight.gd:266
+#: game/scripts/hud_flight.gd:253
 msgid "ЦЕЛИ ВЫЛЕТА"
 msgstr "出击目标"
 
-#: game/scripts/hud_flight.gd:330
+#: game/scripts/hud_flight.gd:321 game/scripts/hud_flight.gd:348
 #, c-format
 msgid "цель: %s"
 msgstr "目标：%s"
 
-#: game/scripts/hud_flight.gd:332 game/scripts/hud_pause.gd:143
+#: game/scripts/hud_flight.gd:323 game/scripts/hud_pause.gd:143
 #, c-format
 msgid "пуск: %s"
 msgstr "发射：%s"
 
-#: game/scripts/hud_flight.gd:332 game/scripts/settings.gd:134
+#: game/scripts/hud_flight.gd:323 game/scripts/settings.gd:134
 msgid "авто"
 msgstr "自动"
 
-#: game/scripts/hud_flight.gd:342 game/scripts/terms.gd:38
+#: game/scripts/hud_flight.gd:333
+#, c-format
+msgid "ручной +%d%%"
+msgstr "手动 +%d%%"
+
+#: game/scripts/hud_flight.gd:333
+msgid "огонь: авто"
+msgstr "射击：自动"
+
+#: game/scripts/hud_flight.gd:335
+#, c-format
+msgid "Курсовая пушка стреляет сама. Клавиша переключает ручной огонь: стреляете сами, и урон растёт до +%d%%."
+msgstr "机炮会自动射击。按键切换为手动射击：由你开火，伤害最高提升 +%d%%。"
+
+#: game/scripts/hud_flight.gd:348
+#, c-format
+msgid "вернётся %d с"
+msgstr "%d 秒后返回"
+
+#: game/scripts/hud_flight.gd:350
+#, c-format
+msgid "В звене: %s. Ведомые держат строй и бьют сами. Клавиша меняет, кого они атакуют первым."
+msgstr "编队：%s。僚机保持队形并自行作战。按键切换其优先攻击目标。"
+
+#: game/scripts/hud_flight.gd:359 game/scripts/terms.gd:38
 msgid "Уклонение"
 msgstr "闪避"
 
-#: game/scripts/hud_flight.gd:342
+#: game/scripts/hud_flight.gd:359
 msgid "бочка: уход от ракет"
 msgstr "滚筒：躲避导弹"
 
-#: game/scripts/hud_flight.gd:343
+#: game/scripts/hud_flight.gd:360
 #, c-format
 msgid "Бочка вбок: на время манёвра по вам не попадают, ракеты за вами теряют цель. Перезарядка %d с."
 msgstr "侧向滚筒：机动期间不会被击中，身后的导弹丢失目标。装填 %d 秒。"
 
-#: game/scripts/hud_flight.gd:346 game/scripts/terms.gd:40 game/scripts/weapons.gd:41
+#: game/scripts/hud_flight.gd:363 game/scripts/terms.gd:40 game/scripts/weapons.gd:41
 msgid "Ловушки"
 msgstr "干扰弹"
 
-#: game/scripts/hud_flight.gd:346
+#: game/scripts/hud_flight.gd:363
 msgid "уводят ракеты"
 msgstr "诱离导弹"
 
-#: game/scripts/hud_flight.gd:347
+#: game/scripts/hud_flight.gd:364
 #, c-format
 msgid "Залп тепловых ловушек: уводит ракеты, летящие к вам. Перезарядка %d с."
 msgstr "齐射干扰弹：诱离飞向你的导弹。装填 %d 秒。"
 
-#: game/scripts/hud_flight.gd:349 game/scripts/settings.gd:22 game/scripts/terms.gd:36
+#: game/scripts/hud_flight.gd:366 game/scripts/settings.gd:22 game/scripts/terms.gd:36
 msgid "Форсаж"
 msgstr "加力"
 
-#: game/scripts/hud_flight.gd:349
+#: game/scripts/hud_flight.gd:366
 msgid "рывок вперёд"
 msgstr "向前冲刺"
 
-#: game/scripts/hud_flight.gd:350
+#: game/scripts/hud_flight.gd:367
 #, c-format
 msgid "Рывок на скорости %.1f с, таранит мелких врагов на пути. Тратит топливо. Перезарядка %d с."
 msgstr "高速冲刺 %.1f 秒，撞毁路上的小型敌人。消耗燃油。装填 %d 秒。"
 
-#: game/scripts/hud_flight.gd:352 game/scripts/settings.gd:25
+#: game/scripts/hud_flight.gd:369 game/scripts/settings.gd:25
 msgid "Нырок"
 msgstr "俯冲"
 
-#: game/scripts/hud_flight.gd:352
+#: game/scripts/hud_flight.gd:369
 msgid "вниз, под огнём ПВО"
 msgstr "俯冲，钻到防空火力下"
 
-#: game/scripts/hud_flight.gd:353
+#: game/scripts/hud_flight.gd:370
 #, c-format
 msgid "Самолёт уходит к земле на %.1f с: ПВО и ракеты его теряют. Перезарядка %d с."
 msgstr "飞机贴地飞行 %.1f 秒：防空和导弹丢失目标。装填 %d 秒。"
 
-#: game/scripts/hud_flight.gd:357 game/scripts/hud_flight.gd:362
+#: game/scripts/hud_flight.gd:374 game/scripts/hud_flight.gd:379
 #, c-format
 msgid ". Перезарядка %d с."
 msgstr "。装填 %d 秒。"
 
-#: game/scripts/hud_flight.gd:501
+#: game/scripts/hud_flight.gd:541
 #, c-format
 msgid "до базы %d м"
 msgstr "距基地 %d 米"
 
-#: game/scripts/hud_flight.gd:501
+#: game/scripts/hud_flight.gd:541
 #, c-format
 msgid "отбомбилась · до базы %d м"
 msgstr "已轰炸 · 距基地 %d 米"
 
-#: game/scripts/hud_flight.gd:524
+#: game/scripts/hud_flight.gd:564
 #, c-format
 msgid "база %d м"
 msgstr "基地 %d 米"
 
-#: game/scripts/hud_flight.gd:524
+#: game/scripts/hud_flight.gd:564
 msgid "база"
 msgstr "基地"
 
-#: game/scripts/hud_flight.gd:534
+#: game/scripts/hud_flight.gd:574
 #, c-format
 msgid "эвакуация %d м"
 msgstr "撤离 %d 米"
 
-#: game/scripts/hud_flight.gd:535
+#: game/scripts/hud_flight.gd:575
 #, c-format
 msgid "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с"
 msgstr "撤离：撤离门 %d / %d · %d 米 · 窗口 %d 秒"
 
-#: game/scripts/hud_flight.gd:582
+#: game/scripts/hud_flight.gd:622
 #, c-format
 msgid "Газ [W/S]: %d%%%s"
 msgstr "油门 [W/S]：%d%%%s"
 
-#: game/scripts/hud_flight.gd:582
+#: game/scripts/hud_flight.gd:622
 msgid "  ФОРСАЖ"
 msgstr "  加力"
 
-#: game/scripts/hud_flight.gd:589
+#: game/scripts/hud_flight.gd:629
 #, c-format
 msgid "БОЕВОЙ РЕЖИМ: пушка ×2 · %.1f с"
 msgstr "战斗模式：机炮 ×2 · %.1f 秒"
 
-#: game/scripts/hud_flight.gd:591
+#: game/scripts/hud_flight.gd:631
 #, c-format
 msgid "НА ХВОСТЕ: пушка +50%"
 msgstr "咬尾：机炮 +50%"
 
-#: game/scripts/hud_flight.gd:595
+#: game/scripts/hud_flight.gd:635
 #, c-format
 msgid "ЗАХОД: пушка и взрывы +%d%%"
 msgstr "攻击航线：机炮和爆炸 +%d%%"
 
-#: game/scripts/hud_flight.gd:598
+#: game/scripts/hud_flight.gd:638
 #, c-format
 msgid "Серия ×%d · опыт ×%.2f"
 msgstr "连杀 ×%d · 经验 ×%.2f"
 
-#: game/scripts/hud_flight.gd:624
+#: game/scripts/hud_flight.gd:664
 #, c-format
 msgid "ПВО %d м"
 msgstr "防空 %d 米"
 
-#: game/scripts/hud_flight.gd:627
+#: game/scripts/hud_flight.gd:667
 #, c-format
 msgid "Позиция ПВО устояла · бункер: %d%%"
 msgstr "防空阵地守住了 · 掩体：%d%%"
 
-#: game/scripts/hud_flight.gd:629
+#: game/scripts/hud_flight.gd:669
 #, c-format
 msgid "ПОЗИЦИЯ ПВО: %d с · уничтожьте бункер: %d%%"
 msgstr "防空阵地：%d 秒 · 摧毁掩体：%d%%"
 
-#: game/scripts/hud_flight.gd:631
+#: game/scripts/hud_flight.gd:671
 #, c-format
 msgid "Позиция ПВО: %d м — подлетите, чтобы начать"
 msgstr "防空阵地：%d 米——靠近以开始"
 
-#: game/scripts/hud_flight.gd:638
+#: game/scripts/hud_flight.gd:678
 #, c-format
 msgid "маяк %d м"
 msgstr "信标 %d 米"
 
-#: game/scripts/hud_flight.gd:641
+#: game/scripts/hud_flight.gd:681
 msgid "Пилот спасён!"
 msgstr "飞行员获救！"
 
-#: game/scripts/hud_flight.gd:643
+#: game/scripts/hud_flight.gd:683
 msgid "Вертолёт ушёл без пилота"
 msgstr "直升机没接到飞行员就撤离了"
 
-#: game/scripts/hud_flight.gd:645
+#: game/scripts/hud_flight.gd:685
 #, c-format
 msgid "СБИТЫЙ ПИЛОТ: держите небо над маяком ещё %d с"
 msgstr "坠机飞行员：在信标上空再坚守 %d 秒"
 
-#: game/scripts/hud_flight.gd:645
+#: game/scripts/hud_flight.gd:685
 msgid " · вернитесь к маяку!"
 msgstr " · 回到信标！"
 
-#: game/scripts/hud_flight.gd:647
+#: game/scripts/hud_flight.gd:687
 #, c-format
 msgid "Аварийный маяк: %d м · вертолёт ждёт ещё %d с"
 msgstr "求救信标：%d 米 · 直升机还会等 %d 秒"
 
-#: game/scripts/hud_flight.gd:655
+#: game/scripts/hud_flight.gd:695
 #, c-format
 msgid "караван %d м"
 msgstr "船队 %d 米"
 
-#: game/scripts/hud_flight.gd:655
+#: game/scripts/hud_flight.gd:695
 #, c-format
 msgid "колонна %d м"
 msgstr "车队 %d 米"
 
-#: game/scripts/hud_flight.gd:658
+#: game/scripts/hud_flight.gd:698
 #, c-format
 msgid "КАРАВАН: до гавани %d с · сухогрузов: %d из %d"
 msgstr "船队：距港口 %d 秒 · 货轮：%d / %d"
 
-#: game/scripts/hud_flight.gd:658
+#: game/scripts/hud_flight.gd:698
 #, c-format
 msgid "КОЛОННА: до укрытия %d с · грузовиков: %d из %d"
 msgstr "车队：距掩蔽处 %d 秒 · 卡车：%d / %d"
 
-#: game/scripts/hud_flight.gd:660
+#: game/scripts/hud_flight.gd:700
 #, c-format
 msgid "Караван снабжения: %d м — подлетите и потопите сухогрузы"
 msgstr "补给船队：%d 米——飞过去击沉货轮"
 
-#: game/scripts/hud_flight.gd:660
+#: game/scripts/hud_flight.gd:700
 #, c-format
 msgid "Колонна снабжения: %d м — подлетите и сожгите грузовики"
 msgstr "补给车队：%d 米——飞过去烧毁卡车"
 
-#: game/scripts/hud_flight.gd:662
+#: game/scripts/hud_flight.gd:702
 msgid "Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза"
 msgstr "击中领头船只——船队就会停下 · 奖励：每艘货轮的货物"
 
-#: game/scripts/hud_flight.gd:662
+#: game/scripts/hud_flight.gd:702
 msgid "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика"
 msgstr "击中领头车辆——车队就会停下 · 奖励：每辆卡车的货物"
 
-#: game/scripts/hud_flight.gd:665
+#: game/scripts/hud_flight.gd:705
 #, c-format
 msgid "транспортник %d м"
 msgstr "运输机 %d 米"
 
-#: game/scripts/hud_flight.gd:666
+#: game/scripts/hud_flight.gd:706
 #, c-format
 msgid "ОХОТА: транспортник уйдёт через %d с · прочность %d%%"
 msgstr "猎杀：运输机 %d 秒后逃离 · 耐久 %d%%"
 
-#: game/scripts/hud_flight.gd:670
+#: game/scripts/hud_flight.gd:710
 #, c-format
 msgid "ас %d м"
 msgstr "王牌 %d 米"
 
-#: game/scripts/hud_flight.gd:671
+#: game/scripts/hud_flight.gd:711
 #, c-format
 msgid "ДОГФАЙТ: ас «%s» · уйдёт через %d с"
 msgstr "缠斗：王牌“%s” · %d 秒后撤离"
 
-#: game/scripts/hud_flight.gd:674
+#: game/scripts/hud_flight.gd:714
 msgid "ХВОСТ! Сбрось газ (S) или манёвр"
 msgstr "被咬尾！收油门（S）或机动"
 
-#: game/scripts/hud_flight.gd:678
+#: game/scripts/hud_flight.gd:718
 #, c-format
 msgid "заправщик %d м"
 msgstr "加油机 %d 米"
 
-#: game/scripts/hud_flight.gd:679
+#: game/scripts/hud_flight.gd:719
 msgid "СТЫКОВКА — ЗАПРАВКА ИДЁТ"
 msgstr "对接——正在加油"
 
-#: game/scripts/hud_flight.gd:679
+#: game/scripts/hud_flight.gd:719
 msgid "ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно"
 msgstr "加油管伸出——保持平稳"
 
-#: game/scripts/hud_flight.gd:679
+#: game/scripts/hud_flight.gd:719
 msgid "ЗАПРАВЩИК: зайдите ему в хвост"
 msgstr "加油机：咬住它的尾部"
 
-#: game/scripts/hud_flight.gd:680
+#: game/scripts/hud_flight.gd:720
 #, c-format
 msgid "%s · уйдёт через %d с · прочность %d%%"
 msgstr "%s · %d 秒后离开 · 耐久 %d%%"
 
-#: game/scripts/hud_flight.gd:711
+#: game/scripts/hud_flight.gd:751
 #, c-format
 msgid "РАДИОЭФИР · «%s»"
 msgstr "无线电 · “%s”"
 
-#: game/scripts/hud_flight.gd:733
+#: game/scripts/hud_flight.gd:774
 #, c-format
 msgid "связка %d"
 msgstr "羁绊 %d"
 
-#: game/scripts/hud_flight.gd:743
+#: game/scripts/hud_flight.gd:784
 #, c-format
 msgid "К связке «%s»"
 msgstr "通往“%s”"
 
-#: game/scripts/hud_flight.gd:752
-msgid "Связка придёт в следующем выборе!"
-msgstr "羁绊将在下次选择中出现！"
+#: game/scripts/hud_flight.gd:790
+msgid "в следующем выборе!"
+msgstr "下次选择时获得！"
 
 #: game/scripts/hud_hangar.gd:11 game/scripts/hud_result.gd:297 game/scripts/hud_result.gd:303 game/scripts/menu_main.gd:12
 msgid "АНГАР"
