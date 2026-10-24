@@ -266,11 +266,13 @@ func _relief(x: float, z: float, v: float, ctx := {}, sd_in := NAN, pv := Vector
 
 ## Which relief to build: F1 slider relief_variety (0 — before RV-01) or --relief0 (lab frames);
 ## RV-02 gullies: slider relief_gullies or --gullies0 (frames without them).
+## RV-04 landforms (pillars, terraces, gorges): slider relief_landforms or --landforms0.
 func _pick_style() -> void:
 	var args := OS.get_cmdline_user_args()
 	var on := Tuning.g("relief_variety") >= 0.5 and not args.has("--relief0")
 	relief_style = 1 if on else 0
 	gullies = Tuning.g("relief_gullies") >= 0.5 and not args.has("--gullies0")
+	_prov.landforms = Tuning.g("relief_landforms") >= 0.5 and not args.has("--landforms0")
 
 
 var gullies := true   # RV-02: gullies on the RV-01 relief (see _pick_style)
