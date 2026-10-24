@@ -142,6 +142,8 @@
 | S5-04, S5-05, S5-07, S5-09 | Описания навыков и связок простыми словами; оружие по классам в ангаре и карточках; текст «Бронещита»; убрать «+1 к лимиту ведомых» (18.10, правки Kanta по 3.5-s5) | Понятность игры для новичков | на проверке в сборке 3.5-s8 (в таблице «в работе» на 18.10 — догадка) |
 | U-08, U-10, U-11, U-12, U-13, U-18 | Экспериментальное оружие; боевой разворот и подписи навыков; пауза и итоги; описания навыков в ангаре; боевой интерфейс; подсказки механик ночи (17.10) | Понятность игры для новичков | на проверке в сборке 3.5-s8 |
 | DM-06 | Первые 90 секунд демо понятны новичку (проверка на внешних тестерах) | Понятность игры для новичков | идея (до 15.12) |
+| UI-01 | Main menu and settings redesign after Sublight (Kanta 24.10): style «Прицел», 5 menu items, «Что нового»/«Отзыв» cards, compact flight log, flexible graphics, controls with rebinding and gamepad; plan `docs/superpowers/plans/2026-10-24-main-menu-settings.md` steps 1–5; Kenney Input Prompts + UI Audio (CC0) approved | Переделать главное меню и настройки | in progress: step 1 (UiStyle + UiFocus merged, PR #367) |
+| UI-02 | Combat UI: HUD, pause variant В «Чертёж самолёта», card pick, results (plan steps 6–9), in parallel (Kanta 24.10) | Переделать интерфейс боя | in progress |
 
 ## Нагорье
 
@@ -327,7 +329,7 @@ Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standar
 | CS-08 | CI: `pick.sh` "all combat except list", smoke catches `ERROR:`/`SHADER ERROR`, `check_po` and `.gd` tools in smoke; tests in a temp `user://` | — | idea |
 | CS-09 | Combat preload: operation models in the background, `Boom3D` and materials warmed up at sortie start | — | idea |
 | CS-10 | Split `render3d.gd` (after Next Fest) | — | idea (after the demo) |
-| CS-11 | UI design system: `UiStyle`, font size ≥ 14, shared buttons and tabs, gamepad focus (`docs/standards/ui-design-system.md` §6) | — | idea |
+| CS-11 | UI design system: `UiStyle`, font size ≥ 14, shared buttons and tabs, gamepad focus (`docs/standards/ui-design-system.md` §6) | Переделать главное меню и настройки (with UI-01/UI-02) | in progress: `UiStyle` tokens and `UiFocus` merged 24.10 (PR #367) |
 | CS-13 | Balance numbers: `tuning.gd` keeps only F1 sliders, others go to `game/scripts/balance/<system>.gd` when files are touched; update the CLAUDE.md rule (Kanta 2026-10-23, option 2) | every code thread; CLAUDE.md — "Короткий CLAUDE.md" | rule in force |
 | CS-12 | Important review findings without their own row: spawner freezes bombers at the cap, bomb lead (`move_vel`), "Skvoznyak" summons without a cap, hints spent on the title screen, `TEST_PICKS` → 2, volume writes balance into `tuning.json`, settings do not fit at 1080, ground shader (13 samplers, `dFdx` in a branch), double explosion lights, `.import` for new models, 334 MB `models/pilot` in git, JPEG 4:2:0 normal map. Details — review README | split across system threads | idea |
 | LANG-01 | Move internal text to English (Kanta 2026-10-23, option 2): new code, comments, commits and docs in English right away; existing files translated when touched; a separate pass over key documents — CLAUDE.md, `docs/game-context.md` ("Rules now" section), `docs/backlog.md` header, `docs/process/` | coordinator assigns; CLAUDE.md — thread "Короткий CLAUDE.md" | in progress (standards and CLAUDE.md done 2026-10-23) |
