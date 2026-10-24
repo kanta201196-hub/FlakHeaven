@@ -14,7 +14,7 @@ extends GPUParticles3D
 ## Draws in world space (`local_coords = false`), the CPU path in Boom3D's local space: both match while
 ## Render3D and Boom3D stay at the origin.
 
-## Which Boom3D layer this is (Boom3D.L_* index) — selects the size/colour rules in the shader
+## Which Boom3D layer this is (Boom3D.L_* index, or GpuFx.L_FLIP) — selects the size/colour rules in the shader
 var layer := 0
 ## Live-particle estimate for budgets and the perf log
 var counter := FxCounter.new()
@@ -126,6 +126,11 @@ const WRITE := {
 	b = mat3(r * 2.0);
 	c.a *= (1.0 - k) * (1.0 - k);
 """,
+	7: """
+	float r = mix(r0, r1, k);   // flipbook (GpuFx.L_FLIP); e = (-, glow, delay, -); the bake carries the motion
+	b = mat3(r * 2.0);
+	cd = vec4(0.0, k, 0.0, e.y);
+""",
 }
 
 
@@ -166,6 +171,7 @@ func emit(q: Dictionary) -> void:
 		2: e = Color(q.get("seed", 0.0), q.get("h", 1.0), delay, q.get("sq", 1.0))
 		4: e = Color(q.get("w", 1.5), 0.0, delay, 0.0)
 		5: e = Color(q.get("seed", 0.0), 0.0, delay, q.get("sq", 1.0))
+		7: e = Color(0.0, q.get("glow", 1.0), delay, 0.0)
 	var basis := Basis(Vector3(q.get("r0", 0.0), q.get("r1", 0.0), life),
 		Vector3(q.get("b", 0.0), q.get("g", 0.0), q.get("drag", 0.0)),
 		Vector3(q.get("wind", 0.0), q.get("rot", 0.0), q.get("spin", 0.0)))
