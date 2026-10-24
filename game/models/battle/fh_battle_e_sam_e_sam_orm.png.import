@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dmatjawncjfmn"
-path="res://.godot/imported/fh_battle_e_sam_ground_sam_color.png-b089931a7e2b9b900a8d1a5bbef33946.ctex"
+uid="uid://ckjuap2p184np"
+path="res://.godot/imported/fh_battle_e_sam_e_sam_orm.png-b68177d9a78de132ae68aaab075e5633.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "63a9bad15ce71b6a82385515182c9b07"
+"md5": "80e0ae719e9738bba71525be8c64ce1d"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_sam_ground_sam_color.png"
-dest_files=["res://.godot/imported/fh_battle_e_sam_ground_sam_color.png-b089931a7e2b9b900a8d1a5bbef33946.ctex"]
+source_file="res://models/battle/fh_battle_e_sam_e_sam_orm.png"
+dest_files=["res://.godot/imported/fh_battle_e_sam_e_sam_orm.png-b68177d9a78de132ae68aaab075e5633.ctex"]
 
 [params]
 

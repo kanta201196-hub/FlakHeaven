@@ -1151,10 +1151,18 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 	if not u.has("hull"):
 		u["hull"] = ang
 		var inst := (u["node"] as Node3D).get_child(0)
-		for nm in ["turret", "antenna", "launcher"]:
+		for nm in ["turret", "antenna", "launcher", "launcher_yaw", "launcher_pitch"]:
 			var n := inst.find_child(nm, true, false)
 			if n != null:
 				u[nm] = n
+		if u.has("launcher_pitch"):
+			var cells := []
+			for i in 64:
+				var c := (u["launcher_pitch"] as Node3D).find_child("cell_%d" % i, false, false)
+				if c == null:
+					break
+				cells.append(c)
+			u["cells"] = cells
 	var gt := e as GroundTarget
 	if gt != null and gt.drive != null:
 		# правка 3.5-s4: курс корпуса — из модуля движения. Раньше брался сдвиг точки на экране,
@@ -1176,7 +1184,42 @@ func _ground_parts(u: Dictionary, e: Enemy, ang: float, delta: float) -> float:
 		var up := deg_to_rad(55.0) if float(e.get("_lock") if e.get("_lock") != null else 0.0) > 0.0 else 0.0
 		var ln := u["launcher"] as Node3D
 		ln.rotation.z = move_toward(ln.rotation.z, up, delta * 1.2)
-	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher")) else ang
+	if u.has("launcher_pitch") and gt != null:
+		_sam_launcher(u, gt, hull, delta)
+	return hull if (u.has("turret") or u.has("antenna") or u.has("launcher") or u.has("launcher_pitch")) else ang
+
+
+## SAM launcher (Kanta 24.10, model tools/blender/sf_recipes.py "e_sam"): the box rides folded flat over the
+## deck; when the launcher stands at a live site it rises, then the turntable turns it after the plane and
+## keeps tracking through the lock; a launch kicks the box. Folding runs the other way round — turn back
+## first, then lower — because a folded box swung sideways would cut through the cab.
+const SAM_UP := deg_to_rad(30.0)     # raised elevation of the source model
+const SAM_RAISE := deg_to_rad(70.0)  # elevation rate, °/s: ~0.45 s to raise, inside the 1.2 s lock
+const SAM_TRAVERSE := deg_to_rad(120.0)
+const SAM_KICK := deg_to_rad(4.0)    # box dips on each launch, settles back
+
+
+func _sam_launcher(u: Dictionary, gt: GroundTarget, hull: float, delta: float) -> void:
+	var yaw := u["launcher_yaw"] as Node3D
+	var pitch := u["launcher_pitch"] as Node3D
+	var up := gt.launcher_up()
+	var raised: float = u.get("sam_el", 0.0)
+	var want_yaw := 0.0
+	var pl := Main.I.player
+	if up and raised > SAM_UP * 0.8 and pl != null:
+		want_yaw = -wrapf((pl.global_position - gt.global_position).angle() - hull, -PI, PI)
+	yaw.rotation.y = rotate_toward(yaw.rotation.y, want_yaw, SAM_TRAVERSE * delta)
+	var want_el := SAM_UP if up else (SAM_UP if absf(yaw.rotation.y) > 0.05 else 0.0)
+	raised = move_toward(raised, want_el, SAM_RAISE * delta)
+	u["sam_el"] = raised
+	if gt.launches != int(u.get("sam_n", 0)):
+		u["sam_n"] = gt.launches
+		u["sam_kick"] = SAM_KICK
+	var kick: float = u.get("sam_kick", 0.0)
+	u["sam_kick"] = move_toward(kick, 0.0, SAM_KICK * 3.0 * delta)
+	pitch.rotation.z = raised - kick
+	var cells: Array = u.get("cells", [])
+	gt.launch_at = _ground_to_combat((cells[gt.launches % cells.size()] as Node3D).global_position) if not cells.is_empty() else Vector2.INF
 
 
 ## A-03: подвижные части машин конвоя (tools/blender/convoy_models.py): колёса крутятся по пройденному пути
