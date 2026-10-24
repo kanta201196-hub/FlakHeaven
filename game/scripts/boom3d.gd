@@ -622,6 +622,24 @@ func _ground(g: Vector3, s: float) -> void:
 	var p := g + Vector3(0, s * 0.25, 0)
 	# M-39: короткая яркая вспышка, маленькое огненное ядро (~0,25 с), дальше — пыль цвета земли и тёмный дым
 	_flash(p + Vector3(0, s * 0.5, 0), s * 3.2, 0.1, Color(1.0, 0.93, 0.8, 1.0))
+	# in Forward+ fireball, column and dust are the pre-rendered flipbook, as for bombs (VFX-02)
+	if _gpu == null or not _gpu.flip("ground", g, s):
+		_ground_body(g, p, s)
+	# тест 3.5-s7: комья и обломки — низко и в стороны (раньше до 7 s вверх: летели в камеру и росли на экране)
+	for i in _n(clampf(s / 6.0, 4.0, 7.0)):
+		var a := randf() * TAU
+		var dv := Vector3(cos(a) * randf_range(1.6, 3.2), randf_range(1.4, 2.8), sin(a) * randf_range(1.6, 3.2)) * s
+		_debris(p, dv, s * randf_range(0.06, 0.11), Color(0.24, 0.19, 0.14), 0.25, "dust", false, 0.0)
+	for i in _n(2):
+		var a2 := randf() * TAU
+		_debris(p, Vector3(cos(a2) * 2.0, 2.6, sin(a2) * 2.0) * s, s * 0.1, Color(0.15, 0.14, 0.13), 1.0, "smoke", false, 0.5)
+	_sparks(p, _n(clampf(s * 0.2, 4.0, 9.0)), 280.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.2, 0.35)
+	_emit.append({"p": g, "t": 0.0, "life": randf_range(4.0, 6.5), "s": s * 0.55, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 1.4})
+	_light(g + Vector3(0, s * 2.5, 0), clampf(s / 7.0, 2.0, 7.0), clampf(s * 12.0, 260.0, 1000.0), 0.3)
+
+
+## Fireball, smoke column and dust wave of a destroyed ground target from particles (Compatibility, no flipbook)
+func _ground_body(g: Vector3, p: Vector3, s: float) -> void:
 	_core(p, s * 0.4, s * 0.95, 0.24, 1.0, 0.7)
 	for i in _n(clampf(s / 5.0, 3.0, 6.0)):
 		var d := _rdir(0.9)
@@ -641,17 +659,6 @@ func _ground(g: Vector3, s: float) -> void:
 		_smoke(p + Vector3(d2.x, 0, d2.z) * s * (0.25 if dark else 0.5), Vector3(d2.x * 0.6, up, d2.z * 0.6) * s, s * 0.6,
 			s * randf_range(2.2, 3.1), randf_range(3.5, 5.5), col, 0.35 if dark else 0.0, 6.0 if dark else 3.0, 0.9, randf_range(0.0, 0.15))
 	_dust_skirt(g, s, 1.0)
-	# тест 3.5-s7: комья и обломки — низко и в стороны (раньше до 7 s вверх: летели в камеру и росли на экране)
-	for i in _n(clampf(s / 6.0, 4.0, 7.0)):
-		var a := randf() * TAU
-		var dv := Vector3(cos(a) * randf_range(1.6, 3.2), randf_range(1.4, 2.8), sin(a) * randf_range(1.6, 3.2)) * s
-		_debris(p, dv, s * randf_range(0.06, 0.11), Color(0.24, 0.19, 0.14), 0.25, "dust", false, 0.0)
-	for i in _n(2):
-		var a2 := randf() * TAU
-		_debris(p, Vector3(cos(a2) * 2.0, 2.6, sin(a2) * 2.0) * s, s * 0.1, Color(0.15, 0.14, 0.13), 1.0, "smoke", false, 0.5)
-	_sparks(p, _n(clampf(s * 0.2, 4.0, 9.0)), 280.0 + s * 8.0, 0.45, Color(1.0, 0.7, 0.3, 1.0), 0.2, 0.35)
-	_emit.append({"p": g, "t": 0.0, "life": randf_range(4.0, 6.5), "s": s * 0.55, "acc_f": 0.0, "acc_s": 0.0, "fire_t": 1.4})
-	_light(g + Vector3(0, s * 2.5, 0), clampf(s / 7.0, 2.0, 7.0), clampf(s * 12.0, 260.0, 1000.0), 0.3)
 
 
 ## Бомбы и НАР по площади: меньше огня, больше пыли и земли; пыльная волна доходит до края зоны поражения
