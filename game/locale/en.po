@@ -6767,3 +6767,143 @@ msgstr "WHAT'S NEW"
 #: game/scripts/menu_main.gd (UI-01)
 msgid "ЭВАКУАЦИЙ"
 msgstr "EXTRACTIONS"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "В окне, без рамки на весь экран или полный экран."
+msgstr "Windowed, borderless full screen or exclusive full screen."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Вернуть все клавиши, как было по умолчанию."
+msgstr "Restore every key to its default."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Верхний предел кадров в секунду: меньше нагрев и шум видеокарты."
+msgstr "Upper limit of frames per second: less heat and fan noise from the graphics card."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Выстрелы, взрывы, попадания."
+msgstr "Gunfire, explosions, hits."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Громкость всей игры."
+msgstr "Volume of the whole game."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Громкость музыки."
+msgstr "Music volume."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Гул двигателя вашего самолёта."
+msgstr "The hum of your plane's engine."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ЗНАЧЕНИЕ"
+msgstr "VALUE"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ИНТЕРФЕЙС"
+msgstr "INTERFACE"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Как самолёт слушается клавиш и мыши: летит по направлению, поворачивает влево-вправо или следует за курсором."
+msgstr "How the plane responds to keys and mouse: flies in the pressed direction, turns left/right, or follows the cursor."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Картинки самолётов и техники. Если выключить, будут схематичные фигуры (F4)."
+msgstr "Pictures of planes and vehicles. Turn off for schematic shapes (F4)."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Мышь и геймпад"
+msgstr "Mouse and gamepad"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Нажмите Enter или щёлкните, затем нужную клавишу. Esc — отмена."
+msgstr "Press Enter or click, then press the key you want. Esc cancels."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Наклон камеры над полем боя. В полёте — клавиша F9."
+msgstr "Camera tilt over the battlefield. In flight: F9."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Насколько далеко камера. Меньше — видно больше поля."
+msgstr "How far away the camera is. Lower shows more of the field."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Насколько миникарта закрывает поле боя."
+msgstr "How much the minimap covers the battlefield."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Объёмная 3D-картинка. Если выключить, вернётся старая плоская 2D."
+msgstr "Full 3D picture. Turn off to go back to the old flat 2D."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ПО УМОЛЧАНИЮ"
+msgstr "DEFAULTS"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ПРИМЕНИТЬ"
+msgstr "APPLY"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "ПУНКТ"
+msgstr "ITEM"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Пунктирные круги дальности вашего оружия."
+msgstr "Dashed range circles of your weapons."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "РАЗДЕЛ"
+msgstr "SECTION"
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Размер вашего самолёта на экране."
+msgstr "Size of your plane on screen."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Размер врагов и наземных целей на экране."
+msgstr "Size of enemies and ground targets on screen."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Размер миникарты в углу экрана."
+msgstr "Size of the minimap in the screen corner."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Размер окна в режиме «В окне»."
+msgstr "Window size in windowed mode."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Тени, сглаживание, детали рельефа и растительность разом. Если выбрать вручную, игра перестанет снижать качество сама."
+msgstr "Shadows, antialiasing, terrain detail and vegetation in one go. Once you pick it by hand, the game stops lowering quality on its own."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Тряска камеры от взрывов и попаданий. 0 — без тряски."
+msgstr "Camera shake from explosions and hits. 0 means no shake."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Убирает интерфейс в полёте — для красивых кадров и видео."
+msgstr "Hides the in-flight interface, for nice screenshots and videos."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Убирает разрывы картинки, но может добавить небольшую задержку управления."
+msgstr "Removes screen tearing but may add a little input delay."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Удаляет ангар, экипажи и запчасти. Отменить нельзя, поэтому нужно нажать два раза."
+msgstr "Deletes the hangar, crews and parts. It cannot be undone, so you have to press twice."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Цифры урона над целями. В полёте переключается клавишей F3."
+msgstr "Damage numbers over targets. Toggle in flight with F3."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Шрифт подсказок и текста интерфейса."
+msgstr "Font of hints and interface text."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Щелчки меню и сигналы интерфейса."
+msgstr "Menu clicks and interface signals."
+
+#: game/scripts/menu_settings.gd (UI-01)
+msgid "Язык меню и подсказок. «Авто» берёт язык системы."
+msgstr "Language of menus and hints. \"Auto\" uses the system language."
