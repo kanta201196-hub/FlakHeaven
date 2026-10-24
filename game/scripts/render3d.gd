@@ -126,6 +126,14 @@ func _ready() -> void:
 	e.adjustment_contrast = 1.08
 	e.adjustment_saturation = 1.05
 	e.fog_enabled = false
+	# Forward+ only settings in one place (agreed between the effects and 3D-models threads, 24.10): Compatibility
+	# keeps today's look. VFX-01: HDR glow, so fire, flashes and tracers above 1.0 bloom; tonemap stays as above.
+	if RenderingServer.get_current_rendering_method() == "forward_plus":
+		e.glow_enabled = true
+		e.glow_intensity = 0.9
+		e.glow_bloom = 0.0
+		e.glow_hdr_threshold = 1.0
+		e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.environment = e
 	_env = e
 	add_child(env)

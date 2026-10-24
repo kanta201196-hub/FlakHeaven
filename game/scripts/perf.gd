@@ -147,8 +147,9 @@ func _process(delta: float) -> void:
 		line += " облака=%d клубов, заливка %.0f%%" % [Render3D.I._puffs.shown, Render3D.I._puffs.fill * 100.0]
 	if Boom3D.I != null:
 		var pc := []
-		for a in Boom3D.I._parts:
-			pc.append((a as Array).size())
+		var gc: Array = Boom3D.I._gpu.counts() if Boom3D.I._gpu != null else []
+		for i in Boom3D.I._parts.size():
+			pc.append((Boom3D.I._parts[i] as Array).size() + (int(gc[i]) if not gc.is_empty() else 0))
 		line += " частицы=%s" % str(pc)
 	print(line)
 	print(_vp_report())

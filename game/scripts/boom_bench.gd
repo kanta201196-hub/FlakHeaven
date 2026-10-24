@@ -26,6 +26,11 @@ func _init(main: Main) -> void:
 		if a.begins_with("--tilt="):
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
 			_suffix += "_t" + a.substr(7)
+		if a.begins_with("--zoom="):   # close-up frames for review: camera zoom beyond the player slider range
+			Tuning.set_param("camera_zoom", float(a.substr(7)))
+			_suffix += "_z" + a.substr(7)
+		if a.begins_with("--tag="):   # extra file suffix, so parallel renders do not overwrite each other
+			_suffix += "_" + a.substr(6)
 		if a.begins_with("--boomonly="):   # только эти сцены через запятую: --boomonly=blast,ground
 			_only = a.substr(11).split(",")
 	_scenes = [
@@ -50,6 +55,10 @@ func _init(main: Main) -> void:
 func process(delta: float) -> void:
 	_t += delta
 	if m.state == "menu" and _i < 0 and _t > 0.3:
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--op="):   # same area in every run (campaign.cfg remembers the last operation played)
+				Campaign.debug_open_all()
+				Campaign.select(clampi(int(a.substr(5)) - 1, 0, Campaign.OPS.size() - 1))
 		m.select_class("fighter")
 		_t = 0.0
 		return
