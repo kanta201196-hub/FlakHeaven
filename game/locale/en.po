@@ -3337,6 +3337,10 @@ msgstr "Classic"
 msgid "Песок"
 msgstr "Sand"
 
+#: game/scripts/livery.gd
+msgid "Серый"
+msgstr "Grey"
+
 #: game/scripts/livery.gd:37
 msgid "Чёрный глянец"
 msgstr "Black Gloss"
