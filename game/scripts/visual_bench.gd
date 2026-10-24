@@ -68,7 +68,7 @@ func process(delta: float) -> void:
 	m.god_mode = true
 	m.spawner.process_mode = Node.PROCESS_MODE_DISABLED
 	var cur: Dictionary = _points[_i] if _i >= 0 and _i < _points.size() else {}
-	var keep: bool = cur.get("enemies", false) or cur.get("convoy", false) or cur.has("live")   # M-36: машины колонны — тоже враги
+	var keep: bool = cur.get("enemies", false) or cur.get("convoy", false) or cur.has("live") or cur.has("sam_poses")   # M-36: машины колонны — тоже враги
 	for e in m.get_tree().get_nodes_in_group("enemies"):
 		if not keep:
 			(e as Node).queue_free()
@@ -142,6 +142,8 @@ func process(delta: float) -> void:
 		_fort.parts_down = {}
 		for nm in (["turret_1", "turret_2", "turret_3", "turret_4"] if ph >= 2 else []) + (["engine_l", "engine_r"] if ph >= 3 else []):
 			_fort.parts_down[nm] = true
+	elif p.has("sam_poses"):
+		_sam_poses(p)
 	elif p.get("heli", false):
 		if _heli == null:   # S9-22: «Сарыч» висит рядом с игроком, логика стоит (винты крутит render3d)
 			_spawned = true
@@ -645,6 +647,8 @@ func _make_points() -> Array:
 		for ph in [1, 2, 3]:
 			pts.append({"name": "model_fortress_%d" % ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "enemies": true, "fortress": ph, "wait": 2.5})
 		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
+		for ph in ["march", "track", "launch"]:   # Kanta 24.10: SAM launcher folded, raised and tracking, launching
+			pts.append({"name": "sam_" + ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 9.0, "sam_poses": ph, "wait": 2.5})
 		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
 		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
 	for a in OS.get_cmdline_user_args():
@@ -728,6 +732,62 @@ func _live(p: Dictionary) -> void:
 var _spawned := false
 var _fort: Fortress = null
 var _heli: Helicopter = null
+var _sams: Array = []
+
+
+## SAM launcher phases for review (Kanta 24.10): "march" (box folded, on the move), "track" (raised at a live
+## site, turned to the player), "launch" (a missile leaves its cell, the box kicks). One launcher per point; its
+## logic is frozen and Render3D animates the launcher from the fields set here.
+func _sam_poses(p: Dictionary) -> void:
+	if _pt < 0.3:   # the class switch at the start of a point clears the world
+		return
+	if not p.has("_sam"):   # a new point: drop the previous phase's launcher if the world kept it
+		for g in _sams:
+			if is_instance_valid(g):
+				g.queue_free()
+		_sams.clear()
+	if not _sams.is_empty() and not is_instance_valid(_sams[0]):
+		_sams.clear()
+	var phase: String = p["sam_poses"]
+	if _sams.is_empty():
+		p["_sam"] = true
+		var tr := Terrain3D.active()
+		var at: Vector2 = tr.find_floor(p["pos"], 2600.0, 0.0, [], AASite.FLOOR_MID, true) if tr != null else p["pos"]
+		p["pos"] = at + Vector2(-60, -48)   # the bench keeps the player and camera on the point
+		_spawned = true
+		m.player.process_mode = Node.PROCESS_MODE_DISABLED
+		var site := AASite.new()
+		site.active = phase != "march"
+		var g := GroundTarget.new()
+		g.setup("sam", site, 1.0)
+		g.position = at
+		g.anchor = at
+		g._body_angle = 0.4
+		if phase == "march":
+			g._goal = at + Vector2(400, 0)
+		g.process_mode = Node.PROCESS_MODE_DISABLED
+		m.world.add_child(g)
+		_sams.append(g)
+	var sam: GroundTarget = _sams[0]
+	var r3 := Render3D.I
+	if r3 != null and r3.terrain != null:
+		# the 3D camera looks ahead of the player, so steer the point until the launcher sits mid-frame
+		var vs := m.get_viewport().get_visible_rect().size
+		var scr := r3.cam.unproject_position(r3.terrain.surface_fast(sam.anchor.x, sam.anchor.y))
+		var step := (scr - vs * Vector2(0.5, 0.55)) / (8.0 * float(p.get("zoom", 1.0)) / 9.0) * 0.5
+		p["pos"] = Vector2(p["pos"]) + step.limit_length(20.0)   # small steps so the camera settles
+		var pu: Dictionary = r3._units.get(m.player.get_instance_id(), {})
+		if pu.has("node"):   # the plane would cover the launcher: hide its 3D model only
+			(pu["node"] as Node3D).visible = false
+			if pu.get("sh") != null:
+				(pu["sh"] as Node3D).visible = false
+	sam.hp = maxf(sam.hp, sam.max_hp)   # the player's guns stay off it
+	if sam.sprite_info().is_empty():   # frozen targets never run _draw, which is where Render3D gets its model
+		sam._spr = {"tex": "e_sam", "len": 34.0, "angle": sam._body_angle}
+	if phase == "launch" and _pt > float(p.get("wait", 2.0)) - 0.2 and sam.launches == 0 and sam.launch_at.is_finite():
+		var to := m.player.global_position - sam.global_position
+		m.projectiles.spawn_missile(sam.launch_at, to.normalized(), "sam", "ЗРК")
+		sam.launches = 1
 var _g_spawned := false
 
 

@@ -43,6 +43,10 @@ var _fire_dir := 0.0         # куда смотрит ствол при пер�
 var _def_flash := 0.0
 var leaderless := false      # бункер уничтожен
 var drive: GroundDrive = null   # правка 3.5-s4: у ЗСУ и ЗРК
+## SAM launcher (Kanta 24.10): missiles fired so far — picks the next cell of the launch box
+var launches := 0
+## Combat-plane point of the next cell mouth, set by Render3D from the 3D launcher; INF — no 3D model
+var launch_at := Vector2.INF
 var _drive_t := 0.0
 
 const DRIVE_SPEED := 70.0
@@ -183,7 +187,11 @@ func behave(delta: float) -> void:
 			if _lock > 0.0:
 				_lock -= delta
 				if _lock <= 0.0:
-					Main.I.projectiles.spawn_missile(global_position, to.normalized(), "sam", kind())
+					# the missile leaves its own cell of the raised box when the 3D model is on (Kanta 24.10)
+					# (a stale point from a model that stopped updating is ignored by the distance check)
+					var from := launch_at if launch_at.is_finite() and launch_at.distance_to(global_position) < 60.0 else global_position
+					Main.I.projectiles.spawn_missile(from, to.normalized(), "sam", kind())
+					launches += 1
 					Main.I.sfx.play("sam_launch", -6.0, 0.9)
 			else:
 				_cd -= delta
@@ -192,6 +200,13 @@ func behave(delta: float) -> void:
 					_lock = Tuning.g("msl_sam_lock")
 					_cd = randf_range(5.0, 6.5)
 					Main.I.sfx.play("sam_lock", -6.0, 1.2)
+
+
+## SAM launcher pose for the 3D model (Kanta 24.10): the box rides folded and is raised only while the
+## launcher stands at a live site or is locking on — the same moments it may fire, so the animation never
+## changes when a missile leaves.
+func launcher_up() -> bool:
+	return variant == "sam" and (_lock > 0.0 or (_goal == Vector2.INF and site != null and site.active and not leaderless))
 
 
 ## Переезд: раз в несколько секунд — новая точка между бункером и самолётом (полукольцо 140–240 пикс. × AASite.SPREAD)

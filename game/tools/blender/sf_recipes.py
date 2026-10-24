@@ -1,0 +1,198 @@
+"""Recipes for sf_rework.py: one entry per game model made from a Sketchfab source (VIS-01, Kanta 24.10.2026).
+
+Keys (coordinates are Blender, after placing: nose +X, up +Z, left +Y, length 1):
+  root       name of the root node (as in the previous game GLB)
+  rot        source rotation, degrees (X, Y, Z), applied before scaling
+  ground     True: lowest point on z = 0 (vehicles); False: centred (aircraft)
+  len_exclude  regex of objects ignored when measuring length (rotor blades)
+  drop       regex of source objects to delete
+  split      regex of objects to split into loose parts (single-mesh sources) before grouping
+  wheels     road wheel search (sf_rework.find_wheels): match, steer (front steered axles), rmin, rmax, ymin
+  groups     node -> rules [("name", regex) | ("box", (x0, x1, y0, y1, z0, z1))] on the part centre
+  pivots     node -> (x, y, z) | "center" | "base"   (where the game rotates the node)
+  parents    node -> parent node (default: root)
+  materials  [(regex on source material name, rule)]; rule: mode auto|paint|keep|glass, hue ranges, smin,
+             color (force flat sRGB), desat, tint, rough, metal, nstr
+  erase      source material name -> [(u0, v0, u1, v1)] glTF UV rectangles painted over (markings, lettering)
+  paint      camo (sRGB palette), scale, stretch, belly, marks [(box, colour)], dust, rough (lo, hi), wear, fade
+  tris       battle triangle budget; weight: node -> budget weight; fixed: node -> exact budget
+Source credits: game/models/CREDITS.md."""
+
+# Нагорье convoy and ground AA: sand / ochre / brown spots (Kanta 17.10, convoy_kit.CAMO), matte with satin sheen
+SAND = {"camo": [(0.62, 0.52, 0.36), (0.50, 0.40, 0.27), (0.36, 0.30, 0.21)], "scale": 1.0,
+        "rough": (0.76, 0.84), "wear": 0.6, "detail": 0.85, "dust": 0.6}
+# enemy helicopter: sandy khaki and grey-green spots, blue-grey belly (helicopter.py, Kanta 18.10)
+HELI = {"camo": [(0.33, 0.38, 0.335), (0.6, 0.585, 0.44), (0.3, 0.35, 0.31)], "scale": 1.9, "stretch": (0.75, 1.0, 1.3),
+        "belly": (0.46, 0.51, 0.55), "dust": 0.25, "rough": (0.76, 0.84), "wear": 0.5, "detail": 0.8}
+# enemy jets: dark grey two-tone, lighter belly, muted red tips (enemy_air.py scheme())
+JET_RED = (0.55, 0.15, 0.11)
+JET = {"camo": [(0.25, 0.255, 0.265), (0.31, 0.315, 0.32), (0.2, 0.205, 0.215)], "scale": 1.5, "stretch": (0.6, 1.0, 1.0),
+       "belly": (0.42, 0.43, 0.44), "dust": 0.0, "rough": (0.74, 0.82), "wear": 0.45, "detail": 0.75,
+       "wear_col": (0.5, 0.5, 0.5), "fade": 0.04, "fade_col": (0.6, 0.6, 0.6)}
+
+# vehicle olive paint (most sources): green-yellow hues
+OLIVE = {"mode": "auto", "hue": [(38, 150)], "smin": 0.12}
+TYRE = {"mode": "keep", "rough": 0.92, "desat": 0.6}
+GLASS = {"mode": "glass", "rough": 0.3, "color": (0.06, 0.075, 0.085)}
+STEEL = {"mode": "keep", "rough": 0.6, "metal": 0.4, "desat": 0.5}
+
+def _flat_mat(name, rgb, rough, metal):
+    """Plain glTF-like material for parts made in code (sf_rework.repaint reads base colour like an import)."""
+    import bpy
+    m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+    m.use_nodes = True
+    b = m.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = (*[((c + 0.055) / 1.055) ** 2.4 for c in rgb], 1.0)
+    b.inputs["Roughness"].default_value = rough
+    b.inputs["Metallic"].default_value = metal
+    return m
+
+
+def technical_hmg():
+    """Heavy machine gun on a pintle in the pickup bed (Kanta 24.10: "add a mounted HMG").
+    Fictional 12.7 mm class gun, sized for a 5.2 m pickup (length 1 = 5.2 m): finned barrel jacket, muzzle brake,
+    receiver with spade grips, ammo box on the left, small bent gun shield. Pintle post with three braces stands on the
+    bed floor (z = 0.151) at x = -0.25, top at z = 0.35 — the turret pivot; the gun axis is at z = 0.378, over the cab
+    roof (z = 0.33), so the gun can fire forward. Objects named hmg_b_* (fixed, root) and hmg_t_* (node turret)."""
+    import math
+    import bpy
+    import convoy_kit as K
+    from convoy_kit import box, cyl, tube
+    K.parts.clear()
+    px, pz, gz = -0.25, 0.35, 0.378
+    steel = _flat_mat("hmg_steel", (0.13, 0.13, 0.125), 0.55, 0.6)
+    olive = _flat_mat("hmg_olive", (0.30, 0.30, 0.22), 0.8, 0.0)
+    paint = _flat_mat("hmg_paint", (0.40, 0.42, 0.26), 0.8, 0.0)
+    base = [cyl("hmg_b_plate", (px, 0, 0.154), 0.028, 0.006, "steel", n=16),
+            cyl("hmg_b_post", (px, 0, (0.151 + pz) / 2), 0.0085, pz - 0.151, "steel", n=12)]
+    for i, a in enumerate((90.0, 210.0, 330.0)):
+        dx, dy = math.cos(math.radians(a)) * 0.075, math.sin(math.radians(a)) * 0.075
+        base.append(tube("hmg_b_leg%d" % i, [(px, 0, 0.25), (px + dx, dy, 0.153)], 0.0045, "steel", n=6))
+    top = [cyl("hmg_t_swivel", (px, 0, pz + 0.008), 0.0135, 0.016, "steel", n=14),
+           box("hmg_t_yoke_l", (px + 0.004, 0.019, gz - 0.008), (0.045, 0.006, 0.036), "steel", bevel=0.0),
+           box("hmg_t_yoke_r", (px + 0.004, -0.019, gz - 0.008), (0.045, 0.006, 0.036), "steel", bevel=0.0),
+           box("hmg_t_receiver", (px - 0.008, 0, gz), (0.095, 0.029, 0.034), "steel", bevel=0.002),
+           box("hmg_t_cover", (px - 0.004, 0, gz + 0.019), (0.07, 0.024, 0.006), "steel", bevel=0.0),
+           cyl("hmg_t_jacket", (px + 0.075, 0, gz + 0.002), 0.0115, 0.075, "steel", axis="X", n=14),
+           cyl("hmg_t_barrel", (px + 0.165, 0, gz + 0.002), 0.0062, 0.13, "steel", axis="X", n=10),
+           cyl("hmg_t_brake", (px + 0.235, 0, gz + 0.002), 0.0105, 0.02, "steel", axis="X", n=12),
+           box("hmg_t_sight", (px + 0.03, 0, gz + 0.026), (0.006, 0.004, 0.014), "steel", bevel=0.0),
+           box("hmg_t_ammo", (px - 0.004, 0.034, gz - 0.006), (0.05, 0.024, 0.034), "olive", bevel=0.002),
+           box("hmg_t_shield", (px + 0.05, 0, gz + 0.004), (0.005, 0.1, 0.058), "paint", bevel=0.0),
+           box("hmg_t_shield_l", (px + 0.041, 0.056, gz + 0.004), (0.02, 0.005, 0.058), "paint", bevel=0.0,
+               rot=("Z", -30.0)),
+           box("hmg_t_shield_r", (px + 0.041, -0.056, gz + 0.004), (0.02, 0.005, 0.058), "paint", bevel=0.0,
+               rot=("Z", 30.0))]
+    for k in range(6):   # cooling fins on the jacket
+        top.append(cyl("hmg_t_fin%d" % k, (px + 0.045 + k * 0.012, 0, gz + 0.002), 0.0145, 0.003, "steel", axis="X", n=14))
+    for s in (1, -1):
+        top.append(tube("hmg_t_grip%d" % (s > 0), [(px - 0.055, s * 0.01, gz), (px - 0.07, s * 0.012, gz - 0.012)],
+                        0.0035, "steel", n=6))
+    obs = base + top
+    for o in obs:
+        bpy.context.view_layer.objects.active = o
+        for md in list(o.modifiers):
+            bpy.ops.object.select_all(action="DESELECT")
+            o.select_set(True)
+            bpy.ops.object.modifier_apply(modifier=md.name)
+        o.data.materials.clear()
+        o.data.materials.append(olive if "ammo" in o.name else paint if "shield" in o.name else steel)
+    return obs
+
+
+RECIPES = {
+    "e_zsu": {
+        "root": "ground_zsu", "rot": (0, 0, 0), "ground": True,
+        "materials": [(r"(?i)glass|lens|stek", GLASS), (r".", OLIVE)],
+        "groups": {"turret": [("box", (-0.32, 0.55, -0.24, 0.24, 0.255, 1.0))]},
+        "pivots": {"turret": (0.035, -0.004, 0.25)},
+        # track runs are hundreds of loose links, grilles are perforated plates: both floor collapse
+        # decimation near 75k tris, so the low mesh gets stand-ins and the bake keeps their detail
+        "low_voxel": r"^G_M-", "low_hull": r"^(K_B_U|K_U_V|D_S_P|Material_018)-",
+        "paint": SAND, "tris": 18000,
+    },
+    "e_convoy_truck": {
+        "root": "convoy_truck", "rot": (0, 0, 90), "ground": True,
+        "wheel_cyl": {"steer": 1, "axles": [0.295, -0.17, -0.35], "z": 0.076, "r": 0.079, "y": (0.115, 0.2)},
+        "materials": [(r"material_1$", GLASS), (r".", dict(OLIVE, hue=[(44, 150)], smin=0.13, vmax=0.5))],
+        "keep": {"material_0": [(0.40, 0.19, 1.0, 0.435), (0.65, 0.43, 0.985, 0.545)]},   # canvas cover stays canvas
+        "erase": {"material_0": [(0.285, 0.77, 0.43, 0.82)]},   # maker's name plate on the bonnet sides
+        "paint": SAND, "tris": 13000,
+    },
+    "e_convoy_ifv": {
+        "root": "convoy_ifv", "rot": (0, 0, -90), "ground": True, "split": ".",
+        "wheels": {"steer": 2, "rmax": 0.12, "rmin": 0.06},
+        "materials": [(r"(?i)tire", TYRE), (r"(?i)50cal", STEEL), (r".", dict(OLIVE, hue=[(30, 170)], smin=0.06))],
+        "groups": {"turret": [("mat", r"(?i)^turret$|50cal")]},
+        "pivots": {"turret": "base"},
+        "paint": SAND, "tris": 14000,
+    },
+    "e_convoy_scout": {
+        "root": "convoy_scout", "rot": (0, 0, -90), "ground": True, "split": "(?i)tyre|rim|nut|gauge",
+        "wheels": {"steer": 2, "rmax": 0.12, "match": "(?i)tyre"},
+        "materials": [(r".", OLIVE)],
+        "groups": {"turret": [("name", r"(?i)^turret|camera|lenses")]},
+        "pivots": {"turret": "base"},
+        "paint": SAND, "tris": 13000,
+    },
+    "e_convoy_technical": {
+        "root": "convoy_technical", "rot": (0, 0, 90), "ground": True, "split": ".",
+        "wheels": {"steer": 1, "rmax": 0.12}, "build": technical_hmg,
+        "materials": [(r"(?i)window", GLASS), (r"hmg_steel", STEEL), (r"hmg_olive", {"mode": "keep", "rough": 0.8}),
+                      (r"hmg_paint", {"mode": "paint"}), (r".", OLIVE)],
+        "groups": {"turret": [("name", r"^hmg_t_")]},
+        "pivots": {"turret": (-0.25, 0.0, 0.35)}, "fixed": {"turret": 1400},
+        "paint": SAND, "tris": 9000,
+    },
+    "e_helicopter": {
+        "root": "helicopter", "rot": (0, 0, 90), "ground": True, "len_exclude": r"(?i)^rotorblades",
+        # camo greens/olive, light khaki-grey and the blue belly are paint; yellow parts (blade tips) stay
+        "materials": [(r".", {"mode": "auto", "hue": [(60, 235)], "smin": 0.08, "gray": (0.3, 0.95)})],
+        "erase": {"Scene_-_Root": [
+            (0.105, 0.35, 0.178, 0.418), (0.655, 0.0, 0.745, 0.042),      # stars
+            (0.10, 0.525, 0.158, 0.598),                                   # side number
+            (0.128, 0.0, 0.208, 0.082),                                    # nose art
+            (0.413, 0.0, 0.447, 0.152), (0.418, 0.108, 0.607, 0.158),       # stencil arrows and lettering
+            (0.103, 0.843, 0.147, 0.937), (0.585, 0.035, 0.61, 0.065)]},     # lettering, small red mark
+        "groups": {"rotor": [("name", r"(?i)^rotor")], "tail_rotor": [("name", r"(?i)^tailrotor(?!stub)")]},
+        "pivots": {"rotor": (0.126, -0.005, 0.226), "tail_rotor": (-0.433, 0.022, 0.199)},
+        "paint": HELI, "tris": 18000, "weight": {"rotor": 0.6},
+    },
+    "e_interceptor": {
+        "root": "interceptor", "rot": (0, 0, 90), "ground": False,
+        "materials": [(r"(?i)glass", GLASS),
+                      (r"(?i)^black|int_cab|pribor|panel|gyro", {"mode": "keep", "rough": 0.7, "color": (0.1, 0.1, 0.1)}),
+                      (r"(?i)roket", {"mode": "keep", "rough": 0.8, "color": (0.58, 0.58, 0.55)}),
+                      (r"(?i)pric", {"mode": "keep", "rough": 0.8, "color": (0.15, 0.15, 0.15)}),
+                      (r".", {"mode": "paint"})],
+        "erase": {"body": [(0.072, 0.385, 0.148, 0.455), (0.497, 0.385, 0.573, 0.455),     # wing stars
+                           (0.072, 0.885, 0.148, 0.955), (0.497, 0.885, 0.573, 0.955),
+                           (0.698, 0.215, 0.772, 0.285), (0.793, 0.215, 0.865, 0.285),     # side number
+                           (0.598, 0.275, 0.692, 0.392), (0.598, 0.765, 0.692, 0.882)],    # warning stencils
+                  "material": [(0.705, 0.07, 0.785, 0.135), (0.685, 0.255, 0.755, 0.325),     # fin stars
+                               (0.715, 0.535, 0.815, 0.755), (0.575, 0.935, 0.705, 0.985),     # text plates
+                               (0.265, 0.095, 0.41, 0.175), (0.175, 0.575, 0.265, 0.615)]},   # red covers
+        # enemy marks (fictional, as code-built enemies): red nose tip, wingtips, fin top
+        "paint": dict(JET, marks=[((0.455, 1, -1, 1, -1, 1), JET_RED), ((-1, 1, 0.165, 1, -1, 1), JET_RED),
+                                  ((-1, 1, -1, -0.165, -1, 1), JET_RED), ((-1, -0.2, -1, 1, 0.075, 1), JET_RED)]),
+        # landing gear and its doors hang below the belly: the game shows the jet in flight
+        "kill_faces": [(0.10, 0.16, -0.013, 0.013, -1, -0.036),
+                       (-0.19, -0.12, 0.085, 0.12, -1, -0.036), (-0.19, -0.12, -0.12, -0.085, -1, -0.036)],
+        "tris": 12000,
+    },
+    "e_sam": {
+        # 8x8 launcher truck (Kanta 24.10: box folded flat on the move, raises at a stop, turns, tracks, launches).
+        # The source is grey: neutral greys are paint, saturated parts (extinguishers, lamps, crates, glass) stay.
+        "root": "sam", "rot": (0, 0, 90), "ground": True, "len_exclude": "Gun", "cy_ref": True,
+        "launcher": {"match": "Gun", "heading": 90.0, "el": 30.0, "box_len": 0.472, "base_z": 0.25, "cell_depth": 0.004},
+        "wheel_cyl": {"steer": 2, "axles": [0.262, 0.062, -0.202, -0.400], "z": 0.098, "r": 0.102, "y": (0.09, 0.2), "match": "Wheels"},
+        "materials": [(r"Wheels", {"mode": "auto", "hue": [], "gray": (0.42, 0.9), "rough": 0.92, "desat": 0.6,
+                                   "nstr": 0.0}),   # flat normals: no moulded tyre lettering
+                      (r".", {"mode": "auto", "hue": [(60, 170)], "smin": 0.12, "gray": (0.16, 0.86)})],
+        "erase": {"Body": [(0.505, 0.775, 0.553, 0.828)],                                  # hull number, stripes
+                  "material": [(0.059, 0.18, 0.104, 0.23), (0.315, 0.18, 0.359, 0.23)],   # box numbers, stripes
+                  "Details": [(0.094, 0.559, 0.135, 0.602)]},                              # door roundel
+        "paint": SAND, "tris": 17500,   # wheels get more: decimated tread blocks turn into spikes
+        "weight": {"launcher_pitch": 1.3, **{"wheel_%s%s" % (a, s): 1.7 for a in ("f", "f2", "1", "2") for s in "lr"}},
+    },
+}
