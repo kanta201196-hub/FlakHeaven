@@ -33,6 +33,9 @@ var _scorch_mesh: QuadMesh
 var _scorch_mat: StandardMaterial3D
 var _crater_mm: MultiMeshInstance3D   # тест 3.5-s4 (п. 14): воронки от бомб (FxGround.craters), один MultiMesh
 var _crater_mat: StandardMaterial3D
+## VFX-06: Forward+ decal pools for scorch marks and craters (see marks_as_decals)
+var _scorch_decals: Array[Decal] = []
+var _crater_decals: Array[Decal] = []
 var _crater_mesh: PlaneMesh
 var _bombs3 := {}                  # тест 3.5-s4 (п. 10): падающие бомбы — номер → MeshInstance3D
 var _bid := 0
@@ -2407,6 +2410,7 @@ func _sync_scorch(m: Main) -> void:
 		add_child(_scorch_mm)
 	var mmx := _scorch_mm.multimesh
 	var n := mini(marks.size(), mmx.instance_count)
+	var dm := marks_as_decals()
 	var lo := Vector3.INF
 	var hi := -Vector3.INF
 	for i in n:
@@ -2417,12 +2421,18 @@ func _sync_scorch(m: Main) -> void:
 				mk["life"] = 0.0
 		var r: float = mk["r"] * 1.6
 		var pos: Vector3 = mk["g3"] + Vector3(0, 0.8, 0)
+		var fade := clampf(float(mk["life"]) / 6.0, 0.0, 1.0)
+		if dm:
+			_place_decal(_scorch_decals, i, Transform3D(Basis.IDENTITY, pos), Vector3(r, r * 1.2 + 16.0, r), Fx._soft,
+				Color(0.04, 0.03, 0.02, 0.55 * fade))
+			continue
 		mmx.set_instance_transform(i, Transform3D(Basis(Vector3.RIGHT, -PI / 2.0).scaled(Vector3(r, 1, r)), pos))
-		mmx.set_instance_color(i, Color(1, 1, 1, clampf(float(mk["life"]) / 6.0, 0.0, 1.0)))
+		mmx.set_instance_color(i, Color(1, 1, 1, fade))
 		lo = lo.min(pos - Vector3(r, 1, r))
 		hi = hi.max(pos + Vector3(r, 1, r))
-	mmx.visible_instance_count = n
-	if n > 0:
+	mmx.visible_instance_count = 0 if dm else n
+	_hide_decals(_scorch_decals, n if dm else 0)
+	if n > 0 and not dm:
 		_scorch_mm.custom_aabb = AABB(lo, hi - lo)
 
 
@@ -2635,6 +2645,7 @@ func _sync_craters(m: Main) -> void:
 		add_child(_crater_mm)
 	var mmx := _crater_mm.multimesh
 	var cnt := mini(list.size(), mmx.instance_count)
+	var dm := marks_as_decals()
 	var lo := Vector3.INF
 	var hi := -Vector3.INF
 	for i in cnt:
@@ -2658,11 +2669,48 @@ func _sync_craters(m: Main) -> void:
 				c["life"] = 0.0
 		var xf: Transform3D = c["xf"]
 		var rr := float(c["rr"])
+		var fade := clampf(float(c["life"]) / Fx.FxGround.CRATER_FADE, 0.0, 1.0)
+		if dm:
+			_place_decal(_crater_decals, i, Transform3D(xf.basis.orthonormalized(), xf.origin), Vector3(rr * 2.0, rr * 1.5 + 16.0, rr * 2.0),
+				_crater_mat.albedo_texture, Color(1, 1, 1, fade))
+			continue
 		mmx.set_instance_transform(i, xf)
-		mmx.set_instance_color(i, Color(1, 1, 1, clampf(float(c["life"]) / Fx.FxGround.CRATER_FADE, 0.0, 1.0)))
+		mmx.set_instance_color(i, Color(1, 1, 1, fade))
 		lo = lo.min(xf.origin - Vector3(rr, rr, rr))
 		hi = hi.max(xf.origin + Vector3(rr, rr, rr))
-	mmx.visible_instance_count = cnt
-	if cnt > 0:
+	mmx.visible_instance_count = 0 if dm else cnt
+	_hide_decals(_crater_decals, cnt if dm else 0)
+	if cnt > 0 and not dm:
 		_crater_mm.custom_aabb = AABB(lo, hi - lo)
+
+
+## VFX-06: in Forward+ craters and scorch are Decals projected onto the relief, so they wrap a curved slope
+## instead of a flat quad that floats over a hollow or sinks into a bump; Compatibility has no decals and
+## keeps the quads. Decals take the scene light, so a crater is lit by the sun like the ground around it.
+func marks_as_decals() -> bool:
+	return GpuFx.active()
+
+
+## Puts decal i of pool (creating it on first use) at xf with box size sz, texture tex and colour col
+func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex: Texture2D, col: Color) -> void:
+	while pool.size() <= i:
+		var d := Decal.new()
+		d.cull_mask = 1
+		d.upper_fade = 0.15
+		d.lower_fade = 0.6
+		add_child(d)
+		pool.append(d)
+	var dc := pool[i]
+	dc.visible = col.a > 0.004
+	dc.transform = xf
+	dc.size = sz
+	if dc.texture_albedo != tex:
+		dc.texture_albedo = tex
+	dc.modulate = col
+
+
+## Hides decals of pool from index `from` on (marks that ended)
+func _hide_decals(pool: Array[Decal], from: int) -> void:
+	for i in range(from, pool.size()):
+		pool[i].visible = false
 
