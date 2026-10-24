@@ -30,6 +30,7 @@ shader_type particles;
 render_mode disable_force, disable_velocity;
 uniform vec3 wind;   // Boom3D.WIND, set in setup()
 uniform vec3 cam_f = vec3(0.0, -1.0, 0.0);
+uniform float game_dt;   // game time step of this frame (0 when paused), see tick()
 // USERDATA1 = (r0, r1, life, buoyancy); USERDATA2 = (gravity, drag, wind, spin); USERDATA3 = emitted custom;
 // USERDATA4 = (position, age); USERDATA5 = (velocity, rotation); USERDATA6 = base colour
 vec3 to_linear(vec3 s) {
@@ -48,7 +49,7 @@ void start() {
 }
 void process() {
 	float life = USERDATA1.z;
-	float t = USERDATA4.w + DELTA;
+	float t = USERDATA4.w + game_dt;
 	vec3 p = USERDATA4.xyz;
 	vec3 v = USERDATA5.xyz;
 	float rot = USERDATA5.w;
@@ -56,10 +57,10 @@ void process() {
 		ACTIVE = false;
 	}
 	if (t >= 0.0) {
-		v.y += (USERDATA1.w - USERDATA2.x) * DELTA;
-		v *= 1.0 - min(USERDATA2.y * DELTA, 0.9);
-		p += (v + wind * USERDATA2.z) * DELTA;
-		rot += USERDATA2.w * DELTA;
+		v.y += (USERDATA1.w - USERDATA2.x) * game_dt;
+		v *= 1.0 - min(USERDATA2.y * game_dt, 0.9);
+		p += (v + wind * USERDATA2.z) * game_dt;
+		rot += USERDATA2.w * game_dt;
 	}
 	USERDATA4 = vec4(p, t);
 	USERDATA5 = vec4(v, rot);
@@ -173,8 +174,10 @@ func emit(q: Dictionary) -> void:
 	counter.add(_clock, life + delay)
 
 
-## Advances the layer clock (game time, paused with the game) and passes the camera direction to the shader.
-## The GPU steps particles by real frame time, so speed_scale follows Engine.time_scale (the boom bench slows time).
+## Advances the layer clock (game time, paused with the game) and passes this frame's game time step and the
+## camera direction to the shader. The shader steps by that uniform, not by DELTA: the renderer's frame time
+## is not the game's delta (on the slow cloud renderer smoke aged visibly faster than Boom3D, bench frames 24.10), and with
+## fixed_fps = 0 the process shader runs once per drawn frame, like Boom3D._tick.
 func tick(dt: float, cam_f: Vector3) -> void:
 	_clock += dt
 	if _ready_frames < 2:
@@ -183,9 +186,10 @@ func tick(dt: float, cam_f: Vector3) -> void:
 			for q in _pending:
 				emit(q)
 			_pending.clear()
-	speed_scale = 0.0 if dt <= 0.0 else Engine.time_scale
+	var pm := process_material as ShaderMaterial
+	pm.set_shader_parameter("game_dt", maxf(dt, 0.0))
 	if layer == 4:
-		(process_material as ShaderMaterial).set_shader_parameter("cam_f", cam_f)
+		pm.set_shader_parameter("cam_f", cam_f)
 
 
 ## Estimated particles alive in this layer

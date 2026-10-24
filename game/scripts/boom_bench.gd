@@ -55,6 +55,10 @@ func _init(main: Main) -> void:
 func process(delta: float) -> void:
 	_t += delta
 	if m.state == "menu" and _i < 0 and _t > 0.3:
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--op="):   # same area in every run (campaign.cfg remembers the last operation played)
+				Campaign.debug_open_all()
+				Campaign.select(clampi(int(a.substr(5)) - 1, 0, Campaign.OPS.size() - 1))
 		m.select_class("fighter")
 		_t = 0.0
 		return
