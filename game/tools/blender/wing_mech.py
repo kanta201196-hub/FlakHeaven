@@ -92,8 +92,8 @@ _W, _H = _img.size
 _PX = np.array(_img.pixels[:], dtype=np.float32).reshape(_H, _W, 4)
 DARK = 0.86
 # Planes whose COLOR_0 carries the texture's sRGB value instead of its linear one. In the game (WingMech.attach_skin)
-# linear values come out much darker than the skin around them: on the light-grey fighter_1 (VIS-01) the slats and
-# flaps were near-black bands (checked in Godot 24.10). The other planes keep the colours they were tuned with.
+# linear values come out much darker than the skin around them: on fighter_1 (VIS-01, first painted light grey) the
+# slats and flaps were near-black bands (checked in Godot 24.10). The other planes keep the colours they were tuned with.
 SRGB_OUT = {"fighter_1"}
 
 
