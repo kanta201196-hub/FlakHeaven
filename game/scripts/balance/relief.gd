@@ -81,7 +81,7 @@ const ERO_KEEP := 0.35
 ## share (far under the combat plane), PILLAR_SKIRT — scree skirt height at the foot.
 const PILLAR_CELL := 1500.0
 const PILLAR_CHANCE := 0.3
-const PILLAR_R_MIN := 70.0
+const PILLAR_R_MIN := 90.0
 const PILLAR_R_MAX := 170.0
 const PILLAR_H_MIN := 0.22
 const PILLAR_H_MAX := 0.5
@@ -94,9 +94,10 @@ const GORGE_FROM := 0.25
 const GORGE_TO := 0.45
 const GORGE_RUN := 0.35
 const GORGE_TOP := 0.12
-## River terraces: on gentle banks (hills, low mid mountains) where the second noise is above
+## River terraces: on gentle banks (hills, low mid mountains) where their own noise (TERRACE_WAVE px) is above
 ## TERRACE_FROM…TO, the first TERRACE_STEPS steps of TERRACE_STEP (ceiling share) become benches;
 ## a tread keeps TERRACE_TREAD of the slope (no dead-flat tables).
+const TERRACE_WAVE := 8500.0
 const TERRACE_FROM := 0.0
 const TERRACE_TO := 0.2
 const TERRACE_STEP := 0.08

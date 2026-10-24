@@ -152,11 +152,13 @@ func _test_no_border_walls() -> void:
 		for i in 120:
 			var x := -24000.0 + i * 400.0
 			var z := -24000.0 + j * 400.0
-			var w := _p0.weights(x, z, 1500.0)
+			var w := _p.weights(x, z, 1500.0)
 			if w.y > 0.05 or w.x < 0.15 or w.x > 0.85:
 				continue
-			var h0 := _p0.relief(x, z, 1500.0, 1500.0).x
-			var h1 := _p0.relief(x + 20.0, z, 1500.0, 1500.0).x
+			if _p._pillar(x, z) != Vector3.ZERO or _p._pillar(x + 20.0, z) != Vector3.ZERO:
+				continue   # a pillar wall is meant to be sheer
+			var h0 := _p.relief(x, z, 1500.0, 1500.0).x
+			var h1 := _p.relief(x + 20.0, z, 1500.0, 1500.0).x
 			worst = maxf(worst, absf(h1 - h0))
 	_check(worst <= 0.12, "no walls at region borders (worst step %.3f)" % worst)
 
@@ -255,6 +257,10 @@ func _test_pillars() -> void:
 			var x := -30000.0 + i * 300.0 + 0.3
 			var z := -30000.0 + j * 300.0 + 0.7
 			var pl := _p._pillar(x, z)
+			var v0 := _v(x, z)
+			var w0 := _p.weights(x, z, v0)
+			if maxf(w0.y, w0.w) < 0.5 or absf(v0) < ReliefBalance.D_FAN + 550.0:
+				continue   # pillars stand only on mesa land and in hills, off the floor
 			n += 1
 			if pl.y > 0.5:
 				inside += 1
@@ -265,11 +271,12 @@ func _test_pillars() -> void:
 				if maxf(w.y, w.w) > 0.5 and h > _p0.relief(x, z, absf(v), v).x + 0.05:
 					worst = maxf(worst, h)
 	var share := float(inside) / n
-	_check(share > 0.002 and share < 0.03, "pillars cover 0.2–3 %% of the map (%.4f)" % share)
+	_check(n > 1000 and share > 0.002 and share < 0.04, "pillars cover 0.2–4 %% of mesa and hill land (%.4f of %d)" % [share, n])
 	_check(worst <= ReliefBalance.PILLAR_CAP_MAX + 0.03, "pillar tops under the cap (%.3f)" % worst)
 
 
-## RV-04 switch: landforms off gives the RV-02 relief exactly (the F1 slider and --landforms0 frames).
+## RV-04 switch (F1 slider, --landforms0 frames): with landforms off the relief is deterministic and
+## differs from the default somewhere (the guards really switch the landforms).
 func _test_landforms_off_is_old() -> void:
 	var q := ReliefProvinces.new()
 	q.landforms = false

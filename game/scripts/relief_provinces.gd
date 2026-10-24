@@ -20,6 +20,7 @@ var _cone := FastNoiseLite.new()
 var _spine := FastNoiseLite.new()
 var _canyon := FastNoiseLite.new()
 var _gorge := FastNoiseLite.new()
+var _terrace := FastNoiseLite.new()
 ## RV-04 landforms (pillars, river terraces, gorges) on/off; Terrain3D sets it from the F1 slider.
 var landforms := true
 # Same seeds and frequencies as Terrain3D's noises: the old relief texture carries over.
@@ -47,6 +48,7 @@ func _init() -> void:
 	_cone.cellular_jitter = 0.8
 	_smooth(_canyon, 7151, ReliefBalance.CANYON_WAVE, 2)
 	_smooth(_gorge, 8231, ReliefBalance.GORGE_WAVE, 1)
+	_smooth(_terrace, 9419, ReliefBalance.TERRACE_WAVE, 1)
 	_ridged(_spine, 8017, ReliefBalance.SPINE_WAVE, 3, 0.45)
 	_ridged(_ridge, 1291, 1300.0, 5, 0.5)
 	_ridged(_ero, 2719, 560.0, 4, 0.45)
@@ -185,7 +187,7 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 	# RV-04 river terraces: the low part of a gentle bank climbs in benches (treads keep a tilt)
 	if landforms and mt > 0.0:
 		var tk := (1.0 - mesa) * (1.0 - smoothstep(0.45, 0.7, e)) * (1.0 - gk) \
-			* smoothstep(ReliefBalance.TERRACE_FROM, ReliefBalance.TERRACE_TO, _gorge.get_noise_2d(x * 0.7 + 5000.0, z * 0.7))
+			* smoothstep(ReliefBalance.TERRACE_FROM, ReliefBalance.TERRACE_TO, _terrace.get_noise_2d(x, z))
 		if tk > 0.0:
 			var ts := ReliefBalance.TERRACE_STEP
 			var tq := mt / ts
@@ -238,19 +240,22 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 		var f2 := t2 - floorf(t2)
 		var step2 := (floorf(t2) + smoothstep(0.55, 0.85, f2)) / 16.0
 		h += ((step2 - t2 / 16.0) * lerpf(0.6, 0.9, mesa) + 0.016 + (sn + 1.0) * 0.01) * rock
-	# RV-04 lone rock pillars and buttes on mesa land and dry hills, away from the valley floor
-	if landforms and a > ReliefBalance.D_FAN + 250.0:
-		var pk := maxf(mesa, hill) * smoothstep(ReliefBalance.D_FAN + 250.0, ReliefBalance.D_FAN + 550.0, a)
-		if pk > 0.0:
-			var pl := _pillar(x, z)
-			if pl.x > 0.0:
-				var cap := minf(h + pl.x * pk, maxf(h, ReliefBalance.PILLAR_CAP_MAX))
-				h = maxf(h, lerpf(h, cap, pl.y)) + pl.z * pk * (1.0 - pl.y)   # skirt only around the foot
-				rock = maxf(rock, pl.y * pk)
 	# small bumps on the floor and fans (as the old relief)
 	h += (_hill.get_noise_2d(x, z) + 1.0) * 0.5 * 0.025 * (0.3 + fan)
 	var scree := foot * smoothstep(-0.1, 0.25, cr + 0.1) * lerpf(0.5, 1.0, maxf(e, mesa))
 	scree = maxf(scree, apron * mesa)
+	# RV-04 lone rock pillars and buttes on mesa land and dry hills, away from the valley floor
+	# (last, so the cap holds over every other term)
+	if landforms and a > ReliefBalance.D_FAN + 250.0:
+		var pk := maxf(mesa, hill) * smoothstep(ReliefBalance.D_FAN + 250.0, ReliefBalance.D_FAN + 550.0, a)
+		if pk > 0.0:
+			var pl := _pillar(x, z)
+			if pl.x > 0.0 or pl.z > 0.0:
+				var cap := minf(h + pl.x * pk, maxf(h, ReliefBalance.PILLAR_CAP_MAX))
+				var sk := pl.z * pk * (1.0 - pl.y)   # skirt only around the foot
+				h = maxf(h, lerpf(h, cap, pl.y)) + sk
+				rock = maxf(rock, pl.y * pk)
+				scree = maxf(scree, sk / ReliefBalance.PILLAR_SKIRT)
 	return Vector3(clampf(h, -0.03, 1.0), clampf(rock, 0.0, 1.0), clampf(scree, 0.0, 1.0))
 
 
@@ -261,13 +266,21 @@ func relief(x: float, z: float, a: float, v: float, pv := Vector4(-1.0, 0.0, 0.0
 ## pillar never spans more than one cell (radius ≤ PILLAR_R_MAX < cell / 4).
 func _pillar(x: float, z: float) -> Vector3:
 	var c := ReliefBalance.PILLAR_CELL
-	var ci := floorf(x / c)
-	var cj := floorf(z / c)
+	var fx := x / c
+	var fz := z / c
+	var ci := floorf(fx)
+	var cj := floorf(fz)
+	# centres sit in the middle half of a cell, so a neighbour reaches in only near the cell's edge
+	var m := (ReliefBalance.PILLAR_R_MAX * 1.18 * 2.4 - c * 0.25) / c
+	var i0 := -1 if fx - ci < m else 0
+	var i1 := 1 if fx - ci > 1.0 - m else 0
+	var j0 := -1 if fz - cj < m else 0
+	var j1 := 1 if fz - cj > 1.0 - m else 0
 	var best := Vector3.ZERO
-	for oj in 3:
-		for oi in 3:
-			var cx := ci + oi - 1.0
-			var cz := cj + oj - 1.0
+	for oj in range(j0, j1 + 1):
+		for oi in range(i0, i1 + 1):
+			var cx := ci + oi
+			var cz := cj + oj
 			var hh := sin(cx * 91.3 + cz * 417.9 + 3.1) * 43758.5453
 			if fposmod(hh, 1.0) > ReliefBalance.PILLAR_CHANCE:
 				continue
@@ -275,14 +288,14 @@ func _pillar(x: float, z: float) -> Vector3:
 			var pz := (cz + 0.25 + 0.5 * fposmod(hh * 13.17, 1.0)) * c
 			var d := Vector2(x - px, z - pz).length()
 			var rr := lerpf(ReliefBalance.PILLAR_R_MIN, ReliefBalance.PILLAR_R_MAX, fposmod(hh * 3.77, 1.0))
-			if d > rr * 2.4:
+			if d > rr * 1.18 * 2.4:   # beyond the widest lobe's skirt
 				continue
 			# slightly lobed outline: not a perfect cylinder
 			var ang := atan2(z - pz, x - px)
 			rr *= 1.0 + 0.12 * sin(ang * 3.0 + hh) + 0.06 * sin(ang * 5.0 - hh * 2.0)
 			var body := 1.0 - smoothstep(rr - 25.0, rr, d)
 			var ph := lerpf(ReliefBalance.PILLAR_H_MIN, ReliefBalance.PILLAR_H_MAX, fposmod(hh * 5.93, 1.0))
-			ph *= 1.0 - 0.15 * (d / rr) * (d / rr)   # a little domed cap
+			ph *= 1.0 - 0.15 * minf(d / rr, 1.0) * minf(d / rr, 1.0)   # a little domed cap
 			var sk := 1.0 - smoothstep(rr, rr * 2.4, d)
 			var v := Vector3(ph, body, sk * sk * ReliefBalance.PILLAR_SKIRT)
 			if v.y + v.z > best.y + best.z:
