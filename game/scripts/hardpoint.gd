@@ -589,7 +589,7 @@ func slot_pos(p: Player, i: int) -> Vector2:
 
 
 func _slot_pos(p: Player, i: int) -> Vector2:
-	if weapon in ["aam", "rockets", "bombs", "srm", "agm", "hebomb"] and not launch_offs.is_empty() and Render3D.enabled:
+	if Weapons.leaves_pylon(weapon) and not launch_offs.is_empty() and Render3D.enabled:
 		return p.global_position + (launch_offs[i % launch_offs.size()] as Vector2).rotated(p.heading)
 	if slots == 1:
 		return p.global_position

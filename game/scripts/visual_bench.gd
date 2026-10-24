@@ -380,7 +380,11 @@ func _hold(p: Dictionary) -> void:
 	if p.has("roll"):   # 3.4-t1 п. 6: самолёт в бочке, брюхом к камере
 		m.player.roll_dir = 1
 		m.player.roll_t = m.player.roll_time() * float(p["roll"])
-	m.camera.zoom = Vector2.ONE * float(p.get("zoom", 1.0))
+	var zk := 1.0
+	for a in OS.get_cmdline_user_args():   # PG-01: --zoomk=2.5 — every point closer (weapon close-ups)
+		if a.begins_with("--zoomk="):
+			zk = float(a.get_slice("=", 1))
+	m.camera.zoom = Vector2.ONE * float(p.get("zoom", 1.0)) * zk
 	m.camera.reset_smoothing()
 
 
@@ -813,7 +817,7 @@ func _hangar_bench() -> void:
 				if a.begins_with("--weaplist="):
 					wl = Array(a.get_slice("=", 1).split(","))
 			for w in wl:
-				for wt in [1, 2, 3, 4]:
+				for wt in ([1, 2, 3] if not Profile.WBRANCH.has(w) else [1, 2, 3, 4]):   # PG-01: no modernization yet
 					_hq.append(["W", w, wt])
 			_t = 0.0
 			return
@@ -822,6 +826,14 @@ func _hangar_bench() -> void:
 			for lv in [1, 2]:
 				for wt in [3, 4]:
 					_hq.append(["bomber", lv, wt])
+			_t = 0.0
+			return
+		if OS.get_cmdline_user_args().has("--hangarnew"):
+			# PG-01: the new standard weapons on each plane, tiers 1 / 2 / 3 (hangar models)
+			Hangar3D.bench_weapons = {"fighter": ["srm", ""], "attacker": ["srm", "agm"], "bomber": ["hebomb", "agm"]}
+			for c in PlaneClasses.LIST:
+				for wt in [1, 2, 3]:
+					_hq.append([c, 1, wt])
 			_t = 0.0
 			return
 		var evo_bench := OS.get_cmdline_user_args().has("--hangarevo")
@@ -882,6 +894,7 @@ func _hangar_bench() -> void:
 		m.hangar_tab = "weapons"
 		m.hangar_cls = "attacker"
 		m.hangar_w = cur[1]
+		Hangar3D.bench_tab_w = cur[1]
 		if Hangar3D.I != null:
 			Hangar3D.I.weapon_tier = cur[2]
 			Hangar3D.I._idle = 0.0

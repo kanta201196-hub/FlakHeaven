@@ -91,7 +91,7 @@ static func fire_hebomb(hp: Hardpoint, p: Player, manual: bool) -> bool:
 		else:
 			to = hp.aim_point(p)
 		Main.I.projectiles.spawn_bomb(hp.slot_pos(p, s), fuse, hp.dmg() * Hardpoint.GROUND_BOMB_K, hp.range_px(), "фугасные бомбы", to, true)
-		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.bomb_t(5)   # the largest bomb model until its own is made
+		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.HEBOMB_VT0 + WeaponModels.tier(hp.level)
 		Main.I.projectiles.bombs[-1]["shake"] = WeaponBalance.HEBOMB_SHAKE
 		hp.bay_release(p, Main.I.projectiles.bombs[-1], 0.0)
 	Main.I.sfx.play("bomb_drop", -12.0, 0.8)

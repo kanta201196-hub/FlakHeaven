@@ -131,6 +131,12 @@ static func is_bomb(id: String) -> bool:
 	return BOMBS.has(id)
 
 
+## True for weapons whose rounds leave the pylon (missiles, rocket pods, bombs): the model is hidden or dimmed
+## while reloading and the launch point is taken from the model on the pylon
+static func leaves_pylon(id: String) -> bool:
+	return Hardpoint.MISSILES.has(id) or BOMBS.has(id)
+
+
 static func exp_open(id: String) -> bool:
 	return Campaign.cleared(int(EXP_OP.get(id, 99)))
 

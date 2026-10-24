@@ -5,7 +5,9 @@ class_name PlaneArt
 ## Точки подвеса считаются по силуэту крыла автоматически — новые картинки подхватываются без правки кода.
 
 ## 2.8: длина подвеса — доля длины истребителя на экране (plane_len), чтобы подвесы были видны
-const WEAPON_FRAC := {"aam": 0.34, "rockets": 0.26, "bombs": 0.27, "gunpod": 0.3, "flares": 0.22, "turret": 0.22}
+## PG-01: `srm` shorter than `aam`, `agm` the longest missile, `hebomb` longer than a cluster bomb
+const WEAPON_FRAC := {"aam": 0.34, "rockets": 0.26, "bombs": 0.27, "gunpod": 0.3, "flares": 0.22, "turret": 0.22,
+	"srm": 0.28, "agm": 0.4, "hebomb": 0.33}
 
 static var _tex := {}
 static var _anchors := {}

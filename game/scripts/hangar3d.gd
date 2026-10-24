@@ -22,6 +22,8 @@ var view_lvl := 1
 static var bench_weapons := {}
 static var bench_pitch_min := -0.2   # стенд: камера ниже обычного (тест 3.5-s5, п. 3 — открытый бомбоотсек снизу)
 static var bench_seeker := 0   # Т-3: стенд --modules — «Глазастик» на ракетах
+## Bench --hangarweaptab: weapon shown on the weapons tab even if it is not in the class list (PG-01 frames)
+static var bench_tab_w := ""
 var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5), 4 — эволюция (Т-4)
 var tier_rects: Array = []   # [Rect2, ступень]
 var _ctrl: Control

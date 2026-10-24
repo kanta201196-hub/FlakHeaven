@@ -225,6 +225,8 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 	var own: Array = Profile.WEAPON_ORDER.filter(func(x): return Weapons.in_game(x) and PlaneClasses.allows(m.hangar_cls, x))
 	if not own.has(m.hangar_w) and not Weapons.EXP.has(m.hangar_w) and not own.is_empty():
 		m.hangar_w = own[0]
+	if Hangar3D.bench_tab_w != "":
+		m.hangar_w = Hangar3D.bench_tab_w
 	for w in own:
 		var r := Rect2(lx, y, 300, 70)
 		var on: bool = m.hangar_w == w
@@ -279,7 +281,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		_text(Vector2(vx + 24, area.position.y + 220), "Встроенное оружие — модель на самолёте", 16, Color(0.7, 0.74, 0.8))
 	_text(Vector2(rx, area.position.y + 24), Loc.t("%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)") % Loc.t(Weapons.DEFS[w2]["title"]), 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
-	for tier in [1, 2, 3]:
+	for tier in ([1, 2, 3] if Profile.WBRANCH.has(w2) else []):   # PG-01: new weapons get hangar branches in PG-03
 		_text(Vector2(rx, yy + 20), Loc.t("Ступень %d%s") % [tier, Loc.t(" · модернизация") if tier == 3 else ""], 18, Color.WHITE)
 		var st2 := Profile.tier_state(w2, tier)
 		var locked: bool = (tier == 2 and Profile.tier_state(w2, 1) == "") or (tier == 3 and not Profile.tier3_open(w2))

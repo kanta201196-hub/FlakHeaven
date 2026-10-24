@@ -153,7 +153,9 @@ static func hang(weapon: String, t: int, evo := false) -> float:
 ## Т-5: кассетные бомбы (балка → держатель на 4 → кассета) и ловушки (кассеты-«соты» в обшивке → контейнер на законцовке)
 const WEAPON_GLB := {"aam": "res://models/weapons/aam_%d.glb", "rockets": "res://models/weapons/rockets_%d.glb",
 	"bombs": "res://models/weapons/bombs_%d.glb", "flares": "res://models/weapons/flares_%d.glb",
-	"arm": "res://models/weapons/arm_%d.glb"}   # Т-8: противорадарная ракета «Ласки»
+	"arm": "res://models/weapons/arm_%d.glb",   # Т-8: противорадарная ракета «Ласки»
+	# PG-01: new standard weapons, tiers 1–3 (tools/blender/weapons_hq.py srm|agm|hebomb)
+	"srm": "res://models/weapons/srm_%d.glb", "agm": "res://models/weapons/agm_%d.glb", "hebomb": "res://models/weapons/hebomb_%d.glb"}
 ## Т-6: эволюция — совсем другая модель (правило владельца): «Шмель», «Ливень», «Салют» (на спине),
 ## «Бабушкин ковёр» (под фюзеляжем, планка поперёк полёта — свой узел крепления, без пилона)
 const EVO_GLB := "res://models/weapons/%s_evo.glb"
@@ -176,7 +178,21 @@ const DROP_EVO_GLB := "res://models/weapons/bombdrop_evo.glb"
 const DROP_LEN := [0.0, 0.27, 0.27, 0.27, 0.27, 0.27, 0.167]
 
 
+## Length of a falling bomb of kind `vt` as a share of plane length
+static func drop_len(vt: int) -> float:
+	if vt > HEBOMB_VT0:
+		return float(PlaneArt.WEAPON_FRAC["hebomb"])
+	return float(DROP_LEN[clampi(vt, 1, BOMB_EVO_VT)])
+
+
+## PG-01: falling HE bomb — vt `HEBOMB_VT0` + model tier (hebomb_<t>.glb, the same length as on the pylon)
+const HEBOMB_VT0 := 10
+
+
+## Mesh of a falling bomb of kind `vt` (calibres 1–5, carpet bomb, HE bomb tiers)
 static func drop_mesh(vt: int) -> Mesh:
+	if vt > HEBOMB_VT0:
+		return weapon_model("hebomb", clampi(vt - HEBOMB_VT0, 1, 3))
 	var t := clampi(vt, 1, BOMB_EVO_VT)
 	if t == BOMB_EVO_VT:
 		return _glb_mesh(DROP_EVO_GLB, 1.0, Color(), "glb_drop_evo") if ResourceLoader.exists(DROP_EVO_GLB) else null
