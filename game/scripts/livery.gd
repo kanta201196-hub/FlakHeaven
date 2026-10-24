@@ -58,10 +58,12 @@ const VARIANTS := {
 
 ## Исходная окраска модели: [яркость основного тона (линейная), ниже этой яркости — не трогать (фонарь, сопла)]
 ## по гистограммам текстур ангара (у моделей боя те же текстуры, уменьшенные).
-## «Оса 1» (VIS-01, модель Sketchfab в сером): пики яркости 0,135 (средне-серый верх), 0,20 (светло-серый),
-## 0,28 (брюхо) — основной тон 0,15 держит оба серых верха в основной полосе, брюхо — в светлой; ниже 0,012 — сопло, ниши
+## «Оса 1» (VIS-01, Sketchfab model in the Highlands camo, sf_recipes.HIGHLAND): luminance peaks 0.027 (dark olive-brown
+## spots), 0.057 (sand-brown, the main tone), 0.077 (grey-tan spots), 0.18 (blue-grey belly). Base 0.056 puts the dark
+## spots in the dark band, grey-tan slightly lighter than the base, the belly in the light band; below 0.012 —
+## nozzle, wells, cockpit
 const SRC := {
-	"fighter_1": [0.15, 0.012], "fighter_2": [0.14, 0.022],
+	"fighter_1": [0.056, 0.012], "fighter_2": [0.14, 0.022],
 	"attacker_1": [0.056, 0.011], "attacker_2": [0.056, 0.011],
 	"bomber_1": [0.079, 0.013], "bomber_2": [0.078, 0.013],
 }

@@ -222,11 +222,15 @@ func ui_click(action: String) -> void:
 		hangar_action(action.substr(3))
 	elif action == "menu_codex" or action == "codex":
 		m.codex_back = "menu" if m.state == "menu" else "paused"
+		HudCodex.hints_reset_done = false
 		m._set_state("codex")
 	elif action == "codex_back":
 		m._set_state(m.codex_back)
 	elif action.begins_with("cx_tab:"):
 		HudCodex.tab = int(action.substr(7))
+	elif action == "cx_hints":
+		Hints.reset()
+		HudCodex.hints_reset_done = true
 	elif action == "cx_all":
 		HudCodex.show_all = not HudCodex.show_all
 	elif action == "menu_settings":
@@ -237,8 +241,10 @@ func ui_click(action: String) -> void:
 		m.report.open()
 	elif action == "menu_logs":
 		OS.shell_open(ProjectSettings.globalize_path("user://"))
-	elif action == "menu_howto":
-		m.menu.howto = true
+	elif action == "menu_howto":   # «Как играть» lives in the codex now (UI-01)
+		HudCodex.tab = HudCodex.TAB_HOWTO
+		m.codex_back = "menu"
+		m._set_state("codex")
 	elif action == "wishlist":   # M-07: демо — страница игры в Steam
 		Demo.open_store()
 	elif action == "demo_end_close":

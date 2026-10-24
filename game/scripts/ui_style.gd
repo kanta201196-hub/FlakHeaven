@@ -134,9 +134,9 @@ static func menu_item(ci: CanvasItem, r: Rect2, label: String, focus: float, ena
 	text(ci, font, Vector2(lx, base), label, size, tc)
 	var lw := text_w(font, label, size)
 	if badge and enabled:
-		ci.draw_circle(Vector2(lx + lw + 14.0, base - size * 0.42), 5.0, BRAND_RED)
+		ci.draw_circle(Vector2(lx + lw + 12.0, base - size * 0.62), 5.0, BRAND_RED)
 	if note != "":
-		text(ci, head_font(600, 2), Vector2(lx + 2.0, base + 22.0), note, FS_CAPTION,
+		text(ci, head_font(600, 2), Vector2(lx + 2.0, base + 24.0), note, FS_CAPTION + 1,
 			Color(tc.r, tc.g, tc.b, 0.7) if on else TEXT_DIM)
 	if enabled:
 		text(ci, font, Vector2(r.end.x - 48.0, base), "›", size * 3 / 4, tc)

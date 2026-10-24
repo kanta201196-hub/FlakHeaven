@@ -249,7 +249,11 @@ void fragment() {
 				float by = pow(clamp(wnorm.y, 0.0, 1.0), 4.0);
 				float bs = pow(1.0 - clamp(wnorm.y, 0.0, 1.0), 2.0) * 2.0;
 				vec3 ry = texture(t_rock, world3.xz / rock_world).rgb;
-				vec3 rs = texture(t_rock, vec2(dot(world3.xz, vec2(-hn.y, hn.x)), -world3.y) / rock_world).rgb;
+				// Kanta 24.10 («что за полоски»): v ran along world height, so on a slope that is not a wall the
+				// texture stretched down the slope into streaks; now u/v lie in the slope plane (no stretch)
+				vec3 ct = vec3(-hn.y, 0.0, hn.x);
+				vec3 dt = cross(wnorm, ct);
+				vec3 rs = texture(t_rock, vec2(dot(world3, ct), dot(world3, dt)) / rock_world).rgb;
 				rc = (ry * by + rs * bs) / (by + bs);
 			}
 			// аудит Р-5: тёмные трещины фото скалы читались мазками копоти — контраст рисунка мягче
@@ -259,8 +263,10 @@ void fragment() {
 			float sy = world3.y / strata_px + dot(world3.xz, vec2(0.0021, 0.0013)) + vnoise(world / 240.0) * 1.6;
 			float band = vnoise(vec2(floor(sy), 3.7) * 0.73);
 			vec3 tint = mix(rock_brown, rock_grey, band) * 1.8;
-			float lip = 1.0 - 0.18 * smoothstep(0.75, 1.0, fract(sy)) * smoothstep(0.15, 0.45, slope);
-			rc = mix(rc, rl * tint, 0.7) * lip;
+			// Kanta 24.10: on slopes under ~50° the layers and their dark lips read as map contour lines,
+			// so they show on steep walls only (bands from ~35°, lips from ~50°)
+			float lip = 1.0 - 0.18 * smoothstep(0.75, 1.0, fract(sy)) * smoothstep(0.35, 0.6, slope);
+			rc = mix(rc, rl * tint, 0.7 * smoothstep(0.2, 0.45, slope)) * lip;
 			// на полках уступов — каменная крошка (текстура щебня уже выбрана выше)
 			float shelf = rg * (1.0 - smoothstep(0.12, 0.3, slope));
 			rc = mix(rc, mix(s2.a.rgb, vec3(dot(s2.a.rgb, vec3(0.333))), 0.5) * 1.05, shelf * 0.45);
