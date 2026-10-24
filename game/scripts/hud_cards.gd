@@ -28,6 +28,8 @@ static var _tip_ids: Array[StringName] = []
 static var _tip_card := -1
 ## Term hit areas of this frame: [Rect2, id, level] (level -1 — on a card, n — in tooltip n)
 var _term_rects: Array = []
+## Parsed card and term texts by "skip|text" (the screen redraws every frame; texts repeat)
+static var _parsed := {}
 ## Tooltip panels drawn last frame, for keeping a chain open while the mouse moves into it
 static var _tip_rects: Array[Rect2] = []
 
@@ -156,7 +158,7 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 		desc = desc.get_slice("\n", 0)
 	var path := _card_path(p, c)
 	var bottom := r.end.y - 34.0 - (24.0 if path != "" else 0.0) - (70.0 if warn != "" else 0.0)
-	var segs := Terms.parse(desc)
+	var segs := _parse(desc)
 	var fs := 18
 	while fs > 15 and _rich_height(segs, w - 44.0, fs) > bottom - y:
 		fs -= 1
@@ -258,6 +260,15 @@ func _has_weapon(p: Player, w: String) -> bool:
 
 
 # ---------- Rich text with terms ----------
+
+## `Terms.parse` with a cache, so redraws do not re-scan the same texts.
+func _parse(text: String, skip: StringName = &"") -> Array:
+	var k := "%s|%s|%s" % [TranslationServer.get_locale(), skip, text]
+	if not _parsed.has(k):
+		if _parsed.size() > 200:
+			_parsed.clear()
+		_parsed[k] = Terms.parse(text, "", skip)
+	return _parsed[k]
 
 ## Splits segments into drawable pieces: words with their trailing spaces, CJK characters
 ## one by one (Chinese has no spaces to break at). Each piece keeps the segment's kind and id.
@@ -432,7 +443,7 @@ func _terms_tips(m: Main, pos: Vector2, size: Vector2) -> void:
 	var x := pos.x
 	for lvl in _tip_ids.size():
 		var id: StringName = _tip_ids[lvl]
-		var segs := Terms.parse(Terms.desc(id), "", id)
+		var segs := _parse(Terms.desc(id), id)
 		var body_h := _rich_height(segs, TIP_W - 40.0, UiStyle.FS_BODY)
 		var r := Rect2(minf(x, size.x - TIP_W - 24.0), pos.y, TIP_W, 62.0 + body_h)
 		UiStyle.panel(ctrl, r, UiStyle.LINE, Color(UiStyle.PANEL, 0.97), 14.0)

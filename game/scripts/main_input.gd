@@ -61,6 +61,10 @@ func handle_global_input() -> void:
 		"levelup":
 			if m._state_t < CARD_INPUT_DELAY:
 				return
+			# Enter / gamepad A take the focused card (A is also "choose_1": focus starts on card 1)
+			if Input.is_action_just_pressed("ui_accept"):
+				m.choose_card(HudCards.focus)
+				return
 			for i in m.offers.size():
 				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
 					m.choose_card(i)
@@ -69,8 +73,6 @@ func handle_global_input() -> void:
 				m.reroll()
 			elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
 				HudCards.move_focus(1 if Input.is_action_just_pressed("ui_right") else -1, m.offers.size())
-			elif Input.is_action_just_pressed("ui_accept"):
-				m.choose_card(HudCards.focus)
 			elif Input.is_action_just_pressed("card_lock"):
 				m.lock_card(HudCards.focus)
 			elif Input.is_action_just_pressed("card_ban"):
