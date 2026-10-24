@@ -82,6 +82,10 @@ func _ready() -> void:
 	for r in REBIND:
 		var a: String = r[0]
 		_defaults[a] = Binds.from_events(InputMap.action_get_events(a)) if InputMap.has_action(a) else ["", "", ""]
+		# three slots hold two keys and one gamepad input; more defaults would be dropped by apply_binds
+		var kept := 3 - (_defaults[a] as Array).count("")
+		if InputMap.has_action(a) and InputMap.action_get_events(a).size() > kept:
+			push_warning("Settings: %s has more default inputs than the controls tab can show" % a)
 	binds = _defaults.duplicate(true)
 	for fam: String in GLYPH_FAMILIES:
 		if fam == "":
