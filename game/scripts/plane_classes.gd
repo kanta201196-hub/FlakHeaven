@@ -30,7 +30,7 @@ const DATA := {
 			{"name": "Под фюзеляжем", "slots": 1, "weapon": ""},
 		],
 		"turrets": 0,
-		"weapons": ["aam", "rockets", "flares"], "signature": "aam",
+		"weapons": ["aam", "rockets", "flares", "srm"], "signature": "aam",
 		"wingmen": 1,
 		"skill3": "combat_turn",
 		"color": Color(0.55, 0.85, 1.0),
@@ -46,7 +46,7 @@ const DATA := {
 			{"name": "Внешняя пара", "slots": 2, "weapon": ""},
 		],
 		"turrets": 1,
-		"weapons": ["aam", "rockets", "flares", "bombs", "turret"], "signature": "rockets",
+		"weapons": ["aam", "rockets", "flares", "bombs", "turret", "srm", "agm"], "signature": "rockets",
 		"wingmen": 2,
 		"skill3": "armor_shield",
 		"color": Color(0.6, 0.95, 0.65),
@@ -63,7 +63,7 @@ const DATA := {
 			{"name": "Крылья (пара)", "slots": 2, "weapon": ""},
 		],
 		"turrets": 1, "turrets_max": 2,
-		"weapons": ["rockets", "flares", "bombs", "turret"], "signature": "bombs",
+		"weapons": ["rockets", "flares", "bombs", "turret", "agm", "hebomb"], "signature": "bombs",
 		"wingmen": 2,
 		"skill3": "umbrella",
 		"color": Color(0.95, 0.85, 0.55),
@@ -184,6 +184,24 @@ static func turret_slots(cls_id: String, level: int) -> int:
 	if level >= TURRET2_LVL:
 		n = int(d.get("turrets_max", n))
 	return n
+
+
+## PG-01 (Kanta 24.10): third hardpoint group, opened by hangar node «Узлы подвеса» lvl 2 of that plane.
+## Appended after all other groups (turrets, heavy), so card ids, saves and 3D layout keep their indices.
+## frac — where a wing pair hangs along the half-span (0 — the default by group index).
+const GROUP3 := {
+	"fighter": {"name": "Законцовки крыла (пара)", "slots": 2, "weapon": "", "frac": 0.85},
+	"attacker": {"name": "Под фюзеляжем", "slots": 1, "weapon": ""},
+	"bomber": {"name": "Внешняя пара", "slots": 2, "weapon": "", "frac": 0.82},
+}
+
+
+## Hardpoint group definitions of a class: the base `groups`, plus `GROUP3` when `third` is open
+static func group_defs(cls_id: String, third: bool) -> Array:
+	var out: Array = (DATA[cls_id]["groups"] as Array).duplicate()
+	if third:
+		out.append(GROUP3[cls_id])
+	return out
 
 
 static func allows(cls_id: String, w: String) -> bool:

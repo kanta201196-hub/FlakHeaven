@@ -18,6 +18,7 @@ const WEAPON_TAGS := {
 	"aam": ["missiles"], "rockets": ["missiles", "blast"], "gunpod": ["kinetic"],
 	"turret": ["kinetic", "turrets"], "flares": ["maneuver", "armor"], "bombs": ["blast"],
 	"railgun": ["kinetic"], "emp": ["blast"], "laser": ["turrets"], "plasma": ["blast"],
+	"srm": ["missiles", "maneuver"], "agm": ["missiles", "armor"], "hebomb": ["blast", "armor"],
 }
 const MODULE_TAGS := {
 	"reload": ["missiles"], "seeker": ["missiles"], "frag": ["blast"], "warhead": ["blast"],

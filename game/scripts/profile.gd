@@ -13,7 +13,7 @@ const NODES := {
 	"engine": {"title": "Двигатель", "step": "скорость +2%", "note": ""},
 	"armor": {"title": "Броня", "step": "прочность +5%", "note": ""},
 	"wing": {"title": "Крыло", "step": "разворот +3%", "note": ""},
-	"pylons": {"title": "Узлы подвеса", "step": "урон подвесов и турелей +4%", "note": "временно: до введения грузоподъёмности"},
+	"pylons": {"title": "Узлы подвеса", "step": "урон подвесов и турелей +4%", "note": "ур. 2 — третья группа подвеса"},
 	"tank": {"title": "Топливный бак", "step": "объём бака +8% (≈ +43 с полёта)", "note": ""},
 }
 const NODE_ORDER := ["frame", "engine", "armor", "wing", "pylons", "tank"]
@@ -114,6 +114,8 @@ const WAGE := 50
 const PROMOTE_COST := [[5, 100], [10, 300], [15, 700], [20, 1200]]
 
 var data := {}
+## Where the profile is stored; unit tests point it to a test file so a real profile is never touched.
+var path := PATH
 
 
 func _ready() -> void:
@@ -125,7 +127,8 @@ func _default_class(cls: String) -> Dictionary:
 	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2, "livery": "",
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"nodes2": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
-		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start2": ""}
+		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start2": "",
+		"gun": "std", "guns": ["std"]}
 
 
 func reset_data() -> void:
@@ -137,9 +140,9 @@ func reset_data() -> void:
 
 
 func load_profile() -> void:
-	if not FileAccess.file_exists(PATH):
+	if not FileAccess.file_exists(path):
 		return
-	var f := FileAccess.open(PATH, FileAccess.READ)
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return
 	var d = JSON.parse_string(f.get_as_text())
@@ -169,13 +172,13 @@ func load_profile() -> void:
 
 
 func save() -> void:
-	var tmp := PATH + ".tmp"
+	var tmp := path + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
 		return
 	f.store_string(JSON.stringify(data, "  "))
 	f.close()
-	DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(PATH))
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(path))
 
 
 func wipe() -> void:
@@ -300,6 +303,50 @@ func start2_options(c: String) -> Array:
 func start2(c: String) -> String:
 	var w := String(cls(c).get("start2", ""))
 	return w if crew_lvl(c) >= START2_LVL and start2_options(c).has(w) else ""
+
+
+## PG-01: course gun of class `c` for the next sortie (`WeaponBalance.GUNS` id)
+func gun(c: String) -> String:
+	var g := String(cls(c).get("gun", "std"))
+	return g if guns(c).has(g) else "std"
+
+
+## PG-01: course guns class `c` owns (always has "std")
+func guns(c: String) -> Array:
+	var out: Array = ["std"]
+	for g in cls(c).get("guns", []):
+		if WeaponBalance.GUNS.has(String(g)) and not out.has(String(g)):
+			out.append(String(g))
+	return out
+
+
+## PG-01: buy course gun `id` for class `c` once, for `WeaponBalance.GUN_PRICE`; selects it. False if owned or too few parts
+func buy_gun(c: String, id: String) -> bool:
+	if not WeaponBalance.GUNS.has(id) or guns(c).has(id) or parts() < int(WeaponBalance.GUN_PRICE[id]):
+		return false
+	data["parts"] = parts() - int(WeaponBalance.GUN_PRICE[id])
+	var owned := guns(c)
+	owned.append(id)
+	cls(c)["guns"] = owned
+	cls(c)["gun"] = id
+	save()
+	return true
+
+
+## PG-01: select an owned course gun; switching is free, an unowned id is ignored
+func set_gun(c: String, id: String) -> void:
+	if not guns(c).has(id):
+		return
+	cls(c)["gun"] = id
+	save()
+
+
+## PG-01 (Kanta 24.10, answer 3a): the third hardpoint group opens at node «Узлы подвеса» lvl 2 of plane `lv`
+const GROUP3_PYLONS := 2
+
+
+func third_group(c: String, lv := 0) -> bool:
+	return node(c, "pylons", lv) >= GROUP3_PYLONS
 
 
 func set_start2(c: String, w: String) -> void:

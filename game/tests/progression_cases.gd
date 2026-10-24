@@ -1,0 +1,164 @@
+extends RefCounted
+## Unit tests for the deeper upgrades of stage 1 (PG-01): class weapon lists, level scaling of the
+## new weapons, course gun variants, the third hardpoint group and the profile keys behind them.
+## Same style as `run_state_test.gd`: each check prints FAIL with a message, exit code 1 on failure.
+## The profile is a fresh instance writing to a test file, so a player's real profile is never touched.
+## Loaded by `progression_test.gd` after the first frame: game scripts use autoloads (`Tuning`,
+## `Profile`), which do not exist yet when a `-s` script is compiled.
+
+const TEST_PATH := "user://test_profile_pg01.json"
+
+var _failed := 0
+var _checks := 0
+var _profile_script: GDScript = load("res://scripts/profile.gd")
+
+
+## Run every check; returns [checks, failed]
+func run() -> Array:
+	_test_class_lists()
+	_test_pool_and_bombs()
+	_test_level_scaling()
+	_test_gun_variants()
+	_test_group_defs()
+	_test_defence_classes()
+	_test_profile_guns()
+	_test_profile_third_group()
+	_test_profile_round_trip()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
+	return [_checks, _failed]
+
+
+func _check(ok: bool, what: String) -> void:
+	_checks += 1
+	if not ok:
+		_failed += 1
+		print("FAIL: ", what)
+
+
+func _fresh_profile() -> Node:
+	var p: Node = _profile_script.new()
+	p.path = TEST_PATH
+	p.reset_data()
+	return p
+
+
+## Each class gets its own new weapons; the others never show up in its card pool.
+func _test_class_lists() -> void:
+	_check(PlaneClasses.allows("fighter", "srm"), "fighter: srm")
+	_check(not PlaneClasses.allows("fighter", "agm"), "fighter: no agm")
+	_check(not PlaneClasses.allows("fighter", "hebomb"), "fighter: no hebomb")
+	_check(PlaneClasses.allows("attacker", "srm") and PlaneClasses.allows("attacker", "agm"), "attacker: srm, agm")
+	_check(not PlaneClasses.allows("attacker", "hebomb"), "attacker: no hebomb")
+	_check(PlaneClasses.allows("bomber", "agm") and PlaneClasses.allows("bomber", "hebomb"), "bomber: agm, hebomb")
+	_check(not PlaneClasses.allows("bomber", "srm"), "bomber: no srm")
+	for c in PlaneClasses.LIST:
+		_check(PlaneClasses.signature(c) in ["aam", "rockets", "bombs"], "signature unchanged for %s" % c)
+
+
+func _test_pool_and_bombs() -> void:
+	for w in ["srm", "agm", "hebomb"]:
+		_check(Weapons.POOL.has(w), "%s in the card pool" % w)
+		_check(Weapons.DEFS.has(w) and not Weapons.DEFS[w].get("exp", false), "%s is standard, not experimental" % w)
+		_check(Weapons.in_game(w), "%s is in the game" % w)
+		_check(Prog.WEAPON_TAGS.has(w), "%s has course tags" % w)
+	_check(Weapons.is_bomb("bombs") and Weapons.is_bomb("hebomb"), "bomb family")
+	_check(not Weapons.is_bomb("agm") and not Weapons.is_bomb("plasma"), "not bombs")
+	_check(Weapons.DEFS["hebomb"].get("uses_trigger", false), "HE bomb has the manual trigger")
+
+
+## Level 2–5 factors and reload floors (spec table).
+func _test_level_scaling() -> void:
+	_check(is_equal_approx(WeaponBalance.dmg_k("srm", 1), 1.0), "srm dmg lvl 1")
+	_check(is_equal_approx(WeaponBalance.dmg_k("srm", 3), 1.5), "srm dmg lvl 3")
+	_check(is_equal_approx(WeaponBalance.cd_k("srm", 5), 1.0 - 0.08 * 4), "srm cd lvl 5")
+	_check(is_equal_approx(WeaponBalance.cd_k("agm", 5), 1.0 - 0.06 * 4), "agm cd lvl 5")
+	_check(is_equal_approx(WeaponBalance.range_k("hebomb", 2), 1.08), "hebomb radius lvl 2")
+	_check(is_equal_approx(WeaponBalance.cd_k("hebomb", 4), 1.0), "hebomb cd does not scale")
+	_check(is_equal_approx(WeaponBalance.range_k("srm", 5), 1.0), "srm range does not scale")
+	_check(is_equal_approx(WeaponBalance.cd_floor("srm"), 2.0) and is_equal_approx(WeaponBalance.cd_floor("agm"), 3.5), "reload floors")
+	_check(WeaponBalance.cd_floor("hebomb") == 0.0, "no floor for the HE bomb")
+
+
+func _test_gun_variants() -> void:
+	var std := WeaponBalance.gun_k("std")
+	var twin := WeaponBalance.gun_k("twin")
+	var heavy := WeaponBalance.gun_k("heavy")
+	_check(is_equal_approx(std["rate"], 1.0) and is_equal_approx(std["dmg"], 1.0), "std neutral")
+	_check(is_equal_approx(twin["rate"], 1.6) and is_equal_approx(twin["dmg"], 0.65), "twin rate and damage")
+	_check(is_equal_approx(heavy["rate"], 0.55) and is_equal_approx(heavy["dmg"], 2.0) and is_equal_approx(heavy["speed"], 1.15), "heavy")
+	_check(WeaponBalance.gun_k("nope") == std, "unknown gun → std")
+	_check(WeaponBalance.GUN_PRICE["std"] == 0 and WeaponBalance.GUN_PRICE["heavy"] > WeaponBalance.GUN_PRICE["twin"], "prices")
+	# DPS stays close to the standard gun (choice by feel, not by power): within ±15 %
+	for g in [twin, heavy]:
+		_check(absf(g["rate"] * g["dmg"] - 1.0) <= 0.15, "gun DPS near standard")
+
+
+## The third group is appended after everything else: old indices never shift.
+func _test_group_defs() -> void:
+	for c in PlaneClasses.LIST:
+		var base: Array = PlaneClasses.group_defs(c, false)
+		var more: Array = PlaneClasses.group_defs(c, true)
+		_check(base == PlaneClasses.get_data(c)["groups"], "%s: no third group without unlock" % c)
+		_check(more.size() == base.size() + 1 and more.slice(0, base.size()) == base, "%s: third group appended" % c)
+		_check(String(more[-1]["weapon"]) == "" and int(more[-1]["slots"]) >= 1, "%s: third group starts empty" % c)
+
+
+func _test_defence_classes() -> void:
+	_check(Enemy.src_class("УР В-З") == "ap", "guided missile is armor-piercing")
+	_check(Enemy.src_class("курсовое: крупнокалиберная (авто)") == "gun_ap", "heavy gun class")
+	_check(Enemy.src_class("курсовое (авто)") == "gun", "standard gun unchanged")
+	_check(Enemy.src_class("ракеты ближнего боя") == "homing", "short-range missile is homing")
+	_check(Enemy.src_class("фугасные бомбы") == "blast", "HE bomb is blast")
+	_check(is_equal_approx(Enemy.DEF_K["armor"]["ap"], 1.3) and is_equal_approx(Enemy.DEF_K["armor"]["gun_ap"], 0.8), "armor factors")
+	_check(is_equal_approx(Enemy.DEF_K["agile"]["gun_ap"], 1.15), "agile vs heavy gun")
+
+
+func _test_profile_guns() -> void:
+	var p := _fresh_profile()
+	_check(p.gun("fighter") == "std" and p.guns("fighter") == ["std"], "defaults")
+	p.set_gun("fighter", "twin")
+	_check(p.gun("fighter") == "std", "unowned gun cannot be selected")
+	p.data["parts"] = WeaponBalance.GUN_PRICE["twin"] - 1
+	_check(not p.buy_gun("fighter", "twin") and p.parts() == WeaponBalance.GUN_PRICE["twin"] - 1, "not enough parts")
+	p.data["parts"] = WeaponBalance.GUN_PRICE["twin"] + 10
+	_check(p.buy_gun("fighter", "twin") and p.parts() == 10, "bought for the price")
+	_check(p.guns("fighter").has("twin") and p.gun("fighter") == "twin", "bought gun is owned and selected")
+	_check(not p.buy_gun("fighter", "twin"), "cannot buy twice")
+	p.set_gun("fighter", "std")
+	_check(p.gun("fighter") == "std", "switch back is free")
+	_check(p.gun("bomber") == "std", "guns are per class")
+	p.free()
+
+
+func _test_profile_third_group() -> void:
+	var p := _fresh_profile()
+	_check(not p.third_group("attacker", 1), "no third group at pylons 0")
+	p.cls("attacker")["nodes"]["pylons"] = 1
+	_check(not p.third_group("attacker", 1), "no third group at pylons 1")
+	p.cls("attacker")["nodes"]["pylons"] = 2
+	_check(p.third_group("attacker", 1), "third group at pylons 2")
+	_check(not p.third_group("attacker", 2), "plane lvl 2 has its own nodes")
+	p.free()
+
+
+## New keys survive save → load; an old save without them loads with defaults.
+func _test_profile_round_trip() -> void:
+	var p := _fresh_profile()
+	p.data["parts"] = 1000
+	p.buy_gun("bomber", "heavy")
+	p.save()
+	var q := _fresh_profile()
+	q.load_profile()
+	_check(q.gun("bomber") == "heavy" and q.guns("bomber").has("heavy"), "gun survives save/load")
+	var old: Dictionary = q.data.duplicate(true)
+	for c in old["classes"]:
+		old["classes"][c].erase("gun")
+		old["classes"][c].erase("guns")
+	var f := FileAccess.open(TEST_PATH, FileAccess.WRITE)
+	f.store_string(JSON.stringify(old))
+	f.close()
+	var r := _fresh_profile()
+	r.load_profile()
+	_check(r.gun("bomber") == "std" and r.guns("bomber") == ["std"], "old save → defaults")
+	for x in [p, q, r]:
+		x.free()
