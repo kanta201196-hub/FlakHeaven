@@ -515,6 +515,41 @@ func smoke_screen(pos: Vector2, r: float, burst := false) -> void:
 	_to_screen = false
 
 
+## VFX-04: muzzle flash size per enemy gun kind (Projectiles.GUN_NAMES ids; missing = 1)
+const MUZZLE := {"pickup": 0.8, "apc": 1.0, "zsu": 1.2, "ifv": 1.5, "fighter": 1.0, "ace": 1.1}
+
+
+## VFX-04: muzzle flash where a gun fires, Forward+ only (GPU particles; Compatibility never had one, so it stays
+## as it was): a short bright disc and three flame tongues along the shot. pos is the muzzle on the combat plane,
+## vel the bullet velocity; enemy flashes are sized by gun kind
+func muzzle(pos: Vector2, vel: Vector2, enemy: bool, gun := "") -> void:
+	if _gpu == null or vel.length_squared() < 1.0:
+		return
+	var s := float(MUZZLE.get(gun, 1.0)) if enemy else 1.0
+	var d := vel.normalized()
+	var d3 := Vector3(d.x, 0.0, d.y)
+	# above the wings: the flash is depth-tested and the gun sits inside the plane model
+	var p := Vector3(pos.x, 8.0, pos.y) + d3 * 5.0 * s
+	_flash(p, 15.0 * s, 0.06, Color(1.0, 0.78, 0.42, 0.95))
+	_add(L_SPARK, {"p": p, "v": d3 * 700.0 * s, "life": 0.06, "c": Color(1.0, 0.85, 0.5, 1.0), "w": 3.6 * s})
+	for k in [-1.0, 1.0]:
+		_add(L_SPARK, {"p": p, "v": d3.rotated(Vector3.UP, 0.6 * k) * 420.0 * s, "life": 0.05,
+			"c": Color(1.0, 0.7, 0.35, 1.0), "w": 2.0 * s})
+
+
+## VFX-04: bullet hit on a plane or armour in Forward+: a small flash and a few sparks flying flat; false in
+## Compatibility, where Fx.hit_spark keeps its 2D sparks
+func hit(pos: Vector2, color: Color) -> bool:
+	if _gpu == null:
+		return false
+	var p := Vector3(pos.x, 8.0, pos.y)
+	var c := color.lerp(Color(1.0, 0.8, 0.45), 0.5)
+	_flash(p, 18.0, 0.07, Color(c.r, c.g, c.b, 0.9))
+	c.a = 1.0
+	_sparks(p, 6, 340.0, 0.22, c, 0.0, 0.35)
+	return true
+
+
 ## Правка 3.5-s4 (п. 27): пуск ракеты с крыла — вспышка двигателя и клуб белого дыма назад
 func launch(pos: Vector2, dir: Vector2, vel: Vector2) -> void:
 	var p := Vector3(pos.x, -2.0, pos.y)

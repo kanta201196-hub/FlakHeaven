@@ -127,7 +127,7 @@
 | B-19 | Перки ступеней 3–4, слот навыка 3 (ступень 3 веток оружия сделана — U-07) | геймдизайн | идея |
 | PG-01 | Deeper upgrades, stage 1: 3rd hardpoint group (node «Узлы подвеса» lvl 2), new weapons short-range heat AAM («Оса», «Грач»; hypothesis, check in a build), guided air-to-ground missile («Оса», «Грач», «Кит»), HE bomb («Кит»), two new course guns (twin, heavy); course gun and ammo (standard / AP / HE / incendiary) bought per plane (Kanta 24.10); hangar weapon view without pylons. Open: real stand models, Sketchfab weapon models (waiting for Kanta's picks), volumetric card icons. Design + plan first (`docs/superpowers/plans/`). Merge after GD-02/03 are in a build (Kanta 24.10, option a) | Углубить прокачку для демо | в работе: design and plan |
 | PG-02 | Deeper upgrades, stage 2: incendiary tanks, air mines, jammer pod; modernizations for the new weapons (anti-radiation missile dropped from this stage, Kanta 24.10 — see PG-04) | Углубить прокачку для демо | после PG-01 |
-| PG-04 | Idea (Kanta 24.10): radar synergy — enemy radars on hills raise incoming damage to the player while they illuminate him (HUD warning «облучение» + damage-up marker); anti-radiation missile counters them. Not now | — | идея |
+| PG-04 | Update «Интенсивное облучение» (Kanta 24.10, after the current mechanics are polished): radar synergy — enemy radars on hills raise incoming damage to the player while they illuminate him (HUD warning «облучение» + damage-up marker); anti-radiation missile and the «Ласка» wingman counter them. Not now | — | идея |
 | PG-05 | Analyse choice on plane 1 after the weapon-per-plane sets (Kanta 24.10: «Оса 1» and «Кит 1» have 4 hardpoint weapons for 3 groups; short-range missiles only on «Оса 2», so not in the demo). Use balance logs of a build | Углубить прокачку для демо | идея |
 | PG-03 | Deeper upgrades, stage 3: hangar «комплектация» (engine, wing, avionics sidegrades), weapon branch tier 1 changes behaviour, 3–4 new synergies | Углубить прокачку для демо | после PG-02 |
 | S5-06 | Прокачка самолёта ур. 1 и ур. 2 раздельная: ур. 2 с нуля, перенос в профиле | Понятность игры для новичков | на проверке в сборке 3.5-s8 (в таблице «в работе» на 18.10 — догадка) |
@@ -142,6 +142,8 @@
 | S5-04, S5-05, S5-07, S5-09 | Описания навыков и связок простыми словами; оружие по классам в ангаре и карточках; текст «Бронещита»; убрать «+1 к лимиту ведомых» (18.10, правки Kanta по 3.5-s5) | Понятность игры для новичков | на проверке в сборке 3.5-s8 (в таблице «в работе» на 18.10 — догадка) |
 | U-08, U-10, U-11, U-12, U-13, U-18 | Экспериментальное оружие; боевой разворот и подписи навыков; пауза и итоги; описания навыков в ангаре; боевой интерфейс; подсказки механик ночи (17.10) | Понятность игры для новичков | на проверке в сборке 3.5-s8 |
 | DM-06 | Первые 90 секунд демо понятны новичку (проверка на внешних тестерах) | Понятность игры для новичков | идея (до 15.12) |
+| UI-01 | Main menu and settings redesign after Sublight (Kanta 24.10): style «Прицел», 5 menu items, «Что нового»/«Отзыв» cards, compact flight log, flexible graphics, controls with rebinding and gamepad; plan `docs/superpowers/plans/2026-10-24-main-menu-settings.md` steps 1–5; Kenney Input Prompts + UI Audio (CC0) approved | Переделать главное меню и настройки | in progress: step 1 (UiStyle + UiFocus merged, PR #367) |
+| UI-02 | Combat UI: HUD, pause variant В «Чертёж самолёта», card pick, results (plan steps 6–9), in parallel (Kanta 24.10) | Переделать интерфейс боя | in progress |
 
 ## Нагорье
 
@@ -167,7 +169,7 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | VFX-01 | GPU effect system foundation: `GpuFx`, layers, routing from `Boom3D`, glow; explosions on the GPU, same look (Forward+ only) | Улучшить эффекты боя | готово 24.10, PR #351 |
 | VFX-02 | Own flipbooks baked in Blender from above (fire, smoke, Нагорье dust, plasma, flak) with smoke lighting | Улучшить эффекты боя | сделано: бомба #357, наземная цель #358, взрыв в воздухе #360 (Forward+); зенитный разрыв — позже |
 | VFX-03 | Smoke: ribbon missile trails, smoke columns over burning targets, damaged-plane smoke, convoy smoke screen | Улучшить эффекты боя | сделано: дым ракет и дым обломков #360, дымовая завеса колонны #363 (Kanta ок 24.10) |
-| VFX-04 | Gunfire: muzzle flash, glowing tracers, hit sparks, dust from ground hits | Улучшить эффекты боя | в работе: вспышки у стволов, трассеры, искры попаданий |
+| VFX-04 | Gunfire: muzzle flash, glowing tracers, hit sparks, dust from ground hits | Улучшить эффекты боя | сделано: вспышки у стволов, трассеры, искры попаданий #368 (Kanta ок 24.10); пыль от попаданий в землю — дальше |
 | VFX-05 | Water: splashes and ripple rings on the river | Улучшить эффекты боя | после VFX-01 |
 | VFX-06 | Decal craters and scorch on slopes, light pool, sparks/debris collide with relief; final fps check | Улучшить эффекты боя | после VFX-02 |
 
@@ -327,7 +329,7 @@ Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standar
 | CS-08 | CI: `pick.sh` "all combat except list", smoke catches `ERROR:`/`SHADER ERROR`, `check_po` and `.gd` tools in smoke; tests in a temp `user://` | — | idea |
 | CS-09 | Combat preload: operation models in the background, `Boom3D` and materials warmed up at sortie start | — | idea |
 | CS-10 | Split `render3d.gd` (after Next Fest) | — | idea (after the demo) |
-| CS-11 | UI design system: `UiStyle`, font size ≥ 14, shared buttons and tabs, gamepad focus (`docs/standards/ui-design-system.md` §6) | — | idea |
+| CS-11 | UI design system: `UiStyle`, font size ≥ 14, shared buttons and tabs, gamepad focus (`docs/standards/ui-design-system.md` §6) | Переделать главное меню и настройки (with UI-01/UI-02) | in progress: `UiStyle` tokens and `UiFocus` merged 24.10 (PR #367) |
 | CS-13 | Balance numbers: `tuning.gd` keeps only F1 sliders, others go to `game/scripts/balance/<system>.gd` when files are touched; update the CLAUDE.md rule (Kanta 2026-10-23, option 2) | every code thread; CLAUDE.md — "Короткий CLAUDE.md" | rule in force |
 | CS-12 | Important review findings without their own row: spawner freezes bombers at the cap, bomb lead (`move_vel`), "Skvoznyak" summons without a cap, hints spent on the title screen, `TEST_PICKS` → 2, volume writes balance into `tuning.json`, settings do not fit at 1080, ground shader (13 samplers, `dFdx` in a branch), double explosion lights, `.import` for new models, 334 MB `models/pilot` in git, JPEG 4:2:0 normal map. Details — review README | split across system threads | idea |
 | LANG-01 | Move internal text to English (Kanta 2026-10-23, option 2): new code, comments, commits and docs in English right away; existing files translated when touched; a separate pass over key documents — CLAUDE.md, `docs/game-context.md` ("Rules now" section), `docs/backlog.md` header, `docs/process/` | coordinator assigns; CLAUDE.md — thread "Короткий CLAUDE.md" | in progress (standards and CLAUDE.md done 2026-10-23) |

@@ -248,7 +248,10 @@ func text(pos: Vector2, s: String, color := Color(1, 1, 1)) -> void:
 	numbers.append({"p": pos, "t": Loc.out(s), "life": 1.2, "c": color, "size": 22})
 
 
+## Bullet hit: a few short sparks at pos (in Forward+ the 3D burst of Boom3D.hit instead)
 func hit_spark(pos: Vector2, color := Color(1, 1, 0.8)) -> void:
+	if Boom3D.active() and Boom3D.ensure().hit(pos, color):   # VFX-04: Forward+ — a small 3D spark burst
+		return
 	for i in 3:
 		sparks.append({"p": pos, "v": Vector2.from_angle(randf() * TAU) * randf_range(80.0, 200.0), "life": 0.15, "c": color})
 
