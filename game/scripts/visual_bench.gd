@@ -127,7 +127,7 @@ func process(delta: float) -> void:
 			_fort = Fortress.new()
 			_fort.setup_fortress(5000.0)
 			_fort.heading = -0.5
-			_fort.position = (p["pos"] as Vector2) + Vector2(0, -40)
+			_fort.position = (p["pos"] as Vector2) + (p.get("fort_off", Vector2(0, -40)) as Vector2)
 			_fort.process_mode = Node.PROCESS_MODE_DISABLED
 			_fort.base_pos = _fort.position + Vector2.from_angle(_fort.heading) * 1400.0   # FB-01: маршрут к базе на кадре
 			_fort._wp = _fort.base_pos
@@ -162,12 +162,12 @@ func process(delta: float) -> void:
 	if p.get("convoy", false):
 		if _convoy == null:
 			_convoy = Convoy.new()
-			_convoy.setup(p["pos"], Vector2.RIGHT, 1.0, 0.0, 0.0)
+			_convoy.setup(p.get("convoy_at", p["pos"]), Vector2.RIGHT, 1.0, 0.0, 0.0)
 			m.world.add_child(_convoy)
 			_convoy.process_mode = Node.PROCESS_MODE_DISABLED
 		if _pt > 0.3 and not p.has("_done"):   # машины уже в мире — ставим подряд по дороге у точки и останавливаем
 			p["_done"] = true
-			var s0: float = _convoy._s_of(p["pos"])
+			var s0: float = _convoy._s_of(p.get("convoy_at", p["pos"]))
 			var at := s0
 			for v: ConvoyVehicle in _convoy.vehicles:   # середина колонны — у точки
 				at += (float(ConvoyVehicle.SPEC[v.role]["len"]) * Tuning.g("unit_scale") + ConvoyVehicle.GAP) * 0.5
@@ -414,6 +414,8 @@ func _save(name: String) -> void:
 			n += 1
 			if l > 245.0:
 				hot += 1
+	if _i >= 0 and _i < _points.size() and _points[_i].get("sizes", false):
+		_print_sizes(name)
 	print("VISUAL %s lum=%.1f hot=%.2f%%" % [name, sum / maxf(n, 1), 100.0 * hot / maxf(n, 1)])
 	# M-31: вызовы отрисовки основного вьюпорта (видимые и тени) — сравнение «до/после»
 	var rid := m.get_viewport().get_viewport_rid()
@@ -447,6 +449,46 @@ func _save(name: String) -> void:
 			R._puffs.fill if R._puffs != null else 0.0, low,
 			R._puffs.immersion if R._puffs != null else 0.0])
 		if R._puffs != null: print("VISUAL  veil ", R._puffs._veil.visible, " ", R._puffs._veil.get_global_rect(), " ", R._puffs._veil.is_visible_in_tree())
+
+
+## Size bench (--sizebench): the camera and the player sit this far from the convoy's road point,
+## and the Fortress this far from the player, so that none of the three covers another
+const SIZE_PLAYER_OFF := Vector2(280, 120)
+const SIZE_FORT_OFF := Vector2(-560, -330)
+
+
+## Size bench: prints the on-screen length (frame pixels, nose to tail through the 3D camera,
+## perspective included) of the player plane, every convoy vehicle and the Fortress
+func _print_sizes(name: String) -> void:
+	var r3 := Render3D.I
+	if r3 == null:
+		return
+	var rows: Array = [["player", m.player]]
+	if _convoy != null:
+		for v: ConvoyVehicle in _convoy.vehicles:
+			rows.append([v.role, v])
+	if _fort != null:
+		rows.append(["fortress", _fort])
+	var img_w := float(m.get_viewport().get_texture().get_width())
+	var px_k := img_w / maxf(r3.cam.get_viewport().get_visible_rect().size.x, 1.0)
+	for row: Array in rows:
+		var u: Dictionary = r3._units.get((row[1] as Node).get_instance_id(), {})
+		if u.is_empty():
+			print("VISUAL %s size %s: no 3D unit" % [name, row[0]])
+			continue
+		var root: Node3D = u["node"]
+		var inv := root.global_transform.affine_inverse()
+		var box := AABB()
+		var first := true
+		for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
+			var b: AABB = (inv * mi.global_transform) * mi.get_aabb()
+			box = b if first else box.merge(b)
+			first = false
+		var c := box.get_center()
+		var a2 := r3.cam.unproject_position(root.global_transform * Vector3(box.position.x, c.y, c.z))
+		var b2 := r3.cam.unproject_position(root.global_transform * Vector3(box.end.x, c.y, c.z))
+		print("VISUAL %s size %s: %.0f px on screen (model %s)" % [name, row[0], a2.distance_to(b2) * px_k,
+			"GLB" if u.get("bm") != null else "relief"])
 
 
 ## Точки: пустыня, гора, кишлак, оазис, бой со взрывами, крупный план самолёта
@@ -665,6 +707,14 @@ func _make_points() -> Array:
 			pts.append({"name": "unit_" + k, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": UNIT_POSES[k][2], "unit_poses": k, "wait": 3.5})
 		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
 		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
+	if OS.get_cmdline_user_args().has("--sizebench") and ter != null:
+		# VIS-01 (Kanta 24.10): true sizes at the normal gameplay zoom — the player fighter, a whole
+		# convoy on the road and the Fortress in one frame; the log prints their on-screen lengths
+		pts = []
+		var road := ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD)
+		pts.append({"name": "size_trio", "pos": road + SIZE_PLAYER_OFF, "convoy": true, "convoy_at": road,
+			"fortress": 1, "fort_off": SIZE_FORT_OFF, "cls": ["fighter", 1], "zoom": 1.0, "wait": 2.5,
+			"sizes": true})
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--pts="):   # relief lab: --pts=name:x:z:zoom,name2:x:z:zoom — arbitrary camera points
 			pts = []
