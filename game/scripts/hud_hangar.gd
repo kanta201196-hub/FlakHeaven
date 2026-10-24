@@ -175,14 +175,47 @@ func _hg_start2(m: Main, lx: float, y: float) -> void:
 		return
 	var cur := Profile.start2(c)
 	var opts: Array = [""] + Profile.start2_options(c)
+	# PG-01: three columns — with the new weapons a class has up to 7 options
 	for i in opts.size():
 		var w := String(opts[i])
-		var r := Rect2(lx + (i % 2) * 154.0, y + 28.0 + (i / 2) * 40.0, 146.0, 34.0)
+		var r := Rect2(lx + (i % 3) * 102.0, y + 28.0 + (i / 3) * 40.0, 96.0, 34.0)
 		var on := cur == w
 		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
-		_text(Vector2(r.position.x, r.position.y + 23), "пусто" if w == "" else String(Weapons.DEFS[w]["short"]), 14, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		_text(Vector2(r.position.x, r.position.y + 23), Loc.t("пусто") if w == "" else Loc.t(String(Weapons.DEFS[w]["short"])), 13, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		_buttons.append([r, "hg:start2:" + w])
-	_para(Vector2(lx, y + 34.0 + ceili(opts.size() / 2.0) * 40.0), "Ставится с ур. 1; улучшения — карточками в бою.", 300.0, 13, Color(0.65, 0.68, 0.75))
+	_para(Vector2(lx, y + 34.0 + ceili(opts.size() / 3.0) * 40.0), "Ставится с ур. 1; улучшения — карточками в бою.", 300.0, 13, Color(0.65, 0.68, 0.75))
+
+
+## PG-01 (Kanta 24.10): course gun of the class — bought once for parts, switched for free before a sortie
+const GUN_TITLE := {"std": "Стандартная", "twin": "Спарка", "heavy": "Крупный калибр"}
+const GUN_HINT := {
+	"std": "Обычная пушка: ровный темп и урон.",
+	"twin": "Темп ×1,6, урон ×0,65, лёгкий разброс — против роя дронов, быстрее разгоняет «обороты».",
+	"heavy": "Темп ×0,55, урон ×2, снаряд быстрее; броню почти пробивает (×0,8 вместо ×0,5).",
+}
+
+
+func _hg_gun(m: Main, lx: float, y: float) -> float:
+	var c := m.hangar_cls
+	_text(Vector2(lx, y + 16), "Курсовая пушка", 17, Color.WHITE)
+	var cur := Profile.gun(c)
+	var owned := Profile.guns(c)
+	for i in WeaponBalance.GUN_ORDER.size():
+		var g: String = WeaponBalance.GUN_ORDER[i]
+		var r := Rect2(lx + i * 102.0, y + 28.0, 96.0, 44.0)
+		var on := cur == g
+		var has := owned.has(g)
+		var price := int(WeaponBalance.GUN_PRICE[g])
+		var can := has or Profile.parts() >= price
+		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08 if can else 0.04))
+		var tc := Color(0.08, 0.07, 0.05) if on else (Color(0.85, 0.88, 0.95) if can else Color(0.55, 0.57, 0.62))
+		_text(Vector2(r.position.x, r.position.y + 19), Loc.t(String(GUN_TITLE[g])), 13, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		var sub := Loc.t("✓ выбрана") if on else (Loc.t("выбрать") if has else Loc.t("%d зап.") % price)
+		_text(Vector2(r.position.x, r.position.y + 37), sub, 12, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		if can:
+			_buttons.append([r, "hg:gun:" + g])
+	_para(Vector2(lx, y + 80.0), Loc.t(String(GUN_HINT[cur])), 300.0, 13, Color(0.65, 0.68, 0.75))
+	return y + 122.0
 
 
 func _hg_weapons(m: Main, area: Rect2) -> void:
@@ -212,7 +245,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		if PlaneClasses.signature(m.hangar_cls) == w:
 			_text(Vector2(lx + 60, y + 54), "★ особенность класса: +20%", 13, Color(0.6, 1.0, 0.65), HORIZONTAL_ALIGNMENT_RIGHT, 228.0)
 		y += 80.0
-	_hg_start2(m, lx, y + 6.0)
+	_hg_start2(m, lx, _hg_gun(m, lx, y + 6.0))
 	var w2 := m.hangar_w
 	var rx := lx + 340.0
 	var rw := area.size.x - 340.0 - 470.0
