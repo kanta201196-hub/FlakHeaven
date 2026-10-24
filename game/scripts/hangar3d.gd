@@ -36,9 +36,18 @@ var _idle := 0.0             # секунд без мыши — потом ме�
 var _drawn_frame := -10
 var _cls := ""
 var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
-## Kanta 24.10: real stand for bombs instead of box stands; cradle height as a share of the cart height
+## Kanta 24.10: real stands from Sketchfab (CC BY, CREDITS.md) instead of box stands. Per weapon:
+## len — stand length per weapon length; x — weapon centre from the stand centre, y — weapon bottom over the floor
+## (with mid — the weapon axis, for missiles held in rings), as shares of the stand length / height measured on the
+## stand model; view — weapon scale so the stand fits the view.
 const STAND_CART := "res://models/hangar/stand_cart.glb"
-const CART_CRADLE := 0.55
+const STAND_BOMB := {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 1.0}
+const STANDS := {
+	"hebomb": {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 0.72},
+	"aam": {"path": "res://models/hangar/stand_missile_cart.glb", "len": 1.32, "x": 0.287, "y": 0.865, "mid": true, "view": 0.8},
+	"srm": {"path": "res://models/hangar/stand_missile_cart.glb", "len": 1.32, "x": 0.287, "y": 0.865, "mid": true, "view": 0.8},
+	"agm": {"path": "res://models/hangar/stand_loader.glb", "len": 1.2, "x": 0.42, "y": 0.855, "view": 0.6},
+}
 ## Floor of the weapon store in the weapon view (box stands went from here up to the weapon)
 const FLOOR_Y := -0.2
 var turret_pos: Array = []   # [Vector3, сторона] — турели текущей модели
@@ -353,8 +362,10 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
 		var bb := wmi.mesh.get_aabb()
 		var s := (0.62 if weapon != "turret" else 1.05) / maxf(1.0, maxf(bb.size.x, bb.size.z))
-		if weapon == "hebomb":   # Sketchfab bomb is stubby with wide fins: smaller, so the cart and the bomb fit the view
-			s *= 0.72
+		var stand: Dictionary = STANDS.get(weapon, STAND_BOMB if Weapons.is_bomb(weapon) else {})
+		if (evo and not Weapons.is_bomb(weapon)) or not ResourceLoader.exists(stand.get("path", "")):
+			stand = {}   # evolved missiles are other shapes: they keep the box stands
+		s *= stand.get("view", 1.0)
 		# турель — в одном масштабе на всех ступенях (модель меньше 1 — множитель не зависит от габарита),
 		# поэтому рост ступени виден; S9-04: стоит неподвижно, стволами вперёд-вбок к камере (3/4 спереди)
 		var rot := TURRET_SHOW_YAW if weapon == "turret" else 0.0
@@ -365,18 +376,22 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		# п. 32: на складе оружие лежит на двух ложементах-подставках от пола до низа модели
 		var bottom := wmi.position.y + bb.position.y * s
 		var on_cart := false
-		# Kanta 24.10: bombs lie on a real bomb cart (Sketchfab №23, CC BY — CREDITS.md), the weapon sits on its cradle
-		if Weapons.is_bomb(weapon) and ResourceLoader.exists(STAND_CART):
-			var cart := WeaponModels._glb_mesh(STAND_CART, 1.0, Color(), "stand_cart")
+		# Kanta 24.10: the weapon lies on its real stand (bomb cart, missile cart, loader), sitting on the cradle
+		if not stand.is_empty():
+			var cart := WeaponModels._glb_mesh(stand["path"], 1.0, Color(), stand["path"].get_file().get_basename())
 			if cart != null:
 				var cb := cart.get_aabb()
-				var ck := bb.size.x * s * 1.05 / cb.size.x
+				var ck: float = bb.size.x * s * stand["len"] / cb.size.x
 				var cm := MeshInstance3D.new()
 				cm.mesh = cart
 				cm.basis = Basis.from_scale(Vector3.ONE * ck)
-				cm.position = Vector3(0, FLOOR_Y - cb.position.y * ck, 0)
+				# the pair is centred in the view: weapon and stand move apart by half the cradle offset each
+				var dx: float = cb.size.x * stand["x"] * ck
+				cm.position = Vector3(-cb.get_center().x * ck - dx * 0.5, FLOOR_Y - cb.position.y * ck, 0)
 				pivot.add_child(cm)
-				wmi.position.y += FLOOR_Y + cb.size.y * ck * CART_CRADLE - bottom
+				wmi.position.x += dx * 0.5
+				var low := bottom if not stand.get("mid", false) else wmi.position.y + bb.get_center().y * s
+				wmi.position.y += FLOOR_Y + cb.size.y * ck * stand["y"] - low
 				on_cart = true
 		if weapon != "turret" and not on_cart and bottom > -0.19:
 			var sm := StandardMaterial3D.new()

@@ -60,6 +60,11 @@ for o in list(sc.objects):
     if o != ob:
         bpy.data.objects.remove(o)
 me = ob.data
+# neutral names: source object, mesh and material names often carry real hardware names (CLAUDE.md rule 1)
+ob.name = me.name = "weapon"
+for i, mat in enumerate(me.materials):
+    if mat is not None:
+        mat.name = "mat%d" % i
 
 # orientation: given nose axis → +X; given up axis → +Z (Blender), which glTF export turns into +Y
 AX = {'+x': Vector((1, 0, 0)), '-x': Vector((-1, 0, 0)), '+y': Vector((0, 1, 0)), '-y': Vector((0, -1, 0)),
