@@ -50,6 +50,8 @@ var offer_rare := false
 var class_task: ClassTask = null   # EX-07: задание класса на вылет
 var level_at_5 := 0   # уровень на 5:00 — для баланса кривой опыта
 var stats := {}
+## Damage per second by source over the last minute (pause screen, combat UI v2)
+var dps := DpsWindow.new()
 var counters := {}
 var shots := 0
 var hits := 0
@@ -214,6 +216,7 @@ func start_run() -> void:
 
 	run = RunState.new()
 	is_dead = false
+	dps.reset()
 	stats = {"taken": {}, "taken_by": {}, "dealt": {}, "kills_by": {}, "taken_kind": {}, "raw_in": {}}   # S8: taken_kind — урон по видам оружия врагов, raw_in — «сырой» урон с --god
 	ace_log = []
 	counters = {}
@@ -636,9 +639,13 @@ func continue_mult() -> float:
 
 # ---------- Статистика ----------
 
+## Adds `v` to stat `key` of `group` ("dealt", "taken", …) for the results screen and the log;
+## dealt damage also feeds the last-minute DPS window of the pause screen.
 func add_stat(group: String, key: String, v: float) -> void:
 	var d: Dictionary = stats[group]
 	d[key] = float(d.get(key, 0.0)) + v
+	if group == "dealt":
+		dps.add(StringName(key), v, run_time)
 
 
 func stats_add_counter(key: String, v: int) -> void:
