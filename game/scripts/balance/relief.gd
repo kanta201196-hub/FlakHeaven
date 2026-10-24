@@ -61,3 +61,17 @@ const MESA_KNOB := 0.022
 ## Side canyons in mesa regions: noise wavelength and half-width (in noise units).
 const CANYON_WAVE := 2600.0
 const CANYON_W := 0.05
+## RV-02 gullies (own "erosion filter", Kanta 2026-10-24): stripes running down the slope in
+## cells of GULLY_CELL px, GULLY_OCTAVES finer layers that follow the slope plus the coarser
+## gullies (so they branch). GULLY_AMP — depth of the coarsest layer in shares of the ceiling,
+## each finer layer GULLY_GAIN of the previous; GULLY_BIAS — how much deeper than high (0…1). GULLY_SLOPE_* — base slope (share per px) where
+## gullies start and reach full depth: none on flat ground. ERO_KEEP — share of the old uniform
+## "wrinkle" noise swing kept on slopes once gullies are on (its mean stays, so peaks keep their height).
+const GULLY_CELL := 420.0
+const GULLY_OCTAVES := 3
+const GULLY_AMP := 0.17
+const GULLY_GAIN := 0.5
+const GULLY_BIAS := 0.15
+const GULLY_SLOPE_FROM := 0.00005
+const GULLY_SLOPE_TO := 0.0003
+const ERO_KEEP := 0.35
