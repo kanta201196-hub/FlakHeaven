@@ -6607,3 +6607,7 @@ msgstr "强光诱饵"
 #, c-format
 msgid "+10% радиуса отстрела и +10% шанса увести ЗРК за ранг"
 msgstr "每阶投放半径 +10%，诱离防空导弹几率 +10%"
+
+#: game/scripts/hud_screens.gd
+msgid "ВЕТКА МАСТЕРСТВА"
+msgstr "精通分支"

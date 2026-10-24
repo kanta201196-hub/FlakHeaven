@@ -33,6 +33,8 @@ func process(delta: float) -> void:
 		_run_autotest(delta)
 		if m._args.has("--smoke"):
 			_smoke_check()
+	if m._args.has("--pairtest"):
+		_pair_test()
 	if m._args.has("--shots"):
 		_debug_screenshots(delta)
 	if m.state == "playing" and m._args.has("--aaflat") and not _shots_done.has("aaflat") and m.run_time > 3.0:
@@ -166,6 +168,24 @@ func _ui_test() -> void:
 		_hud_at = Time.get_ticks_msec()
 	elif _ui_phase == 5 and Time.get_ticks_msec() - _hud_at > 800:
 		_shot("ui_codex_info")
+		m.get_tree().quit()
+
+
+var _pair_phase := 0
+
+## S10-01: экран выбора мастерства в бою («или-ИЛИ», 35-й уровень) — кадр для проверки
+## godot --path game --rendering-driver opengl3 -- --autotest --smoke --god --class=fighter --pairtest
+func _pair_test() -> void:
+	if _pair_phase == 0 and m.state == "playing" and m.run_time > 2.0:
+		m.player.mastery = true
+		m.run.level = 35
+		(m.player.groups[0] as Hardpoint).level = Weapons.MAX_LEVEL
+		m.run.pending_levels = 1
+		m._open_levelup()
+		_pair_phase = 1
+	elif _pair_phase == 1 and m.state == "levelup" and m._state_t > 1.0:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_levelup_pair.png")
+		print("SHOT levelup_pair")
 		m.get_tree().quit()
 
 
@@ -578,6 +598,8 @@ func _run_autotest(delta: float) -> void:
 				m.choose_course(0)
 			return
 		"levelup":
+			if m._args.has("--pairtest"):
+				return   # S10-01: экран выбора держим для кадра
 			if _bot_wait <= 0.0:
 				_bot_wait = 0.3
 				if m._args.has("--bot=course"):
