@@ -48,6 +48,7 @@ func _init(main: Main) -> void:
 		{"name": "plasma", "times": [0.5, 0.7, 0.9, 1.4, 3.0], "plasma": true},   # S10-08: плазменная бомба падает и рвётся на земле
 		{"name": "trails", "times": [0.3, 0.6, 1.0, 1.6], "trails": true},   # VFX-03: missile and rocket smoke
 		{"name": "wreck", "times": [1.0, 2.0, 3.0], "wreck": true},   # VFX-03: smoke of a wreck on the ground and of a falling plane
+		{"name": "screen", "times": [0.5, 1.5, 3.0, 5.0], "screen": true},   # VFX-03: convoy smoke screen (as Convoy.smoke_fx)
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
 	if not _only.is_empty():
@@ -128,6 +129,8 @@ func process(delta: float) -> void:
 				m.fx.explosion(_pos + o, [12.0, 20.0, 46.0, 18.0][k % 4], k % 4 != 3, true, "flak" if k % 4 == 0 else "")
 		return
 	_et += delta
+	if sc.get("screen", false):
+		_screen(delta)
 	var times: Array = sc.get("times", TIMES)
 	if _shot < times.size() and _et >= float(times[_shot]):
 		var img := m.get_viewport().get_texture().get_image()
@@ -139,6 +142,20 @@ func process(delta: float) -> void:
 		_pos += Vector2(2600, 0)   # следующая сцена — на чистом месте (без пятен и дыма прошлой)
 		if _i < _scenes.size():
 			_start()
+
+
+var _scr_acc := 0.0
+
+## Same emission as Convoy.smoke_fx: a burst of 7 puffs, then 2 every 0.25 s over a 170 px circle
+func _screen(delta: float) -> void:
+	var burst := _et <= delta
+	_scr_acc -= delta
+	if _scr_acc > 0.0 and not burst:
+		return
+	_scr_acc = 0.25
+	for i in (7 if burst else 2):
+		var o := Vector2.from_angle(randf() * TAU) * Convoy.SMOKE_R * sqrt(randf()) * 0.85
+		Boom3D.ensure().smoke_screen(GroundTarget.air_pos(_pos + o), Convoy.SMOKE_R * 0.45, burst)
 
 
 func _start() -> void:
