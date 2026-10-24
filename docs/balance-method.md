@@ -118,3 +118,5 @@ Reading by section 4, item 1 (danger first):
 
 Order: GD-02 goes into the next build cycle (this one already carries S10-13 and EX-10), measured "before → after" against this pooled baseline, 48 sorties.
 
+**Third baseline (2026-10-24, 24 sorties, commit 2071305, `balance.sh` from a copy, no hangs).** Against the pooled 38 it is a second A/A check: 1 of 27 cells "counts" («Грач» ace fight 38 → 44 s), about what chance gives at 90 %. The rule holds. The demo baseline is now **62 sorties** (`base_demo_a`, `_b`, `_c`; about 20 per class), enough for the HP metrics too. Its picture is the same as above: «Оса» and «Кит» outside M3 and M5, «Кит» also M4, signature weapons below 20 % for all three.
+
