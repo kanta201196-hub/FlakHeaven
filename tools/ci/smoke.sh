@@ -8,7 +8,7 @@ set -uo pipefail
 CLS="${1:-fighter}"
 GODOT="${GODOT:-godot}"
 LOG="${SMOKE_LOG:-smoke_${CLS}.log}"
-ERR_RE="SCRIPT ERROR|Parse Error"
+ERR_RE="SCRIPT ERROR|Parse Error|SHADER ERROR"
 
 # CS-03: состояние вылета меняется только методами RunState — прямые записи в Main не пропускаем
 if [ -z "${SMOKE_SKIP_IMPORT:-}" ]; then
@@ -52,7 +52,7 @@ pid=$!
 # следим за логом: при первой ошибке скрипта останавливаем только свой процесс Godot
 while kill -0 "$pid" 2>/dev/null; do
 	if grep -qE "$ERR_RE" "$LOG"; then
-		kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+		pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null   # xvfb-run: stop its children too
 		grep -m3 -nE -A4 "$ERR_RE" "$LOG"
 		echo "smoke: SCRIPT ERROR ($CLS), лог $LOG"; exit 1
 	fi

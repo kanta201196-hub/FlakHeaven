@@ -9,7 +9,13 @@ extends Node3D
 ## Boom3D layers simulated on the GPU (L_SMOKE, L_FIRE, L_CORE, L_SPARK, L_SHOCK, L_FLASH)
 const LAYERS := [0, 1, 2, 4, 5, 6]
 
+## Slots per GPU layer = Boom3D.CAP x SLOTS. A full GPU layer drops the newest particle (emits only take free
+## slots), while the CPU path drops the oldest; spare slots keep a fresh explosion whole in a crowded fight.
+const SLOTS := 2
+
 var _layers := {}
+## Same layers as a typed list, so per-frame loops do not build an Array from the dictionary
+var _list: Array[FxLayer] = []
 
 
 ## True when the GPU path can run: Forward+ renderer and no `--oldfx` (CPU path forced for comparisons)
@@ -22,9 +28,10 @@ static func active() -> bool:
 func build(meshes: Array, mats: Array, caps: Array) -> void:
 	for L in LAYERS:
 		var fl := FxLayer.new()
-		fl.setup(L, caps[L], meshes[L], mats[L])
+		fl.setup(L, caps[L] * SLOTS, meshes[L], mats[L])
 		add_child(fl)
 		_layers[L] = fl
+		_list.append(fl)
 
 
 ## True if this Boom3D layer is drawn on the GPU
@@ -39,13 +46,21 @@ func emit(L: int, q: Dictionary) -> void:
 
 ## Per frame: game time step (0 when paused) and camera forward for velocity-aligned sparks
 func tick(dt: float, cam_f: Vector3) -> void:
-	for fl in _layers.values():
-		(fl as FxLayer).tick(dt, cam_f)
+	for fl in _list:
+		fl.tick(dt, cam_f)
 
 
 ## Estimated GPU particles alive, all layers
 func alive() -> int:
 	var n := 0
-	for fl in _layers.values():
-		n += (fl as FxLayer).alive()
+	for fl in _list:
+		n += fl.alive()
 	return n
+
+
+## Estimated particles alive per Boom3D layer (0 for CPU layers), for the perf log
+func counts() -> Array:
+	var pc := [0, 0, 0, 0, 0, 0, 0]
+	for fl in _list:
+		pc[fl.layer] = fl.alive()
+	return pc

@@ -2,29 +2,39 @@ class_name FxLayer
 extends GPUParticles3D
 ## One layer of GPU effect particles (VFX-01): the simulation `Boom3D._tick` / `_write` did on the CPU now runs
 ## in a particle shader, and the layer is drawn with the same spatial shaders Boom3D uses, so the look stays.
-## Particles come only from code (`emit_particle`). Checked on a Forward+ frame 2026-10-24: that needs
-## `emitting = true` with `amount_ratio = 0`; with `emitting = false` code-emitted particles do not appear.
+## Particles come only from code (`emit_particle`). Checked on a Forward+ frame 2026-10-24: emits show with
+## `emitting = true` and not with `emitting = false`. In 4.4.1 the first emit switches the server-side emitter
+## off and clears it, and later emits take free slots; slots started before that die at once (identity
+## transform unpacks to life 0). So never call `restart()` or set `emitting` again: the next emit would clear
+## every live particle. `amount_ratio = 0` is only a guard (the custom shader does not read it).
 ## Godot 4.4 `ParticleProcessMaterial` ignores the colour passed to `emit_particle` (no preserve-colour flag
 ## before 4.5), hence the custom particle shader. Emitted data is packed into the transform basis and custom:
 ## basis x = (r0, r1, life), y = (buoyancy, gravity, drag), z = (wind, rotation, spin), custom = per layer (below).
-## When the ring of `amount` slots is full, new particles are dropped by the engine; callers budget with FxCounter.
+## When all `amount` slots are busy the engine drops the new particle (GpuFx gives spare slots for that).
+## Draws in world space (`local_coords = false`), the CPU path in Boom3D's local space: both match while
+## Render3D and Boom3D stay at the origin.
 
 ## Which Boom3D layer this is (Boom3D.L_* index) — selects the size/colour rules in the shader
 var layer := 0
+## Live-particle estimate for budgets and the perf log
 var counter := FxCounter.new()
 var _clock := 0.0
 ## Emits made before the particle buffers exist on the GPU are lost (Boom3D is created by the first explosion),
-## so the first frames queue them and replay them once the layer has been processed
+## so the first frames queue them and replay them once the layer has been processed (they lose those ~2 frames
+## of delay, invisible at explosion start)
 var _pending: Array = []
 var _ready_frames := 0
 
 const SIM := """
 shader_type particles;
 render_mode disable_force, disable_velocity;
-uniform vec3 wind = vec3(22.0, 0.0, -6.0);
+uniform vec3 wind;   // Boom3D.WIND, set in setup()
 uniform vec3 cam_f = vec3(0.0, -1.0, 0.0);
 // USERDATA1 = (r0, r1, life, buoyancy); USERDATA2 = (gravity, drag, wind, spin); USERDATA3 = emitted custom;
 // USERDATA4 = (position, age); USERDATA5 = (velocity, rotation); USERDATA6 = base colour
+vec3 to_linear(vec3 s) {
+	return mix(pow((s + 0.055) / 1.055, vec3(2.4)), s / 12.92, lessThanEqual(s, vec3(0.04045)));
+}
 void start() {
 	USERDATA1 = vec4(TRANSFORM[0].xyz, TRANSFORM[1].x);
 	USERDATA2 = vec4(TRANSFORM[1].yz, TRANSFORM[2].x, TRANSFORM[2].z);
@@ -33,9 +43,7 @@ void start() {
 	USERDATA5 = vec4(VELOCITY, TRANSFORM[2].y);
 	// Boom3D colours were tuned by eye in Compatibility, which treats them as sRGB; Forward+ reads them as
 	// linear, so dark smoke came out near-white (frames 24.10). Converting keeps the tuned look.
-	vec3 lo = COLOR.rgb / 12.92;
-	vec3 hi = pow((COLOR.rgb + 0.055) / 1.055, vec3(2.4));
-	USERDATA6 = vec4(mix(hi, lo, lessThanEqual(COLOR.rgb, vec3(0.04045))), COLOR.a);
+	USERDATA6 = vec4(to_linear(COLOR.rgb), COLOR.a);
 	TRANSFORM = mat4(vec4(0.0), vec4(0.0), vec4(0.0), vec4(USERDATA4.xyz, 1.0));
 }
 void process() {
@@ -81,7 +89,7 @@ const WRITE := {
 	c.a *= smoothstep(0.0, 0.08, k) * (1.0 - k * k);
 	if (e.w > 0.0) {
 		float gk = smoothstep(0.1, 0.9, k) * 0.75;
-		c.rgb = mix(c.rgb, vec3(e.w, e.w * 0.97, e.w * 0.93), gk);
+		c.rgb = mix(c.rgb, to_linear(vec3(e.w, e.w * 0.97, e.w * 0.93)), gk);   // grey is sRGB like c was
 	}
 	cd = vec4(rot, k, e.x, e.y * max(0.0, 1.0 - k * 3.5));
 """,
@@ -137,6 +145,7 @@ func setup(L: int, n: int, mesh: Mesh, draw: Material) -> void:
 	sh.code = SIM % WRITE[L]
 	var pm := ShaderMaterial.new()
 	pm.shader = sh
+	pm.set_shader_parameter("wind", Boom3D.WIND)
 	process_material = pm
 	draw_pass_1 = mesh
 	material_override = draw

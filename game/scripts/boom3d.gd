@@ -478,8 +478,7 @@ const DEFAULTS := {"t": 0.0, "b": 0.0, "g": 0.0, "drag": 0.0, "wind": 0.0, "rot"
 
 func _add(L: int, q: Dictionary) -> void:
 	if _gpu != null and _gpu.has_layer(L):
-		q.merge(DEFAULTS)
-		_gpu.emit(L, q)
+		_gpu.emit(L, q)   # FxLayer.emit reads every field with its default, no merge needed
 		return
 	var arr: Array = _parts[L]
 	if arr.size() >= CAP[L]:
@@ -797,11 +796,13 @@ func _process(delta: float) -> void:
 	var wt := Time.get_ticks_usec()
 	var total := 0
 	for L in 7:
+		if _gpu != null and _gpu.has_layer(L):
+			continue   # drawn by GpuFx, the MultiMesh stays empty
 		if not (L == L_SMOKE and _smoke_skip and dt > 0.0):
 			_write(L)
 		total += (_parts[L] as Array).size()
 	if Perf.on: Perf.sub("b.write", wt)
-	stats_peak = maxi(stats_peak, total)
+	stats_peak = maxi(stats_peak, total if _gpu == null else count())
 	stats_us = Time.get_ticks_usec() - t0
 
 
