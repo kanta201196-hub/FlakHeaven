@@ -158,8 +158,8 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 
 | ID | Задача | Тред / владелец | Статус |
 | --- | --- | --- | --- |
-| VFX-01 | GPU effect system foundation: `GpuFx`, layers, routing from `Boom3D`, glow; explosions on the GPU with a temporary CC0 sheet | Улучшить эффекты боя | в работе |
-| VFX-02 | Own flipbooks baked in Blender from above (fire, smoke, Нагорье dust, plasma, flak) with smoke lighting | Улучшить эффекты боя | после VFX-01 |
+| VFX-01 | GPU effect system foundation: `GpuFx`, layers, routing from `Boom3D`, glow; explosions on the GPU, same look (Forward+ only) | Улучшить эффекты боя | готово 24.10, PR #351 |
+| VFX-02 | Own flipbooks baked in Blender from above (fire, smoke, Нагорье dust, plasma, flak) with smoke lighting | Улучшить эффекты боя | в работе (первым — взрыв бомбы, замечание Kanta 24.10) |
 | VFX-03 | Smoke: ribbon missile trails, smoke columns over burning targets, damaged-plane smoke, convoy smoke screen | Улучшить эффекты боя | после VFX-02 |
 | VFX-04 | Gunfire: muzzle flash, glowing tracers, hit sparks, dust from ground hits | Улучшить эффекты боя | после VFX-01 |
 | VFX-05 | Water: splashes and ripple rings on the river | Улучшить эффекты боя | после VFX-01 |
