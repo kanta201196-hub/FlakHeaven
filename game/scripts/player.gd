@@ -508,7 +508,7 @@ func add_wingman(type := "swift", k := 1.0, temp := false, life := 0.0) -> void:
 	var w := Wingman.new()
 	w.setup(type, k, temp, life)
 	w.slot = wingmen.size()
-	# S10-15: arrive behind the wingman's own slot, not all at one point behind the leader
+	# S10-16: arrive behind the wingman's own slot, not all at one point behind the leader
 	w.global_position = global_position + w._slot_offset(self) - Vector2.from_angle(heading) * 60.0
 	w.heading = heading
 	wingmen.append(w)
