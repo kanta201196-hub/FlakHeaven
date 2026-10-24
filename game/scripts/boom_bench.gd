@@ -26,6 +26,9 @@ func _init(main: Main) -> void:
 		if a.begins_with("--tilt="):
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
 			_suffix += "_t" + a.substr(7)
+		if a.begins_with("--zoom="):   # close-up frames for review: camera zoom beyond the player slider range
+			Tuning.set_param("camera_zoom", float(a.substr(7)))
+			_suffix += "_z" + a.substr(7)
 		if a.begins_with("--tag="):   # extra file suffix, so parallel renders do not overwrite each other
 			_suffix += "_" + a.substr(6)
 		if a == "--vfx2":   # VFX probe frames go next to the current ones: boom_<scene>_v2_<n>.png
