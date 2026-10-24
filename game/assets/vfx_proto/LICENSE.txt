@@ -1,3 +1,0 @@
-VFX probe flipbooks (thread: combat effects). Source: Unity Labs free VFX image sequences, CC0.
-https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks
-Not for release: probe only, used with -- --vfx2.

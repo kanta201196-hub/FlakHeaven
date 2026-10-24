@@ -31,8 +31,6 @@ func _init(main: Main) -> void:
 			_suffix += "_z" + a.substr(7)
 		if a.begins_with("--tag="):   # extra file suffix, so parallel renders do not overwrite each other
 			_suffix += "_" + a.substr(6)
-		if a == "--vfx2":   # VFX probe frames go next to the current ones: boom_<scene>_v2_<n>.png
-			_suffix += "_v2"
 		if a.begins_with("--boomonly="):   # только эти сцены через запятую: --boomonly=blast,ground
 			_only = a.substr(11).split(",")
 	_scenes = [

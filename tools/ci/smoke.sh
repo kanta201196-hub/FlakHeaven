@@ -39,7 +39,15 @@ if [ "$CLS" = all ]; then
 	exit $fail
 fi
 
-"$GODOT" --headless --path game -- --autotest --smoke --turbo --god --class="$CLS" >"$LOG" 2>&1 &
+# VFX-01: SMOKE_RENDER=forward_plus runs the sortie with a real Forward+ renderer (GPU effects are off in
+# headless mode). Without a GPU it needs xvfb and Mesa lavapipe: apt-get install mesa-vulkan-drivers; slow (minutes).
+if [ "${SMOKE_RENDER:-}" = forward_plus ]; then
+	ICD=/usr/share/vulkan/icd.d/lvp_icd.json
+	[ -f "$ICD" ] && [ -z "${VK_ICD_FILENAMES:-}" ] && export VK_ICD_FILENAMES="$ICD"
+	xvfb-run -a -s "-screen 0 1280x720x24" "$GODOT" --path game --rendering-method forward_plus -- --autotest --smoke --turbo --god --class="$CLS" >"$LOG" 2>&1 &
+else
+	"$GODOT" --headless --path game -- --autotest --smoke --turbo --god --class="$CLS" >"$LOG" 2>&1 &
+fi
 pid=$!
 # следим за логом: при первой ошибке скрипта останавливаем только свой процесс Godot
 while kill -0 "$pid" 2>/dev/null; do
