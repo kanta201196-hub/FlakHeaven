@@ -53,6 +53,7 @@ func _init(main: Main) -> void:
 			[Vector2(470, -170), 100.0], [Vector2(60, 230), 90.0]]},   # VFX-06: craters and scorch on the relief
 		{"name": "fires", "times": [0.15, 0.6, 1.2, 1.8], "boom": [[Vector2(-260, -40), 18.0, false, ""], [Vector2(240, 120), 18.0, false, ""],
 			[Vector2(30, -170), 46.0, true, ""], [Vector2(-60, 210), 18.0, false, ""]], "blast": [Vector2(380, -120), 130.0]},   # VFX-06: light of blasts and burning spots
+		{"name": "splash", "times": [0.1, 0.3, 0.6, 1.0, 1.8], "river": true},   # VFX-05: bomb, crash and rounds in the river
 		{"name": "guns", "times": [0.3, 0.52, 0.71, 0.93, 1.12], "guns": true, "slow": 0.02, "pl": Vector2(-220, 120)},   # VFX-04: muzzle flashes, tracers, hit sparks
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
@@ -141,6 +142,17 @@ func process(delta: float) -> void:
 					ws.amount = w[1]
 			for bl: Array in sc.get("blasts", []):
 				m.fx.blast(_pos + (bl[0] as Vector2), bl[1])
+			if sc.get("river", false):
+				var rp := _river_points(3)
+				if rp.is_empty():
+					print("BOOM splash: no river in view")
+				else:
+					m.fx.blast(rp[0], 90.0)
+					if rp.size() > 1:
+						m.fx.explosion(rp[1], 30.0, false)   # a plane crashing into the river, as Render3D._sync_crashes
+					if rp.size() > 2:
+						for k in 6:   # rounds landing in the water
+							Boom3D.ensure().ground_hit(rp[2] + Vector2(randf_range(-12, 12), randf_range(-30, 30)))
 			if sc.get("emp", false):
 				m.fx.emp_wave(m.player.global_position, 380.0)
 			for k in int(sc.get("stress", 0)):   # мясорубка: 30 взрывов разом — замер нагрузки
@@ -179,7 +191,47 @@ func _screen(delta: float) -> void:
 		Boom3D.ensure().smoke_screen(GroundTarget.air_pos(_pos + o), Convoy.SMOKE_R * 0.45, burst)
 
 
+## Up to n points on the combat plane whose ground on screen is river water, spread apart, within the view
+func _river_points(n: int) -> Array[Vector2]:
+	var out: Array[Vector2] = []
+	var R := Render3D.I
+	if R == null:
+		return out
+	var cand: Array[Vector2] = []
+	for y in range(-420, 421, 20):
+		for x in range(-700, 701, 20):
+			var p := _pos + Vector2(x, y)
+			if R.is_water(R.ground_under(p), 0.0):
+				cand.append(p)
+	cand.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.distance_squared_to(_pos) < b.distance_squared_to(_pos))
+	for p in cand:   # nearest to the view centre first, so the effects stay in frame
+		if out.any(func(q: Vector2) -> bool: return q.distance_to(p) < 200.0):
+			continue
+		out.append(p)
+		if out.size() >= n:
+			break
+	return out
+
+
 var _gun_acc := 0.0
+var _home := Vector2.INF
+
+
+## VFX-05: the river point nearest to `from` (combat plane ≈ ground x, z), so the splash scene films water;
+## `from` itself when the area has no river within 4000 px
+func _river_spot(from: Vector2) -> Vector2:
+	var R := Render3D.I
+	if R == null or R.terrain == null:
+		return from
+	var best := from
+	var bd := INF
+	for y in range(-4000, 4001, 40):
+		for x in range(-4000, 4001, 40):
+			var p := from + Vector2(x, y)
+			if absf(R.terrain.river_field(p.x, p.y)) < Terrain3D.D_RIVER * 0.3 and p.distance_squared_to(from) < bd:
+				bd = p.distance_squared_to(from)
+				best = p
+	return best
 
 ## Gunfire through the game's own calls: the player's two guns fire at a point ahead, two ground guns (ZSU, IFV)
 ## and a fighter fire at the player, and the player's bullets spark where they hit, 12 shots a second each
@@ -208,6 +260,11 @@ func _start() -> void:
 	Engine.time_scale = SLOW
 	_et = 0.0
 	_shot = 0
+	if _home == Vector2.INF:
+		_home = _pos
+	_pos = _home
+	if _i < _scenes.size() and _scenes[_i].get("river", false):
+		_pos = _river_spot(_home)
 	m.camera.global_position = _pos
 	m.camera.reset_smoothing()
-	_wait = 40 if _i < _scenes.size() and _scenes[_i].has("slow") else 4   # slowed scenes freeze the camera chase
+	_wait = 40 if _i < _scenes.size() and (_scenes[_i].has("slow") or _scenes[_i].has("river")) else 4   # slowed scenes freeze the camera chase
