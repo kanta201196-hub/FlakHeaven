@@ -223,6 +223,64 @@ func _hud_test() -> void:
 
 var _hud_at := 0
 
+var _cu_phase := 0
+
+## Combat UI v2 frames (HUD with a skill tooltip, card pick, pause blueprint, results) on a
+## mid-sortie build: 07:42, level 14, three weapons, modules and wingmen.
+## godot --path game --rendering-driver opengl3 --resolution 1920x1080 -- --autotest --god --shots --combatui
+func _combat_ui_test() -> void:
+	var p := m.player
+	var now := Time.get_ticks_msec()
+	if _cu_phase == 0 and m.state == "playing" and m.run_time > 2.0:
+		seed(11)
+		for i in 40:
+			if Cards.need_course(p):
+				var co := Cards.course_options(p)
+				p.course = co[0] if not co.is_empty() else "-"
+				continue
+			var offs := Cards.offer(p, 3, {}, {}, 0)
+			if offs.is_empty():
+				break
+			Cards.apply(p, offs[randi() % offs.size()])
+		m.run.debug_set(&"level", 14)
+		m.run.debug_set(&"kills", 1284)
+		m.run.debug_set(&"parts", 412.0)
+		m.run_time = 462.0
+		p.ab_cd = 3.9
+		p.dive_cd = 6.0
+		_cu_phase = 1
+		_hud_at = now
+	elif _cu_phase == 1 and now - _hud_at > 1500:
+		var e_tile := m.hud.skill_tile_rect("sharp_turn")
+		if e_tile.size.x > 0.0:
+			m.get_viewport().warp_mouse(e_tile.get_center())
+		_cu_phase = 2
+		_hud_at = now
+	elif _cu_phase == 2 and now - _hud_at > 600:
+		_shot("cu_hud")
+		m.run.debug_set(&"pending_levels", 1)
+		m._open_levelup()
+		_cu_phase = 3
+	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.8:
+		_shot("cu_levelup")
+		m._set_state("paused")
+		_cu_phase = 4
+	elif _cu_phase == 4 and m.state == "paused" and m._state_t > 0.8:
+		_shot("cu_pause")
+		m._set_state("playing")
+		m.run_time = 975.0
+		m.stats["dealt"] = {"ракеты В-В": 263378.0, "турели": 70320.0, "уязвимые точки «Крепости»": 64448.0, "курсовое (авто)": 60960.0,
+			"ведомые: стриж": 41590.0, "НАР": 15360.0}
+		m.stats["taken"] = {"таран": 292.0, "пули": 1010.0, "ракеты": 120.0}
+		m.run.debug_set(&"kills", 3455)
+		m.run.debug_set(&"bosses_killed", 3)
+		Events.evac_reached.emit()
+		_cu_phase = 5
+	elif _cu_phase == 5 and m.state == "evac" and m.result_t > 4.0:
+		_shot("cu_result")
+		m.get_tree().quit()
+
+
 
 var _rep_phase := 0
 
@@ -377,6 +435,9 @@ func _debug_screenshots(delta: float) -> void:
 	if m._args.has("--hudtest") and m.state == "playing":
 		_hud_test()
 		return
+	if m._args.has("--combatui") and m.state in ["playing", "paused", "evac", "levelup"]:
+		_combat_ui_test()
+		return
 	if m.state == "menu" and m._state_t > 1.0 and m.menu.howto:
 		_shot("howto")
 		m.menu.close_howto()
@@ -518,7 +579,7 @@ func _run_autotest(delta: float) -> void:
 			if _bot_wait <= 0.0:
 				_bot_wait = 1.5
 				_shot("menu")
-				if m._args.has("--shots") and not _shots_done.has("hangar_crew"):
+				if m._args.has("--shots") and not _shots_done.has("hangar_crew") and not m._args.has("--combatui"):
 					Profile.debug_parts(8000)
 					Campaign.debug_open_all() # U-05/U-07: на скриншотах открыты все операции и ступень 3
 					Profile.debug_level("fighter")
@@ -527,7 +588,7 @@ func _run_autotest(delta: float) -> void:
 					Profile.cls("fighter")["crew_xp"] = int(Profile.CREW_CUM[mini(Profile.crew_lvl("fighter"), Profile.CREW_CUM.size() - 1)])
 					Profile.buy_plane2("fighter") # 3.5: на скриншоте — выбор самолёта на вылет
 					m.ui_click("menu_hangar")
-				elif m._args.has("--shots") and not _shots_done.has("settings"):
+				elif m._args.has("--shots") and not _shots_done.has("settings") and not m._args.has("--combatui"):
 					m.menu.tab = 1
 					m.menu.open_settings("menu")
 				else:

@@ -18,6 +18,62 @@ static func ui_font() -> Font:
 
 # ---------- Примитивы ----------
 
+## Player-facing name of the key bound to `action` (design system pattern 3): the first
+## keyboard key, else the mouse button. Follows rebinding because it reads InputMap.
+## Gamepad glyphs come with the controls tab (menu plan step 4).
+static func key_label(action: String) -> String:
+	if not InputMap.has_action(action):
+		return "?"
+	var mouse := ""
+	for ev in InputMap.action_get_events(action):
+		if ev is InputEventKey:
+			var k := ev as InputEventKey
+			var code := k.keycode if k.keycode != KEY_NONE else DisplayServer.keyboard_get_keycode_from_physical(k.physical_keycode)
+			return OS.get_keycode_string(code).to_upper()
+		if ev is InputEventMouseButton and mouse == "":
+			match (ev as InputEventMouseButton).button_index:
+				MOUSE_BUTTON_LEFT:
+					mouse = Loc.t("ЛКМ")
+				MOUSE_BUTTON_RIGHT:
+					mouse = Loc.t("ПКМ")
+				MOUSE_BUTTON_MIDDLE:
+					mouse = Loc.t("СКМ")
+	return mouse if mouse != "" else "?"
+
+
+## Word-wrapped lines of `s` (translated) for `width`, at most `max_lines`; the last one
+## gets an ellipsis when text is left over. For centred captions under icon tiles.
+func _lines(s: String, width: float, fsize: int, font: Font = null, max_lines := 2) -> PackedStringArray:
+	var f := font if font != null else ui_font()
+	var out := PackedStringArray()
+	var cur := ""
+	var words := Loc.out(s).split(" ", false)
+	for i in words.size():
+		var tryl := words[i] if cur == "" else cur + " " + words[i]
+		if f.get_string_size(tryl, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x <= width or cur == "":
+			cur = tryl
+			continue
+		if out.size() == max_lines - 1:
+			out.append(_fit(cur + " " + " ".join(words.slice(i)), width, fsize, f))
+			return out
+		out.append(cur)
+		cur = words[i]
+	if cur != "":
+		out.append(cur)
+	return out
+
+
+## Text cut with an ellipsis to fit `width` at font size `fsize` in `font` (default: the
+## body font); returns the translated string.
+func _fit(s: String, width: float, fsize: int, font: Font = null) -> String:
+	var f := font if font != null else ui_font()
+	s = Loc.out(s)
+	if f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x <= width:
+		return s
+	while s.length() > 1 and f.get_string_size(s + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x > width:
+		s = s.substr(0, s.length() - 1)
+	return s + "…"
+
 ## 3.1: у всего текста интерфейса тёмная обводка — читается на светлой земле
 ## Перевод: ключ — русская фраза; без таблицы перевода строка выводится как есть
 func _text(pos: Vector2, s: String, size := 20, color := Color(0.92, 0.95, 1.0), align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:

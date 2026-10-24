@@ -26,6 +26,9 @@ var _buttons: Array = [] # [Rect2, action]
 # Модули отрисовки (рисуют в ctrl, кнопки складывают в общий _buttons)
 var _flight_ui: HudFlight
 var _screens_ui: HudScreens
+var _pause_ui: HudPause
+var _cards_ui: HudCards
+var _result_ui: HudResult
 var _codex_ui: HudCodex
 var _hangar_ui: HudHangar
 var _campaign_ui: HudCampaign
@@ -85,10 +88,14 @@ func _ready() -> void:
 	ctrl.draw.connect(_draw_hud)
 	_flight_ui = HudFlight.new(ctrl, _buttons)
 	_screens_ui = HudScreens.new(ctrl, _buttons)
+	_pause_ui = HudPause.new(ctrl, _buttons)
+	_cards_ui = HudCards.new(ctrl, _buttons)
+	_result_ui = HudResult.new(ctrl, _buttons)
 	_codex_ui = HudCodex.new(ctrl, _buttons)
 	_hangar_ui = HudHangar.new(ctrl, _buttons)
 	_campaign_ui = HudCampaign.new(ctrl, _buttons)
 	_autotest = OS.get_cmdline_user_args().has("--autotest")
+	HudIcons.warm()
 	Events.banner.connect(_on_banner)
 	Events.radio.connect(_on_radio)
 
@@ -158,6 +165,11 @@ func button_at(pos: Vector2) -> String:
 	return ""
 
 
+## Screen rect of the bottom-bar tile of the skill bound to `action` (debug frames).
+func skill_tile_rect(action: String) -> Rect2:
+	return _flight_ui.skill_rect(action)
+
+
 ## Screen rect of the button with this action (empty Rect2 if it is not on screen).
 func button_rect(action: String) -> Rect2:
 	for b in _buttons:
@@ -187,14 +199,16 @@ func _draw_hud() -> void:
 		_campaign_ui.draw(size)
 		return
 
-	_flight_ui.draw(m, size, _dmg_flash)
+	# pause, card pick and results cover the whole fight, so the flight HUD would only show through them
+	if m.state not in ["paused", "levelup", "dead", "evac"]:
+		_flight_ui.draw(m, size, _dmg_flash)
 
 	match m.state:
 		"course_pick":
 			_screens_ui.course_pick(m, size)
 		"levelup":
-			_screens_ui.levelup(m, size)
+			_cards_ui.draw(m, size)
 		"paused":
-			_screens_ui.loadout(m, size)
+			_pause_ui.draw(m, size)
 		"dead", "evac":
-			_screens_ui.result(m, size)
+			_result_ui.result(m, size)

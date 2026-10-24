@@ -28,6 +28,8 @@ func _ready() -> void:
 	_add("loadout", [KEY_TAB], [])
 	_add("fire_hardpoint", [KEY_K], [], [[JOY_AXIS_TRIGGER_LEFT, 1.0]], [MOUSE_BUTTON_RIGHT])
 	_add("reroll", [KEY_R], [])
+	_add("card_lock", [KEY_Z], [])   # combat UI v2: lock / ban the focused card on the card pick
+	_add("card_ban", [KEY_X], [])
 	_add("change_class", [KEY_C], [])
 	_add("ui_hangar", [KEY_H], [])
 	_add("debug_level", [KEY_F5], [])
