@@ -103,6 +103,10 @@ func salvo(n: int, dmg: float, over := 0.4) -> void:
 	_salvo_t = 0.0
 
 
+## Wingman size relative to plane_len (the same 0.85 that clear_r uses for the wingman's half-span)
+const WING_SIZE := 0.85
+
+
 func _slot_offset(p: Player) -> Vector2:
 	# 3.5 (правка 23): сначала места по бокам (крыло к крылу), следующие — впереди-сбоку
 	# («Грачата» сверх двух постоянных); «Сомкнуть строй» — ближе.
@@ -111,7 +115,11 @@ func _slot_offset(p: Player) -> Vector2:
 	var row := slot / 2
 	var span := clear_r(p)
 	var lat := span + (10.0 if p.ranks_t > 0.0 else 40.0)
-	var base := Vector2(-20.0, side * lat) if row == 0 else Vector2(span * 0.6 + 40.0 * (row - 1), side * (lat + 30.0 * row))
+	# S10-15 (Kanta: "Rooklings" overlapped the escort): the next row stood only 30 px further out, less than a
+	# wingman's own size, so a front-side Rookling sat on the side wingman. Each row now steps out by a full
+	# wingman size plus a gap.
+	var step := Tuning.g("plane_len") * WING_SIZE + 14.0
+	var base := Vector2(-20.0, side * lat) if row == 0 else Vector2(span * 0.6 + 40.0 * (row - 1), side * (lat + step * row))
 	var off := base.rotated(_form_h if not is_nan(_form_h) else p.heading)
 	if _run_t > 0.0: # «Тёплая компания»: заход вперёд
 		off += Vector2.from_angle(p.heading) * 330.0 * sin(clampf(1.0 - _run_t / 1.2, 0.0, 1.0) * PI)
@@ -120,7 +128,7 @@ func _slot_offset(p: Player) -> Vector2:
 
 ## Ближе этого (центр к центру) ведомый к ведущему не подходит: половины размахов обоих самолётов
 func clear_r(p: Player) -> float:
-	return Tuning.g("plane_len") * (p.size + 0.85) * 0.5 + 8.0
+	return Tuning.g("plane_len") * (p.size + WING_SIZE) * 0.5 + 8.0
 
 
 func _leave() -> void:

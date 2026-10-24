@@ -503,11 +503,13 @@ func gun_rate() -> float:
 	return guns.gun_rate()
 
 
+## Adds a wingman in the next free formation slot; temp ones ("Rooklings") leave after `life` seconds.
 func add_wingman(type := "swift", k := 1.0, temp := false, life := 0.0) -> void:
 	var w := Wingman.new()
 	w.setup(type, k, temp, life)
 	w.slot = wingmen.size()
-	w.global_position = global_position - Vector2.from_angle(heading) * 60.0
+	# S10-15: arrive behind the wingman's own slot, not all at one point behind the leader
+	w.global_position = global_position + w._slot_offset(self) - Vector2.from_angle(heading) * 60.0
 	w.heading = heading
 	wingmen.append(w)
 	Main.I.world.add_child(w)
