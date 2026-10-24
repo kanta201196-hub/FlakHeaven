@@ -30,7 +30,7 @@ const DATA := {
 			{"name": "Под фюзеляжем", "slots": 1, "weapon": ""},
 		],
 		"turrets": 0,
-		"weapons": ["aam", "rockets", "flares", "srm"], "signature": "aam",
+		"weapons": ["aam", "rockets", "flares", "srm", "agm"], "signature": "aam",
 		"wingmen": 1,
 		"skill3": "combat_turn",
 		"color": Color(0.55, 0.85, 1.0),

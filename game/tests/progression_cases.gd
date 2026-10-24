@@ -47,7 +47,7 @@ func _fresh_profile() -> Node:
 ## Each class gets its own new weapons; the others never show up in its card pool.
 func _test_class_lists() -> void:
 	_check(PlaneClasses.allows("fighter", "srm"), "fighter: srm")
-	_check(not PlaneClasses.allows("fighter", "agm"), "fighter: no agm")
+	_check(PlaneClasses.allows("fighter", "agm"), "fighter: agm (Kanta 24.10, ground option without bombs)")
 	_check(not PlaneClasses.allows("fighter", "hebomb"), "fighter: no hebomb")
 	_check(PlaneClasses.allows("attacker", "srm") and PlaneClasses.allows("attacker", "agm"), "attacker: srm, agm")
 	_check(not PlaneClasses.allows("attacker", "hebomb"), "attacker: no hebomb")
