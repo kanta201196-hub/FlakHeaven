@@ -13,9 +13,16 @@ const RIGHT_W := 620.0
 const TOP := 300.0
 const BUILD_TILE := 72.0
 
+## Keyboard / gamepad focus: an id from this frame's `_focusables`. Main resets it to
+## "restart" («Ещё вылет») each time the screen opens.
+static var focus := "restart"
+## This frame's focusable items, in order: [Rect2, focus id, action]
+static var _focusables: Array = []
+
 
 ## Draws the whole results screen (and the demo-end overlay over it when it is open).
 func result(m: Main, size: Vector2) -> void:
+	_focusables.clear()
 	if Demo.end_open:
 		_demo_end(size)
 		return
@@ -140,10 +147,12 @@ func _bar_row(pos: Vector2, w: float, label: String, v: int, tot: int, col: Colo
 	return pos.y + 28.0
 
 
-## Small outlined switch under the damage panel.
+## Small outlined switch under the damage panel. Its focus id stays "rtab" whichever way it
+## points, so focus does not jump away after the press.
 func _toggle(r: Rect2, label: String, action: String) -> void:
 	r.size.x = UiStyle.text_w(UiStyle.head_font(700, 3), label, UiStyle.FS_CAPTION) + 36.0
-	var hover := r.has_point(ctrl.get_local_mouse_position())
+	var hover := r.has_point(ctrl.get_local_mouse_position()) or focus == "rtab"
+	_focusables.append([r, "rtab", action])
 	ctrl.draw_rect(r, Color(UiStyle.ACCENT, 0.12) if hover else Color(UiStyle.PANEL, 0.6))
 	ctrl.draw_rect(r, UiStyle.ACCENT if hover else UiStyle.LINE, false, 1.0)
 	UiStyle.text(ctrl, UiStyle.head_font(700, 3), Vector2(r.position.x + 16, r.position.y + 26), label, UiStyle.FS_CAPTION, UiStyle.TEXT)
@@ -287,7 +296,7 @@ func _bottom(m: Main, size: Vector2) -> void:
 	x = UiStyle.key_hint(ctrl, Vector2(x, y), key_label("restart"), Loc.t("ЕЩЁ ВЫЛЕТ"))
 	x = UiStyle.key_hint(ctrl, Vector2(x, y), key_label("ui_hangar"), Loc.t("АНГАР"))
 	x = UiStyle.key_hint(ctrl, Vector2(x, y), key_label("change_class"), Loc.t("САМОЛЁТ"))
-	UiStyle.key_hint(ctrl, Vector2(x, y), "1 · 2", Loc.t("УРОН"))
+	UiStyle.key_hint(ctrl, Vector2(x, y), key_label("choose_1") + " · " + key_label("choose_2"), Loc.t("УРОН"))
 	var bh := 52.0
 	var by := size.y - 78.0
 	var rx := size.x - 64.0
@@ -298,13 +307,14 @@ func _bottom(m: Main, size: Vector2) -> void:
 		var bw := UiStyle.text_w(f, String(s[0]), UiStyle.FS_LABEL) + 56.0
 		rx -= bw
 		var r := Rect2(rx, by, bw, bh)
-		var hover := r.has_point(ctrl.get_local_mouse_position())
+		var hover := r.has_point(ctrl.get_local_mouse_position()) or focus == String(s[1])
 		var main: bool = s[2]
 		ctrl.draw_rect(r, Color(UiStyle.ACCENT, 0.18 if hover else 0.12) if main else (Color(1, 1, 1, 0.08) if hover else UiStyle.PANEL))
 		ctrl.draw_rect(r, UiStyle.ACCENT if main or hover else UiStyle.LINE, false, 2.0 if main else 1.0)
 		UiStyle.text(ctrl, f, Vector2(r.position.x, r.position.y + 34), String(s[0]), UiStyle.FS_LABEL, UiStyle.ACCENT if main else UiStyle.TEXT,
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		_buttons.append([r, String(s[1])])
+		_focusables.append([r, String(s[1]), String(s[1])])
 		rx -= 14.0
 	if Main.REPORT_URL != "":
 		if m.report_sent:
@@ -316,7 +326,8 @@ func _bottom(m: Main, size: Vector2) -> void:
 ## Report button stands out from the rest without popups or sound (Kanta, 18.10): amber
 ## fill, a caption above it and a soft breathing frame for the first seconds on screen.
 func _report_button(r: Rect2, shown_t: float) -> void:
-	var hover := r.has_point(ctrl.get_local_mouse_position())
+	var hover := r.has_point(ctrl.get_local_mouse_position()) or focus == "report_open"
+	_focusables.append([r, "report_open", "report_open"])
 	ctrl.draw_rect(r, UiStyle.ACCENT.lightened(0.15) if hover else UiStyle.ACCENT)
 	if shown_t < 6.0:
 		var k := 0.5 + 0.5 * sin(shown_t * 3.0)
@@ -461,3 +472,25 @@ static func _top_keys(d: Dictionary, n: int) -> Array:
 	var keys := d.keys().filter(func(k) -> bool: return float(d[k]) >= 0.5)
 	keys.sort_custom(func(a, b) -> bool: return float(d[a]) > float(d[b]))
 	return keys.slice(0, n)
+
+
+# ---------- Focus (keyboard and gamepad, called by MainInput) ----------
+
+## Moves focus to the nearest button in direction `dir` (the damage toggle and the bottom row).
+static func move_focus(dir: Vector2i) -> void:
+	var rects: Array[Rect2] = []
+	var ids: Array[StringName] = []
+	for f: Array in _focusables:
+		rects.append(f[0])
+		ids.append(StringName(f[1]))
+	var j := UiFocus.step(rects, UiFocus.index_of(ids, StringName(focus)), dir)
+	if j >= 0:
+		focus = String(ids[j])
+
+
+## Action for Enter/A on the focused button ("" when nothing is focusable this frame).
+static func accept() -> String:
+	for f: Array in _focusables:
+		if f[1] == focus:
+			return String(f[2])
+	return ""

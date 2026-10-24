@@ -164,6 +164,12 @@ var _state_t := 0.0 # сколько реального времени прош�
 
 
 func _set_state(s: String) -> void:
+	# combat UI v2: screens opened from combat start on their safe default, never on a focus
+	# left from the last time (a remembered «Покинуть вылет» must not take one press)
+	if s == "paused" and state == "playing":
+		HudPause.focus = "resume"
+	elif s == "dead" or s == "evac":
+		HudResult.focus = "restart"
 	state = s
 	_state_t = 0.0
 	get_tree().paused = s != "playing"

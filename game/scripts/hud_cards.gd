@@ -22,6 +22,9 @@ const TIP_DEPTH := 3
 static var focus := 0
 ## Pilot level the focus belongs to: a new level starts on the first card
 static var _focus_level := -1
+## Mouse position of the last frame: hovering moves focus only when the mouse moves, so a
+## cursor resting on a card does not undo arrow and gamepad navigation.
+static var _last_mp := Vector2(-1.0, -1.0)
 ## Open term explanations, outermost first
 static var _tip_ids: Array[StringName] = []
 ## Card whose term opened the first explanation (-1 — the focused card's first term)
@@ -51,9 +54,11 @@ func draw(m: Main, size: Vector2) -> void:
 	var x0 := (size.x - n * CARD_W - (n - 1) * gap) / 2.0
 	var top := 214.0
 	var mp := ctrl.get_local_mouse_position()
+	var moved := mp != _last_mp
+	_last_mp = mp
 	for i in n:
 		var r := Rect2(x0 + i * (CARD_W + gap), top, CARD_W, CARD_H)
-		if r.has_point(mp) and focus != i:
+		if moved and r.has_point(mp) and focus != i:
 			focus = i
 			_tip_card = -1
 	for i in n:

@@ -13,6 +13,8 @@ func _init(main: Main) -> void:
 	m = main
 
 
+## Per-frame keys and gamepad buttons outside flight control, dispatched by game state:
+## menus, card pick, pause, results, global toggles and debug keys.
 func handle_global_input() -> void:
 	if m.report != null and m.report.visible:
 		return
@@ -62,7 +64,7 @@ func handle_global_input() -> void:
 			if m._state_t < CARD_INPUT_DELAY:
 				return
 			# Enter / gamepad A take the focused card (A is also "choose_1": focus starts on card 1)
-			if Input.is_action_just_pressed("ui_accept"):
+			if _accept_pressed():
 				m.choose_card(HudCards.focus)
 				return
 			for i in m.offers.size():
@@ -85,7 +87,16 @@ func handle_global_input() -> void:
 				return
 			if Input.is_action_just_pressed("restart") and m.result_t < 0.5:
 				return
-			for i in 3:
+			# Enter / gamepad A press the focused button (A is also "choose_1", so it goes first)
+			if _accept_pressed():
+				var a := HudResult.accept()
+				if a != "":
+					ui_click(a)
+				return
+			for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+				if Input.is_action_just_pressed(_DIR_ACTIONS[d]):
+					HudResult.move_focus(d)
+			for i in 2:
 				if Input.is_action_just_pressed("choose_%d" % (i + 1)):
 					m.result_tab = i
 			if Input.is_action_just_pressed("ui_hangar"):
@@ -141,10 +152,24 @@ func _pause_nav() -> void:
 			var a := HudPause.side(dir)
 			if a != "":
 				ui_click(a)
-	if Input.is_action_just_pressed("ui_accept"):
+	if _accept_pressed():
 		var a := HudPause.accept()
 		if a != "":
 			ui_click(a)
+
+
+const _DIR_ACTIONS := {Vector2i.UP: "ui_up", Vector2i.DOWN: "ui_down", Vector2i.LEFT: "ui_left", Vector2i.RIGHT: "ui_right"}
+
+
+## Enter / gamepad A on screens over combat. Space is left out although Godot puts it in
+## `ui_accept`: it is the roll key players mash in a fight, and must not pick a card or press
+## «Покинуть вылет». The press is also taken off "roll" (A is both), so leaving the screen in
+## this frame does not start a barrel roll.
+func _accept_pressed() -> bool:
+	if not Input.is_action_just_pressed("ui_accept") or Input.is_physical_key_pressed(KEY_SPACE):
+		return false
+	Input.action_release("roll")
+	return true
 
 
 ## B-47: варианты наклона камеры для тестовой сборки (решение владельца — после теста)

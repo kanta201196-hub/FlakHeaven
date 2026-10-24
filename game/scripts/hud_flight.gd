@@ -7,8 +7,6 @@ extends HudKit
 
 
 var _mini: HudMinimap = null
-## Full cooldown of each skill tile seen when it started, for the cooldown sweep
-var _cd_full := {}
 ## Skill columns of this frame for the hover tooltip: [Rect2, title, body, action]
 var _skill_tips: Array = []
 ## Top of the bottom bar this frame (hints and radio sit above it)
@@ -27,6 +25,8 @@ const BAR_TILE := 72.0
 const BAR_COL := 132.0
 
 
+## Draws the in-flight HUD: hull and fuel, goals and currency, the weapon and skill bar with
+## cooldowns, radio, hints and the skill tooltip last so nothing covers it.
 func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	var p := m.player
 	_skill_tips.clear()
