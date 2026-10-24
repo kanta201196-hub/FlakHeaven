@@ -33,6 +33,8 @@ const CLASSIC_KIT := ["classic", "Классика", Color(0.43, 0.42, 0.39), Co
 const VARIANTS := {
 	"fighter": [
 		["classic", "Классика"],
+		# Kanta 24.10: keep the neutral grey «Оса» 1 shipped with before the Highland camouflage became its own paint
+		["grey", "Серый", Color(0.33, 0.35, 0.37), Color(0.42, 0.44, 0.46), Color(0.56, 0.58, 0.61), 0.8, 0.05, 0],
 		["sand", "Песок", Color(0.56, 0.43, 0.29), Color(0.80, 0.69, 0.50), Color(0.88, 0.80, 0.63), 0.62, 0.05, 0],
 		["black_gloss", "Чёрный глянец", Color(0.05, 0.05, 0.056), Color(0.075, 0.075, 0.082), Color(0.12, 0.12, 0.13), 0.14, 0.3, 0],
 		["pink_leopard", "Розовый леопард", Color(0.86, 0.52, 0.64), Color(0.96, 0.62, 0.74), Color(1.0, 0.74, 0.83), 0.55, 0.05, 1,
