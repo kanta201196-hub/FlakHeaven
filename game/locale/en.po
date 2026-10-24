@@ -6836,3 +6836,223 @@ msgstr "synergy: good company"
 #: game/scripts/wingman.gd:450
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "«Весь экран» — тени до края кадра. «Ближе» — тени только у центра, зато они чётче."
+msgstr "\"Whole screen\" draws shadows to the edge of the frame. \"Closer\" keeps them near the centre, but sharper."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Билинейный"
+msgstr "Bilinear"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Ближе"
+msgstr "Closer"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "В каком разрешении рисуется 3D-картинка. Меньше — больше кадров, но картинка мягче. Интерфейс всегда чёткий."
+msgstr "Resolution the 3D picture is drawn at. Lower gives more frames but a softer picture. The interface always stays sharp."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Весь экран"
+msgstr "Whole screen"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Вкл"
+msgstr "On"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Выкл"
+msgstr "Off"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Высокая"
+msgstr "High"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Высокие"
+msgstr "High"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Дальность теней"
+msgstr "Shadow distance"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Детали мира"
+msgstr "World detail"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Детализация рельефа"
+msgstr "Terrain detail"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Если в вылете мало кадров, игра сама выберет набор попроще. Выключается, как только вы меняете графику вручную."
+msgstr "If a sortie runs at a low frame rate, the game picks a lighter preset on its own. Turns off as soon as you change graphics by hand."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Заработает после перехода игры на рендер Forward+. Сейчас игра на Compatibility, выбранное значение сохранится."
+msgstr "Will work once the game moves to the Forward+ renderer. The game runs on Compatibility now; your choice is kept."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Как растянуть картинку до размера экрана при масштабе меньше 100 %. FSR сохраняет чёткость лучше."
+msgstr "How the picture is stretched to the screen when the render scale is below 100 %. FSR keeps it sharper."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Качество"
+msgstr "Quality"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Качество эффектов"
+msgstr "Effects quality"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Максимальная"
+msgstr "Maximum"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Максимум"
+msgstr "Maximum"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Мало"
+msgstr "Few"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Масштаб отрисовки"
+msgstr "Render scale"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Много"
+msgstr "Many"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Мягкая тень в ущельях, у стен построек и под техникой. Рельеф выглядит объёмнее."
+msgstr "Soft shade in gorges, by building walls and under vehicles. Terrain looks more solid."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Мягкость краёв теней. «Низкие» — резкие края, «Ультра» — самые мягкие."
+msgstr "Softness of shadow edges. \"Low\" is hard-edged, \"Ultra\" the softest."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "НАГРУЗКА НА ВИДЕОКАРТУ"
+msgstr "GPU LOAD"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Набор всех пунктов ниже разом. Если поменять любой пункт, здесь будет «Своё». Если выбрать вручную, игра перестанет снижать качество сама."
+msgstr "Sets every option below at once. Change any of them and this reads \"Custom\". Once you pick it by hand, the game stops lowering quality on its own."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Низкая"
+msgstr "Low"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Низкие"
+msgstr "Low"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Общее качество"
+msgstr "Overall quality"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Отражённый свет (SSIL)"
+msgstr "Indirect light (SSIL)"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Повышение чёткости (апскейл)"
+msgstr "Upscaling"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Разрешение теней"
+msgstr "Shadow resolution"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Растительность и постройки"
+msgstr "Vegetation and buildings"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Свечение огня и вспышек"
+msgstr "Glow of fire and flashes"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Свечение огня, вспышек и трассеров."
+msgstr "Glow of fire, flashes and tracers."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Своё"
+msgstr "Custom"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Сглаживание"
+msgstr "Antialiasing"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Сколько деревьев, камней и мелочей на земле и какие из них отбрасывают тень. Меняется при следующей сборке участков карты."
+msgstr "How many trees, rocks and small things are on the ground and which cast shadows. Changes when map sections are next rebuilt."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Сколько мелких деталей у гор и склонов, скалы с трёх сторон — с уровня «Высокая»."
+msgstr "How much fine detail mountains and slopes get; three-sided rock texturing starts at \"High\"."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Сколько частиц у взрывов, дыма и облаков. Если в бою проседают кадры, снизьте этот пункт первым."
+msgstr "How many particles explosions, smoke and clouds get. If frames drop in combat, lower this first."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Снижать качество при низком FPS"
+msgstr "Lower quality at low FPS"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Средне"
+msgstr "Medium"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Средние"
+msgstr "Medium"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Средняя"
+msgstr "Medium"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Счётчик кадров"
+msgstr "FPS counter"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Тени"
+msgstr "Shadows"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Тени и свет"
+msgstr "Shadows and light"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Убирает «лесенку» на краях самолётов, построек и гор. MSAA 4× и 8× заметно нагружают видеокарту."
+msgstr "Smooths jagged edges on planes, buildings and mountains. MSAA 4× and 8× are heavy on the graphics card."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Ультра"
+msgstr "Ultra"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Фоновое затенение (SSAO)"
+msgstr "Ambient occlusion (SSAO)"
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Цветной отражённый свет от земли и стен: склоны подсвечивают друг друга."
+msgstr "Coloured light bounced off ground and walls: slopes light each other up."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Часть значений заработает после перехода игры на рендер Forward+. Сейчас игра на Compatibility."
+msgstr "Some values will work once the game moves to the Forward+ renderer. The game runs on Compatibility now."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Число кадров в секунду в углу экрана в полёте."
+msgstr "Frames per second in the screen corner during flight."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "Чёткость теней. 8192 — самые аккуратные тени, но нужна мощная видеокарта."
+msgstr "Shadow sharpness. 8192 gives the cleanest shadows but needs a strong graphics card."
+
+#: game/scripts/gfx_presets.gd (UI-01 step 3)
+msgid "на максимуме"
+msgstr "at maximum"

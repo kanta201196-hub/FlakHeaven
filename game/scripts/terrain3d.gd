@@ -84,7 +84,7 @@ var props: BiomeProps          # B-41: модели биома на рельеф
 func setup(depth: float, mat: Material, bg: Background) -> void:
 	base_y = -depth
 	_pick_style()
-	N = N_GFX[clampi(Settings.gfx, 0, 3)]
+	N = N_GFX[Settings.gopt("terrain")]
 	ceiling = maxf(depth - 30.0, 0.0)   # запас на крен и толщину моделей у плоскости боя
 	material = mat
 	_bg = bg
@@ -138,7 +138,7 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 func clear() -> void:
 	_gen += 1
 	_wait_pending()   # потоки читают N — меняем после них
-	N = N_GFX[clampi(Settings.gfx, 0, 3)]
+	N = N_GFX[Settings.gopt("terrain")]
 	for k in _chunks:
 		(_chunks[k] as Node).queue_free()
 	_chunks.clear()
