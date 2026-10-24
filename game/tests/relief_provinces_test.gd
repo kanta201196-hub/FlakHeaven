@@ -18,6 +18,7 @@ func _init() -> void:
 	_test_area_shares()
 	_test_regional_contrast()
 	_test_no_border_walls()
+	_test_mesa_ledges_not_flat()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -138,3 +139,28 @@ func _test_no_border_walls() -> void:
 			var h1 := _p.relief(x + 20.0, z, 1500.0, 1500.0).x
 			worst = maxf(worst, absf(h1 - h0))
 	_check(worst <= 0.12, "no walls at region borders (worst step %.3f)" % worst)
+
+
+## Kanta 24.10 («резкие перепады высот и идеально ровное место, так не бывает»): mesa ledges and
+## gorge floors roll and dip; dead-flat ground (under 1.5° at a 470 px ceiling) stays under 4 %
+## of mesa land off the valley floor (it was 10–15 % with flat-stepped ledges).
+func _test_mesa_ledges_not_flat() -> void:
+	var n := 0
+	var flat := 0
+	for j in 160:
+		for i in 160:
+			var x := -24000.0 + i * 300.0 + 0.37
+			var z := -24000.0 + j * 300.0 + 0.61
+			var v := _v(x, z)
+			if absf(v) < 600.0 or _p.weights(x, z, v).y < 0.8:
+				continue
+			var h := _p.relief(x, z, absf(v), v).x
+			var hx := _p.relief(x + 8.0, z, absf(_v(x + 8.0, z)), _v(x + 8.0, z)).x
+			var hz := _p.relief(x, z + 8.0, absf(_v(x, z + 8.0)), _v(x, z + 8.0)).x
+			var g := Vector2(hx - h, hz - h).length() * 470.0 / 8.0
+			n += 1
+			if rad_to_deg(atan(g)) < 1.5:
+				flat += 1
+	var share := float(flat) / maxf(n, 1.0)
+	_check(n > 200, "enough mesa samples (%d)" % n)
+	_check(share < 0.04, "dead-flat mesa ground under 4 %% (%.3f of %d)" % [share, n])

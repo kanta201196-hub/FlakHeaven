@@ -50,6 +50,14 @@ const MESA_CLIFF := 260.0
 const MESA_TOP_LOW := 0.35
 const MESA_TOP_HIGH := 0.62
 const MESA_LEVELS := 4.0
+## Kanta 24.10 («резкие перепады и идеально ровное место, так не бывает»): a ledge keeps this share
+## of the ground's own rise and roll (no dead-flat tables), the lower MESA_TALUS share of each step
+## is a concave scree apron under the wall instead of a sheer drop; MESA_HUMMOCK — low mounds on the
+## ledges (share of the ceiling, ±), MESA_KNOB — small ~180 px mounds on top of them.
+const MESA_TREAD := 0.3
+const MESA_TALUS := 0.4
+const MESA_HUMMOCK := 0.05
+const MESA_KNOB := 0.022
 ## Side canyons in mesa regions: noise wavelength and half-width (in noise units).
 const CANYON_WAVE := 2600.0
 const CANYON_W := 0.05

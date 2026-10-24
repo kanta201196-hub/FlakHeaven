@@ -9,7 +9,7 @@ class_name PlaneFx
 ## «Оса 1» (модель Sketchfab, VIS-01): одно сопло по оси, срез x −0,464 длины, ось на −0,060, радиус 0,031 — по модели.
 const SPEC := {
 	"fighter_1": {"jet": [Vector2(-79, 0)], "r": 5.3, "y": -10.2},
-	"fighter_2": {"jet": [Vector2(-99, -12), Vector2(-99, 11)], "r": 7.0},
+	"fighter_2": {"jet": [Vector2(-100, -16.5), Vector2(-100, 16.5)], "r": 5.5},   # Meshy model 24.10: nozzle exits x -0.444, z ±0.074
 	"attacker_1": {"jet": [Vector2(-49, -19.5), Vector2(-49, 18.5)], "r": 6.5},
 	"attacker_2": {"jet": [Vector2(-61, -20), Vector2(-61, 20)], "r": 7.0},
 	"bomber_1": {"prop": [Vector2(37, -81), Vector2(55, -39), Vector2(55, 39), Vector2(37, 82)], "pr": 20.0,
