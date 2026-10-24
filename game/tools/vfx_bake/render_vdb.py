@@ -20,6 +20,11 @@ Air kill (game/art/vfx/blast_air.png, set "Mid-Air Explosion"): every 2nd .vdb l
       --first 1 --step 1 --count 63 --res 512 --samples 32 --emission 4.0 --fire-scale 0.5 \
       --size 440 --centre 0,0,0 --rot 0,0,0
   python3 game/tools/vfx_bake/pack_atlas.py frames/ game/art/vfx/blast_air.png --clip-x 142,370
+Flak burst (game/art/vfx/blast_flak.png): the same seq/, black-grey smoke, a short dull flame:
+  blender -b --python game/tools/vfx_bake/render_vdb.py -- seq/ frames/ \
+      --first 1 --step 1 --count 63 --res 512 --samples 32 --emission 1.6 --fire-scale 0.15 \
+      --albedo 0.09,0.085,0.08 --density 3.0 --size 440 --centre 0,0,0 --rot 0,0,0
+  python3 game/tools/vfx_bake/pack_atlas.py frames/ game/art/vfx/blast_flak.png --clip-x 142,370
 """
 import argparse
 import math
