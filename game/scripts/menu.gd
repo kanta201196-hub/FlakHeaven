@@ -291,11 +291,17 @@ func _menu_button(r: Rect2, label: String, action: String, primary := false, ena
 	ctrl.draw_rect(Rect2(r.position.x, r.position.y, 6, r.size.y), C_RED if enabled else C_DIM)
 	var tc := Color(0.08, 0.07, 0.05) if (hover or primary) else (C_TEXT if enabled else C_DIM)
 	var fs := 34 if r.size.x > 400.0 else 26
-	_txt(Vector2(r.position.x + 34, r.position.y + r.size.y * 0.66), label, fs, tc, bold())
+	# S10-14: подпись — внутри кнопки под названием (раньше висела под кнопкой и налезала на следующие)
+	var ly := r.position.y + (40.0 if note != "" else r.size.y * 0.66)
+	_txt(Vector2(r.position.x + 34, ly), label, fs, tc, bold())
 	if fs == 34:
-		_txt(Vector2(r.end.x - 50, r.position.y + r.size.y * 0.66), "›", fs, tc, bold())
+		_txt(Vector2(r.end.x - 50, ly), "›", fs, tc, bold())
 	if note != "":
-		_txt(Vector2(r.position.x + 34, r.end.y + 20), note, 15, C_DIM)
+		var nfs := 15
+		while nfs > 11 and Hud.ui_font().get_string_size(Loc.out(note), HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > r.size.x - 68.0:
+			nfs -= 1
+		var nc := Color(tc.r, tc.g, tc.b, 0.75) if (hover or primary) else C_DIM
+		_txt(Vector2(r.position.x + 34, r.end.y - 14), note, nfs, nc)
 	if enabled:
 		_buttons.append([r, action])
 
@@ -353,15 +359,15 @@ func _main(m: Main, size: Vector2) -> void:
 		ctrl.draw_colored_polygon(PackedVector2Array([Vector2(x, 462), Vector2(x + 14, 462), Vector2(x + 6, 476), Vector2(x - 8, 476)]), C_RED)
 	_txt(Vector2(106, 512), "Авиа-roguelike: 15 минут вылета, звено, подвесы и асы", 20, C_DIM)
 	var x0 := 96.0
-	var y := 600.0
+	var y := 584.0
 	_menu_button(Rect2(x0, y, 560, 78), "ВЫЛЕТ", "menu_play", true)
 	_menu_button(Rect2(x0, y + 96, 560, 62), "СПРАВОЧНИК", "menu_codex")
-	_menu_button(Rect2(x0, y + 172, 560, 62), Loc.t("АНГАР") + ("  !" if Profile.any_purchase() else ""), "menu_hangar", false, true,
+	_menu_button(Rect2(x0, y + 174, 560, 78), Loc.t("АНГАР") + ("  !" if Profile.any_purchase() else ""), "menu_hangar", false, true,
 		Loc.t("Запчасти: %d · экипажи: Оса %d · Грач %d · Кит %d") % [Profile.parts(), Profile.crew_lvl("fighter"), Profile.crew_lvl("attacker"), Profile.crew_lvl("bomber")])
-	_menu_button(Rect2(x0, y + 256, 272, 62), "НАСТРОЙКИ", "menu_settings")
-	_menu_button(Rect2(x0 + 288, y + 256, 272, 62), "КАК ИГРАТЬ", "menu_howto")
-	_menu_button(Rect2(x0, y + 336, 272, 62), "ЛОГИ", "menu_logs")
-	_menu_button(Rect2(x0 + 288, y + 336, 272, 62), "ВЫХОД", "menu_quit")
+	_menu_button(Rect2(x0, y + 270, 272, 62), "НАСТРОЙКИ", "menu_settings")
+	_menu_button(Rect2(x0 + 288, y + 270, 272, 62), "КАК ИГРАТЬ", "menu_howto")
+	_menu_button(Rect2(x0, y + 350, 272, 62), "ЛОГИ", "menu_logs")
+	_menu_button(Rect2(x0 + 288, y + 350, 272, 62), "ВЫХОД", "menu_quit")
 	_records_panel(Rect2(size.x - 64 - 520, 150, 520, 520))
 	_biome_pick(Rect2(size.x - 64 - 520, 700, 520, 150))
 	if Demo.on:   # M-07: демо — кнопка списка желаемого под выбором района
