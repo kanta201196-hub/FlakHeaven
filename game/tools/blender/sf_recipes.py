@@ -30,6 +30,11 @@ JET = {"camo": [(0.25, 0.255, 0.265), (0.31, 0.315, 0.32), (0.2, 0.205, 0.215)],
        "belly": (0.42, 0.43, 0.44), "dust": 0.0, "rough": (0.74, 0.82), "wear": 0.45, "detail": 0.75,
        "wear_col": (0.5, 0.5, 0.5), "fade": 0.04, "fade_col": (0.6, 0.6, 0.6)}
 
+# player fighter «Оса» lvl 1: clean light / medium grey two-tone, lighter belly, no marks
+GREY = {"camo": [(0.50, 0.52, 0.54), (0.61, 0.63, 0.65)], "scale": 1.3, "stretch": (0.6, 1.0, 1.0),
+        "belly": (0.72, 0.73, 0.74), "dust": 0.0, "rough": (0.62, 0.72), "wear": 0.25, "detail": 0.8,
+        "wear_col": (0.66, 0.67, 0.68), "fade": 0.03, "fade_col": (0.75, 0.76, 0.77), "streak": 0.08}
+
 # vehicle olive paint (most sources): green-yellow hues
 OLIVE = {"mode": "auto", "hue": [(38, 150)], "smin": 0.12}
 TYRE = {"mode": "keep", "rough": 0.92, "desat": 0.6}
@@ -100,7 +105,84 @@ def technical_hmg():
     return obs
 
 
+def fighter_1_bay_covers():
+    """Closed gear doors for «Оса» lvl 1: the source is modelled gear down, with open wells under the nose and on
+    both sides of the belly; the game shows the plane in flight, so the wells get flush covers (measured by vertical
+    rays on the placed source: nose well x 0.142…0.248, |y| < 0.014; main wells x -0.16…-0.088, |y| 0.015…0.05).
+    Each cover is a slightly curved plate following the belly next to the well, painted like the skin."""
+    import bpy
+    import bmesh
+    mat = _flat_mat("f1_bay_paint", (0.55, 0.56, 0.57), 0.7, 0.0)
+    obs = []
+
+    def plate(name, x0, x1, y0, y1, zf, nx=8, ny=4, out=(0.0, 0.0, -1.0), pt=None):
+        """Grid plate over x and a second coordinate; pt(x, t) -> (x, y, z) for t in y0..y1 (default (x, t, zf));
+        faces turned toward the outward direction `out`."""
+        me = bpy.data.meshes.new(name)
+        bm = bmesh.new()
+        pt = pt or (lambda x, t: (x, t, zf(x, t)))
+        grid = [[bm.verts.new(pt(x0 + (x1 - x0) * i / nx, y0 + (y1 - y0) * j / ny))
+                 for j in range(ny + 1)] for i in range(nx + 1)]
+        for i in range(nx):
+            for j in range(ny):
+                f = bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+                f.normal_update()
+                if f.normal.dot(out) < 0:
+                    f.normal_flip()
+        bm.to_mesh(me)
+        bm.free()
+        me.uv_layers.new(name="UVMap")
+        me.materials.append(mat)
+        o = bpy.data.objects.new(name, me)
+        bpy.context.scene.collection.objects.link(o)
+        obs.append(o)
+
+    # nose well: belly beside it falls from z -0.060 (x 0.25) to -0.066 (x 0.14) at |y| 0.02, centre 0.004 lower
+    plate("f1_cover_nose", 0.138, 0.252, -0.019, 0.019,
+          lambda x, y: -0.060 - (0.252 - x) * 0.053 - 0.004 * (1.0 - (y / 0.02) ** 2))
+    for s in (1, -1):   # main wells: belly z -0.081 at |y| 0.015 up to -0.067 at |y| 0.05
+        plate("f1_cover_main_%s" % ("l" if s > 0 else "r"), -0.164, -0.084, s * 0.013, s * 0.052,
+              lambda x, y: -0.081 + (abs(y) - 0.015) * 0.4 - (-0.084 - x) * 0.05)
+        # the wells are open on the fuselage side too, between the cover and the wing glove (z -0.068 … -0.018)
+        plate("f1_cover_side_%s" % ("l" if s > 0 else "r"), -0.164, -0.084, -0.0685, -0.016, None, ny=3,
+              out=(0.0, float(s), 0.0), pt=lambda x, t, s=s: (x, s * 0.0515, t))
+    return obs
+
+
+# «Оса» lvl 1 source parts left out: the cockpit interior (the canopy glass shader is opaque, so it is never seen),
+# the landing gear with its open doors (the game shows the plane in flight), the source's own missiles, belly tank
+# and its pylon (the game hangs its own stores), the ventral fin folded for landing and the duplicate windscreen pane
+DROP_F1 = (r"^kabina_|^OBJ0290_|^OBJ381_|^OBJ144_|^[a-z0-9]+_fuz_(017sini|010panel|upl|005bl|014roz)|^OBJ019[2-6]_"
+           r"|^OBJ185_|^OBJ0308_|^Plane001_|^OBJ097_|^OBJ088_"
+           r"|^OBJ0041_|^stoykanos_|^nos_|^OBJ0355_|^OBJ004[367]_|^OBJ006[13]_"
+           r"|^OBJ01(0[89]|1\d|2[0-5]|3\d|4\d|5\d|6\d|7[0-7]|8[12])_"
+           r"|^r\d+_r\d+_\d|^OBJ0204_|^Object002_|^OBJ0024_|^OBJ0277_|^OBJ00(44|62)_")
+# markings on the fuselage atlas (glTF UV of the source "fuzcamo" image): fin stars and numbers, side numbers,
+# nose art, unit badges, wing stars top and bottom
+ERASE_F1 = [(0.064, 0.102, 0.122, 0.162), (0.066, 0.425, 0.122, 0.484),       # fin stars
+            (0.113, 0.088, 0.137, 0.117), (0.05, 0.479, 0.068, 0.502),       # fin numbers
+            (0.278, 0.052, 0.334, 0.097), (0.28, 0.654, 0.332, 0.7),         # side numbers
+            (0.206, 0.034, 0.28, 0.07), (0.206, 0.682, 0.28, 0.718),         # nose art and its eyes
+            (0.382, 0.05, 0.43, 0.106), (0.382, 0.642, 0.432, 0.702),        # unit badges
+            (0.83, 0.161, 0.867, 0.198), (0.83, 0.559, 0.867, 0.595),        # wing stars, top
+            (0.453, 0.158, 0.496, 0.198), (0.453, 0.558, 0.494, 0.597),      # wing stars, bottom
+            (0.058, 0.578, 0.1, 0.638),                                       # dark placard
+            (0.122, 0.125, 0.146, 0.141), (0.044, 0.461, 0.07, 0.477)]        # fin stencil bars
+
 RECIPES = {
+    "fighter_1": {
+        "root": "fighter_1", "rot": (0, 0, 90), "ground": False,
+        "drop": DROP_F1, "build": fighter_1_bay_covers,
+        "materials": [(r"glass$|014roz", GLASS),
+                      (r"fuzcamo", {"mode": "paint", "flatten": 13}), (r"f1_bay_paint", {"mode": "paint"}),
+                      # dark grey skin pieces (radome, overlays lying on the wing and glove) take the paint too:
+                      # left dark, the bake picks them or the skin under them at random and the wing gets blotches
+                      (r"nosser", {"mode": "paint"}),
+                      (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+        "erase": {"fuzcamo": ERASE_F1}, "mat_names": {"glass": "glass"}, "img_plain": True,
+        "uv_split_x": [-0.3, -0.1, 0.1, 0.3],   # fuselage-long islands would leave half the atlas empty
+        "paint": GREY, "tris": 12000,
+    },
     "e_zsu": {
         "root": "ground_zsu", "rot": (0, 0, 0), "ground": True,
         "materials": [(r"(?i)glass|lens|stek", GLASS), (r".", OLIVE)],
@@ -196,3 +278,7 @@ RECIPES = {
         "weight": {"launcher_pitch": 1.3, **{"wheel_%s%s" % (a, s): 1.7 for a in ("f", "f2", "1", "2") for s in "lr"}},
     },
 }
+
+# «Оса» lvl 1 hangar close-up: the same rework without decimation, subdivided once (the source has ~11k visible
+# triangles; the hangar camera comes close) and baked at 4096
+RECIPES["fighter_1_hangar"] = dict(RECIPES["fighter_1"], root="fh_hangar_fighter_1", tris=80000, subdiv=1)

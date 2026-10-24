@@ -16,7 +16,7 @@
 Запуск из game/tools/blender — по исходным моделям без стекла (повторный запуск по уже разрезанной модели
 работает, но режет ещё раз): исходники — /mnt/project-files/models_src/canopy_glass/orig/.
   python3 canopy_glass.py all [--debug папка] [--dry]
-  python3 canopy_glass.py ../../models/hangar/fh_hangar_fighter_1.glb --debug /tmp/glass
+  python3 canopy_glass.py ../../models/hangar/fh_hangar_fighter_2.glb --debug /tmp/glass
 --debug: кадры сверху и сбоку с сеткой 0.05 (выбор по текстуре и итог после разреза в <папка>/cut/).
 После запуска: godot --headless --path game --import. После battle_lod.py или новой модели Meshy — запустить
 заново (и добавить внешний материал «glass» в .import новой модели, как у нынешних).
@@ -41,7 +41,6 @@ TUNE = {
     # области фонаря (по кадрам --debug, сетка 0.05): x — от и до, hw — полуширина, y — нижняя граница
     # стекла в начале и в конце области; mode: tex — стекло по текстуре (dark — порог яркости, blue — синеватость),
     # geo — вся поверхность области (у «Кита 1» стекло закрашено камуфляжем, на текстуре его не видно)
-    "fighter_1": [{"x": (0.12, 0.34), "hw": 0.035, "y": (-0.012, -0.012), "mode": "tex", "dark": 0.05, "pad": 0.009}],
     "fighter_2": [{"x": (-0.01, 0.31), "hw": 0.04, "y": (0.012, 0.008), "mode": "tex", "dark": 0.05, "pad": 0.006}],
     "attacker_1": [{"x": (0.12, 0.35), "hw": 0.04, "y": (-0.006, -0.012), "mode": "tex", "dark": 0.03,
                     "blue": -0.025, "blue_lum": 0.07}],
@@ -54,7 +53,7 @@ TUNE = {
 }
 
 # порог «очень тёмного» из Livery.SRC (ниже — расцветка не трогает): по нему стекло дорастает до кромки
-GROW = {"fighter_1": 0.022, "fighter_2": 0.022, "attacker_1": 0.011, "attacker_2": 0.011,
+GROW = {"fighter_2": 0.022, "attacker_1": 0.011, "attacker_2": 0.011,
         "bomber_1": 0.013, "bomber_2": 0.013}
 
 
@@ -474,8 +473,9 @@ def main():
     a = ap.parse_args()
     paths = a.glb
     if paths == ["all"]:
+        # «Оса 1» (VIS-01) — модель Sketchfab с собственным стеклом «glass» (sf_rework.py): резать её не нужно
         paths = [os.path.join(MODELS, k, f"fh_{k}_{c}_{l}.glb") for k in ("hangar", "battle")
-                 for c in ("fighter", "attacker", "bomber") for l in (1, 2)]
+                 for c in ("fighter", "attacker", "bomber") for l in (1, 2) if f"{c}_{l}" in TUNE]
     for p in paths:
         process(p, a.debug or None, a.dry)
 

@@ -16,6 +16,7 @@ Pipeline (Blender as the `bpy` module, 5.2):
 
 Run (from the repo root; source files are untrusted downloads, so -I):
   python3 -I game/tools/blender/sf_rework.py <recipe> <src.glb> <out_dir> [--tex=2048] [--tris=12000] [--samples=16]
+      [--jpeg=90]
   -> <out_dir>/<recipe>.glb (+ _color/_normal/_orm .png for review).  Recipes: sf_recipes.py.
 Dependencies: bpy 5.2.2 (pip module), numpy. No network.
 """
@@ -533,6 +534,24 @@ def flat_normals(img, rects, tag):
     return out
 
 
+def flatten_lum(rgb, mask, size):
+    """Remove a painted camouflage from a source texture but keep its fine detail (panel lines, rivets, grime).
+
+    The repaint keeps the source luminance as detail, so a strong camouflage (dark brown over tan) would show
+    through the new paint as dark blobs. A median filter of the luminance (window `size` px, odd) follows the
+    blobs, including their sharp edges, but not lines thinner than the window; dividing by it leaves only that
+    fine detail around the median luminance of the paint area (mask > 0.5). Needs Pillow."""
+    from PIL import Image, ImageFilter
+    size = size | 1
+    lum = (rgb * np.array([0.2126, 0.7152, 0.0722])).sum(-1)
+    img = Image.fromarray(np.clip(lum * 255.0 + 0.5, 0, 255).astype(np.uint8))
+    med = np.asarray(img.filter(ImageFilter.MedianFilter(size)), dtype=np.float32) / 255.0
+    sel = mask > 0.5
+    target = float(np.median(lum[sel])) if sel.sum() > 50 else float(np.median(lum))
+    k = np.clip(target / np.maximum(med, 0.02), 0.3, 4.0)
+    return np.clip(rgb * k[..., None], 0.0, 1.0)
+
+
 def prep_image(img, mat_rule, erase, tag, keep=()):
     """Make the masked copy of a base-colour image: RGB = source with markings painted over, A = paint mask.
     erase: list of (u0, v0, u1, v1) in glTF UV (v down) — filled with the surrounding colour, mask 1;
@@ -564,6 +583,8 @@ def prep_image(img, mat_rule, erase, tag, keep=()):
         noise = 1.0 + 0.04 * (rng.random(patch.shape[:2]) - 0.5)
         rgb[y0:y1, x0:x1] = fill[None, None, :] * noise[..., None]
         m[y0:y1, x0:x1] = 1.0 if mode != "keep" else 0.0
+    if mat_rule.get("flatten"):
+        rgb = flatten_lum(rgb, m, int(mat_rule["flatten"]))
     lum = (rgb * np.array([0.2126, 0.7152, 0.0722])).sum(-1)
     ref_l = float(np.median(lum[m > 0.5])) if (m > 0.5).sum() > 50 else float(np.median(lum))
     out = bpy.data.images.new("prep_" + tag, w, h, alpha=True)
@@ -782,6 +803,30 @@ def repaint(mat, R, cache):
 
 
 # ---------------------------------------------------------------- low poly per node
+def subdivide_low(lo, levels, crease_deg):
+    """Close-up (hangar) model from a source lighter than its budget: Catmull-Clark subdivision rounds the
+    faceted curves (fuselage, intakes, radome); edges sharper than crease_deg and open borders get full crease,
+    so wing edges, fin tips and panel breaks keep their shape. The bake still projects the source surface."""
+    bm = bmesh.new()
+    bm.from_mesh(lo.data)
+    cr = bm.edges.layers.float.get("crease_edge") or bm.edges.layers.float.new("crease_edge")
+    lim = math.radians(crease_deg)
+    for e in bm.edges:
+        if len(e.link_faces) != 2 or e.calc_face_angle(0.0) > lim:
+            e[cr] = 1.0
+    bm.to_mesh(lo.data)
+    bm.free()
+    _select([lo])
+    md = lo.modifiers.new("sd", "SUBSURF")
+    md.levels = levels
+    md.render_levels = levels
+    md.use_creases = True
+    md.boundary_smooth = "PRESERVE_CORNERS"
+    bpy.ops.object.modifier_apply(modifier="sd")
+    md = lo.modifiers.new("tri", "TRIANGULATE")
+    bpy.ops.object.modifier_apply(modifier="tri")
+
+
 def make_low(groups, R, budget):
     """Join a copy of each node's sources, weld and decimate; budget split by visible area (bounding box)."""
     def area(obs):
@@ -846,11 +891,31 @@ def make_low(groups, R, budget):
                 md.ratio = max(0.01, want / t * (0.92 ** it))
                 md.use_collapse_triangulate = True
                 bpy.ops.object.modifier_apply(modifier="dc")
+        elif R.get("subdiv"):
+            subdivide_low(lo, R["subdiv"], R.get("crease_deg", 35))
         print("LOW", g or "<root>", t, "->", tris([lo]), "budget", want)
         for p in me.polygons:
             p.use_smooth = True
         lows[g] = lo
     return lows
+
+
+def split_uv_islands(obs, cuts):
+    """Cut long UV islands at the planes x = cuts (normalised model length).
+
+    Smart UV project keeps a whole fuselage side as one island as long as the plane; the packer cannot scale the
+    atlas past that island, so most of the texture stays empty. Islands are found by shared UV coordinates, so a
+    tiny UV shift per segment (faces grouped by the x of their centre) separates them; pack_islands then lays the
+    pieces out freely and the texel density rises."""
+    import bisect
+    for o in obs:
+        me = o.data
+        uvl = me.uv_layers.active.data
+        for p in me.polygons:
+            k = bisect.bisect(cuts, (o.matrix_world @ p.center).x)
+            if k:
+                for li in p.loop_indices:
+                    uvl[li].uv.x += 1e-4 * k
 
 
 def unwrap(lows, R):
@@ -868,6 +933,10 @@ def unwrap(lows, R):
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=0.002, area_weight=0.0, scale_to_bounds=False)
+    if R.get("uv_split_x"):
+        bpy.ops.object.mode_set(mode="OBJECT")
+        split_uv_islands(obs, R["uv_split_x"])
+        bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.uv.select_all(action="SELECT")
     bpy.ops.uv.pack_islands(margin=0.002, rotate=True, scale=True)
     bpy.ops.object.mode_set(mode="OBJECT")
@@ -892,7 +961,8 @@ def bake(groups, lows, R, tex, samples, out_dir, name):
     bk.margin_type = "EXTEND"
     imgs = {}
     for key, nc in (("color", False), ("rough", True), ("metal", True), ("normal", True)):
-        im = bpy.data.images.new("%s_%s" % (name, key), tex, tex, alpha=False)
+        # img_plain: embedded images named just color / normal / orm, so Godot extracts <glb>_color.jpg etc.
+        im = bpy.data.images.new(key if R.get("img_plain") else "%s_%s" % (name, key), tex, tex, alpha=False)
         im.colorspace_settings.name = "Non-Color" if nc else "sRGB"
         imgs[key] = im
     bake_mat = bpy.data.materials.new("bake_target")
@@ -923,7 +993,7 @@ def bake(groups, lows, R, tex, samples, out_dir, name):
     return imgs
 
 
-def finish(groups, lows, imgs, R, out_dir, name, tex):
+def finish(groups, lows, imgs, R, out_dir, name, tex, jpeg=0):
     """Pack ORM, build body/glass materials, set pivots and parents, export GLB, merge primitives."""
     w = tex
     rough = _px(imgs["rough"])[..., 0]
@@ -931,7 +1001,7 @@ def finish(groups, lows, imgs, R, out_dir, name, tex):
     orm = np.ones((w, w, 4), np.float32)
     orm[..., 1] = rough
     orm[..., 2] = metal
-    imo = bpy.data.images.new(name + "_orm", w, w, alpha=False)
+    imo = bpy.data.images.new("orm" if R.get("img_plain") else name + "_orm", w, w, alpha=False)
     imo.colorspace_settings.name = "Non-Color"
     imo.pixels.foreach_set(orm.ravel())
     for k, im in (("color", imgs["color"]), ("normal", imgs["normal"]), ("orm", imo)):
@@ -941,7 +1011,11 @@ def finish(groups, lows, imgs, R, out_dir, name, tex):
     root_name = R.get("root", name)
     fin = {}
     for key in ("body", "glass"):
-        m = bpy.data.materials.new("%s_%s" % (root_name, key))
+        # mat_names: names the game keys on (e.g. "glass" gets shaders/canopy_glass.tres through the .import)
+        nm = R.get("mat_names", {}).get(key, "%s_%s" % (root_name, key))
+        if bpy.data.materials.get(nm) is not None:   # a source material of that name would push ours to "glass.001"
+            bpy.data.materials[nm].name = nm + "_src"
+        m = bpy.data.materials.new(nm)
         m.use_nodes = True
         nt = m.node_tree
         b = nt.nodes["Principled BSDF"]
@@ -1014,8 +1088,10 @@ def finish(groups, lows, imgs, R, out_dir, name, tex):
     mn, mx = bounds(list(lows.values()))
     print("FINAL tris", total, "size", tuple(round(v, 3) for v in (mx - mn)), "min", tuple(round(v, 3) for v in mn))
     out = os.path.join(out_dir, name + ".glb")
+    # jpeg > 0: textures as JPEG of that quality (hangar 4096 maps would be tens of MB as PNG)
     bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", use_selection=False, export_yup=True,
-                              export_image_format="AUTO", export_apply=True)
+                              export_image_format="JPEG" if jpeg else "AUTO", export_jpeg_quality=jpeg or 90,
+                              export_apply=True)
     import importlib.util
     spec = importlib.util.spec_from_file_location("glb_merge_prims", str(TOOLS / "glb_merge_prims.py"))
     gm = importlib.util.module_from_spec(spec)
@@ -1033,6 +1109,7 @@ def main() -> int:
     ap.add_argument("--tex", type=int, default=2048)
     ap.add_argument("--tris", type=int, default=0)
     ap.add_argument("--samples", type=int, default=16)
+    ap.add_argument("--jpeg", type=int, default=0, help="export textures as JPEG of this quality (0: PNG)")
     ap.add_argument("--probe", action="store_true", help="only place, list parts (centre, size, tris), export placed GLB")
     a = ap.parse_args()
     R = sf_recipes.RECIPES[a.recipe]
@@ -1086,7 +1163,7 @@ def main() -> int:
     lows = make_low(groups, R, a.tris or R.get("tris", 12000))
     unwrap(lows, R)
     imgs = bake(groups, lows, R, a.tex, a.samples, a.out_dir, a.recipe)
-    finish(groups, lows, imgs, R, a.out_dir, a.recipe, a.tex)
+    finish(groups, lows, imgs, R, a.out_dir, a.recipe, a.tex, a.jpeg)
     return 0
 
 
