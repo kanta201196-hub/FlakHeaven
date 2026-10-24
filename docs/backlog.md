@@ -150,6 +150,19 @@
 | B-44 | Режим фото и витринные кадры биома для Steam: 5 кадров 1920×1080 и 4K без интерфейса | продюсер + арт | идея |
 | B-36 | Небо и дымка: облака сделаны (M-31, M-40); остаётся дымка в долинах | программист | идея |
 
+## Эффекты боя
+
+Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan `docs/superpowers/plans/2026-10-24-combat-vfx.md`.
+
+| ID | Задача | Тред / владелец | Статус |
+| --- | --- | --- | --- |
+| VFX-01 | GPU effect system foundation: `GpuFx`, layers, routing from `Boom3D`, glow; explosions on the GPU with a temporary CC0 sheet | Улучшить эффекты боя | в работе |
+| VFX-02 | Own flipbooks baked in Blender from above (fire, smoke, Нагорье dust, plasma, flak) with smoke lighting | Улучшить эффекты боя | после VFX-01 |
+| VFX-03 | Smoke: ribbon missile trails, smoke columns over burning targets, damaged-plane smoke, convoy smoke screen | Улучшить эффекты боя | после VFX-02 |
+| VFX-04 | Gunfire: muzzle flash, glowing tracers, hit sparks, dust from ground hits | Улучшить эффекты боя | после VFX-01 |
+| VFX-05 | Water: splashes and ripple rings on the river | Улучшить эффекты боя | после VFX-01 |
+| VFX-06 | Decal craters and scorch on slopes, light pool, sparks/debris collide with relief; final fps check | Улучшить эффекты боя | после VFX-02 |
+
 ## Архипелаг
 
 Тред «Второй биом». Описание биома — `docs/biome2/archipelago.md`.
