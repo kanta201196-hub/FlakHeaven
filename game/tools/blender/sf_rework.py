@@ -1009,6 +1009,10 @@ def finish(groups, lows, imgs, R, out_dir, name, tex, jpeg=0):
         im.file_format = "PNG"
         im.save()
     root_name = R.get("root", name)
+    # which source materials are glass, read before the renaming below: a source material called "glass" becomes
+    # "glass_src", and looking it up by its old name afterwards would find our new glass material (no fh_glass flag)
+    # and put the source glass into the body
+    is_glass = {m.name: bool(m.get("fh_glass")) for m in bpy.data.materials}
     fin = {}
     for key in ("body", "glass"):
         # mat_names: names the game keys on (e.g. "glass" gets shaders/canopy_glass.tres through the .import)
@@ -1042,7 +1046,7 @@ def finish(groups, lows, imgs, R, out_dir, name, tex, jpeg=0):
         slots = list(lo["fh_slots"])
         for i, s in enumerate(lo.material_slots):
             src = slots[i] if i < len(slots) else ""
-            s.material = fin["glass"] if src and bpy.data.materials[src].get("fh_glass") else fin["body"]
+            s.material = fin["glass"] if is_glass.get(src) else fin["body"]
         _select([lo])
         bpy.ops.object.material_slot_remove_unused()   # duplicate slots merge later (glb_merge_prims)
     # pivots: recipe gives a point or "center" (bbox centre: wheels) / "base" (bbox centre x,y; min z: turrets)
@@ -1097,6 +1101,14 @@ def finish(groups, lows, imgs, R, out_dir, name, tex, jpeg=0):
     gm = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gm)
     gm.merge(out)
+    if R.get("img_plain"):
+        # the glTF exporter names an image after its file (<recipe>_color.png), not its datablock: rename in the GLB
+        js, bin_ = gm.read_glb(out)
+        for im in js.get("images", []):
+            for k in ("color", "normal", "orm"):
+                if im.get("name", "").endswith("_" + k):
+                    im["name"] = k
+        gm.write_glb(out, js, bin_)
     print("EXPORT", out)
     return out
 

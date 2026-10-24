@@ -30,7 +30,16 @@ JET = {"camo": [(0.25, 0.255, 0.265), (0.31, 0.315, 0.32), (0.2, 0.205, 0.215)],
        "belly": (0.42, 0.43, 0.44), "dust": 0.0, "rough": (0.74, 0.82), "wear": 0.45, "detail": 0.75,
        "wear_col": (0.5, 0.5, 0.5), "fade": 0.04, "fade_col": (0.6, 0.6, 0.6)}
 
-# player fighter «Оса» lvl 1: clean light / medium grey two-tone, lighter belly, no marks
+# player fighter «Оса» lvl 1 for the Highlands (Kanta 24.10: "repaint Osa 1 for the Highlands"): the light grey read
+# almost white on the beige sand, so the upper surfaces get a matte disruptive desert camo clearly darker and more
+# saturated than the ground: dark olive-brown, sand-brown (the most area), grey-tan spots; light blue-grey belly.
+# Same family as the attacker / bomber «Песочный камуфляж» (livery.gd SAND_CAMO: light belly) but darker and browner,
+# so the fighter is told apart from them. Order matters: camo[1] covers ~45 %, camo[0] ~35 %, camo[2] ~20 %.
+HIGHLAND = {"camo": [(0.21, 0.20, 0.135), (0.40, 0.30, 0.20), (0.36, 0.34, 0.29)], "scale": 1.1,
+            "stretch": (0.6, 1.0, 1.0), "belly": (0.58, 0.62, 0.66), "dust": 0.0, "rough": (0.76, 0.84),
+            "wear": 0.3, "detail": 0.8, "wear_col": (0.50, 0.46, 0.38), "fade": 0.04, "fade_col": (0.62, 0.56, 0.45),
+            "streak": 0.08}
+# previous «Оса» lvl 1 paint (VIS-01 first install): clean light / medium grey two-tone, lighter belly, no marks
 GREY = {"camo": [(0.50, 0.52, 0.54), (0.61, 0.63, 0.65)], "scale": 1.3, "stretch": (0.6, 1.0, 1.0),
         "belly": (0.72, 0.73, 0.74), "dust": 0.0, "rough": (0.62, 0.72), "wear": 0.25, "detail": 0.8,
         "wear_col": (0.66, 0.67, 0.68), "fade": 0.03, "fade_col": (0.75, 0.76, 0.77), "streak": 0.08}
@@ -181,7 +190,7 @@ RECIPES = {
                       (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
         "erase": {"fuzcamo": ERASE_F1}, "mat_names": {"glass": "glass"}, "img_plain": True,
         "uv_split_x": [-0.3, -0.1, 0.1, 0.3],   # fuselage-long islands would leave half the atlas empty
-        "paint": GREY, "tris": 12000,
+        "paint": HIGHLAND, "tris": 12000,
     },
     "e_zsu": {
         "root": "ground_zsu", "rot": (0, 0, 0), "ground": True,
