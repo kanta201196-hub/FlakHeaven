@@ -25,3 +25,4 @@
 | Файлы | Набор | Автор | Страница |
 | --- | --- | --- | --- |
 | `vfx/blast_ground.png` | Ground Explosion | JangaFX | https://jangafx.com/software/embergen/download/free-vdb-animations |
+| `vfx/blast_air.png` | Mid-Air Explosion (Midair_Explosion_01, every 2nd frame) | JangaFX | https://jangafx.com/software/embergen/download/free-vdb-animations |

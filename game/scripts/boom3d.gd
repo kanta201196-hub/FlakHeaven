@@ -572,9 +572,24 @@ func _flak(p: Vector3, s: float) -> void:
 func _air(p: Vector3, s: float, debris: bool) -> void:
 	# M-39: вспышка + тёмный дым + обломки; огненное ядро маленькое и гаснет за четверть секунды, пыли нет
 	_flash(p, s * 3.4, 0.09, Color(1.0, 0.93, 0.8, 1.0))
-	_core(p, s * 0.45, s * 1.0, 0.26, 1.0)
 	if not _lo:
 		_add(L_SHOCK, {"p": p, "v": Vector3.ZERO, "life": 0.18, "r0": s * 0.8, "r1": s * 3.6, "c": Color(1.0, 0.92, 0.8, 0.12), "seed": randf() * 40.0})
+	# in Forward+ fireball and smoke cloud are the pre-rendered mid-air flipbook (VFX-02)
+	if _gpu == null or not _gpu.flip("air", p, s):
+		_air_body(p, s)
+	_sparks(p, _n(clampf(s * 0.4, 6.0, 14.0)), 300.0 + s * 9.0, 0.45)
+	if debris:
+		for i in _n(clampf(s / 8.0, 2.0, 5.0)):
+			var dv := _rdir(0.4) * randf_range(140.0, 320.0)
+			var burning := i == 0 and s > 26.0
+			_debris(p, dv, s * randf_range(0.1, 0.2) * (1.6 if burning else 1.0), Color(0.16, 0.15, 0.14), 1.0,
+				"fire" if burning else "smoke", burning, 0.5)
+	_light(p + Vector3(0, s * 2.0, 0), clampf(s / 9.0, 1.5, 6.0), clampf(s * 12.0, 200.0, 900.0), 0.25)
+
+
+## Fireball, fire tongues and smoke cloud of an air kill from particles (Compatibility, no flipbook)
+func _air_body(p: Vector3, s: float) -> void:
+	_core(p, s * 0.45, s * 1.0, 0.26, 1.0)
 	var nf := _n(clampf(s / 6.0, 3.0, 6.0))
 	for i in nf:
 		var d := _rdir()
@@ -586,14 +601,6 @@ func _air(p: Vector3, s: float, debris: bool) -> void:
 		var g := randf_range(0.08, 0.13) if dark else randf_range(0.26, 0.34)
 		_smoke(p + d2 * s * 0.45, d2 * s * randf_range(0.6, 1.3), s * 0.6, s * randf_range(2.0, 2.9), randf_range(2.4, 3.8),
 			Color(g, g * 0.96, g * 0.92, 0.75), 0.45 if dark else 0.1, 8.0, 1.2, randf_range(0.0, 0.12))
-	_sparks(p, _n(clampf(s * 0.4, 6.0, 14.0)), 300.0 + s * 9.0, 0.45)
-	if debris:
-		for i in _n(clampf(s / 8.0, 2.0, 5.0)):
-			var dv := _rdir(0.4) * randf_range(140.0, 320.0)
-			var burning := i == 0 and s > 26.0
-			_debris(p, dv, s * randf_range(0.1, 0.2) * (1.6 if burning else 1.0), Color(0.16, 0.15, 0.14), 1.0,
-				"fire" if burning else "smoke", burning, 0.5)
-	_light(p + Vector3(0, s * 2.0, 0), clampf(s / 9.0, 1.5, 6.0), clampf(s * 12.0, 200.0, 900.0), 0.25)
 
 
 ## Крупная цель или игрок: цепочка взрывов по корпусу, несколько горящих обломков до земли, большая волна

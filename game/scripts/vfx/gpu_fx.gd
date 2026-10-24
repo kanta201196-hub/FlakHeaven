@@ -31,6 +31,8 @@ const FLIPS := {
 	"blast": {"tex": "res://art/vfx/blast_ground.png", "frames": 64, "cols": 8, "size": 4.0, "lift": 0.20, "life": 3.4, "glow": 0.4},
 	# destroyed ground target: same bake; its particle cloud was about 6 s across (fireball 1.9 s), so larger per s
 	"ground": {"tex": "res://art/vfx/blast_ground.png", "frames": 64, "cols": 8, "size": 6.0, "lift": 0.20, "life": 3.0, "glow": 0.4},
+	# air kill: CC0 mid-air set seen from above, centred on the kill point (no lift); 63 frames + 1 empty
+	"air": {"tex": "res://art/vfx/blast_air.png", "frames": 63, "cols": 8, "size": 9.0, "lift": 0.0, "life": 3.0, "glow": 0.4},
 }
 
 ## Draw shader of the flipbook layer: camera-facing quad (like Boom3D.BILLBOARD, without rotation), frame from

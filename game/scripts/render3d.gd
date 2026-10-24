@@ -50,7 +50,7 @@ var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые па
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: Material
 var _burnt_sprite_mat: StandardMaterial3D   # остов без 3D-модели (картинка): тёмная заливка, как раньше
-var _smoke_mat: StandardMaterial3D
+var _smoke_mat: Material
 var title: TitleFlight       # тест 3.5-s5 (п. 1): звено 3D-моделей на заставке меню
 ## Высотная тень: силуэт самолёта, размытый, меньше и бледнее настоящей тени. На высоте в километры
 ## настоящая тень размыта полутенью солнца до пятна и лежит далеко в стороне, а крупная чёткая тень
@@ -2004,16 +2004,34 @@ func _ground_to_combat(g3: Vector3) -> Vector2:
 	return Vector2(c.x + (g3.x - c.x) * k, c.z + (g3.z - c.z) * k)
 
 
+## VFX-03 (Forward+): burning wrecks and falling planes smoke with Boom3D's lit smoke (self-shadowed puffs, fire
+## glow from below while fresh) instead of the flat unlit quad. CPUParticles3D gives INSTANCE_CUSTOM = (angle, phase),
+## so only the tile (by instance) and the heat (first ~20 % of life) are filled in here.
+func _wreck_smoke_mat() -> Material:
+	var bb := Boom3D.BILLBOARD.replace("cd = INSTANCE_CUSTOM;",
+		"cd = vec4(INSTANCE_CUSTOM.x, INSTANCE_CUSTOM.y, float(INSTANCE_ID % 4), (1.0 - smoothstep(0.0, 0.2, INSTANCE_CUSTOM.y)) * 0.9);")
+	var sh := Shader.new()
+	sh.code = Boom3D.SMOKE_SH % [Boom3D.COMMON, bb]
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	mat.set_shader_parameter("puff", Boom3D._puff)
+	return mat
+
+
 ## Шлейф дыма с огнём у падающего самолёта: частицы в мировых координатах, поднимаются и расплываются
 func _make_smoke() -> CPUParticles3D:
+	# also replaces the flat material cached by a wreck that came before Boom3D made its puff texture
+	if not _smoke_mat is ShaderMaterial and GpuFx.active() and Boom3D._puff != null:
+		_smoke_mat = _wreck_smoke_mat()
 	if _smoke_mat == null:
-		_smoke_mat = StandardMaterial3D.new()
-		_smoke_mat.albedo_texture = Fx._smoke_n[0] if not Fx._smoke_n.is_empty() else Fx._soft
-		_smoke_mat.vertex_color_use_as_albedo = true
-		_smoke_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_smoke_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_smoke_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-		_smoke_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		var sm := StandardMaterial3D.new()
+		sm.albedo_texture = Fx._smoke_n[0] if not Fx._smoke_n.is_empty() else Fx._soft
+		sm.vertex_color_use_as_albedo = true
+		sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+		sm.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		_smoke_mat = sm
 	var q := QuadMesh.new()
 	q.size = Vector2(1, 1)
 	q.material = _smoke_mat
@@ -2040,6 +2058,12 @@ func _make_smoke() -> CPUParticles3D:
 	gr.offsets = PackedFloat32Array([0.0, 0.06, 0.2, 1.0])
 	gr.colors = PackedColorArray([Color(1.0, 0.75, 0.3, 0.95), Color(0.9, 0.4, 0.12, 0.8), Color(0.18, 0.17, 0.16, 0.6), Color(0.3, 0.3, 0.3, 0.0)])
 	s.color_ramp = gr
+	if _smoke_mat is ShaderMaterial:
+		# VFX-03: lit smoke reads as a dark column only when it is taller and denser than the old flat quads
+		s.lifetime = 3.2
+		s.scale_amount_min = 34.0
+		s.scale_amount_max = 56.0
+		gr.colors = PackedColorArray([Color(1.0, 0.7, 0.3, 0.9), Color(0.6, 0.25, 0.08, 0.85), Color(0.1, 0.095, 0.09, 0.8), Color(0.22, 0.21, 0.2, 0.0)])
 	s.emitting = true
 	add_child(s)
 	return s
