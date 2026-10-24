@@ -118,3 +118,9 @@
 - Команда: `curl --cacert /root/.ccr/ca-bundle.crt https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument --form-string chat_id=<id> -F document=@файл --form-string "caption=подпись"`. Числовой chat_id без `@`; `chat_id=@имя_канала` всегда только через `--form-string`, иначе curl читает его как файл (ошибка 26).
 - Файл сначала скопировать из `/mnt/attach/project-files/...` в локальную папку.
 - Отправка в личку Kanta разрешена (решение Kanta 20.10); в каналы и чужие чаты бот пишет только по плану публикаций.
+
+## 8. itch.io access (checked 2026-10-24)
+- `ITCH_API_KEY` is set as an environment variable (not a network secret: the key goes into the URL path). Works: `https://itch.io/api/1/$ITCH_API_KEY/me` returns user Kanta2011; `/my-games` returns the game `kanta2011.itch.io/flak-heaven` (id 5196484).
+- The key is read-only plus butler. `butler` (v15.32.0, `broth.itch.zone/butler/linux-amd64/LATEST/archive/default`) authenticates with `BUTLER_API_KEY=$ITCH_API_KEY`; `butler status kanta2011/flak-heaven` answers "No channel found" because nothing was pushed yet. Builds can be pushed after Kanta's "yes" (external write).
+- The page description and forum topics cannot be edited via API, and the Chromium login is blocked by Cloudflare (not bypassed). Page and forum edits go to Kanta as ready-to-paste text.
+- Pending: add the Discord link (https://discord.gg/VmSepr2Wge) to the page description, post the "Get Feedback" topic (text in `promo-plan.md`).
