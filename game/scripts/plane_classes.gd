@@ -5,7 +5,7 @@ class_name PlaneClasses
 ## groups — группы подвесов (одна настройка приоритета на группу):
 ##   name — где висит, slots — сколько точек в группе, weapon — стартовое оружие ("" — пусто).
 ## turrets — встроенные автотурели (круговой обстрел), отдельная группа без выбора оружия: сколько на старте;
-##   turrets_max — сколько можно получить в бою (тест 3.5-s7: «Грач» — 1, «Кит» — 2, корма и фюзеляж).
+##   потолок в бою, оружие, бонус ★ и ведомые — по самолёту (класс + ур. самолёта), см. `PLANES`.
 ## 3.5 (правки 13, 26, 27) — «ощущение» класса:
 ##   inertia_k — во сколько раз дольше вектор скорости догоняет нос (занос тяжёлой машины);
 ##   turn_accel — как быстро набирается угловая скорость (в долях полной за секунду): Оса — сразу, Кит — медленно;
@@ -30,8 +30,7 @@ const DATA := {
 			{"name": "Под фюзеляжем", "slots": 1, "weapon": ""},
 		],
 		"turrets": 0,
-		"weapons": ["aam", "rockets", "flares"], "signature": "aam",
-		"wingmen": 1,
+		"signature": "aam",
 		"skill3": "combat_turn",
 		"color": Color(0.55, 0.85, 1.0),
 	},
@@ -46,8 +45,7 @@ const DATA := {
 			{"name": "Внешняя пара", "slots": 2, "weapon": ""},
 		],
 		"turrets": 1,
-		"weapons": ["aam", "rockets", "flares", "bombs", "turret"], "signature": "rockets",
-		"wingmen": 2,
+		"signature": "rockets",
 		"skill3": "armor_shield",
 		"color": Color(0.6, 0.95, 0.65),
 	},
@@ -62,9 +60,8 @@ const DATA := {
 			{"name": "Бомбоотсек", "slots": 2, "weapon": "bombs"},
 			{"name": "Крылья (пара)", "slots": 2, "weapon": ""},
 		],
-		"turrets": 1, "turrets_max": 2,
-		"weapons": ["rockets", "flares", "bombs", "turret"], "signature": "bombs",
-		"wingmen": 2,
+		"turrets": 1,
+		"signature": "bombs",
 		"skill3": "umbrella",
 		"color": Color(0.95, 0.85, 0.55),
 	},
@@ -155,9 +152,53 @@ const SKILL3 := {
 }
 
 
-## Правка 5 теста 3.5-s5 (Kanta): у каждого самолёта свой список оружия — в ангаре и в карточках боя.
-## Экспериментальное оружие тяжёлого подвеса пока общее. Особенность класса (★) — +20% урона одному оружию.
-const SIGNATURE_K := 1.2
+## Kanta 24.10: what each plane (class + plane level) carries. Overrides the class `DATA` for that plane:
+## weapons — card and hangar pool; bonus — damage factor per weapon (the ★ class bonus, 15 % on plane 1,
+## 20 % on plane 2, plus extras); turrets_max — turret cap reached by turret upgrades; wingmen — permanent
+## wingmen cap; wing_types — allowed wingman types. Experimental weapons of the heavy hardpoint stay common.
+const PLANES := {
+	"fighter": {
+		1: {"weapons": ["aam", "agm", "rockets", "flares"], "bonus": {"aam": 1.15},
+			"turrets_max": 0, "wingmen": 1, "wing_types": ["swift"]},
+		2: {"weapons": ["aam", "agm", "rockets", "flares", "srm"], "bonus": {"aam": 1.2, "agm": 1.05},
+			"turrets_max": 0, "wingmen": 1, "wing_types": ["swift", "rook"]},
+	},
+	"attacker": {
+		1: {"weapons": ["rockets", "aam", "agm", "bombs", "turret", "flares"], "bonus": {"rockets": 1.15},
+			"turrets_max": 1, "wingmen": 1, "wing_types": ["swift", "rook"]},
+		2: {"weapons": ["rockets", "aam", "agm", "bombs", "turret", "flares"], "bonus": {"rockets": 1.2},
+			"turrets_max": 2, "wingmen": 1, "wing_types": ["swift", "rook"]},
+	},
+	"bomber": {
+		1: {"weapons": ["bombs", "hebomb", "rockets", "turret", "flares"], "bonus": {"bombs": 1.15},
+			"turrets_max": 2, "wingmen": 2, "wing_types": ["swift"]},
+		2: {"weapons": ["bombs", "hebomb", "rockets", "turret", "flares"], "bonus": {"bombs": 1.2},
+			"turrets_max": 3, "wingmen": 2, "wing_types": ["swift"]},
+	},
+}
+
+
+## Class data of plane `lv` (1 or 2): `DATA` of the class with that plane's `PLANES` overrides
+static func plane(cls_id: String, lv: int) -> Dictionary:
+	var d: Dictionary = (DATA[cls_id] as Dictionary).duplicate(true)
+	d.merge((PLANES[cls_id][clampi(lv, 1, 2)] as Dictionary).duplicate(true), true)
+	d["plane_lvl"] = clampi(lv, 1, 2)
+	return d
+
+
+## Plane level to use when the caller gives none: the plane this class flies now
+static func _lv(cls_id: String, lv: int) -> int:
+	return lv if lv > 0 else Profile.plane_lvl(cls_id)
+
+
+## Damage factor of weapon `w` on plane `lv` (the ★ class bonus and plane extras; 1.0 — none)
+static func bonus_k(cls_id: String, lv: int, w: String) -> float:
+	return float((PLANES[cls_id][clampi(_lv(cls_id, lv), 1, 2)]["bonus"] as Dictionary).get(w, 1.0))
+
+
+## Whether plane `lv` may take a permanent wingman of type `t` (`Prog.WING_TYPES` id)
+static func wing_type_ok(cls_id: String, lv: int, t: String) -> bool:
+	return (PLANES[cls_id][clampi(_lv(cls_id, lv), 1, 2)]["wing_types"] as Array).has(t)
 
 
 ## Фишка 2 (Kanta 18.10, «бери в работу»): мастерство класса — одна особая карточка за вылет,
@@ -176,18 +217,44 @@ const MASTERY_FIRE_SRC := "мастерство: выжженная земля"
 
 ## Тест 3.5-s7 (Kanta): у «Кита» на старте только кормовая турель, верхняя на фюзеляже — с ур. 3 турелей
 const TURRET2_LVL := 3
+## Kanta 24.10: third turret mount («Кит» plane 2) at turret lvl 5
+const TURRET3_LVL := 5
 
 
-static func turret_slots(cls_id: String, level: int) -> int:
-	var d: Dictionary = DATA[cls_id]
-	var n := int(d["turrets"])
+## Turret mounts at turret upgrade `level` on plane `lv`: the class start count, +1 at lvl 3 and +1 at lvl 5,
+## capped by the plane's `turrets_max` (Kanta 24.10: «Грач» 1 / 2, «Кит» 2 / 3)
+static func turret_slots(cls_id: String, level: int, lv := 0) -> int:
+	var n := int(DATA[cls_id]["turrets"])
+	if n <= 0:
+		return 0
 	if level >= TURRET2_LVL:
-		n = int(d.get("turrets_max", n))
-	return n
+		n += 1
+	if level >= TURRET3_LVL:
+		n += 1
+	return mini(n, maxi(int(DATA[cls_id]["turrets"]), int(PLANES[cls_id][clampi(_lv(cls_id, lv), 1, 2)]["turrets_max"])))
 
 
-static func allows(cls_id: String, w: String) -> bool:
-	return Weapons.EXP.has(w) or (DATA[cls_id]["weapons"] as Array).has(w)
+## PG-01 (Kanta 24.10): third hardpoint group, opened by hangar node «Узлы подвеса» lvl 2 of that plane.
+## Appended after all other groups (turrets, heavy), so card ids, saves and 3D layout keep their indices.
+## frac — where a wing pair hangs along the half-span (0 — the default by group index).
+const GROUP3 := {
+	"fighter": {"name": "Законцовки крыла (пара)", "slots": 2, "weapon": "", "frac": 1.0},
+	"attacker": {"name": "Под фюзеляжем", "slots": 1, "weapon": ""},
+	"bomber": {"name": "Внешняя пара", "slots": 2, "weapon": "", "frac": 0.82},
+}
+
+
+## Hardpoint group definitions of a class: the base `groups`, plus `GROUP3` when `third` is open
+static func group_defs(cls_id: String, third: bool) -> Array:
+	var out: Array = (DATA[cls_id]["groups"] as Array).duplicate()
+	if third:
+		out.append(GROUP3[cls_id])
+	return out
+
+
+## Whether plane `lv` of the class may carry weapon `w` (0 — the plane the class flies now)
+static func allows(cls_id: String, w: String, lv := 0) -> bool:
+	return Weapons.EXP.has(w) or (PLANES[cls_id][clampi(_lv(cls_id, lv), 1, 2)]["weapons"] as Array).has(w)
 
 
 static func signature(cls_id: String) -> String:

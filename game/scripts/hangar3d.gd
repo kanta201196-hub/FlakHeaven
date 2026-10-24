@@ -22,6 +22,8 @@ var view_lvl := 1
 static var bench_weapons := {}
 static var bench_pitch_min := -0.2   # стенд: камера ниже обычного (тест 3.5-s5, п. 3 — открытый бомбоотсек снизу)
 static var bench_seeker := 0   # Т-3: стенд --modules — «Глазастик» на ракетах
+## Bench --hangarweaptab: weapon shown on the weapons tab even if it is not in the class list (PG-01 frames)
+static var bench_tab_w := ""
 var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5), 4 — эволюция (Т-4)
 var tier_rects: Array = []   # [Rect2, ступень]
 var _ctrl: Control
@@ -34,6 +36,11 @@ var _idle := 0.0             # секунд без мыши — потом ме�
 var _drawn_frame := -10
 var _cls := ""
 var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
+## Kanta 24.10: real stand for bombs instead of box stands; cradle height as a share of the cart height
+const STAND_CART := "res://models/hangar/stand_cart.glb"
+const CART_CRADLE := 0.55
+## Floor of the weapon store in the weapon view (box stands went from here up to the weapon)
+const FLOOR_Y := -0.2
 var turret_pos: Array = []   # [Vector3, сторона] — турели текущей модели
 ## Тест 3.5-s8: показ механизации (HangarAnim) — кнопка на виде самолёта или курсор на узле «Крыло»
 var mech_demo := false
@@ -332,7 +339,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		turret_pos.clear()
 		var evo := weapon_tier == 4
 		var t := mini(weapon_tier, 3)
-		var side := "top" if weapon == "turret" else ("" if weapon == "flares" and not evo else "under")
+		# Kanta 24.10: the weapon itself on the stands, without the pylon that holds it on the wing
+		var side := "top" if weapon == "turret" else ""
 		if evo and weapon in ["flares"]:
 			side = "top"
 		elif evo and weapon == "bombs":
@@ -345,6 +353,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
 		var bb := wmi.mesh.get_aabb()
 		var s := (0.62 if weapon != "turret" else 1.05) / maxf(1.0, maxf(bb.size.x, bb.size.z))
+		if weapon == "hebomb":   # Sketchfab bomb is stubby with wide fins: smaller, so the cart and the bomb fit the view
+			s *= 0.72
 		# турель — в одном масштабе на всех ступенях (модель меньше 1 — множитель не зависит от габарита),
 		# поэтому рост ступени виден; S9-04: стоит неподвижно, стволами вперёд-вбок к камере (3/4 спереди)
 		var rot := TURRET_SHOW_YAW if weapon == "turret" else 0.0
@@ -354,7 +364,21 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		pivot.add_child(wmi)
 		# п. 32: на складе оружие лежит на двух ложементах-подставках от пола до низа модели
 		var bottom := wmi.position.y + bb.position.y * s
-		if weapon != "turret" and bottom > -0.19:
+		var on_cart := false
+		# Kanta 24.10: bombs lie on a real bomb cart (Sketchfab №23, CC BY — CREDITS.md), the weapon sits on its cradle
+		if Weapons.is_bomb(weapon) and ResourceLoader.exists(STAND_CART):
+			var cart := WeaponModels._glb_mesh(STAND_CART, 1.0, Color(), "stand_cart")
+			if cart != null:
+				var cb := cart.get_aabb()
+				var ck := bb.size.x * s * 1.05 / cb.size.x
+				var cm := MeshInstance3D.new()
+				cm.mesh = cart
+				cm.basis = Basis.from_scale(Vector3.ONE * ck)
+				cm.position = Vector3(0, FLOOR_Y - cb.position.y * ck, 0)
+				pivot.add_child(cm)
+				wmi.position.y += FLOOR_Y + cb.size.y * ck * CART_CRADLE - bottom
+				on_cart = true
+		if weapon != "turret" and not on_cart and bottom > -0.19:
 			var sm := StandardMaterial3D.new()
 			sm.albedo_color = Color(0.32, 0.34, 0.3)
 			sm.metallic = 0.1   # S9-03: крашеные ложементы — матовые
@@ -441,7 +465,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		g.evo = weapon_tier == 4
 		g.level = [1, 3, 5][mini(weapon_tier, 3) - 1]   # ступень вида → уровень оружия (ловушки ставятся по уровню)
 		if g.builtin and g.weapon == "turret":   # тест 3.5-s7: верхняя турель «Кита» — с ур. 3
-			g.slots = PlaneClasses.turret_slots(cls_id, g.level)
+			g.slots = PlaneClasses.turret_slots(cls_id, g.level, lvl)
 		if g.is_empty():
 			continue
 		var wt := PlaneArt.weapon_tex(g.weapon)

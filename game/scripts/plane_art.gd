@@ -5,7 +5,9 @@ class_name PlaneArt
 ## Точки подвеса считаются по силуэту крыла автоматически — новые картинки подхватываются без правки кода.
 
 ## 2.8: длина подвеса — доля длины истребителя на экране (plane_len), чтобы подвесы были видны
-const WEAPON_FRAC := {"aam": 0.34, "rockets": 0.26, "bombs": 0.27, "gunpod": 0.3, "flares": 0.22, "turret": 0.22}
+## PG-01: `srm` shorter than `aam`, `agm` the longest missile, `hebomb` longer than a cluster bomb
+const WEAPON_FRAC := {"aam": 0.34, "rockets": 0.26, "bombs": 0.27, "gunpod": 0.3, "flares": 0.22, "turret": 0.22,
+	"srm": 0.28, "agm": 0.4, "hebomb": 0.24}   # hebomb: the stubby finned model reads huge at 0.33 (PG-01)
 
 static var _tex := {}
 static var _anchors := {}
@@ -113,6 +115,8 @@ static func slot_points(cls_id: String, lvl: int, group_index: int, group: Hardp
 		return [Vector2(wx + 2.0, 0.0)]
 	# пары на крыле: первая группа ближе к фюзеляжу, вторая — дальше
 	var frac := 0.38 if group_index == 0 else 0.62
+	if group.mount_frac > 0.0:
+		frac = group.mount_frac   # PG-01: third group on the wing tips / outer pair
 	var off := maxf(fus + 5.0, half * frac)
 	for i in group.slots / 2:
 		var o := off + i * half * 0.14

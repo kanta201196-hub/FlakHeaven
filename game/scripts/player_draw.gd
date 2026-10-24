@@ -86,7 +86,7 @@ func _draw_sprite(w: float) -> void:
 			continue
 		var pts := PlaneArt.slot_points(pl.cls_id, pl.plane_lvl, gi, g)
 		var a := 1.0
-		if g.weapon in ["aam", "rockets", "bombs"] and g.cd > 0.3:
+		if Weapons.leaves_pylon(g.weapon) and g.cd > 0.3:
 			a = 0.4
 		var wk := 1.0 / maxf(k, 0.01) # оружие в экранных пикселях, независимо от масштаба картинки
 		for pt in pts:

@@ -942,6 +942,11 @@ msgstr "%s: Lv. %d → %d\n%s"
 msgid "\nВторая турель — сверху на фюзеляже"
 msgstr "\nSecond turret — on top of the fuselage"
 
+msgid "\nЕщё одна турель"
+msgstr "\nOne more turret"
+
+#: game/scripts/cards.gd:686
+#: game/scripts/cards.gd:701
 #: game/scripts/cards.gd:709
 #, c-format
 msgid "\nБонус редкости: +%s урона группы"
@@ -949,8 +954,8 @@ msgstr "\nRarity bonus: +%s group damage"
 
 #: game/scripts/cards.gd:711
 #, c-format
-msgid "\n★ Особенность класса: урон +20%"
-msgstr "\n★ Class trait: damage +20%"
+msgid "\n★ Бонус самолёта: урон +%d%%"
+msgstr "\n★ Plane bonus: damage +%d%%"
 
 #: game/scripts/cards.gd:713
 #, c-format
@@ -1194,10 +1199,6 @@ msgstr "drones"
 #: game/scripts/ekranoplan.gd:24
 msgid "экранопланы"
 msgstr "ground-effect craft"
-
-#: game/scripts/enemy.gd:63
-msgid "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, рельсотрон и лазер — сильнее."
-msgstr "A grey shield above an enemy means armor: cannon and turrets do half damage, while rockets, bombs, railgun and laser hit harder."
 
 #: game/scripts/enemy.gd:64
 msgid "Жёлтые шевроны — манёвренный враг: уходит от взрывов и НАР. Бейте его пушкой, лучше с хвоста."
@@ -1569,8 +1570,8 @@ msgstr "Ground damage"
 
 #: game/scripts/hud_campaign.gd:182
 #, c-format
-msgid "Экипаж ур. %d · ★ %s +20%%"
-msgstr "Crew lv. %d · ★ %s +20%%"
+msgid "Экипаж ур. %d · ★ %s +%d%%"
+msgstr "Crew lv. %d · ★ %s +%d%%"
 
 #: game/scripts/hud_campaign.gd:186
 #, c-format
@@ -2658,8 +2659,8 @@ msgstr "Fitted from Lv. 1; improved by cards in combat."
 
 #: game/scripts/hud_hangar.gd:213
 #, c-format
-msgid "★ особенность класса: +20%"
-msgstr "★ class specialty: +20%"
+msgid "★ бонус самолёта: +%d%%"
+msgstr "★ plane bonus: +%d%%"
 
 #: game/scripts/hud_hangar.gd:242
 #, c-format
@@ -4701,10 +4702,6 @@ msgstr "Pylons"
 msgid "урон подвесов и турелей +4%"
 msgstr "hardpoint and turret damage +4%"
 
-#: game/scripts/profile.gd:16
-msgid "временно: до введения грузоподъёмности"
-msgstr "temporary: until payload is added"
-
 #: game/scripts/profile.gd:17
 msgid "Топливный бак"
 msgstr "Fuel tank"
@@ -5626,13 +5623,13 @@ msgid "Стриж"
 msgstr "Swift"
 
 #: game/scripts/prog.gd:63
-msgid "Держит строй, бьёт самолёты из пушки, 2 наводящиеся ракеты (35) раз в 7 с"
-msgstr "Holds formation, hits planes with its cannon, 2 homing missiles (35) every 7 s"
+msgid "Держит строй, бьёт самолёты из пушки, 2 наводящиеся ракеты (35) раз в 10 с"
+msgstr "Holds formation, hits planes with its cannon, 2 homing missiles (35) every 10 s"
 
 #: game/scripts/prog.gd:64
 #, c-format
-msgid "+40% урона, ракеты раз в 5 с"
-msgstr "+40% damage, missiles every 5 s"
+msgid "+40% урона, ракеты раз в 7 с"
+msgstr "+40% damage, missiles every 7 s"
 
 #: game/scripts/prog.gd:64
 msgid "ракеты с осколками; раз в 6 с сбивает ракету рядом с ведущим"
@@ -5647,8 +5644,8 @@ msgid "Грачонок"
 msgstr "Rookling"
 
 #: game/scripts/prog.gd:66
-msgid "Приоритет — наземные цели: залп из 6 ракет (12, взрыв 50) раз в 5 с; прочнее ×1,5"
-msgstr "Priority: ground targets — salvo of 6 rockets (12, blast 50) every 5 s; tougher ×1.5"
+msgid "Приоритет — наземные цели: залп из 6 ракет (12, взрыв 50) раз в 7 с; прочнее ×1,5"
+msgstr "Priority: ground targets — salvo of 6 rockets (12, blast 50) every 7 s; tougher ×1.5"
 
 #: game/scripts/prog.gd:67
 #, c-format
@@ -6837,6 +6834,165 @@ msgstr "synergy: good company"
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
 
+#: PG-01
+msgid "%d зап."
+msgstr "%d parts"
+
+#: PG-01
+msgid "1 бомба с точки; ур. 2–5: +25% урона, +8% радиуса"
+msgstr "1 bomb per hardpoint; lv. 2–5: +25% damage, +8% radius"
+
+#: PG-01
+msgid "1 ракета с точки; ур. 2–5: +25% урона, −6% перезарядки"
+msgstr "1 missile per hardpoint; lv. 2–5: +25% damage, −6% cooldown"
+
+#: PG-01
+msgid "1 ракета с точки; ур. 2–5: +25% урона, −8% перезарядки"
+msgstr "1 missile per hardpoint; lv. 2–5: +25% damage, −8% cooldown"
+
+#: PG-01
+msgid "Ближний бой"
+msgstr "Short-range"
+
+#: PG-01
+msgid "Законцовки крыла (пара)"
+msgstr "Wingtips (pair)"
+
+#: PG-01
+msgid "Лёгкие ракеты с тепловой головкой: по одной с точки в ближайший самолёт рядом. Быстро перезаряжаются и круто доворачивают — против дронов и вёртких истребителей"
+msgstr "Light heat-seeking missiles: one per hardpoint at the nearest aircraft close by. Quick to reload and turn hard — good against drones and agile fighters"
+
+#: PG-01
+msgid "Обычная пушка: ровный темп и урон."
+msgstr "Regular cannon: steady rate of fire and damage."
+
+#: PG-01
+msgid "Одна тяжёлая бомба с точки: долгая перезарядка, большой взрыв по земле, урон ×2 по наземным целям; самолёты не задевает. Против бункеров и колонн"
+msgstr "One heavy bomb per hardpoint: long cooldown, big blast on the ground, ×2 damage to ground targets; does not hit aircraft. Against bunkers and convoys"
+
+#: PG-01
+msgid "Ракета В-З"
+msgstr "AGM"
+
+#: PG-01
+msgid "Ракеты ближнего боя"
+msgstr "Short-range missiles"
+
+#: PG-01
+msgid "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, ракета «воздух-земля», рельсотрон и лазер — сильнее. Бронебойные снаряды пушки броню пробивают."
+msgstr "A grey shield above an enemy means armor: cannon and turrets do half damage, while rockets, bombs, the air-to-ground missile, railgun and laser hit harder. Armor-piercing cannon shells go through armor."
+
+#: PG-01
+msgid "Спарка"
+msgstr "Twin gun"
+
+#: PG-01
+msgid "Стандартная"
+msgstr "Standard"
+
+#: PG-01
+msgid "Темп ×0,55, урон ×2, снаряд быстрее."
+msgstr "Rate ×0.55, damage ×2, faster shell."
+
+#: PG-01
+msgid "Темп ×1,6, урон ×0,65, лёгкий разброс — против роя дронов, быстрее разгоняет «обороты»."
+msgstr "Rate ×1.6, damage ×0.65, slight spread — against drone swarms, builds up \"revs\" faster."
+
+#: PG-01
+msgid "Тяжёлая ракета по наземным целям с дальней дистанции: сама выбирает бронированную или крупную цель. Броня её не останавливает — по бронированным урон выше"
+msgstr "Heavy missile against ground targets from long range: picks armored or large targets itself. Armor does not stop it — more damage to armored targets"
+
+#: PG-01
+msgid "УР В-З"
+msgstr "AGM"
+
+#: PG-01
+msgid "Управляемая ракета «воздух-земля»"
+msgstr "Guided air-to-ground missile"
+
+#: PG-01
+msgid "Фугасная"
+msgstr "HE bomb"
+
+#: PG-01
+msgid "Фугасная авиабомба"
+msgstr "High-explosive bomb"
+
+#: PG-01
+msgid "выбрать"
+msgstr "select"
+
+#: PG-01
+msgid "ракета «воздух-земля»"
+msgstr "air-to-ground missile"
+
+#: PG-01
+msgid "ракеты ближнего боя"
+msgstr "short-range missiles"
+
+#: PG-01
+msgid "ур. 2 — третья группа подвеса"
+msgstr "lv. 2 — third hardpoint group"
+
+#: PG-01
+msgid "фугасные бомбы"
+msgstr "HE bombs"
+
+#: PG-01
+msgid "✓ выбрана"
+msgstr "✓ selected"
+
+#: PG-01
+msgid "Курсовая пушка этого самолёта"
+msgstr "Course gun of this plane"
+
+#: PG-01
+msgid "Снаряды"
+msgstr "Shells"
+
+#: PG-01
+msgid "Обычные"
+msgstr "Standard"
+
+#: PG-01
+msgid "Бронебойные"
+msgstr "Armor-piercing"
+
+#: PG-01
+msgid "Осколочные"
+msgstr "High-explosive"
+
+#: PG-01
+msgid "Зажигательные"
+msgstr "Incendiary"
+
+#: PG-01
+msgid "Обычные снаряды: полный урон и скорость."
+msgstr "Standard shells: full damage and speed."
+
+#: PG-01
+msgid "Бронебойные: урон ×0,75, скорость ×1; пробивают броню. Лучше всего по одной крепкой цели."
+msgstr "Armor-piercing: damage ×0.75, speed ×1; pierce armor. Best against one tough target."
+
+#: PG-01
+msgid "Осколочно-фугасные: урон ×1, скорость ×0,75; осколки задевают соседей. Лучше всего по группе."
+msgstr "High-explosive: damage ×1, speed ×0.75; fragments hit nearby enemies. Best against groups."
+
+#: PG-01
+msgid "Зажигательные: урон ×0,85, скорость ×0,8; цель горит, огонь копится. Лучше всего по боссам."
+msgstr "Incendiary: damage ×0.85, speed ×0.8; the target burns and fire stacks. Best against bosses."
+
+#: PG-01
+msgid "горение"
+msgstr "burning"
+
+#: PG-01
+msgid "курсовое: осколки"
+msgstr "Course gun: fragments"
+
+#: PG-01
+msgid "✓ выбраны"
+msgstr "✓ selected"
 #: game/scripts/gfx_presets.gd (UI-01 step 3)
 msgid "«Весь экран» — тени до края кадра. «Ближе» — тени только у центра, зато они чётче."
 msgstr "\"Whole screen\" draws shadows to the edge of the frame. \"Closer\" keeps them near the centre, but sharper."

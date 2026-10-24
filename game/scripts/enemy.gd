@@ -56,11 +56,11 @@ var ecm_t := 0.0
 var ecm_off_t := 0.0
 const ECM_OFF := 8.0
 const DEF_K := {
-	"armor": {"gun": 0.5, "blast": 1.3, "homing": 1.0, "energy": 1.3},
-	"agile": {"gun": 1.15, "blast": 0.6, "homing": 1.0, "energy": 1.3},
+	"armor": {"gun": 0.5, "blast": 1.3, "homing": 1.0, "energy": 1.3, "ap": 1.3, "gun_ap": 1.0},
+	"agile": {"gun": 1.15, "blast": 0.6, "homing": 1.0, "energy": 1.3, "ap": 1.0, "gun_ap": 1.15},
 }
 const DEF_HINT := {
-	"armor": "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, рельсотрон и лазер — сильнее.",
+	"armor": "Серый щит над врагом — броня: пушка и турели бьют вполовину, а НАР, бомбы, ракета «воздух-земля», рельсотрон и лазер — сильнее. Бронебойные снаряды пушки броню пробивают.",
 	"agile": "Жёлтые шевроны — манёвренный враг: уходит от взрывов и НАР. Бейте его пушкой, лучше с хвоста.",
 	"ecm": "Фиолетовые дуги — помехи ракетоносца: самонаводящиеся ракеты почти не попадают. Сбейте ракетоносец пушкой или снимите помехи ЭМИ.",
 }
@@ -68,17 +68,31 @@ const DEF_HINT := {
 var _sep := Vector2.ZERO
 
 
-## EX-04: вид оружия по источнику урона (строки источников — как в статистике урона)
+## EX-04: вид оружия по источнику урона (строки источников — как в статистике урона).
+## PG-01: "ap" — guided air-to-ground missile (armor-piercing); armor-piercing course ammo — see `course_class`;
+## burning from incendiary ammo ignores defences.
 static func src_class(src: String) -> String:
 	if src in ["ЭМИ", "лазер", "рельсотрон"]:
 		return "energy"
-	if src in ["ракеты В-В", "ёлочка", "противоракеты"]:
+	if src == "УР В-З":
+		return "ap"
+	if src in ["ракеты В-В", "ёлочка", "противоракеты", "ракеты ближнего боя"]:
 		return "homing"
 	if src.begins_with("курсовое") or src in ["гондола", "турели"] or src.begins_with("ведом"):
 		return "gun"
-	if src in ["проход на форсаже", "бронещит", "прочее"]:
+	if src in ["проход на форсаже", "бронещит", "прочее", "горение"]:
 		return ""
 	return "blast"   # НАР, бомбы, ковровые, плазма, связки со взрывом
+
+
+## PG-01 (Kanta 24.10): bullets with armor-piercing ammo are "gun_ap" (armor does not halve them). The source
+## name stays «курсовое (…)», so logs, the damage report and the ace "on the tail" rule do not change.
+static func course_class(c: String, src: String, ap_ammo: bool) -> String:
+	return "gun_ap" if ap_ammo and c == "gun" and src.begins_with("курсовое") else c
+
+
+static func _ap_ammo() -> bool:
+	return Main.I != null and is_instance_valid(Main.I.player) and Main.I.player.ammo == "ap"
 
 
 func jammed() -> bool:
@@ -87,7 +101,7 @@ func jammed() -> bool:
 
 ## EX-04: множитель урона от защиты
 func defense_k(src: String) -> float:
-	var c := src_class(src)
+	var c := course_class(src_class(src), src, _ap_ammo())
 	var k := 1.0
 	if DEF_K.has(defense):
 		k = float(DEF_K[defense].get(c, 1.0))

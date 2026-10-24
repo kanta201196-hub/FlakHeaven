@@ -179,7 +179,7 @@ func _planes(m: Main, r: Rect2) -> void:
 			ctrl.draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(float(row[1]), 0.0, 1.0), bar.size.y)), col)
 			y += 24.0
 		y += 10.0
-		y += _para(Vector2(x, y + 12.0), Loc.t("Экипаж ур. %d · ★ %s +20%%") % [Profile.crew_lvl(id), Loc.t(String(Weapons.DEFS[d["signature"]]["short"]))], tw, 15, Color(0.65, 1.0, 0.72)) + 10.0
+		y += _para(Vector2(x, y + 12.0), Loc.t("Экипаж ур. %d · ★ %s +%d%%") % [Profile.crew_lvl(id), Loc.t(String(Weapons.DEFS[d["signature"]]["short"])), roundi((PlaneClasses.bonus_k(id, 0, String(d["signature"])) - 1.0) * 100.0)], tw, 15, Color(0.65, 1.0, 0.72)) + 10.0
 		# навык класса [E]: у выбранного самолёта — три варианта, у остальных — текущий
 		var cur: String = m.skill_pick.get(id, Profile.skills(id)[0])
 		if not on:

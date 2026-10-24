@@ -10,7 +10,8 @@ extends RefCounted
 ## below change then. Static only; callers pass their Control.
 
 ## Full tiles with glow and family disc baked in, by weapon id
-const WEAPON_TILES := {"aam": "w_aam", "rockets": "w_rockets", "bombs": "w_hebomb", "flares": "w_flares"}
+## (bombs no longer borrow the old HE-bomb tile: cluster bombs get their own model render, PG-01)
+const WEAPON_TILES := {"aam": "w_aam", "rockets": "w_rockets", "flares": "w_flares"}
 ## Schematic pictures by icon key (module id, skill id or "wingman")
 const SCHEMATIC := {
 	"engine": "s_engine", "wing": "s_flaps", "armor": "s_armor", "reload": "s_reload",
@@ -53,6 +54,8 @@ static func warm() -> void:
 		_load("res://art/ui_icons/%s.jpg" % f)
 	for f: String in SCHEMATIC.values():
 		_load("res://art/ui_icons/%s.png" % f)
+	for w: String in Weapons.DEFS:   # PG-01 model renders, cached by CardIcons
+		CardIcons.tex("model_" + w)
 	glow_texture()
 
 
@@ -159,8 +162,12 @@ static func tile(ci: Control, r: Rect2, key: String, fam: String, frame: Color, 
 		if SCHEMATIC.has(key):
 			ci.draw_texture_rect(_load("res://art/ui_icons/%s.png" % SCHEMATIC[key]), r, false, mod)
 		else:
-			var spr := PlaneArt.weapon_tex(key) if Weapons.DEFS.has(key) else null
-			if spr != null:
+			# PG-01: bare render of the hangar model (game/tools/model_lab/card_icons.py) over this tile's glow
+			var mdl := CardIcons.tex("model_" + key)
+			var spr := PlaneArt.weapon_tex(key) if Weapons.DEFS.has(key) and mdl == null else null
+			if mdl != null:
+				ci.draw_texture_rect(mdl, Rect2(r.position + Vector2(r.size.x * 0.06, -r.size.y * 0.02), r.size * 0.96), false, mod)
+			elif spr != null:
 				var k := r.size.x * 0.62 / maxf(spr.get_width(), spr.get_height())
 				ci.draw_set_transform(r.get_center() + Vector2(r.size.x * 0.06, -r.size.y * 0.06), -PI / 4.0, Vector2(k, k))
 				ci.draw_texture(spr, -spr.get_size() / 2.0, mod)

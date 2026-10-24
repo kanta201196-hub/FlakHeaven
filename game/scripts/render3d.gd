@@ -1048,7 +1048,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				# Т-5: створки открываются при сбросе бомб (перезарядка группы бомбоотсека скакнула вверх)
 				var dropped := false
 				for g: Hardpoint in p.groups:
-					if g.weapon == "bombs":
+					if Weapons.is_bomb(g.weapon):
 						var key := "bay_cd_%s" % g.name
 						dropped = dropped or g.cd > float(u.get(key, g.cd)) + 0.3
 						u[key] = g.cd
@@ -1668,7 +1668,7 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 			ent["ver"] = int(wc.get("ver", 0)) + 1
 			wc["ver"] = ent["ver"]
 			wc[gi] = ent
-		var dim := g.weapon in ["aam", "rockets", "bombs"] and g.cd > 0.3
+		var dim := Weapons.leaves_pylon(g.weapon) and g.cd > 0.3
 		var len_px: float = ent["len_px"]
 		var l_offs: Array = []
 		for mt: Dictionary in ent["mounts"]:
@@ -1710,13 +1710,13 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 				wmi.basis = b.scaled(Vector3(len_px, len_px, len_px))
 				if tail_cab and wmi.get_child_count() > 0:   # кабина стрелка неподвижна, крутится только шар
 					(wmi.get_child(0) as Node3D).basis = Basis(Vector3.UP, float(mt["yaw"]) - yaw)
-			if g.weapon == "aam" or g.weapon == "rockets":
+			if g.weapon in Hardpoint.MISSILES:
 				# правка 3.5-s4 (п. 27): ракета ушла с пилона — её там нет до перезарядки; пуск — с этой точки
 				wmi.visible = not dim
 				var wp := root.global_transform * wmi.position
 				l_offs.append((Vector2(wp.x, wp.z) - p.global_position).rotated(-p.heading))
 			else:
-				if g.weapon == "bombs":
+				if Weapons.is_bomb(g.weapon):
 					# тест 3.5-s5 (п. 3): бомбы падают с точек подвеса (из бомбоотсека — из открытого люка);
 					# у «ковра» в отсеке — с места каждой из 8 бомб кассеты
 					var bl: Array = WeaponModels.CARPET_BAY_PTS if int(mt["t"]) == WeaponModels.CARPET_BAY_T else [Vector3.ZERO]
@@ -1728,7 +1728,7 @@ func _sync_weapons(u: Dictionary, p: Player, tex: Texture2D) -> void:
 					wmi.transparency = tr_w
 			if mt["side"] == "bay":   # в закрытом бомбоотсеке бомб не видно
 				wmi.visible = float(u.get("bay_t", 1.0)) > 0.4
-		if g.weapon in ["aam", "rockets", "bombs"]:
+		if Weapons.leaves_pylon(g.weapon):
 			g.launch_offs = l_offs
 	for key in u["weapons"].keys():
 		if not want.has(key):
@@ -1759,6 +1759,11 @@ func _weapon_layout(u: Dictionary, p: Player, tex: Texture2D, gi: int, g: Hardpo
 			var lo := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw)
 			if not is_nan(lo):
 				y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
+		elif mt.get("rail", false) and u.get("bm") != null:   # Kanta 24.10: missile beside the real wing tip, at wing level
+			var tr2 := WeaponModels.tip_rail(u["bm"], pt.x / tw, pt.y / tw)
+			if not is_nan(tr2.x):
+				pt.y = tr2.x * tw + signf(pt.y) * WeaponModels.TIP_GAP * len_px
+				y = tr2.y * tw
 		elif mt["side"] == "top" and g.weapon == "turret" and u.get("bm") != null:
 			# тест 3.5-s7: верхняя турель — на настоящей спине фюзеляжа (у «Кита» она выше, чем у «Грача»)
 			var hi := WeaponModels.surface_low(u["bm"], pt.x / tw, pt.y / tw, true)
@@ -2520,7 +2525,7 @@ func _sync_bombs(m: Main) -> void:
 		var bs := Basis(fwd, zx.cross(fwd), zx)
 		var w := float(b["wob"]) + k * 14.0
 		bs = bs * Basis(Vector3.BACK, 0.07 * sin(w)) * Basis(Vector3.UP, 0.06 * sin(w * 1.3 + 1.0)) * Basis(Vector3.RIGHT, 0.4 * k)
-		var ln := plen * float(WeaponModels.DROP_LEN[clampi(vt, 1, WeaponModels.BOMB_EVO_VT)])
+		var ln := plen * WeaponModels.drop_len(vt)
 		mi.global_transform = Transform3D(bs.scaled(Vector3(ln, ln, ln)), pos)
 	for id in _bombs3.keys():
 		if not seen.has(id):

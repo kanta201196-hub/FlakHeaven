@@ -11,6 +11,8 @@ var bombs: Array[Dictionary] = []     # бомбы игрока (взрыв по
 var missiles: Array[Dictionary] = []  # вражеские ракеты
 var ebullets: Array[Dictionary] = []  # вражеские пули
 var fires: Array[Dictionary] = []     # 3.1: огонь на земле («Новогодняя ночь»)
+var burning: Array = []   # PG-01: enemies set on fire by incendiary course ammo (state in meta "burn")
+var _burn_tick := 0.0
 
 
 func _ready() -> void:
@@ -363,6 +365,7 @@ func _update_chain(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_update_bullets(delta)
+	_update_burning(delta)
 	_update_player_missiles(delta)
 	_update_rockets(delta)
 	_update_bombs(delta)
@@ -417,6 +420,7 @@ func _update_bullets(delta: float) -> void:
 				if e.hit_at == Vector2.INF:
 					e.hit_at = p
 				e.take_hit(float(b["dmg"]) * _bullet_k(src, e), src)
+				_ammo_effects(b, p, e)
 				if b.has("he"): # «Пушкарь»: фугасный снаряд
 					aoe(p, float(b["he"]), float(b["dmg"]) * 0.6, "связка: пушкарь", true, e)
 					b.erase("he")
@@ -436,6 +440,44 @@ func _update_bullets(delta: float) -> void:
 			if not hit and b["m"] and is_instance_valid(Main.I.player):
 				Main.I.player.on_bullet_miss()
 			bullets.remove_at(i)
+
+
+## PG-01: effect of the course gun ammo on a hit — HE splash around `p`, incendiary burn on `e`
+func _ammo_effects(b: Dictionary, p: Vector2, e: Enemy) -> void:
+	if b.has("splash"):
+		var sp: Array = b["splash"]   # [radius, share of damage]
+		aoe(p, float(sp[0]), float(b["dmg"]) * float(sp[1]), "курсовое: осколки", false, e)
+	if b.has("inc") and e.hp > 0.0:
+		var st: Dictionary = e.get_meta("burn", {})
+		if st.is_empty():
+			burning.append(weakref(e))
+		e.set_meta("burn", WeaponBalance.burn_add(st, float(b["dmg"])))
+
+
+## PG-01: burning enemies take damage 4 times a second until the fire goes out
+const BURN_STEP := 0.25
+
+
+func _update_burning(delta: float) -> void:
+	if burning.is_empty():
+		return
+	_burn_tick += delta
+	if _burn_tick < BURN_STEP:
+		return
+	var dt := _burn_tick
+	_burn_tick = 0.0
+	for i in range(burning.size() - 1, -1, -1):
+		var e := (burning[i] as WeakRef).get_ref() as Enemy
+		if e == null or e.hp <= 0.0 or not e.has_meta("burn"):
+			burning.remove_at(i)
+			continue
+		var st: Dictionary = e.get_meta("burn")
+		var step := minf(dt, float(st["t"]))
+		e.take_hit(float(st["dps"]) * step, "горение")
+		st["t"] = float(st["t"]) - dt
+		if float(st["t"]) <= 0.0:
+			e.remove_meta("burn")
+			burning.remove_at(i)
 
 
 ## Отрезок a→b проходит через круг (c, r)
@@ -498,6 +540,10 @@ func _bullet_k(src: String, e: Enemy) -> float:
 	return k
 
 
+## PG-01: tracer width factor by course gun variant (bullet key "gun")
+const TRACER_W := {"std": 1.0, "twin": 0.75, "heavy": 1.6}
+
+
 func _update_player_missiles(delta: float) -> void:
 	var sk := _seeker()
 	var pl := Main.I.player
@@ -525,7 +571,7 @@ func _update_player_missiles(delta: float) -> void:
 				Main.I.tele.add("msl_lost")
 		var spd := minf(v.length() + 1500.0 * delta, 720.0 * _missile_spd() * float(m.get("spd_k", 1.0)))
 		if t != null and float(m["age"]) >= float(m.get("free", 0.0)):
-			var ang := rotate_toward(v.angle(), (t.aim_point(p) - p).angle(), deg_to_rad(320.0) * delta)
+			var ang := rotate_toward(v.angle(), (t.aim_point(p) - p).angle(), deg_to_rad(320.0 * float(m.get("turn_k", 1.0))) * delta)
 			v = Vector2.from_angle(ang) * spd
 		else:
 			v = v.normalized() * spd
@@ -668,8 +714,8 @@ func _update_bombs(delta: float) -> void:
 			# тест 3.5-s4 (п. 14): на земле остаётся воронка (бомбы падают до земли; БЧ ракеты рвётся в воздухе)
 			if String(b["src"]) != "разделяющаяся БЧ" and is_instance_valid(Main.I.fx.ground):
 				Main.I.fx.ground.crater(b["p"], float(b["r"]))
-			Main.I.sfx.play("bomb", -10.0, 1.0, b["p"])
-			Main.I.add_shake(2.0)
+			Main.I.sfx.play("bomb", -10.0 + (4.0 if b.has("shake") else 0.0), 0.8 if b.has("shake") else 1.0, b["p"])
+			Main.I.add_shake(float(b.get("shake", 2.0)))   # PG-01: the HE bomb shakes harder
 			bombs.remove_at(i)
 
 
@@ -867,9 +913,10 @@ func _draw() -> void:
 		var p: Vector2 = b["p"]
 		var dir := (b["v"] as Vector2).normalized()
 		var l := 34.0 if b.has("pierce") else 24.0
-		draw_line(p - dir * l, p, Color(0.1, 0.07, 0.03, 0.5), 6.0)
-		draw_line(p - dir * l, p, Color(1.0, 0.62, 0.15, 0.75), 4.0)
-		draw_line(p - dir * l * 0.6, p, Color(1.0, 0.97, 0.8), 1.6)
+		var w := float(TRACER_W.get(b.get("gun", "std"), 1.0))   # PG-01: twin — thinner, heavy — thicker
+		draw_line(p - dir * l, p, Color(0.1, 0.07, 0.03, 0.5), 6.0 * w)
+		draw_line(p - dir * l, p, Color(1.0, 0.62, 0.15, 0.75), 4.0 * w)
+		draw_line(p - dir * l * 0.6, p, Color(1.0, 0.97, 0.8), 1.6 * w)
 	for m in pmissiles:
 		var tc: Color = m.get("tint", Color(0.86, 0.86, 0.9))
 		_draw_smoke(m["trail"], m["p"], tc, 1.0)
