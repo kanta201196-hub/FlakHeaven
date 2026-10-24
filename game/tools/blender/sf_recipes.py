@@ -180,4 +180,19 @@ RECIPES = {
                        (-0.19, -0.12, 0.085, 0.12, -1, -0.036), (-0.19, -0.12, -0.12, -0.085, -1, -0.036)],
         "tris": 12000,
     },
+    "e_sam": {
+        # 8x8 launcher truck (Kanta 24.10: box folded flat on the move, raises at a stop, turns, tracks, launches).
+        # The source is grey: neutral greys are paint, saturated parts (extinguishers, lamps, crates, glass) stay.
+        "root": "sam", "rot": (0, 0, 90), "ground": True, "len_exclude": "Gun", "cy_ref": True,
+        "launcher": {"match": "Gun", "heading": 90.0, "el": 30.0, "box_len": 0.472, "base_z": 0.25, "cell_depth": 0.004},
+        "wheel_cyl": {"steer": 2, "axles": [0.262, 0.062, -0.202, -0.400], "z": 0.098, "r": 0.102, "y": (0.09, 0.2), "match": "Wheels"},
+        "materials": [(r"Wheels", {"mode": "auto", "hue": [], "gray": (0.42, 0.9), "rough": 0.92, "desat": 0.6,
+                                   "nstr": 0.0}),   # flat normals: no moulded tyre lettering
+                      (r".", {"mode": "auto", "hue": [(60, 170)], "smin": 0.12, "gray": (0.16, 0.86)})],
+        "erase": {"Body": [(0.505, 0.775, 0.553, 0.828)],                                  # hull number, stripes
+                  "material": [(0.059, 0.18, 0.104, 0.23), (0.315, 0.18, 0.359, 0.23)],   # box numbers, stripes
+                  "Details": [(0.094, 0.559, 0.135, 0.602)]},                              # door roundel
+        "paint": SAND, "tris": 17500,   # wheels get more: decimated tread blocks turn into spikes
+        "weight": {"launcher_pitch": 1.3, **{"wheel_%s%s" % (a, s): 1.7 for a in ("f", "f2", "1", "2") for s in "lr"}},
+    },
 }

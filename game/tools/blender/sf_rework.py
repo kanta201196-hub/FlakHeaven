@@ -102,7 +102,8 @@ def place(obs, R):
     mn, mx = bounds(ref)
     amn, amx = bounds(obs)
     cx = (mn.x + mx.x) / 2
-    cy = (amn.y + amx.y) / 2
+    # cy_ref: centre on the len_exclude-filtered parts (a launcher box turned to the side must not shift the chassis)
+    cy = (mn.y + mx.y) / 2 if R.get("cy_ref") else (amn.y + amx.y) / 2
     cz = amn.z if R.get("ground", True) else (amn.z + amx.z) / 2
     xform(obs, Matrix.Translation((-cx, -cy, -cz)))
     if R.get("mirror_y"):
@@ -226,7 +227,8 @@ def assign_groups(obs, R):
 
 def cut_wheels(obs, R):
     """Cut road wheels out of meshes whose faces are not connected parts (e.g. one welded-free shell):
-    recipe wheel_cyl = {"steer": n, "axles": [x...], "z": zc, "r": radius, "y": (y_in, y_out)}; a face goes to a wheel
+    recipe wheel_cyl = {"steer": n, "axles": [x...], "z": zc, "r": radius, "y": (y_in, y_out), "match": regex of the
+    objects to cut (default all)}; a face goes to a wheel
     when all its vertices are inside the cylinder (axis along Y) of that axle and side."""
     W = R["wheel_cyl"]
     axles = sorted(W["axles"], reverse=True)
@@ -241,6 +243,8 @@ def cut_wheels(obs, R):
     out = []
     for o in obs:
         out.append(o)
+        if not re.search(W.get("match", "."), o.name):   # only the objects that hold the wheels
+            continue
         for nm, x, sg in specs:
             bm = bmesh.new()
             bm.from_mesh(o.data)
@@ -263,7 +267,8 @@ def cut_wheels(obs, R):
             new = next(s for s in bpy.context.selected_objects if s != o)
             new.name = "WHEEL_" + nm
             out.append(new)
-            R["groups"] = {nm: [("name", "^WHEEL_%s$" % nm)], **R.get("groups", {})}
+            # several source objects can give pieces of one wheel: WHEEL_<nm>, WHEEL_<nm>.001 ...
+            R["groups"] = {nm: [("name", r"^WHEEL_%s(\.\d+)?$" % nm)], **R.get("groups", {})}
             R.setdefault("pivots", {})[nm] = (x, sg * (y0 + y1) / 2, zc)
             print("WHEEL", nm, "faces", len(idx))
     return out
@@ -329,6 +334,145 @@ def find_wheels(obs, R):
         R.setdefault("pivots", {})[nm] = tuple(w["c"])
         print("WHEEL", nm, "c=(%.3f %.3f %.3f) r=%.3f parts=%d" % (w["c"].x, w["c"].y, w["c"].z, w["r"], len(w["parts"])))
     return out
+
+
+def _pos_islands(me, tol=2e-5):
+    """Face islands of a mesh exported with every face split (no shared vertices at seams or hard edges).
+
+    Faces that touch the same vertex position belong to one part, so a pillar or a cell floor is one island
+    even when the source mesh has no shared vertices. Returns a list of face-index lists."""
+    n = len(me.vertices)
+    co = np.empty(n * 3, np.float64)
+    me.vertices.foreach_get("co", co)
+    _, pid = np.unique(np.round(co.reshape(-1, 3) / tol).astype(np.int64), axis=0, return_inverse=True)
+    pid = pid.ravel()
+    parent = list(range(len(me.polygons)))
+
+    def root(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    first = {}
+    for p in me.polygons:
+        for v in p.vertices:
+            k = pid[v]
+            if k in first:
+                a, b = root(first[k]), root(p.index)
+                if a != b:
+                    parent[b] = a
+            else:
+                first[k] = p.index
+    out = {}
+    for p in me.polygons:
+        out.setdefault(root(p.index), []).append(p.index)
+    return list(out.values())
+
+
+def _separate_faces(o, faces, name):
+    """Move the given faces of o into a new object (same materials); returns it. Vertices are not welded,
+    so the source custom normals stay as imported."""
+    _select([o])
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="DESELECT")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    fs = set(faces)
+    for p in o.data.polygons:
+        p.select = p.index in fs
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.separate(type="SELECTED")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    new = next(s for s in bpy.context.selected_objects if s != o)
+    new.name = name
+    return new
+
+
+def build_launcher(obs, R):
+    """Split a missile launcher into the turntable and the elevating box, fold the box for travel, find the cells.
+
+    Recipe launcher = {"match": regex of the source object(s) holding the launcher, "heading": box direction in the
+    source (degrees from +X toward +Y), "el": box elevation in the source (degrees), "box_len": box length along its
+    axis, "base_z": islands lying wholly below this height are the turntable (node launcher_yaw), the rest is the box
+    with its pillar, rams and cables (node launcher_pitch), "cell_depth"/"cell_max": cell floors searched within
+    this depth behind the mouth plane, islands up to this size}.
+    The game turns launcher_yaw about the vertical axis through the turntable centre (top of the plate) and
+    launcher_pitch about a horizontal hinge at the bottom of the box's rear end (Blender axis -Y = glTF/Godot +Z for a
+    positive raise). Rest pose: box pointing +X (nose), folded flat; the source pose is yaw +heading, raise +el.
+    Cells: empties cell_<i> (children of launcher_pitch) at the centre of each tube mouth; their +X is the launch
+    direction (the box axis). Results go to R["_launcher"] (numbers for the report) and R["_empties"]."""
+    L = R["launcher"]
+    src = [o for o in obs if re.search(L["match"], o.name)]
+    if len(src) > 1:
+        _select(src)
+        bpy.ops.object.join()
+    g = bpy.context.object if len(src) > 1 else src[0]
+    obs = [o for o in obs if o not in src] + [g]
+    me = g.data
+    co = np.array([tuple(v.co) for v in me.vertices])
+    isl = _pos_islands(me)
+    poly_v = [list(p.vertices) for p in me.polygons]
+    base_f, box_f = [], []
+    for f in isl:
+        zmax = max(co[v, 2] for i in f for v in poly_v[i])
+        (base_f if zmax < L["base_z"] else box_f).extend(f)
+    hd, el = math.radians(L["heading"]), math.radians(L["el"])
+    U = np.array([math.cos(hd) * math.cos(el), math.sin(hd) * math.cos(el), math.sin(el)])
+    W = np.array([-math.cos(hd) * math.sin(el), -math.sin(hd) * math.sin(el), math.cos(el)])
+    C = np.array([-math.sin(hd), math.cos(hd), 0.0])
+    bv = co[sorted({v for i in base_f for v in poly_v[i]})]
+    pivot = np.array([(bv[:, 0].min() + bv[:, 0].max()) / 2, (bv[:, 1].min() + bv[:, 1].max()) / 2, bv[:, 2].max()])
+    xv = co[sorted({v for i in box_f for v in poly_v[i]})]
+    pu, pw = xv @ U, xv @ W
+    mouth = pu.max()
+    hinge_u = mouth - L["box_len"]
+    hinge_w = pw[pu > mouth - 0.12].min()
+    hinge = hinge_u * U + hinge_w * W + (pivot @ C) * C
+    # cells: the recessed floor of each tube mouth (faces facing along the box axis, just behind the mouth plane),
+    # one island per cell
+    depth = L.get("cell_depth", 0.02)
+    wall = []
+    for i in box_f:
+        p = me.polygons[i]
+        n = np.array(tuple(p.normal))
+        vu = co[poly_v[i]] @ U
+        if n @ U > 0.9 and vu.min() > mouth - depth and vu.max() < mouth - 5e-4:
+            wall.append(i)
+    cells = []
+    if wall:
+        sub = bpy.data.meshes.new("cellprobe")
+        used = sorted({v for i in wall for v in poly_v[i]})
+        remap = {v: k for k, v in enumerate(used)}
+        sub.from_pydata([tuple(co[v]) for v in used], [], [[remap[v] for v in poly_v[i]] for i in wall])
+        for f in _pos_islands(sub):
+            pts = np.array([tuple(sub.vertices[v].co) for i in f for v in sub.polygons[i].vertices])
+            ec, ew = np.ptp(pts @ C), np.ptp(pts @ W)
+            if ec < L.get("cell_max", 0.03) and ew < L.get("cell_max", 0.03) and min(ec, ew) > 0.004:
+                c = pts.mean(0)
+                cells.append(mouth * U + (c @ W) * W + (c @ C) * C)
+        bpy.data.meshes.remove(sub)
+    cells.sort(key=lambda p: (-round(float(p @ W), 3), -round(float(p @ C), 3)))
+    base = _separate_faces(g, base_f, "LYAW_base")
+    g.name = "LPITCH_box"
+    # rest pose: turn the box to point +X about the turntable axis, then fold it down about the hinge
+    pv = Vector(pivot)
+    m_yaw = Matrix.Translation(pv) @ Matrix.Rotation(-hd, 4, "Z") @ Matrix.Translation(-pv)
+    for o in (base, g):
+        o.data.transform(m_yaw)
+    hv = m_yaw @ Vector(hinge)
+    m_fold = Matrix.Translation(hv) @ Matrix.Rotation(el, 4, "Y") @ Matrix.Translation(-hv)
+    g.data.transform(m_fold)
+    cells_rest = [m_fold @ (m_yaw @ Vector(p)) for p in cells]
+    R["groups"] = {"launcher_yaw": [("name", "^LYAW_")], "launcher_pitch": [("name", "^LPITCH_")], **R.get("groups", {})}
+    R.setdefault("pivots", {}).update({"launcher_yaw": tuple(pv), "launcher_pitch": tuple(hv)})
+    R.setdefault("parents", {})["launcher_pitch"] = "launcher_yaw"
+    R["_empties"] = {"launcher_pitch": [("cell_%d" % k, tuple(p)) for k, p in enumerate(cells_rest)]}
+    R["_launcher"] = {"pivot": tuple(pv), "hinge": tuple(hv), "el": L["el"], "heading": L["heading"],
+                      "mouth_u": float(mouth), "cells": len(cells)}
+    print("LAUNCHER pivot=(%.4f %.4f %.4f) hinge=(%.4f %.4f %.4f) mouth_u=%.4f base=%d faces box=%d faces cells=%d" % (
+        *pv, *hv, mouth, len(base_f), len(box_f), len(cells)))
+    for k, p in enumerate(cells_rest):
+        print("CELL %d rest=(%.4f %.4f %.4f) rel_hinge=(%.4f %.4f %.4f)" % (k, *p, *(p - hv)))
+    return obs[:-1] + [base, g]
 
 
 # ---------------------------------------------------------------- source textures: markings and paint mask
@@ -858,6 +1002,14 @@ def finish(groups, lows, imgs, R, out_dir, name, tex):
         if o.name not in [lo.name for lo in lows.values()]:
             bpy.data.objects.remove(o)
     bpy.context.view_layer.update()
+    for g, marks in R.get("_empties", {}).items():   # locator nodes (missile cells): +X = launch direction
+        for nm, p in marks:
+            e = bpy.data.objects.new(nm, None)
+            e.empty_display_size = 0.01
+            bpy.context.scene.collection.objects.link(e)
+            e.parent = lows[g]
+            e.matrix_world = Matrix.Translation(Vector(p))
+    bpy.context.view_layer.update()
     total = tris(list(lows.values()))
     mn, mx = bounds(list(lows.values()))
     print("FINAL tris", total, "size", tuple(round(v, 3) for v in (mx - mn)), "min", tuple(round(v, 3) for v in mn))
@@ -909,6 +1061,8 @@ def main() -> int:
                 bpy.data.objects.remove(o)
     if R.get("build"):   # parts made in code (e.g. the technical's machine gun)
         obs += R["build"]()
+    if R.get("launcher"):   # turntable + elevating box (SAM), folded for travel
+        obs = build_launcher(obs, R)
     if R.get("wheels"):
         obs = find_wheels(obs, R)
     if R.get("wheel_cyl"):

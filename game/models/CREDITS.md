@@ -38,3 +38,4 @@
 | battle/e_convoy_technical (пикап с пулемётом; пулемёт собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
 | battle/e_helicopter (вертолёт) | Hind Attack Helicopter | Ashley Aslett | https://sketchfab.com/3d-models/hind-attack-helicopter-bb65bdfde2c54007a52dfbe1d91d930d | CC BY 4.0, изменено |
 | battle/e_interceptor (перехватчик) | Sukhoi Su-15TM | Tim Samedov | https://sketchfab.com/3d-models/sukhoi-su-15tm-3403b6f0f47d428eb2dd098f864d9ae1 | CC BY 4.0, изменено |
+| battle/e_sam (ЗРК: пусковая на шасси 8x8) | Anti-Aircraft Missile System | M1RON | https://sketchfab.com/3d-models/anti-aircraft-missile-system-578f3acbd1a44e72996c9b7b48772018 | CC BY 4.0, изменено |
