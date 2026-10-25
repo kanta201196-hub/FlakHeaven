@@ -326,6 +326,11 @@ func _combat_ui_test() -> void:
 			if offs.is_empty():
 				break
 			Cards.apply(p, offs[randi() % offs.size()])
+		# one manual-launch group, so the frames show the launch keys (S11-18)
+		for g: Hardpoint in p.groups:
+			if g.uses_trigger():
+				g.trigger = "button"
+				break
 		m.run.debug_set(&"level", 14)
 		m.run.debug_set(&"kills", 1284)
 		m.run.debug_set(&"parts", 412.0)
@@ -342,10 +347,29 @@ func _combat_ui_test() -> void:
 		_hud_at = now
 	elif _cu_phase == 2 and now - _hud_at > 600:
 		_shot("cu_hud")
+		# a finished synergy can leave the course empty again: pick one, so the next screen is the card pick
+		if Cards.need_course(p):
+			var co := Cards.course_options(p)
+			p.course = co[0] if not co.is_empty() else "-"
 		m.run.debug_set(&"pending_levels", 1)
 		m._open_levelup()
 		_cu_phase = 3
-	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.8:
+	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.5 and _hud_at < now - 1000:
+		# weapon upgrade cards in the frame: the laser's long title (S11-26) and a «now / at lv. N» text (S11-20)
+		var ups: Array = []
+		for gi in p.groups.size():
+			var g: Hardpoint = p.groups[gi]
+			if not g.is_empty() and (g.heavy or ups.is_empty()):
+				g.level = mini(g.level, 2)   # frame only: an upgrade with levels still ahead
+				ups.append(Cards.finalize(p, {"id": "up_%d" % gi, "ban": "up:%d" % gi, "kind": "weapon_up", "group": gi,
+					"cat": "Оружие", "title": "%s: улучшение" % Weapons.title(g.weapon), "rarity": 1}))
+		for i in mini(ups.size(), m.offers.size() - 1):
+			m.offers[i + 1] = ups[i]
+		# mouse over the second card, so the frame shows its term tooltips (S11-22)
+		var vs := m.get_viewport().get_visible_rect().size
+		m.get_viewport().warp_mouse(Vector2(vs.x / 2.0 - vs.x * 0.085, vs.y * 0.5))
+		_hud_at = now + 100000
+	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 1.2:
 		_shot("cu_levelup")
 		# last-minute damage for the pause block and the hardpoint DPS
 		for k in 50:
@@ -761,7 +785,7 @@ func _run_autotest(delta: float) -> void:
 				m.choose_course(0)
 			return
 		"levelup":
-			if m._args.has("--pairtest") or m._args.has("--cardtest"):
+			if m._args.has("--pairtest") or m._args.has("--cardtest") or m._args.has("--combatui"):
 				return   # S10-01: экран выбора держим для кадра
 			if _bot_wait <= 0.0:
 				_bot_wait = 0.3
