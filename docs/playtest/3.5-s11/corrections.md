@@ -30,5 +30,6 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-23 | Card pick screen: player HP must be visible (screenshot s11_note_19.png; the same screenshot shows the dangling «)» on «Усиленная боевая часть», part of S11-21) | combat UI thread | new |
 | S11-24 | In battle: some yellow flat-looking planes; identify which unit it is (screenshot s11_note_20.png) | 3D models thread | new |
 | S11-25 | Pause screen: many elements overlap each other (slot numbers on icons, numbered markers on the plane blueprint, right column cut at the screen edge, truncated labels) (screenshot s11_note_21.png) | combat UI thread | new |
+| S11-26 | Card «Лазер обороны «Луч» (экспериментальный)»: the title/description is cut with an ellipsis, the full text is not visible (screenshot s11_note_22.png) | combat UI thread | new |
 
-Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_21.png`.
+Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_22.png`.
