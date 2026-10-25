@@ -7,6 +7,9 @@ extends Enemy
 ##   sam    — зенитный ракетный комплекс: захват (красная линия) → ракета;
 ##   radar  — РЛС: пока жива, ЗСУ и ЗРК стреляют дальше (+30%);
 ##   bunker — командный бункер: прочный, без оружия. 3.5: главная цель — уничтожен бункер, позиция взята.
+##   jeep   — machine-gun pickup in the yard of the fortified area (FortArea): bursts like the convoy
+##            technical, never drives.
+## `fixed` (FortArea): the target never drives — the tower launchers and the yard jeeps.
 ## 3.5: бункер и РЛС стоят на месте; ЗСУ и ЗРК переезжают между позициями вокруг бункера,
 ## встают между ним и самолётом и прикрывают его. Без бункера техника теряет управление и уезжает.
 ## Правка 3.5-s4 (Kanta: «тупо перекатываются»): переезды через общий модуль GroundDrive (как у конвоя) —
@@ -43,6 +46,10 @@ var _fire_dir := 0.0         # куда смотрит ствол при пер�
 var _def_flash := 0.0
 var leaderless := false      # бункер уничтожен
 var drive: GroundDrive = null   # правка 3.5-s4: у ЗСУ и ЗРК
+## FortArea: stands where it was put (tower launcher, yard jeep), no GroundDrive
+var fixed := false
+## FortArea: height of the mount above the ground in world px (tower top); 0 — on the ground
+var mount_h := 0.0
 ## SAM launcher (Kanta 24.10): missiles fired so far — picks the next cell of the launch box
 var launches := 0
 ## Combat-plane point of the next cell mouth, set by Render3D from the 3D launcher; INF — no 3D model
@@ -59,7 +66,7 @@ func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 	_body_angle = randf() * TAU
 	is_ground = true
 	no_despawn = true
-	big = v != "zsu"
+	big = v != "zsu" and v != "jeep"
 	# S6-02 (решение Kanta 18.10): прочность по категориям — стандартная 90 (ЗСУ, радар), бронированная 135 (ЗРК),
 	# укреплённые строения 270 (бункер); × рост врагов
 	match v:
@@ -79,6 +86,11 @@ func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 			radius = 22.0
 			xp = 3
 			parts = 3
+		"jeep":   # the convoy technical's numbers (ConvoyVehicle.SPEC), no new balance
+			hp = GroundTarget.HP_STD
+			radius = 20.0
+			xp = 4
+			parts = 4
 		"bunker":
 			hp = GroundTarget.HP_FORT # главная цель позиции
 			radius = 43.0   # hitbox follows the +35% bunker model (Kanta 24.10)
@@ -93,12 +105,12 @@ func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 
 
 func kind() -> String:
-	return "ПВО"
+	return site.who() if site != null else "ПВО"
 
 
-## S8 «eweap»: ЗСУ — спаренные зенитные автоматы
+## S8 «eweap»: ЗСУ — спаренные зенитные автоматы; the yard jeep — the convoy pickup's machine gun
 func gun_kind() -> String:
-	return "zsu"
+	return "pickup" if variant == "jeep" else "zsu"
 
 
 ## Наземные цели не масштабируются спавнером
@@ -138,11 +150,11 @@ static func air_pos(g: Vector2) -> Vector2:
 
 
 func mobile() -> bool:
-	return variant == "zsu" or variant == "sam"
+	return not fixed and (variant == "zsu" or variant == "sam")
 
 
 func _range() -> float:
-	var r := 650.0 if variant == "zsu" else 900.0
+	var r := 650.0 if variant == "zsu" or variant == "jeep" else 900.0
 	if site != null and site.radar_alive():
 		r *= 1.3
 	return r
@@ -183,6 +195,8 @@ func behave(delta: float) -> void:
 				if _cd <= 0.0 and d < _range():
 					_aim = 0.4
 					_cd = randf_range(1.8, 2.6)
+		"jeep":
+			_jeep_fire(delta, d)
 		"sam":
 			if _lock > 0.0:
 				_lock -= delta
@@ -195,11 +209,33 @@ func behave(delta: float) -> void:
 					Main.I.sfx.play("sam_launch", -6.0, 0.9)
 			else:
 				_cd -= delta
-				# ЗРК пускает только с места
-				if _cd <= 0.0 and d < _range() and _goal == Vector2.INF:
+				# ЗРК пускает только с места; FortArea keeps its missiles under the cap
+				if _cd <= 0.0 and d < _range() and _goal == Vector2.INF and site.can_launch(self):
 					_lock = Tuning.g("msl_sam_lock")
 					_cd = randf_range(5.0, 6.5)
 					Main.I.sfx.play("sam_lock", -6.0, 1.2)
+
+
+## Jeep (FortArea yard): bursts of the convoy pickup's gun at the player in range (same rhythm as
+## ConvoyVehicle `technical`).
+func _jeep_fire(delta: float, d: float) -> void:
+	if _shots > 0:
+		_shot_t -= delta
+		if _shot_t <= 0.0:
+			fire_at_player(gun_spread())
+			_shots -= 1
+			_shot_t = 0.08
+	else:
+		_cd -= delta
+		if _cd <= 0.0 and d < _range():
+			_shots = int(Tuning.g("eb_pickup_burst"))
+			_cd = randf_range(1.6, 2.4)
+			Main.I.sfx.play("aa_alert", -18.0, 1.6)
+
+
+## SAM lock in progress (FortArea counts locks toward its missile cap).
+func locking() -> bool:
+	return _lock > 0.0
 
 
 ## SAM launcher pose for the 3D model (Kanta 24.10): the box rides folded and is raised only while the
@@ -367,13 +403,14 @@ func _draw() -> void:
 	# Хитбоксы (radius) не менялись — попадание чуть щедрее картинки, как у конвоя.
 	# Тест 3.5-s8 (Kanta: «бункер — улучшить качество и размер»): новый бункер кодом, 44 (~13 м с обваловкой) —
 	# заметно крупнее машин ПВО, читается как командный пункт позиции
-	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 59.0]}   # Kanta 24.10: bunker +35% (44 -> 59)
+	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "jeep": ["e_convoy_technical", 14.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 59.0]}   # Kanta 24.10: bunker +35% (44 -> 59)
 	var ba: float = _body_angle
 	if mobile() and not leaderless and _goal == Vector2.INF and site != null and site.active:
 		ba = heading # стоит — разворачивается на цель
 	if variant == "zsu" and _def_flash > 0.0:
 		ba = _fire_dir
-	if draw_enemy_sprite(spr[variant][0], spr[variant][1], Color.WHITE, ba):
+	var slen: float = spr[variant][1] * (1.6 if fixed and variant == "sam" else 1.0)   # FA-01: tower launcher reads from the air (preview, Kanta «да»)
+	if draw_enemy_sprite(spr[variant][0], slen, Color.WHITE, ba):
 		if variant == "zsu" and (_aim > 0.0 or _shots > 0 or _def_flash > 0.0):
 			draw_circle(Vector2.from_angle(ba) * 19.0, 5.0, Color(1.0, 0.9, 0.3))   # M-37: у среза ствола меньшей модели
 		if variant == "sam" and _lock > 0.0:

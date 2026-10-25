@@ -69,6 +69,8 @@ var tilt: Variant = null
 var sam_el := 0.0
 var sam_n := 0
 var sam_kick := 0.0
+## FortArea tower launcher: the truck body is hidden and the launcher sits on the tower pad (done once)
+var fort_mount := false
 ## Convoy wheels / turret / launcher found on the model (Dictionary); null until looked up
 var cv: Variant = null
 

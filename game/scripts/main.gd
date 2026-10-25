@@ -516,6 +516,7 @@ func ban_card(i: int) -> void:
 ## Banner headline per activity kind; the reward part is built from what `RunState` paid.
 const ACTIVITY_TITLE := {
 	&"ground": "Позиция ПВО уничтожена!", &"convoy": "Колонна разбита!", &"dogfight": "Ас-соперник сбит!",
+	&"fort": "База противника разгромлена!",
 }
 
 

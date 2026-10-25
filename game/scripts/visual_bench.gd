@@ -96,7 +96,22 @@ func process(delta: float) -> void:
 	if p.has("live"):
 		_live(p)
 		return
-	if p.get("ground", false):
+	if p.get("fort_area", false):
+		# FA-01: the «Укрепрайон» base on the map fort — launchers raised, nothing breaks. Wait for Render3D's
+		# place filter: before it, chunk_object gives the raw spot, not where the 3D fort stands (off the river)
+		if not _fa_spawned and m.background.place_filter.is_valid():
+			_fa_spawned = true
+			var fp: Vector2 = p["fort"]
+			var f := FortArea.pick_fort(FortArea.forts_near(m.background, fp, 900.0), fp, 900.0)
+			if not f.is_empty():
+				var base := FortArea.new()
+				base.setup_fort(f, 1.0)
+				for g in base.targets:
+					g.hp = 99999.0
+					g.max_hp = 99999.0
+				base.active = true
+				m.world.add_child(base)
+	elif p.get("ground", false):
 		if not _g_spawned:
 			_g_spawned = true
 			var site := AASite.new()
@@ -579,6 +594,9 @@ func _make_points() -> Array:
 		pts.append({"name": "aa_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.3, "convoy": true, "enemies": true, "ground": true, "site_off": Vector2(-380, -40), "wait": 2.5})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
+	if found.has("o_fort"):   # FA-01: the fortified-area base — whole fort and a tower launcher close up
+		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
+		pts.append({"name": "fort_area_close", "pos": found["o_fort"] + Vector2(0, 250), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
 	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
 		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
 		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
@@ -939,6 +957,7 @@ func _sam_poses(p: Dictionary) -> void:
 		m.projectiles.spawn_missile(sam.launch_at, to.normalized(), "sam", "ЗРК")
 		sam.launches = 1
 var _g_spawned := false
+var _fa_spawned := false
 
 
 ## VIS-01 unit close-ups: kind -> [enemy texture, sprite length, camera zoom]. Lengths are the game's own

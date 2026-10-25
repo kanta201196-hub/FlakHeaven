@@ -874,6 +874,7 @@ const C_AA := Color(0.35, 0.85, 1.0)
 const C_CONVOY := Color(1.0, 0.5, 0.25)
 const C_TRANSPORT := Color(1.0, 0.55, 0.95)
 const C_RESCUE := Color(0.45, 1.0, 0.55)
+const C_FORT := Color(1.0, 0.42, 0.32)   # FA-01: the enemy base — red, apart from the AA site's blue
 
 
 ## Активности: указатели на позицию ПВО и аса-соперника, радиопереговоры, «ХВОСТ!»
@@ -884,7 +885,21 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	if is_instance_valid(node):
 		# свежий взгляд: задача активности на песке не читалась — тёмная плашка
 		ctrl.draw_rect(Rect2((size.x - 980.0) / 2.0, 250.0, 980.0, 62.0), Color(0.02, 0.025, 0.03, 0.55))
-		if node is AASite:
+		if node is FortArea:
+			var base := node as FortArea
+			var db := int(p.global_position.distance_to(base.global_position))
+			_edge_arrow(_ws(xf, base.global_position), rect, size, C_FORT, 1.8, Loc.t("база %d м") % (db / 10))
+			var bs: String
+			if base.failed:
+				bs = Loc.t("База противника устояла · пусковых осталось: %d") % base.launchers_left()
+			elif base.active:
+				bs = Loc.t("УКРЕПРАЙОН: %d с · пусковых на башнях: %d из %d") % [int(ceil(base.timer)), base.launchers_left(), base.launchers.size()]
+			else:
+				bs = Loc.t("База противника: %d м — подлетите, чтобы начать") % (db / 10)
+			_ctext(276, bs, 22, Color(1.0, 0.7, 0.55))
+			if not base.failed:
+				_ctext(302, "Награда: выбор из редких карточек + 60 запчастей", 17, Color(0.85, 0.75, 1.0))
+		elif node is AASite:
 			var site := node as AASite
 			var d := int(p.global_position.distance_to(site.global_position))
 			_edge_arrow(_ws(xf, site.global_position), rect, size, C_AA, 1.8, Loc.t("ПВО %d м") % (d / 10))
