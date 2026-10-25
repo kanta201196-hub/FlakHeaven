@@ -18,5 +18,6 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-11 | «Kit» 1: the bomb bay opens but the bombs hang right on the belly; the bay must open the plane's interior where the bombs sit, now they appear from thin air (screenshot s11_note_8.png) | 3D models thread | new |
 | S11-12 | «Kit» 1: wing mechanisation has the same problems as on the other planes (see S11-02) | 3D models thread | new |
 | S11-13 | Hangar: turrets look low quality and hang in the air (screenshot s11_note_9.png) | 3D models thread | new |
+| S11-14 | «Kit» 2: texture problems on the model (screenshot s11_note_10.png) | 3D models thread | new |
 
-Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_9.png`.
+Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_10.png`.
