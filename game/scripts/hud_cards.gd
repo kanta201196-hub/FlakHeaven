@@ -71,9 +71,15 @@ func draw(m: Main, size: Vector2) -> void:
 			if moved and focus != i:
 				focus = i
 				_tip_card = -1
+	# cards rise into place while the pick delay runs (MainInput.CARD_INPUT_DELAY)
+	var k := clampf(m._state_t / MainInput.CARD_INPUT_DELAY, 0.0, 1.0)
+	var rise := 28.0 * (1.0 - k) * (1.0 - k)
+	var drawn: Array = []
 	for i in n:
-		var r := Rect2(x0 + i * (CARD_W + gap), top - (14.0 if i == focus else 0.0), CARD_W, CARD_H)
+		var r := Rect2(x0 + i * (CARD_W + gap), top - (14.0 if i == focus else 0.0) + rise, CARD_W, CARD_H)
 		_card(m, p, i, r, i == focus, pair)
+		drawn.append(r)
+	_fade_in(drawn, m._state_t)
 	if pair and n == 2:
 		var oc := Vector2(x0 + CARD_W + gap * 0.5, top + CARD_H * 0.5)
 		ctrl.draw_circle(oc, 30.0, Color(UiStyle.SCRIM, 1.0))
