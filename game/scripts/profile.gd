@@ -912,6 +912,34 @@ func debug_demo_profile() -> void:
 	save()
 
 
+## S11-30: balance autotest as an upgraded player, copied from Kanta's 3.5-s11 log (run without --demo):
+## plane lvl 2, every node of both planes at 5, crew lvl 12, first perk of each branch then the second ones,
+## weapon tiers 1–2 as Kanta picked them (aam ab, rockets bb, gunpod ab, flares bb, bombs ab, turret ab)
+func debug_max_profile() -> void:
+	const CREW := 12
+	const PICKS := {"aam": "ab", "rockets": "bb", "gunpod": "ab", "flares": "bb", "bombs": "ab", "turret": "ab"}
+	for c in PlaneClasses.LIST:
+		var d := cls(c)
+		for key in ["nodes", "nodes2"]:
+			for k in (d[key] as Dictionary).keys():
+				d[key][k] = 5
+		d["plane2"] = true
+		d["plane_sel"] = 2
+		d["crew_rank"] = CREW
+		d["crew_xp"] = int(CREW_CUM[CREW - 1])
+		d["perks"] = []
+		for step in 2:
+			for br in PERKS[c]:
+				if perk_points(c) > 0:
+					(d["perks"] as Array).append(br[1][step][0])
+	for w in WEAPON_ORDER:
+		var pick := String(PICKS.get(w, "ab"))
+		data["weapons"][w]["t1"] = pick[0]
+		data["weapons"][w]["t2"] = pick[1]
+	Campaign.debug_open_all()
+	save()
+
+
 func debug_all() -> void:
 	for c in PlaneClasses.LIST:
 		cls(c)["crew_xp"] = int(CREW_CUM[CREW_CUM.size() - 1])

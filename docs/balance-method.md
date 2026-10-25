@@ -120,3 +120,20 @@ Order: GD-02 goes into the next build cycle (this one already carries S10-13 and
 
 **Third baseline (2026-10-24, 24 sorties, commit 2071305, `balance.sh` from a copy, no hangs).** Against the pooled 38 it is a second A/A check: 1 of 27 cells "counts" («Грач» ace fight 38 → 44 s), about what chance gives at 90 %. The rule holds. The demo baseline is now **62 sorties** (`base_demo_a`, `_b`, `_c`; about 20 per class), enough for the HP metrics too. Its picture is the same as above: «Оса» and «Кит» outside M3 and M5, «Кит» also M4, signature weapons below 20 % for all three.
 
+## 9. The Fortress fight (S11-30), 2026-10-25
+
+The method's metrics stop at 15:00; the Fortress comes at 15:00. Fortress runs use `UNTIL=1080` (3 minutes of fight) and «Грач» only (`EXTRA="--class=attacker"`). `PROFILE=max` is an upgraded player copied from Kanta's 3.5-s11 hangar (`Profile.debug_max_profile`). The autotest prints per phase where the damage offered to the Fortress went: `AUTOTEST: fortress phase N s … near … in … cut … pt … bay … hull … lost …` (in — after the source factor; lost — hit the covered hull; cut — landed but over the fight-length cap).
+
+**Proposed corridor (not yet approved by Kanta):** median fight 60–100 s (not killed counts as 180), turrets ≤ 45 s, killed within 3 minutes in ≥ 90 % of sorties.
+
+**What the counters showed (before):** in phase 1 about 2/3 of the damage that passed the cap hit the covered hull, and on the demo profile the cap cut 62 % of all incoming damage. The cap was charged before the hit was routed, so misses used up the turrets' share. Two number changes (turret share 0.07 → 0.056, point radius 46 → 55, 7–8 sorties each) showed no difference from noise.
+
+**Change:** the cap counts only damage that reached the hit points. Before 15–16 / after 8 sorties per profile, median, bootstrap 90 % interval:
+
+| Profile | Fight, s | Turrets, s | Killed in 3 min | Reached the base |
+| --- | --- | --- | --- | --- |
+| demo | 148 → 93 [−95…−16] **counts** | 81 → 45 [−68…−10] **counts** | 10/15 → 8/8 | 9/15 → 1/8 |
+| max | 144 → 134 [−80…+46] | 78 → 70 [−58…+94] | 10/16 → 5/8 | 11/16 → 4/8 |
+
+The upgraded bot's damage is rarely over the cap, so the change barely touches it; in 3 of its 8 "after" sorties it barely attacked the Fortress (bot behaviour). Kanta's s11 sortie dealt about 2.9× the Fortress's strength in 95 s, which is over the cap, so a human upgraded player should gain more than the bot. Check after the build on human logs.
+

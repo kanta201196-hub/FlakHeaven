@@ -34,6 +34,6 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-27 | After an explosion many unclear particles hang in the air, look like hay or straw (screenshot s11_note_24.png) | effects thread | merged (PR #406): it was the scorch texture (straw in the photo), rebaked without it |
 | S11-28 | Before a NAR (unguided rocket) explosion there is a strange, clearly noticeable delay with a pulsing on the ground | effects thread | merged (PR #406): it was the «Термобарика» 0.5 s sticky delay; the blast is now on impact |
 | S11-29 | «Fortress» (Крепость) boss: turrets float in the air detached from the plane; the screenshot also shows the bomber drawn flat white/pink (screenshot s11_note_25.png) | 3D models thread | new |
-| S11-30 | Could not shoot down the «Fortress» boss on an upgraded «Grach» (balance: needs the balance method, one change per build cycle) | game design thread | new |
+| S11-30 | Could not shoot down the «Fortress» boss on an upgraded «Grach» (balance: needs the balance method, one change per build cycle) | game design thread | fixed in the PR «Fortress: fight cap counts landed damage» (with GD-02 in the same build, Kanta) |
 
 Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_25.png`.
