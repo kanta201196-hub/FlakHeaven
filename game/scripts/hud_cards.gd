@@ -9,11 +9,12 @@ extends HudKit
 ## Keyboard and gamepad: ←/→ move the focus, Enter picks, 1–4 pick directly, R rerolls,
 ## lock and ban keys act on the focused card (MainInput).
 
-const CARD_W := 390.0
-const CARD_H := 570.0
-const GAP := 25.0
-const CUT := 26.0
-const ICON := 190.0
+## Card size: about 3/4 of the first version (S11-17, Kanta: «карточки уменьшить на 25%»)
+const CARD_W := 300.0
+const CARD_H := 450.0
+const GAP := 24.0
+const CUT := 22.0
+const ICON := 132.0
 const TIP_W := 480.0
 ## Deepest chain of nested term explanations
 const TIP_DEPTH := 3
@@ -35,6 +36,9 @@ var _term_rects: Array = []
 static var _parsed := {}
 ## Tooltip panels drawn last frame, for keeping a chain open while the mouse moves into it
 static var _tip_rects: Array[Rect2] = []
+## True after ←/→ until the mouse moves: then the focused card's explanation stays open
+## without the mouse over it (S11-22 hides it when the mouse leaves the cards).
+static var _kbd := false
 
 
 ## Draws the whole screen over the paused fight.
@@ -45,6 +49,7 @@ func draw(m: Main, size: Vector2) -> void:
 	if m.run.level != _focus_level:
 		_focus_level = m.run.level
 		move_focus(-focus, n)
+		_kbd = false
 	focus = clampi(focus, 0, maxi(n - 1, 0))
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(UiStyle.SCRIM, 0.82))
 	ctrl.draw_rect(Rect2(0, 0, size.x, 8), UiStyle.ACCENT)
@@ -56,11 +61,16 @@ func draw(m: Main, size: Vector2) -> void:
 	var mp := ctrl.get_local_mouse_position()
 	var moved := mp != _last_mp
 	_last_mp = mp
+	if moved:
+		_kbd = false
+	var over_card := false
 	for i in n:
-		var r := Rect2(x0 + i * (CARD_W + gap), top, CARD_W, CARD_H)
-		if moved and r.has_point(mp) and focus != i:
-			focus = i
-			_tip_card = -1
+		var r := Rect2(x0 + i * (CARD_W + gap), top - 14.0, CARD_W, CARD_H + 14.0)
+		if r.has_point(mp):
+			over_card = true
+			if moved and focus != i:
+				focus = i
+				_tip_card = -1
 	for i in n:
 		var r := Rect2(x0 + i * (CARD_W + gap), top - (14.0 if i == focus else 0.0), CARD_W, CARD_H)
 		_card(m, p, i, r, i == focus, pair)
@@ -71,8 +81,22 @@ func draw(m: Main, size: Vector2) -> void:
 		UiStyle.text(ctrl, UiStyle.head_font(800, 2), Vector2(oc.x - 30.0, oc.y + 7.0), Loc.t("ИЛИ"), UiStyle.FS_LABEL, UiStyle.ACCENT_SOFT, HORIZONTAL_ALIGNMENT_CENTER, 60.0)
 	var by := top + CARD_H + 26.0
 	_actions(m, Vector2(x0, by), pair)
-	_terms_tips(m, Vector2(x0 + 420.0, by - 4.0), size)
+	_terms_tips(m, Vector2(x0 + 420.0, by - 4.0), size, over_card or _kbd)
 	_hints(size, pair)
+	_hull(p)
+
+
+## S11-23: hull bar in the top-left corner, where it is in flight, so a pick can weigh repair.
+func _hull(p: Player) -> void:
+	if not is_instance_valid(p):
+		return
+	var r := Rect2(40, 32, 400, 26)
+	var hk := clampf(p.hp / p.max_hp, 0.0, 1.0)
+	var hc := Color(0.4, 0.85, 0.45) if hk > 0.33 else UiStyle.DANGER
+	ctrl.draw_rect(r.grow(3.0), Color(0, 0, 0, 0.6))
+	ctrl.draw_rect(Rect2(r.position, Vector2(r.size.x * hk, r.size.y)), hc)
+	UiStyle.text(ctrl, UiStyle.head_font(700, 1), Vector2(r.position.x, r.position.y + 19.0), Loc.t("КОРПУС %d / %d") % [int(p.hp), int(p.max_hp)],
+		UiStyle.FS_BODY, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 
 
 func _header(m: Main, size: Vector2, pair: bool) -> void:
@@ -86,7 +110,10 @@ func _header(m: Main, size: Vector2, pair: bool) -> void:
 		small = Loc.t("НАГРАДА %s") % (m.run.rare_reasons[0] if not m.run.rare_reasons.is_empty() else "")
 		big = Loc.t("РЕДКИЕ КАРТОЧКИ")
 		col = Cards.RARITY[3]["color"]
-	UiStyle.text(ctrl, UiStyle.head_font(700, 6), Vector2(0, 64), small, UiStyle.FS_H3 - 2, UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	# S11-19: the reason for rare cards («НАГРАДА ЗА ПОЗИЦИЮ ПВО») is news, so it is bright
+	var scol := UiStyle.TEXT_DIM if not m.offer_rare or pair else UiStyle.TEXT
+	UiStyle.text(ctrl, UiStyle.head_font(700, 6), Vector2(0, 64), small, UiStyle.FS_H3 if m.offer_rare and not pair else UiStyle.FS_H3 - 2, scol,
+		HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	UiStyle.text(ctrl, UiStyle.head_font(800, 8), Vector2(0, 128), big, 64, col, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	var sub := ""
 	if pair:
@@ -131,30 +158,37 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 	_buttons.append([r, "card:%d" % i])
 	var cx := r.position.x
 	var w := r.size.x
-	UiStyle.text(ctrl, UiStyle.head_font(700, 5), Vector2(cx, r.position.y + 34), rname, UiStyle.FS_BODY, rc, HORIZONTAL_ALIGNMENT_CENTER, w)
+	UiStyle.text(ctrl, UiStyle.head_font(700, 4), Vector2(cx, r.position.y + 30), rname, UiStyle.FS_CAPTION, rc, HORIZONTAL_ALIGNMENT_CENTER, w)
 	if not m.locked.is_empty() and m.locked["id"] == c["id"]:
-		UiStyle.text(ctrl, UiStyle.head_font(700, 2), Vector2(cx, r.position.y + 34), "◆ " + Loc.t("ЗАКРЕПЛЕНА"), UiStyle.FS_CAPTION, UiStyle.ACCENT,
+		UiStyle.text(ctrl, UiStyle.head_font(700, 2), Vector2(cx, r.position.y + 30), "◆ " + Loc.t("ЗАКРЕПЛЕНА"), UiStyle.FS_CAPTION, UiStyle.ACCENT,
 			HORIZONTAL_ALIGNMENT_RIGHT, w - CUT - 10.0)
 	# big icon
-	var ir := Rect2(cx + (w - ICON) / 2.0, r.position.y + 52.0, ICON, ICON)
+	var ir := Rect2(cx + (w - ICON) / 2.0, r.position.y + 42.0, ICON, ICON)
 	HudIcons.tile(ctrl, ir, HudIcons.card_key(p, c), HudIcons.card_family(p, c), Color.TRANSPARENT)
-	# name in the rarity colour, up to two lines, centred in a fixed band
+	# name in the rarity colour, centred in a fixed band: two lines at 21 px, or three at 18 px
+	# for long names such as «Лазер обороны «Луч» (экспериментальный): улучшение» (S11-26)
 	var nf := UiStyle.head_font(700, 1)
-	var lines := _lines(Loc.title(c["title"]), w - 44.0, 26, nf)
-	var ny := ir.end.y + 26.0 + (1 if lines.size() == 1 else 0) * 15.0
+	var nfs := 21
+	var lines := _lines(Loc.title(c["title"]), w - 32.0, nfs, nf, 2)
+	if lines.size() == 2 and lines[1].ends_with("…"):
+		nfs = 18
+		lines = _lines(Loc.title(c["title"]), w - 28.0, nfs, nf, 3)
+	var nlh := nfs + 4.0
+	var ny := ir.end.y + 22.0 + (2.0 - lines.size()) * nlh * 0.5 + (4.0 if lines.size() == 3 else 0.0)
 	for li in lines.size():
-		UiStyle.text(ctrl, nf, Vector2(cx, ny + li * 30.0), lines[li], 26, rc, HORIZONTAL_ALIGNMENT_CENTER, w)
-	var y := ir.end.y + 84.0
+		UiStyle.text(ctrl, nf, Vector2(cx, ny + li * nlh), lines[li], nfs, rc, HORIZONTAL_ALIGNMENT_CENTER, w)
+	var y := ir.end.y + 64.0 + (8.0 if lines.size() == 3 else 0.0)
 	# level pips and level line
 	var lv := _card_level(p, c)
 	if lv.y > 0:
-		var pw := 16.0
+		var pw := 12.0
 		var px := cx + (w - lv.y * (pw + 4.0) + 4.0) / 2.0
 		for k in int(lv.y):
 			var pr := Rect2(px + k * (pw + 4.0), y, pw, 6)
 			ctrl.draw_rect(pr, UiStyle.ACCENT if k < int(lv.x) else (Color(rc, 0.9) if k == int(lv.x) else Color(1, 1, 1, 0.15)))
-	UiStyle.text(ctrl, UiStyle.head_font(600, 2), Vector2(cx, y + 28.0), _level_line(p, c, lv), UiStyle.FS_CAPTION, UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, w)
-	y += 46.0
+	UiStyle.text(ctrl, UiStyle.head_font(600, 2), Vector2(cx, y + 26.0), _fit(_level_line(p, c, lv), w - 24.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 2)),
+		UiStyle.FS_CAPTION, UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, w)
+	y += 40.0
 	# text with terms; the "either-or" warning goes to a red box at the bottom
 	var desc := Loc.out(Loc.t(String(c["desc"])))
 	var warn := ""
@@ -162,19 +196,19 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 		warn = desc.substr(desc.get_slice("\n", 0).length()).strip_edges()
 		desc = desc.get_slice("\n", 0)
 	var path := _card_path(p, c)
-	var bottom := r.end.y - 34.0 - (24.0 if path != "" else 0.0) - (70.0 if warn != "" else 0.0)
+	var bottom := r.end.y - 32.0 - (22.0 if path != "" else 0.0) - (66.0 if warn != "" else 0.0)
 	var segs := _parse(desc)
-	var fs := 18
-	while fs > 15 and _rich_height(segs, w - 44.0, fs) > bottom - y:
+	var fs := 16
+	while fs > UiStyle.FS_MIN and _rich_height(segs, w - 32.0, fs) > bottom - y:
 		fs -= 1
-	_rich(Vector2(cx + 22.0, y + fs), segs, w - 44.0, fs, UiStyle.TEXT_WARM, int((bottom - y) / (fs * 1.38)), i)
+	_rich(Vector2(cx + 16.0, y + fs), segs, w - 32.0, fs, UiStyle.TEXT_WARM, int((bottom - y) / (fs * 1.38)), i)
 	if warn != "":
-		var wr := Rect2(cx + 16.0, r.end.y - 112.0, w - 32.0, 64.0)
+		var wr := Rect2(cx + 12.0, r.end.y - 100.0, w - 24.0, 60.0)
 		ctrl.draw_rect(wr, Color(UiStyle.DANGER, 0.16))
 		ctrl.draw_rect(wr, Color(UiStyle.DANGER, 0.7), false, 1.5)
 		_para(Vector2(wr.position.x + 12, wr.position.y + 24), warn, wr.size.x - 24.0, UiStyle.FS_CAPTION, UiStyle.DANGER.lightened(0.35))
 	if path != "":
-		UiStyle.text(ctrl, ui_font(), Vector2(cx + 22.0, r.end.y - 44.0), _fit(path, w - 44.0, UiStyle.FS_CAPTION), UiStyle.FS_CAPTION, UiStyle.ACCENT_SOFT)
+		UiStyle.text(ctrl, ui_font(), Vector2(cx + 16.0, r.end.y - 40.0), _fit(path, w - 32.0, UiStyle.FS_CAPTION), UiStyle.FS_CAPTION, UiStyle.ACCENT_SOFT)
 	_tag(p, c, r)
 	UiStyle.key_hint(ctrl, Vector2(r.end.x - 48.0, r.end.y - 9.0), str(i + 1), "")
 
@@ -313,58 +347,94 @@ func _font_of(kind: StringName) -> Font:
 func _rich_height(segs: Array, width: float, fs: int) -> float:
 	var x := 0.0
 	var lines := 1
-	for pc: Array in _pieces(segs):
-		if pc[0] == "\n":
+	for wd: Array in _words(_pieces(segs)):
+		if wd[0][0] == "\n":
 			lines += 1
 			x = 0.0
 			continue
-		var pw := _font_of(pc[1]).get_string_size(String(pc[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var core := _font_of(pc[1]).get_string_size(String(pc[0]).strip_edges(false, true), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		if x > 0.0 and x + core > width:
+		var wx := _word_w(wd, fs)
+		if x > 0.0 and x + wx.y > width:
 			lines += 1
 			x = 0.0
-		x += pw
+		x += wx.x
 	return lines * fs * 1.38
 
 
-## Draws segments from `pos` (first baseline), wrapping at `width`, at most `max_lines`
-## (the last visible line ends with «…» when cut). Terms are bold amber with a dotted
-## underline and register hit areas for tooltips (`level` -1 = on card `card`, else the
-## tooltip level); numbers are bold green.
+## Pieces glued into words that may not be split by a line break (S11-21): a break is only
+## allowed after a space or a CJK character, so «(из 11)» never leaves «)» alone on the
+## next line even though «11» is a number piece and «)» a text piece.
+func _words(pieces: Array) -> Array:
+	var out: Array = []
+	var cur: Array = []
+	for pc: Array in pieces:
+		if pc[0] == "\n":
+			if not cur.is_empty():
+				out.append(cur)
+				cur = []
+			out.append([pc])
+			continue
+		cur.append(pc)
+		var s := String(pc[0])
+		if s.ends_with(" ") or s.unicode_at(s.length() - 1) >= 0x2E80:
+			out.append(cur)
+			cur = []
+	if not cur.is_empty():
+		out.append(cur)
+	return out
+
+
+## Width of a word: x — with its trailing space, y — without it (what must fit on the line).
+func _word_w(wd: Array, fs: int) -> Vector2:
+	var w := 0.0
+	for k in wd.size():
+		w += _font_of(wd[k][1]).get_string_size(String(wd[k][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var last: Array = wd[wd.size() - 1]
+	var f := _font_of(last[1])
+	var tail := f.get_string_size(String(last[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x - f.get_string_size(String(last[0]).strip_edges(false, true), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	return Vector2(w, w - tail)
+
+
+## Draws segments from `pos` (first baseline), wrapping at `width` between words (`_words`),
+## at most `max_lines` (the last visible line ends with «…» when cut). Terms are bold amber
+## with a dotted underline and register hit areas for tooltips (`level` -1 = on card
+## `card`, else the tooltip level); numbers are bold green.
 func _rich(pos: Vector2, segs: Array, width: float, fs: int, color: Color, max_lines := 99, card := -1, level := -1) -> float:
 	var x := 0.0
 	var line := 0
 	var lh := fs * 1.38
-	var pieces := _pieces(segs)
-	for k in pieces.size():
-		var pc: Array = pieces[k]
-		if pc[0] == "\n":
+	var words := _words(_pieces(segs))
+	for wi in words.size():
+		var wd: Array = words[wi]
+		if wd[0][0] == "\n":
 			line += 1
 			x = 0.0
 			continue
-		var f := _font_of(pc[1])
-		var s := String(pc[0])
-		var pw := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var core := f.get_string_size(s.strip_edges(false, true), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		if x > 0.0 and x + core > width:
+		var wx := _word_w(wd, fs)
+		if x > 0.0 and x + wx.y > width:
 			line += 1
 			x = 0.0
 		if line >= max_lines:
 			break
-		var at := Vector2(pos.x + x, pos.y + line * lh)
-		var last_fit := line == max_lines - 1 and k + 1 < pieces.size() and x + pw + 40.0 > width
-		if last_fit:
-			s = s.strip_edges(false, true) + "…"
-		var col := color
-		if pc[1] == Terms.TERM:
-			col = UiStyle.ACCENT_SOFT
-			ctrl.draw_dashed_line(at + Vector2(0, 4), at + Vector2(core, 4), Color(UiStyle.ACCENT_SOFT, 0.8), 1.0, 3.0)
-			_term_rects.append([Rect2(at.x - 2.0, at.y - fs, core + 4.0, lh), StringName(pc[2]), level, card])
-		elif pc[1] == Terms.NUM:
-			col = UiStyle.OK
-		ctrl.draw_string(f, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
-		x += pw
-		if last_fit:
+		var cut := line == max_lines - 1 and wi + 1 < words.size() and x + wx.x + 40.0 > width
+		for k in wd.size():
+			var pc: Array = wd[k]
+			var f := _font_of(pc[1])
+			var s := String(pc[0])
+			if cut and k == wd.size() - 1:
+				s = s.strip_edges(false, true) + "…"
+			var pw := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			var core := f.get_string_size(s.strip_edges(false, true), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			var at := Vector2(pos.x + x, pos.y + line * lh)
+			var col := color
+			if pc[1] == Terms.TERM:
+				col = UiStyle.ACCENT_SOFT
+				ctrl.draw_dashed_line(at + Vector2(0, 4), at + Vector2(core, 4), Color(UiStyle.ACCENT_SOFT, 0.8), 1.0, 3.0)
+				_term_rects.append([Rect2(at.x - 2.0, at.y - fs, core + 4.0, lh), StringName(pc[2]), level, card])
+			elif pc[1] == Terms.NUM:
+				col = UiStyle.OK
+			ctrl.draw_string(f, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+			x += pw
+		if cut:
 			break
 	return (line + 1) * lh
 
@@ -424,9 +494,19 @@ func _key_button(pos: Vector2, key: String, label: String, action: String, enabl
 
 ## Explanation panels: the hovered term (or the focused card's first term), then terms
 ## hovered inside each panel open the next panel to the right. The chain stays open while
-## the mouse is over a panel, so nested terms can be reached.
-func _terms_tips(m: Main, pos: Vector2, size: Vector2) -> void:
+## the mouse is over a panel, so nested terms can be reached. `show` — the mouse is over a
+## card or the last move was a key: otherwise the chain closes (S11-22).
+func _terms_tips(m: Main, pos: Vector2, size: Vector2, show: bool) -> void:
 	var mp := ctrl.get_local_mouse_position()
+	var in_tip0 := false
+	for r in _tip_rects:
+		if r.grow(8.0).has_point(mp):
+			in_tip0 = true
+	if not show and not in_tip0:
+		# S11-22: the mouse left the cards and the explanations: nothing stays on screen
+		_tip_ids.clear()
+		_tip_rects.clear()
+		return
 	# a term under the mouse on a card starts a new chain
 	for t: Array in _term_rects:
 		if (t[0] as Rect2).has_point(mp) and int(t[2]) == -1:
@@ -490,3 +570,4 @@ static func move_focus(dir: int, n: int) -> void:
 	focus = wrapi(focus + dir, 0, n)
 	_tip_card = -1
 	_tip_ids.clear()
+	_kbd = true

@@ -189,6 +189,10 @@ RECIPES = {
                       (r"nosser", {"mode": "paint"}),
                       (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
         "erase": {"fuzcamo": ERASE_F1}, "mat_names": {"glass": "glass"}, "img_plain": True,
+        # S11-07: the source's own glove pylons (loose plates inside the composite "mig23mld_fuz_nab" object) read
+        # as an empty second missile mount next to the game's pylon; f1_glove_pylons.py cuts them from a finished GLB
+        "kill_faces": [(r"_fuz_nab_", (-0.115, 0.062, 0.083, 0.097, -0.036, -0.003)),
+                       (r"_fuz_nab_", (-0.115, 0.062, -0.097, -0.083, -0.036, -0.003))],
         "uv_split_x": [-0.3, -0.1, 0.1, 0.3],   # fuselage-long islands would leave half the atlas empty
         "paint": HIGHLAND, "tris": 12000,
     },

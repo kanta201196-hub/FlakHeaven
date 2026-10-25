@@ -126,8 +126,8 @@ const SYNERGIES := {
 		"desc": "Наводящаяся ракета, сбившая цель, сразу пускает новую в ближайшую (до 4 перепусков, каждый +20% урона)",
 		"short": "сбитие → новая ракета"},
 	"thermobaric": {"title": "Термобарика", "w": ["rockets"], "tag": "blast", "tag2": "missiles", "color": Color(1.0, 0.95, 0.85),
-		"desc": "Ракета залпа прилипает и через 0,5 с даёт объёмный взрыв 130 пикс. (урон ×1,5); соседние взрывы сливаются: до ×2",
-		"short": "прилипающие ракеты, объёмный взрыв"},
+		"desc": "Ракета залпа сразу даёт объёмный взрыв 130 пикс. (урон ×1,5); соседние взрывы сливаются: до ×2",
+		"short": "объёмный взрыв при попадании"},
 	"salvo": {"title": "Огненный вал", "w": ["rockets"], "tag": "missiles", "tag2": "blast", "color": Color(1.0, 0.45, 0.15),
 		"desc": "Каждый 3-й залп ракет — вал: три линии по 5 взрывов в 250 / 450 / 650 пикс. впереди (урон ×1,3)",
 		"short": "каждый 3-й залп — три линии огня"},
@@ -376,6 +376,20 @@ static func _roll(level: int) -> int:
 		if r <= 0.0:
 			return i
 	return 0
+
+
+## S11-20: the weapon level text split into what this pick gives now and what comes at a
+## later level, one line each («Сейчас: …», «На ур. 4: …»); parts without a level go last.
+static func _level_lines(lvl: String, from: int, to: int) -> String:
+	var sp := CardText.level_split(lvl, from, to)
+	var s := ""
+	if not (sp["now"] as PackedStringArray).is_empty():
+		s += "\n" + Loc.t("Сейчас: %s") % "; ".join(sp["now"])
+	for l: Array in sp["later"]:
+		s += "\n" + Loc.t("На ур. %d: %s") % [int(l[0]), String(l[1])]
+	if not (sp["base"] as PackedStringArray).is_empty():
+		s += "\n" + "; ".join(sp["base"])
+	return s
 
 
 static func _pct(v: float) -> String:
@@ -702,7 +716,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 		"weapon_up":
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			var to := mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
-			card["desc"] = Loc.t("%s: ур. %d → %d\n%s") % [g2.name, g2.level, to, Weapons.DEFS[g2.weapon]["lvl"]]
+			card["desc"] = Loc.t("%s: ур. %d → %d") % [g2.name, g2.level, to] + _level_lines(Loc.t(Weapons.DEFS[g2.weapon]["lvl"]), g2.level, to)
 			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to, int(p.cls["plane_lvl"])) > g2.slots:
 				card["desc"] += "\nВторая турель — сверху на фюзеляже" if g2.slots == 1 else "\nЕщё одна турель"
 			if r > 0:
