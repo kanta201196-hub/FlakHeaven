@@ -793,7 +793,7 @@ func _fire_turret(p: Player) -> bool:
 	_burst += TurretMath.BURST - 1
 	_burst_t = _burst_gap
 	_turret_round(p)
-	Main.I.sfx.play("turret_fire", -21.0)
+	Main.I.sfx.play("turret_burst", -21.0)   # the whole 4-round burst in one sample (sound thread, PR #426)
 	return true
 
 
