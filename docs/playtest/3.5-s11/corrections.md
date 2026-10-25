@@ -27,5 +27,6 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-20 | Card description is unclear: cannot tell whether the bonuses apply now or only after 4 more levels (screenshot s11_note_16.png) | combat UI thread (card text) | new |
 | S11-21 | Card descriptions: text wraps so a closing bracket lands alone on the next line (e.g. «(из 11» / «)»); fix the wrapping in all descriptions (screenshot s11_note_17.png) | combat UI thread | new |
 | S11-22 | Card pick: the tooltip at the bottom must disappear when the mouse leaves the card (screenshot s11_note_18.png) | combat UI thread | new |
+| S11-23 | Card pick screen: player HP must be visible (screenshot s11_note_19.png; the same screenshot shows the dangling «)» on «Усиленная боевая часть», part of S11-21) | combat UI thread | new |
 
-Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_18.png`.
+Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_19.png`.
