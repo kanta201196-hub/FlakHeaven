@@ -625,6 +625,15 @@ func _make_points() -> Array:
 	pts.append({"name": "closeup", "pos": found.get("o_rocks_big", empty) + Vector2(-260, 0), "zoom": 2.5})
 	pts.append({"name": "roll", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.62})
 	pts.append({"name": "roll90", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.78})
+	if OS.get_cmdline_user_args().has("--altbench"):
+		# Kanta 25.10 (flight altitude): the gameplay zoom over the plain, a ridge and an AA site with enemy
+		# planes around the player and air and ground blasts mid-way, to judge how high the planes read
+		pts = []
+		var ab := [[Vector2(-330, 160), 18.0, false, ""], [Vector2(-120, 260), 130.0, false, "blast"],
+			[Vector2(260, -120), 22.0, true, ""], [Vector2(340, 200), 12.0, true, "flak"]]
+		pts.append({"name": "alt_plain", "pos": empty, "enemies": true, "booms": ab, "shot_t": 0.6, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "alt_ridge", "pos": peak + Vector2(0, 300), "enemies": true, "booms": ab, "shot_t": 0.6, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "alt_site", "pos": empty + Vector2(2400, 0), "enemies": true, "ground": true, "booms": ab, "shot_t": 0.6, "wait": 2.5, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--fxbench"):   # 3.4-t1: эффекты (след, форсаж, ракеты, винты, падение ведомого)
 		pts = []
 		pts.append({"name": "trail", "pos": empty, "fly": true, "wait": 3.0, "zoom": 0.8})

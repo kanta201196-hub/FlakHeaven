@@ -82,11 +82,15 @@ var lod_frames := 0            # кадров, когда кусок на экр
 var props: BiomeProps          # B-41: модели биома на рельефе (null — без них)
 
 
+## Relief with the valley floor depth px below the combat plane; mountains rise at most
+## min(depth − 30, relief_height) above it
 func setup(depth: float, mat: Material, bg: Background) -> void:
 	base_y = -depth
 	_pick_style()
 	N = N_GFX[Settings.gopt("terrain")]
-	ceiling = maxf(depth - 30.0, 0.0)   # запас на крен и толщину моделей у плоскости боя
+	# a gap for bank and model thickness at the combat plane; the mountains keep their own height
+	# (relief_height) when the ground goes deeper, so a deeper ground lowers the whole landscape
+	ceiling = clampf(depth - 30.0, 0.0, Tuning.g("relief_height"))
 	material = mat
 	_bg = bg
 	_mask.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
