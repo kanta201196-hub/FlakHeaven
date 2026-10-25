@@ -320,7 +320,7 @@ static func footprint(name: String) -> float:
 		"o_oasis":
 			return 0.5
 		"o_fort":
-			return 0.62
+			return 0.68   # half-diagonal of the turned walls plus corner towers, so the ×2 fort keeps its corner off the road
 	return 0.45
 
 
