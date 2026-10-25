@@ -378,6 +378,20 @@ static func _roll(level: int) -> int:
 	return 0
 
 
+## S11-20: the weapon level text split into what this pick gives now and what comes at a
+## later level, one line each («Сейчас: …», «На ур. 4: …»); parts without a level go last.
+static func _level_lines(lvl: String, to: int) -> String:
+	var sp := CardText.level_split(lvl, to)
+	var s := ""
+	if not (sp["now"] as PackedStringArray).is_empty():
+		s += "\n" + Loc.t("Сейчас: %s") % "; ".join(sp["now"])
+	for l: Array in sp["later"]:
+		s += "\n" + Loc.t("На ур. %d: %s") % [int(l[0]), String(l[1])]
+	if not (sp["base"] as PackedStringArray).is_empty():
+		s += "\n" + "; ".join(sp["base"])
+	return s
+
+
 static func _pct(v: float) -> String:
 	return "%d%%" % int(round(v * 100.0))
 
@@ -702,7 +716,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 		"weapon_up":
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			var to := mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
-			card["desc"] = Loc.t("%s: ур. %d → %d\n%s") % [g2.name, g2.level, to, Weapons.DEFS[g2.weapon]["lvl"]]
+			card["desc"] = Loc.t("%s: ур. %d → %d") % [g2.name, g2.level, to] + _level_lines(Loc.t(Weapons.DEFS[g2.weapon]["lvl"]), to)
 			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to, int(p.cls["plane_lvl"])) > g2.slots:
 				card["desc"] += "\nВторая турель — сверху на фюзеляже" if g2.slots == 1 else "\nЕщё одна турель"
 			if r > 0:

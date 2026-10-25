@@ -32,6 +32,15 @@ const GROUP_AT := {
 const WEAPON_SRC := {"aam": &"ракеты В-В", "rockets": &"НАР", "bombs": &"бомбы", "gunpod": &"гондола",
 	"turret": &"турели", "emp": &"ЭМИ", "laser": &"лазер", "railgun": &"рельсотрон", "plasma": &"плазма"}
 const MOD_TILE := 64.0
+## Module caption width under a tile, and the gap from the blueprint to the module columns:
+## wide enough for two-word names in three lines, narrow enough that both columns stay
+## between the hardpoint panel and the stats column on a 1920-wide screen (S11-25).
+const MOD_CAP := 170.0
+const MOD_GAP := 60.0
+## Blueprint box side; 460 leaves room for the module columns and their captions
+const BP := 460.0
+## Blueprint marker radius; module leader lines stop at its rim instead of under the number
+const MARK_R := 15.0
 
 ## Focused item: "row:<i>" (hardpoint group), "wing" (wingmen target) or a menu action
 static var focus := ""
@@ -39,6 +48,8 @@ static var focus := ""
 static var _focusables: Array = []
 ## Selector actions of this frame's rows, by focus id: [back, forward]
 static var _sides := {}
+## Hardpoint marker centres on the blueprint this frame (module leader lines avoid them)
+var _marks: Array[Vector2] = []
 
 
 ## Draws the whole pause screen over the frozen fight.
@@ -53,9 +64,9 @@ func draw(m: Main, size: Vector2) -> void:
 	var crumb := Loc.t("ПАУЗА  //  ВЫЛЕТ «%s»  //  %02d:%02d") % [Loc.t(Campaign.op()["title"]).to_upper(), t / 60, t % 60]
 	UiStyle.text(ctrl, hf, Vector2(98, 58), crumb, 20, UiStyle.TEXT)
 	var left := Rect2(40, 110, 560, 0)
-	var bottom := _hardpoints(m, p, left)
+	var bottom := _hardpoints(m, p, left, size)
 	_menu(m, Vector2(56, maxf(bottom + 36.0, size.y - 340.0)))
-	_blueprint(m, p, Rect2((600.0 + size.x - 480.0) / 2.0 - 250.0, 200.0, 500.0, 500.0))
+	_blueprint(m, p, Rect2((600.0 + size.x - 480.0) / 2.0 - BP / 2.0, 200.0, BP, BP))
 	var sy := _stats(p, Rect2(size.x - 480.0, 110.0, 440.0, 0.0))
 	sy = _tags(p, Rect2(size.x - 480.0, sy + 16.0, 440.0, 0.0))
 	_damage(m, Rect2(size.x - 480.0, sy + 16.0, 440.0, 0.0))
@@ -70,9 +81,11 @@ func _diamond_outline(c: Vector2, s: float, col: Color) -> void:
 # ---------- Hardpoints ----------
 
 ## Hardpoint rows and the wingmen target row; returns the bottom y of the panel.
-func _hardpoints(m: Main, p: Player, r: Rect2) -> float:
+## Row height comes from the logical screen height `size` (not window pixels), leaving room
+## for the four-item menu and the hint strip under the panel.
+func _hardpoints(m: Main, p: Player, r: Rect2, size: Vector2) -> float:
 	var rows := p.groups.size() + (1 if not p.wingmen.is_empty() else 0)
-	var rh := clampf((m.get_viewport().get_visible_rect().size.y - 520.0) / maxf(rows, 1), 74.0, 96.0)
+	var rh := clampf((size.y - 500.0) / maxf(rows, 1), 74.0, 96.0)
 	r.size.y = 64.0 + rows * rh
 	UiStyle.panel(ctrl, r, UiStyle.LINE, UiStyle.PANEL, 18.0)
 	var tf := UiStyle.head_font(700, 4)
@@ -102,8 +115,9 @@ func _hardpoints(m: Main, p: Player, r: Rect2) -> float:
 func _group_row(m: Main, p: Player, gi: int, row: Rect2, mp: Vector2) -> void:
 	var g: Hardpoint = p.groups[gi]
 	var on := focus == "row:%d" % gi
-	var tile := Rect2(row.position.x + 14, row.position.y + (row.size.y - 64.0) / 2.0, 64, 64)
-	_num_badge(Vector2(tile.position.x - 4, tile.position.y - 2), gi + 1)
+	# the slot number sits in its own gutter left of the tile, not on the icon (S11-25)
+	var tile := Rect2(row.position.x + 36, row.position.y + (row.size.y - 64.0) / 2.0, 64, 64)
+	_num_badge(Vector2(row.position.x + 14, tile.get_center().y), gi + 1)
 	var sf := UiStyle.head_font(600, 3)
 	var nf := UiStyle.head_font(700, 1)
 	var tx := tile.end.x + 18.0
@@ -124,7 +138,7 @@ func _group_row(m: Main, p: Player, gi: int, row: Rect2, mp: Vector2) -> void:
 	HudIcons.tile(ctrl, tile, g.weapon, fam, frame, -1)
 	UiStyle.text(ctrl, sf, Vector2(tx, row.position.y + 20), "%s ×%d" % [Loc.t(g.name).to_upper(), g.slots], UiStyle.FS_CAPTION, UiStyle.TEXT_2)
 	var title := Loc.t(g.evo_title()) if g.evo else Loc.t(Weapons.title(g.weapon))
-	UiStyle.text(ctrl, nf, Vector2(tx, row.position.y + 44), _fit(title, row.end.x - tx - 130.0, UiStyle.FS_LABEL, nf), UiStyle.FS_LABEL, UiStyle.TEXT)
+	_row_title(title, Vector2(tx, row.position.y + 44), row.end.x - tx - 130.0, _has_selector(g), nf)
 	# level pips and DPS on the right
 	var px := row.end.x - 116.0
 	for i in Weapons.MAX_LEVEL:
@@ -140,8 +154,27 @@ func _group_row(m: Main, p: Player, gi: int, row: Rect2, mp: Vector2) -> void:
 	if Weapons.DEFS[g.weapon]["uses_priority"]:
 		_selector(sel, Loc.t(Weapons.PRIORITY_NAMES[g.priority]), "prioback:%d" % gi, "prio:%d" % gi, on, "row:%d" % gi)
 	elif g.uses_trigger():
-		var tl := Loc.t("пуск: авто") if g.trigger == "auto" else Loc.t("пуск: %s") % key_label("fire_hardpoint")
+		var tl := Loc.t("пуск: авто") if g.trigger == "auto" else Loc.t("пуск: %s") % key_labels("fire_hardpoint")
 		_selector(sel, tl, "trig:%d" % gi, "trig:%d" % gi, on, "row:%d" % gi)
+
+
+## Weapon name in a hardpoint row: full size if it fits, else one step smaller, else (only
+## when the row has no selector under it) two lines; a cut with «…» is the last resort (S11-25).
+func _row_title(title: String, pos: Vector2, w: float, selector: bool, f: Font) -> void:
+	for fs: int in [UiStyle.FS_LABEL, UiStyle.FS_BODY]:
+		if UiStyle.text_w(f, title, fs) <= w:
+			UiStyle.text(ctrl, f, pos, title, fs, UiStyle.TEXT)
+			return
+	if not selector:
+		var lines := _lines(title, w, UiStyle.FS_BODY, f, 2)
+		for i in lines.size():
+			UiStyle.text(ctrl, f, pos + Vector2(0, i * 19.0), lines[i], UiStyle.FS_BODY, UiStyle.TEXT)
+		return
+	UiStyle.text(ctrl, f, pos, _fit(title, w, UiStyle.FS_BODY, f), UiStyle.FS_BODY, UiStyle.TEXT)
+
+
+func _has_selector(g: Hardpoint) -> bool:
+	return bool(Weapons.DEFS[g.weapon]["uses_priority"]) or g.uses_trigger()
 
 
 func _best_rate(m: Main) -> float:
@@ -149,7 +182,7 @@ func _best_rate(m: Main) -> float:
 	return float(top[0][1]) if not top.is_empty() else 0.0
 
 
-## Amber number in a ring at the top-left corner of a hardpoint tile.
+## Amber slot number in a ring, centred at `c` (left of the hardpoint tile).
 func _num_badge(c: Vector2, n: int) -> void:
 	ctrl.draw_circle(c, 13.0, Color(0.05, 0.055, 0.05))
 	ctrl.draw_arc(c, 13.0, 0.0, TAU, 24, UiStyle.ACCENT, 2.0)
@@ -214,16 +247,24 @@ func _blueprint(m: Main, p: Player, box: Rect2) -> void:
 	ctrl.draw_polyline(outline, UiStyle.ACCENT, 3.0, true)
 	ctrl.draw_dashed_line(_at(box, Vector2(50, 4)), _at(box, Vector2(50, 92)), Color(UiStyle.ACCENT, 0.45), 1.5, 8.0)
 	ctrl.draw_dashed_line(_at(box, Vector2(8, 57)), _at(box, Vector2(92, 57)), Color(UiStyle.ACCENT, 0.3), 1.5, 8.0)
-	# hardpoint markers
+	# hardpoint markers: placed first so module leaders can avoid them, drawn last so they
+	# stay on top of the leader lines (S11-25)
+	_marks.clear()
+	var marks: Array = []
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
 		for at: Vector2 in _group_points(g.name, gi, p.groups.size()):
 			var c := _at(box, at)
-			ctrl.draw_circle(c, 15.0, Color(0.05, 0.055, 0.05, 0.95))
-			ctrl.draw_arc(c, 15.0, 0.0, TAU, 24, UiStyle.ACCENT if not g.is_empty() else Color(UiStyle.ACCENT, 0.4), 2.5)
-			UiStyle.text(ctrl, UiStyle.head_font(800, 0), Vector2(c.x - 15, c.y + 6), str(gi + 1), UiStyle.FS_BODY,
-				UiStyle.ACCENT if not g.is_empty() else Color(UiStyle.ACCENT, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 30.0)
+			_marks.append(c)
+			marks.append([c, gi, g.is_empty()])
 	_modules(p, box)
+	for mk: Array in marks:
+		var c: Vector2 = mk[0]
+		var col := Color(UiStyle.ACCENT, 0.4) if mk[2] else UiStyle.ACCENT
+		ctrl.draw_circle(c, MARK_R, Color(0.05, 0.055, 0.05, 0.95))
+		ctrl.draw_arc(c, MARK_R, 0.0, TAU, 24, col, 2.5)
+		UiStyle.text(ctrl, UiStyle.head_font(800, 0), Vector2(c.x - MARK_R, c.y + 6), str(int(mk[1]) + 1), UiStyle.FS_BODY,
+			Color(UiStyle.ACCENT, 0.5) if mk[2] else UiStyle.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, MARK_R * 2.0)
 	_wingmen(p, box)
 	var cap := Loc.t("%s · СХЕМА ПОДВЕСОВ") % Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper()
 	UiStyle.text(ctrl, UiStyle.head_font(600, 4), Vector2(box.position.x, box.end.y + 30), cap, UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, box.size.x)
@@ -261,8 +302,8 @@ func _modules(p: Player, box: Rect2) -> void:
 			left.append(id)
 		else:
 			right.append(id)
-	_module_column(p, box, left, box.position.x - MOD_TILE - 70.0)
-	_module_column(p, box, right, box.end.x + 70.0)
+	_module_column(p, box, left, box.position.x - MOD_TILE - MOD_GAP)
+	_module_column(p, box, right, box.end.x + MOD_GAP)
 
 
 func _module_at(id: String) -> Vector2:
@@ -272,13 +313,18 @@ func _module_at(id: String) -> Vector2:
 func _module_column(p: Player, box: Rect2, ids: Array, x: float) -> void:
 	if ids.is_empty():
 		return
-	var step := minf(112.0, (box.size.y + 60.0) / ids.size())
-	var y0 := box.position.y - 30.0 + maxf(0.0, (box.size.y + 60.0 - step * ids.size()) / 2.0)
+	# a crowded column gets smaller tiles, and captions only as many lines as fit the step,
+	# so a tile never lands on the caption above it
+	var span := box.size.y + 120.0
+	var step := minf(118.0, span / ids.size())
+	var ts := MOD_TILE if ids.size() <= 4 else 52.0
+	var max_lines := clampi(int((step - ts - 4.0) / 16.0), 1, 3)
+	var y0 := box.position.y - 80.0 + maxf(0.0, (span - step * ids.size()) / 2.0)
 	for i in ids.size():
 		var id: String = ids[i]
-		var r := Rect2(x, y0 + i * step, MOD_TILE, MOD_TILE)
-		var a := _at(box, _module_at(id))
+		var r := Rect2(x + (MOD_TILE - ts) / 2.0, y0 + i * step, ts, ts)
 		var from := Vector2(r.end.x + 4.0 if x < box.position.x else r.position.x - 4.0, r.get_center().y)
+		var a := _off_marks(_at(box, _module_at(id)), from)
 		ctrl.draw_dashed_line(from, a, Color(UiStyle.ACCENT, 0.7), 1.5, 5.0)
 		ctrl.draw_circle(a, 4.0, UiStyle.ACCENT)
 		var lvl := int(p.taken.get(id, 0))
@@ -286,13 +332,26 @@ func _module_column(p: Player, box: Rect2, ids: Array, x: float) -> void:
 		var key := p.skill3 if id == "skill3" else id
 		HudIcons.tile(ctrl, r, key, fam, Cards.RARITY[clampi(lvl - 1, 0, 4)]["color"], lvl)
 		var title := Loc.t(String(Cards.MODULES[id]["title"])) if id != "skill3" else Loc.t(PlaneClasses.SKILL3[p.skill3]["title"])
-		var lines := _lines(title, MOD_TILE + 80.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 1))
+		var lines := _lines(title, MOD_CAP, UiStyle.FS_CAPTION, UiStyle.head_font(600, 1), max_lines)
+		var cx := r.get_center().x - MOD_CAP / 2.0
 		for li in lines.size():
-			UiStyle.text(ctrl, UiStyle.head_font(600, 1), Vector2(r.position.x - 40.0, r.end.y + 18.0 + li * 16.0), lines[li], UiStyle.FS_CAPTION,
-				UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, MOD_TILE + 80.0)
+			UiStyle.text(ctrl, UiStyle.head_font(600, 1), Vector2(cx, r.end.y + 16.0 + li * 16.0), lines[li], UiStyle.FS_CAPTION,
+				UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, MOD_CAP)
 
 
-## Wingmen in formation under the wings, outside the drawing.
+## Leader-line end `a` moved to the rim of a hardpoint marker it would land under, on the
+## side the line comes `from`, so the dot never covers a slot number.
+func _off_marks(a: Vector2, from: Vector2) -> Vector2:
+	for c in _marks:
+		if a.distance_to(c) < MARK_R + 4.0:
+			var d := (from - c).normalized() if from != c else Vector2.UP
+			return c + d * (MARK_R + 4.0)
+	return a
+
+
+## Wingmen in formation at the bottom corners of the drawing, clear of the tail and the wing
+## tips: one per flank per row, more stack upwards, so neither their names nor the scheme
+## caption under the box overlap (S11-25).
 func _wingmen(p: Player, box: Rect2) -> void:
 	var n := 0
 	for w in p.wingmen:
@@ -301,11 +360,12 @@ func _wingmen(p: Player, box: Rect2) -> void:
 		var wm: Wingman = w
 		var side := -1.0 if n % 2 == 0 else 1.0
 		var row := n / 2
-		var c := Vector2(box.get_center().x + side * (box.size.x * 0.36 + row * 60.0), box.end.y - 40.0 + row * 70.0)
+		var c := Vector2(box.get_center().x + side * (box.size.x * 0.5 - 52.0), box.end.y - 62.0 - row * 90.0)
 		var r := Rect2(c - Vector2(30, 30), Vector2(60, 60))
 		HudIcons.tile(ctrl, r, "wingman", "wing", Prog.TAGS["wing"]["color"] if wm.alive() else UiStyle.TEXT_OFF, wm.lvl, 0.0, not wm.alive())
-		UiStyle.text(ctrl, UiStyle.head_font(600, 1), Vector2(r.position.x - 30, r.end.y + 18), "«%s»" % Loc.t(Prog.WING_TYPES[wm.type]["short"]).to_upper(),
-			UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, 120.0)
+		var wf := UiStyle.head_font(600, 1)
+		UiStyle.text(ctrl, wf, Vector2(c.x - 50.0, r.end.y + 18), _fit("«%s»" % Loc.t(Prog.WING_TYPES[wm.type]["short"]).to_upper(), 100.0, UiStyle.FS_CAPTION, wf),
+			UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, 100.0)
 		n += 1
 
 

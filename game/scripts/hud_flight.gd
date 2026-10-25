@@ -362,7 +362,7 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 		if Weapons.DEFS[hp.weapon]["uses_priority"]:
 			sub = Loc.t("цель: %s") % Loc.t(Weapons.PRIORITY_NAMES[hp.priority])
 		elif hp.uses_trigger():
-			sub = Loc.t("пуск: %s") % (Loc.t("авто") if hp.trigger == "auto" else key_label("fire_hardpoint"))
+			sub = Loc.t("пуск: %s") % (Loc.t("авто") if hp.trigger == "auto" else key_labels("fire_hardpoint"))
 		var c := BarCol.new()
 		c.hp = hp
 		c.pos = Vector2(x, ty)
