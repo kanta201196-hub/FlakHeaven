@@ -5,3 +5,13 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 
 | ID | Note | Source | Status |
 | --- | --- | --- | --- |
+| S11-01 | Title screen: the biome looks bad | relief thread | new |
+| S11-02 | Hangar flaps: only the flap piece lowers, the wing stays solid; the wing section must lower as a part of the wing («Osa» 2) | 3D models thread | new |
+| S11-03 | Hangar: NAR (unguided rockets) need a proper stand when viewed | 3D / upgrades thread | new |
+| S11-04 | Move the course gun setup to the left so weapons are set up in one place | menu / upgrades thread | new |
+| S11-05 | Course gun: a separate description under each block instead of one common text | menu / upgrades thread | new |
+| S11-06 | «Osa» 2: missiles intersect the plane's textures | 3D models thread | new |
+| S11-07 | «Osa» 1: missiles hang crooked on the pylon; a leftover hull-coloured part on the wing looks like a missile mount | 3D models thread | new |
+| S11-08 | «Osa» 1: flaps work with the same defects as «Osa» 2 (see S11-02) | 3D models thread | new |
+
+Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_5.png`.
