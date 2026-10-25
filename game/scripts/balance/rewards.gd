@@ -2,7 +2,7 @@ class_name Rewards
 extends RefCounted
 ## Reward table for sortie activities and level-up fallbacks (ADR-04, CS-03).
 ## Read only by `RunState.award_activity` and `RunState`'s level-up fallback, so every activity
-## pays through one formula. Numbers match the game as of build 3.5-s10.
+## pays through one formula. Numbers match the game as of build 3.5-s11.
 
 ## How an activity decides whether it pays a pick from rare cards.
 enum Rare {
