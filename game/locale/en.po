@@ -7340,3 +7340,15 @@ msgstr "synergy: good company"
 #: game/scripts/wingman.gd:450
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
+
+#: game/scripts/cards.gd
+msgid "Быстрая подзарядка"
+msgstr "Fast Recharge"
+
+#: game/scripts/cards.gd
+msgid "Широкий импульс"
+msgstr "Wide Pulse"
+
+#: game/scripts/cards.gd
+msgid "+10% радиуса за ранг"
+msgstr "+10% radius per rank"
