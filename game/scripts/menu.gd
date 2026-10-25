@@ -39,6 +39,7 @@ func _ready() -> void:
 	main_screen = MenuMain.new(self)
 	settings_screen = MenuSettings.new(self)
 	load_records()
+	add_child(UpdateCheck.new())
 
 
 func active() -> bool:

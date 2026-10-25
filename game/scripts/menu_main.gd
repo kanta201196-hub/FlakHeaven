@@ -101,6 +101,9 @@ func draw(size: Vector2) -> void:
 	if Demo.on:   # M-07: demo — wishlist button under the log
 		_card(Rect2(x, 730, COL_W, 84), &"wishlist", "В СПИСОК ЖЕЛАЕМОГО",
 			Loc.t("Полная игра: Архипелаг, самолёты ур. 2, ещё 2 операции"), false)
+	elif UpdateCheck.latest != "":   # a newer build is on the site — download page
+		_card(Rect2(x, 730, COL_W, 84), &"mm_update", Loc.t("ВЫШЛА СБОРКА %s") % UpdateCheck.latest,
+			Loc.t("СКАЧАТЬ НОВУЮ ВЕРСИЮ · ITCH.IO"), false)
 	var hx := float(UiStyle.MARGIN)
 	hx = UiStyle.key_hint(ctrl, Vector2(hx, size.y - 32), "↑↓", Loc.t("ВЫБОР"))
 	hx = UiStyle.key_hint(ctrl, Vector2(hx, size.y - 32), "ENTER", Loc.t("ОТКРЫТЬ"))
@@ -157,6 +160,8 @@ func _activate(id: StringName) -> void:
 			_focus = &"mm_close" if id == &"mm_whats_new" else (&"report_open" if Main.REPORT_URL != "" else &"menu_logs")
 		&"mm_close":
 			_close_overlay()
+		&"mm_update":
+			OS.shell_open(UpdateCheck.page)
 		_:
 			var a := String(id)
 			if a.begins_with("menu_biome:") and a.substr(11) == Campaign.biome_of(Campaign.index()):
