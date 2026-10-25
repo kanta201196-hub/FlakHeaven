@@ -54,6 +54,12 @@ const STANDS := {
 }
 ## Floor of the weapon store in the weapon view (box stands went from here up to the weapon)
 const FLOOR_Y := -0.2
+## S11-13 (Kanta: the turret "hangs in the air"): in the weapon store the turret sits on its ring mount
+## in a fuselage skin section on a wheeled frame (tools/blender/turret_stand.py). seat_r / seat_y - the
+## flange top's radius and height in the stand model; view - turret scale so the stand fits the view;
+## lift - the camera aims at this share of the pair's height over the floor.
+const TURRET_STAND := {"path": "res://models/hangar/stand_turret.glb", "seat_r": 1.0, "seat_y": 1.75,
+	"view": 0.55, "lift": 0.5}
 var turret_pos: Array = []   # [Vector3, сторона] — турели текущей модели
 ## Тест 3.5-s8: показ механизации (HangarAnim) — кнопка на виде самолёта или курсор на узле «Крыло»
 var mech_demo := false
@@ -312,6 +318,7 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	if k != _key:
 		if _key.begins_with("w_"):
 			_dist = DIST0
+			focus = Vector3.ZERO   # the turret on its mount stand aims the camera higher (S11-13)
 		_key = k
 		_build(cls_id, view_lvl)
 	return vp.get_texture()
@@ -320,10 +327,13 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 ## Тест 3.5-s3 («текстуры в ангаре — идеально»): вид рисуется с запасом по разрешению — в пикселях экрана
 ## (при растяжении окна) × SUPERSAMPLE и сжимается в рамку: текстура модели чётче, края без лесенки
 const SUPERSAMPLE := 1.5
+## Bench (--hcam close-ups, S11): supersample factor instead of SUPERSAMPLE, so saved close-ups are large; 0 — off
+static var bench_supersample := 0.0
 
 
 func _fit_vp(r: Rect2) -> void:
-	var k := SUPERSAMPLE * maxf(1.0, _ctrl.get_viewport().get_final_transform().get_scale().x) if _ctrl != null else SUPERSAMPLE
+	var ss := bench_supersample if bench_supersample > 0.0 else SUPERSAMPLE
+	var k := ss * maxf(1.0, _ctrl.get_viewport().get_final_transform().get_scale().x) if _ctrl != null else ss
 	k = minf(k, 3200.0 / maxf(r.size.x, 1.0))
 	var sz := Vector2i(maxi(64, int(r.size.x * k)), maxi(64, int(r.size.y * k)))
 	if vp.size != sz:
@@ -353,7 +363,9 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		var evo := weapon_tier == 4
 		var t := mini(weapon_tier, 3)
 		# Kanta 24.10: the weapon itself on the stands, without the pylon that holds it on the wing
-		var side := "top" if weapon == "turret" else ""
+		var on_mount := weapon == "turret" and ResourceLoader.exists(TURRET_STAND["path"])
+		# S11-13: on the mount stand the stand is the ring mount: no collar from the plane
+		var side := ("mount" if on_mount else "top") if weapon == "turret" else ""
 		if evo and weapon in ["flares"]:
 			side = "top"
 		elif evo and weapon == "bombs":
@@ -370,6 +382,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		if (evo and not Weapons.is_bomb(weapon)) or not ResourceLoader.exists(stand.get("path", "")):
 			stand = {}   # evolved missiles are other shapes: they keep the box stands
 		s *= stand.get("view", 1.0)
+		if on_mount:
+			s *= float(TURRET_STAND["view"])
 		# турель — в одном масштабе на всех ступенях (модель меньше 1 — множитель не зависит от габарита),
 		# поэтому рост ступени виден; S9-04: стоит неподвижно, стволами вперёд-вбок к камере (3/4 спереди)
 		var rot := TURRET_SHOW_YAW if weapon == "turret" else 0.0
@@ -382,6 +396,9 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		var on_cart := false
 		if not stand.is_empty():
 			on_cart = _place_on_stand(wmi, bb, s, bottom, stand)
+		focus = Vector3.ZERO
+		if on_mount:
+			_place_on_mount(wmi, s, bottom)
 		if weapon != "turret" and not on_cart and bottom > -0.19:
 			var sm := StandardMaterial3D.new()
 			sm.albedo_color = Color(0.32, 0.34, 0.3)
@@ -435,6 +452,40 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 		_cradle(Vector3(wmi.position.x + bb.get_center().x * s, axis, wmi.position.z + bb.get_center().z * s),
 			body, float(stand["cradle"]) * cb.size.x * ck)
 	return true
+
+
+## S11-13: seats the turret `wmi` (view scale `s`, lowest point `bottom`) on the ring mount stand
+## (TURRET_STAND): the stand's flange fits the turret's own base ring, its wheels stand on the store floor
+## and the turret is raised onto the flange; the camera aims at the middle of the pair.
+func _place_on_mount(wmi: MeshInstance3D, s: float, bottom: float) -> void:
+	var path: String = TURRET_STAND["path"]
+	var stand := WeaponModels._glb_mesh(path, 1.0, Color(), path.get_file().get_basename())
+	if stand == null:
+		return
+	var ck := _base_radius(wmi.mesh) * s / float(TURRET_STAND["seat_r"])
+	wmi.position.y += FLOOR_Y + float(TURRET_STAND["seat_y"]) * ck - bottom
+	# the turret origin is the centre of its base ring; the stand's fuselage runs along the barrels
+	var sm := MeshInstance3D.new()
+	sm.mesh = stand
+	sm.basis = Basis(Vector3.UP, TURRET_SHOW_YAW).scaled(Vector3.ONE * ck)
+	sm.position = Vector3(wmi.position.x, FLOOR_Y, wmi.position.z)
+	pivot.add_child(sm)
+	var top := wmi.position.y + wmi.mesh.get_aabb().end.y * s
+	# the turret mesh box is centred on x, z (show_weapon), so the camera stays on that vertical
+	focus = Vector3(0.0, FLOOR_Y + (top - FLOOR_Y) * float(TURRET_STAND["lift"]), 0.0)
+
+
+## Radius of a turret mesh's base ring: the widest vertex from the vertical axis in its lowest tenth.
+func _base_radius(m: Mesh) -> float:
+	var bb := m.get_aabb()
+	var lim := bb.position.y + bb.size.y * 0.1
+	var r := 0.0
+	for si in m.get_surface_count():
+		var verts: PackedVector3Array = m.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]
+		for v in verts:
+			if v.y <= lim:
+				r = maxf(r, Vector2(v.x, v.z).length())
+	return r if r > 0.0 else bb.size.z * 0.4
 
 
 ## Cradle on the loader plate (Kanta 24.10: the missile is held, not laid): a beam `span` long under the weapon
@@ -498,13 +549,29 @@ static func _body_radius(m: Mesh) -> float:
 	return r
 
 
+## Bench: --hangarglb=<cls_lvl>=<absolute .glb> shows that file instead of the imported hangar model, so a GLB fix
+## made outside the project (S11-07: glove pylons cut from «Оса» 1 while another task owns the hangar GLBs) can be
+## checked in the hangar without importing it. Loaded at run time (GLTFDocument), so the canopy keeps the GLB's
+## own glass material. null — no override for this plane.
+func _bench_glb(key: String) -> Node3D:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--hangarglb=%s=" % key):
+			var doc := GLTFDocument.new()
+			var st := GLTFState.new()
+			if doc.append_from_file(a.get_slice("=", 2), st) == OK:
+				return doc.generate_scene(st) as Node3D
+	return null
+
+
 func _build(cls_id: String, lvl: int) -> void:
 	for c in pivot.get_children():
 		c.queue_free()
 	var path := "res://models/hangar/fh_hangar_%s_%d.glb" % [cls_id, lvl]
 	if not ResourceLoader.exists(path):
 		return
-	var model: Node3D = (load(path) as PackedScene).instantiate()
+	var model: Node3D = _bench_glb("%s_%d" % [cls_id, lvl])
+	if model == null:
+		model = (load(path) as PackedScene).instantiate()
 	# обшивка под углом (крылья, фюзеляж сбоку) — анизотропная фильтрация, иначе текстура «плывёт»
 	for c in model.find_children("*", "MeshInstance3D", true, false):
 		var mi := c as MeshInstance3D
@@ -590,9 +657,11 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var lo := _surface_y(x, z, true)
 			var hi := _surface_y(x, z, false)
 			var y := 0.0
+			var pitch := 0.0
 			match side:
 				"under":
 					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mtr, weapon_tier == 4) * wlen
+					pitch = _chord_pitch(x - 0.02 * wlen, z, (0.18 if g.weapon in ["aam", "arm"] else 0.25) * wlen)
 				"belly":   # Т-6: «Бабушкин ковёр» — своим узлом прямо к брюху, без пилона
 					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, 3, true) - WeaponModels.PYLON_H) * wlen
 				"top", "wing":
@@ -645,8 +714,27 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
 			if side == "bottom" or (side == "tail" and WeaponModels.TURRET_MODELS.has(cls_id) and not (WeaponModels.TURRET_MODELS[cls_id] as Dictionary).has("tail")):
 				bs = bs * Basis(Vector3.RIGHT, PI)
+			if pitch != 0.0:   # S11-07: the pylon lies along the wing's chord, not level under a sloping glove
+				bs = Basis(Vector3.BACK, pitch) * bs
 			wmi.basis = bs.scaled(Vector3(wlen, wlen, wlen))
 			pivot.add_child(wmi)
+
+
+## Largest chord slope a pylon follows (rad): a steeper difference between its ends means one end reaches past the
+## wing (nacelle, fairing, trailing edge), and the pylon stays level
+const PYLON_PITCH_MAX := 0.1
+
+
+## S11-07 (Kanta: «ракеты висят криво»): pitch (rad, nose up > 0) that lays a pylon of half-length `half` centred at
+## (x, z) along the wing underside, so both its ends touch the skin instead of one end floating below a sloping glove.
+## 0 when either end misses the model or the slope is not a plain wing chord.
+func _chord_pitch(x: float, z: float, half: float) -> float:
+	var lf := _surface_y(x + half, z, true)
+	var lr := _surface_y(x - half, z, true)
+	if is_nan(lf) or is_nan(lr):
+		return 0.0
+	var p := atan2(lf - lr, 2.0 * half)
+	return p if absf(p) <= PYLON_PITCH_MAX else 0.0
 
 
 var _faces := PackedVector3Array()

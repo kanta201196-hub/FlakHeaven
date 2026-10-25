@@ -78,6 +78,21 @@ const EXHAUST := {
 	"bomber_1": [0.36, [-0.16, -0.01, 0.105, 0.19, -0.12, -0.02], [-0.14, 0.04, 0.24, 0.32, -0.13, -0.04]],
 }
 
+## S11-14 / S11-15 (playtest 3.5-s11, Kanta: «проблемы с текстурами» on «Кит» 2 and «Грач»): the hangar remesh closed
+## the jet intakes and nozzles with caps and baked them mid or light (source luminance 0.02–0.08, above the l_keep
+## cut-off), so every paint scheme painted the inside of the engines: orange tiger stripes inside the intakes,
+## off-white «Классика» inside the nozzles, over the lumpy remeshed duct walls. Inside these openings the surface
+## takes a dark sooty metal instead of the paint. Per plane, in model axes (nose +X, up +Y, both sides by |z|):
+## [axis y, axis |z|, nacelle radius r, [intake x0, x1], [nozzle x0, x1]]. A point counts as inside when it lies
+## within 0.9 r of the axis in one of the x spans and faces the axis or along it (the duct walls and the caps), so
+## the outer skin of the nacelle and of the nozzle keeps the paint. Measured on the hangar models (radial fit of the
+## nacelle skin, caps found by their ±X normals); the battle models share the shape and axes.
+const ENGINE_HOLES := {
+	"attacker_1": [-0.0387, 0.0884, 0.0335, [0.065, 0.13], [-0.26, -0.15]],
+	"attacker_2": [-0.0293, 0.0919, 0.0404, [0.035, 0.12], [-0.31, -0.20]],
+	"bomber_2": [-0.0144, 0.0702, 0.0295, [-0.135, 0.0], [-0.29, -0.24]],
+}
+
 static var _shader: Shader
 static var _force := ""   # стенд: --livery=<id> — окраска своего самолёта в бою, если у класса такая есть
 
@@ -122,6 +137,7 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 	var key := "%s_%d" % [cls, lvl]
 	var src: Array = SRC.get(key, [0.1, 0.012])
 	var ex: Array = EXHAUST.get(key, [])
+	var holes: Array = ENGINE_HOLES.get(key, [])
 	# основной меш (текстура Meshy) — по нему габарит модели для узоров
 	var box := AABB()
 	var body: Array = []
@@ -146,7 +162,7 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 			# вид поверхности — по имени материала в GLB (у механизации поверх стоит общий материал WingMech)
 			var m0 := mi.mesh.surface_get_material(si)
 			var m := mi.get_surface_override_material(si)
-			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex)
+			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex, holes)
 			if sm != null:
 				mi.set_surface_override_material(si, sm)
 
@@ -173,7 +189,10 @@ static func _rel(mi: Node3D, model: Node3D) -> Transform3D:
 	return xf
 
 
-static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transform3D, box: AABB, ex: Array = []) -> ShaderMaterial:
+## Paint material for one surface: `ex` — exhaust boxes (EXHAUST), `holes` — engine openings (ENGINE_HOLES) of the
+## plane, both only for the textured skin (mode 0); null for surfaces that keep their own material.
+static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transform3D, box: AABB, ex: Array = [],
+		holes: Array = []) -> ShaderMaterial:
 	var bm := m as BaseMaterial3D
 	if bm == null or nm == "glass":
 		return null                     # стекло фонаря (ShaderMaterial «glass») — одно на все окраски
@@ -214,6 +233,12 @@ static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transfo
 			var b: Array = ex[i + 1]
 			sm.set_shader_parameter("ex_min%d" % i, Vector3(b[0], b[4], b[2]))
 			sm.set_shader_parameter("ex_max%d" % i, Vector3(b[1], b[5], b[3]))
+	if mode == 0 and holes.size() == 5:
+		var hi: Array = holes[3]
+		var hn: Array = holes[4]
+		sm.set_shader_parameter("has_holes", true)
+		sm.set_shader_parameter("hole_axis", Vector3(holes[0], holes[1], holes[2]))
+		sm.set_shader_parameter("hole_x", Vector4(hi[0], hi[1], hn[0], hn[1]))
 	sm.set_shader_parameter("c_dark", v[2])
 	sm.set_shader_parameter("c_mid", v[3])
 	sm.set_shader_parameter("c_light", v[4])
@@ -250,6 +275,9 @@ uniform vec3 ex_min0 = vec3(0.0);
 uniform vec3 ex_max0 = vec3(0.0);
 uniform vec3 ex_min1 = vec3(0.0);
 uniform vec3 ex_max1 = vec3(0.0);
+uniform bool has_holes = false;   // Livery.ENGINE_HOLES: intakes and nozzles stay dark metal
+uniform vec3 hole_axis = vec3(0.0);   // nacelle axis y, |z|, radius
+uniform vec4 hole_x = vec4(0.0);      // intake x0, x1, nozzle x0, x1
 uniform vec3 c_dark : source_color;
 uniform vec3 c_mid : source_color;
 uniform vec3 c_light : source_color;
@@ -295,6 +323,21 @@ float in_box(vec3 p, vec3 a, vec3 b) {
 	vec3 lo = smoothstep(a - 0.02, a + 0.02, p);
 	vec3 hi = 1.0 - smoothstep(b - 0.02, b + 0.02, p);
 	return lo.x * lo.y * lo.z * hi.x * hi.y * hi.z;
+}
+
+// S11-14/15: 1 inside an engine opening (Livery.ENGINE_HOLES): near the nacelle axis in an intake or nozzle span and
+// facing the axis or along it (duct walls, caps); the outer skin faces away from the axis and keeps the paint
+float x_span(float x, float a, float b) {
+	return smoothstep(a - 0.004, a + 0.004, x) * (1.0 - smoothstep(b - 0.004, b + 0.004, x));
+}
+float engine_hole(vec3 p, vec3 n) {
+	vec2 d = vec2(p.y - hole_axis.x, abs(p.z) - hole_axis.y);
+	float rad = length(d);
+	float near_axis = 1.0 - smoothstep(0.84 * hole_axis.z, 0.92 * hole_axis.z, rad);
+	float radial = dot(d, vec2(n.y, n.z * sign(p.z))) / max(rad, 1e-4);
+	float facing = max(1.0 - smoothstep(-0.2, 0.15, radial), smoothstep(0.5, 0.7, abs(n.x)));
+	float span = max(x_span(p.x, hole_x.x, hole_x.y), x_span(p.x, hole_x.z, hole_x.w));
+	return near_axis * facing * span;
 }
 
 // плоскость узора по преобладающей оси нормали: сверху — (x, z), борт — (x, y), торец — (z, y)
@@ -439,8 +482,12 @@ void fragment() {
 		mk = zone * mix(0.6, 1.0, smoothstep(ex_metal - 0.14, ex_metal + 0.14, metal0));
 	}
 	col *= mix(1.0, 0.7, mk);
+	// S11-14/15: inside intakes and nozzles — dark sooty metal from the source detail, not the paint
+	float hole = has_holes ? engine_hole(lp, normalize(ln)) : 0.0;
+	col = mix(col, min(src * 0.45, vec3(0.03)), hole);
+	keep *= 1.0 - hole;
 	ALBEDO = mix(col, src, keep);
-	ROUGHNESS = mix(mix(clamp(liv_rough + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), rough0, keep);
-	METALLIC = mix(mix(liv_metal, 0.45, mk), 0.0, keep);
+	ROUGHNESS = mix(mix(mix(clamp(liv_rough + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
+	METALLIC = mix(mix(mix(liv_metal, 0.45, mk), 0.35, hole), 0.0, keep);
 }
 """

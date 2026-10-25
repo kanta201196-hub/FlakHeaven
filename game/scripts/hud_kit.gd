@@ -39,6 +39,33 @@ static var _key_cache := {}
 static var _key_t := 0
 
 
+## Mouse button and keyboard key of `action` together («ПКМ / K»), mouse first: for actions
+## players mostly use with the mouse (missile launch), where key_label() alone shows only the
+## key and reads as if the mouse did nothing (S11-18). Falls back to key_label() without a mouse bind.
+static func key_labels(action: String) -> String:
+	var mouse := ""
+	if InputMap.has_action(action):
+		for ev in InputMap.action_get_events(action):
+			if ev is InputEventMouseButton:
+				mouse = _mouse_name((ev as InputEventMouseButton).button_index)
+				break
+	var key := key_label(action)
+	if mouse == "" or mouse == key:
+		return key
+	return mouse + " / " + key
+
+
+static func _mouse_name(button: int) -> String:
+	match button:
+		MOUSE_BUTTON_LEFT:
+			return Loc.t("ЛКМ")
+		MOUSE_BUTTON_RIGHT:
+			return Loc.t("ПКМ")
+		MOUSE_BUTTON_MIDDLE:
+			return Loc.t("СКМ")
+	return ""
+
+
 ## key_label() without the cache: reads InputMap now.
 static func _key_label(action: String) -> String:
 	if not InputMap.has_action(action):

@@ -40,8 +40,9 @@ var _crater_decals: Array[Decal] = []
 var _crater_mesh: PlaneMesh
 var _bombs3 := {}                  # тест 3.5-s4 (п. 10): падающие бомбы — номер → MeshInstance3D
 var _bid := 0
-var _flash_mat: StandardMaterial3D
-var _elite_mat: StandardMaterial3D
+var _flash_mat: Material        # hit flash over a 3D enemy model (_unit_overlay)
+var _boss_flash_mat: Material   # hit flash of a boss: it is under steady fire, so it stays weak
+var _elite_mat: Material        # elite enemy: gold tint
 var _zoom := 1.0
 var _c2 := Vector2.ZERO        # центр кадра на плоскости боя (для указателей за краем экрана)
 var _shadow_shader: Shader
@@ -222,14 +223,9 @@ func _ready() -> void:
 	_scorch_mat.albedo_color = Color(0.04, 0.03, 0.02, 0.55)
 	_scorch_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_scorch_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_flash_mat = StandardMaterial3D.new()
-	_flash_mat.albedo_color = Color(1, 1, 1, 0.75)
-	_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_elite_mat = StandardMaterial3D.new()
-	_elite_mat.albedo_color = Color(1.0, 0.75, 0.2, 0.28)
-	_elite_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_elite_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_flash_mat = _unit_overlay(OVERLAY_FLASH)
+	_boss_flash_mat = _unit_overlay(OVERLAY_BOSS_FLASH)
+	_elite_mat = _unit_overlay(OVERLAY_ELITE)
 	_wreck_mat = _make_burnt_mat()   # S10-07: остов самолёта — закопчённый металл, а не чёрная заливка
 	_trails = Contrails.new()
 	add_child(_trails)
@@ -552,6 +548,31 @@ func _process(delta: float) -> void:
 
 
 # ---------- самолёты и наземные цели ----------
+
+## Overlay over an enemy's 3D model (S11-24, S11-29): [Forward+ multiplier, Compatibility colour and alpha].
+## Compatibility draws a see-through unshaded fill, as tuned before the Forward+ switch. On Forward+ that
+## fill flooded the enemies' dark paint in the linear HDR frame (elite drones flat yellow, the Fortress
+## under fire flat white), so there the model's own colour is multiplied (shaders/unit_tint.gdshader):
+## paint, shading and markings stay. A boss is under steady fire, so its hit flash is on almost every
+## frame: it only lightens the paint a little.
+const OVERLAY_FLASH := [Vector3(2.4, 2.4, 2.4), Color(1.0, 1.0, 1.0, 0.75)]
+const OVERLAY_BOSS_FLASH := [Vector3(1.3, 1.3, 1.3), Color(1.0, 1.0, 1.0, 0.3)]
+const OVERLAY_ELITE := [Vector3(1.55, 1.2, 0.5), Color(1.0, 0.75, 0.2, 0.28)]
+
+
+## Overlay material for enemy 3D models from one of the OVERLAY_* pairs, for the renderer in use.
+func _unit_overlay(pair: Array) -> Material:
+	if Settings.forward_plus():
+		var t := ShaderMaterial.new()
+		t.shader = preload("res://shaders/unit_tint.gdshader")
+		t.set_shader_parameter("k", pair[0])
+		return t
+	var m := StandardMaterial3D.new()
+	m.albedo_color = pair[1]
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return m
+
 
 func _unit_mesh(tex: Texture2D, length_px: float, thick: float, grid: int) -> Dictionary:
 	var mesh := ReliefMesh.build(tex, tex.get_width() * thick, grid)
@@ -1187,7 +1208,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		var mi2: MeshInstance3D = ue["mi"]
 		var ov: Material
 		if ue.get("bm") != null:
-			ov = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
+			var hit_mat := _boss_flash_mat if e.is_boss else _flash_mat
+			ov = hit_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
 		else:
 			# модель из картинки (транспортник и др.): подсветка только по силуэту, иначе видна сетка квадратами
 			ov = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)

@@ -31,12 +31,12 @@ func _init(main: Main) -> void:
 		if a == "--flatclouds":   # M-31: сравнение — прежние плоские облака (vis_<имя>_flat.png)
 			Tuning.set_param("cloud3d", 0.0)
 			_suffix += "_flat"
-		if a.begins_with("--tag="):   # extra file suffix, so parallel renders of two checkouts do not overwrite each other
-			_suffix += "_" + a.substr(6)
 		if a.begins_with("--gfx="):   # T4-04: сравнение пресетов качества — vis_<имя>_gN.png
 			_suffix += "_g" + a.substr(6)
 		if a == "--relief0":   # relief lab: frames of the current relief (vis_<name>_before.png)
 			_suffix += "_before"
+		if a.begins_with("--tag="):   # parallel workers share user://: vis_<name>_<tag>.png keeps frames apart
+			_suffix += "_" + a.substr(6)
 		if a == "--nowater":   # S9-07/S9-08: «до» — кишлак без учёта ручья и реки у посёлка (vis_<имя>_dry.png)
 			AdobeBuild.ignore_water = true
 			_suffix += "_dry"
@@ -135,7 +135,8 @@ func process(delta: float) -> void:
 			_fort._wp = _fort.base_pos
 			m.world.add_child(_fort)
 		_fort.hp = _fort.max_hp   # игрок стреляет: без своей логики «Крепость» не гасит вспышку попадания
-		_fort._flash = 0.0
+		# S11-29 (point "fort_hit"): as under steady fire in a fight, the hit flash stays on every frame
+		_fort._flash = 0.06 if p.get("fort_hit", false) else 0.0
 		var ph: int = p["fortress"]
 		_fort.phase = ph
 		_fort.hatches_open = ph >= 2
@@ -727,6 +728,9 @@ func _make_points() -> Array:
 		pts.append({"name": "model_ground", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.3, "enemies": true, "ground": true, "wait": 2.5})
 		for ph in [1, 2, 3]:
 			pts.append({"name": "model_fortress_%d" % ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "enemies": true, "fortress": ph, "wait": 2.5})
+		# S11-29: the Fortress close (turrets on the hull, paint) and under steady fire (hit flash every frame)
+		pts.append({"name": "model_fortress_close", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.6, "enemies": true, "fortress": 1, "wait": 2.5})
+		pts.append({"name": "model_fortress_hit", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.6, "enemies": true, "fortress": 1, "fort_hit": true, "wait": 2.5})
 		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
 		for ph in ["march", "track", "launch"]:   # Kanta 24.10: SAM launcher folded, raised and tracking, launching
 			pts.append({"name": "sam_" + ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 9.0, "sam_poses": ph, "wait": 2.5})
@@ -905,6 +909,8 @@ const UNIT_POSES := {
 	"zsu": ["e_zsu", 27.0, 20.0], "truck": ["e_convoy_truck", 28.0, 20.0], "ifv": ["e_convoy_ifv", 25.0, 22.0],
 	"scout": ["e_convoy_scout", 18.0, 28.0], "technical": ["e_convoy_technical", 14.0, 34.0],
 	"heli": ["e_helicopter", 60.0, 9.0], "interceptor": ["e_interceptor", 46.0, 11.0],
+	# S11-24: the strike drone plain and elite (the elite marking drew it flat yellow on Forward+)
+	"drone": ["e_drone", 34.0, 14.0], "drone_elite": ["e_drone", 34.0, 12.0], "drone_hit": ["e_drone", 34.0, 14.0],
 }
 var _unit: Enemy = null
 var _unit_cv: Convoy = null
@@ -948,6 +954,10 @@ func _unit_poses(p: Dictionary) -> void:
 				_unit = Helicopter.new()
 			"interceptor":
 				_unit = Interceptor.new()
+			"drone", "drone_elite", "drone_hit":
+				_unit = Drone.new()
+				if kind == "drone_elite":
+					_unit.make_elite()
 			_:
 				if _unit_cv == null:
 					_unit_cv = Convoy.new()   # never enters the tree: only carries the alarm flag the turret reads
@@ -969,7 +979,7 @@ func _unit_poses(p: Dictionary) -> void:
 	var aim := body + (1.15 if _pt > 1.0 else 0.0)
 	_unit.hp = maxf(_unit.hp, 99999.0)
 	_unit.max_hp = maxf(_unit.max_hp, 99999.0)
-	_unit._flash = 0.0
+	_unit._flash = 0.06 if kind == "drone_hit" else 0.0   # S11-24: drone_hit shows the hit flash
 	_unit._spr = {"tex": spec[0], "len": spec[1], "angle": aim if kind == "zsu" else body}
 	var r3 := Render3D.I
 	if r3 == null:
@@ -1024,6 +1034,22 @@ var _hclose: Array = ([
 ] if OS.get_cmdline_user_args().has("--hangarclose") else [])
 
 
+## S11 close-up views from the command line: --hcam=name:cls:lvl:tier:livery:fx:fy:fz:yaw:pitch:dist[;…]
+## (livery "-" keeps the profile's paint; focus in model units, plane length 1) → user://vis_hcam_<name><suffix>.png
+var _hcams: Array = []
+
+
+func _hcam() -> Array:
+	if _hcams.is_empty():
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--hcam="):
+				for e in a.get_slice("=", 1).split(";", false):
+					var f := e.split(":")
+					if f.size() == 11:
+						_hcams.append(Array(f))
+	return _hcams
+
+
 ## Тест 3.5-s8 (--mechanim): ракурсы показа механизации [фокус, рысканье, тангаж, дальность] по классам
 const MECH_FRAMES := 8
 const MECH_DT := 0.75   # с между кадрами: 8 кадров = полный цикл HangarAnim (6 с)
@@ -1072,6 +1098,14 @@ func _hangar_bench() -> void:
 				_hq.append(q)
 			_t = 0.0
 			return
+		if not _hcam().is_empty():
+			# S11: free close-ups of the hangar plane, one queue entry per --hcam view, rendered large
+			Hangar3D.bench_supersample = 2.5
+			for vi in _hcam().size():
+				var hv: Array = _hcam()[vi]
+				_hq.append([hv[1], int(hv[2]), int(hv[3]), "C", hv[4], vi])
+			_t = 0.0
+			return
 		if OS.get_cmdline_user_args().has("--mechanim"):
 			# тест 3.5-s8: показ механизации — кадры анимации подряд (MECH_FRAMES через MECH_DT с) по ракурсам _MECH_VIEWS
 			for c in PlaneClasses.LIST:
@@ -1086,7 +1120,7 @@ func _hangar_bench() -> void:
 			for key: String in _MECHCLOSE:
 				for view: String in _MECHCLOSE[key]:
 					for pose in [0, 1]:
-						_hq.append([key.get_slice("_", 0), int(key.get_slice("_", 1)), 3 if key.begins_with("bomber") else 1, "C", view, pose])
+						_hq.append([key.get_slice("_", 0), int(key.get_slice("_", 1)), 3 if key.begins_with("bomber") else 1, "K", view, pose])
 			_t = 0.0
 			return
 		if OS.get_cmdline_user_args().has("--hangarweaptab"):
@@ -1172,6 +1206,9 @@ func _hangar_bench() -> void:
 	if cur[0] == "W":
 		m.hangar_tab = "weapons"
 		m.hangar_cls = "attacker"
+		for a in OS.get_cmdline_user_args():   # --wcls=bomber: the weapon store of that class (its turret)
+			if a.begins_with("--wcls="):
+				m.hangar_cls = a.get_slice("=", 1)
 		m.hangar_w = cur[1]
 		Hangar3D.bench_tab_w = cur[1]
 		var wcam := ""
@@ -1188,6 +1225,9 @@ func _hangar_bench() -> void:
 		_hf += 1
 		if _hf > 8 and _t > 1.2:
 			_save("hangar_w_%s_%d%s" % [cur[1], cur[2], wcam])
+			if Hangar3D.I != null:   # S11-13: the weapon view alone, at its own resolution (close-up frames)
+				Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_hangar_wvp_%s_%s_%d%s%s.png" % [
+					m.hangar_cls, cur[1], cur[2], wcam, _suffix])
 			_hq.pop_front()
 			_t = 0.0
 			_hf = 0
@@ -1198,7 +1238,7 @@ func _hangar_bench() -> void:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
 		Hangar3D.I.weapon_tier = cur[2]
-		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":   # --mechclose
+		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K":   # --mechclose
 			var cv: Array = _MECHCLOSE["%s_%d" % [cur[0], cur[1]]][cur[4]]
 			HangarAnim.bench_pose = float(cur[5])
 			Hangar3D.anim_time = 0.0
@@ -1217,6 +1257,16 @@ func _hangar_bench() -> void:
 			Hangar3D.I._yaw = mv[1]
 			Hangar3D.I._pitch = mv[2]
 			Hangar3D.I._dist = mv[3]
+			Hangar3D.I._idle = 0.0
+		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":   # --hcam close-up
+			var cv: Array = _hcam()[cur[5]]
+			if String(cv[4]) != "-":
+				Profile.cls(cur[0])["livery"] = cv[4]
+			Hangar3D.bench_pitch_min = -1.3
+			Hangar3D.I.focus = Vector3(float(cv[5]), float(cv[6]), float(cv[7]))
+			Hangar3D.I._yaw = float(cv[8])
+			Hangar3D.I._pitch = float(cv[9])
+			Hangar3D.I._dist = float(cv[10])
 			Hangar3D.I._idle = 0.0
 		elif cur.size() > 4:   # --liveries: окраска из очереди (в профиль без сохранения)
 			Profile.cls(cur[0])["livery"] = cur[4]
@@ -1265,11 +1315,16 @@ func _hangar_bench() -> void:
 	_hf += 1
 	var mech_next: bool = cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "M" and int(cur[4]) > 0   # модель уже собрана
 	# --mechclose: the same plane as the previous frame is already built, only the camera and the pose change
-	mech_next = mech_next or (cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C" and _mc_last == "%s_%d" % [cur[0], cur[1]] and _hf > 2)
+	mech_next = mech_next or (cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K" and _mc_last == "%s_%d" % [cur[0], cur[1]] and _hf > 2)
 	if (_hf > 8 and _t > 1.2 and (cur.size() < 6 or typeof(cur[3]) != TYPE_STRING or _hf > 14)) or (mech_next and _hf > 2):   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
-		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":
+		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K":   # --mechclose
 			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_mechclose_%s_%d_%s_p%d%s.png" % [cur[0], cur[1], cur[4], cur[5], _suffix])
 			_mc_last = "%s_%d" % [cur[0], cur[1]]
+		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":
+			# S11: only the 3D view (SubViewport, supersampled), so the close-up is not shrunk into the hangar frame
+			var hn := "user://vis_hcam_%s%s.png" % [_hcam()[cur[5]][0], _suffix]
+			Hangar3D.I.vp.get_texture().get_image().save_png(hn)
+			print("VISUAL hcam %s" % hn)
 		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING:
 			# только сам вид ангара (SubViewport, с запасом по разрешению) — для серии кадров и GIF
 			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_mech_%s_v%d_f%02d.png" % [cur[0], cur[5], cur[4]])
@@ -1281,6 +1336,9 @@ func _hangar_bench() -> void:
 			_save("hangar_livery_%s_%d_%s" % [cur[0], cur[1], cur[4]])
 		elif cur.size() > 3:
 			_save("turret_s%d_%s_%d_w%d_v%d" % [WeaponModels.turret_style, cur[0], cur[1], cur[2], cur[3]])
+			# S11-13: the hangar view alone, at its own resolution (close-up frames)
+			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_turretvp_%s_%d_w%d_v%d%s.png" % [
+				cur[0], cur[1], cur[2], cur[3], _suffix])
 		else:
 			_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])
 		_hq.pop_front()

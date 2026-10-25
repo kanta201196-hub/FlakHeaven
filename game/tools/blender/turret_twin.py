@@ -9,16 +9,19 @@ quad — эволюция «Дикобраз» (одобрена 16.10): 4 ст�
 Стволы укорочены на ~40% по замечанию владельца 16.10 («не слишком ли длинные стволы»).
 Выход: turret_twin_t<N>.blend / .glb (quad — turret_twin_quad) (ось стволов +X, верх +Y в Godot, начало — центр погона),
        preview_*.png. Единица — длина башни (без стволов) = 1."""
-import sys, os
+import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
 import turret_lib as L
 
 
-def twin(TIER=2, QUAD=False, M_BODY=None, M_DARK=None, M_BARREL=None, M_GLASS=None, base="", guns="guns", seg=1.0):
+def twin(TIER=2, QUAD=False, M_BODY=None, M_DARK=None, M_BARREL=None, M_GLASS=None, base="", guns="guns", seg=1.0,
+         detail=False):
     """Геометрия спаренной турели в своих единицах (длина башни = 1, начало — центр погона).
     base — группа неподвижной части (у «Крепости» — узел turret_N), guns — группа люльки со стволами
-    (может совпадать с base); seg — множитель числа граней цилиндров (для облегчённой модели боя)."""
+    (может совпадать с base); seg — множитель числа граней цилиндров (для облегчённой модели боя);
+    detail — hangar close-up detail (S11-13): ring bolts, hatch, vision blocks, rivets, lifting eyes,
+    recoil cylinders, cable conduit. Off for the Fortress, whose turrets are a few pixels in battle."""
     def c(name, cc, r, h, m, axis="Z", verts=24, bevel=0.0):
         return cyl(name, cc, r, h, m, axis, max(8, int(round(verts * seg))), bevel)
     L.group = base
@@ -104,7 +107,61 @@ def twin(TIER=2, QUAD=False, M_BODY=None, M_DARK=None, M_BARREL=None, M_GLASS=No
         y = sgn * 0.42
         tube("rail", [(-0.58, y, Z1), (-0.6, y, Z1 + 0.09), (-0.2, y, Z1 + 0.09), (-0.16, y, Z1 + 0.03)], 0.012, M_DARK)
     tube("rail_back", [(-0.6, -0.42, Z1 + 0.09), (-0.6, 0.42, Z1 + 0.09)], 0.012, M_DARK)
+    if detail:
+        _twin_detail(TIER, QUAD, M_BODY, M_DARK, M_BARREL, M_GLASS, base, guns, Z0, Z1, BZ, LEVELS, c)
     L.group = ""
+
+
+def _twin_detail(TIER, QUAD, M_BODY, M_DARK, M_BARREL, M_GLASS, base, guns, Z0, Z1, BZ, LEVELS, c):
+    """S11-13 (Kanta: hangar turrets look low quality): small parts that read in the hangar close-up.
+    Same axes and units as twin(); nothing changes the silhouette or the muzzle point."""
+    L.group = base
+    # bolted turret ring: bolts on the ring top and a dark race groove
+    for i in range(18):
+        a = i * math.tau / 18
+        c("ring_bolt", (math.cos(a) * 0.4, math.sin(a) * 0.4, 0.083), 0.016, 0.014, M_DARK, verts=8)
+    c("race", (0, 0, 0.006), 0.445, 0.012, M_DARK)
+    # traverse drive housing at the back of the pedestal with a cable conduit into the hull
+    box("traverse", (-0.3, -0.12, 0.15), (0.14, 0.12, 0.1), M_BODY, 0.01)
+    c("motor", (-0.3, -0.21, 0.15), 0.04, 0.08, M_DARK, "Y", 12)
+    tube("conduit", [(-0.3, 0.0, 0.17), (-0.42, 0.06, 0.2), (-0.5, 0.1, 0.28)], 0.018, M_DARK)
+    # rivets along the top edge of each armour half and on the side panels
+    for sgn in (1, -1):
+        for i in range(8):
+            x = -0.53 + i * 0.12
+            c("rivet", (x, sgn * 0.44, Z1 - 0.025), 0.011, 0.01, M_DARK, "Y", 8)
+        for i in range(5):
+            x = -0.36 + i * 0.13
+            c("rivet", (x, sgn * 0.467, 0.5), 0.009, 0.008, M_DARK, "Y", 8)
+            c("rivet", (x, sgn * 0.467, 0.34), 0.009, 0.008, M_DARK, "Y", 8)
+        # lifting eyes on the roof plates
+        tube("eye", [(-0.48, sgn * 0.33, Z1 + 0.027), (-0.48, sgn * 0.33, Z1 + 0.06),
+                     (-0.42, sgn * 0.33, Z1 + 0.06), (-0.42, sgn * 0.33, Z1 + 0.027)], 0.008, M_DARK)
+        # vision block: armoured periscope head on the front of each roof plate, dark glass forward
+        if not (QUAD and sgn < 0):
+            box("vision", (0.24, sgn * 0.3, Z1 + 0.05), (0.1, 0.09, 0.05), M_BODY, 0.006)
+            box("vision_glass", (0.292, sgn * 0.3, Z1 + 0.052), (0.006, 0.07, 0.026), M_GLASS, 0.0)
+    # gunner's hatch on the left rear plate: round lid, hinge, grab handle
+    c("hatch", (-0.33, 0.27, Z1 + 0.034), 0.12, 0.018, M_BODY, "Z", 24, 0.004)
+    c("hatch_rim", (-0.33, 0.27, Z1 + 0.027), 0.13, 0.008, M_DARK, "Z", 24)
+    box("hinge", (-0.45, 0.27, Z1 + 0.036), (0.03, 0.12, 0.022), M_DARK, 0.004)
+    tube("handle", [(-0.26, 0.23, Z1 + 0.043), (-0.26, 0.23, Z1 + 0.065), (-0.26, 0.31, Z1 + 0.065),
+                    (-0.26, 0.31, Z1 + 0.043)], 0.007, M_DARK)
+    # weld seams where the halves meet the back bridge
+    for sgn in (1, -1):
+        box("weld", (-0.3, sgn * 0.09, Z1 - 0.01), (0.56, 0.012, 0.012), M_DARK, 0.0)
+    # radio antenna base at the back
+    c("ant_base", (-0.5, -0.32, Z1 + 0.03), 0.025, 0.03, M_DARK, "Z", 10)
+    c("ant_whip", (-0.5, -0.32, Z1 + 0.16), 0.006, 0.24, M_BARREL, "Z", 6)
+    # recoil buffers above each gun pair and cooling slots on the sleeves (they elevate with the guns)
+    L.group = guns
+    for bz in LEVELS:
+        c("buffer", (0.82, 0, bz + 0.055), 0.022, 0.34, M_BARREL, "X", 12)
+        c("buffer_cap", (1.0, 0, bz + 0.055), 0.026, 0.03, M_DARK, "X", 12)
+        for sgn in (1, -1):
+            for x in (0.79, 0.86, 0.93):
+                box("slot", (x, sgn * 0.075, bz + 0.05), (0.035, 0.03, 0.008), M_DARK, 0.0)
+    L.group = base
 
 
 if __name__ == "__main__":
@@ -118,7 +175,7 @@ if __name__ == "__main__":
     M_BARREL = mat("turret_barrel", (0.3, 0.3, 0.29), 0.45, 0.6)
     M_GLASS = mat("turret_glass", (0.12, 0.2, 0.24), 0.6, 0.06)
 
-    twin(TIER, QUAD, M_BODY, M_DARK, M_BARREL, M_GLASS)
+    twin(TIER, QUAD, M_BODY, M_DARK, M_BARREL, M_GLASS, detail=True)
     build("turret_twin_quad" if QUAD else "turret_twin_t%d" % TIER, OUT)
     if "nopreview" not in sys.argv:
         preview(OUT, [("ref", (3.3, -3.9, 2.6), (1.05, 0, 0.35), 50),

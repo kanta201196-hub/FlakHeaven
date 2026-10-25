@@ -9,6 +9,14 @@ class_name PlaneArt
 const WEAPON_FRAC := {"aam": 0.34, "rockets": 0.26, "bombs": 0.27, "gunpod": 0.3, "flares": 0.22, "turret": 0.22,
 	"srm": 0.28, "agm": 0.4, "hebomb": 0.24}   # hebomb: the stubby finned model reads huge at 0.33 (PG-01)
 
+## S11-06 / S11-07 (playtest 3.5-s11): the inner wing pair's station on planes where the point found from the sprite
+## silhouette misses the real wing, in model units (plane length 1 = sprite width, as Hangar3D and Render3D map
+## points onto the model): x along the nose, z out along the wing. «Оса» 2: outboard of the engine nacelle and the
+## fairing beside it, where the underside is flat (at 38 % of the half-span the missile fins cut into both).
+## «Оса» 1: under the fixed wing glove, the source model's own pylon station (the silhouette point sat against the
+## fuselage side under the swing-wing root, with the pylon's rear half behind the trailing edge).
+const WING_PAIR := {"fighter_1": Vector2(-0.075, 0.085), "fighter_2": Vector2(-0.15, 0.2)}
+
 static var _tex := {}
 static var _anchors := {}
 
@@ -90,6 +98,7 @@ static func shape_info(cls_id: String, lvl: int) -> Dictionary:
 
 
 ## Точки подвеса для группы (в пикселях текстуры, начало — центр, нос вправо).
+## Wing pairs come from the silhouette; the first pair of a plane in WING_PAIR hangs at its measured station instead.
 static func slot_points(cls_id: String, lvl: int, group_index: int, group: Hardpoint) -> Array:
 	var s := shape_info(cls_id, lvl)
 	if s.is_empty():
@@ -118,10 +127,15 @@ static func slot_points(cls_id: String, lvl: int, group_index: int, group: Hardp
 	if group.mount_frac > 0.0:
 		frac = group.mount_frac   # PG-01: third group on the wing tips / outer pair
 	var off := maxf(fus + 5.0, half * frac)
+	var px := wx - 1.0
+	var station: Vector2 = WING_PAIR.get("%s_%d" % [cls_id, lvl], Vector2.ZERO)
+	if group_index == 0 and group.mount_frac <= 0.0 and station != Vector2.ZERO:
+		px = station.x * float(s["w"])
+		off = station.y * float(s["w"])
 	for i in group.slots / 2:
 		var o := off + i * half * 0.14
-		pts.append(Vector2(wx - 1.0, o))
-		pts.append(Vector2(wx - 1.0, -o))
+		pts.append(Vector2(px, o))
+		pts.append(Vector2(px, -o))
 	return pts
 
 

@@ -25,7 +25,8 @@ Run (bpy 5.x as a module, from game/tools/blender), input = the model BEFORE the
 (S11-10: the open well with a hanging door Meshy baked into each nacelle of «Kit» 2):
   --close=-0.131,-0.014,0.0425,0.069,-0.09,-0.026 --close=-0.131,-0.014,-0.069,-0.0425,-0.09,-0.026
 Recipe of 25.10 (S11): source = the six fh_hangar_*.glb at origin/main 6332ec1, each run as above with its key;
-bomber_2 with the two --close boxes. Then `godot --headless --path game --import`."""
+bomber_2 with the two --close boxes; fighter_1 afterwards through f1_glove_pylons.py (S11-07: drops the two baked
+glove pylon plates, in and out = the same hangar GLB). Then `godot --headless --path game --import`."""
 import argparse
 import os
 import sys
