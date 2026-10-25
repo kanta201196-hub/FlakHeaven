@@ -19,14 +19,42 @@ var _hint_prev := Rect2()
 var _bar_rect := Rect2()
 ## Bottom of the goals panel this frame (streak line sits under it)
 var _goals_bottom := 0.0
+## Process frame in which `draw` last ran: the layers draw only what this frame's pass laid out.
+## `_hide` — HUD hidden by the setting (read again by `draw_post`)
+var _drawn_frame := -1
+var _hide := false
+## Layers Hud puts above its own drawing (children of ctrl, drawn in this order after ctrl):
+## "bar_s" — the bar's static part, redrawn only when `_bar_sig` changes; "bar_d" — cooldowns,
+## reload bars and key caps, every frame; "post" — `draw_post`.
+var layers: Dictionary[String, Control] = {}
+## Bottom bar of this frame for the bar layers: player, weapons/skills separator x (-1 — none),
+## columns; `_bar_sig` — everything the static part shows, compared each frame
+var _bar_p: Player = null
+var _bar_sep := -1.0
+var _bar_cols: Array[BarCol] = []
+var _bar_sig: Array = []
+
+
+## One bottom-bar column as laid out this frame: a weapon group (`hp`, with its target or trigger
+## line `sub`) or a skill / course gun / wingmen (`sk`, its tile frame, dimming and key cap).
+class BarCol extends RefCounted:
+	var pos: Vector2
+	var hp: Hardpoint = null
+	var sub := ""
+	var sk: Dictionary = {}
+	var frame := Color.WHITE
+	var dim := false
+	var key := ""
 
 ## Size of icon tiles in the bottom bar and the column each tile takes
 const BAR_TILE := 72.0
 const BAR_COL := 132.0
 
 
-## Draws the in-flight HUD: hull and fuel, goals and currency, the weapon and skill bar with
-## cooldowns, radio, hints and the skill tooltip last so nothing covers it.
+## Draws the in-flight HUD panels (XP line, hull and fuel, activities, timer, goals and
+## currency) and lays out the bottom bar. The bar itself and everything that sits above it
+## (minimap, radio, hints, tooltip) are drawn by Hud's layers: `draw_bar_static`,
+## `draw_bar_dyn`, `draw_post`.
 func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	var p := m.player
 	_skill_tips.clear()
@@ -58,18 +86,45 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	if is_instance_valid(p) and m.state == "playing":
 		_action_bar(m, p, size)
 		if Perf.on: pt = Perf.sub("hud.action_bar", pt)
-		if not hide:
-			if _mini == null:
-				_mini = HudMinimap.new(ctrl)
-			_mini.draw(m, size)
-		if Perf.on: pt = Perf.sub("hud.minimap", pt)
+	_drawn_frame = Engine.get_process_frames()
+	_hide = hide
+
+
+## True when `draw` ran in this process frame, so the layers have fresh layout to draw.
+func drawn_now() -> bool:
+	return _drawn_frame == Engine.get_process_frames()
+
+
+## Makes the next bar layout redraw the static layer (it was cleared without drawing).
+func forget_bar() -> void:
+	_bar_sig = []
+
+
+## True when this frame's pass laid out the bottom bar (its layers have something to draw).
+func bar_now() -> bool:
+	return drawn_now() and _bar_rect.has_area()
+
+
+## The flight HUD above the bottom bar, in the order it always had: minimap, combat texts,
+## boss bars, markers, radio, hints, the skill tooltip, banner and first-minute key hints.
+## Hud draws it on its own layer after the bar layers, so the bar can sit between the panels
+## drawn by `draw` and these without being redrawn every frame.
+func draw_post(m: Main, size: Vector2) -> void:
+	var p := m.player
+	var pt := Time.get_ticks_usec() if Perf.on else 0
+	if is_instance_valid(p) and m.state == "playing" and not _hide:
+		if _mini == null:
+			_mini = HudMinimap.new(ctrl)
+		_mini.ctrl = ctrl
+		_mini.draw(m, size)
+	if Perf.on: pt = Perf.sub("hud.minimap", pt)
 	_fx_texts(m)
 	if Perf.on: pt = Perf.sub("hud.fx_texts", pt)
 	_boss_bars(m, size)
 	_threat_markers(size)
 	if m.state == "playing":
 		_evac_marker(m, size)
-		if m.hud.radio_t > 0.0 and is_instance_valid(p) and not hide:
+		if m.hud.radio_t > 0.0 and is_instance_valid(p) and not _hide:
 			_radio_box(m, size)
 	if Perf.on: pt = Perf.sub("hud.markers", pt)
 
@@ -281,6 +336,11 @@ func _goals(m: Main, r: Rect2) -> void:
 
 ## Bottom centre bar: weapon groups (picture, level, reload, target mode), a divider, then
 ## skills (key cap, cooldown, name, hint). Hovering a skill shows its tooltip.
+## Lays out the bottom bar for this frame: columns, tooltip rects, `bar_top`. Drawing is split
+## between two layers: the static part (panel, tiles, names, hints) is redrawn only when what it
+## shows changes — re-drawing ten tiles with their captions every frame was ~1–2 ms; cooldown
+## sweeps, reload bars and key caps go to the layer above it every frame. Nothing static overlaps
+## the dynamic part except the tile under its sweep, so the picture is the same as one pass.
 func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 	var weps: Array = []
 	for g in p.groups:
@@ -292,49 +352,122 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 	var r := Rect2((size.x - w) / 2.0, size.y - 184.0, w, 172.0)
 	bar_top = r.position.y
 	_bar_rect = r
-	UiStyle.panel(ctrl, r, Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.8))
 	var x := r.position.x + 10.0
 	var ty := r.position.y + 30.0
+	var cols: Array[BarCol] = []
+	var sig: Array = [size, r, TranslationServer.get_locale(), Settings.font]
 	for g in weps:
-		_weapon_col(p, g as Hardpoint, Vector2(x, ty))
+		var hp := g as Hardpoint
+		var sub := ""
+		if Weapons.DEFS[hp.weapon]["uses_priority"]:
+			sub = Loc.t("цель: %s") % Loc.t(Weapons.PRIORITY_NAMES[hp.priority])
+		elif hp.uses_trigger():
+			sub = Loc.t("пуск: %s") % (Loc.t("авто") if hp.trigger == "auto" else key_label("fire_hardpoint"))
+		var c := BarCol.new()
+		c.hp = hp
+		c.pos = Vector2(x, ty)
+		c.sub = sub
+		cols.append(c)
+		sig.append_array([hp.weapon, hp.level, hp.evo, sub])
 		x += BAR_COL
 	for ex: Dictionary in extras:
-		_skill_col(ex, Vector2(x, ty))
+		cols.append(_skill_layout(ex, Vector2(x, ty), sig))
 		x += BAR_COL
+	var sep := -1.0
 	if not weps.is_empty():
-		ctrl.draw_line(Vector2(x + 12.0, r.position.y + 18.0), Vector2(x + 12.0, r.end.y - 18.0), Color(1, 1, 1, 0.16), 1.5)
+		sep = x + 12.0
 		x += 24.0
 	for sk: Dictionary in skills:
-		_skill_col(sk, Vector2(x, ty))
+		cols.append(_skill_layout(sk, Vector2(x, ty), sig))
 		x += BAR_COL
+	_bar_p = p
+	_bar_sep = sep
+	_bar_cols = cols
+	if sig != _bar_sig:
+		_bar_sig = sig
+		if layers.has("bar_s"):
+			layers["bar_s"].queue_redraw()
 
 
-## One weapon group column: tile with level frame, reload bar in family colour, name, target.
-func _weapon_col(p: Player, hp: Hardpoint, pos: Vector2) -> void:
-	var tr := Rect2(pos.x + (BAR_COL - BAR_TILE) / 2.0, pos.y, BAR_TILE, BAR_TILE)
+## Static look of a skill column (frame, dim, key) for the signature, plus its tooltip rect.
+func _skill_layout(sk: Dictionary, pos: Vector2, sig: Array) -> BarCol:
+	var cd: float = sk["cd"]
+	var active: float = sk["active"]
+	var fam: String = sk["fam"]
+	var frame := Color(1, 1, 1, 0.35)
+	if active > 0.0 or (cd <= 0.0 and fam == "skill"):
+		frame = UiStyle.ACCENT
+	var dim := cd > 0.0 and active <= 0.0
+	var key := key_label(String(sk["action"]))
+	sig.append_array([sk["key"], fam, frame, dim, sk["title"], sk["hint"]])
+	_skill_tips.append([Rect2(pos.x, pos.y - 16.0, BAR_COL, 150.0), "%s · %s" % [String(sk["title"]).to_upper(), key], String(sk["desc"]), String(sk["action"])])
+	var c := BarCol.new()
+	c.sk = sk
+	c.pos = pos
+	c.frame = frame
+	c.dim = dim
+	c.key = key
+	return c
+
+
+## "bar_s" layer: bar panel, tiles, names, hints, the weapons/skills separator.
+func draw_bar_static() -> void:
+	if not bar_now():
+		return
+	var r := _bar_rect
+	UiStyle.panel(ctrl, r, Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.8))
+	for c in _bar_cols:
+		if c.hp != null:
+			_weapon_static(c.hp, c.pos, c.sub)
+		else:
+			_skill_static(c)
+	if _bar_sep >= 0.0:
+		ctrl.draw_line(Vector2(_bar_sep, r.position.y + 18.0), Vector2(_bar_sep, r.end.y - 18.0), Color(1, 1, 1, 0.16), 1.5)
+
+
+## "bar_d" layer: reload bars, active glow, cooldown sweeps and seconds, key caps.
+func draw_bar_dyn() -> void:
+	if not bar_now() or not is_instance_valid(_bar_p):
+		return
+	for c in _bar_cols:
+		if c.hp != null:
+			_weapon_dyn(_bar_p, c.hp, c.pos)
+		else:
+			_skill_dyn(c)
+
+
+## Icon tile of the bar column at `pos` (centred in the column).
+func _tile_rect(pos: Vector2) -> Rect2:
+	return Rect2(pos.x + (BAR_COL - BAR_TILE) / 2.0, pos.y, BAR_TILE, BAR_TILE)
+
+
+## Weapon group column, static part: tile with level frame, name, target or trigger line.
+func _weapon_static(hp: Hardpoint, pos: Vector2, sub: String) -> void:
+	var tr := _tile_rect(pos)
 	var fam := HudIcons.weapon_family(hp.weapon)
 	var fc := HudIcons.family_color(fam)
 	var frame: Color = Cards.EVO_COLOR if hp.evo else Cards.RARITY[clampi(hp.level - 1, 0, 4)]["color"]
 	HudIcons.tile(ctrl, tr, hp.weapon, fam, frame, hp.level if not hp.evo else -1)
 	if hp.evo:
 		HudIcons.number(ctrl, Vector2(tr.end.x - 6.0, tr.position.y + 22.0), "★", 20)
-	var full := maxf(hp.reload_time(p), 0.01)
-	var k := 1.0 - clampf(hp.cd / full, 0.0, 1.0)
-	ctrl.draw_rect(Rect2(tr.position.x, tr.end.y + 5.0, tr.size.x, 4.0), Color(1, 1, 1, 0.12))
-	ctrl.draw_rect(Rect2(tr.position.x, tr.end.y + 5.0, tr.size.x * k, 4.0), fc if k >= 1.0 else fc.darkened(0.25))
 	var nf := UiStyle.head_font(700, 1)
 	var nl := _lines(Loc.t(Weapons.DEFS[hp.weapon]["short"]).to_upper(), BAR_COL - 6.0, UiStyle.FS_CAPTION, nf)
 	var ny := tr.end.y + 30.0 - (8.0 if nl.size() > 1 else 0.0)
 	for i in nl.size():
 		UiStyle.text(ctrl, nf, Vector2(pos.x, ny + i * 17.0), nl[i], UiStyle.FS_CAPTION, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
-	var sub := ""
-	if Weapons.DEFS[hp.weapon]["uses_priority"]:
-		sub = Loc.t("цель: %s") % Loc.t(Weapons.PRIORITY_NAMES[hp.priority])
-	elif hp.uses_trigger():
-		sub = Loc.t("пуск: %s") % (Loc.t("авто") if hp.trigger == "auto" else key_label("fire_hardpoint"))
 	if sub != "":
 		UiStyle.text(ctrl, UiStyle.head_font(600, 0), Vector2(pos.x, ny + (nl.size() - 1) * 17.0 + 20.0), _fit(sub, BAR_COL - 4.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 0)),
 			UiStyle.FS_CAPTION, fc.lightened(0.2), HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+
+
+## Weapon group column, every frame: the reload bar in family colour under the tile.
+func _weapon_dyn(p: Player, hp: Hardpoint, pos: Vector2) -> void:
+	var tr := _tile_rect(pos)
+	var fc := HudIcons.family_color(HudIcons.weapon_family(hp.weapon))
+	var full := maxf(hp.reload_time(p), 0.01)
+	var k := 1.0 - clampf(hp.cd / full, 0.0, 1.0)
+	ctrl.draw_rect(Rect2(tr.position.x, tr.end.y + 5.0, tr.size.x, 4.0), Color(1, 1, 1, 0.12))
+	ctrl.draw_rect(Rect2(tr.position.x, tr.end.y + 5.0, tr.size.x * k, 4.0), fc if k >= 1.0 else fc.darkened(0.25))
 
 
 ## Course gun and wingmen as bar columns next to the weapons (they used to be text lines in
@@ -392,51 +525,14 @@ func _skill_list(p: Player) -> Array:
 	return out
 
 
-## One skill column: key cap over the tile, cooldown sweep and seconds, name and hint.
-## Active — amber frame with glow; ready — family frame; cooling down — dimmed.
-func _skill_col(sk: Dictionary, pos: Vector2) -> void:
-	var tr := Rect2(pos.x + (BAR_COL - BAR_TILE) / 2.0, pos.y, BAR_TILE, BAR_TILE)
-	var cd: float = sk["cd"]
-	var active: float = sk["active"]
-	var full: float = maxf(float(sk["full"]), 0.01)
+## Skill column, static part: tile (amber frame when active or a ready skill, grey otherwise,
+## dimmed while cooling down), name and hint. The active glow is per-frame (`_skill_dyn`).
+func _skill_static(c: BarCol) -> void:
+	var sk := c.sk
+	var pos := c.pos
+	var tr := _tile_rect(pos)
 	var fam: String = sk["fam"]
-	var frame := Color(1, 1, 1, 0.35)
-	if active > 0.0:
-		frame = UiStyle.ACCENT
-		for i in 3:
-			ctrl.draw_rect(tr.grow(3.0 + i * 3.0), Color(UiStyle.ACCENT, 0.22 - i * 0.06), false, 3.0)
-	elif cd <= 0.0 and fam == "skill":
-		frame = UiStyle.ACCENT
-	HudIcons.tile(ctrl, tr, String(sk["key"]), fam, frame, -1, 0.0, cd > 0.0 and active <= 0.0)
-	if cd > 0.0 and active <= 0.0:
-		# sweep: the part still cooling down stays dark, clockwise from 12 o'clock
-		var c := tr.get_center()
-		var pts := PackedVector2Array([c])
-		var frac := clampf(cd / full, 0.0, 1.0)
-		var steps := 24
-		for i in steps + 1:
-			var a := -PI / 2.0 + TAU * (1.0 - frac) + TAU * frac * float(i) / steps
-			var d := Vector2.from_angle(a)
-			var t := minf(tr.size.x / 2.0 / maxf(absf(d.x), 0.001), tr.size.y / 2.0 / maxf(absf(d.y), 0.001))
-			pts.append(c + d * t)
-		ctrl.draw_colored_polygon(pts, Color(0, 0, 0, 0.45))
-		var cs := ("%.1f" % cd) if cd < 10.0 else str(int(ceil(cd)))
-		var f := UiStyle.head_font(800, 0)
-		ctrl.draw_string_outline(f, Vector2(tr.position.x, c.y + 11.0), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 30, 5, Color(0, 0, 0, 0.9))
-		ctrl.draw_string(f, Vector2(tr.position.x, c.y + 11.0), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 30, Color.WHITE)
-	elif active > 0.0:
-		var f2 := UiStyle.head_font(800, 0)
-		var as_ := "%.1f" % active
-		ctrl.draw_string_outline(f2, Vector2(tr.position.x, tr.position.y + 22.0), as_, HORIZONTAL_ALIGNMENT_RIGHT, tr.size.x - 5.0, 20, 4, Color(0, 0, 0, 0.9))
-		ctrl.draw_string(f2, Vector2(tr.position.x, tr.position.y + 22.0), as_, HORIZONTAL_ALIGNMENT_RIGHT, tr.size.x - 5.0, 20, UiStyle.ACCENT_SOFT)
-	# key cap on the top-left corner of the tile
-	var kf := UiStyle.head_font(700, 1)
-	var key := key_label(String(sk["action"]))
-	var kw := maxf(28.0, UiStyle.text_w(kf, key, UiStyle.FS_CAPTION) + 14.0)
-	var kr := Rect2(tr.position.x - 6.0, tr.position.y - 16.0, kw, 24.0)
-	ctrl.draw_rect(kr, Color(0.05, 0.055, 0.05, 0.95))
-	ctrl.draw_rect(kr, Color(1, 1, 1, 0.55), false, 1.5)
-	UiStyle.text(ctrl, kf, Vector2(kr.position.x, kr.end.y - 6.0), key, UiStyle.FS_CAPTION, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, kw)
+	HudIcons.tile(ctrl, tr, String(sk["key"]), fam, c.frame, -1, 0.0, c.dim)
 	var nc := UiStyle.ACCENT if fam == "skill" else UiStyle.TEXT
 	var title := String(sk["title"]).to_upper()
 	var nf := UiStyle.head_font(700, 1)
@@ -455,7 +551,47 @@ func _skill_col(sk: Dictionary, pos: Vector2) -> void:
 		var hl := _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION, null, 1 if ny > tr.end.y + 30.0 else 2)
 		for i in hl.size():
 			UiStyle.text(ctrl, ui_font(), Vector2(pos.x, ny + 19.0 + i * 16.0), hl[i], UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
-	_skill_tips.append([Rect2(pos.x, tr.position.y - 16.0, BAR_COL, 150.0), "%s · %s" % [String(sk["title"]).to_upper(), key], String(sk["desc"]), String(sk["action"])])
+
+
+## Skill column, every frame: glow while active, cooldown sweep and seconds, key cap on the
+## tile's top-left corner (over the sweep, as before the split).
+func _skill_dyn(c: BarCol) -> void:
+	var sk := c.sk
+	var tr := _tile_rect(c.pos)
+	var cd: float = sk["cd"]
+	var active: float = sk["active"]
+	var full: float = maxf(float(sk["full"]), 0.01)
+	if active > 0.0:
+		for i in 3:
+			ctrl.draw_rect(tr.grow(3.0 + i * 3.0), Color(UiStyle.ACCENT, 0.22 - i * 0.06), false, 3.0)
+	if cd > 0.0 and active <= 0.0:
+		# sweep: the part still cooling down stays dark, clockwise from 12 o'clock
+		var ctr := tr.get_center()
+		var pts := PackedVector2Array([ctr])
+		var frac := clampf(cd / full, 0.0, 1.0)
+		var steps := 24
+		for i in steps + 1:
+			var a := -PI / 2.0 + TAU * (1.0 - frac) + TAU * frac * float(i) / steps
+			var d := Vector2.from_angle(a)
+			var t := minf(tr.size.x / 2.0 / maxf(absf(d.x), 0.001), tr.size.y / 2.0 / maxf(absf(d.y), 0.001))
+			pts.append(ctr + d * t)
+		ctrl.draw_colored_polygon(pts, Color(0, 0, 0, 0.45))
+		var cs := ("%.1f" % cd) if cd < 10.0 else str(int(ceil(cd)))
+		var f := UiStyle.head_font(800, 0)
+		ctrl.draw_string_outline(f, Vector2(tr.position.x, ctr.y + 11.0), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 30, 5, Color(0, 0, 0, 0.9))
+		ctrl.draw_string(f, Vector2(tr.position.x, ctr.y + 11.0), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 30, Color.WHITE)
+	elif active > 0.0:
+		var f2 := UiStyle.head_font(800, 0)
+		var as_ := "%.1f" % active
+		ctrl.draw_string_outline(f2, Vector2(tr.position.x, tr.position.y + 22.0), as_, HORIZONTAL_ALIGNMENT_RIGHT, tr.size.x - 5.0, 20, 4, Color(0, 0, 0, 0.9))
+		ctrl.draw_string(f2, Vector2(tr.position.x, tr.position.y + 22.0), as_, HORIZONTAL_ALIGNMENT_RIGHT, tr.size.x - 5.0, 20, UiStyle.ACCENT_SOFT)
+	var kf := UiStyle.head_font(700, 1)
+	var key := c.key
+	var kw := maxf(28.0, UiStyle.text_w(kf, key, UiStyle.FS_CAPTION) + 14.0)
+	var kr := Rect2(tr.position.x - 6.0, tr.position.y - 16.0, kw, 24.0)
+	ctrl.draw_rect(kr, Color(0.05, 0.055, 0.05, 0.95))
+	ctrl.draw_rect(kr, Color(1, 1, 1, 0.55), false, 1.5)
+	UiStyle.text(ctrl, kf, Vector2(kr.position.x, kr.end.y - 6.0), key, UiStyle.FS_CAPTION, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, kw)
 
 
 ## Rect of the skill column bound to `action` in the last frame (empty if not drawn).
