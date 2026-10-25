@@ -186,16 +186,17 @@ func _draw() -> void:
 
 
 ## A player blast near the fort: to ground, to unit space, into FortDamage; broken pieces get dust and smoke.
-func _on_blast(pos: Vector2, r: float) -> void:
+## `r` — the blast's real radius (reach), `r_base` — before the player's radius upgrades (hit weight).
+func _on_blast(pos: Vector2, r: float, r_base: float) -> void:
 	var c: Vector2 = fort["pos"]
 	var size := float(fort["size"])
 	var g := GroundTarget.ground_of(pos, c)
 	if g.distance_to(c) > size * 0.75 + r:
 		return
 	var gr := GroundTarget.ground_of(pos + Vector2(r, 0.0), c).distance_to(g)
-	var got := damage.apply_blast(to_unit(fort, g), gr / size, FortDamage.hit_weight(r))
+	var got := damage.apply_blast(to_unit(fort, g), gr / size, FortDamage.hit_weight(r_base))
 	for id in got:
-		_break_fx(id)
+		break_fx(id)
 	if not got.is_empty():
 		Events.fort_changed.emit(_key)
 
@@ -207,7 +208,7 @@ func _track_towers() -> void:
 		var g := launchers[i]
 		var frac := g.hp / g.max_hp if is_instance_valid(g) and g.hp > 0.0 else 0.0
 		if damage.set_tower(i, frac):
-			_break_fx("t%d" % i)
+			break_fx("t%d" % i)
 			changed = true
 	if changed:
 		Events.fort_changed.emit(_key)
@@ -231,7 +232,7 @@ static func piece_spot(id: String) -> Vector3:
 
 
 ## Dust and debris burst with a scorch where a piece broke, then black smoke rising off it.
-func _break_fx(id: String) -> void:
+func break_fx(id: String) -> void:
 	_log("%s -> %d" % [id, int(damage.state[id])])
 	if Main.I == null or Main.I.fx == null:
 		return

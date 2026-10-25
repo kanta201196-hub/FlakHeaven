@@ -533,7 +533,7 @@ func _print_sizes(name: String) -> void:
 func _print_fort_size(name: String, fp: Vector2, px_k: float) -> void:
 	var r3 := Render3D.I
 	for mi: Node in r3._objs.values():
-		if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh != FortBuild.mesh():
+		if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh not in [FortBuild.mesh(), FortBuild.base()]:
 			continue
 		var n3 := mi as MeshInstance3D
 		if Vector2(n3.global_position.x, n3.global_position.z).distance_to(fp) > 5.0:
@@ -997,7 +997,7 @@ func _fort_break(b: Dictionary) -> void:
 		else:
 			var sp := FortArea.piece_spot(id)
 			for got in _fa_base.damage.apply_blast(Vector2(sp.x, sp.z), 0.005, 9.0):
-				_fa_base._break_fx(got)
+				_fa_base.break_fx(got)
 	Events.fort_changed.emit(FortView.key_of(_fa_fort["pos"]))
 
 

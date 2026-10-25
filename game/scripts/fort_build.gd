@@ -66,6 +66,7 @@ static var _broken := {}         # "id:state" → ArrayMesh (FortDamage.DAMAGED 
 static var _mats := {}
 static var _task := -1
 static var _btask := -1
+static var _bstarted := false    # main thread only: the broken set's build was started (workers write _broken)
 
 var _st := {}                    # piece → {material → SurfaceTool}
 var _piece := "base"
@@ -95,7 +96,8 @@ static func piece(id: String, state: int) -> ArrayMesh:
 	if _btask >= 0:
 		WorkerThreadPool.wait_for_task_completion(_btask)
 		_btask = -1
-	if _broken.is_empty():
+	if not _bstarted:
+		_bstarted = true
 		_make_broken()
 	return _broken.get("%s:%d" % [id, state])
 
@@ -109,8 +111,12 @@ static func prefetch() -> void:
 	elif _task >= 0 and WorkerThreadPool.is_task_completed(_task):
 		WorkerThreadPool.wait_for_task_completion(_task)
 		_task = -1
-	elif _task < 0 and _mesh != null and _broken.is_empty() and _btask < 0:
+	elif _task < 0 and _mesh != null and not _bstarted:
+		_bstarted = true
 		_btask = WorkerThreadPool.add_task(_make_broken, false, "fort_build_broken")
+	elif _btask >= 0 and WorkerThreadPool.is_task_completed(_btask):
+		WorkerThreadPool.wait_for_task_completion(_btask)
+		_btask = -1
 
 
 static func _wait_intact() -> void:

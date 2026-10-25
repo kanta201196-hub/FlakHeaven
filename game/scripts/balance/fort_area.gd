@@ -23,5 +23,10 @@ const WHO := "укрепрайон"
 const WALL_POOL := 2.0
 const GATE_POOL := 1.5
 const BOMB_R := 130.0   # the bombs' base radius (weapons.gd «bombs» range)
-## Smaller player blasts (cannon HE splash, A-A missile splash) do not reach the walls at all.
+## The heaviest single hit, in bombs (a big thermobaric blast).
+const HIT_CAP := 1.5
+## Only ordnance blasts (rockets, bombs, thermobaric, chain reaction) of at least this base radius reach the walls;
+## cannon HE splash and A-A missile splash never do.
 const BLAST_MIN_R := 50.0
+## A tower's crown is knocked about at this share of its launcher's HP (spec: 50 %).
+const TOWER_DAMAGED := 0.5

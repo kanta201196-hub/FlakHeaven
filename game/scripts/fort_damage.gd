@@ -30,10 +30,10 @@ func _init() -> void:
 	state["store"] = INTACT
 
 
-## Weight of one player explosion of radius `r_px` against a piece's pool: its share of a bomb's radius,
-## capped, so upgraded damage numbers do not change how many hits a wall takes.
+## Weight of one player explosion of base radius `r_px` (before radius upgrades) against a piece's pool: its
+## share of a bomb's radius, capped, so upgrades do not change how many hits a wall takes.
 static func hit_weight(r_px: float) -> float:
-	return clampf(r_px / FortBalance.BOMB_R, 0.0, 1.5)
+	return clampf(r_px / FortBalance.BOMB_R, 0.0, FortBalance.HIT_CAP)
 
 
 ## A blast at `p` (unit space) of radius `r` (unit) and weight `w` (hit_weight) lands on every wall section,
@@ -66,7 +66,7 @@ func apply_blast(p: Vector2, r: float, w: float) -> Array[String]:
 ## Returns true when the state changed.
 func set_tower(i: int, hp_frac: float) -> bool:
 	var id := "t%d" % i
-	var want := BROKEN if hp_frac <= 0.0 else (DAMAGED if hp_frac <= 0.5 else INTACT)
+	var want := BROKEN if hp_frac <= 0.0 else (DAMAGED if hp_frac <= FortBalance.TOWER_DAMAGED else INTACT)
 	if want <= int(state[id]):
 		return false
 	state[id] = want
