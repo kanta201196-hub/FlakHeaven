@@ -10,8 +10,8 @@ extends Node3D
 ## 2D→3D: (x, y) → (x, высота, y).
 
 const FOV := 50.0
-## B-26: земля ниже плоскости боя на ground_depth (было 70 px) — между ними настоящий рельеф
-var GROUND_Y := -500.0
+## B-26: the ground is ground_depth below the combat plane; 900 px since 25.10 (Kanta: planes felt like they hug the ground at 500)
+var GROUND_Y := -900.0
 const CLOUD_Y := 380.0       # облака между камерой и самолётами
 const ON := true
 
