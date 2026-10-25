@@ -1244,6 +1244,9 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			elif ue.bm != null:
 				hull = _ground_parts(ue, e, ang, delta)
 				var gt := e as GroundTarget
+				if gt != null and gt.mount_h > 0.0:
+					_fort_mount(ue)
+					gp.y += gt.mount_h   # FA-01: on the tower top
 				if gt != null and gt.drive != null:
 					# правка 3.5-s4: ЗСУ и ЗРК — корпус по курсу машины, наклон по склону и от разгона
 					tilt = _drive_tilt(ue, gt.anchor, hull, gt.drive, len_px, delta)
@@ -1348,7 +1351,9 @@ func _ground_parts(u: Unit3D, e: Enemy, ang: float, delta: float) -> float:
 				cells.append(c)
 			u.cells = cells
 	var gt := e as GroundTarget
-	if gt != null and gt.drive != null:
+	if gt != null and gt.fixed:
+		pass   # FortArea: tower launchers and yard jeeps never turn their hull (the screen point drifts with the camera)
+	elif gt != null and gt.drive != null:
 		# правка 3.5-s4: курс корпуса — из модуля движения. Раньше брался сдвиг точки на экране,
 		# а она смещается и от движения камеры — корпус «перекатывался» на стоящей машине
 		u.hull = gt.drive.heading
@@ -1371,6 +1376,24 @@ func _ground_parts(u: Unit3D, e: Enemy, ang: float, delta: float) -> float:
 	if u.launcher_pitch != null and gt != null:
 		_sam_launcher(u, gt, hull, delta)
 	return hull if (u.turret != null or u.antenna != null or u.launcher != null or u.launcher_pitch != null) else ang
+
+
+## FA-01 (Kanta 2026-10-25): a FortArea tower launcher is the SAM truck's own launcher subtree
+## (launcher_yaw → launcher_pitch → cell_*), so `_sam_launcher` animates it unchanged; the truck body is
+## hidden and the turntable moves out of it to the model origin, onto the tower pad. Runs once per unit.
+func _fort_mount(u: Unit3D) -> void:
+	if u.fort_mount or u.launcher_yaw == null:
+		return
+	u.fort_mount = true
+	var yaw := u.launcher_yaw as Node3D
+	var inst := (u.node as Node3D).get_child(0) as Node3D
+	yaw.reparent(inst, false)   # in the GLB the turntable is a child of the body mesh, which gets hidden
+	for mi in inst.find_children("*", "MeshInstance3D", true, false):
+		if mi != yaw and not yaw.is_ancestor_of(mi):
+			(mi as MeshInstance3D).visible = false
+	yaw.position = Vector3(0.0, 0.02, 0.0)
+	if yaw is MeshInstance3D:
+		u.mi = yaw   # hit flash on a visible part
 
 
 ## SAM launcher (Kanta 24.10, model tools/blender/sf_recipes.py "e_sam"): the box rides folded flat over the

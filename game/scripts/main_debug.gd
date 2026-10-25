@@ -600,7 +600,9 @@ func _debug_screenshots(delta: float) -> void:
 		_shot("evac_zone")
 	if m.state == "playing" and is_instance_valid(m.spawner.activity_node):
 		var an: Node = m.spawner.activity_node
-		if an is AASite and (an as AASite).active and (an as AASite).left() < 5:
+		if an is FortArea and (an as FortArea).active and (an as Node2D).global_position.distance_to(m.player.global_position) < 700.0:
+			_shot("fort_area")
+		elif an is AASite and (an as AASite).active and (an as AASite).left() < 5:
 			_shot("aa_site")
 		if an is RivalAce and (an as Node2D).global_position.distance_to(m.player.global_position) < 500.0:
 			_shot("dogfight")

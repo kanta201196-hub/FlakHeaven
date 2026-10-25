@@ -138,6 +138,16 @@ func _ready() -> void:
 		Main.I.world.add_child.call_deferred(g)
 
 
+## Missile `who` of the site's launchers (the fortified area has its own, see FortArea).
+func who() -> String:
+	return "ПВО"
+
+
+## May launcher g start a lock now? The AA site has no cap; FortArea limits missiles in the air.
+func can_launch(_g: GroundTarget) -> bool:
+	return true
+
+
 func radar_alive() -> bool:
 	for g in targets:
 		if is_instance_valid(g) and g.variant == "radar" and g.hp > 0.0:

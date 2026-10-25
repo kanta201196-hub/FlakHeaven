@@ -15,7 +15,7 @@ var next_activity := 60.0
 var activity_i := 0
 var activity_node: Node = null
 var fuel: Fuel = null   # 3.5: топливо и свой заправщик
-const ACTIVITIES := ["ground", "dogfight", "transport", "convoy"]
+const ACTIVITIES := ["ground", "dogfight", "transport", "convoy", "fort"]
 ## EX-03 (отзывы внешних тестеров 21.10): «очередь на атаку» — одновременно заходят не больше attack_slots()
 ## дронов и ракетоносцев, остальные ждут поодаль и не стреляют. Толпа вокруг игрока не кружит «вальс».
 var _attackers: Array = []
@@ -35,6 +35,9 @@ func _ready() -> void:
 		next_activity = 20.0
 	if OS.get_cmdline_user_args().has("--convoy"):
 		activity_i = 3      # проверка: сразу конвой
+		next_activity = 10.0
+	if OS.get_cmdline_user_args().has("--fort"):
+		activity_i = 4      # check: the fortified area first (FA-01)
 		next_activity = 10.0
 	if OS.get_cmdline_user_args().has("--warship"):   # проверка «Архипелага»: корабль-босс на 1:00 (--leviathan — «Левиафан»)
 		Tuning.set_param("boss_every", 60.0)
@@ -354,6 +357,15 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		kind_s = "rescue"   # EX-09: «Сухое русло» — первая активность вылета: сбитый пилот
 		Story.rescue_done = true
 		activity_i -= 1
+	# FA-01: «Укрепрайон» takes a real map fort ahead; none in reach (or the sea biome) — next kind this round
+	var fort: Dictionary = {}
+	if kind_s == "fort":
+		if not Biome.sea():
+			var want := p.global_position + Vector2.from_angle(p.heading) * FortBalance.AHEAD
+			fort = FortArea.pick_fort(FortArea.forts_near(Main.I.background, want, FortBalance.REACH), want, FortBalance.REACH)
+		if fort.is_empty():
+			activity_i += 1
+			kind_s = ACTIVITIES[activity_i % ACTIVITIES.size()]
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: activity start ", kind_s, " at %.0f" % t)
 	activity_i += 1
@@ -375,6 +387,14 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Events.banner.emit("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
 		Story.say(Story.DISPATCH, "Позиция ПВО ожила. Подавите — и небо станет тише.")
 		Hints.show("act_aa", "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости.", 9.0, 2)
+	elif kind_s == "fort":
+		var base := FortArea.new()
+		base.setup_fort(fort, hp_k, recent_dps())
+		Main.I.world.add_child(base)
+		activity_node = base
+		Events.banner.emit("Разведка: в старой крепости база противника! Награда — выбор из редких карточек", 4.0)
+		Story.say(Story.DISPATCH, "В крепости засели зенитчики. Пусковые на башнях — снесите их.")
+		Hints.show("act_fort", "Укрепрайон: летите по стрелке к крепости. На четырёх башнях пусковые ЗРК — разбейте все четыре, пока идёт отсчёт. Тепловые ловушки уводят их ракеты, джипы во дворе бьют из пулемётов.", 9.0, 2)
 	elif kind_s == "convoy":
 		var cv := Convoy.new()
 		# колонна пересекает курс игрока впереди: маршрут через точку в 1 300 пикс. по курсу
