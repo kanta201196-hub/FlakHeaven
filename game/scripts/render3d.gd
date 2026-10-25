@@ -2477,6 +2477,7 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 	var seen := {}
 	var CH := Background.CHUNK
 	_prefetch_villages(bg, view.grow(CH))
+	FortBuild.prefetch()   # FA-02: the fort mesh builds in the background before the first fort shows
 	for cx in range(int(floorf(view.position.x / CH)), int(floorf(view.end.x / CH)) + 1):
 		for cy in range(int(floorf(view.position.y / CH)), int(floorf(view.end.y / CH)) + 1):
 			var key := Vector2i(cx, cy)
@@ -2497,7 +2498,7 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				var sz := float(o["size"])
 				var vr: int = o.get("var", absi(hash(key)) % 4)
 				match o["name"]:
-					"o_fort": mi.mesh = AdobeBuild.fort()
+					"o_fort": mi.mesh = FortBuild.mesh()   # FA-02: set Г, materials per surface
 					"o_village":
 						# S9-07/S9-08: застройка без дворов на воде, сады, поля и линия обороны — по ручью и реке посёлка
 						if _vtasks.has(key):
@@ -2510,7 +2511,8 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 						em.material_override = AdobeBuild.material()
 						mi.add_child(em)
 					_: mi.mesh = AdobeBuild.oasis(vr)
-				mi.material_override = AdobeBuild.material()
+				if o["name"] != "o_fort":
+					mi.material_override = AdobeBuild.material()
 				mi.position = Vector3(o["pos"].x, gy - sz * 0.01, o["pos"].y)
 				mi.basis = Basis(Vector3.UP, -float(o["rot"])).scaled(Vector3(sz, sz, sz))
 				add_child(mi)
