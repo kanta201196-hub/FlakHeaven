@@ -219,16 +219,21 @@ func _src_k(src: String) -> float:
 	return 1.0
 
 
-## Урон идёт туда, куда попали: в точку текущей фазы, в открытый люк (×3) или в корпус (10%, не ниже половины)
+## Damage goes where it hit: into a point of the current phase, into the open bay (×3) or into the hull (10%, not
+## below half). S11-30: the fight-length cap (_cap_total) counts only damage that reached the hit points. It used to be
+## charged before the hit was routed, so hits on the covered hull (2/3 of the bot's damage in phase 1) used up the
+## turrets' share and stretched phase 1 to 75–95 s.
 func absorb(dmg: float) -> float:
 	var at := hit_at
 	hit_at = Vector2.INF
-	dmg = _cap_total(dmg * _src_k(last_src))
-	if dmg <= 0.0:
+	var offered := dmg * _src_k(last_src)
+	_split("in", offered)
+	if offered <= 0.0:
 		return 0.0
 	if phase >= 3:
-		_confirm(global_position if at == Vector2.INF else at, dmg, Color(1, 0.9, 0.6))
-		return dmg
+		var d3 := _landed(offered, "hull")
+		_confirm(global_position if at == Vector2.INF else at, d3, Color(1, 0.9, 0.6))
+		return d3
 	if at != Vector2.INF:
 		var want := _want()
 		var best: Dictionary = {}
@@ -241,18 +246,37 @@ func absorb(dmg: float) -> float:
 				best_d = d
 				best = pt
 		if not best.is_empty():
-			_confirm(_world(best), dmg, Color(1.0, 0.85, 0.35))
-			best["hp"] = float(best["hp"]) - dmg
-			Main.I.add_stat("dealt", last_src, dmg)
+			var pd := _landed(offered, "pt")
+			_confirm(_world(best), pd, Color(1.0, 0.85, 0.35))
+			best["hp"] = float(best["hp"]) - pd
+			Main.I.add_stat("dealt", last_src, pd)
 			if float(best["hp"]) <= 0.0:
 				_point_down(best)
 			return 0.0
 		if phase == 2 and hatches_open and at.distance_to(_bay_world()) < BAY_R + 12.0:
-			var bd := minf(dmg * BAY_K, maxf(0.0, hp - max_hp * HULL_FLOOR))
+			var raw_bay := minf(offered * BAY_K, maxf(0.0, hp - max_hp * HULL_FLOOR))
+			var bd := _landed(raw_bay, "bay")
 			_confirm(_bay_world(), bd, Color(1.0, 0.55, 0.2))
 			Main.I.tele.add("fortress_bay")
 			return bd
-	return minf(dmg * PASS, maxf(0.0, hp - max_hp * HULL_FLOOR))
+	var raw_hull := minf(offered * PASS, maxf(0.0, hp - max_hp * HULL_FLOOR))
+	_split("lost", offered - raw_hull)
+	return _landed(raw_hull, "hull")
+
+
+## Damage that reached the hit points, through the fight-length cap; the autotest counters say where it went and how much was cut
+func _landed(d: float, where: String) -> float:
+	var c := _cap_total(d)
+	_split(where, c)
+	_split("cut", d - c)
+	return c
+
+
+## S11-30: where the damage offered to the Fortress went, per phase (autotest prints it at the end of a sortie):
+## in — after the source factor, lost — hit the covered hull and did nothing, cut — landed but over the fight-length
+## cap, pt — into a point, bay, hull — what reached the hull. Counters only, not log columns.
+func _split(k: String, v: float) -> void:
+	Main.I.tele.add("fort%d_%s" % [phase, k], v)
 
 
 func _point_down(pt: Dictionary) -> void:
@@ -328,6 +352,9 @@ func behave(delta: float) -> void:
 			else:
 				_wp = base_pos
 			_to_base = not _to_base
+	if d < SECTOR_R:
+		Main.I.tele.add("fort%d_near_s" % phase, delta)
+	Main.I.tele.add("fort%d_s" % phase, delta)
 	_turrets(delta, p)
 	_escort(delta)
 	if phase == 2:

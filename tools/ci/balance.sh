@@ -7,7 +7,7 @@
 #   OPS="1 2"       operations, each in its own parallel process (1 «Перевал», 2 «Сухое русло» — the demo operations)
 #   RUNS=6          sorties per process (classes rotate: 6 = every class twice)
 #   PAR=1           processes per operation (4 cloud cores: OPS="1 2" PAR=2 — four at once)
-#   PROFILE=demo    demo — demo player profile; fresh — empty hangar
+#   PROFILE=demo    demo — demo player profile; fresh — empty hangar; max — upgraded player (Kanta's s11 hangar)
 #   UNTIL=900       sortie length, s (no evacuation; deaths are counted, the sortie goes on)
 #   OUT=balance_out folder for logs and per-process user:// data
 #   WALL=14400      real-time limit per process, s
@@ -24,6 +24,7 @@ PAR="${PAR:-1}"
 ERR_RE="SCRIPT ERROR|Parse Error"
 extra=()
 [ "$PROFILE" = "demo" ] && extra=(--demo --profile=demo)
+[ "$PROFILE" = "max" ] && extra=(--profile=max)
 read -r -a more <<<"${EXTRA:-}"
 extra+=("${more[@]}")
 mkdir -p "$OUT"
