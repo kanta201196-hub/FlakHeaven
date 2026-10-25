@@ -87,6 +87,17 @@ func _ready() -> void:
 	add_child(ctrl)
 	ctrl.draw.connect(_draw_hud)
 	_flight_ui = HudFlight.new(ctrl, _buttons)
+	# layers over ctrl, drawn after it in this order (see HudFlight.layers)
+	for n in ["bar_s", "bar_d", "post"]:
+		var l := Control.new()
+		l.name = n
+		l.set_anchors_preset(Control.PRESET_FULL_RECT)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ctrl.add_child(l)
+		_flight_ui.layers[n] = l
+	(_flight_ui.layers["bar_s"] as Control).draw.connect(_on_layer.bind("bar_s"))
+	(_flight_ui.layers["bar_d"] as Control).draw.connect(_on_layer.bind("bar_d"))
+	(_flight_ui.layers["post"] as Control).draw.connect(_on_layer.bind("post"))
 	_screens_ui = HudScreens.new(ctrl, _buttons)
 	_pause_ui = HudPause.new(ctrl, _buttons)
 	_cards_ui = HudCards.new(ctrl, _buttons)
@@ -143,6 +154,9 @@ func _process(delta: float) -> void:
 	banner_t = maxf(0.0, banner_t - real)
 	radio_t = maxf(0.0, radio_t - real)
 	ctrl.queue_redraw()
+	# after ctrl: they draw what ctrl's pass laid out this frame ("bar_s" only when it changed)
+	(_flight_ui.layers["bar_d"] as Control).queue_redraw()
+	(_flight_ui.layers["post"] as Control).queue_redraw()
 
 
 func _input(event: InputEvent) -> void:
@@ -181,6 +195,43 @@ func button_rect(action: String) -> Rect2:
 # ---------- Главная отрисовка ----------
 
 func _draw_hud() -> void:
+	_flight_ui.drawn = false
+	_flight_ui.bar_drawn = false
+	_draw_hud_body()
+	var bs: Control = _flight_ui.layers["bar_s"]
+	if bs.visible != _flight_ui.bar_drawn:
+		bs.visible = _flight_ui.bar_drawn
+		if bs.visible:
+			bs.queue_redraw()   # what it held was drawn for an earlier bar
+
+
+## Draws one of the flight HUD layers over ctrl with the flight HUD module pointed at it: the
+## bottom bar's static and per-frame parts, then everything above the bar ("post", and the
+## course pick screen that covers the flight HUD).
+func _on_layer(which: String) -> void:
+	var m := Main.I
+	if m == null or not _flight_ui.drawn:
+		return
+	var l: Control = _flight_ui.layers[which]
+	var t0 := Time.get_ticks_usec() if Perf.on else 0
+	_flight_ui.ctrl = l
+	match which:
+		"bar_s":
+			_flight_ui.draw_bar_static()
+		"bar_d":
+			_flight_ui.draw_bar_dyn()
+		"post":
+			_flight_ui.draw_post(m, l.size)
+			if m.state == "course_pick":
+				_screens_ui.ctrl = l
+				_screens_ui.course_pick(m, l.size)
+				_screens_ui.ctrl = ctrl
+	_flight_ui.ctrl = ctrl
+	if Perf.on:
+		Perf.sub("hud.layer_" + which, t0)
+
+
+func _draw_hud_body() -> void:
 	_buttons.clear()
 	var m := Main.I
 	if m == null or m.tuning_panel.visible:
@@ -204,8 +255,6 @@ func _draw_hud() -> void:
 		_flight_ui.draw(m, size, _dmg_flash)
 
 	match m.state:
-		"course_pick":
-			_screens_ui.course_pick(m, size)
 		"levelup":
 			_cards_ui.draw(m, size)
 		"paused":
