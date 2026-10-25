@@ -397,8 +397,15 @@ func _resume_after_cards() -> void:
 	player.invuln = maxf(player.invuln, CARD_INVULN)
 
 
+## True once the card or course screen has been open for MainInput.CARD_INPUT_DELAY: picks,
+## rerolls, locks and bans before that are ignored whatever sent them (key, gamepad, mouse
+## click), so input from the fight cannot take a card the player has not seen (Kanta 25.10).
+func cards_live() -> bool:
+	return _state_t >= MainInput.CARD_INPUT_DELAY
+
+
 func choose_card(i: int) -> void:
-	if state != "levelup" or i < 0 or i >= offers.size():
+	if state != "levelup" or i < 0 or i >= offers.size() or not cards_live():
 		return
 	var c: Dictionary = offers[i]
 	if not locked.is_empty() and c["id"] == locked["id"]:
@@ -430,7 +437,7 @@ func _open_course() -> void:
 
 
 func choose_course(i: int) -> void:
-	if state != "course_pick" or i < 0 or i >= course_offers.size():
+	if state != "course_pick" or i < 0 or i >= course_offers.size() or not cards_live():
 		return
 	player.course = course_offers[i]
 	course_log.append("%d:%s>%s" % [int(run_time), "/".join(PackedStringArray(course_offers)), course_offers[i]])
@@ -445,7 +452,7 @@ func choose_course(i: int) -> void:
 
 ## «Сменить курс» на экране выбора — за 1 переброс
 func change_course() -> void:
-	if state != "levelup" or rerolls <= 0:
+	if state != "levelup" or rerolls <= 0 or not cards_live():
 		return
 	rerolls -= 1
 	player.course = ""
@@ -462,7 +469,7 @@ func slowmo(t: float) -> void:
 
 
 func reroll() -> void:
-	if state != "levelup" or rerolls <= 0:
+	if state != "levelup" or rerolls <= 0 or not cards_live():
 		return
 	rerolls -= 1
 	sfx.play("card", -10.0, 0.8)
@@ -473,7 +480,7 @@ func reroll() -> void:
 ## Закрепить карточку: она гарантированно будет в следующем выборе (и переживёт переброс).
 ## Повторный клик — открепить.
 func lock_card(i: int) -> void:
-	if state != "levelup" or i < 0 or i >= offers.size():
+	if state != "levelup" or i < 0 or i >= offers.size() or not cards_live():
 		return
 	if not locked.is_empty() and locked["id"] == offers[i]["id"]:
 		locked = {}
@@ -484,7 +491,7 @@ func lock_card(i: int) -> void:
 
 ## Исключить карточку из выпадения до конца вылета; на её место — новая.
 func ban_card(i: int) -> void:
-	if state != "levelup" or bans <= 0 or i < 0 or i >= offers.size():
+	if state != "levelup" or bans <= 0 or i < 0 or i >= offers.size() or not cards_live():
 		return
 	var c: Dictionary = offers[i]
 	if c["kind"] == "branch" and bool(c["first"]):

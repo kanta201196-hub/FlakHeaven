@@ -54,4 +54,8 @@ func course_pick(m: Main, size: Vector2) -> void:
 			_cond_chips(Vector2(r.position.x + 18, yy), [c])
 			yy += 28.0
 		_text(Vector2(r.position.x + 18, r.end.y - 16), Loc.t("≈ ещё %d подходящих карточек") % Cards.cards_left(conds), 16, Menu.C_AMBER)
+	var cards: Array = []
+	for i in n:
+		cards.append(Rect2(x0 + i * (w + gap), 250, w, h))
+	_fade_in(cards, m._state_t)
 	_ctext(690, "1–3 или клик — выбрать специализацию", 17, Color(0.75, 0.8, 0.9))

@@ -40,7 +40,9 @@ var focus := Vector3.ZERO    # куда смотрит камера (стенд 
 ## model (measured on it): x — weapon centre from the stand centre (of its length), y — weapon bottom over the floor
 ## (of its height). Size: len — stand length per weapon length, or ring — inner radius of the stand's rings (of its
 ## length), so the missile body fills them. slots — across offsets (of its length) of the missiles it holds, one
-## missile in each; mid — y is the missile axis; cradle — beam on the plate the weapon is strapped to (of its length);
+## missile in each; mid — y is the missile axis; cradle — beam on the plate the weapon is strapped to (of its length),
+## band — strap arc in degrees (open at the top for a pod with a suspension beam, S11-03); pod — the weapon is a round
+## pod with a beam on top, so its width, not its height, sizes the body;
 ## view — weapon scale so the stand fits the view.
 const STAND_CART := "res://models/hangar/stand_cart.glb"
 const STAND_BOMB := {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 1.0}
@@ -51,6 +53,8 @@ const STANDS := {
 	"aam": MISSILE_CART,
 	"srm": MISSILE_CART,
 	"agm": {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.13, "view": 0.5},
+	"rockets": {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.13, "view": 0.5, "band": 240.0,
+		"pod": true},
 }
 ## Floor of the weapon store in the weapon view (box stands went from here up to the weapon)
 const FLOOR_Y := -0.2
@@ -423,7 +427,9 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 	if cart == null:
 		return false
 	var cb := cart.get_aabb()
-	var body := _body_radius(wmi.mesh) * s
+	# a pod is round, but its suspension beam on top lifts the box centre: its width gives the body
+	var pod: bool = stand.get("pod", false)
+	var body := (bb.size.z * 0.5 if pod else _body_radius(wmi.mesh)) * s
 	var ck: float = (body / stand["ring"] if stand.has("ring") else bb.size.x * s * stand["len"]) / cb.size.x
 	var cm := MeshInstance3D.new()
 	cm.mesh = cart
@@ -432,7 +438,7 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 	cm.position = Vector3(-cb.get_center().x * ck - dx * 0.5, FLOOR_Y - cb.position.y * ck, -cb.get_center().z * ck)
 	pivot.add_child(cm)
 	wmi.position.x += dx * 0.5
-	var axis := wmi.position.y + bb.get_center().y * s
+	var axis := wmi.position.y + (bb.position.y + bb.size.z * 0.5 if pod else bb.get_center().y) * s
 	var low := bottom
 	if stand.get("mid", false):
 		low = axis
@@ -450,7 +456,7 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 			pivot.add_child(w)
 	if stand.has("cradle"):
 		_cradle(Vector3(wmi.position.x + bb.get_center().x * s, axis, wmi.position.z + bb.get_center().z * s),
-			body, float(stand["cradle"]) * cb.size.x * ck)
+			body, float(stand["cradle"]) * cb.size.x * ck, float(stand.get("band", 360.0)))
 	return true
 
 
@@ -490,7 +496,9 @@ func _base_radius(m: Mesh) -> float:
 
 ## Cradle on the loader plate (Kanta 24.10: the missile is held, not laid): a beam `span` long under the weapon
 ## body (radius `r`, axis at `axis`), a saddle at each end and a strap round the body over each saddle.
-func _cradle(axis: Vector3, r: float, span: float) -> void:
+## `band` is the strap's arc in degrees from the bottom: 360 closes it, less leaves the top free for a pod's
+## suspension beam (S11-03: a full ring would cut through it).
+func _cradle(axis: Vector3, r: float, span: float, band := 360.0) -> void:
 	var sm := StandardMaterial3D.new()
 	sm.albedo_color = Color(0.58, 0.62, 0.66)   # the loader's own grey: the cradle reads as part of it
 	sm.metallic = 0.3   # painted steel, matte (Kanta 19.10)
@@ -503,15 +511,18 @@ func _cradle(axis: Vector3, r: float, span: float) -> void:
 	beam.position = axis + Vector3(0, -r * 1.425, 0)
 	pivot.add_child(beam)
 	for sx: float in [-0.45, 0.45]:
-		var band := MeshInstance3D.new()
-		var tm := TorusMesh.new()
-		tm.inner_radius = r * 1.0
-		tm.outer_radius = r * 1.16
-		band.mesh = tm
-		band.material_override = sm
-		band.basis = Basis(Vector3.BACK, PI / 2.0)
-		band.position = axis + Vector3(sx * span, 0, 0)
-		pivot.add_child(band)
+		var strap := MeshInstance3D.new()
+		if band >= 360.0:
+			var tm := TorusMesh.new()
+			tm.inner_radius = r * 1.0
+			tm.outer_radius = r * 1.16
+			strap.mesh = tm
+			strap.basis = Basis(Vector3.BACK, PI / 2.0)
+		else:
+			strap.mesh = _arc_strap(r, r * 1.12, r * 0.22, deg_to_rad(band))
+		strap.material_override = sm
+		strap.position = axis + Vector3(sx * span, 0, 0)
+		pivot.add_child(strap)
 		var sad := MeshInstance3D.new()
 		var bx := BoxMesh.new()
 		bx.size = Vector3(r * 0.6, r * 0.45, r * 1.5)
@@ -519,6 +530,32 @@ func _cradle(axis: Vector3, r: float, span: float) -> void:
 		sad.material_override = sm
 		sad.position = axis + Vector3(sx * span, -r * 1.03, 0)
 		pivot.add_child(sad)
+
+
+## Strap arc round the X axis, open at the top: inner radius `r0`, outer `r1`, `w` wide along X, `arc` radians
+## centred on the bottom.
+static func _arc_strap(r0: float, r1: float, w: float, arc: float) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var n := 32
+	var pt := func(a: float, r: float, x: float) -> Vector3: return Vector3(x, -cos(a) * r, sin(a) * r)
+	for i in n:
+		var a0 := -arc * 0.5 + arc * i / n
+		var a1 := -arc * 0.5 + arc * (i + 1) / n
+		for q: Array in [[r1, r1, w, -w], [r0, r0, -w, w], [r0, r1, w, w], [r1, r0, -w, -w]]:
+			# outer face, inner face, two side faces: each quad as two triangles
+			var p00: Vector3 = pt.call(a0, q[0], q[2] * 0.5)
+			var p01: Vector3 = pt.call(a0, q[1], q[3] * 0.5)
+			var p10: Vector3 = pt.call(a1, q[0], q[2] * 0.5)
+			var p11: Vector3 = pt.call(a1, q[1], q[3] * 0.5)
+			for v in [p00, p10, p11, p00, p11, p01]:
+				st.add_vertex(v)
+	for a: float in [-arc * 0.5, arc * 0.5]:   # end caps
+		var c := [pt.call(a, r0, -w * 0.5), pt.call(a, r1, -w * 0.5), pt.call(a, r1, w * 0.5), pt.call(a, r0, w * 0.5)]
+		for v in [c[0], c[1], c[2], c[0], c[2], c[3]]:
+			st.add_vertex(v)
+	st.generate_normals()
+	return st.commit()
 
 
 static var _radius_cache := {}
@@ -748,6 +785,9 @@ func _collect_faces(model: Node3D) -> void:
 	_faces = PackedVector3Array()
 	for c in model.find_children("*", "MeshInstance3D", true, false):
 		var mi := c as MeshInstance3D
+		# S11-11: the bay doors cut out of a «Kit» belly are not the surface the bombs hang from — the bay ceiling is
+		if mi.get_parent() != null and mi.get_parent().name == "bay_doors":
+			continue
 		var xf := pivot.global_transform.affine_inverse() * mi.global_transform
 		for v in mi.mesh.get_faces():
 			_faces.append(xf * v)

@@ -14,8 +14,17 @@ static var _scenes := {}
 static var _force := OS.get_cmdline_user_args().has("--mechdown")   # стенд: всё выпущено
 
 
-## Подвесить механизацию к модели (key — «fighter_1» и т. п.); null, если для модели её нет
+## Подвесить механизацию к модели (key — «fighter_1» и т. п.); null, если для модели её нет.
+## S11-02: hangar models carry their own sections cut out of the wing (tools/blender/mech_cut.py, node "wing_mech");
+## then those are used instead of the plates GLB, which stays for the battle models.
 static func attach(model: Node3D, key: String) -> Node3D:
+	var baked := model.find_child("wing_mech", true, false) as Node3D
+	if baked != null:
+		for part in _parts(baked):
+			_baked_rest(part)
+		baked.set_meta("parts", _parts(baked))
+		baked.set_meta("t", 0.0)
+		return baked
 	var path := "res://models/mech/fh_mech_%s.glb" % key
 	if not _scenes.has(path):
 		_scenes[path] = load(path) if ResourceLoader.exists(path) else null
@@ -28,6 +37,7 @@ static func attach(model: Node3D, key: String) -> Node3D:
 		var part := mech.find_child(n, true, false) as Node3D
 		if part != null:
 			part.set_meta("rest", part.transform)
+	mech.set_meta("parts", _parts(mech))
 	mech.set_meta("t", 0.0)
 	model.add_child(mech)
 	return mech
@@ -42,17 +52,50 @@ static func update(mech: Node3D, bank: float, brake: float, wing_lvl: int, delta
 	pose(mech, t)
 
 
+## Pose of all slats and flaps for the travel t (0 retracted … 1 normal travel; the hangar demo goes past 1)
 static func pose(mech: Node3D, t: float) -> void:
-	for n in ["slat_l", "slat_r", "flap_l", "flap_r"]:
-		var part := mech.find_child(n, true, false) as Node3D
-		if part == null or not part.has_meta("rest"):
+	var parts: Array = mech.get_meta("parts") if mech.has_meta("parts") else _parts(mech)
+	for part: Node3D in parts:
+		if not part.has_meta("rest"):
 			continue
 		var rest: Transform3D = part.get_meta("rest")
-		# ось шарнира — локальная −Z узла (Y в Blender): закрылок вниз — отрицательный угол, предкрылок — положительный
-		if n.begins_with("flap"):
-			part.transform = rest * Transform3D(Basis(Vector3.FORWARD, -deg_to_rad(FLAP_DEG) * t), Vector3.ZERO)
+		# ось шарнира — локальная −Z узла (Y в Blender): закрылок вниз — отрицательный угол, предкрылок — положительный.
+		# A section cut out of the wing also slides along the chord (meta "slide"): the flap aft, the slat forward,
+		# so the slot between it and the wing opens as on a real slotted flap.
+		if String(part.name).begins_with("flap"):
+			var aft := float(part.get_meta("slide", 0.0)) * t
+			part.transform = rest * Transform3D(Basis(Vector3.FORWARD, -deg_to_rad(FLAP_DEG) * t), Vector3(-aft, 0, 0))
 		else:
-			part.transform = rest * Transform3D(Basis(Vector3.FORWARD, deg_to_rad(SLAT_DEG) * t), Vector3(SLAT_OUT * t, 0, 0))
+			var fwd := float(part.get_meta("slide", SLAT_OUT)) * t
+			part.transform = rest * Transform3D(Basis(Vector3.FORWARD, deg_to_rad(SLAT_DEG) * t), Vector3(fwd, 0, 0))
+
+
+## Moving sections under a mechanisation node: slat_l, flap_r2 and so on (the plates GLB has one of each per wing,
+## a cut hangar model one per span segment)
+static func _parts(mech: Node3D) -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	for c in mech.get_children():
+		var nm := String(c.name)
+		if c is Node3D and (nm.begins_with("slat_") or nm.begins_with("flap_")):
+			out.append(c as Node3D)
+	if out.is_empty():   # plates GLB: the parts sit one level deeper under the scene root
+		for n in ["slat_l", "slat_r", "flap_l", "flap_r"]:
+			var part := mech.find_child(n, true, false) as Node3D
+			if part != null:
+				out.append(part)
+	return out
+
+
+## Rest pose and slide of a section cut out of a hangar model: the slide is a share of the section chord
+## (its extent along the local X), the flap 15 %, the slat 30 %
+static func _baked_rest(part: Node3D) -> void:
+	part.set_meta("rest", part.transform)
+	var chord := 0.0
+	if part is MeshInstance3D:
+		chord = (part as MeshInstance3D).get_aabb().size.x
+	for c in part.find_children("*", "MeshInstance3D", true, false):
+		chord = maxf(chord, (c as MeshInstance3D).get_aabb().size.x)
+	part.set_meta("slide", chord * (0.15 if String(part.name).begins_with("flap") else 0.3))
 
 
 ## Мигание неуязвимости — как у самой модели
@@ -69,7 +112,19 @@ const BAY_RATE := 3.0         # доля хода в секунду
 const BAY_HOLD := 1.2         # сколько створки открыты после сброса, с
 
 
+## Bay doors of «Kit»: S11-10/11 — a cut hangar model has its own doors and a real bay (node "bay_doors",
+## tools/blender/mech_cut.py); otherwise the doors GLB laid over the belly (battle models)
 static func attach_bay(model: Node3D, key: String) -> Node3D:
+	var baked := model.find_child("bay_doors", true, false) as Node3D
+	if baked != null:
+		for n in ["bay_l", "bay_r"]:
+			var part := baked.find_child(n, true, false) as Node3D
+			if part != null:
+				part.set_meta("rest", part.transform)
+		baked.set_meta("t", 0.0)
+		baked.set_meta("hold", 0.0)
+		baked.set_meta("cavity", true)
+		return baked
 	var path := "res://models/mech/fh_bay_%s.glb" % key
 	if not _scenes.has(path):
 		_scenes[path] = load(path) if ResourceLoader.exists(path) else null

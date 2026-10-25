@@ -1090,6 +1090,26 @@ const _MECH_VIEWS := {
 }
 
 
+## S11-02/08/10/11/12 (--mechclose): large close-ups of every plane's wing mechanisation and the «Kit» bomb bay,
+## each view twice: flaps up with the bay closed (pose 0) and flaps down with the bay open (pose 1).
+## [focus, yaw, pitch, distance] in hangar axes (nose +X, up +Y, left wing -Z); "bay" only on the bombers
+var _mc_last := ""   # --mechclose: plane of the previous frame
+const _MECHCLOSE := {
+	"fighter_1": {"low34": [Vector3(-0.24, -0.02, -0.14), PI + 0.55, -0.4, 0.34], "side": [Vector3(-0.24, -0.02, -0.14), -PI / 2.0 - 0.55, -0.05, 0.4],
+		"top34": [Vector3(-0.24, -0.02, -0.14), PI + 0.55, 0.55, 0.34]},
+	"fighter_2": {"low34": [Vector3(-0.2, -0.03, -0.27), PI + 0.55, -0.4, 0.36], "side": [Vector3(-0.2, -0.03, -0.27), -PI / 2.0 - 0.55, -0.05, 0.42],
+		"top34": [Vector3(-0.2, -0.03, -0.27), PI + 0.55, 0.55, 0.36]},
+	"attacker_1": {"low34": [Vector3(-0.12, -0.06, -0.24), PI + 0.55, -0.4, 0.38], "side": [Vector3(-0.12, -0.06, -0.24), -PI / 2.0 - 0.55, -0.05, 0.46],
+		"top34": [Vector3(-0.12, -0.06, -0.24), PI + 0.55, 0.55, 0.38]},
+	"attacker_2": {"low34": [Vector3(-0.16, -0.06, -0.25), PI + 0.55, -0.4, 0.38], "side": [Vector3(-0.16, -0.06, -0.25), -PI / 2.0 - 0.55, -0.05, 0.46],
+		"top34": [Vector3(-0.16, -0.06, -0.25), PI + 0.55, 0.55, 0.38]},
+	"bomber_1": {"low34": [Vector3(-0.08, -0.07, -0.3), PI + 0.55, -0.4, 0.42], "side": [Vector3(-0.08, -0.07, -0.3), -PI / 2.0 - 0.55, -0.05, 0.5],
+		"top34": [Vector3(-0.08, -0.07, -0.3), PI + 0.55, 0.55, 0.42], "bay": [Vector3(-0.01, -0.08, 0.0), -PI / 2.0 + 0.45, -0.55, 0.38]},
+	"bomber_2": {"low34": [Vector3(-0.17, -0.03, -0.27), PI + 0.55, -0.4, 0.42], "side": [Vector3(-0.17, -0.03, -0.27), -PI / 2.0 - 0.55, -0.05, 0.5],
+		"top34": [Vector3(-0.17, -0.03, -0.27), PI + 0.55, 0.55, 0.42], "bay": [Vector3(-0.16, -0.05, 0.0), -PI / 2.0 + 0.45, -0.55, 0.38]},
+}
+
+
 func _hangar_bench() -> void:
 	if _t < 1.5:
 		return
@@ -1123,6 +1143,13 @@ func _hangar_bench() -> void:
 						continue
 					for f in MECH_FRAMES:
 						_hq.append([c, 1, 3 if c == "bomber" else 1, "M", f, vi])
+			_t = 0.0
+			return
+		if OS.get_cmdline_user_args().has("--mechclose"):
+			for key: String in _MECHCLOSE:
+				for view: String in _MECHCLOSE[key]:
+					for pose in [0, 1]:
+						_hq.append([key.get_slice("_", 0), int(key.get_slice("_", 1)), 3 if key.begins_with("bomber") else 1, "K", view, pose])
 			_t = 0.0
 			return
 		if OS.get_cmdline_user_args().has("--hangarweaptab"):
@@ -1240,7 +1267,17 @@ func _hangar_bench() -> void:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
 		Hangar3D.I.weapon_tier = cur[2]
-		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "M":   # --mechanim
+		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K":   # --mechclose
+			var cv: Array = _MECHCLOSE["%s_%d" % [cur[0], cur[1]]][cur[4]]
+			HangarAnim.bench_pose = float(cur[5])
+			Hangar3D.anim_time = 0.0
+			Hangar3D.bench_pitch_min = -0.9
+			Hangar3D.I.focus = cv[0]
+			Hangar3D.I._yaw = cv[1]
+			Hangar3D.I._pitch = cv[2]
+			Hangar3D.I._dist = cv[3]
+			Hangar3D.I._idle = 0.0
+		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "M":   # --mechanim
 			var mv: Array = _MECH_VIEWS[cur[0]][cur[5]]
 			Hangar3D.I.mech_demo = true
 			Hangar3D.anim_time = float(cur[4]) * MECH_DT
@@ -1305,9 +1342,14 @@ func _hangar_bench() -> void:
 			Hangar3D.I._pitch = 1.45
 			Hangar3D.I._idle = 0.0
 	_hf += 1
-	var mech_next: bool = cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and int(cur[4]) > 0   # модель уже собрана
+	var mech_next: bool = cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "M" and int(cur[4]) > 0   # модель уже собрана
+	# --mechclose: the same plane as the previous frame is already built, only the camera and the pose change
+	mech_next = mech_next or (cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K" and _mc_last == "%s_%d" % [cur[0], cur[1]] and _hf > 2)
 	if (_hf > 8 and _t > 1.2 and (cur.size() < 6 or typeof(cur[3]) != TYPE_STRING or _hf > 14)) or (mech_next and _hf > 2):   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
-		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":
+		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K":   # --mechclose
+			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_mechclose_%s_%d_%s_p%d%s.png" % [cur[0], cur[1], cur[4], cur[5], _suffix])
+			_mc_last = "%s_%d" % [cur[0], cur[1]]
+		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":
 			# S11: only the 3D view (SubViewport, supersampled), so the close-up is not shrunk into the hangar frame
 			var hn := "user://vis_hcam_%s%s.png" % [_hcam()[cur[5]][0], _suffix]
 			Hangar3D.I.vp.get_texture().get_image().save_png(hn)
