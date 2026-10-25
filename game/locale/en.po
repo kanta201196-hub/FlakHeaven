@@ -2641,22 +2641,10 @@ msgid "Окраска:"
 msgstr "Livery:"
 
 #: game/scripts/hud_hangar.gd:172
-msgid "Второй подвес на старте"
-msgstr "Second hardpoint at start"
-
 #: game/scripts/hud_hangar.gd:174
 #, c-format
-msgid "Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек."
-msgstr "Unlocks at crew Lv. %d. Until then the second hardpoint is empty: weapons come from cards."
-
 #: game/scripts/hud_hangar.gd:183
-msgid "пусто"
-msgstr "empty"
-
 #: game/scripts/hud_hangar.gd:185
-msgid "Ставится с ур. 1; улучшения — карточками в бою."
-msgstr "Fitted from Lv. 1; improved by cards in combat."
-
 #: game/scripts/hud_hangar.gd:213
 #, c-format
 msgid "★ бонус самолёта: +%d%%"
@@ -7336,3 +7324,27 @@ msgstr "Some values are unavailable: the graphics card does not support Vulkan, 
 #: game/scripts/menu_settings.gd (Forward+ switch)
 msgid "Недоступно: видеокарта не поддерживает Vulkan, и игра работает в режиме совместимости. Выбранное значение сохранится."
 msgstr "Unavailable: the graphics card does not support Vulkan, so the game runs in compatibility mode. The chosen value is kept."
+
+msgid "Выбор стартового вооружения (не более 2 видов)"
+msgstr "Starting weapons (2 kinds at most)"
+
+msgid "На старте %d из %d."
+msgstr "At start: %d of %d."
+
+msgid "Чтобы поставить другое, сначала снимите одно."
+msgstr "To pick another, take one off first."
+
+msgid "Второе место — с ур. экипажа %d."
+msgstr "Second place opens at crew Lv. %d."
+
+msgid "КУРСОВАЯ ПУШКА"
+msgstr "COURSE GUN"
+
+msgid "✓ подвес %d"
+msgstr "✓ hardpoint %d"
+
+msgid "На старт"
+msgstr "Add to start"
+
+msgid "всегда на самолёте"
+msgstr "always fitted"

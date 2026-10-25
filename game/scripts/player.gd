@@ -184,16 +184,15 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 		var h3 := Hardpoint.new(g3["name"], int(g3["slots"]), g3["weapon"])
 		h3.mount_frac = float(g3.get("frac", 0.0))
 		groups.append(h3)
-	# фишка 3: оружие, выбранное в ангаре, — на первый пустой обычный подвес, ур. 1
-	var s2 := Profile.start2(id)
-	if s2 != "":
-		for g in groups:
-			var h: Hardpoint = g
-			if not h.builtin and not h.heavy and h.is_empty():
-				h.weapon = s2
-				h.level = 1
-				h.cd = 0.5
-				break
+	# S11-09: starting weapons from the hangar list (signature by default) on the normal groups, lvl 1
+	var normal: Array = groups.filter(func(g): return not (g as Hardpoint).builtin and not (g as Hardpoint).heavy)
+	var picks := Profile.start_weapons(id)
+	var where: Array = Profile.start_assign(normal.map(func(g): return (g as Hardpoint).name), picks, PlaneClasses.signature(id))
+	for i in normal.size():
+		var h: Hardpoint = normal[i]
+		h.weapon = String(where[i])
+		if h.weapon != "" and h.weapon != PlaneClasses.signature(id):
+			h.cd = 0.5   # as the old second-hardpoint pick; the signature keeps its random first delay
 	# PG-01 check flag --weapon=<id>: that weapon on the last empty normal group from the start
 	for arg in OS.get_cmdline_user_args():
 		if String(arg).begins_with("--weapon="):
