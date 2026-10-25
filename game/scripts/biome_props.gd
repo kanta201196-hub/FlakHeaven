@@ -34,6 +34,13 @@ const KINDS := {
 ## с видом сбоку и одна горизонтальная с видом сверху (tools/model_lab/bake_impostor.gd), 6 треугольников.
 const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree"}
 
+## VIS-01: decimated copies (tools/model_lab/biome_lite.py) for kinds placed by the hundred.
+## A boulder pile is 10-30 px on screen at zoom 1.0, so 600 triangles look the same as the
+## full 3000. The import's automatic LOD only halves it (UV seams stop simplification at
+## ~1600 triangles) and a MultiMesh picks one LOD for the whole chunk. Same frame as the full model; its material
+## (textures) is reused, so only the triangle count differs. Used on every preset.
+const LOW_POLY := {"boulders": "b02_boulders_lite"}
+
 ## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
 const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
 static var _force_plane := -2
@@ -58,7 +65,11 @@ func _init(terrain: Terrain3D) -> void:
 	_t = terrain
 
 
+## Mesh the MultiMesh of a kind draws: tree cards below "Max", the decimated copy for
+## LOW_POLY kinds, otherwise the full model (null when the model file is missing)
 func _mesh(kind: String) -> Mesh:
+	if LOW_POLY.has(kind):
+		return _low_poly(kind)
 	if LITE.has(kind) and Settings.gopt("props") < Settings.GFX_MAX:
 		var lk := kind + "_lite"
 		if not _meshes.has(lk):
@@ -131,6 +142,29 @@ func _full_mesh(kind: String) -> Mesh:
 	return _meshes[kind]
 
 
+## Decimated copy of a LOW_POLY kind with the full model's materials (same textures and
+## colour grading); falls back to the full model when the light file is missing
+func _low_poly(kind: String) -> Mesh:
+	var key := kind + "_low"
+	if _meshes.has(key):
+		return _meshes[key]
+	var full := _full_mesh(kind)
+	var mesh: Mesh = full
+	var path: String = DIR + String(LOW_POLY[kind]) + ".glb"
+	if full != null and ResourceLoader.exists(path):
+		var scene := (load(path) as PackedScene).instantiate()
+		var mi := _find_mesh(scene)
+		if mi != null and mi.mesh is ArrayMesh:
+			var lite := mi.mesh as ArrayMesh
+			var last := full.get_surface_count() - 1
+			for si in lite.get_surface_count():
+				lite.surface_set_material(si, full.surface_get_material(mini(si, last)))
+			mesh = lite
+		scene.free()
+	_meshes[key] = mesh
+	return mesh
+
+
 ## Строка вида: Нагорье (KINDS) или «Архипелаг» (SeaProps.KINDS, полный путь к модели)
 func _row(kind: String) -> Array:
 	return KINDS[kind] if KINDS.has(kind) else SeaProps.KINDS[kind]
@@ -193,7 +227,8 @@ func _find_mesh(n: Node) -> MeshInstance3D:
 func mesh_heights() -> Dictionary:
 	var out := {}
 	for kind in (SeaProps.KINDS if Biome.sea() else KINDS):
-		var mesh := _mesh(kind)
+		# the light copy is ~1 % lower: size caps follow the full model, placement stays the same
+		var mesh := _full_mesh(kind) if LOW_POLY.has(kind) else _mesh(kind)
 		out[kind] = mesh.get_aabb().size.y if mesh != null else -1.0
 	return out
 
