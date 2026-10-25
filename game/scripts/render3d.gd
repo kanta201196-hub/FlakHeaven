@@ -635,7 +635,7 @@ func model_units() -> Vector2:
 		var u: Unit3D = _units[id]
 		if u.bm != null:
 			n += 1
-			if not u.tris >= 0:
+			if u.tris < 0:
 				u.tris = (u.mi as MeshInstance3D).mesh.get_faces().size() / 3
 			t += int(u.tris)
 	return Vector2(n, t)
@@ -773,13 +773,16 @@ func _on_ray(p: Vector2, y: float) -> Vector2:
 
 ## Полёт по рельефу: самолёт плавно поднимается над хребтами и опускается в долины.
 ## Высота цели — рельеф под самолётом и впереди по курсу (look — на сколько пикс. вперёд смотреть)
-## плюс запас relief_clear, в пределах relief_up / relief_down от плоскости боя. Возвращает [высота, тангаж].
-func _relief_alt(u: Unit3D, p: Vector2, fwd: Vector2, look: float, delta: float) -> Array:
+## плюс запас relief_clear, в пределах relief_up / relief_down от плоскости боя. Returns the height;
+## the nose pitch to draw is left in `u.pitch` (an Array per call was a big-fight allocation per plane).
+func _relief_alt(u: Unit3D, p: Vector2, fwd: Vector2, look: float, delta: float) -> float:
+	_frame_tuning()
 	var alt: float = u.alt
-	if terrain == null or Tuning.g("relief_follow") < 0.5:
+	if terrain == null or not _ft_relief:
 		u.has_alt = true
 		u.alt = move_toward(alt, 0.0, delta * 60.0)
-		return [float(u.alt), 0.0]
+		u.pitch = 0.0
+		return u.alt
 	# высоту рельефа считаем не каждый кадр (дорого для сотни врагов): игрок — каждый кадр,
 	# остальные — раз в ~0,25 с, вразнобой
 	var target: float = u.alt_to
@@ -791,17 +794,48 @@ func _relief_alt(u: Unit3D, p: Vector2, fwd: Vector2, look: float, delta: float)
 			for f: float in [0.5, 1.0]:
 				var a: Vector2 = p + fwd * look * f
 				top = maxf(top, terrain.surface_fast(a.x, a.y).y)
-		target = clampf(top + Tuning.g("relief_clear"), -Tuning.g("relief_down"), Tuning.g("relief_up"))
+		target = clampf(top + _ft_relief_clear, -_ft_relief_down, _ft_relief_up)
 		u.alt_to = target
 	u.alt_next = next
-	var nw := lerpf(alt, target, 1.0 - exp(-delta * Tuning.g("relief_rate")))
+	var nw := lerpf(alt, target, 1.0 - exp(-delta * _ft_relief_rate))
 	u.has_alt = true
 	u.alt = nw
 	# нос вверх при наборе, вниз при снижении (сглажено, не больше ~15°)
 	var vy := (nw - alt) / maxf(delta, 0.001)
 	var pt := clampf(atan2(vy, 400.0), -0.26, 0.26)
-	u.pitch = lerpf(float(u.pitch), pt, 1.0 - exp(-delta * 5.0))
-	return [nw, float(u.pitch)]
+	u.pitch = lerpf(u.pitch, pt, 1.0 - exp(-delta * 5.0))
+	return nw
+
+
+## Sliders and the sun direction the per-unit code reads, refreshed once a frame: with 60+ planes
+## the Tuning lookups alone were several hundred a frame.
+var _ft_frame := -1
+var _ft_relief := false
+var _ft_relief_clear := 0.0
+var _ft_relief_down := 0.0
+var _ft_relief_up := 0.0
+var _ft_relief_rate := 0.0
+var _ft_shadow := false
+var _ft_shadow_off := 0.0
+var _ft_shadow_size := 0.0
+var _ft_sun := Vector3.DOWN
+
+
+## Refreshes the _ft_* copies on the first call in a process frame.
+func _frame_tuning() -> void:
+	var fr := Engine.get_process_frames()
+	if fr == _ft_frame:
+		return
+	_ft_frame = fr
+	_ft_relief = Tuning.g("relief_follow") >= 0.5
+	_ft_relief_clear = Tuning.g("relief_clear")
+	_ft_relief_down = Tuning.g("relief_down")
+	_ft_relief_up = Tuning.g("relief_up")
+	_ft_relief_rate = Tuning.g("relief_rate")
+	_ft_shadow = Tuning.g("plane_shadow") > 0.5
+	_ft_shadow_off = Tuning.g("shadow_off")
+	_ft_shadow_size = Tuning.g("shadow_size")
+	_ft_sun = -sun.global_transform.basis.z if sun != null else Vector3.DOWN
 
 
 ## Тест 3.5-s7: нижняя граница для самолёта игрока — самая высокая точка земли под ним и вокруг
@@ -912,8 +946,9 @@ func _make_shadow(tex: Texture2D, root: Node3D) -> MeshInstance3D:
 ## Тень самолёта: точка на рельефе по лучу солнца, сдвиг от самолёта укорочен (shadow_off),
 ## силуэт уменьшен (shadow_size) и прижат к склону по нормали рельефа.
 func _place_shadow(u: Unit3D, p: Vector2, heading: float, k: float) -> void:
+	_frame_tuning()
 	var sh: MeshInstance3D = u.sh
-	var hi := Tuning.g("plane_shadow") > 0.5 and terrain != null
+	var hi := _ft_shadow and terrain != null
 	var cs := GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if hi else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	# поиск по дереву модели — только при смене режима (раньше каждый кадр у каждого самолёта)
 	var n_kids := (u.node as Node3D).get_child_count()
@@ -931,12 +966,12 @@ func _place_shadow(u: Unit3D, p: Vector2, heading: float, k: float) -> void:
 	# с тем же сдвигом — на глаз не отличить, рельеф пологий
 	var fr := Engine.get_process_frames()
 	if u.kind == "player" or not u.sh_ok or (fr + int(u.sh_f)) % 4 == 0:
-		if not u.sh_f >= 0:
+		if u.sh_f < 0:
 			u.sh_f = randi() % 4
-		var d := -sun.global_transform.basis.z   # куда светит солнце
+		var d := _ft_sun   # куда светит солнце
 		var y := GROUND_Y
 		var g := Vector2.ZERO
-		var off := Tuning.g("shadow_off")
+		var off := _ft_shadow_off
 		for i in 3:
 			var t := y / d.y
 			g = p + Vector2(d.x, d.z) * t * off
@@ -944,14 +979,14 @@ func _place_shadow(u: Unit3D, p: Vector2, heading: float, k: float) -> void:
 		var e := 8.0
 		u.sh_n = Vector3(terrain.surface_fast(g.x - e, g.y).y - terrain.surface_fast(g.x + e, g.y).y, 2.0 * e,
 			terrain.surface_fast(g.x, g.y - e).y - terrain.surface_fast(g.x, g.y + e).y).normalized()
+		u.sh_b = Basis(Quaternion(Vector3.UP, u.sh_n))
 		u.sh_ok = true
 		u.sh_off = g - p
 		u.sh_y = y
-	var gp: Vector2 = p + (u.sh_off as Vector2)
-	var s := k * Tuning.g("shadow_size")
+	var gp: Vector2 = p + u.sh_off
+	var s := k * _ft_shadow_size
 	var yaw := Basis(Vector3.UP, -heading)
-	var tilt := Basis(Quaternion(Vector3.UP, u.sh_n as Vector3))
-	var xf := Transform3D((tilt * yaw).scaled(Vector3(s, 1.0, s)), Vector3(gp.x, float(u.sh_y) + 3.0, gp.y))
+	var xf := Transform3D((u.sh_b * yaw).scaled(Vector3(s, 1.0, s)), Vector3(gp.x, u.sh_y + 3.0, gp.y))
 	if sh == null:
 		var tx: Texture2D = u.shb
 		if not _shb.has(tx):
@@ -979,7 +1014,7 @@ func _poolable(kind: String, thick: float, bm: PackedScene, tex: Texture2D) -> b
 
 
 func _pool_put(u: Unit3D) -> bool:
-	if not u.shb != null or u.bm == null or u.kind != "enemy" or not is_nan(u.hull):
+	if u.shb == null or u.bm == null or u.kind != "enemy" or not is_nan(u.hull):
 		return false
 	var tex: Texture2D = u.tex
 	if tex.resource_path.contains("fortress"):
@@ -1095,8 +1130,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				roll = (1.0 - p.roll_t / p.roll_time()) * TAU * p.roll_dir
 			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт плавно ниже и меньше на экране
 			var ra := _relief_alt(u, p.global_position, p.velocity, 1.0, sd)
-			var y: float = maxf(ra[0] - Tuning.g("dive_depth") * dk, _ground_floor(p.global_position, Tuning.g("plane_len") * p.size * 0.5))
-			_place(u, p.global_position, p.heading, p.bank * 0.55, roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), float(ra[1]) - 0.2 * p.dive_pitch())
+			var y: float = maxf(ra - Tuning.g("dive_depth") * dk, _ground_floor(p.global_position, Tuning.g("plane_len") * p.size * 0.5))
+			_place(u, p.global_position, p.heading, p.bank * 0.55, roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), u.pitch - 0.2 * p.dive_pitch())
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
 			# S9-16: на «Звуковом ударе» (ram_t) — тот же огонь и плотный след, что на форсаже
 			u.ab = move_toward(float(u.ab), 1.0 if p.ab_t > 0.0 or p.ram_t > 0.0 else 0.0, sd * 4.0)
@@ -1146,7 +1181,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			if uw.kit == null and uw.bm != null:   # Т-8: полосы звена и подвесы по типу ведомого
 				uw.kit = WingMech.attach_wing_kit(uw.node.get_child(0) as Node3D, wt.resource_path.get_file().get_basename(), wm.type, uw.bm)
 			var rw := _relief_alt(uw, wm.global_position, Vector2.from_angle(wm.heading) * 300.0, 1.0, sd)
-			_place(uw, wm.global_position, wm.heading, _turn_bank(uw, wm.heading, delta), 0.0, rw[0], _alt_scale(rw[0]), rw[1])
+			_place(uw, wm.global_position, wm.heading, _turn_bank(uw, wm.heading, delta), 0.0, rw, _alt_scale(rw), uw.pitch)
 			if uw.mech != null:
 				WingMech.update(uw.mech, float(uw.bank), 0.0, 0, sd)
 			PlaneFx.update(uw, sd, 0.0)
@@ -1163,10 +1198,11 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		var ua := _ensure(an.get_instance_id(), "ally", at, float(an.call("ally_len")), 0.075, 56)
 		var ah: float = an.get("heading")
 		var rl := _relief_alt(ua, an.global_position, Vector2.from_angle(ah) * 300.0, 1.0, sd)
-		_place(ua, an.global_position, ah, _turn_bank(ua, ah, delta), 0.0, rl[0], _alt_scale(rl[0]), rl[1])
+		_place(ua, an.global_position, ah, _turn_bank(ua, ah, delta), 0.0, rl, _alt_scale(rl), ua.pitch)
 		PlaneFx.update(ua, sd, 0.0)
 		if ua.bm != null and an.get("boom_len") != null:
 			_tanker_boom(ua, an, float(an.call("ally_len")))
+	var unit_scale := Tuning.g("unit_scale")
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var et := Time.get_ticks_usec() if Perf.on else 0   # a slow unit shows as «пик:r3d.e.<class>»
 		var e := n as Enemy
@@ -1178,7 +1214,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		var t: Texture2D = Enemy.etex(info["tex"])
 		if t == null:
 			continue
-		var len_px: float = float(info["len"]) * Tuning.g("unit_scale") * (1.2 if e.elite else 1.0)
+		var len_px: float = float(info["len"]) * unit_scale * (1.2 if e.elite else 1.0)
 		if not _units.has(e.get_instance_id()) and not _battle_model_ready(t):
 			continue   # its model is still loading; an existing unit never waits (it would count as gone)
 		var ue := _ensure(e.get_instance_id(), "enemy", t, len_px, 0.05 if e.is_ground else 0.07, 40 if not e.is_boss else 64)
@@ -1213,7 +1249,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 				LeviathanParts.update(ue, e as Warship, delta)
 		else:
 			var re := _relief_alt(ue, e.global_position, Vector2.from_angle(ang) * 250.0, 0.0 if e.is_boss else 1.0, sd)
-			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle(), re[0], _alt_scale(re[0]), re[1]) # 3.5: бочка при уклонении
+			_place(ue, e.global_position, ang, _turn_bank(ue, ang, delta), e.roll_angle(), re, _alt_scale(re), ue.pitch) # 3.5: бочка при уклонении
 			if ue.bm != null and e is Fortress:
 				_fortress_parts(ue, e as Fortress, ang, delta)
 			elif ue.bm != null and e is Helicopter:
@@ -1264,7 +1300,7 @@ const TAIL_HUB := 0.03
 
 
 func _rotors(u: Unit3D, delta: float) -> void:
-	if not u.rot != null:
+	if u.rot == null:
 		var inst := (u.node as Node3D).get_child(0)
 		var r := inst.find_child("rotor", true, false) as MeshInstance3D
 		var tr := inst.find_child("tail_rotor", true, false) as MeshInstance3D
@@ -1281,7 +1317,7 @@ func _rotors(u: Unit3D, delta: float) -> void:
 ## 3.5-s8: винты транспортника (tools/blender/enemy_air_big.py, узлы prop_1…prop_4, ось — локальная X);
 ## так же — винты «Буревестника» и «Чайки» (tools/model_lab/b2_sea_craft.py)
 func _props(u: Unit3D, delta: float) -> void:
-	if not u.props3 != null:
+	if u.props3 == null:
 		var inst := (u.node as Node3D).get_child(0)
 		u.props3 = inst.find_children("prop_*", "Node3D", true, false)
 	for p in u.props3:
@@ -1292,7 +1328,7 @@ func _props(u: Unit3D, delta: float) -> void:
 ## башня ЗСУ (turret) смотрит на цель, антенна РЛС (antenna) вращается, контейнеры ЗРК (launcher)
 ## поднимаются, пока идёт захват цели — предупреждение перед пуском. Возвращает курс корпуса.
 func _ground_parts(u: Unit3D, e: Enemy, ang: float, delta: float) -> float:
-	if not not is_nan(u.hull):
+	if is_nan(u.hull):
 		u.hull = ang
 		var inst := (u.node as Node3D).get_child(0)
 		for nm in ["turret", "antenna", "launcher", "launcher_yaw", "launcher_pitch"]:
@@ -1375,7 +1411,7 @@ func _convoy_parts(u: Unit3D, v: ConvoyVehicle, len_px: float, delta: float) -> 
 	var hull := v.heading
 	if dr == null:
 		return Vector3(hull, 0.0, 0.0)
-	if u.bm != null and not u.cv != null:
+	if u.bm != null and u.cv == null:
 		var inst := (u.node as Node3D).get_child(0)
 		var d := {"wheels": [], "front": [], "r": 0.072}
 		for c in inst.find_children("wheel_*", "Node3D", true, false):
@@ -1669,7 +1705,7 @@ const FORTRESS_NODES := ["turret_1", "turret_2", "turret_3", "turret_4", "engine
 
 
 func _fortress_parts(u: Unit3D, f: Fortress, ang: float, delta: float) -> void:
-	if not u.fparts != null:
+	if u.fparts == null:
 		var inst := (u.node as Node3D).get_child(0)
 		var d := {}
 		for nm in FORTRESS_NODES:
@@ -2084,7 +2120,7 @@ const WRECK_MAX := 8
 
 ## Ведомый сбит (hp ≤ 0) — модель не удаляем, а роняем: дым, крен, удар о землю
 func _start_crash(u: Unit3D) -> bool:
-	if u.kind != "wing" or not u.ref != null:
+	if u.kind != "wing" or u.ref == null:
 		return false
 	var wm: Wingman = (u.ref as WeakRef).get_ref()
 	if wm == null or wm.hp > 0.0:

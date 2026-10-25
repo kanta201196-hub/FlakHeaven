@@ -43,6 +43,8 @@ var sh_n := Vector3.UP
 var sh_off := Vector2.ZERO
 var sh_y := 0.0
 var sh_f := -1
+## Slope tilt of the shadow from `sh_n` (rebuilt with each sample, not every frame)
+var sh_b := Basis.IDENTITY
 
 # --- flight over the relief (Render3D._relief_alt) ---
 ## True once the unit flies over the relief: _place then puts it on the camera ray at `alt`
