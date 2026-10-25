@@ -44,6 +44,7 @@ const FLIPS := {
 const FLIP_SH := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 uniform sampler2D depth_tex : hint_depth_texture, filter_linear;
 uniform sampler2D atlas : source_color, filter_linear_mipmap, repeat_disable;
 uniform float frames = 64.0;
@@ -70,7 +71,7 @@ void fragment() {
 	float f0 = floor(f);
 	vec4 a = mix(texture(atlas, cell(f0, UV)), texture(atlas, cell(min(f0 + 1.0, frames - 1.0), UV)), f - f0);
 	float hot = smoothstep(0.6, 1.0, max(a.r, a.g)) * smoothstep(0.08, 0.35, a.r - a.b);
-	ALBEDO = a.rgb * (1.0 + hot * cd.w);
+	ALBEDO = (a.rgb * (1.0 + hot * cd.w)) * FX_EXP;
 	float z = texture(depth_tex, SCREEN_UV).r;
 	vec4 v = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, z, 1.0);
 	float gap = VERTEX.z - v.z / v.w;   // distance in front of the scene behind this pixel
