@@ -643,6 +643,8 @@ func _build(cls_id: String, lvl: int) -> void:
 	if bay != null:
 		WingMech.pose_bay(bay, 1.0)
 	_apply_livery(model, cls_id, lvl)
+	# Kanta 25.10: running engines — the flame fills the rough remeshed nozzles (not on «Кит» 1, propellers)
+	NozzleFlame.attach(model, "%s_%d" % [cls_id, lvl])
 	_add_weapons(cls_id, lvl)
 
 
