@@ -19,6 +19,8 @@ var _ft_max := 0.0
 var _spikes := 0
 var _win_len := 10.0
 var _last := 0
+var _eng := {}   # engine-side per-frame sums over the window (ms): process, physics, render CPU/GPU
+var _measured: Array[RID] = []
 
 
 static func mark(name: String) -> void:
@@ -119,6 +121,7 @@ func _process(delta: float) -> void:
 		if ft > 33.0:
 			_spikes += 1
 	_prev_us = now
+	_sample_engine()
 	if _win < _win_len:
 		return
 	var m := Main.I
@@ -137,6 +140,7 @@ func _process(delta: float) -> void:
 		line += " %s=%.1fмс" % [k, _peaks[k] / 1000.0]
 	_peaks.clear()
 	line += " | сумма=%.2f мс процесс=%.2f" % [tot, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0]
+	line += " | " + _engine_report()
 	line += " | врагов=%d пуль=%d узлов=%d draws=%d tris=%dk" % [
 		m.get_tree().get_nodes_in_group("enemies").size() if m != null else 0,
 		m.projectiles.get_child_count() if m != null and m.projectiles != null else 0,
@@ -162,22 +166,58 @@ func _process(delta: float) -> void:
 	_win = 0.0
 
 
-## Вызовы отрисовки по вьюпортам: основной и слой боя (наклонная камера), видимые и тени
-func _vp_report() -> String:
-	var out := "VP"
+## Engine time per frame, averaged over the window. Script marks only cover _process of game systems;
+## when fps is low but their sum is small, these say whether the frame goes to physics, the render
+## thread's CPU work (culling, draw submission) or the GPU itself. Render times need
+## viewport_set_measure_render_time, switched on here for every viewport Perf reports.
+func _sample_engine() -> void:
+	for vp: Viewport in _viewports():
+		var rid := vp.get_viewport_rid()
+		if not rid in _measured:
+			RenderingServer.viewport_set_measure_render_time(rid, true)
+			_measured.append(rid)
+	_eng["proc"] = float(_eng.get("proc", 0.0)) + Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+	_eng["phys"] = float(_eng.get("phys", 0.0)) + Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+	var cpu := RenderingServer.get_frame_setup_time_cpu()
+	var gpu := 0.0
+	for rid in _measured:
+		cpu += RenderingServer.viewport_get_measured_render_time_cpu(rid)
+		gpu += RenderingServer.viewport_get_measured_render_time_gpu(rid)
+	_eng["rcpu"] = float(_eng.get("rcpu", 0.0)) + cpu
+	_eng["rgpu"] = float(_eng.get("rgpu", 0.0)) + gpu
+
+
+## One "ENG" chunk of the PERF line: average ms per frame for the frame itself and each engine part.
+func _engine_report() -> String:
+	var n := maxf(_frames, 1)
+	var out := "ENG кадр=%.2f процесс=%.2f физика=%.2f рендер_цп=%.2f рендер_гп=%.2f" % [_win * 1000.0 / n,
+		float(_eng.get("proc", 0.0)) / n, float(_eng.get("phys", 0.0)) / n, float(_eng.get("rcpu", 0.0)) / n,
+		float(_eng.get("rgpu", 0.0)) / n]
+	_eng.clear()
+	return out
+
+
+func _viewports() -> Array:
 	var vps: Array = [get_viewport()]
 	if Render3D.I != null and Render3D.I._combat_vp != null:
 		vps.append(Render3D.I._combat_vp)
 	if Render3D.I != null and Render3D.I._psh_vp != null:
 		vps.append(Render3D.I._psh_vp)
-	for vp: Viewport in vps:
+	return vps
+
+
+## Вызовы отрисовки по вьюпортам: основной и слой боя (наклонная камера), видимые и тени
+func _vp_report() -> String:
+	var out := "VP"
+	for vp: Viewport in _viewports():
 		var rid := vp.get_viewport_rid()
-		out += " %s: вид=%d/%dk тени=%d/%dk кадр=%.1fмс" % [vp.name.left(10),
+		out += " %s: вид=%d/%dk тени=%d/%dk цп=%.1fмс гп=%.1fмс" % [vp.name.left(10),
 			RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
 			RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
 			RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
 			RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
-			RenderingServer.viewport_get_measured_render_time_cpu(rid)]
+			RenderingServer.viewport_get_measured_render_time_cpu(rid),
+			RenderingServer.viewport_get_measured_render_time_gpu(rid)]
 	out += " | 2D: %d" % int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
 	return out
 
