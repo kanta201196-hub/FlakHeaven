@@ -132,7 +132,7 @@ func _default_class(cls: String) -> Dictionary:
 	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2, "livery": "",
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"nodes2": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
-		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start2": "",
+		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start": [PlaneClasses.signature(cls)],
 		"kit1": _default_kit(), "kit2": _default_kit()}
 
 
@@ -173,6 +173,9 @@ func load_profile() -> void:
 				dst["crew_xp"] = int(dst["crew_xp"])
 				# 3.5: старый профиль без звания — звание = уровень по опыту (прогресс не теряется)
 				dst["crew_rank"] = int(src["crew_rank"]) if src.has("crew_rank") else xp_lvl_of(int(dst["crew_xp"]))
+				# S11-09: an old save has no start list — signature plus the old «second hardpoint at start»
+				if not src.has("start"):
+					dst["start"] = [PlaneClasses.signature(c)] + ([String(src["start2"])] if String(src.get("start2", "")) != "" else [])
 				if not (CALLSIGNS[c] as Array).has(dst["callsign"]):
 					dst["callsign"] = CALLSIGNS[c][0]
 	if d.get("weapons") is Dictionary:
@@ -303,18 +306,73 @@ func livery(c: String) -> String:
 	return String(cls(c).get("livery", ""))
 
 
-## Фишка 3 (Kanta 18.10): оружие на второй подвес с начала вылета — открывается с ур. экипажа START2_LVL
+## S11-09 (Kanta 25.10): the second starting place opens at this crew level (was «Фишка 3», 18.10)
 const START2_LVL := 5
 
 
-## Что можно поставить на старт: обычное оружие самолёта, кроме особенности (она уже стоит на первом подвесе)
-func start2_options(c: String) -> Array:
-	return Weapons.POOL.filter(func(w): return PlaneClasses.allows(c, w) and w != PlaneClasses.signature(c))
+## Weapons the hangar offers for the start: this plane's standard pool, the class signature first
+func start_options(c: String) -> Array:
+	var sig := PlaneClasses.signature(c)
+	var out: Array = [sig] if PlaneClasses.allows(c, sig) else []
+	for w in Weapons.POOL:
+		if w != sig and PlaneClasses.allows(c, w):
+			out.append(w)
+	return out
 
 
-func start2(c: String) -> String:
-	var w := String(cls(c).get("start2", ""))
-	return w if crew_lvl(c) >= START2_LVL and start2_options(c).has(w) else ""
+## How many kinds may start: one, two from crew level START2_LVL
+func start_cap(c: String) -> int:
+	return 2 if crew_lvl(c) >= START2_LVL else 1
+
+
+## Starting weapons in pick order: the saved list without unknown or repeated kinds, cut to the cap
+func start_weapons(c: String) -> Array:
+	var opts := start_options(c)
+	var out: Array = []
+	for w in (cls(c).get("start", []) as Array):
+		if opts.has(w) and not out.has(w) and out.size() < start_cap(c):
+			out.append(String(w))
+	return out
+
+
+## Put weapon `w` on the start list or take it off; false when it can't go on (cap reached or not offered)
+func toggle_start(c: String, w: String) -> bool:
+	var cur := start_weapons(c)
+	if cur.has(w):
+		cur.erase(w)
+	elif start_options(c).has(w) and cur.size() < start_cap(c):
+		cur.append(w)
+	else:
+		return false
+	cls(c)["start"] = cur
+	save()
+	return true
+
+
+## Which normal hardpoint group gets which starting weapon ("" — empty). `names` are the groups in order.
+## The signature keeps group 0 (its own place on the model); the rest fill free groups in pick order,
+## a bomb bay last unless the weapon is a bomb, so rockets don't sit in the bay while the wings are empty.
+static func start_assign(names: Array, picks: Array, sig: String) -> Array:
+	var out: Array = []
+	out.resize(names.size())
+	out.fill("")
+	var rest := picks.duplicate()
+	if rest.has(sig) and not names.is_empty():
+		out[0] = sig
+		rest.erase(sig)
+	for w in rest:
+		var bomb := String(w) in ["bombs", "hebomb"]
+		var order := range(names.size())
+		order.sort_custom(func(a, b): return _bay_rank(String(names[a]), bomb) < _bay_rank(String(names[b]), bomb))
+		for i in order:
+			if out[i] == "":
+				out[i] = w
+				break
+	return out
+
+
+static func _bay_rank(group: String, bomb: bool) -> int:
+	return 0 if bomb == group.begins_with("Бомбоотсек") else 1
 
 
 ## PG-01 (Kanta 24.10): what plane `lv` of class `c` carries — course gun and ammo; lv 0 = the plane it flies now
@@ -403,11 +461,6 @@ const GROUP3_PYLONS := 2
 
 func third_group(c: String, lv := 0) -> bool:
 	return node(c, "pylons", lv) >= GROUP3_PYLONS
-
-
-func set_start2(c: String, w: String) -> void:
-	cls(c)["start2"] = w
-	save()
 
 
 func set_livery(c: String, id: String) -> void:

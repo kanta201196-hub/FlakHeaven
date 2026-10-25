@@ -54,6 +54,12 @@ const STANDS := {
 }
 ## Floor of the weapon store in the weapon view (box stands went from here up to the weapon)
 const FLOOR_Y := -0.2
+## S11-13 (Kanta: the turret "hangs in the air"): in the weapon store the turret sits on its ring mount
+## in a fuselage skin section on a wheeled frame (tools/blender/turret_stand.py). seat_r / seat_y - the
+## flange top's radius and height in the stand model; view - turret scale so the stand fits the view;
+## lift - the camera aims at this share of the pair's height over the floor.
+const TURRET_STAND := {"path": "res://models/hangar/stand_turret.glb", "seat_r": 1.0, "seat_y": 1.75,
+	"view": 0.55, "lift": 0.5}
 var turret_pos: Array = []   # [Vector3, сторона] — турели текущей модели
 ## Тест 3.5-s8: показ механизации (HangarAnim) — кнопка на виде самолёта или курсор на узле «Крыло»
 var mech_demo := false
@@ -312,6 +318,7 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	if k != _key:
 		if _key.begins_with("w_"):
 			_dist = DIST0
+			focus = Vector3.ZERO   # the turret on its mount stand aims the camera higher (S11-13)
 		_key = k
 		_build(cls_id, view_lvl)
 	return vp.get_texture()
@@ -356,7 +363,9 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		var evo := weapon_tier == 4
 		var t := mini(weapon_tier, 3)
 		# Kanta 24.10: the weapon itself on the stands, without the pylon that holds it on the wing
-		var side := "top" if weapon == "turret" else ""
+		var on_mount := weapon == "turret" and ResourceLoader.exists(TURRET_STAND["path"])
+		# S11-13: on the mount stand the stand is the ring mount: no collar from the plane
+		var side := ("mount" if on_mount else "top") if weapon == "turret" else ""
 		if evo and weapon in ["flares"]:
 			side = "top"
 		elif evo and weapon == "bombs":
@@ -373,6 +382,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		if (evo and not Weapons.is_bomb(weapon)) or not ResourceLoader.exists(stand.get("path", "")):
 			stand = {}   # evolved missiles are other shapes: they keep the box stands
 		s *= stand.get("view", 1.0)
+		if on_mount:
+			s *= float(TURRET_STAND["view"])
 		# турель — в одном масштабе на всех ступенях (модель меньше 1 — множитель не зависит от габарита),
 		# поэтому рост ступени виден; S9-04: стоит неподвижно, стволами вперёд-вбок к камере (3/4 спереди)
 		var rot := TURRET_SHOW_YAW if weapon == "turret" else 0.0
@@ -385,6 +396,9 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		var on_cart := false
 		if not stand.is_empty():
 			on_cart = _place_on_stand(wmi, bb, s, bottom, stand)
+		focus = Vector3.ZERO
+		if on_mount:
+			_place_on_mount(wmi, s, bottom)
 		if weapon != "turret" and not on_cart and bottom > -0.19:
 			var sm := StandardMaterial3D.new()
 			sm.albedo_color = Color(0.32, 0.34, 0.3)
@@ -438,6 +452,40 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 		_cradle(Vector3(wmi.position.x + bb.get_center().x * s, axis, wmi.position.z + bb.get_center().z * s),
 			body, float(stand["cradle"]) * cb.size.x * ck)
 	return true
+
+
+## S11-13: seats the turret `wmi` (view scale `s`, lowest point `bottom`) on the ring mount stand
+## (TURRET_STAND): the stand's flange fits the turret's own base ring, its wheels stand on the store floor
+## and the turret is raised onto the flange; the camera aims at the middle of the pair.
+func _place_on_mount(wmi: MeshInstance3D, s: float, bottom: float) -> void:
+	var path: String = TURRET_STAND["path"]
+	var stand := WeaponModels._glb_mesh(path, 1.0, Color(), path.get_file().get_basename())
+	if stand == null:
+		return
+	var ck := _base_radius(wmi.mesh) * s / float(TURRET_STAND["seat_r"])
+	wmi.position.y += FLOOR_Y + float(TURRET_STAND["seat_y"]) * ck - bottom
+	# the turret origin is the centre of its base ring; the stand's fuselage runs along the barrels
+	var sm := MeshInstance3D.new()
+	sm.mesh = stand
+	sm.basis = Basis(Vector3.UP, TURRET_SHOW_YAW).scaled(Vector3.ONE * ck)
+	sm.position = Vector3(wmi.position.x, FLOOR_Y, wmi.position.z)
+	pivot.add_child(sm)
+	var top := wmi.position.y + wmi.mesh.get_aabb().end.y * s
+	# the turret mesh box is centred on x, z (show_weapon), so the camera stays on that vertical
+	focus = Vector3(0.0, FLOOR_Y + (top - FLOOR_Y) * float(TURRET_STAND["lift"]), 0.0)
+
+
+## Radius of a turret mesh's base ring: the widest vertex from the vertical axis in its lowest tenth.
+func _base_radius(m: Mesh) -> float:
+	var bb := m.get_aabb()
+	var lim := bb.position.y + bb.size.y * 0.1
+	var r := 0.0
+	for si in m.get_surface_count():
+		var verts: PackedVector3Array = m.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]
+		for v in verts:
+			if v.y <= lim:
+				r = maxf(r, Vector2(v.x, v.z).length())
+	return r if r > 0.0 else bb.size.z * 0.4
 
 
 ## Cradle on the loader plate (Kanta 24.10: the missile is held, not laid): a beam `span` long under the weapon

@@ -6,7 +6,8 @@ built the same way:
   - radius warped by low-frequency noise over the angle (lumpy, never a circle);
   - thin radial rays (high-frequency noise over the angle) that reach further out than the body;
   - fbm breakup near the rim and scattered specks outside it.
-Colour: Poly Haven "Burned Ground 01" (CC0, Rob Tuytel) for the detail, darkened toward the centre.
+Colour: Poly Haven "Burned Ground 01" (CC0, Rob Tuytel) for the detail, darkened toward the centre; its pale
+straw blades are filtered out (they looked like hay on large marks).
 Straight alpha, RGBA 1024 px, transparent border so the decal never shows its box edge.
 
 Run from the repo root:
@@ -17,9 +18,10 @@ Dependencies: Pillow, numpy.
 import argparse
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 SIZE = 1024
+STRAW_PX = 9   # odd filter size in px; straw blades in the 1k source are 2-6 px wide
 
 
 def periodic_noise(rng: np.random.Generator, theta: np.ndarray, harmonics: int, falloff: float) -> np.ndarray:
@@ -77,6 +79,9 @@ def bake(src: str, out: str, seed: int) -> None:
     alpha = np.clip(alpha, 0, 1)
 
     tex = Image.open(src).convert("RGB").resize((SIZE, SIZE), Image.LANCZOS)
+    # the photo has pale burnt straw blades; on a large mark they read as hay lying on the ground (s11 note 27),
+    # so a grey opening (min, then max filter) wipes out every bright stroke thinner than STRAW_PX
+    tex = tex.filter(ImageFilter.MinFilter(STRAW_PX)).filter(ImageFilter.MaxFilter(STRAW_PX))
     rgb = np.asarray(tex, dtype=np.float64) / 255.0
     lum = rgb.mean(axis=2, keepdims=True)
     detail = 0.35 * rgb + 0.65 * lum                 # mostly luminance: soot, not straw
