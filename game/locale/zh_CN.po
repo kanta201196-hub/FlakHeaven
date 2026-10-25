@@ -2641,22 +2641,10 @@ msgid "Окраска:"
 msgstr "涂装："
 
 #: game/scripts/hud_hangar.gd:172
-msgid "Второй подвес на старте"
-msgstr "开局第二挂架"
-
 #: game/scripts/hud_hangar.gd:174
 #, c-format
-msgid "Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек."
-msgstr "机组Lv.%d解锁。在此之前第二挂架为空：武器来自卡牌。"
-
 #: game/scripts/hud_hangar.gd:183
-msgid "пусто"
-msgstr "空"
-
 #: game/scripts/hud_hangar.gd:185
-msgid "Ставится с ур. 1; улучшения — карточками в бою."
-msgstr "Lv.1起装备；战斗中通过卡牌强化。"
-
 #: game/scripts/hud_hangar.gd:213
 #, c-format
 msgid "★ бонус самолёта: +%d%%"
@@ -7336,3 +7324,27 @@ msgstr "部分选项不可用：显卡不支持 Vulkan，游戏以兼容模式�
 #: game/scripts/menu_settings.gd (Forward+ switch)
 msgid "Недоступно: видеокарта не поддерживает Vulkan, и игра работает в режиме совместимости. Выбранное значение сохранится."
 msgstr "不可用：显卡不支持 Vulkan，游戏以兼容模式运行。所选值会被保留。"
+
+msgid "Выбор стартового вооружения (не более 2 видов)"
+msgstr "开局武器（最多 2 种）"
+
+msgid "На старте %d из %d."
+msgstr "开局：%d / %d。"
+
+msgid "Чтобы поставить другое, сначала снимите одно."
+msgstr "要换别的，请先取下一种。"
+
+msgid "Второе место — с ур. экипажа %d."
+msgstr "第二个位置在机组 %d 级解锁。"
+
+msgid "КУРСОВАЯ ПУШКА"
+msgstr "机炮"
+
+msgid "✓ подвес %d"
+msgstr "✓ 挂架 %d"
+
+msgid "На старт"
+msgstr "设为开局"
+
+msgid "всегда на самолёте"
+msgstr "始终装备"
