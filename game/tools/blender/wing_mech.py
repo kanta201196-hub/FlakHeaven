@@ -10,28 +10,13 @@ Z — вверх. Закрылок вниз — поворот вокруг Y н
 Запуск (bpy 5.x): python3 wing_mech.py <модель ангара.glb> <класс_ур> <out.glb>
   например: python3 wing_mech.py ../../models/hangar/fh_hangar_fighter_1.glb fighter_1 ../../models/mech/fh_mech_fighter_1.glb
 После переделки модели (Т-2) — запустить заново; кромки ищутся по силуэту, в таблице ниже только размах."""
-import sys, math
+import os, sys, math
 import bpy, bmesh
 from mathutils import Vector, geometry
 
-# Размах (y от оси, левое крыло; правое — зеркально) и середина хорды на концах отрезка (x),
-# чтобы отличить крыло от мотогондол и стабилизатора. Снято по виду сверху 17.10.
-# fighter_2 (Meshy model, 24.10): exposed wing |y| 0.18-0.41; inboard of 0.21 the tailplane almost touches the trailing
-# edge under a top-down ray, so the flaps start at 0.21.
-# Предкрылки — внешние 50–70% консоли, закрылки — внутренние, без элеронов на законцовке.
-SPANS = {
-    # fighter_1 «Оса» (Sketchfab model, VIS-01, 24.10): swing wing from the glove (y 0.09) to the tip (0.225)
-    "fighter_1": {"slat": [(0.14, 0.205, -0.21, -0.334)], "flap": [(0.10, 0.17, -0.153, -0.276)]},
-    "fighter_2": {"slat": [(0.20, 0.37, -0.165, -0.238)], "flap": [(0.21, 0.32, -0.174, -0.218)]},
-    "attacker_1": {"slat": [(0.20, 0.42, -0.12, -0.17)], "flap": [(0.12, 0.32, -0.10, -0.14)]},
-    "attacker_2": {"slat": [(0.20, 0.44, -0.16, -0.20)], "flap": [(0.15, 0.33, -0.15, -0.18)]},
-    # «Кит 1»: между мотогондолами и за внешней
-    "bomber_1": {"slat": [(0.21, 0.26, -0.03, -0.045), (0.37, 0.48, -0.11, -0.16)],
-                 "flap": [(0.20, 0.27, -0.02, -0.04), (0.355, 0.41, -0.09, -0.12)]},
-    "bomber_2": {"slat": [(0.20, 0.48, -0.11, -0.25)], "flap": [(0.17, 0.36, -0.10, -0.19)]},
-}
-SLAT_C = 0.15     # доля хорды
-FLAP_C = 0.26
+# span table and chord shares — shared with mech_cut.py (sections cut out of the hangar models, S11-02)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from mech_spans import SPANS, SLAT_C, FLAP_C  # noqa: E402
 LIFT = 0.0022     # пластина над обшивкой, чтобы не утонула
 THICK = 0.004
 STEPS = 10

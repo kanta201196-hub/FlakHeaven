@@ -660,6 +660,9 @@ func _collect_faces(model: Node3D) -> void:
 	_faces = PackedVector3Array()
 	for c in model.find_children("*", "MeshInstance3D", true, false):
 		var mi := c as MeshInstance3D
+		# S11-11: the bay doors cut out of a «Kit» belly are not the surface the bombs hang from — the bay ceiling is
+		if mi.get_parent() != null and mi.get_parent().name == "bay_doors":
+			continue
 		var xf := pivot.global_transform.affine_inverse() * mi.global_transform
 		for v in mi.mesh.get_faces():
 			_faces.append(xf * v)
