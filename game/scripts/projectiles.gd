@@ -650,9 +650,10 @@ func _update_rockets(delta: float) -> void:
 				break
 		if boom:
 			if r.get("sticky", false):
-				# «Термобарика»: заряд прилипает и рвётся через 0,5 с объёмным взрывом
+				# «Термобарика»: объёмный взрыв в этом же кадре (_update_thermo идёт следом). S11-28: пауза 0,5 с
+				# с мигающим кружком на земле читалась как задержка взрыва НАР; слияние соседних взрывов (окно 0,3 с) осталось
 				_sticky.append({"e": weakref(hit_e) if hit_e != null else null, "off": p - (hit_e.global_position if hit_e != null else p),
-					"p": p, "t": 0.5, "dmg": float(r["dmg"]) * 1.5, "ground_k": float(r.get("ground_k", 1.0))})
+					"p": p, "t": 0.0, "dmg": float(r["dmg"]) * 1.5, "ground_k": float(r.get("ground_k", 1.0))})
 			else:
 				aoe(p, float(r["r"]), float(r["dmg"]), r.get("src", "НАР"), true, null, 0, false, float(r.get("ground_k", 1.0)), true)
 			rockets.remove_at(i)
@@ -931,9 +932,6 @@ func _draw_layer() -> void:
 		var tc: Color = m.get("tint", Color(0.86, 0.86, 0.9))
 		_draw_smoke(m["trail"], m["p"], tc, 1.0)
 		_draw_missile(m["p"], m["v"], 22.0, Color(0.95, 0.95, 1.0))
-	for st in _sticky:
-		var sp: Vector2 = st["p"]
-		draw_circle(sp, 6.0 + 4.0 * sin(Time.get_ticks_msec() * 0.03), Color(1.0, 0.95, 0.7, 0.85))
 	for r in rockets:
 		if float(r["delay"]) > 0.0:
 			continue
