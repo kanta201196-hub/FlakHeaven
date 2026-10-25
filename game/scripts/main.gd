@@ -113,6 +113,10 @@ func _ready() -> void:
 			Settings.gfx_auto = false
 		if a.begins_with("--tilt="):   # B-47: наклон камеры, град (проба; 0 — строго сверху)
 			Tuning.set_param("cam_tilt", float(a.substr(7)))
+		if a.begins_with("--capseed="):   # trailer capture: same seed + args = same sortie
+			seed(int(a.substr(10)))
+	if _args.has("--trailercap"):
+		add_child(load("res://scripts/trailer_cap.gd").new(self))
 	DEBUG = not (OS.has_feature("tester") or _args.has("--tester"))
 	Events.activity_succeeded.connect(_on_activity_succeeded)
 	Events.activity_failed.connect(_on_activity_failed)
@@ -516,6 +520,7 @@ func ban_card(i: int) -> void:
 ## Banner headline per activity kind; the reward part is built from what `RunState` paid.
 const ACTIVITY_TITLE := {
 	&"ground": "Позиция ПВО уничтожена!", &"convoy": "Колонна разбита!", &"dogfight": "Ас-соперник сбит!",
+	&"fort": "База противника разгромлена!",
 }
 
 

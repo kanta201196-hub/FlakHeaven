@@ -96,7 +96,22 @@ func process(delta: float) -> void:
 	if p.has("live"):
 		_live(p)
 		return
-	if p.get("ground", false):
+	if p.get("fort_area", false):
+		# FA-01: the «Укрепрайон» base on the map fort — launchers raised, nothing breaks. Wait for Render3D's
+		# place filter: before it, chunk_object gives the raw spot, not where the 3D fort stands (off the river)
+		if not _fa_spawned and m.background.place_filter.is_valid():
+			_fa_spawned = true
+			var fp: Vector2 = p["fort"]
+			var f := FortArea.pick_fort(FortArea.forts_near(m.background, fp, 900.0), fp, 900.0)
+			if not f.is_empty():
+				var base := FortArea.new()
+				base.setup_fort(f, 1.0)
+				for g in base.targets:
+					g.hp = 99999.0
+					g.max_hp = 99999.0
+				base.active = true
+				m.world.add_child(base)
+	elif p.get("ground", false):
 		if not _g_spawned:
 			_g_spawned = true
 			var site := AASite.new()
@@ -478,11 +493,11 @@ func _print_sizes(name: String) -> void:
 	var img_w := float(m.get_viewport().get_texture().get_width())
 	var px_k := img_w / maxf(r3.cam.get_viewport().get_visible_rect().size.x, 1.0)
 	for row: Array in rows:
-		var u: Dictionary = r3._units.get((row[1] as Node).get_instance_id(), {})
-		if u.is_empty():
+		var u: Unit3D = r3._units.get((row[1] as Node).get_instance_id())
+		if u == null:
 			print("VISUAL %s size %s: no 3D unit" % [name, row[0]])
 			continue
-		var root: Node3D = u["node"]
+		var root: Node3D = u.node
 		var inv := root.global_transform.affine_inverse()
 		var box := AABB()
 		var first := true
@@ -494,7 +509,7 @@ func _print_sizes(name: String) -> void:
 		var a2 := r3.cam.unproject_position(root.global_transform * Vector3(box.position.x, c.y, c.z))
 		var b2 := r3.cam.unproject_position(root.global_transform * Vector3(box.end.x, c.y, c.z))
 		print("VISUAL %s size %s: %.0f px on screen (model %s)" % [name, row[0], a2.distance_to(b2) * px_k,
-			"GLB" if u.get("bm") != null else "relief"])
+			"GLB" if u.bm != null else "relief"])
 	var fp: Variant = _points[_i].get("fort_obj")
 	if fp != null:
 		_print_fort_size(name, fp as Vector2, px_k)
@@ -579,6 +594,9 @@ func _make_points() -> Array:
 		pts.append({"name": "aa_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.3, "convoy": true, "enemies": true, "ground": true, "site_off": Vector2(-380, -40), "wait": 2.5})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
+	if found.has("o_fort"):   # FA-01: the fortified-area base — whole fort and a tower launcher close up
+		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
+		pts.append({"name": "fort_area_close", "pos": found["o_fort"] + Vector2(0, 250), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
 	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
 		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
 		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
@@ -625,6 +643,15 @@ func _make_points() -> Array:
 	pts.append({"name": "closeup", "pos": found.get("o_rocks_big", empty) + Vector2(-260, 0), "zoom": 2.5})
 	pts.append({"name": "roll", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.62})
 	pts.append({"name": "roll90", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.78})
+	if OS.get_cmdline_user_args().has("--altbench"):
+		# Kanta 25.10 (flight altitude): the gameplay zoom over the plain, a ridge and an AA site with enemy
+		# planes around the player and air and ground blasts mid-way, to judge how high the planes read
+		pts = []
+		var ab := [[Vector2(-330, 160), 18.0, false, ""], [Vector2(-120, 260), 130.0, false, "blast"],
+			[Vector2(260, -120), 22.0, true, ""], [Vector2(340, 200), 12.0, true, "flak"]]
+		pts.append({"name": "alt_plain", "pos": empty, "enemies": true, "booms": ab, "shot_t": 0.6, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "alt_ridge", "pos": peak + Vector2(0, 300), "enemies": true, "booms": ab, "shot_t": 0.6, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "alt_site", "pos": empty + Vector2(2400, 0), "enemies": true, "ground": true, "booms": ab, "shot_t": 0.6, "wait": 2.5, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--fxbench"):   # 3.4-t1: эффекты (след, форсаж, ракеты, винты, падение ведомого)
 		pts = []
 		pts.append({"name": "trail", "pos": empty, "fly": true, "wait": 3.0, "zoom": 0.8})
@@ -716,6 +743,35 @@ func _make_points() -> Array:
 		for k in spots:
 			for zz in [["near", 2.5], ["mid", 1.0], ["far", 0.55]]:
 				pts.append({"name": "ter_%s_%s" % [k, zz[0]], "pos": spots[k], "zoom": zz[1], "wait": 1.2})
+	if OS.get_cmdline_user_args().has("--convoymtn") and ter != null:
+		# S11 (Kanta 25.10): a column ordered over the mountains, where the road search near its point finds
+		# nothing (a bomber patrol there gets no road: the first such point on a grid around the empty cell);
+		# the camera sits where its route passes: on the road since the far road search, on the straight line
+		# over the ridges before it
+		pts = []
+		var at := Vector2.INF
+		var mid := Vector2.INF
+		for k in 400:
+			var q := empty + Vector2(k % 20 - 10, floori(k / 20.0) - 10) * 1500.0
+			if absf(ter.river_field(q.x, q.y)) < 1500.0:
+				continue
+			var near := Convoy.new()
+			near.patrol = true
+			near._build_route(q, Vector2.RIGHT, ter)
+			var none := not near.on_road
+			near.free()
+			if none:
+				at = q
+				break
+		if at.is_finite():
+			var probe := Convoy.new()
+			probe._build_route(at, Vector2.RIGHT, ter)
+			mid = probe.point_at(probe._s_of(probe._center_road))
+			print("VISUAL convoy over the mountains at %s: on_road=%s route centre %s" % [at, probe.on_road, mid])
+			probe.free()
+		if at.is_finite():
+			for zz in [["near", 1.3], ["far", 0.55]]:
+				pts.append({"name": "cvm_%s" % zz[0], "pos": mid, "zoom": zz[1], "convoy": true, "convoy_at": at, "wait": 1.5})
 	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
 		pts = []
 		for c in ["fighter", "attacker", "bomber"]:
@@ -888,11 +944,11 @@ func _sam_poses(p: Dictionary) -> void:
 		var scr := r3.cam.unproject_position(r3.terrain.surface_fast(sam.anchor.x, sam.anchor.y))
 		var step := (scr - vs * Vector2(0.5, 0.55)) / (8.0 * float(p.get("zoom", 1.0)) / 9.0) * 0.5
 		p["pos"] = Vector2(p["pos"]) + step.limit_length(20.0)   # small steps so the camera settles
-		var pu: Dictionary = r3._units.get(m.player.get_instance_id(), {})
-		if pu.has("node"):   # the plane would cover the launcher: hide its 3D model only
-			(pu["node"] as Node3D).visible = false
-			if pu.get("sh") != null:
-				(pu["sh"] as Node3D).visible = false
+		var pu: Unit3D = r3._units.get(m.player.get_instance_id())
+		if pu != null:   # the plane would cover the launcher: hide its 3D model only
+			(pu.node as Node3D).visible = false
+			if pu.sh != null:
+				(pu.sh as Node3D).visible = false
 	sam.hp = maxf(sam.hp, sam.max_hp)   # the player's guns stay off it
 	if sam.sprite_info().is_empty():   # frozen targets never run _draw, which is where Render3D gets its model
 		sam._spr = {"tex": "e_sam", "len": 34.0, "angle": sam._body_angle}
@@ -901,6 +957,7 @@ func _sam_poses(p: Dictionary) -> void:
 		m.projectiles.spawn_missile(sam.launch_at, to.normalized(), "sam", "ЗРК")
 		sam.launches = 1
 var _g_spawned := false
+var _fa_spawned := false
 
 
 ## VIS-01 unit close-ups: kind -> [enemy texture, sprite length, camera zoom]. Lengths are the game's own
@@ -1007,17 +1064,17 @@ func _unit_poses(p: Dictionary) -> void:
 	var r3 := Render3D.I
 	if r3 == null:
 		return
-	var u: Dictionary = r3._units.get(_unit.get_instance_id(), {})
-	if u.has("node"):
+	var u: Unit3D = r3._units.get(_unit.get_instance_id())
+	if u != null:
 		var vs := m.get_viewport().get_visible_rect().size
-		var scr := r3.cam.unproject_position((u["node"] as Node3D).global_position)
+		var scr := r3.cam.unproject_position((u.node as Node3D).global_position)
 		var step := (scr - vs * Vector2(0.5, 0.5)) / (8.0 * float(p.get("zoom", 1.0)) / 9.0) * 2.0
 		p["pos"] = Vector2(p["pos"]) + step.limit_length(200.0)   # software GL in the cloud runs a few frames a second
-	var pu: Dictionary = r3._units.get(m.player.get_instance_id(), {})
-	if pu.has("node"):
-		(pu["node"] as Node3D).visible = false
-		if pu.get("sh") != null:
-			(pu["sh"] as Node3D).visible = false
+	var pu: Unit3D = r3._units.get(m.player.get_instance_id())
+	if pu != null:
+		(pu.node as Node3D).visible = false
+		if pu.sh != null:
+			(pu.sh as Node3D).visible = false
 
 
 func _spawn_all_enemies(c: Vector2) -> void:

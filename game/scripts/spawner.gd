@@ -15,7 +15,7 @@ var next_activity := 60.0
 var activity_i := 0
 var activity_node: Node = null
 var fuel: Fuel = null   # 3.5: топливо и свой заправщик
-const ACTIVITIES := ["ground", "dogfight", "transport", "convoy"]
+const ACTIVITIES := ["ground", "dogfight", "transport", "convoy", "fort"]
 ## EX-03 (отзывы внешних тестеров 21.10): «очередь на атаку» — одновременно заходят не больше attack_slots()
 ## дронов и ракетоносцев, остальные ждут поодаль и не стреляют. Толпа вокруг игрока не кружит «вальс».
 var _attackers: Array = []
@@ -35,6 +35,9 @@ func _ready() -> void:
 		next_activity = 20.0
 	if OS.get_cmdline_user_args().has("--convoy"):
 		activity_i = 3      # проверка: сразу конвой
+		next_activity = 10.0
+	if OS.get_cmdline_user_args().has("--fort"):
+		activity_i = 4      # check: the fortified area first (FA-01)
 		next_activity = 10.0
 	if OS.get_cmdline_user_args().has("--warship"):   # проверка «Архипелага»: корабль-босс на 1:00 (--leviathan — «Левиафан»)
 		Tuning.set_param("boss_every", 60.0)
@@ -318,6 +321,7 @@ func spawn_bombers(p: Player, t: float) -> void:
 ## без баннера и таймера, груз с грузовиков как у конвоя
 const PATROL_EVERY := 35.0
 const PATROL_FROM := 45.0
+const PATROL_RETRY := 6.0   # s: next try after a patrol found no road near the bomber's path
 var _patrol_cd := PATROL_FROM
 var _patrol_cv: Convoy = null
 
@@ -334,6 +338,10 @@ func _patrol(p: Player, t: float, delta: float) -> void:
 	var mid := p.global_position + Vector2.from_angle(p.heading + randf_range(-0.5, 0.5)) * 1100.0
 	var side := 1.0 if randf() < 0.5 else -1.0
 	cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_mult() * hp_ramp(t), recent_dps(), t)
+	if cv.vehicles.is_empty():   # no road near the bomber's path (mountains): try again soon
+		cv.free()
+		_patrol_cd = PATROL_RETRY
+		return
 	Main.I.world.add_child(cv)
 	_patrol_cv = cv
 	if OS.get_cmdline_user_args().has("--autotest"):
@@ -349,6 +357,15 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		kind_s = "rescue"   # EX-09: «Сухое русло» — первая активность вылета: сбитый пилот
 		Story.rescue_done = true
 		activity_i -= 1
+	# FA-01: «Укрепрайон» takes a real map fort ahead; none in reach (or the sea biome) — next kind this round
+	var fort: Dictionary = {}
+	if kind_s == "fort":
+		if not Biome.sea():
+			var want := p.global_position + Vector2.from_angle(p.heading) * FortBalance.AHEAD
+			fort = FortArea.pick_fort(FortArea.forts_near(Main.I.background, want, FortBalance.REACH), want, FortBalance.REACH)
+		if fort.is_empty():
+			activity_i += 1
+			kind_s = ACTIVITIES[activity_i % ACTIVITIES.size()]
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: activity start ", kind_s, " at %.0f" % t)
 	activity_i += 1
@@ -370,6 +387,14 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Events.banner.emit("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
 		Story.say(Story.DISPATCH, "Позиция ПВО ожила. Подавите — и небо станет тише.")
 		Hints.show("act_aa", "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости.", 9.0, 2)
+	elif kind_s == "fort":
+		var base := FortArea.new()
+		base.setup_fort(fort, hp_k, recent_dps())
+		Main.I.world.add_child(base)
+		activity_node = base
+		Events.banner.emit("Разведка: в старой крепости база противника! Награда — выбор из редких карточек", 4.0)
+		Story.say(Story.DISPATCH, "В крепости засели зенитчики. Пусковые на башнях — снесите их.")
+		Hints.show("act_fort", "Укрепрайон: летите по стрелке к крепости. На четырёх башнях пусковые ЗРК — разбейте все четыре, пока идёт отсчёт. Тепловые ловушки уводят их ракеты, джипы во дворе бьют из пулемётов.", 9.0, 2)
 	elif kind_s == "convoy":
 		var cv := Convoy.new()
 		# колонна пересекает курс игрока впереди: маршрут через точку в 1 300 пикс. по курсу
@@ -430,7 +455,9 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	# правка 3.5-s4: ×1,6 — по асу бьёт всё сразу (лог «Осы»: 10–33 с вместо 25–35);
 	# тест 3.5-s5 (п. 10): множитель — доля урона, что реально ложится в одиночную цель (single_k), у каждого свой
 	last_single_k = single_k()
-	var hp_dps := recent_dps() * ttk * last_single_k / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
+	var hp_formula := hp
+	var hp_dps_k1 := recent_dps() * ttk / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
+	var hp_dps := hp_dps_k1 * last_single_k
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f из %d с)" % [wave, hp, hp_dps, recent_dps(), last_single_k, _big_hist.size()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
@@ -445,7 +472,10 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	# 3.5 (разбор каталога 16.10): третья волна — босс «Крепость» вместо пары асов
 	elif wave >= 3 or OS.get_cmdline_user_args().has("--fortress"):
 		var f := Fortress.new()
-		f.setup_fortress(hp * 2.0 * 1.35) # прочность двух асов вместе со щитами; фазы делят её на точки и корпус
+		# GD-08: one landing share for every class instead of the duel share (see AceBalance.fortress_hp)
+		var fhp := hp_formula if OS.get_cmdline_user_args().has("--shots") else AceBalance.fortress_hp(hp_formula, hp_dps_k1)
+		last_single_k = AceBalance.FORTRESS_SINGLE_K   # the sortie log shows the share the Fortress was built with
+		f.setup_fortress(fhp * 2.0 * 1.35) # прочность двух асов вместе со щитами; фазы делят её на точки и корпус
 		f.position = p.global_position + Vector2.from_angle(randf() * TAU) * boss_dist()
 		f.heading = (p.global_position - f.position).angle() + PI / 2.0
 		Main.I.world.add_child(f)

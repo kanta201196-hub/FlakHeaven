@@ -95,6 +95,9 @@
 | GD-03 | «Кит» bombs: damage +25 % and more ground targets on «Кит»'s path (convoys more often) — bombs give 1.5–9 % of «Кит» damage without modernization. After GD-02, one change per build | Бой: правки по 3.5-s10 | идея (Kanta 23.10, option 1) |
 | GD-04 | Late combat for a strong player: threats to dodge instead of thicker enemies (SAM salvos with a warning, bomber wedges, elite waves); the ×4 cap stays (see S7-10) | — | после демо (Kanta 23.10, option 1) |
 | GD-05 | Scout (convoy 8×8) to true model scale: length 18 → ~25 px, so its hit zone grows ~40 % and it gets easier to hit. Balance change: after GD-02, one change per build | 3D-модели по плану Kirill | идея (Kanta 24.10) |
+| GD-06 | Max HP depends on one card («Бронеплиты»): guarantee it is offered when the plane has none by level 10 (flight analysis of 3.5-s11, Kanta «Б» 25.10; S11-34). One balance change per build | Геймдизайн-разбор накопленного опыта | done (PR #421), next build |
+| GD-07 | Remember for later (Kanta «запоминаем на будущее» 25.10): drones and interceptors deal 70–85% of damage to the player, rams are 22–28%; if the target «the player enjoys, not overcomes» needs it, soften drone rams (less damage or a short invulnerability after a ram). Not now: first measure with GD-02, S11-30 and GD-06 | Геймдизайн-разбор накопленного опыта | idea, parked |
+| GD-08 | «Fortress» boss HP for «Оса» (605k at k 1.6 against 82k–97k): bot run, class «Оса», max profile, then decide (S11-35) | Геймдизайн-разбор накопленного опыта | done: one share 0.55 for every class (Kanta, option 1), next build |
 
 **Слито и ждёт проверки Kanta в сборке 3.5-s8** (подробности в архиве, раздел «После теста 3.5-s4: бой»): S4-01, S4-02, S4-03, S4-05…S4-08, S4-10…S4-12 — нырок под самолётами, ловушки асов, цифры урона, ведомые и цель звена, перезарядка ракет, «Крепость», выбор карточки; P5-01…P5-03, P5-05…P5-12, P5-33 — тормоза, тени, бомбы «Кита», ощущение классов, нырок, объёмные взрывы. Статус «на проверке (PR)» в старых таблицах означает, что PR слит до 18.10 (сборка 3.5-s8 собрана из `main` после PR #236); как слияние проверено в игре — не сверялось, это догадка.
 
@@ -337,6 +340,17 @@ Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standar
 | CS-13 | Balance numbers: `tuning.gd` keeps only F1 sliders, others go to `game/scripts/balance/<system>.gd` when files are touched; update the CLAUDE.md rule (Kanta 2026-10-23, option 2) | every code thread; CLAUDE.md — "Короткий CLAUDE.md" | rule in force |
 | CS-12 | Important review findings without their own row: spawner freezes bombers at the cap, bomb lead (`move_vel`), "Skvoznyak" summons without a cap, hints spent on the title screen, `TEST_PICKS` → 2, volume writes balance into `tuning.json`, settings do not fit at 1080, ground shader (13 samplers, `dFdx` in a branch), double explosion lights, `.import` for new models, 334 MB `models/pilot` in git, JPEG 4:2:0 normal map. Details — review README | split across system threads | idea |
 | LANG-01 | Move internal text to English (Kanta 2026-10-23, option 2): new code, comments, commits and docs in English right away; existing files translated when touched; a separate pass over key documents — CLAUDE.md, `docs/game-context.md` ("Rules now" section), `docs/backlog.md` header, `docs/process/` | coordinator assigns; CLAUDE.md — thread "Короткий CLAUDE.md" | in progress (standards and CLAUDE.md done 2026-10-23) |
+
+## Укрепрайон (activity 5, Kanta «да» 2026-10-25)
+
+Spec `docs/superpowers/specs/2026-10-25-fortified-area-design.md`, plan `docs/superpowers/plans/2026-10-25-fortified-area.md`. Thread «Сделать активность «Укрепрайон» из крепости» owns `fort_area.gd`, the fort model and the fort parts of `render3d.gd` (coordinated with «Ускорить большие бои»).
+
+| ID | Task | Thread / owner | Status |
+| --- | --- | --- | --- |
+| FA-01 | Activity logic: spawner `"fort"`, map fort pick, banner, 4 fixed launchers (≤ 4 missiles), 2 yard jeeps, reward, unit tests | Укрепрайон | done (#427) |
+| FA-02 | Fort model set Г (procedural fort_build.gd), pieces with broken variants, tower launcher GLB | Укрепрайон | in progress |
+| FA-03 | Conditional destructibility: piece HP from explosives, state swaps, debris and scorch, stays broken | Укрепрайон | planned |
+| FA-04 | Frames from the game on 3 graphics presets for Kanta | Укрепрайон | planned |
 
 ## После Next Fest (процесс, 23.10.2026)
 
