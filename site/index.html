@@ -384,6 +384,7 @@ if(LINKS.tester){
   document.querySelectorAll(".tester-direct").forEach(function(a){a.href=LINKS.tester;a.target="_blank";a.rel="noopener";});
   var openForm=function(){
     if(document.getElementById("tester-frame"))return;
+    ping("form");
     var w=document.createElement("div");w.className="formwrap";
     var l=document.createElement("div");l.className="loading";
     l.textContent=document.documentElement.lang==="en"?"Loading the form…":"Загружаем форму…";
@@ -399,6 +400,12 @@ if(LINKS.tester){
   ["top-tester","wide-tester","mg-tester"].forEach(function(id){var a=document.getElementById(id);a.hidden=false;
     a.onclick=function(e){e.preventDefault();openForm();T.scrollIntoView({behavior:reduce?"auto":"smooth"});};});
 }
+
+/* Счётчик нажатий без куки: запрос к пустому файлу /t/<имя>.txt, число видно в аналитике Cloudflare по адресу. */
+function ping(n){try{fetch("/t/"+n+".txt",{cache:"no-store",keepalive:true}).catch(function(){});}catch(e){}}
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(!a)return;
+  var h=a.href,n=/t\.me\//.test(h)?"tg":/discord\.gg\//.test(h)?"discord":/itch\.io\//.test(h)?"itch":/steampowered\.com\//.test(h)?"steam":"";
+  if(n)ping(n);});
 
 /* Язык */
 function setLang(l){document.documentElement.lang=l;
