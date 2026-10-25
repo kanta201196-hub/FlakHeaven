@@ -1,6 +1,6 @@
 # Weapon or hangar stand from Sketchfab → game model (Blender, bpy; PG-01, Kanta 24.10).
 #   python3 -I sf_weapon_prep.py in.glb out.glb --nose=+y [--pick=x,-0.1,0.3] [--keep=NAME,..] [--drop=NAME,..]
-#       [--target=30000] [--median=9] [--len=1] [--up=+z] [--tint=r,g,b,k] [--keepparts=x,-0.45,0.5]
+#       [--target=30000] [--median=9] [--len=1] [--up=+z] [--tint=r,g,b,k] [--keepparts=x,0,0.6] [--dropparts=x,-0.35,-0.28]
 # Output axes as every weapon model of the game: nose → +X, up → +Y (glTF), length along X = --len (1),
 # centred on the origin. Stands (--stand) keep their own up axis and sit on y = 0, longest side along X.
 #   --pick=axis,lo,hi  keep only parts whose bounding-box centre on that axis (source Blender coords) is in [lo, hi]
@@ -77,10 +77,13 @@ me.transform(basis)
 if 'roll' in opt:
     me.transform(Matrix.Rotation(math.radians(float(opt['roll'])), 4, 'X'))
 # --keepparts=axis,lo,hi: after orientation, keep only loose parts whose bounding-box centre on that axis
-# (share of the length, the model centred on 0) is in [lo, hi] — e.g. drop the tow bar of a cart
-if 'keepparts' in opt:
+# (share of the length, the model centred on 0) is in [lo, hi] — e.g. drop the tow bar of a cart;
+# --dropparts=axis,lo,hi: the opposite, drop the parts inside the range (the rear rings of the cart)
+for key in ('keepparts', 'dropparts'):
+    if key not in opt:
+        continue
     import bmesh
-    ax, lo, hi = opt['keepparts'].split(',')
+    ax, lo, hi = opt[key].split(',')
     i = 'xyz'.index(ax)
     bm = bmesh.new(); bm.from_mesh(me)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4 * max(ob.dimensions))
@@ -100,7 +103,7 @@ if 'keepparts' in opt:
                 if b.index not in seen:
                     seen.add(b.index); stack.append(b)
         cc = (max(u.co[i] for u in comp) + min(u.co[i] for u in comp)) / 2
-        if not float(lo) <= (cc - c0) / span <= float(hi):
+        if (float(lo) <= (cc - c0) / span <= float(hi)) == (key == 'dropparts'):
             drop += comp
     bmesh.ops.delete(bm, geom=drop, context='VERTS')
     bm.to_mesh(me); bm.free()

@@ -40,7 +40,7 @@ var focus := Vector3.ZERO    # куда смотрит камера (стенд 
 ## model (measured on it): x — weapon centre from the stand centre (of its length), y — weapon bottom over the floor
 ## (of its height). Size: len — stand length per weapon length, or ring — inner radius of the stand's rings (of its
 ## length), so the missile body fills them. slots — across offsets (of its length) of the missiles it holds, one
-## missile in each; mid — y is the missile axis; cradle — beam the weapon is strapped to (of the weapon length);
+## missile in each; mid — y is the missile axis; cradle — beam on the plate the weapon is strapped to (of its length);
 ## view — weapon scale so the stand fits the view.
 const STAND_CART := "res://models/hangar/stand_cart.glb"
 const STAND_BOMB := {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 1.0}
@@ -50,7 +50,7 @@ const STANDS := {
 	"hebomb": {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 0.72},
 	"aam": MISSILE_CART,
 	"srm": MISSILE_CART,
-	"agm": {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.5, "view": 0.5},
+	"agm": {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.13, "view": 0.5},
 }
 ## Floor of the weapon store in the weapon view (box stands went from here up to the weapon)
 const FLOOR_Y := -0.2
@@ -420,19 +420,20 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 	if stand.get("mid", false):
 		low = axis
 	elif stand.has("cradle"):
-		low = axis - body * 1.6   # beam 0.35 and saddles 0.25 of the body radius between the plate and the body
+		low = axis - body * 1.52   # beam 0.35 and saddles 0.25 of the body radius; the beam sits 0.08 into the plate
 	var lift: float = FLOOR_Y + cb.size.y * ck * stand["y"] - low
 	wmi.position.y += lift
 	axis += lift
 	var slots: Array = stand.get("slots", [])
+	var z0 := wmi.position.z
 	for i in slots.size():
 		var w := wmi if i == 0 else wmi.duplicate() as MeshInstance3D
-		w.position.z += float(slots[i]) * cb.size.x * ck
+		w.position.z = z0 + float(slots[i]) * cb.size.x * ck
 		if i > 0:
 			pivot.add_child(w)
 	if stand.has("cradle"):
 		_cradle(Vector3(wmi.position.x + bb.get_center().x * s, axis, wmi.position.z + bb.get_center().z * s),
-			body, float(stand["cradle"]) * bb.size.x * s)
+			body, float(stand["cradle"]) * cb.size.x * ck)
 	return true
 
 
