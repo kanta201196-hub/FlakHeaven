@@ -334,6 +334,9 @@ func _patrol(p: Player, t: float, delta: float) -> void:
 	var mid := p.global_position + Vector2.from_angle(p.heading + randf_range(-0.5, 0.5)) * 1100.0
 	var side := 1.0 if randf() < 0.5 else -1.0
 	cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_mult() * hp_ramp(t), recent_dps(), t)
+	if cv.vehicles.is_empty():   # no road near the bomber's path (mountains): no patrol this time
+		cv.free()
+		return
 	Main.I.world.add_child(cv)
 	_patrol_cv = cv
 	if OS.get_cmdline_user_args().has("--autotest"):
