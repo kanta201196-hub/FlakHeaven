@@ -783,7 +783,7 @@ func _update_missiles(delta: float) -> void:
 		var boom := false
 		var wt2: Wingman = m.get("tgt") as Wingman if is_instance_valid(m.get("tgt")) else null
 		if wt2 != null and wt2.alive() and not m["lost"] and p.distance_to(wt2.global_position) < 26.0:
-			wt2.damage(msl_p(kind, "dmg"))
+			wt2.damage(msl_p(kind, "dmg") * float(m.get("dk", 1.0)))
 			Main.I.fx.hit_spark(p, Color(1, 0.5, 0.2))
 			missiles.remove_at(i)
 			continue
@@ -793,10 +793,11 @@ func _update_missiles(delta: float) -> void:
 			if hit and kind == "hnar" and pl.dodges("пули", who):
 				hit = false
 				Main.I.tele.add("dive_dodged")
+			var mdmg := msl_p(kind, "dmg") * float(m.get("dk", 1.0))   # dk — shooter's damage multiplier (GD-02)
 			if hit and pl.is_invulnerable():
-				_raw_hit(pl, m, msl_p(kind, "dmg"), wk)
+				_raw_hit(pl, m, mdmg, wk)
 			if hit and not pl.is_invulnerable():
-				_hit_player(pl, msl_p(kind, "dmg"), "ракеты", who, wk)
+				_hit_player(pl, mdmg, "ракеты", who, wk)
 				Main.I.stats_add_counter("missile_hits", 1)
 				done = true
 				boom = kind == "sam" or kind == "hnar"

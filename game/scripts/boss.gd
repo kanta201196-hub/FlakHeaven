@@ -74,6 +74,8 @@ func setup(v: String, hp_total: float) -> void:
 		defense = "agile"   # EX-06: «Сквозняк» манёвренный; «Почтальон» ставит помехи (behave)
 	_born = Main.I.run_time
 	_wave = Main.I.spawner.boss_wave if Main.I.spawner != null else 0
+	out_k = AceBalance.dmg_k(_wave)   # GD-02: the first ace hits softer, HP unchanged
+	contact_damage *= out_k
 	_taken0 = float((Main.I.stats["taken_by"] as Dictionary).get("асы", 0.0))
 	min_life = 26.0   # правка 3.5-s4 (было 16 — в логе «Кита» асы жили 10–47 с)
 	_side = _orbit
@@ -240,7 +242,7 @@ func _behave_carrier(delta: float, p: Player) -> void:
 			_run_shot = 0.45
 			for j in 3:
 				var dj := Vector2.from_angle(heading).rotated((j - 1) * 0.09)
-				Main.I.projectiles.spawn_enemy_bullet(global_position + dj * radius, dj * 480.0, kind(), true)
+				Main.I.projectiles.spawn_enemy_bullet(global_position + dj * radius, dj * 480.0, kind(), true, out_k)
 			Main.I.sfx.play("enemy_fire", -9.0, 0.5)
 		if d < 300.0 or _run_t > 4.0:
 			_run = false
@@ -262,6 +264,7 @@ func _behave_carrier(delta: float, p: Player) -> void:
 			for i in n:
 				var wt: Node2D = wl[i % wl.size()] if not wl.is_empty() and (i == 0 or i == n - 1) else null
 				Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading) * 30.0, Vector2.from_angle(heading + (i - (n - 1) * 0.5) * 0.22), "aam", kind(), 0.5, wt)
+				Main.I.projectiles.missiles.back()["dk"] = out_k
 			Main.I.sfx.play("missile_enemy", -4.0, 0.8)
 			_a_cd = 4.5 * angry()
 	else:
@@ -276,11 +279,11 @@ func _behave_carrier(delta: float, p: Player) -> void:
 		var off := randf() * TAU
 		for i in 18:
 			var dir := Vector2.from_angle(off + TAU * i / 18.0)
-			Main.I.projectiles.spawn_enemy_bullet(global_position + dir * radius, dir * 280.0, kind(), true)
+			Main.I.projectiles.spawn_enemy_bullet(global_position + dir * radius, dir * 280.0, kind(), true, out_k)
 		# и прицельная очередь из 3 крупных пуль по игроку
 		for j in 3:
 			var dj := to.normalized().rotated((j - 1) * 0.12)
-			Main.I.projectiles.spawn_enemy_bullet(global_position + dj * radius, dj * 440.0, kind(), true)
+			Main.I.projectiles.spawn_enemy_bullet(global_position + dj * radius, dj * 440.0, kind(), true, out_k)
 		Main.I.sfx.play("enemy_fire", -8.0, 0.4)
 
 
