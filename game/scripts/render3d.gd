@@ -663,9 +663,12 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			inst.scale = Vector3.ONE * float(tex.get_width())
 			inst.scale.y *= float(MODEL_H.get(tex.resource_path.get_file().get_basename(), 1.0))
 			root.add_child(inst)
+			# the hull mesh carries the hit flash and the elite tint: propellers (prop_*) come first in the
+			# transport and drone GLBs, and a flash on a propeller alone is not seen
 			for c in inst.find_children("*", "MeshInstance3D", true, false):
-				mi = c
-				break
+				if not String(c.name).begins_with("prop_"):
+					mi = c
+					break
 		if mi == null:
 			bm = null
 			mi = MeshInstance3D.new()

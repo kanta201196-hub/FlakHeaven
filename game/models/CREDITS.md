@@ -40,6 +40,10 @@
 | battle/e_convoy_technical (пикап с пулемётом; пулемёт собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
 | battle/e_helicopter (вертолёт) | Hind Attack Helicopter | Ashley Aslett | https://sketchfab.com/3d-models/hind-attack-helicopter-bb65bdfde2c54007a52dfbe1d91d930d | CC BY 4.0, изменено |
 | battle/e_interceptor (перехватчик) | Sukhoi Su-15TM | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/sukhoi-su-15tm-3403b6f0f47d428eb2dd098f864d9ae1 | CC BY 4.0, изменено |
+| battle/e_drone (дрон) | Morok UAV Drone 3D Model | rombic992 (rombic991) | https://sketchfab.com/3d-models/morok-uav-drone-3d-model-3ae0e923b50f4885a2317eba199043cd | CC BY 4.0, изменено |
+| battle/e_carrier (ракетоносец) | Yakovlev Yak-28P | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/yakovlev-yak-28p-d8fb2ad3d871437392453568c0c8bfe8 | CC BY 4.0, изменено |
+| battle/e_transport (транспортник; пока и бомбардировщик «Буйвол») | Lockheed C-130 Hercules | Dave Love (Tyler_Dave) | https://sketchfab.com/3d-models/lockheed-c-130-hercules-5acfb2eb4f204f51ab418856c116b68e | CC BY 4.0, изменено |
+| battle/e_rival (ас-соперник) | Concept jet | Gabriel (wokom) | https://sketchfab.com/3d-models/concept-jet-69012312f3ab4f13b637b6a188aa3d4c | CC BY 4.0, изменено |
 | battle/fighter_2, hangar/fighter_2 («Оса 2») | Meshy (paid plan), own generation; image reference — a render of Sketchfab #63 (view-only), Kanta 24.10, `docs/game-context.md` | own generation (Meshy) | — | Meshy paid plan, commercial rights |
 | weapons/srm_*, weapons/hq/srm_* (ракета ближнего боя) | AIM-9 missile | rickslash | https://sketchfab.com/3d-models/caaf15b49bac4144b6c6be577c2b872a | CC BY 4.0, изменено |
 | weapons/agm_*, weapons/hq/agm_* (управляемая ракета «воздух-земля») | AGM 65 MAVERICK | XARYA | https://sketchfab.com/3d-models/5447a415b21840568fbfa01cf6dd166a | CC BY 4.0, изменено |

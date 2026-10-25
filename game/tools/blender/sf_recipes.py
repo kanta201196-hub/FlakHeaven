@@ -294,6 +294,64 @@ RECIPES = {
         "paint": SAND, "tris": 17500,   # wheels get more: decimated tread blocks turn into spikes
         "weight": {"launcher_pitch": 1.3, **{"wheel_%s%s" % (a, s): 1.7 for a in ("f", "f2", "1", "2") for s in "lr"}},
     },
+    # VIS-01 (Kanta 25.10.2026, picks from the Sketchfab shortlist): flying enemies rebuilt from CC BY sources.
+    # All of them wear the same dark grey enemy scheme (JET) as the interceptor so the enemy air force reads as one.
+    "e_drone": {
+        # pusher-prop recon drone; the source is plain light grey. The propeller is its own node (prop_1, axis X):
+        # Render3D._props spins every prop_* node of a battle model
+        "root": "drone", "rot": (0, 0, 180), "ground": False,
+        "materials": [(r"^10_Fuselage", {"mode": "paint"}),
+                      (r".", {"mode": "keep", "desat": 0.5, "rough": 0.6})],
+        "groups": {"prop_1": [("name", r"^defaultMaterial\.002$")]},
+        "pivots": {"prop_1": "center"},
+        "paint": JET, "tris": 6000, "weight": {"prop_1": 0.4},
+    },
+    "e_carrier": {
+        # two-engine missile carrier; light grey skin with red stars, a red side number and a green tail band
+        "root": "carrier", "rot": (0, 0, 90), "ground": False,
+        "materials": [(r"Material_381", GLASS),
+                      (r"^(material|Panel)$", {"mode": "keep", "rough": 0.7, "color": (0.1, 0.1, 0.1)}),
+                      # light grey skin is paint; the dark radome, intakes and nozzles stay
+                      (r".", {"mode": "auto", "hue": [], "gray": (0.45, 1.0)})],
+        "erase": {k: [(0.46, 0.05, 0.58, 0.137),                                        # side number
+                      (0.558, 0.215, 0.832, 0.301), (0.769, 0.5, 1.0, 0.617),          # fin band, fin star
+                      (0.578, 0.785, 0.649, 0.856), (0.254, 0.789, 0.324, 0.856),      # wing stars
+                      (0.394, 0.418, 0.578, 0.434), (0.867, 0.422, 0.93, 0.434)]        # red stencil lines
+                  for k in ("BODY1", "BODY2", "BODY2_0", "003l.paa")},
+        # landing gear, its doors and the wingtip outriggers hang below the belly: the game shows it in flight
+        "drop_box": [(-1, 1, -1, 1, -1, -0.045)],
+        "paint": dict(JET, marks=[((0.46, 1, -1, 1, -1, 1), JET_RED), ((-1, 1, 0.245, 1, -1, 1), JET_RED),
+                                  ((-1, 1, -1, -0.245, -1, 1), JET_RED), ((-1, -0.25, -1, 1, 0.075, 1), JET_RED)]),
+        "tris": 12000,
+    },
+    "e_transport": {
+        # four-engine turboprop; a sand/green camouflage with a tail emblem, serial and faded wing roundels.
+        # The single-mesh source is split into loose parts so each propeller becomes a prop_N node (axis X)
+        "root": "transport", "rot": (0, 0, 90), "ground": False, "split": r"^Object_",
+        "materials": [(r"Cockpit", {"mode": "auto", "hue": [(25, 170)], "smin": 0.1}),
+                      # whole skin textures are paint: an "auto" mask leaves light pixels out, and the camouflage
+                      # flattening (which brightens the dark blobs) would show them as white specks
+                      (r"Fuselage|Wings|^plane_body", {"mode": "paint", "flatten": 15}),
+                      (r".", {"mode": "keep", "desat": 0.6, "rough": 0.7})],
+        "erase": {"C130_Wings_Left.002": [(0.78, 0.77, 0.96, 0.97), (0.25, 0.04, 0.37, 0.16), (0.57, 0.19, 0.69, 0.31)],
+                  "C130_Wings_Right.002": [(0.76, 0.77, 0.94, 0.97), (0.25, 0.04, 0.37, 0.16), (0.57, 0.19, 0.69, 0.31)]},
+        "drop_box": [(-1, 1, -1, 1, -1, -0.15)],   # wheels and gear legs
+        "groups": {"prop_%d" % (i + 1): [("box", (0.19, 0.22, y - 0.035, y + 0.035, -0.14, 0.0))]
+                   for i, y in enumerate((0.341, 0.171, -0.171, -0.342))},
+        "pivots": {"prop_1": (0.203, 0.341, -0.061), "prop_2": (0.203, 0.171, -0.072),
+                   "prop_3": (0.203, -0.171, -0.072), "prop_4": (0.203, -0.342, -0.061)},
+        "paint": dict(JET, marks=[((0.47, 1, -1, 1, -1, 1), JET_RED), ((-1, -0.3, -1, 1, 0.15, 1), JET_RED)]),
+        "tris": 16000, "weight": {"prop_%d" % i: 0.3 for i in range(1, 5)},
+    },
+    "e_rival": {
+        # fictional concept fighter: its grey digital camo becomes the enemy scheme; the gold canopy, the yellow
+        # stencil lines and the blue nozzle glow (saturated) stay
+        "root": "rival", "rot": (0, 0, 90), "ground": False,
+        "materials": [(r".", {"mode": "auto", "hue": [], "gray": (0.03, 1.0), "flatten": 15})],
+        "paint": dict(JET, marks=[((0.46, 1, -1, 1, -1, 1), JET_RED), ((-1, 1, 0.3, 1, -1, 1), JET_RED),
+                                  ((-1, 1, -1, -0.3, -1, 1), JET_RED), ((-1, -0.25, -1, 1, 0.08, 1), JET_RED)]),
+        "tris": 12000,
+    },
 }
 
 # «Оса» lvl 1 hangar close-up: the same rework without decimation, subdivided once (the source has ~11k visible
