@@ -6,7 +6,9 @@ extends RefCounted
 var m: Main
 ## CR-05: A/X/B/Y are both combat actions and "pick card 1–4"; a press held from the fight must not
 ## blindly pick a card on the level-up or course screen, so input waits this long after it opens.
-const CARD_INPUT_DELAY := 0.3
+## Kanta 25.10: long enough that a click or key mashed in the fight lands before the cards
+## are live (keys, gamepad and mouse alike — Main checks it too); the cards fade in meanwhile.
+const CARD_INPUT_DELAY := 0.6
 
 
 func _init(main: Main) -> void:

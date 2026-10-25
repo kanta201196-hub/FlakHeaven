@@ -147,6 +147,18 @@ func _fit_now(s: String, width: float, fsize: int, f: Font) -> String:
 		s = s.substr(0, s.length() - 1)
 	return s + "…"
 
+## Card-screen fade-in: covers `rects` with the backdrop colour, fully at `state_t` 0 and gone
+## once the pick delay (MainInput.CARD_INPUT_DELAY) is over, so cards "develop" while input is
+## still blocked and look live exactly when they become clickable (Kanta 25.10).
+func _fade_in(rects: Array, state_t: float) -> void:
+	var k := clampf(state_t / MainInput.CARD_INPUT_DELAY, 0.0, 1.0)
+	if k >= 1.0:
+		return
+	var a := 0.9 * (1.0 - k)
+	for r: Rect2 in rects:
+		ctrl.draw_rect(r.grow(4.0), Color(0.03, 0.035, 0.04, a))
+
+
 ## 3.1: у всего текста интерфейса тёмная обводка — читается на светлой земле
 ## Перевод: ключ — русская фраза; без таблицы перевода строка выводится как есть
 func _text(pos: Vector2, s: String, size := 20, color := Color(0.92, 0.95, 1.0), align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:

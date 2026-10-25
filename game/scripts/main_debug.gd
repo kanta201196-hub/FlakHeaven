@@ -308,6 +308,8 @@ func _hud_test() -> void:
 var _hud_at := 0
 
 var _cu_phase := 0
+## The card fade-in frame of the combat UI test is taken (once per run)
+var _cu_fade := false
 
 ## Combat UI v2 frames (HUD with a skill tooltip, card pick, pause blueprint, results) on a
 ## mid-sortie build: 07:42, level 14, three weapons, modules and wingmen.
@@ -354,6 +356,9 @@ func _combat_ui_test() -> void:
 		m.run.debug_set(&"pending_levels", 1)
 		m._open_levelup()
 		_cu_phase = 3
+	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.25 and not _cu_fade:
+		_shot("cu_levelup_fade")   # cards still developing, picks blocked (MainInput.CARD_INPUT_DELAY)
+		_cu_fade = true
 	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.5 and _hud_at < now - 1000:
 		# weapon upgrade cards in the frame: the laser's long title (S11-26) and a «now / at lv. N» text (S11-20)
 		var ups: Array = []
@@ -543,6 +548,10 @@ func _aa_flat_test() -> void:
 
 func _debug_screenshots(delta: float) -> void:
 	_shot_t += delta / maxf(Engine.time_scale, 0.01)
+	# before the settle delay: the combat UI test also frames the card fade-in at 0.25 s
+	if m._args.has("--combatui") and m.state in ["playing", "paused", "evac", "levelup"]:
+		_combat_ui_test()
+		return
 	if m._state_t < 0.6:
 		return
 	if m._args.has("--uitest") and m.state in ["playing", "paused", "evac", "levelup", "codex"]:
@@ -550,9 +559,6 @@ func _debug_screenshots(delta: float) -> void:
 		return
 	if m._args.has("--hudtest") and m.state == "playing":
 		_hud_test()
-		return
-	if m._args.has("--combatui") and m.state in ["playing", "paused", "evac", "levelup"]:
-		_combat_ui_test()
 		return
 	if m.state == "menu" and m._state_t > 1.0:
 		_shot("menu")
