@@ -39,7 +39,7 @@ const FLIGHT := [
 static var _t := 0.0
 static var _head := H0         # course without the weave (along the route)
 static var _rate := 0.0        # its turn rate, rad/s
-static var _route := PackedVector2Array()   # river line, ROUTE_STEP apart, in flight order
+static var _route := TitleRoute.new(ROUTE_STEP, ROUTE_WIN)   # traced river and its moving average
 static var _dir := Vector2.ZERO             # tracing direction at the route's last point
 static var _s := 0.0                        # camera's place on the route, px of river
 static var _off := Vector2.ZERO             # camera minus route when the route started (eased out)
@@ -68,14 +68,14 @@ static func advance(dt: float, pos := Vector2.INF) -> Vector2:
 		_head = lerp_angle(_head, H0, 1.0 - exp(-dt * TURN_K))
 		_rate = 0.0
 		return Vector2.from_angle(heading()) * SPEED * dt
-	if _route.is_empty() or not _last.is_finite() or pos.distance_to(_last) > 1.0:
+	if _route.size() == 0 or not _last.is_finite() or pos.distance_to(_last) > 1.0:
 		_start_route(t, pos)   # first frame, or the camera was moved (new menu visit after a sortie)
 	_trace(t)
-	var c0 := _route_point(_s)
-	var tan := _route_point(_s + 60.0) - _route_point(_s - 60.0)
+	var c0 := _route.point(_s)
+	var tan := _route.point(_s + 60.0) - _route.point(_s - 60.0)
 	var k := tan.length() / 120.0   # smoothed path length per px of river (< 1 on meanders)
 	_s += SPEED * dt / clampf(k, 0.25, 1.0)
-	var c1 := _route_point(_s)
+	var c1 := _route.point(_s)
 	var prev := _head
 	if (c1 - c0).length_squared() > 1e-6:
 		_head = lerp_angle(_head, (c1 - c0).angle(), 1.0 - exp(-dt * TURN_K))
@@ -98,13 +98,14 @@ static func _terrain() -> Terrain3D:
 static func _start_route(t: Terrain3D, pos: Vector2) -> void:
 	var p := _to_river(t, pos)
 	_dir = _river_tangent(t, p, Vector2.from_angle(H0))
-	_route = PackedVector2Array([p])
+	_route.clear()
+	_route.add(p)
 	_s = 0.0
 	_trace(t)
-	_off = pos - _route_point(0.0)
+	_off = pos - _route.point(0.0)
 	_off_t = 0.0
-	if (_route_point(60.0) - _route_point(-60.0)).length_squared() > 1e-6:
-		_head = (_route_point(60.0) - _route_point(-60.0)).angle()
+	if (_route.point(60.0) - _route.point(-60.0)).length_squared() > 1e-6:
+		_head = (_route.point(60.0) - _route.point(-60.0)).angle()
 
 
 ## Extends the route so it reaches ROUTE_AHEAD + ROUTE_WIN past the camera (spread over frames)
@@ -112,25 +113,10 @@ static func _trace(t: Terrain3D) -> void:
 	var need := int((_s + ROUTE_WIN + ROUTE_AHEAD) / ROUTE_STEP) + 1
 	var n := 0
 	while _route.size() < need and n < ROUTE_PER_FRAME:
-		var last := _route[_route.size() - 1]
-		var p := _to_river(t, last + _dir * ROUTE_STEP, 2)
+		var p := _to_river(t, _route.last() + _dir * ROUTE_STEP, 2)
 		_dir = _river_tangent(t, p, _dir)
-		_route.append(p)
+		_route.add(p)
 		n += 1
-
-
-## Route centre at s px of river: the mean of the river samples within ±ROUTE_WIN (clamped to the
-## traced part, so the start of the route is the river itself)
-static func _route_point(s: float) -> Vector2:
-	if _route.is_empty():
-		return Vector2.ZERO
-	var last := _route.size() - 1
-	var i0 := clampi(int((s - ROUTE_WIN) / ROUTE_STEP), 0, last)
-	var i1 := clampi(int((s + ROUTE_WIN) / ROUTE_STEP), 0, last)
-	var sum := Vector2.ZERO
-	for i in range(i0, i1 + 1):
-		sum += _route[i]
-	return sum / float(i1 - i0 + 1)
 
 
 ## Newton steps onto the river line (river_field = 0), each at most 1500 px
