@@ -4,6 +4,9 @@ extends Node2D
 
 var hp := 10.0
 var max_hp := 10.0
+## Size of the HP bar and the defence mark over the enemy, share of the hitbox: below 1 they are smaller and
+## sit closer (FortArea's tower launchers and yard jeeps, Kanta 25.10: the full-size bars dwarfed the fort).
+var hud_k := 1.0
 var radius := 14.0
 var big := false
 var kill_shake := 2.0
@@ -283,7 +286,7 @@ func _process(delta: float) -> void:
 		move_vel = move_vel.lerp((global_position - _prev_pos) / delta, 0.3)
 	_prev_pos = global_position
 	if anchor != Vector2.INF:
-		global_position = GroundTarget.air_pos(anchor)
+		global_position = GroundTarget.air_pos(anchor, anchor_lift())
 	if leaving:
 		_leave(delta)
 		return
@@ -584,13 +587,22 @@ func apply_hp_mult(m: float) -> void:
 	max_hp = hp
 
 
-## Полоска прочности у повреждённых крупных врагов.
+## Height of the 3D model above the ground at `anchor` (a tower-top launcher); the logic position, hitbox
+## and HP bar are projected from that height so they sit on the model, not on the ground under it.
+func anchor_lift() -> float:
+	return 0.0
+
+
+## Полоска прочности у повреждённых крупных врагов; `hud_k` < 1 — короче и ближе к цели.
 func draw_hp_bar() -> void:
 	if hp >= max_hp or max_hp < 30.0:
 		return
-	var w := radius * 2.0
-	draw_rect(Rect2(-radius, -radius - 12.0, w, 4.0), Color(0, 0, 0, 0.6))
-	draw_rect(Rect2(-radius, -radius - 12.0, w * hp / max_hp, 4.0), Color(1.0, 0.4, 0.3))
+	var k := hud_k
+	var w := radius * 2.0 * k
+	var h := 4.0 if k >= 1.0 else 3.0
+	var y := -radius - 12.0 if k >= 1.0 else -radius * k - 8.0   # a small bar sits close over its target
+	draw_rect(Rect2(-w * 0.5, y, w, h), Color(0, 0, 0, 0.6))
+	draw_rect(Rect2(-w * 0.5, y, w * hp / max_hp, h), Color(1.0, 0.4, 0.3))
 
 
 ## Выстрел по игроку с упреждением.
@@ -677,7 +689,7 @@ func draw_enemy_sprite(tex_name: String, length: float, tint := Color.WHITE, ang
 
 ## EX-04: значок защиты над врагом — броня (серый щит), манёвренный (жёлтые шевроны), помехи (фиолетовые дуги)
 func draw_defense_mark() -> void:
-	var y := -radius - 16.0
+	var y := -radius - 16.0 if hud_k >= 1.0 else -radius * hud_k - 15.0   # right over a small HP bar
 	match defense:
 		"armor":
 			var sh := PackedVector2Array([Vector2(-6, y - 6), Vector2(6, y - 6), Vector2(6, y), Vector2(0, y + 6), Vector2(-6, y)])

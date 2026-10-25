@@ -43,24 +43,27 @@ static func forts_near(bg: Background, want: Vector2, reach: float) -> Array:
 	return out
 
 
-## Unit-mesh point of the fort (AdobeBuild.fort, gate in +z) to world px, the way Render3D draws it:
+## Unit-mesh point of the fort (FortBuild.mesh, gate in +z) to world px, the way Render3D draws it:
 ## scaled by size, turned by rot.
 static func fort_point(f: Dictionary, unit: Vector2) -> Vector2:
 	return (f["pos"] as Vector2) + unit.rotated(float(f["rot"])) * float(f["size"])
 
 
-## The four tower tops: (-,-), (+,-), (-,+), (+,+) in unit-mesh order.
+## The four tower pads (round corner towers of FortBuild): (-,-), (+,-), (-,+), (+,+) in unit-mesh order.
 static func tower_points(f: Dictionary) -> PackedVector2Array:
-	var k := 0.42 - 0.17 * 0.4
+	var k := FortBuild.TOWER_C
 	var out := PackedVector2Array()
 	for s: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
 		out.append(fort_point(f, s * k))
 	return out
 
 
-## Two jeep spots in the yard: south of the citadel, either side of the gate road, clear of the rooms.
+## Two jeep spots in the yard (FortBuild.YARD): by the citadel's door and by the gate road.
 static func yard_points(f: Dictionary) -> PackedVector2Array:
-	return PackedVector2Array([fort_point(f, Vector2(-0.17, 0.19)), fort_point(f, Vector2(0.21, 0.17))])
+	var out := PackedVector2Array()
+	for q: Vector2 in FortBuild.YARD:
+		out.append(fort_point(f, q))
+	return out
 
 
 ## A launcher may start a lock while missiles in the air plus locks in progress stay under the cap.
@@ -78,7 +81,7 @@ func setup_fort(f: Dictionary, hp_mult: float, dps := 0.0) -> void:
 	for i in tops.size():
 		var g := GroundTarget.new()
 		g.fixed = true
-		g.mount_h = float(f["size"]) * FortBalance.TOWER_H
+		g.mount_h = float(f["size"]) * FortBuild.TOWER_TOP
 		g.setup("sam", self, hp_mult, dps)
 		g.position = tops[i]
 		launchers.append(g)

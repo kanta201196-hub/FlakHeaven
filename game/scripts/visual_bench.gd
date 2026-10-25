@@ -104,6 +104,7 @@ func process(delta: float) -> void:
 			var fp: Vector2 = p["fort"]
 			var f := FortArea.pick_fort(FortArea.forts_near(m.background, fp, 900.0), fp, 900.0)
 			if not f.is_empty():
+				_fa_fort = f
 				var base := FortArea.new()
 				base.setup_fort(f, 1.0)
 				for g in base.targets:
@@ -111,6 +112,9 @@ func process(delta: float) -> void:
 					g.max_hp = 99999.0
 				base.active = true
 				m.world.add_child(base)
+		if not _fa_fort.is_empty():   # the camera on the 3D fort (pushed off the river), not the raw chunk spot
+			var at: Vector2 = FortArea.tower_points(_fa_fort)[3] if p.get("on_tower", false) else _fa_fort["pos"]
+			p["pos"] = at + (p.get("off", Vector2.ZERO) as Vector2)
 	elif p.get("ground", false):
 		if not _g_spawned:
 			_g_spawned = true
@@ -520,7 +524,7 @@ func _print_sizes(name: String) -> void:
 func _print_fort_size(name: String, fp: Vector2, px_k: float) -> void:
 	var r3 := Render3D.I
 	for mi: Node in r3._objs.values():
-		if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh != AdobeBuild.fort():
+		if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh != FortBuild.mesh():
 			continue
 		var n3 := mi as MeshInstance3D
 		if Vector2(n3.global_position.x, n3.global_position.z).distance_to(fp) > 5.0:
@@ -595,8 +599,10 @@ func _make_points() -> Array:
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	if found.has("o_fort"):   # FA-01: the fortified-area base — whole fort and a tower launcher close up
-		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
-		pts.append({"name": "fort_area_close", "pos": found["o_fort"] + Vector2(0, 250), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
+		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "off": Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
+		pts.append({"name": "fort_area_close", "pos": found["o_fort"], "off": Vector2(0, 60), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
+		# FA-02: the tower, its launcher, sandbags and the wall textures up close
+		pts.append({"name": "fort_area_tower", "pos": found["o_fort"], "off": Vector2(-60, 40), "on_tower": true, "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 6.0, "wait": 2.0})
 	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
 		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
 		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
@@ -958,6 +964,7 @@ func _sam_poses(p: Dictionary) -> void:
 		sam.launches = 1
 var _g_spawned := false
 var _fa_spawned := false
+var _fa_fort: Dictionary = {}   # FA-02: the fort the bench base stands on, for the camera points
 
 
 ## VIS-01 unit close-ups: kind -> [enemy texture, sprite length, camera zoom]. Lengths are the game's own

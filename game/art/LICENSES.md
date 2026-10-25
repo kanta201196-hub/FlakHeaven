@@ -15,6 +15,18 @@
 | `pbr/river_*` | River Small Rocks (`river_small_rocks`) | Rob Tuytel, Rico Cilliers | https://polyhaven.com/a/river_small_rocks |
 | `pbr/rock_*` | Cliff Side (`cliff_side`) | James Ray Cock, Jenelle van Heerden, Dario Barresi | https://polyhaven.com/a/cliff_side |
 
+## Текстуры крепости «Укрепрайон» (`game/art/fort/`), Poly Haven — https://polyhaven.com/license
+
+Набор Г «Штукатурка с камнем» (выбор Kanta 25.10.2026). 1K jpg без изменений: цвет (`_color`), нормаль OpenGL (`_normal`), AO/шероховатость/металл (`_arm`). Модель — `game/scripts/fort_build.gd`.
+
+| Файлы | Набор | Авторы | Страница |
+| --- | --- | --- | --- |
+| `fort/plaster_*` | Plaster Stone Wall 01 (`plaster_stone_wall_01`) | Charlotte Baglioni | https://polyhaven.com/a/plaster_stone_wall_01 |
+| `fort/stone_*` | Old Stone Wall (`old_stone_wall`) | Charlotte Baglioni | https://polyhaven.com/a/old_stone_wall |
+| `fort/brick_*` | Brown Brick 02 (`brown_brick_02`) | Rob Tuytel | https://polyhaven.com/a/brown_brick_02 |
+| `fort/conc_*` | Concrete Wall 008 (`concrete_wall_008`) | Dario Barresi, Charlotte Baglioni | https://polyhaven.com/a/concrete_wall_008 |
+| `fort/wood_*` | Old Planks 02 (`old_planks_02`) | Rob Tuytel | https://polyhaven.com/a/old_planks_02 |
+
 ## Портреты экипажа (`portraits/*.png`)
 Сгенерированы владельцем проекта в ChatGPT по промптам из `/mnt/project-files/progression/portraits_chatgpt_prompts.md` (2026-10-16). Уменьшены до 256×384. Оригиналы (1024×1536; «Оса» v2 — 1448×1086, обрезка по центру 2:3) хранятся в общей папке проекта (`progression/portraits/`).
 

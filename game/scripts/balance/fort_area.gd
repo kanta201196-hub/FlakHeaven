@@ -17,5 +17,3 @@ const REACH := 6000.0   # 3000 found a fort ahead only 55 % of the time, 6000 �
 const CLEAR_R := 2600.0
 ## Missile `who` of the base: the base counts its own missiles in the air by it.
 const WHO := "укрепрайон"
-## Tower top above the ground, share of the fort size (unit mesh tower height 0.17, AdobeBuild.fort).
-const TOWER_H := 0.17
