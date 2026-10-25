@@ -497,8 +497,8 @@ msgid "Ракета залпа сразу даёт объёмный взрыв 1
 msgstr "Salvo rockets give a 130 px fuel-air blast on impact (dmg ×1.5); nearby blasts merge: up to ×2"
 
 #: game/scripts/cards.gd:130
-msgid "прилипающие ракеты, объёмный взрыв"
-msgstr "sticky rockets, fuel-air blast"
+msgid "объёмный взрыв при попадании"
+msgstr "fuel-air blast on impact"
 
 #: game/scripts/cards.gd:131
 msgid "Огненный вал"
