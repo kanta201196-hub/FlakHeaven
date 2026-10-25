@@ -347,8 +347,8 @@ Spec `docs/superpowers/specs/2026-10-25-fortified-area-design.md`, plan `docs/su
 
 | ID | Task | Thread / owner | Status |
 | --- | --- | --- | --- |
-| FA-01 | Activity logic: spawner `"fort"`, map fort pick, banner, 4 fixed launchers (≤ 4 missiles), 2 yard jeeps, reward, unit tests | Укрепрайон | in progress |
-| FA-02 | Fort model set Г (Blender, by code), pieces with broken variants, tower launcher GLB | Укрепрайон | planned |
+| FA-01 | Activity logic: spawner `"fort"`, map fort pick, banner, 4 fixed launchers (≤ 4 missiles), 2 yard jeeps, reward, unit tests | Укрепрайон | done (#427) |
+| FA-02 | Fort model set Г (procedural fort_build.gd), pieces with broken variants, tower launcher GLB | Укрепрайон | in progress |
 | FA-03 | Conditional destructibility: piece HP from explosives, state swaps, debris and scorch, stays broken | Укрепрайон | planned |
 | FA-04 | Frames from the game on 3 graphics presets for Kanta | Укрепрайон | planned |
 

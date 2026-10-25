@@ -25,7 +25,7 @@ Review page with sketches and texture renders: https://claude.ai/artifact/GNjvcT
 
 ## How it plays
 
-- **Where:** a real `o_fort` of the map. When the activity's turn comes, the spawner picks the fort nearest to a point ~1700 px ahead of the player within 3000 px (*guess*). No fort in reach → the activity is skipped this round (next one in the rotation starts), so no fort ever pops out of nothing.
+- **Where:** a real `o_fort` of the map. When the activity's turn comes, the spawner picks the fort nearest to a point ~1700 px ahead of the player within 6000 px (measured: 3000 found a fort 55 % of the time, 6000 found one 94 %). No fort in reach → the activity is skipped this round (next one in the rotation starts), so no fort ever pops out of nothing.
 - **Start:** arrow as other activities. Approach closer than 1150 px (as the AA site) → banner «Обнаружена база противника» (translation key), alarm, timer **90 s** (*guess*; optional-activity timers are allowed).
 - **Defence:** 4 corner towers, each a SAM launcher on a turntable. Launcher logic = `GroundTarget` `sam`: lock `msl_sam_lock`, cooldown 5–6.5 s, range 900 px. Fort-wide cap: **at most 4 fort missiles in the air** (Kanta 25.10). Launchers don't drive; they rise, turn after the plane, lock, launch, kick (existing `_sam_launcher` animation).
 - **Yard jeeps:** 2 convoy technicals (`fh_battle_e_convoy_technical.glb`) parked in the yard, same behaviour and HP as the convoy technical, but they never leave the yard (*guess*; Kanta may prefer pure decor). Not required for the goal.

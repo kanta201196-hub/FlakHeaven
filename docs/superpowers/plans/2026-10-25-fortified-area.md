@@ -29,7 +29,7 @@ Uses today's fort mesh and the normal SAM truck model parked on the tower tops; 
    - `static func can_lock(in_air: int, locking: int, cap: int) -> bool` — `in_air + locking < cap`. Test cap 4.
    - Tests: `game/tests/fort_area_test.gd`, run by `tools/ci/unit.sh`.
 2. **Balance file** `game/scripts/balance/fort_area.gd`: `MISSILE_CAP := 4` (Kanta), `ACTIVATE_R := 1150.0`,
-   `LIMIT := 90.0` (*guess*), `REACH := 3000.0` (*guess*), `AHEAD := 1700.0`, jeep count 2.
+   `LIMIT := 90.0` (*guess*), `REACH := 6000.0` (measured, 94 % find rate), `AHEAD := 1700.0`, jeep count 2.
 3. **GroundTarget**: `fixed := false` flag — `mobile()` returns false when fixed; SAM lock asks
    `site.can_launch()` (AASite: always true; FortArea: the cap); `kind()` returns `"укрепрайон"` for fort
    pieces so the fort can count its own missiles in `Projectiles.missiles`.
@@ -78,4 +78,4 @@ Burning store, burnt jeep/truck variants, smoke columns; final frames page for K
 
 ## Open numbers (*guess*, tuned after the first play test)
 
-Timer 90 s, reach 3000 px, parts ×1.5, wall section pool (2 bomb hits).
+Timer 90 s, reach 6000 px (measured), parts ×1.5, wall section pool (2 bomb hits).
