@@ -16,6 +16,7 @@ const SMOKE_CUT := 0.4        # под дымом машины получают 
 const FAIRWAY := 0.0           # «Архипелаг»: фарватер — по оси пролива, посередине воды (замечание Kanta 21.10: караван «плыл» по суше); острова — дальше 280 пикс. от оси
 const STEP := 30.0            # шаг точек маршрута, пикс.
 const CARGO := {"truck": 30.0, "light": 15.0}
+const ROAD_DEV := 80.0   # max offset from the road axis on land, px: the road's outer half 22 + about a truck length
 const RIVER_SAFE := Terrain3D.RIVER_GUARD + 12.0   # A-07: центр машины вне охранной зоны у реки (M-35, тред «3D-модели») на полкорпуса
 const HELI_DELAY := 6.0       # M-41: через столько секунд после тревоги колонну прикрывают вертолёты «Сарыч» (решение Kanta 18.10)
 const VIEW_MARGIN := 220.0    # A-06: колонна появляется за краем видимой области с таким запасом
@@ -270,8 +271,17 @@ func _hidden_head(s0: float, offs: Array[float]) -> float:
 	return maxf(head, tail)
 
 
-## A-07: смещение от оси дороги, допустимое у реки: к воде не дальше обочины
+## Widest allowed offset from the road axis: ROAD_DEV on a land road, unlimited for the Archipelago
+## fairway and a valley-floor fallback route (they have no road to keep to)
+func lane_cap() -> float:
+	return ROAD_DEV if on_road and not _sea else INF
+
+
+## Allowed offset from the road axis. A-07: towards the river no farther than the shoulder. S11 (Kanta
+## 25.10): «держать их надо на дороге, максимум небольшие отклонения» — on land never more than ROAD_DEV
+## from the axis (guards pulling aside on alarm, a bypass round a wreck); the Archipelago keeps its lanes
 func safe_lane(lane: float) -> float:
+	lane = clampf(lane, -lane_cap(), lane_cap())
 	if river_sign == 0.0:
 		return lane
 	var to_water := Terrain3D.D_ROAD - RIVER_SAFE
@@ -692,6 +702,9 @@ func _process(delta: float) -> void:
 				row.append("%s:%d/%d%s" % [c.role.left(2), int(c.s), int(c.drive.speed), "x" if c.wreck else ""])
 				if _tr != null and on_road and not _sea and _tr.river_field(c.anchor.x, c.anchor.y) < Terrain3D.D_RIVER + 6.0:
 					print("AUTOTEST: convoy WET ", c.role)
+				var dev := absf(lateral_of(c.anchor, c.s))
+				if on_road and not _sea and not c.wreck and dev > ROAD_DEV + 20.0:
+					print("AUTOTEST: convoy OFFROAD %s %d px" % [c.role, int(dev)])
 		print("AUTOTEST: convoy t%d alarm=%s %s" % [int(_t), alarm, " ".join(row)])
 	queue_redraw()
 
