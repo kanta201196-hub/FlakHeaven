@@ -1034,6 +1034,22 @@ var _hclose: Array = ([
 ] if OS.get_cmdline_user_args().has("--hangarclose") else [])
 
 
+## S11 close-up views from the command line: --hcam=name:cls:lvl:tier:livery:fx:fy:fz:yaw:pitch:dist[;…]
+## (livery "-" keeps the profile's paint; focus in model units, plane length 1) → user://vis_hcam_<name><suffix>.png
+var _hcams: Array = []
+
+
+func _hcam() -> Array:
+	if _hcams.is_empty():
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--hcam="):
+				for e in a.get_slice("=", 1).split(";", false):
+					var f := e.split(":")
+					if f.size() == 11:
+						_hcams.append(Array(f))
+	return _hcams
+
+
 ## Тест 3.5-s8 (--mechanim): ракурсы показа механизации [фокус, рысканье, тангаж, дальность] по классам
 const MECH_FRAMES := 8
 const MECH_DT := 0.75   # с между кадрами: 8 кадров = полный цикл HangarAnim (6 с)
@@ -1060,6 +1076,14 @@ func _hangar_bench() -> void:
 					["bomber", 1, 1, 1], ["bomber", 1, 2, 1], ["bomber", 1, 3, 1], ["bomber", 1, 4, 1], ["bomber", 2, 3, 1],
 					["bomber", 1, 1, 0], ["bomber", 1, 2, 0], ["bomber", 2, 3, 0]]:
 				_hq.append(q)
+			_t = 0.0
+			return
+		if not _hcam().is_empty():
+			# S11: free close-ups of the hangar plane, one queue entry per --hcam view, rendered large
+			Hangar3D.bench_supersample = 2.5
+			for vi in _hcam().size():
+				var hv: Array = _hcam()[vi]
+				_hq.append([hv[1], int(hv[2]), int(hv[3]), "C", hv[4], vi])
 			_t = 0.0
 			return
 		if OS.get_cmdline_user_args().has("--mechanim"):
@@ -1197,6 +1221,16 @@ func _hangar_bench() -> void:
 			Hangar3D.I._pitch = mv[2]
 			Hangar3D.I._dist = mv[3]
 			Hangar3D.I._idle = 0.0
+		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":   # --hcam close-up
+			var cv: Array = _hcam()[cur[5]]
+			if String(cv[4]) != "-":
+				Profile.cls(cur[0])["livery"] = cv[4]
+			Hangar3D.bench_pitch_min = -1.3
+			Hangar3D.I.focus = Vector3(float(cv[5]), float(cv[6]), float(cv[7]))
+			Hangar3D.I._yaw = float(cv[8])
+			Hangar3D.I._pitch = float(cv[9])
+			Hangar3D.I._dist = float(cv[10])
+			Hangar3D.I._idle = 0.0
 		elif cur.size() > 4:   # --liveries: окраска из очереди (в профиль без сохранения)
 			Profile.cls(cur[0])["livery"] = cur[4]
 			if cur.size() > 5:   # --hangarclose: [фокус, рысканье, тангаж, дальность]
@@ -1244,7 +1278,12 @@ func _hangar_bench() -> void:
 	_hf += 1
 	var mech_next: bool = cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and int(cur[4]) > 0   # модель уже собрана
 	if (_hf > 8 and _t > 1.2 and (cur.size() < 6 or typeof(cur[3]) != TYPE_STRING or _hf > 14)) or (mech_next and _hf > 2):   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
-		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING:
+		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":
+			# S11: only the 3D view (SubViewport, supersampled), so the close-up is not shrunk into the hangar frame
+			var hn := "user://vis_hcam_%s%s.png" % [_hcam()[cur[5]][0], _suffix]
+			Hangar3D.I.vp.get_texture().get_image().save_png(hn)
+			print("VISUAL hcam %s" % hn)
+		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING:
 			# только сам вид ангара (SubViewport, с запасом по разрешению) — для серии кадров и GIF
 			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_mech_%s_v%d_f%02d.png" % [cur[0], cur[5], cur[4]])
 			if int(cur[4]) == 0 and cur[5] == 0:
