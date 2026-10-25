@@ -35,5 +35,6 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-28 | Before a NAR (unguided rocket) explosion there is a strange, clearly noticeable delay with a pulsing on the ground | effects thread | merged (PR #406): it was the «Термобарика» 0.5 s sticky delay; the blast is now on impact |
 | S11-29 | «Fortress» (Крепость) boss: turrets float in the air detached from the plane; the screenshot also shows the bomber drawn flat white/pink (screenshot s11_note_25.png) | 3D models thread | new |
 | S11-30 | Could not shoot down the «Fortress» boss on an upgraded «Grach» (balance: needs the balance method, one change per build cycle) | game design thread | fixed in the PR «Fortress: fight cap counts landed damage» (with GD-02 in the same build, Kanta) |
+| S11-31 | After a level-up add a short pause so a card cannot be picked by a reflex click or key from the fight (Kanta 25.10) | combat UI thread | merged (PR #416): picks, rerolls, locks and bans wait 0.6 s for keys, gamepad and mouse; cards fade in meanwhile |
 
 Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_25.png`.
