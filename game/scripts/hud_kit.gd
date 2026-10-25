@@ -22,7 +22,25 @@ static func ui_font() -> Font:
 ## keyboard key, else the mouse button. Follows rebinding because it reads InputMap.
 ## Keyboard only on purpose: no gamepad glyphs in hint bars (Kanta, 24.10); the gamepad
 ## column lives in the controls tab.
+## The HUD asks for the same keys every frame; resolving a physical key asks the OS (and in headless runs
+## prints an error each time), so labels are cached and refreshed twice a second — a rebind or a keyboard
+## layout switch shows within 0.5 s.
 static func key_label(action: String) -> String:
+	var now := Time.get_ticks_msec()
+	if now - _key_t > 500:
+		_key_cache.clear()
+		_key_t = now
+	if not _key_cache.has(action):
+		_key_cache[action] = _key_label(action)
+	return _key_cache[action]
+
+
+static var _key_cache := {}
+static var _key_t := 0
+
+
+## key_label() without the cache: reads InputMap now.
+static func _key_label(action: String) -> String:
 	if not InputMap.has_action(action):
 		return "?"
 	var mouse := ""
@@ -44,8 +62,24 @@ static func key_label(action: String) -> String:
 
 ## Word-wrapped lines of `s` (translated) for `width`, at most `max_lines`; the last one
 ## gets an ellipsis when text is left over. For centred captions under icon tiles.
+## Results are cached: tile captions are re-laid out every frame, and each try measures (shapes) a string.
 func _lines(s: String, width: float, fsize: int, font: Font = null, max_lines := 2) -> PackedStringArray:
 	var f := font if font != null else ui_font()
+	var key := [s, width, fsize, f.get_instance_id(), max_lines, TranslationServer.get_locale()]
+	if _lines_cache.has(key):
+		return _lines_cache[key]
+	if _lines_cache.size() > 2000:
+		_lines_cache.clear()
+	var res := _lines_now(s, width, fsize, f, max_lines)
+	_lines_cache[key] = res
+	return res
+
+
+static var _lines_cache := {}
+static var _fit_cache := {}
+
+
+func _lines_now(s: String, width: float, fsize: int, f: Font, max_lines: int) -> PackedStringArray:
 	var out := PackedStringArray()
 	var cur := ""
 	var words := Loc.out(s).split(" ", false)
@@ -68,6 +102,17 @@ func _lines(s: String, width: float, fsize: int, font: Font = null, max_lines :=
 ## body font); returns the translated string.
 func _fit(s: String, width: float, fsize: int, font: Font = null) -> String:
 	var f := font if font != null else ui_font()
+	var key := [s, width, fsize, f.get_instance_id(), TranslationServer.get_locale()]
+	if _fit_cache.has(key):
+		return _fit_cache[key]
+	if _fit_cache.size() > 2000:
+		_fit_cache.clear()
+	var res := _fit_now(s, width, fsize, f)
+	_fit_cache[key] = res
+	return res
+
+
+func _fit_now(s: String, width: float, fsize: int, f: Font) -> String:
 	s = Loc.out(s)
 	if f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x <= width:
 		return s

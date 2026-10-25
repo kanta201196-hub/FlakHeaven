@@ -63,12 +63,15 @@ func draw(m: Main, size: Vector2) -> void:
 		var age := fposmod(sweep - (q - c).angle(), TAU) / TAU
 		return lerpf(1.0, 0.3, age)
 	# враги: воздух — красные точки, наземные — оранжевые квадраты, асы — крупные малиновые
+	# the two lambdas above, inlined for the enemy marks: a lambda call costs more than its maths
+	var lim := rad - 4.0
 	for n in m.get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
 		if e == null or e.hp <= 0.0:
 			continue
-		var q: Vector2 = to_map.call(e.global_position)
-		var g: float = glow.call(q) * a
+		var d: Vector2 = (e.global_position - pp) * k
+		var q: Vector2 = c + (d.normalized() * lim if d.length() > lim else d)
+		var g: float = lerpf(1.0, 0.3, fposmod(sweep - (q - c).angle(), TAU) / TAU) * a
 		if e.is_boss:
 			ctrl.draw_circle(q, 5.0, Color(1.0, 0.3, 0.65, maxf(g, 0.7 * a)))
 			ctrl.draw_arc(q, 7.5, 0.0, TAU, 16, Color(0, 0, 0, 0.7 * a), 1.5)
@@ -122,21 +125,30 @@ func _diamond(p: Vector2, s: float, col: Color) -> void:
 	ctrl.draw_colored_polygon(inner, col)
 
 
-## Река: кэш-картинка по полю долин; пересчёт, когда игрок сдвинулся на 1/8 обзора
+## Река: кэш-картинка по полю долин; пересчёт, когда игрок сдвинулся на 1/8 обзора.
+## The first picture is built at once; later ones are built RIVER_ROWS rows per frame into a spare image
+## while the old one stays on screen (it is drawn with the offset from where it was taken, as between
+## rebuilds), then swapped in. A whole rebuild is 1600 field samples, a 20–40 ms hitch in one frame.
+const RIVER_ROWS := 3
+var _river_img: Image = null   # picture being built
+var _river_row := 0
+var _river_new_at := Vector2.ZERO
+
+
 func _draw_river(r: Rect2, pp: Vector2, a: float) -> void:
 	if Render3D.I == null or Render3D.I.terrain == null:
 		return
-	if _river_tex == null or pp.distance_to(_river_at) > RANGE / 8.0:
-		var img := Image.create(RIVER_N, RIVER_N, false, Image.FORMAT_RGBA8)
-		var step := RANGE * 2.0 / RIVER_N
-		for iy in RIVER_N:
-			for ix in RIVER_N:
-				var wp := pp + Vector2((ix + 0.5) * step - RANGE, (iy + 0.5) * step - RANGE)
-				var v := absf(Render3D.I.terrain.river_field(wp.x, wp.y))
-				var w := clampf(1.0 - (v - (Terrain3D.SEA_W if Biome.sea() else Terrain3D.D_RIVER)) / (step * 0.6), 0.0, 1.0)
-				img.set_pixel(ix, iy, Color(0.3, 0.6, 0.85, w))
-		_river_tex = ImageTexture.create_from_image(img)
-		_river_at = pp
+	var rt := Time.get_ticks_usec()
+	if _river_tex == null or pp.distance_to(_river_at) > RANGE:   # first picture or a jump (new sortie)
+		_river_start(pp)
+		_river_rows(RIVER_N)
+	elif _river_img == null and pp.distance_to(_river_at) > RANGE / 8.0:
+		_river_start(pp)
+	if _river_img != null:
+		_river_rows(RIVER_ROWS)
+	if Perf.on:
+		Perf.peak("hud.river_max", Time.get_ticks_usec() - rt)
+		Perf.sub("hud.river", rt)
 	# кэш снят в другой точке — берём из него окно под текущую позицию (за краем — крайние пиксели)
 	# окно кэша под текущую позицию (UV), рисуем кругом — по форме экрана радара
 	var off := (pp - _river_at) / (RANGE * 2.0)
@@ -148,3 +160,28 @@ func _draw_river(r: Rect2, pp: Vector2, a: float) -> void:
 		pts.append(c + d * r.size.x * 0.5)
 		uvs.append(Vector2(0.5, 0.5) + d * 0.5 + off)
 	ctrl.draw_polygon(pts, PackedColorArray([Color(1, 1, 1, 0.6 * a)]), uvs, _river_tex)
+
+
+func _river_start(pp: Vector2) -> void:
+	_river_img = Image.create(RIVER_N, RIVER_N, false, Image.FORMAT_RGBA8)
+	_river_row = 0
+	_river_new_at = pp
+
+
+## Fills up to `n` more rows of the picture being built; the last row swaps it in.
+func _river_rows(n: int) -> void:
+	var step := RANGE * 2.0 / RIVER_N
+	var edge := Terrain3D.SEA_W if Biome.sea() else Terrain3D.D_RIVER
+	var ter := Render3D.I.terrain
+	var end := mini(_river_row + n, RIVER_N)
+	for iy in range(_river_row, end):
+		for ix in RIVER_N:
+			var wp := _river_new_at + Vector2((ix + 0.5) * step - RANGE, (iy + 0.5) * step - RANGE)
+			var v := absf(ter.river_field(wp.x, wp.y))
+			var w := clampf(1.0 - (v - edge) / (step * 0.6), 0.0, 1.0)
+			_river_img.set_pixel(ix, iy, Color(0.3, 0.6, 0.85, w))
+	_river_row = end
+	if _river_row >= RIVER_N:
+		_river_tex = ImageTexture.create_from_image(_river_img)
+		_river_at = _river_new_at
+		_river_img = null

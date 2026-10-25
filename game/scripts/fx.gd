@@ -339,7 +339,15 @@ func _rblob(tex: Texture2D, p: Vector2, r: float, rot: float, c: Color) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
+## Perf (--perf) times every 2D layer's _draw: it runs in the deferred flush after _process, outside the probes
 func _draw() -> void:
+	var t0 := Time.get_ticks_usec() if Perf.on else 0
+	_draw_layer()
+	if Perf.on:
+		Perf.sub("draw.fx", t0)
+
+
+func _draw_layer() -> void:
 	if OS.get_cmdline_user_args().has("--nofx"):
 		return
 	for s in smokes:
