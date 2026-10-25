@@ -57,7 +57,7 @@ static func spec_of(tex: Texture2D) -> Dictionary:
 	return SPEC.get(tex.resource_path.get_file().get_basename(), {})
 
 
-## Создаёт огонь сопел и винты на самолёте (u — запись Render3D._units)
+## Creates engine flames and props on a plane (u — a Render3D / TitleFlight unit; fills u.fx, u.props)
 static func attach(u: Unit3D, tex: Texture2D) -> void:
 	var s := spec_of(tex)
 	var root: Node3D = u.node
@@ -114,7 +114,7 @@ static func attach(u: Unit3D, tex: Texture2D) -> void:
 		fx["trail"].append(Vector3(pt.x, y, pt.y))
 
 
-## boost 0…1 — форсаж; винты крутятся всегда, пламя дрожит и вытягивается на форсаже
+## Per frame for unit u: boost 0…1 is afterburner; props always spin, flames flicker and stretch on boost
 static func update(u: Unit3D, delta: float, boost: float, on := true) -> void:
 	var fx: Dictionary = u.fx
 	if fx.is_empty():
@@ -142,7 +142,7 @@ static func update(u: Unit3D, delta: float, boost: float, on := true) -> void:
 			q.basis = Basis(Vector3.RIGHT, -PI / 2.0 if i == 0 else 0.0) * Basis.from_scale(Vector3(ln, wd, 1.0))
 
 
-## Т-3: голубой факел (модуль «Форсированный двигатель» ур. 5)
+## T-3: blue flame on unit u (module «Форсированный двигатель» lv. 5)
 static func set_blue(u: Unit3D, on: bool) -> void:
 	var fx: Dictionary = u.fx
 	if fx.is_empty() or bool(fx.get("blue", false)) == on:
@@ -153,7 +153,7 @@ static func set_blue(u: Unit3D, on: bool) -> void:
 			(q as MeshInstance3D).material_override = _flame_blue if on else _flame_mat
 
 
-## Точки следа в мировых координатах
+## Trail points of unit u in world coordinates
 static func trail_points(u: Unit3D) -> Array:
 	var out := []
 	var fx: Dictionary = u.fx

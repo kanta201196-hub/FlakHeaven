@@ -89,7 +89,7 @@ static func _set_model(p: Dictionary, broken: bool) -> void:
 		(p["turret"] as Node3D).rotation.y = float(p["yaw"])
 
 
-## Каждый кадр после _place корпуса. u — запись Render3D (node → сцена корпуса), ws — корабль.
+## Every frame after the hull is placed. u — the ship's Render3D unit (u.node holds the hull scene), ws — the ship.
 static func update(u: Unit3D, ws: Warship, delta: float) -> void:
 	var root: Node3D = u.node
 	if root.get_child_count() == 0:

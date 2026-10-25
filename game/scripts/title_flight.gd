@@ -217,7 +217,7 @@ func sync(on: bool, delta: float) -> void:
 	var right := fwd.orthogonal() * -1.0   # вправо по курсу (2D: y вниз)
 	var bank := clampf(turn_rate() * BANK_K, -0.35, 0.35)
 	for u: Unit3D in _units:
-		var w := wobble(float(u.ph))
+		var w := wobble(u.wob)
 		var off: Vector2 = u.slot
 		var p := lead + fwd * (off.x + w.x) * L + right * (off.y + w.y) * L
 		var y := ALT + w.w
@@ -266,7 +266,7 @@ func _build() -> void:
 		u.tex = tex
 		u.bm = sc
 		u.slot = f[1]
-		u.ph = f[3]
+		u.wob = f[3]
 		u.rel = rel
 		u.has_alt = true   # Render3D._place puts the plane on the camera ray at alt
 		u.alt = ALT

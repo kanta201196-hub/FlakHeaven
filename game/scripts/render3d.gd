@@ -818,6 +818,7 @@ var _ft_relief_rate := 0.0
 var _ft_shadow := false
 var _ft_shadow_off := 0.0
 var _ft_shadow_size := 0.0
+var _ft_shadow_alpha := 0.0
 var _ft_sun := Vector3.DOWN
 
 
@@ -835,6 +836,7 @@ func _frame_tuning() -> void:
 	_ft_shadow = Tuning.g("plane_shadow") > 0.5
 	_ft_shadow_off = Tuning.g("shadow_off")
 	_ft_shadow_size = Tuning.g("shadow_size")
+	_ft_shadow_alpha = Tuning.g("shadow_alpha")
 	_ft_sun = -sun.global_transform.basis.z if sun != null else Vector3.DOWN
 
 
@@ -901,7 +903,8 @@ func _setup_plane_shadows() -> void:
 func _sync_plane_shadows() -> void:
 	if _psh_cam == null:
 		return
-	var on := Tuning.g("plane_shadow") > 0.5 and terrain != null
+	_frame_tuning()
+	var on := _ft_shadow and terrain != null
 	_psh_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	if not on:
 		_ground_mat.set_shader_parameter("plane_sh_rect", Vector4(0, 0, 1, 0))
@@ -994,13 +997,13 @@ func _place_shadow(u: Unit3D, p: Vector2, heading: float, k: float) -> void:
 		(_shb[tx] as Array).append(xf)
 		return
 	sh.global_transform = xf
-	var al := Tuning.g("shadow_alpha")
+	var al := _ft_shadow_alpha
 	if u.sh_a != al:
 		# параметры материала — только при смене настройки, а не каждый кадр
 		u.sh_a = al
 		var mat := sh.material_override as ShaderMaterial
 		mat.set_shader_parameter("alpha", al)
-		mat.set_shader_parameter("blur", 0.03 + 0.03 * (1.0 - Tuning.g("shadow_size")))
+		mat.set_shader_parameter("blur", 0.03 + 0.03 * (1.0 - _ft_shadow_size))
 
 
 ## Оптимизация (финальный проход 3.5): модели сбитых самолётов врага не удаляем, а прячем и отдаём
@@ -1331,10 +1334,11 @@ func _ground_parts(u: Unit3D, e: Enemy, ang: float, delta: float) -> float:
 	if is_nan(u.hull):
 		u.hull = ang
 		var inst := (u.node as Node3D).get_child(0)
-		for nm in ["turret", "antenna", "launcher", "launcher_yaw", "launcher_pitch"]:
-			var n := inst.find_child(nm, true, false)
-			if n != null:
-				u.set(nm, n)
+		u.turret = inst.find_child("turret", true, false) as Node3D
+		u.antenna = inst.find_child("antenna", true, false) as Node3D
+		u.launcher = inst.find_child("launcher", true, false) as Node3D
+		u.launcher_yaw = inst.find_child("launcher_yaw", true, false) as Node3D
+		u.launcher_pitch = inst.find_child("launcher_pitch", true, false) as Node3D
 		if u.launcher_pitch != null:
 			var cells := []
 			for i in 64:
@@ -1793,7 +1797,6 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 	var root: Node3D = u.node
 	var want := {}
 	var wc: Dictionary = u.wcache   # оптимизация (финальный проход 3.5): раскладка подвесов группы
-	u.wcache = wc
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
 		if g.is_empty():

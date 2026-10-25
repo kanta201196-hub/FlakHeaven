@@ -117,3 +117,5 @@ var tris := -1
 var cls := ""
 var slot := Vector2.ZERO
 var rel := 1.0
+## Formation wobble phase
+var wob := 0.0
