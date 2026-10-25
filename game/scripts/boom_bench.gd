@@ -55,6 +55,9 @@ func _init(main: Main) -> void:
 			[Vector2(30, -170), 46.0, true, ""], [Vector2(-60, 210), 18.0, false, ""]], "blast": [Vector2(380, -120), 130.0]},   # VFX-06: light of blasts and burning spots
 		{"name": "splash", "times": [0.1, 0.3, 0.6, 1.0, 1.8], "river": true},   # VFX-05: bomb, crash and rounds in the river
 		{"name": "guns", "times": [0.3, 0.52, 0.71, 0.93, 1.12], "guns": true, "slow": 0.02, "pl": Vector2(-220, 120)},   # VFX-04: muzzle flashes, tracers, hit sparks
+		# Kanta 25.10: machine-gun turrets of the bomber tracking targets that circle and cross the plane; --film saves
+		# every frame (run with --fixed-fps 30 for a clip in game time) and prints the frame of each turret shot
+		{"name": "turrets", "times": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], "turrets": true, "slow": 1.0, "pl": Vector2.ZERO},
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
 	if not _only.is_empty():
@@ -76,7 +79,11 @@ func process(delta: float) -> void:
 			if a.begins_with("--gfx="):
 				Settings.set_preset(int(a.substr(6)))
 		Settings.apply_gfx()
-		m.select_class("fighter")
+		var cls := "fighter"
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--cls="):   # a class with turrets for the turret scene: --cls=bomber
+				cls = a.substr(6)
+		m.select_class(cls)
 		_t = 0.0
 		return
 	if m.state != "playing" or not is_instance_valid(m.player):
@@ -84,7 +91,8 @@ func process(delta: float) -> void:
 	m.god_mode = true
 	m.spawner.process_mode = Node.PROCESS_MODE_DISABLED
 	for e in m.get_tree().get_nodes_in_group("enemies"):
-		(e as Node).queue_free()
+		if not (e as Node).has_meta("bench"):   # the turret scene's own targets stay
+			(e as Node).queue_free()
 	if m.hud != null:
 		m.hud.visible = false
 	if _i < 0:
@@ -153,6 +161,8 @@ func process(delta: float) -> void:
 					if rp.size() > 2:
 						for k in 6:   # rounds landing in the water
 							Boom3D.ensure().ground_hit(rp[2] + Vector2(randf_range(-12, 12), randf_range(-30, 30)))
+			if sc.get("turrets", false):
+				_turret_targets()
 			if sc.get("emp", false):
 				m.fx.emp_wave(m.player.global_position, 380.0)
 			for k in int(sc.get("stress", 0)):   # мясорубка: 30 взрывов разом — замер нагрузки
@@ -164,7 +174,11 @@ func process(delta: float) -> void:
 		_screen(delta)
 	if sc.get("guns", false):
 		_guns(delta)
+	if sc.get("turrets", false):
+		_turrets_move()
 	var times: Array = sc.get("times", TIMES)
+	if _film:
+		_film_frame(sc)
 	if _shot < times.size() and _et >= float(times[_shot]):
 		var img := m.get_viewport().get_texture().get_image()
 		img.save_png("user://boom_%s%s_%d.png" % [sc["name"], _suffix, _shot])
@@ -254,6 +268,64 @@ func _guns(delta: float) -> void:
 		var a: Vector2 = _pos + (g[0] as Vector2)
 		pr.spawn_enemy_bullet(a, (pl.global_position - a).normalized().rotated(randf_range(-0.05, 0.05)) * 520.0, "", false, 0.0,
 			false, g[1], 1.2)
+
+
+var _targets: Array[Enemy] = []
+var _film := OS.get_cmdline_user_args().has("--film")
+var _film_n := 0
+
+## Paths of the turret scene's targets: [radius, angular speed rad/s, phase]; radius 0 — a pass across the nose
+const TURRET_PATHS := [[170.0, 0.9, 0.0], [230.0, -0.6, 2.0], [0.0, 220.0, 0.0], [130.0, 1.4, 4.0]]
+
+
+## Four drones that cannot die and do nothing on their own: _turrets_move flies them on TURRET_PATHS
+func _turret_targets() -> void:
+	for t in _targets:
+		if is_instance_valid(t):
+			t.queue_free()
+	_targets.clear()
+	for k in TURRET_PATHS.size():
+		var d := Drone.new()
+		d.set_meta("bench", true)
+		d.global_position = _pos
+		m.world.add_child(d)
+		d.hp = 1.0e9
+		d.process_mode = Node.PROCESS_MODE_DISABLED
+		_targets.append(d)
+	_turrets_move()
+
+
+func _turrets_move() -> void:
+	for k in _targets.size():
+		var d := _targets[k]
+		if not is_instance_valid(d):
+			continue
+		var pth: Array = TURRET_PATHS[k]
+		var r: float = pth[0]
+		var p: Vector2
+		var hd: float
+		if r > 0.0:
+			var a: float = float(pth[2]) + float(pth[1]) * _et
+			p = _pos + Vector2.from_angle(a) * r
+			hd = a + signf(float(pth[1])) * PI / 2.0
+		else:   # crosses 170 px above the plane, left to right, again every 900 px
+			var x := fposmod(float(pth[1]) * _et, 900.0) - 450.0
+			p = _pos + Vector2(x, -170.0)
+			hd = 0.0
+		d.global_position = p
+		d.heading = hd
+		d.hp = 1.0e9
+
+
+## --film: every frame to user://film<suffix>_NNNN.png; "FILM shot N" marks the frame of each new turret round,
+## so the clip's sound can be laid from the game's own turret samples
+func _film_frame(sc: Dictionary) -> void:
+	m.get_viewport().get_texture().get_image().save_png("user://film_%s%s_%04d.png" % [sc["name"], _suffix, _film_n])
+	for b: Dictionary in m.projectiles.bullets:
+		if String(b.get("src", "")) == "турели" and not b.has("film"):
+			b["film"] = true
+			print("FILM shot %d" % _film_n)
+	_film_n += 1
 
 
 func _start() -> void:
