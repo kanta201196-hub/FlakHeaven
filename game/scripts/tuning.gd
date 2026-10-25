@@ -4,7 +4,7 @@ extends Node
 ## Формат: ключ: [минимум, максимум, шаг, значение по умолчанию, подпись]
 
 const PATH := "user://tuning.json"
-const VERSION := 15 # при смене стандартных значений старые сохранения игнорируются
+const VERSION := 16 # при смене стандартных значений старые сохранения игнорируются
 
 const RANGES := {
 	"render3d": [0, 1, 1, 1, "3D-картинка (0 — старый 2D)"],
@@ -15,7 +15,8 @@ const RANGES := {
 	"relief_gullies": [0, 1, 1, 1, "3D: Нагорье — овраги на склонах (0 — без них, как до RV-02)"],
 	"relief_landforms": [0, 1, 1, 1, "3D: Нагорье — останцы, террасы у реки, ущелья (0 — без них, как до RV-04)"],
 	"cam_tilt": [0, 50, 1, 28, "3D: наклон камеры от вертикали, град (0 — строго сверху; F9 — 28/35/45/сверху)"],
-	"ground_depth": [70, 800, 10, 500, "3D: глубина земли под плоскостью боя, пикс (рельеф между ними)"],
+	"ground_depth": [70, 1600, 10, 500, "3D: глубина земли под плоскостью боя, пикс (рельеф между ними)"],
+	"relief_height": [100, 800, 10, 470, "3D: высота гор над дном долин, пикс (не выше глубины земли − 30)"],
 	"ground_tile": [60, 800, 10, 300, "3D: размер плитки текстуры земли, пикс"],
 	"obj_albedo": [0.4, 1.2, 0.05, 0.85, "3D: яркость объектов биома"],
 	"cloud3d": [0, 1, 1, 1, "3D-облака из клубов (0 — плоские, как до 3.5-s5; на «Низком» всегда плоские)"],
@@ -171,6 +172,18 @@ const KEEP := ["master_db", "music_db", "sfx_db", "engine_db", "ui_db", "scheme"
 func _ready() -> void:
 	reset()
 	load_params()
+	_cmdline_params()
+
+
+## Bench and comparison runs: --tune=key:value,key2:value2 sets parameters for this run only (not saved),
+## before any scene reads them (Render3D reads ground_depth once, in _ready)
+func _cmdline_params() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--tune="):
+			for kv in a.substr(7).split(","):
+				var f := kv.split(":")
+				if f.size() == 2 and params.has(f[0]):
+					params[f[0]] = float(f[1])
 
 
 func reset() -> void:

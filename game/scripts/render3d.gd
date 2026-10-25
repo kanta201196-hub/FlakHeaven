@@ -176,7 +176,7 @@ func _ready() -> void:
 	cam = Camera3D.new()
 	cam.fov = FOV
 	cam.near = 10.0
-	cam.far = 6000.0
+	cam.far = 9000.0   # a deeper ground (ground_depth) with the tilted camera and the zoomed-out boss view
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
 	add_child(cam)
 	cam.current = true
