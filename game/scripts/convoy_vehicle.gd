@@ -299,7 +299,15 @@ func behave(delta: float) -> void:
 		else:
 			want = 0.0
 	lane = move_toward(lane, convoy.safe_lane(goal_lane), 60.0 * delta)
-	var target := convoy.keep_dry(convoy.point_at(goal_s) + convoy.normal_at(goal_s) * lane)
+	# S11 (Kanta 25.10: on the road, small deviations at most): never steer at a road point behind the car.
+	# A guard ahead of its post (the middle of the column) used to turn round to it in a loop off the road;
+	# now it only slows down (want above) and the column catches up. Nor at a point far ahead: a guard
+	# racing to the middle of the column aimed straight at it and cut the bends across the slopes
+	var target_s := clampf(goal_s, s + 30.0, s + 90.0)
+	# a dash through a bend still overshoots past the allowed band: outside it, slow to a crawl and steer back
+	if absf(convoy.lateral_of(anchor, s)) > convoy.lane_cap() + 10.0:
+		want = minf(want, 50.0)
+	var target := convoy.keep_dry(convoy.point_at(target_s) + convoy.normal_at(target_s) * lane)
 	if want <= 0.5:
 		drive.stop(delta)
 	else:
