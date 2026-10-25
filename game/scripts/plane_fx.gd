@@ -57,17 +57,17 @@ static func spec_of(tex: Texture2D) -> Dictionary:
 	return SPEC.get(tex.resource_path.get_file().get_basename(), {})
 
 
-## Создаёт огонь сопел и винты на самолёте (u — запись Render3D._units)
-static func attach(u: Dictionary, tex: Texture2D) -> void:
+## Creates engine flames and props on a plane (u — a Render3D / TitleFlight unit; fills u.fx, u.props)
+static func attach(u: Unit3D, tex: Texture2D) -> void:
 	var s := spec_of(tex)
-	var root: Node3D = u["node"]
+	var root: Node3D = u.node
 	var fx := {"flames": [], "props": [], "trail": []}
-	u["fx"] = fx
+	u.fx = fx
 	if s.is_empty():
 		return
 	_init_res()
 	# своя высота сопла — только у 3D-модели; рельеф из картинки («Низкое» качество) плоский, огонь на общей высоте
-	var y: float = s.get("y", tex.get_width() * 0.012) if u.get("bm") != null else tex.get_width() * 0.012
+	var y: float = s.get("y", tex.get_width() * 0.012) if u.bm != null else tex.get_width() * 0.012
 	for pt: Vector2 in s.get("jet", []):
 		var r: float = s["r"]
 		# две скрещённые плоскости: сверху видна горизонтальная, при крене и наклоне камеры — вертикальная
@@ -83,10 +83,10 @@ static func attach(u: Dictionary, tex: Texture2D) -> void:
 		fx["flames"].append({"n": f, "r": r, "ph": randf() * 10.0})
 		fx["trail"].append(Vector3(pt.x - r, y, pt.y))
 	var props: Node3D = null
-	if s.has("prop") and u.get("bm") != null:
+	if s.has("prop") and u.bm != null:
 		props = WingMech.attach_props(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 	if props != null:
-		u["props"] = props
+		u.props = props
 		fx["blades"] = WingMech.prop_nodes(props)
 		fx["blurs"] = []
 		for n: Node3D in fx["blades"]:
@@ -114,9 +114,9 @@ static func attach(u: Dictionary, tex: Texture2D) -> void:
 		fx["trail"].append(Vector3(pt.x, y, pt.y))
 
 
-## boost 0…1 — форсаж; винты крутятся всегда, пламя дрожит и вытягивается на форсаже
-static func update(u: Dictionary, delta: float, boost: float, on := true) -> void:
-	var fx: Dictionary = u.get("fx", {})
+## Per frame for unit u: boost 0…1 is afterburner; props always spin, flames flicker and stretch on boost
+static func update(u: Unit3D, delta: float, boost: float, on := true) -> void:
+	var fx: Dictionary = u.fx
 	if fx.is_empty():
 		return
 	var t := Time.get_ticks_msec() * 0.001
@@ -142,9 +142,9 @@ static func update(u: Dictionary, delta: float, boost: float, on := true) -> voi
 			q.basis = Basis(Vector3.RIGHT, -PI / 2.0 if i == 0 else 0.0) * Basis.from_scale(Vector3(ln, wd, 1.0))
 
 
-## Т-3: голубой факел (модуль «Форсированный двигатель» ур. 5)
-static func set_blue(u: Dictionary, on: bool) -> void:
-	var fx: Dictionary = u.get("fx", {})
+## T-3: blue flame on unit u (module «Форсированный двигатель» lv. 5)
+static func set_blue(u: Unit3D, on: bool) -> void:
+	var fx: Dictionary = u.fx
 	if fx.is_empty() or bool(fx.get("blue", false)) == on:
 		return
 	fx["blue"] = on
@@ -153,13 +153,13 @@ static func set_blue(u: Dictionary, on: bool) -> void:
 			(q as MeshInstance3D).material_override = _flame_blue if on else _flame_mat
 
 
-## Точки следа в мировых координатах
-static func trail_points(u: Dictionary) -> Array:
+## Trail points of unit u in world coordinates
+static func trail_points(u: Unit3D) -> Array:
 	var out := []
-	var fx: Dictionary = u.get("fx", {})
+	var fx: Dictionary = u.fx
 	if fx.is_empty():
 		return out
-	var xf := (u["node"] as Node3D).global_transform
+	var xf := (u.node as Node3D).global_transform
 	for p: Vector3 in fx["trail"]:
 		out.append(xf * p)
 	return out

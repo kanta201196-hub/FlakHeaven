@@ -341,8 +341,8 @@ func _cat(n: Node, R: Render3D) -> String:
 		_roots.clear()
 		_roots_f = Engine.get_process_frames()
 		for id in R._units:
-			var u: Dictionary = R._units[id]
-			_roots[u["node"]] = "%s:%s" % [u["kind"], (u["tex"] as Texture2D).resource_path.get_file().get_basename()]
+			var u: Unit3D = R._units[id]
+			_roots[u.node] = "%s:%s" % [u.kind, (u.tex as Texture2D).resource_path.get_file().get_basename()]
 	var c := n
 	while c != null and c != R:
 		if _roots.has(c):

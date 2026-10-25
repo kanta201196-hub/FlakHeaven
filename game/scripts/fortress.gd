@@ -559,8 +559,8 @@ func _ring_at(pt: Dictionary, xf: Transform2D) -> Vector2:
 	var r := Render3D.I
 	if not Render3D.enabled or r == null or r.cam == null:
 		return fallback
-	var u: Dictionary = r._units.get(get_instance_id(), {})
-	var parts: Dictionary = u.get("fparts", {})
+	var u: Unit3D = r._units.get(get_instance_id())
+	var parts: Dictionary = u.fparts if u != null and u.fparts != null else {}
 	var nm := String(pt["node"]) + ("_prop" if pt["kind"] == "engine" else "")
 	var n := parts.get(nm) as Node3D
 	if n == null or not is_instance_valid(n):

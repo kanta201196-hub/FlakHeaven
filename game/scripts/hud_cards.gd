@@ -175,10 +175,11 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 	# for long names such as «Лазер обороны «Луч» (экспериментальный): улучшение» (S11-26)
 	var nf := UiStyle.head_font(700, 1)
 	var nfs := 21
-	var lines := _lines(Loc.title(c["title"]), w - 32.0, nfs, nf, 2)
+	var title := _card_title(p, c)
+	var lines := _lines(title, w - 32.0, nfs, nf, 2)
 	if lines.size() == 2 and lines[1].ends_with("…"):
 		nfs = 18
-		lines = _lines(Loc.title(c["title"]), w - 28.0, nfs, nf, 3)
+		lines = _lines(title, w - 28.0, nfs, nf, 3)
 	var nlh := nfs + 4.0
 	var ny := ir.end.y + 22.0 + (2.0 - lines.size()) * nlh * 0.5 + (4.0 if lines.size() == 3 else 0.0)
 	for li in lines.size():
@@ -245,10 +246,29 @@ func _tag(p: Player, c: Dictionary, r: Rect2) -> void:
 
 
 ## «УР. 2 → 3», «НОВОЕ ОРУЖИЕ», «МОДУЛЬ 3 ИЗ 6», «МАКСИМУМ» — whatever applies to the card.
+## Name shown on the card. A mastery branch shows its own name («Скорострел» / «Калибр»):
+## the stored title starts with the weapon name, which is the same on both cards of the
+## «или-или» pair and pushed the branch name past the ellipsis (S11-33). The weapon goes to
+## the level line instead.
+func _card_title(p: Player, c: Dictionary) -> String:
+	if String(c["kind"]) == "branch":
+		var g: Hardpoint = p.groups[int(c["group"])]
+		return Loc.t(String(Cards.branch_def(g.weapon, String(c["branch"]))["title"]))
+	return Loc.title(c["title"])
+
+
+## Small line under the name: level or rank with «максимум», the module slot it takes, or the
+## card category; for a mastery branch it starts with the weapon the branch is for.
 func _level_line(p: Player, c: Dictionary, lv: Vector2) -> String:
 	var parts := PackedStringArray()
 	var kind := String(c["kind"])
-	if kind == "weapon_new":
+	if kind == "branch":
+		var g: Hardpoint = p.groups[int(c["group"])]
+		parts.append((Loc.t(g.evo_title()) if g.evo else Loc.t(String(Weapons.DEFS[g.weapon]["short"]))).to_upper())
+		parts.append(Loc.t("РАНГ %d → %d") % [lv.x, mini(int(lv.x) + 1, int(lv.y))])
+		if int(lv.x) + 1 >= int(lv.y):
+			parts.append(Loc.t("МАКСИМУМ"))
+	elif kind == "weapon_new":
 		parts.append(Loc.t("НОВОЕ ОРУЖИЕ"))
 	elif lv.y > 0:
 		parts.append(Loc.t("УР. %d → %d") % [lv.x, mini(int(lv.x) + 1, int(lv.y))])

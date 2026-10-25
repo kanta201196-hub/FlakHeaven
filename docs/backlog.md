@@ -341,6 +341,17 @@ Summary — `docs/review/code-2026-10-23/README.md`, standards — `docs/standar
 | CS-12 | Important review findings without their own row: spawner freezes bombers at the cap, bomb lead (`move_vel`), "Skvoznyak" summons without a cap, hints spent on the title screen, `TEST_PICKS` → 2, volume writes balance into `tuning.json`, settings do not fit at 1080, ground shader (13 samplers, `dFdx` in a branch), double explosion lights, `.import` for new models, 334 MB `models/pilot` in git, JPEG 4:2:0 normal map. Details — review README | split across system threads | idea |
 | LANG-01 | Move internal text to English (Kanta 2026-10-23, option 2): new code, comments, commits and docs in English right away; existing files translated when touched; a separate pass over key documents — CLAUDE.md, `docs/game-context.md` ("Rules now" section), `docs/backlog.md` header, `docs/process/` | coordinator assigns; CLAUDE.md — thread "Короткий CLAUDE.md" | in progress (standards and CLAUDE.md done 2026-10-23) |
 
+## Укрепрайон (activity 5, Kanta «да» 2026-10-25)
+
+Spec `docs/superpowers/specs/2026-10-25-fortified-area-design.md`, plan `docs/superpowers/plans/2026-10-25-fortified-area.md`. Thread «Сделать активность «Укрепрайон» из крепости» owns `fort_area.gd`, the fort model and the fort parts of `render3d.gd` (coordinated with «Ускорить большие бои»).
+
+| ID | Task | Thread / owner | Status |
+| --- | --- | --- | --- |
+| FA-01 | Activity logic: spawner `"fort"`, map fort pick, banner, 4 fixed launchers (≤ 4 missiles), 2 yard jeeps, reward, unit tests | Укрепрайон | in progress |
+| FA-02 | Fort model set Г (Blender, by code), pieces with broken variants, tower launcher GLB | Укрепрайон | planned |
+| FA-03 | Conditional destructibility: piece HP from explosives, state swaps, debris and scorch, stays broken | Укрепрайон | planned |
+| FA-04 | Frames from the game on 3 graphics presets for Kanta | Укрепрайон | planned |
+
 ## После Next Fest (процесс, 23.10.2026)
 
 Тред пока не назначен; задачи возьмёт координатор после 25.01. Подробности — `docs/process/early-access.md`.
