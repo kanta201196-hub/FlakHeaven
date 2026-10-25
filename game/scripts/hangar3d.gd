@@ -320,10 +320,13 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 ## Тест 3.5-s3 («текстуры в ангаре — идеально»): вид рисуется с запасом по разрешению — в пикселях экрана
 ## (при растяжении окна) × SUPERSAMPLE и сжимается в рамку: текстура модели чётче, края без лесенки
 const SUPERSAMPLE := 1.5
+## Bench (--hcam close-ups, S11): supersample factor instead of SUPERSAMPLE, so saved close-ups are large; 0 — off
+static var bench_supersample := 0.0
 
 
 func _fit_vp(r: Rect2) -> void:
-	var k := SUPERSAMPLE * maxf(1.0, _ctrl.get_viewport().get_final_transform().get_scale().x) if _ctrl != null else SUPERSAMPLE
+	var ss := bench_supersample if bench_supersample > 0.0 else SUPERSAMPLE
+	var k := ss * maxf(1.0, _ctrl.get_viewport().get_final_transform().get_scale().x) if _ctrl != null else ss
 	k = minf(k, 3200.0 / maxf(r.size.x, 1.0))
 	var sz := Vector2i(maxi(64, int(r.size.x * k)), maxi(64, int(r.size.y * k)))
 	if vp.size != sz:
@@ -498,13 +501,29 @@ static func _body_radius(m: Mesh) -> float:
 	return r
 
 
+## Bench: --hangarglb=<cls_lvl>=<absolute .glb> shows that file instead of the imported hangar model, so a GLB fix
+## made outside the project (S11-07: glove pylons cut from «Оса» 1 while another task owns the hangar GLBs) can be
+## checked in the hangar without importing it. Loaded at run time (GLTFDocument), so the canopy keeps the GLB's
+## own glass material. null — no override for this plane.
+func _bench_glb(key: String) -> Node3D:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--hangarglb=%s=" % key):
+			var doc := GLTFDocument.new()
+			var st := GLTFState.new()
+			if doc.append_from_file(a.get_slice("=", 2), st) == OK:
+				return doc.generate_scene(st) as Node3D
+	return null
+
+
 func _build(cls_id: String, lvl: int) -> void:
 	for c in pivot.get_children():
 		c.queue_free()
 	var path := "res://models/hangar/fh_hangar_%s_%d.glb" % [cls_id, lvl]
 	if not ResourceLoader.exists(path):
 		return
-	var model: Node3D = (load(path) as PackedScene).instantiate()
+	var model: Node3D = _bench_glb("%s_%d" % [cls_id, lvl])
+	if model == null:
+		model = (load(path) as PackedScene).instantiate()
 	# обшивка под углом (крылья, фюзеляж сбоку) — анизотропная фильтрация, иначе текстура «плывёт»
 	for c in model.find_children("*", "MeshInstance3D", true, false):
 		var mi := c as MeshInstance3D
@@ -590,9 +609,11 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var lo := _surface_y(x, z, true)
 			var hi := _surface_y(x, z, false)
 			var y := 0.0
+			var pitch := 0.0
 			match side:
 				"under":
 					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mtr, weapon_tier == 4) * wlen
+					pitch = _chord_pitch(x - 0.02 * wlen, z, (0.18 if g.weapon in ["aam", "arm"] else 0.25) * wlen)
 				"belly":   # Т-6: «Бабушкин ковёр» — своим узлом прямо к брюху, без пилона
 					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, 3, true) - WeaponModels.PYLON_H) * wlen
 				"top", "wing":
@@ -645,8 +666,27 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			var bs := Basis(Vector3.UP, float(mt["yaw"]))
 			if side == "bottom" or (side == "tail" and WeaponModels.TURRET_MODELS.has(cls_id) and not (WeaponModels.TURRET_MODELS[cls_id] as Dictionary).has("tail")):
 				bs = bs * Basis(Vector3.RIGHT, PI)
+			if pitch != 0.0:   # S11-07: the pylon lies along the wing's chord, not level under a sloping glove
+				bs = Basis(Vector3.BACK, pitch) * bs
 			wmi.basis = bs.scaled(Vector3(wlen, wlen, wlen))
 			pivot.add_child(wmi)
+
+
+## Largest chord slope a pylon follows (rad): a steeper difference between its ends means one end reaches past the
+## wing (nacelle, fairing, trailing edge), and the pylon stays level
+const PYLON_PITCH_MAX := 0.1
+
+
+## S11-07 (Kanta: «ракеты висят криво»): pitch (rad, nose up > 0) that lays a pylon of half-length `half` centred at
+## (x, z) along the wing underside, so both its ends touch the skin instead of one end floating below a sloping glove.
+## 0 when either end misses the model or the slope is not a plain wing chord.
+func _chord_pitch(x: float, z: float, half: float) -> float:
+	var lf := _surface_y(x + half, z, true)
+	var lr := _surface_y(x - half, z, true)
+	if is_nan(lf) or is_nan(lr):
+		return 0.0
+	var p := atan2(lf - lr, 2.0 * half)
+	return p if absf(p) <= PYLON_PITCH_MAX else 0.0
 
 
 var _faces := PackedVector3Array()
