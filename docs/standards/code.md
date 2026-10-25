@@ -27,8 +27,8 @@ Migration: new code and new documents are written in English right away. Existin
 
 ## 1. Engine and versions
 
-1. Godot **4.4.1**, **GL Compatibility** renderer. Do not use what 4.4 lacks: `@abstract`, variadic `...args`, `duplicate_deep()` (all 4.5). Typed dictionaries `Dictionary[K, V]` exist in 4.4 — use them.
-2. GL Compatibility has no SSAO, SSR, volumetric fog, decals, DOF, TAA, FXAA or compute shaders. It has MSAA, glow, depth and height fog. At most 8 omni/spot lights per mesh — extra lights are silently dropped.
+1. Godot **4.4.1**, **Forward+** renderer with the GL Compatibility fallback (both must work: `Settings.forward_plus()`). Do not use what 4.4 lacks: `@abstract`, variadic `...args`, `duplicate_deep()` (all 4.5). Typed dictionaries `Dictionary[K, V]` exist in 4.4 — use them.
+2. Colour constants in shaders go through `SRGB()` (`game/shaders/srgb.gdshaderinc`) or a `source_color` uniform: Compatibility shows raw values, Forward+ treats them as linear and draws them lighter. The GL Compatibility fallback has no SSAO, SSR, volumetric fog, decals, DOF, TAA, FXAA or compute shaders. It has MSAA, glow, depth and height fog. At most 8 omni/spot lights per mesh — extra lights are silently dropped.
 3. Always commit `.uid` files and move them together with their script or shader.
 
 ## 2. GDScript: style and documentation

@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode cull_disabled;
+#include "res://shaders/srgb.gdshaderinc"
 // 3.0: земля биома в 3D — 4 материала смешиваются пятнами по шуму, получает свет и тени.
 // B-24: множитель яркости и псевдорельеф по яркости.
 // B-25: PBR-наборы CC0 (цвет + нормаль + высота), смешивание по высоте (камни проступают сквозь
@@ -84,7 +85,7 @@ uniform float cloud_dark = 0.28;   // Э-3 (аудит 3.5-s6): тень обл�
 // rect: x, z левого верхнего угла, сторона, включено
 uniform sampler2D plane_sh : filter_linear, repeat_disable, hint_default_black;
 uniform vec4 plane_sh_rect = vec4(0.0, 0.0, 1.0, 0.0);
-uniform vec3 plane_sh_color = vec3(0.04, 0.05, 0.09);
+uniform vec3 plane_sh_color : source_color = vec3(0.04, 0.05, 0.09);
 // Тест 3.5-s7: метки на земле — прицел и зона бомб, огонь на земле. Раньше это были плоские круги в слое боя
 // (над рельефом); теперь земля сама рисует их: точка рельефа проецируется лучом камеры на плоскость боя
 // (как GroundTarget.air_pos) и сравнивается с зоной там — метка ложится по склонам ровно туда, где бьёт.
@@ -302,7 +303,7 @@ void fragment() {
 		float snow = smoothstep(sfrom, sfrom + 0.05, rel.y + (hgt - 0.5) * 0.05 + patch)
 			* (1.0 - smoothstep(0.3, 0.55, slope)) * (1.0 - 0.8 * rg)
 			* mix(1.0, smoothstep(0.55, 0.8, prov.x) * (1.0 - prov.y), prov.w);   // RV-01: snow only in high ranges
-		vec3 snow_c = vec3(0.64, 0.67, 0.72) * (0.93 + 0.1 * vnoise(world / 160.0 - 4.0));
+		vec3 snow_c = SRGB(vec3(0.64, 0.67, 0.72)) * (0.93 + 0.1 * vnoise(world / 160.0 - 4.0));
 		c = mix(c, snow_c, snow);
 		nxy *= 1.0 - snow;
 		hgt = mix(hgt, 0.65, snow);   // и в AO по высоте текстуры — трещины не проступают
@@ -318,7 +319,7 @@ void fragment() {
 		if (sm.x + sm.y + sm.z > 0.004) {
 			float en = vnoise(world / 55.0 + 11.0) - 0.5 + (vnoise(world / 17.0 - 5.0) - 0.5) * 0.4;
 			float tr = smoothstep(0.2, 0.75, sm.x + en * 0.5);
-			vec3 packed_c = mix(c, vec3(dot(c, vec3(0.333))) * vec3(1.1, 1.0, 0.86), 0.4) * (1.04 + 0.08 * (vnoise(world / 9.0) - 0.5));
+			vec3 packed_c = mix(c, vec3(dot(c, vec3(0.333))) * SRGB(vec3(1.1, 1.0, 0.86)), 0.4) * (1.04 + 0.08 * (vnoise(world / 9.0) - 0.5));
 			c = mix(c, packed_c, tr * 0.7);
 			nxy *= 1.0 - 0.5 * tr;
 			float gr = smoothstep(0.25, 0.7, sm.y + en * 0.55);
@@ -333,7 +334,7 @@ void fragment() {
 				vec2 fr = fract(fg);
 				float pick = hash(cell);
 				// цвета — к палитре земли: приглушённые, поле не «газон»; внутри участка — рядки и пятна
-				vec3 fc = pick < 0.3 ? vec3(0.46, 0.47, 0.3) : (pick < 0.55 ? vec3(0.64, 0.57, 0.4) : (pick < 0.78 ? vec3(0.5, 0.41, 0.31) : vec3(0.38, 0.41, 0.27)));
+				vec3 fc = pick < 0.3 ? SRGB(vec3(0.46, 0.47, 0.3)) : (pick < 0.55 ? SRGB(vec3(0.64, 0.57, 0.4)) : (pick < 0.78 ? SRGB(vec3(0.5, 0.41, 0.31)) : SRGB(vec3(0.38, 0.41, 0.27))));
 				fc = mix(fc, c, 0.25);
 				float rows = 0.9 + 0.1 * sin((pick < 0.5 ? fq.x : fq.y) * 0.9);
 				fc *= rows * (0.86 + 0.28 * vnoise(world / 7.0 + pick * 40.0)) * (0.9 + 0.2 * vnoise(world / 40.0 - pick * 13.0));
@@ -348,12 +349,12 @@ void fragment() {
 			float bn = smoothstep(0.25, 0.75, sm.z + (vnoise(world / 14.0 + 2.0) - 0.5) * 0.6 + (vnoise(world / 4.0) - 0.5) * 0.15);
 			// не сплошная клякса: сажа пятнами, по краю — рыжеватая опалённая земля, в середине темнее
 			float soot = 0.55 + 0.45 * smoothstep(0.3, 0.7, vnoise(world / 6.0 + 21.0));
-			vec3 burnt = mix(c * vec3(0.62, 0.52, 0.44), vec3(0.2, 0.175, 0.155), smoothstep(0.55, 1.0, sm.z) * soot);
+			vec3 burnt = mix(c * SRGB(vec3(0.62, 0.52, 0.44)), SRGB(vec3(0.2, 0.175, 0.155)), smoothstep(0.55, 1.0, sm.z) * soot);
 			c = mix(c, burnt, bn * 0.78);
 			nxy *= 1.0 - 0.5 * bn;
 		}
 		float bank = 1.0 - smoothstep(river_w, river_w * 2.4, rd + edge);
-		c = mix(c, c * vec3(0.78, 0.82, 0.7), bank * 0.6);       // сырая земля и зелень у воды
+		c = mix(c, c * SRGB(vec3(0.78, 0.82, 0.7)), bank * 0.6);       // сырая земля и зелень у воды
 		float water = 1.0 - smoothstep(river_w * 0.45, river_w * 0.8, rd + edge * 0.5);
 		if (sea && sea_look > 0) {
 			// у моря поле по воде растянуто (1 ед. ≈ depth_px / sea_w px), у реки — нет: кромка резкая, ~15 px
@@ -372,7 +373,7 @@ void fragment() {
 			vec2 wq = world + vec2(vnoise(world / 230.0 + 5.0), vnoise(world / 230.0 - 9.0)) * 120.0;
 			float big = vnoise(wq / 520.0 + 3.0) * 0.65 + vnoise(wq / 190.0 - 4.0) * 0.35;
 			float dp = clamp(dp0 + (big - 0.5) * 0.22 * smoothstep(0.04, 0.25, dp0), 0.0, 1.0);
-			vec3 sh = vec3(0.4, 0.66, 0.6), md = vec3(0.13, 0.4, 0.47), dpc = vec3(0.06, 0.2, 0.3);
+			vec3 sh = SRGB(vec3(0.4, 0.66, 0.6)), md = SRGB(vec3(0.13, 0.4, 0.47)), dpc = SRGB(vec3(0.06, 0.2, 0.3));
 			wc = mix(sh, md, smoothstep(0.03, 0.3, dp));
 			// глубокое — по смеси поля и шума: у оси узкого пролива поле ломается по треугольникам, шум прячет излом
 			wc = mix(wc, dpc, smoothstep(0.3, 0.55, dp * 0.55 + big * 0.45 + 0.08));
@@ -381,28 +382,28 @@ void fragment() {
 				// вид 4 (по фото Kanta 21.10): приглушённая серо-бирюзовая вода, отмель широкая и плавная
 				// оба перехода — по смеси поля и шума: у оси узкого пролива поле ломается по треугольникам
 				float dd = dp * 0.6 + big * 0.4;
-				wc = mix(vec3(0.34, 0.64, 0.62), vec3(0.15, 0.47, 0.55), smoothstep(0.02, 0.42, min(dp, dd + 0.12)));
-				wc = mix(wc, vec3(0.09, 0.27, 0.4), smoothstep(0.32, 0.78, dd));
+				wc = mix(SRGB(vec3(0.34, 0.64, 0.62)), SRGB(vec3(0.15, 0.47, 0.55)), smoothstep(0.02, 0.42, min(dp, dd + 0.12)));
+				wc = mix(wc, SRGB(vec3(0.09, 0.27, 0.4)), smoothstep(0.32, 0.78, dd));
 				wc *= 0.97 + 0.05 * vnoise(wq / 90.0 + 11.0);
 			}
 			float t = TIME;
 			if (sea_look >= 3) {
 				// отмель прозрачная: под водой песок и камни берега, с глубиной уходят в цвет воды
-				vec3 bed = c * vec3(0.7, 0.9, 0.86) + vec3(0.02, 0.07, 0.07);
+				vec3 bed = c * SRGB(vec3(0.7, 0.9, 0.86)) + SRGB(vec3(0.02, 0.07, 0.07));
 				if (sea_look >= 4) {
 					// дно: светлые песчаные косы и тёмные пятна водорослей, видны далеко от берега
 					float bar = smoothstep(0.45, 0.75, vnoise(vec2(world.x * 0.6 + world.y * 0.8, world.y * 0.6 - world.x * 0.8) / vec2(140.0, 45.0)));
 					float weed = smoothstep(0.55, 0.8, vnoise(wq / 55.0 - 6.0)) * (0.6 + 0.4 * vnoise(world / 12.0));
 					// под водой красный гаснет: дно в бирюзу, светлее только косы
-					bed = mix(vec3(0.42, 0.66, 0.6), vec3(0.58, 0.76, 0.66), bar);
-					bed = mix(bed, vec3(0.18, 0.34, 0.32), weed * 0.7);
+					bed = mix(SRGB(vec3(0.42, 0.66, 0.6)), SRGB(vec3(0.58, 0.76, 0.66)), bar);
+					bed = mix(bed, SRGB(vec3(0.18, 0.34, 0.32)), weed * 0.7);
 					wc = mix(bed, wc, smoothstep(0.0, 0.45, dp0) * 0.75 + 0.25);
 				} else {
 					wc = mix(bed, wc, smoothstep(0.01, 0.3, dp0) * 0.85 + 0.15);
 				}
 				// блики-каустика на дне отмели
 				float ca = vnoise(world / 11.0 + vec2(t * 0.35, t * 0.2)) * vnoise(world / 14.0 - vec2(t * 0.25, -t * 0.3));
-				sea_e += vec3(0.9, 1.0, 0.95) * smoothstep(0.32, 0.5, ca) * 0.1 * (1.0 - smoothstep(0.0, 0.15, dp));
+				sea_e += SRGB(vec3(0.9, 1.0, 0.95)) * smoothstep(0.32, 0.5, ca) * 0.1 * (1.0 - smoothstep(0.0, 0.15, dp));
 			}
 			// пена: тонкая рваная линия у кромки
 			float brk = smoothstep(0.35, 0.7, vnoise(world / 38.0 + 4.0)) * 0.6 + 0.4;
@@ -422,7 +423,7 @@ void fragment() {
 				// блики: произведение трёх шумов под углом к сетке — редкие искры без квадратов
 				vec2 g1 = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * world;
 				float gl = vnoise(g1 / 13.0 + vec2(t * 0.9, -t * 0.4)) * vnoise(world / 17.0 - vec2(t * 0.5, t * 0.7)) * vnoise(world / 90.0 + t * 0.05);
-				sea_e += vec3(1.0, 0.98, 0.9) * smoothstep(0.36, 0.55, gl) * 0.16 * smoothstep(0.1, 0.4, dp0);
+				sea_e += SRGB(vec3(1.0, 0.98, 0.9)) * smoothstep(0.36, 0.55, gl) * 0.16 * smoothstep(0.1, 0.4, dp0);
 				wc *= 0.95 + 0.1 * vnoise(r1 * 0.5);
 			}
 			if (sea_look >= 4) {
@@ -435,7 +436,7 @@ void fragment() {
 					* smoothstep(0.55, 0.75, vnoise(world / 260.0 - 5.0))
 					* smoothstep(0.35, 0.65, vnoise(world / 22.0 + vec2(t * 0.15, 0.0)));
 				foam = max(foam, surf * 0.85);
-				sea_e = sea_e * 0.25 + vec3(0.06, 0.065, 0.06) * smoothstep(0.4, 0.8, vnoise(world / 420.0 + vec2(t * 0.01, 0.0))) * smoothstep(0.2, 0.6, dp0);
+				sea_e = sea_e * 0.25 + SRGB(vec3(0.06, 0.065, 0.06)) * smoothstep(0.4, 0.8, vnoise(world / 420.0 + vec2(t * 0.01, 0.0))) * smoothstep(0.2, 0.6, dp0);
 			}
 			if (sea_look >= 5 && water > 0.0) {   // на суше не считаем (дорого: 9 волн на пиксель)
 				// S10-06 (Kanta 23.10: «у воды очень плохое качество»): вместо мягких пятен шума — мелкие волны.
@@ -477,7 +478,7 @@ void fragment() {
 				vec3 hv = normalize(sl + vec3(0.0, 1.0, 0.25));
 				float sp = pow(clamp(dot(nn, hv), 0.0, 1.0), 350.0);
 				float spm = smoothstep(0.35, 0.75, vnoise(world / 260.0 + vec2(t * 0.02, 1.0)));
-				sea_e += vec3(1.0, 0.95, 0.82) * sp * 1.1 * calm * spm;
+				sea_e += SRGB(vec3(1.0, 0.95, 0.82)) * sp * 1.1 * calm * spm;
 				// барашки: редкие белые гребни больших волн, только на глубине и пятнами
 				float cap = smoothstep(0.8, 0.95, hk) * smoothstep(0.6, 0.85, vnoise(world / 170.0 + vec2(t * 0.05, 3.0)))
 					* smoothstep(0.3, 0.55, dp0);
@@ -491,10 +492,10 @@ void fragment() {
 				float r1 = 1.0 - abs(vnoise(cq + vec2(t * 0.3, t * 0.2)) * 2.0 - 1.0);
 				float r2 = 1.0 - abs(vnoise(cq * 1.37 - vec2(t * 0.25, -t * 0.32) + 5.0) * 2.0 - 1.0);
 				float cs = pow(r1 * r2, 5.0) * (1.0 - smoothstep(0.6, 1.6, fw));
-				sea_e += vec3(0.85, 1.0, 0.95) * cs * 0.18 * shal;
+				sea_e += SRGB(vec3(0.85, 1.0, 0.95)) * cs * 0.18 * shal;
 				sea_n = g * 0.9;
 			}
-			wc = mix(wc, vec3(0.9, 0.93, 0.92), foam * 0.8);
+			wc = mix(wc, SRGB(vec3(0.9, 0.93, 0.92)), foam * 0.8);
 			sea_e *= water;
 		} else if (sea) {
 			// глубина: у берега бирюзовая отмель, к оси пролива синее; пятна рифов и ряби — шумом
@@ -506,7 +507,7 @@ void fragment() {
 			wc *= 0.95 + 0.08 * vnoise(world / 160.0) + 0.03 * vnoise(world / 55.0 + 11.0);
 			float foam = (1.0 - smoothstep(0.0, 0.05, abs(dp0 - 0.03)))
 				* (0.55 + 0.45 * smoothstep(0.3, 0.7, vnoise(world / 75.0 + 4.0)));
-			wc = mix(wc, vec3(0.93, 0.95, 0.94), foam * 0.75);
+			wc = mix(wc, SRGB(vec3(0.93, 0.95, 0.94)), foam * 0.75);
 		}
 		if (sea && sea_look > 0) {
 			// мокрый песок у кромки вместо сухой рыжей полосы
@@ -518,12 +519,12 @@ void fragment() {
 				float bw = 22.0 * smoothstep(0.3, 0.65, vnoise(world / 210.0 + 8.0)) + 3.0 * vnoise(world / 9.0);
 				float beach = (1.0 - smoothstep(bw - 3.0, bw + 1.0, sl)) * (1.0 - water);
 				float veg = (1.0 - smoothstep(60.0, 190.0, sl + (vnoise(world / 70.0) - 0.5) * 80.0)) * (1.0 - beach);
-				vec3 vc = mix(vec3(0.25, 0.39, 0.19), vec3(0.37, 0.47, 0.25), vnoise(world / 24.0)) * (0.85 + 0.3 * vnoise(world / 6.0));
+				vec3 vc = mix(SRGB(vec3(0.25, 0.39, 0.19)), SRGB(vec3(0.37, 0.47, 0.25)), vnoise(world / 24.0)) * (0.85 + 0.3 * vnoise(world / 6.0));
 				c = mix(c, vc, veg * 0.8 * smoothstep(0.3, 0.6, vnoise(world / 90.0 + 4.0) * 0.6 + 0.4));
-				c = mix(c, vec3(0.88, 0.76, 0.55) * (0.94 + 0.1 * vnoise(world / 5.0)), beach * 0.92);
+				c = mix(c, SRGB(vec3(0.88, 0.76, 0.55)) * (0.94 + 0.1 * vnoise(world / 5.0)), beach * 0.92);
 				wet *= 0.25;
 			}
-			c = mix(c, c * vec3(0.7, 0.72, 0.7), wet * 0.7);
+			c = mix(c, c * SRGB(vec3(0.7, 0.72, 0.7)), wet * 0.7);
 		}
 		c = mix(c, wc, water);
 		nxy *= 1.0 - water;
@@ -600,7 +601,7 @@ void fragment() {
 				float edge = 1.0 - smoothstep(r * (0.55 + 0.35 * n), r * (0.75 + 0.35 * n), d);
 				// гарь с тлеющими прожилками: светятся только «трещины» шума, остальное — тёмная гарь с лёгким жаром
 				float ember = smoothstep(0.42, 0.78, n2) * edge;
-				alb = mix(alb, alb * vec3(0.2, 0.18, 0.16), edge * 0.8 * a);
+				alb = mix(alb, alb * SRGB(vec3(0.2, 0.18, 0.16)), edge * 0.8 * a);
 				gz_e += zc * (ember * 1.1 + edge * 0.1) * a;
 			} else {
 				// S9-26 (Kanta: «прицел всё ещё как будто в воздухе»): метка нарисована краской на земле — толщина

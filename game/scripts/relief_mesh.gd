@@ -151,6 +151,7 @@ static func material(tex: Texture2D, metal := 0.35, rough := 0.5, tint := Color.
 	m.albedo_texture = tex
 	m.albedo_color = Color(tint.r, tint.g, tint.b, 1.0)
 	m.vertex_color_use_as_albedo = true
+	m.vertex_color_is_srgb = true   # Forward+: vertex colours were tuned as display colours in Compatibility (srgb.gdshaderinc)
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	m.alpha_scissor_threshold = 0.45
 	m.metallic = metal

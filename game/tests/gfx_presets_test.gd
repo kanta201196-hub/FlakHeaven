@@ -38,17 +38,23 @@ func _test_presets_valid() -> void:
 
 
 ## Old `Render3D.apply_gfx`: scale 60/80/100/100 %, shadow atlas 1024/2048/4096/4096, MSAA 2× only on max.
+## Under the Compatibility fallback presets 0–2 still draw exactly that; Forward+ adds on top.
 func _test_presets_match_old_switch() -> void:
 	var scale := [60, 80, 100, 100]
 	var atlas := [1024, 2048, 4096, 4096]
 	for i in 4:
 		var p := GfxPresets.preset(i)
+		var c := GfxPresets.effective(p, false)
 		_check(GfxPresets.SCALES[p["scale"]] == scale[i], "preset %d render scale as before" % i)
 		_check(GfxPresets.SHADOW_RES[p["shadow_res"]] == atlas[i], "preset %d shadow atlas as before" % i)
-		_check(p["aa"] == (GfxPresets.AA_MSAA2 if i == 3 else GfxPresets.AA_OFF), "preset %d antialiasing as before" % i)
 		_check(p["terrain"] == i and p["props"] == i and p["effects"] == i, "preset %d world detail and effects follow the level" % i)
-		_check(p["shadows"] == GfxPresets.SHADOWS_HIGH, "preset %d keeps the default soft shadows" % i)
-		_check(p["ssao"] == 0 and p["ssil"] == 0, "preset %d adds no ambient occlusion yet" % i)
+		if i < 3:
+			_check(c["aa"] == GfxPresets.AA_OFF, "preset %d: no antialiasing in Compatibility, as before" % i)
+			_check(c["shadows"] == GfxPresets.SHADOWS_HIGH, "preset %d keeps the default soft shadows" % i)
+			_check(c["ssao"] == 0 and c["ssil"] == 0 and c["upscale"] == 0, "preset %d: nothing Forward+-only left in Compatibility" % i)
+	_check(GfxPresets.preset(0)["upscale"] > 0 and GfxPresets.preset(1)["upscale"] > 0, "low and medium upscale with FSR in Forward+")
+	_check(GfxPresets.preset(2)["ssao"] > 0 and GfxPresets.preset(3)["ssao"] > GfxPresets.preset(2)["ssao"], "ambient occlusion grows with the preset")
+	_check(GfxPresets.preset(3)["aa"] == GfxPresets.AA_MSAA4, "max: MSAA 4×")
 
 
 func _test_custom() -> void:

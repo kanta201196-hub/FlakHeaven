@@ -27,6 +27,7 @@ static func material() -> StandardMaterial3D:
 	_mat.uv1_world_triplanar = true
 	_mat.uv1_scale = Vector3.ONE / 160.0
 	_mat.vertex_color_use_as_albedo = true
+	_mat.vertex_color_is_srgb = true   # Forward+: same colours as in Compatibility (srgb.gdshaderinc)
 	_mat.albedo_color = Color(1.0, 0.95, 0.88)
 	_mat.roughness = 0.95
 	_mat.metallic = 0.0

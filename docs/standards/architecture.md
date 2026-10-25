@@ -4,7 +4,7 @@ Version 1, 2026-10-23. Produced with the `engineering:architecture` skill from t
 
 ## 1. Constraints that shape the architecture
 
-- **Godot 4.4.1, GL Compatibility** — for Steam Deck, weak PCs and Mac. No compute shaders, at most 8 lights per mesh, shaders compile on first draw.
+- **Godot 4.4.1, Forward+** (since 24.10.2026, decision VIS-01; plan `docs/superpowers/plans/2026-10-24-forward-plus.md`). PCs without Vulkan/D3D12 fall back to **GL Compatibility** automatically: no compute shaders, no SSAO/FXAA/TAA/FSR there, at most 8 lights per mesh; `GfxPresets.supported` and `GpuFx.active()` pick what each renderer can draw. Shaders compile on first draw.
 - **Bullet heaven:** dozens of air enemies (cap `enemy_cap` = 70), hundreds of projectiles, 15-minute sorties.
 - **Most code is written by Claude agents** in separate threads with no shared memory. Rules must be simple, checkable and written down; coupling must be explicit, because an agent only knows what it has read.
 - **Deadlines:** Next Fest demo by 2026-12-15, Early Access after. No big rewrites "for cleanliness" — improve along the way.

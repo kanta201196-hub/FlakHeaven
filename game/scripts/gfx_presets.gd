@@ -2,8 +2,8 @@ class_name GfxPresets
 extends RefCounted
 ## Graphics options and quality presets (UI-01 step 3, plan table «Graphics options»). Every
 ## option is stored as an index into its value list; a preset is one index per option. The four
-## presets reproduce the old single «Качество графики» switch exactly, so nobody's picture
-## changes until they touch an option (preset numbers get tuned from fps on Kanta's PC in step 5).
+## presets keep the old single «Качество графики» switch's numbers and, in Forward+, add the
+## effects Compatibility could not draw (preset numbers get tuned from fps on Kanta's PC).
 ## Pure data and rules, unit-tested in `game/tests/gfx_presets_test.gd`; `Render3D.apply_gfx`
 ## turns the effective values into engine calls.
 
@@ -46,16 +46,19 @@ const LABELS := {
 	"effects": ["Низкое", "Среднее", "Высокое", "Максимальное"],
 }
 
-## Presets «Низкое», «Среднее», «Высокое», «Максимальное» (same names as `Settings.GFX`)
+## Presets «Низкое», «Среднее», «Высокое», «Максимальное» (same names as `Settings.GFX`). Forward+ adds
+## FSR 1 upscaling on the low two, FXAA, SSAO and stronger antialiasing; under the Compatibility fallback
+## (`effective`) presets 0–2 draw exactly what the old single switch drew. Numbers get tuned from fps on
+## Kanta's PC (plan 2026-10-24-forward-plus.md, step 6).
 const PRESETS := [
-	{"scale": 1, "upscale": 0, "aa": AA_OFF, "shadows": SHADOWS_HIGH, "shadow_dist": 1, "shadow_res": 0,
+	{"scale": 1, "upscale": 1, "aa": AA_OFF, "shadows": SHADOWS_HIGH, "shadow_dist": 1, "shadow_res": 0,
 		"ssao": 0, "ssil": 0, "glow": 1, "terrain": 0, "props": 0, "effects": 0},
-	{"scale": 3, "upscale": 0, "aa": AA_OFF, "shadows": SHADOWS_HIGH, "shadow_dist": 1, "shadow_res": 1,
+	{"scale": 3, "upscale": 1, "aa": AA_FXAA, "shadows": SHADOWS_HIGH, "shadow_dist": 1, "shadow_res": 1,
 		"ssao": 0, "ssil": 0, "glow": 1, "terrain": 1, "props": 1, "effects": 1},
-	{"scale": 5, "upscale": 0, "aa": AA_OFF, "shadows": SHADOWS_HIGH, "shadow_dist": 1, "shadow_res": 2,
-		"ssao": 0, "ssil": 0, "glow": 1, "terrain": 2, "props": 2, "effects": 2},
-	{"scale": 5, "upscale": 0, "aa": AA_MSAA2, "shadows": SHADOWS_HIGH, "shadow_dist": 1, "shadow_res": 2,
-		"ssao": 0, "ssil": 0, "glow": 1, "terrain": 3, "props": 3, "effects": 3},
+	{"scale": 5, "upscale": 0, "aa": AA_FXAA, "shadows": SHADOWS_HIGH, "shadow_dist": 1, "shadow_res": 2,
+		"ssao": 1, "ssil": 0, "glow": 1, "terrain": 2, "props": 2, "effects": 2},
+	{"scale": 5, "upscale": 0, "aa": AA_MSAA4, "shadows": SHADOWS_ULTRA, "shadow_dist": 1, "shadow_res": 2,
+		"ssao": 2, "ssil": 0, "glow": 1, "terrain": 3, "props": 3, "effects": 3},
 ]
 
 ## GPU cost of each option at its highest value, 1–5 bars, for the description panel

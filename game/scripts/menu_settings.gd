@@ -1014,9 +1014,9 @@ func _description(r: Rect2) -> void:
 	UiStyle.text(ctrl, cf2, Vector2(x, y + 8.0), "на максимуме", UiStyle.FS_CAPTION, UiStyle.TEXT_DIM)
 	y += 40.0
 	if GfxPresets.needs_forward_plus(gid) and not Settings.forward_plus():
-		var msg := "Часть значений заработает после перехода игры на рендер Forward+. Сейчас игра на Compatibility."
+		var msg := "Часть значений недоступна: видеокарта не поддерживает Vulkan, и игра работает в режиме совместимости."
 		if row.get("off", false):
-			msg = "Заработает после перехода игры на рендер Forward+. Сейчас игра на Compatibility, выбранное значение сохранится."
+			msg = "Недоступно: видеокарта не поддерживает Vulkan, и игра работает в режиме совместимости. Выбранное значение сохранится."
 		for line in menu.wrap(Loc.t(msg), w, UiStyle.FS_BODY):
 			ctrl.draw_string(body, Vector2(x, y), line, HORIZONTAL_ALIGNMENT_LEFT, -1, UiStyle.FS_BODY, UiStyle.ACCENT_SOFT)
 			y += 24.0
