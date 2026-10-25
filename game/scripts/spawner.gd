@@ -455,7 +455,9 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	# правка 3.5-s4: ×1,6 — по асу бьёт всё сразу (лог «Осы»: 10–33 с вместо 25–35);
 	# тест 3.5-s5 (п. 10): множитель — доля урона, что реально ложится в одиночную цель (single_k), у каждого свой
 	last_single_k = single_k()
-	var hp_dps := recent_dps() * ttk * last_single_k / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
+	var hp_formula := hp
+	var hp_dps_k1 := recent_dps() * ttk / 1.35 * (1.0 + (Campaign.k("hp") - 1.0) * 0.5)
+	var hp_dps := hp_dps_k1 * last_single_k
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f из %d с)" % [wave, hp, hp_dps, recent_dps(), last_single_k, _big_hist.size()])
 	if not OS.get_cmdline_user_args().has("--shots"): # скриншоты: асы нарочно слабые
@@ -470,7 +472,10 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	# 3.5 (разбор каталога 16.10): третья волна — босс «Крепость» вместо пары асов
 	elif wave >= 3 or OS.get_cmdline_user_args().has("--fortress"):
 		var f := Fortress.new()
-		f.setup_fortress(hp * 2.0 * 1.35) # прочность двух асов вместе со щитами; фазы делят её на точки и корпус
+		# GD-08: one landing share for every class instead of the duel share (see AceBalance.fortress_hp)
+		var fhp := hp_formula if OS.get_cmdline_user_args().has("--shots") else AceBalance.fortress_hp(hp_formula, hp_dps_k1)
+		last_single_k = AceBalance.FORTRESS_SINGLE_K   # the sortie log shows the share the Fortress was built with
+		f.setup_fortress(fhp * 2.0 * 1.35) # прочность двух асов вместе со щитами; фазы делят её на точки и корпус
 		f.position = p.global_position + Vector2.from_angle(randf() * TAU) * boss_dist()
 		f.heading = (p.global_position - f.position).angle() + PI / 2.0
 		Main.I.world.add_child(f)

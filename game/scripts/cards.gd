@@ -855,6 +855,15 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 				wc["rarity"] = roll_rarity(Main.I.run.level, min_r)
 				out.append(finalize(p, wc))
 				break
+	# GD-06: no «Бронеплиты» by level 10 — the card is guaranteed (again after CardBalance.ARMOR_EVERY choices if declined)
+	if out.size() < count and CardBalance.armor_due(Main.I.run.level, int(p.taken.get("armor", 0)), p.picks, p.armor_next):
+		for c in cands:
+			if c[1]["id"] == "armor" and not out.any(func(o): return o["id"] == "armor"):
+				var ac: Dictionary = (c[1] as Dictionary).duplicate()
+				ac["rarity"] = roll_rarity(Main.I.run.level, min_r)
+				out.append(finalize(p, ac))
+				p.armor_next = CardBalance.next_pick(p.picks)
+				break
 	var taken_ids: Array = out.map(func(c): return c["id"])
 	cands = cands.filter(func(c): return not taken_ids.has(c[1]["id"]))
 	var late: bool = Main.I != null and Main.I.run_time >= 480.0
