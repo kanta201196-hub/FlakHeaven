@@ -50,7 +50,10 @@ const FIRE_LIGHTS := 16
 ## falloff is 1/d^0.5 and flashes are FLASH_GAIN_FWD times brighter, so a blast and a fire throw a warm pool
 ## of light on the ground and models around them (Compatibility keeps its look and cost)
 const LIGHT_FALLOFF_FWD := 0.5
-const FLASH_GAIN_FWD := 8.0
+## Forward+ exposure (Render3D.FP_EXPOSURE_K, 1.5) brightens the whole scene; lights were tuned before it, and
+## the ground pool under a blast or fire then clipped to white, so their energy takes that factor back out
+const LIGHT_EXPOSURE_COMP := 1.0 / 1.5
+const FLASH_GAIN_FWD := 8.0 * LIGHT_EXPOSURE_COMP
 var _fire_lights: Array = []   # VFX-06: flickering lights of burning spots, Forward+ only (see _fire_glow)
 var _fire_clock := 0.0
 var _later: Array = []      # отложенные вспышки (цепочки у крупных)
@@ -107,6 +110,7 @@ vec2 tile_uv(vec2 uv) { vec2 t = vec2(mod(cd.z, 2.0), floor(cd.z * 0.5 + 0.01));
 const FIRE_SH := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 uniform sampler2D puff : filter_linear_mipmap, repeat_disable;
 %s
 %s
@@ -116,7 +120,7 @@ void fragment() {
 	float d = t.r * (0.8 + 0.4 * t.g);
 	float a = smoothstep(age * 0.85, age * 0.85 + 0.4, d);
 	float heat = clamp(cd.w * (1.0 - age * 0.9) + (d - 0.45) * 0.9, 0.0, 1.0);
-	ALBEDO = ramp(heat) * COLOR.rgb;
+	ALBEDO = (ramp(heat) * COLOR.rgb) * FX_EXP;
 	ALPHA = a * COLOR.a;
 }
 """
@@ -125,6 +129,7 @@ void fragment() {
 const SMOKE_SH := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 uniform sampler2D puff : filter_linear_mipmap, repeat_disable;
 %s
 %s
@@ -140,7 +145,7 @@ void fragment() {
 	float a = smoothstep(age * 0.55, age * 0.55 + 0.6, d * (0.85 + 0.3 * t.g));
 	vec3 col = COLOR.rgb * lit + vec3(0.1, 0.095, 0.085) * clamp(lit - 0.9, -0.5, 0.5);
 	col += ramp(cd.w * (0.4 + d * 0.8)) * cd.w * smoothstep(0.2, 0.8, d);
-	ALBEDO = col;
+	ALBEDO = col * FX_EXP;
 	ALPHA = a * COLOR.a;
 }
 """
@@ -153,6 +158,7 @@ void fragment() {
 const SCREEN_SH := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 uniform sampler2D soft : filter_linear_mipmap, repeat_enable;
 uniform sampler2D depth_tex : hint_depth_texture, filter_linear;
 uniform vec3 to_sun = vec3(-0.46, 0.63, -0.56);
@@ -184,7 +190,7 @@ void fragment() {
 	float z = texture(depth_tex, SCREEN_UV).r;
 	vec4 vp = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, z, 1.0);
 	float gap = VERTEX.z - vp.z / vp.w;
-	ALBEDO = col;
+	ALBEDO = col * FX_EXP;
 	ALPHA = a * COLOR.a * clamp(gap / max(side * 0.5, 1.0), 0.0, 1.0);
 }
 """
@@ -193,6 +199,7 @@ void fragment() {
 const CORE_SH := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_back, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 %s
 varying vec4 cd;
 varying float vn;
@@ -212,7 +219,7 @@ void fragment() {
 	float heat = clamp(cd.z * (1.0 - age * 1.35) + (vn - 0.5) * 0.7 + (n2 - 0.5) * 0.8 - fres * 0.5 + 0.12, 0.0, 1.0);
 	float body = n2 * 0.55 + vn * 0.45 + (1.0 - fres) * 0.25;
 	float a = smoothstep(age * 1.05 - 0.05, age * 1.05 + 0.18, body);
-	ALBEDO = ramp(heat) * COLOR.rgb;
+	ALBEDO = (ramp(heat) * COLOR.rgb) * FX_EXP;
 	ALPHA = a * COLOR.a;
 }
 """
@@ -221,11 +228,12 @@ void fragment() {
 const SPARK_SH := """
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 void fragment() {
 	float w = 1.0 - abs(UV.y * 2.0 - 1.0);
 	// хвост гаснет, голова круглая и мягкая — короткая искра читается точкой, а не квадратом
 	float a = w * w * smoothstep(0.0, 0.75, UV.x) * (1.0 - smoothstep(0.82, 1.0, UV.x));
-	ALBEDO = COLOR.rgb * 2.2;
+	ALBEDO = (COLOR.rgb * 2.2) * FX_EXP;
 	ALPHA = a * COLOR.a;
 }
 """
@@ -234,11 +242,12 @@ void fragment() {
 const FLASH_SH := """
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 %s
 void fragment() {
 	float d = length(UV * 2.0 - 1.0);
 	float a = pow(clamp(1.0 - d, 0.0, 1.0), 2.2);
-	ALBEDO = COLOR.rgb * 2.0;
+	ALBEDO = (COLOR.rgb * 2.0) * FX_EXP;
 	ALPHA = a * COLOR.a;
 }
 """
@@ -247,6 +256,7 @@ void fragment() {
 const SHOCK_SH := """
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 %s
 varying vec4 cd;
 varying vec3 lp;
@@ -255,7 +265,7 @@ void fragment() {
 	float f = 1.0 - abs(dot(NORMAL, VIEW));
 	float n = fbm(lp + vec3(cd.x * 4.0));
 	float a = (pow(f, 2.0) * 0.6 + 0.15) * smoothstep(0.35, 0.75, n);
-	ALBEDO = COLOR.rgb;
+	ALBEDO = COLOR.rgb * FX_EXP;
 	ALPHA = a * COLOR.a;
 }
 """
@@ -1158,7 +1168,7 @@ func _fire_glow(e: Dictionary, p: Vector3, s: float, glow: float) -> void:
 	var l: OmniLight3D = slot["l"]
 	l.position = p + Vector3(0, s * 0.9 + 8.0, 0)
 	l.omni_range = clampf(s * 10.0, 130.0, 420.0)
-	l.light_energy = clampf(s * 2.5, 18.0, 40.0) * glow * flicker
+	l.light_energy = clampf(s * 2.5, 18.0, 40.0) * LIGHT_EXPOSURE_COMP * glow * flicker
 	l.visible = true
 
 
