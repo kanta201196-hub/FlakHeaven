@@ -21,6 +21,9 @@ var _win_len := 10.0
 var _last := 0
 var _eng := {}   # engine-side per-frame sums over the window (ms): process, physics, render CPU/GPU
 var _measured: Array[RID] = []
+var _ft_sum := 0.0
+static var _ph := ""       # current phase outside node _process (see _phase)
+static var _ph_t := 0
 
 
 static func mark(name: String) -> void:
@@ -28,6 +31,7 @@ static func mark(name: String) -> void:
 		return
 	var now := Time.get_ticks_usec()
 	_acc[name] = int(_acc.get(name, 0)) + now - _t
+	_spike(name, now - _t)
 	_t = now
 
 
@@ -35,6 +39,7 @@ static func mark(name: String) -> void:
 static func sub(name: String, t0: int) -> int:
 	var now := Time.get_ticks_usec()
 	_acc[name] = int(_acc.get(name, 0)) + now - t0
+	_spike(name, now - t0)
 	return now
 
 
@@ -48,6 +53,7 @@ static var _peaks := {}
 
 static func begin() -> void:
 	if on:
+		_phase("")
 		_t = Time.get_ticks_usec()
 
 
@@ -78,13 +84,50 @@ func _ready() -> void:
 		var n := _Probe.new()
 		n.process_priority = pr[i]
 		n.label = "" if i == 0 else String(names[i - 1])
+		n.next = String(names[i]) if i < names.size() else ""
 		n.process_mode = Node.PROCESS_MODE_ALWAYS
 		add_child(n)
 		_probes.append(n)
 	_last = Time.get_ticks_usec()
 	get_tree().node_added.connect(_on_added)
+	RenderingServer.frame_pre_draw.connect(_phase.bind("draw"))
+	RenderingServer.frame_post_draw.connect(_phase.bind("post"))
+	get_tree().physics_frame.connect(_phase.bind("phys"))
+	get_tree().process_frame.connect(_phase.bind("pre"))
 	for n in get_tree().root.find_children("*", "", true, false):
 		_on_added(n)
+
+
+## Worst single frame of a group or phase in the window; printed as «пик:…» only above SPIKE_US, so a
+## hitch in the window can be traced to the system that took it.
+const SPIKE_US := 8000
+static var _spikes_by := {}
+
+
+static func _spike(name: String, us: int) -> void:
+	if us > SPIKE_US and us > int(_spikes_by.get(name, 0)):
+		_spikes_by[name] = us
+
+
+## Main-thread time outside node _process, split by the engine's own signals so a slow frame has no
+## unexplained remainder:
+## «eng.dq.<group>» — deferred calls queued while <group> ran its _process, mostly its nodes' queued _draw()
+##   (the HUD is drawn here, not in «hud»);
+## «eng.tail» — the 2D transform flush between the last probe and the deferred calls;
+## «eng.late» — deferred calls queued later, the queue_free delete queue, engine work until drawing;
+## «eng.draw» — RenderingServer.draw on the main thread (canvas, culling, submission, present);
+## «eng.post» — after drawing until physics (audio sync, input); «eng.phys» — physics steps;
+## «eng.pre» — process_frame signal handlers. Headless runs never draw: there «late» holds the rest.
+static func _phase(next: String) -> void:
+	if not on:
+		return
+	var now := Time.get_ticks_usec()
+	if _ph != "":
+		var k := "eng." + _ph
+		_acc[k] = int(_acc.get(k, 0)) + now - _ph_t
+		_spike(k, now - _ph_t)
+	_ph = next
+	_ph_t = now
 
 
 ## Системы — в свою группу приоритета (порядок обработки внутри группы не меняется)
@@ -117,6 +160,7 @@ func _process(delta: float) -> void:
 	var now := Time.get_ticks_usec()
 	if _prev_us > 0:
 		var ft := (now - _prev_us) / 1000.0
+		_ft_sum += ft
 		_ft_max = maxf(_ft_max, ft)
 		if ft > 33.0:
 			_spikes += 1
@@ -139,7 +183,11 @@ func _process(delta: float) -> void:
 	for k in _peaks:
 		line += " %s=%.1fмс" % [k, _peaks[k] / 1000.0]
 	_peaks.clear()
-	line += " | сумма=%.2f мс процесс=%.2f" % [tot, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0]
+	for k in _spikes_by:
+		line += " пик:%s=%.0fмс" % [k, _spikes_by[k] / 1000.0]
+	_spikes_by.clear()
+	line += " | сумма=%.2f мс процесс=%.2f кадр_факт=%.2f" % [tot, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, _ft_sum / maxf(_frames, 1)]
+	_ft_sum = 0.0
 	line += " | " + _engine_report()
 	line += " | врагов=%d пуль=%d узлов=%d draws=%d tris=%dk" % [
 		m.get_tree().get_nodes_in_group("enemies").size() if m != null else 0,
@@ -323,9 +371,17 @@ var _roots_f := -1
 class _Probe:
 	extends Node
 	var label := ""
+	var next := ""   # the group processed after this probe; its queue_redraw()/call_deferred run as «dq.<next>»
 
 	func _process(_d: float) -> void:
 		if label == "":
 			Perf.begin()
 		else:
 			Perf.mark(label)
+		# deferred calls run in the order they were queued, so a marker queued between two groups splits
+		# the deferred flush by the group that queued the work (mostly its nodes' _draw())
+		if next != "":
+			Perf._phase.call_deferred("dq." + next)
+		else:
+			Perf._phase("tail")
+			Perf._phase.call_deferred("late")

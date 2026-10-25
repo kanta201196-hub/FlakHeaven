@@ -900,7 +900,15 @@ func _check_near_miss(b: Dictionary, d: float, near: float, pl: Player, kind: St
 
 # ---------- Отрисовка ----------
 
+## Perf (--perf) times every 2D layer's _draw: it runs in the deferred flush after _process, outside the probes
 func _draw() -> void:
+	var t0 := Time.get_ticks_usec() if Perf.on else 0
+	_draw_layer()
+	if Perf.on:
+		Perf.sub("draw.projectiles", t0)
+
+
+func _draw_layer() -> void:
 	# тест 3.5-s7: в 3D огонь и зоны бомб рисует земля по рельефу (render3d._sync_ground_zones)
 	var gz := Render3D.I != null and Render3D.I.ground_zones_on()
 	for f in fires:

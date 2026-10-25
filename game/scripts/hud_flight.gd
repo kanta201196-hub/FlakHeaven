@@ -42,26 +42,36 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	ctrl.draw_rect(Rect2(0, 0, size.x * clampf(m.run.xp / m.xp_need(), 0.0, 1.0), 6), UiStyle.ACCENT)
 
 	var hide := Settings.hide_hud and m.state == "playing"
+	var pt := Time.get_ticks_usec() if Perf.on else 0
 	if is_instance_valid(p) and not hide:
 		_left_panel(m, p)
+		if Perf.on: pt = Perf.sub("hud.left", pt)
 		_flight_panel(m, p, size)
+		if Perf.on: pt = Perf.sub("hud.flight", pt)
 		if m.state == "playing":
 			_activity_panel(m, p, size)
+		if Perf.on: pt = Perf.sub("hud.activity", pt)
 	_top_center(m, size)
+	if Perf.on: pt = Perf.sub("hud.top_center", pt)
 	_top_right(m, size)
+	if Perf.on: pt = Perf.sub("hud.top_right", pt)
 	if is_instance_valid(p) and m.state == "playing":
 		_action_bar(m, p, size)
+		if Perf.on: pt = Perf.sub("hud.action_bar", pt)
 		if not hide:
 			if _mini == null:
 				_mini = HudMinimap.new(ctrl)
 			_mini.draw(m, size)
+		if Perf.on: pt = Perf.sub("hud.minimap", pt)
 	_fx_texts(m)
+	if Perf.on: pt = Perf.sub("hud.fx_texts", pt)
 	_boss_bars(m, size)
 	_threat_markers(size)
 	if m.state == "playing":
 		_evac_marker(m, size)
 		if m.hud.radio_t > 0.0 and is_instance_valid(p) and not hide:
 			_radio_box(m, size)
+	if Perf.on: pt = Perf.sub("hud.markers", pt)
 
 	if Hints.t > 0.0 and Hints.text != "" and m.state == "playing":
 		_hint_box(Hints.text, size, clampf(Hints.t * 2.0, 0.0, 1.0))

@@ -525,9 +525,12 @@ func _process(delta: float) -> void:
 	_sync_missiles(m)
 	_sync_enemy_shots(m)
 	if Perf.on: pt = Perf.sub("r3d.missiles", pt)
+	var ct0 := pt
 	_sync_crashes(m, sd)
+	if Perf.on: ct0 = Perf.sub("r3d.c.crashes", ct0)
 	title.sync(m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu", delta)
 	_trails.tick(delta if title.active() else sd)   # в меню мир на паузе, а следы звена тают в реальном времени
+	if Perf.on: Perf.sub("r3d.c.trails", ct0)
 	_wakes.tick(sd)
 	if Perf.on: pt = Perf.sub("r3d.crash_trails", pt)
 	_sync_objects(c2, h)
@@ -572,6 +575,28 @@ func _battle_model(tex: Texture2D) -> PackedScene:
 
 
 var _bm_cache := {}
+
+
+## Whether the battle model for `tex` can be used this frame without blocking. The first enemy of a type
+## used to load its GLB on the main thread (15–350 ms freeze in a fight); now the load runs in the
+## background and the new enemy, still off screen where it spawns, waits a few frames for its model.
+func _battle_model_ready(tex: Texture2D) -> bool:
+	if _bm_cache.has(tex):
+		return true
+	var path := "res://models/battle/fh_battle_%s.glb" % tex.resource_path.get_file().get_basename()
+	if not ResourceLoader.exists(path):
+		_bm_cache[tex] = null
+		return true
+	match ResourceLoader.load_threaded_get_status(path):
+		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return false
+		ResourceLoader.THREAD_LOAD_LOADED:
+			_bm_cache[tex] = ResourceLoader.load_threaded_get(path)
+			return true
+		ResourceLoader.THREAD_LOAD_FAILED:
+			return true   # _battle_model() tries the ordinary load and reports the error
+	ResourceLoader.load_threaded_request(path)
+	return false
 ## M-37 (Kanta 18.10): высота модели к её длине ближе к настоящей — при наклоне камеры 28–45° высокая модель
 ## «встаёт» над землёй и кажется крупнее. Бункер Meshy вдвое выше настоящего укрытия с обваловкой (0,8 длины
 ## против ~0,3), у РЛС антенна на мачте ~1 длины против ~0,8. Сжатие только по вертикали; у РЛС ось вращения
@@ -668,10 +693,10 @@ func _place(u: Dictionary, p: Vector2, heading: float, bank: float, roll: float,
 		# самолёт выше или ниже плоскости боя — на луче камеры через точку p: на экране он там же,
 		# где его пули и хитбокс, а высоту видно по размеру и по рельефу под ним
 		q = _on_ray(p, y)
-	root.position = Vector3(q.x, y, q.y)
 	var b := Basis(Vector3.UP, -heading) * Basis(Vector3.BACK, pitch) * Basis(Vector3.RIGHT, bank + roll)
 	var k: float = u["k"] * scale_k
-	root.basis = b.scaled(Vector3(k, k, k))
+	# one transform write: each write re-sends the transform of every mesh in the model to the renderer
+	root.transform = Transform3D(b.scaled(Vector3(k, k, k)), Vector3(q.x, y, q.y))
 	if u.has("sh") or u.has("shb"):
 		_place_shadow(u, p, heading, k)
 
@@ -1023,6 +1048,7 @@ func _flush_shadows() -> void:
 func _sync_units(m: Main, delta: float, sd: float) -> void:
 	for id in _units:
 		_units[id]["seen"] = false
+	var ut := Time.get_ticks_usec() if Perf.on else 0
 	var p := m.player
 	if is_instance_valid(p) and p.is_visible_in_tree():
 		var tex := PlaneArt.plane_tex(p.cls_id, p.plane_lvl)
@@ -1091,6 +1117,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var wpts := PlaneFx.trail_points(uw)
 			for i in wpts.size():
 				_trails.emit("w%d_%d" % [wm.get_instance_id(), i], wpts[i], [0.22, 2.5, 14.0, 1.0, 14.0])
+	if Perf.on: ut = Perf.sub("r3d.u.player", ut)
 	# 3.5: свои самолёты вне звена (заправщик): ally_tex(), ally_len(), heading
 	for n in get_tree().get_nodes_in_group("allies3d"):
 		var an := n as Node2D
@@ -1105,6 +1132,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		if ua.get("bm") != null and an.get("boom_len") != null:
 			_tanker_boom(ua, an, float(an.call("ally_len")))
 	for n in get_tree().get_nodes_in_group("enemies"):
+		var et := Time.get_ticks_usec() if Perf.on else 0   # a slow unit shows as «пик:r3d.e.<class>»
 		var e := n as Enemy
 		if e == null or e.hp <= 0.0:
 			continue
@@ -1115,6 +1143,8 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 		if t == null:
 			continue
 		var len_px: float = float(info["len"]) * Tuning.g("unit_scale") * (1.2 if e.elite else 1.0)
+		if not _units.has(e.get_instance_id()) and not _battle_model_ready(t):
+			continue   # its model is still loading; an existing unit never waits (it would count as gone)
 		var ue := _ensure(e.get_instance_id(), "enemy", t, len_px, 0.05 if e.is_ground else 0.07, 40 if not e.is_boss else 64)
 		var ang: float = info.get("angle", e.heading)
 		if e.is_ground:
@@ -1155,20 +1185,34 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			elif ue.get("bm") != null:   # винты prop_* (транспортник, «Буревестник», «Чайка»); нет узлов — нет работы
 				_props(ue, delta)
 		var mi2: MeshInstance3D = ue["mi"]
+		var ov: Material
 		if ue.get("bm") != null:
-			mi2.material_overlay = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
+			ov = _flash_mat if e._flash > 0.0 else (_elite_mat if e.elite else null)
 		else:
 			# модель из картинки (транспортник и др.): подсветка только по силуэту, иначе видна сетка квадратами
-			mi2.material_overlay = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)
+			ov = _cut_overlay(ue["tex"], "flash") if e._flash > 0.0 else (_cut_overlay(ue["tex"], "elite") if e.elite else null)
+		if mi2.material_overlay != ov:   # the setter always re-sends the material to the renderer
+			mi2.material_overlay = ov
+		if Perf.on: Perf._spike("r3d.e." + _perf_cls(e), Time.get_ticks_usec() - et)
+	if Perf.on: ut = Perf.sub("r3d.u.enemies", ut)
 	_sync_wrecks(delta)
+	if Perf.on: ut = Perf.sub("r3d.u.wrecks", ut)
 	_sync_dust(delta)
+	if Perf.on: ut = Perf.sub("r3d.u.dust", ut)
 	_flush_shadows()
 	_sync_plane_shadows()
+	if Perf.on: ut = Perf.sub("r3d.u.shadows", ut)
 	for id in _units.keys():
 		if not _units[id]["seen"]:
 			if not _start_crash(_units[id]) and not _pool_put(_units[id]):
 				(_units[id]["node"] as Node).queue_free()
 			_units.erase(id)
+
+
+## Class name of a unit for Perf spike labels (script class, else the engine class).
+static func _perf_cls(n: Node) -> String:
+	var sc: Script = n.get_script()
+	return sc.get_global_name() if sc != null and sc.get_global_name() != "" else n.get_class()
 
 
 ## Helicopter rotors: the main rotor turns clockwise seen from above, the tail rotor about its own axis (local Z

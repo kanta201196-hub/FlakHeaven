@@ -85,7 +85,15 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## Perf (--perf) times every 2D layer's _draw: it runs in the deferred flush after _process, outside the probes
 func _draw() -> void:
+	var t0 := Time.get_ticks_usec() if Perf.on else 0
+	_draw_layer()
+	if Perf.on:
+		Perf.sub("draw.pickups", t0)
+
+
+func _draw_layer() -> void:
 	for it in items:
 		var p: Vector2 = it["p"]
 		if it["kind"] == "xp":
