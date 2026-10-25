@@ -58,14 +58,14 @@ class BarCol extends RefCounted:
 	var key := ""
 
 ## Size of icon tiles in the bottom bar and the column each tile takes
-const BAR_TILE := 72.0
-const BAR_COL := 132.0
+const BAR_TILE := 56.0
+const BAR_COL := 112.0
 ## Left column: width, row height (shrinks down to SIDE_ROW_MIN when many rows must fit above
 ## the minimap) and tile size
-const SIDE_W := 300.0
-const SIDE_ROW := 74.0
-const SIDE_ROW_MIN := 58.0
-const SIDE_TILE := 54.0
+const SIDE_W := 250.0
+const SIDE_ROW := 60.0
+const SIDE_ROW_MIN := 50.0
+const SIDE_TILE := 44.0
 
 
 ## Draws the in-flight HUD panels (XP line, hull and fuel, activities, timer, goals and
@@ -399,13 +399,13 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 		y += rh
 	# bottom bar: skills only
 	var w := skills.size() * BAR_COL + 20.0
-	var r := Rect2((size.x - w) / 2.0, size.y - 184.0, w, 172.0)
+	var r := Rect2((size.x - w) / 2.0, size.y - 158.0, w, 146.0)
 	bar_top = r.position.y
 	_bar_rect = r
 	sig.append(r)
 	var x := r.position.x + 10.0
 	for sk: Dictionary in skills:
-		cols.append(_skill_layout(sk, Vector2(x, r.position.y + 30.0), sig))
+		cols.append(_skill_layout(sk, Vector2(x, r.position.y + 26.0), sig))
 		x += BAR_COL
 	_bar_p = p
 	_bar_cols = cols
@@ -427,7 +427,7 @@ func _skill_layout(sk: Dictionary, pos: Vector2, sig: Array, row := false, rh :=
 	var dim := cd > 0.0 and active <= 0.0
 	var key := key_label(String(sk["action"]))
 	sig.append_array([sk["key"], fam, frame, dim, sk["title"], sk["hint"]])
-	var tip := Rect2(pos.x, pos.y, SIDE_W, rh) if row else Rect2(pos.x, pos.y - 16.0, BAR_COL, 150.0)
+	var tip := Rect2(pos.x, pos.y, SIDE_W, rh) if row else Rect2(pos.x, pos.y - 16.0, BAR_COL, 136.0)
 	_skill_tips.append([tip, "%s · %s" % [String(sk["title"]).to_upper(), key], String(sk["desc"]), String(sk["action"]), row])
 	var c := BarCol.new()
 	c.sk = sk
@@ -444,9 +444,9 @@ func draw_bar_static() -> void:
 	if not bar_now():
 		return
 	if _bar_rect.has_area():
-		UiStyle.panel(ctrl, _bar_rect, Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.8))
+		UiStyle.panel(ctrl, _bar_rect, Color(1, 1, 1, 0.1), Color(0.03, 0.035, 0.035, 0.42))
 	if _side_rect.has_area():
-		UiStyle.panel(ctrl, _side_rect, Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.72))
+		UiStyle.panel(ctrl, _side_rect, Color(1, 1, 1, 0.1), Color(0.03, 0.035, 0.035, 0.38))
 	for c in _bar_cols:
 		if c.hp != null:
 			_weapon_static(c)
@@ -482,15 +482,15 @@ func _tile_of(c: BarCol) -> Rect2:
 ## Name and one-line hint beside a left-column tile (weapon short name with its target or
 ## trigger, gun mode, wingmen target).
 func _row_text(tr: Rect2, title: String, sub: String, col: Color, sub_col: Color) -> void:
-	var tx := tr.end.x + 14.0
+	var tx := tr.end.x + 12.0
 	var tw := _side_rect.end.x - tx - 12.0
 	var nf := UiStyle.head_font(700, 1)
 	var cy := tr.get_center().y
-	var name_y := cy - 2.0 if sub != "" else cy + 6.0
-	UiStyle.text(ctrl, nf, Vector2(tx, name_y), _fit(title, tw, UiStyle.FS_BODY, nf), UiStyle.FS_BODY, col)
+	var name_y := cy - 2.0 if sub != "" else cy + 5.0
+	UiStyle.text(ctrl, nf, Vector2(tx, name_y), _fit(title, tw, UiStyle.FS_CAPTION, nf), UiStyle.FS_CAPTION, col)
 	if sub != "":
 		var sf := UiStyle.head_font(600, 0)
-		UiStyle.text(ctrl, sf, Vector2(tx, name_y + 20.0), _fit(sub, tw, UiStyle.FS_CAPTION, sf), UiStyle.FS_CAPTION, sub_col)
+		UiStyle.text(ctrl, sf, Vector2(tx, name_y + 17.0), _fit(sub, tw, UiStyle.FS_CAPTION, sf), UiStyle.FS_CAPTION, sub_col)
 
 
 ## Weapon group, static part: tile with level frame and the name with its target or trigger
@@ -511,11 +511,11 @@ func _weapon_static(c: BarCol) -> void:
 		return
 	var nf := UiStyle.head_font(700, 1)
 	var nl := _lines(Loc.t(Weapons.DEFS[hp.weapon]["short"]).to_upper(), BAR_COL - 6.0, UiStyle.FS_CAPTION, nf)
-	var ny := tr.end.y + 30.0 - (8.0 if nl.size() > 1 else 0.0)
+	var ny := tr.end.y + 24.0 - (8.0 if nl.size() > 1 else 0.0)
 	for i in nl.size():
 		UiStyle.text(ctrl, nf, Vector2(pos.x, ny + i * 17.0), nl[i], UiStyle.FS_CAPTION, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
 	if sub != "":
-		UiStyle.text(ctrl, UiStyle.head_font(600, 0), Vector2(pos.x, ny + (nl.size() - 1) * 17.0 + 20.0), _fit(sub, BAR_COL - 4.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 0)),
+		UiStyle.text(ctrl, UiStyle.head_font(600, 0), Vector2(pos.x, ny + (nl.size() - 1) * 17.0 + 17.0), _fit(sub, BAR_COL - 4.0, UiStyle.FS_CAPTION, UiStyle.head_font(600, 0)),
 			UiStyle.FS_CAPTION, fc.lightened(0.2), HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
 
 
@@ -604,7 +604,7 @@ func _skill_static(c: BarCol) -> void:
 	var nc := UiStyle.ACCENT if fam == "skill" else UiStyle.TEXT
 	var title := String(sk["title"]).to_upper()
 	var nf := UiStyle.head_font(700, 1)
-	var ny := tr.end.y + 30.0
+	var ny := tr.end.y + 24.0
 	if UiStyle.text_w(nf, title, UiStyle.FS_CAPTION) > BAR_COL - 6.0 and title.contains(" "):
 		# two-word names («БОЕВОЙ РАЗВОРОТ») go on two lines rather than shrink
 		var sp := title.find(" ")
@@ -616,9 +616,9 @@ func _skill_static(c: BarCol) -> void:
 	var hint := String(sk["hint"])
 	if hint != "":
 		# two-line names leave room for one hint line inside the bar
-		var hl := _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION, null, 1 if ny > tr.end.y + 30.0 else 2)
+		var hl := _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION, null, 1 if ny > tr.end.y + 24.0 else 2)
 		for i in hl.size():
-			UiStyle.text(ctrl, ui_font(), Vector2(pos.x, ny + 19.0 + i * 16.0), hl[i], UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
+			UiStyle.text(ctrl, ui_font(), Vector2(pos.x, ny + 17.0 + i * 15.0), hl[i], UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
 
 
 ## Skill column, every frame: glow while active, cooldown sweep and seconds, key cap on the
@@ -646,8 +646,9 @@ func _skill_dyn(c: BarCol) -> void:
 		ctrl.draw_colored_polygon(pts, Color(0, 0, 0, 0.45))
 		var cs := ("%.1f" % cd) if cd < 10.0 else str(int(ceil(cd)))
 		var f := UiStyle.head_font(800, 0)
-		ctrl.draw_string_outline(f, Vector2(tr.position.x, ctr.y + 11.0), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 30, 5, Color(0, 0, 0, 0.9))
-		ctrl.draw_string(f, Vector2(tr.position.x, ctr.y + 11.0), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, 30, Color.WHITE)
+		var cfs := int(clampf(tr.size.x * 0.5, 22.0, 30.0))
+		ctrl.draw_string_outline(f, Vector2(tr.position.x, ctr.y + cfs * 0.37), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, cfs, 5, Color(0, 0, 0, 0.9))
+		ctrl.draw_string(f, Vector2(tr.position.x, ctr.y + cfs * 0.37), cs, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x, cfs, Color.WHITE)
 	elif active > 0.0:
 		var f2 := UiStyle.head_font(800, 0)
 		var as_ := "%.1f" % active
