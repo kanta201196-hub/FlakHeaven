@@ -75,7 +75,7 @@ func dmg() -> float:
 
 ## S9-15: «Калибр» — +18% урона за ранг, «Скорострел» — −10% перезарядки за ранг (до 5 рангов)
 func branch_dmg_k() -> float:
-	return 1.0 + 0.18 * branch_rank if branch == "power" else 1.0
+	return 1.0 + 0.18 * branch_rank if branch == "power" and not Cards.BRANCHES_W.has(weapon) else 1.0
 
 
 func branch_cd_k() -> float:
@@ -219,8 +219,8 @@ func range_px() -> float:
 			return 520.0 * p.mods["servo_range"] * _evo_k("range")
 		if evo and weapon == "flares":
 			return 360.0 * _evo_k("range")
-	if weapon == "flares" and branch == "power":
-		base *= 1.0 + 0.1 * branch_rank   # S10-09: «Яркие ловушки»
+	if weapon in ["flares", "emp"] and branch == "power":
+		base *= 1.0 + 0.1 * branch_rank   # S10-09: «Яркие ловушки»; ЭМИ: «Расширенный импульс» (Kanta 25.10)
 	match weapon:
 		"flares", "emp", "laser", "plasma":
 			return base * (1.0 + 0.08 * (level - 1))

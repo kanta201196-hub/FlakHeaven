@@ -7340,3 +7340,15 @@ msgstr "羁绊：热闹伙伴"
 #: game/scripts/wingman.gd:450
 msgid "связка: волчья стая"
 msgstr "羁绊：狼群"
+
+#: game/scripts/cards.gd
+msgid "Быстрая подзарядка"
+msgstr "快速充能"
+
+#: game/scripts/cards.gd
+msgid "Широкий импульс"
+msgstr "宽脉冲"
+
+#: game/scripts/cards.gd
+msgid "+10% радиуса за ранг"
+msgstr "每级半径 +10%"
