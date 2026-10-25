@@ -1265,7 +1265,7 @@ msgstr "afterburner pass"
 msgid "бронещит"
 msgstr "armor shield"
 
-#: game/scripts/enemy.gd:83 game/scripts/enemy.gd:145 game/scripts/player.gd:635 game/scripts/player.gd:642 game/scripts/rival_ace.gd:109
+#: game/scripts/enemy.gd:83 game/scripts/enemy.gd:145 game/scripts/player.gd:634 game/scripts/player.gd:641 game/scripts/rival_ace.gd:109
 msgid "прочее"
 msgstr "other"
 
@@ -1277,7 +1277,7 @@ msgstr "burning"
 msgid "враг"
 msgstr "enemy"
 
-#: game/scripts/enemy.gd:570 game/scripts/hud_result.gd:110 game/scripts/hud_result.gd:446 game/scripts/player.gd:628 game/scripts/run_log.gd:38
+#: game/scripts/enemy.gd:570 game/scripts/hud_result.gd:110 game/scripts/hud_result.gd:446 game/scripts/player.gd:627 game/scripts/run_log.gd:38
 msgid "таран"
 msgstr "ram"
 
@@ -1385,7 +1385,7 @@ msgstr "\"Fortress\" is over the base again! Shoot it down"
 msgid "Люк открыт! Попадание в люк — ×3 урона"
 msgstr "Hatch open! Hits on the hatch deal ×3 damage"
 
-#: game/scripts/fortress.gd:477 game/scripts/hardpoint.gd:852 game/scripts/hardpoint.gd:903 game/scripts/hud_pause.gd:32 game/scripts/player.gd:527 game/scripts/projectiles.gd:92
+#: game/scripts/fortress.gd:477 game/scripts/hardpoint.gd:852 game/scripts/hardpoint.gd:903 game/scripts/hud_pause.gd:32 game/scripts/player.gd:526 game/scripts/projectiles.gd:92
 msgid "бомбы"
 msgstr "bombs"
 
@@ -1510,7 +1510,7 @@ msgstr "Maximum"
 msgid "Максимальное"
 msgstr "Maximum"
 
-#: game/scripts/ground_target.gd:96 game/scripts/player.gd:628 game/scripts/player.gd:649
+#: game/scripts/ground_target.gd:96 game/scripts/player.gd:627 game/scripts/player.gd:648
 msgid "ПВО"
 msgstr "AA"
 
@@ -1573,7 +1573,7 @@ msgstr "synergy: thermobaric"
 msgid "связка: огненный вал"
 msgstr "synergy: fire wall"
 
-#: game/scripts/hardpoint.gd:873 game/scripts/hud_pause.gd:29 game/scripts/plane_art.gd:107 game/scripts/plane_classes.gd:60 game/scripts/weapon_models.gd:780
+#: game/scripts/hardpoint.gd:873 game/scripts/hud_pause.gd:29 game/scripts/plane_art.gd:107 game/scripts/plane_classes.gd:60 game/scripts/profile.gd:375 game/scripts/weapon_models.gd:780
 msgid "Бомбоотсек"
 msgstr "Bomb Bay"
 
@@ -2639,7 +2639,7 @@ msgstr "Unlock all"
 msgid "Сброс профиля"
 msgstr "Reset profile"
 
-#: game/scripts/hud_hangar.gd:65 game/scripts/hud_hangar.gd:290
+#: game/scripts/hud_hangar.gd:65 game/scripts/hud_hangar.gd:310
 msgid "Тяните мышью — вращение, колесо — приближение"
 msgstr "Drag to rotate, wheel to zoom"
 
@@ -2670,12 +2670,12 @@ msgstr "not bought: unavailable for sorties"
 msgid "Вид оружия:"
 msgstr "Weapon view:"
 
-#: game/scripts/hud_hangar.gd:99 game/scripts/hud_hangar.gd:297
+#: game/scripts/hud_hangar.gd:99 game/scripts/hud_hangar.gd:317
 #, c-format
 msgid "ур. %d"
 msgstr "Lv. %d"
 
-#: game/scripts/hud_hangar.gd:99 game/scripts/hud_hangar.gd:297
+#: game/scripts/hud_hangar.gd:99 game/scripts/hud_hangar.gd:317
 msgid "модерниз."
 msgstr "upgrade"
 
@@ -2750,327 +2750,345 @@ msgid "Окраска:"
 msgstr "Livery:"
 
 #: game/scripts/hud_hangar.gd:172
-msgid "Второй подвес на старте"
-msgstr "Second hardpoint at start"
+msgid "Выбор стартового вооружения (не более 2 видов)"
+msgstr "Starting weapons (2 kinds at most)"
 
-#: game/scripts/hud_hangar.gd:174
+#: game/scripts/hud_hangar.gd:175
 #, c-format
-msgid "Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек."
-msgstr "Unlocks at crew Lv. %d. Until then the second hardpoint is empty: weapons come from cards."
+msgid "На старте %d из %d."
+msgstr "At start: %d of %d."
 
-#: game/scripts/hud_hangar.gd:184
-msgid "пусто"
-msgstr "empty"
+#: game/scripts/hud_hangar.gd:177
+msgid "Чтобы поставить другое, сначала снимите одно."
+msgstr "To pick another, take one off first."
+
+#: game/scripts/hud_hangar.gd:179
+#, c-format
+msgid "Второе место — с ур. экипажа %d."
+msgstr "Second place opens at crew Lv. %d."
 
 #: game/scripts/hud_hangar.gd:186
-msgid "Ставится с ур. 1; улучшения — карточками в бою."
-msgstr "Fitted from Lv. 1; improved by cards in combat."
-
-#: game/scripts/hud_hangar.gd:190
 msgid "Стандартная"
 msgstr "Standard"
 
-#: game/scripts/hud_hangar.gd:190
+#: game/scripts/hud_hangar.gd:186
 msgid "Спарка"
 msgstr "Twin gun"
 
-#: game/scripts/hud_hangar.gd:190 game/scripts/profile.gd:32 game/scripts/profile.gd:38
+#: game/scripts/hud_hangar.gd:186 game/scripts/profile.gd:32 game/scripts/profile.gd:38
 msgid "Крупный калибр"
 msgstr "Heavy caliber"
 
-#: game/scripts/hud_hangar.gd:192
+#: game/scripts/hud_hangar.gd:188
 msgid "Обычная пушка: ровный темп и урон."
 msgstr "Regular cannon: steady rate of fire and damage."
 
-#: game/scripts/hud_hangar.gd:193
+#: game/scripts/hud_hangar.gd:189
 msgid "Темп ×1,6, урон ×0,65, лёгкий разброс — против роя дронов, быстрее разгоняет «обороты»."
 msgstr "Rate ×1.6, damage ×0.65, slight spread — against drone swarms, builds up \"revs\" faster."
 
-#: game/scripts/hud_hangar.gd:194
+#: game/scripts/hud_hangar.gd:190
 msgid "Темп ×0,55, урон ×2, снаряд быстрее."
 msgstr "Rate ×0.55, damage ×2, faster shell."
 
-#: game/scripts/hud_hangar.gd:196
+#: game/scripts/hud_hangar.gd:192
 msgid "Обычные"
 msgstr "Standard"
 
-#: game/scripts/hud_hangar.gd:196
+#: game/scripts/hud_hangar.gd:192
 msgid "Бронебойные"
 msgstr "Armor-piercing"
 
-#: game/scripts/hud_hangar.gd:196
+#: game/scripts/hud_hangar.gd:192
 msgid "Осколочные"
 msgstr "High-explosive"
 
-#: game/scripts/hud_hangar.gd:196
+#: game/scripts/hud_hangar.gd:192
 msgid "Зажигательные"
 msgstr "Incendiary"
 
-#: game/scripts/hud_hangar.gd:198
+#: game/scripts/hud_hangar.gd:194
 msgid "Обычные снаряды: полный урон и скорость."
 msgstr "Standard shells: full damage and speed."
 
-#: game/scripts/hud_hangar.gd:199
+#: game/scripts/hud_hangar.gd:195
 msgid "Бронебойные: урон ×0,75, скорость ×1; пробивают броню. Лучше всего по одной крепкой цели."
 msgstr "Armor-piercing: damage ×0.75, speed ×1; pierce armor. Best against one tough target."
 
-#: game/scripts/hud_hangar.gd:200
+#: game/scripts/hud_hangar.gd:196
 msgid "Осколочно-фугасные: урон ×1, скорость ×0,75; осколки задевают соседей. Лучше всего по группе."
 msgstr "High-explosive: damage ×1, speed ×0.75; fragments hit nearby enemies. Best against groups."
 
-#: game/scripts/hud_hangar.gd:201
+#: game/scripts/hud_hangar.gd:197
 msgid "Зажигательные: урон ×0,85, скорость ×0,8; цель горит, огонь копится. Лучше всего по боссам."
 msgstr "Incendiary: damage ×0.85, speed ×0.8; the target burns and fire stacks. Best against bosses."
 
-#: game/scripts/hud_hangar.gd:207
+#: game/scripts/hud_hangar.gd:203
 msgid "Курсовая пушка этого самолёта"
 msgstr "Course gun of this plane"
 
-#: game/scripts/hud_hangar.gd:209
+#: game/scripts/hud_hangar.gd:205
 msgid "✓ выбрана"
 msgstr "✓ selected"
 
-#: game/scripts/hud_hangar.gd:217
+#: game/scripts/hud_hangar.gd:214
 msgid "Снаряды"
 msgstr "Shells"
 
-#: game/scripts/hud_hangar.gd:219
+#: game/scripts/hud_hangar.gd:216
 msgid "✓ выбраны"
 msgstr "✓ selected"
 
-#: game/scripts/hud_hangar.gd:238
+#: game/scripts/hud_hangar.gd:234
 msgid "выбрать"
 msgstr "select"
 
-#: game/scripts/hud_hangar.gd:238
+#: game/scripts/hud_hangar.gd:234
 #, c-format
 msgid "%d зап."
 msgstr "%d parts"
 
-#: game/scripts/hud_hangar.gd:272
+#: game/scripts/hud_hangar.gd:255
+msgid "КУРСОВАЯ ПУШКА"
+msgstr "COURSE GUN"
+
+#: game/scripts/hud_hangar.gd:280
 #, c-format
 msgid "★ бонус самолёта: +%d%%"
 msgstr "★ plane bonus: +%d%%"
 
-#: game/scripts/hud_hangar.gd:301
+#: game/scripts/hud_hangar.gd:288
+#, c-format
+msgid "✓ подвес %d"
+msgstr "✓ hardpoint %d"
+
+#: game/scripts/hud_hangar.gd:288
+msgid "На старт"
+msgstr "Add to start"
+
+#: game/scripts/hud_hangar.gd:293
+msgid "всегда на самолёте"
+msgstr "always fitted"
+
+#: game/scripts/hud_hangar.gd:321
 #, c-format
 msgid "%s: турелей нет. Показана турель: %s"
 msgstr "%s: no turrets. Showing turret: %s"
 
-#: game/scripts/hud_hangar.gd:303
+#: game/scripts/hud_hangar.gd:323
 #, c-format
 msgid "Турель класса: %s"
 msgstr "Class turret: %s"
 
-#: game/scripts/hud_hangar.gd:305
+#: game/scripts/hud_hangar.gd:325
 msgid "Встроенное оружие — модель на самолёте"
 msgstr "Built-in weapon: model on the plane"
 
-#: game/scripts/hud_hangar.gd:308
+#: game/scripts/hud_hangar.gd:326
 #, c-format
 msgid "%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)"
 msgstr "%s: upgrade branches (active while the weapon is mounted; shared by all classes)"
 
-#: game/scripts/hud_hangar.gd:311
+#: game/scripts/hud_hangar.gd:329
 #, c-format
 msgid "Ступень %d%s"
 msgstr "Tier %d%s"
 
-#: game/scripts/hud_hangar.gd:311
+#: game/scripts/hud_hangar.gd:329
 msgid " · модернизация"
 msgstr " · upgrade"
 
-#: game/scripts/hud_hangar.gd:314
+#: game/scripts/hud_hangar.gd:332
 #, c-format
 msgid "сначала выберите ступень %d"
 msgstr "pick tier %d first"
 
-#: game/scripts/hud_hangar.gd:316
+#: game/scripts/hud_hangar.gd:334
 msgid "откроется после операции 2 «Сухое русло» (кампания)"
 msgstr "unlocks after operation 2 \"Dry Riverbed\" (campaign)"
 
-#: game/scripts/hud_hangar.gd:318
+#: game/scripts/hud_hangar.gd:336
 msgid "сначала выберите ступень 2 выше"
 msgstr "pick tier 2 above first"
 
-#: game/scripts/hud_hangar.gd:324
+#: game/scripts/hud_hangar.gd:342
 #, c-format
 msgid "Ступень %d — "
 msgstr "Tier %d: "
 
-#: game/scripts/hud_hangar.gd:328
+#: game/scripts/hud_hangar.gd:346
 msgid "Нужно:"
 msgstr "Needs:"
 
-#: game/scripts/hud_hangar.gd:329
+#: game/scripts/hud_hangar.gd:347
 msgid "ступень 2"
 msgstr "tier 2"
 
-#: game/scripts/hud_hangar.gd:330
+#: game/scripts/hud_hangar.gd:348
 msgid "операция 2 «Сухое русло»"
 msgstr "operation 2 \"Dry Riverbed\""
 
-#: game/scripts/hud_hangar.gd:331
+#: game/scripts/hud_hangar.gd:349
 #, c-format
 msgid "%d запч."
 msgstr "%d parts"
 
-#: game/scripts/hud_hangar.gd:332
+#: game/scripts/hud_hangar.gd:350
 msgid "самолёт ур. 2"
 msgstr "plane Lv. 2"
 
-#: game/scripts/hud_hangar.gd:346
+#: game/scripts/hud_hangar.gd:364
 msgid "ВЫБРАТЬ (оплачено)"
 msgstr "SELECT (paid)"
 
-#: game/scripts/hud_hangar.gd:350
+#: game/scripts/hud_hangar.gd:368
 #, c-format
 msgid "ВЗЯТЬ — %d"
 msgstr "TAKE: %d"
 
-#: game/scripts/hud_hangar.gd:352
+#: game/scripts/hud_hangar.gd:370
 #, c-format
 msgid "%d запчастей"
 msgstr "%d parts"
 
-#: game/scripts/hud_hangar.gd:354
+#: game/scripts/hud_hangar.gd:372
 #, c-format
 msgid "переиграть — %d"
 msgstr "reroll: %d"
 
-#: game/scripts/hud_hangar.gd:364
+#: game/scripts/hud_hangar.gd:382
 #, c-format
 msgid "Позывной: «%s»"
 msgstr "Callsign: \"%s\""
 
-#: game/scripts/hud_hangar.gd:365
+#: game/scripts/hud_hangar.gd:383
 msgid "СМЕНИТЬ"
 msgstr "CHANGE"
 
-#: game/scripts/hud_hangar.gd:382
+#: game/scripts/hud_hangar.gd:400
 #, c-format
 msgid "Черта: «%s»"
 msgstr "Trait: \"%s\""
 
-#: game/scripts/hud_hangar.gd:390
+#: game/scripts/hud_hangar.gd:408
 #, c-format
 msgid "Экипаж ур. %d"
 msgstr "Crew Lv. %d"
 
-#: game/scripts/hud_hangar.gd:396
+#: game/scripts/hud_hangar.gd:414
 #, c-format
 msgid "опыт для ур. %d набран"
 msgstr "XP for Lv. %d earned"
 
-#: game/scripts/hud_hangar.gd:396
+#: game/scripts/hud_hangar.gd:414
 #, c-format
 msgid "%d / %d опыта до ур. %d"
 msgstr "%d / %d XP to Lv. %d"
 
-#: game/scripts/hud_hangar.gd:403
+#: game/scripts/hud_hangar.gd:421
 #, c-format
 msgid "ПОВЫСИТЬ В ЗВАНИИ — %d запчастей"
 msgstr "PROMOTE: %d parts"
 
-#: game/scripts/hud_hangar.gd:406
+#: game/scripts/hud_hangar.gd:424
 #, c-format
 msgid "Повысить в звании — %d (не хватает запчастей)"
 msgstr "Promote: %d (not enough parts)"
 
-#: game/scripts/hud_hangar.gd:406
+#: game/scripts/hud_hangar.gd:424
 #, c-format
 msgid "Повысить в звании — %d (нужен опыт)"
 msgstr "Promote: %d (need XP)"
 
-#: game/scripts/hud_hangar.gd:410
+#: game/scripts/hud_hangar.gd:428
 msgid "Следующие звания — "
 msgstr "Further ranks: "
 
-#: game/scripts/hud_hangar.gd:412
+#: game/scripts/hud_hangar.gd:430
 msgid "Рост показателей: "
 msgstr "Stat growth: "
 
-#: game/scripts/hud_hangar.gd:414
+#: game/scripts/hud_hangar.gd:432
 msgid "Открытия по уровню экипажа:"
 msgstr "Unlocks by crew level:"
 
-#: game/scripts/hud_hangar.gd:415
+#: game/scripts/hud_hangar.gd:433
 msgid "2-й навык класса; самолёт ур. 2"
 msgstr "2nd class skill; plane Lv. 2"
 
-#: game/scripts/hud_hangar.gd:415
+#: game/scripts/hud_hangar.gd:433
 msgid "ведомый «Ласка»"
 msgstr "wingman \"Weasel\""
 
-#: game/scripts/hud_hangar.gd:415
+#: game/scripts/hud_hangar.gd:433
 msgid "2-й слот навыка [F]"
 msgstr "2nd skill slot [F]"
 
-#: game/scripts/hud_hangar.gd:415 game/scripts/profile.gd:282
+#: game/scripts/hud_hangar.gd:433 game/scripts/profile.gd:285
 msgid "перки 2-й ступени"
 msgstr "tier 2 perks"
 
-#: game/scripts/hud_hangar.gd:415
+#: game/scripts/hud_hangar.gd:433
 msgid "3-й навык класса"
 msgstr "3rd class skill"
 
-#: game/scripts/hud_hangar.gd:415
+#: game/scripts/hud_hangar.gd:433
 msgid "ведомый «Грачонок»"
 msgstr "wingman \"Rookling\""
 
-#: game/scripts/hud_hangar.gd:418
+#: game/scripts/hud_hangar.gd:436
 #, c-format
 msgid "ур. %d — %s"
 msgstr "Lv. %d: %s"
 
-#: game/scripts/hud_hangar.gd:422
+#: game/scripts/hud_hangar.gd:440
 #, c-format
 msgid "ПЕРКИ — очков: %d (на чётных уровнях)"
 msgstr "PERKS: %d points (on even levels)"
 
-#: game/scripts/hud_hangar.gd:423
+#: game/scripts/hud_hangar.gd:441
 msgid "СБРОСИТЬ ПЕРКИ"
 msgstr "RESET PERKS"
 
-#: game/scripts/hud_hangar.gd:433
+#: game/scripts/hud_hangar.gd:451
 #, c-format
 msgid "ступень %d — в разработке"
 msgstr "tier %d: in development"
 
-#: game/scripts/hud_hangar.gd:445
+#: game/scripts/hud_hangar.gd:463
 #, c-format
 msgid "с экипажа ур. %d"
 msgstr "from crew Lv. %d"
 
-#: game/scripts/hud_hangar.gd:449
+#: game/scripts/hud_hangar.gd:467
 msgid "НАВЫКИ КЛАССА"
 msgstr "CLASS SKILLS"
 
-#: game/scripts/hud_hangar.gd:454
+#: game/scripts/hud_hangar.gd:472
 #, c-format
 msgid "Слот %d [%s]%s"
 msgstr "Slot %d [%s]%s"
 
-#: game/scripts/hud_hangar.gd:454
+#: game/scripts/hud_hangar.gd:472
 #, c-format
 msgid " — экипаж ур. %d"
 msgstr " (crew Lv. %d)"
 
-#: game/scripts/hud_hangar.gd:470
+#: game/scripts/hud_hangar.gd:488
 #, c-format
 msgid " (экипаж ур. %d)"
 msgstr " (crew Lv. %d)"
 
-#: game/scripts/hud_hangar.gd:472
+#: game/scripts/hud_hangar.gd:490
 #, c-format
 msgid " — уже в слоте %d"
 msgstr " (already in slot %d)"
 
-#: game/scripts/hud_hangar.gd:479
+#: game/scripts/hud_hangar.gd:497
 msgid "Слот 3 — экипаж ур. 12, в разработке"
 msgstr "Slot 3: crew Lv. 12, in development"
 
-#: game/scripts/hud_hangar.gd:480
+#: game/scripts/hud_hangar.gd:498
 msgid "Карточки «уровень навыка» улучшают навык слота 1."
 msgstr "\"Skill level\" cards improve the slot 1 skill."
 
@@ -3132,7 +3150,7 @@ msgstr "Outer pair"
 msgid "Тяжёлый подвес"
 msgstr "Heavy pylon"
 
-#: game/scripts/hud_pause.gd:32 game/scripts/hud_result.gd:465 game/scripts/player.gd:520 game/scripts/projectiles.gd:68 game/scripts/projectiles.gd:657 game/scripts/run_log.gd:9
+#: game/scripts/hud_pause.gd:32 game/scripts/hud_result.gd:465 game/scripts/player.gd:519 game/scripts/projectiles.gd:68 game/scripts/projectiles.gd:657 game/scripts/run_log.gd:9
 msgid "НАР"
 msgstr "rockets"
 
@@ -3277,7 +3295,7 @@ msgstr "▸ DETAILS · DAMAGE TAKEN"
 msgid "ПОЛУЧЕННЫЙ УРОН"
 msgstr "DAMAGE TAKEN"
 
-#: game/scripts/hud_result.gd:110 game/scripts/player.gd:628 game/scripts/projectiles.gd:112 game/scripts/projectiles.gd:793 game/scripts/projectiles.gd:859 game/scripts/projectiles.gd:862
+#: game/scripts/hud_result.gd:110 game/scripts/player.gd:627 game/scripts/projectiles.gd:112 game/scripts/projectiles.gd:793 game/scripts/projectiles.gd:859 game/scripts/projectiles.gd:862
 msgid "пули"
 msgstr "bullets"
 
@@ -5001,34 +5019,34 @@ msgstr "mastery: scorched earth"
 msgid "Законцовки крыла (пара)"
 msgstr "Wingtips (pair)"
 
-#: game/scripts/player.gd:247
+#: game/scripts/player.gd:246
 #, c-format
 msgid "+%d к специализации «%s»"
 msgstr "+%d to specialization \"%s\""
 
-#: game/scripts/player.gd:256
+#: game/scripts/player.gd:255
 #, c-format
 msgid "СВЯЗКА «%s» — СЛОТ %d"
 msgstr "SYNERGY \"%s\" — SLOT %d"
 
-#: game/scripts/player.gd:475
+#: game/scripts/player.gd:474
 #, c-format
 msgid "Заход на атаку: летите прямо секунду — пушка, НАР и бомбы бьют до +30% сильнее. На крутом вираже бонус пропадает."
 msgstr "Attack run: fly straight for a second and your cannon, rockets and bombs hit up to 30% harder. A hard turn cancels the bonus."
 
-#: game/scripts/player.gd:541 game/scripts/projectiles.gd:807 game/scripts/projectiles.gd:896
+#: game/scripts/player.gd:540 game/scripts/projectiles.gd:807 game/scripts/projectiles.gd:896
 msgid "ракета"
 msgstr "missile"
 
-#: game/scripts/player.gd:546 game/scripts/projectiles.gd:868
+#: game/scripts/player.gd:545 game/scripts/projectiles.gd:868
 msgid "пуля"
 msgstr "bullet"
 
-#: game/scripts/player.gd:673
+#: game/scripts/player.gd:672
 msgid "связка: утюг"
 msgstr "synergy: iron"
 
-#: game/scripts/player.gd:680
+#: game/scripts/player.gd:679
 msgid "Второе дыхание!"
 msgstr "Second wind!"
 
@@ -5810,87 +5828,87 @@ msgstr "Old Friend"
 msgid "пока в звене нет ведомых, в каждом выборе карточек есть ведомый"
 msgstr "while the flight has no wingmen, every card choice includes a wingman"
 
-#: game/scripts/profile.gd:273
+#: game/scripts/profile.gd:276
 #, c-format
 msgid "очко перка (ур. %d)"
 msgstr "perk point (Lv. %d)"
 
-#: game/scripts/profile.gd:276
+#: game/scripts/profile.gd:279
 #, c-format
 msgid "навык «%s»"
 msgstr "skill \"%s\""
 
-#: game/scripts/profile.gd:278
+#: game/scripts/profile.gd:281
 msgid "второй слот навыка [F]"
 msgstr "second skill slot [F]"
 
-#: game/scripts/profile.gd:280
+#: game/scripts/profile.gd:283
 msgid "можно купить самолёт ур. 2"
 msgstr "can buy a Lv. 2 plane"
 
-#: game/scripts/profile.gd:285
+#: game/scripts/profile.gd:288
 #, c-format
 msgid "ведомый %s в карточках"
 msgstr "wingman %s in cards"
 
-#: game/scripts/profile.gd:654
+#: game/scripts/profile.gd:707
 #, c-format
 msgid "%s ур. %d (%d)"
 msgstr "%s Lv. %d (%d)"
 
-#: game/scripts/profile.gd:657
+#: game/scripts/profile.gd:710
 #, c-format
 msgid "Самолёт ур. 2 (%d)"
 msgstr "Lv. 2 plane (%d)"
 
-#: game/scripts/profile.gd:659
+#: game/scripts/profile.gd:712
 #, c-format
 msgid "Повысить в звании до ур. %d (%d)"
 msgstr "Promote to Lv. %d (%d)"
 
-#: game/scripts/profile.gd:691
+#: game/scripts/profile.gd:744
 #, c-format
 msgid "В воздухе %d:%02d"
 msgstr "Airborne %d:%02d"
 
-#: game/scripts/profile.gd:692
+#: game/scripts/profile.gd:745
 #, c-format
 msgid "Уровень пилота %d"
 msgstr "Pilot level %d"
 
-#: game/scripts/profile.gd:695
+#: game/scripts/profile.gd:748
 #, c-format
 msgid "Асы ×%d"
 msgstr "Aces ×%d"
 
-#: game/scripts/profile.gd:697
+#: game/scripts/profile.gd:750
 #, c-format
 msgid "Активности ×%d"
 msgstr "Activities ×%d"
 
-#: game/scripts/profile.gd:703
+#: game/scripts/profile.gd:756
 msgid "Гибель ×0,75"
 msgstr "Death ×0.75"
 
-#: game/scripts/profile.gd:710
+#: game/scripts/profile.gd:763
 #, c-format
 msgid "Продолжение ×%.1f"
 msgstr "Continue ×%.1f"
 
-#: game/scripts/profile.gd:712
+#: game/scripts/profile.gd:765
 msgid "За вылет"
 msgstr "Per sortie"
 
-#: game/scripts/profile.gd:733
+#: game/scripts/profile.gd:786
 msgid "Самолёт ур. 2 выдадут после операции «Перевал» — пройдите её."
 msgstr "The Lv. 2 plane is granted after operation \"Mountain Pass\" — complete it."
 
-#: game/scripts/profile.gd:735
+#: game/scripts/profile.gd:788
 #, c-format
 msgid "Самолёт ур. 2 ждёт — загляни в ангар: %d запчастей."
 msgstr "Lv. 2 plane is waiting — visit the hangar: %d parts."
 
-#: game/scripts/profile.gd:737
+#: game/scripts/profile.gd:790
 #, c-format
 msgid "Копим на самолёт ур. 2: %d запчастей (есть %d)."
 msgstr "Saving for a Lv. 2 plane: %d parts (have %d)."

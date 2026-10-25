@@ -705,7 +705,7 @@ func _run_autotest(delta: float) -> void:
 					Profile.buy_plane2("fighter") # 3.5: на скриншоте — выбор самолёта на вылет
 					m.ui_click("menu_hangar")
 				elif m._args.has("--shots") and not _shots_done.has("settings") and not m._args.has("--combatui"):
-					m.menu.tab = 1
+					m.menu.settings_screen.tab = 1   # graphics tab on the settings shot
 					m.menu.open_settings("menu")
 				else:
 					if m._args.has("--profile=demo") and not _demo_profile_set:
@@ -734,6 +734,15 @@ func _run_autotest(delta: float) -> void:
 					m.input_ctl.hangar_action("gun:twin")   # PG-01: the shot shows a bought course gun
 				elif not _shots_done.has("hangar_weapons"):
 					_shot("hangar_weapons")
+					# S11-09: next shot — the Rook at crew Lv. 5 with both starting places taken
+					for i in 4:
+						Profile.debug_level("attacker")
+					m.input_ctl.hangar_action("cls:attacker")
+					m.input_ctl.hangar_action("start:agm")
+				elif not _shots_done.has("hangar_start"):
+					_shot("hangar_start")
+					m.input_ctl.hangar_action("start:agm")   # back to the default loadout for the sorties after
+					m.input_ctl.hangar_action("cls:fighter")
 					m.hangar_tab = "crew"
 					m.input_ctl.hangar_action("perk:f_msl1")
 				elif not _shots_done.has("hangar_crew"):

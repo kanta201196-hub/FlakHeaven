@@ -166,27 +166,23 @@ func _hg_livery(c: String, lx: float, y: float) -> void:
 		_buttons.append([r, "hg:livery:" + String(lst[i][0])])
 
 
-## Фишка 3 (Kanta 18.10): какое оружие стоит на втором подвесе с начала вылета
-func _hg_start2(m: Main, lx: float, y: float) -> void:
+## S11-09 (Kanta 25.10): heading and counter of the starting-weapons list; returns the y below them
+func _hg_start_head(m: Main, lx: float, y: float, w: float) -> float:
 	var c := m.hangar_cls
-	_text(Vector2(lx, y + 16), "Второй подвес на старте", 17, Color.WHITE)
-	if Profile.crew_lvl(c) < Profile.START2_LVL:
-		_para(Vector2(lx, y + 40), Loc.t("Откроется на ур. экипажа %d. Пока второй подвес пустой — оружие из карточек.") % Profile.START2_LVL, 300.0, 14, Color(0.65, 0.68, 0.75))
-		return
-	var cur := Profile.start2(c)
-	var opts: Array = [""] + Profile.start2_options(c)
-	# PG-01: three columns — with the new weapons a class has up to 7 options
-	for i in opts.size():
-		var w := String(opts[i])
-		var r := Rect2(lx + (i % 3) * 102.0, y + 28.0 + (i / 3) * 40.0, 96.0, 34.0)
-		var on := cur == w
-		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
-		_text(Vector2(r.position.x, r.position.y + 23), Loc.t("пусто") if w == "" else Loc.t(String(Weapons.DEFS[w]["short"])), 13, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
-		_buttons.append([r, "hg:start2:" + w])
-	_para(Vector2(lx, y + 34.0 + ceili(opts.size() / 3.0) * 40.0), "Ставится с ур. 1; улучшения — карточками в бою.", 300.0, 13, Color(0.65, 0.68, 0.75))
+	_text(Vector2(lx, y + 18), Loc.t("Выбор стартового вооружения (не более 2 видов)"), 17, Menu.C_AMBER)
+	var n := Profile.start_weapons(c).size()
+	var cap := Profile.start_cap(c)
+	var line := Loc.t("На старте %d из %d.") % [n, cap]
+	if n >= cap and cap >= 2:
+		line += " " + Loc.t("Чтобы поставить другое, сначала снимите одно.")
+	elif cap < 2:
+		line += " " + Loc.t("Второе место — с ур. экипажа %d.") % Profile.START2_LVL
+	var h := _para(Vector2(lx, y + 40), line, w, 13, Color(0.65, 0.68, 0.75))
+	return y + 30.0 + h + 10.0
 
 
 ## PG-01 (Kanta 24.10): course gun of the plane (class + plane level) — bought once for parts, switched for free before a sortie
+const LEFT_W := 420.0   # S11-04: left column of the weapons tab (gun, ammo, start list)
 const GUN_TITLE := {"std": "Стандартная", "twin": "Спарка", "heavy": "Крупный калибр"}
 const GUN_HINT := {
 	"std": "Обычная пушка: ровный темп и урон.",
@@ -207,19 +203,19 @@ func _hg_gun(m: Main, lx: float, y: float, w: float) -> float:
 	_text(Vector2(lx, y + 14), Loc.t("Курсовая пушка этого самолёта"), 16, Color.WHITE)
 	var cur := Profile.gun(c)
 	_kit_row(WeaponBalance.GUN_ORDER, GUN_TITLE, WeaponBalance.GUN_PRICE, cur, Profile.guns(c), "hg:gun:", lx, y + 22.0, w, "✓ выбрана")
-	return y + 66.0
+	var h := _para(Vector2(lx, y + 80.0), Loc.t(String(GUN_HINT[cur])), w, 13, Color(0.65, 0.68, 0.75))   # S11-05: its own text
+	return y + 68.0 + h + 14.0
 
 
 ## PG-01 (Kanta 24.10): ammo type of the plane's course gun — same buy-once, switch-free rule as the gun.
-## Draws the gun and ammo hints as one paragraph under both rows; returns the y below it.
+## S11-05: the ammo hint sits under the ammo row only (the gun has its own); returns the y below it.
 func _hg_ammo(m: Main, lx: float, y: float, w: float) -> float:
 	var c := m.hangar_cls
 	_text(Vector2(lx, y + 14), Loc.t("Снаряды"), 16, Color.WHITE)
 	var cur := Profile.ammo(c)
 	_kit_row(WeaponBalance.AMMO_ORDER, AMMO_TITLE, WeaponBalance.AMMO_PRICE, cur, Profile.ammos(c), "hg:ammo:", lx, y + 22.0, w, "✓ выбраны")
-	var hint := Loc.t(String(GUN_HINT[Profile.gun(c)])) + " " + Loc.t(String(AMMO_HINT[cur]))
-	_para(Vector2(lx, y + 82.0), hint, w, 13, Color(0.65, 0.68, 0.75))
-	return y + 130.0
+	var h := _para(Vector2(lx, y + 80.0), Loc.t(String(AMMO_HINT[cur])), w, 13, Color(0.65, 0.68, 0.75))
+	return y + 68.0 + h + 20.0
 
 
 ## One row of buy-once / select-free buttons (course guns or ammo) across width `w`
@@ -241,40 +237,64 @@ func _kit_row(order: Array, titles: Dictionary, prices: Dictionary, cur: String,
 			_buttons.append([r, act + id])
 
 
+## Weapons tab. S11-04/05/09 (Kanta 25.10): the left column holds all weapon setup — course gun and ammo on top,
+## then one list of this plane's weapons with a «На старт» toggle each (at most two kinds start);
+## a click on a card shows its upgrade branches in the middle, the 3D model stays on the right.
 func _hg_weapons(m: Main, area: Rect2) -> void:
 	var lx := area.position.x
-	var y := area.position.y
-	# правка 5 теста 3.5-s5: только оружие этого самолёта; особенность класса (★) отмечена
-	var own: Array = Profile.WEAPON_ORDER.filter(func(x): return Weapons.in_game(x) and PlaneClasses.allows(m.hangar_cls, x))
+	var lw := LEFT_W
+	var c := m.hangar_cls
+	var opts: Array = Profile.start_options(c)
+	var own: Array = opts.duplicate()
+	if PlaneClasses.allows(c, "turret") and Weapons.in_game("turret"):
+		own.append("turret")   # turrets are fixed on the plane: branches only, no start toggle
 	if not own.has(m.hangar_w) and not Weapons.EXP.has(m.hangar_w) and not own.is_empty():
 		m.hangar_w = own[0]
 	if Hangar3D.bench_tab_w != "":
 		m.hangar_w = Hangar3D.bench_tab_w
-	for w in own:
-		var r := Rect2(lx, y, 300, 70)
+	_text(Vector2(lx, area.position.y + 20), Loc.t("КУРСОВАЯ ПУШКА"), 17, Menu.C_AMBER)
+	var y := _hg_ammo(m, lx, _hg_gun(m, lx, area.position.y + 26.0, lw), lw)
+	y = _hg_start_head(m, lx, y, lw)
+	var picks := Profile.start_weapons(c)
+	var full := picks.size() >= Profile.start_cap(c)
+	for w: String in own:
+		var r := Rect2(lx, y, lw, 56)
 		var on: bool = m.hangar_w == w
 		_panel(r, on)
 		_buttons.append([r, "hg:wsel:" + w])
 		var t := PlaneArt.weapon_tex(w)
 		if t != null:
-			var k := 54.0 / t.get_height()
-			ctrl.draw_set_transform(Vector2(lx + 30, y + 35), 0.0, Vector2(k, k))
+			var k := 44.0 / t.get_height()
+			ctrl.draw_set_transform(Vector2(lx + 26, y + 28), 0.0, Vector2(k, k))
 			ctrl.draw_texture(t, -t.get_size() / 2.0)
 			ctrl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		_text(Vector2(lx + 60, y + 30), Loc.t(String(Weapons.DEFS[w]["short"])), 18, Color.WHITE if on else Color(0.85, 0.88, 0.95))
-		var marks := ""
-		for tier in [1, 2, 3]:
-			var st := Profile.tier_state(w, tier)
-			marks += ("●" if st != "" and st != "?" else "○") + " "
-		_text(Vector2(lx + 60, y + 54), marks, 15, Menu.C_AMBER)
-		var bk := PlaneClasses.bonus_k(m.hangar_cls, 0, w)
+		_text(Vector2(lx + 54, y + 24), Loc.t(String(Weapons.DEFS[w]["short"])), 17, Color.WHITE if on else Color(0.85, 0.88, 0.95))
+		var sub := ""
+		if Profile.WBRANCH.has(w):
+			for tier in [1, 2, 3]:
+				var st := Profile.tier_state(w, tier)
+				sub += ("●" if st != "" and st != "?" else "○") + " "
+		_text(Vector2(lx + 54, y + 46), sub, 14, Menu.C_AMBER)
+		var bk := PlaneClasses.bonus_k(c, 0, w)
 		if bk > 1.0:
-			_text(Vector2(lx + 60, y + 54), Loc.t("★ бонус самолёта: +%d%%") % roundi((bk - 1.0) * 100.0), 13, Color(0.6, 1.0, 0.65), HORIZONTAL_ALIGNMENT_RIGHT, 228.0)
-		y += 80.0
-	_hg_start2(m, lx, y + 6.0)
+			_text(Vector2(lx + 54 + (52.0 if sub != "" else 0.0), y + 46), Loc.t("★ бонус самолёта: +%d%%") % roundi((bk - 1.0) * 100.0), 12, Color(0.6, 1.0, 0.65))
+		var br := Rect2(lx + lw - 138, y + 12, 126, 32)
+		if opts.has(w):
+			var picked := picks.has(w)
+			var can := picked or not full
+			ctrl.draw_rect(br, Menu.C_AMBER if picked else Color(1, 1, 1, 0.08 if can else 0.03))
+			if not picked:
+				ctrl.draw_rect(br, Color(1, 1, 1, 0.25 if can else 0.08), false, 1.0)
+			var lbl := (Loc.t("✓ подвес %d") % (picks.find(w) + 1)) if picked else Loc.t("На старт")
+			_text(Vector2(br.position.x, br.position.y + 22), lbl, 14, Color(0.08, 0.07, 0.05) if picked else (Color(0.85, 0.88, 0.95) if can else Color(0.45, 0.47, 0.52)), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
+			if can:
+				_buttons.append([br, "hg:start:" + w])
+		else:
+			_text(Vector2(br.position.x, br.position.y + 22), Loc.t("всегда на самолёте"), 12, Color(0.6, 0.62, 0.68), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
+		y += 62.0
 	var w2 := m.hangar_w
-	var rx := lx + 340.0
-	var rw := area.size.x - 340.0 - 470.0
+	var rx := lx + lw + 36.0
+	var rw := area.size.x - lw - 36.0 - 470.0
 	# тест 3.5-s3: оружие — объёмной моделью справа, как самолёт на вкладке «САМОЛЁТ»
 	var vx := rx + rw + 20.0
 	var vw := 450.0
@@ -303,8 +323,6 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 				_text(Vector2(vx + 16, area.position.y + 452), Loc.t("Турель класса: %s") % Loc.t(PlaneClasses.DATA[m.hangar_cls]["title"]), 14, Color(0.7, 0.74, 0.8))
 	else:
 		_text(Vector2(vx + 24, area.position.y + 220), "Встроенное оружие — модель на самолёте", 16, Color(0.7, 0.74, 0.8))
-	# PG-01: the plane's course gun and ammo sit under the weapon viewer, the left column is full
-	_hg_ammo(m, vx + 8, _hg_gun(m, vx + 8, area.position.y + 474.0, vw - 10.0), vw - 10.0)
 	_text(Vector2(rx, area.position.y + 24), Loc.t("%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)") % Loc.t(Weapons.DEFS[w2]["title"]), 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
 	for tier in ([1, 2, 3] if Profile.WBRANCH.has(w2) else []):   # PG-01: new weapons get hangar branches in PG-03
