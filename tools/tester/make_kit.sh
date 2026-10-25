@@ -38,3 +38,6 @@ cp "$here"/SAFETY_NOTE_*.txt "$here"/INSTRUCTIONS_*.txt "$dir"/
   echo "The tester report is sent with a button in the game; it collects no names, emails or personal files."
 } > "$dir/TESTER_NOTE.txt"
 echo "Комплект готов в $dir:"; ls "$dir"
+# Kanta 2026-10-25: testers learn about a new build from the game menu (UpdateCheck compares with site/version.json)
+echo
+echo "После заливки на itch.io: site/version.json → \"build\": \"$build\" (коммит в main), пост о сборке в Discord и Telegram."

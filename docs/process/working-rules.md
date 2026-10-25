@@ -5,6 +5,7 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 ## Decisions and money
 - Decisions on game design, art, audio, money, legal and team are made by Kanta (Kirill stepped back on 2026-10-18). Each decision is a line in the decision log `docs/game-context.md` with who decided → a numbered task in `docs/backlog.md` → an owner thread right away. Agents prepare options and a recommendation.
 - A new test build only on Kanta's direct command, once the previous build's list is closed and checked in game; at least a day between builds (Kanta, 2026-10-22).
+- After Kanta uploads a build to itch.io: set `site/version.json` → `"build"` to the new number (commit to `main`; testers on an older build then see «Вышла сборка …» in the main menu with the itch.io link), and post the build in Discord and Telegram (Kanta, 2026-10-25).
 - No spending on people. Money only for tools and subscriptions, Kanta decides.
 - Documents are the source of truth: decision → `docs/game-context.md`, task → `docs/backlog.md`, build result → `docs/status-log.md` and `game/README.md`. Heavy files (builds, raw models, `.blend`) stay in the Claude project files (`/mnt/project-files`).
 
