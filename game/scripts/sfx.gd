@@ -112,6 +112,8 @@ const FALLBACK := {
 	"boom_dock": "lock", "boom_undock": "lock", "refuel_done": "evac",
 	"aa_alert": "lock", "sam_lock": "lock", "sam_launch": "missile_enemy", "aa_intercept": "enemy_fire",
 	"fortress_part": "shield_break", "fortress_ring": "enemy_fire",
+	# 25.10: очередь автотурели (4 выстрела в одном файле) — один вызов на очередь, а не на патрон
+	"turret_burst": "turret_fire",
 }
 
 ## События только из файлов, без заглушки (нет файла — тишина). Море Архипелага (18.10):
@@ -123,7 +125,7 @@ const VOICES := 24
 ## Сколько копий звука может звучать одновременно; новая копия сверх предела заменяет самую старую.
 ## Остальные события — до 4 копий.
 const VOICE_CAP := {
-	"gun_fire": 3, "gunpod_fire": 2, "turret_fire": 2, "enemy_fire": 4, "hit": 4, "pickup": 3,
+	"gun_fire": 3, "gunpod_fire": 2, "turret_fire": 2, "turret_burst": 3, "enemy_fire": 4, "hit": 4, "pickup": 3,
 	"explode": 5, "explode_big": 3, "bomb": 4, "aam_launch": 3, "rocket_launch": 3, "card": 2,
 	"ship_horn": 1, "gulls": 1, "ship_sink": 2,
 }
