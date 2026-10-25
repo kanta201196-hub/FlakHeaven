@@ -168,7 +168,7 @@ static func wobble(ph: float) -> Vector4:
 
 
 var r3: Render3D
-var _units: Array = []   # записи как у Render3D._units: node, k, fx, mech, sh …
+var _units: Array[Unit3D] = []   # same records as Render3D._units
 var _key := ""
 var _check_t := 0.0
 
@@ -216,19 +216,19 @@ func sync(on: bool, delta: float) -> void:
 	var fwd := Vector2.from_angle(h)
 	var right := fwd.orthogonal() * -1.0   # вправо по курсу (2D: y вниз)
 	var bank := clampf(turn_rate() * BANK_K, -0.35, 0.35)
-	for u: Dictionary in _units:
-		var w := wobble(float(u["ph"]))
-		var off: Vector2 = u["slot"]
+	for u: Unit3D in _units:
+		var w := wobble(float(u.ph))
+		var off: Vector2 = u.slot
 		var p := lead + fwd * (off.x + w.x) * L + right * (off.y + w.y) * L
 		var y := ALT + w.w
-		var len_w: float = L * float(u["rel"])   # длина на плоскости боя: на экране LEN_K высоты кадра при любом зуме
-		u["k"] = len_w / float((u["tex"] as Texture2D).get_width())
+		var len_w: float = L * float(u.rel)   # длина на плоскости боя: на экране LEN_K высоты кадра при любом зуме
+		u.k = len_w / float((u.tex as Texture2D).get_width())
 		r3._place(u, p, h, bank + w.z, 0.0, y, r3._alt_scale(y))
 		PlaneFx.update(u, delta, 0.0)
 		var pts := PlaneFx.trail_points(u)
 		var s := len_w / 100.0
 		for i in pts.size():
-			r3._trails.emit("title_%s_%d" % [u["cls"], i], pts[i], [0.16, 2.5 * s, 9.0 * s, 3.0, 10.0 * s])
+			r3._trails.emit("title_%s_%d" % [u.cls, i], pts[i], [0.16, 2.5 * s, 9.0 * s, 3.0, 10.0 * s])
 
 
 func _build() -> void:
@@ -259,17 +259,26 @@ func _build() -> void:
 		WingMech.attach_bay(model, key)
 		# длина относительно «Осы»: по классу и по картинке уровня (ур. 2 крупнее), как в бою
 		var rel := float(f[2]) * float(tex.get_width()) / float(tex1.get_width())
-		var u := {"node": root, "kind": "title", "cls": cls, "tex": tex, "bm": sc, "slot": f[1], "ph": f[3],
-			"rel": rel, "k": 1.0, "alt": ALT}   # alt — Render3D._place ставит самолёт на луч камеры
-		u["sh"] = r3._make_shadow(tex, root)
+		var u := Unit3D.new()
+		u.node = root
+		u.kind = "title"
+		u.cls = cls
+		u.tex = tex
+		u.bm = sc
+		u.slot = f[1]
+		u.ph = f[3]
+		u.rel = rel
+		u.has_alt = true   # Render3D._place puts the plane on the camera ray at alt
+		u.alt = ALT
+		u.sh = r3._make_shadow(tex, root)
 		PlaneFx.attach(u, tex)   # огонь сопел; винты «Кита 1» (WingMech.attach_props) с диском размытия
 		Livery.apply(model, cls, lvl, Livery.current(cls))   # после всех деталей — перекрашиваются и они
 		_units.append(u)
 
 
 func clear() -> void:
-	for u: Dictionary in _units:
-		if is_instance_valid(u["node"]):
-			(u["node"] as Node).queue_free()
+	for u: Unit3D in _units:
+		if is_instance_valid(u.node):
+			(u.node as Node).queue_free()
 	_units.clear()
 	_key = ""

@@ -90,15 +90,15 @@ static func _set_model(p: Dictionary, broken: bool) -> void:
 
 
 ## Каждый кадр после _place корпуса. u — запись Render3D (node → сцена корпуса), ws — корабль.
-static func update(u: Dictionary, ws: Warship, delta: float) -> void:
-	var root: Node3D = u["node"]
+static func update(u: Unit3D, ws: Warship, delta: float) -> void:
+	var root: Node3D = u.node
 	if root.get_child_count() == 0:
 		return
 	var inst := root.get_child(0) as Node3D
-	var st: Dictionary = u.get("lev", {})
+	var st: Dictionary = u.lev
 	if st.is_empty() or int(st["owner"]) != ws.get_instance_id() or not is_instance_valid(st["holder"]):
 		st = attach(inst, ws.get_instance_id())
-		u["lev"] = st
+		u.lev = st
 		if st.is_empty():
 			return
 	var frac := ws.hp / maxf(ws.max_hp, 1.0)

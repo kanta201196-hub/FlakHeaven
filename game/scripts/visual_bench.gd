@@ -478,11 +478,11 @@ func _print_sizes(name: String) -> void:
 	var img_w := float(m.get_viewport().get_texture().get_width())
 	var px_k := img_w / maxf(r3.cam.get_viewport().get_visible_rect().size.x, 1.0)
 	for row: Array in rows:
-		var u: Dictionary = r3._units.get((row[1] as Node).get_instance_id(), {})
-		if u.is_empty():
+		var u: Unit3D = r3._units.get((row[1] as Node).get_instance_id())
+		if u == null:
 			print("VISUAL %s size %s: no 3D unit" % [name, row[0]])
 			continue
-		var root: Node3D = u["node"]
+		var root: Node3D = u.node
 		var inv := root.global_transform.affine_inverse()
 		var box := AABB()
 		var first := true
@@ -926,11 +926,11 @@ func _sam_poses(p: Dictionary) -> void:
 		var scr := r3.cam.unproject_position(r3.terrain.surface_fast(sam.anchor.x, sam.anchor.y))
 		var step := (scr - vs * Vector2(0.5, 0.55)) / (8.0 * float(p.get("zoom", 1.0)) / 9.0) * 0.5
 		p["pos"] = Vector2(p["pos"]) + step.limit_length(20.0)   # small steps so the camera settles
-		var pu: Dictionary = r3._units.get(m.player.get_instance_id(), {})
-		if pu.has("node"):   # the plane would cover the launcher: hide its 3D model only
-			(pu["node"] as Node3D).visible = false
-			if pu.get("sh") != null:
-				(pu["sh"] as Node3D).visible = false
+		var pu: Unit3D = r3._units.get(m.player.get_instance_id())
+		if pu != null:   # the plane would cover the launcher: hide its 3D model only
+			(pu.node as Node3D).visible = false
+			if pu.sh != null:
+				(pu.sh as Node3D).visible = false
 	sam.hp = maxf(sam.hp, sam.max_hp)   # the player's guns stay off it
 	if sam.sprite_info().is_empty():   # frozen targets never run _draw, which is where Render3D gets its model
 		sam._spr = {"tex": "e_sam", "len": 34.0, "angle": sam._body_angle}
@@ -1022,17 +1022,17 @@ func _unit_poses(p: Dictionary) -> void:
 	var r3 := Render3D.I
 	if r3 == null:
 		return
-	var u: Dictionary = r3._units.get(_unit.get_instance_id(), {})
-	if u.has("node"):
+	var u: Unit3D = r3._units.get(_unit.get_instance_id())
+	if u != null:
 		var vs := m.get_viewport().get_visible_rect().size
-		var scr := r3.cam.unproject_position((u["node"] as Node3D).global_position)
+		var scr := r3.cam.unproject_position((u.node as Node3D).global_position)
 		var step := (scr - vs * Vector2(0.5, 0.5)) / (8.0 * float(p.get("zoom", 1.0)) / 9.0) * 2.0
 		p["pos"] = Vector2(p["pos"]) + step.limit_length(200.0)   # software GL in the cloud runs a few frames a second
-	var pu: Dictionary = r3._units.get(m.player.get_instance_id(), {})
-	if pu.has("node"):
-		(pu["node"] as Node3D).visible = false
-		if pu.get("sh") != null:
-			(pu["sh"] as Node3D).visible = false
+	var pu: Unit3D = r3._units.get(m.player.get_instance_id())
+	if pu != null:
+		(pu.node as Node3D).visible = false
+		if pu.sh != null:
+			(pu.sh as Node3D).visible = false
 
 
 func _spawn_all_enemies(c: Vector2) -> void:
