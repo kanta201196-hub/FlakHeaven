@@ -56,14 +56,18 @@ const TURRET_MODELS := {
 		"body": [Color(0.45, 0.39, 0.27), Color(0.46, 0.4, 0.28)],
 		# корма (пример владельца 16.10): кабина стрелка с фонарём и шаровая установка под килем
 		"tail": "res://models/turrets/turret_kit_tail_ball_t%d.glb", "cabin": "res://models/turrets/turret_kit_tail_cabin.glb",
-		"muzzle_tail": Vector3(1.36, 0.0, 0.0)},
+		"muzzle_tail": Vector3(1.36, 0.0, 0.0),
+		# S11-13: ring mount on the spine and the belly too (base ring r 0.445);
+		# the round fuselage needs a deeper skirt
+		"ring": {"sides": ["top", "bottom"], "r": 0.445, "depth": 2.2}},
 	# S9-04 (Kanta 23.10: «каждый уровень заметно отличается»): 1 — малая (×0,88), один ствол без щитка;
 	# 2 — два ствола один над другим, тормоза, рамка-щиток, короб ленты; 3 — крупная (×1,12), два ствола рядом
 	# в кожухах, сплошной бронещиток, два короба, экраны, прицел. muzzle_t — дульный срез по ступени, k — размер
 	"attacker": {"file": "res://models/turrets/turret_grach_t%d.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
 		"muzzle_t": [Vector3(0.792, 0.282, 0.0), Vector3(1.17, 0.34, 0.18), Vector3(1.16, 0.403, 0.0)],
 		"k": [0.88, 1.0, 1.12],
-		"body": [Color(0.3, 0.3, 0.24), Color(0.31, 0.31, 0.28)]},
+		"body": [Color(0.3, 0.3, 0.24), Color(0.31, 0.31, 0.28)],
+		"ring": {"sides": ["top"], "r": RING_BASE_R, "depth": 1.0}},
 }
 
 
@@ -267,9 +271,11 @@ static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 
 	var cols: Array = spec["body"]
 	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
 	var m := _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s%s" % [cls, file.get_file(), tint.to_html(), part], part)
-	if cls == "attacker" and side == "top" and m != null and part != "guns":
+	var ring: Dictionary = spec.get("ring", {})
+	if m != null and part != "guns" and side in ring.get("sides", []):
 		var ks: Array = spec.get("k", [1.0, 1.0, 1.0])
-		return _with_ring(m as ArrayMesh, float(spec["s"]) * float(ks[clampi(t, 1, 3) - 1]), tint)
+		var rs := float(spec["s"]) * float(ks[clampi(t, 1, 3) - 1]) * float(ring["r"]) / RING_BASE_R
+		return _with_ring(m as ArrayMesh, rs, tint, float(ring["depth"]))
 	return m
 
 
@@ -297,10 +303,16 @@ static func _rel_xf(n: Node3D, root: Node) -> Transform3D:
 	return xf
 
 
+## Base ring radius (GLB units) the ring mount below was sized for: the «Grach» turret base
+const RING_BASE_R := 0.39
+
+
 ## Т-2 (каталог: «погон под турель» у «Грача»): кольцевое основание верхней установки — пояс в цвет корпуса
-## чуть шире основания башни (r 0.39 в осях GLB) и тёмный шов погона; нижняя часть уходит в обшивку
-static func _with_ring(src: ArrayMesh, s: float, tint: Color) -> ArrayMesh:
-	var key := "ring_%d_%s" % [src.get_instance_id(), tint.to_html()]
+## чуть шире основания башни (r 0.39 в осях GLB) и тёмный шов погона; нижняя часть уходит в обшивку.
+## s — scale (base radius / RING_BASE_R included); depth — how far the collar reaches down into the skin, as a
+## multiple of the attacker's: on a round fuselage spine (S11-13, «Kit») a shallow collar left gaps at its sides.
+static func _with_ring(src: ArrayMesh, s: float, tint: Color, depth := 1.0) -> ArrayMesh:
+	var key := "ring_%d_%s_%.2f" % [src.get_instance_id(), tint.to_html(), depth]
 	if _cache.has(key):
 		return _cache[key]
 	var am := src.duplicate() as ArrayMesh
@@ -308,8 +320,8 @@ static func _with_ring(src: ArrayMesh, s: float, tint: Color) -> ArrayMesh:
 		am.surface_set_material(si, src.surface_get_material(si))
 	var collar := CylinderMesh.new()
 	collar.top_radius = 0.47 * s
-	collar.bottom_radius = 0.53 * s
-	collar.height = 0.14 * s
+	collar.height = (0.04 + 0.1 * depth) * s   # top stays 0.04 s over the base, the rest goes into the skin
+	collar.bottom_radius = (0.47 + 0.06 * depth) * s
 	collar.radial_segments = 32
 	var seam := TorusMesh.new()
 	seam.inner_radius = 0.41 * s
@@ -324,7 +336,8 @@ static func _with_ring(src: ArrayMesh, s: float, tint: Color) -> ArrayMesh:
 	dark.albedo_color = Color(0.08, 0.08, 0.09)
 	dark.roughness = 0.85
 	dark.metallic = 0.12
-	for part: Array in [[collar, Vector3(0, -0.03 * s, 0), body], [seam, Vector3(0, 0.035 * s, 0), dark]]:
+	for part: Array in [[collar, Vector3(0, 0.04 * s - collar.height * 0.5, 0), body],
+			[seam, Vector3(0, 0.035 * s, 0), dark]]:
 		var st := SurfaceTool.new()
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
 		st.append_from(part[0] as Mesh, 0, Transform3D(Basis.from_scale(Vector3(1, 0.5, 1)) if part[0] is TorusMesh else Basis(), part[1]))

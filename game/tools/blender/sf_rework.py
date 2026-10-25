@@ -139,11 +139,17 @@ def _in_box(p, b):
 
 
 def kill_box_faces(obs, boxes):
-    """Delete faces whose centre lies in any of the boxes (x0, x1, y0, y1, z0, z1), normalised coordinates."""
+    """Delete faces whose centre lies in any of the boxes (x0, x1, y0, y1, z0, z1), normalised coordinates.
+    An entry (regex, box) applies only to objects whose name matches, so a part can be cut out of a composite
+    source object without holing the skin of other objects that cross the same box (S11-07 glove pylons)."""
     for o in obs:
+        mine = [b[1] if isinstance(b[0], str) else b for b in boxes
+                if not isinstance(b[0], str) or re.search(b[0], o.name)]
+        if not mine:
+            continue
         bm = bmesh.new()
         bm.from_mesh(o.data)
-        dead = [f for f in bm.faces if any(_in_box(f.calc_center_median(), b) for b in boxes)]
+        dead = [f for f in bm.faces if any(_in_box(f.calc_center_median(), b) for b in mine)]
         if dead:
             bmesh.ops.delete(bm, geom=dead, context="FACES")
             bm.to_mesh(o.data)

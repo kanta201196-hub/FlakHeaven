@@ -5,7 +5,7 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 
 | ID | Note | Source | Status |
 | --- | --- | --- | --- |
-| S11-01 | Title screen: the biome looks bad | relief thread | new |
+| S11-01 | Title screen: the biome looks bad | relief thread | merged (PR #410): the menu camera follows the river valley instead of drifting onto bare mesa |
 | S11-02 | Hangar flaps: only the flap piece lowers, the wing stays solid; the wing section must lower as a part of the wing («Osa» 2) | 3D models thread | new |
 | S11-03 | Hangar: NAR (unguided rockets) need a proper stand when viewed | 3D / upgrades thread | new |
 | S11-04 | Move the course gun setup to the left so weapons are set up in one place | menu / upgrades thread | merged (PR #404) |
@@ -20,7 +20,7 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-13 | Hangar: turrets look low quality and hang in the air (screenshot s11_note_9.png) | 3D models thread | new |
 | S11-14 | «Kit» 2: texture problems on the model (screenshot s11_note_10.png) | 3D models thread | new |
 | S11-15 | «Grach» (Грач): the same texture problem as «Kit» 2 (see S11-14; screenshot s11_note_11.png) | 3D models thread | new |
-| S11-16 | In game: ground textures look pixelated (screenshot s11_note_12.png) | relief thread | new |
+| S11-16 | In game: ground textures look pixelated (screenshot s11_note_12.png) | relief thread | merged (PR #410): sin-based noise hash rounded differently on real GPUs; integer hash, checked on the laptop |
 | S11-17 | Make the cards (level-up card pick) about 25% smaller (screenshot s11_note_13.png) | combat UI thread | merged (PR #405) |
 | S11-18 | Pause pylon panel: numbers overlap other elements; the launch hint shows «К» (K) but missiles actually fire on the right mouse button (screenshot s11_note_14.png) | combat UI thread | merged (PR #405) |
 | S11-19 | Header «НАГРАДА ЗА ПОЗИЦИЮ ПВО» is too dim and hard to find: make it a bit brighter (screenshot s11_note_15.png) | combat UI thread | merged (PR #405) |
@@ -31,9 +31,9 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-24 | In battle: some yellow flat-looking planes; identify which unit it is (screenshot s11_note_20.png) | 3D models thread | new |
 | S11-25 | Pause screen: many elements overlap each other (slot numbers on icons, numbered markers on the plane blueprint, right column cut at the screen edge, truncated labels) (screenshot s11_note_21.png) | combat UI thread | merged (PR #405) |
 | S11-26 | Card «Лазер обороны «Луч» (экспериментальный)»: the title/description is cut with an ellipsis, the full text is not visible; the card must also say what the weapon does and its base damage (code: 6 damage per 0.9 s on the nearest enemy only when there is nothing to burn; first it burns up to 2 missiles and 2 bullets in 250 px) (screenshots s11_note_22.png, s11_note_23.png) | combat UI thread | merged (text in main, title layout PR #405) |
-| S11-27 | After an explosion many unclear particles hang in the air, look like hay or straw (screenshot s11_note_24.png) | effects thread | new |
-| S11-28 | Before a NAR (unguided rocket) explosion there is a strange, clearly noticeable delay with a pulsing on the ground | effects thread | new |
+| S11-27 | After an explosion many unclear particles hang in the air, look like hay or straw (screenshot s11_note_24.png) | effects thread | merged (PR #406): it was the scorch texture (straw in the photo), rebaked without it |
+| S11-28 | Before a NAR (unguided rocket) explosion there is a strange, clearly noticeable delay with a pulsing on the ground | effects thread | merged (PR #406): it was the «Термобарика» 0.5 s sticky delay; the blast is now on impact |
 | S11-29 | «Fortress» (Крепость) boss: turrets float in the air detached from the plane; the screenshot also shows the bomber drawn flat white/pink (screenshot s11_note_25.png) | 3D models thread | new |
-| S11-30 | Could not shoot down the «Fortress» boss on an upgraded «Grach» (balance: needs the balance method, one change per build cycle) | game design thread | new |
+| S11-30 | Could not shoot down the «Fortress» boss on an upgraded «Grach» (balance: needs the balance method, one change per build cycle) | game design thread | fixed in the PR «Fortress: fight cap counts landed damage» (with GD-02 in the same build, Kanta) |
 
 Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_25.png`.

@@ -1,6 +1,6 @@
 """Босс «Крепость» (решение владельца 16.10): тяжёлый бомбардировщик-носитель, бой по фазам
 турели → люки и двигатели → раскрытый корпус. Вымышленный, «по мотивам»: без знаков и надписей.
-Запуск: python3 fortress.py <out_dir> [--sprite <png>]
+Запуск: python3 fortress.py <out_dir> [--sprite <png>] [--nopreview]
   out_dir/fortress.glb (+ .blend и предпросмотры); с --sprite ещё вид строго сверху с прозрачным фоном
   для спрайта art/enemies/e_fortress.png (ширина картинки = длина модели).
 Длина модели = 1 (= LEN 270 пикс. в fortress.gd), нос +X, центр в начале координат.
@@ -24,6 +24,7 @@ from mathutils import Matrix
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 OUT = args[0]
 SPRITE = args[args.index("--sprite") + 1] if "--sprite" in args else ""
+PREVIEW = "--nopreview" not in args   # Cycles previews take minutes on a CPU
 L.reset()
 # корпус матовый (правило Kanta 19.10, S8-K1): краска без блеска, тон приглушён, полосы — тусклый сурик;
 # лёгкая грязь — множитель цвета по вершинам (атрибут Col → glTF COLOR_0, см. grime() перед сборкой)
@@ -142,9 +143,12 @@ def turret(n, x, y, z, tier):
     L.group = ""
     cyl("turret_ring", (x, y, z), 0.034, 0.008, M_DARK, "Z", 24)
     g = "turret_%d" % n
-    L.pivots[g] = (x, y, z)
     k = len(L.parts)
     twin(tier, False, M_T_BODY, M_T_DARK, M_T_BARREL, M_T_GLASS, base=g, guns=g, seg=0.5)
+    # S11-29: twin() sets the pivot of its gun group to the cradle trunnions in turret units; here the guns
+    # are the turret node itself, so that pivot replaced the ring centre and the turrets swung off the hull
+    # when render3d turned them. The node turns about the vertical through the ring centre.
+    L.pivots[g] = (x, y, z)
     m = Matrix.Translation((x, y, z)) @ Matrix.Scale(TS, 4)
     for ob in L.parts[k:]:
         # фаски — в единицах турели, потом перенос в оси «Крепости»
@@ -351,7 +355,8 @@ if SPRITE:
     bpy.data.objects.remove(cam)
     bpy.data.objects.remove(sun)
 
-root.location.z += 0.15
-preview(OUT, [("iso", (0.9, -1.1, 0.9), (0, 0, 0.15), 50), ("top", (0, 0, 2.6), None, 45),
-              ("side", (0, -2.2, 0.2), (0, 0, 0.15), 50)])
+if PREVIEW:
+    root.location.z += 0.15
+    preview(OUT, [("iso", (0.9, -1.1, 0.9), (0, 0, 0.15), 50), ("top", (0, 0, 2.6), None, 45),
+                  ("side", (0, -2.2, 0.2), (0, 0, 0.15), 50)])
 print("DONE")

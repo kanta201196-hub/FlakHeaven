@@ -712,6 +712,10 @@ func _run_autotest(delta: float) -> void:
 						_demo_profile_set = true   # GD-01: demo player profile, see Profile.debug_demo_profile
 						Profile.debug_demo_profile()
 						print("AUTOTEST: demo profile, nodes %d, crew %d" % [Demo.node_cap(), Demo.crew_cap()])
+					elif m._args.has("--profile=max") and not _demo_profile_set:
+						_demo_profile_set = true   # S11-30: upgraded player, see Profile.debug_max_profile
+						Profile.debug_max_profile()
+						print("AUTOTEST: max profile, plane %d" % Profile.plane_lvl("attacker"))
 					m.ui_click("menu_play")
 			return
 		"settings":
@@ -849,6 +853,10 @@ func _run_autotest(delta: float) -> void:
 					int(m.tele.g("mastery_t")), int(m.tele.g("mastery_dmg"))])
 				print_taken("AUTOTEST")
 				print("AUTOTEST: modules %d/%d %s, hp_cd %.2f" % [Cards.mod_slots_used(m.player), Cards.MOD_SLOTS, m.player.taken, float(m.player.mods["hp_cd"])])
+				if m.tele.g("fort1_s") > 0.0:   # S11-30: where the damage offered to the Fortress went, by phase
+					for ph in [1, 2, 3]:
+						var f := func(k: String) -> int: return int(m.tele.g("fort%d_%s" % [ph, k]))
+						print("AUTOTEST: fortress phase %d s %d near %d in %d cut %d pt %d bay %d hull %d lost %d" % [ph, f.call("s"), f.call("near_s"), f.call("in"), f.call("cut"), f.call("pt"), f.call("bay"), f.call("hull"), f.call("lost")])
 				print("AUTOTEST: heal box %d card %d kit %d allcards %d activity %d armor %d other %d, max_hp %d, taken %d, would-die %d" % [int(m.tele.g("heal_box")), int(m.tele.g("heal_card")), int(m.tele.g("heal_kit")), int(m.tele.g("heal_allcards")), int(m.tele.g("heal_activity")), int(m.tele.g("heal_armor")), int(m.tele.g("heal_прочее")) + int(m.tele.g("heal_perk")), int(m.player.max_hp), int(m.total("taken")), int(m.tele.g("nodie"))])
 				print("AUTOTEST: dealt air %d ground %d" % [int(m.tele.g("dealt_air")), int(m.tele.g("dealt_ground"))])
 				print("AUTOTEST: evo times %s, level %d, groups %s" % [str(m.player.evo_times), m.run.level, ", ".join(PackedStringArray(m.player.groups.map(func(g): return "%s %d" % [(g as Hardpoint).weapon, (g as Hardpoint).level])))])

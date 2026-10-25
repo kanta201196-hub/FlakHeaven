@@ -16,7 +16,17 @@ void vertex() {
 	world = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
 }
 
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)) + seed) * 43758.5453); }
+// S11-16: integer hash of an integer cell (every caller passes whole numbers: noise corners, rows, cells).
+// The old fract(sin(dot(p, …)) * 43758) amplified rounding by ~10^4: real GPUs (NVIDIA, Intel) round the
+// corner sums of neighbouring cells differently, so value noise got steps on its cell grid, and the
+// sharp scree threshold turned them into square blocks on the ground. Integer math is exact everywhere.
+// Hash by Inigo Quilez (MIT); seed shifts the pattern per sortie as before.
+float hash(vec2 p) {
+	uvec2 x = uvec2(ivec2(floor(p + 0.5))) + uvec2(uint(abs(seed)) * 7919u, uint(abs(seed)) * 104729u);
+	uvec2 q = 1103515245u * ((x >> 1u) ^ x.yx);
+	uint n = 1103515245u * (q.x ^ (q.y >> 3u));
+	return float(n) * (1.0 / 4294967295.0);
+}
 float vnoise(vec2 p) {
 	vec2 i = floor(p); vec2 f = fract(p);
 	vec2 u = f * f * (3.0 - 2.0 * f);
