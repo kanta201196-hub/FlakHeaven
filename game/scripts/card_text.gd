@@ -16,10 +16,11 @@ static var _lvl_re := RegEx.create_from_string("^(?:ур\\.|Lv\\.)\\s?(\\d+)(?:[
 
 
 ## Splits a translated weapon level text (parts separated by «;» or «；») for a pick that
-## takes the weapon to level `to`: {now: parts that apply with this pick, later: [[first
-## level, part]] still ahead, base: parts with no level prefix}. Ranges already passed are
-## dropped. Used by `Cards` for the «Сейчас / На ур. N» lines (S11-20).
-static func level_split(text: String, to: int) -> Dictionary:
+## takes the weapon from level `from` to `to` (a rare card can jump two levels): {now: parts
+## for any level gained by this pick, later: [[first level, part]] still ahead, base: parts
+## with no level prefix}. Single levels already taken are dropped. Used by `Cards` for the
+## «Сейчас / На ур. N» lines (S11-20).
+static func level_split(text: String, from: int, to: int) -> Dictionary:
 	var now := PackedStringArray()
 	var later: Array = []
 	var base := PackedStringArray()
@@ -31,7 +32,7 @@ static func level_split(text: String, to: int) -> Dictionary:
 			continue
 		var a := int(m.get_string(1))
 		var b := int(m.get_string(2)) if m.get_string(2) != "" else a
-		if a <= to and to <= b:
+		if a <= to and b > from:
 			now.append(m.get_string(3))
 		elif a > to:
 			later.append([a, m.get_string(3)])
