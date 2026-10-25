@@ -16,14 +16,16 @@ const SPEED := 80.0            # пикс/с по плоскости боя (б�
 const WEAVE := 0.12            # «змейка» курса, ± рад
 const WEAVE_W := 0.11          # её частота, рад/с (период ~57 с)
 const BANK_K := 3.2            # крен от скорости разворота
-## S11-01: the flight follows the river valley (river, road, fields, villages, slopes on both sides: the
-## Highlands at their most readable) instead of drifting over whatever lies up-screen. The course stays
-## within RIVER_CONE of H0, so the planes keep flying toward the horizon of the tilted camera; where the
-## river bends away the flight crosses the hills and meets the valley again later.
-const RIVER_CONE := 0.75       # max turn from H0, rad
-const RIVER_SIDE := 260.0      # keep the camera this far from the river line, on its current bank, px
-const RIVER_PULL := 900.0      # distance error (px) that turns the course fully toward the bank line
-const TURN_K := 0.35           # how fast the course follows the valley, 1/s
+## S11-01: the camera flies along the river valley (river, road, fields, villages, slopes on both sides:
+## the Highlands at their most readable) instead of drifting over whatever lies up-screen. The route is
+## the river line itself, traced ahead of the camera, and the camera follows its moving average over
+## ±ROUTE_WIN px of river, so meanders do not swing the flight while the water stays on screen.
+const ROUTE_STEP := 40.0       # river line sample spacing, px
+const ROUTE_WIN := 1200.0      # half window of the moving average along the river, px
+const ROUTE_AHEAD := 3000.0    # traced river kept ahead of the camera, px
+const ROUTE_PER_FRAME := 40    # max river samples traced per frame (each costs ~10 field samples)
+const SETTLE_T := 3.0          # s to ease from where the camera was to the route (no jump)
+const TURN_K := 0.6            # how fast the heading follows the route, 1/s
 const ANCHOR := Vector2(0.56, 0.54)  # ведущий на экране, доля кадра (справа от кнопок, под журналом)
 const LEN_K := 0.17            # длина «Осы» на экране, доля высоты кадра
 const ALT := 60.0              # высота звена над плоскостью боя, пикс
@@ -35,8 +37,14 @@ const FLIGHT := [
 ]
 
 static var _t := 0.0
-static var _head := H0         # course without the weave (follows the valley)
+static var _head := H0         # course without the weave (along the route)
 static var _rate := 0.0        # its turn rate, rad/s
+static var _route := PackedVector2Array()   # river line, ROUTE_STEP apart, in flight order
+static var _dir := Vector2.ZERO             # tracing direction at the route's last point
+static var _s := 0.0                        # camera's place on the route, px of river
+static var _off := Vector2.ZERO             # camera minus route when the route started (eased out)
+static var _off_t := 0.0
+static var _last := Vector2.INF             # where advance() left the camera
 
 
 ## Курс звена сейчас (рад, как heading в 2D: 0 — вправо, −π/2 — вверх по экрану)
@@ -49,39 +57,109 @@ static func turn_rate() -> float:
 	return _rate + WEAVE * WEAVE_W * cos(_t * WEAVE_W)
 
 
-## Шаг камеры меню за кадр (реальное время): камера плывёт вместе со звеном. pos — где камера сейчас
-## (по ней курс тянется вдоль долины реки, S11-01); без неё — прежний курс H0
+## Шаг камеры меню за кадр (реальное время): камера плывёт вместе со звеном. pos — где камера сейчас.
+## S11-01: with the Highlands terrain built, the step follows the river valley route; without it (tests,
+## the Archipelago coast, the first frames before the 3D scene) the old straight course H0 with a weave
 static func advance(dt: float, pos := Vector2.INF) -> Vector2:
 	_t += dt
-	var want := _valley_course(pos)
+	var t := _terrain()
+	if t == null or not pos.is_finite():
+		_route.clear()
+		_head = lerp_angle(_head, H0, 1.0 - exp(-dt * TURN_K))
+		_rate = 0.0
+		return Vector2.from_angle(heading()) * SPEED * dt
+	if _route.is_empty() or not _last.is_finite() or pos.distance_to(_last) > 1.0:
+		_start_route(t, pos)   # first frame, or the camera was moved (new menu visit after a sortie)
+	_trace(t)
+	var c0 := _route_point(_s)
+	var tan := _route_point(_s + 60.0) - _route_point(_s - 60.0)
+	var k := tan.length() / 120.0   # smoothed path length per px of river (< 1 on meanders)
+	_s += SPEED * dt / clampf(k, 0.25, 1.0)
+	var c1 := _route_point(_s)
 	var prev := _head
-	_head = lerp_angle(_head, want, 1.0 - exp(-dt * TURN_K))
+	if (c1 - c0).length_squared() > 1e-6:
+		_head = lerp_angle(_head, (c1 - c0).angle(), 1.0 - exp(-dt * TURN_K))
 	_rate = angle_difference(prev, _head) / maxf(dt, 1e-4)
-	return Vector2.from_angle(heading()) * SPEED * dt
+	_off_t += dt
+	var target := c1 + _off * maxf(0.0, 1.0 - _off_t / SETTLE_T)
+	_last = target
+	return target - pos
 
 
-## S11-01: the course along the river valley at pos: the river's direction (the side that points
-## forward), bent toward a line RIVER_SIDE off the river on the current bank, clamped to RIVER_CONE
-## around H0. No terrain (tests, menu before the 3D scene) — H0.
-static func _valley_course(pos: Vector2) -> float:
-	if not pos.is_finite() or Render3D.I == null or Render3D.I.terrain == null:
-		return H0
-	var t := Render3D.I.terrain
-	var e := 60.0
-	var v := t.river_field(pos.x, pos.y)
-	var g := Vector2(t.river_field(pos.x + e, pos.y) - t.river_field(pos.x - e, pos.y),
-		t.river_field(pos.x, pos.y + e) - t.river_field(pos.x, pos.y - e))
-	if g.length_squared() < 1e-6:
-		return H0
-	g = g.normalized()
-	var fwd := Vector2.from_angle(H0)
-	var along := g.orthogonal()
-	if along.dot(fwd) < 0.0:
-		along = -along
-	var away := g * signf(v)   # away from the river on this bank
-	var err := clampf((absf(v) - RIVER_SIDE) / RIVER_PULL, -1.0, 1.0)
-	var dir := along - away * err
-	return H0 + clampf(angle_difference(H0, dir.angle()), -RIVER_CONE, RIVER_CONE)
+## Highlands terrain of the menu backdrop, or null (no 3D scene yet, or the Archipelago: its coast field
+## has no river line to follow)
+static func _terrain() -> Terrain3D:
+	if Render3D.I == null or Render3D.I.terrain == null or Render3D.I.terrain._sea:
+		return null
+	return Render3D.I.terrain
+
+
+## New route from the river nearest to pos, traced in the direction closest to H0
+static func _start_route(t: Terrain3D, pos: Vector2) -> void:
+	var p := _to_river(t, pos)
+	_dir = _river_tangent(t, p, Vector2.from_angle(H0))
+	_route = PackedVector2Array([p])
+	_s = 0.0
+	_trace(t)
+	_off = pos - _route_point(0.0)
+	_off_t = 0.0
+	if (_route_point(60.0) - _route_point(-60.0)).length_squared() > 1e-6:
+		_head = (_route_point(60.0) - _route_point(-60.0)).angle()
+
+
+## Extends the route so it reaches ROUTE_AHEAD + ROUTE_WIN past the camera (spread over frames)
+static func _trace(t: Terrain3D) -> void:
+	var need := int((_s + ROUTE_WIN + ROUTE_AHEAD) / ROUTE_STEP) + 1
+	var n := 0
+	while _route.size() < need and n < ROUTE_PER_FRAME:
+		var last := _route[_route.size() - 1]
+		var p := _to_river(t, last + _dir * ROUTE_STEP, 2)
+		_dir = _river_tangent(t, p, _dir)
+		_route.append(p)
+		n += 1
+
+
+## Route centre at s px of river: the mean of the river samples within ±ROUTE_WIN (clamped to the
+## traced part, so the start of the route is the river itself)
+static func _route_point(s: float) -> Vector2:
+	if _route.is_empty():
+		return Vector2.ZERO
+	var last := _route.size() - 1
+	var i0 := clampi(int((s - ROUTE_WIN) / ROUTE_STEP), 0, last)
+	var i1 := clampi(int((s + ROUTE_WIN) / ROUTE_STEP), 0, last)
+	var sum := Vector2.ZERO
+	for i in range(i0, i1 + 1):
+		sum += _route[i]
+	return sum / float(i1 - i0 + 1)
+
+
+## Newton steps onto the river line (river_field = 0), each at most 1500 px
+static func _to_river(t: Terrain3D, p: Vector2, steps := 12) -> Vector2:
+	for i in steps:
+		var v := t.river_field(p.x, p.y)
+		var g := _grad(t, p)
+		if g.length_squared() < 1e-10:
+			break
+		var d := g * (v / g.length_squared())
+		p -= d.limit_length(1500.0)
+		if absf(v) < 0.5:
+			break
+	return p
+
+
+## River direction at p, the one of its two senses closer to want
+static func _river_tangent(t: Terrain3D, p: Vector2, want: Vector2) -> Vector2:
+	var g := _grad(t, p)
+	if g.length_squared() < 1e-10:
+		return want.normalized()
+	var a := g.normalized().orthogonal()
+	return a if a.dot(want) >= 0.0 else -a
+
+
+static func _grad(t: Terrain3D, p: Vector2) -> Vector2:
+	var e := 8.0
+	return Vector2(t.river_field(p.x + e, p.y) - t.river_field(p.x - e, p.y),
+		t.river_field(p.x, p.y + e) - t.river_field(p.x, p.y - e)) / (2.0 * e)
 
 
 ## Разнобой ведомого в строю: (покачивание вдоль/поперёк в долях «Осы», крен, высота)
