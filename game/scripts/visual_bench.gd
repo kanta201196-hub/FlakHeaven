@@ -717,26 +717,31 @@ func _make_points() -> Array:
 			for zz in [["near", 2.5], ["mid", 1.0], ["far", 0.55]]:
 				pts.append({"name": "ter_%s_%s" % [k, zz[0]], "pos": spots[k], "zoom": zz[1], "wait": 1.2})
 	if OS.get_cmdline_user_args().has("--convoymtn") and ter != null:
-		# S11 (Kanta 25.10): a column ordered over the mountains, where the road search near its point
-		# finds nothing (the first such point on a grid around the empty cell); the camera sits where its
-		# route passes: on the road since the far road search, on the straight line over the ridges before it
+		# S11 (Kanta 25.10): a column ordered over the mountains, where the road search near its point finds
+		# nothing (a bomber patrol there gets no road: the first such point on a grid around the empty cell);
+		# the camera sits where its route passes: on the road since the far road search, on the straight line
+		# over the ridges before it
 		pts = []
 		var at := Vector2.INF
 		var mid := Vector2.INF
 		for k in 400:
-			var q := empty + Vector2(k % 20 - 10, k / 20 - 10) * 1500.0
+			var q := empty + Vector2(k % 20 - 10, floori(k / 20.0) - 10) * 1500.0
 			if absf(ter.river_field(q.x, q.y)) < 1500.0:
 				continue
-			var probe := Convoy.new()
-			probe._build_route(q, Vector2.RIGHT, ter)
-			var far := not probe.on_road or probe._center_road.distance_to(q) > 2500.0
-			if far:
+			var near := Convoy.new()
+			near.patrol = true
+			near._build_route(q, Vector2.RIGHT, ter)
+			var none := not near.on_road
+			near.free()
+			if none:
 				at = q
-				mid = probe.point_at(probe._s_of(probe._center_road))
-				print("VISUAL convoy over the mountains at %s: on_road=%s route centre %s" % [q, probe.on_road, mid])
-			probe.free()
-			if far:
 				break
+		if at.is_finite():
+			var probe := Convoy.new()
+			probe._build_route(at, Vector2.RIGHT, ter)
+			mid = probe.point_at(probe._s_of(probe._center_road))
+			print("VISUAL convoy over the mountains at %s: on_road=%s route centre %s" % [at, probe.on_road, mid])
+			probe.free()
 		if at.is_finite():
 			for zz in [["near", 1.3], ["far", 0.55]]:
 				pts.append({"name": "cvm_%s" % zz[0], "pos": mid, "zoom": zz[1], "convoy": true, "convoy_at": at, "wait": 1.5})
