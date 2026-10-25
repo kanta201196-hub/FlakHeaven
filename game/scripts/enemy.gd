@@ -8,6 +8,8 @@ var radius := 14.0
 var big := false
 var kill_shake := 2.0
 var contact_damage := 0.0
+## Multiplier of the damage this enemy's shots deal (GD-02: the first-wave ace uses 0.7)
+var out_k := 1.0
 var heading := 0.0
 var is_boss := false
 var is_ground := false   # наземная цель: не таранит, ракеты В-В по ней не стреляют
@@ -614,10 +616,10 @@ func fire_at_player(spread := 0.0, twin := false) -> void:
 	if twin:
 		var side := Vector2(-dir.y, dir.x) * (9.0 if gun == "zsu" else 5.0)
 		var k := 0.5 if gun == "" else 1.0
-		Main.I.projectiles.spawn_enemy_bullet(at + side, dir * (spd + add), kind(), false, k, false, gun, life)
-		Main.I.projectiles.spawn_enemy_bullet(at - side, dir * (spd + add), kind(), false, k, true, gun, life)
+		Main.I.projectiles.spawn_enemy_bullet(at + side, dir * (spd + add), kind(), false, k * out_k, false, gun, life)
+		Main.I.projectiles.spawn_enemy_bullet(at - side, dir * (spd + add), kind(), false, k * out_k, true, gun, life)
 		return
-	Main.I.projectiles.spawn_enemy_bullet(at, dir * (spd + add), kind(), false, 1.0, false, gun, life)
+	Main.I.projectiles.spawn_enemy_bullet(at, dir * (spd + add), kind(), false, out_k, false, gun, life)
 
 
 ## S8 «eweap»: вид пулемёта или пушки (Projectiles.GUN_NAMES): урон, скорость, разброс и трассер.
