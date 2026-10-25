@@ -176,8 +176,9 @@ func _sample_engine() -> void:
 		if not rid in _measured:
 			RenderingServer.viewport_set_measure_render_time(rid, true)
 			_measured.append(rid)
-	_eng["proc"] = float(_eng.get("proc", 0.0)) + Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
-	_eng["phys"] = float(_eng.get("phys", 0.0)) + Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+	# TIME_PROCESS / TIME_PHYSICS_PROCESS are the engine's per-second maxima, not per-frame times
+	_eng["proc"] = maxf(float(_eng.get("proc", 0.0)), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+	_eng["phys"] = maxf(float(_eng.get("phys", 0.0)), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
 	var cpu := RenderingServer.get_frame_setup_time_cpu()
 	var gpu := 0.0
 	for rid in _measured:
@@ -187,11 +188,12 @@ func _sample_engine() -> void:
 	_eng["rgpu"] = float(_eng.get("rgpu", 0.0)) + gpu
 
 
-## One "ENG" chunk of the PERF line: average ms per frame for the frame itself and each engine part.
+## One "ENG" chunk of the PERF line: average ms per frame for the frame and render CPU/GPU; process and
+## physics are the worst frame of the window (the engine only exposes their per-second maximum).
 func _engine_report() -> String:
 	var n := maxf(_frames, 1)
-	var out := "ENG кадр=%.2f процесс=%.2f физика=%.2f рендер_цп=%.2f рендер_гп=%.2f" % [_win * 1000.0 / n,
-		float(_eng.get("proc", 0.0)) / n, float(_eng.get("phys", 0.0)) / n, float(_eng.get("rcpu", 0.0)) / n,
+	var out := "ENG кадр=%.2f процесс_макс=%.2f физика_макс=%.2f рендер_цп=%.2f рендер_гп=%.2f" % [_win * 1000.0 / n,
+		float(_eng.get("proc", 0.0)), float(_eng.get("phys", 0.0)), float(_eng.get("rcpu", 0.0)) / n,
 		float(_eng.get("rgpu", 0.0)) / n]
 	_eng.clear()
 	return out
