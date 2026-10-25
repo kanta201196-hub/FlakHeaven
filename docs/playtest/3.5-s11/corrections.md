@@ -21,16 +21,16 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-14 | «Kit» 2: texture problems on the model (screenshot s11_note_10.png) | 3D models thread | new |
 | S11-15 | «Grach» (Грач): the same texture problem as «Kit» 2 (see S11-14; screenshot s11_note_11.png) | 3D models thread | new |
 | S11-16 | In game: ground textures look pixelated (screenshot s11_note_12.png) | relief thread | new |
-| S11-17 | Make the cards (level-up card pick) about 25% smaller (screenshot s11_note_13.png) | combat UI thread | new |
-| S11-18 | Pause pylon panel: numbers overlap other elements; the launch hint shows «К» (K) but missiles actually fire on the right mouse button (screenshot s11_note_14.png) | combat UI thread | new |
-| S11-19 | Header «НАГРАДА ЗА ПОЗИЦИЮ ПВО» is too dim and hard to find: make it a bit brighter (screenshot s11_note_15.png) | combat UI thread | new |
-| S11-20 | Card description is unclear: cannot tell whether the bonuses apply now or only after 4 more levels (screenshot s11_note_16.png) | combat UI thread (card text) | new |
-| S11-21 | Card descriptions: text wraps so a closing bracket lands alone on the next line (e.g. «(из 11» / «)»); fix the wrapping in all descriptions (screenshot s11_note_17.png) | combat UI thread | new |
-| S11-22 | Card pick: the tooltip at the bottom must disappear when the mouse leaves the card (screenshot s11_note_18.png) | combat UI thread | new |
-| S11-23 | Card pick screen: player HP must be visible (screenshot s11_note_19.png; the same screenshot shows the dangling «)» on «Усиленная боевая часть», part of S11-21) | combat UI thread | new |
+| S11-17 | Make the cards (level-up card pick) about 25% smaller (screenshot s11_note_13.png) | combat UI thread | merged (PR #405) |
+| S11-18 | Pause pylon panel: numbers overlap other elements; the launch hint shows «К» (K) but missiles actually fire on the right mouse button (screenshot s11_note_14.png) | combat UI thread | merged (PR #405) |
+| S11-19 | Header «НАГРАДА ЗА ПОЗИЦИЮ ПВО» is too dim and hard to find: make it a bit brighter (screenshot s11_note_15.png) | combat UI thread | merged (PR #405) |
+| S11-20 | Card description is unclear: cannot tell whether the bonuses apply now or only after 4 more levels (screenshot s11_note_16.png) | combat UI thread (card text) | merged (PR #405) |
+| S11-21 | Card descriptions: text wraps so a closing bracket lands alone on the next line (e.g. «(из 11» / «)»); fix the wrapping in all descriptions (screenshot s11_note_17.png) | combat UI thread | merged (PR #405) |
+| S11-22 | Card pick: the tooltip at the bottom must disappear when the mouse leaves the card (screenshot s11_note_18.png) | combat UI thread | merged (PR #405) |
+| S11-23 | Card pick screen: player HP must be visible (screenshot s11_note_19.png; the same screenshot shows the dangling «)» on «Усиленная боевая часть», part of S11-21) | combat UI thread | merged (PR #405) |
 | S11-24 | In battle: some yellow flat-looking planes; identify which unit it is (screenshot s11_note_20.png) | 3D models thread | new |
-| S11-25 | Pause screen: many elements overlap each other (slot numbers on icons, numbered markers on the plane blueprint, right column cut at the screen edge, truncated labels) (screenshot s11_note_21.png) | combat UI thread | new |
-| S11-26 | Card «Лазер обороны «Луч» (экспериментальный)»: the title/description is cut with an ellipsis, the full text is not visible; the card must also say what the weapon does and its base damage (code: 6 damage per 0.9 s on the nearest enemy only when there is nothing to burn; first it burns up to 2 missiles and 2 bullets in 250 px) (screenshots s11_note_22.png, s11_note_23.png) | combat UI thread | new |
+| S11-25 | Pause screen: many elements overlap each other (slot numbers on icons, numbered markers on the plane blueprint, right column cut at the screen edge, truncated labels) (screenshot s11_note_21.png) | combat UI thread | merged (PR #405) |
+| S11-26 | Card «Лазер обороны «Луч» (экспериментальный)»: the title/description is cut with an ellipsis, the full text is not visible; the card must also say what the weapon does and its base damage (code: 6 damage per 0.9 s on the nearest enemy only when there is nothing to burn; first it burns up to 2 missiles and 2 bullets in 250 px) (screenshots s11_note_22.png, s11_note_23.png) | combat UI thread | merged (text in main, title layout PR #405) |
 | S11-27 | After an explosion many unclear particles hang in the air, look like hay or straw (screenshot s11_note_24.png) | effects thread | new |
 | S11-28 | Before a NAR (unguided rocket) explosion there is a strange, clearly noticeable delay with a pulsing on the ground | effects thread | new |
 | S11-29 | «Fortress» (Крепость) boss: turrets float in the air detached from the plane; the screenshot also shows the bomber drawn flat white/pink (screenshot s11_note_25.png) | 3D models thread | new |
