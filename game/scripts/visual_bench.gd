@@ -112,8 +112,17 @@ func process(delta: float) -> void:
 					g.max_hp = 99999.0
 				base.active = true
 				m.world.add_child(base)
+				_fa_base = base
+		if p.has("fort_break") and not p.get("_broke", false) and _fa_base != null:
+			p["_broke"] = true
+			_fort_break(p["fort_break"])
 		if not _fa_fort.is_empty():   # the camera on the 3D fort (pushed off the river), not the raw chunk spot
-			var at: Vector2 = FortArea.tower_points(_fa_fort)[3] if p.get("on_tower", false) else _fa_fort["pos"]
+			var at: Vector2 = _fa_fort["pos"]
+			if p.has("on_piece"):   # FA-03: a broken piece close up
+				var sp := FortArea.piece_spot(p["on_piece"])
+				at = FortArea.fort_point(_fa_fort, Vector2(sp.x, sp.z))
+			elif p.get("on_tower", false):
+				at = FortArea.tower_points(_fa_fort)[3]
 			p["pos"] = at + (p.get("off", Vector2.ZERO) as Vector2)
 	elif p.get("ground", false):
 		if not _g_spawned:
@@ -603,6 +612,16 @@ func _make_points() -> Array:
 		pts.append({"name": "fort_area_close", "pos": found["o_fort"], "off": Vector2(0, 60), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
 		# FA-02: the tower, its launcher, sandbags and the wall textures up close
 		pts.append({"name": "fort_area_tower", "pos": found["o_fort"], "off": Vector2(-60, 40), "on_tower": true, "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 6.0, "wait": 2.0})
+		# FA-03: mid-fight (one crown collapsed, one cracked, a breach) and the fort taken (all crowns, gate, store)
+		var fa := {"fort": found["o_fort"], "fort_area": true, "enemies": true}
+		pts.append(fa.merged({"name": "fort_area_hit", "pos": found["o_fort"], "off": Vector2(0, 60), "zoom": 2.4, "wait": 2.5,
+			"fort_break": {"t3": 0.0, "t1": 0.4, "w5": 1}}))
+		pts.append(fa.merged({"name": "fort_area_hit_tower", "pos": found["o_fort"], "off": Vector2(-60, 40), "on_piece": "t3", "zoom": 6.0, "wait": 1.5}))
+		pts.append(fa.merged({"name": "fort_area_hit_breach", "pos": found["o_fort"], "off": Vector2(40, 30), "on_piece": "w5", "zoom": 6.0, "wait": 1.5}))
+		pts.append(fa.merged({"name": "fort_area_ruin", "pos": found["o_fort"], "off": Vector2(0, 60), "zoom": 2.4, "wait": 6.0,
+			"fort_break": {"t0": 0.0, "t1": 0.0, "t2": 0.0, "w1": 1, "gate": 1, "store": 1}}))
+		pts.append(fa.merged({"name": "fort_area_ruin_wide", "pos": found["o_fort"], "off": Vector2(0, 300), "zoom": 1.0, "wait": 1.5}))
+		pts.append(fa.merged({"name": "fort_area_ruin_gate", "pos": found["o_fort"], "off": Vector2(0, 50), "on_piece": "gate", "zoom": 6.0, "wait": 1.5}))
 	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
 		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
 		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
@@ -965,6 +984,21 @@ func _sam_poses(p: Dictionary) -> void:
 var _g_spawned := false
 var _fa_spawned := false
 var _fa_fort: Dictionary = {}   # FA-02: the fort the bench base stands on, for the camera points
+var _fa_base: FortArea
+
+
+## FA-03 bench: breaks pieces of the bench fort as a fight would. `b`: piece id → launcher HP share for towers
+## ("t3": 0.0 collapses it, 0.4 — damaged), any value for walls, gate and store (blown). Plays the same dust and smoke.
+func _fort_break(b: Dictionary) -> void:
+	for id: String in b:
+		if id.begins_with("t"):
+			var g := _fa_base.launchers[int(id.substr(1))]
+			g.hp = g.max_hp * float(b[id])
+		else:
+			var sp := FortArea.piece_spot(id)
+			for got in _fa_base.damage.apply_blast(Vector2(sp.x, sp.z), 0.005, 9.0):
+				_fa_base._break_fx(got)
+	Events.fort_changed.emit(FortView.key_of(_fa_fort["pos"]))
 
 
 ## VIS-01 unit close-ups: kind -> [enemy texture, sprite length, camera zoom]. Lengths are the game's own

@@ -151,6 +151,20 @@ static func air_pos(g: Vector2, lift := 0.0) -> Vector2:
 	return Vector2(c.x + (g.x - c.x) / k, c.z + (g.y - c.z) / k)
 
 
+## Inverse of air_pos: the point on the ground under logic-plane point `a`, for ground at the height of `ref`
+## (a flat site, like a fort's yard). Without 3D — the same point.
+static func ground_of(a: Vector2, ref: Vector2) -> Vector2:
+	var r := Render3D.I
+	if r == null or not Render3D.enabled or r.cam == null or r.terrain == null:
+		return a
+	var c := r.cam.global_position
+	var y := r.terrain.surface_fast(ref.x, ref.y).y
+	if c.y <= 1.0 or c.y - y <= 1.0:
+		return a
+	var k := (c.y - y) / c.y
+	return Vector2(c.x + (a.x - c.x) * k, c.z + (a.y - c.z) * k)
+
+
 ## FA-01: a tower launcher's hitbox and HP bar sit on the tower top, where its model is (Kanta 25.10).
 func anchor_lift() -> float:
 	return mount_h

@@ -2498,7 +2498,9 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				var sz := float(o["size"])
 				var vr: int = o.get("var", absi(hash(key)) % 4)
 				match o["name"]:
-					"o_fort": mi.mesh = FortBuild.mesh()   # FA-02: set Г, materials per surface
+					"o_fort":
+						mi.mesh = FortBuild.mesh()   # FA-02: set Г, materials per surface
+						mi.add_child(FortView.new(o["pos"]))   # FA-03: broken pieces, idle until this fort is hit
 					"o_village":
 						# S9-07/S9-08: застройка без дворов на воде, сады, поля и линия обороны — по ручью и реке посёлка
 						if _vtasks.has(key):

@@ -17,3 +17,11 @@ const REACH := 6000.0   # 3000 found a fort ahead only 55 % of the time, 6000 �
 const CLEAR_R := 2600.0
 ## Missile `who` of the base: the base counts its own missiles in the air by it.
 const WHO := "укрепрайон"
+
+## FA-03 destructibility (spec «Conditional destructibility», *guess*): explosive hits a wall section and the
+## gate take before they break. A hit weighs its blast radius against a bomb's (FortDamage.hit_weight).
+const WALL_POOL := 2.0
+const GATE_POOL := 1.5
+const BOMB_R := 130.0   # the bombs' base radius (weapons.gd «bombs» range)
+## Smaller player blasts (cannon HE splash, A-A missile splash) do not reach the walls at all.
+const BLAST_MIN_R := 50.0
