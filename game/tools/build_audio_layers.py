@@ -414,6 +414,45 @@ def build_music_rock(out_dir):
         print('%-14s %.0f с' % (name, len(y) / SR))
 
 
+# Очередь автотурели (25.10, турели «как в Sublight», тред эффектов): одна запись на очередь из 4 выстрелов
+# через ~45 мс — плотное «бррт». Выстрел = хлопок лёгкого автомата + низкий удар (синтез 150 -> 70 Гц)
+# + сухой щелчок сверху; у последнего — короткий отзвук. Разброс времени, тона и громкости — чтобы не «пулемёт-метроном».
+BURST_N, BURST_GAP = 4, 0.045
+H.REF_PUNCH['turret_burst'] = H.REF_PUNCH['turret_fire']
+
+
+def build_turret_burst(out_dir):
+    shots = [layer('smg', st, 0.075, 0.04) for st in (0.055, 0.16, 0.26)]
+    crack = layer('bimp16', 'auto', 0.05, 0.03, af='highpass=f=3500')
+    tail = layer('mk44', 0.305, 0.22, 0.16, 1.0, af='lowpass=f=1800')
+    for f in glob.glob(os.path.join(out_dir, 'turret_burst*.ogg')):
+        os.remove(f)
+    for v in range(3):
+        rng = np.random.default_rng(31 + v)
+        n = int((BURST_GAP * BURST_N + 0.3) * SR)
+        out = np.zeros((n, 2), dtype=np.float32)
+        for k in range(BURST_N):
+            d = int((k * BURST_GAP + rng.uniform(-0.003, 0.003)) * SR) if k else 0
+            g = 10 ** (rng.uniform(-1.5, 0.5) / 20)
+            pitch = rng.uniform(0.95, 1.06)
+            sh = shots[(v + k) % 3]
+            idx = np.arange(0, len(sh) - 1, pitch)
+            sh = np.stack([np.interp(idx, np.arange(len(sh)), sh[:, c]) for c in (0, 1)], 1)
+            parts = [(norm_peak(sh, 0), 0), (norm_peak(sub(150, 70, 0.05, 40), -5), 0), (norm_peak(crack, -11), 0)]
+            if k == BURST_N - 1:
+                parts.append((norm_peak(tail, -9), int(0.01 * SR)))
+            for y, o in parts:
+                m = min(len(y), n - d - o)
+                out[d + o:d + o + m] += y[:m] * g
+        out = out[:int((BURST_GAP * (BURST_N - 1) + 0.25) * SR)]
+        out *= 10 ** ((H.REF_PUNCH['turret_burst'] - H.punch_db(out.mean(1))) / 20)
+        if np.abs(out).max() > 0.89:
+            out = limit_st(out)
+        name = 'turret_burst_%d' % (v + 1)
+        write_ogg_st(out, os.path.join(out_dir, name + '.ogg'))
+        print('%-14s %.2f с  got %.1f dB' % (name, len(out) / SR, H.punch_db(out.mean(1))))
+
+
 def main():
     out_dir = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else H.AUDIO
     only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else None
@@ -424,6 +463,8 @@ def main():
         build_ambient(out_dir)
     if only is not None and 'music_rock' in only:  # только по явной команде: заменяет музыку боя и аса
         build_music_rock(out_dir)
+    if only is None or 'turret_burst' in only:
+        build_turret_burst(out_dir)
     if only is None or 'sea' in only:
         build_sea(out_dir)
     for event, variants in LAYERS.items():
