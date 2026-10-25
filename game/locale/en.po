@@ -493,8 +493,8 @@ msgid "Термобарика"
 msgstr "Thermobaric"
 
 #: game/scripts/cards.gd:129
-msgid "Ракета залпа прилипает и через 0,5 с даёт объёмный взрыв 130 пикс. (урон ×1,5); соседние взрывы сливаются: до ×2"
-msgstr "Salvo rockets stick and after 0.5 s give a 130 px fuel-air blast (dmg ×1.5); nearby blasts merge: up to ×2"
+msgid "Ракета залпа сразу даёт объёмный взрыв 130 пикс. (урон ×1,5); соседние взрывы сливаются: до ×2"
+msgstr "Salvo rockets give a 130 px fuel-air blast on impact (dmg ×1.5); nearby blasts merge: up to ×2"
 
 #: game/scripts/cards.gd:130
 msgid "прилипающие ракеты, объёмный взрыв"
