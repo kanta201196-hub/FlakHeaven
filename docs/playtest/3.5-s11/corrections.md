@@ -23,5 +23,6 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-16 | In game: ground textures look pixelated (screenshot s11_note_12.png) | relief thread | new |
 | S11-17 | Make the cards (level-up card pick) about 25% smaller (screenshot s11_note_13.png) | combat UI thread | new |
 | S11-18 | Pause pylon panel: numbers overlap other elements; the launch hint shows «К» (K) but missiles actually fire on the right mouse button (screenshot s11_note_14.png) | combat UI thread | new |
+| S11-19 | Header «НАГРАДА ЗА ПОЗИЦИЮ ПВО» is too dim and hard to find: make it a bit brighter (screenshot s11_note_15.png) | combat UI thread | new |
 
-Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_14.png`.
+Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_15.png`.
