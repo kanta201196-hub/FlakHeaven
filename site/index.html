@@ -27,7 +27,7 @@
 <link rel="preload" href="fonts/unbounded-cyrillic-300-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/manrope-cyrillic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* Шрифты лежат на нашем сайте: страница не обращается к чужим серверам. Лицензия шрифтов — SIL OFL. */
+/* Шрифты лежат на нашем сайте. Лицензия шрифтов — SIL OFL. */
 @font-face{font-family:"Unbounded";font-weight:300;font-display:swap;src:url(fonts/unbounded-cyrillic-300-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
 @font-face{font-family:"Unbounded";font-weight:300;font-display:swap;src:url(fonts/unbounded-latin-300-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"Unbounded";font-weight:600;font-display:swap;src:url(fonts/unbounded-cyrillic-600-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
@@ -362,8 +362,8 @@ footer p{margin:0 0 8px}
 </main>
 
 <footer class="in small">
-  <p data-l="ru">Сайт не использует куки и счётчики посещений. <a href="privacy.html">Политика конфиденциальности</a> · Связь: <a href="mailto:hello@flakheaven.com">hello@flakheaven.com</a>, <a href="https://t.me/FlakHeaven">Telegram</a>, <a href="https://discord.gg/VmSepr2Wge">Discord</a> · Тестовая сборка: <a href="https://kanta2011.itch.io/flak-heaven">itch.io</a></p>
-  <p data-l="en">This site uses no cookies or visitor tracking. <a href="privacy.html">Privacy policy</a> · Contact: <a href="mailto:hello@flakheaven.com">hello@flakheaven.com</a>, <a href="https://t.me/FlakHeaven">Telegram</a>, <a href="https://discord.gg/VmSepr2Wge">Discord</a> · Test build: <a href="https://kanta2011.itch.io/flak-heaven">itch.io</a></p>
+  <p data-l="ru">Сайт не использует куки, посещения считаем без них (Cloudflare Web Analytics). <a href="privacy.html">Политика конфиденциальности</a> · Связь: <a href="mailto:hello@flakheaven.com">hello@flakheaven.com</a>, <a href="https://t.me/FlakHeaven">Telegram</a>, <a href="https://discord.gg/VmSepr2Wge">Discord</a> · Тестовая сборка: <a href="https://kanta2011.itch.io/flak-heaven">itch.io</a></p>
+  <p data-l="en">This site uses no cookies; visits are counted without them (Cloudflare Web Analytics). <a href="privacy.html">Privacy policy</a> · Contact: <a href="mailto:hello@flakheaven.com">hello@flakheaven.com</a>, <a href="https://t.me/FlakHeaven">Telegram</a>, <a href="https://discord.gg/VmSepr2Wge">Discord</a> · Test build: <a href="https://kanta2011.itch.io/flak-heaven">itch.io</a></p>
   <p data-l="ru">Музыка: «Heart of Machine» — Alexandr Zhelanov (CC BY 3.0). Шрифты Unbounded, Manrope, Russo One (SIL OFL). 3D-просмотр — model-viewer (Apache 2.0).</p>
   <p data-l="en">Music: “Heart of Machine” by Alexandr Zhelanov (CC BY 3.0). Fonts Unbounded, Manrope, Russo One (SIL OFL). 3D viewer: model-viewer (Apache 2.0).</p>
   <span data-l="ru">© 2026 Flak Heaven. Все совпадения с реальной техникой и странами случайны.</span>
@@ -377,7 +377,7 @@ Object.keys(LINKS).forEach(function(k){var a=document.getElementById("l-"+k);if(
 if(LINKS.steam)document.getElementById("cta").hidden=false;
 var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* Заявка тестера: форма встраивается на страницу только по нажатию — до этого сайт не грузит чужих скриптов и куки. */
+/* Заявка тестера: форма встраивается на страницу только по нажатию — до этого сайт не грузит куки Яндекса. */
 if(LINKS.tester){
   var T=document.getElementById("tester"),FID=(LINKS.tester.match(/\/u\/([0-9a-f]+)/)||[])[1]||"";
   T.hidden=false;
