@@ -16,6 +16,14 @@ const SPEED := 80.0            # пикс/с по плоскости боя (б�
 const WEAVE := 0.12            # «змейка» курса, ± рад
 const WEAVE_W := 0.11          # её частота, рад/с (период ~57 с)
 const BANK_K := 3.2            # крен от скорости разворота
+## S11-01: the flight follows the river valley (river, road, fields, villages, slopes on both sides: the
+## Highlands at their most readable) instead of drifting over whatever lies up-screen. The course stays
+## within RIVER_CONE of H0, so the planes keep flying toward the horizon of the tilted camera; where the
+## river bends away the flight crosses the hills and meets the valley again later.
+const RIVER_CONE := 0.75       # max turn from H0, rad
+const RIVER_SIDE := 260.0      # keep the camera this far from the river line, on its current bank, px
+const RIVER_PULL := 900.0      # distance error (px) that turns the course fully toward the bank line
+const TURN_K := 0.35           # how fast the course follows the valley, 1/s
 const ANCHOR := Vector2(0.56, 0.54)  # ведущий на экране, доля кадра (справа от кнопок, под журналом)
 const LEN_K := 0.17            # длина «Осы» на экране, доля высоты кадра
 const ALT := 60.0              # высота звена над плоскостью боя, пикс
@@ -27,22 +35,53 @@ const FLIGHT := [
 ]
 
 static var _t := 0.0
+static var _head := H0         # course without the weave (follows the valley)
+static var _rate := 0.0        # its turn rate, rad/s
 
 
 ## Курс звена сейчас (рад, как heading в 2D: 0 — вправо, −π/2 — вверх по экрану)
 static func heading() -> float:
-	return H0 + WEAVE * sin(_t * WEAVE_W)
+	return _head + WEAVE * sin(_t * WEAVE_W)
 
 
 ## Скорость разворота, рад/с
 static func turn_rate() -> float:
-	return WEAVE * WEAVE_W * cos(_t * WEAVE_W)
+	return _rate + WEAVE * WEAVE_W * cos(_t * WEAVE_W)
 
 
-## Шаг камеры меню за кадр (реальное время): камера плывёт вместе со звеном
-static func advance(dt: float) -> Vector2:
+## Шаг камеры меню за кадр (реальное время): камера плывёт вместе со звеном. pos — где камера сейчас
+## (по ней курс тянется вдоль долины реки, S11-01); без неё — прежний курс H0
+static func advance(dt: float, pos := Vector2.INF) -> Vector2:
 	_t += dt
+	var want := _valley_course(pos)
+	var prev := _head
+	_head = lerp_angle(_head, want, 1.0 - exp(-dt * TURN_K))
+	_rate = angle_difference(prev, _head) / maxf(dt, 1e-4)
 	return Vector2.from_angle(heading()) * SPEED * dt
+
+
+## S11-01: the course along the river valley at pos: the river's direction (the side that points
+## forward), bent toward a line RIVER_SIDE off the river on the current bank, clamped to RIVER_CONE
+## around H0. No terrain (tests, menu before the 3D scene) — H0.
+static func _valley_course(pos: Vector2) -> float:
+	if not pos.is_finite() or Render3D.I == null or Render3D.I.terrain == null:
+		return H0
+	var t := Render3D.I.terrain
+	var e := 60.0
+	var v := t.river_field(pos.x, pos.y)
+	var g := Vector2(t.river_field(pos.x + e, pos.y) - t.river_field(pos.x - e, pos.y),
+		t.river_field(pos.x, pos.y + e) - t.river_field(pos.x, pos.y - e))
+	if g.length_squared() < 1e-6:
+		return H0
+	g = g.normalized()
+	var fwd := Vector2.from_angle(H0)
+	var along := g.orthogonal()
+	if along.dot(fwd) < 0.0:
+		along = -along
+	var away := g * signf(v)   # away from the river on this bank
+	var err := clampf((absf(v) - RIVER_SIDE) / RIVER_PULL, -1.0, 1.0)
+	var dir := along - away * err
+	return H0 + clampf(angle_difference(H0, dir.angle()), -RIVER_CONE, RIVER_CONE)
 
 
 ## Разнобой ведомого в строю: (покачивание вдоль/поперёк в долях «Осы», крен, высота)
