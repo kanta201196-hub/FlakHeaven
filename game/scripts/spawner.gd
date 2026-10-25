@@ -318,6 +318,7 @@ func spawn_bombers(p: Player, t: float) -> void:
 ## без баннера и таймера, груз с грузовиков как у конвоя
 const PATROL_EVERY := 35.0
 const PATROL_FROM := 45.0
+const PATROL_RETRY := 6.0   # s: next try after a patrol found no road near the bomber's path
 var _patrol_cd := PATROL_FROM
 var _patrol_cv: Convoy = null
 
@@ -334,6 +335,10 @@ func _patrol(p: Player, t: float, delta: float) -> void:
 	var mid := p.global_position + Vector2.from_angle(p.heading + randf_range(-0.5, 0.5)) * 1100.0
 	var side := 1.0 if randf() < 0.5 else -1.0
 	cv.setup(mid, Vector2.from_angle(p.heading + side * PI / 2.0), hp_mult() * hp_ramp(t), recent_dps(), t)
+	if cv.vehicles.is_empty():   # no road near the bomber's path (mountains): try again soon
+		cv.free()
+		_patrol_cd = PATROL_RETRY
+		return
 	Main.I.world.add_child(cv)
 	_patrol_cv = cv
 	if OS.get_cmdline_user_args().has("--autotest"):

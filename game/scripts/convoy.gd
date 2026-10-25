@@ -55,9 +55,12 @@ var _dbg := OS.get_cmdline_user_args().has("--convoy") and OS.get_cmdline_user_a
 var patrol := false
 
 
-## center — точка, через которую пройдёт колонна; dir — примерное направление марша
+## center: a point the column passes; dir: rough direction of the march. A patrol with no road near
+## its point (over the mountains) gets no vehicles, and the caller drops it.
 func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> void:
 	_build_route(center, dir)
+	if patrol and _tr != null and not on_road and not _sea:
+		return
 	var order := ["scout", "technical", "truck", "light", "truck", "ifv", "manpads"]
 	if patrol:
 		order = ["technical", "truck", "light"]
@@ -111,10 +114,16 @@ func _terrain() -> Terrain3D:
 var _center_road := Vector2.INF
 
 
-## Маршрут по оси дороги: до 4 000 пикс. назад от center (там колонна ждёт за краем экрана) и до 7 000 вперёд по ходу dir.
-## Дорога ищется у center и, если там её нет, в нескольких точках вокруг (A-07: прямая без дороги могла пересечь реку)
-func _build_route(center: Vector2, dir: Vector2) -> void:
-	var tr := _terrain()
+## Route along the road axis: up to 4 000 px back from center (the column waits there off screen) and up to
+## 7 000 px ahead along dir. The road is looked for at center and at a few points around it (A-07: a straight
+## line with no road could cross the river). S11 (Kanta 25.10): columns move only on roads. Over the mountains,
+## more than ~2.5 km from a river, none of those points reaches the road and the column used to drive a straight
+## line across ridges and passes; now the search goes on in rings out to FAR_ROAD px (the nearest river reach).
+## A patrol skips the far search (it is on the bomber's path or nowhere); the straight line is left for no terrain
+## tr: the terrain to use (tests pass one); null — the game's (Render3D)
+func _build_route(center: Vector2, dir: Vector2, tr: Terrain3D = null) -> void:
+	if tr == null:
+		tr = _terrain()
 	_tr = tr
 	if tr != null:
 		var d := dir.normalized()
@@ -124,18 +133,10 @@ func _build_route(center: Vector2, dir: Vector2) -> void:
 			offs.append_array([2400.0, -2400.0, 3200.0, -3200.0])   # у моря прямая по суше недопустима — ищем дальше
 		for o in offs:
 			var c0: Vector2 = _near_water(tr, center + side * float(o)) if _sea else tr.find_floor(center + side * float(o), 900.0)
-			var c := _to_road(tr, c0, 30 if _sea else 12)
-			if c == Vector2.INF:
-				continue
-			var fw := _march(tr, c, dir, 7000.0)
-			var bk := _march(tr, c, -dir, 4000.0)
-			if fw.size() * STEP > 1800.0 and bk.size() * STEP > 900.0:
-				bk.reverse()
-				pts = bk
-				pts.append_array(fw.slice(1))
-				on_road = true
-				_center_road = c
+			if _try_route(tr, c0, dir):
 				break
+		if not on_road and not _sea and not patrol:
+			_far_route(tr, center, dir)
 	if not on_road:
 		# рельефа нет (или дорога не нашлась) — прямая
 		pts = PackedVector2Array()
@@ -155,6 +156,48 @@ func _build_route(center: Vector2, dir: Vector2) -> void:
 		var c := point_at(sc)
 		var n := normal_at(sc)
 		river_sign = signf(tr.river_field(c.x + n.x * 20.0, c.y + n.y * 20.0) - tr.river_field(c.x - n.x * 20.0, c.y - n.y * 20.0))
+
+
+## Road route through the road point nearest to c0 (Newton onto the road line, then marching both ways).
+## Takes it when it runs at least 1 800 px ahead and 900 px back; sets pts, on_road and _center_road
+func _try_route(tr: Terrain3D, c0: Vector2, dir: Vector2) -> bool:
+	var c := _to_road(tr, c0, 30 if _sea else 12)
+	if c == Vector2.INF:
+		return false
+	var fw := _march(tr, c, dir, 7000.0)
+	var bk := _march(tr, c, -dir, 4000.0)
+	if fw.size() * STEP <= 1800.0 or bk.size() * STEP <= 900.0:
+		return false
+	bk.reverse()
+	pts = bk
+	pts.append_array(fw.slice(1))
+	on_road = true
+	_center_road = c
+	return true
+
+
+const FAR_ROAD := 7200.0   # how far from center the road search goes in the mountains, px
+const FAR_RING := 600.0    # ring spacing of that search, px
+
+
+## Far road search, nearest first: on each ring around center the sample with the smallest river field
+## (the one nearest a river) is a start for _try_route, which goes from there onto the road. Ring by ring,
+## so a column near a valley costs a ring or two of samples, not the whole FAR_ROAD disc
+func _far_route(tr: Terrain3D, center: Vector2, dir: Vector2) -> void:
+	var r := FAR_RING * 3.0
+	while r <= FAR_ROAD:
+		var best := Vector2.INF
+		var best_f := INF
+		var n := int(TAU * r / 300.0)
+		for i in n:
+			var q := center + Vector2.from_angle(TAU * i / n) * r
+			var f := absf(tr.river_field(q.x, q.y))
+			if f < best_f:
+				best_f = f
+				best = q
+		if _try_route(tr, best, dir):
+			return
+		r += FAR_RING
 
 
 ## «Архипелаг»: сколько точек маршрута не на глубокой воде (для автотеста; на суше — 0)
