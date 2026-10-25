@@ -1,6 +1,6 @@
 # Fortified area activity — design (draft for Kanta)
 
-Status: **draft, waiting for Kanta's «да» on the rules** (numbers marked *guess*). Texture set chosen: Г. Thread «Сделать активность «Укрепрайон» из крепости», 2026-10-25.
+Status: **approved by Kanta 2026-10-25** («до 4 ракет в воздухе, в остальном — да»). Numbers still marked *guess* are tuned after the first play test. Texture set: Г. No bunker in the yard. Thread «Сделать активность «Укрепрайон» из крепости», 2026-10-25.
 Review page with sketches and texture renders: https://claude.ai/artifact/GNjvcTyiR3fhn3doF8Vzzp (stage 1), texture study: https://claude.ai/artifact/GS3AWzC9zxsNEK25y6eboH, set Г with our game models and destruction states: https://claude.ai/artifact/GLunKY4yCjT5npGcNeconG
 
 ## Kanta's brief (2026-10-25, verbatim points)
@@ -27,7 +27,7 @@ Review page with sketches and texture renders: https://claude.ai/artifact/GNjvcT
 
 - **Where:** a real `o_fort` of the map. When the activity's turn comes, the spawner picks the fort nearest to a point ~1700 px ahead of the player within 3000 px (*guess*). No fort in reach → the activity is skipped this round (next one in the rotation starts), so no fort ever pops out of nothing.
 - **Start:** arrow as other activities. Approach closer than 1150 px (as the AA site) → banner «Обнаружена база противника» (translation key), alarm, timer **90 s** (*guess*; optional-activity timers are allowed).
-- **Defence:** 4 corner towers, each a SAM launcher on a turntable. Launcher logic = `GroundTarget` `sam`: lock `msl_sam_lock`, cooldown 5–6.5 s, range 900 px. Fort-wide cap: **at most 2 fort missiles in the air** (*guess*), so four launchers never salvo the player. Launchers don't drive; they rise, turn after the plane, lock, launch, kick (existing `_sam_launcher` animation).
+- **Defence:** 4 corner towers, each a SAM launcher on a turntable. Launcher logic = `GroundTarget` `sam`: lock `msl_sam_lock`, cooldown 5–6.5 s, range 900 px. Fort-wide cap: **at most 4 fort missiles in the air** (Kanta 25.10). Launchers don't drive; they rise, turn after the plane, lock, launch, kick (existing `_sam_launcher` animation).
 - **Yard jeeps:** 2 convoy technicals (`fh_battle_e_convoy_technical.glb`) parked in the yard, same behaviour and HP as the convoy technical, but they never leave the yard (*guess*; Kanta may prefer pure decor). Not required for the goal.
 - **Goal:** destroy the 4 launchers. Fort taken → garrison leaves, the fort burns. Optional bonus inside: fuel and ammo store (no weapons) that blows up in a chain.
 - **Reward:** like the AA site — a pick of rare cards + parts; parts ×1.5 of the AA site (*guess*, harder fight). Timer out → fort stays, launchers go quiet when the player leaves 1500 px, no reward.
