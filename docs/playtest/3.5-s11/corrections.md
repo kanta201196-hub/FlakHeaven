@@ -15,5 +15,6 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-08 | «Osa» 1: flaps work with the same defects as «Osa» 2 (see S11-02) | 3D models thread | new |
 | S11-09 | Rework weapon setup in the hangar: one solid list where at most two items can be picked; heading «Выбор стартового вооружения (не более 2 видов)», the main list below as it is now (screenshot s11_note_6.png) | menu / upgrades thread | new |
 | S11-10 | «Kit» (Кит): the model already had a permanently open bomb bay and the new mechanisation now conflicts with it — remove the extra parts; wing mechanisation has the same defects as on the other planes (see S11-02; screenshot s11_note_7.png) | 3D models thread | new |
+| S11-11 | «Kit» 1: the bomb bay opens but the bombs hang right on the belly; the bay must open the plane's interior where the bombs sit, now they appear from thin air (screenshot s11_note_8.png) | 3D models thread | new |
 
-Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_7.png`.
+Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_8.png`.
