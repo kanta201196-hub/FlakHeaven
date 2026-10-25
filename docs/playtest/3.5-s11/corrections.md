@@ -21,5 +21,6 @@ Build kit: `/mnt/project-files/builds/3.5-s11/`. Open items carried from s10 are
 | S11-14 | «Kit» 2: texture problems on the model (screenshot s11_note_10.png) | 3D models thread | new |
 | S11-15 | «Grach» (Грач): the same texture problem as «Kit» 2 (see S11-14; screenshot s11_note_11.png) | 3D models thread | new |
 | S11-16 | In game: ground textures look pixelated (screenshot s11_note_12.png) | relief thread | new |
+| S11-17 | Make the cards (level-up card pick) about 25% smaller (screenshot s11_note_13.png) | combat UI thread | new |
 
-Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_12.png`.
+Screenshots (Kanta, 2026-10-25): `/mnt/project-files/playtest/3.5-s11/s11_note_1.png` … `s11_note_13.png`.
