@@ -36,6 +36,7 @@ func _ready() -> void:
 	add_child(td)
 	td.setup(500.0, StandardMaterial3D.new(), bg)
 	_check_drawn(td)
+	_check_ctx_split(td)
 	td.queue_free()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
@@ -145,3 +146,42 @@ func _check_drawn(t: Terrain3D) -> void:
 	print("UNIT: AA place over built chunks %.1f ms avg, exact heights %.1f ms avg" % [us[0] / 1000.0 / cs.size(), us[1] / 1000.0 / cs.size()])
 	_check(bad == 0, "AA points over built chunks too close to the river or in water: %d" % bad)
 	_check(us[0] < us[1], "placement over built chunks is cheaper than with exact heights")
+
+
+## RV-05: the chunk snapshot splits side valleys and near streams per cell (ctx vsides/streams) only to
+## save time; chunks built with and without the split must match exactly, also at village streams and
+## for the coarse placeholder grid.
+func _check_ctx_split(t: Terrain3D) -> void:
+	var keys: Array[Vector2i] = []
+	var r := 0
+	while keys.size() < 3 and r < 40:
+		for kx in range(-r, r + 1):
+			for kz in range(-r, r + 1):
+				if maxi(absi(kx), absi(kz)) != r:
+					continue   # only the ring at distance r
+				var k := Vector2i(kx, kz)
+				var o := t._obj(k)
+				if keys.size() < 3 and not o.is_empty() and o["name"] == "o_village":
+					keys.append(k)
+		r += 1
+	_check(keys.size() == 3, "found 3 village chunks (%d)" % keys.size())
+	var near := 0
+	var same := 0
+	for k in keys:
+		var ctx := t._ctx(k)
+		if not (ctx["streams"][k] as Array).is_empty():
+			near += 1
+		var old := ctx.duplicate()
+		old.erase("vsides")
+		old.erase("streams")
+		var ok := true
+		for lod in [0, Terrain3D.LOD_N]:
+			var a := t._compute(k, ctx, t._gen, lod)
+			var b := t._compute(k, old, t._gen, lod)
+			for f in ["hs", "verts", "uv1", "uv2", "cols", "c0"]:
+				ok = ok and a[f] == b[f]
+		if ok:
+			same += 1
+	print("UNIT: ctx split — %d village chunks, %d with streams, %d identical" % [keys.size(), near, same])
+	_check(near > 0, "a village chunk has its stream in the split list")
+	_check(same == keys.size(), "chunks with the split ctx match the old build")
