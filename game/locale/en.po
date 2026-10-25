@@ -6744,8 +6744,8 @@ msgid "Лазер «Луч»"
 msgstr "\"Ray\" laser"
 
 #: game/scripts/weapons.gd:71
-msgid "Сжигает вражеские ракеты и пули рядом с самолётом и подсвечивает ближайшего врага. По самолётам и земле — слабо"
-msgstr "Burns enemy missiles and bullets near the plane and marks the nearest enemy. Weak vs planes and ground"
+msgid "Каждые 0,9 с сжигает до 2 ракет и 2 пуль врага в радиусе 250 пикс. Если сжигать нечего — 6 урона ближайшему врагу"
+msgstr "Every 0.9 s burns up to 2 enemy missiles and 2 bullets within 250 px. Nothing to burn: 6 damage to the nearest enemy"
 
 #: game/scripts/weapons.gd:73
 #, c-format
