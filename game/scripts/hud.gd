@@ -22,6 +22,8 @@ var _radio_at := 0
 var _autotest := false
 var _dmg_flash := 0.0
 var _buttons: Array = [] # [Rect2, action]
+## The flight HUD layers drew something last frame (so they need one more pass to clear)
+var _layers_live := false
 
 # Модули отрисовки (рисуют в ctrl, кнопки складывают в общий _buttons)
 var _flight_ui: HudFlight
@@ -88,16 +90,14 @@ func _ready() -> void:
 	ctrl.draw.connect(_draw_hud)
 	_flight_ui = HudFlight.new(ctrl, _buttons)
 	# layers over ctrl, drawn after it in this order (see HudFlight.layers)
-	for n in ["bar_s", "bar_d", "post"]:
+	for n: String in ["bar_s", "bar_d", "post"]:
 		var l := Control.new()
 		l.name = n
 		l.set_anchors_preset(Control.PRESET_FULL_RECT)
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ctrl.add_child(l)
+		l.draw.connect(_on_layer.bind(n))
 		_flight_ui.layers[n] = l
-	(_flight_ui.layers["bar_s"] as Control).draw.connect(_on_layer.bind("bar_s"))
-	(_flight_ui.layers["bar_d"] as Control).draw.connect(_on_layer.bind("bar_d"))
-	(_flight_ui.layers["post"] as Control).draw.connect(_on_layer.bind("post"))
 	_screens_ui = HudScreens.new(ctrl, _buttons)
 	_pause_ui = HudPause.new(ctrl, _buttons)
 	_cards_ui = HudCards.new(ctrl, _buttons)
@@ -153,10 +153,7 @@ func _process(delta: float) -> void:
 	var real := delta / maxf(Engine.time_scale, 0.01)   # messages count real time (slow-mo, hit-stop)
 	banner_t = maxf(0.0, banner_t - real)
 	radio_t = maxf(0.0, radio_t - real)
-	ctrl.queue_redraw()
-	# after ctrl: they draw what ctrl's pass laid out this frame ("bar_s" only when it changed)
-	(_flight_ui.layers["bar_d"] as Control).queue_redraw()
-	(_flight_ui.layers["post"] as Control).queue_redraw()
+	ctrl.queue_redraw()   # its pass queues the flight HUD layers (`_draw_hud`)
 
 
 func _input(event: InputEvent) -> void:
@@ -194,26 +191,37 @@ func button_rect(action: String) -> Rect2:
 
 # ---------- Главная отрисовка ----------
 
+## Draws the current screen on ctrl. When the flight HUD was drawn, queues its layers from here,
+## so they redraw after this pass in the same flush and see this frame's layout ("bar_s" is
+## queued by the bar layout itself, only when its picture changes).
 func _draw_hud() -> void:
-	_flight_ui.drawn = false
-	_flight_ui.bar_drawn = false
 	_draw_hud_body()
-	var bs: Control = _flight_ui.layers["bar_s"]
-	if bs.visible != _flight_ui.bar_drawn:
-		bs.visible = _flight_ui.bar_drawn
-		if bs.visible:
+	var bs := _flight_ui.layers["bar_s"]
+	var bar := _flight_ui.bar_now()
+	if bs.visible != bar:
+		bs.visible = bar
+		if bar:
 			bs.queue_redraw()   # what it held was drawn for an earlier bar
+	var live := _flight_ui.drawn_now()
+	if live or _layers_live:   # one pass after the flight HUD goes away clears them
+		_flight_ui.layers["bar_d"].queue_redraw()
+		_flight_ui.layers["post"].queue_redraw()
+	_layers_live = live
 
 
 ## Draws one of the flight HUD layers over ctrl with the flight HUD module pointed at it: the
 ## bottom bar's static and per-frame parts, then everything above the bar ("post", and the
 ## course pick screen that covers the flight HUD).
+## A layer queued before ctrl in a frame (resize, visibility) draws nothing here: ctrl's pass
+## queues it again afterwards with fresh layout ("bar_s" by forgetting its signature).
 func _on_layer(which: String) -> void:
 	var m := Main.I
-	if m == null or not _flight_ui.drawn:
+	if m == null or not _flight_ui.drawn_now():
+		if which == "bar_s":
+			_flight_ui.forget_bar()
 		return
-	var l: Control = _flight_ui.layers[which]
-	var t0 := Time.get_ticks_usec() if Perf.on else 0
+	var l := _flight_ui.layers[which]
+	var t0 := Time.get_ticks_usec() if Perf.on and which != "post" else 0
 	_flight_ui.ctrl = l
 	match which:
 		"bar_s":
@@ -227,7 +235,7 @@ func _on_layer(which: String) -> void:
 				_screens_ui.course_pick(m, l.size)
 				_screens_ui.ctrl = ctrl
 	_flight_ui.ctrl = ctrl
-	if Perf.on:
+	if t0 > 0:   # "post" is timed inside by its parts (hud.minimap, hud.markers, ...)
 		Perf.sub("hud.layer_" + which, t0)
 
 
