@@ -124,7 +124,7 @@ Order: GD-02 goes into the next build cycle (this one already carries S10-13 and
 
 The method's metrics stop at 15:00; the Fortress comes at 15:00. Fortress runs use `UNTIL=1080` (3 minutes of fight) and «Грач» only (`EXTRA="--class=attacker"`). `PROFILE=max` is an upgraded player copied from Kanta's 3.5-s11 hangar (`Profile.debug_max_profile`). The autotest prints per phase where the damage offered to the Fortress went: `AUTOTEST: fortress phase N s … near … in … cut … pt … bay … hull … lost …` (in — after the source factor; lost — hit the covered hull; cut — landed but over the fight-length cap).
 
-**Proposed corridor (not yet approved by Kanta):** median fight 60–100 s (not killed counts as 180), turrets ≤ 45 s, killed within 3 minutes in ≥ 90 % of sorties.
+**Corridor (approved by Kanta on 2026-10-25):** median fight 60–100 s (not killed counts as 180), turrets ≤ 45 s, killed within 3 minutes in ≥ 90 % of sorties.
 
 **What the counters showed (before):** in phase 1 about 2/3 of the damage that passed the cap hit the covered hull, and on the demo profile the cap cut 62 % of all incoming damage. The cap was charged before the hit was routed, so misses used up the turrets' share. Two number changes (turret share 0.07 → 0.056, point radius 46 → 55, 7–8 sorties each) showed no difference from noise.
 
