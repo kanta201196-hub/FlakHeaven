@@ -40,6 +40,7 @@ var gun_variant := "std"
 var ammo := "std"   # PG-01 (Kanta 24.10): course gun ammo type (`WeaponBalance.AMMO`)
 var mastery_off := false    # от карточки мастерства отказались — больше не придёт
 var evo_wait := {}         # отказ от эволюции: оружие → номер выбора, с которого вернётся
+var armor_next := 0        # GD-06: first card choice that may carry the guaranteed «Бронеплиты» again (CardBalance)
 var evo_times := {}        # когда получены эволюции (лог)
 var patch_times := {}      # когда получены нашивки (лог)
 var gun_evo := false       # «Дятел»
