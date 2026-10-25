@@ -263,7 +263,15 @@ func _pair_test() -> void:
 		else:
 			m.player.mastery = true
 			m.run.level = 35
-			(m.player.groups[0] as Hardpoint).level = Weapons.MAX_LEVEL
+			# --heavy=<weapon>: the pair is for that weapon (S11-33 frame: «ЭМИ-заряд (экспериментальный)»)
+			var gi := 0
+			for i in m.player.groups.size():
+				if (m.player.groups[i] as Hardpoint).heavy and not (m.player.groups[i] as Hardpoint).is_empty():
+					gi = i
+			for i in m.player.groups.size():
+				if i != gi:
+					(m.player.groups[i] as Hardpoint).level = mini((m.player.groups[i] as Hardpoint).level, Weapons.MAX_LEVEL - 1)
+			(m.player.groups[gi] as Hardpoint).level = Weapons.MAX_LEVEL
 		m.run.pending_levels = 1
 		m._open_levelup()
 		_pair_phase = 1
