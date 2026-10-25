@@ -58,6 +58,7 @@ var relief_style := 1
 var _prov := ReliefProvinces.new()
 var _scenes := {}              # Vector2i → сцены прошедших боёв клетки (scenes())
 var _side := {}                # Vector2i → боковые долины поселений рядом: [[A, B, ширина], …]
+var _split := {}               # RV-05: Vector2i → [valley sides, streams within reach of the cell] (see _split_sides)
 var _bg: Background
 ## Сборка кусков в фоне (тест 3.5-s3: кусок считался в главном потоке до 77 мс — рывки при полёте).
 ## Высоты и массивы вершин считает пул потоков по снимку данных (ctx), сетку и модели биома
@@ -153,13 +154,14 @@ func clear() -> void:
 	_objs_cache.clear()
 	_flats.clear()
 	_side.clear()
+	_split.clear()
 	_scenes.clear()
 
 
 ## Расстояние до линии реки, px, со знаком берега; боковые долины поселений сводят его к нулю
 func valley(x: float, z: float, ctx := {}, rf := NAN) -> float:
 	var d := river_field(x, z) if is_nan(rf) else rf   # rf — уже посчитанное river_field(x, z) (кусок рельефа)
-	for s in _sides(x, z, ctx):
+	for s in (_cell_list(ctx, "vsides", x, z) if ctx.has("vsides") else _sides(x, z, ctx)):
 		if float(s[2]) < 0.0:
 			continue   # ручей (stream_field)
 		# L-08: не ближе края русла — иначе врез русла (_height_v) опускал всю площадку поселения
@@ -355,7 +357,7 @@ func green(x: float, z: float, v := NAN) -> float:
 func stream_field(x: float, z: float, ctx := {}) -> float:
 	var best := INF
 	var p := Vector2(x, z)
-	for s in _sides(x, z, ctx):
+	for s in (_cell_list(ctx, "streams", x, z) if ctx.has("streams") else _sides(x, z, ctx)):
 		if float(s[2]) >= 0.0:
 			continue
 		var d := _seg_dist(p, s[0], s[1])
@@ -440,6 +442,7 @@ func _sides(x: float, z: float, ctx := {}) -> Array:
 	_side[key] = out
 	if _side.size() > 600:
 		_side.clear()
+		_split.clear()
 	return out
 
 
@@ -1186,11 +1189,13 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 	# иначе на экране дыра до фона
 	var missing := 0
 	for key in keys:
-		if not _chunks.has(key) and not _spare.has(key):
+		# RV-05: a key already on its way (placeholder up, full chunk in the background) is not missing
+		if not _chunks.has(key) and not _spare.has(key) and not _lods.has(key) and not _pending.has(key):
 			missing += 1
 	var now := missing > maxi(6, keys.size() / 2)
 	var hole := false
 	var batch: Array[Vector2i] = []
+	var lods: Array[Vector2i] = []
 	for key in keys:
 		if _chunks.has(key):
 			continue
@@ -1202,10 +1207,20 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 			_chunks[key] = mi
 			_drop_lod(key)
 			continue
-		if now:
-			batch.append(key)
-			continue
 		var on_screen := core.has_area() and core.intersects(Rect2(Vector2(key) * CHUNK, Vector2(CHUNK, CHUNK)))
+		if now:
+			# RV-05: only what is on screen is built in full right away; the margin (off screen, kept for
+			# shadows and camera drift) gets a coarse placeholder in the same batch and its full chunk
+			# in the background, so the start freeze no longer pays for chunks nobody sees yet
+			if on_screen or not core.has_area():
+				batch.append(key)
+				continue
+			var ready = _take_done(key)
+			if ready != null:   # computed earlier in the background: place it, no placeholder needed
+				_place_chunk(key, ready)
+			elif not _lods.has(key):
+				lods.append(key)
+			continue
 		var res = _take_done(key)
 		if res != null:
 			if budget <= 0 and not (on_screen and not _lods.has(key)):
@@ -1226,9 +1241,9 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 				var tl := Time.get_ticks_usec()
 				_place_chunk(key, _compute(key, _ctx(key), _gen, LOD_N))
 				if Perf.on: Perf.peak("ter.lod_max", Perf.sub("ter.lod", tl) - tl)
-	if not batch.is_empty():
+	if not batch.is_empty() or not lods.is_empty():
 		var tb := Time.get_ticks_usec()
-		_build_now(batch)
+		_build_now(batch, lods)
 		if Perf.on: Perf.peak("ter.now_max", Perf.sub("ter.now", tb) - tb)
 	if hole:
 		lod_frames += 1
@@ -1263,30 +1278,40 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 		_flats.clear()
 
 
-## Скачок камеры / старт вылета: недостающие куски строим сразу, но всеми ядрами (проход по оптимизации 3.5-s7):
-## раньше — по одному в главном потоке, 64 куска на старте ≈ 64 × 60 мс. Ставим в том же порядке (ближние первыми)
 var _batch_keys: Array[Vector2i] = []
 var _batch_ctx: Array = []
 var _batch_res: Array = []
+var _batch_full := 0
 
 
-func _build_now(keys: Array[Vector2i]) -> void:
-	_batch_keys = keys
+## Скачок камеры / старт вылета: недостающие куски строим сразу, но всеми ядрами (проход по оптимизации 3.5-s7):
+## раньше — по одному в главном потоке, 64 куска на старте ≈ 64 × 60 мс. Ставим в том же порядке (ближние первыми).
+## RV-05: lods — off-screen keys that get a coarse placeholder (LOD_N) in the same parallel batch; their
+## full chunks are queued in the background only after the batch, so they do not take its threads.
+func _build_now(keys: Array[Vector2i], lods: Array[Vector2i] = []) -> void:
+	_batch_keys = keys.duplicate()
+	_batch_keys.append_array(lods)
+	_batch_full = keys.size()
 	_batch_ctx = []
 	_batch_res = []
-	for key in keys:
+	for key in _batch_keys:
 		_batch_ctx.append(_ctx(key))
-	_batch_res.resize(keys.size())
-	var gid := WorkerThreadPool.add_group_task(_build_one, keys.size(), -1, true, "terrain now")
+	_batch_res.resize(_batch_keys.size())
+	var gid := WorkerThreadPool.add_group_task(_build_one, _batch_keys.size(), -1, true, "terrain now")
 	WorkerThreadPool.wait_for_group_task_completion(gid)
-	for i in keys.size():
-		_place_chunk(keys[i], _batch_res[i])
+	for i in _batch_keys.size():
+		_place_chunk(_batch_keys[i], _batch_res[i])
+	for i in range(_batch_full, _batch_keys.size()):
+		var key := _batch_keys[i]
+		if not _pending.has(key):   # the same snapshot: threads only read it
+			_pending[key] = WorkerThreadPool.add_task(_compute_bg.bind(key, _batch_ctx[i], _gen), false, "terrain chunk")
 	_batch_ctx = []
 	_batch_res = []
 
 
+## One chunk of the _build_now batch on a worker: full grid for the first _batch_full keys, placeholder after.
 func _build_one(i: int) -> void:
-	var r := _compute(_batch_keys[i], _batch_ctx[i], _gen)
+	var r := _compute(_batch_keys[i], _batch_ctx[i], _gen, 0 if i < _batch_full else LOD_N)
 	_mx.lock()
 	_batch_res[i] = r
 	_mx.unlock()
@@ -1326,11 +1351,41 @@ func _exit_tree() -> void:
 	_wait_pending()
 
 
+## RV-05: per-cell list from a ctx split (vsides, streams) for the cell of point (x, z); a point
+## outside the cells the ctx covers gets none, like _sides with a ctx.
+func _cell_list(ctx: Dictionary, name: String, x: float, z: float) -> Array:
+	return (ctx[name] as Dictionary).get(Vector2i(int(floorf(x / CHUNK)), int(floorf(z / CHUNK))), [])
+
+
+## RV-05: segment a–b touches the rect (conservative: its bounding box does). Used only to drop
+## stream segments that are surely out of reach, so a false "near" costs time, never a wrong result.
+static func _seg_rect_near(a: Vector2, b: Vector2, r: Rect2) -> bool:
+	return Rect2(a, Vector2.ZERO).expand(b).intersects(r, true)
+
+
+## RV-05: the chunk build asks valley() and stream_field() at every grid node; a village brings
+## dozens of stream segments (smoothed polyline), and both functions walked all of them per node.
+## Split a cell's side list once: [valley sides only, streams that can be within STREAM_REACH of the
+## cell] (stream_field ignores farther ones anyway), so the result is exactly the same. Main thread.
+func _split_sides(k: Vector2i, sides: Array) -> Array:
+	var vl := []
+	var sl := []
+	var cell := Rect2(Vector2(k) * CHUNK, Vector2(CHUNK, CHUNK)).grow(STREAM_REACH + 1.0)
+	for s in sides:
+		if float(s[2]) >= 0.0:
+			vl.append(s)
+		elif _seg_rect_near(s[0], s[1], cell):
+			sl.append(s)
+	return [vl, sl]
+
+
 ## Снимок данных для фонового расчёта куска: объекты биома и боковые долины вокруг
 ## (поток только читает их, общие кэши трогает лишь главный поток)
 func _ctx(key: Vector2i) -> Dictionary:
 	var objs := {}
 	var sides := {}
+	var vsides := {}
+	var streams := {}
 	for dx in range(-3, 4):
 		for dz in range(-3, 4):
 			var k := Vector2i(key.x + dx, key.y + dz)
@@ -1339,6 +1394,10 @@ func _ctx(key: Vector2i) -> Dictionary:
 		for dz in range(-2, 3):
 			var k := Vector2i(key.x + dx, key.y + dz)
 			sides[k] = _sides((k.x + 0.5) * CHUNK, (k.y + 0.5) * CHUNK)
+			if not _split.has(k):
+				_split[k] = _split_sides(k, sides[k])
+			vsides[k] = _split[k][0]
+			streams[k] = _split[k][1]
 	var scn := {}
 	if _bg != null:
 		for dx in range(-1, 2):
@@ -1350,7 +1409,8 @@ func _ctx(key: Vector2i) -> Dictionary:
 		var o: Dictionary = objs[k]
 		if not o.is_empty() and FLAT_OBJS.has(o["name"]):
 			flats.append(o)
-	var ctx := {"objs": objs, "sides": sides, "flat": _bg != null, "scenes": scn, "flats": flats}
+	var ctx := {"objs": objs, "sides": sides, "flat": _bg != null, "scenes": scn, "flats": flats,
+		"vsides": vsides, "streams": streams}
 	if props != null:
 		ctx["hk"] = props.mesh_heights()
 	return ctx
