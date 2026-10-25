@@ -19,7 +19,7 @@ const OBJECTS := {
 	"o_rocks_big": [300.0, 14.0, 3.0, Color(0.88, 0.84, 0.8)],
 	"o_rocks_small": [150.0, 8.0, 5.0, Color(0.92, 0.9, 0.86)],
 	"o_mesa": [560.0, 34.0, 1.2, Color(0.9, 0.86, 0.82)],
-	"o_fort": [380.0, 18.0, 1.6, Color(1, 1, 1)],
+	"o_fort": [760.0, 36.0, 1.6, Color(1, 1, 1)],   # Kanta 25.10: fort ×2, it read as barely bigger than a convoy truck
 	"o_village": [1650.0, 10.0, 1.8, Color(1, 1, 1)],   # 3.5-s8: мини-городок, площадь ×3,4 (было 440, 640, 900)
 	"o_oasis": [420.0, 16.0, 1.5, Color(1, 1, 1)],
 	"o_crater": [170.0, 0.0, 3.0, Color(1, 1, 1)],
