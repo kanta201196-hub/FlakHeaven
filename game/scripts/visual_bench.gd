@@ -494,7 +494,7 @@ func _print_sizes(name: String) -> void:
 		var a2 := r3.cam.unproject_position(root.global_transform * Vector3(box.position.x, c.y, c.z))
 		var b2 := r3.cam.unproject_position(root.global_transform * Vector3(box.end.x, c.y, c.z))
 		print("VISUAL %s size %s: %.0f px on screen (model %s)" % [name, row[0], a2.distance_to(b2) * px_k,
-			"GLB" if u.get("bm") != null else "relief"])
+			"GLB" if u.bm != null else "relief"])
 	var fp: Variant = _points[_i].get("fort_obj")
 	if fp != null:
 		_print_fort_size(name, fp as Vector2, px_k)
