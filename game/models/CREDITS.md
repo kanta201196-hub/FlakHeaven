@@ -41,6 +41,11 @@
 | battle/e_convoy_ifv (БМП колонны, колёсная 8x8) | Patria AMV | bunny | https://sketchfab.com/3d-models/patria-amv-5dcd4a541cd34059b0268379636fca3b | CC BY 4.0, изменено |
 | battle/e_convoy_scout (броневик колонны) | M1126 Infantry Carrier Vehicle | cenobyte | https://sketchfab.com/3d-models/m1126-infantry-carrier-vehicle-b0c559a02c1842b0976a241c9a998360 | CC BY 4.0, изменено |
 | battle/e_convoy_technical (пикап с пулемётом; пулемёт собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
+| battle/e_convoy_pickup_tent (лёгкий пикап с тентом; тент собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
+| battle/e_convoy_manpads (пикап с расчётом ПЗРК: машина) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
+| battle/e_convoy_manpads (пусковая труба ПЗРК; расчёт собран кодом) | MANPADS model 9K333 Verba | Ser (s-k_2005) | https://sketchfab.com/3d-models/manpads-model-9k333-verba-d7e05be0f5384e93a96ca47d84f1da07 | CC BY 4.0, изменено |
+| battle/e_radar (РЛС на шасси 6x6) | Renault TRM Radar Truck | Muhamad Mirza Arrafi (MirzaArrafiERV_45) | https://sketchfab.com/3d-models/renault-trm-radar-truck-1ad95e5724624a3bba7d36a686817efc | CC BY 4.0, изменено |
+| battle/e_bunker (бункер на скале) | Devil's Slide Bunker - Pacifica, CA | Azad Balabanian (azadbal) | https://sketchfab.com/3d-models/devils-slide-bunker-pacifica-ca-52982f5a24834be48dab4057d2df1c3d | CC BY 4.0, изменено |
 | battle/e_helicopter (вертолёт) | Hind Attack Helicopter | Ashley Aslett | https://sketchfab.com/3d-models/hind-attack-helicopter-bb65bdfde2c54007a52dfbe1d91d930d | CC BY 4.0, изменено |
 | battle/e_interceptor (перехватчик) | Sukhoi Su-15TM | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/sukhoi-su-15tm-3403b6f0f47d428eb2dd098f864d9ae1 | CC BY 4.0, изменено |
 | battle/e_drone (дрон) | Morok UAV Drone 3D Model | rombic992 (rombic991) | https://sketchfab.com/3d-models/morok-uav-drone-3d-model-3ae0e923b50f4885a2317eba199043cd | CC BY 4.0, изменено |
