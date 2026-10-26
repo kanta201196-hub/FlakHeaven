@@ -21,6 +21,7 @@ var _fancy := false   # VFX-03: Forward+ draws missile smoke with SMOKE_SH; Comp
 const SMOKE_SH := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 uniform sampler2D soft : source_color, filter_linear_mipmap;
 uniform vec3 to_sun = vec3(-0.46, 0.63, -0.56);
 %s
@@ -61,7 +62,7 @@ void fragment() {
 		float heat = (1.0 - smoothstep(0.0, 14.0, cu.x)) * prof;
 		col = mix(col, vec3(2.6, 1.35, 0.42), heat);
 		ALBEDO = col;
-		ALPHA = clamp(COLOR.a * a * (1.0 + heat), 0.0, 1.0);
+		ALPHA = clamp(COLOR.a * a * (1.0 + heat), 0.0, 1.0) * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);   // salvo fan off the plane
 	}
 }
 """

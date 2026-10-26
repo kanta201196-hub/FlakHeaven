@@ -8,3 +8,16 @@
 #else
 #define FX_EXP (1.0 / 1.5)
 #endif
+
+// Player clear zone, Kanta s12 (26.10): late in a run blasts, fire, missile smoke and the fan of a missile salvo
+// covered the player's plane completely. Render3D sets fx_clear each frame: xy = the player on screen (0..1),
+// z = zone radius as a share of the viewport height, w = how much of the effect is taken away at the centre
+// (0 = off). Effect alpha multiplied by fx_clear_k() thins out over the plane and is full again at the zone edge.
+global uniform vec4 fx_clear;
+float fx_clear_k(vec2 suv, vec2 vsize) {
+	if (fx_clear.w <= 0.0) {
+		return 1.0;
+	}
+	vec2 d = (suv - fx_clear.xy) * vec2(vsize.x / max(vsize.y, 1.0), 1.0);
+	return 1.0 - fx_clear.w * (1.0 - smoothstep(fx_clear.z * 0.45, fx_clear.z, length(d)));
+}

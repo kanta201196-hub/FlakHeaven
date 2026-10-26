@@ -39,3 +39,10 @@ textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.09, 0.11, 0.15, 1)
+
+[shader_globals]
+
+fx_clear={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
