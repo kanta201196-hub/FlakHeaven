@@ -1,7 +1,7 @@
-"""Village houses for the Highland kishlak from CC BY Sketchfab sources (VIS-01, Kanta 26.10.2026: «Кишлак: дома
-49 + 51 + 50, 71 тоже можно использовать. Скомпануй разные»).
+"""Village houses for the Highland kishlak from CC BY Sketchfab sources (VIS-01, Kanta 26.10.2026: village houses
+from models 49, 50 and 51, model 71 may be used too, mix them).
 
-The source textures are dropped: every face gets one of the «Укрепрайон» material classes (texture set Г, FortBuild
+The source textures are dropped: every face gets one of the fortified-area fort material classes (texture set Г, FortBuild
 SETS: plaster, brick, wood, stone; plus flat dark openings and faded cloth), so the village and the fort read as one
 place. Faces are classed by source material name, or for single-texture sources by the texture colour under the
 face. Each house variant is centred on its footprint, base on z = 0, metres (≈ the fort preview's units), long side

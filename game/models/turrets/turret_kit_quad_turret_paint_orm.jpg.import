@@ -2,21 +2,21 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bsqg6yk5s5exx"
-path.s3tc="res://.godot/imported/fh_battle_e_bunker_e_bunker_orm.jpg-c1622118a08689a379c843151f665187.s3tc.ctex"
-path.etc2="res://.godot/imported/fh_battle_e_bunker_e_bunker_orm.jpg-c1622118a08689a379c843151f665187.etc2.ctex"
+uid="uid://bbkp6l5vxiffl"
+path.s3tc="res://.godot/imported/turret_kit_quad_turret_paint_orm.jpg-f08556ebbae2cc18f65f2b7c4e4c55db.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_quad_turret_paint_orm.jpg-f08556ebbae2cc18f65f2b7c4e4c55db.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "ac45d1ea671952074dc224498a70f795"
+"md5": "5987abcc39e3235c36c4bfb050e8ad13"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_bunker_e_bunker_orm.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_bunker_e_bunker_orm.jpg-c1622118a08689a379c843151f665187.s3tc.ctex", "res://.godot/imported/fh_battle_e_bunker_e_bunker_orm.jpg-c1622118a08689a379c843151f665187.etc2.ctex"]
+source_file="res://models/turrets/turret_kit_quad_turret_paint_orm.jpg"
+dest_files=["res://.godot/imported/turret_kit_quad_turret_paint_orm.jpg-f08556ebbae2cc18f65f2b7c4e4c55db.s3tc.ctex", "res://.godot/imported/turret_kit_quad_turret_paint_orm.jpg-f08556ebbae2cc18f65f2b7c4e4c55db.etc2.ctex"]
 
 [params]
 

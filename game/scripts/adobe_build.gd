@@ -1343,7 +1343,7 @@ static func _t_house(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, floors
 	var parapet := floors == 2 or rng.randf() < 0.3
 	var bx := 0.0
 	var sx := 0.0
-	if not parapet and floors == 1 and h.x > 0.03 and rng.randf() < 0.25:   # надстройка-балахана на части крыши
+	if not parapet and floors == 1 and h.x > 0.03 and rng.randf() < 0.25:   # a balakhana (upper room) over part of the roof
 		bx = h.x * rng.randf_range(0.35, 0.5)
 		sx = (h.x - bx) * (1.0 if rng.randf() < 0.5 else -1.0)
 	var door := rng.randf_range(-0.4, 0.4) * h.x
@@ -1362,7 +1362,7 @@ static func _t_house(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, floors
 	elif bx > 0.0:
 		_ob(st, c, yaw, sx, 0.0, Vector3(bx * 2.0, 0.026, h.y * 1.6), wall, roof.darkened(0.04), hh)
 	_ob(st, c, yaw, door, h.y + 0.0015, Vector3(0.011, minf(hh * 0.6, 0.024), 0.003), T_DARK, T_DARK)
-	if soot:   # копоть
+	if soot:   # soot
 		_ob(st, c, yaw, sp.x, sp.y, Vector3(h.x * 0.9, 0.001, h.y * 0.8), BURNT, BURNT, hh)
 
 

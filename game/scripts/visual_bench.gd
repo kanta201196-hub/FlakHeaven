@@ -40,7 +40,7 @@ func _init(main: Main) -> void:
 		if a == "--nowater":   # S9-07/S9-08: «до» — кишлак без учёта ручья и реки у посёлка (vis_<имя>_dry.png)
 			AdobeBuild.ignore_water = true
 			_suffix += "_dry"
-		if a == "--boxhouses":   # VIS-01: «до» — дома кишлака коробками, а не моделями (vis_<имя>_box.png)
+		if a == "--boxhouses":   # VIS-01: "before" — village houses as boxes, not models (vis_<name>_box.png)
 			AdobeBuild.model_houses = false
 			_suffix += "_box"
 
@@ -361,6 +361,16 @@ func _hold(p: Dictionary) -> void:
 	if p.has("cls"):   # 3.4-t1 п. 9, 19: другой самолёт (винты «Кита 1», сопла)
 		m.player.cls_id = p["cls"][0]
 		m.player.plane_lvl = p["cls"][1]
+	if p.has("tlv"):   # S12 --turretbench: turret level (tier 1/2/3 at 1/3/5), evolution and «Стальной ёж» pods
+		for g: Hardpoint in m.player.groups:
+			if g.weapon == "turret":
+				g.level = int(p["tlv"])
+				g.evo = p.get("evo", false)
+				g.slots = PlaneClasses.turret_slots(m.player.cls_id, g.level, m.player.plane_lvl)
+		if p.get("hh", false):
+			m.player.syn["hedgehog"] = true
+		else:
+			m.player.syn.erase("hedgehog")
 	if OS.get_cmdline_user_args().has("--holdfire"):   # PG-01: missiles stay on their rails for weapon close-ups
 		for g: Hardpoint in m.player.groups:
 			if g.weapon in Hardpoint.MISSILES:
@@ -898,8 +908,18 @@ func _make_points() -> Array:
 		# VIS-01: each reworked enemy model alone and close, moving parts posed (turret turned, wheels steered)
 		for k in UNIT_POSES:
 			pts.append({"name": "unit_" + k, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": UNIT_POSES[k][2], "unit_poses": k, "wait": 3.5})
+		# the bunker at the normal gameplay zoom with the player's fighter beside it, for scale
+		pts.append({"name": "unit_bunker_play", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "unit_poses": "bunker", "play": true, "wait": 3.5})
 		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
 		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
+	if OS.get_cmdline_user_args().has("--turretbench"):
+		# S12 (Kanta 26.10): the turrets of the --cls plane close up in battle, tier by tier, then the evolution
+		# and the «Стальной ёж» launch pods; run with --cls=bomber or --cls=attacker
+		pts = []
+		for q in [["t1", 1, false, false], ["t2", 3, false, false], ["t3", 5, false, false], ["evo", 5, true, false],
+				["t3_hedgehog", 5, false, true], ["evo_hedgehog", 5, true, true]]:
+			pts.append({"name": "turret_" + String(q[0]), "pos": empty + Vector2(300, 300), "tlv": q[1], "evo": q[2], "hh": q[3],
+				"zoom": 7.0, "wait": 1.5})
 	if OS.get_cmdline_user_args().has("--sizebench") and ter != null:
 		# VIS-01 (Kanta 24.10): true sizes at the normal gameplay zoom — the player fighter, a whole
 		# convoy on the road and the Fortress in one frame; the log prints their on-screen lengths
@@ -1124,6 +1144,7 @@ func _clear_of(p: Vector2, reach: float) -> Array:
 ## turns off the hull (ZSU: sprite angle ~65° after the first second; convoy: alarm on, so it aims at the
 ## player, who stays on the camera point off the vehicle's quarter),
 ## convoy wheels have rolled and the front axles steer. The camera steers until the 3D model sits mid-frame.
+## A "play" point instead keeps the gameplay zoom and the player's plane in view beside the unit, for scale.
 func _unit_poses(p: Dictionary) -> void:
 	if _pt < 0.3:   # the class switch at the start of a point clears the world
 		return
@@ -1142,7 +1163,7 @@ func _unit_poses(p: Dictionary) -> void:
 	if _unit == null:
 		var tr := Terrain3D.active()
 		var at: Vector2 = tr.find_floor(p["pos"], 2600.0, 0.0, _clear_of(p["pos"], 3200.0), AASite.FLOOR_MID, true) if tr != null else p["pos"]
-		p["pos"] = at + Vector2(-60, -48)
+		p["pos"] = at + (Vector2(-100, -70) if p.get("play", false) else Vector2(-60, -48))
 		_spawned = true
 		m.player.process_mode = Node.PROCESS_MODE_DISABLED
 		match kind:
@@ -1204,6 +1225,13 @@ func _unit_poses(p: Dictionary) -> void:
 	if r3 == null:
 		return
 	var u: Unit3D = r3._units.get(_unit.get_instance_id())
+	if p.get("play", false):   # gameplay framing: the player's plane stays on the camera point and in view
+		var pp: Unit3D = r3._units.get(m.player.get_instance_id())
+		if pp != null:   # the close-up points before this one hid it
+			(pp.node as Node3D).visible = true
+			if pp.sh != null:
+				(pp.sh as Node3D).visible = true
+		return
 	if u != null:
 		var vs := m.get_viewport().get_visible_rect().size
 		var scr := r3.cam.unproject_position((u.node as Node3D).global_position)
