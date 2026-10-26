@@ -175,6 +175,9 @@ func process(delta: float) -> void:
 		_fort.parts_down = {}
 		for nm in (["turret_1", "turret_2", "turret_3", "turret_4"] if ph >= 2 else []) + (["engine_l", "engine_r"] if ph >= 3 else []):
 			_fort.parts_down[nm] = true
+		# its logic is off, so nothing redraws it: without this the point rings stay where the first draw put them,
+		# before the 3D model existed (Fortress._ring_at fallback), off the turrets on the wings
+		_fort.queue_redraw()
 	elif p.has("sam_poses"):
 		_sam_poses(p)
 	elif p.has("unit_poses"):
@@ -1090,7 +1093,7 @@ const UNIT_POSES := {
 	"drone": ["e_drone", 34.0, 14.0], "drone_elite": ["e_drone", 34.0, 12.0], "drone_hit": ["e_drone", 34.0, 14.0],
 	# Kanta 25.10 enemy overview: every Highlands enemy alone and close (lengths from each script's sprite)
 	"interceptor_elite": ["e_interceptor", 46.0, 9.5], "carrier": ["e_carrier", 60.0, 8.5],
-	"carrier_elite": ["e_carrier", 60.0, 7.2], "bomber": ["e_transport", 120.0, 4.2],
+	"carrier_elite": ["e_carrier", 60.0, 7.2], "bomber": ["e_bomber", 120.0, 4.2],
 	"transport": ["e_transport", 190.0, 2.7], "rival": ["e_rival", 64.0, 8.0], "postman": ["e_postman", 92.0, 5.5],
 	"draft": ["e_draft", 84.0, 6.0], "light": ["e_convoy_pickup_tent", 14.0, 34.0],
 	"manpads": ["e_convoy_manpads", 14.0, 34.0], "radar": ["e_radar", 32.0, 15.0], "bunker": ["e_bunker", 59.0, 8.5],

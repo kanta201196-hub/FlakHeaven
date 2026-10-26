@@ -111,8 +111,8 @@ func handle_global_input() -> void:
 				m.start_run()
 				m._set_state("campaign")
 			return
-	if Input.is_action_just_pressed("toggle_tuning") and Main.DEBUG:
-		m.tuning_panel.toggle()
+	if Input.is_action_just_pressed("toggle_tuning") and (Main.DEBUG or Main.aces()):
+		m.tuning_panel.toggle(not Main.DEBUG)
 	if Input.is_action_just_pressed("wing_prio") and m.state == "playing" and is_instance_valid(m.player) and not m.player.wingmen.is_empty():
 		cycle_wing_prio()
 	if Input.is_action_just_pressed("toggle_numbers"):
@@ -223,6 +223,10 @@ func abort_run() -> void:
 func ui_click(action: String) -> void:
 	if action == "menu_play":
 		m._set_state("campaign")
+	elif action == "menu_aces":   # AB-01: «Битва асов» test mode — «Оса» with the hangar setup, straight into the fight
+		m.mode = "aces"
+		m.cls_id = "fighter"
+		m.select_class(m.cls_id)
 	elif action == "campaign_back":
 		m._set_state("menu")
 	elif action.begins_with("op:"):

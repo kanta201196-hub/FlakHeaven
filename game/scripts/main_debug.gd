@@ -687,6 +687,9 @@ func print_taken(tag: String) -> void:
 func _smoke_end(code: int, why: String) -> void:
 	print_taken("SMOKE")
 	print("SMOKE: dealt %s · rail %d · emp %d · laser burned %d · mastery +%d" % [str(m.stats["dealt"]), int(m.counters.get("rail_shots", 0)), int(m.counters.get("emp_pulses", 0)), int(m.counters.get("laser_burned", 0)), int(m.tele.g("mastery_dmg"))])
+	if Main.aces():
+		print("SMOKE: aces mode — aces down %d, gone %d, hp %.0f / %.0f" % [m.run.aces_down, m.run.aces_gone,
+			m.player.hp if is_instance_valid(m.player) else 0.0, m.player.max_hp if is_instance_valid(m.player) else 0.0])
 	print("SMOKE: %s class %s, level %d, kills %d, %s, %.0f s real" % ["ok" if code == 0 else "FAIL", m.cls_id, m.run.level, m.run.kills, why, Time.get_ticks_msec() / 1000.0])
 	m.get_tree().quit(code)
 

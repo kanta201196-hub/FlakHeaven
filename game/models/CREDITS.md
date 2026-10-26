@@ -50,8 +50,12 @@
 | battle/e_interceptor (перехватчик) | Sukhoi Su-15TM | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/sukhoi-su-15tm-3403b6f0f47d428eb2dd098f864d9ae1 | CC BY 4.0, изменено |
 | battle/e_drone (дрон) | Morok UAV Drone 3D Model | rombic992 (rombic991) | https://sketchfab.com/3d-models/morok-uav-drone-3d-model-3ae0e923b50f4885a2317eba199043cd | CC BY 4.0, изменено |
 | battle/e_carrier (ракетоносец) | Yakovlev Yak-28P | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/yakovlev-yak-28p-d8fb2ad3d871437392453568c0c8bfe8 | CC BY 4.0, изменено |
-| battle/e_transport (транспортник; пока и бомбардировщик «Буйвол») | Lockheed C-130 Hercules | Dave Love (Tyler_Dave) | https://sketchfab.com/3d-models/lockheed-c-130-hercules-5acfb2eb4f204f51ab418856c116b68e | CC BY 4.0, изменено |
+| battle/e_transport (транспортник) | Lockheed C-130 Hercules | Dave Love (Tyler_Dave) | https://sketchfab.com/3d-models/lockheed-c-130-hercules-5acfb2eb4f204f51ab418856c116b68e | CC BY 4.0, изменено |
 | battle/e_rival (ас-соперник) | Concept jet | Gabriel (wokom) | https://sketchfab.com/3d-models/concept-jet-69012312f3ab4f13b637b6a188aa3d4c | CC BY 4.0, изменено |
+| battle/e_bomber (бомбардировщик «Буйвол») | Boeing B-29A Superfortress — It's Hawg Wild | mgg8 | https://sketchfab.com/3d-models/boeing-b-29a-superfortress-its-hawg-wild-f3ac8db7269f4f61a8713143505b918c | CC0, изменено |
+| battle/e_postman (ас «Почтальон») | A-10 ThunderBolt II | KOG_THORNS (ioai25312) | https://sketchfab.com/3d-models/a-10-thunderbolt-ii-623514b5f1f9483a9bbee7f25da77468 | CC BY 4.0, изменено |
+| battle/e_draft (ас «Сквозняк») | Lockheed Martin F-16e/f "Fighting Falcon" | andertan | https://sketchfab.com/3d-models/lockheed-martin-f-16ef-fighting-falcon-d54c72e055a647ad9173e01548e50db3 | CC BY 4.0, изменено |
+| battle/e_fortress (корпус босса «Крепость»; башни, люки и ядро собраны кодом) | [PBR] B-2 Spirit | Immersive3D (Immersive3A) | https://sketchfab.com/3d-models/pbr-b-2-spirit-b16592b1083948a49ae2afa90d190a08 | CC BY 4.0, изменено |
 | battle/fighter_2, hangar/fighter_2 («Оса 2») | Meshy (paid plan), own generation; image reference — a render of Sketchfab #63 (view-only), Kanta 24.10, `docs/game-context.md` | own generation (Meshy) | — | Meshy paid plan, commercial rights |
 | weapons/srm_*, weapons/hq/srm_* (ракета ближнего боя) | AIM-9 missile | rickslash | https://sketchfab.com/3d-models/caaf15b49bac4144b6c6be577c2b872a | CC BY 4.0, изменено |
 | weapons/agm_*, weapons/hq/agm_* (управляемая ракета «воздух-земля») | AGM 65 MAVERICK | XARYA | https://sketchfab.com/3d-models/5447a415b21840568fbfa01cf6dd166a | CC BY 4.0, изменено |

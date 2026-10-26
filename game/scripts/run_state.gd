@@ -31,6 +31,19 @@ var best_streak := 0
 var tail_kills := 0
 var near_misses := 0
 var bosses_killed := 0
+## «Битва асов» test mode (AB-01): rival aces shot down and rival aces that flew away.
+var aces_down := 0
+var aces_gone := 0
+
+
+## «Битва асов»: a rival ace was shot down.
+func on_rival_down() -> void:
+	aces_down += 1
+
+
+## «Битва асов»: a rival ace left the fight on its own (its 90 s ran out).
+func on_rival_gone() -> void:
+	aces_gone += 1
 
 
 ## Adds XP (already multiplied by the F1 `xp_mult` slider) and queues every level gained.
