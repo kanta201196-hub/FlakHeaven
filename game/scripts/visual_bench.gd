@@ -1447,12 +1447,12 @@ func _hangar_bench() -> void:
 			return
 		if OS.get_cmdline_user_args().has("--hangarweaptab"):
 			# тест 3.5-s3: вкладка «ОРУЖИЕ» — каждое оружие объёмной моделью, ступени 1 / 3 / 5 и модернизация
-			var wl := ["aam", "rockets", "bombs", "flares", "turret"]
+			var wl := ["aam", "srm", "agm", "rockets", "bombs", "hebomb", "flares", "turret"]
 			for a in OS.get_cmdline_user_args():   # --weaplist=bombs,flares — только эти виды
 				if a.begins_with("--weaplist="):
 					wl = Array(a.get_slice("=", 1).split(","))
 			for w in wl:
-				for wt in ([1, 2, 3] if not Profile.WBRANCH.has(w) else [1, 2, 3, 4]):   # PG-01: no modernization yet
+				for wt in ([1, 2, 3, 4] if Prog.EVOS.has(w) else [1, 2, 3]):   # «модерниз.» only where the weapon evolves
 					_hq.append(["W", w, wt])
 			_t = 0.0
 			return

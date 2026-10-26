@@ -61,6 +61,9 @@ func _init(main: Main) -> void:
 		# Kanta 26.10: every effect at its real place on the model — nozzle flames on afterburner, course guns firing
 		# at a drone ahead, turrets at drones around (run once per class and plane level: --cls=… --plane=2)
 		{"name": "planes", "times": [0.4, 0.55, 0.7, 0.85, 1.0], "turrets": true, "ab": true, "ahead": true, "pl": Vector2.ZERO},
+		# Kanta s12: blasts, fire and a «Ёлочка» missile salvo right on the player's plane
+		{"name": "clear", "times": [0.25, 0.6, 1.0, 1.6], "boom": [[Vector2(0, 0), 46.0, true, ""], [Vector2(45, -30), 20.0, true, ""],
+			[Vector2(-30, 40), 18.0, false, ""]], "trails": true, "salvo": true, "pl": Vector2.ZERO},
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
 	if not _only.is_empty():
@@ -145,6 +148,11 @@ func process(delta: float) -> void:
 					m.projectiles.spawn_missile(a, (pp - a).normalized(), src[1])
 				for k in 3:
 					m.projectiles.spawn_rocket(pp + Vector2(0, -20 * k), Vector2(520, -300).rotated(0.08 * k), 0.0, 40.0, 0.0)
+			if sc.get("salvo", false):   # the «Ёлочка» fan as PlayerSkills._fire_yolka launches it
+				for i in 10:
+					var a := m.player.heading + (float(i) / 9.0 - 0.5) * 2.6
+					m.projectiles.spawn_player_missile(m.player.global_position, m.player.velocity * 0.5 + Vector2.from_angle(a) * 300.0,
+						null, 0.0, "ёлочка")
 			if sc.get("wreck", false) and Render3D.I != null:
 				Boom3D.ensure()   # the lit smoke takes Boom3D's puff texture
 				for w: Array in [[Vector2.ZERO, 16], [Vector2(300, -120), 36]]:   # a wreck on the ground; a crash still smoking hard

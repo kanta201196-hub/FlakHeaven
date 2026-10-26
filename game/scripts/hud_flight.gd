@@ -154,7 +154,7 @@ func draw_post(m: Main, size: Vector2) -> void:
 		var a := clampf(m.hud.banner_t, 0.0, 1.0)
 		# dark plate under the banner: yellow text on bright sand is unreadable without it
 		var bw := ui_font().get_string_size(Loc.out(m.hud.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
-		var by := maxf(186.0, _boss_bottom + 12.0)   # under the boss bars when an ace is up
+		var by := maxf(186.0, _boss_bottom + 20.0)   # under the boss bars when an ace is up, with a gap (s12)
 		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, by, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
 		_ctext(by + 32.0, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
 
@@ -752,9 +752,17 @@ func _boss_head(title: String, frac: float, value: String, x: float, y: float, w
 
 ## Правка 3.5-s4: полоса «Крепости» — общая прочность, под ней — значки точек: 4 турели и 2 двигателя, сбитые перечёркнуты.
 ## FB-01: справа от значков — сколько осталось до нашей базы
+## s12: the phase title is a whole sentence («… — правое крыло 1 из 3, бейте в открытый люк») and
+## was cut at the dash in the 40 px heading; the part after the dash goes to a smaller line under
+## the point icons.
 func _fortress_bar(f: Fortress, x: float, y: float, w: float) -> float:
 	var fr := f.total_frac()
-	_boss_head(f.title, fr, "%d%%" % int(ceil(fr * 100.0)), x, y, w)
+	var full := Loc.out(f.title)
+	var sep := " — " if full.contains(" — ") else "——"   # zh_CN writes the dash without spaces
+	var dash := full.find(sep)
+	var head := full if dash < 0 else full.left(dash)
+	var task := "" if dash < 0 else full.substr(dash + sep.length())
+	_boss_head(head, fr, "%d%%" % int(ceil(fr * 100.0)), x, y, w)
 	y += BOSS_BAR_Y + BOSS_BAR_H - 6.0   # point icons and the base distance go under the bar
 	var ix := x + w / 2.0 - 6 * 28.0 / 2.0
 	for pt in f.points:
@@ -772,6 +780,9 @@ func _fortress_bar(f: Fortress, x: float, y: float, w: float) -> float:
 		var d := int(f.global_position.distance_to(f.base_pos)) / 10
 		var s := ("до базы %d м" % d) if f.base_hits == 0 else ("отбомбилась · до базы %d м" % d)
 		_text(Vector2(ix + 8, y + 45), s, 15, Color(0.6, 0.9, 1.0) if f.base_hits == 0 else Color(1.0, 0.55, 0.45))
+	if task != "":
+		_ptext(y + 78.0, task.left(1).to_upper() + task.substr(1), UiStyle.FS_LABEL, Color(1.0, 0.85, 0.55))
+		return y + 92.0
 	return y + 62.0
 
 
@@ -856,6 +867,8 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 		var lo := Tuning.g("throttle_min")
 		var hi := Tuning.g("throttle_max")
 		var w := 260.0
+		# s12: thin text over light sand — a dark plate under the label
+		ctrl.draw_rect(Rect2(x - 8.0, y - 30.0, w + 16.0, 48.0), Color(0.02, 0.025, 0.03, 0.55))
 		_text(Vector2(x, y - 8), Loc.t("Газ [W/S]: %d%%%s") % [int(round(p.throttle * 100.0)), Loc.t("  ФОРСАЖ") if p.ab_t > 0.0 else ""], 17, Color(0.85, 0.9, 1.0))
 		ctrl.draw_rect(Rect2(x, y, w, 10), Color(1, 1, 1, 0.08))
 		ctrl.draw_rect(Rect2(x, y, w * (p.throttle - lo) / (hi - lo), 10), Color(0.55, 0.8, 1.0) if p.throttle <= 1.0 else Color(1.0, 0.7, 0.35))
@@ -863,13 +876,13 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 		ctrl.draw_line(Vector2(mid, y - 3), Vector2(mid, y + 13), Color.WHITE, 2.0)
 	if p.combat_t > 0.0:
 		# U-02: боевой режим после разворота — полоска под самолётом
-		_ctext(size.y / 2.0 + 96.0, Loc.t("БОЕВОЙ РЕЖИМ: пушка ×2 · %.1f с") % p.combat_t, 20, Color(0.6, 0.9, 1.0))
+		_ptext(size.y / 2.0 + 96.0, Loc.t("БОЕВОЙ РЕЖИМ: пушка ×2 · %.1f с") % p.combat_t, 20, Color(0.6, 0.9, 1.0))
 	if p.on_tail():
-		_ctext(size.y / 2.0 + 120.0, "НА ХВОСТЕ: пушка +50%", 22, Color(1.0, 0.9, 0.4))
+		_ptext(size.y / 2.0 + 122.0, "НА ХВОСТЕ: пушка +50%", 22, Color(1.0, 0.9, 0.4))
 	var rk := p.run_k()
 	if rk > 1.05:
 		# EX-04: заход на атаку — прямой полёт усиливает пушку, НАР и бомбы
-		_ctext(size.y / 2.0 + 144.0, Loc.t("ЗАХОД: пушка и взрывы +%d%%") % int(round((rk - 1.0) * 100.0)), 20, Color(1.0, 0.75, 0.4, clampf((rk - 1.0) / Player.RUN_BONUS, 0.4, 1.0)))
+		_ptext(size.y / 2.0 + 150.0, Loc.t("ЗАХОД: пушка и взрывы +%d%%") % int(round((rk - 1.0) * 100.0)), 20, Color(1.0, 0.75, 0.4, clampf((rk - 1.0) / Player.RUN_BONUS, 0.4, 1.0)))
 	if m.run.streak >= 3:
 		var a := clampf(m.run.streak_t, 0.0, 1.0)
 		var stt := Loc.t("Серия ×%d · опыт ×%.2f") % [m.run.streak, m.streak_mult()]
@@ -888,14 +901,29 @@ const C_RESCUE := Color(0.45, 1.0, 0.55)
 const C_FORT := Color(1.0, 0.42, 0.32)   # FA-01: the enemy base — red, apart from the AA site's blue
 
 
+## Caption of an activity target, drawn on the HUD over the world: above the target, or under it
+## when the task plate `avoid` covers that spot (s12: «Транспортник» hid under «ОХОТА»).
+func _world_caption(xf: Transform2D, wp: Vector2, radius: float, s: String, col: Color, avoid: Rect2) -> void:
+	var top := _ws(xf, wp + Vector2(0.0, -radius - 24.0))
+	var bot := _ws(xf, wp + Vector2(0.0, radius + 40.0))
+	if not top.is_finite() or not bot.is_finite():
+		return
+	var pos := top
+	if Rect2(top.x - 120.0, top.y - 20.0, 240.0, 26.0).intersects(avoid):
+		pos = bot
+	_text(Vector2(pos.x - 120.0, pos.y), s, 18, col, HORIZONTAL_ALIGNMENT_CENTER, 240.0)
+
+
 ## Активности: указатели на позицию ПВО и аса-соперника, радиопереговоры, «ХВОСТ!»
 func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	var xf := m.get_viewport().get_canvas_transform()
 	var rect := Rect2(Vector2.ZERO, size).grow(-60.0)
 	var node: Node = m.spawner.activity_node if m.spawner != null else null
+	# s12: with boss bars up, the task plate goes under them and the banner slot (it overlapped them)
+	var ay := 250.0 if _boss_bottom <= 0.0 else maxf(250.0, _boss_bottom + 66.0)
 	if is_instance_valid(node):
 		# свежий взгляд: задача активности на песке не читалась — тёмная плашка
-		ctrl.draw_rect(Rect2((size.x - 980.0) / 2.0, 250.0, 980.0, 62.0), Color(0.02, 0.025, 0.03, 0.55))
+		ctrl.draw_rect(Rect2((size.x - 980.0) / 2.0, ay, 980.0, 62.0), Color(0.02, 0.025, 0.03, 0.78))   # s12: denser, red text read poorly on brown
 		if node is FortArea:
 			var base := node as FortArea
 			var db := int(p.global_position.distance_to(base.global_position))
@@ -907,9 +935,9 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				bs = Loc.t("УКРЕПРАЙОН: %d с · пусковых на башнях: %d из %d") % [int(ceil(base.timer)), base.launchers_left(), base.launchers.size()]
 			else:
 				bs = Loc.t("База противника: %d м — подлетите, чтобы начать") % (db / 10)
-			_ctext(276, bs, 22, Color(1.0, 0.7, 0.55))
+			_ctext(ay + 26.0, bs, 22, Color(1.0, 0.7, 0.55))
 			if not base.failed:
-				_ctext(302, "Награда: выбор из редких карточек + 60 запчастей", 17, Color(0.85, 0.75, 1.0))
+				_ctext(ay + 52.0, "Награда: выбор из редких карточек + 60 запчастей", 17, Color(0.85, 0.75, 1.0))
 		elif node is AASite:
 			var site := node as AASite
 			var d := int(p.global_position.distance_to(site.global_position))
@@ -921,9 +949,9 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				s = Loc.t("ПОЗИЦИЯ ПВО: %d с · уничтожьте бункер: %d%%") % [int(ceil(site.timer)), int(ceil(site.bunker_frac() * 100.0))]
 			else:
 				s = Loc.t("Позиция ПВО: %d м — подлетите, чтобы начать") % (d / 10)
-			_ctext(276, s, 22, Color(1.0, 0.85, 0.4))
+			_ctext(ay + 26.0, s, 22, Color(1.0, 0.85, 0.4))
 			if not site.failed:
-				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
+				_ctext(ay + 52.0, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
 		elif node is Rescue:
 			var rs := node as Rescue
 			var dr := int(p.global_position.distance_to(rs.global_position)) / 10
@@ -937,9 +965,9 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				rt = Loc.t("СБИТЫЙ ПИЛОТ: держите небо над маяком ещё %d с") % int(ceil(rs.timer)) + ("" if p.global_position.distance_to(rs.global_position) < Rescue.HOLD_R else Loc.t(" · вернитесь к маяку!"))
 			else:
 				rt = Loc.t("Аварийный маяк: %d м · вертолёт ждёт ещё %d с") % [dr, int(ceil(rs.life))]
-			_ctext(276, rt, 22, Color(0.55, 1.0, 0.65))
+			_ctext(ay + 26.0, rt, 22, Color(0.55, 1.0, 0.65))
 			if not rs.done and not rs.failed:
-				_ctext(302, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
+				_ctext(ay + 52.0, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
 		elif node is Convoy:
 			var cv := node as Convoy
 			var sea := Biome.sea()
@@ -950,26 +978,27 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				cs = Loc.t("КАРАВАН: до гавани %d с · сухогрузов: %d из %d" if sea else "КОЛОННА: до укрытия %d с · грузовиков: %d из %d") % [int(ceil(maxf(cv.timer, 0.0))), cv.trucks_left(), cv.trucks_total]
 			else:
 				cs = Loc.t("Караван снабжения: %d м — подлетите и потопите сухогрузы" if sea else "Колонна снабжения: %d м — подлетите и сожгите грузовики") % dm
-			_ctext(276, cs, 22, Color(1.0, 0.78, 0.45))
-			_ctext(302, "Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза" if sea else "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика", 17, Color(0.85, 0.75, 1.0))
+			_ctext(ay + 26.0, cs, 22, Color(1.0, 0.78, 0.45))
+			_ctext(ay + 52.0, "Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза" if sea else "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика", 17, Color(0.85, 0.75, 1.0))
 		elif node is Transport:
 			var tr := node as Transport
 			_edge_arrow(_ws(xf, tr.global_position), rect, size, C_TRANSPORT, 1.8, Loc.t("транспортник %d м") % (int(p.global_position.distance_to(tr.global_position)) / 10))
-			_ctext(276, Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], 22, Color(1.0, 0.75, 0.45))
-			_ctext(302, "Награда: груз — запчасти и ремкомплекты", 17, Color(0.85, 0.75, 1.0))
+			_world_caption(xf, tr.global_position, tr.radius, "Транспортник", Color(1, 0.85, 0.6), Rect2((size.x - 980.0) / 2.0, ay, 980.0, 62.0))
+			_ctext(ay + 26.0, Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], 22, Color(1.0, 0.75, 0.45))
+			_ctext(ay + 52.0, "Награда: груз — запчасти и ремкомплекты", 17, Color(0.85, 0.75, 1.0))
 		elif node is RivalAce:
 			var ace := node as RivalAce
 			_edge_arrow(_ws(xf, ace.global_position), rect, size, Color(1.0, 0.3, 0.35), 1.8, Loc.t("ас %d м") % (int(p.global_position.distance_to(ace.global_position)) / 10))
-			_ctext(276, Loc.t("ДОГФАЙТ: ас «%s» · уйдёт через %d с") % [ace.callsign, int(ceil(ace.life))], 22, Color(1.0, 0.6, 0.6))
-			_ctext(302, "Награда: выбор из редких карточек", 17, Color(0.85, 0.75, 1.0))
+			_ctext(ay + 26.0, Loc.t("ДОГФАЙТ: ас «%s» · уйдёт через %d с") % [ace.callsign, int(ceil(ace.life))], 22, Color(1.0, 0.72, 0.7))
+			_ctext(ay + 52.0, "Награда: выбор из редких карточек", 17, Color(0.85, 0.75, 1.0))
 			if ace.threatening() and int(Time.get_ticks_msec() / 200) % 2 == 0:
-				_ctext(size.y / 2.0 - 110.0, "ХВОСТ! Сбрось газ (S) или манёвр", 30, Color(1.0, 0.3, 0.25))
+				_ptext(size.y / 2.0 + 196.0, "ХВОСТ! Сбрось газ (S) или манёвр", 30, Color(1.0, 0.42, 0.36), 0.75)   # under the plane: above it the boss and task plates stack
 	# 3.5: свой заправщик
 	var tk: Tanker = m.spawner.fuel.tanker if m.spawner != null and m.spawner.fuel != null else null
 	if is_instance_valid(tk) and tk.alive() and not tk.leaving:
 		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8, Loc.t("заправщик %d м") % (int(p.global_position.distance_to(tk.global_position)) / 10))
 		var ts := Loc.t("СТЫКОВКА — ЗАПРАВКА ИДЁТ") if tk.filling else (Loc.t("ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно") if tk.in_cone else Loc.t("ЗАПРАВЩИК: зайдите ему в хвост"))
-		_ctext(328, Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
+		_ctext(ay + 78.0, Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
 
 
 ## Правка 20 (тест 3.5-s4): радиоэфир — справа внизу, значок рации, позывной, полупрозрачная плашка.

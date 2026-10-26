@@ -322,7 +322,16 @@ func _process(delta: float) -> void:
 		remove_from_group("enemies")
 		queue_free()
 		return
-	queue_redraw()
+	if in_draw_view():
+		queue_redraw()
+
+
+## True when this enemy's _draw can show anything. Off the view neither its 2D overlay (HP bar,
+## marks, sectors) nor its 3D model is seen; the PC bench of 26.10 had the enemies' queued _draw
+## at ~1.4 ms late in a sortie. Off view the sprite info keeps its last heading until it is back.
+func in_draw_view() -> bool:
+	var v := Render3D.view_now
+	return not Render3D.enabled or not v.has_area() or v.has_point(global_position)
 
 
 func behave(_delta: float) -> void:

@@ -43,16 +43,29 @@ var focus := Vector3.ZERO    # куда смотрит камера (стенд 
 ## missile in each; mid — y is the missile axis; cradle — beam on the plate the weapon is strapped to (of its length),
 ## band — strap arc in degrees (open at the top for a pod with a suspension beam, S11-03); pod — the weapon is a round
 ## pod with a beam on top, so its width, not its height, sizes the body;
-## view — weapon scale so the stand fits the view.
+## view — weapon scale so the stand fits the view; body — the weapon lies on its body, not on its fin tips
+## (fins wider than the body hang beside the cradles, 3.5-s12: the HE bomb floated); turn — the weapon is turned
+## lengthwise on the stand and the stand is stretched along it to `len` of the weapon, its width to `wide` of the
+## weapon's depth (Kanta 26.10 «растяни её»: the carpet row of eight bombs on the bomb cart).
+## The bomb cart lost its floating discs and reflectors (glb_drop_parts.py), so y counts to its cradle tops.
 const STAND_CART := "res://models/hangar/stand_cart.glb"
-const STAND_BOMB := {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 1.0}
+const STAND_BOMB := {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.95, "view": 1.0}
+## 3.5-s12 (Kanta: «модерниз. — на кирпичах»): every evolved weapon stands on a real stand too
+const STAND_LOADER := {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.13, "view": 0.5}
+const STANDS_EVO := {
+	"aam": STAND_LOADER,
+	"rockets": {"path": STAND_CART, "len": 1.15, "x": 0.0, "y": 0.97, "view": 0.85},
+	"flares": {"path": STAND_CART, "len": 1.25, "x": 0.0, "y": 1.0, "view": 0.8},
+	"bombs": {"path": STAND_CART, "len": 1.04, "x": 0.0, "y": 0.95, "view": 1.0, "turn": true, "wide": 1.15},
+}
 const MISSILE_CART := {"path": "res://models/hangar/stand_missile_cart.glb", "ring": 0.052, "x": 0.0, "y": 0.863,
 	"mid": true, "slots": [-0.2317, 0.2475], "view": 0.8}
 const STANDS := {
-	"hebomb": {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.55, "view": 0.72},
+	"hebomb": {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.95, "view": 0.72, "body": true},
+	"flares": {"path": STAND_CART, "len": 1.25, "x": 0.0, "y": 0.86, "view": 0.85},   # the cassette nests into the cradle saddles
 	"aam": MISSILE_CART,
 	"srm": MISSILE_CART,
-	"agm": {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.13, "view": 0.5},
+	"agm": STAND_LOADER,
 	"rockets": {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.13, "view": 0.5, "band": 240.0,
 		"pod": true},
 }
@@ -391,14 +404,18 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		var bb := wmi.mesh.get_aabb()
 		var s := (0.62 if weapon != "turret" else 1.05) / maxf(1.0, maxf(bb.size.x, bb.size.z))
 		var stand: Dictionary = STANDS.get(weapon, STAND_BOMB if Weapons.is_bomb(weapon) else {})
-		if (evo and not Weapons.is_bomb(weapon)) or not ResourceLoader.exists(stand.get("path", "")):
-			stand = {}   # evolved missiles are other shapes: they keep the box stands
+		if evo:
+			stand = STANDS_EVO.get(weapon, {})
+			if weapon == "bombs" and t == WeaponModels.CARPET_BAY_T:
+				stand = STAND_BOMB   # the bomber's bay cassette is already long: it lies along the cart as it is
+		if not ResourceLoader.exists(stand.get("path", "")):
+			stand = {}
 		s *= stand.get("view", 1.0)
 		if on_mount:
 			s *= float(TURRET_STAND["view"])
 		# турель — в одном масштабе на всех ступенях (модель меньше 1 — множитель не зависит от габарита),
 		# поэтому рост ступени виден; S9-04: стоит неподвижно, стволами вперёд-вбок к камере (3/4 спереди)
-		var rot := TURRET_SHOW_YAW if weapon == "turret" else 0.0
+		var rot := TURRET_SHOW_YAW if weapon == "turret" else (PI / 2.0 if stand.get("turn", false) else 0.0)
 		wmi.basis = Basis(Vector3.UP, rot).scaled(Vector3.ONE * s)
 		var c := Basis(Vector3.UP, rot) * (bb.get_center() * s)
 		wmi.position = Vector3(-c.x, -0.03 if side == "under" else (-0.15 if weapon == "turret" else -0.08), -c.z)
@@ -438,21 +455,28 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 	# a pod is round, but its suspension beam on top lifts the box centre: its width gives the body
 	var pod: bool = stand.get("pod", false)
 	var body := (bb.size.z * 0.5 if pod else _body_radius(wmi.mesh)) * s
-	var ck: float = (body / stand["ring"] if stand.has("ring") else bb.size.x * s * stand["len"]) / cb.size.x
+	var turn: bool = stand.get("turn", false)
+	var lx := (bb.size.z if turn else bb.size.x) * s   # the weapon's length along the stand
+	var ck: float = (body / stand["ring"] if stand.has("ring") else lx * stand["len"]) / cb.size.x
+	var cw := ck   # across and up: the stand keeps its proportions unless it is stretched along a turned weapon
+	if turn:
+		cw = bb.size.x * s * float(stand.get("wide", 1.0)) / cb.size.z
 	var cm := MeshInstance3D.new()
 	cm.mesh = cart
-	cm.basis = Basis.from_scale(Vector3.ONE * ck)
+	cm.basis = Basis.from_scale(Vector3(ck, cw, cw))
 	var dx: float = cb.size.x * stand["x"] * ck
-	cm.position = Vector3(-cb.get_center().x * ck - dx * 0.5, FLOOR_Y - cb.position.y * ck, -cb.get_center().z * ck)
+	cm.position = Vector3(-cb.get_center().x * ck - dx * 0.5, FLOOR_Y - cb.position.y * cw, -cb.get_center().z * cw)
 	pivot.add_child(cm)
 	wmi.position.x += dx * 0.5
 	var axis := wmi.position.y + (bb.position.y + bb.size.z * 0.5 if pod else bb.get_center().y) * s
 	var low := bottom
-	if stand.get("mid", false):
+	if stand.get("body", false):
+		low = axis - _body_radius(wmi.mesh) * s
+	elif stand.get("mid", false):
 		low = axis
 	elif stand.has("cradle"):
 		low = axis - body * 1.52   # beam 0.35 and saddles 0.25 of the body radius; the beam sits 0.08 into the plate
-	var lift: float = FLOOR_Y + cb.size.y * ck * stand["y"] - low
+	var lift: float = FLOOR_Y + cb.size.y * cw * stand["y"] - low
 	wmi.position.y += lift
 	axis += lift
 	var slots: Array = stand.get("slots", [])

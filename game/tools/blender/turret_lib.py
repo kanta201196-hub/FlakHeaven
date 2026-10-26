@@ -85,6 +85,30 @@ def prism(name, profile, width, m, bevel=0.018):
     bpy.context.view_layer.objects.active = ob
     return finish(ob, m, bevel, 3)
 
+def drill(ob, c, r, depth, m, verts=16):
+    """Сверлит канал ствола: круглое отверстие вдоль X в передней грани ob (c — центр среза, канал уходит
+    назад на depth). Kanta (3.5-s12): «у турелей в стволе отверстий быть не должно?» — тёмный диск поверх
+    грани на крупном плане читался как выпуклая шишка, настоящая выемка с тёмными стенками читается дулом.
+    Фаска ob применяется до выреза; стенки канала получают материал m."""
+    bpy.context.view_layer.objects.active = ob
+    for md in list(ob.modifiers):
+        bpy.ops.object.modifier_apply(modifier=md.name)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=verts, radius=r, depth=depth + 0.02,
+                                        location=(c[0] - depth / 2 + 0.01, c[1], c[2]), rotation=(0, math.pi / 2, 0))
+    cut = bpy.context.object
+    cut.data.materials.append(m)
+    md = ob.modifiers.new("bore", "BOOLEAN")
+    md.operation = "DIFFERENCE"
+    md.object = cut
+    md.solver = "EXACT"
+    md.material_mode = "TRANSFER"
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=md.name)
+    bpy.data.objects.remove(cut, do_unlink=True)
+    for p in ob.data.polygons:   # flat faces stay flat: smooth shading would pinch the n-gon around the hole
+        p.use_smooth = max(abs(p.normal.x), abs(p.normal.y), abs(p.normal.z)) < 0.99
+    return ob
+
 def tube(name, pts, r, m):
     """Поручень из прямых трубок по точкам"""
     for i in range(len(pts) - 1):
