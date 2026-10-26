@@ -14,8 +14,9 @@ static var _hub_shader: Shader
 
 
 ## Поставить диск размытия на узел винта (идемпотентно: узлы из пула уже с диском).
-## face_z — винт крутится вокруг локальной Z (рулевой), иначе вокруг Y (несущий).
-static func attach(rotor: MeshInstance3D, radius: float, blades: int, keep_r: float, face_z: bool) -> void:
+## axis — локальная ось вращения: Vector3.AXIS_Y (несущий), AXIS_Z (рулевой), AXIS_X (тянущие и толкающие
+## винты самолётов prop_*, VIS-01: тонкие лопасти при вращении читались отдельными палками).
+static func attach(rotor: MeshInstance3D, radius: float, blades: int, keep_r: float, axis: int) -> void:
 	if rotor == null or rotor.get_node_or_null("blur") != null:
 		return
 	if _disc_shader == null:
@@ -37,17 +38,21 @@ static func attach(rotor: MeshInstance3D, radius: float, blades: int, keep_r: fl
 			hm.set_shader_parameter("normal_tex", bm.normal_texture)
 		hm.set_shader_parameter("rough", clampf(bm.roughness, 0.8, 0.95))
 		hm.set_shader_parameter("keep_r", keep_r)
-		hm.set_shader_parameter("face_z", face_z)
+		hm.set_shader_parameter("axis", axis)
 		rotor.set_surface_override_material(si, hm)
 	var pm := PlaneMesh.new()
 	pm.size = Vector2.ONE * radius * 2.0
-	pm.orientation = PlaneMesh.FACE_Z if face_z else PlaneMesh.FACE_Y
+	pm.orientation = [PlaneMesh.FACE_X, PlaneMesh.FACE_Y, PlaneMesh.FACE_Z][axis]
 	var dm := ShaderMaterial.new()
 	dm.shader = _disc_shader
 	dm.set_shader_parameter("radius", radius)
 	dm.set_shader_parameter("blades", float(blades))
 	dm.set_shader_parameter("hub", keep_r / radius)
-	dm.set_shader_parameter("face_z", face_z)
+	dm.set_shader_parameter("axis", axis)
+	if axis == Vector3.AXIS_X:
+		# a plane's prop disc stands upright under the top-down camera and shows as a thin sliver: denser haze reads
+		dm.set_shader_parameter("a_base", 0.34)
+		dm.set_shader_parameter("a_streak", 0.22)
 	pm.material = dm
 	var disc := MeshInstance3D.new()
 	disc.name = "blur"
@@ -64,14 +69,14 @@ uniform vec3 tint : source_color = vec3(0.62, 0.62, 0.60);   // тонмаппе
 uniform float radius = 0.56;
 uniform float blades = 5.0;
 uniform float hub = 0.08;          // доля радиуса: внутри — втулка, диска нет
-uniform bool face_z = false;
+uniform int axis = 1;   // локальная ось вращения: 0 — X, 1 — Y, 2 — Z
 uniform float a_base = 0.22;       // ровная дымка диска
 uniform float a_streak = 0.18;     // полосы лопастей поверх
 
 varying vec2 pp;
 
 void vertex() {
-	pp = (face_z ? VERTEX.xy : VERTEX.xz) / radius;
+	pp = (axis == 0 ? VERTEX.yz : (axis == 2 ? VERTEX.xy : VERTEX.xz)) / radius;
 }
 
 void fragment() {
@@ -100,12 +105,12 @@ uniform vec4 albedo_col : source_color = vec4(1.0);
 uniform bool has_normal = false;
 uniform float rough = 0.85;
 uniform float keep_r = 0.05;
-uniform bool face_z = false;
+uniform int axis = 1;   // локальная ось вращения: 0 — X, 1 — Y, 2 — Z
 
 varying float rr;
 
 void vertex() {
-	rr = length(face_z ? VERTEX.xy : VERTEX.xz);
+	rr = length(axis == 0 ? VERTEX.yz : (axis == 2 ? VERTEX.xy : VERTEX.xz));
 }
 
 void fragment() {
