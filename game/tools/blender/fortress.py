@@ -49,6 +49,7 @@ M_T_BODY = mat("enemy_turret", (0.12, 0.13, 0.12), 0.1, 0.85)
 M_T_DARK = mat("enemy_turret_dark", (0.05, 0.05, 0.055), 0.1, 0.88)
 M_T_BARREL = mat("enemy_turret_barrel", (0.16, 0.165, 0.17), 0.15, 0.8)
 M_T_GLASS = mat("enemy_turret_glass", (0.05, 0.08, 0.1), 0.0, 0.8)
+M_MSL = mat("enemy_missile", (0.3, 0.3, 0.29), 0.1, 0.75)   # the dome's rail missile: a shade lighter than the wing so it reads
 TS = 0.062          # масштаб турели turret_twin (длина башни 1) в оси «Крепости» (длина самолёта 1)
 
 PX = 270.0
@@ -239,10 +240,12 @@ DOME_R, DOME_H = 0.018, 0.0102   # 60 % of the old twin turret (ring Ø 0.068 �
 
 
 def dome_turret(n, x, y, hull_uv):
-    """Wing-mode turret (Kanta 26.10, concept Б): a low dome on a fixed collar blended into the skin, with a gun
-    slit, twin short barrels, a seam band, a crown hatch and a sensor eye. The collar stays with the hull; the dome and its guns
-    are node turret_n, pivot on the vertical through the dome centre, barrels along +X, so render3d's yaw turns
-    the whole dome to track the player. Dome and collar wear the hull's own paint (HullUV)."""
+    """Wing-mode turret (Kanta 26.10, concept Б and his sketch): a low dome on a fixed collar blended into the skin,
+    with a gun slit, twin short barrels, a seam band, a sensor eye and a small finned missile on a short rail along
+    the crown. The collar stays with the hull; the dome, guns and rail are node turret_n, pivot on the vertical
+    through the dome centre, barrels along +X, so render3d's yaw turns the whole dome to track the player. The
+    missile is its own node turret_n_missile under turret_n, so it turns with the dome and can be hidden while it
+    reloads after a launch. Dome and collar wear the hull's own paint (HullUV)."""
     z = top(x, y)
     R, H = DOME_R, DOME_H
     L.group = ""
@@ -262,7 +265,8 @@ def dome_turret(n, x, y, hull_uv):
     ob.scale = (1, 1, 0.6)
     bpy.ops.object.transform_apply(scale=True)
     finish(ob, M_DARK)
-    cyl("dome_hatch", (x - R * 0.15, y + R * 0.1, z + H * 0.985), R * 0.26, H * 0.05, M_DARK, "Z", 20)
+    # launch rail on the crown: a low pylon, the missile hangs on top of it nose forward
+    box("dome_rail", (x - R * 0.05, y, z + H * 1.02), (R * 0.9, R * 0.12, H * 0.22), M_T_DARK, 0.0)
     # gun slit in the front face and twin barrels with muzzle brakes, dark gunmetal
     box("dome_slit", (x + R * 0.62, y, z + H * 0.5), (R * 0.85, R * 0.62, H * 0.26), M_T_DARK, 0.0)
     for s in (-1, 1):
@@ -272,6 +276,24 @@ def dome_turret(n, x, y, hull_uv):
     # sensor eye on the shoulder, looking where the guns look
     sphere("dome_eye_rim", (x + R * 0.55, y - R * 0.48, z + H * 0.72), R * 0.17, (1, 1, 0.55), M_T_DARK, 12)
     sphere("dome_eye", (x + R * 0.62, y - R * 0.48, z + H * 0.74), R * 0.12, (1, 1, 0.6), M_T_GLASS, 12)
+    m = g + "_missile"
+    L.group = m
+    L.pivots[m] = (x, y, z)
+    L.parents[m] = g
+    mr, mz, mx0, mx1 = R * 0.1, z + H * 1.13 + R * 0.1, x - R * 0.7, x + R * 0.55   # body radius, axis height, tail, nose root
+    cyl("msl_body", ((mx0 + mx1) / 2, y, mz), mr, mx1 - mx0, M_MSL, "X", 12)
+    bpy.ops.mesh.primitive_cone_add(vertices=12, radius1=mr, radius2=0.0, depth=R * 0.32, location=(mx1 + R * 0.16, y, mz))
+    ob = bpy.context.object
+    ob.name = "msl_nose"
+    ob.rotation_euler = (0, math.pi / 2, 0)
+    bpy.ops.object.transform_apply(rotation=True)
+    finish(ob, M_T_DARK)
+    for a in range(4):   # cruciform tail fins, and a smaller set of canards behind the nose
+        ang = math.pi / 4 + a * math.pi / 2
+        for fx, fl, fs in ((mx0 + R * 0.1, R * 0.22, R * 0.2), (mx1 - R * 0.12, R * 0.1, R * 0.09)):
+            ob = box("msl_fin", (0, 0, 0), (fl, R * 0.04, fs), M_MSL, 0.0)
+            ob.data.transform(Matrix.Rotation(ang - math.pi / 2, 4, "X") @ Matrix.Translation((0, 0, mr + fs / 2)))
+            ob.location = (fx, y, mz)
     L.group = ""
 
 

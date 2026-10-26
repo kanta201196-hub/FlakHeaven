@@ -39,6 +39,7 @@ const ESCORT_N := 4
 const MIN_FIGHT := 45.0          # предел урона: бой не короче 45 с при любой сборке
 const FLEE_SPEED := 0.75         # фаза 3: доля BASE_SPEED — игрок догоняет
 const FLEE_T := 50.0
+const MSL_RELOAD := 4.0          # a dome turret's rail missile is back this long after it left
 
 var phase := 1
 var points: Array = []           # [{name, node, kind, off (в осях самолёта: x — вперёд), hp, max, cd, shots, st, sec: [центр, полуширина]}]
@@ -95,7 +96,7 @@ func setup_fortress(total: float) -> void:
 
 
 func _pt(n: String, node: String, kd: String, off: Vector2, h: float, sec: Array) -> Dictionary:
-	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0, "sec": sec}
+	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0, "sec": sec, "msl": 0.0}
 
 
 func kind() -> String:
@@ -416,6 +417,7 @@ func _turrets(delta: float, p: Player) -> void:
 	for pt in points:
 		if pt["kind"] != "turret" or float(pt["hp"]) <= 0.0:
 			continue
+		pt["msl"] = maxf(0.0, float(pt["msl"]) - delta)
 		var at := _world(pt)
 		var to := p.global_position - at
 		if int(pt["shots"]) > 0:
@@ -490,8 +492,7 @@ func _bay(delta: float, p: Player, to: Vector2, d: float) -> void:
 		if _lock <= 0.0:
 			for i in 4:
 				# S10-04: пуск с крыльев вперёд по курсу, потом доворот на цель
-				Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading + PI / 2.0 * (1.0 if i % 2 else -1.0)) * 40.0,
-					Vector2.from_angle(heading + (i - 1.5) * 0.15), "aam", kind(), Projectiles.MSL_FREE)
+				Main.I.projectiles.spawn_missile(_msl_from(i), Vector2.from_angle(heading + (i - 1.5) * 0.15), "aam", kind(), Projectiles.MSL_FREE)
 			Main.I.sfx.play("missile_enemy", -4.0, 0.7)
 			_missile_cd = 6.0
 		return
@@ -499,6 +500,18 @@ func _bay(delta: float, p: Player, to: Vector2, d: float) -> void:
 	if _missile_cd <= 0.0 and d < 1000.0:
 		_lock = 1.1
 		Main.I.sfx.play("lock", -4.0, 0.7)
+
+
+## Where volley missile i leaves from (Kanta 26.10): the rail missile on top of a live dome turret, cycling through
+## them, and that dome shows no missile until MSL_RELOAD runs out; with every turret down, the wing roots as before.
+## Same count, timing and damage either way: only the launch point moves.
+func _msl_from(i: int) -> Vector2:
+	var racks := points.filter(func(pt: Dictionary) -> bool: return pt["kind"] == "turret" and float(pt["hp"]) > 0.0)
+	if racks.is_empty():
+		return global_position + Vector2.from_angle(heading + PI / 2.0 * (1.0 if i % 2 else -1.0)) * 40.0
+	var pt: Dictionary = racks[i % racks.size()]
+	pt["msl"] = MSL_RELOAD
+	return _world(pt)
 
 
 func _update_zones(delta: float, p: Player) -> void:

@@ -31,6 +31,7 @@ def mat(name, rgb, metal=0.0, rough=0.6):
 parts = []
 group = ""          # пусто — основной корпус; иначе подвижная часть (узел с этим именем в GLB)
 pivots = {}         # группа → точка вращения (x, y, z)
+parents = {}        # группа → группа-родитель (по умолчанию корпус): деталь крутится вместе с ней
 
 def finish(ob, m, bevel=0.0, seg=1):
     ob.data.materials.append(m)
@@ -129,7 +130,7 @@ def build(name, out):
         if gname:
             o = bpy.data.objects[gname]
             mw = o.matrix_world.copy()
-            o.parent = tur
+            o.parent = bpy.data.objects[parents[gname]] if gname in parents else tur
             o.matrix_world = mw
     print("TRIS", tris)
 
