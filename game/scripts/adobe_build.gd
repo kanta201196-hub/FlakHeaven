@@ -12,28 +12,31 @@ const DARK := Color(0.62, 0.55, 0.47)    # проёмы, бойницы, две�
 const WATER := Color(0.3, 0.4, 0.42)     # вода в пруду оазиса
 
 static var _cache := {}
-static var _mat: StandardMaterial3D
+static var _mat: ShaderMaterial
 
 
-## Материал: глина из набора земли CC0 в трёх проекциях — без развёртки, без растяжения на стенах
-static func material() -> StandardMaterial3D:
+## Material of the village and oasis meshes (adobe.gdshader): clay from the CC0 ground set in three world
+## projections (no unwrap, no stretching on walls), vertex colour as albedo, matte (Kanta 19.10). The vertex
+## colour's alpha picks own surfaces — sandbags, trench and street strips (ID_* below) — textured by RoadTex
+static func material() -> ShaderMaterial:
 	if _mat != null:
 		return _mat
-	_mat = StandardMaterial3D.new()
+	_mat = ShaderMaterial.new()
+	_mat.shader = load("res://shaders/adobe.gdshader")
 	var p := "res://art/ground/pbr/clay_albedo.jpg"
 	if ResourceLoader.exists(p):
-		_mat.albedo_texture = load(p)
-	_mat.uv1_triplanar = true
-	_mat.uv1_world_triplanar = true
-	_mat.uv1_scale = Vector3.ONE / 160.0
-	_mat.vertex_color_use_as_albedo = true
-	_mat.vertex_color_is_srgb = true   # Forward+: same colours as in Compatibility (srgb.gdshaderinc)
-	_mat.albedo_color = Color(1.0, 0.95, 0.88)
-	_mat.roughness = 0.95
-	_mat.metallic = 0.0
-	_mat.metallic_specular = 0.15   # Kanta 19.10: глина и крыши — полностью матовые, без бликов
-	_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_mat.set_shader_parameter("clay_tex", load(p))
+	_mat.set_shader_parameter("albedo", Color(1.0, 0.95, 0.88))
+	RoadTex.apply_adobe(_mat)
 	return _mat
+
+
+## Vertex-colour alpha codes read by adobe.gdshader. Strips carry ±ID_SPAN across their width (edge to edge),
+## so the shader knows the middle of a trench or a street
+const ID_BAG := 0.25
+const ID_TRENCH := 0.5
+const ID_STREET := 0.75
+const ID_SPAN := 0.08
 
 
 static func fort() -> ArrayMesh:
@@ -329,7 +332,7 @@ static func footprint(name: String) -> float:
 ## где через линию идёт тропа — проход. На выходах троп с другой стороны — посты из мешков.
 ## Остовы подбитой техники перед линией ставит Terrain3D.scenes. Меш посёлка утоплен на 1 % размера
 ## (render3d) — всё низкое поднимаем на SINK, иначе уходит под землю
-const BAG := Color(0.8, 0.72, 0.55)
+const BAG := Color(0.8, 0.72, 0.55, ID_BAG)   # alpha: hessian in adobe.gdshader
 const TRENCH := Color(0.42, 0.36, 0.29)
 const GUN := Color(0.36, 0.37, 0.34)
 const DEF_R := 1.07   # радиус линии, доля края застройки
@@ -372,7 +375,7 @@ static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator, 
 		if _wet_seg(water, a, b, 0.05):
 			continue   # S9-08: над ручьём окоп и бруствер прерываются (с запасом на окоп за бруствером)
 		var inward := -((a + b) * 0.5).normalized() * 0.022
-		_strip(st, a + inward, b + inward, 0.02, TRENCH, sink + 0.003)   # окоп за бруствером
+		_strip(st, a + inward, b + inward, 0.02, TRENCH, sink + 0.003, ID_TRENCH)   # окоп за бруствером
 		if edge_log_on:
 			edge_log.append(["trench", a, b])
 		_bags(st, a, b, sink, rng)
@@ -411,7 +414,8 @@ static func _seg_near(a: Vector2, b: Vector2, pts: Array, r: float) -> bool:
 	return false
 
 
-## Ряд мешков с песком от a до b: два ряда внахлёст
+## A row of sandbags from a to b: two overlapping rows, each bag its own "pillow" (_bag) with a gap,
+## slightly different in size and turned (Kanta 26.10: the bags used to be solid slabs)
 static func _bags(st: SurfaceTool, a: Vector2, b: Vector2, y0: float, rng: RandomNumberGenerator) -> void:
 	var len := a.distance_to(b)
 	var dir := (b - a) / maxf(len, 1e-6)
@@ -419,9 +423,52 @@ static func _bags(st: SurfaceTool, a: Vector2, b: Vector2, y0: float, rng: Rando
 	for row in 2:
 		for i in n:
 			var c := a + dir * (len * (i + 0.5 * row + 0.25) / n)
-			var s := Vector3(0.026, 0.011, 0.017) * rng.randf_range(0.9, 1.1)
-			var yaw_c := Vector3(c.x, y0 + row * 0.009, c.y)
-			_box_yaw(st, yaw_c, s, dir.angle(), BAG)
+			var s := Vector3(0.022, 0.011, 0.016) * rng.randf_range(0.9, 1.1)
+			_bag(st, Vector3(c.x, y0 + row * 0.0085, c.y), s, dir.angle() + rng.randf_range(-0.12, 0.12), rng)
+
+
+## One bag: a "pillow" s.x long, s.y high, s.z wide on base c.y, turned by yaw. A ring of 10 points
+## (superellipse: straight sides, rounded ends) at three heights: bottom tucked in, middle bulging, top rounded
+## to the centre; smooth normals (group 1). 50 triangles; colour BAG (alpha ID_BAG: hessian in adobe.gdshader),
+## the tone varies slightly from bag to bag
+static func _bag(st: SurfaceTool, c: Vector3, s: Vector3, yaw: float, rng: RandomNumberGenerator) -> void:
+	var col := BAG.darkened(rng.randf_range(0.0, 0.12))
+	col.a = BAG.a
+	var fx := Vector2.from_angle(yaw)
+	var fz := -fx.orthogonal()
+	var ring := func(k: int, sc: float) -> Vector2:
+		var t := TAU * (k + 0.5) / 10.0
+		var cx := cos(t)
+		var sz := sin(t)
+		var u := signf(cx) * pow(absf(cx), 0.4) * s.x * 0.5 * sc
+		var v := signf(sz) * pow(absf(sz), 0.6) * s.z * 0.5 * sc
+		return Vector2(c.x, c.z) + fx * u + fz * v
+	var levels := [[0.0, 0.86], [0.5, 1.0], [0.88, 0.7]]
+	st.set_smooth_group(1)
+	st.set_color(col)
+	for li in 2:
+		var y0 := c.y + s.y * float(levels[li][0])
+		var y1 := c.y + s.y * float(levels[li + 1][0])
+		for k in 10:
+			var p0: Vector2 = ring.call(k, levels[li][1])
+			var p1: Vector2 = ring.call((k + 1) % 10, levels[li][1])
+			var q0: Vector2 = ring.call(k, levels[li + 1][1])
+			var q1: Vector2 = ring.call((k + 1) % 10, levels[li + 1][1])
+			# facing out: same order as _quad (a, c, b, a, d, c) with a = p1 bottom, b = p0 bottom
+			var va := Vector3(p1.x, y0, p1.y)
+			var vb := Vector3(p0.x, y0, p0.y)
+			var vc := Vector3(q0.x, y1, q0.y)
+			var vd := Vector3(q1.x, y1, q1.y)
+			for v: Vector3 in [va, vc, vb, va, vd, vc]:
+				st.add_vertex(v)
+	var top := Vector3(c.x, c.y + s.y, c.z)
+	for k in 10:
+		var p0: Vector2 = ring.call(k, levels[2][1])
+		var p1: Vector2 = ring.call((k + 1) % 10, levels[2][1])
+		var yt := c.y + s.y * float(levels[2][0])
+		for v: Vector3 in [Vector3(p0.x, yt, p0.y), top, Vector3(p1.x, yt, p1.y)]:
+			st.add_vertex(v)
+	st.set_smooth_group(-1)
 
 
 ## Позиция с орудием: кольцо мешков и ствол наружу
@@ -430,7 +477,8 @@ static func _gun_pit(st: SurfaceTool, c: Vector2, out_ang: float, y0: float, rng
 	for i in 9:
 		var a0 := out_ang + PI * 0.25 + TAU * 0.85 * float(i) / 9.0   # проём сзади, к посёлку
 		var p := c + Vector2.from_angle(a0) * r
-		_box_yaw(st, Vector3(p.x, y0, p.y), Vector3(0.03, 0.014, 0.018), a0 + PI * 0.5, BAG)
+		_bag(st, Vector3(p.x, y0, p.y), Vector3(0.027, 0.008, 0.017) * rng.randf_range(0.92, 1.08), a0 + PI * 0.5 + rng.randf_range(-0.1, 0.1), rng)
+		_bag(st, Vector3(p.x, y0 + 0.007, p.y), Vector3(0.024, 0.007, 0.015) * rng.randf_range(0.92, 1.08), a0 + PI * 0.5 + rng.randf_range(-0.15, 0.15), rng)
 	_box_yaw(st, Vector3(c.x, y0, c.y), Vector3(0.03, 0.013, 0.022), out_ang, GUN)   # лафет
 	var tip := c + Vector2.from_angle(out_ang) * 0.03
 	_box_yaw(st, Vector3(tip.x, y0 + 0.009, tip.y), Vector3(0.055, 0.006, 0.006), out_ang, GUN)   # ствол
@@ -441,7 +489,9 @@ static func _post(st: SurfaceTool, c: Vector2, out_ang: float, y0: float, rng: R
 	for i in 6:
 		var a0 := out_ang - PI * 0.6 + PI * 1.2 * float(i) / 5.0
 		var p := c + Vector2.from_angle(a0) * 0.026
-		_box_yaw(st, Vector3(p.x, y0, p.y), Vector3(0.024, 0.013, 0.015), a0 + PI * 0.5, BAG)
+		_bag(st, Vector3(p.x, y0, p.y), Vector3(0.021, 0.0075, 0.014) * rng.randf_range(0.92, 1.08), a0 + PI * 0.5 + rng.randf_range(-0.1, 0.1), rng)
+		if i % 5 != 0:
+			_bag(st, Vector3(p.x, y0 + 0.0065, p.y), Vector3(0.019, 0.0065, 0.013) * rng.randf_range(0.92, 1.08), a0 + PI * 0.5 + rng.randf_range(-0.15, 0.15), rng)
 
 
 ## Коробка, повёрнутая на yaw вокруг вертикали (основание на c.y)
@@ -463,13 +513,23 @@ static func _box_yaw(st: SurfaceTool, c: Vector3, s: Vector3, yaw: float, col: C
 const PATH := Color(0.86, 0.84, 0.86)   # утоптанная улица: в тон земле, чуть светлее (3.5-s8: была оранжевой)
 
 
-## Плоская полоса (тропа) от a до b шириной w чуть над землёй
-static func _strip(st: SurfaceTool, a: Vector2, b: Vector2, w: float, col: Color, y := 0.002) -> void:
+## Flat strip (path) from a to b, w wide, just above the ground. id (ID_TRENCH, ID_STREET) picks its own material
+## in adobe.gdshader: colour alpha id - ID_SPAN on one edge and id + ID_SPAN on the other (the shader knows the middle)
+static func _strip(st: SurfaceTool, a: Vector2, b: Vector2, w: float, col: Color, y := 0.002, id := 1.0) -> void:
 	var n := (b - a).normalized().orthogonal() * w * 0.5
 	var ext := (b - a).normalized() * w * 0.5   # стык соседних кусков без щелей
 	var p0 := a - ext
 	var p1 := b + ext
-	_quad(st, Vector3(p0.x - n.x, y, p0.y - n.y), Vector3(p1.x - n.x, y, p1.y - n.y), Vector3(p1.x + n.x, y, p1.y + n.y), Vector3(p0.x + n.x, y, p0.y + n.y), col)
+	var lo := Color(col, id - ID_SPAN if id < 1.0 else col.a)
+	var hi := Color(col, id + ID_SPAN if id < 1.0 else col.a)
+	var qa := Vector3(p0.x - n.x, y, p0.y - n.y)
+	var qb := Vector3(p1.x - n.x, y, p1.y - n.y)
+	var qc := Vector3(p1.x + n.x, y, p1.y + n.y)
+	var qd := Vector3(p0.x + n.x, y, p0.y + n.y)
+	st.set_smooth_group(-1)
+	for v: Array in [[qa, lo], [qc, hi], [qb, lo], [qa, lo], [qd, hi], [qc, hi]]:   # as _quad: a, c, b, a, d, c
+		st.set_color(v[1])
+		st.add_vertex(v[0])
 
 
 ## Огород за дувалом: низкая глинобитная ограда по периметру с проходом
@@ -709,7 +769,7 @@ static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector
 
 
 ## L-07 (правка Kanta 18.10.2026): деревянный мост. Пролёт — по X от −0,5 до 0,5 (длина 1), низ свай — y < 0.
-## foot = false — мост на дороге через ручей (под колонну: ширина 0,36 пролёта, перила, две пары свай);
+## foot = false — мост на дороге через ручей (под колонну: ширина 0,4 пролёта, перила, две пары свай);
 ## foot = true — пешеходный через реку (узкий, чуть выгнут, тонкие стойки и поручни)
 const WOOD := Color(0.47, 0.35, 0.24)
 const WOOD_DARK := Color(0.3, 0.22, 0.16)
@@ -721,7 +781,7 @@ static func bridge(foot: bool) -> ArrayMesh:
 		return _cache[key]
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var w := 0.09 if foot else 0.36
+	var w := 0.09 if foot else 0.4   # Kanta 26.10: the road is 31 px solid now; deck 34–38 px over a 84–95 px span
 	var n := 26 if foot else 15
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7707 if foot else 7708
@@ -920,7 +980,7 @@ static func village(variant: int) -> ArrayMesh:
 			var b := pl[k + 1]
 			if a.length() > V_EDGE * outline(variant, a.angle()) * 1.02:
 				continue
-			_strip(st, a, b, float(p[1]), PATH, SINK + 0.0025)
+			_strip(st, a, b, float(p[1]), PATH, SINK + 0.0025, ID_STREET)
 	# S9-07/S9-08: окраина (сады, поля, линия обороны) — отдельной сеткой на каждый посёлок (village_edge):
 	# ручей долины-притока и река у каждого посёлка свои, а эта сетка общая для раскладки
 	var marr := _scaled_arrays(st, V_UNIT)

@@ -657,6 +657,9 @@ func _make_points() -> Array:
 		pts.append({"name": "rocks_foot", "pos": best_s[1], "zoom": 1.2})
 		# M-36: дорога шире — колонна конвоя стоит на дороге (логика машин выключена)
 		pts.append({"name": "road_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 2.2, "convoy": true, "wait": 1.5})
+		pts.append({"name": "road_ground", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "ground_dist": 110.0, "wait": 2.0})   # Kanta 26.10: road surface up close
+		# Kanta 26.10 (road wide enough for 1.5 vehicles): the convoy on the road at gameplay height, the player's plane beside it
+		pts.append({"name": "road_play", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "cls": ["fighter", 1], "zoom": 1.3, "convoy": true, "wait": 1.5})
 		pts.append({"name": "road_smoke", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.0, "convoy": true, "smoke": true, "wait": 3.0})
 		# M-37: позиция ПВО целиком и рядом с колонной (размеры ПВО относительно машин конвоя)
 		pts.append({"name": "aa_site", "pos": empty, "zoom": 1.0, "enemies": true, "ground": true, "wait": 2.5})
@@ -704,6 +707,15 @@ func _make_points() -> Array:
 		pts.append({"name": "village_houses", "pos": found["o_village"] + Vector2(-150, 0), "ground_dist": 260.0, "wait": 3.0})   # VIS-01: house models up close
 		# VIS-01: the village at gameplay height with the player's plane over it, to judge the houses' scale
 		pts.append({"name": "village_play", "pos": found["o_village"] + Vector2(0, 450), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+		# Kanta 26.10 (street and road textures, trench and sandbags): a street and the defence line up close.
+		# The line runs round the object's −x side at DEF_R of the built-up edge (outline taken as 1)
+		for vo: Dictionary in placed:
+			if vo["pos"] == found["o_village"]:
+				var rot := float(vo["rot"])
+				pts.append({"name": "village_lane", "pos": vo["pos"] + Vector2(0.06, 0.0).rotated(rot) * float(vo["size"]), "ground_dist": 120.0, "wait": 3.0})
+				var tl := Vector2.from_angle(PI + 0.22) * (AdobeBuild.V_EDGE * AdobeBuild.DEF_R - 0.03) * AdobeBuild.V_UNIT
+				pts.append({"name": "village_trench", "pos": vo["pos"] + tl.rotated(rot) * float(vo["size"]), "ground_dist": 90.0, "wait": 3.0})
+				break
 		for vr in 4:
 			AdobeBuild._vcache.erase("village%d" % vr)
 			var t0 := Time.get_ticks_usec()
