@@ -9,6 +9,7 @@ extends RefCounted
 ## Left column: [action, label]
 const ITEMS := [
 	[&"menu_play", "ВЫЛЕТ"],
+	[&"menu_aces", "БИТВА АСОВ"],
 	[&"menu_hangar", "АНГАР"],
 	[&"menu_codex", "СПРАВОЧНИК"],
 	[&"menu_settings", "НАСТРОЙКИ"],
@@ -89,9 +90,10 @@ func handle_input(event: InputEvent) -> bool:
 func draw(size: Vector2) -> void:
 	_items.clear()
 	_logo()
-	var y0 := size.y - 70.0 - 36.0 - ITEMS.size() * ROW_H
-	for i in ITEMS.size():
-		_item(Rect2(96, y0 + i * ROW_H, ROW_W, ROW_H - 8.0), ITEMS[i][0], ITEMS[i][1])
+	var list := _list()
+	var y0 := size.y - 70.0 - 36.0 - list.size() * ROW_H
+	for i in list.size():
+		_item(Rect2(96, y0 + i * ROW_H, ROW_W, ROW_H - 8.0), list[i][0], list[i][1])
 	var x := size.x - UiStyle.MARGIN - COL_W
 	_card(Rect2(x, 150, COL_W, 84), &"mm_whats_new", "ЧТО НОВОГО",
 		Loc.t("СБОРКА %s · СПИСОК ИЗМЕНЕНИЙ") % Demo.tag(Main.BUILD), false)
@@ -113,6 +115,11 @@ func draw(size: Vector2) -> void:
 		_overlay(size)
 	if not _ids().has(_focus):
 		_focus = _ids()[0] if not _items.is_empty() else &""
+
+
+## Left-column items of this build: the «Битва асов» test mode (AB-01) is not in the demo.
+func _list() -> Array:
+	return ITEMS.filter(func(it: Array) -> bool: return not (Demo.on and it[0] == &"menu_aces"))
 
 
 # ---------- Focus and actions ----------
@@ -195,6 +202,8 @@ func _logo() -> void:
 func _item(r: Rect2, id: StringName, label: String) -> void:
 	var note := ""
 	var badge := false
+	if id == &"menu_aces":
+		note = Loc.t("ТЕСТ · «ОСА» ПРОТИВ АСОВ · РЕАЛИСТИЧНЫЙ УРОН")
 	if id == &"menu_hangar":
 		badge = Profile.any_purchase()
 		note = Loc.t("ЗАПЧАСТИ %d") % Profile.parts()

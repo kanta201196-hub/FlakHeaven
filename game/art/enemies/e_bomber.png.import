@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cpfbm43t0sbbo"
-path="res://.godot/imported/fh_battle_e_postman_postman_normal.png-970b5cf69db0dbf9d4ce64a3a725d688.ctex"
+uid="uid://ca40tq4oc6qku"
+path="res://.godot/imported/e_bomber.png-ab5e92934e18518be1e7c1e8823a424a.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "7a5ee9f9c72a6d8164422df9eeff68c1"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_e_postman_postman_normal.png"
-dest_files=["res://.godot/imported/fh_battle_e_postman_postman_normal.png-970b5cf69db0dbf9d4ce64a3a725d688.ctex"]
+source_file="res://art/enemies/e_bomber.png"
+dest_files=["res://.godot/imported/e_bomber.png-ab5e92934e18518be1e7c1e8823a424a.ctex"]
 
 [params]
 
@@ -24,7 +21,7 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
