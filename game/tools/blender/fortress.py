@@ -7,6 +7,8 @@
 Точки уязвимости стоят там же, где Fortress.points[i].off (пикс. / 270; в Blender Y = −y экрана):
   turret_1 левое крыло (−6, −78), turret_2 правое крыло (−6, 78), turret_3 верхняя (48, 0),
   turret_4 кормовая (−112, 0), engine_l (14, −44), engine_r (14, 44).
+  Wing mode (--wing): dome turrets two per wing, turret_1/2 outer (−20, ∓92), turret_3/4 inner (−4, ∓48),
+  engines (14, ∓21).
 Подвижные узлы GLB:
   turret_1…turret_4 — башни (спаренные турели из turret_twin.py, S8-K1), поворот вокруг вертикали (стволы по +X);
   engine_l/r_prop  — соосные винты двигателей, вращаются вокруг оси X;
@@ -171,6 +173,108 @@ def top(x, y):
     return loc.z if hit else 0.0
 
 
+class HullUV:
+    """The hull's paint under a point (wing mode): a ray straight down onto the hull triangles gives the UV
+    there, so a fairing built on the skin carries on the camouflage and wear of the skin beneath it."""
+
+    def __init__(self, hulls):
+        from mathutils.bvhtree import BVHTree
+        self.tris = []   # [(uv a, uv b, uv c, corners a, b, c, material)]
+        verts, polys = [], []
+        for ob in hulls:
+            me = ob.data
+            me.calc_loop_triangles()
+            uvl = me.uv_layers.active.data
+            for lt in me.loop_triangles:
+                cs = [ob.matrix_world @ me.vertices[me.loops[li].vertex_index].co for li in lt.loops]
+                uvs = [Vector((*uvl[li].uv, 0.0)) for li in lt.loops]
+                polys.append((len(verts), len(verts) + 1, len(verts) + 2))
+                verts += cs
+                self.tris.append((uvs, cs, me.materials[lt.material_index]))
+        self.bvh = BVHTree.FromPolygons(verts, polys)
+
+    def at(self, x, y):
+        """(uv, material) of the hull skin at plan point (x, y); None off the hull"""
+        from mathutils.geometry import barycentric_transform
+        loc, _n, i, _d = self.bvh.ray_cast(Vector((x, y, 1.0)), Vector((0, 0, -1)))
+        if i is None:
+            return None
+        uvs, cs, m = self.tris[i]
+        uv = barycentric_transform(loc, cs[0], cs[1], cs[2], uvs[0], uvs[1], uvs[2])
+        return (uv.x, uv.y), m
+
+    def paint(self, ob, x0, y0, k=1.0):
+        """Give ob the hull material and UVs of the skin under it, its plan shrunk by k about (x0, y0)
+        (k < 1 keeps a small dome inside one camouflage patch instead of smearing a wide strip onto it)"""
+        mw = ob.matrix_world
+        me = ob.data
+        uvl = me.uv_layers.get("UVMap") or me.uv_layers.new(name="UVMap")
+        m = self.at(x0, y0)[1]
+        for li, lp in enumerate(me.loops):
+            p = mw @ me.vertices[lp.vertex_index].co
+            hit = self.at(x0 + (p.x - x0) * k, y0 + (p.y - y0) * k) or self.at(x0, y0)
+            uvl.data[li].uv = hit[0]
+        me.materials.clear()
+        me.materials.append(m)
+
+
+def ellipsoid(name, c, r, m, seg=32, rings=16):
+    """Upper half of an ellipsoid with radii r = (rx, ry, rz), base on c"""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=seg, v_segments=rings, radius=1.0)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.05], context="VERTS")
+    for v in bm.verts:
+        v.co = Vector((v.co.x * r[0], v.co.y * r[1], v.co.z * r[2]))
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    ob.location = c
+    bpy.context.view_layer.update()
+    return finish(ob, m)
+
+
+DOME_R, DOME_H = 0.018, 0.0102   # 60 % of the old twin turret (ring Ø 0.068 → dome Ø 0.036 of the hull length)
+
+
+def dome_turret(n, x, y, hull_uv):
+    """Wing-mode turret (Kanta 26.10, concept Б): a low dome on a fixed collar blended into the skin, with a gun
+    slit, twin short barrels, a seam band, a crown hatch and a sensor eye. The collar stays with the hull; the dome and its guns
+    are node turret_n, pivot on the vertical through the dome centre, barrels along +X, so render3d's yaw turns
+    the whole dome to track the player. Dome and collar wear the hull's own paint (HullUV)."""
+    z = top(x, y)
+    R, H = DOME_R, DOME_H
+    L.group = ""
+    collar = ellipsoid("dome_collar", (x, y, z - 0.0012), (R * 1.3, R * 1.3, H * 0.22), M_HULL)
+    hull_uv.paint(collar, x, y, 0.5)
+    cyl("dome_seam", (x, y, z + H * 0.03), R * 1.03, H * 0.08, M_DARK, "Z", 32)
+    g = "turret_%d" % n
+    L.group = g
+    L.pivots[g] = (x, y, z)
+    dome = ellipsoid("dome", (x, y, z), (R, R, H), M_HULL)
+    hull_uv.paint(dome, x, y, 0.8)
+    # panel seam round the shoulder and a flush access hatch on the crown, just proud of the skin
+    bpy.ops.mesh.primitive_torus_add(major_radius=R * 0.78, minor_radius=R * 0.014, major_segments=32, minor_segments=6,
+                                     location=(x, y, z + H * 0.64))
+    ob = bpy.context.object
+    ob.name = "dome_panel"
+    ob.scale = (1, 1, 0.6)
+    bpy.ops.object.transform_apply(scale=True)
+    finish(ob, M_DARK)
+    cyl("dome_hatch", (x - R * 0.15, y + R * 0.1, z + H * 0.985), R * 0.26, H * 0.05, M_DARK, "Z", 20)
+    # gun slit in the front face and twin barrels with muzzle brakes, dark gunmetal
+    box("dome_slit", (x + R * 0.62, y, z + H * 0.5), (R * 0.85, R * 0.62, H * 0.26), M_T_DARK, 0.0)
+    for s in (-1, 1):
+        by = y + s * R * 0.2
+        cyl("barrel", (x + R * 1.12, by, z + H * 0.5), 0.0012, R * 1.15, M_T_DARK, "X", 12)
+        cyl("muzzle", (x + R * 1.72, by, z + H * 0.5), 0.0018, R * 0.18, M_T_DARK, "X", 12)
+    # sensor eye on the shoulder, looking where the guns look
+    sphere("dome_eye_rim", (x + R * 0.55, y - R * 0.48, z + H * 0.72), R * 0.17, (1, 1, 0.55), M_T_DARK, 12)
+    sphere("dome_eye", (x + R * 0.62, y - R * 0.48, z + H * 0.74), R * 0.12, (1, 1, 0.6), M_T_GLASS, 12)
+    L.group = ""
+
+
 if WING:
     bpy.ops.import_scene.gltf(filepath=WING)
     for ob in list(bpy.context.scene.objects):
@@ -298,12 +402,17 @@ else:
         plate("fin_red", [(-0.462, s * 0.166), (-0.499, s * 0.166), (-0.499, s * 0.174), (-0.462, s * 0.174)], 0.115, 0.01, M_RED)
 
 # --- башни ---
-# wing mode: the points match Fortress.points in fortress.gd (wing turrets behind the leading edge, top turret
-# behind the cockpit, tail turret on the centre trailing point)
-TPOS = [at(-16, -78), at(-16, 78), at(22, 0), at(-40, 0)] if WING else [at(-6, -78), at(-6, 78), at(48, 0), at(-112, 0)]
-for n, (x, y) in enumerate(TPOS, 1):
-    z = top(x, y) + 0.004 if WING else (0.008 if n <= 2 else (FR + 0.006 if n == 3 else 0.042))
-    turret(n, x, y, z, 3 if n == 3 else 2)   # верхняя — ступень 3 (короба лент, прицел), остальные — 2
+if WING:
+    # the points match Fortress.points in fortress.gd: two dome turrets per wing (Kanta 26.10), outer pair first,
+    # then the inner pair; turret_3 (inner left) is the command turret
+    hull_uv = HullUV([o for o in L.parts if o.name.startswith("hull")])
+    for n, (x, y) in enumerate([at(-20, -92), at(-20, 92), at(-4, -48), at(-4, 48)], 1):
+        dome_turret(n, x, y, hull_uv)
+else:
+    TPOS = [at(-6, -78), at(-6, 78), at(48, 0), at(-112, 0)]
+    for n, (x, y) in enumerate(TPOS, 1):
+        z = 0.008 if n <= 2 else (FR + 0.006 if n == 3 else 0.042)
+        turret(n, x, y, z, 3 if n == 3 else 2)   # верхняя — ступень 3 (короба лент, прицел), остальные — 2
 
 # --- люки на спине (фаза 2): ракеты под створками ---
 HX0, HX1, HY = (-0.035, 0.035, 0.03) if WING else (-0.0, 0.12, 0.034)
