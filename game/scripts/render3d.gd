@@ -665,9 +665,12 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 			inst.scale = Vector3.ONE * float(tex.get_width())
 			inst.scale.y *= float(MODEL_H.get(tex.resource_path.get_file().get_basename(), 1.0))
 			root.add_child(inst)
+			# the hull mesh carries the hit flash and the elite tint: propellers (prop_*) come first in the
+			# transport and drone GLBs, and a flash on a propeller alone is not seen
 			for c in inst.find_children("*", "MeshInstance3D", true, false):
-				mi = c
-				break
+				if not String(c.name).begins_with("prop_"):
+					mi = c
+					break
 		if mi == null:
 			bm = null
 			mi = MeshInstance3D.new()
@@ -1313,8 +1316,8 @@ func _rotors(u: Unit3D, delta: float) -> void:
 		var r := inst.find_child("rotor", true, false) as MeshInstance3D
 		var tr := inst.find_child("tail_rotor", true, false) as MeshInstance3D
 		u.rot = [r, tr]
-		RotorBlur.attach(r, ROTOR_R, 5, ROTOR_HUB, false)
-		RotorBlur.attach(tr, TAIL_R, 3, TAIL_HUB, true)
+		RotorBlur.attach(r, ROTOR_R, 5, ROTOR_HUB, Vector3.AXIS_Y)
+		RotorBlur.attach(tr, TAIL_R, 3, TAIL_HUB, Vector3.AXIS_Z)
 	var rr: Array = u.rot
 	if rr[0] != null:
 		(rr[0] as Node3D).rotate_y(-delta * 9.0)
@@ -1323,11 +1326,20 @@ func _rotors(u: Unit3D, delta: float) -> void:
 
 
 ## 3.5-s8: винты транспортника (tools/blender/enemy_air_big.py, узлы prop_1…prop_4, ось — локальная X);
-## так же — винты «Буревестника» и «Чайки» (tools/model_lab/b2_sea_craft.py)
+## так же — винты «Буревестника» и «Чайки» (tools/model_lab/b2_sea_craft.py), дрона и транспортника из sf_recipes.py.
+## VIS-01 (Kanta 26.10): лопасти крутящегося винта читались отдельными палками, поэтому у винта-меша, как у
+## вертолёта, остаётся втулка, а лопасти заменяет диск размытия (RotorBlur). Радиус — по самому мешу винта
+## (наибольшее удаление от оси X), втулка — 15 % радиуса, так что подходит любая модель с узлами prop_*.
 func _props(u: Unit3D, delta: float) -> void:
 	if u.props3 == null:
 		var inst := (u.node as Node3D).get_child(0)
 		u.props3 = inst.find_children("prop_*", "Node3D", true, false)
+		for p in u.props3:
+			var mi := p as MeshInstance3D
+			if mi != null and mi.mesh != null:
+				var bb := mi.mesh.get_aabb()
+				var r := maxf(maxf(absf(bb.position.y), absf(bb.end.y)), maxf(absf(bb.position.z), absf(bb.end.z)))
+				RotorBlur.attach(mi, r, 3, r * 0.15, Vector3.AXIS_X)
 	for p in u.props3:
 		(p as Node3D).rotate_x(delta * 22.0)
 
