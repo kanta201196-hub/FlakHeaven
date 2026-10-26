@@ -901,6 +901,19 @@ const C_RESCUE := Color(0.45, 1.0, 0.55)
 const C_FORT := Color(1.0, 0.42, 0.32)   # FA-01: the enemy base — red, apart from the AA site's blue
 
 
+## Caption of an activity target, drawn on the HUD over the world: above the target, or under it
+## when the task plate `avoid` covers that spot (s12: «Транспортник» hid under «ОХОТА»).
+func _world_caption(xf: Transform2D, wp: Vector2, radius: float, s: String, col: Color, avoid: Rect2) -> void:
+	var top := _ws(xf, wp + Vector2(0.0, -radius - 24.0))
+	var bot := _ws(xf, wp + Vector2(0.0, radius + 40.0))
+	if not top.is_finite() or not bot.is_finite():
+		return
+	var pos := top
+	if Rect2(top.x - 120.0, top.y - 20.0, 240.0, 26.0).intersects(avoid):
+		pos = bot
+	_text(Vector2(pos.x - 120.0, pos.y), s, 18, col, HORIZONTAL_ALIGNMENT_CENTER, 240.0)
+
+
 ## Активности: указатели на позицию ПВО и аса-соперника, радиопереговоры, «ХВОСТ!»
 func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	var xf := m.get_viewport().get_canvas_transform()
@@ -970,6 +983,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 		elif node is Transport:
 			var tr := node as Transport
 			_edge_arrow(_ws(xf, tr.global_position), rect, size, C_TRANSPORT, 1.8, Loc.t("транспортник %d м") % (int(p.global_position.distance_to(tr.global_position)) / 10))
+			_world_caption(xf, tr.global_position, tr.radius, "Транспортник", Color(1, 0.85, 0.6), Rect2((size.x - 980.0) / 2.0, ay, 980.0, 62.0))
 			_ctext(ay + 26.0, Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], 22, Color(1.0, 0.75, 0.45))
 			_ctext(ay + 52.0, "Награда: груз — запчасти и ремкомплекты", 17, Color(0.85, 0.75, 1.0))
 		elif node is RivalAce:
