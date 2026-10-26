@@ -6,6 +6,9 @@ extends CanvasLayer
 
 var _sliders := {}
 var _values := {}
+var _rows := {}
+## True while the panel shows only the «Битва асов» flight sliders (tester build in the aces mode)
+var _aces_only := false
 
 
 func _ready() -> void:
@@ -65,6 +68,7 @@ func _ready() -> void:
 		row.add_child(s)
 		row.add_child(v)
 		vb.add_child(row)
+		_rows[key] = row
 		_sliders[key] = s
 		_values[key] = v
 
@@ -77,7 +81,12 @@ func _ready() -> void:
 	var reset := Button.new()
 	reset.text = "Сбросить к стандартным"
 	reset.pressed.connect(func() -> void:
-		Tuning.reset()
+		if _aces_only:
+			for k in _rows:
+				if String(k).begins_with("aces_"):
+					Tuning.set_param(k, float(Tuning.RANGES[k][3]))
+		else:
+			Tuning.reset()
 		_refresh())
 	buttons.add_child(reset)
 	var close := Button.new()
@@ -86,9 +95,14 @@ func _ready() -> void:
 	buttons.add_child(close)
 
 
-func toggle() -> void:
+## Opens or closes the panel. `aces_only` shows just the `aces_*` flight sliders: the tester build has no F1
+## panel, but Kanta tunes the «Битва асов» turn feel there (2026-10-26).
+func toggle(aces_only := false) -> void:
 	visible = not visible
 	if visible:
+		_aces_only = aces_only
+		for k in _rows:
+			(_rows[k] as Control).visible = not aces_only or String(k).begins_with("aces_")
 		_refresh()
 	get_tree().paused = visible
 

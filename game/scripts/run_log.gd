@@ -60,7 +60,7 @@ static func write(m: Main, outcome: String) -> void:
 	row.append(Telemetry.LOG_VER)
 	row.append_array(m.tele.row(m))
 	# тест 3.5-s5: операция и сложность — без них прочность и урон врагов в логе не сравнить
-	row.append("%s/%s" % [Campaign.op()["id"], Campaign.diff()["title"]])
+	row.append("aces/test" if Main.aces() else "%s/%s" % [Campaign.op()["id"], Campaign.diff()["title"]])
 	row.append(aces(m))
 	row.append(kv(m.stats.get("taken_kind", {})))
 	row.append(" | ".join(m.tele.timeline))

@@ -35,6 +35,9 @@ func result(m: Main, size: Vector2) -> void:
 		UiStyle.OK if evac else UiStyle.DANGER, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	var sub := Loc.t("ОПЕРАЦИЯ «%s» · «%s» · ЭКИПАЖ «%s»") % [Loc.t(Campaign.op()["title"]).to_upper(),
 		Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper(), String(Profile.cls(m.cls_id)["callsign"]).to_upper()]
+	if Main.aces():
+		sub = Loc.t("БИТВА АСОВ · ТЕСТ · «%s» · ЭКИПАЖ «%s»") % [Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper(),
+			String(Profile.cls(m.cls_id)["callsign"]).to_upper()]
 	UiStyle.text(ctrl, UiStyle.head_font(700, 6), Vector2(0, 240), sub, UiStyle.FS_LABEL, UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	var op := op_line(m)
 	if not op.is_empty():
@@ -368,6 +371,9 @@ func _grouped(v: int) -> String:
 
 ## Campaign operation result: [text, colour] or [] when the sortie was not an operation run.
 static func op_line(m: Main) -> Array:
+	if Main.aces():   # «Битва асов»: the score; the test pays no parts
+		return [Loc.t("Асов сбито: %d · ушло: %d · в бою %d:%02d · запчасти в тесте не начисляются") % [m.run.aces_down,
+			m.run.aces_gone, int(m.run_time) / 60, int(m.run_time) % 60], UiStyle.ACCENT_SOFT]
 	var o: Dictionary = m.op_result
 	if o.is_empty():
 		return []

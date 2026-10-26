@@ -1139,14 +1139,15 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт плавно ниже и меньше на экране
 			var ra := _relief_alt(u, p.global_position, p.velocity, 1.0, sd)
 			var y: float = maxf(ra - Tuning.g("dive_depth") * dk, _ground_floor(p.global_position, Tuning.g("plane_len") * p.size * 0.5))
-			_place(u, p.global_position, p.heading, p.bank * 0.55, roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), u.pitch - 0.2 * p.dive_pitch())
+			_place(u, p.global_position, p.heading, p.bank * (deg_to_rad(Tuning.g("aces_bank")) if Main.aces() else 0.55), roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), u.pitch - 0.2 * p.dive_pitch())
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
 			# S9-16: на «Звуковом ударе» (ram_t) — тот же огонь и плотный след, что на форсаже
 			u.ab = move_toward(float(u.ab), 1.0 if p.ab_t > 0.0 or p.ram_t > 0.0 else 0.0, sd * 4.0)
 			var ab: float = u.ab
 			PlaneFx.update(u, sd, ab)
+			# «Битва асов»: след живёт дольше — на экране остаются целые дуги виражей, как в Sky Knights
 			# M-39 (Э-2): инверсия белая, у сопла узкая и плотная, расплывается шире и тает быстрее (жизнь короче)
-			var st := [lerpf(0.32, 0.55, ab), lerpf(3.0, 5.0, ab) * p.size, lerpf(18.0, 28.0, ab) * p.size, lerpf(1.2, 1.8, ab), 12.0]
+			var st := [lerpf(0.32, 0.55, ab), lerpf(3.0, 5.0, ab) * p.size, lerpf(18.0, 28.0, ab) * p.size, Tuning.g("aces_trail") if Main.aces() else lerpf(1.2, 1.8, ab), 12.0]
 			var pts := PlaneFx.trail_points(u)
 			for i in pts.size():
 				_trails.emit("p%d" % i, pts[i], st)
@@ -1738,10 +1739,11 @@ func _sink_foam(id: int, gp: Vector3, len_px: float, on: bool) -> void:
 	d["t"] = 0.0
 
 
-## Подвижные части «Крепости» (tools/blender/fortress.py): башни смотрят на игрока, винты крутятся,
+## Подвижные части «Крепости» (tools/blender/fortress.py): башни смотрят на игрока (ракета на куполе — с ней), винты крутятся,
 ## выбитые точки (Fortress.parts_down) пропадают или останавливаются; с фазы 2 открываются люки
 ## и поднимаются ракеты, в фазе 3 откидываются панели обшивки над раскалённым ядром.
-const FORTRESS_NODES := ["turret_1", "turret_2", "turret_3", "turret_4", "engine_l_prop", "engine_l_prop2",
+const FORTRESS_NODES := ["turret_1", "turret_2", "turret_3", "turret_4", "turret_1_missile", "turret_2_missile",
+	"turret_3_missile", "turret_4_missile", "engine_l_prop", "engine_l_prop2",
 	"engine_r_prop", "engine_r_prop2", "hatch_l", "hatch_r", "bay_l", "bay_r", "hull_l", "hull_r", "core"]
 
 
@@ -1763,6 +1765,8 @@ func _fortress_parts(u: Unit3D, f: Fortress, ang: float, delta: float) -> void:
 			continue
 		var t := parts[nm] as Node3D
 		t.visible = not f.parts_down.has(nm)
+		if parts.has(nm + "_missile") and i < f.points.size():   # the dome's rail missile, gone while it reloads
+			(parts[nm + "_missile"] as Node3D).visible = float(f.points[i].get("msl", 0.0)) <= 0.0
 		if t.visible and p != null and i < f.points.size():
 			var to := p.global_position - (f.global_position + (f.points[i]["off"] as Vector2).rotated(ang))
 			t.rotation.y = lerp_angle(t.rotation.y, -wrapf(to.angle() - ang, -PI, PI), 1.0 - exp(-delta * 6.0))

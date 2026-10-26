@@ -307,6 +307,13 @@ func _counter(r: Rect2, value: String, caption: String, col: Color) -> float:
 ## [done, text, reward] — reward shows only numbers the game really pays.
 func _goal_rows(m: Main) -> Array:
 	var rows: Array = []
+	if Main.aces():   # «Битва асов»: the score instead of operation goals
+		rows.append([false, Loc.t("асов сбито: %d") % m.run.aces_down, ""])
+		if m.run.aces_gone > 0:
+			rows.append([false, Loc.t("асов ушло: %d") % m.run.aces_gone, ""])
+		var nx := int(ceilf(m.spawner.ace_next_in())) if m.spawner != null else 0
+		rows.append([false, Loc.t("ас через %d:%02d") % [nx / 60, nx % 60] if nx > 0 else Loc.t("ас в бою!"), ""])
+		return rows
 	var t := int(m.run_time)
 	var left := maxi(0, 900 - t)
 	var op := Campaign.op()
