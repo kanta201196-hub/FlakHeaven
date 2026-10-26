@@ -1875,6 +1875,9 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 						(wmi.get_child(0) as Node3D).visible = false
 			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
+				var pods := wmi.get_node_or_null("pods") as Node3D   # S12: «Стальной ёж» launch pods on the turret
+				if pods != null:
+					pods.visible = p.syn.has("hedgehog")
 				var idle := yaw
 				# правка 3.5-s4 (п. 13): стволы смотрят туда же, куда наведена турель в бою (aim), без цели —
 				# плавно возвращаются в походное положение; поворот с той же ограниченной скоростью

@@ -41,6 +41,16 @@ static func make(weapon: String, t: int, side := "", cls := "", evo := false, pl
 			cmi.name = "cabin"
 			cmi.mesh = cab
 			mi.add_child(cmi)
+	# S12: «Стальной ёж» mini-missile pods (GLB node pods), hidden until the card is open (Render3D._sync_weapons);
+	# added last, so child 0 stays the pylon or the tail cabin
+	if weapon == "turret" and tm != null:
+		var pods := turret_model(cls, t, side, evo, plvl, "pods")
+		if pods != null:
+			var pmi := MeshInstance3D.new()
+			pmi.name = "pods"
+			pmi.mesh = pods
+			pmi.visible = false
+			mi.add_child(pmi)
 	return mi
 
 
@@ -52,8 +62,11 @@ const TURRET_MODELS := {
 	# 3 — + короба лент и прицельная головка; эволюция «Дикобраз» — 4 ствола и антенна наведения
 	"bomber": {"file": "res://models/turrets/turret_kit_t%d.glb", "evo": "res://models/turrets/turret_kit_quad.glb",
 		"s": 0.3, "muzzle": Vector3(2.09, 0.43, 0.0),
-		# окраска — средний тон обшивки «Кита 1» / «Кита 2» (Т-2: песочная окраска класса, splinter_camo.py kit)
-		"body": [Color(0.45, 0.39, 0.27), Color(0.46, 0.4, 0.28)],
+		# S12 (Kanta 26.10: the upgrade must show): tier 1 has short barrels; 2, 3 and the evolution the long ones
+		"muzzle_t": [Vector3(1.84, 0.43, 0.0), Vector3(2.09, 0.43, 0.0), Vector3(2.09, 0.43, 0.0)],
+		# body — the ring collar under the turret (_with_ring); S12: the sand base of the baked turret paint
+		# (turret_paint.py, livery SAND_CAMO), so the collar continues the turret
+		"body": [Color(0.68, 0.6, 0.44), Color(0.68, 0.6, 0.44)],
 		# корма (пример владельца 16.10): кабина стрелка с фонарём и шаровая установка под килем
 		"tail": "res://models/turrets/turret_kit_tail_ball_t%d.glb", "cabin": "res://models/turrets/turret_kit_tail_cabin.glb",
 		"muzzle_tail": Vector3(1.36, 0.0, 0.0),
@@ -66,7 +79,7 @@ const TURRET_MODELS := {
 	"attacker": {"file": "res://models/turrets/turret_grach_t%d.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
 		"muzzle_t": [Vector3(0.792, 0.282, 0.0), Vector3(1.17, 0.34, 0.18), Vector3(1.16, 0.403, 0.0)],
 		"k": [0.88, 1.0, 1.12],
-		"body": [Color(0.3, 0.3, 0.24), Color(0.31, 0.31, 0.28)],
+		"body": [Color(0.68, 0.6, 0.44), Color(0.68, 0.6, 0.44)],   # S12: ring collar in the turret's sand base
 		"ring": {"sides": ["top"], "r": RING_BASE_R, "depth": 1.0}},
 }
 
@@ -262,7 +275,8 @@ static func weapon_model(weapon: String, t: int, evo := false, hq := false) -> M
 	return _glb_mesh(file, 1.0, Color(), "glb_" + file.get_file().get_basename() + ("_hq" if file.begins_with(HQ_DIR) else ""))
 
 
-## part: "" — вся турель (бой), "body" — без люльки со стволами, "guns" — только они в своих осях (шарнир — 0)
+## part: "" — вся турель (бой), "body" — без люльки со стволами, "guns" — только они в своих осях (шарнир — 0),
+## "pods" — only the «Стальной ёж» launch pods, in the turret axes (null when the model has none)
 static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 1, part := "") -> Mesh:
 	var file := turret_file(cls, t, side, evo)
 	if file == "":
@@ -272,7 +286,7 @@ static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 
 	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
 	var m := _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s%s" % [cls, file.get_file(), tint.to_html(), part], part)
 	var ring: Dictionary = spec.get("ring", {})
-	if m != null and part != "guns" and side in ring.get("sides", []):
+	if m != null and part != "guns" and part != "pods" and side in ring.get("sides", []):
 		var ks: Array = spec.get("k", [1.0, 1.0, 1.0])
 		var rs := float(spec["s"]) * float(ks[clampi(t, 1, 3) - 1]) * float(ring["r"]) / RING_BASE_R
 		return _with_ring(m as ArrayMesh, rs, tint, float(ring["depth"]))
@@ -348,24 +362,31 @@ static func _with_ring(src: ArrayMesh, s: float, tint: Color, depth := 1.0) -> A
 
 
 ## Меш из GLB: все части в один ArrayMesh с масштабом s; материалы «body» перекрашиваются в tint
-## part (турели, тест 3.5-s8): "" — корпус и узел «guns» вместе, "body" — без него, "guns" — только он, в своих осях
+## (the S12 baked turret paint is named turret_paint* and keeps its own colours)
+## part (турели, тест 3.5-s8): "" — корпус и узел «guns» вместе, "body" — без него, "guns" — только он, в своих осях;
+## "pods" — only the node "pods" (S12), which is never part of the other variants
 static func _glb_mesh(file: String, s: float, tint: Color, key: String, part := "") -> Mesh:
 	if _cache.has(key):
 		return _cache[key]
 	var root: Node = (load(file) as PackedScene).instantiate()
 	var src: MeshInstance3D = null
 	for c in root.find_children("*", "MeshInstance3D", true, false):
-		src = c
-		break
+		if c.name != "guns" and c.name != "pods":
+			src = c
+			break
 	if src == null:
 		root.free()
 		return null
 	var srcs: Array = []   # [меш, преобразование в оси модели]
 	var guns := root.find_child("guns", true, false) as MeshInstance3D
 	var sc := Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3.ZERO)
-	if part != "guns":
+	if part == "pods":
+		var pods := root.find_child("pods", true, false) as MeshInstance3D
+		if pods != null:
+			srcs.append([pods.mesh, sc * _rel_xf(pods, root)])
+	elif part != "guns":
 		srcs.append([src.mesh, sc * _rel_xf(src, root)])
-	if guns != null and guns != src and part != "body":
+	if guns != null and guns != src and part != "body" and part != "pods":
 		var gx := _rel_xf(guns, root)
 		if part == "guns":
 			gx.origin = Vector3.ZERO
