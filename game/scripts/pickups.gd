@@ -120,6 +120,9 @@ var _no_uv := PackedVector2Array()
 func _draw_layer() -> void:
 	var view := (get_viewport().get_canvas_transform() * get_global_transform()).affine_inverse() * get_viewport_rect()
 	view = view.grow(_CULL_MARGIN)
+	if Render3D.enabled and Render3D.view_now.has_area():
+		# the tilted camera shows the 2D world through the combat layer, farther than this viewport's rect
+		view = view.merge(Render3D.view_now)
 	for it in items:
 		var p: Vector2 = it["p"]
 		if not view.has_point(p):
