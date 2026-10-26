@@ -677,6 +677,15 @@ func _make_points() -> Array:
 		pts.append({"name": "oasis_close", "pos": found["o_oasis"] + Vector2(0, 600), "zoom": 2.4})
 		# VIS-01 review (26.10): the palm clumps and the well filling the frame
 		pts.append({"name": "oasis_palms", "pos": found["o_oasis"], "ground_dist": 260.0, "wait": 3.0})
+		# VIS-01 (26.10): the tamarisk bushes among the palms, centred on the settled oasis (Terrain3D moves it to
+		# the river, so found["o_oasis"] is off to one side): the whole oasis and a close-up
+		var osp: Vector2 = found["o_oasis"]
+		for o: Dictionary in placed:
+			if o["name"] == "o_oasis" and o["pos"] == found["o_oasis"] and ter != null:
+				var sp := ter._settle_spot(o)
+				osp = sp if sp.is_finite() else osp
+		pts.append({"name": "oasis_whole", "pos": osp, "ground_dist": 650.0, "wait": 3.0})
+		pts.append({"name": "oasis_bushes", "pos": osp + Vector2(0, 120), "ground_dist": 300.0, "wait": 3.0})
 	# VIS-01 review: a big rock group (outcrop, boulders, spires) up close, the one farthest from any settlement
 	var rk := [-1.0, Vector2.INF]
 	for o: Dictionary in placed:

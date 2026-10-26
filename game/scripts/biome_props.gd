@@ -35,7 +35,13 @@ const KINDS := {
 	# VIS-01 (Kanta 26.10, oasis: models 66 to 70): date palms and the well of the oasis (tools/blender/oasis_models.py)
 	"palm": ["b12_date_palm", 26.0, 40.0],
 	"well": ["b13_oasis_well", 10.0, 12.0],
+	# VIS-01 (Kanta 26.10): tamarisk bushes of the oasis and by the village streams (oasis_models.py --bush), 3-5 m;
+	# its import has generate_lods off (the automatic LOD dropped the leaf cards, leaving bare branches)
+	"bush": ["b14_oasis_bush", 18.0, 28.0],
 }
+
+## Kinds drawn with a per-instance colour (_tint): a slight per-bush shade so a thicket is not one flat colour
+const TINTED := ["bush"]
 
 ## T4-05: облегчённые деревья для пресетов ниже «Максимального» (11–14 тыс. треуг. у полной модели).
 ## 3.4-t1 (п. 17): вместо зелёного шара — «карточки» из картинок той же модели Meshy: две скрещённые
@@ -322,6 +328,7 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 					var q := p0 + Vector2.from_angle(a0) * rr + Vector2.from_angle(a0 + PI / 2) * (i - 3.5) * 26.0
 					if _zone(q, ctx) == "floor":
 						_add(rng, put, "palm" if oasis else "poplar", q, [], ctx)
+				_water_bushes(obj, put, ctx)
 				if obj["name"] == "o_village":
 					for i in rng.randi_range(1, 2):
 						_ring_zone(rng, put, "yurt", p0, r0 * 1.2, r0 * 1.7, ["floor", "fan"], ctx)
@@ -431,13 +438,16 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = mesh
+		mm.use_colors = kind in TINTED   # must be set before instance_count
 		mm.instance_count = arr.size()
 		for j in arr.size():
 			mm.set_instance_transform(j, arr[j])
+		if mm.use_colors:
+			_tint(mm, arr)
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.name = kind
-		var small: bool = kind in ["shrub", "boulders", "boulders_b", "poplar", "orchard"] or kind in SeaProps.SMALL
+		var small: bool = kind in ["shrub", "bush", "boulders", "boulders_b", "poplar", "orchard"] or kind in SeaProps.SMALL
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
 		var no_shadow := Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if no_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -687,3 +697,47 @@ func _add_vehicle(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: 
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)
+
+
+## VIS-01 (Kanta 26.10): tamarisk bushes ("bush") in the oasis gardens and on its river bank, and a few on the banks
+## of a village's streams. They have their own rng seeded by the object's place, so the rest of the chunk (trees,
+## rocks, wrecks, yurts) is placed exactly as before; houses, yards and streets (ground_mask x) stay clear.
+func _water_bushes(obj: Dictionary, put: Dictionary, ctx: Dictionary) -> void:
+	var p0: Vector2 = obj["pos"]
+	var brng := RandomNumberGenerator.new()
+	brng.seed = hash(Vector2i(roundi(p0.x), roundi(p0.y))) ^ 0xb05e
+	var oasis: bool = obj["name"] == "o_oasis"
+	var sz0 := float(obj["size"])
+	var vr := int(obj.get("var", 0))
+	var want := brng.randi_range(9, 13) if oasis else brng.randi_range(3, 6)
+	var n := 0
+	for i in 200:
+		if n >= want:
+			break
+		var q := p0 + Vector2.from_angle(brng.randf() * TAU) * sz0 * (0.8 if oasis else 1.3) * sqrt(brng.randf())
+		var gm := AdobeBuild.ground_mask(obj["name"], vr, (q - p0).rotated(-float(obj["rot"])) / sz0)
+		if gm.x > 0.3:
+			continue
+		var z := _zone(q, ctx)
+		if not (z == "bank" or (oasis and z in ["floor", "fan"] and gm.y > 0.15)):
+			continue
+		n += 1
+		_add(brng, put, "bush", q, [], ctx)
+		if brng.randf() < 0.5:   # tamarisks grow in small thickets
+			_add(brng, put, "bush", q + Vector2.from_angle(brng.randf() * TAU) * brng.randf_range(14.0, 22.0), [], ctx)
+
+
+## Per-instance shade of a TINTED kind: brightness 0.88-1.0 and a slight shift between greener and yellower, from
+## the instance's place (stable between visits of a chunk). The mesh's materials multiply the albedo by COLOR
+## (the bush's own vertex colours carry the dusty lower leaves; the instance colour multiplies them).
+func _tint(mm: MultiMesh, arr: Array) -> void:
+	for si in mm.mesh.get_surface_count():
+		var mat := mm.mesh.surface_get_material(si) as BaseMaterial3D
+		if mat != null:
+			mat.vertex_color_use_as_albedo = true
+	for j in arr.size():
+		var o: Vector3 = (arr[j] as Transform3D).origin
+		var h := absi(hash(Vector2i(roundi(o.x), roundi(o.z))))
+		var b := 0.88 + 0.12 * float(h % 97) / 96.0
+		var g := float((h >> 8) % 89) / 88.0   # 0 greener .. 1 yellower
+		mm.set_instance_color(j, Color(b * lerpf(0.94, 1.0, g), b, b * lerpf(1.0, 0.86, g)))
