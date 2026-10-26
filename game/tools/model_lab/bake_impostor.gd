@@ -6,7 +6,7 @@ extends SceneTree
 ## Результат — game/models/biome/<имя>_side.png и <имя>_top.png (256 × 256).
 ## Только некоторые модели: ... -s res://tools/model_lab/bake_impostor.gd -- b05_orchard_tree
 
-const MODELS := ["b04_poplar", "b05_orchard_tree"]
+const MODELS := ["b04_poplar", "b05_orchard_tree", "b12_date_palm"]
 const SIZE := 256
 
 var _vp: SubViewport

@@ -607,6 +607,8 @@ func _make_points() -> Array:
 		pts.append({"name": "aa_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.3, "convoy": true, "enemies": true, "ground": true, "site_off": Vector2(-380, -40), "wait": 2.5})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
+	if found.has("o_oasis"):   # VIS-01: the oasis palms and well close up (south of it: the tilted camera looks north)
+		pts.append({"name": "oasis_close", "pos": found["o_oasis"] + Vector2(0, 600), "zoom": 2.4})
 	if found.has("o_fort"):   # FA-01: the fortified-area base — whole fort and a tower launcher close up
 		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "off": Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
 		pts.append({"name": "fort_area_close", "pos": found["o_fort"], "off": Vector2(0, 60), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})

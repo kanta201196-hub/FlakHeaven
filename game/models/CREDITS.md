@@ -55,3 +55,5 @@
 | weapons/aam_1..3, weapons/hq/aam_1..3 (наводящиеся ракеты, ступени 1–3) | Russian weapon pack | Rhine_Lab_Muelsyse | https://sketchfab.com/3d-models/af00b7135a184ecfb2812a0e54458a8a | CC BY 4.0, изменено |
 | hangar/stand_missile_cart (тележка для ракет «воздух-воздух» в ангаре) | cart with "R-27ET" A-A soviet missiles | Tiltow | https://sketchfab.com/3d-models/fadb1f9ef8cd4425aeada7d918255200 | CC BY 4.0, изменено |
 | hangar/stand_loader (самоходный погрузчик для ракет «воздух-земля» в ангаре) | Weapons Loader | Sengchor | https://sketchfab.com/3d-models/016ca0f9b98b4ffbbe0e55f235bef496 | CC BY 4.0, изменено |
+| biome/b12_date_palm (финиковые пальмы оазиса в Нагорье; облегчённые карточки b12_date_palm_side/top) | Date Palm | evolveduk | https://sketchfab.com/3d-models/11acf710e6c149daa8d6fb8cdc5d087f | CC BY 4.0, изменено |
+| biome/b13_oasis_well (колодец во дворе оазиса) | Desert Environment Well (first Zbrush asset) | Bhaddou | https://sketchfab.com/3d-models/45e65e48986141f88d18d0f9ebd18994 | CC BY 4.0, изменено |
