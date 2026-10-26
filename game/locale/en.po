@@ -7417,6 +7417,9 @@ msgstr "Ace down! Total: %d"
 msgid "Асов сбито: %d · ушло: %d · в бою %d:%02d · запчасти в тесте не начисляются"
 msgstr "Aces down: %d · got away: %d · in combat %d:%02d · the test pays no parts"
 
+msgid "ПОДГОТОВКА"
+msgstr "PREFLIGHT"
+
 msgid "БИТВА АСОВ"
 msgstr "ACES BATTLE"
 

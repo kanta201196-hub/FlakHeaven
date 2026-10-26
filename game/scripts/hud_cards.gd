@@ -112,6 +112,9 @@ func _header(m: Main, size: Vector2, pair: bool) -> void:
 	if pair:
 		small = Loc.t("МАСТЕРСТВО ОРУЖИЯ")
 		big = Loc.t("ИЛИ-ИЛИ")
+	elif Main.aces():   # «Битва асов»: the draft before takeoff, then a card for every ace shot down
+		small = Loc.t("БИТВА АСОВ")
+		big = Loc.t("ПОДГОТОВКА") if m.run.aces_down == 0 else Loc.t("ЗА АСА")
 	elif m.offer_rare:
 		small = Loc.t("НАГРАДА %s") % (m.run.rare_reasons[0] if not m.run.rare_reasons.is_empty() else "")
 		big = Loc.t("РЕДКИЕ КАРТОЧКИ")

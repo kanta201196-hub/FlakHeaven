@@ -65,6 +65,8 @@ Done now (aces mode only): first ace 10 s, every 25 s, up to 3; interceptors ≤
 `LIGHT_BULLET_SHARE` 4 % for non-ace bullets; ace flares chance 0.5, 2 charges; F = flare salvo every 6 s
 (`FLARE_CD`, the 2nd skill slot is off in the mode); start hint names F / E / Space against missiles.
 
-Waiting for Kanta: the build loop. Options — 1 (recommended) draft of 8 cards before takeoff + 1 card per ace
+Build loop — Kanta chose option 1 (26.10): `AcesBalance.DRAFT_PICKS` 8 picks before takeoff
+(`RunState.add_picks` at `start_run`; the card screen pauses the clock), `ace_picks()` one card per ace
+shot down, `CARDS_MAX` 20 per sortie; header «БИТВА АСОВ · ПОДГОТОВКА» / «ЗА АСА». Options were: Options — 1 (recommended) draft of 8 cards before takeoff + 1 card per ace
 shot down; 2 two cards at start + 2 per ace; 3 a 20-card draft before takeoff, nothing in flight.
 Page: https://claude.ai/artifact/TcfsADTtKPk9ZH7y6s7gyc
