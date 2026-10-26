@@ -99,7 +99,7 @@ func _die() -> void:
 
 func _draw() -> void:
 	_draw_sectors()
-	if not draw_enemy_sprite("e_transport", LEN):
+	if not draw_enemy_sprite("e_bomber", LEN):
 		var xf := Transform2D(heading, Vector2.ZERO)
 		var c := body_color(Color(0.42, 0.45, 0.4))
 		draw_colored_polygon(xf * PackedVector2Array([Vector2(48, 0), Vector2(34, 8), Vector2(8, 9), Vector2(0, 62), Vector2(-12, 62), Vector2(-14, 9),

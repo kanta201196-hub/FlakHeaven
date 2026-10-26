@@ -7,6 +7,8 @@
 Точки уязвимости стоят там же, где Fortress.points[i].off (пикс. / 270; в Blender Y = −y экрана):
   turret_1 левое крыло (−6, −78), turret_2 правое крыло (−6, 78), turret_3 верхняя (48, 0),
   turret_4 кормовая (−112, 0), engine_l (14, −44), engine_r (14, 44).
+  Wing mode (--wing): dome turrets two per wing, turret_1/2 outer (−20, ∓92), turret_3/4 inner (−4, ∓48),
+  engines (14, ∓21).
 Подвижные узлы GLB:
   turret_1…turret_4 — башни (спаренные турели из turret_twin.py, S8-K1), поворот вокруг вертикали (стволы по +X);
   engine_l/r_prop  — соосные винты двигателей, вращаются вокруг оси X;
@@ -25,6 +27,10 @@ args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 OUT = args[0]
 SPRITE = args[args.index("--sprite") + 1] if "--sprite" in args else ""
 PREVIEW = "--nopreview" not in args   # Cycles previews take minutes on a CPU
+# VIS-01 (Kanta 26.10): --wing <glb> builds the flying-wing «Крепость» on the reworked CC BY hull (sf_recipes
+# e_fortress_hull) at the old span instead of the code-built fuselage; turrets, hatches and core sit on its top skin
+WING = args[args.index("--wing") + 1] if "--wing" in args else ""
+WING_SCALE = 0.404   # hull span 2.436 at length 1 → the old span 0.98
 L.reset()
 # корпус матовый (правило Kanta 19.10, S8-K1): краска без блеска, тон приглушён, полосы — тусклый сурик;
 # лёгкая грязь — множитель цвета по вершинам (атрибут Col → glTF COLOR_0, см. grime() перед сборкой)
@@ -160,130 +166,285 @@ def turret(n, x, y, z, tier):
     L.group = ""
 
 
-# --- фюзеляж: длинный, остеклённый нос, на корме сужается под кормовую башню ---
-loft("fuselage", [(0.5, 0.004, 0.004, -0.004), (0.49, 0.016, 0.015, -0.004), (0.475, 0.027, 0.026, -0.003),
-                  (0.455, 0.037, 0.036, -0.002), (0.43, 0.046, 0.045, -0.001), (0.39, 0.053, 0.053, 0.0),
-                  (0.33, 0.057, 0.058, 0.0), (0.25, FR, FR + 0.002, 0.0), (-0.1, FR, FR + 0.002, 0.0), (-0.22, FR * 0.97, FR, 0.001),
-                  (-0.3, 0.052, 0.051, 0.003), (-0.38, 0.043, 0.041, 0.006), (-0.44, 0.032, 0.03, 0.01), (-0.5, 0.012, 0.012, 0.014)], M_HULL, 36)
-sphere("nose_glass", (0.468, 0, -0.002), 0.031, (1.1, 1.0, 0.9), M_GLASS, 28)
-for k in range(5):   # переплёт остеклённого носа
-    a = math.pi * (k + 1) / 6
-    tube("nose_frame", [(0.452, math.cos(a) * 0.035, -0.002 + math.sin(a) * 0.033), (0.49, math.cos(a) * 0.012, -0.002 + math.sin(a) * 0.011)], 0.0012, M_DARK)
-for x in (0.452, 0.472):
-    cyl("nose_ring", (x, 0, -0.002), 0.036 if x < 0.46 else 0.029, 0.002, M_DARK, "X", 28)
-sphere("cockpit", (0.36, 0, 0.044), 0.03, (1.9, 1.0, 0.6), M_GLASS, 24)
-for x in (0.33, 0.35, 0.37, 0.39):   # переплёт фонаря
-    k = math.sqrt(max(0.0, 1 - ((x - 0.36) / 0.057) ** 2))
-    bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.05, major_segments=24, minor_segments=6,
-                                     location=(x, 0, 0.044), rotation=(0, math.pi / 2, 0))
-    fr = bpy.context.object
-    bpy.ops.object.transform_apply(rotation=True)
-    fr.scale = (0.03, 0.0305 * k, 0.0185 * k)
-    bpy.ops.object.transform_apply(scale=True)
-    finish(fr, M_DARK)
-tube("canopy_spine", [(0.305, 0, 0.0545), (0.415, 0, 0.0545)], 0.0012, M_DARK)
-# панели обшивки: кольцевые швы и продольные линии лючков
-for x in (0.42, 0.2, 0.08, -0.05, -0.17, -0.27, -0.38):
-    r = FR if -0.22 < x < 0.25 else (0.05 if x > 0 else 0.046)
-    cyl("seam", (x, 0, 0.0), r * 1.004, 0.0015, M_DARK, "X", 36)
-for s in (1, -1):
-    box("side_hatch", (0.27, s * FR * 0.99, -0.012), (0.03, 0.002, 0.024), M_DARK, 0.0)
-    box("side_line", (0.0, s * FR * 1.0, 0.018), (0.4, 0.0015, 0.0015), M_DARK, 0.0)
-cyl("antenna", (0.2, 0, FR + 0.012), 0.0015, 0.024, M_STEEL, "Z", 8)
-box("spine", (-0.02, 0, FR + 0.002), (0.5, 0.012, 0.008), M_LIGHT, 0.002)
-for x in (0.3, -0.31):
-    cyl("red_band", (x, 0, 0), FR * 1.02 if x > 0 else 0.046, 0.016, M_RED, "X", 24)
+def top(x, y):
+    """Height of the hull's top skin at (x, y) (wing mode), by a ray from above"""
+    dg = bpy.context.evaluated_depsgraph_get()
+    hit, loc, _n, _i, _o, _m = bpy.context.scene.ray_cast(dg, Vector((x, y, 1.0)), Vector((0, 0, -1)))
+    return loc.z if hit else 0.0
 
-# --- крыло почти прямое, с поперечным V; красные законцовки; закрылки и предкрылки ---
-span = 0.48
-wing = [(0.07, 0.0), (-0.02, span), (-0.1, span), (-0.17, 0.0)]   # трапеция: корень шире, лёгкая стреловидность
-for s in (1, -1):
-    wing_solid("wing", (0.07, -0.17), (-0.02, -0.1), s * span, -0.012, 0.01, M_HULL)
-    for t in (0.3, 0.6, 0.85):   # швы панелей вдоль размаха
-        x0, x1 = 0.07 - 0.09 * t, -0.17 + 0.07 * t
-        y = s * span * t
-        box("wing_seam", ((x0 + x1) / 2, y, -0.012 + 0.022 * t + 0.0075 * (1 - 0.25 * t)), (x0 - x1 - 0.04, 0.0015, 0.001), M_DARK, 0.0)
-    plate("tip", [(-0.017, s * (span - 0.005)), (-0.103, s * (span - 0.005)), (-0.103, s * (span + 0.012)), (-0.02, s * (span + 0.012))],
-          0.01, 0.016, M_RED)
-    plate("flap", [(-0.145, s * 0.07), (-0.115, s * 0.36), (-0.128, s * 0.36), (-0.162, s * 0.07)], -0.004, 0.006, M_DARK, 0.004)
-    plate("slat", [(0.032, s * 0.2), (0.002, s * 0.44), (-0.006, s * 0.44), (0.024, s * 0.2)], -0.002, 0.006, M_LIGHT, 0.008)
 
-# --- двигатели: две большие гондолы с соосными винтами (как в fortress.gd — два двигателя) ---
-for nm, (ex, ey) in (("engine_l", at(14, -44)), ("engine_r", at(14, 44))):
+class HullUV:
+    """The hull's paint under a point (wing mode): a ray straight down onto the hull triangles gives the UV
+    there, so a fairing built on the skin carries on the camouflage and wear of the skin beneath it."""
+
+    def __init__(self, hulls):
+        from mathutils.bvhtree import BVHTree
+        self.tris = []   # [(uv a, uv b, uv c, corners a, b, c, material)]
+        verts, polys = [], []
+        for ob in hulls:
+            me = ob.data
+            me.calc_loop_triangles()
+            uvl = me.uv_layers.active.data
+            for lt in me.loop_triangles:
+                cs = [ob.matrix_world @ me.vertices[me.loops[li].vertex_index].co for li in lt.loops]
+                uvs = [Vector((*uvl[li].uv, 0.0)) for li in lt.loops]
+                polys.append((len(verts), len(verts) + 1, len(verts) + 2))
+                verts += cs
+                self.tris.append((uvs, cs, me.materials[lt.material_index]))
+        self.bvh = BVHTree.FromPolygons(verts, polys)
+
+    def at(self, x, y):
+        """(uv, material) of the hull skin at plan point (x, y); None off the hull"""
+        from mathutils.geometry import barycentric_transform
+        loc, _n, i, _d = self.bvh.ray_cast(Vector((x, y, 1.0)), Vector((0, 0, -1)))
+        if i is None:
+            return None
+        uvs, cs, m = self.tris[i]
+        uv = barycentric_transform(loc, cs[0], cs[1], cs[2], uvs[0], uvs[1], uvs[2])
+        return (uv.x, uv.y), m
+
+    def paint(self, ob, x0, y0, k=1.0):
+        """Give ob the hull material and UVs of the skin under it, its plan shrunk by k about (x0, y0)
+        (k < 1 keeps a small dome inside one camouflage patch instead of smearing a wide strip onto it)"""
+        mw = ob.matrix_world
+        me = ob.data
+        uvl = me.uv_layers.get("UVMap") or me.uv_layers.new(name="UVMap")
+        m = self.at(x0, y0)[1]
+        for li, lp in enumerate(me.loops):
+            p = mw @ me.vertices[lp.vertex_index].co
+            hit = self.at(x0 + (p.x - x0) * k, y0 + (p.y - y0) * k) or self.at(x0, y0)
+            uvl.data[li].uv = hit[0]
+        me.materials.clear()
+        me.materials.append(m)
+
+
+def ellipsoid(name, c, r, m, seg=32, rings=16):
+    """Upper half of an ellipsoid with radii r = (rx, ry, rz), base on c"""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=seg, v_segments=rings, radius=1.0)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.05], context="VERTS")
+    for v in bm.verts:
+        v.co = Vector((v.co.x * r[0], v.co.y * r[1], v.co.z * r[2]))
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    ob.location = c
+    bpy.context.view_layer.update()
+    return finish(ob, m)
+
+
+DOME_R, DOME_H = 0.018, 0.0102   # 60 % of the old twin turret (ring Ø 0.068 → dome Ø 0.036 of the hull length)
+
+
+def dome_turret(n, x, y, hull_uv):
+    """Wing-mode turret (Kanta 26.10, concept Б): a low dome on a fixed collar blended into the skin, with a gun
+    slit, twin short barrels, a seam band, a crown hatch and a sensor eye. The collar stays with the hull; the dome and its guns
+    are node turret_n, pivot on the vertical through the dome centre, barrels along +X, so render3d's yaw turns
+    the whole dome to track the player. Dome and collar wear the hull's own paint (HullUV)."""
+    z = top(x, y)
+    R, H = DOME_R, DOME_H
     L.group = ""
-    loft("nacelle", [(0.2, 0.01, 0.01, 0.0), (0.185, 0.022, 0.024, 0.0), (0.15, 0.026, 0.03, -0.004),
-                     (0.05, 0.025, 0.03, -0.008), (-0.04, 0.012, 0.014, -0.006), (-0.06, 0.004, 0.004, -0.004)], M_HULL, 20)
-    nac = L.parts[-1]
-    nac.location = (ex - 0.06, ey, -0.006)
-    bpy.ops.object.select_all(action="DESELECT")
-    bpy.context.view_layer.objects.active = nac
-    nac.select_set(True)
-    bpy.ops.object.transform_apply(location=True)
-    nac.name = nm + "_nacelle"
-    cyl("intake", (ex + 0.1, ey, -0.032), 0.009, 0.03, M_DARK, "X", 12)
-    for cx in (ex + 0.12, ex + 0.04):   # кольца капота
-        cyl("cowl_ring", (cx, ey, -0.01), 0.0275, 0.003, M_DARK, "X", 24)
-    for k in range(3):   # патрубки выхлопа
-        cyl("stack", (ex + 0.06 - k * 0.018, ey + (0.026 if ey > 0 else -0.026), 0.006), 0.004, 0.01, M_STEEL, "X", 8)
-    cyl("exhaust", (ex - 0.02, ey + (0.024 if ey > 0 else -0.024), 0.004), 0.006, 0.04, M_DARK, "X", 10)
-    px = ex + 0.145
-    for k, dx in enumerate((0.0, -0.014)):
-        L.group = "%s_prop%s" % (nm, "" if k == 0 else "2")
-        L.pivots[L.group] = (px + dx, ey, -0.006)
-        for i in range(4):
-            a = i * math.pi / 2 + (math.pi / 4 if k else 0)
-            bpy.ops.mesh.primitive_cube_add(size=1, location=(px + dx, ey + math.cos(a) * 0.038, -0.006 + math.sin(a) * 0.038))
+    collar = ellipsoid("dome_collar", (x, y, z - 0.0012), (R * 1.3, R * 1.3, H * 0.22), M_HULL)
+    hull_uv.paint(collar, x, y, 0.5)
+    cyl("dome_seam", (x, y, z + H * 0.03), R * 1.03, H * 0.08, M_DARK, "Z", 32)
+    g = "turret_%d" % n
+    L.group = g
+    L.pivots[g] = (x, y, z)
+    dome = ellipsoid("dome", (x, y, z), (R, R, H), M_HULL)
+    hull_uv.paint(dome, x, y, 0.8)
+    # panel seam round the shoulder and a flush access hatch on the crown, just proud of the skin
+    bpy.ops.mesh.primitive_torus_add(major_radius=R * 0.78, minor_radius=R * 0.014, major_segments=32, minor_segments=6,
+                                     location=(x, y, z + H * 0.64))
+    ob = bpy.context.object
+    ob.name = "dome_panel"
+    ob.scale = (1, 1, 0.6)
+    bpy.ops.object.transform_apply(scale=True)
+    finish(ob, M_DARK)
+    cyl("dome_hatch", (x - R * 0.15, y + R * 0.1, z + H * 0.985), R * 0.26, H * 0.05, M_DARK, "Z", 20)
+    # gun slit in the front face and twin barrels with muzzle brakes, dark gunmetal
+    box("dome_slit", (x + R * 0.62, y, z + H * 0.5), (R * 0.85, R * 0.62, H * 0.26), M_T_DARK, 0.0)
+    for s in (-1, 1):
+        by = y + s * R * 0.2
+        cyl("barrel", (x + R * 1.12, by, z + H * 0.5), 0.0012, R * 1.15, M_T_DARK, "X", 12)
+        cyl("muzzle", (x + R * 1.72, by, z + H * 0.5), 0.0018, R * 0.18, M_T_DARK, "X", 12)
+    # sensor eye on the shoulder, looking where the guns look
+    sphere("dome_eye_rim", (x + R * 0.55, y - R * 0.48, z + H * 0.72), R * 0.17, (1, 1, 0.55), M_T_DARK, 12)
+    sphere("dome_eye", (x + R * 0.62, y - R * 0.48, z + H * 0.74), R * 0.12, (1, 1, 0.6), M_T_GLASS, 12)
+    L.group = ""
+
+
+if WING:
+    bpy.ops.import_scene.gltf(filepath=WING)
+    for ob in list(bpy.context.scene.objects):
+        if ob.type != "MESH":
+            continue
+        mw = ob.matrix_world.copy()
+        ob.parent = None
+        ob.matrix_world = Matrix.Scale(WING_SCALE, 4) @ mw
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.select_all(action="DESELECT")
+        ob.select_set(True)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        ob.name = "hull"
+        ob["fh_group"] = ""
+        L.parts.append(ob)
+    for ob in list(bpy.context.scene.objects):
+        if ob.type == "EMPTY":
+            bpy.data.objects.remove(ob)
+    bpy.context.view_layer.update()
+    # jet intakes on the engine humps: a compressor face per engine, the node render3d spins (engine_X_prop)
+    for nm, (ex, ey) in (("engine_l", at(14, -21)), ("engine_r", at(14, 21))):
+        L.group = nm + "_prop"
+        z = top(ex, ey) - 0.004
+        L.pivots[L.group] = (ex, ey, z)
+        cyl("fan_hub", (ex, ey, z), 0.004, 0.003, M_STEEL, "X", 12)
+        for i in range(8):
+            a = i * math.pi / 4
+            bpy.ops.mesh.primitive_cube_add(size=1, location=(ex, ey + math.cos(a) * 0.006, z + math.sin(a) * 0.006))
             ob = bpy.context.object
-            ob.name = "blade"
-            ob.scale = (0.004, 0.072, 0.011)
-            ob.rotation_euler = (a, 0, 0)
+            ob.name = "fan_blade"
+            ob.scale = (0.001, 0.009, 0.0025)
+            ob.rotation_euler = (a, 0.3, 0)
             bpy.ops.object.transform_apply(scale=True, rotation=True)
             finish(ob, M_DARK)
-    L.group = ""
-    sphere("spinner", (px + 0.006, ey, -0.006), 0.014, (1.6, 1.0, 1.0), M_RED, 14)
+        L.group = ""
+else:
+    # --- фюзеляж: длинный, остеклённый нос, на корме сужается под кормовую башню ---
+    loft("fuselage", [(0.5, 0.004, 0.004, -0.004), (0.49, 0.016, 0.015, -0.004), (0.475, 0.027, 0.026, -0.003),
+                      (0.455, 0.037, 0.036, -0.002), (0.43, 0.046, 0.045, -0.001), (0.39, 0.053, 0.053, 0.0),
+                      (0.33, 0.057, 0.058, 0.0), (0.25, FR, FR + 0.002, 0.0), (-0.1, FR, FR + 0.002, 0.0), (-0.22, FR * 0.97, FR, 0.001),
+                      (-0.3, 0.052, 0.051, 0.003), (-0.38, 0.043, 0.041, 0.006), (-0.44, 0.032, 0.03, 0.01), (-0.5, 0.012, 0.012, 0.014)], M_HULL, 36)
+    sphere("nose_glass", (0.468, 0, -0.002), 0.031, (1.1, 1.0, 0.9), M_GLASS, 28)
+    for k in range(5):   # переплёт остеклённого носа
+        a = math.pi * (k + 1) / 6
+        tube("nose_frame", [(0.452, math.cos(a) * 0.035, -0.002 + math.sin(a) * 0.033), (0.49, math.cos(a) * 0.012, -0.002 + math.sin(a) * 0.011)], 0.0012, M_DARK)
+    for x in (0.452, 0.472):
+        cyl("nose_ring", (x, 0, -0.002), 0.036 if x < 0.46 else 0.029, 0.002, M_DARK, "X", 28)
+    sphere("cockpit", (0.36, 0, 0.044), 0.03, (1.9, 1.0, 0.6), M_GLASS, 24)
+    for x in (0.33, 0.35, 0.37, 0.39):   # переплёт фонаря
+        k = math.sqrt(max(0.0, 1 - ((x - 0.36) / 0.057) ** 2))
+        bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.05, major_segments=24, minor_segments=6,
+                                         location=(x, 0, 0.044), rotation=(0, math.pi / 2, 0))
+        fr = bpy.context.object
+        bpy.ops.object.transform_apply(rotation=True)
+        fr.scale = (0.03, 0.0305 * k, 0.0185 * k)
+        bpy.ops.object.transform_apply(scale=True)
+        finish(fr, M_DARK)
+    tube("canopy_spine", [(0.305, 0, 0.0545), (0.415, 0, 0.0545)], 0.0012, M_DARK)
+    # панели обшивки: кольцевые швы и продольные линии лючков
+    for x in (0.42, 0.2, 0.08, -0.05, -0.17, -0.27, -0.38):
+        r = FR if -0.22 < x < 0.25 else (0.05 if x > 0 else 0.046)
+        cyl("seam", (x, 0, 0.0), r * 1.004, 0.0015, M_DARK, "X", 36)
+    for s in (1, -1):
+        box("side_hatch", (0.27, s * FR * 0.99, -0.012), (0.03, 0.002, 0.024), M_DARK, 0.0)
+        box("side_line", (0.0, s * FR * 1.0, 0.018), (0.4, 0.0015, 0.0015), M_DARK, 0.0)
+    cyl("antenna", (0.2, 0, FR + 0.012), 0.0015, 0.024, M_STEEL, "Z", 8)
+    box("spine", (-0.02, 0, FR + 0.002), (0.5, 0.012, 0.008), M_LIGHT, 0.002)
+    for x in (0.3, -0.31):
+        cyl("red_band", (x, 0, 0), FR * 1.02 if x > 0 else 0.046, 0.016, M_RED, "X", 24)
 
-# --- хвост: стабилизатор и два киля на концах (H-хвост — силуэт сверху отличается от транспортника) ---
-for s in (1, -1):
-    plate("stab", [(-0.4, 0.0), (-0.44, s * 0.17), (-0.49, s * 0.17), (-0.485, 0.0)], 0.02, 0.012, M_HULL)
-    prism("fin", [(-0.42, 0.02), (-0.47, 0.11), (-0.5, 0.11), (-0.495, 0.02)], 0.008, M_HULL, 0.0)
-    fin = L.parts[-1]
-    fin.location.y = s * 0.17
-    plate("fin_red", [(-0.462, s * 0.166), (-0.499, s * 0.166), (-0.499, s * 0.174), (-0.462, s * 0.174)], 0.115, 0.01, M_RED)
+    # --- крыло почти прямое, с поперечным V; красные законцовки; закрылки и предкрылки ---
+    span = 0.48
+    wing = [(0.07, 0.0), (-0.02, span), (-0.1, span), (-0.17, 0.0)]   # трапеция: корень шире, лёгкая стреловидность
+    for s in (1, -1):
+        wing_solid("wing", (0.07, -0.17), (-0.02, -0.1), s * span, -0.012, 0.01, M_HULL)
+        for t in (0.3, 0.6, 0.85):   # швы панелей вдоль размаха
+            x0, x1 = 0.07 - 0.09 * t, -0.17 + 0.07 * t
+            y = s * span * t
+            box("wing_seam", ((x0 + x1) / 2, y, -0.012 + 0.022 * t + 0.0075 * (1 - 0.25 * t)), (x0 - x1 - 0.04, 0.0015, 0.001), M_DARK, 0.0)
+        plate("tip", [(-0.017, s * (span - 0.005)), (-0.103, s * (span - 0.005)), (-0.103, s * (span + 0.012)), (-0.02, s * (span + 0.012))],
+              0.01, 0.016, M_RED)
+        plate("flap", [(-0.145, s * 0.07), (-0.115, s * 0.36), (-0.128, s * 0.36), (-0.162, s * 0.07)], -0.004, 0.006, M_DARK, 0.004)
+        plate("slat", [(0.032, s * 0.2), (0.002, s * 0.44), (-0.006, s * 0.44), (0.024, s * 0.2)], -0.002, 0.006, M_LIGHT, 0.008)
+
+    # --- двигатели: две большие гондолы с соосными винтами (как в fortress.gd — два двигателя) ---
+    for nm, (ex, ey) in (("engine_l", at(14, -44)), ("engine_r", at(14, 44))):
+        L.group = ""
+        loft("nacelle", [(0.2, 0.01, 0.01, 0.0), (0.185, 0.022, 0.024, 0.0), (0.15, 0.026, 0.03, -0.004),
+                         (0.05, 0.025, 0.03, -0.008), (-0.04, 0.012, 0.014, -0.006), (-0.06, 0.004, 0.004, -0.004)], M_HULL, 20)
+        nac = L.parts[-1]
+        nac.location = (ex - 0.06, ey, -0.006)
+        bpy.ops.object.select_all(action="DESELECT")
+        bpy.context.view_layer.objects.active = nac
+        nac.select_set(True)
+        bpy.ops.object.transform_apply(location=True)
+        nac.name = nm + "_nacelle"
+        cyl("intake", (ex + 0.1, ey, -0.032), 0.009, 0.03, M_DARK, "X", 12)
+        for cx in (ex + 0.12, ex + 0.04):   # кольца капота
+            cyl("cowl_ring", (cx, ey, -0.01), 0.0275, 0.003, M_DARK, "X", 24)
+        for k in range(3):   # патрубки выхлопа
+            cyl("stack", (ex + 0.06 - k * 0.018, ey + (0.026 if ey > 0 else -0.026), 0.006), 0.004, 0.01, M_STEEL, "X", 8)
+        cyl("exhaust", (ex - 0.02, ey + (0.024 if ey > 0 else -0.024), 0.004), 0.006, 0.04, M_DARK, "X", 10)
+        px = ex + 0.145
+        for k, dx in enumerate((0.0, -0.014)):
+            L.group = "%s_prop%s" % (nm, "" if k == 0 else "2")
+            L.pivots[L.group] = (px + dx, ey, -0.006)
+            for i in range(4):
+                a = i * math.pi / 2 + (math.pi / 4 if k else 0)
+                bpy.ops.mesh.primitive_cube_add(size=1, location=(px + dx, ey + math.cos(a) * 0.038, -0.006 + math.sin(a) * 0.038))
+                ob = bpy.context.object
+                ob.name = "blade"
+                ob.scale = (0.004, 0.072, 0.011)
+                ob.rotation_euler = (a, 0, 0)
+                bpy.ops.object.transform_apply(scale=True, rotation=True)
+                finish(ob, M_DARK)
+        L.group = ""
+        sphere("spinner", (px + 0.006, ey, -0.006), 0.014, (1.6, 1.0, 1.0), M_RED, 14)
+
+    # --- хвост: стабилизатор и два киля на концах (H-хвост — силуэт сверху отличается от транспортника) ---
+    for s in (1, -1):
+        plate("stab", [(-0.4, 0.0), (-0.44, s * 0.17), (-0.49, s * 0.17), (-0.485, 0.0)], 0.02, 0.012, M_HULL)
+        prism("fin", [(-0.42, 0.02), (-0.47, 0.11), (-0.5, 0.11), (-0.495, 0.02)], 0.008, M_HULL, 0.0)
+        fin = L.parts[-1]
+        fin.location.y = s * 0.17
+        plate("fin_red", [(-0.462, s * 0.166), (-0.499, s * 0.166), (-0.499, s * 0.174), (-0.462, s * 0.174)], 0.115, 0.01, M_RED)
 
 # --- башни ---
-for n, (x, y) in enumerate([at(-6, -78), at(-6, 78), at(48, 0), at(-112, 0)], 1):
-    z = 0.008 if n <= 2 else (FR + 0.006 if n == 3 else 0.042)
-    turret(n, x, y, z, 3 if n == 3 else 2)   # верхняя — ступень 3 (короба лент, прицел), остальные — 2
+if WING:
+    # the points match Fortress.points in fortress.gd: two dome turrets per wing (Kanta 26.10), outer pair first,
+    # then the inner pair; turret_3 (inner left) is the command turret
+    hull_uv = HullUV([o for o in L.parts if o.name.startswith("hull")])
+    for n, (x, y) in enumerate([at(-20, -92), at(-20, 92), at(-4, -48), at(-4, 48)], 1):
+        dome_turret(n, x, y, hull_uv)
+else:
+    TPOS = [at(-6, -78), at(-6, 78), at(48, 0), at(-112, 0)]
+    for n, (x, y) in enumerate(TPOS, 1):
+        z = 0.008 if n <= 2 else (FR + 0.006 if n == 3 else 0.042)
+        turret(n, x, y, z, 3 if n == 3 else 2)   # верхняя — ступень 3 (короба лент, прицел), остальные — 2
 
 # --- люки на спине (фаза 2): ракеты под створками ---
-HX0, HX1, HY = -0.0, 0.12, 0.034
-box("bay_well", ((HX0 + HX1) / 2, 0, FR + 0.0005), (HX1 - HX0, 0.07, 0.004), M_DARK, 0.0)
+HX0, HX1, HY = (-0.035, 0.035, 0.03) if WING else (-0.0, 0.12, 0.034)
+HZ = max(top(x, y) for x in (HX0, HX1) for y in (-HY, 0, HY)) - FR if WING else 0.0   # HZ + FR = skin height
+box("bay_well", ((HX0 + HX1) / 2, 0, FR + HZ + 0.0005), (HX1 - HX0, 0.07, 0.004), M_DARK, 0.0)
 for s, side in ((1, "l"), (-1, "r")):
     L.group = "bay_" + side
-    L.pivots[L.group] = ((HX0 + HX1) / 2, s * 0.018, FR - 0.002)
-    for x0 in (HX0 + 0.012, HX0 + 0.066):
-        cyl("missile", (x0 + 0.02, s * 0.018, FR - 0.002), 0.0055, 0.05, M_STEEL, "X", 10)
-        sphere("missile_eye", (x0 + 0.046, s * 0.018, FR - 0.002), 0.0055, (1.3, 1, 1), M_GLASS, 10)
+    L.pivots[L.group] = ((HX0 + HX1) / 2, s * 0.018, FR + HZ - 0.002)
+    for x0 in ((HX0 + 0.01,) if WING else (HX0 + 0.012, HX0 + 0.066)):
+        cyl("missile", (x0 + 0.02, s * 0.018, FR + HZ - 0.002), 0.0055, 0.05, M_STEEL, "X", 10)
+        sphere("missile_eye", (x0 + 0.046, s * 0.018, FR + HZ - 0.002), 0.0055, (1.3, 1, 1), M_GLASS, 10)
     L.group = "hatch_" + side
-    L.pivots[L.group] = ((HX0 + HX1) / 2, s * (HY + 0.004), FR + 0.006)
-    box("hatch", ((HX0 + HX1) / 2, s * HY / 2, FR + 0.007), (HX1 - HX0, HY, 0.004), M_LIGHT, 0.001)
-    box("hatch_stripe", ((HX0 + HX1) / 2, s * HY / 2, FR + 0.0095), (HX1 - HX0 - 0.02, 0.006, 0.001), M_RED, 0.0)
+    L.pivots[L.group] = ((HX0 + HX1) / 2, s * (HY + 0.004), FR + HZ + 0.006)
+    box("hatch", ((HX0 + HX1) / 2, s * HY / 2, FR + HZ + 0.007), (HX1 - HX0, HY, 0.004), M_LIGHT, 0.001)
+    box("hatch_stripe", ((HX0 + HX1) / 2, s * HY / 2, FR + HZ + 0.0095), (HX1 - HX0 - 0.02, 0.006, 0.001), M_RED, 0.0)
 L.group = ""
 
 # --- ядро (фаза 3): раскалённый блок под откидными панелями обшивки ---
-CX0, CX1 = -0.26, -0.08
+CX0, CX1 = (-0.11, -0.045) if WING else (-0.26, -0.08)
+CZ = max(top(x, y) for x in (CX0, CX1) for y in (-0.033, 0, 0.033)) - FR if WING else 0.0
 L.group = "core"
-L.pivots[L.group] = ((CX0 + CX1) / 2, 0, FR)
-box("core_well", ((CX0 + CX1) / 2, 0, FR + 0.0005), (CX1 - CX0, 0.066, 0.004), M_DARK, 0.0)
-box("core_block", ((CX0 + CX1) / 2, 0, FR + 0.002), (CX1 - CX0 - 0.03, 0.044, 0.003), M_CORE, 0.0)
+L.pivots[L.group] = ((CX0 + CX1) / 2, 0, FR + CZ)
+box("core_well", ((CX0 + CX1) / 2, 0, FR + CZ + 0.0005), (CX1 - CX0, 0.066, 0.004), M_DARK, 0.0)
+box("core_block", ((CX0 + CX1) / 2, 0, FR + CZ + 0.002), (CX1 - CX0 - 0.03, 0.044, 0.003), M_CORE, 0.0)
 for x in (CX0 + 0.03, (CX0 + CX1) / 2, CX1 - 0.03):
-    cyl("core_coil", (x, 0, FR + 0.003), 0.01, 0.003, M_DARK, "Z", 12)
+    cyl("core_coil", (x, 0, FR + CZ + 0.003), 0.01, 0.003, M_DARK, "Z", 12)
 for s, side in ((1, "l"), (-1, "r")):
     L.group = "hull_" + side
-    L.pivots[L.group] = ((CX0 + CX1) / 2, s * 0.036, FR + 0.006)
-    box("hull_panel", ((CX0 + CX1) / 2, s * 0.018, FR + 0.006), (CX1 - CX0, 0.036, 0.004), M_HULL, 0.001)
+    L.pivots[L.group] = ((CX0 + CX1) / 2, s * 0.036, FR + CZ + 0.006)
+    box("hull_panel", ((CX0 + CX1) / 2, s * 0.018, FR + CZ + 0.006), (CX1 - CX0, 0.036, 0.004), M_HULL, 0.001)
     for x in (CX0 + 0.02, CX1 - 0.02):
-        box("rivet_strip", (x, s * 0.018, FR + 0.0085), (0.004, 0.032, 0.001), M_DARK, 0.0)
+        box("rivet_strip", (x, s * 0.018, FR + CZ + 0.0085), (0.004, 0.032, 0.001), M_DARK, 0.0)
 L.group = ""
 
 
