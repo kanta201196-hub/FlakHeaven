@@ -160,6 +160,9 @@ func clear() -> void:
 	_hgrid.clear()
 	_spare_order.clear()
 	_objs_cache.clear()
+	_alive_mx.lock()
+	_alive.clear()
+	_alive_mx.unlock()
 	_flats.clear()
 	_side.clear()
 	_split.clear()
@@ -886,6 +889,8 @@ func fix_object(o: Dictionary) -> Dictionary:
 		if o["name"] == "o_village":   # L-01: главная тропа посёлка (+x объекта) — к реке через дорогу
 			o = o.duplicate()
 			o["rot"] = (_trib(p0)[1] - p0).angle()   # L-09: вниз по долине-притоку
+	elif o["name"] == "o_mesa" and _bg != null and _mesa_blocked(o, p0):
+		return {}
 	elif o["name"] == "o_crater" and absf(_v_raw(p0.x, p0.y)) / V_SCALE > D_FAN:
 		return {}   # воронка с площадкой на склоне выглядела ямой в горе: воронки — на дне долин и конусах
 	var p := p0
@@ -926,7 +931,12 @@ func fix_object(o: Dictionary) -> Dictionary:
 ## Кишлак и крепость встают за дорогой (дорога идёт по их краю), оазис — на другом берегу.
 ## Нет реки ближе SETTLE_REACH — поселения в клетке нет (раньше к нему прорезалась длинная боковая долина)
 const SETTLE_REACH := 1300.0   # < CHUNK: сдвинутое поселение остаётся в соседней клетке (_flat смотрит ±1)
-const SETTLE_GAP := 2000.0     # между поселениями не ближе
+## Clear ground between the edges of two settlements (village, fort, oasis), px: one screen width at the
+## default zoom (1920), so two big structures never share the screen (Kanta 26.10, s12: two forts and a
+## fort with a village side by side; the old 2000 px between centres left ~500 px between the walls).
+const SETTLE_GAP := 1920.0
+## A mesa keeps this much ground clear of any settlement edge, px (a fort used to stand half on a mesa)
+const MESA_GAP := 150.0
 
 
 ## Место поселения у реки (INF — реки рядом нет)
@@ -945,12 +955,22 @@ func _settle_spot(o: Dictionary) -> Vector2:
 	return p
 
 
-## Рядом уже есть поселение с большим приоритетом (от хеша клетки) — это не ставим
+## True when a placed settlement of higher priority (cell hash) stands closer than SETTLE_GAP edge to edge,
+## so this one is not placed. "Placed" is decided greedily from the highest priority down (_settle_alive),
+## so a candidate dropped by a third one does not block anything: the map keeps as many settlements as fit.
+## The search spans SETTLE_CELLS cells: two villages plus the gap plus SETTLE_REACH fit inside it.
+const SETTLE_CELLS := 5
+## Cell → whether its settlement candidate is placed (_settle_alive); chunk threads share it under the mutex
+var _alive := {}
+var _alive_mx := Mutex.new()
+
+
 func _settle_crowded(o: Dictionary, p: Vector2) -> bool:
 	var key := Vector2i(int(floorf((o["pos"] as Vector2).x / CHUNK)), int(floorf((o["pos"] as Vector2).y / CHUNK)))
 	var mine := hash(key) & 0xffff
-	for dx in range(-3, 4):
-		for dz in range(-3, 4):
+	var r := _settle_r(o)
+	for dx in range(-SETTLE_CELLS, SETTLE_CELLS + 1):
+		for dz in range(-SETTLE_CELLS, SETTLE_CELLS + 1):
 			if dx == 0 and dz == 0:
 				continue
 			var k := Vector2i(key.x + dx, key.y + dz)
@@ -960,7 +980,52 @@ func _settle_crowded(o: Dictionary, p: Vector2) -> bool:
 			if n.is_empty() or not (n["name"] in SETTLE):
 				continue
 			var np := _settle_spot(n)
-			if np.is_finite() and np.distance_to(p) < SETTLE_GAP:
+			if np.is_finite() and np.distance_to(p) < r + _settle_r(n) + SETTLE_GAP and _settle_alive(k):
+				return true
+	return false
+
+
+## Whether the settlement candidate of cell `k` is placed: it has a settle spot and no placed settlement of
+## higher priority crowds it. Recursion only climbs to higher priorities, so it ends; results are cached.
+func _settle_alive(k: Vector2i) -> bool:
+	_alive_mx.lock()   # Godot's Mutex is recursive: the nested calls below lock it again
+	if _alive.has(k):
+		var hit: bool = _alive[k]
+		_alive_mx.unlock()
+		return hit
+	var ok := false
+	var n := _bg._chunk_object_raw(k.x, k.y)
+	if not n.is_empty() and n["name"] in SETTLE:
+		var np := _settle_spot(n)
+		ok = np.is_finite() and not _settle_crowded(n, np)
+	if _alive.size() > 20000:
+		_alive.clear()
+	_alive[k] = ok
+	_alive_mx.unlock()
+	return ok
+
+
+## Radius a big object takes on the ground, px (AdobeBuild.footprint of its size).
+func _settle_r(o: Dictionary) -> float:
+	return float(o["size"]) * AdobeBuild.footprint(o["name"])
+
+
+## True when a placed settlement (village, fort, oasis) covers the ground mesa `o` at `p` would stand on.
+## Settlements are read through the filter (cached), so their final, river-pushed spot counts.
+func _mesa_blocked(o: Dictionary, p: Vector2) -> bool:
+	var key := Vector2i(int(floorf((o["pos"] as Vector2).x / CHUNK)), int(floorf((o["pos"] as Vector2).y / CHUNK)))
+	var r := _settle_r(o)
+	for dx in range(-2, 3):
+		for dz in range(-2, 3):
+			if dx == 0 and dz == 0:
+				continue
+			var raw := _bg._chunk_object_raw(key.x + dx, key.y + dz)
+			if raw.is_empty() or not (raw["name"] in SETTLE):
+				continue   # only settlements go through the filter here: a mesa next door would recurse
+			var n := _bg.chunk_object(key.x + dx, key.y + dz)
+			if n.is_empty():
+				continue
+			if (n["pos"] as Vector2).distance_to(p) < r + _settle_r(n) + MESA_GAP:
 				return true
 	return false
 

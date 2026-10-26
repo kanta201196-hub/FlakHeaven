@@ -633,6 +633,13 @@ func _make_points() -> Array:
 	if empty == Vector2.INF:
 		empty = Vector2.ZERO
 	var pts := [{"name": "desert", "pos": empty}]
+	for a in OS.get_cmdline_user_args():   # --at=x:y,x:y — wide frames of given world points (placement checks)
+		if a.begins_with("--at="):
+			var at := a.get_slice("=", 1).split(",")
+			for i in at.size():
+				var q := Vector2(float(at[i].get_slice(":", 0)), float(at[i].get_slice(":", 1)))
+				pts.append({"name": "at_%d" % i, "pos": q, "wait": 3.0})   # the player's screen at the default zoom
+				pts.append({"name": "atw_%d" % i, "pos": q, "zoom": 0.5, "wait": 3.0})   # twice as wide: the neighbours
 	# B-26: горы теперь — рельеф; берём самую высокую точку рядом с пустой клеткой
 	var peak := empty + Vector2(4000, 0)
 	if Render3D.I != null and Render3D.I.terrain != null:
