@@ -172,6 +172,9 @@ func process(delta: float) -> void:
 		_fort.parts_down = {}
 		for nm in (["turret_1", "turret_2", "turret_3", "turret_4"] if ph >= 2 else []) + (["engine_l", "engine_r"] if ph >= 3 else []):
 			_fort.parts_down[nm] = true
+		# its logic is off, so nothing redraws it: without this the point rings stay where the first draw put them,
+		# before the 3D model existed (Fortress._ring_at fallback), off the turrets on the wings
+		_fort.queue_redraw()
 	elif p.has("sam_poses"):
 		_sam_poses(p)
 	elif p.has("unit_poses"):
