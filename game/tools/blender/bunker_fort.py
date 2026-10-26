@@ -1,8 +1,8 @@
-"""AA-site bunker of the Highlands in the «Укрепрайон» look (VIS-01, Kanta 26.10.2026: «Бункер очень плохой, переделывай»).
+"""AA-site bunker of the Highlands in the fortified-area fort look (VIS-01, Kanta 26.10.2026: "the bunker is very bad, redo it").
 
 Why: the scan bunker (#94) read as a shapeless blob with a hole in its face. This one is built from data like
 ground_models.py, but its surfaces use the fort's texture set Г (game/art/fort: concrete, stone, planks; the
-fort's burlap for the bags), so the bunker and the «Укрепрайон» read as one army's work.
+fort's burlap for the bags), so the bunker and the fortified-area fort read as one army's work.
 
 What: a concrete casemate dug into an earth berm up to its roof slab, facing +X: a wide embrasure with a dark interior and a
 twin MG under the slab edge, a thick roof slab with chipped edges and bent rebar, a sandbag rim on the roof, a rear
