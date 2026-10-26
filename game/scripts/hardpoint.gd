@@ -29,13 +29,6 @@ var aim := NAN
 var launch_offs: Array = []
 var _aim_t: Enemy = null
 var _aim_scan := 0.0
-var _aim_w := 0.0          # turret traverse speed now, rad/s (TurretMath.turn)
-var _want := NAN           # last frame's angle to the target, for the target's own turn rate
-var _want_t: Enemy = null
-var _burst := 0            # rounds of the current burst still to fire (TurretMath.BURST per reload)
-var _burst_t := 0.0
-var _burst_gap := TurretMath.GAP
-var _burst_life := 0.5     # round life of the current burst: to its target and a little past
 const TURRET_TRAVERSE := 150.0   # °/с; «Сервоприводы» — +25% за уровень
 const TURRET_GATE := 0.09        # рад — стреляет, когда стволы смотрят на цель точнее
 const TURRET_INTERCEPT := 0.55   # тест 3.5-s7 (Kanta): турели сбивают ракету в 55% случаев (одна попытка на ракету)
@@ -243,7 +236,6 @@ func update(delta: float, p: Player) -> void:
 		return
 	if weapon == "turret":
 		_turret_aim(delta, p)
-		_turret_burst(delta, p)
 		_turret_intercept(delta, p)
 		if p.syn.has("hedgehog"):
 			_hedgehog(delta, p)
@@ -725,17 +717,7 @@ func _turret_aim(delta: float, p: Player) -> void:
 		if _aim_t == null:
 			_aim_t = Weapons.pick_target(p.global_position, range_px(), priority)
 	var want := p.heading if _aim_t == null else (_aim_t.global_position - p.global_position).angle()
-	# Kanta 25.10 (Sublight): the barrels speed up, slow down onto the target and follow it, instead of a constant
-	# speed with a dead stop; same top speed, so the servo cards and the time to swing round stay as they were
-	var tw := 0.0
-	if _aim_t == _want_t and not is_nan(_want) and delta > 0.0:
-		tw = wrapf(want - _want, -PI, PI) / delta
-	_want = want
-	_want_t = _aim_t
-	var wmax := deg_to_rad(TURRET_TRAVERSE) * float(p.mods.get("turret_traverse", 1.0))
-	var r := TurretMath.turn(aim, _aim_w, want, clampf(tw, -wmax, wmax), wmax, delta)
-	aim = wrapf(r.x, -PI, PI)
-	_aim_w = r.y
+	aim = rotate_toward(aim, want, deg_to_rad(TURRET_TRAVERSE) * float(p.mods.get("turret_traverse", 1.0)) * delta)
 
 
 func _fire_gun(p: Player) -> bool:
@@ -778,55 +760,28 @@ func _fire_gun(p: Player) -> bool:
 	return true
 
 
-## Турель: огонь по цели, на которую уже наведены стволы (без мгновенного разворота). Kanta 25.10 (Sublight):
-## each reload starts a short burst of TurretMath.BURST rounds along the barrels instead of one round; the rounds
-## share the old round's damage, so damage per second is the same
+## Турель: огонь по цели, на которую уже наведены стволы (без мгновенного разворота)
 func _fire_turret(p: Player) -> bool:
 	var t := _aim_t
 	if t == null or not is_instance_valid(t) or t.hp <= 0.0 or is_nan(aim):
 		return false
 	if absf(wrapf((t.global_position - p.global_position).angle() - aim, -PI, PI)) > TURRET_GATE:
 		return false
-	var spd := 1300.0 * Profile.wk(weapon, "spd")
-	_burst_life = (t.global_position.distance_to(p.global_position) + 60.0) / spd
-	_burst_gap = TurretMath.gap(reload_time(p))
-	_burst += TurretMath.BURST - 1
-	_burst_t = _burst_gap
-	_turret_round(p)
-	Main.I.sfx.play("turret_burst", -21.0)   # the whole 4-round burst in one sample (sound thread, PR #426)
-	return true
-
-
-## The rest of the burst: one round every _burst_gap s, aimed wherever the barrels look now (the burst sweeps
-## with the turret, as in the reference), even if the target died mid-burst
-func _turret_burst(delta: float, p: Player) -> void:
-	if _burst <= 0:
-		return
-	_burst_t -= delta
-	while _burst > 0 and _burst_t <= 0.0:
-		_burst -= 1
-		_burst_t += _burst_gap
-		_turret_round(p)
-
-
-## One round from every turret slot (two barrels each after the evolution) along aim
-func _turret_round(p: Player) -> void:
-	var t := _aim_t if is_instance_valid(_aim_t) and _aim_t.hp > 0.0 else null
 	var barrels := 2 if evo else 1
-	var spd := 1300.0 * Profile.wk(weapon, "spd")
-	var rd := TurretMath.round_dmg(dmg() * Profile.wk(weapon, "dmg"))
 	for s in slots:
 		for b in barrels:
 			var pos := _slot_pos(p, s)
 			if barrels > 1:
 				pos += Vector2.from_angle(aim + PI / 2.0) * (5.0 if b == 0 else -5.0)
+			var to := t.global_position - pos
+			var spd := 1300.0 * Profile.wk(weapon, "spd")
 			# стволы смотрят по aim; поправка на место турели на крыле — к цели, но не больше зазора наведения
-			var da := 0.0
-			if t != null:
-				da = clampf(wrapf((t.global_position - pos).angle() - aim, -PI, PI), -TURRET_GATE, TURRET_GATE)
+			var da := clampf(wrapf(to.angle() - aim, -PI, PI), -TURRET_GATE, TURRET_GATE)
 			var dir := Vector2.from_angle(aim + da + randf_range(-0.03, 0.03))
-			Main.I.projectiles.spawn_player_bullet(pos, dir * spd + p.velocity * 0.5, rd, _burst_life, false, "турели", 0, 0.0)
-			Main.I.projectiles.bullets.back()["o"] = pos   # muzzle point: turret tracer look (Render3D, Projectiles._draw)
+			Main.I.projectiles.spawn_player_bullet(pos, dir * spd + p.velocity * 0.5, dmg() * Profile.wk(weapon, "dmg"),
+				(to.length() + 60.0) / spd, false, "турели", 0, 0.0)
+	Main.I.sfx.play("turret_fire", -21.0)
+	return true
 
 
 func _fire_flares(p: Player) -> bool:
