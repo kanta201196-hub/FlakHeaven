@@ -313,10 +313,48 @@ var _bt := 0.0     # M-39: игровое время после взрывов �
 var _pt := 0.0     # время в точке (3.4-t1: эффекты — самолёт летит, за ним тянется след)
 
 
+## VIS-01 review: a camera of its own at `ground_dist` world px from the ground straight below the point,
+## at the same tilt. The game camera stands over the combat plane, ground_depth above the ground, so a high
+## zoom brings the ground only about twice closer; houses, palms and rocks need a real close-up.
+var _gcam: Camera3D = null
+
+
+func _ground_cam(p: Dictionary) -> void:
+	var r3 := Render3D.I
+	if r3 == null or r3.cam == null:
+		return
+	if not p.has("ground_dist"):
+		if _gcam != null and _gcam.current:
+			r3.cam.current = true
+		return
+	if _gcam == null:
+		_gcam = Camera3D.new()
+		_gcam.fov = Render3D.FOV
+		_gcam.near = 2.0
+		_gcam.far = 9000.0
+		_gcam.keep_aspect = Camera3D.KEEP_HEIGHT
+		_gcam.cull_mask = r3.cam.cull_mask
+		r3.add_child(_gcam)
+	var at: Vector2 = p.get("ground_at", p["pos"])
+	if not p.has("ground_at"):   # the frame point's own spot: _hold moves pos with the game camera
+		p["ground_at"] = at
+	var g := Vector3(at.x, r3.terrain.surface_fast(at.x, at.y).y if r3.terrain != null else r3.GROUND_Y, at.y)
+	var tilt := deg_to_rad(Tuning.g("cam_tilt"))
+	_gcam.global_position = g + Vector3(0.0, cos(tilt), sin(tilt)) * float(p["ground_dist"])
+	_gcam.basis = Basis.looking_at(Vector3(0, -cos(tilt), -sin(tilt)), Vector3(0, 0, -1))
+	_gcam.current = true
+	var pu: Unit3D = r3._units.get(m.player.get_instance_id())   # the plane flies in the combat plane above
+	if pu != null:
+		(pu.node as Node3D).visible = false
+		if pu.sh != null:
+			(pu.sh as Node3D).visible = false
+
+
 func _hold(p: Dictionary) -> void:
 	var pos: Vector2 = p["pos"]
 	var dt := m.get_process_delta_time()
 	_pt += dt
+	_ground_cam(p)
 	if p.has("cls"):   # 3.4-t1 п. 9, 19: другой самолёт (винты «Кита 1», сопла)
 		m.player.cls_id = p["cls"][0]
 		m.player.plane_lvl = p["cls"][1]
@@ -555,6 +593,7 @@ func _print_fort_size(name: String, fp: Vector2, px_k: float) -> void:
 func _make_points() -> Array:
 	var bg := m.background
 	var found := {}
+	var placed := []   # VIS-01 review: every object, to pick a rock group away from settlements
 	var empty := Vector2.INF
 	var cnt := {}   # 3.5-s8: сколько объектов каждого вида на 29 × 29 клеток (кишлаков стало меньше?)
 	var near_river := {}   # тест 3.5-s4 (п. 16): поселения ближе всех к реке (кромка у воды): имя → [зазор, объект]
@@ -571,6 +610,7 @@ func _make_points() -> Array:
 				else:
 					if not found.has(o["name"]):
 						found[o["name"]] = o["pos"]
+					placed.append(o)
 					cnt[o["name"]] = int(cnt.get(o["name"], 0)) + 1
 					if ter != null and o["name"] in Terrain3D.SETTLE:
 						var gap := absf(ter.river_field(o["pos"].x, o["pos"].y)) - float(o["size"]) * 0.5
@@ -612,6 +652,21 @@ func _make_points() -> Array:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	if found.has("o_oasis"):   # VIS-01: the oasis palms and well close up (south of it: the tilted camera looks north)
 		pts.append({"name": "oasis_close", "pos": found["o_oasis"] + Vector2(0, 600), "zoom": 2.4})
+		# VIS-01 review (26.10): the palm clumps and the well filling the frame
+		pts.append({"name": "oasis_palms", "pos": found["o_oasis"], "ground_dist": 260.0, "wait": 3.0})
+	# VIS-01 review: a big rock group (outcrop, boulders, spires) up close, the one farthest from any settlement
+	var rk := [-1.0, Vector2.INF]
+	for o: Dictionary in placed:
+		if o["name"] != "o_rocks_big":
+			continue
+		var gap := INF
+		for q: Dictionary in placed:
+			if q["name"] in ["o_village", "o_oasis", "o_fort", "o_mesa"]:
+				gap = minf(gap, (o["pos"] as Vector2).distance_to(q["pos"]) - float(q["size"]))
+		if gap > rk[0]:
+			rk = [gap, o["pos"]]
+	if rk[1] != Vector2.INF:
+		pts.append({"name": "rocks_group", "pos": rk[1], "ground_dist": 180.0, "wait": 3.0})
 	if found.has("o_fort"):   # FA-01: the fortified-area base — whole fort and a tower launcher close up
 		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "off": Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
 		pts.append({"name": "fort_area_close", "pos": found["o_fort"], "off": Vector2(0, 60), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
@@ -633,7 +688,7 @@ func _make_points() -> Array:
 		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
 		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
 		pts.append({"name": "village_close", "pos": found["o_village"] + Vector2(0, 600), "zoom": 2.4})
-		pts.append({"name": "village_houses", "pos": found["o_village"] + Vector2(-150, 250), "zoom": 6.0})   # VIS-01: house models up close
+		pts.append({"name": "village_houses", "pos": found["o_village"] + Vector2(-150, 0), "ground_dist": 260.0, "wait": 3.0})   # VIS-01: house models up close
 		# VIS-01: the village at gameplay height with the player's plane over it, to judge the houses' scale
 		pts.append({"name": "village_play", "pos": found["o_village"] + Vector2(0, 450), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
 		for vr in 4:
@@ -955,7 +1010,7 @@ func _sam_poses(p: Dictionary) -> void:
 	if _sams.is_empty():
 		p["_sam"] = true
 		var tr := Terrain3D.active()
-		var at: Vector2 = tr.find_floor(p["pos"], 2600.0, 0.0, [], AASite.FLOOR_MID, true) if tr != null else p["pos"]
+		var at: Vector2 = tr.find_floor(p["pos"], 2600.0, 0.0, _clear_of(p["pos"], 3200.0), AASite.FLOOR_MID, true) if tr != null else p["pos"]
 		p["pos"] = at + Vector2(-60, -48)   # the bench keeps the player and camera on the point
 		_spawned = true
 		m.player.process_mode = Node.PROCESS_MODE_DISABLED
@@ -1033,6 +1088,22 @@ var _unit: Enemy = null
 var _unit_cv: Convoy = null
 
 
+## VIS-01 (Kanta 26.10: units stood on the fort walls): find_floor keeps only size * 0.6 + 50 off a map object,
+## which is inside a fort's corner towers; every object within `reach` of `p`, as Background places it
+## (river push applied), is kept a full size plus a margin away so a close-up shows the unit on open ground.
+func _clear_of(p: Vector2, reach: float) -> Array:
+	var out := []
+	var ch := Background.CHUNK
+	var r := int(ceil(reach / ch)) + 1
+	var c := Vector2i(floori(p.x / ch), floori(p.y / ch))
+	for cx in range(c.x - r, c.x + r + 1):
+		for cy in range(c.y - r, c.y + r + 1):
+			var o := m.background.chunk_object(cx, cy)
+			if not o.is_empty():
+				out.append([o["pos"], float(o["size"]) + 250.0])
+	return out
+
+
 ## VIS-01: one enemy model alone and centred, logic frozen, the player's plane hidden (as _sam_poses).
 ## Ground units get their moving parts posed through the same fields Render3D reads in a battle: the turret
 ## turns off the hull (ZSU: sprite angle ~65° after the first second; convoy: alarm on, so it aims at the
@@ -1055,7 +1126,7 @@ func _unit_poses(p: Dictionary) -> void:
 	var body := 0.4
 	if _unit == null:
 		var tr := Terrain3D.active()
-		var at: Vector2 = tr.find_floor(p["pos"], 2600.0, 0.0, [], AASite.FLOOR_MID, true) if tr != null else p["pos"]
+		var at: Vector2 = tr.find_floor(p["pos"], 2600.0, 0.0, _clear_of(p["pos"], 3200.0), AASite.FLOOR_MID, true) if tr != null else p["pos"]
 		p["pos"] = at + Vector2(-60, -48)
 		_spawned = true
 		m.player.process_mode = Node.PROCESS_MODE_DISABLED
