@@ -18,14 +18,19 @@ func _cond_line(center: Vector2, e: Dictionary) -> void:
 		x += ui_font().get_string_size(Loc.out(pt[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 
 
+## Top of the specialization cards: below the wrapped two-paragraph subtitle.
+const CARD_TOP := 290.0
+
+
 func course_pick(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.72))
 	var p := m.player
 	var slot := p.syn.size() + 1
 	_ctext(150, Loc.t("ВЫБОР СПЕЦИАЛИЗАЦИИ — СВЯЗКА %d ИЗ 3") % slot, 40, Menu.C_AMBER)
-	_ctext(192, "Связка — сильный бонус, который меняет оружие или навык. Выберите, какую собирать: карточки к ней отмечены «▲» и выпадают чаще.", 17, Color(0.8, 0.84, 0.92))
-	_ctext(218, Loc.t("Нужно набрать очки цветных меток на карточках: для 1-й связки — %d, 2-й — %d, 3-й — %d. Сменить специализацию можно позже за 1 переброс.") % [
-		Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]], 16, Color(0.7, 0.74, 0.82))
+	# s12: one full-width line ran under the objectives panel — wrap to the middle instead
+	var sy := 188.0 + _cpara(188.0, "Связка — сильный бонус, который меняет оружие или навык. Выберите, какую собирать: карточки к ней отмечены «▲» и выпадают чаще.", 960.0, 17, Color(0.8, 0.84, 0.92))
+	_cpara(sy + 4.0, Loc.t("Нужно набрать очки цветных меток на карточках: для 1-й связки — %d, 2-й — %d, 3-й — %d. Сменить специализацию можно позже за 1 переброс.") % [
+		Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]], 960.0, 16, Color(0.7, 0.74, 0.82))
 	var w := 520.0
 	var h := 400.0
 	var gap := 36.0
@@ -37,7 +42,7 @@ func course_pick(m: Main, size: Vector2) -> void:
 		var id: String = m.course_offers[i]
 		var sd := Cards.syn_def(p, id)
 		var col: Color = sd.get("color", Menu.C_AMBER)
-		var r := Rect2(x0 + i * (w + gap), 250, w, h)
+		var r := Rect2(x0 + i * (w + gap), CARD_TOP, w, h)
 		var hover := r.has_point(mp)
 		ctrl.draw_rect(r, Color(0.07, 0.08, 0.1, 0.96))
 		ctrl.draw_rect(Rect2(r.position, Vector2(w, 40)), Color(col.r, col.g, col.b, 0.3))
@@ -56,6 +61,6 @@ func course_pick(m: Main, size: Vector2) -> void:
 		_text(Vector2(r.position.x + 18, r.end.y - 16), Loc.t("≈ ещё %d подходящих карточек") % Cards.cards_left(conds), 16, Menu.C_AMBER)
 	var cards: Array = []
 	for i in n:
-		cards.append(Rect2(x0 + i * (w + gap), 250, w, h))
+		cards.append(Rect2(x0 + i * (w + gap), CARD_TOP, w, h))
 	_fade_in(cards, m._state_t)
-	_ctext(690, "1–3 или клик — выбрать специализацию", 17, Color(0.75, 0.8, 0.9))
+	_ctext(CARD_TOP + h + 40.0, "1–3 или клик — выбрать специализацию", 17, Color(0.75, 0.8, 0.9))

@@ -171,6 +171,24 @@ func _ctext(y: float, s: String, size: int, color: Color) -> void:
 	_text(Vector2(0, y), s, size, color, HORIZONTAL_ALIGNMENT_CENTER, ctrl.size.x)
 
 
+## Centred line on a dark plate: warnings and run bonuses under the plane must read on bright
+## sand and on red rock alike, which an outline alone does not give (s12 recordings).
+func _ptext(y: float, s: String, size: int, color: Color, alpha := 0.62) -> void:
+	var w := ui_font().get_string_size(Loc.out(s), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 28.0
+	ctrl.draw_rect(Rect2((ctrl.size.x - w) / 2.0, y - size * 1.05, w, size * 1.45), Color(0.02, 0.025, 0.03, alpha * color.a))
+	_ctext(y, s, size, color)
+
+
+## Centred paragraph wrapped to `width`, for subtitles that would otherwise run under the corner
+## panels; `y` is the first baseline. Returns the paragraph height.
+func _cpara(y: float, s: String, width: float, size := 17, color := Color(0.85, 0.88, 0.95)) -> float:
+	s = Loc.out(s)
+	var pos := Vector2((ctrl.size.x - width) / 2.0, y)
+	ctrl.draw_multiline_string_outline(ui_font(), pos, s, HORIZONTAL_ALIGNMENT_CENTER, width, size, -1, maxi(3, size / 5), Color(0.02, 0.025, 0.03, 0.8 * color.a))
+	ctrl.draw_multiline_string(ui_font(), pos, s, HORIZONTAL_ALIGNMENT_CENTER, width, size, -1, color)
+	return ui_font().get_multiline_string_size(s, HORIZONTAL_ALIGNMENT_CENTER, width, size).y
+
+
 ## Многострочный текст с переносом по ширине
 func _para(pos: Vector2, s: String, width: float, size := 18, color := Color(0.85, 0.88, 0.95)) -> float:
 	s = Loc.out(s)

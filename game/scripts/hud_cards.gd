@@ -93,9 +93,11 @@ func draw(m: Main, size: Vector2) -> void:
 
 
 ## S11-23: hull bar in the top-left corner, where it is in flight, so a pick can weigh repair.
+## s12: on its own it looked like a leftover of the flight HUD — it sits in the same panel now.
 func _hull(p: Player) -> void:
 	if not is_instance_valid(p):
 		return
+	UiStyle.panel(ctrl, Rect2(20, 20, 440, 50), Color(1, 1, 1, 0.12), Color(0.03, 0.035, 0.035, 0.72))
 	var r := Rect2(40, 32, 400, 26)
 	var hk := clampf(p.hp / p.max_hp, 0.0, 1.0)
 	var hc := Color(0.4, 0.85, 0.45) if hk > 0.33 else UiStyle.DANGER
