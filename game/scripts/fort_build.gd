@@ -163,28 +163,28 @@ static func material(m: int) -> Material:
 		sm.set_shader_parameter("bleach", s[6])
 		sm.set_shader_parameter("unit", 1.0 / K)
 		mat = sm
+	elif m in [M.DARK, M.OLIVE, M.STEEL, M.SOOT, M.CHAR]:
+		# plain colours get procedural wear and dust, not flat even paint (Kanta 26.10)
+		match m:
+			M.DARK:
+				mat = flat_material(Color(0.118, 0.102, 0.086), 0.95, 1.0 / K)
+			M.OLIVE:   # darker than the preview: the warm sun tint turned it lime
+				mat = flat_material(Color(0.29, 0.3, 0.21), 0.95, 1.0 / K)
+			M.STEEL:
+				mat = flat_material(Color(0.357, 0.365, 0.361), 0.8, 1.0 / K)
+			M.SOOT:   # burnt-out steel of the store
+				mat = flat_material(Color(0.133, 0.114, 0.098), 1.0, 1.0 / K, 0.4)
+			M.CHAR:   # charred gate leaves and planks
+				mat = flat_material(Color(0.2, 0.16, 0.13), 1.0, 1.0 / K, 0.4)
 	else:
 		var f := StandardMaterial3D.new()
 		f.metallic_specular = 0.2
 		f.roughness = 0.95
 		match m:
-			M.DARK:
-				f.albedo_color = Color(0.118, 0.102, 0.086)
-			M.OLIVE:
-				f.albedo_color = Color(0.29, 0.3, 0.21)   # darker than the preview: the warm sun tint turned it lime
-			M.STEEL:
-				f.albedo_color = Color(0.357, 0.365, 0.361)
-				f.roughness = 0.75
 			M.BAG:
 				f.albedo_color = Color(0.85, 0.78, 0.65)
 				if ResourceLoader.exists(BAG_TEX):
 					f.albedo_texture = load(BAG_TEX)
-				f.roughness = 1.0
-			M.SOOT:   # burnt-out steel of the store
-				f.albedo_color = Color(0.133, 0.114, 0.098)
-				f.roughness = 1.0
-			M.CHAR:   # charred gate leaves and planks
-				f.albedo_color = Color(0.2, 0.16, 0.13)
 				f.roughness = 1.0
 			M.NET:    # camouflage net over the store, seen from both sides
 				f.albedo_color = Color(0.46, 0.44, 0.29)
@@ -193,6 +193,24 @@ static func material(m: int) -> Material:
 		mat = f
 	_mats[m] = mat
 	return mat
+
+
+## Shader of flat_material. Preloaded with the script on the main thread: the materials are first made inside
+## the fort and village build tasks, and a load() there hung the sortie start while the main thread waited on them.
+const FLAT_SHADER := preload("res://shaders/weathered_flat.gdshader")
+
+
+## Plain-coloured surface with procedural weathering (shaders/weathered_flat.gdshader): colour `c` (sRGB, as a
+## StandardMaterial3D albedo), base `rough`ness, `unit` metres per mesh unit (fort: 1 / K, village models: 1) and
+## how much `dust` settles. Shared by FortBuild and VillageHouses; callers cache the result.
+static func flat_material(c: Color, rough: float, unit: float, dust := 1.0) -> ShaderMaterial:
+	var sm := ShaderMaterial.new()
+	sm.shader = FLAT_SHADER
+	sm.set_shader_parameter("albedo", c)
+	sm.set_shader_parameter("roughness", rough)
+	sm.set_shader_parameter("unit", unit)
+	sm.set_shader_parameter("dust", dust)
+	return sm
 
 
 ## Tile size of a surface's UVs, preview units per texture repeat.

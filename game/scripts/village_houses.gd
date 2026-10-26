@@ -243,7 +243,7 @@ const FLAT := {
 
 
 ## Material of a model class: the fort's texture sets for plaster, brick, stone and wood (fort shader, terms in
-## metres), flat lit colours (FLAT) for the rest
+## metres), FLAT colours with procedural weathering (FortBuild.flat_material) for the rest
 static func material(cls: String) -> Material:
 	if _mats.has(cls):
 		return _mats[cls]
@@ -257,11 +257,7 @@ static func material(cls: String) -> Material:
 		sm.set_shader_parameter("roof_clean", 1.0)
 		sm.set_shader_parameter("normal_depth", 0.0)   # no relief: at 40 px it adds nothing, and on the Low preset the models' tangents blew it out to white
 		mat = sm
-	else:
-		var f := StandardMaterial3D.new()
-		f.metallic_specular = 0.2
-		f.roughness = 1.0
-		f.albedo_color = FLAT.get(cls, FLAT["cloth"])
-		mat = f
+	else:   # procedural wear and dust over the flat colour (Kanta 26.10: no flat even paint); model units are metres
+		mat = FortBuild.flat_material(FLAT.get(cls, FLAT["cloth"]), 1.0, 1.0, 0.0 if cls == "dark" else 1.0)   # no dust in the dark openings
 	_mats[cls] = mat
 	return mat
