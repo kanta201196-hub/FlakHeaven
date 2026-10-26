@@ -257,6 +257,7 @@ func start_run() -> void:
 	Hints.clear()
 	if aces():
 		Events.banner.emit(Loc.t("БИТВА АСОВ · ТЕСТ"), 4.0)
+		run.add_picks(AcesBalance.DRAFT_PICKS)   # option 1 (Kanta 26.10): the build is drafted before takeoff
 		Hints.show("aces_goal2", "Битва асов: асы взлетают один за другим. Три ракеты или пара очередей аса — и самолёт сбит, у них так же. От ракет: F — ловушки, E — разворот сбивает наведение, Пробел — бочка. F1 — настройка полёта.", 10.0, 3)
 	else:
 		Events.banner.emit(Loc.t("%s · ОПЕРАЦИЯ «%s» · %s") % [Loc.t(Biome.title()).to_upper(), Loc.t(String(Campaign.op()["title"])).to_upper(), Loc.t(String(Campaign.diff()["title"])).to_upper()], 4.0)
@@ -555,6 +556,7 @@ func _on_activity_succeeded(kind: StringName) -> void:
 	if aces():   # «Битва асов»: a downed ace is the score, no parts or cards
 		if kind == &"dogfight":
 			run.on_rival_down()
+			run.add_picks(AcesBalance.ace_picks(run.aces_down))   # option 1: a card for every ace
 			Events.banner.emit(Loc.t("Ас сбит! Всего: %d") % run.aces_down, 2.5)
 		return
 	var r := run.award_activity(kind)
