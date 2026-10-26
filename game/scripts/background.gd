@@ -31,6 +31,9 @@ var _tex := {}
 var _names: Array = []
 var _total_w := 0.0
 var biome_ok := false
+## FA-03: damage of «Укрепрайон» forts this sortie (FortView.key_of(fort pos) → FortDamage); lives as long as
+## the sortie's background, so a broken fort stays broken when it scrolls off screen and back.
+var forts_hit := {}
 
 
 func _ready() -> void:

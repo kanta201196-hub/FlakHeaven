@@ -312,8 +312,10 @@ func break_locks(from: Vector2, r: float) -> int:
 ## 3.1: радиус × «Осколочная рубашка» (и «Штурмовой заход» II); нашивки «Взрыв» I (край 50%) и II (цепной подрыв).
 ## chainable — взрыв НАР или бомбы: только он запускает «Цепную реакцию» (тест 3.5-s7: её запускали и мини-ракеты
 ## «Стального ежа», и всё подряд — у «Кита» цепь дала 39% урона за вылет)
+## A visible ordnance blast also tells breakable ground structures (Events.player_blast, FA-03).
 func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false, ground_k := 1.0, chainable := false) -> void:
 	var edge := 0.35
+	var r_base := r
 	var pl := Main.I.player
 	var blast2 := false
 	if is_instance_valid(pl):
@@ -338,6 +340,8 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 				died.append([e.global_position, e.max_hp])
 	if visual:
 		Main.I.fx.blast(pos, r)
+		if (chainable or chain > 0) and r_base >= FortBalance.BLAST_MIN_R:
+			Events.player_blast.emit(pos, r, r_base)   # FA-03: walls, gate and store of an enemy fort
 	for dd in died.slice(0, CHAIN_FAN):
 		_chain_q.append({"p": dd[0], "dmg": 30.0 + CHAIN_HP * float(dd[1]), "n": chain + 1, "t": 0.08})
 
