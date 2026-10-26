@@ -2,7 +2,7 @@ extends Node3D
 ## Model studio (VIS-01, Kanta 24.10: every model is reviewed in large close-ups on all graphics presets).
 ## Shows a set of game models on a flat sand plane under the game's sun, environment and graphics preset
 ## (the same engine calls as Render3D._ready / apply_gfx), with the game's own materials: village houses
-## through VillageHouses, biome props through BiomeProps (tree cards below «Максимальное», as in a sortie),
+## through VillageHouses, biome props through BiomeProps (tree cards below the Maximum preset, as in a sortie),
 ## battle units straight from their GLB. Each set is shot from a 3/4 view (35° above the horizon) and from
 ## straight above, framed on its bounds.
 ##

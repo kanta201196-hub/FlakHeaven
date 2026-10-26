@@ -31,6 +31,7 @@ def mat(name, rgb, metal=0.0, rough=0.6):
 parts = []
 group = ""          # пусто — основной корпус; иначе подвижная часть (узел с этим именем в GLB)
 pivots = {}         # группа → точка вращения (x, y, z)
+parents = {}        # группа → группа-родитель (по умолчанию корпус): деталь крутится вместе с ней
 
 def finish(ob, m, bevel=0.0, seg=1):
     ob.data.materials.append(m)
@@ -99,8 +100,10 @@ def tube(name, pts, r, m):
 
 
 
-def build(name, out):
-    """Применить фаски, слить детали в один объект, сохранить .blend и .glb"""
+def build(name, out, paint=None, tex=2048):
+    """Применить фаски, слить детали в один объект, сохранить .blend и .glb.
+    paint — palette from turret_paint.PALETTES: bake the textured paint (S12) before the export; the root gets a
+    tex x tex atlas, the moving groups half of it (pods a quarter)"""
     os.makedirs(out, exist_ok=True)
     for ob in parts:
         bpy.context.view_layer.objects.active = ob
@@ -129,12 +132,20 @@ def build(name, out):
         if gname:
             o = bpy.data.objects[gname]
             mw = o.matrix_world.copy()
-            o.parent = tur
+            o.parent = bpy.data.objects[parents[gname]] if gname in parents else tur
             o.matrix_world = mw
     print("TRIS", tris)
+    if paint is not None:
+        import turret_paint
+        turret_paint.bake(tur, paint, tex, "turret_paint")
+        for gname in groups:
+            if gname:
+                turret_paint.bake(bpy.data.objects[gname], paint, tex // 4 if gname == "pods" else tex // 2,
+                                  "turret_paint_" + gname)
 
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + ".blend"))
-    bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format="GLB", use_selection=False)
+    bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format="GLB", use_selection=False,
+                              export_image_format="JPEG" if paint is not None else "AUTO", export_jpeg_quality=90)
 
     return tur
 

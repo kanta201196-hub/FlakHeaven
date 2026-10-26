@@ -39,9 +39,10 @@ const ESCORT_N := 4
 const MIN_FIGHT := 45.0          # предел урона: бой не короче 45 с при любой сборке
 const FLEE_SPEED := 0.75         # фаза 3: доля BASE_SPEED — игрок догоняет
 const FLEE_T := 50.0
+const MSL_RELOAD := 4.0          # a dome turret's rail missile is back this long after it left
 
 var phase := 1
-var points: Array = []           # [{name, node, kind, off (в осях самолёта: x — вперёд), hp, max, cd, shots, st, sec: [центр, полуширина]}]
+var points: Array = []           # [{name, node, kind, off (в осях самолёта: x — вперёд), hp, max, cd, shots, st, sec: [центр, полуширина], msl: rail missile reload, dm/lk: phase-1 dome launch clock (FortressBalance.dome_step)}]
 ## Для 3D-модели (узлы GLB: turret_1…turret_4, engine_l, engine_r, hatch_l/r, bay_l/r, core):
 ## выбитые части — имя узла → true; люки открыты в фазе 2 циклами, корпус раскрыт в фазе 3
 var parts_down := {}
@@ -91,11 +92,16 @@ func setup_fortress(total: float) -> void:
 		_pt("левый двигатель", "engine_l", "engine", Vector2(14, -21) * k, total * ENGINE_SHARE, []),
 		_pt("правый двигатель", "engine_r", "engine", Vector2(14, 21) * k, total * ENGINE_SHARE, []),
 	]
+	var dome := 0
+	for pt in points:
+		if pt["kind"] == "turret":
+			pt["dm"] = FortressBalance.DOME_MSL_FIRST + FortressBalance.DOME_MSL_STAGGER * dome
+			dome += 1
 	_set_title()
 
 
 func _pt(n: String, node: String, kd: String, off: Vector2, h: float, sec: Array) -> Dictionary:
-	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0, "sec": sec}
+	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0, "sec": sec, "msl": 0.0, "dm": 0.0, "lk": 0.0}
 
 
 func kind() -> String:
@@ -364,6 +370,8 @@ func behave(delta: float) -> void:
 		Main.I.tele.add("fort%d_near_s" % phase, delta)
 	Main.I.tele.add("fort%d_s" % phase, delta)
 	_turrets(delta, p)
+	if phase == 1:
+		_domes(delta, p, d)
 	_escort(delta)
 	if phase == 2:
 		_bay(delta, p, to, d)
@@ -416,6 +424,7 @@ func _turrets(delta: float, p: Player) -> void:
 	for pt in points:
 		if pt["kind"] != "turret" or float(pt["hp"]) <= 0.0:
 			continue
+		pt["msl"] = maxf(0.0, float(pt["msl"]) - delta)
 		var at := _world(pt)
 		var to := p.global_position - at
 		if int(pt["shots"]) > 0:
@@ -433,6 +442,35 @@ func _turrets(delta: float, p: Player) -> void:
 			continue
 		pt["shots"] = 3
 		pt["cd"] = randf_range(1.6, 2.4)
+
+
+## Phase-1 dome missiles (Kanta 26.10, FortressBalance): each live dome launches its rail missile once per
+## DOME_MSL_EVERY s, domes staggered, after the bay volley's lock warning; the type, homing and damage are the
+## volley's. A lock starts only in range and under the Fortress-wide MSL_CAP (missiles in the air + locks).
+func _domes(delta: float, p: Player, d: float) -> void:
+	var in_air := 0
+	for m: Dictionary in Main.I.projectiles.missiles:
+		if m.get("who", "") == kind():
+			in_air += 1
+	var locking := 0
+	for pt in points:
+		if pt["kind"] == "turret" and float(pt["hp"]) > 0.0 and float(pt["lk"]) > 0.0:
+			locking += 1
+	for pt in points:
+		if pt["kind"] != "turret" or float(pt["hp"]) <= 0.0:
+			continue
+		var may := d < FortressBalance.DOME_MSL_RANGE and FortArea.can_lock(in_air, locking, FortressBalance.MSL_CAP)
+		var ev := FortressBalance.dome_step(pt, delta, may)
+		if ev == "lock":
+			locking += 1
+			Main.I.sfx.play("lock", -6.0, 0.6)
+		elif ev == "fire":
+			locking -= 1
+			in_air += 1
+			var at := _world(pt)
+			Main.I.projectiles.spawn_missile(at, (p.global_position - at).normalized(), "aam", kind(), Projectiles.MSL_FREE)
+			Main.I.sfx.play("missile_enemy", -6.0, 0.6)
+			pt["msl"] = FortressBalance.DOME_MSL_EVERY - FortressBalance.DOME_MSL_LOCK
 
 
 ## Видит ли турель точку: в своём секторе и не в мёртвой зоне (углы — от центра «Крепости»)
@@ -490,8 +528,7 @@ func _bay(delta: float, p: Player, to: Vector2, d: float) -> void:
 		if _lock <= 0.0:
 			for i in 4:
 				# S10-04: пуск с крыльев вперёд по курсу, потом доворот на цель
-				Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading + PI / 2.0 * (1.0 if i % 2 else -1.0)) * 40.0,
-					Vector2.from_angle(heading + (i - 1.5) * 0.15), "aam", kind(), Projectiles.MSL_FREE)
+				Main.I.projectiles.spawn_missile(_msl_from(i), Vector2.from_angle(heading + (i - 1.5) * 0.15), "aam", kind(), Projectiles.MSL_FREE)
 			Main.I.sfx.play("missile_enemy", -4.0, 0.7)
 			_missile_cd = 6.0
 		return
@@ -499,6 +536,18 @@ func _bay(delta: float, p: Player, to: Vector2, d: float) -> void:
 	if _missile_cd <= 0.0 and d < 1000.0:
 		_lock = 1.1
 		Main.I.sfx.play("lock", -4.0, 0.7)
+
+
+## Where volley missile i leaves from (Kanta 26.10): the rail missile on top of a live dome turret, cycling through
+## them, and that dome shows no missile until MSL_RELOAD runs out; with every turret down, the wing roots as before.
+## Same count, timing and damage either way: only the launch point moves.
+func _msl_from(i: int) -> Vector2:
+	var racks := points.filter(func(pt: Dictionary) -> bool: return pt["kind"] == "turret" and float(pt["hp"]) > 0.0)
+	if racks.is_empty():
+		return global_position + Vector2.from_angle(heading + PI / 2.0 * (1.0 if i % 2 else -1.0)) * 40.0
+	var pt: Dictionary = racks[i % racks.size()]
+	pt["msl"] = MSL_RELOAD
+	return _world(pt)
 
 
 func _update_zones(delta: float, p: Player) -> void:

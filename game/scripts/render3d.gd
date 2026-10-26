@@ -1739,10 +1739,11 @@ func _sink_foam(id: int, gp: Vector3, len_px: float, on: bool) -> void:
 	d["t"] = 0.0
 
 
-## Подвижные части «Крепости» (tools/blender/fortress.py): башни смотрят на игрока, винты крутятся,
+## Подвижные части «Крепости» (tools/blender/fortress.py): башни смотрят на игрока (ракета на куполе — с ней), винты крутятся,
 ## выбитые точки (Fortress.parts_down) пропадают или останавливаются; с фазы 2 открываются люки
 ## и поднимаются ракеты, в фазе 3 откидываются панели обшивки над раскалённым ядром.
-const FORTRESS_NODES := ["turret_1", "turret_2", "turret_3", "turret_4", "engine_l_prop", "engine_l_prop2",
+const FORTRESS_NODES := ["turret_1", "turret_2", "turret_3", "turret_4", "turret_1_missile", "turret_2_missile",
+	"turret_3_missile", "turret_4_missile", "engine_l_prop", "engine_l_prop2",
 	"engine_r_prop", "engine_r_prop2", "hatch_l", "hatch_r", "bay_l", "bay_r", "hull_l", "hull_r", "core"]
 
 
@@ -1764,6 +1765,8 @@ func _fortress_parts(u: Unit3D, f: Fortress, ang: float, delta: float) -> void:
 			continue
 		var t := parts[nm] as Node3D
 		t.visible = not f.parts_down.has(nm)
+		if parts.has(nm + "_missile") and i < f.points.size():   # the dome's rail missile, gone while it reloads
+			(parts[nm + "_missile"] as Node3D).visible = float(f.points[i].get("msl", 0.0)) <= 0.0
 		if t.visible and p != null and i < f.points.size():
 			var to := p.global_position - (f.global_position + (f.points[i]["off"] as Vector2).rotated(ang))
 			t.rotation.y = lerp_angle(t.rotation.y, -wrapf(to.angle() - ang, -PI, PI), 1.0 - exp(-delta * 6.0))
@@ -1876,6 +1879,9 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 						(wmi.get_child(0) as Node3D).visible = false
 			var yaw: float = mt["yaw"]
 			if g.weapon == "turret":   # п. 37: турель смотрит на ближайшую цель
+				var pods := wmi.get_node_or_null("pods") as Node3D   # S12: «Стальной ёж» launch pods on the turret
+				if pods != null:
+					pods.visible = p.syn.has("hedgehog")
 				var idle := yaw
 				# правка 3.5-s4 (п. 13): стволы смотрят туда же, куда наведена турель в бою (aim), без цели —
 				# плавно возвращаются в походное положение; поворот с той же ограниченной скоростью

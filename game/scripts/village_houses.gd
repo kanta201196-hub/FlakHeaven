@@ -1,10 +1,10 @@
 class_name VillageHouses
-## Highland kishlak houses from models (VIS-01, Kanta 26.10.2026: «Кишлак: дома 49 + 51 + 50, 71 тоже можно
-## использовать. Скомпануй разные»). AdobeBuild lays the village out as before and, instead of drawing a house as
+## Highland kishlak houses from models (VIS-01, Kanta 26.10.2026: village houses from models 49, 50 and 51, model 71
+## may be used too, mix them). AdobeBuild lays the village out as before and, instead of drawing a house as
 ## boxes, records where it stands (`AdobeBuild._home`); this class picks a model variant for each lot and draws all
 ## of one variant in a village with one MultiMeshInstance3D. The models (game/models/village, built by
 ## tools/blender/village_houses.py) carry no textures of their own: their surfaces are named by material class and
-## get the «Укрепрайон» fort's texture set Г (FortBuild.SETS), so the village and the fort read as one place.
+## get the fortified-area fort's texture set Г (FortBuild.SETS), so the village and the fort read as one place.
 ## Model units are metres, long side along X, base on y = 0, centred on the footprint.
 
 ## [file, size (x, height, depth) in metres, floors, weight]. Sizes come from village_houses.py's printout.
@@ -147,7 +147,7 @@ static func material(cls: String) -> Material:
 		sm.set_shader_parameter("grime", GRIME if cls != "wood" else 0.01)
 		sm.set_shader_parameter("bleach", BLEACH)
 		sm.set_shader_parameter("roof_clean", 1.0)
-		sm.set_shader_parameter("normal_depth", 0.0)   # no relief: at 40 px it adds nothing, and on «Низкое» the models' tangents blew it out to white
+		sm.set_shader_parameter("normal_depth", 0.0)   # no relief: at 40 px it adds nothing, and on the Low preset the models' tangents blew it out to white
 		mat = sm
 	else:
 		var f := StandardMaterial3D.new()

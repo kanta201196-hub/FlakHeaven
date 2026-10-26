@@ -1,4 +1,4 @@
-"""Highlands oasis models from CC BY Sketchfab sources (VIS-01, Kanta 26.10: «Оазис: 66 … 70»).
+"""Highlands oasis models from CC BY Sketchfab sources (VIS-01, Kanta 26.10: oasis from models 66 to 70).
   b12_date_palm  — date palm (Date Palm, evolveduk): the frond cards keep their alpha texture, the trunk is
                    decimated; fronds toned to the dusty olive of the Highlands orchards, bark warm grey-brown;
   b13_oasis_well — well (Desert Environment Well, Bhaddou): stone ring and plank cover, toned to the stone and
@@ -7,7 +7,7 @@ Everything matte (roughness 1, metallic 0). Units as the other biome models (too
 standing on z = 0 (y = 0 in Godot), centred, the largest size in plan = 1; biome_props.gd scales by width.
 Run (bpy 5.x): python3 -I oasis_models.py <palm.glb> <well.glb> <out_dir>
   → <out_dir>/b12_date_palm.glb, b13_oasis_well.glb
-The palm's light cards for presets below «Максимальное»: tools/model_lab/bake_impostor.gd -- b12_date_palm."""
+The palm's light cards for presets below Maximum: tools/model_lab/bake_impostor.gd -- b12_date_palm."""
 import sys, os
 import numpy as np
 import bpy
