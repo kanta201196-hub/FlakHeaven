@@ -4,8 +4,8 @@ Why: the scan bunker (#94) read as a shapeless blob with a hole in its face. Thi
 ground_models.py, but its surfaces use the fort's texture set Г (game/art/fort: concrete, stone, planks; the
 fort's burlap for the bags), so the bunker and the «Укрепрайон» read as one army's work.
 
-What: a concrete casemate half dug into a sandstone knoll, facing +X: a wide embrasure with a dark interior and a
-twin MG under a visor, a thick roof slab with chipped edges and bent rebar, a sandbag rim on the roof, a rear
+What: a concrete casemate dug into an earth berm up to its roof slab, facing +X: a wide embrasure with a dark interior and a
+twin MG under the slab edge, a thick roof slab with chipped edges and bent rebar, a sandbag rim on the roof, a rear
 entrance trench with plank revetment and steps, a periscope, an antenna stub and a vent. Weathering is baked:
 dust low and in crevices, rain streaks, chipped concrete edges, soot above the embrasure.
 
@@ -57,10 +57,11 @@ def _boxtex(nt, path, tile, colorspace="sRGB"):
     return t.outputs["Color"]
 
 
-def fmat(kind, tex, tile, gain, dust=0.5, soot=False, chips=False, streaks=False, rock="", bump=0.6):
+def fmat(kind, tex, tile, gain, dust=0.5, soot=False, chips=False, streaks=False, rock="", bump=0.6, low=""):
     """A baked material in the convoy_kit contract (EMIT colour, node "bsdf" for the normal, node "out").
     tex: image path; gain: sRGB-ish multiplier towards the Highlands' sand-ochre (FortBuild.SETS gains);
-    rock: path of the ground texture for the gentle faces (tex then shows only on steep ones)."""
+    rock: path of the ground texture for the gentle faces (tex then shows only on steep ones);
+    low: path of the texture near z = 0 (the berm's toe takes the terrain's own sand)."""
     m = bpy.data.materials.new(kind)
     m.use_nodes = True
     nt = m.node_tree
@@ -80,8 +81,13 @@ def fmat(kind, tex, tile, gain, dust=0.5, soot=False, chips=False, streaks=False
         flat = _band(nt, nz.outputs["Z"], 0.6, 0.86)
         sand = _mix(nt, 1.0, _boxtex(nt, rock, 1.4), (0.92, 0.84, 0.76), "MULTIPLY")
         col = _mix(nt, _m(nt, "MULTIPLY", flat, 0.85), col, sand)
-        # the raw gravel and rock albedos read orange next to the lit terrain (bench 26.10): half their saturation
-        col = _n(nt, "ShaderNodeHueSaturation", Color=col, Saturation=0.5).outputs["Color"]
+    if rock:
+        # the raw gravel and rock albedos read dark orange next to the lit terrain (bench 26.10, the ground shader
+        # lifts and greys its sand): less saturated and lighter
+        col = _n(nt, "ShaderNodeHueSaturation", Color=col, Saturation=0.8, Value=1.25).outputs["Color"]
+    if low:   # the toe: the terrain's own sand, greyed and lifted the way the ground shader shows it on the flats
+        ground = _n(nt, "ShaderNodeHueSaturation", Color=_boxtex(nt, low, 1.2), Saturation=0.75, Value=1.55).outputs["Color"]
+        col = _mix(nt, _m(nt, "SUBTRACT", 1.0, _band(nt, z.outputs["Z"], 0.004, 0.045)), col, ground)
     # large blotches: sun bleach and damp, so a big face is not one flat tone
     big = _noise(nt, pos, 4.0, 3.0, (4.0, 2.0, 7.0))
     col = _mix(nt, _m(nt, "MULTIPLY", _band(nt, big, 0.45, 0.66), 0.35), col, (0.8, 0.72, 0.6), "MULTIPLY")
@@ -149,21 +155,30 @@ def fmat(kind, tex, tile, gain, dust=0.5, soot=False, chips=False, streaks=False
     return m
 
 
-fmat("conc", os.path.join(FORT, "conc_color.jpg"), 0.3, (0.92, 0.8, 0.64), 0.5, soot=True, chips=True, streaks=True)
-fmat("slab", os.path.join(FORT, "conc_color.jpg"), 0.3, (0.86, 0.75, 0.6), 0.9, chips=True, streaks=True)
-# the knoll wears the terrain's own rock and gravel (art/ground/pbr), so it grows out of the map rather than sits on
-# it; tiles a few times finer than the terrain's (300 px = 5 units), which would leave the close-up a flat smear
-fmat("knoll", os.path.join(GROUND, "rock_albedo.jpg"), 1.0, (0.95, 0.9, 0.86), 0.12, rock=os.path.join(GROUND, "gravel_albedo.jpg"), bump=0.9)
+fmat("conc", os.path.join(FORT, "conc_color.jpg"), 0.2, (0.98, 0.84, 0.66), 0.5, soot=True, chips=True, streaks=True)
+# the roof slab is what the combat camera sees: the fort's concrete, only lightly dusted (0.9 hid it under flat sand)
+fmat("slab", os.path.join(FORT, "conc_color.jpg"), 0.2, (0.92, 0.86, 0.76), 0.3, chips=True, streaks=True)
+# the berm wears the terrain's own textures (art/ground/pbr): spoil of gravel and rock up the slope, the plain sand
+# of the flats at the toe, so it fades into the map; tiles a few times finer than the terrain's (300 px = 5 units),
+# which would leave the close-up a flat smear
+fmat("knoll", os.path.join(GROUND, "rock_albedo.jpg"), 1.0, (0.9, 0.84, 0.8), 0.15, rock=os.path.join(GROUND, "gravel_albedo.jpg"),
+     bump=0.9, low=os.path.join(GROUND, "sand_albedo.jpg"))
 fmat("plank", os.path.join(FORT, "wood_color.jpg"), 0.14, (0.8, 0.7, 0.58), 0.6, bump=0.8)
 fmat("bag", BAG, 0.06, (0.95, 0.86, 0.7), 0.4, bump=0.7)
 fmat("trench", os.path.join(FORT, "stone_color.jpg"), 0.2, (0.62, 0.48, 0.36), 0.8, bump=0.5)
 
-# ---------------------------------------------------------------- knoll
-CX = -0.06                 # knoll centre: the casemate's face sticks out of its +X side
-AX, AY, H = 0.43, 0.38, 0.115
+# ---------------------------------------------------------------- earth berm
+# Coordinator review 26.10: the round knoll read as a pale plate under a box. The casemate is now dug in: an
+# irregular berm of spoil is heaped against its sides and back up to the roof slab and slopes out into the ground
+# with a soft toe (cosine profile, zero slope where it meets the terrain, then sinks under it), so only the slab,
+# the embrasure face and the rear trench show.
 FRONT = 0.19               # casemate face
 REAR = -0.2                # casemate back wall
+HB = 0.17                  # body half width
+TOP = 0.12                 # body top (low profile: the berm covers the walls)
 TR_Y = 0.058               # trench half width
+EZ0, EZ1, EW = 0.035, 0.088, 0.11   # embrasure sill, lintel and half width
+HW = TOP - 0.008           # berm height against the walls
 
 
 def _hash(i, j):
@@ -180,22 +195,40 @@ def _vnoise(x, y, f):
     return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy
 
 
+def _rect_d(x, y):
+    """Distance from (x, y) to the casemate's footprint (0 inside)"""
+    dx = max(REAR - x, 0.0, x - FRONT)
+    dy = max(abs(y) - HB, 0.0)
+    return math.hypot(dx, dy)
+
+
+def berm_w(x, y):
+    """Berm width round the walls: irregular, wider at the back, narrower on the sides (sprite canvas 256x212)"""
+    w = 0.13 + 0.09 * _vnoise(x + 5.3, y - 2.1, 4.5)
+    if x < REAR:
+        w += 0.05
+    return w
+
+
 def knoll_h(x, y):
-    """Height of the knoll; lowered into a firing apron in front of the embrasure and a trench at the back"""
-    r = (abs((x - CX) / AX) ** 2.4 + abs(y / AY) ** 2.4) ** (1 / 2.4)
-    r *= 1.0 + 0.08 * (_vnoise(x, y, 7.0) - 0.5)
-    if r >= 1.0:   # the toe keeps sinking gently under the terrain: a sharp drop showed as a rock-textured lip
-        return -0.012 * min(1.0, (r - 1.0) / 0.1)
-    f = (1.0 - r * r) ** 1.8
-    h = H * f
-    # lumps of sandstone, gentle enough that most of the mound reads as grit and only the lumps as rock
-    h += 0.022 * f * (_vnoise(x + 3.1, y, 6.0) - 0.5) + 0.005 * f * (_vnoise(x, y + 1.7, 19.0) - 0.5)
-    # firing apron: the ground falls away in front of the face
-    if x > FRONT - 0.02:
-        a = min(1.0, (x - FRONT + 0.02) / 0.1) * max(0.0, 1.0 - max(0.0, abs(y) - 0.15) / 0.12)
-        h = h * (1.0 - 0.85 * a) + 0.006 * a
-    # rear trench to the door
-    if x < REAR + 0.02:
+    """Ground height of the bunker model: the berm against the walls, a glacis under the embrasure, the trench"""
+    d = _rect_d(x, y)
+    w = berm_w(x, y)
+    t = d / w
+    if t >= 1.0:   # past the toe the berm dips just under the terrain (deeper would lift it: the studio and the
+        return -0.004 * min(1.0, (t - 1.0) / 0.2)   # sprite ground a model on its lowest point)
+    s = 0.5 * (1.0 + math.cos(math.pi * t))
+    h = HW * s
+    # spoil lumps and a ragged crest
+    h += s * (0.012 * (_vnoise(x + 3.1, y, 9.0) - 0.5) + 0.004 * (_vnoise(x, y + 1.7, 31.0) - 0.5))
+    # glacis in front of the face: the earth stops under the sill and falls away forward; the berm wraps the
+    # front corners, so the face shows only between them
+    if x > FRONT - 0.03:
+        k = min(1.0, (x - FRONT + 0.03) / 0.04) * max(0.0, min(1.0, 1.0 - (abs(y) - HB + 0.01) / 0.07))
+        gl = max(0.0, EZ0 - 0.014 - 0.45 * max(0.0, x - FRONT)) * (0.5 + 0.5 * math.cos(math.pi * min(1.0, max(0.0, x - FRONT) / 0.16)))
+        h = h * (1.0 - k) + min(h, gl) * k
+    # rear trench to the door, cut through the berm
+    if x < REAR + 0.01:
         tw = TR_Y + 0.012 + (REAR - x) * 0.04
         if abs(y) < tw:
             h = min(h, 0.004)
@@ -205,25 +238,37 @@ def knoll_h(x, y):
     return h
 
 
-# radial mesh round the knoll centre: a smooth toe that dips under the terrain (a square grid cut at the rim left a
-# saw-tooth edge), rings packed towards the rim where the slope changes most
-NR, NA = 30, 84
-vs, fs = [(CX, 0.0, knoll_h(CX, 0.0))], []
-for j in range(1, NR + 1):
-    t = 1.08 * (1.0 - (1.0 - j / NR) ** 1.6)   # 1.08: the toe stays inside the 256x212 sprite canvas
-    for i in range(NA):
-        a = 2 * math.pi * i / NA
-        x, y = CX + AX * t * math.cos(a), AY * t * math.sin(a)
-        vs.append((x, y, knoll_h(x, y)))
+# rays from the casemate's centre: each starts inside the footprint (hidden under the casemate) and ends past the
+# berm's toe, so the sheet's outer edge is a smooth curve just under the ground, not a grid's staircase
+NA, NR = 120, 26
+XC = (FRONT + REAR) / 2
+vs, fs = [], []
 for i in range(NA):
-    fs.append((0, 1 + i, 1 + (i + 1) % NA))
-for j in range(NR - 1):
-    for i in range(NA):
-        a0, a1 = 1 + j * NA, 1 + (j + 1) * NA
-        fs.append((a0 + i, a1 + i, a1 + (i + 1) % NA, a0 + (i + 1) % NA))
+    a = 2 * math.pi * i / NA
+    ca, sa = math.cos(a), math.sin(a)
+    # where the ray leaves the footprint
+    r0 = min((FRONT - XC) / ca if ca > 1e-6 else (REAR - XC) / ca if ca < -1e-6 else 9.0,
+             HB / abs(sa) if abs(sa) > 1e-6 else 9.0)
+    ex, ey = XC + ca * r0, sa * r0
+    r1 = r0 + 1.25 * berm_w(ex, ey)
+    if abs(sa) > 1e-6:
+        r1 = min(r1, 0.405 / abs(sa))   # the sprite canvas (256x212)
+    r1 = min(r1, (0.4 - XC) / ca if ca > 1e-6 else (-0.52 - XC) / ca if ca < -1e-6 else 9.0)
+    for j in range(NR + 1):
+        u = j / NR
+        r = r0 - 0.02 + (r1 - r0 + 0.02) * (u ** 1.15)
+        x, y = XC + ca * r, sa * r
+        h = knoll_h(x, y)
+        if j == NR:
+            h = min(h, -0.004)
+        vs.append((x, y, h))
+for i in range(NA):
+    i1 = (i + 1) % NA
+    for j in range(NR):
+        fs.append((i * (NR + 1) + j, i * (NR + 1) + j + 1, i1 * (NR + 1) + j + 1, i1 * (NR + 1) + j))
 kn = K._obj("knoll", vs, fs, "knoll")
-# convoy_kit recalculates normals "outside", which on an open sheet can turn the whole mound face-down (the bake
-# then saw every face as steep and laid rock all over it); a terrain sheet always faces up
+# convoy_kit recalculates normals "outside", which on an open sheet can turn it face-down (the bake then saw every
+# face as steep); a ground sheet always faces up
 import bmesh  # noqa: E402
 bm = bmesh.new()
 bm.from_mesh(kn.data)
@@ -233,8 +278,6 @@ bm.to_mesh(kn.data)
 bm.free()
 
 # ---------------------------------------------------------------- casemate
-HB = 0.17      # body half width
-TOP = 0.165    # body top
 
 
 def rr(a, b, r, cx=0.0, n=3):
@@ -251,11 +294,11 @@ bh = (FRONT - REAR) / 2
 prism_z("casemate", rr(bh, HB, 0.02, bx), -0.01, TOP, "conc", 0.006, 2)
 # battered front: a sloped concrete apron at the foot of the face
 K._obj("face_batter", [(FRONT, -HB, -0.01), (FRONT, HB, -0.01), (FRONT + 0.035, HB, -0.01), (FRONT + 0.035, -HB, -0.01),
-                       (FRONT, -HB, 0.05), (FRONT, HB, 0.05)],
+                       (FRONT, -HB, 0.02), (FRONT, HB, 0.02)],
        [(0, 3, 2, 1), (0, 1, 5, 4), (3, 4, 5, 2), (0, 4, 3), (1, 2, 5)], "conc", 0.004)
 
 # roof slab: thick, overhanging, with chipped corners and edges (a jagged outline, not a clean rounded box)
-SX0, SX1, SY = REAR - 0.04, FRONT + 0.05, HB + 0.045
+SX0, SX1, SY = REAR - 0.04, FRONT + 0.015, HB + 0.045   # little overhang at the front: it shaded the embrasure
 outline = []
 P = [(SX1, -SY), (SX1, SY), (SX0, SY), (SX0, -SY)]
 chips = []
@@ -283,33 +326,27 @@ for (x, y, nx_, ny_) in chips[:6]:
         tube("rebar", [(px - nx_ * 0.01, py - ny_ * 0.01, TOP + 0.017), (px + nx_ * 0.006, py + ny_ * 0.006, TOP + 0.018),
                        (px + nx_ * 0.016, py + ny_ * 0.016, TOP + 0.03)], 0.0014, "steel", 4)
 
-# embrasure: a wide slit with a dark interior, splayed cheeks, a visor over it, a sloped sill and a twin MG
-EZ0, EZ1, EW = 0.068, 0.112, 0.105
+# embrasure: a wide slit with a dark interior, splayed cheeks, a sloped sill and a twin MG
 box("emb_dark", (FRONT + 0.001, 0, (EZ0 + EZ1) / 2), (0.004, 2 * EW, EZ1 - EZ0), "black", 0.0)
 for s in (1, -1):
     K._obj("emb_cheek", [(FRONT, s * EW, EZ0 - 0.012), (FRONT, s * EW, EZ1 + 0.012), (FRONT + 0.03, s * (EW + 0.03), EZ1 + 0.02),
                          (FRONT + 0.03, s * (EW + 0.03), EZ0 - 0.02), (FRONT + 0.03, s * (EW + 0.055), EZ1 + 0.02),
                          (FRONT + 0.03, s * (EW + 0.055), EZ0 - 0.02), (FRONT, s * (EW + 0.055), EZ1 + 0.02), (FRONT, s * (EW + 0.055), EZ0 - 0.02)],
            [(0, 1, 2, 3), (3, 2, 4, 5), (5, 4, 6, 7), (1, 6, 4, 2), (0, 3, 5, 7)], "conc", 0.003)
-box("emb_visor", (FRONT + 0.03, 0, EZ1 + 0.03), (0.07, 2 * EW + 0.14, 0.022), "conc", 0.004)
 K._obj("emb_sill", [(FRONT, -EW, EZ0), (FRONT, EW, EZ0), (FRONT + 0.035, EW + 0.02, EZ0 - 0.022), (FRONT + 0.035, -EW - 0.02, EZ0 - 0.022),
                     (FRONT, -EW, EZ0 - 0.03), (FRONT, EW, EZ0 - 0.03)],
        [(0, 3, 2, 1), (0, 1, 5, 4), (3, 4, 5, 2), (0, 4, 3), (1, 2, 5)], "conc", 0.003)
-box("mantlet", (FRONT + 0.004, 0.0, 0.09), (0.016, 0.05, 0.03), "dark", 0.003)
+box("mantlet", (FRONT + 0.004, 0.0, 0.061), (0.016, 0.05, 0.03), "dark", 0.003)
 for s in (-0.011, 0.011):
-    cyl("barrel", (FRONT + 0.045, s, 0.092), 0.0038, 0.075, "steel", "X", 8)
-    cyl("muzzle", (FRONT + 0.084, s, 0.092), 0.0055, 0.012, "dark", "X", 8)
-# small side loopholes near the front corners
-for s in (1, -1):
-    box("loop_dark", (FRONT - 0.06, s * (HB + 0.001), 0.1), (0.05, 0.004, 0.022), "black", 0.0)
-    box("loop_visor", (FRONT - 0.06, s * (HB + 0.012), 0.122), (0.07, 0.026, 0.012), "conc", 0.003)
+    cyl("barrel", (FRONT + 0.045, s, 0.062), 0.0038, 0.075, "steel", "X", 8)
+    cyl("muzzle", (FRONT + 0.084, s, 0.062), 0.0055, 0.012, "dark", "X", 8)
 
 # rear wall: steel door, frame, steps down from the trench
-box("door", (REAR - 0.002, 0, 0.055), (0.006, 0.075, 0.105), "dark", 0.002)
-box("door_frame", (REAR - 0.006, 0, 0.115), (0.012, 0.1, 0.014), "conc", 0.003)
+box("door", (REAR - 0.002, 0, 0.05), (0.006, 0.075, 0.095), "dark", 0.002)
+box("door_frame", (REAR - 0.006, 0, 0.104), (0.012, 0.1, 0.014), "conc", 0.003)
 for s in (1, -1):
-    box("door_post", (REAR - 0.006, s * 0.044, 0.055), (0.012, 0.012, 0.11), "conc", 0.002)
-cyl("door_wheel", (REAR - 0.008, 0.016, 0.06), 0.012, 0.004, "steel", "X", 10)
+    box("door_post", (REAR - 0.006, s * 0.044, 0.05), (0.012, 0.012, 0.1), "conc", 0.002)
+cyl("door_wheel", (REAR - 0.008, 0.016, 0.052), 0.012, 0.004, "steel", "X", 10)
 
 # ---------------------------------------------------------------- rear trench with plank revetment
 TX0 = -0.5
@@ -378,7 +415,7 @@ def surf(x, y):
     return max(0.0, knoll_h(x, y))
 
 
-poles = [(SX0 + 0.03, -SY - 0.03, 0.235), (bx - 0.04, -SY - 0.04, 0.23), (SX0 + 0.11, -0.07, 0.26)]
+poles = [(SX0 + 0.03, -SY - 0.03, 0.19), (bx - 0.04, -SY - 0.04, 0.185), (SX0 + 0.11, -0.07, 0.215)]
 for (x, y, zt) in poles:
     tube("net_pole", [(x, y, surf(x, y) - 0.01), (x, y, zt)], 0.004, "wood", 5)
 NX_, NY_ = 16, 10
