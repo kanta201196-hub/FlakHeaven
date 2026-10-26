@@ -425,8 +425,10 @@ def _bake_setup(m, sp, img):
     return tex
 
 
-def build(name, out, tex_size=1024, blend_dir=None):
-    """Слить детали в один объект (по материалу — поверхность), сглаживание по углу, развёртка, запекание (HQ), GLB"""
+def build(name, out, tex_size=1024, blend_dir=None, join=()):
+    """Слить детали в один объект (по материалу — поверхность), сглаживание по углу, развёртка, запекание (HQ), GLB.
+    join — готовые меши сцены (например, импортированная модель Sketchfab), которые после запекания деталей
+    вливаются в тот же объект: в GLB игра берёт один меш на оружие (WeaponModels._glb_mesh)."""
     os.makedirs(out, exist_ok=True)
     verts, faces, mids, names = [], [], [], []
     for mi, (mname, (vs, fs)) in enumerate(G.items()):
@@ -498,6 +500,13 @@ def build(name, out, tex_size=1024, blend_dir=None):
                 for n in list(nt.nodes):
                     if n.type == "TEX_IMAGE":
                         nt.nodes.remove(n)
+    if join:
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in join:
+            o.select_set(True)
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.join()
     if blend_dir:
         os.makedirs(blend_dir, exist_ok=True)
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(blend_dir, name + (".blend" if HQ else "_battle.blend")))

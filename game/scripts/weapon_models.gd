@@ -76,7 +76,9 @@ const TURRET_MODELS := {
 	# S9-04 (Kanta 23.10: «каждый уровень заметно отличается»): 1 — малая (×0,88), один ствол без щитка;
 	# 2 — два ствола один над другим, тормоза, рамка-щиток, короб ленты; 3 — крупная (×1,12), два ствола рядом
 	# в кожухах, сплошной бронещиток, два короба, экраны, прицел. muzzle_t — дульный срез по ступени, k — размер
-	"attacker": {"file": "res://models/turrets/turret_grach_t%d.glb", "s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
+	# 3.5-s12: evolution «Дикобраз» — the t3 turret with a fire-control radar on the roof (turret_light.py evo)
+	"attacker": {"file": "res://models/turrets/turret_grach_t%d.glb", "evo": "res://models/turrets/turret_grach_evo.glb",
+		"s": 0.36, "muzzle": Vector3(1.17, 0.34, 0.18),
 		"muzzle_t": [Vector3(0.792, 0.282, 0.0), Vector3(1.17, 0.34, 0.18), Vector3(1.16, 0.403, 0.0)],
 		"k": [0.88, 1.0, 1.12],
 		"body": [Color(0.68, 0.6, 0.44), Color(0.68, 0.6, 0.44)],   # S12: ring collar in the turret's sand base

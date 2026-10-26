@@ -7443,3 +7443,6 @@ msgstr "aces down: %d"
 
 msgid "асов ушло: %d"
 msgstr "aces got away: %d"
+
+msgid "У этого оружия веток улучшений в ангаре пока нет: они появятся в следующем этапе прокачки. В бою оно растёт по уровням 1–5 карточками, как и остальное оружие."
+msgstr "This weapon has no hangar upgrade branches yet: they come with the next upgrade stage. In battle it still grows through levels 1–5 with cards, like every other weapon."
