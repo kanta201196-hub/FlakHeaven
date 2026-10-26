@@ -53,6 +53,17 @@ void fragment() {
 """
 
 
+## Nozzle exits of a 3D battle model in picture pixels: {"jet": [Vector2(x, z)…], "y": axis height, "r": radius};
+## empty for a plane without jets. From NozzleFlame.NOZZLES, which was measured on the models themselves.
+static func model_nozzles(key: String, tex_w: float) -> Dictionary:
+	var n: Array = NozzleFlame.NOZZLES.get(key, [])
+	if n.is_empty():
+		return {}
+	var z: float = float(n[2]) * tex_w
+	var pts: Array = [Vector2(float(n[0]) * tex_w, 0.0)] if is_zero_approx(z) else [Vector2(float(n[0]) * tex_w, -z), Vector2(float(n[0]) * tex_w, z)]
+	return {"jet": pts, "y": float(n[1]) * tex_w, "r": float(n[3]) * tex_w * 1.15}
+
+
 static func spec_of(tex: Texture2D) -> Dictionary:
 	return SPEC.get(tex.resource_path.get_file().get_basename(), {})
 
@@ -68,8 +79,18 @@ static func attach(u: Unit3D, tex: Texture2D) -> void:
 	_init_res()
 	# своя высота сопла — только у 3D-модели; рельеф из картинки («Низкое» качество) плоский, огонь на общей высоте
 	var y: float = s.get("y", tex.get_width() * 0.012) if u.bm != null else tex.get_width() * 0.012
-	for pt: Vector2 in s.get("jet", []):
-		var r: float = s["r"]
+	var jets: Array = s.get("jet", [])
+	var r_jet: float = s.get("r", 0.0)
+	if u.bm != null:
+		# Kanta 26.10 (s12: flame above and between the nozzles of «Оса 2»): on a 3D model the flames sit in the real
+		# nozzle exits measured on the models (NozzleFlame.NOZZLES, same axes: length 1 = picture width)
+		var nz := model_nozzles(tex.resource_path.get_file().get_basename(), tex.get_width())
+		if not nz.is_empty():
+			jets = nz["jet"]
+			y = nz["y"]
+			r_jet = nz["r"]
+	for pt: Vector2 in jets:
+		var r := r_jet
 		# две скрещённые плоскости: сверху видна горизонтальная, при крене и наклоне камеры — вертикальная
 		var f := Node3D.new()
 		f.position = Vector3(pt.x, y, pt.y)

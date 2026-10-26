@@ -646,9 +646,36 @@ func _add_scene(rng: RandomNumberGenerator, put: Dictionary, it: Dictionary, ctx
 	# обломки самолётов (PLANE_KINDS) — с пятном гари и бороздой в модели: утапливаем меньше, чтобы их было видно
 	var sink := 0.01 if kind in PLANE_KINDS else 0.03
 	var t := Transform3D(Basis(Vector3.UP, -float(it["yaw"])).scaled(Vector3(w, w, w)), s - Vector3(0, w * sink, 0))
+	if kind in PLANE_KINDS:
+		t = _wreck_on_ground(p, w, float(it["yaw"]), s, ctx)
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)
+
+
+## A crashed plane lies along the ground under it: tilted to the slope fitted through a ring of samples and lifted
+## where the ground bulges above that slope. A level model sank its downhill half and its own scorch quad into a
+## valley side, so the terrain showed through the hull and the wreck blended into the ground (Kanta 26.10)
+func _wreck_on_ground(p: Vector2, w: float, yaw: float, s: Vector3, ctx: Dictionary) -> Transform3D:
+	var r := w * 0.45
+	var pts: Array[Vector3] = []
+	var sx := 0.0
+	var sz := 0.0
+	for i in 8:
+		var q := p + Vector2.from_angle(TAU * i / 8.0) * r
+		var y := _t.surface(q.x, q.y, ctx).y - s.y
+		pts.append(Vector3(q.x - p.x, y, q.y - p.y))
+		sx += (q.x - p.x) * y
+		sz += (q.y - p.y) * y
+	# least-squares slope of y = a·x + b·z over the ring (Σx² = Σz² = 4r², Σxz = 0)
+	var a := sx / (4.0 * r * r)
+	var b := sz / (4.0 * r * r)
+	var nrm := Vector3(-a, 1.0, -b).normalized()
+	var lift := 0.0
+	for v in pts:
+		lift = maxf(lift, v.y - (a * v.x + b * v.z))
+	var bs := Basis(Quaternion(Vector3.UP, nrm)) * Basis(Vector3.UP, -yaw)
+	return Transform3D(bs.scaled(Vector3(w, w, w)), s + Vector3(0, lift * 0.8 - w * 0.005, 0))
 
 
 ## Машина стоит вдоль дороги (нос по направлению дороги, лёгкий разворот)
