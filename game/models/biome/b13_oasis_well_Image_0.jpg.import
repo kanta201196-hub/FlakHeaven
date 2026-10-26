@@ -1,0 +1,37 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://baow5gg8jvwvu"
+path="res://.godot/imported/b13_oasis_well_Image_0.jpg-63084e195afd29f987cffa5426b92303.ctex"
+metadata={
+"vram_texture": false
+}
+generator_parameters={
+"md5": "7b3c64d6af767c4e2b67a57b78e3d3cc"
+}
+
+[deps]
+
+source_file="res://models/biome/b13_oasis_well_Image_0.jpg"
+dest_files=["res://.godot/imported/b13_oasis_well_Image_0.jpg-63084e195afd29f987cffa5426b92303.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1

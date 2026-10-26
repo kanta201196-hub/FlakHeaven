@@ -27,12 +27,15 @@ const KINDS := {
 	"bridge": ["", 84.0, 95.0],        # L-07: модели кодом (AdobeBuild.bridge): мост дороги через ручей
 	# Kanta 24.10: the road bridge was smaller than the AA vehicles crossing it; span 58 -> 84 (deck width scales with it)
 	"footbridge": ["", 150.0, 165.0],  # и пешеходный через реку
+	# VIS-01 (Kanta 26.10, «Оазис: 66 … 70»): date palms and the well of the oasis (tools/blender/oasis_models.py)
+	"palm": ["b12_date_palm", 26.0, 40.0],
+	"well": ["b13_oasis_well", 10.0, 12.0],
 }
 
 ## T4-05: облегчённые деревья для пресетов ниже «Максимального» (11–14 тыс. треуг. у полной модели).
 ## 3.4-t1 (п. 17): вместо зелёного шара — «карточки» из картинок той же модели Meshy: две скрещённые
 ## с видом сбоку и одна горизонтальная с видом сверху (tools/model_lab/bake_impostor.gd), 6 треугольников.
-const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree"}
+const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree", "palm": "b12_date_palm"}
 
 ## VIS-01: decimated copies (tools/model_lab/biome_lite.py) for kinds placed by the hundred.
 ## A boulder pile is 10-30 px on screen at zoom 1.0, so 600 triangles look the same as the
@@ -96,7 +99,7 @@ func _lite_tree(kind: String) -> Mesh:
 	am.surface_set_material(0, _card_mat(DIR + LITE[kind] + "_side.png"))
 	var st2 := SurfaceTool.new()
 	st2.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var yt := h * (0.72 if kind == "poplar" else 0.66)
+	var yt := h * (0.72 if kind == "poplar" else (0.8 if kind == "palm" else 0.66))   # the palm crown sits on top of a bare trunk
 	var r := w * 0.5
 	_card(st2, Vector3(-r, yt, r), Vector3(r, yt, r), Vector3(r, yt, -r), Vector3(-r, yt, -r), Vector3.UP)
 	st2.commit(am)
@@ -276,6 +279,12 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 				var sz0 := float(obj["size"])
 				var trees := 0
 				var want := rng.randi_range(14, 20) if obj["name"] == "o_oasis" else rng.randi_range(18, 28)   # 3.5-s8: городок крупнее
+				# VIS-01 (Kanta 26.10): the oasis grows date palms in clumps and has a well in the courtyard of its houses
+				# (AdobeBuild.oasis: houses ring the point (0.06, -0.05) of the 1 × 1 plot); the village keeps its orchards
+				var oasis: bool = obj["name"] == "o_oasis"
+				var tree := "palm" if oasis else "orchard"
+				if oasis:
+					_add(rng, put, "well", p0 + Vector2(0.06, -0.05).rotated(float(obj["rot"])) * sz0, [], ctx)
 				for i in 120:
 					if trees >= want:
 						break
@@ -284,15 +293,16 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 					if gm.y < 0.45 or gm.x > 0.5 or not (_zone(q, ctx) in ["floor", "fan"]):
 						continue
 					trees += 1
-					_add(rng, put, "orchard", q, [], ctx)
-					if rng.randf() < 0.45:   # сад — группа деревьев
-						_add(rng, put, "orchard", q + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(30.0, 45.0), [], ctx)
+					_add(rng, put, tree, q, [], ctx)
+					if rng.randf() < (0.7 if oasis else 0.45):   # сад — группа деревьев; пальмы растут куртинами
+						var dir := Vector2.from_angle(rng.randf() * TAU)
+						_add(rng, put, tree, q + dir * (rng.randf_range(22.0, 32.0) if oasis else rng.randf_range(30.0, 45.0)), [], ctx)
 				var a0 := rng.randf() * TAU
 				var rr := sz0 * maxf(AdobeBuild.footprint(obj["name"]), 0.5) * AdobeBuild.outline(vr, a0 - float(obj["rot"])) * 0.95
 				for i in rng.randi_range(5, 8):
 					var q := p0 + Vector2.from_angle(a0) * rr + Vector2.from_angle(a0 + PI / 2) * (i - 3.5) * 26.0
 					if _zone(q, ctx) == "floor":
-						_add(rng, put, "poplar", q, [], ctx)
+						_add(rng, put, "palm" if oasis else "poplar", q, [], ctx)
 				if obj["name"] == "o_village":
 					for i in rng.randi_range(1, 2):
 						_ring_zone(rng, put, "yurt", p0, r0 * 1.2, r0 * 1.7, ["floor", "fan"], ctx)
