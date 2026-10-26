@@ -226,6 +226,8 @@ static func piece_spot(id: String) -> Vector3:
 		return Vector3(FortBuild.GATE_C.x * k, 10.0, FortBuild.GATE_C.y * k)
 	if id == "store":
 		return Vector3(FortBuild.STORE_C.x * k, 3.0, FortBuild.STORE_C.y * k)
+	if id == "citadel":
+		return Vector3(-8.0 * k, 12.0, -16.0 * k)
 	for w: Array in FortBuild.WALLS:
 		if w[0] == id:
 			var m: Vector2 = ((w[1] as Vector2) + (w[2] as Vector2)) * 0.5 * k

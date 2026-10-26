@@ -621,6 +621,8 @@ func _make_points() -> Array:
 		pts.append(fa.merged({"name": "fort_area_ruin", "pos": found["o_fort"], "off": Vector2(0, 60), "zoom": 2.4, "wait": 6.0,
 			"fort_break": {"t0": 0.0, "t1": 0.0, "t2": 0.0, "w1": 1, "gate": 1, "store": 1, "citadel": 1}}))
 		pts.append(fa.merged({"name": "fort_area_ruin_wide", "pos": found["o_fort"], "off": Vector2(0, 300), "zoom": 1.0, "wait": 1.5}))
+		# FA-04: the taken fort's burning citadel, store and yard close up
+		pts.append(fa.merged({"name": "fort_area_ruin_citadel", "pos": found["o_fort"], "off": Vector2(0, 40), "on_piece": "citadel", "zoom": 4.5, "wait": 1.5}))
 		pts.append(fa.merged({"name": "fort_area_ruin_gate", "pos": found["o_fort"], "off": Vector2(0, 50), "on_piece": "gate", "zoom": 6.0, "wait": 1.5}))
 	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
 		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
