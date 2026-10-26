@@ -619,7 +619,7 @@ func _make_points() -> Array:
 		pts.append(fa.merged({"name": "fort_area_hit_tower", "pos": found["o_fort"], "off": Vector2(-60, 40), "on_piece": "t3", "zoom": 6.0, "wait": 1.5}))
 		pts.append(fa.merged({"name": "fort_area_hit_breach", "pos": found["o_fort"], "off": Vector2(40, 30), "on_piece": "w5", "zoom": 6.0, "wait": 1.5}))
 		pts.append(fa.merged({"name": "fort_area_ruin", "pos": found["o_fort"], "off": Vector2(0, 60), "zoom": 2.4, "wait": 6.0,
-			"fort_break": {"t0": 0.0, "t1": 0.0, "t2": 0.0, "w1": 1, "gate": 1, "store": 1}}))
+			"fort_break": {"t0": 0.0, "t1": 0.0, "t2": 0.0, "w1": 1, "gate": 1, "store": 1, "citadel": 1}}))
 		pts.append(fa.merged({"name": "fort_area_ruin_wide", "pos": found["o_fort"], "off": Vector2(0, 300), "zoom": 1.0, "wait": 1.5}))
 		pts.append(fa.merged({"name": "fort_area_ruin_gate", "pos": found["o_fort"], "off": Vector2(0, 50), "on_piece": "gate", "zoom": 6.0, "wait": 1.5}))
 	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
@@ -988,12 +988,14 @@ var _fa_base: FortArea
 
 
 ## FA-03 bench: breaks pieces of the bench fort as a fight would. `b`: piece id → launcher HP share for towers
-## ("t3": 0.0 collapses it, 0.4 — damaged), any value for walls, gate and store (blown). Plays the same dust and smoke.
+## ("t3": 0.0 collapses it, 0.4 — damaged), any value for walls, gate and store (blown) and "citadel" (the fort taken). Plays the same dust and smoke.
 func _fort_break(b: Dictionary) -> void:
 	for id: String in b:
 		if id.begins_with("t"):
 			var g := _fa_base.launchers[int(id.substr(1))]
 			g.hp = g.max_hp * float(b[id])
+		elif id == "citadel":   # the fort taken: citadel and trucks burn
+			_fa_base.damage.take()
 		else:
 			var sp := FortArea.piece_spot(id)
 			for got in _fa_base.damage.apply_blast(Vector2(sp.x, sp.z), 0.005, 9.0):

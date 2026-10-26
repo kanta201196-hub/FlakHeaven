@@ -143,6 +143,8 @@ func on_target_destroyed(g: GroundTarget) -> void:
 	_log("%s down, launchers left %d, %.0f s on the timer" % [g.variant, launchers_left(), timer])
 	if g.variant == "sam" and not done and launchers_left() == 0:   # g is already at 0 hp here
 		done = true
+		if damage.take():   # FA-04: the citadel goes up, trucks burn
+			Events.fort_changed.emit(_key)
 		for t in targets:
 			if is_instance_valid(t) and t != g:
 				(t as GroundTarget).leaderless = true   # the yard jeeps stop shooting

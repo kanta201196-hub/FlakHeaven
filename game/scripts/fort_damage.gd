@@ -11,7 +11,7 @@ extends RefCounted
 enum { INTACT, DAMAGED, BROKEN }
 
 ## Piece id → INTACT / DAMAGED / BROKEN. Ids: t0..t3 (towers, FortBuild order), w0..w7 (FortBuild.WALLS),
-## gate, store.
+## gate, store, citadel.
 var state := {}
 ## Piece id → explosive hits still to take (bomb = 1, FortDamage.hit_weight).
 var pool := {}
@@ -28,6 +28,7 @@ func _init() -> void:
 	state["gate"] = INTACT
 	pool["gate"] = FortBalance.GATE_POOL
 	state["store"] = INTACT
+	state["citadel"] = INTACT   # FA-04: burns when the fort is taken (take), never from blasts
 
 
 ## Weight of one player explosion of base radius `r_px` (before radius upgrades) against a piece's pool: its
@@ -70,6 +71,15 @@ func set_tower(i: int, hp_frac: float) -> bool:
 	if want <= int(state[id]):
 		return false
 	state[id] = want
+	ver += 1
+	return true
+
+
+## The fort is taken (all launchers down): the citadel goes up in flames. Returns true the first time.
+func take() -> bool:
+	if state["citadel"] == BROKEN:
+		return false
+	state["citadel"] = BROKEN
 	ver += 1
 	return true
 

@@ -17,6 +17,7 @@ func _ready() -> void:
 	_test_damage_gate_store()
 	_test_damage_towers()
 	_test_hit_weight()
+	_test_damage_taken()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -89,10 +90,10 @@ func _test_to_unit() -> void:
 	_check(FortArea.to_unit(f, FortArea.fort_point(f, u)).distance_to(u) < 1e-4, "to_unit inverts fort_point")
 
 
-## FA-03: 4 towers, 8 wall sections (2 per side), gate, store; all intact at the start.
+## FA-03: 4 towers, 8 wall sections (2 per side), gate, store, citadel; all intact at the start.
 func _test_damage_pieces() -> void:
 	var d := FortDamage.new()
-	_check(d.state.size() == 14, "14 pieces, got %d" % d.state.size())
+	_check(d.state.size() == 15, "15 pieces, got %d" % d.state.size())
 	for id: String in d.state:
 		_check(d.state[id] == FortDamage.INTACT, "%s intact at start" % id)
 	_check(d.ver == 0, "fresh record has version 0")
@@ -153,3 +154,14 @@ func _test_hit_weight() -> void:
 	_check(is_equal_approx(FortDamage.hit_weight(FortBalance.BOMB_R), 1.0), "bomb radius weighs 1")
 	_check(is_equal_approx(FortDamage.hit_weight(FortBalance.BOMB_R * 0.4), 0.4), "rocket weighs its radius share")
 	_check(is_equal_approx(FortDamage.hit_weight(1000.0), 1.5), "capped at 1.5")
+
+
+## FA-04: the citadel burns when the fort is taken (spec table), once; blasts never set it off.
+func _test_damage_taken() -> void:
+	var d := FortDamage.new()
+	d.apply_blast(Vector2(-6.0, -16.0) * FortBuild.K, 0.2, 5.0)
+	_check(d.state["citadel"] == FortDamage.INTACT, "blasts do not burn the citadel")
+	var v := d.ver
+	_check(d.take(), "taking the fort sets the citadel burning")
+	_check(d.state["citadel"] == FortDamage.BROKEN and d.ver == v + 1, "citadel burning, version bumped")
+	_check(not d.take(), "taken only once")
