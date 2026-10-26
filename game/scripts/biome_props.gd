@@ -59,6 +59,10 @@ const ROCK_VARIANTS := {
 	"spire": ["spire", "spire_b"],
 }
 
+## Rock kinds stand on the lowest ground under their footprint (_rock_floor): a scan is long and flat-bottomed,
+## and on a steep slope a 4 % sink at the centre left its downhill end hanging in the air (Kanta 26.10)
+const ROCK_KINDS := ["outcrop", "outcrop_b", "boulders", "boulders_b", "spire", "spire_b"]
+
 ## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
 const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
 static var _force_plane := -2
@@ -486,10 +490,24 @@ func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Ve
 	if w < 4.0:
 		return
 	# утапливаем на 4 % ширины, чтобы на склоне не висело на краю
-	var t := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.04, 0))
+	var y := s.y - w * 0.04
+	if ROCK_KINDS.has(kind):
+		y = _rock_floor(p, w, ctx)
+	var t := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(w, w, w)), Vector3(s.x, y, s.z))
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)
+
+
+## Base height for a rock w px wide at p: the lowest ground at the centre and on a ring of 8 points at 0.45 w
+## (the model is centred and at most w across), sunk 2 % more. The uphill side goes into the slope, which reads
+## as rock coming out of the ground; nothing hangs over the downhill side.
+func _rock_floor(p: Vector2, w: float, ctx: Dictionary) -> float:
+	var y := _t.surface(p.x, p.y, ctx).y
+	for i in 8:
+		var q := p + Vector2.from_angle(TAU * i / 8.0) * w * 0.45
+		y = minf(y, _t.surface(q.x, q.y, ctx).y)
+	return y - w * 0.02
 
 
 ## L-07 (правка Kanta): деревянные мосты — где дорога пересекает ручей посёлка; пешеходный — от оазиса
