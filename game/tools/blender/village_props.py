@@ -1,7 +1,7 @@
-"""Village clutter and market props for the Highland kishlak (VIS-01, Kanta 26.10.2026: «Все по твоим рекомендациям -
-ок»; «В кишлаке в центре предлагаю поставить палатки какие-нибудь, имитировать рынок»).
+"""Village clutter and market props for the Highland kishlak (VIS-01, Kanta 26.10.2026: "everything as you
+recommend is ok"; "put some tents in the centre of the kishlak to imitate a market").
 
-Sources are CC BY Sketchfab models (game/models/CREDITS.md) plus a few props built here in the «Укрепрайон» manner
+Sources are CC BY Sketchfab models (game/models/CREDITS.md) plus a few props built here in the fortified-area fort manner
 (texture set Г classes and faded cloth): market tents in three cloth colours, a tandoor, a rug hung on a frame.
 Two kinds of output, both metres, long side along X, centred on the footprint, base on z = 0, matte:
   class props — every face gets a material class (vh_wood, vh_plaster, vh_cloth…; VillageHouses.material paints

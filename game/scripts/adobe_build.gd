@@ -1590,7 +1590,7 @@ const MKT_CLEAR := 0.005     ## tents keep this off street edges
 const MKT_STALLS := 4        ## ring stalls (model 126) the rows always make room for
 
 
-## VIS-01 (Kanta 26.10: «В кишлаке в центре предлагаю поставить палатки какие-нибудь, имитировать рынок»): the
+## VIS-01 (Kanta 26.10: "put some tents in the centre of the kishlak to imitate a market"): the
 ## square as a bazaar. Tent rows run along the main street on both sides, the first two facing each other across
 ## an aisle where rugs, pots and sacks lie out; rugs hang on frames at the row ends, a cart or two and the trough
 ## stand in the gaps. Each row takes a tent wherever one fits off the streets, the pool and the first ring stalls

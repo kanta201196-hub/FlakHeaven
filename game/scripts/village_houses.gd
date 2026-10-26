@@ -21,8 +21,8 @@ const VARIANTS := [
 const WELL := 8                      ## variant index of the yard well (hand pump on a slab, model 71)
 const WELL_FILE := "vh_well"
 const WELL_SCALE := 1.6              ## the scan is a 1.2 m slab: barely a few pixels at the game's height
-## Village clutter and the market (Kanta 26.10.2026: «Все по твоим рекомендациям - ок»; «В кишлаке в центре
-## предлагаю поставить палатки какие-нибудь, имитировать рынок»), built by tools/blender/village_props.py:
+## Village clutter and the market (Kanta 26.10.2026: "everything as you recommend is ok"; "put some tents in
+## the centre of the kishlak to imitate a market"), built by tools/blender/village_props.py:
 ## [file, size (x, height, depth) in metres]. Variant index = PROP0 + row. Surfaces named vh_<class> get the class
 ## materials below; the rest keep their own (graded, matte) texture.
 const PROPS := [
