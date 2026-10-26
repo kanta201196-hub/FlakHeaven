@@ -36,7 +36,12 @@ const SETS := {
 	"bunker_rear": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, 150.0]],   # the trench and door
 	"manpads": [["unit", "fh_battle_e_convoy_manpads", 0.0, 0.0, 14.0, 30.0]],
 	"pickup": [["unit", "fh_battle_e_convoy_pickup_tent", 0.0, 0.0, 14.0, 30.0]],
+	"fortress": [["unit", "fh_battle_e_fortress", 0.0, 0.0, 270.0, 30.0]],
+	"fortress_dome": [["unit", "fh_battle_e_fortress", 0.0, 0.0, 270.0, 30.0]],
 }
+## Sets framed on one node of the model instead of the whole set: set → [node name, bounds growth]. A boss is
+## too big for its small parts to show in a whole-model frame (the Fortress dome turrets, weathering review).
+const FOCUS := {"fortress_dome": ["turret_3", 3.2]}
 const SIZE := 20.0          ## a set's longest side after scaling, units
 const ISO_PITCH := 35.0     ## 3/4 view: degrees above the horizon
 const ISO_YAW := 35.0       ## and around from the front (+z)
@@ -155,7 +160,7 @@ func _process(_d: float) -> void:
 	var item: Array = _queue[0]
 	if item[1] == "iso":
 		_show(item[0])
-	_frame(item[1])
+	_frame(item[1], item[0])
 	_wait = 12   # TAA, SSAO and the shadow atlas settle over a few frames
 
 
@@ -194,9 +199,14 @@ func _show(name: String) -> void:
 	_set_root.position = -Vector3(box.get_center().x, box.position.y, box.get_center().z) * k
 
 
-## Camera on the set's bounds: `iso` from ISO_PITCH above the horizon, `top` straight down
-func _frame(view: String) -> void:
+## Camera on the set's bounds (or on its FOCUS node, grown): `iso` from ISO_PITCH above the horizon, `top` straight down
+func _frame(view: String, set_name := "") -> void:
 	var box := _bounds(_set_root, Transform3D.IDENTITY)
+	if FOCUS.has(set_name):
+		var f: Node3D = _set_root.find_child(FOCUS[set_name][0], true, false) as Node3D
+		if f != null:
+			var fb := _bounds(f, f.get_parent().global_transform)
+			box = AABB(fb.get_center() - fb.size * 0.5 * FOCUS[set_name][1], fb.size * FOCUS[set_name][1])
 	var c := box.get_center()
 	var r := box.size.length() * 0.5
 	var dist := r / sin(deg_to_rad(_cam.fov * 0.5)) * 0.6   # the set fills about 80 % of the frame height

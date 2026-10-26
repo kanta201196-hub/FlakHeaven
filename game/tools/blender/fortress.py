@@ -22,6 +22,7 @@ from turret_lib import *
 import turret_lib as L
 from turret_twin import twin
 from mathutils import Matrix
+import numpy as np
 
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 OUT = args[0]
@@ -50,6 +51,8 @@ M_T_DARK = mat("enemy_turret_dark", (0.05, 0.05, 0.055), 0.1, 0.88)
 M_T_BARREL = mat("enemy_turret_barrel", (0.16, 0.165, 0.17), 0.15, 0.8)
 M_T_GLASS = mat("enemy_turret_glass", (0.05, 0.08, 0.1), 0.0, 0.8)
 M_MSL = mat("enemy_missile", (0.3, 0.3, 0.29), 0.1, 0.75)   # the dome's rail missile: a shade lighter than the wing so it reads
+# the dome's gun barrels: the turret's dark paint; the name tells the weathering bake where the muzzles are (soot)
+M_T_GUN = mat("enemy_gun_barrel", (0.05, 0.05, 0.055), 0.1, 0.88)
 TS = 0.062          # масштаб турели turret_twin (длина башни 1) в оси «Крепости» (длина самолёта 1)
 
 PX = 270.0
@@ -251,6 +254,7 @@ def dome_turret(n, x, y, hull_uv):
     L.group = ""
     collar = ellipsoid("dome_collar", (x, y, z - 0.0012), (R * 1.3, R * 1.3, H * 0.22), M_HULL)
     hull_uv.paint(collar, x, y, 0.5)
+    L.group = "fittings"   # fixed dark fittings get the weathering bake; the hull skin keeps its own texture
     cyl("dome_seam", (x, y, z + H * 0.03), R * 1.03, H * 0.08, M_DARK, "Z", 32)
     g = "turret_%d" % n
     L.group = g
@@ -271,8 +275,8 @@ def dome_turret(n, x, y, hull_uv):
     box("dome_slit", (x + R * 0.62, y, z + H * 0.5), (R * 0.85, R * 0.62, H * 0.26), M_T_DARK, 0.0)
     for s in (-1, 1):
         by = y + s * R * 0.2
-        cyl("barrel", (x + R * 1.12, by, z + H * 0.5), 0.0012, R * 1.15, M_T_DARK, "X", 12)
-        cyl("muzzle", (x + R * 1.72, by, z + H * 0.5), 0.0018, R * 0.18, M_T_DARK, "X", 12)
+        cyl("barrel", (x + R * 1.12, by, z + H * 0.5), 0.0012, R * 1.15, M_T_GUN, "X", 12)
+        cyl("muzzle", (x + R * 1.72, by, z + H * 0.5), 0.0018, R * 0.18, M_T_GUN, "X", 12)
     # sensor eye on the shoulder, looking where the guns look
     sphere("dome_eye_rim", (x + R * 0.55, y - R * 0.48, z + H * 0.72), R * 0.17, (1, 1, 0.55), M_T_DARK, 12)
     sphere("dome_eye", (x + R * 0.62, y - R * 0.48, z + H * 0.74), R * 0.12, (1, 1, 0.6), M_T_GLASS, 12)
@@ -439,6 +443,7 @@ else:
 # --- люки на спине (фаза 2): ракеты под створками ---
 HX0, HX1, HY = (-0.035, 0.035, 0.03) if WING else (-0.0, 0.12, 0.034)
 HZ = max(top(x, y) for x in (HX0, HX1) for y in (-HY, 0, HY)) - FR if WING else 0.0   # HZ + FR = skin height
+L.group = "fittings"
 box("bay_well", ((HX0 + HX1) / 2, 0, FR + HZ + 0.0005), (HX1 - HX0, 0.07, 0.004), M_DARK, 0.0)
 for s, side in ((1, "l"), (-1, "r")):
     L.group = "bay_" + side
@@ -504,8 +509,40 @@ def grime():
             a.data[i].color = (k, k, k * 0.98, 1.0)
 
 
-grime()
-root = build("fortress", OUT)
+def weather(root):
+    """Weathered paint on everything but the hull skin (Kanta 26.10: the domes looked flat — even paint, no
+    roughness, no wear). Wing mode only: the CC BY hull already carries its own baked texture (sf_recipes).
+    Each surface keeps its own colour (turret_paint own-colour mode); the dome takes the skin under it.
+    Atlas A — dome turret 1 with its rail missile, at turret scale; turrets 2…4 are the same meshes moved,
+    so they share its UVs and material (one texture set instead of four). Atlas B — every other moving or
+    fixed detail: hatches, bay missiles, core panels, intake fans and the dark fittings on the skin."""
+    import turret_paint
+    obj = bpy.data.objects
+    pal = {"own": True, "seed": 31, "wear": 0.9, "dust": 0.7}
+    turret_paint.bake_set([obj["turret_1"], obj["turret_1_missile"]], pal, 1024, "fortress_dome_paint", TS)
+    for n in (2, 3, 4):
+        for a, b in (("turret_1", "turret_%d" % n), ("turret_1_missile", "turret_%d_missile" % n)):
+            src, dst = obj[a].data, obj[b].data
+            assert len(src.loops) == len(dst.loops) and len(src.polygons) == len(dst.polygons), (a, b)
+            uv = np.empty(len(src.loops) * 2, np.float32)
+            src.uv_layers["UVMap"].data.foreach_get("uv", uv)
+            while dst.uv_layers:
+                dst.uv_layers.remove(dst.uv_layers[0])
+            dst.uv_layers.new(name="UVMap").data.foreach_set("uv", uv)
+            mi = np.empty(len(src.polygons), np.int32)
+            src.polygons.foreach_get("material_index", mi)
+            dst.materials.clear()
+            for m in src.materials:
+                dst.materials.append(m)
+            dst.polygons.foreach_set("material_index", mi)
+            dst.update()
+    rest = [o for o in obj if o.type == "MESH" and o.get("fh_group", "") and not o.name.startswith("turret_")]
+    turret_paint.bake_set(rest, dict(pal, seed=37), 1024, "fortress_fit_paint", 0.1)
+
+
+if not WING:
+    grime()
+root = build("fortress", OUT, before_export=weather if WING else None)
 
 if SPRITE:
     # вид строго сверху, ортографический: ширина кадра = длина модели (1), фон прозрачный

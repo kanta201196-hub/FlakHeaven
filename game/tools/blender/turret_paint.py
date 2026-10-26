@@ -15,7 +15,15 @@ float images; numpy computes every layer from those, so features follow the 3D s
 island borders; one more Cycles bake turns the object-space normals into the tangent-space map.
 Glass faces keep their own untextured material. Colours are sRGB 0…1.
 
-The material name has no "body", so WeaponModels._glb_mesh does not re-tint it (the paint is final)."""
+The material name has no "body", so WeaponModels._glb_mesh does not re-tint it (the paint is final).
+
+Own-colour mode (pal["own"], Kanta 26.10 "no model ships with flat paint", first used on the «Крепость» domes):
+the camouflage is skipped and every face keeps the colour its original material gives it — a flat Base Color or
+the texture behind it, sampled through the object's old UVs (a dome that wears the hull's skin keeps that skin);
+the same wear, grime, dust, soot and relief go on top, so a model is weathered without leaving its palette.
+bake_set() packs several objects into one atlas (one material and one texture set for all of them), and
+scale gives the size of "one turret length" in world units, so panels, rivets and chips keep their size on a
+model of another scale. Faces of glass or glowing ("core") materials keep their own material."""
 import atexit, math, os, shutil, tempfile
 import numpy as np
 import bpy
@@ -95,34 +103,44 @@ def _pixels(im):
 
 
 def _part(m):
+    """Surface kind of a material by its name: 0 painted body, 1 dark fitting (or steel), 2 gun barrel,
+    3 kept as it is (glass, the glowing core)"""
     n = m.name if m else ""
-    return 3 if "glass" in n else 2 if "barrel" in n else 1 if "dark" in n else 0
+    return 3 if ("glass" in n or "core" in n) else 2 if "barrel" in n else 1 if ("dark" in n or "steel" in n) else 0
 
 
-def _bake_emit(ob, img, build):
-    """Bake an emission shader built by build(nodes, links, part_id) -> socket into img (all slots)"""
-    orig = list(ob.data.materials)
-    tmp = []
-    for m in orig:
-        t = bpy.data.materials.new("bake_tmp")
-        t.use_nodes = True
-        N, Lk = t.node_tree.nodes, t.node_tree.links
-        N.clear()
-        out = N.new("ShaderNodeOutputMaterial")
-        em = N.new("ShaderNodeEmission")
-        Lk.new(build(N, Lk, _part(m)), em.inputs["Color"])
-        Lk.new(em.outputs[0], out.inputs[0])
-        tx = N.new("ShaderNodeTexImage")
-        tx.image = img
-        N.active = tx
-        tmp.append(t)
-    for i, t in enumerate(tmp):
-        ob.data.materials[i] = t
+_SCALE = 1.0   # world units per turret length for the current bake (bake_set sets it)
+
+
+def _bake_emit(obs, img, build):
+    """Bake an emission shader built by build(nodes, links, part_id, material) -> socket into img, for every
+    slot of every object in obs (they share the atlas)"""
+    saved = []
+    for ob in obs:
+        orig = list(ob.data.materials)
+        tmp = []
+        for m in orig:
+            t = bpy.data.materials.new("bake_tmp")
+            t.use_nodes = True
+            N, Lk = t.node_tree.nodes, t.node_tree.links
+            N.clear()
+            out = N.new("ShaderNodeOutputMaterial")
+            em = N.new("ShaderNodeEmission")
+            Lk.new(build(N, Lk, _part(m), m), em.inputs["Color"])
+            Lk.new(em.outputs[0], out.inputs[0])
+            tx = N.new("ShaderNodeTexImage")
+            tx.image = img
+            N.active = tx
+            tmp.append(t)
+        for i, t in enumerate(tmp):
+            ob.data.materials[i] = t
+        saved.append((ob, orig, tmp))
     bpy.ops.object.bake(type="EMIT", margin=0, use_clear=True)
-    for i, m in enumerate(orig):
-        ob.data.materials[i] = m
-    for t in tmp:
-        bpy.data.materials.remove(t)
+    for ob, orig, tmp in saved:
+        for i, m in enumerate(orig):
+            ob.data.materials[i] = m
+        for t in tmp:
+            bpy.data.materials.remove(t)
     return _pixels(img)
 
 
@@ -136,7 +154,7 @@ def _enc(N, Lk, sock):
     return v.outputs[0]
 
 
-def _b_pos(N, Lk, pid):
+def _b_pos(N, Lk, pid, m=None):
     g = N.new("ShaderNodeNewGeometry")
     v = N.new("ShaderNodeVectorMath")
     v.operation = "MULTIPLY_ADD"
@@ -146,25 +164,56 @@ def _b_pos(N, Lk, pid):
     return v.outputs[0]
 
 
-def _b_nrm(N, Lk, pid):
+def _b_nrm(N, Lk, pid, m=None):
     return _enc(N, Lk, N.new("ShaderNodeNewGeometry").outputs["True Normal"])
 
 
-def _b_bev(N, Lk, pid):
+def _b_bev(N, Lk, pid, m=None):
     b = N.new("ShaderNodeBevel")
     b.samples = 8
-    b.inputs["Radius"].default_value = 0.006
+    b.inputs["Radius"].default_value = 0.006 * _SCALE
     return _enc(N, Lk, b.outputs[0])
 
 
-def _b_ao(N, Lk, pid):
+def _b_ao(N, Lk, pid, m=None):
     a = N.new("ShaderNodeAmbientOcclusion")
     a.samples = 16
-    a.inputs["Distance"].default_value = 0.14
+    a.inputs["Distance"].default_value = 0.14 * _SCALE
     c = N.new("ShaderNodeCombineColor")
     Lk.new(a.outputs["AO"], c.inputs[0])
     c.inputs[1].default_value = (pid + 1) / 8.0   # G: part id (+1, so 0 is "no surface")
     return c.outputs[0]
+
+
+def _b_src(N, Lk, pid, m=None):
+    """The material's own base colour (linear): its Base Color texture sampled through the old UVs ("src"),
+    or the flat colour; a vertex-colour multiply in front of it (fortress.py grime) is skipped, the bake has
+    its own grime"""
+    rgb = N.new("ShaderNodeRGB")
+    rgb.outputs[0].default_value = (0.5, 0.5, 0.5, 1.0)
+    b = m.node_tree.nodes.get("Principled BSDF") if m is not None and m.node_tree else None
+    if b is None:
+        return rgb.outputs[0]
+    inp = b.inputs["Base Color"]
+    rgb.outputs[0].default_value = inp.default_value[:]
+    if inp.is_linked:
+        src = inp.links[0].from_node
+        if src.type == "TEX_IMAGE" and src.image is not None:
+            tx = N.new("ShaderNodeTexImage")
+            tx.image = src.image
+            uv = N.new("ShaderNodeUVMap")
+            uv.uv_map = "src"
+            Lk.new(uv.outputs[0], tx.inputs["Vector"])
+            return tx.outputs["Color"]
+        if src.type == "MIX" and "A" in src.inputs:
+            rgb.outputs[0].default_value = src.inputs["A"].default_value[:]
+    return rgb.outputs[0]
+
+
+def _to_srgb(c):
+    """Linear 0…1 → sRGB 0…1 (the albedo PNG is written in sRGB)"""
+    c = np.clip(c, 0.0, 1.0)
+    return np.where(c <= 0.0031308, c * 12.92, 1.055 * np.power(c, 1 / 2.4) - 0.055).astype(np.float32)
 
 
 # ---------------- layers ----------------
@@ -216,11 +265,14 @@ def _cuts(seed, share):
     return _CUTS[seed]
 
 
-def _layers(P, N, B, AO, part, x_tip, pal, guns):
-    """Albedo (sRGB), roughness, metal, height-perturbed normal for the covered texels"""
+def _layers(P, N, B, AO, part, x_tip, pal, guns, src=None):
+    """Albedo (sRGB), roughness, metal, height-perturbed normal for the covered texels; src — the faces' own
+    colours (sRGB) in own-colour mode, None for the camouflage"""
     seed = pal["seed"]
     n_pts = len(P)
     body, dark, barrel, glass = part == 0, part == 1, part == 2, part == 3
+    if src is not None:
+        return _layers_own(P, N, B, AO, part, x_tip, pal, src)
     # --- base colour: the livery's soft-edged blotches (two noise fields over the sand base, like the plane's
     # SAND_CAMO pattern): red-brown where the first field is high, olive where the second one is
     base, brown, olive = (np.array(t, np.float32) for t in pal["tones"])
@@ -287,6 +339,66 @@ def _layers(P, N, B, AO, part, x_tip, pal, guns):
     return np.clip(col, 0, 1), np.clip(rough, 0, 1), np.clip(metal, 0, 1), nn
 
 
+def _layers_own(P, N, B, AO, part, x_tip, pal, src):
+    """Own-colour weathering: the same chips, grime, streaks, dust, soot and relief as the camouflage paint,
+    over each face's own colour; matte throughout (Kanta: no gloss), only bare-steel chips are metallic.
+    pal: seed, and optional wear (chip amount, 1 = the turrets'), dust (1 = the turrets')"""
+    seed = pal["seed"]
+    wear = pal.get("wear", 1.0)
+    body, dark, barrel, glass = part == 0, part == 1, part == 2, part == 3
+    paint = body | dark
+    col = src.copy()
+    mott = fbm(P, 5.0, seed + 1, 4)
+    col = col * (1.0 + 0.2 * (mott - 0.5))[:, None]
+    col = col * (1.0 + 0.08 * (fbm(P, 22.0, seed + 2, 3) - 0.5))[:, None]
+    col = np.where((paint & (N[:, 2] > 0.5))[:, None], col * 1.06 + 0.012, col)   # sun-faded upper faces
+    rough = np.where(body, 0.86, np.where(dark, 0.8, np.where(barrel, 0.62, 0.1))).astype(np.float32)
+    rough = rough + 0.1 * (fbm(P, 30.0, seed + 3, 3) - 0.5) + 0.06 * (mott - 0.5)
+    metal = np.where(barrel, 0.45, np.where(dark, 0.15, 0.0)).astype(np.float32)
+    # chipped convex edges: a dark primer first, bare steel only where the chip is deep
+    edge = np.clip((1.0 - np.einsum("ij,ij->i", B, N)) * 9.0, 0.0, 1.0) * sstep(0.55, 0.85, AO)
+    chipn = fbm(P, 38.0, seed + 4, 3)
+    w = edge * wear + (chipn - 0.5) * 1.3 - 0.52
+    w = np.maximum(w, (fbm(P, 16.0, seed + 6, 3) - 0.78) * 2.5 * wear * (chipn > 0.55))
+    primer = sstep(0.0, 0.06, w) * paint
+    bare = sstep(0.24, 0.36, w) * paint
+    bare_b = sstep(0.1, 0.25, edge * 1.2 + (chipn - 0.5) - 0.2) * barrel
+    col = col * (1 - 0.8 * primer[:, None]) + PRIMER * (0.8 * primer)[:, None]
+    col = col * (1 - 0.8 * bare[:, None]) + STEEL * (0.8 * bare)[:, None]
+    col = col * (1 - 0.4 * bare_b[:, None]) + STEEL * (0.4 * bare_b)[:, None]
+    rough = rough * (1 - bare) + 0.45 * bare
+    metal = metal * (1 - bare) + 0.7 * bare
+    # grime in crevices, darker lower faces, rain/oil streaks down the walls, dust settled on upper faces
+    cav = 1.0 - AO
+    col = col * (1 - 0.5 * cav[:, None]) + DIRT * (0.5 * cav)[:, None]
+    under = np.clip(-N[:, 2], 0, 1) * 0.25 * (0.6 + 0.8 * (mott - 0.5))
+    col = col * (1 - under[:, None]) + DIRT * 0.6 * under[:, None]
+    wall = 1.0 - np.abs(N[:, 2])
+    st = fbm(P * np.array([1.0, 1.0, 0.07], np.float32), 34.0, seed + 8, 3)
+    streak = sstep(0.55, 0.78, st) * wall * 0.3 * (glass == 0)
+    col = col * (1 - streak[:, None]) + DIRT * 0.6 * streak[:, None]
+    dust = np.clip(N[:, 2], 0, 1) * np.clip(cav * 1.6 + (fbm(P, 9.0, seed + 9, 3) - 0.5) * 0.7, 0, 0.45)
+    dust = dust * pal.get("dust", 1.0) * (glass == 0)
+    col = col * (1 - dust[:, None]) + DUST * dust[:, None]
+    rough = np.clip(rough + 0.08 * dust + 0.06 * cav, 0.05, 1.0)
+    metal = metal * (1 - dust)
+    if x_tip is not None:   # powder soot towards the muzzles
+        s = sstep(x_tip - 0.32, x_tip - 0.02, P[:, 0]) * (0.55 + 0.6 * (fbm(P, 14.0, seed + 10, 3) - 0.3))
+        s = np.clip(s, 0, 1) * (barrel | dark)
+        col = col * (1 - s[:, None]) + SOOT * s[:, None]
+        rough = rough * (1 - s) + 0.92 * s
+        metal = metal * (1 - s)
+    col = col * (0.5 + 0.5 * AO ** 0.8)[:, None]
+    t, b = _frame(N)
+    armour = body.astype(np.float32)
+    e = 0.0007
+    hu = (_height(P + t * e, t, b, armour, seed) - _height(P - t * e, t, b, armour, seed)) / (2 * e)
+    hv = (_height(P + b * e, t, b, armour, seed) - _height(P - b * e, t, b, armour, seed)) / (2 * e)
+    nn = B - (hu[:, None] * t + hv[:, None] * b)
+    nn /= np.linalg.norm(nn, axis=1, keepdims=True) + 1e-8
+    return np.clip(col, 0, 1), np.clip(rough, 0, 1), np.clip(metal, 0, 1), nn
+
+
 def _dilate(img, mask, it=24):
     """Grow the covered texels outwards (texture filtering and mips must not pull in the background)"""
     img = img.copy()
@@ -311,19 +423,46 @@ def _save_png(name, arr):
     return p
 
 
-def bake(ob, pal, size, mat_name):
+def bake(ob, pal, size, mat_name, scale=1.0):
     """Unwrap ob, bake the paint layers and replace its materials with mat_name (glass faces keep theirs)"""
+    bake_set([ob], pal, size, mat_name, scale)
+
+
+def bake_set(obs, pal, size, mat_name, scale=1.0):
+    """Unwrap the objects obs into one size x size atlas, bake the paint layers and give all of them the one
+    material mat_name; faces of kept materials (glass, core) keep theirs. scale — world units per turret
+    length (the noise, panel and chip sizes are tuned for a turret of length 1). pal["own"] — each face keeps
+    its material's own colour (texture or flat) instead of the camouflage; the old UV layer is read for it."""
+    global _SCALE
+    _SCALE = scale
+    own = bool(pal.get("own"))
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
     sc.render.bake.margin = 0
+    if bpy.context.object is not None and bpy.context.object.mode != "OBJECT":
+        bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.object.select_all(action="DESELECT")
-    ob.select_set(True)
-    bpy.context.view_layer.objects.active = ob
-    me = ob.data
-    while me.uv_layers:
-        me.uv_layers.remove(me.uv_layers[0])
-    me.uv_layers.new(name="UVMap")
+    for ob in obs:
+        ob.select_set(True)
+        me = ob.data
+        if own:
+            # the detail boxes and cylinders come smooth-shaded without a bevel; their averaged normals would
+            # read as worn edges over whole faces (and look blobby in the game): sharp edges above 40°
+            me.set_sharp_from_angle(angle=math.radians(40))
+        if own and me.uv_layers:
+            keep = me.uv_layers.active or me.uv_layers[0]
+            for l in list(me.uv_layers):
+                if l != keep:
+                    me.uv_layers.remove(l)
+            me.uv_layers[0].name = "src"
+        else:
+            while me.uv_layers:
+                me.uv_layers.remove(me.uv_layers[0])
+        uv = me.uv_layers.new(name="UVMap")
+        me.uv_layers.active = uv
+        uv.active_render = True
+    bpy.context.view_layer.objects.active = obs[0]
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.006, area_weight=0.0, scale_to_bounds=True)
@@ -331,23 +470,25 @@ def bake(ob, pal, size, mat_name):
 
     im = _img("tp_data", size)
     sc.cycles.samples = 1   # plain surface data: one sample per texel is exact
-    pos = _bake_emit(ob, im, _b_pos)
-    nrm = _bake_emit(ob, im, _b_nrm)
+    pos = _bake_emit(obs, im, _b_pos)
+    nrm = _bake_emit(obs, im, _b_nrm)
+    src = _bake_emit(obs, im, _b_src) if own else None
     sc.cycles.samples = 6
-    bev = _bake_emit(ob, im, _b_bev)
+    bev = _bake_emit(obs, im, _b_bev)
     sc.cycles.samples = 16
-    aop = _bake_emit(ob, im, _b_ao)
+    aop = _bake_emit(obs, im, _b_ao)
     bpy.data.images.remove(im)
     mask = aop[..., 1] > 0.05
     sel = np.nonzero(mask)
-    P = (pos[sel][:, :3] - 0.5) / 0.2
+    P = (pos[sel][:, :3] - 0.5) / 0.2 / scale
     N = nrm[sel][:, :3] * 2 - 1
     N /= np.linalg.norm(N, axis=1, keepdims=True) + 1e-8
     B = bev[sel][:, :3] * 2 - 1
     B /= np.linalg.norm(B, axis=1, keepdims=True) + 1e-8
     AO = np.clip(aop[sel][:, 0], 0, 1)
     part = np.rint(aop[sel][:, 1] * 8 - 1).astype(np.int64)
-    x_tip = float(P[part == 2, 0].max()) if (part == 2).any() and ob.name != "pods" else None
+    S = _to_srgb(src[sel][:, :3]) if own else None
+    x_tip = float(P[part == 2, 0].max()) if (part == 2).any() and obs[0].name != "pods" else None
 
     H, W = mask.shape
     alb = np.zeros((H, W, 3), np.float32)
@@ -356,7 +497,8 @@ def bake(ob, pal, size, mat_name):
     CH = 400000
     for s0 in range(0, len(P), CH):
         sl = slice(s0, s0 + CH)
-        col, rough, metal, nn = _layers(P[sl], N[sl], B[sl], AO[sl], part[sl], x_tip, pal, ob.name)
+        col, rough, metal, nn = _layers(P[sl], N[sl], B[sl], AO[sl], part[sl], x_tip, pal, obs[0].name,
+                                        S[sl] if own else None)
         ys, xs = sel[0][sl], sel[1][sl]
         alb[ys, xs] = col
         orm[ys, xs] = np.stack([AO[sl], rough, metal], 1)
@@ -372,9 +514,10 @@ def bake(ob, pal, size, mat_name):
     i_onm.colorspace_settings.name = "Non-Color"
 
     # object-space normal → tangent-space map: bake NORMAL through a Normal Map node in object space
+    # (the objects keep their transforms at identity until build() sets group origins, so object space is
+    # the same for all of them up to a translation, which a normal does not see)
     i_nrm = bpy.data.images.new(tag + "_normal", size, size, alpha=False)
     i_nrm.colorspace_settings.name = "Non-Color"
-    orig = list(me.materials)
     t = bpy.data.materials.new("bake_nrm")
     t.use_nodes = True
     Nd, Lk = t.node_tree.nodes, t.node_tree.links
@@ -388,15 +531,18 @@ def bake(ob, pal, size, mat_name):
     tgt = Nd.new("ShaderNodeTexImage")
     tgt.image = i_nrm
     Nd.active = tgt
-    for i in range(len(orig)):
-        me.materials[i] = t
+    origs = {}
+    for ob in obs:
+        origs[ob.name] = list(ob.data.materials)
+        for i in range(len(origs[ob.name])):
+            ob.data.materials[i] = t
     sc.cycles.samples = 1
     bpy.ops.object.bake(type="NORMAL", normal_space="TANGENT", margin=16, use_clear=True)
     i_nrm.filepath_raw = os.path.join(TMP, tag + "_normal.png")
     i_nrm.file_format = "PNG"
     i_nrm.save()
 
-    # final material: one paint material, glass stays separate
+    # final material: one paint material, glass and glowing parts stay separate
     pm = bpy.data.materials.new(mat_name)
     pm.use_nodes = True
     Nd, Lk = pm.node_tree.nodes, pm.node_tree.links
@@ -415,13 +561,24 @@ def bake(ob, pal, size, mat_name):
     nm = Nd.new("ShaderNodeNormalMap")
     Lk.new(tn.outputs["Color"], nm.inputs["Color"])
     Lk.new(nm.outputs[0], bsdf.inputs["Normal"])
-    glass_m = next((m for m in orig if _part(m) == 3), None)
-    gl = np.array([_part(orig[p.material_index]) == 3 for p in me.polygons], bool)
-    me.materials.clear()
-    me.materials.append(pm)
-    if glass_m is not None and gl.any():
-        me.materials.append(glass_m)
-    me.polygons.foreach_set("material_index", gl.astype(np.int32) if glass_m is not None else np.zeros(len(gl), np.int32))
-    me.update()
+    for ob in obs:
+        me = ob.data
+        orig = origs[ob.name]
+        kept = []
+        idx = np.zeros(len(me.polygons), np.int32)
+        for p in me.polygons:
+            m = orig[p.material_index]
+            if _part(m) == 3:
+                if m not in kept:
+                    kept.append(m)
+                idx[p.index] = 1 + kept.index(m)
+        me.materials.clear()
+        me.materials.append(pm)
+        for m in kept:
+            me.materials.append(m)
+        me.polygons.foreach_set("material_index", idx)
+        if "src" in me.uv_layers:
+            me.uv_layers.remove(me.uv_layers["src"])
+        me.update()
     bpy.data.materials.remove(t)
-    print("PAINT %s: %d px, %d texels covered" % (mat_name, size, int(mask.sum())))
+    print("PAINT %s: %d px, %d texels covered, %d objects" % (mat_name, size, int(mask.sum()), len(obs)))
