@@ -57,3 +57,7 @@
 | hangar/stand_loader (самоходный погрузчик для ракет «воздух-земля» в ангаре) | Weapons Loader | Sengchor | https://sketchfab.com/3d-models/016ca0f9b98b4ffbbe0e55f235bef496 | CC BY 4.0, изменено |
 | biome/b12_date_palm (финиковые пальмы оазиса в Нагорье; облегчённые карточки b12_date_palm_side/top) | Date Palm | evolveduk | https://sketchfab.com/3d-models/11acf710e6c149daa8d6fb8cdc5d087f | CC BY 4.0, изменено |
 | biome/b13_oasis_well (колодец во дворе оазиса) | Desert Environment Well (first Zbrush asset) | Bhaddou | https://sketchfab.com/3d-models/45e65e48986141f88d18d0f9ebd18994 | CC BY 4.0, изменено |
+| village/vh_h49 (большой дом кишлака на каменном цоколе) | Desert house 01 FREE | filthycent | https://sketchfab.com/3d-models/desert-house-01-free-2f7b88bbcf1b454cad2c3e9dbc9dd18e | CC BY 4.0, изменено |
+| village/vh_h50a..f (дома кишлака в 1–2 этажа) | Desert Mud Concrete House Lowpoly | 00amza | https://sketchfab.com/3d-models/desert-mud-concrete-house-lowpoly-bd4917fa72c84e41aa1e5299871f1b2e | CC BY 4.0, изменено |
+| village/vh_h51 (дом кишлака с навесом) | Desert House 01 | torricane | https://sketchfab.com/3d-models/desert-house-01-7649a03206864931a3c118ec14d8ac3c | CC BY 4.0, изменено |
+| village/vh_well (колонка во дворе кишлака) | Hand Well 3D Scan | zdenkoroman | https://sketchfab.com/3d-models/hand-well-3d-scan-76a39bd60163451497c794afe979f8b2 | CC BY 4.0, изменено |
