@@ -210,7 +210,6 @@ func _ready() -> void:
 	sm.set_shader_parameter("road_v", Terrain3D.D_ROAD)
 	sm.set_shader_parameter("road_w", Terrain3D.ROAD_W)        # M-36: дорога шире под конвой
 	sm.set_shader_parameter("road_w_in", Terrain3D.ROAD_W_IN)
-	RoadTex.apply_ground(sm)   # Kanta 26.10: photo road look (--roadtex=N), none by default
 	_ground_mat = sm
 	terrain = Terrain3D.new()
 	add_child(terrain)

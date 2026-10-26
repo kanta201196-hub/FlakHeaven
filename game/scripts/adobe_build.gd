@@ -414,7 +414,8 @@ static func _seg_near(a: Vector2, b: Vector2, pts: Array, r: float) -> bool:
 	return false
 
 
-## Ряд мешков с песком от a до b: два ряда внахлёст
+## Ряд мешков с песком от a до b: два ряда внахлёст, каждый мешок — своя «подушка» (_bag) с зазором,
+## чуть разного размера и повёрнутый (Kanta 26.10: мешки были сплошными плитами)
 static func _bags(st: SurfaceTool, a: Vector2, b: Vector2, y0: float, rng: RandomNumberGenerator) -> void:
 	var len := a.distance_to(b)
 	var dir := (b - a) / maxf(len, 1e-6)
@@ -422,9 +423,52 @@ static func _bags(st: SurfaceTool, a: Vector2, b: Vector2, y0: float, rng: Rando
 	for row in 2:
 		for i in n:
 			var c := a + dir * (len * (i + 0.5 * row + 0.25) / n)
-			var s := Vector3(0.026, 0.011, 0.017) * rng.randf_range(0.9, 1.1)
-			var yaw_c := Vector3(c.x, y0 + row * 0.009, c.y)
-			_box_yaw(st, yaw_c, s, dir.angle(), BAG)
+			var s := Vector3(0.022, 0.011, 0.016) * rng.randf_range(0.9, 1.1)
+			_bag(st, Vector3(c.x, y0 + row * 0.0085, c.y), s, dir.angle() + rng.randf_range(-0.12, 0.12), rng)
+
+
+## Один мешок: «подушка» длиной s.x, высотой s.y, шириной s.z на основании c.y, повёрнутая на yaw.
+## Кольцо из 10 точек (сверхэллипс: прямые бока, скруглённые концы) на трёх высотах — низ поджат,
+## середина раздута, верх скруглён к центру; гладкие нормали (группа 1). 50 треугольников; цвет BAG
+## (альфа ID_BAG — мешковина в adobe.gdshader), тон слегка разный от мешка к мешку
+static func _bag(st: SurfaceTool, c: Vector3, s: Vector3, yaw: float, rng: RandomNumberGenerator) -> void:
+	var col := BAG.darkened(rng.randf_range(0.0, 0.12))
+	col.a = BAG.a
+	var fx := Vector2.from_angle(yaw)
+	var fz := -fx.orthogonal()
+	var ring := func(k: int, sc: float) -> Vector2:
+		var t := TAU * (k + 0.5) / 10.0
+		var cx := cos(t)
+		var sz := sin(t)
+		var u := signf(cx) * pow(absf(cx), 0.4) * s.x * 0.5 * sc
+		var v := signf(sz) * pow(absf(sz), 0.6) * s.z * 0.5 * sc
+		return Vector2(c.x, c.z) + fx * u + fz * v
+	var levels := [[0.0, 0.86], [0.5, 1.0], [0.88, 0.7]]
+	st.set_smooth_group(1)
+	st.set_color(col)
+	for li in 2:
+		var y0 := c.y + s.y * float(levels[li][0])
+		var y1 := c.y + s.y * float(levels[li + 1][0])
+		for k in 10:
+			var p0: Vector2 = ring.call(k, levels[li][1])
+			var p1: Vector2 = ring.call((k + 1) % 10, levels[li][1])
+			var q0: Vector2 = ring.call(k, levels[li + 1][1])
+			var q1: Vector2 = ring.call((k + 1) % 10, levels[li + 1][1])
+			# лицом наружу: порядок как у _quad (a, c, b, a, d, c) для a = p1 низ, b = p0 низ
+			var va := Vector3(p1.x, y0, p1.y)
+			var vb := Vector3(p0.x, y0, p0.y)
+			var vc := Vector3(q0.x, y1, q0.y)
+			var vd := Vector3(q1.x, y1, q1.y)
+			for v: Vector3 in [va, vc, vb, va, vd, vc]:
+				st.add_vertex(v)
+	var top := Vector3(c.x, c.y + s.y, c.z)
+	for k in 10:
+		var p0: Vector2 = ring.call(k, levels[2][1])
+		var p1: Vector2 = ring.call((k + 1) % 10, levels[2][1])
+		var yt := c.y + s.y * float(levels[2][0])
+		for v: Vector3 in [Vector3(p0.x, yt, p0.y), top, Vector3(p1.x, yt, p1.y)]:
+			st.add_vertex(v)
+	st.set_smooth_group(-1)
 
 
 ## Позиция с орудием: кольцо мешков и ствол наружу
@@ -433,7 +477,8 @@ static func _gun_pit(st: SurfaceTool, c: Vector2, out_ang: float, y0: float, rng
 	for i in 9:
 		var a0 := out_ang + PI * 0.25 + TAU * 0.85 * float(i) / 9.0   # проём сзади, к посёлку
 		var p := c + Vector2.from_angle(a0) * r
-		_box_yaw(st, Vector3(p.x, y0, p.y), Vector3(0.03, 0.014, 0.018), a0 + PI * 0.5, BAG)
+		_bag(st, Vector3(p.x, y0, p.y), Vector3(0.027, 0.008, 0.017) * rng.randf_range(0.92, 1.08), a0 + PI * 0.5 + rng.randf_range(-0.1, 0.1), rng)
+		_bag(st, Vector3(p.x, y0 + 0.007, p.y), Vector3(0.024, 0.007, 0.015) * rng.randf_range(0.92, 1.08), a0 + PI * 0.5 + rng.randf_range(-0.15, 0.15), rng)
 	_box_yaw(st, Vector3(c.x, y0, c.y), Vector3(0.03, 0.013, 0.022), out_ang, GUN)   # лафет
 	var tip := c + Vector2.from_angle(out_ang) * 0.03
 	_box_yaw(st, Vector3(tip.x, y0 + 0.009, tip.y), Vector3(0.055, 0.006, 0.006), out_ang, GUN)   # ствол
@@ -444,7 +489,9 @@ static func _post(st: SurfaceTool, c: Vector2, out_ang: float, y0: float, rng: R
 	for i in 6:
 		var a0 := out_ang - PI * 0.6 + PI * 1.2 * float(i) / 5.0
 		var p := c + Vector2.from_angle(a0) * 0.026
-		_box_yaw(st, Vector3(p.x, y0, p.y), Vector3(0.024, 0.013, 0.015), a0 + PI * 0.5, BAG)
+		_bag(st, Vector3(p.x, y0, p.y), Vector3(0.021, 0.0075, 0.014) * rng.randf_range(0.92, 1.08), a0 + PI * 0.5 + rng.randf_range(-0.1, 0.1), rng)
+		if i % 5 != 0:
+			_bag(st, Vector3(p.x, y0 + 0.0065, p.y), Vector3(0.019, 0.0065, 0.013) * rng.randf_range(0.92, 1.08), a0 + PI * 0.5 + rng.randf_range(-0.15, 0.15), rng)
 
 
 ## Коробка, повёрнутая на yaw вокруг вертикали (основание на c.y)
@@ -722,7 +769,7 @@ static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector
 
 
 ## L-07 (правка Kanta 18.10.2026): деревянный мост. Пролёт — по X от −0,5 до 0,5 (длина 1), низ свай — y < 0.
-## foot = false — мост на дороге через ручей (под колонну: ширина 0,36 пролёта, перила, две пары свай);
+## foot = false — мост на дороге через ручей (под колонну: ширина 0,4 пролёта, перила, две пары свай);
 ## foot = true — пешеходный через реку (узкий, чуть выгнут, тонкие стойки и поручни)
 const WOOD := Color(0.47, 0.35, 0.24)
 const WOOD_DARK := Color(0.3, 0.22, 0.16)
@@ -734,7 +781,7 @@ static func bridge(foot: bool) -> ArrayMesh:
 		return _cache[key]
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var w := 0.09 if foot else 0.36
+	var w := 0.09 if foot else 0.4   # Kanta 26.10: the road is 31 px solid now; deck 34–38 px over a 84–95 px span
 	var n := 26 if foot else 15
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7707 if foot else 7708

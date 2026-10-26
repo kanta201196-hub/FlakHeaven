@@ -86,8 +86,9 @@ void fragment() {
 		// dusty khaki burlap; the weave only shades it (its mean brightness is bag_mean)
 		float hl = dot(hc, vec3(0.333)) / bag_mean;
 		alb = bag_color * mix(1.0, hl, 0.6);
-		// the long sides sit in shade and read near black: lift them, warmer (sun-bounced sand, not sky)
-		alb *= mix(vec3(1.95, 1.5, 1.05), vec3(1.0), tri_w.y);
+		// the sides in shade read near black: lift them, warmer (sun-bounced sand, not sky). Rounded bags
+		// (AdobeBuild._bag, 26.10) catch a little more light than the old flat-sided blocks, so the lift is a bit milder
+		alb *= mix(vec3(1.8, 1.45, 1.08), vec3(1.0), tri_w.y);
 		rough = 0.98;
 	} else if (mat_id < 0.62 && trench_tex) {
 		float across = clamp((mat_id - 0.5) / 0.08, -1.0, 1.0);   // −1 … 1 edge to edge

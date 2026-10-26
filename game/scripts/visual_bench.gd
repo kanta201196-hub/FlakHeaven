@@ -645,6 +645,8 @@ func _make_points() -> Array:
 		# M-36: дорога шире — колонна конвоя стоит на дороге (логика машин выключена)
 		pts.append({"name": "road_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 2.2, "convoy": true, "wait": 1.5})
 		pts.append({"name": "road_ground", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "ground_dist": 110.0, "wait": 2.0})   # Kanta 26.10: road surface up close
+		# Kanta 26.10 (road wide enough for 1.5 vehicles): the convoy on the road at gameplay height, the player's plane beside it
+		pts.append({"name": "road_play", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "cls": ["fighter", 1], "zoom": 1.3, "convoy": true, "wait": 1.5})
 		pts.append({"name": "road_smoke","pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.0, "convoy": true, "smoke": true, "wait": 3.0})
 		# M-37: позиция ПВО целиком и рядом с колонной (размеры ПВО относительно машин конвоя)
 		pts.append({"name": "aa_site", "pos": empty, "zoom": 1.0, "enemies": true, "ground": true, "wait": 2.5})

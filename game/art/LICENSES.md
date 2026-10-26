@@ -15,17 +15,13 @@
 | `pbr/river_*` | River Small Rocks (`river_small_rocks`) | Rob Tuytel, Rico Cilliers | https://polyhaven.com/a/river_small_rocks |
 | `pbr/rock_*` | Cliff Side (`cliff_side`) | James Ray Cock, Jenelle van Heerden, Dario Barresi | https://polyhaven.com/a/cliff_side |
 
-## Текстуры дорог, улиц, окопов и мешков (`game/art/ground/road/`), Poly Haven — https://polyhaven.com/license
+## Текстуры улиц, окопов и мешков (`game/art/ground/road/`), Poly Haven — https://polyhaven.com/license
 
-Подготовка: `game/tools/terrain/prep_road.py` (цвет 1K; нормаль OpenGL в R,G + высота в B; у `lane_cobble` зелень между камнями высушена). Код — `game/scripts/road_tex.gd`, `game/shaders/adobe.gdshader`.
+Подготовка: `game/tools/terrain/prep_road.py` (цвет 1K; нормаль OpenGL в R,G + высота в B). Код — `game/scripts/road_tex.gd`, `game/shaders/adobe.gdshader`.
 
 | Файлы | Набор | Авторы | Страница |
 | --- | --- | --- | --- |
-| `road/road_tracks_*` | Dirt Aerial 02 (`dirt_aerial_02`) | Rob Tuytel | https://polyhaven.com/a/dirt_aerial_02 |
-| `road/road_gravel_*` | Sandy Gravel 02 (`sandy_gravel_02`) | Dario Barresi | https://polyhaven.com/a/sandy_gravel_02 |
-| `road/road_sand_*` | Red Sand (`red_sand`) | Rohit Seervi | https://polyhaven.com/a/red_sand |
 | `road/lane_flag_*` | Stone Pathway (`stone_pathway`) | Amal Kumar | https://polyhaven.com/a/stone_pathway |
-| `road/lane_cobble_*` | Cobblestone Large 01 (`cobblestone_large_01`) | Rob Tuytel | https://polyhaven.com/a/cobblestone_large_01 |
 | `road/trench_soil_*` | Excavated Soil Wall (`excavated_soil_wall`) | Amal Kumar | https://polyhaven.com/a/excavated_soil_wall |
 | `road/trench_planks_*` | Brown Planks 04 (`brown_planks_04`) | Rob Tuytel | https://polyhaven.com/a/brown_planks_04 |
 | `road/bag_hessian_*` | Hessian 230 (`hessian_230`) | colormass, Rico Cilliers | https://polyhaven.com/a/hessian_230 |

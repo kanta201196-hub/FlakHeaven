@@ -9,11 +9,7 @@ from PIL import Image
 D, OUT = sys.argv[1].rstrip("/") + "/", sys.argv[2].rstrip("/") + "/"
 S = 1024
 SETS = {
-    "road_tracks": "dirt_aerial_02",
-    "road_gravel": "sandy_gravel_02",
-    "road_sand": "red_sand",
     "lane_flag": "stone_pathway",
-    "lane_cobble": "cobblestone_large_01",
     "trench_soil": "excavated_soil_wall",
     "trench_planks": "brown_planks_04",
     "bag_hessian": "hessian_230",
@@ -26,13 +22,6 @@ def load(path, mode="RGB"):
 
 for name, src in SETS.items():
     alb = np.asarray(load(D + src + "__Diffuse.jpg")).astype(np.float32)
-    if name == "lane_cobble":
-        # grass tufts between the stones: dry them to soil colour (arid highlands, no green)
-        r, g, b = alb[..., 0], alb[..., 1], alb[..., 2]
-        green = np.clip((g - np.maximum(r, b) * 0.97) / 6.0, 0.0, 1.0)[..., None]
-        lum = (0.3 * r + 0.59 * g + 0.11 * b)[..., None]
-        soil = lum * np.array([1.12, 0.98, 0.8])
-        alb = alb * (1.0 - green) + soil * green
     Image.fromarray(np.clip(alb, 0, 255).astype(np.uint8)).save(OUT + name + "_albedo.jpg", quality=90)
     if name == "trench_planks":
         print(name, "ok")
