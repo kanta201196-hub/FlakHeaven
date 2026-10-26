@@ -45,11 +45,6 @@ GREY = {"camo": [(0.50, 0.52, 0.54), (0.61, 0.63, 0.65)], "scale": 1.3, "stretch
         "wear_col": (0.66, 0.67, 0.68), "fade": 0.03, "fade_col": (0.75, 0.76, 0.77), "streak": 0.08}
 
 # vehicle olive paint (most sources): green-yellow hues
-# desert bunker (Kanta 26.10, shortlist 94): weathered sand-grey concrete close to the sandstone knoll; low detail,
-# because the source luminance carries the graffiti the repaint must hide
-BUNKER = {"camo": [(0.34, 0.31, 0.26), (0.30, 0.28, 0.24), (0.27, 0.25, 0.22)], "scale": 2.0,
-          "rough": (0.88, 0.95), "wear": 0.35, "detail": 0.14, "dust": 0.3, "streak": 0.2,
-          "wear_col": (0.43, 0.40, 0.35), "fade_col": (0.41, 0.38, 0.33)}   # weathered grey-ochre: darker than the sand around it
 OLIVE = {"mode": "auto", "hue": [(38, 150)], "smin": 0.12}
 TYRE = {"mode": "keep", "rough": 0.92, "desat": 0.6}
 GLASS = {"mode": "glass", "rough": 0.3, "color": (0.06, 0.075, 0.085)}
@@ -388,16 +383,6 @@ RECIPES = {
         "groups": {"launcher": [("name", r"^mpl_")]},
         "pivots": {"launcher": (-0.34, 0.0, 0.495)}, "fixed": {"launcher": 1600},
         "paint": SAND, "tris": 9000,
-    },
-    # casemate on a sandstone knoll (Kanta 26.10, shortlist 94, the Archipelago coast bunker reworked for the desert).
-    # Source prepared outside the recipe: cropped to the casemate and the top of its knoll, faces above the knoll cut
-    # in a material 'concrete' (fully repainted: hides the graffiti); on the rock only the graffiti colours and the
-    # green shrubs are repainted, the sandstone texture stays
-    "e_bunker": {
-        "root": "ground_bunker", "rot": (0, 0, 90), "ground": True,
-        "materials": [(r"^concrete", {"mode": "paint", "flatten": 31}),
-                      (r".", {"mode": "auto", "hue": [(0, 14), (55, 340)], "smin": 0.18, "gray": (0.0, 0.22)})],
-        "paint": BUNKER, "tris": 8000,
     },
     # radar truck (Kanta 26.10, shortlist 88): a 6x6 truck with a lattice search antenna on a mast at the rear.
     # The tan factory paint becomes the sand camo; the antenna head (dish, feed, mast head) is the node render3d
