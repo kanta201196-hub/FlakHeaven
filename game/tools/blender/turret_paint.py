@@ -339,6 +339,18 @@ def _layers(P, N, B, AO, part, x_tip, pal, guns, src=None):
     return np.clip(col, 0, 1), np.clip(rough, 0, 1), np.clip(metal, 0, 1), nn
 
 
+def _height_box(p, ax, armour, seed):
+    """_height with the panel grid laid on the two world axes across each texel's dominant normal axis ax"""
+    i0 = np.where(ax == 0, 1, 0)
+    i1 = np.where(ax == 2, 1, 2)
+    r = np.arange(len(p))
+    e0 = np.zeros_like(p)
+    e1 = np.zeros_like(p)
+    e0[r, i0] = 1.0
+    e1[r, i1] = 1.0
+    return _height(p, e0, e1, armour, seed)
+
+
 def _layers_own(P, N, B, AO, part, x_tip, pal, src):
     """Own-colour weathering: the same chips, grime, streaks, dust, soot and relief as the camouflage paint,
     over each face's own colour; matte throughout (Kanta: no gloss), only bare-steel chips are metallic.
@@ -389,11 +401,14 @@ def _layers_own(P, N, B, AO, part, x_tip, pal, src):
         rough = rough * (1 - s) + 0.92 * s
         metal = metal * (1 - s)
     col = col * (0.5 + 0.5 * AO ** 0.8)[:, None]
+    # relief on a box projection (straight seams on domes and drums; the turret frame curls them into a
+    # radial checker on a round surface), half the turrets' depth
     t, b = _frame(N)
-    armour = body.astype(np.float32)
+    ax = np.argmax(np.abs(N), axis=1)
+    armour = body.astype(np.float32) * 0.5
     e = 0.0007
-    hu = (_height(P + t * e, t, b, armour, seed) - _height(P - t * e, t, b, armour, seed)) / (2 * e)
-    hv = (_height(P + b * e, t, b, armour, seed) - _height(P - b * e, t, b, armour, seed)) / (2 * e)
+    hu = (_height_box(P + t * e, ax, armour, seed) - _height_box(P - t * e, ax, armour, seed)) / (2 * e)
+    hv = (_height_box(P + b * e, ax, armour, seed) - _height_box(P - b * e, ax, armour, seed)) / (2 * e)
     nn = B - (hu[:, None] * t + hv[:, None] * b)
     nn /= np.linalg.norm(nn, axis=1, keepdims=True) + 1e-8
     return np.clip(col, 0, 1), np.clip(rough, 0, 1), np.clip(metal, 0, 1), nn
