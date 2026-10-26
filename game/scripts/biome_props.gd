@@ -449,7 +449,8 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		mmi.name = kind
 		var small: bool = kind in ["shrub", "bush", "boulders", "boulders_b", "poplar", "orchard"] or kind in SeaProps.SMALL
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
-		var no_shadow := Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)
+		# bushes never cast shadows: 8.6k-triangle leaf cards, 20–30 per oasis, too small to need them
+		var no_shadow := kind == "bush" or Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if no_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		parent.add_child(mmi)
 		# оптимизация (после #105): на «Максимальном» деревья полной детализации (11–14 тыс. треуг.) тень
