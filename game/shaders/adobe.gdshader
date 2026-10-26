@@ -3,7 +3,7 @@ render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specula
 // Village and oasis mesh (AdobeBuild): the StandardMaterial3D it replaces (clay photo in world-space triplanar,
 // vertex colour as albedo, matte), plus own surfaces picked by the vertex colour's alpha (AdobeBuild.ID_*):
 //   ~1.0  walls, roofs, yards — exactly the old material;
-//   0.25  sandbags — hessian cloth with its weave in the normal (Kanta 26.10: «текстуры мешков… если плохие замени»);
+//   0.25  sandbags — hessian cloth with its weave in the normal (Kanta 26.10: "replace the sandbag textures if they are bad");
 //   0.42…0.58 trench strip — packed soil, darker and lower in the middle, plank revetment along both edges;
 //   0.67…0.83 street strip — packed earth or a photo lane set (--roadtex), frayed into the yard ground at the edges.
 // For the strips the alpha also runs across the strip (edge to edge), so the shader knows where the middle is.

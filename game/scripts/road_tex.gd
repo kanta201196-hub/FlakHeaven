@@ -1,7 +1,7 @@
 class_name RoadTex
 extends RefCounted
 ## Photo textures (CC0, game/art/ground/road) for village streets, trenches and sandbags.
-## Kanta 26.10: «поищи нормальные текстуры… дорог», «текстуры окопов и мешков… если плохие замени»; of the
+## Kanta 26.10: "find proper road textures", "trench and sandbag textures: replace them if they are bad"; of the
 ## preview looks he took the stone flagstone streets and kept the map road's own flat colour (only wider,
 ## Terrain3D.ROAD_W). `--roadtex=old` draws the village as before this change (bench "before" frames).
 

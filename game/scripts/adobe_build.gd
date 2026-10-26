@@ -414,8 +414,8 @@ static func _seg_near(a: Vector2, b: Vector2, pts: Array, r: float) -> bool:
 	return false
 
 
-## Ряд мешков с песком от a до b: два ряда внахлёст, каждый мешок — своя «подушка» (_bag) с зазором,
-## чуть разного размера и повёрнутый (Kanta 26.10: мешки были сплошными плитами)
+## A row of sandbags from a to b: two overlapping rows, each bag its own "pillow" (_bag) with a gap,
+## slightly different in size and turned (Kanta 26.10: the bags used to be solid slabs)
 static func _bags(st: SurfaceTool, a: Vector2, b: Vector2, y0: float, rng: RandomNumberGenerator) -> void:
 	var len := a.distance_to(b)
 	var dir := (b - a) / maxf(len, 1e-6)
@@ -427,10 +427,10 @@ static func _bags(st: SurfaceTool, a: Vector2, b: Vector2, y0: float, rng: Rando
 			_bag(st, Vector3(c.x, y0 + row * 0.0085, c.y), s, dir.angle() + rng.randf_range(-0.12, 0.12), rng)
 
 
-## Один мешок: «подушка» длиной s.x, высотой s.y, шириной s.z на основании c.y, повёрнутая на yaw.
-## Кольцо из 10 точек (сверхэллипс: прямые бока, скруглённые концы) на трёх высотах — низ поджат,
-## середина раздута, верх скруглён к центру; гладкие нормали (группа 1). 50 треугольников; цвет BAG
-## (альфа ID_BAG — мешковина в adobe.gdshader), тон слегка разный от мешка к мешку
+## One bag: a "pillow" s.x long, s.y high, s.z wide on base c.y, turned by yaw. A ring of 10 points
+## (superellipse: straight sides, rounded ends) at three heights: bottom tucked in, middle bulging, top rounded
+## to the centre; smooth normals (group 1). 50 triangles; colour BAG (alpha ID_BAG: hessian in adobe.gdshader),
+## the tone varies slightly from bag to bag
 static func _bag(st: SurfaceTool, c: Vector3, s: Vector3, yaw: float, rng: RandomNumberGenerator) -> void:
 	var col := BAG.darkened(rng.randf_range(0.0, 0.12))
 	col.a = BAG.a
@@ -454,7 +454,7 @@ static func _bag(st: SurfaceTool, c: Vector3, s: Vector3, yaw: float, rng: Rando
 			var p1: Vector2 = ring.call((k + 1) % 10, levels[li][1])
 			var q0: Vector2 = ring.call(k, levels[li + 1][1])
 			var q1: Vector2 = ring.call((k + 1) % 10, levels[li + 1][1])
-			# лицом наружу: порядок как у _quad (a, c, b, a, d, c) для a = p1 низ, b = p0 низ
+			# facing out: same order as _quad (a, c, b, a, d, c) with a = p1 bottom, b = p0 bottom
 			var va := Vector3(p1.x, y0, p1.y)
 			var vb := Vector3(p0.x, y0, p0.y)
 			var vc := Vector3(q0.x, y1, q0.y)
@@ -513,8 +513,8 @@ static func _box_yaw(st: SurfaceTool, c: Vector3, s: Vector3, yaw: float, col: C
 const PATH := Color(0.86, 0.84, 0.86)   # утоптанная улица: в тон земле, чуть светлее (3.5-s8: была оранжевой)
 
 
-## Плоская полоса (тропа) от a до b шириной w чуть над землёй. id (ID_TRENCH, ID_STREET) — свой материал
-## в adobe.gdshader: альфа цвета id − ID_SPAN у одного края и id + ID_SPAN у другого (шейдер знает середину)
+## Flat strip (path) from a to b, w wide, just above the ground. id (ID_TRENCH, ID_STREET) picks its own material
+## in adobe.gdshader: colour alpha id - ID_SPAN on one edge and id + ID_SPAN on the other (the shader knows the middle)
 static func _strip(st: SurfaceTool, a: Vector2, b: Vector2, w: float, col: Color, y := 0.002, id := 1.0) -> void:
 	var n := (b - a).normalized().orthogonal() * w * 0.5
 	var ext := (b - a).normalized() * w * 0.5   # стык соседних кусков без щелей
