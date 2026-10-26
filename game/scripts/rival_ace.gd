@@ -161,7 +161,10 @@ func behave(delta: float) -> void:
 	_evade_cd -= delta
 	_scan_t -= delta
 	_flare_cd -= delta
-	flare_defense(delta, 400.0, 240.0, 0.8, 2.5, 8.0)
+	if Main.aces():
+		flare_defense(delta, 400.0, 240.0, AcesBalance.ACE_FLARE_CHANCE, 2.5, 8.0, AcesBalance.ACE_FLARE_CHARGES)
+	else:
+		flare_defense(delta, 400.0, 240.0, 0.8, 2.5, 8.0)
 	if _evade_cd <= 0.0 and _scan_t <= 0.0 and not maneuvering() and _shots == 0:
 		_scan_t = 0.15
 		var threat := incoming_fire(0.4, 3)

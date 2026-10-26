@@ -646,7 +646,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	if dodges(source, who):
 		return
 	if Main.aces():   # «Битва асов»: a fixed share of the hull per missile / bullet / ram, no difficulty or late ramp
-		amount = AcesBalance.player_hit(source, amount, max_hp)
+		amount = AcesBalance.player_hit(source, amount, max_hp, who)
 	else:
 		amount *= Campaign.k("dmg") # U-05: урон врагов по сложности операции
 		amount *= Spawner.dmg_ramp(Main.I.run_time) # правка 3.5-s4: поздний бой опаснее

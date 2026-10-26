@@ -585,7 +585,11 @@ func _skill_list(p: Player) -> Array:
 	out.append({"key": p.skill3, "action": "sharp_turn", "title": Loc.t(s3["title"]) + ("" if p.s3_lvl() <= 0 else " " + Prog.ROMAN[p.s3_lvl()]),
 		"hint": Loc.t(String(s3.get("hud", ""))), "desc": Loc.t(String(s3.get("short", ""))) + Loc.t(". Перезарядка %d с.") % int(round(p.cd_of(p.skill3))),
 		"cd": p.s3_cd, "full": p.cd_of(p.skill3), "active": p.s3_active(), "fam": "skill"})
-	if p.skill_b != "":
+	if Main.aces():
+		out.append({"key": "flares", "action": "skill_2", "title": Loc.t("Ловушки"), "hint": Loc.t("уводят ракеты"),
+			"desc": Loc.t("Залп тепловых ловушек: уводит ракеты, летящие к вам. Перезарядка %d с.") % int(round(AcesBalance.FLARE_CD)),
+			"cd": p.sb_cd, "full": AcesBalance.FLARE_CD, "active": p.salvo_t, "fam": "maneuver_skill"})
+	elif p.skill_b != "":
 		var sb: Dictionary = PlaneClasses.SKILL3[p.skill_b]
 		out.append({"key": p.skill_b, "action": "skill_2", "title": Loc.t(sb["title"]), "hint": Loc.t(String(sb.get("hud", ""))),
 			"desc": Loc.t(String(sb.get("short", ""))) + Loc.t(". Перезарядка %d с.") % int(round(p.cd_of(p.skill_b))),
