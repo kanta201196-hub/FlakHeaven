@@ -3,7 +3,7 @@ extends RefCounted
 ## Numbers of the «Крепость» boss fight (Fortress) that Kanta set by name; the rest still live as constants
 ## at the top of fortress.gd.
 
-## Kanta 2026-10-26 (decision card «Пускать раз в 12 с»): until the fall every live dome turret launches the
+## Kanta 2026-10-26 (decision card «Пускать раз в 12 с»): in phase 1 every live dome turret launches the
 ## missile on its rail once per this many seconds, counted launch to launch. The dome shows no missile for
 ## the same time, so the player reads the reload off the model.
 const DOME_MSL_EVERY := 12.0

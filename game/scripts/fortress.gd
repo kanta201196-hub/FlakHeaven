@@ -7,7 +7,7 @@ extends Boss
 ##   1. Left wing — its two domes and the left engine. All 4 domes fire into their sectors (nose and tail are dead
 ##      zones) and launch their rail missiles; the escort is topped up while the command dome (turret_3, left wing) lives.
 ##   2. Right wing — its two domes and the right engine, plus the bay: it opens in cycles (6 s of 14) and lays a
-##      carpet behind it; a hit in the open bay is ×3 to the hull. The right domes keep firing. Each engine −20% speed.
+##      carpet behind it; a hit in the open bay is ×3 to the hull. The right domes keep their guns, rail missiles stay a phase-1 threat. Each engine −20% speed.
 ##   3. «Падение» — корпус открыт, двигатели чадят чёрным дымом; бросает маршрут и тянет прочь от игрока
 ##      (S9-20: не кружит), огрызается кольцами пуль и ловушками. Не добили за FLEE_T с — падает сама,
 ##      запчастей за неё вдвое меньше.
@@ -377,7 +377,7 @@ func behave(delta: float) -> void:
 		Main.I.tele.add("fort%d_near_s" % phase, delta)
 	Main.I.tele.add("fort%d_s" % phase, delta)
 	_turrets(delta, p)
-	if phase < 3:
+	if phase == 1:
 		_domes(delta, p, d)
 	_escort(delta)
 	if phase == 2:
@@ -451,7 +451,7 @@ func _turrets(delta: float, p: Player) -> void:
 		pt["cd"] = randf_range(1.6, 2.4)
 
 
-## Dome missiles (Kanta 26.10, FortressBalance), phases 1–2: each live dome launches its rail missile once per
+## Phase-1 dome missiles (Kanta 26.10, FortressBalance; the right domes stay live in phase 2 but keep only their guns): each live dome launches its rail missile once per
 ## DOME_MSL_EVERY s, domes staggered, after the bay volley's lock warning; the type, homing and damage are the
 ## volley's. A lock starts only in range and under the Fortress-wide MSL_CAP (missiles in the air + locks).
 func _domes(delta: float, p: Player, d: float) -> void:
