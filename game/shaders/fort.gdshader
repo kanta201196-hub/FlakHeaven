@@ -17,11 +17,14 @@ uniform float grime = 5.0;     // dust band height, preview units
 uniform float bleach = 12.0;   // sun-bleached from this height up
 uniform float ao_amount = 0.55;
 uniform float unit = 109.52;   // preview units per mesh unit (FortBuild.K inverse)
+uniform float roof_clean = 0.0;   // VIS-01 village houses: no rain streaks on low flat roofs (the fort keeps 0)
 
 varying vec3 fp;
+varying float up;
 
 void vertex() {
 	fp = VERTEX * unit;
+	up = NORMAL.y;
 }
 
 void fragment() {
@@ -33,7 +36,7 @@ void fragment() {
 	c *= mix(vec3(0.9, 0.86, 0.8), vec3(1.04, 1.02, 0.98), lf);
 	float col = fract(sin(floor((fp.x + fp.z) * 0.9) * 91.7) * 4375.3);
 	float streak = step(0.86, col) * smoothstep(14.0, 4.0, fp.y) * smoothstep(0.0, 3.0, fp.y);
-	c *= 1.0 - streak * 0.14;
+	c *= 1.0 - streak * 0.14 * (1.0 - roof_clean * step(0.7, up));
 	float top = smoothstep(bleach, bleach + 6.0, fp.y);
 	c = mix(c, c * 1.08 + vec3(0.03), top);
 	vec3 arm = texture(arm_tex, UV).rgb;

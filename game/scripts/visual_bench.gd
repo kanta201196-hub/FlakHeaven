@@ -40,6 +40,9 @@ func _init(main: Main) -> void:
 		if a == "--nowater":   # S9-07/S9-08: «до» — кишлак без учёта ручья и реки у посёлка (vis_<имя>_dry.png)
 			AdobeBuild.ignore_water = true
 			_suffix += "_dry"
+		if a == "--boxhouses":   # VIS-01: «до» — дома кишлака коробками, а не моделями (vis_<имя>_box.png)
+			AdobeBuild.model_houses = false
+			_suffix += "_box"
 
 
 func process(delta: float) -> void:
@@ -626,11 +629,12 @@ func _make_points() -> Array:
 		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
 		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
 		pts.append({"name": "village_close", "pos": found["o_village"] + Vector2(0, 600), "zoom": 2.4})
+		pts.append({"name": "village_houses", "pos": found["o_village"] + Vector2(-150, 250), "zoom": 6.0})   # VIS-01: house models up close
 		for vr in 4:
 			AdobeBuild._vcache.erase("village%d" % vr)
 			var t0 := Time.get_ticks_usec()
 			var vm := AdobeBuild.village(vr)
-			print("VISUAL village%d mesh tris=%d build=%d ms %s" % [vr, vm.surface_get_array_len(0) / 3, (Time.get_ticks_usec() - t0) / 1000, AdobeBuild._vcache.get("village%d_stats" % vr, {})])
+			print("VISUAL village%d mesh tris=%d build=%d ms %s house models tris=%d" % [vr, vm.surface_get_array_len(0) / 3, (Time.get_ticks_usec() - t0) / 1000, AdobeBuild._vcache.get("village%d_stats" % vr, {}), VillageHouses.tris(AdobeBuild.village_homes(vr))])
 	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
 	if ter != null:
 		var got := {}

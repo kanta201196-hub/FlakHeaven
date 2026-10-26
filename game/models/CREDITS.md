@@ -52,3 +52,7 @@
 | weapons/aam_1..3, weapons/hq/aam_1..3 (наводящиеся ракеты, ступени 1–3) | Russian weapon pack | Rhine_Lab_Muelsyse | https://sketchfab.com/3d-models/af00b7135a184ecfb2812a0e54458a8a | CC BY 4.0, изменено |
 | hangar/stand_missile_cart (тележка для ракет «воздух-воздух» в ангаре) | cart with "R-27ET" A-A soviet missiles | Tiltow | https://sketchfab.com/3d-models/fadb1f9ef8cd4425aeada7d918255200 | CC BY 4.0, изменено |
 | hangar/stand_loader (самоходный погрузчик для ракет «воздух-земля» в ангаре) | Weapons Loader | Sengchor | https://sketchfab.com/3d-models/016ca0f9b98b4ffbbe0e55f235bef496 | CC BY 4.0, изменено |
+| village/vh_h49 (большой дом кишлака на каменном цоколе) | Desert house 01 FREE | filthycent | https://sketchfab.com/3d-models/desert-house-01-free-2f7b88bbcf1b454cad2c3e9dbc9dd18e | CC BY 4.0, изменено |
+| village/vh_h50a..f (дома кишлака в 1–2 этажа) | Desert Mud Concrete House Lowpoly | 00amza | https://sketchfab.com/3d-models/desert-mud-concrete-house-lowpoly-bd4917fa72c84e41aa1e5299871f1b2e | CC BY 4.0, изменено |
+| village/vh_h51 (дом кишлака с навесом) | Desert House 01 | torricane | https://sketchfab.com/3d-models/desert-house-01-7649a03206864931a3c118ec14d8ac3c | CC BY 4.0, изменено |
+| village/vh_well (колонка во дворе кишлака) | Hand Well 3D Scan | zdenkoroman | https://sketchfab.com/3d-models/hand-well-3d-scan-76a39bd60163451497c794afe979f8b2 | CC BY 4.0, изменено |

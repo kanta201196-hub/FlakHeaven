@@ -778,6 +778,7 @@ static func _roof_col(rng: RandomNumberGenerator) -> Color:
 ## разрушена (стены рваной сплошной линией, груды глины). По краям — сады за дувалами и поля с межами.
 ## Всё — одна сетка (один вызов отрисовки), повёрнутые коробки
 static var _cmx := Mutex.new()
+static var model_houses := true   # VIS-01: houses as models (VillageHouses); false — the old box houses (bench «before»)
 static var _vcache := {}   # сетки кишлака: собираются и в фоне (prewarm) — только под _cmx
 
 
@@ -801,6 +802,8 @@ static func village(variant: int) -> ArrayMesh:
 	var paths := village_paths(variant)
 	var lots := []   # [центр, полуразмер, угол] — повёрнутые прямоугольники: ничто не наползает друг на друга и на улицы
 	var stats := {"yards": 0, "houses": 0}
+	if model_houses:
+		stats["homes"] = []   # VIS-01: houses as models (VillageHouses), recorded instead of drawn
 	# 1) крупные здания: караван-сарай у главной улицы со стороны реки, водокачка у полукольца, склад
 	var ex := V_EDGE * outline(variant, 0.0)
 	for tr in 16:
@@ -903,7 +906,7 @@ static func village(variant: int) -> ArrayMesh:
 		singles -= 1
 		var roll := rng.randf()
 		if roll < 0.55:
-			_t_house(st, c, h, yaw, 1 if rng.randf() < 0.85 else 2, _roof_col(rng), rng)
+			_t_house(st, c, h, yaw, 1 if rng.randf() < 0.85 else 2, _roof_col(rng), rng, stats.get("homes"))
 			stats["houses"] += 1
 		elif roll < 0.8:
 			_t_ruin(st, c, h, yaw, rng.randf_range(0.025, 0.04), rng)
@@ -931,6 +934,9 @@ static func village(variant: int) -> ArrayMesh:
 		var q := (vs[ti * 3] + vs[ti * 3 + 1] + vs[ti * 3 + 2]) / (3.0 * V_UNIT)
 		cen[ti] = Vector2(q.x, q.z)
 	var edge := [lots.duplicate(), rng.state, cen]
+	var homes: Array = stats.get("homes", [])
+	stats.erase("homes")
+	stats["models"] = homes.size()
 	print_verbose("AdobeBuild village%d: дворов %d, домов %d, треугольников %d" % [variant, stats["yards"], stats["houses"], m.surface_get_array_len(0) / 3])
 	_cmx.lock()
 	if _vcache.has(key):   # параллельно собрал другой поток — берём его сетку
@@ -939,6 +945,7 @@ static func village(variant: int) -> ArrayMesh:
 		_vcache[key] = m
 		_vcache[key + "_stats"] = stats
 		_vcache[key + "_edge"] = edge
+		_vcache[key + "_homes"] = homes
 		_vcache[key + "_arrays"] = marr   # village_core cuts wet yards from these (no surface_get_arrays off the main thread)
 	_cmx.unlock()
 	return m
@@ -975,12 +982,37 @@ static func village_at(variant: int, water: Dictionary) -> Array:
 	_cmx.unlock()
 	if not have.is_empty():
 		return have
-	var out := [village_core(variant, water), village_edge(variant, water)]
+	var out := [village_core(variant, water), village_edge(variant, water), village_homes(variant, water)]
 	_cmx.lock()
 	if _icache.size() > 12:
 		_icache.clear()
 	_icache[key] = out
 	_cmx.unlock()
+	return out
+
+
+## VIS-01: model houses and wells of the village (VillageHouses.attach records), without those in the yards and
+## lots that the settlement's water cuts out of the core mesh (village_core)
+static func village_homes(variant: int, water := {}) -> Array:
+	village(variant)
+	_cmx.lock()
+	var homes: Array = _vcache.get("village%d_homes" % variant, [])
+	var edge: Array = _vcache.get("village%d_edge" % variant, [[], 0, PackedVector2Array()])
+	_cmx.unlock()
+	if water.is_empty() or homes.is_empty():
+		return homes
+	var out := []
+	for hm in homes:
+		var q: Vector2 = hm[1]
+		var wet := false
+		for l in edge[0]:
+			var lc := (q - (l[0] as Vector2)).rotated(-float(l[2]))
+			var hh: Vector2 = l[1] + Vector2.ONE * 0.004
+			if absf(lc.x) <= hh.x and absf(lc.y) <= hh.y and _wet_box(water, l[0], l[1], l[2], 0.004):
+				wet = true
+				break
+		if not wet:
+			out.append(hm)
 	return out
 
 
@@ -1243,23 +1275,64 @@ static func _t_wall(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vect
 
 
 ## Дом в осях (c, yaw): плоская глиняная крыша, 1–2 этажа, иногда парапет, надстройка, копоть; дверь —
-## тёмный проём на стороне z = +h.y (во двор)
-static func _t_house(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, floors: int, roof: Color, rng: RandomNumberGenerator) -> void:
+## тёмный проём на стороне z = +h.y (во двор). VIS-01: with homes (an Array) the house is not drawn but recorded
+## there for VillageHouses (_home); rng is drawn exactly as before either way, so the layout and the edge that
+## continues the same generator do not move
+static func _t_house(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, floors: int, roof: Color, rng: RandomNumberGenerator, homes = null) -> void:
 	var hh := rng.randf_range(0.03, 0.038) if floors == 1 else rng.randf_range(0.058, 0.07)
+	var parapet := floors == 2 or rng.randf() < 0.3
+	var bx := 0.0
+	var sx := 0.0
+	if not parapet and floors == 1 and h.x > 0.03 and rng.randf() < 0.25:   # надстройка-балахана на части крыши
+		bx = h.x * rng.randf_range(0.35, 0.5)
+		sx = (h.x - bx) * (1.0 if rng.randf() < 0.5 else -1.0)
+	var door := rng.randf_range(-0.4, 0.4) * h.x
+	var soot := rng.randf() < 0.15
+	var sp := Vector2(rng.randf_range(-0.3, 0.3) * h.x, rng.randf_range(-0.3, 0.3) * h.y) if soot else Vector2.ZERO
+	if homes != null:
+		_home(homes, c, h, yaw, hh, floors)
+		return
 	var wall := T_WALL.lerp(roof, 0.4).darkened(0.04)
 	_ob(st, c, yaw, 0.0, 0.0, Vector3(h.x * 2.0, hh, h.y * 2.0), wall, roof)
-	if floors == 2 or rng.randf() < 0.3:
+	if parapet:
 		var t := 0.005
 		for s: float in [-1.0, 1.0]:
 			_ob(st, c, yaw, 0.0, s * (h.y - t * 0.5), Vector3(h.x * 2.0, 0.007, t), wall, roof.lightened(0.04), hh)
 			_ob(st, c, yaw, s * (h.x - t * 0.5), 0.0, Vector3(t, 0.007, h.y * 2.0 - 2.0 * t), wall, roof.lightened(0.04), hh)
-	elif floors == 1 and h.x > 0.03 and rng.randf() < 0.25:   # надстройка-балахана на части крыши
-		var bx := h.x * rng.randf_range(0.35, 0.5)
-		var sx := (h.x - bx) * (1.0 if rng.randf() < 0.5 else -1.0)
+	elif bx > 0.0:
 		_ob(st, c, yaw, sx, 0.0, Vector3(bx * 2.0, 0.026, h.y * 1.6), wall, roof.darkened(0.04), hh)
-	_ob(st, c, yaw, rng.randf_range(-0.4, 0.4) * h.x, h.y + 0.0015, Vector3(0.011, minf(hh * 0.6, 0.024), 0.003), T_DARK, T_DARK)
-	if rng.randf() < 0.15:   # копоть
-		_ob(st, c, yaw, rng.randf_range(-0.3, 0.3) * h.x, rng.randf_range(-0.3, 0.3) * h.y, Vector3(h.x * 0.9, 0.001, h.y * 0.8), BURNT, BURNT, hh)
+	_ob(st, c, yaw, door, h.y + 0.0015, Vector3(0.011, minf(hh * 0.6, 0.024), 0.003), T_DARK, T_DARK)
+	if soot:   # копоть
+		_ob(st, c, yaw, sp.x, sp.y, Vector3(h.x * 0.9, 0.001, h.y * 0.8), BURNT, BURNT, hh)
+
+
+const M_PER_UNIT := 6.94 / 640.0   ## one metre of a model (≈ the fort's preview unit, 6.94 px) in old units
+
+## VIS-01: a house lot as model houses for VillageHouses — [variant, centre, yaw, scale old units per metre]. A long
+## lot (yard houses run the whole wall) is split into 1–3 houses of different variants and heights; each is fitted
+## to its part (at most 25 % off the model's proportions, height near the box house's). Its own generator, seeded
+## by the lot, so the village's generator is untouched
+static func _home(homes: Array, c: Vector2, h: Vector2, yaw: float, hh: float, floors: int) -> void:
+	var hr := RandomNumberGenerator.new()
+	hr.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5)))
+	if h.y > h.x:   # long side along the model's X
+		h = Vector2(h.y, h.x)
+		yaw += PI * 0.5
+	var n := clampi(roundi(h.x / (h.y * 1.4)), 1, 3)
+	var seg := h.x * 2.0 / n
+	for k in n:
+		var f := floors if k == 0 or hr.randf() < 0.5 else 3 - floors
+		var v := VillageHouses.pick(seg, h.y * 2.0, f, hr)
+		var ms := VillageHouses.size(v)
+		var sx := seg * 0.94 / ms.x
+		var sz := h.y * 2.0 / ms.z
+		var s := minf(sx, sz)
+		sx = minf(sx, s * 1.25)
+		sz = minf(sz, s * 1.25)
+		var ht := hh if f == floors else (0.034 if f == 1 else 0.064)
+		var sy := clampf(ht / ms.y, s * 0.8, s * 1.4)
+		var flip := PI if hr.randf() < 0.5 else 0.0
+		homes.append([v, c + Vector2(-h.x + seg * (k + 0.5), 0.0).rotated(yaw), yaw + flip, Vector3(sx, sy, sz)])
 
 
 ## Дом без крыши: четыре стены рваным верхом сплошной линией, внутри груда глины
@@ -1370,7 +1443,7 @@ static func _yard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int
 			hsz = Vector2(hs.y, hs.x)
 		elif to_c.y < 0.0:
 			hy = yaw + PI
-		_t_house(st, wc, hsz, hy, floors if i == 0 else (1 if rng.randf() < 0.85 else 2), roof.lightened(rng.randf_range(-0.03, 0.03)), rng)
+		_t_house(st, wc, hsz, hy, floors if i == 0 else (1 if rng.randf() < 0.85 else 2), roof.lightened(rng.randf_range(-0.03, 0.03)), rng, stats.get("homes"))
 		stats["houses"] += 1
 	# дерево во дворе
 	if state < 2 and rng.randf() < 0.5:
@@ -1381,6 +1454,20 @@ static func _yard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int
 				free = false
 		if free:
 			_crown(st, c + tc.rotated(yaw), rng.randf_range(0.016, 0.024), rng)
+	# VIS-01: a hand-pump well in some yards, clear of the houses (its own generator: the layout does not move)
+	if state < 2 and stats.has("homes"):
+		var wr := RandomNumberGenerator.new()
+		wr.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5))) + 1
+		if wr.randf() < 0.35:
+			for k in 6:
+				var wp := Vector2(wr.randf_range(-0.5, 0.5) * h.x, wr.randf_range(-0.5, 0.5) * h.y)
+				var free := true
+				for hs in houses:
+					if absf(wp.x - hs[0].x) < hs[1].x + 0.016 and absf(wp.y - hs[0].y) < hs[1].y + 0.016:
+						free = false
+				if free:
+					stats["homes"].append([VillageHouses.WELL, c + wp.rotated(yaw), yaw + wr.randf() * TAU, Vector3.ONE * M_PER_UNIT])
+					break
 
 
 ## Крона дерева: два повёрнутых друг к другу яруса (сверху — восьмиугольник), оливково-серая
