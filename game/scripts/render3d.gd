@@ -17,6 +17,12 @@ const ON := true
 
 static var I: Render3D
 static var enabled := true
+## World area worth drawing this frame: the 3D view (with its margin) plus the 2D screen grown by
+## ENEMY_DRAW_MARGIN. Enemies outside skip their _draw (Enemy.in_draw_view). Empty until the first
+## battle frame, which means «draw everything».
+static var view_now := Rect2()
+## Reach of the longest 2D enemy overlay past the screen edge (bomber tail sector 620 px, heli aim fan 520 px)
+const ENEMY_DRAW_MARGIN := 800.0
 
 var cam: Camera3D
 var sun: DirectionalLight3D
@@ -511,6 +517,8 @@ func _process(delta: float) -> void:
 	if tilt > 0.001:
 		# с наклоном видно дальше вперёд (вверх по экрану)
 		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
+	var screen := get_viewport().get_canvas_transform().affine_inverse() * get_viewport().get_visible_rect()
+	view_now = view_g.merge(screen.grow(ENEMY_DRAW_MARGIN))
 	var pt := Time.get_ticks_usec() if Perf.on else 0
 	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1, _screen_ground(vs))
 	_fit_shadow()
