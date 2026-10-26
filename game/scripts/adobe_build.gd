@@ -12,28 +12,31 @@ const DARK := Color(0.62, 0.55, 0.47)    # проёмы, бойницы, две�
 const WATER := Color(0.3, 0.4, 0.42)     # вода в пруду оазиса
 
 static var _cache := {}
-static var _mat: StandardMaterial3D
+static var _mat: ShaderMaterial
 
 
-## Материал: глина из набора земли CC0 в трёх проекциях — без развёртки, без растяжения на стенах
-static func material() -> StandardMaterial3D:
+## Material of the village and oasis meshes (adobe.gdshader): clay from the CC0 ground set in three world
+## projections (no unwrap, no stretching on walls), vertex colour as albedo, matte (Kanta 19.10). The vertex
+## colour's alpha picks own surfaces — sandbags, trench and street strips (ID_* below) — textured by RoadTex
+static func material() -> ShaderMaterial:
 	if _mat != null:
 		return _mat
-	_mat = StandardMaterial3D.new()
+	_mat = ShaderMaterial.new()
+	_mat.shader = load("res://shaders/adobe.gdshader")
 	var p := "res://art/ground/pbr/clay_albedo.jpg"
 	if ResourceLoader.exists(p):
-		_mat.albedo_texture = load(p)
-	_mat.uv1_triplanar = true
-	_mat.uv1_world_triplanar = true
-	_mat.uv1_scale = Vector3.ONE / 160.0
-	_mat.vertex_color_use_as_albedo = true
-	_mat.vertex_color_is_srgb = true   # Forward+: same colours as in Compatibility (srgb.gdshaderinc)
-	_mat.albedo_color = Color(1.0, 0.95, 0.88)
-	_mat.roughness = 0.95
-	_mat.metallic = 0.0
-	_mat.metallic_specular = 0.15   # Kanta 19.10: глина и крыши — полностью матовые, без бликов
-	_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_mat.set_shader_parameter("clay_tex", load(p))
+	_mat.set_shader_parameter("albedo", Color(1.0, 0.95, 0.88))
+	RoadTex.apply_adobe(_mat)
 	return _mat
+
+
+## Vertex-colour alpha codes read by adobe.gdshader. Strips carry ±ID_SPAN across their width (edge to edge),
+## so the shader knows the middle of a trench or a street
+const ID_BAG := 0.25
+const ID_TRENCH := 0.5
+const ID_STREET := 0.75
+const ID_SPAN := 0.08
 
 
 static func fort() -> ArrayMesh:
@@ -329,7 +332,7 @@ static func footprint(name: String) -> float:
 ## где через линию идёт тропа — проход. На выходах троп с другой стороны — посты из мешков.
 ## Остовы подбитой техники перед линией ставит Terrain3D.scenes. Меш посёлка утоплен на 1 % размера
 ## (render3d) — всё низкое поднимаем на SINK, иначе уходит под землю
-const BAG := Color(0.8, 0.72, 0.55)
+const BAG := Color(0.8, 0.72, 0.55, ID_BAG)   # alpha: hessian in adobe.gdshader
 const TRENCH := Color(0.42, 0.36, 0.29)
 const GUN := Color(0.36, 0.37, 0.34)
 const DEF_R := 1.07   # радиус линии, доля края застройки
@@ -372,7 +375,7 @@ static func _defence(st: SurfaceTool, variant: int, rng: RandomNumberGenerator, 
 		if _wet_seg(water, a, b, 0.05):
 			continue   # S9-08: над ручьём окоп и бруствер прерываются (с запасом на окоп за бруствером)
 		var inward := -((a + b) * 0.5).normalized() * 0.022
-		_strip(st, a + inward, b + inward, 0.02, TRENCH, sink + 0.003)   # окоп за бруствером
+		_strip(st, a + inward, b + inward, 0.02, TRENCH, sink + 0.003, ID_TRENCH)   # окоп за бруствером
 		if edge_log_on:
 			edge_log.append(["trench", a, b])
 		_bags(st, a, b, sink, rng)
@@ -463,13 +466,23 @@ static func _box_yaw(st: SurfaceTool, c: Vector3, s: Vector3, yaw: float, col: C
 const PATH := Color(0.86, 0.84, 0.86)   # утоптанная улица: в тон земле, чуть светлее (3.5-s8: была оранжевой)
 
 
-## Плоская полоса (тропа) от a до b шириной w чуть над землёй
-static func _strip(st: SurfaceTool, a: Vector2, b: Vector2, w: float, col: Color, y := 0.002) -> void:
+## Плоская полоса (тропа) от a до b шириной w чуть над землёй. id (ID_TRENCH, ID_STREET) — свой материал
+## в adobe.gdshader: альфа цвета id − ID_SPAN у одного края и id + ID_SPAN у другого (шейдер знает середину)
+static func _strip(st: SurfaceTool, a: Vector2, b: Vector2, w: float, col: Color, y := 0.002, id := 1.0) -> void:
 	var n := (b - a).normalized().orthogonal() * w * 0.5
 	var ext := (b - a).normalized() * w * 0.5   # стык соседних кусков без щелей
 	var p0 := a - ext
 	var p1 := b + ext
-	_quad(st, Vector3(p0.x - n.x, y, p0.y - n.y), Vector3(p1.x - n.x, y, p1.y - n.y), Vector3(p1.x + n.x, y, p1.y + n.y), Vector3(p0.x + n.x, y, p0.y + n.y), col)
+	var lo := Color(col, id - ID_SPAN if id < 1.0 else col.a)
+	var hi := Color(col, id + ID_SPAN if id < 1.0 else col.a)
+	var qa := Vector3(p0.x - n.x, y, p0.y - n.y)
+	var qb := Vector3(p1.x - n.x, y, p1.y - n.y)
+	var qc := Vector3(p1.x + n.x, y, p1.y + n.y)
+	var qd := Vector3(p0.x + n.x, y, p0.y + n.y)
+	st.set_smooth_group(-1)
+	for v: Array in [[qa, lo], [qc, hi], [qb, lo], [qa, lo], [qd, hi], [qc, hi]]:   # as _quad: a, c, b, a, d, c
+		st.set_color(v[1])
+		st.add_vertex(v[0])
 
 
 ## Огород за дувалом: низкая глинобитная ограда по периметру с проходом
@@ -920,7 +933,7 @@ static func village(variant: int) -> ArrayMesh:
 			var b := pl[k + 1]
 			if a.length() > V_EDGE * outline(variant, a.angle()) * 1.02:
 				continue
-			_strip(st, a, b, float(p[1]), PATH, SINK + 0.0025)
+			_strip(st, a, b, float(p[1]), PATH, SINK + 0.0025, ID_STREET)
 	# S9-07/S9-08: окраина (сады, поля, линия обороны) — отдельной сеткой на каждый посёлок (village_edge):
 	# ручей долины-притока и река у каждого посёлка свои, а эта сетка общая для раскладки
 	var marr := _scaled_arrays(st, V_UNIT)

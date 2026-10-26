@@ -56,6 +56,14 @@ uniform float sea_depth_px = 450.0;
 // S10-06: откуда светит солнце сцены (render3d.gd sun) — блики и светлые склоны волн
 uniform vec3 sea_sun = vec3(-0.48, 0.658, -0.58);
 uniform vec3 road_color : source_color = vec3(0.7, 0.62, 0.5);
+// Kanta 26.10 («нормальные текстуры дорог»): a CC0 photo set on the road (game/art/ground/road, R,G normal + B height),
+// tiled in world space; off = the flat colour above. Wheel ruts stay procedural (they follow the road's axis)
+uniform bool road_tex = false;
+uniform sampler2D t_road : source_color, repeat_enable, filter_linear_mipmap_anisotropic;
+uniform sampler2D n_road : hint_default_white, repeat_enable, filter_linear_mipmap_anisotropic;
+uniform float road_tile = 70.0;    // world px per texture repeat
+uniform vec3 road_tint : source_color = vec3(1.0);
+uniform float road_sat = 0.7;      // photo saturation towards the ground palette
 uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к палитре стайл-гайда (фото рыжее)
 uniform float rock_sat = 0.45;
 // M-36: скальные выходы и осыпи (маски — UV, terrain3d.gd _relief). Цвета — сухие горы: бурая и серая порода
@@ -548,8 +556,24 @@ void fragment() {
 		float rdist = abs(rd0) + (vnoise(world / 140.0 - 7.0) - 0.5) * 4.0;
 		float road = (1.0 - smoothstep(rhalf - 8.5, rhalf, rdist)) * (1.0 - water);
 		float ruts = 1.0 - 0.18 * (1.0 - smoothstep(0.0, 1.6, abs(abs(rd0) - 5.5)));
-		c = mix(c, road_color * (0.92 + 0.12 * vnoise(world / 30.0)) * ruts, road * 0.6);
-		nxy *= 1.0 - road * 0.7;
+		if (road_tex) {
+			if (road > 0.001) {
+				vec4 ra = texture(t_road, world / road_tile);
+				vec4 rn = texture(n_road, world / road_tile);
+				vec3 rc = mix(vec3(dot(ra.rgb, vec3(0.333))), ra.rgb, road_sat) * road_tint;
+				// wheel ruts: compacted, darker and smoother along both tracks of the axis
+				float rt = 1.0 - smoothstep(0.6, 2.4, abs(abs(rd0) - 5.5));
+				rc *= 1.0 - 0.2 * rt;
+				// the edge frays by the set's own height: stones stick out into the verge, dust fills its hollows
+				float rb = clamp(road * 1.5 - 0.25 + (rn.b - 0.5) * 0.9, 0.0, 1.0);
+				c = mix(c, rc, rb * 0.95);
+				nxy = mix(nxy, (rn.rg * 2.0 - 1.0) * (1.0 - 0.7 * rt), rb);
+				hgt = mix(hgt, rn.b, rb);
+			}
+		} else {
+			c = mix(c, road_color * (0.92 + 0.12 * vnoise(world / 30.0)) * ruts, road * 0.6);
+			nxy *= 1.0 - road * 0.7;
+		}
 	}
 	c = mix(vec3(dot(c, vec3(0.299, 0.587, 0.114))), c, saturation);
 	float macro = 0.88 + 0.2 * vnoise(world / 2600.0 + 5.0) + 0.06 * (vnoise(world / 700.0 - 9.0) - 0.5);
