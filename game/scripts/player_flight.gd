@@ -76,7 +76,9 @@ func _steer(delta: float) -> void:
 	pl.heading = wrapf(pl.heading, -PI, PI)
 	var ang_vel := wrapf(pl.heading - prev, -PI, PI) / maxf(delta, 0.0001)
 	# тест 3.5-s7: тяжёлый самолёт входит в крен и выходит из него медленнее — видно вес
-	pl.bank = lerpf(pl.bank, clampf(ang_vel / tr, -1.0, 1.0), 1.0 - exp(-delta * float(pl.cls.get("bank_rate", 12.0))))
+	var want_bank := clampf(ang_vel / tr, -1.0, 1.0)
+	var bank_rate := AcesBalance.bank_rate(pl.bank, want_bank) if Main.aces() else float(pl.cls.get("bank_rate", 12.0))
+	pl.bank = lerpf(pl.bank, want_bank, 1.0 - exp(-delta * bank_rate))
 
 
 ## Желаемая угловая скорость к курсу target: не больше, чем успеем погасить до него (без перелёта)

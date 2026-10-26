@@ -1139,14 +1139,15 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт плавно ниже и меньше на экране
 			var ra := _relief_alt(u, p.global_position, p.velocity, 1.0, sd)
 			var y: float = maxf(ra - Tuning.g("dive_depth") * dk, _ground_floor(p.global_position, Tuning.g("plane_len") * p.size * 0.5))
-			_place(u, p.global_position, p.heading, p.bank * 0.55, roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), u.pitch - 0.2 * p.dive_pitch())
+			_place(u, p.global_position, p.heading, p.bank * (AcesBalance.BANK_VIS if Main.aces() else 0.55), roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), u.pitch - 0.2 * p.dive_pitch())
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
 			# S9-16: на «Звуковом ударе» (ram_t) — тот же огонь и плотный след, что на форсаже
 			u.ab = move_toward(float(u.ab), 1.0 if p.ab_t > 0.0 or p.ram_t > 0.0 else 0.0, sd * 4.0)
 			var ab: float = u.ab
 			PlaneFx.update(u, sd, ab)
+			# «Битва асов»: след живёт дольше — на экране остаются целые дуги виражей, как в Sky Knights
 			# M-39 (Э-2): инверсия белая, у сопла узкая и плотная, расплывается шире и тает быстрее (жизнь короче)
-			var st := [lerpf(0.32, 0.55, ab), lerpf(3.0, 5.0, ab) * p.size, lerpf(18.0, 28.0, ab) * p.size, lerpf(1.2, 1.8, ab), 12.0]
+			var st := [lerpf(0.32, 0.55, ab), lerpf(3.0, 5.0, ab) * p.size, lerpf(18.0, 28.0, ab) * p.size, AcesBalance.TRAIL_LIFE if Main.aces() else lerpf(1.2, 1.8, ab), 12.0]
 			var pts := PlaneFx.trail_points(u)
 			for i in pts.size():
 				_trails.emit("p%d" % i, pts[i], st)

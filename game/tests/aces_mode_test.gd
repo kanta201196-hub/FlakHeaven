@@ -15,6 +15,7 @@ func _init() -> void:
 	_test_ace_schedule()
 	_test_caps()
 	_test_score()
+	_test_turn_look()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -77,3 +78,14 @@ func _test_score() -> void:
 	r.on_rival_gone()
 	_check(r.aces_down == 2 and r.aces_gone == 1, "aces shot down and gone are counted apart")
 	_check(r.pending_levels == 0 and r.rare_picks == 0, "a downed ace gives no card pick in the mode")
+
+
+func _test_turn_look() -> void:
+	_check(AcesBalance.bank_rate(0.0, 0.8) == AcesBalance.BANK_IN_RATE, "rolls into a turn fast from level")
+	_check(AcesBalance.bank_rate(0.3, 0.8) == AcesBalance.BANK_IN_RATE, "rolls deeper fast")
+	_check(AcesBalance.bank_rate(0.8, 0.1) == AcesBalance.BANK_OUT_RATE, "levels out slowly")
+	_check(AcesBalance.bank_rate(0.5, -0.5) == AcesBalance.BANK_OUT_RATE, "reversing the turn first levels out slowly")
+	_check(AcesBalance.BANK_IN_RATE > AcesBalance.BANK_OUT_RATE, "roll-in faster than roll-out")
+	_check(AcesBalance.BANK_VIS > 0.55 and AcesBalance.BANK_VIS < PI / 2.0, "deeper bank than the campaign, never fully on its side")
+	var turn := 210.0 * AcesBalance.TURN_K
+	_check(turn >= 90.0 and turn <= 120.0, "«Оса» turns about 100°/s like Sky Knights (%.0f)" % turn)

@@ -7,11 +7,20 @@ extends RefCounted
 
 ## Flight, as multipliers on the campaign numbers: inertia of the heading catch-up, speed lost in a hard turn,
 ## turn rate (wider turns), cruise speed of the player and interceptors, camera zoom (less = further out).
-const INERTIA_K := 2.5
+## Sky Knights gameplay frames (2026-10-26): the plane does not slide, the nose follows the path; the weight is
+## in the speed lost in a turn and in the bank. So inertia is lower than the campaign, turn ≈ 100°/s like theirs.
+const INERTIA_K := 0.5
 const BLEED_K := 2.0
-const TURN_K := 0.8
+const TURN_K := 0.5
 const SPEED_K := 1.3
 const ZOOM_K := 0.85
+
+## Look of the turn (Sky Knights frames): the plane rolls to about 60° (campaign ≈ 32°), rolls in fast
+## (≈ 0.3 s) and out slowly (≈ 0.8 s); the white contrail behind it lives 3.5 s, so whole arcs stay on screen.
+const BANK_VIS := 1.05
+const BANK_IN_RATE := 10.0
+const BANK_OUT_RATE := 3.5
+const TRAIL_LIFE := 3.5
 
 ## Share of the player's max HP one hit takes: a missile (3 kill), a bullet (two long ace bursts of 5 rounds,
 ## a miss or two, kill), a ram.
@@ -65,3 +74,9 @@ static func needs(kind: String, alive: int) -> bool:
 		"carrier":
 			return alive < CARRIER_MAX
 	return false
+
+
+## Rate (1/s) at which the bank follows `want`: fast when rolling deeper into a turn, slow when levelling out.
+static func bank_rate(bank: float, want: float) -> float:
+	var deeper := absf(want) > absf(bank) and (signf(want) == signf(bank) or bank == 0.0)
+	return BANK_IN_RATE if deeper else BANK_OUT_RATE
