@@ -57,8 +57,7 @@ if TIER == 1:
     cyl("mantlet", (0.3, 0, 0.32), 0.1, 0.09, M_DARK, "X", 20, 0.01)
     cyl("sleeve", (0.4, 0, 0.32), 0.045, 0.14, M_BARREL, "X")
     cyl("barrel", (0.64, 0, 0.32), 0.022, 0.4, M_BARREL, "X", 16)
-    cyl("hider", (0.86, 0, 0.32), 0.03, 0.07, M_BARREL, "X", 16)   # пламегаситель
-    cyl("bore", (0.896, 0, 0.32), 0.014, 0.004, M_DARK, "X", 12)
+    drill(cyl("hider", (0.86, 0, 0.32), 0.03, 0.07, M_BARREL, "X", 16), (0.895, 0, 0.32), 0.014, 0.05, M_DARK)   # пламегаситель с каналом
     L.group = ""
 
 elif TIER == 2:
@@ -87,9 +86,9 @@ elif TIER == 2:
         cyl("sleeve", (0.38, y, z), 0.04, 0.26, M_BARREL, "X")
         cyl("collar", (0.5, y, z), 0.046, 0.03, M_BARREL, "X")
         cyl("barrel", (0.83, y, z), 0.02, 0.66, M_BARREL, "X", 16)
-        box("brake", (1.12, y, z), (0.11, 0.05, 0.05), M_BARREL, 0.005)
+        # 3.5-s12: the bore is drilled into the brake's face
+        drill(box("brake", (1.12, y, z), (0.11, 0.05, 0.05), M_BARREL, 0.005), (1.175, y, z), 0.013, 0.022, M_DARK)
         box("brake_slot", (1.12, y, z), (0.035, 0.052, 0.03), M_DARK, 0.0)
-        cyl("bore", (1.1755, y, z), 0.013, 0.004, M_DARK, "X", 12)   # 3.5-s12: bore on the brake's face
     # щиток: рамка вокруг стволов на лбу правого блока
     box("shield", (0.31, y, 0.34), (0.035, 0.22, 0.34), M_BODY, 0.008)
     box("shield_cap", (0.3, y, 0.52), (0.08, 0.22, 0.025), M_BODY, 0.005)
@@ -136,10 +135,9 @@ else:
                 cyl("hole", (0.49 + i * 0.055, yb + math.cos(ang) * 0.035, 0.36 + math.sin(ang) * 0.035),
                     0.009, 0.006, M_DARK, "Y" if abs(math.sin(ang)) < 0.5 else "Z", 8)
         cyl("barrel", (0.85, yb, 0.36), 0.019, 0.22, M_BARREL, "X", 16)
-        box("brake", (0.99, yb, 0.36), (0.09, 0.06, 0.055), M_BARREL, 0.005)
+        drill(box("brake", (0.99, yb, 0.36), (0.09, 0.06, 0.055), M_BARREL, 0.005), (1.035, yb, 0.36), 0.012, 0.012, M_DARK)
         for x in (0.97, 1.01):
             box("brake_slot", (x, yb, 0.36), (0.016, 0.062, 0.035), M_DARK, 0.0)
-        cyl("bore", (1.036, yb, 0.36), 0.012, 0.004, M_DARK, "X", 12)
     L.group = ""
 
 # S12 (Kanta 26.10: "add detail so the upgrade difference shows"): small parts per tier

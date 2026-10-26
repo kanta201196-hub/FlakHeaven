@@ -80,23 +80,20 @@ def twin(TIER=2, QUAD=False, M_BODY=None, M_DARK=None, M_BARREL=None, M_GLASS=No
             if short:
                 c("barrel", (1.36, y, bz), 0.028, 0.66, M_BARREL, "X", 16)
                 c("band", (1.2, y, bz), 0.036, 0.03, M_BARREL, "X", 16)
-                c("tip", (1.75, y, bz), 0.034, 0.16, M_BARREL, "X", 16)
-                c("bore", (1.835, y, bz), 0.016, 0.01, M_DARK, "X", 12)
+                drill(c("tip", (1.75, y, bz), 0.034, 0.16, M_BARREL, "X", 16), (1.83, y, bz), 0.016, 0.06, M_DARK)
                 continue
             c("barrel", (1.48, y, bz), 0.028, 0.9, M_BARREL, "X", 16)
             for x in (1.2, 1.26, 1.74, 1.8):
                 c("band", (x, y, bz), 0.036, 0.03, M_BARREL, "X", 16)
             if TIER >= 2:
                 # дульный тормоз: короб с двумя окнами
-                box("brake", (2.0, y, bz), (0.17, 0.07, 0.07), M_BARREL, 0.006)
+                # 3.5-s12 (Kanta: "no bore in the barrels?"): the bore is drilled into the brake's front face
+                drill(box("brake", (2.0, y, bz), (0.17, 0.07, 0.07), M_BARREL, 0.006), (2.085, y, bz), 0.018, 0.03, M_DARK)
                 for x in (1.96, 2.05):
                     box("brake_slot", (x, y, bz), (0.05, 0.072, 0.045), M_DARK, 0.0)
-                # 3.5-s12 (Kanta: "no bore in the barrels?"): the brake's front face shows the bore
-                c("bore", (2.0855, y, bz), 0.018, 0.004, M_DARK, "X", 12)
             else:
                 # ступень 1: ствол без тормоза — простой пламегаситель-втулка, срез там же
-                c("tip", (2.0, y, bz), 0.034, 0.16, M_BARREL, "X", 16)
-                c("bore", (2.085, y, bz), 0.016, 0.01, M_DARK, "X", 12)
+                drill(c("tip", (2.0, y, bz), 0.034, 0.16, M_BARREL, "X", 16), (2.08, y, bz), 0.016, 0.06, M_DARK)
     L.group = base
     if TIER == 3 and not QUAD:
         # короба лент по бокам башни с рукавами подачи к люльке
