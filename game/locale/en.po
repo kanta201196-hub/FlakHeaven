@@ -7426,8 +7426,8 @@ msgstr "ACES BATTLE · TEST"
 msgid "БИТВА АСОВ · ТЕСТ · «%s» · ЭКИПАЖ «%s»"
 msgstr "ACES BATTLE · TEST · «%s» · CREW «%s»"
 
-msgid "Битва асов: асы взлетают один за другим. Три ракеты или пара очередей — и самолёт сбит, у них так же. Заходите в хвост и не давайте зайти себе."
-msgstr "Aces battle: enemy aces take off one after another. Three missiles or a couple of bursts and a plane is down, theirs too. Get on their tail and keep them off yours."
+msgid "Битва асов: асы взлетают один за другим. Три ракеты или пара очередей — и самолёт сбит, у них так же. Заходите в хвост и не давайте зайти себе. F1 — настройка полёта."
+msgstr "Aces battle: enemy aces take off one after another. Three missiles or a couple of bursts and a plane is down, theirs too. Get on their tail and keep them off yours. F1: flight settings."
 
 msgid "Вражеский ас «%s» заходит вам в хвост!"
 msgstr "Enemy ace «%s» is getting on your tail!"

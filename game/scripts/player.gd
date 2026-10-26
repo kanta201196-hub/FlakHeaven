@@ -389,7 +389,7 @@ func turn_rate_free() -> float:
 	# Чем медленнее летим, тем круче разворот (до ×1,4), на форсаже — шире (до ×0,75)
 	var f := velocity.length() / maxf(cruise_speed(), 1.0)
 	var k := clampf(1.0 + (1.0 - f) * 0.8, 0.75, 1.4)
-	return deg_to_rad(Tuning.g("turn_rate")) * float(cls["turn"]) * mods["turn"] * k * (AcesBalance.TURN_K if Main.aces() else 1.0)
+	return deg_to_rad(Tuning.g("turn_rate")) * float(cls["turn"]) * mods["turn"] * k * (Tuning.g("aces_turn") if Main.aces() else 1.0)
 
 
 ## Тест 3.5-s7: предел по радиусу разворота класса — угловая скорость не больше скорость / радиус.

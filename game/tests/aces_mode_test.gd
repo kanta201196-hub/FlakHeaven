@@ -86,6 +86,6 @@ func _test_turn_look() -> void:
 	_check(AcesBalance.bank_rate(0.8, 0.1) == AcesBalance.BANK_OUT_RATE, "levels out slowly")
 	_check(AcesBalance.bank_rate(0.5, -0.5) == AcesBalance.BANK_OUT_RATE, "reversing the turn first levels out slowly")
 	_check(AcesBalance.BANK_IN_RATE > AcesBalance.BANK_OUT_RATE, "roll-in faster than roll-out")
-	_check(AcesBalance.BANK_VIS > 0.55 and AcesBalance.BANK_VIS < PI / 2.0, "deeper bank than the campaign, never fully on its side")
+	_check(deg_to_rad(AcesBalance.BANK_VIS_DEG) > 0.55 and AcesBalance.BANK_VIS_DEG < 90.0, "deeper bank than the campaign, never fully on its side")
 	var turn := 210.0 * AcesBalance.TURN_K
 	_check(turn >= 90.0 and turn <= 120.0, "«Оса» turns about 100°/s like Sky Knights (%.0f)" % turn)
