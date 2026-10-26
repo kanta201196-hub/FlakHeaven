@@ -12,6 +12,11 @@ const KINDS := {
 	"outcrop": ["b01_rock_outcrop", 40.0, 80.0],
 	"boulders": ["b02_boulders", 12.0, 30.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90, потом 22–50); масштаб «2–4 км»: валун 2–6 м при истребителе ~100 px
 	"spire": ["b03_rock_spire", 25.0, 45.0],
+	# VIS-01 (Kanta 26.10): scan variants of the rocks (tools/model_lab/rock_prep.py); placement asks for the base
+	# kind and _add_sized swaps in a variant by place (ROCK_VARIANTS)
+	"outcrop_b": ["b12_rock_outcrop_b", 40.0, 80.0],
+	"boulders_b": ["b13_boulders_b", 12.0, 30.0],
+	"spire_b": ["b14_rock_spire_b", 25.0, 45.0],
 	"poplar": ["b04_poplar", 16.0, 24.0],
 	"orchard": ["b05_orchard_tree", 34.0, 50.0],
 	"shrub": ["b06_shrub", 14.0, 30.0],
@@ -27,19 +32,36 @@ const KINDS := {
 	"bridge": ["", 84.0, 95.0],        # L-07: модели кодом (AdobeBuild.bridge): мост дороги через ручей
 	# Kanta 24.10: the road bridge was smaller than the AA vehicles crossing it; span 58 -> 84 (deck width scales with it)
 	"footbridge": ["", 150.0, 165.0],  # и пешеходный через реку
+	# VIS-01 (Kanta 26.10, oasis: models 66 to 70): date palms and the well of the oasis (tools/blender/oasis_models.py)
+	"palm": ["b12_date_palm", 26.0, 40.0],
+	"well": ["b13_oasis_well", 10.0, 12.0],
 }
 
 ## T4-05: облегчённые деревья для пресетов ниже «Максимального» (11–14 тыс. треуг. у полной модели).
 ## 3.4-t1 (п. 17): вместо зелёного шара — «карточки» из картинок той же модели Meshy: две скрещённые
 ## с видом сбоку и одна горизонтальная с видом сверху (tools/model_lab/bake_impostor.gd), 6 треугольников.
-const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree"}
+const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree", "palm": "b12_date_palm"}
 
 ## VIS-01: decimated copies (tools/model_lab/biome_lite.py) for kinds placed by the hundred.
 ## A boulder pile is 10-30 px on screen at zoom 1.0, so 600 triangles look the same as the
 ## full 3000. The import's automatic LOD only halves it (UV seams stop simplification at
 ## ~1600 triangles) and a MultiMesh picks one LOD for the whole chunk. Same frame as the full model; its material
 ## (textures) is reused, so only the triangle count differs. Used on every preset.
-const LOW_POLY := {"boulders": "b02_boulders_lite"}
+const LOW_POLY := {"boulders": "b02_boulders_lite", "boulders_b": "b13_boulders_b_lite"}
+
+## VIS-01 (Kanta 26.10: rocks "not monotonous"): models a base rock kind may be drawn with. The pick is by a
+## ~100 px cell of the place, not the cell's rng, so the placement stays as it was, and a rock group (an outcrop
+## with its scree) mostly shares one look while the next group differs. Each variant is one more MultiMesh
+## (draw call) in a chunk where it appears.
+const ROCK_VARIANTS := {
+	"outcrop": ["outcrop", "outcrop_b"],
+	"boulders": ["boulders", "boulders_b"],
+	"spire": ["spire", "spire_b"],
+}
+
+## Rock kinds stand on the lowest ground under their footprint (_rock_floor): a scan is long and flat-bottomed,
+## and on a steep slope a 4 % sink at the centre left its downhill end hanging in the air (Kanta 26.10)
+const ROCK_KINDS := ["outcrop", "outcrop_b", "boulders", "boulders_b", "spire", "spire_b"]
 
 ## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
 const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
@@ -96,7 +118,7 @@ func _lite_tree(kind: String) -> Mesh:
 	am.surface_set_material(0, _card_mat(DIR + LITE[kind] + "_side.png"))
 	var st2 := SurfaceTool.new()
 	st2.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var yt := h * (0.72 if kind == "poplar" else 0.66)
+	var yt := h * (0.72 if kind == "poplar" else (0.8 if kind == "palm" else 0.66))   # the palm crown sits on top of a bare trunk
 	var r := w * 0.5
 	_card(st2, Vector3(-r, yt, r), Vector3(r, yt, r), Vector3(r, yt, -r), Vector3(-r, yt, -r), Vector3.UP)
 	st2.commit(am)
@@ -276,6 +298,12 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 				var sz0 := float(obj["size"])
 				var trees := 0
 				var want := rng.randi_range(14, 20) if obj["name"] == "o_oasis" else rng.randi_range(18, 28)   # 3.5-s8: городок крупнее
+				# VIS-01 (Kanta 26.10): the oasis grows date palms in clumps and has a well in the courtyard of its houses
+				# (AdobeBuild.oasis: houses ring the point (0.06, -0.05) of the 1 × 1 plot); the village keeps its orchards
+				var oasis: bool = obj["name"] == "o_oasis"
+				var tree := "palm" if oasis else "orchard"
+				if oasis:
+					_add(rng, put, "well", p0 + Vector2(0.06, -0.05).rotated(float(obj["rot"])) * sz0, [], ctx)
 				for i in 120:
 					if trees >= want:
 						break
@@ -284,15 +312,16 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 					if gm.y < 0.45 or gm.x > 0.5 or not (_zone(q, ctx) in ["floor", "fan"]):
 						continue
 					trees += 1
-					_add(rng, put, "orchard", q, [], ctx)
-					if rng.randf() < 0.45:   # сад — группа деревьев
-						_add(rng, put, "orchard", q + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(30.0, 45.0), [], ctx)
+					_add(rng, put, tree, q, [], ctx)
+					if rng.randf() < (0.7 if oasis else 0.45):   # an orchard is a group of trees; palms grow in clumps
+						var dir := Vector2.from_angle(rng.randf() * TAU)
+						_add(rng, put, tree, q + dir * (rng.randf_range(22.0, 32.0) if oasis else rng.randf_range(30.0, 45.0)), [], ctx)
 				var a0 := rng.randf() * TAU
 				var rr := sz0 * maxf(AdobeBuild.footprint(obj["name"]), 0.5) * AdobeBuild.outline(vr, a0 - float(obj["rot"])) * 0.95
 				for i in rng.randi_range(5, 8):
 					var q := p0 + Vector2.from_angle(a0) * rr + Vector2.from_angle(a0 + PI / 2) * (i - 3.5) * 26.0
 					if _zone(q, ctx) == "floor":
-						_add(rng, put, "poplar", q, [], ctx)
+						_add(rng, put, "palm" if oasis else "poplar", q, [], ctx)
 				if obj["name"] == "o_village":
 					for i in rng.randi_range(1, 2):
 						_ring_zone(rng, put, "yurt", p0, r0 * 1.2, r0 * 1.7, ["floor", "fan"], ctx)
@@ -408,7 +437,7 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.name = kind
-		var small: bool = kind in ["shrub", "boulders", "poplar", "orchard"] or kind in SeaProps.SMALL
+		var small: bool = kind in ["shrub", "boulders", "boulders_b", "poplar", "orchard"] or kind in SeaProps.SMALL
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
 		var no_shadow := Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if no_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -440,7 +469,12 @@ func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2,
 	_add_sized(rng, put, kind, p, rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2])), ctx)
 
 
+## One model of `kind` at p, w px wide (shrunk high up and capped below the combat plane); a rock kind may be
+## swapped for one of its ROCK_VARIANTS here, before the height cap, so the cap uses the variant's own height
 func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, w: float, ctx: Dictionary) -> void:
+	if ROCK_VARIANTS.has(kind):
+		var vs: Array = ROCK_VARIANTS[kind]
+		kind = vs[absi(hash(Vector2i(roundi(p.x / 97.0), roundi(p.y / 97.0)))) % vs.size()]
 	# M-35: ни один предмет биома (дерево, куст, валун, юрта, мешки) не залезает кроной/краем в охранную зону реки
 	# S9-07: и в охранную полосу ручья посёлка (протоки) — river_field её не видит
 	if _t.river_guard_dist(p, w * 0.45) < 0.0 or _t.stream_dist(p, ctx) < Terrain3D.STREAM_GUARD + w * 0.45:
@@ -456,10 +490,24 @@ func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Ve
 	if w < 4.0:
 		return
 	# утапливаем на 4 % ширины, чтобы на склоне не висело на краю
-	var t := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.04, 0))
+	var y := s.y - w * 0.04
+	if ROCK_KINDS.has(kind):
+		y = _rock_floor(p, w, ctx)
+	var t := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(w, w, w)), Vector3(s.x, y, s.z))
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)
+
+
+## Base height for a rock w px wide at p: the lowest ground at the centre and on a ring of 8 points at 0.45 w
+## (the model is centred and at most w across), sunk 2 % more. The uphill side goes into the slope, which reads
+## as rock coming out of the ground; nothing hangs over the downhill side.
+func _rock_floor(p: Vector2, w: float, ctx: Dictionary) -> float:
+	var y := _t.surface(p.x, p.y, ctx).y
+	for i in 8:
+		var q := p + Vector2.from_angle(TAU * i / 8.0) * w * 0.45
+		y = minf(y, _t.surface(q.x, q.y, ctx).y)
+	return y - w * 0.02
 
 
 ## L-07 (правка Kanta): деревянные мосты — где дорога пересекает ручей посёлка; пешеходный — от оазиса

@@ -45,6 +45,11 @@ GREY = {"camo": [(0.50, 0.52, 0.54), (0.61, 0.63, 0.65)], "scale": 1.3, "stretch
         "wear_col": (0.66, 0.67, 0.68), "fade": 0.03, "fade_col": (0.75, 0.76, 0.77), "streak": 0.08}
 
 # vehicle olive paint (most sources): green-yellow hues
+# desert bunker (Kanta 26.10, shortlist 94): weathered sand-grey concrete close to the sandstone knoll; low detail,
+# because the source luminance carries the graffiti the repaint must hide
+BUNKER = {"camo": [(0.34, 0.31, 0.26), (0.30, 0.28, 0.24), (0.27, 0.25, 0.22)], "scale": 2.0,
+          "rough": (0.88, 0.95), "wear": 0.35, "detail": 0.14, "dust": 0.3, "streak": 0.2,
+          "wear_col": (0.43, 0.40, 0.35), "fade_col": (0.41, 0.38, 0.33)}   # weathered grey-ochre: darker than the sand around it
 OLIVE = {"mode": "auto", "hue": [(38, 150)], "smin": 0.12}
 TYRE = {"mode": "keep", "rough": 0.92, "desat": 0.6}
 GLASS = {"mode": "glass", "rough": 0.3, "color": (0.06, 0.075, 0.085)}
@@ -111,6 +116,125 @@ def technical_hmg():
             bpy.ops.object.modifier_apply(modifier=md.name)
         o.data.materials.clear()
         o.data.materials.append(olive if "ammo" in o.name else paint if "shield" in o.name else steel)
+    return obs
+
+
+def pickup_tent_cover():
+    """Canvas tilt over the bed of the light pickup (Kanta 26.10: the tent pickup on the same base as the technical,
+    so the two read as one family). Bed of the 00amza pickup (length 1 = 5.2 m): floor z = 0.151, x -0.464…-0.094,
+    sides at |y| = 0.15 with the rail at z ≈ 0.21 (cab roof 0.33), cab back wall at x ≈ -0.08. The tilt stands on the
+    rails: straight walls up to z 0.33, arched roof to z 0.40, sagging a little between four hoops; the hoops and
+    lashing straps are darker.
+    Objects named tent_* (node tent: hidden on a wreck, render3d.gd)."""
+    import math
+    import bpy
+    import convoy_kit as K
+    from convoy_kit import loft, tube
+    K.parts.clear()
+    canvas = _flat_mat("tent_canvas", (0.44, 0.40, 0.29), 0.95, 0.0)
+    strap = _flat_mat("tent_strap", (0.27, 0.25, 0.19), 0.95, 0.0)
+    x0, x1, w, zw, zr = -0.468, -0.088, 0.155, 0.33, 0.40
+    hoops = [x0 + (x1 - x0) * k / 3 for k in range(4)]
+
+    def section(x, sag):
+        pts = [(x, -w, 0.205), (x, -w, zw - sag)]
+        for i in range(1, 8):   # arch from wall top to wall top
+            a = math.pi * i / 8
+            pts.append((x, -w * math.cos(a), zw - sag + (zr - zw) * math.sin(a)))
+        pts += [(x, w, zw - sag), (x, w, 0.205)]
+        return pts
+
+    secs = []
+    for k in range(13):
+        x = x0 + (x1 - x0) * k / 12
+        d = min(abs(x - h) for h in hoops) / ((x1 - x0) / 6)   # 0 at a hoop, 1 midway
+        secs.append(section(x, 0.008 * math.sin(math.pi * d / 2)))
+    obs = [loft("tent_canvas", secs, "olive")]
+    for h in hoops:   # hoop bands just outside the canvas
+        pts = [(h, p[1] * 1.03, p[2] + (0.003 if p[2] > zw else 0.0)) for p in section(h, 0.0)]
+        obs.append(tube("tent_hoop", pts, 0.004, "olive", n=6))
+    for s in (1, -1):   # lashing rail along the bed side
+        obs.append(tube("tent_rail", [(x0, s * w * 1.02, 0.215), (x1, s * w * 1.02, 0.215)], 0.004, "olive", n=6))
+    for o in obs:
+        bpy.context.view_layer.objects.active = o
+        for md in list(o.modifiers):
+            bpy.ops.object.select_all(action="DESELECT")
+            o.select_set(True)
+            bpy.ops.object.modifier_apply(modifier=md.name)
+        o.data.materials.clear()
+        o.data.materials.append(canvas if o.name.startswith("tent_canvas") else strap)
+    return obs
+
+
+def manpads_crew():
+    """MANPADS team in the bed of the light pickup (Kanta 26.10, shortlist 95: the launcher model on the same truck
+    as the technical and the tent pickup). Layout of the code-built unit it replaces (test 3.5-s8, Kanta: "it all
+    stuck together"): the gunner stands at the rear left of the bed with the launcher on his RIGHT shoulder, beside
+    the head, pointing forward over the cab; the loader kneels at the right side facing out; missile cases and a spare
+    tube lie along the left side by the cab. Bed of the 00amza pickup (length 1 = 5.2 m): floor z = 0.151,
+    x -0.464…-0.094, |y| < 0.15.
+    The launcher is the shortlisted Sketchfab model (path in env FH_MANPADS_TUBE; CREDITS.md): the display missile
+    and its fins are dropped, the front end (-X in the source) turned to +X, scaled to a 1.6 m tube (0.31) and put on
+    the shoulder point. Paint is flat (recipe), so no stencils of the source survive.
+    Objects mpl_* form the node launcher (pivot = the shoulder; render3d.gd raises it when locking), mpc_* stay on
+    the root."""
+    import math
+    import os
+    import re
+    import bpy
+    from mathutils import Matrix
+    import convoy_kit as K
+    from convoy_kit import box, cyl, person, tube
+    K.parts.clear()
+    tz = 0.155
+    gx, gy = -0.34, 0.07
+    _hip, top = person("mpc_gunner", gx, gy, tz, 0.0, "stand", "cloth", "helmet")
+    ty, sh = gy - 0.07, tz + top + 0.006
+    z0 = tz + top
+    arms = {"mpl_arm_r": [(gx, gy - 0.058, z0 - 0.015), (gx + 0.01, gy - 0.082, z0 - 0.075),
+                          (gx + 0.058, ty - 0.004, sh - 0.03)],
+            "mpl_arm_l": [(gx, gy + 0.058, z0 - 0.015), (gx + 0.075, gy + 0.035, z0 - 0.065),
+                          (gx + 0.125, ty + 0.012, sh - 0.016)]}
+    for name, pts in arms.items():
+        tube(name, pts, 0.013, "cloth", 6)
+    person("mpc_loader", -0.2, -0.085, tz, -70.0, "kneel", "cloth2", "wrap", True)
+    for k in range(2):
+        box("mpc_case", (-0.19, 0.112, tz + 0.02 + k * 0.04), (0.18, 0.05, 0.04), "olive", 0.003)
+    cyl("mpc_spare_tube", (-0.2, 0.112, tz + 0.096), 0.009, 0.24, "olive", "X", 10)
+    for k in range(2):
+        box("mpc_ammo_box", (-0.43, -0.11 + k * 0.05, tz + 0.02), (0.05, 0.04, 0.04), "olive", 0.003)
+    obs = list(K.parts)
+    flat = {"cloth": (0.45, 0.41, 0.32), "cloth2": (0.34, 0.34, 0.28), "skin": (0.55, 0.40, 0.30),
+            "olive": (0.33, 0.35, 0.24), "black": (0.06, 0.06, 0.06)}
+    for o in obs:
+        bpy.context.view_layer.objects.active = o
+        for md in list(o.modifiers):
+            bpy.ops.object.select_all(action="DESELECT")
+            o.select_set(True)
+            bpy.ops.object.modifier_apply(modifier=md.name)
+        kind = o.data.materials[0].name if o.data.materials else "olive"
+        kind = kind if kind in flat else "olive"
+        o.data.materials.clear()
+        o.data.materials.append(_flat_mat("mp_" + kind, flat[kind], 0.9, 0.0))
+    # the launcher: source tube axis on x (front -X), y = 0, z = 0; shoulder rest at x = 10 (behind the grip)
+    old = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.environ["FH_MANPADS_TUBE"])
+    s = 0.31 / 36.5
+    m = Matrix.Translation((gx, ty, sh + 0.004)) @ Matrix.Scale(s, 4) @ Matrix.Rotation(math.pi, 4, "Z") \
+        @ Matrix.Translation((-10.0, 0.0, 0.0))
+    for o in [o for o in bpy.data.objects if o not in old]:
+        if o.type != "MESH" or re.search(r"(?i)rocket|stab", o.name) or not o.data.polygons:
+            continue
+        mw = o.matrix_world.copy()
+        if o.data.users > 1:
+            o.data = o.data.copy()
+        o.parent = None
+        o.data.transform(m @ mw)
+        o.matrix_world = Matrix.Identity(4)
+        o.name = "mpl_" + o.name
+        obs.append(o)
+    for o in [o for o in bpy.data.objects if o not in old and o not in obs]:
+        bpy.data.objects.remove(o)
     return obs
 
 
@@ -242,6 +366,48 @@ RECIPES = {
         "groups": {"turret": [("name", r"^hmg_t_")]},
         "pivots": {"turret": (-0.25, 0.0, 0.35)}, "fixed": {"turret": 1400},
         "paint": SAND, "tris": 9000,
+    },
+    # light pickup with a canvas tilt: the technical's truck without the gun (pickup_tent_cover above)
+    "e_convoy_pickup_tent": {
+        "root": "convoy_pickup_tent", "rot": (0, 0, 90), "ground": True, "split": ".",
+        "wheels": {"steer": 1, "rmax": 0.12}, "build": pickup_tent_cover,
+        "materials": [(r"(?i)window", GLASS), (r"^tent_", {"mode": "keep", "rough": 0.95}), (r".", OLIVE)],
+        "groups": {"tent": [("name", r"^tent_")]},
+        "pivots": {"tent": "center"}, "fixed": {"tent": 900},
+        "paint": SAND, "tris": 8000,
+    },
+    # MANPADS team: the technical's truck with the gunner, loader and launcher in the bed (manpads_crew above)
+    "e_convoy_manpads": {
+        "root": "convoy_manpads", "rot": (0, 0, 90), "ground": True, "split": "^(?!mp)",
+        "wheels": {"steer": 1, "rmax": 0.12, "match": "^(?!mp)"}, "build": manpads_crew,
+        "materials": [(r"(?i)window", GLASS), (r"^mp_", {"mode": "keep", "rough": 0.9, "desat": 0.0}),
+                      (r"^PZRC", {"mode": "keep", "color": (0.33, 0.35, 0.24), "rough": 0.7}),
+                      (r"^(trigger|battery|material|switch|button)", {"mode": "keep", "color": (0.12, 0.12, 0.11),
+                                                                       "rough": 0.6}),
+                      (r".", OLIVE)],
+        "groups": {"launcher": [("name", r"^mpl_")]},
+        "pivots": {"launcher": (-0.34, 0.0, 0.495)}, "fixed": {"launcher": 1600},
+        "paint": SAND, "tris": 9000,
+    },
+    # casemate on a sandstone knoll (Kanta 26.10, shortlist 94, the Archipelago coast bunker reworked for the desert).
+    # Source prepared outside the recipe: cropped to the casemate and the top of its knoll, faces above the knoll cut
+    # in a material 'concrete' (fully repainted: hides the graffiti); on the rock only the graffiti colours and the
+    # green shrubs are repainted, the sandstone texture stays
+    "e_bunker": {
+        "root": "ground_bunker", "rot": (0, 0, 90), "ground": True,
+        "materials": [(r"^concrete", {"mode": "paint", "flatten": 31}),
+                      (r".", {"mode": "auto", "hue": [(0, 14), (55, 340)], "smin": 0.18, "gray": (0.0, 0.22)})],
+        "paint": BUNKER, "tris": 8000,
+    },
+    # radar truck (Kanta 26.10, shortlist 88): a 6x6 truck with a lattice search antenna on a mast at the rear.
+    # The tan factory paint becomes the sand camo; the antenna head (dish, feed, mast head) is the node render3d
+    # spins about the mast axis
+    "e_radar": {
+        "root": "ground_radar", "rot": (0, 0, 90), "ground": True, "split": ".",
+        "materials": [(r".", {"mode": "auto", "hue": [(15, 170)], "smin": 0.06, "gray": (0.3, 0.95)})],
+        "groups": {"antenna": [("box", (-0.5, -0.05, -0.35, 0.35, 0.57, 1.0))]},
+        "pivots": {"antenna": (-0.143, -0.066, 0.6)},
+        "paint": SAND, "tris": 12000,
     },
     "e_helicopter": {
         "root": "helicopter", "rot": (0, 0, 90), "ground": True, "len_exclude": r"(?i)^rotorblades",

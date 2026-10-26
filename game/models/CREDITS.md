@@ -28,6 +28,9 @@
 | biome2/a35_olive_b (старая олива) | Old Olive Tree | massive-graphisme | https://sketchfab.com/3d-models/old-olive-tree-6328df8a0f214143a880a72b86db2ab4 | CC BY 4.0, изменено |
 | biome2/a37_pine_b (кипарис) | Pine Trees Pack (PS1 Low Poly) | Vova Truestory | https://sketchfab.com/3d-models/pine-trees-pack-ps1-low-poly-347d7f6122af4bf684f752df2dd0eb5a | CC BY 4.0, изменено |
 | biome2/a38_tree_leaf (лиственное дерево) | Leaf Tree (PS1 Low Poly) | Wersaus33 | https://sketchfab.com/3d-models/leaf-tree-ps1-low-poly-d799c08100974e1ba352fcd646cb0694 | CC BY 4.0, изменено |
+| biome/b12_rock_outcrop_b (выход породы, вариант) | Namaqualand Cliff 02 | Poly Haven (скан: Dario Barresi, Rico Cilliers) | https://polyhaven.com/a/namaqualand_cliff_02 | CC0, изменено |
+| biome/b13_boulders_b (россыпь валунов, вариант) | Namaqualand Boulder 02 | Poly Haven (скан: Greg Zaal, Rico Cilliers) | https://polyhaven.com/a/namaqualand_boulder_02 | CC0, изменено |
+| biome/b14_rock_spire_b (скала-останец, вариант) | Desert Cliff 6 | WireframeArt | https://sketchfab.com/3d-models/desert-cliff-6-ed2e9c7e976e4768868481e4a5c63f6f | CC BY 4.0, изменено |
 | battle/e_albatross (босс «Альбатрос») | LM-328 Flying Boat | TonyWony | https://sketchfab.com/3d-models/lm-328-flying-boat-d34a38da8ac6454cbdea645433b8d45b | CC BY 4.0, изменено |
 | battle/e_leviathan (босс «Левиафан») | Kiev-class Aircraft Carrier | Muhamad Mirza Arrafi | https://sketchfab.com/3d-models/kiev-class-aircraft-carrier-f854eda1eab54a40aae8628e6456ae78 | CC BY 4.0, изменено |
 | battle/e_lev_turret (главная башня «Левиафана») | US Mark 15/16 19-inch 45 caliber turret | Peter Primini | https://sketchfab.com/3d-models/us-mark-1516-19-inch-45-caliber-turret-1284145fb0e8419c97ae487cbf08ff16 | CC BY 4.0, изменено |
@@ -38,6 +41,11 @@
 | battle/e_convoy_ifv (БМП колонны, колёсная 8x8) | Patria AMV | bunny | https://sketchfab.com/3d-models/patria-amv-5dcd4a541cd34059b0268379636fca3b | CC BY 4.0, изменено |
 | battle/e_convoy_scout (броневик колонны) | M1126 Infantry Carrier Vehicle | cenobyte | https://sketchfab.com/3d-models/m1126-infantry-carrier-vehicle-b0c559a02c1842b0976a241c9a998360 | CC BY 4.0, изменено |
 | battle/e_convoy_technical (пикап с пулемётом; пулемёт собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
+| battle/e_convoy_pickup_tent (лёгкий пикап с тентом; тент собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
+| battle/e_convoy_manpads (пикап с расчётом ПЗРК: машина) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
+| battle/e_convoy_manpads (пусковая труба ПЗРК; расчёт собран кодом) | MANPADS model 9K333 Verba | Ser (s-k_2005) | https://sketchfab.com/3d-models/manpads-model-9k333-verba-d7e05be0f5384e93a96ca47d84f1da07 | CC BY 4.0, изменено |
+| battle/e_radar (РЛС на шасси 6x6) | Renault TRM Radar Truck | Muhamad Mirza Arrafi (MirzaArrafiERV_45) | https://sketchfab.com/3d-models/renault-trm-radar-truck-1ad95e5724624a3bba7d36a686817efc | CC BY 4.0, изменено |
+| battle/e_bunker (бункер на скале) | Devil's Slide Bunker - Pacifica, CA | Azad Balabanian (azadbal) | https://sketchfab.com/3d-models/devils-slide-bunker-pacifica-ca-52982f5a24834be48dab4057d2df1c3d | CC BY 4.0, изменено |
 | battle/e_helicopter (вертолёт) | Hind Attack Helicopter | Ashley Aslett | https://sketchfab.com/3d-models/hind-attack-helicopter-bb65bdfde2c54007a52dfbe1d91d930d | CC BY 4.0, изменено |
 | battle/e_interceptor (перехватчик) | Sukhoi Su-15TM | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/sukhoi-su-15tm-3403b6f0f47d428eb2dd098f864d9ae1 | CC BY 4.0, изменено |
 | battle/e_drone (дрон) | Morok UAV Drone 3D Model | rombic992 (rombic991) | https://sketchfab.com/3d-models/morok-uav-drone-3d-model-3ae0e923b50f4885a2317eba199043cd | CC BY 4.0, изменено |
@@ -56,3 +64,9 @@
 | weapons/aam_1..3, weapons/hq/aam_1..3 (наводящиеся ракеты, ступени 1–3) | Russian weapon pack | Rhine_Lab_Muelsyse | https://sketchfab.com/3d-models/af00b7135a184ecfb2812a0e54458a8a | CC BY 4.0, изменено |
 | hangar/stand_missile_cart (тележка для ракет «воздух-воздух» в ангаре) | cart with "R-27ET" A-A soviet missiles | Tiltow | https://sketchfab.com/3d-models/fadb1f9ef8cd4425aeada7d918255200 | CC BY 4.0, изменено |
 | hangar/stand_loader (самоходный погрузчик для ракет «воздух-земля» в ангаре) | Weapons Loader | Sengchor | https://sketchfab.com/3d-models/016ca0f9b98b4ffbbe0e55f235bef496 | CC BY 4.0, изменено |
+| biome/b12_date_palm (финиковые пальмы оазиса в Нагорье; облегчённые карточки b12_date_palm_side/top) | Date Palm | evolveduk | https://sketchfab.com/3d-models/11acf710e6c149daa8d6fb8cdc5d087f | CC BY 4.0, изменено |
+| biome/b13_oasis_well (колодец во дворе оазиса) | Desert Environment Well (first Zbrush asset) | Bhaddou | https://sketchfab.com/3d-models/45e65e48986141f88d18d0f9ebd18994 | CC BY 4.0, изменено |
+| village/vh_h49 (большой дом кишлака на каменном цоколе) | Desert house 01 FREE | filthycent | https://sketchfab.com/3d-models/desert-house-01-free-2f7b88bbcf1b454cad2c3e9dbc9dd18e | CC BY 4.0, изменено |
+| village/vh_h50a..f (дома кишлака в 1–2 этажа) | Desert Mud Concrete House Lowpoly | 00amza | https://sketchfab.com/3d-models/desert-mud-concrete-house-lowpoly-bd4917fa72c84e41aa1e5299871f1b2e | CC BY 4.0, изменено |
+| village/vh_h51 (дом кишлака с навесом) | Desert House 01 | torricane | https://sketchfab.com/3d-models/desert-house-01-7649a03206864931a3c118ec14d8ac3c | CC BY 4.0, изменено |
+| village/vh_well (колонка во дворе кишлака) | Hand Well 3D Scan | zdenkoroman | https://sketchfab.com/3d-models/hand-well-3d-scan-76a39bd60163451497c794afe979f8b2 | CC BY 4.0, изменено |
