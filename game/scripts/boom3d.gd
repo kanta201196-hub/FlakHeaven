@@ -121,7 +121,7 @@ void fragment() {
 	float a = smoothstep(age * 0.85, age * 0.85 + 0.4, d);
 	float heat = clamp(cd.w * (1.0 - age * 0.9) + (d - 0.45) * 0.9, 0.0, 1.0);
 	ALBEDO = (ramp(heat) * COLOR.rgb) * FX_EXP;
-	ALPHA = a * COLOR.a;
+	ALPHA = a * COLOR.a * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);
 }
 """
 
@@ -146,7 +146,7 @@ void fragment() {
 	vec3 col = COLOR.rgb * lit + vec3(0.1, 0.095, 0.085) * clamp(lit - 0.9, -0.5, 0.5);
 	col += ramp(cd.w * (0.4 + d * 0.8)) * cd.w * smoothstep(0.2, 0.8, d);
 	ALBEDO = col * FX_EXP;
-	ALPHA = a * COLOR.a;
+	ALPHA = a * COLOR.a * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);
 }
 """
 
@@ -191,7 +191,7 @@ void fragment() {
 	vec4 vp = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, z, 1.0);
 	float gap = VERTEX.z - vp.z / vp.w;
 	ALBEDO = col * FX_EXP;
-	ALPHA = a * COLOR.a * clamp(gap / max(side * 0.5, 1.0), 0.0, 1.0);
+	ALPHA = a * COLOR.a * clamp(gap / max(side * 0.5, 1.0), 0.0, 1.0) * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);
 }
 """
 
@@ -220,7 +220,7 @@ void fragment() {
 	float body = n2 * 0.55 + vn * 0.45 + (1.0 - fres) * 0.25;
 	float a = smoothstep(age * 1.05 - 0.05, age * 1.05 + 0.18, body);
 	ALBEDO = (ramp(heat) * COLOR.rgb) * FX_EXP;
-	ALPHA = a * COLOR.a;
+	ALPHA = a * COLOR.a * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);
 }
 """
 
@@ -266,7 +266,7 @@ void fragment() {
 	float n = fbm(lp + vec3(cd.x * 4.0));
 	float a = (pow(f, 2.0) * 0.6 + 0.15) * smoothstep(0.35, 0.75, n);
 	ALBEDO = COLOR.rgb * FX_EXP;
-	ALPHA = a * COLOR.a;
+	ALPHA = a * COLOR.a * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);
 }
 """
 

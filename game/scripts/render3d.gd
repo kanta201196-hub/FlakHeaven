@@ -57,6 +57,7 @@ var _wakes: SeaWakes         # S10-10: кильватерный след суд�
 var _tid := 0                # номера ракет для их следов
 var _eshot_mm: MultiMeshInstance3D   # тест 3.5-s5 (п. 11): ракеты врагов — модели
 var _eglow_mm: MultiMeshInstance3D   # и светящиеся точки: трассеры пуль, ореол и факел ракет
+var _fx_clear := Vector4.ZERO   # last value sent to the fx_clear shader global (_sync_fx_clear)
 var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые падают
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: Material
@@ -534,6 +535,7 @@ func _process(delta: float) -> void:
 	if Perf.on: pt = Perf.sub("r3d.terrain", pt)
 	var sd := 0.0 if get_tree().paused else delta   # время эффектов стоит на паузе
 	_sync_units(m, delta, sd)
+	_sync_fx_clear(m, vs)
 	if Perf.on: pt = Perf.sub("r3d.units", pt)
 	_sync_missiles(m)
 	_sync_enemy_shots(m)
@@ -2023,6 +2025,10 @@ func _sync_missiles(m: Main) -> void:
 			if mm.has("k") and MSL_TRAIL.has(mm["k"]):   # S8 «eweap»: след по виду вражеской ракеты
 				var mts: Array = MSL_TRAIL[mm["k"]]
 				st = [mts[0], mts[1], mts[2], mts[3], float(mts[4]) * lo, mts[5]]
+			if mm.get("src", "") == "ёлочка":
+				# Kanta s12: the 10–14 mini-rockets of the salvo fanned out in full missile smoke and hid the plane
+				# for about a second; a mini-rocket leaves a thin, short-lived trail
+				st = [0.6, 2.0, 5.5, 0.5, 12.0 * lo, st[5]]
 			if mm.has("tint"):   # связки: след своего цвета (бирюзовый, золотой…), но светлый
 				st = st.duplicate()
 				st[5] = (mm["tint"] as Color).lerp(Color.WHITE, 0.45)
@@ -2176,6 +2182,30 @@ func _sync_enemy_shots(m: Main) -> void:
 		var aabb := AABB(lo - Vector3(40, 40, 40), hi - lo + Vector3(80, 80, 80))
 		_eshot_mm.custom_aabb = aabb
 		_eglow_mm.custom_aabb = aabb
+
+
+const FX_CLEAR_R := 1.6      # clear zone radius, plane lengths
+const FX_CLEAR_CUT := 0.7    # share of an effect's opacity taken away over the plane itself
+
+
+## Kanta s12 (26.10): late in a run blasts, fire, missile smoke and the fan of a missile salvo hid the player's
+## plane; only the lock ring showed where it was. Effects thin out over the plane (fx_clear_k in
+## fx_exposure.gdshaderinc): this puts the plane's screen spot and size into the global shader parameter
+func _sync_fx_clear(m: Main, vs: Vector2) -> void:
+	var v := Vector4.ZERO
+	var pu: Unit3D = _units.get(m.player.get_instance_id()) if is_instance_valid(m.player) else null
+	if pu != null and pu.node != null and (pu.node as Node3D).visible and not (m.state in ["menu", "settings"]) \
+			and vs.y > 1.0:
+		var p3 := (pu.node as Node3D).global_position
+		if not cam.is_position_behind(p3):
+			var a := cam.unproject_position(p3)
+			# model length 1 is the picture width, so the plane is k × picture width long in the world
+			var ln := pu.k * (float(pu.tex.get_width()) if pu.tex != null else 1.0)
+			var b := cam.unproject_position(p3 + cam.global_basis.x * ln * FX_CLEAR_R)
+			v = Vector4(a.x / vs.x, a.y / vs.y, a.distance_to(b) / vs.y, FX_CLEAR_CUT)
+	if v != _fx_clear:
+		_fx_clear = v
+		RenderingServer.global_shader_parameter_set(&"fx_clear", v)
 
 
 # ---------- 3.4-t1: сбитый ведомый падает (п. 32) ----------
