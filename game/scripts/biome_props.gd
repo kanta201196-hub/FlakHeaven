@@ -22,14 +22,16 @@ const KINDS := {
 	"shrub": ["b06_shrub", 14.0, 30.0],
 	"truck": ["b07_wreck_truck", 46.0, 52.0],   # масштаб «2–4 км»: как грузовик колонны (50 px)
 	"tank": ["b08_wreck_tank", 40.0, 46.0],
-	"yurt": ["b09_yurt", 34.0, 44.0],
+	# Kanta 26.10 (bridges and yurt rework): the yurt is built in code (PropBuild.yurt); its width of 1 is the
+	# ground ring, the felt body is 0.84 of it, so the range is 1/0.84 of the old 34–44 px body
+	"yurt": ["", 40.0, 52.0],
 	"sandbag": ["b10_sandbag_post", 40.0, 55.0],
 	"plane": ["b11_wreck_plane", 110.0, 130.0],   # сцены прошедших боёв (Terrain3D.scenes)
 	# тест 3.5-s8 (правка Kanta 19.10): варианты обломков — сцена «plane» берёт один из них по месту (plane_kind)
 	"plane_b": ["b11_wreck_plane_b", 110.0, 130.0],   # хвост оторван в начале борозды
 	"plane_c": ["b11_wreck_plane_c", 110.0, 130.0],   # фюзеляж переломлен пополам
 	"heli": ["b11_wreck_heli", 110.0, 130.0],         # вертолёт на боку, лопасти в стороны
-	"bridge": ["", 84.0, 95.0],        # L-07: модели кодом (AdobeBuild.bridge): мост дороги через ручей
+	"bridge": ["", 84.0, 95.0],        # L-07: built in code (PropBuild.bridge): the road bridge over the village stream
 	# Kanta 24.10: the road bridge was smaller than the AA vehicles crossing it; span 58 -> 84 (deck width scales with it)
 	"footbridge": ["", 150.0, 165.0],  # и пешеходный через реку
 	# VIS-01 (Kanta 26.10, oasis: models 66 to 70): date palms and the well of the oasis (tools/blender/oasis_models.py)
@@ -150,7 +152,9 @@ func _card_mat(path: String) -> StandardMaterial3D:
 
 func _full_mesh(kind: String) -> Mesh:
 	if kind in ["bridge", "footbridge"]:
-		return AdobeBuild.bridge(kind == "footbridge")
+		return PropBuild.bridge(kind == "footbridge")
+	if kind == "yurt":
+		return PropBuild.yurt()
 	if not _meshes.has(kind):
 		_meshes[kind] = null
 		var f: String = _row(kind)[0]

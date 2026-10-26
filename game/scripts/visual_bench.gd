@@ -602,6 +602,24 @@ func _print_fort_size(name: String, fp: Vector2, px_k: float) -> void:
 	print("VISUAL %s size o_fort: no 3D fort at %s" % [name, fp])
 
 
+## Position of the first `kind` model BiomeProps plans in the chunks around `at` (nearest ring first), or
+## Vector2.INF. The plan is the same pure calculation the terrain runs, so the model is really there.
+func _find_prop(ter: Terrain3D, at: Vector2, kind: String) -> Vector2:
+	if ter == null or ter.props == null or at == Vector2.INF:
+		return Vector2.INF
+	var c := Vector2i(int(floorf(at.x / Terrain3D.CHUNK)), int(floorf(at.y / Terrain3D.CHUNK)))
+	for r in 3:
+		for dx in range(-r, r + 1):
+			for dz in range(-r, r + 1):
+				if maxi(absi(dx), absi(dz)) != r:
+					continue
+				var key := c + Vector2i(dx, dz)
+				var put: Dictionary = ter.props.plan(key, ter._ctx(key))
+				for t: Transform3D in put.get(kind, []):
+					return Vector2(t.origin.x, t.origin.z)
+	return Vector2.INF
+
+
 ## Точки: пустыня, гора, кишлак, оазис, бой со взрывами, крупный план самолёта
 func _make_points() -> Array:
 	var bg := m.background
@@ -754,14 +772,34 @@ func _make_points() -> Array:
 	if ter != null:   # L-07: мосты — пешеходный у оазиса, дорожный через ручей посёлка
 		if found.has("o_oasis"):
 			pts.append({"name": "footbridge", "pos": ter._river_point(found["o_oasis"]), "zoom": 2.5})
-		if found.has("o_village"):
-			for sd in ter._sides(found["o_village"].x, found["o_village"].y):
-				if float(sd[2]) < 0.0:
+		# bridges and yurt rework: where BiomeProps really put a road bridge and a yurt (the plan of the chunks
+		# round the nearest villages), close up and at gameplay height with the player's plane for scale
+		var bq := Vector2.INF
+		var yq := Vector2.INF
+		var nv := 0
+		for vo: Dictionary in placed:
+			if vo["name"] != "o_village" or nv >= 40 or (bq != Vector2.INF and yq != Vector2.INF):
+				continue
+			nv += 1
+			if bq == Vector2.INF:   # BiomeProps._bridges: a village stream crossing the road line
+				for sd in ter._sides(vo["pos"].x, vo["pos"].y):
 					var f0: float = ter.river_field(sd[0].x, sd[0].y) - Terrain3D.D_ROAD
 					var f1: float = ter.river_field(sd[1].x, sd[1].y) - Terrain3D.D_ROAD
-					if f0 * f1 <= 0.0 and f0 != f1:
-						pts.append({"name": "road_bridge", "pos": (sd[0] as Vector2).lerp(sd[1], f0 / (f0 - f1)), "zoom": 2.5})
+					if float(sd[2]) < 0.0 and f0 * f1 <= 0.0 and f0 != f1:
+						bq = (sd[0] as Vector2).lerp(sd[1], f0 / (f0 - f1))
 						break
+			if yq == Vector2.INF and nv <= 8:   # a plan is ~0.1 s a chunk: only round the first villages
+				yq = _find_prop(ter, vo["pos"], "yurt")
+		print("VISUAL props bridge at %s yurt at %s, tris bridge=%d footbridge=%d yurt=%d" % [bq, yq, PropBuild.tris(PropBuild.bridge(false)), PropBuild.tris(PropBuild.bridge(true)), PropBuild.tris(PropBuild.yurt())])
+		if bq != Vector2.INF:
+			pts.append({"name": "road_bridge", "pos": bq, "zoom": 2.5})
+			pts.append({"name": "bridge_close", "pos": bq, "ground_dist": 150.0, "wait": 3.0})
+			pts.append({"name": "bridge_play", "pos": bq + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+		if found.has("o_oasis"):
+			pts.append({"name": "footbridge_close", "pos": ter._river_point(found["o_oasis"]), "ground_dist": 230.0, "wait": 3.0})
+		if yq != Vector2.INF:
+			pts.append({"name": "yurt_close", "pos": yq, "ground_dist": 95.0, "wait": 3.0})
+			pts.append({"name": "yurt_play", "pos": yq + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	if found.has("o_wreck"):   # тест 3.5-s4 (п. 18): обломки самолёта крупно
 		pts.append({"name": "wreck", "pos": found["o_wreck"], "zoom": 2.5})
