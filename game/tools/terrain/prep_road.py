@@ -29,7 +29,7 @@ for name, src in SETS.items():
     if name == "lane_cobble":
         # grass tufts between the stones: dry them to soil colour (arid highlands, no green)
         r, g, b = alb[..., 0], alb[..., 1], alb[..., 2]
-        green = np.clip((g - np.maximum(r, b)) / 30.0, 0.0, 1.0)[..., None]
+        green = np.clip((g - np.maximum(r, b) * 0.97) / 6.0, 0.0, 1.0)[..., None]
         lum = (0.3 * r + 0.59 * g + 0.11 * b)[..., None]
         soil = lum * np.array([1.12, 0.98, 0.8])
         alb = alb * (1.0 - green) + soil * green
