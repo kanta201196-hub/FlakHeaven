@@ -80,6 +80,8 @@ def fmat(kind, tex, tile, gain, dust=0.5, soot=False, chips=False, streaks=False
         flat = _band(nt, nz.outputs["Z"], 0.6, 0.86)
         sand = _mix(nt, 1.0, _boxtex(nt, rock, 1.4), (0.92, 0.84, 0.76), "MULTIPLY")
         col = _mix(nt, _m(nt, "MULTIPLY", flat, 0.85), col, sand)
+        # the raw gravel and rock albedos read orange next to the lit terrain (bench 26.10): half their saturation
+        col = _n(nt, "ShaderNodeHueSaturation", Color=col, Saturation=0.5).outputs["Color"]
     # large blotches: sun bleach and damp, so a big face is not one flat tone
     big = _noise(nt, pos, 4.0, 3.0, (4.0, 2.0, 7.0))
     col = _mix(nt, _m(nt, "MULTIPLY", _band(nt, big, 0.45, 0.66), 0.35), col, (0.8, 0.72, 0.6), "MULTIPLY")
