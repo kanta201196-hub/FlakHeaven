@@ -59,7 +59,7 @@ var _flare_cd := 0.0
 
 func setup(hp_total: float) -> void:
 	# U-05: в операциях 2–4 кампании в дуэль выходит «Барон» и помнит прошлые встречи
-	if Campaign.baron():
+	if Campaign.baron() and not Main.aces():   # the test mode does not touch the campaign's «Барон» story
 		callsign = "Барон"
 		_again = Campaign.baron_met() > 0
 		Campaign.on_baron_met()

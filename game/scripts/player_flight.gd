@@ -169,14 +169,16 @@ func _move(delta: float) -> void:
 		speed *= 1.0 + 0.2 * clampf(pl._straight_t - 1.2, 0.0, 1.0)
 	# Тест 3.5-s7 (инерция): крутой разворот съедает скорость (тяжёлый — больше), на прямой она
 	# набирается обратно с разгоном класса: «Оса» быстро, «Кит» долго. Боевой разворот — без потери.
-	var want_e := 1.0 - Tuning.g("turn_bleed") * float(pl.cls.get("bleed_k", 1.0)) * absf(pl.bank)
+	var bleed := Tuning.g("turn_bleed") * (AcesBalance.BLEED_K if Main.aces() else 1.0)
+	var want_e := 1.0 - bleed * float(pl.cls.get("bleed_k", 1.0)) * absf(pl.bank)
 	if pl.turn_t > 0.0:
 		want_e = pl._energy
 	var rate := Tuning.g("speed_regain") * float(pl.cls.get("accel_k", 1.0))
 	pl._energy = move_toward(pl._energy, want_e, (rate * 1.5 if want_e < pl._energy else rate) * delta)
 	speed *= pl._energy
 	var target := Vector2.from_angle(pl.heading) * speed
-	var k := 1.0 - exp(-delta / maxf(Tuning.g("inertia") * float(pl.cls.get("inertia_k", 1.0)), 0.001))
+	var inertia := Tuning.g("inertia") * (AcesBalance.INERTIA_K if Main.aces() else 1.0)
+	var k := 1.0 - exp(-delta / maxf(inertia * float(pl.cls.get("inertia_k", 1.0)), 0.001))
 	pl.velocity = pl.velocity.lerp(target, k)
 	var step := pl.velocity * delta
 	if pl.roll_t > 0.0:

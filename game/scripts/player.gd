@@ -376,7 +376,8 @@ func _ready() -> void:
 
 
 func cruise_speed() -> float:
-	return Tuning.g("cruise_speed") * float(cls["speed"]) * mods["speed"] * Fuel.speed_k() # 3.5: пустой бак −30%
+	return Tuning.g("cruise_speed") * float(cls["speed"]) * mods["speed"] * Fuel.speed_k() \
+		* (AcesBalance.SPEED_K if Main.aces() else 1.0) # 3.5: пустой бак −30%
 
 
 func turn_rate() -> float:
@@ -388,7 +389,7 @@ func turn_rate_free() -> float:
 	# Чем медленнее летим, тем круче разворот (до ×1,4), на форсаже — шире (до ×0,75)
 	var f := velocity.length() / maxf(cruise_speed(), 1.0)
 	var k := clampf(1.0 + (1.0 - f) * 0.8, 0.75, 1.4)
-	return deg_to_rad(Tuning.g("turn_rate")) * float(cls["turn"]) * mods["turn"] * k
+	return deg_to_rad(Tuning.g("turn_rate")) * float(cls["turn"]) * mods["turn"] * k * (AcesBalance.TURN_K if Main.aces() else 1.0)
 
 
 ## Тест 3.5-s7: предел по радиусу разворота класса — угловая скорость не больше скорость / радиус.
@@ -644,8 +645,11 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 		return
 	if dodges(source, who):
 		return
-	amount *= Campaign.k("dmg") # U-05: урон врагов по сложности операции
-	amount *= Spawner.dmg_ramp(Main.I.run_time) # правка 3.5-s4: поздний бой опаснее
+	if Main.aces():   # «Битва асов»: a fixed share of the hull per missile / bullet / ram, no difficulty or late ramp
+		amount = AcesBalance.player_hit(source, amount, max_hp)
+	else:
+		amount *= Campaign.k("dmg") # U-05: урон врагов по сложности операции
+		amount *= Spawner.dmg_ramp(Main.I.run_time) # правка 3.5-s4: поздний бой опаснее
 	if dive_t > 0.0 and who == "ПВО":
 		amount *= Tuning.g("dive_aa_k")
 	if shield_t > 0.0:
@@ -684,7 +688,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	Main.I.add_stat("taken", source, amount)
 	if who != "":
 		Main.I.add_stat("taken_by", who, amount)
-	invuln = 0.7
+	invuln = AcesBalance.HIT_INVULN if Main.aces() else 0.7
 	if big_hit and patch("armor") >= 2 and _armor2_cd <= 0.0:
 		invuln = 1.0
 		_armor2_cd = 12.0
