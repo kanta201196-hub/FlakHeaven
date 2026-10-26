@@ -768,49 +768,9 @@ static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector
 		st.add_vertex(v)
 
 
-## L-07 (правка Kanta 18.10.2026): деревянный мост. Пролёт — по X от −0,5 до 0,5 (длина 1), низ свай — y < 0.
-## foot = false — мост на дороге через ручей (под колонну: ширина 0,4 пролёта, перила, две пары свай);
-## foot = true — пешеходный через реку (узкий, чуть выгнут, тонкие стойки и поручни)
+## Timber tones of the village's posts, crates and trench planks (the bridges moved to PropBuild)
 const WOOD := Color(0.47, 0.35, 0.24)
 const WOOD_DARK := Color(0.3, 0.22, 0.16)
-
-
-static func bridge(foot: bool) -> ArrayMesh:
-	var key := "bridge_%s" % foot
-	if _cache.has(key):
-		return _cache[key]
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var w := 0.09 if foot else 0.4   # Kanta 26.10: the road is 31 px solid now; deck 34–38 px over a 84–95 px span
-	var n := 26 if foot else 15
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7707 if foot else 7708
-	var deck := func(x: float) -> float: return (0.025 + 0.04 * cos(PI * x)) if foot else 0.06
-	for i in n:   # настил: доски поперёк пролёта, чуть разного тона, с щелями
-		var x := -0.5 + (i + 0.5) / n
-		var col := WOOD.darkened(rng.randf_range(0.0, 0.18))
-		_box(st, Vector3(x, deck.call(x), rng.randf_range(-0.004, 0.004)), Vector3(0.8 / n, 0.012 if foot else 0.02, w * rng.randf_range(0.94, 1.0)), col, col.lightened(0.06))
-	for sz: float in [-1.0, 1.0]:
-		# продольные балки под настилом
-		_box(st, Vector3(0, deck.call(0.0) - 0.02, sz * w * 0.3), Vector3(1.0, 0.02, w * 0.12), WOOD_DARK, WOOD_DARK)
-		# стойки и поручень
-		var m := 7 if foot else 6
-		for i in m:
-			var x := -0.45 + 0.9 * i / (m - 1)
-			var y := float(deck.call(x))
-			_box(st, Vector3(x, y, sz * w * 0.47), Vector3(0.012, 0.05 if foot else 0.07, 0.012), WOOD_DARK, WOOD_DARK)
-		for i in m - 1:
-			var x0 := -0.45 + 0.9 * i / (m - 1)
-			var x1 := -0.45 + 0.9 * (i + 1) / (m - 1)
-			var ym := (float(deck.call(x0)) + float(deck.call(x1))) * 0.5
-			_box(st, Vector3((x0 + x1) * 0.5, ym + (0.045 if foot else 0.065), sz * w * 0.47), Vector3(x1 - x0 + 0.012, 0.008, 0.01), WOOD, WOOD.lightened(0.05))
-	for px: float in ([-0.18, 0.18] if not foot else [-0.22, 0.0, 0.22]):   # сваи в воде
-		for sz: float in [-1.0, 1.0]:
-			_box(st, Vector3(px, -0.12, sz * w * 0.3), Vector3(0.018, float(deck.call(px)) + 0.1, 0.018), WOOD_DARK, WOOD_DARK)
-	var m := _scaled(st, 1.0)
-	m.surface_set_material(0, material())
-	_cache[key] = m
-	return m
 
 
 ## Палитра кишлака (3.5-s8, аудит Б-5: крыши были одного оранжевого цвета, ярче земли). Цвет вершины
