@@ -1922,12 +1922,17 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 					for lp: Vector3 in bl:
 						var bw := root.global_transform * (wmi.transform * lp)
 						l_offs.append((Vector2(bw.x, bw.z) - p.global_position).rotated(-p.heading))
+				elif g.weapon == "turret" or g.weapon == "gunpod":
+					# Kanta 26.10: turret and gun-pod rounds (and their muzzle flash) leave from the barrels of the model,
+					# not from a fixed spot beside the fuselage; +X of the weapon mesh runs along the barrels
+					var mw := root.global_transform * (wmi.transform * Vector3(0.35, 0.0, 0.0))
+					l_offs.append((Vector2(mw.x, mw.z) - p.global_position).rotated(-p.heading))
 				var tr_w := 0.6 if dim else 0.0
 				if wmi.transparency != tr_w:
 					wmi.transparency = tr_w
 			if mt["side"] == "bay":   # в закрытом бомбоотсеке бомб не видно
 				wmi.visible = float(u.bay_t) > 0.4
-		if Weapons.leaves_pylon(g.weapon):
+		if Weapons.leaves_pylon(g.weapon) or g.weapon == "turret" or g.weapon == "gunpod":
 			g.launch_offs = l_offs
 	for key in u.weapons.keys():
 		if not want.has(key):
@@ -2548,10 +2553,16 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				var e := sw * 0.35
 				var px: float = o["pos"].x
 				var pz: float = o["pos"].y
-				var nrm := Vector3(terrain.surface_fast(px - e, pz).y - terrain.surface_fast(px + e, pz).y, 2.0 * e,
-					terrain.surface_fast(px, pz - e).y - terrain.surface_fast(px, pz + e).y).normalized()
+				var yl := terrain.surface_fast(px - e, pz).y
+				var yr := terrain.surface_fast(px + e, pz).y
+				var yb := terrain.surface_fast(px, pz - e).y
+				var yf := terrain.surface_fast(px, pz + e).y
+				var nrm := Vector3(yl - yr, 2.0 * e, yb - yf).normalized()
+				# Kanta 26.10: in a hollow the tilted hull still sank at its ends and the ground showed through it;
+				# lift by how far the ground curves up above the slope through the centre
+				var lift := maxf(0.0, maxf((yl + yr) * 0.5, (yb + yf) * 0.5) - gy)
 				var wn: Node3D = wreck_ps.instantiate()
-				wn.position = Vector3(px, gy - sw * 0.01, pz)
+				wn.position = Vector3(px, gy + lift * 0.8 - sw * 0.005, pz)
 				wn.basis = (Basis(Quaternion(Vector3.UP, nrm)) * Basis(Vector3.UP, -float(o["rot"]))).scaled(Vector3(sw, sw, sw))
 				add_child(wn)
 				_objs[key] = wn
@@ -3029,7 +3040,7 @@ func marks_as_decals() -> bool:
 func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex: Texture2D, col: Color) -> void:
 	while pool.size() <= i:
 		var d := Decal.new()
-		d.cull_mask = 1
+		d.cull_mask = Terrain3D.DECAL_LAYER   # ground only: not the wreck lying in the scorch
 		d.upper_fade = 0.15
 		d.lower_fade = 0.6
 		add_child(d)

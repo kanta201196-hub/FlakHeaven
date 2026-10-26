@@ -39,6 +39,13 @@ static func attach(model: Node3D, key: String) -> Node3D:
 	return holder
 
 
+## Kanta 26.10 (effects at the real places): the course-gun point measured on the battle model (model axes, z is
+## the starboard side; mirror it for the other gun), Vector3.INF until a model of `key` was attached
+static func gun_point(key: String) -> Vector3:
+	var a: Dictionary = _anchors.get(key, {})
+	return a.get("gun", Vector3.INF)
+
+
 ## levels — уровни модулей игрока (Player.taken); детали пересобираются, только когда меняется ступень
 static func update(holder: Node3D, levels: Dictionary) -> void:
 	var st := {}
@@ -244,6 +251,13 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 	a["gun"] = Vector3(gx, gy, _half_width(faces, gx, gy) * 0.8)
 	# сопла: точки огня PlaneFx (пикс. картинки) → оси модели; высота — середина сечения перед соплом
 	var jets: Array = []
+	var nz: Array = NozzleFlame.NOZZLES.get(key, [])
+	if not nz.is_empty():   # Kanta 26.10: the nozzle exits measured on the models — the same place as the flames
+		for z in ([0.0] if is_zero_approx(float(nz[2])) else [-float(nz[2]), float(nz[2])]):
+			jets.append(Vector3(float(nz[0]), float(nz[1]), z))
+		a["jets"] = jets
+		a["jet_r"] = float(nz[3])
+		return a
 	var spec: Dictionary = PlaneFx.SPEC.get(key, {})
 	var cls := key.get_slice("_", 0)
 	var tex := PlaneArt.plane_tex(cls, int(key.get_slice("_", 1)))

@@ -99,6 +99,13 @@ func _shoot(delta: float) -> void:
 func _fire_one(fwd: Vector2, aim: Vector2, lead: bool, age := 0.0) -> void:
 	pl._gun_side = -pl._gun_side
 	var muzzle := pl.global_position + fwd * 16.0 * pl.size + Vector2.from_angle(pl.heading + PI / 2.0) * 7.0 * pl.size * pl._gun_side
+	var tex := PlaneArt.plane_tex(pl.cls_id, pl.plane_lvl)
+	var gp := ModuleParts.gun_point(tex.resource_path.get_file().get_basename()) if tex != null and Render3D.enabled else Vector3.INF
+	if gp != Vector3.INF:
+		# Kanta 26.10: rounds leave from the gun ports in the nose of the 3D model (the point the gun module's barrel
+		# grows from), both sides in turn — not from a fixed spot beside the fuselage
+		var ln := Tuning.g("plane_len") * pl.size * float(tex.get_width()) / float(PlaneArt.plane_tex(pl.cls_id, 1).get_width())
+		muzzle = pl.global_position + fwd * (gp.x + 0.03) * ln + Vector2.from_angle(pl.heading + PI / 2.0) * gp.z * ln * pl._gun_side
 	Main.I.shots += 1
 	pl._gun_n += 1
 	var src := "курсовое (ручн.)" if pl.manual_mode else "курсовое (авто)"

@@ -374,9 +374,9 @@ if layout in FURROW:
     m_earth = bpy.data.materials.new("furrow")
     m_earth.use_nodes = True
     bs = m_earth.node_tree.nodes["Principled BSDF"]
-    vc = m_earth.node_tree.nodes.new("ShaderNodeVertexColor")
-    vc.layer_name = "Col"
-    m_earth.node_tree.links.new(vc.outputs["Color"], bs.inputs["Base Color"])
+    # Godot's glTF import does not take the vertex colours as albedo: a linked colour left the furrow default
+    # white, a pale streak through the wreck on light ground (Kanta 26.10). Plain dark earth as the base colour
+    bs.inputs["Base Color"].default_value = (0.1, 0.08, 0.06, 1.0)
     bs.inputs["Metallic"].default_value = 0.0
     bs.inputs["Roughness"].default_value = 1.0
     bm = bmesh.new()

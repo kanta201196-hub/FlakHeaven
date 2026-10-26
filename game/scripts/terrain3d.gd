@@ -1041,6 +1041,9 @@ func wet(p: Vector2) -> bool:
 ## выгоревшие пятна и воронки рисует шейдер рельефа (k = scorch, crater). Не в воде и не на берегу,
 ## не на домах и огородах, не друг в друге; на склон техника не заезжает. Только главный поток (кэш)
 ## Элемент: {k, p (Vector2), yaw, w (ширина модели, px), r (радиус занятого места, px)}
+## Render layer only the ground has: scorch and crater decals project onto it alone, so a wreck, a house or a
+## truck standing in a fresh scorch is not painted with the burnt ground texture (Kanta 26.10)
+const DECAL_LAYER := 1 << 18
 const SCENE_W := {"tank": 64.0, "truck": 60.0, "plane": 120.0, "sandbag": 48.0}
 
 
@@ -1726,6 +1729,7 @@ func _place_chunk(key: Vector2i, r: Dictionary) -> void:
 	mi.mesh = mesh
 	mi.material_override = material
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	mi.layers |= DECAL_LAYER
 	add_child(mi)
 	if int(r.get("lod", 0)) > 0:   # Р-13: заглушка — без моделей биома и без сетки высот (surface_fast считает точно)
 		_lods[key] = mi

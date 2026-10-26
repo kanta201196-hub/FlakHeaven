@@ -58,6 +58,9 @@ func _init(main: Main) -> void:
 		# Kanta 25.10: machine-gun turrets of the bomber tracking targets that circle and cross the plane; --film saves
 		# every frame (run with --fixed-fps 30 for a clip in game time) and prints the frame of each turret shot
 		{"name": "turrets", "times": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], "turrets": true, "slow": 1.0, "pl": Vector2.ZERO},
+		# Kanta 26.10: every effect at its real place on the model — nozzle flames on afterburner, course guns firing
+		# at a drone ahead, turrets at drones around (run once per class and plane level: --cls=… --plane=2)
+		{"name": "planes", "times": [0.4, 0.55, 0.7, 0.85, 1.0], "turrets": true, "ab": true, "ahead": true, "pl": Vector2.ZERO},
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
 	if not _only.is_empty():
@@ -162,7 +165,7 @@ func process(delta: float) -> void:
 						for k in 6:   # rounds landing in the water
 							Boom3D.ensure().ground_hit(rp[2] + Vector2(randf_range(-12, 12), randf_range(-30, 30)))
 			if sc.get("turrets", false):
-				_turret_targets()
+				_turret_targets(sc.get("ahead", false))
 			if sc.get("emp", false):
 				m.fx.emp_wave(m.player.global_position, 380.0)
 			for k in int(sc.get("stress", 0)):   # мясорубка: 30 взрывов разом — замер нагрузки
@@ -176,6 +179,8 @@ func process(delta: float) -> void:
 		_guns(delta)
 	if sc.get("turrets", false):
 		_turrets_move()
+	if sc.get("ab", false):
+		m.player.ab_t = 1.0
 	var times: Array = sc.get("times", TIMES)
 	if _film:
 		_film_frame(sc)
@@ -278,13 +283,14 @@ var _film_n := 0
 const TURRET_PATHS := [[170.0, 0.9, 0.0], [230.0, -0.6, 2.0], [0.0, 220.0, 0.0], [130.0, 1.4, 4.0]]
 
 
-## Four drones that cannot die and do nothing on their own: _turrets_move flies them on TURRET_PATHS
-func _turret_targets() -> void:
+## Four drones that cannot die and do nothing on their own: _turrets_move flies them on TURRET_PATHS;
+## `ahead` adds a fifth one hanging in front of the nose, so the course guns fire too
+func _turret_targets(ahead := false) -> void:
 	for t in _targets:
 		if is_instance_valid(t):
 			t.queue_free()
 	_targets.clear()
-	for k in TURRET_PATHS.size():
+	for k in TURRET_PATHS.size() + (1 if ahead else 0):
 		var d := Drone.new()
 		d.set_meta("bench", true)
 		d.global_position = _pos
@@ -300,10 +306,15 @@ func _turrets_move() -> void:
 		var d := _targets[k]
 		if not is_instance_valid(d):
 			continue
-		var pth: Array = TURRET_PATHS[k]
-		var r: float = pth[0]
 		var p: Vector2
 		var hd: float
+		if k >= TURRET_PATHS.size():   # in front of the nose
+			d.global_position = m.player.global_position + Vector2.from_angle(m.player.heading) * 230.0
+			d.heading = m.player.heading + PI
+			d.hp = 1.0e9
+			continue
+		var pth: Array = TURRET_PATHS[k]
+		var r: float = float(pth[0])
 		if r > 0.0:
 			var a: float = float(pth[2]) + float(pth[1]) * _et
 			p = _pos + Vector2.from_angle(a) * r
