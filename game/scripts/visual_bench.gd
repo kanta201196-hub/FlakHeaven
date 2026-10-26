@@ -791,6 +791,22 @@ func _make_points() -> Array:
 		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
 		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
 		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
+	if OS.get_cmdline_user_args().has("--wreckbench") and ter != null:
+		# Kanta 26.10: crashed-plane wrecks blended into the ground; the first four plane scenes of past fights
+		# (valley sides, several wreck variants) and the map's wreck object, from a camera close to the ground
+		pts = []
+		var nw := 0
+		for r in range(0, 14):
+			for cx in range(-r, r + 1):
+				for cy in range(-r, r + 1):
+					if maxi(absi(cx), absi(cy)) != r or nw >= 4:
+						continue
+					for it in ter.scenes(Vector2i(cx, cy)):
+						if it["k"] == "plane" and nw < 4:
+							pts.append({"name": "wreck_scene%d" % nw, "pos": it["p"], "ground_dist": 230.0, "wait": 2.0})
+							nw += 1
+		if found.has("o_wreck"):
+			pts.append({"name": "wreck_obj", "pos": found["o_wreck"], "ground_dist": 300.0, "wait": 2.0})
 	if OS.get_cmdline_user_args().has("--eweapbench"):   # S8 «eweap»: ракеты ПЗРК / самолёта / ЗРК и трассеры по видам оружия
 		pts = []
 		pts.append({"name": "eweap", "pos": empty, "eweap": true, "shot_t": 1.5, "zoom": 1.0})

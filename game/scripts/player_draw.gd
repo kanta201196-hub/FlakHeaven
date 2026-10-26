@@ -71,11 +71,8 @@ func _draw_sprite(w: float) -> void:
 	pl.draw_texture(tex, -half, Color(0, 0, 0, 0.28 * col.a))
 	# форсаж — пламя за соплами
 	if pl.ab_t > 0.0:
-		var s := PlaneArt.shape_info(pl.cls_id, pl.plane_lvl)
-		var tx: float = s.get("tail", -half.x)
 		pl.draw_set_transform(Vector2.ZERO, pl.heading, sc)
-		var fl := PackedVector2Array([Vector2(tx + 3, 3.0 / maxf(w, 0.3)), Vector2(tx - 14.0 - randf() * 8.0, 0), Vector2(tx + 3, -3.0 / maxf(w, 0.3))])
-		pl.draw_colored_polygon(fl, Color(1.0, 0.6, 0.2, 0.9))
+		_ab_flames(tex, w, -half.x)
 	var base := Transform2D(pl.heading, sc, 0.0, Vector2.ZERO)
 	pl.draw_set_transform_matrix(base)
 	pl.draw_texture(tex, -half, col)
@@ -100,17 +97,23 @@ func _draw_sprite(w: float) -> void:
 		pl.draw_circle(Vector2.ZERO, 40.0 * pl.size * (1.6 - pl._upgrade_flash), Color(1.0, 0.95, 0.6, 0.35 * pl._upgrade_flash))
 
 
-## 3.0: модель в 3D — здесь только пламя форсажа и вспышка модернизации
-func _draw_3d_extras(w: float) -> void:
-	var tex := PlaneArt.plane_tex(pl.cls_id, pl.plane_lvl)
-	var k := _sprite_scale()
-	if pl.ab_t > 0.0:
-		var s := PlaneArt.shape_info(pl.cls_id, pl.plane_lvl)
-		var tx: float = s.get("tail", -tex.get_width() / 2.0)
-		pl.draw_set_transform(Vector2.ZERO, pl.heading, Vector2(k, k * w))
-		var fl := PackedVector2Array([Vector2(tx + 3, 3.0 / maxf(w, 0.3)), Vector2(tx - 14.0 - randf() * 8.0, 0), Vector2(tx + 3, -3.0 / maxf(w, 0.3))])
+## Afterburner tongues of the flat sprite, one behind each nozzle of the picture (PlaneFx.SPEC); a prop plane has
+## none. Before Kanta 26.10 a single tongue came out of the middle of the tail, also on twin-engine planes.
+func _ab_flames(tex: Texture2D, w: float, tail_x: float) -> void:
+	var s := PlaneFx.spec_of(tex)
+	var jets: Array = s.get("jet", [])
+	var r: float = s.get("r", 3.0)
+	for j: Vector2 in jets:
+		var tx := maxf(j.x, tail_x)
+		var hw := r * 0.6 / maxf(w, 0.3)
+		var fl := PackedVector2Array([Vector2(tx + 3, j.y + hw), Vector2(tx - 14.0 - randf() * 8.0, j.y), Vector2(tx + 3, j.y - hw)])
 		pl.draw_colored_polygon(fl, Color(1.0, 0.6, 0.2, 0.9))
-		pl.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## 3.0: модель в 3D — здесь только вспышка модернизации. Kanta 26.10 (s12): the flat afterburner tongue drawn here
+## came out of the middle of the tail over the 3D model, even on twin-engine «Оса 2»; the model's own nozzle flames
+## (PlaneFx, in the real nozzle exits) stretch on afterburner, so nothing is drawn here for it any more
+func _draw_3d_extras(_w: float) -> void:
 	if pl._upgrade_flash > 0.0:
 		pl.draw_circle(Vector2.ZERO, 40.0 * pl.size * (1.6 - pl._upgrade_flash), Color(1.0, 0.95, 0.6, 0.35 * pl._upgrade_flash))
 

@@ -51,7 +51,6 @@ var _wakes: SeaWakes         # S10-10: кильватерный след суд�
 var _tid := 0                # номера ракет для их следов
 var _eshot_mm: MultiMeshInstance3D   # тест 3.5-s5 (п. 11): ракеты врагов — модели
 var _eglow_mm: MultiMeshInstance3D   # и светящиеся точки: трассеры пуль, ореол и факел ракет
-var _ttr_mm: MultiMeshInstance3D     # Kanta 25.10: long golden streaks of the player's turret rounds
 var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые падают
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: Material
@@ -521,7 +520,6 @@ func _process(delta: float) -> void:
 	if Perf.on: pt = Perf.sub("r3d.units", pt)
 	_sync_missiles(m)
 	_sync_enemy_shots(m)
-	_sync_turret_tracers(m)
 	if Perf.on: pt = Perf.sub("r3d.missiles", pt)
 	var ct0 := pt
 	_sync_crashes(m, sd)
@@ -1886,19 +1884,9 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 				# правка 3.5-s4 (п. 13): стволы смотрят туда же, куда наведена турель в бою (aim), без цели —
 				# плавно возвращаются в походное положение; поворот с той же ограниченной скоростью
 				var tgt := -wrapf(g.aim - p.heading, -PI, PI) if g.has_aim_target() else idle
-				# Kanta 25.10 (Sublight): the same damped turn as the aim (TurretMath), tighter, so the barrels speed up
-				# and settle softly, follow the aim closely, and swing home to the stowed position without a dead stop
 				var cur := float(wmi.get_meta("yaw_cur", idle))
-				var dt := get_process_delta_time()
-				var prev := float(wmi.get_meta("yaw_tgt", tgt))
-				var jump := wrapf(tgt - prev, -PI, PI)
-				var tw := jump / dt if dt > 0.0 and absf(jump) < 0.3 else 0.0   # a target switch is not a turn rate
-				var wmax := deg_to_rad(Hardpoint.TURRET_TRAVERSE) * float(p.mods.get("turret_traverse", 1.0))
-				var tr := TurretMath.turn(cur, float(wmi.get_meta("yaw_w", 0.0)), tgt, clampf(tw, -wmax, wmax), wmax * 1.3, dt, TurretMath.SETTLE * 1.8)
-				cur = wrapf(tr.x, -PI, PI)
+				cur = rotate_toward(cur, tgt, deg_to_rad(Hardpoint.TURRET_TRAVERSE) * float(p.mods.get("turret_traverse", 1.0)) * get_process_delta_time())
 				wmi.set_meta("yaw_cur", cur)
-				wmi.set_meta("yaw_w", tr.y)
-				wmi.set_meta("yaw_tgt", tgt)
 				yaw = cur
 				if mt["side"] == "tail":   # кормовая установка — в секторе ±60° назад, как настоящая
 					yaw = idle + clampf(wrapf(yaw - idle, -PI, PI), -1.05, 1.05)
@@ -1922,12 +1910,17 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 					for lp: Vector3 in bl:
 						var bw := root.global_transform * (wmi.transform * lp)
 						l_offs.append((Vector2(bw.x, bw.z) - p.global_position).rotated(-p.heading))
+				elif g.weapon == "turret" or g.weapon == "gunpod":
+					# Kanta 26.10: turret and gun-pod rounds (and their muzzle flash) leave from the barrels of the model,
+					# not from a fixed spot beside the fuselage; +X of the weapon mesh runs along the barrels
+					var mw := root.global_transform * (wmi.transform * Vector3(0.35, 0.0, 0.0))
+					l_offs.append((Vector2(mw.x, mw.z) - p.global_position).rotated(-p.heading))
 				var tr_w := 0.6 if dim else 0.0
 				if wmi.transparency != tr_w:
 					wmi.transparency = tr_w
 			if mt["side"] == "bay":   # в закрытом бомбоотсеке бомб не видно
 				wmi.visible = float(u.bay_t) > 0.4
-		if Weapons.leaves_pylon(g.weapon):
+		if Weapons.leaves_pylon(g.weapon) or g.weapon == "turret" or g.weapon == "gunpod":
 			g.launch_offs = l_offs
 	for key in u.weapons.keys():
 		if not want.has(key):
@@ -2117,8 +2110,6 @@ func _sync_enemy_shots(m: Main) -> void:
 		n_g += 1
 	# VFX-04: player tracers (Projectiles._draw look: dark underlay, warm glow, white core) drawn here in Forward+
 	for b: Dictionary in (pr.bullets if mine else []):
-		if b.has("o"):   # turret rounds: long streaks in _sync_turret_tracers
-			continue
 		var p: Vector2 = b["p"]
 		var v: Vector2 = b["v"]
 		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
@@ -2168,87 +2159,6 @@ func _sync_enemy_shots(m: Main) -> void:
 		var aabb := AABB(lo - Vector3(40, 40, 40), hi - lo + Vector3(80, 80, 80))
 		_eshot_mm.custom_aabb = aabb
 		_eglow_mm.custom_aabb = aabb
-
-
-## Kanta 25.10 (Sublight as the reference): a turret round is a long thin golden streak with a white-hot head that
-## fades out towards the tail, the length of most of a plane, so a burst reads as a fast stream of fire.
-## x of the quad runs along the flight (+1 is the head), y across it.
-const TURRET_TRACER_SHADER := """
-shader_type spatial;
-render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled, fog_disabled;
-uniform float hdr = 1.0;
-varying vec4 col;
-void vertex() {
-	col = COLOR;
-}
-void fragment() {
-	vec2 p = UV * 2.0 - 1.0;
-	float along = p.x * 0.5 + 0.5;                              // 0 — tail, 1 — head
-	float w = abs(p.y);
-	float tip = smoothstep(1.0, 0.93, along);                   // rounded head end
-	float body = smoothstep(1.0, 0.3, w) * pow(along, 1.7) * tip;
-	float core = smoothstep(0.5, 0.0, w) * smoothstep(0.45, 0.92, along) * tip;
-	vec3 hot = vec3(1.0, 0.96, 0.86) * hdr;
-	ALBEDO = mix(col.rgb * (1.0 + (hdr - 1.0) * 0.35), hot, core);
-	ALPHA = clamp(body * 0.8 * col.a + core, 0.0, 1.0);
-}
-"""
-const TURRET_TRACER_LEN := 84.0   # px; shorter while the round is still that close to the muzzle
-const TURRET_TRACER_W := 3.4      # px across
-
-
-## Turret rounds (Projectiles bullets with an "o" muzzle point) as one MultiMesh: one draw call for any number
-func _sync_turret_tracers(m: Main) -> void:
-	var pr := m.projectiles
-	if pr == null or not tracers_3d():
-		if _ttr_mm != null:
-			_ttr_mm.multimesh.visible_instance_count = 0
-		return
-	if _ttr_mm == null:
-		var sh := Shader.new()
-		sh.code = TURRET_TRACER_SHADER
-		var mat := ShaderMaterial.new()
-		mat.shader = sh
-		mat.render_priority = 99   # same layer as the other tracers: over models and clouds
-		mat.set_shader_parameter("hdr", 2.6)
-		var pm := PlaneMesh.new()
-		pm.size = Vector2(2, 2)
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.use_colors = true
-		mm.mesh = pm
-		mm.instance_count = 64
-		mm.visible_instance_count = 0
-		_ttr_mm = MultiMeshInstance3D.new()
-		_ttr_mm.multimesh = mm
-		_ttr_mm.material_override = mat
-		_ttr_mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_ttr_mm.top_level = true
-		add_child(_ttr_mm)
-	var mmx := _ttr_mm.multimesh
-	if mmx.instance_count < pr.bullets.size():   # resizing clears the buffer, so grow before filling
-		mmx.instance_count = pr.bullets.size() + 64
-	var n := 0
-	var lo := Vector3(INF, INF, INF)
-	var hi := -lo
-	for b: Dictionary in pr.bullets:
-		if not b.has("o"):
-			continue
-		var p: Vector2 = b["p"]
-		var v: Vector2 = b["v"]
-		var dir := v.normalized() if v.length() > 1.0 else Vector2.RIGHT
-		var ln := minf(TURRET_TRACER_LEN, p.distance_to(b["o"]) + 6.0)
-		var ctr := Vector3(p.x - dir.x * ln * 0.5, 1.3, p.y - dir.y * ln * 0.5)
-		var xa := Vector3(dir.x, 0, dir.y) * ln * 0.5
-		var za := Vector3(-dir.y, 0, dir.x) * TURRET_TRACER_W * 0.5
-		mmx.set_instance_transform(n, Transform3D(Basis(xa, Vector3.UP, za), ctr))
-		mmx.set_instance_color(n, Color(1.0, 0.66, 0.2, 1.0))
-		n += 1
-		lo = lo.min(ctr)
-		hi = hi.max(ctr)
-	mmx.visible_instance_count = n
-	if n > 0:
-		_ttr_mm.custom_aabb = AABB(lo - Vector3(90, 40, 90), hi - lo + Vector3(180, 80, 180))
 
 
 # ---------- 3.4-t1: сбитый ведомый падает (п. 32) ----------
@@ -2548,10 +2458,16 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 				var e := sw * 0.35
 				var px: float = o["pos"].x
 				var pz: float = o["pos"].y
-				var nrm := Vector3(terrain.surface_fast(px - e, pz).y - terrain.surface_fast(px + e, pz).y, 2.0 * e,
-					terrain.surface_fast(px, pz - e).y - terrain.surface_fast(px, pz + e).y).normalized()
+				var yl := terrain.surface_fast(px - e, pz).y
+				var yr := terrain.surface_fast(px + e, pz).y
+				var yb := terrain.surface_fast(px, pz - e).y
+				var yf := terrain.surface_fast(px, pz + e).y
+				var nrm := Vector3(yl - yr, 2.0 * e, yb - yf).normalized()
+				# Kanta 26.10: in a hollow the tilted hull still sank at its ends and the ground showed through it;
+				# lift by how far the ground curves up above the slope through the centre
+				var lift := maxf(0.0, maxf((yl + yr) * 0.5, (yb + yf) * 0.5) - gy)
 				var wn: Node3D = wreck_ps.instantiate()
-				wn.position = Vector3(px, gy - sw * 0.01, pz)
+				wn.position = Vector3(px, gy + lift * 0.8 - sw * 0.005, pz)
 				wn.basis = (Basis(Quaternion(Vector3.UP, nrm)) * Basis(Vector3.UP, -float(o["rot"]))).scaled(Vector3(sw, sw, sw))
 				add_child(wn)
 				_objs[key] = wn
@@ -3029,7 +2945,7 @@ func marks_as_decals() -> bool:
 func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex: Texture2D, col: Color) -> void:
 	while pool.size() <= i:
 		var d := Decal.new()
-		d.cull_mask = 1
+		d.cull_mask = Terrain3D.DECAL_LAYER   # ground only: not the wreck lying in the scorch
 		d.upper_fade = 0.15
 		d.lower_fade = 0.6
 		add_child(d)
