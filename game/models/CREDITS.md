@@ -43,7 +43,7 @@
 | battle/e_convoy_technical (пикап с пулемётом; пулемёт собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
 | battle/e_convoy_pickup_tent (лёгкий пикап с тентом; тент собран кодом) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
 | battle/e_convoy_manpads (пикап с расчётом ПЗРК: машина) | Pickup Truck | 00amza | https://sketchfab.com/3d-models/pickup-truck-047615f53e2d45b9a1a2a4dd203d459c | CC BY 4.0, изменено |
-| battle/e_convoy_manpads (пусковая труба ПЗРК; расчёт собран кодом) | MANPADS model 9K333 Verba | Ser (s-k_2005) | https://sketchfab.com/3d-models/manpads-model-9k333-verba-d7e05be0f5384e93a96ca47d84f1da07 | CC BY 4.0, изменено |
+| battle/e_convoy_manpads (пусковая труба ПЗРК; стрелок собран кодом) | MANPADS model 9K333 Verba | Ser (s-k_2005) | https://sketchfab.com/3d-models/manpads-model-9k333-verba-d7e05be0f5384e93a96ca47d84f1da07 | CC BY 4.0, изменено |
 | battle/e_radar (РЛС на шасси 6x6) | Renault TRM Radar Truck | Muhamad Mirza Arrafi (MirzaArrafiERV_45) | https://sketchfab.com/3d-models/renault-trm-radar-truck-1ad95e5724624a3bba7d36a686817efc | CC BY 4.0, изменено |
 | battle/e_helicopter (вертолёт) | Hind Attack Helicopter | Ashley Aslett | https://sketchfab.com/3d-models/hind-attack-helicopter-bb65bdfde2c54007a52dfbe1d91d930d | CC BY 4.0, изменено |
 | battle/e_interceptor (перехватчик) | Sukhoi Su-15TM | Tim Samedov (citizensnip) | https://sketchfab.com/3d-models/sukhoi-su-15tm-3403b6f0f47d428eb2dd098f864d9ae1 | CC BY 4.0, изменено |
