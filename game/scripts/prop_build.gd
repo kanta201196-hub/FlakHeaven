@@ -230,7 +230,7 @@ func _yurt() -> void:
 	var door_half := 0.5 / r          # half-angle of the 1 m door
 	var roll_a := -PI * 0.5           # rolled-up felt on the far side
 	var roll_half := 1.0
-	var felt := Color(0.8, 0.76, 0.68)
+	var felt := Color(0.75, 0.71, 0.63)
 	var dark := Color(0.09, 0.075, 0.06)
 	# inner darkness behind the lattice and under the crown
 	_ring_wall(M.PLAIN, r - 0.12, r - 0.14, -YURT_SINK, wall_h, seg, -INF, 0.0, dark, true)
@@ -606,10 +606,10 @@ static func _material(m: int, unit: float, wear: Dictionary) -> ShaderMaterial:
 			nrm = FELT_TEX + "nh.jpg"
 			sm.set_shader_parameter("tex_norm", true)   # hessian is dark and golden: only its weave is kept,
 			sm.set_shader_parameter("desat", 0.92)      # the vertex tone sets the felt colour
-			sm.set_shader_parameter("tex_mix", 0.45)
+			sm.set_shader_parameter("tex_mix", 0.3)
 			sm.set_shader_parameter("gain", Vector3(0.95, 0.95, 0.95))
 			sm.set_shader_parameter("normal_depth", 0.5)
-			sm.set_shader_parameter("stain", 0.22)
+			sm.set_shader_parameter("stain", 0.36)
 			sm.set_shader_parameter("stain_scale", 0.9)
 			sm.set_shader_parameter("dust_top", 0.12)
 			sm.set_shader_parameter("rough", 0.97)

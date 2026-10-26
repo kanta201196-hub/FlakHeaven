@@ -788,7 +788,7 @@ func _make_points() -> Array:
 					if float(sd[2]) < 0.0 and f0 * f1 <= 0.0 and f0 != f1:
 						bq = (sd[0] as Vector2).lerp(sd[1], f0 / (f0 - f1))
 						break
-			if yq == Vector2.INF and nv <= 8:   # a plan is ~0.1 s a chunk: only round the first villages
+			if yq == Vector2.INF:   # on "Low" the zones differ and the first villages may have no yurt
 				yq = _find_prop(ter, vo["pos"], "yurt")
 		print("VISUAL props bridge at %s yurt at %s, tris bridge=%d footbridge=%d yurt=%d" % [bq, yq, PropBuild.tris(PropBuild.bridge(false)), PropBuild.tris(PropBuild.bridge(true)), PropBuild.tris(PropBuild.yurt())])
 		if bq != Vector2.INF:
