@@ -873,7 +873,7 @@ static func village(variant: int) -> ArrayMesh:
 		var h := Vector2(0.15, 0.15)
 		var c := Vector2(mx, _main_y(variant, mx)) + d.orthogonal() * sg * (PATH_W * 0.5 + h.y + 0.012)
 		if _place(c, h, d.angle(), lots, variant, 0.01, true):
-			_serai(st, c, h, d.angle(), 2 if sg > 0.0 else 0, rng)
+			_serai(st, c, h, d.angle(), 2 if sg > 0.0 else 0, rng, stats.get("homes"))
 			stats["serai"] = 1
 			break
 	var tower := false
@@ -895,7 +895,7 @@ static func village(variant: int) -> ArrayMesh:
 			ware = false
 			stats["warehouse"] = 1
 	# 2) площадь-базар: хауз, навесы торговцев по кругу; ряды лавок вдоль главной улицы у площади
-	_bazaar(st, variant, lots, rng)
+	_bazaar(st, variant, lots, rng, stats.get("homes"))
 	for sgx: float in [-1.0, 1.0]:
 		for sg: float in [-1.0, 1.0]:
 			var x := SQ_R + 0.03
@@ -908,7 +908,7 @@ static func village(variant: int) -> ArrayMesh:
 				var hz := 0.026
 				var c := u + nrm * sg * (PATH_W * 0.5 + hz + 0.004)
 				if _place(c, Vector2(w, hz), d.angle(), lots, variant, 0.003, false):
-					_shop(st, c, Vector2(w, hz), d.angle(), sg, rng)
+					_shop(st, c, Vector2(w, hz), d.angle(), sg, rng, stats.get("homes"))
 				x += w * 2.0 + 0.004
 	# 3) дворы-кварталы вдоль улиц (ворота к улице), потом — в глубине кварталов (ворота к ближайшему проходу)
 	var want := rng.randi_range(40, 45)
@@ -1052,7 +1052,8 @@ static func village_at(variant: int, water: Dictionary) -> Array:
 
 
 ## VIS-01: model houses and wells of the village (VillageHouses.attach records), without those in the yards and
-## lots that the settlement's water cuts out of the core mesh (village_core)
+## lots that the settlement's water cuts out of the core mesh (village_core); props on no lot (the market, shop
+## awnings) are dropped when the water's guard reaches them
 static func village_homes(variant: int, water := {}) -> Array:
 	village(variant)
 	_cmx.lock()
@@ -1065,12 +1066,16 @@ static func village_homes(variant: int, water := {}) -> Array:
 	for hm in homes:
 		var q: Vector2 = hm[1]
 		var wet := false
+		var in_lot := false
 		for l in edge[0]:
 			var lc := (q - (l[0] as Vector2)).rotated(-float(l[2]))
 			var hh: Vector2 = l[1] + Vector2.ONE * 0.004
-			if absf(lc.x) <= hh.x and absf(lc.y) <= hh.y and _wet_box(water, l[0], l[1], l[2], 0.004):
-				wet = true
+			if absf(lc.x) <= hh.x and absf(lc.y) <= hh.y:
+				in_lot = true
+				wet = _wet_box(water, l[0], l[1], l[2], 0.004)
 				break
+		if not in_lot:   # the square's market and stalls stand on no lot: each keeps off the water on its own
+			wet = _wet_box(water, q, Vector2.ONE * 0.02, 0.0, 0.004)
 		if not wet:
 			out.append(hm)
 	return out
@@ -1506,6 +1511,7 @@ static func _yard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int
 		_t_house(st, wc, hsz, hy, floors if i == 0 else (1 if rng.randf() < 0.85 else 2), roof.lightened(rng.randf_range(-0.03, 0.03)), rng, stats.get("homes"))
 		stats["houses"] += 1
 	# дерево во дворе
+	var taken := []   # VIS-01: yard spots already used (tree, well), in yard axes
 	if state < 2 and rng.randf() < 0.5:
 		var tc := Vector2(rng.randf_range(-0.3, 0.3) * h.x, rng.randf_range(-0.3, 0.3) * h.y)
 		var free := true
@@ -1513,54 +1519,99 @@ static func _yard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int
 			if absf(tc.x - hh[0].x) < hh[1].x + 0.018 and absf(tc.y - hh[0].y) < hh[1].y + 0.018:
 				free = false
 		if free:
-			_crown(st, c + tc.rotated(yaw), rng.randf_range(0.016, 0.024), rng)
+			_crown(st, c + tc.rotated(yaw), rng.randf_range(0.016, 0.024), rng, stats.get("homes"))
+			taken.append(tc)
+	if state >= 2 or not stats.has("homes"):
+		return
 	# VIS-01: a hand-pump well in some yards, clear of the houses (its own generator: the layout does not move)
-	if state < 2 and stats.has("homes"):
-		var wr := RandomNumberGenerator.new()
-		wr.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5))) + 1
-		if wr.randf() < 0.35:
-			for k in 6:
-				var wp := Vector2(wr.randf_range(-0.5, 0.5) * h.x, wr.randf_range(-0.5, 0.5) * h.y)
-				var free := true
-				for hs in houses:
-					if absf(wp.x - hs[0].x) < hs[1].x + 0.016 and absf(wp.y - hs[0].y) < hs[1].y + 0.016:
-						free = false
-				if free:
-					stats["homes"].append([VillageHouses.WELL, c + wp.rotated(yaw), yaw + wr.randf() * TAU, Vector3.ONE * M_PER_UNIT])
-					break
+	var wr := RandomNumberGenerator.new()
+	wr.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5))) + 1
+	if wr.randf() < 0.35:
+		for k in 6:
+			var wp := Vector2(wr.randf_range(-0.5, 0.5) * h.x, wr.randf_range(-0.5, 0.5) * h.y)
+			var free := true
+			for hs in houses:
+				if absf(wp.x - hs[0].x) < hs[1].x + 0.016 and absf(wp.y - hs[0].y) < hs[1].y + 0.016:
+					free = false
+			if free:
+				stats["homes"].append([VillageHouses.WELL, c + wp.rotated(yaw), yaw + wr.randf() * TAU, Vector3.ONE * M_PER_UNIT])
+				taken.append(wp)
+				break
+	# VIS-01 (Kanta 26.10): household clutter — a tandoor, a woodpile, a haystack — in some yards, clear of the
+	# houses, the tree and the well; a generator of its own again
+	var yr := RandomNumberGenerator.new()
+	yr.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5))) + 2
+	for kv: Array in [[VillageHouses.TANDOOR, 0.3], [VillageHouses.WOODPILE, 0.35], [VillageHouses.HAY, 0.22]]:
+		if yr.randf() >= float(kv[1]):
+			continue
+		for k in 6:
+			var q := Vector2(yr.randf_range(-0.6, 0.6) * h.x, yr.randf_range(-0.6, 0.6) * h.y)
+			var free := true
+			for hs in houses:
+				if absf(q.x - hs[0].x) < hs[1].x + 0.015 and absf(q.y - hs[0].y) < hs[1].y + 0.015:
+					free = false
+			for o: Vector2 in taken:
+				if o.distance_to(q) < 0.024:
+					free = false
+			if free:
+				stats["homes"].append([kv[0], c + q.rotated(yaw), yaw + PI * 0.5 * yr.randi_range(0, 3), Vector3.ONE * M_PER_UNIT])
+				taken.append(q)
+				break
 
 
-## Крона дерева: два повёрнутых друг к другу яруса (сверху — восьмиугольник), оливково-серая
-static func _crown(st: SurfaceTool, c: Vector2, r: float, rng: RandomNumberGenerator) -> void:
+## Крона дерева: два повёрнутых друг к другу яруса (сверху — восьмиугольник), оливково-серая.
+## VIS-01: with homes, a tree model (VillageHouses.ORCHARD or PALM, picked by place: palm_share of them palms) is
+## recorded instead; rng is drawn exactly as for the boxes
+static func _crown(st: SurfaceTool, c: Vector2, r: float, rng: RandomNumberGenerator, homes = null, palm_share := 0.3) -> void:
 	var col := T_TREE.lightened(rng.randf_range(-0.05, 0.08))
 	var y0 := rng.randf_range(0.012, 0.02)
 	var yaw := rng.randf() * TAU
+	if homes != null:
+		var roll := float(absi(hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5)))) % 1000) / 1000.0
+		homes.append([VillageHouses.PALM if roll < palm_share else VillageHouses.ORCHARD, c, yaw, Vector3.ONE * r * 2.6])
+		return
 	_ob(st, c, yaw, 0.0, 0.0, Vector3(0.004, y0 + 0.004, 0.004), T_DARK, T_DARK)   # ствол
 	_ob(st, c, yaw, 0.0, 0.0, Vector3(r * 1.7, r * 0.9, r * 1.7), col.darkened(0.1), col, y0)
 	_ob(st, c, yaw + PI * 0.25, 0.0, 0.0, Vector3(r * 1.5, r * 1.15, r * 1.5), col.darkened(0.1), col.lightened(0.05), y0)
 
 
-## Лавка у главной улицы: низкий дом, навес из ткани над улицей (сторона к улице — z = −sg·h.y в осях d)
-static func _shop(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, sg: float, rng: RandomNumberGenerator) -> void:
+## Лавка у главной улицы: низкий дом, навес из ткани над улицей (сторона к улице — z = −sg·h.y в осях d).
+## VIS-01: with homes, the shop is a model house (_home) and its cloth is the awning model over the front;
+## rng is drawn exactly as for the boxes
+static func _shop(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, sg: float, rng: RandomNumberGenerator, homes = null) -> void:
 	var hy := yaw + (PI if sg < 0.0 else 0.0)   # +z дома — к улице
 	var roof := _roof_col(rng)
-	_ob(st, c, hy, 0.0, 0.0, Vector3(h.x * 2.0 - 0.003, rng.randf_range(0.026, 0.034), h.y * 2.0), T_WALL.lerp(roof, 0.4), roof)
+	var ht := rng.randf_range(0.026, 0.034)
+	var awning := rng.randf() < 0.7
+	var cl := Color()
+	if awning:
+		cl = T_CLOTH[rng.randi() % T_CLOTH.size()]
+	if homes != null:
+		_home(homes, c, Vector2(h.x - 0.0015, h.y), hy, ht, 1)
+		if awning:   # the awning's width over the shop front, a little shallower than the model so it keeps off mid-street
+			var s := h.x * 1.9 / float(VillageHouses.PROPS[VillageHouses.AWNING - VillageHouses.PROP0][1].x)
+			homes.append([VillageHouses.AWNING, c + Vector2(0.0, h.y + 0.008).rotated(hy), hy, Vector3(s, s, s * 0.7)])
+		return
+	_ob(st, c, hy, 0.0, 0.0, Vector3(h.x * 2.0 - 0.003, ht, h.y * 2.0), T_WALL.lerp(roof, 0.4), roof)
 	_ob(st, c, hy, 0.0, h.y + 0.001, Vector3(h.x * 1.2, 0.018, 0.003), T_DARK, T_DARK)
-	if rng.randf() < 0.7:
-		var cl: Color = T_CLOTH[rng.randi() % T_CLOTH.size()]
+	if awning:
 		_ob(st, c, hy, 0.0, h.y + 0.009, Vector3(h.x * 1.9, 0.0025, 0.018), cl.darkened(0.1), cl, 0.02)
 
 
 ## Площадь-базар: хауз (пруд в глиняном борту) и 10–14 навесов торговцев по кругу, не на улицах
-static func _bazaar(st: SurfaceTool, variant: int, lots: Array, rng: RandomNumberGenerator) -> void:
+## VIS-01: with homes, the stalls are recorded as models (VillageHouses.STALL, sacks as BAGS) and a market of tent
+## rows fills the square (_market); rng is drawn exactly as for the boxes
+static func _bazaar(st: SurfaceTool, variant: int, lots: Array, rng: RandomNumberGenerator, homes = null) -> void:
 	var pc := Vector2.from_angle(rng.randf() * TAU) * SQ_R * 0.45
-	if path_info(variant, pc).x > 0.03:
+	var pool := path_info(variant, pc).x > 0.03
+	if pool:
 		_ob(st, pc, 0.3, 0.0, 0.0, Vector3(0.05, 0.004, 0.04), T_WALL, WATER)
 		for s: float in [-1.0, 1.0]:
 			_ob(st, pc, 0.3, 0.0, s * 0.022, Vector3(0.056, 0.007, 0.006), T_WALL, T_ROOFS[0])
 			_ob(st, pc, 0.3, s * 0.027, 0.0, Vector3(0.006, 0.007, 0.04), T_WALL, T_ROOFS[0])
-		_crown(st, pc + Vector2(0.045, 0.02), 0.024, rng)
+		_crown(st, pc + Vector2(0.045, 0.02), 0.024, rng, homes, 1.0)   # a palm by the pool
 	var put := []
+	var stalls := []   # [place, yaw, sacks] when recording models
 	for i in 60:
 		if put.size() >= 14:
 			break
@@ -1577,17 +1628,149 @@ static func _bazaar(st: SurfaceTool, variant: int, lots: Array, rng: RandomNumbe
 		put.append(p)
 		var yaw := a + PI * 0.5
 		var cl: Color = T_CLOTH[rng.randi() % T_CLOTH.size()]
+		if homes != null:
+			stalls.append([p, yaw, rng.randf() < 0.4])
+			continue
 		_ob(st, p, yaw, 0.0, 0.006, Vector3(0.028, 0.008, 0.01), T_WALL, T_RUBBLE)   # прилавок
 		for sx: float in [-1.0, 1.0]:
 			_ob(st, p, yaw, sx * 0.015, -0.011, Vector3(0.0025, 0.02, 0.0025), WOOD_DARK, WOOD_DARK)
 		_ob(st, p, yaw, 0.0, 0.0, Vector3(0.036, 0.0025, 0.03), cl.darkened(0.12), cl, 0.02)   # навес
 		if rng.randf() < 0.4:   # мешки, корзины
 			_ob(st, p, yaw + 0.5, 0.012, 0.018, Vector3(0.008, 0.006, 0.008), BAG, BAG)
+	if homes != null:
+		_market(variant, pc, pool, stalls, homes)
+
+
+const MKT_TENT := 0.9        ## market tents at 90 %: 3.2 × 2.9 m
+const MKT_STEP := 0.039      ## tent pitch along a row (a tent and ~0.4 m between), old units
+## Row lines either side of the main street: the first two face each other across a ~2.2 m aisle, the third
+## stands back to back with the second, facing the square's edge
+const MKT_ROWS := [0.038, 0.094, 0.131]
+const MKT_CLEAR := 0.005     ## tents keep this off street edges
+const MKT_STALLS := 4        ## ring stalls (model 126) the rows always make room for
+
+
+## VIS-01 (Kanta 26.10: "put some tents in the centre of the kishlak to imitate a market"): the
+## square as a bazaar. Tent rows run along the main street on both sides, the first two facing each other across
+## an aisle where rugs, pots and sacks lie out; rugs hang on frames at the row ends, a cart or two and the trough
+## stand in the gaps. Each row takes a tent wherever one fits off the streets, the pool and the first ring stalls
+## of _bazaar (models too; the other ring stalls stay where they clear the tents). Its own generator (the village's is untouched), so the layout is fixed per variant
+static func _market(variant: int, pc: Vector2, pool: bool, stalls: Array, homes: Array) -> void:
+	var mr := RandomNumberGenerator.new()
+	mr.seed = 7919 * (variant + 1) + 4241
+	var d := _main_dir(variant, 0.0)
+	var ya := d.angle()
+	var n := Vector2(0.0, 1.0).rotated(ya)   # local +z of a model at yaw ya: the tent's counter side
+	var hx := 0.0195 * MKT_TENT   # tent half size, old units
+	var hz := 0.0175 * MKT_TENT
+	var tents := []
+	var spots := []   # the first ring stalls of _bazaar stay for sure: the rows leave gaps for them
+	for s: Array in stalls.slice(0, MKT_STALLS):
+		spots.append(s[0])
+	for ri in MKT_ROWS.size():
+		for side: float in [-1.0, 1.0]:
+			var v: float = MKT_ROWS[ri] * side
+			var face := side if ri % 2 == 0 else -side   # the counter's side: +n·face
+			# along the row, a tent wherever one fits (streets cross the square at different places per variant)
+			var u := -SQ_R
+			while u < SQ_R:
+				var c := d * u + n * v
+				var ok := not (pool and c.distance_to(pc) < 0.05) and not _near(c, spots, 0.042)
+				for cx: float in [-1.0, 0.0, 1.0]:
+					for cz: float in [-1.0, 0.0, 1.0]:
+						var q := c + d * hx * cx + n * hz * cz
+						if ok and (q.length() > SQ_R - 0.004 or path_info(variant, q).x < MKT_CLEAR):
+							ok = false
+				if not ok:
+					u += 0.004
+					continue
+				u += MKT_STEP
+				var yaw := ya + (0.0 if face > 0.0 else PI) + mr.randf_range(-0.04, 0.04)
+				var roll := mr.randf()
+				homes.append([VillageHouses.TENT + (0 if roll < 0.4 else (1 if roll < 0.7 else 2)), c, yaw, Vector3.ONE * M_PER_UNIT * MKT_TENT])
+				tents.append(c)
+				if ri == 2:   # the back row faces the square's edge: no aisle in front
+					continue
+				# goods laid out in front, in the aisle
+				var g := mr.randf()
+				var gp := c + n * face * (hz + 0.011) + d * mr.randf_range(-0.006, 0.006)
+				if path_info(variant, gp).x < 0.004:
+					continue
+				if g < 0.35:
+					homes.append([VillageHouses.RUG, gp, ya + mr.randf_range(-0.12, 0.12), Vector3.ONE * M_PER_UNIT * 0.8])
+				elif g < 0.55:
+					homes.append([VillageHouses.POTS, gp, mr.randf() * TAU, Vector3.ONE * M_PER_UNIT * 0.8])
+				elif g < 0.75:
+					homes.append([VillageHouses.BAGS, gp, mr.randf() * TAU, Vector3.ONE * M_PER_UNIT * 0.7])
+	# rugs hung on frames at the ends of the rows
+	var ends := []
+	for c: Vector2 in tents:
+		var lone_l := true
+		var lone_r := true
+		for o: Vector2 in tents:
+			if o.distance_to(c - d * MKT_STEP) < 0.01:
+				lone_l = false
+			if o.distance_to(c + d * MKT_STEP) < 0.01:
+				lone_r = false
+		if lone_l:
+			ends.append(c - d * (hx + 0.008))
+		if lone_r:
+			ends.append(c + d * (hx + 0.008))
+	# the ring stalls: the first MKT_STALLS, and the rest where they clear the tents
+	var taken := tents + spots
+	for i in stalls.size():
+		var s: Array = stalls[i]
+		var p: Vector2 = s[0]
+		if i >= MKT_STALLS:
+			if _near(p, tents, 0.046):
+				continue
+			taken.append(p)
+		homes.append([VillageHouses.STALL, p, s[1], Vector3.ONE * M_PER_UNIT * 0.8])
+		if s[2]:
+			homes.append([VillageHouses.BAGS, p + Vector2(0.012, 0.03).rotated(float(s[1])), float(s[1]) + 0.5, Vector3.ONE * M_PER_UNIT * 0.6])
+	var frames := 0
+	for e: Vector2 in ends:
+		if frames >= 3 or mr.randf() < 0.45:
+			continue
+		if e.length() < SQ_R - 0.01 and path_info(variant, e).x > 0.006 and not _near(e, taken, 0.024):
+			homes.append([VillageHouses.RUGFRAME, e, ya + PI * 0.5, Vector3.ONE * M_PER_UNIT])
+			taken.append(e)
+			frames += 1
+	# the trough by the pool, carts in empty spots of the square
+	var free := []
+	var gy := -SQ_R
+	while gy < SQ_R:
+		var gx := -SQ_R
+		while gx < SQ_R:
+			var c := d * gx + n * gy
+			gx += 0.03
+			if c.length() > SQ_R - 0.02 or path_info(variant, c).x < 0.016 or (pool and c.distance_to(pc) < 0.05):
+				continue
+			if not _near(c, taken, 0.036):
+				free.append(c)
+		gy += 0.03
+	if pool:
+		var tp := pc + Vector2.from_angle(0.3 + PI * 0.5) * 0.04
+		if path_info(variant, tp).x > 0.006:
+			homes.append([VillageHouses.TROUGH, tp, 0.3, Vector3.ONE * M_PER_UNIT * 0.8])
+	elif not free.is_empty():
+		homes.append([VillageHouses.TROUGH, free.pop_at(mr.randi() % free.size()), ya, Vector3.ONE * M_PER_UNIT * 0.8])
+	for i in mini(1 + mr.randi() % 2, free.size()):
+		homes.append([VillageHouses.CART, free.pop_at(mr.randi() % free.size()), ya + mr.randf_range(-0.6, 0.6), Vector3.ONE * M_PER_UNIT])
+
+
+## Some point of pts lies closer than r to p
+static func _near(p: Vector2, pts: Array, r: float) -> bool:
+	for q: Vector2 in pts:
+		if q.distance_to(p) < r:
+			return true
+	return false
 
 
 ## Караван-сарай: квадрат толстых стен, кельи по периметру внутри, угловые башни, высокий портал ворот
 ## на стороне gate (0: z = −h.y, 2: z = +h.y), во дворе — колодец и груз
-static func _serai(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int, rng: RandomNumberGenerator) -> void:
+## VIS-01: with homes, its cargo is recorded as models (sacks and pots) instead of boxes; rng as before
+static func _serai(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int, rng: RandomNumberGenerator, homes = null) -> void:
 	var t := 0.012
 	var wh := 0.042
 	var roof := _roof_col(rng)
@@ -1628,7 +1811,12 @@ static func _serai(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: in
 		var p := Vector2(rng.randf_range(-0.6, 0.6) * (h.x - d - t), rng.randf_range(-0.6, 0.6) * (h.y - d - t))
 		if p.length() < 0.03:
 			continue
-		_ob(st, c, yaw + rng.randf_range(-0.3, 0.3), p.x, p.y, Vector3(0.016, 0.009, 0.012), WOOD, WOOD.lightened(0.08) if rng.randf() < 0.5 else BAG)
+		var cy := yaw + rng.randf_range(-0.3, 0.3)
+		var crate := rng.randf() < 0.5
+		if homes != null:
+			homes.append([VillageHouses.POTS if crate else VillageHouses.BAGS, c + p.rotated(cy), cy, Vector3.ONE * M_PER_UNIT * 0.9])
+			continue
+		_ob(st, c, cy, p.x, p.y, Vector3(0.016, 0.009, 0.012), WOOD, WOOD.lightened(0.08) if crate else BAG)
 
 
 ## Водокачка: глинобитная башня-основание и восьмигранный металлический бак сверху

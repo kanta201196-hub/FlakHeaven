@@ -21,6 +21,47 @@ const VARIANTS := [
 const WELL := 8                      ## variant index of the yard well (hand pump on a slab, model 71)
 const WELL_FILE := "vh_well"
 const WELL_SCALE := 1.6              ## the scan is a 1.2 m slab: barely a few pixels at the game's height
+## Village clutter and the market (Kanta 26.10.2026: "everything as you recommend is ok"; "put some tents in
+## the centre of the kishlak to imitate a market"), built by tools/blender/village_props.py:
+## [file, size (x, height, depth) in metres]. Variant index = PROP0 + row. Surfaces named vh_<class> get the class
+## materials below; the rest keep their own (graded, matte) texture.
+const PROPS := [
+	["vc_stall", Vector3(3.86, 3.01, 3.89)],     # market stall: cloth tent on poles, crates, pots, baskets (126)
+	["vc_awning", Vector3(10.24, 4.62, 4.78)],   # cloth awning on a timber frame, over a shop front (127)
+	["vc_cart", Vector3(2.23, 0.77, 1.01)],      # two-wheeled wooden cart (128)
+	["vc_bags", Vector3(1.82, 0.59, 1.71)],      # pile of burlap sacks (132)
+	["vc_pots", Vector3(1.85, 0.69, 1.16)],      # clay pots with lids (134)
+	["vc_rug", Vector3(2.48, 0.01, 1.62)],       # rug laid out on the ground (138)
+	["vc_hay", Vector3(2.16, 0.85, 1.18)],       # haystack (139)
+	["vc_wood", Vector3(1.53, 1.04, 1.55)],      # woodpile (140)
+	["vc_trough", Vector3(3.25, 0.59, 2.31)],    # water trough and a bucket (141)
+	["vc_tent_a", Vector3(3.60, 2.55, 3.20)],    # market tent, built: gabled cloth canopy over a counter
+	["vc_tent_b", Vector3(3.60, 2.55, 3.20)],
+	["vc_tent_c", Vector3(3.60, 2.55, 3.20)],
+	["vc_tandoor", Vector3(1.50, 1.15, 1.50)],   # clay oven on a plinth, built
+	["vc_rugframe", Vector3(2.90, 2.20, 0.09)],  # rugs hung on a timber frame, built
+]
+## A rug is 1 cm thick: at the houses' sunk base the ground swallows it, so it lies a hair above the ground
+## (old units, ≈ 15 cm, unseen from above)
+const RUG_LIFT := 0.0035
+const PROP0 := 9
+const STALL := 9
+const AWNING := 10
+const CART := 11
+const BAGS := 12
+const POTS := 13
+const RUG := 14
+const HAY := 15
+const WOODPILE := 16
+const TROUGH := 17
+const TENT := 18                     ## TENT, TENT + 1, TENT + 2: the three cloth colours
+const TANDOOR := 21
+const RUGFRAME := 22
+## Yard and square trees: the biome's tree cards (BiomeProps._lite_tree, 6 triangles) in place of the old stacked
+## boxes. The cards have the full model's size, width 1 on X/Z, so a record's scale is the crown's width in old units
+const ORCHARD := 23
+const PALM := 24
+const TREE_KINDS := {ORCHARD: "orchard", PALM: "palm"}
 const DIR := "res://models/village/"
 ## Fort shader terms in model metres (the fort's are in preview units of a far taller wall)
 const GRIME := 1.5
@@ -52,6 +93,10 @@ static func pick(lx: float, lz: float, floors: int, rng: RandomNumberGenerator) 
 static func size(v: int) -> Vector3:
 	if v == WELL:
 		return Vector3(1.22, 1.31, 1.25) * WELL_SCALE
+	if TREE_KINDS.has(v):
+		return Vector3(1.0, 1.4, 1.0)
+	if v >= PROP0:
+		return PROPS[v - PROP0][1]
 	return VARIANTS[v][1]
 
 
@@ -81,7 +126,7 @@ static func attach(parent: Node3D, homes: Array) -> int:
 			if v == WELL:
 				s *= WELL_SCALE
 			var b := Basis(Vector3.UP, -float(h[2])) * Basis.from_scale(s * AdobeBuild.V_UNIT)
-			var o := Vector3(c.x, AdobeBuild.SINK - 0.002, c.y) * AdobeBuild.V_UNIT
+			var o := Vector3(c.x, AdobeBuild.SINK - 0.002 + (RUG_LIFT if v == RUG else 0.0), c.y) * AdobeBuild.V_UNIT
 			mm.set_instance_transform(i, Transform3D(b, o))
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
@@ -100,6 +145,22 @@ static func tris(homes: Array) -> int:
 	return n
 
 
+## Draw calls the models of a village add to a colour pass: one per surface of each variant present (attach makes
+## one MultiMesh per variant). Main thread only
+static func draws(homes: Array) -> int:
+	var seen := {}
+	var n := 0
+	for h in homes:
+		var v := int(h[0])
+		if seen.has(v):
+			continue
+		seen[v] = true
+		var mesh := _mesh(v)
+		if mesh != null:
+			n += mesh.get_surface_count()
+	return n
+
+
 static func _tris(mesh: ArrayMesh) -> int:
 	var n := 0
 	for si in mesh.get_surface_count():
@@ -108,11 +169,16 @@ static func _tris(mesh: ArrayMesh) -> int:
 	return n
 
 
-## Mesh of a variant with the fort's materials on its surfaces (classes by surface material name)
+## Mesh of a variant with the fort's materials on its surfaces (classes by surface material name); textured props
+## keep their own texture, matte; trees are the biome's tree cards
 static func _mesh(v: int) -> ArrayMesh:
 	if _meshes.has(v):
 		return _meshes[v]
-	var path := DIR + (WELL_FILE if v == WELL else String(VARIANTS[v][0])) + ".glb"
+	if TREE_KINDS.has(v):
+		_meshes[v] = BiomeProps.new(null)._lite_tree(TREE_KINDS[v]) as ArrayMesh
+		return _meshes[v]
+	var file := WELL_FILE if v == WELL else String(PROPS[v - PROP0][0] if v >= PROP0 else VARIANTS[v][0])
+	var path := DIR + file + ".glb"
 	var mesh: ArrayMesh = null
 	if ResourceLoader.exists(path):
 		var n: Node = (load(path) as PackedScene).instantiate()
@@ -123,6 +189,16 @@ static func _mesh(v: int) -> ArrayMesh:
 	if mesh != null and v != WELL:
 		for si in mesh.get_surface_count():
 			var m := mesh.surface_get_material(si)
+			if m is StandardMaterial3D and not m.resource_name.begins_with("vh_"):
+				var t := m as StandardMaterial3D   # a prop's own texture (graded in village_props.py): matte, both sides
+				t.roughness = 1.0
+				t.metallic = 0.0
+				t.metallic_specular = 0.2
+				t.cull_mode = BaseMaterial3D.CULL_DISABLED
+				if t.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+					t.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+					t.alpha_scissor_threshold = 0.5
+				continue
 			mesh.surface_set_material(si, material(m.resource_name.trim_prefix("vh_") if m != null else "plaster"))
 	elif mesh != null:
 		var m := mesh.surface_get_material(0) as StandardMaterial3D
@@ -134,8 +210,21 @@ static func _mesh(v: int) -> ArrayMesh:
 	return mesh
 
 
+## Flat lit colours of the classes without a fort texture: openings, three faded cloths (market tents come in all
+## three), terracotta, wicker and burlap
+const FLAT := {
+	"dark": Color(0.118, 0.102, 0.086),
+	"cloth": Color(0.48, 0.4, 0.33),
+	"cloth2": Color(0.36, 0.38, 0.4),     # washed-out indigo
+	"cloth3": Color(0.5, 0.33, 0.28),     # faded madder
+	"clay": Color(0.56, 0.4, 0.3),
+	"straw": Color(0.6, 0.52, 0.37),
+	"bag": Color(0.55, 0.49, 0.39),
+}
+
+
 ## Material of a model class: the fort's texture sets for plaster, brick, stone and wood (fort shader, terms in
-## metres), flat lit colours for dark openings and faded cloth
+## metres), flat lit colours (FLAT) for the rest
 static func material(cls: String) -> Material:
 	if _mats.has(cls):
 		return _mats[cls]
@@ -153,7 +242,7 @@ static func material(cls: String) -> Material:
 		var f := StandardMaterial3D.new()
 		f.metallic_specular = 0.2
 		f.roughness = 1.0
-		f.albedo_color = Color(0.118, 0.102, 0.086) if cls == "dark" else Color(0.48, 0.4, 0.33)
+		f.albedo_color = FLAT.get(cls, FLAT["cloth"])
 		mat = f
 	_mats[cls] = mat
 	return mat
