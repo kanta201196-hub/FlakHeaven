@@ -93,21 +93,48 @@ func _draw() -> void:
 		Perf.sub("draw.pickups", t0)
 
 
+## Unit XP diamond (outline, body, highlight), scaled per item by draw_set_transform.
+## draw_primitive takes a convex quad as is; draw_colored_polygon triangulated every call,
+## and late in a sortie up to 500 diamonds lie on the map.
+const _XP_OUT := [Vector2(0, -1.35), Vector2(0.945, 0), Vector2(0, 1.35), Vector2(-0.945, 0)]
+const _XP_BODY := [Vector2(0, -1), Vector2(0.7, 0), Vector2(0, 1), Vector2(-0.7, 0)]
+const _XP_HI := [Vector2(0, -0.55), Vector2(0.3, -0.1), Vector2(0, 0.1), Vector2(-0.3, -0.1)]
+const _XP_OUT_C := Color(0.02, 0.15, 0.08, 0.9)
+const _XP_BODY_C := Color(0.35, 1.0, 0.7)
+const _XP_HI_C := Color(0.9, 1.0, 0.95)
+## The widest thing drawn is the XP glow: 2.2 × s, s ≤ 15 × 1.12 ≈ 17 → 37 px from the centre
+const _CULL_MARGIN := 40.0
+
+var _pts_out := PackedVector2Array(_XP_OUT)
+var _pts_body := PackedVector2Array(_XP_BODY)
+var _pts_hi := PackedVector2Array(_XP_HI)
+var _col_out := PackedColorArray([_XP_OUT_C, _XP_OUT_C, _XP_OUT_C, _XP_OUT_C])
+var _col_body := PackedColorArray([_XP_BODY_C, _XP_BODY_C, _XP_BODY_C, _XP_BODY_C])
+var _col_hi := PackedColorArray([_XP_HI_C, _XP_HI_C, _XP_HI_C, _XP_HI_C])
+var _no_uv := PackedVector2Array()
+
+
+## Draws only the items on screen. Pickups live up to 3500 px from the player and pile up in a
+## long fight (PC bench 26.10: draw.pickups + its flush grew to ~4.4 ms by 15:00), and every
+## off-screen one still cost its draw commands each frame.
 func _draw_layer() -> void:
+	var view := (get_viewport().get_canvas_transform() * get_global_transform()).affine_inverse() * get_viewport_rect()
+	view = view.grow(_CULL_MARGIN)
 	for it in items:
 		var p: Vector2 = it["p"]
+		if not view.has_point(p):
+			continue
 		if it["kind"] == "xp":
 			# 3.1: опыт заметнее — крупнее, тёмный контур, свечение и пульсация
 			var s := (7.0 + minf(float(it["v"]), 8.0)) * (1.0 + 0.12 * sin(_t * 6.0 + p.x * 0.01))
 			# рисуем в локальных координатах: на дальних участках бесконечной карты
-			# триангуляция полигона в мировых координатах теряет точность
-			draw_set_transform(p)
+			# мировые координаты теряют точность
+			draw_set_transform(p, 0.0, Vector2(s, s))
 			if Fx._soft != null:
-				draw_texture_rect(Fx._soft, Rect2(Vector2(-s, -s) * 2.2, Vector2(s, s) * 4.4), false, Color(0.3, 1.0, 0.75, 0.45))
-			var o := s * 1.35
-			draw_colored_polygon(PackedVector2Array([Vector2(0, -o), Vector2(o * 0.7, 0), Vector2(0, o), Vector2(-o * 0.7, 0)]), Color(0.02, 0.15, 0.08, 0.9))
-			draw_colored_polygon(PackedVector2Array([Vector2(0, -s), Vector2(s * 0.7, 0), Vector2(0, s), Vector2(-s * 0.7, 0)]), Color(0.35, 1.0, 0.7))
-			draw_colored_polygon(PackedVector2Array([Vector2(0, -s * 0.55), Vector2(s * 0.3, -s * 0.1), Vector2(0, s * 0.1), Vector2(-s * 0.3, -s * 0.1)]), Color(0.9, 1.0, 0.95))
+				draw_texture_rect(Fx._soft, Rect2(-2.2, -2.2, 4.4, 4.4), false, Color(0.3, 1.0, 0.75, 0.45))
+			draw_primitive(_pts_out, _col_out, _no_uv)
+			draw_primitive(_pts_body, _col_body, _no_uv)
+			draw_primitive(_pts_hi, _col_hi, _no_uv)
 			draw_set_transform(Vector2.ZERO)
 		elif it["kind"] == "cargo":
 			# ящик груза: доски и обвязка, мягкое золотое свечение — видно на песке

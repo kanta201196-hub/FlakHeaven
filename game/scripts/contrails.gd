@@ -190,15 +190,23 @@ func tick(delta: float) -> void:
 			if _fancy:
 				if i > 0:
 					along += p.distance_to(o)
-				var cu := [total - along, along, k, 1.0 if smoke else 0.0]
-				cus.append_array(cu)
-				cus.append_array(cu)
+				var fs := 1.0 if smoke else 0.0
+				for _side in 2:   # plain appends: an Array literal per point was a heap allocation
+					cus.append(total - along)
+					cus.append(along)
+					cus.append(k)
+					cus.append(fs)
 				var sn := Vector3(-d.y, 0.0, d.x)
 				nrms.append(sn)
 				nrms.append(sn)
 			if i > 0:
 				var v := base + (i - 1) * 2
-				idx.append_array(PackedInt32Array([v, v + 1, v + 2, v + 1, v + 3, v + 2]))
+				idx.append(v)
+				idx.append(v + 1)
+				idx.append(v + 2)
+				idx.append(v + 1)
+				idx.append(v + 3)
+				idx.append(v + 2)
 	_am.clear_surfaces()
 	if idx.is_empty():
 		return
