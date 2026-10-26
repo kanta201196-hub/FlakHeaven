@@ -39,9 +39,10 @@ const ESCORT_N := 4
 const MIN_FIGHT := 45.0          # предел урона: бой не короче 45 с при любой сборке
 const FLEE_SPEED := 0.75         # фаза 3: доля BASE_SPEED — игрок догоняет
 const FLEE_T := 50.0
+const MSL_RELOAD := 4.0          # a dome turret's rail missile is back this long after it left
 
 var phase := 1
-var points: Array = []           # [{name, node, kind, off (в осях самолёта: x — вперёд), hp, max, cd, shots, st, sec: [центр, полуширина]}]
+var points: Array = []           # [{name, node, kind, off (в осях самолёта: x — вперёд), hp, max, cd, shots, st, sec: [центр, полуширина], msl: rail missile reload, dm/lk: phase-1 dome launch clock (FortressBalance.dome_step)}]
 ## Для 3D-модели (узлы GLB: turret_1…turret_4, engine_l, engine_r, hatch_l/r, bay_l/r, core):
 ## выбитые части — имя узла → true; люки открыты в фазе 2 циклами, корпус раскрыт в фазе 3
 var parts_down := {}
@@ -80,18 +81,27 @@ func setup_fortress(total: float) -> void:
 	contact_damage = 25.0
 	var k := LEN / 270.0
 	points = [
-		_pt("турель левого крыла", "turret_1", "turret", Vector2(-6, -78) * k, total * TURRET_SHARE, [-PI / 2.0, deg_to_rad(60.0)]),
-		_pt("турель правого крыла", "turret_2", "turret", Vector2(-6, 78) * k, total * TURRET_SHARE, [PI / 2.0, deg_to_rad(60.0)]),
-		_pt("верхняя турель", "turret_3", "turret", Vector2(48, 0) * k, total * TURRET_SHARE, [0.0, deg_to_rad(100.0)]),
-		_pt("кормовая турель", "turret_4", "turret", Vector2(-112, 0) * k, total * TURRET_SHARE, [PI, deg_to_rad(70.0)]),
-		_pt("левый двигатель", "engine_l", "engine", Vector2(14, -44) * k, total * ENGINE_SHARE, []),
-		_pt("правый двигатель", "engine_r", "engine", Vector2(14, 44) * k, total * ENGINE_SHARE, []),
+		# Kanta 26.10: four dome turrets, two per wing. The outer pair guards the beam and rear quarters, the inner pair
+		# the front quarters across the nose (they replaced the top and tail turrets); together they cover every bearing
+		# outside the dead zones, with at most two turrets on any one bearing and the same total arc as the old four
+		# (sectors sized for that, so phase 1 fire stays as it was). turret_3 is the command turret.
+		_pt("внешняя турель левого крыла", "turret_1", "turret", Vector2(-20, -92) * k, total * TURRET_SHARE, [deg_to_rad(-100.0), deg_to_rad(75.0)]),
+		_pt("внешняя турель правого крыла", "turret_2", "turret", Vector2(-20, 92) * k, total * TURRET_SHARE, [deg_to_rad(100.0), deg_to_rad(75.0)]),
+		_pt("командная турель", "turret_3", "turret", Vector2(-4, -48) * k, total * TURRET_SHARE, [deg_to_rad(-55.0), deg_to_rad(75.0)]),
+		_pt("внутренняя турель правого крыла", "turret_4", "turret", Vector2(-4, 48) * k, total * TURRET_SHARE, [deg_to_rad(55.0), deg_to_rad(75.0)]),
+		_pt("левый двигатель", "engine_l", "engine", Vector2(14, -21) * k, total * ENGINE_SHARE, []),
+		_pt("правый двигатель", "engine_r", "engine", Vector2(14, 21) * k, total * ENGINE_SHARE, []),
 	]
+	var dome := 0
+	for pt in points:
+		if pt["kind"] == "turret":
+			pt["dm"] = FortressBalance.DOME_MSL_FIRST + FortressBalance.DOME_MSL_STAGGER * dome
+			dome += 1
 	_set_title()
 
 
 func _pt(n: String, node: String, kd: String, off: Vector2, h: float, sec: Array) -> Dictionary:
-	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0, "sec": sec}
+	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0, "sec": sec, "msl": 0.0, "dm": 0.0, "lk": 0.0}
 
 
 func kind() -> String:
@@ -136,17 +146,21 @@ func _in_dead(a: float) -> bool:
 
 ## ---------- Форма для попаданий ----------
 
-## Круги корпуса и крыльев (в осях самолёта): фюзеляж от носа до хвоста и размах крыла
+## Hit circles of the flying wing (plane axes, px): the centre body from nose to tail and each swept wing along
+## its mid-chord out to the tip (VIS-01, Kanta 26.10: the boss is a flying wing at the old span). The points above
+## sit on the same model: two dome turrets on each wing (inner pair near the root, outer pair near the tip), the
+## engines on the intake humps.
 static var _shape: Array = []
 
 
 static func _hull_shape() -> Array:
 	if _shape.is_empty():
-		for i in 9:
-			_shape.append([Vector2(110.0 - i * 29.0, 0.0), 22.0])
-		for i in 9:
-			if i != 4:
-				_shape.append([Vector2(-20.0, -124.0 + i * 31.0), 15.0])
+		for x in [40.0, 18.0, -4.0, -26.0, -40.0]:
+			_shape.append([Vector2(x, 0.0), 22.0])
+		# wing: [mid-chord x, y, radius], measured on the model at 270 px per hull length
+		for w in [[-8.0, 32.0, 22.0], [-11.0, 54.0, 18.0], [-16.0, 78.0, 13.0], [-27.0, 95.0, 13.0], [-40.0, 113.0, 13.0], [-50.0, 128.0, 9.0]]:
+			for s in [-1.0, 1.0]:
+				_shape.append([Vector2(w[0], s * w[1]), w[2]])
 	return _shape
 
 
@@ -356,6 +370,8 @@ func behave(delta: float) -> void:
 		Main.I.tele.add("fort%d_near_s" % phase, delta)
 	Main.I.tele.add("fort%d_s" % phase, delta)
 	_turrets(delta, p)
+	if phase == 1:
+		_domes(delta, p, d)
 	_escort(delta)
 	if phase == 2:
 		_bay(delta, p, to, d)
@@ -408,6 +424,7 @@ func _turrets(delta: float, p: Player) -> void:
 	for pt in points:
 		if pt["kind"] != "turret" or float(pt["hp"]) <= 0.0:
 			continue
+		pt["msl"] = maxf(0.0, float(pt["msl"]) - delta)
 		var at := _world(pt)
 		var to := p.global_position - at
 		if int(pt["shots"]) > 0:
@@ -427,6 +444,35 @@ func _turrets(delta: float, p: Player) -> void:
 		pt["cd"] = randf_range(1.6, 2.4)
 
 
+## Phase-1 dome missiles (Kanta 26.10, FortressBalance): each live dome launches its rail missile once per
+## DOME_MSL_EVERY s, domes staggered, after the bay volley's lock warning; the type, homing and damage are the
+## volley's. A lock starts only in range and under the Fortress-wide MSL_CAP (missiles in the air + locks).
+func _domes(delta: float, p: Player, d: float) -> void:
+	var in_air := 0
+	for m: Dictionary in Main.I.projectiles.missiles:
+		if m.get("who", "") == kind():
+			in_air += 1
+	var locking := 0
+	for pt in points:
+		if pt["kind"] == "turret" and float(pt["hp"]) > 0.0 and float(pt["lk"]) > 0.0:
+			locking += 1
+	for pt in points:
+		if pt["kind"] != "turret" or float(pt["hp"]) <= 0.0:
+			continue
+		var may := d < FortressBalance.DOME_MSL_RANGE and FortArea.can_lock(in_air, locking, FortressBalance.MSL_CAP)
+		var ev := FortressBalance.dome_step(pt, delta, may)
+		if ev == "lock":
+			locking += 1
+			Main.I.sfx.play("lock", -6.0, 0.6)
+		elif ev == "fire":
+			locking -= 1
+			in_air += 1
+			var at := _world(pt)
+			Main.I.projectiles.spawn_missile(at, (p.global_position - at).normalized(), "aam", kind(), Projectiles.MSL_FREE)
+			Main.I.sfx.play("missile_enemy", -6.0, 0.6)
+			pt["msl"] = FortressBalance.DOME_MSL_EVERY - FortressBalance.DOME_MSL_LOCK
+
+
 ## Видит ли турель точку: в своём секторе и не в мёртвой зоне (углы — от центра «Крепости»)
 func _covers(pt: Dictionary, from: Vector2, to: Vector2) -> bool:
 	var a := _rel(from, to)
@@ -436,7 +482,7 @@ func _covers(pt: Dictionary, from: Vector2, to: Vector2) -> bool:
 	return absf(wrapf(a - float(sec[0]), -PI, PI)) <= float(sec[1])
 
 
-## Эскорт (фаза 1): ESCORT_N перехватчиков; пока цела верхняя турель, раз в 20 с — пополнение
+## Эскорт (фаза 1): ESCORT_N перехватчиков; пока цела командная турель (turret_3), раз в 20 с — пополнение
 func _escort(delta: float) -> void:
 	if phase != 1:
 		return
@@ -482,8 +528,7 @@ func _bay(delta: float, p: Player, to: Vector2, d: float) -> void:
 		if _lock <= 0.0:
 			for i in 4:
 				# S10-04: пуск с крыльев вперёд по курсу, потом доворот на цель
-				Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading + PI / 2.0 * (1.0 if i % 2 else -1.0)) * 40.0,
-					Vector2.from_angle(heading + (i - 1.5) * 0.15), "aam", kind(), Projectiles.MSL_FREE)
+				Main.I.projectiles.spawn_missile(_msl_from(i), Vector2.from_angle(heading + (i - 1.5) * 0.15), "aam", kind(), Projectiles.MSL_FREE)
 			Main.I.sfx.play("missile_enemy", -4.0, 0.7)
 			_missile_cd = 6.0
 		return
@@ -491,6 +536,18 @@ func _bay(delta: float, p: Player, to: Vector2, d: float) -> void:
 	if _missile_cd <= 0.0 and d < 1000.0:
 		_lock = 1.1
 		Main.I.sfx.play("lock", -4.0, 0.7)
+
+
+## Where volley missile i leaves from (Kanta 26.10): the rail missile on top of a live dome turret, cycling through
+## them, and that dome shows no missile until MSL_RELOAD runs out; with every turret down, the wing roots as before.
+## Same count, timing and damage either way: only the launch point moves.
+func _msl_from(i: int) -> Vector2:
+	var racks := points.filter(func(pt: Dictionary) -> bool: return pt["kind"] == "turret" and float(pt["hp"]) > 0.0)
+	if racks.is_empty():
+		return global_position + Vector2.from_angle(heading + PI / 2.0 * (1.0 if i % 2 else -1.0)) * 40.0
+	var pt: Dictionary = racks[i % racks.size()]
+	pt["msl"] = MSL_RELOAD
+	return _world(pt)
 
 
 func _update_zones(delta: float, p: Player) -> void:

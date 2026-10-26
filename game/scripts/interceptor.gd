@@ -48,7 +48,7 @@ func _ready() -> void:
 
 
 func speed() -> float:
-	return Tuning.g("interceptor_speed")
+	return Tuning.g("interceptor_speed") * (AcesBalance.SPEED_K if Main.aces() else 1.0)
 
 
 func turn_deg() -> float:
