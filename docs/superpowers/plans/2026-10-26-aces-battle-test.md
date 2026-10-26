@@ -37,3 +37,19 @@ PvP is not part of this plan (decided after early access).
 
 `tools/ci/unit.sh`, `tools/ci/smoke.sh all` (campaign unchanged), a headless aces run (`--aces` flag starts
 the mode for checks), `tools/ci/full.sh` once (combat code changed).
+
+## Turn feel from Sky Knights gameplay (2026-10-26, Kanta «да» with a little slide, PR #437)
+
+Frames of a Sky Knights tutorial sortie (720p, plane ≈ 25 px, so angles are estimates): the plane banks to
+about 60° (never fully on its side), rolls in within ~0.3 s and out in ~0.8 s; turns ≈ 100°/s with no slide,
+the nose always along the path; speed drops 10–20 % in a hard turn; one thin white contrail from the tail,
+always on, lives 3+ s, so whole arcs stay on screen; camera far (plane 3–4 % of screen height), north-up,
+leads the plane, constant zoom; low semi-transparent clouds sell speed.
+
+Our mode before this: bank shown ≈ 32°, same rate in and out; turn 168°/s; inertia ×2.5 (a visible slide);
+contrail 1.2–1.8 s. Change, aces mode only: `AcesBalance.BANK_VIS` 60°, `BANK_IN_RATE` / `BANK_OUT_RATE`,
+`TRAIL_LIFE` 3.5 s, `TURN_K` 0.5 (≈ 105°/s), `INERTIA_K` 1.4 (Kanta 26.10: «как у них, но немного скольжения»;
+≈ 0.2 s catch-up instead of 0.36 s; the weight stays mostly in `BLEED_K`).
+Camera (already north-up with look-ahead) and zoom unchanged.
+All seven numbers are F1 sliders `aces_*` in `Tuning` (defaults from `AcesBalance`); in the aces mode F1 opens
+just those sliders, also in the tester build, so Kanta tunes the feel himself.
