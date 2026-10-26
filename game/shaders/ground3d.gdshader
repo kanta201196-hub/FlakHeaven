@@ -37,8 +37,8 @@ uniform vec3 haze_color : source_color = vec3(0.62, 0.68, 0.78);
 uniform float river_w = 26.0;
 uniform float river_guard = 68.0;  // M-35: охранная зона реки (terrain3d.gd RIVER_GUARD) — без пятен поселений, полей и гари
 uniform float road_v = 85.0;
-uniform float road_w = 22.0;     // M-36: полуширина дороги наружу от реки (terrain3d.gd ROAD_W; L-03 «Второго биома» — та же 22)
-uniform float road_w_in = 14.0;  // M-36: полуширина к реке (ROAD_W_IN): край не заходит в охранную зону
+uniform float road_w = 27.0;     // M-36: полуширина дороги наружу от реки (terrain3d.gd ROAD_W)
+uniform float road_w_in = 16.0;  // M-36: полуширина к реке (ROAD_W_IN): край не заходит в охранную зону
 uniform vec3 water_color : source_color = vec3(0.3, 0.42, 0.44);
 // «Архипелаг» (Biome.sea): вода пролива — цвет по глубине (поле берега 0 … sea_w), пена у кромки
 uniform bool sea = false;
@@ -546,7 +546,7 @@ void fragment() {
 		float rd0 = rel.z - road_v;
 		float rhalf = rd0 < 0.0 ? road_w_in : road_w;
 		float rdist = abs(rd0) + (vnoise(world / 140.0 - 7.0) - 0.5) * 4.0;
-		float road = (1.0 - smoothstep(rhalf - 8.5, rhalf, rdist)) * (1.0 - water);
+		float road = (1.0 - smoothstep(rhalf - 6.0, rhalf, rdist)) * (1.0 - water);   // Kanta 26.10: soft edge 8.5 -> 6 px
 		float ruts = 1.0 - 0.18 * (1.0 - smoothstep(0.0, 1.6, abs(abs(rd0) - 5.5)));
 		c = mix(c, road_color * (0.92 + 0.12 * vnoise(world / 30.0)) * ruts, road * 0.6);
 		nxy *= 1.0 - road * 0.7;

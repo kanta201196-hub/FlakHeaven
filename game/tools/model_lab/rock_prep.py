@@ -1,7 +1,7 @@
 """Rock and spire variants for the Highlands from photo-scans (VIS-01, Kanta 26.10.2026).
 
 Why: the Highlands had one outcrop, one boulder pile and one spire model, so every rock group on the map
-looked the same ("скомпонуй, чтобы смотрелось не однообразно"). This turns CC0 / CC BY scans (Poly Haven,
+looked the same ("compose them so it does not look monotonous"). This turns CC0 / CC BY scans (Poly Haven,
 Sketchfab; authors in game/models/CREDITS.md) into biome models the way biome_prep.py does for Meshy ones:
 
 1. load the source with node transforms applied; several meshes with their own textures go into one

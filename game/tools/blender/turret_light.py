@@ -1,6 +1,6 @@
 """Лёгкая турель «Грача» (средний класс; референс владельца 16.10): низкая тумба, компактная башня
 со скошенным лбом. Меньше и слабее турели «Кита».
-Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3] [nopreview] <out_dir>
+Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3] [nopreview] [nopaint] <out_dir>
   → turret_light_t<N>.blend / .glb / preview_*.png (по умолчанию t1)
 Ступени — S9-04 (Kanta 23.10: «турель почти не меняется при улучшении — каждый уровень должен заметно
 отличаться: стволы, короба, щитки, размер»). Силуэт меняется на каждом шаге:
@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
 import turret_lib as L
 import bpy
+from turret_twin import hedgehog_pods
 
 OUT = sys.argv[-1] if len(sys.argv) > 1 else "."
 TIER = next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 1)
@@ -136,6 +137,42 @@ else:
         cyl("bore", (1.036, yb, 0.36), 0.012, 0.004, M_DARK, "X", 12)
     L.group = ""
 
+# S12 (Kanta 26.10: "add detail so the upgrade difference shows"): small parts per tier
+# on top of the silhouette steps above — t1 stays the plain box; t2 gets rivet rows, lifting eyes and a roof
+# grab rail; t3 also a whip antenna, a rear stowage bustle with straps and a cable conduit to the sight.
+if TIER >= 2:
+    # (wall y, first and last rivet x, wall top z) — rows stop short of the sloped front
+    walls = {2: [(0.33, -0.42, 0.08, 0.58), (-0.365, -0.42, 0.0, 0.52)],
+             3: [(0.31, -0.44, 0.1, 0.6), (-0.31, -0.44, 0.1, 0.6)]}[TIER]
+    for y, x0, x1, top in walls:
+        sgn = 1 if y > 0 else -1
+        n = int((x1 - x0) / 0.09) + 1
+        for i in range(n):
+            cyl("rivet", (x0 + i * 0.09, y + sgn * 0.004, top - 0.03), 0.009, 0.008, M_DARK, "Y", 8)
+            cyl("rivet", (x0 + i * 0.09, y + sgn * 0.004, 0.19), 0.009, 0.008, M_DARK, "Y", 8)
+    top = {2: 0.58, 3: 0.6}[TIER]
+    yc = 0.12 if TIER == 2 else 0.0
+    for sgn in (1, -1):
+        y = yc + sgn * 0.14
+        tube("eye", [(-0.4, y, top + 0.015), (-0.4, y, top + 0.045), (-0.35, y, top + 0.045), (-0.35, y, top + 0.015)],
+             0.007, M_DARK)
+    tube("grab_rail", [(-0.2, yc - 0.12, top + 0.01), (-0.2, yc - 0.12, top + 0.05), (-0.2, yc + 0.12, top + 0.05),
+                       (-0.2, yc + 0.12, top + 0.01)], 0.009, M_DARK)
+if TIER == 3:
+    cyl("ant_base", (-0.42, -0.2, 0.62), 0.022, 0.03, M_DARK, "Z", 10)
+    cyl("ant_whip", (-0.42, -0.2, 0.8), 0.005, 0.34, M_BARREL, "Z", 6)
+    box("bustle", (-0.55, 0, 0.42), (0.14, 0.44, 0.2), M_BODY, 0.01)
+    box("bustle_lid", (-0.55, 0, 0.53), (0.15, 0.42, 0.02), M_DARK, 0.004)
+    for y in (-0.12, 0.12):
+        box("strap", (-0.55, y, 0.42), (0.152, 0.025, 0.205), M_DARK, 0.0)
+    tube("conduit", [(-0.3, -0.25, 0.62), (-0.1, -0.24, 0.63), (-0.04, -0.2, 0.66)], 0.012, M_DARK)
+
+# «Стальной ёж» mini-missile pods (separate node "pods", shown only with the card): beside the hull per tier
+POD = {1: ([(-0.22, 0.32, 0.33), (-0.22, -0.32, 0.33)], 0.25, 0.8),
+       2: ([(-0.37, 0.41, 0.38), (-0.37, -0.43, 0.38)], 0.33, 0.8),
+       3: ([(-0.44, 0.43, 0.42), (-0.44, -0.43, 0.42)], 0.31, 0.85)}[TIER]
+hedgehog_pods(POD[0], POD[1], M_BODY, M_DARK, M_BARREL, cyl, POD[2])
+
 # размер ступени: вся турель — от центра тумбы (у основания)
 if K != 1.0:
     for ob in L.parts:
@@ -149,7 +186,8 @@ if K != 1.0:
     for g, p in list(L.pivots.items()):
         L.pivots[g] = tuple(c * K for c in p)
 
-build("turret_light_t%d" % TIER, OUT)
+from turret_paint import PALETTES
+build("turret_light_t%d" % TIER, OUT, None if "nopaint" in sys.argv else PALETTES["grach"])
 if "nopreview" not in sys.argv:
     preview(OUT, [("ref", (2.4, -2.6, 1.4), (0.35, 0, 0.32), 50),
                   ("rear", (-2.0, 2.0, 1.6), (0.3, 0, 0.32), 50),

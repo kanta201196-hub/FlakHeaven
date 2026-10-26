@@ -2,7 +2,7 @@ extends Node3D
 ## Model studio (VIS-01, Kanta 24.10: every model is reviewed in large close-ups on all graphics presets).
 ## Shows a set of game models on a flat sand plane under the game's sun, environment and graphics preset
 ## (the same engine calls as Render3D._ready / apply_gfx), with the game's own materials: village houses
-## through VillageHouses, biome props through BiomeProps (tree cards below «Максимальное», as in a sortie),
+## through VillageHouses, biome props through BiomeProps (tree cards below the Maximum preset, as in a sortie),
 ## battle units straight from their GLB. Each set is shot from a 3/4 view (35° above the horizon) and from
 ## straight above, framed on its bounds.
 ##
@@ -32,7 +32,8 @@ const SETS := {
 		["house", 14, 2.5, 4.0, 0.0, 0.0], ["house", 15, 7.0, 4.0, 0.0, 0.0],
 		["house", 16, -9.5, 8.5, 0.0, 0.0], ["house", 17, -4.0, 8.5, 0.0, 0.0]],
 	"radar": [["unit", "fh_battle_e_radar", 0.0, 0.0, 32.0, 30.0]],
-	"bunker": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, 30.0]],
+	"bunker": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, -40.0]],   # the embrasure side
+	"bunker_rear": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, 150.0]],   # the trench and door
 	"manpads": [["unit", "fh_battle_e_convoy_manpads", 0.0, 0.0, 14.0, 30.0]],
 	"pickup": [["unit", "fh_battle_e_convoy_pickup_tent", 0.0, 0.0, 14.0, 30.0]],
 }

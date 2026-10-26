@@ -5,11 +5,13 @@
      ступени стволов (Т-4): t1 — без тормозов, t2 — дульные тормоза, t3 — тормоза и дырчатый кожух
   python3 turret_tail.py cabin <out_dir>  → turret_tail_cabin.glb (кабина)
 Обе в одних осях: начало координат — центр шара, стволы +X (в игре развёрнуты назад), Z вверх.
-Единицы как у turret_twin.py (длина башни = 1), стволы короткие — как у укороченной турели."""
+Единицы как у turret_twin.py (длина башни = 1), стволы короткие — как у укороченной турели.
+S12: baked paint in the «Кит» palette (turret_paint.py, 1024 px atlas); nopaint skips it."""
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
 import turret_lib as L
+from turret_twin import hedgehog_pods
 
 OUT = sys.argv[-1]
 part = "ball" if "ball" in sys.argv else "cabin"
@@ -52,6 +54,8 @@ if part == "ball":
             cyl("jacket", (0.83, y, 0), 0.04, 0.34, M_DARK, "X", 16)
             for x in (0.72, 0.8, 0.88, 0.96):
                 cyl("jacket_ring", (x, y, 0), 0.044, 0.018, M_BARREL, "X", 16)
+    # S12: «Стальной ёж» launch pods on the ball sides (node "pods", shown only with the card)
+    hedgehog_pods([(-0.04, sgn * 0.34, 0.0) for sgn in (1, -1)], 0.27, M_BODY, M_DARK, M_BARREL, cyl, 0.7)
     shots = [("iso", (2.4, -2.8, 1.6), (0.4, 0, 0), 50)]
 else:
     # корпус кабины — круглый хвост фюзеляжа, сужается к шару; сверху остеклённый фонарь с переплётами
@@ -80,7 +84,9 @@ else:
     cyl("ball_seat", (-0.14, 0, 0.0), 0.31, 0.06, M_DARK, "X", 28)
     shots = [("iso", (1.6, -2.4, 1.4), (-0.5, 0, 0.1), 50)]
 
-root = build("turret_tail_" + part + ("_t%d" % TIER if part == "ball" else ""), OUT)
+from turret_paint import PALETTES
+root = build("turret_tail_" + part + ("_t%d" % TIER if part == "ball" else ""), OUT,
+             None if "nopaint" in sys.argv else PALETTES["kit"], 1024)
 root.location.z += 0.6   # предпросмотр над полом
 if "nopreview" not in sys.argv:
     preview(OUT, [(n, (p[0], p[1], p[2] + 0.6), (t[0], t[1], t[2] + 0.6), l) for n, p, t, l in shots])
