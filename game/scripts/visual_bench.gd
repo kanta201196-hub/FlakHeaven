@@ -508,6 +508,14 @@ func _save(name: String) -> void:
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)])
+	# render budget: the whole frame (every viewport, shadows included) and video memory, comparable across
+	# renderers for draw calls and objects (frame time means nothing on a GPU-less machine)
+	print("VISUAL %s total draws=%d prims=%dk objects=%d tex_mb=%.1f vram_mb=%.1f" % [name,
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1000,
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TEXTURE_MEM_USED) / 1048576.0,
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED) / 1048576.0])
 	print("VISUAL %s nodes=%d" % [name, m.get_tree().get_node_count()])
 	if Render3D.I != null and Render3D.I.terrain != null:   # Р-13: заглушки рельефа сейчас и кадров с ними с начала
 		print("VISUAL %s terrain lods=%d lod_frames=%d" % [name, Render3D.I.terrain._lods.size(), Render3D.I.terrain.lod_frames])
@@ -611,6 +619,10 @@ func _make_points() -> Array:
 	var cnt := {}   # 3.5-s8: сколько объектов каждого вида на 29 × 29 клеток (кишлаков стало меньше?)
 	var near_river := {}   # тест 3.5-s4 (п. 16): поселения ближе всех к реке (кромка у воды): имя → [зазор, объект]
 	var ter: Terrain3D = Render3D.I.terrain if Render3D.I != null else null
+	# on a slow machine the scan can run before Render3D hands the sortie's background its place filter: the
+	# unfiltered spots then name villages the 3D world drops or moves (frames of empty ground). Scan what it draws
+	if ter != null and not bg.place_filter.is_valid():
+		bg.place_filter = ter.fix_object
 	for r in range(0, 14):
 		for cx in range(-r, r + 1):
 			for cy in range(-r, r + 1):
