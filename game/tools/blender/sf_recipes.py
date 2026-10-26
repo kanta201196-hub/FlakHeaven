@@ -47,9 +47,9 @@ GREY = {"camo": [(0.50, 0.52, 0.54), (0.61, 0.63, 0.65)], "scale": 1.3, "stretch
 # vehicle olive paint (most sources): green-yellow hues
 # desert bunker (Kanta 26.10, shortlist 94): weathered sand-grey concrete close to the sandstone knoll; low detail,
 # because the source luminance carries the graffiti the repaint must hide
-BUNKER = {"camo": [(0.52, 0.47, 0.38), (0.47, 0.42, 0.34), (0.42, 0.38, 0.31)], "scale": 2.0,
-          "rough": (0.86, 0.94), "wear": 0.3, "detail": 0.1, "dust": 0.5, "streak": 0.12,
-          "wear_col": (0.66, 0.61, 0.52), "fade_col": (0.70, 0.64, 0.54)}
+BUNKER = {"camo": [(0.34, 0.31, 0.26), (0.30, 0.28, 0.24), (0.27, 0.25, 0.22)], "scale": 2.0,
+          "rough": (0.88, 0.95), "wear": 0.35, "detail": 0.14, "dust": 0.3, "streak": 0.2,
+          "wear_col": (0.43, 0.40, 0.35), "fade_col": (0.41, 0.38, 0.33)}   # weathered grey-ochre: darker than the sand around it
 OLIVE = {"mode": "auto", "hue": [(38, 150)], "smin": 0.12}
 TYRE = {"mode": "keep", "rough": 0.92, "desat": 0.6}
 GLASS = {"mode": "glass", "rough": 0.3, "color": (0.06, 0.075, 0.085)}
