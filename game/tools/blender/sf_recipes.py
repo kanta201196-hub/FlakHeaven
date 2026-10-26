@@ -509,6 +509,91 @@ RECIPES = {
         "paint": dict(JET, marks=[((0.47, 1, -1, 1, -1, 1), JET_RED), ((-1, -0.3, -1, 1, 0.15, 1), JET_RED)]),
         "tris": 16000, "weight": {"prop_%d" % i: 0.3 for i in range(1, 5)},
     },
+    "e_bomber": {
+        # four-engine piston bomber («Буйвол»). The skins carry a black belly scheme and yellow tips in their
+        # textures; insignia, tail letter, serial and nose lettering are thin decal parts in the palette objects
+        # (Object_4/5/6), cut out by face so the fin and fuselage skins under them stay. Skins get a flat colour, so
+        # the camouflage covers the old scheme completely; panel lines come from the source normal maps
+        "root": "bomber", "rot": (0, 0, 90), "ground": False, "split": r"^Object_",
+        "materials": [(r"^PaletteMaterial002$", GLASS),
+                      (r"^PaletteMaterial00[345]$", {"mode": "keep"}),
+                      (r"^b29_", {"mode": "paint", "color": (0.78, 0.79, 0.80)}),
+                      (r".", {"mode": "auto", "hue": [], "gray": (0.45, 1.0)})],
+        "kill_faces": [(r"^Object_[456](\.|$)", b) for b in (
+            (-0.215, -0.115, 0.03, 0.05, -0.065, -0.03), (-0.215, -0.115, -0.05, -0.03, -0.065, -0.03),   # stars
+            (0.085, 0.15, 0.385, 0.505, -0.05, -0.034), (0.085, 0.15, -0.505, -0.385, -0.05, -0.034),     # wings
+            (0.105, 0.145, -0.05, -0.035, -0.055, -0.03),                                                # nose art
+            (0.22, 0.34, 0.03, 0.05, -0.05, 0.04), (0.22, 0.34, -0.05, -0.03, -0.05, 0.04),            # lettering
+            (-0.45, -0.27, 0.0007, 0.012, -0.012, 0.1), (-0.45, -0.27, -0.012, -0.0007, -0.012, 0.1))],  # tail
+        # nose and main gear with their doors
+        "drop_box": [(0.38, 0.5, -0.03, 0.03, -1, -0.1), (0.05, 0.2, 0.1, 0.18, -1, -0.088),
+                     (0.05, 0.2, -0.18, -0.1, -1, -0.088)],
+        "groups": {"prop_%d" % (i + 1): [("box", (x0, x0 + 0.03, y - 0.045, y + 0.045, z - 0.045, z + 0.045))]
+                   for i, (x0, y, z) in enumerate(((0.273, 0.309, -0.044), (0.284, 0.14, -0.057),
+                                                   (0.284, -0.14, -0.057), (0.273, -0.309, -0.044)))},
+        "pivots": {"prop_1": (0.28, 0.309, -0.044), "prop_2": (0.291, 0.14, -0.057),
+                   "prop_3": (0.291, -0.14, -0.057), "prop_4": (0.28, -0.309, -0.044)},
+        "paint": dict(JET, marks=[((0.47, 1, -1, 1, -1, 1), JET_RED), ((-1, 1, 0.66, 1, -1, 1), JET_RED),
+                                  ((-1, 1, -1, -0.66, -1, 1), JET_RED), ((-1, -0.3, -1, 1, 0.11, 1), JET_RED)]),
+        "tris": 16000, "weight": {"prop_%d" % i: 0.3 for i in range(1, 5)},
+    },
+    "e_postman": {
+        # ace «Почтальон» (heavy missile ace), inspired by a twin-engine ground-attack jet: the light grey skin
+        # becomes the enemy scheme; national insignia, tail codes, serials, unit badges and stencils are erased by
+        # UV; landing gear removed; underwing stores (missiles) kept
+        "root": "postman", "rot": (0, 0, 90), "ground": False, "planar_deg": 0.3,
+        # gear legs, wheels and doors; the cockpit interior under the opaque canopy (only eats the triangle budget)
+        "drop": r"^Object_(2|3|4|11|12|14|15|18|19|16|17|20|63|96|97|3[235-9]|4[0-9]|5[0-5]|7[37-9]|8[0-9]|9[0-4])$",
+        "materials": [(r"glass", GLASS),
+                      (r"^Meshesagauges0201Mtl_9[12]$", {"mode": "paint", "flatten": 15}),
+                      (r".", {"mode": "auto", "hue": [], "gray": (0.25, 1.0), "desat": 0.3})],
+        "erase": {
+            "Meshesagauges0201Mtl_91": [(0.70, 0.575, 0.76, 0.625), (0.70, 0.755, 0.76, 0.80), (0.355, 0.56, 0.405, 0.60),
+                                        (0.34, 0.80, 0.395, 0.84), (0.555, 0.61, 0.605, 0.645), (0.555, 0.76, 0.605, 0.795)],
+            "Meshesagauges0201Mtl_92": [(0.125, 0.375, 0.18, 0.415), (0.83, 0.53, 0.885, 0.57), (0.23, 0.275, 0.28, 0.30),
+                                        (0.73, 0.275, 0.785, 0.30), (0.285, 0.335, 0.335, 0.36), (0.68, 0.335, 0.73, 0.36),
+                                        (0.415, 0.33, 0.455, 0.36), (0.555, 0.33, 0.595, 0.36), (0.365, 0.37, 0.38, 0.43),
+                                        (0.62, 0.37, 0.635, 0.43), (0.05, 0.76, 0.125, 0.89), (0.44, 0.76, 0.525, 0.89),
+                                        (0.0, 0.36, 0.025, 0.40), (0.975, 0.36, 1.0, 0.40)],
+        },
+        "drop_box": [(-1, 1, -1, 1, -1, -0.075)],
+        "paint": dict(JET, marks=[((0.44, 1, -1, 1, -1, 1), JET_RED), ((-1, 1, 0.47, 1, -1, 1), JET_RED),
+                                  ((-1, 1, -1, -0.47, -1, 1), JET_RED), ((-1, -0.3, -1, 1, 0.08, 1), JET_RED)]),
+        "tris": 16000,
+    },
+    "e_draft": {
+        # agile ace: a light fighter with blueprint-projected skins (two side textures and a third, unrelated
+        # grey skin on the wings). The desert camo becomes the enemy scheme; roundels, flags, serials and the
+        # blueprint captions are erased; missiles, nozzle and intake keep their own colours
+        "root": "draft", "rot": (0, 0, 0), "ground": False,
+        # the fin's thin side overlays (Object_25, Object_33) bake black on one side: the fin under them is whole
+        "drop": r"^Object_(25|33)$",
+        # the underwing fuel tanks (Object_16) hang just under the thin wing; the decimated wing sits below the
+        # source skin there, the bake picked a tank and left a light oval on one wing. The tanks go (a light ace)
+        "kill_faces": [(r"^Object_16$", (-1, 1, 0.08, 1, -1, 1)), (r"^Object_16$", (-1, 1, -1, -0.08, -1, 1))],
+        "materials": [(r"glass|^Not_so_Dark$|^Material\.003$", GLASS),
+                      # near-black factors (rails, airbrake wells beside the nozzle) read as holes from above: dark grey
+                      (r"^(F15_R|white_mat\.001|darkenss|Material\.006)$|^F15_R\.001$",
+                       {"mode": "keep", "rough": 0.6, "color": (0.14, 0.14, 0.15)}),
+                      (r"^(Engine_inside|darkenss|Material\.006|material|F15_|white_mat|screen|Darker_paint$)",
+                       {"mode": "keep", "desat": 0.6, "rough": 0.6}),
+                      (r".", {"mode": "paint", "flatten": 15})],
+        "erase": dict(
+            [(k, [(0.83, 0.24, 0.878, 0.29), (0.858, 0.287, 0.897, 0.322), (0.89, 0.3, 0.935, 0.375),
+                  (0.8, 0.17, 0.835, 0.21), (0.25, 0.32, 0.29, 0.375), (0.14, 0.5, 0.18, 0.54),
+                  (0.14, 0.57, 0.18, 0.61), (0.25, 0.742, 0.29, 0.79), (0.03, 0.89, 0.42, 0.99),
+                  (0.03, 0.03, 0.19, 0.12)]) for k in ("F16_text_R.001",)]
+            + [(k, [(0.12, 0.24, 0.17, 0.29), (0.105, 0.287, 0.142, 0.322), (0.065, 0.3, 0.11, 0.37),
+                    (0.16, 0.17, 0.195, 0.21), (0.71, 0.32, 0.75, 0.375), (0.82, 0.5, 0.86, 0.54),
+                    (0.82, 0.57, 0.86, 0.61), (0.71, 0.742, 0.75, 0.79), (0.58, 0.89, 0.97, 0.99),
+                    (0.81, 0.03, 0.97, 0.12)]) for k in ("F16_text_L",)]
+            + [(k, [(0.24, 0.77, 0.3, 0.85), (0.405, 0.525, 0.44, 0.565), (0.415, 0.135, 0.445, 0.17),
+                    (0.475, 0.53, 0.505, 0.565), (0.8, 0.18, 0.89, 0.225), (0.74, 0.235, 0.85, 0.485),
+                    (0.04, 0.89, 0.48, 0.99), (0.04, 0.03, 0.2, 0.12)]) for k in ("Not_so_dark", "Not_so_dark.001")]),
+        "paint": dict(JET, marks=[((0.42, 1, -1, 1, -1, 1), JET_RED), ((-1, 1, 0.3, 1, -1, 1), JET_RED),
+                                  ((-1, 1, -1, -0.3, -1, 1), JET_RED), ((-1, -0.25, -1, 1, 0.08, 1), JET_RED)]),
+        "tris": 12000,
+    },
     "e_rival": {
         # fictional concept fighter: its grey digital camo becomes the enemy scheme; the gold canopy, the yellow
         # stencil lines and the blue nozzle glow (saturated) stay
@@ -517,6 +602,16 @@ RECIPES = {
         "paint": dict(JET, marks=[((0.46, 1, -1, 1, -1, 1), JET_RED), ((-1, 1, 0.3, 1, -1, 1), JET_RED),
                                   ((-1, 1, -1, -0.3, -1, 1), JET_RED), ((-1, -0.25, -1, 1, 0.08, 1), JET_RED)]),
         "tris": 12000,
+    },
+    "e_fortress_hull": {
+        # «Крепость» boss hull: a flying wing. Gear, gear doors and the open bomb-bay doors are dropped; the
+        # turrets, hatches and core come from fortress.py --wing on top of it
+        "root": "fortress_hull", "rot": (0, 0, -90), "ground": False,
+        "drop": r"^Object_(4|6|8|10|12|20|22|24|26)$",
+        "materials": [(r".", {"mode": "auto", "hue": [], "gray": (0.03, 1.0), "flatten": 15})],
+        "paint": dict(JET, marks=[((0.4, 1, -1, 1, -1, 1), JET_RED), ((-1, 1, 1.0, 2, -1, 1), JET_RED),
+                                  ((-1, 1, -2, -1.0, -1, 1), JET_RED)]),
+        "tris": 16000,
     },
 }
 

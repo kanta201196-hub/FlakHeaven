@@ -24,7 +24,7 @@ var refuels := 0
 func _process(delta: float) -> void:
 	var m := Main.I
 	var p := m.player
-	if p == null or p.hp <= 0.0 or m.state != "playing":
+	if p == null or p.hp <= 0.0 or m.state != "playing" or Main.aces():   # «Битва асов»: no fuel to manage
 		return
 	var burn := AB_BURN if p.ab_t > 0.0 else 1.0
 	left = maxf(0.0, left - delta * burn)

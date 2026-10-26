@@ -80,12 +80,16 @@ func setup_fortress(total: float) -> void:
 	contact_damage = 25.0
 	var k := LEN / 270.0
 	points = [
-		_pt("турель левого крыла", "turret_1", "turret", Vector2(-6, -78) * k, total * TURRET_SHARE, [-PI / 2.0, deg_to_rad(60.0)]),
-		_pt("турель правого крыла", "turret_2", "turret", Vector2(-6, 78) * k, total * TURRET_SHARE, [PI / 2.0, deg_to_rad(60.0)]),
-		_pt("верхняя турель", "turret_3", "turret", Vector2(48, 0) * k, total * TURRET_SHARE, [0.0, deg_to_rad(100.0)]),
-		_pt("кормовая турель", "turret_4", "turret", Vector2(-112, 0) * k, total * TURRET_SHARE, [PI, deg_to_rad(70.0)]),
-		_pt("левый двигатель", "engine_l", "engine", Vector2(14, -44) * k, total * ENGINE_SHARE, []),
-		_pt("правый двигатель", "engine_r", "engine", Vector2(14, 44) * k, total * ENGINE_SHARE, []),
+		# Kanta 26.10: four dome turrets, two per wing. The outer pair guards the beam and rear quarters, the inner pair
+		# the front quarters across the nose (they replaced the top and tail turrets); together they cover every bearing
+		# outside the dead zones, with at most two turrets on any one bearing and the same total arc as the old four
+		# (sectors sized for that, so phase 1 fire stays as it was). turret_3 is the command turret.
+		_pt("внешняя турель левого крыла", "turret_1", "turret", Vector2(-20, -92) * k, total * TURRET_SHARE, [deg_to_rad(-100.0), deg_to_rad(75.0)]),
+		_pt("внешняя турель правого крыла", "turret_2", "turret", Vector2(-20, 92) * k, total * TURRET_SHARE, [deg_to_rad(100.0), deg_to_rad(75.0)]),
+		_pt("командная турель", "turret_3", "turret", Vector2(-4, -48) * k, total * TURRET_SHARE, [deg_to_rad(-55.0), deg_to_rad(75.0)]),
+		_pt("внутренняя турель правого крыла", "turret_4", "turret", Vector2(-4, 48) * k, total * TURRET_SHARE, [deg_to_rad(55.0), deg_to_rad(75.0)]),
+		_pt("левый двигатель", "engine_l", "engine", Vector2(14, -21) * k, total * ENGINE_SHARE, []),
+		_pt("правый двигатель", "engine_r", "engine", Vector2(14, 21) * k, total * ENGINE_SHARE, []),
 	]
 	_set_title()
 
@@ -136,17 +140,21 @@ func _in_dead(a: float) -> bool:
 
 ## ---------- Форма для попаданий ----------
 
-## Круги корпуса и крыльев (в осях самолёта): фюзеляж от носа до хвоста и размах крыла
+## Hit circles of the flying wing (plane axes, px): the centre body from nose to tail and each swept wing along
+## its mid-chord out to the tip (VIS-01, Kanta 26.10: the boss is a flying wing at the old span). The points above
+## sit on the same model: two dome turrets on each wing (inner pair near the root, outer pair near the tip), the
+## engines on the intake humps.
 static var _shape: Array = []
 
 
 static func _hull_shape() -> Array:
 	if _shape.is_empty():
-		for i in 9:
-			_shape.append([Vector2(110.0 - i * 29.0, 0.0), 22.0])
-		for i in 9:
-			if i != 4:
-				_shape.append([Vector2(-20.0, -124.0 + i * 31.0), 15.0])
+		for x in [40.0, 18.0, -4.0, -26.0, -40.0]:
+			_shape.append([Vector2(x, 0.0), 22.0])
+		# wing: [mid-chord x, y, radius], measured on the model at 270 px per hull length
+		for w in [[-8.0, 32.0, 22.0], [-11.0, 54.0, 18.0], [-16.0, 78.0, 13.0], [-27.0, 95.0, 13.0], [-40.0, 113.0, 13.0], [-50.0, 128.0, 9.0]]:
+			for s in [-1.0, 1.0]:
+				_shape.append([Vector2(w[0], s * w[1]), w[2]])
 	return _shape
 
 
@@ -436,7 +444,7 @@ func _covers(pt: Dictionary, from: Vector2, to: Vector2) -> bool:
 	return absf(wrapf(a - float(sec[0]), -PI, PI)) <= float(sec[1])
 
 
-## Эскорт (фаза 1): ESCORT_N перехватчиков; пока цела верхняя турель, раз в 20 с — пополнение
+## Эскорт (фаза 1): ESCORT_N перехватчиков; пока цела командная турель (turret_3), раз в 20 с — пополнение
 func _escort(delta: float) -> void:
 	if phase != 1:
 		return

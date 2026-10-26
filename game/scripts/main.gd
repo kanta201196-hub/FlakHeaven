@@ -24,6 +24,9 @@ var render3d: Render3D
 
 ## Состояния: menu, settings, campaign («В вылет»), playing, levelup, paused, dead, evac
 var state := "menu"
+## Game mode of the sortie: "campaign" or "aces" (the «Битва асов» test mode, AB-01). Set by the menu
+## (`MainInput.ui_click`); a restart from the result screen keeps it.
+var mode := "campaign"
 var cls_id := "fighter"
 var skill_pick := {}
 var codex_back := "menu"
@@ -62,7 +65,7 @@ var god_mode := false
 ## Тестовая сборка для внешних тестеров: экспорт с фичей «tester» или флаг --tester → без отладки
 static var DEBUG := true
 ## Build number shown in the menu, logs and reports; bump by commit before each export (code.md §11)
-const BUILD := "3.5-s11"
+const BUILD := "3.5-s12"
 ## 3.3-t2: отчёты тестеров уходят в Google Таблицу через веб-приложение Apps Script (пусто — кнопки нет)
 const REPORT_URL_BUILTIN := "https://script.google.com/macros/s/AKfycbxUYjbaKRdhawZJqQp52ZlEnh2LoAxDyEf-PefnyF_90ssskJgmcnFrTGJ0P7Y9PHrw/exec"
 static var REPORT_URL := ""
@@ -98,6 +101,11 @@ var parts_kept: int:
 	set(v): run.parts_kept = v
 
 
+## True while the sortie is the «Битва асов» test mode: «Оса», rival aces, realistic damage (`AcesBalance`).
+static func aces() -> bool:
+	return I != null and I.mode == "aces"
+
+
 func _ready() -> void:
 	I = self
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -130,6 +138,9 @@ func _ready() -> void:
 	Events.evac_closed.connect(_on_evac_closed)
 	Events.evac_point_lost.connect(_on_evac_point_lost)
 	_autotest = _args.has("--autotest")
+	if _args.has("--aces"):   # check: the sortie is the «Битва асов» test mode
+		mode = "aces"
+		cls_id = "fighter"
 	god_mode = _args.has("--god")
 	if _args.has("--fast"):
 		base_ts = 3.0
@@ -176,6 +187,8 @@ func _set_state(s: String) -> void:
 		HudResult.focus = "restart"
 	state = s
 	_state_t = 0.0
+	if s in ["menu", "campaign", "hangar"] and not _args.has("--aces"):
+		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
 	if is_instance_valid(player) and menu != null:
 		player.visible = not (s == "menu" or s == "hangar" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
@@ -198,7 +211,7 @@ func start_run() -> void:
 	add_child(world)
 	move_child(world, 0)
 
-	Biome.id = Campaign.biome_of(Campaign.index())   # тред «Второй биом»: биом мира — по операции, до создания фона
+	Biome.id = Biome.HIGHLAND if aces() else Campaign.biome_of(Campaign.index())   # тред «Второй биом»: биом мира — по операции, до создания фона
 	if sfx != null:
 		sfx.set_ambient("sea" if Biome.sea() else "highland")   # фон биома: прибой или горный ветер (PR #186)
 	background = Background.new()
@@ -218,8 +231,9 @@ func start_run() -> void:
 	var sk1: String = skill_pick.get(cls_id, sks[0])
 	player.setup(cls_id, sk1, sks[1] if sks[1] != sk1 else (sks[0] if sks[0] != sk1 else ""))
 	world.add_child(player)
-	class_task = ClassTask.new(cls_id)
-	Story.start(self)   # EX-09: «Купол», задание класса, в финале — «Гром» в звене
+	class_task = null if aces() else ClassTask.new(cls_id)
+	if not aces():
+		Story.start(self)   # EX-09: «Купол», задание класса, в финале — «Гром» в звене
 	projectiles = Projectiles.new()
 	world.add_child(projectiles)
 	fx = Fx.new()
@@ -240,13 +254,18 @@ func start_run() -> void:
 	hud.clear_messages()
 	op_flags = {}
 	op_result = {}
-	Events.banner.emit(Loc.t("%s · ОПЕРАЦИЯ «%s» · %s") % [Loc.t(Biome.title()).to_upper(), Loc.t(String(Campaign.op()["title"])).to_upper(), Loc.t(String(Campaign.diff()["title"])).to_upper()], 4.0)
-	# U-02: цель вылета — первые 3 вылета (U-05: задача операции кампании)
 	Hints.clear()
-	Hints.show("goal", Loc.t("Задача: %s. Всех врагов не перебить — они прилетают всё время.") % String(Campaign.op()["task"]).to_lower(), 9.0, 3)
+	if aces():
+		Events.banner.emit(Loc.t("БИТВА АСОВ · ТЕСТ"), 4.0)
+		Hints.show("aces_goal", "Битва асов: асы взлетают один за другим. Три ракеты или пара очередей — и самолёт сбит, у них так же. Заходите в хвост и не давайте зайти себе. F1 — настройка полёта.", 10.0, 3)
+	else:
+		Events.banner.emit(Loc.t("%s · ОПЕРАЦИЯ «%s» · %s") % [Loc.t(Biome.title()).to_upper(), Loc.t(String(Campaign.op()["title"])).to_upper(), Loc.t(String(Campaign.diff()["title"])).to_upper()], 4.0)
+		# U-02: цель вылета — первые 3 вылета (U-05: задача операции кампании)
+		Hints.show("goal", Loc.t("Задача: %s. Всех врагов не перебить — они прилетают всё время.") % String(Campaign.op()["task"]).to_lower(), 9.0, 3)
 	# U-03: первый вылет — подсказки по одной вместо стены текста «Как играть»
 	Hints.show("controls", "Мышь — куда лететь: самолёт поворачивает за курсором. Пушка стреляет сама по врагам впереди.", 7.0, 2)
-	Hints.show("xp", "Зелёные ромбы со сбитых врагов — опыт: пролетайте рядом, они притянутся. Новый уровень — выбор улучшения.", 7.0, 2)
+	if not aces():   # no XP cards in «Битва асов»
+		Hints.show("xp", "Зелёные ромбы со сбитых врагов — опыт: пролетайте рядом, они притянутся. Новый уровень — выбор улучшения.", 7.0, 2)
 	if Settings.minimap > 0:
 		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
 	evac_windows = 0
@@ -281,7 +300,8 @@ func _process(delta: float) -> void:
 		run_time += delta
 		if class_task != null:
 			class_task.update(self)
-		Story.tick(self)
+		if not aces():
+			Story.tick(self)
 		if level_at_5 == 0 and run_time >= 300.0:
 			level_at_5 = run.level
 		run.tick(delta)
@@ -323,6 +343,8 @@ func _process(delta: float) -> void:
 		# Камера чуть отъезжает на скорости — ощущение разгона
 		var f := clampf(player.velocity.length() / maxf(player.cruise_speed(), 1.0), 0.5, 1.8)
 		var z := Tuning.g("camera_zoom") / lerpf(1.0, player.size, 0.35) / (1.0 + maxf(0.0, f - 1.0) * 0.3)
+		if aces():
+			z *= AcesBalance.ZOOM_K   # faster planes: see the ace a little further out
 		camera.zoom = camera.zoom.lerp(Vector2(z, z), 1.0 - exp(-delta * 3.0))
 		_ab_snd = move_toward(_ab_snd, 1.0 if player.ab_t > 0.0 else 0.0, delta * 3.0)
 		sfx.set_engine(player.velocity.length() / player.cruise_speed(), player.hp > 0.0 and state == "playing",
@@ -362,7 +384,7 @@ func kill_xp_k() -> float:
 
 ## Adds XP from pickups (times the F1 `xp_mult` slider); nothing after death.
 func add_xp(v: float) -> void:
-	if is_dead:
+	if is_dead or aces():   # «Битва асов»: the hangar setup is the build, no cards
 		return
 	run.add_xp(v * Tuning.g("xp_mult"))
 
@@ -530,6 +552,11 @@ const ACTIVITY_TITLE := {
 func _on_activity_succeeded(kind: StringName) -> void:
 	if _autotest:
 		print("AUTOTEST: activity success ", kind, " at %.0f" % run_time)
+	if aces():   # «Битва асов»: a downed ace is the score, no parts or cards
+		if kind == &"dogfight":
+			run.on_rival_down()
+			Events.banner.emit(Loc.t("Ас сбит! Всего: %d") % run.aces_down, 2.5)
+		return
 	var r := run.award_activity(kind)
 	if r.is_empty():
 		return
@@ -565,6 +592,8 @@ func _on_activity_failed(kind: StringName, who: String) -> void:
 	if kind != &"rescue":
 		Story.say(Story.DISPATCH, "Ушли. Ничего, следующих встретим.")
 	if kind == &"dogfight":
+		if aces():
+			run.on_rival_gone()
 		Events.banner.emit(Loc.t("Ас «%s» ушёл — награды нет") % who, 3.0)
 
 
@@ -765,10 +794,17 @@ func _award(outcome: String) -> void:
 ## `Events.player_died`: the sortie ends; half the parts kept, profile award, log.
 func _on_player_died() -> void:
 	is_dead = true
-	parts_kept = int(run.parts * 0.5 * Campaign.k("reward"))
-	op_result = Campaign.result_base(run_time, op_flags)
-	op_result["done"] = false
-	_award("dead")
+	if aces():   # test mode: no parts, crew XP or campaign progress (cannot be farmed)
+		parts_kept = 0
+		op_result = {}
+		meta_award = {}
+		result_t = 0.0
+		result_tab = 0
+	else:
+		parts_kept = int(run.parts * 0.5 * Campaign.k("reward"))
+		op_result = Campaign.result_base(run_time, op_flags)
+		op_result["done"] = false
+		_award("dead")
 	fx.explosion(player.global_position, 40.0)
 	sfx.play("player_explode", 0.0, 0.7)
 	add_shake(16.0)
