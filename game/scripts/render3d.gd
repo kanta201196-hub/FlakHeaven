@@ -17,8 +17,8 @@ const ON := true
 
 static var I: Render3D
 static var enabled := true
-## World area worth drawing this frame: the 3D view (with its margin) plus the 2D screen grown by
-## ENEMY_DRAW_MARGIN. Enemies outside skip their _draw (Enemy.in_draw_view). Empty until the first
+## World area worth drawing this frame: the 3D view (with its margin) plus the 2D screen and the
+## tilted combat layer, both grown by ENEMY_DRAW_MARGIN. Enemies outside skip their _draw (Enemy.in_draw_view). Empty until the first
 ## battle frame, which means «draw everything».
 static var view_now := Rect2()
 ## Reach of the longest 2D enemy overlay past the screen edge (bomber tail sector 620 px, heli aim fan 520 px)
@@ -371,6 +371,10 @@ func _set_tilt_mode(on: bool, m: Main) -> void:
 
 
 ## Каждый кадр: какую часть плоскости боя видит камера → такой прямоугольник рисуем в текстуру
+## World area the tilted combat layer shows this frame (empty while the camera looks straight down)
+var _combat_rect := Rect2()
+
+
 func _sync_combat_layer() -> void:
 	var vs := get_viewport().get_visible_rect().size
 	var r := Rect2()
@@ -396,6 +400,7 @@ func _sync_combat_layer() -> void:
 		_combat_vp.size = size
 	var sc := float(size.x) / r.size.x
 	_combat_vp.canvas_transform = Transform2D(0.0, Vector2(sc, sc), 0.0, -r.position * sc)
+	_combat_rect = r
 	_combat_quad.position = Vector3(r.get_center().x, 0.0, r.get_center().y)
 	_combat_quad.scale = Vector3(r.size.x, 1.0, r.size.y)
 
@@ -519,6 +524,10 @@ func _process(delta: float) -> void:
 		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
 	var screen := get_viewport().get_canvas_transform().affine_inverse() * get_viewport().get_visible_rect()
 	view_now = view_g.merge(screen.grow(ENEMY_DRAW_MARGIN))
+	if _tilt_on and _combat_rect.has_area():
+		# with the camera tilted the 2D world is shown through the combat layer, which reaches
+		# farther up the screen than the 2D camera's own rect
+		view_now = view_now.merge(_combat_rect.grow(ENEMY_DRAW_MARGIN))
 	var pt := Time.get_ticks_usec() if Perf.on else 0
 	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1, _screen_ground(vs))
 	_fit_shadow()
