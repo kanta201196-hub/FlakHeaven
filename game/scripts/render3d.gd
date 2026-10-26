@@ -17,6 +17,12 @@ const ON := true
 
 static var I: Render3D
 static var enabled := true
+## World area worth drawing this frame: the 3D view (with its margin) plus the 2D screen and the
+## tilted combat layer, both grown by ENEMY_DRAW_MARGIN. Enemies outside skip their _draw (Enemy.in_draw_view). Empty until the first
+## battle frame, which means «draw everything».
+static var view_now := Rect2()
+## Reach of the longest 2D enemy overlay past the screen edge (bomber tail sector 620 px, heli aim fan 520 px)
+const ENEMY_DRAW_MARGIN := 800.0
 
 var cam: Camera3D
 var sun: DirectionalLight3D
@@ -51,6 +57,7 @@ var _wakes: SeaWakes         # S10-10: кильватерный след суд�
 var _tid := 0                # номера ракет для их следов
 var _eshot_mm: MultiMeshInstance3D   # тест 3.5-s5 (п. 11): ракеты врагов — модели
 var _eglow_mm: MultiMeshInstance3D   # и светящиеся точки: трассеры пуль, ореол и факел ракет
+var _fx_clear := Vector4.ZERO   # last value sent to the fx_clear shader global (_sync_fx_clear)
 var _crashes: Array = []     # 3.4-t1 (п. 32): сбитые ведомые падают
 var _wrecks: Array = []      # и остаются обломками на земле
 var _wreck_mat: Material
@@ -365,6 +372,10 @@ func _set_tilt_mode(on: bool, m: Main) -> void:
 
 
 ## Каждый кадр: какую часть плоскости боя видит камера → такой прямоугольник рисуем в текстуру
+## World area the tilted combat layer shows this frame (empty while the camera looks straight down)
+var _combat_rect := Rect2()
+
+
 func _sync_combat_layer() -> void:
 	var vs := get_viewport().get_visible_rect().size
 	var r := Rect2()
@@ -390,6 +401,7 @@ func _sync_combat_layer() -> void:
 		_combat_vp.size = size
 	var sc := float(size.x) / r.size.x
 	_combat_vp.canvas_transform = Transform2D(0.0, Vector2(sc, sc), 0.0, -r.position * sc)
+	_combat_rect = r
 	_combat_quad.position = Vector3(r.get_center().x, 0.0, r.get_center().y)
 	_combat_quad.scale = Vector3(r.size.x, 1.0, r.size.y)
 
@@ -511,12 +523,19 @@ func _process(delta: float) -> void:
 	if tilt > 0.001:
 		# с наклоном видно дальше вперёд (вверх по экрану)
 		view_g = view_g.grow_individual(half_g.x * tilt, half_g.y * tilt * 3.0, half_g.x * tilt, 0.0)
+	var screen := get_viewport().get_canvas_transform().affine_inverse() * get_viewport().get_visible_rect()
+	view_now = view_g.merge(screen.grow(ENEMY_DRAW_MARGIN))
+	if _tilt_on and _combat_rect.has_area():
+		# with the camera tilted the 2D world is shown through the combat layer, which reaches
+		# farther up the screen than the 2D camera's own rect
+		view_now = view_now.merge(_combat_rect.grow(ENEMY_DRAW_MARGIN))
 	var pt := Time.get_ticks_usec() if Perf.on else 0
 	terrain.sync(view_g, 64 if terrain._chunks.is_empty() else 1, _screen_ground(vs))
 	_fit_shadow()
 	if Perf.on: pt = Perf.sub("r3d.terrain", pt)
 	var sd := 0.0 if get_tree().paused else delta   # время эффектов стоит на паузе
 	_sync_units(m, delta, sd)
+	_sync_fx_clear(m, vs)
 	if Perf.on: pt = Perf.sub("r3d.units", pt)
 	_sync_missiles(m)
 	_sync_enemy_shots(m)
@@ -2006,6 +2025,10 @@ func _sync_missiles(m: Main) -> void:
 			if mm.has("k") and MSL_TRAIL.has(mm["k"]):   # S8 «eweap»: след по виду вражеской ракеты
 				var mts: Array = MSL_TRAIL[mm["k"]]
 				st = [mts[0], mts[1], mts[2], mts[3], float(mts[4]) * lo, mts[5]]
+			if mm.get("src", "") == "ёлочка":
+				# Kanta s12: the 10–14 mini-rockets of the salvo fanned out in full missile smoke and hid the plane
+				# for about a second; a mini-rocket leaves a thin, short-lived trail
+				st = [0.6, 2.0, 5.5, 0.5, 12.0 * lo, st[5]]
 			if mm.has("tint"):   # связки: след своего цвета (бирюзовый, золотой…), но светлый
 				st = st.duplicate()
 				st[5] = (mm["tint"] as Color).lerp(Color.WHITE, 0.45)
@@ -2159,6 +2182,30 @@ func _sync_enemy_shots(m: Main) -> void:
 		var aabb := AABB(lo - Vector3(40, 40, 40), hi - lo + Vector3(80, 80, 80))
 		_eshot_mm.custom_aabb = aabb
 		_eglow_mm.custom_aabb = aabb
+
+
+const FX_CLEAR_R := 1.6      # clear zone radius, plane lengths
+const FX_CLEAR_CUT := 0.7    # share of an effect's opacity taken away over the plane itself
+
+
+## Kanta s12 (26.10): late in a run blasts, fire, missile smoke and the fan of a missile salvo hid the player's
+## plane; only the lock ring showed where it was. Effects thin out over the plane (fx_clear_k in
+## fx_exposure.gdshaderinc): this puts the plane's screen spot and size into the global shader parameter
+func _sync_fx_clear(m: Main, vs: Vector2) -> void:
+	var v := Vector4.ZERO
+	var pu: Unit3D = _units.get(m.player.get_instance_id()) if is_instance_valid(m.player) else null
+	if pu != null and pu.node != null and (pu.node as Node3D).visible and not (m.state in ["menu", "settings"]) \
+			and vs.y > 1.0:
+		var p3 := (pu.node as Node3D).global_position
+		if not cam.is_position_behind(p3):
+			var a := cam.unproject_position(p3)
+			# model length 1 is the picture width, so the plane is k × picture width long in the world
+			var ln := pu.k * (float(pu.tex.get_width()) if pu.tex != null else 1.0)
+			var b := cam.unproject_position(p3 + cam.global_basis.x * ln * FX_CLEAR_R)
+			v = Vector4(a.x / vs.x, a.y / vs.y, a.distance_to(b) / vs.y, FX_CLEAR_CUT)
+	if v != _fx_clear:
+		_fx_clear = v
+		RenderingServer.global_shader_parameter_set(&"fx_clear", v)
 
 
 # ---------- 3.4-t1: сбитый ведомый падает (п. 32) ----------

@@ -16,6 +16,7 @@ func _init() -> void:
 	_test_caps()
 	_test_score()
 	_test_turn_look()
+	_test_build_loop()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -83,7 +84,7 @@ func _test_score() -> void:
 	r.on_rival_down()
 	r.on_rival_gone()
 	_check(r.aces_down == 2 and r.aces_gone == 1, "aces shot down and gone are counted apart")
-	_check(r.pending_levels == 0 and r.rare_picks == 0, "a downed ace gives no card pick in the mode")
+	_check(r.pending_levels == 0 and r.rare_picks == 0, "on_rival_down queues no pick itself (Main adds AcesBalance.ace_picks)")
 
 
 func _test_turn_look() -> void:
@@ -95,3 +96,19 @@ func _test_turn_look() -> void:
 	_check(deg_to_rad(AcesBalance.BANK_VIS_DEG) > 0.55 and AcesBalance.BANK_VIS_DEG < 90.0, "deeper bank than the campaign, never fully on its side")
 	var turn := 210.0 * AcesBalance.TURN_K
 	_check(turn >= 90.0 and turn <= 120.0, "«Оса» turns about 100°/s like Sky Knights (%.0f)" % turn)
+
+
+func _test_build_loop() -> void:
+	# option 1 (Kanta 26.10): a draft before takeoff, a card per ace shot down, a cap per sortie
+	var r := RunState.new()
+	r.add_picks(AcesBalance.DRAFT_PICKS)
+	_check(r.pending_levels == 8 and r.rare_picks == 0, "8 ordinary picks before takeoff")
+	var total := AcesBalance.DRAFT_PICKS
+	for n in range(1, 30):
+		var k := AcesBalance.ace_picks(n)
+		if n == 1:
+			_check(k == 1, "the first ace gives a card")
+		total += k
+	_check(total == AcesBalance.CARDS_MAX, "never more than %d cards per sortie (%d)" % [AcesBalance.CARDS_MAX, total])
+	r.add_picks(-3)
+	_check(r.pending_levels == 8, "negative picks are ignored")

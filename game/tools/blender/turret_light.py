@@ -1,7 +1,10 @@
 """Лёгкая турель «Грача» (средний класс; референс владельца 16.10): низкая тумба, компактная башня
 со скошенным лбом. Меньше и слабее турели «Кита».
-Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3] [nopreview] [nopaint] <out_dir>
-  → turret_light_t<N>.blend / .glb / preview_*.png (по умолчанию t1)
+Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3|evo] [nopreview] [nopaint] <out_dir>
+  → turret_light_t<N>.blend / .glb / preview_*.png (по умолчанию t1); evo → turret_light_evo
+evo — «Дикобраз» on the «Грач» (3.5-s12, Kanta: "turret lv5 and the evolution look the same in the hangar"):
+  the t3 turret plus a fire-control head on the roof (mast, box search radar, tracking dish) and cable runs,
+  the same look as the «Кит» quad, so the card that shoots missiles down shows on the model.
 Ступени — S9-04 (Kanta 23.10: «турель почти не меняется при улучшении — каждый уровень должен заметно
 отличаться: стволы, короба, щитки, размер»). Силуэт меняется на каждом шаге:
   t1 (ур. 1–2) — малая (×0,88): одна башня без бокового блока, ОДИН короткий ствол с пламегасителем,
@@ -23,7 +26,8 @@ import bpy
 from turret_twin import hedgehog_pods
 
 OUT = sys.argv[-1] if len(sys.argv) > 1 else "."
-TIER = next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 1)
+EVO = "evo" in sys.argv[1:-1]
+TIER = 3 if EVO else next((int(a[1]) for a in sys.argv[1:-1] if a in ("t1", "t2", "t3")), 1)
 K = {1: 0.88, 2: 1.0, 3: 1.12}[TIER]   # размер ступени (вся турель относительно центра тумбы)
 L.reset()
 M_BODY = mat("turret_body", (0.4, 0.39, 0.37), 0.08, 0.86)
@@ -53,8 +57,7 @@ if TIER == 1:
     cyl("mantlet", (0.3, 0, 0.32), 0.1, 0.09, M_DARK, "X", 20, 0.01)
     cyl("sleeve", (0.4, 0, 0.32), 0.045, 0.14, M_BARREL, "X")
     cyl("barrel", (0.64, 0, 0.32), 0.022, 0.4, M_BARREL, "X", 16)
-    cyl("hider", (0.86, 0, 0.32), 0.03, 0.07, M_BARREL, "X", 16)   # пламегаситель
-    cyl("bore", (0.896, 0, 0.32), 0.014, 0.004, M_DARK, "X", 12)
+    drill(cyl("hider", (0.86, 0, 0.32), 0.03, 0.07, M_BARREL, "X", 16), (0.895, 0, 0.32), 0.014, 0.05, M_DARK)   # пламегаситель с каналом
     L.group = ""
 
 elif TIER == 2:
@@ -83,7 +86,8 @@ elif TIER == 2:
         cyl("sleeve", (0.38, y, z), 0.04, 0.26, M_BARREL, "X")
         cyl("collar", (0.5, y, z), 0.046, 0.03, M_BARREL, "X")
         cyl("barrel", (0.83, y, z), 0.02, 0.66, M_BARREL, "X", 16)
-        box("brake", (1.12, y, z), (0.11, 0.05, 0.05), M_BARREL, 0.005)
+        # 3.5-s12: the bore is drilled into the brake's face
+        drill(box("brake", (1.12, y, z), (0.11, 0.05, 0.05), M_BARREL, 0.005), (1.175, y, z), 0.013, 0.022, M_DARK)
         box("brake_slot", (1.12, y, z), (0.035, 0.052, 0.03), M_DARK, 0.0)
     # щиток: рамка вокруг стволов на лбу правого блока
     box("shield", (0.31, y, 0.34), (0.035, 0.22, 0.34), M_BODY, 0.008)
@@ -131,10 +135,9 @@ else:
                 cyl("hole", (0.49 + i * 0.055, yb + math.cos(ang) * 0.035, 0.36 + math.sin(ang) * 0.035),
                     0.009, 0.006, M_DARK, "Y" if abs(math.sin(ang)) < 0.5 else "Z", 8)
         cyl("barrel", (0.85, yb, 0.36), 0.019, 0.22, M_BARREL, "X", 16)
-        box("brake", (0.99, yb, 0.36), (0.09, 0.06, 0.055), M_BARREL, 0.005)
+        drill(box("brake", (0.99, yb, 0.36), (0.09, 0.06, 0.055), M_BARREL, 0.005), (1.035, yb, 0.36), 0.012, 0.012, M_DARK)
         for x in (0.97, 1.01):
             box("brake_slot", (x, yb, 0.36), (0.016, 0.062, 0.035), M_DARK, 0.0)
-        cyl("bore", (1.036, yb, 0.36), 0.012, 0.004, M_DARK, "X", 12)
     L.group = ""
 
 # S12 (Kanta 26.10: "add detail so the upgrade difference shows"): small parts per tier
@@ -167,6 +170,23 @@ if TIER == 3:
         box("strap", (-0.55, y, 0.42), (0.152, 0.025, 0.205), M_DARK, 0.0)
     tube("conduit", [(-0.3, -0.25, 0.62), (-0.1, -0.24, 0.63), (-0.04, -0.2, 0.66)], 0.012, M_DARK)
 
+if EVO:
+    # fire-control head of «Дикобраз»: mast behind the sight, box radar with a dark array face, tracking dish
+    zt = 0.6
+    cyl("radar_mast", (-0.3, 0.0, zt + 0.08), 0.03, 0.16, M_DARK, "Z", 12)
+    cyl("radar_turntable", (-0.3, 0.0, zt + 0.17), 0.06, 0.025, M_DARK, "Z", 16)
+    box("radar_box", (-0.3, 0.0, zt + 0.26), (0.13, 0.32, 0.14), M_BODY, 0.01)
+    box("radar_face", (-0.23, 0.0, zt + 0.26), (0.012, 0.28, 0.11), M_DARK, 0.003)
+    for i in range(5):
+        box("radar_rib", (-0.223, -0.11 + i * 0.055, zt + 0.26), (0.008, 0.008, 0.1), M_BARREL, 0.0)
+    box("radar_hood", (-0.27, 0.0, zt + 0.34), (0.11, 0.34, 0.02), M_BODY, 0.004)
+    cyl("dish_arm", (-0.3, 0.2, zt + 0.26), 0.011, 0.09, M_DARK, "Y", 8)
+    cyl("dish", (-0.26, 0.26, zt + 0.26), 0.065, 0.016, M_BODY, "X", 24, 0.004)
+    cyl("dish_feed", (-0.21, 0.26, zt + 0.26), 0.007, 0.08, M_DARK, "X", 8)
+    for sgn in (1, -1):
+        tube("cable", [(-0.3, sgn * 0.05, zt + 0.02), (-0.05, sgn * 0.07, zt + 0.02), (0.15, sgn * 0.08, zt - 0.02)],
+             0.01, M_DARK)
+
 # «Стальной ёж» mini-missile pods (separate node "pods", shown only with the card): beside the hull per tier
 POD = {1: ([(-0.22, 0.32, 0.33), (-0.22, -0.32, 0.33)], 0.25, 0.8),
        2: ([(-0.37, 0.41, 0.38), (-0.37, -0.43, 0.38)], 0.33, 0.8),
@@ -187,7 +207,7 @@ if K != 1.0:
         L.pivots[g] = tuple(c * K for c in p)
 
 from turret_paint import PALETTES
-build("turret_light_t%d" % TIER, OUT, None if "nopaint" in sys.argv else PALETTES["grach"])
+build("turret_light_evo" if EVO else "turret_light_t%d" % TIER, OUT, None if "nopaint" in sys.argv else PALETTES["grach"])
 if "nopreview" not in sys.argv:
     preview(OUT, [("ref", (2.4, -2.6, 1.4), (0.35, 0, 0.32), 50),
                   ("rear", (-2.0, 2.0, 1.6), (0.3, 0, 0.32), 50),

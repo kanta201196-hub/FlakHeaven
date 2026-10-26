@@ -13,6 +13,8 @@ var level := 1
 var xp := 0.0
 ## Levels gained but not yet turned into a card pick.
 var pending_levels := 0
+## Card picks made this sortie.
+var picks_taken := 0
 ## How many of `pending_levels` are picks from rare cards.
 var rare_picks := 0
 ## Labels of the pending rare picks, oldest first («ЗА АСА»).
@@ -44,6 +46,11 @@ func on_rival_down() -> void:
 ## «Битва асов»: a rival ace left the fight on its own (its 90 s ran out).
 func on_rival_gone() -> void:
 	aces_gone += 1
+
+
+## «Битва асов»: queues `n` ordinary card picks (the draft before takeoff, a card per ace shot down).
+func add_picks(n: int) -> void:
+	pending_levels += maxi(0, n)
 
 
 ## Adds XP (already multiplied by the F1 `xp_mult` slider) and queues every level gained.
@@ -145,6 +152,7 @@ func award_activity(kind: StringName) -> Dictionary:
 ## Takes one card pick off the queue (`rare` — it was a pick from rare cards).
 func take_pick(rare: bool) -> void:
 	pending_levels -= 1
+	picks_taken += 1
 	if rare:
 		rare_picks -= 1
 		if not rare_reasons.is_empty():

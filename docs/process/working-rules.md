@@ -27,6 +27,7 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 - Generator credits: input image and generation package approved by Kanta before spending.
 - Two quality levels: in combat ~5–15k triangles; hangar and close-ups — max. Always keep sources (project files).
 - Every model is shown as a screenshot from the game camera.
+- No model ships with flat, even paint (Kanta 2026-10-26, Fortress domes): every own or procedural model gets a natural surface before review — edge wear, cavity grime and dust, seams or panel lines where they fit, soot near engines and guns, and a roughness map with variation. Matte, no gloss. Bake approach: `game/tools/blender/turret_paint.py`.
 - Remaining 3D-model tasks: `docs/tasks/3d-models-handoff.md`.
 
 ## Site flakheaven.com

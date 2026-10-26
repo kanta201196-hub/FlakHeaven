@@ -44,11 +44,11 @@ if part == "ball":
         for x in (0.62, 1.05):
             cyl("band", (x, y, 0), 0.034, 0.03, M_BARREL, "X", 16)
         if TIER >= 2:
-            box("brake", (1.29, y, 0), (0.14, 0.064, 0.064), M_BARREL, 0.006)
+            # 3.5-s12: the bore is drilled into the brake's face
+            drill(box("brake", (1.29, y, 0), (0.14, 0.064, 0.064), M_BARREL, 0.006), (1.36, y, 0), 0.016, 0.03, M_DARK)
             box("brake_slot", (1.29, y, 0), (0.05, 0.066, 0.04), M_DARK, 0.0)
         else:
-            cyl("tip", (1.29, y, 0), 0.032, 0.14, M_BARREL, "X", 16)
-            cyl("bore", (1.362, y, 0), 0.015, 0.01, M_DARK, "X", 12)
+            drill(cyl("tip", (1.29, y, 0), 0.032, 0.14, M_BARREL, "X", 16), (1.36, y, 0), 0.015, 0.06, M_DARK)
         if TIER == 3:
             # дырчатый кожух охлаждения на средней части ствола
             cyl("jacket", (0.83, y, 0), 0.04, 0.34, M_DARK, "X", 16)

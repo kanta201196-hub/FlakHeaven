@@ -52,6 +52,10 @@ const ACE_FLARE_CHARGES := 2
 ## How many of each kind stay in the air and how often the spawner tops them up, s.
 const INTERCEPTOR_MAX := 1
 const CARRIER_MAX := 2
+## Build loop (Kanta 2026-10-26, option 1): DRAFT_PICKS ordinary card picks in a row before takeoff, then one
+## more for every rival ace shot down, CARDS_MAX picks per sortie at most. No XP from kills.
+const DRAFT_PICKS := 8
+const CARDS_MAX := 20
 ## Player flares on F (the 2nd skill slot) in the mode: a salvo like «Кит»'s, every FLARE_CD s.
 const FLARE_CD := 6.0
 const TOPUP_EVERY := 6.0
@@ -92,3 +96,9 @@ static func needs(kind: String, alive: int) -> bool:
 static func bank_rate(bank: float, want: float, rate_in: float = BANK_IN_RATE, rate_out: float = BANK_OUT_RATE) -> float:
 	var deeper := absf(want) > absf(bank) and (signf(want) == signf(bank) or bank == 0.0)
 	return rate_in if deeper else rate_out
+
+
+## Card picks earned by shooting down the `aces_down`-th rival ace: one while the sortie total (draft + aces)
+## stays within CARDS_MAX, then none.
+static func ace_picks(aces_down: int) -> int:
+	return 1 if DRAFT_PICKS + aces_down <= CARDS_MAX else 0

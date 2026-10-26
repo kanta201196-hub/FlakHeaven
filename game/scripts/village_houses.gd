@@ -63,6 +63,12 @@ const ORCHARD := 23
 const PALM := 24
 const TREE_KINDS := {ORCHARD: "orchard", PALM: "palm"}
 const DIR := "res://models/village/"
+## Render budget (graphics option «props», as BiomeProps): the rug lies a centimetre off the ground, so its shadow
+## is never seen on any preset; one shadow draw per village saved
+const NO_SHADOW := [RUG]
+## «Мало» (props 0, preset «Низкое»): yard and market clutter under ~3 m is left out. Each kind is a few pixels at
+## gameplay height but one draw call per village; the tents, stalls, awnings and rug frames keep the market
+const LOW_SKIP := [CART, BAGS, POTS, RUG, HAY, WOODPILE, TROUGH, TANDOOR]
 ## Fort shader terms in model metres (the fort's are in preview units of a far taller wall)
 const GRIME := 1.5
 const BLEACH := 2.8
@@ -102,11 +108,17 @@ static func size(v: int) -> Vector3:
 
 ## Add the houses of one village under its MeshInstance3D: homes are AdobeBuild records
 ## [variant, centre (old units), yaw, scale (x, y, z)]; one MultiMeshInstance3D per variant present.
+## The «props» graphics option trims it the way BiomeProps trims the biome: on «Мало» the small clutter
+## (LOW_SKIP) is not drawn and the remaining clutter, well and trees cast no shadow (as biome models there); on
+## «Средне» the LOW_SKIP models and the well, a few pixels at gameplay height, cast none. Houses always cast one.
 ## Main thread only (loads the models). Returns the number of triangles added.
 static func attach(parent: Node3D, homes: Array) -> int:
+	var props := Settings.gopt("props")
 	var by := {}
 	for h in homes:
 		var v := int(h[0])
+		if props == 0 and LOW_SKIP.has(v):
+			continue
 		if not by.has(v):
 			by[v] = []
 		by[v].append(h)
@@ -130,9 +142,16 @@ static func attach(parent: Node3D, homes: Array) -> int:
 			mm.set_instance_transform(i, Transform3D(b, o))
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
+		if NO_SHADOW.has(v) or (props == 0 and _small(v)) or (props == 1 and (LOW_SKIP.has(v) or v == WELL)):
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		parent.add_child(mmi)
 		tris += _tris(mesh) * by[v].size()
 	return tris
+
+
+## Clutter, the yard well and the tree cards: the models BiomeProps would call small (no house)
+static func _small(v: int) -> bool:
+	return v == WELL or v >= PROP0
 
 
 ## Triangles the houses of a village draw (visual_bench's per-village count). Main thread only
