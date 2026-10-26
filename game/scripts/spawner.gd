@@ -184,6 +184,9 @@ func _process(delta: float) -> void:
 				_air_hist = _air_hist.slice(_air_hist.size() - 200)
 		if _dealt_hist.size() > 120:
 			_dealt_hist = _dealt_hist.slice(_dealt_hist.size() - 61)
+	if Main.aces():
+		_aces_tick(p, t, delta)
+		return
 	_pressure(t, delta)
 	# Ас каждые 5 минут
 	var due := int(t / Tuning.g("boss_every"))
@@ -284,6 +287,64 @@ func _process(delta: float) -> void:
 				var h := Helicopter.new()
 				_place(h, p, randf() * TAU, t)
 				h.heading = (p.global_position - h.position).angle()
+
+
+## «Битва асов» (AB-01): when the next rival ace takes off and the top-up timer of interceptors and carriers
+var _ace_next := AcesBalance.ACE_FIRST
+var _autotest := OS.get_cmdline_user_args().has("--autotest")
+var _topup_cd := 1.0
+
+
+## «Битва асов» spawn rules instead of the campaign ones: a few interceptors, more missile carriers, a rival ace
+## every AcesBalance.ACE_EVERY s; fixed HP, no ramps, waves, activities or evacuation.
+func _aces_tick(p: Player, t: float, delta: float) -> void:
+	var icpts := 0
+	var carriers := 0
+	var rivals := 0
+	for n in get_tree().get_nodes_in_group("enemies"):
+		if n is RivalAce:
+			rivals += 1
+		elif n is Interceptor:
+			icpts += 1
+		elif n is MissileCarrier:
+			carriers += 1
+	if AcesBalance.ace_due(t, _ace_next, rivals):
+		_ace_next = t + AcesBalance.ACE_EVERY
+		var ace := RivalAce.new()
+		ace.setup(AcesBalance.ACE_HP)
+		ace.min_life = 0.0   # realistic damage: three missiles bring it down, no per-second cap
+		var back := p.heading + PI + randf_range(-0.6, 0.6)
+		ace.position = p.global_position + Vector2.from_angle(back) * 1100.0
+		ace.heading = (p.global_position - ace.position).angle()
+		Main.I.world.add_child(ace)
+		if _autotest:
+			print("AUTOTEST: aces mode — rival ace %s at %.0f (%d up)" % [ace.callsign, t, rivals + 1])
+		Events.banner.emit(Loc.t("Вражеский ас «%s» заходит вам в хвост!") % Loc.t(ace.callsign), 3.0)
+		Main.I.sfx.play("boss", -8.0, 1.4)
+	_topup_cd -= delta
+	if _topup_cd > 0.0:
+		return
+	_topup_cd = AcesBalance.TOPUP_EVERY
+	if AcesBalance.needs("interceptor", icpts):
+		_aces_place(Interceptor.new(), p, AcesBalance.INTERCEPTOR_HP, t)
+	if AcesBalance.needs("carrier", carriers):
+		_aces_place(MissileCarrier.new(), p, AcesBalance.CARRIER_HP, t)
+
+
+## «Битва асов»: seconds until the next rival ace may take off (0 — it waits for a free slot).
+func ace_next_in() -> float:
+	return maxf(0.0, _ace_next - Main.I.run_time)
+
+
+## Places `e` off screen like `_place`, with fixed `hp`: the mode has no HP ramp, difficulty or elite variants.
+func _aces_place(e: Enemy, p: Player, hp: float, t: float) -> void:
+	var far := 1.0 + 0.5 * sin(deg_to_rad(Tuning.g("cam_tilt")))
+	e.position = p.global_position + Vector2.from_angle(randf() * TAU) * randf_range(1150.0, 1350.0) * far
+	Main.I.world.add_child(e)
+	e.hp = hp
+	e.max_hp = hp
+	e.born_t = t
+	e.heading = (p.global_position - e.position).angle()
 
 
 const BOMBER_FROM := 180.0

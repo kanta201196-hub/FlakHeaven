@@ -223,6 +223,10 @@ func abort_run() -> void:
 func ui_click(action: String) -> void:
 	if action == "menu_play":
 		m._set_state("campaign")
+	elif action == "menu_aces":   # AB-01: «Битва асов» test mode — «Оса» with the hangar setup, straight into the fight
+		m.mode = "aces"
+		m.cls_id = "fighter"
+		m.select_class(m.cls_id)
 	elif action == "campaign_back":
 		m._set_state("menu")
 	elif action.begins_with("op:"):
