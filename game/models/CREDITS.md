@@ -28,6 +28,9 @@
 | biome2/a35_olive_b (старая олива) | Old Olive Tree | massive-graphisme | https://sketchfab.com/3d-models/old-olive-tree-6328df8a0f214143a880a72b86db2ab4 | CC BY 4.0, изменено |
 | biome2/a37_pine_b (кипарис) | Pine Trees Pack (PS1 Low Poly) | Vova Truestory | https://sketchfab.com/3d-models/pine-trees-pack-ps1-low-poly-347d7f6122af4bf684f752df2dd0eb5a | CC BY 4.0, изменено |
 | biome2/a38_tree_leaf (лиственное дерево) | Leaf Tree (PS1 Low Poly) | Wersaus33 | https://sketchfab.com/3d-models/leaf-tree-ps1-low-poly-d799c08100974e1ba352fcd646cb0694 | CC BY 4.0, изменено |
+| biome/b12_rock_outcrop_b (выход породы, вариант) | Namaqualand Cliff 02 | Poly Haven (скан: Dario Barresi, Rico Cilliers) | https://polyhaven.com/a/namaqualand_cliff_02 | CC0, изменено |
+| biome/b13_boulders_b (россыпь валунов, вариант) | Namaqualand Boulder 02 | Poly Haven (скан: Greg Zaal, Rico Cilliers) | https://polyhaven.com/a/namaqualand_boulder_02 | CC0, изменено |
+| biome/b14_rock_spire_b (скала-останец, вариант) | Desert Cliff 6 | WireframeArt | https://sketchfab.com/3d-models/desert-cliff-6-ed2e9c7e976e4768868481e4a5c63f6f | CC BY 4.0, изменено |
 | battle/e_albatross (босс «Альбатрос») | LM-328 Flying Boat | TonyWony | https://sketchfab.com/3d-models/lm-328-flying-boat-d34a38da8ac6454cbdea645433b8d45b | CC BY 4.0, изменено |
 | battle/e_leviathan (босс «Левиафан») | Kiev-class Aircraft Carrier | Muhamad Mirza Arrafi | https://sketchfab.com/3d-models/kiev-class-aircraft-carrier-f854eda1eab54a40aae8628e6456ae78 | CC BY 4.0, изменено |
 | battle/e_lev_turret (главная башня «Левиафана») | US Mark 15/16 19-inch 45 caliber turret | Peter Primini | https://sketchfab.com/3d-models/us-mark-1516-19-inch-45-caliber-turret-1284145fb0e8419c97ae487cbf08ff16 | CC BY 4.0, изменено |

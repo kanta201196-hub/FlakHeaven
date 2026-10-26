@@ -12,6 +12,11 @@ const KINDS := {
 	"outcrop": ["b01_rock_outcrop", 40.0, 80.0],
 	"boulders": ["b02_boulders", 12.0, 30.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90, потом 22–50); масштаб «2–4 км»: валун 2–6 м при истребителе ~100 px
 	"spire": ["b03_rock_spire", 25.0, 45.0],
+	# VIS-01 (Kanta 26.10): scan variants of the rocks (tools/model_lab/rock_prep.py); placement asks for the base
+	# kind and _add_sized swaps in a variant by place (ROCK_VARIANTS)
+	"outcrop_b": ["b12_rock_outcrop_b", 40.0, 80.0],
+	"boulders_b": ["b13_boulders_b", 12.0, 30.0],
+	"spire_b": ["b14_rock_spire_b", 25.0, 45.0],
 	"poplar": ["b04_poplar", 16.0, 24.0],
 	"orchard": ["b05_orchard_tree", 34.0, 50.0],
 	"shrub": ["b06_shrub", 14.0, 30.0],
@@ -39,7 +44,17 @@ const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree"}
 ## full 3000. The import's automatic LOD only halves it (UV seams stop simplification at
 ## ~1600 triangles) and a MultiMesh picks one LOD for the whole chunk. Same frame as the full model; its material
 ## (textures) is reused, so only the triangle count differs. Used on every preset.
-const LOW_POLY := {"boulders": "b02_boulders_lite"}
+const LOW_POLY := {"boulders": "b02_boulders_lite", "boulders_b": "b13_boulders_b_lite"}
+
+## VIS-01 (Kanta 26.10: rocks "not monotonous"): models a base rock kind may be drawn with. The pick is by a
+## ~100 px cell of the place, not the cell's rng, so the placement stays as it was, and a rock group (an outcrop
+## with its scree) mostly shares one look while the next group differs. Each variant is one more MultiMesh
+## (draw call) in a chunk where it appears.
+const ROCK_VARIANTS := {
+	"outcrop": ["outcrop", "outcrop_b"],
+	"boulders": ["boulders", "boulders_b"],
+	"spire": ["spire", "spire_b"],
+}
 
 ## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
 const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
@@ -408,7 +423,7 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.name = kind
-		var small: bool = kind in ["shrub", "boulders", "poplar", "orchard"] or kind in SeaProps.SMALL
+		var small: bool = kind in ["shrub", "boulders", "boulders_b", "poplar", "orchard"] or kind in SeaProps.SMALL
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
 		var no_shadow := Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if no_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -440,7 +455,12 @@ func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2,
 	_add_sized(rng, put, kind, p, rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2])), ctx)
 
 
+## One model of `kind` at p, w px wide (shrunk high up and capped below the combat plane); a rock kind may be
+## swapped for one of its ROCK_VARIANTS here, before the height cap, so the cap uses the variant's own height
 func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, w: float, ctx: Dictionary) -> void:
+	if ROCK_VARIANTS.has(kind):
+		var vs: Array = ROCK_VARIANTS[kind]
+		kind = vs[absi(hash(Vector2i(roundi(p.x / 97.0), roundi(p.y / 97.0)))) % vs.size()]
 	# M-35: ни один предмет биома (дерево, куст, валун, юрта, мешки) не залезает кроной/краем в охранную зону реки
 	# S9-07: и в охранную полосу ручья посёлка (протоки) — river_field её не видит
 	if _t.river_guard_dist(p, w * 0.45) < 0.0 or _t.stream_dist(p, ctx) < Terrain3D.STREAM_GUARD + w * 0.45:
