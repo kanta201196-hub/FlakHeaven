@@ -11,7 +11,7 @@ extends RefCounted
 ## base() + piece(id, state) once a fort is hit. Broken variants (preview hq_scene.html brokenTower, wallBreach,
 ## blown gate, burnt store) build in a second background task after the intact set.
 
-enum M { PLASTER, STONE, BRICK, CONC, WOOD, DARK, BAG, OLIVE, STEEL, RUB_PLASTER, RUB_BRICK, RUB_STONE, SOOT, CHAR }
+enum M { PLASTER, STONE, BRICK, CONC, WOOD, DARK, BAG, OLIVE, STEEL, RUB_PLASTER, RUB_BRICK, RUB_STONE, SOOT, CHAR, NET }
 
 const K := 0.42 / 46.0          ## preview unit → unit mesh (the old fort's wall line was 0.42)
 const S := 46.0                 ## wall line, half side
@@ -186,6 +186,10 @@ static func material(m: int) -> Material:
 			M.CHAR:   # charred gate leaves and planks
 				f.albedo_color = Color(0.2, 0.16, 0.13)
 				f.roughness = 1.0
+			M.NET:    # camouflage net over the store, seen from both sides
+				f.albedo_color = Color(0.46, 0.44, 0.29)
+				f.roughness = 1.0
+				f.cull_mode = BaseMaterial3D.CULL_DISABLED
 		mat = f
 	_mats[m] = mat
 	return mat
@@ -240,6 +244,9 @@ func _begin(id: String) -> void:
 func _build() -> void:
 	_begin("base")
 	_gate_towers()
+	for c: Vector2 in [Vector2(-18, S + 16), Vector2(18, S + 16)]:   # sandbag checkpoints on the gate road
+		_sandbag_ring(c.x, 0.0, c.y, 4.2, 0.0 if c.x < 0.0 else PI)
+	_begin("citadel")
 	_citadel()
 	for i in 4:
 		_begin("t%d" % i)
@@ -252,6 +259,7 @@ func _build() -> void:
 	_begin("store")
 	for z: float in [-12.0, -5.0, 2.0]:
 		_fuel_tank(30.0, z, 0.1)
+	_camo_net(31.0, -5.0, 0.1)
 
 
 ## Damaged and broken variants of every piece, keyed "id:state" (FortDamage states).
@@ -270,6 +278,8 @@ func _build_broken() -> void:
 	_gate_blown()
 	_begin("store:%d" % FortDamage.BROKEN)
 	_store_burnt()
+	_begin("citadel:%d" % FortDamage.BROKEN)
+	_citadel(true)
 
 
 # ---------- layout (preview «live» state; gate in the south, +z) ----------
@@ -540,10 +550,24 @@ func _store_burnt() -> void:
 		_boxr(M.SOOT, Vector3(_r(1.0, 2.6), 0.15, _r(0.6, 1.4)), Vector3(30.0 + _r(-6.0, 6.0), 0.2, -5.0 + _r(-10.0, 10.0)), _tumble(0.5))
 
 
-## Citadel (two stepped blocks and the keep) and the rooms along the inner walls.
-func _citadel() -> void:
-	_block(-6, -16, 32, 22, 12)
-	_block(-10, -18, 16, 12, 7, 12.8)
+## Citadel (two stepped blocks and the keep) and the rooms along the inner walls. `burnt` (FA-04, the fort taken):
+## the upper block's roof has fallen in onto the lower roof, soot licks up from every window, beams stick out.
+func _citadel(burnt := false) -> void:
+	_block(-6, -16, 32, 22, 12, 0.0, burnt)
+	if burnt:
+		_block(-10, -18, 16, 12, 4.5, 12.8, true)
+		_rubble(Vector3(-10, 17.3, -18), 45, 5.0, 1.2)
+		_rubble(Vector3(-2, 12.8, -12), 25, 4.0, 1.0)
+		for i in 5:
+			var a := _rng.randf() * TAU
+			_beam(Vector3(-10.0 + cos(a) * 5.0, 17.0, -18.0 + sin(a) * 4.0), _r(3.0, 5.0), Vector3(cos(a), 0, sin(a)), _r(-0.5, 0.4))
+		# the camera looks down, so the fire shows on the roofs: char around the gutted top, soot spreading out
+		_box(M.CHAR, Vector3(15.0, 0.1, 11.0), Vector3(-10, 18.1, -18))
+		for i in 7:
+			var m := M.CHAR if i < 3 else M.SOOT
+			_box(m, Vector3(_r(4.0, 8.0), 0.1, _r(3.0, 6.0)), Vector3(_r(-20.0, 8.0), 12.8 + 0.01 * i, _r(-26.0, -6.0)), _r(0.0, PI))
+	else:
+		_block(-10, -18, 16, 12, 7, 12.8)
 	_box(M.PLASTER, Vector3(9, 27, 9), Vector3(6, 0, -22))
 	_box(M.PLASTER, Vector3(9.6, 0.8, 9.6), Vector3(6, 27, -22))
 	for d: Vector2 in [Vector2(-4, -4), Vector2(4, -4), Vector2(-4, 4), Vector2(4, 4)]:
@@ -556,7 +580,8 @@ func _citadel() -> void:
 
 
 ## Flat-roofed adobe block: parapet with merlons on the long sides, windows and beam ends on the +z face, stone base.
-func _block(x: float, z: float, w: float, d: float, h: float, y0 := 0.0) -> void:
+## `burnt` — soot stains rising from the windows.
+func _block(x: float, z: float, w: float, d: float, h: float, y0 := 0.0, burnt := false) -> void:
 	_box(M.PLASTER, Vector3(w, h, d), Vector3(x, y0, z))
 	_box(M.PLASTER, Vector3(w + 0.4, 0.8, d + 0.4), Vector3(x, y0 + h, z))
 	var i := -w * 0.5 + 2.0
@@ -567,6 +592,9 @@ func _block(x: float, z: float, w: float, d: float, h: float, y0 := 0.0) -> void
 	i = -w * 0.5 + 3.0
 	while i < w * 0.5 - 2.0:
 		_box(M.DARK, Vector3(1.2, 2.2, 0.5), Vector3(x + i, y0 + h * 0.55, z + d * 0.5 + 0.05))
+		if burnt:
+			var sh := minf(h * 0.4, 4.0)
+			_box(M.SOOT, Vector3(_r(1.8, 2.6), sh, 0.3), Vector3(x + i, y0 + h * 0.55 + 1.6, z + d * 0.5 + 0.12))
 		_cyl(M.WOOD, 0.3, 0.3, 1.4, 6, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(x + i + 1.6, y0 + h - 1.4, z + d * 0.5 + 0.5)))
 		i += 4.5
 	_box(M.STONE, Vector3(w, 3, d), Vector3(x, y0 - 0.01, z))
@@ -586,6 +614,28 @@ func _fuel_tank(x: float, z: float, ry: float, m := M.OLIVE, tip := 0.0, lift :=
 	_xf = body
 	for s: float in [-1.0, 1.0]:
 		_box(M.STEEL if m == M.OLIVE else m, Vector3(0.7, 2.2, 3.6), Vector3(s * 3.0, 0, 0))
+	_xf = keep
+
+
+## Camouflage net over the store: sags between its poles, edges hanging down to ~0.7 m over the ground.
+func _camo_net(x: float, z: float, ry: float) -> void:
+	var nx := 16
+	var nz := 12
+	var keep := _xf
+	_xf = _xf * Transform3D(Basis(Vector3.UP, ry), Vector3(x, 0, z))
+	var g := []
+	for i in nx + 1:
+		var col := []
+		for j in nz + 1:
+			var px := -11.0 + 22.0 * i / nx
+			var pz := -8.0 + 16.0 * j / nz
+			var e := minf(1.0, minf(11.0 - absf(px), 8.0 - absf(pz)) / 3.5)
+			col.append(_xf * Vector3(px, 6.2 - (1.0 - e) * 5.5 + sin(px * 0.8) * cos(pz * 0.7) * 0.35, pz))
+		g.append(col)
+	var below := _xf * Vector3(0, -40.0, 0)
+	for i in nx:
+		for j in nz:
+			_quad(M.NET, g[i][j], g[i + 1][j], g[i + 1][j + 1], g[i][j + 1], below)
 	_xf = keep
 
 
