@@ -329,23 +329,23 @@ def tex_prop(name, obs, size, k):
 
 
 STALL_KEEP = r"tenda\.012_leather|tenda\.012_pole|Crate_low\.15[36]|Terakota|Wicker-non-pbr|Kursi"
-STALL_RULE = [("leather", "cloth"), ("Terakota", "clay"), ("Wicker", "straw"), (".", "wood")]
+STALL_RULE = [("leather", "cloth"), ("Terakota", "clay"), (".", "wood")]   # wicker as wood: a surface is a draw call
 AWNING_RULE = [("tarp", "cloth"), (".", "wood")]
-CART_RULE = [("Binding", "dark"), (".", "wood")]
+CART_RULE = [(".", "wood")]   # iron bindings read as dark wood at 15 px; one surface
 
 # [name, source dir, keep regex, drop regex, class rule | (texture size, brightness), scale to metres, triangle
 # budget]. Class props are made two-sided afterwards (their tarps, planks and cloths are open sheets: the class
 # materials cull back faces), so they end at twice the budget
 SOURCES = [
-    ("stall", "stall", STALL_KEEP, r"^$", STALL_RULE, 1.0, 450),
-    ("awning", "awning", r".", r"^$", AWNING_RULE, 1.0, 650),
-    ("cart", "cart", r".", r"^$", CART_RULE, 0.01, 350),
-    ("bags", "bags", r".", r"^$", (256, 0.78), 1.0, 500),
-    ("pots", "pots", r".", r"^$", (256, 0.95), 0.01, 700),
+    ("stall", "stall", STALL_KEEP, r"^$", STALL_RULE, 1.0, 300),
+    ("awning", "awning", r".", r"^$", AWNING_RULE, 1.0, 200),
+    ("cart", "cart", r".", r"^$", CART_RULE, 0.01, 150),
+    ("bags", "bags", r".", r"^$", (256, 0.78), 1.0, 300),
+    ("pots", "pots", r".", r"^$", (256, 0.95), 0.01, 350),
     ("rug", "rug", r".", r"^$", (512, 0.85), 2.5, 60),
-    ("hay", "hay", r".", r"^$", (256, 0.9), 1.0, 500),
-    ("wood", "wood", r".", r"^$", (256, 0.8), 0.02, 500),
-    ("trough", "trough", r".", r"Anvil", (256, 0.9), 0.01, 500),
+    ("hay", "hay", r".", r"^$", (256, 0.9), 1.0, 300),
+    ("wood", "wood", r".", r"^$", (256, 0.8), 0.02, 300),
+    ("trough", "trough", r".", r"Anvil", (256, 0.9), 0.01, 300),
 ]
 
 
@@ -357,9 +357,12 @@ def build_source(dl, out, row):
         if o not in keepo:
             bpy.data.objects.remove(o)
     if isinstance(rule, list):
+        # each part to its share of the budget: one collapse over the whole prop ate the awning's thin frame
+        total = sum(tris(p) for p in keepo)
+        for p in keepo:
+            decimate(p, max(12, int(target * tris(p) / total)))
         o = class_prop(keepo, rule)
         normalize(o, scale)
-        decimate(o, target)
         drop_unused_slots(o)
         two_sided(o)
         box_uvs(o)
@@ -428,9 +431,9 @@ def build_tent(out, cloth):
             _box(bm, (sx * (W - 0.12), sy * (D - 0.15), E / 2), (0.08, 0.08, E), wi)
         _box(bm, (sx * (W - 0.12), 0, R / 2), (0.08, 0.08, R), wi)
     _box(bm, (0, -D + 0.55, 0.4), (3.0, 0.7, 0.8), wi)   # counter
-    for k, x in enumerate((-1.0, -0.3, 0.45, 1.1)):   # goods: sacks and bundles (one class: a surface is a draw call)
-        _box(bm, (x, -D + 0.55, 0.92), (0.45, 0.4, 0.24 + 0.06 * (k % 2)), CLASSES.index("bag"))
-    _box(bm, (0.6, 0.6, 0.35), (0.9, 0.7, 0.7), CLASSES.index("bag"))   # sacks at the back
+    for k, x in enumerate((-1.0, -0.3, 0.45, 1.1)):   # goods: crates (timber, as the frame: a surface is a draw call)
+        _box(bm, (x, -D + 0.55, 0.92), (0.45, 0.4, 0.24 + 0.06 * (k % 2)), wi)
+    _box(bm, (0.6, 0.6, 0.35), (0.9, 0.7, 0.7), wi)   # crates at the back
     o = _mesh_object("tent", bm, mats)
     drop_unused_slots(o)
     box_uvs(o)

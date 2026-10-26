@@ -26,14 +26,14 @@ const WELL_SCALE := 1.6              ## the scan is a 1.2 m slab: barely a few p
 ## [file, size (x, height, depth) in metres]. Variant index = PROP0 + row. Surfaces named vh_<class> get the class
 ## materials below; the rest keep their own (graded, matte) texture.
 const PROPS := [
-	["vc_stall", Vector3(4.28, 3.01, 3.86)],     # market stall: cloth tent on poles, crates, pots, baskets (126)
-	["vc_awning", Vector3(10.25, 4.63, 4.73)],   # cloth awning on a timber frame, over a shop front (127)
-	["vc_cart", Vector3(2.16, 0.74, 1.01)],      # two-wheeled wooden cart (128)
-	["vc_bags", Vector3(1.82, 0.58, 1.71)],      # pile of burlap sacks (132)
-	["vc_pots", Vector3(1.84, 0.68, 1.15)],      # clay pots with lids (134)
+	["vc_stall", Vector3(3.86, 3.01, 3.89)],     # market stall: cloth tent on poles, crates, pots, baskets (126)
+	["vc_awning", Vector3(10.24, 4.62, 4.78)],   # cloth awning on a timber frame, over a shop front (127)
+	["vc_cart", Vector3(2.23, 0.77, 1.01)],      # two-wheeled wooden cart (128)
+	["vc_bags", Vector3(1.82, 0.59, 1.71)],      # pile of burlap sacks (132)
+	["vc_pots", Vector3(1.85, 0.69, 1.16)],      # clay pots with lids (134)
 	["vc_rug", Vector3(2.48, 0.01, 1.62)],       # rug laid out on the ground (138)
 	["vc_hay", Vector3(2.16, 0.85, 1.18)],       # haystack (139)
-	["vc_wood", Vector3(1.50, 1.04, 1.55)],      # woodpile (140)
+	["vc_wood", Vector3(1.53, 1.04, 1.55)],      # woodpile (140)
 	["vc_trough", Vector3(3.25, 0.59, 2.31)],    # water trough and a bucket (141)
 	["vc_tent_a", Vector3(3.60, 2.55, 3.20)],    # market tent, built: gabled cloth canopy over a counter
 	["vc_tent_b", Vector3(3.60, 2.55, 3.20)],
@@ -41,6 +41,9 @@ const PROPS := [
 	["vc_tandoor", Vector3(1.50, 1.15, 1.50)],   # clay oven on a plinth, built
 	["vc_rugframe", Vector3(2.90, 2.20, 0.09)],  # rugs hung on a timber frame, built
 ]
+## A rug is 1 cm thick: at the houses' sunk base the ground swallows it, so it lies a hair above the ground
+## (old units, ≈ 15 cm, unseen from above)
+const RUG_LIFT := 0.0035
 const PROP0 := 9
 const STALL := 9
 const AWNING := 10
@@ -123,7 +126,7 @@ static func attach(parent: Node3D, homes: Array) -> int:
 			if v == WELL:
 				s *= WELL_SCALE
 			var b := Basis(Vector3.UP, -float(h[2])) * Basis.from_scale(s * AdobeBuild.V_UNIT)
-			var o := Vector3(c.x, AdobeBuild.SINK - 0.002, c.y) * AdobeBuild.V_UNIT
+			var o := Vector3(c.x, AdobeBuild.SINK - 0.002 + (RUG_LIFT if v == RUG else 0.0), c.y) * AdobeBuild.V_UNIT
 			mm.set_instance_transform(i, Transform3D(b, o))
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
