@@ -40,7 +40,7 @@ func _init(main: Main) -> void:
 		if a == "--nowater":   # S9-07/S9-08: «до» — кишлак без учёта ручья и реки у посёлка (vis_<имя>_dry.png)
 			AdobeBuild.ignore_water = true
 			_suffix += "_dry"
-		if a == "--boxhouses":   # VIS-01: «до» — дома кишлака коробками, а не моделями (vis_<имя>_box.png)
+		if a == "--boxhouses":   # VIS-01: "before" — village houses as boxes, not models (vis_<name>_box.png)
 			AdobeBuild.model_houses = false
 			_suffix += "_box"
 

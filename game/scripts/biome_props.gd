@@ -32,7 +32,7 @@ const KINDS := {
 	"bridge": ["", 84.0, 95.0],        # L-07: модели кодом (AdobeBuild.bridge): мост дороги через ручей
 	# Kanta 24.10: the road bridge was smaller than the AA vehicles crossing it; span 58 -> 84 (deck width scales with it)
 	"footbridge": ["", 150.0, 165.0],  # и пешеходный через реку
-	# VIS-01 (Kanta 26.10, «Оазис: 66 … 70»): date palms and the well of the oasis (tools/blender/oasis_models.py)
+	# VIS-01 (Kanta 26.10, oasis: models 66 to 70): date palms and the well of the oasis (tools/blender/oasis_models.py)
 	"palm": ["b12_date_palm", 26.0, 40.0],
 	"well": ["b13_oasis_well", 10.0, 12.0],
 }
@@ -313,7 +313,7 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 						continue
 					trees += 1
 					_add(rng, put, tree, q, [], ctx)
-					if rng.randf() < (0.7 if oasis else 0.45):   # сад — группа деревьев; пальмы растут куртинами
+					if rng.randf() < (0.7 if oasis else 0.45):   # an orchard is a group of trees; palms grow in clumps
 						var dir := Vector2.from_angle(rng.randf() * TAU)
 						_add(rng, put, tree, q + dir * (rng.randf_range(22.0, 32.0) if oasis else rng.randf_range(30.0, 45.0)), [], ctx)
 				var a0 := rng.randf() * TAU
