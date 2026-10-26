@@ -46,6 +46,7 @@ if part == "ball":
         if TIER >= 2:
             box("brake", (1.29, y, 0), (0.14, 0.064, 0.064), M_BARREL, 0.006)
             box("brake_slot", (1.29, y, 0), (0.05, 0.066, 0.04), M_DARK, 0.0)
+            cyl("bore", (1.3605, y, 0), 0.016, 0.004, M_DARK, "X", 12)   # 3.5-s12: bore on the brake's face
         else:
             cyl("tip", (1.29, y, 0), 0.032, 0.14, M_BARREL, "X", 16)
             cyl("bore", (1.362, y, 0), 0.015, 0.01, M_DARK, "X", 12)

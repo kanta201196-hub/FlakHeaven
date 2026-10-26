@@ -91,6 +91,8 @@ def twin(TIER=2, QUAD=False, M_BODY=None, M_DARK=None, M_BARREL=None, M_GLASS=No
                 box("brake", (2.0, y, bz), (0.17, 0.07, 0.07), M_BARREL, 0.006)
                 for x in (1.96, 2.05):
                     box("brake_slot", (x, y, bz), (0.05, 0.072, 0.045), M_DARK, 0.0)
+                # 3.5-s12 (Kanta: "no bore in the barrels?"): the brake's front face shows the bore
+                c("bore", (2.0855, y, bz), 0.018, 0.004, M_DARK, "X", 12)
             else:
                 # ступень 1: ствол без тормоза — простой пламегаситель-втулка, срез там же
                 c("tip", (2.0, y, bz), 0.034, 0.16, M_BARREL, "X", 16)
