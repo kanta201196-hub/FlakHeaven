@@ -276,6 +276,7 @@ const STORE_FILL := 0.25
 const STORE_AMBIENT := 0.36
 const STORE_WHITE := 4.0
 const STORE_EXPOSURE := 1.0
+const GLOW_THRESHOLD := 1.6   # flight background: glow only above this HDR level (the flame core, not the sky)
 ## S9-04: поворот турели на вкладке «ОРУЖИЕ» (рад): при виде по умолчанию (YAW0) стволы — к зрителю под ~55°
 const TURRET_SHOW_YAW := 1.35
 
@@ -307,6 +308,13 @@ func _set_bg(mode: String) -> void:
 	_fill_light.light_energy = STORE_FILL
 	_env.tonemap_white = 1.6 if fly else STORE_WHITE
 	_env.tonemap_exposure = 1.0 if fly else STORE_EXPOSURE
+	# Kanta 25.10: the nozzle flame (NozzleFlame) blooms in the showcase; only HDR-bright pixels glow, so the
+	# sky and the paint stay as they were
+	_env.glow_enabled = fly
+	_env.glow_hdr_threshold = GLOW_THRESHOLD
+	_env.glow_intensity = 0.45
+	_env.glow_bloom = 0.0
+	_env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 
 
 ## Каждый кадр, пока открыта вкладка «САМОЛЁТ»: какой самолёт показать и где
@@ -643,6 +651,8 @@ func _build(cls_id: String, lvl: int) -> void:
 	if bay != null:
 		WingMech.pose_bay(bay, 1.0)
 	_apply_livery(model, cls_id, lvl)
+	# Kanta 25.10: running engines — the flame fills the rough remeshed nozzles (not on «Кит» 1, propellers)
+	NozzleFlame.attach(model, "%s_%d" % [cls_id, lvl])
 	_add_weapons(cls_id, lvl)
 
 

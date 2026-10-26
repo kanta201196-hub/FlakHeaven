@@ -1009,6 +1009,13 @@ const UNIT_POSES := {
 	"heli": ["e_helicopter", 60.0, 9.0], "interceptor": ["e_interceptor", 46.0, 11.0],
 	# S11-24: the strike drone plain and elite (the elite marking drew it flat yellow on Forward+)
 	"drone": ["e_drone", 34.0, 14.0], "drone_elite": ["e_drone", 34.0, 12.0], "drone_hit": ["e_drone", 34.0, 14.0],
+	# Kanta 25.10 enemy overview: every Highlands enemy alone and close (lengths from each script's sprite)
+	"interceptor_elite": ["e_interceptor", 46.0, 9.5], "carrier": ["e_carrier", 60.0, 8.5],
+	"carrier_elite": ["e_carrier", 60.0, 7.2], "bomber": ["e_transport", 120.0, 4.2],
+	"transport": ["e_transport", 190.0, 2.7], "rival": ["e_rival", 64.0, 8.0], "postman": ["e_postman", 92.0, 5.5],
+	"draft": ["e_draft", 84.0, 6.0], "light": ["e_convoy_pickup_tent", 14.0, 34.0],
+	"manpads": ["e_convoy_manpads", 14.0, 34.0], "radar": ["e_radar", 32.0, 15.0], "bunker": ["e_bunker", 59.0, 8.5],
+	"sam": ["e_sam", 34.0, 14.0],
 }
 var _unit: Enemy = null
 var _unit_cv: Convoy = null
@@ -1041,21 +1048,33 @@ func _unit_poses(p: Dictionary) -> void:
 		_spawned = true
 		m.player.process_mode = Node.PROCESS_MODE_DISABLED
 		match kind:
-			"zsu":
+			"zsu", "radar", "bunker", "sam":
 				var g := GroundTarget.new()
-				g.setup("zsu", AASite.new(), 1.0)
+				g.setup(kind, AASite.new(), 1.0)
 				g.position = at
 				g.anchor = at
 				g._body_angle = body
 				_unit = g
 			"heli":
 				_unit = Helicopter.new()
-			"interceptor":
+			"interceptor", "interceptor_elite":
 				_unit = Interceptor.new()
+			"carrier", "carrier_elite":
+				_unit = MissileCarrier.new()
+			"bomber":
+				_unit = Bomber.new()
+			"transport":
+				var tp := Transport.new()
+				tp.setup(99999.0)
+				_unit = tp
+			"rival":
+				_unit = RivalAce.new()
+			"postman", "draft":
+				var b := Boss.new()
+				b.setup("carrier" if kind == "postman" else "interceptor", 99999.0)
+				_unit = b
 			"drone", "drone_elite", "drone_hit":
 				_unit = Drone.new()
-				if kind == "drone_elite":
-					_unit.make_elite()
 			_:
 				if _unit_cv == null:
 					_unit_cv = Convoy.new()   # never enters the tree: only carries the alarm flag the turret reads
@@ -1074,6 +1093,10 @@ func _unit_poses(p: Dictionary) -> void:
 			_unit.heading = body
 		_unit.process_mode = Node.PROCESS_MODE_DISABLED
 		m.world.add_child(_unit)
+		if _unit is RivalAce:
+			(_unit as RivalAce).setup(99999.0)
+		if kind.ends_with("_elite"):
+			_unit.make_elite()
 	var aim := body + (1.15 if _pt > 1.0 else 0.0)
 	_unit.hp = maxf(_unit.hp, 99999.0)
 	_unit.max_hp = maxf(_unit.max_hp, 99999.0)
@@ -1135,6 +1158,17 @@ var _hclose: Array = ([
 ## S11 close-up views from the command line: --hcam=name:cls:lvl:tier:livery:fx:fy:fz:yaw:pitch:dist[;…]
 ## (livery "-" keeps the profile's paint; focus in model units, plane length 1) → user://vis_hcam_<name><suffix>.png
 var _hcams: Array = []
+
+
+var _hc_frame := 0   # --hcamframes: frame of the current view
+
+
+## --hcamframes=N: each --hcam view saves N consecutive frames instead of one (a clip of the animated hangar).
+func _hcam_frames() -> int:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--hcamframes="):
+			return int(a.get_slice("=", 1))
+	return 0
 
 
 func _hcam() -> Array:
@@ -1421,7 +1455,15 @@ func _hangar_bench() -> void:
 		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":
 			# S11: only the 3D view (SubViewport, supersampled), so the close-up is not shrunk into the hangar frame
 			var hn := "user://vis_hcam_%s%s.png" % [_hcam()[cur[5]][0], _suffix]
-			Hangar3D.I.vp.get_texture().get_image().save_png(hn)
+			if _hcam_frames() > 0:   # --hcamframes=N: N frames in a row for a clip (run with --fixed-fps)
+				hn = "user://vis_hcam_%s%s_f%03d.png" % [_hcam()[cur[5]][0], _suffix, _hc_frame]
+				Hangar3D.I.vp.get_texture().get_image().save_png(hn)
+				_hc_frame += 1
+				if _hc_frame < _hcam_frames():
+					return
+				_hc_frame = 0
+			else:
+				Hangar3D.I.vp.get_texture().get_image().save_png(hn)
 			print("VISUAL hcam %s" % hn)
 		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING:
 			# только сам вид ангара (SubViewport, с запасом по разрешению) — для серии кадров и GIF
