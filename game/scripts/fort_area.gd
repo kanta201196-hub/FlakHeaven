@@ -6,9 +6,13 @@ extends AASite
 ## противника» and an optional timer. The base is taken when the four launchers are down; the jeeps
 ## are extra targets. The base keeps at most FortBalance.MISSILE_CAP missiles in the air (locks count).
 ## Built on AASite: the same targets list, `active`, timer and cleanup; GroundTarget asks `can_launch`.
+## FA-03: the fort is conditionally destructible — player blasts breach walls, blow the gate and burn the store,
+## tower crowns follow their launcher's HP (FortDamage); the damage outlives this node for the whole sortie.
 
 var fort: Dictionary = {}
 var launchers: Array[GroundTarget] = []
+var damage: FortDamage
+var _key: Vector2i
 
 
 ## Nearest map fort to `want` within `reach` among chunk objects `objs` (Background.chunk_object
@@ -43,24 +47,32 @@ static func forts_near(bg: Background, want: Vector2, reach: float) -> Array:
 	return out
 
 
-## Unit-mesh point of the fort (AdobeBuild.fort, gate in +z) to world px, the way Render3D draws it:
+## Unit-mesh point of the fort (FortBuild.mesh, gate in +z) to world px, the way Render3D draws it:
 ## scaled by size, turned by rot.
 static func fort_point(f: Dictionary, unit: Vector2) -> Vector2:
 	return (f["pos"] as Vector2) + unit.rotated(float(f["rot"])) * float(f["size"])
 
 
-## The four tower tops: (-,-), (+,-), (-,+), (+,+) in unit-mesh order.
+## World px point `p` to the fort's unit-mesh space: the inverse of fort_point.
+static func to_unit(f: Dictionary, p: Vector2) -> Vector2:
+	return (p - (f["pos"] as Vector2)).rotated(-float(f["rot"])) / float(f["size"])
+
+
+## The four tower pads (round corner towers of FortBuild): (-,-), (+,-), (-,+), (+,+) in unit-mesh order.
 static func tower_points(f: Dictionary) -> PackedVector2Array:
-	var k := 0.42 - 0.17 * 0.4
+	var k := FortBuild.TOWER_C
 	var out := PackedVector2Array()
 	for s: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
 		out.append(fort_point(f, s * k))
 	return out
 
 
-## Two jeep spots in the yard: south of the citadel, either side of the gate road, clear of the rooms.
+## Two jeep spots in the yard (FortBuild.YARD): by the citadel's door and by the gate road.
 static func yard_points(f: Dictionary) -> PackedVector2Array:
-	return PackedVector2Array([fort_point(f, Vector2(-0.17, 0.19)), fort_point(f, Vector2(0.21, 0.17))])
+	var out := PackedVector2Array()
+	for q: Vector2 in FortBuild.YARD:
+		out.append(fort_point(f, q))
+	return out
 
 
 ## A launcher may start a lock while missiles in the air plus locks in progress stay under the cap.
@@ -74,11 +86,19 @@ func setup_fort(f: Dictionary, hp_mult: float, dps := 0.0) -> void:
 	anchor = f["pos"]
 	global_position = anchor
 	timer = FortBalance.LIMIT
+	_key = FortView.key_of(f["pos"])
+	var bg: Background = Main.I.background if Main.I != null else null
+	damage = bg.forts_hit.get(_key) if bg != null else null
+	if damage == null:
+		damage = FortDamage.new()
+		if bg != null:
+			bg.forts_hit[_key] = damage
+	Events.player_blast.connect(_on_blast)
 	var tops := tower_points(f)
 	for i in tops.size():
 		var g := GroundTarget.new()
 		g.fixed = true
-		g.mount_h = float(f["size"]) * FortBalance.TOWER_H
+		g.mount_h = float(f["size"]) * FortBuild.TOWER_TOP
 		g.setup("sam", self, hp_mult, dps)
 		g.position = tops[i]
 		launchers.append(g)
@@ -136,6 +156,7 @@ func on_target_destroyed(g: GroundTarget) -> void:
 
 func _process(delta: float) -> void:
 	global_position = GroundTarget.air_pos(anchor)
+	_track_towers()
 	var p := Main.I.player
 	if p == null:
 		return
@@ -162,6 +183,67 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if not active and not done:
 		draw_arc(Vector2.ZERO, FortBalance.ACTIVATE_R, 0.0, TAU, 96, Color(1.0, 0.85, 0.3, 0.12), 2.0)
+
+
+## A player blast near the fort: to ground, to unit space, into FortDamage; broken pieces get dust and smoke.
+## `r` — the blast's real radius (reach), `r_base` — before the player's radius upgrades (hit weight).
+func _on_blast(pos: Vector2, r: float, r_base: float) -> void:
+	var c: Vector2 = fort["pos"]
+	var size := float(fort["size"])
+	var g := GroundTarget.ground_of(pos, c)
+	if g.distance_to(c) > size * 0.75 + r:
+		return
+	var gr := GroundTarget.ground_of(pos + Vector2(r, 0.0), c).distance_to(g)
+	var got := damage.apply_blast(to_unit(fort, g), gr / size, FortDamage.hit_weight(r_base))
+	for id in got:
+		break_fx(id)
+	if not got.is_empty():
+		Events.fort_changed.emit(_key)
+
+
+## Tower crowns follow their launchers: half HP — damaged, destroyed (or gone) — collapsed.
+func _track_towers() -> void:
+	var changed := false
+	for i in launchers.size():
+		var g := launchers[i]
+		var frac := g.hp / g.max_hp if is_instance_valid(g) and g.hp > 0.0 else 0.0
+		if damage.set_tower(i, frac):
+			break_fx("t%d" % i)
+			changed = true
+	if changed:
+		Events.fort_changed.emit(_key)
+
+
+## Unit-mesh centre and effect height (preview units) of a breakable piece (FortDamage ids).
+static func piece_spot(id: String) -> Vector3:
+	var k := FortBuild.K
+	if id.begins_with("t"):
+		var t: Vector2 = FortBuild.TOWERS[int(id.substr(1))] * FortBuild.S * k
+		return Vector3(t.x, FortBuild.TOWER_H * 0.7, t.y)
+	if id == "gate":
+		return Vector3(FortBuild.GATE_C.x * k, 10.0, FortBuild.GATE_C.y * k)
+	if id == "store":
+		return Vector3(FortBuild.STORE_C.x * k, 3.0, FortBuild.STORE_C.y * k)
+	for w: Array in FortBuild.WALLS:
+		if w[0] == id:
+			var m: Vector2 = ((w[1] as Vector2) + (w[2] as Vector2)) * 0.5 * k
+			return Vector3(m.x, FortBuild.WH * 0.6, m.y)
+	return Vector3.ZERO
+
+
+## Dust and debris burst with a scorch where a piece broke, then black smoke rising off it.
+func break_fx(id: String) -> void:
+	_log("%s -> %d" % [id, int(damage.state[id])])
+	if Main.I == null or Main.I.fx == null:
+		return
+	var sp := piece_spot(id)
+	var size := float(fort["size"])
+	var at := GroundTarget.air_pos(fort_point(fort, Vector2(sp.x, sp.z)), sp.y * FortBuild.K * size)
+	var big: bool = id.begins_with("t") and damage.state[id] == FortDamage.BROKEN
+	Main.I.fx.explosion(at, size * (0.07 if big else 0.05), false, true, "ground")
+	if Boom3D.active():
+		for i in (4 if big else 2):
+			Boom3D.ensure().black_smoke(at + Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * size * 0.03, size * 0.05)
 
 
 ## Autotest trace of the activity (tools/ci, `--autotest --fort`).

@@ -31,7 +31,7 @@ func spawn_player_bullet(pos: Vector2, vel: Vector2, dmg: float, life: float, ma
 		b["hit"] = []
 	bullets.append(b)
 	if Boom3D.active():
-		Boom3D.ensure().muzzle(pos, vel, false)
+		Boom3D.ensure().muzzle(pos, vel, false, "turret" if src == "турели" else "")
 
 
 ## opts: splash (радиус осколков, 55), bounce (сколько раз искать новую цель после сбития), fire (огонь на земле)
@@ -312,8 +312,10 @@ func break_locks(from: Vector2, r: float) -> int:
 ## 3.1: радиус × «Осколочная рубашка» (и «Штурмовой заход» II); нашивки «Взрыв» I (край 50%) и II (цепной подрыв).
 ## chainable — взрыв НАР или бомбы: только он запускает «Цепную реакцию» (тест 3.5-s7: её запускали и мини-ракеты
 ## «Стального ежа», и всё подряд — у «Кита» цепь дала 39% урона за вылет)
+## A visible ordnance blast also tells breakable ground structures (Events.player_blast, FA-03).
 func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false, ground_k := 1.0, chainable := false) -> void:
 	var edge := 0.35
+	var r_base := r
 	var pl := Main.I.player
 	var blast2 := false
 	if is_instance_valid(pl):
@@ -338,6 +340,8 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 				died.append([e.global_position, e.max_hp])
 	if visual:
 		Main.I.fx.blast(pos, r)
+		if (chainable or chain > 0) and r_base >= FortBalance.BLAST_MIN_R:
+			Events.player_blast.emit(pos, r, r_base)   # FA-03: walls, gate and store of an enemy fort
 	for dd in died.slice(0, CHAIN_FAN):
 		_chain_q.append({"p": dd[0], "dmg": 30.0 + CHAIN_HP * float(dd[1]), "n": chain + 1, "t": 0.08})
 
@@ -924,6 +928,12 @@ func _draw_layer() -> void:
 	for b in ([] if Render3D.I != null and Render3D.I.tracers_3d() else bullets):   # VFX-04: Forward+ draws them in 3D
 		var p: Vector2 = b["p"]
 		var dir := (b["v"] as Vector2).normalized()
+		if b.has("o"):   # Kanta 25.10: turret round — long golden streak, hot head (as Render3D._sync_turret_tracers)
+			var tl := minf(Render3D.TURRET_TRACER_LEN, p.distance_to(b["o"]) + 6.0)
+			draw_line(p - dir * tl, p, Color(1.0, 0.62, 0.15, 0.35), 3.0)
+			draw_line(p - dir * tl * 0.5, p, Color(1.0, 0.7, 0.25, 0.8), 2.4)
+			draw_line(p - dir * tl * 0.18, p, Color(1.0, 0.97, 0.85), 1.6)
+			continue
 		var l := 34.0 if b.has("pierce") else 24.0
 		var w := float(TRACER_W.get(b.get("gun", "std"), 1.0))   # PG-01: twin — thinner, heavy — thicker
 		draw_line(p - dir * l, p, Color(0.1, 0.07, 0.03, 0.5), 6.0 * w)

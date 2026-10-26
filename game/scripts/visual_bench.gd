@@ -104,6 +104,7 @@ func process(delta: float) -> void:
 			var fp: Vector2 = p["fort"]
 			var f := FortArea.pick_fort(FortArea.forts_near(m.background, fp, 900.0), fp, 900.0)
 			if not f.is_empty():
+				_fa_fort = f
 				var base := FortArea.new()
 				base.setup_fort(f, 1.0)
 				for g in base.targets:
@@ -111,6 +112,18 @@ func process(delta: float) -> void:
 					g.max_hp = 99999.0
 				base.active = true
 				m.world.add_child(base)
+				_fa_base = base
+		if p.has("fort_break") and not p.get("_broke", false) and _fa_base != null:
+			p["_broke"] = true
+			_fort_break(p["fort_break"])
+		if not _fa_fort.is_empty():   # the camera on the 3D fort (pushed off the river), not the raw chunk spot
+			var at: Vector2 = _fa_fort["pos"]
+			if p.has("on_piece"):   # FA-03: a broken piece close up
+				var sp := FortArea.piece_spot(p["on_piece"])
+				at = FortArea.fort_point(_fa_fort, Vector2(sp.x, sp.z))
+			elif p.get("on_tower", false):
+				at = FortArea.tower_points(_fa_fort)[3]
+			p["pos"] = at + (p.get("off", Vector2.ZERO) as Vector2)
 	elif p.get("ground", false):
 		if not _g_spawned:
 			_g_spawned = true
@@ -520,7 +533,7 @@ func _print_sizes(name: String) -> void:
 func _print_fort_size(name: String, fp: Vector2, px_k: float) -> void:
 	var r3 := Render3D.I
 	for mi: Node in r3._objs.values():
-		if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh != AdobeBuild.fort():
+		if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh not in [FortBuild.mesh(), FortBuild.base()]:
 			continue
 		var n3 := mi as MeshInstance3D
 		if Vector2(n3.global_position.x, n3.global_position.z).distance_to(fp) > 5.0:
@@ -595,8 +608,20 @@ func _make_points() -> Array:
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
 	if found.has("o_fort"):   # FA-01: the fortified-area base — whole fort and a tower launcher close up
-		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
-		pts.append({"name": "fort_area_close", "pos": found["o_fort"] + Vector2(0, 250), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
+		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "off": Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
+		pts.append({"name": "fort_area_close", "pos": found["o_fort"], "off": Vector2(0, 60), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
+		# FA-02: the tower, its launcher, sandbags and the wall textures up close
+		pts.append({"name": "fort_area_tower", "pos": found["o_fort"], "off": Vector2(-60, 40), "on_tower": true, "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 6.0, "wait": 2.0})
+		# FA-03: mid-fight (one crown collapsed, one cracked, a breach) and the fort taken (all crowns, gate, store)
+		var fa := {"fort": found["o_fort"], "fort_area": true, "enemies": true}
+		pts.append(fa.merged({"name": "fort_area_hit", "pos": found["o_fort"], "off": Vector2(0, 60), "zoom": 2.4, "wait": 2.5,
+			"fort_break": {"t3": 0.0, "t1": 0.4, "w5": 1}}))
+		pts.append(fa.merged({"name": "fort_area_hit_tower", "pos": found["o_fort"], "off": Vector2(-60, 40), "on_piece": "t3", "zoom": 6.0, "wait": 1.5}))
+		pts.append(fa.merged({"name": "fort_area_hit_breach", "pos": found["o_fort"], "off": Vector2(40, 30), "on_piece": "w5", "zoom": 6.0, "wait": 1.5}))
+		pts.append(fa.merged({"name": "fort_area_ruin", "pos": found["o_fort"], "off": Vector2(0, 60), "zoom": 2.4, "wait": 6.0,
+			"fort_break": {"t0": 0.0, "t1": 0.0, "t2": 0.0, "w1": 1, "gate": 1, "store": 1}}))
+		pts.append(fa.merged({"name": "fort_area_ruin_wide", "pos": found["o_fort"], "off": Vector2(0, 300), "zoom": 1.0, "wait": 1.5}))
+		pts.append(fa.merged({"name": "fort_area_ruin_gate", "pos": found["o_fort"], "off": Vector2(0, 50), "on_piece": "gate", "zoom": 6.0, "wait": 1.5}))
 	if found.has("o_village"):   # тест 3.5-s8: кишлак-городок общим планом и крупно (центр, базар)
 		# с наклоном камеры земля в центре кадра — севернее игрока: точка южнее посёлка, чтобы он был в центре
 		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
@@ -958,6 +983,22 @@ func _sam_poses(p: Dictionary) -> void:
 		sam.launches = 1
 var _g_spawned := false
 var _fa_spawned := false
+var _fa_fort: Dictionary = {}   # FA-02: the fort the bench base stands on, for the camera points
+var _fa_base: FortArea
+
+
+## FA-03 bench: breaks pieces of the bench fort as a fight would. `b`: piece id → launcher HP share for towers
+## ("t3": 0.0 collapses it, 0.4 — damaged), any value for walls, gate and store (blown). Plays the same dust and smoke.
+func _fort_break(b: Dictionary) -> void:
+	for id: String in b:
+		if id.begins_with("t"):
+			var g := _fa_base.launchers[int(id.substr(1))]
+			g.hp = g.max_hp * float(b[id])
+		else:
+			var sp := FortArea.piece_spot(id)
+			for got in _fa_base.damage.apply_blast(Vector2(sp.x, sp.z), 0.005, 9.0):
+				_fa_base.break_fx(got)
+	Events.fort_changed.emit(FortView.key_of(_fa_fort["pos"]))
 
 
 ## VIS-01 unit close-ups: kind -> [enemy texture, sprite length, camera zoom]. Lengths are the game's own
@@ -968,6 +1009,13 @@ const UNIT_POSES := {
 	"heli": ["e_helicopter", 60.0, 9.0], "interceptor": ["e_interceptor", 46.0, 11.0],
 	# S11-24: the strike drone plain and elite (the elite marking drew it flat yellow on Forward+)
 	"drone": ["e_drone", 34.0, 14.0], "drone_elite": ["e_drone", 34.0, 12.0], "drone_hit": ["e_drone", 34.0, 14.0],
+	# Kanta 25.10 enemy overview: every Highlands enemy alone and close (lengths from each script's sprite)
+	"interceptor_elite": ["e_interceptor", 46.0, 9.5], "carrier": ["e_carrier", 60.0, 8.5],
+	"carrier_elite": ["e_carrier", 60.0, 7.2], "bomber": ["e_transport", 120.0, 4.2],
+	"transport": ["e_transport", 190.0, 2.7], "rival": ["e_rival", 64.0, 8.0], "postman": ["e_postman", 92.0, 5.5],
+	"draft": ["e_draft", 84.0, 6.0], "light": ["e_convoy_pickup_tent", 14.0, 34.0],
+	"manpads": ["e_convoy_manpads", 14.0, 34.0], "radar": ["e_radar", 32.0, 15.0], "bunker": ["e_bunker", 59.0, 8.5],
+	"sam": ["e_sam", 34.0, 14.0],
 }
 var _unit: Enemy = null
 var _unit_cv: Convoy = null
@@ -1000,21 +1048,33 @@ func _unit_poses(p: Dictionary) -> void:
 		_spawned = true
 		m.player.process_mode = Node.PROCESS_MODE_DISABLED
 		match kind:
-			"zsu":
+			"zsu", "radar", "bunker", "sam":
 				var g := GroundTarget.new()
-				g.setup("zsu", AASite.new(), 1.0)
+				g.setup(kind, AASite.new(), 1.0)
 				g.position = at
 				g.anchor = at
 				g._body_angle = body
 				_unit = g
 			"heli":
 				_unit = Helicopter.new()
-			"interceptor":
+			"interceptor", "interceptor_elite":
 				_unit = Interceptor.new()
+			"carrier", "carrier_elite":
+				_unit = MissileCarrier.new()
+			"bomber":
+				_unit = Bomber.new()
+			"transport":
+				var tp := Transport.new()
+				tp.setup(99999.0)
+				_unit = tp
+			"rival":
+				_unit = RivalAce.new()
+			"postman", "draft":
+				var b := Boss.new()
+				b.setup("carrier" if kind == "postman" else "interceptor", 99999.0)
+				_unit = b
 			"drone", "drone_elite", "drone_hit":
 				_unit = Drone.new()
-				if kind == "drone_elite":
-					_unit.make_elite()
 			_:
 				if _unit_cv == null:
 					_unit_cv = Convoy.new()   # never enters the tree: only carries the alarm flag the turret reads
@@ -1033,6 +1093,10 @@ func _unit_poses(p: Dictionary) -> void:
 			_unit.heading = body
 		_unit.process_mode = Node.PROCESS_MODE_DISABLED
 		m.world.add_child(_unit)
+		if _unit is RivalAce:
+			(_unit as RivalAce).setup(99999.0)
+		if kind.ends_with("_elite"):
+			_unit.make_elite()
 	var aim := body + (1.15 if _pt > 1.0 else 0.0)
 	_unit.hp = maxf(_unit.hp, 99999.0)
 	_unit.max_hp = maxf(_unit.max_hp, 99999.0)
@@ -1094,6 +1158,17 @@ var _hclose: Array = ([
 ## S11 close-up views from the command line: --hcam=name:cls:lvl:tier:livery:fx:fy:fz:yaw:pitch:dist[;…]
 ## (livery "-" keeps the profile's paint; focus in model units, plane length 1) → user://vis_hcam_<name><suffix>.png
 var _hcams: Array = []
+
+
+var _hc_frame := 0   # --hcamframes: frame of the current view
+
+
+## --hcamframes=N: each --hcam view saves N consecutive frames instead of one (a clip of the animated hangar).
+func _hcam_frames() -> int:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--hcamframes="):
+			return int(a.get_slice("=", 1))
+	return 0
 
 
 func _hcam() -> Array:
@@ -1380,7 +1455,15 @@ func _hangar_bench() -> void:
 		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":
 			# S11: only the 3D view (SubViewport, supersampled), so the close-up is not shrunk into the hangar frame
 			var hn := "user://vis_hcam_%s%s.png" % [_hcam()[cur[5]][0], _suffix]
-			Hangar3D.I.vp.get_texture().get_image().save_png(hn)
+			if _hcam_frames() > 0:   # --hcamframes=N: N frames in a row for a clip (run with --fixed-fps)
+				hn = "user://vis_hcam_%s%s_f%03d.png" % [_hcam()[cur[5]][0], _suffix, _hc_frame]
+				Hangar3D.I.vp.get_texture().get_image().save_png(hn)
+				_hc_frame += 1
+				if _hc_frame < _hcam_frames():
+					return
+				_hc_frame = 0
+			else:
+				Hangar3D.I.vp.get_texture().get_image().save_png(hn)
 			print("VISUAL hcam %s" % hn)
 		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING:
 			# только сам вид ангара (SubViewport, с запасом по разрешению) — для серии кадров и GIF

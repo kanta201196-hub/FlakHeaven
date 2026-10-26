@@ -557,8 +557,8 @@ const MUZZLE := {"pickup": 0.8, "apc": 1.0, "zsu": 1.2, "ifv": 1.5, "fighter": 1
 
 
 ## VFX-04: muzzle flash where a gun fires, Forward+ only (GPU particles; Compatibility never had one, so it stays
-## as it was): a short bright disc and three flame tongues along the shot. pos is the muzzle on the combat plane,
-## vel the bullet velocity; enemy flashes are sized by gun kind
+## as it was): a short bright disc and three flame tongues along the shot, a small star for a turret round (gun
+## "turret"). pos is the muzzle on the combat plane, vel the bullet velocity; enemy flashes are sized by gun kind
 func muzzle(pos: Vector2, vel: Vector2, enemy: bool, gun := "") -> void:
 	if _gpu == null or vel.length_squared() < 1.0:
 		return
@@ -567,6 +567,14 @@ func muzzle(pos: Vector2, vel: Vector2, enemy: bool, gun := "") -> void:
 	var d3 := Vector3(d.x, 0.0, d.y)
 	# above the wings: the flash is depth-tested and the gun sits inside the plane model
 	var p := Vector3(pos.x, 8.0, pos.y) + d3 * 5.0 * s
+	if gun == "turret" and not enemy:
+		# Kanta 25.10 (Sublight): a turret round gets a small four-ray star at the barrel instead of the cannon's
+		# disc and tongues: white-hot centre, short rays along and across the shot, gone in 1–2 frames
+		_flash(p, 9.0, 0.045, Color(1.0, 0.9, 0.75, 1.0))
+		var sd := Vector3(-d.y, 0.0, d.x)
+		for r: Array in [[d3, 520.0, 3.0], [-d3, 260.0, 2.2], [sd, 300.0, 2.2], [-sd, 300.0, 2.2]]:
+			_add(L_SPARK, {"p": p, "v": (r[0] as Vector3) * float(r[1]), "life": 0.04, "c": Color(1.0, 0.82, 0.55, 1.0), "w": float(r[2])})
+		return
 	_flash(p, 15.0 * s, 0.06, Color(1.0, 0.78, 0.42, 0.95))
 	_add(L_SPARK, {"p": p, "v": d3 * 700.0 * s, "life": 0.06, "c": Color(1.0, 0.85, 0.5, 1.0), "w": 3.6 * s})
 	for k in [-1.0, 1.0]:

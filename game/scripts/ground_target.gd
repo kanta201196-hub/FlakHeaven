@@ -122,6 +122,8 @@ func _ready() -> void:
 	super()
 	z_index = -2
 	anchor = position # точка рельефа; логическая позиция считается от неё каждый кадр (Enemy._process)
+	if fixed:
+		hud_k = 0.5   # FA-01: the fort's launchers and jeeps — small bars and marks (Kanta 25.10)
 	if mobile():
 		drive = GroundDrive.new(anchor, _body_angle)
 		if variant == "zsu":   # гусеницы: доворот на месте, короткая дуга
@@ -137,16 +139,35 @@ func _ready() -> void:
 
 
 ## Проекция точки рельефа на слой самолётов (как её видно с камеры). Без 3D — та же точка.
-static func air_pos(g: Vector2) -> Vector2:
+static func air_pos(g: Vector2, lift := 0.0) -> Vector2:
 	var r := Render3D.I
 	if r == null or not Render3D.enabled or r.cam == null or r.terrain == null:
 		return g
 	var c := r.cam.global_position
-	var y := r.terrain.surface_fast(g.x, g.y).y
+	var y := r.terrain.surface_fast(g.x, g.y).y + lift   # FA-01: a tower launcher stands lift px above the ground
 	if c.y <= 1.0 or c.y - y <= 1.0:
 		return g
 	var k := (c.y - y) / c.y
 	return Vector2(c.x + (g.x - c.x) / k, c.z + (g.y - c.z) / k)
+
+
+## Inverse of air_pos: the point on the ground under logic-plane point `a`, for ground at the height of `ref`
+## (a flat site, like a fort's yard). Without 3D — the same point.
+static func ground_of(a: Vector2, ref: Vector2) -> Vector2:
+	var r := Render3D.I
+	if r == null or not Render3D.enabled or r.cam == null or r.terrain == null:
+		return a
+	var c := r.cam.global_position
+	var y := r.terrain.surface_fast(ref.x, ref.y).y
+	if c.y <= 1.0 or c.y - y <= 1.0:
+		return a
+	var k := (c.y - y) / c.y
+	return Vector2(c.x + (a.x - c.x) * k, c.z + (a.y - c.z) * k)
+
+
+## FA-01: a tower launcher's hitbox and HP bar sit on the tower top, where its model is (Kanta 25.10).
+func anchor_lift() -> float:
+	return mount_h
 
 
 func mobile() -> bool:
@@ -409,7 +430,7 @@ func _draw() -> void:
 		ba = heading # стоит — разворачивается на цель
 	if variant == "zsu" and _def_flash > 0.0:
 		ba = _fire_dir
-	var slen: float = spr[variant][1] * (1.6 if fixed and variant == "sam" else 1.0)   # FA-01: tower launcher reads from the air (preview, Kanta «да»)
+	var slen: float = spr[variant][1]   # Kanta 25.10: the tower launcher at the truck's own scale (×1.6 looked oversized on the tower)
 	if draw_enemy_sprite(spr[variant][0], slen, Color.WHITE, ba):
 		if variant == "zsu" and (_aim > 0.0 or _shots > 0 or _def_flash > 0.0):
 			draw_circle(Vector2.from_angle(ba) * 19.0, 5.0, Color(1.0, 0.9, 0.3))   # M-37: у среза ствола меньшей модели

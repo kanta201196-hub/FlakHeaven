@@ -8,6 +8,14 @@ extends Node
 ## An enemy took `dmg` damage (after armor).
 @warning_ignore("unused_signal")
 signal enemy_hit(enemy: Enemy, dmg: float)
+## A player ordnance explosion (rocket, bomb, thermobaric, chain reaction) of radius `r` went off at `pos`
+## (logic plane); `r_base` is its radius before the player's radius upgrades. Ground structures that can break
+## (the «Укрепрайон» fort, FA-03) listen. Blasts with r_base below FortBalance.BLAST_MIN_R are not sent.
+@warning_ignore("unused_signal")
+signal player_blast(pos: Vector2, r: float, r_base: float)
+## A piece of the fort at `key` (FortView.key_of) changed state; its FortView swaps the meshes.
+@warning_ignore("unused_signal")
+signal fort_changed(key: Vector2i)
 ## An enemy or convoy vehicle was destroyed by the player's side.
 @warning_ignore("unused_signal")
 signal enemy_killed(enemy: Enemy)
