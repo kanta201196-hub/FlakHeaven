@@ -3,10 +3,11 @@ extends Boss
 ## FB-01 (решение Kanta 18.10.2026, `docs/proposals/final-boss-rework.md`): финальный босс «Прорыв».
 ## Тяжёлый носитель не кружит вокруг игрока, а летит по маршруту к нашей базе; игрок его перехватывает.
 ## Дошёл до базы — бомбит её (запчасти за него −50%) и заходит на второй круг; бой продолжается.
-##   1. «Строй» — 4 турели, у каждой свой сектор обстрела; нос и хвост — мёртвые зоны. Эскорт из перехватчиков
-##      пополняется, пока цела верхняя (командная) турель.
-##   2. «Боевой курс» — люки открываются циклами (6 с из 14) и кладут за собой ковровую дорожку; попадание
-##      в открытый люк — ×3 урона по корпусу. Двигатели бьются с задней полусферы; каждый — минус 20% скорости.
+## «Крыло за крылом» (Kanta 26.10, FortressBalance.next_phase): the fight goes wing by wing; point HP shares are unchanged.
+##   1. Left wing — its two domes and the left engine. All 4 domes fire into their sectors (nose and tail are dead
+##      zones) and launch their rail missiles; the escort is topped up while the command dome (turret_3, left wing) lives.
+##   2. Right wing — its two domes and the right engine, plus the bay: it opens in cycles (6 s of 14) and lays a
+##      carpet behind it; a hit in the open bay is ×3 to the hull. The right domes keep their guns, rail missiles stay a phase-1 threat. Each engine −20% speed.
 ##   3. «Падение» — корпус открыт, двигатели чадят чёрным дымом; бросает маршрут и тянет прочь от игрока
 ##      (S9-20: не кружит), огрызается кольцами пуль и ловушками. Не добили за FLEE_T с — падает сама,
 ##      запчастей за неё вдвое меньше.
@@ -101,7 +102,7 @@ func setup_fortress(total: float) -> void:
 
 
 func _pt(n: String, node: String, kd: String, off: Vector2, h: float, sec: Array) -> Dictionary:
-	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0, "sec": sec, "msl": 0.0, "dm": 0.0, "lk": 0.0}
+	return {"name": n, "node": node, "kind": kd, "off": off, "hp": h, "max": h, "cd": randf_range(0.8, 2.0), "shots": 0, "st": 0.0, "sec": sec, "msl": 0.0, "dm": 0.0, "lk": 0.0, "wing": FortressBalance.wing_of(off)}
 
 
 func kind() -> String:
@@ -110,8 +111,8 @@ func kind() -> String:
 
 func _set_title() -> void:
 	match phase:
-		1: title = "«Крепость» идёт на базу — сбейте турели: %d из 4" % (4 - _alive("turret"))
-		2: title = "«Крепость» на боевом курсе — двигатели %d из 2, бейте в открытый люк" % (2 - _alive("engine"))
+		1: title = "«Крепость» идёт на базу — сбейте левое крыло: %d из 3" % (3 - _wing_alive(1))
+		2: title = "«Крепость» на боевом курсе — правое крыло %d из 3, бейте в открытый люк" % (3 - _wing_alive(2))
 		_: title = "«Крепость» падает и идёт на таран — добивайте!"
 
 
@@ -119,6 +120,15 @@ func _alive(kd: String) -> int:
 	var n := 0
 	for pt in points:
 		if pt["kind"] == kd and float(pt["hp"]) > 0.0:
+			n += 1
+	return n
+
+
+## Live points (domes and engine) of wing `w`: 1 — left, 2 — right
+func _wing_alive(w: int) -> int:
+	var n := 0
+	for pt in points:
+		if int(pt["wing"]) == w and float(pt["hp"]) > 0.0:
 			n += 1
 	return n
 
@@ -131,8 +141,9 @@ func _bay_world() -> Vector2:
 	return global_position + BAY.rotated(heading)
 
 
-func _want() -> String:
-	return "turret" if phase == 1 else ("engine" if phase == 2 else "")
+## Whether the point takes damage now: alive and on the current phase's wing
+func _target(pt: Dictionary) -> bool:
+	return float(pt["hp"]) > 0.0 and FortressBalance.targets(phase, int(pt["wing"]))
 
 
 ## Угол на точку относительно курса (−PI…PI): 0 — прямо по носу
@@ -174,9 +185,8 @@ func _closest(a: Vector2, b: Vector2, c: Vector2) -> Vector2:
 func seg_test(a: Vector2, b: Vector2) -> bool:
 	if not Projectiles.seg_hit(a, b, global_position, 150.0):
 		return false
-	var want := _want()
 	for pt in points:
-		if pt["kind"] == want and float(pt["hp"]) > 0.0 and Projectiles.seg_hit(a, b, _world(pt), PT_R):
+		if _target(pt) and Projectiles.seg_hit(a, b, _world(pt), PT_R):
 			hit_at = _closest(a, b, _world(pt))
 			return true
 	if phase == 2 and hatches_open and Projectiles.seg_hit(a, b, _bay_world(), BAY_R):
@@ -192,9 +202,8 @@ func seg_test(a: Vector2, b: Vector2) -> bool:
 
 func aoe_dist(pos: Vector2) -> float:
 	var d := INF
-	var want := _want()
 	for pt in points:
-		if pt["kind"] == want and float(pt["hp"]) > 0.0:
+		if _target(pt):
 			d = minf(d, pos.distance_to(_world(pt)) - PT_R)
 	if phase == 2 and hatches_open:
 		d = minf(d, pos.distance_to(_bay_world()) - BAY_R)
@@ -207,9 +216,8 @@ func aoe_dist(pos: Vector2) -> float:
 func aim_point(from: Vector2) -> Vector2:
 	var best := global_position
 	var best_d := INF
-	var want := _want()
 	for pt in points:
-		if pt["kind"] == want and float(pt["hp"]) > 0.0:
+		if _target(pt):
 			var d := _world(pt).distance_to(from)
 			if d < best_d:
 				best_d = d
@@ -249,11 +257,10 @@ func absorb(dmg: float) -> float:
 		_confirm(global_position if at == Vector2.INF else at, d3, Color(1, 0.9, 0.6))
 		return d3
 	if at != Vector2.INF:
-		var want := _want()
 		var best: Dictionary = {}
 		var best_d := PT_NEAR
 		for pt in points:
-			if pt["kind"] != want or float(pt["hp"]) <= 0.0:
+			if not _target(pt):
 				continue
 			var d := _world(pt).distance_to(at)
 			if d < best_d:
@@ -308,15 +315,15 @@ func _point_down(pt: Dictionary) -> void:
 		Events.banner.emit("Турель сбита: %d из 4" % (4 - _alive("turret")), 2.0)
 	Main.I.fx.text(at + Vector2(0, -40), "СБИТА!" if pt["kind"] == "turret" else "СБИТ!", Color(1.0, 0.8, 0.4))
 	Main.I.fx.ring(at, 70.0, Color(1.0, 0.6, 0.25))
-	if phase == 1 and _alive("turret") == 0:
-		phase = 2
+	var was := phase
+	phase = FortressBalance.next_phase(phase, _wing_alive(phase))
+	if was == 1 and phase == 2:
 		_bay_t = 1.5
-		Events.banner.emit("Турели сбиты! «Крепость» на боевом курсе — бейте в открытый люк и по двигателям", 3.5)
-		Events.radio.emit("Штаб", "Турели молчат! Ждите, когда откроется люк, — бейте в брюхо. Двигатели — с задней полусферы.", false)
+		Events.banner.emit("Левое крыло сбито! Теперь правое — турели, двигатель и открытый люк", 3.5)
+		Events.radio.emit("Штаб", "Левое крыло горит! Берите правое: две турели и двигатель. Откроется люк — бейте в брюхо.", false)
 		Main.I.tele.add("fortress_phase2_s", Main.I.run_time - _born)
 		_missile_cd = 3.0
-	elif phase == 2 and _alive("engine") == 0:
-		phase = 3
+	elif was == 2 and phase == 3:
 		hull_open = true
 		hatches_open = false
 		_zones.clear()
@@ -400,8 +407,8 @@ func _start_route(p: Player) -> void:
 	_wp = base_pos
 	_to_base = true
 	Events.banner.emit("«Крепость» идёт на нашу базу! Перехватите её, пока не дошла", 4.0)
-	Events.radio.emit("Штаб", "«Крепость» на подходе. Сначала турели — у каждой свой сектор, заходите с носа или с хвоста, там мёртвые зоны.", false)
-	Hints.show("fortress", "«Крепость» летит к нашей базе (стрелка «база»). Турели бьют в свои сектора, нос и хвост — мёртвые зоны. Урон идёт в ту точку, куда попали.", 10.0, 2)
+	Events.radio.emit("Штаб", "«Крепость» на подходе. Сначала левое крыло: две турели и двигатель. У турелей свои сектора, нос и хвост — мёртвые зоны.", false)
+	Hints.show("fortress", "«Крепость» летит к нашей базе (стрелка «база»). Сбивайте её крыло за крылом: сначала левое, потом правое. Нос и хвост — мёртвые зоны турелей.", 10.0, 2)
 
 
 func _bomb_base() -> void:
@@ -444,7 +451,7 @@ func _turrets(delta: float, p: Player) -> void:
 		pt["cd"] = randf_range(1.6, 2.4)
 
 
-## Phase-1 dome missiles (Kanta 26.10, FortressBalance): each live dome launches its rail missile once per
+## Phase-1 dome missiles (Kanta 26.10, FortressBalance; the right domes stay live in phase 2 but keep only their guns): each live dome launches its rail missile once per
 ## DOME_MSL_EVERY s, domes staggered, after the bay volley's lock warning; the type, homing and damage are the
 ## volley's. A lock starts only in range and under the Fortress-wide MSL_CAP (missiles in the air + locks).
 func _domes(delta: float, p: Player, d: float) -> void:
@@ -634,7 +641,7 @@ func _ring_at(pt: Dictionary, xf: Transform2D) -> Vector2:
 func _draw() -> void:
 	var xf := Transform2D(heading, Vector2.ZERO)
 	_draw_route()
-	if phase == 1:
+	if phase < 3:
 		_draw_sectors()
 	var tex := "e_fortress" if Enemy.etex("e_fortress") != null else "e_transport"
 	if not draw_enemy_sprite(tex, LEN, Color(0.75, 0.72, 0.68)):
@@ -642,13 +649,12 @@ func _draw() -> void:
 			Vector2(-100, 14), Vector2(-120, 50), Vector2(-135, 50), Vector2(-128, 0), Vector2(-135, -50), Vector2(-120, -50), Vector2(-100, -14),
 			Vector2(-40, -20), Vector2(-35, -130), Vector2(-5, -130), Vector2(10, -20), Vector2(70, -18)]), body_color(Color(0.42, 0.44, 0.4)))
 	# уязвимые точки текущей фазы — мигающие кольца с полоской прочности
-	var want := _want()
 	for pt in points:
 		var at := _ring_at(pt, xf)
 		if float(pt["hp"]) <= 0.0:
 			draw_circle(at, 9.0, Color(0.15, 0.12, 0.1, 0.9))   # выбитая точка — копоть
 			continue
-		var active: bool = pt["kind"] == want
+		var active := _target(pt)
 		var col := Color(1.0, 0.85, 0.3) if pt["kind"] == "turret" else Color(1.0, 0.45, 0.2)
 		var a := 0.55 + 0.4 * absf(sin(_t * 5.0)) if active else 0.3
 		draw_arc(at, 16.0, 0.0, TAU, 24, Color(col, a), 3.0 if active else 1.5)
@@ -685,7 +691,7 @@ func _draw_route() -> void:
 	draw_string(Hud.ui_font(), bl + Vector2(-120, 8), Loc.out("НАША БАЗА"), HORIZONTAL_ALIGNMENT_CENTER, 240, 28, Color(0.6, 0.9, 1.0))
 
 
-## Сектора турелей (фаза 1): красный веер там, где бьёт хоть одна живая турель; мёртвые зоны — зелёные
+## Сектора турелей (фазы 1–2, «Крыло за крылом»: правые купола живы и во 2-й): красный веер там, где бьёт хоть одна живая турель; мёртвые зоны — зелёные
 func _draw_sectors() -> void:
 	var steps := 72
 	for i in steps:

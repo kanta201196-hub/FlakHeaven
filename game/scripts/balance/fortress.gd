@@ -36,3 +36,21 @@ static func dome_step(pt: Dictionary, delta: float, may: bool) -> String:
 		return ""
 	pt["lk"] = DOME_MSL_LOCK
 	return "lock"
+
+
+## «Крыло за крылом» (Kanta 2026-10-26, decision card): the fight goes wing by wing. Phase 1 is the left wing
+## (two domes and the left engine), phase 2 the right wing (two domes, the right engine and the open bay), phase 3
+## the fall. Point HP shares are unchanged, only the order. A point's wing comes from its offset in the plane's
+## axes: y < 0 is the left wing.
+static func wing_of(off: Vector2) -> int:
+	return 1 if off.y < 0.0 else 2
+
+
+## Whether a point of wing `wing` takes damage in phase `phase`: only the current phase's wing, none in the fall
+static func targets(phase: int, wing: int) -> bool:
+	return phase < 3 and wing == phase
+
+
+## The phase after a point went down: `wing_alive` is how many points of the current phase's wing are still up
+static func next_phase(phase: int, wing_alive: int) -> int:
+	return phase + 1 if phase < 3 and wing_alive == 0 else phase

@@ -1316,20 +1316,20 @@ msgid "База противника устояла — награды не бу
 msgstr "The enemy base held — no reward"
 
 #: game/scripts/fortress.gd:83
-msgid "турель левого крыла"
-msgstr "left wing turret"
+msgid "внешняя турель левого крыла"
+msgstr "left wing outer turret"
 
 #: game/scripts/fortress.gd:84
-msgid "турель правого крыла"
-msgstr "right wing turret"
+msgid "внешняя турель правого крыла"
+msgstr "right wing outer turret"
 
 #: game/scripts/fortress.gd:85
-msgid "верхняя турель"
-msgstr "top turret"
+msgid "командная турель"
+msgstr "command turret"
 
 #: game/scripts/fortress.gd:86
-msgid "кормовая турель"
-msgstr "tail turret"
+msgid "внутренняя турель правого крыла"
+msgstr "right wing inner turret"
 
 #: game/scripts/fortress.gd:87
 msgid "левый двигатель"
@@ -1341,13 +1341,13 @@ msgstr "right engine"
 
 #: game/scripts/fortress.gd:103
 #, c-format
-msgid "«Крепость» идёт на базу — сбейте турели: %d из 4"
-msgstr "\"Fortress\" is heading for the base — shoot down the turrets: %d of 4"
+msgid "«Крепость» идёт на базу — сбейте левое крыло: %d из 3"
+msgstr "\"Fortress\" is heading for the base — shoot down the left wing: %d of 3"
 
 #: game/scripts/fortress.gd:104
 #, c-format
-msgid "«Крепость» на боевом курсе — двигатели %d из 2, бейте в открытый люк"
-msgstr "\"Fortress\" on its bombing run — engines %d of 2, hit the open hatch"
+msgid "«Крепость» на боевом курсе — правое крыло %d из 3, бейте в открытый люк"
+msgstr "\"Fortress\" on its bombing run — right wing %d of 3, hit the open hatch"
 
 #: game/scripts/fortress.gd:105
 msgid "«Крепость» падает и идёт на таран — добивайте!"
@@ -1380,12 +1380,12 @@ msgid "СБИТ!"
 msgstr "DOWN!"
 
 #: game/scripts/fortress.gd:300
-msgid "Турели сбиты! «Крепость» на боевом курсе — бейте в открытый люк и по двигателям"
-msgstr "Turrets down! \"Fortress\" on its bombing run — hit the open hatch and the engines"
+msgid "Левое крыло сбито! Теперь правое — турели, двигатель и открытый люк"
+msgstr "Left wing down! Now the right one: turrets, engine and the open hatch"
 
 #: game/scripts/fortress.gd:301
-msgid "Турели молчат! Ждите, когда откроется люк, — бейте в брюхо. Двигатели — с задней полусферы."
-msgstr "Turrets are silent! Wait for the bomb bay to open and hit her belly. Hit the engines from behind."
+msgid "Левое крыло горит! Берите правое: две турели и двигатель. Откроется люк — бейте в брюхо."
+msgstr "Left wing is burning! Take the right one: two turrets and the engine. When the bay opens, hit her belly."
 
 #: game/scripts/fortress.gd:309
 msgid "Двигатели горят! «Крепость» дымит и уходит — догоните и добейте!"
@@ -1400,12 +1400,12 @@ msgid "«Крепость» идёт на нашу базу! Перехвати�
 msgstr "\"Fortress\" is heading for our base! Intercept it before it gets there"
 
 #: game/scripts/fortress.gd:387
-msgid "«Крепость» на подходе. Сначала турели — у каждой свой сектор, заходите с носа или с хвоста, там мёртвые зоны."
-msgstr "The Fortress is inbound. Take out the turrets first: each covers its own sector, so come in from the nose or the tail, where they can't reach."
+msgid "«Крепость» на подходе. Сначала левое крыло: две турели и двигатель. У турелей свои сектора, нос и хвост — мёртвые зоны."
+msgstr "The Fortress is inbound. Left wing first: two turrets and the engine. Each turret covers its own sector; the nose and the tail are blind spots."
 
 #: game/scripts/fortress.gd:388
-msgid "«Крепость» летит к нашей базе (стрелка «база»). Турели бьют в свои сектора, нос и хвост — мёртвые зоны. Урон идёт в ту точку, куда попали."
-msgstr "\"Fortress\" is flying to our base (\"base\" arrow). Turrets cover their own sectors; nose and tail are blind spots. Damage goes where you hit."
+msgid "«Крепость» летит к нашей базе (стрелка «база»). Сбивайте её крыло за крылом: сначала левое, потом правое. Нос и хвост — мёртвые зоны турелей."
+msgstr "\"Fortress\" is flying to our base (\"base\" arrow). Take it down wing by wing: left first, then right. Nose and tail are the turrets' blind spots."
 
 #: game/scripts/fortress.gd:401
 msgid "«Крепость» отбомбилась по базе — запчастей за неё вдвое меньше. Она заходит на второй круг!"

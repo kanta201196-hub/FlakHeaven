@@ -151,3 +151,18 @@ Options (Kanta decides, one balance change per build):
 1. **The Fortress uses one fixed share for every class, 0.55** (median of «Грач» and «Кит»): Kanta's «Оса» 605k → about 208k, the others unchanged. Recommended.
 2. Cap the share for the Fortress at 1.0: 605k → about 378k.
 3. Leave it: the 45 s cap already stops a fight being too short, so the HP could follow damage only; not recommended (no cause fixed).
+
+### 9.2 Wing by wing (Kanta 2026-10-26), with dome missiles (GD-09)
+
+Phases: left wing (turret_1, turret_3, engine_l) → right wing (turret_2, turret_4, engine_r) + bay → fall; the same point shares, so the total point work is unchanged. Rules in `FortressBalance.wing_of / targets / next_phase` (`game/tests/fortress_wings_test.gd`). Bot «Грач», 8 sorties per run, baseline is `main` with the 12 s dome missiles (a609113). Median fight (not killed = 180 s), bootstrap 90 % interval of the difference:
+
+| Profile | Version | Fight, s | Phase 1, s | ≤ 45 s | Killed in 3 min |
+| --- | --- | --- | --- | --- | --- |
+| demo | main (turrets → engines) | 89 | 43 | 4/8 | 8/8 |
+| demo | wings, dome missiles phases 1–2 | 87 | 30 | 6/8 | 8/8 |
+| demo | **wings, dome missiles phase 1 (shipped)** | 97 [−20…+26] | 32 | 5/8 | 8/8 |
+| max | main | 148 | 100 | 2/7 | 5/7 |
+| max | wings, missiles phases 1–2 | 168 | 68 | 2/8 | 5/8 |
+| max | **wings, missiles phase 1 (shipped)** | 180 [−1…+71] | 94 | 1/8 | 3/8 |
+
+Demo stays in the corridor and the first phase gets shorter. On max the corridor fails before and after; with wings the second phase takes 50–97 s (was 14–39 s for the two engines alone) because the right domes keep firing while the bot works the wing, and the bot offers only 1.2–1.6× the Fortress HP there (2–4× on demo). The upgraded bot was already outside the corridor, so the human check after the build decides (backlog GD-10).
