@@ -24,6 +24,13 @@ const SETS := {
 	"rocks": [["prop", "outcrop_b", 0.0, 0.0, 70.0, 0.0], ["prop", "spire_b", 52.0, -18.0, 40.0, 30.0],
 		["prop", "boulders_b", -40.0, 22.0, 26.0, 0.0], ["prop", "boulders_b", -30.0, -30.0, 20.0, 120.0],
 		["prop", "boulders_b", 34.0, 30.0, 24.0, 240.0]],
+	# village clutter and market props (VillageHouses.PROPS, metres)
+	"vprops": [["house", 9, -10.0, -7.0, 0.0, 0.0], ["house", 10, 2.0, -7.5, 0.0, 0.0],
+		["house", 18, -10.0, -1.0, 0.0, 0.0], ["house", 19, -5.5, -1.0, 0.0, 0.0], ["house", 20, -1.0, -1.0, 0.0, 0.0],
+		["house", 22, 3.5, -1.0, 0.0, 0.0], ["house", 21, 8.0, -1.0, 0.0, 0.0],
+		["house", 11, -9.5, 4.0, 0.0, 0.0], ["house", 12, -5.0, 4.0, 0.0, 0.0], ["house", 13, -1.5, 4.0, 0.0, 0.0],
+		["house", 14, 2.5, 4.0, 0.0, 0.0], ["house", 15, 7.0, 4.0, 0.0, 0.0],
+		["house", 16, -9.5, 8.5, 0.0, 0.0], ["house", 17, -4.0, 8.5, 0.0, 0.0]],
 	"radar": [["unit", "fh_battle_e_radar", 0.0, 0.0, 32.0, 30.0]],
 	"bunker": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, 30.0]],
 	"manpads": [["unit", "fh_battle_e_convoy_manpads", 0.0, 0.0, 14.0, 30.0]],

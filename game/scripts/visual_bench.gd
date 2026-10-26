@@ -691,11 +691,14 @@ func _make_points() -> Array:
 		pts.append({"name": "village_houses", "pos": found["o_village"] + Vector2(-150, 0), "ground_dist": 260.0, "wait": 3.0})   # VIS-01: house models up close
 		# VIS-01: the village at gameplay height with the player's plane over it, to judge the houses' scale
 		pts.append({"name": "village_play", "pos": found["o_village"] + Vector2(0, 450), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+		# VIS-01: the market on the square up close (Kanta 26.10: tents in the centre of the kishlak)
+		pts.append({"name": "village_market", "pos": found["o_village"], "ground_dist": 170.0, "wait": 3.0})
 		for vr in 4:
 			AdobeBuild._vcache.erase("village%d" % vr)
 			var t0 := Time.get_ticks_usec()
 			var vm := AdobeBuild.village(vr)
-			print("VISUAL village%d mesh tris=%d build=%d ms %s house models tris=%d" % [vr, vm.surface_get_array_len(0) / 3, (Time.get_ticks_usec() - t0) / 1000, AdobeBuild._vcache.get("village%d_stats" % vr, {}), VillageHouses.tris(AdobeBuild.village_homes(vr))])
+			var hm := AdobeBuild.village_homes(vr)
+			print("VISUAL village%d mesh tris=%d build=%d ms %s house models tris=%d models=%d model draws=%d" % [vr, vm.surface_get_array_len(0) / 3, (Time.get_ticks_usec() - t0) / 1000, AdobeBuild._vcache.get("village%d_stats" % vr, {}), VillageHouses.tris(hm), hm.size(), VillageHouses.draws(hm)])
 	# сцены прошедших боёв (Terrain3D.scenes): первая с самолётом и первая с танком — крупнее
 	if ter != null:
 		var got := {}
