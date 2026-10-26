@@ -310,7 +310,11 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
 		h3.lvl_rects.clear()
 		h3.tier_rects.clear()
-		for ti in 4:
+		# «модерниз.» only for weapons that evolve in battle (Prog.EVOS); agm, srm, hebomb have no evolution
+		var tiers := 4 if Prog.EVOS.has(w2) else 3
+		if h3.weapon_tier > tiers:
+			h3.weapon_tier = tiers
+		for ti in tiers:
 			var tr2 := Rect2(vx + 16 + ti * 106, area.position.y + 392, 98, 32)
 			var on2: bool = h3.weapon_tier == ti + 1
 			ctrl.draw_rect(tr2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.08))
@@ -325,6 +329,8 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		_text(Vector2(vx + 24, area.position.y + 220), "Встроенное оружие — модель на самолёте", 16, Color(0.7, 0.74, 0.8))
 	_text(Vector2(rx, area.position.y + 24), Loc.t("%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)") % Loc.t(Weapons.DEFS[w2]["title"]), 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
+	if not Profile.WBRANCH.has(w2):   # PG-01: new weapons get hangar branches in PG-03 — say so instead of an empty panel
+		_para(Vector2(rx, yy + 30), Loc.t("У этого оружия веток улучшений в ангаре пока нет: они появятся в следующем этапе прокачки. В бою оно растёт по уровням 1–5 карточками, как и остальное оружие."), rw, 16, Color(0.75, 0.78, 0.84))
 	for tier in ([1, 2, 3] if Profile.WBRANCH.has(w2) else []):   # PG-01: new weapons get hangar branches in PG-03
 		_text(Vector2(rx, yy + 20), Loc.t("Ступень %d%s") % [tier, Loc.t(" · модернизация") if tier == 3 else ""], 18, Color.WHITE)
 		var st2 := Profile.tier_state(w2, tier)

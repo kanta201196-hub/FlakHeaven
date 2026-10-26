@@ -75,7 +75,7 @@ void fragment() {
 	float z = texture(depth_tex, SCREEN_UV).r;
 	vec4 v = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, z, 1.0);
 	float gap = VERTEX.z - v.z / v.w;   // distance in front of the scene behind this pixel
-	ALPHA = a.a * COLOR.a * clamp(gap / max(side * soft, 1.0), 0.0, 1.0);
+	ALPHA = a.a * COLOR.a * clamp(gap / max(side * soft, 1.0), 0.0, 1.0) * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);
 }
 """
 

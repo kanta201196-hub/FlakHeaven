@@ -13,6 +13,20 @@ static func dmg_k(wave: int) -> float:
 	return FIRST_WAVE_DMG_K if wave == 1 else 1.0
 
 
+## Chance that an ace's flares pull away a player missile within their reach: wave aces (`Boss`) and the campaign
+## rival ace. Kanta 2026-10-26 (decision card «Ловушки асов слабее», 3.5-s12): «Оса» is the missile class and died in
+## the first-ace fight 3 of 3 times while flares took 36–83 of her missiles in 6 minutes («Грач»: 81 in 16.5), so
+## against her missiles aces flare at FLARE_CHANCE_OSA. `docs/playtest/3.5-s12/osa-first-ace.md`.
+const FLARE_CHANCE_BOSS := 0.85
+const FLARE_CHANCE_RIVAL := 0.8
+const FLARE_CHANCE_OSA := 0.5
+
+
+## Flare chance of an ace whose normal chance is `base` against the missiles of the class `cls_id`
+static func flare_chance(base: float, cls_id: String) -> float:
+	return FLARE_CHANCE_OSA if cls_id == "fighter" else base
+
+
 ## GD-08 (Kanta 2026-10-25, option 1): the Fortress strength follows the player's damage with this share of it
 ## for every class. The share measured in ace duels does not fit the Fortress, where only hits near a turret or an
 ## engine count: in 3.5-s11 «Оса» duelled aces at 1.46–1.6 and met a Fortress of 605k against 82–97k for «Грач»

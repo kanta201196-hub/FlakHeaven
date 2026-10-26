@@ -21,6 +21,7 @@ var _fancy := false   # VFX-03: Forward+ draws missile smoke with SMOKE_SH; Comp
 const SMOKE_SH := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 uniform sampler2D soft : source_color, filter_linear_mipmap;
 uniform vec3 to_sun = vec3(-0.46, 0.63, -0.56);
 %s
@@ -61,7 +62,7 @@ void fragment() {
 		float heat = (1.0 - smoothstep(0.0, 14.0, cu.x)) * prof;
 		col = mix(col, vec3(2.6, 1.35, 0.42), heat);
 		ALBEDO = col;
-		ALPHA = clamp(COLOR.a * a * (1.0 + heat), 0.0, 1.0);
+		ALPHA = clamp(COLOR.a * a * (1.0 + heat), 0.0, 1.0) * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);   // salvo fan off the plane
 	}
 }
 """
@@ -190,15 +191,23 @@ func tick(delta: float) -> void:
 			if _fancy:
 				if i > 0:
 					along += p.distance_to(o)
-				var cu := [total - along, along, k, 1.0 if smoke else 0.0]
-				cus.append_array(cu)
-				cus.append_array(cu)
+				var fs := 1.0 if smoke else 0.0
+				for _side in 2:   # plain appends: an Array literal per point was a heap allocation
+					cus.append(total - along)
+					cus.append(along)
+					cus.append(k)
+					cus.append(fs)
 				var sn := Vector3(-d.y, 0.0, d.x)
 				nrms.append(sn)
 				nrms.append(sn)
 			if i > 0:
 				var v := base + (i - 1) * 2
-				idx.append_array(PackedInt32Array([v, v + 1, v + 2, v + 1, v + 3, v + 2]))
+				idx.append(v)
+				idx.append(v + 1)
+				idx.append(v + 2)
+				idx.append(v + 1)
+				idx.append(v + 3)
+				idx.append(v + 2)
 	_am.clear_surfaces()
 	if idx.is_empty():
 		return

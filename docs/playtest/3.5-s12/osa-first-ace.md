@@ -1,6 +1,6 @@
 # 3.5-s12: why «Оса» dies and «Грач» does not (Kanta, 2026-10-26)
 
-Kanta: «На Осе прям чет тяжко было, на Граче попроще». Data: sheet «Вылеты», rows 45–49 (tester 2fba92dd, build 3.5-s12). Skill: `flak-heaven-game-design`; nothing changed in the game yet.
+Kanta: «На Осе прям чет тяжко было, на Граче попроще». Data: sheet «Вылеты», rows 45–49 (tester 2fba92dd, build 3.5-s12). Skill: `flak-heaven-game-design`; Kanta chose option 2 on 2026-10-26 (see «Decision» at the end).
 
 ## Sorties
 
@@ -27,3 +27,7 @@ All three campaign deaths of «Оса» are inside the fight with the first ace:
 3. Ramming ×0.5 for «Оса» only (GD-07, D2-B): −10–15 % damage taken.
 
 «Битва асов» (row 45): «Оса» died at level 1 in 78 s, all 205 damage from interceptors. Passed to the «Битва асов» thread.
+
+## Decision and check
+
+Kanta 2026-10-26: option 2. Wave aces and the campaign rival ace flare «Оса»'s missiles at 0.5 (`AceBalance.flare_chance`, test `game/tests/ace_flares_test.gd`). Bot «Оса», max profile, operation «Небо над Шахрисангом», 16 + 16 sorties to 8:00, before → after (bootstrap 90 %): missiles taken by flares 36 → 26 (median); first-ace fight 71 → 67 s [−25…+12]; would die 62 → 82 [−4…+45]; level at 5:00 15 → 12 [−8…+2]. No measurable gain for the bot, whose missiles deal a small part of its ace damage; the check is Kanta's next «Оса» sorties (backlog GD-11).

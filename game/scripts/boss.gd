@@ -182,7 +182,7 @@ func _resist(delta: float, p: Player) -> void:
 	_evade_cd -= delta
 	_flare_cd -= delta
 	_scan_t -= delta
-	flare_defense(delta, 440.0, 260.0, 0.85, 2.5 if angry() >= 1.0 else 3.0, 7.0)
+	flare_defense(delta, 440.0, 260.0, AceBalance.flare_chance(AceBalance.FLARE_CHANCE_BOSS, p.cls_id), 2.5 if angry() >= 1.0 else 3.0, 7.0)
 	if _evade_cd > 0.0 or maneuvering() or _scan_t > 0.0:
 		return
 	_scan_t = 0.12
