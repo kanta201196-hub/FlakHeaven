@@ -25,7 +25,8 @@ const SETS := {
 		["prop", "boulders_b", -40.0, 22.0, 26.0, 0.0], ["prop", "boulders_b", -30.0, -30.0, 20.0, 120.0],
 		["prop", "boulders_b", 34.0, 30.0, 24.0, 240.0]],
 	"radar": [["unit", "fh_battle_e_radar", 0.0, 0.0, 32.0, 30.0]],
-	"bunker": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, 30.0]],
+	"bunker": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, -40.0]],   # the embrasure side
+	"bunker_rear": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, 150.0]],   # the trench and door
 	"manpads": [["unit", "fh_battle_e_convoy_manpads", 0.0, 0.0, 14.0, 30.0]],
 	"pickup": [["unit", "fh_battle_e_convoy_pickup_tent", 0.0, 0.0, 14.0, 30.0]],
 }

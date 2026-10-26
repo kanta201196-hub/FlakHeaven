@@ -896,6 +896,8 @@ func _make_points() -> Array:
 		# VIS-01: each reworked enemy model alone and close, moving parts posed (turret turned, wheels steered)
 		for k in UNIT_POSES:
 			pts.append({"name": "unit_" + k, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": UNIT_POSES[k][2], "unit_poses": k, "wait": 3.5})
+		# the bunker at the normal gameplay zoom with the player's fighter beside it, for scale
+		pts.append({"name": "unit_bunker_play", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "unit_poses": "bunker", "play": true, "wait": 3.5})
 		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
 		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
 	if OS.get_cmdline_user_args().has("--turretbench"):
@@ -1130,6 +1132,7 @@ func _clear_of(p: Vector2, reach: float) -> Array:
 ## turns off the hull (ZSU: sprite angle ~65° after the first second; convoy: alarm on, so it aims at the
 ## player, who stays on the camera point off the vehicle's quarter),
 ## convoy wheels have rolled and the front axles steer. The camera steers until the 3D model sits mid-frame.
+## A "play" point instead keeps the gameplay zoom and the player's plane in view beside the unit, for scale.
 func _unit_poses(p: Dictionary) -> void:
 	if _pt < 0.3:   # the class switch at the start of a point clears the world
 		return
@@ -1148,7 +1151,7 @@ func _unit_poses(p: Dictionary) -> void:
 	if _unit == null:
 		var tr := Terrain3D.active()
 		var at: Vector2 = tr.find_floor(p["pos"], 2600.0, 0.0, _clear_of(p["pos"], 3200.0), AASite.FLOOR_MID, true) if tr != null else p["pos"]
-		p["pos"] = at + Vector2(-60, -48)
+		p["pos"] = at + (Vector2(-100, -70) if p.get("play", false) else Vector2(-60, -48))
 		_spawned = true
 		m.player.process_mode = Node.PROCESS_MODE_DISABLED
 		match kind:
@@ -1210,6 +1213,13 @@ func _unit_poses(p: Dictionary) -> void:
 	if r3 == null:
 		return
 	var u: Unit3D = r3._units.get(_unit.get_instance_id())
+	if p.get("play", false):   # gameplay framing: the player's plane stays on the camera point and in view
+		var pp: Unit3D = r3._units.get(m.player.get_instance_id())
+		if pp != null:   # the close-up points before this one hid it
+			(pp.node as Node3D).visible = true
+			if pp.sh != null:
+				(pp.sh as Node3D).visible = true
+		return
 	if u != null:
 		var vs := m.get_viewport().get_visible_rect().size
 		var scr := r3.cam.unproject_position((u.node as Node3D).global_position)

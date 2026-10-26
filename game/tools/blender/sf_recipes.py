@@ -45,11 +45,6 @@ GREY = {"camo": [(0.50, 0.52, 0.54), (0.61, 0.63, 0.65)], "scale": 1.3, "stretch
         "wear_col": (0.66, 0.67, 0.68), "fade": 0.03, "fade_col": (0.75, 0.76, 0.77), "streak": 0.08}
 
 # vehicle olive paint (most sources): green-yellow hues
-# desert bunker (Kanta 26.10, shortlist 94): weathered sand-grey concrete close to the sandstone knoll; low detail,
-# because the source luminance carries the graffiti the repaint must hide
-BUNKER = {"camo": [(0.34, 0.31, 0.26), (0.30, 0.28, 0.24), (0.27, 0.25, 0.22)], "scale": 2.0,
-          "rough": (0.88, 0.95), "wear": 0.35, "detail": 0.14, "dust": 0.3, "streak": 0.2,
-          "wear_col": (0.43, 0.40, 0.35), "fade_col": (0.41, 0.38, 0.33)}   # weathered grey-ochre: darker than the sand around it
 OLIVE = {"mode": "auto", "hue": [(38, 150)], "smin": 0.12}
 TYRE = {"mode": "keep", "rough": 0.92, "desat": 0.6}
 GLASS = {"mode": "glass", "rough": 0.3, "color": (0.06, 0.075, 0.085)}
@@ -167,60 +162,163 @@ def pickup_tent_cover():
 
 
 def manpads_crew():
-    """MANPADS team in the bed of the light pickup (Kanta 26.10, shortlist 95: the launcher model on the same truck
-    as the technical and the tent pickup). Layout of the code-built unit it replaces (test 3.5-s8, Kanta: "it all
-    stuck together"): the gunner stands at the rear left of the bed with the launcher on his RIGHT shoulder, beside
-    the head, pointing forward over the cab; the loader kneels at the right side facing out; missile cases and a spare
-    tube lie along the left side by the cab. Bed of the 00amza pickup (length 1 = 5.2 m): floor z = 0.151,
-    x -0.464…-0.094, |y| < 0.15.
+    """MANPADS gunner in the bed of the light pickup (Kanta 26.10, shortlist 95: the launcher model on the same truck
+    as the technical and the tent pickup). Kanta 26.10: the old two-man crew of tube figures read as crude, so the bed
+    carries ONE properly proportioned soldier (1.8 m, built in metres and scaled to the truck: length 1 = 5.2 m):
+    braced stance with the left foot forward, boots, knee pad, belt, plate carrier with pouches, a small pack, a
+    shemagh round the neck and a helmet; the launcher lies on his RIGHT shoulder with the cheek against it, the right
+    hand on the gripstock and the left hand under the tube in front of it, pointing forward over the cab. Missile
+    cases, a spare tube and ammo boxes lie in the bed. Bed of the 00amza pickup: floor z = 0.151,
+    x -0.464…-0.094, |y| < 0.15. Uniform sand, vest and helmet olive, no markings.
     The launcher is the shortlisted Sketchfab model (path in env FH_MANPADS_TUBE; CREDITS.md): the display missile
     and its fins are dropped, the front end (-X in the source) turned to +X, scaled to a 1.6 m tube (0.31) and put on
     the shoulder point. Paint is flat (recipe), so no stencils of the source survive.
-    Objects mpl_* form the node launcher (pivot = the shoulder; render3d.gd raises it when locking), mpc_* stay on
+    Objects mpl_* (tube, both arms and gloves) form the node launcher, pivot = the shoulder point (gx, 0, sh) where
+    render3d.gd raises it when locking; the shoulders sit near that axis, so the arms stay attached; mpc_* stay on
     the root."""
     import math
     import os
     import re
     import bpy
-    from mathutils import Matrix
+    from mathutils import Matrix, Vector
     import convoy_kit as K
-    from convoy_kit import box, cyl, person, tube
+    from convoy_kit import box, cyl
     K.parts.clear()
-    tz = 0.155
-    gx, gy = -0.34, 0.07
-    _hip, top = person("mpc_gunner", gx, gy, tz, 0.0, "stand", "cloth", "helmet")
-    ty, sh = gy - 0.07, tz + top + 0.006
-    z0 = tz + top
-    arms = {"mpl_arm_r": [(gx, gy - 0.058, z0 - 0.015), (gx + 0.01, gy - 0.082, z0 - 0.075),
-                          (gx + 0.058, ty - 0.004, sh - 0.03)],
-            "mpl_arm_l": [(gx, gy + 0.058, z0 - 0.015), (gx + 0.075, gy + 0.035, z0 - 0.065),
-                          (gx + 0.125, ty + 0.012, sh - 0.016)]}
-    for name, pts in arms.items():
-        tube(name, pts, 0.013, "cloth", 6)
-    person("mpc_loader", -0.2, -0.085, tz, -70.0, "kneel", "cloth2", "wrap", True)
+    M = 1.0 / 5.2                       # metres -> truck units
+    tz = 0.155                          # standing surface (bed floor + liner)
+    gx, ty = -0.34, 0.0                 # shoulder rest of the tube (launcher pivot x, y)
+    sh = tz + 1.525 * M                 # tube axis height = pivot z (recipe "pivots")
+    bx, by = gx - 0.04 * M, ty + 0.13 * M
+    kinds = {}
+
+    def W(p):
+        return Vector((bx + p[0] * M, by + p[1] * M, tz + p[2] * M))
+
+    def tag(o, kind):
+        kinds[o.name] = kind
+        return o
+
+    def limb(name, pts, radii, kind, n=10):
+        """A tapered sleeve along a polyline (parallel-transport rings), radii per point, in metres."""
+        P = [W(p) for p in pts]
+        T = [(P[min(i + 1, len(P) - 1)] - P[max(i - 1, 0)]).normalized() for i in range(len(P))]
+        u = T[0].orthogonal().normalized()
+        vs = []
+        for i, c in enumerate(P):
+            u = (u - T[i] * u.dot(T[i])).normalized()
+            v = T[i].cross(u)
+            for j in range(n):
+                a = 2 * math.pi * j / n
+                vs.append(c + (u * math.cos(a) + v * math.sin(a)) * radii[i] * M)
+        f = [(i * n + j, i * n + (j + 1) % n, (i + 1) * n + (j + 1) % n, (i + 1) * n + j)
+             for i in range(len(P) - 1) for j in range(n)]
+        f += [tuple(range(n))[::-1], tuple(range((len(P) - 1) * n, len(P) * n))]
+        return tag(K._obj(name, vs, f, "olive"), kind)
+
+    def trunk(name, rings, kind, n=14, sq=0.25):
+        """Loft of rounded rings (x, z, half depth, half width) in metres; sq pushes the ellipse towards a box."""
+        secs = []
+        for x, z, rx, ry in rings:
+            ring = []
+            for j in range(n):
+                a = 2 * math.pi * j / n
+                k = 1.0 + sq * abs(math.sin(2 * a)) * 0.3
+                ring.append(W((x + rx * math.cos(a) * k, ry * math.sin(a) * k, z)))
+            secs.append(ring)
+        return tag(K.loft(name, secs, "olive"), kind)
+
+    def blob(name, c, r, kind, n=10, m=6):
+        """Ellipsoid (radii r = (rx, ry, rz) in metres) for the head, hands, shoulders and pads."""
+        c = W(c)
+        vs = [c + Vector((0, 0, -r[2] * M))]
+        for i in range(1, m):
+            t = math.pi * i / m
+            for j in range(n):
+                a = 2 * math.pi * j / n
+                vs.append(c + Vector((r[0] * math.sin(t) * math.cos(a), r[1] * math.sin(t) * math.sin(a),
+                                      -r[2] * math.cos(t))) * M)
+        vs.append(c + Vector((0, 0, r[2] * M)))
+        f = [(0, 1 + (j + 1) % n, 1 + j) for j in range(n)]
+        for i in range(m - 2):
+            a0, a1 = 1 + i * n, 1 + (i + 1) * n
+            f += [(a0 + j, a0 + (j + 1) % n, a1 + (j + 1) % n, a1 + j) for j in range(n)]
+        top = len(vs) - 1
+        f += [(top, 1 + (m - 2) * n + j, 1 + (m - 2) * n + (j + 1) % n) for j in range(n)]
+        return tag(K._obj(name, vs, f, "olive"), kind)
+
+    def mbox(name, c, s, kind, yaw=0.0, bevel=0.01):
+        rot = Matrix.Rotation(math.radians(yaw), 3, "Z")
+        return tag(box(name, tuple(W(c)), tuple(v * M for v in s), "olive", bevel * M, rot=rot), kind)
+
+    # legs: braced stance, left foot forward, right foot back; boots
+    for side, ank, knee, hip in ((1, (0.15, 0.12, 0.1), (0.19, 0.11, 0.52), (0.0, 0.095, 0.93)),
+                                 (-1, (-0.16, -0.13, 0.1), (-0.07, -0.115, 0.5), (0.0, -0.095, 0.93))):
+        th = tuple((h + k) / 2 for h, k in zip(hip, knee))
+        ca = tuple((k + a) / 2 for k, a in zip(knee, ank))
+        limb("mpc_leg", [hip, th, knee, ca, ank], [0.095, 0.085, 0.066, 0.06, 0.05], "cloth")
+        yaw = 8.0 * side
+        mbox("mpc_boot", (ank[0] + 0.05, ank[1], 0.055), (0.28, 0.105, 0.11), "boot", yaw, 0.03)
+        mbox("mpc_sole", (ank[0] + 0.05, ank[1], 0.012), (0.29, 0.11, 0.024), "black", yaw, 0.008)
+    blob("mpc_kneepad", (0.24, 0.11, 0.52), (0.05, 0.06, 0.07), "olive")
+    mbox("mpc_thigh_pouch", (0.02, -0.18, 0.72), (0.12, 0.05, 0.16), "olive", 0.0, 0.02)
+    # torso leaning into the tube, belt, plate carrier, pack
+    trunk("mpc_torso", [(0.0, 0.86, 0.11, 0.17), (0.0, 0.98, 0.105, 0.165), (0.01, 1.08, 0.1, 0.155),
+                        (0.025, 1.22, 0.115, 0.175), (0.03, 1.36, 0.11, 0.19), (0.035, 1.44, 0.08, 0.16),
+                        (0.04, 1.49, 0.05, 0.07)], "cloth")
+    trunk("mpc_belt", [(0.0, 0.94, 0.118, 0.176), (0.0, 1.0, 0.115, 0.174)], "dark", sq=0.6)
+    trunk("mpc_vest", [(0.012, 1.02, 0.13, 0.17), (0.022, 1.16, 0.135, 0.18), (0.03, 1.34, 0.128, 0.182),
+                       (0.034, 1.4, 0.11, 0.15)], "olive", sq=1.0)
+    for yy in (-0.09, 0.0, 0.09):
+        mbox("mpc_pouch", (0.17, yy, 1.1), (0.05, 0.075, 0.12), "olive", 0.0, 0.015)
+    mbox("mpc_radio", (-0.12, 0.12, 1.06), (0.07, 0.07, 0.15), "dark", 0.0, 0.015)
+    mbox("mpc_pack", (-0.17, 0.0, 1.22), (0.12, 0.28, 0.3), "olive", 0.0, 0.04)
+    tag(cyl("mpc_canteen", tuple(W((-0.06, 0.17, 0.9))), 0.045 * M, 0.15 * M, "olive", "Z", 10), "olive")
+    for s in (1, -1):
+        blob("mpc_shoulder", (0.04, s * 0.19, 1.4), (0.08, 0.075, 0.075), "cloth")
+    # neck, shemagh, head (cheek on the tube), helmet
+    tag(cyl("mpc_neck", tuple(W((0.045, 0.01, 1.52))), 0.055 * M, 0.1 * M, "olive", "Z", 10), "skin")
+    trunk("mpc_shemagh", [(0.04, 1.45, 0.095, 0.11), (0.045, 1.5, 0.085, 0.095), (0.05, 1.56, 0.07, 0.075)],
+          "scarf", sq=0.0)
+    hx, hy, hz = 0.07, 0.03, 1.64
+    blob("mpc_head", (hx, hy, hz), (0.1, 0.085, 0.12), "skin", 14, 8)
+    blob("mpc_nose", (hx + 0.1, hy, hz - 0.01), (0.02, 0.016, 0.03), "skin", 6, 4)
+    blob("mpc_helmet", (hx - 0.005, hy, hz + 0.035), (0.13, 0.115, 0.11), "helmet", 16, 8)
+    trunk("mpc_helmet_rim", [(hx - 0.005, hz + 0.03, 0.135, 0.12), (hx - 0.005, hz + 0.045, 0.133, 0.118)],
+          "helmet", 16, 0.0)
+    mbox("mpc_goggles", (hx + 0.06, hy, hz + 0.1), (0.07, 0.17, 0.04), "dark", 0.0, 0.015)
+    trunk("mpc_strap", [(hx, hz - 0.11, 0.095, 0.06), (hx, hz - 0.08, 0.1, 0.09)], "dark", 12, 0.0)
+    # arms with the launcher (node launcher): right hand on the gripstock, left hand under the tube ahead of it
+    for nm, pts, hand in (
+            ("mpl_arm_r", [(0.04, -0.2, 1.41), (0.09, -0.25, 1.29), (0.14, -0.29, 1.18), (0.25, -0.21, 1.27),
+                           (0.33, -0.14, 1.35)], (0.36, -0.13, 1.37)),
+            ("mpl_arm_l", [(0.07, 0.18, 1.41), (0.2, 0.12, 1.34), (0.33, 0.06, 1.27), (0.45, -0.04, 1.36),
+                           (0.54, -0.12, 1.43)], (0.57, -0.13, 1.455))):
+        limb(nm, pts, [0.078, 0.068, 0.056, 0.05, 0.042], "cloth")
+        blob(nm.replace("arm", "glove"), hand, (0.055, 0.045, 0.05), "glove")
+    # props in the bed: missile cases and a spare tube by the cab, ammo boxes at the tailgate
     for k in range(2):
-        box("mpc_case", (-0.19, 0.112, tz + 0.02 + k * 0.04), (0.18, 0.05, 0.04), "olive", 0.003)
-    cyl("mpc_spare_tube", (-0.2, 0.112, tz + 0.096), 0.009, 0.24, "olive", "X", 10)
+        tag(box("mpc_case", (-0.19, 0.112, tz + 0.02 + k * 0.04), (0.18, 0.05, 0.04), "olive", 0.003), "olive")
+    tag(cyl("mpc_spare_tube", (-0.2, 0.112, tz + 0.096), 0.009, 0.24, "olive", "X", 10), "olive")
     for k in range(2):
-        box("mpc_ammo_box", (-0.43, -0.11 + k * 0.05, tz + 0.02), (0.05, 0.04, 0.04), "olive", 0.003)
+        tag(box("mpc_ammo_box", (-0.43, -0.11 + k * 0.05, tz + 0.02), (0.05, 0.04, 0.04), "olive", 0.003), "olive")
     obs = list(K.parts)
-    flat = {"cloth": (0.45, 0.41, 0.32), "cloth2": (0.34, 0.34, 0.28), "skin": (0.55, 0.40, 0.30),
-            "olive": (0.33, 0.35, 0.24), "black": (0.06, 0.06, 0.06)}
+    flat = {"cloth": (0.47, 0.41, 0.29), "skin": (0.52, 0.37, 0.27), "olive": (0.33, 0.35, 0.24),
+            "helmet": (0.37, 0.37, 0.27), "scarf": (0.66, 0.6, 0.48), "boot": (0.2, 0.15, 0.1),
+            "glove": (0.16, 0.15, 0.12), "dark": (0.14, 0.14, 0.12), "black": (0.06, 0.06, 0.06)}
     for o in obs:
+        kind = kinds.get(o.name, "olive")
         bpy.context.view_layer.objects.active = o
         for md in list(o.modifiers):
             bpy.ops.object.select_all(action="DESELECT")
             o.select_set(True)
             bpy.ops.object.modifier_apply(modifier=md.name)
-        kind = o.data.materials[0].name if o.data.materials else "olive"
-        kind = kind if kind in flat else "olive"
         o.data.materials.clear()
         o.data.materials.append(_flat_mat("mp_" + kind, flat[kind], 0.9, 0.0))
     # the launcher: source tube axis on x (front -X), y = 0, z = 0; shoulder rest at x = 10 (behind the grip)
     old = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=os.environ["FH_MANPADS_TUBE"])
     s = 0.31 / 36.5
-    m = Matrix.Translation((gx, ty, sh + 0.004)) @ Matrix.Scale(s, 4) @ Matrix.Rotation(math.pi, 4, "Z") \
+    m = Matrix.Translation((gx, ty, sh)) @ Matrix.Scale(s, 4) @ Matrix.Rotation(math.pi, 4, "Z") \
         @ Matrix.Translation((-10.0, 0.0, 0.0))
     for o in [o for o in bpy.data.objects if o not in old]:
         if o.type != "MESH" or re.search(r"(?i)rocket|stab", o.name) or not o.data.polygons:
@@ -376,7 +474,7 @@ RECIPES = {
         "pivots": {"tent": "center"}, "fixed": {"tent": 900},
         "paint": SAND, "tris": 8000,
     },
-    # MANPADS team: the technical's truck with the gunner, loader and launcher in the bed (manpads_crew above)
+    # MANPADS team: the technical's truck with one gunner and the launcher in the bed (manpads_crew above)
     "e_convoy_manpads": {
         "root": "convoy_manpads", "rot": (0, 0, 90), "ground": True, "split": "^(?!mp)",
         "wheels": {"steer": 1, "rmax": 0.12, "match": "^(?!mp)"}, "build": manpads_crew,
@@ -386,18 +484,8 @@ RECIPES = {
                                                                        "rough": 0.6}),
                       (r".", OLIVE)],
         "groups": {"launcher": [("name", r"^mpl_")]},
-        "pivots": {"launcher": (-0.34, 0.0, 0.495)}, "fixed": {"launcher": 1600},
+        "pivots": {"launcher": (-0.34, 0.0, 0.448)}, "fixed": {"launcher": 2000},
         "paint": SAND, "tris": 9000,
-    },
-    # casemate on a sandstone knoll (Kanta 26.10, shortlist 94, the Archipelago coast bunker reworked for the desert).
-    # Source prepared outside the recipe: cropped to the casemate and the top of its knoll, faces above the knoll cut
-    # in a material 'concrete' (fully repainted: hides the graffiti); on the rock only the graffiti colours and the
-    # green shrubs are repainted, the sandstone texture stays
-    "e_bunker": {
-        "root": "ground_bunker", "rot": (0, 0, 90), "ground": True,
-        "materials": [(r"^concrete", {"mode": "paint", "flatten": 31}),
-                      (r".", {"mode": "auto", "hue": [(0, 14), (55, 340)], "smin": 0.18, "gray": (0.0, 0.22)})],
-        "paint": BUNKER, "tris": 8000,
     },
     # radar truck (Kanta 26.10, shortlist 88): a 6x6 truck with a lattice search antenna on a mast at the rear.
     # The tan factory paint becomes the sand camo; the antenna head (dish, feed, mast head) is the node render3d
