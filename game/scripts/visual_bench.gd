@@ -634,6 +634,8 @@ func _make_points() -> Array:
 		pts.append({"name": "village_wide", "pos": found["o_village"] + Vector2(0, 700), "zoom": 0.6})
 		pts.append({"name": "village_close", "pos": found["o_village"] + Vector2(0, 600), "zoom": 2.4})
 		pts.append({"name": "village_houses", "pos": found["o_village"] + Vector2(-150, 250), "zoom": 6.0})   # VIS-01: house models up close
+		# VIS-01: the village at gameplay height with the player's plane over it, to judge the houses' scale
+		pts.append({"name": "village_play", "pos": found["o_village"] + Vector2(0, 450), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
 		for vr in 4:
 			AdobeBuild._vcache.erase("village%d" % vr)
 			var t0 := Time.get_ticks_usec()
