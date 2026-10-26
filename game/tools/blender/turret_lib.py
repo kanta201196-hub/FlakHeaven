@@ -124,10 +124,12 @@ def tube(name, pts, r, m):
 
 
 
-def build(name, out, paint=None, tex=2048):
+def build(name, out, paint=None, tex=2048, before_export=None):
     """Применить фаски, слить детали в один объект, сохранить .blend и .glb.
     paint — palette from turret_paint.PALETTES: bake the textured paint (S12) before the export; the root gets a
-    tex x tex atlas, the moving groups half of it (pods a quarter)"""
+    tex x tex atlas, the moving groups half of it (pods a quarter).
+    before_export(root) — the model's own paint step instead (e.g. fortress.py bakes chosen groups with
+    turret_paint.bake_set); it runs on the joined, pivoted objects, and the textures are then exported as JPEG"""
     os.makedirs(out, exist_ok=True)
     for ob in parts:
         bpy.context.view_layer.objects.active = ob
@@ -166,10 +168,12 @@ def build(name, out, paint=None, tex=2048):
             if gname:
                 turret_paint.bake(bpy.data.objects[gname], paint, tex // 4 if gname == "pods" else tex // 2,
                                   "turret_paint_" + gname)
+    if before_export is not None:
+        before_export(tur)
 
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + ".blend"))
     bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format="GLB", use_selection=False,
-                              export_image_format="JPEG" if paint is not None else "AUTO", export_jpeg_quality=90)
+                              export_image_format="JPEG" if paint is not None or before_export is not None else "AUTO", export_jpeg_quality=90)
 
     return tur
 

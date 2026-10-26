@@ -508,6 +508,14 @@ func _save(name: String) -> void:
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE, RenderingServer.VIEWPORT_RENDER_INFO_PRIMITIVES_IN_FRAME) / 1000,
 		RenderingServer.viewport_get_render_info(rid, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)])
+	# render budget: the whole frame (every viewport, shadows included) and video memory, comparable across
+	# renderers for draw calls and objects (frame time means nothing on a GPU-less machine)
+	print("VISUAL %s total draws=%d prims=%dk objects=%d tex_mb=%.1f vram_mb=%.1f" % [name,
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1000,
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TEXTURE_MEM_USED) / 1048576.0,
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED) / 1048576.0])
 	print("VISUAL %s nodes=%d" % [name, m.get_tree().get_node_count()])
 	if Render3D.I != null and Render3D.I.terrain != null:   # Р-13: заглушки рельефа сейчас и кадров с ними с начала
 		print("VISUAL %s terrain lods=%d lod_frames=%d" % [name, Render3D.I.terrain._lods.size(), Render3D.I.terrain.lod_frames])
@@ -602,6 +610,24 @@ func _print_fort_size(name: String, fp: Vector2, px_k: float) -> void:
 	print("VISUAL %s size o_fort: no 3D fort at %s" % [name, fp])
 
 
+## Position of the first `kind` model BiomeProps plans in the chunks around `at` (nearest ring first), or
+## Vector2.INF. The plan is the same pure calculation the terrain runs, so the model is really there.
+func _find_prop(ter: Terrain3D, at: Vector2, kind: String) -> Vector2:
+	if ter == null or ter.props == null or at == Vector2.INF:
+		return Vector2.INF
+	var c := Vector2i(int(floorf(at.x / Terrain3D.CHUNK)), int(floorf(at.y / Terrain3D.CHUNK)))
+	for r in 3:
+		for dx in range(-r, r + 1):
+			for dz in range(-r, r + 1):
+				if maxi(absi(dx), absi(dz)) != r:
+					continue
+				var key := c + Vector2i(dx, dz)
+				var put: Dictionary = ter.props.plan(key, ter._ctx(key))
+				for t: Transform3D in put.get(kind, []):
+					return Vector2(t.origin.x, t.origin.z)
+	return Vector2.INF
+
+
 ## Точки: пустыня, гора, кишлак, оазис, бой со взрывами, крупный план самолёта
 func _make_points() -> Array:
 	var bg := m.background
@@ -611,6 +637,10 @@ func _make_points() -> Array:
 	var cnt := {}   # 3.5-s8: сколько объектов каждого вида на 29 × 29 клеток (кишлаков стало меньше?)
 	var near_river := {}   # тест 3.5-s4 (п. 16): поселения ближе всех к реке (кромка у воды): имя → [зазор, объект]
 	var ter: Terrain3D = Render3D.I.terrain if Render3D.I != null else null
+	# on a slow machine the scan can run before Render3D hands the sortie's background its place filter: the
+	# unfiltered spots then name villages the 3D world drops or moves (frames of empty ground). Scan what it draws
+	if ter != null and not bg.place_filter.is_valid():
+		bg.place_filter = ter.fix_object
 	for r in range(0, 14):
 		for cx in range(-r, r + 1):
 			for cy in range(-r, r + 1):
@@ -763,14 +793,34 @@ func _make_points() -> Array:
 	if ter != null:   # L-07: мосты — пешеходный у оазиса, дорожный через ручей посёлка
 		if found.has("o_oasis"):
 			pts.append({"name": "footbridge", "pos": ter._river_point(found["o_oasis"]), "zoom": 2.5})
-		if found.has("o_village"):
-			for sd in ter._sides(found["o_village"].x, found["o_village"].y):
-				if float(sd[2]) < 0.0:
+		# bridges and yurt rework: where BiomeProps really put a road bridge and a yurt (the plan of the chunks
+		# round the nearest villages), close up and at gameplay height with the player's plane for scale
+		var bq := Vector2.INF
+		var yq := Vector2.INF
+		var nv := 0
+		for vo: Dictionary in placed:
+			if vo["name"] != "o_village" or nv >= 40 or (bq != Vector2.INF and yq != Vector2.INF):
+				continue
+			nv += 1
+			if bq == Vector2.INF:   # BiomeProps._bridges: a village stream crossing the road line
+				for sd in ter._sides(vo["pos"].x, vo["pos"].y):
 					var f0: float = ter.river_field(sd[0].x, sd[0].y) - Terrain3D.D_ROAD
 					var f1: float = ter.river_field(sd[1].x, sd[1].y) - Terrain3D.D_ROAD
-					if f0 * f1 <= 0.0 and f0 != f1:
-						pts.append({"name": "road_bridge", "pos": (sd[0] as Vector2).lerp(sd[1], f0 / (f0 - f1)), "zoom": 2.5})
+					if float(sd[2]) < 0.0 and f0 * f1 <= 0.0 and f0 != f1:
+						bq = (sd[0] as Vector2).lerp(sd[1], f0 / (f0 - f1))
 						break
+			if yq == Vector2.INF:   # on "Low" the zones differ and the first villages may have no yurt
+				yq = _find_prop(ter, vo["pos"], "yurt")
+		print("VISUAL props bridge at %s yurt at %s, tris bridge=%d footbridge=%d yurt=%d" % [bq, yq, PropBuild.tris(PropBuild.bridge(false)), PropBuild.tris(PropBuild.bridge(true)), PropBuild.tris(PropBuild.yurt())])
+		if bq != Vector2.INF:
+			pts.append({"name": "road_bridge", "pos": bq, "zoom": 2.5})
+			pts.append({"name": "bridge_close", "pos": bq, "ground_dist": 150.0, "wait": 3.0})
+			pts.append({"name": "bridge_play", "pos": bq + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+		if found.has("o_oasis"):
+			pts.append({"name": "footbridge_close", "pos": ter._river_point(found["o_oasis"]), "ground_dist": 230.0, "wait": 3.0})
+		if yq != Vector2.INF:
+			pts.append({"name": "yurt_close", "pos": yq, "ground_dist": 95.0, "wait": 3.0})
+			pts.append({"name": "yurt_play", "pos": yq + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	if found.has("o_wreck"):   # тест 3.5-s4 (п. 18): обломки самолёта крупно
 		pts.append({"name": "wreck", "pos": found["o_wreck"], "zoom": 2.5})
