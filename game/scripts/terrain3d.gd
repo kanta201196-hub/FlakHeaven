@@ -23,10 +23,10 @@ const D_ROAD := 85.0           # ось дороги
 ## M-36 (решение Kanta 18.10.2026): дорога шире под машины конвоя — полоса в шейдере земли, px от оси D_ROAD.
 ## Наружу (от реки) — ROAD_W (было 14, ×1,57); к реке — ROAD_W_IN: край не заходит в охранную зону RIVER_GUARD
 ## (85 − 14 = 71 > 68). Видимая ширина ~29 px вместо ~20 (×1,45): ось колонны — по-прежнему D_ROAD
-## Kanta 26.10: «должно помещаться 1,5 корпуса машины». Самая широкая машина — грузовик: 28 × unit_scale 1,8
-## × ширина модели 0,404 ≈ 20 px, значит сплошная полоса ≥ 31 px. Сплошная часть — до (полуширина − 6) с каждой
-## стороны (мягкий край в ground3d.gdshader): (27 − 6) + (16 − 6) = 31 px, всего с краями 43 px (было 19 и 36).
-## К реке 16: край по-прежнему вне охранной зоны (85 − 16 = 69 > 68)
+## Road must fit 1.5 vehicle bodies. The widest convoy vehicle is the truck: 28 x unit_scale 1.8
+## x model width 0.404 = ~20 px, so the solid band must be >= 31 px. The solid part reaches (half-width - 6)
+## on each side (soft edge in ground3d.gdshader): (27 - 6) + (16 - 6) = 31 px, 43 px with edges.
+## River side 16: the edge still stays outside the guard zone (85 - 16 = 69 > 68)
 const ROAD_W := 27.0
 const ROAD_W_IN := 16.0
 const D_FLOOR := 260.0         # ровное дно долины
