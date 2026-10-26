@@ -27,11 +27,11 @@ func _check(ok: bool, what: String) -> void:
 		print("FAIL: ", what)
 
 
-func _hits_to_kill(source: String, max_hp: float) -> int:
+func _hits_to_kill(source: String, max_hp: float, who := "") -> int:
 	var hp := max_hp
 	var n := 0
 	while hp > 0.0 and n < 100:
-		hp -= AcesBalance.player_hit(source, 1.0, max_hp)
+		hp -= AcesBalance.player_hit(source, 1.0, max_hp, who)
 		n += 1
 	return n
 
@@ -44,9 +44,12 @@ func _test_missiles() -> void:
 
 
 func _test_bursts() -> void:
-	var n := _hits_to_kill("пули", 120.0)
+	var n := _hits_to_kill("пули", 120.0, "ас-соперник")
 	# an ace burst is 5 rounds; two long bursts with a miss or two = 8–10 hits
-	_check(n >= 8 and n <= 10, "two long bursts kill (%d hits)" % n)
+	_check(n >= 8 and n <= 10, "two long ace bursts kill (%d hits)" % n)
+	var light := _hits_to_kill("пули", 172.0, "перехватчики")
+	# s12: two interceptors killed «Оса» in 78 s before any ace; their guns must not be ace guns
+	_check(light >= 20, "interceptor guns need 20+ hits (%d)" % light)
 
 
 func _test_other_damage() -> void:
@@ -66,6 +69,9 @@ func _test_caps() -> void:
 	_check(AcesBalance.needs("interceptor", AcesBalance.INTERCEPTOR_MAX - 1), "room for an interceptor")
 	_check(not AcesBalance.needs("interceptor", AcesBalance.INTERCEPTOR_MAX), "interceptors capped")
 	_check(AcesBalance.CARRIER_MAX > AcesBalance.INTERCEPTOR_MAX, "more missile carriers than interceptors")
+	_check(AcesBalance.ACE_MAX >= AcesBalance.INTERCEPTOR_MAX + AcesBalance.CARRIER_MAX,
+		"s12: aces are at least half of the sky, not the escorts")
+	_check(AcesBalance.ACE_FLARE_CHANCE < 0.8 and AcesBalance.ACE_FLARE_CHARGES < 3, "aces flare less than in the campaign")
 	_check(not AcesBalance.needs("drone", 0), "no drones in the mode")
 	_check(AcesBalance.ACE_HP > AcesBalance.CARRIER_HP and AcesBalance.CARRIER_HP > AcesBalance.INTERCEPTOR_HP,
 		"ace > carrier > interceptor")

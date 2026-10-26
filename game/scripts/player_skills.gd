@@ -65,7 +65,11 @@ func _handle_skills() -> void:
 		Main.I.sfx.play("afterburner", -8.0)
 	if Input.is_action_just_pressed("sharp_turn") and pl.s3_cd <= 0.0 and pl.s3_active() <= 0.0:
 		_activate_skill3(pl.skill3, 0)
-	if pl.skill_b != "" and Input.is_action_just_pressed("skill_2") and pl.sb_cd <= 0.0 and pl.s3_active(pl.skill_b) <= 0.0:
+	if Main.aces():
+		# «Битва асов» (s12, Kanta: «нет способов ухода от ракет»): F — залп ловушек вместо навыка 2-го слота
+		if Input.is_action_just_pressed("skill_2") and pl.sb_cd <= 0.0:
+			_flare_salvo(true)
+	elif pl.skill_b != "" and Input.is_action_just_pressed("skill_2") and pl.sb_cd <= 0.0 and pl.s3_active(pl.skill_b) <= 0.0:
 		_activate_skill3(pl.skill_b, 1)
 	if Input.is_action_just_pressed("toggle_fire_mode"):
 		pl.manual_mode = not pl.manual_mode
@@ -310,8 +314,13 @@ func salvo_waves() -> void:
 	Main.I.sfx.play("flare", -10.0, 1.2)
 
 
-func _flare_salvo() -> void:
-	pl.roll_cd = pl.salvo_cd_full()
+## Flare salvo: lures missiles near the plane and breaks the locks of farther ones. «Кит» fires it on Space
+## (roll cooldown); `on_f` — any class on F in «Битва асов» (its own cooldown, `AcesBalance.FLARE_CD`).
+func _flare_salvo(on_f := false) -> void:
+	if on_f:
+		pl.sb_cd = AcesBalance.FLARE_CD
+	else:
+		pl.roll_cd = pl.salvo_cd_full()
 	pl.salvo_t = SALVO_TIME
 	_salvo_next = SALVO_TIME - SALVO_IV
 	Main.I.tele.add("roll_uses")

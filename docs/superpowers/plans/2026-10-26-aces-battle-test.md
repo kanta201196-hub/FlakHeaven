@@ -53,3 +53,18 @@ contrail 1.2–1.8 s. Change, aces mode only: `AcesBalance.BANK_VIS` 60°, `BANK
 Camera (already north-up with look-ahead) and zoom unchanged.
 All seven numbers are F1 sliders `aces_*` in `Tuning` (defaults from `AcesBalance`); in the aces mode F1 opens
 just those sliders, also in the tester build, so Kanta tunes the feel himself.
+
+## After build 3.5-s12 (Kanta's play, 2026-10-26)
+
+Kanta: fun overall; no way to evade missiles, too many small enemies, wants more aces; wants a build loop.
+Log (sheet «Вылеты», row 45): died at 78 s, level 1, all 205 damage from interceptor guns (`BULLET_SHARE` applied
+to every bullet, so ~10 interceptor hits killed), aces lured 10 of his missiles (13 salvos), combat turn E never
+used (it already breaks missile locks within 1100), roll used 6 times.
+
+Done now (aces mode only): first ace 10 s, every 25 s, up to 3; interceptors ≤ 1, carriers ≤ 2;
+`LIGHT_BULLET_SHARE` 4 % for non-ace bullets; ace flares chance 0.5, 2 charges; F = flare salvo every 6 s
+(`FLARE_CD`, the 2nd skill slot is off in the mode); start hint names F / E / Space against missiles.
+
+Waiting for Kanta: the build loop. Options — 1 (recommended) draft of 8 cards before takeoff + 1 card per ace
+shot down; 2 two cards at start + 2 per ace; 3 a 20-card draft before takeoff, nothing in flight.
+Page: https://claude.ai/artifact/TcfsADTtKPk9ZH7y6s7gyc

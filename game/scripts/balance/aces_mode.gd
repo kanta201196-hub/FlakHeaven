@@ -24,10 +24,12 @@ const BANK_IN_RATE := 10.0
 const BANK_OUT_RATE := 3.5
 const TRAIL_LIFE := 3.5
 
-## Share of the player's max HP one hit takes: a missile (3 kill), a bullet (two long ace bursts of 5 rounds,
-## a miss or two, kill), a ram.
+## Share of the player's max HP one hit takes: a missile (3 kill), a bullet of a rival ace (two long bursts of
+## 5 rounds, a miss or two, kill), a bullet of anyone else, a ram. s12 (Kanta's log 26.10): with every bullet at
+## the ace share, two interceptors killed «Оса» in 78 s before she met an ace; their guns now take ~25 hits.
 const MISSILE_SHARE := 0.34
 const BULLET_SHARE := 0.115
+const LIGHT_BULLET_SHARE := 0.04
 const RAM_SHARE := 0.5
 ## Post-hit invulnerability, s: the campaign's 0.7 s would swallow most of a burst (rounds 0.09 s apart).
 const HIT_INVULN := 0.05
@@ -39,23 +41,31 @@ const CARRIER_HP := 90.0
 const ACE_HP := 140.0
 
 ## Rival aces: the first one at ACE_FIRST s, then every ACE_EVERY s, at most ACE_MAX in the air.
-const ACE_FIRST := 20.0
-const ACE_EVERY := 45.0
-const ACE_MAX := 2
+## s12, Kanta: «слишком много мелких, хочется больше асов» — aces come sooner and more often, fewer escorts.
+const ACE_FIRST := 10.0
+const ACE_EVERY := 25.0
+const ACE_MAX := 3
+## Rival ace flares in the mode: chance to lure a missile and charges (campaign 0.8 and 3). s12 log: aces
+## lured 10 of «Оса»'s missiles in 78 s, and three missiles are meant to bring an ace down.
+const ACE_FLARE_CHANCE := 0.5
+const ACE_FLARE_CHARGES := 2
 ## How many of each kind stay in the air and how often the spawner tops them up, s.
-const INTERCEPTOR_MAX := 2
-const CARRIER_MAX := 4
+const INTERCEPTOR_MAX := 1
+const CARRIER_MAX := 2
+## Player flares on F (the 2nd skill slot) in the mode: a salvo like «Кит»'s, every FLARE_CD s.
+const FLARE_CD := 6.0
 const TOPUP_EVERY := 6.0
 
 
 ## Damage of one hit on the player in the mode: missiles, bullets and rams take a fixed share of `max_hp`
-## (the plane's armour and shields still apply after this); any other source keeps its `amount`.
-static func player_hit(source: String, amount: float, max_hp: float) -> float:
+## (the plane's armour and shields still apply after this); a rival ace's bullets (`who` = its `kind()`) hit
+## harder than anyone else's; any other source keeps its `amount`.
+static func player_hit(source: String, amount: float, max_hp: float, who := "") -> float:
 	match source:
 		"ракеты":   # i18n-skip
 			return max_hp * MISSILE_SHARE
 		"пули":   # i18n-skip
-			return max_hp * BULLET_SHARE
+			return max_hp * (BULLET_SHARE if who == "ас-соперник" else LIGHT_BULLET_SHARE)   # i18n-skip
 		"таран":   # i18n-skip
 			return max_hp * RAM_SHARE
 	return amount
