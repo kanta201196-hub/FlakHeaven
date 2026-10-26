@@ -137,7 +137,7 @@ else:
         cyl("bore", (1.036, yb, 0.36), 0.012, 0.004, M_DARK, "X", 12)
     L.group = ""
 
-# S12 (Kanta 26.10: «добавь детализации, чтобы была заметна разница при прокачке»): small parts per tier
+# S12 (Kanta 26.10: "add detail so the upgrade difference shows"): small parts per tier
 # on top of the silhouette steps above — t1 stays the plain box; t2 gets rivet rows, lifting eyes and a roof
 # grab rail; t3 also a whip antenna, a rear stowage bustle with straps and a cable conduit to the sight.
 if TIER >= 2:

@@ -1,4 +1,4 @@
-"""Baked PBR paint for the player turrets (S12, Kanta 26.10: «сделаем качественную текстуру и окраску»;
+"""Baked PBR paint for the player turrets (S12, Kanta 26.10: "let us make a quality texture and paint";
 target look — weathered painted armour like catalog pick 113, colours from our planes' livery, no rust or flags).
 
 turret_lib.build(..., paint=PALETTES[...]) calls bake() on each joined object (root, "guns", "pods") before the
@@ -23,7 +23,7 @@ from PIL import Image
 
 # tones — camouflage colours (sRGB): base, first and second blotch colour; share — area of the two blotch colours
 # (a third red-brown, a fifth olive).
-# Both planes fly the default livery «Песочный камуфляж» (livery.gd SAND_CAMO, Kanta 18.10): sand base,
+# Both planes fly the default livery "sand camo" (livery.gd SAND_CAMO, Kanta 18.10): sand base,
 # red-brown and olive blotches; the base is a touch darker than the plane's, because the turret paint carries
 # its own grime and AO. Each class keeps its own seed, so the two turrets do not share one pattern.
 _SAND = [(0.80, 0.72, 0.53), (0.58, 0.37, 0.19), (0.25, 0.23, 0.14)]

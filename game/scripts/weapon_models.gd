@@ -391,8 +391,9 @@ static func _glb_mesh(file: String, s: float, tint: Color, key: String, part := 
 		if part == "guns":
 			gx.origin = Vector3.ZERO
 		srcs.append([guns.mesh, sc * gx])
-	if srcs.is_empty():
+	if srcs.is_empty():   # e.g. part "pods" of a turret without pods: remembered, so make() does not reload the GLB
 		root.free()
+		_cache[key] = null
 		return null
 	# по поверхности на материал (корпус и стволы одного материала — одна поверхность, как было до деления)
 	var sts := {}
