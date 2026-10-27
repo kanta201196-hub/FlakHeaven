@@ -1651,7 +1651,7 @@ func _hangar_bench() -> void:
 			var tp: Array = h.turret_pos[cur[3]] if cur[3] < h.turret_pos.size() else [Vector3.ZERO, "top"]
 			h.focus = tp[0]
 			h._yaw = 2.2 if tp[1] != "tail" else 2.7
-			h._pitch = {"top": 0.45, "tail": 0.3, "bottom": -0.25}.get(tp[1], 0.3)
+			h._pitch = {"top": 0.45, "wing": 0.5, "tail": 0.3, "bottom": -0.25}.get(tp[1], 0.3)
 			h._dist = 0.3
 			h._idle = 0.0
 		elif OS.get_cmdline_user_args().has("--hangarside"):   # вид сбоку: проверка, где сидят турели и подвесы

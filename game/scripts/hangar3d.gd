@@ -78,6 +78,7 @@ const FLOOR_Y := -0.2
 const TURRET_STAND := {"path": "res://models/hangar/stand_turret.glb", "seat_r": 1.0, "seat_y": 1.75,
 	"view": 0.55, "lift": 0.5}
 var turret_pos: Array = []   # [Vector3, сторона] — турели текущей модели
+var _model: Node3D           # S13: the plane model of the view; flush flare panels and turret fairings go under it
 ## Тест 3.5-s8: показ механизации (HangarAnim) — кнопка на виде самолёта или курсор на узле «Крыло»
 var mech_demo := false
 var mech_hover := false      # HudHangar ставит каждый кадр, пока курсор на узле «Крыло»
@@ -649,6 +650,7 @@ func _build(cls_id: String, lvl: int) -> void:
 			if m != null:
 				m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	pivot.add_child(model)
+	_model = model
 	turret_pos.clear()
 	_collect_faces(model)
 	# Т-3: модули прокачки — стенд --modules=N показывает все модули на уровне N
@@ -685,7 +687,8 @@ func _apply_livery(model: Node3D, cls_id: String, lvl: int) -> void:
 	Livery.apply(model, cls_id, lvl, Livery.current(cls_id))
 
 
-## Стартовое оружие класса на узлах подвески — под крылом / в бомбоотсеке (те же точки, что в игре)
+## Стартовое оружие класса на узлах подвески — под крылом / в бомбоотсеке (те же точки, что в игре).
+## Flares and wing-turret fairings are laid onto the model's skin (SkinPatch), the same as Render3D does in battle.
 func _add_weapons(cls_id: String, lvl: int) -> void:
 	var tex := PlaneArt.plane_tex(cls_id, lvl)
 	var tex1 := PlaneArt.plane_tex(cls_id, 1)
@@ -700,6 +703,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 	var tw := float(tex.get_width())
 	# длина самолёта в игре: plane_len × размер класса × (ширина картинки ур. / ур. 1); модель — длиной 1
 	var plane_k := float(data["size"]) * tw / float(tex1.get_width())
+	var repaint := false   # a turret fairing was added: the livery has to paint it like the rest of the skin
 	for gi in groups.size():
 		var g: Hardpoint = groups[gi]
 		if bench_weapons.has(cls_id) and gi < (bench_weapons[cls_id] as Array).size() and bench_weapons[cls_id][gi] != "":
@@ -717,6 +721,11 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		for mt: Dictionary in WeaponModels.mounts(cls_id, lvl, gi, g):
 			var pt: Vector2 = mt["p"]
 			var side: String = mt["side"]
+			if side == "skin":   # S13: flush flare-dispenser panel in the model's own skin, no weapon model
+				var fp := SkinPatch.flare_panel(_model, float(mt["mx"]), float(mt["mz"]), float(mt.get("seed", 0.0)))
+				if fp != null:
+					_model.add_child(fp)
+				continue
 			var mtr: int = mt.get("t", mini(weapon_tier, 3))
 			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4, lvl, true)   # тест 3.5-s8: ангарная версия
 			if g.weapon == "aam" and weapon_tier != 4:
@@ -735,8 +744,16 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 					pitch = _chord_pitch(x - 0.02 * wlen, z, (0.18 if g.weapon in ["aam", "arm"] else 0.25) * wlen)
 				"belly":   # Т-6: «Бабушкин ковёр» — своим узлом прямо к брюху, без пилона
 					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, 3, true) - WeaponModels.PYLON_H) * wlen
-				"top", "wing":
+				"top":
 					y = hi if not is_nan(hi) else 0.03
+				"wing":
+					y = hi if not is_nan(hi) else 0.03
+					if g.weapon == "turret":   # S13: «Грач» 2 wing turret — its ring on the crown of a wing fairing
+						var fr := SkinPatch.turret_fairing(_model, x, z, WeaponModels.collar_r(cls_id, 3) * wlen)
+						if fr != null:
+							_model.add_child(fr)
+							y = float(fr.get_meta("crown"))
+							repaint = true
 				"bay":   # Т-5: бомбы «Кита» в открытом бомбоотсеке — верх утоплен в фюзеляж
 					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * wlen * 0.6
 				"tip":   # Т-5: контейнер ловушек на законцовке — по оси крыла
@@ -789,6 +806,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 				bs = Basis(Vector3.BACK, pitch) * bs
 			wmi.basis = bs.scaled(Vector3(wlen, wlen, wlen))
 			pivot.add_child(wmi)
+	if repaint:
+		_apply_livery(_model, cls_id, lvl)
 
 
 ## Largest chord slope a pylon follows (rad): a steeper difference between its ends means one end reaches past the
