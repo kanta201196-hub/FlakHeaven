@@ -41,10 +41,18 @@ const SETS := {
 	"pickup": [["unit", "fh_battle_e_convoy_pickup_tent", 0.0, 0.0, 14.0, 30.0]],
 	"fortress": [["unit", "fh_battle_e_fortress", 0.0, 0.0, 270.0, 30.0]],
 	"fortress_dome": [["unit", "fh_battle_e_fortress", 0.0, 0.0, 270.0, 30.0]],
+	# Kanta 27.10: the centre body (weapon bay and core panel cut out of the skin), shut and open, and the intake
+	"fortress_spine": [["unit", "fh_battle_e_fortress", 0.0, 0.0, 270.0, 30.0]],
+	"fortress_spine_open": [["unit", "fh_battle_e_fortress", 0.0, 0.0, 270.0, 30.0]],
+	"fortress_intake": [["unit", "fh_battle_e_fortress", 0.0, 0.0, 270.0, 30.0]],
 }
 ## Sets framed on one node of the model instead of the whole set: set → [node name, bounds growth]. A boss is
 ## too big for its small parts to show in a whole-model frame (the Fortress dome turrets, weathering review).
-const FOCUS := {"fortress_dome": ["turret_3", 3.2]}
+const FOCUS := {"fortress_dome": ["turret_3", 3.2], "fortress_spine": ["core", 2.6], "fortress_spine_open": ["core", 2.6],
+	"fortress_intake": ["engine_l_prop", 9.0]}
+## Sets whose model is posed as in a later boss phase (Render3D._fortress_parts): "open" = bay doors and core
+## panels open, bay missiles lifted
+const POSE := {"fortress_spine_open": "open"}
 const SIZE := 20.0          ## a set's longest side after scaling, units
 const ISO_PITCH := 35.0     ## 3/4 view: degrees above the horizon
 const ISO_YAW := 35.0       ## and around from the front (+z)
@@ -192,6 +200,8 @@ func _show(name: String) -> void:
 			"unit":
 				body = (load("res://models/battle/%s.glb" % part[1]) as PackedScene).instantiate()
 				body.scale = Vector3.ONE * float(part[4])
+				if POSE.get(name, "") == "open":
+					_pose_open(body)
 		n.add_child(body)
 		n.position = Vector3(float(part[2]), 0.0, float(part[3]))
 		n.rotation_degrees.y = float(part[5])
@@ -200,6 +210,22 @@ func _show(name: String) -> void:
 	var k := SIZE / maxf(maxf(box.size.x, box.size.z), 0.001)
 	_set_root.scale = Vector3.ONE * k
 	_set_root.position = -Vector3(box.get_center().x, box.position.y, box.get_center().z) * k
+
+
+## The Fortress in phases 2 and 3 the way Render3D._fortress_parts leaves it: doors at 125°, core panels at 140°
+## (the left ones turn the other way), bay missiles lifted 0.012
+func _pose_open(body: Node3D) -> void:
+	for side in ["l", "r"]:
+		var s := -1.0 if side == "l" else 1.0
+		var h := body.find_child("hatch_" + side, true, false) as Node3D
+		if h != null:
+			h.rotation.x = s * deg_to_rad(125.0)
+		var hp := body.find_child("hull_" + side, true, false) as Node3D
+		if hp != null:
+			hp.rotation.x = s * deg_to_rad(140.0)
+		var b := body.find_child("bay_" + side, true, false) as Node3D
+		if b != null:
+			b.position.y += 0.012
 
 
 ## Camera on the set's bounds (or on its FOCUS node, grown): `iso` from ISO_PITCH above the horizon, `top` straight down
