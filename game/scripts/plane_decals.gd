@@ -11,6 +11,7 @@ class_name PlaneDecals
 ## Art: one mask atlas (tools/decal_atlas.py): R/G/B weights of the primary, secondary and ink paints, A coverage.
 
 const WEAR := 0.35   ## default weathering: chips and fading of the paint
+const PREVIEW_LIFT := 0.0018   ## the editor's live decal sits over the committed ones
 const FAIRING := "crown"   ## meta SkinPatch.turret_fairing sets on a fairing (a second one gets a generated name)
 ## Debug sample art per class (`--decals`), laid on the presets: nose, tally, number, fin, wing, wing turn (radians),
 ## primary and secondary paint
@@ -60,6 +61,67 @@ static func attach(model: Node3D, key: String, ins: Node3D) -> void:
 		tally = Profile.decal_tally(cls)
 	if records.is_empty():
 		return
+	_keep(model, ins, key, records, tally)
+	build(model)
+
+
+## Shows `records` on `model` instead of what it carries now (the hangar editor after every change); an empty list
+## clears the mesh and brings hidden badges back. `tally` — marks for tally decals.
+static func show(model: Node3D, key: String, records: Array[DecalRecord], tally: int) -> void:
+	var ins := model.get_node_or_null("insignia") as Node3D
+	if ins == null:
+		return
+	_keep(model, ins, key, records, tally)
+	build(model)
+
+
+## The editor's live decal: `r` drawn a little above the others with a pulsing light tint (the decal under the
+## cursor, the one being moved or the selected one); null hides it
+static func show_preview(model: Node3D, r: DecalRecord, tally: int) -> void:
+	var ins := model.get_node_or_null("insignia") as Node3D
+	if ins == null:
+		return
+	var mi := ins.get_node_or_null("decal_preview") as MeshInstance3D
+	var mesh: ArrayMesh = null
+	var hull := hull_of(model) if r != null else null
+	if hull != null:
+		var one: Array[DecalRecord] = [r]
+		mesh = DecalMesh.build(hull, one, tally, PREVIEW_LIFT)
+	if mesh == null:
+		if mi != null:
+			mi.visible = false
+		return
+	if mi == null:
+		mi = MeshInstance3D.new()
+		mi.name = "decal_preview"
+		mi.material_override = material(1.0)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ins.add_child(mi)
+	mi.mesh = mesh
+	mi.visible = true
+
+
+## The skin decals are cut from: the hull with any turret fairings as extra skin (null for a model without one).
+## Kept on the model while its fairings stay the same, since the editor casts a ray on it every frame.
+static func hull_of(model: Node3D) -> PlaneHull:
+	var fairings: Array[MeshInstance3D] = []
+	for c in model.get_children():
+		if c is MeshInstance3D and c.has_meta(FAIRING) and (c as MeshInstance3D).mesh != null:
+			fairings.append(c)
+	var kept: Array = model.get_meta("decal_hull", [])
+	if kept.size() == 2 and int(kept[0]) == fairings.size():
+		return kept[1]
+	var hull := PlaneHull.of(model)
+	if hull == null:
+		return null
+	if not fairings.is_empty():
+		hull = hull.with_extra(PlaneHull.from_meshes(fairings, model, false))
+	model.set_meta("decal_hull", [fairings.size(), hull])
+	return hull
+
+
+## Stores what `build` draws on the insignia node and watches the model for turret fairings
+static func _keep(model: Node3D, ins: Node3D, key: String, records: Array[DecalRecord], tally: int) -> void:
 	ins.set_meta("decal_records", records)
 	ins.set_meta("decal_tally", tally)
 	ins.set_meta("decal_key", key)
@@ -67,7 +129,6 @@ static func attach(model: Node3D, key: String, ins: Node3D) -> void:
 	if not model.has_meta("decal_watch"):   # the battle model is reused from a pool: connect once
 		model.set_meta("decal_watch", true)
 		model.child_entered_tree.connect(_on_child.bind(model))
-	build(model)
 
 
 ## (Re)builds the decal mesh of `model` from the records kept on its insignia node, turret fairings included
@@ -76,21 +137,15 @@ static func build(model: Node3D) -> void:
 	if ins == null or not is_instance_valid(ins) or ins.get_parent() != model:
 		return
 	var records: Array[DecalRecord] = ins.get_meta("decal_records", [] as Array[DecalRecord])
-	var hull := PlaneHull.of(model)
-	if hull == null or records.is_empty():
-		return
 	var t0 := Time.get_ticks_usec()
-	var fairings: Array[MeshInstance3D] = []
-	for c in model.get_children():
-		if c is MeshInstance3D and c.has_meta(FAIRING) and (c as MeshInstance3D).mesh != null:
-			fairings.append(c)
-	if not fairings.is_empty():
-		hull = hull.with_extra(PlaneHull.from_meshes(fairings, model, false))
-	var mesh := DecalMesh.build(hull, records, int(ins.get_meta("decal_tally", 0)))
+	var hull := hull_of(model) if not records.is_empty() else null
+	var mesh := DecalMesh.build(hull, records, int(ins.get_meta("decal_tally", 0))) if hull != null else null
 	var mi := ins.get_node_or_null("decals") as MeshInstance3D
 	if mesh == null:
-		if mi != null:
-			mi.queue_free()
+		if mi != null:   # kept (not freed): the editor may fill it again in the same frame
+			mi.mesh = null
+			mi.visible = false
+		_hide_covered_badges(ins, records)
 		return
 	if mi == null:
 		mi = MeshInstance3D.new()
@@ -99,10 +154,12 @@ static func build(model: Node3D) -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ins.add_child(mi)
 	mi.mesh = mesh
+	mi.visible = true
 	_hide_covered_badges(ins, records)
 	if _samples:
-		print("DECALS %s: %d decals, %d fairings, %d triangles, hull %d triangles, %.1f ms" % [
-			String(ins.get_meta("decal_key", "")), records.size(), fairings.size(),
+		var fairing_tris := hull.extra.triangles() if hull.extra != null else 0
+		print("DECALS %s: %d decals, %d fairing triangles, %d triangles, hull %d triangles, %.1f ms" % [
+			String(ins.get_meta("decal_key", "")), records.size(), fairing_tris,
 			int(mesh.surface_get_array_len(0) / 3.0), hull.triangles(), (Time.get_ticks_usec() - t0) / 1000.0])
 
 
@@ -147,7 +204,8 @@ static func _add(out: Array[DecalRecord], r: DecalRecord, art: Array, angle: flo
 	DecalLoadout.add(out, r)
 
 
-## Fin and side insignia under a decal are hidden (the wing roundels never are)
+## Fin and side insignia under a decal are hidden (the wing roundels never are); a badge hidden here before comes
+## back once no decal covers it (the editor moves decals away). Badges hidden by Insignia itself are left alone.
 static func _hide_covered_badges(ins: Node3D, records: Array[DecalRecord]) -> void:
 	for c in ins.find_children("*", "MeshInstance3D", true, false):
 		var mi := c as MeshInstance3D
@@ -155,13 +213,21 @@ static func _hide_covered_badges(ins: Node3D, records: Array[DecalRecord]) -> vo
 		if not (n.begins_with("fin") or n.begins_with("side")) or mi.mesh == null:
 			continue
 		var centre := PlaneHull.rel_transform(mi, ins) * mi.mesh.get_aabb().get_center()
+		var covered := false
 		for r in records:
 			if r.pos.distance_to(centre) < maxf(r.size * 0.6, 0.02):
-				mi.visible = false
+				covered = true
+				break
+		if covered and mi.visible:
+			mi.visible = false
+			mi.set_meta("decal_hid", true)
+		elif not covered and mi.get_meta("decal_hid", false):
+			mi.visible = true
+			mi.remove_meta("decal_hid")
 
 
-## The decal material (one per plane; the shader is shared)
-static func material() -> ShaderMaterial:
+## The decal material (one per plane; the shader is shared); `highlight` 1 — the editor's pulsing light tint
+static func material(highlight := 0.0) -> ShaderMaterial:
 	if _shader == null:
 		_shader = Shader.new()
 		_shader.code = SHADER
@@ -176,6 +242,7 @@ static func material() -> ShaderMaterial:
 	m.set_shader_parameter("palette", pal)
 	m.set_shader_parameter("ink", DecalCatalog.palette().size() - 1)
 	m.set_shader_parameter("wear", _wear)
+	m.set_shader_parameter("highlight", highlight)
 	return m
 
 
@@ -188,6 +255,7 @@ uniform sampler2D atlas : source_color, filter_linear_mipmap_anisotropic, repeat
 uniform vec3 palette[16];   // DecalCatalog paints (sRGB), then the ink
 uniform int ink = 12;
 uniform float wear = 0.35;  // 0 — fresh, 1 — chipped and faded
+uniform float highlight = 0.0;  // editor preview: pulses towards a light tint so the live decal stands out
 
 varying vec3 lp;
 varying flat vec2 paint;
@@ -218,7 +286,10 @@ void fragment() {
 	float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
 	col = mix(col, vec3(l) * vec3(1.02, 0.98, 0.9), 0.25 * wear);
 	col *= 1.0 - 0.18 * wear * smoothstep(0.45, 0.8, grime);
+	float pulse = highlight * (0.5 + 0.5 * sin(TIME * 5.0));
+	col = mix(col, SRGB(vec3(1.0, 0.92, 0.6)), 0.35 * pulse);
 	ALBEDO = col;
+	EMISSION = col * 0.25 * pulse;
 	ROUGHNESS = 0.82 + 0.1 * grime;
 	METALLIC = 0.0;
 	ALPHA = cover;
