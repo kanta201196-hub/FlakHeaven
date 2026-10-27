@@ -731,11 +731,14 @@ func _boss_bars(m: Main, size: Vector2) -> void:
 			ctrl.draw_rect(Rect2(x, y + BOSS_BAR_Y + BOSS_BAR_H + 3.0, w * b.shield / b.shield_max, 6), Color(0.5, 0.8, 1.0))
 		_boss_bottom = y + BOSS_BAR_Y + BOSS_BAR_H + 9.0
 		y += BOSS_STEP
+	_boss_box = Rect2((size.x - BOSS_W) / 2.0, 100.0, BOSS_W, _boss_bottom - 100.0) if _boss_bottom > 0.0 else Rect2()
 
 
 const BOSS_W := 760.0
 ## Lowest y of this frame's boss bars (0 with no boss), so the banner goes under them
 var _boss_bottom := 0.0
+## Area of the boss names and bars (empty with no boss): ring arrows and their labels keep out
+var _boss_box := Rect2()
 ## Bar offset under the boss name, bar height and the step to the next boss
 const BOSS_BAR_Y := 42.0
 const BOSS_BAR_H := 30.0
@@ -856,6 +859,11 @@ func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1
 		pos = c + dir * minf(tx, ty)
 	if not pos.is_finite():
 		return
+	if _boss_box.has_area() and _boss_box.grow(18.0 * scale + 6.0).has_point(pos):
+		# s13: an arrow on the top of the ring sat on the boss name — step it to the side of the
+		# bars; under them it ran into the task line and the banners
+		var side := -1.0 if pos.x < _boss_box.get_center().x else 1.0
+		pos.x = _boss_box.get_center().x + side * (_boss_box.size.x / 2.0 + 18.0 * scale + 8.0)
 	var a := dir.angle()
 	var k := 18.0 * scale
 	var pts := PackedVector2Array([pos + Vector2.from_angle(a) * k, pos + Vector2.from_angle(a + 2.5) * k * 0.8, pos + Vector2.from_angle(a - 2.5) * k * 0.8])
@@ -872,6 +880,13 @@ func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1
 			# s13: past the arrow the label ran onto the skills bar — put it on the inner side
 			lp = pos - dir * (k + 30.0)
 			r.position = Vector2(lp.x - tw / 2.0 - 6.0, lp.y - 11.0)
+		if _boss_box.has_area() and r.intersects(_boss_box):
+			# s13: «база 1387 м» lay over «Крепость» — slide the label off the boss bars sideways
+			if pos.x < _boss_box.get_center().x:
+				r.position.x = _boss_box.position.x - r.size.x - 4.0
+			else:
+				r.position.x = _boss_box.end.x + 4.0
+			lp.x = r.get_center().x
 		ctrl.draw_rect(r, Color(0.02, 0.025, 0.03, 0.7))
 		ctrl.draw_rect(Rect2(r.position, Vector2(3, r.size.y)), col)
 		_text(Vector2(r.position.x + 6, lp.y + 5), label, fs, col.lightened(0.25))
