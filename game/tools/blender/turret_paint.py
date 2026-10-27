@@ -39,6 +39,23 @@ PALETTES = {
     "kit": {"tones": _SAND, "share": (0.33, 0.2), "seed": 7},
     "grach": {"tones": _SAND, "share": (0.33, 0.2), "seed": 11},
 }
+# Kanta 27.10 (build s13, item 4) took two more liveries, «Степь» and «Скальный осколок» (livery.gd STEPPE, ROCK);
+# the turrets follow them the way they follow the sand camo: the plane's colours a touch darker, the plane's pattern
+# kind. pattern — "blotch" (default, soft fields), "bands" (wavy disruptive bands; freq — bands per turret length),
+# "splinter" (angular patches cut by random planes; cuts — how many planes). Files: <turret>_<livery>.glb.
+_STEPPE = [(0.49, 0.48, 0.33), (0.47, 0.37, 0.24), (0.25, 0.23, 0.17)]
+_ROCK = [(0.51, 0.49, 0.45), (0.43, 0.35, 0.28), (0.29, 0.28, 0.27)]
+for _k, _seed in (("kit", 7), ("grach", 11)):
+    PALETTES[_k + "_steppe"] = {"tones": _STEPPE, "share": (0.36, 0.22), "seed": _seed, "pattern": "bands", "freq": 1.3}
+    PALETTES[_k + "_rock"] = {"tones": _ROCK, "share": (0.33, 0.33), "seed": _seed, "pattern": "splinter", "cuts": 7}
+
+
+def pick(cls_key, argv):
+    """Palette of a turret script: PALETTES[cls_key], or PALETTES[cls_key + "_" + x] for a "livery=x" argument"""
+    for a in argv:
+        if a.startswith("livery="):
+            return PALETTES[cls_key + "_" + a.split("=", 1)[1]]
+    return PALETTES[cls_key]
 
 PRIMER = np.array([0.27, 0.26, 0.23], np.float32)     # under the paint where it is chipped
 STEEL = np.array([0.56, 0.56, 0.54], np.float32)      # bare metal at the worn edges
@@ -265,6 +282,43 @@ def _cuts(seed, share):
     return _CUTS[seed]
 
 
+def _camo(P, pal):
+    """Camouflage colours (sRGB) at points P by pal["pattern"]: soft blotches (sand camo), wavy bands or angular
+    splinter patches; the colours tones[1] and tones[2] take about the shares pal["share"] of the surface"""
+    seed = pal["seed"]
+    base, c2, c3 = (np.array(t, np.float32) for t in pal["tones"])
+    col = np.tile(base, (len(P), 1))
+    pat = pal.get("pattern", "blotch")
+    s2, s3 = pal["share"]
+    if pat == "bands":
+        warp = (fbm(P, 1.6, seed + 30, 3) - 0.5) * 2.2
+        d = (P @ np.array([0.75, 0.62, 0.3], np.float32)) * pal.get("freq", 1.3) + warp
+        f = d - np.floor(d)
+        col[f < s2] = c2
+        col[(f >= s2) & (f < s2 + s3)] = c3
+        return col
+    if pat == "splinter":
+        rng = np.random.default_rng(seed)
+        wob = np.stack([fbm(P, 3.0, seed + 40 + i, 2) for i in range(3)], 1) - 0.5
+        pw = P + wob * 0.04   # a little hand wobble on the masked edges
+        code = np.zeros(len(P), np.int64)
+        for _ in range(pal.get("cuts", 7)):
+            n = rng.normal(size=3).astype(np.float32)
+            n /= np.linalg.norm(n)
+            o = rng.uniform((-0.4, -0.4, 0.0), (1.6, 0.4, 0.6)).astype(np.float32)
+            code = code * 2 + ((pw - o) @ n > 0).astype(np.int64)
+        h = _hash(code, np.full_like(code, 3), np.full_like(code, 5), seed)
+        col[h < s2] = c2
+        col[(h >= s2) & (h < s2 + s3)] = c3
+        return col
+    c1, cc2 = _cuts(seed, pal["share"])
+    n1 = fbm(P, 2.4, seed + 20, 3)
+    n2 = fbm(P, 2.8, seed + 21, 3)
+    col[(n2 > cc2) & (n1 <= c1)] = c3
+    col[n1 > c1] = c2
+    return col
+
+
 def _layers(P, N, B, AO, part, x_tip, pal, guns, src=None):
     """Albedo (sRGB), roughness, metal, height-perturbed normal for the covered texels; src — the faces' own
     colours (sRGB) in own-colour mode, None for the camouflage"""
@@ -275,13 +329,7 @@ def _layers(P, N, B, AO, part, x_tip, pal, guns, src=None):
         return _layers_own(P, N, B, AO, part, x_tip, pal, src)
     # --- base colour: the livery's soft-edged blotches (two noise fields over the sand base, like the plane's
     # SAND_CAMO pattern): red-brown where the first field is high, olive where the second one is
-    base, brown, olive = (np.array(t, np.float32) for t in pal["tones"])
-    c1, c2 = _cuts(seed, pal["share"])
-    n1 = fbm(P, 2.4, seed + 20, 3)
-    n2 = fbm(P, 2.8, seed + 21, 3)
-    col = np.tile(base, (n_pts, 1))
-    col[(n2 > c2) & (n1 <= c1)] = olive
-    col[n1 > c1] = brown
+    col = _camo(P, pal)
     col = np.where(dark[:, None], FITTING, col)
     col = np.where(barrel[:, None], GUNMETAL, col)
     col = np.where(glass[:, None], GLASS, col)

@@ -7849,3 +7849,35 @@ msgstr "+ 机库中还有 %d 枚"
 #, c-format
 msgid "Медаль «Ветеран» +%d %%"
 msgstr "“老兵”勋章 +%d %%"
+
+#: game/scripts/livery.gd:73
+msgid "Выгоревшая дюна"
+msgstr "褪色沙丘"
+
+#: game/scripts/livery.gd:76
+msgid "Скальный осколок"
+msgstr "岩石碎片"
+
+#: game/scripts/livery.gd:79
+msgid "Старая олива"
+msgstr "旧橄榄"
+
+#: game/scripts/livery.gd:82
+msgid "Высотная дымка"
+msgstr "高空薄雾"
+
+#: game/scripts/livery.gd:85
+msgid "Сумерки"
+msgstr "黄昏"
+
+#: game/scripts/livery.gd:88
+msgid "Степь"
+msgstr "草原"
+
+#: game/scripts/livery.gd:91
+msgid "Глина и пыль"
+msgstr "黏土与尘土"
+
+#: game/scripts/livery.gd:94
+msgid "Зимняя побелка"
+msgstr "冬季白涂"

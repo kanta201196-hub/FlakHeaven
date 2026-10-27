@@ -7849,3 +7849,35 @@ msgstr "+ %d more in the hangar"
 #, c-format
 msgid "Медаль «Ветеран» +%d %%"
 msgstr "Veteran medal +%d %%"
+
+#: game/scripts/livery.gd:73
+msgid "Выгоревшая дюна"
+msgstr "Bleached Dune"
+
+#: game/scripts/livery.gd:76
+msgid "Скальный осколок"
+msgstr "Rock Splinter"
+
+#: game/scripts/livery.gd:79
+msgid "Старая олива"
+msgstr "Old Olive"
+
+#: game/scripts/livery.gd:82
+msgid "Высотная дымка"
+msgstr "High Haze"
+
+#: game/scripts/livery.gd:85
+msgid "Сумерки"
+msgstr "Dusk"
+
+#: game/scripts/livery.gd:88
+msgid "Степь"
+msgstr "Steppe"
+
+#: game/scripts/livery.gd:91
+msgid "Глина и пыль"
+msgstr "Clay and Dust"
+
+#: game/scripts/livery.gd:94
+msgid "Зимняя побелка"
+msgstr "Winter Whitewash"
