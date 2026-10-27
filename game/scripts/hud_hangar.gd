@@ -159,7 +159,9 @@ func _hg_livery(c: String, lx: float, y: float) -> void:
 		var r := Rect2(lx + 100 + i * step, y, step - 6, 30)
 		var on: bool = lst[i][0] == cur
 		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
-		var nm := String(lst[i][1])
+		# translate the whole name before a long one is split into two lines: the halves («Песочный» /
+		# «камуфляж») are not keys of their own, so splitting first left them untranslated in English
+		var nm := Loc.t(String(lst[i][1]))
 		var tc := Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95)
 		if nm.contains(" ") and ui_font().get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > r.size.x - 6:
 			var sp := nm.find(" ")   # длинное название — в две строки
