@@ -58,6 +58,47 @@ const VARIANTS := {
 	],
 }
 
+## Build s13, item 4 (Kanta 27.10: «разные варианты раскраски и камуфляжа, разнообразь, сделай естественными»):
+## proposal paints for all three player planes, rendered only on the bench (--livproposals) until Kanta picks; the
+## hangar picker (VARIANTS) is unchanged. Pattern 7 — natural camouflage in model axes: [id, name, colour 2 (c_dark),
+## base (c_mid), sun-bleach tint (c_light), roughness, metal, 7, colour 3 (pat_a), belly (pat_b), params].
+## params: style — 0 soft sprayed blotches, 1 hard splinter (planar cells), 2 wavy disruptive bands, 3 fine mottle
+## over soft clouds, 4 one worn tone with repainted panels, 5 worn whitewash over the base; scale — pattern
+## frequency per plane length (× CLASS_SCALE, so a bigger plane wears relatively smaller patches, as real paint
+## would); cut — noise levels above which colour 2 / colour 3 show (higher — less area); edge — edge softness in
+## noise units (0 — hard, with a pixel of antialiasing); fade — sun bleaching of the upper surfaces; grime — flow
+## streaks, tail soot and chipping; belly — how strongly the light belly replaces the camouflage (0 — wraps round).
+## Colours are fictional (no national scheme is copied); sRGB, the shader takes them as source_color.
+const NATURAL := [
+	["nat_dune", "Выгоревшая дюна", Color(0.52, 0.36, 0.22), Color(0.76, 0.66, 0.48), Color(0.86, 0.80, 0.68), 0.86, 0.03, 7,
+		Color(0.36, 0.33, 0.22), Color(0.70, 0.70, 0.64),
+		{"style": 0, "scale": 5.0, "cut": Vector2(0.52, 0.58), "edge": 0.035, "fade": 0.45, "grime": 0.8, "belly": 1.0, "seed": 1.0}],
+	["nat_rock", "Скальный осколок", Color(0.46, 0.38, 0.30), Color(0.55, 0.53, 0.49), Color(0.70, 0.69, 0.66), 0.88, 0.03, 7,
+		Color(0.31, 0.30, 0.29), Color(0.63, 0.65, 0.65),
+		{"style": 1, "scale": 5.5, "cut": Vector2(0.33, 0.33), "edge": 0.0, "fade": 0.45, "grime": 0.9, "belly": 1.0, "seed": 2.0}],
+	["nat_olive", "Старая олива", Color(0.26, 0.28, 0.18), Color(0.38, 0.37, 0.24), Color(0.55, 0.53, 0.40), 0.9, 0.03, 7,
+		Color(0.50, 0.48, 0.34), Color(0.52, 0.53, 0.49),
+		{"style": 4, "scale": 9.0, "cut": Vector2(0.22, 0.12), "edge": 0.0, "fade": 0.8, "grime": 1.0, "belly": 1.0, "seed": 3.0}],
+	["nat_alt", "Высотная дымка", Color(0.47, 0.50, 0.53), Color(0.58, 0.61, 0.63), Color(0.70, 0.72, 0.73), 0.84, 0.04, 7,
+		Color(0.40, 0.43, 0.47), Color(0.71, 0.74, 0.75),
+		{"style": 3, "scale": 4.0, "cut": Vector2(0.55, 0.66), "edge": 0.06, "fade": 0.35, "grime": 0.7, "belly": 1.0, "seed": 4.0}],
+	["nat_dusk", "Сумерки", Color(0.33, 0.37, 0.43), Color(0.45, 0.49, 0.54), Color(0.60, 0.63, 0.66), 0.85, 0.04, 7,
+		Color(0.26, 0.29, 0.34), Color(0.62, 0.65, 0.68),
+		{"style": 2, "scale": 3.2, "cut": Vector2(0.42, 0.20), "edge": 0.025, "fade": 0.4, "grime": 0.8, "belly": 1.0, "seed": 5.0}],
+	["nat_steppe", "Степь", Color(0.50, 0.40, 0.26), Color(0.53, 0.52, 0.36), Color(0.70, 0.66, 0.52), 0.88, 0.03, 7,
+		Color(0.27, 0.25, 0.18), Color(0.64, 0.63, 0.56),
+		{"style": 2, "scale": 4.0, "cut": Vector2(0.36, 0.22), "edge": 0.0, "fade": 0.5, "grime": 0.9, "belly": 1.0, "seed": 6.0}],
+	["nat_clay", "Глина и пыль", Color(0.56, 0.38, 0.27), Color(0.71, 0.62, 0.50), Color(0.82, 0.77, 0.68), 0.88, 0.03, 7,
+		Color(0.42, 0.35, 0.28), Color(0.68, 0.66, 0.60),
+		{"style": 0, "scale": 9.0, "cut": Vector2(0.55, 0.61), "edge": 0.06, "fade": 0.5, "grime": 0.8, "belly": 0.0, "seed": 7.0}],
+	["nat_frost", "Зимняя побелка", Color(0.34, 0.34, 0.24), Color(0.76, 0.76, 0.73), Color(0.80, 0.80, 0.78), 0.92, 0.02, 7,
+		Color(0.55, 0.55, 0.50), Color(0.72, 0.73, 0.72),
+		{"style": 5, "scale": 8.0, "cut": Vector2(0.64, 0.54), "edge": 0.03, "fade": 0.2, "grime": 0.9, "belly": 0.6, "seed": 8.0}],
+]
+## Pattern 7 frequency per class: battle sizes are 1.0 / 1.25 / 1.6 (PlaneClasses), so a bigger plane gets a
+## finer pattern in its own model units and its patches stay about the size of the fighter's on screen
+const CLASS_SCALE := {"fighter": 1.0, "attacker": 1.2, "bomber": 1.45}
+
 ## Исходная окраска модели: [яркость основного тона (линейная), ниже этой яркости — не трогать (фонарь, сопла)]
 ## по гистограммам текстур ангара (у моделей боя те же текстуры, уменьшенные).
 ## «Оса 1» (VIS-01, Sketchfab model in the Highlands camo, sf_recipes.HIGHLAND): luminance peaks 0.027 (dark olive-brown
@@ -98,15 +139,24 @@ static var _force := ""   # стенд: --livery=<id> — окраска сво�
 
 
 ## Список вариантов класса: [[id, название], …]; первый — по умолчанию
+## With --livproposals (bench only) the NATURAL proposals follow the class's own paints
 static func list(cls: String) -> Array:
 	var out: Array = []
-	for v: Array in VARIANTS.get(cls, []):
+	for v: Array in _all(cls):
 		out.append([v[0], v[1]])
 	return out
 
 
+## The class's paints, plus the NATURAL proposals on the bench (--livproposals)
+static func _all(cls: String) -> Array:
+	var l: Array = VARIANTS.get(cls, [])
+	if OS.get_cmdline_user_args().has("--livproposals") and VARIANTS.has(cls):
+		l = l + NATURAL
+	return l
+
+
 static func _find(cls: String, id: String) -> Array:
-	for v: Array in VARIANTS.get(cls, []):
+	for v: Array in _all(cls):
 		if v[0] == id:
 			return v
 	return []
@@ -162,7 +212,8 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 			# вид поверхности — по имени материала в GLB (у механизации поверх стоит общий материал WingMech)
 			var m0 := mi.mesh.surface_get_material(si)
 			var m := mi.get_surface_override_material(si)
-			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex, holes)
+			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex, holes,
+					float(CLASS_SCALE.get(cls, 1.0)))
 			if sm != null:
 				mi.set_surface_override_material(si, sm)
 
@@ -190,9 +241,10 @@ static func _rel(mi: Node3D, model: Node3D) -> Transform3D:
 
 
 ## Paint material for one surface: `ex` — exhaust boxes (EXHAUST), `holes` — engine openings (ENGINE_HOLES) of the
-## plane, both only for the textured skin (mode 0); null for surfaces that keep their own material.
+## plane, both only for the textured skin (mode 0); `cls_scale` — CLASS_SCALE of the plane for pattern 7 (NATURAL);
+## null for surfaces that keep their own material.
 static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transform3D, box: AABB, ex: Array = [],
-		holes: Array = []) -> ShaderMaterial:
+		holes: Array = [], cls_scale: float = 1.0) -> ShaderMaterial:
 	var bm := m as BaseMaterial3D
 	if bm == null or nm == "glass":
 		return null                     # стекло фонаря (ShaderMaterial «glass») — одно на все окраски
@@ -248,6 +300,16 @@ static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transfo
 	if v.size() > 9:
 		sm.set_shader_parameter("pat_a", v[8])
 		sm.set_shader_parameter("pat_b", v[9])
+	if v.size() > 10:   # pattern 7 (NATURAL): style and weathering
+		var np: Dictionary = v[10]
+		sm.set_shader_parameter("nat_style", int(np.get("style", 0)))
+		sm.set_shader_parameter("nat_scale", float(np.get("scale", 5.0)) * cls_scale)
+		sm.set_shader_parameter("nat_cut", np.get("cut", Vector2(0.53, 0.6)))
+		sm.set_shader_parameter("nat_edge", float(np.get("edge", 0.03)))
+		sm.set_shader_parameter("nat_fade", float(np.get("fade", 0.5)))
+		sm.set_shader_parameter("nat_grime", float(np.get("grime", 0.8)))
+		sm.set_shader_parameter("nat_belly", float(np.get("belly", 1.0)))
+		sm.set_shader_parameter("nat_seed", float(np.get("seed", 0.0)))
 	sm.set_shader_parameter("to_model", Projection(xf))
 	sm.set_shader_parameter("box_min", box.position)
 	sm.set_shader_parameter("box_size", box.size)
@@ -289,6 +351,15 @@ uniform vec3 pat_b : source_color;
 uniform mat4 to_model = mat4(1.0);
 uniform vec3 box_min = vec3(-0.5);
 uniform vec3 box_size = vec3(1.0);
+// pattern 7 (Livery.NATURAL)
+uniform int nat_style = 0;
+uniform float nat_scale = 5.0;
+uniform vec2 nat_cut = vec2(0.53, 0.6);
+uniform float nat_edge = 0.03;
+uniform float nat_fade = 0.5;
+uniform float nat_grime = 0.8;
+uniform float nat_belly = 1.0;
+uniform float nat_seed = 0.0;
 
 const float CAMO_DARK = 0.52;
 const float CAMO_OCHRE = 0.53;
@@ -382,6 +453,75 @@ float tiger(vec3 p) {
 	return 1.0 - smoothstep(width - 0.03, width, tri);
 }
 
+// pattern 7: a field's edge at level c — soft by nat_edge, never sharper than a pixel
+float nat_step(float f, float c) {
+	float w = max(nat_edge, fwidth(f) + 0.002);
+	return smoothstep(c - w, c + w, f);
+}
+
+// pattern 7: soft patches — blobs over a warped domain, so they are uneven and elongated, never round
+float nat_soft(vec3 p, float s) {
+	vec3 w = vec3(vnoise3(p * 0.8 + s), vnoise3(p * 0.8 + s + 13.7), vnoise3(p * 0.8 + s + 29.1)) - 0.5;
+	return blobs(p + w * 1.1 + vec3(s * 3.7));
+}
+
+// pattern 7: 3D cells — id (0…1) of the nearest feature point; the walls between cells are planes, so on the
+// skin the edges run straight like masked splinter paint or panel borders
+float nat_cell(vec3 p) {
+	vec3 i = floor(p); vec3 f = fract(p);
+	float d1 = 9.0; float id = 0.0;
+	for (int z = -1; z <= 1; z++) {
+		for (int y = -1; y <= 1; y++) {
+			for (int x = -1; x <= 1; x++) {
+				vec3 o = vec3(float(x), float(y), float(z));
+				vec3 r = o + vec3(hash3(i + o), hash3(i + o + 17.3), hash3(i + o + 41.9)) - f;
+				float d = dot(r, r);
+				if (d < d1) { d1 = d; id = hash3(i + o + 7.7); }
+			}
+		}
+	}
+	return id;
+}
+
+// pattern 7: weights of colour 2 (x) and colour 3 (y) by nat_style at the scaled model point p, normal n
+vec2 nat_pattern(vec3 p, vec3 n) {
+	float s = nat_seed;
+	if (nat_style == 1) {
+		// hard splinter: cells turned and stretched along a diagonal, a little hand wobble on the edges
+		float a = 0.55 + s;
+		vec3 r = vec3(p.x * cos(a) - p.z * sin(a), p.y, p.x * sin(a) + p.z * cos(a));
+		r += (vec3(vnoise3(p * 3.0 + s), vnoise3(p * 3.0 + s + 5.1), vnoise3(p * 3.0 + s + 9.4)) - 0.5) * 0.08;
+		float id = nat_cell(r * vec3(0.55, 1.0, 1.5));
+		float c2 = step(id, nat_cut.x);
+		return vec2(c2, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y));
+	} else if (nat_style == 2) {
+		// wavy disruptive bands across the plane, their width breathing along them
+		float warp = (nat_soft(p * 0.7, s) - 0.5) * 2.2;
+		float d = p.x * 0.75 + p.z * 0.62 + p.y * 0.3 + warp;
+		float f = fract(d);
+		float w = max(nat_edge, fwidth(d) + 0.002);
+		float c2 = (1.0 - smoothstep(nat_cut.x - w, nat_cut.x + w, f)) * smoothstep(0.0, w, f);
+		float c3 = smoothstep(nat_cut.x - w, nat_cut.x + w, f) * (1.0 - smoothstep(nat_cut.x + nat_cut.y - w, nat_cut.x + nat_cut.y + w, f));
+		return vec2(c2, c3);
+	} else if (nat_style == 3) {
+		// soft clouds of colour 2, fine mottle of colour 3 over everything
+		return vec2(nat_step(nat_soft(p, s), nat_cut.x), nat_step(blobs(p * 3.4 + vec3(s)), nat_cut.y));
+	} else if (nat_style == 4) {
+		// one tone: panels repainted darker (colour 2) or left to bleach (colour 3), cells longer along the flow
+		float id = nat_cell(p * vec3(0.55, 1.2, 1.0) + vec3(s));
+		float c2 = step(id, nat_cut.x);
+		return vec2(c2 * 0.55, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y) * 0.6);
+	} else if (nat_style == 5) {
+		// whitewash: colour 2 (the paint under it) where it wore through — more on forward-facing edges and in
+		// streaks along the flow; colour 3 where the wash is thin
+		float wear = nat_soft(p * vec3(0.6, 1.0, 1.4), s) + 0.22 * smoothstep(0.3, 0.9, n.x)
+				+ 0.12 * (vnoise3(vec3(p.x * 0.6, p.y * 9.0, p.z * 9.0) + vec3(s)) - 0.5);
+		return vec2(nat_step(wear, nat_cut.x), nat_step(wear, nat_cut.y));
+	}
+	// soft sprayed blotches: two warped fields, colour 3 over colour 2
+	return vec2(nat_step(nat_soft(p, s), nat_cut.x), nat_step(nat_soft(p * 1.15 + vec3(4.2), s + 5.0), nat_cut.y));
+}
+
 void vertex() {
 	lp = (to_model * vec4(VERTEX, 1.0)).xyz;
 	ln = normalize((to_model * vec4(NORMAL, 0.0)).xyz);
@@ -425,6 +565,7 @@ void fragment() {
 	// интерполированной нормали давал рваный зубчатый край на гондолах и кромках крыла (тест 3.5-s7)
 	float under_n = smoothstep(-0.08, -0.62, ln.y);
 	vec3 q = (lp - box_min) / box_size;   // 0…1 по габариту: x — хвост→нос, y — низ→верх, z — левое→правое крыло
+	float rough_add = 0.0;   // pattern 7: roughness variation of the paint
 	if (pattern == 1) {
 		vec2 lr = leopard(plane_uv(lp, ln));
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), lr.y * 0.8);
@@ -471,6 +612,32 @@ void fragment() {
 		float tips = smoothstep(0.375, 0.385, abs(q.z - 0.5));
 		float htail = smoothstep(0.215, 0.225, abs(q.z - 0.5)) * (1.0 - smoothstep(0.12, 0.13, q.x));
 		col = mix(col, pat_a, max(tips, htail) * (1.0 - belly));
+	} else if (pattern == 7) {
+		// natural camouflage (Livery.NATURAL): pattern, a wavy belly line, then sun bleaching, uneven paint,
+		// flow streaks, soot aft and chipped forward edges — no flat even paint
+		vec3 n = normalize(ln);
+		vec2 w = nat_pattern(lp * nat_scale, n);
+		vec3 cam = mix(mix(c_mid, c_dark, w.x), pat_a, w.y);
+		if (nat_style == 5) {   // whitewash: colour 3 is a thin wash between the white and the paint under it
+			cam = mix(mix(c_mid, pat_a, w.y), c_dark, w.x);
+		}
+		float bel = smoothstep(-0.02, -0.45, n.y + 0.2 * (vnoise3(lp * 9.0 + vec3(nat_seed)) - 0.5)) * nat_belly;
+		cam = mix(cam, pat_b, bel);
+		cam *= mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5);
+		float top = smoothstep(0.1, 0.85, n.y);
+		float fade_n = smoothstep(0.25, 0.75, blobs(lp * 3.5 + vec3(nat_seed * 2.3)));
+		float lum = dot(cam, vec3(0.2126, 0.7152, 0.0722));
+		vec3 bleach = mix(mix(cam, vec3(lum), 0.45) * 1.12, c_light, 0.3);
+		float fd = clamp(nat_fade * (0.25 + 0.75 * top) * (0.35 + 0.65 * fade_n), 0.0, 1.0);
+		cam = mix(cam, bleach, fd);
+		cam *= 1.0 + 0.07 * (vnoise3(lp * 22.0 + vec3(nat_seed)) - 0.5) + 0.05 * (vnoise3(lp * 75.0) - 0.5);
+		float st = vnoise3(vec3(lp.x * 4.0, lp.y * 60.0, lp.z * 60.0) + vec3(nat_seed));
+		cam *= 1.0 - nat_grime * 0.1 * smoothstep(0.62, 0.92, st) * (0.4 + 0.6 * (1.0 - q.x));
+		cam *= mix(1.0 - 0.1 * nat_grime, 1.0, smoothstep(0.0, 0.4, q.x));
+		float chip = smoothstep(0.45, 0.9, n.x) * smoothstep(0.7, 0.78, vnoise3(lp * 140.0 + vec3(nat_seed)));
+		cam = mix(cam, vec3(0.3, 0.29, 0.26) * 0.55, chip * nat_grime * 0.8);
+		rough_add = 0.08 * (fade_n - 0.5) + 0.06 * fd + 0.04 * (vnoise3(lp * 30.0) - 0.5);
+		col = cam;
 	}
 	// очень тёмное (фонарь, сопла, ниши) — исходный цвет
 	float keep = 1.0 - smoothstep(l_keep * 0.6, l_keep, l);
@@ -487,7 +654,7 @@ void fragment() {
 	col = mix(col, min(src * 0.45, vec3(0.03)), hole);
 	keep *= 1.0 - hole;
 	ALBEDO = mix(col, src, keep);
-	ROUGHNESS = mix(mix(mix(clamp(liv_rough + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
+	ROUGHNESS = mix(mix(mix(clamp(liv_rough + rough_add + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
 	METALLIC = mix(mix(mix(liv_metal, 0.45, mk), 0.35, hole), 0.0, keep);
 }
 """
