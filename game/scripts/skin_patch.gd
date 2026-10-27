@@ -11,7 +11,7 @@ extends RefCounted
 ##   blister() — a smooth teardrop fairing rising out of the skin, coloured from the skin texture under it
 ##               (vertex colours, material «mech_skin…» so Livery repaints it with the plane): the wing turret
 ##               barbettes of «Грач» 2.
-## Hull triangles are read once per body mesh and cached.
+## The skin is `PlaneHull.of(model)`: read once per body mesh, shared with the decals.
 
 ## Flare dispensers per plane: a row of flush panels on each side of the rear fuselage top, one more panel per
 ## flare tier (1–3), in model axes: [x of the first panel, step along x to the next one, |z| of the row].
@@ -31,42 +31,9 @@ const PANEL := Vector2(0.034, 0.013)
 const LIFT := 0.0007
 const DISPENSER_SHADER := preload("res://shaders/flare_dispenser.gdshader")
 
-static var _hulls := {}
 static var _images := {}
 static var _panel_mats := {}
 static var _fairings := {}
-
-
-## Hull of `model`: {"tri": PackedVector3Array (3 per triangle, model axes), "uv": PackedVector2Array (same order),
-## "tex": albedo Texture2D or null}; empty when the model has no textured body.
-static func hull(model: Node3D) -> Dictionary:
-	for c in model.find_children("*", "MeshInstance3D", true, false):
-		var mi := c as MeshInstance3D
-		if mi.mesh == null or mi.mesh.get_surface_count() == 0 or _under(mi, model, ["bay_doors", "wing_mech"]):
-			continue
-		var m := mi.mesh.surface_get_material(0) as BaseMaterial3D
-		if m == null or m.albedo_texture == null or String(m.resource_name) == "glass":
-			continue
-		if _hulls.has(mi.mesh):
-			return _hulls[mi.mesh]
-		var xf := _rel(mi, model)
-		var arr := mi.mesh.surface_get_arrays(0)
-		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
-		var uv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV]
-		var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
-		var tri := PackedVector3Array()
-		var tuv := PackedVector2Array()
-		var n := idx.size() if idx.size() > 0 else v.size()
-		tri.resize(n)
-		tuv.resize(n)
-		for i in n:
-			var k := idx[i] if idx.size() > 0 else i
-			tri[i] = xf * v[k]
-			tuv[i] = uv[k] if uv.size() > k else Vector2.ZERO
-		var h := {"tri": tri, "uv": tuv, "tex": m.albedo_texture}
-		_hulls[mi.mesh] = h
-		return h
-	return {}
 
 
 ## Flush flare-dispenser panel at (x, z) on the top of `model`'s skin, with the dispenser shader; null when the
@@ -105,20 +72,20 @@ static func flare_spots(key: String, tier: int) -> Array[Vector2]:
 ## along the skin normal. UV.x runs from the aft end (0) to the front (1). A grid point over a small hole or crack
 ## of the remeshed skin takes the nearest hit of its row; null when more than a sixth of the points miss.
 static func panel(model: Node3D, centre: Vector2, size: Vector2, yaw: float, lift: float) -> ArrayMesh:
-	var h := hull(model)
-	if h.is_empty():
+	var h := PlaneHull.of(model)
+	if h == null:
 		return null
 	var nu := 12
 	var nv := 5
 	var ax := Vector2(cos(yaw), sin(yaw))
 	var az := Vector2(-ax.y, ax.x)
-	var cand := _candidates(h, Rect2(centre - Vector2.ONE * size.x, Vector2.ONE * size.x * 2.0))
+	var cand := h.in_rect_xz(Rect2(centre - Vector2.ONE * size.x, Vector2.ONE * size.x * 2.0))
 	var hits: Array = []
 	var miss := 0
 	for j in nv + 1:
 		for i in nu + 1:
 			var p := centre + ax * (float(i) / nu - 0.5) * size.x + az * (float(j) / nv - 0.5) * size.y
-			var hit := _top_hit(h, cand, p.x, p.y)
+			var hit := h.top_hit(cand, p.x, p.y)
 			hits.append(hit)
 			miss += 1 if hit.is_empty() else 0
 	if miss * 6 > hits.size():
@@ -157,15 +124,15 @@ static func panel(model: Node3D, centre: Vector2, size: Vector2, yaw: float, lif
 ## Returns {"mesh": ArrayMesh, "crown": y of its top} or {} when the skin is not under its centre.
 static func blister(model: Node3D, centre: Vector2, front: float, back: float, half_w: float, height: float,
 		flat_r := 0.0) -> Dictionary:
-	var h := hull(model)
-	if h.is_empty():
+	var h := PlaneHull.of(model)
+	if h == null:
 		return {}
-	var img := _image(h["tex"])
+	var img := _image(h.tex)
 	var nr := 12
 	var na := 32
 	var reach := maxf(maxf(front, back), half_w) * 1.1
-	var cand := _candidates(h, Rect2(centre - Vector2.ONE * reach, Vector2.ONE * reach * 2.0))
-	var c0 := _top_hit(h, cand, centre.x, centre.y)
+	var cand := h.in_rect_xz(Rect2(centre - Vector2.ONE * reach, Vector2.ONE * reach * 2.0))
+	var c0 := h.top_hit(cand, centre.x, centre.y)
 	if c0.is_empty():
 		return {}
 	var crown := float(c0["y"]) + height
@@ -180,7 +147,7 @@ static func blister(model: Node3D, centre: Vector2, front: float, back: float, h
 			var a := TAU * float(ai) / na
 			var ext := Vector2(cos(a) * (front if cos(a) > 0.0 else back), sin(a) * half_w)
 			var p := centre + ext * r
-			var hit := _top_hit(h, cand, p.x, p.y)
+			var hit := h.top_hit(cand, p.x, p.y)
 			if hit.is_empty():
 				hit = last[ai]
 			else:
@@ -245,10 +212,10 @@ static func fairing_crown(model: Node3D, x: float, z: float, rb: float) -> float
 
 
 static func _fairing(model: Node3D, x: float, z: float, rb: float) -> Dictionary:
-	var h := hull(model)
-	if h.is_empty():
+	var h := PlaneHull.of(model)
+	if h == null:
 		return {}
-	var key := "%d_%.4f_%.4f_%.4f" % [(h["tri"] as PackedVector3Array).size(), x, z, rb]
+	var key := "%d_%.4f_%.4f_%.4f" % [h.pos.size(), x, z, rb]
 	if not _fairings.has(key):
 		_fairings[key] = blister(model, Vector2(x, z), rb * 1.4, rb * 2.2, rb * 1.45, rb * 0.45, rb * 1.05)
 	return _fairings[key]
@@ -256,61 +223,11 @@ static func _fairing(model: Node3D, x: float, z: float, rb: float) -> Dictionary
 
 ## Height of the top skin of `model` at (x, z) (model axes), NAN on a miss
 static func top_y(model: Node3D, x: float, z: float) -> float:
-	var h := hull(model)
-	if h.is_empty():
+	var h := PlaneHull.of(model)
+	if h == null:
 		return NAN
-	var hit := _top_hit(h, _candidates(h, Rect2(Vector2(x, z) - Vector2.ONE * 0.01, Vector2.ONE * 0.02)), x, z)
+	var hit := h.top_hit(h.in_rect_xz(Rect2(Vector2(x, z) - Vector2.ONE * 0.01, Vector2.ONE * 0.02)), x, z)
 	return NAN if hit.is_empty() else float(hit["y"])
-
-
-## Indices of the triangles whose x/z box overlaps `r` (x along r.position.x, z along r.position.y)
-static func _candidates(h: Dictionary, r: Rect2) -> PackedInt32Array:
-	var tri: PackedVector3Array = h["tri"]
-	var out := PackedInt32Array()
-	var x0 := r.position.x
-	var x1 := r.end.x
-	var z0 := r.position.y
-	var z1 := r.end.y
-	for i in range(0, tri.size(), 3):
-		var a := tri[i]
-		var b := tri[i + 1]
-		var c := tri[i + 2]
-		if maxf(a.x, maxf(b.x, c.x)) < x0 or minf(a.x, minf(b.x, c.x)) > x1:
-			continue
-		if maxf(a.z, maxf(b.z, c.z)) < z0 or minf(a.z, minf(b.z, c.z)) > z1:
-			continue
-		out.append(i)
-	return out
-
-
-## Highest triangle of the candidates under (x, z): {"y", "n" (normal facing up), "uv"}; {} on a miss
-static func _top_hit(h: Dictionary, cand: PackedInt32Array, x: float, z: float) -> Dictionary:
-	var tri: PackedVector3Array = h["tri"]
-	var tuv: PackedVector2Array = h["uv"]
-	var best := {}
-	var p := Vector2(x, z)
-	for i in cand:
-		var a := tri[i]
-		var b := tri[i + 1]
-		var c := tri[i + 2]
-		var a2 := Vector2(a.x, a.z)
-		var v0 := Vector2(b.x, b.z) - a2
-		var v1 := Vector2(c.x, c.z) - a2
-		var v2 := p - a2
-		var den := v0.x * v1.y - v1.x * v0.y
-		if absf(den) < 1e-14:
-			continue
-		var u := (v2.x * v1.y - v1.x * v2.y) / den
-		var w := (v0.x * v2.y - v2.x * v0.y) / den
-		if u < 0.0 or w < 0.0 or u + w > 1.0:
-			continue
-		var y := a.y + u * (b.y - a.y) + w * (c.y - a.y)
-		if best.is_empty() or y > float(best["y"]):
-			var n := (b - a).cross(c - a).normalized()
-			if n.y < 0.0:
-				n = -n
-			best = {"y": y, "n": n, "uv": tuv[i] + u * (tuv[i + 1] - tuv[i]) + w * (tuv[i + 2] - tuv[i])}
-	return best
 
 
 static func _grid_indices(st: SurfaceTool, nu: int, nv: int) -> void:
@@ -347,23 +264,3 @@ static func _sample(img: Image, uv: Vector2) -> Color:
 	var hh := img.get_height()
 	var c := img.get_pixel(clampi(int(fposmod(uv.x, 1.0) * w), 0, w - 1), clampi(int(fposmod(uv.y, 1.0) * hh), 0, hh - 1))
 	return Color(c.r, c.g, c.b, 1.0)
-
-
-static func _under(n: Node, model: Node, names: Array) -> bool:
-	var p := n.get_parent()
-	while p != null and p != model:
-		if String(p.name) in names:
-			return true
-		p = p.get_parent()
-	return false
-
-
-## Transform of `mi` into the axes of `model` (without the model's own transform)
-static func _rel(mi: Node3D, model: Node3D) -> Transform3D:
-	var xf := Transform3D.IDENTITY
-	var n: Node = mi
-	while n != null and n != model:
-		if n is Node3D:
-			xf = (n as Node3D).transform * xf
-		n = n.get_parent()
-	return xf

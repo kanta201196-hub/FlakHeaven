@@ -57,6 +57,12 @@ static func add(list: Array[DecalRecord], r: DecalRecord) -> bool:
 	return true
 
 
+## Kill tally marks of class `cls` (Kanta 27.10, option A): rival aces and «Крепости» downed by this class, lifetime —
+## the medal counter `tally_<class>` that Medals.run_counters adds up after every sortie
+static func tally_of(counters: Dictionary, cls: String) -> int:
+	return maxi(int(counters.get("tally_" + cls, 0)), 0)
+
+
 ## Atlas stamps of one record: a picture is one stamp, a number one stamp per digit, a tally one per mark
 ## (`tally` marks, at most DecalCatalog.TALLY_MAX, rows of TALLY_ROW starting at the record's position)
 static func stamps(r: DecalRecord, tally: int) -> Array[DecalStamp]:

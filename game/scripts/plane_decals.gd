@@ -5,27 +5,15 @@ class_name PlaneDecals
 ## flight and combat, in Forward+ and GL Compatibility. The mesh hangs under the insignia node, so the
 ## invulnerability blink covers it. A decal laid over the fin badge hides that badge (Kanta: a personal fin badge
 ## may replace the class mark); the wing roundels always stay.
+## Turret fairings (SkinPatch) are added to the model after its insignia, in the hangar and in combat; when one
+## arrives the mesh is rebuilt once (deferred) with the fairings as extra skin, so a decal on that wing lies on the
+## fairing instead of vanishing under it.
 ## Art: one mask atlas (tools/decal_atlas.py): R/G/B weights of the primary, secondary and ink paints, A coverage.
 
 const WEAR := 0.35   ## default weathering: chips and fading of the paint
-## Debug samples per plane (`--decals`), shot onto the skin by `Hull.raycast` from the side (nose, tally, number,
-## fin, right side) or from above (right wing). [x, y, size] in model axes; a wing entry is [x, −z, size] (left wing
-## coordinates, mirrored); the tally x is its front end.
-const SAMPLE_SPOTS := {
-	"fighter_1": {"nose": [0.33, -0.032, 0.03], "kills": [0.255, -0.022, 0.011], "num": [0.03, -0.035, 0.026],
-		"fin": [-0.407, 0.064, 0.035], "wing": [-0.24, -0.09, 0.045]},
-	"fighter_2": {"nose": [0.405, -0.036, 0.026], "kills": [0.33, -0.008, 0.01], "num": [0.02, -0.052, 0.016],
-		"fin": [-0.318, 0.058, 0.03], "wing": [-0.2, -0.16, 0.05]},
-	"attacker_1": {"nose": [0.365, -0.067, 0.03], "kills": [0.285, -0.03, 0.012], "num": [-0.12, -0.034, 0.022],
-		"fin": [-0.42, 0.07, 0.035], "wing": [-0.15, -0.17, 0.05]},
-	"attacker_2": {"nose": [0.395, -0.064, 0.03], "kills": [0.29, -0.07, 0.012], "num": [-0.18, -0.027, 0.024],
-		"fin": [-0.392, 0.08, 0.04], "wing": [-0.18, -0.18, 0.05]},
-	"bomber_1": {"nose": [0.38, -0.066, 0.026], "kills": [0.33, -0.053, 0.01], "num": [-0.2, -0.058, 0.03],
-		"fin": [-0.404, 0.087, 0.045], "wing": [0.0, -0.12, 0.05]},
-	"bomber_2": {"nose": [0.405, -0.046, 0.024], "kills": [0.36, -0.025, 0.01], "num": [0.23, -0.026, 0.016],
-		"fin": [-0.378, 0.08, 0.045], "wing": [-0.12, -0.2, 0.05]},
-}
-## Debug sample art per class: nose, tally, number, fin, wing, wing turn (radians), primary and secondary paint
+const FAIRING := "crown"   ## meta SkinPatch.turret_fairing sets on a fairing (a second one gets a generated name)
+## Debug sample art per class (`--decals`), laid on the presets: nose, tally, number, fin, wing, wing turn (radians),
+## primary and secondary paint
 const SAMPLE_ART := {
 	"fighter": ["shark_mouth", "tally_air", "07", "skull_winged", "bolt", 0.35, "bone", "red"],
 	"attacker": ["rook", "tally_ground", "312", "skull_wrench", "chevrons", -0.5, "bone", "rust"],
@@ -60,86 +48,103 @@ static func attach(model: Node3D, key: String, ins: Node3D) -> void:
 		return
 	var cls := key.get_slice("_", 0)
 	var lvl := int(key.get_slice("_", 1))
-	var hull: DecalMesh.Hull = null
 	var records: Array[DecalRecord] = []
 	var tally := 0
-	var t0 := Time.get_ticks_usec()
 	if samples_on():
-		hull = DecalMesh.hull_of(model)
+		var hull := PlaneHull.of(model)
 		if hull != null:
 			records = samples(hull, key)
 		tally = _sample_tally
 	else:
 		records = Profile.decals(cls, lvl)
-		if records.is_empty():
-			return
-		hull = DecalMesh.hull_of(model)
-		tally = tally_count()
+		tally = Profile.decal_tally(cls)
+	if records.is_empty():
+		return
+	ins.set_meta("decal_records", records)
+	ins.set_meta("decal_tally", tally)
+	ins.set_meta("decal_key", key)
+	model.set_meta("decal_ins", ins)
+	if not model.has_meta("decal_watch"):   # the battle model is reused from a pool: connect once
+		model.set_meta("decal_watch", true)
+		model.child_entered_tree.connect(_on_child.bind(model))
+	build(model)
+
+
+## (Re)builds the decal mesh of `model` from the records kept on its insignia node, turret fairings included
+static func build(model: Node3D) -> void:
+	var ins: Node3D = model.get_meta("decal_ins", null)
+	if ins == null or not is_instance_valid(ins) or ins.get_parent() != model:
+		return
+	var records: Array[DecalRecord] = ins.get_meta("decal_records", [] as Array[DecalRecord])
+	var hull := PlaneHull.of(model)
 	if hull == null or records.is_empty():
 		return
-	var mesh := DecalMesh.build(hull, records, tally)
+	var t0 := Time.get_ticks_usec()
+	var fairings: Array[MeshInstance3D] = []
+	for c in model.get_children():
+		if c is MeshInstance3D and c.has_meta(FAIRING) and (c as MeshInstance3D).mesh != null:
+			fairings.append(c)
+	if not fairings.is_empty():
+		hull = hull.with_extra(PlaneHull.from_meshes(fairings, model, false))
+	var mesh := DecalMesh.build(hull, records, int(ins.get_meta("decal_tally", 0)))
+	var mi := ins.get_node_or_null("decals") as MeshInstance3D
 	if mesh == null:
+		if mi != null:
+			mi.queue_free()
 		return
-	var mi := MeshInstance3D.new()
-	mi.name = "decals"
+	if mi == null:
+		mi = MeshInstance3D.new()
+		mi.name = "decals"
+		mi.material_override = material()
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ins.add_child(mi)
 	mi.mesh = mesh
-	mi.material_override = material()
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	ins.add_child(mi)
 	_hide_covered_badges(ins, records)
 	if _samples:
-		print("DECALS %s: %d decals, %d triangles, hull %d triangles, %.1f ms" % [key, records.size(),
-			int(mesh.surface_get_array_len(0) / 3.0), int(hull.pos.size() / 3.0), (Time.get_ticks_usec() - t0) / 1000.0])
+		print("DECALS %s: %d decals, %d fairings, %d triangles, hull %d triangles, %.1f ms" % [
+			String(ins.get_meta("decal_key", "")), records.size(), fairings.size(),
+			int(mesh.surface_get_array_len(0) / 3.0), hull.triangles(), (Time.get_ticks_usec() - t0) / 1000.0])
 
 
-## Kill tally marks (Kanta 27.10, option A): rival aces and «Крепости» downed, lifetime (medal counters)
-static func tally_count() -> int:
-	var mc: Dictionary = Profile.medal_counters()
-	return int(mc.get("aces", 0)) + int(mc.get("fortresses", 0))
+## A turret fairing joined the model: rebuild once at the end of the frame (both wing fairings come together)
+static func _on_child(node: Node, model: Node3D) -> void:
+	if not node.has_meta(FAIRING) or model.get_meta("decal_dirty", false):
+		return
+	model.set_meta("decal_dirty", true)
+	_rebuild_later.call_deferred(model)
 
 
-## The debug sample decals of plane `key`, placed by rays on its hull (a missed ray drops that decal)
-static func samples(hull: DecalMesh.Hull, key: String) -> Array[DecalRecord]:
+static func _rebuild_later(model: Node3D) -> void:
+	if not is_instance_valid(model):
+		return
+	model.set_meta("decal_dirty", false)
+	build(model)
+
+
+## The debug sample decals of plane `key`, laid on the presets (a missed ray drops that decal)
+static func samples(hull: PlaneHull, key: String) -> Array[DecalRecord]:
 	var out: Array[DecalRecord] = []
-	var spots: Dictionary = SAMPLE_SPOTS.get(key, {})
 	var art: Array = SAMPLE_ART.get(key.get_slice("_", 0), [])
-	if spots.is_empty() or art.is_empty():
+	if art.is_empty():
 		return out
-	for side: float in [-1.0, 1.0]:   # −Z — left side, +Z — right side
-		var nose: Array = spots["nose"]
-		_place(out, hull, String(art[0]), Vector3(nose[0], nose[1], side), side, nose[2], 0.0, side > 0.0, art, "")
-		var num: Array = spots["num"]
-		_place(out, hull, DecalCatalog.NUMBER, Vector3(num[0], num[1], side), side, num[2], 0.0, false, art, String(art[2]))
-		var k: Array = spots["kills"]
-		_place(out, hull, String(art[1]), Vector3(k[0], k[1], side), side, k[2], 0.0, side > 0.0, art, "")
-	var fin: Array = spots["fin"]
-	_place(out, hull, String(art[3]), Vector3(fin[0], fin[1], 1.0), 1.0, fin[2], 0.0, false, art, "")
-	var wing: Array = spots["wing"]   # the right wing (+Z): the lit side in the hangar
-	var hit := hull.raycast(Vector3(wing[0], 1.0, -float(wing[1])), Vector3.DOWN)
-	if hit.size() == 2:
-		DecalLoadout.add(out, _record(String(art[4]), hit, wing[2], float(art[5]), false, art, ""))
+	for side in [-1, 1]:
+		_add(out, DecalPresets.record(hull, key, "nose", side, String(art[0])), art, 0.0, "")
+		_add(out, DecalPresets.record(hull, key, "number", side, DecalCatalog.NUMBER), art, 0.0, String(art[2]))
+		_add(out, DecalPresets.record(hull, key, "tally", side, String(art[1])), art, 0.0, "")
+	_add(out, DecalPresets.record(hull, key, "fin", 1, String(art[3])), art, 0.0, "")
+	_add(out, DecalPresets.record(hull, key, "wing", 1, String(art[4])), art, float(art[5]), "")   # the lit side
 	return out
 
 
-static func _place(out: Array[DecalRecord], hull: DecalMesh.Hull, id: String, origin: Vector3, side: float,
-		size: float, angle: float, mirror: bool, art: Array, text: String) -> void:
-	var hit := hull.raycast(origin, Vector3(0.0, 0.0, -side))
-	if hit.size() == 2:
-		DecalLoadout.add(out, _record(id, hit, size, angle, mirror, art, text))
-
-
-static func _record(id: String, hit: Array, size: float, angle: float, mirror: bool, art: Array, text: String) -> DecalRecord:
-	var r := DecalRecord.new()
-	r.id = id
-	r.pos = hit[0]
-	r.normal = hit[1]
-	r.size = size
+static func _add(out: Array[DecalRecord], r: DecalRecord, art: Array, angle: float, text: String) -> void:
+	if r == null:
+		return
 	r.angle = angle
-	r.mirror = mirror
 	r.c1 = String(art[6])
 	r.c2 = String(art[7])
-	r.text = text
-	return r
+	if text != "":
+		r.text = text
+	DecalLoadout.add(out, r)
 
 
 ## Fin and side insignia under a decal are hidden (the wing roundels never are)
@@ -149,7 +154,7 @@ static func _hide_covered_badges(ins: Node3D, records: Array[DecalRecord]) -> vo
 		var n := String(mi.name) if not String(mi.name).begins_with("Mesh") else String(mi.get_parent().name)
 		if not (n.begins_with("fin") or n.begins_with("side")) or mi.mesh == null:
 			continue
-		var centre := DecalMesh.rel_transform(mi, ins) * mi.mesh.get_aabb().get_center()
+		var centre := PlaneHull.rel_transform(mi, ins) * mi.mesh.get_aabb().get_center()
 		for r in records:
 			if r.pos.distance_to(centre) < maxf(r.size * 0.6, 0.02):
 				mi.visible = false
