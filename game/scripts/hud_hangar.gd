@@ -209,7 +209,7 @@ func _hg_livery(c: String, lx: float, y: float) -> void:
 		_buttons.append([br, "hg:livery:" + String(b[2])])
 	ctrl.draw_rect(rm, Color(1, 1, 1, 0.08))
 	_text(Vector2(rm.position.x + 12, rm.position.y + 21), Loc.t(String(lst[i][1])), 15, Color.WHITE)
-	_text(Vector2(rm.position.x, rm.position.y + 21), "%d / %d" % [i + 1, lst.size()], 13, tc, HORIZONTAL_ALIGNMENT_RIGHT, rm.size.x - 12)
+	_text(Vector2(rm.position.x, rm.position.y + 21), "%d / %d" % [i + 1, lst.size()], 14, tc, HORIZONTAL_ALIGNMENT_RIGHT, rm.size.x - 12)
 	_buttons.append([rm, "hg:livery:" + next])
 
 
