@@ -36,6 +36,7 @@ var hangar_cls := "fighter"
 var hangar_tab := "plane"
 var hangar_medal := ""   # medal picked on the «НАГРАДЫ» tab (its card stays under the board)
 var hangar_w := "aam"
+var decal_edit: DecalEditor   ## the hangar decal editor while «Знаки ›» is open (DecalEditInput drives it), else null
 var hangar_back := "menu"        # анимация итогов для ангара   # 3.1: справочник связок — откуда открыт   # 3.1: выбранный навык класса: класс → id
 
 var ace_log: Array = []   # тест 3.5-s5 (п. 10): асы вылета — прочность, урон по оружию, время жизни (колонка aces лога)

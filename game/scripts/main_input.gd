@@ -4,6 +4,7 @@ extends RefCounted
 ## смена приоритета/пуска подвесов, действия ангара. Состояние вылета живёт в Main.
 
 var m: Main
+var dc: DecalEditInput   ## the hangar decal editor's keys, gamepad and panel buttons
 ## CR-05: A/X/B/Y are both combat actions and "pick card 1–4"; a press held from the fight must not
 ## blindly pick a card on the level-up or course screen, so input waits this long after it opens.
 ## Kanta 25.10: long enough that a click or key mashed in the fight lands before the cards
@@ -13,6 +14,7 @@ const CARD_INPUT_DELAY := 0.6
 
 func _init(main: Main) -> void:
 	m = main
+	dc = DecalEditInput.new(main)
 
 
 ## Per-frame keys and gamepad buttons outside flight control, dispatched by game state:
@@ -28,6 +30,12 @@ func handle_global_input() -> void:
 				m._set_state(m.codex_back)
 			return
 		"hangar":
+			if dc.is_open():   # the decal editor: Esc / Back leaves the editor, not the hangar
+				if Input.is_action_just_pressed("pause"):
+					dc.back()
+				else:
+					dc.frame(m.get_process_delta_time())
+				return
 			if Input.is_action_just_pressed("pause"):
 				m.start_run()
 				m._set_state(m.hangar_back)
@@ -346,10 +354,18 @@ func cycle_priority(gi: int, dir := 1) -> void:
 	m.sfx.play("card", -14.0, 1.3)
 
 
+## A hangar button `hg:<a>` (split at «:»): class, tab, purchases, loadout, livery, the decal editor (`dc:*`,
+## DecalEditInput) and leaving the hangar. Any action outside the decal editor closes it first, so its decals are
+## saved before the view changes plane, paint or tab.
 func hangar_action(a: String) -> void:
 	var p := a.split(":")
 	var c := m.hangar_cls
 	var ok := true
+	if p[0] == "dc":
+		ok = dc.action(p)
+		m.sfx.play("card" if ok else "ui_ban", -12.0, 1.3 if ok else 0.8)
+		return
+	dc.close()   # any other hangar action first closes the decal editor (its decals are saved)
 	match p[0]:
 		"cls":
 			m.hangar_cls = p[1]

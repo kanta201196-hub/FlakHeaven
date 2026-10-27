@@ -36,6 +36,7 @@ var _idle := 0.0             # секунд без мыши — потом ме�
 var _drawn_frame := -10
 var _cls := ""
 var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
+var _built_lvl := 1          # plane level of the model on view (model_key)
 ## Kanta 24.10: real stands from Sketchfab (CC BY, CREDITS.md) instead of box stands. Per weapon, shares of the stand
 ## model (measured on it): x — weapon centre from the stand centre (of its length), y — weapon bottom over the floor
 ## (of its height). Size: len — stand length per weapon length, or ring — inner radius of the stand's rings (of its
@@ -654,6 +655,7 @@ func _build(cls_id: String, lvl: int) -> void:
 				m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	pivot.add_child(model)
 	_model = model
+	_built_lvl = lvl
 	turret_pos.clear()
 	_collect_faces(model)
 	# Т-3: модули прокачки — стенд --modules=N показывает все модули на уровне N
@@ -890,7 +892,10 @@ func _process(delta: float) -> void:
 	_idle += delta
 	_t += delta
 	# п. 32: в «полёте» самолёт чуть покачивается, как в воздухе; на складе оружие стоит
-	if _bg == "flight":
+	if decal_mode:   # the decal editor: the plane holds still under the cursor
+		pivot.position.y = 0.0
+		pivot.rotation = Vector3.ZERO
+	elif _bg == "flight":
 		var st := anim_time if anim_time >= 0.0 else _t   # стенд --mechanim: покачивание тоже по заданному моменту
 		pivot.position.y = sin(st * 0.9) * 0.012
 		pivot.rotation = Vector3(sin(st * 0.6) * 0.035, 0.0, sin(st * 0.75 + 1.0) * 0.02)
@@ -904,7 +909,7 @@ func _process(delta: float) -> void:
 		_anim = HangarAnim.collect(pivot)
 	HangarAnim.step(_anim, anim_time if anim_time >= 0.0 else _t, mech_demo or mech_hover or _key.begins_with("w_"), delta)
 	mech_hover = false
-	if not _drag and _idle > 3.0:
+	if not _drag and _idle > 3.0 and not decal_mode:
 		_yaw += delta * 0.25
 	_pitch = clampf(_pitch, bench_pitch_min, 1.35)
 	_dist = clampf(_dist, 0.7 if focus == Vector3.ZERO else 0.2, 3.2)
@@ -935,6 +940,10 @@ func _input(event: InputEvent) -> void:
 						weapon_tier = int(tr[1])
 						get_viewport().set_input_as_handled()
 						return
+				if decal_mode and rect.has_point(mp):   # the left button places and moves decals
+					decal_press.emit(mp, true)
+					get_viewport().set_input_as_handled()
+					return
 				if rect.has_point(mp):
 					if mb.double_click:
 						_yaw = YAW0
@@ -944,13 +953,120 @@ func _input(event: InputEvent) -> void:
 					_idle = 0.0
 					get_viewport().set_input_as_handled()
 			else:
+				if decal_mode:
+					decal_press.emit(mp, false)
 				_drag = false
+		elif decal_mode and mb.button_index == MOUSE_BUTTON_RIGHT:   # editor: the right button orbits
+			_drag = mb.pressed and rect.has_point(mp)
+			if _drag:
+				get_viewport().set_input_as_handled()
+		elif decal_mode and mb.pressed and rect.has_point(mp) and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			decal_wheel.emit(1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1)
+			get_viewport().set_input_as_handled()
 		elif mb.pressed and rect.has_point(mp) and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			_dist *= 0.9 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.1
 			_idle = 0.0
 			get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and decal_mode and not _drag:
+		decal_cursor = mp
+		decal_pad = false
 	elif event is InputEventMouseMotion and _drag:
 		var mm := event as InputEventMouseMotion
 		_yaw += mm.relative.x * 0.008
 		_pitch += mm.relative.y * 0.006
 		_idle = 0.0
+
+
+# ---------- Decal editor mode (spec 2026-10-27-plane-decals-design.md §6) ----------
+
+## The decal editor is open: no idle spin or sway, the left button and the wheel go to the editor (signals below),
+## the right button orbits
+var decal_mode := false
+## Editor cursor in ctrl coordinates (the mouse, or the gamepad stick moves it)
+var decal_cursor := Vector2(-1.0, -1.0)
+## The cursor was last moved by the gamepad (HudDecals draws a cross for it)
+var decal_pad := false
+## Left button pressed (true) or released (false) over the view in decal mode, at `p` (ctrl coordinates)
+signal decal_press(p: Vector2, pressed: bool)
+## Wheel over the view in decal mode: +1 up, −1 down
+signal decal_wheel(steps: int)
+var _dc_model: Node3D
+var _dc_sig := ""
+var _dc_live_sig := ""
+
+
+## Plane key of the model on view («fighter_2»): what the decal presets and Profile.decals are keyed by
+func model_key() -> String:
+	return "%s_%d" % [_cls, _built_lvl]
+
+
+## The skin under screen point `p` (ctrl coordinates): [position, normal] in model axes, [] off the plane or on the
+## canopy glass
+func decal_ray(p: Vector2) -> Array:
+	if _model == null or not is_instance_valid(_model) or not rect.has_point(p) or rect.size.x < 1.0:
+		return []
+	var hull := PlaneDecals.hull_of(_model)
+	if hull == null:
+		return []
+	var px := (p - rect.position) / rect.size * Vector2(vp.size)
+	var inv := _model.global_transform.affine_inverse()
+	var o := inv * cam.project_ray_origin(px)
+	var d := (inv.basis * cam.project_ray_normal(px)).normalized()
+	# start the march where the ray enters the plane's sphere (the model is about 1 long round its centre)
+	var b := o.dot(d)
+	var disc := b * b - (o.length_squared() - DECAL_REACH * DECAL_REACH)
+	if disc < 0.0:
+		return []
+	var t0 := maxf(0.0, -b - sqrt(disc))
+	return hull.raycast_clear(o + d * t0, d, 2.0 * DECAL_REACH, PlaneHull.glass_of(_model))   # not under the canopy
+
+
+const DECAL_REACH := 0.8   ## model units round the centre where the cursor ray looks for skin
+
+
+## Draws the editor's decals: `records` on the plane (rebuilt only when they change), `live` — the decal under the
+## cursor / being moved / selected, with the highlight (null none); `tally` — marks for tally decals
+func decal_refresh(records: Array[DecalRecord], live: DecalRecord, tally: int) -> void:
+	if _model == null or not is_instance_valid(_model):
+		return
+	var sig := "%d|%s" % [tally, str(records.map(func(r: DecalRecord) -> Dictionary: return r.to_dict()))]
+	if _model != _dc_model or sig != _dc_sig:
+		_dc_model = _model
+		_dc_sig = sig
+		_dc_live_sig = "-"
+		PlaneDecals.show(_model, model_key(), records, tally)
+	var ls := str(live.to_dict()) if live != null else ""
+	if ls != _dc_live_sig:
+		_dc_live_sig = ls
+		PlaneDecals.show_preview(_model, live, tally)
+
+
+## Leaves decal mode: plane `key` shows `records` with the real `tally` again, the preview goes away (a model of
+## another plane, already rebuilt from the profile, is left as it is)
+func decal_close(key: String, records: Array[DecalRecord], tally: int) -> void:
+	decal_mode = false
+	_drag = false
+	if _model != null and is_instance_valid(_model) and model_key() == key:
+		PlaneDecals.show(_model, model_key(), records, tally)
+		PlaneDecals.show_preview(_model, null, tally)
+	_dc_model = null
+	_dc_sig = ""
+	_dc_live_sig = ""
+
+
+## The skin of the plane on view the decals are cut from (null without a model)
+func decal_hull() -> PlaneHull:
+	return PlaneDecals.hull_of(_model) if _model != null and is_instance_valid(_model) else null
+
+
+## Turns the camera by `dx`, `dy` radians (the gamepad's right stick in the editor)
+func orbit(dx: float, dy: float) -> void:
+	_yaw += dx
+	_pitch += dy
+	_idle = 0.0
+
+
+## Zooms by `steps` wheel notches (+ closer)
+func zoom(steps: int) -> void:
+	_dist *= pow(0.9, steps)
+	_idle = 0.0

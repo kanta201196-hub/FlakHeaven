@@ -1454,6 +1454,9 @@ const _MECHCLOSE := {
 func _hangar_bench() -> void:
 	if _t < 1.5:
 		return
+	if OS.get_cmdline_user_args().has("--decaledit") or _db_cls() != "":
+		_decal_bench()
+		return
 	if m.state != "hangar":
 		m.ui_click("menu_hangar")
 		for a in OS.get_cmdline_user_args():
@@ -1897,3 +1900,125 @@ func _lev_bench(delta: float) -> void:
 	m.camera.global_position = cam
 	m.camera.zoom = Vector2.ONE * zoom
 	m.camera.reset_smoothing()
+
+
+# ---------- PR3: hangar decal editor (--decaledit[=class]) ----------
+## Opens «Знаки ›» on plane 1 of the class, checks the editor's refusals (DECALEDIT lines) and saves the hangar
+## screen and the 3D view at each step → user://vis_decaledit_<step>.png / vis_decaledit_vp_<step>.png. The profile
+## goes to a scratch file (user://vis_decaledit_profile.json, removed at the end): the bench never touches the real one.
+const _DB_STEPS := ["empty", "cursor", "selected", "moving", "focus"]
+var _db_step := -1
+var _db_wait := 0
+
+
+func _db_cls() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--decaledit="):
+			return a.get_slice("=", 1)
+	return ""
+
+
+func _decal_bench() -> void:
+	var cls := _db_cls() if _db_cls() != "" else "fighter"
+	if m.state != "hangar":
+		Profile.path = "user://vis_decaledit_profile.json"
+		m.ui_click("menu_hangar")
+		return
+	m.hangar_tab = "plane"
+	m.hangar_cls = cls
+	var h3 := Hangar3D.I
+	if h3 == null:
+		return
+	if _db_step < 0:
+		h3._cls = cls
+		h3.view_lvl = 1
+		h3._yaw = -1.15
+		h3._pitch = 0.2
+		h3._dist = 0.95
+		h3._idle = 0.0
+		_db_wait += 1
+		if h3.model_key() != cls + "_1" or _db_wait < 8:
+			return
+		m.input_ctl.dc.open()
+		print("DECALEDIT open: %s" % (m.decal_edit != null))
+		_db_step = 0
+		_db_wait = 0
+		_t = 0.0
+		return
+	_db_wait += 1
+	if _db_wait < 10 or _t < 1.2:
+		return
+	var step: String = _DB_STEPS[_db_step]
+	_save("decaledit_" + step)
+	h3.vp.get_texture().get_image().save_png("user://vis_decaledit_vp_%s%s.png" % [step, _suffix])
+	_db_wait = 0
+	_t = 0.0
+	_db_step += 1
+	var e := m.decal_edit
+	var hull := h3.decal_hull()
+	var key := h3.model_key()
+	match step:
+		"empty":   # → the cursor over the nose with the winged skull
+			print("DECALEDIT empty hit off the plane: %s" % str(h3.decal_ray(h3.rect.position + Vector2(6, 6))))
+			print("DECALEDIT place on empty hit: %s" % e.place([]))
+			e.pick("skull_winged", true)
+			var r := DecalPresets.record(hull, key, "nose", -1, "skull_winged")
+			h3.decal_cursor = _db_screen(h3, r.pos)
+			h3.decal_pad = true
+			print("DECALEDIT cursor hit: %s" % str(h3.decal_ray(h3.decal_cursor)))
+			var glass := PlaneHull.glass_of(h3._model)
+			var gt := -1   # the highest upward-facing canopy triangle: shoot straight down through it
+			for t in (glass.triangles() if glass != null else 0):
+				if glass.nrm[t * 3].y > 0.8 and (gt < 0 or glass.pos[t * 3].y > glass.pos[gt * 3].y):
+					gt = t
+			if gt >= 0:
+				var gc := (glass.pos[gt * 3] + glass.pos[gt * 3 + 1] + glass.pos[gt * 3 + 2]) / 3.0 + Vector3.UP * 0.3
+				print("DECALEDIT ray down through the canopy: %s, without the glass: %d" % [
+					str(hull.raycast_clear(gc, Vector3.DOWN, 0.6, glass)), hull.raycast(gc, Vector3.DOWN, 0.6).size()])
+		"cursor":   # → placed by a mouse click, plus a number and a tally from the presets; the first one selected
+			h3.decal_press.emit(h3.decal_cursor, true)
+			h3.decal_press.emit(h3.decal_cursor, false)
+			print("DECALEDIT click placed: %d" % e.records.size())
+			e.pick(DecalCatalog.NUMBER, true)
+			e.set_text("27")
+			print("DECALEDIT preset number: %s" % e.preset(hull, key, "number", -1))
+			e.pick("tally_air", true)
+			print("DECALEDIT preset tally: %s" % e.preset(hull, key, "tally", -1))
+			e.cancel()
+			e.sel = 0
+			h3.decal_pad = false
+			h3.decal_cursor = Vector2(-1, -1)
+			m.input_ctl.dc.frame(0.016)
+			print("DECALEDIT records %d, profile %d" % [e.records.size(), Profile.decals(cls, 1).size()])
+		"selected":   # → the number picked up and carried towards the tail
+			e.sel = 1
+			e.grab()
+			var r2 := DecalPresets.record(hull, key, "tally", -1, "tally_air")
+			h3.decal_cursor = _db_screen(h3, r2.pos + Vector3(-0.1, 0.02, 0.0))
+			h3.decal_pad = true
+		"moving":   # → dropped; the gamepad focus on the panel
+			m.input_ctl.dc._pad_a(h3)
+			print("DECALEDIT moved: %s" % (not e.moving))
+			h3.decal_pad = false
+			h3.decal_cursor = Vector2(-1, -1)
+			for i in 4:
+				HudDecals.move_focus(Vector2i.DOWN if i > 0 else Vector2i.RIGHT)
+			print("DECALEDIT focus %d: %s" % [HudDecals.focus, HudDecals.focused_action()])
+		"focus":   # cap, then close: the profile keeps the decals
+			while e.records.size() < DecalLoadout.MAX_DECALS:
+				DecalLoadout.add(e.records, DecalRecord.from_dict(e.records[0].to_dict()))
+			e.changed = true
+			print("DECALEDIT cap: %s" % e.pick("bolt", true))
+			e.records.resize(3)
+			e.changed = true
+			m.input_ctl.dc.close()
+			print("DECALEDIT closed: %s, profile %d decals" % [m.decal_edit == null, Profile.decals(cls, 1).size()])
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(Profile.path))
+			print("VISUAL done")
+			m.get_tree().quit()
+
+
+## Screen point (hangar ctrl coordinates) of model point `p` of the plane on view
+func _db_screen(h3: Hangar3D, p: Vector3) -> Vector2:
+	var px := h3.cam.unproject_position(h3._model.global_transform * p)
+	return h3.rect.position + px / Vector2(h3.vp.size) * h3.rect.size

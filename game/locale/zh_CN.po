@@ -7881,3 +7881,256 @@ msgstr "黏土与尘土"
 #: game/scripts/livery.gd:94
 msgid "Зимняя побелка"
 msgstr "冬季白涂"
+
+#: game/scripts/decal_edit_input.gd:212 game/scripts/decal_edit_input.gd:216
+msgid "Наведите на самолёт"
+msgstr "请对准飞机"
+
+#: game/scripts/decal_edit_input.gd:216 game/scripts/decal_edit_input.gd:281 game/scripts/decal_edit_input.gd:298 game/scripts/decal_edit_input.gd:317
+#, c-format
+msgid "Не больше %d знаков на самолёт"
+msgstr "每架飞机最多 %d 个标志"
+
+#: game/scripts/decal_edit_input.gd:279
+#, c-format
+msgid "Этот знак ещё закрыт: %s"
+msgstr "该标志尚未解锁：%s"
+
+#: game/scripts/decal_edit_input.gd:295
+msgid "Сначала выберите картинку"
+msgstr "请先选择图案"
+
+#: game/scripts/decal_edit_input.gd:298
+msgid "Сюда этот самолёт знак не берёт"
+msgstr "这架飞机的这个位置放不下"
+
+#: game/scripts/decal_edit_input.gd:317
+msgid "Сначала выберите знак на самолёте"
+msgstr "请先选中飞机上的标志"
+
+#: game/scripts/hud_decals.gd:15
+msgid "Крылатый череп"
+msgstr "带翼骷髅"
+
+#: game/scripts/hud_decals.gd:15
+msgid "Череп с ключами"
+msgstr "骷髅与扳手"
+
+#: game/scripts/hud_decals.gd:15
+msgid "Огненный череп"
+msgstr "烈焰骷髅"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Молния"
+msgstr "闪电"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Туз пик"
+msgstr "黑桃 A"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Кости"
+msgstr "骰子"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Шевроны"
+msgstr "人字纹"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Солнце"
+msgstr "太阳"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Оса"
+msgstr "黄蜂"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Грач"
+msgstr "白嘴鸦"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Кит"
+msgstr "鲸"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Чёрный кот"
+msgstr "黑猫"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Акулья пасть"
+msgstr "鲨鱼嘴"
+
+#: game/scripts/hud_decals.gd:18
+msgid "Глаз"
+msgstr "眼睛"
+
+#: game/scripts/hud_decals.gd:18
+msgid "Горы"
+msgstr "山峰"
+
+#: game/scripts/hud_decals.gd:18 game/scripts/hud_decals.gd:22
+msgid "Номер"
+msgstr "编号"
+
+#: game/scripts/hud_decals.gd:18
+msgid "Счёт: воздух"
+msgstr "战绩：空中"
+
+#: game/scripts/hud_decals.gd:18
+msgid "Счёт: земля"
+msgstr "战绩：地面"
+
+#: game/scripts/hud_decals.gd:19
+msgid "Счёт: бомбы"
+msgstr "战绩：炸弹"
+
+#: game/scripts/hud_decals.gd:22
+msgid "Нос"
+msgstr "机头"
+
+#: game/scripts/hud_decals.gd:22
+msgid "Счёт"
+msgstr "战绩"
+
+#: game/scripts/hud_decals.gd:22
+msgid "Киль"
+msgstr "垂尾"
+
+#: game/scripts/hud_decals.gd:67
+#, c-format
+msgid "1 вылет — %s"
+msgstr "出击 1 次 — %s"
+
+#: game/scripts/hud_decals.gd:70
+#, c-format
+msgid "экипаж ур. %d"
+msgstr "机组 %d 级"
+
+#: game/scripts/hud_decals.gd:72
+msgid "первая пройденная операция"
+msgstr "首次完成战役"
+
+#: game/scripts/hud_decals.gd:75
+msgid "первая эвакуация"
+msgstr "首次撤离"
+
+#: game/scripts/hud_decals.gd:77
+#, c-format
+msgid "%d вылетов"
+msgstr "出击 %d 次"
+
+#: game/scripts/hud_decals.gd:79
+msgid "первый сбитый ас"
+msgstr "首次击落王牌"
+
+#: game/scripts/hud_decals.gd:81
+msgid "первая сбитая «Крепость»"
+msgstr "首次击落“堡垒”"
+
+#: game/scripts/hud_decals.gd:95
+msgid "ЗНАКИ НА САМОЛЁТЕ"
+msgstr "机身标志"
+
+#: game/scripts/hud_decals.gd:111
+msgid "Геймпад: стик — курсор, A — поставить / взять, B — снять выбор, LT / RT — размер, LB / RB — поворот, X — отразить, Y — цвет, крестовина — панель, правый стик — вид"
+msgstr "手柄：摇杆 — 光标，A — 放置 / 拿起，B — 取消选择，LT / RT — 大小，LB / RB — 旋转，X — 镜像，Y — 颜色，十字键 — 面板，右摇杆 — 视角"
+
+#: game/scripts/hud_decals.gd:112
+msgid "ЛКМ — поставить / взять и тащить, колесо — размер, Q / E — поворот (Shift — точно), F — отразить, Del — удалить, ПКМ — вращать вид"
+msgstr "左键 — 放置 / 拿起并拖动，滚轮 — 大小，Q / E — 旋转（Shift — 微调），F — 镜像，Del — 删除，右键 — 旋转视角"
+
+#: game/scripts/hud_decals.gd:137
+msgid "Порядок: нижние строки лежат поверх"
+msgstr "顺序：下面的行覆盖在上面"
+
+#: game/scripts/hud_decals.gd:140
+msgid "Пока пусто: выберите картинку справа и щёлкните по самолёту."
+msgstr "暂无标志：在右侧选择图案，然后点击飞机。"
+
+#: game/scripts/hud_decals.gd:186
+#, c-format
+msgid "откроется: %s"
+msgstr "解锁条件：%s"
+
+#: game/scripts/hud_decals.gd:196
+msgid "Готовое место (для выбранной картинки)"
+msgstr "预设位置（用于所选图案）"
+
+#: game/scripts/hud_decals.gd:202
+msgid "Л"
+msgstr "左"
+
+#: game/scripts/hud_decals.gd:202
+msgid "П"
+msgstr "右"
+
+#: game/scripts/hud_decals.gd:213
+#, c-format
+msgid "Цвет %d"
+msgstr "颜色 %d"
+
+#: game/scripts/hud_decals.gd:233
+msgid "Цифры"
+msgstr "数字"
+
+#: game/scripts/hud_decals.gd:240
+msgid "+ цифра"
+msgstr "+ 数字"
+
+#: game/scripts/hud_decals.gd:241
+msgid "− цифра"
+msgstr "− 数字"
+
+#: game/scripts/hud_decals.gd:245
+#, c-format
+msgid "Счёт побед класса: %d"
+msgstr "该机型战绩：%d"
+
+#: game/scripts/hud_decals.gd:247
+#, c-format
+msgid "(в ангаре для примера %d)"
+msgstr "（机库中示例显示 %d）"
+
+#: game/scripts/hud_decals.gd:249
+msgid "Отметка — за каждого сбитого аса и «Крепость»"
+msgstr "每击落一名王牌或一架“堡垒”记一个标记"
+
+#: game/scripts/hud_decals.gd:257
+msgid "↺ поворот"
+msgstr "↺ 旋转"
+
+#: game/scripts/hud_decals.gd:258
+msgid "↻ поворот"
+msgstr "↻ 旋转"
+
+#: game/scripts/hud_decals.gd:259
+msgid "Меньше"
+msgstr "缩小"
+
+#: game/scripts/hud_decals.gd:260
+msgid "Больше"
+msgstr "放大"
+
+#: game/scripts/hud_decals.gd:262
+msgid "Отразить"
+msgstr "镜像"
+
+#: game/scripts/hud_decals.gd:264
+msgid "На другой борт"
+msgstr "复制到另一侧"
+
+#: game/scripts/hud_decals.gd:265
+msgid "Удалить"
+msgstr "删除"
+
+#: game/scripts/hud_hangar.gd:82
+msgid "Щёлкните по самолёту — поставить знак; правая кнопка — вращение"
+msgstr "点击飞机放置标志；右键旋转视角"
+
+#: game/scripts/hud_hangar.gd:130
+msgid "‹ Знаки"
+msgstr "‹ 标志"
+
+#: game/scripts/hud_hangar.gd:130
+msgid "Знаки ›"
+msgstr "标志 ›"

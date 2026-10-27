@@ -19,6 +19,7 @@ class Builder:
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var paints := PackedVector2Array()   ## UV2: primary and secondary paint index
+	var lift := DecalMesh.LIFT           ## the editor's preview sits higher, over the committed decals
 
 	## Cuts the hull under one stamp and appends the pieces
 	func project(hull: PlaneHull, st: DecalStamp) -> void:
@@ -51,7 +52,7 @@ class Builder:
 					var u := xy.x * 0.5 + 0.5
 					if st.mirror:
 						u = 1.0 - u
-					verts.append((v[0] as Vector3) + n * DecalMesh.LIFT)
+					verts.append((v[0] as Vector3) + n * lift)
 					normals.append(n)
 					uvs.append(st.uv.position + Vector2(u, 0.5 - xy.y * 0.5) * st.uv.size)
 					paints.append(Vector2(st.c1, st.c2))
@@ -93,9 +94,10 @@ static func clip(poly: Array) -> Array:
 	return poly
 
 
-## One merged mesh for all `records` on the hull; `tally` — marks for tally decals
-static func build(hull: PlaneHull, records: Array[DecalRecord], tally: int) -> ArrayMesh:
+## One merged mesh for all `records` on the hull; `tally` — marks for tally decals; `lift` — distance off the skin
+static func build(hull: PlaneHull, records: Array[DecalRecord], tally: int, lift := LIFT) -> ArrayMesh:
 	var b := Builder.new()
+	b.lift = lift
 	for r in records:
 		for st in DecalLoadout.stamps(r, tally):
 			b.project(hull, st)
