@@ -190,6 +190,7 @@ func _set_state(s: String) -> void:
 	if s in ["menu", "campaign", "hangar"] and not _args.has("--aces"):
 		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
+	Settings.set_screen_cap(s != "playing")
 	if is_instance_valid(player) and menu != null:
 		player.visible = not (s == "menu" or s == "hangar" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
 	Engine.time_scale = base_ts
@@ -604,10 +605,17 @@ func streak_mult() -> float:
 	return run.streak_mult()
 
 
-## `Events.near_miss`: counts it (keeps the streak) and shows the "close call" text.
+var _near_text_ms := -100000   # when the last "close call" text went up (Time.get_ticks_msec)
+
+
+## `Events.near_miss`: counts it (keeps the streak) and shows the "close call" text. Kanta s13: three texts at
+## once stacked over the plane and hid it, so a new one waits 1.5 s after the last and stands clear of the plane
 func _on_near_miss(kind: StringName) -> void:
 	run.on_near_miss()
-	fx.text(player.global_position + Vector2(0, -50), "На волоске!" if kind == &"bullet" else "Ракета мимо!", Color(0.6, 0.95, 1.0))
+	var now := Time.get_ticks_msec()
+	if now - _near_text_ms >= 1500:
+		_near_text_ms = now
+		fx.text(player.global_position + Vector2(0, -85), "На волоске!" if kind == &"bullet" else "Ракета мимо!", Color(0.6, 0.95, 1.0))
 	sfx.play("near_miss", -16.0, 1.6)
 
 

@@ -197,8 +197,30 @@ func apply() -> void:
 		2:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
-	Engine.max_fps = FPS_LIMITS[fps_limit]
+	apply_fps()
 	apply_audio()
+
+
+## Frame cap outside a sortie (menu, hangar, pause, cards, results). s13 review: with vsync on and
+## no limit the GPU sat at 91–98 % in the menu and hangar too; 60 fps is plenty for screens.
+const SCREEN_FPS := 60
+## True while no sortie is being flown (Main._set_state); autotests keep running uncapped
+var screen_cap := false
+
+
+## Applies the player's fps limit; outside a sortie it is at most SCREEN_FPS.
+func apply_fps() -> void:
+	var lim: int = FPS_LIMITS[fps_limit]
+	if screen_cap and not OS.get_cmdline_user_args().has("--autotest"):
+		lim = SCREEN_FPS if lim == 0 else mini(lim, SCREEN_FPS)
+	Engine.max_fps = lim
+
+
+## Switches the screen cap when the game leaves or enters a sortie.
+func set_screen_cap(on: bool) -> void:
+	if on != screen_cap:
+		screen_cap = on
+		apply_fps()
 
 
 ## Язык: выбранный или по системе — русский для ru/uk/be/kk, иначе английский
