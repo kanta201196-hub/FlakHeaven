@@ -1460,6 +1460,9 @@ func _hangar_bench() -> void:
 	if OS.get_cmdline_user_args().has("--decalaudit"):
 		_decal_audit()
 		return
+	if _ds_path() != "":
+		_decal_shots()
+		return
 	if m.state != "hangar":
 		m.ui_click("menu_hangar")
 		for a in OS.get_cmdline_user_args():
@@ -2031,20 +2034,23 @@ func _db_screen(h3: Hangar3D, p: Vector3) -> Vector2:
 ## Every class, plane level and weapon tier in the hangar (tier 4 — the modernised weapons; «Грач» 2 gets its wing
 ## turret fairings with the turret tiers), then every battle model without and with level-5 module parts: DecalAuditRun
 ## places decals on each and prints DAUDIT lines; user://decal_audit.json keeps the problem cases. `--daudit=<key>`
-## audits only that plane («attacker_2»). The profile goes to a scratch file, removed at the end.
+## audits only that plane («attacker_2»), `--daudit-variants=t1,mod5` only those variants. The profile goes to a
+## scratch file, removed at the end.
 var _da_q: Array = []
 var _da_run: DecalAuditRun
 var _da_wait := 0
+var _da_tag := ""
 
 
 func _decal_audit() -> void:
 	if _da_run == null:
 		_da_run = DecalAuditRun.new()
-		Profile.path = "user://vis_daudit_profile.json"
 		var only := ""
 		for a in OS.get_cmdline_user_args():
 			if a.begins_with("--daudit="):
 				only = a.get_slice("=", 1)
+		_da_tag = "_" + only if only != "" else ""   # one plane per run: several runs can go side by side
+		Profile.path = "user://vis_daudit_profile%s.json" % _da_tag
 		for c in PlaneClasses.LIST:
 			for lv in [1, 2]:
 				if only != "" and only != "%s_%d" % [c, lv]:
@@ -2057,11 +2063,16 @@ func _decal_audit() -> void:
 					continue
 				for mods in [0, 5]:
 					_da_q.append(["battle", c, lv, mods])
+		for a in OS.get_cmdline_user_args():   # `--daudit-variants=t1,mod5`: only those variants
+			if a.begins_with("--daudit-variants="):
+				var vs := a.get_slice("=", 1).split(",")
+				_da_q = _da_q.filter(func(q: Array) -> bool:
+					return vs.has(("t%d" if q[0] == "hangar" else "mod%d") % q[3]))
 	if m.state != "hangar":
 		m.ui_click("menu_hangar")
 		return
 	if _da_q.is_empty():
-		_da_run.finish("user://decal_audit.json")
+		_da_run.finish("user://decal_audit%s.json" % _da_tag)
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(Profile.path))
 		print("VISUAL done")
 		m.get_tree().quit()
@@ -2095,3 +2106,114 @@ func _decal_audit() -> void:
 		_da_run.run_liveries(h3._model, key)
 		h3._apply_livery(h3._model, cur[1], cur[2])
 	_da_q.pop_front()
+
+
+# ---------- decal audit frames (--decalshots=<json>) ----------
+## Frames of chosen decals on the hangar model, for the audit's before/after review: the JSON (an absolute path) is a
+## list of shots {name, key, tier, recs: [DecalRecord dicts] or "presets", tally, view: [yaw offset, pitch offset,
+## distance]}. "presets" puts a picture on every preset spot on both sides. The camera looks at the first decal along
+## its normal, turned by the view offsets (presets: the whole plane from the left); the 3D view goes to
+## user://vis_daudit_<name>.png. The plane holds still (the editor's pose). The profile goes to a scratch file,
+## removed at the end.
+var _ds_q: Array = []
+var _ds_wait := 0
+var _ds_started := false
+
+
+func _ds_path() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--decalshots="):
+			return a.get_slice("=", 1)
+	return ""
+
+
+func _decal_shots() -> void:
+	if not _ds_started:
+		_ds_started = true
+		Profile.path = "user://vis_daudit_profile.json"
+		var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(_ds_path()))
+		if data is Array:
+			_ds_q = data
+		print("DSHOTS %d shots" % _ds_q.size())
+	if m.state != "hangar":
+		m.ui_click("menu_hangar")
+		return
+	if _ds_q.is_empty():
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(Profile.path))
+		print("VISUAL done")
+		m.get_tree().quit()
+		return
+	var sh: Dictionary = _ds_q[0]
+	var key := String(sh["key"])
+	var cls := key.get_slice("_", 0)
+	var lvl := int(key.get_slice("_", 1))
+	var tier := int(sh.get("tier", 1))
+	m.hangar_tab = "plane"
+	m.hangar_cls = cls
+	var h3 := Hangar3D.I
+	if h3 == null:
+		return
+	h3._cls = cls
+	h3.view_lvl = lvl
+	h3.weapon_tier = tier
+	h3.decal_mode = true
+	if h3._key != "%s_%d_%d_%s" % [cls, lvl, tier, Livery.current(cls)] or h3._model == null:
+		_ds_wait = 0
+		return
+	_ds_wait += 1
+	if _ds_wait == 3:
+		_ds_place(h3, sh, key)
+	if _ds_wait < 14:
+		return
+	h3.vp.get_texture().get_image().save_png("user://vis_daudit_%s.png" % String(sh["name"]))
+	print("DSHOTS saved %s" % String(sh["name"]))
+	_ds_wait = 2   # the next shot on the same model only changes the decals and the camera
+	_ds_q.pop_front()
+
+
+## Puts the shot's decals on the hangar model and aims the camera at the first one
+func _ds_place(h3: Hangar3D, sh: Dictionary, key: String) -> void:
+	var recs: Array[DecalRecord] = []
+	var presets := sh.get("recs") is String
+	if presets:
+		var hull := PlaneDecals.hull_of(h3._model)
+		var pics := {"nose": "shark_mouth", "number": DecalCatalog.NUMBER, "tally": "tally_air",
+			"fin": "skull_winged", "wing": "bolt"}
+		for spot: String in DecalPresets.NAMES:
+			for side in [-1, 1]:
+				var r := DecalPresets.record(hull, key, spot, side, String(pics[spot]))
+				if r != null:
+					if spot == "number":
+						r.text = "27"
+					recs.append(r)
+	else:
+		# "fit": the size the editor allows there (DecalPresets.fit_size; looked up by name, so the bench also
+		# runs on code from before the fit existed, for the "before" frames)
+		var ps: Script = load("res://scripts/decal_presets.gd")
+		var can_fit := bool(sh.get("fit", false)) and ps.get_script_method_list().any(
+			func(md: Dictionary) -> bool: return String(md["name"]) == "fit_size")
+		var fit_hull: PlaneHull = (load("res://scripts/plane_decals.gd") as Script).call("cursor_hull", h3._model) \
+				if can_fit else null
+		for d: Dictionary in sh["recs"]:
+			var r := DecalRecord.from_dict(d)
+			if r != null:
+				if can_fit:
+					r.size = float(ps.call("fit_size", fit_hull, r, int(sh.get("tally", 0))))
+				recs.append(r)
+	PlaneDecals.show(h3._model, key, recs, int(sh.get("tally", 0)))
+	var view: Array = sh.get("view", [0.0, 0.0, 0.0])
+	var mt := h3._model.global_transform
+	var tgt := Vector3.ZERO
+	var n := Vector3(0.0, 0.45, -1.0).normalized()
+	var size := 0.15
+	if not presets and not recs.is_empty():
+		tgt = recs[0].pos
+		n = recs[0].normal
+		size = recs[0].size
+	h3.focus = mt * tgt
+	var dir := (mt.basis * n).normalized()
+	Hangar3D.bench_pitch_min = -1.3
+	h3._yaw = atan2(dir.z, dir.x) + float(view[0])
+	h3._pitch = clampf(asin(clampf(dir.y, -1.0, 1.0)) + float(view[1]), -1.3, 1.3)
+	h3._dist = float(view[2]) if float(view[2]) > 0.0 else clampf(size * mt.basis.get_scale().x * 7.0, 0.2, 1.2)
+	h3._idle = 0.0
