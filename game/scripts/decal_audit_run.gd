@@ -63,6 +63,10 @@ func run_model(root: Node3D, model: Node3D, key: String, kind: String, variant: 
 				fairing_spots[key] = sp
 	print("DAUDIT model %s/%s/%s: scene %d triangles %s, hull %d (+%d extra), fairings %d" % [kind, key, variant,
 		scene.count(), str(tag_tris), hull.triangles(), hull.extra.triangles() if hull.extra != null else 0, fairings])
+	if OS.get_cmdline_user_args().has("--daudit-search"):
+		_search(root, model, scene, hull, glass, key, kind, variant)
+		PlaneDecals.show(model, key, none, 0)
+		return
 	var list := _cases(hull, glass, scene, model, key)
 	if not OS.get_cmdline_user_args().has("--daudit-raw"):   # the sizes the editor allows there (DecalEditor.hull)
 		for cs: Dictionary in list:
@@ -334,6 +338,37 @@ func _cases(hull: PlaneHull, glass: PlaneHull, scene: DecalAudit.Tris, model: No
 		var r := _free(hit)
 		out.append({"group": pr[0], "label": pr[1], "rec": r, "probe": [o, d]})
 	return out
+
+
+## Spot search (`--daudit-search`): every preset spot tried at places around its own (left side, its first picture)
+## and scored by the sum of its problem shares; prints `DAUDIT search` lines to pick a clear place from
+func _search(root: Node3D, model: Node3D, scene: DecalAudit.Tris, hull: PlaneHull, glass: PlaneHull, key: String,
+		kind: String, variant: String) -> void:
+	var spots: Dictionary = DecalPresets.SPOTS.get(key, {})
+	var only: PackedStringArray = []   # `--daudit-spots=number,tally`: just those spots
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--daudit-spots="):
+			only = a.get_slice("=", 1).split(",")
+	for spot: String in spots.keys():
+		if not only.is_empty() and not only.has(spot):
+			continue
+		var s: Array = spots[spot]
+		for dx: float in [-0.06, -0.03, 0.0, 0.03, 0.06]:
+			for dy: float in [-0.02, -0.01, 0.0, 0.01, 0.02]:
+				var at := [float(s[0]) + dx, float(s[1]) + dy, float(s[2])]
+				var r := DecalPresets.record(hull, key, spot, -1, String(SPOT_PICS[spot][0]).get_slice(":", 0), at)
+				if r == null:
+					continue
+				if String(SPOT_PICS[spot][0]).contains(":"):
+					r.text = String(SPOT_PICS[spot][0]).get_slice(":", 1)
+				var res := _one(root, model, scene, hull, glass, key, {"group": "search", "label": spot, "rec": r})
+				var score := 0.0
+				var txt := ""
+				for p in DecalAudit.problems(res):
+					score += float(res[p])
+					txt += " %s=%.3f" % [p, float(res[p])]
+				print("DAUDIT search %s/%s/%s %s %.3f %.3f score=%.3f%s" % [kind, key, variant, spot, at[0], at[1],
+					score, txt])
 
 
 ## A preset record with picture `pic` («number:888» — a number with those digits)

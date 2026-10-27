@@ -9,7 +9,7 @@ const NAMES := ["nose", "number", "tally", "fin", "wing"]
 ## Spots in model axes (nose +X, up +Y, left wing −Z, length 1). A side spot is [x, y, size], shot from the chosen
 ## side; the tally x is its front end; a wing spot is [x, |z|, size], shot from above onto the chosen wing.
 const SPOTS := {
-	"fighter_1": {"nose": [0.33, -0.032, 0.03], "tally": [0.255, -0.022, 0.011], "number": [0.03, -0.035, 0.026],
+	"fighter_1": {"nose": [0.33, -0.032, 0.03], "tally": [0.255, -0.012, 0.011], "number": [0.06, -0.015, 0.026],
 		"fin": [-0.407, 0.064, 0.035], "wing": [-0.24, 0.09, 0.045]},
 	"fighter_2": {"nose": [0.405, -0.036, 0.026], "tally": [0.33, -0.008, 0.01], "number": [0.02, -0.052, 0.016],
 		"fin": [-0.318, 0.058, 0.03], "wing": [-0.2, 0.16, 0.05]},
@@ -19,7 +19,7 @@ const SPOTS := {
 		"fin": [-0.392, 0.08, 0.04], "wing": [-0.18, 0.18, 0.05]},
 	"bomber_1": {"nose": [0.38, -0.066, 0.026], "tally": [0.33, -0.053, 0.01], "number": [-0.2, -0.058, 0.03],
 		"fin": [-0.404, 0.087, 0.045], "wing": [0.0, 0.12, 0.05]},
-	"bomber_2": {"nose": [0.405, -0.046, 0.024], "tally": [0.36, -0.025, 0.01], "number": [0.23, -0.026, 0.016],
+	"bomber_2": {"nose": [0.405, -0.046, 0.024], "tally": [0.33, -0.005, 0.01], "number": [0.23, -0.036, 0.016],
 		"fin": [-0.378, 0.08, 0.045], "wing": [-0.12, 0.2, 0.05]},
 }
 const NUMBER_TEXT := "01"   ## digits a number preset starts with
@@ -28,12 +28,13 @@ const SNAP := 0.03          ## how far off the skin the mirrored copy looks for 
 
 ## A record of picture `id` at preset `spot` of plane `key` on `side` (−1 left, +1 right); null for an unknown
 ## plane or spot, or when the ray misses the skin. Directional pictures on the nose and the tally are mirrored on
-## the right side so they face forward on both sides; a number is never mirrored.
-static func record(hull: PlaneHull, key: String, spot: String, side: int, id: String) -> DecalRecord:
+## the right side so they face forward on both sides; a number is never mirrored. `at` — [x, y or z, size] in
+## place of the spot's own (the decal audit's spot search tries places around it).
+static func record(hull: PlaneHull, key: String, spot: String, side: int, id: String, at: Array = []) -> DecalRecord:
 	var spots: Dictionary = SPOTS.get(key, {})
 	if not spots.has(spot) or hull == null or not DecalCatalog.has_image(id):
 		return null
-	var s: Array = spots[spot]
+	var s: Array = at if at.size() == 3 else spots[spot]
 	var sd := 1.0 if side >= 0 else -1.0
 	var hit: Array
 	if spot == "wing":
