@@ -137,13 +137,29 @@ def main() -> int:
         coef, *_ = np.linalg.lstsq(A, UV[fit], rcond=None)
         res = np.abs(A @ coef - UV[fit]).max(0)
         tgt = moved & (Q[:, 2] * sd >= 0.0)
-        UV[tgt] = np.c_[Q[tgt, 0], Q[tgt, 2], np.ones(int(tgt.sum()))] @ coef
+        # mirrored about XA into the fitted skin: extrapolated past FIT_X the fit leaves the UV island and lands
+        # in the dark gutter of the atlas
+        xm = np.clip(2.0 * XA - Q[tgt, 0], FIT_X[0], FIT_X[1])
+        UV[tgt] = np.c_[xm, Q[tgt, 2], np.ones(int(tgt.sum()))] @ coef
         print("  side %+d: UV fit on %d belly vertices, max residual %s, %d vertices remapped"
               % (sd, int(fit.sum()), res.round(4), int(tgt.sum())))
     local = Q @ Minv[:3, :3].T + Minv[:3, 3]
     write_accessor(g, at["POSITION"], local)
     write_accessor(g, at["NORMAL"], (N @ M[:3, :3]) / np.linalg.norm(N @ M[:3, :3], axis=1, keepdims=True))
     write_accessor(g, at["TEXCOORD_0"], UV)
+    # the doors' inner faces and the bay walls faced into the bay; laid onto the belly they face up into the hull
+    # and are culled, which leaves a dark hole: every flattened triangle is wound to face down like the belly
+    a, b, c = Q[T[:, 0]], Q[T[:, 1]], Q[T[:, 2]]
+    fn = np.cross(b - a, c - a)
+    if np.linalg.det(M[:3, :3]) < 0:
+        fn = -fn
+    flat_t = moved[T].all(1)
+    up = flat_t & (fn[:, 1] > 0)
+    T2 = T.copy()
+    T2[up] = T2[up][:, [0, 2, 1]]
+    print("  %d flattened triangles, %d turned to face down" % (int(flat_t.sum()), int(up.sum())))
+    if up.any():
+        g.set_indices(0, 0, T2)
     g.save(dst)
     print("saved", dst)
     return 0
