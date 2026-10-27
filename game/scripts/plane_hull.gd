@@ -48,6 +48,27 @@ static func of(model: Node3D) -> PlaneHull:
 	return h
 
 
+## The canopy glass of `model`'s body mesh (its surfaces with the «glass» material), cached like the skin; an
+## empty hull when the model has none. The decal cursor stops on it (`raycast_clear`).
+static func glass_of(model: Node3D) -> PlaneHull:
+	var mi := body(model)
+	if mi == null:
+		return null
+	if _glass_cache.has(mi.mesh):
+		return _glass_cache[mi.mesh]
+	var h := PlaneHull.new()
+	var xf := rel_transform(mi, model)
+	for si in mi.mesh.get_surface_count():
+		var m := mi.mesh.surface_get_material(si)   # the glass is a ShaderMaterial (canopy_glass.tres)
+		if m != null and String(m.resource_name) == "glass":
+			_append_surface(h, mi.mesh, si, xf)
+	_glass_cache[mi.mesh] = h
+	return h
+
+
+static var _glass_cache := {}   # body Mesh → its glass as a PlaneHull
+
+
 ## The body mesh of `model`: the first mesh with a textured first surface that is not a moving or added part
 static func body(model: Node3D) -> MeshInstance3D:
 	for c in model.find_children("*", "MeshInstance3D", true, false):
@@ -77,19 +98,24 @@ static func from_meshes(meshes: Array[MeshInstance3D], model: Node3D, textured_o
 				continue
 			if h.tex == null and m != null:
 				h.tex = m.albedo_texture
-			var arr := mi.mesh.surface_get_arrays(si)
-			var vv: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
-			var nv: PackedVector3Array = arr[Mesh.ARRAY_NORMAL] if arr[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
-			var tv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
-			var iv: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
-			var n := iv.size() if iv.size() > 0 else vv.size()
-			n -= n % 3
-			for i in n:
-				var k := iv[i] if iv.size() > 0 else i
-				h.pos.append(xf * vv[k])
-				h.nrm.append((xf.basis * (nv[k] if nv.size() > k else Vector3.UP)).normalized())
-				h.uv.append(tv[k] if tv.size() > k else Vector2.ZERO)
+			_append_surface(h, mi.mesh, si, xf)
 	return h
+
+
+## Appends the triangles of surface `si` of `mesh`, moved by `xf` into model axes
+static func _append_surface(h: PlaneHull, mesh: Mesh, si: int, xf: Transform3D) -> void:
+	var arr := mesh.surface_get_arrays(si)
+	var vv: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var nv: PackedVector3Array = arr[Mesh.ARRAY_NORMAL] if arr[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+	var tv: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
+	var iv: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	var n := iv.size() if iv.size() > 0 else vv.size()
+	n -= n % 3
+	for i in n:
+		var k := iv[i] if iv.size() > 0 else i
+		h.pos.append(xf * vv[k])
+		h.nrm.append((xf.basis * (nv[k] if nv.size() > k else Vector3.UP)).normalized())
+		h.uv.append(tv[k] if tv.size() > k else Vector2.ZERO)
 
 
 ## This hull plus `more` skin, without touching the cached hull (other planes share it): a view that shares the
@@ -188,6 +214,18 @@ func raycast(origin: Vector3, dir: Vector3, max_len := 3.0) -> Array:
 		var e := extra.raycast(origin, dir, max_len)
 		if e.size() == 2 and (hit.is_empty() or origin.distance_to(e[0]) < origin.distance_to(hit[0])):
 			hit = e
+	return hit
+
+
+## `raycast`, but [] when `blocker` (the canopy glass) is hit first: the cursor must not reach the skin under the
+## glass, where a decal would be hidden. A null blocker gives the plain raycast.
+func raycast_clear(origin: Vector3, dir: Vector3, max_len: float, blocker: PlaneHull) -> Array:
+	var hit := raycast(origin, dir, max_len)
+	if hit.is_empty() or blocker == null:
+		return hit
+	var b := blocker.raycast(origin, dir, max_len)
+	if b.size() == 2 and origin.distance_to(b[0]) < origin.distance_to(hit[0]) - 0.001:
+		return []
 	return hit
 
 

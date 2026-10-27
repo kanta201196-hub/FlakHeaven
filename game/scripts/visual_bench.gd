@@ -1966,6 +1966,15 @@ func _decal_bench() -> void:
 			h3.decal_cursor = _db_screen(h3, r.pos)
 			h3.decal_pad = true
 			print("DECALEDIT cursor hit: %s" % str(h3.decal_ray(h3.decal_cursor)))
+			var glass := PlaneHull.glass_of(h3._model)
+			var gt := -1   # the highest upward-facing canopy triangle: shoot straight down through it
+			for t in (glass.triangles() if glass != null else 0):
+				if glass.nrm[t * 3].y > 0.8 and (gt < 0 or glass.pos[t * 3].y > glass.pos[gt * 3].y):
+					gt = t
+			if gt >= 0:
+				var gc := (glass.pos[gt * 3] + glass.pos[gt * 3 + 1] + glass.pos[gt * 3 + 2]) / 3.0 + Vector3.UP * 0.3
+				print("DECALEDIT ray down through the canopy: %s, without the glass: %d" % [
+					str(hull.raycast_clear(gc, Vector3.DOWN, 0.6, glass)), hull.raycast(gc, Vector3.DOWN, 0.6).size()])
 		"cursor":   # → placed by a mouse click, plus a number and a tally from the presets; the first one selected
 			h3.decal_press.emit(h3.decal_cursor, true)
 			h3.decal_press.emit(h3.decal_cursor, false)

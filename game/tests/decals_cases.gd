@@ -29,6 +29,7 @@ func run() -> Array:
 	_test_tally()
 	_test_unlocks()
 	_test_editor()
+	_test_glass()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
 	return [_checks, _failed]
 
@@ -434,3 +435,18 @@ func _test_editor() -> void:
 		e.place(hit)
 	_check(e.pick("bolt", true) == "cap" and not e.place(hit), "a full plane takes no more decals")
 	_check(not e.other_side(h), "nor a mirror copy")
+
+
+func _test_glass() -> void:
+	# skin: a plate at y 0 facing up; glass: a small plate 5 cm above its middle (a canopy over the cockpit)
+	var b := _box(Vector3(0, -0.05, 0), Vector3(0.5, 0.05, 0.5))
+	var skin := PlaneHull.from_triangles(b[0], b[1])
+	var g := _box(Vector3(0, 0.05, 0), Vector3(0.05, 0.002, 0.05))
+	var glass := PlaneHull.from_triangles(g[0], g[1])
+	var through := skin.raycast_clear(Vector3(0, 1, 0), Vector3.DOWN, 2.0, glass)
+	_check(through.is_empty(), "a ray through the glass finds no skin (nothing is placed under a canopy)")
+	var beside := skin.raycast_clear(Vector3(0.3, 1, 0.3), Vector3.DOWN, 2.0, glass)
+	_check(beside.size() == 2 and is_equal_approx((beside[0] as Vector3).y, 0.0), "beside the glass the skin is hit")
+	var none := skin.raycast_clear(Vector3(0.3, 1, 0.3), Vector3.DOWN, 2.0, null)
+	_check(none.size() == 2, "without glass it is a plain raycast")
+

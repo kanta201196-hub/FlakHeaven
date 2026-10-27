@@ -1000,7 +1000,8 @@ func model_key() -> String:
 	return "%s_%d" % [_cls, _built_lvl]
 
 
-## The skin under screen point `p` (ctrl coordinates): [position, normal] in model axes, [] off the plane
+## The skin under screen point `p` (ctrl coordinates): [position, normal] in model axes, [] off the plane or on the
+## canopy glass
 func decal_ray(p: Vector2) -> Array:
 	if _model == null or not is_instance_valid(_model) or not rect.has_point(p) or rect.size.x < 1.0:
 		return []
@@ -1017,7 +1018,7 @@ func decal_ray(p: Vector2) -> Array:
 	if disc < 0.0:
 		return []
 	var t0 := maxf(0.0, -b - sqrt(disc))
-	return hull.raycast(o + d * t0, d, 2.0 * DECAL_REACH)
+	return hull.raycast_clear(o + d * t0, d, 2.0 * DECAL_REACH, PlaneHull.glass_of(_model))   # not under the canopy
 
 
 const DECAL_REACH := 0.8   ## model units round the centre where the cursor ray looks for skin
