@@ -7881,3 +7881,256 @@ msgstr "Clay and Dust"
 #: game/scripts/livery.gd:94
 msgid "Зимняя побелка"
 msgstr "Winter Whitewash"
+
+#: game/scripts/decal_edit_input.gd:212 game/scripts/decal_edit_input.gd:216
+msgid "Наведите на самолёт"
+msgstr "Point at the plane"
+
+#: game/scripts/decal_edit_input.gd:216 game/scripts/decal_edit_input.gd:281 game/scripts/decal_edit_input.gd:298 game/scripts/decal_edit_input.gd:317
+#, c-format
+msgid "Не больше %d знаков на самолёт"
+msgstr "No more than %d decals per plane"
+
+#: game/scripts/decal_edit_input.gd:279
+#, c-format
+msgid "Этот знак ещё закрыт: %s"
+msgstr "This decal is still locked: %s"
+
+#: game/scripts/decal_edit_input.gd:295
+msgid "Сначала выберите картинку"
+msgstr "Pick a picture first"
+
+#: game/scripts/decal_edit_input.gd:298
+msgid "Сюда этот самолёт знак не берёт"
+msgstr "This plane has no room for it there"
+
+#: game/scripts/decal_edit_input.gd:317
+msgid "Сначала выберите знак на самолёте"
+msgstr "Select a decal on the plane first"
+
+#: game/scripts/hud_decals.gd:15
+msgid "Крылатый череп"
+msgstr "Winged skull"
+
+#: game/scripts/hud_decals.gd:15
+msgid "Череп с ключами"
+msgstr "Skull and wrenches"
+
+#: game/scripts/hud_decals.gd:15
+msgid "Огненный череп"
+msgstr "Flaming skull"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Молния"
+msgstr "Lightning"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Туз пик"
+msgstr "Ace of spades"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Кости"
+msgstr "Dice"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Шевроны"
+msgstr "Chevrons"
+
+#: game/scripts/hud_decals.gd:16
+msgid "Солнце"
+msgstr "Sun"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Оса"
+msgstr "Wasp"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Грач"
+msgstr "Rook"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Кит"
+msgstr "Whale"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Чёрный кот"
+msgstr "Black cat"
+
+#: game/scripts/hud_decals.gd:17
+msgid "Акулья пасть"
+msgstr "Shark mouth"
+
+#: game/scripts/hud_decals.gd:18
+msgid "Глаз"
+msgstr "Eye"
+
+#: game/scripts/hud_decals.gd:18
+msgid "Горы"
+msgstr "Peaks"
+
+#: game/scripts/hud_decals.gd:18 game/scripts/hud_decals.gd:22
+msgid "Номер"
+msgstr "Number"
+
+#: game/scripts/hud_decals.gd:18
+msgid "Счёт: воздух"
+msgstr "Tally: air"
+
+#: game/scripts/hud_decals.gd:18
+msgid "Счёт: земля"
+msgstr "Tally: ground"
+
+#: game/scripts/hud_decals.gd:19
+msgid "Счёт: бомбы"
+msgstr "Tally: bombs"
+
+#: game/scripts/hud_decals.gd:22
+msgid "Нос"
+msgstr "Nose"
+
+#: game/scripts/hud_decals.gd:22
+msgid "Счёт"
+msgstr "Tally"
+
+#: game/scripts/hud_decals.gd:22
+msgid "Киль"
+msgstr "Fin"
+
+#: game/scripts/hud_decals.gd:67
+#, c-format
+msgid "1 вылет — %s"
+msgstr "1 sortie — %s"
+
+#: game/scripts/hud_decals.gd:70
+#, c-format
+msgid "экипаж ур. %d"
+msgstr "crew Lv. %d"
+
+#: game/scripts/hud_decals.gd:72
+msgid "первая пройденная операция"
+msgstr "first operation cleared"
+
+#: game/scripts/hud_decals.gd:75
+msgid "первая эвакуация"
+msgstr "first evacuation"
+
+#: game/scripts/hud_decals.gd:77
+#, c-format
+msgid "%d вылетов"
+msgstr "%d sorties"
+
+#: game/scripts/hud_decals.gd:79
+msgid "первый сбитый ас"
+msgstr "first enemy ace downed"
+
+#: game/scripts/hud_decals.gd:81
+msgid "первая сбитая «Крепость»"
+msgstr "first \"Fortress\" downed"
+
+#: game/scripts/hud_decals.gd:95
+msgid "ЗНАКИ НА САМОЛЁТЕ"
+msgstr "PLANE DECALS"
+
+#: game/scripts/hud_decals.gd:111
+msgid "Геймпад: стик — курсор, A — поставить / взять, B — снять выбор, LT / RT — размер, LB / RB — поворот, X — отразить, Y — цвет, крестовина — панель, правый стик — вид"
+msgstr "Gamepad: stick — cursor, A — place / pick up, B — deselect, LT / RT — size, LB / RB — rotate, X — mirror, Y — paint, d-pad — panel, right stick — view"
+
+#: game/scripts/hud_decals.gd:112
+msgid "ЛКМ — поставить / взять и тащить, колесо — размер, Q / E — поворот (Shift — точно), F — отразить, Del — удалить, ПКМ — вращать вид"
+msgstr "LMB — place / pick up and drag, wheel — size, Q / E — rotate (Shift — fine), F — mirror, Del — delete, RMB — turn the view"
+
+#: game/scripts/hud_decals.gd:137
+msgid "Порядок: нижние строки лежат поверх"
+msgstr "Order: lower rows lie on top"
+
+#: game/scripts/hud_decals.gd:140
+msgid "Пока пусто: выберите картинку справа и щёлкните по самолёту."
+msgstr "Nothing yet: pick a picture on the right and click on the plane."
+
+#: game/scripts/hud_decals.gd:186
+#, c-format
+msgid "откроется: %s"
+msgstr "unlocks: %s"
+
+#: game/scripts/hud_decals.gd:196
+msgid "Готовое место (для выбранной картинки)"
+msgstr "Preset spot (for the picked picture)"
+
+#: game/scripts/hud_decals.gd:202
+msgid "Л"
+msgstr "L"
+
+#: game/scripts/hud_decals.gd:202
+msgid "П"
+msgstr "R"
+
+#: game/scripts/hud_decals.gd:213
+#, c-format
+msgid "Цвет %d"
+msgstr "Paint %d"
+
+#: game/scripts/hud_decals.gd:233
+msgid "Цифры"
+msgstr "Digits"
+
+#: game/scripts/hud_decals.gd:240
+msgid "+ цифра"
+msgstr "+ digit"
+
+#: game/scripts/hud_decals.gd:241
+msgid "− цифра"
+msgstr "− digit"
+
+#: game/scripts/hud_decals.gd:245
+#, c-format
+msgid "Счёт побед класса: %d"
+msgstr "Class kill tally: %d"
+
+#: game/scripts/hud_decals.gd:247
+#, c-format
+msgid "(в ангаре для примера %d)"
+msgstr "(the hangar shows %d as an example)"
+
+#: game/scripts/hud_decals.gd:249
+msgid "Отметка — за каждого сбитого аса и «Крепость»"
+msgstr "One mark for every enemy ace and \"Fortress\" downed"
+
+#: game/scripts/hud_decals.gd:257
+msgid "↺ поворот"
+msgstr "↺ rotate"
+
+#: game/scripts/hud_decals.gd:258
+msgid "↻ поворот"
+msgstr "↻ rotate"
+
+#: game/scripts/hud_decals.gd:259
+msgid "Меньше"
+msgstr "Smaller"
+
+#: game/scripts/hud_decals.gd:260
+msgid "Больше"
+msgstr "Larger"
+
+#: game/scripts/hud_decals.gd:262
+msgid "Отразить"
+msgstr "Mirror"
+
+#: game/scripts/hud_decals.gd:264
+msgid "На другой борт"
+msgstr "Other side"
+
+#: game/scripts/hud_decals.gd:265
+msgid "Удалить"
+msgstr "Delete"
+
+#: game/scripts/hud_hangar.gd:82
+msgid "Щёлкните по самолёту — поставить знак; правая кнопка — вращение"
+msgstr "Click on the plane to place a decal; right button turns the view"
+
+#: game/scripts/hud_hangar.gd:130
+msgid "‹ Знаки"
+msgstr "‹ Decals"
+
+#: game/scripts/hud_hangar.gd:130
+msgid "Знаки ›"
+msgstr "Decals ›"

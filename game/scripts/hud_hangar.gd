@@ -7,6 +7,8 @@ extends HudKit
 
 ## Drawer of the «НАГРАДЫ» tab (created on first use)
 var _medals: HudMedals
+## Decal editor panel (created on first use)
+var _decals: HudDecals
 
 func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.05, 0.94))
@@ -75,7 +77,16 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	var dy := vh - 330.0
 	var vr := Rect2(lx + 8, area.position.y + 8, lw - 16, vh)
 	ctrl.draw_texture_rect(h3.show_plane(c, vr), vr, false)
-	_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
+	var editing := Main.I.decal_edit != null
+	if editing:
+		_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Щёлкните по самолёту — поставить знак; правая кнопка — вращение", 14, Color(0.85, 0.88, 0.95))
+		if h3.decal_pad and vr.has_point(h3.decal_cursor):   # the gamepad cursor
+			var cp := h3.decal_cursor
+			for d: Vector2 in [Vector2(1, 0), Vector2(0, 1)]:
+				ctrl.draw_line(cp - d * 14, cp + d * 14, Color(0, 0, 0, 0.7), 4.0)
+				ctrl.draw_line(cp - d * 14, cp + d * 14, Color.WHITE, 2.0)
+	else:
+		_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
 	# тест 3.5-s8: показ механизации — закрылки и предкрылки, створки отсека, турели (Hangar3D / HangarAnim)
 	var mr := Rect2(vr.end.x - 196, vr.position.y + 8, 188, 30)
 	var mon := h3.mech_demo
@@ -112,6 +123,12 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_text(Vector2(tr2.position.x, tr2.position.y + 21), (Loc.t("ур. %d") % [1, 3, 5][ti]) if ti < 3 else Loc.t("модерниз."), 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
 		h3.tier_rects.append([tr2, ti + 1])
 	_hg_livery(c, lx, area.position.y + dy + 432)
+	# decal editor (spec 2026-10-27-plane-decals-design.md §6): opens in place of the node cards
+	var dr := Rect2(lx + 556, area.position.y + dy + 432, lw - 580, 30)
+	ctrl.draw_rect(dr, Menu.C_AMBER if editing else Color(1, 1, 1, 0.08))
+	ctrl.draw_rect(dr, Menu.C_AMBER, false, 1.0)
+	_text(Vector2(dr.position.x, dr.position.y + 21), Loc.t("‹ Знаки") if editing else Loc.t("Знаки ›"), 15, Color(0.08, 0.07, 0.05) if editing else Color(0.95, 0.9, 0.75), HORIZONTAL_ALIGNMENT_CENTER, dr.size.x)
+	_buttons.append([dr, "hg:dc:close" if editing else "hg:dc:open"])
 	var y := area.position.y + dy + 486.0
 	if bought:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
@@ -132,6 +149,11 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	var rx := lx + lw + 30.0
 	var rw := area.size.x - lw - 30.0
 	var yy := area.position.y
+	if editing:
+		if _decals == null:
+			_decals = HudDecals.new(ctrl, _buttons)
+		_decals.draw(Main.I, Rect2(rx, yy, rw, area.size.y))
+		return
 	for id in Profile.NODE_ORDER:
 		var nd: Dictionary = Profile.NODES[id]
 		var lv2 := Profile.node(c, id, vl)
