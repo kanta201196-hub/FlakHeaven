@@ -39,6 +39,8 @@ static func run_counters(m: Main, outcome: String) -> Dictionary:
 	}
 	for k in m.medal_run:
 		r[k] = int(r.get(k, 0)) + int(m.medal_run[k])
+	# the class's kill tally on its decals (Kanta 27.10, option A): rival aces and «Крепости» downed by this class
+	r["tally_" + m.cls_id] = int(m.run.bosses_killed) + int(m.medal_run.get("fortresses", 0))
 	if evac and bool(m.op_result.get("done", false)):
 		r["op_" + String(Campaign.op()["id"])] = 1
 	if Campaign.flag("grom_free"):

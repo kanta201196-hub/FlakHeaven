@@ -491,6 +491,16 @@ func set_decals(c: String, lv: int, list: Array[DecalRecord]) -> void:
 	cls(c)["decals%d" % clampi(lv, 1, 2)] = DecalLoadout.to_save(lo)
 
 
+## True when decal picture `id` may go on a plane of class `c` (DecalUnlocks: start set or a milestone reached)
+func decal_open(id: String, c: String) -> bool:
+	return DecalUnlocks.is_open(id, c, medal_counters(), crew_lvl(c))
+
+
+## Kill tally marks of class `c` on its decals: rival aces and «Крепости» this class downed
+func decal_tally(c: String) -> int:
+	return DecalLoadout.tally_of(medal_counters(), c)
+
+
 func set_livery(c: String, id: String) -> void:
 	cls(c)["livery"] = id
 	save()

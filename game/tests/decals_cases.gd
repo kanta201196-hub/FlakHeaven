@@ -22,6 +22,12 @@ func run() -> Array:
 	_test_projection()
 	_test_profile_round_trip()
 	_test_old_profile()
+	_test_hull()
+	_test_extra_hull()
+	_test_mirror()
+	_test_presets()
+	_test_tally()
+	_test_unlocks()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
 	return [_checks, _failed]
 
@@ -150,7 +156,7 @@ func _test_projection() -> void:
 	r.size = 0.04
 	r.normal = Vector3(0, 0, -1)
 	var out := DecalMesh.Builder.new()
-	var hull := DecalMesh.Hull.from_triangles(pos, nrm)
+	var hull := PlaneHull.from_triangles(pos, nrm)
 	for st: DecalStamp in DecalLoadout.stamps(r, 0):
 		out.project(hull, st)
 	_check(out.verts.size() >= 3 and out.verts.size() % 3 == 0, "the decal cuts whole triangles from the skin")
@@ -204,3 +210,151 @@ func _test_old_profile() -> void:
 	_check(q.decals("bomber", 1).is_empty() and int(q.data["parts"]) == 5, "an old profile loads, no decals")
 	_check(q.decals("attacker", 1).size() == 1, "broken decal entries are dropped on load, valid ones kept")
 	q.free()
+
+
+## Triangles of an axis-aligned box centred at `c` with half sizes `h`, normals outward
+func _box(c: Vector3, h: Vector3) -> Array:
+	var pos := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	for axis in 3:
+		for sgn: float in [-1.0, 1.0]:
+			var n := Vector3.ZERO
+			n[axis] = sgn
+			var u := Vector3.ZERO
+			u[(axis + 1) % 3] = h[(axis + 1) % 3]
+			var v := Vector3.ZERO
+			v[(axis + 2) % 3] = h[(axis + 2) % 3]
+			var f := c + n * h[axis]
+			for p: Vector3 in [f - u - v, f + u - v, f + u + v, f - u - v, f + u + v, f - u + v]:
+				pos.append(p)
+				nrm.append(n)
+	return [pos, nrm]
+
+
+func _test_hull() -> void:
+	# a wide floor at y 0 and a small deck at y 0.1 above its middle, both facing up
+	var b1 := _box(Vector3(0, -0.05, 0), Vector3(0.5, 0.05, 0.5))
+	var b2 := _box(Vector3(0, 0.05, 0), Vector3(0.05, 0.05, 0.05))
+	var pos: PackedVector3Array = (b1[0] as PackedVector3Array) + (b2[0] as PackedVector3Array)
+	var nrm: PackedVector3Array = (b1[1] as PackedVector3Array) + (b2[1] as PackedVector3Array)
+	var h := PlaneHull.from_triangles(pos, nrm)
+	_check(h.triangles() == 24, "the hull keeps every triangle")
+	var top := h.top_hit(h.in_rect_xz(Rect2(-0.01, -0.01, 0.02, 0.02)), 0.0, 0.0)
+	_check(not top.is_empty() and is_equal_approx(float(top["y"]), 0.1), "top_hit finds the highest skin (the deck)")
+	var side := h.top_hit(h.in_rect_xz(Rect2(0.29, 0.29, 0.02, 0.02)), 0.3, 0.3)
+	_check(not side.is_empty() and is_equal_approx(float(side["y"]), 0.0), "beside the deck top_hit finds the floor")
+	_check(h.in_rect_xz(Rect2(2.0, 2.0, 0.1, 0.1)).is_empty(), "no triangles far off the hull")
+	var hit := h.raycast(Vector3(0.0, 1.0, 0.0), Vector3.DOWN)
+	_check(hit.size() == 2 and is_equal_approx((hit[0] as Vector3).y, 0.1), "a ray from above hits the deck first")
+	_check(hit.size() == 2 and (hit[1] as Vector3).is_equal_approx(Vector3.UP), "the hit carries the skin normal")
+	_check(h.raycast(Vector3(0.3, -1.0, 0.3), Vector3.UP).size() == 2, "a ray from below hits the floor's bottom face")
+	var inside := h.raycast(Vector3(0.3, -0.05, 0.3), Vector3(0, 0, 1))
+	_check(inside.size() == 0, "from inside the hull every face looks away: no hit")
+
+
+func _test_extra_hull() -> void:
+	# a skin at z 0 facing −Z and a small fairing plate 1 cm in front of it (like a turret fairing on a wing)
+	var pos := PackedVector3Array([Vector3(-0.1, -0.1, 0), Vector3(0.1, 0.1, 0), Vector3(0.1, -0.1, 0),
+		Vector3(-0.1, -0.1, 0), Vector3(-0.1, 0.1, 0), Vector3(0.1, 0.1, 0)])
+	var nrm := PackedVector3Array()
+	for i in 6:
+		nrm.append(Vector3(0, 0, -1))
+	var fpos := PackedVector3Array()
+	for p in pos:
+		fpos.append(Vector3(p.x * 0.05, p.y * 0.05, -0.01))
+	var base := PlaneHull.from_triangles(pos, nrm)
+	var r := DecalRecord.new()
+	r.id = "bolt"
+	r.size = 0.04
+	r.normal = Vector3(0, 0, -1)
+	var list: Array[DecalRecord] = [r]
+	var plain := DecalMesh.build(base, list, 0)
+	var with := PlaneHull.from_triangles(pos, nrm)
+	with.extra = PlaneHull.from_triangles(fpos, nrm)
+	var both := DecalMesh.build(with, list, 0)
+	_check(plain != null and both != null and both.surface_get_array_len(0) > plain.surface_get_array_len(0),
+		"the decal also covers the fairing")
+	var front := false
+	if both != null:
+		for v: Vector3 in both.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+			front = front or v.z < -0.0095
+	_check(front, "the fairing's piece lies on the fairing, in front of the skin")
+	var hit := with.raycast(Vector3(0, 0, -1), Vector3(0, 0, 1))
+	_check(hit.size() == 2 and is_equal_approx((hit[0] as Vector3).z, -0.01), "the cursor ray stops on the fairing")
+	var miss := with.raycast(Vector3(0.05, 0.05, -1), Vector3(0, 0, 1))
+	_check(miss.size() == 2 and is_equal_approx((miss[0] as Vector3).z, 0.0), "beside the fairing the ray reaches the skin")
+
+
+func _reflect(v: Vector3) -> Vector3:
+	return Vector3(v.x, v.y, -v.z)
+
+
+func _test_mirror() -> void:
+	var r := _sample()
+	r.pos = Vector3(0.3, -0.03, -0.05)
+	r.normal = Vector3(0.1, -0.2, -1.0).normalized()
+	r.angle = 0.6
+	var m := DecalPresets.mirrored(r, null)
+	_check(m != null and m.pos.is_equal_approx(Vector3(0.3, -0.03, 0.05)), "the copy sits on the other side")
+	if m == null:
+		return
+	_check(m.normal.is_equal_approx(_reflect(r.normal)), "the copy's normal is reflected")
+	var b := r.basis_vectors()
+	var bm := m.basis_vectors()
+	_check(bm[1].is_equal_approx(_reflect(b[1])), "the copy's top points the same way (reflected)")
+	_check(bm[0].is_equal_approx(-_reflect(b[0])) and m.mirror != r.mirror, "the copy is a mirror image")
+	_check(m.id == r.id and m.size == r.size and m.c1 == r.c1 and m.c2 == r.c2, "picture, size and paints are kept")
+	_check(DecalPresets.mirrored(m, null).pos.is_equal_approx(r.pos), "mirroring twice gives the original")
+
+
+func _test_presets() -> void:
+	for key: String in DecalPresets.SPOTS:
+		var spots: Dictionary = DecalPresets.SPOTS[key]
+		var ok := true
+		for spot: String in DecalPresets.NAMES:
+			ok = ok and spots.has(spot) and float(spots[spot][2]) >= DecalRecord.SIZE_MIN \
+				and float(spots[spot][2]) <= DecalRecord.SIZE_MAX
+		_check(ok, "%s has every preset with a valid size" % key)
+	var b := _box(Vector3.ZERO, Vector3(0.5, 0.2, 0.25))
+	var h := PlaneHull.from_triangles(b[0], b[1])
+	var right := DecalPresets.record(h, "fighter_1", "nose", 1, "shark_mouth")
+	_check(right != null and right.normal.is_equal_approx(Vector3(0, 0, 1)) and is_equal_approx(right.pos.z, 0.25),
+		"the nose preset lands on the right side's skin")
+	_check(right != null and right.mirror, "a side picture is mirrored on the right side, so it faces the nose")
+	var left := DecalPresets.record(h, "fighter_1", "nose", -1, "shark_mouth")
+	_check(left != null and not left.mirror and left.normal.is_equal_approx(Vector3(0, 0, -1)), "and not on the left")
+	var wing := DecalPresets.record(h, "fighter_1", "wing", 1, "bolt")
+	_check(wing != null and wing.normal.is_equal_approx(Vector3.UP) and wing.pos.z > 0.0, "the wing preset lies on top, right wing")
+	var num := DecalPresets.record(h, "fighter_1", "number", 1, "number")
+	_check(num != null and num.text != "" and not num.mirror, "a number preset gets digits and is never mirrored")
+	_check(DecalPresets.record(h, "nope_9", "nose", 1, "bolt") == null, "an unknown plane has no presets")
+	var empty := PlaneHull.from_triangles(PackedVector3Array(), PackedVector3Array())
+	_check(DecalPresets.record(empty, "fighter_1", "nose", 1, "bolt") == null, "a missed ray gives no record")
+
+
+func _test_tally() -> void:
+	var c := {"tally_fighter": 3, "aces": 50, "fortresses": 9}
+	_check(DecalLoadout.tally_of(c, "fighter") == 3, "the tally counts this class's aces and «Крепости»")
+	_check(DecalLoadout.tally_of(c, "bomber") == 0, "another class starts its own tally")
+	_check(DecalLoadout.tally_of({}, "fighter") == 0, "no counters, no marks")
+
+
+func _test_unlocks() -> void:
+	var none := {}
+	for id: String in DecalUnlocks.START:
+		_check(DecalUnlocks.is_open(id, "fighter", none, 1), "%s is open from the start" % id)
+	_check(DecalUnlocks.is_open("wasp", "fighter", none, 1) and not DecalUnlocks.is_open("whale", "fighter", none, 1),
+		"a class's own mascot is open, the others are not")
+	_check(DecalUnlocks.is_open("whale", "fighter", {"sorties_bomber": 1}, 1), "a mascot opens after a sortie on its class")
+	_check(not DecalUnlocks.is_open("eye", "fighter", none, 4) and DecalUnlocks.is_open("eye", "fighter", none, 5),
+		"crew rank milestones open at the rank")
+	_check(DecalUnlocks.is_open("skull_winged", "bomber", none, Insignia.ACE_RANK), "the winged skull opens at the ace rank")
+	_check(not DecalUnlocks.is_open("ace_card", "fighter", none, 1) and DecalUnlocks.is_open("ace_card", "fighter", {"aces": 1}, 1),
+		"the ace card opens with the first rival ace")
+	_check(DecalUnlocks.is_open("skull_wrench", "fighter", {"op_forts": 1}, 1), "an operation cleared opens its picture")
+	_check(not DecalUnlocks.is_open("skull_wrench", "fighter", {"op_forts": 0, "sorties": 9}, 1), "but not before")
+	_check(not DecalUnlocks.is_open("hologram", "fighter", {"aces": 99}, 20), "an unknown picture is never open")
+	var all := true
+	for id: String in DecalCatalog.IMAGES:
+		all = all and (id in DecalUnlocks.START or (DecalUnlocks.MASCOTS.values() as Array).has(id) or DecalUnlocks.RULES.has(id))
+	_check(all, "every picture has an unlock rule")
