@@ -27,6 +27,7 @@ const GROUP_AT := {
 	"Крылья (пара)": [Vector2(30, 55), Vector2(70, 55)], "Под фюзеляжем": [Vector2(50, 50)],
 	"Внутренняя пара": [Vector2(37, 52), Vector2(63, 52)], "Внешняя пара": [Vector2(22, 56), Vector2(78, 56)],
 	"Бомбоотсек": [Vector2(50, 58)], "Тяжёлый подвес": [Vector2(50, 67)], "Турели": [Vector2(50, 31)],
+	"Законцовки крыла (пара)": [Vector2(12, 57), Vector2(88, 57)],
 }
 ## Weapon id → damage source label in `Main.stats["dealt"]` (the DPS of a hardpoint row)
 const WEAPON_SRC := {"aam": &"ракеты В-В", "rockets": &"НАР", "bombs": &"бомбы", "gunpod": &"гондола",
@@ -255,6 +256,12 @@ func _blueprint(m: Main, p: Player, box: Rect2) -> void:
 		var g: Hardpoint = p.groups[gi]
 		for at: Vector2 in _group_points(g.name, gi, p.groups.size()):
 			var c := _at(box, at)
+			# s13: a group without a fixed spot could land on another marker (the fighter's
+			# third group sat under the heavy hardpoint) — step it aside until it is clear
+			for k in 6:
+				if not _marks.any(func(o: Vector2) -> bool: return o.distance_to(c) < MARK_R * 2.2):
+					break
+				c.x += MARK_R * 2.4
 			_marks.append(c)
 			marks.append([c, gi, g.is_empty()])
 	_modules(p, box)

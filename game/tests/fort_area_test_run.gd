@@ -44,6 +44,17 @@ func _test_pick_fort() -> void:
 	var b := _fort(Vector2(0, 900))
 	var got := FortArea.pick_fort([far, village, a, b], Vector2.ZERO, 3000.0)
 	_check(got.get("pos") == Vector2(0, 900), "nearest of two forts in reach")
+	# Kanta s13 #10: a fort the activity already used this sortie (taken or not) never hosts it again
+	var used := {FortView.key_of(Vector2(0, 900)): true}
+	got = FortArea.pick_fort([far, village, a, b], Vector2.ZERO, 3000.0, used)
+	_check(got.get("pos") == Vector2(2000, 0), "a used fort is skipped for the next one in reach")
+	_check(FortArea.pick_fort([b], Vector2.ZERO, 3000.0, used).is_empty(), "only a used fort — no fort")
+	# Kanta s13 #12: the fort only exists for the activity, so it must not pop up on screen
+	var screen := Rect2(-800, 400, 1600, 900)
+	got = FortArea.pick_fort([a, b], Vector2.ZERO, 3000.0, {}, screen)
+	_check(got.get("pos") == Vector2(2000, 0), "a fort on screen is skipped")
+	var edge := _fort(Vector2(1000, 850))   # centre off screen, but its walls reach in
+	_check(FortArea.pick_fort([edge], Vector2.ZERO, 3000.0, {}, screen).is_empty(), "a fort reaching into the screen is skipped")
 
 
 ## Tower pads: unit-mesh corners ±0.42 (round towers on the wall corners, FortBuild) scaled by size and turned by rot like Render3D draws them.

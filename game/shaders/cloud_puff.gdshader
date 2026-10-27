@@ -7,6 +7,7 @@
 // в тени, теневая сторона от солнца темнее, низ облака заметно темнее и голубее. sun_to задаёт Render3D.
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
+#include "res://shaders/fx_exposure.gdshaderinc"
 
 uniform sampler2D noise_tex : filter_linear, repeat_enable;
 uniform vec3 sun_to = vec3(-0.62, 0.85, -0.75);   // направление на солнце (мир)
@@ -64,5 +65,7 @@ void fragment() {
 	vec3 low = base_color * mix(0.78, 1.05, lit);
 	vec3 col = mix(low, top, smoothstep(0.0, 0.85, tone));
 	ALBEDO = col;
-	ALPHA = smoothstep(0.05, 0.5, a) * v_data.w;
+	// Kanta s13: a cloud over the fight hid half the screen with the enemies and the player's plane under it;
+	// it thins out to a fifth over a window around the player (3 × the effects' clear zone)
+	ALPHA = smoothstep(0.05, 0.5, a) * v_data.w * fx_clear_kr(SCREEN_UV, VIEWPORT_SIZE, 3.0, 0.8);
 }

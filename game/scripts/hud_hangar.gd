@@ -5,6 +5,9 @@ extends HudKit
 
 # ---------- 3.2: ангар ----------
 
+## Drawer of the «НАГРАДЫ» tab (created on first use)
+var _medals: HudMedals
+
 func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.05, 0.94))
 	var c := m.hangar_cls
@@ -26,8 +29,10 @@ func draw(m: Main, size: Vector2) -> void:
 		_text(Vector2(r.position.x + 16, r.position.y + 52), Loc.t("Экипаж ур. %d%s") % [Profile.crew_lvl(id), (Loc.t("  · очков перков: %d") % pp) if pp > 0 else ""], 15, Color(0.85, 0.88, 0.95))
 	# вкладки
 	var tabs := [["plane", "САМОЛЁТ"], ["weapons", "ОРУЖИЕ"], ["crew", "ЭКИПАЖ"]]
+	if not Demo.on:
+		tabs.append(["medals", "НАГРАДЫ"])   # Kanta 27.10: medals with small bonuses, not in the demo
 	for i in tabs.size():
-		var r2 := Rect2(size.x / 2.0 - 450 + i * 300.0, 182, 290, 44)
+		var r2 := Rect2(size.x / 2.0 - tabs.size() * 150.0 + i * 300.0, 182, 290, 44)
 		var on2: bool = m.hangar_tab == tabs[i][0]
 		ctrl.draw_rect(r2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.06))
 		_text(Vector2(r2.position.x, r2.position.y + 30), tabs[i][1], 18, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, r2.size.x)
@@ -40,6 +45,10 @@ func draw(m: Main, size: Vector2) -> void:
 			_hg_weapons(m, area)
 		"crew":
 			_hg_crew(c, area)
+		"medals":
+			if _medals == null:
+				_medals = HudMedals.new(ctrl, _buttons)
+			_medals.draw(m, area)
 	_button(Rect2(size.x / 2.0 - 180, size.y - 110, 360, 56), Loc.t("В ВЫЛЕТ — %s") % Loc.t(PlaneClasses.DATA[c]["title"]), "hg:fly", 20)
 	if Main.DEBUG:
 		var dy := size.y - 110
@@ -53,14 +62,18 @@ func draw(m: Main, size: Vector2) -> void:
 func _hg_plane(c: String, area: Rect2) -> void:
 	# слева — самолёт ур. 1 / ур. 2
 	var lx := area.position.x
-	var lw := 560.0
+	var lw := 680.0   # s13: wider (was 560), the 3D view gets the room; the node cards still fit on the right
 	_panel(Rect2(lx, area.position.y, lw, area.size.y), false)
 	var bought: bool = bool(Profile.cls(c)["plane2"])
 	# 3.4-t1 (п. 1): объёмная модель — тянуть мышью, колесо — приближение; ур. 2 виден и не купленным
 	var h3 := Hangar3D.ensure(ctrl)
 	# S9-02: узлы того самолёта, что на виде (раньше — того, что выбран в вылет: смотрели ур. 1, а улучшался ур. 2)
 	var vl: int = h3.view_lvl if bought else 1
-	var vr := Rect2(lx + 8, area.position.y + 8, lw - 16, 330)
+	# s13 (Kanta's video: a small model window top left, the panel's bottom empty): the view takes all the height
+	# the controls below leave free (434 px at 1080p instead of 330); dy moves the controls down with it
+	var vh := maxf(330.0, area.size.y - 266.0)   # 266: the controls and the «buy» button under the view
+	var dy := vh - 330.0
+	var vr := Rect2(lx + 8, area.position.y + 8, lw - 16, vh)
 	ctrl.draw_texture_rect(h3.show_plane(c, vr), vr, false)
 	_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
 	# тест 3.5-s8: показ механизации — закрылки и предкрылки, створки отсека, турели (Hangar3D / HangarAnim)
@@ -72,7 +85,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	h3.mech_rect = mr
 	h3.lvl_rects.clear()
 	for lv in [1, 2]:
-		var br := Rect2(lx + 24 + (lv - 1) * 150, area.position.y + 348, 140, 36)
+		var br := Rect2(lx + 24 + (lv - 1) * 150, area.position.y + dy + 348, 140, 36)
 		var on: bool = h3.view_lvl == lv
 		ctrl.draw_rect(br, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
 		_text(Vector2(br.position.x, br.position.y + 25), Loc.t("Ур. %d") % lv, 17, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
@@ -80,7 +93,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	if bought:
 		# 3.5: выбор самолёта на вылет — для уровня, который сейчас на виде
 		var sel := Profile.plane_lvl(c)
-		var sr := Rect2(lx + 330, area.position.y + 348, 210, 36)
+		var sr := Rect2(lx + 330, area.position.y + dy + 348, 210, 36)
 		if h3.view_lvl == sel:
 			_panel(sr, true)
 			ctrl.draw_rect(sr, Color(0.5, 1.0, 0.6), false, 2.0)
@@ -88,18 +101,18 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		else:
 			_button(sr, Loc.t("ЛЕТАТЬ НА УР. %d") % h3.view_lvl, "hg:plane_sel:%d" % h3.view_lvl, 14)
 	elif h3.view_lvl == 2:
-		_text(Vector2(lx + 330, area.position.y + 372), "не куплен — в вылет недоступен", 15, Color(1.0, 0.75, 0.45))
+		_text(Vector2(lx + 330, area.position.y + dy + 372), "не куплен — в вылет недоступен", 15, Color(1.0, 0.75, 0.45))
 	# п. 3: как оружие меняется с уровнем
 	h3.tier_rects.clear()
-	_text(Vector2(lx + 24, area.position.y + 414), "Вид оружия:", 15, Color(0.8, 0.84, 0.9))
+	_text(Vector2(lx + 24, area.position.y + dy + 414), "Вид оружия:", 15, Color(0.8, 0.84, 0.9))
 	for ti in 4:
-		var tr2 := Rect2(lx + 130 + ti * 100, area.position.y + 392, 92, 30)
+		var tr2 := Rect2(lx + 130 + ti * 100, area.position.y + dy + 392, 92, 30)
 		var on2: bool = h3.weapon_tier == ti + 1
 		ctrl.draw_rect(tr2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.08))
 		_text(Vector2(tr2.position.x, tr2.position.y + 21), (Loc.t("ур. %d") % [1, 3, 5][ti]) if ti < 3 else Loc.t("модерниз."), 15, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, tr2.size.x)
 		h3.tier_rects.append([tr2, ti + 1])
-	_hg_livery(c, lx, area.position.y + 432)
-	var y := area.position.y + 486.0
+	_hg_livery(c, lx, area.position.y + dy + 432)
+	var y := area.position.y + dy + 486.0
 	if bought:
 		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
 		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 15, Color(0.8, 0.85, 0.9))
@@ -155,7 +168,9 @@ func _hg_livery(c: String, lx: float, y: float) -> void:
 		var r := Rect2(lx + 100 + i * step, y, step - 6, 30)
 		var on: bool = lst[i][0] == cur
 		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
-		var nm := String(lst[i][1])
+		# translate the whole name before a long one is split into two lines: the halves («Песочный» /
+		# «камуфляж») are not keys of their own, so splitting first left them untranslated in English
+		var nm := Loc.t(String(lst[i][1]))
 		var tc := Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95)
 		if nm.contains(" ") and ui_font().get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > r.size.x - 6:
 			var sp := nm.find(" ")   # длинное название — в две строки

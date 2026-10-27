@@ -34,6 +34,7 @@ var result_t := 0.0
 var result_tab := 0 # правка 30: вкладка итогов — 0 обзор, 1 урон, 2 сборка
 var hangar_cls := "fighter"
 var hangar_tab := "plane"
+var hangar_medal := ""   # medal picked on the «НАГРАДЫ» tab (its card stays under the board)
 var hangar_w := "aam"
 var hangar_back := "menu"        # анимация итогов для ангара   # 3.1: справочник связок — откуда открыт   # 3.1: выбранный навык класса: класс → id
 
@@ -241,6 +242,10 @@ func start_run() -> void:
 	world.add_child(fx)
 
 	run = RunState.new()
+	run.parts_k = 1.0 if aces() else Profile.medal_parts_k(String(Campaign.op()["id"]))   # medals: parts bonus
+	medal_run = {}
+	medal_kill_t = []
+	_hurt_t = 600.0
 	is_dead = false
 	dps.reset()
 	stats = {"taken": {}, "taken_by": {}, "dealt": {}, "kills_by": {}, "taken_kind": {}, "raw_in": {}}   # S8: taken_kind — урон по видам оружия врагов, raw_in — «сырой» урон с --god
@@ -272,8 +277,8 @@ func start_run() -> void:
 		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
 	evac_windows = 0
 	evac_lost = false
-	rerolls = TEST_PICKS + Profile.extra_rerolls(cls_id) # 3.5: самолёт ур. 2 — +1 переброс
-	bans = TEST_PICKS
+	rerolls = TEST_PICKS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # 3.5: самолёт ур. 2 — +1 переброс; медаль «Коллекционер»
+	bans = TEST_PICKS + int(Profile.medal_bonus("bans"))   # медаль «Мастер связок»
 	banned = {}
 	locked = {}
 	course_log = []
@@ -388,7 +393,7 @@ func kill_xp_k() -> float:
 func add_xp(v: float) -> void:
 	if is_dead or aces():   # «Битва асов»: the hangar setup is the build, no cards
 		return
-	run.add_xp(v * Tuning.g("xp_mult"))
+	run.add_xp(v * Tuning.g("xp_mult") * (float(player.mods["xp_k"]) if is_instance_valid(player) else 1.0))   # medal «Быстрый взлёт»
 
 
 func _open_levelup() -> void:
@@ -560,6 +565,8 @@ func _on_activity_succeeded(kind: StringName) -> void:
 			run.add_picks(AcesBalance.ace_picks(run.aces_down))   # option 1: a card for every ace
 			Events.banner.emit(Loc.t("Ас сбит! Всего: %d") % run.aces_down, 2.5)
 		return
+	if kind == &"fort":
+		medal_add("fort_areas")
 	var r := run.award_activity(kind)
 	if r.is_empty():
 		return
@@ -605,10 +612,17 @@ func streak_mult() -> float:
 	return run.streak_mult()
 
 
-## `Events.near_miss`: counts it (keeps the streak) and shows the "close call" text.
+var _near_text_ms := -100000   # when the last "close call" text went up (Time.get_ticks_msec)
+
+
+## `Events.near_miss`: counts it (keeps the streak) and shows the "close call" text. Kanta s13: three texts at
+## once stacked over the plane and hid it, so a new one waits 1.5 s after the last and stands clear of the plane
 func _on_near_miss(kind: StringName) -> void:
 	run.on_near_miss()
-	fx.text(player.global_position + Vector2(0, -50), "На волоске!" if kind == &"bullet" else "Ракета мимо!", Color(0.6, 0.95, 1.0))
+	var now := Time.get_ticks_msec()
+	if now - _near_text_ms >= 1500:
+		_near_text_ms = now
+		fx.text(player.global_position + Vector2(0, -85), "На волоске!" if kind == &"bullet" else "Ракета мимо!", Color(0.6, 0.95, 1.0))
 	sfx.play("near_miss", -16.0, 1.6)
 
 
@@ -735,6 +749,7 @@ func _on_enemy_killed(e: Enemy) -> void:
 	if is_instance_valid(player):
 		player.on_kill(e)
 	add_stat("kills_by", e.kind(), 1.0)
+	_medal_kill(e)
 	if class_task != null:
 		class_task.on_kill(self, e)
 	var from_tail := is_instance_valid(player) and player.on_tail() and player.tail_target == e
@@ -742,7 +757,8 @@ func _on_enemy_killed(e: Enemy) -> void:
 		e.xp = int(ceil(e.xp * 1.5))
 		fx.text(e.global_position + Vector2(0, -30), "Сбит с хвоста!", Color(1.0, 0.9, 0.4))
 	run.on_kill(e.parts * (1.5 if (e.is_ground and is_instance_valid(player) and player.has_perk("a_grd2")) else 1.0) \
-		* (player.mastery_parts_k(e) if is_instance_valid(player) else 1.0), from_tail)
+		* (player.mastery_parts_k(e) if is_instance_valid(player) else 1.0) \
+		* (float(player.mods["boss_parts"]) if e.is_boss and is_instance_valid(player) else 1.0), from_tail)   # medal «Крепость пала»
 	fx.explosion(e.global_position, e.radius * (1.3 if e.big else 1.0), not e.is_ground)
 	sfx.play("explode_big" if e.big else "explode", -4.0 if e.big else -12.0, 1.0, e.global_position)
 	add_shake(e.kill_shake)
@@ -774,6 +790,7 @@ func _on_enemy_killed(e: Enemy) -> void:
 
 ## `Events.player_damaged`: shake, hint, hit-stop, sound, red flash.
 func _on_player_damaged(_amount: float) -> void:
+	_clean_mark()
 	add_shake(10.0)
 	if is_instance_valid(player) and player.has_roll():
 		Hints.show("roll", "Space — уклонение: короткий переворот, во время которого пули и ракеты не попадают.", 7.0, 2)
@@ -782,14 +799,64 @@ func _on_player_damaged(_amount: float) -> void:
 	hud.flash_damage()
 
 
+# ---------- медали: счётчики вылета (Medals.run_counters) ----------
+
+## This sortie's medal counters that nothing else keeps (fortresses, ground kills, missile kills, rams, flared
+## missiles, fortified areas, the best clean stretch after 10:00)
+var medal_run := {}
+## Kill times of this sortie, s — the «Карусель» medal looks for the best minute
+var medal_kill_t: Array = []
+var _hurt_t := 600.0
+
+
+## +`n` to this sortie's medal counter `key`
+func medal_add(key: String, n := 1) -> void:
+	medal_run[key] = int(medal_run.get(key, 0)) + n
+
+
+func _medal_kill(e: Enemy) -> void:
+	medal_kill_t.append(run_time)
+	if e.is_ground:
+		medal_add("ground")
+	if e is Fortress:
+		medal_add("fortresses")
+		if (e as Fortress).base_hits == 0:
+			medal_add("fort_clean")
+	if MedalBalance.MSL_SRC.has(e.last_src):
+		medal_add("msl_kills")
+	if e is Drone and e.rammed:
+		medal_add("ram_drones")
+
+
+## Weapons and modules of this sortie for «Коллекционер»: cards taken plus the weapons the plane flew with from the start
+## (a class's signature weapon never comes as a «new weapon» card to that class)
+func _medal_cards() -> Array:
+	if not is_instance_valid(player):
+		return []
+	var out: Array = player.medal_cards.duplicate()
+	for g: Hardpoint in player.groups:
+		if not g.builtin and not g.is_empty() and not out.has("w:" + g.weapon):
+			out.append("w:" + g.weapon)
+	return out
+
+
+## Closes the stretch without damage that ends now (after 10:00 only) — medal «Ни царапины»
+func _clean_mark() -> void:
+	if run_time > 600.0:
+		medal_run["clean_s"] = maxi(int(medal_run.get("clean_s", 0)), int(run_time - maxf(_hurt_t, 600.0)))
+		_hurt_t = run_time
+
+
 ## 3.2: начисление в профиль (запчасти + жалованье, опыт экипажа) — сразу при конце вылета
 var meta_award := {}
 
 
 func _award(outcome: String) -> void:
+	_clean_mark()
 	meta_award = Profile.award_run({"cls": cls_id, "outcome": outcome, "run_time": run_time, "level": run.level,
 		"bosses": run.bosses_killed, "activities": run.activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
-		"op_parts": int(op_result.get("parts", 0))})
+		"op_parts": int(op_result.get("parts", 0)), "medals": Medals.run_counters(self, outcome),
+		"cards_taken": _medal_cards(), "syn_taken": player.syn.keys() if is_instance_valid(player) else []})
 	result_t = 0.0
 	result_tab = 0
 

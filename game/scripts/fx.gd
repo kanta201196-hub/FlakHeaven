@@ -433,21 +433,34 @@ class FxGround:
 
 	## Тест 3.5-s4 (п. 14): воронки от бомб — держатся CRATER_LIFE секунд и плавно гаснут; не больше
 	## CRATER_MAX (старые уходят первыми). В 3D их рисует render3d._sync_craters по рельефу.
-	const CRATER_LIFE := 75.0
-	const CRATER_FADE := 20.0
-	const CRATER_MAX := 40
+	## Kanta s13: by the end of a fight 40 black craters for 75 s littered the ground; fewer and shorter now,
+	## and the oldest over the limit fades out (CRATER_OUT s) instead of vanishing
+	const CRATER_LIFE := 35.0
+	const CRATER_FADE := 12.0
+	const CRATER_MAX := 16
+	const CRATER_OUT := 3.0
 	var craters: Array = []
 
+	## A bomb crater at p; past CRATER_MAX live ones the oldest start fading out
 	func crater(p: Vector2, r: float) -> void:
 		craters.append({"p": p, "r": clampf(r * 0.75, 30.0, 140.0), "life": CRATER_LIFE, "rot": randf() * TAU})
-		if craters.size() > CRATER_MAX:
+		var live := 0
+		for i in range(craters.size() - 1, -1, -1):
+			var c: Dictionary = craters[i]
+			if c.has("fd"):
+				continue
+			live += 1
+			if live > CRATER_MAX:   # from the opacity it has now down to nothing in CRATER_OUT s
+				c["life"] = CRATER_OUT * clampf(float(c["life"]) / CRATER_FADE, 0.0, 1.0)
+				c["fd"] = CRATER_OUT
+		if craters.size() > CRATER_MAX * 2:
 			craters.pop_front()
 
 	func scorch(p: Vector2, r: float, air: bool) -> void:
 		# сбитый в воздухе падает рядом — пятно меньше и смещено «вниз-вправо», как тень
 		var off := Vector2(r * 0.6, r * 0.9) if air else Vector2.ZERO
 		marks.append({"p": p + off, "r": r, "life": 25.0, "rot": randf() * TAU})
-		if marks.size() > 160:
+		if marks.size() > 90:   # Kanta s13: fewer soot marks pile up late in a fight
 			marks.pop_front()
 
 	func _process(delta: float) -> void:
@@ -466,7 +479,7 @@ class FxGround:
 			return
 		var ct := Fx.crater_tex()
 		for c in craters:
-			var ca := clampf(float(c["life"]) / CRATER_FADE, 0.0, 1.0)
+			var ca := clampf(float(c["life"]) / float(c.get("fd", CRATER_FADE)), 0.0, 1.0)
 			var cr: float = c["r"]
 			draw_set_transform(c["p"], float(c["rot"]))
 			draw_texture_rect(ct, Rect2(-Vector2(cr, cr), Vector2(cr, cr) * 2.0), false, Color(1, 1, 1, ca))

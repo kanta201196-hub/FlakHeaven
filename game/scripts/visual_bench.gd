@@ -55,6 +55,9 @@ func process(delta: float) -> void:
 	if OS.get_cmdline_user_args().has("--menushot"):
 		_menu_shot()
 		return
+	if OS.get_cmdline_user_args().has("--medalbench"):
+		_medal_bench()
+		return
 	if OS.get_cmdline_user_args().has("--levbench"):
 		_lev_bench(delta)
 		return
@@ -96,6 +99,12 @@ func process(delta: float) -> void:
 		m.get_tree().quit()
 		return
 	var p: Dictionary = _points[_i]
+	var sf: Variant = p.get("fort_obj", p.get("show_fort"))
+	if sf != null and m.background.place_filter.is_valid():
+		# Kanta s13: forts show only for the «Укрепрайон» activity; a still shot of one registers it as the activity does
+		var f := FortArea.pick_fort(FortArea.forts_near(m.background, sf, 900.0), sf, 900.0)
+		if not f.is_empty() and not m.background.forts_hit.has(FortView.key_of(f["pos"])):
+			m.background.forts_hit[FortView.key_of(f["pos"])] = FortDamage.new()
 	if p.has("live"):
 		_live(p)
 		return
@@ -708,6 +717,8 @@ func _make_points() -> Array:
 		pts.append({"name": "aa_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.3, "convoy": true, "enemies": true, "ground": true, "site_off": Vector2(-380, -40), "wait": 2.5})
 	for k in [["village", "o_village"], ["oasis", "o_oasis"], ["fort", "o_fort"]]:
 		pts.append({"name": k[0], "pos": found.get(k[1], empty + Vector2(4000, 0))})
+		if k[0] == "fort" and found.has("o_fort"):
+			pts[-1]["show_fort"] = found["o_fort"]
 	if found.has("o_oasis"):   # VIS-01: the oasis palms and well close up (south of it: the tilted camera looks north)
 		pts.append({"name": "oasis_close", "pos": found["o_oasis"] + Vector2(0, 600), "zoom": 2.4})
 		# VIS-01 review (26.10): the palm clumps and the well filling the frame
@@ -1725,6 +1736,29 @@ func _hangar_bench() -> void:
 ## Тест 3.5-s5 (п. 1): заставка главного меню — кадры на 3, 6 и 9 с → user://vis_menu_<с>.png
 ## (с --gfx=0 — спрайтовый режим «Низкого»)
 var _ms := 0
+
+
+## Medals (Kanta 27.10): the hangar tab «НАГРАДЫ» with a made-up mix of tiers (in memory, not saved), a medal card
+## open under the board; frame vis_hangar_medals.png
+func _medal_bench() -> void:
+	if _t < 1.5:
+		return
+	if m.state != "hangar":
+		m.ui_click("menu_hangar")
+		var c: Dictionary = Profile.data["medals"]["c"]
+		for k in ["kills", "aces", "evacs", "parts", "sorties", "ground", "near_misses", "blast_dmg", "sorties_bomber", "op_pass"]:
+			c[k] = {"kills": 12000, "aces": 60, "evacs": 12, "parts": 260000, "sorties": 60, "ground": 800,
+				"near_misses": 4000, "blast_dmg": 2000000, "sorties_bomber": 30, "op_pass": 6}[k]
+		c["ram_drones"] = 120
+		Profile._medal_cache = {}
+		m.hangar_tab = "medals"
+		m.hangar_medal = "fighter"
+		_t = 0.0
+		return
+	if _t > 1.5:
+		_save("hangar_medals")
+		print("VISUAL done")
+		m.get_tree().quit()
 
 
 func _menu_shot() -> void:

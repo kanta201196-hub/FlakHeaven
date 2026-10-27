@@ -52,7 +52,7 @@ func _handle_skills() -> void:
 			pl.man_buff_t = 2.0
 		Main.I.sfx.play("roll", -10.0)
 	if Input.is_action_just_pressed("dive") and pl.dive_cd <= 0.0 and pl.dive_t <= 0.0:
-		pl.dive_t = Tuning.g("dive_time")
+		pl.dive_t = pl.dive_time()
 		pl.dive_cd = pl.dive_cd_full()
 		Main.I.tele.add("dive_uses")
 		Main.I.sfx.play("dive", -12.0, 0.6)

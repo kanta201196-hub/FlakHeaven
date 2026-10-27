@@ -1156,7 +1156,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт плавно ниже и меньше на экране
 			var ra := _relief_alt(u, p.global_position, p.velocity, 1.0, sd)
 			var y: float = maxf(ra - Tuning.g("dive_depth") * dk, _ground_floor(p.global_position, Tuning.g("plane_len") * p.size * 0.5))
-			_place(u, p.global_position, p.heading, p.bank * (deg_to_rad(Tuning.g("aces_bank")) if Main.aces() else 0.55), roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), u.pitch - 0.2 * p.dive_pitch())
+			_place(u, p.global_position, p.heading, (p.bank * deg_to_rad(Tuning.g("aces_bank")) if Main.aces() else vis_bank(p.bank, float(p.cls.get("bank_deg", 32.0)))), roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), u.pitch - 0.2 * p.dive_pitch())
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
 			# S9-16: на «Звуковом ударе» (ram_t) — тот же огонь и плотный след, что на форсаже
 			u.ab = move_toward(float(u.ab), 1.0 if p.ab_t > 0.0 or p.ram_t > 0.0 else 0.0, sd * 4.0)
@@ -1842,6 +1842,13 @@ func _tanker_boom(u: Unit3D, an: Node2D, len_px: float) -> void:
 
 
 ## Крен от скорости поворота (для врагов и ведомых)
+## Model roll of the player's plane for its bank (−1..1, share of the top turn rate). Kanta 27.10: a hard turn
+## should lean much deeper for the feel of flight, the turn radius stays arcade. Steeper than linear: a gentle
+## turn leans about as before (0.55 rad at full bank before), a hard one up to max_deg (per class, PlaneClasses)
+static func vis_bank(bank: float, max_deg: float) -> float:
+	return signf(bank) * pow(absf(bank), 1.35) * deg_to_rad(max_deg)
+
+
 func _turn_bank(u: Unit3D, heading: float, delta: float) -> float:
 	var dh := wrapf(heading - float(u.ph), -PI, PI)
 	u.ph = heading
@@ -2234,8 +2241,8 @@ func _sync_enemy_shots(m: Main) -> void:
 		_eglow_mm.custom_aabb = aabb
 
 
-const FX_CLEAR_R := 1.6      # clear zone radius, plane lengths
-const FX_CLEAR_CUT := 0.7    # share of an effect's opacity taken away over the plane itself
+const FX_CLEAR_R := 2.2      # clear zone radius, plane lengths (s13: 1.6 was not enough late in a run)
+const FX_CLEAR_CUT := 0.85   # share of an effect's opacity taken away over the plane itself
 
 
 ## Kanta s12 (26.10): late in a run blasts, fire, missile smoke and the fan of a missile salvo hid the player's
@@ -2510,6 +2517,8 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 			var o := bg.chunk_object(cx, cy)
 			if o.is_empty() or o["name"] in OBJ_SKIP_3D:
 				continue
+			if o["name"] == "o_fort" and not bg.forts_hit.has(FortView.key_of(o["pos"])):
+				continue   # Kanta s13: a fort is only the «Укрепрайон» activity's (FortArea registers it), not scenery
 			seen[key] = true
 			if _objs.has(key):
 				continue
@@ -3016,7 +3025,7 @@ func _sync_craters(m: Main) -> void:
 				c["life"] = 0.0
 		var xf: Transform3D = c["xf"]
 		var rr := float(c["rr"])
-		var fade := clampf(float(c["life"]) / Fx.FxGround.CRATER_FADE, 0.0, 1.0)
+		var fade := clampf(float(c["life"]) / float(c.get("fd", Fx.FxGround.CRATER_FADE)), 0.0, 1.0)
 		if dm:
 			_place_decal(_crater_decals, i, Transform3D(xf.basis.orthonormalized(), xf.origin), Vector3(rr * 2.0, rr * 1.5 + 16.0, rr * 2.0),
 				_crater_mat.albedo_texture, Color(1, 1, 1, fade))

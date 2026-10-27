@@ -160,49 +160,52 @@ func _ready() -> void:
 	cam.current = true
 
 
-## Тест 3.5-s4 (п. 32): небо для вида «полёт» — от дымки у горизонта к синеве в зените, мягкое солнце
+## Тест 3.5-s4 (п. 32): небо для вида «полёт» — от дымки у горизонта к синеве в зените, мягкое солнце.
+## s13 (Kanta: «фон квадратами, сделай правдоподобное небо с облаками»): below the horizon the plane now flies
+## over a sea of cumulus tops (lit from the sun, blue-grey in the hollows, fading into haze far off) instead of a
+## flat grey; the colours go through SRGB(), so Forward+ no longer washes them out to grey
 const SKY_SHADER := """
 shader_type sky;
+#include "res://shaders/srgb.gdshaderinc"
+#include "res://shaders/hangar_clouds.gdshaderinc"
 void sky() {
 	float h = EYEDIR.y;
-	vec3 haze = vec3(0.78, 0.83, 0.88);
-	vec3 zen = vec3(0.30, 0.47, 0.72);
-	vec3 low = vec3(0.42, 0.45, 0.47);   // далеко внизу — земля в дымке, темнее неба: светлый самолёт читается сверху
-	vec3 c = mix(haze, zen, smoothstep(0.0, 0.7, h));
-	c = mix(c, low, smoothstep(-0.02, -0.35, h));
+	vec3 haze = SRGB(vec3(0.76, 0.82, 0.89));
+	vec3 zen = SRGB(vec3(0.22, 0.42, 0.72));
+	vec3 c = mix(haze, zen, smoothstep(0.0, 0.65, h));
 	vec3 sd = normalize(vec3(-0.55, 0.55, 0.62));
+	if (h < 0.02) {
+		// cloud sea 1 unit below the eye, seen to the horizon
+		float d = 1.0 / max(-h + 0.035, 0.035);
+		vec2 p = EYEDIR.xz * d * 0.55 + vec2(cloud_time(TIME, 0.06), 0.0);
+		vec3 cl = cloud_col(p, normalize(sd.xz), 0.47);
+		float far = smoothstep(4.0, 26.0, d);
+		c = mix(cl, haze, far);
+	}
 	float sun = max(dot(EYEDIR, sd), 0.0);
-	c += vec3(1.0, 0.9, 0.7) * (pow(sun, 400.0) * 1.5 + pow(sun, 12.0) * 0.12);
+	c += SRGB(vec3(1.0, 0.9, 0.7)) * (pow(sun, 400.0) * 1.5 + pow(sun, 12.0) * 0.12);
 	COLOR = c;
 }
 """
-## Слой облаков под самолётом: шумовые клочья плывут назад (самолёт летит носом +X), к краю тают
+## Слой облаков под самолётом: шумовые клочья плывут назад (самолёт летит носом +X), к краю тают.
+## s13: the same cumulus look as the cloud sea of the sky, so the near layers drift over it without a seam
 const CLOUD_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
+#include "res://shaders/srgb.gdshaderinc"
+#include "res://shaders/hangar_clouds.gdshaderinc"
 uniform float speed = 0.35;
 uniform float scale = 0.55;
 uniform float cover = 0.5;
 uniform float alpha_k = 0.9;
 varying vec3 wp;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-	vec2 i = floor(p); vec2 f = fract(p);
-	vec2 u = f * f * (3.0 - 2.0 * f);
-	return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
-}
-float fbm(vec2 p) {
-	float v = 0.0; float a = 0.5;
-	for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
-	return v;
-}
 void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
 void fragment() {
-	vec2 p = wp.xz * scale + vec2(TIME * speed, 0.0);
-	float n = fbm(p);
+	vec2 p = wp.xz * scale + vec2(cloud_time(TIME, speed), 0.0);
+	float n = cloud_fbm(p);
 	float a = smoothstep(cover, cover + 0.22, n);
 	float edge = 1.0 - smoothstep(4.0, 11.0, length(wp.xz));
-	ALBEDO = mix(vec3(0.82, 0.85, 0.9), vec3(1.0), smoothstep(cover, cover + 0.35, n));
+	ALBEDO = cloud_col(p, normalize(vec2(-0.55, 0.62)), cover);
 	ALPHA = a * edge * alpha_k;
 }
 """
