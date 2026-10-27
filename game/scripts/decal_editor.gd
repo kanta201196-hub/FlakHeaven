@@ -27,6 +27,13 @@ var c1 := DecalCatalog.DEFAULT_C1
 var c2 := DecalCatalog.DEFAULT_C2
 var text := DecalPresets.NUMBER_TEXT
 var changed := false          ## records differ from what the caller last stored
+## The skin under the cursor (`PlaneDecals.cursor_hull`); when set, a decal is kept to the size that fits where it
+## lies (`DecalPresets.fit_size`: not hanging off a wing tip, not wrapped round the nose)
+var hull: PlaneHull = null
+var tally := PREVIEW_TALLY    ## tally marks the fit is measured with
+var note := ""                ## why the last action changed the size: "shrunk" (made to fit), "max" (no larger here)
+var _fit_key := ""
+var _fit_size := 0.0
 
 
 ## Starts editing plane `lv` of class `c` with copies of `list`
@@ -80,7 +87,21 @@ func preview(hit: Array) -> DecalRecord:
 	if r != null:
 		r.pos = hit[0]
 		r.normal = (hit[1] as Vector3).normalized()
+		r.size = _fitted(r)
 	return r
+
+
+## The size `r` may have where it lies (its own size when there is no hull or it fits); cached for the cursor,
+## which asks every frame
+func _fitted(r: DecalRecord) -> float:
+	if hull == null:
+		return r.size
+	var key := "%s|%s|%.4f|%.3f|%s|%s" % [str(r.pos.snapped(Vector3.ONE * 0.001)),
+		str(r.normal.snapped(Vector3.ONE * 0.02)), r.size, r.angle, r.id, r.text]
+	if key != _fit_key:
+		_fit_key = key
+		_fit_size = DecalPresets.fit_size(hull, r, tally)
+	return _fit_size
 
 
 ## Places the tool at `hit` and selects the new decal (the tool stays for the next stamp)
@@ -90,6 +111,7 @@ func place(hit: Array) -> bool:
 	var r := preview(hit)
 	if r == null or not DecalLoadout.add(records, r):
 		return false
+	note = "shrunk" if r.size < size - 1e-6 else ""
 	sel = records.size() - 1
 	changed = true
 	return true
@@ -119,8 +141,11 @@ func grab() -> bool:
 func drop(hit: Array) -> bool:
 	if not moving or sel < 0 or hit.size() != 2:
 		return false
+	var was := records[sel].size
 	records[sel].pos = hit[0]
 	records[sel].normal = (hit[1] as Vector3).normalized()
+	records[sel].size = _fitted(records[sel])
+	note = "shrunk" if records[sel].size < was - 1e-6 else ""
 	moving = false
 	changed = true
 	return true
@@ -136,13 +161,20 @@ func cancel() -> bool:
 	return had
 
 
-## Scales by SCALE_STEP^steps within the record limits
+## Scales by SCALE_STEP^steps within the record limits; a selected decal grows only while it fits where it lies
+## (`note` "max" when it stopped)
 func scale_by(steps: int) -> void:
+	note = ""
 	size = clampf(size * pow(SCALE_STEP, steps), DecalRecord.SIZE_MIN, DecalRecord.SIZE_MAX)
 	if sel >= 0:
-		records[sel].size = clampf(records[sel].size * pow(SCALE_STEP, steps), DecalRecord.SIZE_MIN, DecalRecord.SIZE_MAX)
-		size = records[sel].size
-		changed = true
+		var r := records[sel]
+		var was := r.size
+		r.size = clampf(r.size * pow(SCALE_STEP, steps), DecalRecord.SIZE_MIN, DecalRecord.SIZE_MAX)
+		if steps > 0 and hull != null and DecalPresets.fit(hull, r, tally) < DecalPresets.FIT_SHARE:
+			r.size = minf(was, _fitted(r))
+			note = "max"
+		size = r.size
+		changed = changed or r.size != was
 
 
 ## Turns around the skin normal by `steps` × 15° (2° when `fine`)
@@ -222,12 +254,15 @@ func order(delta: int) -> void:
 	changed = true
 
 
-## «На другой борт»: adds the mirror copy of the selected decal and selects it
-func other_side(hull: PlaneHull) -> bool:
+## «На другой борт»: adds the mirror copy of the selected decal (snapped onto `on`) and selects it
+func other_side(on: PlaneHull) -> bool:
 	if sel < 0 or moving:
 		return false
-	var m := DecalPresets.mirrored(records[sel], hull)
-	if m == null or not DecalLoadout.add(records, m):
+	var m := DecalPresets.mirrored(records[sel], on)
+	if m == null:
+		return false
+	m.size = _fitted(m)
+	if not DecalLoadout.add(records, m):
 		return false
 	sel = records.size() - 1
 	changed = true
@@ -235,10 +270,10 @@ func other_side(hull: PlaneHull) -> bool:
 
 
 ## Places the tool at preset `spot` of plane `key` on `side` (−1 left, +1 right) with the tool's paints
-func preset(hull: PlaneHull, key: String, spot: String, side: int) -> bool:
+func preset(on: PlaneHull, key: String, spot: String, side: int) -> bool:
 	if tool == "" or moving:
 		return false
-	var r := DecalPresets.record(hull, key, spot, side, tool)
+	var r := DecalPresets.record(on, key, spot, side, tool)
 	if r == null:
 		return false
 	r.c1 = c1
@@ -246,6 +281,9 @@ func preset(hull: PlaneHull, key: String, spot: String, side: int) -> bool:
 	r.angle = angle
 	if DecalCatalog.kind(tool) == "number":
 		r.text = text
+	var want := r.size
+	r.size = _fitted(r)
+	note = "shrunk" if r.size < want - 1e-6 else ""
 	if not DecalLoadout.add(records, r):
 		return false
 	sel = records.size() - 1

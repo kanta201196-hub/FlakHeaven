@@ -91,6 +91,16 @@ func _store(e: DecalEditor) -> void:
 		_dirty = true
 
 
+## Says why the editor changed or kept a decal's size (DecalEditor.note): it was made smaller to fit where it was
+## put, or it cannot grow any more there
+func _fit_note(e: DecalEditor) -> void:
+	if e.note == "shrunk":
+		_say(Loc.t("Знак уменьшен: крупнее здесь не помещается"))
+	elif e.note == "max":
+		_say(Loc.t("Крупнее здесь не поместится"), true)
+	e.note = ""
+
+
 ## Shows why an action did nothing; `buzz` — also the refusal sound (panel buttons get theirs from MainInput)
 func _say(s: String, buzz := false) -> void:
 	note = s
@@ -111,10 +121,13 @@ func frame(delta: float) -> void:
 		close()
 		return
 	note_t = maxf(0.0, note_t - delta)
+	e.hull = h3.decal_hull()   # sizes stay within what fits where a decal lies
+	e.tally = maxi(tally, DecalEditor.PREVIEW_TALLY)
 	_keys()
 	_pad(h3, delta)
 	if m.decal_edit == null:   # B closed it
 		return
+	_fit_note(e)
 	_hit = h3.decal_ray(h3.decal_cursor) if (h3.decal_pad or HudDecals.focus < 0) else []
 	var live := e.preview(_hit)
 	if live == null and e.sel >= 0 and not e.moving:
