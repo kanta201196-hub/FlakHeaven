@@ -190,6 +190,7 @@ func _set_state(s: String) -> void:
 	if s in ["menu", "campaign", "hangar"] and not _args.has("--aces"):
 		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
+	Settings.set_screen_cap(s != "playing")
 	if is_instance_valid(player) and menu != null:
 		player.visible = not (s == "menu" or s == "hangar" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
 	Engine.time_scale = base_ts
