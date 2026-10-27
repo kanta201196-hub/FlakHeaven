@@ -28,6 +28,7 @@ func run() -> Array:
 	_test_presets()
 	_test_tally()
 	_test_unlocks()
+	_test_editor()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
 	return [_checks, _failed]
 
@@ -358,3 +359,78 @@ func _test_unlocks() -> void:
 	for id: String in DecalCatalog.IMAGES:
 		all = all and (id in DecalUnlocks.START or (DecalUnlocks.MASCOTS.values() as Array).has(id) or DecalUnlocks.RULES.has(id))
 	_check(all, "every picture has an unlock rule")
+
+
+func _test_editor() -> void:
+	var e := DecalEditor.new()
+	var given: Array[DecalRecord] = [_sample()]
+	e.open("fighter", 1, given)
+	_check(e.records.size() == 1 and e.records[0] != given[0], "the editor works on copies of the plane's decals")
+	_check(e.sel == -1 and e.tool == "" and not e.changed, "nothing is selected or changed on open")
+	var hit := [Vector3(0.1, 0.0, -0.05), Vector3(0, 0, -1)]
+	_check(e.preview(hit) == null and not e.place(hit), "without a picture nothing is previewed or placed")
+	_check(e.pick("eye", false) == "locked" and e.tool == "", "a locked picture cannot be picked")
+	_check(e.pick("hologram", true) == "unknown", "an unknown picture cannot be picked")
+	_check(e.pick("bolt", true) == "", "an open picture becomes the tool")
+	var pv := e.preview(hit)
+	_check(pv != null and pv.id == "bolt" and pv.pos == hit[0] and pv.normal == hit[1], "the preview lies where the cursor hits")
+	_check(e.preview([]) == null and not e.place([]), "a cursor off the plane places nothing")
+	_check(e.place(hit) and e.records.size() == 2 and e.sel == 1 and e.changed, "a click places the decal and selects it")
+	_check(e.tool == "bolt", "the tool stays for the next stamp")
+	e.scale_by(100)
+	_check(is_equal_approx(e.records[1].size, DecalRecord.SIZE_MAX), "scaling stops at the largest size")
+	e.scale_by(-200)
+	_check(is_equal_approx(e.records[1].size, DecalRecord.SIZE_MIN), "and at the smallest")
+	e.rotate_by(1)
+	_check(is_equal_approx(e.records[1].angle, DecalEditor.ROT_STEP), "a bumper turns by one step")
+	e.rotate_by(-24)
+	_check(absf(e.records[1].angle) <= PI + 1e-5, "the angle wraps")
+	e.toggle_mirror()
+	_check(e.records[1].mirror, "mirror flips the selected decal")
+	e.set_paint(1, "teal")
+	e.set_paint(2, "nope")
+	_check(e.records[1].c1 == "teal" and e.records[1].c2 == DecalCatalog.DEFAULT_C2, "paints take only known ids")
+	e.next_paint(1)
+	_check(e.records[1].c1 != "teal" and DecalCatalog.PAINTS.has(e.records[1].c1), "next paint cycles through the palette")
+	# select, move, drop
+	e.cancel()
+	_check(e.sel == -1 and e.tool == "", "cancel drops the tool and the selection")
+	_check(not e.cancel(), "with nothing to drop cancel says so (B then leaves the editor)")
+	_check(e.select_at(Vector3(0.1, 0.0, -0.051)) == 1, "a click on a decal selects the topmost one there")
+	_check(e.select_at(Vector3(0.9, 0.9, 0.9)) == -1 and e.sel == -1, "a click beside the decals selects nothing")
+	e.select_at(Vector3(0.1, 0.0, -0.05))
+	_check(e.grab() and e.shown().size() == 1, "a grabbed decal is hidden from the plane while it moves")
+	var to := [Vector3(-0.2, 0.05, -0.04), Vector3(0, 0, -1)]
+	_check(e.preview(to) != null and e.preview(to).id == "bolt", "the moving decal follows the cursor")
+	_check(not e.drop([]) and e.moving, "it cannot be dropped off the plane")
+	_check(e.drop(to) and not e.moving and e.records[1].pos == to[0] and e.shown().size() == 2, "it lands where it is dropped")
+	# number
+	e.pick(DecalCatalog.NUMBER, true)
+	e.set_text("4a2")
+	e.place(hit)
+	var num := e.records[e.sel]
+	_check(num.text == "42", "the number takes the typed digits")
+	e.toggle_mirror()
+	_check(not num.mirror, "a number never mirrors")
+	e.set_text("")
+	_check(num.text == "42", "an empty number keeps its digits")
+	# order and remove
+	e.order(-5)
+	_check(e.sel == 0 and e.records[0] == num, "a decal moves back in the draw order, to the bottom at most")
+	e.order(1)
+	_check(e.sel == 1 and e.records[1] == num, "and forward")
+	e.remove()
+	_check(e.records.size() == 2 and e.sel == -1 and not e.records.has(num), "remove deletes the selected decal")
+	# other side and presets on a box
+	var b := _box(Vector3.ZERO, Vector3(0.5, 0.2, 0.25))
+	var h := PlaneHull.from_triangles(b[0], b[1])
+	e.pick("bolt", true)
+	_check(e.preset(h, "fighter_1", "nose", 1) and e.records[e.sel].normal.is_equal_approx(Vector3(0, 0, 1)), "a preset places the tool there")
+	var n0 := e.records.size()
+	_check(e.other_side(h) and e.records.size() == n0 + 1 and e.records[e.sel].normal.is_equal_approx(Vector3(0, 0, -1)),
+		"«на другой борт» adds the mirror copy and selects it")
+	# cap
+	while e.records.size() < DecalLoadout.MAX_DECALS:
+		e.place(hit)
+	_check(e.pick("bolt", true) == "cap" and not e.place(hit), "a full plane takes no more decals")
+	_check(not e.other_side(h), "nor a mirror copy")
