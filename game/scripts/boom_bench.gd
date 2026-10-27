@@ -66,6 +66,9 @@ func _init(main: Main) -> void:
 			[Vector2(-30, 40), 18.0, false, ""]], "trails": true, "salvo": true, "pl": Vector2.ZERO},
 		# Kanta s13: a cloud over the fight; every cell gets a cloud (cloud_chance 1 before the first is made)
 		{"name": "cloudy", "times": [0.5, 1.2], "boom": [[Vector2(60, -40), 20.0, true, ""]], "turrets": true, "pl": Vector2.ZERO},
+		# Kanta 27.10: hard turns lean the plane deeper; straight, a full right turn, a full left turn, straight again
+		# (left/right scheme, real flight: the heading is not pinned in this scene). With --film for a clip
+		{"name": "bank", "times": [0.6, 1.6, 2.4, 3.4, 4.2], "bank": true, "slow": 1.0, "pl": Vector2.ZERO},
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
 	if _only.has("cloudy"):
@@ -113,7 +116,8 @@ func process(delta: float) -> void:
 		_start()
 	var pl_at: Vector2 = _scenes[_i].get("pl", Vector2(-330, 260)) if _i >= 0 and _i < _scenes.size() else Vector2(-330, 260)
 	m.player.global_position = _pos + pl_at
-	m.player.heading = -PI / 3.0
+	if not (_i >= 0 and _i < _scenes.size() and _scenes[_i].get("bank", false) and _wait <= 0):
+		m.player.heading = -PI / 3.0
 	m.camera.global_position = _pos
 	m.camera.reset_smoothing()
 	if _i >= _scenes.size():
@@ -193,6 +197,14 @@ func process(delta: float) -> void:
 		_turrets_move()
 	if sc.get("ab", false):
 		m.player.ab_t = 1.0
+	if sc.get("bank", false):
+		Tuning.set_param("scheme", 1.0)
+		var side := 1.0 if _et >= 0.6 and _et < 2.2 else (-1.0 if _et >= 2.2 and _et < 3.8 else 0.0)
+		for a: Array in [["move_right", side > 0.0], ["move_left", side < 0.0]]:
+			if a[1]:
+				Input.action_press(a[0])
+			else:
+				Input.action_release(a[0])
 	var times: Array = sc.get("times", TIMES)
 	if _film:
 		_film_frame(sc)
