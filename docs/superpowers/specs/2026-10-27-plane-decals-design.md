@@ -47,6 +47,8 @@ Findings and fixes for the release version:
 - «Оса» 2 and «Кит» 2 number slots came out small (the intake lip and the wing glove leave little flat side). Release: «Оса» 2 number on the intake side under the wing leading edge, larger, and «Кит» 2 number on the rear fuselage under the fin (tested later by frame). Every slot gets Kanta's «ок» on a hangar frame per plane, like models.
 - The existing ace mark «Коготь» (`side_*` in `fh_ins_*`) sits where the kill tally and the number go on some planes. Proposal: the claw becomes the first glyph of the kill tally row (an ace's tally starts with the claw), and the `side_*` sticker is dropped.
 - Nose art on «Кит» 1 sits right behind the glazed navigator nose; on «Грач» the nose is narrow, nose art stays small (≈4 cm at plane length 1).
+- Prototype frames show that the nose slots are long and low (made for the shark mouth): a square picture (mascot, skull) letterboxes into a small square. Release: two nose shapes per plane — «mouth» (long, low, on the chin) and «badge» (square, higher, under the windscreen) — and each picture says which it uses.
+- Combat frame (`--visual --tilt=28 --op=1 --gfx=2`, Forward+): at gameplay height the whole plane is ~40 px and banks; only the fin badge shows as a coloured dot, side decals are invisible. Decals are a hangar, title-flight and screenshot feature; the combat read of «my plane» stays with the livery and the wing roundel.
 
 ## 5. How decals render (decision: sticker meshes + one atlas)
 
