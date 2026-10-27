@@ -15,7 +15,14 @@
   hatch_l/r        — створки люков на спине (фаза 2), открываются поворотом вокруг оси X;
   bay_l/r          — ракеты под люками, приподнимаются, когда люки открыты;
   hull_l/r         — панели обшивки над «ядром» (фаза 3), откидываются;
-  core             — раскалённое ядро внутри корпуса."""
+  core             — раскалённое ядро внутри корпуса.
+Wing mode (Kanta 27.10): hatch_l/r and hull_l/r are doors cut out of the hull's own top skin (spine_doors): the node
+holds the dark edges, underside, hinge strip and latches; its child hatch_X_skin / hull_X_skin is the door's skin with
+the hull's texture and UVs. engine_X_prop is the compressor face at the back of the hull's intake duct; the domes
+sit on a level race with a fixed fairing ring down to the curved skin. Rebuild of the battle model:
+  python3 fortress.py <out> --wing <e_fortress_hull.glb from sf_rework.py e_fortress_hull> --nopreview \\
+      --sprite ../../art/enemies/e_fortress.png
+  then copy <out>/fortress.glb to ../../models/battle/fh_battle_e_fortress.glb and run godot --import."""
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from turret_lib import *
@@ -170,11 +177,14 @@ def turret(n, x, y, z, tier):
     L.group = ""
 
 
+SKIN = None   # wing mode: HullUV of the intact hull, set right after the import (the skin before any cut-out)
+
+
 def top(x, y):
-    """Height of the hull's top skin at (x, y) (wing mode), by a ray from above"""
-    dg = bpy.context.evaluated_depsgraph_get()
-    hit, loc, _n, _i, _o, _m = bpy.context.scene.ray_cast(dg, Vector((x, y, 1.0)), Vector((0, 0, -1)))
-    return loc.z if hit else 0.0
+    """Height of the hull's top skin at (x, y) (wing mode): a ray from above onto the intact hull only, so a
+    part already placed (a dome, a fan) or a hole already cut does not change where the next one sits"""
+    loc, _n, _i, _d = SKIN.bvh.ray_cast(Vector((x, y, 1.0)), Vector((0, 0, -1)))
+    return loc.z if loc is not None else 0.0
 
 
 class HullUV:
@@ -242,18 +252,58 @@ def ellipsoid(name, c, r, m, seg=32, rings=16):
 DOME_R, DOME_H = 0.018, 0.0102   # 60 % of the old twin turret (ring Ø 0.068 → dome Ø 0.036 of the hull length)
 
 
+def fairing(name, x, y, zb, r0, r1, hull_uv, seg=24, rings=4):
+    """Fixed fairing ring of a dome turret (Kanta 27.10: seat the domes into the skin): the dome turns on a level
+    race at height zb, while the wing under it is curved and tilted, so a flat collar floated on one side and
+    sank on the other. The ring starts level at radius r0 (under the dome's rim) and runs down to the real skin
+    at r1 with a cosine shoulder; every vertex takes the hull's UV under it, so the ring is the same painted skin."""
+    bm = bmesh.new()
+    grid = []
+    for j in range(rings + 1):
+        t = j / rings
+        r = r0 + (r1 - r0) * t
+        f = 0.5 * (1.0 + math.cos(math.pi * t))   # 1 at the race, 0 on the skin
+        row = []
+        for i in range(seg):
+            a = 2 * math.pi * i / seg
+            px, py = x + r * math.cos(a), y + r * math.sin(a)
+            assert SKIN.at(px, py) is not None, ("fairing off the wing", name, px, py)
+            zs = top(px, py) + 0.00015
+            row.append(bm.verts.new((px, py, zs + (zb - zs) * f)))
+        grid.append(row)
+    for a, b in zip(grid, grid[1:]):
+        for i in range(seg):
+            bm.faces.new((a[i], b[i], b[(i + 1) % seg], a[(i + 1) % seg]))
+    bm.faces.new(list(reversed(grid[0])))   # the race floor under the dome, never seen but closes the ring
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.faces.ensure_lookup_table()
+    if bm.faces[0].normal.z < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    finish(ob, M_HULL)
+    hull_uv.paint(ob, x, y, 1.0)
+    return ob
+
+
 def dome_turret(n, x, y, hull_uv):
-    """Wing-mode turret (Kanta 26.10, concept Б and his sketch): a low dome on a fixed collar blended into the skin,
-    with a gun slit, twin short barrels, a seam band, a sensor eye and a small finned missile on a short rail along
-    the crown. The collar stays with the hull; the dome, guns and rail are node turret_n, pivot on the vertical
+    """Wing-mode turret (Kanta 26.10, concept Б and his sketch): a low dome on a fixed fairing ring blended into the
+    skin, with a gun slit, twin short barrels, a seam band, a sensor eye and a small finned missile on a short rail
+    along the crown. The ring stays with the hull; the dome, guns and rail are node turret_n, pivot on the vertical
     through the dome centre, barrels along +X, so render3d's yaw turns the whole dome to track the player. The
     missile is its own node turret_n_missile under turret_n, so it turns with the dome and can be hidden while it
-    reloads after a launch. Dome and collar wear the hull's own paint (HullUV)."""
-    z = top(x, y)
+    reloads after a launch. Dome and ring wear the hull's own paint (HullUV).
+    The dome is a body of revolution turning about the vertical, so its base must be level: it sits on a race at
+    the highest skin point under its rim (it never cuts into the skin as it turns), and the fairing ring fills the
+    space between that level race and the curved skin around it."""
     R, H = DOME_R, DOME_H
+    z = max(top(x + r * math.cos(a), y + r * math.sin(a)) for r in (0.0, R * 0.5, R) for a in
+            (i * math.pi / 8 for i in range(16))) + 0.0004
     L.group = ""
-    collar = ellipsoid("dome_collar", (x, y, z - 0.0012), (R * 1.3, R * 1.3, H * 0.22), M_HULL)
-    hull_uv.paint(collar, x, y, 0.5)
+    fairing("dome_fairing", x, y, z, R * 0.97, R * 1.45, hull_uv)
     L.group = "fittings"   # fixed dark fittings get the weathering bake; the hull skin keeps its own texture
     cyl("dome_seam", (x, y, z + H * 0.03), R * 1.03, H * 0.08, M_DARK, "Z", 32)
     g = "turret_%d" % n
@@ -269,8 +319,9 @@ def dome_turret(n, x, y, hull_uv):
     ob.scale = (1, 1, 0.6)
     bpy.ops.object.transform_apply(scale=True)
     finish(ob, M_DARK)
-    # launch rail on the crown: a low pylon, the missile hangs on top of it nose forward
-    box("dome_rail", (x - R * 0.05, y, z + H * 1.02), (R * 0.9, R * 0.12, H * 0.22), M_T_DARK, 0.0)
+    # launch rail on the crown: a low pylon, the missile hangs on top of it nose forward; its foot goes down into
+    # the curved crown (0.82 H, below the dome surface at the rail's ends) so neither end floats
+    box("dome_rail", (x - R * 0.05, y, z + H * 0.975), (R * 0.9, R * 0.12, H * 0.31), M_T_DARK, 0.0)
     # gun slit in the front face and twin barrels with muzzle brakes, dark gunmetal
     box("dome_slit", (x + R * 0.62, y, z + H * 0.5), (R * 0.85, R * 0.62, H * 0.26), M_T_DARK, 0.0)
     for s in (-1, 1):
@@ -320,20 +371,40 @@ if WING:
         if ob.type == "EMPTY":
             bpy.data.objects.remove(ob)
     bpy.context.view_layer.update()
-    # jet intakes on the engine humps: a compressor face per engine, the node render3d spins (engine_X_prop)
-    for nm, (ex, ey) in (("engine_l", at(14, -21)), ("engine_r", at(14, 21))):
+    SKIN = HullUV([o for o in L.parts if o.name.startswith("hull")])
+    # jet intakes (Kanta 27.10): the hull already has a letterbox intake mouth at the front of each engine hump
+    # (lip at x ≈ 0.08, opening y ≈ ±0.055…0.095, z ≈ 0.009…0.019, duct back wall at x ≈ 0.05). The compressor
+    # face sits at the back of that duct on its centre line, facing forward, with a fixed dark blanking disc behind
+    # it; nothing of it reaches the hump's skin (the old fan stood half out of the hump, blades through the skin).
+    # The face is the node render3d spins (engine_X_prop, rotation about X).
+    FAN_X, FAN_Y, FAN_Z, FAN_R = 0.057, 0.0765, 0.0145, 0.0047
+    for nm, s in (("engine_l", 1), ("engine_r", -1)):
+        ey = s * FAN_Y
+        L.group = "fittings"
+        cyl("duct_blank", (FAN_X - 0.0022, ey, FAN_Z), FAN_R + 0.0008, 0.0006, M_DARK, "X", 16)
         L.group = nm + "_prop"
-        z = top(ex, ey) - 0.004
-        L.pivots[L.group] = (ex, ey, z)
-        cyl("fan_hub", (ex, ey, z), 0.004, 0.003, M_STEEL, "X", 12)
-        for i in range(8):
-            a = i * math.pi / 4
-            bpy.ops.mesh.primitive_cube_add(size=1, location=(ex, ey + math.cos(a) * 0.006, z + math.sin(a) * 0.006))
+        L.pivots[L.group] = (FAN_X, ey, FAN_Z)
+        cyl("fan_hub", (FAN_X, ey, FAN_Z), FAN_R * 0.38, 0.0018, M_STEEL, "X", 12)
+        bpy.ops.mesh.primitive_cone_add(vertices=12, radius1=FAN_R * 0.38, radius2=0.0, depth=0.0016,
+                                        location=(FAN_X + 0.0017, ey, FAN_Z), rotation=(0, math.pi / 2, 0))
+        ob = bpy.context.object
+        ob.name = "fan_spinner"
+        bpy.ops.object.transform_apply(rotation=True)
+        finish(ob, M_STEEL)
+        for i in range(9):
+            a = i * 2 * math.pi / 9
+            rc = FAN_R * 0.68
+            bpy.ops.mesh.primitive_cube_add(size=1, location=(FAN_X, ey + math.cos(a) * rc, FAN_Z + math.sin(a) * rc))
             ob = bpy.context.object
             ob.name = "fan_blade"
-            ob.scale = (0.001, 0.009, 0.0025)
-            ob.rotation_euler = (a, 0.3, 0)
+            ob.scale = (0.0004, FAN_R * 0.62, 0.0016)
+            ob.rotation_euler = (a, 0.0, 0.0)   # the long (Y) side radial
             bpy.ops.object.transform_apply(scale=True, rotation=True)
+            # blade pitch: a twist about its own radial axis (transform_apply also applied the location, so the
+            # mesh is in model coordinates: turn it about the blade centre)
+            bc = Vector((FAN_X, ey + math.cos(a) * rc, FAN_Z + math.sin(a) * rc))
+            ob.data.transform(Matrix.Translation(bc) @ Matrix.Rotation(0.45, 4, Vector((0, math.cos(a), math.sin(a))))
+                              @ Matrix.Translation(-bc))
             finish(ob, M_DARK)
         L.group = ""
 else:
@@ -431,49 +502,374 @@ else:
 if WING:
     # the points match Fortress.points in fortress.gd: two dome turrets per wing (Kanta 26.10), outer pair first,
     # then the inner pair; turret_3 (inner left) is the command turret
-    hull_uv = HullUV([o for o in L.parts if o.name.startswith("hull")])
     for n, (x, y) in enumerate([at(-20, -92), at(-20, 92), at(-4, -48), at(-4, 48)], 1):
-        dome_turret(n, x, y, hull_uv)
+        dome_turret(n, x, y, SKIN)
 else:
     TPOS = [at(-6, -78), at(-6, 78), at(48, 0), at(-112, 0)]
     for n, (x, y) in enumerate(TPOS, 1):
         z = 0.008 if n <= 2 else (FR + 0.006 if n == 3 else 0.042)
         turret(n, x, y, z, 3 if n == 3 else 2)   # верхняя — ступень 3 (короба лент, прицел), остальные — 2
 
-# --- люки на спине (фаза 2): ракеты под створками ---
-HX0, HX1, HY = (-0.035, 0.035, 0.03) if WING else (-0.0, 0.12, 0.034)
-HZ = max(top(x, y) for x in (HX0, HX1) for y in (-HY, 0, HY)) - FR if WING else 0.0   # HZ + FR = skin height
-L.group = "fittings"
-box("bay_well", ((HX0 + HX1) / 2, 0, FR + HZ + 0.0005), (HX1 - HX0, 0.07, 0.004), M_DARK, 0.0)
-for s, side in ((1, "l"), (-1, "r")):
-    L.group = "bay_" + side
-    L.pivots[L.group] = ((HX0 + HX1) / 2, s * 0.018, FR + HZ - 0.002)
-    for x0 in ((HX0 + 0.01,) if WING else (HX0 + 0.012, HX0 + 0.066)):
-        cyl("missile", (x0 + 0.02, s * 0.018, FR + HZ - 0.002), 0.0055, 0.05, M_STEEL, "X", 10)
-        sphere("missile_eye", (x0 + 0.046, s * 0.018, FR + HZ - 0.002), 0.0055, (1.3, 1, 1), M_GLASS, 10)
-    L.group = "hatch_" + side
-    L.pivots[L.group] = ((HX0 + HX1) / 2, s * (HY + 0.004), FR + HZ + 0.006)
-    box("hatch", ((HX0 + HX1) / 2, s * HY / 2, FR + HZ + 0.007), (HX1 - HX0, HY, 0.004), M_LIGHT, 0.001)
-    box("hatch_stripe", ((HX0 + HX1) / 2, s * HY / 2, FR + HZ + 0.0095), (HX1 - HX0 - 0.02, 0.006, 0.001), M_RED, 0.0)
-L.group = ""
+# --- wing mode: weapon bay (phase 2) and core access panel (phase 3) cut out of the centre-body skin ---
+# Kanta 27.10: the old hatches and core panels were flat light boxes on top of the curved skin ("what is glued
+# onto the Fortress?"). Here they are the hull's own skin: each door is cut out of the top skin along its outline,
+# keeps the hull's triangles, UVs and paint (so it is flush and the same colour), gets a thin dark edge and
+# underside, and a dark well goes down into the hull under it. What shows when closed: the seam gap round each
+# door, a hinge strip along its outer edge and latch plates along the centre line.
+# Placement, from the airframe (hull height map and top view):
+#  - the centre body is the ridge |y| < ~0.035 from the canopy (x 0.10…0.16) back to the trailing-edge tip
+#    (x −0.18); the engine humps run beside it at |y| 0.05…0.10, intakes at x ≈ 0.08, exhausts at x ≈ −0.08;
+#  - the weapon bay sits on the ridge between the two engine humps, just aft of the canopy: two doors split on
+#    the centre line, hinged on their outer edges (lines parallel to the centre line, the axis render3d turns
+#    them about), with the fore and aft edges swept parallel to the leading edge (the usual sawtooth of a
+#    flying wing's doors), so the bay is a chevron of constant length;
+#  - the core panel is a larger access panel on the ridge aft of the bay, past a 0.016 frame, between the
+#    exhaust humps: fore edge parallel to the leading edge like the bay's, aft edge parallel to the centre
+#    section's trailing edge; split on the centre line, hinged on the outer edges as well.
+LE_K = 0.71     # the leading edge runs x = 0.2 − 0.71·|y|: door edges parallel to it fall back 0.71 per |y|
+TE_K = 0.94     # the centre section's trailing edge runs forward 0.94 per |y| from its tip (x −0.18, y 0)
+SEAM = 0.001    # gap round a door; the dark wall of the well under it is the panel line
+DOOR_T = 0.0012  # door skin thickness (dark edge and underside)
+BAY_F, BAY_L, BAY_W = 0.074, 0.072, 0.03       # bay: fore point on the centre line, length along x, half width
+CORE_F, CORE_A, CORE_W = -0.014, -0.135, 0.032  # core panel: fore point, aft point (centre line), half width
 
-# --- ядро (фаза 3): раскалённый блок под откидными панелями обшивки ---
-CX0, CX1 = (-0.11, -0.045) if WING else (-0.26, -0.08)
-CZ = max(top(x, y) for x in (CX0, CX1) for y in (-0.033, 0, 0.033)) - FR if WING else 0.0
-L.group = "core"
-L.pivots[L.group] = ((CX0 + CX1) / 2, 0, FR + CZ)
-box("core_well", ((CX0 + CX1) / 2, 0, FR + CZ + 0.0005), (CX1 - CX0, 0.066, 0.004), M_DARK, 0.0)
-box("core_block", ((CX0 + CX1) / 2, 0, FR + CZ + 0.002), (CX1 - CX0 - 0.03, 0.044, 0.003), M_CORE, 0.0)
-for x in (CX0 + 0.03, (CX0 + CX1) / 2, CX1 - 0.03):
-    cyl("core_coil", (x, 0, FR + CZ + 0.003), 0.01, 0.003, M_DARK, "Z", 12)
-for s, side in ((1, "l"), (-1, "r")):
-    L.group = "hull_" + side
-    L.pivots[L.group] = ((CX0 + CX1) / 2, s * 0.036, FR + CZ + 0.006)
-    box("hull_panel", ((CX0 + CX1) / 2, s * 0.018, FR + CZ + 0.006), (CX1 - CX0, 0.036, 0.004), M_HULL, 0.001)
-    for x in (CX0 + 0.02, CX1 - 0.02):
-        box("rivet_strip", (x, s * 0.018, FR + CZ + 0.0085), (0.004, 0.032, 0.001), M_DARK, 0.0)
-L.group = ""
 
+def _ccw(poly):
+    """The polygon wound counter-clockwise seen from above"""
+    a = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1]))
+    return list(poly) if a > 0 else list(reversed(poly))
+
+
+def _inside(poly, p, eps=1e-9):
+    """Plan point p inside the convex counter-clockwise polygon"""
+    for (ax, ay), (bx, by) in zip(poly, poly[1:] + poly[:1]):
+        if (bx - ax) * (p[1] - ay) - (by - ay) * (p[0] - ax) < -eps:
+            return False
+    return True
+
+
+def _inset(poly, d):
+    """Convex counter-clockwise polygon with its edge i (poly[i] → poly[i+1]) moved inward by d[i]"""
+    n = len(poly)
+    lines = []
+    for i in range(n):
+        a, b = Vector(poly[i]), Vector(poly[(i + 1) % n])
+        t = (b - a).normalized()
+        lines.append((a + Vector((-t.y, t.x)) * d[i], t))
+    out = []
+    for i in range(n):
+        (p0, t0), (p1, t1) = lines[i - 1], lines[i]
+        s = ((p1.x - p0.x) * t1.y - (p1.y - p0.y) * t1.x) / (t0.x * t1.y - t0.y * t1.x)
+        q = p0 + t0 * s
+        out.append((q.x, q.y))
+    return out
+
+
+def _new_object(name, bm):
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    return ob
+
+
+def cut_top(obs, poly, name):
+    """Cut the top skin of obs inside the convex plan polygon poly out into new objects (the same materials and
+    UVs, so the same paint); obs keep the rest of their skin with a hole. The skin is split exactly on the
+    polygon's edges by vertical planes (only top faces reaching the polygon's box are split, so the rest of the
+    hull is untouched). Returns the cut pieces."""
+    poly = _ccw(poly)
+    x0, x1 = min(p[0] for p in poly), max(p[0] for p in poly)
+    y0, y1 = min(p[1] for p in poly), max(p[1] for p in poly)
+    out = []
+    for ob in obs:
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+
+        def region():
+            fs = []
+            for f in bm.faces:
+                if f.normal.z < 0.05:
+                    continue
+                xs, ys = [v.co.x for v in f.verts], [v.co.y for v in f.verts]
+                if max(xs) < x0 or min(xs) > x1 or max(ys) < y0 or min(ys) > y1:
+                    continue
+                c = f.calc_center_median()
+                if abs(c.z - top(c.x, c.y)) > 0.0015:   # top skin only, not the duct roofs or the belly
+                    continue
+                fs.append(f)
+            return fs
+
+        for a, b in zip(poly, poly[1:] + poly[:1]):
+            fs = region()
+            geom = list({v for f in fs for v in f.verts}) + list({e for f in fs for e in f.edges}) + fs
+            bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-7, plane_co=Vector((a[0], a[1], 0.0)),
+                                   plane_no=Vector((b[1] - a[1], a[0] - b[0], 0.0)).normalized())
+            bm.normal_update()
+        bm.faces.ensure_lookup_table()
+        bm.faces.index_update()
+        sel = {f.index for f in region() if _inside(poly, f.calc_center_median())}
+        if sel:
+            cp = bm.copy()
+            cp.faces.ensure_lookup_table()
+            assert len(cp.faces) == len(bm.faces)
+            bmesh.ops.delete(cp, geom=[f for i, f in enumerate(cp.faces) if i not in sel], context="FACES")
+            bmesh.ops.delete(bm, geom=[bm.faces[i] for i in sel], context="FACES")
+            piece = _new_object(name, cp)
+            cp.free()
+            for m in ob.data.materials:
+                piece.data.materials.append(m)
+            out.append(piece)
+        bm.to_mesh(ob.data)
+        bm.free()
+    return out
+
+
+def _join(obs, name):
+    """One object from obs (None when obs is empty)"""
+    if not obs:
+        return None
+    bpy.ops.object.select_all(action="DESELECT")
+    for ob in obs:
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = obs[0]
+    if len(obs) > 1:
+        bpy.ops.object.join()
+    ob = bpy.context.view_layer.objects.active
+    ob.name = name
+    return ob
+
+
+def door_back(skin, name, m):
+    """The door's dark edge walls and underside: the skin piece lowered by DOOR_T (its inner face, seen when the
+    door stands open) and walls round its free edges. The skin piece itself is the door's top."""
+    src = bmesh.new()
+    src.from_mesh(skin.data)
+    bm = bmesh.new()
+    up, low = {}, {}
+
+    def tv(v):
+        if v not in up:
+            up[v] = bm.verts.new(v.co)
+        return up[v]
+
+    def lv(v):
+        if v not in low:
+            low[v] = bm.verts.new(v.co - Vector((0, 0, DOOR_T)))
+        return low[v]
+
+    for f in src.faces:
+        bm.faces.new([lv(v) for v in reversed(f.verts)])   # facing down
+    for e in src.edges:
+        if len(e.link_faces) == 1:
+            lp = e.link_loops[0]
+            a, b = lp.vert, lp.link_loop_next.vert
+            bm.faces.new((tv(a), lv(a), lv(b), tv(b)))      # facing out of the door
+    src.free()
+    ob = _new_object(name, bm)
+    bm.free()
+    return finish(ob, m)
+
+
+def skin_patch(name, quad, m, lift=0.00035, n=8):
+    """A thin plate lying on the skin over the plan quad [(x, y)] × 4 (bilinear, n cells along its first side)"""
+    bm = bmesh.new()
+    (ax, ay), (bx, by), (cx, cy), (dx, dy) = quad
+    rows = []
+    for j in range(2):
+        row = []
+        for i in range(n + 1):
+            t = i / n
+            if j == 0:
+                px, py = ax + (bx - ax) * t, ay + (by - ay) * t
+            else:
+                px, py = dx + (cx - dx) * t, dy + (cy - dy) * t
+            row.append(bm.verts.new((px, py, top(px, py) + lift)))
+        rows.append(row)
+    for i in range(n):
+        bm.faces.new((rows[0][i], rows[0][i + 1], rows[1][i + 1], rows[1][i]))
+    bm.normal_update()
+    bm.faces.ensure_lookup_table()
+    if bm.faces[0].normal.z < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    ob = _new_object(name, bm)
+    bm.free()
+    return finish(ob, m)
+
+
+def well(name, outline, z_floor, m, floor_group=None):
+    """Dark well under an opening: walls from the skin edge of the outline (any simple polygon) straight down to
+    z_floor, facing into the well, and a floor at z_floor (in floor_group if given, e.g. the pulsing core)"""
+    outline = _ccw(outline)
+    pts = []
+    for a, b in zip(outline, outline[1:] + outline[:1]):
+        k = max(1, int(math.dist(a, b) / 0.004))
+        pts += [(a[0] + (b[0] - a[0]) * i / k, a[1] + (b[1] - a[1]) * i / k) for i in range(k)]
+    bm = bmesh.new()
+    tops = [bm.verts.new((x, y, top(x, y) + 0.0003)) for x, y in pts]
+    bots = [bm.verts.new((x, y, z_floor)) for x, y in pts]
+    n = len(pts)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((tops[i], tops[j], bots[j], bots[i]))   # normal to the left of a→b: into the well
+    ob = finish(_new_object(name + "_walls", bm), m)
+    bm.free()
+    g = L.group
+    if floor_group is not None:
+        L.group = floor_group
+    bm = bmesh.new()
+    bm.faces.new([bm.verts.new((x, y, z_floor)) for x, y in outline])
+    ob2 = finish(_new_object(name + "_floor", bm), m)
+    bm.free()
+    L.group = g
+    return ob, ob2
+
+
+def spine_doors(hulls, half, prefix, latches):
+    """Two doors split on the centre line out of the skin inside the plan outline: half(s) is the convex half
+    polygon on side s (+1 left, −1 right) whose edge 0 runs along the centre line and edge 2 along the outer
+    hinge line. Node prefix_l / prefix_r: dark edges, underside, hinge strip and latches (weathered); its child
+    prefix_X_skin: the door's own skin with the hull paint. Pivot on the hinge line, so render3d's turn about X
+    swings each door up and outwards. Returns {side: pivot}."""
+    pivots = {}
+    for s, side in ((1, "l"), (-1, "r")):
+        hole = _ccw(half(s))
+        pieces = cut_top(hulls, hole, prefix + "_cut")
+        # the door: the hole less SEAM round it (half of it at the centre line, where the other door meets it)
+        d = [SEAM * 0.5 if abs(hole[i][1]) < 1e-9 and abs(hole[(i + 1) % 4][1]) < 1e-9 else SEAM for i in range(4)]
+        door = _inset(hole, d)
+        skins = cut_top(pieces, door, prefix + "_skin")
+        for p in pieces:   # the seam strip left round the door: open, the well wall shows through
+            bpy.data.objects.remove(p)
+        g = prefix + "_" + side
+        skin = _join(skins, g + "_skin")
+        outer = sorted(door, key=lambda p: -abs(p[1]))[:2]           # the hinge edge
+        inner = sorted(door, key=lambda p: abs(p[1]))[:2]            # the centre-line edge
+        xm = (outer[0][0] + outer[1][0]) / 2
+        hy = outer[0][1]
+        pv = (xm, hy, top(xm, hy) - DOOR_T * 0.5)
+        pivots[side] = pv
+        L.group = g
+        L.pivots[g] = pv
+        door_back(skin, "door_back", M_DARK)
+        xa, xb = sorted((outer[0][0], outer[1][0]))
+        w = 0.0013 * s
+        skin_patch("hinge", [(xa + 0.001, hy - w * 0.15), (xb - 0.001, hy - w * 0.15),
+                             (xb - 0.001, hy - w * 1.15), (xa + 0.001, hy - w * 1.15)], M_DARK)
+        ia, ib = sorted((inner[0][0], inner[1][0]))
+        iy = inner[0][1]
+        for t in latches:
+            lx = ia + (ib - ia) * t
+            skin_patch("latch", [(lx - 0.0024, iy + s * 0.0006), (lx + 0.0024, iy + s * 0.0006),
+                                 (lx + 0.0024, iy + s * 0.0022), (lx - 0.0024, iy + s * 0.0022)], M_DARK, n=3)
+        skin["fh_group"] = g + "_skin"
+        L.parts.append(skin)
+        L.pivots[g + "_skin"] = pv
+        L.parents[g + "_skin"] = g
+    L.group = ""
+    return pivots
+
+
+def spine_bay(hulls):
+    """Phase 2 weapon bay on the centre body (see the placement note above): doors hatch_l / hatch_r, the two
+    missiles bay_l / bay_r lying in the well under them (render3d lifts them 0.012 when the doors open)."""
+    xa = BAY_F - BAY_L
+
+    def half(s):
+        return [(BAY_F, 0.0), (xa, 0.0), (xa - LE_K * BAY_W, s * BAY_W), (BAY_F - LE_K * BAY_W, s * BAY_W)]
+
+    outline = [(BAY_F, 0.0), (BAY_F - LE_K * BAY_W, BAY_W), (xa - LE_K * BAY_W, BAY_W), (xa, 0.0),
+               (xa - LE_K * BAY_W, -BAY_W), (BAY_F - LE_K * BAY_W, -BAY_W)]
+    # missiles: as before (body r 0.0055, 0.05 long, seeker eye in front), centred in the chevron at |y| = 0.016;
+    # deep enough that each stays under the skin above it with 1.5 mm to spare while the doors are shut
+    my, mr = 0.016, 0.0055
+    fore = BAY_F - LE_K * (my + mr)           # the bay's fore edge where the missile's outer side is
+    aft = xa - LE_K * (my - mr)               # its aft edge where the missile's inner side is
+    x0 = (fore + aft) / 2 - 0.024             # missile from x0 − 0.005 (tail) to x0 + 0.053 (eye tip)
+    assert x0 - 0.005 > aft + 0.001 and x0 + 0.053 < fore - 0.001, ("bay too short for the missiles", x0, fore, aft)
+    sky = min(top(x, sy * yy) for x in np.linspace(x0 - 0.005, x0 + 0.053, 12) for yy in (my - mr, my, my + mr)
+              for sy in (1, -1))
+    mz = sky - 0.0015 - mr
+    z_floor = min(mz - mr - 0.0005, min(top(x, y) for x, y in outline) - 0.004)
+    L.group = "fittings"
+    well("bay_well", outline, z_floor, M_DARK)
+    for s, side in ((1, "l"), (-1, "r")):
+        L.group = "bay_" + side
+        L.pivots[L.group] = (x0 + 0.02, s * my, mz)
+        cyl("missile", (x0 + 0.02, s * my, mz), mr, 0.05, M_STEEL, "X", 10)
+        sphere("missile_eye", (x0 + 0.046, s * my, mz), mr, (1.3, 1, 1), M_GLASS, 10)
+    L.group = ""
+    spine_doors(hulls, half, "hatch", (0.3, 0.7))
+    print("BAY floor %.4f missiles z %.4f skin min over them %.4f" % (z_floor, mz, sky))
+
+
+def spine_core(hulls):
+    """Phase 3 core under the large access panel aft of the bay (see the placement note above): panels hull_l /
+    hull_r, node core (glowing block, coils and the well floor; render3d pulses it), walls in the fixed fittings."""
+    def fore(y):
+        return CORE_F - LE_K * abs(y)
+
+    def aft(y):
+        return CORE_A + TE_K * abs(y)
+
+    def half(s):
+        return [(CORE_F, 0.0), (CORE_A, 0.0), (aft(CORE_W), s * CORE_W), (fore(CORE_W), s * CORE_W)]
+
+    outline = [(CORE_F, 0.0), (fore(CORE_W), CORE_W), (aft(CORE_W), CORE_W), (CORE_A, 0.0),
+               (aft(CORE_W), -CORE_W), (fore(CORE_W), -CORE_W)]
+    z_floor = min(top(x, y) for x, y in outline) - 0.006
+    cx = -0.07
+    L.group = "core"
+    L.pivots[L.group] = (cx, 0, z_floor)
+    L.group = "fittings"
+    well("core_well", outline, z_floor, M_DARK, floor_group="core")
+    L.group = "core"
+    # the glowing block and its three coils as before (0.06 × 0.04 now, it fits the panel's narrower aft end)
+    assert fore(0.02) > cx + 0.03 + 0.003 and aft(0.02) < cx - 0.03 - 0.003
+    box("core_block", (cx, 0, z_floor + 0.0015), (0.06, 0.04, 0.003), M_CORE, 0.0)
+    for x in (cx - 0.02, cx, cx + 0.02):
+        cyl("core_coil", (x, 0, z_floor + 0.0025), 0.01, 0.003, M_DARK, "Z", 12)
+    L.group = ""
+    spine_doors(hulls, half, "hull", (0.2, 0.5, 0.8))
+    print("CORE floor %.4f" % z_floor)
+
+
+if WING:
+    _hulls = [o for o in L.parts if o.name.startswith("hull") and o.get("fh_group", "") == ""]
+    spine_bay(_hulls)
+    spine_core(_hulls)
+else:
+    # --- люки на спине (фаза 2): ракеты под створками ---
+    HX0, HX1, HY = -0.0, 0.12, 0.034
+    L.group = "fittings"
+    box("bay_well", ((HX0 + HX1) / 2, 0, FR + 0.0005), (HX1 - HX0, 0.07, 0.004), M_DARK, 0.0)
+    for s, side in ((1, "l"), (-1, "r")):
+        L.group = "bay_" + side
+        L.pivots[L.group] = ((HX0 + HX1) / 2, s * 0.018, FR - 0.002)
+        for x0 in (HX0 + 0.012, HX0 + 0.066):
+            cyl("missile", (x0 + 0.02, s * 0.018, FR - 0.002), 0.0055, 0.05, M_STEEL, "X", 10)
+            sphere("missile_eye", (x0 + 0.046, s * 0.018, FR - 0.002), 0.0055, (1.3, 1, 1), M_GLASS, 10)
+        L.group = "hatch_" + side
+        L.pivots[L.group] = ((HX0 + HX1) / 2, s * (HY + 0.004), FR + 0.006)
+        box("hatch", ((HX0 + HX1) / 2, s * HY / 2, FR + 0.007), (HX1 - HX0, HY, 0.004), M_LIGHT, 0.001)
+        box("hatch_stripe", ((HX0 + HX1) / 2, s * HY / 2, FR + 0.0095), (HX1 - HX0 - 0.02, 0.006, 0.001), M_RED, 0.0)
+    L.group = ""
+
+    # --- ядро (фаза 3): раскалённый блок под откидными панелями обшивки ---
+    CX0, CX1 = -0.26, -0.08
+    L.group = "core"
+    L.pivots[L.group] = ((CX0 + CX1) / 2, 0, FR)
+    box("core_well", ((CX0 + CX1) / 2, 0, FR + 0.0005), (CX1 - CX0, 0.066, 0.004), M_DARK, 0.0)
+    box("core_block", ((CX0 + CX1) / 2, 0, FR + 0.002), (CX1 - CX0 - 0.03, 0.044, 0.003), M_CORE, 0.0)
+    for x in (CX0 + 0.03, (CX0 + CX1) / 2, CX1 - 0.03):
+        cyl("core_coil", (x, 0, FR + 0.003), 0.01, 0.003, M_DARK, "Z", 12)
+    for s, side in ((1, "l"), (-1, "r")):
+        L.group = "hull_" + side
+        L.pivots[L.group] = ((CX0 + CX1) / 2, s * 0.036, FR + 0.006)
+        box("hull_panel", ((CX0 + CX1) / 2, s * 0.018, FR + 0.006), (CX1 - CX0, 0.036, 0.004), M_HULL, 0.001)
+        for x in (CX0 + 0.02, CX1 - 0.02):
+            box("rivet_strip", (x, s * 0.018, FR + 0.0085), (0.004, 0.032, 0.001), M_DARK, 0.0)
+    L.group = ""
 
 
 def grime():
@@ -514,29 +910,24 @@ def weather(root):
     roughness, no wear). Wing mode only: the CC BY hull already carries its own baked texture (sf_recipes).
     Each surface keeps its own colour (turret_paint own-colour mode); the dome takes the skin under it.
     Atlas A — dome turret 1 with its rail missile, at turret scale; turrets 2…4 are the same meshes moved,
-    so they share its UVs and material (one texture set instead of four). Atlas B — every other moving or
-    fixed detail: hatches, bay missiles, core panels, intake fans and the dark fittings on the skin."""
+    so they share its mesh (UVs and material included: one texture set instead of four). Atlas B — every other
+    moving or fixed detail: door edges, hinges and latches, bay missiles, the core, intake fans and the dark
+    fittings on the skin. The doors' own skin (groups *_skin) keeps the hull's texture and UVs untouched, so a
+    shut door is the same paint as the skin round it."""
     import turret_paint
     obj = bpy.data.objects
     pal = {"own": True, "seed": 31, "wear": 0.9, "dust": 0.7}
     turret_paint.bake_set([obj["turret_1"], obj["turret_1_missile"]], pal, 1024, "fortress_dome_paint", TS)
     for n in (2, 3, 4):
         for a, b in (("turret_1", "turret_%d" % n), ("turret_1_missile", "turret_%d_missile" % n)):
-            src, dst = obj[a].data, obj[b].data
-            assert len(src.loops) == len(dst.loops) and len(src.polygons) == len(dst.polygons), (a, b)
-            uv = np.empty(len(src.loops) * 2, np.float32)
-            src.uv_layers["UVMap"].data.foreach_get("uv", uv)
-            while dst.uv_layers:
-                dst.uv_layers.remove(dst.uv_layers[0])
-            dst.uv_layers.new(name="UVMap").data.foreach_set("uv", uv)
-            mi = np.empty(len(src.polygons), np.int32)
-            src.polygons.foreach_get("material_index", mi)
-            dst.materials.clear()
-            for m in src.materials:
-                dst.materials.append(m)
-            dst.polygons.foreach_set("material_index", mi)
-            dst.update()
-    rest = [o for o in obj if o.type == "MESH" and o.get("fh_group", "") and not o.name.startswith("turret_")]
+            # Kanta 27.10 review: copying turret 1's UVs loop by loop scrambled the paint on turrets 2…4 (the
+            # joined parts came in another order, 40 % of the loops sat elsewhere); the mesh itself is shared now.
+            # Each node's origin is its pivot and the parts are built relative to it, so the shapes are equal.
+            old = obj[b].data
+            obj[b].data = obj[a].data
+            bpy.data.meshes.remove(old)
+    rest = [o for o in obj if o.type == "MESH" and o.get("fh_group", "") and not o.name.startswith("turret_")
+            and not o.name.endswith("_skin")]
     turret_paint.bake_set(rest, dict(pal, seed=37), 1024, "fortress_fit_paint", 0.1)
 
 
