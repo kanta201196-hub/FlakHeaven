@@ -1,6 +1,6 @@
 # Decal editor (hangar) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** A «Знаки ›» editor in the hangar's plane tab where the player puts decals anywhere on the plane — place, move, scale, rotate, mirror, recolour, reorder, delete, presets, «на другой борт» — with mouse or gamepad.
 
@@ -46,10 +46,10 @@
 - `func remove() -> void`, `func order(delta: int) -> void`, `func other_side(hull: PlaneHull) -> bool`, `func preset(hull: PlaneHull, key: String, spot: String, side: int) -> bool`.
 - `func shown() -> Array[DecalRecord]` — records to draw now (without the one being moved).
 
-- [ ] Write `_test_editor`: open/pick/place/select/grab/drop/scale clamps/rotate wraps/mirror keeps numbers readable/paint cycling/text digits/remove/order/cap refusal/locked refusal/empty hit/other_side/preset/shown while moving.
-- [ ] Run `godot --headless --path game -s res://tests/decals_test.gd`: fails (no class).
-- [ ] Implement `decal_editor.gd`; `godot --headless --path game --import`; run the test: passes.
-- [ ] Commit.
+- [x] Write `_test_editor`: open/pick/place/select/grab/drop/scale clamps/rotate wraps/mirror keeps numbers readable/paint cycling/text digits/remove/order/cap refusal/locked refusal/empty hit/other_side/preset/shown while moving.
+- [x] Run `godot --headless --path game -s res://tests/decals_test.gd`: fails (no class).
+- [x] Implement `decal_editor.gd`; `godot --headless --path game --import`; run the test: passes.
+- [x] Commit.
 
 ### Task 2: PlaneDecals — show any record list, preview mesh, badges come back
 
@@ -61,7 +61,7 @@
 - `static func hull_of(model: Node3D) -> PlaneHull` — the skin with fairings (what the decals are cut from); used by the cursor.
 - `material(highlight := 0.0)` gains a `highlight` uniform (pulsing light rim for the selected decal).
 
-- [ ] Implement; covered by the frames of Task 5 (node code, no unit test).
+- [x] Implement; covered by the frames of Task 5 (node code, no unit test).
 
 ### Task 3: Hangar3D editor mode
 
@@ -69,20 +69,28 @@
 
 **Interfaces — produces:** `var decal_mode := false`; `func decal_ray(p: Vector2) -> Array` (screen point in ctrl coords → [pos, normal] in model axes, or []); `func decal_refresh(records: Array[DecalRecord], preview: DecalRecord, tally: int)`; `func orbit(dx: float, dy: float)`; `func model_key() -> String`. In decal mode: no idle spin, no sway, left button is the editor's (MainInput), right-drag orbits.
 
-- [ ] Implement; check with the bench frames (Task 5).
+- [x] Implement; check with the bench frames (Task 5).
 
 ### Task 4: HudDecals panel, hangar wiring, input, translations
 
 **Files:** Create `game/scripts/hud_decals.gd`; Modify `game/scripts/hud_hangar.gd` (`_hg_livery` row: «Знаки ›»; `_hg_plane`: right column → `HudDecals.draw` while open), `game/scripts/main_input.gd` (`hangar_action` `dc:*`, editor keys and gamepad in `handle_global_input`), `game/scripts/main.gd` (`var decal_edit: DecalEditor`), `game/locale/en.po`, `game/locale/zh_CN.po`.
 
-- [ ] Panel: decal list (≤ 12 rows: select, ▲ ▼, ✕), picture grid (locked dimmed + «откроется: …»), presets (Нос · Номер · Счёт · Киль · Крыло, борт Л / П), two paint rows, number digits, Отразить · На другой борт · Удалить, help line with key labels, «‹ Назад».
-- [ ] Mouse: click in the view places / selects / drags; wheel scales the selected decal (else zooms); Q / E rotate (Shift — fine); F mirror; Del delete; right-drag orbits.
-- [ ] Gamepad: left stick — cursor (slower over the plane), A place / pick up / drop, B drop selection / back, LT / RT scale, LB / RB rotate, X mirror, Y next paint, right stick — camera, d-pad — panel focus, A on a focused panel button presses it.
-- [ ] `python3 tools/i18n/check_po.py game/locale/en.po --sync` (and zh_CN), fill the new strings; `check_po.py` exit 0.
+- [x] Panel: decal list (≤ 12 rows: select, ▲ ▼, ✕), picture grid (locked dimmed + «откроется: …»), presets (Нос · Номер · Счёт · Киль · Крыло, борт Л / П), two paint rows, number digits, Отразить · На другой борт · Удалить, help line with key labels, «‹ Назад».
+- [x] Mouse: click in the view places / selects / drags; wheel scales the selected decal (else zooms); Q / E rotate (Shift — fine); F mirror; Del delete; right-drag orbits.
+- [x] Gamepad: left stick — cursor (slower over the plane), A place / pick up / drop, B drop selection / back, LT / RT scale, LB / RB rotate, X mirror, Y next paint, right stick — camera, d-pad — panel focus, A on a focused panel button presses it.
+- [x] `python3 tools/i18n/check_po.py game/locale/en.po --sync` (and zh_CN), fill the new strings; `check_po.py` exit 0.
 
 ### Task 5: Bench frames and checks
 
 **Files:** Modify `game/scripts/visual_bench.gd` (`--decaledit` hangar shot: the editor open with sample decals, a selected decal and the cursor preview).
 
-- [ ] Frames (Forward+, JPEG, page in the scratchpad): the editor panel, the cursor preview on a curved nose, a selected decal; gamepad cursor.
-- [ ] `--import`, `unit.sh`, `smoke.sh all`, `full.sh` with exit codes; push; report.
+- [x] Frames (Forward+, JPEG, page in the scratchpad): the editor panel, the cursor preview on a curved nose, a selected decal; gamepad cursor.
+- [x] `--import`, `unit.sh`, `smoke.sh all`, `full.sh` with exit codes; push; report.
+
+## As built (differences from the plan)
+
+- Input lives in its own `DecalEditInput` (`game/scripts/decal_edit_input.gd`, owned by `MainInput.dc`): `MainInput` only routes `hg:dc:*` to it and calls `frame()` while the hangar is open. The gamepad is read raw (first pad), because the combat actions also carry mouse and keyboard binds (the left button fires).
+- `Hangar3D` reports the editor's left button and wheel by signals (`decal_press`, `decal_wheel`); `decal_close(key, …)` restores the real tally only when that plane is still on view.
+- The cursor stops on the canopy glass (`PlaneHull.glass_of`, `raycast_clear`, unit-tested): before, a decal could be put on the skin under the glass, where it is hidden.
+- Help line: keyboard words by default, gamepad words while the pad moved the cursor (no glyphs).
+
