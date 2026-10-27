@@ -268,8 +268,9 @@ static func prop_nodes(props: Node3D) -> Array:
 
 ## Поворот винтов на угол (в радианах) вокруг их оси; знак — как вращаются лопасти (передней кромкой вперёд)
 static func spin_props(nodes: Array, angle: float) -> void:
-	for n: Node3D in nodes:
-		n.rotate_object_local(Vector3.RIGHT, -angle)
+	for n: Variant in nodes:
+		if is_instance_valid(n):   # the hangar rebuilds the model while a spin may still hold the old nodes
+			(n as Node3D).rotate_object_local(Vector3.RIGHT, -angle)
 
 
 static func attach_detail(model: Node3D, key: String) -> Node3D:
