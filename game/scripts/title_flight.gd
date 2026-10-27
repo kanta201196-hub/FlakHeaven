@@ -16,6 +16,10 @@ const SPEED := 80.0            # пикс/с по плоскости боя (б�
 const WEAVE := 0.12            # «змейка» курса, ± рад
 const WEAVE_W := 0.11          # её частота, рад/с (период ~57 с)
 const BANK_K := 3.2            # крен от скорости разворота
+## s13 (Kanta: «подрагивание самолётов на заставке»): the turn rate was the per-frame heading change over dt, so
+## the uneven camera steps along the traced river (±10 % frame to frame) shook the bank by ±0.03 rad every
+## frame and up to 0.25 rad in two frames. The rate now follows that raw value with this time constant, 1/s
+const RATE_K := 1.2
 ## S11-01: the camera flies along the river valley (river, road, fields, villages, slopes on both sides:
 ## the Highlands at their most readable) instead of drifting over whatever lies up-screen. The route is
 ## the river line itself, traced ahead of the camera, and the camera follows its moving average over
@@ -28,15 +32,24 @@ const ROUTE_MAX := 4000        # samples (160 km of river, ~35 min) before the r
 const SETTLE_T := 8.0          # s to ease from where the camera was onto the route
 const SETTLE_MAX := 600.0      # farther than this from the route (back from a sortie) — jump to it
 const TURN_K := 0.6            # how fast the heading follows the route, 1/s
-const ANCHOR := Vector2(0.56, 0.54)  # ведущий на экране, доля кадра (справа от кнопок, под журналом)
-const LEN_K := 0.17            # длина «Осы» на экране, доля высоты кадра
+## s13 (Kanta's video: the flight crossed the logo and slid under the side panels): ANCHOR is now the centre of
+## the formation, not the leader, at the centre of the free window of the menu (between the button column
+## at 0.31 and the panels at 0.70 of the width, below the logo at 0.30 and above the hints at 0.95 of the
+## height). The river route turns the flight any way, so the formation is closed up (FLIGHT slots ×0.77) and
+## sized to fit that window at any heading: its farthest plane («Кит», 1.9 «Осы» lengths from the centre)
+## stays inside at LEN_K 0.15
+const ANCHOR := Vector2(0.505, 0.62)  # центр строя на экране, доля кадра
+const LEN_K := 0.15            # длина «Осы» на экране, доля высоты кадра
 const ALT := 60.0              # высота звена над плоскостью боя, пикс
 ## класс, место в строю (вперёд, вправо — в длинах «Осы»), длина относительно «Осы», фаза разнобоя
 const FLIGHT := [
 	["fighter", Vector2(0.0, 0.0), 1.0, 0.0],
-	["attacker", Vector2(-1.1, -1.3), 1.08, 1.7],
-	["bomber", Vector2(-1.55, 1.45), 1.45, 3.1],
+	["attacker", Vector2(-0.85, -1.0), 1.08, 1.7],
+	["bomber", Vector2(-1.2, 1.1), 1.45, 3.1],
 ]
+
+## Centre of the formation in «Оса» lengths (forward, right): the mean of the FLIGHT slots
+const _CENTRE := Vector2(-0.683, 0.033)
 
 static var _t := 0.0
 static var _head := H0         # course without the weave (along the route)
@@ -56,7 +69,7 @@ static func heading() -> float:
 	return _head if _on_route else _head + WEAVE * sin(_t * WEAVE_W)
 
 
-## Turn rate of heading(), rad/s (drives the bank)
+## Turn rate of heading(), rad/s, smoothed over RATE_K (drives the bank)
 static func turn_rate() -> float:
 	return _rate if _on_route else _rate + WEAVE * WEAVE_W * cos(_t * WEAVE_W)
 
@@ -73,7 +86,7 @@ static func advance(dt: float, pos := Vector2.INF) -> Vector2:
 		_on_route = false
 		_last = Vector2.INF
 		_head = lerp_angle(_head, H0, 1.0 - exp(-dt * TURN_K))
-		_rate = 0.0
+		_rate = lerpf(_rate, 0.0, 1.0 - exp(-dt * RATE_K))
 		return Vector2.from_angle(heading()) * SPEED * dt
 	if _route.size() == 0 or not _last.is_finite() or pos.distance_to(_last) > 1.0 \
 			or _route.size() > ROUTE_MAX:
@@ -90,7 +103,7 @@ static func advance(dt: float, pos := Vector2.INF) -> Vector2:
 	var prev := _head
 	if (target - pos).length_squared() > 1e-6:
 		_head = lerp_angle(_head, (target - pos).angle(), 1.0 - exp(-dt * TURN_K))
-	_rate = angle_difference(prev, _head) / maxf(dt, 1e-4)
+	_rate = lerpf(_rate, angle_difference(prev, _head) / maxf(dt, 1e-4), 1.0 - exp(-dt * RATE_K))
 	_last = target
 	return target - pos
 
@@ -210,11 +223,12 @@ func sync(on: bool, delta: float) -> void:
 	var d := cam.project_ray_normal(vs * ANCHOR)
 	if d.y > -0.05:
 		return
-	var lead := Vector2(o.x + d.x * (-o.y / d.y), o.z + d.z * (-o.y / d.y))   # точка ведущего на плоскости боя
+	var mid := Vector2(o.x + d.x * (-o.y / d.y), o.z + d.z * (-o.y / d.y))   # центр строя на плоскости боя
 	var L := LEN_K * vs.y / maxf(r3._zoom, 0.01)
 	var h := heading()
 	var fwd := Vector2.from_angle(h)
 	var right := fwd.orthogonal() * -1.0   # вправо по курсу (2D: y вниз)
+	var lead := mid - (fwd * _CENTRE.x + right * _CENTRE.y) * L
 	var bank := clampf(turn_rate() * BANK_K, -0.35, 0.35)
 	for u: Unit3D in _units:
 		var w := wobble(u.wob)
