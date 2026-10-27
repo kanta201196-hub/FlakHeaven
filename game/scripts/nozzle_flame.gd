@@ -9,13 +9,16 @@ class_name NozzleFlame
 
 ## Nozzle exits per hangar model, in model axes (nose +X, up +Y, length 1): [exit x, axis y, axis |z|, inner
 ## radius]. |z| > 0 means a pair, mirrored. Fighters measured from a rear depth map of the hangar GLBs (the
-## cavity inside the lip); attackers and «Кит» 2 match Livery.ENGINE_HOLES (nozzle x0, slightly inside r).
+## cavity inside the lip). Attackers and «Кит» 2 (S13, Kanta: the «Грач» 1 flame was wider than its nozzles and
+## off their axis): circle fits of the nozzle lip in cross-sections of the hangar GLBs, checked on the battle
+## GLBs (same axes within 0.001): x of the lip, centre of the opening, radius of the opening inside the lip.
+## The earlier values came from the nacelle radius (Livery.ENGINE_HOLES), 1.6–2× the opening.
 const NOZZLES := {
 	"fighter_1": [-0.47, -0.058, 0.0, 0.028],
 	"fighter_2": [-0.455, -0.042, 0.0755, 0.025],
-	"attacker_1": [-0.255, -0.0387, 0.0884, 0.03],
-	"attacker_2": [-0.305, -0.0293, 0.0919, 0.036],
-	"bomber_2": [-0.285, -0.0144, 0.0702, 0.027],
+	"attacker_1": [-0.242, -0.0386, 0.0807, 0.016],
+	"attacker_2": [-0.292, -0.032, 0.088, 0.0158],
+	"bomber_2": [-0.274, -0.0156, 0.0702, 0.0176],
 }
 const PLUME_LEN := 9.0   # outer plume length, in nozzle radii
 const CORE_LEN := 3.2    # hot core length, in nozzle radii

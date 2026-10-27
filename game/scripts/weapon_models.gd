@@ -82,7 +82,7 @@ const TURRET_MODELS := {
 		"muzzle_t": [Vector3(0.792, 0.282, 0.0), Vector3(1.17, 0.34, 0.18), Vector3(1.16, 0.403, 0.0)],
 		"k": [0.88, 1.0, 1.12],
 		"body": [Color(0.68, 0.6, 0.44), Color(0.68, 0.6, 0.44)],   # S12: ring collar in the turret's sand base
-		"ring": {"sides": ["top"], "r": RING_BASE_R, "depth": 1.0}},
+		"ring": {"sides": ["top", "wing"], "r": RING_BASE_R, "depth": 1.0}},
 }
 
 
@@ -804,14 +804,32 @@ static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.
 	return Vector2(r.x, absf(r.y) * signf(side))
 
 
+const KIT_TOP_TURRET := 0.4   # верхняя турель «Кита»: доля длины от носа
+## S13: ventral turret of «Кит» (third slot): model x (plane length 1), just aft of the bomb bay (x -0.31..0)
+const KIT_BOTTOM_TURRET_X := -0.335
+## S13 (Kanta 27.10): wing turrets of «Грач» 2 — model (x, |z|) on the wing, on the outer panel just outboard of
+## the flaps (z 0.15–0.33, they move in flight) and of the wing insignia (z 0.24–0.34), between the slats and the
+## trailing edge, near the chord's thickest line
+const WING_TURRETS := {"attacker_2": Vector2(-0.185, 0.385)}
+
+
+## Radius of a turret's ring collar (_with_ring) in the weapon mesh units, before the mount scale; tier t 1–3
+static func collar_r(cls: String, t: int) -> float:
+	var spec: Dictionary = TURRET_MODELS.get(cls, {})
+	if spec.is_empty():
+		return 0.0
+	var ks: Array = spec.get("k", [1.0, 1.0, 1.0])
+	var ring: Dictionary = spec.get("ring", {})
+	return 0.47 * float(spec["s"]) * float(ks[clampi(t, 1, 3) - 1]) * float(ring.get("r", RING_BASE_R)) / RING_BASE_R
+
+
 ## Точки крепления оружия (пиксели картинки самолёта, центр картинки, нос по +X) и сторона:
 ##   "under" — под крылом на пилоне (НАР, ракеты, бомбы, контейнеры — как на настоящих самолётах);
 ##   встроенные турели — как у реальных бомбардировщиков и штурмовиков:
 ##   "tail" — кормовая установка в хвосте фюзеляжа (стволы назад), "top" — верхняя за кабиной,
 ##   "bottom" — нижняя под фюзеляжем. yaw — куда смотрят стволы без цели (0 — вперёд, PI — назад).
-const KIT_TOP_TURRET := 0.4   # верхняя турель «Кита»: доля длины от носа
-
-
+##   S13: "wing" turret — on a wing fairing (WING_TURRETS), "skin" — a flush flare panel; both also carry
+##   "mx"/"mz", the spot in model axes (plane length 1), for SkinPatch.
 static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	var out: Array = []
 	var bay_grp := g.weapon == "bombs" and g.name.begins_with("Бомбоотсек") and has_bay(cls_id, lvl)
@@ -833,21 +851,17 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 			out.append({"p": Vector2(float(sh["nose"]) - float(sh["len"]) * (0.55 if top else 0.5), 0.0),
 				"side": "top" if top else "belly", "yaw": 0.0})
 			return out
-	# Т-5: ловушки встроены в корпус, а не на пилоне: ступень 1 — две кассеты на спине у хвоста,
-	# 2 — крупнее, плюс у корня крыла, 3 — плюс контейнеры на законцовках. «t» — какую модель ставить
+	# S13 (Kanta 27.10: «ловушки просто прилеплены сверху»): flares are flush dispenser panels in the skin of the
+	# rear fuselage (SkinPatch.FLARE_ROWS), one more pair per tier; side «skin» — Hangar3D and Render3D lay them onto
+	# the model at (mx, mz) in model axes instead of hanging a weapon model; «seed» varies the spent cartridges
 	if g.weapon == "flares" and not g.evo:
-		var fs := PlaneArt.shape_info(cls_id, lvl)
-		if not fs.is_empty():
-			var ft := tier(g.level)
-			var fz: float = maxf(float(fs["fus"]) * 0.55, 3.0)
-			for sd in [-1.0, 1.0]:
-				out.append({"p": Vector2(float(fs["nose"]) - float(fs["len"]) * 0.68, fz * sd), "side": "top", "yaw": 0.0, "t": mini(ft, 2)})
-			if ft >= 2:
-				for sd in [-1.0, 1.0]:
-					out.append({"p": wing_point(cls_id, lvl, sd, 0.2), "side": "wing", "yaw": 0.0, "t": 2})
-			if ft >= 3:
-				for sd in [-1.0, 1.0]:
-					out.append({"p": wing_point(cls_id, lvl, sd, 0.96), "side": "tip", "yaw": 0.0, "t": 3})
+		var ftex := PlaneArt.plane_tex(cls_id, lvl)
+		if ftex != null:
+			var fw := float(ftex.get_width())
+			var spots := SkinPatch.flare_spots("%s_%d" % [cls_id, lvl], tier(g.level))
+			for i in spots.size():
+				var q: Vector2 = spots[i]
+				out.append({"p": q * fw, "side": "skin", "yaw": 0.0, "t": tier(g.level), "mx": q.x, "mz": q.y, "seed": float(i)})
 			return out
 	# Kanta 24.10: wing-tip pair («Оса» third group) hangs beside the tip at wing level, not under the swept wing
 	# (from above it looked as if the missiles lay on top of the wing)
@@ -869,10 +883,22 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	var L: float = s["len"]
 	var tail: float = s["tail"]
 	var nose: float = s["nose"]
+	# S13 (Kanta 27.10): «Грач» 2 with both turrets carries them on the wings, one per wing on a fairing
+	# (SkinPatch.turret_fairing); with one — the gunner behind the canopy as before
+	var wt: Vector2 = WING_TURRETS.get("%s_%d" % [cls_id, lvl], Vector2.ZERO)
+	var wtex := PlaneArt.plane_tex(cls_id, lvl)
+	if wt != Vector2.ZERO and g.slots >= 2 and wtex != null:
+		var ww := float(wtex.get_width())
+		for sd in [-1.0, 1.0]:
+			out.append({"p": Vector2(wt.x, wt.y * sd) * ww, "side": "wing", "yaw": PI, "mx": wt.x, "mz": wt.y * sd})
+		return out
 	var order: Array
 	if cls_id == "bomber":
-		# тест 3.5-s7 (Kanta): турели «Кита» только на корпусе — кормовая под килем и верхняя на спине фюзеляжа
+		# тест 3.5-s7 (Kanta): турели «Кита» только на корпусе — кормовая под килем и верхняя на спине фюзеляжа;
+		# S13: the third («Кит» 2, lvl 5) — ventral, under the fuselage aft of the bomb bay (it used to wrap onto the tail)
 		order = [["tail", tail + L * 0.035, PI, 0.0], ["top", nose - L * KIT_TOP_TURRET, PI, 0.0]]
+		if wtex != null:
+			order.append(["bottom", KIT_BOTTOM_TURRET_X * float(wtex.get_width()), PI, 0.0])
 	else:
 		# штурмовик: стрелок за кабиной (верхняя; тест 3.5-s3 — на фюзеляже за фонарём, не на нём), вторая — нижняя
 		order = [["top", nose - L * 0.5, PI, 0.0], ["bottom", nose - L * 0.45, PI, 0.0], ["tail", tail + L * 0.035, PI, 0.0]]
