@@ -371,6 +371,11 @@ func _hold(p: Dictionary) -> void:
 			m.player.syn["hedgehog"] = true
 		else:
 			m.player.syn.erase("hedgehog")
+	if p.has("flv"):   # S13 --planebench: flares of this level on the second group (0 — that group empty)
+		var fg: Hardpoint = m.player.groups[1] if m.player.groups.size() > 1 else null
+		if fg != null and not fg.builtin:
+			fg.weapon = "flares" if int(p["flv"]) > 0 else ""
+			fg.level = maxi(1, int(p["flv"]))
 	if OS.get_cmdline_user_args().has("--holdfire"):   # PG-01: missiles stay on their rails for weapon close-ups
 		for g: Hardpoint in m.player.groups:
 			if g.weapon in Hardpoint.MISSILES:
@@ -997,6 +1002,17 @@ func _make_points() -> Array:
 		pts.append({"name": "unit_bunker_play", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "unit_poses": "bunker", "play": true, "wait": 3.5})
 		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
 		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
+	if OS.get_cmdline_user_args().has("--planebench"):
+		# S13 (Kanta 27.10): the --cls plane 1 and 2 at the gameplay zoom and close, turret lvl 1 / 3 / 5 with
+		# flares of the same level on the second group (flv), so turret mounts, flare dispensers and the nozzle
+		# flames are seen as the player sees them; run with --cls=attacker or --cls=bomber
+		pts = []
+		for lv in [1, 2]:
+			for q in [[1, 0], [3, 3], [5, 5]]:
+				pts.append({"name": "plane_%d_t%d" % [lv, q[0]], "pos": empty + Vector2(300, 300), "cls": [m.player.cls_id, lv],
+					"tlv": q[0], "flv": q[1], "zoom": 1.0, "wait": 1.5})
+			pts.append({"name": "plane_%d_close" % lv, "pos": empty + Vector2(300, 300), "cls": [m.player.cls_id, lv],
+				"tlv": 5, "flv": 5, "zoom": 2.6, "wait": 1.5})
 	if OS.get_cmdline_user_args().has("--turretbench"):
 		# S12 (Kanta 26.10): the turrets of the --cls plane close up in battle, tier by tier, then the evolution
 		# and the «Стальной ёж» launch pods; run with --cls=bomber or --cls=attacker
@@ -1441,9 +1457,18 @@ func _hangar_bench() -> void:
 				_hq.append(q)
 			_t = 0.0
 			return
+		for a in OS.get_cmdline_user_args():
+			# S13: --benchweap=attacker:,flares;bomber:,flares — weapons per hardpoint group of each class
+			# (empty keeps the class default) for the --hcam close-ups, e.g. the flare dispensers
+			if a.begins_with("--benchweap="):
+				for e in a.get_slice("=", 1).split(";", false):
+					Hangar3D.bench_weapons[e.get_slice(":", 0)] = Array(e.get_slice(":", 1).split(","))
+			if a.begins_with("--hcamss="):   # supersample of the --hcam close-ups (lavapipe renders 2.5 slowly)
+				Hangar3D.bench_supersample = float(a.get_slice("=", 1))
 		if not _hcam().is_empty():
 			# S11: free close-ups of the hangar plane, one queue entry per --hcam view, rendered large
-			Hangar3D.bench_supersample = 2.5
+			if Hangar3D.bench_supersample <= 0.0:
+				Hangar3D.bench_supersample = 2.5
 			for vi in _hcam().size():
 				var hv: Array = _hcam()[vi]
 				_hq.append([hv[1], int(hv[2]), int(hv[3]), "C", hv[4], vi])
