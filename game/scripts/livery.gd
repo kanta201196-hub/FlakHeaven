@@ -79,11 +79,11 @@ const NATURAL := [
 	["nat_olive", "Старая олива", Color(0.26, 0.28, 0.18), Color(0.38, 0.37, 0.24), Color(0.55, 0.53, 0.40), 0.9, 0.03, 7,
 		Color(0.50, 0.48, 0.34), Color(0.52, 0.53, 0.49),
 		{"style": 4, "scale": 9.0, "cut": Vector2(0.22, 0.12), "edge": 0.0, "fade": 0.8, "grime": 1.0, "belly": 1.0, "seed": 3.0}],
-	["nat_alt", "Высотная дымка", Color(0.47, 0.50, 0.53), Color(0.58, 0.61, 0.63), Color(0.70, 0.72, 0.73), 0.84, 0.04, 7,
-		Color(0.40, 0.43, 0.47), Color(0.71, 0.74, 0.75),
+	["nat_alt", "Высотная дымка", Color(0.47, 0.48, 0.48), Color(0.58, 0.58, 0.56), Color(0.68, 0.67, 0.64), 0.9, 0.03, 7,
+		Color(0.40, 0.41, 0.42), Color(0.68, 0.69, 0.68),
 		{"style": 3, "scale": 4.0, "cut": Vector2(0.55, 0.66), "edge": 0.06, "fade": 0.35, "grime": 0.7, "belly": 1.0, "seed": 4.0}],
-	["nat_dusk", "Сумерки", Color(0.33, 0.37, 0.43), Color(0.45, 0.49, 0.54), Color(0.60, 0.63, 0.66), 0.85, 0.04, 7,
-		Color(0.26, 0.29, 0.34), Color(0.62, 0.65, 0.68),
+	["nat_dusk", "Сумерки", Color(0.34, 0.36, 0.39), Color(0.46, 0.48, 0.50), Color(0.60, 0.60, 0.60), 0.9, 0.03, 7,
+		Color(0.27, 0.28, 0.30), Color(0.62, 0.63, 0.63),
 		{"style": 2, "scale": 3.2, "cut": Vector2(0.42, 0.20), "edge": 0.025, "fade": 0.4, "grime": 0.8, "belly": 1.0, "seed": 5.0}],
 	["nat_steppe", "Степь", Color(0.50, 0.40, 0.26), Color(0.53, 0.52, 0.36), Color(0.70, 0.66, 0.52), 0.88, 0.03, 7,
 		Color(0.27, 0.25, 0.18), Color(0.64, 0.63, 0.56),
@@ -91,9 +91,9 @@ const NATURAL := [
 	["nat_clay", "Глина и пыль", Color(0.56, 0.38, 0.27), Color(0.71, 0.62, 0.50), Color(0.82, 0.77, 0.68), 0.88, 0.03, 7,
 		Color(0.42, 0.35, 0.28), Color(0.68, 0.66, 0.60),
 		{"style": 0, "scale": 9.0, "cut": Vector2(0.55, 0.61), "edge": 0.06, "fade": 0.5, "grime": 0.8, "belly": 0.0, "seed": 7.0}],
-	["nat_frost", "Зимняя побелка", Color(0.34, 0.34, 0.24), Color(0.76, 0.76, 0.73), Color(0.80, 0.80, 0.78), 0.92, 0.02, 7,
-		Color(0.55, 0.55, 0.50), Color(0.72, 0.73, 0.72),
-		{"style": 5, "scale": 8.0, "cut": Vector2(0.64, 0.54), "edge": 0.03, "fade": 0.2, "grime": 0.9, "belly": 0.6, "seed": 8.0}],
+	["nat_frost", "Зимняя побелка", Color(0.34, 0.34, 0.24), Color(0.74, 0.72, 0.67), Color(0.78, 0.76, 0.71), 0.94, 0.02, 7,
+		Color(0.56, 0.55, 0.47), Color(0.70, 0.69, 0.66),
+		{"style": 5, "scale": 8.0, "cut": Vector2(0.68, 0.58), "edge": 0.03, "fade": 0.2, "grime": 0.9, "belly": 0.6, "seed": 8.0}],
 ]
 ## Pattern 7 frequency per class: battle sizes are 1.0 / 1.25 / 1.6 (PlaneClasses), so a bigger plane gets a
 ## finer pattern in its own model units and its patches stay about the size of the fighter's on screen
