@@ -420,12 +420,16 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		kind_s = "rescue"   # EX-09: «Сухое русло» — первая активность вылета: сбитый пилот
 		Story.rescue_done = true
 		activity_i -= 1
-	# FA-01: «Укрепрайон» takes a real map fort ahead; none in reach (or the sea biome) — next kind this round
+	# FA-01: «Укрепрайон» takes a real map fort ahead; none in reach (or the sea biome) — next kind this round.
+	# Kanta s13: the fort shows only for the activity (Render3D draws forts in forts_hit), so never one already
+	# used this sortie and never one on screen, where it would pop up
 	var fort: Dictionary = {}
 	if kind_s == "fort":
 		if not Biome.sea():
+			var bg: Background = Main.I.background
 			var want := p.global_position + Vector2.from_angle(p.heading) * FortBalance.AHEAD
-			fort = FortArea.pick_fort(FortArea.forts_near(Main.I.background, want, FortBalance.REACH), want, FortBalance.REACH)
+			var screen: Rect2 = Render3D.view_now if Render3D.enabled and Render3D.I != null else bg._view()
+			fort = FortArea.pick_fort(FortArea.forts_near(bg, want, FortBalance.REACH), want, FortBalance.REACH, bg.forts_hit, screen)
 		if fort.is_empty():
 			activity_i += 1
 			kind_s = ACTIVITIES[activity_i % ACTIVITIES.size()]

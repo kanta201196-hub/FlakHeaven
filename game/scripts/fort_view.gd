@@ -1,6 +1,6 @@
 class_name FortView
 extends Node3D
-## 3D look of one map fort beyond its mesh (FA-03, FA-04). Render3D adds it under every o_fort MeshInstance3D.
+## 3D look of one map fort beyond its mesh (FA-03, FA-04). Render3D adds it under every o_fort MeshInstance3D (only the forts the activity took, Background.forts_hit).
 ## It dresses the yard with game models (two convoy trucks by the gate road, a stack of crates) and otherwise
 ## does nothing (no _process) until FortArea reports a change of that fort through Events.fort_changed. Then
 ## the parent draws only FortBuild.base() and this node holds one MeshInstance3D per breakable piece in its
