@@ -2184,8 +2184,8 @@ func _sync_enemy_shots(m: Main) -> void:
 		_eglow_mm.custom_aabb = aabb
 
 
-const FX_CLEAR_R := 1.6      # clear zone radius, plane lengths
-const FX_CLEAR_CUT := 0.7    # share of an effect's opacity taken away over the plane itself
+const FX_CLEAR_R := 2.2      # clear zone radius, plane lengths (s13: 1.6 was not enough late in a run)
+const FX_CLEAR_CUT := 0.85   # share of an effect's opacity taken away over the plane itself
 
 
 ## Kanta s12 (26.10): late in a run blasts, fire, missile smoke and the fan of a missile salvo hid the player's
@@ -2968,7 +2968,7 @@ func _sync_craters(m: Main) -> void:
 				c["life"] = 0.0
 		var xf: Transform3D = c["xf"]
 		var rr := float(c["rr"])
-		var fade := clampf(float(c["life"]) / Fx.FxGround.CRATER_FADE, 0.0, 1.0)
+		var fade := clampf(float(c["life"]) / float(c.get("fd", Fx.FxGround.CRATER_FADE)), 0.0, 1.0)
 		if dm:
 			_place_decal(_crater_decals, i, Transform3D(xf.basis.orthonormalized(), xf.origin), Vector3(rr * 2.0, rr * 1.5 + 16.0, rr * 2.0),
 				_crater_mat.albedo_texture, Color(1, 1, 1, fade))

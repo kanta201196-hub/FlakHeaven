@@ -14,10 +14,15 @@
 // z = zone radius as a share of the viewport height, w = how much of the effect is taken away at the centre
 // (0 = off). Effect alpha multiplied by fx_clear_k() thins out over the plane and is full again at the zone edge.
 global uniform vec4 fx_clear;
-float fx_clear_k(vec2 suv, vec2 vsize) {
+// Same zone scaled: rk times the radius, cut instead of fx_clear.w (clouds open a wider window over the fight)
+float fx_clear_kr(vec2 suv, vec2 vsize, float rk, float cut) {
 	if (fx_clear.w <= 0.0) {
 		return 1.0;
 	}
 	vec2 d = (suv - fx_clear.xy) * vec2(vsize.x / max(vsize.y, 1.0), 1.0);
-	return 1.0 - fx_clear.w * (1.0 - smoothstep(fx_clear.z * 0.45, fx_clear.z, length(d)));
+	float r = fx_clear.z * rk;
+	return 1.0 - cut * (1.0 - smoothstep(r * 0.45, r, length(d)));
+}
+float fx_clear_k(vec2 suv, vec2 vsize) {
+	return fx_clear_kr(suv, vsize, 1.0, fx_clear.w);
 }

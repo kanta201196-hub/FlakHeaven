@@ -64,8 +64,12 @@ func _init(main: Main) -> void:
 		# Kanta s12: blasts, fire and a «Ёлочка» missile salvo right on the player's plane
 		{"name": "clear", "times": [0.25, 0.6, 1.0, 1.6], "boom": [[Vector2(0, 0), 46.0, true, ""], [Vector2(45, -30), 20.0, true, ""],
 			[Vector2(-30, 40), 18.0, false, ""]], "trails": true, "salvo": true, "pl": Vector2.ZERO},
+		# Kanta s13: a cloud over the fight; every cell gets a cloud (cloud_chance 1 before the first is made)
+		{"name": "cloudy", "times": [0.5, 1.2], "boom": [[Vector2(60, -40), 20.0, true, ""]], "turrets": true, "pl": Vector2.ZERO},
 		{"name": "debris", "times": [0.4, 1.0, 2.2], "boom": [[Vector2(-150, 0), 46.0, true, ""], [Vector2(200, 60), 18.0, false, ""]]},
 	]
+	if _only.has("cloudy"):
+		Tuning.set_param("cloud_chance", 1.0)
 	if not _only.is_empty():
 		_scenes = _scenes.filter(func(sc: Dictionary) -> bool: return _only.has(String(sc["name"])))
 
