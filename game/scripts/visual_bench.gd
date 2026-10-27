@@ -1457,6 +1457,9 @@ func _hangar_bench() -> void:
 	if OS.get_cmdline_user_args().has("--decaledit") or _db_cls() != "":
 		_decal_bench()
 		return
+	if OS.get_cmdline_user_args().has("--decalaudit"):
+		_decal_audit()
+		return
 	if m.state != "hangar":
 		m.ui_click("menu_hangar")
 		for a in OS.get_cmdline_user_args():
@@ -2022,3 +2025,73 @@ func _decal_bench() -> void:
 func _db_screen(h3: Hangar3D, p: Vector3) -> Vector2:
 	var px := h3.cam.unproject_position(h3._model.global_transform * p)
 	return h3.rect.position + px / Vector2(h3.vp.size) * h3.rect.size
+
+
+# ---------- decal geometry audit (--decalaudit; headless is enough) ----------
+## Every class, plane level and weapon tier in the hangar (tier 4 — the modernised weapons; «Грач» 2 gets its wing
+## turret fairings with the turret tiers), then every battle model without and with level-5 module parts: DecalAuditRun
+## places decals on each and prints DAUDIT lines; user://decal_audit.json keeps the problem cases. `--daudit=<key>`
+## audits only that plane («attacker_2»). The profile goes to a scratch file, removed at the end.
+var _da_q: Array = []
+var _da_run: DecalAuditRun
+var _da_wait := 0
+
+
+func _decal_audit() -> void:
+	if _da_run == null:
+		_da_run = DecalAuditRun.new()
+		Profile.path = "user://vis_daudit_profile.json"
+		var only := ""
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--daudit="):
+				only = a.get_slice("=", 1)
+		for c in PlaneClasses.LIST:
+			for lv in [1, 2]:
+				if only != "" and only != "%s_%d" % [c, lv]:
+					continue
+				for tier in [1, 2, 3, 4]:
+					_da_q.append(["hangar", c, lv, tier])
+		for c in PlaneClasses.LIST:
+			for lv in [1, 2]:
+				if only != "" and only != "%s_%d" % [c, lv]:
+					continue
+				for mods in [0, 5]:
+					_da_q.append(["battle", c, lv, mods])
+	if m.state != "hangar":
+		m.ui_click("menu_hangar")
+		return
+	if _da_q.is_empty():
+		_da_run.finish("user://decal_audit.json")
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(Profile.path))
+		print("VISUAL done")
+		m.get_tree().quit()
+		return
+	var cur: Array = _da_q[0]
+	var key := "%s_%d" % [cur[1], cur[2]]
+	if cur[0] == "battle":
+		var holder := DecalAuditRun.battle_model(m, key, int(cur[3]))
+		if holder != null:
+			_da_run.run_model(holder, holder.get_child(0) as Node3D, key, "battle", "mod%d" % cur[3])
+			holder.queue_free()
+		_da_q.pop_front()
+		return
+	m.hangar_tab = "plane"
+	m.hangar_cls = cur[1]
+	var h3 := Hangar3D.I
+	if h3 == null:
+		return
+	h3._cls = cur[1]
+	h3.view_lvl = cur[2]
+	h3.weapon_tier = cur[3]
+	if h3._key != "%s_%d_%d_%s" % [cur[1], cur[2], cur[3], Livery.current(cur[1])] or h3._model == null:
+		_da_wait = 0
+		return
+	_da_wait += 1
+	if _da_wait < 3:
+		return
+	_da_wait = 0
+	_da_run.run_model(h3.pivot, h3._model, key, "hangar", "t%d" % cur[3])
+	if int(cur[3]) == 1:
+		_da_run.run_liveries(h3._model, key)
+		h3._apply_livery(h3._model, cur[1], cur[2])
+	_da_q.pop_front()

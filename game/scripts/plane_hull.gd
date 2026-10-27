@@ -209,7 +209,7 @@ func near(lo: Vector3, hi: Vector3) -> PackedInt32Array:
 
 ## First skin hit facing the ray (Möller–Trumbore), `extra` included: [position, smooth normal], or [] on a miss
 func raycast(origin: Vector3, dir: Vector3, max_len := 3.0) -> Array:
-	var hit := _raycast_own(origin, dir, max_len)
+	var hit := _raycast_own(origin, dir, max_len).slice(0, 2)
 	if extra != null:
 		var e := extra.raycast(origin, dir, max_len)
 		if e.size() == 2 and (hit.is_empty() or origin.distance_to(e[0]) < origin.distance_to(hit[0])):
@@ -227,6 +227,12 @@ func raycast_clear(origin: Vector3, dir: Vector3, max_len: float, blocker: Plane
 	if b.size() == 2 and origin.distance_to(b[0]) < origin.distance_to(hit[0]) - 0.001:
 		return []
 	return hit
+
+
+## First own hit facing the ray (no `extra`) with the triangle it hit: [position, smooth normal, triangle], or []
+## on a miss. The decal audit uses the triangle to tell which part of the model the cursor would land on.
+func ray_hit(origin: Vector3, dir: Vector3, max_len := 3.0) -> Array:
+	return _raycast_own(origin, dir, max_len)
 
 
 func _raycast_own(origin: Vector3, dir: Vector3, max_len: float) -> Array:
@@ -253,7 +259,7 @@ func _raycast_own(origin: Vector3, dir: Vector3, max_len: float) -> Array:
 							best = float(r[0])
 							var nn: Vector3 = (nrm[t * 3] * (1.0 - r[1] - r[2]) + nrm[t * 3 + 1] * r[1]
 								+ nrm[t * 3 + 2] * r[2]).normalized()
-							hit = [origin + d * best, nn]
+							hit = [origin + d * best, nn, t]
 		if hit.size() > 0 and best < s - CELL:
 			break
 		s += CELL * 0.5

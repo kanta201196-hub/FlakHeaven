@@ -202,6 +202,7 @@ static func turret_fairing(model: Node3D, x: float, z: float, rb: float) -> Mesh
 	mi.name = "turret_fairing"
 	mi.mesh = d["mesh"]
 	mi.set_meta("crown", d["crown"])
+	mi.set_meta("spot", Vector3(x, z, rb))   # where it was built (the decal audit rebuilds it on the battle model)
 	return mi
 
 
