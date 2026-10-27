@@ -907,7 +907,8 @@ func _process(delta: float) -> void:
 	if _anim_key != _key:
 		_anim_key = _key
 		_anim = HangarAnim.collect(pivot)
-	HangarAnim.step(_anim, anim_time if anim_time >= 0.0 else _t, mech_demo or mech_hover or _key.begins_with("w_"), delta)
+	HangarAnim.step(_anim, anim_time if anim_time >= 0.0 else _t, mech_demo or mech_hover or _key.begins_with("w_"), delta,
+		decal_mode)
 	mech_hover = false
 	if not _drag and _idle > 3.0 and not decal_mode:
 		_yaw += delta * 0.25
@@ -1005,7 +1006,7 @@ func model_key() -> String:
 func decal_ray(p: Vector2) -> Array:
 	if _model == null or not is_instance_valid(_model) or not rect.has_point(p) or rect.size.x < 1.0:
 		return []
-	var hull := PlaneDecals.hull_of(_model)
+	var hull := PlaneDecals.cursor_hull(_model)
 	if hull == null:
 		return []
 	var px := (p - rect.position) / rect.size * Vector2(vp.size)
@@ -1018,7 +1019,32 @@ func decal_ray(p: Vector2) -> Array:
 	if disc < 0.0:
 		return []
 	var t0 := maxf(0.0, -b - sqrt(disc))
-	return hull.raycast_clear(o + d * t0, d, 2.0 * DECAL_REACH, PlaneHull.glass_of(_model))   # not under the canopy
+	return hull.raycast_clear(o + d * t0, d, 2.0 * DECAL_REACH, _decal_blocker())   # not under glass or a weapon
+
+
+## What the decal cursor cannot reach through: the canopy glass, the weapons, turrets and module parts (a click on a
+## missile must not put a decal on the skin behind it). Built once per model on view.
+func _decal_blocker() -> PlaneHull:
+	if _dc_block_model == _model and _dc_block != null:
+		return _dc_block
+	_dc_block_model = _model
+	_dc_block = PlaneHull.glass_of(_model)
+	var inv := _model.global_transform.affine_inverse()
+	var gear := PlaneHull.new()
+	for c in pivot.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		if mi.mesh == null or not mi.is_visible_in_tree():
+			continue
+		if (_model.is_ancestor_of(mi) and not PlaneHull.under(mi, _model, ["module_parts", "props"])):
+			continue
+		PlaneHull.append_mesh(gear, mi.mesh, inv * mi.global_transform)
+	if gear.triangles() > 0:
+		_dc_block = gear if _dc_block == null else _dc_block.with_extra(gear)
+	return _dc_block
+
+
+var _dc_block: PlaneHull
+var _dc_block_model: Node3D
 
 
 const DECAL_REACH := 0.8   ## model units round the centre where the cursor ray looks for skin
@@ -1056,7 +1082,7 @@ func decal_close(key: String, records: Array[DecalRecord], tally: int) -> void:
 
 ## The skin of the plane on view the decals are cut from (null without a model)
 func decal_hull() -> PlaneHull:
-	return PlaneDecals.hull_of(_model) if _model != null and is_instance_valid(_model) else null
+	return PlaneDecals.cursor_hull(_model) if _model != null and is_instance_valid(_model) else null
 
 
 ## Turns the camera by `dx`, `dy` radians (the gamepad's right stick in the editor)
