@@ -37,12 +37,18 @@ func run_model(root: Node3D, model: Node3D, key: String, kind: String, variant: 
 	_pose(model, 0.0, 0.0)
 	var none: Array[DecalRecord] = []
 	PlaneDecals.show(model, key, none, 0)
-	var hull := PlaneDecals.hull_of(model)
+	var hull := PlaneDecals.cursor_hull(model)   # what the editor's cursor and the presets land on
 	if hull == null:
 		notes.append("%s/%s/%s: no hull" % [kind, key, variant])
 		return
-	var glass := PlaneHull.glass_of(model)
 	var scene := DecalAudit.collect(root, model, false)
+	# what the cursor stops on (Hangar3D._decal_blocker): the canopy glass, weapons, turrets, module parts
+	var glass := PlaneHull.new()
+	for t in scene.count():
+		if scene.tag[t] in [DecalAudit.Tag.GLASS, DecalAudit.Tag.ADDON]:
+			for k in 3:
+				glass.pos.append(scene.pos[t * 3 + k])
+				glass.nrm.append(scene.nrm[t * 3 + k])
 	var tag_tris := {}
 	for t in scene.count():
 		tag_tris[scene.tag[t]] = int(tag_tris.get(scene.tag[t], 0)) + 1
@@ -58,6 +64,11 @@ func run_model(root: Node3D, model: Node3D, key: String, kind: String, variant: 
 	print("DAUDIT model %s/%s/%s: scene %d triangles %s, hull %d (+%d extra), fairings %d" % [kind, key, variant,
 		scene.count(), str(tag_tris), hull.triangles(), hull.extra.triangles() if hull.extra != null else 0, fairings])
 	var list := _cases(hull, glass, scene, model, key)
+	if not OS.get_cmdline_user_args().has("--daudit-raw"):   # the sizes the editor allows there (DecalEditor.hull)
+		for cs: Dictionary in list:
+			if String(cs["group"]) != "preset":
+				var r: DecalRecord = cs["rec"]
+				r.size = DecalPresets.fit_size(hull, r, int(cs.get("tally", TALLY)))
 	var part_cases: Array = []
 	for cs: Dictionary in list:
 		var res := _one(root, model, scene, hull, glass, key, cs)

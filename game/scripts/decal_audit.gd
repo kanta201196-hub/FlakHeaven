@@ -46,6 +46,7 @@ class Tris:
 	var tag := PackedInt32Array()     ## Tag per triangle
 	var owner := PackedInt32Array()   ## index into `names` per triangle
 	var paint := PackedFloat32Array() ## decals: primary paint index (UV2.x), tells overlapping decals apart
+	var fade := PackedFloat32Array()  ## decals: vertex alpha (COLOR.a, DecalMesh's fade at a steep skin), 3 per triangle
 	var names: Array[String] = []
 	var hull: PlaneHull
 
@@ -146,8 +147,8 @@ static func _tag(mi: MeshInstance3D, si: int, model: Node3D, body: MeshInstance3
 	if mi == body:
 		var bm := m as BaseMaterial3D
 		return Tag.SKIN if bm != null and bm.albedo_texture != null else Tag.WELL
-	if mi.has_meta(PlaneDecals.FAIRING):
-		return Tag.SKIN
+	if mi.has_meta(PlaneDecals.FAIRING) or PlaneHull.under(mi, model, ["detail", "tail_cabin"]):
+		return Tag.SKIN   # decal skin since the audit (PlaneHull.statics_of)
 	return Tag.ADDON
 
 
@@ -169,6 +170,7 @@ static func _append(out: Tris, mesh: Mesh, si: int, xf: Transform3D, tg: int, nm
 	var nv: PackedVector3Array = arr[Mesh.ARRAY_NORMAL] if arr[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
 	var iv: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
 	var u2: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV2] if arr[Mesh.ARRAY_TEX_UV2] != null else PackedVector2Array()
+	var cv: PackedColorArray = arr[Mesh.ARRAY_COLOR] if arr[Mesh.ARRAY_COLOR] != null else PackedColorArray()
 	var n := iv.size() if iv.size() > 0 else vv.size()
 	n -= n % 3
 	var start := out.gn.size()
@@ -189,6 +191,7 @@ static func _append(out: Tris, mesh: Mesh, si: int, xf: Transform3D, tg: int, nm
 			ns += vn
 			out.pos.append(p)
 			out.nrm.append(vn)
+			out.fade.append(cv[vi].a if decals and cv.size() > vi else 1.0)
 		var cr := (ps[1] - ps[0]).cross(ps[2] - ps[0])
 		vote += signf(cr.dot(ns))
 		crosses.append(cr.normalized())
@@ -249,6 +252,10 @@ static func raster(t: Tris, f: Frame, zlo: float, zhi: float, only := -1, paint 
 				var z := w0 * s[0].z + w1 * s[1].z + w2 * s[2].z
 				if z < zlo or z > zhi:
 					continue
+				if t.fade[ti * 3] < 0.999 or t.fade[ti * 3 + 1] < 0.999 or t.fade[ti * 3 + 2] < 0.999:
+					# the alpha scissor cuts a faded decal at 0.5
+					if w0 * t.fade[ti * 3] + w1 * t.fade[ti * 3 + 1] + w2 * t.fade[ti * 3 + 2] < 0.5:
+						continue
 				var q := j * RES + i
 				if z > g.z[q]:
 					g.z[q] = z
@@ -370,6 +377,8 @@ static func area_stats(dec: Tris, n: Vector3) -> Dictionary:
 	var bk := 0.0
 	for t in dec.count():
 		var a := (dec.pos[t * 3 + 1] - dec.pos[t * 3]).cross(dec.pos[t * 3 + 2] - dec.pos[t * 3]).length() * 0.5
+		if dec.fade[t * 3] + dec.fade[t * 3 + 1] + dec.fade[t * 3 + 2] < 1.5:
+			continue   # faded out: not drawn
 		var c := dec.gn[t].dot(n)
 		total += a
 		if c <= BACK_COS:
