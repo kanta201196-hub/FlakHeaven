@@ -1,6 +1,6 @@
 """Лёгкая турель «Грача» (средний класс; референс владельца 16.10): низкая тумба, компактная башня
 со скошенным лбом. Меньше и слабее турели «Кита».
-Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3|evo] [nopreview] [nopaint] [livery=steppe|rock] <out_dir>
+Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3|evo] [nopreview] [nopaint] [livery=<Livery.TURRET_PAINT suffix>] <out_dir>
   → turret_light_t<N>.blend / .glb / preview_*.png (по умолчанию t1); evo → turret_light_evo
 evo — «Дикобраз» on the «Грач» (3.5-s12, Kanta: "turret lv5 and the evolution look the same in the hangar"):
   the t3 turret plus a fire-control head on the roof (mast, box search radar, tracking dish) and cable runs,
