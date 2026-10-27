@@ -1895,6 +1895,8 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 					u.weapons[skey] = sk
 					if mt.has("fair_rb"):
 						_apply_livery(model, tex)   # the fairing takes the plane's paint
+				# part of the airframe: blinks with the hull while invulnerable
+				(u.weapons[skey] as GeometryInstance3D).transparency = (u.mi as GeometryInstance3D).transparency
 				if mt.has("skin"):
 					continue
 			var wmi: MeshInstance3D = u.weapons.get(key)
