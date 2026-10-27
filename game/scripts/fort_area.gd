@@ -1,11 +1,13 @@
 class_name FortArea
 extends AASite
 ## Activity «Укрепрайон» (FA-01, Kanta 2026-10-25, spec docs/superpowers/specs/2026-10-25-fortified-area-design.md).
-## A real Highland fort of the map (`o_fort`) is an enemy base: a SAM launcher on each of the four
+## A Highland fort spot of the map (`o_fort`) becomes an enemy base: a SAM launcher on each of the four
 ## towers and two machine-gun jeeps in the yard. Closer than ACTIVATE_R — banner «Обнаружена база
 ## противника» and an optional timer. The base is taken when the four launchers are down; the jeeps
 ## are extra targets. The base keeps at most FortBalance.MISSILE_CAP missiles in the air (locks count).
 ## Built on AASite: the same targets list, `active`, timer and cleanup; GroundTarget asks `can_launch`.
+## Kanta s13: the fort is not scenery: it shows only once the activity takes it (Background.forts_hit), then stays,
+## taken or not, for the rest of the sortie, and the activity never takes it again.
 ## FA-03: the fort is conditionally destructible — player blasts breach walls, blow the gate and burn the store,
 ## tower crowns follow their launcher's HP (FortDamage); the damage outlives this node for the whole sortie.
 
@@ -16,13 +18,19 @@ var _key: Vector2i
 
 
 ## Nearest map fort to `want` within `reach` among chunk objects `objs` (Background.chunk_object
-## dictionaries); `{}` when there is none.
-static func pick_fort(objs: Array, want: Vector2, reach: float) -> Dictionary:
+## dictionaries); `{}` when there is none. Kanta s13: a fort shows only while it hosts the activity, so
+## forts already used this sortie (`used`, keyed by FortView.key_of, i.e. Background.forts_hit) are
+## skipped, and so is one whose walls would reach into `screen` (it would pop up in plain sight).
+static func pick_fort(objs: Array, want: Vector2, reach: float, used := {}, screen := Rect2()) -> Dictionary:
 	var best: Dictionary = {}
 	var best_d := reach
 	for o: Dictionary in objs:
-		if o.get("name", "") != "o_fort":
+		if o.get("name", "") != "o_fort" or used.has(FortView.key_of(o["pos"])):
 			continue
+		if screen.has_area():
+			var half := float(o["size"]) * 0.75   # wall corners at ±0.42·size, turned: well inside
+			if screen.intersects(Rect2(o["pos"] - Vector2(half, half), Vector2(half, half) * 2.0)):
+				continue
 		var d: float = (o["pos"] as Vector2).distance_to(want)
 		if d <= best_d:
 			best_d = d
