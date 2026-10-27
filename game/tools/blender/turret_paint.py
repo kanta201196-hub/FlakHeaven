@@ -82,10 +82,15 @@ for _k, _seed in (("kit", 7), ("grach", 11)):
 
 
 def pick(cls_key, argv):
-    """Palette of a turret script: PALETTES[cls_key], or PALETTES[cls_key + "_" + x] for a "livery=x" argument"""
+    """Palette of a turret script: PALETTES[cls_key], or PALETTES[cls_key + "_" + x] for a "livery=x" argument;
+    "livery=x,y,…" gives a list of (suffix, palette), which turret_lib.build bakes in one run (the paint-independent
+    bakes are made once, see _DATA) and exports as <name>_<suffix>.glb each"""
     for a in argv:
         if a.startswith("livery="):
-            return PALETTES[cls_key + "_" + a.split("=", 1)[1]]
+            ids = a.split("=", 1)[1].split(",")
+            if len(ids) > 1:
+                return [(i, PALETTES[cls_key + "_" + i]) for i in ids]
+            return PALETTES[cls_key + "_" + ids[0]]
     return PALETTES[cls_key]
 
 PRIMER = np.array([0.27, 0.26, 0.23], np.float32)     # under the paint where it is chipped
@@ -341,7 +346,7 @@ def _cells(P, pal, n_cuts, wobble=0.04):
     return _hash(code, np.full_like(code, 3), np.full_like(code, 5), seed)
 
 
-def _camo(P, pal):
+def _camo(P, pal, N=None):
     """Camouflage colours (sRGB) at points P by pal["pattern"] (see PALETTES) and the colour index k (0 base, 1 colour 2,
     2 colour 3); the colours tones[1] and tones[2] take about the shares pal["share"] of the surface"""
     seed = pal["seed"]
@@ -395,9 +400,10 @@ def _camo(P, pal):
         width = pal.get("width", 0.3) * sstep(0.2, 0.7, along) + 0.03 * fbm(P, 30.0, seed + 34, 2)
         k[tri < width] = 1
     elif pat == "rust":
-        f1 = lambda q: fbm(q, 2.6, seed + 20, 3) + 0.25 * (1.0 - sstep(0.05, 0.4, q[:, 2]))   # runs gather low
+        f1 = lambda q: fbm(q, 2.6, seed + 20, 3)
+        low = 0.0 if N is None else 0.12 * np.clip(-N[:, 2], 0.0, 1.0)   # runs gather on the lower faces
         k[_cells(P, pal, 6, 0.0) < s3] = 2   # whole repaired panels in primer
-        k[f1(P) > _qcut("r1", f1, s2)] = 1
+        k[f1(P) + low > _qcut("r1", f1, s2)] = 1
     elif pat == "chequer":
         c = pal.get("cell", 0.09)
         q = np.floor(P / c).astype(np.int64)
@@ -413,17 +419,17 @@ def _camo(P, pal):
     return col, k
 
 
-def _layers(P, N, B, AO, part, x_tip, pal, guns, src=None):
+def _layers(P, N, B, AO, part, x_tip, pal, guns, src=None, want_nrm=True):
     """Albedo (sRGB), roughness, metal, height-perturbed normal for the covered texels; src — the faces' own
     colours (sRGB) in own-colour mode, None for the camouflage"""
     seed = pal["seed"]
     n_pts = len(P)
     body, dark, barrel, glass = part == 0, part == 1, part == 2, part == 3
     if src is not None:
-        return _layers_own(P, N, B, AO, part, x_tip, pal, src)
+        return _layers_own(P, N, B, AO, part, x_tip, pal, src)   # (always with its normal)
     # --- base colour: the livery's soft-edged blotches (two noise fields over the sand base, like the plane's
     # SAND_CAMO pattern): red-brown where the first field is high, olive where the second one is
-    col, ck = _camo(P, pal)
+    col, ck = _camo(P, pal, N)
     col = np.where(dark[:, None], FITTING, col)
     col = np.where(barrel[:, None], GUNMETAL, col)
     col = np.where(glass[:, None], GLASS, col)
@@ -475,15 +481,21 @@ def _layers(P, N, B, AO, part, x_tip, pal, guns, src=None):
         metal = metal * (1 - s) + 0.1 * s
     # AO into the albedo (the game's renderer does not shade crevices by itself)
     col = col * (0.5 + 0.5 * AO ** 0.8)[:, None]
-    # --- normal: bevelled base normal tilted by the relief gradient (finite differences along t, b)
+    nn = _relief(P, N, B, body, seed) if want_nrm else None
+    return np.clip(col, 0, 1), np.clip(rough, 0, 1), np.clip(metal, 0, 1), nn
+
+
+def _relief(P, N, B, body, seed):
+    """Bevelled base normal tilted by the relief gradient (panel lines, welds, rivets on the painted armour; finite
+    differences along the surface frame); it depends on the shape and the seed only, not on the paint colours"""
     t, b = _frame(N)
-    armour = body.astype(np.float32)   # panel lines, welds and rivets only on the painted armour
+    armour = body.astype(np.float32)
     e = 0.0007
     hu = (_height(P + t * e, t, b, armour, seed) - _height(P - t * e, t, b, armour, seed)) / (2 * e)
     hv = (_height(P + b * e, t, b, armour, seed) - _height(P - b * e, t, b, armour, seed)) / (2 * e)
     nn = B - (hu[:, None] * t + hv[:, None] * b)
     nn /= np.linalg.norm(nn, axis=1, keepdims=True) + 1e-8
-    return np.clip(col, 0, 1), np.clip(rough, 0, 1), np.clip(metal, 0, 1), nn
+    return nn
 
 
 def _height_box(p, ax, armour, seed):
@@ -578,9 +590,11 @@ def _dilate(img, mask, it=24):
     return img
 
 
-def _save_png(name, arr):
-    """arr (h, w, c) 0…1 with Blender's bottom-up rows → PNG on disk, loaded back as a Blender image"""
-    p = os.path.join(TMP, name + ".png")
+def _save_png(name, arr, sub=""):
+    """arr (h, w, c) 0…1 with Blender's bottom-up rows → PNG on disk (in TMP/sub: the glTF export names a texture
+    by its file, so each paint of a multi-paint run keeps the plain names in its own folder)"""
+    os.makedirs(os.path.join(TMP, sub), exist_ok=True)
+    p = os.path.join(TMP, sub, name + ".png")
     Image.fromarray((np.clip(arr[::-1], 0, 1) * 255 + 0.5).astype(np.uint8)).save(p)
     return p
 
@@ -598,6 +612,8 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     global _SCALE
     _SCALE = scale
     own = bool(pal.get("own"))
+    key = (tuple(ob.name for ob in obs), mat_name, size, scale, pal["seed"])
+    hit = _DATA.get(key) if not own else None
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
@@ -607,6 +623,51 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     bpy.ops.object.select_all(action="DESELECT")
     for ob in obs:
         ob.select_set(True)
+    if hit is None:
+        _unwrap(obs, own)
+        data = _bake_data(obs, own, size, scale)
+    else:
+        data = hit   # a later paint of the same run: the same unwrap, surface data and relief normal map
+    mask, sel, P, N, B, AO, part, S, x_tip = data[:9]
+
+    H, W = mask.shape
+    alb = np.zeros((H, W, 3), np.float32)
+    orm = np.zeros((H, W, 3), np.float32)
+    onm = np.zeros((H, W, 3), np.float32)
+    CH = 400000
+    for s0 in range(0, len(P), CH):
+        sl = slice(s0, s0 + CH)
+        col, rough, metal, nn = _layers(P[sl], N[sl], B[sl], AO[sl], part[sl], x_tip, pal, obs[0].name,
+                                        S[sl] if own else None, hit is None)
+        ys, xs = sel[0][sl], sel[1][sl]
+        alb[ys, xs] = col
+        orm[ys, xs] = np.stack([AO[sl], rough, metal], 1)
+        if nn is not None:
+            onm[ys, xs] = nn * 0.5 + 0.5
+    alb = _dilate(alb, mask)
+    orm = _dilate(orm, mask)
+    tag = mat_name
+    sub = pal.get("suffix", "")
+    i_alb = bpy.data.images.load(_save_png(tag + "_albedo", alb, sub))
+    i_orm = bpy.data.images.load(_save_png(tag + "_orm", orm, sub))
+    i_orm.colorspace_settings.name = "Non-Color"
+    if hit is None:
+        i_nrm = _bake_normal(obs, _dilate(onm, mask), size, tag)
+        if not own:
+            _DATA[key] = data + (i_nrm,)
+    else:
+        i_nrm = hit[9]
+    _finish(obs, mat_name, i_alb, i_orm, i_nrm)
+    print("PAINT %s: %d px, %d texels covered, %d objects%s" % (mat_name, size, int(mask.sum()), len(obs),
+                                                             " (reused data)" if hit is not None else ""))
+
+
+_DATA = {}   # bake_set: per objects / material / size / scale / seed, the paint-independent part of a bake
+
+
+def _unwrap(obs, own):
+    """Fresh UV atlas over the selected objects obs (own-colour mode keeps the old UVs as "src")"""
+    for ob in obs:
         me = ob.data
         if own:
             # the detail boxes and cylinders come smooth-shaded without a bevel; their averaged normals would
@@ -630,6 +691,11 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.006, area_weight=0.0, scale_to_bounds=True)
     bpy.ops.object.mode_set(mode="OBJECT")
 
+
+def _bake_data(obs, own, size, scale):
+    """Cycles surface data of the atlas: (mask, texel indices, position, normal, bevelled normal, AO, part id,
+    own colours or None, muzzle x or None) — everything the paint layers need that does not depend on the paint"""
+    sc = bpy.context.scene
     im = _img("tp_data", size)
     sc.cycles.samples = 1   # plain surface data: one sample per texel is exact
     pos = _bake_emit(obs, im, _b_pos)
@@ -651,27 +717,12 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     part = np.rint(aop[sel][:, 1] * 8 - 1).astype(np.int64)
     S = _to_srgb(src[sel][:, :3]) if own else None
     x_tip = float(P[part == 2, 0].max()) if (part == 2).any() and obs[0].name != "pods" else None
+    return (mask, sel, P, N, B, AO, part, S, x_tip)
 
-    H, W = mask.shape
-    alb = np.zeros((H, W, 3), np.float32)
-    orm = np.zeros((H, W, 3), np.float32)
-    onm = np.zeros((H, W, 3), np.float32)
-    CH = 400000
-    for s0 in range(0, len(P), CH):
-        sl = slice(s0, s0 + CH)
-        col, rough, metal, nn = _layers(P[sl], N[sl], B[sl], AO[sl], part[sl], x_tip, pal, obs[0].name,
-                                        S[sl] if own else None)
-        ys, xs = sel[0][sl], sel[1][sl]
-        alb[ys, xs] = col
-        orm[ys, xs] = np.stack([AO[sl], rough, metal], 1)
-        onm[ys, xs] = nn * 0.5 + 0.5
-    alb = _dilate(alb, mask)
-    orm = _dilate(orm, mask)
-    onm = _dilate(onm, mask)
-    tag = mat_name
-    i_alb = bpy.data.images.load(_save_png(tag + "_albedo", alb))
-    i_orm = bpy.data.images.load(_save_png(tag + "_orm", orm))
-    i_orm.colorspace_settings.name = "Non-Color"
+
+def _bake_normal(obs, onm, size, tag):
+    """Object-space relief normals onm (h, w, 3, 0…1) → the tangent-space normal map image of the atlas"""
+    sc = bpy.context.scene
     i_onm = bpy.data.images.load(_save_png(tag + "_objnormal", onm))
     i_onm.colorspace_settings.name = "Non-Color"
 
@@ -703,6 +754,27 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     i_nrm.filepath_raw = os.path.join(TMP, tag + "_normal.png")
     i_nrm.file_format = "PNG"
     i_nrm.save()
+    for ob in obs:
+        for i, m in enumerate(origs[ob.name]):
+            ob.data.materials[i] = m
+    bpy.data.materials.remove(t)
+    return i_nrm
+
+
+def _finish(obs, mat_name, i_alb, i_orm, i_nrm):
+    """Give the objects the one paint material (glass and glowing faces keep theirs)"""
+    origs = {ob.name: list(ob.data.materials) for ob in obs}
+    # a later paint of the same run: the previous paint's material and textures go (the relief normal map is
+    # shared), so the new ones take the same names and the GLB's textures keep their file names
+    for m in {m for ms in origs.values() for m in ms if m is not None and m.name.startswith(mat_name)}:
+        for nd in m.node_tree.nodes:
+            if nd.type == "TEX_IMAGE" and nd.image is not None and nd.image != i_nrm:
+                bpy.data.images.remove(nd.image)
+        bpy.data.materials.remove(m)
+    origs = {ob.name: list(ob.data.materials) for ob in obs}
+    i_alb.name = mat_name + "_albedo"
+    i_orm.name = mat_name + "_orm"
+    i_nrm.name = mat_name + "_normal"
 
     # final material: one paint material, glass and glowing parts stay separate
     pm = bpy.data.materials.new(mat_name)
@@ -742,5 +814,3 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
         if "src" in me.uv_layers:
             me.uv_layers.remove(me.uv_layers["src"])
         me.update()
-    bpy.data.materials.remove(t)
-    print("PAINT %s: %d px, %d texels covered, %d objects" % (mat_name, size, int(mask.sum()), len(obs)))
