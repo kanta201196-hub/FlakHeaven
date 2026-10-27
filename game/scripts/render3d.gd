@@ -2460,6 +2460,8 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 			var o := bg.chunk_object(cx, cy)
 			if o.is_empty() or o["name"] in OBJ_SKIP_3D:
 				continue
+			if o["name"] == "o_fort" and not bg.forts_hit.has(FortView.key_of(o["pos"])):
+				continue   # Kanta s13: a fort is only the «Укрепрайон» activity's (FortArea registers it), not scenery
 			seen[key] = true
 			if _objs.has(key):
 				continue

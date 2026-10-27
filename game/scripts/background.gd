@@ -32,7 +32,9 @@ var _names: Array = []
 var _total_w := 0.0
 var biome_ok := false
 ## FA-03: damage of «Укрепрайон» forts this sortie (FortView.key_of(fort pos) → FortDamage); lives as long as
-## the sortie's background, so a broken fort stays broken when it scrolls off screen and back.
+## the sortie's background, so a broken fort stays broken when it scrolls off screen and back. Kanta s13: it is
+## also the list of forts that show at all (a fort is the activity's, not scenery), and the activity never
+## takes one of them again.
 var forts_hit := {}
 
 
@@ -137,6 +139,8 @@ func _draw() -> void:
 		for cy in range(int(floorf(g.position.y / CHUNK)), int(floorf(g.end.y / CHUNK)) + 1):
 			var o := chunk_object(cx, cy)
 			if not o.is_empty() and view.grow(o["size"]).has_point(o["pos"]):
+				if o["name"] == "o_fort" and not forts_hit.has(FortView.key_of(o["pos"])):
+					continue   # Kanta s13: only the «Укрепрайон» activity's forts show (as in Render3D)
 				objs.append(o)
 	# сначала все тени, потом объекты — тени не ложатся поверх соседей
 	for o in objs:
