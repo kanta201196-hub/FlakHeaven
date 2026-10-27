@@ -180,27 +180,37 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		yy += 102.0
 
 
-## Тест 3.5-s4, п. 35: ряд «Окраска: …» — выбор сохраняется в профиле класса, виден в ангаре и в бою
+## Тест 3.5-s4, п. 35: ряд «Окраска: …» — выбор сохраняется в профиле класса, виден в ангаре и в бою.
+## Kanta 27.10 took ten more liveries (17 per class): a row of buttons left ~26 px each, so the row is an option
+## «‹ value ›» (ui-design-system.md §3): ‹ and › step to the previous / next paint (wrapping round), the middle shows
+## the current one and its place in the list, a click on it steps forward. Every part is a button, so the gamepad
+## focus reaches them as before.
 func _hg_livery(c: String, lx: float, y: float) -> void:
 	_text(Vector2(lx + 24, y + 21), "Окраска:", 15, Color(0.8, 0.84, 0.9))
-	var cur := Livery.current(c)
 	var lst := Livery.list(c)
-	var step := minf(112.0, 452.0 / maxf(lst.size(), 1))   # 5 окрасок (С-1) — кнопки уже, ряд в ширину панели
-	for i in lst.size():
-		var r := Rect2(lx + 100 + i * step, y, step - 6, 30)
-		var on: bool = lst[i][0] == cur
-		ctrl.draw_rect(r, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
-		# translate the whole name before a long one is split into two lines: the halves («Песочный» /
-		# «камуфляж») are not keys of their own, so splitting first left them untranslated in English
-		var nm := Loc.t(String(lst[i][1]))
-		var tc := Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95)
-		if nm.contains(" ") and ui_font().get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > r.size.x - 6:
-			var sp := nm.find(" ")   # длинное название — в две строки
-			_text(Vector2(r.position.x, r.position.y + 13), nm.substr(0, sp), 11, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
-			_text(Vector2(r.position.x, r.position.y + 26), nm.substr(sp + 1), 11, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
-		else:
-			_text(Vector2(r.position.x, r.position.y + 20), nm, 12, tc, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
-		_buttons.append([r, "hg:livery:" + String(lst[i][0])])
+	if lst.is_empty():
+		return
+	var cur := Livery.current(c)
+	var i := 0
+	for k in lst.size():
+		if lst[k][0] == cur:
+			i = k
+	var prev := String(lst[(i - 1 + lst.size()) % lst.size()][0])
+	var next := String(lst[(i + 1) % lst.size()][0])
+	var rl := Rect2(lx + 100, y, 40, 30)
+	var rm := Rect2(lx + 146, y, 360, 30)
+	var rr := Rect2(lx + 512, y, 40, 30)
+	var tc := Color(0.85, 0.88, 0.95)
+	for b: Array in [[rl, "‹", prev], [rr, "›", next]]:
+		var br: Rect2 = b[0]
+		ctrl.draw_rect(br, Color(1, 1, 1, 0.08))
+		ctrl.draw_rect(br, Menu.C_AMBER, false, 1.0)
+		_text(Vector2(br.position.x, br.position.y + 23), String(b[1]), 20, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
+		_buttons.append([br, "hg:livery:" + String(b[2])])
+	ctrl.draw_rect(rm, Color(1, 1, 1, 0.08))
+	_text(Vector2(rm.position.x + 12, rm.position.y + 21), Loc.t(String(lst[i][1])), 15, Color.WHITE)
+	_text(Vector2(rm.position.x, rm.position.y + 21), "%d / %d" % [i + 1, lst.size()], 13, tc, HORIZONTAL_ALIGNMENT_RIGHT, rm.size.x - 12)
+	_buttons.append([rm, "hg:livery:" + next])
 
 
 ## S11-09 (Kanta 25.10): heading and counter of the starting-weapons list; returns the y below them
