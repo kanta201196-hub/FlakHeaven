@@ -23,6 +23,10 @@ var mods := {
 	"wing_dmg": 1.0, "wing_hp": 1.0,
 	"blast_dmg": 1.0, "twin": 0.0, "cluster_dmg": 0.0,
 	"man_cd": 1.0, "taken_k": 1.0, "ground_dmg": 1.0, "turret_dmg": 1.0, "turret_rate": 1.0,
+	# medals (Profile._apply_medals): damage to aces / convoys / fortified areas, gun spread, tail-hit damage,
+	# flare and dive cooldowns, longer dive, repair, in-sortie XP, parts for aces, «Крепость» slower
+	"boss_dmg": 1.0, "convoy_dmg": 1.0, "fort_dmg": 1.0, "spread_k": 1.0, "tail_k": 1.0, "flare_cd": 1.0,
+	"dive_cd": 1.0, "dive_add": 0.0, "heal_k": 1.0, "xp_k": 1.0, "boss_parts": 1.0, "fortress_slow": 0.0,
 }
 var skill_b := ""          # 3.2: навык во 2-м слоте (F), с экипажа ур. 5
 var sb_cd := 0.0
@@ -73,6 +77,7 @@ var _parade_t := 20.0
 var _nest_done := false
 var taken := {}            # сколько раз взята каждая карточка-модуль
 var syn := {}              # открытые связки (2.8): id → true
+var medal_cards: Array = []  # weapons and modules taken from cards this sortie, "w:id" / "m:id" (medal «Коллекционер»)
 var cards_log: Array = []  # названия взятых карточек — для итогов вылета
 var groups: Array = []     # Hardpoint
 var wingmen: Array = []    # Wingman
@@ -436,7 +441,12 @@ func salvo_cd_full() -> float:
 
 ## Cooldown of the dive when used now (at least the dive + 1 s).
 func dive_cd_full() -> float:
-	return maxf(Tuning.g("dive_time") + 1.0, Tuning.g("dive_cd") * float(mods["man_cd"]))
+	return maxf(dive_time() + 1.0, Tuning.g("dive_cd") * float(mods["man_cd"]) * float(mods["dive_cd"]))
+
+
+## Dive length, s: the F1 slider plus the medal «Под зонтиком»
+func dive_time() -> float:
+	return Tuning.g("dive_time") + float(mods["dive_add"])
 
 
 ## Afterburner duration with upgrades.
@@ -605,7 +615,7 @@ static func _dss(x: float) -> float:   # производная _ss, норми�
 func dive_k() -> float:
 	if dive_t <= 0.0:
 		return 0.0
-	var dur := Tuning.g("dive_time")
+	var dur := dive_time()
 	var edge := dur * DIVE_EDGE
 	return _ss((dur - dive_t) / edge) * _ss(dive_t / edge)
 
@@ -614,7 +624,7 @@ func dive_k() -> float:
 func dive_pitch() -> float:
 	if dive_t <= 0.0:
 		return 0.0
-	var dur := Tuning.g("dive_time")
+	var dur := dive_time()
 	var edge := dur * DIVE_EDGE
 	var gone := dur - dive_t
 	if gone < edge:
@@ -634,6 +644,7 @@ func is_invulnerable() -> bool:
 
 
 func heal(amount: float, src := "прочее") -> void:
+	amount *= float(mods["heal_k"])   # medal «Механик»
 	var before := hp
 	hp = minf(max_hp, hp + amount)
 	Main.I.stats_add_counter("healed", int(round(hp - before)))

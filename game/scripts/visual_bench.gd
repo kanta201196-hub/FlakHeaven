@@ -55,6 +55,9 @@ func process(delta: float) -> void:
 	if OS.get_cmdline_user_args().has("--menushot"):
 		_menu_shot()
 		return
+	if OS.get_cmdline_user_args().has("--medalbench"):
+		_medal_bench()
+		return
 	if OS.get_cmdline_user_args().has("--levbench"):
 		_lev_bench(delta)
 		return
@@ -1708,6 +1711,29 @@ func _hangar_bench() -> void:
 ## Тест 3.5-s5 (п. 1): заставка главного меню — кадры на 3, 6 и 9 с → user://vis_menu_<с>.png
 ## (с --gfx=0 — спрайтовый режим «Низкого»)
 var _ms := 0
+
+
+## Medals (Kanta 27.10): the hangar tab «НАГРАДЫ» with a made-up mix of tiers (in memory, not saved), a medal card
+## open under the board; frame vis_hangar_medals.png
+func _medal_bench() -> void:
+	if _t < 1.5:
+		return
+	if m.state != "hangar":
+		m.ui_click("menu_hangar")
+		var c: Dictionary = Profile.data["medals"]["c"]
+		for k in ["kills", "aces", "evacs", "parts", "sorties", "ground", "near_misses", "blast_dmg", "sorties_bomber", "op_pass"]:
+			c[k] = {"kills": 12000, "aces": 60, "evacs": 12, "parts": 260000, "sorties": 60, "ground": 800,
+				"near_misses": 4000, "blast_dmg": 2000000, "sorties_bomber": 30, "op_pass": 6}[k]
+		c["ram_drones"] = 120
+		Profile._medal_cache = {}
+		m.hangar_tab = "medals"
+		m.hangar_medal = "fighter"
+		_t = 0.0
+		return
+	if _t > 1.5:
+		_save("hangar_medals")
+		print("VISUAL done")
+		m.get_tree().quit()
 
 
 func _menu_shot() -> void:

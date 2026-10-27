@@ -38,3 +38,19 @@ const FORTRESS_SINGLE_K := 0.55
 ## over the fight time at share 1 (`dps_hp_k1`) times FORTRESS_SINGLE_K, whichever is larger.
 static func fortress_hp(formula_hp: float, dps_hp_k1: float) -> float:
 	return maxf(formula_hp, dps_hp_k1 * FORTRESS_SINGLE_K)
+
+
+## Ace shield regeneration. Kanta 2026-10-27 (card «Щит не растёт в бою»; s13 «Кит» vs «Сквозняк»: 90 s fight,
+## three times the ace's HP spent, the shield grew back between the heavy plane's passes): the shield regrows only
+## while the ace is farther than SHIELD_CALM_R from the player, SHIELD_WAIT s after the last hit, SHIELD_REGEN of its
+## size per second.
+const SHIELD_CALM_R := 900.0
+const SHIELD_WAIT := 4.0
+const SHIELD_REGEN := 0.15
+
+
+## Shield the ace has after `delta` s: `dist` — px to the player, `since_hit` — s since the last hit
+static func shield_after(shield: float, shield_max: float, since_hit: float, dist: float, delta: float) -> float:
+	if dist < SHIELD_CALM_R or since_hit <= SHIELD_WAIT or shield >= shield_max:
+		return shield
+	return minf(shield_max, shield + shield_max * SHIELD_REGEN * delta)

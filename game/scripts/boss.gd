@@ -153,10 +153,10 @@ func absorb(dmg: float) -> float:
 func behave(delta: float) -> void:
 	_t += delta
 	_since_hit += delta
-	if _since_hit > 4.0 and shield < shield_max:
-		shield = minf(shield_max, shield + shield_max * 0.15 * delta)
 	_say_t -= delta
 	var p := Main.I.player
+	var far := INF if p == null else global_position.distance_to(p.global_position)
+	shield = AceBalance.shield_after(shield, shield_max, _since_hit, far, delta)   # Kanta 27.10: not while in the fight
 	if p == null or p.hp <= 0.0:
 		position += Vector2.from_angle(heading) * 200.0 * delta
 		return
