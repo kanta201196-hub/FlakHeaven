@@ -7446,3 +7446,35 @@ msgstr "aces got away: %d"
 
 msgid "У этого оружия веток улучшений в ангаре пока нет: они появятся в следующем этапе прокачки. В бою оно растёт по уровням 1–5 карточками, как и остальное оружие."
 msgstr "This weapon has no hangar upgrade branches yet: they come with the next upgrade stage. In battle it still grows through levels 1–5 with cards, like every other weapon."
+
+#: game/scripts/livery.gd:73
+msgid "Выгоревшая дюна"
+msgstr "Bleached Dune"
+
+#: game/scripts/livery.gd:76
+msgid "Скальный осколок"
+msgstr "Rock Splinter"
+
+#: game/scripts/livery.gd:79
+msgid "Старая олива"
+msgstr "Old Olive"
+
+#: game/scripts/livery.gd:82
+msgid "Высотная дымка"
+msgstr "High Haze"
+
+#: game/scripts/livery.gd:85
+msgid "Сумерки"
+msgstr "Dusk"
+
+#: game/scripts/livery.gd:88
+msgid "Степь"
+msgstr "Steppe"
+
+#: game/scripts/livery.gd:91
+msgid "Глина и пыль"
+msgstr "Clay and Dust"
+
+#: game/scripts/livery.gd:94
+msgid "Зимняя побелка"
+msgstr "Winter Whitewash"

@@ -7446,3 +7446,35 @@ msgstr "逃走王牌：%d"
 
 msgid "У этого оружия веток улучшений в ангаре пока нет: они появятся в следующем этапе прокачки. В бою оно растёт по уровням 1–5 карточками, как и остальное оружие."
 msgstr "该武器暂时没有机库升级分支：它们将在下一次更新中加入。战斗中它仍像其他武器一样通过卡牌升到 1–5 级。"
+
+#: game/scripts/livery.gd:73
+msgid "Выгоревшая дюна"
+msgstr "褪色沙丘"
+
+#: game/scripts/livery.gd:76
+msgid "Скальный осколок"
+msgstr "岩石碎片"
+
+#: game/scripts/livery.gd:79
+msgid "Старая олива"
+msgstr "旧橄榄"
+
+#: game/scripts/livery.gd:82
+msgid "Высотная дымка"
+msgstr "高空薄雾"
+
+#: game/scripts/livery.gd:85
+msgid "Сумерки"
+msgstr "黄昏"
+
+#: game/scripts/livery.gd:88
+msgid "Степь"
+msgstr "草原"
+
+#: game/scripts/livery.gd:91
+msgid "Глина и пыль"
+msgstr "黏土与尘土"
+
+#: game/scripts/livery.gd:94
+msgid "Зимняя побелка"
+msgstr "冬季白涂"
