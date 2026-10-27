@@ -133,7 +133,8 @@ func _default_class(cls: String) -> Dictionary:
 		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"nodes2": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
 		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start": [PlaneClasses.signature(cls)],
-		"kit1": _default_kit(), "kit2": _default_kit()}
+		"kit1": _default_kit(), "kit2": _default_kit(),
+		"decals1": {"v": DecalLoadout.VERSION, "items": []}, "decals2": {"v": DecalLoadout.VERSION, "items": []}}
 
 
 ## PG-01 (Kanta 24.10): course gun and ammo of one plane — bought per plane, not per class
@@ -180,6 +181,9 @@ func load_profile() -> void:
 					dst["start"] = [PlaneClasses.signature(c)] + ([String(src["start2"])] if String(src.get("start2", "")) != "" else [])
 				if not (CALLSIGNS[c] as Array).has(dst["callsign"]):
 					dst["callsign"] = CALLSIGNS[c][0]
+				# free-placed decals (Kanta 27.10): every entry checked, old formats migrated, a newer one kept as is
+				for dk in ["decals1", "decals2"]:
+					dst[dk] = DecalLoadout.to_save(DecalLoadout.parse(src.get(dk)))
 	# medals (Kanta 27.10): lifetime counters and the cards / synergies ever taken; an old save starts from zero
 	if d.get("medals") is Dictionary:
 		var md: Dictionary = d["medals"]
@@ -472,6 +476,19 @@ const GROUP3_PYLONS := 2
 
 func third_group(c: String, lv := 0) -> bool:
 	return node(c, "pylons", lv) >= GROUP3_PYLONS
+
+
+## Free-placed decals of plane `lv` (1 or 2) of class `c`; empty for a save from a newer build (kept untouched)
+func decals(c: String, lv: int) -> Array[DecalRecord]:
+	return DecalLoadout.parse(cls(c).get("decals%d" % clampi(lv, 1, 2))).records
+
+
+## Replaces the decals of plane `lv`; more than DecalLoadout.MAX_DECALS are cut. Saved with the next `save()`
+func set_decals(c: String, lv: int, list: Array[DecalRecord]) -> void:
+	var lo := DecalLoadout.new()
+	for r in list:
+		DecalLoadout.add(lo.records, r)
+	cls(c)["decals%d" % clampi(lv, 1, 2)] = DecalLoadout.to_save(lo)
 
 
 func set_livery(c: String, id: String) -> void:

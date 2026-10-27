@@ -39,6 +39,8 @@ static func attach(model: Node3D, key: String, role := "player") -> Node3D:
 			mi.material_override = _mat(mark)
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	model.add_child(ins)
+	if role == "player":   # the player's own decals (free placement, Kanta 27.10); wingmen have none
+		PlaneDecals.attach(model, key, ins)
 	return ins
 
 
