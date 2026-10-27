@@ -142,7 +142,9 @@ func _default_kit() -> Dictionary:
 
 
 func reset_data() -> void:
-	data = {"version": VERSION, "parts": 0, "sorties": 0, "parts_earned_total": 0, "classes": {}, "weapons": {}}
+	data = {"version": VERSION, "parts": 0, "sorties": 0, "parts_earned_total": 0, "classes": {}, "weapons": {},
+		"medals": {"c": {}, "cards": [], "syn": []}}
+	_medal_cache = {}
 	for c in PlaneClasses.LIST:
 		data["classes"][c] = _default_class(c)
 	for w in WEAPON_ORDER:
@@ -178,6 +180,15 @@ func load_profile() -> void:
 					dst["start"] = [PlaneClasses.signature(c)] + ([String(src["start2"])] if String(src.get("start2", "")) != "" else [])
 				if not (CALLSIGNS[c] as Array).has(dst["callsign"]):
 					dst["callsign"] = CALLSIGNS[c][0]
+	# medals (Kanta 27.10): lifetime counters and the cards / synergies ever taken; an old save starts from zero
+	if d.get("medals") is Dictionary:
+		var md: Dictionary = d["medals"]
+		if md.get("c") is Dictionary:
+			for k in md["c"]:
+				data["medals"]["c"][k] = int(md["c"][k])
+		for k in ["cards", "syn"]:
+			if md.get(k) is Array:
+				data["medals"][k] = (md[k] as Array).duplicate()
 	if d.get("weapons") is Dictionary:
 		for w in WEAPON_ORDER:
 			if (d["weapons"] as Dictionary).has(w):
@@ -736,6 +747,7 @@ func award_run(s: Dictionary) -> Dictionary:
 		return out
 	var wage := WAGE
 	var add := int(s["parts_kept"]) + wage + int(s.get("op_parts", 0)) # U-05: + награда за первый проход операции
+	out["medals_new"] = medals_award(s.get("medals", {}), add, s.get("cards_taken", []), s.get("syn_taken", []))
 	data["parts"] = parts() + add
 	data["parts_earned_total"] = int(data["parts_earned_total"]) + add
 	data["sorties"] = int(data["sorties"]) + 1
@@ -764,6 +776,11 @@ func award_run(s: Dictionary) -> Dictionary:
 		sum += bonus
 	lines.append(["За вылет", 30])
 	sum += 30
+	var mx := medal_bonus("crew_xp")
+	if mx > 0.0:   # medal «Ветеран»
+		var vb := int(round(sum * mx))
+		lines.append([Loc.t("Медаль «Ветеран» +%d %%") % int(round(mx * 100.0)), vb])
+		sum += vb
 	var xp_before := int(cls(c)["crew_xp"])
 	cls(c)["crew_xp"] = xp_before + sum
 	out["xp_lines"] = lines
@@ -861,6 +878,7 @@ func apply(p: Player) -> void:
 	if has_perk(c, "b_wing1"):
 		m["wing_hp"] *= 1.2
 		m["wing_dmg"] *= 1.1
+	_apply_medals(p)
 	p.hp = p.max_hp
 
 
@@ -875,7 +893,97 @@ func gate_r_k(_c: String) -> float:
 
 ## B-06: объём бака — +8% за уровень узла «Бак»
 func fuel_k(c: String) -> float:
-	return 1.0 + 0.08 * node(c, "tank") * meta_k()
+	return (1.0 + 0.08 * node(c, "tank") * meta_k()) * (1.0 + medal_bonus("fuel"))
+
+
+# ---------- медали (Kanta 27.10, «Наградная планка»; MedalBalance) ----------
+
+var _medal_cache := {}
+
+
+## Lifetime medal counters (counter key → value)
+func medal_counters() -> Dictionary:
+	return data["medals"]["c"]
+
+
+## Tier of every medal now (medal id → 0…4)
+func medal_tiers() -> Dictionary:
+	if not _medal_cache.has("t"):
+		_medal_cache["t"] = MedalBalance.tiers(medal_counters(), Medals.sets())
+	return _medal_cache["t"]
+
+
+## Total medal bonus of kind `key` (MedalBalance keys: "dmg", "hp", "parts", "msl_cd" …), caps applied; 0 when none.
+## The demo build has no medals.
+func medal_bonus(key: String) -> float:
+	if Demo.on:
+		return 0.0
+	if not _medal_cache.has("b"):
+		_medal_cache["b"] = MedalBalance.bonuses(medal_tiers())
+	return float((_medal_cache["b"] as Dictionary).get(key, 0.0))
+
+
+## Adds one sortie to the medal counters: `run` — the sortie's counters (Medals.run_counters), `parts_add` — parts
+## credited, `cards` / `syn` — card keys and synergies taken. Returns the medals that reached a new tier
+## ([[id, tier], …]) for the result screen. Saved together with the rest of the award.
+func medals_award(run: Dictionary, parts_add: int, cards: Array, syn: Array) -> Array:
+	if Demo.on:
+		return []
+	var before := medal_tiers().duplicate()
+	var r := run.duplicate()
+	r["parts"] = parts_add
+	r["sorties"] = 1
+	var md: Dictionary = data["medals"]
+	for k in [["cards", cards], ["syn", syn]]:
+		var have: Array = md[k[0]]
+		for x in k[1]:
+			if not have.has(x):
+				have.append(x)
+	MedalBalance.add_run(md["c"], r)
+	var cs := Medals.card_set()
+	md["c"]["cards_seen"] = (md["cards"] as Array).filter(func(x): return cs.has(x)).size()
+	md["c"]["syn_seen"] = (md["syn"] as Array).filter(func(x): return Cards.SYNERGIES.has(x)).size()
+	_medal_cache = {}
+	return MedalBalance.new_tiers(before, medal_tiers())
+
+
+## Medal bonuses on the plane at the start of a sortie (called from apply); caps are in MedalBalance.bonuses
+func _apply_medals(p: Player) -> void:
+	var m: Dictionary = p.mods
+	m["dmg_all"] *= 1.0 + medal_bonus("dmg")
+	m["boss_dmg"] *= 1.0 + medal_bonus("boss_dmg")
+	m["ground_dmg"] *= 1.0 + medal_bonus("ground_dmg")
+	m["blast_r"] *= 1.0 + medal_bonus("blast")
+	m["blast_dmg"] *= 1.0 + medal_bonus("blast_dmg")
+	m["spread_k"] *= 1.0 - medal_bonus("spread")
+	m["tail_k"] *= 1.0 + medal_bonus("tail_dmg")
+	m["msl_cd"] = float(m.get("msl_cd", 1.0)) * (1.0 - medal_bonus("msl_cd"))
+	m["turret_traverse"] *= 1.0 + medal_bonus("traverse")
+	m["wing_hp"] *= 1.0 + medal_bonus("wing_hp")
+	m["convoy_dmg"] *= 1.0 + medal_bonus("convoy_dmg")
+	m["fort_dmg"] *= 1.0 + medal_bonus("fort_area_dmg")
+	m["fortress_slow"] = medal_bonus("fortress_slow")
+	m["dive_add"] += medal_bonus("dive_time")
+	m["roll_time"] += medal_bonus("roll_time")
+	m["flare_cd"] *= 1.0 - medal_bonus("flare_cd")
+	m["dive_cd"] *= 1.0 - medal_bonus("dive_cd")
+	m["heal_k"] *= 1.0 + medal_bonus("heal")
+	m["xp_k"] *= 1.0 + medal_bonus("xp")
+	m["boss_parts"] *= 1.0 + medal_bonus("boss_parts")
+	var hp_k := medal_bonus("hp")
+	match p.cls_id:
+		"fighter":
+			m["turn"] *= 1.0 + medal_bonus("fighter_turn")
+		"attacker":
+			hp_k += medal_bonus("attacker_hp")
+		"bomber":
+			m["blast_dmg"] *= 1.0 + medal_bonus("bomber_bombs")
+	p.max_hp *= 1.0 + hp_k
+
+
+## Parts multiplier of medals for the current operation: «Сборщик мусора» plus the top tier of the operation's medal
+func medal_parts_k(op_id: String) -> float:
+	return (1.0 + medal_bonus("parts")) * (1.0 + medal_bonus("op_parts:" + op_id))
 
 
 # ---------- отладка (тестовая сборка) ----------

@@ -580,7 +580,7 @@ func _skill_list(p: Player) -> Array:
 		"desc": Loc.t("Рывок на скорости %.1f с, таранит мелких врагов на пути. Тратит топливо. Перезарядка %d с.") % [p.ab_time_full(), int(round(p.ab_cd_full()))],
 		"cd": p.ab_cd, "full": p.ab_cd_full(), "active": p.ab_t, "fam": "maneuver_skill"})
 	out.append({"key": "dive", "action": "dive", "title": Loc.t("Нырок"), "hint": Loc.t("вниз, под огнём ПВО"),
-		"desc": Loc.t("Самолёт уходит к земле на %.1f с: ПВО и ракеты его теряют. Перезарядка %d с.") % [Tuning.g("dive_time"), int(round(p.dive_cd_full()))],
+		"desc": Loc.t("Самолёт уходит к земле на %.1f с: ПВО и ракеты его теряют. Перезарядка %d с.") % [p.dive_time(), int(round(p.dive_cd_full()))],
 		"cd": p.dive_cd, "full": p.dive_cd_full(), "active": p.dive_t, "fam": "maneuver_skill"})
 	var s3: Dictionary = p.s3_def()
 	out.append({"key": p.skill3, "action": "sharp_turn", "title": Loc.t(s3["title"]) + ("" if p.s3_lvl() <= 0 else " " + Prog.ROMAN[p.s3_lvl()]),
