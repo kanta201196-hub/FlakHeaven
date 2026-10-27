@@ -78,6 +78,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 	_hint_prev = _hint_rect
 	_hint_rect = Rect2()
 	bar_top = size.y - 12.0
+	_bars_last = [_bar_rect, _side_rect]
 	_bar_rect = Rect2()
 	_side_rect = Rect2()
 	if dmg_flash > 0.0:
@@ -818,6 +819,19 @@ func _evac_marker(m: Main, size: Vector2) -> void:
 	_ctext(246, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с") % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7))
 
 
+## True when `r` touches the bottom bar or the weapons column — this frame's, or the last
+## frame's for arrows drawn before the bar is laid out (`_activity_panel`).
+func _on_bars(r: Rect2) -> bool:
+	for b: Rect2 in [_bar_rect, _side_rect] + _bars_last:
+		if b.has_area() and r.intersects(b.grow(6.0)):
+			return true
+	return false
+
+
+## Bar and column rects of the previous frame (`_on_bars`)
+var _bars_last: Array = []
+
+
 ## Правка 28 (тест 3.5-s4): стрелка с тёмной обводкой и подписью — видна и на жёлтой земле.
 ## Отзыв 3.5-s7: стрелки заданий, ворот, заправщика и аса — не у края, а на кольце вокруг центра, где их видно.
 ## S11-38: a point next to the camera plane projects to an infinite or NaN screen position; an
@@ -851,6 +865,10 @@ func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1
 		var fs := 15
 		var tw := ui_font().get_string_size(Loc.out(label), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var r := Rect2(lp.x - tw / 2.0 - 6.0, lp.y - 11.0, tw + 12.0, 22.0)
+		if _on_bars(r):
+			# s13: past the arrow the label ran onto the skills bar — put it on the inner side
+			lp = pos - dir * (k + 30.0)
+			r.position = Vector2(lp.x - tw / 2.0 - 6.0, lp.y - 11.0)
 		ctrl.draw_rect(r, Color(0.02, 0.025, 0.03, 0.7))
 		ctrl.draw_rect(Rect2(r.position, Vector2(3, r.size.y)), col)
 		_text(Vector2(r.position.x + 6, lp.y + 5), label, fs, col.lightened(0.25))
@@ -914,16 +932,43 @@ func _world_caption(xf: Transform2D, wp: Vector2, radius: float, s: String, col:
 	_text(Vector2(pos.x - 120.0, pos.y), s, 18, col, HORIZONTAL_ALIGNMENT_CENTER, 240.0)
 
 
+## Task plate of the activity under way: the y set by `_activity_panel`, the one-line form while
+## boss bars are up, and the plate drawn this frame (world captions step out from under it).
+var _task_y := 250.0
+var _task_compact := false
+var _task_rect := Rect2()
+
+
+## Activity task line on its dark plate: full width with room for the reward line, or (boss up)
+## a plate just around the line.
+func _task(s: String, col: Color) -> void:
+	var w := 980.0
+	var h := 62.0
+	if _task_compact:
+		w = ui_font().get_string_size(Loc.out(s), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 40.0
+		h = 34.0
+	_task_rect = Rect2((ctrl.size.x - w) / 2.0, _task_y, w, h)
+	ctrl.draw_rect(_task_rect, Color(0.02, 0.025, 0.03, 0.78))   # s12: dense, red text read poorly on brown
+	_ctext(_task_y + (24.0 if _task_compact else 26.0), s, 20 if _task_compact else 22, col)
+
+
+## Reward line under the task; left out of the one-line form.
+func _task_sub(s: String) -> void:
+	if not _task_compact:
+		_ctext(_task_y + 52.0, s, 17, Color(0.85, 0.75, 1.0))
+
+
 ## Активности: указатели на позицию ПВО и аса-соперника, радиопереговоры, «ХВОСТ!»
 func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	var xf := m.get_viewport().get_canvas_transform()
 	var rect := Rect2(Vector2.ZERO, size).grow(-60.0)
 	var node: Node = m.spawner.activity_node if m.spawner != null else null
-	# s12: with boss bars up, the task plate goes under them and the banner slot (it overlapped them)
-	var ay := 250.0 if _boss_bottom <= 0.0 else maxf(250.0, _boss_bottom + 66.0)
+	# s12: with boss bars up, the task plate goes under them and the banner slot (it overlapped them);
+	# s13: there it shrinks to one line, so the top of the field is not three plates deep
+	_task_compact = _boss_bottom > 0.0
+	var ay := 250.0 if not _task_compact else maxf(250.0, _boss_bottom + 72.0)
+	_task_y = ay
 	if is_instance_valid(node):
-		# свежий взгляд: задача активности на песке не читалась — тёмная плашка
-		ctrl.draw_rect(Rect2((size.x - 980.0) / 2.0, ay, 980.0, 62.0), Color(0.02, 0.025, 0.03, 0.78))   # s12: denser, red text read poorly on brown
 		if node is FortArea:
 			var base := node as FortArea
 			var db := int(p.global_position.distance_to(base.global_position))
@@ -935,9 +980,9 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				bs = Loc.t("УКРЕПРАЙОН: %d с · пусковых на башнях: %d из %d") % [int(ceil(base.timer)), base.launchers_left(), base.launchers.size()]
 			else:
 				bs = Loc.t("База противника: %d м — подлетите, чтобы начать") % (db / 10)
-			_ctext(ay + 26.0, bs, 22, Color(1.0, 0.7, 0.55))
+			_task(bs, Color(1.0, 0.7, 0.55))
 			if not base.failed:
-				_ctext(ay + 52.0, "Награда: выбор из редких карточек + 60 запчастей", 17, Color(0.85, 0.75, 1.0))
+				_task_sub("Награда: выбор из редких карточек + 60 запчастей")
 		elif node is AASite:
 			var site := node as AASite
 			var d := int(p.global_position.distance_to(site.global_position))
@@ -949,9 +994,9 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				s = Loc.t("ПОЗИЦИЯ ПВО: %d с · уничтожьте бункер: %d%%") % [int(ceil(site.timer)), int(ceil(site.bunker_frac() * 100.0))]
 			else:
 				s = Loc.t("Позиция ПВО: %d м — подлетите, чтобы начать") % (d / 10)
-			_ctext(ay + 26.0, s, 22, Color(1.0, 0.85, 0.4))
+			_task(s, Color(1.0, 0.85, 0.4))
 			if not site.failed:
-				_ctext(ay + 52.0, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
+				_task_sub("Награда: выбор из редких карточек + 40 запчастей")
 		elif node is Rescue:
 			var rs := node as Rescue
 			var dr := int(p.global_position.distance_to(rs.global_position)) / 10
@@ -965,9 +1010,9 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				rt = Loc.t("СБИТЫЙ ПИЛОТ: держите небо над маяком ещё %d с") % int(ceil(rs.timer)) + ("" if p.global_position.distance_to(rs.global_position) < Rescue.HOLD_R else Loc.t(" · вернитесь к маяку!"))
 			else:
 				rt = Loc.t("Аварийный маяк: %d м · вертолёт ждёт ещё %d с") % [dr, int(ceil(rs.life))]
-			_ctext(ay + 26.0, rt, 22, Color(0.55, 1.0, 0.65))
+			_task(rt, Color(0.55, 1.0, 0.65))
 			if not rs.done and not rs.failed:
-				_ctext(ay + 52.0, "Награда: выбор из редких карточек + 40 запчастей", 17, Color(0.85, 0.75, 1.0))
+				_task_sub("Награда: выбор из редких карточек + 40 запчастей")
 		elif node is Convoy:
 			var cv := node as Convoy
 			var sea := Biome.sea()
@@ -978,19 +1023,19 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				cs = Loc.t("КАРАВАН: до гавани %d с · сухогрузов: %d из %d" if sea else "КОЛОННА: до укрытия %d с · грузовиков: %d из %d") % [int(ceil(maxf(cv.timer, 0.0))), cv.trucks_left(), cv.trucks_total]
 			else:
 				cs = Loc.t("Караван снабжения: %d м — подлетите и потопите сухогрузы" if sea else "Колонна снабжения: %d м — подлетите и сожгите грузовики") % dm
-			_ctext(ay + 26.0, cs, 22, Color(1.0, 0.78, 0.45))
-			_ctext(ay + 52.0, "Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза" if sea else "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика", 17, Color(0.85, 0.75, 1.0))
+			_task(cs, Color(1.0, 0.78, 0.45))
+			_task_sub("Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза" if sea else "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика")
 		elif node is Transport:
 			var tr := node as Transport
 			_edge_arrow(_ws(xf, tr.global_position), rect, size, C_TRANSPORT, 1.8, Loc.t("транспортник %d м") % (int(p.global_position.distance_to(tr.global_position)) / 10))
-			_world_caption(xf, tr.global_position, tr.radius, "Транспортник", Color(1, 0.85, 0.6), Rect2((size.x - 980.0) / 2.0, ay, 980.0, 62.0))
-			_ctext(ay + 26.0, Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], 22, Color(1.0, 0.75, 0.45))
-			_ctext(ay + 52.0, "Награда: груз — запчасти и ремкомплекты", 17, Color(0.85, 0.75, 1.0))
+			_world_caption(xf, tr.global_position, tr.radius, "Транспортник", Color(1, 0.85, 0.6), _task_rect)
+			_task(Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], Color(1.0, 0.75, 0.45))
+			_task_sub("Награда: груз — запчасти и ремкомплекты")
 		elif node is RivalAce:
 			var ace := node as RivalAce
 			_edge_arrow(_ws(xf, ace.global_position), rect, size, Color(1.0, 0.3, 0.35), 1.8, Loc.t("ас %d м") % (int(p.global_position.distance_to(ace.global_position)) / 10))
-			_ctext(ay + 26.0, Loc.t("ДОГФАЙТ: ас «%s» · уйдёт через %d с") % [ace.callsign, int(ceil(ace.life))], 22, Color(1.0, 0.72, 0.7))
-			_ctext(ay + 52.0, "Награда: выбор из редких карточек", 17, Color(0.85, 0.75, 1.0))
+			_task(Loc.t("ДОГФАЙТ: ас «%s» · уйдёт через %d с") % [ace.callsign, int(ceil(ace.life))], Color(1.0, 0.72, 0.7))
+			_task_sub("Награда: выбор из редких карточек")
 			if ace.threatening() and int(Time.get_ticks_msec() / 200) % 2 == 0:
 				_ptext(size.y / 2.0 + 196.0, "ХВОСТ! Сбрось газ (S) или манёвр", 30, Color(1.0, 0.42, 0.36), 0.75)   # under the plane: above it the boss and task plates stack
 	# 3.5: свой заправщик
@@ -998,7 +1043,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	if is_instance_valid(tk) and tk.alive() and not tk.leaving:
 		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8, Loc.t("заправщик %d м") % (int(p.global_position.distance_to(tk.global_position)) / 10))
 		var ts := Loc.t("СТЫКОВКА — ЗАПРАВКА ИДЁТ") if tk.filling else (Loc.t("ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно") if tk.in_cone else Loc.t("ЗАПРАВЩИК: зайдите ему в хвост"))
-		_ctext(ay + 78.0, Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
+		_ctext(ay + (52.0 if _task_compact else 78.0), Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
 
 
 ## Правка 20 (тест 3.5-s4): радиоэфир — справа внизу, значок рации, позывной, полупрозрачная плашка.
@@ -1041,7 +1086,8 @@ func _radio_box(m: Main, size: Vector2) -> void:
 	var blink := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
 	for i in 2:
 		ctrl.draw_arc(Vector2(ic.x + 9, ic.y - 28), 8.0 + i * 8.0, -PI * 0.85, -PI * 0.15, 8, Color(col.r, col.g, col.b, a * blink * (1.0 - i * 0.3)), 2.0)
-	_text(Vector2(r.position.x + 92, r.position.y + 28), Loc.t("РАДИОЭФИР · «%s»") % m.hud.radio_from, 18, Color(col.r, col.g, col.b, a))
+	# s13: ace names come quoted already («Сквозняк») — no second pair of quotes
+	_text(Vector2(r.position.x + 92, r.position.y + 28), Loc.t("РАДИОЭФИР · «%s»") % m.hud.radio_from.trim_prefix("«").trim_suffix("»"), 18, Color(col.r, col.g, col.b, a))
 	_para(Vector2(r.position.x + 92, r.position.y + 56), m.hud.radio_text, w - 112.0, 22, Color(1, 1, 1, a))
 
 
