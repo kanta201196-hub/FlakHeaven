@@ -171,7 +171,7 @@ static func build(hull: PlaneHull, records: Array[DecalRecord], tally: int, lift
 	b.to_local = to_local
 	for i in records.size():
 		b.lift = lift + LIFT_STEP * i
-		for st in DecalLoadout.stamps(records[i], tally):
+		for st in DecalLoadout.stamps(records[i], tally, hull):
 			b.project(hull, st)
 			if hull.extra != null:
 				b.project(hull.extra, st)

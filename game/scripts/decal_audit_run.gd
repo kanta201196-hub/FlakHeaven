@@ -42,6 +42,7 @@ func run_model(root: Node3D, model: Node3D, key: String, kind: String, variant: 
 		notes.append("%s/%s/%s: no hull" % [kind, key, variant])
 		return
 	var scene := DecalAudit.collect(root, model, false)
+	DecalAudit.seat_hull = PlaneDecals.hull_of(model)
 	# what the cursor stops on (Hangar3D._decal_blocker): the canopy glass, weapons, turrets, module parts
 	var glass := PlaneHull.new()
 	for t in scene.count():

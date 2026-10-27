@@ -25,6 +25,9 @@ const STRETCH := 1.5         ## area stretch of a decal triangle (1 / facing) co
 const WRAP_COS := 0.5        ## a decal triangle turned more than 60° from the decal's normal wraps round an edge
 const BACK_COS := 0.0        ## a decal triangle facing away from the decal (printed on the far side of a thin part)
 
+## The decal hull of the model being audited (PlaneDecals.hull_of): digits and marks are seated on it, as DecalMesh does
+static var seat_hull: PlaneHull = null
+
 enum Tag {SKIN, GLASS, PART, ADDON, INSIGNIA, WELL}
 ## Problem categories in report order, with the share of a decal (opaque samples, or decal area for the area ones)
 ## above which a decal counts as having that problem
@@ -293,7 +296,7 @@ static func audit(scene: Tris, ins: Tris, dec: Tris, r: DecalRecord, tally: int)
 	var by := {}
 	var opaque_n := 0
 	var visible_n := 0
-	for st in DecalLoadout.stamps(r, tally):
+	for st in DecalLoadout.stamps(r, tally, seat_hull):
 		var f := Frame.of_stamp(st)
 		var depth := maxf(st.half_w, st.half_h) + 0.004
 		var zs := raster(scene, f, -depth - 0.01, OCC_REACH)
@@ -401,7 +404,7 @@ static func symmetry(scene: Tris, dec: Tris, a: DecalRecord, b: DecalRecord, tal
 	var pb := float(DecalCatalog.paint_index(b.c1))
 	var inter := 0
 	var uni := 0
-	for st in DecalLoadout.stamps(a, tally):
+	for st in DecalLoadout.stamps(a, tally, seat_hull):
 		var f := Frame.of_stamp(st)
 		var depth := maxf(st.half_w, st.half_h) + 0.004
 		var fr := f.reflected()
@@ -439,7 +442,7 @@ static func overlap_zfight(dec: Tris, a: DecalRecord, b: DecalRecord, tally: int
 	var pb := float(DecalCatalog.paint_index(b.c1))
 	var both := 0
 	var bad := 0
-	for st in DecalLoadout.stamps(a, tally):
+	for st in DecalLoadout.stamps(a, tally, seat_hull):
 		var f := Frame.of_stamp(st)
 		var depth := maxf(st.half_w, st.half_h) + 0.004
 		var ga := raster(dec, f, -depth - 0.01, depth + 0.01, -1, pa)

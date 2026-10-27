@@ -33,6 +33,7 @@ func run() -> Array:
 	_test_slab()
 	_test_winding()
 	_test_fade()
+	_test_seat()
 	_test_lift_order()
 	_test_blockers()
 	_test_parts()
@@ -555,6 +556,47 @@ func _test_winding() -> void:
 	for v in bl.verts:
 		on_near = on_near and v.z < 0.0005
 	_check(on_near, "the far face of a thin part gets nothing even when its smoothed normals lean over")
+
+
+func _test_seat() -> void:
+	# a fuselage 30 cm across (a cylinder about Y) and a full row of tally marks across its side: every mark lands on
+	# the skin, though the row's far end lies ~4 cm off the flat plane of the record
+	var rad := 0.15
+	var pos := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	var seg := 48
+	for i in seg:
+		var a0 := deg_to_rad(-60.0 + 120.0 * i / seg)
+		var a1 := deg_to_rad(-60.0 + 120.0 * (i + 1) / seg)
+		var q: Array[Vector3] = []
+		var o: Array[Vector3] = []
+		for a: float in [a0, a1]:
+			for y: float in [-0.03, 0.03]:
+				q.append(Vector3(rad * sin(a), y, rad - rad * cos(a)))
+				o.append(Vector3(sin(a), 0.0, -cos(a)))
+		for tri: Array in [[0, 1, 3], [0, 3, 2]]:
+			var t: Array = tri
+			var c := (q[t[1]] - q[t[0]]).cross(q[t[2]] - q[t[0]])
+			if c.dot(o[t[0]]) > 0.0:   # Godot winding: the cross product points inward
+				t = [t[0], t[2], t[1]]
+			for k: int in t:
+				pos.append(q[k])
+				nrm.append(o[k])
+	var hull := PlaneHull.from_triangles(pos, nrm)
+	var r := DecalRecord.new()
+	r.id = "tally_air"
+	r.size = 0.01
+	r.normal = Vector3(0, 0, -1)
+	var sts := DecalLoadout.stamps(r, DecalLoadout.TALLY_ROW, hull)
+	var flat := DecalLoadout.stamps(r, DecalLoadout.TALLY_ROW)
+	var drawn := 0
+	for st in sts:
+		var b := DecalMesh.Builder.new()
+		b.project(hull, st)
+		drawn += int(b.verts.size() > 0)
+	var far_off := absf((flat[-1].center - sts[-1].center).length()) > 0.005
+	_check(drawn == sts.size() and far_off, "every tally mark of a long row lands on a curved fuselage (%d of %d)" % [
+		drawn, sts.size()])
 
 
 func _test_fade() -> void:

@@ -83,7 +83,7 @@ const FIT_GRID := Vector2i(7, 5)
 ## stamps, each point shot along the decal's normal at `hull`; a hit inside the box depth on skin turned less than
 ## 60° from the decal counts. Off the plane, over an edge or on a steep side it does not. 1 — the decal fits.
 static func fit(hull: PlaneHull, r: DecalRecord, tally: int) -> float:
-	var sts := DecalLoadout.stamps(r, maxi(tally, 1))
+	var sts := DecalLoadout.stamps(r, maxi(tally, 1), hull)
 	if hull == null or sts.is_empty():
 		return 1.0
 	var b := r.basis_vectors()
