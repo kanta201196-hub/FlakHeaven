@@ -30,6 +30,22 @@ const KHAKI := ["khaki", "Хаки", Color(0.36, 0.35, 0.23), Color(0.45, 0.43, 
 ## на солнце выходит в 245/255, 0,51 — в ≈ 215 (грязно-белый на песке); в ангаре (белая точка 1,6) — светло-серый мат.
 const CLASSIC_KIT := ["classic", "Классика", Color(0.43, 0.42, 0.39), Color(0.52, 0.51, 0.48), Color(0.565, 0.555, 0.52), 0.88, 0.05, 3,
 	Color(0.15, 0.28, 0.48), Color(0.37, 0.46, 0.55)]
+## Kanta 27.10 (build s13, item 4) took two of the natural proposals for all three planes (pattern 7, see NATURAL):
+## «Степь» — khaki, ochre and dark brown in wavy disruptive bands with hard edges; «Скальный осколок» — grey-brown
+## angular splinter patches with straight masked edges. Their turrets wear the same paint (TURRET_PAINT).
+const STEPPE := ["steppe", "Степь", Color(0.50, 0.40, 0.26), Color(0.53, 0.52, 0.36), Color(0.70, 0.66, 0.52), 0.88, 0.03, 7,
+	Color(0.27, 0.25, 0.18), Color(0.64, 0.63, 0.56),
+	{"style": 2, "scale": 4.0, "cut": Vector2(0.36, 0.22), "edge": 0.0, "fade": 0.5, "grime": 0.9, "belly": 1.0, "seed": 6.0}]
+const ROCK := ["rock", "Скальный осколок", Color(0.46, 0.38, 0.30), Color(0.55, 0.53, 0.49), Color(0.70, 0.69, 0.66), 0.88, 0.03, 7,
+	Color(0.31, 0.30, 0.29), Color(0.63, 0.65, 0.65),
+	{"style": 1, "scale": 5.5, "cut": Vector2(0.33, 0.33), "edge": 0.0, "fade": 0.45, "grime": 0.9, "belly": 1.0, "seed": 2.0}]
+## Turret paint per livery: [suffix of the baked turret GLBs (turret_paint.py PALETTES "<class>_<suffix>",
+## models/turrets/<turret>_<suffix>.glb), colour of the ring collar under the turret (the baked base a touch darker,
+## like WeaponModels.TURRET_MODELS body for the sand camo)]. Other liveries keep the sand-camo turrets.
+const TURRET_PAINT := {
+	"steppe": ["steppe", Color(0.42, 0.41, 0.28)],
+	"rock": ["rock", Color(0.43, 0.42, 0.38)],
+}
 const VARIANTS := {
 	"fighter": [
 		["classic", "Классика"],
@@ -39,6 +55,8 @@ const VARIANTS := {
 		["black_gloss", "Чёрный глянец", Color(0.05, 0.05, 0.056), Color(0.075, 0.075, 0.082), Color(0.12, 0.12, 0.13), 0.14, 0.3, 0],
 		["pink_leopard", "Розовый леопард", Color(0.86, 0.52, 0.64), Color(0.96, 0.62, 0.74), Color(1.0, 0.74, 0.83), 0.55, 0.05, 1,
 			Color(0.22, 0.07, 0.13), Color(0.80, 0.36, 0.50)],
+		STEPPE,
+		ROCK,
 	],
 	"attacker": [
 		SAND_CAMO,
@@ -47,6 +65,8 @@ const VARIANTS := {
 		["black_matte", "Чёрный мат", Color(0.05, 0.05, 0.05), Color(0.085, 0.085, 0.085), Color(0.12, 0.12, 0.115), 0.95, 0.0, 0],
 		["tiger", "Тигр", Color(0.78, 0.42, 0.10), Color(0.88, 0.50, 0.14), Color(0.93, 0.58, 0.20), 0.6, 0.05, 2,
 			Color(0.05, 0.04, 0.035), Color(0.92, 0.86, 0.72)],
+		STEPPE,
+		ROCK,
 	],
 	"bomber": [
 		SAND_CAMO,
@@ -55,13 +75,16 @@ const VARIANTS := {
 		KHAKI,
 		["black_red", "Чёрный с красным", Color(0.04, 0.04, 0.045), Color(0.07, 0.07, 0.075), Color(0.11, 0.11, 0.115), 0.42, 0.25, 4,
 			Color(0.78, 0.07, 0.05), Color(0.0, 0.0, 0.0)],
+		STEPPE,
+		ROCK,
 	],
 }
 
 ## Build s13, item 4 (Kanta 27.10: «разные варианты раскраски и камуфляжа, разнообразь, сделай естественными»):
-## proposal paints for all three player planes, rendered only on the bench (--livproposals) until Kanta picks; the
-## hangar picker (VARIANTS) is unchanged. Pattern 7 — natural camouflage in model axes: [id, name, colour 2 (c_dark),
-## base (c_mid), sun-bleach tint (c_light), roughness, metal, 7, colour 3 (pat_a), belly (pat_b), params].
+## proposal paints for all three player planes, rendered only on the bench (--livproposals); Kanta took «Степь» and
+## «Скальный осколок» (STEPPE, ROCK above), the rest stay here as bench-only proposals. Pattern 7 — natural
+## camouflage in model axes: [id, name, colour 2 (c_dark), base (c_mid), sun-bleach tint (c_light), roughness, metal,
+## 7, colour 3 (pat_a), belly (pat_b), params].
 ## params: style — 0 soft sprayed blotches, 1 hard splinter (planar cells), 2 wavy disruptive bands, 3 fine mottle
 ## over soft clouds, 4 one worn tone with repainted panels, 5 worn whitewash over the base; scale — pattern
 ## frequency per plane length (× CLASS_SCALE, so a bigger plane wears relatively smaller patches, as real paint
@@ -73,9 +96,6 @@ const NATURAL := [
 	["nat_dune", "Выгоревшая дюна", Color(0.52, 0.36, 0.22), Color(0.76, 0.66, 0.48), Color(0.86, 0.80, 0.68), 0.86, 0.03, 7,
 		Color(0.36, 0.33, 0.22), Color(0.70, 0.70, 0.64),
 		{"style": 0, "scale": 5.0, "cut": Vector2(0.52, 0.58), "edge": 0.035, "fade": 0.45, "grime": 0.8, "belly": 1.0, "seed": 1.0}],
-	["nat_rock", "Скальный осколок", Color(0.46, 0.38, 0.30), Color(0.55, 0.53, 0.49), Color(0.70, 0.69, 0.66), 0.88, 0.03, 7,
-		Color(0.31, 0.30, 0.29), Color(0.63, 0.65, 0.65),
-		{"style": 1, "scale": 5.5, "cut": Vector2(0.33, 0.33), "edge": 0.0, "fade": 0.45, "grime": 0.9, "belly": 1.0, "seed": 2.0}],
 	["nat_olive", "Старая олива", Color(0.26, 0.28, 0.18), Color(0.38, 0.37, 0.24), Color(0.55, 0.53, 0.40), 0.9, 0.03, 7,
 		Color(0.50, 0.48, 0.34), Color(0.52, 0.53, 0.49),
 		{"style": 4, "scale": 9.0, "cut": Vector2(0.22, 0.12), "edge": 0.0, "fade": 0.8, "grime": 1.0, "belly": 1.0, "seed": 3.0}],
@@ -85,9 +105,6 @@ const NATURAL := [
 	["nat_dusk", "Сумерки", Color(0.34, 0.36, 0.39), Color(0.46, 0.48, 0.50), Color(0.60, 0.60, 0.60), 0.9, 0.03, 7,
 		Color(0.27, 0.28, 0.30), Color(0.62, 0.63, 0.63),
 		{"style": 2, "scale": 3.2, "cut": Vector2(0.42, 0.20), "edge": 0.025, "fade": 0.4, "grime": 0.8, "belly": 1.0, "seed": 5.0}],
-	["nat_steppe", "Степь", Color(0.50, 0.40, 0.26), Color(0.53, 0.52, 0.36), Color(0.70, 0.66, 0.52), 0.88, 0.03, 7,
-		Color(0.27, 0.25, 0.18), Color(0.64, 0.63, 0.56),
-		{"style": 2, "scale": 4.0, "cut": Vector2(0.36, 0.22), "edge": 0.0, "fade": 0.5, "grime": 0.9, "belly": 1.0, "seed": 6.0}],
 	["nat_clay", "Глина и пыль", Color(0.56, 0.38, 0.27), Color(0.71, 0.62, 0.50), Color(0.82, 0.77, 0.68), 0.88, 0.03, 7,
 		Color(0.42, 0.35, 0.28), Color(0.68, 0.66, 0.60),
 		{"style": 0, "scale": 9.0, "cut": Vector2(0.55, 0.61), "edge": 0.06, "fade": 0.5, "grime": 0.8, "belly": 0.0, "seed": 7.0}],
@@ -176,6 +193,13 @@ static func current(cls: String) -> String:
 		var l: Array = VARIANTS.get(cls, [[""]])
 		return String(l[0][0])
 	return id
+
+
+## Turret paint of livery `id` (default: the class's current one): [GLB suffix, ring collar colour], or [] for the
+## sand-camo turrets
+## (WeaponModels.turret_file / turret_model pick the baked files and the collar by it)
+static func turret_paint(cls: String, id := "") -> Array:
+	return TURRET_PAINT.get(id if id != "" else current(cls), [])
 
 
 ## Перекрасить модель самолёта (корень модели ангара или боевой; key — «fighter_1» и т. п.). Звать после того,
