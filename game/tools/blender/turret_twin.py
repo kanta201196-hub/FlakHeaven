@@ -1,6 +1,6 @@
 """Спаренная турель «Кита» (по референсу владельца 16.10): основание-погон, бронированная
 башня с плитами сверху, люлька и два ствола с дульными тормозами.
-Запуск (bpy 5.x):  python3 turret_twin.py [t1|t2|t3|quad] [nopreview] [nopaint] <out_dir>
+Запуск (bpy 5.x):  python3 turret_twin.py [t1|t2|t3|quad] [nopreview] [nopaint] [livery=steppe|rock] <out_dir>
 Ступени (Т-4, plan-after-review 3.6 — меняют форму и детали, не размер; по умолчанию t2):
   t1 (ур. 1–2) — спарка без дульных тормозов, простой маск;
   t2 (ур. 3–4) — дульные тормоза и бронещиток перед люлькой;
@@ -276,8 +276,8 @@ if __name__ == "__main__":
     M_GLASS = mat("turret_glass", (0.12, 0.2, 0.24), 0.6, 0.06)
 
     twin(TIER, QUAD, M_BODY, M_DARK, M_BARREL, M_GLASS, detail=True)
-    from turret_paint import PALETTES
-    build("turret_twin_quad" if QUAD else "turret_twin_t%d" % TIER, OUT, None if "nopaint" in sys.argv else PALETTES["kit"])
+    from turret_paint import pick
+    build("turret_twin_quad" if QUAD else "turret_twin_t%d" % TIER, OUT, None if "nopaint" in sys.argv else pick("kit", sys.argv))
     if "nopreview" not in sys.argv:
         preview(OUT, [("ref", (3.3, -3.9, 2.6), (1.05, 0, 0.35), 50),
                       ("rear", (-2.6, 2.6, 2.0), (0.6, 0, 0.35), 50),

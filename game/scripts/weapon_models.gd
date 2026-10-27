@@ -286,6 +286,9 @@ static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 
 	var spec: Dictionary = TURRET_MODELS[cls]
 	var cols: Array = spec["body"]
 	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
+	var tp := Livery.turret_paint(cls)
+	if tp.size() > 1 and file.get_basename().ends_with("_" + String(tp[0])):
+		tint = tp[1]   # the ring collar continues the livery's baked turret paint
 	var m := _glb_mesh(file, float(spec["s"]), tint, "turret_model_%s_%s_%s%s" % [cls, file.get_file(), tint.to_html(), part], part)
 	var ring: Dictionary = spec.get("ring", {})
 	if m != null and part != "guns" and part != "pods" and side in ring.get("sides", []):
@@ -295,7 +298,10 @@ static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 
 	return m
 
 
-static func turret_file(cls: String, t := 1, side := "", evo := false) -> String:
+## GLB of the class's turret for the tier / mount side / evolution, in the paint of `livery` (default: the class's
+## current one) when one is baked for it (models/turrets/<turret>_<suffix>.glb, Livery.TURRET_PAINT), else the sand-camo turret;
+## "" when the class has no turret model
+static func turret_file(cls: String, t := 1, side := "", evo := false, livery := "") -> String:
 	var spec: Dictionary = TURRET_MODELS.get(cls, {})
 	if spec.is_empty():
 		return ""
@@ -306,6 +312,12 @@ static func turret_file(cls: String, t := 1, side := "", evo := false) -> String
 		file = spec["evo"]
 	if file.contains("%d"):
 		file = file % clampi(t, 1, 3)
+	# Kanta 27.10: turrets follow the plane's livery — the same turret baked in that paint (Livery.TURRET_PAINT)
+	var tp := Livery.turret_paint(cls, livery)
+	if not tp.is_empty():
+		var lf := "%s_%s.glb" % [file.get_basename(), tp[0]]
+		if ResourceLoader.exists(lf):
+			return lf
 	return file if ResourceLoader.exists(file) else ""
 
 

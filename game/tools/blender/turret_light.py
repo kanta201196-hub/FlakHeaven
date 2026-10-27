@@ -1,6 +1,6 @@
 """Лёгкая турель «Грача» (средний класс; референс владельца 16.10): низкая тумба, компактная башня
 со скошенным лбом. Меньше и слабее турели «Кита».
-Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3|evo] [nopreview] [nopaint] <out_dir>
+Запуск (bpy 5.x):  python3 turret_light.py [t1|t2|t3|evo] [nopreview] [nopaint] [livery=steppe|rock] <out_dir>
   → turret_light_t<N>.blend / .glb / preview_*.png (по умолчанию t1); evo → turret_light_evo
 evo — «Дикобраз» on the «Грач» (3.5-s12, Kanta: "turret lv5 and the evolution look the same in the hangar"):
   the t3 turret plus a fire-control head on the roof (mast, box search radar, tracking dish) and cable runs,
@@ -206,8 +206,8 @@ if K != 1.0:
     for g, p in list(L.pivots.items()):
         L.pivots[g] = tuple(c * K for c in p)
 
-from turret_paint import PALETTES
-build("turret_light_evo" if EVO else "turret_light_t%d" % TIER, OUT, None if "nopaint" in sys.argv else PALETTES["grach"])
+from turret_paint import pick
+build("turret_light_evo" if EVO else "turret_light_t%d" % TIER, OUT, None if "nopaint" in sys.argv else pick("grach", sys.argv))
 if "nopreview" not in sys.argv:
     preview(OUT, [("ref", (2.4, -2.6, 1.4), (0.35, 0, 0.32), 50),
                   ("rear", (-2.0, 2.0, 1.6), (0.3, 0, 0.32), 50),
