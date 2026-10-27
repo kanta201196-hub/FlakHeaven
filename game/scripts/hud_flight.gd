@@ -655,7 +655,10 @@ func _skill_dyn(c: BarCol) -> void:
 			var d := Vector2.from_angle(a)
 			var t := minf(tr.size.x / 2.0 / maxf(absf(d.x), 0.001), tr.size.y / 2.0 / maxf(absf(d.y), 0.001))
 			pts.append(ctr + d * t)
-		ctrl.draw_colored_polygon(pts, Color(0, 0, 0, 0.45))
+		# the last frames of a cooldown give a sliver of sub-pixel width that the renderer cannot
+		# triangulate («Invalid polygon data, triangulation failed» in s11–s13 logs): skip it
+		if frac > 0.005:
+			ctrl.draw_colored_polygon(pts, Color(0, 0, 0, 0.45))
 		var cs := ("%.1f" % cd) if cd < 10.0 else str(int(ceil(cd)))
 		var f := UiStyle.head_font(800, 0)
 		var cfs := int(clampf(tr.size.x * 0.5, 22.0, 30.0))
