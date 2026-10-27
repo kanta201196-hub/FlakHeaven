@@ -65,7 +65,8 @@ func _wave(p: Player) -> void:
 		dr.lane = (i - 0.5) * 70.0
 		dr.position = global_position + Vector2.from_angle(ang) * 1100.0
 		Main.I.world.add_child(dr)
-		dr.apply_hp_mult(Main.I.spawner.hp_mult() * Spawner.hp_ramp(Main.I.run_time))
+		dr.hp = DroneBalance.hp(p.guns.base_damage())   # Kanta 27.10: a couple of hits, like every drone
+		dr.max_hp = dr.hp
 		dr.heading = (p.global_position - dr.position).angle()
 
 

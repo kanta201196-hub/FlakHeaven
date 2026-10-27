@@ -179,7 +179,7 @@ func _process(delta: float) -> void:
 		_dealt_hist.append(dealt_total())
 		_big_tick(p)
 		if not m.boss_alive():
-			_air_hist.append([t, air_count(get_tree().get_nodes_in_group("enemies"))])
+			_air_hist.append([t, air_count(get_tree().get_nodes_in_group("enemies"), true)])
 			if _air_hist.size() > 300:
 				_air_hist = _air_hist.slice(_air_hist.size() - 200)
 		if _dealt_hist.size() > 120:
@@ -221,6 +221,8 @@ func _process(delta: float) -> void:
 				# 3.5: камикадзе выведен из игры (разбор каталога 16.10) — все дроны заходят цепью
 				d.lane = (i - (count - 1) / 2.0) * 70.0
 				_place(d, p, ang + randf_range(-0.2, 0.2), t)
+				d.hp = DroneBalance.hp(p.guns.base_damage())   # Kanta 27.10: a couple of hits, at any minute
+				d.max_hp = d.hp
 				d.heading = (p.global_position - d.position).angle()
 
 	# «Архипелаг» (E-07): экраноплан «Крачка» проходит по проливу раз в ~1,5 мин после 2:00 (--ekr — сразу)
@@ -558,11 +560,13 @@ func _spawn_bosses(p: Player, wave: int) -> void:
 	Events.boss_wave.emit(wave, maxi(1, variants.size()))
 
 
-func air_count(enemies: Array) -> int:
+## Planes in the air that count against enemy_cap; `no_drones` — for the pressure measure, which leaves drones out
+## (Kanta 27.10: their HP follows the player's gun, so their kill rate says nothing about the others' strength)
+func air_count(enemies: Array, no_drones := false) -> int:
 	var n := 0
 	for e in enemies:
 		var en := e as Enemy
-		if not en.is_boss and not en.is_ground and not en.no_despawn and not en.leaving:
+		if not en.is_boss and not en.is_ground and not en.no_despawn and not en.leaving and not (no_drones and en is Drone):
 			n += 1
 	return n
 
@@ -616,7 +620,7 @@ func _place(e: Enemy, p: Player, ang: float, t: float) -> void:
 	e.born_t = t
 	# 2.8: с 10-й минуты — элитные варианты (прочнее ×3, крупнее, больше опыта)
 	# 3.1: элитные — с 6:00 и чаще (до 30%)
-	if t > 360.0 and randf() < clampf((t - 360.0) / 1500.0, 0.0, 0.3):
+	if not e is Drone and t > 360.0 and randf() < clampf((t - 360.0) / 1500.0, 0.0, 0.3):
 		e.make_elite()
 
 
@@ -626,9 +630,9 @@ static func hp_ramp(t: float) -> float:
 	return (1.0 + t / 450.0) * (1.0 + maxf(0.0, t - 300.0) / 60.0 * 0.04)
 
 
-## Сбит обычный самолёт — запомнить, сколько он прожил
+## Сбит обычный самолёт — запомнить, сколько он прожил (дроны — нет: их прочность идёт от пушки игрока, DroneBalance)
 func note_kill(e: Enemy) -> void:
-	if e.born_t < 0.0 or e.is_boss or e.is_ground or e.no_despawn or Main.I.boss_alive():
+	if e is Drone or e.born_t < 0.0 or e.is_boss or e.is_ground or e.no_despawn or Main.I.boss_alive():
 		return
 	var t := Main.I.run_time
 	_lives.append([t, t - e.born_t])
