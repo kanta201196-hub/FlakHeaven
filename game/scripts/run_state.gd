@@ -38,6 +38,10 @@ var aces_down := 0
 var aces_gone := 0
 
 
+## Medal parts bonus for this sortie (Profile.medal_parts_k), set by Main at the start
+var parts_k := 1.0
+
+
 ## «Битва асов»: a rival ace was shot down.
 func on_rival_down() -> void:
 	aces_down += 1
@@ -116,7 +120,7 @@ func tick(delta: float) -> void:
 ## the amount already includes it, e.g. cargo valued when dropped). Returns the amount actually
 ## paid, for banners and the log. `reason` is for the log.
 func grant_parts(amount: float, _reason: StringName = &"", late_bonus := true) -> float:
-	var paid := amount * (continue_mult() if late_bonus else 1.0)
+	var paid := amount * (continue_mult() if late_bonus else 1.0) * parts_k
 	parts += paid
 	return paid
 

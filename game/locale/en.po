@@ -7447,6 +7447,409 @@ msgstr "aces got away: %d"
 msgid "У этого оружия веток улучшений в ангаре пока нет: они появятся в следующем этапе прокачки. В бою оно растёт по уровням 1–5 карточками, как и остальное оружие."
 msgstr "This weapon has no hangar upgrade branches yet: they come with the next upgrade stage. In battle it still grows through levels 1–5 with cards, like every other weapon."
 
+# Medals (Kanta 2026-10-27): game/scripts/balance/medals.gd, hud_medals.gd, profile.gd
+
+msgid "Истребитель"
+msgstr "Fighter Ace"
+
+#, c-format
+msgid "Сбить %s врагов"
+msgstr "Shoot down %s enemies"
+
+#, c-format
+msgid "урон +%s"
+msgstr "damage +%s"
+
+msgid "Гроза асов"
+msgstr "Ace Breaker"
+
+#, c-format
+msgid "Сбить %s асов"
+msgstr "Shoot down %s aces"
+
+#, c-format
+msgid "урон по асам +%s"
+msgstr "damage to aces +%s"
+
+msgid "Крепость пала"
+msgstr "The Fortress Falls"
+
+#, c-format
+msgid "Сбить «Крепость» %s раз"
+msgstr "Shoot down the Fortress %s times"
+
+#, c-format
+msgid "запчасти за асов +%s"
+msgstr "parts from aces +%s"
+
+msgid "Штурмовик"
+msgstr "Ground Pounder"
+
+#, c-format
+msgid "Уничтожить %s наземных целей"
+msgstr "Destroy %s ground targets"
+
+#, c-format
+msgid "урон по земле +%s"
+msgstr "ground damage +%s"
+
+msgid "Подрывник"
+msgstr "Demolition Expert"
+
+#, c-format
+msgid "Нанести %s урона взрывами"
+msgstr "Deal %s explosion damage"
+
+#, c-format
+msgid "радиус взрывов +%s, урон взрывов +2/4/6 %%"
+msgstr "blast radius +%s, blast damage +2/4/6 %%"
+
+msgid "Меткий глаз"
+msgstr "Keen Eye"
+
+#, c-format
+msgid "Попасть из пушки %s раз"
+msgstr "Land %s gun hits"
+
+#, c-format
+msgid "разброс пушки −%s"
+msgstr "gun spread −%s"
+
+msgid "На хвосте"
+msgstr "On the Tail"
+
+#, c-format
+msgid "Сбить %s врагов с хвоста"
+msgstr "Shoot down %s enemies from the tail"
+
+#, c-format
+msgid "урон «на хвосте» +%s"
+msgstr "on-the-tail damage +%s"
+
+#, c-format
+msgid "Сбить %s врагов ракетами"
+msgstr "Shoot down %s enemies with missiles"
+
+#, c-format
+msgid "перезарядка ракет −%s"
+msgstr "missile reload −%s"
+
+msgid "Зенитчик"
+msgstr "Flak Gunner"
+
+#, c-format
+msgid "Нанести %s урона турелями"
+msgstr "Deal %s turret damage"
+
+#, c-format
+msgid "поворот турелей +%s"
+msgstr "turret traverse +%s"
+
+msgid "Ведущий"
+msgstr "Flight Lead"
+
+#, c-format
+msgid "Ведомые наносят %s урона"
+msgstr "Wingmen deal %s damage"
+
+#, c-format
+msgid "прочность ведомых +%s"
+msgstr "wingman hull +%s"
+
+msgid "Колонна не прошла"
+msgstr "Convoy Stopped"
+
+#, c-format
+msgid "Разбить %s колонн"
+msgstr "Wreck %s convoys"
+
+#, c-format
+msgid "урон по колоннам +%s"
+msgstr "damage to convoys +%s"
+
+msgid "Ни шагу назад"
+msgstr "Not One Step Back"
+
+#, c-format
+msgid "Сбить «Крепость», не дав ей ударить по базе, %s раз"
+msgstr "Down the Fortress before it hits the base %s times"
+
+#, c-format
+msgid "«Крепость» медленнее на %s"
+msgstr "Fortress slower by %s"
+
+msgid "Под зонтиком"
+msgstr "Under the Umbrella"
+
+#, c-format
+msgid "Пройти нырком под %s ракетами"
+msgstr "Dive under %s missiles"
+
+#, c-format
+msgid "нырок длиннее на %s с"
+msgstr "dive longer by %s s"
+
+msgid "Укрепрайон взят"
+msgstr "Stronghold Taken"
+
+#, c-format
+msgid "Взять %s укрепрайонов"
+msgstr "Take %s strongholds"
+
+#, c-format
+msgid "урон по укрепрайону +%s"
+msgstr "damage to strongholds +%s"
+
+msgid "Живучий"
+msgstr "Survivor"
+
+#, c-format
+msgid "Эвакуироваться %s раз"
+msgstr "Evacuate %s times"
+
+#, c-format
+msgid "прочность +%s"
+msgstr "hull +%s"
+
+#, c-format
+msgid "Пролететь «на волоске» %s раз"
+msgstr "Fly a close shave %s times"
+
+#, c-format
+msgid "бочка: неуязвимость +%s с"
+msgstr "roll: invulnerable +%s s"
+
+msgid "Ловец ракет"
+msgstr "Missile Catcher"
+
+#, c-format
+msgid "Увести ловушками %s ракет"
+msgstr "Lure away %s missiles with flares"
+
+#, c-format
+msgid "перезарядка ловушек −%s"
+msgstr "flare reload −%s"
+
+msgid "Ныряльщик"
+msgstr "Diver"
+
+#, c-format
+msgid "Нырнуть %s раз"
+msgstr "Dive %s times"
+
+#, c-format
+msgid "перезарядка нырка −%s"
+msgstr "dive cooldown −%s"
+
+#, c-format
+msgid "Починить в воздухе %s прочности"
+msgstr "Repair %s hull in the air"
+
+#, c-format
+msgid "ремонт +%s"
+msgstr "repair +%s"
+
+msgid "Дальний рейс"
+msgstr "Long Haul"
+
+#, c-format
+msgid "Дозаправиться %s раз"
+msgstr "Refuel %s times"
+
+#, c-format
+msgid "топливо +%s"
+msgstr "fuel +%s"
+
+msgid "Сборщик мусора"
+msgstr "Scrap Collector"
+
+#, c-format
+msgid "Собрать %s запчастей"
+msgstr "Collect %s parts"
+
+#, c-format
+msgid "запчасти +%s"
+msgstr "parts +%s"
+
+#, c-format
+msgid "Совершить %s вылетов"
+msgstr "Fly %s sorties"
+
+#, c-format
+msgid "опыт экипажа +%s"
+msgstr "crew XP +%s"
+
+msgid "Быстрый взлёт"
+msgstr "Quick Climb"
+
+#, c-format
+msgid "Взять 20-й уровень к 5:00 %s раз"
+msgstr "Reach level 20 by 5:00 %s times"
+
+#, c-format
+msgid "опыт в вылете +%s"
+msgstr "sortie XP +%s"
+
+msgid "Коллекционер"
+msgstr "Collector"
+
+msgid "Взять каждую карточку хоть раз"
+msgstr "Take every card at least once"
+
+#, c-format
+msgid "+%s переброс карточек за вылет"
+msgstr "+%s card reroll per sortie"
+
+msgid "Мастер связок"
+msgstr "Synergy Master"
+
+#, c-format
+msgid "Открыть %s связок"
+msgstr "Open %s synergies"
+
+msgid "+1 изгнание карточки за вылет (ступень 2)"
+msgstr "+1 card banish per sortie (tier 2)"
+
+msgid "Крылья «Осы»"
+msgstr "Wings of the Wasp"
+
+#, c-format
+msgid "Совершить %s вылетов на «Осе»"
+msgstr "Fly %s sorties in the Wasp"
+
+#, c-format
+msgid "разворот «Осы» +%s"
+msgstr "Wasp turn rate +%s"
+
+msgid "Броня «Грача»"
+msgstr "Armor of the Rook"
+
+#, c-format
+msgid "Совершить %s вылетов на «Граче»"
+msgstr "Fly %s sorties in the Rook"
+
+#, c-format
+msgid "прочность «Грача» +%s"
+msgstr "Rook hull +%s"
+
+msgid "Бомбы «Кита»"
+msgstr "Bombs of the Whale"
+
+#, c-format
+msgid "Совершить %s вылетов на «Ките»"
+msgstr "Fly %s sorties in the Whale"
+
+#, c-format
+msgid "урон бомб «Кита» +%s"
+msgstr "Whale bomb damage +%s"
+
+#, c-format
+msgid "Пройти операцию «Перевал» %s раз"
+msgstr "Complete operation Mountain Pass %s times"
+
+#, c-format
+msgid "ступень 4: запчасти в этой операции +3 %%"
+msgstr "tier 4: parts in this operation +3 %%"
+
+#, c-format
+msgid "Пройти операцию «Сухое русло» %s раз"
+msgstr "Complete operation Dry Riverbed %s times"
+
+#, c-format
+msgid "Пройти операцию «Крепости» %s раз"
+msgstr "Complete operation Fortresses %s times"
+
+#, c-format
+msgid "Пройти операцию «Небо над Шахрисангом» %s раз"
+msgstr "Complete operation Skies over Shahrisang %s times"
+
+msgid "Гром жив"
+msgstr "Thunder Lives"
+
+msgid "Пройти историю «Где Гром?»"
+msgstr "Finish the story «Where Is Thunder?»"
+
+msgid "Таран"
+msgstr "Battering Ram"
+
+msgid "Сбить таранами 100 дронов за один вылет"
+msgstr "Ram down 100 drones in one sortie"
+
+msgid "Только пушка"
+msgstr "Guns Only"
+
+msgid "Эвакуироваться без подвесного оружия"
+msgstr "Evacuate with no hardpoint weapons"
+
+msgid "На честном слове"
+msgstr "On a Wing and a Prayer"
+
+#, c-format
+msgid "Эвакуироваться с прочностью ниже 5 %"
+msgstr "Evacuate with less than 5 % hull"
+
+msgid "Сбить 300 врагов за одну минуту"
+msgstr "Shoot down 300 enemies in one minute"
+
+msgid "Ни царапины"
+msgstr "Not a Scratch"
+
+msgid "5 минут подряд без урона после 10:00"
+msgstr "5 minutes in a row without damage after 10:00"
+
+msgid "НАГРАДЫ"
+msgstr "AWARDS"
+
+msgid "все"
+msgstr "all"
+
+#, c-format
+msgid "Ступеней получено: %d из %d"
+msgstr "Tiers earned: %d of %d"
+
+#, c-format
+msgid "Наведите на медаль — здесь условие и бонус. Бонусы медалей действуют всегда и складываются до +10 %."
+msgstr "Point at a medal to see its condition and bonus. Medal bonuses are always on and add up to +10 %."
+
+#, c-format
+msgid "ступень %d из %d"
+msgstr "tier %d of %d"
+
+msgid "получена"
+msgstr "earned"
+
+msgid "не получена"
+msgstr "not earned"
+
+msgid "Скрытая медаль: условие откроется, когда она будет получена."
+msgstr "Hidden medal: the condition shows once it is earned."
+
+#, c-format
+msgid " — сейчас %s из %s"
+msgstr " — now %s of %s"
+
+#, c-format
+msgid "Следующая ступень: %s"
+msgstr "Next tier: %s"
+
+msgid " — выполнено"
+msgstr " — done"
+
+#, c-format
+msgid "Действует: %s"
+msgstr "Active: %s"
+
+msgid "НОВЫЕ МЕДАЛИ"
+msgstr "NEW MEDALS"
+
+#, c-format
+msgid "+ ещё %d в ангаре"
+msgstr "+ %d more in the hangar"
+
+#, c-format
+msgid "Медаль «Ветеран» +%d %%"
+msgstr "Veteran medal +%d %%"
+
 #: game/scripts/livery.gd:73
 msgid "Выгоревшая дюна"
 msgstr "Bleached Dune"

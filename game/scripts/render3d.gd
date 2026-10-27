@@ -1857,7 +1857,8 @@ func _turn_bank(u: Unit3D, heading: float, delta: float) -> float:
 	return float(u.bank)
 
 
-## Подвесы — объёмные модели на точках подвеса поверх крыла
+## Подвесы — объёмные модели на точках подвеса поверх крыла; S13: flare panels and wing-turret fairings are
+## built into the model's own skin (SkinPatch) and tracked in u.weapons like the weapon nodes
 func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 	var root: Node3D = u.node
 	var want := {}
@@ -1884,6 +1885,27 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 		for mt: Dictionary in ent["mounts"]:
 			var key: String = mt["key"]
 			want[key] = true
+			if mt.has("skin") or mt.has("fair_rb"):
+				# S13: a flush flare panel / a wing-turret fairing — part of the model's skin, built once under it
+				var skey := key if mt.has("skin") else key + "_fair"
+				want[skey] = true
+				if not u.weapons.has(skey):
+					var model := root.get_child(0) as Node3D
+					var sk: MeshInstance3D = null
+					if mt.has("skin"):
+						sk = SkinPatch.flare_panel(model, float(mt["mx"]), float(mt["mz"]), float(mt["seed"]))
+					else:
+						sk = SkinPatch.turret_fairing(model, float(mt["mx"]), float(mt["mz"]), float(mt["fair_rb"]))
+					if sk == null:
+						sk = MeshInstance3D.new()   # the skin missed the spot: keep an empty node so it is not retried
+					model.add_child(sk)
+					u.weapons[skey] = sk
+					if mt.has("fair_rb"):
+						_apply_livery(model, tex)   # the fairing takes the plane's paint
+				# part of the airframe: blinks with the hull while invulnerable
+				(u.weapons[skey] as GeometryInstance3D).transparency = (u.mi as GeometryInstance3D).transparency
+				if mt.has("skin"):
+					continue
 			var wmi: MeshInstance3D = u.weapons.get(key)
 			if wmi == null:
 				wmi = WeaponModels.make(g.weapon, mt["t"], mt["side"], p.cls_id, g.evo, p.plane_lvl)
@@ -1963,11 +1985,18 @@ func _weapon_layout(u: Unit3D, p: Player, tex: Texture2D, gi: int, g: Hardpoint,
 	# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5
 	var tr := WeaponModels.tier(g.level, g.evo)
 	var tw := float(tex.get_width())
+	var root_model: Node3D = (u.node as Node3D).get_child(0) as Node3D if u.bm != null else null
 	var out: Array = []
 	for si in pts.size():
 		var mt: Dictionary = pts[si]
 		var mtr: int = mt.get("t", tr)   # Т-5: у ловушек модель задаёт точка (кассета / контейнер)
 		var pt: Vector2 = mt["p"]
+		var fair_rb := 0.0
+		if mt["side"] == "skin":   # S13: flush flare panel, laid onto the model in _sync_weapons
+			if u.bm != null:
+				out.append({"key": "%d_%d_%s_skin" % [gi, si, g.weapon], "skin": true, "mx": mt["mx"], "mz": mt["mz"],
+					"seed": float(mt.get("seed", 0.0))})
+			continue
 		# подвесы — под крылом на пилоне (видны на крене и под наклоном камеры), турели — на своих местах
 		# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
 		var tail_cab: bool = mt["side"] == "tail" and g.weapon == "turret" and (WeaponModels.TURRET_MODELS.get(p.cls_id, {}) as Dictionary).has("tail")
@@ -1987,15 +2016,36 @@ func _weapon_layout(u: Unit3D, p: Player, tex: Texture2D, gi: int, g: Hardpoint,
 			var hi := WeaponModels.surface_low(u.bm, pt.x / tw, pt.y / tw, true)
 			if not is_nan(hi):
 				y = hi * tw
+		elif mt["side"] == "bottom" and g.weapon == "turret" and u.bm != null:
+			# S13: the ventral turret hangs from the real belly («Кит» 2 third slot), as in the hangar
+			var lo3 := WeaponModels.surface_low(u.bm, pt.x / tw, pt.y / tw)
+			if not is_nan(lo3):
+				y = lo3 * tw
+		elif mt["side"] == "wing" and g.weapon == "turret" and mt.has("mx") and u.bm != null:
+			# S13: «Грач» 2 wing turret — its ring on the crown of the wing fairing (SkinPatch, same as the hangar)
+			fair_rb = WeaponModels.collar_r(p.cls_id, 3) * len_px / tw
+			var cr := SkinPatch.fairing_crown(root_model, float(mt["mx"]), float(mt["mz"]), fair_rb)
+			if not is_nan(cr):
+				y = cr * tw
+			else:
+				fair_rb = 0.0
+				var hw := WeaponModels.surface_low(u.bm, pt.x / tw, pt.y / tw, true)
+				if not is_nan(hw):
+					y = hw * tw
 		elif mt["side"] == "bay" and u.bm != null:
 			# тест 3.5-s5 (п. 3): бомбы и кассета «ковра» — от настоящего брюха модели, как в ангаре
 			# (иначе верх кассеты проходил сквозь фюзеляж и был виден сверху)
 			var lo2 := WeaponModels.surface_low(u.bm, pt.x / tw, pt.y / tw)
 			if not is_nan(lo2):
 				y = lo2 * tw - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6
-		out.append({"key": "%d_%d_%s_%d%s_s%d" % [gi, si, g.weapon, mtr, "e" if g.evo else "", seek], "t": mtr,
+		var ent := {"key": "%d_%d_%s_%d%s_s%d" % [gi, si, g.weapon, mtr, "e" if g.evo else "", seek], "t": mtr,
 			"side": mt["side"], "yaw": float(mt["yaw"]), "pos": Vector3(pt.x, y, pt.y), "tail_cab": tail_cab,
-			"flip": mt["side"] == "bottom" or under_tail})
+			"flip": mt["side"] == "bottom" or under_tail}
+		if fair_rb > 0.0:
+			ent["fair_rb"] = fair_rb
+			ent["mx"] = mt["mx"]
+			ent["mz"] = mt["mz"]
+		out.append(ent)
 	return {"mounts": out, "len_px": len_px}
 
 

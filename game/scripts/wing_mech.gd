@@ -273,6 +273,8 @@ static func spin_props(nodes: Array, angle: float) -> void:
 			(n as Node3D).rotate_object_local(Vector3.RIGHT, -angle)
 
 
+## Т-2: silhouette details of the plane (models/mech/fh_detail_<key>.glb: canards, fins, winglets, tip tanks)
+## under `model`, painted with the skin material; null when the plane has none
 static func attach_detail(model: Node3D, key: String) -> Node3D:
 	var path := "res://models/mech/fh_detail_%s.glb" % key
 	if not _scenes.has(path):
@@ -281,6 +283,9 @@ static func attach_detail(model: Node3D, key: String) -> Node3D:
 		return null
 	var det: Node3D = (_scenes[path] as PackedScene).instantiate()
 	det.name = "detail"
+	# S13: the rebuilt fins, winglets, canards and tanks (detail_foils.py) are «mech_skin» with weathered vertex
+	# colours — the same matte skin material as the slats and flaps
+	attach_skin(det, model)
 	model.add_child(det)
 	return det
 

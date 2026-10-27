@@ -37,7 +37,7 @@ func gun_damage() -> float:
 	if pl.combat_t > 0.0:
 		d *= 1.3
 	if pl.on_tail():
-		d *= 1.5
+		d *= 1.5 * float(pl.mods["tail_k"])   # medal «На хвосте»
 	return d
 
 
@@ -117,7 +117,7 @@ func _fire_one(fwd: Vector2, aim: Vector2, lead: bool, age := 0.0) -> void:
 	pl._gun_n += 1
 	var src := "курсовое (ручн.)" if pl.manual_mode else "курсовое (авто)"
 	var every := 3 if (pl.manual_mode and pl.manual_bonus >= 0.4) else 4
-	var spread := float(variant()["spread"])
+	var spread := float(variant()["spread"]) * float(pl.mods["spread_k"])   # medal «Меткий глаз»
 	if spread > 0.0:   # PG-01: the twin gun scatters a little
 		aim = aim.rotated(deg_to_rad(randf_range(-spread, spread)))
 	if pl.gun_evo and pl._gun_n % every == 0:

@@ -137,7 +137,7 @@ func reload_time(p: Player) -> float:
 			if not evo:
 				k *= 1.0 - 0.1 * (level - 1)
 		"flares":
-			k *= pow(0.9, level - 1)
+			k *= pow(0.9, level - 1) * float(p.mods.get("flare_cd", 1.0))   # medal «Ловец ракет»
 		"railgun", "emp", "laser", "plasma":
 			k *= pow(0.92, level - 1)
 		"bombs":

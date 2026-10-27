@@ -5,6 +5,9 @@ extends HudKit
 
 # ---------- 3.2: ангар ----------
 
+## Drawer of the «НАГРАДЫ» tab (created on first use)
+var _medals: HudMedals
+
 func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.05, 0.94))
 	var c := m.hangar_cls
@@ -26,8 +29,10 @@ func draw(m: Main, size: Vector2) -> void:
 		_text(Vector2(r.position.x + 16, r.position.y + 52), Loc.t("Экипаж ур. %d%s") % [Profile.crew_lvl(id), (Loc.t("  · очков перков: %d") % pp) if pp > 0 else ""], 15, Color(0.85, 0.88, 0.95))
 	# вкладки
 	var tabs := [["plane", "САМОЛЁТ"], ["weapons", "ОРУЖИЕ"], ["crew", "ЭКИПАЖ"]]
+	if not Demo.on:
+		tabs.append(["medals", "НАГРАДЫ"])   # Kanta 27.10: medals with small bonuses, not in the demo
 	for i in tabs.size():
-		var r2 := Rect2(size.x / 2.0 - 450 + i * 300.0, 182, 290, 44)
+		var r2 := Rect2(size.x / 2.0 - tabs.size() * 150.0 + i * 300.0, 182, 290, 44)
 		var on2: bool = m.hangar_tab == tabs[i][0]
 		ctrl.draw_rect(r2, Menu.C_AMBER if on2 else Color(1, 1, 1, 0.06))
 		_text(Vector2(r2.position.x, r2.position.y + 30), tabs[i][1], 18, Color(0.08, 0.07, 0.05) if on2 else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, r2.size.x)
@@ -40,6 +45,10 @@ func draw(m: Main, size: Vector2) -> void:
 			_hg_weapons(m, area)
 		"crew":
 			_hg_crew(c, area)
+		"medals":
+			if _medals == null:
+				_medals = HudMedals.new(ctrl, _buttons)
+			_medals.draw(m, area)
 	_button(Rect2(size.x / 2.0 - 180, size.y - 110, 360, 56), Loc.t("В ВЫЛЕТ — %s") % Loc.t(PlaneClasses.DATA[c]["title"]), "hg:fly", 20)
 	if Main.DEBUG:
 		var dy := size.y - 110

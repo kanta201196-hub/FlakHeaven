@@ -116,6 +116,11 @@ func _set_title() -> void:
 		_: title = "«Крепость» падает и идёт на таран — добивайте!"
 
 
+## Medal «Ни шагу назад»: the share by which the Fortress flies slower (0 without the medal)
+func _medal_slow() -> float:
+	return float(Main.I.player.mods["fortress_slow"]) if is_instance_valid(Main.I.player) else 0.0
+
+
 func _alive(kd: String) -> int:
 	var n := 0
 	for pt in points:
@@ -341,7 +346,7 @@ func behave(delta: float) -> void:
 	var p := Main.I.player
 	if base_pos == Vector2.INF:
 		_start_route(p)
-	var spd := BASE_SPEED * (1.0 - 0.2 * (2 - _alive("engine")))
+	var spd := BASE_SPEED * (1.0 - 0.2 * (2 - _alive("engine"))) * (1.0 - _medal_slow())
 	if p == null or p.hp <= 0.0:
 		position += Vector2.from_angle(heading) * spd * delta
 		return

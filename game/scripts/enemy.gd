@@ -23,6 +23,7 @@ var parts := 1       # запчасти (валюта ангара) за сби�
 var repair_chance := 0.02
 var _flash := 0.0
 var elite := false
+var rammed := false       # died in a collision with the player (medal «Таран»)
 var last_src := ""        # источник последнего попадания (мастерство «Кита»)
 var born_t := -1.0       # правка 3.5-s4: когда появился (для «напряжения боя» в спавнере)
 var min_life := 0.0      # правка 3.5-s4: асы — корпус не быстрее чем за min_life с (предел урона в секунду)
@@ -142,6 +143,17 @@ func _scale_hitbox() -> void:
 	radius *= sqrt(Tuning.g("unit_scale"))
 
 
+## Medal damage bonus against this target (Profile._apply_medals): aces, convoy vehicles, fortified-area defences
+func _medal_k(m: Dictionary) -> float:
+	if is_boss:
+		return float(m.get("boss_dmg", 1.0))
+	if self is ConvoyVehicle:
+		return float(m.get("convoy_dmg", 1.0))
+	if self is GroundTarget and (self as GroundTarget).site is FortArea:
+		return float(m.get("fort_dmg", 1.0))
+	return 1.0
+
+
 ## Название типа для статистики после вылета.
 func kind() -> String:
 	return "враг"
@@ -154,6 +166,7 @@ func take_hit(dmg: float, source := "прочее") -> void:
 		dmg *= float(Main.I.player.mods.get("dmg_all", 1.0))
 		if is_ground:
 			dmg *= float(Main.I.player.mods.get("ground_dmg", 1.0)) # перк «Наводчик»
+		dmg *= _medal_k(Main.I.player.mods)
 		var mk: float = Main.I.player.mastery_k(self, source)
 		if mk > 1.0:
 			dmg *= mk
@@ -578,11 +591,13 @@ func _check_contact() -> void:
 		if (p.shield_t > 0.0 or p.ram_t > 0.0) and not tough:
 			# Бронещит: таран без урона себе
 			Main.I.add_stat("dealt", "бронещит", hp)
+			rammed = true
 			_die()
 		elif not p.is_invulnerable():
 			# на форсаже самолёт проходит строй: столкновение бьёт втрое слабее
 			p.damage(contact_damage * (0.3 if p.ab_t > 0.0 else 1.0), "таран", kind())
 			if not tough:
+				rammed = true
 				_die()
 
 
