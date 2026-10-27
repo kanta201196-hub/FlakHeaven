@@ -7446,3 +7446,406 @@ msgstr "逃走王牌：%d"
 
 msgid "У этого оружия веток улучшений в ангаре пока нет: они появятся в следующем этапе прокачки. В бою оно растёт по уровням 1–5 карточками, как и остальное оружие."
 msgstr "该武器暂时没有机库升级分支：它们将在下一次更新中加入。战斗中它仍像其他武器一样通过卡牌升到 1–5 级。"
+
+# Medals (Kanta 2026-10-27): game/scripts/balance/medals.gd, hud_medals.gd, profile.gd
+
+msgid "Истребитель"
+msgstr "王牌战斗机"
+
+#, c-format
+msgid "Сбить %s врагов"
+msgstr "击落 %s 个敌人"
+
+#, c-format
+msgid "урон +%s"
+msgstr "伤害 +%s"
+
+msgid "Гроза асов"
+msgstr "王牌克星"
+
+#, c-format
+msgid "Сбить %s асов"
+msgstr "击落 %s 名王牌"
+
+#, c-format
+msgid "урон по асам +%s"
+msgstr "对王牌伤害 +%s"
+
+msgid "Крепость пала"
+msgstr "要塞陷落"
+
+#, c-format
+msgid "Сбить «Крепость» %s раз"
+msgstr "击落“要塞” %s 次"
+
+#, c-format
+msgid "запчасти за асов +%s"
+msgstr "王牌零件 +%s"
+
+msgid "Штурмовик"
+msgstr "对地攻击手"
+
+#, c-format
+msgid "Уничтожить %s наземных целей"
+msgstr "摧毁 %s 个地面目标"
+
+#, c-format
+msgid "урон по земле +%s"
+msgstr "对地伤害 +%s"
+
+msgid "Подрывник"
+msgstr "爆破专家"
+
+#, c-format
+msgid "Нанести %s урона взрывами"
+msgstr "造成 %s 爆炸伤害"
+
+#, c-format
+msgid "радиус взрывов +%s, урон взрывов +2/4/6 %%"
+msgstr "爆炸半径 +%s，爆炸伤害 +2/4/6 %%"
+
+msgid "Меткий глаз"
+msgstr "鹰眼"
+
+#, c-format
+msgid "Попасть из пушки %s раз"
+msgstr "机炮命中 %s 次"
+
+#, c-format
+msgid "разброс пушки −%s"
+msgstr "机炮散布 −%s"
+
+msgid "На хвосте"
+msgstr "咬尾"
+
+#, c-format
+msgid "Сбить %s врагов с хвоста"
+msgstr "从后方击落 %s 个敌人"
+
+#, c-format
+msgid "урон «на хвосте» +%s"
+msgstr "咬尾伤害 +%s"
+
+#, c-format
+msgid "Сбить %s врагов ракетами"
+msgstr "用导弹击落 %s 个敌人"
+
+#, c-format
+msgid "перезарядка ракет −%s"
+msgstr "导弹装填 −%s"
+
+msgid "Зенитчик"
+msgstr "防空炮手"
+
+#, c-format
+msgid "Нанести %s урона турелями"
+msgstr "炮塔造成 %s 伤害"
+
+#, c-format
+msgid "поворот турелей +%s"
+msgstr "炮塔转速 +%s"
+
+msgid "Ведущий"
+msgstr "长机"
+
+#, c-format
+msgid "Ведомые наносят %s урона"
+msgstr "僚机造成 %s 伤害"
+
+#, c-format
+msgid "прочность ведомых +%s"
+msgstr "僚机耐久 +%s"
+
+msgid "Колонна не прошла"
+msgstr "车队止步"
+
+#, c-format
+msgid "Разбить %s колонн"
+msgstr "击溃 %s 支车队"
+
+#, c-format
+msgid "урон по колоннам +%s"
+msgstr "对车队伤害 +%s"
+
+msgid "Ни шагу назад"
+msgstr "寸步不让"
+
+#, c-format
+msgid "Сбить «Крепость», не дав ей ударить по базе, %s раз"
+msgstr "在“要塞”轰炸基地前将其击落 %s 次"
+
+#, c-format
+msgid "«Крепость» медленнее на %s"
+msgstr "“要塞”减速 %s"
+
+msgid "Под зонтиком"
+msgstr "伞下"
+
+#, c-format
+msgid "Пройти нырком под %s ракетами"
+msgstr "俯冲躲过 %s 枚导弹"
+
+#, c-format
+msgid "нырок длиннее на %s с"
+msgstr "俯冲延长 %s 秒"
+
+msgid "Укрепрайон взят"
+msgstr "攻克据点"
+
+#, c-format
+msgid "Взять %s укрепрайонов"
+msgstr "攻克 %s 个据点"
+
+#, c-format
+msgid "урон по укрепрайону +%s"
+msgstr "对据点伤害 +%s"
+
+msgid "Живучий"
+msgstr "幸存者"
+
+#, c-format
+msgid "Эвакуироваться %s раз"
+msgstr "撤离 %s 次"
+
+#, c-format
+msgid "прочность +%s"
+msgstr "耐久 +%s"
+
+#, c-format
+msgid "Пролететь «на волоске» %s раз"
+msgstr "千钧一发 %s 次"
+
+#, c-format
+msgid "бочка: неуязвимость +%s с"
+msgstr "横滚无敌 +%s 秒"
+
+msgid "Ловец ракет"
+msgstr "诱弹手"
+
+#, c-format
+msgid "Увести ловушками %s ракет"
+msgstr "用热诱弹引开 %s 枚导弹"
+
+#, c-format
+msgid "перезарядка ловушек −%s"
+msgstr "热诱弹装填 −%s"
+
+msgid "Ныряльщик"
+msgstr "俯冲者"
+
+#, c-format
+msgid "Нырнуть %s раз"
+msgstr "俯冲 %s 次"
+
+#, c-format
+msgid "перезарядка нырка −%s"
+msgstr "俯冲冷却 −%s"
+
+#, c-format
+msgid "Починить в воздухе %s прочности"
+msgstr "空中修复 %s 耐久"
+
+#, c-format
+msgid "ремонт +%s"
+msgstr "修复 +%s"
+
+msgid "Дальний рейс"
+msgstr "远航"
+
+#, c-format
+msgid "Дозаправиться %s раз"
+msgstr "加油 %s 次"
+
+#, c-format
+msgid "топливо +%s"
+msgstr "燃料 +%s"
+
+msgid "Сборщик мусора"
+msgstr "废料收集者"
+
+#, c-format
+msgid "Собрать %s запчастей"
+msgstr "收集 %s 零件"
+
+#, c-format
+msgid "запчасти +%s"
+msgstr "零件 +%s"
+
+#, c-format
+msgid "Совершить %s вылетов"
+msgstr "出击 %s 次"
+
+#, c-format
+msgid "опыт экипажа +%s"
+msgstr "机组经验 +%s"
+
+msgid "Быстрый взлёт"
+msgstr "快速爬升"
+
+#, c-format
+msgid "Взять 20-й уровень к 5:00 %s раз"
+msgstr "在 5:00 前达到 20 级 %s 次"
+
+#, c-format
+msgid "опыт в вылете +%s"
+msgstr "出击经验 +%s"
+
+msgid "Коллекционер"
+msgstr "收藏家"
+
+msgid "Взять каждую карточку хоть раз"
+msgstr "每张卡牌至少拿过一次"
+
+#, c-format
+msgid "+%s переброс карточек за вылет"
+msgstr "每次出击 +%s 次重抽"
+
+msgid "Мастер связок"
+msgstr "协同大师"
+
+#, c-format
+msgid "Открыть %s связок"
+msgstr "解锁 %s 个协同"
+
+msgid "+1 изгнание карточки за вылет (ступень 2)"
+msgstr "每次出击 +1 次放逐卡牌（第 2 阶）"
+
+msgid "Крылья «Осы»"
+msgstr "“胡蜂”之翼"
+
+#, c-format
+msgid "Совершить %s вылетов на «Осе»"
+msgstr "驾驶“胡蜂”出击 %s 次"
+
+#, c-format
+msgid "разворот «Осы» +%s"
+msgstr "“胡蜂”转向 +%s"
+
+msgid "Броня «Грача»"
+msgstr "“秃鼻鸦”之甲"
+
+#, c-format
+msgid "Совершить %s вылетов на «Граче»"
+msgstr "驾驶“秃鼻鸦”出击 %s 次"
+
+#, c-format
+msgid "прочность «Грача» +%s"
+msgstr "“秃鼻鸦”耐久 +%s"
+
+msgid "Бомбы «Кита»"
+msgstr "“鲸”之弹"
+
+#, c-format
+msgid "Совершить %s вылетов на «Ките»"
+msgstr "驾驶“鲸”出击 %s 次"
+
+#, c-format
+msgid "урон бомб «Кита» +%s"
+msgstr "“鲸”炸弹伤害 +%s"
+
+#, c-format
+msgid "Пройти операцию «Перевал» %s раз"
+msgstr "完成“山口”行动 %s 次"
+
+#, c-format
+msgid "ступень 4: запчасти в этой операции +3 %%"
+msgstr "第 4 阶：本行动零件 +3 %%"
+
+#, c-format
+msgid "Пройти операцию «Сухое русло» %s раз"
+msgstr "完成“干河床”行动 %s 次"
+
+#, c-format
+msgid "Пройти операцию «Крепости» %s раз"
+msgstr "完成“要塞群”行动 %s 次"
+
+#, c-format
+msgid "Пройти операцию «Небо над Шахрисангом» %s раз"
+msgstr "完成“沙赫里桑上空”行动 %s 次"
+
+msgid "Гром жив"
+msgstr "雷霆尚在"
+
+msgid "Пройти историю «Где Гром?»"
+msgstr "完成故事“雷霆在哪？”"
+
+msgid "Таран"
+msgstr "撞击"
+
+msgid "Сбить таранами 100 дронов за один вылет"
+msgstr "一次出击中撞毁 100 架无人机"
+
+msgid "Только пушка"
+msgstr "唯有机炮"
+
+msgid "Эвакуироваться без подвесного оружия"
+msgstr "不带挂载武器撤离"
+
+msgid "На честном слове"
+msgstr "命悬一线"
+
+#, c-format
+msgid "Эвакуироваться с прочностью ниже 5 %"
+msgstr "以低于 5 % 的耐久撤离"
+
+msgid "Сбить 300 врагов за одну минуту"
+msgstr "一分钟内击落 300 个敌人"
+
+msgid "Ни царапины"
+msgstr "毫发无伤"
+
+msgid "5 минут подряд без урона после 10:00"
+msgstr "10:00 后连续 5 分钟未受伤"
+
+msgid "НАГРАДЫ"
+msgstr "勋章"
+
+msgid "все"
+msgstr "全部"
+
+#, c-format
+msgid "Ступеней получено: %d из %d"
+msgstr "已获得阶数：%d / %d"
+
+#, c-format
+msgid "Наведите на медаль — здесь условие и бонус. Бонусы медалей действуют всегда и складываются до +10 %."
+msgstr "指向勋章查看条件和加成。勋章加成始终生效，同类最多叠加到 +10 %。"
+
+#, c-format
+msgid "ступень %d из %d"
+msgstr "第 %d 阶 / 共 %d 阶"
+
+msgid "получена"
+msgstr "已获得"
+
+msgid "не получена"
+msgstr "未获得"
+
+msgid "Скрытая медаль: условие откроется, когда она будет получена."
+msgstr "隐藏勋章：获得后显示条件。"
+
+#, c-format
+msgid " — сейчас %s из %s"
+msgstr " — 当前 %s / %s"
+
+#, c-format
+msgid "Следующая ступень: %s"
+msgstr "下一阶：%s"
+
+msgid " — выполнено"
+msgstr " — 已完成"
+
+#, c-format
+msgid "Действует: %s"
+msgstr "生效中：%s"
+
+msgid "НОВЫЕ МЕДАЛИ"
+msgstr "新勋章"
+
+#, c-format
+msgid "+ ещё %d в ангаре"
+msgstr "+ 机库中还有 %d 枚"
+
+#, c-format
+msgid "Медаль «Ветеран» +%d %%"
+msgstr "“老兵”勋章 +%d %%"

@@ -20,7 +20,12 @@ static var focus := "restart"
 static var _focusables: Array = []
 
 
+## Draws the «new medals» strip in the rewards panel (created on first use)
+var _medals: HudMedals
+
+
 ## Draws the whole results screen (and the demo-end overlay over it when it is open).
+
 func result(m: Main, size: Vector2) -> void:
 	_focusables.clear()
 	if Demo.end_open:
@@ -250,7 +255,8 @@ func _rewards(m: Main, r: Rect2) -> void:
 			extra.append([Loc.t("Техник: «%s»") % String(a["tech"]), UiStyle.PARTS])
 		if String(a.get("hint_buy", "")) != "":
 			extra.append([Loc.t("Можно купить: ") + String(a["hint_buy"]), UiStyle.TEXT_2])
-	r.size.y = 48.0 + (60.0 if short else lines.size() * 36.0 + 54.0 + 70.0) + extra.size() * 24.0
+	var medals_new: Array = [] if short else a.get("medals_new", [])
+	r.size.y = 48.0 + (60.0 if short else lines.size() * 36.0 + 54.0 + 70.0) + extra.size() * 24.0 + (104.0 if not medals_new.is_empty() else 0.0)
 	UiStyle.panel(ctrl, r, UiStyle.LINE, UiStyle.PANEL, 18.0)
 	var hr := Rect2(r.position.x + 1, r.position.y + 1, r.size.x - 20.0, 42.0)
 	ctrl.draw_rect(hr, UiStyle.ACCENT)
@@ -288,6 +294,10 @@ func _rewards(m: Main, r: Rect2) -> void:
 	for e: Array in extra:
 		UiStyle.text(ctrl, ui_font(), Vector2(x, y + 16), _fit(String(e[0]), w, UiStyle.FS_CAPTION), UiStyle.FS_CAPTION, e[1])
 		y += 24.0
+	if not medals_new.is_empty():   # Kanta 27.10: medals reached a new tier in this sortie
+		if _medals == null:
+			_medals = HudMedals.new(ctrl, _buttons)
+		y += _medals.new_strip(medals_new, Vector2(x, y), w)
 
 
 # ---------- Bottom ----------

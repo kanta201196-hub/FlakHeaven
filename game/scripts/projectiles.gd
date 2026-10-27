@@ -237,6 +237,8 @@ func intercept_missile_at(from: Vector2, r: float, decoy := false, decoy_add := 
 			continue
 		break
 	var at: Vector2 = missiles[best]["p"]
+	if decoy:
+		Main.I.medal_add("flared")   # medal «Ловец ракет»
 	if decoy and is_instance_valid(Main.I.player) and Main.I.player.syn.has("mirror"):
 		# «Зеркало»: уведённая ракета разворачивается и летит во врага как своя
 		var mm := missiles[best]

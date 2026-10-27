@@ -1036,4 +1036,8 @@ static func apply(p: Player, card: Dictionary) -> void:
 	if card["kind"] != "reserve" and card["kind"] != "synergy" and card["kind"] != "skill_syn":
 		p.add_tags(tags, 2 if card["kind"] == "evolution" else 1)
 	p.picks += 1
+	if card["kind"] == "weapon_new":
+		p.medal_cards.append("w:" + String(card["weapon"]))
+	elif MODULES.has(card["id"]):
+		p.medal_cards.append("m:" + String(card["id"]))
 	p.cards_log.append("%s [%s]" % [card["title"], RARITY[r]["name"]])
