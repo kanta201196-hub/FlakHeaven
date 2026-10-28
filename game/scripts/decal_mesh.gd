@@ -24,6 +24,7 @@ const MIN_FACING := 0.3     ## skin turned further than ~72° from the decal get
 const FADE_FROM := 0.42     ## facing (cos) where the decal starts to fade …
 const FADE_TO := 0.58       ## … and where it is whole; the alpha scissor cuts at ~60°
 const DEPTH_PAD := 0.004    ## the box reaches this much deeper than half the decal's size, model units
+const SPLIT_LEVELS := 3     ## a piece partly under a moving part is split this many times, at most (4^3 pieces)
 
 
 ## Collected decal triangles (non-indexed); `mesh()` turns them into one ArrayMesh surface
@@ -63,7 +64,7 @@ class Builder:
 			if above == 3 or below == 3:
 				continue
 			poly = DecalMesh.clip(poly)
-			if poly.size() < 3 or _blocked(poly, st, depth):
+			if poly.size() < 3:
 				continue
 			var flip := (hull.pos[t * 3 + 1] - hull.pos[t * 3]).cross(hull.pos[t * 3 + 2] - hull.pos[t * 3]).dot(gn) > 0.0
 			for i in range(1, poly.size() - 1):
@@ -71,8 +72,33 @@ class Builder:
 				var p0: Vector3 = tri[0][0]
 				if ((tri[1][0] as Vector3) - p0).cross((tri[2][0] as Vector3) - p0).length_squared() < 1e-18:
 					continue   # a sliver left where a corner lay on a box side
+				_emit(tri, gn, st, depth, DecalMesh.SPLIT_LEVELS)
+
+	## Emits one piece triangle, minus what a moving part covers: a triangle the part covers only in part is split
+	## in four (`levels` more times at most) so the uncovered skin keeps its decal; a coarse battle-hull triangle
+	## half under a flap plate would otherwise be dropped whole and leave the skin beside the flap bare
+	func _emit(tri: Array, gn: Vector3, st: DecalStamp, depth: float, levels: int) -> void:
+		if not blockers.is_empty():
+			var c := ((tri[0][0] as Vector3) + (tri[1][0] as Vector3) + (tri[2][0] as Vector3)) / 3.0
+			var hid := int(_blocked_at(c, st, depth))
+			if levels > 0:
 				for v: Array in tri:
-					_vertex(v, gn, st)
+					hid += int(_blocked_at(v[0], st, depth))
+				if hid == 4:
+					return
+				if hid > 0:
+					var m: Array = [_mid(tri[0], tri[1]), _mid(tri[1], tri[2]), _mid(tri[2], tri[0])]
+					for sub: Array in [[tri[0], m[0], m[2]], [m[0], tri[1], m[1]], [m[2], m[1], tri[2]], [m[0], m[1], m[2]]]:
+						_emit(sub, gn, st, depth, levels - 1)
+					return
+			elif hid > 0:
+				return
+		for v: Array in tri:
+			_vertex(v, gn, st)
+
+	## Midpoint of two piece vertices ([position, normal, box xyz])
+	static func _mid(a: Array, b: Array) -> Array:
+		return [(a[0] as Vector3).lerp(b[0], 0.5), (a[1] as Vector3).lerp(b[1], 0.5), (a[2] as Vector3).lerp(b[2], 0.5)]
 
 	## One vertex of a piece: lifted along its smooth normal (along the face where that normal lies), faded by how
 	## far the skin there turns from the decal
@@ -92,15 +118,9 @@ class Builder:
 		paints.append(Vector2(st.c1, st.c2))
 		colors.append(Color(1, 1, 1, smoothstep(DecalMesh.FADE_FROM, DecalMesh.FADE_TO, n.dot(st.normal))))
 
-	## True when a moving part lies over the piece (its centre seen along the decal's normal within the box depth):
-	## the piece would show as a ghost on the wing when the flap goes down
-	func _blocked(poly: Array, st: DecalStamp, depth: float) -> bool:
-		if blockers.is_empty():
-			return false
-		var c := Vector3.ZERO
-		for v: Array in poly:
-			c += v[0]
-		c /= poly.size()
+	## True when a moving part lies over skin point `c` (seen along the decal's normal within the box depth): a piece
+	## there would show as a ghost on the wing when the flap goes down
+	func _blocked_at(c: Vector3, st: DecalStamp, depth: float) -> bool:
 		for b in blockers:
 			if not b.bounds().grow(depth).has_point(c):
 				continue

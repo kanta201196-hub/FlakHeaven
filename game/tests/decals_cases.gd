@@ -656,12 +656,30 @@ func _test_blockers() -> void:
 	var one: Array[DecalRecord] = [_bolt(0.06)]
 	var plain := DecalMesh.build(hull, one, 0)
 	var cut := DecalMesh.build(hull, one, 0, DecalMesh.LIFT, blk)
-	_check(cut != null and cut.surface_get_array_len(0) < plain.surface_get_array_len(0),
-		"no piece of the decal under a moving part lying over the skin")
+	_check(cut != null and _area(cut) < _area(plain) * 0.8, "no piece of the decal under a moving part lying over the skin")
+	# the skin is two big triangles, each half under the plate: the uncovered half keeps its decal
+	var cv: PackedVector3Array = cut.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var free_area := 0.0
+	var under := 0
+	for t in range(0, cv.size(), 3):
+		var c := (cv[t] + cv[t + 1] + cv[t + 2]) / 3.0
+		under += int(c.y < -0.012)
+		free_area += (cv[t + 1] - cv[t]).cross(cv[t + 2] - cv[t]).length() * 0.5 if c.y > -0.005 else 0.0
+	_check(under == 0 and free_area > 0.06 * 0.03 * 0.9,
+		"a skin triangle half under a moving part keeps the decal on its uncovered half (%.5f)" % free_area)
 	var moved := DecalMesh.build(hull, one, 0, DecalMesh.LIFT, [] as Array[PlaneHull],
 		Transform3D(Basis(), Vector3(1, 0, 0)))
 	var mv: PackedVector3Array = moved.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 	_check(mv[0].x > 0.9, "a moving part's piece is built in the part's own axes")
+
+
+## Surface area of a one-surface triangle mesh
+func _area(m: ArrayMesh) -> float:
+	var v: PackedVector3Array = m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var a := 0.0
+	for t in range(0, v.size(), 3):
+		a += (v[t + 1] - v[t]).cross(v[t + 2] - v[t]).length() * 0.5
+	return a
 
 
 func _mesh(pl: Array) -> ArrayMesh:
