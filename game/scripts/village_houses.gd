@@ -260,7 +260,7 @@ static func material(cls: String) -> Material:
 	var ids := {"plaster": FortBuild.M.PLASTER, "brick": FortBuild.M.BRICK, "stone": FortBuild.M.STONE, "wood": FortBuild.M.WOOD}
 	var mat: Material
 	if ids.has(cls):
-		var sm := (FortBuild.material(ids[cls]) as ShaderMaterial).duplicate() as ShaderMaterial
+		var sm := (FortBuild.set_material(ids[cls]) as ShaderMaterial).duplicate() as ShaderMaterial
 		sm.set_shader_parameter("unit", 1.0)
 		sm.set_shader_parameter("grime", GRIME if cls != "wood" else 0.01)
 		sm.set_shader_parameter("bleach", BLEACH)

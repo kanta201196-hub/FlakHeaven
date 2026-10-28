@@ -2,10 +2,16 @@
 // UVs box-projected at build time (FortBuild). The grading follows the approved preview scene
 // (/mnt/project-files/visual/fort_rework/hq/hq_scene.html): the lower metres pick up the valley's dust,
 // soft large-scale tone patches, rain streaks under the parapet, the top bleached by the sun.
-// Heights are in preview units (`unit` per mesh unit), so the terms do not depend on the fort's size.
+// Heights are in preview units (`unit` per mesh unit, ≈ metres), so the terms do not depend on the fort's size.
 // Multipliers act on the sampled (linear) texture colour, as in the preview; no colour constants to SRGB().
+// The fort's own terms (the village houses that share the texture sets keep them off, FortBuild.set_material):
+//   vcol    — the vertex colour's tone: damp foot, mud repairs, soot (FortKit._tri_n);
+//   wear    — the village walls' weathered mud plaster (adobe_wear.gdshaderinc), so fort and village match;
+//   courses — the lifts of rammed earth (pakhsa), ~0.95 units each, a dark seam between and a tone per lift.
 shader_type spatial;
 render_mode cull_back;
+
+#include "res://shaders/adobe_wear.gdshaderinc"
 
 uniform sampler2D color_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -18,12 +24,18 @@ uniform float bleach = 12.0;   // sun-bleached from this height up
 uniform float ao_amount = 0.55;
 uniform float unit = 109.52;   // preview units per mesh unit (FortBuild.K inverse)
 uniform float roof_clean = 0.0;   // VIS-01 village houses: no rain streaks on low flat roofs (the fort keeps 0)
+uniform float vcol = 0.0;
+uniform float wear = 0.0;
+uniform vec3 lift = vec3(1.0);   // adobe_wear's lift of the shaded vertical faces
+uniform float courses = 0.0;
 
 varying vec3 fp;
+varying vec3 mn;
 varying float up;
 
 void vertex() {
 	fp = VERTEX * unit;
+	mn = NORMAL;
 	up = NORMAL.y;
 }
 
@@ -40,8 +52,23 @@ void fragment() {
 	float top = smoothstep(bleach, bleach + 6.0, fp.y);
 	c = mix(c, c * 1.08 + vec3(0.03), top);
 	vec3 arm = texture(arm_tex, UV).rgb;
+	float rough = arm.g;
+	c *= mix(vec3(1.0), COLOR.rgb, vcol);
+	vec3 nn = normalize(mn);
+	float vert = 1.0 - smoothstep(0.55, 0.85, abs(nn.y));
+	if (courses > 0.0) {
+		// rammed-earth lifts: the seams wander a little, each lift has its own tone along the wall
+		float yy = fp.y + 0.22 * sin(fp.x * 0.21 + fp.z * 0.17) + 0.1 * sin(fp.x * 0.9 - fp.z * 0.7);
+		float k = yy / 0.95;
+		float seam = smoothstep(0.37, 0.45, abs(fract(k) - 0.5) * 0.95);
+		float tone = hash3(vec3(floor(k), floor((fp.x + fp.z) / 6.5), 3.0));
+		c *= 1.0 - courses * vert * (0.2 * seam + 0.12 * (tone - 0.5));
+	}
+	if (wear > 0.0) {
+		c = mix(c, adobe_wear(c, c, fp, nn, rough, lift), wear);
+	}
 	ALBEDO = c;
-	ROUGHNESS = arm.g;
+	ROUGHNESS = rough;
 	METALLIC = 0.0;
 	SPECULAR = 0.3;
 	AO = mix(1.0, arm.r, ao_amount);

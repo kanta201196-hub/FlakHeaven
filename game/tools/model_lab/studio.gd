@@ -14,7 +14,10 @@ extends Node3D
 
 ## Set → parts [source, what, x, z, width, yaw°]. source: "house" (VillageHouses variant, metres), "prop"
 ## (BiomeProps kind, width in world px like KINDS), "unit" (battle GLB under res://models/battle/, width = its
-## sprite length), "adobe" (AdobeBuild.debug_piece kind: village walls, gates and ruins with their houses).
+## sprite length), "adobe" (AdobeBuild.debug_piece kind: village walls, gates and ruins with their houses),
+## "fort" (the Highland fort of FortBuild: "whole", "taken" = every piece in the state of a taken fort, or
+## "<piece id>:<FortDamage state>" = that piece in that state among the other pieces intact; the frame then
+## closes in on the piece, FORT_FOCUS).
 ## Widths only matter inside a set: the set is scaled to a fixed size before framing.
 const SETS := {
 	"houses": [["house", 0, -9.0, -4.0, 0.0, 10.0], ["house", 2, 7.0, -7.0, 0.0, -5.0], ["house", 5, 8.0, 4.0, 0.0, 90.0],
@@ -40,6 +43,20 @@ const SETS := {
 	"v_yard_damaged": [["adobe", "yard_damaged", 0.0, 0.0, 0.0, 0.0]],
 	"v_yard_ruined": [["adobe", "yard_ruined", 0.0, 0.0, 0.0, 0.0]],
 	"v_ruins": [["adobe", "ruins", 0.0, 0.0, 0.0, 0.0]],
+	# the Highland fort «Укрепрайон» (FortBuild): whole, taken, and each piece type intact and broken
+	"fort": [["fort", "whole", 0.0, 0.0, 0.0, 0.0]],
+	"fort_taken": [["fort", "taken", 0.0, 0.0, 0.0, 0.0]],
+	"fort_tower": [["fort", "t3:0", 0.0, 0.0, 0.0, 0.0]],
+	"fort_tower_damaged": [["fort", "t3:1", 0.0, 0.0, 0.0, 0.0]],
+	"fort_tower_broken": [["fort", "t3:2", 0.0, 0.0, 0.0, 0.0]],
+	"fort_wall": [["fort", "w5:0", 0.0, 0.0, 0.0, 0.0]],
+	"fort_wall_broken": [["fort", "w5:2", 0.0, 0.0, 0.0, 0.0]],
+	"fort_gate": [["fort", "gate:0", 0.0, 0.0, 0.0, 0.0]],
+	"fort_gate_broken": [["fort", "gate:2", 0.0, 0.0, 0.0, 0.0]],
+	"fort_store": [["fort", "store:0", 0.0, 0.0, 0.0, 0.0]],
+	"fort_store_broken": [["fort", "store:2", 0.0, 0.0, 0.0, 0.0]],
+	"fort_citadel": [["fort", "citadel:0", 0.0, 0.0, 0.0, 0.0]],
+	"fort_citadel_burnt": [["fort", "citadel:2", 0.0, 0.0, 0.0, 0.0]],
 	"radar": [["unit", "fh_battle_e_radar", 0.0, 0.0, 32.0, 30.0]],
 	"bunker": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, -40.0]],   # the embrasure side
 	"bunker_rear": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, 150.0]],   # the trench and door
@@ -59,6 +76,10 @@ const FOCUS := {"fortress_dome": ["turret_3", 3.2], "fortress_spine": ["core", 2
 ## Sets whose model is posed as in a later boss phase (Render3D._fortress_parts): "open" = bay doors and core
 ## panels open, bay missiles lifted
 const POSE := {"fortress_spine_open": "open"}
+## A fort piece set's frame: the piece's bounds grown by this (it shows with its neighbours around it)
+const FORT_FOCUS := 1.6
+## The pieces of a taken fort in the studio (as the bench's fort_area_ruin): FortDamage state per piece id
+const FORT_TAKEN := {"t0": 2, "t1": 2, "t2": 2, "t3": 1, "w1": 2, "w5": 2, "gate": 2, "store": 2, "citadel": 2}
 const VILLAGE_PX := 1650.0  ## o_village size in world px (AdobeBuild.V_UNIT): an "adobe" part's scale before framing
 const SIZE := 20.0          ## a set's longest side after scaling, units
 const ISO_PITCH := 35.0     ## 3/4 view: degrees above the horizon
@@ -232,6 +253,8 @@ func _show(name: String) -> void:
 				mi.scale = Vector3.ONE * VILLAGE_PX
 				VillageHouses.attach(mi, piece[1])
 				body = mi
+			"fort":
+				body = _fort(String(part[1]))
 			"unit":
 				body = (load("res://models/battle/%s.glb" % part[1]) as PackedScene).instantiate()
 				body.scale = Vector3.ONE * float(part[4])
@@ -250,7 +273,46 @@ func _show(name: String) -> void:
 	var floor_y := box.position.y
 	if not _adobe_mats.is_empty():
 		floor_y += AdobeBuild.SINK * AdobeBuild.V_UNIT * VILLAGE_PX
+	if name.begins_with("fort") and not name.begins_with("fortress"):   # the fort is sunk the same way (Render3D)
+		floor_y = FortBuild.GROUND * FortBuild.K
 	_set_root.position = -Vector3(box.get_center().x, floor_y, box.get_center().z) * k
+
+
+## The Highland fort as FortView draws it, in its unit mesh space: one MeshInstance3D for the whole fort, or the
+## base plus one per piece (FortDamage ids) in the state `spec` asks for. A "<id>:<state>" spec names its piece's
+## node "focus", so _frame closes in on it.
+func _fort(spec: String) -> Node3D:
+	var root := Node3D.new()
+	if spec == "whole":
+		var whole := MeshInstance3D.new()
+		whole.mesh = FortBuild.mesh()
+		root.add_child(whole)
+		return root
+	var states := {}
+	for id: String in FortDamage.new().state:
+		states[id] = int(FORT_TAKEN.get(id, 0)) if spec == "taken" else 0
+	var focus := ""
+	if spec != "taken":
+		focus = spec.get_slice(":", 0)
+		states[focus] = int(spec.get_slice(":", 1))
+	var base := MeshInstance3D.new()
+	base.mesh = FortBuild.base()
+	root.add_child(base)
+	for id: String in states:
+		var mi := MeshInstance3D.new()
+		mi.mesh = FortBuild.piece(id, int(states[id]))
+		mi.name = "focus" if id == focus and id != "citadel" else id
+		root.add_child(mi)
+	if focus == "citadel":   # the citadel piece holds the rooms round the yard too: frame the citadel itself
+		var box := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(40.0, 26.0, 30.0) * FortBuild.K
+		box.mesh = bm
+		box.position = Vector3(-6.0, 13.0, -14.0) * FortBuild.K
+		box.visible = false
+		box.name = "focus"
+		root.add_child(box)
+	return root
 
 
 ## The Fortress in phases 2 and 3 the way Render3D._fortress_parts leaves it: doors at 125°, core panels at 140°
@@ -272,6 +334,10 @@ func _pose_open(body: Node3D) -> void:
 ## Camera on the set's bounds (or on its FOCUS node, grown): `iso` from ISO_PITCH above the horizon, `top` straight down
 func _frame(view: String, set_name := "") -> void:
 	var box := _bounds(_set_root, Transform3D.IDENTITY)
+	var fo := _set_root.find_child("focus", true, false) as Node3D
+	if fo != null:   # a fort piece set: its piece and a ring of what stands round it
+		var fb := _bounds(fo, fo.get_parent().global_transform)
+		box = AABB(fb.get_center() - fb.size * 0.5 * FORT_FOCUS, fb.size * FORT_FOCUS)
 	if FOCUS.has(set_name):
 		var f: Node3D = _set_root.find_child(FOCUS[set_name][0], true, false) as Node3D
 		if f != null:
