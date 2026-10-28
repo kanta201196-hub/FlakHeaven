@@ -10,6 +10,8 @@ class_name VillageHouses
 ## item 1, 28.10.2026) with the old variants' footprints: battered mud walls, parapets, roof beams, deep openings,
 ## stairs, verandas and roof clutter, each with one baked weathered material (adobe_*) instead of the class
 ## materials, so a variant is one draw call.
+## The Highland oasis's farmstead models (OASIS: ayvan houses, a covered cistern, a vine pergola) are drawn the
+## same way under the oasis mesh (OasisBuild.attach), with the oasis plot's unit and ground passed to attach().
 
 ## [file, size (x, height, depth) in metres, floors, weight]. Sizes come from village_houses.py's printout.
 const VARIANTS := [
@@ -66,6 +68,21 @@ const RUGFRAME := 22
 const ORCHARD := 23
 const PALM := 24
 const TREE_KINDS := {ORCHARD: "orchard", PALM: "palm"}
+## Highland oasis farmstead (weak-models list item 3, built by tools/blender/oasis_adobe.py; OasisBuild places
+## them): [file, size (x, height above ground, depth) in metres]. Variant index = OASIS0 + row. Each is one mesh
+## with one baked weathered adobe material, like the kishlak's h50 houses.
+const OASIS := [
+	["oh_a", Vector3(8.00, 3.79, 7.09)], # rooms behind a deep ayvan on three posts, vine trellis (4049 tris)
+	["oh_b", Vector3(7.85, 3.66, 7.33)], # L-plan round a corner ayvan, roof stair, bread oven (3141 tris)
+	["oh_c", Vector3(8.60, 3.81, 6.26)], # long house, ayvan on four posts under a grapevine (4345 tris)
+	["oh_d", Vector3(7.09, 6.24, 6.97)], # two storeys, summer ayvan on the roof, porch below (3903 tris)
+	["oh_cistern", Vector3(5.10, 3.83, 6.72)], # covered cistern: mud-brick dome, portal, trough (1546 tris)
+	["oh_pergola", Vector3(5.96, 3.11, 4.29)], # free grapevine pergola over a clay platform (3249 tris)
+]
+const OASIS0 := 25
+const OASIS_HOUSES := 4              ## the first rows of OASIS are dwellings (OasisBuild picks among them)
+const CISTERN := OASIS0 + 4
+const PERGOLA := OASIS0 + 5
 const DIR := "res://models/village/"
 ## Render budget (graphics option «props», as BiomeProps): the rug lies a centimetre off the ground, so its shadow
 ## is never seen on any preset; one shadow draw per village saved
@@ -105,6 +122,8 @@ static func size(v: int) -> Vector3:
 		return Vector3(1.22, 1.31, 1.25) * WELL_SCALE
 	if TREE_KINDS.has(v):
 		return Vector3(1.0, 1.4, 1.0)
+	if v >= OASIS0:
+		return OASIS[v - OASIS0][1]
 	if v >= PROP0:
 		return PROPS[v - PROP0][1]
 	return VARIANTS[v][1]
@@ -112,11 +131,13 @@ static func size(v: int) -> Vector3:
 
 ## Add the houses of one village under its MeshInstance3D: homes are AdobeBuild records
 ## [variant, centre (old units), yaw, scale (x, y, z)]; one MultiMeshInstance3D per variant present.
+## unit — the parent mesh's units per record unit and ground — the ground level in record units: the village's
+## old units and sink by default; the oasis passes its own (OasisBuild.attach).
 ## The «props» graphics option trims it the way BiomeProps trims the biome: on «Мало» the small clutter
 ## (LOW_SKIP) is not drawn and the remaining clutter, well and trees cast no shadow (as biome models there); on
 ## «Средне» the LOW_SKIP models and the well, a few pixels at gameplay height, cast none. Houses always cast one.
 ## Main thread only (loads the models). Returns the number of triangles added.
-static func attach(parent: Node3D, homes: Array) -> int:
+static func attach(parent: Node3D, homes: Array, unit := AdobeBuild.V_UNIT, ground := AdobeBuild.SINK) -> int:
 	var props := Settings.gopt("props")
 	var by := {}
 	for h in homes:
@@ -141,8 +162,8 @@ static func attach(parent: Node3D, homes: Array) -> int:
 			var s: Vector3 = h[3]
 			if v == WELL:
 				s *= WELL_SCALE
-			var b := Basis(Vector3.UP, -float(h[2])) * Basis.from_scale(s * AdobeBuild.V_UNIT)
-			var o := Vector3(c.x, AdobeBuild.SINK - 0.002 + (RUG_LIFT if v == RUG else 0.0), c.y) * AdobeBuild.V_UNIT
+			var b := Basis(Vector3.UP, -float(h[2])) * Basis.from_scale(s * unit)
+			var o := Vector3(c.x, ground - 0.002 + (RUG_LIFT if v == RUG else 0.0), c.y) * unit
 			mm.set_instance_transform(i, Transform3D(b, o))
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
@@ -153,9 +174,10 @@ static func attach(parent: Node3D, homes: Array) -> int:
 	return tris
 
 
-## Clutter, the yard well and the tree cards: the models BiomeProps would call small (no house)
+## Clutter, the yard well and the tree cards: the models BiomeProps would call small (no house; the oasis
+## farmstead models are buildings)
 static func _small(v: int) -> bool:
-	return v == WELL or v >= PROP0
+	return v == WELL or (v >= PROP0 and v < OASIS0)
 
 
 ## Triangles the houses of a village draw (visual_bench's per-village count). Main thread only
@@ -200,7 +222,7 @@ static func _mesh(v: int) -> ArrayMesh:
 	if TREE_KINDS.has(v):
 		_meshes[v] = BiomeProps.new(null)._lite_tree(TREE_KINDS[v]) as ArrayMesh
 		return _meshes[v]
-	var file := WELL_FILE if v == WELL else String(PROPS[v - PROP0][0] if v >= PROP0 else VARIANTS[v][0])
+	var file := WELL_FILE if v == WELL else _file(v)
 	var path := DIR + file + ".glb"
 	var mesh: ArrayMesh = null
 	if ResourceLoader.exists(path):
@@ -237,6 +259,13 @@ static func _mesh(v: int) -> ArrayMesh:
 			m.metallic_specular = 0.2
 	_meshes[v] = mesh
 	return mesh
+
+
+## GLB file name (without .glb) of a model variant other than the well and the tree cards
+static func _file(v: int) -> String:
+	if v >= OASIS0:
+		return String(OASIS[v - OASIS0][0])
+	return String(PROPS[v - PROP0][0] if v >= PROP0 else VARIANTS[v][0])
 
 
 ## Flat lit colours of the classes without a fort texture: openings, three faded cloths (market tents come in all

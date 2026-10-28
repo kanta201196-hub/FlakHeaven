@@ -2548,7 +2548,9 @@ func _sync_objects(c2: Vector2, h: float) -> void:
 						em.material_override = AdobeBuild.material()
 						mi.add_child(em)
 						VillageHouses.attach(mi, vm[2])   # VIS-01: houses as models, one MultiMesh per variant
-					_: mi.mesh = AdobeBuild.oasis(vr)
+					_:
+						mi.mesh = AdobeBuild.oasis(vr)
+						OasisBuild.attach(mi, vr)   # the farmstead's houses, cistern and pergola as models
 				if o["name"] != "o_fort":
 					mi.material_override = AdobeBuild.material()
 				mi.position = Vector3(o["pos"].x, gy - sz * 0.01, o["pos"].y)

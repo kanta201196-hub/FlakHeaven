@@ -3,6 +3,7 @@ render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specula
 // Village and oasis mesh (AdobeBuild): the StandardMaterial3D it replaces (clay photo in world-space triplanar,
 // vertex colour as albedo, matte), plus own surfaces picked by the vertex colour's alpha (AdobeBuild.ID_*):
 //   ~1.0  walls, roofs, yards — exactly the old material;
+//   0.04…0.2 still water (AdobeBuild.ID_WATER) — the oasis pond and its irrigation channels, wet mud at a channel's edges;
 //   0.25  sandbags — hessian cloth with its weave in the normal (Kanta 26.10: "replace the sandbag textures if they are bad");
 //   0.42…0.58 trench strip — packed soil, darker and lower in the middle, plank revetment along both edges;
 //   0.67…0.83 street strip — packed earth or a photo lane set (--roadtex), frayed into the yard ground at the edges.
@@ -80,7 +81,22 @@ void fragment() {
 	vec3 wn = FRONT_FACING ? wnrm : -wnrm;   // the side the camera sees, as the engine flips it
 	bool own_n = false;
 	float rough = roughness;
-	if (mat_id < 0.33 && bag_tex_on) {
+	float spec = specular;
+	if (mat_id < 0.205) {
+		// still water (oasis pond, irrigation channels): dark and glossy in the middle with a slow ripple in the
+		// normal, wet dark mud towards a channel's edges (the alpha runs across a channel as on a street strip)
+		float across = clamp((mat_id - 0.12) / 0.08, -1.0, 1.0);
+		float wet = 1.0 - smoothstep(0.45, 0.8, abs(across));
+		vec2 rp = wpos.xz / px_per_m;
+		float r1 = vnoise(vec3(rp * 1.7, TIME * 0.15));
+		float r2 = vnoise(vec3(rp * 4.3 + 11.0, TIME * 0.25));
+		vec3 water = vec3(0.045, 0.058, 0.04) * (0.8 + 0.4 * vnoise(vec3(rp * 0.35, 3.0)));
+		alb = mix(alb * vec3(0.5, 0.47, 0.44), water, wet);
+		wn = normalize(mix(wn, normalize(vec3((r1 - 0.5) * 0.12, 1.0, (r2 - 0.5) * 0.12)), wet));
+		own_n = true;
+		rough = mix(0.85, 0.2, wet);
+		spec = mix(specular, 0.3, wet);
+	} else if (mat_id < 0.33 && bag_tex_on) {
 		// sandbags: hessian weave in three projections, the weave also in the normal
 		vec3 bp = wpos / bag_tile;
 		vec4 hx = texture(bag_tex, bp.zy);
@@ -137,6 +153,6 @@ void fragment() {
 		NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);
 	}
 	METALLIC = 0.0;
-	SPECULAR = specular;
+	SPECULAR = spec;
 	ROUGHNESS = rough;
 }

@@ -33,6 +33,7 @@ static func material() -> ShaderMaterial:
 
 ## Vertex-colour alpha codes read by adobe.gdshader. Strips carry ±ID_SPAN across their width (edge to edge),
 ## so the shader knows the middle of a trench or a street
+const ID_WATER := 0.12   ## still water: the oasis pond, and as a strip its irrigation channels (OasisBuild)
 const ID_BAG := 0.25
 const ID_TRENCH := 0.5
 const ID_STREET := 0.75
@@ -532,28 +533,6 @@ static func _strip(st: SurfaceTool, a: Vector2, b: Vector2, w: float, col: Color
 		st.add_vertex(v[0])
 
 
-## Огород за дувалом: низкая глинобитная ограда по периметру с проходом
-static func _garden(st: SurfaceTool, c: Vector2, s: Vector2, rng: RandomNumberGenerator) -> void:
-	var t := 0.006
-	var h := rng.randf_range(0.01, 0.016)
-	var x0 := c.x - s.x * 0.5
-	var x1 := c.x + s.x * 0.5
-	var z0 := c.y - s.y * 0.5
-	var z1 := c.y + s.y * 0.5
-	var gate := rng.randi() % 4
-	var sides := [[Vector2(x0, z0), Vector2(x1, z0)], [Vector2(x1, z0), Vector2(x1, z1)], [Vector2(x1, z1), Vector2(x0, z1)], [Vector2(x0, z1), Vector2(x0, z0)]]
-	for i in 4:
-		var a: Vector2 = sides[i][0]
-		var b: Vector2 = sides[i][1]
-		if i == gate:   # проход: две половинки стены
-			_wall(st, a, a.lerp(b, 0.4), t, h, false)
-			_wall(st, a.lerp(b, 0.6), b, t, h, false)
-		elif rng.randf() < 0.2:   # обвалившийся кусок
-			_wall(st, a, a.lerp(b, 0.55), t, h, false)
-		else:
-			_wall(st, a, b, t, h, false)
-
-
 ## Сжать готовую сетку в k раз (кишлак строится в старых единицах)
 static func _scaled(st: SurfaceTool, k: float) -> ArrayMesh:
 	var m := ArrayMesh.new()
@@ -574,64 +553,10 @@ static func _scaled_arrays(st: SurfaceTool, k: float) -> Array:
 	return arr
 
 
-## Оазис (тест 3.5-s4, п. 17): вместо круглой картинки-наклейки — несколько глинобитных домов у
-## пруда, огороды за дувалами; зелень (поля, сады) — пятном на земле и деревьями biome_props.
-## Площадка 1 × 1 = размер объекта
+## The Highland oasis (o_oasis) on its 1 × 1 plot: the farmstead's walls, pond, channels and ruins
+## (OasisBuild.mesh); Render3D adds its house models with OasisBuild.attach
 static func oasis(variant: int) -> ArrayMesh:
-	var key := "oasis%d" % variant
-	if _cache.has(key):
-		return _cache[key]
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 4241 * (variant + 3)
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var core := Vector2(0.06, -0.05)
-	# пруд (хауз) с глиняным бортиком
-	var pc := core + Vector2(-0.1, 0.06)
-	_box(st, Vector3(pc.x, 0.0, pc.y), Vector3(0.1, 0.006, 0.075), WALL, WATER)
-	_parapet(st, Vector3(pc.x, 0.0, pc.y), Vector2(0.11, 0.085), 0.008, 0.012)
-	# 3–5 домов вокруг двора
-	for i in rng.randi_range(3, 5):
-		var a := rng.randf() * TAU
-		var c := core + Vector2.from_angle(a) * rng.randf_range(0.06, 0.11)
-		if c.distance_to(pc) < 0.085:
-			continue
-		var s := Vector2(rng.randf_range(0.05, 0.075), rng.randf_range(0.045, 0.065))
-		if rng.randf() < 0.75:
-			_house(st, c, s, rng.randf_range(0.04, 0.06), rng)
-		else:
-			_roofless(st, c, s, rng.randf_range(0.04, 0.06), rng)
-	# огороды за дувалами в зелёном пятне
-	for i in rng.randi_range(4, 7):
-		var a := rng.randf() * TAU
-		var r := rng.randf_range(0.17, 0.28) * outline(variant, a)
-		_garden(st, Vector2.from_angle(a) * r, Vector2(rng.randf_range(0.08, 0.13), rng.randf_range(0.07, 0.11)), rng)
-	st.generate_normals()
-	var m := st.commit()
-	_cache[key] = m
-	return m
-
-
-## Целый дом: плоская крыша с парапетом, дверь; иногда пятно копоти
-static func _house(st: SurfaceTool, c: Vector2, s: Vector2, h: float, rng: RandomNumberGenerator) -> void:
-	_box(st, Vector3(c.x, 0.0, c.y), Vector3(s.x, h, s.y), WALL, ROOF)
-	_parapet(st, Vector3(c.x, h, c.y), s, 0.006, 0.009)
-	_box(st, Vector3(c.x, 0.0, c.y + s.y * 0.5 + 0.001), Vector3(0.014, h * 0.6, 0.003), DARK, DARK)
-	if rng.randf() < 0.4:
-		_soot(st, Vector3(c.x + rng.randf_range(-0.3, 0.3) * s.x, h + 0.001, c.y + rng.randf_range(-0.3, 0.3) * s.y), s * 0.45, rng)
-
-
-## Дом без крыши: стены разной высоты с рваным верхом, внутри тёмный пол и завал
-static func _roofless(st: SurfaceTool, c: Vector2, s: Vector2, h: float, rng: RandomNumberGenerator) -> void:
-	var t := 0.008
-	var x0 := c.x - s.x * 0.5
-	var x1 := c.x + s.x * 0.5
-	var z0 := c.y - s.y * 0.5
-	var z1 := c.y + s.y * 0.5
-	for side in [[Vector2(x0, z0), Vector2(x1, z0)], [Vector2(x1, z0), Vector2(x1, z1)], [Vector2(x1, z1), Vector2(x0, z1)], [Vector2(x0, z1), Vector2(x0, z0)]]:
-		_broken_wall(st, side[0], side[1], t, h, rng)
-	_box(st, Vector3(c.x, 0.0, c.y), Vector3(s.x - t * 2.0, 0.004, s.y - t * 2.0), BURNT, BURNT)   # пол в копоти
-	_rubble(st, c + Vector2(rng.randf_range(-0.2, 0.2) * s.x, rng.randf_range(-0.2, 0.2) * s.y), s.x * 0.3, 3, rng)
+	return OasisBuild.mesh(variant)
 
 
 ## Обрушенный дом: обломки стен по углам и груда глины
