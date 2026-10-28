@@ -1127,11 +1127,17 @@ func _make_points() -> Array:
 			pts.append({"name": "size_fort", "pos": pp, "convoy": true, "convoy_at": rd,
 				"fort_obj": fp, "cls": ["fighter", 1], "zoom": 1.0, "wait": 2.5, "sizes": true})
 	for a in OS.get_cmdline_user_args():
-		if a.begins_with("--pts="):   # relief lab: --pts=name:x:z:zoom,name2:x:z:zoom — arbitrary camera points
+		# relief lab: --pts=name:x:z:zoom,name2:x:z:zoom — arbitrary camera points; an optional fifth field is a
+		# close-up camera height over the ground in px (ground_dist), like the poplar_close and vehwreck_ points
+		if a.begins_with("--pts="):
 			pts = []
 			for q in a.substr(6).split(","):
 				var f := q.split(":")
-				pts.append({"name": f[0], "pos": Vector2(float(f[1]), float(f[2])), "zoom": float(f[3]) if f.size() > 3 else 1.0, "wait": 1.2})
+				var pt := {"name": f[0], "pos": Vector2(float(f[1]), float(f[2])), "zoom": float(f[3]) if f.size() > 3 else 1.0, "wait": 1.2}
+				if f.size() > 4:
+					pt["ground_dist"] = float(f[4])
+					pt["wait"] = 3.0
+				pts.append(pt)
 		if a.begins_with("--vat="):   # S9-07/S9-08: кишлак у протоки: --vat=x,z[,zoom] (координаты — tools/village_water)
 			var v := a.substr(6).split(",")
 			pts = [{"name": "village_water", "pos": Vector2(float(v[0]), float(v[1])), "zoom": float(v[2]) if v.size() > 2 else 1.0, "wait": 1.5}]
