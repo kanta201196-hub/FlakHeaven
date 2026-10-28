@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://q5fkr3cy8xsd"
-path="res://.godot/imported/turret_kit_tail_ball_t1_ash_turret_paint_pods_orm.jpg-dabd4eac6567952e216e4d52c0936595.ctex"
+path.s3tc="res://.godot/imported/turret_kit_tail_ball_t1_ash_turret_paint_pods_orm.jpg-dabd4eac6567952e216e4d52c0936595.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_tail_ball_t1_ash_turret_paint_pods_orm.jpg-dabd4eac6567952e216e4d52c0936595.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "2dc2d5237b4d8473331fd5eafa8d753d"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_tail_ball_t1_ash_turret_paint_pods_orm.jpg"
-dest_files=["res://.godot/imported/turret_kit_tail_ball_t1_ash_turret_paint_pods_orm.jpg-dabd4eac6567952e216e4d52c0936595.ctex"]
+dest_files=["res://.godot/imported/turret_kit_tail_ball_t1_ash_turret_paint_pods_orm.jpg-dabd4eac6567952e216e4d52c0936595.s3tc.ctex", "res://.godot/imported/turret_kit_tail_ball_t1_ash_turret_paint_pods_orm.jpg-dabd4eac6567952e216e4d52c0936595.etc2.ctex"]
 
 [params]
 

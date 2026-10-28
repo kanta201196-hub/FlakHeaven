@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d0lofbunswm45"
-path="res://.godot/imported/turret_kit_tail_ball_t2_shark_turret_paint_normal.jpg-b1bafff026a404f295cde7bda46efc3b.ctex"
+path.s3tc="res://.godot/imported/turret_kit_tail_ball_t2_shark_turret_paint_normal.jpg-b1bafff026a404f295cde7bda46efc3b.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_tail_ball_t2_shark_turret_paint_normal.jpg-b1bafff026a404f295cde7bda46efc3b.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d4f7d80b89524f177bf759da228fb4b3"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_tail_ball_t2_shark_turret_paint_normal.jpg"
-dest_files=["res://.godot/imported/turret_kit_tail_ball_t2_shark_turret_paint_normal.jpg-b1bafff026a404f295cde7bda46efc3b.ctex"]
+dest_files=["res://.godot/imported/turret_kit_tail_ball_t2_shark_turret_paint_normal.jpg-b1bafff026a404f295cde7bda46efc3b.s3tc.ctex", "res://.godot/imported/turret_kit_tail_ball_t2_shark_turret_paint_normal.jpg-b1bafff026a404f295cde7bda46efc3b.etc2.ctex"]
 
 [params]
 

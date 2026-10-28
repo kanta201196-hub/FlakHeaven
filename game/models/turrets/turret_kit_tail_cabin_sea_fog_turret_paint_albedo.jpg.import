@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://8bibkqjiu4i5"
-path="res://.godot/imported/turret_kit_tail_cabin_sea_fog_turret_paint_albedo.jpg-e584a439c1de856455eafaa1ab425fef.ctex"
+path.s3tc="res://.godot/imported/turret_kit_tail_cabin_sea_fog_turret_paint_albedo.jpg-e584a439c1de856455eafaa1ab425fef.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_tail_cabin_sea_fog_turret_paint_albedo.jpg-e584a439c1de856455eafaa1ab425fef.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "feb72a68bc908b400b4a6b32b141f683"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_tail_cabin_sea_fog_turret_paint_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_tail_cabin_sea_fog_turret_paint_albedo.jpg-e584a439c1de856455eafaa1ab425fef.ctex"]
+dest_files=["res://.godot/imported/turret_kit_tail_cabin_sea_fog_turret_paint_albedo.jpg-e584a439c1de856455eafaa1ab425fef.s3tc.ctex", "res://.godot/imported/turret_kit_tail_cabin_sea_fog_turret_paint_albedo.jpg-e584a439c1de856455eafaa1ab425fef.etc2.ctex"]
 
 [params]
 

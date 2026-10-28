@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bj4fnnfayqkem"
-path="res://.godot/imported/turret_grach_t3_arctic_tiger_turret_paint_guns_orm.jpg-40e9a9a2552746bb77567ec588c1f0bf.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t3_arctic_tiger_turret_paint_guns_orm.jpg-40e9a9a2552746bb77567ec588c1f0bf.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t3_arctic_tiger_turret_paint_guns_orm.jpg-40e9a9a2552746bb77567ec588c1f0bf.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "acd833c15d8533cca65b98f53e5e5b02"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t3_arctic_tiger_turret_paint_guns_orm.jpg"
-dest_files=["res://.godot/imported/turret_grach_t3_arctic_tiger_turret_paint_guns_orm.jpg-40e9a9a2552746bb77567ec588c1f0bf.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t3_arctic_tiger_turret_paint_guns_orm.jpg-40e9a9a2552746bb77567ec588c1f0bf.s3tc.ctex", "res://.godot/imported/turret_grach_t3_arctic_tiger_turret_paint_guns_orm.jpg-40e9a9a2552746bb77567ec588c1f0bf.etc2.ctex"]
 
 [params]
 

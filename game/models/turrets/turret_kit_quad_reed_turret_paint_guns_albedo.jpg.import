@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://3igex7rh230o"
-path="res://.godot/imported/turret_kit_quad_reed_turret_paint_guns_albedo.jpg-74aef1b508bc53bfdbfed9d2027a4b3d.ctex"
+path.s3tc="res://.godot/imported/turret_kit_quad_reed_turret_paint_guns_albedo.jpg-74aef1b508bc53bfdbfed9d2027a4b3d.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_quad_reed_turret_paint_guns_albedo.jpg-74aef1b508bc53bfdbfed9d2027a4b3d.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "1181631cd2218efcb35605ab5da291e1"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_quad_reed_turret_paint_guns_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_quad_reed_turret_paint_guns_albedo.jpg-74aef1b508bc53bfdbfed9d2027a4b3d.ctex"]
+dest_files=["res://.godot/imported/turret_kit_quad_reed_turret_paint_guns_albedo.jpg-74aef1b508bc53bfdbfed9d2027a4b3d.s3tc.ctex", "res://.godot/imported/turret_kit_quad_reed_turret_paint_guns_albedo.jpg-74aef1b508bc53bfdbfed9d2027a4b3d.etc2.ctex"]
 
 [params]
 

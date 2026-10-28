@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bwk1x4i3pyv7a"
-path="res://.godot/imported/turret_kit_tail_ball_t3_sea_fog_turret_paint_pods_albedo.jpg-6e0689b1326d9a860eef5acbde55c911.ctex"
+path.s3tc="res://.godot/imported/turret_kit_tail_ball_t3_sea_fog_turret_paint_pods_albedo.jpg-6e0689b1326d9a860eef5acbde55c911.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_tail_ball_t3_sea_fog_turret_paint_pods_albedo.jpg-6e0689b1326d9a860eef5acbde55c911.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "12b8cd05bce3522ea7f6aae9f8e30278"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_tail_ball_t3_sea_fog_turret_paint_pods_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_tail_ball_t3_sea_fog_turret_paint_pods_albedo.jpg-6e0689b1326d9a860eef5acbde55c911.ctex"]
+dest_files=["res://.godot/imported/turret_kit_tail_ball_t3_sea_fog_turret_paint_pods_albedo.jpg-6e0689b1326d9a860eef5acbde55c911.s3tc.ctex", "res://.godot/imported/turret_kit_tail_ball_t3_sea_fog_turret_paint_pods_albedo.jpg-6e0689b1326d9a860eef5acbde55c911.etc2.ctex"]
 
 [params]
 

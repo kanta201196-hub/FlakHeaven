@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://buuw7mye846ao"
-path="res://.godot/imported/turret_kit_t1_chequer_turret_paint_orm.jpg-e16a154aa29a82e9dff90594da3d6f68.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t1_chequer_turret_paint_orm.jpg-e16a154aa29a82e9dff90594da3d6f68.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t1_chequer_turret_paint_orm.jpg-e16a154aa29a82e9dff90594da3d6f68.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "f2f2e0c26cbc9eeaea6058f6c07fbad2"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t1_chequer_turret_paint_orm.jpg"
-dest_files=["res://.godot/imported/turret_kit_t1_chequer_turret_paint_orm.jpg-e16a154aa29a82e9dff90594da3d6f68.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t1_chequer_turret_paint_orm.jpg-e16a154aa29a82e9dff90594da3d6f68.s3tc.ctex", "res://.godot/imported/turret_kit_t1_chequer_turret_paint_orm.jpg-e16a154aa29a82e9dff90594da3d6f68.etc2.ctex"]
 
 [params]
 

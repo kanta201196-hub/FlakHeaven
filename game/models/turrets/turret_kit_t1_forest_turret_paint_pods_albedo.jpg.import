@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://df780osk517f6"
-path="res://.godot/imported/turret_kit_t1_forest_turret_paint_pods_albedo.jpg-28e062c76398fcdf455e8415f05af091.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t1_forest_turret_paint_pods_albedo.jpg-28e062c76398fcdf455e8415f05af091.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t1_forest_turret_paint_pods_albedo.jpg-28e062c76398fcdf455e8415f05af091.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "00531d189f576966bcc1bc544c9e26ba"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t1_forest_turret_paint_pods_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_t1_forest_turret_paint_pods_albedo.jpg-28e062c76398fcdf455e8415f05af091.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t1_forest_turret_paint_pods_albedo.jpg-28e062c76398fcdf455e8415f05af091.s3tc.ctex", "res://.godot/imported/turret_kit_t1_forest_turret_paint_pods_albedo.jpg-28e062c76398fcdf455e8415f05af091.etc2.ctex"]
 
 [params]
 

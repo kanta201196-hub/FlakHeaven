@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dc6lva8mnit7y"
-path="res://.godot/imported/turret_kit_t2_forest_turret_paint_guns_normal.jpg-d4bb651f5e6c0d67b0c0d3d9ddaaa603.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t2_forest_turret_paint_guns_normal.jpg-d4bb651f5e6c0d67b0c0d3d9ddaaa603.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t2_forest_turret_paint_guns_normal.jpg-d4bb651f5e6c0d67b0c0d3d9ddaaa603.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "2a0a52d21a42d3f2eb5f512be5418981"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t2_forest_turret_paint_guns_normal.jpg"
-dest_files=["res://.godot/imported/turret_kit_t2_forest_turret_paint_guns_normal.jpg-d4bb651f5e6c0d67b0c0d3d9ddaaa603.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t2_forest_turret_paint_guns_normal.jpg-d4bb651f5e6c0d67b0c0d3d9ddaaa603.s3tc.ctex", "res://.godot/imported/turret_kit_t2_forest_turret_paint_guns_normal.jpg-d4bb651f5e6c0d67b0c0d3d9ddaaa603.etc2.ctex"]
 
 [params]
 

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bssu7nl7iuh7o"
-path="res://.godot/imported/turret_kit_quad_shark_turret_paint_pods_normal.jpg-e7c20769e1cc505c5986466c3c8cc665.ctex"
+path.s3tc="res://.godot/imported/turret_kit_quad_shark_turret_paint_pods_normal.jpg-e7c20769e1cc505c5986466c3c8cc665.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_quad_shark_turret_paint_pods_normal.jpg-e7c20769e1cc505c5986466c3c8cc665.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "6799c65e0b489655972ed58353f9b1b5"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_quad_shark_turret_paint_pods_normal.jpg"
-dest_files=["res://.godot/imported/turret_kit_quad_shark_turret_paint_pods_normal.jpg-e7c20769e1cc505c5986466c3c8cc665.ctex"]
+dest_files=["res://.godot/imported/turret_kit_quad_shark_turret_paint_pods_normal.jpg-e7c20769e1cc505c5986466c3c8cc665.s3tc.ctex", "res://.godot/imported/turret_kit_quad_shark_turret_paint_pods_normal.jpg-e7c20769e1cc505c5986466c3c8cc665.etc2.ctex"]
 
 [params]
 

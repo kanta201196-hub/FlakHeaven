@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://onqp1cf7mmap"
-path="res://.godot/imported/turret_kit_tail_ball_t2_forest_turret_paint_albedo.jpg-4dc5d0bf4e30ec9dde0fb58a3f0e28e8.ctex"
+path.s3tc="res://.godot/imported/turret_kit_tail_ball_t2_forest_turret_paint_albedo.jpg-4dc5d0bf4e30ec9dde0fb58a3f0e28e8.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_tail_ball_t2_forest_turret_paint_albedo.jpg-4dc5d0bf4e30ec9dde0fb58a3f0e28e8.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "76739487b6a4536ac34f254ff85e6cdf"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_tail_ball_t2_forest_turret_paint_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_tail_ball_t2_forest_turret_paint_albedo.jpg-4dc5d0bf4e30ec9dde0fb58a3f0e28e8.ctex"]
+dest_files=["res://.godot/imported/turret_kit_tail_ball_t2_forest_turret_paint_albedo.jpg-4dc5d0bf4e30ec9dde0fb58a3f0e28e8.s3tc.ctex", "res://.godot/imported/turret_kit_tail_ball_t2_forest_turret_paint_albedo.jpg-4dc5d0bf4e30ec9dde0fb58a3f0e28e8.etc2.ctex"]
 
 [params]
 

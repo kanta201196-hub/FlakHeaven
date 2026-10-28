@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bxg3espl3cng0"
-path="res://.godot/imported/turret_grach_t3_dazzle_turret_paint_guns_orm.jpg-6da91d46715143aae306a2a00da91b98.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t3_dazzle_turret_paint_guns_orm.jpg-6da91d46715143aae306a2a00da91b98.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t3_dazzle_turret_paint_guns_orm.jpg-6da91d46715143aae306a2a00da91b98.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "acd833c15d8533cca65b98f53e5e5b02"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t3_dazzle_turret_paint_guns_orm.jpg"
-dest_files=["res://.godot/imported/turret_grach_t3_dazzle_turret_paint_guns_orm.jpg-6da91d46715143aae306a2a00da91b98.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t3_dazzle_turret_paint_guns_orm.jpg-6da91d46715143aae306a2a00da91b98.s3tc.ctex", "res://.godot/imported/turret_grach_t3_dazzle_turret_paint_guns_orm.jpg-6da91d46715143aae306a2a00da91b98.etc2.ctex"]
 
 [params]
 

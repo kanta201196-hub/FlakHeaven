@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bbuywbj47qttj"
-path="res://.godot/imported/turret_kit_t1_reed_turret_paint_orm.jpg-186eb951cb0f8ec2cfa9b72e5600aab2.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t1_reed_turret_paint_orm.jpg-186eb951cb0f8ec2cfa9b72e5600aab2.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t1_reed_turret_paint_orm.jpg-186eb951cb0f8ec2cfa9b72e5600aab2.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "df921372e87ea65e1b763ef50dbfe041"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t1_reed_turret_paint_orm.jpg"
-dest_files=["res://.godot/imported/turret_kit_t1_reed_turret_paint_orm.jpg-186eb951cb0f8ec2cfa9b72e5600aab2.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t1_reed_turret_paint_orm.jpg-186eb951cb0f8ec2cfa9b72e5600aab2.s3tc.ctex", "res://.godot/imported/turret_kit_t1_reed_turret_paint_orm.jpg-186eb951cb0f8ec2cfa9b72e5600aab2.etc2.ctex"]
 
 [params]
 

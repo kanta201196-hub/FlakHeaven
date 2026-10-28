@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c8gokcmee3rpu"
-path="res://.godot/imported/turret_kit_t2_pixel_turret_paint_albedo.jpg-0238dbf466c504c9006e4919bfee785d.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t2_pixel_turret_paint_albedo.jpg-0238dbf466c504c9006e4919bfee785d.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t2_pixel_turret_paint_albedo.jpg-0238dbf466c504c9006e4919bfee785d.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "a168d7982852c6fd56737067ac9f1bb7"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t2_pixel_turret_paint_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_t2_pixel_turret_paint_albedo.jpg-0238dbf466c504c9006e4919bfee785d.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t2_pixel_turret_paint_albedo.jpg-0238dbf466c504c9006e4919bfee785d.s3tc.ctex", "res://.godot/imported/turret_kit_t2_pixel_turret_paint_albedo.jpg-0238dbf466c504c9006e4919bfee785d.etc2.ctex"]
 
 [params]
 

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dxw7wys3ykb5s"
-path="res://.godot/imported/turret_grach_t3_sea_fog_turret_paint_orm.jpg-8c0770595b0a793335ce94f21f779537.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t3_sea_fog_turret_paint_orm.jpg-8c0770595b0a793335ce94f21f779537.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t3_sea_fog_turret_paint_orm.jpg-8c0770595b0a793335ce94f21f779537.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "881f268e8f4e65bd36e5b36c96a818d1"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t3_sea_fog_turret_paint_orm.jpg"
-dest_files=["res://.godot/imported/turret_grach_t3_sea_fog_turret_paint_orm.jpg-8c0770595b0a793335ce94f21f779537.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t3_sea_fog_turret_paint_orm.jpg-8c0770595b0a793335ce94f21f779537.s3tc.ctex", "res://.godot/imported/turret_grach_t3_sea_fog_turret_paint_orm.jpg-8c0770595b0a793335ce94f21f779537.etc2.ctex"]
 
 [params]
 

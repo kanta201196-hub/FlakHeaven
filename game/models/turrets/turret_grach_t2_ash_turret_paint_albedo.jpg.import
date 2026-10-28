@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cus64r7vidovt"
-path="res://.godot/imported/turret_grach_t2_ash_turret_paint_albedo.jpg-5a4c16f0d0cd761cd1b7d6177d388b62.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t2_ash_turret_paint_albedo.jpg-5a4c16f0d0cd761cd1b7d6177d388b62.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t2_ash_turret_paint_albedo.jpg-5a4c16f0d0cd761cd1b7d6177d388b62.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "2439b882b573bc139ec22f8af80a7a19"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t2_ash_turret_paint_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_t2_ash_turret_paint_albedo.jpg-5a4c16f0d0cd761cd1b7d6177d388b62.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t2_ash_turret_paint_albedo.jpg-5a4c16f0d0cd761cd1b7d6177d388b62.s3tc.ctex", "res://.godot/imported/turret_grach_t2_ash_turret_paint_albedo.jpg-5a4c16f0d0cd761cd1b7d6177d388b62.etc2.ctex"]
 
 [params]
 

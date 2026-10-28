@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://by5aot70hubig"
-path="res://.godot/imported/turret_kit_t2_dazzle_turret_paint_albedo.jpg-99b7f82c9a8af119d40139cd818a2fd5.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t2_dazzle_turret_paint_albedo.jpg-99b7f82c9a8af119d40139cd818a2fd5.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t2_dazzle_turret_paint_albedo.jpg-99b7f82c9a8af119d40139cd818a2fd5.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "6dc2982bda5f0871182459597a7c0c51"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t2_dazzle_turret_paint_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_t2_dazzle_turret_paint_albedo.jpg-99b7f82c9a8af119d40139cd818a2fd5.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t2_dazzle_turret_paint_albedo.jpg-99b7f82c9a8af119d40139cd818a2fd5.s3tc.ctex", "res://.godot/imported/turret_kit_t2_dazzle_turret_paint_albedo.jpg-99b7f82c9a8af119d40139cd818a2fd5.etc2.ctex"]
 
 [params]
 

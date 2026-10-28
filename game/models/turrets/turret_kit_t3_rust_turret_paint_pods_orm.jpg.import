@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b523kgi2ncqoi"
-path="res://.godot/imported/turret_kit_t3_rust_turret_paint_pods_orm.jpg-8259fad7fc19038b9f57eef25aac45c1.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t3_rust_turret_paint_pods_orm.jpg-8259fad7fc19038b9f57eef25aac45c1.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t3_rust_turret_paint_pods_orm.jpg-8259fad7fc19038b9f57eef25aac45c1.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "cd3a5b8403cdd02adedcf555068bd2f0"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t3_rust_turret_paint_pods_orm.jpg"
-dest_files=["res://.godot/imported/turret_kit_t3_rust_turret_paint_pods_orm.jpg-8259fad7fc19038b9f57eef25aac45c1.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t3_rust_turret_paint_pods_orm.jpg-8259fad7fc19038b9f57eef25aac45c1.s3tc.ctex", "res://.godot/imported/turret_kit_t3_rust_turret_paint_pods_orm.jpg-8259fad7fc19038b9f57eef25aac45c1.etc2.ctex"]
 
 [params]
 

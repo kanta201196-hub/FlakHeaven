@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://de0fbfbk003a5"
-path="res://.godot/imported/turret_kit_t1_forest_turret_paint_orm.jpg-1a6c355044efa73fb9e89a7312ed2ace.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t1_forest_turret_paint_orm.jpg-1a6c355044efa73fb9e89a7312ed2ace.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t1_forest_turret_paint_orm.jpg-1a6c355044efa73fb9e89a7312ed2ace.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d60fd1e0107e611a581576cdf8151ba7"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t1_forest_turret_paint_orm.jpg"
-dest_files=["res://.godot/imported/turret_kit_t1_forest_turret_paint_orm.jpg-1a6c355044efa73fb9e89a7312ed2ace.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t1_forest_turret_paint_orm.jpg-1a6c355044efa73fb9e89a7312ed2ace.s3tc.ctex", "res://.godot/imported/turret_kit_t1_forest_turret_paint_orm.jpg-1a6c355044efa73fb9e89a7312ed2ace.etc2.ctex"]
 
 [params]
 

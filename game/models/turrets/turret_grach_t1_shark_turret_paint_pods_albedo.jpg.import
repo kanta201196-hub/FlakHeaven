@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cdp44oi7t0b2y"
-path="res://.godot/imported/turret_grach_t1_shark_turret_paint_pods_albedo.jpg-3ff8294d71bd1f58ed2efc4010fc16f0.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t1_shark_turret_paint_pods_albedo.jpg-3ff8294d71bd1f58ed2efc4010fc16f0.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t1_shark_turret_paint_pods_albedo.jpg-3ff8294d71bd1f58ed2efc4010fc16f0.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "7c8c8389eb9cf743185620687731a1c5"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t1_shark_turret_paint_pods_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_t1_shark_turret_paint_pods_albedo.jpg-3ff8294d71bd1f58ed2efc4010fc16f0.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t1_shark_turret_paint_pods_albedo.jpg-3ff8294d71bd1f58ed2efc4010fc16f0.s3tc.ctex", "res://.godot/imported/turret_grach_t1_shark_turret_paint_pods_albedo.jpg-3ff8294d71bd1f58ed2efc4010fc16f0.etc2.ctex"]
 
 [params]
 

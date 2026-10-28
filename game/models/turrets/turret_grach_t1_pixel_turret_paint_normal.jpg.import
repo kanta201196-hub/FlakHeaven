@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b51lcvgh0nalm"
-path="res://.godot/imported/turret_grach_t1_pixel_turret_paint_normal.jpg-d1035a40f338bc87ef3fe1a7b4810dfc.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t1_pixel_turret_paint_normal.jpg-d1035a40f338bc87ef3fe1a7b4810dfc.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t1_pixel_turret_paint_normal.jpg-d1035a40f338bc87ef3fe1a7b4810dfc.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "5e5db8006e73882af2c251478eaf16c4"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t1_pixel_turret_paint_normal.jpg"
-dest_files=["res://.godot/imported/turret_grach_t1_pixel_turret_paint_normal.jpg-d1035a40f338bc87ef3fe1a7b4810dfc.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t1_pixel_turret_paint_normal.jpg-d1035a40f338bc87ef3fe1a7b4810dfc.s3tc.ctex", "res://.godot/imported/turret_grach_t1_pixel_turret_paint_normal.jpg-d1035a40f338bc87ef3fe1a7b4810dfc.etc2.ctex"]
 
 [params]
 

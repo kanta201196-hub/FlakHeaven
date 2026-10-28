@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://du3j4op2itiar"
-path="res://.godot/imported/turret_grach_t1_sea_fog_turret_paint_pods_normal.jpg-a24a2fd3daba888b895ae60d716c4ecf.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t1_sea_fog_turret_paint_pods_normal.jpg-a24a2fd3daba888b895ae60d716c4ecf.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t1_sea_fog_turret_paint_pods_normal.jpg-a24a2fd3daba888b895ae60d716c4ecf.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "98a97008af66b58049606554f012e49f"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t1_sea_fog_turret_paint_pods_normal.jpg"
-dest_files=["res://.godot/imported/turret_grach_t1_sea_fog_turret_paint_pods_normal.jpg-a24a2fd3daba888b895ae60d716c4ecf.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t1_sea_fog_turret_paint_pods_normal.jpg-a24a2fd3daba888b895ae60d716c4ecf.s3tc.ctex", "res://.godot/imported/turret_grach_t1_sea_fog_turret_paint_pods_normal.jpg-a24a2fd3daba888b895ae60d716c4ecf.etc2.ctex"]
 
 [params]
 

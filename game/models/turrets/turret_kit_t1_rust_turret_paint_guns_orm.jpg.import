@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bp0ja3q5ns3oq"
-path="res://.godot/imported/turret_kit_t1_rust_turret_paint_guns_orm.jpg-6a6ef0a0c70e65b36fbcfa485b53206c.ctex"
+path.s3tc="res://.godot/imported/turret_kit_t1_rust_turret_paint_guns_orm.jpg-6a6ef0a0c70e65b36fbcfa485b53206c.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t1_rust_turret_paint_guns_orm.jpg-6a6ef0a0c70e65b36fbcfa485b53206c.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "a07683124b0b43eb6c512dbd013b2b86"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_t1_rust_turret_paint_guns_orm.jpg"
-dest_files=["res://.godot/imported/turret_kit_t1_rust_turret_paint_guns_orm.jpg-6a6ef0a0c70e65b36fbcfa485b53206c.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t1_rust_turret_paint_guns_orm.jpg-6a6ef0a0c70e65b36fbcfa485b53206c.s3tc.ctex", "res://.godot/imported/turret_kit_t1_rust_turret_paint_guns_orm.jpg-6a6ef0a0c70e65b36fbcfa485b53206c.etc2.ctex"]
 
 [params]
 

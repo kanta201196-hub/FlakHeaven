@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bklj5mi00tln1"
-path="res://.godot/imported/turret_grach_t2_ash_turret_paint_guns_normal.jpg-fcf209c45f10b00f0bddb8ee7d13b37e.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t2_ash_turret_paint_guns_normal.jpg-fcf209c45f10b00f0bddb8ee7d13b37e.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t2_ash_turret_paint_guns_normal.jpg-fcf209c45f10b00f0bddb8ee7d13b37e.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "57b0b2425e76affda9191ec24f86960b"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t2_ash_turret_paint_guns_normal.jpg"
-dest_files=["res://.godot/imported/turret_grach_t2_ash_turret_paint_guns_normal.jpg-fcf209c45f10b00f0bddb8ee7d13b37e.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t2_ash_turret_paint_guns_normal.jpg-fcf209c45f10b00f0bddb8ee7d13b37e.s3tc.ctex", "res://.godot/imported/turret_grach_t2_ash_turret_paint_guns_normal.jpg-fcf209c45f10b00f0bddb8ee7d13b37e.etc2.ctex"]
 
 [params]
 

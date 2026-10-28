@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ir6lvmex4pcc"
-path="res://.godot/imported/turret_grach_t3_chequer_turret_paint_guns_albedo.jpg-ec44ce949f47c682eb3cc697d0556478.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t3_chequer_turret_paint_guns_albedo.jpg-ec44ce949f47c682eb3cc697d0556478.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t3_chequer_turret_paint_guns_albedo.jpg-ec44ce949f47c682eb3cc697d0556478.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "7a139750f03edb13772c785fa80f6fc3"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t3_chequer_turret_paint_guns_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_t3_chequer_turret_paint_guns_albedo.jpg-ec44ce949f47c682eb3cc697d0556478.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t3_chequer_turret_paint_guns_albedo.jpg-ec44ce949f47c682eb3cc697d0556478.s3tc.ctex", "res://.godot/imported/turret_grach_t3_chequer_turret_paint_guns_albedo.jpg-ec44ce949f47c682eb3cc697d0556478.etc2.ctex"]
 
 [params]
 

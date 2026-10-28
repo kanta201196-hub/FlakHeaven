@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://x7167w5qgwcn"
-path="res://.godot/imported/turret_grach_t2_rust_turret_paint_guns_orm.jpg-70347eac9da298f72fa85b9d1bd700cc.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t2_rust_turret_paint_guns_orm.jpg-70347eac9da298f72fa85b9d1bd700cc.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t2_rust_turret_paint_guns_orm.jpg-70347eac9da298f72fa85b9d1bd700cc.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d2d258d10bc20e6d303d460b8de7c237"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t2_rust_turret_paint_guns_orm.jpg"
-dest_files=["res://.godot/imported/turret_grach_t2_rust_turret_paint_guns_orm.jpg-70347eac9da298f72fa85b9d1bd700cc.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t2_rust_turret_paint_guns_orm.jpg-70347eac9da298f72fa85b9d1bd700cc.s3tc.ctex", "res://.godot/imported/turret_grach_t2_rust_turret_paint_guns_orm.jpg-70347eac9da298f72fa85b9d1bd700cc.etc2.ctex"]
 
 [params]
 

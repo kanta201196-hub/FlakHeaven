@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bufj8pt5ht7ys"
-path="res://.godot/imported/turret_grach_t1_forest_turret_paint_albedo.jpg-92e7585c2a557801a837e87b544cc171.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t1_forest_turret_paint_albedo.jpg-92e7585c2a557801a837e87b544cc171.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t1_forest_turret_paint_albedo.jpg-92e7585c2a557801a837e87b544cc171.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "882f039adf15c7f1db87181766dde1b8"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t1_forest_turret_paint_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_t1_forest_turret_paint_albedo.jpg-92e7585c2a557801a837e87b544cc171.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t1_forest_turret_paint_albedo.jpg-92e7585c2a557801a837e87b544cc171.s3tc.ctex", "res://.godot/imported/turret_grach_t1_forest_turret_paint_albedo.jpg-92e7585c2a557801a837e87b544cc171.etc2.ctex"]
 
 [params]
 

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bk0fgs516h45j"
-path="res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_pods_albedo.jpg-38863592c84c49ab08d946c5160bef1f.ctex"
+path.s3tc="res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_pods_albedo.jpg-38863592c84c49ab08d946c5160bef1f.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_pods_albedo.jpg-38863592c84c49ab08d946c5160bef1f.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "3c859624049da2d6013258692c345e14"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_quad_arctic_tiger_turret_paint_pods_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_pods_albedo.jpg-38863592c84c49ab08d946c5160bef1f.ctex"]
+dest_files=["res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_pods_albedo.jpg-38863592c84c49ab08d946c5160bef1f.s3tc.ctex", "res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_pods_albedo.jpg-38863592c84c49ab08d946c5160bef1f.etc2.ctex"]
 
 [params]
 

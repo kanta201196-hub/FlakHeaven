@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c2trtdvahu6qx"
-path="res://.godot/imported/turret_kit_tail_ball_t3_dazzle_turret_paint_pods_normal.jpg-a6cd23db4b2adc8906475fad1d1601e4.ctex"
+path.s3tc="res://.godot/imported/turret_kit_tail_ball_t3_dazzle_turret_paint_pods_normal.jpg-a6cd23db4b2adc8906475fad1d1601e4.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_tail_ball_t3_dazzle_turret_paint_pods_normal.jpg-a6cd23db4b2adc8906475fad1d1601e4.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "2bc64241dd9b315f266810188431b2a3"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_tail_ball_t3_dazzle_turret_paint_pods_normal.jpg"
-dest_files=["res://.godot/imported/turret_kit_tail_ball_t3_dazzle_turret_paint_pods_normal.jpg-a6cd23db4b2adc8906475fad1d1601e4.ctex"]
+dest_files=["res://.godot/imported/turret_kit_tail_ball_t3_dazzle_turret_paint_pods_normal.jpg-a6cd23db4b2adc8906475fad1d1601e4.s3tc.ctex", "res://.godot/imported/turret_kit_tail_ball_t3_dazzle_turret_paint_pods_normal.jpg-a6cd23db4b2adc8906475fad1d1601e4.etc2.ctex"]
 
 [params]
 

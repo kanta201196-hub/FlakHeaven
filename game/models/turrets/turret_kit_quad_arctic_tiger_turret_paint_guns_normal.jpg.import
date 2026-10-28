@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cs0rjd0ehdh20"
-path="res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_guns_normal.jpg-ecf207f1d327919fa09e0d4096c3c9b4.ctex"
+path.s3tc="res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_guns_normal.jpg-ecf207f1d327919fa09e0d4096c3c9b4.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_guns_normal.jpg-ecf207f1d327919fa09e0d4096c3c9b4.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "c10ccfef265704320b83961fba404eac"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_kit_quad_arctic_tiger_turret_paint_guns_normal.jpg"
-dest_files=["res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_guns_normal.jpg-ecf207f1d327919fa09e0d4096c3c9b4.ctex"]
+dest_files=["res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_guns_normal.jpg-ecf207f1d327919fa09e0d4096c3c9b4.s3tc.ctex", "res://.godot/imported/turret_kit_quad_arctic_tiger_turret_paint_guns_normal.jpg-ecf207f1d327919fa09e0d4096c3c9b4.etc2.ctex"]
 
 [params]
 

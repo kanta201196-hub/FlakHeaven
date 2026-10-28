@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d3m85a3fvilgg"
-path="res://.godot/imported/turret_grach_t2_arctic_tiger_turret_paint_albedo.jpg-1b57ae4e714a15bf0d8c88168e3c1da3.ctex"
+path.s3tc="res://.godot/imported/turret_grach_t2_arctic_tiger_turret_paint_albedo.jpg-1b57ae4e714a15bf0d8c88168e3c1da3.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t2_arctic_tiger_turret_paint_albedo.jpg-1b57ae4e714a15bf0d8c88168e3c1da3.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "b741a2272058562a8a7519af8e0792d2"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_t2_arctic_tiger_turret_paint_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_t2_arctic_tiger_turret_paint_albedo.jpg-1b57ae4e714a15bf0d8c88168e3c1da3.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t2_arctic_tiger_turret_paint_albedo.jpg-1b57ae4e714a15bf0d8c88168e3c1da3.s3tc.ctex", "res://.godot/imported/turret_grach_t2_arctic_tiger_turret_paint_albedo.jpg-1b57ae4e714a15bf0d8c88168e3c1da3.etc2.ctex"]
 
 [params]
 
