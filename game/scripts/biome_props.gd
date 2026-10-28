@@ -208,9 +208,16 @@ func _low_poly(kind: String) -> Mesh:
 	return mesh
 
 
-## Строка вида: Нагорье (KINDS) или «Архипелаг» (SeaProps.KINDS, полный путь к модели)
+## Row of a kind: Highland (KINDS) or Archipelago (SeaProps.KINDS, full model path). An unknown kind gets an
+## empty row (no model, so nothing is drawn) and a warning naming it instead of a script error: one such error
+## was seen once in a Forward+ bench run and did not repeat, so the warning keeps the kind visible if it does
 func _row(kind: String) -> Array:
-	return KINDS[kind] if KINDS.has(kind) else SeaProps.KINDS[kind]
+	if KINDS.has(kind):
+		return KINDS[kind]
+	if SeaProps.KINDS.has(kind):
+		return SeaProps.KINDS[kind]
+	push_warning("BiomeProps: unknown prop kind '%s'" % kind)
+	return ["", 0.0, 0.0]
 
 
 func _count_meshes(n: Node) -> int:
