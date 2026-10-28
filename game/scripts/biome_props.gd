@@ -82,19 +82,57 @@ const ROCK_KINDS := ["outcrop_b", "outcrop_c", "boulders_b", "boulders_c", "spir
 
 ## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
 const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
-static var _force_plane := -2
+
+# Worker-thread copies of the lists plan() reads by index. plan() runs on Terrain3D's worker threads, and a
+# GDScript const Array is read-only: Godot 4.4 hands out each element of a read-only Array through one scratch
+# slot per array (Array::operator[] const), so threads reading the same const list overwrite each other's
+# value. A rock then drew the wrong variant, a size range mixed its ends, and once the kind came out empty
+# (SCRIPT ERROR in _row, Forward+ bench 28.10; tests/props_thread_test.gd). Packed arrays have no such slot and
+# Dictionary lookups are safe. The tables are built once when the script loads, on the main thread (Render3D
+# creates BiomeProps before any chunk task), and never change after that. The consts stay the source of truth.
+static var _variants := _variant_table()   # base rock kind → PackedStringArray of ROCK_VARIANTS
+static var _sizes := _size_table()         # kind → PackedFloat64Array [min, max] width in px (KINDS)
+static var _planes := PackedStringArray(PLANE_KINDS)
+static var _force_plane := _wreckvar_arg()
+
+
+## ROCK_VARIANTS as packed string lists, for reading on worker threads (see _variants)
+static func _variant_table() -> Dictionary:
+	var out := {}
+	for base: String in ROCK_VARIANTS:
+		out[base] = PackedStringArray(ROCK_VARIANTS[base])
+	return out
+
+
+## The width range of every Highland kind as a packed [min, max] pair, for reading on worker threads (see
+## _variants); float64, so the widths drawn are bit-for-bit the KINDS values
+static func _size_table() -> Dictionary:
+	var out := {}
+	for kind: String in KINDS:
+		out[kind] = PackedFloat64Array([float(KINDS[kind][1]), float(KINDS[kind][2])])
+	return out
+
+
+## Bench option --wreckvar=N (index into PLANE_KINDS), read once at script load; -1 when it is not given
+static func _wreckvar_arg() -> int:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--wreckvar="):
+			return clampi(int(a.get_slice("=", 1)), 0, PLANE_KINDS.size() - 1)
+	return -1
 
 
 ## Вариант обломков по месту (детерминированно, без случайных чисел клетки — расстановка не меняется);
-## стенд: --wreckvar=N — всем обломкам вариант N (0 — a, 1 — b, 2 — c, 3 — вертолёт)
+## стенд: --wreckvar=N — всем обломкам вариант N (0 — a, 1 — b, 2 — c, 3 — вертолёт). Called from plan() on
+## worker threads, so it reads the packed copy _planes, not PLANE_KINDS
 static func plane_kind(p: Vector2) -> String:
-	if _force_plane == -2:
-		_force_plane = -1
-		for a in OS.get_cmdline_user_args():
-			if a.begins_with("--wreckvar="):
-				_force_plane = clampi(int(a.get_slice("=", 1)), 0, PLANE_KINDS.size() - 1)
-	var i := _force_plane if _force_plane >= 0 else absi(hash(Vector2i(roundi(p.x), roundi(p.y)))) % PLANE_KINDS.size()
-	return PLANE_KINDS[i]
+	var i := _force_plane if _force_plane >= 0 else absi(hash(Vector2i(roundi(p.x), roundi(p.y)))) % _planes.size()
+	return _planes[i]
+
+
+## Random width of a kind from its KINDS range: one rng draw, as before (worker-safe through _sizes)
+static func _rand_width(rng: RandomNumberGenerator, kind: String) -> float:
+	var r: PackedFloat64Array = _sizes[kind]
+	return rng.randf_range(r[0], r[1])
 
 var _meshes := {}   # вид → Mesh (или null, если модели нет)
 var _t: Terrain3D
@@ -208,15 +246,16 @@ func _low_poly(kind: String) -> Mesh:
 	return mesh
 
 
-## Row of a kind: Highland (KINDS) or Archipelago (SeaProps.KINDS, full model path). An unknown kind gets an
-## empty row (no model, so nothing is drawn) and a warning naming it instead of a script error: one such error
-## was seen once in a Forward+ bench run and did not repeat, so the warning keeps the kind visible if it does
+## Row of a kind: Highland (KINDS) or Archipelago (SeaProps.KINDS, full model path). An unknown kind is a bug
+## (it is how the worker-thread race above showed): debug builds stop on an assert naming it, which the CI checks
+## catch as a SCRIPT ERROR; a release build draws nothing for that kind instead of failing the whole chunk
 func _row(kind: String) -> Array:
 	if KINDS.has(kind):
 		return KINDS[kind]
 	if SeaProps.KINDS.has(kind):
 		return SeaProps.KINDS[kind]
-	push_warning("BiomeProps: unknown prop kind '%s'" % kind)
+	push_error("BiomeProps: unknown prop kind '%s'" % kind)
+	assert(false, "BiomeProps: unknown prop kind '%s'" % kind)
 	return ["", 0.0, 0.0]
 
 
@@ -499,14 +538,14 @@ func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2,
 	for k in keep_out:
 		if p.distance_to(k[0]) < float(k[1]):
 			return
-	_add_sized(rng, put, kind, p, rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2])), ctx)
+	_add_sized(rng, put, kind, p, _rand_width(rng, kind), ctx)
 
 
 ## One model of `kind` at p, w px wide (shrunk high up and capped below the combat plane); a rock kind may be
 ## swapped for one of its ROCK_VARIANTS here, before the height cap, so the cap uses the variant's own height
 func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, w: float, ctx: Dictionary) -> void:
-	if ROCK_VARIANTS.has(kind):
-		var vs: Array = ROCK_VARIANTS[kind]
+	if _variants.has(kind):
+		var vs: PackedStringArray = _variants[kind]
 		kind = vs[absi(hash(Vector2i(roundi(p.x / 97.0), roundi(p.y / 97.0)))) % vs.size()]
 	# M-35: ни один предмет биома (дерево, куст, валун, юрта, мешки) не залезает кроной/краем в охранную зону реки
 	# S9-07: и в охранную полосу ручья посёлка (протоки) — river_field её не видит
@@ -557,7 +596,7 @@ func _bridges(rng: RandomNumberGenerator, put: Dictionary, obj: Dictionary, key:
 			continue
 		var q: Vector2 = (s[0] as Vector2).lerp(s[1], f0 / (f0 - f1))
 		if _in_chunk(q, ox, oz):
-			_put_bridge(put, "bridge", q, _road_dir(q).angle(), KINDS["bridge"][1], ctx)
+			_put_bridge(put, "bridge", q, _road_dir(q).angle(), (_sizes["bridge"] as PackedFloat64Array)[0], ctx)
 	var spots := []
 	for dx in [-1, 0, 1]:   # точка реки у оазиса может лежать в соседней клетке
 		for dz in [-1, 0, 1]:
@@ -571,7 +610,7 @@ func _bridges(rng: RandomNumberGenerator, put: Dictionary, obj: Dictionary, key:
 			spots.append(q)
 	for q: Vector2 in spots:
 		if _in_chunk(q, ox, oz) and absf(_t.river_field(q.x, q.y)) < 6.0:
-			_put_bridge(put, "footbridge", q, _river_normal(q).angle(), rng.randf_range(KINDS["footbridge"][1], KINDS["footbridge"][2]), ctx)
+			_put_bridge(put, "footbridge", q, _river_normal(q).angle(), _rand_width(rng, "footbridge"), ctx)
 
 
 func _river_normal(q: Vector2) -> Vector2:
@@ -713,7 +752,7 @@ func _wreck_on_ground(p: Vector2, w: float, yaw: float, s: Vector3, ctx: Diction
 
 ## Машина стоит вдоль дороги (нос по направлению дороги, лёгкий разворот)
 func _add_vehicle(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, dir: Vector2, ctx: Dictionary) -> void:
-	var w := rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2]))
+	var w := _rand_width(rng, kind)
 	var s := _t.surface(p.x, p.y, ctx)
 	var yaw := -dir.angle() + rng.randf_range(-0.35, 0.35) + (PI if rng.randf() < 0.5 else 0.0)
 	var t := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.03, 0))
