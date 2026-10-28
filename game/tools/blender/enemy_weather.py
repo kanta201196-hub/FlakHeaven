@@ -58,7 +58,8 @@ def source(glb):
 
 # Recipes. kind: air | ground | sea; m — the model's real length in metres (the GLB is 1 long), so chips, panels,
 # streaks and soot keep a real size on every model; panel_m — panel size (default 1.3 m); wear, grime, fade, dust,
-# salt, seam — layer strengths (1 = default); bevel_m / ao_m — the edge and occlusion radii of the bake.
+# salt, seam — layer strengths (1 = default); bevel_m / ao_m — the edge and occlusion radii of the bake;
+# soft_sat — source paint less saturated than this is canvas or rubber and gets no chips.
 # Propeller nodes (prop_*) add exhaust soot behind them; rear-facing occluded faces (jet nozzles) are burnt dark.
 RECIPES = {
     # ---- air: Highland (drone, interceptor, missile carrier, bomber, transport, helicopter, rival ace, aces
@@ -79,7 +80,7 @@ RECIPES = {
     "e_zsu": {"kind": "ground", "m": 7.0, "seed": 20},
     "e_sam": {"kind": "ground", "m": 12.0, "seed": 21},
     "e_radar": {"kind": "ground", "m": 10.0, "seed": 22},
-    "e_convoy_truck": {"kind": "ground", "m": 8.0, "seed": 23},
+    "e_convoy_truck": {"kind": "ground", "m": 8.0, "seed": 23, "soft_sat": 0.19},
     "e_convoy_pickup_tent": {"kind": "ground", "m": 5.5, "seed": 24},
     "e_convoy_scout": {"kind": "ground", "m": 7.0, "seed": 25},
     "e_convoy_technical": {"kind": "ground", "m": 5.5, "seed": 26},
@@ -252,6 +253,13 @@ def layers(P, N, Bd, AO, glass, src, srough, rec, texel):
     w = np.maximum(w, lead * wear * (fbm(Pm * np.array([1.0, 0.3, 1.0], np.float32), 14.0, seed + 6, 2) - 0.5) * 2.2)
     # scattered chips away from edges: small, primer only (on canvas or a broad hood a big bare patch reads fake)
     w = np.maximum(w, np.minimum((fbm(Pm, 9.0, seed + 7, 3) - 0.8) * 2.2 * wear * (chipn > 0.58), 0.25))
+    if rec.get("soft_sat"):
+        # canvas and rubber: grey, unsaturated source paint; their wrinkles read as edges to the bevel bake, but
+        # cloth does not chip, so no chips there
+        mx = src.max(axis=1)
+        sat = (mx - src.min(axis=1)) / (mx + 1e-3)
+        soft = (1.0 - sstep(rec["soft_sat"] - 0.04, rec["soft_sat"] + 0.03, sat)) * (mx > 0.2)
+        w = w - 1.5 * soft
     primer = sstep(0.0, 0.05, w) * paint
     # bare metal only in the deepest chips, broken up by the chip noise so thin parts (flap gaps, track
     # teeth) never turn into one continuous bright line
