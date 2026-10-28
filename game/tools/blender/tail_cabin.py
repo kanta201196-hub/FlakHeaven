@@ -3,8 +3,18 @@
 механизация крыла (wing_mech.py): models/mech/fh_tail_<класс>_<ур>.glb.
 Сечение берётся с самой модели: эллипс фюзеляжа в X0 (лучи сверху, снизу и сбоку), дальше к X1 корпус
 плавно сужается до шара установки. Цвет обшивки — вершинный, снят с текстуры фюзеляжа по кругу сечения,
-поэтому верх и низ кабины того же тона, что фюзеляж перед ней. Сверху у торца — остеклённый фонарь
-с переплётами, по бокам окна. Узел ball_mount — центр шара со стволами (игра ставит туда турель).
+поэтому верх и низ кабины того же тона, что фюзеляж перед ней. Узел ball_mount — центр шара со стволами
+(игра ставит туда турель).
+
+Weak-models list (Kanta 28.10, «кабина — капля»): the glazing is no longer a glass egg with torus hoops stuck on
+the cone. The cabin is one lofted shell whose own quads are the details: over the rear of the cabin the upper
+quads are panes set a little into the skin between frame strips (bows every third segment, a ring frame every
+third ring), a flush side window each side ahead of it, a dark seam line where the cabin meets the fuselage and
+a dark collar round the ball; short walls join the inset panes to the skin, so every frame edge is crisp.
+Paint is matte (roughness 0.85); the livery shader repaints the skin (mech_skin) as before.
+Build from the hangar model, the same skin the battle model is baked from (battle_bake.py):
+  python3 tail_cabin.py game/models/hangar/fh_hangar_bomber_1.glb bomber_1 game/models/mech/fh_tail_bomber_1.glb \
+      --tex=game/models/hangar/fh_hangar_bomber_1_col.jpg
 
 Запуск (bpy 5.x): python3 tail_cabin.py <модель ангара.glb> <класс_ур> <out.glb> [--tex=<извлечённая *_0.png>]
 --tex — цвет обшивки брать с извлечённой текстуры (там окраска splinter_camo.py), а не со встроенной в GLB.
@@ -23,7 +33,10 @@ TAILS = {
     "bomber_1": (-0.39, -0.478, 0.6),
     "bomber_2": (-0.385, -0.468, 0.55),
 }
-RINGS, SEG = 10, 28
+RINGS, SEG = 18, 36
+SEAM_RING = 1          # the dark joint line with the fuselage
+GLAZE0 = 8             # the canopy panes from this ring to the collar
+WIN0, WIN1 = 4, 7      # the side windows
 GROW = 1.06          # кабина чуть толще конуса фюзеляжа, чтобы его закрыть
 DARK = 0.9
 
@@ -115,104 +128,107 @@ def mat(name, col=None, rough=0.5, metal=0.3, alpha=1.0):
     return m
 
 
-M_SKIN = mat("mech_skin")
-M_DARK = mat("tail_dark", (0.06, 0.06, 0.065, 1), 0.5, 0.5)
+M_SKIN = mat("mech_skin", None, 0.85, 0.1)
+M_DARK = mat("tail_dark", (0.05, 0.05, 0.055, 1), 0.75, 0.3)
 M_GLASS = mat("tail_glass", (0.06, 0.1, 0.12, 1), 0.08, 0.6)
 
 
 def section(i):
+    """x, half-width and half-height of ring i (0 = the joint inside the fuselage, RINGS = the ball end)"""
     f = i / RINGS
     s = GROW * (1.0 - (1.0 - TAPER) * f * f)
     return X0 + (X1 - X0) * f, a0 * s, b0 * s
 
 
+def kind(i, k):
+    """What the quad between rings i, i+1 and segments k, k+1 is: skin, glass, frame (skin between the panes),
+    seam (the dark joint line at the fuselage) or collar (the dark ring round the ball)."""
+    t = 2 * math.pi * (k + 0.5) / SEG
+    up = math.sin(t)                 # +1 on top, -1 under the belly
+    side = abs(math.cos(t))          # 1 on the flanks
+    if i == SEAM_RING:
+        return "seam"
+    if i >= RINGS - 1:
+        return "collar"
+    if GLAZE0 <= i < RINGS - 1 and up > 0.25:          # the gunner's canopy over the rear of the cabin
+        if (i - GLAZE0) % 3 == 2 or k % 3 == 0:        # ring frames every third ring, bows every third segment
+            return "frame"
+        return "glass"
+    if WIN0 <= i < WIN1 and side > 0.8 and abs(up) < 0.5:   # a side window each side, ahead of the canopy
+        return "glass"
+    return "skin"
+
+
+# panes and the seam sit a little below the skin; short walls join the levels, so each step reads as a crisp edge
+INSET = {"skin": 1.0, "frame": 1.0, "glass": 0.975, "seam": 0.985, "collar": 1.0}
+MATS = {"skin": 0, "frame": 0, "glass": 1, "seam": 2, "collar": 2}
 bm = bmesh.new()
 colk = bm.loops.layers.color.new("Col")
-rings = []
-for i in range(RINGS + 1):
-    x, a, b = section(i)
-    rings.append([bm.verts.new((x, math.cos(2 * math.pi * k / SEG) * a, zc + math.sin(2 * math.pi * k / SEG) * b))
-                  for k in range(SEG)])
-for i in range(RINGS):
-    for k in range(SEG):
-        k2 = (k + 1) % SEG
-        f = bm.faces.new((rings[i][k], rings[i][k2], rings[i + 1][k2], rings[i + 1][k]))
-        for lp, kk in zip(f.loops, (k, k2, k2, k)):
-            lp[colk] = ring_col[kk]
-# торец под шар закрыт обшивкой (тёмный только тонкий погон — тор ниже)
+_vc = {}
+
+
+def vert(i, k, s):
+    """Shared vertex of ring i, segment k at inset s"""
+    key = (i, k % SEG, s)
+    if key not in _vc:
+        x, a, b = section(i)
+        t = 2 * math.pi * (k % SEG) / SEG
+        _vc[key] = bm.verts.new((x, math.cos(t) * a * s, zc + math.sin(t) * b * s))
+    return _vc[key]
+
+
+def face(vs, mat, cols):
+    """New face on the given verts with material index `mat`; corner colours come from the sampled skin ring
+    (one segment per corner). The dark material (2) is flat-shaded so seams and walls read as crisp lines."""
+    f = bm.faces.new(vs)
+    f.material_index = mat
+    f.smooth = mat != 2
+    for lp, kk in zip(f.loops, cols):
+        lp[colk] = ring_col[kk % SEG]
+    return f
+
+
+grid = {(i, k): kind(i, k) for i in range(RINGS) for k in range(SEG)}
+for (i, k), kd in grid.items():
+    s = INSET[kd]
+    face((vert(i, k, s), vert(i, k + 1, s), vert(i + 1, k + 1, s), vert(i + 1, k, s)), MATS[kd], (k, k + 1, k + 1, k))
+    # wall to the next segment (shared radial edge at k + 1)
+    s2 = INSET[grid[(i, (k + 1) % SEG)]]
+    if s2 != s:
+        lo_s = min(s, s2)
+        hi_s = max(s, s2)
+        face((vert(i, k + 1, hi_s), vert(i + 1, k + 1, hi_s), vert(i + 1, k + 1, lo_s), vert(i, k + 1, lo_s)), 2,
+             (k + 1,) * 4)
+    # wall to the next ring (shared edge at ring i + 1)
+    if i + 1 < RINGS:
+        s2 = INSET[grid[(i + 1, k)]]
+        if s2 != s:
+            lo_s = min(s, s2)
+            hi_s = max(s, s2)
+            face((vert(i + 1, k, hi_s), vert(i + 1, k + 1, hi_s), vert(i + 1, k + 1, lo_s), vert(i + 1, k, lo_s)), 2,
+                 (k, k + 1, k + 1, k))
+# the end under the ball is closed (dark: only the collar shows round the ball)
 cen = bm.verts.new((X1, 0, zc))
 for k in range(SEG):
-    f = bm.faces.new((rings[-1][(k + 1) % SEG], rings[-1][k], cen))
-    for lp, kk in zip(f.loops, ((k + 1) % SEG, k, k)):
-        lp[colk] = ring_col[kk]
-# трубка открыта спереди — recalc_face_normals ошибается; разворачиваем по радиусу: нормали наружу
+    face((vert(RINGS, k + 1, 1.0), vert(RINGS, k, 1.0), cen), 2, (k + 1, k, k))
 bm.normal_update()
 for f in bm.faces:
     c = f.calc_center_median()
-    out = Vector((0, c.y, c.z - zc)) if (c.y ** 2 + (c.z - zc) ** 2) > 1e-10 else Vector((-1, 0, 0))
+    out = Vector((0, c.y, c.z - zc)) if (c.y ** 2 + (c.z - zc) ** 2) > 1e-10 else Vector((1, 0, 0))
+    if len(f.verts) == 4 and f.material_index == 2 and abs(f.normal.x) > 0.7:
+        continue   # ring walls face along the axis; recalc below keeps them consistent
     if f.normal.dot(out) < 0:
         f.normal_flip()
 me = bpy.data.meshes.new("tail_cabin")
 bm.to_mesh(me)
 bm.free()
 me.materials.append(M_SKIN)
+me.materials.append(M_GLASS)
+me.materials.append(M_DARK)
 cab = bpy.data.objects.new("tail_cabin", me)
 sc.collection.objects.link(cab)
 parts = [cab]
 
-
-def add(ob, m):
-    ob.data.materials.clear()
-    ob.data.materials.append(m)
-    for p in ob.data.polygons:
-        p.use_smooth = True
-    parts.append(ob)
-    return ob
-
-
-# фонарь стрелка: остеклённый горб сверху у торца с переплётами
-xe, ae, be = section(RINGS)
-xm, am, bm_ = section(int(RINGS * 0.55))
-cx = (xm + xe) * 0.5
-bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=1, location=(cx, 0, zc + bm_ * 0.62))
-can = bpy.context.object
-can.scale = (abs(xe - xm) * 0.55, am * 0.6, bm_ * 0.5)
-bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-add(can, M_GLASS)
-for fx in (-0.5, 0.0, 0.5):
-    x = cx + fx * abs(xe - xm) * 0.55
-    k = math.sqrt(max(0.0, 1 - fx * fx))
-    bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.04, major_segments=24, minor_segments=6,
-                                     location=(x, 0, zc + bm_ * 0.62), rotation=(0, math.pi / 2, 0))
-    fr = bpy.context.object
-    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-    fr.scale = (0.02, am * 0.6 * k * 1.03, bm_ * 0.5 * k * 1.03)
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    add(fr, M_DARK)
-# боковые окна
-for sgn in (1, -1):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=1,
-                                         location=(xm + (xe - xm) * 0.2, sgn * am * 0.97, zc + bm_ * 0.1))
-    w = bpy.context.object
-    w.scale = (abs(xe - xm) * 0.22, am * 0.08, bm_ * 0.22)
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    add(w, M_GLASS)
-# шов на стыке с фюзеляжем и погон шара
-for x, m in ((X0 + (X1 - X0) * 0.08, M_DARK), (X1, M_DARK)):
-    _, a, b = section(0 if x != X1 else RINGS)
-    bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.05, major_segments=SEG, minor_segments=6,
-                                     location=(x, 0, zc), rotation=(0, math.pi / 2, 0))
-    t = bpy.context.object
-    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-    t.scale = (0.03, a * 1.01, b * 1.01)
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    add(t, m)
-
-bpy.ops.object.select_all(action="DESELECT")
-for p in parts:
-    p.select_set(True)
-bpy.context.view_layer.objects.active = cab
-bpy.ops.object.join()
 mount = bpy.data.objects.new("ball_mount", None)
 mount.location = (X1 - 0.002, 0, zc)
 sc.collection.objects.link(mount)
@@ -221,7 +237,7 @@ mount.matrix_parent_inverse = cab.matrix_world.inverted()
 for o in plane:
     bpy.data.objects.remove(o, do_unlink=True)
 for o in list(sc.objects):
-    if o.type not in ("MESH", "EMPTY"):
+    if o.type not in ("MESH", "EMPTY") or (o.type == "EMPTY" and o is not mount):   # importer leftovers too
         bpy.data.objects.remove(o, do_unlink=True)
 bpy.ops.export_scene.gltf(filepath=dst, export_format="GLB", export_materials="EXPORT", export_vertex_color="MATERIAL")
-print("TAIL %s: %d tris, ball at x=%.3f z=%.4f end r=%.4f/%.4f" % (dst, sum(len(p.vertices) - 2 for p in cab.data.polygons), X1, zc, ae, be))
+print("TAIL %s: %d tris, ball at x=%.3f z=%.4f end r=%.4f/%.4f" % (dst, sum(len(p.vertices) - 2 for p in cab.data.polygons), X1, zc, *section(RINGS)[1:]))
