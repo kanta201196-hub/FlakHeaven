@@ -101,7 +101,8 @@ RECIPES = {
     "e_albatross": {"kind": "air", "m": 30.0, "seed": 15, "mode": "set", "size": 2048, "salt": 0.6},
     "e_ship_escort": {"kind": "sea", "m": 25.0, "seed": 44, "mode": "set", "size": 1024},
     "e_ship_landing": {"kind": "sea", "m": 20.0, "seed": 45, "mode": "set", "size": 2048},
-    "e_leviathan": {"kind": "sea", "m": 250.0, "seed": 46, "mode": "set", "size": 2048},
+    # no "e_leviathan": a 250 m hull in one new 2048 atlas loses the deck markings and smears the deck (about
+    # 12 cm a texel before packing losses); it keeps its source textures until it gets its own per-part bake
 }
 # the Leviathan's knock-out parts (b2_leviathan.py REF: model length 1 = that many metres), whole and broken
 for _i, (_p, _m) in enumerate((("e_lev_turret", 26.0), ("e_lev_launcher", 10.0), ("e_lev_radar", 10.0), ("e_lev_zsu", 7.0))):
