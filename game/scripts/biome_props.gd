@@ -83,6 +83,21 @@ const ROCK_KINDS := ["outcrop_b", "outcrop_c", "boulders_b", "boulders_c", "spir
 ## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
 const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
 
+## Burnt-out ground vehicles (road columns and battle scenes): they lie along the ground like plane wrecks
+const VEHICLE_KINDS := ["tank", "truck"]
+
+## Share of its width a vehicle wreck sits below the ground fitted under it (_wreck_on_ground)
+const VEHICLE_SINK := 0.012
+
+## Steepest tilt of a vehicle wreck, rise over run (tan 15°): a hulk rests on fairly level ground
+const VEHICLE_SLOPE := 0.27
+
+## Plants _clear_wrecks keeps off wrecks: trees and bushes whose crowns would cover a hulk
+const PLANT_KINDS := ["poplar", "orchard", "palm", "shrub", "bush"]
+
+## Gap in px between a plant's crown and a wreck's half-length (_clear_wrecks)
+const WRECK_CLEAR := 6.0
+
 # Worker-thread copies of the lists plan() reads by index. plan() runs on Terrain3D's worker threads, and a
 # GDScript const Array is read-only: Godot 4.4 hands out each element of a read-only Array through one scratch
 # slot per array (Array::operator[] const), so threads reading the same const list overwrite each other's
@@ -93,6 +108,8 @@ const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
 static var _variants := _variant_table()   # base rock kind → PackedStringArray of ROCK_VARIANTS
 static var _sizes := _size_table()         # kind → PackedFloat64Array [min, max] width in px (KINDS)
 static var _planes := PackedStringArray(PLANE_KINDS)
+static var _vehicles := PackedStringArray(VEHICLE_KINDS)
+static var _plants := PackedStringArray(PLANT_KINDS)
 static var _force_plane := _wreckvar_arg()
 
 
@@ -155,25 +172,42 @@ func _mesh(kind: String) -> Mesh:
 	return _full_mesh(kind)
 
 
-## Дерево-карточки в габаритах полной модели (модели нормированы: ширина по X/Z = 1, низ в y = 0)
-func _lite_tree(kind: String) -> Mesh:
+## Tree cards in the full model's size (models are normalised: width 1 on X/Z, base at y = 0): a side card with
+## the baked side view and a horizontal card with the top view (tools/model_lab/bake_impostor.gd).
+## billboard (the drawn tree): one side card that turns about Y to face the camera. Two crossed side cards were
+## seen almost edge-on from the near-top-down camera and read as a dark X over the crown (Kanta 28.10). The card
+## keeps the instance's scale (billboard_keep_scale), and custom_aabb covers every turn so culling never drops it.
+## billboard = false: the two crossed cards, for the shadow-only copy on "Max" (apply), which nobody sees
+## and whose shadow should not turn with the camera.
+func _lite_tree(kind: String, billboard := true) -> Mesh:
 	var full := _full_mesh(kind)
 	var size := full.get_aabb().size if full != null else Vector3(1.0, 1.4, 1.0)
 	var h := size.y
 	var w := maxf(size.x, size.z)
 	var side_s := maxf(h, w)   # кадр «сбоку» — квадрат со стороной max(h, w), центр на середине высоты
+	var y0 := h * 0.5 - side_s * 0.5
 	var am := ArrayMesh.new()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for ang in [0.0, PI / 2.0]:
+	for ang: float in ([0.0] if billboard else [0.0, PI / 2.0]):
 		var ax := Vector3(cos(ang), 0, sin(ang)) * side_s * 0.5
-		var y0 := h * 0.5 - side_s * 0.5
 		_card(st, Vector3(0, y0, 0) - ax, Vector3(0, y0, 0) + ax, Vector3(0, y0 + side_s, 0) + ax, Vector3(0, y0 + side_s, 0) - ax, Vector3(-sin(ang), 0, cos(ang)))
 	st.commit(am)
-	am.surface_set_material(0, _card_mat(DIR + LITE[kind] + "_side.png"))
+	var side := _card_mat(DIR + LITE[kind] + "_side.png")
+	if billboard:
+		side.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+		side.billboard_keep_scale = true
+		var half := side_s * 0.5
+		var y_lo := minf(y0, 0.0)
+		am.custom_aabb = AABB(Vector3(-half, y_lo, -half), Vector3(side_s, maxf(y0 + side_s, h) - y_lo, side_s))
+	am.surface_set_material(0, side)
 	var st2 := SurfaceTool.new()
 	st2.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var yt := h * (0.72 if kind == "poplar" else (0.8 if kind == "palm" else 0.66))   # the palm crown sits on top of a bare trunk
+	# the palm crown sits on top of a bare trunk. With the billboard the top card of the broad crowns goes up near
+	# the crown top: from above it then hides the side card's crown, which otherwise showed as a stripe across it
+	var yt := h * (0.72 if kind == "poplar" else (0.8 if kind == "palm" else 0.66))
+	if billboard and kind != "poplar":
+		yt = h * 0.88
 	var r := w * 0.5
 	_card(st2, Vector3(-r, yt, r), Vector3(r, yt, r), Vector3(r, yt, -r), Vector3(-r, yt, -r), Vector3.UP)
 	st2.commit(am)
@@ -486,7 +520,50 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 			_add(rng, put, "yurt", q, keep_out, ctx)
 			_add(rng, put, "yurt", q + Vector2(60, 25), keep_out, ctx)
 			_add(rng, put, "shrub", q + Vector2(-40, 30), keep_out, ctx)
+	_clear_wrecks(put, key, ctx)
 	return put
+
+
+## Drops every plant (PLANT_KINDS) whose crown would reach over a wreck. Trees are placed before the road
+## columns, and the orchards and palms of a settlement ignore keep_out, so an orchard tree could stand on a
+## burnt-out tank (Kanta 28.10). Plants are removed after all placement instead of being redrawn, so the rng
+## sequence, and with it the rest of the chunk, stays exactly as before. Wrecks are the ones this chunk placed
+## and the vehicle and plane items of the neighbouring chunks' battle scenes (ctx "scenes"); a road column of a
+## neighbouring chunk is not known here. Worker-thread safe: reads only the packed tables and the snapshot ctx.
+func _clear_wrecks(put: Dictionary, key: Vector2i, ctx: Dictionary) -> void:
+	var blocks := []   # [centre, half-length]
+	for kind: String in put:
+		if _vehicles.has(kind) or _planes.has(kind):
+			for t: Transform3D in put[kind]:
+				blocks.append([Vector2(t.origin.x, t.origin.z), t.basis.x.length() * 0.5])
+	var scn: Dictionary = ctx.get("scenes", {})
+	for dx in [-1, 0, 1]:
+		for dz in [-1, 0, 1]:
+			if dx == 0 and dz == 0:
+				continue   # this chunk's scene wrecks are in put already
+			for it: Dictionary in scn.get(Vector2i(key.x + dx, key.y + dz), []):
+				if _vehicles.has(it["k"]) or it["k"] == "plane":
+					blocks.append([it["p"], float(it["w"]) * 0.5])
+	if blocks.is_empty():
+		return
+	for kind in _plants:
+		if not put.has(kind):
+			continue
+		var kept := []
+		for t: Transform3D in put[kind]:
+			var q := Vector2(t.origin.x, t.origin.z)
+			var reach := t.basis.x.length() * 0.5 + WRECK_CLEAR
+			var clear := true
+			for b: Array in blocks:
+				if q.distance_to(b[0]) < float(b[1]) + reach:
+					clear = false
+					break
+			if clear:
+				kept.append(t)
+		if kept.is_empty():
+			put.erase(kind)
+		else:
+			put[kind] = kept
 
 
 ## Модели в сцену (главный поток): каждый вид — один MultiMesh
@@ -518,9 +595,9 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		# отбрасывают «карточками» той же модели (6 треуг.) — в садах у кишлаков это ~0,6 млн треуг. в проходе теней
 		if not no_shadow and LITE.has(kind) and Settings.gopt("props") >= Settings.GFX_MAX:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			var lk: String = kind + "_lite"
+			var lk: String = kind + "_lite_shadow"
 			if not _meshes.has(lk):
-				_meshes[lk] = _lite_tree(kind)
+				_meshes[lk] = _lite_tree(kind, false)
 			var mm2 := MultiMesh.new()
 			mm2.transform_format = MultiMesh.TRANSFORM_3D
 			mm2.mesh = _meshes[lk]
@@ -715,11 +792,12 @@ func _add_scene(rng: RandomNumberGenerator, put: Dictionary, it: Dictionary, ctx
 		w = minf(w, (-30.0 - s.y) / maxf(hk, 0.01))
 	if w < 4.0:
 		return
-	# обломки самолётов (PLANE_KINDS) — с пятном гари и бороздой в модели: утапливаем меньше, чтобы их было видно
-	var sink := 0.01 if kind in PLANE_KINDS else 0.03
-	var t := Transform3D(Basis(Vector3.UP, -float(it["yaw"])).scaled(Vector3(w, w, w)), s - Vector3(0, w * sink, 0))
-	if kind in PLANE_KINDS:
+	# wrecks lie along the ground (_wreck_on_ground); the sandbag post stands level, sunk 3 %
+	var t := Transform3D(Basis(Vector3.UP, -float(it["yaw"])).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.03, 0))
+	if _planes.has(kind):
 		t = _wreck_on_ground(p, w, float(it["yaw"]), s, ctx)
+	elif _vehicles.has(kind):
+		t = _wreck_on_ground(p, w, float(it["yaw"]), s, ctx, VEHICLE_SINK, VEHICLE_SLOPE)
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)
@@ -727,8 +805,13 @@ func _add_scene(rng: RandomNumberGenerator, put: Dictionary, it: Dictionary, ctx
 
 ## A crashed plane lies along the ground under it: tilted to the slope fitted through a ring of samples and lifted
 ## where the ground bulges above that slope. A level model sank its downhill half and its own scorch quad into a
-## valley side, so the terrain showed through the hull and the wreck blended into the ground (Kanta 26.10)
-func _wreck_on_ground(p: Vector2, w: float, yaw: float, s: Vector3, ctx: Dictionary) -> Transform3D:
+## valley side, so the terrain showed through the hull and the wreck blended into the ground (Kanta 26.10).
+## Burnt-out tanks and trucks lie the same way: their long flat-bottomed hulls had the same fault (Kanta 28.10).
+## sink: how far below the fitted ground the model's base goes, as a share of w (a vehicle sits a little deeper,
+## so its tracks and wheels read as resting in the dust). max_slope: the steepest tilt allowed, as rise over run; a
+## battle scene can stand by a ledge, where the fit reached ~50° and laid a truck on its side (the lift then keeps
+## the capped hull above the ground instead).
+func _wreck_on_ground(p: Vector2, w: float, yaw: float, s: Vector3, ctx: Dictionary, sink := 0.005, max_slope := INF) -> Transform3D:
 	var r := w * 0.45
 	var pts: Array[Vector3] = []
 	var sx := 0.0
@@ -742,20 +825,25 @@ func _wreck_on_ground(p: Vector2, w: float, yaw: float, s: Vector3, ctx: Diction
 	# least-squares slope of y = a·x + b·z over the ring (Σx² = Σz² = 4r², Σxz = 0)
 	var a := sx / (4.0 * r * r)
 	var b := sz / (4.0 * r * r)
+	var g := Vector2(a, b).length()
+	if g > max_slope:
+		a *= max_slope / g
+		b *= max_slope / g
 	var nrm := Vector3(-a, 1.0, -b).normalized()
 	var lift := 0.0
 	for v in pts:
 		lift = maxf(lift, v.y - (a * v.x + b * v.z))
 	var bs := Basis(Quaternion(Vector3.UP, nrm)) * Basis(Vector3.UP, -yaw)
-	return Transform3D(bs.scaled(Vector3(w, w, w)), s + Vector3(0, lift * 0.8 - w * 0.005, 0))
+	return Transform3D(bs.scaled(Vector3(w, w, w)), s + Vector3(0, lift * 0.8 - w * sink, 0))
 
 
-## Машина стоит вдоль дороги (нос по направлению дороги, лёгкий разворот)
+## A burnt-out vehicle of a road column: along the road (nose either way, slightly turned), lying along the ground
+## under it (_wreck_on_ground). Draws three rng values, which plan() replays when it skips a vehicle.
 func _add_vehicle(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, dir: Vector2, ctx: Dictionary) -> void:
 	var w := _rand_width(rng, kind)
 	var s := _t.surface(p.x, p.y, ctx)
 	var yaw := -dir.angle() + rng.randf_range(-0.35, 0.35) + (PI if rng.randf() < 0.5 else 0.0)
-	var t := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.03, 0))
+	var t := _wreck_on_ground(p, w, -yaw, s, ctx, VEHICLE_SINK, VEHICLE_SLOPE)
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)

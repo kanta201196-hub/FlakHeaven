@@ -1,16 +1,42 @@
 extends SceneTree
 ## 3.4-t1 (п. 17): картинки для облегчённых деревьев (пресеты ниже «Максимального»).
-## Модель Meshy снимается сбоку и сверху на прозрачном фоне при свете игры; облегчённое дерево —
-## две скрещённые «карточки» с видом сбоку и одна горизонтальная с видом сверху (BiomeProps).
-##   xvfb-run godot --path game --rendering-driver opengl3 -s res://tools/model_lab/bake_impostor.gd
+## The model is shot from the side and from above on a transparent background; the light tree (BiomeProps._lite_tree)
+## is one side card turned to the camera and one horizontal card with the top view.
+## Forward+ (the renderer the cards are drawn with; lavapipe in the cloud):
+##   VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json xvfb-run godot --path game --rendering-method forward_plus \
+##     -s res://tools/model_lab/bake_impostor.gd
 ## Результат — game/models/biome/<имя>_side.png и <имя>_top.png (256 × 256).
 ## Только некоторые модели: ... -s res://tools/model_lab/bake_impostor.gd -- b05_orchard_tree
+##
+## Light (Kanta 28.10: the cards were dark and blotchy next to the full model). The game camera looks down from the
+## south, so what it sees of a full tree is mostly sunlit leaf tops. The top view takes the game's sun; the side view
+## takes the same sun turned round to the camera's side, otherwise the card shows the crown's shaded back. The ambient
+## is lifted and a weak fill light from the opposite side lightens leaves that face away from the sun (double-sided
+## leaf cards light their back face dark). Holes: see _fill_holes.
+## The date palm's pictures are still the earlier bake (Kanta 28.10 frames: with this light its fronds came out paler
+## than the vivid old ones, and the camera-facing card already removed its dark X); bake it only to change that.
 
 const MODELS := ["b04_poplar", "b05_orchard_tree", "b12_date_palm"]
 const SIZE := 256
 
+## Hole-filling radius in pixels per model (_fill_holes); the code-built poplar has open gaps between its leaf
+## clusters that read as see-through holes on a 6-triangle card
+const FILL := {"b04_poplar": 3, "b05_orchard_tree": 2, "b12_date_palm": 1}
+
+## Ambient energy: the game's Forward+ ambient (render3d.gd FP_AMBIENT 0.38) lifted, so the crown's self-shaded
+## patches are lighter than on the full model (a 6-triangle card shows them as flat dark blotches)
+const AMBIENT := 0.45
+## Energy of the fill light opposite the sun
+const FILL_LIGHT := 0.25
+
+## Game sun direction (render3d.gd) and its mirror towards the side camera at +Z
+const SUN_TOP := Vector3(0.62, -0.85, 0.75)
+const SUN_SIDE := Vector3(0.62, -0.85, -0.75)
+
 var _vp: SubViewport
 var _cam: Camera3D
+var _sun: DirectionalLight3D
+var _fill: DirectionalLight3D
 var _queue: Array = []
 var _frames := 0
 
@@ -27,15 +53,20 @@ func _initialize() -> void:
 	e.background_mode = Environment.BG_CLEAR_COLOR
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	e.ambient_light_color = Color(0.6, 0.68, 0.82)
-	e.ambient_light_energy = 0.55
-	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	e.ambient_light_energy = AMBIENT
+	# no tonemapping here: the card is unshaded, and the game's exposure and filmic curve apply to it as they do
+	# to the lit full model, so the picture must hold the linear lit colour (Forward+ stores it sRGB-encoded)
+	e.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.environment = e
 	_vp.add_child(env)
-	var sun := DirectionalLight3D.new()
-	sun.light_color = Color(1.0, 0.9, 0.76)
-	sun.light_energy = 1.15
-	sun.basis = Basis.looking_at(Vector3(0.62, -0.85, 0.75).normalized(), Vector3(0, 0, -1))
-	_vp.add_child(sun)
+	_sun = DirectionalLight3D.new()
+	_sun.light_color = Color(1.0, 0.9, 0.76)
+	_sun.light_energy = 1.15
+	_vp.add_child(_sun)
+	_fill = DirectionalLight3D.new()
+	_fill.light_color = Color(0.85, 0.9, 1.0)
+	_fill.light_energy = FILL_LIGHT
+	_vp.add_child(_fill)
 	_cam = Camera3D.new()
 	_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	_vp.add_child(_cam)
@@ -65,6 +96,9 @@ func _process(_delta: float) -> bool:
 		var aabb := _aabb(_model)
 		var h := aabb.size.y
 		var w := maxf(aabb.size.x, aabb.size.z)
+		var sun_dir: Vector3 = SUN_SIDE if _cur[1] == "side" else SUN_TOP
+		_sun.basis = Basis.looking_at(sun_dir.normalized(), Vector3(0, 0, -1))
+		_fill.basis = Basis.looking_at(Vector3(-sun_dir.x, -0.4, -sun_dir.z).normalized(), Vector3(0, 0, -1))
 		if _cur[1] == "side":
 			_cam.size = maxf(h, w) * 1.02
 			_cam.position = Vector3(0, h * 0.5, 50.0)
@@ -78,11 +112,79 @@ func _process(_delta: float) -> bool:
 	_frames += 1
 	if _frames == 4:
 		var img := _vp.get_texture().get_image()
+		img.convert(Image.FORMAT_RGBA8)
+		_fill_holes(img, int(FILL.get(_cur[0], 0)))
 		var path := "res://models/biome/%s_%s.png" % [_cur[0], _cur[1]]
 		img.save_png(ProjectSettings.globalize_path(path))
 		print("BAKED ", path)
 		_cur = []
 	return false
+
+
+## Closes see-through gaps in a baked card: a morphological closing of the alpha mask (grow by r pixels, then
+## shrink by r) marks the pinholes and narrow gaps inside the crown, and each one is filled opaque with the mean
+## colour of the opaque pixels around it. The outline stays where it was (closing does not grow the silhouette),
+## and mipmapped alpha-scissor cards no longer break up into holes at a distance.
+func _fill_holes(img: Image, r: int) -> void:
+	if r <= 0:
+		return
+	var n := img.get_width()
+	var solid := PackedByteArray()
+	solid.resize(n * n)
+	for y in n:
+		for x in n:
+			solid[y * n + x] = 1 if img.get_pixel(x, y).a > 0.5 else 0
+	var grown := _morph(solid, n, r, true)
+	var closed := _morph(grown, n, r, false)
+	var filled := 0
+	for y in n:
+		for x in n:
+			var i := y * n + x
+			if solid[i] == 1 or closed[i] == 0:
+				continue
+			var sum := Color(0, 0, 0, 0)
+			var k := 0
+			for dy in range(-r - 1, r + 2):
+				for dx in range(-r - 1, r + 2):
+					var xx := x + dx
+					var yy := y + dy
+					if xx >= 0 and yy >= 0 and xx < n and yy < n and solid[yy * n + xx] == 1:
+						sum += img.get_pixel(xx, yy)
+						k += 1
+			if k > 0:
+				var c := sum / float(k)
+				img.set_pixel(x, y, Color(c.r, c.g, c.b, 1.0))
+				filled += 1
+	print("FILLED %d px (r %d)" % [filled, r])
+
+
+## Square dilation (grow = true) or erosion of a 0/1 mask of side n by radius r
+func _morph(m: PackedByteArray, n: int, r: int, grow: bool) -> PackedByteArray:
+	var out := PackedByteArray()
+	out.resize(n * n)
+	var want := 1 if grow else 0
+	for y in n:
+		for x in n:
+			var v := 1 - want
+			for dy in range(-r, r + 1):
+				var yy := y + dy
+				if yy < 0 or yy >= n:
+					if not grow:
+						v = 0
+					continue
+				for dx in range(-r, r + 1):
+					var xx := x + dx
+					if xx < 0 or xx >= n:
+						if not grow:
+							v = 0
+						continue
+					if m[yy * n + xx] == want:
+						v = want
+						break
+				if v == want:
+					break
+			out[y * n + x] = v
+	return out
 
 
 func _aabb(n: Node) -> AABB:
