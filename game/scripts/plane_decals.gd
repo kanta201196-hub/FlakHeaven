@@ -5,14 +5,22 @@ class_name PlaneDecals
 ## flight and combat, in Forward+ and GL Compatibility. The mesh hangs under the insignia node, so the
 ## invulnerability blink covers it. A decal laid over the fin badge hides that badge (Kanta: a personal fin badge
 ## may replace the class mark); the wing roundels always stay.
-## Turret fairings (SkinPatch) are added to the model after its insignia, in the hangar and in combat; when one
-## arrives the mesh is rebuilt once (deferred) with the fairings as extra skin, so a decal on that wing lies on the
-## fairing instead of vanishing under it.
+## Turret fairings (SkinPatch), silhouette details and the «Кит» tail cabin are extra skin (`hull_of`); the fairings,
+## the tail cabin and the battle bay doors are added to the model after its insignia, so when one arrives the mesh is
+## rebuilt once (deferred): a decal there lies on it instead of vanishing under it.
+## Moving parts (slats, flaps, bay doors: `PlaneHull.parts_of`) get a decal mesh of their own, hung under the part
+## and built in its axes, so the piece of a decal on a flap goes down with the flap; on the battle model, where the
+## flap plates lie over the wing, the wing under a plate gets no piece (no ghost when the flap goes down).
 ## Art: one mask atlas (tools/decal_atlas.py): R/G/B weights of the primary, secondary and ink paints, A coverage.
 
 const WEAR := 0.35   ## default weathering: chips and fading of the paint
 const PREVIEW_LIFT := 0.0018   ## the editor's live decal sits over the committed ones
 const FAIRING := "crown"   ## meta SkinPatch.turret_fairing sets on a fairing (a second one gets a generated name)
+## Nodes whose arrival under the model changes the skin decals are cut from (besides fairings)
+const WATCH := ["bay_doors", "tail_cabin", "detail", "wing_mech"]
+const PART_MESH := "decals_part"   ## the decal mesh under a moving part
+const PART_PREVIEW := "decal_preview_part"
+const ROUNDEL_REACH := 0.01   ## how far off the decal a roundel still counts as lying over it, model units
 ## Debug sample art per class (`--decals`), laid on the presets: nose, tally, number, fin, wing, wing turn (radians),
 ## primary and secondary paint
 const SAMPLE_ART := {
@@ -81,43 +89,61 @@ static func show_preview(model: Node3D, r: DecalRecord, tally: int) -> void:
 	var ins := model.get_node_or_null("insignia") as Node3D
 	if ins == null:
 		return
-	var mi := ins.get_node_or_null("decal_preview") as MeshInstance3D
-	var mesh: ArrayMesh = null
+	var one: Array[DecalRecord] = []
+	if r != null:
+		one.append(r)
 	var hull := hull_of(model) if r != null else null
+	var parts := PlaneHull.parts_of(model)
+	var mesh: ArrayMesh = null
 	if hull != null:
-		var one: Array[DecalRecord] = [r]
-		mesh = DecalMesh.build(hull, one, tally, PREVIEW_LIFT)
-	if mesh == null:
-		if mi != null:
-			mi.visible = false
-		return
-	if mi == null:
-		mi = MeshInstance3D.new()
-		mi.name = "decal_preview"
-		mi.material_override = material(1.0)
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ins.add_child(mi)
-	mi.mesh = mesh
-	mi.visible = true
+		mesh = DecalMesh.build(hull, one, tally, PREVIEW_LIFT, _part_hulls(parts))
+	_put(ins, "decal_preview", mesh, 1.0)
+	for pt: Dictionary in parts:
+		var pm: ArrayMesh = null
+		if r != null:
+			pm = DecalMesh.build(pt["hull"], one, tally, PREVIEW_LIFT, [] as Array[PlaneHull], pt["to_local"])
+		_put(pt["node"], PART_PREVIEW, pm, 1.0)
 
 
-## The skin decals are cut from: the hull with any turret fairings as extra skin (null for a model without one).
-## Kept on the model while its fairings stay the same, since the editor casts a ray on it every frame.
+## The skin decals are cut from: the hull with the turret fairings, silhouette details and tail cabin as extra skin
+## (null for a model without one). Kept on the model while those stay the same, since the editor casts a ray on it
+## every frame.
 static func hull_of(model: Node3D) -> PlaneHull:
-	var fairings: Array[MeshInstance3D] = []
-	for c in model.get_children():
-		if c is MeshInstance3D and c.has_meta(FAIRING) and (c as MeshInstance3D).mesh != null:
-			fairings.append(c)
+	var more := PlaneHull.statics_of(model)
+	var sig := ",".join(PackedStringArray(more.map(func(m: MeshInstance3D) -> String: return str(m.get_instance_id()))))
 	var kept: Array = model.get_meta("decal_hull", [])
-	if kept.size() == 2 and int(kept[0]) == fairings.size():
+	if kept.size() == 2 and String(kept[0]) == sig:
 		return kept[1]
 	var hull := PlaneHull.of(model)
 	if hull == null:
 		return null
-	if not fairings.is_empty():
-		hull = hull.with_extra(PlaneHull.from_meshes(fairings, model, false))
-	model.set_meta("decal_hull", [fairings.size(), hull])
+	if not more.is_empty():
+		hull = hull.with_extra(PlaneHull.from_meshes(more, model, false))
+	model.set_meta("decal_hull", [sig, hull])
 	return hull
+
+
+## What the editor's cursor and the presets land on: `hull_of` plus the moving parts at rest (the editor holds the
+## flaps up and the bay shut), so a click on a flap puts the decal on the flap, not on the skin behind it
+static func cursor_hull(model: Node3D) -> PlaneHull:
+	var hull := hull_of(model)
+	if hull == null:
+		return null
+	var parts := PlaneHull.parts_of(model)
+	if parts.is_empty():
+		return hull
+	var kept: Array = model.get_meta("decal_cursor", [])
+	if kept.size() == 2 and kept[0] == hull:
+		return kept[1]
+	var ph := PlaneHull.new()
+	for pt: Dictionary in parts:
+		var h: PlaneHull = pt["hull"]
+		ph.pos.append_array(h.pos)
+		ph.nrm.append_array(h.nrm)
+	var chain := ph if hull.extra == null else hull.extra.with_extra(ph)
+	var cur := hull.with_extra(chain)
+	model.set_meta("decal_cursor", [hull, cur])
+	return cur
 
 
 ## Stores what `build` draws on the insignia node and watches the model for turret fairings
@@ -138,34 +164,65 @@ static func build(model: Node3D) -> void:
 		return
 	var records: Array[DecalRecord] = ins.get_meta("decal_records", [] as Array[DecalRecord])
 	var t0 := Time.get_ticks_usec()
+	var tally := int(ins.get_meta("decal_tally", 0))
 	var hull := hull_of(model) if not records.is_empty() else null
-	var mesh := DecalMesh.build(hull, records, int(ins.get_meta("decal_tally", 0))) if hull != null else null
-	var mi := ins.get_node_or_null("decals") as MeshInstance3D
+	var parts := PlaneHull.parts_of(model)
+	var mesh := DecalMesh.build(hull, records, tally, DecalMesh.LIFT, _part_hulls(parts)) if hull != null else null
+	var part_tris := 0
+	for pt: Dictionary in parts:
+		var pm: ArrayMesh = null
+		if hull != null:
+			pm = DecalMesh.build(pt["hull"], records, tally, DecalMesh.LIFT, [] as Array[PlaneHull], pt["to_local"])
+		_put(pt["node"], PART_MESH, pm, 0.0)
+		part_tris += int(pm.surface_get_array_len(0) / 3.0) if pm != null else 0
+	_put(ins, "decals", mesh, 0.0)
+	_hide_covered_badges(ins, records)
 	if mesh == null:
-		if mi != null:   # kept (not freed): the editor may fill it again in the same frame
+		return
+	if _samples:
+		var fairing_tris := hull.extra.triangles() if hull.extra != null else 0
+		print("DECALS %s: %d decals, %d extra skin triangles, %d triangles (+%d on moving parts), hull %d triangles, %.1f ms" % [
+			String(ins.get_meta("decal_key", "")), records.size(), fairing_tris,
+			int(mesh.surface_get_array_len(0) / 3.0), part_tris, hull.triangles(), (Time.get_ticks_usec() - t0) / 1000.0])
+
+
+## The moving parts' skins (model axes at rest): the body's decal gets no piece under them
+static func _part_hulls(parts: Array) -> Array[PlaneHull]:
+	var out: Array[PlaneHull] = []
+	for pt: Dictionary in parts:
+		out.append(pt["hull"])
+	return out
+
+
+## Puts `mesh` into the decal mesh node `name` under `parent` (made on first use, with the decal material;
+## `highlight` 1 — the editor's preview); a null mesh hides the node under the insignia, which is kept so the editor
+## can fill it again in the same frame. Under a moving part an empty node is removed instead: the part is repainted
+## by Livery.apply, which walks every MeshInstance3D outside the insignia and expects a mesh on each.
+static func _put(parent: Node3D, node_name: String, mesh: ArrayMesh, highlight: float) -> void:
+	var mi := parent.get_node_or_null(node_name) as MeshInstance3D
+	if mesh == null:
+		if mi != null and String(parent.name) != "insignia":
+			parent.remove_child(mi)
+			mi.queue_free()
+		elif mi != null:
 			mi.mesh = null
 			mi.visible = false
-		_hide_covered_badges(ins, records)
 		return
 	if mi == null:
 		mi = MeshInstance3D.new()
-		mi.name = "decals"
-		mi.material_override = material()
+		mi.name = node_name
+		mi.material_override = material(highlight)
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ins.add_child(mi)
+		parent.add_child(mi)
 	mi.mesh = mesh
 	mi.visible = true
-	_hide_covered_badges(ins, records)
-	if _samples:
-		var fairing_tris := hull.extra.triangles() if hull.extra != null else 0
-		print("DECALS %s: %d decals, %d fairing triangles, %d triangles, hull %d triangles, %.1f ms" % [
-			String(ins.get_meta("decal_key", "")), records.size(), fairing_tris,
-			int(mesh.surface_get_array_len(0) / 3.0), hull.triangles(), (Time.get_ticks_usec() - t0) / 1000.0])
 
 
-## A turret fairing joined the model: rebuild once at the end of the frame (both wing fairings come together)
+## A turret fairing, the tail cabin or the bay doors joined the model: rebuild once at the end of the frame (both
+## wing fairings come together)
 static func _on_child(node: Node, model: Node3D) -> void:
-	if not node.has_meta(FAIRING) or model.get_meta("decal_dirty", false):
+	if node.get_parent() != model or not (node.has_meta(FAIRING) or String(node.name) in WATCH) \
+			or model.get_meta("decal_dirty", false):
 		return
 	model.set_meta("decal_dirty", true)
 	_rebuild_later.call_deferred(model)
@@ -226,6 +283,58 @@ static func _hide_covered_badges(ins: Node3D, records: Array[DecalRecord]) -> vo
 			mi.remove_meta("decal_hid")
 
 
+## True when decal `r` (with `tally` marks) would lie wholly under the plane's roundels: they stay on top of decals
+## (spec §2.4), so such a decal never shows. Fin and side badges do not count — a decal over one hides the badge
+## (`_hide_covered_badges`). A 5×5 grid over the decal's stamps, each point shot along its normal at the roundels.
+static func under_roundel(model: Node3D, r: DecalRecord, tally: int) -> bool:
+	var rh := _roundel_hull(model)
+	if rh == null or r == null:
+		return false
+	var sts := DecalLoadout.stamps(r, maxi(tally, 1))
+	if sts.is_empty():
+		return false
+	var b := r.basis_vectors()
+	var n := r.normal.normalized()
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for st in sts:
+		var c := Vector2((st.center - r.pos).dot(b[0]), (st.center - r.pos).dot(b[1]))
+		lo = lo.min(c - Vector2(st.half_w, st.half_h))
+		hi = hi.max(c + Vector2(st.half_w, st.half_h))
+	for i in 5:
+		for j in 5:
+			var q := Vector2(lerpf(lo.x, hi.x, (i + 0.5) / 5.0), lerpf(lo.y, hi.y, (j + 0.5) / 5.0))
+			var p := r.pos + b[0] * q.x + b[1] * q.y
+			if rh.raycast(p + n * ROUNDEL_REACH, -n, ROUNDEL_REACH * 2.0).size() != 2:
+				return false
+	return true
+
+
+## The roundels on the model's insignia node as one hull in model axes (fin and side badges left out); cached on the
+## insignia node until its meshes change
+static func _roundel_hull(model: Node3D) -> PlaneHull:
+	var ins := model.get_node_or_null("insignia") as Node3D
+	if ins == null:
+		return null
+	var meshes: Array[MeshInstance3D] = []
+	for c in ins.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		var n := String(mi.name) if not String(mi.name).begins_with("Mesh") else String(mi.get_parent().name)
+		if mi.mesh == null or n.begins_with("decal") or n.begins_with("fin") or n.begins_with("side"):
+			continue
+		meshes.append(mi)
+	var sig := ",".join(PackedStringArray(meshes.map(func(m: MeshInstance3D) -> String: return str(m.mesh.get_rid().get_id()))))
+	var kept: Array = ins.get_meta("roundel_hull", [])
+	if kept.size() == 2 and String(kept[0]) == sig:
+		return kept[1]
+	var h := PlaneHull.new()
+	for mi in meshes:
+		PlaneHull.append_mesh(h, mi.mesh, PlaneHull.rel_transform(mi, model))
+	var out: PlaneHull = h if h.triangles() > 0 else null
+	ins.set_meta("roundel_hull", [sig, out])
+	return out
+
+
 ## The decal material (one per plane; the shader is shared); `highlight` 1 — the editor's pulsing light tint
 static func material(highlight := 0.0) -> ShaderMaterial:
 	if _shader == null:
@@ -281,7 +390,7 @@ void fragment() {
 	// weathering in model space (does not swim with the projection): chips show the paint below, the rest fades
 	// towards a dusty grey and gets grime blotches
 	float chip = vnoise3(lp * 900.0) * 0.6 + vnoise3(lp * 260.0) * 0.4;
-	float cover = t.a * step(wear * 0.42, chip);
+	float cover = t.a * COLOR.a * step(wear * 0.42, chip);   // COLOR.a: DecalMesh fades it out on a steep skin
 	float grime = vnoise3(lp * 120.0 + 3.7);
 	float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
 	col = mix(col, vec3(l) * vec3(1.02, 0.98, 0.9), 0.25 * wear);

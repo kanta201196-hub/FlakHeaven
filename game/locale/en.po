@@ -7896,6 +7896,18 @@ msgstr "No more than %d decals per plane"
 msgid "Этот знак ещё закрыт: %s"
 msgstr "This decal is still locked: %s"
 
+#: game/scripts/decal_edit_input.gd:117
+msgid "Опознавательный знак закроет этот знак"
+msgstr "A roundel will cover this decal"
+
+#: game/scripts/decal_edit_input.gd:98
+msgid "Знак уменьшен: крупнее здесь не помещается"
+msgstr "Decal shrunk: a larger one does not fit here"
+
+#: game/scripts/decal_edit_input.gd:100
+msgid "Крупнее здесь не поместится"
+msgstr "It won't fit here any larger"
+
 #: game/scripts/decal_edit_input.gd:295
 msgid "Сначала выберите картинку"
 msgstr "Pick a picture first"

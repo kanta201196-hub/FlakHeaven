@@ -30,6 +30,18 @@ func run() -> Array:
 	_test_unlocks()
 	_test_editor()
 	_test_glass()
+	_test_slab()
+	_test_winding()
+	_test_fade()
+	_test_seat()
+	_test_protrusion()
+	_test_under_roundel()
+	_test_lift_order()
+	_test_blockers()
+	_test_parts()
+	_test_fit()
+	_test_editor_fit()
+	_test_audit()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
 	return [_checks, _failed]
 
@@ -450,3 +462,395 @@ func _test_glass() -> void:
 	var none := skin.raycast_clear(Vector3(0.3, 1, 0.3), Vector3.DOWN, 2.0, null)
 	_check(none.size() == 2, "without glass it is a plain raycast")
 
+
+
+# ---------- geometry rules from the decal audit (--decalaudit) ----------
+
+## Two triangles of a flat skin facing −Z at depth `z`, `k` units across, with Godot's winding (the cross product of
+## the edges points into the skin) unless `ccw`
+func _plate(k: float, z := 0.0, ccw := false) -> Array:
+	var a := [Vector3(-k, -k, z), Vector3(k, k, z), Vector3(k, -k, z), Vector3(-k, -k, z), Vector3(-k, k, z),
+		Vector3(k, k, z)]
+	var pos := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	for i in 6:
+		pos.append(a[i] if ccw else a[[0, 2, 1, 3, 5, 4][i]])
+		nrm.append(Vector3(0, 0, -1))
+	return [pos, nrm]
+
+
+func _bolt(size: float, n := Vector3(0, 0, -1), at := Vector3.ZERO) -> DecalRecord:
+	var r := DecalRecord.new()
+	r.id = "bolt"
+	r.size = size
+	r.normal = n
+	r.pos = at
+	return r
+
+
+## Godot front faces seen from the decal: every emitted triangle's edge cross product points away from the viewer
+func _faces_decal(verts: PackedVector3Array, n: Vector3) -> bool:
+	for t in range(0, verts.size(), 3):
+		if (verts[t + 1] - verts[t]).cross(verts[t + 2] - verts[t]).dot(n) >= -1e-12:
+			return false
+	return verts.size() > 0
+
+
+func _project(hull: PlaneHull, r: DecalRecord) -> DecalMesh.Builder:
+	var b := DecalMesh.Builder.new()
+	for st in DecalLoadout.stamps(r, 0):
+		b.project(hull, st)
+	return b
+
+
+func _test_slab() -> void:
+	# one big skin triangle tilted 30° about X: its corners lie far outside a small decal's depth, its middle crosses it
+	var tilt := Basis(Vector3.RIGHT, deg_to_rad(30.0))
+	var pl := _plate(0.4)
+	var pos := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	for i in 3:
+		pos.append(tilt * (pl[0] as PackedVector3Array)[i])
+		nrm.append(tilt * Vector3(0, 0, -1))
+	var hull := PlaneHull.from_triangles(pos, nrm)
+	var r := _bolt(0.01, tilt * Vector3(0, 0, -1), tilt * Vector3(0.1, -0.1, 0.0))
+	var b := _project(hull, r)
+	_check(b.verts.size() >= 3, "a big skin triangle crossing a small decal is cut, not dropped (battle hulls)")
+	var inside := true
+	for v in b.verts:
+		inside = inside and absf((v - r.pos).dot(r.normal)) <= 0.0091
+	_check(inside, "the piece stays inside the box depth")
+
+
+func _test_winding() -> void:
+	var godot := _plate(0.1)
+	var ccw := _plate(0.1, 0.0, true)
+	_check(PlaneHull.from_triangles(godot[0], godot[1]).winding() == -1, "Godot meshes wind inwards (winding −1)")
+	_check(PlaneHull.from_triangles(ccw[0], ccw[1]).winding() == 1, "counter-clockwise meshes wind outwards (+1)")
+	for pl: Array in [godot, ccw]:
+		var b := _project(PlaneHull.from_triangles(pl[0], pl[1]), _bolt(0.04))
+		_check(_faces_decal(b.verts, Vector3(0, 0, -1)), "pieces face the decal whatever the skin's winding")
+	# a flipped triangle among Godot ones (the bodies are double-sided): it still gets its piece
+	var pos: PackedVector3Array = (godot[0] as PackedVector3Array).duplicate()
+	var t := pos[1]
+	pos[1] = pos[2]
+	pos[2] = t
+	var bf := _project(PlaneHull.from_triangles(pos, godot[1]), _bolt(0.04))
+	var full := _project(PlaneHull.from_triangles(godot[0], godot[1]), _bolt(0.04))
+	_check(bf.verts.size() == full.verts.size() and _faces_decal(bf.verts, Vector3(0, 0, -1)),
+		"a flipped skin triangle gets its piece, wound to face the decal")
+	# a thin part: its near face and, 2 mm behind, its far face (outward +Z) whose normals were smoothed across the
+	# edge (they point along the edge, a little towards the decal): the far face gets no piece
+	var near := _plate(0.1)
+	var side := _plate(0.1, -0.3)   # more skin elsewhere, as in a real model, so the winding vote is clear
+	var far := _plate(0.1, 0.002)
+	var tp := PackedVector3Array()
+	var tn := PackedVector3Array()
+	tp.append_array(near[0])
+	tp.append_array(side[0])
+	tn.append_array(near[1])
+	tn.append_array(side[1])
+	for i in [0, 2, 1, 3, 5, 4]:
+		tp.append((far[0] as PackedVector3Array)[i])   # wound the Godot way for an outward +Z
+		tn.append(Vector3(0.0, 0.95, -0.3).normalized())
+	var bl := _project(PlaneHull.from_triangles(tp, tn), _bolt(0.04))
+	var on_near := bl.verts.size() > 0
+	for v in bl.verts:
+		on_near = on_near and v.z < 0.0005
+	_check(on_near, "the far face of a thin part gets nothing even when its smoothed normals lean over")
+
+
+func _test_seat() -> void:
+	# a fuselage 30 cm across (a cylinder about Y) and a full row of tally marks across its side: every mark lands on
+	# the skin, though the row's far end lies ~4 cm off the flat plane of the record
+	var rad := 0.15
+	var pos := PackedVector3Array()
+	var nrm := PackedVector3Array()
+	var seg := 48
+	for i in seg:
+		var a0 := deg_to_rad(-60.0 + 120.0 * i / seg)
+		var a1 := deg_to_rad(-60.0 + 120.0 * (i + 1) / seg)
+		var q: Array[Vector3] = []
+		var o: Array[Vector3] = []
+		for a: float in [a0, a1]:
+			for y: float in [-0.03, 0.03]:
+				q.append(Vector3(rad * sin(a), y, rad - rad * cos(a)))
+				o.append(Vector3(sin(a), 0.0, -cos(a)))
+		for tri: Array in [[0, 1, 3], [0, 3, 2]]:
+			var t: Array = tri
+			var c := (q[t[1]] - q[t[0]]).cross(q[t[2]] - q[t[0]])
+			if c.dot(o[t[0]]) > 0.0:   # Godot winding: the cross product points inward
+				t = [t[0], t[2], t[1]]
+			for k: int in t:
+				pos.append(q[k])
+				nrm.append(o[k])
+	var hull := PlaneHull.from_triangles(pos, nrm)
+	var r := DecalRecord.new()
+	r.id = "tally_air"
+	r.size = 0.01
+	r.normal = Vector3(0, 0, -1)
+	var sts := DecalLoadout.stamps(r, DecalLoadout.TALLY_ROW, hull)
+	var flat := DecalLoadout.stamps(r, DecalLoadout.TALLY_ROW)
+	var drawn := 0
+	for st in sts:
+		var b := DecalMesh.Builder.new()
+		b.project(hull, st)
+		drawn += int(b.verts.size() > 0)
+	var far_off := absf((flat[-1].center - sts[-1].center).length()) > 0.005
+	_check(drawn == sts.size() and far_off, "every tally mark of a long row lands on a curved fuselage (%d of %d)" % [
+		drawn, sts.size()])
+
+
+## Two boxes as one hull: the skin (a slab whose face at z = 0 looks at −Z) and `b` standing on it
+func _on_slab(b: Array) -> PlaneHull:
+	var slab := _box(Vector3(0, 0, 0.05), Vector3(0.1, 0.1, 0.05))
+	return PlaneHull.from_triangles((slab[0] as PackedVector3Array) + (b[0] as PackedVector3Array),
+		(slab[1] as PackedVector3Array) + (b[1] as PackedVector3Array))
+
+
+func _test_protrusion() -> void:
+	# an antenna stub 12 mm square and 15 mm tall on the skin: the cursor passes through it, it gets no piece, and the
+	# editor's fit does not shrink a decal for it
+	var hull := _on_slab(_box(Vector3(0, 0, -0.0075), Vector3(0.006, 0.006, 0.0075)))
+	var front := -1   # a triangle of the stub's face at z = −0.015
+	var skin := -1    # a triangle of the slab's face at z = 0
+	for t in hull.triangles():
+		var c := (hull.pos[t * 3] + hull.pos[t * 3 + 1] + hull.pos[t * 3 + 2]) / 3.0
+		if hull.nrm[t * 3].z < -0.9 and absf(c.z + 0.015) < 0.0001:
+			front = t
+		elif hull.nrm[t * 3].z < -0.9 and absf(c.z) < 0.0001:
+			skin = t
+	_check(front >= 0 and hull.protrusion(front), "an antenna stub standing on the skin is a protrusion")
+	_check(skin >= 0 and not hull.protrusion(skin), "the skin under it is not")
+	var plain := hull.raycast(Vector3(0, 0, -0.5), Vector3(0, 0, 1))
+	var through := hull.raycast(Vector3(0, 0, -0.5), Vector3(0, 0, 1), 3.0, true)
+	_check(plain.size() == 2 and absf((plain[0] as Vector3).z + 0.015) < 0.001, "a plain ray stops on the stub")
+	_check(through.size() == 2 and absf((through[0] as Vector3).z) < 0.001, "the cursor's ray passes through it onto the skin")
+	var r := _bolt(0.04)
+	var b := _project(hull, r)
+	var off_skin := 0
+	for v in b.verts:
+		off_skin += int(v.z < -0.002)
+	_check(b.verts.size() > 0 and off_skin == 0, "the decal lies on the skin under the stub, none of it on the stub")
+	_check(is_equal_approx(DecalPresets.fit_size(hull, r, 0), 0.04), "the stub does not make the editor shrink the decal")
+	# a raised panel 6 cm wide is skin, not a protrusion
+	var deck := _on_slab(_box(Vector3(0, 0, -0.0075), Vector3(0.03, 0.03, 0.0075)))
+	var top := -1
+	for t in deck.triangles():
+		var c := (deck.pos[t * 3] + deck.pos[t * 3 + 1] + deck.pos[t * 3 + 2]) / 3.0
+		if deck.nrm[t * 3].z < -0.9 and absf(c.z + 0.015) < 0.0001:
+			top = t
+	_check(top >= 0 and not deck.protrusion(top), "a raised panel wider than the threshold keeps its decal")
+
+
+func _test_under_roundel() -> void:
+	# a roundel 6 cm across lying 0.8 mm over the skin, and a fin badge of the same size elsewhere
+	var model := Node3D.new()
+	var ins := Node3D.new()
+	ins.name = "insignia"
+	model.add_child(ins)
+	var roundel := MeshInstance3D.new()
+	roundel.name = "roundel_l"
+	roundel.mesh = _mesh(_plate(0.03, -0.0008))
+	ins.add_child(roundel)
+	var badge := MeshInstance3D.new()
+	badge.name = "fin_l"
+	badge.mesh = _mesh(_plate(0.03, -0.0008))
+	badge.position = Vector3(0.3, 0, 0)
+	ins.add_child(badge)
+	_check(PlaneDecals.under_roundel(model, _bolt(0.02), 0), "a small decal wholly on a roundel is reported hidden")
+	_check(not PlaneDecals.under_roundel(model, _bolt(0.08), 0), "a decal larger than the roundel shows round it")
+	_check(not PlaneDecals.under_roundel(model, _bolt(0.02, Vector3(0, 0, -1), Vector3(0.3, 0, 0)), 0),
+		"a fin badge does not hide a decal (the decal hides the badge)")
+	model.free()
+
+
+func _test_fade() -> void:
+	# a skin bent along x = 0: the left half faces the decal, the right half turns 70° away
+	var n1 := Vector3(0, 0, -1)
+	var n2 := Vector3(sin(deg_to_rad(70.0)), 0, -cos(deg_to_rad(70.0)))
+	var e := Vector3(-n2.z, 0, n2.x)   # along the right half, away from the bend
+	var lo := Vector3(0, -0.05, 0)
+	var hi := Vector3(0, 0.05, 0)
+	var pos := PackedVector3Array([Vector3(-0.05, -0.05, 0), hi, lo, Vector3(-0.05, -0.05, 0), Vector3(-0.05, 0.05, 0), hi,
+		lo, e * 0.05 + hi, e * 0.05 + lo, lo, hi, e * 0.05 + hi])
+	var nrm := PackedVector3Array()
+	for i in 12:
+		nrm.append(n1 if i < 6 else n2)
+	var b := _project(PlaneHull.from_triangles(pos, nrm), _bolt(0.06))
+	var flat := 1.0
+	var steep := 0.0
+	var n_steep := 0
+	for i in b.verts.size():
+		if b.normals[i].dot(n1) > 0.99:
+			flat = minf(flat, b.colors[i].a)
+		else:
+			steep = maxf(steep, b.colors[i].a)
+			n_steep += 1
+	_check(b.verts.size() > 0 and is_equal_approx(flat, 1.0), "skin facing the decal shows it whole")
+	_check(n_steep > 0 and steep < 0.5, "skin turned 70° away fades it out (no stretching round the edge)")
+
+
+func _test_lift_order() -> void:
+	var pl := _plate(0.1)
+	var hull := PlaneHull.from_triangles(pl[0], pl[1])
+	var two: Array[DecalRecord] = [_bolt(0.04), _bolt(0.04)]
+	two[1].c1 = "white"
+	var m := DecalMesh.build(hull, two, 0)
+	var vs: PackedVector3Array = m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var u2: PackedVector2Array = m.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2]
+	var z0 := 0.0
+	var z1 := 0.0
+	for i in vs.size():
+		if is_equal_approx(u2[i].x, float(DecalCatalog.paint_index("white"))):
+			z1 = vs[i].z
+		else:
+			z0 = vs[i].z
+	_check(z1 < z0 - DecalMesh.LIFT_STEP * 0.5, "a later decal lies over an earlier one (drawn in list order)")
+	_check(DecalMesh.LIFT + DecalMesh.LIFT_STEP * (DecalLoadout.MAX_DECALS - 1) < 0.0008 - 0.0001,
+		"even the last of 12 decals lies under the roundels (insignia 0.8 mm off the skin)")
+
+
+func _test_blockers() -> void:
+	var pl := _plate(0.1)
+	var hull := PlaneHull.from_triangles(pl[0], pl[1])
+	var flap := _plate(0.045, -0.004)   # a plate 4 mm over the lower half of the skin, like a battle flap plate
+	var fp := PackedVector3Array()
+	for v: Vector3 in flap[0]:
+		fp.append(v + Vector3(0, -0.05, 0))
+	var blk: Array[PlaneHull] = [PlaneHull.from_triangles(fp, flap[1])]
+	var one: Array[DecalRecord] = [_bolt(0.06)]
+	var plain := DecalMesh.build(hull, one, 0)
+	var cut := DecalMesh.build(hull, one, 0, DecalMesh.LIFT, blk)
+	_check(cut != null and _area(cut) < _area(plain) * 0.8, "no piece of the decal under a moving part lying over the skin")
+	# the skin is two big triangles, each half under the plate: the uncovered half keeps its decal
+	var cv: PackedVector3Array = cut.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var free_area := 0.0
+	var under := 0
+	for t in range(0, cv.size(), 3):
+		var c := (cv[t] + cv[t + 1] + cv[t + 2]) / 3.0
+		under += int(c.y < -0.012)
+		free_area += (cv[t + 1] - cv[t]).cross(cv[t + 2] - cv[t]).length() * 0.5 if c.y > -0.005 else 0.0
+	_check(under == 0 and free_area > 0.06 * 0.03 * 0.9,
+		"a skin triangle half under a moving part keeps the decal on its uncovered half (%.5f)" % free_area)
+	var moved := DecalMesh.build(hull, one, 0, DecalMesh.LIFT, [] as Array[PlaneHull],
+		Transform3D(Basis(), Vector3(1, 0, 0)))
+	var mv: PackedVector3Array = moved.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	_check(mv[0].x > 0.9, "a moving part's piece is built in the part's own axes")
+
+
+## Surface area of a one-surface triangle mesh
+func _area(m: ArrayMesh) -> float:
+	var v: PackedVector3Array = m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var a := 0.0
+	for t in range(0, v.size(), 3):
+		a += (v[t + 1] - v[t]).cross(v[t + 2] - v[t]).length() * 0.5
+	return a
+
+
+func _mesh(pl: Array) -> ArrayMesh:
+	var arr: Array = []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = pl[0]
+	arr[Mesh.ARRAY_NORMAL] = pl[1]
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m
+
+
+func _test_parts() -> void:
+	var model := Node3D.new()
+	var mech := Node3D.new()
+	mech.name = "wing_mech"
+	model.add_child(mech)
+	var flap := MeshInstance3D.new()
+	flap.name = "flap_l"
+	flap.mesh = _mesh(_plate(0.02))
+	flap.position = Vector3(-0.3, 0.0, 0.0)
+	flap.set_meta("rest", flap.transform)
+	mech.add_child(flap)
+	flap.rotation = Vector3(0, 0, -0.4)   # posed down: the decal is still measured at rest
+	var parts := PlaneHull.parts_of(model)
+	_check(parts.size() == 1 and parts[0]["node"] == flap, "a flap is a moving part a decal can lie on")
+	if parts.size() == 1:
+		var h: PlaneHull = parts[0]["hull"]
+		_check(absf(h.bounds().get_center().x + 0.3) < 1e-4 and absf(h.bounds().get_center().y) < 1e-4,
+			"its skin is in model axes at rest, whatever its pose")
+		var one: Array[DecalRecord] = [_bolt(0.02, Vector3(0, 0, -1), Vector3(-0.3, 0, 0))]
+		var m := DecalMesh.build(h, one, 0, DecalMesh.LIFT, [] as Array[PlaneHull], parts[0]["to_local"])
+		var vs: PackedVector3Array = m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] if m != null else PackedVector3Array()
+		_check(vs.size() > 0 and absf(vs[0].x) < 0.03, "its decal piece is in the flap's own axes (hangs under it)")
+	model.free()
+
+
+func _test_fit() -> void:
+	var b := _box(Vector3.ZERO, Vector3(0.05, 0.05, 0.02))   # a 10 cm square slab: its faces at z = ±0.02
+	var hull := PlaneHull.from_triangles(b[0], b[1])
+	var r := _bolt(0.04, Vector3(0, 0, 1), Vector3(0, 0, 0.02))
+	_check(is_equal_approx(DecalPresets.fit(hull, r, 0), 1.0), "a small decal in the middle of a face fits")
+	r.size = DecalRecord.SIZE_MAX
+	_check(DecalPresets.fit(hull, r, 0) < DecalPresets.FIT_SHARE, "a decal larger than the face does not")
+	var s := DecalPresets.fit_size(hull, r, 0)
+	r.size = s
+	_check(s < DecalRecord.SIZE_MAX and DecalPresets.fit(hull, r, 0) >= DecalPresets.FIT_SHARE,
+		"fit_size gives the largest size that fits there")
+	var edge := _bolt(0.06, Vector3(0, 0, 1), Vector3(0.045, 0, 0.02))
+	_check(DecalPresets.fit(hull, edge, 0) < DecalPresets.FIT_SHARE, "half off the edge does not fit")
+
+
+func _test_editor_fit() -> void:
+	var b := _box(Vector3.ZERO, Vector3(0.05, 0.05, 0.02))
+	var e := DecalEditor.new()
+	var none: Array[DecalRecord] = []
+	e.open("fighter", 1, none)
+	e.hull = PlaneHull.from_triangles(b[0], b[1])
+	e.pick("bolt", true)
+	e.size = DecalRecord.SIZE_MAX
+	var hit := [Vector3(0, 0, 0.02), Vector3(0, 0, 1)]
+	_check(e.place(hit) and e.records[0].size < DecalRecord.SIZE_MAX and e.note == "shrunk",
+		"a decal too big for the spot is placed smaller, and the editor says why")
+	var fitted := e.records[0].size
+	e.scale_by(3)
+	_check(e.records[0].size <= fitted + 1e-6 and e.note == "max", "it does not grow past what fits")
+	e.scale_by(-2)
+	_check(e.records[0].size < fitted and e.note == "", "it still shrinks")
+
+
+## Triangles of `pl` as audit triangles tagged `tag` (normals −Z)
+func _audit_tris(into: DecalAudit.Tris, pos: PackedVector3Array, tag: int) -> void:
+	for t in range(0, pos.size(), 3):
+		for k in 3:
+			into.pos.append(pos[t + k])
+			into.nrm.append(Vector3(0, 0, -1))
+			into.fade.append(1.0)
+		into.gn.append(Vector3(0, 0, -1))
+		into.tag.append(tag)
+		into.owner.append(0)
+		into.paint.append(0.0)
+	if into.names.is_empty():
+		into.names.append("mesh")
+	into.done()
+
+
+func _test_audit() -> void:
+	# the audit's own rules on a plate: a decal on it is fine; a second plate in front hides it
+	var pl := _plate(0.1)
+	var scene := DecalAudit.Tris.new()
+	_audit_tris(scene, pl[0], DecalAudit.Tag.SKIN)
+	var r := _bolt(0.04)
+	var one: Array[DecalRecord] = [r]
+	var m := DecalMesh.build(PlaneHull.from_triangles(pl[0], pl[1]), one, 0)
+	var dec := DecalAudit.Tris.new()
+	_audit_tris(dec, m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX], DecalAudit.Tag.SKIN)
+	var res := DecalAudit.audit(scene, null, dec, r, 0)
+	_check(int(res["opaque"]) > 0 and DecalAudit.problems(res).is_empty(), "a decal on a flat plate has no problems")
+	_audit_tris(scene, _plate(0.1, -0.01)[0], DecalAudit.Tag.ADDON)
+	var hid := DecalAudit.audit(scene, null, dec, r, 0)
+	_check(float(hid.get("hidden_addon", 0.0)) > 0.9, "a plate 1 cm in front of the decal hides it")
+	var empty := DecalAudit.Tris.new()
+	empty.done()
+	var gap := DecalAudit.audit(scene, null, empty, r, 0)
+	_check(float(gap.get("hidden_addon", 0.0)) > 0.9, "and with no decal at all the plate is what shows")
+	var st := DecalAudit.area_stats(dec, Vector3(0, 0, -1))
+	_check(is_zero_approx(float(st.get("stretch", 0.0))) and is_zero_approx(float(st.get("back_leak", 0.0))),
+		"a flat decal is not stretched and faces its viewer")

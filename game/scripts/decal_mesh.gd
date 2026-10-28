@@ -1,15 +1,30 @@
 class_name DecalMesh
 extends RefCounted
 ## Builds the decal mesh of one plane (Kanta 27.10, free placement): every stamp's oriented box cuts the hull
-## triangles inside it (Sutherland–Hodgman against the box sides), the pieces are lifted along the skin normal so
-## they never z-fight, and all decals of the plane merge into one ArrayMesh — one draw call in combat. Plain
+## triangles inside it (Sutherland–Hodgman against the box sides and its depth), the pieces are lifted off the skin
+## so they never z-fight, and all decals of the plane merge into one ArrayMesh — one draw call in combat. Plain
 ## triangles and one ShaderMaterial: works in Forward+ and GL Compatibility (Godot `Decal` nodes do not exist there).
 ## The hull (`PlaneHull`, shared with SkinPatch) is read once per model mesh; its grid makes a placement visit only
-## nearby triangles, and `PlaneHull.raycast` is the editor's cursor on the skin. Turret fairings built at run time
-## ride along as the hull's `extra` and get their share of a decal too.
+## nearby triangles, and `PlaneHull.raycast` is the editor's cursor on the skin. Turret fairings, silhouette details
+## and the tail cabin ride along as the hull's `extra`; moving parts get meshes of their own (`PlaneDecals`).
+##
+## Geometry rules, measured by the decal audit (`--decalaudit`, DecalAudit):
+## - a triangle counts by its own face, not its smoothed normals: the plane bodies are double-sided and carry flipped
+##   and sharp-edged triangles, whose vertex normals point away from the face; pieces are always wound to face the
+##   decal, so the decal material can cull back faces;
+## - the decal fades out where the skin turns more than ~60° from it (per-vertex `COLOR.a`, cut by the alpha scissor
+##   along a smooth line) instead of stretching round a nose or over an edge onto the other side;
+## - the depth slab is clipped too: one large triangle of a battle hull crossing the box is cut, not dropped;
+## - decals lie under the roundels (insignia sit 0.8 mm off the skin), and each later decal a hair higher than the
+##   one before, so overlapping decals draw in list order instead of z-fighting.
 
-const LIFT := 0.0009      ## off the skin, model units (insignia use 0.0008)
-const MIN_FACING := 0.25  ## skin turned further than this from the decal (the far side of a fin) is skipped
+const LIFT := 0.00025       ## off the skin, model units (insignia 0.0008: the roundels stay on top, spec §2.4)
+const LIFT_STEP := 0.00003  ## each later decal of the list lies this much higher: overlaps draw in list order
+const MIN_FACING := 0.3     ## skin turned further than ~72° from the decal gets no piece at all
+const FADE_FROM := 0.42     ## facing (cos) where the decal starts to fade …
+const FADE_TO := 0.58       ## … and where it is whole; the alpha scissor cuts at ~60°
+const DEPTH_PAD := 0.004    ## the box reaches this much deeper than half the decal's size, model units
+const SPLIT_LEVELS := 3     ## a piece partly under a moving part is split this many times, at most (4^3 pieces)
 
 
 ## Collected decal triangles (non-indexed); `mesh()` turns them into one ArrayMesh surface
@@ -19,43 +34,105 @@ class Builder:
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var paints := PackedVector2Array()   ## UV2: primary and secondary paint index
+	var colors := PackedColorArray()     ## alpha: the fade at a steep skin
 	var lift := DecalMesh.LIFT           ## the editor's preview sits higher, over the committed decals
+	var blockers: Array[PlaneHull] = []  ## moving parts lying over the skin: no piece under them (battle flaps)
+	var to_local := Transform3D.IDENTITY ## pieces go out in these axes (a moving part's own)
 
 	## Cuts the hull under one stamp and appends the pieces
 	func project(hull: PlaneHull, st: DecalStamp) -> void:
-		var depth := maxf(st.half_w, st.half_h) + 0.004
+		var depth := maxf(st.half_w, st.half_h) + DecalMesh.DEPTH_PAD
 		var ext := (st.right.abs() * st.half_w + st.up.abs() * st.half_h + st.normal.abs() * depth)
+		var wind := float(hull.winding())
 		for t in hull.near(st.center - ext, st.center + ext):
-			var na := hull.nrm[t * 3]
-			var nb := hull.nrm[t * 3 + 1]
-			var nc := hull.nrm[t * 3 + 2]
-			if (na + nb + nc).normalized().dot(st.normal) < DecalMesh.MIN_FACING:
+			var gn := DecalMesh.face_normal(hull, t, wind)
+			if gn == Vector3.ZERO:
 				continue
-			var poly: Array = []   # [position, normal, Vector2(x, y) in −1…1 box units]
-			var out_z := 0
+			var facing := gn.dot(st.normal)
+			if facing < DecalMesh.MIN_FACING:
+				continue
+			# a small protrusion (an antenna stub) stands in front of the skin the stamp lies on: it carries no piece.
+			# Only what rises in front of the stamp's plane can be one, which spares the test for the rest.
+			var cz := ((hull.pos[t * 3] + hull.pos[t * 3 + 1] + hull.pos[t * 3 + 2]) / 3.0 - st.center).dot(st.normal)
+			if cz > PlaneHull.SMALL_STEP and hull.protrusion(t):
+				continue
+			var poly: Array = []   # [position, normal, Vector3(x, y, z) in −1…1 box units]
+			var above := 0
+			var below := 0
 			for i in 3:
 				var p := hull.pos[t * 3 + i]
 				var rel := p - st.center
-				var z := rel.dot(st.normal)
-				if absf(z) > depth:
-					out_z += 1
-				poly.append([p, hull.nrm[t * 3 + i], Vector2(rel.dot(st.right) / st.half_w, rel.dot(st.up) / st.half_h)])
-			if out_z == 3:
+				var z := rel.dot(st.normal) / depth
+				above += int(z > 1.0)
+				below += int(z < -1.0)
+				poly.append([p, hull.nrm[t * 3 + i], Vector3(rel.dot(st.right) / st.half_w, rel.dot(st.up) / st.half_h, z)])
+			if above == 3 or below == 3:
 				continue
 			poly = DecalMesh.clip(poly)
 			if poly.size() < 3:
 				continue
+			var flip := (hull.pos[t * 3 + 1] - hull.pos[t * 3]).cross(hull.pos[t * 3 + 2] - hull.pos[t * 3]).dot(gn) > 0.0
 			for i in range(1, poly.size() - 1):
-				for v: Array in [poly[0], poly[i], poly[i + 1]]:
-					var n: Vector3 = (v[1] as Vector3).normalized()
-					var xy: Vector2 = v[2]
-					var u := xy.x * 0.5 + 0.5
-					if st.mirror:
-						u = 1.0 - u
-					verts.append((v[0] as Vector3) + n * lift)
-					normals.append(n)
-					uvs.append(st.uv.position + Vector2(u, 0.5 - xy.y * 0.5) * st.uv.size)
-					paints.append(Vector2(st.c1, st.c2))
+				var tri: Array = [poly[0], poly[i + 1], poly[i]] if flip else [poly[0], poly[i], poly[i + 1]]
+				var p0: Vector3 = tri[0][0]
+				if ((tri[1][0] as Vector3) - p0).cross((tri[2][0] as Vector3) - p0).length_squared() < 1e-18:
+					continue   # a sliver left where a corner lay on a box side
+				_emit(tri, gn, st, depth, DecalMesh.SPLIT_LEVELS)
+
+	## Emits one piece triangle, minus what a moving part covers: a triangle the part covers only in part is split
+	## in four (`levels` more times at most) so the uncovered skin keeps its decal; a coarse battle-hull triangle
+	## half under a flap plate would otherwise be dropped whole and leave the skin beside the flap bare
+	func _emit(tri: Array, gn: Vector3, st: DecalStamp, depth: float, levels: int) -> void:
+		if not blockers.is_empty():
+			var c := ((tri[0][0] as Vector3) + (tri[1][0] as Vector3) + (tri[2][0] as Vector3)) / 3.0
+			var hid := int(_blocked_at(c, st, depth))
+			if levels > 0:
+				for v: Array in tri:
+					hid += int(_blocked_at(v[0], st, depth))
+				if hid == 4:
+					return
+				if hid > 0:
+					var m: Array = [_mid(tri[0], tri[1]), _mid(tri[1], tri[2]), _mid(tri[2], tri[0])]
+					for sub: Array in [[tri[0], m[0], m[2]], [m[0], tri[1], m[1]], [m[2], m[1], tri[2]], [m[0], m[1], m[2]]]:
+						_emit(sub, gn, st, depth, levels - 1)
+					return
+			elif hid > 0:
+				return
+		for v: Array in tri:
+			_vertex(v, gn, st)
+
+	## Midpoint of two piece vertices ([position, normal, box xyz])
+	static func _mid(a: Array, b: Array) -> Array:
+		return [(a[0] as Vector3).lerp(b[0], 0.5), (a[1] as Vector3).lerp(b[1], 0.5), (a[2] as Vector3).lerp(b[2], 0.5)]
+
+	## One vertex of a piece: lifted along its smooth normal (along the face where that normal lies), faded by how
+	## far the skin there turns from the decal
+	func _vertex(v: Array, gn: Vector3, st: DecalStamp) -> void:
+		var n: Vector3 = (v[1] as Vector3).normalized()
+		var p: Vector3 = v[0]
+		var xyz: Vector3 = v[2]
+		var sharp := n.dot(gn) < 0.5   # a sharp edge or a flipped triangle: the smoothed normal says nothing
+		if sharp:
+			n = gn
+		var u := xyz.x * 0.5 + 0.5
+		if st.mirror:
+			u = 1.0 - u
+		verts.append(to_local * (p + n * lift))
+		normals.append((to_local.basis * n).normalized())
+		uvs.append(st.uv.position + Vector2(u, 0.5 - xyz.y * 0.5) * st.uv.size)
+		paints.append(Vector2(st.c1, st.c2))
+		colors.append(Color(1, 1, 1, smoothstep(DecalMesh.FADE_FROM, DecalMesh.FADE_TO, n.dot(st.normal))))
+
+	## True when a moving part lies over skin point `c` (seen along the decal's normal within the box depth): a piece
+	## there would show as a ghost on the wing when the flap goes down
+	func _blocked_at(c: Vector3, st: DecalStamp, depth: float) -> bool:
+		for b in blockers:
+			if not b.bounds().grow(depth).has_point(c):
+				continue
+			# shot from the viewer's side towards the piece: a part's outer face in between hides it
+			if b.raycast(c + st.normal * depth * 2.0, -st.normal, depth * 2.0 - 0.0005).size() == 2:
+				return true
+		return false
 
 	## One-surface mesh of everything projected so far (null when empty)
 	func mesh() -> ArrayMesh:
@@ -65,6 +142,7 @@ class Builder:
 		arr.resize(Mesh.ARRAY_MAX)
 		arr[Mesh.ARRAY_VERTEX] = verts
 		arr[Mesh.ARRAY_NORMAL] = normals
+		arr[Mesh.ARRAY_COLOR] = colors
 		arr[Mesh.ARRAY_TEX_UV] = uvs
 		arr[Mesh.ARRAY_TEX_UV2] = paints
 		var m := ArrayMesh.new()
@@ -72,9 +150,23 @@ class Builder:
 		return m
 
 
-## Clips a polygon of [position, normal, box xy] to the box sides |x| ≤ 1, |y| ≤ 1
+## Outward face normal of triangle `t`: its winding normal turned to the side its smooth normals point to; where
+## they disagree with the face (a sharp edge, a crease) the model's own winding (`wind`, PlaneHull.winding) decides.
+## Zero for a degenerate triangle.
+static func face_normal(hull: PlaneHull, t: int, wind: float) -> Vector3:
+	var a := hull.pos[t * 3]
+	var cr := (hull.pos[t * 3 + 1] - a).cross(hull.pos[t * 3 + 2] - a)
+	if cr.length_squared() < 1e-20:
+		return Vector3.ZERO
+	cr = cr.normalized()
+	var sm := hull.nrm[t * 3] + hull.nrm[t * 3 + 1] + hull.nrm[t * 3 + 2]
+	var d := cr.dot(sm.normalized()) if sm.length_squared() > 1e-12 else 0.0
+	return cr * (signf(d) if absf(d) >= 0.5 else wind)
+
+
+## Clips a polygon of [position, normal, box xyz] to the box |x| ≤ 1, |y| ≤ 1, |z| ≤ 1
 static func clip(poly: Array) -> Array:
-	for axis in 2:
+	for axis in 3:
 		for sgn: float in [1.0, -1.0]:
 			if poly.is_empty():
 				return poly
@@ -82,24 +174,29 @@ static func clip(poly: Array) -> Array:
 			for i in poly.size():
 				var a: Array = poly[i]
 				var b: Array = poly[(i + 1) % poly.size()]
-				var da := 1.0 - sgn * (a[2] as Vector2)[axis]
-				var db := 1.0 - sgn * (b[2] as Vector2)[axis]
+				var da := 1.0 - sgn * (a[2] as Vector3)[axis]
+				var db := 1.0 - sgn * (b[2] as Vector3)[axis]
 				if da >= 0.0:
 					out.append(a)
 				if (da >= 0.0) != (db >= 0.0):
 					var k := da / (da - db)
 					out.append([(a[0] as Vector3).lerp(b[0], k), (a[1] as Vector3).lerp(b[1], k),
-						(a[2] as Vector2).lerp(b[2], k)])
+						(a[2] as Vector3).lerp(b[2], k)])
 			poly = out
 	return poly
 
 
-## One merged mesh for all `records` on the hull; `tally` — marks for tally decals; `lift` — distance off the skin
-static func build(hull: PlaneHull, records: Array[DecalRecord], tally: int, lift := LIFT) -> ArrayMesh:
+## One merged mesh for all `records` on the hull (and its `extra`); `tally` — marks for tally decals; `lift` —
+## distance off the skin of the first decal (each later one a LIFT_STEP higher); `blockers` — moving parts over the
+## skin; `to_local` — the axes the mesh is built in (a moving part's: `hull` is then that part, in model axes)
+static func build(hull: PlaneHull, records: Array[DecalRecord], tally: int, lift := LIFT,
+		blockers: Array[PlaneHull] = [], to_local := Transform3D.IDENTITY) -> ArrayMesh:
 	var b := Builder.new()
-	b.lift = lift
-	for r in records:
-		for st in DecalLoadout.stamps(r, tally):
+	b.blockers = blockers
+	b.to_local = to_local
+	for i in records.size():
+		b.lift = lift + LIFT_STEP * i
+		for st in DecalLoadout.stamps(records[i], tally, hull):
 			b.project(hull, st)
 			if hull.extra != null:
 				b.project(hull.extra, st)

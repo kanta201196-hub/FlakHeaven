@@ -35,20 +35,24 @@ static func collect(root: Node3D) -> Dictionary:
 	return d
 
 
-## Поза на момент t (с); demo — показ механизации; delta — для плавного перехода между режимами
-static func step(d: Dictionary, t: float, demo: bool, delta: float) -> void:
+## Поза на момент t (с); demo — показ механизации; delta — для плавного перехода между режимами.
+## `hold` — the decal editor is open: flaps up and the bay shut (blending there), the pose the decals and the
+## editor's cursor are measured in (PlaneDecals.cursor_hull)
+static func step(d: Dictionary, t: float, demo: bool, delta: float, hold := false) -> void:
 	if bench_pose >= 0.0:
 		_bench_step(d)
 		return
-	var k := move_toward(float(d["k"]), 1.0 if demo else 0.0, BLEND * delta)
+	var k := move_toward(float(d["k"]), 1.0 if demo and not hold else 0.0, BLEND * delta)
 	d["k"] = k
+	var h := move_toward(float(d.get("h", 0.0)), 1.0 if hold else 0.0, BLEND * delta)
+	d["h"] = h
 	var ks := smoothstep(0.0, 1.0, k)
 	var mech: Node3D = d["mech"]
 	if mech != null and is_instance_valid(mech) and not WingMech._force:
 		WingMech.pose(mech, ks * DEMO_MECH * mech_phase(t))
 	var bay: Node3D = d["bay"]
 	if bay != null and is_instance_valid(bay):
-		var bt := lerpf(1.0, 1.0 - mech_phase(t + MECH_PERIOD * 0.5), ks)
+		var bt := lerpf(1.0, 1.0 - mech_phase(t + MECH_PERIOD * 0.5), ks) * (1.0 - smoothstep(0.0, 1.0, h))
 		WingMech.pose_bay(bay, bt)
 		# бомбы висят ниже створок: пока отсек почти закрыт, их не показываем (иначе «торчат» сквозь створки);
 		# S11-11: a model with a real bay (meta "cavity") keeps them inside, so they stay visible
