@@ -64,8 +64,10 @@ static func tally_of(counters: Dictionary, cls: String) -> int:
 
 
 ## Atlas stamps of one record: a picture is one stamp, a number one stamp per digit, a tally one per mark
-## (`tally` marks, at most DecalCatalog.TALLY_MAX, rows of TALLY_ROW starting at the record's position)
-static func stamps(r: DecalRecord, tally: int) -> Array[DecalStamp]:
+## (`tally` marks, at most DecalCatalog.TALLY_MAX, rows of TALLY_ROW starting at the record's position). With `hull`,
+## every digit and mark is seated on the skin (`seat`): laid out in the record's flat plane, the far marks of a long
+## row would float off a curved fuselage, outside the depth they cut, and come out missing.
+static func stamps(r: DecalRecord, tally: int, hull: PlaneHull = null) -> Array[DecalStamp]:
 	var out: Array[DecalStamp] = []
 	var b := r.basis_vectors()
 	var kind := DecalCatalog.kind(r.id)
@@ -90,7 +92,19 @@ static func stamps(r: DecalRecord, tally: int) -> Array[DecalStamp]:
 	elif kind == "pic":
 		out.append(_stamp(r.pos, r, b, r.size * 0.5 * DecalCatalog.aspect(r.id), r.size * 0.5,
 			DecalCatalog.image_rect(r.id), r.mirror, ci, cj))
+	if hull != null and out.size() > 1:
+		for st in out:
+			seat(st, r.pos, hull)
 	return out
+
+
+## Moves stamp `st` along its normal onto the skin of `hull` (the nearest skin within reach of its plane, which
+## grows with its distance from the record's anchor `anchor`); left where it is when the ray finds none
+static func seat(st: DecalStamp, anchor: Vector3, hull: PlaneHull) -> void:
+	var reach := clampf(st.center.distance_to(anchor) * 0.6, maxf(st.half_w, st.half_h), 0.08)
+	var hit := hull.raycast(st.center + st.normal * reach, -st.normal, reach * 2.0, true)
+	if hit.size() == 2:
+		st.center = hit[0]
 
 
 static func _stamp(c: Vector3, r: DecalRecord, b: Array[Vector3], hw: float, hh: float, uv: Rect2, mirror: bool,

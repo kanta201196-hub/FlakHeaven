@@ -21,6 +21,8 @@ const NOTE_TIME := 3.0
 var m: Main
 var note := ""                ## why the last action did nothing (shown in the panel)
 var note_t := 0.0
+var _roundel_key := ""        # the decal `_roundel_note` last looked at, and whether a roundel hides it
+var _roundel_hid := false
 var tally := 0                ## the class's real kill tally (read when the editor opens)
 var _dirty := false           ## the profile holds decal changes the file does not have yet
 var _press_at := Vector2.ZERO
@@ -91,6 +93,30 @@ func _store(e: DecalEditor) -> void:
 		_dirty = true
 
 
+## Says why the editor changed or kept a decal's size (DecalEditor.note): it was made smaller to fit where it was
+## put, or it cannot grow any more there
+func _fit_note(e: DecalEditor) -> void:
+	if e.note == "shrunk":
+		_say(Loc.t("Знак уменьшен: крупнее здесь не помещается"))
+	elif e.note == "max":
+		_say(Loc.t("Крупнее здесь не поместится"), true)
+	e.note = ""
+
+
+## Says so while the decal under the cursor (or the selected one) would lie wholly under a roundel, which stays on
+## top and hides it (spec §2.4); asked again only when the decal changes
+func _roundel_note(h3: Hangar3D, r: DecalRecord) -> void:
+	if r == null:
+		_roundel_key = ""
+		return
+	var k := "%s|%s|%.4f|%.3f|%s" % [r.id, str(r.pos.snapped(Vector3.ONE * 0.001)), r.size, r.angle, r.text]
+	if k != _roundel_key:
+		_roundel_key = k
+		_roundel_hid = h3.decal_under_roundel(r, maxi(tally, DecalEditor.PREVIEW_TALLY))
+	if _roundel_hid:
+		_say(Loc.t("Опознавательный знак закроет этот знак"))
+
+
 ## Shows why an action did nothing; `buzz` — also the refusal sound (panel buttons get theirs from MainInput)
 func _say(s: String, buzz := false) -> void:
 	note = s
@@ -111,14 +137,18 @@ func frame(delta: float) -> void:
 		close()
 		return
 	note_t = maxf(0.0, note_t - delta)
+	e.hull = h3.decal_hull()   # sizes stay within what fits where a decal lies
+	e.tally = maxi(tally, DecalEditor.PREVIEW_TALLY)
 	_keys()
 	_pad(h3, delta)
 	if m.decal_edit == null:   # B closed it
 		return
+	_fit_note(e)
 	_hit = h3.decal_ray(h3.decal_cursor) if (h3.decal_pad or HudDecals.focus < 0) else []
 	var live := e.preview(_hit)
 	if live == null and e.sel >= 0 and not e.moving:
 		live = e.records[e.sel]   # the selected decal pulses
+	_roundel_note(h3, live)
 	_store(e)
 	h3.decal_refresh(e.shown(), live, maxi(tally, DecalEditor.PREVIEW_TALLY))
 

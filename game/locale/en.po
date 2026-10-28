@@ -7896,6 +7896,18 @@ msgstr "No more than %d decals per plane"
 msgid "Этот знак ещё закрыт: %s"
 msgstr "This decal is still locked: %s"
 
+#: game/scripts/decal_edit_input.gd:117
+msgid "Опознавательный знак закроет этот знак"
+msgstr "A roundel will cover this decal"
+
+#: game/scripts/decal_edit_input.gd:98
+msgid "Знак уменьшен: крупнее здесь не помещается"
+msgstr "Decal shrunk: a larger one does not fit here"
+
+#: game/scripts/decal_edit_input.gd:100
+msgid "Крупнее здесь не поместится"
+msgstr "It won't fit here any larger"
+
 #: game/scripts/decal_edit_input.gd:295
 msgid "Сначала выберите картинку"
 msgstr "Pick a picture first"
@@ -8134,3 +8146,43 @@ msgstr "‹ Decals"
 #: game/scripts/hud_hangar.gd:130
 msgid "Знаки ›"
 msgstr "Decals ›"
+
+#: game/scripts/livery.gd:46
+msgid "Лесная тень"
+msgstr "Forest Shadow"
+
+#: game/scripts/livery.gd:51
+msgid "Морской туман"
+msgstr "Sea Fog"
+
+#: game/scripts/livery.gd:54
+msgid "Вулканический пепел"
+msgstr "Volcanic Ash"
+
+#: game/scripts/livery.gd:57
+msgid "Тростник"
+msgstr "Reed"
+
+#: game/scripts/livery.gd:65
+msgid "Ослепитель"
+msgstr "Dazzler"
+
+#: game/scripts/livery.gd:68
+msgid "Пиксельная фуксия"
+msgstr "Pixel Fuchsia"
+
+#: game/scripts/livery.gd:71
+msgid "Акула"
+msgstr "Shark"
+
+#: game/scripts/livery.gd:77
+msgid "Полярный тигр"
+msgstr "Arctic Tiger"
+
+#: game/scripts/livery.gd:80
+msgid "Ржавое железо"
+msgstr "Rusty Iron"
+
+#: game/scripts/livery.gd:83
+msgid "Гоночная шахматка"
+msgstr "Racing Chequer"
