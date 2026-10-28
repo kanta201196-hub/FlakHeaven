@@ -8134,3 +8134,43 @@ msgstr "‹ 标志"
 #: game/scripts/hud_hangar.gd:130
 msgid "Знаки ›"
 msgstr "标志 ›"
+
+#: game/scripts/livery.gd:46
+msgid "Лесная тень"
+msgstr "林影"
+
+#: game/scripts/livery.gd:51
+msgid "Морской туман"
+msgstr "海雾"
+
+#: game/scripts/livery.gd:54
+msgid "Вулканический пепел"
+msgstr "火山灰"
+
+#: game/scripts/livery.gd:57
+msgid "Тростник"
+msgstr "芦苇"
+
+#: game/scripts/livery.gd:65
+msgid "Ослепитель"
+msgstr "炫目"
+
+#: game/scripts/livery.gd:68
+msgid "Пиксельная фуксия"
+msgstr "像素紫红"
+
+#: game/scripts/livery.gd:71
+msgid "Акула"
+msgstr "鲨鱼"
+
+#: game/scripts/livery.gd:77
+msgid "Полярный тигр"
+msgstr "极地虎"
+
+#: game/scripts/livery.gd:80
+msgid "Ржавое железо"
+msgstr "锈铁"
+
+#: game/scripts/livery.gd:83
+msgid "Гоночная шахматка"
+msgstr "赛车棋格"

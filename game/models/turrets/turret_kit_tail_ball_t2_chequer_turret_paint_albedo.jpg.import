@@ -1,0 +1,39 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://cgu1rkuswuxxs"
+path.s3tc="res://.godot/imported/turret_kit_tail_ball_t2_chequer_turret_paint_albedo.jpg-7445a5d6bdc35b587f7e7f75080a032a.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_tail_ball_t2_chequer_turret_paint_albedo.jpg-7445a5d6bdc35b587f7e7f75080a032a.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "b21efb9392c8298484b1d04821c66f06"
+}
+
+[deps]
+
+source_file="res://models/turrets/turret_kit_tail_ball_t2_chequer_turret_paint_albedo.jpg"
+dest_files=["res://.godot/imported/turret_kit_tail_ball_t2_chequer_turret_paint_albedo.jpg-7445a5d6bdc35b587f7e7f75080a032a.s3tc.ctex", "res://.godot/imported/turret_kit_tail_ball_t2_chequer_turret_paint_albedo.jpg-7445a5d6bdc35b587f7e7f75080a032a.etc2.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1
