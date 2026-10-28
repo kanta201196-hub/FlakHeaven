@@ -6,16 +6,20 @@ class_name VillageHouses
 ## tools/blender/village_houses.py) carry no textures of their own: their surfaces are named by material class and
 ## get the fortified-area fort's texture set Г (FortBuild.SETS), so the village and the fort read as one place.
 ## Model units are metres, long side along X, base on y = 0, centred on the footprint.
+## The six common houses vh_h50a…f are procedural adobe houses (tools/blender/village_adobe.py, weak-models list
+## item 1, 28.10.2026) with the old variants' footprints: battered mud walls, parapets, roof beams, deep openings,
+## stairs, verandas and roof clutter, each with one baked weathered material (adobe_*) instead of the class
+## materials, so a variant is one draw call.
 
 ## [file, size (x, height, depth) in metres, floors, weight]. Sizes come from village_houses.py's printout.
 const VARIANTS := [
 	["vh_h49", Vector3(14.01, 5.33, 11.99), 1, 0.35],   # big L-shaped house on a stone plinth, beam ends
-	["vh_h50a", Vector3(8.49, 6.55, 8.08), 2, 1.0],
-	["vh_h50b", Vector3(9.57, 6.52, 4.25), 2, 1.0],
-	["vh_h50c", Vector3(8.51, 3.37, 8.08), 1, 1.0],
-	["vh_h50d", Vector3(7.78, 3.37, 5.64), 1, 1.0],
-	["vh_h50e", Vector3(8.51, 3.58, 4.26), 1, 1.0],     # arcade front
-	["vh_h50f", Vector3(8.50, 6.69, 8.08), 2, 0.7],     # arcade front
+	["vh_h50a", Vector3(8.49, 6.79, 8.08), 2, 1.0],   # L-plan, upper room, roof terrace, mud stair (2654 tris)
+	["vh_h50b", Vector3(9.57, 6.50, 4.25), 2, 1.0],   # two-storey tower block and a terraced wing (2500 tris)
+	["vh_h50c", Vector3(8.51, 3.77, 8.08), 1, 1.0],   # square, deep loggia on two posts (1996 tris)
+	["vh_h50d", Vector3(7.78, 3.65, 5.64), 1, 1.0],   # two rooms on a stone plinth (1648 tris)
+	["vh_h50e", Vector3(8.51, 3.75, 4.26), 1, 1.0],   # long, veranda on four posts (1980 tris)
+	["vh_h50f", Vector3(8.50, 6.84, 8.08), 2, 0.7],   # two-storey, timber gallery and balcony (2808 tris)
 	["vh_h51", Vector3(9.00, 3.48, 8.14), 1, 0.8],      # small house, open pergola and a cloth awning
 ]
 const WELL := 8                      ## variant index of the yard well (hand pump on a slab, model 71)
@@ -208,6 +212,12 @@ static func _mesh(v: int) -> ArrayMesh:
 	if mesh != null and v != WELL:
 		for si in mesh.get_surface_count():
 			var m := mesh.surface_get_material(si)
+			if m is StandardMaterial3D and m.resource_name.begins_with("adobe_"):
+				var b := m as StandardMaterial3D   # a baked adobe house: its albedo, roughness and relief are final
+				b.metallic = 0.0
+				b.metallic_specular = 0.25
+				b.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+				continue
 			if m is StandardMaterial3D and not m.resource_name.begins_with("vh_"):
 				var t := m as StandardMaterial3D   # a prop's own texture (graded in village_props.py): matte, both sides
 				t.roughness = 1.0

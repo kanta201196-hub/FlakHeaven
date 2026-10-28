@@ -14,7 +14,8 @@ extends Node3D
 
 ## Set → parts [source, what, x, z, width, yaw°]. source: "house" (VillageHouses variant, metres), "prop"
 ## (BiomeProps kind, width in world px like KINDS), "unit" (battle GLB under res://models/battle/, width = its
-## sprite length). Widths only matter inside a set: the set is scaled to a fixed size before framing.
+## sprite length), "adobe" (AdobeBuild.debug_piece kind: village walls, gates and ruins with their houses).
+## Widths only matter inside a set: the set is scaled to a fixed size before framing.
 const SETS := {
 	"houses": [["house", 0, -9.0, -4.0, 0.0, 10.0], ["house", 2, 7.0, -7.0, 0.0, -5.0], ["house", 5, 8.0, 4.0, 0.0, 90.0],
 		["house", 7, -6.0, 9.0, 0.0, 180.0], ["house", 8, 1.5, 1.0, 0.0, 30.0]],
@@ -34,6 +35,11 @@ const SETS := {
 		["house", 11, -9.5, 4.0, 0.0, 0.0], ["house", 12, -5.0, 4.0, 0.0, 0.0], ["house", 13, -1.5, 4.0, 0.0, 0.0],
 		["house", 14, 2.5, 4.0, 0.0, 0.0], ["house", 15, 7.0, 4.0, 0.0, 0.0],
 		["house", 16, -9.5, 8.5, 0.0, 0.0], ["house", 17, -4.0, 8.5, 0.0, 0.0]],
+	# village compounds and ruins built by AdobeBuild (debug_piece kinds), their houses as VillageHouses models
+	"v_yard": [["adobe", "yard", 0.0, 0.0, 0.0, 0.0]],
+	"v_yard_damaged": [["adobe", "yard_damaged", 0.0, 0.0, 0.0, 0.0]],
+	"v_yard_ruined": [["adobe", "yard_ruined", 0.0, 0.0, 0.0, 0.0]],
+	"v_ruins": [["adobe", "ruins", 0.0, 0.0, 0.0, 0.0]],
 	"radar": [["unit", "fh_battle_e_radar", 0.0, 0.0, 32.0, 30.0]],
 	"bunker": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, -40.0]],   # the embrasure side
 	"bunker_rear": [["unit", "fh_battle_e_bunker", 0.0, 0.0, 59.0, 150.0]],   # the trench and door
@@ -53,6 +59,7 @@ const FOCUS := {"fortress_dome": ["turret_3", 3.2], "fortress_spine": ["core", 2
 ## Sets whose model is posed as in a later boss phase (Render3D._fortress_parts): "open" = bay doors and core
 ## panels open, bay missiles lifted
 const POSE := {"fortress_spine_open": "open"}
+const VILLAGE_PX := 1650.0  ## o_village size in world px (AdobeBuild.V_UNIT): an "adobe" part's scale before framing
 const SIZE := 20.0          ## a set's longest side after scaling, units
 const ISO_PITCH := 35.0     ## 3/4 view: degrees above the horizon
 const ISO_YAW := 35.0       ## and around from the front (+z)
@@ -64,8 +71,10 @@ var _cam: Camera3D
 var _sun: DirectionalLight3D
 var _set_root: Node3D
 var _wait := 0
-## Ad-hoc sets from --units=<glb>,<glb>: one battle GLB each (name without .glb), shown alone at yaw 30°
+## Ad-hoc sets from --units=<glb>,<glb>: one battle GLB each (name without .glb), shown alone at yaw 30°;
+## from --houses=<variant>,<variant>: one VillageHouses variant each, set name = its file (vh_h50a …)
 var _extra := {}
+var _adobe_mats: Array[ShaderMaterial] = []   ## village-mesh materials of the set: their px_scale follows the set's scale
 
 
 func _ready() -> void:
@@ -82,6 +91,14 @@ func _ready() -> void:
 			for u in a.substr(8).split(","):
 				_extra[u] = [["unit", u, 0.0, 0.0, 1.0, 30.0]]
 				sets.append(u)
+		elif a.begins_with("--houses="):   # after --sets=…: shown after those sets
+			if sets == SETS.keys():
+				sets = []
+			for h in a.substr(9).split(","):
+				var v := int(h)
+				var nm := String(VillageHouses.VARIANTS[v][0]) if v < VillageHouses.VARIANTS.size() else "vhouse_%d" % v
+				_extra[nm] = [["house", v, 0.0, 0.0, 0.0, 30.0]]
+				sets.append(nm)
 	Settings.set_preset(_gfx)
 	_build_world()
 	for s in sets:
@@ -189,6 +206,7 @@ func _show(name: String) -> void:
 	_set_root = Node3D.new()
 	add_child(_set_root)
 	var props := BiomeProps.new(null)
+	_adobe_mats.clear()
 	for part: Array in (_extra[name] if _extra.has(name) else SETS[name]):
 		var n := Node3D.new()
 		var body: Node3D = null
@@ -204,6 +222,16 @@ func _show(name: String) -> void:
 				mi.mesh = props._mesh(String(part[1]))
 				mi.scale = Vector3.ONE * float(part[4])
 				body = mi
+			"adobe":   # AdobeBuild piece: old units × V_UNIT, scaled to world px as the game scales o_village
+				var piece := AdobeBuild.debug_piece(String(part[1]))
+				var mi := MeshInstance3D.new()
+				mi.mesh = piece[0]
+				var am := AdobeBuild.material().duplicate() as ShaderMaterial
+				mi.material_override = am
+				_adobe_mats.append(am)
+				mi.scale = Vector3.ONE * VILLAGE_PX
+				VillageHouses.attach(mi, piece[1])
+				body = mi
 			"unit":
 				body = (load("res://models/battle/%s.glb" % part[1]) as PackedScene).instantiate()
 				body.scale = Vector3.ONE * float(part[4])
@@ -216,7 +244,13 @@ func _show(name: String) -> void:
 	var box := _bounds(_set_root, Transform3D.IDENTITY)
 	var k := SIZE / maxf(maxf(box.size.x, box.size.z), 0.001)
 	_set_root.scale = Vector3.ONE * k
-	_set_root.position = -Vector3(box.get_center().x, box.position.y, box.get_center().z) * k
+	for am in _adobe_mats:   # the village shader works in world px: undo the set's scale
+		am.set_shader_parameter("px_scale", 1.0 / k)
+	# the village mesh is sunk (AdobeBuild.SINK) as in the game: its ground level goes on the sand
+	var floor_y := box.position.y
+	if not _adobe_mats.is_empty():
+		floor_y += AdobeBuild.SINK * AdobeBuild.V_UNIT * VILLAGE_PX
+	_set_root.position = -Vector3(box.get_center().x, floor_y, box.get_center().z) * k
 
 
 ## The Fortress in phases 2 and 3 the way Render3D._fortress_parts leaves it: doors at 125°, core panels at 140°

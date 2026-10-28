@@ -1,0 +1,39 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://ctfbpqfwcdg2r"
+path.s3tc="res://.godot/imported/vh_h50e_adobe_h50e_normal.jpg-0399a1698f0e0922c48a5e3eece87752.s3tc.ctex"
+path.etc2="res://.godot/imported/vh_h50e_adobe_h50e_normal.jpg-0399a1698f0e0922c48a5e3eece87752.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "992e974d7995cb43c6e937d94d8bc88b"
+}
+
+[deps]
+
+source_file="res://models/village/vh_h50e_adobe_h50e_normal.jpg"
+dest_files=["res://.godot/imported/vh_h50e_adobe_h50e_normal.jpg-0399a1698f0e0922c48a5e3eece87752.s3tc.ctex", "res://.godot/imported/vh_h50e_adobe_h50e_normal.jpg-0399a1698f0e0922c48a5e3eece87752.etc2.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=1
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1

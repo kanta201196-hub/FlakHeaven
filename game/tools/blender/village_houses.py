@@ -7,10 +7,12 @@ place. Faces are classed by source material name, or for single-texture sources 
 face. Each house variant is centred on its footprint, base on z = 0, metres (≈ the fort preview's units), long side
 along X, decimated, and gets box-projected UVs (metres / tile of its class, as FortBuild._tri) so the fort shader
 tiles it at the fort's texel size. The well (71) keeps its scan texture, decimated.
+The six model-50 houses vh_h50a…f are no longer made here: they were replaced (weak-models list, item 1, 28.10.2026)
+by procedural houses from village_adobe.py, so their rows are gone and a rerun leaves those files alone.
 
 Run (from the repo root; the sources are untrusted downloads, so -I):
   python3 -I game/tools/blender/village_houses.py <dl_dir> <out_dir>
-    <dl_dir>/{h49,h50,h51,w71}/src.glb  ->  <out_dir>/vh_<name>.glb, <out_dir>/vh_well.glb, sizes printed as
+    <dl_dir>/{h49,h51,w71}/src.glb  ->  <out_dir>/vh_<name>.glb, <out_dir>/vh_well.glb, sizes printed as
     a GDScript table for VillageHouses.VARIANTS
 """
 import math
@@ -200,12 +202,6 @@ H51 = [("lambert2$|lambert15$", "plaster"), ("lambert3$|lambert4$|blinn1$|lamber
        ("lambert8$", "dark"), ("lambert10$", "cloth")]
 VARIANTS = [
     ("h49", "h49", r".", r"GROUND|SAND_02", H49, 0.01, 1000),
-    ("h50a", "h50", r"^Desert House_001", r"^$", [(".", "tex")], 1.0, 350),
-    ("h50b", "h50", r"^Desert House_002", r"^$", [(".", "tex")], 1.0, 300),
-    ("h50c", "h50", r"^Desert House_003", r"^$", [(".", "tex")], 1.0, 260),
-    ("h50d", "h50", r"^Desert House_004", r"^$", [(".", "tex")], 1.0, 200),
-    ("h50e", "h50", r"^Desert House_005", r"^$", [(".", "tex")], 1.0, 240),
-    ("h50f", "h50", r"^Desert House_006", r"^$", [(".", "tex")], 1.0, 350),
     ("h51", "h51", r".", r"knob_ring|pCylinder", H51, 1.9, 500),
 ]
 
