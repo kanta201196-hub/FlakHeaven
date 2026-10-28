@@ -161,21 +161,38 @@ def build(name, out, paint=None, tex=2048, before_export=None):
             o.parent = bpy.data.objects[parents[gname]] if gname in parents else tur
             o.matrix_world = mw
     print("TRIS", tris)
+    if isinstance(paint, list):
+        # several liveries in one run (turret_paint.pick "livery=a,b,…"): the unwrap and the paint-independent
+        # bakes are made once, each paint exported as <name>_<suffix>.glb (no .blend)
+        for sfx, pal in paint:
+            _paint(tur, groups, dict(pal, suffix=sfx), tex)
+            _export(os.path.join(out, "%s_%s.glb" % (name, sfx)), True)
+        return tur
     if paint is not None:
-        import turret_paint
-        turret_paint.bake(tur, paint, tex, "turret_paint")
-        for gname in groups:
-            if gname:
-                turret_paint.bake(bpy.data.objects[gname], paint, tex // 4 if gname == "pods" else tex // 2,
-                                  "turret_paint_" + gname)
+        _paint(tur, groups, paint, tex)
     if before_export is not None:
         before_export(tur)
 
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, name + ".blend"))
-    bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format="GLB", use_selection=False,
-                              export_image_format="JPEG" if paint is not None or before_export is not None else "AUTO", export_jpeg_quality=90)
+    _export(os.path.join(out, name + ".glb"), paint is not None or before_export is not None)
 
     return tur
+
+
+def _paint(tur, groups, paint, tex):
+    """Bake the turret_paint palette onto the root (tex atlas) and the moving groups (half; pods a quarter)"""
+    import turret_paint
+    turret_paint.bake(tur, paint, tex, "turret_paint")
+    for gname in groups:
+        if gname:
+            turret_paint.bake(bpy.data.objects[gname], paint, tex // 4 if gname == "pods" else tex // 2,
+                              "turret_paint_" + gname)
+
+
+def _export(path, jpeg):
+    """The whole scene as GLB; baked textures as JPEG"""
+    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=False,
+                              export_image_format="JPEG" if jpeg else "AUTO", export_jpeg_quality=90)
 
 
 def preview(out, shots):

@@ -1,6 +1,6 @@
 """Спаренная турель «Кита» (по референсу владельца 16.10): основание-погон, бронированная
 башня с плитами сверху, люлька и два ствола с дульными тормозами.
-Запуск (bpy 5.x):  python3 turret_twin.py [t1|t2|t3|quad] [nopreview] [nopaint] [livery=steppe|rock] <out_dir>
+Запуск (bpy 5.x):  python3 turret_twin.py [t1|t2|t3|quad] [nopreview] [nopaint] [livery=<Livery.TURRET_PAINT suffix>] <out_dir>
 Ступени (Т-4, plan-after-review 3.6 — меняют форму и детали, не размер; по умолчанию t2):
   t1 (ур. 1–2) — спарка без дульных тормозов, простой маск;
   t2 (ур. 3–4) — дульные тормоза и бронещиток перед люлькой;

@@ -1,9 +1,9 @@
 """Кормовая установка «Кита» по примеру владельца 16.10 (catalog/refs/tail_turret): кабина стрелка
 в конце фюзеляжа под килем — остеклённый фонарь сверху, под ним сферическая установка со спаренными
 пушками. Две модели, потому что кабина неподвижна, а шар со стволами поворачивается:
-  python3 turret_tail.py ball [t1|t2|t3] [livery=steppe|rock] <out_dir>   → turret_tail_ball_t<N>.glb  (шар и стволы)
+  python3 turret_tail.py ball [t1|t2|t3] [livery=<Livery.TURRET_PAINT suffix>] <out_dir>   → turret_tail_ball_t<N>.glb  (шар и стволы)
      ступени стволов (Т-4): t1 — без тормозов, t2 — дульные тормоза, t3 — тормоза и дырчатый кожух
-  python3 turret_tail.py cabin [livery=steppe|rock] <out_dir>  → turret_tail_cabin.glb (кабина)
+  python3 turret_tail.py cabin [livery=<Livery.TURRET_PAINT suffix>] <out_dir>  → turret_tail_cabin.glb (кабина)
 Обе в одних осях: начало координат — центр шара, стволы +X (в игре развёрнуты назад), Z вверх.
 Единицы как у turret_twin.py (длина башни = 1), стволы короткие — как у укороченной турели.
 S12: baked paint in the «Кит» palette (turret_paint.py, 1024 px atlas); nopaint skips it."""

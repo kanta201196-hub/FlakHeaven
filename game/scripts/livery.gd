@@ -39,12 +39,68 @@ const STEPPE := ["steppe", "Степь", Color(0.50, 0.40, 0.26), Color(0.53, 0.
 const ROCK := ["rock", "Скальный осколок", Color(0.46, 0.38, 0.30), Color(0.55, 0.53, 0.49), Color(0.70, 0.69, 0.66), 0.88, 0.03, 7,
 	Color(0.31, 0.30, 0.29), Color(0.63, 0.65, 0.65),
 	{"style": 1, "scale": 5.5, "cut": Vector2(0.33, 0.33), "edge": 0.0, "fade": 0.45, "grime": 0.9, "belly": 1.0, "seed": 2.0}]
+## Kanta 27.10 took all ten round-2 proposals for all three planes (pattern 7, styles 0, 3, 6–12; see NATURAL for
+## the params). Natural: «Лесная тень» — dark olive with brown and near-black green soft blotches; «Морской туман» —
+## two close greys in big soft patches; «Вулканический пепел» — near-charcoal with grey clouds and a light speckle;
+## «Тростник» — straw with long olive and brown streaks along the flow.
+const FOREST := ["forest", "Лесная тень", Color(0.36, 0.29, 0.21), Color(0.33, 0.36, 0.24), Color(0.50, 0.52, 0.40), 0.88, 0.03, 7,
+	Color(0.17, 0.19, 0.14), Color(0.50, 0.53, 0.47),
+	{"style": 0, "scale": 7.0, "cut": Vector2(0.54, 0.60), "edge": 0.03, "fade": 0.4, "grime": 0.9, "belly": 1.0, "seed": 11.0}]
+## Snow (Kanta's note on the review): the belly is a mid blue-grey, not a near-white, so a bank over snow still shows
+## a darker underside, and the darker patches are a step deeper than on the review frames
+const SEA_FOG := ["sea_fog", "Морской туман", Color(0.33, 0.36, 0.39), Color(0.47, 0.50, 0.51), Color(0.62, 0.63, 0.62), 0.88, 0.03, 7,
+	Color(0.40, 0.43, 0.46), Color(0.56, 0.59, 0.62),
+	{"style": 0, "scale": 3.0, "cut": Vector2(0.52, 0.70), "edge": 0.08, "fade": 0.35, "grime": 0.8, "belly": 1.0, "seed": 12.0}]
+const ASH := ["ash", "Вулканический пепел", Color(0.33, 0.32, 0.30), Color(0.24, 0.24, 0.23), Color(0.45, 0.44, 0.42), 0.9, 0.03, 7,
+	Color(0.52, 0.51, 0.48), Color(0.45, 0.45, 0.44),
+	{"style": 3, "scale": 4.5, "cut": Vector2(0.55, 0.70), "edge": 0.05, "fade": 0.5, "grime": 0.8, "belly": 1.0, "seed": 13.0}]
+const REED := ["reed", "Тростник", Color(0.42, 0.42, 0.27), Color(0.70, 0.62, 0.42), Color(0.80, 0.74, 0.58), 0.88, 0.03, 7,
+	Color(0.40, 0.30, 0.20), Color(0.70, 0.68, 0.58),
+	{"style": 6, "scale": 5.0, "cut": Vector2(0.56, 0.62), "edge": 0.02, "fade": 0.45, "grime": 0.8, "belly": 1.0, "seed": 14.0}]
+## Unusual, in the spirit of «Розовый леопард» and «Тигр»: «Ослепитель» — black and white stripes, each big angular
+## piece striped its own way, some stripes blue-grey; «Пиксельная фуксия» — digital camouflage, fuchsia and dark
+## violet over light lilac; «Акула» — a calm grey plane with a shark mouth on the nose (NOSE); «Полярный тигр» — tiger
+## stripes in graphite over white; «Ржавое железо» — bare matte metal with rust runs and panels in primer;
+## «Гоночная шахматка» — yellow with a black-and-yellow chequer on the nose, wing tips and fin top.
+const DAZZLE := ["dazzle", "Ослепитель", Color(0.08, 0.08, 0.09), Color(0.78, 0.78, 0.75), Color(0.82, 0.82, 0.80), 0.86, 0.03, 7,
+	Color(0.35, 0.40, 0.48), Color(0.78, 0.78, 0.75),
+	{"style": 7, "scale": 3.5, "cut": Vector2(0.5, 0.0), "edge": 0.0, "fade": 0.2, "grime": 0.6, "belly": 0.0, "seed": 15.0}]
+const PIXEL := ["pixel", "Пиксельная фуксия", Color(0.70, 0.18, 0.48), Color(0.62, 0.58, 0.64), Color(0.72, 0.70, 0.74), 0.86, 0.03, 7,
+	Color(0.25, 0.13, 0.30), Color(0.70, 0.68, 0.72),
+	{"style": 8, "scale": 4.0, "cut": Vector2(0.53, 0.62), "edge": 0.0, "fade": 0.25, "grime": 0.6, "belly": 0.5, "seed": 16.0}]
+const SHARK := ["shark", "Акула", Color(0.05, 0.05, 0.05), Color(0.48, 0.50, 0.50), Color(0.92, 0.90, 0.84), 0.86, 0.03, 7,
+	Color(0.55, 0.06, 0.05), Color(0.74, 0.75, 0.74),
+	{"style": 9, "scale": 3.0, "cut": Vector2(0.6, 1.0), "edge": 0.06, "fade": 0.3, "grime": 0.8, "belly": 1.0, "seed": 17.0}]
+## Snow (Kanta's note on the review): the white is an off-white grey (0.74, not 0.80) so the sun does not burn it out
+## over snow, the graphite stripes are wider (cut.x scales the stripe width) and carry on across the belly, and the
+## belly is a cold mid grey, so the plane keeps a dark-light pattern and a darker underside against snow
+const ARCTIC_TIGER := ["arctic_tiger", "Полярный тигр", Color(0.16, 0.17, 0.19), Color(0.74, 0.75, 0.75), Color(0.80, 0.80, 0.79), 0.86, 0.03, 7,
+	Color(0.16, 0.17, 0.19), Color(0.50, 0.53, 0.57),
+	{"style": 10, "scale": 1.0, "cut": Vector2(1.35, 0.5), "edge": 0.0, "fade": 0.15, "grime": 0.8, "belly": 0.85, "seed": 18.0}]
+const RUST := ["rust", "Ржавое железо", Color(0.45, 0.24, 0.12), Color(0.55, 0.55, 0.53), Color(0.62, 0.62, 0.60), 0.55, 0.6, 7,
+	Color(0.55, 0.58, 0.30), Color(0.55, 0.55, 0.53),
+	{"style": 11, "scale": 7.0, "cut": Vector2(0.62, 0.18), "edge": 0.03, "fade": 0.1, "grime": 1.0, "belly": 0.0, "seed": 19.0}]
+const CHEQUER := ["chequer", "Гоночная шахматка", Color(0.06, 0.06, 0.06), Color(0.80, 0.62, 0.12), Color(0.86, 0.74, 0.40), 0.82, 0.03, 7,
+	Color(0.06, 0.06, 0.06), Color(0.80, 0.62, 0.12),
+	{"style": 12, "scale": 18.0, "cut": Vector2(0.5, 0.5), "edge": 0.0, "fade": 0.3, "grime": 0.8, "belly": 0.0, "seed": 20.0}]
+## The ten round-2 liveries in picker order (natural first)
+const ROUND2 := [FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST, CHEQUER]
 ## Turret paint per livery: [suffix of the baked turret GLBs (turret_paint.py PALETTES "<class>_<suffix>",
 ## models/turrets/<turret>_<suffix>.glb), colour of the ring collar under the turret (the baked base a touch darker,
 ## like WeaponModels.TURRET_MODELS body for the sand camo)]. Other liveries keep the sand-camo turrets.
 const TURRET_PAINT := {
 	"steppe": ["steppe", Color(0.42, 0.41, 0.28)],
 	"rock": ["rock", Color(0.43, 0.42, 0.38)],
+	"forest": ["forest", Color(0.26, 0.29, 0.19)],
+	"sea_fog": ["sea_fog", Color(0.37, 0.39, 0.40)],
+	"ash": ["ash", Color(0.19, 0.19, 0.18)],
+	"reed": ["reed", Color(0.55, 0.48, 0.33)],
+	"dazzle": ["dazzle", Color(0.61, 0.61, 0.59)],
+	"pixel": ["pixel", Color(0.48, 0.46, 0.50)],
+	"shark": ["shark", Color(0.37, 0.39, 0.39)],
+	"arctic_tiger": ["arctic_tiger", Color(0.58, 0.59, 0.59)],
+	"rust": ["rust", Color(0.43, 0.43, 0.42)],
+	"chequer": ["chequer", Color(0.63, 0.49, 0.09)],
 }
 const VARIANTS := {
 	"fighter": [
@@ -57,6 +113,7 @@ const VARIANTS := {
 			Color(0.22, 0.07, 0.13), Color(0.80, 0.36, 0.50)],
 		STEPPE,
 		ROCK,
+		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST, CHEQUER,
 	],
 	"attacker": [
 		SAND_CAMO,
@@ -67,6 +124,7 @@ const VARIANTS := {
 			Color(0.05, 0.04, 0.035), Color(0.92, 0.86, 0.72)],
 		STEPPE,
 		ROCK,
+		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST, CHEQUER,
 	],
 	"bomber": [
 		SAND_CAMO,
@@ -77,6 +135,7 @@ const VARIANTS := {
 			Color(0.78, 0.07, 0.05), Color(0.0, 0.0, 0.0)],
 		STEPPE,
 		ROCK,
+		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST, CHEQUER,
 	],
 }
 
@@ -86,7 +145,10 @@ const VARIANTS := {
 ## camouflage in model axes: [id, name, colour 2 (c_dark), base (c_mid), sun-bleach tint (c_light), roughness, metal,
 ## 7, colour 3 (pat_a), belly (pat_b), params].
 ## params: style — 0 soft sprayed blotches, 1 hard splinter (planar cells), 2 wavy disruptive bands, 3 fine mottle
-## over soft clouds, 4 one worn tone with repainted panels, 5 worn whitewash over the base; scale — pattern
+## over soft clouds, 4 one worn tone with repainted panels, 5 worn whitewash over the base, 6 long streaks along the
+## flow, 7 dazzle (angular pieces, each striped its own way), 8 digital (fields built of square «pixels»), 9 plain coat
+## with a shark mouth on the nose (NOSE), 10 tiger stripes (cut.x — stripe width, 1 as «Тигр»), 11 bare metal with
+## rust (colour 2) and primer panels (colour 3), 12 chequer on the nose, wing tips and fin top; scale — pattern
 ## frequency per plane length (× CLASS_SCALE, so a bigger plane wears relatively smaller patches, as real paint
 ## would); cut — noise levels above which colour 2 / colour 3 show (higher — less area); edge — edge softness in
 ## noise units (0 — hard, with a pixel of antialiasing); fade — sun bleaching of the upper surfaces; grime — flow
@@ -115,6 +177,19 @@ const NATURAL := [
 ## Pattern 7 frequency per class: battle sizes are 1.0 / 1.25 / 1.6 (PlaneClasses), so a bigger plane gets a
 ## finer pattern in its own model units and its patches stay about the size of the fighter's on screen
 const CLASS_SCALE := {"fighter": 1.0, "attacker": 1.2, "bomber": 1.45}
+## Shark mouth (style 9, «Акула») placed by each plane's own nose: [x of the mouth's front end (just behind the nose
+## cone tip, the pitot probe excluded), x of its back corner, height y of the nose axis, nose radius at the back
+## corner], model axes (nose +X, up +Y, plane length 1). Measured on the hangar models (cross-sections of the skin
+## near the nose); the battle models share the shape and axes. The mouth is laid out in x along the nose and in the
+## angle round the nose axis, so it keeps its shape on the tapering cone, and the eye is sized by the radius.
+const NOSE := {
+	"fighter_1": [0.425, 0.245, -0.031, 0.027],
+	"fighter_2": [0.485, 0.29, -0.034, 0.045],
+	"attacker_1": [0.43, 0.24, -0.06, 0.042],
+	"attacker_2": [0.45, 0.25, -0.064, 0.042],
+	"bomber_1": [0.44, 0.25, -0.063, 0.032],
+	"bomber_2": [0.45, 0.27, -0.042, 0.031],
+}
 
 ## Исходная окраска модели: [яркость основного тона (линейная), ниже этой яркости — не трогать (фонарь, сопла)]
 ## по гистограммам текстур ангара (у моделей боя те же текстуры, уменьшенные).
@@ -212,6 +287,7 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 	var src: Array = SRC.get(key, [0.1, 0.012])
 	var ex: Array = EXHAUST.get(key, [])
 	var holes: Array = ENGINE_HOLES.get(key, [])
+	var nose: Array = NOSE.get(key, [])
 	# основной меш (текстура Meshy) — по нему габарит модели для узоров
 	var box := AABB()
 	var body: Array = []
@@ -237,7 +313,7 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 			var m0 := mi.mesh.surface_get_material(si)
 			var m := mi.get_surface_override_material(si)
 			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex, holes,
-					float(CLASS_SCALE.get(cls, 1.0)))
+					float(CLASS_SCALE.get(cls, 1.0)), nose)
 			if sm != null:
 				mi.set_surface_override_material(si, sm)
 
@@ -266,9 +342,10 @@ static func _rel(mi: Node3D, model: Node3D) -> Transform3D:
 
 ## Paint material for one surface: `ex` — exhaust boxes (EXHAUST), `holes` — engine openings (ENGINE_HOLES) of the
 ## plane, both only for the textured skin (mode 0); `cls_scale` — CLASS_SCALE of the plane for pattern 7 (NATURAL);
-## null for surfaces that keep their own material.
+## `nose` — the plane's NOSE entry for the shark mouth (style 9; empty — no mouth); null for surfaces that keep their
+## own material.
 static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transform3D, box: AABB, ex: Array = [],
-		holes: Array = [], cls_scale: float = 1.0) -> ShaderMaterial:
+		holes: Array = [], cls_scale: float = 1.0, nose: Array = []) -> ShaderMaterial:
 	var bm := m as BaseMaterial3D
 	if bm == null or nm == "glass":
 		return null                     # стекло фонаря (ShaderMaterial «glass») — одно на все окраски
@@ -334,6 +411,8 @@ static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transfo
 		sm.set_shader_parameter("nat_grime", float(np.get("grime", 0.8)))
 		sm.set_shader_parameter("nat_belly", float(np.get("belly", 1.0)))
 		sm.set_shader_parameter("nat_seed", float(np.get("seed", 0.0)))
+		if nose.size() == 4:
+			sm.set_shader_parameter("shark_nose", Vector4(nose[0], nose[1], nose[2], nose[3]))
 	sm.set_shader_parameter("to_model", Projection(xf))
 	sm.set_shader_parameter("box_min", box.position)
 	sm.set_shader_parameter("box_size", box.size)
@@ -384,6 +463,7 @@ uniform float nat_fade = 0.5;
 uniform float nat_grime = 0.8;
 uniform float nat_belly = 1.0;
 uniform float nat_seed = 0.0;
+uniform vec4 shark_nose = vec4(0.0);   // style 9 (Livery.NOSE): mouth front x, back x, nose axis y, nose radius
 
 const float CAMO_DARK = 0.52;
 const float CAMO_OCHRE = 0.53;
@@ -435,6 +515,40 @@ float engine_hole(vec3 p, vec3 n) {
 	return near_axis * facing * span;
 }
 
+// style 9: shark mouth on both sides of the nose (Livery.NOSE). u runs along the nose from the mouth's front end (0)
+// to its back corner (1); the opening is an angle round the nose axis, so the shape holds on the tapering cone.
+// Returns (outline, inside, teeth, eye ring) weights and the eye's pupil.
+vec4 shark_mouth(vec3 p, out float pupil) {
+	pupil = 0.0;
+	if (shark_nose.x <= shark_nose.y) return vec4(0.0);
+	float u = (shark_nose.x - p.x) / (shark_nose.x - shark_nose.y);
+	vec2 d = vec2(abs(p.z), p.y - shark_nose.z);
+	float rad = length(d);
+	float ang = atan(d.y, max(d.x, 1e-5));   // + up from the side line
+	float on_nose = 1.0 - smoothstep(1.5 * shark_nose.w, 1.9 * shark_nose.w, rad);   // the nose skin, not wings or intakes
+	float uc = clamp(u, 0.0, 1.0);
+	float in_u = smoothstep(-0.01, 0.0, u) * (1.0 - smoothstep(1.0, 1.01, u)) * on_nose;
+	float h = 0.78 * pow(sin(3.1416 * pow(uc, 1.35)), 0.55);   // half opening (rad), widest behind the middle
+	float dv = ang + 0.22;   // the lips meet a little under the side line
+	float aw = fwidth(dv) + 0.004;
+	float inside = (1.0 - smoothstep(h - aw, h + aw, abs(dv))) * in_u;
+	float outline = (1.0 - smoothstep(h + 0.11 - aw, h + 0.11 + aw, abs(dv))) * in_u;
+	// teeth from both lips, 8 along the mouth, half the opening long at most
+	float tri = abs(fract(uc * 8.0) - 0.5) * 2.0;
+	float tl = min(0.3, 0.5 * h) * (1.0 - tri);
+	float teeth = inside * (1.0 - smoothstep(tl - aw, tl + aw, h - abs(dv)));
+	// eye above the back of the mouth, clear of the upper lip's outline, sized by the nose radius
+	float ue = 0.8;
+	float he = 0.78 * pow(sin(3.1416 * pow(ue, 1.35)), 0.55);
+	float xe = shark_nose.x - ue * (shark_nose.x - shark_nose.y);
+	vec2 e = vec2((p.x - xe) / shark_nose.w, (ang - (he - 0.22 + 0.56)) * rad / shark_nose.w);
+	float el = length(e);
+	float ew = fwidth(el) + 0.01;
+	float ring = (1.0 - smoothstep(0.36 - ew, 0.36 + ew, el)) * on_nose;
+	pupil = (1.0 - smoothstep(0.2 - ew, 0.2 + ew, el)) * on_nose;
+	return vec4(outline, inside, teeth, ring);
+}
+
 // плоскость узора по преобладающей оси нормали: сверху — (x, z), борт — (x, y), торец — (z, y)
 vec2 plane_uv(vec3 p, vec3 n) {
 	vec3 a = abs(n);
@@ -466,15 +580,18 @@ vec2 leopard(vec2 uv) {
 	return vec2(ring, inner);
 }
 
-// тигр: изогнутые поперечные полосы, к концам сужаются
-float tiger(vec3 p) {
+// тигр: изогнутые поперечные полосы, к концам сужаются; k — stripe width (1 — «Тигр», «Полярный тигр» wider)
+float tiger_w(vec3 p, float k) {
 	float w = vnoise(p.xz * 4.0 + p.y * 3.0) * 1.4 + vnoise(p.xz * 11.0) * 0.45;
 	float s = p.x * 15.0 + abs(p.z) * 5.0 + w + p.y * 3.0;
 	float tri = abs(fract(s) - 0.5);
 	// ширина полосы меняется вдоль неё — к концам сужается до нуля (рваный «клин»)
 	float along = vnoise(vec2(floor(s) * 5.1, 0.0) + vec2(abs(p.z) * 7.0 + p.y * 8.0, p.x * 3.0));
-	float width = 0.24 * smoothstep(0.25, 0.75, along) + 0.03 * vnoise(p.xz * 30.0);
+	float width = (0.24 * smoothstep(0.25, 0.75, along) + 0.03 * vnoise(p.xz * 30.0)) * k;
 	return 1.0 - smoothstep(width - 0.03, width, tri);
+}
+float tiger(vec3 p) {
+	return tiger_w(p, 1.0);
 }
 
 // pattern 7: a field's edge at level c — soft by nat_edge, never sharper than a pixel
@@ -541,6 +658,26 @@ vec2 nat_pattern(vec3 p, vec3 n) {
 		float wear = nat_soft(p * vec3(0.6, 1.0, 1.4), s) + 0.22 * smoothstep(0.3, 0.9, n.x)
 				+ 0.12 * (vnoise3(vec3(p.x * 0.6, p.y * 9.0, p.z * 9.0) + vec3(s)) - 0.5);
 		return vec2(nat_step(wear, nat_cut.x), nat_step(wear, nat_cut.y));
+	} else if (nat_style == 6) {
+		// reed: long thin streaks along the airflow (x), two layers
+		vec3 r = vec3(p.x * 0.18, p.y * 2.6, p.z * 2.6);
+		float f = blobs(r + vec3(s)) + 0.15 * (vnoise3(p * 1.5 + vec3(s)) - 0.5);
+		return vec2(nat_step(f, nat_cut.x), nat_step(blobs(r * 1.3 + vec3(s + 7.0)), nat_cut.y));
+	} else if (nat_style == 7) {
+		// dazzle: big angular cells, each striped in its own direction; half the cells colour 2, half colour 3
+		float id = nat_cell(p * 0.45 + vec3(s));
+		float a = id * 6.2832;
+		vec3 dir = normalize(vec3(cos(a), 0.5 * sin(a * 3.0), sin(a)));
+		float d = dot(p, dir) * 1.6;
+		float w = max(nat_edge, fwidth(d) + 0.002);
+		float stripe = smoothstep(0.25 - w, 0.25 + w, abs(fract(d) - 0.5));
+		float c2 = step(id, nat_cut.x);
+		return vec2(stripe * c2, stripe * (1.0 - c2));
+	} else if (nat_style == 8) {
+		// digital: the fields sampled on a cube grid, so the patches are built of square «pixels» (two sizes)
+		vec3 g = (floor(p * 4.4) + 0.5) / 4.4;
+		vec3 g2 = (floor(p * 8.8) + 0.5) / 8.8;
+		return vec2(step(nat_cut.x, nat_soft(g, s)), step(nat_cut.y, blobs(g2 * 1.3 + vec3(s + 3.0))));
 	}
 	// soft sprayed blotches: two warped fields, colour 3 over colour 2
 	return vec2(nat_step(nat_soft(p, s), nat_cut.x), nat_step(nat_soft(p * 1.15 + vec3(4.2), s + 5.0), nat_cut.y));
@@ -590,6 +727,7 @@ void fragment() {
 	float under_n = smoothstep(-0.08, -0.62, ln.y);
 	vec3 q = (lp - box_min) / box_size;   // 0…1 по габариту: x — хвост→нос, y — низ→верх, z — левое→правое крыло
 	float rough_add = 0.0;   // pattern 7: roughness variation of the paint
+	float metal_k = 1.0;     // pattern 7 bare metal: rust and primer are not metallic
 	if (pattern == 1) {
 		vec2 lr = leopard(plane_uv(lp, ln));
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), lr.y * 0.8);
@@ -640,13 +778,47 @@ void fragment() {
 		// natural camouflage (Livery.NATURAL): pattern, a wavy belly line, then sun bleaching, uneven paint,
 		// flow streaks, soot aft and chipped forward edges — no flat even paint
 		vec3 n = normalize(ln);
-		vec2 w = nat_pattern(lp * nat_scale, n);
+		vec3 pn = lp * nat_scale;
+		vec2 w;
+		if (nat_style == 9) {   // shark: a plain coat with faint soft patches; the mouth goes on after the belly
+			w = vec2(nat_step(nat_soft(pn, nat_seed), nat_cut.x) * 0.5, 0.0);
+		} else if (nat_style == 10) {   // tiger stripes (as pattern 2, cut.x — width), weathered like the rest of 7
+			w = vec2(tiger_w(lp, nat_cut.x), 0.0);
+		} else if (nat_style == 11) {
+			// bare metal: rust in soft fields, more on the lower faces; primer on whole repaired panels
+			float rust = nat_step(nat_soft(pn, nat_seed) + 0.2 * smoothstep(0.0, -0.8, n.y), nat_cut.x);
+			float primer = step(nat_cell(pn * vec3(0.55, 1.2, 1.0) + vec3(nat_seed)), nat_cut.y) * (1.0 - rust);
+			w = vec2(rust, primer);
+			metal_k = 1.0 - max(rust, primer);
+		} else if (nat_style == 12) {
+			// chequer on the nose, the wing tips and the top of the fin, over a plain coat
+			float zone = max(max(smoothstep(0.82, 0.83, q.x), smoothstep(0.38, 0.39, abs(q.z - 0.5))),
+					smoothstep(0.72, 0.73, q.y) * (1.0 - smoothstep(0.32, 0.33, q.x)));
+			vec3 cq = floor(lp * nat_scale);
+			w = vec2(zone * mod(cq.x + cq.y + cq.z, 2.0), 0.0);
+		} else {
+			w = nat_pattern(pn, n);
+		}
 		vec3 cam = mix(mix(c_mid, c_dark, w.x), pat_a, w.y);
 		if (nat_style == 5) {   // whitewash: colour 3 is a thin wash between the white and the paint under it
 			cam = mix(mix(c_mid, pat_a, w.y), c_dark, w.x);
 		}
 		float bel = smoothstep(-0.02, -0.45, n.y + 0.2 * (vnoise3(lp * 9.0 + vec3(nat_seed)) - 0.5)) * nat_belly;
 		cam = mix(cam, pat_b, bel);
+		if (nat_style == 10) {   // snow: the graphite stripes carry on over the belly, so it never reads as one white
+			cam = mix(cam, c_dark, w.x * bel * 0.8);
+		}
+		if (nat_style == 9) {
+			// shark mouth: black outline (colour 2), dark red inside (colour 3), teeth and eye ring in the sun-bleach
+			// tint, black pupil
+			float pupil;
+			vec4 sm = shark_mouth(lp, pupil);
+			cam = mix(cam, c_dark, sm.x);
+			cam = mix(cam, pat_a, sm.y);
+			cam = mix(cam, c_light, sm.z);
+			cam = mix(cam, c_light, sm.w);
+			cam = mix(cam, c_dark, pupil);
+		}
 		cam *= mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5);
 		float top = smoothstep(0.1, 0.85, n.y);
 		float fade_n = smoothstep(0.25, 0.75, blobs(lp * 3.5 + vec3(nat_seed * 2.3)));
@@ -679,6 +851,6 @@ void fragment() {
 	keep *= 1.0 - hole;
 	ALBEDO = mix(col, src, keep);
 	ROUGHNESS = mix(mix(mix(clamp(liv_rough + rough_add + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
-	METALLIC = mix(mix(mix(liv_metal, 0.45, mk), 0.35, hole), 0.0, keep);
+	METALLIC = mix(mix(mix(liv_metal * metal_k, 0.45, mk), 0.35, hole), 0.0, keep);
 }
 """
