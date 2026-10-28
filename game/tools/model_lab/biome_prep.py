@@ -12,9 +12,8 @@ from PIL import Image, ImageEnhance
 # имя: (треугольников, текстура, насыщенность, яркость, оттенок RGB)
 # Скалы и валуны Meshy светлее земли и рыжее палитры — приглушаем; деревья чуть темнее и спокойнее.
 MODELS = {
-    "b01_rock_outcrop": (3000, 1024, 0.45, 0.78, (0.97, 0.95, 0.92)),
-    "b02_boulders": (3000, 1024, 0.7, 0.82, (1.0, 0.95, 0.86)),
-    "b03_rock_spire": (3000, 1024, 0.45, 0.8, (0.97, 0.95, 0.92)),
+    # b01_rock_outcrop, b02_boulders, b03_rock_spire were removed from the game on 28.10.2026 (weak-models list,
+    # items 4 and 6): scans b12/b13 (rock_prep.py, rock_derive.py) and spires from blender/rock_spires.py instead
     "b04_poplar": (2000, 1024, 0.85, 0.9, (1.0, 1.0, 0.95)),
     "b05_orchard_tree": (2000, 1024, 0.85, 0.9, (1.0, 1.0, 0.95)),
     "b06_shrub": (900, 512, 0.8, 0.88, (1.0, 1.0, 0.94)),

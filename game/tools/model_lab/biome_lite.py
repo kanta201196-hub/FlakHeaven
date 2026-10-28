@@ -16,8 +16,8 @@ This tool writes a decimated copy of an already prepared GLB:
 
 Run (from the repo root):
     python3 game/tools/model_lab/biome_lite.py \
-        game/models/biome/b02_boulders.glb \
-        game/models/biome/b02_boulders_lite.glb --tris 600
+        game/models/biome/b13_boulders_b.glb \
+        game/models/biome/b13_boulders_b_lite.glb --tris 600
 Dependencies: pymeshlab, trimesh, numpy (see decimate_glb.py).
 """
 

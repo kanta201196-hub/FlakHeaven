@@ -10,7 +10,8 @@ Sketchfab; authors in game/models/CREDITS.md) into biome models the way biome_pr
    (green texels under the face) and the small loose bits these cuts leave;
 3. decimate to the budget with UVs kept (biome_lite.decimate);
 4. grade the colour to the Highlands rocks already in the game (mean and spread per channel of
-   b01_rock_outcrop's texture, mixed with the scan's own so variants stay told apart), matte;
+   the Highlands rock colour the player knows, REF_MEAN / REF_STD below, mixed with the scan's own so variants
+   stay told apart), matte;
 5. stand on y = 0, centred, largest X/Z size = 1 (BiomeProps scales to pixels), JPEG textures.
 
 Run (from the repo root; the sources are untrusted downloads, so -I):
@@ -33,7 +34,10 @@ from biome_lite import decimate  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 OUT = os.path.join(ROOT, "models", "biome")
-REF = os.path.join(OUT, "b01_rock_outcrop_0.jpg")   # the colour the player already knows as Highlands rock
+# the colour the player already knows as Highlands rock: per-channel mean and spread (0..255) of the texture of
+# b01_rock_outcrop, the Meshy outcrop these scans were graded to (the model left the game on 28.10.2026)
+REF_MEAN = np.array([100.1, 86.6, 70.2], np.float32)
+REF_STD = np.array([23.2, 20.7, 17.5], np.float32)
 
 # name: tris, texture px, ground cut (fraction of height), cut vegetation, keep own colour (0..1),
 #       around the top (fraction of the source width: keep only faces this close to the highest point in plan,
@@ -43,8 +47,8 @@ MODELS = {
     "b12_rock_outcrop_b": (3000, 1024, 0.02, True, 0.35, 0.0),
     # Namaqualand Boulder 02 (Poly Haven): a row of big split boulders
     "b13_boulders_b": (3000, 1024, 0.03, True, 0.35, 0.0),
-    # Desert Cliff 6 (WireframeArt): a stepped sandstone "pagoda" spire
-    "b14_rock_spire_b": (3000, 1024, 0.0, False, 0.3, 0.0),
+    # b14_rock_spire_b (Desert Cliff 6, a stepped "cairn") left the game on 28.10.2026: spires are procedural now
+    # (blender/rock_spires.py)
 }
 
 
@@ -172,9 +176,8 @@ def components(m: trimesh.Trimesh) -> np.ndarray:
 def grade(img: Image.Image, own: float, used: np.ndarray) -> Image.Image:
     """Mean/spread per channel moved to the game's rock texture; `own` keeps part of the scan's colour.
     `used`: colours (0..1) under the model's faces, so empty atlas space does not skew the statistics"""
-    ref = np.asarray(Image.open(REF).convert("RGB"), dtype=np.float32)
     a = np.asarray(img.convert("RGB"), dtype=np.float32)
-    rm, rs = ref.reshape(-1, 3).mean(0), ref.reshape(-1, 3).std(0)
+    rm, rs = REF_MEAN, REF_STD
     am, as_ = used.mean(0) * 255.0, used.std(0) * 255.0 + 1e-3
     # own 0: the game rock's mean and spread; 1: the scan's own colour (the spread stays the scan's when it
     # is the smaller one, so a smooth scan does not get blotchy)

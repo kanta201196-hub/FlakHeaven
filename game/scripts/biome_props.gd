@@ -9,14 +9,21 @@ extends RefCounted
 const DIR := "res://models/biome/"
 ## вид: [файл, ширина в px мира мин, макс]
 const KINDS := {
-	"outcrop": ["b01_rock_outcrop", 40.0, 80.0],
-	"boulders": ["b02_boulders", 12.0, 30.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90, потом 22–50); масштаб «2–4 км»: валун 2–6 м при истребителе ~100 px
-	"spire": ["b03_rock_spire", 25.0, 45.0],
-	# VIS-01 (Kanta 26.10): scan variants of the rocks (tools/model_lab/rock_prep.py); placement asks for the base
-	# kind and _add_sized swaps in a variant by place (ROCK_VARIANTS)
+	# Base rock kinds: placement asks for them and they carry the size range, but no model of their own;
+	# _add_sized draws one of their ROCK_VARIANTS at the place (weak-models list items 4 and 6, Kanta 28.10)
+	"outcrop": ["", 40.0, 80.0],
+	"boulders": ["", 12.0, 30.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90, потом 22–50); масштаб «2–4 км»: валун 2–6 м при истребителе ~100 px
+	"spire": ["", 25.0, 45.0],
+	# VIS-01 (Kanta 26.10): photo-scan rocks (tools/model_lab/rock_prep.py) and variants derived from them
+	# (rock_derive.py: the outcrop with fallen boulders, the bunched boulder pile)
 	"outcrop_b": ["b12_rock_outcrop_b", 40.0, 80.0],
+	"outcrop_c": ["b12_rock_outcrop_c", 40.0, 80.0],
 	"boulders_b": ["b13_boulders_b", 12.0, 30.0],
-	"spire_b": ["b14_rock_spire_b", 25.0, 45.0],
+	"boulders_c": ["b13_boulders_c", 12.0, 30.0],
+	# eroded sandstone hoodoo, pinnacle cluster and squat tower with scree (tools/blender/rock_spires.py)
+	"spire_c": ["b15_rock_spire_c", 25.0, 45.0],
+	"spire_d": ["b15_rock_spire_d", 25.0, 45.0],
+	"spire_e": ["b15_rock_spire_e", 25.0, 45.0],
 	"poplar": ["b04_poplar", 16.0, 24.0],
 	"orchard": ["b05_orchard_tree", 34.0, 50.0],
 	"shrub": ["b06_shrub", 14.0, 30.0],
@@ -55,21 +62,23 @@ const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree", "palm": "b
 ## full 3000. The import's automatic LOD only halves it (UV seams stop simplification at
 ## ~1600 triangles) and a MultiMesh picks one LOD for the whole chunk. Same frame as the full model; its material
 ## (textures) is reused, so only the triangle count differs. Used on every preset.
-const LOW_POLY := {"boulders": "b02_boulders_lite", "boulders_b": "b13_boulders_b_lite"}
+const LOW_POLY := {"boulders_b": "b13_boulders_b_lite", "boulders_c": "b13_boulders_c_lite"}
 
 ## VIS-01 (Kanta 26.10: rocks "not monotonous"): models a base rock kind may be drawn with. The pick is by a
 ## ~100 px cell of the place, not the cell's rng, so the placement stays as it was, and a rock group (an outcrop
 ## with its scree) mostly shares one look while the next group differs. Each variant is one more MultiMesh
-## (draw call) in a chunk where it appears.
+## (draw call) in a chunk where it appears. The Meshy outcrop, boulders and spire and the cairn-like spire scan
+## left the list (weak-models list items 4 and 6, Kanta 28.10): scans and models derived from them, and
+## procedural spires, instead.
 const ROCK_VARIANTS := {
-	"outcrop": ["outcrop", "outcrop_b"],
-	"boulders": ["boulders", "boulders_b"],
-	"spire": ["spire", "spire_b"],
+	"outcrop": ["outcrop_b", "outcrop_c"],
+	"boulders": ["boulders_b", "boulders_c"],
+	"spire": ["spire_c", "spire_d", "spire_e"],
 }
 
 ## Rock kinds stand on the lowest ground under their footprint (_rock_floor): a scan is long and flat-bottomed,
 ## and on a steep slope a 4 % sink at the centre left its downhill end hanging in the air (Kanta 26.10)
-const ROCK_KINDS := ["outcrop", "outcrop_b", "boulders", "boulders_b", "spire", "spire_b"]
+const ROCK_KINDS := ["outcrop_b", "outcrop_c", "boulders_b", "boulders_c", "spire_c", "spire_d", "spire_e"]
 
 ## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
 const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
@@ -156,6 +165,8 @@ func _card_mat(path: String) -> StandardMaterial3D:
 	return m
 
 
+## Full model of a kind from its GLB (cached); null for a kind without a file (the base rock kinds, which are
+## drawn as one of their ROCK_VARIANTS) or when the file is missing
 func _full_mesh(kind: String) -> Mesh:
 	if kind in ["bridge", "footbridge"]:
 		return PropBuild.bridge(kind == "footbridge")
@@ -165,7 +176,7 @@ func _full_mesh(kind: String) -> Mesh:
 		_meshes[kind] = null
 		var f: String = _row(kind)[0]
 		var path: String = (f if f.begins_with("res://") else DIR + f) + ".glb"
-		if ResourceLoader.exists(path):
+		if f != "" and ResourceLoader.exists(path):
 			var scene := (load(path) as PackedScene).instantiate()
 			var mi := _find_mesh(scene)
 			if mi != null:
@@ -451,7 +462,7 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.name = kind
-		var small: bool = kind in ["shrub", "bush", "boulders", "boulders_b", "poplar", "orchard"] or kind in SeaProps.SMALL
+		var small: bool = kind in ["shrub", "bush", "boulders_b", "boulders_c", "poplar", "orchard"] or kind in SeaProps.SMALL
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
 		# bushes never cast shadows: 8.6k-triangle leaf cards, 20–30 per oasis, too small to need them
 		var no_shadow: bool = kind == "bush" or Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)
