@@ -642,6 +642,33 @@ func _find_prop(ter: Terrain3D, at: Vector2, kind: String) -> Vector2:
 	return Vector2.INF
 
 
+## Place of the BiomeProps model of `kind` with the most models of the same kind within 150 px, over the
+## chunks up to `reach` chunks from `at` (ties: the one nearest to `at`), or Vector2.INF when there is none.
+## A grove or a column of wrecks fills the frame better than the first single model _find_prop returns.
+func _find_dense(ter: Terrain3D, at: Vector2, kind: String, reach: int) -> Vector2:
+	if ter == null or ter.props == null or at == Vector2.INF:
+		return Vector2.INF
+	var c := Vector2i(int(floorf(at.x / Terrain3D.CHUNK)), int(floorf(at.y / Terrain3D.CHUNK)))
+	var qs: Array[Vector2] = []
+	for dx in range(-reach, reach + 1):
+		for dz in range(-reach, reach + 1):
+			var key := c + Vector2i(dx, dz)
+			var put: Dictionary = ter.props.plan(key, ter._ctx(key))
+			for t: Transform3D in put.get(kind, []):
+				qs.append(Vector2(t.origin.x, t.origin.z))
+	var best := Vector2.INF
+	var best_n := -1
+	for q in qs:
+		var n := 0
+		for o in qs:
+			if q.distance_to(o) < 150.0:
+				n += 1
+		if n > best_n or (n == best_n and q.distance_to(at) < best.distance_to(at)):
+			best = q
+			best_n = n
+	return best
+
+
 ## Place of the BiomeProps rock of base kind `base` (any of its ROCK_VARIANTS) nearest to `at` in the chunks
 ## around it, or Vector2.INF. Unlike _find_prop it does not depend on which variant a place draws, so a
 ## before/after pair of frames shows the same rock.
@@ -868,6 +895,23 @@ func _make_points() -> Array:
 		if yq != Vector2.INF:
 			pts.append({"name": "yurt_close", "pos": yq, "ground_dist": 95.0, "wait": 3.0})
 			pts.append({"name": "yurt_play", "pos": yq + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+		# weak-models list (Kanta 28.10): the densest poplar grove by the nearest village, and burnt-out vehicles on
+		# the road, at gameplay height and close up. The places come from BiomeProps.plan, so a before/after pair
+		# of frames shows the same trees and hulks
+		var pq := _find_dense(ter, found.get("o_village", empty), "poplar", 2)
+		print("VISUAL poplar grove at %s" % pq)
+		if pq != Vector2.INF:
+			pts.append({"name": "poplar_play", "pos": pq, "wait": 3.0})
+			pts.append({"name": "poplar_close", "pos": pq, "ground_dist": 170.0, "wait": 3.0})
+		var road := ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD)
+		for vk: String in ["tank", "truck"]:
+			var vq := _find_dense(ter, road, vk, 4)
+			print("VISUAL %s wreck at %s" % [vk, vq])
+			if vq == Vector2.INF:
+				continue
+			if vk == "tank":
+				pts.append({"name": "vehwreck_tank_play", "pos": vq, "wait": 3.0})
+			pts.append({"name": "vehwreck_%s_close" % vk, "pos": vq, "ground_dist": 95.0, "wait": 3.0})
 	pts.append({"name": "battle", "pos": empty + Vector2(0, -300), "boom": true})
 	if found.has("o_wreck"):   # тест 3.5-s4 (п. 18): обломки самолёта крупно
 		pts.append({"name": "wreck", "pos": found["o_wreck"], "zoom": 2.5})

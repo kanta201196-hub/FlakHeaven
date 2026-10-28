@@ -14,11 +14,10 @@ from PIL import Image, ImageEnhance
 MODELS = {
     # b01_rock_outcrop, b02_boulders, b03_rock_spire were removed from the game on 28.10.2026 (weak-models list,
     # items 4 and 6): scans b12/b13 (rock_prep.py, rock_derive.py) and spires from blender/rock_spires.py instead
-    "b04_poplar": (2000, 1024, 0.85, 0.9, (1.0, 1.0, 0.95)),
+    # b04_poplar, b07_wreck_truck and b08_wreck_tank left this list on 28.10.2026 (weak-models list): the poplar is
+    # built by blender/biome_flora.py, the wrecks by blender/vehicle_wreck.py
     "b05_orchard_tree": (2000, 1024, 0.85, 0.9, (1.0, 1.0, 0.95)),
     "b06_shrub": (900, 512, 0.8, 0.88, (1.0, 1.0, 0.94)),
-    "b07_wreck_truck": (7000, 1024, 0.8, 0.85, (1.0, 0.97, 0.94)),   # Т-9: было 4000 — угловатые колёса
-    "b08_wreck_tank": (7000, 1024, 0.8, 0.85, (1.0, 0.97, 0.94)),
     "b10_sandbag_post": (2000, 1024, 0.8, 0.88, (1.0, 0.97, 0.92)),
 }
 

@@ -127,13 +127,15 @@ def leaves(name, seed, n_leaf=95, size=512, leaf_len=(0.17, 0.25), width=0.36, b
 
 
 # ---------------- кора ----------------
-def bark(name, seed, size=(256, 512)):
+def bark(name, seed, size=(256, 512), base=(0.36, 0.31, 0.25)):
+    """Bark colour and normal maps (paths): furrows along the trunk, cracks, lichen and dust; base — the bark tone
+    (the default is the orchard's brown; the poplar passes a light grey)"""
     w, h = size
     n1 = pnoise(h, w, seed, 8, 24, 50, aniso=(1.0, 0.12))    # продольные борозды
     n2 = pnoise(h, w, seed + 1, 10, 40, 60)
     hgt = np.clip(0.55 + 0.35 * np.abs(n1) ** 0.6 * np.sign(n1) + 0.1 * n2, 0, 1)
     crack = np.clip((0.35 - np.abs(n1)) * 4, 0, 1)            # трещины
-    base = np.array([0.36, 0.31, 0.25], np.float32)
+    base = np.array(base, np.float32)
     rgb = base * (0.8 + 0.3 * hgt[..., None]) * (1 - 0.45 * crack[..., None])
     rgb = rgb + np.array([0.04, 0.04, 0.03]) * pnoise(h, w, seed + 2, 1, 4, 20)[..., None]   # лишайник/пыль
     return save(name + "_color", rgb), save(name + "_normal", normal_map(hgt * (1 - 0.5 * crack), 2.5))
