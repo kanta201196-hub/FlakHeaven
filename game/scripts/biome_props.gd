@@ -9,14 +9,21 @@ extends RefCounted
 const DIR := "res://models/biome/"
 ## вид: [файл, ширина в px мира мин, макс]
 const KINDS := {
-	"outcrop": ["b01_rock_outcrop", 40.0, 80.0],
-	"boulders": ["b02_boulders", 12.0, 30.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90, потом 22–50); масштаб «2–4 км»: валун 2–6 м при истребителе ~100 px
-	"spire": ["b03_rock_spire", 25.0, 45.0],
-	# VIS-01 (Kanta 26.10): scan variants of the rocks (tools/model_lab/rock_prep.py); placement asks for the base
-	# kind and _add_sized swaps in a variant by place (ROCK_VARIANTS)
+	# Base rock kinds: placement asks for them and they carry the size range, but no model of their own;
+	# _add_sized draws one of their ROCK_VARIANTS at the place (weak-models list items 4 and 6, Kanta 28.10)
+	"outcrop": ["", 40.0, 80.0],
+	"boulders": ["", 12.0, 30.0],   # правка Kanta 18.10 (п. 5): камни мельче (было 40–90, потом 22–50); масштаб «2–4 км»: валун 2–6 м при истребителе ~100 px
+	"spire": ["", 25.0, 45.0],
+	# VIS-01 (Kanta 26.10): photo-scan rocks (tools/model_lab/rock_prep.py) and variants derived from them
+	# (rock_derive.py: the outcrop with fallen boulders, the bunched boulder pile)
 	"outcrop_b": ["b12_rock_outcrop_b", 40.0, 80.0],
+	"outcrop_c": ["b12_rock_outcrop_c", 40.0, 80.0],
 	"boulders_b": ["b13_boulders_b", 12.0, 30.0],
-	"spire_b": ["b14_rock_spire_b", 25.0, 45.0],
+	"boulders_c": ["b13_boulders_c", 12.0, 30.0],
+	# eroded sandstone hoodoo, pinnacle cluster and squat tower with scree (tools/blender/rock_spires.py)
+	"spire_c": ["b15_rock_spire_c", 25.0, 45.0],
+	"spire_d": ["b15_rock_spire_d", 25.0, 45.0],
+	"spire_e": ["b15_rock_spire_e", 25.0, 45.0],
 	"poplar": ["b04_poplar", 16.0, 24.0],
 	"orchard": ["b05_orchard_tree", 34.0, 50.0],
 	"shrub": ["b06_shrub", 14.0, 30.0],
@@ -55,37 +62,77 @@ const LITE := {"poplar": "b04_poplar", "orchard": "b05_orchard_tree", "palm": "b
 ## full 3000. The import's automatic LOD only halves it (UV seams stop simplification at
 ## ~1600 triangles) and a MultiMesh picks one LOD for the whole chunk. Same frame as the full model; its material
 ## (textures) is reused, so only the triangle count differs. Used on every preset.
-const LOW_POLY := {"boulders": "b02_boulders_lite", "boulders_b": "b13_boulders_b_lite"}
+const LOW_POLY := {"boulders_b": "b13_boulders_b_lite", "boulders_c": "b13_boulders_c_lite"}
 
 ## VIS-01 (Kanta 26.10: rocks "not monotonous"): models a base rock kind may be drawn with. The pick is by a
 ## ~100 px cell of the place, not the cell's rng, so the placement stays as it was, and a rock group (an outcrop
 ## with its scree) mostly shares one look while the next group differs. Each variant is one more MultiMesh
-## (draw call) in a chunk where it appears.
+## (draw call) in a chunk where it appears. The Meshy outcrop, boulders and spire and the cairn-like spire scan
+## left the list (weak-models list items 4 and 6, Kanta 28.10): scans and models derived from them, and
+## procedural spires, instead.
 const ROCK_VARIANTS := {
-	"outcrop": ["outcrop", "outcrop_b"],
-	"boulders": ["boulders", "boulders_b"],
-	"spire": ["spire", "spire_b"],
+	"outcrop": ["outcrop_b", "outcrop_c"],
+	"boulders": ["boulders_b", "boulders_c"],
+	"spire": ["spire_c", "spire_d", "spire_e"],
 }
 
 ## Rock kinds stand on the lowest ground under their footprint (_rock_floor): a scan is long and flat-bottomed,
 ## and on a steep slope a 4 % sink at the centre left its downhill end hanging in the air (Kanta 26.10)
-const ROCK_KINDS := ["outcrop", "outcrop_b", "boulders", "boulders_b", "spire", "spire_b"]
+const ROCK_KINDS := ["outcrop_b", "outcrop_c", "boulders_b", "boulders_c", "spire_c", "spire_d", "spire_e"]
 
 ## Варианты обломков (tools/blender/plane_wreck.py: раскладки a, b, c и вертолёт)
 const PLANE_KINDS := ["plane", "plane_b", "plane_c", "heli"]
-static var _force_plane := -2
+
+# Worker-thread copies of the lists plan() reads by index. plan() runs on Terrain3D's worker threads, and a
+# GDScript const Array is read-only: Godot 4.4 hands out each element of a read-only Array through one scratch
+# slot per array (Array::operator[] const), so threads reading the same const list overwrite each other's
+# value. A rock then drew the wrong variant, a size range mixed its ends, and once the kind came out empty
+# (SCRIPT ERROR in _row, Forward+ bench 28.10; tests/props_thread_test.gd). Packed arrays have no such slot and
+# Dictionary lookups are safe. The tables are built once when the script loads, on the main thread (Render3D
+# creates BiomeProps before any chunk task), and never change after that. The consts stay the source of truth.
+static var _variants := _variant_table()   # base rock kind → PackedStringArray of ROCK_VARIANTS
+static var _sizes := _size_table()         # kind → PackedFloat64Array [min, max] width in px (KINDS)
+static var _planes := PackedStringArray(PLANE_KINDS)
+static var _force_plane := _wreckvar_arg()
+
+
+## ROCK_VARIANTS as packed string lists, for reading on worker threads (see _variants)
+static func _variant_table() -> Dictionary:
+	var out := {}
+	for base: String in ROCK_VARIANTS:
+		out[base] = PackedStringArray(ROCK_VARIANTS[base])
+	return out
+
+
+## The width range of every Highland kind as a packed [min, max] pair, for reading on worker threads (see
+## _variants); float64, so the widths drawn are bit-for-bit the KINDS values
+static func _size_table() -> Dictionary:
+	var out := {}
+	for kind: String in KINDS:
+		out[kind] = PackedFloat64Array([float(KINDS[kind][1]), float(KINDS[kind][2])])
+	return out
+
+
+## Bench option --wreckvar=N (index into PLANE_KINDS), read once at script load; -1 when it is not given
+static func _wreckvar_arg() -> int:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--wreckvar="):
+			return clampi(int(a.get_slice("=", 1)), 0, PLANE_KINDS.size() - 1)
+	return -1
 
 
 ## Вариант обломков по месту (детерминированно, без случайных чисел клетки — расстановка не меняется);
-## стенд: --wreckvar=N — всем обломкам вариант N (0 — a, 1 — b, 2 — c, 3 — вертолёт)
+## стенд: --wreckvar=N — всем обломкам вариант N (0 — a, 1 — b, 2 — c, 3 — вертолёт). Called from plan() on
+## worker threads, so it reads the packed copy _planes, not PLANE_KINDS
 static func plane_kind(p: Vector2) -> String:
-	if _force_plane == -2:
-		_force_plane = -1
-		for a in OS.get_cmdline_user_args():
-			if a.begins_with("--wreckvar="):
-				_force_plane = clampi(int(a.get_slice("=", 1)), 0, PLANE_KINDS.size() - 1)
-	var i := _force_plane if _force_plane >= 0 else absi(hash(Vector2i(roundi(p.x), roundi(p.y)))) % PLANE_KINDS.size()
-	return PLANE_KINDS[i]
+	var i := _force_plane if _force_plane >= 0 else absi(hash(Vector2i(roundi(p.x), roundi(p.y)))) % _planes.size()
+	return _planes[i]
+
+
+## Random width of a kind from its KINDS range: one rng draw, as before (worker-safe through _sizes)
+static func _rand_width(rng: RandomNumberGenerator, kind: String) -> float:
+	var r: PackedFloat64Array = _sizes[kind]
+	return rng.randf_range(r[0], r[1])
 
 var _meshes := {}   # вид → Mesh (или null, если модели нет)
 var _t: Terrain3D
@@ -156,6 +203,8 @@ func _card_mat(path: String) -> StandardMaterial3D:
 	return m
 
 
+## Full model of a kind from its GLB (cached); null for a kind without a file (the base rock kinds, which are
+## drawn as one of their ROCK_VARIANTS) or when the file is missing
 func _full_mesh(kind: String) -> Mesh:
 	if kind in ["bridge", "footbridge"]:
 		return PropBuild.bridge(kind == "footbridge")
@@ -165,7 +214,7 @@ func _full_mesh(kind: String) -> Mesh:
 		_meshes[kind] = null
 		var f: String = _row(kind)[0]
 		var path: String = (f if f.begins_with("res://") else DIR + f) + ".glb"
-		if ResourceLoader.exists(path):
+		if f != "" and ResourceLoader.exists(path):
 			var scene := (load(path) as PackedScene).instantiate()
 			var mi := _find_mesh(scene)
 			if mi != null:
@@ -197,9 +246,17 @@ func _low_poly(kind: String) -> Mesh:
 	return mesh
 
 
-## Строка вида: Нагорье (KINDS) или «Архипелаг» (SeaProps.KINDS, полный путь к модели)
+## Row of a kind: Highland (KINDS) or Archipelago (SeaProps.KINDS, full model path). An unknown kind is a bug
+## (it is how the worker-thread race above showed): debug builds stop on an assert naming it, which the CI checks
+## catch as a SCRIPT ERROR; a release build draws nothing for that kind instead of failing the whole chunk
 func _row(kind: String) -> Array:
-	return KINDS[kind] if KINDS.has(kind) else SeaProps.KINDS[kind]
+	if KINDS.has(kind):
+		return KINDS[kind]
+	if SeaProps.KINDS.has(kind):
+		return SeaProps.KINDS[kind]
+	push_error("BiomeProps: unknown prop kind '%s'" % kind)
+	assert(false, "BiomeProps: unknown prop kind '%s'" % kind)
+	return ["", 0.0, 0.0]
 
 
 func _count_meshes(n: Node) -> int:
@@ -451,7 +508,7 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.name = kind
-		var small: bool = kind in ["shrub", "bush", "boulders", "boulders_b", "poplar", "orchard"] or kind in SeaProps.SMALL
+		var small: bool = kind in ["shrub", "bush", "boulders_b", "boulders_c", "poplar", "orchard"] or kind in SeaProps.SMALL
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
 		# bushes never cast shadows: 8.6k-triangle leaf cards, 20–30 per oasis, too small to need them
 		var no_shadow: bool = kind == "bush" or Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)
@@ -481,14 +538,14 @@ func _add(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2,
 	for k in keep_out:
 		if p.distance_to(k[0]) < float(k[1]):
 			return
-	_add_sized(rng, put, kind, p, rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2])), ctx)
+	_add_sized(rng, put, kind, p, _rand_width(rng, kind), ctx)
 
 
 ## One model of `kind` at p, w px wide (shrunk high up and capped below the combat plane); a rock kind may be
 ## swapped for one of its ROCK_VARIANTS here, before the height cap, so the cap uses the variant's own height
 func _add_sized(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, w: float, ctx: Dictionary) -> void:
-	if ROCK_VARIANTS.has(kind):
-		var vs: Array = ROCK_VARIANTS[kind]
+	if _variants.has(kind):
+		var vs: PackedStringArray = _variants[kind]
 		kind = vs[absi(hash(Vector2i(roundi(p.x / 97.0), roundi(p.y / 97.0)))) % vs.size()]
 	# M-35: ни один предмет биома (дерево, куст, валун, юрта, мешки) не залезает кроной/краем в охранную зону реки
 	# S9-07: и в охранную полосу ручья посёлка (протоки) — river_field её не видит
@@ -539,7 +596,7 @@ func _bridges(rng: RandomNumberGenerator, put: Dictionary, obj: Dictionary, key:
 			continue
 		var q: Vector2 = (s[0] as Vector2).lerp(s[1], f0 / (f0 - f1))
 		if _in_chunk(q, ox, oz):
-			_put_bridge(put, "bridge", q, _road_dir(q).angle(), KINDS["bridge"][1], ctx)
+			_put_bridge(put, "bridge", q, _road_dir(q).angle(), (_sizes["bridge"] as PackedFloat64Array)[0], ctx)
 	var spots := []
 	for dx in [-1, 0, 1]:   # точка реки у оазиса может лежать в соседней клетке
 		for dz in [-1, 0, 1]:
@@ -553,7 +610,7 @@ func _bridges(rng: RandomNumberGenerator, put: Dictionary, obj: Dictionary, key:
 			spots.append(q)
 	for q: Vector2 in spots:
 		if _in_chunk(q, ox, oz) and absf(_t.river_field(q.x, q.y)) < 6.0:
-			_put_bridge(put, "footbridge", q, _river_normal(q).angle(), rng.randf_range(KINDS["footbridge"][1], KINDS["footbridge"][2]), ctx)
+			_put_bridge(put, "footbridge", q, _river_normal(q).angle(), _rand_width(rng, "footbridge"), ctx)
 
 
 func _river_normal(q: Vector2) -> Vector2:
@@ -695,7 +752,7 @@ func _wreck_on_ground(p: Vector2, w: float, yaw: float, s: Vector3, ctx: Diction
 
 ## Машина стоит вдоль дороги (нос по направлению дороги, лёгкий разворот)
 func _add_vehicle(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, dir: Vector2, ctx: Dictionary) -> void:
-	var w := rng.randf_range(float(KINDS[kind][1]), float(KINDS[kind][2]))
+	var w := _rand_width(rng, kind)
 	var s := _t.surface(p.x, p.y, ctx)
 	var yaw := -dir.angle() + rng.randf_range(-0.35, 0.35) + (PI if rng.randf() < 0.5 else 0.0)
 	var t := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(w, w, w)), s - Vector3(0, w * 0.03, 0))

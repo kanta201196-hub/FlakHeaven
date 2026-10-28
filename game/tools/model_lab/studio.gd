@@ -11,6 +11,7 @@ extends Node3D
 ##     godot --path game --rendering-method forward_plus --resolution 1920x1080 res://tools/model_lab/studio.tscn \
 ##     -- --gfx=2 --sets=houses,palms --out=/abs/dir
 ##   -> <out>/studio_<set>_<view>_g<gfx>.png, view = iso | top. --sets omitted: every set in SETS.
+##   --props=spire,spire_b: one BiomeProps kind alone per set, named p_<kind> (rock variant reviews).
 
 ## Set → parts [source, what, x, z, width, yaw°]. source: "house" (VillageHouses variant, metres), "prop"
 ## (BiomeProps kind, width in world px like KINDS), "unit" (battle GLB under res://models/battle/, width = its
@@ -28,8 +29,8 @@ const SETS := {
 	"bushes": [["prop", "bush", 0.0, 0.0, 26.0, 0.0], ["prop", "bush", 22.0, -6.0, 20.0, 80.0],
 		["prop", "bush", -20.0, -8.0, 24.0, 160.0], ["prop", "bush", 6.0, 20.0, 18.0, 240.0],
 		["prop", "palm", -6.0, -30.0, 34.0, 30.0]],
-	"rocks": [["prop", "outcrop_b", 0.0, 0.0, 70.0, 0.0], ["prop", "spire_b", 52.0, -18.0, 40.0, 30.0],
-		["prop", "boulders_b", -40.0, 22.0, 26.0, 0.0], ["prop", "boulders_b", -30.0, -30.0, 20.0, 120.0],
+	"rocks": [["prop", "outcrop_b", 0.0, 0.0, 70.0, 0.0], ["prop", "spire_c", 52.0, -18.0, 40.0, 30.0],
+		["prop", "boulders_b", -40.0, 22.0, 26.0, 0.0], ["prop", "boulders_c", -30.0, -30.0, 20.0, 120.0],
 		["prop", "boulders_b", 34.0, 30.0, 24.0, 240.0]],
 	# village clutter and market props (VillageHouses.PROPS, metres)
 	"vprops": [["house", 9, -10.0, -7.0, 0.0, 0.0], ["house", 10, 2.0, -7.5, 0.0, 0.0],
@@ -120,6 +121,11 @@ func _ready() -> void:
 			for u in a.substr(8).split(","):
 				_extra[u] = [["unit", u, 0.0, 0.0, 1.0, 30.0]]
 				sets.append(u)
+		elif a.begins_with("--props="):   # one BiomeProps kind per set "p_<kind>" (rock variant reviews)
+			sets = []
+			for k in a.substr(8).split(","):
+				_extra["p_" + k] = [["prop", k, 0.0, 0.0, float(BiomeProps.KINDS[k][2]), 30.0]]
+				sets.append("p_" + k)
 		elif a.begins_with("--houses="):   # after --sets=…: shown after those sets
 			if sets == SETS.keys():
 				sets = []

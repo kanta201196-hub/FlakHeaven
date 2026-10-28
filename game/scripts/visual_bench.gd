@@ -642,6 +642,26 @@ func _find_prop(ter: Terrain3D, at: Vector2, kind: String) -> Vector2:
 	return Vector2.INF
 
 
+## Place of the BiomeProps rock of base kind `base` (any of its ROCK_VARIANTS) nearest to `at` in the chunks
+## around it, or Vector2.INF. Unlike _find_prop it does not depend on which variant a place draws, so a
+## before/after pair of frames shows the same rock.
+func _find_rock(ter: Terrain3D, at: Vector2, base: String) -> Vector2:
+	if ter == null or ter.props == null or at == Vector2.INF:
+		return Vector2.INF
+	var c := Vector2i(int(floorf(at.x / Terrain3D.CHUNK)), int(floorf(at.y / Terrain3D.CHUNK)))
+	var best := Vector2.INF
+	for dx in range(-2, 3):
+		for dz in range(-2, 3):
+			var key := c + Vector2i(dx, dz)
+			var put: Dictionary = ter.props.plan(key, ter._ctx(key))
+			for kind: String in BiomeProps.ROCK_VARIANTS[base]:
+				for t: Transform3D in put.get(kind, []):
+					var q := Vector2(t.origin.x, t.origin.z)
+					if q.distance_to(at) < best.distance_to(at):
+						best = q
+	return best
+
+
 ## Точки: пустыня, гора, кишлак, оазис, бой со взрывами, крупный план самолёта
 func _make_points() -> Array:
 	var bg := m.background
@@ -745,6 +765,17 @@ func _make_points() -> Array:
 			rk = [gap, o["pos"]]
 	if rk[1] != Vector2.INF:
 		pts.append({"name": "rocks_group", "pos": rk[1], "ground_dist": 180.0, "wait": 3.0})
+		# weak-models list items 4 and 6 (Kanta 28.10): the same group, the nearest spire to it and the nearest one
+		# to the peak, at gameplay height (the default zoom). Spires are found by place over every spire variant,
+		# so the frames show the same spot whichever variant the place now draws (before/after pairs)
+		pts.append({"name": "rocks_play", "pos": rk[1], "wait": 3.0})
+		var sp := _find_rock(ter, rk[1], "spire")
+		if sp != Vector2.INF:
+			pts.append({"name": "rocks_spire_play", "pos": sp, "wait": 3.0})
+			pts.append({"name": "rocks_spire_close", "pos": sp, "ground_dist": 220.0, "wait": 3.0})
+		var sc := _find_rock(ter, peak, "spire")
+		if sc != Vector2.INF and sc.distance_to(sp) > 400.0:
+			pts.append({"name": "rocks_spire_crest", "pos": sc, "wait": 3.0})
 	if found.has("o_fort"):   # FA-01: the fortified-area base — whole fort and a tower launcher close up
 		pts.append({"name": "fort_area", "pos": found["o_fort"] + Vector2(0, 300), "off": Vector2(0, 300), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 1.0, "wait": 3.0})
 		pts.append({"name": "fort_area_close", "pos": found["o_fort"], "off": Vector2(0, 60), "fort": found["o_fort"], "fort_area": true, "enemies": true, "zoom": 2.4, "wait": 2.0})
