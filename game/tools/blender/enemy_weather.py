@@ -108,7 +108,7 @@ for _i, (_p, _m) in enumerate((("e_lev_turret", 26.0), ("e_lev_launcher", 10.0),
         RECIPES[_p + _b] = {"kind": "sea", "m": _m, "seed": 50 + _i, "mode": "set", "size": 1024, "vcol": True}
 
 PRIMER = {"air": (0.36, 0.37, 0.31), "ground": (0.30, 0.27, 0.22), "sea": (0.36, 0.22, 0.15)}
-BARE = {"air": (0.56, 0.57, 0.58), "ground": (0.46, 0.46, 0.44), "sea": (0.42, 0.40, 0.38)}
+BARE = {"air": (0.47, 0.48, 0.49), "ground": (0.36, 0.36, 0.35), "sea": (0.34, 0.32, 0.30)}
 DIRT = np.array([0.20, 0.17, 0.13], np.float32)
 DUST = np.array([0.62, 0.55, 0.43], np.float32)
 SOOT = np.array([0.04, 0.037, 0.035], np.float32)
@@ -250,9 +250,12 @@ def layers(P, N, Bd, AO, glass, src, srough, rec, texel):
     chipn = fbm(Pm, 9.0, seed + 5, 3)
     w = edge * wear * 1.3 + (chipn - 0.5) * 1.4 - 0.5
     w = np.maximum(w, lead * wear * (fbm(Pm * np.array([1.0, 0.3, 1.0], np.float32), 14.0, seed + 6, 2) - 0.5) * 2.2)
-    w = np.maximum(w, (fbm(Pm, 5.0, seed + 7, 3) - 0.8) * 2.2 * wear * (chipn > 0.58))   # scattered chips
+    # scattered chips away from edges: small, primer only (on canvas or a broad hood a big bare patch reads fake)
+    w = np.maximum(w, np.minimum((fbm(Pm, 9.0, seed + 7, 3) - 0.8) * 2.2 * wear * (chipn > 0.58), 0.25))
     primer = sstep(0.0, 0.05, w) * paint
-    bare = sstep(0.3, 0.42, w) * paint
+    # bare metal only in the deepest chips, broken up by the chip noise so thin parts (flap gaps, track
+    # teeth) never turn into one continuous bright line
+    bare = sstep(0.36, 0.5, w) * sstep(0.45, 0.6, chipn) * paint
     col = col * (1 - 0.8 * primer[:, None]) + np.array(PRIMER[kind], np.float32) * (0.8 * primer)[:, None]
     col = col * (1 - 0.85 * bare[:, None]) + np.array(BARE[kind], np.float32) * (0.85 * bare)[:, None]
     # --- cavity grime (the old albedo already has some AO, so this is light)
@@ -299,8 +302,8 @@ def layers(P, N, Bd, AO, glass, src, srough, rec, texel):
     base = np.full(len(P), 0.8, np.float32) if srough is None else np.clip(srough, 0.72, 0.92)
     rough = base + 0.1 * (fbm(Pm, 1.5, seed + 13, 3) - 0.5) + 0.05 * (mott - 0.5) + 0.06 * fade + 0.05 * sm
     rough = rough + 0.05 * streak + rough_add + 0.08 * s
-    rough = rough * (1 - bare) + 0.45 * bare
-    metal = 0.6 * bare * (1.0 if kind == "air" else 0.8)
+    rough = rough * (1 - bare) + 0.6 * bare    # worn, oxidised metal: dull, so it never mirrors the sky
+    metal = 0.35 * bare * (1.0 if kind == "air" else 0.8)
     # --- relief: seams sunk, chips sunk a little below the paint, fine orange-peel
     height = -0.5 * sm - 0.35 * primer + 0.08 * (fbm(Pm, 30.0, seed + 14, 2) - 0.5)
     return np.clip(col, 0, 1), np.clip(rough, 0.05, 1), np.clip(metal, 0, 1), height
