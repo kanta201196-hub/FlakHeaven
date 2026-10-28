@@ -11,12 +11,14 @@
             нормаль), пыльные бежево-серые; кладка подковой вперевязку в 2 мешка толщиной и 3 ряда;
             под ней насыпь из земли с комьями (текстура земли, матовая, цвет земли Нагорья), внутри — окоп
             с земляным дном; пулемёт на сошках, ящики.
+  poplar  — columnar poplar (weak-models list, Kanta 28.10, replaces the Meshy b04_poplar): straight grey
+            trunk bare at the foot, steeply rising branches, leaf-card clumps inside a narrow spindle crown.
 Текстуры — процедурные (tex_lib.py), всё матовое (roughness 1, metallic 0).
 Единицы — как у моделей биома (tools/model_lab/biome_prep.py): стоит на z = 0 (в Godot y = 0), центр
 в нуле, наибольший размер в плане = 1 — игра масштабирует под ширину в пикселях (biome_props.gd).
 
-Запуск (bpy 5.x): python3 biome_flora.py <папка вывода> [orchard] [shrub] [sandbag]
-  → <папка>/b05_orchard_tree.glb, b06_shrub.glb, b10_sandbag_post.glb (+ .blend в $FH_SRC, если задан)
+Запуск (bpy 5.x): python3 biome_flora.py <папка вывода> [orchard] [shrub] [sandbag] [poplar]
+  → <папка>/b05_orchard_tree.glb, b06_shrub.glb, b10_sandbag_post.glb, b04_poplar.glb (+ .blend в $FH_SRC, если задан)
 Облегчённое дерево («карточки») после этого: tools/model_lab/bake_impostor.gd (см. его шапку)."""
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,7 +28,7 @@ from mathutils import Vector, Matrix, noise
 import tex_lib as T
 
 OUT = sys.argv[1]
-ONLY = sys.argv[2:] or ["orchard", "shrub", "sandbag"]
+ONLY = sys.argv[2:] or ["orchard", "shrub", "sandbag", "poplar"]
 SRC = os.environ.get("FH_SRC", "")
 
 
@@ -223,7 +225,7 @@ def unit(rng, up=0.0):
 
 
 # ---------------- листва ----------------
-def foliage(B, rng, clumps, crown_c, crown_sq, size, mat, n_per, dry_share=0.15, dark=0.42, tint=1.0):
+def foliage(B, rng, clumps, crown_c, crown_sq, size, mat, n_per, dry_share=0.15, dark=0.42, tint=1.0, col_k=None):
     """Пучки листовых карточек. clumps: [(центр, радиус)]. Нормаль карточки в вершине — наружу от центра кроны
     (сжатого по crown_sq) с примесью — от центра пучка; вершинный цвет: внутри пучка и кроны темнее,
     подсушенные пучки — желтее"""
@@ -238,6 +240,8 @@ def foliage(B, rng, clumps, crown_c, crown_sq, size, mat, n_per, dry_share=0.15,
         c = Vector(c)
         dryk = rng.random() < dry_share
         ct = np.array((1.07, 1.0, 0.82) if dryk else (1.0, 1.0, 1.0)) * rng.uniform(0.88, 1.08) * tint
+        if col_k is not None:   # a caller's own shade for these clumps (the poplar's silvery and drying ones)
+            ct = ct * col_k
         nf = nrm_of(c)
         for i in range(n_per):
             d = unit(rng, 0.35)
@@ -308,6 +312,107 @@ def orchard():
     foliage(B, rng, clumps, cc, (2.2, 2.2, 1.1), 0.46, 1, 62, dark=0.32, tint=0.86)
     ob = B.finish("b05_orchard_tree", [m_bark, m_leaf])
     normalize_export(ob, "b05_orchard_tree")
+
+
+# ---------------- тополь ----------------
+def poplar():
+    """Columnar poplar (weak-models list, Kanta 28.10: replaces the Meshy b04_poplar, whose crown was faceted
+    toxic-green shards). A fictional tree in the spirit of the Lombardy and white poplars along Highland fields
+    and streams: a straight grey trunk, bare for the first ~1.8 m, with a thin leader to the top; many steeply
+    rising branches (the fastigiate habit) hug it, each with short twigs; the leaves are alpha-cut cards
+    gathered in clumps on the branches, inside a narrow spindle (widest at a third of the crown, pointed top),
+    so the crown is broken and open, and the trunk and branches show through at its base. The leaf green is the
+    orchard's muted summer green with yellow-grey (dry) and silvery (underside) clumps; the bark is the orchard's
+    bark texture greyed by the vertex colour. Same build as the orchard tree: one mesh, bark and leaf materials,
+    ~8 k triangles, height ~3.2 of the crown width (the old model's proportions, so the size caps and the
+    impostor cards of BiomeProps keep their numbers)."""
+    reset()
+    rng = np.random.default_rng(41)
+    B = Builder()
+    bark_c, bark_n = T.bark("poplar_bark", 17, base=(0.55, 0.5, 0.43))   # light warm-grey poplar bark
+    leaf_c, leaf_n = T.leaves("poplar_leaves", 6, n_leaf=120, leaf_len=(0.12, 0.17), width=0.62,
+                              base=(0.37, 0.42, 0.24), dry=(0.54, 0.52, 0.35), dry_share=0.14, var=0.08)
+    m_bark = material("poplar_bark", bark_c, bark_n, nstrength=1.1)
+    m_leaf = material("poplar_leaves", leaf_c, leaf_n, alpha=True, nstrength=0.8)
+    grey = srgb((1.0, 0.98, 0.95))
+    H = 15.0                 # tree height, m
+    Z0 = 1.8                 # lowest branches
+    RMAX = 2.35              # crown radius at its widest
+
+    def env(z):
+        """Crown radius at height z: a spindle, widest at ~35 % of the crown, rounded at the bottom, pointed top"""
+        t = (z - Z0 * 1.2) / (H - Z0 * 1.2)
+        if t <= 0.0 or t >= 1.0:
+            return 0.15
+        return RMAX * (math.sin(math.pi * t ** 0.72) ** 0.8) * (1.0 - 0.25 * t)
+
+    # trunk: straight with a slight sway, flared at the foot, then the leader thins out to the top
+    tr = []
+    lean = Vector((rng.normal() * 0.02, rng.normal() * 0.02, 1)).normalized()
+    for i in range(13):
+        z = -0.1 + (H * 0.94 + 0.1) * (i / 12) ** 1.1
+        tr.append(Vector((lean.x * z + math.sin(z * 0.6) * 0.05, lean.y * z + math.cos(z * 0.5) * 0.05, z)))
+    rad = [0.36, 0.27, 0.24] + [0.23 * (1 - (i - 2) / 10) ** 1.3 + 0.025 for i in range(3, 13)]
+    B.sweep(tr, rad, grey, 0, sides=9, cap=True, wobble=0.08, seed=3.0)
+
+    def on_trunk(z):
+        """Point of the trunk polyline at height z"""
+        for a, b in zip(tr, tr[1:]):
+            if b.z >= z:
+                return a.lerp(b, (z - a.z) / max(b.z - a.z, 1e-6))
+        return tr[-1]
+
+    clumps = []
+    n_br = 30
+    golden = math.pi * (3 - math.sqrt(5))
+    for i in range(n_br):
+        zb = Z0 + (H * 0.86 - Z0) * (i / (n_br - 1)) ** 0.92 + rng.uniform(-0.25, 0.25)
+        a = i * golden + rng.uniform(-0.3, 0.3)
+        el = math.radians(rng.uniform(58, 74))                 # steeply rising: the fastigiate habit
+        reach = env(zb + 1.5) * rng.uniform(0.75, 1.0)
+        L = min(reach / max(math.cos(el), 0.2) * 0.95, H - zb)
+        d = Vector((math.cos(a) * math.cos(el), math.sin(a) * math.cos(el), math.sin(el)))
+        r0 = 0.085 * (1.0 - 0.55 * (zb / H))
+        p = branch(B, on_trunk(zb), d, L, r0, 0.018, grey, 0, rng, segs=4, curve=0.45, sides=5)
+        for k, tk in ((2, 0.0), (4, 0.0)):
+            q = p[k]
+            rr = env(q.z)
+            flat = Vector((q.x, q.y, 0.0))
+            if flat.length > rr * 0.95:                        # keep the clump inside the spindle
+                q = Vector((flat.x * rr * 0.95 / flat.length, flat.y * rr * 0.95 / flat.length, q.z))
+            clumps.append((q + Vector((0, 0, 0.15)), rng.uniform(0.65, 0.85)))
+        if zb < H * 0.7:                                       # twigs: short, also rising
+            for s3 in (-1, 1):
+                dd = (p[-1] - p[-2]).normalized()
+                d3 = (Matrix.Rotation(s3 * rng.uniform(0.5, 0.9), 3, "Z") @ dd + Vector((0, 0, 0.6))).normalized()
+                p3 = branch(B, p[2], d3, L * rng.uniform(0.3, 0.42), 0.025, 0.01, grey, 0, rng, segs=2, curve=0.2,
+                            sides=4)
+                q = p3[-1]
+                rr = env(q.z)
+                flat = Vector((q.x, q.y, 0.0))
+                if flat.length > rr:
+                    q = Vector((flat.x * rr / flat.length, flat.y * rr / flat.length, q.z))
+                clumps.append((q, rng.uniform(0.55, 0.75)))
+    # the leader's top and the gaps along it: clumps hugging the trunk up to the pointed tip
+    for z in np.arange(Z0 + 0.8, H * 0.99, 0.9):
+        q = on_trunk(min(z, H * 0.93))
+        off = Vector((rng.normal(), rng.normal(), 0)).normalized() * env(z) * rng.uniform(0.15, 0.45)
+        clumps.append((Vector((q.x, q.y, z)) + off, rng.uniform(0.5, 0.7) * (0.7 if z > H * 0.9 else 1.0)))
+    # silvery (white-poplar undersides) and yellow-grey clumps; the rest in the orchard's green
+    cc = Vector((0, 0, Z0 + (H - Z0) * 0.42))
+    for c, r in clumps:
+        roll = rng.random()
+        tint = 0.97 * rng.uniform(0.9, 1.08)
+        if roll < 0.18:
+            tcol = np.array((1.06, 1.08, 1.1))     # silver-grey undersides turned up by the wind
+        elif roll < 0.3:
+            tcol = np.array((1.08, 1.03, 0.86))    # yellow-grey, drying
+        else:
+            tcol = np.array((1.0, 1.0, 1.0))
+        foliage(B, rng, [(c, r)], cc, (RMAX * 1.2, RMAX * 1.2, (H - Z0) * 0.55), 0.82, 1, 13, dry_share=0.0,
+                dark=0.42, tint=tint, col_k=tcol)
+    ob = B.finish("b04_poplar", [m_bark, m_leaf])
+    normalize_export(ob, "b04_poplar")
 
 
 # ---------------- куст ----------------
@@ -450,4 +555,4 @@ def sandbag():
 
 
 for k in ONLY:
-    {"orchard": orchard, "shrub": shrub, "sandbag": sandbag}[k]()
+    {"orchard": orchard, "shrub": shrub, "sandbag": sandbag, "poplar": poplar}[k]()

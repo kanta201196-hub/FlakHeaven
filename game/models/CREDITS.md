@@ -81,3 +81,12 @@
 | village/vc_hay (стог сена) | Haystack 2 | Frice | https://sketchfab.com/3d-models/haystack-2-b0f9bf31bec0474fb20f3d911f427a8c | CC BY 4.0, изменено |
 | village/vc_wood (поленница) | Woodpile (game ready asset) | Aparicio Silva 3D | https://sketchfab.com/3d-models/woodpile-game-ready-asset-fcd5d5993be64ca38ef8ae2926574874 | CC BY 4.0, изменено |
 | village/vc_trough (поилка с ведром) | Anvil, Water Bucket And Water Trough | RBG_illustrations | https://sketchfab.com/3d-models/anvil-water-bucket-and-water-trough-fddb4946ae574427a2d4ccc1fb17e33a | CC BY 4.0, изменено |
+
+## Модели, собранные кодом без сторонних исходников
+
+Своя геометрия и процедурные текстуры, сторонних моделей и текстур нет; таблица выше их не касается.
+
+| Модель в игре | Чем собрана | Что заменила |
+| --- | --- | --- |
+| biome/b04_poplar (тополь; карточки b04_poplar_side/top) | `tools/blender/biome_flora.py poplar` | генерацию Meshy (список слабых моделей, Kanta 28.10.2026) |
+| biome/b08_wreck_tank, biome/b07_wreck_truck (сгоревшие танк и грузовик) | `tools/blender/vehicle_wreck.py` | генерации Meshy (список слабых моделей, Kanta 28.10.2026) |
