@@ -49,8 +49,13 @@ class Builder:
 			if gn == Vector3.ZERO:
 				continue
 			var facing := gn.dot(st.normal)
-			if facing < DecalMesh.MIN_FACING or hull.protrusion(t):
-				continue   # turned away, or a small protrusion standing in front of the skin that carries the decal
+			if facing < DecalMesh.MIN_FACING:
+				continue
+			# a small protrusion (an antenna stub) stands in front of the skin the stamp lies on: it carries no piece.
+			# Only what rises in front of the stamp's plane can be one, which spares the test for the rest.
+			var cz := ((hull.pos[t * 3] + hull.pos[t * 3 + 1] + hull.pos[t * 3 + 2]) / 3.0 - st.center).dot(st.normal)
+			if cz > PlaneHull.SMALL_STEP and hull.protrusion(t):
+				continue
 			var poly: Array = []   # [position, normal, Vector3(x, y, z) in −1…1 box units]
 			var above := 0
 			var below := 0

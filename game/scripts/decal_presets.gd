@@ -38,9 +38,9 @@ static func record(hull: PlaneHull, key: String, spot: String, side: int, id: St
 	var sd := 1.0 if side >= 0 else -1.0
 	var hit: Array
 	if spot == "wing":
-		hit = hull.raycast(Vector3(float(s[0]), 1.0, float(s[1]) * sd), Vector3.DOWN, true)
+		hit = hull.raycast(Vector3(float(s[0]), 1.0, float(s[1]) * sd), Vector3.DOWN, 3.0, true)
 	else:
-		hit = hull.raycast(Vector3(float(s[0]), float(s[1]), sd), Vector3(0.0, 0.0, -sd), true)
+		hit = hull.raycast(Vector3(float(s[0]), float(s[1]), sd), Vector3(0.0, 0.0, -sd), 3.0, true)
 	if hit.size() != 2:
 		return null
 	var r := DecalRecord.new()
