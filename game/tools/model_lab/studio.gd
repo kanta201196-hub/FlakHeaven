@@ -64,6 +64,8 @@ var _cam: Camera3D
 var _sun: DirectionalLight3D
 var _set_root: Node3D
 var _wait := 0
+## Ad-hoc sets from --units=<glb>,<glb>: one battle GLB each (name without .glb), shown alone at yaw 30°
+var _extra := {}
 
 
 func _ready() -> void:
@@ -75,6 +77,11 @@ func _ready() -> void:
 			sets = Array(a.substr(7).split(","))
 		elif a.begins_with("--out="):
 			_out = a.substr(6)
+		elif a.begins_with("--units="):
+			sets = []
+			for u in a.substr(8).split(","):
+				_extra[u] = [["unit", u, 0.0, 0.0, 1.0, 30.0]]
+				sets.append(u)
 	Settings.set_preset(_gfx)
 	_build_world()
 	for s in sets:
@@ -182,7 +189,7 @@ func _show(name: String) -> void:
 	_set_root = Node3D.new()
 	add_child(_set_root)
 	var props := BiomeProps.new(null)
-	for part: Array in SETS[name]:
+	for part: Array in (_extra[name] if _extra.has(name) else SETS[name]):
 		var n := Node3D.new()
 		var body: Node3D = null
 		match String(part[0]):
