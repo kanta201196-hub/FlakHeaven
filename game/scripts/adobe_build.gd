@@ -1275,28 +1275,208 @@ static func _ob(st: SurfaceTool, c: Vector2, yaw: float, lx: float, lz: float, s
 		_quad(st, Vector3(a.x, yb, a.y), Vector3(b.x, yb, b.y), Vector3(b.x, yt, b.y), Vector3(a.x, yt, a.y), side)
 
 
-## Стена в осях постройки от a до b (локальные координаты), толщина t, высота h; ragged — рваный верх
-## сплошной линией (куски разной высоты встык, без щелей); breach — пролом в середине
+## Compound wall (duval) in the building's axes from a to b (local coordinates), base thickness t, height h:
+## a battered mud wall (top WALL_TAPER of the base) under a rounded coping, its top eroded in shallow dips, a
+## damp darker foot and a sun-bleached crest in the vertex colours (adobe.gdshader adds plaster wear, fallen
+## plaster with mud-brick courses, cracks and rain streaks). ragged — a broken top, pieces of different height
+## joined by jagged slopes; breach — a gap in the middle with a heap of fallen clay. The village's rng is drawn
+## exactly as the old box walls drew it (the layout and the edge that continue the same generator stay put);
+## the erosion has a generator of its own, seeded by the wall's place.
 static func _t_wall(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vector2, t: float, h: float, col: Color, rng: RandomNumberGenerator, ragged := false, breach := false) -> void:
 	var len := a.distance_to(b)
 	if len < 0.002:
 		return
-	var dir := (b - a) / len
 	var n := maxi(1, int(len / 0.022)) if ragged else 1
 	var hh := h
-	var top := col.lightened(0.05)
+	var tops := PackedFloat32Array()   # height of each piece, -1 for the breach
 	for k in n:
 		var f0 := float(k) / n
 		var f1 := float(k + 1) / n
 		if breach and n >= 3 and k == n / 2:
 			_heap(st, c + a.lerp(b, (f0 + f1) * 0.5).rotated(yaw), 0.014, rng)
+			tops.append(-1.0)
 			continue
 		if ragged:
 			hh = clampf(hh + rng.randf_range(-0.35, 0.35) * h, h * 0.3, h)
-		var m := a.lerp(b, (f0 + f1) * 0.5)
-		var l := len / n + (t if (k == 0 or k == n - 1) else 0.0)
-		var s := Vector3(l, hh, t)
-		_ob(st, c + m.rotated(yaw), yaw + dir.angle(), 0.0, 0.0, s, col, top)
+		tops.append(hh)
+	var wr := RandomNumberGenerator.new()
+	wr.seed = hash(Vector2i(roundi((a.x + b.x + c.x * 3.0) * 1e5), roundi((a.y + b.y + c.y * 3.0) * 1e5)))
+	# the top's outline as runs of [share of the length, height] points; a breach splits the wall in two runs
+	var runs := []
+	var pts := []
+	for k in n:
+		var f0 := float(k) / n
+		var f1 := float(k + 1) / n
+		if tops[k] < 0.0:
+			if not pts.is_empty():
+				pts.append([f0, tops[k - 1] * wr.randf_range(0.25, 0.45)])
+				runs.append(pts)
+			pts = []
+			continue
+		if pts.is_empty():
+			var y0 := tops[k] if k == 0 else tops[k] * wr.randf_range(0.25, 0.45)
+			pts.append([f0, y0])
+		if ragged:
+			pts.append([(f0 + f1) * 0.5, tops[k] * wr.randf_range(0.9, 1.04)])
+			if k < n - 1 and tops[k + 1] >= 0.0:
+				pts.append([f1, minf(tops[k], tops[k + 1]) * wr.randf_range(0.7, 0.95)])
+		else:
+			var m := maxi(1, int(len / WALL_SEG))
+			for i in range(1, m):
+				var dip := wr.randf_range(0.8, 0.9) if wr.randf() < 0.14 else wr.randf_range(0.96, 1.03)
+				pts.append([float(i) / m, h * dip])
+		if k == n - 1:
+			pts.append([1.0, tops[k]])
+	if not pts.is_empty():
+		runs.append(pts)
+	for r: Array in runs:
+		_wall_run(st, c, yaw, a, b, t, r, col)
+
+
+## One unbroken stretch of a compound wall: pts — [share of a→b, height] along its top. Sections of the
+## profile (battered sides, damp foot band, rounded coping smoothed across its crest) between consecutive
+## points; the stretch's ends get end caps and reach t/2 past a wall end, so walls overlap at the corners
+const WALL_TAPER := 0.72   ## a compound wall's top is this share of its base thickness
+const COPING := 0.22       ## the rounded coping rises this share of the base thickness above its shoulders
+const DAMP := 0.0055       ## the damp, dirtier foot of a wall: this high above the ground, old units (~0.5 m)
+const WALL_SEG := 0.026    ## an intact wall's eroded top: one height point per this length, old units (~2.4 m)
+
+
+static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vector2, t: float, pts: Array, col: Color, ext := true) -> void:
+	if pts.size() < 2:
+		return
+	var len := a.distance_to(b)
+	var dir := (b - a) / len
+	var nrm := dir.orthogonal()
+	var damp := col.darkened(0.3)
+	var top := col.lightened(0.06)
+	var crest := col.lightened(0.14)
+	var secs := []   # per point: [left rows, right rows] of Vector3, bottom to crest
+	for i in pts.size():
+		var f: float = pts[i][0]
+		var y: float = pts[i][1]
+		var along := f * len
+		if ext and i == 0 and f <= 0.0:
+			along -= t * 0.5
+		elif ext and i == pts.size() - 1 and f >= 1.0:
+			along += t * 0.5
+		var o := a + dir * along
+		var yd := minf(DAMP, y * 0.4)
+		var hw := [t * 0.5, t * 0.5, lerpf(t * 0.5, t * WALL_TAPER * 0.5, yd / maxf(y, 0.0001)), t * WALL_TAPER * 0.5, 0.0]
+		var hy := [0.0, SINK, SINK + yd, SINK + y, SINK + y + t * COPING]
+		var side := []
+		for s: float in [-1.0, 1.0]:
+			var rows := []
+			for j in 5:
+				var q := c + (o + nrm * s * float(hw[j])).rotated(yaw)
+				rows.append(Vector3(q.x, float(hy[j]), q.y))
+			side.append(rows)
+		secs.append(side)
+	var cols := [damp, damp, col, top, crest]
+	for i in secs.size() - 1:
+		for s in 2:
+			var p: Array = secs[i][s]
+			var q: Array = secs[i + 1][s]
+			for j in 4:
+				st.set_smooth_group(7 if j == 3 else -1)   # the coping is rounded: smooth across its crest
+				var v := [p[j], q[j], q[j + 1], p[j + 1]]
+				var cs := [cols[j], cols[j], cols[j + 1], cols[j + 1]]
+				if s == 0:
+					v = [q[j], p[j], p[j + 1], q[j + 1]]
+				for k: int in [0, 2, 1, 0, 3, 2]:
+					st.set_color(cs[k])
+					st.add_vertex(v[k])
+	# end caps: the profile polygon (left rows up, crest, right rows down), fanned from its first point
+	for e: int in [0, secs.size() - 1]:
+		var l: Array = secs[e][0]
+		var r: Array = secs[e][1]
+		var ring := [l[0], l[1], l[2], l[3], l[4], r[3], r[2], r[1], r[0]]
+		var rc := [damp, damp, col, top, crest, top, col, damp, damp]
+		st.set_smooth_group(-1)
+		for k in range(1, ring.size() - 1):
+			var tri := [0, k, k + 1] if e == 0 else [0, k + 1, k]
+			for ti: int in tri:
+				st.set_color(rc[ti])
+				st.add_vertex(ring[ti])
+
+
+## Gate of a compound wall in the yard's axes: two adobe piers with rounded caps either side of the passage,
+## a timber frame (posts and a lintel under a small mud roof) and two plank leaves — shut, or one swung in.
+## g — the passage centre on the wall line (yard axes), dirv — along the wall, gw — half the passage width,
+## state — the yard's (0 whole, 1 damaged: a leaf fallen, 2 ruined: no frame, the lintel on the ground).
+## Its own generator: the village's rng is not drawn.
+static func _gate(st: SurfaceTool, c: Vector2, yaw: float, g: Vector2, dirv: Vector2, gw: float, t: float, wh: float, state: int, shut: bool, col: Color) -> void:
+	var gr := RandomNumberGenerator.new()
+	gr.seed = hash(Vector2i(roundi((c.x + g.x) * 1e5), roundi((c.y + g.y) * 1e5))) + 3
+	var inw := -g.normalized() if g.length() > 0.0001 else Vector2.ZERO   # towards the yard
+	var ph := wh * (1.2 if state < 2 else gr.randf_range(0.55, 0.85))
+	for s: float in [-1.0, 1.0]:
+		var p0 := g + dirv * s * (gw - t * 0.5)
+		var p1 := g + dirv * s * (gw + t * 1.1)
+		_wall_run(st, c, yaw, p0, p1, t * 1.35, [[0.0, ph], [1.0, ph]], col.lightened(0.03), false)
+	if state == 2:   # the lintel lies across the rubble of the passage
+		var la := g + dirv * gw * 0.9 + inw * 0.004
+		var lb := g - dirv * gw * 0.7 + inw * 0.012
+		_beam(st, c, yaw, Vector3(la.x, SINK + 0.002, la.y), Vector3(lb.x, SINK + 0.004, lb.y), 0.0024, WOOD_DARK)
+		return
+	var fh := wh * 1.12
+	for s: float in [-1.0, 1.0]:   # timber posts against the piers
+		var q := g + dirv * s * (gw - 0.0012)
+		_beam(st, c, yaw, Vector3(q.x, SINK - 0.002, q.y), Vector3(q.x, SINK + fh, q.y), 0.0026, WOOD)
+	var l0 := g - dirv * (gw + t * 0.9)
+	var l1 := g + dirv * (gw + t * 0.9)
+	_beam(st, c, yaw, Vector3(l0.x, SINK + fh + 0.0012, l0.y), Vector3(l1.x, SINK + fh + 0.0012, l1.y), 0.0026, WOOD)
+	var roof := col.lightened(0.05)   # a small mud roof on the lintel
+	_ob(st, c + g.rotated(yaw), yaw + dirv.angle(), 0.0, 0.0, Vector3(gw * 2.0 + t * 2.4, 0.003, t * 1.5), roof, roof.lightened(0.06), fh + 0.0025)
+	var lw := gw * 0.98
+	if shut:
+		for s: float in [-1.0, 1.0]:   # two leaves meeting in the middle
+			var m := g + dirv * s * lw * 0.5 + inw * 0.001
+			_beam(st, c, yaw, Vector3(m.x, SINK - 0.001, m.y), Vector3(m.x, SINK + wh * 1.02, m.y), 0.0, WOOD_DARK,
+				Vector2(lw * 0.96, 0.0013), dirv)
+	elif state == 0 and gr.randf() < 0.6:   # one leaf swung into the yard
+		var hinge := g + dirv * lw
+		var open := (inw * 0.8 - dirv * 0.6).normalized()
+		var m := hinge + open * lw * 0.5
+		_beam(st, c, yaw, Vector3(m.x, SINK - 0.001, m.y), Vector3(m.x, SINK + wh * 1.02, m.y), 0.0, WOOD_DARK,
+			Vector2(lw * 0.96, 0.0013), open)
+	elif state == 1:   # a leaf torn off, lying in the passage
+		var m := g + inw * 0.006 + dirv * gw * 0.2
+		_beam(st, c, yaw, Vector3(m.x, SINK + 0.0007, m.y) - Vector3(dirv.x, 0.0, dirv.y) * lw * 0.5,
+			Vector3(m.x, SINK + 0.0007, m.y) + Vector3(dirv.x, 0.0, dirv.y) * lw * 0.5, 0.0, WOOD_DARK,
+			Vector2(wh * 0.95, 0.0013), Vector2(-dirv.y, dirv.x))
+
+
+## Timber (or a plank) in the building's axes from p (Vector3, x/z local) to q: square section w thick, or with
+## sec (width, thickness) a plank whose width lies along `across` (local, horizontal). Flat-shaded box
+static func _beam(st: SurfaceTool, c: Vector2, yaw: float, p: Vector3, q: Vector3, w: float, col: Color, sec := Vector2.ZERO, across := Vector2.ZERO) -> void:
+	var d := q - p
+	if d.length() < 0.00001:
+		return
+	var dn := d.normalized()
+	var u: Vector3
+	if across != Vector2.ZERO:
+		u = Vector3(across.x, 0.0, across.y).normalized()
+	else:
+		u = dn.cross(Vector3.UP)
+		if u.length() < 0.001:
+			u = Vector3.RIGHT
+		u = u.normalized()
+	var v := dn.cross(u).normalized()
+	var su := (sec.x if sec != Vector2.ZERO else w) * 0.5
+	var sv := (sec.y if sec != Vector2.ZERO else w) * 0.5
+	var k := []
+	for e: Vector3 in [p, q]:
+		for f: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+			var l := e + u * su * f.x + v * sv * f.y
+			var wpt := c + Vector2(l.x, l.z).rotated(yaw)
+			k.append(Vector3(wpt.x, l.y, wpt.y))
+	var top := col.lightened(0.06)
+	for i in 4:
+		var j := (i + 1) % 4
+		_quad(st, k[i], k[4 + i], k[4 + j], k[j], top if i == 0 else col)
+	_quad(st, k[0], k[1], k[2], k[3], col)
+	_quad(st, k[7], k[6], k[5], k[4], col)
 
 
 ## Дом в осях (c, yaw): плоская глиняная крыша, 1–2 этажа, иногда парапет, надстройка, копоть; дверь —
@@ -1360,7 +1540,8 @@ static func _home(homes: Array, c: Vector2, h: Vector2, yaw: float, hh: float, f
 		homes.append([v, c + Vector2(-h.x + seg * (k + 0.5), 0.0).rotated(yaw), yaw + flip, Vector3(sx, sy, sz)])
 
 
-## Дом без крыши: четыре стены рваным верхом сплошной линией, внутри груда глины
+## Дом без крыши: четыре стены рваным верхом сплошной линией, внутри груда глины. Charred roof beams lie
+## across the heap and stick out over the broken walls (own generator: the village's rng is drawn as before)
 static func _t_ruin(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, hh: float, rng: RandomNumberGenerator) -> void:
 	var t := 0.007
 	var corners := [Vector2(-h.x, -h.y), Vector2(h.x, -h.y), Vector2(h.x, h.y), Vector2(-h.x, h.y)]
@@ -1373,20 +1554,80 @@ static func _t_ruin(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, hh: flo
 			_t_wall(st, c, yaw, a + inw, a.lerp(b, 0.35) + inw, t, hh * 0.5, T_WALL, rng, true)
 			continue
 		_t_wall(st, c, yaw, a + inw, b + inw, t, hh, T_WALL, rng, true)
-	_heap(st, c + Vector2(rng.randf_range(-0.3, 0.3) * h.x, 0.0).rotated(yaw), minf(h.x, h.y) * 0.75, rng)
+	var hc := c + Vector2(rng.randf_range(-0.3, 0.3) * h.x, 0.0).rotated(yaw)
+	_heap(st, hc, minf(h.x, h.y) * 0.75, rng)
+	var br := RandomNumberGenerator.new()
+	br.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5))) + 5
+	for k in br.randi_range(1, 3):
+		var ang := br.randf() * TAU
+		var l := maxf(h.x, h.y) * br.randf_range(1.0, 1.6)
+		var m := (hc - c).rotated(-yaw) + Vector2(br.randf_range(-0.3, 0.3) * h.x, br.randf_range(-0.3, 0.3) * h.y)
+		var e := Vector2.from_angle(ang) * l * 0.5
+		var y0 := SINK + br.randf_range(0.002, 0.012)
+		var y1 := SINK + br.randf_range(0.004, hh * 0.8)
+		_beam(st, c, yaw, Vector3(m.x - e.x, y0, m.y - e.y), Vector3(m.x + e.x, y1, m.y + e.y), 0.0022,
+			BURNT if br.randf() < 0.6 else WOOD_DARK)
 
 
-## Груда глины и обломков: ступенчатый холмик из 3 повёрнутых плит и пара кусков рядом
+## Груда глины и обломков: a lumpy mound of fallen mud brick (rings of jittered points, darker in the hollows,
+## lighter on top), clay chunks round it and a broken beam now and then. The village's rng gives the mound's
+## turn and tone and the two big chunks as before; the shape has a generator of its own
 static func _heap(st: SurfaceTool, c: Vector2, r: float, rng: RandomNumberGenerator) -> void:
 	var yaw := rng.randf() * TAU
 	var col := T_RUBBLE.darkened(rng.randf_range(0.0, 0.08))
-	_ob(st, c, yaw, 0.0, 0.0, Vector3(r * 2.0, 0.006, r * 1.6), col, col.lightened(0.04))
-	_ob(st, c, yaw + 0.4, 0.0, 0.0, Vector3(r * 1.35, 0.012, r * 1.1), col, col.lightened(0.06))
-	_ob(st, c, yaw + 0.9, r * 0.15, 0.0, Vector3(r * 0.7, 0.018, r * 0.6), col, col.lightened(0.08))
+	var hr := RandomNumberGenerator.new()
+	hr.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5))) + 7
+	_mound(st, c, Vector2(r * 1.05, r * 0.85), minf(0.013, r * 0.45), yaw, col, hr)
 	for k in 2:
 		var p := c + Vector2.from_angle(rng.randf() * TAU) * r * rng.randf_range(0.9, 1.3)
 		var cc := BURNT if rng.randf() < 0.25 else col
-		_ob(st, p, rng.randf() * TAU, 0.0, 0.0, Vector3(0.008, 0.005, 0.006), cc, cc)
+		_ob(st, p, rng.randf() * TAU, 0.0, 0.0, Vector3(0.008, 0.005, 0.006), cc, cc.lightened(0.05))
+	for k in hr.randi_range(4, 8):   # loose bricks and clods
+		var p := c + Vector2.from_angle(hr.randf() * TAU) * r * hr.randf_range(0.7, 1.5)
+		var cc := col.darkened(hr.randf_range(-0.05, 0.12))
+		_ob(st, p, hr.randf() * TAU, 0.0, 0.0, Vector3(0.0036, 0.0022, 0.0026) * hr.randf_range(0.8, 1.4), cc, cc.lightened(0.06))
+	if hr.randf() < 0.45:
+		var e := Vector2.from_angle(hr.randf() * TAU) * r * 0.8
+		_beam(st, c, 0.0, Vector3(-e.x, SINK + 0.003, -e.y), Vector3(e.x, SINK + hr.randf_range(0.006, 0.014), e.y), 0.002, WOOD_DARK)
+
+
+## Irregular mound of radii rad (x, z, turned by yaw) and height hgt: four jittered rings and a top, smooth-shaded, the base
+## ring a little under the ground; vertex colour darker low and in the hollows, lighter towards the top
+static func _mound(st: SurfaceTool, c: Vector2, rad: Vector2, hgt: float, yaw: float, col: Color, hr: RandomNumberGenerator) -> void:
+	var nseg := 14
+	var lv := [[1.0, -0.002], [0.84, 0.3], [0.6, 0.64], [0.3, 0.9]]
+	var rings := []
+	var rcol := []
+	for li in lv.size():
+		var ring := []
+		var rc := []
+		for i in nseg:
+			var a := TAU * (float(i) + 0.5 * float(li % 2)) / nseg
+			var k := float(lv[li][0]) * hr.randf_range(0.86, 1.1)
+			var q := c + Vector2(cos(a) * rad.x * k, sin(a) * rad.y * k).rotated(yaw)
+			var y := SINK + float(lv[li][1]) * hgt * hr.randf_range(0.85, 1.15)
+			ring.append(Vector3(q.x, y, q.y))
+			rc.append(col.darkened(hr.randf_range(0.0, 0.1) + 0.04 * (3 - li)).lightened(0.04 * li))
+		rings.append(ring)
+		rcol.append(rc)
+	var apex := Vector3(c.x, SINK + hgt, c.y) + Vector3(hr.randf_range(-0.15, 0.15) * rad.x, 0.0, hr.randf_range(-0.15, 0.15) * rad.y)
+	st.set_smooth_group(5)   # a soft heap of earth, not a faceted rock
+	for li in rings.size() - 1:
+		for i in nseg:
+			var j := (i + 1) % nseg
+			var v := [rings[li][i], rings[li][j], rings[li + 1][j], rings[li + 1][i]]
+			var cs := [rcol[li][i], rcol[li][j], rcol[li + 1][j], rcol[li + 1][i]]
+			for k: int in [0, 2, 1, 0, 3, 2]:
+				st.set_color(cs[k])
+				st.add_vertex(v[k])
+	var last: Array = rings[rings.size() - 1]
+	for i in nseg:
+		var j := (i + 1) % nseg
+		for k: int in [0, 1, 2]:
+			var vv: Vector3 = [last[i], apex, last[j]][k]
+			st.set_color(col.lightened(0.1) if k == 1 else rcol[rings.size() - 1][i if k == 0 else j])
+			st.add_vertex(vv)
+	st.set_smooth_group(-1)
 
 
 ## Двор-квартал в осях (c, yaw), полуразмер h. Глухая стена по периметру, ворота на стороне gate
@@ -1412,9 +1653,9 @@ static func _yard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int
 			var gw := 0.016
 			_t_wall(st, c, yaw, a + nin, gm - dirv * gw + nin, t, wh, wall, rng, state == 2)
 			_t_wall(st, c, yaw, gm + dirv * gw + nin, b + nin, t, wh, wall, rng, state == 2)
-			# створки ворот — тёмные, чуть выше стены
-			if state == 0 and rng.randf() < 0.5:
-				_ob(st, c, yaw, gm.x + nin.x, gm.y + nin.y, Vector3(gw * 2.0 if i % 2 == 0 else t * 1.2, wh * 0.9, t * 1.2 if i % 2 == 0 else gw * 2.0), T_DARK, T_DARK)
+			# piers, a timber frame under a small mud roof and plank leaves (shut as often as the old dark leaves)
+			var shut := state == 0 and rng.randf() < 0.5
+			_gate(st, c, yaw, gm + nin, dirv, gw, t, wh, state, shut, wall)
 			continue
 		_t_wall(st, c, yaw, a + nin, b + nin, t, wh, wall, rng, state == 2, i == breach_side)
 	# дома: A — вдоль стены напротив ворот во всю длину, B и C — вдоль боковых
@@ -1517,6 +1758,36 @@ static func _yard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int
 				stats["homes"].append([kv[0], c + q.rotated(yaw), yaw + PI * 0.5 * yr.randi_range(0, 3), Vector3.ONE * M_PER_UNIT])
 				taken.append(q)
 				break
+
+
+## Model studio (tools/model_lab/studio.gd): one village piece built by the same functions as village(), for
+## close-up review of the compound walls, gates and ruins. kind: "yard" (an intact walled yard, gate on -z),
+## "yard_damaged" (a breach and one ruined house), "yard_ruined" (ragged walls, heaps), "ruins" (a roofless
+## house, a heap and a breached ragged wall). Returns [mesh (old units × V_UNIT, like the village mesh),
+## homes (VillageHouses.attach records)]. The seed is searched so the yard comes out in the asked state.
+static func debug_piece(kind: String) -> Array:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var homes := []
+	var stats := {"yards": 0, "houses": 0, "homes": homes}
+	var rng := RandomNumberGenerator.new()
+	if kind.begins_with("yard"):
+		var want: int = {"yard": 0, "yard_damaged": 1, "yard_ruined": 2}.get(kind, 0)
+		for s in 400:
+			rng.seed = 4100 + s
+			var r := rng.randf()
+			if (0 if r < 0.68 else (1 if r < 0.9 else 2)) == want:
+				rng.seed = 4100 + s
+				break
+		_yard(st, Vector2.ZERO, Vector2(0.11, 0.085), 0.0, 0, rng, stats)
+	else:
+		rng.seed = 5
+		_t_ruin(st, Vector2(-0.055, 0.01), Vector2(0.034, 0.028), 0.0, 0.035, rng)
+		_heap(st, Vector2(0.035, 0.03), 0.026, rng)
+		_t_wall(st, Vector2(0.0, -0.045), 0.0, Vector2(-0.09, 0.0), Vector2(0.09, 0.0), 0.007, 0.018, T_WALL, rng, true, true)
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _scaled_arrays(st, V_UNIT))
+	return [m, homes]
 
 
 ## Крона дерева: два повёрнутых друг к другу яруса (сверху — восьмиугольник), оливково-серая.

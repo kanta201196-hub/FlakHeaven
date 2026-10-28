@@ -163,6 +163,7 @@ def _part(m):
 
 
 _SCALE = 1.0   # world units per turret length for the current bake (bake_set sets it)
+_PART_FN = [None]   # bake_set: pal["part"] (material -> surface id) replaces _part for the current bake
 
 
 def _bake_emit(obs, img, build):
@@ -179,7 +180,7 @@ def _bake_emit(obs, img, build):
             N.clear()
             out = N.new("ShaderNodeOutputMaterial")
             em = N.new("ShaderNodeEmission")
-            Lk.new(build(N, Lk, _part(m), m), em.inputs["Color"])
+            Lk.new(build(N, Lk, (_PART_FN[0] or _part)(m), m), em.inputs["Color"])
             Lk.new(em.outputs[0], out.inputs[0])
             tx = N.new("ShaderNodeTexImage")
             tx.image = img
@@ -608,9 +609,12 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     """Unwrap the objects obs into one size x size atlas, bake the paint layers and give all of them the one
     material mat_name; faces of kept materials (glass, core) keep theirs. scale — world units per turret
     length (the noise, panel and chip sizes are tuned for a turret of length 1). pal["own"] — each face keeps
-    its material's own colour (texture or flat) instead of the camouflage; the old UV layer is read for it."""
+    its material's own colour (texture or flat) instead of the camouflage; the old UV layer is read for it.
+    pal["part"] (material -> int) and pal["layers"] ((P, N, B, AO, part, own colours) -> albedo, roughness, metal,
+    relief normal) let another kind of surface reuse the bakes with its own surface ids and layers."""
     global _SCALE
     _SCALE = scale
+    _PART_FN[0] = pal.get("part")
     own = bool(pal.get("own"))
     key = (tuple(ob.name for ob in obs), mat_name, size, scale, pal["seed"])
     hit = _DATA.get(key) if not own else None
@@ -637,8 +641,11 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     CH = 400000
     for s0 in range(0, len(P), CH):
         sl = slice(s0, s0 + CH)
-        col, rough, metal, nn = _layers(P[sl], N[sl], B[sl], AO[sl], part[sl], x_tip, pal, obs[0].name,
-                                        S[sl] if own else None, hit is None)
+        if pal.get("layers") is not None:   # a caller's own layers (village_adobe.py: adobe walls, not paint)
+            col, rough, metal, nn = pal["layers"](P[sl], N[sl], B[sl], AO[sl], part[sl], S[sl] if own else None)
+        else:
+            col, rough, metal, nn = _layers(P[sl], N[sl], B[sl], AO[sl], part[sl], x_tip, pal, obs[0].name,
+                                            S[sl] if own else None, hit is None)
         ys, xs = sel[0][sl], sel[1][sl]
         alb[ys, xs] = col
         orm[ys, xs] = np.stack([AO[sl], rough, metal], 1)
