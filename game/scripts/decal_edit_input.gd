@@ -21,6 +21,8 @@ const NOTE_TIME := 3.0
 var m: Main
 var note := ""                ## why the last action did nothing (shown in the panel)
 var note_t := 0.0
+var _roundel_key := ""        # the decal `_roundel_note` last looked at, and whether a roundel hides it
+var _roundel_hid := false
 var tally := 0                ## the class's real kill tally (read when the editor opens)
 var _dirty := false           ## the profile holds decal changes the file does not have yet
 var _press_at := Vector2.ZERO
@@ -101,6 +103,20 @@ func _fit_note(e: DecalEditor) -> void:
 	e.note = ""
 
 
+## Says so while the decal under the cursor (or the selected one) would lie wholly under a roundel, which stays on
+## top and hides it (spec §2.4); asked again only when the decal changes
+func _roundel_note(h3: Hangar3D, r: DecalRecord) -> void:
+	if r == null:
+		_roundel_key = ""
+		return
+	var k := "%s|%s|%.4f|%.3f|%s" % [r.id, str(r.pos.snapped(Vector3.ONE * 0.001)), r.size, r.angle, r.text]
+	if k != _roundel_key:
+		_roundel_key = k
+		_roundel_hid = h3.decal_under_roundel(r, maxi(tally, DecalEditor.PREVIEW_TALLY))
+	if _roundel_hid:
+		_say(Loc.t("Опознавательный знак закроет этот знак"))
+
+
 ## Shows why an action did nothing; `buzz` — also the refusal sound (panel buttons get theirs from MainInput)
 func _say(s: String, buzz := false) -> void:
 	note = s
@@ -132,6 +148,7 @@ func frame(delta: float) -> void:
 	var live := e.preview(_hit)
 	if live == null and e.sel >= 0 and not e.moving:
 		live = e.records[e.sel]   # the selected decal pulses
+	_roundel_note(h3, live)
 	_store(e)
 	h3.decal_refresh(e.shown(), live, maxi(tally, DecalEditor.PREVIEW_TALLY))
 

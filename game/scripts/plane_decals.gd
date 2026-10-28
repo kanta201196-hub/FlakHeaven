@@ -20,6 +20,7 @@ const FAIRING := "crown"   ## meta SkinPatch.turret_fairing sets on a fairing (a
 const WATCH := ["bay_doors", "tail_cabin", "detail", "wing_mech"]
 const PART_MESH := "decals_part"   ## the decal mesh under a moving part
 const PART_PREVIEW := "decal_preview_part"
+const ROUNDEL_REACH := 0.01   ## how far off the decal a roundel still counts as lying over it, model units
 ## Debug sample art per class (`--decals`), laid on the presets: nose, tally, number, fin, wing, wing turn (radians),
 ## primary and secondary paint
 const SAMPLE_ART := {
@@ -280,6 +281,58 @@ static func _hide_covered_badges(ins: Node3D, records: Array[DecalRecord]) -> vo
 		elif not covered and mi.get_meta("decal_hid", false):
 			mi.visible = true
 			mi.remove_meta("decal_hid")
+
+
+## True when decal `r` (with `tally` marks) would lie wholly under the plane's roundels: they stay on top of decals
+## (spec §2.4), so such a decal never shows. Fin and side badges do not count — a decal over one hides the badge
+## (`_hide_covered_badges`). A 5×5 grid over the decal's stamps, each point shot along its normal at the roundels.
+static func under_roundel(model: Node3D, r: DecalRecord, tally: int) -> bool:
+	var rh := _roundel_hull(model)
+	if rh == null or r == null:
+		return false
+	var sts := DecalLoadout.stamps(r, maxi(tally, 1))
+	if sts.is_empty():
+		return false
+	var b := r.basis_vectors()
+	var n := r.normal.normalized()
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for st in sts:
+		var c := Vector2((st.center - r.pos).dot(b[0]), (st.center - r.pos).dot(b[1]))
+		lo = lo.min(c - Vector2(st.half_w, st.half_h))
+		hi = hi.max(c + Vector2(st.half_w, st.half_h))
+	for i in 5:
+		for j in 5:
+			var q := Vector2(lerpf(lo.x, hi.x, (i + 0.5) / 5.0), lerpf(lo.y, hi.y, (j + 0.5) / 5.0))
+			var p := r.pos + b[0] * q.x + b[1] * q.y
+			if rh.raycast(p + n * ROUNDEL_REACH, -n, ROUNDEL_REACH * 2.0).size() != 2:
+				return false
+	return true
+
+
+## The roundels on the model's insignia node as one hull in model axes (fin and side badges left out); cached on the
+## insignia node until its meshes change
+static func _roundel_hull(model: Node3D) -> PlaneHull:
+	var ins := model.get_node_or_null("insignia") as Node3D
+	if ins == null:
+		return null
+	var meshes: Array[MeshInstance3D] = []
+	for c in ins.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		var n := String(mi.name) if not String(mi.name).begins_with("Mesh") else String(mi.get_parent().name)
+		if mi.mesh == null or n.begins_with("decal") or n.begins_with("fin") or n.begins_with("side"):
+			continue
+		meshes.append(mi)
+	var sig := ",".join(PackedStringArray(meshes.map(func(m: MeshInstance3D) -> String: return str(m.mesh.get_rid().get_id()))))
+	var kept: Array = ins.get_meta("roundel_hull", [])
+	if kept.size() == 2 and String(kept[0]) == sig:
+		return kept[1]
+	var h := PlaneHull.new()
+	for mi in meshes:
+		PlaneHull.append_mesh(h, mi.mesh, PlaneHull.rel_transform(mi, model))
+	var out: PlaneHull = h if h.triangles() > 0 else null
+	ins.set_meta("roundel_hull", [sig, out])
+	return out
 
 
 ## The decal material (one per plane; the shader is shared); `highlight` 1 — the editor's pulsing light tint

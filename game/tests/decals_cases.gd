@@ -34,6 +34,8 @@ func run() -> Array:
 	_test_winding()
 	_test_fade()
 	_test_seat()
+	_test_protrusion()
+	_test_under_roundel()
 	_test_lift_order()
 	_test_blockers()
 	_test_parts()
@@ -597,6 +599,70 @@ func _test_seat() -> void:
 	var far_off := absf((flat[-1].center - sts[-1].center).length()) > 0.005
 	_check(drawn == sts.size() and far_off, "every tally mark of a long row lands on a curved fuselage (%d of %d)" % [
 		drawn, sts.size()])
+
+
+## Two boxes as one hull: the skin (a slab whose face at z = 0 looks at −Z) and `b` standing on it
+func _on_slab(b: Array) -> PlaneHull:
+	var slab := _box(Vector3(0, 0, 0.05), Vector3(0.1, 0.1, 0.05))
+	return PlaneHull.from_triangles((slab[0] as PackedVector3Array) + (b[0] as PackedVector3Array),
+		(slab[1] as PackedVector3Array) + (b[1] as PackedVector3Array))
+
+
+func _test_protrusion() -> void:
+	# an antenna stub 12 mm square and 15 mm tall on the skin: the cursor passes through it, it gets no piece, and the
+	# editor's fit does not shrink a decal for it
+	var hull := _on_slab(_box(Vector3(0, 0, -0.0075), Vector3(0.006, 0.006, 0.0075)))
+	var front := -1   # a triangle of the stub's face at z = −0.015
+	var skin := -1    # a triangle of the slab's face at z = 0
+	for t in hull.triangles():
+		var c := (hull.pos[t * 3] + hull.pos[t * 3 + 1] + hull.pos[t * 3 + 2]) / 3.0
+		if hull.nrm[t * 3].z < -0.9 and absf(c.z + 0.015) < 0.0001:
+			front = t
+		elif hull.nrm[t * 3].z < -0.9 and absf(c.z) < 0.0001:
+			skin = t
+	_check(front >= 0 and hull.protrusion(front), "an antenna stub standing on the skin is a protrusion")
+	_check(skin >= 0 and not hull.protrusion(skin), "the skin under it is not")
+	var plain := hull.raycast(Vector3(0, 0, -0.5), Vector3(0, 0, 1))
+	var through := hull.raycast(Vector3(0, 0, -0.5), Vector3(0, 0, 1), 3.0, true)
+	_check(plain.size() == 2 and absf((plain[0] as Vector3).z + 0.015) < 0.001, "a plain ray stops on the stub")
+	_check(through.size() == 2 and absf((through[0] as Vector3).z) < 0.001, "the cursor's ray passes through it onto the skin")
+	var r := _bolt(0.04)
+	var b := _project(hull, r)
+	var off_skin := 0
+	for v in b.verts:
+		off_skin += int(v.z < -0.002)
+	_check(b.verts.size() > 0 and off_skin == 0, "the decal lies on the skin under the stub, none of it on the stub")
+	_check(is_equal_approx(DecalPresets.fit_size(hull, r, 0), 0.04), "the stub does not make the editor shrink the decal")
+	# a raised panel 6 cm wide is skin, not a protrusion
+	var deck := _on_slab(_box(Vector3(0, 0, -0.0075), Vector3(0.03, 0.03, 0.0075)))
+	var top := -1
+	for t in deck.triangles():
+		var c := (deck.pos[t * 3] + deck.pos[t * 3 + 1] + deck.pos[t * 3 + 2]) / 3.0
+		if deck.nrm[t * 3].z < -0.9 and absf(c.z + 0.015) < 0.0001:
+			top = t
+	_check(top >= 0 and not deck.protrusion(top), "a raised panel wider than the threshold keeps its decal")
+
+
+func _test_under_roundel() -> void:
+	# a roundel 6 cm across lying 0.8 mm over the skin, and a fin badge of the same size elsewhere
+	var model := Node3D.new()
+	var ins := Node3D.new()
+	ins.name = "insignia"
+	model.add_child(ins)
+	var roundel := MeshInstance3D.new()
+	roundel.name = "roundel_l"
+	roundel.mesh = _mesh(_plate(0.03, -0.0008))
+	ins.add_child(roundel)
+	var badge := MeshInstance3D.new()
+	badge.name = "fin_l"
+	badge.mesh = _mesh(_plate(0.03, -0.0008))
+	badge.position = Vector3(0.3, 0, 0)
+	ins.add_child(badge)
+	_check(PlaneDecals.under_roundel(model, _bolt(0.02), 0), "a small decal wholly on a roundel is reported hidden")
+	_check(not PlaneDecals.under_roundel(model, _bolt(0.08), 0), "a decal larger than the roundel shows round it")
+	_check(not PlaneDecals.under_roundel(model, _bolt(0.02, Vector3(0, 0, -1), Vector3(0.3, 0, 0)), 0),
+		"a fin badge does not hide a decal (the decal hides the badge)")
+	model.free()
 
 
 func _test_fade() -> void:
