@@ -2,12 +2,12 @@ class_name Insignia
 ## V-07: свои знаки на самолётах (решение Kanta 17.10: все шесть, art/insignia/insignia_N.png).
 ## Наклейки по обшивке — отдельный GLB в осях модели (tools/blender/insignia.py → models/mech/fh_ins_<класс>_<ур>.glb):
 ## узлы wing_l / wing_r (сверху на крыльях), fin_l / fin_r (киль), side_l / side_r (борт за кабиной).
-## Крыло — 1 «Вершина», общий знак ВВС. Киль — знак класса: 2 «Стрела» у «Осы», 4 «Перо» у «Грача»,
+## Крыло — без знака: «Вершину» (1) Kanta 28.10 велел убрать с крыльев, узлы wing_l / wing_r удаляются. Киль — знак класса: 2 «Стрела» у «Осы», 4 «Перо» у «Грача»,
 ## 5 «Винт» у «Кита»; у ведомых — 3 «Шевроны». Борт — 6 «Коготь» у асов: экипаж от ACE_RANK звания.
 
 const ACE_RANK := 15
 const CLASS_MARK := {"fighter": 2, "attacker": 4, "bomber": 5}
-const WING_MARK := 1
+const WING_MARK := 1   ## fallback fin mark of a class not in CLASS_MARK; the wings themselves carry none any more
 const WINGMAN_MARK := 3
 const ACE_MARK := 6
 
@@ -33,7 +33,12 @@ static func attach(model: Node3D, key: String, role := "player") -> Node3D:
 		# узел наклейки — родитель меша (glTF: узел → MeshInstance3D) или сам меш
 		var n := String(mi.name) if String(mi.name).begins_with("wing") or String(mi.name).begins_with("fin") \
 				or String(mi.name).begins_with("side") else String(mi.get_parent().name)
-		var mark := WING_MARK if n.begins_with("wing") else (fin if n.begins_with("fin") else (ACE_MARK if ace else 0))
+		if n.begins_with("wing"):
+			# Kanta 28.10: no roundel on the wings. Freed, not hidden, so the decal code (PlaneDecals roundel hull,
+			# the editor's «a roundel will cover this» note) finds no roundel either and decals may go there.
+			mi.free()
+			continue
+		var mark: int = fin if n.begins_with("fin") else (ACE_MARK if ace else 0)
 		mi.visible = mark > 0
 		if mark > 0:
 			mi.material_override = _mat(mark)
