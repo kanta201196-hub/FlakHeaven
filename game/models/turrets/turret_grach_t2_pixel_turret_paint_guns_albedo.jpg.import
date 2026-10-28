@@ -1,0 +1,37 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://dfg8cos1cxw3"
+path="res://.godot/imported/turret_grach_t2_pixel_turret_paint_guns_albedo.jpg-c20af6759952176aba27315c63f99dde.ctex"
+metadata={
+"vram_texture": false
+}
+generator_parameters={
+"md5": "c07b019d6eda4046cd0861ca4cb5a277"
+}
+
+[deps]
+
+source_file="res://models/turrets/turret_grach_t2_pixel_turret_paint_guns_albedo.jpg"
+dest_files=["res://.godot/imported/turret_grach_t2_pixel_turret_paint_guns_albedo.jpg-c20af6759952176aba27315c63f99dde.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1
