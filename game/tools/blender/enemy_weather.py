@@ -317,6 +317,19 @@ def layers(P, N, Bd, AO, glass, src, srough, rec, texel):
     return np.clip(col, 0, 1), np.clip(rough, 0.05, 1), np.clip(metal, 0, 1), height
 
 
+def _thin_edges(bev, mask, texel, rec):
+    """dot(bevel, shading normal) with wide "edge" areas removed. A real edge is a band a couple of bevel radii
+    wide; where a whole panel reads as edge (a double-skinned hood, a crumpled sheet) the bevel bake is fooled, and
+    chips there turn into one big peeled patch. A grey opening in texture space keeps only those wide areas, and
+    they are taken back out of the edge strength."""
+    from scipy.ndimage import grey_opening
+    e = np.where(mask, np.clip((1.0 - np.clip(bev[..., 0], -1, 1)) * 6.0 - 0.12, 0.0, 1.0), 0.0)
+    width = 2.0 * rec.get("bevel_m", 0.035) / rec["m"] / max(texel, 1e-6)
+    k = int(np.clip(3.0 * width + 1.0, 5, 64))
+    thin = np.clip(e - grey_opening(e, size=(k, k)), 0.0, 1.0)
+    return 1.0 - (thin + 0.12) / 6.0
+
+
 def layers_chunked(P, N, B, AO, glass, src, srough, rec, texel, chunk=300000):
     """layers() in slices (the noise temporaries of millions of texels do not fit in memory at once); the
     model's height range, which some layers need, is measured on the whole set first"""
@@ -463,6 +476,7 @@ def weather_atlas(name, out_dir):
     dx = np.linalg.norm(Pw[:, 1:] - Pw[:, :-1], axis=-1)
     ok = mask[:, 1:] & mask[:, :-1]
     texel = float(np.median(dx[ok])) if ok.any() else 1.0 / size
+    Bv = _thin_edges(bev, mask, texel, rec)[sel]
     step = np.full((H, W), texel, np.float32)
     # old pictures, as bottom-up arrays like the bakes
     def arr(pil, mode="RGB"):
@@ -698,6 +712,7 @@ def weather_set(name, out_dir):
     dx = np.linalg.norm(Pw[:, 1:] - Pw[:, :-1], axis=-1)
     ok = mask[:, 1:] & mask[:, :-1]
     texel = float(np.median(dx[ok]))
+    Bv = _thin_edges(bev, mask, texel, rec)[sel]
     # vertex colours of the Leviathan parts were written as sRGB values (b2_leviathan.py), the rest is linear
     S = np.clip(vc[sel][:, :3], 0, 1) if vc is not None else tp._to_srgb(src[sel][:, :3])
     S = S * (1.0 - 0.75 * (1.0 - np.clip(occ[sel], 0, 1)))[:, None]
