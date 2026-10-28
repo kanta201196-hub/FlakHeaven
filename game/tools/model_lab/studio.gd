@@ -15,7 +15,7 @@ extends Node3D
 ## Set → parts [source, what, x, z, width, yaw°]. source: "house" (VillageHouses variant, metres), "prop"
 ## (BiomeProps kind, width in world px like KINDS), "unit" (battle GLB under res://models/battle/, width = its
 ## sprite length), "adobe" (AdobeBuild.debug_piece kind: village walls, gates and ruins with their houses),
-## "fort" (the Highland fort of FortBuild: "whole", "taken" = every piece in the state of a taken fort, or
+## "oasis" (OasisBuild.studio_piece kind on the oasis plot, its models through VillageHouses), "fort" (the Highland fort of FortBuild: "whole", "taken" = every piece in the state of a taken fort, or
 ## "<piece id>:<FortDamage state>" = that piece in that state among the other pieces intact; the frame then
 ## closes in on the piece, FORT_FOCUS).
 ## Widths only matter inside a set: the set is scaled to a fixed size before framing.
@@ -43,6 +43,13 @@ const SETS := {
 	"v_yard_damaged": [["adobe", "yard_damaged", 0.0, 0.0, 0.0, 0.0]],
 	"v_yard_ruined": [["adobe", "yard_ruined", 0.0, 0.0, 0.0, 0.0]],
 	"v_ruins": [["adobe", "ruins", 0.0, 0.0, 0.0, 0.0]],
+	# the Highland oasis farmstead (OasisBuild.studio_piece kinds): a walled garden with its gate, fallen stretch
+	# and channel; the pond with the cistern and the pergola; a roofless house; whole variants
+	"o_garden": [["oasis", "garden", 0.0, 0.0, 0.0, 0.0]],
+	"o_pond": [["oasis", "pond", 0.0, 0.0, 0.0, 0.0]],
+	"o_ruin": [["oasis", "ruin", 0.0, 0.0, 0.0, 0.0]],
+	"o_whole0": [["oasis", "v0", 0.0, 0.0, 0.0, 0.0]],
+	"o_whole2": [["oasis", "v2", 0.0, 0.0, 0.0, 0.0]],
 	# the Highland fort «Укрепрайон» (FortBuild): whole, taken, and each piece type intact and broken
 	"fort": [["fort", "whole", 0.0, 0.0, 0.0, 0.0]],
 	"fort_taken": [["fort", "taken", 0.0, 0.0, 0.0, 0.0]],
@@ -81,6 +88,7 @@ const FORT_FOCUS := 1.6
 ## The pieces of a taken fort in the studio (as the bench's fort_area_ruin): FortDamage state per piece id
 const FORT_TAKEN := {"t0": 2, "t1": 2, "t2": 2, "t3": 1, "w1": 2, "w5": 2, "gate": 2, "store": 2, "citadel": 2}
 const VILLAGE_PX := 1650.0  ## o_village size in world px (AdobeBuild.V_UNIT): an "adobe" part's scale before framing
+const OASIS_PX := 420.0     ## o_oasis size in world px (OasisBuild.PLOT_PX): an "oasis" part's scale before framing
 const SIZE := 20.0          ## a set's longest side after scaling, units
 const ISO_PITCH := 35.0     ## 3/4 view: degrees above the horizon
 const ISO_YAW := 35.0       ## and around from the front (+z)
@@ -118,6 +126,8 @@ func _ready() -> void:
 			for h in a.substr(9).split(","):
 				var v := int(h)
 				var nm := String(VillageHouses.VARIANTS[v][0]) if v < VillageHouses.VARIANTS.size() else "vhouse_%d" % v
+				if v >= VillageHouses.OASIS0:
+					nm = String(VillageHouses.OASIS[v - VillageHouses.OASIS0][0])
 				_extra[nm] = [["house", v, 0.0, 0.0, 0.0, 30.0]]
 				sets.append(nm)
 	Settings.set_preset(_gfx)
@@ -228,6 +238,7 @@ func _show(name: String) -> void:
 	add_child(_set_root)
 	var props := BiomeProps.new(null)
 	_adobe_mats.clear()
+	var oasis := false
 	for part: Array in (_extra[name] if _extra.has(name) else SETS[name]):
 		var n := Node3D.new()
 		var body: Node3D = null
@@ -253,6 +264,17 @@ func _show(name: String) -> void:
 				mi.scale = Vector3.ONE * VILLAGE_PX
 				VillageHouses.attach(mi, piece[1])
 				body = mi
+			"oasis":   # OasisBuild piece on the 1 × 1 plot, scaled to world px as the game scales o_oasis
+				var piece := OasisBuild.studio_piece(String(part[1]))
+				var mi := MeshInstance3D.new()
+				mi.mesh = piece[0]
+				var am := AdobeBuild.material().duplicate() as ShaderMaterial
+				mi.material_override = am
+				_adobe_mats.append(am)
+				mi.scale = Vector3.ONE * OASIS_PX
+				VillageHouses.attach(mi, piece[1], OasisBuild.K, OasisBuild.GROUND / OasisBuild.K)
+				body = mi
+				oasis = true
 			"fort":
 				body = _fort(String(part[1]))
 			"unit":
@@ -271,7 +293,9 @@ func _show(name: String) -> void:
 		am.set_shader_parameter("px_scale", 1.0 / k)
 	# the village mesh is sunk (AdobeBuild.SINK) as in the game: its ground level goes on the sand
 	var floor_y := box.position.y
-	if not _adobe_mats.is_empty():
+	if oasis:
+		floor_y = OasisBuild.GROUND * OASIS_PX
+	elif not _adobe_mats.is_empty():
 		floor_y += AdobeBuild.SINK * AdobeBuild.V_UNIT * VILLAGE_PX
 	if name.begins_with("fort") and not name.begins_with("fortress"):   # the fort is sunk the same way (Render3D)
 		floor_y = FortBuild.GROUND * FortBuild.K
