@@ -2194,9 +2194,17 @@ func _ds_place(h3: Hangar3D, sh: Dictionary, key: String) -> void:
 			func(md: Dictionary) -> bool: return String(md["name"]) == "fit_size")
 		var fit_hull: PlaneHull = (load("res://scripts/plane_decals.gd") as Script).call("cursor_hull", h3._model) \
 				if can_fit else null
+		# where the editor's cursor lands now: its skin ray passes small protrusions (same name lookup as the fit)
+		var skin_ray := can_fit and (load("res://scripts/plane_hull.gd") as Script).get_script_method_list().any(
+			func(md: Dictionary) -> bool: return String(md["name"]) == "protrusion")
 		for d: Dictionary in sh["recs"]:
 			var r := DecalRecord.from_dict(d)
 			if r != null:
+				if skin_ray:
+					var hit: Array = fit_hull.call("raycast", r.pos + r.normal * 0.1, -r.normal, 0.2, true)
+					if hit.size() == 2:
+						r.pos = hit[0]
+						r.normal = hit[1]
 				if can_fit:
 					r.size = float(ps.call("fit_size", fit_hull, r, int(sh.get("tally", 0))))
 				recs.append(r)
