@@ -102,7 +102,7 @@ static func stamps(r: DecalRecord, tally: int, hull: PlaneHull = null) -> Array[
 ## grows with its distance from the record's anchor `anchor`); left where it is when the ray finds none
 static func seat(st: DecalStamp, anchor: Vector3, hull: PlaneHull) -> void:
 	var reach := clampf(st.center.distance_to(anchor) * 0.6, maxf(st.half_w, st.half_h), 0.08)
-	var hit := hull.raycast(st.center + st.normal * reach, -st.normal, reach * 2.0)
+	var hit := hull.raycast(st.center + st.normal * reach, -st.normal, reach * 2.0, true)
 	if hit.size() == 2:
 		st.center = hit[0]
 

@@ -11,6 +11,11 @@ extends RefCounted
 ## `extra` chains a second, uncached hull (the turret fairings built at run time) into `raycast` and the decal cutter.
 
 const CELL := 0.03   ## grid cell, model units
+const SMALL_R := 0.02        ## a protrusion's surface ends within this distance round a point of it, model units
+const SMALL_BEHIND := 0.04   ## … and skin facing the same way lies within this distance behind it
+const SMALL_STEP := 0.006    ## the surface "ends" where a parallel shot lands this much deeper (or misses)
+const SMALL_UP := 0.03       ## the parallel shots start this far in front of the face
+const DETAIL_MIN := 0.05     ## a silhouette detail smaller than this (longest side, model units) is no decal skin
 ## Nodes whose meshes are never skin: moving parts and everything other systems add to the model
 const SKIP_NODES := ["wing_mech", "bay_doors", "insignia", "module_parts", "wing_kit", "decals"]
 
@@ -26,6 +31,7 @@ var _indexed := false
 var _wind := 0                    # winding convention, see winding()
 var _bounds := AABB()
 var _has_bounds := false
+var _small := {}                  # triangle → protrusion() result
 
 
 ## Hull from flat triangle arrays (tests, fairing meshes)
@@ -231,8 +237,13 @@ static func statics_of(model: Node3D) -> Array[MeshInstance3D]:
 			out.append(c as MeshInstance3D)
 		elif String(c.name) in ["detail", "tail_cabin"]:
 			for d in c.find_children("*", "MeshInstance3D", true, false):
-				if (d as MeshInstance3D).mesh != null and not String(d.name).begins_with("decal"):
-					out.append(d as MeshInstance3D)
+				var dm := d as MeshInstance3D
+				if dm.mesh == null or String(d.name).begins_with("decal"):
+					continue
+				# an antenna or a blade among the details stands in front of the decal, it does not carry one
+				var size := (rel_transform(dm, model) * dm.mesh.get_aabb()).size
+				if maxf(size.x, maxf(size.y, size.z)) >= DETAIL_MIN:
+					out.append(dm)
 	return out
 
 
@@ -310,11 +321,13 @@ func near(lo: Vector3, hi: Vector3) -> PackedInt32Array:
 	return out
 
 
-## First skin hit facing the ray (Möller–Trumbore), `extra` included: [position, smooth normal], or [] on a miss
-func raycast(origin: Vector3, dir: Vector3, max_len := 3.0) -> Array:
-	var hit := _raycast_own(origin, dir, max_len).slice(0, 2)
+## First skin hit facing the ray (Möller–Trumbore), `extra` included: [position, smooth normal], or [] on a miss.
+## `skin`: the ray passes through small protrusions (`protrusion`: an antenna, a blade, a pitot stub) onto the skin
+## behind them — the cursor, the presets and the editor's fit never land a decal on one.
+func raycast(origin: Vector3, dir: Vector3, max_len := 3.0, skin := false) -> Array:
+	var hit := (_skin_hit(origin, dir, max_len) if skin else _raycast_own(origin, dir, max_len)).slice(0, 2)
 	if extra != null:
-		var e := extra.raycast(origin, dir, max_len)
+		var e := extra.raycast(origin, dir, max_len, skin)
 		if e.size() == 2 and (hit.is_empty() or origin.distance_to(e[0]) < origin.distance_to(hit[0])):
 			hit = e
 	return hit
@@ -323,7 +336,7 @@ func raycast(origin: Vector3, dir: Vector3, max_len := 3.0) -> Array:
 ## `raycast`, but [] when `blocker` (the canopy glass) is hit first: the cursor must not reach the skin under the
 ## glass, where a decal would be hidden. A null blocker gives the plain raycast.
 func raycast_clear(origin: Vector3, dir: Vector3, max_len: float, blocker: PlaneHull) -> Array:
-	var hit := raycast(origin, dir, max_len)
+	var hit := raycast(origin, dir, max_len, true)
 	if hit.is_empty() or blocker == null:
 		return hit
 	var b := blocker.raycast(origin, dir, max_len)
@@ -338,35 +351,87 @@ func ray_hit(origin: Vector3, dir: Vector3, max_len := 3.0) -> Array:
 	return _raycast_own(origin, dir, max_len)
 
 
+## Nearest own triangle facing the ray within `max_len`: [position, smooth normal, triangle], or []. Walks the grid
+## cell by cell along the ray (Amanatides–Woo); every triangle is filed in each cell its bounds touch, so the cells
+## the ray crosses hold every triangle it can hit.
 func _raycast_own(origin: Vector3, dir: Vector3, max_len: float) -> Array:
 	_index()
 	var d := dir.normalized()
+	var cell := cell_of(origin)
+	var stp := Vector3i.ZERO
+	var t_max := Vector3(INF, INF, INF)
+	var t_delta := Vector3(INF, INF, INF)
+	for ax in 3:
+		if absf(d[ax]) > 1e-12:
+			stp[ax] = 1 if d[ax] > 0.0 else -1
+			var edge := float(cell[ax] + (1 if d[ax] > 0.0 else 0)) * CELL
+			t_max[ax] = (edge - origin[ax]) / d[ax]
+			t_delta[ax] = CELL / absf(d[ax])
 	var best := INF
 	var hit: Array = []
 	var tested := {}
-	var s := 0.0
-	while s <= max_len:
-		var k := cell_of(origin + d * s)
-		for dx in [-1, 0, 1]:
-			for dy in [-1, 0, 1]:
-				for dz in [-1, 0, 1]:
-					var kk := k + Vector3i(dx, dy, dz)
-					if not _grid.has(kk):
-						continue
-					for t: int in _grid[kk]:
-						if tested.has(t):
-							continue
-						tested[t] = true
-						var r := _ray_tri(origin, d, t)
-						if r.size() == 3 and float(r[0]) < best:
-							best = float(r[0])
-							var nn: Vector3 = (nrm[t * 3] * (1.0 - r[1] - r[2]) + nrm[t * 3 + 1] * r[1]
-								+ nrm[t * 3 + 2] * r[2]).normalized()
-							hit = [origin + d * best, nn, t]
-		if hit.size() > 0 and best < s - CELL:
+	var t := 0.0
+	while t <= max_len:
+		var tris: Array = _grid.get(cell, [])
+		for tri: int in tris:
+			if tested.has(tri):
+				continue
+			tested[tri] = true
+			var r := _ray_tri(origin, d, tri)
+			if r.size() == 3 and float(r[0]) < best and float(r[0]) <= max_len:
+				best = float(r[0])
+				var nn: Vector3 = (nrm[tri * 3] * (1.0 - r[1] - r[2]) + nrm[tri * 3 + 1] * r[1]
+					+ nrm[tri * 3 + 2] * r[2]).normalized()
+				hit = [origin + d * best, nn, tri]
+		var ax := 0 if t_max.x <= t_max.y and t_max.x <= t_max.z else (1 if t_max.y <= t_max.z else 2)
+		if best <= t_max[ax]:
 			break
-		s += CELL * 0.5
+		t = t_max[ax]
+		cell[ax] += stp[ax]
+		t_max[ax] += t_delta[ax]
 	return hit
+
+
+## `_raycast_own` that goes on through small protrusions (at most a few) to the skin behind them
+func _skin_hit(origin: Vector3, dir: Vector3, max_len: float) -> Array:
+	var d := dir.normalized()
+	var o := origin
+	var left := max_len
+	for i in 4:
+		var h := _raycast_own(o, d, left)
+		if h.is_empty() or not protrusion(int(h[2])):
+			return h
+		var gone := o.distance_to(h[0]) + 0.0005
+		o = (h[0] as Vector3) + d * 0.0005
+		left -= gone
+		if left <= 0.0:
+			return []
+	return []
+
+
+## True when triangle `t` belongs to a small protrusion standing in front of the skin — an antenna, a blade, a pitot
+## stub, a lip: right behind it (along its face normal, within SMALL_BEHIND) lies more skin facing the same way, and
+## its surface ends within SMALL_R round it on at least three of four sides (a shot there lands SMALL_STEP deeper or
+## misses). A wing over a nacelle, a canard or a fin is not one: what lies behind their faces is their own inside.
+## Cached per triangle.
+func protrusion(t: int) -> bool:
+	if _small.has(t):
+		return _small[t]
+	var res := false
+	var gn := DecalMesh.face_normal(self, t, float(winding()))
+	if gn != Vector3.ZERO:
+		var c := (pos[t * 3] + pos[t * 3 + 1] + pos[t * 3 + 2]) / 3.0
+		if not _raycast_own(c - gn * 0.0005, -gn, SMALL_BEHIND).is_empty():
+			var u := gn.cross(Vector3.UP if absf(gn.y) < 0.9 else Vector3.RIGHT).normalized()
+			var v := gn.cross(u)
+			var ends := 0
+			for off: Vector3 in [u, -u, v, -v]:
+				var h := _raycast_own(c + off * SMALL_R + gn * SMALL_UP, -gn, SMALL_UP + SMALL_BEHIND + SMALL_R)
+				if h.is_empty() or ((h[0] as Vector3) - c).dot(-gn) > SMALL_STEP:
+					ends += 1
+			res = ends >= 3
+	_small[t] = res
+	return res
 
 
 func _ray_tri(o: Vector3, d: Vector3, t: int) -> Array:

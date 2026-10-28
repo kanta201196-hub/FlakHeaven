@@ -1037,6 +1037,9 @@ func _decal_blocker() -> PlaneHull:
 			continue
 		if (_model.is_ancestor_of(mi) and not PlaneHull.under(mi, _model, ["module_parts", "props"])):
 			continue
+		var bb := (inv * mi.global_transform) * mi.mesh.get_aabb()
+		if maxf(bb.size.x, maxf(bb.size.y, bb.size.z)) < PlaneHull.DETAIL_MIN:
+			continue   # an aerial or a small module part: the cursor passes it onto the skin behind
 		PlaneHull.append_mesh(gear, mi.mesh, inv * mi.global_transform)
 	if gear.triangles() > 0:
 		_dc_block = gear if _dc_block == null else _dc_block.with_extra(gear)
@@ -1083,6 +1086,11 @@ func decal_close(key: String, records: Array[DecalRecord], tally: int) -> void:
 ## The skin of the plane on view the decals are cut from (null without a model)
 func decal_hull() -> PlaneHull:
 	return PlaneDecals.cursor_hull(_model) if _model != null and is_instance_valid(_model) else null
+
+
+## True when decal `r` would lie wholly under a roundel of the plane on view (PlaneDecals.under_roundel)
+func decal_under_roundel(r: DecalRecord, tally: int) -> bool:
+	return _model != null and is_instance_valid(_model) and PlaneDecals.under_roundel(_model, r, tally)
 
 
 ## Turns the camera by `dx`, `dy` radians (the gamepad's right stick in the editor)

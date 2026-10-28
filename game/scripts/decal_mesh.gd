@@ -49,8 +49,8 @@ class Builder:
 			if gn == Vector3.ZERO:
 				continue
 			var facing := gn.dot(st.normal)
-			if facing < DecalMesh.MIN_FACING:
-				continue
+			if facing < DecalMesh.MIN_FACING or hull.protrusion(t):
+				continue   # turned away, or a small protrusion standing in front of the skin that carries the decal
 			var poly: Array = []   # [position, normal, Vector3(x, y, z) in −1…1 box units]
 			var above := 0
 			var below := 0

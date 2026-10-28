@@ -38,9 +38,9 @@ static func record(hull: PlaneHull, key: String, spot: String, side: int, id: St
 	var sd := 1.0 if side >= 0 else -1.0
 	var hit: Array
 	if spot == "wing":
-		hit = hull.raycast(Vector3(float(s[0]), 1.0, float(s[1]) * sd), Vector3.DOWN)
+		hit = hull.raycast(Vector3(float(s[0]), 1.0, float(s[1]) * sd), Vector3.DOWN, true)
 	else:
-		hit = hull.raycast(Vector3(float(s[0]), float(s[1]), sd), Vector3(0.0, 0.0, -sd))
+		hit = hull.raycast(Vector3(float(s[0]), float(s[1]), sd), Vector3(0.0, 0.0, -sd), true)
 	if hit.size() != 2:
 		return null
 	var r := DecalRecord.new()
@@ -67,7 +67,7 @@ static func mirrored(r: DecalRecord, hull: PlaneHull) -> DecalRecord:
 	m.angle = wrapf(-r.angle, -PI, PI)
 	m.mirror = false if DecalCatalog.kind(r.id) == "number" else not r.mirror
 	if hull != null:
-		var hit := hull.raycast(m.pos + m.normal * SNAP, -m.normal, SNAP * 2.0)
+		var hit := hull.raycast(m.pos + m.normal * SNAP, -m.normal, SNAP * 2.0, true)
 		if hit.size() == 2:
 			m.pos = hit[0]
 			m.normal = hit[1]
@@ -101,7 +101,7 @@ static func fit(hull: PlaneHull, r: DecalRecord, tally: int) -> float:
 			var k := Vector2((i + 0.5) / FIT_GRID.x, (j + 0.5) / FIT_GRID.y)
 			var q := lo + (hi - lo) * k
 			var p := r.pos + b[0] * q.x + b[1] * q.y
-			var hit := hull.raycast(p + n * depth, -n, depth * 2.0)
+			var hit := hull.raycast(p + n * depth, -n, depth * 2.0, true)
 			if hit.size() == 2 and (hit[1] as Vector3).dot(n) >= FIT_COS:
 				good += 1
 	return float(good) / float(FIT_GRID.x * FIT_GRID.y)
