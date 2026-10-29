@@ -90,6 +90,10 @@ const NO_SHADOW := [RUG]
 ## «Мало» (props 0, preset «Низкое»): yard and market clutter under ~3 m is left out. Each kind is a few pixels at
 ## gameplay height but one draw call per village; the tents, stalls, awnings and rug frames keep the market
 const LOW_SKIP := [CART, BAGS, POTS, RUG, HAY, WOODPILE, TROUGH, TANDOOR]
+## Strength of the warm bounce from the sunlit ground into the houses' shaded walls (bounce.gdshaderinc): the
+## south and east faces the camera sees are in shade and read near black under the sky ambient alone
+const BOUNCE := 0.5
+const BAKED_SHADER := preload("res://shaders/adobe_baked.gdshader")
 ## Fort shader terms in model metres (the fort's are in preview units of a far taller wall)
 const GRIME := 1.5
 const BLEACH := 2.8
@@ -235,10 +239,17 @@ static func _mesh(v: int) -> ArrayMesh:
 		for si in mesh.get_surface_count():
 			var m := mesh.surface_get_material(si)
 			if m is StandardMaterial3D and m.resource_name.begins_with("adobe_"):
-				var b := m as StandardMaterial3D   # a baked adobe house: its albedo, roughness and relief are final
-				b.metallic = 0.0
-				b.metallic_specular = 0.25
-				b.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+				# a baked adobe house: its albedo, roughness and relief are final; the same textures through
+				# adobe_baked.gdshader, which adds the warm sand bounce into the shaded walls (BOUNCE)
+				var b := m as StandardMaterial3D
+				var sm := ShaderMaterial.new()
+				sm.shader = BAKED_SHADER
+				sm.resource_name = b.resource_name
+				sm.set_shader_parameter("albedo_tex", b.albedo_texture)
+				sm.set_shader_parameter("rough_tex", b.roughness_texture)
+				sm.set_shader_parameter("normal_tex", b.normal_texture)
+				sm.set_shader_parameter("bounce", BOUNCE)
+				mesh.surface_set_material(si, sm)
 				continue
 			if m is StandardMaterial3D and not m.resource_name.begins_with("vh_"):
 				var t := m as StandardMaterial3D   # a prop's own texture (graded in village_props.py): matte, both sides
@@ -295,6 +306,7 @@ static func material(cls: String) -> Material:
 		sm.set_shader_parameter("bleach", BLEACH)
 		sm.set_shader_parameter("roof_clean", 1.0)
 		sm.set_shader_parameter("normal_depth", 0.0)   # no relief: at 40 px it adds nothing, and on the Low preset the models' tangents blew it out to white
+		sm.set_shader_parameter("bounce", BOUNCE if cls != "wood" else 0.0)
 		mat = sm
 	else:   # procedural wear and dust over the flat colour (Kanta 26.10: no flat even paint); model units are metres
 		mat = FortBuild.flat_material(FLAT.get(cls, FLAT["cloth"]), 1.0, 1.0, 0.0 if cls == "dark" else 1.0)   # no dust in the dark openings

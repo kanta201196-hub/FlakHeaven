@@ -13,6 +13,8 @@ const WATER := Color(0.3, 0.4, 0.42)     # вода в пруду оазиса
 
 static var _cache := {}
 static var _mat: ShaderMaterial
+## Warm bounce from the sunlit ground into the shaded sides of the walls (adobe.gdshader, bounce.gdshaderinc)
+const BOUNCE := 0.35
 
 
 ## Material of the village and oasis meshes (adobe.gdshader): clay from the CC0 ground set in three world
@@ -27,6 +29,7 @@ static func material() -> ShaderMaterial:
 	if ResourceLoader.exists(p):
 		_mat.set_shader_parameter("clay_tex", load(p))
 	_mat.set_shader_parameter("albedo", Color(1.0, 0.95, 0.88))
+	_mat.set_shader_parameter("bounce", BOUNCE)
 	RoadTex.apply_adobe(_mat)
 	return _mat
 

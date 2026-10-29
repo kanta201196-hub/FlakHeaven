@@ -10,8 +10,8 @@ render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specula
 // For the strips the alpha also runs across the strip (edge to edge), so the shader knows where the middle is.
 // Walls and heaps (alpha 1) are weathered mud plaster (weak-models list, item 1, 28.10): the ground photo's
 // polygon cracks are toned down on the walls, with large soft tone patches, plaster fallen off in places showing
-// mud-brick courses, hairline cracks, rain streaks, and a warm bounce lift on the walls (their shaded sides read
-// near black from above). The foot and crest tones come from the vertex colours (AdobeBuild._wall_run).
+// mud-brick courses, hairline cracks, rain streaks, a warm lift on the walls and a warm bounce fill into their
+// shaded sides (bounce.gdshaderinc: they read near black from above). The foot and crest tones come from the vertex colours (AdobeBuild._wall_run).
 // Sizes are in metres: `px_per_m` world px per metre.
 
 uniform vec4 albedo : source_color = vec4(1.0, 0.95, 0.88, 1.0);
@@ -64,6 +64,7 @@ void vertex() {
 }
 
 #include "res://shaders/adobe_wear.gdshaderinc"
+#include "res://shaders/bounce.gdshaderinc"
 
 vec4 triplanar(sampler2D s, vec3 w, vec3 p) {
 	return texture(s, p.xy) * w.z + texture(s, p.xz) * w.y + texture(s, p.zy * vec2(-1.0, 1.0)) * w.x;
@@ -149,6 +150,9 @@ void fragment() {
 		alb = mix(alb, adobe_wear(alb, cm, wpos / px_per_m, wn, rough, vec3(1.5, 1.38, 1.22)), wear);
 	}
 	ALBEDO = alb;
+	if (mat_id > 0.9) {   // walls and heaps: warm bounce from the sand into their shaded sides (bounce.gdshaderinc)
+		EMISSION = bounce_fill(alb, wn);
+	}
 	if (own_n) {   // own surfaces only: walls and roofs keep the engine's normal, as before
 		NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);
 	}

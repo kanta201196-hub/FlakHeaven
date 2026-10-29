@@ -67,6 +67,9 @@ const WEAR := {
 	M.PLASTER: [0.8, Vector3(1.15, 1.1, 1.04), 0.0],
 	M.RUB_PLASTER: [0.6, Vector3(1.0, 1.0, 1.0), 0.0],
 }
+## Warm bounce from the sunlit ground into the shaded faces of the fort's earth, brick and stone (fort.gdshader,
+## bounce.gdshaderinc), as on the village walls: the faces the camera sees are the shaded ones
+const BOUNCE := 0.35
 const BAG_TEX := "res://models/biome/b10_sandbag_post_sandbag_burlap_color.jpg"
 const TOWERS := [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]   ## t0..t3, FortArea.tower_points order
 ## Tower shapes: rounded-square keeps at t0 and t3, round bastions at t1 and t2
@@ -164,6 +167,7 @@ static func material(m: int) -> Material:
 	if SETS.has(m):
 		var sm := _set_shader(m)
 		sm.set_shader_parameter("vcol", 1.0)
+		sm.set_shader_parameter("bounce", BOUNCE if m != M.WOOD else 0.0)
 		if FORT_GAIN.has(m):
 			sm.set_shader_parameter("gain", FORT_GAIN[m])
 		if WEAR.has(m):

@@ -7,11 +7,13 @@
 // The fort's own terms (the village houses that share the texture sets keep them off, FortBuild.set_material):
 //   vcol    — the vertex colour's tone: damp foot, mud repairs, soot (FortKit._tri_n);
 //   wear    — the village walls' weathered mud plaster (adobe_wear.gdshaderinc), so fort and village match;
-//   courses — the lifts of rammed earth (pakhsa), ~0.95 units each, a dark seam between and a tone per lift.
+//   courses — the lifts of rammed earth (pakhsa), ~0.95 units each, a dark seam between and a tone per lift;
+//   bounce  — the warm fill from the sunlit ground into the shaded walls (bounce.gdshaderinc).
 shader_type spatial;
 render_mode cull_back;
 
 #include "res://shaders/adobe_wear.gdshaderinc"
+#include "res://shaders/bounce.gdshaderinc"
 
 uniform sampler2D color_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -32,11 +34,13 @@ uniform float courses = 0.0;
 varying vec3 fp;
 varying vec3 mn;
 varying float up;
+varying vec3 wn;
 
 void vertex() {
 	fp = VERTEX * unit;
 	mn = NORMAL;
 	up = NORMAL.y;
+	wn = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);   // the bounce fill needs the world facing
 }
 
 void fragment() {
@@ -68,6 +72,7 @@ void fragment() {
 		c = mix(c, adobe_wear(c, c, fp, nn, rough, lift), wear);
 	}
 	ALBEDO = c;
+	EMISSION = bounce_fill(c, normalize(wn));   // warm sand bounce into the shaded walls (0 unless `bounce` set)
 	ROUGHNESS = rough;
 	METALLIC = 0.0;
 	SPECULAR = 0.3;
