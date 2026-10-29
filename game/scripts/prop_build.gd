@@ -80,9 +80,11 @@ static func tris(m: Mesh) -> int:
 
 ## Three-span road bridge, 15 m: stone abutments with wing walls and corner posts on the banks, two masonry
 ## piers whose pointed cutwaters rise past the deck as buttresses (the masonry reads from the top-down camera),
-## concrete bed blocks, four steel stringers, a transverse plank deck with two wheel-track runners,
-## timber kerbs and a post-and-rail parapet. Wear: plank tones and a few fresh replacements, ruts darker on the
-## runners, leaning posts, one broken rail, fallen stones at the pier feet.
+## concrete bed blocks, four steel stringers, a deck of chamfered transverse planks of mixed widths with nail
+## heads over the stringers, two wheel tracks of staggered longitudinal boards, kerb timbers with a steel angle
+## and a post-and-rail parapet. Wear: silver-brown plank tones and a few fresh replacements, two missing planks,
+## a split one, rubber smears and a bolted patch plate on the tracks, oil drips, earth and gravel carried onto
+## both ends, grit along the kerbs, leaning posts, one broken rail, fallen stones at the pier feet.
 func _road_bridge() -> void:
 	var hl := ROAD_L * 0.5
 	var hw := ROAD_L * 0.2          # half deck width, 3 m
@@ -121,22 +123,87 @@ func _road_bridge() -> void:
 		_box(M.PLAIN, Vector3(ROAD_L - 0.6, 0.04, 0.28), Vector3(0, str_top - 0.02, z), Basis.IDENTITY, c)
 		_box(M.PLAIN, Vector3(ROAD_L - 0.6, str_h - 0.08, 0.04), Vector3(0, str_top - str_h * 0.5, z), Basis.IDENTITY, c.darkened(0.15))
 		_box(M.PLAIN, Vector3(ROAD_L - 0.6, 0.04, 0.28), Vector3(0, cap_top + 0.02, z), Basis.IDENTITY, c.darkened(0.1))
-	# transverse planks, 0.25 m with 2 cm gaps, every tone a little different, a few fresh replacements
+	# transverse planks of mixed widths (0.2-0.3 m, 1.5-3 cm gaps), chamfered so every edge catches the light,
+	# a little sprung; weathered silver-brown with a few fresh warm replacements, two missing planks (the
+	# stringers show through) and one split plank sagging between its stringers
+	var xs := []
 	var x := -hl + 0.15
 	while x < hl - 0.15:
+		var w := _r(0.2, 0.3)
+		xs.append([x + w * 0.5, w])
+		x += w + _r(0.015, 0.03)
+	var np := xs.size()
+	var gone := [_rng.randi_range(6, int(np * 0.5) - 4), _rng.randi_range(int(np * 0.5) + 3, np - 7)]
+	var split := _rng.randi_range(int(np * 0.34), int(np * 0.66))
+	var nail := Color(0.2, 0.17, 0.15)
+	for i in xs.size():
+		if i in gone:
+			continue
+		var px: float = xs[i][0]
+		var pw: float = xs[i][1]
 		var fresh := _rng.randf() < 0.07
-		var col := Color(1.12, 1.06, 0.95) if fresh else _tone(0.9, 0.12)
-		_box(M.WOOD, Vector3(0.25, plank_t, hw * 2.0 - _r(0.0, 0.12)), Vector3(x, top - plank_t * 0.5 + _r(-0.008, 0.008), _r(-0.04, 0.04)), Basis(Vector3.UP, _r(-0.006, 0.006)), col)
-		x += 0.27
-	# wheel-track runners, darker where the tyres run
+		var t := _r(0.74, 1.0)
+		var col := Color(1.1, 1.02, 0.88) if fresh else Color(t, t * _r(0.95, 0.99), t * _r(0.88, 0.95))
+		var pl := hw * 2.0 - _r(0.0, 0.14)
+		var cz := _r(-0.04, 0.04)
+		var cy := top - plank_t * 0.5 + _r(-0.008, 0.008)
+		var b := Basis(Vector3.UP, _r(-0.008, 0.008))
+		if i == split:   # split along its length: the outer half has dropped onto the stringer flange
+			_slat(M.WOOD, pl, pw * 0.48, plank_t, Vector3(px - pw * 0.26, cy, cz), b, col, 0.02, 0.0, 0.0)
+			_slat(M.WOOD, pl * 0.5, pw * 0.46, plank_t, Vector3(px + pw * 0.26, cy - 0.03, cz + pl * 0.25), b * Basis(Vector3.RIGHT, 0.05), col.darkened(0.1), 0.02, 0.0, -0.05)
+		else:
+			_slat(M.WOOD, pl, pw, plank_t, Vector3(px, cy, cz), b, col, 0.022, _r(0.0, 0.012), _r(0.0, 0.012))
+		for z: float in [-2.25, -0.75, 0.75, 2.25]:   # one nail head per stringer, staggered
+			var q := Vector3(px + pw * _r(-0.25, 0.25), cy + plank_t * 0.5 + 0.012, z + _r(-0.05, 0.05))
+			_quad(M.PLAIN, q + Vector3(-0.018, 0, -0.018), q + Vector3(0.018, 0, -0.018), q + Vector3(0.018, 0, 0.018), q + Vector3(-0.018, 0, 0.018), q - Vector3.UP, nail)
+	# wheel-track runners: three longitudinal boards per track in staggered lengths, darker and rubber-smeared
+	# where the tyres run; one runner bay patched with a bolted steel plate
+	var plate := _rng.randi_range(1, 3)
 	for z: float in [-1.25, 1.25]:
-		for i in 5:
-			var x0 := -hl + ROAD_L * i / 5.0
-			_box(M.WOOD, Vector3(ROAD_L / 5.0 - 0.03, 0.06, 0.9), Vector3(x0 + ROAD_L * 0.1, top + 0.03, z), Basis.IDENTITY, _tone(0.72, 0.06))
+		for k in 3:
+			var bz := z + (k - 1) * 0.31
+			var x0 := -hl + 0.05
+			var seg := 0
+			while x0 < hl - 0.3:
+				var l := minf(_r(2.4, 3.6) if seg > 0 or k != 1 else _r(1.2, 2.0), hl - 0.05 - x0)
+				var tt := _r(0.55, 0.7) if k == 1 else _r(0.66, 0.8)
+				_slat(M.WOOD, l - 0.03, 0.29, 0.06, Vector3(x0 + l * 0.5, top + 0.03, bz), Basis(Vector3.UP, PI * 0.5 + _r(-0.004, 0.004)), Color(tt, tt * 0.96, tt * 0.9), 0.015, 0.0, 0.0)
+				x0 += l
+				seg += 1
+		var smear := Color(0.16, 0.14, 0.13)
+		for i in 4:   # rubber smears: dark ragged streaks along the middle boards
+			_patch(M.PLAIN, Vector3(_r(-hl + 1.0, hl - 1.0), top + 0.062, z + _r(-0.12, 0.12)), Vector2(_r(0.8, 1.6), _r(0.08, 0.16)), smear)
+		if (z > 0.0) == (plate % 2 == 0):
+			var pc := Vector3(-hl + ROAD_L * (0.2 + 0.18 * plate), top + 0.066, z)
+			_box(M.PLAIN, Vector3(0.95, 0.012, 1.05), pc, Basis(Vector3.UP, _r(-0.05, 0.05)), Color(0.42, 0.3, 0.22))
+			for c: Vector3 in [Vector3(-0.4, 0, -0.45), Vector3(0.4, 0, -0.45), Vector3(0.4, 0, 0.45), Vector3(-0.4, 0, 0.45)]:
+				_box(M.PLAIN, Vector3(0.05, 0.02, 0.05), pc + c + Vector3(0, 0.012, 0), Basis.IDENTITY, Color(0.25, 0.2, 0.17))
+	# oil drips between the tracks, gravel and earth carried onto both ends of the deck by the wheels
+	for i in 3:
+		_patch(M.PLAIN, Vector3(_r(-hl + 2.0, hl - 2.0), top + 0.014, _r(-0.4, 0.4)), Vector2(_r(0.25, 0.5), _r(0.2, 0.4)), Color(0.1, 0.09, 0.08))
+	var earth := Color(0.24, 0.19, 0.14)
+	for sx: float in [-1.0, 1.0]:
+		for i in 16:   # dried mud clods shed by the tyres, thickest on the tracks near the deck ends
+			var zt := (1.25 if i % 2 == 0 else -1.25) + _r(-0.35, 0.35)
+			_chunk(M.PLAIN, _r(0.03, 0.08), Vector3(sx * (hl - _r(0.1, 1.4)), top + 0.075, zt), earth * _r(0.8, 1.15))
+		for i in 14:
+			var q := Vector3(sx * (hl - _r(0.1, 1.6)), top + 0.02, _r(-hw + 0.4, hw - 0.4))
+			_chunk(M.STONE, _r(0.025, 0.06), q, _tone(0.8, 0.1))
+	for i in 10:   # grit swept against the kerbs
+		_chunk(M.STONE, _r(0.02, 0.05), Vector3(_r(-hl + 0.5, hl - 0.5), top + 0.015, (1.0 if i % 2 == 0 else -1.0) * (hw - 0.38)), _tone(0.8, 0.1))
 	# kerbs and parapet: posts every 1.5 m, a top rail and a mid rail; one bay's rails broken
 	var bad := _rng.randi_range(2, 7)
 	for sz: float in [-1.0, 1.0]:
-		_box(M.WOOD, Vector3(ROAD_L, 0.22, 0.25), Vector3(0, top + 0.11, sz * (hw - 0.2)), Basis.IDENTITY, _tone(0.78, 0.06))
+		var kx := -hl
+		while kx < hl - 0.05:   # kerb timbers in 2.5-4 m lengths, scuffed tones, steel angle on the road edge
+			var l := minf(_r(2.5, 4.0), hl - kx)
+			var kt := _r(0.66, 0.84)
+			_slat(M.WOOD, l - 0.02, 0.25, 0.22, Vector3(kx + l * 0.5, top + 0.11, sz * (hw - 0.2)), Basis(Vector3.UP, PI * 0.5), Color(kt, kt * 0.97, kt * 0.9), 0.025, 0.0, 0.0)
+			_box(M.PLAIN, Vector3(0.05, 0.05, 0.05), Vector3(kx + l * 0.5, top + 0.225, sz * (hw - 0.2)), Basis.IDENTITY, nail)
+			kx += l
+		var ang := Color(0.34, 0.26, 0.2)
+		_box(M.PLAIN, Vector3(ROAD_L - 0.1, 0.008, 0.07), Vector3(0, top + 0.224, sz * (hw - 0.3)), Basis.IDENTITY, ang)
+		_box(M.PLAIN, Vector3(ROAD_L - 0.1, 0.07, 0.008), Vector3(0, top + 0.19, sz * (hw - 0.33)), Basis.IDENTITY, ang.darkened(0.1))
 		var n := 11
 		var posts := []
 		for i in n:
@@ -406,6 +473,42 @@ func _box(m: int, s: Vector3, c: Vector3, b: Basis, col: Color) -> void:
 		Vector3(-h.x, -h.y, h.z), Vector3(h.x, -h.y, h.z), Vector3(h.x, h.y, h.z), Vector3(-h.x, h.y, h.z)]
 	for f: Array in [[4, 5, 6, 7], [1, 0, 3, 2], [5, 1, 2, 6], [0, 4, 7, 3], [7, 6, 2, 3], [0, 1, 5, 4]]:
 		_quad(m, c + b * v[f[0]], c + b * v[f[1]], c + b * v[f[2]], c + b * v[f[3]], c, col)
+
+
+## Board of length l along its local z, width w, thickness t, centred at c and turned by b: top edges
+## chamfered by ch (the bevel catches light, so planks never read as cut-out cards), its two ends lifted by ya
+## and yb (cupped or sprung boards). 20 triangles.
+func _slat(m: int, l: float, w: float, t: float, c: Vector3, b: Basis, col: Color, ch: float, ya: float, yb: float) -> void:
+	var hw := w * 0.5
+	var ht := t * 0.5
+	var sec := [Vector2(-hw, -ht), Vector2(hw, -ht), Vector2(hw, ht - ch), Vector2(hw - ch, ht), Vector2(-hw + ch, ht), Vector2(-hw, ht - ch)]
+	var e0 := []
+	var e1 := []
+	for q: Vector2 in sec:
+		e0.append(c + b * Vector3(q.x, q.y + ya, -l * 0.5))
+		e1.append(c + b * Vector3(q.x, q.y + yb, l * 0.5))
+	var n := sec.size()
+	for i in n:
+		var j := (i + 1) % n
+		_quad(m, e0[i], e0[j], e1[j], e1[i], c + b * Vector3(0, (ya + yb) * 0.5, 0), col)
+	for i in range(1, n - 1):
+		_tri(m, e0[0], e0[i], e0[i + 1], c + b * Vector3(0, 0, l), col)
+		_tri(m, e1[0], e1[i], e1[i + 1], c - b * Vector3(0, 0, l), col)
+
+
+## Ragged patch lying on a deck: an ellipse of half-sizes r.x (along x) and r.y (along z) with a jittered rim.
+## mound = 0: a flat film (oil, rubber); mound > 0: a low heap whose rim dips below the surface so its edge
+## never reads as a paper cut-out. 12 triangles.
+func _patch(m: int, c: Vector3, r: Vector2, col: Color, mound := 0.0) -> void:
+	var rim := []
+	var ph := _r(0.0, TAU)
+	for i in 12:
+		var a := TAU * i / 12.0
+		var k := 0.7 + 0.3 * sin(a * 3.0 + ph) * 0.5 + _r(0.0, 0.35)
+		rim.append(c + Vector3(cos(a) * r.x * k, -0.012 if mound > 0.0 else 0.0, sin(a) * r.y * k))
+	var top := c + Vector3(0, mound, 0)
+	for i in 12:
+		_tri(m, top, rim[i], rim[(i + 1) % 12], c - Vector3.UP, col)
 
 
 ## Square-section bar of width w from a to b (rails, cables, ropes, slats): four sides, no end caps, which are
