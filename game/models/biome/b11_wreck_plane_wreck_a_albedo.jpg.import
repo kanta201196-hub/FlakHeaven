@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d0fprxeq3yoda"
-path="res://.godot/imported/b11_wreck_plane_interceptor_color.jpg-b66e748e2c9625bc331ae297687e4381.ctex"
+uid="uid://tmfo2y4ak0j3"
+path="res://.godot/imported/b11_wreck_plane_wreck_a_albedo.jpg-e292958966f6ebe457a5edb67f0960dd.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "5ebfe4e11cd47312b4e8931e380e4ee3"
+"md5": "56dde997ea1e38ebdf2363a25a6d5fc6"
 }
 
 [deps]
 
-source_file="res://models/biome/b11_wreck_plane_interceptor_color.jpg"
-dest_files=["res://.godot/imported/b11_wreck_plane_interceptor_color.jpg-b66e748e2c9625bc331ae297687e4381.ctex"]
+source_file="res://models/biome/b11_wreck_plane_wreck_a_albedo.jpg"
+dest_files=["res://.godot/imported/b11_wreck_plane_wreck_a_albedo.jpg-e292958966f6ebe457a5edb67f0960dd.ctex"]
 
 [params]
 

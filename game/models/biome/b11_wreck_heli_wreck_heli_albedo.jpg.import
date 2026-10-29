@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://5gu2o55b3h2o"
-path="res://.godot/imported/b11_wreck_heli_helicopter_color.jpg-b2d341e3b65f2e7066b431393be70a89.ctex"
+uid="uid://di4c55ddjg4ip"
+path="res://.godot/imported/b11_wreck_heli_wreck_heli_albedo.jpg-f2e068ab5df0c0047d0de9257bb3d969.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "d6d19826df7806cda9dc98e3e7647dec"
+"md5": "379985ba9fef2baff3ac0d87bb59df85"
 }
 
 [deps]
 
-source_file="res://models/biome/b11_wreck_heli_helicopter_color.jpg"
-dest_files=["res://.godot/imported/b11_wreck_heli_helicopter_color.jpg-b2d341e3b65f2e7066b431393be70a89.ctex"]
+source_file="res://models/biome/b11_wreck_heli_wreck_heli_albedo.jpg"
+dest_files=["res://.godot/imported/b11_wreck_heli_wreck_heli_albedo.jpg-f2e068ab5df0c0047d0de9257bb3d969.ctex"]
 
 [params]
 

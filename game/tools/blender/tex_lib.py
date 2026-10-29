@@ -179,15 +179,30 @@ def earth(name, seed, size=512, base=(0.55, 0.5, 0.41)):
 
 # ---------------- пятно гари ----------------
 def scorch(name, seed, size=512):
-    """Выжженная земля: чёрная середина, бурый обгоревший край, рваная граница; альфа плавно к краю"""
+    """Scorched ground under a wreck: a charcoal core flecked with grey ash, burnt earth and grass round it, soot
+    fingers thrown out by the fire, charred specks; a ragged edge, the alpha fading out at the rim. sRGB"""
     s = size
     y, x = np.mgrid[0:s, 0:s].astype(np.float32)
-    r = np.hypot(x - s / 2, y - s / 2) / (s / 2)
+    dx, dy = x - s / 2, y - s / 2
+    r = np.hypot(dx, dy) / (s / 2)
+    ang = np.arctan2(dy, dx)
     n = pnoise(s, s, seed, 2, 9, 50)
     n2 = pnoise(s, s, seed + 1, 10, 40, 60)
-    rr = r * (1 + 0.28 * n + 0.08 * n2)
-    alpha = np.clip((1.0 - rr) * 2.2, 0, 1) ** 1.4 * 0.92
-    core = np.clip((0.55 - rr) * 2.5, 0, 1)
-    rgb = np.array([0.24, 0.19, 0.14], np.float32) * (1 - core[..., None]) + np.array([0.05, 0.045, 0.04], np.float32) * core[..., None]
+    n3 = pnoise(s, s, seed + 2, 40, 110, 90)
+    rng = np.random.default_rng(seed)
+    fing = np.zeros_like(r)
+    for k in (5, 7, 11):   # soot fingers: angular lobes of different counts and phases
+        fing += np.clip(np.sin(ang * k + rng.uniform(0, 6.3) + 2.0 * n), 0, 1) ** 3 / 3.0
+    rr = r * (1 + 0.26 * n + 0.08 * n2) - 0.22 * fing * np.clip(r, 0, 1)
+    alpha = np.clip((1.0 - rr) * 2.3, 0, 1) ** 1.3 * 0.95
+    core = np.clip((0.55 - rr) * 2.6, 0, 1)
+    edge = np.clip((rr - 0.55) * 3.0, 0, 1)
+    rgb = np.array([0.055, 0.048, 0.042], np.float32) * core[..., None] \
+        + np.array([0.2, 0.15, 0.1], np.float32) * ((1 - core) * (1 - edge))[..., None] \
+        + np.array([0.33, 0.26, 0.17], np.float32) * ((1 - core) * edge)[..., None]
+    ash = np.clip((0.45 - rr) * 3.0, 0, 1) * np.clip((n2 + n3 * 0.6 - 0.3) * 2.5, 0, 1)
+    rgb = rgb * (1 - 0.7 * ash[..., None]) + np.array([0.42, 0.4, 0.37], np.float32) * (0.7 * ash)[..., None]
+    speck = (n3 > 0.62) & (rr < 0.95)
+    rgb[speck] *= 0.35
     rgb = rgb * (0.85 + 0.25 * n2[..., None])
     return save(name + "_color", rgb, alpha)

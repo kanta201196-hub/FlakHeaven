@@ -612,7 +612,9 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     its material's own colour (texture or flat) instead of the camouflage; the old UV layer is read for it.
     pal["part"] (material -> int) and pal["layers"] ((P, N, B, AO, part, own colours) -> albedo, roughness, metal,
     relief normal) let another kind of surface reuse the bakes with its own surface ids and layers. pal["uv_scale"]
-    (material -> float, optional) gives some surfaces more texels than their area would (cloth over its poles)."""
+    (material -> float, optional) gives some surfaces more texels than their area would (cloth over its poles);
+    pal["uv_margin"] (default 0.006 of the atlas) is the island margin, smaller for meshes of thousands of islands
+    (torn wrecks), where the default margins would take most of the atlas."""
     global _SCALE
     _SCALE = scale
     _PART_FN[0] = pal.get("part")
@@ -629,7 +631,7 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
     for ob in obs:
         ob.select_set(True)
     if hit is None:
-        _unwrap(obs, own, pal.get("uv_scale"))
+        _unwrap(obs, own, pal.get("uv_scale"), pal.get("uv_margin", 0.006))
         data = _bake_data(obs, own, size, scale)
     else:
         data = hit   # a later paint of the same run: the same unwrap, surface data and relief normal map
@@ -673,10 +675,10 @@ def bake_set(obs, pal, size, mat_name, scale=1.0):
 _DATA = {}   # bake_set: per objects / material / size / scale / seed, the paint-independent part of a bake
 
 
-def _unwrap(obs, own, uv_scale=None):
+def _unwrap(obs, own, uv_scale=None, margin=0.006):
     """Fresh UV atlas over the selected objects obs (own-colour mode keeps the old UVs as "src"). uv_scale
     (material -> float) scales the islands of some materials before a repack, so they get that many times the
-    texel density of the rest; None keeps the area-proportional atlas."""
+    texel density of the rest; None keeps the area-proportional atlas. margin — the island margin (atlas share)."""
     for ob in obs:
         me = ob.data
         if own:
@@ -698,7 +700,7 @@ def _unwrap(obs, own, uv_scale=None):
     bpy.context.view_layer.objects.active = obs[0]
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.006, area_weight=0.0, scale_to_bounds=True)
+    bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=margin, area_weight=0.0, scale_to_bounds=True)
     bpy.ops.object.mode_set(mode="OBJECT")
     if uv_scale is None:
         return
@@ -713,7 +715,7 @@ def _unwrap(obs, own, uv_scale=None):
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.select_all(action="SELECT")
-    bpy.ops.uv.pack_islands(rotate=True, margin=0.006)
+    bpy.ops.uv.pack_islands(rotate=True, margin=margin)
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
