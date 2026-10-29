@@ -23,6 +23,11 @@ const SIZE := 256
 ## clusters that read as see-through holes on a 6-triangle card
 const FILL := {"b04_poplar": 3, "b05_orchard_tree": 2, "b12_date_palm": 1}
 
+## Top views whose crown is closed over the middle (_close_crown): share of the picture's width the trunk's fork
+## and the gaps round it show in. The orchard tree's open centre showed its pale branch cross on the top card,
+## seen through the side card's crown from the near-top-down camera (Kanta 28.10 review)
+const CLOSE_CROWN := {"b05_orchard_tree": 0.3}
+
 ## Ambient energy: the game's Forward+ ambient (render3d.gd FP_AMBIENT 0.38) lifted, so the crown's self-shaded
 ## patches are lighter than on the full model (a 6-triangle card shows them as flat dark blotches)
 const AMBIENT := 0.45
@@ -114,6 +119,8 @@ func _process(_delta: float) -> bool:
 		var img := _vp.get_texture().get_image()
 		img.convert(Image.FORMAT_RGBA8)
 		_fill_holes(img, int(FILL.get(_cur[0], 0)))
+		if _cur[1] == "top" and CLOSE_CROWN.has(_cur[0]):
+			_close_crown(img, float(CLOSE_CROWN[_cur[0]]))
 		var path := "res://models/biome/%s_%s.png" % [_cur[0], _cur[1]]
 		img.save_png(ProjectSettings.globalize_path(path))
 		print("BAKED ", path)
@@ -156,6 +163,41 @@ func _fill_holes(img: Image, r: int) -> void:
 				img.set_pixel(x, y, Color(c.r, c.g, c.b, 1.0))
 				filled += 1
 	print("FILLED %d px (r %d)" % [filled, r])
+
+
+## Closes the middle of a top view: within r_share × width of the centre every see-through or bark pixel (the
+## trunk's fork and the gaps round it) takes the pixel of a leafy patch of the crown further out (the same spot
+## shifted by about a third of the width, trying eight directions until it lands on leaves), so the centre
+## continues the crown's own leaf texture and light instead of a flat fill.
+func _close_crown(img: Image, r_share: float) -> void:
+	var n := img.get_width()
+	var c := Vector2(n, n) * 0.5
+	var rc := n * r_share
+	var src := img.duplicate() as Image
+	var done := 0
+	for y in n:
+		for x in n:
+			var d := Vector2(x + 0.5, y + 0.5) - c
+			if d.length() > rc:
+				continue
+			var px := src.get_pixel(x, y)
+			if px.a > 0.5 and not _bark(px):
+				continue
+			for k in 8:   # a patch of the crown shifted in whole: the leaves keep their own grain and scale
+				var q := Vector2(x, y) + Vector2.from_angle(0.6 + 0.785 * k) * n * 0.36
+				var qx := clampi(int(q.x), 0, n - 1)
+				var qy := clampi(int(q.y), 0, n - 1)
+				var s := src.get_pixel(qx, qy)
+				if s.a > 0.5 and not _bark(s):
+					img.set_pixel(x, y, Color(s.r, s.g, s.b, 1.0))
+					done += 1
+					break
+	print("CROWN closed %d px" % done)
+
+
+## A bark pixel of the orchard tree's top view: warmer than the olive leaves (red over green)
+func _bark(c: Color) -> bool:
+	return c.r > c.g * 1.04
 
 
 ## Square dilation (grow = true) or erosion of a 0/1 mask of side n by radius r
