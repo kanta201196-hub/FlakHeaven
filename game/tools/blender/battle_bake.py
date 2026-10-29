@@ -13,10 +13,11 @@ and the shape's fine relief are baked onto it from the hangar model:
    own plates GLBs (fh_mech_*, fh_bay_*) over the closed wing and belly, as before.
 2. Low mesh: MeshLab quadric edge collapse of the welded hull to the budget (skin and canopy glass apart, their
    shared outline kept, so the glass edge stays where it was), edges sharper than --sharp shaded hard.
-3. The hangar's shading normals are copied onto the low mesh (it shades like the hangar model, not like its own
-   coarser facets). Smart UV Project, then Cycles (CPU) selected-to-active from the hangar mesh: paint and ORM
-   through emission (no light, no shadow); a tangent-space normal map only with --normal geo|full (the remeshed
-   hangar models have none: their panel lines are in the paint, and a baked map brought back bake noise).
+3. Shading normals from an evened-out copy of the low mesh itself, corner by corner (see shade_low: a nearest-
+   face copy of the hangar's normals flipped ~9 % of the corners). Smart UV Project, then
+   Cycles (CPU) selected-to-active from the hangar mesh: paint and ORM through emission (no light, no shadow); a
+   tangent-space normal map only with --normal geo|full (the remeshed hangar models have none: their panel lines
+   are in the paint, and a baked map brought back bake noise).
 4. Export one mesh node `fh_battle_<key>`, length 1, nose +X, the same axes, scale and origin as the hangar model
    (so the mech, bay, tail cabin, insignia, decals, nozzles and module anchors sit where they did); materials
    `skin` (surface 0, textured: Livery and PlaneHull take it as the skin) and `glass` (the .import maps it to
@@ -240,7 +241,8 @@ def deviation(hi: bpy.types.Object, lo: bpy.types.Object) -> tuple:
 
 def even_out(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> int:
     """Laplacian smoothing (volume kept) of a mesh's broad surfaces: the hangar skin was voxel-remeshed from a
-    Meshy scan and its wings and fuselage undulate; copied as they are, the undulations show as wavy shading. Vertices
+    Meshy scan and its wings and fuselage undulate, and the low mesh collapsed from it keeps the long waves; shaded
+    as they are, they show as blotchy light and dark patches. Vertices
     on open edges, on hard edges (sharper than `sharp`) and next to them do not move, so the outline, the canopy
     edge, wing edges and fin edges stay where they were. Returns the number of vertices held."""
     if iters <= 0:
@@ -274,21 +276,61 @@ def even_out(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> i
     return len(hold)
 
 
-def transfer_normals(hi: bpy.types.Object, lo: bpy.types.Object, sharp: float) -> None:
-    """Shading normals of the hangar skin onto the low mesh (custom split normals, nearest face interpolated):
-    the low mesh shades like the hangar model instead of showing its own coarser facets; hard edges stay hard
-    because each side of a split takes the normal of the hangar face on its own side. The welded hangar mesh has
-    lost the GLB's split normals, so it is shaded smooth with the same hard-edge angle first."""
-    activate(hi)
-    bpy.ops.object.shade_smooth()
-    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(sharp), keep_sharp_edges=False)
-    m = lo.modifiers.new("nrm", "DATA_TRANSFER")
-    m.object = hi
-    m.use_loop_data = True
-    m.data_types_loops = {"CUSTOM_NORMAL"}
-    m.loop_mapping = "POLYINTERP_NEAREST"
+
+
+def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> tuple:
+    """Shading normals of the low mesh: the smooth normals (hard past `sharp`) of an evened-out copy of the low
+    mesh itself, handed over corner by corner (the copy has the same topology, so each corner gets the normal of
+    the very same corner, never of a neighbour or of the far side of a fin). A corner whose evened normal would
+    lie more than 60° from its own face keeps its plain smooth normal. The shape itself is not moved.
+
+    Why not the hangar's normals: the welded hangar mesh has coincident inner faces where the moving sections and
+    the nacelles meet the hull (1.8k non-manifold edges on «Кит-1»). A nearest-face copy (DATA_TRANSFER,
+    POLYINTERP_NEAREST) took those, or the far side of thin fins, for 5-15 % of the low mesh's corners and gave them
+    a normal more than 90° from their own face: dark creases, specks and faceted triangles in the game.
+    Returns (evened vertices held, corners that kept their plain normal)."""
     activate(lo)
-    bpy.ops.object.modifier_apply(modifier=m.name)
+    bpy.ops.object.shade_smooth()
+    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(sharp), keep_sharp_edges=True)
+    if iters <= 0:
+        return 0, 0
+    ev = lo.copy()
+    ev.data = lo.data.copy()
+    bpy.context.scene.collection.objects.link(ev)
+    held = even_out(ev, sharp, iters, factor)
+    n = len(lo.data.loops)
+    cn = np.empty(n * 3)
+    ev.data.corner_normals.foreach_get("vector", cn)
+    cn = cn.reshape(-1, 3)
+    own = np.empty(n * 3)
+    lo.data.corner_normals.foreach_get("vector", own)
+    own = own.reshape(-1, 3)
+    fn = np.empty(len(lo.data.polygons) * 3)
+    lo.data.polygons.foreach_get("normal", fn)
+    fn = fn.reshape(-1, 3)
+    lp = np.repeat(np.arange(len(lo.data.polygons)), [p.loop_total for p in lo.data.polygons])
+    bad = np.einsum("ij,ij->i", cn, fn[lp]) < 0.5
+    cn[bad] = own[bad]
+    lo.data.normals_split_custom_set([tuple(v) for v in cn])
+    me = ev.data
+    bpy.data.objects.remove(ev)
+    bpy.data.meshes.remove(me)
+    return held, int(bad.sum())
+
+
+def normal_report(lo: bpy.types.Object) -> tuple:
+    """Share of the low mesh's corners whose shading normal is more than 60° / 90° from their own face (a corner
+    that far shades as a dark crease or speck); returned for the log and the final OK line."""
+    me = lo.data
+    cn = np.empty(len(me.loops) * 3)
+    me.corner_normals.foreach_get("vector", cn)
+    cn = cn.reshape(-1, 3)
+    fn = np.empty(len(me.polygons) * 3)
+    me.polygons.foreach_get("normal", fn)
+    fn = fn.reshape(-1, 3)
+    lp = np.repeat(np.arange(len(me.polygons)), [p.loop_total for p in me.polygons])
+    d = np.einsum("ij,ij->i", cn, fn[lp])
+    return float((d < 0.5).mean()), float((d < 0.0).mean())
 
 
 def unwrap(lo: bpy.types.Object, tex: int) -> None:
@@ -518,8 +560,8 @@ def main() -> int:
                          "remeshed hangar models carry no normal map either); geo / full: a baked normal map "
                          "from the hangar geometry / and its normal map")
     ap.add_argument("--sharp", type=float, default=40.0, help="edges sharper than this (degrees) are shaded hard")
-    ap.add_argument("--smooth", type=int, default=12,
-                    help="Laplacian iterations evening out the hangar skin the shading normals are taken from")
+    ap.add_argument("--smooth", type=int, default=40,
+                    help="Laplacian iterations evening out the copy of the low mesh its shading normals come from")
     ap.add_argument("--smooth-factor", dest="smooth_factor", type=float, default=0.5)
     ap.add_argument("--glass", type=float, default=0.35, help="share of the canopy glass triangles kept")
     ap.add_argument("--samples", type=int, default=4)
@@ -530,15 +572,10 @@ def main() -> int:
     hi = load_hangar(a.src)
     clean_hi(hi)
     lo = decimate(hi, a.tris, a.glass, a.sharp)
-    # shading: the low mesh takes the normals of an evened-out copy of the hangar skin, so it shades like the
-    # hangar's shape without the voxel-remesh undulations and without its own coarser facets
-    src = hi.copy()
-    src.data = hi.data.copy()
-    bpy.context.scene.collection.objects.link(src)
-    held = even_out(src, a.sharp, a.smooth, a.smooth_factor)
-    log("normal source evened out: %d iterations, %d vertices held" % (a.smooth, held))
-    transfer_normals(src, lo, a.sharp)
-    bpy.data.objects.remove(src)
+    held, kept = shade_low(lo, a.sharp, a.smooth, a.smooth_factor)
+    log("shading: evened copy %d iterations, %d vertices held, %d corners kept their plain normal" % (a.smooth, held, kept))
+    bad60, bad90 = normal_report(lo)
+    log("shading normals > 60deg from their face: %.3f%%, > 90deg: %.3f%%" % (100 * bad60, 100 * bad90))
     dev = deviation(hi, lo)
     log("deviation lo->hi 99%% %.5f max %.5f; hi->lo 99%% %.5f max %.5f" % dev)
 
