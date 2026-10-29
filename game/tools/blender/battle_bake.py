@@ -11,10 +11,13 @@ and the shape's fine relief are baked onto it from the hangar model:
    Slats, flaps (`wing_mech`) and bay doors (`bay_doors`) are moved into the hull at rest and welded back where
    they were cut out; the dark wells under them (material `mech_well`) are dropped. The battle game hangs its
    own plates GLBs (fh_mech_*, fh_bay_*) over the closed wing and belly, as before.
-2. Low mesh: MeshLab quadric edge collapse of the welded hull to the budget (skin and canopy glass apart, their
-   shared outline kept, so the glass edge stays where it was), edges sharper than --sharp shaded hard.
-3. Shading normals from an evened-out copy of the low mesh itself, corner by corner (see shade_low: a nearest-
-   face copy of the hangar's normals flipped ~9 % of the corners). Smart UV Project, then
+2. Low mesh: MeshLab quadric edge collapse of the welded hull to the budget (skin and canopy glass apart; the
+   glass, the skin round its rim and the skin along the top-view outline are not collapsed, so the glass edge and
+   the wing and tail edges stay where they were), edges sharper than --sharp shaded hard.
+3. Shading normals: the hangar's smooth normal under each corner where it agrees with the low face (ray along the
+   face normal, moving sections and bent normals skipped, see _hangar_normals), elsewhere from an evened-out copy
+   of the low mesh itself, corner by corner (see shade_low: a plain nearest-face copy of the hangar's normals
+   flipped ~9 % of the corners). Smart UV Project, then
    Cycles (CPU) selected-to-active from the hangar mesh: paint and ORM through emission (no light, no shadow); a
    tangent-space normal map only with --normal geo|full (the remeshed hangar models have none: their panel lines
    are in the paint, and a baked map brought back bake noise).
@@ -27,7 +30,8 @@ and the shape's fine relief are baked onto it from the hangar model:
 Needs bpy (Blender 5.x as a module, tested 5.2.3) and pymeshlab (2025.7). Run from the repo root, then
 `godot --headless --path game --import`:
   python3 game/tools/blender/battle_bake.py game/models/hangar/fh_hangar_bomber_1.glb \
-      game/models/battle/fh_battle_bomber_1.glb [--tris 12000] [--tex 2048] [--normal geo|full] [--sharp 40]
+      game/models/battle/fh_battle_bomber_1.glb [--tris 30000] [--tex 2048] [--normal geo|full] [--sharp 40] \
+      [--outline 2] [--glass 1] [--shade hangar|even] [--threads 2]
 Recipe of the shipped models: docs/tasks/3d-models-handoff.md («Боевые модели из ангарных»).
 """
 import argparse
@@ -46,6 +50,7 @@ from mathutils import Matrix
 from mathutils.bvhtree import BVHTree
 
 T0 = time.time()
+HN_DIST = 0.003   # farthest hangar point a low corner takes its shading normal from (_hangar_normals), model units
 LOST = 0.004   # a hangar vertex farther than this from the collapsed skin marks a thin part to keep, model units
 
 
@@ -83,12 +88,16 @@ def load_hangar(src: str) -> bpy.types.Object:
     meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
     bm = bmesh.new()
     mats: list = []
+    part = bm.faces.layers.int.new("part")   # 1: a moving section (slat, flap, bay door), see _hangar_normals
     for o in meshes:
         me = o.data.copy()
         me.transform(o.matrix_world)
         n0 = len(bm.faces)
         bm.from_mesh(me)
         bm.faces.ensure_lookup_table()
+        part = bm.faces.layers.int["part"]
+        for f in bm.faces[n0:]:
+            f[part] = 0 if o.parent is None else 1
         remap = []
         for m in me.materials:
             if m not in mats:
@@ -350,7 +359,58 @@ def even_out(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> i
 
 
 
-def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> tuple:
+def _hangar_normals(lo: bpy.types.Object, hi: bpy.types.Object, cn: np.ndarray, fnl: np.ndarray) -> np.ndarray:
+    """Corner normals of `lo` replaced by the hangar skin's smooth normal under the corner, where that is
+    trustworthy: the outermost hangar face within HN_DIST along the low face's normal, its interpolated normal within
+    45 deg of both the low face and the evened normal `cn` and within 30 deg of the hit face itself (so the far side
+    of a fin, a coincident inner face of the welded sections or a crease the low mesh does not have never lend a
+    normal); the other corners keep `cn`. Each corner is sampled a little inside its
+    face, so a corner on a ridge takes the side of the ridge its face lies on.
+
+    Why: the evened copy rounds off crisp narrow features the low mesh only follows in a zigzag, such as the spine
+    ridge of «Кит-2» between the engines, which shaded as a row of light and dark lumps; the hangar normals there
+    are smooth along the ridge and match the hangar model."""
+    bm = bmesh.new()
+    bm.from_mesh(hi.data)
+    glass = {i for i, m in enumerate(hi.data.materials) if m.name.startswith("glass")}
+    bm.verts.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    tree = BVHTree.FromBMesh(bm)
+    vn = np.array([v.normal[:] for v in bm.verts])
+    part = bm.faces.layers.int.get("part")
+    me = lo.data
+    co = np.array([v.co[:] for v in me.vertices])
+    lv = np.empty(len(me.loops), dtype=np.int64)
+    me.loops.foreach_get("vertex_index", lv)
+    cen = np.array([p.center[:] for p in me.polygons])
+    lp = np.repeat(np.arange(len(me.polygons)), [p.loop_total for p in me.polygons])
+    pts = co[lv] * 0.85 + cen[lp] * 0.15
+    out = cn.copy()
+    took = 0
+    for i, pt in enumerate(pts):
+        # the outermost hangar surface along the low face's normal: the one seen, not an inner face behind it
+        loc, fno, fi, _ = tree.ray_cast(tuple(pt + fnl[i] * HN_DIST), tuple(-fnl[i]), 2.0 * HN_DIST)
+        if fi is None or bm.faces[fi].material_index in glass or fnl[i] @ np.array(fno[:]) < 0.0:
+            continue
+        if part is not None and bm.faces[fi][part]:
+            continue   # a moving section welded into its cut-out: its rim vertices carry bent normals
+        f = bm.faces[fi]
+        vs = [v.index for v in f.verts]
+        # inverse-distance weights of the face's vertex normals at the hit point
+        w = np.array([1.0 / (1e-6 + (bm.verts[j].co - loc).length) for j in vs])
+        n = (vn[vs] * w[:, None]).sum(axis=0)
+        n /= np.linalg.norm(n) + 1e-12
+        # a vertex shared with welded inner faces (moving sections, nacelle joins) has a bent normal: then the hit
+        # face's normal and the low face disagree with it, and the corner keeps the evened normal
+        if n @ fnl[i] > 0.707 and n @ cn[i] > 0.707 and n @ np.array(fno[:]) > 0.866:
+            out[i] = n
+            took += 1
+    bm.free()
+    log("shading: %d of %d corners took the hangar normal" % (took, len(pts)))
+    return out
+
+
+def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float, hi=None) -> tuple:
     """Shading normals of the low mesh: the smooth normals (hard past `sharp`) of an evened-out copy of the low
     mesh itself, handed over corner by corner (the copy has the same topology, so each corner gets the normal of
     the very same corner, never of a neighbour or of the far side of a fin). A corner whose evened normal would
@@ -383,6 +443,8 @@ def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> 
     lp = np.repeat(np.arange(len(lo.data.polygons)), [p.loop_total for p in lo.data.polygons])
     bad = np.einsum("ij,ij->i", cn, fn[lp]) < 0.5
     cn[bad] = own[bad]
+    if hi is not None:
+        cn = _hangar_normals(lo, hi, cn, fn[lp])
     lo.data.normals_split_custom_set([tuple(v) for v in cn])
     me = ev.data
     bpy.data.objects.remove(ev)
@@ -645,6 +707,9 @@ def main() -> int:
     ap.add_argument("--outline", type=float, default=2.0,
                     help="skin faces within this many pixels (2000 px per model length) of the top-view outline are "
                          "not collapsed; 0: off")
+    ap.add_argument("--shade", default="hangar", choices=["hangar", "even"],
+                    help="shading normals: hangar — the hangar's smooth normals where they agree with the low face, "
+                         "the evened copy elsewhere; even — the evened copy only")
     ap.add_argument("--threads", type=int, default=0, help="Cycles CPU threads (0: all)")
     ap.add_argument("--samples", type=int, default=4)
     ap.add_argument("--jpeg", type=int, default=90)
@@ -654,7 +719,7 @@ def main() -> int:
     hi = load_hangar(a.src)
     clean_hi(hi)
     lo = decimate(hi, a.tris, a.glass, a.sharp, a.outline)
-    held, kept = shade_low(lo, a.sharp, a.smooth, a.smooth_factor)
+    held, kept = shade_low(lo, a.sharp, a.smooth, a.smooth_factor, hi if a.shade == "hangar" else None)
     log("shading: evened copy %d iterations, %d vertices held, %d corners kept their plain normal" % (a.smooth, held, kept))
     bad60, bad90 = normal_report(lo)
     log("shading normals > 60deg from their face: %.3f%%, > 90deg: %.3f%%" % (100 * bad60, 100 * bad90))
