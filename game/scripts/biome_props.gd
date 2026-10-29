@@ -98,6 +98,13 @@ const PLANT_KINDS := ["poplar", "orchard", "palm", "shrub", "bush"]
 ## Gap in px between a plant's crown and a wreck's half-length (_clear_wrecks)
 const WRECK_CLEAR := 6.0
 
+## Salt of the road-column rng (road_wrecks): a stream of its own, apart from the chunk's main rng, so any chunk
+## can recompute a neighbour's column without running the neighbour's whole plan()
+const ROAD_WRECK_SALT := 0x40ad7c
+
+## Chance that a chunk has a road column of burnt-out vehicles (road_wrecks)
+const ROAD_WRECK_CHANCE := 0.22
+
 # Worker-thread copies of the lists plan() reads by index. plan() runs on Terrain3D's worker threads, and a
 # GDScript const Array is read-only: Godot 4.4 hands out each element of a read-only Array through one scratch
 # slot per array (Array::operator[] const), so threads reading the same const list overwrite each other's
@@ -509,22 +516,9 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 				_add(rng, put, "orchard", p + Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(30.0, 45.0), keep_out, ctx)
 		elif roll < 0.55:
 			_add(rng, put, "poplar", p, keep_out, ctx)
-	# сгоревшая техника — только на дороге или у обочины (на гору ей не заехать)
-	if rng.randf() < 0.22:
-		var q := _road_point(Vector2(ox + rng.randf_range(100, 1300), oz + rng.randf_range(100, 1300)))
-		if _zone(q, ctx) == "road" and _in_chunk(q, ox, oz):
-			var n := rng.randi_range(1, 3)   # колонна: машины одна за другой вдоль дороги
-			var dir := _road_dir(q)
-			for i in n:
-				var off := dir.orthogonal() * rng.randf_range(-14, 14)
-				if _t.in_river_guard(q + dir * (i * 90.0) + off, 14.0):   # M-35: к реке не съезжает — к другой обочине
-					off = -off
-				var w := q + dir * (i * 90.0) + off
-				if _t.in_river_guard(w, 14.0):
-					for k in 3:   # как _add_vehicle: остальная клетка — без сдвига случайных чисел
-						rng.randf()
-					continue
-				_add_vehicle(rng, put, "tank" if rng.randf() < 0.4 else "truck", w, dir, ctx)
+	# burnt-out vehicles only on the road or its verge (they could not drive up a mountain)
+	for it: Dictionary in road_wrecks(key):
+		_add_vehicle(put, it, ctx)
 	_bridges(rng, put, obj, key, ctx)
 	# юрты кочевников — летние пастбища: пологие места в стороне от дороги, недалеко от воды
 	if rng.randf() < 0.08:
@@ -540,9 +534,10 @@ func plan(key: Vector2i, ctx: Dictionary) -> Dictionary:
 ## Drops every plant (PLANT_KINDS) whose crown would reach over a wreck. Trees are placed before the road
 ## columns, and the orchards and palms of a settlement ignore keep_out, so an orchard tree could stand on a
 ## burnt-out tank (Kanta 28.10). Plants are removed after all placement instead of being redrawn, so the rng
-## sequence, and with it the rest of the chunk, stays exactly as before. Wrecks are the ones this chunk placed
-## and the vehicle and plane items of the neighbouring chunks' battle scenes (ctx "scenes"); a road column of a
-## neighbouring chunk is not known here. Worker-thread safe: reads only the packed tables and the snapshot ctx.
+## sequence, and with it the rest of the chunk, stays as it is. Wrecks are the ones this chunk placed, the
+## vehicle and plane items of the neighbouring chunks' battle scenes (ctx "scenes") and the road columns of the
+## 8 neighbours (road_wrecks: a column near a chunk edge reaches into the next chunk, up to ~200 px).
+## Worker-thread safe: reads only the packed tables, the snapshot ctx and the pure river field.
 func _clear_wrecks(put: Dictionary, key: Vector2i, ctx: Dictionary) -> void:
 	var blocks := []   # [centre, half-length]
 	for kind: String in put:
@@ -553,10 +548,13 @@ func _clear_wrecks(put: Dictionary, key: Vector2i, ctx: Dictionary) -> void:
 	for dx in [-1, 0, 1]:
 		for dz in [-1, 0, 1]:
 			if dx == 0 and dz == 0:
-				continue   # this chunk's scene wrecks are in put already
-			for it: Dictionary in scn.get(Vector2i(key.x + dx, key.y + dz), []):
+				continue   # this chunk's scene and road wrecks are in put already
+			var nk := Vector2i(key.x + dx, key.y + dz)
+			for it: Dictionary in scn.get(nk, []):
 				if _vehicles.has(it["k"]) or it["k"] == "plane":
 					blocks.append([it["p"], float(it["w"]) * 0.5])
+			for it: Dictionary in road_wrecks(nk):
+				blocks.append([it["p"], float(it["w"]) * 0.5])
 	if blocks.is_empty():
 		return
 	for kind in _plants:
@@ -742,7 +740,7 @@ func _zone(p: Vector2, ctx: Dictionary) -> String:
 	var a := absf(v)
 	if a < Terrain3D.RIVER_GUARD:   # M-35: охранная зона реки (вода и мокрый берег) — сюда ничего не ставим
 		return "river"
-	if v - Terrain3D.D_ROAD > -Terrain3D.ROAD_W_IN and v - Terrain3D.D_ROAD < Terrain3D.ROAD_W:   # L-03: дорога шире наружу от реки (как в шейдере)
+	if _road_band(v):
 		return "road"
 	if a < Terrain3D.RIVER_GUARD + 40.0:   # прибрежная полоса тополей и кустов — сразу за охранной зоной
 		return "bank"
@@ -760,6 +758,14 @@ func _zone(p: Vector2, ctx: Dictionary) -> String:
 	if h > 0.55 and sl < 0.6:
 		return "crest"
 	return "slope"
+
+
+## True when the river field value v (Terrain3D.river_field) is on the road: the "road" zone of _zone, which is
+## checked after the river guard zone. L-03: the road is wider outwards from the river (as in the shader).
+static func _road_band(v: float) -> bool:
+	if absf(v) < Terrain3D.RIVER_GUARD:
+		return false
+	return v - Terrain3D.D_ROAD > -Terrain3D.ROAD_W_IN and v - Terrain3D.D_ROAD < Terrain3D.ROAD_W
 
 
 ## Ближайшая к p точка дороги (2 шага Ньютона по полю долин)
@@ -850,13 +856,46 @@ func _wreck_on_ground(p: Vector2, w: float, yaw: float, s: Vector3, ctx: Diction
 	return Transform3D(bs.scaled(Vector3(w, w, w)), s + Vector3(0, lift * 0.8 - w * sink, 0))
 
 
-## A burnt-out vehicle of a road column: along the road (nose either way, slightly turned), lying along the ground
-## under it (_wreck_on_ground). Draws three rng values, which plan() replays when it skips a vehicle.
-func _add_vehicle(rng: RandomNumberGenerator, put: Dictionary, kind: String, p: Vector2, dir: Vector2, ctx: Dictionary) -> void:
-	var w := _rand_width(rng, kind)
-	var s := _t.surface(p.x, p.y, ctx)
-	var yaw := -dir.angle() + rng.randf_range(-0.35, 0.35) + (PI if rng.randf() < 0.5 else 0.0)
-	var t := _wreck_on_ground(p, w, -yaw, s, ctx, VEHICLE_SINK, VEHICLE_SLOPE)
+## The burnt-out road column of chunk key: 1-3 tanks and trucks one after another along the road, each slightly
+## off the road axis and turned (nose either way), never in the river guard zone (M-35). Returns items shaped
+## like a battle scene's: {"k": kind, "p": centre (Vector2), "w": length in px, "yaw": for _wreck_on_ground}.
+## Its rng is seeded from the chunk key alone (ROAD_WRECK_SALT), apart from plan()'s main stream, so _clear_wrecks
+## can ask for the 8 neighbours' columns; there is no world seed to mix in (the Highland world is fixed: the
+## terrain noise and Background objects use constant seeds too). Cheap: ~30 river_field samples for a chunk with a
+## column and one draw for the rest; no heights, so the ctx snapshot is not needed. Worker-thread safe.
+func road_wrecks(key: Vector2i) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(key) ^ ROAD_WRECK_SALT
+	if rng.randf() >= ROAD_WRECK_CHANCE:
+		return out
+	var ox := key.x * Terrain3D.CHUNK
+	var oz := key.y * Terrain3D.CHUNK
+	var q := _road_point(Vector2(ox + rng.randf_range(100, 1300), oz + rng.randf_range(100, 1300)))
+	if not _road_band(_t.river_field(q.x, q.y)) or not _in_chunk(q, ox, oz):
+		return out
+	var dir := _road_dir(q)
+	for i in rng.randi_range(1, 3):
+		# every value is drawn before the checks, so a skipped vehicle does not move the next one
+		var off := dir.orthogonal() * rng.randf_range(-14, 14)
+		var kind := "tank" if rng.randf() < 0.4 else "truck"
+		var w := _rand_width(rng, kind)
+		var yaw := dir.angle() + rng.randf_range(-0.35, 0.35) + (PI if rng.randf() < 0.5 else 0.0)
+		var c := q + dir * (i * 90.0)
+		if _t.in_river_guard(c + off, 14.0):   # M-35: it does not slide into the river, it goes to the other verge
+			off = -off
+		if _t.in_river_guard(c + off, 14.0):
+			continue
+		out.append({"k": kind, "p": c + off, "w": w, "yaw": yaw})
+	return out
+
+
+## A burnt-out vehicle of a road column (a road_wrecks item), lying along the ground under it (_wreck_on_ground)
+func _add_vehicle(put: Dictionary, it: Dictionary, ctx: Dictionary) -> void:
+	var kind: String = it["k"]
+	var p: Vector2 = it["p"]
+	var w := float(it["w"])
+	var t := _wreck_on_ground(p, w, float(it["yaw"]), _t.surface(p.x, p.y, ctx), ctx, VEHICLE_SINK, VEHICLE_SLOPE)
 	if not put.has(kind):
 		put[kind] = []
 	put[kind].append(t)
