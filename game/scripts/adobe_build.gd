@@ -1256,9 +1256,7 @@ static func _t_wall(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vect
 			var y0 := tops[k] if k == 0 else tops[k] * wr.randf_range(0.25, 0.45)
 			pts.append([f0, y0])
 		if ragged:
-			pts.append([(f0 + f1) * 0.5, tops[k] * wr.randf_range(0.9, 1.04)])
-			if k < n - 1 and tops[k + 1] >= 0.0:
-				pts.append([f1, minf(tops[k], tops[k + 1]) * wr.randf_range(0.7, 0.95)])
+			_ragged_top(pts, f0, f1, len, h, tops, k, wr)
 		else:
 			var m := maxi(1, int(len / WALL_SEG))
 			for i in range(1, m):
@@ -1269,7 +1267,54 @@ static func _t_wall(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vect
 	if not pts.is_empty():
 		runs.append(pts)
 	for r: Array in runs:
-		_wall_run(st, c, yaw, a, b, t, r, col)
+		_wall_run(st, c, yaw, a, b, t, r, col, true, ragged)
+
+
+## Broken top of piece k (shares f0…f1 of a wall `len` long, full height h) of a ragged wall, appended to pts:
+## points at irregular spacing whose height follows the pieces' levels (tops, eased from one piece to the next)
+## under three octaves of noise, with V-shaped bites and sheer breaks where a block of mud brick came away. The
+## old outline peaked in every piece's middle and dipped at every joint: a regular saw that read as stair steps.
+## Only wr (the wall's own generator) is drawn. The piece's end point is added when another piece follows.
+static func _ragged_top(pts: Array, f0: float, f1: float, len: float, h: float, tops: PackedFloat32Array, k: int,
+		wr: RandomNumberGenerator) -> void:
+	var n := tops.size()
+	var prev := tops[k - 1] if k > 0 and tops[k - 1] >= 0.0 else tops[k]
+	var next := tops[k + 1] if k < n - 1 and tops[k + 1] >= 0.0 else tops[k]
+	var sd := wr.randf() * 40.0
+	var f := f0
+	while true:
+		f += wr.randf_range(0.003, 0.008) / len
+		if f >= f1 - 0.002 / len:
+			break
+		var u := (f - f0) / (f1 - f0)
+		var lv := lerpf((prev + tops[k]) * 0.5, tops[k], smoothstep(0.0, 0.5, u)) if u < 0.5 \
+			else lerpf(tops[k], (tops[k] + next) * 0.5, smoothstep(0.5, 1.0, u))
+		var d := f * len
+		var y := lv + (_vn1(d / 0.009, sd) - 0.5) * 0.4 * h + (_vn1(d / 0.0032, sd + 5.0) - 0.5) * 0.14 * h \
+			+ (_vn1(d / 0.0013, sd + 9.0) - 0.5) * 0.05 * h   # the crumbled lip of each brick course
+		var roll := wr.randf()
+		if roll < 0.12:   # a bite: the top dips sharply and climbs back
+			pts.append([f, clampf(y * wr.randf_range(0.45, 0.7), h * 0.15, h)])
+			continue
+		if roll < 0.22:   # a sheer break: a near-vertical edge between two levels
+			var y2 := y * wr.randf_range(0.65, 0.85) if wr.randf() < 0.5 else minf(y * wr.randf_range(1.15, 1.35), h)
+			pts.append([f, clampf(y, h * 0.15, h)])
+			f += 0.0009 / len
+			pts.append([f, clampf(y2, h * 0.15, h)])
+			continue
+		pts.append([f, clampf(y, h * 0.15, h)])
+	if k < n - 1 and tops[k + 1] >= 0.0:
+		pts.append([f1, clampf((tops[k] + next) * 0.5 * wr.randf_range(0.85, 1.0), h * 0.15, h)])
+
+
+## Smooth value noise, 0…1, of one coordinate and a seed: no generator, so it is the same in any thread and order
+static func _vn1(x: float, sd: float) -> float:
+	var i := floorf(x)
+	var t := x - i
+	t = t * t * (3.0 - 2.0 * t)
+	var a := sin((i + sd * 17.13) * 12.9898 + 4.1) * 43758.5453
+	var b := sin((i + 1.0 + sd * 17.13) * 12.9898 + 4.1) * 43758.5453
+	return lerpf(a - floorf(a), b - floorf(b), t)
 
 
 ## One unbroken stretch of a compound wall: pts — [share of a→b, height] along its top. Sections of the
@@ -1281,7 +1326,10 @@ const DAMP := 0.0055       ## the damp, dirtier foot of a wall: this high above 
 const WALL_SEG := 0.026    ## an intact wall's eroded top: one height point per this length, old units (~2.4 m)
 
 
-static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vector2, t: float, pts: Array, col: Color, ext := true) -> void:
+## broken — a ruined wall's torn top (ragged _t_wall): no rounded coping, the two faces broken off at different
+## heights that change along the wall and a low ridge off the middle, flat-shaded, so the top reads as snapped
+## mud brick rather than a smooth roll following the outline.
+static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vector2, t: float, pts: Array, col: Color, ext := true, broken := false) -> void:
 	if pts.size() < 2:
 		return
 	var len := a.distance_to(b)
@@ -1289,7 +1337,8 @@ static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Ve
 	var nrm := dir.orthogonal()
 	var damp := col.darkened(0.3)
 	var top := col.lightened(0.06)
-	var crest := col.lightened(0.14)
+	var crest := col.lightened(0.14) if not broken else col.lightened(0.03)   # a torn top: no bleached crest
+	var sd := float(absi(hash(Vector2i(roundi(a.x * 1e5), roundi(b.y * 1e5)))) % 991)
 	var secs := []   # per point: [left rows, right rows] of Vector3, bottom to crest
 	for i in pts.size():
 		var f: float = pts[i][0]
@@ -1302,12 +1351,22 @@ static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Ve
 		var o := a + dir * along
 		var yd := minf(DAMP, y * 0.4)
 		var hw := [t * 0.5, t * 0.5, lerpf(t * 0.5, t * WALL_TAPER * 0.5, yd / maxf(y, 0.0001)), t * WALL_TAPER * 0.5, 0.0]
-		var hy := [0.0, SINK, SINK + yd, SINK + y, SINK + y + t * COPING]
+		var ys := [y, y]   # each face's broken height
+		var ridge := t * COPING
+		var off := 0.0     # the ridge's offset across the wall
+		if broken:
+			var u := _vn1(along / 0.0024, sd) - 0.5
+			var drop := y * 0.07 * (0.4 + _vn1(along / 0.0041, sd + 3.0))
+			ys = [y - drop * (0.5 + u), y - drop * (0.5 - u)]
+			ridge = t * 0.04 * _vn1(along / 0.0017, sd + 6.0)
+			off = (_vn1(along / 0.0033, sd + 9.0) - 0.5) * t * WALL_TAPER * 0.5
 		var side := []
-		for s: float in [-1.0, 1.0]:
+		for si in 2:
+			var s := -1.0 if si == 0 else 1.0
+			var hy := [0.0, SINK, SINK + yd, SINK + float(ys[si]), SINK + y + ridge]
 			var rows := []
 			for j in 5:
-				var q := c + (o + nrm * s * float(hw[j])).rotated(yaw)
+				var q := c + (o + nrm * (s * float(hw[j]) if j < 4 else off)).rotated(yaw)
 				rows.append(Vector3(q.x, float(hy[j]), q.y))
 			side.append(rows)
 		secs.append(side)
@@ -1317,7 +1376,8 @@ static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Ve
 			var p: Array = secs[i][s]
 			var q: Array = secs[i + 1][s]
 			for j in 4:
-				st.set_smooth_group(7 if j == 3 else -1)   # the coping is rounded: smooth across its crest
+				# the coping is rounded: smooth across its crest; a torn top keeps its facets
+				st.set_smooth_group(7 if j == 3 and not broken else -1)
 				var v := [p[j], q[j], q[j + 1], p[j + 1]]
 				var cs := [cols[j], cols[j], cols[j + 1], cols[j + 1]]
 				if s == 0:
