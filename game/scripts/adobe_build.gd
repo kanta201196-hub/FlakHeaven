@@ -930,7 +930,9 @@ static func village_at(variant: int, water: Dictionary) -> Array:
 	_cmx.unlock()
 	if not have.is_empty():
 		return have
-	var out := [village_core(variant, water), village_edge(variant, water), village_homes(variant, water)]
+	var trees := []
+	var edge := village_edge(variant, water, trees)
+	var out := [village_core(variant, water), edge, village_homes(variant, water) + trees]
 	_cmx.lock()
 	if _icache.size() > 12:
 		_icache.clear()
@@ -1031,15 +1033,21 @@ static var edge_log_on := false   # проверка S9-07/S9-08 (tools/village_
 static var edge_log := []         # ["garden", c, h, yaw] | ["trench", a, b] | ["pit", c] | ["post", c], старые единицы
 
 
-static func village_edge(variant: int, water := {}) -> ArrayMesh:
+## The outskirts mesh of variant at its water (see above). trees — an Array to append the orchards' tree records
+## to (VillageHouses.attach records, old units), or null when only the mesh is wanted
+static func village_edge(variant: int, water := {}, trees = null) -> ArrayMesh:
 	var key := "village%d" % variant
 	village(variant)
 	_cmx.lock()
 	var edge: Array = _vcache.get(key + "_edge", [])
 	var dry: ArrayMesh = _vcache.get(key + "_edge_dry") if water.is_empty() else null
+	var dry_trees: Array = _vcache.get(key + "_edge_dry_trees", [])
 	_cmx.unlock()
 	if dry != null and not edge_log_on:
+		if trees != null:
+			(trees as Array).append_array(dry_trees)
 		return dry
+	var tr := []   # the orchards' trees as model records (VillageHouses.ORCHARD), not boxes
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7919 * (variant + 1)
 	rng.state = int(edge[1])
@@ -1063,7 +1071,7 @@ static func village_edge(variant: int, water := {}) -> ArrayMesh:
 		if edge_log_on:
 			edge_log.append(["garden", c, h, yaw])
 		if rng.randf() < 0.55:
-			_orchard(st, c, h, yaw, rng)
+			_orchard(st, c, h, yaw, rng, tr)
 		else:
 			_field(st, c, h, yaw, rng)
 	_defence(st, variant, rng, water)
@@ -1071,7 +1079,10 @@ static func village_edge(variant: int, water := {}) -> ArrayMesh:
 	if water.is_empty():
 		_cmx.lock()
 		_vcache[key + "_edge_dry"] = m
+		_vcache[key + "_edge_dry_trees"] = tr
 		_cmx.unlock()
+	if trees != null:
+		(trees as Array).append_array(tr)
 	return m
 
 
@@ -1690,7 +1701,8 @@ static func _yard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int
 
 ## Model studio (tools/model_lab/studio.gd): one village piece built by the same functions as village(), for
 ## close-up review of the compound walls, gates and ruins. kind: "yard" (an intact walled yard, gate on -z),
-## "yard_damaged" (a breach and one ruined house), "yard_ruined" (ragged walls, heaps), "ruins" (a roofless
+## "yard_damaged" (a breach and one ruined house), "yard_ruined" (ragged walls, heaps), "orchard" (an outskirts
+## orchard: its low wall and rows of tree models), "ruins" (a roofless
 ## house, a heap and a breached ragged wall). Returns [mesh (old units × V_UNIT, like the village mesh),
 ## homes (VillageHouses.attach records)]. The seed is searched so the yard comes out in the asked state.
 static func debug_piece(kind: String) -> Array:
@@ -1708,6 +1720,9 @@ static func debug_piece(kind: String) -> Array:
 				rng.seed = 4100 + s
 				break
 		_yard(st, Vector2.ZERO, Vector2(0.11, 0.085), 0.0, 0, rng, stats)
+	elif kind == "orchard":
+		rng.seed = 11
+		_orchard(st, Vector2.ZERO, Vector2(0.1, 0.075), 0.0, rng, homes)
 	else:
 		rng.seed = 5
 		_t_ruin(st, Vector2(-0.055, 0.01), Vector2(0.034, 0.028), 0.0, 0.035, rng)
@@ -1720,7 +1735,8 @@ static func debug_piece(kind: String) -> Array:
 
 ## Крона дерева: два повёрнутых друг к другу яруса (сверху — восьмиугольник), оливково-серая.
 ## VIS-01: with homes, a tree model (VillageHouses.ORCHARD or PALM, picked by place: palm_share of them palms) is
-## recorded instead; rng is drawn exactly as for the boxes
+## recorded instead; rng is drawn exactly as for the boxes. Every sortie path passes homes (yards, the square,
+## the outskirts' orchards); the boxes are left only for the bench's box-house «before» frames (--boxhouses)
 static func _crown(st: SurfaceTool, c: Vector2, r: float, rng: RandomNumberGenerator, homes = null, palm_share := 0.3) -> void:
 	var col := T_TREE.lightened(rng.randf_range(-0.05, 0.08))
 	var y0 := rng.randf_range(0.012, 0.02)
@@ -1999,8 +2015,10 @@ static func _warehouse(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, rng:
 		_ob(st, c, yaw, x, h.y + 0.001, Vector3(0.026, 0.028, 0.003), T_DARK, T_DARK)
 
 
-## Сад за дувалом: ограда по периметру с проходом, внутри ряды деревьев
-static func _orchard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, rng: RandomNumberGenerator) -> void:
+## Сад за дувалом: ограда по периметру с проходом, внутри ряды деревьев. The trees are recorded in `trees`
+## as orchard tree models (VillageHouses.ORCHARD, drawn by VillageHouses.attach) instead of the old stacked boxes
+## that read as stars from above; rng is drawn exactly as before
+static func _orchard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, rng: RandomNumberGenerator, trees: Array) -> void:
 	var t := 0.006
 	var wh := rng.randf_range(0.008, 0.012)
 	var corners := [Vector2(-h.x, -h.y), Vector2(h.x, -h.y), Vector2(h.x, h.y), Vector2(-h.x, h.y)]
@@ -2020,7 +2038,7 @@ static func _orchard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, rng: R
 			if rng.randf() < 0.15:
 				continue
 			var p := Vector2(-h.x + (i + 0.5) * h.x * 2.0 / nx, -h.y + (j + 0.5) * h.y * 2.0 / nz)
-			_crown(st, c + p.rotated(yaw), rng.randf_range(0.012, 0.017), rng)
+			_crown(st, c + p.rotated(yaw), rng.randf_range(0.012, 0.017), rng, trees, 0.0)
 
 
 ## Поле: межи (низкие земляные валики) по краю и поперёк — 2–4 полосы

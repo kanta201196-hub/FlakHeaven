@@ -63,8 +63,9 @@ const TROUGH := 17
 const TENT := 18                     ## TENT, TENT + 1, TENT + 2: the three cloth colours
 const TANDOOR := 21
 const RUGFRAME := 22
-## Yard and square trees: the biome's tree cards (BiomeProps._lite_tree, 6 triangles) in place of the old stacked
-## boxes. The cards have the full model's size, width 1 on X/Z, so a record's scale is the crown's width in old units
+## Yard, square and orchard trees: the biome's trees in place of the old stacked boxes that read as stars from
+## above — the full model on "Max", the camera-facing card below it (BiomeProps.tree_mesh), as the biome draws
+## them. Both have the full model's size, width 1 on X/Z, so a record's scale is the crown's width in old units
 const ORCHARD := 23
 const PALM := 24
 const TREE_KINDS := {ORCHARD: "orchard", PALM: "palm"}
@@ -100,6 +101,7 @@ const BLEACH := 2.8
 
 static var _meshes := {}             # variant index → ArrayMesh with its surfaces' materials set (main thread only)
 static var _mats := {}
+static var _flora_props: BiomeProps = null   # tree meshes (_flora)
 
 
 ## Model variant for a lot of lx × lz (any units) with `floors` floors: the closest footprint shape among the
@@ -173,9 +175,35 @@ static func attach(parent: Node3D, homes: Array, unit := AdobeBuild.V_UNIT, grou
 		mmi.multimesh = mm
 		if NO_SHADOW.has(v) or (props == 0 and _small(v)) or (props == 1 and (LOW_SKIP.has(v) or v == WELL)):
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif TREE_KINDS.has(v) and props >= Settings.GFX_MAX:
+			# "Max": the full tree casts its shadow through the crossed cards (as BiomeProps.apply): the leaf
+			# cards of the full model in the shadow pass cost ~10k triangles a tree for the same dappled shape
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var sm := MultiMesh.new()
+			sm.transform_format = MultiMesh.TRANSFORM_3D
+			sm.mesh = _tree_shadow(v)
+			sm.instance_count = mm.instance_count
+			for i in mm.instance_count:
+				sm.set_instance_transform(i, mm.get_instance_transform(i))
+			var sh := MultiMeshInstance3D.new()
+			sh.multimesh = sm
+			sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+			parent.add_child(sh)
 		parent.add_child(mmi)
 		tris += _tris(mesh) * by[v].size()
 	return tris
+
+
+## Shadow-only crossed cards of a tree kind for the "Max" preset (main thread only)
+static func _tree_shadow(v: int) -> Mesh:
+	return _flora().tree_mesh(TREE_KINDS[v], true)
+
+
+## The BiomeProps the tree meshes come from: one for all villages, so each tree kind loads once
+static func _flora() -> BiomeProps:
+	if _flora_props == null:
+		_flora_props = BiomeProps.new(null)
+	return _flora_props
 
 
 ## Clutter, the yard well and the tree cards: the models BiomeProps would call small (no house; the oasis
@@ -219,13 +247,12 @@ static func _tris(mesh: ArrayMesh) -> int:
 
 
 ## Mesh of a variant with the fort's materials on its surfaces (classes by surface material name); textured props
-## keep their own texture, matte; trees are the biome's tree cards
+## keep their own texture, matte; trees are the biome's trees for the current preset (full model or card)
 static func _mesh(v: int) -> ArrayMesh:
 	if _meshes.has(v):
 		return _meshes[v]
-	if TREE_KINDS.has(v):
-		_meshes[v] = BiomeProps.new(null)._lite_tree(TREE_KINDS[v]) as ArrayMesh
-		return _meshes[v]
+	if TREE_KINDS.has(v):   # not cached here: the mesh follows the preset (BiomeProps caches both kinds)
+		return _flora().tree_mesh(TREE_KINDS[v]) as ArrayMesh
 	var file := WELL_FILE if v == WELL else _file(v)
 	var path := DIR + file + ".glb"
 	var mesh: ArrayMesh = null

@@ -1130,7 +1130,8 @@ func _make_points() -> Array:
 		# relief lab: --pts=name:x:z:zoom,name2:x:z:zoom — arbitrary camera points; an optional fifth field is a
 		# close-up camera height over the ground in px (ground_dist), like the poplar_close and vehwreck_ points
 		if a.begins_with("--pts="):
-			pts = []
+			if not OS.get_cmdline_user_args().has("--ptsadd"):   # --ptsadd: after the usual points (--only picks)
+				pts = []
 			for q in a.substr(6).split(","):
 				var f := q.split(":")
 				var pt := {"name": f[0], "pos": Vector2(float(f[1]), float(f[2])), "zoom": float(f[3]) if f.size() > 3 else 1.0, "wait": 1.2}

@@ -44,6 +44,7 @@ const SETS := {
 	"v_yard_damaged": [["adobe", "yard_damaged", 0.0, 0.0, 0.0, 0.0]],
 	"v_yard_ruined": [["adobe", "yard_ruined", 0.0, 0.0, 0.0, 0.0]],
 	"v_ruins": [["adobe", "ruins", 0.0, 0.0, 0.0, 0.0]],
+	"v_orchard": [["adobe", "orchard", 0.0, 0.0, 0.0, 0.0]],
 	# the Highland oasis farmstead (OasisBuild.studio_piece kinds): a walled garden with its gate, fallen stretch
 	# and channel; the pond with the cistern and the pergola; a roofless house; whole variants
 	"o_garden": [["oasis", "garden", 0.0, 0.0, 0.0, 0.0]],
