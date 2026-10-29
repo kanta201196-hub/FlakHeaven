@@ -602,7 +602,8 @@ func _unit_mesh(tex: Texture2D, length_px: float, thick: float, grid: int) -> Di
 ## models/battle/fh_battle_<картинка>.glb (tools/blender/battle_lod.py из модели ангара); длина модели 1 =
 ## ширина картинки, нос +X — те же оси, что у рельефа из спрайта, поэтому подвесы, сопла и следы на месте.
 ## Used on every graphics preset, «Низкое» included: a sprite relief looks flat next to the 3D
-## world. The battle model is already the cheap LOD (~9k triangles, 1K textures); no lighter one
+## world. The battle model is already the cheap LOD (~9k triangles, 1K textures; the player planes baked from
+## the hangar models by battle_bake.py carry 30–36k, Godot's import LODs thin them with distance); no lighter one
 ## exists. Returns null only when the picture has no GLB: then ReliefMesh is the fallback (VIS-01).
 func _battle_model(tex: Texture2D) -> PackedScene:
 	# оптимизация: кэш по самой картинке — без сборки пути каждый кадр у каждого самолёта

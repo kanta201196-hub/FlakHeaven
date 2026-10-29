@@ -11,10 +11,13 @@ and the shape's fine relief are baked onto it from the hangar model:
    Slats, flaps (`wing_mech`) and bay doors (`bay_doors`) are moved into the hull at rest and welded back where
    they were cut out; the dark wells under them (material `mech_well`) are dropped. The battle game hangs its
    own plates GLBs (fh_mech_*, fh_bay_*) over the closed wing and belly, as before.
-2. Low mesh: MeshLab quadric edge collapse of the welded hull to the budget (skin and canopy glass apart, their
-   shared outline kept, so the glass edge stays where it was), edges sharper than --sharp shaded hard.
-3. Shading normals from an evened-out copy of the low mesh itself, corner by corner (see shade_low: a nearest-
-   face copy of the hangar's normals flipped ~9 % of the corners). Smart UV Project, then
+2. Low mesh: MeshLab quadric edge collapse of the welded hull to the budget (skin and canopy glass apart; the
+   glass, the skin round its rim and the skin along the top-view outline are not collapsed, so the glass edge and
+   the wing and tail edges stay where they were), edges sharper than --sharp shaded hard.
+3. Shading normals: the hangar's smooth normal under each corner where it agrees with the low face (ray along the
+   face normal, moving sections and bent normals skipped, see _hangar_normals), elsewhere from an evened-out copy
+   of the low mesh itself, corner by corner (see shade_low: a plain nearest-face copy of the hangar's normals
+   flipped ~9 % of the corners). Smart UV Project, then
    Cycles (CPU) selected-to-active from the hangar mesh: paint and ORM through emission (no light, no shadow); a
    tangent-space normal map only with --normal geo|full (the remeshed hangar models have none: their panel lines
    are in the paint, and a baked map brought back bake noise).
@@ -27,7 +30,8 @@ and the shape's fine relief are baked onto it from the hangar model:
 Needs bpy (Blender 5.x as a module, tested 5.2.3) and pymeshlab (2025.7). Run from the repo root, then
 `godot --headless --path game --import`:
   python3 game/tools/blender/battle_bake.py game/models/hangar/fh_hangar_bomber_1.glb \
-      game/models/battle/fh_battle_bomber_1.glb [--tris 12000] [--tex 2048] [--normal geo|full] [--sharp 40]
+      game/models/battle/fh_battle_bomber_1.glb [--tris 30000] [--tex 2048] [--normal geo|full] [--sharp 40] \
+      [--outline 2] [--glass 1] [--shade hangar|even] [--threads 2]
 Recipe of the shipped models: docs/tasks/3d-models-handoff.md («Боевые модели из ангарных»).
 """
 import argparse
@@ -46,6 +50,7 @@ from mathutils import Matrix
 from mathutils.bvhtree import BVHTree
 
 T0 = time.time()
+HN_DIST = 0.003   # farthest hangar point a low corner takes its shading normal from (_hangar_normals), model units
 LOST = 0.004   # a hangar vertex farther than this from the collapsed skin marks a thin part to keep, model units
 
 
@@ -83,12 +88,16 @@ def load_hangar(src: str) -> bpy.types.Object:
     meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
     bm = bmesh.new()
     mats: list = []
+    part = bm.faces.layers.int.new("part")   # 1: a moving section (slat, flap, bay door), see _hangar_normals
     for o in meshes:
         me = o.data.copy()
         me.transform(o.matrix_world)
         n0 = len(bm.faces)
         bm.from_mesh(me)
         bm.faces.ensure_lookup_table()
+        part = bm.faces.layers.int["part"]
+        for f in bm.faces[n0:]:
+            f[part] = 0 if o.parent is None else 1
         remap = []
         for m in me.materials:
             if m not in mats:
@@ -127,9 +136,11 @@ def clean_hi(hi: bpy.types.Object) -> None:
     log("hi: wells dropped %d faces, %d faces left, open edges after weld %d" % (len(kill), len(hi.data.polygons), nb))
 
 
-def decimate(hi: bpy.types.Object, tris: int, glass_ratio: float, sharp: float) -> bpy.types.Object:
-    """Low mesh `lo`: quadric edge collapse (MeshLab) of the skin and of the glass apart; open edges, the shared
-    skin-glass outline among them, keep their vertices, so the two parts weld back without a crack."""
+def decimate(hi: bpy.types.Object, tris: int, glass_ratio: float, sharp: float,
+             outline_px: float = 2.0) -> bpy.types.Object:
+    """Low mesh `lo`: quadric edge collapse (MeshLab) of the skin and of the glass apart. The skin faces along the
+    top-view outline (`outline_px`, see _frozen_skin) and round the canopy are left as they are, so the wing and
+    tail edges stay straight and the skin meets the glass without a gap; `glass_ratio` >= 1 keeps the glass whole."""
     import pymeshlab  # noqa: PLC0415 — only this step needs it
 
     me = hi.data
@@ -152,26 +163,39 @@ def decimate(hi: bpy.types.Object, tris: int, glass_ratio: float, sharp: float) 
         idx[used] = np.arange(len(used), dtype=np.int32)
         parts.append((is_glass, V[used], idx[F]))
     nglass = sum(len(f) for g, _, f in parts if g)
+    glass_pts = np.vstack([pv for g, pv, _ in parts if g]) if nglass else np.zeros((0, 3))
     out_v: list = []
     out_f: list = []
     out_m: list = []
     for is_glass, pv, pf in parts:
-        target = max(64, int(len(pf) * glass_ratio)) if is_glass else max(500, tris - int(nglass * glass_ratio))
-        v2, f2 = _collapse(pymeshlab, pv, pf, target, None)
+        if is_glass:
+            n_glass = len(pf) if glass_ratio >= 1.0 else max(64, int(len(pf) * glass_ratio))
+            target = n_glass
+        else:
+            target = max(500, tris - (nglass if glass_ratio >= 1.0 else int(nglass * glass_ratio)))
+        if is_glass and glass_ratio >= 1.0:
+            # the canopy stays as the hangar cut it: a collapsed glass pulled its outline inward (preserveboundary
+            # does not pin open-edge vertices) and the skin under it showed through as pale triangles
+            v2, f2 = pv, pf
+        else:
+            keep = _frozen_skin(pv, pf, glass_pts, outline_px) if not is_glass else None
+            # with a selection MeshLab collapses the selected faces down to the target and adds the frozen ones
+            v2, f2 = _collapse(pymeshlab, pv, pf, _sel_target(target, keep), keep)
         if not is_glass:
             # thin parts the collapse folds away (the nose probe, aerials): hangar vertices left far from the new
             # skin; the faces round them are kept as they are and the rest is collapsed again
             tree = BVHTree.FromPolygons([tuple(v) for v in v2], [tuple(int(i) for i in f) for f in f2])
             far = np.array([(tree.find_nearest(tuple(v))[3] or 0.0) > LOST for v in pv])
             if far.any():
-                keep = far[pf].any(axis=1)
+                lost = far[pf].any(axis=1)
                 from scipy.spatial import cKDTree  # noqa: PLC0415
 
                 near = cKDTree(pv[pf].mean(axis=1)).query_ball_point(pv[far], LOST * 1.5)
                 for ids in near:   # grow the kept patch a little round each lost vertex
-                    keep[ids] = True
-                log("skin: %d hangar vertices lost (> %.3f), %d faces kept as they are" % (far.sum(), LOST, keep.sum()))
-                v2, f2 = _collapse(pymeshlab, pv, pf, max(500, target - int(keep.sum() * 0.5)), keep)
+                    lost[ids] = True
+                log("skin: %d hangar vertices lost (> %.3f), %d faces kept as they are" % (far.sum(), LOST, lost.sum()))
+                keep = lost if keep is None else (keep | lost)
+                v2, f2 = _collapse(pymeshlab, pv, pf, _sel_target(target, keep), keep)
         base = sum(len(v) for v in out_v)
         out_v.append(v2)
         out_f.append(f2 + base)
@@ -181,9 +205,19 @@ def decimate(hi: bpy.types.Object, tris: int, glass_ratio: float, sharp: float) 
     F2 = np.vstack(out_f)
     lme = bpy.data.meshes.new("lo")
     lme.from_pydata([tuple(v) for v in V2], [], [tuple(int(i) for i in f) for f in F2])
+    # material index before validate(): validate drops duplicate and degenerate faces, and an index list zipped on
+    # after it slid by the dropped count, so the first glass faces came out as skin (painted triangles on the canopy)
+    # (kept in a face attribute while validating: validate also resets indices past the slots, none exist yet)
+    fm = lme.attributes.new("fmat", "INT", "FACE")
+    fm.data.foreach_set("value", np.array(out_m, dtype=np.int32))
+    nf = len(lme.polygons)
     lme.validate()
-    for p, m in zip(lme.polygons, out_m):
-        p.material_index = m
+    if len(lme.polygons) != nf:
+        log("lo: validate dropped %d faces" % (nf - len(lme.polygons)))
+    mi = np.empty(len(lme.polygons), dtype=np.int32)
+    lme.attributes["fmat"].data.foreach_get("value", mi)
+    lme.polygons.foreach_set("material_index", mi)
+    lme.attributes.remove(lme.attributes["fmat"])
     lo = bpy.data.objects.new("lo", lme)
     bpy.context.scene.collection.objects.link(lo)
     bm = bmesh.new()
@@ -207,6 +241,53 @@ def decimate(hi: bpy.types.Object, tris: int, glass_ratio: float, sharp: float) 
         log("shade_smooth_by_angle:", e)
     log("lo: %d tris, open edges %d" % (len(lme.polygons), nb))
     return lo
+
+
+def _sel_target(target: int, keep) -> int:
+    """Face target for a collapse of the selected (not frozen) faces, so the result with the frozen ones lands on
+    `target`; never under a fifth of the selected faces (pushed harder, the collapse next to a frozen band folds
+    faces outward)."""
+    if keep is None:
+        return target
+    n_sel = int((~keep).sum())
+    return max(500, n_sel // 5, target - int(keep.sum()))
+
+
+def _frozen_skin(pv: np.ndarray, pf: np.ndarray, glass_pts: np.ndarray, outline_px: float, res: int = 2000):
+    """Skin faces the collapse must leave as they are (bool per face), or None when there are none:
+
+    * the top-view outline: faces with two vertices within `outline_px` pixels (at `res` per model unit) of the
+      edge of the planform. The wing and tailplane edges are thin folds, not open edges, so preserveboundary does
+      not hold them; collapsed, their vertices slid inward and cut notches into the outline seen from above;
+    * the canopy rim: faces with a vertex on the glass (the glass outline must not move, or the two parts part).
+    `outline_px` <= 0 turns the outline lock off."""
+    from PIL import Image, ImageDraw  # noqa: PLC0415
+    from scipy import ndimage  # noqa: PLC0415
+
+    keep = np.zeros(len(pf), dtype=bool)
+    if len(glass_pts):
+        from scipy.spatial import cKDTree  # noqa: PLC0415
+
+        on_glass = np.array([len(x) > 0 for x in cKDTree(glass_pts).query_ball_point(pv, 1e-6)])
+        rim = on_glass[pf].any(axis=1)
+        keep |= rim
+        log("skin: %d faces round the canopy rim kept" % rim.sum())
+    if outline_px > 0:
+        lo = pv[:, :2].min(axis=0) - 0.01
+        size = np.ceil((pv[:, :2].max(axis=0) + 0.01 - lo) * res).astype(int)
+        img = Image.new("1", (int(size[0]), int(size[1])), 0)
+        d = ImageDraw.Draw(img)
+        p2 = (pv[:, :2] - lo) * res
+        for f in pf:
+            d.polygon([tuple(p2[i]) for i in f], fill=1, outline=1)
+        inside = np.array(img, dtype=bool)   # rows = y (span), cols = x (length)
+        dist = ndimage.distance_transform_edt(inside)
+        px = np.clip(p2.astype(int), 0, [size[0] - 1, size[1] - 1])
+        edge_v = dist[px[:, 1], px[:, 0]] <= outline_px
+        edge_f = edge_v[pf].sum(axis=1) >= 2
+        keep |= edge_f
+        log("skin: %d vertices on the top-view outline, %d faces along it kept" % (edge_v.sum(), edge_f.sum()))
+    return keep if keep.any() else None
 
 
 def _collapse(pymeshlab, pv: np.ndarray, pf: np.ndarray, target: int, keep) -> tuple:
@@ -278,7 +359,80 @@ def even_out(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> i
 
 
 
-def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> tuple:
+def _hangar_normals(lo: bpy.types.Object, hi: bpy.types.Object, cn: np.ndarray, fnl: np.ndarray) -> np.ndarray:
+    """Corner normals of `lo` replaced by the hangar skin's smooth normal under the corner, where that is
+    trustworthy: the outermost hangar face within HN_DIST along the low face's normal, its interpolated normal within
+    45 deg of both the low face and the evened normal `cn` and within 30 deg of the hit face itself (so the far side
+    of a fin, a coincident inner face of the welded sections or a crease the low mesh does not have never lend a
+    normal); the other corners keep `cn`. Each corner is sampled a little inside its
+    face, so a corner on a ridge takes the side of the ridge its face lies on.
+
+    Why: the evened copy rounds off crisp narrow features the low mesh only follows in a zigzag, such as the spine
+    ridge of «Кит-2» between the engines, which shaded as a row of light and dark lumps; the hangar normals there
+    are smooth along the ridge and match the hangar model."""
+    bm = bmesh.new()
+    bm.from_mesh(hi.data)
+    glass = {i for i, m in enumerate(hi.data.materials) if m.name.startswith("glass")}
+    bm.verts.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    tree = BVHTree.FromBMesh(bm)
+    vn = np.array([v.normal[:] for v in bm.verts])
+    part = bm.faces.layers.int.get("part")
+    me = lo.data
+    co = np.array([v.co[:] for v in me.vertices])
+    lv = np.empty(len(me.loops), dtype=np.int64)
+    me.loops.foreach_get("vertex_index", lv)
+    cen = np.array([p.center[:] for p in me.polygons])
+    lp = np.repeat(np.arange(len(me.polygons)), [p.loop_total for p in me.polygons])
+    pts = co[lv] * 0.85 + cen[lp] * 0.15
+    out = cn.copy()
+    took = 0
+    for i, pt in enumerate(pts):
+        # the outermost hangar surface along the low face's normal: the one seen, not an inner face behind it
+        loc, fno, fi, _ = tree.ray_cast(tuple(pt + fnl[i] * HN_DIST), tuple(-fnl[i]), 2.0 * HN_DIST)
+        if fi is None or bm.faces[fi].material_index in glass or fnl[i] @ np.array(fno[:]) < 0.0:
+            continue
+        if part is not None and bm.faces[fi][part]:
+            continue   # a moving section welded into its cut-out: its rim vertices carry bent normals
+        f = bm.faces[fi]
+        vs = [v.index for v in f.verts]
+        # inverse-distance weights of the face's vertex normals at the hit point
+        w = np.array([1.0 / (1e-6 + (bm.verts[j].co - loc).length) for j in vs])
+        n = (vn[vs] * w[:, None]).sum(axis=0)
+        n /= np.linalg.norm(n) + 1e-12
+        # a vertex shared with welded inner faces (moving sections, nacelle joins) has a bent normal: then the hit
+        # face's normal and the low face disagree with it, and the corner keeps the evened normal
+        if n @ fnl[i] > 0.707 and n @ cn[i] > 0.707 and n @ np.array(fno[:]) > 0.866:
+            out[i] = n
+            took += 1
+    bm.free()
+    log("shading: %d of %d corners took the hangar normal" % (took, len(pts)))
+    return out
+
+
+def _glass_normals(lo: bpy.types.Object, cn: np.ndarray) -> np.ndarray:
+    """Canopy glass corners: smooth normals over the glass faces alone (area-weighted), so the dome shades as one
+    smooth piece. The evened copy smoothed the glass together with the skin round it and held the rim, which left
+    dark ragged blotches on the glass (its shader reflects the ground where a normal tilts down)."""
+    me = lo.data
+    gi = [i for i, m in enumerate(me.materials) if m and m.name.startswith("glass")]
+    if not gi:
+        return cn
+    out = cn.copy()
+    acc = np.zeros((len(me.vertices), 3))
+    for p in me.polygons:
+        if p.material_index in gi:
+            for v in p.vertices:
+                acc[v] += np.array(p.normal[:]) * p.area
+    for p in me.polygons:
+        if p.material_index in gi:
+            for li in p.loop_indices:
+                n = acc[me.loops[li].vertex_index]
+                out[li] = n / (np.linalg.norm(n) + 1e-12)
+    return out
+
+
+def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float, hi=None) -> tuple:
     """Shading normals of the low mesh: the smooth normals (hard past `sharp`) of an evened-out copy of the low
     mesh itself, handed over corner by corner (the copy has the same topology, so each corner gets the normal of
     the very same corner, never of a neighbour or of the far side of a fin). A corner whose evened normal would
@@ -311,6 +465,9 @@ def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float) -> 
     lp = np.repeat(np.arange(len(lo.data.polygons)), [p.loop_total for p in lo.data.polygons])
     bad = np.einsum("ij,ij->i", cn, fn[lp]) < 0.5
     cn[bad] = own[bad]
+    if hi is not None:
+        cn = _hangar_normals(lo, hi, cn, fn[lp])
+    cn = _glass_normals(lo, cn)
     lo.data.normals_split_custom_set([tuple(v) for v in cn])
     me = ev.data
     bpy.data.objects.remove(ev)
@@ -373,10 +530,14 @@ def fill_misses(mask: bpy.types.Image, imgs: list) -> int:
     return n
 
 
-def bake(hi: bpy.types.Object, lo: bpy.types.Object, tex: int, normal: str, samples: int) -> dict:
-    """Paint, ORM and tangent normals of `hi` onto `lo`'s UV; returns {suffix: image}."""
+def bake(hi: bpy.types.Object, lo: bpy.types.Object, tex: int, normal: str, samples: int, threads: int = 0) -> dict:
+    """Paint, ORM and tangent normals of `hi` onto `lo`'s UV with `threads` CPU threads (0: all); returns
+    {suffix: image}."""
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
+    if threads > 0:
+        sc.render.threads_mode = "FIXED"
+        sc.render.threads = threads
     sc.cycles.device = "CPU"
     sc.cycles.samples = samples
     sc.cycles.use_denoising = False
@@ -489,9 +650,10 @@ def bake(hi: bpy.types.Object, lo: bpy.types.Object, tex: int, normal: str, samp
     return out
 
 
-def write_images(imgs: dict, dst: str, jpeg: int) -> dict:
+def write_images(imgs: dict, dst: str, jpeg: int) -> tuple:
     """Save the baked images next to the GLB under Godot's extracted names and pack them for the export;
-    remove the model's old extracted images. Returns {suffix: packed image}."""
+    remove the model's old extracted images. Returns ({suffix: packed image}, the temp folder to remove after
+    the export)."""
     base = os.path.splitext(os.path.basename(dst))[0]
     dst_base = os.path.splitext(os.path.abspath(dst))[0]
     ddir = os.path.dirname(dst_base)
@@ -518,7 +680,7 @@ def write_images(imgs: dict, dst: str, jpeg: int) -> dict:
         out[suf] = ni
         shutil.copyfile(path, dst_base + "_" + os.path.basename(path))
         log("image %s: %.1f MB" % (os.path.basename(path), os.path.getsize(path) / 1e6))
-    return out
+    return out, tmpd
 
 
 def skin_material(m: bpy.types.Material, imgs: dict) -> None:
@@ -563,7 +725,15 @@ def main() -> int:
     ap.add_argument("--smooth", type=int, default=40,
                     help="Laplacian iterations evening out the copy of the low mesh its shading normals come from")
     ap.add_argument("--smooth-factor", dest="smooth_factor", type=float, default=0.5)
-    ap.add_argument("--glass", type=float, default=0.35, help="share of the canopy glass triangles kept")
+    ap.add_argument("--glass", type=float, default=1.0,
+                    help="share of the canopy glass triangles kept (1: the hangar glass as it is)")
+    ap.add_argument("--outline", type=float, default=2.0,
+                    help="skin faces within this many pixels (2000 px per model length) of the top-view outline are "
+                         "not collapsed; 0: off")
+    ap.add_argument("--shade", default="hangar", choices=["hangar", "even"],
+                    help="shading normals: hangar — the hangar's smooth normals where they agree with the low face, "
+                         "the evened copy elsewhere; even — the evened copy only")
+    ap.add_argument("--threads", type=int, default=0, help="Cycles CPU threads (0: all)")
     ap.add_argument("--samples", type=int, default=4)
     ap.add_argument("--jpeg", type=int, default=90)
     a = ap.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:])
@@ -571,8 +741,8 @@ def main() -> int:
         sys.exit("input and output must differ")
     hi = load_hangar(a.src)
     clean_hi(hi)
-    lo = decimate(hi, a.tris, a.glass, a.sharp)
-    held, kept = shade_low(lo, a.sharp, a.smooth, a.smooth_factor)
+    lo = decimate(hi, a.tris, a.glass, a.sharp, a.outline)
+    held, kept = shade_low(lo, a.sharp, a.smooth, a.smooth_factor, hi if a.shade == "hangar" else None)
     log("shading: evened copy %d iterations, %d vertices held, %d corners kept their plain normal" % (a.smooth, held, kept))
     bad60, bad90 = normal_report(lo)
     log("shading normals > 60deg from their face: %.3f%%, > 90deg: %.3f%%" % (100 * bad60, 100 * bad90))
@@ -580,7 +750,7 @@ def main() -> int:
     log("deviation lo->hi 99%% %.5f max %.5f; hi->lo 99%% %.5f max %.5f" % dev)
 
     unwrap(lo, a.tex)
-    imgs = write_images(bake(hi, lo, a.tex, a.normal, a.samples), a.dst, a.jpeg)
+    imgs, tmpd = write_images(bake(hi, lo, a.tex, a.normal, a.samples, a.threads), a.dst, a.jpeg)
     skin_material(lo.data.materials[0], imgs)
     bpy.data.objects.remove(hi)
     base = os.path.splitext(os.path.basename(a.dst))[0]
@@ -591,6 +761,7 @@ def main() -> int:
     bpy.ops.export_scene.gltf(filepath=os.path.abspath(a.dst), export_format="GLB", use_selection=True,
                               export_tangents="nrm" in imgs, export_normals=True, export_texcoords=True,
                               export_materials="EXPORT", export_yup=True, export_image_format="AUTO")
+    shutil.rmtree(tmpd, ignore_errors=True)   # the images are packed into the GLB and copied next to it
     tris = sum(len(p.vertices) - 2 for p in lo.data.polygons)
     log("done %s: %d tris, %.1f MB" % (a.dst, tris, os.path.getsize(a.dst) / 1e6))
     print("BATTLE_BAKE_OK tris=%d dev99=%.5f devmax=%.5f lost99=%.5f lostmax=%.5f" % ((tris,) + dev))
