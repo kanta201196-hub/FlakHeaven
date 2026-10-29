@@ -23,6 +23,7 @@ import math
 import os
 import random
 import sys
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -346,7 +347,7 @@ def make_layers(ob, tint, seed, damp=0.0):
 def build(name, out, size):
     """Model one piece, bake its weathered atlas and export <name>.glb; returns (size, triangles, base z)"""
     H.reset(True)
-    V.R.seed(hash(name) & 0xFFFF)
+    V.R.seed(zlib.crc32(name.encode()) & 0xFFFF)   # stable across runs (str hash() is salted per process)
     MODELS[name]()
     ob = V.assemble(name)
     me = ob.data

@@ -16,12 +16,12 @@ class_name VillageHouses
 ## [file, size (x, height, depth) in metres, floors, weight]. Sizes come from village_houses.py's printout.
 const VARIANTS := [
 	["vh_h49", Vector3(14.01, 5.33, 11.99), 1, 0.35],   # big L-shaped house on a stone plinth, beam ends
-	["vh_h50a", Vector3(8.49, 6.79, 8.08), 2, 1.0],   # L-plan, upper room, roof terrace, mud stair (2654 tris)
-	["vh_h50b", Vector3(9.57, 6.50, 4.25), 2, 1.0],   # two-storey tower block and a terraced wing (2500 tris)
-	["vh_h50c", Vector3(8.51, 3.77, 8.08), 1, 1.0],   # square, deep loggia on two posts (1996 tris)
-	["vh_h50d", Vector3(7.78, 3.65, 5.64), 1, 1.0],   # two rooms on a stone plinth (1648 tris)
-	["vh_h50e", Vector3(8.51, 3.75, 4.26), 1, 1.0],   # long, veranda on four posts (1980 tris)
-	["vh_h50f", Vector3(8.50, 6.84, 8.08), 2, 0.7],   # two-storey, timber gallery and balcony (2808 tris)
+	["vh_h50a", Vector3(8.49, 6.79, 8.08), 2, 1.0],   # L-plan, upper room, roof terrace, mud stair (2881 tris)
+	["vh_h50b", Vector3(9.57, 6.50, 4.25), 2, 1.0],   # two-storey tower block and a terraced wing (2679 tris)
+	["vh_h50c", Vector3(8.51, 3.77, 8.08), 1, 1.0],   # square, deep loggia on two posts (2223 tris)
+	["vh_h50d", Vector3(7.78, 3.65, 5.64), 1, 1.0],   # two rooms on a stone plinth (1600 tris)
+	["vh_h50e", Vector3(8.51, 3.75, 4.26), 1, 1.0],   # long, veranda on four posts (2183 tris)
+	["vh_h50f", Vector3(8.50, 6.84, 8.08), 2, 0.7],   # two-storey, timber gallery and balcony (3083 tris)
 	["vh_h51", Vector3(9.00, 3.48, 8.14), 1, 0.8],      # small house, open pergola and a cloth awning
 ]
 const WELL := 8                      ## variant index of the yard well (hand pump on a slab, model 71)
@@ -73,10 +73,10 @@ const TREE_KINDS := {ORCHARD: "orchard", PALM: "palm"}
 ## them): [file, size (x, height above ground, depth) in metres]. Variant index = OASIS0 + row. Each is one mesh
 ## with one baked weathered adobe material, like the kishlak's h50 houses.
 const OASIS := [
-	["oh_a", Vector3(8.00, 3.79, 7.09)], # rooms behind a deep ayvan on three posts, vine trellis (4049 tris)
-	["oh_b", Vector3(7.85, 3.66, 7.33)], # L-plan round a corner ayvan, roof stair, bread oven (3141 tris)
-	["oh_c", Vector3(8.60, 3.81, 6.26)], # long house, ayvan on four posts under a grapevine (4345 tris)
-	["oh_d", Vector3(7.09, 6.24, 6.97)], # two storeys, summer ayvan on the roof, porch below (3903 tris)
+	["oh_a", Vector3(7.93, 3.79, 7.09)], # rooms behind a deep ayvan on three posts, vine trellis (4228 tris)
+	["oh_b", Vector3(7.75, 3.66, 7.33)], # L-plan round a corner ayvan, roof stair, bread oven (3392 tris)
+	["oh_c", Vector3(8.58, 3.81, 6.26)], # long house, ayvan on four posts under a grapevine (4572 tris)
+	["oh_d", Vector3(7.11, 6.24, 6.97)], # two storeys, summer ayvan on the roof, porch below (4106 tris)
 	["oh_cistern", Vector3(5.10, 3.83, 6.72)], # covered cistern: mud-brick dome, portal, trough (1546 tris)
 	["oh_pergola", Vector3(5.96, 3.11, 4.29)], # free grapevine pergola over a clay platform (3249 tris)
 ]
