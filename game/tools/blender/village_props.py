@@ -2,17 +2,18 @@
 recommend is ok"; "put some tents in the centre of the kishlak to imitate a market").
 
 Sources are CC BY Sketchfab models (game/models/CREDITS.md) plus a few props built here in the fortified-area fort manner
-(texture set Г classes and faded cloth): market tents in three cloth colours, a tandoor, a rug hung on a frame.
+(texture set Г classes): a tandoor, a rug hung on a frame. The market cloth (the three tents, the ring stall and
+the shop awning) moved to market_cloth.py, which builds it as baked cloth; this file no longer writes those GLBs.
 Two kinds of output, both metres, long side along X, centred on the footprint, base on z = 0, matte:
   class props — every face gets a material class (vh_wood, vh_plaster, vh_cloth…; VillageHouses.material paints
-    them), so the stall, the awning and the cart read as the same timber and cloth as the houses;
+    them), so the cart reads as the same timber as the houses;
   textured props — one texture per prop, desaturated toward the village's dust, normal/roughness maps dropped,
     downscaled (bags, pots, hay, woodpile, trough, rug): their own pattern is what reads at 10–20 px.
 Each prop is decimated to a budget for a 5–25 px object (1 m ≈ 6.94 px at zoom 1).
 
 Run (from the repo root; the sources are untrusted downloads, so -I):
   python3 -I game/tools/blender/village_props.py <dl_dir> <out_dir>
-    <dl_dir>/{stall,awning,cart,bags,pots,rug,hay,wood,trough}/src.glb -> <out_dir>/vc_<name>.glb, sizes printed as
+    <dl_dir>/{cart,bags,pots,rug,hay,wood,trough}/src.glb -> <out_dir>/vc_<name>.glb, sizes printed as
     a GDScript table for VillageHouses.PROPS
 """
 import math
@@ -328,17 +329,12 @@ def tex_prop(name, obs, size, k):
     return o
 
 
-STALL_KEEP = r"tenda\.012_leather|tenda\.012_pole|Crate_low\.15[36]|Terakota|Wicker-non-pbr|Kursi"
-STALL_RULE = [("leather", "cloth"), ("Terakota", "clay"), (".", "wood")]   # wicker as wood: a surface is a draw call
-AWNING_RULE = [("tarp", "cloth"), (".", "wood")]
 CART_RULE = [(".", "wood")]   # iron bindings read as dark wood at 15 px; one surface
 
 # [name, source dir, keep regex, drop regex, class rule | (texture size, brightness), scale to metres, triangle
 # budget]. Class props are made two-sided afterwards (their tarps, planks and cloths are open sheets: the class
 # materials cull back faces), so they end at twice the budget
 SOURCES = [
-    ("stall", "stall", STALL_KEEP, r"^$", STALL_RULE, 1.0, 300),
-    ("awning", "awning", r".", r"^$", AWNING_RULE, 1.0, 200),
     ("cart", "cart", r".", r"^$", CART_RULE, 0.01, 150),
     ("bags", "bags", r".", r"^$", (256, 0.78), 1.0, 300),
     ("pots", "pots", r".", r"^$", (256, 0.95), 0.01, 350),
@@ -407,40 +403,6 @@ def _mesh_object(name, bm, mats):
     o = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(o)
     return o
-
-
-def build_tent(out, cloth):
-    """Market tent: a gabled cloth canopy (3.6 × 3.2 m, eaves 2 m) on six poles over a timber counter with a few
-    goods. One GLB per cloth colour class, so a row of tents gets two or three faded colours."""
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    mats = class_mats()
-    W, D, E, R = 1.8, 1.6, 1.95, 2.55
-    ci = CLASSES.index(cloth)
-    wi = CLASSES.index("wood")
-    bm = bmesh.new()
-    for sy in (-1, 1):   # roof slopes and the valance along the eaves
-        _quad(bm, [(-W, 0, R), (W, 0, R), (W, sy * D, E), (-W, sy * D, E)], ci)
-        _quad(bm, [(-W, sy * D, E), (W, sy * D, E), (W, sy * D, E - 0.32), (-W, sy * D, E - 0.32)], ci)
-    for sx in (-1, 1):   # gable ends
-        f = [bm.verts.new(p) for p in [(sx * W, -D, E), (sx * W, D, E), (sx * W, 0, R)]]
-        bm.faces.new(f).material_index = ci
-        f = [bm.verts.new(p) for p in [(sx * W, 0, R), (sx * W, D, E), (sx * W, -D, E)]]
-        bm.faces.new(f).material_index = ci
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            _box(bm, (sx * (W - 0.12), sy * (D - 0.15), E / 2), (0.08, 0.08, E), wi)
-        _box(bm, (sx * (W - 0.12), 0, R / 2), (0.08, 0.08, R), wi)
-    _box(bm, (0, -D + 0.55, 0.4), (3.0, 0.7, 0.8), wi)   # counter
-    for k, x in enumerate((-1.0, -0.3, 0.45, 1.1)):   # goods: crates (timber, as the frame: a surface is a draw call)
-        _box(bm, (x, -D + 0.55, 0.92), (0.45, 0.4, 0.24 + 0.06 * (k % 2)), wi)
-    _box(bm, (0.6, 0.6, 0.35), (0.9, 0.7, 0.7), wi)   # crates at the back
-    o = _mesh_object("tent", bm, mats)
-    drop_unused_slots(o)
-    box_uvs(o)
-    flat_shade(o)
-    name = {"cloth": "tent_a", "cloth2": "tent_b", "cloth3": "tent_c"}[cloth]
-    export(o, os.path.join(out, "vc_%s.glb" % name), False)
-    return name, o
 
 
 def build_tandoor(out):
@@ -533,9 +495,6 @@ def main():
 
     for r in SOURCES:
         row(r[0], build_source(dl, out, r))
-    for cl in ("cloth", "cloth2", "cloth3"):
-        n, o = build_tent(out, cl)
-        row(n, o)
     row("tandoor", build_tandoor(out))
     row("rugframe", build_rug_frame(dl, out))
     print("\n".join(rows))

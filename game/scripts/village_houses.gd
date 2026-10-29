@@ -28,12 +28,13 @@ const WELL := 8                      ## variant index of the yard well (hand pum
 const WELL_FILE := "vh_well"
 const WELL_SCALE := 1.6              ## the scan is a 1.2 m slab: barely a few pixels at the game's height
 ## Village clutter and the market (Kanta 26.10.2026: "everything as you recommend is ok"; "put some tents in
-## the centre of the kishlak to imitate a market"), built by tools/blender/village_props.py:
+## the centre of the kishlak to imitate a market"), built by tools/blender/village_props.py; the market cloth
+## (tents, ring stall, shop awning) by tools/blender/market_cloth.py:
 ## [file, size (x, height, depth) in metres]. Variant index = PROP0 + row. Surfaces named vh_<class> get the class
 ## materials below; the rest keep their own (graded, matte) texture.
 const PROPS := [
-	["vc_stall", Vector3(3.86, 3.01, 3.89)],     # market stall: cloth tent on poles, crates, pots, baskets (126)
-	["vc_awning", Vector3(10.24, 4.62, 4.78)],   # cloth awning on a timber frame, over a shop front (127)
+	["vc_stall", Vector3(3.96, 3.15, 3.97)],     # ring stall: olive sunshade on four posts, counter with goods (market_cloth.py)
+	["vc_awning", Vector3(10.21, 4.53, 5.02)],   # saffron shop awning: ledger, rafters, four posts (market_cloth.py)
 	["vc_cart", Vector3(2.23, 0.77, 1.01)],      # two-wheeled wooden cart (128)
 	["vc_bags", Vector3(1.82, 0.59, 1.71)],      # pile of burlap sacks (132)
 	["vc_pots", Vector3(1.85, 0.69, 1.16)],      # clay pots with lids (134)
@@ -41,9 +42,9 @@ const PROPS := [
 	["vc_hay", Vector3(2.16, 0.85, 1.18)],       # haystack (139)
 	["vc_wood", Vector3(1.53, 1.04, 1.55)],      # woodpile (140)
 	["vc_trough", Vector3(3.25, 0.59, 2.31)],    # water trough and a bucket (141)
-	["vc_tent_a", Vector3(3.60, 2.55, 3.20)],    # market tent, built: gabled cloth canopy over a counter
-	["vc_tent_b", Vector3(3.60, 2.55, 3.20)],
-	["vc_tent_c", Vector3(3.60, 2.55, 3.20)],
+	["vc_tent_a", Vector3(3.61, 2.73, 3.95)],    # gabled market tent, madder red (market_cloth.py)
+	["vc_tent_b", Vector3(3.69, 2.70, 3.89)],    # sunshade with a centre peak, cream and indigo (market_cloth.py)
+	["vc_tent_c", Vector3(3.69, 2.76, 3.56)],    # lean-to with a side curtain, washed indigo (market_cloth.py)
 	["vc_tandoor", Vector3(1.50, 1.15, 1.50)],   # clay oven on a plinth, built
 	["vc_rugframe", Vector3(2.90, 2.20, 0.09)],  # rugs hung on a timber frame, built
 ]
@@ -265,9 +266,10 @@ static func _mesh(v: int) -> ArrayMesh:
 	if mesh != null and v != WELL:
 		for si in mesh.get_surface_count():
 			var m := mesh.surface_get_material(si)
-			if m is StandardMaterial3D and m.resource_name.begins_with("adobe_"):
-				# a baked adobe house: its albedo, roughness and relief are final; the same textures through
-				# adobe_baked.gdshader, which adds the warm sand bounce into the shaded walls (BOUNCE)
+			if m is StandardMaterial3D and _baked(m.resource_name):
+				# a baked adobe house or market cloth: its albedo, roughness and relief are final; the same
+				# textures through adobe_baked.gdshader (two-sided), which adds the warm sand bounce into the
+				# shaded walls (BOUNCE)
 				var b := m as StandardMaterial3D
 				var sm := ShaderMaterial.new()
 				sm.shader = BAKED_SHADER
@@ -297,6 +299,11 @@ static func _mesh(v: int) -> ArrayMesh:
 			m.metallic_specular = 0.2
 	_meshes[v] = mesh
 	return mesh
+
+
+## A material whose textures are final (village_adobe.py, oasis_adobe.py houses and market_cloth.py cloth)
+static func _baked(mat_name: String) -> bool:
+	return mat_name.begins_with("adobe_") or mat_name.begins_with("cloth_")
 
 
 ## GLB file name (without .glb) of a model variant other than the well and the tree cards

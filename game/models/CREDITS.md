@@ -72,8 +72,6 @@
 | village/vh_h50a..f (дома кишлака в 1–2 этажа) | Desert Mud Concrete House Lowpoly | 00amza | https://sketchfab.com/3d-models/desert-mud-concrete-house-lowpoly-bd4917fa72c84e41aa1e5299871f1b2e | CC BY 4.0, изменено |
 | village/vh_h51 (дом кишлака с навесом) | Desert House 01 | torricane | https://sketchfab.com/3d-models/desert-house-01-7649a03206864931a3c118ec14d8ac3c | CC BY 4.0, изменено |
 | village/vh_well (колонка во дворе кишлака) | Hand Well 3D Scan | zdenkoroman | https://sketchfab.com/3d-models/hand-well-3d-scan-76a39bd60163451497c794afe979f8b2 | CC BY 4.0, изменено |
-| village/vc_stall (лавка на базаре кишлака) | Low Poly Traditional Market Stall | Nisa Nurul Azizah | https://sketchfab.com/3d-models/low-poly-traditional-market-stall-83f6b14a28094a5ab5f8396ea6f4c1e9 | CC BY 4.0, изменено |
-| village/vc_awning (навес над лавкой) | Old Awning | exiS7-Gs | https://sketchfab.com/3d-models/old-awning-eb9c400becca4690af9b720ce8209765 | CC BY 4.0, изменено |
 | village/vc_cart (тележка) | Wooden cart | DZs | https://sketchfab.com/3d-models/wooden-cart-40d064c5b6a44eb395f56c5594e45ef9 | CC BY 4.0, изменено |
 | village/vc_bags (мешки) | Burlap Bags | carlcapu9 | https://sketchfab.com/3d-models/burlap-bags-5d8a0e888c1246c788669749056c03d3 | CC BY 4.0, изменено |
 | village/vc_pots (кувшины) | Assorted Old Pots | Kigha | https://sketchfab.com/3d-models/assorted-old-pots-7795c6a5fa144bfcb1c33041c71eab00 | CC BY 4.0, изменено |

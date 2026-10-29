@@ -953,6 +953,8 @@ func _make_points() -> Array:
 						continue
 					for it in ter.scenes(Vector2i(cx, cy)):
 						if it["k"] == "plane" and nw < 4:
+							if nw == 0:   # the first one also at gameplay height with the player's plane, for scale
+								pts.append({"name": "wreck_play", "pos": (it["p"] as Vector2) + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
 							pts.append({"name": "wreck_scene%d" % nw, "pos": it["p"], "ground_dist": 230.0, "wait": 2.0})
 							nw += 1
 		if found.has("o_wreck"):
