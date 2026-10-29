@@ -134,10 +134,20 @@ func _gate(blown := false) -> void:
 		_box(M.DARK, Vector3(0.14, 8.0, 0.46), Vector3(0.0, GROUND - 0.4, zf - 0.1))
 		return
 	_box(M.DARK, Vector3(8.2, 8.6, 8.0), Vector3(0.0, GROUND - 0.6, S + 1.0))   # the passage, open now
-	for s: float in [-1.0, 1.0]:   # stubs of the gatehouse front either side
+	for s: float in [-1.0, 1.0]:   # stubs of the gatehouse front either side, torn off unevenly over the passage
 		var h := _r(13.0, 16.5)
-		_boxr(M.MUD, Vector3(2.6, h - 9.6, 8.6), Vector3(s * 4.0, 9.6 + (h - 9.6) * 0.5, S + 0.9), Basis(Vector3.BACK, s * _r(0.02, 0.08)))
-		_boxr(M.BRICK, Vector3(0.6, h - 10.4, 7.6), Vector3(s * 2.65, 9.6 + (h - 10.4) * 0.5, S + 0.9), Basis(Vector3.BACK, s * 0.05))
+		var path := PackedVector2Array()
+		var hs := PackedFloat32Array()
+		var sd := _rng.randf() * 30.0
+		for k in 9:
+			var f := float(k) / 8.0   # 0 against the bastion, 1 over the passage
+			path.append(Vector2(s * lerpf(5.4, 2.4, f), S + 0.9))
+			var fall := clampf(1.0 - pow(f, 1.3) * 0.75 + (_n1(f * 4.0, sd) - 0.5) * 0.3 * smoothstep(0.0, 0.25, f), 0.12, 1.0)
+			hs.append(9.6 + (h - 9.6) * fall)
+		if s < 0.0:
+			path.reverse()
+			hs.reverse()
+		_broken_end(M.MUD, path, hs, 4.3, 4.3, 0.0, 1.0, 9.4)
 	_box(M.CHAR, Vector3(0.75, 9.0, 0.75), Vector3(-4.4, GROUND - 0.5, zf + 0.15))
 	_boxr(M.CHAR, Vector3(0.75, 8.6, 0.75), Vector3(4.9, 4.6, zf + 0.9), Basis(Vector3.BACK, -0.22))
 	_boxr(M.CHAR, Vector3(6.4, 0.55, 0.75), Vector3(-2.2, 8.4, zf + 0.15), Basis(Vector3.BACK, -0.28))   # lintel snapped and sagging

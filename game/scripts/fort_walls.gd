@@ -108,22 +108,25 @@ func _wall_prof(p: Dictionary) -> PackedVector2Array:
 		Vector2(_w_out(p, hw * 0.35), hw * 0.35), Vector2(W_BO, 0.0)])
 
 
-## Section `w`: whole, or blown through the middle (a gap ~20 wide with stepped mud-brick ends, slabs thrown
-## both ways, a slumped cone of earth). Shape and dressing come from the section's own seed, so the two
-## stubs of a breach are the wall that stood there.
+## Section `w`: whole, or blown through the middle (a gap ~20 wide whose stubs crumble into it with torn,
+## irregular tops, slabs thrown both ways, a slumped cone of earth). Shape and dressing come from the
+## section's own seed, so the two stubs of a breach are the wall that stood there.
 func _wall(w: Array, broken: bool) -> void:
 	var a: Vector2 = w[1]
 	var len := a.distance_to(w[2])
 	var runs := [[0.0, 1.0]]
-	if broken:
-		var gh := minf(22.0, len * 0.55) * 0.5 / len
-		runs = [[0.0, 0.5 - gh], [0.5 + gh, 1.0]]
+	var gh := minf(22.0, len * 0.55) * 0.5 / len
+	if broken:   # the full wall stops BREAK_BACK short of the gap; _crumble carries it on, falling
+		runs = [[0.0, 0.5 - gh - BREAK_BACK / len], [0.5 + gh + BREAK_BACK / len, 1.0]]
 	var feats := _wall_feats(w)
 	for r: Array in runs:
 		_wall_run(w, r[0], r[1], broken)
-		var edge := (3.5 if broken else 1.5) / len
+		var edge := (3.5 + BREAK_BACK if broken else 1.5) / len
 		_wall_dress(w, feats, r[0] + edge, r[1] - edge)
 	if broken:
+		_rng.seed = hash(w[0]) + 9
+		_crumble(w, 0.5 - gh - BREAK_BACK / len, 1.0)
+		_crumble(w, 0.5 + gh + BREAK_BACK / len, -1.0)
 		_rng.seed = hash(w[0]) + 5
 		var c := _wall_at(w, 0.5)
 		var dv: Array = _wall_dir(w, 0.5)
@@ -304,30 +307,60 @@ func _buttress(c: Vector2, outv: Vector2, rb: float, hb: float) -> void:
 	_loft(M.MUD, base, plan, ys, 14, true)
 
 
+## How far back from the gap a breached section's full wall stops; its broken end (_crumble) falls from there
+const BREAK_BACK := 3.0
+## How far into the gap the broken end reaches past the gap's edge
+const BREAK_INTO := 6.5
+
+
+## Broken end of a breached section `w`: from t0 (where the full wall stops) `dir` (+1 towards larger t) over
+## BREAK_BACK + BREAK_INTO, the wall's own battered faces under a torn top that falls into the gap unevenly —
+## shoulders, notches and a slumped tongue, never regular steps — with clods and a joist on the broken top.
+func _crumble(w: Array, t0: float, dir: float) -> void:
+	var len := (w[1] as Vector2).distance_to(w[2])
+	var span := BREAK_BACK + BREAK_INTO
+	var n := 22
+	var sd := _rng.randf() * 30.0
+	var hw: float = _wall_prm(w, t0)["hw"]
+	var path := PackedVector2Array()
+	var hs := PackedFloat32Array()
+	for k in n + 1:
+		var s := float(k) / n
+		path.append(_wall_at(w, t0 + dir * s * span / len))
+		var fall := pow(s, 1.25) * 0.9
+		var rough := (_n1(s * 4.5, sd) - 0.5) * 0.42 + (_n1(s * 11.0, sd + 3.0) - 0.5) * 0.18
+		var f := clampf(1.0 - fall + rough * smoothstep(0.0, 0.18, s), 0.07, 1.0)
+		hs.append(maxf(hw * f, GROUND + 0.5))
+	if dir < 0.0:   # the sweep runs from the gap towards the wall either way: keep the path in t order
+		path.reverse()
+		hs.reverse()
+	_broken_end(M.MUD, path, hs, W_BI, W_BO, _w_slope(), float(w[3]))
+	for j in 7:   # clods and chipped bricks lying on the torn top
+		var s := _r(0.15, 0.95)
+		var k := clampi(roundi(s * n), 0, n)
+		var kk := k if dir > 0.0 else n - k
+		var p := path[kk]
+		var off: Vector2 = (_wall_dir(w, t0)[1] as Vector2) * _r(-1.6, 1.6)
+		var y := hs[kk] + 0.2
+		if _rng.randf() < 0.5:
+			_chunk(M.RUB_BRICK if _rng.randf() < 0.6 else M.RUB_PLASTER, _r(0.35, 0.7), Vector3(p.x + off.x, y, p.y + off.y))
+		else:
+			_shard(M.RUB_BRICK, Vector3(0.62, 0.3, 0.32), Vector3(p.x + off.x, y, p.y + off.y), _tumble(0.4), 6)
+	if _rng.randf() < 0.75:   # a joist of the walk snapped where the wall broke
+		var p := path[n / 2]
+		var d: Vector2 = _wall_dir(w, t0)[0]
+		_beam(Vector3(p.x, hs[n / 2] - 0.4, p.y), _r(2.4, 3.8), Vector3(d.x * dir, 0, d.y * dir).rotated(Vector3.UP, _r(-0.5, 0.5)),
+			_r(-0.2, 0.5))
+
+
 ## The hole of a blown wall section, `g` wide, in the section's own frame (x along, z the line's left normal;
-## `out` — which z side faces outwards): stepped mud-brick ends, skin of plaster peeled short, stone stumps,
-## slabs thrown out and in, snapped joists, a slumped cone of earth and scattered debris.
+## `out` — which z side faces outwards): stone stumps of the plinth, slabs thrown out and in, snapped joists, a
+## slumped cone of earth and scattered debris (the stubs' broken ends are _crumble's).
 func _breach(g: float, out: float) -> void:
-	for e: Vector2 in [Vector2(-g * 0.5, 1.0), Vector2(g * 0.5, -1.0)]:
-		for k in 5:
-			var hh := 13.4 * (0.95 - k * _r(0.13, 0.24)) - (_r(0.0, 2.5) if k > 0 else 0.0)
-			if hh < 1.0:
-				break
-			var th := 2.0 * (W_BO - (W_BO - W_TO) * hh / 13.4) - 0.6
-			var xx := e.x + e.y * (k * _r(0.9, 1.4) + 0.55)
-			var zc := _r(-0.3, 0.3)
-			_boxr(M.BRICK, Vector3(1.3, hh, th), Vector3(xx, hh * 0.5, zc), Basis(Vector3.UP, _r(-0.06, 0.06)) * Basis(Vector3.RIGHT, _r(-0.05, 0.05)))
-			var sh := hh * _r(0.7, 0.92)
-			_boxr(M.MUD, Vector3(1.35, sh, 0.5), Vector3(xx, sh * 0.5, out * (th * 0.5 + 0.15)), Basis.IDENTITY)
-			for j in 4:   # loose bricks on the broken top
-				_boxr(M.RUB_BRICK, Vector3(0.62, 0.3, 0.3), Vector3(xx + _r(-0.5, 0.5), hh + 0.15, _r(-th * 0.5, th * 0.5)), _tumble(0.4))
-			if _rng.randf() < 0.7:
-				var dir := Vector3(0, 0, out if e.y > 0.0 else -out).rotated(Vector3.UP, _r(-0.6, 0.6))
-				_beam(Vector3(xx + e.y * 0.4, hh - 0.6, zc + _r(-1.0, 1.0)), _r(2.0, 3.6), dir, _r(-0.3, 0.6))
 	var x := -g * 0.5 + 0.6
-	while x < g * 0.5 - 0.6:   # plinth stumps
+	while x < g * 0.5 - 0.6:   # plinth stumps, broken off unevenly
 		var sh := _r(GROUND + 0.4, GROUND + 2.2)
-		_boxr(M.STONE, Vector3(1.4, sh, 2.0 * W_BO + 0.6), Vector3(x, sh * 0.5, 0), Basis(Vector3.UP, _r(-0.1, 0.1)))
+		_shard(M.STONE, Vector3(1.6, sh, 2.0 * W_BO + 0.6), Vector3(x, sh * 0.5, 0), Basis(Vector3.UP, _r(-0.1, 0.1)), 8)
 		x += 1.4
 	_tint = Color(0.95, 0.9, 0.84)
 	_heap(M.MUD, Vector2(0.0, out * 2.5), Vector2(g * 0.5, 7.5), 4.2)   # the wall slumped into a cone of earth
@@ -335,8 +368,8 @@ func _breach(g: float, out: float) -> void:
 	_tint = Color.WHITE
 	for i in 6:   # big slabs thrown outwards and inwards
 		var sz := out * _r(5.0, 13.0) * (1.0 if i < 4 else -1.0)
-		_boxr(M.MUD if _rng.randf() < 0.7 else M.BRICK, Vector3(_r(3.0, 5.0), _r(0.8, 1.3), _r(4.0, 7.0)), Vector3(_r(-8.0, 8.0), GROUND + 0.2, sz), _tumble(0.35))
+		_shard(M.MUD if _rng.randf() < 0.7 else M.BRICK, Vector3(_r(3.0, 5.0), _r(0.8, 1.3), _r(4.0, 7.0)), Vector3(_r(-8.0, 8.0), GROUND + 0.2, sz), _tumble(0.35))
 	for i in 5:   # parapet chunks
-		_boxr(M.MUD, Vector3(_r(2.0, 3.4), 1.8, 1.3), Vector3(_r(-10.0, 10.0), GROUND + 0.5, out * _r(-6.0, 14.0)), _tumble(1.0))
+		_shard(M.MUD, Vector3(_r(2.0, 3.4), 1.8, 1.3), Vector3(_r(-10.0, 10.0), GROUND + 0.5, out * _r(-6.0, 14.0)), _tumble(1.0))
 	_rubble(Vector3(0, GROUND + 1.0, out * 3.0), 130, 11.0, 2.2)
 	_rubble(Vector3(0, GROUND, -out * 2.0), 60, 8.0, 1.8)

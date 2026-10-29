@@ -213,9 +213,16 @@ static func _pn(a: float, y: float, sd: float) -> float:
 
 # ---------- destruction kit ----------
 
-## Debris pile heaped in a cone around c: slabs, lumpy chunks, loose bricks and splinters, in the fort's
-## earthen materials.
+## Debris pile heaped in a cone around c: broken slabs of plaster and rammed earth, lumpy clods and stones,
+## chipped bricks and splinters, in the fort's earthen materials, half sunk into a low skirt of fines (crumbled
+## mud and dust) so the pile reads as one heap rather than blocks laid on the ground. No piece is a plain box:
+## at gameplay height raw boxes read as building blocks, not rubble.
 func _rubble(c: Vector3, n: int, spread: float, s: float) -> void:
+	if n >= 20:   # the fines the pieces lie in: a low, wide, lumpy skirt
+		var keep := _tint
+		_tint = keep * Color(0.92, 0.88, 0.84)
+		_heap(M.RUB_PLASTER, Vector2(c.x, c.z), Vector2(spread * 0.95, spread * 0.8), s * 0.9, c.y - 0.5, _rng.randf() * TAU)
+		_tint = keep
 	for i in n:
 		var a := _rng.randf() * TAU
 		var d := sqrt(_rng.randf()) * spread
@@ -223,14 +230,68 @@ func _rubble(c: Vector3, n: int, spread: float, s: float) -> void:
 		var p := c + Vector3(cos(a) * d, cone * s * 1.6 * _r(0.6, 1.3), sin(a) * d)
 		var t := _rng.randf()
 		if t < 0.22:
-			_boxr(M.RUB_PLASTER if _rng.randf() < 0.7 else M.RUB_BRICK, Vector3(_r(1.2, 2.6) * s, _r(0.35, 0.7), _r(1.0, 2.0) * s), p, _tumble(0.6))
+			_shard(M.RUB_PLASTER if _rng.randf() < 0.7 else M.RUB_BRICK, Vector3(_r(1.2, 2.6) * s, _r(0.35, 0.7), _r(1.0, 2.0) * s), p, _tumble(0.6))
 		elif t < 0.62:
 			var q := _rng.randf()
 			_chunk(M.RUB_PLASTER if q < 0.5 else (M.RUB_BRICK if q < 0.8 else M.RUB_STONE), _r(0.25, 0.7) * s, p)
 		elif t < 0.92:
-			_boxr(M.RUB_BRICK, Vector3(0.62, 0.3, 0.3), Vector3(p.x, c.y + (p.y - c.y) * 0.7 + 0.15, p.z), _tumble(0.5))
+			_shard(M.RUB_BRICK, Vector3(0.62, 0.3, 0.32), Vector3(p.x, c.y + (p.y - c.y) * 0.7 + 0.15, p.z), _tumble(0.5), 6)
 		else:
 			_boxr(M.WOOD, Vector3(_r(1.5, 3.5), 0.22, 0.32), p, _tumble(0.5))
+
+
+## Broken slab of size s (x, thickness y, z) centred at c, turned by b: an irregular outline of `n` points (a
+## ragged break, not a rectangle) in three rings — a narrower bottom, the full outline jittered in height, a
+## narrower top — so its edges are chipped and its faces uneven. Flat-shaded. Fallen plaster, rammed-earth
+## and parapet blocks, chipped bricks (n = 6 keeps a brick's shape).
+func _shard(m: int, s: Vector3, c: Vector3, b: Basis, n := 9) -> void:
+	var xf := _xf * Transform3D(b, c)
+	var hy := s.y * 0.5
+	var bot := []
+	var mid := []
+	var top := []
+	var a0 := _rng.randf() * TAU
+	for i in n:
+		var a := a0 + (float(i) + _r(-0.3, 0.3)) / n * TAU
+		var k := _r(0.62, 1.08) if n > 6 else _r(0.9, 1.05)
+		var q := Vector2(cos(a) * s.x * 0.5 * k, sin(a) * s.z * 0.5 * k)
+		if n <= 6:   # a brick: the outline pushed out to its corners
+			q = Vector2(signf(q.x) * maxf(absf(q.x), s.x * 0.36), signf(q.y) * maxf(absf(q.y), s.z * 0.3))
+		var yj := hy * _r(-0.3, 0.3)
+		bot.append(xf * Vector3(q.x * _r(0.7, 0.88), -hy + yj * 0.3, q.y * _r(0.7, 0.88)))
+		mid.append(xf * Vector3(q.x, yj, q.y))
+		top.append(xf * Vector3(q.x * _r(0.68, 0.86), hy + hy * _r(-0.35, 0.25), q.y * _r(0.68, 0.86)))
+	var o := xf.origin
+	for i in n:
+		var j := (i + 1) % n
+		_quad(m, bot[i], bot[j], mid[j], mid[i], o)
+		_quad(m, mid[i], mid[j], top[j], top[i], o)
+	for i in range(1, n - 1):
+		_tri(m, top[0], top[i], top[i + 1], o)
+		_tri(m, bot[0], bot[i + 1], bot[i], o)
+
+
+## Broken end of a rammed-earth wall along `path` (xz, from where it still stands full towards the gap),
+## heights hs (the top's centre at each path point, preview units above 0): the battered faces of the wall
+## (half bases bi inside, bo outside at the ground, their slope `slope` across per unit up) under a torn top
+## that rises and falls across the thickness and along the path. side — which way of the path's left normal is
+## outside; y0 — the foot (the ground by default, or the top of what the wall stands on). Closed at both ends.
+## One sweep in `m`.
+func _broken_end(m: int, path: PackedVector2Array, hs: PackedFloat32Array, bi: float, bo: float, slope: float,
+		side: float, y0 := GROUND - 0.6) -> void:
+	var profs := []
+	var sd := _rng.randf() * 40.0
+	for k in path.size():
+		var dh := maxf(hs[k] - y0, 0.6)
+		var hl := y0 + dh * (1.0 + (_n1(float(k) * 0.7, sd) - 0.5) * 0.3)
+		var hr := y0 + dh * (1.0 + (_n1(float(k) * 0.6, sd + 4.0) - 0.5) * 0.3)
+		var hm1 := y0 + dh * (1.0 + (_n1(float(k) * 0.9, sd + 8.0) - 0.5) * 0.22) + 0.25
+		var hm2 := y0 + dh * (1.0 + (_n1(float(k) * 1.1, sd + 12.0) - 0.5) * 0.22) + 0.15
+		var xi := -(bi - slope * (hl - y0))
+		var xo := bo - slope * (hr - y0)
+		profs.append(PackedVector2Array([Vector2(-bi, y0), Vector2(xi, hl), Vector2(lerpf(xi, xo, 0.33), hm1),
+			Vector2(lerpf(xi, xo, 0.68), hm2), Vector2(xo, hr), Vector2(bo, y0)]))
+	_sweep(m, path, profs, side, true)
 
 
 const _ICO_F := [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
@@ -250,6 +311,7 @@ func _chunk(m: int, s: float, p: Vector3) -> void:
 	for q: Vector3 in raw:
 		var u := q.normalized()
 		var k := 1.0 + 0.22 * sin(u.x * f.x + ph.x) + 0.2 * sin(u.y * f.y + ph.y) + 0.18 * sin(u.z * f.z + ph.z)
+		k *= _r(0.8, 1.12)   # each corner its own: no two chunks share the sines' smooth symmetry
 		v.append(_xf * (p + b * (Vector3(u.x, u.y * fl, u.z) * s * k)))
 	var c := _xf * p
 	for fc: Array in _ICO_F:

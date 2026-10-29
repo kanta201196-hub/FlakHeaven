@@ -495,7 +495,7 @@ func _tower(i: int, worn := false) -> void:
 	for k in 6:   # crown pieces at the foot
 		var a := out + _r(-0.9, 0.9)
 		var d := 12.5 + _r(1.0, 8.0)
-		_boxr(M.PLASTER, Vector3(_r(2.0, 3.2), 1.9, 1.3), Vector3(c.x + cos(a) * d, GROUND + 0.6, c.y + sin(a) * d), _tumble(0.9))
+		_shard(M.PLASTER, Vector3(_r(2.0, 3.2), 1.9, 1.3), Vector3(c.x + cos(a) * d, GROUND + 0.6, c.y + sin(a) * d), _tumble(0.9), 8)
 	for k in 4:   # what is left of the balconies
 		var a := out + _r(-0.7, 0.7)
 		var d := 13.0 + _r(1.0, 6.0)
@@ -557,18 +557,26 @@ func _tower_broken(i: int) -> void:
 		var la := out + t
 		var top := hb - _jag(la, c, out)
 		var p := c + _tp(i, la, top, -0.8)
-		_boxr(M.RUB_BRICK if _rng.randf() < 0.75 else M.RUB_PLASTER, Vector3(_r(1.4, 1.9), _r(0.7, 1.6), _r(1.0, 1.5)),
-			Vector3(p.x, top - 0.6, p.y), Basis(Vector3.UP, -la + _r(-0.25, 0.25)) * _tumble(0.25))
-		t += 0.13
-	for sgn: float in [-1.0, 1.0]:   # stepped brick on both faces of the blown gap
+		_shard(M.RUB_BRICK if _rng.randf() < 0.75 else M.RUB_PLASTER, Vector3(_r(1.4, 1.9), _r(0.7, 1.6), _r(1.0, 1.5)),
+			Vector3(p.x, top - 0.6, p.y), Basis(Vector3.UP, -la + _r(-0.25, 0.25)) * _tumble(0.25), 7)
+		t += _r(0.1, 0.17)
+	for sgn: float in [-1.0, 1.0]:   # the shell's torn ends crumble on into the blown gap, unevenly
 		var ea := out + sgn * gap * 0.5
-		var e := c + _tp(i, ea, 0.0, -1.0)
-		for k in 5:
-			var hh := hb * (0.52 - k * 0.09) + _r(-1.0, 1.0)
-			if hh < 1.5:
-				break
-			var p := Vector3(e.x - cos(out) * k * 0.4 + sgn * sin(out) * k * 0.9, hh * 0.5, e.y - sin(out) * k * 0.4 - sgn * cos(out) * k * 0.9)
-			_boxr(M.BRICK, Vector3(2.2, hh, 1.4), p, Basis(Vector3.UP, -ea + _r(-0.2, 0.2)) * Basis(Vector3.BACK, _r(-0.08, 0.08)))
+		var h0 := hb - _jag(ea, c, out)
+		var path := PackedVector2Array()
+		var hs := PackedFloat32Array()
+		var sd := _rng.randf() * 30.0
+		var n := 10
+		for k in n + 1:
+			var f := float(k) / n   # 0 just inside the shell's end, 1 well into the gap
+			var la := ea + sgn * (f * 0.42 - 0.08)
+			path.append(c + _tp(i, la, 0.0, -0.85))
+			var fall := clampf(1.0 - pow(f, 1.2) * 0.85 + (_n1(f * 5.0, sd) - 0.5) * 0.35 * smoothstep(0.0, 0.2, f), 0.08, 1.0)
+			hs.append(maxf(h0 * fall, TOWER_PL + 0.4))
+		if sgn < 0.0:   # the sweep's outside is the path's right: keep it walking the same way round
+			path.reverse()
+			hs.reverse()
+		_broken_end(M.BRICK, path, hs, 1.1, 1.1, 0.03, -1.0)
 	var fy := hb * 0.42
 	for k in 28:   # rubble floor inside
 		var p := c + _tp(i, float(k) / 28.0 * TAU, fy, -1.9)
@@ -582,7 +590,7 @@ func _tower_broken(i: int) -> void:
 	for k in 9:   # fallen crown pieces
 		var a := out + _r(-1.3, 1.3)
 		var d := 13.0 + _r(1.0, 11.0)
-		_boxr(M.PLASTER, Vector3(_r(2.0, 3.2), 1.9, 1.3), Vector3(c.x + cos(a) * d, GROUND + 0.6, c.y + sin(a) * d), _tumble(0.9))
+		_shard(M.PLASTER, Vector3(_r(2.0, 3.2), 1.9, 1.3), Vector3(c.x + cos(a) * d, GROUND + 0.6, c.y + sin(a) * d), _tumble(0.9), 8)
 	var o := Vector2.from_angle(out)
 	_tint = Color(0.95, 0.9, 0.84)
 	_heap(M.MUD, c + o * 13.5, Vector2(9.0, 6.0), 4.0, GROUND - 0.4, out + PI * 0.5)
