@@ -1576,25 +1576,71 @@ static func _heap(st: SurfaceTool, c: Vector2, r: float, rng: RandomNumberGenera
 	var col := T_RUBBLE.darkened(rng.randf_range(0.0, 0.08))
 	var hr := RandomNumberGenerator.new()
 	hr.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5))) + 7
-	_mound(st, c, Vector2(r * 1.05, r * 0.85), minf(0.013, r * 0.45), yaw, col, hr)
+	var mh := minf(0.013, r * 0.45)
+	_mound(st, c, Vector2(r * 1.05, r * 0.85), mh, yaw, col, hr)
 	for k in 2:
 		var p := c + Vector2.from_angle(rng.randf() * TAU) * r * rng.randf_range(0.9, 1.3)
 		var cc := BURNT if rng.randf() < 0.25 else col
-		_ob(st, p, rng.randf() * TAU, 0.0, 0.0, Vector3(0.008, 0.005, 0.006), cc, cc.lightened(0.05))
+		_clod(st, p, rng.randf() * TAU, Vector3(0.008, 0.005, 0.006), cc, cc.lightened(0.05))
 	for k in hr.randi_range(4, 8):   # loose bricks and clods
 		var p := c + Vector2.from_angle(hr.randf() * TAU) * r * hr.randf_range(0.7, 1.5)
 		var cc := col.darkened(hr.randf_range(-0.05, 0.12))
-		_ob(st, p, hr.randf() * TAU, 0.0, 0.0, Vector3(0.0036, 0.0022, 0.0026) * hr.randf_range(0.8, 1.4), cc, cc.lightened(0.06))
+		_clod(st, p, hr.randf() * TAU, Vector3(0.0036, 0.0022, 0.0026) * hr.randf_range(0.8, 1.4), cc, cc.lightened(0.06))
+	for k in hr.randi_range(7, 11):   # broken bricks and clods half buried in the heap's slopes
+		var d := sqrt(hr.randf()) * 0.8
+		var p := c + Vector2.from_angle(hr.randf() * TAU) * r * 0.85 * d
+		var sz := Vector3(0.0042, 0.0026, 0.0032) * hr.randf_range(0.8, 1.7)
+		var cc := BURNT if hr.randf() < 0.15 else col.darkened(hr.randf_range(-0.08, 0.1))
+		_clod(st, p, hr.randf() * TAU, sz, cc, cc.lightened(0.06), mh * (1.0 - d * d) * 0.85 - sz.y * 0.4)
 	if hr.randf() < 0.45:
 		var e := Vector2.from_angle(hr.randf() * TAU) * r * 0.8
 		_beam(st, c, 0.0, Vector3(-e.x, SINK + 0.003, -e.y), Vector3(e.x, SINK + hr.randf_range(0.006, 0.014), e.y), 0.002, WOOD_DARK)
 
 
-## Irregular mound of radii rad (x, z, turned by yaw) and height hgt: four jittered rings and a top, smooth-shaded, the base
-## ring a little under the ground; vertex colour darker low and in the hollows, lighter towards the top
+## Broken clod of mud brick at c (turned by yaw, size s as _ob's box): a chipped, uneven lump instead of a
+## box, whose clean edges read as building blocks at gameplay height. A seven-sided outline in three rings
+## (the foot sunk a little, a bulging middle, a smaller tilted top), each corner pushed in or out by a hash of
+## the place, so no generator is drawn (the village's rng stays as the boxes left it). Flat-shaded. y0 — the
+## foot's height above the ground (a clod lying on a heap's slope).
+static func _clod(st: SurfaceTool, c: Vector2, yaw: float, s: Vector3, side: Color, top: Color, y0 := 0.0) -> void:
+	var n := 7
+	var sd := float(absi(hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5)))) % 997)
+	var tilt := Vector2(_vn1(sd, 3.0) - 0.5, _vn1(sd, 5.0) - 0.5) * s.y * 0.6
+	var rings := [[], [], []]
+	var lv := [[0.82, -0.0008], [1.0, s.y * 0.45], [0.62, s.y]]
+	for i in n:
+		var a := (float(i) + (_vn1(sd + i * 1.7, 1.0) - 0.5) * 0.6) / n * TAU
+		var k := 0.7 + 0.45 * _vn1(sd + i * 2.3, 2.0)
+		var q := Vector2(cos(a) * s.x * 0.5 * k, sin(a) * s.z * 0.5 * k)
+		for li in 3:
+			var kk := float(lv[li][0]) * (0.9 + 0.2 * _vn1(sd + i * 3.1 + li, 4.0))
+			var y := float(lv[li][1])
+			if li == 2:
+				y += q.dot(tilt) / maxf(s.x, 0.0001) + (_vn1(sd + i * 0.9, 6.0) - 0.5) * s.y * 0.5
+			var w := c + (q * kk).rotated(yaw)
+			rings[li].append(Vector3(w.x, SINK + y0 + y, w.y))
+	st.set_smooth_group(-1)
+	for li in 2:
+		for i in n:
+			var j := (i + 1) % n
+			var v := [rings[li][i], rings[li][j], rings[li + 1][j], rings[li + 1][i]]
+			for kk: int in [0, 2, 1, 0, 3, 2]:
+				st.set_color(side if li == 0 else side.lerp(top, 0.5))
+				st.add_vertex(v[kk])
+	for i in range(1, n - 1):
+		for v: Vector3 in [rings[2][0], rings[2][i + 1], rings[2][i]]:
+			st.set_color(top)
+			st.add_vertex(v)
+
+
+## Rubble mound of radii rad (x, z, turned by yaw) and height hgt: a talus profile (steep foot, flatter crown) in six
+## rings whose outline wanders in a few lobes and whose points are jittered in and out, so it reads as slumped mud
+## brick rather than a smooth dome; smooth-shaded, the base ring a little under the ground; vertex colour darker
+## low and in the hollows, lighter towards the top. _heap lays broken clods into its slopes.
 static func _mound(st: SurfaceTool, c: Vector2, rad: Vector2, hgt: float, yaw: float, col: Color, hr: RandomNumberGenerator) -> void:
-	var nseg := 14
-	var lv := [[1.0, -0.002], [0.84, 0.3], [0.6, 0.64], [0.3, 0.9]]
+	var nseg := 20
+	var lv := [[1.0, -0.002], [0.88, 0.2], [0.72, 0.46], [0.54, 0.7], [0.34, 0.88], [0.15, 0.97]]
+	var ph := Vector3(hr.randf() * TAU, hr.randf() * TAU, hr.randf() * TAU)
 	var rings := []
 	var rcol := []
 	for li in lv.size():
@@ -1602,15 +1648,17 @@ static func _mound(st: SurfaceTool, c: Vector2, rad: Vector2, hgt: float, yaw: f
 		var rc := []
 		for i in nseg:
 			var a := TAU * (float(i) + 0.5 * float(li % 2)) / nseg
-			var k := float(lv[li][0]) * hr.randf_range(0.86, 1.1)
+			var lobe := 1.0 + 0.13 * sin(2.0 * a + ph.x) + 0.08 * sin(3.0 * a + ph.y) + 0.05 * sin(5.0 * a + ph.z)
+			var k := float(lv[li][0]) * lobe * hr.randf_range(0.9, 1.1)
 			var q := c + Vector2(cos(a) * rad.x * k, sin(a) * rad.y * k).rotated(yaw)
-			var y := SINK + float(lv[li][1]) * hgt * hr.randf_range(0.85, 1.15)
+			var y := SINK + float(lv[li][1]) * hgt * hr.randf_range(0.8, 1.2) * (0.85 + 0.15 * lobe)
 			ring.append(Vector3(q.x, y, q.y))
-			rc.append(col.darkened(hr.randf_range(0.0, 0.1) + 0.04 * (3 - li)).lightened(0.04 * li))
+			var hollow := hr.randf_range(0.0, 0.14)
+			rc.append(col.darkened(hollow + 0.04 * (lv.size() - 1 - li)).lightened(0.03 * li))
 		rings.append(ring)
 		rcol.append(rc)
 	var apex := Vector3(c.x, SINK + hgt, c.y) + Vector3(hr.randf_range(-0.15, 0.15) * rad.x, 0.0, hr.randf_range(-0.15, 0.15) * rad.y)
-	st.set_smooth_group(5)   # a soft heap of earth, not a faceted rock
+	st.set_smooth_group(5)   # a heap of earth and broken brick, not a faceted rock
 	for li in rings.size() - 1:
 		for i in nseg:
 			var j := (i + 1) % nseg
