@@ -410,6 +410,28 @@ def _hangar_normals(lo: bpy.types.Object, hi: bpy.types.Object, cn: np.ndarray, 
     return out
 
 
+def _glass_normals(lo: bpy.types.Object, cn: np.ndarray) -> np.ndarray:
+    """Canopy glass corners: smooth normals over the glass faces alone (area-weighted), so the dome shades as one
+    smooth piece. The evened copy smoothed the glass together with the skin round it and held the rim, which left
+    dark ragged blotches on the glass (its shader reflects the ground where a normal tilts down)."""
+    me = lo.data
+    gi = [i for i, m in enumerate(me.materials) if m and m.name.startswith("glass")]
+    if not gi:
+        return cn
+    out = cn.copy()
+    acc = np.zeros((len(me.vertices), 3))
+    for p in me.polygons:
+        if p.material_index in gi:
+            for v in p.vertices:
+                acc[v] += np.array(p.normal[:]) * p.area
+    for p in me.polygons:
+        if p.material_index in gi:
+            for li in p.loop_indices:
+                n = acc[me.loops[li].vertex_index]
+                out[li] = n / (np.linalg.norm(n) + 1e-12)
+    return out
+
+
 def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float, hi=None) -> tuple:
     """Shading normals of the low mesh: the smooth normals (hard past `sharp`) of an evened-out copy of the low
     mesh itself, handed over corner by corner (the copy has the same topology, so each corner gets the normal of
@@ -445,6 +467,7 @@ def shade_low(lo: bpy.types.Object, sharp: float, iters: int, factor: float, hi=
     cn[bad] = own[bad]
     if hi is not None:
         cn = _hangar_normals(lo, hi, cn, fn[lp])
+    cn = _glass_normals(lo, cn)
     lo.data.normals_split_custom_set([tuple(v) for v in cn])
     me = ev.data
     bpy.data.objects.remove(ev)
