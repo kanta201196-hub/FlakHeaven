@@ -16,12 +16,12 @@ class_name VillageHouses
 ## [file, size (x, height, depth) in metres, floors, weight]. Sizes come from village_houses.py's printout.
 const VARIANTS := [
 	["vh_h49", Vector3(14.01, 5.33, 11.99), 1, 0.35],   # big L-shaped house on a stone plinth, beam ends
-	["vh_h50a", Vector3(8.49, 6.79, 8.08), 2, 1.0],   # L-plan, upper room, roof terrace, mud stair (2654 tris)
-	["vh_h50b", Vector3(9.57, 6.50, 4.25), 2, 1.0],   # two-storey tower block and a terraced wing (2500 tris)
-	["vh_h50c", Vector3(8.51, 3.77, 8.08), 1, 1.0],   # square, deep loggia on two posts (1996 tris)
-	["vh_h50d", Vector3(7.78, 3.65, 5.64), 1, 1.0],   # two rooms on a stone plinth (1648 tris)
-	["vh_h50e", Vector3(8.51, 3.75, 4.26), 1, 1.0],   # long, veranda on four posts (1980 tris)
-	["vh_h50f", Vector3(8.50, 6.84, 8.08), 2, 0.7],   # two-storey, timber gallery and balcony (2808 tris)
+	["vh_h50a", Vector3(8.49, 6.79, 8.08), 2, 1.0],   # L-plan, upper room, roof terrace, mud stair (2881 tris)
+	["vh_h50b", Vector3(9.57, 6.50, 4.25), 2, 1.0],   # two-storey tower block and a terraced wing (2679 tris)
+	["vh_h50c", Vector3(8.51, 3.77, 8.08), 1, 1.0],   # square, deep loggia on two posts (2223 tris)
+	["vh_h50d", Vector3(7.78, 3.65, 5.64), 1, 1.0],   # two rooms on a stone plinth (1600 tris)
+	["vh_h50e", Vector3(8.51, 3.75, 4.26), 1, 1.0],   # long, veranda on four posts (2183 tris)
+	["vh_h50f", Vector3(8.50, 6.84, 8.08), 2, 0.7],   # two-storey, timber gallery and balcony (3083 tris)
 	["vh_h51", Vector3(9.00, 3.48, 8.14), 1, 0.8],      # small house, open pergola and a cloth awning
 ]
 const WELL := 8                      ## variant index of the yard well (hand pump on a slab, model 71)
@@ -63,8 +63,9 @@ const TROUGH := 17
 const TENT := 18                     ## TENT, TENT + 1, TENT + 2: the three cloth colours
 const TANDOOR := 21
 const RUGFRAME := 22
-## Yard and square trees: the biome's tree cards (BiomeProps._lite_tree, 6 triangles) in place of the old stacked
-## boxes. The cards have the full model's size, width 1 on X/Z, so a record's scale is the crown's width in old units
+## Yard, square and orchard trees: the biome's trees in place of the old stacked boxes that read as stars from
+## above — the full model on "Max", the camera-facing card below it (BiomeProps.tree_mesh), as the biome draws
+## them. Both have the full model's size, width 1 on X/Z, so a record's scale is the crown's width in old units
 const ORCHARD := 23
 const PALM := 24
 const TREE_KINDS := {ORCHARD: "orchard", PALM: "palm"}
@@ -72,10 +73,10 @@ const TREE_KINDS := {ORCHARD: "orchard", PALM: "palm"}
 ## them): [file, size (x, height above ground, depth) in metres]. Variant index = OASIS0 + row. Each is one mesh
 ## with one baked weathered adobe material, like the kishlak's h50 houses.
 const OASIS := [
-	["oh_a", Vector3(8.00, 3.79, 7.09)], # rooms behind a deep ayvan on three posts, vine trellis (4049 tris)
-	["oh_b", Vector3(7.85, 3.66, 7.33)], # L-plan round a corner ayvan, roof stair, bread oven (3141 tris)
-	["oh_c", Vector3(8.60, 3.81, 6.26)], # long house, ayvan on four posts under a grapevine (4345 tris)
-	["oh_d", Vector3(7.09, 6.24, 6.97)], # two storeys, summer ayvan on the roof, porch below (3903 tris)
+	["oh_a", Vector3(7.93, 3.79, 7.09)], # rooms behind a deep ayvan on three posts, vine trellis (4228 tris)
+	["oh_b", Vector3(7.75, 3.66, 7.33)], # L-plan round a corner ayvan, roof stair, bread oven (3392 tris)
+	["oh_c", Vector3(8.58, 3.81, 6.26)], # long house, ayvan on four posts under a grapevine (4572 tris)
+	["oh_d", Vector3(7.11, 6.24, 6.97)], # two storeys, summer ayvan on the roof, porch below (4106 tris)
 	["oh_cistern", Vector3(5.10, 3.83, 6.72)], # covered cistern: mud-brick dome, portal, trough (1546 tris)
 	["oh_pergola", Vector3(5.96, 3.11, 4.29)], # free grapevine pergola over a clay platform (3249 tris)
 ]
@@ -90,12 +91,17 @@ const NO_SHADOW := [RUG]
 ## «Мало» (props 0, preset «Низкое»): yard and market clutter under ~3 m is left out. Each kind is a few pixels at
 ## gameplay height but one draw call per village; the tents, stalls, awnings and rug frames keep the market
 const LOW_SKIP := [CART, BAGS, POTS, RUG, HAY, WOODPILE, TROUGH, TANDOOR]
+## Strength of the warm bounce from the sunlit ground into the houses' shaded walls (bounce.gdshaderinc): the
+## south and east faces the camera sees are in shade and read near black under the sky ambient alone
+const BOUNCE := 0.5
+const BAKED_SHADER := preload("res://shaders/adobe_baked.gdshader")
 ## Fort shader terms in model metres (the fort's are in preview units of a far taller wall)
 const GRIME := 1.5
 const BLEACH := 2.8
 
 static var _meshes := {}             # variant index → ArrayMesh with its surfaces' materials set (main thread only)
 static var _mats := {}
+static var _flora_props: BiomeProps = null   # tree meshes (_flora)
 
 
 ## Model variant for a lot of lx × lz (any units) with `floors` floors: the closest footprint shape among the
@@ -169,9 +175,35 @@ static func attach(parent: Node3D, homes: Array, unit := AdobeBuild.V_UNIT, grou
 		mmi.multimesh = mm
 		if NO_SHADOW.has(v) or (props == 0 and _small(v)) or (props == 1 and (LOW_SKIP.has(v) or v == WELL)):
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif TREE_KINDS.has(v) and props >= Settings.GFX_MAX:
+			# "Max": the full tree casts its shadow through the crossed cards (as BiomeProps.apply): the leaf
+			# cards of the full model in the shadow pass cost ~10k triangles a tree for the same dappled shape
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var sm := MultiMesh.new()
+			sm.transform_format = MultiMesh.TRANSFORM_3D
+			sm.mesh = _tree_shadow(v)
+			sm.instance_count = mm.instance_count
+			for i in mm.instance_count:
+				sm.set_instance_transform(i, mm.get_instance_transform(i))
+			var sh := MultiMeshInstance3D.new()
+			sh.multimesh = sm
+			sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+			parent.add_child(sh)
 		parent.add_child(mmi)
 		tris += _tris(mesh) * by[v].size()
 	return tris
+
+
+## Shadow-only crossed cards of a tree kind for the "Max" preset (main thread only)
+static func _tree_shadow(v: int) -> Mesh:
+	return _flora().tree_mesh(TREE_KINDS[v], true)
+
+
+## The BiomeProps the tree meshes come from: one for all villages, so each tree kind loads once
+static func _flora() -> BiomeProps:
+	if _flora_props == null:
+		_flora_props = BiomeProps.new(null)
+	return _flora_props
 
 
 ## Clutter, the yard well and the tree cards: the models BiomeProps would call small (no house; the oasis
@@ -215,13 +247,12 @@ static func _tris(mesh: ArrayMesh) -> int:
 
 
 ## Mesh of a variant with the fort's materials on its surfaces (classes by surface material name); textured props
-## keep their own texture, matte; trees are the biome's tree cards
+## keep their own texture, matte; trees are the biome's trees for the current preset (full model or card)
 static func _mesh(v: int) -> ArrayMesh:
 	if _meshes.has(v):
 		return _meshes[v]
-	if TREE_KINDS.has(v):
-		_meshes[v] = BiomeProps.new(null)._lite_tree(TREE_KINDS[v]) as ArrayMesh
-		return _meshes[v]
+	if TREE_KINDS.has(v):   # not cached here: the mesh follows the preset (BiomeProps caches both kinds)
+		return _flora().tree_mesh(TREE_KINDS[v]) as ArrayMesh
 	var file := WELL_FILE if v == WELL else _file(v)
 	var path := DIR + file + ".glb"
 	var mesh: ArrayMesh = null
@@ -235,10 +266,17 @@ static func _mesh(v: int) -> ArrayMesh:
 		for si in mesh.get_surface_count():
 			var m := mesh.surface_get_material(si)
 			if m is StandardMaterial3D and m.resource_name.begins_with("adobe_"):
-				var b := m as StandardMaterial3D   # a baked adobe house: its albedo, roughness and relief are final
-				b.metallic = 0.0
-				b.metallic_specular = 0.25
-				b.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+				# a baked adobe house: its albedo, roughness and relief are final; the same textures through
+				# adobe_baked.gdshader, which adds the warm sand bounce into the shaded walls (BOUNCE)
+				var b := m as StandardMaterial3D
+				var sm := ShaderMaterial.new()
+				sm.shader = BAKED_SHADER
+				sm.resource_name = b.resource_name
+				sm.set_shader_parameter("albedo_tex", b.albedo_texture)
+				sm.set_shader_parameter("rough_tex", b.roughness_texture)
+				sm.set_shader_parameter("normal_tex", b.normal_texture)
+				sm.set_shader_parameter("bounce", BOUNCE)
+				mesh.surface_set_material(si, sm)
 				continue
 			if m is StandardMaterial3D and not m.resource_name.begins_with("vh_"):
 				var t := m as StandardMaterial3D   # a prop's own texture (graded in village_props.py): matte, both sides
@@ -295,6 +333,7 @@ static func material(cls: String) -> Material:
 		sm.set_shader_parameter("bleach", BLEACH)
 		sm.set_shader_parameter("roof_clean", 1.0)
 		sm.set_shader_parameter("normal_depth", 0.0)   # no relief: at 40 px it adds nothing, and on the Low preset the models' tangents blew it out to white
+		sm.set_shader_parameter("bounce", BOUNCE if cls != "wood" else 0.0)
 		mat = sm
 	else:   # procedural wear and dust over the flat colour (Kanta 26.10: no flat even paint); model units are metres
 		mat = FortBuild.flat_material(FLAT.get(cls, FLAT["cloth"]), 1.0, 1.0, 0.0 if cls == "dark" else 1.0)   # no dust in the dark openings

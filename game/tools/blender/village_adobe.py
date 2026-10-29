@@ -28,6 +28,7 @@ import math
 import os
 import random
 import sys
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -53,7 +54,7 @@ CLASSES = {
     "wood": (FORT / "wood_color.jpg", (0.38, 0.33, 0.28), 2.2),
     "roof": (GROUND / "clay_albedo.jpg", (0.6, 0.52, 0.42), 3.5),
     "dark": (None, (0.075, 0.064, 0.055), 1.0),
-    "straw": (None, (0.68, 0.58, 0.38), 1.0),
+    "straw": (None, (0.74, 0.58, 0.31), 1.0),
     "clay": (None, (0.6, 0.38, 0.25), 1.0),
     "rug_r": (None, (0.52, 0.17, 0.12), 1.0),
     "rug_b": (None, (0.2, 0.24, 0.36), 1.0),
@@ -399,7 +400,17 @@ def chimney(c, h=0.7):
 
 
 def hay(c, s, seed):
-    lump("straw", c, s, seed, n=12, rings=4, rough=0.16)
+    """A heap of loose hay on a roof: a soft, rounded loaf (many rings, little jitter: the old coarse 12-gon
+    read as a crumpled sheet) with a few flat tufts spilled round its foot"""
+    lump("straw", c, s, seed, n=16, rings=6, rough=0.06)
+    rr = random.Random(seed + 7)
+    for k in range(3):
+        a = rr.uniform(0, 2 * math.pi)
+        d = rr.uniform(0.4, 0.55)
+        p = (c[0] + math.cos(a) * s[0] * d, c[1] + math.sin(a) * s[1] * d, c[2])
+        w = rr.uniform(0.35, 0.55)
+        lump("straw", p, (w, w * rr.uniform(0.6, 0.9), rr.uniform(0.08, 0.14)), seed + 20 + k, n=9, rings=3,
+             rough=0.2)
 
 
 def rug_flat(c, s, rot, cls):
@@ -687,6 +698,12 @@ SB = np.array([0.55, 0.43, 0.31], np.float32)    # mud brick under the plaster
 MORTAR = np.array([0.46, 0.38, 0.3], np.float32)
 DIRT = np.array([0.3, 0.24, 0.18], np.float32)
 DUST = np.array([0.7, 0.62, 0.5], np.float32)
+# dry straw (hay on the roofs): sun-bleached gold on top, warm tan strands, deep brown where it is packed and
+# shaded; a muted gold, not lemon, under the game's strong sun. Kept apart from the dust and grime, whose
+# grey-beige turned the old pale yellow khaki-green in game light
+STRAW_LIT = np.array([0.8, 0.64, 0.38], np.float32)
+STRAW_MID = np.array([0.63, 0.47, 0.26], np.float32)
+STRAW_DEEP = np.array([0.36, 0.25, 0.13], np.float32)
 
 
 def make_layers(ob, tint, seed, loss=1.0):
@@ -788,10 +805,17 @@ def make_layers(ob, tint, seed, loss=1.0):
         wood = part == WOOD
         grey = lum * np.array([1.02, 0.98, 0.92], np.float32) * 1.15
         col = np.where(wood[:, None], col * (1 - 0.35 * upf[:, None]) + grey * (0.35 * upf)[:, None], col)
-        # straw strands, faded rug stripes, clay and metal
+        # straw: strands laid roughly one way (stretched noise), tufts, the packed underside deep brown
         straw = part == STRAW
         sn = TP.fbm(Pm * np.array([3.0, 3.0, 1.0], np.float32), 6.0, seed + 12, 3)
-        col = np.where(straw[:, None], col * (0.75 + 0.5 * sn)[:, None], col)
+        strand = TP.fbm(Pm * np.array([9.0, 1.2, 4.0], np.float32), 5.0, seed + 15, 3)
+        tuft = TP.fbm(Pm, 1.6, seed + 16, 2)
+        lit = np.clip(0.35 + 0.65 * upf + 0.35 * (tuft - 0.5), 0.0, 1.0)
+        sc = STRAW_MID * (1 - lit[:, None]) + STRAW_LIT * lit[:, None]
+        sc = sc * (0.7 + 0.6 * strand)[:, None] * (0.88 + 0.24 * sn)[:, None]
+        deep = np.clip((0.25 - N[:, 2]) * 1.2, 0.0, 0.7)   # the overhanging, packed underside
+        sc = sc * (1 - deep[:, None]) + STRAW_DEEP * deep[:, None]
+        col = np.where(straw[:, None], sc, col)
         rug = (part == RUG_R) | (part == RUG_B)
         ru = np.einsum("ij,ij->i", Pm, b)
         stripe = (np.sin(ru * 18.0) > 0.55) | (np.abs(np.sin(ru * 4.0)) > 0.93)
@@ -799,11 +823,12 @@ def make_layers(ob, tint, seed, loss=1.0):
         col = np.where(rug[:, None], rugc * 0.92 + 0.04, col)
         # cavity grime from AO, sun-bleached tops, dust on what faces up
         cav = 1.0 - AO
-        col = col * (1 - 0.45 * cav[:, None]) + DIRT * (0.45 * cav)[:, None]
+        grime = np.where(straw[:, None], STRAW_DEEP, DIRT)   # straw darkens warm in its hollows, not grey
+        col = col * (1 - 0.45 * cav[:, None]) + grime * (0.45 * cav)[:, None]
         bleach = upf * (part != DARK) * 0.12
         col = col * (1 + bleach[:, None]) + 0.02 * bleach[:, None]
         dust = upf * np.clip(cav * 1.4 + (TP.fbm(Pm, 1.2, seed + 13, 3) - 0.5) * 0.6, 0, 0.4)
-        dust = dust * ((part != PLASTER) & (part != ROOF)) + 0.08 * (part == DARK)
+        dust = dust * ((part != PLASTER) & (part != ROOF) & ~straw) + 0.08 * (part == DARK)
         col = col * (1 - dust[:, None]) + DUST * dust[:, None]
         col = col * (0.6 + 0.4 * AO ** 0.8)[:, None]
         rough = np.select([plaster, part == BRICK, part == STONE, wood, part == ROOF, part == DARK, straw,
@@ -830,7 +855,7 @@ def part_of(m):
 def build(name, out, size):
     """Model one house, bake its weathered atlas and export vh_<name>.glb; returns (size, triangles)"""
     H.reset(True)
-    R.seed(hash(name) & 0xFFFF)
+    R.seed(zlib.crc32(name.encode()) & 0xFFFF)   # stable across runs (str hash() is salted per process)
     HOUSES[name]()
     ob = assemble("vh_" + name)
     dims, zmin = fit(ob, TARGET[name])

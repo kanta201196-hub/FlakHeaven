@@ -13,6 +13,8 @@ const WATER := Color(0.3, 0.4, 0.42)     # вода в пруду оазиса
 
 static var _cache := {}
 static var _mat: ShaderMaterial
+## Warm bounce from the sunlit ground into the shaded sides of the walls (adobe.gdshader, bounce.gdshaderinc)
+const BOUNCE := 0.35
 
 
 ## Material of the village and oasis meshes (adobe.gdshader): clay from the CC0 ground set in three world
@@ -27,6 +29,7 @@ static func material() -> ShaderMaterial:
 	if ResourceLoader.exists(p):
 		_mat.set_shader_parameter("clay_tex", load(p))
 	_mat.set_shader_parameter("albedo", Color(1.0, 0.95, 0.88))
+	_mat.set_shader_parameter("bounce", BOUNCE)
 	RoadTex.apply_adobe(_mat)
 	return _mat
 
@@ -927,7 +930,9 @@ static func village_at(variant: int, water: Dictionary) -> Array:
 	_cmx.unlock()
 	if not have.is_empty():
 		return have
-	var out := [village_core(variant, water), village_edge(variant, water), village_homes(variant, water)]
+	var trees := []
+	var edge := village_edge(variant, water, trees)
+	var out := [village_core(variant, water), edge, village_homes(variant, water) + trees]
 	_cmx.lock()
 	if _icache.size() > 12:
 		_icache.clear()
@@ -1028,15 +1033,21 @@ static var edge_log_on := false   # проверка S9-07/S9-08 (tools/village_
 static var edge_log := []         # ["garden", c, h, yaw] | ["trench", a, b] | ["pit", c] | ["post", c], старые единицы
 
 
-static func village_edge(variant: int, water := {}) -> ArrayMesh:
+## The outskirts mesh of variant at its water (see above). trees — an Array to append the orchards' tree records
+## to (VillageHouses.attach records, old units), or null when only the mesh is wanted
+static func village_edge(variant: int, water := {}, trees = null) -> ArrayMesh:
 	var key := "village%d" % variant
 	village(variant)
 	_cmx.lock()
 	var edge: Array = _vcache.get(key + "_edge", [])
 	var dry: ArrayMesh = _vcache.get(key + "_edge_dry") if water.is_empty() else null
+	var dry_trees: Array = _vcache.get(key + "_edge_dry_trees", [])
 	_cmx.unlock()
 	if dry != null and not edge_log_on:
+		if trees != null:
+			(trees as Array).append_array(dry_trees)
 		return dry
+	var tr := []   # the orchards' trees as model records (VillageHouses.ORCHARD), not boxes
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7919 * (variant + 1)
 	rng.state = int(edge[1])
@@ -1060,7 +1071,7 @@ static func village_edge(variant: int, water := {}) -> ArrayMesh:
 		if edge_log_on:
 			edge_log.append(["garden", c, h, yaw])
 		if rng.randf() < 0.55:
-			_orchard(st, c, h, yaw, rng)
+			_orchard(st, c, h, yaw, rng, tr)
 		else:
 			_field(st, c, h, yaw, rng)
 	_defence(st, variant, rng, water)
@@ -1068,7 +1079,10 @@ static func village_edge(variant: int, water := {}) -> ArrayMesh:
 	if water.is_empty():
 		_cmx.lock()
 		_vcache[key + "_edge_dry"] = m
+		_vcache[key + "_edge_dry_trees"] = tr
 		_cmx.unlock()
+	if trees != null:
+		(trees as Array).append_array(tr)
 	return m
 
 
@@ -1242,9 +1256,7 @@ static func _t_wall(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vect
 			var y0 := tops[k] if k == 0 else tops[k] * wr.randf_range(0.25, 0.45)
 			pts.append([f0, y0])
 		if ragged:
-			pts.append([(f0 + f1) * 0.5, tops[k] * wr.randf_range(0.9, 1.04)])
-			if k < n - 1 and tops[k + 1] >= 0.0:
-				pts.append([f1, minf(tops[k], tops[k + 1]) * wr.randf_range(0.7, 0.95)])
+			_ragged_top(pts, f0, f1, len, h, tops, k, wr)
 		else:
 			var m := maxi(1, int(len / WALL_SEG))
 			for i in range(1, m):
@@ -1255,7 +1267,54 @@ static func _t_wall(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vect
 	if not pts.is_empty():
 		runs.append(pts)
 	for r: Array in runs:
-		_wall_run(st, c, yaw, a, b, t, r, col)
+		_wall_run(st, c, yaw, a, b, t, r, col, true, ragged)
+
+
+## Broken top of piece k (shares f0…f1 of a wall `len` long, full height h) of a ragged wall, appended to pts:
+## points at irregular spacing whose height follows the pieces' levels (tops, eased from one piece to the next)
+## under three octaves of noise, with V-shaped bites and sheer breaks where a block of mud brick came away. The
+## old outline peaked in every piece's middle and dipped at every joint: a regular saw that read as stair steps.
+## Only wr (the wall's own generator) is drawn. The piece's end point is added when another piece follows.
+static func _ragged_top(pts: Array, f0: float, f1: float, len: float, h: float, tops: PackedFloat32Array, k: int,
+		wr: RandomNumberGenerator) -> void:
+	var n := tops.size()
+	var prev := tops[k - 1] if k > 0 and tops[k - 1] >= 0.0 else tops[k]
+	var next := tops[k + 1] if k < n - 1 and tops[k + 1] >= 0.0 else tops[k]
+	var sd := wr.randf() * 40.0
+	var f := f0
+	while true:
+		f += wr.randf_range(0.003, 0.008) / len
+		if f >= f1 - 0.002 / len:
+			break
+		var u := (f - f0) / (f1 - f0)
+		var lv := lerpf((prev + tops[k]) * 0.5, tops[k], smoothstep(0.0, 0.5, u)) if u < 0.5 \
+			else lerpf(tops[k], (tops[k] + next) * 0.5, smoothstep(0.5, 1.0, u))
+		var d := f * len
+		var y := lv + (_vn1(d / 0.009, sd) - 0.5) * 0.4 * h + (_vn1(d / 0.0032, sd + 5.0) - 0.5) * 0.14 * h \
+			+ (_vn1(d / 0.0013, sd + 9.0) - 0.5) * 0.05 * h   # the crumbled lip of each brick course
+		var roll := wr.randf()
+		if roll < 0.12:   # a bite: the top dips sharply and climbs back
+			pts.append([f, clampf(y * wr.randf_range(0.45, 0.7), h * 0.15, h)])
+			continue
+		if roll < 0.22:   # a sheer break: a near-vertical edge between two levels
+			var y2 := y * wr.randf_range(0.65, 0.85) if wr.randf() < 0.5 else minf(y * wr.randf_range(1.15, 1.35), h)
+			pts.append([f, clampf(y, h * 0.15, h)])
+			f += 0.0009 / len
+			pts.append([f, clampf(y2, h * 0.15, h)])
+			continue
+		pts.append([f, clampf(y, h * 0.15, h)])
+	if k < n - 1 and tops[k + 1] >= 0.0:
+		pts.append([f1, clampf((tops[k] + next) * 0.5 * wr.randf_range(0.85, 1.0), h * 0.15, h)])
+
+
+## Smooth value noise, 0…1, of one coordinate and a seed: no generator, so it is the same in any thread and order
+static func _vn1(x: float, sd: float) -> float:
+	var i := floorf(x)
+	var t := x - i
+	t = t * t * (3.0 - 2.0 * t)
+	var a := sin((i + sd * 17.13) * 12.9898 + 4.1) * 43758.5453
+	var b := sin((i + 1.0 + sd * 17.13) * 12.9898 + 4.1) * 43758.5453
+	return lerpf(a - floorf(a), b - floorf(b), t)
 
 
 ## One unbroken stretch of a compound wall: pts — [share of a→b, height] along its top. Sections of the
@@ -1267,7 +1326,10 @@ const DAMP := 0.0055       ## the damp, dirtier foot of a wall: this high above 
 const WALL_SEG := 0.026    ## an intact wall's eroded top: one height point per this length, old units (~2.4 m)
 
 
-static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vector2, t: float, pts: Array, col: Color, ext := true) -> void:
+## broken — a ruined wall's torn top (ragged _t_wall): no rounded coping, the two faces broken off at different
+## heights that change along the wall and a low ridge off the middle, flat-shaded, so the top reads as snapped
+## mud brick rather than a smooth roll following the outline.
+static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Vector2, t: float, pts: Array, col: Color, ext := true, broken := false) -> void:
 	if pts.size() < 2:
 		return
 	var len := a.distance_to(b)
@@ -1275,7 +1337,8 @@ static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Ve
 	var nrm := dir.orthogonal()
 	var damp := col.darkened(0.3)
 	var top := col.lightened(0.06)
-	var crest := col.lightened(0.14)
+	var crest := col.lightened(0.14) if not broken else col.lightened(0.03)   # a torn top: no bleached crest
+	var sd := float(absi(hash(Vector2i(roundi(a.x * 1e5), roundi(b.y * 1e5)))) % 991)
 	var secs := []   # per point: [left rows, right rows] of Vector3, bottom to crest
 	for i in pts.size():
 		var f: float = pts[i][0]
@@ -1288,12 +1351,22 @@ static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Ve
 		var o := a + dir * along
 		var yd := minf(DAMP, y * 0.4)
 		var hw := [t * 0.5, t * 0.5, lerpf(t * 0.5, t * WALL_TAPER * 0.5, yd / maxf(y, 0.0001)), t * WALL_TAPER * 0.5, 0.0]
-		var hy := [0.0, SINK, SINK + yd, SINK + y, SINK + y + t * COPING]
+		var ys := [y, y]   # each face's broken height
+		var ridge := t * COPING
+		var off := 0.0     # the ridge's offset across the wall
+		if broken:
+			var u := _vn1(along / 0.0024, sd) - 0.5
+			var drop := y * 0.07 * (0.4 + _vn1(along / 0.0041, sd + 3.0))
+			ys = [y - drop * (0.5 + u), y - drop * (0.5 - u)]
+			ridge = t * 0.04 * _vn1(along / 0.0017, sd + 6.0)
+			off = (_vn1(along / 0.0033, sd + 9.0) - 0.5) * t * WALL_TAPER * 0.5
 		var side := []
-		for s: float in [-1.0, 1.0]:
+		for si in 2:
+			var s := -1.0 if si == 0 else 1.0
+			var hy := [0.0, SINK, SINK + yd, SINK + float(ys[si]), SINK + y + ridge]
 			var rows := []
 			for j in 5:
-				var q := c + (o + nrm * s * float(hw[j])).rotated(yaw)
+				var q := c + (o + nrm * (s * float(hw[j]) if j < 4 else off)).rotated(yaw)
 				rows.append(Vector3(q.x, float(hy[j]), q.y))
 			side.append(rows)
 		secs.append(side)
@@ -1303,7 +1376,8 @@ static func _wall_run(st: SurfaceTool, c: Vector2, yaw: float, a: Vector2, b: Ve
 			var p: Array = secs[i][s]
 			var q: Array = secs[i + 1][s]
 			for j in 4:
-				st.set_smooth_group(7 if j == 3 else -1)   # the coping is rounded: smooth across its crest
+				# the coping is rounded: smooth across its crest; a torn top keeps its facets
+				st.set_smooth_group(7 if j == 3 and not broken else -1)
 				var v := [p[j], q[j], q[j + 1], p[j + 1]]
 				var cs := [cols[j], cols[j], cols[j + 1], cols[j + 1]]
 				if s == 0:
@@ -1502,25 +1576,71 @@ static func _heap(st: SurfaceTool, c: Vector2, r: float, rng: RandomNumberGenera
 	var col := T_RUBBLE.darkened(rng.randf_range(0.0, 0.08))
 	var hr := RandomNumberGenerator.new()
 	hr.seed = hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5))) + 7
-	_mound(st, c, Vector2(r * 1.05, r * 0.85), minf(0.013, r * 0.45), yaw, col, hr)
+	var mh := minf(0.013, r * 0.45)
+	_mound(st, c, Vector2(r * 1.05, r * 0.85), mh, yaw, col, hr)
 	for k in 2:
 		var p := c + Vector2.from_angle(rng.randf() * TAU) * r * rng.randf_range(0.9, 1.3)
 		var cc := BURNT if rng.randf() < 0.25 else col
-		_ob(st, p, rng.randf() * TAU, 0.0, 0.0, Vector3(0.008, 0.005, 0.006), cc, cc.lightened(0.05))
+		_clod(st, p, rng.randf() * TAU, Vector3(0.008, 0.005, 0.006), cc, cc.lightened(0.05))
 	for k in hr.randi_range(4, 8):   # loose bricks and clods
 		var p := c + Vector2.from_angle(hr.randf() * TAU) * r * hr.randf_range(0.7, 1.5)
 		var cc := col.darkened(hr.randf_range(-0.05, 0.12))
-		_ob(st, p, hr.randf() * TAU, 0.0, 0.0, Vector3(0.0036, 0.0022, 0.0026) * hr.randf_range(0.8, 1.4), cc, cc.lightened(0.06))
+		_clod(st, p, hr.randf() * TAU, Vector3(0.0036, 0.0022, 0.0026) * hr.randf_range(0.8, 1.4), cc, cc.lightened(0.06))
+	for k in hr.randi_range(7, 11):   # broken bricks and clods half buried in the heap's slopes
+		var d := sqrt(hr.randf()) * 0.8
+		var p := c + Vector2.from_angle(hr.randf() * TAU) * r * 0.85 * d
+		var sz := Vector3(0.0042, 0.0026, 0.0032) * hr.randf_range(0.8, 1.7)
+		var cc := BURNT if hr.randf() < 0.15 else col.darkened(hr.randf_range(-0.08, 0.1))
+		_clod(st, p, hr.randf() * TAU, sz, cc, cc.lightened(0.06), mh * (1.0 - d * d) * 0.85 - sz.y * 0.4)
 	if hr.randf() < 0.45:
 		var e := Vector2.from_angle(hr.randf() * TAU) * r * 0.8
 		_beam(st, c, 0.0, Vector3(-e.x, SINK + 0.003, -e.y), Vector3(e.x, SINK + hr.randf_range(0.006, 0.014), e.y), 0.002, WOOD_DARK)
 
 
-## Irregular mound of radii rad (x, z, turned by yaw) and height hgt: four jittered rings and a top, smooth-shaded, the base
-## ring a little under the ground; vertex colour darker low and in the hollows, lighter towards the top
+## Broken clod of mud brick at c (turned by yaw, size s as _ob's box): a chipped, uneven lump instead of a
+## box, whose clean edges read as building blocks at gameplay height. A seven-sided outline in three rings
+## (the foot sunk a little, a bulging middle, a smaller tilted top), each corner pushed in or out by a hash of
+## the place, so no generator is drawn (the village's rng stays as the boxes left it). Flat-shaded. y0 — the
+## foot's height above the ground (a clod lying on a heap's slope).
+static func _clod(st: SurfaceTool, c: Vector2, yaw: float, s: Vector3, side: Color, top: Color, y0 := 0.0) -> void:
+	var n := 7
+	var sd := float(absi(hash(Vector2i(roundi(c.x * 1e5), roundi(c.y * 1e5)))) % 997)
+	var tilt := Vector2(_vn1(sd, 3.0) - 0.5, _vn1(sd, 5.0) - 0.5) * s.y * 0.6
+	var rings := [[], [], []]
+	var lv := [[0.82, -0.0008], [1.0, s.y * 0.45], [0.62, s.y]]
+	for i in n:
+		var a := (float(i) + (_vn1(sd + i * 1.7, 1.0) - 0.5) * 0.6) / n * TAU
+		var k := 0.7 + 0.45 * _vn1(sd + i * 2.3, 2.0)
+		var q := Vector2(cos(a) * s.x * 0.5 * k, sin(a) * s.z * 0.5 * k)
+		for li in 3:
+			var kk := float(lv[li][0]) * (0.9 + 0.2 * _vn1(sd + i * 3.1 + li, 4.0))
+			var y := float(lv[li][1])
+			if li == 2:
+				y += q.dot(tilt) / maxf(s.x, 0.0001) + (_vn1(sd + i * 0.9, 6.0) - 0.5) * s.y * 0.5
+			var w := c + (q * kk).rotated(yaw)
+			rings[li].append(Vector3(w.x, SINK + y0 + y, w.y))
+	st.set_smooth_group(-1)
+	for li in 2:
+		for i in n:
+			var j := (i + 1) % n
+			var v := [rings[li][i], rings[li][j], rings[li + 1][j], rings[li + 1][i]]
+			for kk: int in [0, 2, 1, 0, 3, 2]:
+				st.set_color(side if li == 0 else side.lerp(top, 0.5))
+				st.add_vertex(v[kk])
+	for i in range(1, n - 1):
+		for v: Vector3 in [rings[2][0], rings[2][i + 1], rings[2][i]]:
+			st.set_color(top)
+			st.add_vertex(v)
+
+
+## Rubble mound of radii rad (x, z, turned by yaw) and height hgt: a talus profile (steep foot, flatter crown) in six
+## rings whose outline wanders in a few lobes and whose points are jittered in and out, so it reads as slumped mud
+## brick rather than a smooth dome; smooth-shaded, the base ring a little under the ground; vertex colour darker
+## low and in the hollows, lighter towards the top. _heap lays broken clods into its slopes.
 static func _mound(st: SurfaceTool, c: Vector2, rad: Vector2, hgt: float, yaw: float, col: Color, hr: RandomNumberGenerator) -> void:
-	var nseg := 14
-	var lv := [[1.0, -0.002], [0.84, 0.3], [0.6, 0.64], [0.3, 0.9]]
+	var nseg := 20
+	var lv := [[1.0, -0.002], [0.88, 0.2], [0.72, 0.46], [0.54, 0.7], [0.34, 0.88], [0.15, 0.97]]
+	var ph := Vector3(hr.randf() * TAU, hr.randf() * TAU, hr.randf() * TAU)
 	var rings := []
 	var rcol := []
 	for li in lv.size():
@@ -1528,15 +1648,17 @@ static func _mound(st: SurfaceTool, c: Vector2, rad: Vector2, hgt: float, yaw: f
 		var rc := []
 		for i in nseg:
 			var a := TAU * (float(i) + 0.5 * float(li % 2)) / nseg
-			var k := float(lv[li][0]) * hr.randf_range(0.86, 1.1)
+			var lobe := 1.0 + 0.13 * sin(2.0 * a + ph.x) + 0.08 * sin(3.0 * a + ph.y) + 0.05 * sin(5.0 * a + ph.z)
+			var k := float(lv[li][0]) * lobe * hr.randf_range(0.9, 1.1)
 			var q := c + Vector2(cos(a) * rad.x * k, sin(a) * rad.y * k).rotated(yaw)
-			var y := SINK + float(lv[li][1]) * hgt * hr.randf_range(0.85, 1.15)
+			var y := SINK + float(lv[li][1]) * hgt * hr.randf_range(0.8, 1.2) * (0.85 + 0.15 * lobe)
 			ring.append(Vector3(q.x, y, q.y))
-			rc.append(col.darkened(hr.randf_range(0.0, 0.1) + 0.04 * (3 - li)).lightened(0.04 * li))
+			var hollow := hr.randf_range(0.0, 0.14)
+			rc.append(col.darkened(hollow + 0.04 * (lv.size() - 1 - li)).lightened(0.03 * li))
 		rings.append(ring)
 		rcol.append(rc)
 	var apex := Vector3(c.x, SINK + hgt, c.y) + Vector3(hr.randf_range(-0.15, 0.15) * rad.x, 0.0, hr.randf_range(-0.15, 0.15) * rad.y)
-	st.set_smooth_group(5)   # a soft heap of earth, not a faceted rock
+	st.set_smooth_group(5)   # a heap of earth and broken brick, not a faceted rock
 	for li in rings.size() - 1:
 		for i in nseg:
 			var j := (i + 1) % nseg
@@ -1687,7 +1809,8 @@ static func _yard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, gate: int
 
 ## Model studio (tools/model_lab/studio.gd): one village piece built by the same functions as village(), for
 ## close-up review of the compound walls, gates and ruins. kind: "yard" (an intact walled yard, gate on -z),
-## "yard_damaged" (a breach and one ruined house), "yard_ruined" (ragged walls, heaps), "ruins" (a roofless
+## "yard_damaged" (a breach and one ruined house), "yard_ruined" (ragged walls, heaps), "orchard" (an outskirts
+## orchard: its low wall and rows of tree models), "ruins" (a roofless
 ## house, a heap and a breached ragged wall). Returns [mesh (old units × V_UNIT, like the village mesh),
 ## homes (VillageHouses.attach records)]. The seed is searched so the yard comes out in the asked state.
 static func debug_piece(kind: String) -> Array:
@@ -1705,6 +1828,9 @@ static func debug_piece(kind: String) -> Array:
 				rng.seed = 4100 + s
 				break
 		_yard(st, Vector2.ZERO, Vector2(0.11, 0.085), 0.0, 0, rng, stats)
+	elif kind == "orchard":
+		rng.seed = 11
+		_orchard(st, Vector2.ZERO, Vector2(0.1, 0.075), 0.0, rng, homes)
 	else:
 		rng.seed = 5
 		_t_ruin(st, Vector2(-0.055, 0.01), Vector2(0.034, 0.028), 0.0, 0.035, rng)
@@ -1717,7 +1843,8 @@ static func debug_piece(kind: String) -> Array:
 
 ## Крона дерева: два повёрнутых друг к другу яруса (сверху — восьмиугольник), оливково-серая.
 ## VIS-01: with homes, a tree model (VillageHouses.ORCHARD or PALM, picked by place: palm_share of them palms) is
-## recorded instead; rng is drawn exactly as for the boxes
+## recorded instead; rng is drawn exactly as for the boxes. Every sortie path passes homes (yards, the square,
+## the outskirts' orchards); the boxes are left only for the bench's box-house «before» frames (--boxhouses)
 static func _crown(st: SurfaceTool, c: Vector2, r: float, rng: RandomNumberGenerator, homes = null, palm_share := 0.3) -> void:
 	var col := T_TREE.lightened(rng.randf_range(-0.05, 0.08))
 	var y0 := rng.randf_range(0.012, 0.02)
@@ -1996,8 +2123,10 @@ static func _warehouse(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, rng:
 		_ob(st, c, yaw, x, h.y + 0.001, Vector3(0.026, 0.028, 0.003), T_DARK, T_DARK)
 
 
-## Сад за дувалом: ограда по периметру с проходом, внутри ряды деревьев
-static func _orchard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, rng: RandomNumberGenerator) -> void:
+## Сад за дувалом: ограда по периметру с проходом, внутри ряды деревьев. The trees are recorded in `trees`
+## as orchard tree models (VillageHouses.ORCHARD, drawn by VillageHouses.attach) instead of the old stacked boxes
+## that read as stars from above; rng is drawn exactly as before
+static func _orchard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, rng: RandomNumberGenerator, trees: Array) -> void:
 	var t := 0.006
 	var wh := rng.randf_range(0.008, 0.012)
 	var corners := [Vector2(-h.x, -h.y), Vector2(h.x, -h.y), Vector2(h.x, h.y), Vector2(-h.x, h.y)]
@@ -2017,7 +2146,7 @@ static func _orchard(st: SurfaceTool, c: Vector2, h: Vector2, yaw: float, rng: R
 			if rng.randf() < 0.15:
 				continue
 			var p := Vector2(-h.x + (i + 0.5) * h.x * 2.0 / nx, -h.y + (j + 0.5) * h.y * 2.0 / nz)
-			_crown(st, c + p.rotated(yaw), rng.randf_range(0.012, 0.017), rng)
+			_crown(st, c + p.rotated(yaw), rng.randf_range(0.012, 0.017), rng, trees, 0.0)
 
 
 ## Поле: межи (низкие земляные валики) по краю и поперёк — 2–4 полосы

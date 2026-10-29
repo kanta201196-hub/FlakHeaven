@@ -172,6 +172,19 @@ func _mesh(kind: String) -> Mesh:
 	return _full_mesh(kind)
 
 
+## Mesh of a tree kind (LITE) as the biome draws it on the current preset: the full model on "Max", the
+## camera-facing card below it; shadow_proxy — the crossed cards the "Max" preset casts the trees' shadow with.
+## For VillageHouses' yard and orchard trees, so a settlement's trees match the biome's on every preset.
+## Main thread only (loads the model).
+func tree_mesh(kind: String, shadow_proxy := false) -> Mesh:
+	if shadow_proxy:
+		var lk := kind + "_lite_shadow"
+		if not _meshes.has(lk):
+			_meshes[lk] = _lite_tree(kind, false)
+		return _meshes[lk]
+	return _mesh(kind)
+
+
 ## Tree cards in the full model's size (models are normalised: width 1 on X/Z, base at y = 0): a side card with
 ## the baked side view and a horizontal card with the top view (tools/model_lab/bake_impostor.gd).
 ## billboard (the drawn tree): one side card that turns about Y to face the camera. Two crossed side cards were
