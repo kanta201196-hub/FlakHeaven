@@ -39,6 +39,18 @@ const SETS := {
 		["house", 11, -9.5, 4.0, 0.0, 0.0], ["house", 12, -5.0, 4.0, 0.0, 0.0], ["house", 13, -1.5, 4.0, 0.0, 0.0],
 		["house", 14, 2.5, 4.0, 0.0, 0.0], ["house", 15, 7.0, 4.0, 0.0, 0.0],
 		["house", 16, -9.5, 8.5, 0.0, 0.0], ["house", 17, -4.0, 8.5, 0.0, 0.0]],
+	# the market's cloth up close: the three tent variants in a row, a shop awning and a ring stall
+	"market": [["house", 18, -4.2, -2.2, 0.0, 0.0], ["house", 19, 0.0, -2.2, 0.0, 0.0], ["house", 20, 4.2, -2.2, 0.0, 0.0],
+		["house", 10, 1.0, 4.4, 0.0, 0.0], ["house", 9, -8.6, 3.6, 0.0, 20.0]],
+	"tent": [["house", 18, 0.0, 0.0, 0.0, 0.0]],
+	"awning": [["house", 10, 0.0, 0.0, 0.0, 0.0]],
+	# crashed-plane wrecks (BiomeProps.PLANE_KINDS) side by side, with their scorch patches, and two alone
+	"wrecks": [["prop", "plane", 0.0, 0.0, 120.0, 0.0], ["prop", "plane_b", 140.0, 0.0, 120.0, 0.0],
+		["prop", "plane_c", 0.0, 140.0, 120.0, 0.0], ["prop", "heli", 140.0, 140.0, 120.0, 0.0]],
+	"wreck_plane": [["prop", "plane", 0.0, 0.0, 120.0, 0.0]],
+	"wreck_heli": [["prop", "heli", 0.0, 0.0, 120.0, 0.0]],
+	# the road bridge over a village stream (PropBuild), deck and kerbs
+	"bridge": [["prop", "bridge", 0.0, 0.0, 90.0, 0.0]],
 	# village compounds and ruins built by AdobeBuild (debug_piece kinds), their houses as VillageHouses models
 	"v_yard": [["adobe", "yard", 0.0, 0.0, 0.0, 0.0]],
 	"v_yard_damaged": [["adobe", "yard_damaged", 0.0, 0.0, 0.0, 0.0]],
