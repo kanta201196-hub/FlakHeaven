@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b12j5toar55in"
-path="res://.godot/imported/fh_battle_fighter_2_nrm.jpg-61e10a2832cef7880dfee11cb7717a99.ctex"
+uid="uid://iedypy083gfn"
+path="res://.godot/imported/fh_battle_bomber_1_col.jpg-82f3be86245393775bd84ed6debc7e1a.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "d3e5a0c54fa3a1eb4833c69230adc7e7"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_fighter_2_nrm.jpg"
-dest_files=["res://.godot/imported/fh_battle_fighter_2_nrm.jpg-61e10a2832cef7880dfee11cb7717a99.ctex"]
+source_file="res://models/battle/fh_battle_bomber_1_col.jpg"
+dest_files=["res://.godot/imported/fh_battle_bomber_1_col.jpg-82f3be86245393775bd84ed6debc7e1a.ctex"]
 
 [params]
 
