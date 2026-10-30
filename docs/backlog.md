@@ -377,9 +377,9 @@ Summary — `docs/review/code-2026-10-30.md` (main after the 3.5-s13 base, decal
 
 | ID | Task | Thread / owner | Status |
 | --- | --- | --- | --- |
-| CR2-01 | Medal `aces` counter and class tally count fortresses and warships as aces, fortress twice (`medals.gd:33,43`) | "Провести ревью кода игры" | in PR (fixes after Kanta's «исправляй все» 30.10) |
-| CR2-02 | Empty placeholder `MeshInstance3D` breaks `Livery.apply` when a flare panel / fairing misses the skin (`render3d.gd:1901`) | "Провести ревью кода игры" | in PR (fixes after Kanta's «исправляй все» 30.10) |
-| CR2-03 | Fort pad flattened and wrecks scattered round forts the «Укрепрайон» activity never shows (`terrain3d.gd:18,1074`) | "Провести ревью кода игры" | wrecks: in PR; the flat pad stays (the fort may appear there later; a rebuild on activity start is a separate task) (fixes after Kanta's «исправляй все» 30.10) |
-| CR2-04 | Backup pack: stale refs file → no bundle, "no refs file" note; `--branches` dropped (`tools/backup/make_pack.sh`) | "Провести ревью кода игры" | in PR (fixes after Kanta's «исправляй все» 30.10) |
-| CR2-05 | Small: medal bonus text at zero tiers, drone HP rule into `Drone`, transport caption stale rect, livery cmdline scan per frame, "+ цифра" at 3 digits (R-05, R-08, R-09, R-10, R-12) | "Провести ревью кода игры" | in PR (fixes after Kanta's «исправляй все» 30.10) |
+| CR2-01 | Medal `aces` counter and class tally count fortresses and warships as aces, fortress twice (`medals.gd:33,43`) | "Провести ревью кода игры" | merged, PR #497 (30.10) — verify in s14 |
+| CR2-02 | Empty placeholder `MeshInstance3D` breaks `Livery.apply` when a flare panel / fairing misses the skin (`render3d.gd:1901`) | "Провести ревью кода игры" | merged, PR #497 (30.10) — verify in s14 |
+| CR2-03 | Fort pad flattened and wrecks scattered round forts the «Укрепрайон» activity never shows (`terrain3d.gd:18,1074`) | "Провести ревью кода игры" | wrecks: merged, PR #497; the flat pad stays (the fort may appear there later; a rebuild on activity start is a separate task) (fixes after Kanta's «исправляй все» 30.10) |
+| CR2-04 | Backup pack: stale refs file → no bundle, "no refs file" note; `--branches` dropped (`tools/backup/make_pack.sh`) | "Провести ревью кода игры" | merged, PR #497 (30.10) — verify in s14 |
+| CR2-05 | Small: medal bonus text at zero tiers, drone HP rule into `Drone`, transport caption stale rect, livery cmdline scan per frame, "+ цифра" at 3 digits (R-05, R-08, R-09, R-10, R-12) | "Провести ревью кода игры" | merged, PR #497 (30.10) — verify in s14 |
 | CR2-06 | Balance decision: «Бомбы «Кита»» scales all explosions; «Подрывник» blast_dmg outside the dmg cap (R-06, R-07) | "Провести ревью кода игры" | done: option 1 (text + cap), Kanta 30.10 |
