@@ -1072,8 +1072,7 @@ func scenes(key: Vector2i) -> Array:
 				for i in (2 if rng.randf() < 0.6 else 1):
 					anchors.append([obj["pos"], sz * rng.randf_range(0.62, 0.85), float(obj["rot"]) + PI])
 			"o_fort":
-				if rng.randf() < 0.6:
-					anchors.append([obj["pos"], sz * rng.randf_range(0.75, 1.0)])
+				pass   # the fort shows only once «Укрепрайон» takes it (Kanta s13): no wreck ring round an empty pad
 			"o_oasis":
 				if rng.randf() < 0.25:
 					anchors.append([obj["pos"], sz * rng.randf_range(0.6, 0.75)])

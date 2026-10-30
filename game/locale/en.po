@@ -7740,8 +7740,8 @@ msgid "Совершить %s вылетов на «Ките»"
 msgstr "Fly %s sorties in the Whale"
 
 #, c-format
-msgid "урон бомб «Кита» +%s"
-msgstr "Whale bomb damage +%s"
+msgid "урон взрывов «Кита» +%s"
+msgstr "Whale blast damage +%s"
 
 #, c-format
 msgid "Пройти операцию «Перевал» %s раз"
@@ -8186,3 +8186,8 @@ msgstr "Rusty Iron"
 #: game/scripts/livery.gd:83
 msgid "Гоночная шахматка"
 msgstr "Racing Chequer"
+
+#: game/scripts/decal_edit_input.gd:340
+#, c-format
+msgid "Не больше %d цифр"
+msgstr "No more than %d digits"

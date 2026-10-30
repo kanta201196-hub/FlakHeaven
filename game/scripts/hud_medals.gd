@@ -20,8 +20,8 @@ static func tex(id: String, metal: String) -> Texture2D:
 ## Player text of a medal's bonus at tier `n` ("" for picture-only medals)
 static func bonus_text(md: Dictionary, n: int) -> String:
 	var tpl: String = md["bonus"]
-	if tpl == "" or n <= 0:
-		return ""
+	if tpl == "" or n <= 0 or is_zero_approx(float(md["v"][n - 1])):
+		return ""   # tiers below the first bonus (e.g. operation medals 1–3, «Мастер связок» 1) add nothing
 	var t := Loc.t(tpl)
 	if t.contains("%s"):
 		return t % MedalBalance.value_text(md["b"], float(md["v"][n - 1]))

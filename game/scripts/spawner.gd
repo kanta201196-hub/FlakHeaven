@@ -220,9 +220,7 @@ func _process(delta: float) -> void:
 				var d := Drone.new()
 				# 3.5: камикадзе выведен из игры (разбор каталога 16.10) — все дроны заходят цепью
 				d.lane = (i - (count - 1) / 2.0) * 70.0
-				_place(d, p, ang + randf_range(-0.2, 0.2), t)
-				d.hp = DroneBalance.hp(p.guns.base_damage())   # Kanta 27.10: a couple of hits, at any minute
-				d.max_hp = d.hp
+				_place(d, p, ang + randf_range(-0.2, 0.2), t)   # HP: DroneBalance via Drone.apply_hp_mult
 				d.heading = (p.global_position - d.position).angle()
 
 	# «Архипелаг» (E-07): экраноплан «Крачка» проходит по проливу раз в ~1,5 мин после 2:00 (--ekr — сразу)

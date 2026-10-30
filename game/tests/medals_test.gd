@@ -78,6 +78,8 @@ func _test_helpers() -> void:
 	_check(MedalBalance.best_minute([0.0, 10.0, 59.0, 61.0, 62.0, 200.0]) == 4, "60 s window: 10, 59, 61, 62")
 	_check(MedalBalance.best_minute([]) == 0, "no kills: 0")
 	_check(MedalBalance.blast_of({"бомбы": 100.0, "НАР": 50.5, "курсовое (ручн.)": 999.0}) == 150, "explosions only")
+	_check(MedalBalance.tally({"aces": 2, "fortresses": 1, "warships": 3}) == 3, "tally: aces and fortresses once, no warships")
+	_check(MedalBalance.tally({}) == 0, "tally: nothing downed")
 
 
 func _test_data() -> void:

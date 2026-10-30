@@ -242,9 +242,13 @@ static func list(cls: String) -> Array:
 ## The class's paints, plus the NATURAL proposals on the bench (--livproposals)
 static func _all(cls: String) -> Array:
 	var l: Array = VARIANTS.get(cls, [])
-	if OS.get_cmdline_user_args().has("--livproposals") and VARIANTS.has(cls):
+	if _proposals and VARIANTS.has(cls):
 		l = l + NATURAL
 	return l
+
+
+## `--livproposals` read once: list()/current() run every hangar frame (review 2026-10-30, R-10)
+static var _proposals: bool = OS.get_cmdline_user_args().has("--livproposals")
 
 
 static func _find(cls: String, id: String) -> Array:
@@ -322,6 +326,8 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 ## знаки, модули прокачки и полосы ведомых — нет
 static func _skip(mi: MeshInstance3D, model: Node3D) -> bool:
 	var n: Node = mi
+	if mi.mesh == null:
+		return true   # an empty placeholder (SkinPatch missed the skin, Render3D keeps the node so it is not retried)
 	while n != null and n != model:
 		if String(n.name) in ["insignia", "module_parts", "wing_kit"]:
 			return true
