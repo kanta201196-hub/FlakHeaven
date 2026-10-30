@@ -75,7 +75,7 @@ const LIST := [
 	{"id": "cls_attacker", "g": "class", "f": "badge", "title": "Броня «Грача»", "c": "sorties_attacker", "t": [25, 100, 300],
 		"b": "attacker_hp", "v": [0.02, 0.04, 0.06], "cond": "Совершить %s вылетов на «Граче»", "bonus": "прочность «Грача» +%s"},
 	{"id": "cls_bomber", "g": "class", "f": "badge", "title": "Бомбы «Кита»", "c": "sorties_bomber", "t": [25, 100, 300],
-		"b": "bomber_bombs", "v": [0.03, 0.06, 0.09], "cond": "Совершить %s вылетов на «Ките»", "bonus": "урон бомб «Кита» +%s"},
+		"b": "bomber_bombs", "v": [0.03, 0.06, 0.09], "cond": "Совершить %s вылетов на «Ките»", "bonus": "урон взрывов «Кита» +%s"},
 	{"id": "op_pass", "g": "class", "f": "medal", "title": "Перевал", "c": "op_pass", "t": [1, 5, 20, 50],
 		"b": "op_parts:pass", "v": [0.0, 0.0, 0.0, 0.03], "cond": "Пройти операцию «Перевал» %s раз", "bonus": "ступень 4: запчасти в этой операции +3 %%"},
 	{"id": "op_riverbed", "g": "class", "f": "medal", "title": "Сухое русло", "c": "op_riverbed", "t": [1, 5, 20, 50],
@@ -154,8 +154,11 @@ static func bonuses(t: Dictionary) -> Dictionary:
 		if n <= 0 or key == "":
 			continue
 		var v := float(m["v"][n - 1])
-		if key == "blast":
-			out["blast_dmg"] = float(out.get("blast_dmg", 0.0)) + BLAST_DMG[n - 1]
+		if key == "blast":   # the radius is free; the damage half shares the dmg cap (review 2026-10-30, R-07)
+			var room_d := float(CAPS["dmg"]) - float(used.get("dmg", 0.0))
+			var bd := clampf(BLAST_DMG[n - 1], 0.0, maxf(room_d, 0.0))
+			used["dmg"] = float(used.get("dmg", 0.0)) + bd
+			out["blast_dmg"] = float(out.get("blast_dmg", 0.0)) + bd
 		var cap_k: String = CAP_OF.get(key, "")
 		if cap_k != "":
 			var room := float(CAPS[cap_k]) - float(used.get(cap_k, 0.0))
@@ -186,6 +189,12 @@ static func add_run(c: Dictionary, run: Dictionary) -> void:
 			c[k] = maxi(int(c.get(k, 0)), int(run[k]))
 		else:
 			c[k] = int(c.get(k, 0)) + int(run[k])
+
+
+## Tally marks one sortie earns from its kill counters: each rival ace and each «Крепость» once (a fortress is a
+## Boss too, so it must not be counted through a boss total as well — review 2026-10-30, R-01)
+static func tally(counters: Dictionary) -> int:
+	return int(counters.get("aces", 0)) + int(counters.get("fortresses", 0))
 
 
 ## Explosion damage of one sortie from its damage-by-source table

@@ -1046,8 +1046,8 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 		elif node is Transport:
 			var tr := node as Transport
 			_edge_arrow(_ws(xf, tr.global_position), rect, size, C_TRANSPORT, 1.8, Loc.t("транспортник %d м") % (int(p.global_position.distance_to(tr.global_position)) / 10))
-			_world_caption(xf, tr.global_position, tr.radius, "Транспортник", Color(1, 0.85, 0.6), _task_rect)
 			_task(Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], Color(1.0, 0.75, 0.45))
+			_world_caption(xf, tr.global_position, tr.radius, "Транспортник", Color(1, 0.85, 0.6), _task_rect)   # this frame's plate
 			_task_sub("Награда: груз — запчасти и ремкомплекты")
 		elif node is RivalAce:
 			var ace := node as RivalAce

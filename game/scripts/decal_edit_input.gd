@@ -335,6 +335,9 @@ func action(p: PackedStringArray) -> bool:
 			e.set_text(_digit(_text_now(e), int(p[2]), int(p[3])))
 		"digits":
 			var t := _text_now(e)
+			if int(p[2]) > 0 and t.length() >= DecalRecord.TEXT_MAX:
+				_say(Loc.t("Не больше %d цифр") % DecalRecord.TEXT_MAX)
+				return false
 			e.set_text(t + "0" if int(p[2]) > 0 else t.substr(0, t.length() - 1))
 		"rot":
 			e.rotate_by(int(p[2]))

@@ -30,17 +30,17 @@ static func run_counters(m: Main, outcome: String) -> Dictionary:
 		if String(k).begins_with("ведомые"):  # i18n-skip: damage source key
 			wing += float(m.stats["dealt"][k])
 	var r := {
-		"kills": m.run.kills, "aces": m.run.bosses_killed, "tail_kills": m.run.tail_kills, "near_misses": m.run.near_misses,
+		"kills": m.run.kills, "tail_kills": m.run.tail_kills, "near_misses": m.run.near_misses,
 		"blast_dmg": MedalBalance.blast_of(m.stats["dealt"]), "gun_hits": m.hits, "turret_dmg": m.stat("dealt", "турели"),
 		"wing_dmg": int(wing), "convoys": int(tv.get("convoy_done", 0)), "dive_dodged": int(tv.get("dive_dodged", 0)),
 		"dives": int(tv.get("dive_uses", 0)), "healed": int(m.counters.get("healed", 0)), "refuels": int(tv.get("fuel_refuels", 0)),
 		"evacs": 1 if evac else 0, "lvl20_early": 1 if m.level_at_5 >= 20 else 0, "sorties_" + m.cls_id: 1,
 		"kills_minute": MedalBalance.best_minute(m.medal_kill_t),
 	}
-	for k in m.medal_run:
+	for k in m.medal_run:   # "aces", "fortresses", … from Main._medal_kill
 		r[k] = int(r.get(k, 0)) + int(m.medal_run[k])
 	# the class's kill tally on its decals (Kanta 27.10, option A): rival aces and «Крепости» downed by this class
-	r["tally_" + m.cls_id] = int(m.run.bosses_killed) + int(m.medal_run.get("fortresses", 0))
+	r["tally_" + m.cls_id] = MedalBalance.tally(m.medal_run)
 	if evac and bool(m.op_result.get("done", false)):
 		r["op_" + String(Campaign.op()["id"])] = 1
 	if Campaign.flag("grom_free"):

@@ -299,8 +299,6 @@ func _launch_drones(p: Player, n: int) -> void:
 		dr.position = global_position + Vector2.from_angle(heading + PI * 0.5 * (1.0 if i % 2 == 0 else -1.0)) * 40.0
 		dr.heading = (p.global_position - dr.position).angle()
 		Main.I.world.add_child(dr)
-		dr.hp = DroneBalance.hp(p.guns.base_damage())   # Kanta 27.10: a couple of hits, like every drone
-		dr.max_hp = dr.hp
 	Events.banner.emit("С палубы «Левиафана» взлетают «Чайки»!", 2.0)
 
 

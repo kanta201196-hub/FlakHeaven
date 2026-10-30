@@ -24,6 +24,19 @@ func kind() -> String:
 	return "дроны"
 
 
+## Kanta 27.10 (s13 notes, item 11): a drone holds a couple of the player's course-gun hits at any minute, so the
+## spawner's time ramp, difficulty and pressure multipliers do not apply (DroneBalance). Every spawn site gets it.
+func apply_hp_mult(_m: float) -> void:
+	hp = _gun_hp()
+	max_hp = hp
+
+
+## DroneBalance.hp for the current player's gun; the floor when there is no player (benches, tests)
+static func _gun_hp() -> float:
+	var p: Player = Main.I.player if Main.I != null else null
+	return DroneBalance.hp(p.guns.base_damage() if is_instance_valid(p) and p.guns != null else 0.0)
+
+
 ## S8 «eweap»: курсовые пушки истребителя (спаренная пушка: две пули по 3)
 func gun_kind() -> String:
 	return "fighter"
@@ -31,7 +44,7 @@ func gun_kind() -> String:
 
 func _ready() -> void:
 	super()
-	hp = 12.0
+	apply_hp_mult(1.0)   # hp and max_hp from the player's gun at every spawn site
 	radius = 11.0
 	contact_damage = 6.0
 	xp = 1

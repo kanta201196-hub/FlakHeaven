@@ -7740,8 +7740,8 @@ msgid "Совершить %s вылетов на «Ките»"
 msgstr "驾驶“鲸”出击 %s 次"
 
 #, c-format
-msgid "урон бомб «Кита» +%s"
-msgstr "“鲸”炸弹伤害 +%s"
+msgid "урон взрывов «Кита» +%s"
+msgstr "“鲸”爆炸伤害 +%s"
 
 #, c-format
 msgid "Пройти операцию «Перевал» %s раз"
@@ -8186,3 +8186,8 @@ msgstr "锈铁"
 #: game/scripts/livery.gd:83
 msgid "Гоночная шахматка"
 msgstr "赛车棋格"
+
+#: game/scripts/decal_edit_input.gd:340
+#, c-format
+msgid "Не больше %d цифр"
+msgstr "最多 %d 位数字"

@@ -51,11 +51,17 @@ func _test_caps() -> void:
 	for m: Dictionary in MedalBalance.LIST:
 		all[m["id"]] = (m["t"] as Array).size()
 	var b := MedalBalance.bonuses(all)
-	var dmg := 0.0
+	var dmg := float(b.get("blast_dmg", 0.0))   # «Подрывник» damage shares the cap (R-07), its radius does not
 	for k in b:
 		if MedalBalance.CAP_OF.get(k, "") == "dmg":
 			dmg += float(b[k])
 	_check(dmg <= 0.1 + 1e-6, "all damage bonuses together stay within +10 %% (got %.3f)" % dmg)
+	var bl := MedalBalance.bonuses({"demolition": 3})
+	_check(is_equal_approx(float(bl["blast_dmg"]), 0.06) and is_equal_approx(float(bl["blast"]), 0.09), "«Подрывник» alone: +6 %% damage, +9 %% radius")
+	bl = MedalBalance.bonuses({"fighter": 4, "demolition": 3})   # fighter is earlier in LIST: 4 % used, 6 % room
+	_check(is_equal_approx(float(bl["blast_dmg"]), 0.06) and is_equal_approx(float(bl["dmg"]), 0.04), "blast damage fits the room left")
+	bl = MedalBalance.bonuses({"fighter": 4, "ace_hunter": 3, "demolition": 3})   # 4 + 6 (ace_hunter is clamped to room)…
+	_check(float(bl["blast_dmg"]) + float(bl["dmg"]) + float(bl["boss_dmg"]) <= 0.1 + 1e-6, "blast damage never breaks the +10 %% dmg cap")
 	var hp := float(b.get("hp", 0.0)) + float(b.get("attacker_hp", 0.0))
 	_check(hp <= 0.1 + 1e-6, "HP bonuses together stay within +10 %")
 	_check(float(b.get("parts", 0.0)) <= 0.1 + 1e-6, "parts bonus within +10 %")
@@ -78,6 +84,8 @@ func _test_helpers() -> void:
 	_check(MedalBalance.best_minute([0.0, 10.0, 59.0, 61.0, 62.0, 200.0]) == 4, "60 s window: 10, 59, 61, 62")
 	_check(MedalBalance.best_minute([]) == 0, "no kills: 0")
 	_check(MedalBalance.blast_of({"бомбы": 100.0, "НАР": 50.5, "курсовое (ручн.)": 999.0}) == 150, "explosions only")
+	_check(MedalBalance.tally({"aces": 2, "fortresses": 1, "warships": 3}) == 3, "tally: aces and fortresses once, no warships")
+	_check(MedalBalance.tally({}) == 0, "tally: nothing downed")
 
 
 func _test_data() -> void:
