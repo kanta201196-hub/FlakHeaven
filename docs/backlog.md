@@ -370,3 +370,16 @@ Spec `docs/superpowers/specs/2026-10-25-fortified-area-design.md`, plan `docs/su
 | EA-03 | Страница раннего доступа: цена, описание, дорожная карта для игроков | Маркетинг | март–апрель | идея |
 | EA-04 | Дата выхода: ставим после закрытого теста (догадка: апрель–май) | Kanta | апрель | идея |
 | EA-05 | Проверка `BUILD` в `main.gd:81` (`3.4-t1` при последней сборке 3.5-s10) | Бой / координатор | 30.10 | идея |
+
+## Code review (2026-10-30)
+
+Summary — `docs/review/code-2026-10-30.md` (main after the 3.5-s13 base, decals, medals, Highland models, backup). Thread "Провести ревью кода игры". Owners are assigned by the coordinator after Kanta's "готово".
+
+| ID | Task | Thread / owner | Status |
+| --- | --- | --- | --- |
+| CR2-01 | Medal `aces` counter and class tally count fortresses and warships as aces, fortress twice (`medals.gd:33,43`) | — | idea |
+| CR2-02 | Empty placeholder `MeshInstance3D` breaks `Livery.apply` when a flare panel / fairing misses the skin (`render3d.gd:1901`) | — | idea |
+| CR2-03 | Fort pad flattened and wrecks scattered round forts the «Укрепрайон» activity never shows (`terrain3d.gd:18,1074`) | — | idea |
+| CR2-04 | Backup pack: stale refs file → no bundle, "no refs file" note; `--branches` dropped (`tools/backup/make_pack.sh`) | — | idea |
+| CR2-05 | Small: medal bonus text at zero tiers, drone HP rule into `Drone`, transport caption stale rect, livery cmdline scan per frame, "+ цифра" at 3 digits (R-05, R-08, R-09, R-10, R-12) | — | idea |
+| CR2-06 | Balance decision: «Бомбы «Кита»» scales all explosions; «Подрывник» blast_dmg outside the dmg cap (R-06, R-07) | Kanta | idea |
