@@ -30,6 +30,8 @@
 | `process/efficiency-review.md` | Разбор процесса: где теряем время и что поменяли |
 | `owner-checklist/kanta-now.md` | Что может сделать только Kanta, с датами; первый пункт планёрки |
 | `review/2026-10-22-work-review.md` | Ревью работы Kanta и Claude за 16–22.10: процесс, состояние игры, 14 предложений, проект инструкций |
+| `review/2026-10-30-work-review.md` | Ревью работы Kanta и Claude за 23–30.10: 5 главных проблем, статус предложений 22.10, 9 новых предложений |
+| `review/code-2026-10-30.md` | Code review 2026-10-30 of `main` after the s13 base: findings R-01…R-13, fixes in PR #497 |
 | `review/code-2026-10-23/` | Code review 2026-10-23 (5 areas + Godot 4.4 and Python best practices): key findings CR-01…CR-06 in `README.md`, full reports r1–r6 (in Russian) |
 | `standards/code.md` | **Coding standards:** language (parameter), GDScript, types, docstrings, data, performance, saves, Python, CI, PR author checklist |
 | `standards/architecture.md` | **Architecture:** how the game is built now, target layout, steps CS-01…CS-11, decisions ADR-01…07 |
