@@ -44,7 +44,7 @@ func gun_kind() -> String:
 
 func _ready() -> void:
 	super()
-	hp = _gun_hp()
+	apply_hp_mult(1.0)   # hp and max_hp from the player's gun at every spawn site
 	radius = 11.0
 	contact_damage = 6.0
 	xp = 1

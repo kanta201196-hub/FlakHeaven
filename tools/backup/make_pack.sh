@@ -24,11 +24,17 @@ if [ -n "$SINCE" ] && [ -f "$SINCE" ]; then
     LISTED=$((LISTED + 1))
     git cat-file -e "$sha^{commit}" 2>/dev/null && { EXCL+=("^$sha"); KNOWN=$((KNOWN + 1)); }
   done < "$SINCE"
-  [ "$LISTED" -gt 0 ] && [ "$KNOWN" -eq 0 ] && echo "make_pack: none of the $LISTED refs in $SINCE exist here; bundling the full history" >&2
+  [ "$LISTED" -gt 0 ] && [ "$KNOWN" -eq 0 ] && echo "make_pack: none of the $LISTED refs in $SINCE exist here" >&2
 fi
-# local branches too: unpushed work is what a backup is for
-git bundle create "$OUT/repo-incremental.bundle" --branches --remotes ${EXCL[@]+"${EXCL[@]}"} 2>/dev/null \
-  || echo "no new commits since $SINCE" > "$OUT/repo-incremental.NONE"
+if [ "$KNOWN" -gt 0 ]; then
+  # commits added since the previous pack, local branches included (unpushed work is what a backup is for)
+  git bundle create "$OUT/repo-incremental.bundle" --branches --remotes "${EXCL[@]}" \
+    || echo "no new commits since the refs in $SINCE" > "$OUT/repo-incremental.NONE"
+else
+  # no usable previous refs: GitHub already holds everything under origin/*, so bundle only what it lacks
+  git bundle create "$OUT/repo-incremental.bundle" --branches --not --remotes=origin \
+    || echo "no previous refs usable and no local-only commits: history lives on GitHub (kanta201196-hub/FlakHeaven, see repo-refs.txt)" > "$OUT/repo-incremental.NONE"
+fi
 # Too big to ship through the Drive/PC channels; GitHub already holds these commits.
 if [ -f "$OUT/repo-incremental.bundle" ] && [ "$(stat -c %s "$OUT/repo-incremental.bundle")" -gt $(( ${MAX_BUNDLE_MB:-100} * 1048576 )) ]; then
   rm "$OUT/repo-incremental.bundle"; echo "incremental bundle over ${MAX_BUNDLE_MB:-100} MB skipped; commits are on GitHub (see repo-refs.txt)" > "$OUT/repo-incremental.NONE"

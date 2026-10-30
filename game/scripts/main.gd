@@ -802,7 +802,7 @@ func _on_player_damaged(_amount: float) -> void:
 
 # ---------- медали: счётчики вылета (Medals.run_counters) ----------
 
-## This sortie's medal counters that nothing else keeps (rival aces, fortresses, warships, ground kills, missile
+## This sortie's medal counters that nothing else keeps (rival aces, fortresses, ground kills, missile
 ## kills, rams, flared missiles, fortified areas, the best clean stretch after 10:00). RunState.bosses_killed counts
 ## every Boss, so the ace and fortress medals keep their own counters here (review 2026-10-30, R-01).
 var medal_run := {}
@@ -821,9 +821,7 @@ func _medal_kill(e: Enemy) -> void:
 	if e.is_ground:
 		medal_add("ground")
 	if e is RivalAce:
-		medal_add("aces")
-	if e is Warship:
-		medal_add("warships")
+		medal_add("aces")   # not through bosses_killed: a Fortress or Warship is a Boss too
 	if e is Fortress:
 		medal_add("fortresses")
 		if (e as Fortress).base_hits == 0:

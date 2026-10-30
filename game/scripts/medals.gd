@@ -37,7 +37,7 @@ static func run_counters(m: Main, outcome: String) -> Dictionary:
 		"evacs": 1 if evac else 0, "lvl20_early": 1 if m.level_at_5 >= 20 else 0, "sorties_" + m.cls_id: 1,
 		"kills_minute": MedalBalance.best_minute(m.medal_kill_t),
 	}
-	for k in m.medal_run:   # "aces", "fortresses", "warships", … from Main._medal_kill
+	for k in m.medal_run:   # "aces", "fortresses", … from Main._medal_kill
 		r[k] = int(r.get(k, 0)) + int(m.medal_run[k])
 	# the class's kill tally on its decals (Kanta 27.10, option A): rival aces and «Крепости» downed by this class
 	r["tally_" + m.cls_id] = MedalBalance.tally(m.medal_run)
