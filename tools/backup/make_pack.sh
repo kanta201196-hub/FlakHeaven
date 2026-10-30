@@ -4,7 +4,7 @@
 # The agent session adds threads/PR summaries and README-RESTORE.md, then uploads.
 set -euo pipefail
 OUT="${1:-${TMPDIR:-/tmp}/ficb-$(date -u +%Y%m%d-%H%M)}"
-SINCE="${2:-}"   # commit SHA of the previous backup HEAD (optional, for the incremental bundle)
+SINCE="${2:-}"   # path to the previous backup repo-refs.txt (optional, for the incremental bundle)
 REPO="${REPO:-$(git rev-parse --show-toplevel)}"
 MEM="${MEM:-/tmp/claude/memory/team/silo}"
 PF="${PF:-/mnt/project-files}"
@@ -12,10 +12,23 @@ mkdir -p "$OUT"
 cd "$REPO"
 git fetch -q origin '+refs/heads/*:refs/remotes/origin/*' || true
 { echo "# generated $(date -u +%FT%TZ)"; git for-each-ref --format='%(objectname) %(refname)' refs/remotes/origin; } > "$OUT/repo-refs.txt"
-if [ -n "$SINCE" ] && git cat-file -e "$SINCE^{commit}" 2>/dev/null; then
-  git bundle create "$OUT/repo-incremental.bundle" --branches --remotes "^$SINCE" 2>/dev/null || echo "no new commits" > "$OUT/repo-incremental.NONE"
+# SINCE = previous backup's repo-refs.txt: everything reachable from those SHAs is excluded,
+# so the bundle holds only commits added since then (a single ^main exclude would drag in old unmerged branches).
+EXCL=()
+if [ -n "$SINCE" ] && [ -f "$SINCE" ]; then
+  while read -r sha ref; do
+    case "$sha" in \#*|"") continue;; esac
+    git cat-file -e "$sha^{commit}" 2>/dev/null && EXCL+=("^$sha")
+  done < "$SINCE"
+fi
+if [ ${#EXCL[@]} -gt 0 ]; then
+  git bundle create "$OUT/repo-incremental.bundle" --remotes "${EXCL[@]}" 2>/dev/null || echo "no new commits" > "$OUT/repo-incremental.NONE"
+  # Too big to ship through the Drive/PC channels; GitHub already holds these commits.
+  if [ -f "$OUT/repo-incremental.bundle" ] && [ "$(stat -c %s "$OUT/repo-incremental.bundle")" -gt $(( ${MAX_BUNDLE_MB:-100} * 1048576 )) ]; then
+    rm "$OUT/repo-incremental.bundle"; echo "incremental bundle over ${MAX_BUNDLE_MB:-100} MB skipped; commits are on GitHub (see repo-refs.txt)" > "$OUT/repo-incremental.NONE"
+  fi
 else
-  echo "no base SHA given: full history lives on GitHub (kanta201196-hub/FlakHeaven); only refs recorded" > "$OUT/repo-incremental.NONE"
+  echo "no previous refs file given: full history lives on GitHub (kanta201196-hub/FlakHeaven); only refs recorded" > "$OUT/repo-incremental.NONE"
 fi
 git rev-parse origin/main > "$OUT/main-head.txt"
 [ -d "$MEM" ] && tar czf "$OUT/project-memory.tgz" -C "$(dirname "$MEM")" "$(basename "$MEM")"
