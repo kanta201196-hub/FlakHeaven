@@ -27,23 +27,28 @@
 
 | ID | Задача | Тред / владелец | Статус |
 | --- | --- | --- | --- |
-| S14-01 | В карточке выбора торчит уголок (скос рамки карточки выступает за рамку) | Меню и ангар | передано 31.10 |
+| S14-01 | В карточке выбора торчит уголок (скос рамки карточки выступает за рамку) | Меню и ангар | сделано 31.10, PR #508: метка идёт по скосу рамки |
 | S14-02 | На «Ките-2» какие-то бугры на корпусе | 3D-модели | в работе (3D-модели) 31.10 |
-| S14-03 | Редактор знаков: модель неудобно держать при нанесении, нужен отъезд камеры (zoom out) | Меню и ангар | передано 31.10 |
-| S14-04 | Активности (ПВО) всё ещё появляются рядом с игроком: не в видимости и не ближе чем за 2 экрана | Разобрать генерацию карты Нагорья | передано 31.10 |
-| S14-05 | На земле остались ровные круглые пятна (выровненные площадки), так быть не должно; запросить глубокий разбор генерации карты | Разобрать генерацию карты Нагорья | передано 31.10 |
+| S14-03 | Редактор знаков: модель неудобно держать при нанесении, нужен отъезд камеры (zoom out) | Меню и ангар | сделано 31.10, PR #508: Ctrl + колесо и кнопки «Вид − / +» отдаляют камеру всегда |
+| S14-04 | Активности (ПВО) всё ещё появляются рядом с игроком: не в видимости и не ближе чем за 2 экрана | Разобрать генерацию карты Нагорья | слито #507 31.10, проверить в следующей сборке |
+| S14-05 | На земле остались ровные круглые пятна (выровненные площадки), так быть не должно; запросить глубокий разбор генерации карты | Разобрать генерацию карты Нагорья | слито #507 31.10, проверить в следующей сборке |
 | S14-06 | Плазменная бомба висит в воздухе | 3D-модели | в работе (3D-модели) 31.10 |
 | S14-07 | Индикатор тяги «Газ [W/S]: 100%»: название. Решение: переименовать в «Тяга» (ключ перевода, `.po`); вопрос Kanta закрыт ответом | Интерфейс боя | сделано 31.10: «Скорость [W/S]» (Kanta: вместо «Тяга»), en «Speed», zh «速度» |
-| S14-08 | Ведомый ведёт себя неестественно: резко останавливается и разворачивается (под R-22: за переключателем) | Геймдизайн (ИИ ведомых) | сделано 31.10 за переключателем F1 «Ведомые: плавное следование» (`wing_smooth`, выкл.); ждёт «ок» Kanta, после — включить по умолчанию |
+| S14-08 | Ведомый ведёт себя неестественно: резко останавливается и разворачивается (под R-22: за переключателем) | Геймдизайн (ИИ ведомых) | сделано 31.10: PR #502 (за переключателем F1 `wing_smooth`), «ок» Kanta 31.10 — включено по умолчанию (PR #506). Догадки автотеста s14 покрыты: нос задаёт курс, скорость идёт за носом; «прыжка» в слот нет (только мягкая подтяжка ближе 60 пикс.); разворот 160 °/с теперь с плавным входом и выходом. Самостоятельные заходы раз в 3–6 с оставлены: это задача ведомого, не поломка строя; заход тоже летит плавно |
 | S14-09 | Одинаковые карточки «Калибр» (на одном экране выпали две с одним названием: ближний бой и ракета В-3) | Прокачка | сделано 31.10, PR #500: одноимённые ветки разных оружий подписаны оружием («Калибр: Турели») |
 | S14-10 | Завис «кусок» текстуры взрыва в горе | 3D-модели | в работе (3D-модели) 31.10 |
-| S14-11 | Стартовый экран: самолёты летят в одну сторону к верху экрана, не по кругу | Меню и ангар | передано 31.10 |
+| S14-11 | Стартовый экран: самолёты летят в одну сторону к верху экрана, не по кругу | Меню и ангар | сделано 31.10, PR #508: звено летит прямо к верху экрана, маршрут по реке убран |
 | S14-12 | Просмотр оружия в ангаре: красивый фон (ангар самолётов) | 3D-модели | в работе (3D-модели) 31.10 |
 | S14-13 | Естественная окраска ракет, оружия и подставок (пилонов) | 3D-модели | в работе (3D-модели) 31.10 |
 | S14-14 | Самопроверка: плитка на дорожках кишлака полосами с резкими краями | 3D-модели | в работе (3D-модели) 31.10 |
-| S14-15 | Самопроверка: земля с высоты боя местами в светлых пятнах (проверить вместе с S14-05) | Разобрать генерацию карты Нагорья | передано 31.10 |
+| S14-15 | Самопроверка: земля с высоты боя местами в светлых пятнах (проверить вместе с S14-05) | Разобрать генерацию карты Нагорья | проверить на следующей сборке: вероятно та же причина, что S14-05 (догадка) 31.10 |
 | S14-16 | Самопроверка: фугасная бомба ур. 3 и 5 и ракеты «srm» ур. 1 и 3 выглядят одинаково | 3D-модели | в работе (3D-модели) 31.10 |
-| S14-17 | Самопроверка: у медали «Небо над Шахрисангом» обрезана подпись | Меню и ангар | передано 31.10 |
+| S14-17 | Самопроверка: у медали «Небо над Шахрисангом» обрезана подпись | Меню и ангар | сделано 31.10, PR #508: длинное имя медали уменьшается до 13–11 px |
+| S14-18 | Autotest finding: after ~3 s the plasma bomb fire patch looks like a pixelated white-blue "snow" patch (related to S14-06, which was not reproduced; frame from Kanta needed). Autotest page https://claude.ai/artifact/XSfCTy7c92Aip1Doathf3B | Эффекты боя | передано 31.10 |
+| S14-19 | Autotest guess for S14-10: flat crater quads on slopes in `render3d.gd` `_sync_craters` | Эффекты боя | передано 31.10 |
+| S14-20 | Autotest: first sortie of a new build loads in 76 s, the second in 0.7 s (guess: shader compile); VRAM 2.2-2.9 GB, 1.75 GB of it hangar textures | Ускорить большие бои | передано 31.10 |
+| S14-21 | Autotest: tilted brown slab in the sea on Leviathan (Archipelago) | 3D-модели | передано 31.10 |
+| S14-22 | Autotest signal: bot gets ~400 kills per sortie on Kit vs ~600 on Osa and Grach (no change without Kanta's yes) | Геймдизайн | разобрано 31.10: только сигнал, разговор с Kanta не нужен. Бот на «Ките» плохо держит бой (s13: по асу 2–12 тыс. урона за 3 мин), а у «Кита» роль — прочность и бомбы по земле, не число убийств. Сверить по живым вылетам Kanta на «Ките» в следующей сборке; правок без его «да» нет |
 
 ## Правки по сборке 3.5-s10
 
@@ -167,11 +172,11 @@
 | PG-04 | Update «Интенсивное облучение» (Kanta 24.10, after the current mechanics are polished): radar synergy — enemy radars on hills raise incoming damage to the player while they illuminate him (HUD warning «облучение» + damage-up marker); anti-radiation missile and the «Ласка» wingman counter them. Not now | — | идея |
 | PG-05 | Analyse choice on plane 1 after the weapon-per-plane sets (Kanta 24.10: «Оса 1» and «Кит 1» have 4 hardpoint weapons for 3 groups; short-range missiles only on «Оса 2», so not in the demo). Use balance logs of a build | Углубить прокачку для демо | идея |
 | PG-03 | Deeper upgrades, stage 3: hangar «комплектация» (engine, wing, avionics sidegrades), weapon branch tier 1 changes behaviour, 3–4 new synergies | Углубить прокачку для демо | после PG-02 |
-| PG-06 | Upgrade variety, package (proposal 31.10, `docs/progression/upgrade-variety-2026-10-31.md`): weapon **profiles** — a fork at weapon lvl 3, 2 profiles in the sortie + a 3rd from the hangar, stage 1 `aam`/`srm`/`agm`/`rockets`; second modernization per weapon + modernizations for `srm`/`agm`/`hebomb`; hangar tier 1 for the new weapons, tier 2 unlocks profile C. Needs Kanta's choice (package А/Б/В, fork level, 2 or 3 profiles); then brainstorming → plan → «да» | Расширить варианты прокачки | ждёт Kanta |
-| PG-07 | Mastery after lvl 35 per weapon: 3a own pairs instead of «Скорострел / Калибр» (removes the cause of S14-09) or 3b ranks of the chosen profile after PG-06 (recommended) | Расширить варианты прокачки | ждёт Kanta |
+| PG-06 | Upgrade variety, package (proposal 31.10, `docs/progression/upgrade-variety-2026-10-31.md`): weapon **profiles** — a fork at weapon lvl 3, 2 profiles in the sortie + a 3rd from the hangar, stage 1 `aam`/`srm`/`agm`/`rockets`; second modernization per weapon + modernizations for `srm`/`agm`/`hebomb`; hangar tier 1 for the new weapons, tier 2 unlocks profile C. Kanta 31.10 «делай»: package А, fork at lvl 3, 2 + hangar, mastery = profile ranks (PG-07 3b folded in). Plan `docs/superpowers/plans/2026-10-31-weapon-profiles.md`, 3 PRs. PR 1 (profiles of `aam`/`srm`/`agm`/`rockets`, flags `--wprofile`, `--profileshot`) merged 31.10 in #509, frames https://claude.ai/artifact/QQ7wvuSM4GGpBcWiFSkZuh; PR 2 (modernizations) and PR 3 (hangar, mastery) in work | Расширить варианты прокачки | в работе (Расширить варианты прокачки) |
+| PG-07 | Mastery after lvl 35 per weapon: 3a own pairs instead of «Скорострел / Калибр» (removes the cause of S14-09) or 3b ranks of the chosen profile after PG-06 (recommended). Kanta 31.10: 3b, part of PG-06 PR 3 | Расширить варианты прокачки | в работе (Расширить варианты прокачки) |
 | PG-08 | Modules with a behaviour line at lvl 3 (as `msl_head` has): ramming, afterburner after a dodge, reload on an ace kill, blast edge, etc. — proposal §3.4; after PG-06 | Расширить варианты прокачки | ждёт Kanta |
-| PG-09 | Sortie doctrine at the course screen (VS arcana): «Налёт», «Одиночка», «Снабжение», «Охота на асов», «Старая школа» — proposal §3.5; recommended after the demo | Расширить варианты прокачки | ждёт Kanta |
-| PG-10 | «Битва асов» draft from its own pool, starting at weapon lvl 3 so the first pick is a profile — proposal §3.7; after PG-06 | Расширить варианты прокачки | ждёт Kanta |
+| PG-09 | Sortie doctrine at the course screen (VS arcana): «Налёт», «Одиночка», «Снабжение», «Охота на асов», «Старая школа» — proposal §3.5; Kanta 31.10: after the demo | Расширить варианты прокачки | идея |
+| PG-10 | «Битва асов» draft from its own pool, starting at weapon lvl 3 so the first pick is a profile — proposal §3.7; Kanta 31.10: after the demo | Расширить варианты прокачки | идея |
 | S5-06 | Прокачка самолёта ур. 1 и ур. 2 раздельная: ур. 2 с нуля, перенос в профиле | Понятность игры для новичков | на проверке в сборке 3.5-s8 (в таблице «в работе» на 18.10 — догадка) |
 
 ## Понятность и интерфейс

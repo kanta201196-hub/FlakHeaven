@@ -35,8 +35,13 @@ var anchor := Vector2.ZERO   # 3.5: центр позиции на рельеф�
 
 func setup(center: Vector2, hp_mult: float, dps := 0.0) -> void:
 	var rot := randf() * TAU   # тест 3.5-s4: раскладка поворачивается целиком — машины не съезжаются в кучу
-	var spots := place(Terrain3D.active(), center, rot, randf_range(0.9, 1.2))
-	center = spots[0]
+	setup_spots(place(Terrain3D.active(), center, rot, randf_range(0.9, 1.2)), hp_mult, dps)
+
+
+## The site on spots already placed by place() ([bunker, zsu, zsu, sam, radar]): the spawner places it
+## itself to check the distance from the player first (S14-04).
+func setup_spots(spots: PackedVector2Array, hp_mult: float, dps := 0.0) -> void:
+	var center := spots[0]
 	global_position = center
 	anchor = center
 	var kinds := ["bunker", "zsu", "zsu", "sam", "radar"]

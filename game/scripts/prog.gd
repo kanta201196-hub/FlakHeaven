@@ -83,7 +83,7 @@ static func card_tags(p: Player, card: Dictionary) -> Array:
 	match card["kind"]:
 		"weapon_new":
 			return WEAPON_TAGS.get(card["weapon"], [])
-		"weapon_up":
+		"weapon_up", "profile":
 			return WEAPON_TAGS.get((p.groups[int(card["group"])] as Hardpoint).weapon, [])
 		"module":
 			if card["id"] == "skill3":

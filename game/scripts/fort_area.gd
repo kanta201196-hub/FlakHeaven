@@ -21,11 +21,15 @@ var _key: Vector2i
 ## dictionaries); `{}` when there is none. Kanta s13: a fort shows only while it hosts the activity, so
 ## forts already used this sortie (`used`, keyed by FortView.key_of, i.e. Background.forts_hit) are
 ## skipped, and so is one whose walls would reach into `screen` (it would pop up in plain sight).
-static func pick_fort(objs: Array, want: Vector2, reach: float, used := {}, screen := Rect2()) -> Dictionary:
+## S14-04 (Kanta 31.10): nor one closer than `min_d` to the player at `from` (ActivityBalance.min_dist).
+static func pick_fort(objs: Array, want: Vector2, reach: float, used := {}, screen := Rect2(),
+		from := Vector2.INF, min_d := 0.0) -> Dictionary:
 	var best: Dictionary = {}
 	var best_d := reach
 	for o: Dictionary in objs:
 		if o.get("name", "") != "o_fort" or used.has(FortView.key_of(o["pos"])):
+			continue
+		if from.is_finite() and (o["pos"] as Vector2).distance_to(from) < min_d + float(o["size"]) * 0.75:
 			continue
 		if screen.has_area():
 			var half := float(o["size"]) * 0.75   # wall corners at ±0.42·size, turned: well inside
@@ -101,6 +105,10 @@ func setup_fort(f: Dictionary, hp_mult: float, dps := 0.0) -> void:
 		damage = FortDamage.new()
 		if bg != null:
 			bg.forts_hit[_key] = damage
+			# S14-05: until now the spot was plain land (no pad, no fields); the fort's cells get them now
+			var tr := Terrain3D.active()
+			if tr != null:
+				tr.rebuild_area(f["pos"], float(f["size"]) * FortBalance.GROUND_R)
 	Events.player_blast.connect(_on_blast)
 	var tops := tower_points(f)
 	for i in tops.size():
