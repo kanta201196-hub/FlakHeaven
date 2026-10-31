@@ -75,7 +75,7 @@ for g in ${GFX//,/ }; do
 		fi
 		[ -n "$ONLY" ] && extra+=(--selfcheck-only="$ONLY")
 		wall=5400
-		[ "$part" = combat ] && wall=3600
+		[ "$part" = combat ] && wall=7200   # ~100 s a frame at 1080p on lavapipe, 30 frames
 		echo "selfcheck: $part, preset $g ($RENDERER)"
 		t0=$(date +%s)
 		# own user:// per process (code.md §9.4): no developer profile, no leftovers between parts

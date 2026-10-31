@@ -253,7 +253,7 @@ func process(delta: float) -> void:
 			_ew_t = {}
 			_i += 1
 		return
-	if _phase == 0 and _t > float(p.get("wait", WAIT)):
+	if _phase == 0 and _t > float(p.get("wait", WAIT)) and (SelfCheck.I == null or SelfCheck.I.settled(p)):   # R-23: close-up centred
 		if p.get("boom", false):
 			var c: Vector2 = p["pos"]
 			m.fx.explosion(c + Vector2(220, -90), 34.0)

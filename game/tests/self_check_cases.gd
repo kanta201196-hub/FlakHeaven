@@ -76,3 +76,5 @@ func _test_combat() -> void:
 	_check(pts.size() == 6 * 5, "five shots per plane (got %d)" % pts.size())
 	_check(pts.filter(func(p: Dictionary) -> bool: return p.get("sc_check", false)).size() == 6, "one checked shot per plane")
 	_check(pts.all(func(p: Dictionary) -> bool: return p["pos"] == Vector2(10, 20)), "all at the given spot")
+	var close := pts.filter(func(p: Dictionary) -> bool: return p["sc_shot"] in ["nozzles", "muzzles", "stores"])
+	_check(close.all(func(p: Dictionary) -> bool: return p.has("sc_fill") and not p.has("zoom")), "close-ups sized by plane length, not a fixed zoom")

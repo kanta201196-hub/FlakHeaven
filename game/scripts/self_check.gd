@@ -44,13 +44,17 @@ const PITCH_UNDER := -0.2   ## the lowest the hangar camera goes (Hangar3D.bench
 const TIER_LEVEL := {1: 1, 2: 3, 3: 5, 4: 5}
 ## Weapon store: classes whose store shows a different model (their own turret; the «Кит» bay cassette)
 const STORE_CLASSES := {"turret": ["attacker", "bomber"], "bombs": ["attacker", "bomber"]}
-## Combat close-ups: camera zoom (1 = the gameplay camera) of each shot
+## Combat wide shots: camera zoom (1 = the gameplay camera)
 const ZOOM_FLIGHT := 1.0
-const ZOOM_NOZZLE := 4.5
-const ZOOM_CLOSE := 3.0
 const ZOOM_TRAIL := 1.4
+## Combat close-ups: plane length as a share of the frame height, so a small fighter and a «Кит» fill it alike
+## (a fixed zoom left the fighter a speck and the bomber at 400 px of 1920)
+const FILL_NOZZLE := 1.7
+const FILL_CLOSE := 0.85
 ## Nozzle close-up: the camera moves this share of the plane length back from its centre, onto the nozzles
-const NOZZLE_BACK := 0.3
+const NOZZLE_BACK := 0.32
+## Close-up: frames of its own camera before the shot (the flame and the markers need a frame or two to follow)
+const SETTLE_MIN := 3
 ## Muzzle markers: sphere radius as a share of the plane length
 const MARKER_R := 0.008
 
@@ -73,6 +77,9 @@ var _markers: Array[Node3D] = []
 var _started := false
 var _finished := false
 var _applied := false   # hangar: the current job reached Hangar3D
+var _ccam: Camera3D = null   # combat close-up camera
+var _close_name := ""   # the close-up point the camera serves now
+var _close_n := 0   # frames of that point so far
 
 
 ## The self-check the command line asks for, or null. Reads the flags once.
@@ -199,9 +206,9 @@ static func combat_points(at: Vector2) -> Array:
 		var base := {"pos": at, "cls": [pl[0], pl[1]], "sc": key}
 		var shots := [
 			{"sc_shot": "flight", "fly": true, "zoom": ZOOM_FLIGHT, "wait": 3.0},
-			{"sc_shot": "nozzles", "sc_ab": true, "sc_back": NOZZLE_BACK, "zoom": ZOOM_NOZZLE, "wait": 2.0, "sc_check": true},
-			{"sc_shot": "muzzles", "sc_markers": true, "zoom": ZOOM_CLOSE, "wait": 1.0},
-			{"sc_shot": "stores", "roll": 0.55, "zoom": ZOOM_CLOSE, "wait": 1.0},
+			{"sc_shot": "nozzles", "sc_ab": true, "sc_back": NOZZLE_BACK, "sc_fill": FILL_NOZZLE, "wait": 2.0, "sc_check": true},
+			{"sc_shot": "muzzles", "sc_markers": true, "sc_fill": FILL_CLOSE, "wait": 1.0},
+			{"sc_shot": "stores", "roll": 0.55, "sc_fill": FILL_CLOSE, "wait": 1.0},
 			{"sc_shot": "trails", "fly": true, "sc_ab": true, "missiles": true, "zoom": ZOOM_TRAIL, "wait": 3.0},
 		]
 		for s: Dictionary in shots:
@@ -386,11 +393,59 @@ func hold(p: Dictionary) -> void:
 			g.cd = 0.29   # above zero: no launch; below 0.3: Render3D still shows the store
 	if p.get("sc_ab", false):
 		pl.ab_t = 1.0
-	if p.has("sc_back"):
-		m.camera.global_position = pl.global_position - Vector2.from_angle(pl.heading) * float(p["sc_back"]) * _plane_px()
-		m.camera.reset_smoothing()
+	if p.has("sc_fill"):
+		_frame_close(p)
+	else:
+		_frame_game()
 	if p.get("sc_markers", false) and _markers.is_empty():
 		_add_markers()
+
+
+## Close-up framing, every frame of the point: a camera of its own on the gameplay camera's tilt, aimed at the
+## plane (or sc_back of its length behind it: the nozzles) from the distance at which the plane length is sc_fill
+## of the frame height. The gameplay camera cannot do this: it stands over the combat plane at a height that
+## shrinks with zoom, while the plane flies at its relief altitude above that plane, so a close zoom put the camera
+## level with the plane or under it (the fighter's nozzle frame came out empty).
+func _frame_close(p: Dictionary) -> void:
+	var r3 := Render3D.I
+	var u := _player_unit()
+	if r3 == null or u == null:
+		return
+	if _ccam == null:
+		_ccam = Camera3D.new()
+		_ccam.fov = Render3D.FOV
+		_ccam.near = 1.0
+		_ccam.far = 9000.0
+		_ccam.keep_aspect = Camera3D.KEEP_HEIGHT
+		_ccam.cull_mask = r3.cam.cull_mask
+		r3.add_child(_ccam)
+	if _close_name != String(p["name"]):
+		_close_name = p["name"]
+		_close_n = 0
+	_close_n += 1
+	var pl := m.player
+	var len_px := maxf(_plane_px(), 1.0)
+	var d := -Vector2.from_angle(pl.heading) * float(p.get("sc_back", 0.0)) * len_px
+	var target := u.node.global_position + Vector3(d.x, 0.0, d.y)
+	var dist := len_px / (float(p["sc_fill"]) * 2.0 * tan(deg_to_rad(Render3D.FOV) * 0.5))
+	var tilt := deg_to_rad(Tuning.g("cam_tilt"))
+	_ccam.global_position = target + Vector3(0.0, cos(tilt), sin(tilt)) * dist
+	_ccam.basis = Basis.looking_at(Vector3(0.0, -cos(tilt), -sin(tilt)), Vector3(0, 0, -1))
+	_ccam.current = true
+
+
+## The gameplay camera again after a close-up
+func _frame_game() -> void:
+	if _ccam != null and _ccam.current and Render3D.I != null:
+		Render3D.I.cam.current = true
+
+
+## VisualBench asks before it shoots a point: a close-up waits SETTLE_MIN frames of its own camera (a slow frame
+## can outlast the point's whole wait); any other point is ready at once
+func settled(p: Dictionary) -> bool:
+	if not p.has("sc_fill") or not _gate():
+		return true
+	return _close_name == String(p.get("name", "")) and _close_n >= SETTLE_MIN
 
 
 ## Called by VisualBench._save for a self-check point instead of its own PNG: the JPEG, the manifest entry and,
