@@ -177,7 +177,8 @@ lines of the campaign screen. By op 2 the player knows Monolith builds; by op 3 
 
 **Enemy visual identity (needs Kanta's «ok» as art):** a plain grey vertical slab as the Monolith mark on the Fortress,
 AA sites and trucks; no colours, no eagles, no letters. Cheap (one decal), makes «they are one company» readable from
-the air. Not in this plan's cost until approved.
+the air. *(in game behind F1 `story_mark`: `MonolithMark`, a code-built slab on the model's top; frames for the «ok» via
+`--markshot`, see the review page)*.
 
 ## 10. Mini-bosses and bosses in the story
 

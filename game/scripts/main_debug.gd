@@ -34,6 +34,8 @@ func process(delta: float) -> void:
 			_run_autotest(delta)
 		if m._args.has("--storyshots"):
 			_story_shots()
+		if m._args.has("--markshot"):
+			_mark_shot(delta)
 		elif m._args.has("--smoke"):
 			_smoke_check()
 	if m._args.has("--pairtest") or m._args.has("--cardtest"):
@@ -68,9 +70,11 @@ func process(delta: float) -> void:
 
 
 ## EX-05: какую карточку брать для модернизации оружия w: сама модернизация → оружие → его уровни → модули рецепта
-func _evo_pick(w: String) -> int:
+## `rid` — a recipe id of `Modernizations` (a classic one is the weapon id, so old `--evopick=aam` still works).
+func _evo_pick(rid: String) -> int:
 	var p := m.player
-	var cat: Dictionary = Prog.EVOS[w]["cat"]
+	var w := Modernizations.weapon_of(rid)
+	var cat := Modernizations.cat(rid)
 	var best := -1
 	var best_rank := 99
 	for ci in m.offers.size():
@@ -79,7 +83,7 @@ func _evo_pick(w: String) -> int:
 		if o["kind"] in ["weapon_up", "profile"] and int(o.get("group", 99)) < p.groups.size():
 			ow = (p.groups[int(o["group"])] as Hardpoint).weapon
 		var rank := 99
-		if o["kind"] == "evolution" and ow == w:
+		if o["kind"] == "evolution" and String(o.get("evo", "")) == rid:
 			rank = 0
 		elif o["kind"] == "weapon_new" and ow == w:
 			rank = 1
@@ -748,6 +752,48 @@ func _story_shots() -> void:
 		Dialog.play(m, String(e[1]), e[2], m._set_state.bind("playing"), true)
 	else:
 		Cutscene.play(m, String(e[1]), e[2], "playing")
+
+
+## ST-09 (story plan step 10): frames of the Monolith mark for Kanta's «ok» (--autotest --smoke --turbo --god --markshot
+## --gfx=N). Two seconds into the sortie a Fortress and three AA vehicles are put right ahead of the player, the
+## frame is saved twice (user://shot_mark_1.png at 0.9 s, when the battle models have loaded, shot_mark_2.png at 1.8 s)
+## and the game quits: the smoke bot's own fight is not needed, and its 300 s wall limit never comes.
+var _mark_t := -1.0
+
+
+func _mark_shot(delta: float) -> void:
+	if m.state != "playing" or not is_instance_valid(m.player) or m.run_time < 2.0:
+		return
+	var p := m.player
+	if _mark_t < 0.0:
+		_mark_t = 0.0
+		var ahead := Vector2.from_angle(p.heading)
+		var side := ahead.orthogonal()
+		var f := Fortress.new()
+		f.setup_fortress(4000.0)
+		f.position = p.global_position + ahead * 230.0
+		f.heading = p.heading + PI / 2.0
+		m.world.add_child(f)
+		var i := 0
+		for v in ["zsu", "sam", "radar"]:
+			var g := GroundTarget.new()
+			g.setup(v, null, 1.0)
+			g.position = p.global_position + ahead * 120.0 + side * (90.0 * (i - 1))
+			m.world.add_child(g)
+			i += 1
+		print("MARKSHOT: placed")
+		return
+	_mark_t += delta
+	for k in [1, 2]:
+		var nm := "mark_%d" % k
+		if _mark_t > 0.9 * k and not _shots_done.has(nm):
+			_shots_done[nm] = true
+			var img := m.get_viewport().get_texture().get_image()
+			if img != null:   # headless has no frame
+				img.save_png("user://shot_%s.png" % nm)
+			print("SHOT ", nm)
+	if _shots_done.has("mark_2"):
+		m.get_tree().quit()
 
 
 ## FB-01: смоук с «--fortress» — бой с «Крепостью» до 180 с, раз в 10 с — фаза, точки, расстояние до базы

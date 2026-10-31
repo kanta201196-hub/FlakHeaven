@@ -26,35 +26,35 @@ const THIRD_TIER := 2
 ## armor as the guided missile does (×1.3); `burn` — rockets set the target on fire (incendiary ammo rules).
 const DEFS := {
 	"aam": {
-		"pair": {"title": "Двойной пуск", "desc": "С каждой точки две лёгкие ракеты по разным целям",
+		"pair": {"rank": "dmg", "title": "Двойной пуск", "desc": "С каждой точки две лёгкие ракеты по разным целям",
 			"vs": "группы дронов и перехватчиков", "dmg": 0.55, "per_slot": 2},
-		"reach": {"title": "Дальний захват", "desc": "Захват цели с 1 500 пикс. (было 1 050), ракета на 30 % быстрее",
+		"reach": {"rank": "range", "title": "Дальний захват", "desc": "Захват цели с 1 500 пикс. (было 1 050), ракета на 30 % быстрее",
 			"vs": "ракетоносцы и асы: удар первым, до их пуска", "dmg": 0.9, "range": 1.43, "spd": 1.3},
-		"frag": {"title": "Осколочная", "desc": "Боевая часть рвётся облаком осколков: радиус 110 пикс., соседям 70 % урона",
+		"frag": {"rank": "splash", "title": "Осколочная", "desc": "Боевая часть рвётся облаком осколков: радиус 110 пикс., соседям 70 % урона",
 			"vs": "плотные группы самолётов", "dmg": 0.85, "splash": 110.0, "splash_k": 0.7},
 	},
 	"srm": {
-		"swarm": {"title": "Рой", "desc": "С каждой точки три мини-ракеты по разным целям в 400 пикс.",
+		"swarm": {"rank": "dmg", "title": "Рой", "desc": "С каждой точки три мини-ракеты по разным целям в 400 пикс.",
 			"vs": "дроны", "dmg": 0.4, "range": 0.67, "per_slot": 3},
-		"hound": {"title": "Гончая", "desc": "Доворот вдвое круче, дальность 800 пикс. (было 600)",
+		"hound": {"rank": "turn", "title": "Гончая", "desc": "Доворот вдвое круче, дальность 800 пикс. (было 600)",
 			"vs": "асы и перехватчики", "dmg": 0.85, "range": 1.33, "turn": 2.0, "life": 2.4},
-		"guard": {"title": "Перехватчик", "desc": "Если к вам идёт ракета ближе 300 пикс., пуск уходит по ней",
+		"guard": {"rank": "intercept", "title": "Перехватчик", "desc": "Если к вам идёт ракета ближе 300 пикс., пуск уходит по ней",
 			"vs": "ракетоносцы и позиции ПВО", "dmg": 0.9, "intercept": 300.0},
 	},
 	"agm": {
-		"cluster": {"title": "Кассетная", "desc": "Над целью делится на 4 суббоеприпаса по соседним наземным целям (по 35 % урона, радиус 80)",
+		"cluster": {"rank": "split_k", "title": "Кассетная", "desc": "Над целью делится на 4 суббоеприпаса по соседним наземным целям (по 35 % урона, радиус 80)",
 			"vs": "колонны и позиции ПВО", "split": 4, "split_k": 0.35},
-		"bunker": {"title": "Бетонобой", "desc": "Один тяжёлый удар: урон ×1,6, по броне ещё ×1,5",
+		"bunker": {"rank": "armor_k", "title": "Бетонобой", "desc": "Один тяжёлый удар: урон ×1,6, по броне ещё ×1,5",
 			"vs": "бункеры, бронетехника, «Крепость»", "dmg": 1.6, "armor_k": 1.5},
-		"arm": {"title": "Противорадарная", "desc": "Сама идёт на радар или установку ПВО с 1 400 пикс. (было 900)",
+		"arm": {"rank": "dmg", "title": "Противорадарная", "desc": "Сама идёт на радар или установку ПВО с 1 400 пикс. (было 900)",
 			"vs": "позиции ПВО и укрепрайоны", "range": 1.55, "antiradar": true},
 	},
 	"rockets": {
-		"fan": {"title": "Веер", "desc": "В залпе на две ракеты больше, конус 40°",
+		"fan": {"rank": "dmg", "title": "Веер", "desc": "В залпе на две ракеты больше, конус 40°",
 			"vs": "площадь: колонны, толпы дронов", "dmg": 0.75, "extra": 2, "spread": 20.0},
-		"heat": {"title": "Кумулятив", "desc": "Три тяжёлые ракеты в залпе, броня их не держит",
+		"heat": {"rank": "dmg", "title": "Кумулятив", "desc": "Три тяжёлые ракеты в залпе, броня их не держит",
 			"vs": "бронетехника, вертолёты, ЗРК", "dmg": 1.6, "count": 3, "ap": true},
-		"inc": {"title": "Зажигательные", "desc": "Поджигают цель: ещё 50 % урона за 2 с",
+		"inc": {"rank": "dmg", "title": "Зажигательные", "desc": "Поджигают цель: ещё 50 % урона за 2 с",
 			"vs": "колонны и прочные наземные цели", "dmg": 0.8, "burn": true},
 	},
 }
@@ -65,6 +65,18 @@ const ORDER := {
 	"agm": ["cluster", "bunker", "arm"],
 	"rockets": ["fan", "heat", "inc"],
 }
+## PR 3 (Kanta 31.10, mastery 3b): after level 35 a weapon with a profile gets ranks of that profile instead of
+## «Скорострел / Калибр»: each rank adds RANK_K to the profile's own feature (`rank` key of `DEFS`), up to
+## `Cards.BRANCH_MAX` ranks. A factor the profile does not list (`dmg` of «Противорадарная») starts at 1.
+const RANK_K := 0.12
+## Player text of the ranked feature (Loc.t at draw time).
+const RANK_TEXT := {
+	"dmg": "урон", "range": "дальность захвата", "splash": "радиус осколков", "turn": "доворот",
+	"intercept": "радиус перехвата", "split_k": "урон суббоеприпасов", "armor_k": "урон по броне",
+}
+## Factor keys that default to 1 when the profile does not list them.
+const FACTOR_KEYS := ["dmg", "cd", "range", "spd"]
+
 ## Card colours by position on the screen (first, second, third profile).
 const COLORS := ["missiles", "maneuver", "blast"]
 
@@ -109,3 +121,22 @@ static func open_ids(w: String, third_open: bool) -> Array:
 ## Behaviour value `key` of the profile of hardpoint weapon `w` (`default` when the profile has none).
 static func val(w: String, id: String, key: String, default: Variant) -> Variant:
 	return def(w, id).get(key, default)
+
+
+## Feature that ranks of profile `id` of weapon `w` grow ("" for an unknown pair).
+static func rank_key(w: String, id: String) -> String:
+	return String(def(w, id).get("rank", ""))
+
+
+## Profile `id` of weapon `w` at mastery `rank`: a copy of its definition with the ranked feature ×(1 + RANK_K × rank);
+## rank 0 returns the definition itself, an unknown pair an empty dictionary.
+static func ranked(w: String, id: String, rank: int) -> Dictionary:
+	var d := def(w, id)
+	if rank <= 0 or d.is_empty():
+		return d
+	var out := d.duplicate()
+	var key := rank_key(w, id)
+	if key != "":
+		var base := float(d.get(key, 1.0 if key in FACTOR_KEYS else 0.0))
+		out[key] = base * (1.0 + RANK_K * rank)
+	return out

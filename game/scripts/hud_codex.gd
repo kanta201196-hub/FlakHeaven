@@ -286,8 +286,10 @@ func _skill_rows(p: Player) -> Array:
 
 func _evo_rows(p: Player) -> Array:
 	var out: Array = []
-	for w in Prog.EVOS:
-		var ev: Dictionary = Prog.EVOS[w]
+	var all := Modernizations.all()
+	for rid: String in all:
+		var ev: Dictionary = all[rid]
+		var w := Modernizations.weapon_of(rid)
 		var conds: Array = []
 		var wname: String = "Пушка" if w == "gun" else Weapons.DEFS[w]["short"]
 		var done := false
@@ -297,7 +299,7 @@ func _evo_rows(p: Player) -> Array:
 			for g in (p.groups if p != null else []):
 				if (g as Hardpoint).weapon == w:
 					lv = maxi(lv, (g as Hardpoint).level)
-					done = done or (g as Hardpoint).evo
+					done = done or ((g as Hardpoint).evo and ((g as Hardpoint).evo_id == rid or ((g as Hardpoint).evo_id == "" and rid == w)))
 			mine = mine or lv > 0
 			conds.append(["%s ур. 5%s" % [wname, (" (сейчас %d)" % lv) if (p != null and lv > 0) else ""], lv >= 5])
 		else:
