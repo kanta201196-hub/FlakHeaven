@@ -2464,7 +2464,9 @@ func _turret_yaw(p: Player, root: Node3D, local: Vector3, idle := 0.0) -> float:
 const OBJ_TOP := -30.0
 ## B-26: столовая гора-картинка не нужна — горы теперь настоящие;
 ## B-41: скалы-картинки заменены группами моделей (biome_props.gd)
-const OBJ_SKIP_3D := ["o_mesa", "o_rocks_big", "o_rocks_small"]
+## Objects with no 3D picture: BiomeProps models them (rocks), or the ground shader paints them (o_crater, S14-10:
+## the level crater picture stuck out of slopes as a floating slab)
+const OBJ_SKIP_3D := ["o_mesa", "o_rocks_big", "o_rocks_small", "o_crater"]
 var _wreck_scenes := {}   # вид обломков (BiomeProps.PLANE_KINDS) → PackedScene или null
 
 

@@ -113,3 +113,17 @@ approach (`ACTIVATE_R` 1150 px), so they are not shortened.
 - `rebuild_area` is the first mid-sortie ground change. Any future "terrain reacts to the game" feature
   (craters from bombs, burnt fields) can use it.
 - `_flats` and `_objs_cache` are cleared together when the object cache grows past 400 cells; harmless.
+
+## 5. S14-10: a "piece of explosion texture" stuck in a mountain
+
+**Cause.** Map craters (`o_crater`, 170 px) were the last cell objects still drawn as a 2D picture: a level
+`PlaneMesh` with the crater image at the ground height of the crater's centre (`Render3D._sync_objects`).
+The ground under it was flattened only 30 % (`FLAT_OBJS`), and `fix_object` keeps craters off slopes by the
+raw river field only, which does not see RV-01 mountains, terraces and banks. On any slope the uphill half of
+the picture went into the ground and the rest stuck out as a floating slab with a straight cut edge.
+
+**Fix.** `o_crater` has no 3D picture (`OBJ_SKIP_3D`) and no pad; the chunk build paints it as the same
+ground mark as a battle-scene crater (`burns`, radius 0.4 × size), so it lies on the relief at any slope.
+
+The "slab in the sea" on Leviathan (PC autotest, 31.10) is not this: the Archipelago has no cell objects; that
+is a SeaProps model and was not changed.
