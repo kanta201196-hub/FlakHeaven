@@ -40,6 +40,8 @@ static func start(m: Main) -> void:
 	rescue_done = false
 	var op := highland_op()
 	say(DISPATCH, StoryText.radio("start.pass" if op <= OP_PASS else "start.other"))
+	if op >= 0 and Tuning.g("story_accents") > 0.0:
+		m.sfx.play("sting_start", -8.0)   # step 4: the operation's opening hit (file optional)
 	if m.class_task != null and m.class_task.cls != "":
 		say(DISPATCH, Loc.t(StoryText.radio("task")) % Loc.t(String(ClassTask.DEFS[m.class_task.cls]["brief"])))
 
@@ -53,6 +55,7 @@ static func tick(m: Main) -> void:
 		_grom_in = true
 		m.player.add_wingman("swift", 2.0)
 		say("Гром", StoryText.radio("grom.join"))
+		Cinematic.accent(m, "grom", StoryText.accent("grom"))
 	if not _finale and highland_op() == OP_SKY and Campaign.flag("grom_free") and m.op_flags.get("fortress", false):
 		_finale = true
 		say("Гром", StoryText.radio("grom.finale"))

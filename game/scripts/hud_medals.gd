@@ -77,7 +77,8 @@ func draw(m: Main, area: Rect2) -> void:
 		elif t != null:
 			ctrl.draw_texture_rect(t, ir, false, Color(1, 1, 1, 1.0 if n > 0 else 0.55))
 		var title := "???" if hidden else Loc.t(String(md["title"]))
-		_text(Vector2(cell.position.x + 4, ir.end.y + 16), _fit(title, cw - 8, 14), 14, UiStyle.TEXT if n > 0 else UiStyle.TEXT_OFF, HORIZONTAL_ALIGNMENT_CENTER, cw - 8)
+		var fs := _title_size(title, cw - 8)
+		_text(Vector2(cell.position.x + 4, ir.end.y + 16), _fit(title, cw - 8, fs), fs, UiStyle.TEXT if n > 0 else UiStyle.TEXT_OFF, HORIZONTAL_ALIGNMENT_CENTER, cw - 8)
 		# tier pips and a bar to the next tier
 		var pw := 10.0
 		var px := cell.get_center().x - (count * (pw + 4.0) - 4.0) / 2.0
@@ -93,6 +94,17 @@ func draw(m: Main, area: Rect2) -> void:
 			ctrl.draw_rect(Rect2(br.position, Vector2(br.size.x * f, br.size.y)), UiStyle.OK)
 	_text(Vector2(area.position.x, area.position.y - 8), Loc.t("Ступеней получено: %d из %d") % [earned, all_tiers], 15, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, area.size.x)
 	_detail(show_id, tiers, cnt, sets, Rect2(area.position.x, area.end.y - detail_h, area.size.x, detail_h))
+
+
+## S14-17 (self-check: «Небо над Шахрисангом» was cut to «Небо над Шахри…»): the largest of 14…11 px at which the
+## medal name fits its cell, so long names shrink a little instead of losing their end; 11 px still cuts with «…»
+func _title_size(title: String, width: float) -> int:
+	var f := ui_font()
+	var s := Loc.out(title)
+	for fs in [14, 13, 12]:
+		if f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= width:
+			return fs
+	return 11
 
 
 func _detail(id: String, tiers: Dictionary, cnt: Dictionary, sets: Dictionary, r: Rect2) -> void:

@@ -193,15 +193,42 @@ func _set_state(s: String) -> void:
 		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
 	Settings.set_screen_cap(s != "playing")
+	if s == "playing":
+		Hangar3D.release()
 	if is_instance_valid(player) and menu != null:
-		player.visible = not (s == "menu" or s == "hangar" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
+		player.visible = not (s == "menu" or s == "hangar" or s == "cutscene" or s == "dialog" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
 	Engine.time_scale = base_ts
 
 
+## The campaign screen's «В ВЫЛЕТ ▶» (and the «Битва асов» button): the hangar scene before the operation when it
+## is due (step 3; `--dialog` plays the test scene), then the sortie itself (`_launch_sortie`).
 func select_class(id: String) -> void:
 	cls_id = id
+	var oid := String(Campaign.op()["id"])
+	if _args.has("--dialog") and not _dialog_tested:
+		_dialog_tested = true
+		Dialog.play(self, "test", StoryDialogs.TEST, _launch_sortie)
+	elif not aces() and Dialog.due("hangar_" + oid):
+		Dialog.play(self, "hangar_" + oid, StoryDialogs.scene("hangar_" + oid), _launch_sortie)
+	elif aces() and Dialog.due("hangar_aces"):
+		Dialog.play(self, "hangar_aces", StoryDialogs.scene("hangar_aces"), _launch_sortie)
+	else:
+		_launch_sortie()
+
+
+var _dialog_tested := false   # `--dialog`: the test scene plays once per run of the game
+
+
+## Builds the world and gives control: the operation's intro first when it is due (step 2; `--cutscene` plays the
+## test scene).
+func _launch_sortie() -> void:
 	start_run()
-	_set_state("playing")
+	if _args.has("--cutscene"):
+		Cutscene.play(self, "test", StoryScenes.TEST, "playing")
+	elif not aces() and Campaign.story_scene_due("intro_" + String(Campaign.op()["id"]), Settings.cutscenes):
+		Cutscene.play(self, "intro_" + String(Campaign.op()["id"]), StoryScenes.intro(String(Campaign.op()["id"])), "playing")
+	else:
+		_set_state("playing")
 
 
 func start_run() -> void:
@@ -285,6 +312,8 @@ func start_run() -> void:
 	course_log = []
 	meta_award = {}
 	_slow_t = 0.0
+	_accent_t = 0.0
+	Cinematic.reset()
 	offer_rare = false
 	level_at_5 = 0
 	tele.reset()
@@ -295,11 +324,16 @@ func start_run() -> void:
 func _process(delta: float) -> void:
 	input_ctl.handle_global_input()
 	dbg.process(delta)
+	tele.load_tick()
 	if state in ["dead", "evac"]:
 		result_t += delta / maxf(Engine.time_scale, 0.01)
 	if _slow_t > 0.0 and state == "playing":
 		_slow_t -= delta / maxf(Engine.time_scale, 0.01)
 		if not _hitstop: # 3.4: стоп-кадр не перебивается замедлением
+			Engine.time_scale = _base_scale()
+	if _accent_t > 0.0 and state == "playing":   # story accent (step 4): eases back to normal speed every frame
+		_accent_t -= delta / maxf(Engine.time_scale, 0.01)
+		if not _hitstop:
 			Engine.time_scale = _base_scale()
 	if state == "playing" and not is_dead:
 		tele.frame(delta, self)
@@ -319,6 +353,14 @@ func _process(delta: float) -> void:
 		Hints.tick(delta / maxf(Engine.time_scale, 0.01))
 	_state_t += delta / maxf(Engine.time_scale, 0.01)
 
+	if state == "cutscene":   # story scene: the camera follows the scene keys, the world stays paused
+		Cutscene.tick(self, delta / maxf(Engine.time_scale, 0.01))
+		sfx.music("menu" if Cutscene.next_state == "playing" else "result")
+		return
+	if state == "dialog":   # hangar scene (step 3): lines type out over the paused world
+		Dialog.tick(self, delta / maxf(Engine.time_scale, 0.01))
+		sfx.music("menu")
+		return
 	if state in ["menu", "settings"] and menu.back_state == "menu":
 		# фон меню: камера медленно плывёт над биомом
 		# тест 3.5-s5 (п. 1): по курсу звена заставки — самолёты летят носом вперёд, а не боком
@@ -675,8 +717,22 @@ func _on_evac_reached() -> void:
 	op_result = Campaign.on_evac(run_time, op_flags)
 	_award("evac")
 	RunLog.write(self, "эвакуация")
-	_set_state("evac")
 	sfx.play("evac", -2.0, 1.2)
+	# story (step 2): the operation's outro between the evacuation and the results; (step 3) the hangar debrief after it
+	var oid := String(Campaign.op()["id"])
+	if not aces() and Campaign.story_scene_due("outro_" + oid, Settings.cutscenes) and not StoryScenes.outro(oid).is_empty():
+		Cutscene.play(self, "outro_" + oid, StoryScenes.outro(oid), "evac", _after_outro)
+	else:
+		_after_outro()
+
+
+## After the sortie's outro (or straight after the evacuation): the hangar debrief scene when due, then the results.
+func _after_outro() -> void:
+	var sid := "hangar_%s_after" % String(Campaign.op()["id"])
+	if not aces() and Dialog.due(sid):
+		Dialog.play(self, sid, StoryDialogs.scene(sid), _set_state.bind("evac"))
+	else:
+		_set_state("evac")
 
 
 ## «Левиафан» разбил точку эвакуации (5 залпов): открытое окно закрывается, после его гибели — не откроется
@@ -771,6 +827,8 @@ func _on_enemy_killed(e: Enemy) -> void:
 		op_flags["baron"] = true
 		Story.on_baron_down()
 		fx.text(e.global_position + Vector2(0, -60), "«Барон» сбит!", Color(1.0, 0.85, 0.4))
+		if not aces():
+			Cinematic.accent(self, "baron", StoryText.accent("baron"))
 	if e.is_boss:
 		run.on_boss_killed()
 		if e.has_meta("born"):
@@ -900,9 +958,19 @@ func add_shake(amount: float) -> void:
 var _hitstop := false
 
 
-## Обычная скорость времени с учётом замедления открытия связки
+## Обычная скорость времени с учётом замедления открытия связки и кино-момента сюжета (`AccentCurve`)
 func _base_scale() -> float:
-	return base_ts * (0.3 if _slow_t > 0.0 else 1.0)
+	return base_ts * (0.3 if _slow_t > 0.0 else 1.0) * AccentCurve.scale_at(_accent_t)
+
+
+var _accent_t := 0.0   # real seconds left of a story accent's slow-motion (`Cinematic.accent`)
+
+
+## Starts the slow-motion of a story accent (`Cinematic`); the hit-stop, if one is running, is not interrupted.
+func start_accent() -> void:
+	_accent_t = AccentCurve.DUR
+	if not _hitstop:
+		Engine.time_scale = _base_scale()
 
 
 func hitstop() -> void:
@@ -923,6 +991,8 @@ func hitstop() -> void:
 
 func _input(event: InputEvent) -> void:
 	tele.input(event)
+	if state == "cutscene":
+		Cutscene.request_skip(event)
 
 
 func _exit_tree() -> void:

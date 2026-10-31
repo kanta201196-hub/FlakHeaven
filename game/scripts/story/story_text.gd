@@ -19,6 +19,19 @@ const RADIO := {
 	"grom.alive": "Перехват из крепости: «Гром» жив! Наземные идут за ним.",
 }
 
+## Banners of the three in-combat accents (`Cinematic.accent`), by accent id.
+const ACCENTS := {
+	"fortress": "«Крепость» идёт на нашу базу! Перехватите её, пока не дошла",
+	"baron": "«Барон» сбит! Небо над крепостями наше",
+	"grom": "«Гром» в строю!",
+}
+
+
+## Banner of an in-combat accent, or "" for an unknown id.
+static func accent(id: String) -> String:
+	return String(ACCENTS.get(id, ""))
+
+
 ## Per-operation lines of recurring enemy pilots («Почтальон», «Сквозняк») and the Fortress controller:
 ## key → Array of lines; index by `StoryFlags.line_index(met, n)`. Filled in steps 5–8; empty means «use the
 ## generic line of the unit».
