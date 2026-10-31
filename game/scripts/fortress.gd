@@ -325,7 +325,7 @@ func _point_down(pt: Dictionary) -> void:
 	if was == 1 and phase == 2:
 		_bay_t = 1.5
 		Events.banner.emit("Левое крыло сбито! Теперь правое — турели, двигатель и открытый люк", 3.5)
-		Events.radio.emit("Штаб", "Левое крыло горит! Берите правое: две турели и двигатель. Откроется люк — бейте в брюхо.", false)
+		Events.radio.emit(StoryText.DISPATCH, "Левое крыло горит! Берите правое: две турели и двигатель. Откроется люк — бейте в брюхо.", false)
 		Main.I.tele.add("fortress_phase2_s", Main.I.run_time - _born)
 		_missile_cd = 3.0
 	elif was == 2 and phase == 3:
@@ -333,7 +333,7 @@ func _point_down(pt: Dictionary) -> void:
 		hatches_open = false
 		_zones.clear()
 		Events.banner.emit("Двигатели горят! «Крепость» дымит и уходит — догоните и добейте!", 3.5)
-		Events.radio.emit("Штаб", "Она горит и уходит! Догоняйте, пока не скрылась, — кормовые кольца бьют назад, заходите сбоку.", false)
+		Events.radio.emit(StoryText.DISPATCH, "Она горит и уходит! Догоняйте, пока не скрылась, — кормовые кольца бьют назад, заходите сбоку.", false)
 		Main.I.tele.add("fortress_phase3_s", Main.I.run_time - _born)
 	_set_title()
 
@@ -412,7 +412,7 @@ func _start_route(p: Player) -> void:
 	_wp = base_pos
 	_to_base = true
 	Events.banner.emit("«Крепость» идёт на нашу базу! Перехватите её, пока не дошла", 4.0)
-	Events.radio.emit("Штаб", "«Крепость» на подходе. Сначала левое крыло: две турели и двигатель. У турелей свои сектора, нос и хвост — мёртвые зоны.", false)
+	Events.radio.emit(StoryText.DISPATCH, "«Крепость» на подходе. Сначала левое крыло: две турели и двигатель. У турелей свои сектора, нос и хвост — мёртвые зоны.", false)
 	Hints.show("fortress", "«Крепость» летит к нашей базе (стрелка «база»). Сбивайте её крыло за крылом: сначала левое, потом правое. Нос и хвост — мёртвые зоны турелей.", 10.0, 2)
 
 
