@@ -555,35 +555,43 @@ vec4 shark_mouth(vec3 p, out float pupil) {
 	return vec4(outline, inside, teeth, ring);
 }
 
-// плоскость узора по преобладающей оси нормали: сверху — (x, z), борт — (x, y), торец — (z, y)
-vec2 plane_uv(vec3 p, vec3 n) {
-	vec3 a = abs(n);
-	if (a.y >= a.x && a.y >= a.z) return p.xz;
-	if (a.z >= a.x) return p.xy;
-	return p.zy;
-}
-
-// леопард: розетки — разорванное тёмное кольцо, внутри чуть темнее основы; между ними мелкие пятна
+// леопард: розетки — разорванное тёмное кольцо, внутри чуть темнее основы; между ними мелкие пятна.
+// Every rosette of the 3x3 neighbourhood is drawn whole and the strongest wins: taking only the nearest cell cut
+// a ring off along the straight cell border wherever two rosettes came close, a hard unfiltered edge that read as
+// pixel steps (Kanta 31.10). Edges and ring breaks are drawn about one screen pixel wide (fwidth of the cell grid,
+// continuous across cell borders): crisp up close, no shimmer far away.
 vec2 leopard(vec2 uv) {
 	vec2 g = uv * 12.0;
 	vec2 i = floor(g); vec2 f = fract(g);
-	float d1 = 9.0; vec2 dv = vec2(0.0); float hid = 0.0;
+	float wob = 0.85 + 0.3 * vnoise(uv * 60.0);
+	float gn = 0.35 * vnoise(uv * 40.0);
+	float pf = length(fwidth(g));   // screen pixel in cell units, continuous across cell borders
+	float e = max(0.006, 0.75 * pf);
+	float ring = 0.0; float inner = 0.0;
 	for (int y = -1; y <= 1; y++) {
 		for (int x = -1; x <= 1; x++) {
 			vec2 o = vec2(float(x), float(y));
 			vec2 h = hash22(i + o);
 			vec2 r = o + 0.15 + 0.7 * h - f;
-			float d = dot(r, r);
-			if (d < d1) { d1 = d; dv = r; hid = h.x; }
+			float d = length(r) * wob;
+			float rad = 0.30 + 0.08 * h.x;
+			// the ring's breaks: as crisp as the ring itself (pixel width along the arc, ~1/r per radian)
+			float ga = max(0.03, 2.25 * pf / max(length(r), 0.05));
+			float gaps = smoothstep(-0.55 - ga, -0.55 + ga, sin(atan(r.y, r.x) * 3.0 + h.x * 40.0) + gn);
+			ring = max(ring, smoothstep(rad - 0.125 - e, rad - 0.125 + e, d)
+					* (1.0 - smoothstep(rad + 0.055 - e, rad + 0.055 + e, d)) * gaps);
+			inner = max(inner, 1.0 - smoothstep(rad - 0.135 - e, rad - 0.135 + e, d));
 		}
 	}
-	float d = sqrt(d1) * (0.85 + 0.3 * vnoise(uv * 60.0));
-	float rad = 0.30 + 0.08 * hid;
-	float ang = atan(dv.y, dv.x);
-	float gaps = smoothstep(-0.75, -0.35, sin(ang * 3.0 + hid * 40.0) + 0.35 * vnoise(uv * 40.0));
-	float ring = smoothstep(rad - 0.15, rad - 0.10, d) * (1.0 - smoothstep(rad + 0.03, rad + 0.08, d)) * gaps;
-	float inner = 1.0 - smoothstep(rad - 0.16, rad - 0.11, d);
 	return vec2(ring, inner);
+}
+
+// leopard() on the three model planes, blended by the normal: a hard switch to the dominant axis flickered pixel by
+// pixel on the remeshed skin's uneven normals and cut the rosettes along jagged lines on curved surfaces
+vec2 leopard_tri(vec3 p, vec3 n) {
+	vec3 w = pow(abs(n), vec3(6.0));
+	w /= max(w.x + w.y + w.z, 1e-5);
+	return leopard(p.zy) * w.x + leopard(p.xz) * w.y + leopard(p.xy) * w.z;
 }
 
 // тигр: изогнутые поперечные полосы, к концам сужаются; k — stripe width (1 — «Тигр», «Полярный тигр» wider)
@@ -791,7 +799,7 @@ void fragment() {
 	float rough_add = 0.0;   // pattern 7: roughness variation of the paint
 	float metal_k = 1.0;     // pattern 7 bare metal: rust and primer are not metallic
 	if (pattern == 1) {
-		vec2 lr = leopard(plane_uv(lp, ln));
+		vec2 lr = leopard_tri(lp, ln);
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), lr.y * 0.8);
 		col = mix(col, pat_a, lr.x);
 	} else if (pattern == 2) {
