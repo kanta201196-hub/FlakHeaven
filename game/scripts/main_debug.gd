@@ -30,8 +30,11 @@ func process(delta: float) -> void:
 	if m._args.has("--exittest") and _exit_test():
 		return
 	if m._autotest:
-		_run_autotest(delta)
-		if m._args.has("--smoke"):
+		if not _ss_campaign:   # the story-shots run ends on the campaign screen: the bot must not press «В вылет» again
+			_run_autotest(delta)
+		if m._args.has("--storyshots"):
+			_story_shots()
+		elif m._args.has("--smoke"):
 			_smoke_check()
 	if m._args.has("--pairtest") or m._args.has("--cardtest"):
 		_pair_test()
@@ -688,6 +691,63 @@ func _smoke_check() -> void:
 		_smoke_end(0, "boss %s" % ("alive" if m.boss_alive() else "killed"))
 	elif _smoke_skipped and m._args.has("--fortress"):
 		_fortress_log()
+
+
+## --storyshots (story step 9): once the sortie runs, plays every story scene back to back as a replay — the hangar
+## dialogues of `StoryDialogs.ORDER`, then every intro, outro and epilogue card with its variants — so `--cutshot`
+## saves one frame per scene (user://shot_dialog_<id>.png, user://shot_cutscene_<id>.png) for the review page, and
+## then shows the campaign screen for its vignette frame (user://shot_campaign_vignette.png) and quits.
+## `--vignetteshot` with it skips the scenes. Campaign flags and choices are set so the conditional lines exist;
+## the sortie is a throw-away one, so nothing is restored.
+var _ss_queue: Array = []
+var _ss_started := false
+var _ss_campaign := false
+var _ss_t := 0.0
+
+
+func _story_shots() -> void:
+	if not _ss_started:
+		if m.state != "playing" or m.run_time < 0.5:
+			return
+		_ss_started = true
+		Campaign.set_flag("rescued")
+		Campaign.set_flag("grom_free")
+		Campaign.set_story_choice("lead", "recon")
+		Campaign.set_story_choice("grom_role", "controller")
+		for row: Array in StoryDialogs.ORDER:
+			if String(row[2]) == "dlg":
+				_ss_queue.append(["dlg", String(row[0]), StoryDialogs.scene(String(row[0]))])
+		for pair: Array in [["intro", StoryScenes.INTRO], ["outro", StoryScenes.OUTRO], ["epilogue", StoryScenes.EPILOGUE]]:
+			var table: Dictionary = pair[1]
+			for k in table:
+				_ss_queue.append(["cut", "%s_%s" % [pair[0], String(k).replace(".", "_")], table[k]])
+		if m._args.has("--vignetteshot"):   # only the campaign screen's frame
+			_ss_queue.clear()
+		print("AUTOTEST: story shots — %d scenes" % _ss_queue.size())
+		return
+	if _ss_campaign:
+		_ss_t += 1.0 / 60.0
+		if _ss_t >= 1.5:
+			var img := m.get_viewport().get_texture().get_image()
+			if img != null:
+				img.save_png("user://shot_campaign_vignette.png")
+			print("AUTOTEST: story shots done")
+			m.get_tree().quit(0)
+		return
+	if Dialog.active or Cutscene.active or m.state != "playing":
+		return
+	if _ss_queue.is_empty():
+		# last: the campaign screen with the operation vignette (step 9), 1.5 s after the switch so the light has settled
+		if not _ss_campaign:
+			_ss_campaign = true
+			m._set_state("campaign")
+			_ss_t = 0.0
+		return
+	var e: Array = _ss_queue.pop_front()
+	if String(e[0]) == "dlg":
+		Dialog.play(m, String(e[1]), e[2], m._set_state.bind("playing"), true)
+	else:
+		Cutscene.play(m, String(e[1]), e[2], "playing")
 
 
 ## FB-01: смоук с «--fortress» — бой с «Крепостью» до 180 с, раз в 10 с — фаза, точки, расстояние до базы

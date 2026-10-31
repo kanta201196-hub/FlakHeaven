@@ -45,6 +45,9 @@ static var _t := 0.0
 ## Cutscene (story step 2): the scene sets the course; the camera is driven by `Cutscene`, not by the menu flight.
 static var override := false
 static var ov_heading := 0.0
+## Story step 9: the campaign screen's operation vignette anchors the flight in its window (screen fraction);
+## Vector2.INF — the menu's ANCHOR.
+static var ov_anchor := Vector2.INF
 
 
 static func heading() -> float:
@@ -112,8 +115,9 @@ func sync(on: bool, delta: float) -> void:
 		return
 	var cam := r3.cam
 	var vs := get_viewport().get_visible_rect().size
-	var o := cam.project_ray_origin(vs * ANCHOR)
-	var d := cam.project_ray_normal(vs * ANCHOR)
+	var anc := ov_anchor if ov_anchor != Vector2.INF else ANCHOR
+	var o := cam.project_ray_origin(vs * anc)
+	var d := cam.project_ray_normal(vs * anc)
 	if d.y > -0.05:
 		return
 	var mid := Vector2(o.x + d.x * (-o.y / d.y), o.z + d.z * (-o.y / d.y))   # центр строя на плоскости боя

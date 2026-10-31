@@ -149,6 +149,14 @@ func set_light(preset: String, dur := 1.0) -> void:
 	_light_tw.tween_property(_env, "background_color", (_light_base["bg"] as Color) * (p["bg"] as Color), dur)
 	var target := Basis.looking_at((p["dir"] as Vector3).normalized(), Vector3(0, 0, -1))
 	_light_tw.tween_method(func(u: float) -> void: sun.basis = sun.basis.slerp(target, u).orthonormalized(), 0.0, 1.0, dur)
+	# story step 9: the villages' window lights (VillageHouses window quads read the global `story_night`)
+	_light_tw.tween_method(func(v: float) -> void: RenderingServer.global_shader_parameter_set(&"story_night", v), _night, float(NIGHT_LIGHTS.get(preset, 0.0)), dur)
+	_night = float(NIGHT_LIGHTS.get(preset, 0.0))
+
+
+## How lit the villages' windows are per light preset (global shader parameter `story_night`, 0 — off).
+const NIGHT_LIGHTS := {"day": 0.0, "dawn": 0.35, "dusk": 0.8, "night": 1.0}
+var _night := 0.0
 
 
 func _exit_tree() -> void:
@@ -579,7 +587,7 @@ func _process(delta: float) -> void:
 	var ct0 := pt
 	_sync_crashes(m, sd)
 	if Perf.on: ct0 = Perf.sub("r3d.c.crashes", ct0)
-	title.sync((m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu") or Cutscene.flight_on(), delta)
+	title.sync((m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu") or Cutscene.flight_on() or (m.state == "campaign" and HudCampaign.vignette_on()), delta)
 	_trails.tick(delta if title.active() else sd)   # в меню мир на паузе, а следы звена тают в реальном времени
 	if Perf.on: Perf.sub("r3d.c.trails", ct0)
 	_wakes.tick(sd)

@@ -192,7 +192,84 @@ static func attach(parent: Node3D, homes: Array, unit := AdobeBuild.V_UNIT, grou
 			parent.add_child(sh)
 		parent.add_child(mmi)
 		tris += _tris(mesh) * by[v].size()
+	if Tuning.g("story_lights") > 0.0:
+		tris += _windows(parent, homes, unit, ground)
 	return tris
+
+
+## Story step 9 (F1 `story_lights`): lit windows of the kishlak at dusk and night — one MultiMesh of small unshaded
+## quads on the houses' walls, invisible by day. Their brightness is the global shader parameter `story_night`,
+## which `Render3D.set_light` tweens with the light preset (0 by day, 0.8 at dusk, 1 at night), so the sortie itself
+## never pays for them (the fragment discards at 0). Three or four windows a house, a few left dark by a fixed
+## pattern, so the village reads as lived in rather than lit like a stage. Houses only (`v < PROP0`).
+## Returns the triangles added (two per quad).
+static func _windows(parent: Node3D, homes: Array, unit: float, ground: float) -> int:
+	var xf: Array[Transform3D] = []
+	var n := 0
+	for h in homes:
+		var v := int(h[0])
+		if v >= PROP0 or v == WELL:
+			continue
+		var c: Vector2 = h[1]
+		var s: Vector3 = h[3]
+		var b := Basis(Vector3.UP, -float(h[2]))
+		var o := Vector3(c.x, ground, c.y) * unit
+		var floors := maxi(1, int(roundf(s.y / 3.2)))
+		for w: Array in WINDOW_SPOTS:
+			for f in floors:
+				n += 1
+				if n % 5 == 0:
+					continue   # a dark window now and then
+				var face := Vector3(float(w[0]) * s.x, (float(f) + 0.45) * s.y / float(floors), float(w[1]) * s.z) * unit
+				var out := Vector3(float(w[2]), 0.0, float(w[3]))
+				var pos := o + b * (face + out * 0.03 * unit)
+				var q := Basis.looking_at(-(b * out), Vector3.UP).scaled(Vector3(0.55, 0.4, 1.0) * unit)
+				xf.append(Transform3D(q, pos))
+	if xf.is_empty():
+		return 0
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = _window_mesh()
+	mm.instance_count = xf.size()
+	for i in xf.size():
+		mm.set_instance_transform(i, xf[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mmi)
+	return xf.size() * 2
+
+
+## Window spots on a house in footprint fractions: [x, z, outward x, outward z] — two on the long +Z face, one on
+## the −Z face, one on the +X gable.
+const WINDOW_SPOTS := [[-0.25, 0.5, 0.0, 1.0], [0.25, 0.5, 0.0, 1.0], [0.1, -0.5, 0.0, -1.0], [0.5, -0.1, 1.0, 0.0]]
+static var _window_mesh_cache: QuadMesh
+
+
+## One warm quad, shared by every village: unshaded, additive-looking, alpha from `story_night`.
+static func _window_mesh() -> QuadMesh:
+	if _window_mesh_cache == null:
+		var q := QuadMesh.new()
+		q.size = Vector2.ONE
+		var sh := Shader.new()
+		sh.code = """
+shader_type spatial;
+render_mode unshaded, cull_disabled, blend_mix, depth_draw_opaque;
+global uniform float story_night;
+uniform vec3 col : source_color = vec3(1.0, 0.72, 0.38);
+void fragment() {
+	if (story_night < 0.01) { discard; }
+	vec2 d = abs(UV - 0.5) * 2.0;
+	float edge = 1.0 - smoothstep(0.7, 1.0, max(d.x, d.y));
+	ALBEDO = col * (1.2 + 1.3 * story_night);
+	ALPHA = story_night * edge;
+}
+"""
+		var mat := ShaderMaterial.new()
+		mat.shader = sh
+		q.material = mat
+		_window_mesh_cache = q
+	return _window_mesh_cache
 
 
 ## Shadow-only crossed cards of a tree kind for the "Max" preset (main thread only)
