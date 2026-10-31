@@ -47,5 +47,5 @@ static func steer(st: Dictionary, want_h: float, want_s: float, ps: float, delta
 	var want_w := clampf(diff * TURN_GAIN, -max_w, max_w)
 	var w := move_toward(float(st.get("turn_v", 0.0)), want_w, deg_to_rad(ROLL_ACC) * delta)
 	st.turn_v = w
-	st.heading = float(st.heading) + w * delta
+	st.heading = wrapf(float(st.heading) + w * delta, -PI, PI)
 	st.spd = move_toward(spd, want_s, maxf(ps, 1.0) * ACC * delta)
