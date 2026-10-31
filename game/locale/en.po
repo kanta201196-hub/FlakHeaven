@@ -757,7 +757,7 @@ msgstr "Ace \"Draft\""
 msgid "Ас «Альбатрос»"
 msgstr "Ace \"Albatross\""
 
-#: game/scripts/boss.gd:79 game/scripts/boss.gd:87 game/scripts/boss.gd:214 game/scripts/fortress.gd:109 game/scripts/projectiles.gd:1029
+#: game/scripts/boss.gd:79 game/scripts/boss.gd:87 game/scripts/boss.gd:214 game/scripts/fortress.gd:132 game/scripts/projectiles.gd:1029
 msgid "асы"
 msgstr "aces"
 
@@ -769,11 +769,11 @@ msgstr "Ace "
 msgid "курсовое"
 msgstr "forward guns"
 
-#: game/scripts/boss.gd:127 game/scripts/enemy.gd:87 game/scripts/fortress.gd:242 game/scripts/hardpoint.gd:780 game/scripts/hardpoint.gd:804 game/scripts/hud_pause.gd:34
+#: game/scripts/boss.gd:127 game/scripts/enemy.gd:87 game/scripts/fortress.gd:265 game/scripts/hardpoint.gd:780 game/scripts/hardpoint.gd:804 game/scripts/hud_pause.gd:34
 msgid "турели"
 msgstr "turrets"
 
-#: game/scripts/boss.gd:131 game/scripts/enemy.gd:85 game/scripts/fortress.gd:244 game/scripts/hardpoint.gd:643 game/scripts/hud_pause.gd:33 game/scripts/hud_result.gd:481
+#: game/scripts/boss.gd:131 game/scripts/enemy.gd:85 game/scripts/fortress.gd:267 game/scripts/hardpoint.gd:643 game/scripts/hud_pause.gd:33 game/scripts/hud_result.gd:481
 msgid "ракеты В-В"
 msgstr "AAMs"
 
@@ -1933,11 +1933,11 @@ msgstr "railgun"
 msgid "УР В-З"
 msgstr "AGM"
 
-#: game/scripts/enemy.gd:85 game/scripts/fortress.gd:244 game/scripts/player_skills.gd:195 game/scripts/render3d.gd:2122
+#: game/scripts/enemy.gd:85 game/scripts/fortress.gd:267 game/scripts/player_skills.gd:195 game/scripts/render3d.gd:2122
 msgid "ёлочка"
 msgstr "fir tree"
 
-#: game/scripts/enemy.gd:85 game/scripts/fortress.gd:244 game/scripts/hardpoint.gd:822 game/scripts/hardpoint.gd:829 game/scripts/run_log.gd:10
+#: game/scripts/enemy.gd:85 game/scripts/fortress.gd:267 game/scripts/hardpoint.gd:822 game/scripts/hardpoint.gd:829 game/scripts/run_log.gd:10
 msgid "противоракеты"
 msgstr "anti-missiles"
 
@@ -1945,7 +1945,7 @@ msgstr "anti-missiles"
 msgid "ракеты ближнего боя"
 msgstr "short-range missiles"
 
-#: game/scripts/enemy.gd:87 game/scripts/fortress.gd:242 game/scripts/hardpoint.gd:780 game/scripts/hud_pause.gd:33 game/scripts/projectiles.gd:562 game/scripts/run_log.gd:9
+#: game/scripts/enemy.gd:87 game/scripts/fortress.gd:265 game/scripts/hardpoint.gd:780 game/scripts/hud_pause.gd:33 game/scripts/projectiles.gd:562 game/scripts/run_log.gd:9
 msgid "гондола"
 msgstr "gun pod"
 
@@ -1986,131 +1986,127 @@ msgstr "Enemy base detected! %d s to destroy the launchers"
 msgid "База противника устояла — награды не будет"
 msgstr "The enemy base held — no reward"
 
-#: game/scripts/fortress.gd:89
+#: game/scripts/fortress.gd:90
 msgid "внешняя турель левого крыла"
 msgstr "left wing outer turret"
 
-#: game/scripts/fortress.gd:90
+#: game/scripts/fortress.gd:91
 msgid "внешняя турель правого крыла"
 msgstr "right wing outer turret"
 
-#: game/scripts/fortress.gd:91
+#: game/scripts/fortress.gd:92
 msgid "командная турель"
 msgstr "command turret"
 
-#: game/scripts/fortress.gd:92
+#: game/scripts/fortress.gd:93
 msgid "внутренняя турель правого крыла"
 msgstr "right wing inner turret"
 
-#: game/scripts/fortress.gd:93
+#: game/scripts/fortress.gd:94
 msgid "левый двигатель"
 msgstr "left engine"
 
-#: game/scripts/fortress.gd:94
+#: game/scripts/fortress.gd:95
 msgid "правый двигатель"
 msgstr "right engine"
 
-#: game/scripts/fortress.gd:114
+#: game/scripts/fortress.gd:137
 #, c-format
 msgid "«Крепость» идёт на базу — сбейте левое крыло: %d из 3"
 msgstr "\"Fortress\" is heading for the base — shoot down the left wing: %d of 3"
 
-#: game/scripts/fortress.gd:115
+#: game/scripts/fortress.gd:138
 #, c-format
 msgid "«Крепость» на боевом курсе — правое крыло %d из 3, бейте в открытый люк"
 msgstr "\"Fortress\" on its bombing run — right wing %d of 3, hit the open hatch"
 
-#: game/scripts/fortress.gd:116
+#: game/scripts/fortress.gd:139
 msgid "«Крепость» падает и идёт на таран — добивайте!"
 msgstr "\"Fortress\" is going down and ramming — finish it!"
 
-#: game/scripts/fortress.gd:244 game/scripts/projectiles.gd:247
+#: game/scripts/fortress.gd:267 game/scripts/projectiles.gd:247
 msgid "связка: зеркало"
 msgstr "synergy: mirror"
 
-#: game/scripts/fortress.gd:316
+#: game/scripts/fortress.gd:339
 #, c-format
 msgid "Двигатель сбит: %d из 2 — «Крепость» теряет скорость"
 msgstr "Engine destroyed: %d of 2 — the \"Fortress\" is slowing down"
 
-#: game/scripts/fortress.gd:318
+#: game/scripts/fortress.gd:341
 msgid "Командная турель сбита — эскорт больше не придёт"
 msgstr "Command turret down — no more escorts"
 
-#: game/scripts/fortress.gd:320
+#: game/scripts/fortress.gd:343
 #, c-format
 msgid "Турель сбита: %d из 4"
 msgstr "Turret destroyed: %d of 4"
 
-#: game/scripts/fortress.gd:321
+#: game/scripts/fortress.gd:344
 msgid "СБИТА!"
 msgstr "DOWN!"
 
-#: game/scripts/fortress.gd:321
+#: game/scripts/fortress.gd:344
 msgid "СБИТ!"
 msgstr "DOWN!"
 
-#: game/scripts/fortress.gd:327
+#: game/scripts/fortress.gd:350
 msgid "Левое крыло сбито! Теперь правое — турели, двигатель и открытый люк"
 msgstr "Left wing down! Now the right one: turrets, engine and the open hatch"
 
-#: game/scripts/fortress.gd:328
+#: game/scripts/fortress.gd:351
 msgid "Левое крыло горит! Берите правое: две турели и двигатель. Откроется люк — бейте в брюхо."
 msgstr "Left wing is burning! Take the right one: two turrets and the engine. When the bay opens, hit her belly."
 
-#: game/scripts/fortress.gd:335
+#: game/scripts/fortress.gd:358
 msgid "Двигатели горят! «Крепость» дымит и уходит — догоните и добейте!"
 msgstr "Engines on fire! The “Fortress” is smoking and fleeing — catch it and finish it!"
 
-#: game/scripts/fortress.gd:336
+#: game/scripts/fortress.gd:359
 msgid "Она горит и уходит! Догоняйте, пока не скрылась, — кормовые кольца бьют назад, заходите сбоку."
 msgstr "She's burning and running! Catch her before she's gone — the tail rings fire backwards, come in from the side."
 
-#: game/scripts/fortress.gd:414
-msgid "«Крепость» идёт на нашу базу! Перехватите её, пока не дошла"
-msgstr "\"Fortress\" is heading for our base! Intercept it before it gets there"
-
-#: game/scripts/fortress.gd:415
+#: game/scripts/fortress.gd:439
 msgid "«Крепость» на подходе. Сначала левое крыло: две турели и двигатель. У турелей свои сектора, нос и хвост — мёртвые зоны."
 msgstr "The Fortress is inbound. Left wing first: two turrets and the engine. Each turret covers its own sector; the nose and the tail are blind spots."
 
-#: game/scripts/fortress.gd:416
+#: game/scripts/fortress.gd:440
 msgid "«Крепость» летит к нашей базе (стрелка «база»). Сбивайте её крыло за крылом: сначала левое, потом правое. Нос и хвост — мёртвые зоны турелей."
 msgstr "\"Fortress\" is flying to our base (\"base\" arrow). Take it down wing by wing: left first, then right. Nose and tail are the turrets' blind spots."
 
-#: game/scripts/fortress.gd:429
+#: game/scripts/fortress.gd:453
 msgid "«Крепость» отбомбилась по базе — запчастей за неё вдвое меньше. Она заходит на второй круг!"
 msgstr "\"Fortress\" bombed the base — half the parts for it now. It's coming around again!"
 
-#: game/scripts/fortress.gd:431
+#: game/scripts/fortress.gd:455
 msgid "«Крепость» снова над базой! Сбейте её"
 msgstr "\"Fortress\" is over the base again! Shoot it down"
 
-#: game/scripts/fortress.gd:529
+#: game/scripts/fortress.gd:553
 msgid "Люк открыт! Попадание в люк — ×3 урона"
 msgstr "Hatch open! Hits on the hatch deal ×3 damage"
 
-#: game/scripts/fortress.gd:573 game/scripts/hardpoint.gd:874 game/scripts/hardpoint.gd:925 game/scripts/hud_pause.gd:33 game/scripts/player.gd:547 game/scripts/projectiles.gd:92
+#: game/scripts/fortress.gd:597 game/scripts/hardpoint.gd:874 game/scripts/hardpoint.gd:925 game/scripts/hud_pause.gd:33 game/scripts/player.gd:547 game/scripts/projectiles.gd:92
 msgid "бомбы"
 msgstr "bombs"
 
-#: game/scripts/fortress.gd:615
+#: game/scripts/fortress.gd:639
 msgid "«Крепость» не дотянула и рухнула сама — запчастей за неё вдвое меньше"
 msgstr "The “Fortress” didn't make it and crashed on its own — half the parts for it"
 
-#: game/scripts/fortress.gd:617
+#: game/scripts/fortress.gd:641
 msgid "«Крепость» сбита!"
 msgstr "\"Fortress\" shot down!"
 
-#: game/scripts/fortress.gd:617
+#: game/scripts/fortress.gd:641
 msgid "«Крепость» сбита! (успела отбомбиться по базе)"
 msgstr "\"Fortress\" down! (after bombing the base)"
 
-#: game/scripts/fortress.gd:685 game/scripts/hud_flight.gd:327
+#: game/scripts/fortress.gd:709 game/scripts/hud_flight.gd:327
 msgid "«Крепость»"
 msgstr "\"Fortress\""
 
-#: game/scripts/fortress.gd:696
+#: game/scripts/fortress.gd:720
 msgid "НАША БАЗА"
 msgstr "OUR BASE"
 
@@ -4919,195 +4915,195 @@ msgstr "Green diamonds from downed enemies are XP: fly close and they're pulled 
 msgid "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика»."
 msgstr "Bottom left — minimap: north is up, white arrow — you, red dots — enemies, pink — aces, colored diamond — objective, green diamond — extraction gates, purple dots — flight. Size and opacity — in \"Settings → Graphics\"."
 
-#: game/scripts/main.gd:457
+#: game/scripts/main.gd:463
 #, c-format
 msgid "Все улучшения собраны — вместо карточки ремонт и +%d запчастей"
 msgstr "All upgrades collected — instead of a card: repairs and +%d parts"
 
-#: game/scripts/main.gd:585
+#: game/scripts/main.gd:591
 msgid "Позиция ПВО уничтожена!"
 msgstr "AA site destroyed!"
 
-#: game/scripts/main.gd:585
+#: game/scripts/main.gd:591
 msgid "Колонна разбита!"
 msgstr "Convoy wiped out!"
 
-#: game/scripts/main.gd:585
+#: game/scripts/main.gd:591
 msgid "Ас-соперник сбит!"
 msgstr "Rival ace shot down!"
 
-#: game/scripts/main.gd:586
+#: game/scripts/main.gd:592
 msgid "База противника разгромлена!"
 msgstr "Enemy base destroyed!"
 
-#: game/scripts/main.gd:600
+#: game/scripts/main.gd:606
 #, c-format
 msgid "Ас сбит! Всего: %d"
 msgstr "Ace down! Total: %d"
 
-#: game/scripts/main.gd:615
+#: game/scripts/main.gd:621
 #, c-format
 msgid "Транспортник сбит! Груз: +%d запчастей, ремкомплекты"
 msgstr "Transport shot down! Cargo: +%d parts, repair kits"
 
-#: game/scripts/main.gd:616
+#: game/scripts/main.gd:622
 msgid " и выбор из редких карточек"
 msgstr " and a pick of rare cards"
 
-#: game/scripts/main.gd:619
+#: game/scripts/main.gd:625
 #, c-format
 msgid "Пилот спасён! Награда: выбор из редких карточек и +%d запчастей"
 msgstr "Pilot rescued! Reward: a pick of rare cards and +%d parts"
 
-#: game/scripts/main.gd:622
+#: game/scripts/main.gd:628
 #, c-format
 msgid "Задание класса выполнено! Награда: выбор из редких карточек и +%d запчастей"
 msgstr "Class task complete! Reward: a pick of rare cards and +%d parts"
 
-#: game/scripts/main.gd:625
+#: game/scripts/main.gd:631
 msgid "Чисто сработано. Награда ваша."
 msgstr "Clean work. The reward is yours."
 
-#: game/scripts/main.gd:626
+#: game/scripts/main.gd:632
 msgid "выбор из редких карточек"
 msgstr "a pick of rare cards"
 
-#: game/scripts/main.gd:626
+#: game/scripts/main.gd:632
 #, c-format
 msgid " и +%d запчастей"
 msgstr " and +%d parts"
 
-#: game/scripts/main.gd:627
+#: game/scripts/main.gd:633
 #, c-format
 msgid "ремонт 20%% и +%d запчастей"
 msgstr "20%% repair and +%d parts"
 
-#: game/scripts/main.gd:628
+#: game/scripts/main.gd:634
 #, c-format
 msgid "%s Награда: %s"
 msgstr "%s Reward: %s"
 
-#: game/scripts/main.gd:637
+#: game/scripts/main.gd:643
 msgid "Ушли. Ничего, следующих встретим."
 msgstr "They got away. Never mind, we'll meet the next ones."
 
-#: game/scripts/main.gd:641
+#: game/scripts/main.gd:647
 #, c-format
 msgid "Ас «%s» ушёл — награды нет"
 msgstr "Ace \"%s\" got away — no reward"
 
-#: game/scripts/main.gd:659
+#: game/scripts/main.gd:665
 msgid "На волоске!"
 msgstr "Close call!"
 
-#: game/scripts/main.gd:659
+#: game/scripts/main.gd:665
 msgid "Ракета мимо!"
 msgstr "Missile missed!"
 
-#: game/scripts/main.gd:675
+#: game/scripts/main.gd:681
 msgid "«АЛЬБАТРОС» НА ПОДХОДЕ!"
 msgstr "\"ALBATROSS\" INBOUND!"
 
-#: game/scripts/main.gd:675
+#: game/scripts/main.gd:681
 msgid "КРЕЙСЕР «СТОРОЖ» В ПРОЛИВЕ!"
 msgstr "CRUISER \"WARDEN\" IN THE STRAIT!"
 
-#: game/scripts/main.gd:675
+#: game/scripts/main.gd:681
 msgid "«ЛЕВИАФАН» В ПРОЛИВЕ!"
 msgstr "\"LEVIATHAN\" IN THE STRAIT!"
 
-#: game/scripts/main.gd:677
+#: game/scripts/main.gd:683
 #, c-format
 msgid "АС НА ПОДХОДЕ!  (%d)"
 msgstr "ACE INBOUND!  (%d)"
 
-#: game/scripts/main.gd:677
+#: game/scripts/main.gd:683
 msgid "АС НА ПОДХОДЕ!"
 msgstr "ACE INBOUND!"
 
-#: game/scripts/main.gd:679
+#: game/scripts/main.gd:685
 msgid "Перехват"
 msgstr "Intercept"
 
-#: game/scripts/main.gd:679
+#: game/scripts/main.gd:685
 msgid "Цель вижу. Захожу с солнца."
 msgstr "Target in sight. Coming out of the sun."
 
-#: game/scripts/main.gd:679
+#: game/scripts/main.gd:685
 msgid "Это наше небо. Уходи, пока цел."
 msgstr "This is our sky. Leave while you still can."
 
-#: game/scripts/main.gd:679
+#: game/scripts/main.gd:685
 msgid "Звено, прикрыть меня — работаю по одиночке."
 msgstr "Flight, cover me — I'm going solo."
 
-#: game/scripts/main.gd:680
+#: game/scripts/main.gd:686
 msgid "Ещё один охотник? Посмотрим, сколько продержишься."
 msgstr "Another hunter? Let's see how long you last."
 
-#: game/scripts/main.gd:681
+#: game/scripts/main.gd:687
 msgid "Ас — сильный враг. Собьёте его — откроются ворота эвакуации и добавится переброс карточек."
 msgstr "An ace is a tough enemy. Shoot it down to open the extraction gates and earn a card reroll."
 
-#: game/scripts/main.gd:697
+#: game/scripts/main.gd:703
 msgid "Эвакуация: пролетите через 3 ворот по порядку"
 msgstr "Extraction: fly through 3 gates in order"
 
-#: game/scripts/main.gd:697
+#: game/scripts/main.gd:703
 msgid " · задача операции ещё не выполнена"
 msgstr " · operation objective not done yet"
 
-#: game/scripts/main.gd:699
+#: game/scripts/main.gd:705
 msgid "Улететь можно уже сейчас — или остаться до 15:00 и заработать больше запчастей."
 msgstr "You can leave now — or stay until 15:00 and earn more parts."
 
-#: game/scripts/main.gd:701
+#: game/scripts/main.gd:707
 #, c-format
 msgid "Задание выполнено! Улетайте через ворота — или оставайтесь: добыча +10% за каждую минуту после 15:00."
 msgstr "Objective complete! Leave through the gates — or stay: +10% loot for every minute after 15:00."
 
-#: game/scripts/main.gd:710 game/scripts/menu.gd:114 game/scripts/menu_main.gd:305 game/scripts/report.gd:380
+#: game/scripts/main.gd:716 game/scripts/menu.gd:114 game/scripts/menu_main.gd:305 game/scripts/report.gd:380
 msgid "эвакуация"
 msgstr "extraction"
 
-#: game/scripts/main.gd:738
+#: game/scripts/main.gd:744
 #, c-format
 msgid "%s разбил точку эвакуации — эвакуация закрыта до следующего аса"
 msgstr "%s destroyed the extraction point — no extraction until the next ace"
 
-#: game/scripts/main.gd:745
+#: game/scripts/main.gd:751
 msgid "Окно эвакуации закрыто — следующее после следующего аса"
 msgstr "Extraction window closed — next one after the next ace"
 
-#: game/scripts/main.gd:806
+#: game/scripts/main.gd:812
 msgid "Сбит с хвоста!"
 msgstr "Shot down from behind!"
 
-#: game/scripts/main.gd:817 game/scripts/rival_ace.gd:22 game/scripts/rival_ace.gd:63 game/scripts/rival_ace.gd:105 game/scripts/story.gd:50
+#: game/scripts/main.gd:823 game/scripts/rival_ace.gd:22 game/scripts/rival_ace.gd:63 game/scripts/rival_ace.gd:105 game/scripts/story.gd:52
 msgid "Барон"
 msgstr "Baron"
 
-#: game/scripts/main.gd:820
+#: game/scripts/main.gd:826
 msgid "«Барон» сбит!"
 msgstr "\"Baron\" shot down!"
 
-#: game/scripts/main.gd:829
+#: game/scripts/main.gd:837
 msgid "ПОТОПЛЕН!"
 msgstr "SUNK!"
 
-#: game/scripts/main.gd:829
+#: game/scripts/main.gd:837
 msgid "АС СБИТ!"
 msgstr "ACE SHOT DOWN!"
 
-#: game/scripts/main.gd:833
+#: game/scripts/main.gd:841
 msgid "Точка эвакуации разбита — окно откроется после следующего аса"
 msgstr "Extraction point destroyed — the window opens after the next ace"
 
-#: game/scripts/main.gd:844
+#: game/scripts/main.gd:852
 msgid "Space — уклонение: короткий переворот, во время которого пули и ракеты не попадают."
 msgstr "Space — evade: a quick roll during which bullets and missiles can't hit you."
 
-#: game/scripts/main.gd:932 game/scripts/report.gd:380
+#: game/scripts/main.gd:940 game/scripts/report.gd:380
 msgid "гибель"
 msgstr "death"
 
@@ -7924,7 +7920,7 @@ msgstr "Mouse %d"
 msgid "Sfx: заменены звуки "
 msgstr "Sfx: replaced sounds "
 
-#: game/scripts/sfx.gd:422
+#: game/scripts/sfx.gd:428
 msgid "Sfx: музыка "
 msgstr "Sfx: music "
 
@@ -8022,7 +8018,7 @@ msgstr "AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k 
 msgid "Купол"
 msgstr "Dome"
 
-#: game/scripts/story/dialog_flow.gd:17 game/scripts/story.gd:55 game/scripts/story.gd:58
+#: game/scripts/story/dialog_flow.gd:17 game/scripts/story.gd:57 game/scripts/story.gd:61
 msgid "Гром"
 msgstr "Thunder"
 
@@ -8174,6 +8170,18 @@ msgstr "The sky over Shahrisang is ours. Thanks for not leaving me behind."
 #: game/scripts/story/story_text.gd:19
 msgid "Перехват из крепости: «Гром» жив! Наземные идут за ним."
 msgstr "Intercept from the fortress: \"Thunder\" is alive! Ground forces are going in for him."
+
+#: game/scripts/story/story_text.gd:24
+msgid "«Крепость» идёт на нашу базу! Перехватите её, пока не дошла"
+msgstr "\"Fortress\" is heading for our base! Intercept it before it gets there"
+
+#: game/scripts/story/story_text.gd:25
+msgid "«Барон» сбит! Небо над крепостями наше"
+msgstr "Baron is down! The sky over the forts is ours"
+
+#: game/scripts/story/story_text.gd:26
+msgid "«Гром» в строю!"
+msgstr "Thunder is back in formation!"
 
 #: game/scripts/tanker.gd:96
 msgid "Заправщик сбит! Следующий — через 2 минуты"

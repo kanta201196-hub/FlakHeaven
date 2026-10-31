@@ -78,6 +78,7 @@ func setup_fortress(total: float) -> void:
 	radius = 70.0
 	xp = 150
 	parts = 250
+	_add_drone()
 	kill_shake = 22.0
 	contact_damage = 25.0
 	var k := LEN / 270.0
@@ -99,6 +100,28 @@ func setup_fortress(total: float) -> void:
 			pt["dm"] = FortressBalance.DOME_MSL_FIRST + FortressBalance.DOME_MSL_STAGGER * dome
 			dome += 1
 	_set_title()
+
+
+## Story (step 4): the Fortress's presence — a low rotor drone positioned on it, louder as it comes near
+## (`AudioStreamPlayer2D` attenuation). Only when the file exists (`fortress_drone.ogg`, synthesised by
+## `build_audio_layers.py --only story`); it dies with the node.
+func _add_drone() -> void:
+	const PATH := "res://audio/fortress_drone.ogg"
+	if not ResourceLoader.exists(PATH):
+		return
+	var st = load(PATH)
+	if st is AudioStreamOggVorbis:
+		st.loop = true
+	var a := AudioStreamPlayer2D.new()
+	a.stream = st
+	a.bus = "SFX"
+	a.max_distance = 2600.0
+	a.attenuation = 1.4
+	a.volume_db = -14.0 + Tuning.g("sfx_db")
+	a.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(a)
+	a.play()
+
 
 
 func _pt(n: String, node: String, kd: String, off: Vector2, h: float, sec: Array) -> Dictionary:
@@ -411,7 +434,8 @@ func _start_route(p: Player) -> void:
 	base_pos = global_position + dir * ROUTE_LEN
 	_wp = base_pos
 	_to_base = true
-	Events.banner.emit("«Крепость» идёт на нашу базу! Перехватите её, пока не дошла", 4.0)
+	# story (step 4): the first sighting is a «кино-момент» (banner + slow-motion + stinger, once per sortie)
+	Cinematic.accent(Main.I, "fortress", StoryText.accent("fortress"))
 	Events.radio.emit(StoryText.DISPATCH, "«Крепость» на подходе. Сначала левое крыло: две турели и двигатель. У турелей свои сектора, нос и хвост — мёртвые зоны.", false)
 	Hints.show("fortress", "«Крепость» летит к нашей базе (стрелка «база»). Сбивайте её крыло за крылом: сначала левое, потом правое. Нос и хвост — мёртвые зоны турелей.", 10.0, 2)
 

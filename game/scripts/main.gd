@@ -312,6 +312,8 @@ func start_run() -> void:
 	course_log = []
 	meta_award = {}
 	_slow_t = 0.0
+	_accent_t = 0.0
+	Cinematic.reset()
 	offer_rare = false
 	level_at_5 = 0
 	tele.reset()
@@ -328,6 +330,10 @@ func _process(delta: float) -> void:
 	if _slow_t > 0.0 and state == "playing":
 		_slow_t -= delta / maxf(Engine.time_scale, 0.01)
 		if not _hitstop: # 3.4: стоп-кадр не перебивается замедлением
+			Engine.time_scale = _base_scale()
+	if _accent_t > 0.0 and state == "playing":   # story accent (step 4): eases back to normal speed every frame
+		_accent_t -= delta / maxf(Engine.time_scale, 0.01)
+		if not _hitstop:
 			Engine.time_scale = _base_scale()
 	if state == "playing" and not is_dead:
 		tele.frame(delta, self)
@@ -821,6 +827,8 @@ func _on_enemy_killed(e: Enemy) -> void:
 		op_flags["baron"] = true
 		Story.on_baron_down()
 		fx.text(e.global_position + Vector2(0, -60), "«Барон» сбит!", Color(1.0, 0.85, 0.4))
+		if not aces():
+			Cinematic.accent(self, "baron", StoryText.accent("baron"))
 	if e.is_boss:
 		run.on_boss_killed()
 		if e.has_meta("born"):
@@ -950,9 +958,19 @@ func add_shake(amount: float) -> void:
 var _hitstop := false
 
 
-## Обычная скорость времени с учётом замедления открытия связки
+## Обычная скорость времени с учётом замедления открытия связки и кино-момента сюжета (`AccentCurve`)
 func _base_scale() -> float:
-	return base_ts * (0.3 if _slow_t > 0.0 else 1.0)
+	return base_ts * (0.3 if _slow_t > 0.0 else 1.0) * AccentCurve.scale_at(_accent_t)
+
+
+var _accent_t := 0.0   # real seconds left of a story accent's slow-motion (`Cinematic.accent`)
+
+
+## Starts the slow-motion of a story accent (`Cinematic`); the hit-stop, if one is running, is not interrupted.
+func start_accent() -> void:
+	_accent_t = AccentCurve.DUR
+	if not _hitstop:
+		Engine.time_scale = _base_scale()
 
 
 func hitstop() -> void:
