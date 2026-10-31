@@ -131,8 +131,28 @@ static func attach(u: Unit3D, tex: Texture2D) -> void:
 		d.basis = Basis(Vector3.RIGHT, -PI / 2.0) * Basis.from_scale(Vector3(pr * 0.8, pr * 2.2, 1.0))
 		root.add_child(d)
 		fx["props"].append(d)
+	if props != null and s.has("trail"):
+		# R-23 self-check: the sprite-measured trail points sat > 4 % of the length off the 3D «Кит 1»; on the model
+		# each trail starts on its own engine axis, the sprite's prop-to-trail distance behind the prop
+		var back := (s["prop"][0] as Vector2).x - (s["trail"][0] as Vector2).x
+		for n: Node3D in fx["blades"]:
+			var pp := _in_root(n, root)
+			fx["trail"].append(Vector3(pp.x - back, pp.y, pp.z))
+		return
 	for pt: Vector2 in s.get("trail", []):
 		fx["trail"].append(Vector3(pt.x, y, pt.y))
+
+
+## Position of `n` in the axes of `root` (one of its ancestors), from local transforms only, so it holds before
+## the plane's first frame in the tree
+static func _in_root(n: Node3D, root: Node3D) -> Vector3:
+	var t := Transform3D.IDENTITY
+	var c: Node = n
+	while c != null and c != root:
+		if c is Node3D:
+			t = (c as Node3D).transform * t
+		c = c.get_parent()
+	return t.origin
 
 
 ## Per frame for unit u: boost 0…1 is afterburner; props always spin, flames flicker and stretch on boost
