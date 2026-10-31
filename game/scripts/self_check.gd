@@ -708,7 +708,8 @@ func _issue(e: Dictionary, what: String, text: String, value: Variant = null, li
 	var i := {"file": e["file"], "section": e["section"], "cls": e["cls"], "lvl": e["lvl"], "weapon": e["weapon"],
 		"tier": e["tier"], "shot": e["shot"], "gfx": gfx, "what": what, "text": text}
 	if value != null:
-		i["value"] = snappedf(float(value), 0.0001)
+		# a gap past the search radius comes back as INF, which JSON cannot hold: -1 means «farther than searched»
+		i["value"] = snappedf(float(value), 0.0001) if is_finite(float(value)) else -1.0
 		i["limit"] = limit
 	issues.append(i)
 	print("SELFCHECK issue %s: %s" % [e["file"], text])

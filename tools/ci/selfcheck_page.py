@@ -116,7 +116,8 @@ def _runs(out: Path) -> list[dict]:
 def _load(p: Path, default: dict) -> dict:
     try:
         return json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except (OSError, ValueError) as err:   # said aloud: a silent default once hid an unreadable manifest
+        print(f"selfcheck_page: cannot read {p.name}: {err}", file=sys.stderr)
         return default
 
 
@@ -131,7 +132,7 @@ def _failures(out: Path, runs: dict, mans: list[dict], frames: list[dict]) -> li
             bad.append(f"{name}: процесс Godot завершился с кодом {r['exit']} (лог {r['log']})")
         mf = have.get((r["part"], r["gfx"]))
         if mf is None:
-            bad.append(f"{name}: нет манифеста — кадры этой части не сняты (лог {r['log']})")
+            bad.append(f"{name}: нет манифеста или он не читается — кадры этой части не учтены (лог {r['log']})")
         elif not mf.get("complete"):
             bad.append(f"{name}: прогон оборвался — сняты не все кадры (лог {r['log']})")
         for line in r.get("script_errors", []):
