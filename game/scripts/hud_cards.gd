@@ -358,17 +358,23 @@ func _card_path(p: Player, c: Dictionary) -> String:
 	match String(c["kind"]):
 		"module":
 			var id := String(c["id"])
-			for w in Prog.EVOS:
-				var cat: Dictionary = Prog.EVOS[w]["cat"]
+			var all := Modernizations.all()
+			for rid: String in all:
+				var cat: Dictionary = all[rid]["cat"]
+				var w := Modernizations.weapon_of(rid)
 				if not cat.has(id) or not (w == "gun" or _has_weapon(p, w)) or (w == "gun" and p.gun_evo):
 					continue
 				var have := int(p.taken.get(id, 0))
 				if have < int(cat[id]):
-					return Loc.t("▲ к %s: %d → %d из %d") % [Loc.t(Prog.EVOS[w]["title"]), have, have + 1, int(cat[id])]
+					return Loc.t("▲ к %s: %d → %d из %d") % [Loc.t(all[rid]["title"]), have, have + 1, int(cat[id])]
 		"weapon_up":
 			var g: Hardpoint = p.groups[int(c["group"])]
-			if Prog.EVOS.has(g.weapon) and not g.evo:
-				return Loc.t("▲ ур. 5 откроет %s") % Loc.t(Prog.EVOS[g.weapon]["title"])
+			var rids := Modernizations.ids_for(g.weapon)
+			if not rids.is_empty() and not g.evo:
+				var names := PackedStringArray()
+				for rid2: String in rids:
+					names.append(Loc.t(String(Modernizations.def(rid2)["title"])))
+				return Loc.t("▲ ур. 5 откроет %s") % (" / ".join(names))
 	return ""
 
 
