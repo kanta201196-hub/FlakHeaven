@@ -235,12 +235,30 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 	UiStyle.key_hint(ctrl, Vector2(r.end.x - 48.0, r.end.y - 9.0), str(i + 1), "")
 
 
-## Grows a closed outline of `r` outward by `d` (glow rings of the focused card).
+## Grows a closed outline of `r` (last point = first) outward by `d` along every edge (glow rings of the focused
+## card). S14-01 (Kanta: «торчит уголок, скос рамки выступает за рамку»): each vertex used to move by (±d, ±d), which
+## keeps the sides d away but pushes the 45° bevels √2·d out, so the bevel of the glow stood off the frame. A miter
+## offset keeps every edge, bevels included, exactly d away.
 func _offset_outline(pts: PackedVector2Array, r: Rect2, d: float) -> void:
 	var c := r.get_center()
-	for k in pts.size():
-		var v := pts[k] - c
-		pts[k] = c + v + Vector2(signf(v.x), signf(v.y)) * d
+	var n := pts.size() - 1
+	if n < 3:
+		return
+	var src := pts.duplicate()
+	for k in n:
+		var a := src[(k - 1 + n) % n]
+		var b := src[k]
+		var e := src[(k + 1) % n]
+		var n1 := _out_normal(a, b, c)
+		var n2 := _out_normal(b, e, c)
+		pts[k] = b + (n1 + n2) * d / maxf(1.0 + n1.dot(n2), 0.2)
+	pts[n] = pts[0]
+
+
+## Unit normal of edge `a`–`b` pointing away from `c` (the card's centre)
+func _out_normal(a: Vector2, b: Vector2, c: Vector2) -> Vector2:
+	var nrm := (b - a).orthogonal().normalized()
+	return -nrm if nrm.dot((a + b) * 0.5 - c) < 0.0 else nrm
 
 
 ## Family tag at the bottom: its left edge follows the bevel, then the card's left border, so nothing leaves the card.
