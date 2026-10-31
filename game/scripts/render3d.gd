@@ -2971,6 +2971,7 @@ func _sync_ground_zones(m: Main) -> void:
 	_ground_mat.set_shader_parameter("gz_c", _gz_c)
 	_ground_mat.set_shader_parameter("gz_cam", cam.global_position)
 	_ground_mat.set_shader_parameter("gz_time", Time.get_ticks_msec() * 0.001)
+	_ground_mat.set_shader_parameter("gz_v2", Tuning.g("fx_s14") >= 1.0)
 
 
 ## Воронки: плоский квадрат по наклону рельефа с общей текстурой и материалом (без теней, без света),
@@ -3060,6 +3061,10 @@ func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex:
 		add_child(d)
 		pool.append(d)
 	var dc := pool[i]
+	# S14-19 (R-22 toggle fx_s14): a decal box projects along its Y axis, so a cliff wall inside the box got
+	# the mark smeared down it as streaks («кусок взрыва в горе»); normal fade 0.5 hides surfaces at 90° to the
+	# decal and keeps ordinary slopes (30° off the decal axis keeps ~95 %)
+	dc.normal_fade = 0.5 if Tuning.g("fx_s14") >= 1.0 else 0.0
 	dc.visible = col.a > 0.004
 	dc.transform = xf
 	dc.size = sz
