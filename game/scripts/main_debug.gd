@@ -68,9 +68,11 @@ func process(delta: float) -> void:
 
 
 ## EX-05: какую карточку брать для модернизации оружия w: сама модернизация → оружие → его уровни → модули рецепта
-func _evo_pick(w: String) -> int:
+## `rid` — a recipe id of `Modernizations` (a classic one is the weapon id, so old `--evopick=aam` still works).
+func _evo_pick(rid: String) -> int:
 	var p := m.player
-	var cat: Dictionary = Prog.EVOS[w]["cat"]
+	var w := Modernizations.weapon_of(rid)
+	var cat := Modernizations.cat(rid)
 	var best := -1
 	var best_rank := 99
 	for ci in m.offers.size():
@@ -79,7 +81,7 @@ func _evo_pick(w: String) -> int:
 		if o["kind"] in ["weapon_up", "profile"] and int(o.get("group", 99)) < p.groups.size():
 			ow = (p.groups[int(o["group"])] as Hardpoint).weapon
 		var rank := 99
-		if o["kind"] == "evolution" and ow == w:
+		if o["kind"] == "evolution" and String(o.get("evo", "")) == rid:
 			rank = 0
 		elif o["kind"] == "weapon_new" and ow == w:
 			rank = 1

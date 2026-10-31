@@ -100,16 +100,18 @@ static func card_tags(p: Player, card: Dictionary) -> Array:
 	return []
 
 
-## Готова ли эволюция оружия (w — оружие или "gun")
-static func evo_ready(p: Player, w: String) -> bool:
+## Ready now: modernization recipe `id` (`Modernizations`; a classic id is the weapon id, "gun" — the course gun).
+## Weapon at the top level and not modernized, catalysts taken, from EVO_TIME, not declined in the last picks.
+static func evo_ready(p: Player, id: String) -> bool:
 	if Main.I == null or Main.I.run_time < EVO_TIME:
 		return false
-	if int(p.evo_wait.get(w, 0)) > p.picks:
+	if int(p.evo_wait.get(id, 0)) > p.picks:
 		return false
-	if w == "gun":
+	if id == "gun":
 		if p.gun_evo:
 			return false
 	else:
+		var w := Modernizations.weapon_of(id)
 		var found := false
 		for g in p.groups:
 			var h: Hardpoint = g
@@ -117,19 +119,17 @@ static func evo_ready(p: Player, w: String) -> bool:
 				found = true
 		if not found:
 			return false
-	var cat: Dictionary = EVOS[w]["cat"]
-	for m in cat:
-		if int(p.taken.get(m, 0)) < int(cat[m]):
-			return false
-	return true
+	return Modernizations.cat_done(id, p.taken)
 
 
 ## Подсказка «чего не хватает до эволюции» (для карточек модулей-катализаторов)
 static func evo_hint(p: Player, module_id: String) -> String:
-	for w in EVOS:
-		var cat: Dictionary = EVOS[w]["cat"]
+	var all := Modernizations.all()
+	for id: String in all:
+		var cat: Dictionary = all[id]["cat"]
 		if not cat.has(module_id):
 			continue
+		var w := Modernizations.weapon_of(id)
 		var have: bool = w == "gun"
 		if not have:
 			for g in p.groups:
@@ -140,5 +140,5 @@ static func evo_hint(p: Player, module_id: String) -> String:
 		var need := int(cat[module_id]) - int(p.taken.get(module_id, 0))
 		if need > 0:
 			var wn: String = "пушки" if w == "gun" else Weapons.DEFS[w]["short"]
-			return Loc.t("\nНужно для модернизации: %s → %s (ещё ×%d)") % [Loc.t(wn), Loc.t(EVOS[w]["title"]), need]
+			return Loc.t("\nНужно для модернизации: %s → %s (ещё ×%d)") % [Loc.t(wn), Loc.t(all[id]["title"]), need]
 	return ""
