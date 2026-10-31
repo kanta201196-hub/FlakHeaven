@@ -31,7 +31,7 @@ func _init() -> void:
 	for l in StoryScenes.TEST["lines"]:
 		_check(float((l as Array)[1]) <= float(StoryScenes.TEST["dur"]), "every caption ends inside the scene")
 	# every operation scene is well-formed: duration, ordered camera keys, captions inside the scene and ≤ 110 characters
-	for table: Dictionary in [StoryScenes.INTRO, StoryScenes.OUTRO]:
+	for table: Dictionary in [StoryScenes.INTRO, StoryScenes.OUTRO, StoryScenes.EPILOGUE]:
 		for op in table:
 			var d: Dictionary = table[op]
 			var dur := float(d.get("dur", 0.0))
@@ -53,6 +53,14 @@ func _init() -> void:
 	var kl: Array = CutsceneKeys.line_at(StoryScenes.intro("forts"), 8.0)
 	_check(kl.size() == 4 and not bool(kl[3]), "Kupol's caption is not an enemy voice")
 	_check(String(StoryScenes.outro("forts")["light"]) == "night", "op 3 outro is at night (green flare)")
+	# op 4 (step 8): intro and outro, the epilogue card over black with the stinger, two hook variants
+	_check(not StoryScenes.intro("sky").is_empty() and not StoryScenes.outro("sky").is_empty(), "op 4 has an intro and an outro")
+	var ep_s := StoryScenes.epilogue("sky", true)
+	var ep_l := StoryScenes.epilogue("sky", false)
+	_check(not ep_s.is_empty() and not ep_l.is_empty() and ep_s != ep_l, "op 4 epilogue: a south variant and a later variant")
+	_check(bool(ep_s.get("black", false)) and String(ep_s.get("stinger", "")) == "sting_epilogue", "epilogue card is over black with the stinger")
+	_check(String((ep_s["lines"] as Array)[0][3]).contains("Таласора"), "south variant names the next biome")
+	_check(StoryScenes.epilogue("pass", true).is_empty(), "op 1 has no epilogue card")
 	_check(StoryScenes.intro("no_such_op").is_empty(), "unknown operation → no scene")
 	_check(StoryFlags.MODES.size() == 3, "setting names present for the menu row")
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])

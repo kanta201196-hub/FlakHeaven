@@ -39,6 +39,7 @@ static func start(m: Main) -> void:
 	_grom_in = false
 	_ground_said = false
 	_graf_said = false
+	_warn_n = 0
 	_hq_met = -1
 	rescue_done = false
 	var op := highland_op()
@@ -54,11 +55,21 @@ static func tick(m: Main) -> void:
 		_baron_taunt = true
 		say("Барон", StoryText.radio("baron.taunt"), true)
 	# S9-17: вылет начинается без ведомых — «Гром» догоняет звено на 3-й минуте
+	# шаг 8: по выбору H3′ «Гром» либо сам ведёт самолёт, либо сидит вторым контролёром — тогда его самолёт ведёт
+	# «Иволга» (тот же ведомый, баланс не меняется), а «Гром» предупреждает за минуту до каждого босса
+	var controller := highland_op() == OP_SKY and Campaign.story_choice("grom_role") == "controller"
 	if not _grom_in and highland_op() == OP_SKY and Campaign.flag("grom_free") and m.run_time >= GROM_AT:
 		_grom_in = true
 		m.player.add_wingman("swift", 2.0)
-		say("Гром", StoryText.radio("grom.join"))
-		Cinematic.accent(m, "grom", StoryText.accent("grom"))
+		if controller:
+			say("Иволга", StoryText.radio("oriole.join"))
+			Cinematic.accent(m, "grom", StoryText.accent("oriole"))
+		else:
+			say("Гром", StoryText.radio("grom.join"))
+			Cinematic.accent(m, "grom", StoryText.accent("grom"))
+	if controller and _warn_n < 3 and m.run_time >= Tuning.g("boss_every") * float(_warn_n + 1) - 60.0:
+		_warn_n += 1
+		say("Гром", StoryText.radio("grom.warn.%d" % _warn_n))
 	if not _finale and highland_op() == OP_SKY and Campaign.flag("grom_free") and m.op_flags.get("fortress", false):
 		_finale = true
 		say("Гром", StoryText.radio("grom.finale"))
@@ -80,6 +91,8 @@ static func on_fortress_sight() -> void:
 		say(DISPATCH, StoryText.radio("fortress.sight.riverbed"))
 	elif op == OP_FORTS:
 		say(DISPATCH, StoryText.radio("fortress.sight.forts"))
+	elif op == OP_SKY:
+		say(DISPATCH, StoryText.radio("fortress.sight.sky"))
 	hq_line("arrive")
 
 
@@ -123,6 +136,7 @@ static func on_baron_down() -> void:
 
 
 static var _graf_said := false   # «Граф» уже говорил в этом вылете
+static var _warn_n := 0   # предупреждений второго контролёра выдано в этом вылете (оп. 4, по одному на босса)
 
 
 ## Активность «Сбитый пилот» — один раз за вылет в «Сухом русле» (первая активность вылета)

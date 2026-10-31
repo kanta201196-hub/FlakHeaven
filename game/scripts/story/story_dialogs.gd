@@ -24,6 +24,7 @@ const ORDER := [
 	["hangar_sky", "Перед операцией «Небо над Шахрисангом»", "dlg"],
 	["intro_sky", "Заставка: «Небо над Шахрисангом»", "cut"],
 	["outro_sky", "Финал: «Небо над Шахрисангом»", "cut"],
+	["epilogue_sky", "Карточка: перехват с юга", "cut"],
 	["hangar_sky_after", "Эпилог", "dlg"],
 	["hangar_aces", "Учебный полигон «Вершины»", "dlg"],
 ]
@@ -33,7 +34,10 @@ const ORDER := [
 ## Op 3 (step 7): H3 — Baron's challenge, the choice «принять открыто / пусть ищет» is flavour (the duel happens
 ## anyway); the flag "choice.lead.recon" is the H2′ choice (`DialogFlow.choice_flag`). H3′ — Grom in the hangar
 ## on crutches (guest portrait «Гром»); the choice "grom_role" is his place in op 4: wingman (default) or a second
-## controller at the base — one extra radio warning before each boss, no stats change (ST-10).
+## controller at the base — one extra radio warning before each boss, no stats change (ST-10). Op 4 (step 8): H4 — Купол
+## reads the headquarters' «offer»; the choice "reply" is the crew's answer (two flavours); Grom's line depends on
+## "choice.grom_role.*". H4′ — the epilogue in the hangar: Grom, «Ключ» and the hook to the south. HX — one card for
+## the «Битва асов» test mode.
 const SCENES := {
 	"hangar_prologue": {"steps": [
 		{"who": "Купол", "text": "Неделю назад над перевалом пропал «Гром». Последнее, что было в эфире, — позывной «Барон»."},
@@ -85,6 +89,28 @@ const SCENES := {
 		{"who": "Гром", "text": "В звено. «Ключ» обещал первый исправный самолёт — догоню вас на третьей минуте.", "only": ["grom_role", "wingman"]},
 		{"who": "Гром", "text": "Второй контролёр. Буду слушать их эфир — и предупрежу вас за минуту до каждого, кого они пошлют.", "only": ["grom_role", "controller"]},
 		{"who": "Купол", "text": "Их эфир другой. «Барона» нет — говорит «Граф». Короче, суше. Компания пересчитывает, а не отступает."},
+	]},
+	"hangar_sky": {"steps": [
+		{"who": "Купол", "text": "Перехват этой ночи, читаю дословно: «„Вершина“, предложение остаётся в силе до нашего прибытия. Подпись — и дорога ваша»."},
+		{"who": "Купол", "text": "Прибытие — это «Крепость». Последняя. Курс — на нашу базу. Нет базы — нет авиации — есть подпись. Это и есть «Прорыв»."},
+		{"choice": "reply", "prompt": "Что ответим штабу?", "options": [["Ответить в эфир", "radio"], ["Промолчать — ответим в небе", "silent"]]},
+		{"who": "crew", "text": "Передайте им: дорога не продаётся. И пусть «Крепость» летит — мы её встретим.", "trait": true, "only": ["reply", "radio"]},
+		{"who": "Купол", "text": "Передам. Коротко и без «нянек» — они оценят.", "only": ["reply", "radio"]},
+		{"who": "crew", "text": "Ничего не отвечаем. Пусть штаб слушает тишину до самой базы.", "trait": true, "only": ["reply", "silent"]},
+		{"who": "Купол", "text": "Тишина. Хорошо. У компании всё записано — пусть запишут и это.", "only": ["reply", "silent"]},
+		{"who": "Гром", "text": "«Ключ» дал мне первый исправный самолёт. Догоню звено на третьей минуте — должок за мной.", "flag": ["choice.grom_role.wingman", true]},
+		{"who": "Гром", "text": "Я рядом с «Куполом», на их частоте. Услышите меня — значит, к вам кто-то идёт. Самолёт мой ведёт «Иволга».", "flag": ["choice.grom_role.controller", true]},
+		{"who": "Купол", "text": "Все их звенья будут в воздухе. Поднимаемся всем, что есть."},
+	]},
+	"hangar_sky_after": {"steps": [
+		{"who": "Купол", "text": "«Крепость» догорает на хребте. Колонна прошла перевал засветло — первый раз за год без потерь."},
+		{"who": "Гром", "text": "Небо над Шахрисангом наше. Я это уже говорил в эфире — теперь скажу в ангаре. Спасибо, что не бросили."},
+		{"who": "Ключ", "text": "Их инженеры ушли так быстро, что бросили бетон. Хороший бетон. Будет новая полоса."},
+		{"who": "crew", "text": "Дорога живёт. Остальное — потом.", "trait": true},
+		{"who": "Купол", "text": "Потом будет скоро. Перехват с юга: компания грузится на корабли. Контракт не закрыт — только перенесён."},
+	]},
+	"hangar_aces": {"steps": [
+		{"who": "Купол", "text": "Учебный полигон «Вершины». Без сюжета и без «Монолита»: только вы и асы, волна за волной."},
 	]},
 	"hangar_pass_after": {"steps": [
 		{"who": "Купол", "text": "Колонна прошла, перевал наш. «Барон» в эфире назвал ваш позывной — теперь это личное."},

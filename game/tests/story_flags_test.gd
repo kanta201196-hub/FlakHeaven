@@ -49,6 +49,15 @@ func _init() -> void:
 	_check(StoryText.op_line("draft", "forts", "spawn_after", 0).contains("ведущий"), "Draft after Baron: his wingman is bitter")
 	_check(StoryText.result("forts", ["grom_free"]).contains("свободен"), "op 3 result line")
 	_check(StoryText.radio("fortress.sight.forts") != "", "Kupol has a Fortress-sighting line in op 3")
+	# op 4 (step 8): Graf leads the aces, the controller's three warnings, the hook variants, the campaign result line
+	_check(StoryText.op_line("graf", "sky", "spawn", 0).begins_with("Компания не отступает"), "Graf's arrival line in op 4")
+	_check(StoryText.op_line("graf", "sky", "spawn", 1) != StoryText.op_line("graf", "sky", "spawn", 0), "Graf has an «again» line")
+	for k in [1, 2, 3]:
+		_check(StoryText.radio("grom.warn.%d" % k) != "", "controller warning %d exists" % k)
+	_check(StoryText.radio("grom.warn.4") == "", "no fourth warning (three bosses)")
+	_check(StoryText.radio("hook.south").contains("Таласора") and not StoryText.radio("hook.later").contains("Таласора"), "hook variants")
+	_check(StoryText.accent("oriole") != "" and StoryText.accent("oriole") != StoryText.accent("grom"), "Oriole banner when Grom stays at the base")
+	_check(StoryText.result("sky", ["grom_free"]).begins_with("Кампания Нагорья завершена"), "op 4 result line")
 	_check(StoryText.op_line("postman", "pass", "spawn", 0).begins_with("Доставка"), "Postman's first line in op 1")
 	_check(StoryText.op_line("postman", "pass", "spawn", 1) != StoryText.op_line("postman", "pass", "spawn", 0), "Postman's second meeting: another line")
 	_check(StoryText.op_line("draft", "pass", "run", 0) == "", "no draft.pass.run → generic line")

@@ -11,6 +11,8 @@ const HINT_TO := 4.5       # s when it has faded
 
 func draw(m: Main, size: Vector2) -> void:
 	var bar := size.y * BAR
+	if bool(Cutscene.def.get("black", false)):   # step 8: the epilogue card — captions over black, no world
+		ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color.BLACK)
 	ctrl.draw_rect(Rect2(0, 0, size.x, bar), Color.BLACK)
 	ctrl.draw_rect(Rect2(0, size.y - bar, size.x, bar), Color.BLACK)
 	var t := Cutscene.t
