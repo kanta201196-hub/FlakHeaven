@@ -96,6 +96,10 @@ func draw(m: Main, r: Rect2) -> void:
 	_text(Vector2(x + 260, y + 32), Loc.t("%d из %d") % [e.records.size(), DecalLoadout.MAX_DECALS], 16,
 		Menu.C_AMBER if e.records.size() >= DecalLoadout.MAX_DECALS else Color(0.8, 0.84, 0.9))
 	_btn(Rect2(r.end.x - 214, y + 10, 196, 38), "‹ Назад (Esc)", "hg:dc:close", 16)
+	# S14-03: the camera backs off / comes closer from the panel too (a gamepad reaches them with the d-pad)
+	_btn(Rect2(r.end.x - 214 - 2 * 46, y + 10, 40, 38), "−", "hg:dc:zoom:-1", 20)
+	_btn(Rect2(r.end.x - 214 - 46, y + 10, 40, 38), "+", "hg:dc:zoom:1", 20)
+	_text(Vector2(r.end.x - 214 - 2 * 46 - 44, y + 35), Loc.t("Вид"), 15, Color(0.7, 0.74, 0.8))
 	_list(e, Rect2(x, y + 62, LIST_W, r.size.y - 140))
 	var rx := x + LIST_W + 24.0
 	var rw := r.end.x - 18.0 - rx
@@ -109,7 +113,7 @@ func draw(m: Main, r: Rect2) -> void:
 		_text(Vector2(x, hy), m.input_ctl.dc.note, 15, Menu.C_AMBER)
 	var pad := h3 != null and h3.decal_pad
 	var help := Loc.t("Геймпад: стик — курсор, A — поставить / взять, B — снять выбор, LT / RT — размер, LB / RB — поворот, X — отразить, Y — цвет, крестовина — панель, правый стик — вид") if pad \
-		else Loc.t("ЛКМ — поставить / взять и тащить, колесо — размер, Q / E — поворот (Shift — точно), F — отразить, Del — удалить, ПКМ — вращать вид")
+		else Loc.t("ЛКМ — поставить / взять и тащить, колесо — размер, Ctrl + колесо — отдалить / приблизить вид, Q / E — поворот (Shift — точно), F — отразить, Del — удалить, ПКМ — вращать вид")
 	_para(Vector2(x, hy + 22), help, r.size.x - 36, 14, Color(0.7, 0.74, 0.8))
 	if focus >= _items.size():
 		focus = -1

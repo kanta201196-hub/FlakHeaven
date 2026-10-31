@@ -8052,8 +8052,8 @@ msgid "Геймпад: стик — курсор, A — поставить / в�
 msgstr "Gamepad: stick — cursor, A — place / pick up, B — deselect, LT / RT — size, LB / RB — rotate, X — mirror, Y — paint, d-pad — panel, right stick — view"
 
 #: game/scripts/hud_decals.gd:112
-msgid "ЛКМ — поставить / взять и тащить, колесо — размер, Q / E — поворот (Shift — точно), F — отразить, Del — удалить, ПКМ — вращать вид"
-msgstr "LMB — place / pick up and drag, wheel — size, Q / E — rotate (Shift — fine), F — mirror, Del — delete, RMB — turn the view"
+msgid "ЛКМ — поставить / взять и тащить, колесо — размер, Ctrl + колесо — отдалить / приблизить вид, Q / E — поворот (Shift — точно), F — отразить, Del — удалить, ПКМ — вращать вид"
+msgstr "LMB — place / pick up and drag, wheel — size, Ctrl + wheel — zoom the view out / in, Q / E — rotate (Shift — fine), F — mirror, Del — delete, RMB — turn the view"
 
 #: game/scripts/hud_decals.gd:137
 msgid "Порядок: нижние строки лежат поверх"
@@ -8211,3 +8211,7 @@ msgstr "never"
 #: game/scripts/story/story_flags.gd
 msgid "при первом прохождении"
 msgstr "first clear only"
+
+#: game/scripts/hud_decals.gd
+msgid "Вид"
+msgstr "View"
