@@ -167,7 +167,7 @@ static func finish(m: Main) -> void:
 	if not active:
 		return
 	active = false
-	if not replay and not m.aces():
+	if not replay:   # the «Битва асов» card (HX) is marked seen too: it plays on the first start only
 		Campaign.mark_story_scene(id)
 	var cb := _then
 	_then = Callable()

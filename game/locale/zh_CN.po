@@ -21,7 +21,7 @@ msgstr "防空阵地未被摧毁——没有奖励"
 msgid "AdobeBuild village%d: дворов %d, домов %d, треугольников %d"
 msgstr ""
 
-#: game/scripts/background.gd:11 game/scripts/biome.gd:14 game/scripts/story/story_scenes.gd:26
+#: game/scripts/background.gd:11 game/scripts/biome.gd:14 game/scripts/story/story_scenes.gd:28
 msgid "Нагорье Шахрисанг"
 msgstr "沙赫里桑高地"
 
@@ -1933,7 +1933,7 @@ msgstr "电磁炮"
 msgid "УР В-З"
 msgstr "空地导弹"
 
-#: game/scripts/enemy.gd:85 game/scripts/fortress.gd:267 game/scripts/player_skills.gd:195 game/scripts/render3d.gd:2122
+#: game/scripts/enemy.gd:85 game/scripts/fortress.gd:267 game/scripts/player_skills.gd:195 game/scripts/render3d.gd:2127
 msgid "ёлочка"
 msgstr "松树阵"
 
@@ -1961,7 +1961,7 @@ msgstr "加力穿越"
 msgid "бронещит"
 msgstr "装甲盾"
 
-#: game/scripts/enemy.gd:89 game/scripts/enemy.gd:162 game/scripts/player.gd:655 game/scripts/player.gd:663 game/scripts/rival_ace.gd:128
+#: game/scripts/enemy.gd:89 game/scripts/enemy.gd:162 game/scripts/player.gd:655 game/scripts/player.gd:663 game/scripts/rival_ace.gd:138
 msgid "прочее"
 msgstr "其他"
 
@@ -2211,7 +2211,7 @@ msgstr "最多"
 msgid "Максимальное"
 msgstr "最高"
 
-#: game/scripts/hangar3d.gd:715 game/scripts/hud_pause.gd:29 game/scripts/player.gd:179 game/scripts/prog.gd:10 game/scripts/weapons.gd:106
+#: game/scripts/hangar3d.gd:722 game/scripts/hud_pause.gd:29 game/scripts/player.gd:179 game/scripts/prog.gd:10 game/scripts/self_check.gd:492 game/scripts/weapons.gd:106
 msgid "Турели"
 msgstr "炮塔"
 
@@ -2254,7 +2254,7 @@ msgstr "炸弹瞄准：按住鼠标右键移动准星，松开即投弹。准星
 msgid "ЭМИ-заряд срабатывает сам, когда в голубом круге вокруг вас 3 врага или вражеская ракета: дроны падают, остальные враги на время глохнут, ракеты теряют цель."
 msgstr "当你周围的蓝色圆圈内有 3 个敌人或一枚敌方导弹时，电磁脉冲会自动触发：无人机坠落，其他敌人暂时瘫痪，导弹丢失目标。"
 
-#: game/scripts/hardpoint.gd:512 game/scripts/hud_pause.gd:34 game/scripts/hud_result.gd:497 game/scripts/projectiles.gd:728 game/scripts/render3d.gd:3002
+#: game/scripts/hardpoint.gd:512 game/scripts/hud_pause.gd:34 game/scripts/hud_result.gd:497 game/scripts/projectiles.gd:728 game/scripts/render3d.gd:3007
 msgid "плазма"
 msgstr "等离子"
 
@@ -2270,7 +2270,7 @@ msgstr "羁绊：温压"
 msgid "связка: огненный вал"
 msgstr "羁绊：火墙"
 
-#: game/scripts/hardpoint.gd:895 game/scripts/hud_pause.gd:29 game/scripts/plane_art.gd:116 game/scripts/plane_classes.gd:61 game/scripts/profile.gd:390 game/scripts/weapon_models.gd:847
+#: game/scripts/hardpoint.gd:895 game/scripts/hud_pause.gd:29 game/scripts/plane_art.gd:116 game/scripts/plane_classes.gd:61 game/scripts/profile.gd:390 game/scripts/self_check.gd:191
 msgid "Бомбоотсек"
 msgstr "弹舱"
 
@@ -2947,7 +2947,7 @@ msgstr " （当前 %d）"
 msgid "%s: %d очков + уровень навыка %d"
 msgstr "%s：%d 点 + 技能等级 %d"
 
-#: game/scripts/hud_cutscene.gd:38
+#: game/scripts/hud_cutscene.gd:40
 msgid "Пропустить — любая клавиша"
 msgstr "跳过：任意键"
 
@@ -4248,7 +4248,7 @@ msgstr "内侧一对"
 msgid "Внешняя пара"
 msgstr "外侧一对"
 
-#: game/scripts/hud_pause.gd:29 game/scripts/player.gd:169 game/scripts/player.gd:175
+#: game/scripts/hud_pause.gd:29 game/scripts/player.gd:169 game/scripts/player.gd:175 game/scripts/self_check.gd:497
 msgid "Тяжёлый подвес"
 msgstr "重型挂点"
 
@@ -5066,44 +5066,44 @@ msgstr "任务完成！穿过门离开——或留下：15:00 后每分钟战利
 msgid "эвакуация"
 msgstr "撤离"
 
-#: game/scripts/main.gd:751
+#: game/scripts/main.gd:762
 #, c-format
 msgid "%s разбил точку эвакуации — эвакуация закрыта до следующего аса"
 msgstr ""
 
-#: game/scripts/main.gd:758
+#: game/scripts/main.gd:769
 msgid "Окно эвакуации закрыто — следующее после следующего аса"
 msgstr "撤离窗口已关闭——下一个王牌之后再开"
 
-#: game/scripts/main.gd:819
+#: game/scripts/main.gd:830
 msgid "Сбит с хвоста!"
 msgstr "被从后方击落！"
 
-#: game/scripts/main.gd:830 game/scripts/rival_ace.gd:22 game/scripts/rival_ace.gd:63 game/scripts/rival_ace.gd:107 game/scripts/rival_ace.gd:116 game/scripts/story/story_scenes.gd:45
+#: game/scripts/main.gd:841 game/scripts/rival_ace.gd:22 game/scripts/rival_ace.gd:72 game/scripts/rival_ace.gd:118 game/scripts/story/story_scenes.gd:60 game/scripts/story/story_scenes.gd:72
 msgid "Барон"
 msgstr "男爵"
 
-#: game/scripts/main.gd:833
+#: game/scripts/main.gd:844
 msgid "«Барон» сбит!"
 msgstr "“男爵”已击落！"
 
-#: game/scripts/main.gd:844
+#: game/scripts/main.gd:855
 msgid "ПОТОПЛЕН!"
 msgstr "已击沉！"
 
-#: game/scripts/main.gd:844
+#: game/scripts/main.gd:855
 msgid "АС СБИТ!"
 msgstr "王牌已击落！"
 
-#: game/scripts/main.gd:848
+#: game/scripts/main.gd:859
 msgid "Точка эвакуации разбита — окно откроется после следующего аса"
 msgstr ""
 
-#: game/scripts/main.gd:859
+#: game/scripts/main.gd:870
 msgid "Space — уклонение: короткий переворот, во время которого пули и ракеты не попадают."
 msgstr "Space — 闪避：快速翻滚，期间子弹和导弹无法命中。"
 
-#: game/scripts/main.gd:947 game/scripts/report.gd:380
+#: game/scripts/main.gd:958 game/scripts/report.gd:380
 msgid "гибель"
 msgstr "阵亡"
 
@@ -7620,7 +7620,7 @@ msgstr "正在接人！再守住天空半分钟。"
 msgid "Сбитый пилот: держите небо над маяком 30 с"
 msgstr "坠机飞行员：在信标上空坚守 30 秒"
 
-#: game/scripts/rescue.gd:75
+#: game/scripts/rescue.gd:75 game/scripts/story.gd:65
 msgid "Иволга"
 msgstr "黄鹂"
 
@@ -7636,7 +7636,7 @@ msgstr "直升机没接到飞行员就撤离了。继续搜索。"
 msgid "Шершень"
 msgstr "大黄蜂"
 
-#: game/scripts/rival_ace.gd:22 game/scripts/story.gd:122
+#: game/scripts/rival_ace.gd:22 game/scripts/rival_ace.gd:66 game/scripts/story.gd:135
 msgid "Граф"
 msgstr "伯爵"
 
@@ -7740,7 +7740,7 @@ msgstr "我认得这架飞机。今天不留情。"
 msgid "Мы уже встречались. Второй раз не уйдёшь."
 msgstr "我们见过面。这次你跑不掉了。"
 
-#: game/scripts/rival_ace.gd:36 game/scripts/rival_ace.gd:37 game/scripts/story/story_scenes.gd:45 game/scripts/story/story_scenes.gd:57 game/scripts/story/story_text.gd:69 game/scripts/story/story_text.gd:70
+#: game/scripts/rival_ace.gd:36 game/scripts/rival_ace.gd:37 game/scripts/story/story_scenes.gd:60 game/scripts/story/story_scenes.gd:72 game/scripts/story/story_text.gd:80 game/scripts/story/story_text.gd:81
 msgid "Один на один. Без ваших нянек."
 msgstr "一对一。别带保姆。"
 
@@ -7752,11 +7752,11 @@ msgstr "又是你？一周前你们的“雷霆”也很自信。"
 msgid "…Неплохо. Для новичка."
 msgstr "……不错。对新手来说。"
 
-#: game/scripts/rival_ace.gd:82
+#: game/scripts/rival_ace.gd:93
 msgid "ас-соперник"
 msgstr "敌方王牌"
 
-#: game/scripts/rival_ace.gd:240
+#: game/scripts/rival_ace.gd:250
 msgid "Перелёт!"
 msgstr "冲过头了！"
 
@@ -7778,6 +7778,112 @@ msgstr "存活=%d"
 #, c-format
 msgid "%s@%d hp=%d k=%.2f %s урон=%d: %s"
 msgstr "%s@%d hp=%d k=%.2f %s 伤害=%d: %s"
+
+#: game/scripts/self_check.gd:281 game/scripts/self_check.gd:459
+msgid "кадр не сохранился"
+msgstr ""
+
+#: game/scripts/self_check.gd:325
+#, c-format
+msgid "нет ангарной модели %s"
+msgstr ""
+
+#: game/scripts/self_check.gd:338
+#, c-format
+msgid "%s: панель в обшивке не легла на модель"
+msgstr ""
+
+#: game/scripts/self_check.gd:341
+#, c-format
+msgid "%s (%s): под точкой подвеса нет обшивки — оружие на запасной высоте"
+msgstr ""
+
+#: game/scripts/self_check.gd:346
+#, c-format
+msgid "%s (%s) висит в воздухе: зазор %s длины самолёта"
+msgstr ""
+
+#: game/scripts/self_check.gd:348
+#, c-format
+msgid "%s не подвешено"
+msgstr ""
+
+#: game/scripts/self_check.gd:352
+#, c-format
+msgid "турелей %d, а по уровню должно быть %d"
+msgstr ""
+
+#: game/scripts/self_check.gd:369
+#, c-format
+msgid "%s: модели нет на складе"
+msgstr ""
+
+#: game/scripts/self_check.gd:372
+#, c-format
+msgid "%s: нет подставки"
+msgstr ""
+
+#: game/scripts/self_check.gd:377
+#, c-format
+msgid "%s не лежит на подставке: зазор %s"
+msgstr ""
+
+#: game/scripts/self_check.gd:563
+msgid "нет боевой 3D-модели"
+msgstr ""
+
+#: game/scripts/self_check.gd:583
+#, c-format
+msgid "панель/обтекатель %s не легли на обшивку"
+msgstr ""
+
+#: game/scripts/self_check.gd:587
+#, c-format
+msgid "подвес %s без модели"
+msgstr ""
+
+#: game/scripts/self_check.gd:591
+#, c-format
+msgid "%s висит в воздухе: зазор %s длины самолёта"
+msgstr ""
+
+#: game/scripts/self_check.gd:597
+#, c-format
+msgid "точка вылета турели %s не на стволах: %s длины самолёта"
+msgstr ""
+
+#: game/scripts/self_check.gd:599
+#, c-format
+msgid "моделей на подвесах %d из %d"
+msgstr ""
+
+#: game/scripts/self_check.gd:603
+#, c-format
+msgid "факелов %d, сопел %d"
+msgstr ""
+
+#: game/scripts/self_check.gd:609
+#, c-format
+msgid "след начинается в %s длины от самолёта"
+msgstr ""
+
+#: game/scripts/self_check.gd:612
+msgid "нет точки курсовой пушки"
+msgstr ""
+
+#: game/scripts/self_check.gd:616
+#, c-format
+msgid "точка курсовой пушки не на носу: %s длины"
+msgstr ""
+
+#: game/scripts/self_check.gd:626
+msgid "нет факела в соплах"
+msgstr ""
+
+#: game/scripts/self_check.gd:634
+#, c-format
+msgid "факел не в сопле (z %.3f): обод в среднем в %s радиуса"
+msgstr ""
 
 #: game/scripts/settings.gd:7
 msgid "В окне"
@@ -8014,15 +8120,15 @@ msgstr "王牌对决：他会咬住你的尾巴。收油门（S）或做战斗�
 msgid "AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f из %d с)"
 msgstr "AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f 于 %d 秒)"
 
-#: game/scripts/story/dialog_flow.gd:19 game/scripts/story/story_dialogs.gd:39 game/scripts/story/story_dialogs.gd:40 game/scripts/story/story_dialogs.gd:41 game/scripts/story/story_dialogs.gd:43 game/scripts/story/story_dialogs.gd:46
+#: game/scripts/story/dialog_flow.gd:19 game/scripts/story/story_dialogs.gd:43 game/scripts/story/story_dialogs.gd:44 game/scripts/story/story_dialogs.gd:45 game/scripts/story/story_dialogs.gd:47 game/scripts/story/story_dialogs.gd:50
 msgid "Купол"
 msgstr "穹顶"
 
-#: game/scripts/story/dialog_flow.gd:19 game/scripts/story/story_dialogs.gd:81 game/scripts/story/story_dialogs.gd:83 game/scripts/story/story_dialogs.gd:85 game/scripts/story/story_dialogs.gd:86 game/scripts/story.gd:60
+#: game/scripts/story/dialog_flow.gd:19 game/scripts/story/story_dialogs.gd:85 game/scripts/story/story_dialogs.gd:87 game/scripts/story/story_dialogs.gd:89 game/scripts/story/story_dialogs.gd:90 game/scripts/story/story_dialogs.gd:101
 msgid "Гром"
 msgstr "雷霆"
 
-#: game/scripts/story/dialog_flow.gd:19
+#: game/scripts/story/dialog_flow.gd:19 game/scripts/story/story_dialogs.gd:108
 msgid "Ключ"
 msgstr "扳手"
 
@@ -8091,250 +8197,326 @@ msgid "Финал: «Небо над Шахрисангом»"
 msgstr "结局：《沙赫里桑格的天空》"
 
 #: game/scripts/story/story_dialogs.gd:27
+msgid "Карточка: перехват с юга"
+msgstr "卡片：来自南方的截听"
+
+#: game/scripts/story/story_dialogs.gd:28
 msgid "Эпилог"
 msgstr "尾声"
 
-#: game/scripts/story/story_dialogs.gd:28
+#: game/scripts/story/story_dialogs.gd:29
 msgid "Учебный полигон «Вершины»"
 msgstr "“峰顶”训练场"
 
-#: game/scripts/story/story_dialogs.gd:39
+#: game/scripts/story/story_dialogs.gd:43
 msgid "Неделю назад над перевалом пропал «Гром». Последнее, что было в эфире, — позывной «Барон»."
 msgstr "一周前，“雷鸣”在山口上空失踪。无线电里最后听到的是呼号“男爵”。"
 
-#: game/scripts/story/story_dialogs.gd:40
+#: game/scripts/story/story_dialogs.gd:44
 msgid "Те, кто его сбил, — не банда. Компания «Монолит»: строят дорогу, ПВО и всё, что закажет клиент. Их правило — «Дорога, потом подпись»."
 msgstr "击落他的不是匪帮，而是“磐石”公司：修路、建防空，客户要什么就建什么。他们的规矩是“先修路，再签字”。"
 
-#: game/scripts/story/story_dialogs.gd:41
+#: game/scripts/story/story_dialogs.gd:45
 msgid "Пока дорога через перевал наша, их контракт не закрыт. Поэтому летаем мы — больше некому."
 msgstr "只要山口的公路还在我们手里，他们的合同就没法完成。所以我们飞，因为没有别人。"
 
-#: game/scripts/story/story_dialogs.gd:42
+#: game/scripts/story/story_dialogs.gd:46
 msgid "Понял, «Купол». Когда вылет?"
 msgstr "明白，“穹顶”。什么时候起飞？"
 
-#: game/scripts/story/story_dialogs.gd:43
+#: game/scripts/story/story_dialogs.gd:47
 msgid "Как только колонна выйдет. Самолёт готов — «Ключ» клянётся, что в этот раз закрылки держатся."
 msgstr "车队一出发就走。飞机准备好了，“扳手”发誓这次襟翼不会掉。"
 
-#: game/scripts/story/story_dialogs.gd:46
+#: game/scripts/story/story_dialogs.gd:50
 msgid "Колонна выходит на перевал через час. Ваша задача — чтобы над ней пятнадцать минут было пусто."
 msgstr "车队一小时后进入山口。你们的任务是让它上空十五分钟内空无一物。"
 
-#: game/scripts/story/story_dialogs.gd:47
+#: game/scripts/story/story_dialogs.gd:51
 msgid "Есть минута на вопрос."
 msgstr "有一分钟可以提问。"
 
-#: game/scripts/story/story_dialogs.gd:47
+#: game/scripts/story/story_dialogs.gd:51
 msgid "Спросить о «Монолите»"
 msgstr "询问“磐石”"
 
-#: game/scripts/story/story_dialogs.gd:47
+#: game/scripts/story/story_dialogs.gd:51
 msgid "Спросить о «Громе»"
 msgstr "询问“雷鸣”"
 
-#: game/scripts/story/story_dialogs.gd:48
+#: game/scripts/story/story_dialogs.gd:52
 msgid "Инженеры с охраной. Приходят с контрактом клиента и строят, пока долина не подпишет. Их асы — тоже по контракту."
 msgstr "带着护卫的工程师。他们带着客户的合同来，一直建到山谷签字为止。他们的王牌也是合同工。"
 
-#: game/scripts/story/story_dialogs.gd:49
+#: game/scripts/story/story_dialogs.gd:53
 msgid "Парашюта никто не видел. Перехватов с его именем — тоже. Для меня это значит «ищем»."
 msgstr "没人看到降落伞，也没有提到他名字的截听。对我来说，这意味着“继续找”。"
 
-#: game/scripts/story/story_dialogs.gd:50
+#: game/scripts/story/story_dialogs.gd:54
 msgid "Принято. Работаем над дорогой."
 msgstr "收到。在公路上空干活。"
 
-#: game/scripts/story/story_dialogs.gd:53
+#: game/scripts/story/story_dialogs.gd:57
 msgid "Сухие русла за перевалом. Разведка насчитала шесть позиций ПВО — ровные, как по линейке. Их строят под кого-то в воздухе."
 msgstr "山口后的干河床。侦察数出六个防空阵地，排得像用尺子画的。它们是为空中的某人修的。"
 
-#: game/scripts/story/story_dialogs.gd:54
+#: game/scripts/story/story_dialogs.gd:58
 msgid "Их курьер в эфире называет это «штаб». Что он имеет в виду, узнаем к пятнадцатой минуте."
 msgstr "他们的快递员在无线电里管它叫“指挥部”。他指的是什么，第十五分钟就知道了。"
 
-#: game/scripts/story/story_dialogs.gd:55
+#: game/scripts/story/story_dialogs.gd:59
 msgid "Один вопрос до вылета."
 msgstr "起飞前可以问一个问题。"
 
-#: game/scripts/story/story_dialogs.gd:55
+#: game/scripts/story/story_dialogs.gd:59
 msgid "Спросить о «штабе в воздухе»"
 msgstr "询问“空中的指挥部”"
 
-#: game/scripts/story/story_dialogs.gd:55
+#: game/scripts/story/story_dialogs.gd:59
 msgid "Спросить о порядке спасения"
 msgstr "询问救援程序"
 
-#: game/scripts/story/story_dialogs.gd:56
+#: game/scripts/story/story_dialogs.gd:60
 msgid "Перехваты говорят о программе «Крепость»: летающий командный пункт с турелями. Если он есть — он придёт к нам сам."
 msgstr "截听提到一个“要塞”计划：带炮塔的飞行指挥所。如果它真的存在，它会自己来找我们。"
 
-#: game/scripts/story/story_dialogs.gd:57
+#: game/scripts/story/story_dialogs.gd:61
 msgid "Сбитый включает аварийный маяк. Вертолёт идёт на него, но ему нужно полминуты чистого неба. Услышите маяк — держитесь рядом."
 msgstr "被击落的飞行员会打开求救信标。直升机会飞过去，但需要半分钟的干净天空。听到信标就守在附近。"
 
-#: game/scripts/story/story_dialogs.gd:58
+#: game/scripts/story/story_dialogs.gd:62
 msgid "Понял. Русла, ПВО, пятнадцатая минута."
 msgstr "明白。河床、防空、第十五分钟。"
 
-#: game/scripts/story/story_dialogs.gd:61
+#: game/scripts/story/story_dialogs.gd:65
 msgid "Первая «Крепость» на склоне. Их штаб в эфире назвал это «не по плану». Хорошо, когда у них есть план."
 msgstr "第一架“要塞”躺在山坡上。他们的指挥部在无线电里说这“不在计划内”。他们有计划倒是好事。"
 
-#: game/scripts/story/story_dialogs.gd:62
+#: game/scripts/story/story_dialogs.gd:66
 msgid "«Иволга» дома. Её слова: парашют «Грома» видели у старых крепостей. Это единственная ниточка."
 msgstr "“黄鹂”回家了。她说：有人在旧要塞附近看到了“雷鸣”的降落伞。这是唯一的线索。"
 
-#: game/scripts/story/story_dialogs.gd:63
+#: game/scripts/story/story_dialogs.gd:67
 msgid "Что делаем с ниточкой?"
 msgstr "这条线索怎么办？"
 
-#: game/scripts/story/story_dialogs.gd:63
+#: game/scripts/story/story_dialogs.gd:67
 msgid "Передать разведке — пусть ищут"
 msgstr "交给侦察队去找"
 
-#: game/scripts/story/story_dialogs.gd:63
+#: game/scripts/story/story_dialogs.gd:67
 msgid "Пока молчать — «Барон» не должен знать"
 msgstr "暂时保密，不能让“男爵”知道"
 
-#: game/scripts/story/story_dialogs.gd:64
+#: game/scripts/story/story_dialogs.gd:68
 msgid "Передаю. К «Крепостям» полетите с меткой на карте — разведка покажет, где смотреть."
 msgstr "交上去了。飞往“要塞”时地图上会有标记，侦察队会告诉你们往哪看。"
 
-#: game/scripts/story/story_dialogs.gd:65
+#: game/scripts/story/story_dialogs.gd:69
 msgid "Молчим. «Барон» в эфире болтлив — пусть думает, что мы ничего не знаем."
 msgstr "保密。“男爵”在无线电里话多，让他以为我们什么都不知道。"
 
-#: game/scripts/story/story_dialogs.gd:66
+#: game/scripts/story/story_dialogs.gd:70
 msgid "Вертолёт ушёл без пилота. О «Громе» по-прежнему ничего — разведка смотрит на старые крепости наугад."
 msgstr "直升机没带回飞行员。“雷鸣”仍无消息，侦察队只能在旧要塞一带盲目搜寻。"
 
-#: game/scripts/story/story_dialogs.gd:67
+#: game/scripts/story/story_dialogs.gd:71
 msgid "Тогда дальше. К крепостям."
 msgstr "那就继续。去要塞。"
 
-#: game/scripts/story/story_dialogs.gd:70
+#: game/scripts/story/story_dialogs.gd:74
 msgid "Старые крепости над дорогой. Компания сделала из них огневые точки — и посадила сверху «Барона»."
 msgstr "公路上方的古堡。公司把它们改成了火力点，还把“男爵”放在了上面。"
 
-#: game/scripts/story/story_dialogs.gd:71
+#: game/scripts/story/story_dialogs.gd:75
 msgid "Он выходил в открытый эфир. Зовёт вас. Один на один, без «нянек» — его слова."
 msgstr "他用公开频道喊话，点名要你。一对一，不带“保姆”——这是他的原话。"
 
-#: game/scripts/story/story_dialogs.gd:72
+#: game/scripts/story/story_dialogs.gd:76
 msgid "Разведка смотрела восточную калу: метка будет на карте с первой минуты. Если «Гром» там — наземные пойдут за вами."
 msgstr "侦察看过东边的卡拉堡：标记从第一分钟就会在地图上。如果“雷鸣”在那儿，地面队会跟着你进去。"
 
-#: game/scripts/story/story_dialogs.gd:73
+#: game/scripts/story/story_dialogs.gd:77
 msgid "Что ответить «Барону»?"
 msgstr "怎么回复“男爵”？"
 
-#: game/scripts/story/story_dialogs.gd:73
+#: game/scripts/story/story_dialogs.gd:77
 msgid "Принять вызов открыто"
 msgstr "公开接受挑战"
 
-#: game/scripts/story/story_dialogs.gd:73
+#: game/scripts/story/story_dialogs.gd:77
 msgid "Не отвечать — пусть ищет"
 msgstr "不回应——让他找"
 
-#: game/scripts/story/story_dialogs.gd:74
+#: game/scripts/story/story_dialogs.gd:78
 msgid "Ладно. Передам одной фразой: «Вершина» будет над крепостями. Пусть считает это ответом."
 msgstr "好。我只传一句：“峰顶”会在古堡上空。就当这是回答。"
 
-#: game/scripts/story/story_dialogs.gd:75
+#: game/scripts/story/story_dialogs.gd:79
 msgid "Правильно. Пусть ищет. Тот, кто ищет, смотрит вниз — а вы будете выше."
 msgstr "对。让他找。找的人往下看——而你会在更高处。"
 
-#: game/scripts/story/story_dialogs.gd:76
+#: game/scripts/story/story_dialogs.gd:80
 msgid "И помните: его «Крепость» придёт к пятнадцатой минуте, как по расписанию. Дуэль — не последнее дело."
 msgstr "记住：他的“堡垒”会在第十五分钟准时到。决斗不是最后一件事。"
 
-#: game/scripts/story/story_dialogs.gd:77
+#: game/scripts/story/story_dialogs.gd:81
 msgid "Понял. Сначала «Барон», потом их штаб. По порядку."
 msgstr "明白。先“男爵”，再他们的指挥部。按顺序来。"
 
-#: game/scripts/story/story_dialogs.gd:80
+#: game/scripts/story/story_dialogs.gd:84
 msgid "Зелёная ракета была его. Наземные вынесли «Грома» из восточной калы ночью. Ноги — в гипсе, язык — на месте."
 msgstr "绿色信号弹是他的。地面队夜里把“雷鸣”从东卡拉堡抬了出来。腿打着石膏，嘴还在。"
 
-#: game/scripts/story/story_dialogs.gd:81
+#: game/scripts/story/story_dialogs.gd:85
 msgid "Звено. Я… неделя в подвале у компании — и всё равно первым делом слышу ваш позывной в эфире. Спасибо."
 msgstr "编队。我……在公司的地窖里待了一周，出来第一件事还是在电台里听见你们的呼号。谢谢。"
 
-#: game/scripts/story/story_dialogs.gd:82
+#: game/scripts/story/story_dialogs.gd:86
 msgid "Должок за тобой, «Гром». Купол сказал — ты сам выберешь, как отдавать."
 msgstr "你欠我们一次，“雷鸣”。穹顶说了，怎么还由你自己选。"
 
-#: game/scripts/story/story_dialogs.gd:83
+#: game/scripts/story/story_dialogs.gd:87
 msgid "На костылях в кабину не лезут. Но через неделю лезут. А пока — есть второй вариант."
 msgstr "拄着拐杖进不了座舱。一周后就能了。在此之前，还有第二个选项。"
 
-#: game/scripts/story/story_dialogs.gd:84
+#: game/scripts/story/story_dialogs.gd:88
 msgid "Роль «Грома» в последней операции"
 msgstr "“雷鸣”在最后一次行动中的角色"
 
-#: game/scripts/story/story_dialogs.gd:84
+#: game/scripts/story/story_dialogs.gd:88
 msgid "В звено — ведомым"
 msgstr "进编队——当僚机"
 
-#: game/scripts/story/story_dialogs.gd:84
+#: game/scripts/story/story_dialogs.gd:88
 msgid "На базу — вторым контролёром"
 msgstr "留基地——当第二引导员"
 
-#: game/scripts/story/story_dialogs.gd:85
+#: game/scripts/story/story_dialogs.gd:89
 msgid "В звено. «Ключ» обещал первый исправный самолёт — догоню вас на третьей минуте."
 msgstr "进编队。“扳手”答应把第一架能飞的飞机给我——第三分钟追上你们。"
 
-#: game/scripts/story/story_dialogs.gd:86
+#: game/scripts/story/story_dialogs.gd:90
 msgid "Второй контролёр. Буду слушать их эфир — и предупрежу вас за минуту до каждого, кого они пошлют."
 msgstr "第二引导员。我会监听他们的电台，在他们派出的每一个人到来前一分钟提醒你。"
 
-#: game/scripts/story/story_dialogs.gd:87
+#: game/scripts/story/story_dialogs.gd:91
 msgid "Их эфир другой. «Барона» нет — говорит «Граф». Короче, суше. Компания пересчитывает, а не отступает."
 msgstr "他们的电台变了。“男爵”没了，说话的是“伯爵”。更短，更干。公司在重新清点，不是撤退。"
 
-#: game/scripts/story/story_dialogs.gd:90
+#: game/scripts/story/story_dialogs.gd:94
+msgid "Перехват этой ночи, читаю дословно: «„Вершина“, предложение остаётся в силе до нашего прибытия. Подпись — и дорога ваша»."
+msgstr "昨夜截听，逐字念：“‘峰顶’，报价在我们抵达前有效。签字，公路归你们。”"
+
+#: game/scripts/story/story_dialogs.gd:95
+msgid "Прибытие — это «Крепость». Последняя. Курс — на нашу базу. Нет базы — нет авиации — есть подпись. Это и есть «Прорыв»."
+msgstr "“抵达”指的是“堡垒”。最后一架。航向——我们的基地。没有基地，就没有航空兵，就有了签字。这就是“突破”。"
+
+#: game/scripts/story/story_dialogs.gd:96
+msgid "Что ответим штабу?"
+msgstr "怎么回复他们的指挥部？"
+
+#: game/scripts/story/story_dialogs.gd:96
+msgid "Ответить в эфир"
+msgstr "在电台上回应"
+
+#: game/scripts/story/story_dialogs.gd:96
+msgid "Промолчать — ответим в небе"
+msgstr "沉默——在天上回应"
+
+#: game/scripts/story/story_dialogs.gd:97
+msgid "Передайте им: дорога не продаётся. И пусть «Крепость» летит — мы её встретим."
+msgstr "转告他们：公路不卖。让“堡垒”来吧——我们会迎上去。"
+
+#: game/scripts/story/story_dialogs.gd:98
+msgid "Передам. Коротко и без «нянек» — они оценят."
+msgstr "我会转达。简短，不带“保姆”——他们会欣赏的。"
+
+#: game/scripts/story/story_dialogs.gd:99
+msgid "Ничего не отвечаем. Пусть штаб слушает тишину до самой базы."
+msgstr "什么都不回。让指挥部一路听着寂静飞到基地。"
+
+#: game/scripts/story/story_dialogs.gd:100
+msgid "Тишина. Хорошо. У компании всё записано — пусть запишут и это."
+msgstr "寂静。好。公司什么都记——那就把这也记下来。"
+
+#: game/scripts/story/story_dialogs.gd:101
+msgid "«Ключ» дал мне первый исправный самолёт. Догоню звено на третьей минуте — должок за мной."
+msgstr "“扳手”把第一架能飞的飞机给了我。第三分钟追上编队——我欠你们的。"
+
+#: game/scripts/story/story_dialogs.gd:102
+msgid "Я рядом с «Куполом», на их частоте. Услышите меня — значит, к вам кто-то идёт. Самолёт мой ведёт «Иволга»."
+msgstr "我在“穹顶”旁边，守着他们的频率。听到我，就是有人冲你们来了。我的飞机由“黄鹂”驾驶。"
+
+#: game/scripts/story/story_dialogs.gd:103
+msgid "Все их звенья будут в воздухе. Поднимаемся всем, что есть."
+msgstr "他们所有的编队都会升空。我们把能飞的全派上去。"
+
+#: game/scripts/story/story_dialogs.gd:106
+msgid "«Крепость» догорает на хребте. Колонна прошла перевал засветло — первый раз за год без потерь."
+msgstr "“堡垒”在山脊上烧尽。车队天黑前过了山口——一年来第一次零损失。"
+
+#: game/scripts/story/story_dialogs.gd:107
+msgid "Небо над Шахрисангом наше. Я это уже говорил в эфире — теперь скажу в ангаре. Спасибо, что не бросили."
+msgstr "沙赫里桑的天空是我们的。我在电台里说过了——现在在机库再说一遍。谢谢你们没有放弃我。"
+
+#: game/scripts/story/story_dialogs.gd:108
+msgid "Их инженеры ушли так быстро, что бросили бетон. Хороший бетон. Будет новая полоса."
+msgstr "他们的工程师走得太急，把混凝土都扔下了。好混凝土。可以修条新跑道。"
+
+#: game/scripts/story/story_dialogs.gd:109
+msgid "Дорога живёт. Остальное — потом."
+msgstr "公路活着。其他的以后再说。"
+
+#: game/scripts/story/story_dialogs.gd:110
+msgid "Потом будет скоро. Перехват с юга: компания грузится на корабли. Контракт не закрыт — только перенесён."
+msgstr "“以后”很快就到。南方截听：公司正在装船。合同没有结束——只是转移了。"
+
+#: game/scripts/story/story_dialogs.gd:113
+msgid "Учебный полигон «Вершины». Без сюжета и без «Монолита»: только вы и асы, волна за волной."
+msgstr "“峰顶”训练靶场。没有剧情，没有“磐石”：只有你和王牌，一波接一波。"
+
+#: game/scripts/story/story_dialogs.gd:116
 msgid "Колонна прошла, перевал наш. «Барон» в эфире назвал ваш позывной — теперь это личное."
 msgstr "车队过去了，山口是我们的。“男爵”在无线电里叫了你的呼号，现在是私人恩怨了。"
 
-#: game/scripts/story/story_dialogs.gd:91
+#: game/scripts/story/story_dialogs.gd:117
 msgid "Пусть называет. Хоть познакомимся."
 msgstr "让他叫。至少算认识了。"
 
-#: game/scripts/story/story_dialogs.gd:92
+#: game/scripts/story/story_dialogs.gd:118
 msgid "Их асы прыгают с парашютом и назавтра снова в строю. У компании хорошие спасатели."
 msgstr "他们的王牌跳伞，第二天又归队。这家公司的救援队很不错。"
 
-#: game/scripts/story/story_dialogs.gd:93
+#: game/scripts/story/story_dialogs.gd:119
 msgid "Разведка: в сухих руслах за перевалом копают позиции. По чертежу. Это ваша следующая операция."
 msgstr "侦察报告：山口后的干河床里在挖阵地，照着图纸挖。那是你们的下一次行动。"
 
-#: game/scripts/story/story_dialogs.gd:100
+#: game/scripts/story/story_dialogs.gd:126
 msgid "Звено, проверка связи. Ангар слышит вас, картинка идёт."
 msgstr "编队，通讯检查。机库听得到你们，画面正常。"
 
-#: game/scripts/story/story_dialogs.gd:101
+#: game/scripts/story/story_dialogs.gd:127
 msgid "Слышу чисто. Когда вылет?"
 msgstr "听得清楚。什么时候起飞？"
 
-#: game/scripts/story/story_dialogs.gd:102
+#: game/scripts/story/story_dialogs.gd:128
 msgid "Купол ждёт ответа."
 msgstr "穹顶等待回答。"
 
-#: game/scripts/story/story_dialogs.gd:102
+#: game/scripts/story/story_dialogs.gd:128
 msgid "Спросить о погоде"
 msgstr "询问天气"
 
-#: game/scripts/story/story_dialogs.gd:102
+#: game/scripts/story/story_dialogs.gd:128
 msgid "Спросить о колонне"
 msgstr "询问车队"
 
-#: game/scripts/story/story_dialogs.gd:103
+#: game/scripts/story/story_dialogs.gd:129
 msgid "Над перевалом ясно, ветер с юга. Хороший день для работы."
 msgstr "山口上空晴朗，南风。适合干活的好天气。"
 
-#: game/scripts/story/story_dialogs.gd:104
+#: game/scripts/story/story_dialogs.gd:130
 msgid "Колонна вышла в срок. Ваше дело — чтобы она пришла."
 msgstr "车队按时出发。你们的任务是让它到达。"
 
@@ -8350,63 +8532,87 @@ msgstr "总是"
 msgid "никогда"
 msgstr "从不"
 
-#: game/scripts/story/story_scenes.gd:27 game/scripts/story/story_text.gd:13
+#: game/scripts/story/story_scenes.gd:29 game/scripts/story/story_text.gd:13
 msgid "Звено, небо ваше. Колонна идёт по графику — не дайте её тронуть."
 msgstr "编队，天空交给你们了。车队按计划行进——别让敌人碰它。"
 
-#: game/scripts/story/story_scenes.gd:44
+#: game/scripts/story/story_scenes.gd:47
+msgid "База «Вершины» · первый свет"
+msgstr "“峰顶”基地 · 第一缕光"
+
+#: game/scripts/story/story_scenes.gd:48
+msgid "Все их звенья в воздухе. Курс «Крепости» — на нас."
+msgstr "他们所有的编队都在空中。“堡垒”的航向——冲着我们。"
+
+#: game/scripts/story/story_scenes.gd:49
+msgid "Поднимаемся всем, что есть."
+msgstr "把能飞的全派上去。"
+
+#: game/scripts/story/story_scenes.gd:59
 msgid "Старые крепости · теперь это их позиции"
 msgstr "古堡 · 现在是他们的阵地"
 
-#: game/scripts/story/story_scenes.gd:46
+#: game/scripts/story/story_scenes.gd:61
 msgid "Не отвечайте. Пусть ищет."
 msgstr "不要回应。让他找。"
 
-#: game/scripts/story/story_scenes.gd:56
+#: game/scripts/story/story_scenes.gd:71
 msgid "Старые крепости · метка разведки: восточная кала"
 msgstr "古堡 · 侦察标记：东卡拉堡"
 
-#: game/scripts/story/story_scenes.gd:58
+#: game/scripts/story/story_scenes.gd:73
 msgid "Не отвечайте. Пусть ищет. Метка на карте — ваша, не его."
 msgstr "不要回应。让他找。地图上的标记是你的，不是他的。"
 
-#: game/scripts/story/story_scenes.gd:68
+#: game/scripts/story/story_scenes.gd:83
 msgid "Сухое русло · они строят"
 msgstr "干河床 · 他们在建"
 
-#: game/scripts/story/story_scenes.gd:69
+#: game/scripts/story/story_scenes.gd:84
 msgid "Позиции в руслах — по чертежу. Где-то над ними тот, кто чертит."
 msgstr "河床里的阵地是照图纸修的。画图的人就在它们上方某处。"
 
-#: game/scripts/story/story_scenes.gd:79
+#: game/scripts/story/story_scenes.gd:94
 msgid "Перевал Шахрисанг · неделя после пропажи «Грома»"
 msgstr "沙赫里桑格山口 · “雷鸣”失踪一周后"
 
-#: game/scripts/story/story_scenes.gd:80
+#: game/scripts/story/story_scenes.gd:95
 msgid "Колонна под вами. Пятнадцать минут над ней должно быть пусто."
 msgstr "车队在你们下方。它上空十五分钟内必须空无一物。"
 
-#: game/scripts/story/story_scenes.gd:92
+#: game/scripts/story/story_scenes.gd:107
+msgid "Дорога через перевал · колонна идёт"
+msgstr "山口公路 · 车队在前进"
+
+#: game/scripts/story/story_scenes.gd:108
+msgid "Колонна идёт. «Крепость» догорает на хребте. Дорога живёт."
+msgstr "车队在前进。“堡垒”在山脊上烧尽。公路活着。"
+
+#: game/scripts/story/story_scenes.gd:109
+msgid "Кампания Нагорья завершена"
+msgstr "高地战役完成"
+
+#: game/scripts/story/story_scenes.gd:119
 msgid "Ночь над крепостями"
 msgstr "古堡上空的夜"
 
-#: game/scripts/story/story_scenes.gd:93
+#: game/scripts/story/story_scenes.gd:120
 msgid "Зелёная ракета со стены. Зелёная. Он наш."
 msgstr "城墙上升起绿色信号弹。绿色。他是我们的了。"
 
-#: game/scripts/story/story_scenes.gd:103
+#: game/scripts/story/story_scenes.gd:130
 msgid "Первая «Крепость» сбита"
 msgstr "第一架“要塞”被击落"
 
-#: game/scripts/story/story_scenes.gd:104
+#: game/scripts/story/story_scenes.gd:131
 msgid "Первая. Не последняя: перехват говорит о «программе»."
 msgstr "第一架。不是最后一架：截听提到了一个“计划”。"
 
-#: game/scripts/story/story_scenes.gd:114
+#: game/scripts/story/story_scenes.gd:141
 msgid "Перевал пройден"
 msgstr "山口已通过"
 
-#: game/scripts/story/story_scenes.gd:115
+#: game/scripts/story/story_scenes.gd:142
 msgid "Колонна прошла. О «Громе» — ничего. Пока."
 msgstr "车队过去了。“雷鸣”没有消息。暂时。"
 
@@ -8451,217 +8657,317 @@ msgstr "就是它。飞行的指挥部。原来是它在画他们的阵地图。
 msgid "«Крепость» по расписанию. Штаб решил посмотреть на дуэль сам."
 msgstr "“堡垒”准时到了。指挥部决定亲自来看决斗。"
 
+#: game/scripts/story/story_text.gd:23
+msgid "Вот она. Последняя. Курс — на нашу базу: не дайте ей дойти."
+msgstr "就是它。最后一架。航向我们的基地——别让它到达。"
+
+#: game/scripts/story/story_text.gd:25
+msgid "Второй контролёр на связи. Их курьер поднялся — минута до него."
+msgstr "第二引导员呼叫。他们的快递员起飞了——一分钟后到。"
+
+#: game/scripts/story/story_text.gd:26
+msgid "«Сквозняк» в воздухе, идёт к вам. Минута."
+msgstr "“穿堂风”已升空，冲你们来了。一分钟。"
+
+#: game/scripts/story/story_text.gd:27
+msgid "«Крепость» вышла на курс. Минута — и она у вас."
+msgstr "“堡垒”已进入航线。一分钟后就到你们头上。"
+
 #: game/scripts/story/story_text.gd:28
+msgid "Звено, «Иволга». Веду самолёт «Грома» — он на земле, в эфире. Должок отдаём вместе."
+msgstr "编队，“黄鹂”。我驾驶“雷鸣”的飞机——他在地面，在电台上。这笔债我们一起还。"
+
+#: game/scripts/story/story_text.gd:30
+msgid "Радиоперехват с юга: компания грузится на корабли. Таласора…"
+msgstr "南方无线电截听：公司正在装船。塔拉索拉……"
+
+#: game/scripts/story/story_text.gd:31
+msgid "Радиоперехват с юга: компания грузится на корабли. …Мы ещё услышим о них."
+msgstr "南方无线电截听：公司正在装船。……我们还会听到他们的消息。"
+
+#: game/scripts/story/story_text.gd:37
 msgid "Перевал открыт. «Барон» знает ваш позывной."
 msgstr "山口已打通。“男爵”记住了你的呼号。"
 
-#: game/scripts/story/story_text.gd:29
+#: game/scripts/story/story_text.gd:38
 msgid "«Крепость» № 1 сбита. О «Громе» по-прежнему ничего."
 msgstr "1号“要塞”被击落。“雷鸣”仍无消息。"
 
-#: game/scripts/story/story_text.gd:30
+#: game/scripts/story/story_text.gd:39
 msgid "«Крепость» № 1 сбита. «Гром» — у старых крепостей?"
 msgstr "1号“要塞”被击落。“雷鸣”在旧要塞附近？"
 
-#: game/scripts/story/story_text.gd:31
+#: game/scripts/story/story_text.gd:40
 msgid "«Барон» сбит. «Гром» свободен."
 msgstr "“男爵”被击落。“雷鸣”自由了。"
 
-#: game/scripts/story/story_text.gd:36
+#: game/scripts/story/story_text.gd:41
+msgid "Кампания Нагорья завершена. Дорога живёт."
+msgstr "高地战役完成。公路活着。"
+
+#: game/scripts/story/story_text.gd:46
 msgid "«Крепость» идёт на нашу базу! Перехватите её, пока не дошла"
 msgstr "“堡垒”正飞向我方基地！在它抵达前拦截"
 
-#: game/scripts/story/story_text.gd:37
+#: game/scripts/story/story_text.gd:47
 msgid "«Барон» сбит! Небо над крепостями наше"
 msgstr "男爵被击落！要塞上空是我们的了"
 
-#: game/scripts/story/story_text.gd:38
+#: game/scripts/story/story_text.gd:48
 msgid "«Гром» в строю!"
 msgstr "雷鸣归队！"
 
-#: game/scripts/story/story_text.gd:54
+#: game/scripts/story/story_text.gd:49
+msgid "«Иволга» в строю!"
+msgstr "“黄鹂”入列！"
+
+#: game/scripts/story/story_text.gd:65
 msgid "Доставка по адресу. Принимайте, «Вершина»."
 msgstr "按地址送达。请签收，“峰顶”。"
 
-#: game/scripts/story/story_text.gd:54
+#: game/scripts/story/story_text.gd:65
 msgid "Опять вы на маршруте. Доставлю всё равно."
 msgstr "又是你们挡在路线上。照样送到。"
 
-#: game/scripts/story/story_text.gd:54
+#: game/scripts/story/story_text.gd:65
 msgid "Тот же адрес, тот же курьер."
 msgstr "同样的地址，同样的快递员。"
 
-#: game/scripts/story/story_text.gd:55
+#: game/scripts/story/story_text.gd:66
 msgid "Посылка пошла."
 msgstr "包裹已发出。"
 
-#: game/scripts/story/story_text.gd:55
+#: game/scripts/story/story_text.gd:66
 msgid "Распишитесь в получении."
 msgstr "请签收。"
 
-#: game/scripts/story/story_text.gd:56
+#: game/scripts/story/story_text.gd:67
 msgid "Груз сброшен… катапульта. Спасатели знают, где искать."
 msgstr "货物已投下……弹射。救援队知道去哪儿找。"
 
-#: game/scripts/story/story_text.gd:57
+#: game/scripts/story/story_text.gd:68
 msgid "Сквозит у вас в строю, новичок. Ведущего-то нет."
 msgstr "你们编队漏风啊，新手。长机都没了。"
 
-#: game/scripts/story/story_text.gd:57
+#: game/scripts/story/story_text.gd:68
 msgid "Снова вы? «Барон» будет рад."
 msgstr "又是你？“男爵”会很高兴。"
 
-#: game/scripts/story/story_text.gd:57
+#: game/scripts/story/story_text.gd:68
 msgid "Заткну сквозняк. Второй раз проще."
 msgstr "我来把这股穿堂风堵上。第二次更容易。"
 
-#: game/scripts/story/story_text.gd:58
+#: game/scripts/story/story_text.gd:69
 msgid "Повреждения! Ну всё, без вежливости."
 msgstr "受损了！好吧，不客气了。"
 
-#: game/scripts/story/story_text.gd:59
+#: game/scripts/story/story_text.gd:70
 msgid "Выхожу… Это не считается, слышите? Не считается!"
 msgstr "退出……这不算，听见没？不算！"
 
-#: game/scripts/story/story_text.gd:61
+#: game/scripts/story/story_text.gd:72
 msgid "Штаб видит вас с высоты. Доставлю."
 msgstr "指挥部从高处看着你们。照样送到。"
 
-#: game/scripts/story/story_text.gd:61
+#: game/scripts/story/story_text.gd:72
 msgid "Опять вы. Штаб уже в курсе — он всё видит."
 msgstr "又是你们。指挥部已经知道了，它什么都看得见。"
 
-#: game/scripts/story/story_text.gd:61
+#: game/scripts/story/story_text.gd:72
 msgid "Маршрут согласован со штабом. Сверху."
 msgstr "路线已和指挥部确认。从上面。"
 
-#: game/scripts/story/story_text.gd:62
+#: game/scripts/story/story_text.gd:73
 msgid "Отправление по расписанию."
 msgstr "按时发出。"
 
-#: game/scripts/story/story_text.gd:62
+#: game/scripts/story/story_text.gd:73
 msgid "Адресат — вы."
 msgstr "收件人：你们。"
 
-#: game/scripts/story/story_text.gd:63
+#: game/scripts/story/story_text.gd:74
 msgid "Штаб, курьер выбыл… Катапульта."
 msgstr "指挥部，快递员出局……弹射。"
 
-#: game/scripts/story/story_text.gd:64
+#: game/scripts/story/story_text.gd:75
 msgid "«Барон» просил передать: он вас помнит."
 msgstr "“男爵”让我转告：他记得你们。"
 
-#: game/scripts/story/story_text.gd:64
+#: game/scripts/story/story_text.gd:75
 msgid "Сквозняк вернулся. Соскучились?"
 msgstr "穿堂风回来了。想我了吗？"
 
-#: game/scripts/story/story_text.gd:64
+#: game/scripts/story/story_text.gd:75
 msgid "В руслах тесно, новичок. Уступите небо."
 msgstr "河床上空太挤了，新手。把天空让出来。"
 
-#: game/scripts/story/story_text.gd:65
+#: game/scripts/story/story_text.gd:76
 msgid "Передайте «Барону»… а, сам скажу. Выхожу."
 msgstr "转告“男爵”……算了，我自己说。退出。"
 
-#: game/scripts/story/story_text.gd:66
+#: game/scripts/story/story_text.gd:77
 msgid "Воздушный объект на маршруте штаба. Вы серьёзно? Отойдите от трассы."
 msgstr "指挥部航线上有空中目标。你们认真的？离开航线。"
 
-#: game/scripts/story/story_text.gd:66
+#: game/scripts/story/story_text.gd:77
 msgid "Штаб на маршруте. Повторяю: отойдите от трассы."
 msgstr "指挥部在航线上。重复：离开航线。"
 
-#: game/scripts/story/story_text.gd:67
+#: game/scripts/story/story_text.gd:78
 msgid "Потеря крыла. Штаб запрашивает резерв. Это… не по плану."
 msgstr "机翼损失。指挥部请求预备队。这……不在计划内。"
 
-#: game/scripts/story/story_text.gd:69
+#: game/scripts/story/story_text.gd:80
 msgid "Снова вы. Крепости не прощают второго раза."
 msgstr "又是你。古堡不给第二次机会。"
 
-#: game/scripts/story/story_text.gd:70
+#: game/scripts/story/story_text.gd:81
 msgid "Ищете парашют? Ищите. Я посмотрю сверху, как вы ищете."
 msgstr "找降落伞？找吧。我在上面看你们找。"
 
-#: game/scripts/story/story_text.gd:71
+#: game/scripts/story/story_text.gd:82
 msgid "Неделю назад ваш «Гром» тоже был уверен в себе. Один на один."
 msgstr "一周前你们的“雷鸣”也很自信。一对一。"
 
-#: game/scripts/story/story_text.gd:72
+#: game/scripts/story/story_text.gd:83
 msgid "…Неплохо. Для новичка. Передайте… нет. Ничего не передавайте."
 msgstr "……不错。对新手来说。转告……不。什么都别转告。"
 
-#: game/scripts/story/story_text.gd:73
+#: game/scripts/story/story_text.gd:84
 msgid "«Барон» был лучшим из нас. Был."
 msgstr "“男爵”曾是我们中最好的。曾是。"
 
-#: game/scripts/story/story_text.gd:73
+#: game/scripts/story/story_text.gd:84
 msgid "Компания помнит, «Вершина». Компания всё записывает."
 msgstr "公司记着，“峰顶”。公司什么都记。"
 
-#: game/scripts/story/story_text.gd:74
+#: game/scripts/story/story_text.gd:85
 msgid "Доставка на крепости. «Барон» просил не мешать — я и не мешаю."
 msgstr "送货去古堡。“男爵”让我别碍事——我就不碍事。"
 
-#: game/scripts/story/story_text.gd:74
+#: game/scripts/story/story_text.gd:85
 msgid "Опять маршрут через вас. Доставлю, как всегда."
 msgstr "路线又经过你们。照常送到。"
 
-#: game/scripts/story/story_text.gd:75
+#: game/scripts/story/story_text.gd:86
 msgid "Доставка… Ладно. Просто доставка."
 msgstr "送货……算了。就是送货。"
 
-#: game/scripts/story/story_text.gd:75
+#: game/scripts/story/story_text.gd:86
 msgid "Штаб говорит — работать дальше. Работаю."
 msgstr "指挥部说继续干。干着。"
 
-#: game/scripts/story/story_text.gd:76
+#: game/scripts/story/story_text.gd:87
 msgid "Посылка на крепость пошла."
 msgstr "包裹已发往古堡。"
 
-#: game/scripts/story/story_text.gd:76
+#: game/scripts/story/story_text.gd:87
 msgid "Распишитесь. Хоть кто-нибудь."
 msgstr "签收一下。随便谁。"
 
-#: game/scripts/story/story_text.gd:77
+#: game/scripts/story/story_text.gd:88
 msgid "Курьер выбыл. Устал я от этого адреса…"
 msgstr "快递员退出。我厌倦这个地址了……"
 
-#: game/scripts/story/story_text.gd:78
+#: game/scripts/story/story_text.gd:89
 msgid "«Барон» ждёт вас над калой. Я прослежу, чтобы вы дошли."
 msgstr "“男爵”在卡拉堡上空等你。我会盯着你们到场。"
 
-#: game/scripts/story/story_text.gd:78
+#: game/scripts/story/story_text.gd:89
 msgid "Сквозняк на месте. Ведущий ждёт — не опаздывайте."
 msgstr "穿堂风到位。长机在等——别迟到。"
 
-#: game/scripts/story/story_text.gd:79
+#: game/scripts/story/story_text.gd:90
 msgid "Это был мой ведущий. Мой. Ну всё."
 msgstr "那是我的长机。我的。到此为止。"
 
-#: game/scripts/story/story_text.gd:79
+#: game/scripts/story/story_text.gd:90
 msgid "Вы его сбили. Теперь — я вас."
 msgstr "你打掉了他。现在我来打你。"
 
-#: game/scripts/story/story_text.gd:80
+#: game/scripts/story/story_text.gd:91
 msgid "Повреждения… Не уйду. Не сегодня."
 msgstr "受损……我不走。今天不走。"
 
-#: game/scripts/story/story_text.gd:81
+#: game/scripts/story/story_text.gd:92
 msgid "Выхожу… «Барон», слышишь? Я… а. Тебя же нет."
 msgstr "弹射……“男爵”，听到吗？我……啊。你已经不在了。"
 
-#: game/scripts/story/story_text.gd:82
+#: game/scripts/story/story_text.gd:93
 msgid "Штаб на маршруте. Крепости — наш объект, воздух над ними — тоже. Отойдите."
 msgstr "指挥部在航线上。古堡是我们的目标，上方空域也是。退开。"
 
-#: game/scripts/story/story_text.gd:82
+#: game/scripts/story/story_text.gd:93
 msgid "Штаб на маршруте. Повторяем: воздух над крепостями закрыт."
 msgstr "指挥部在航线上。重复：古堡上空已封闭。"
 
-#: game/scripts/story/story_text.gd:83
+#: game/scripts/story/story_text.gd:94
 msgid "Потеря крыла. Запрос резерва. Протокол соблюдён."
 msgstr "失去一翼。请求预备队。按规程执行。"
+
+#: game/scripts/story/story_text.gd:97
+msgid "Компания не отступает. Только пересчитывает."
+msgstr "公司不撤退。只是重新清点。"
+
+#: game/scripts/story/story_text.gd:97
+msgid "«Граф». Мы знакомы — заочно, по эфиру над крепостями."
+msgstr "“伯爵”。我们认识——隔着电台，在古堡上空。"
+
+#: game/scripts/story/story_text.gd:98
+msgid "Пересчёт окончен… Выхожу. Контракт — не моя забота."
+msgstr "清点完毕……弹射。合同不是我该操心的。"
+
+#: game/scripts/story/story_text.gd:99
+msgid "Топливо. Компания платит за посадку, не за геройство."
+msgstr "燃油。公司付钱是为了降落，不是为了逞英雄。"
+
+#: game/scripts/story/story_text.gd:100
+msgid "Последняя доставка. Потом — домой."
+msgstr "最后一次送货。然后回家。"
+
+#: game/scripts/story/story_text.gd:100
+msgid "Опять вы. Последняя, обещаю."
+msgstr "又是你。最后一次，我保证。"
+
+#: game/scripts/story/story_text.gd:101
+msgid "Последняя посылка пошла."
+msgstr "最后一个包裹已发出。"
+
+#: game/scripts/story/story_text.gd:101
+msgid "Распишитесь — и я свободен."
+msgstr "签收，我就自由了。"
+
+#: game/scripts/story/story_text.gd:102
+msgid "Доставлено… Всё. Я дома."
+msgstr "已送达……完了。我回家了。"
+
+#: game/scripts/story/story_text.gd:103
+msgid "Это личное, «Вершина». Как у вас с «Бароном». Один на один."
+msgstr "这是私人恩怨，“峰顶”。就像你和“男爵”。一对一。"
+
+#: game/scripts/story/story_text.gd:103
+msgid "Снова я. И снова — личное."
+msgstr "又是我。又是私人恩怨。"
+
+#: game/scripts/story/story_text.gd:104
+msgid "Повреждения. Плевать."
+msgstr "受损。无所谓。"
+
+#: game/scripts/story/story_text.gd:105
+msgid "Выхожу… Ладно. Квиты, «Вершина»."
+msgstr "弹射……好吧。扯平了，“峰顶”。"
+
+#: game/scripts/story/story_text.gd:106
+msgid "«Вершина», предложение остаётся в силе до нашего прибытия. Подпись — и дорога ваша."
+msgstr "“峰顶”，报价在我们抵达前有效。签字，公路归你们。"
+
+#: game/scripts/story/story_text.gd:106
+msgid "«Вершина», штаб на курсе к вашей базе. Предложение в силе."
+msgstr "“峰顶”，指挥部正飞向你们的基地。报价有效。"
+
+#: game/scripts/story/story_text.gd:107
+msgid "Потеря крыла. Резерва нет. Штаб продолжает по курсу."
+msgstr "失去一翼。没有预备队。指挥部继续按航线前进。"
 
 #: game/scripts/tanker.gd:96
 msgid "Заправщик сбит! Следующий — через 2 минуты"

@@ -88,6 +88,14 @@ func _init() -> void:
 	_check(i_recon == 2 and i_quiet == 3, "H3: the marker line shows only after the recon choice")
 	var h3a: Array = StoryDialogs.scene("hangar_forts_after")["steps"]
 	_check(DialogFlow.next_step(h3a, 5, {"grom_role": "controller"}, {}) == 6, "H3′: controller answer after that choice")
+	# step 8: H4 — Grom's line follows his role; HX is one card
+	var h4: Array = StoryDialogs.scene("hangar_sky")["steps"]
+	var fw := DialogFlow.flag_names(h4)
+	_check(fw.has("choice.grom_role.wingman") and fw.has("choice.grom_role.controller"), "H4 reads Grom's role")
+	var i_w := DialogFlow.next_step(h4, 7, {}, {"choice.grom_role.wingman": true})
+	var i_c := DialogFlow.next_step(h4, 7, {}, {"choice.grom_role.controller": true})
+	_check(i_w == 7 and i_c == 8, "H4: wingman line vs controller line by the H3′ choice")
+	_check((StoryDialogs.scene("hangar_aces")["steps"] as Array).size() == 1, "HX is a single card")
 	var ids := {}
 	for row: Array in StoryDialogs.ORDER:
 		_check(row.size() == 3 and String(row[2]) in ["dlg", "cut"], "ORDER row has id, title, kind: " + String(row[0]))

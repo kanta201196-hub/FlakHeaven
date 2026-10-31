@@ -730,8 +730,19 @@ func _on_evac_reached() -> void:
 		_after_outro()
 
 
-## After the sortie's outro (or straight after the evacuation): the hangar debrief scene when due, then the results.
+## After the sortie's outro (or straight after the evacuation): the epilogue card when the operation has one (step 8:
+## op 4's hook over black, the Archipelago variant when its operations can be played), then the debrief.
 func _after_outro() -> void:
+	var oid := String(Campaign.op()["id"])
+	var south_live := Campaign.OPS.size() > 4 and Demo.op_ok(4)
+	if not aces() and bool(op_result.get("done", false)) and Campaign.story_scene_due("epilogue_" + oid, Settings.cutscenes) and not StoryScenes.epilogue(oid, south_live).is_empty():
+		Cutscene.play(self, "epilogue_" + oid, StoryScenes.epilogue(oid, south_live), "evac", _after_epilogue)
+	else:
+		_after_epilogue()
+
+
+## The hangar debrief scene when due (and the operation is done), then the results.
+func _after_epilogue() -> void:
 	var sid := "hangar_%s_after" % String(Campaign.op()["id"])
 	if not aces() and bool(op_result.get("done", false)) and Dialog.due(sid):
 		Dialog.play(self, sid, StoryDialogs.scene(sid), _set_state.bind("evac"))
