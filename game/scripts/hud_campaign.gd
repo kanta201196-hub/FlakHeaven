@@ -39,8 +39,30 @@ const C_SUB := Color(0.78, 0.82, 0.76)
 static var log_open := false
 
 
+## Story step 9 (F1 `story_vignette`): the operation card opens with a live window on the biome — the menu world
+## behind the screen shows through a hole in the backdrop, the camera drifts as on the menu with the flight anchored
+## in the window (`TitleFlight.ov_anchor`), the light preset and zoom follow the selected operation (`Main._process`).
+static var vignette := Rect2()   # the window on screen this frame, Rect2() when off
+const VIGNETTE_H := 150.0
+const VIGNETTE_ZOOM := [0.95, 0.85, 0.75, 0.62]        # by operation index in the biome: closer first
+const VIGNETTE_LIGHT := ["dawn", "day", "day", "dusk"]  # the operations' hours (intro presets)
+
+
+static func vignette_on() -> bool:
+	return Tuning.g("story_vignette") > 0.0 and Render3D.enabled
+
+
 func draw(size: Vector2) -> void:
-	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.035, 0.04, 0.032, 0.9))
+	var bd := Color(0.035, 0.04, 0.032, 0.9)
+	if vignette.size.x > 0.0:   # the backdrop around the vignette window, the window itself only slightly dimmed
+		var vg := vignette
+		ctrl.draw_rect(Rect2(0, 0, size.x, vg.position.y), bd)
+		ctrl.draw_rect(Rect2(0, vg.end.y, size.x, size.y - vg.end.y), bd)
+		ctrl.draw_rect(Rect2(0, vg.position.y, vg.position.x, vg.size.y), bd)
+		ctrl.draw_rect(Rect2(vg.end.x, vg.position.y, size.x - vg.end.x, vg.size.y), bd)
+		ctrl.draw_rect(vg, Color(0.0, 0.0, 0.0, 0.12))
+	else:
+		ctrl.draw_rect(Rect2(Vector2.ZERO, size), bd)
 	var m := Main.I
 	_button(Rect2(64, 32, 200, 42), "‹ Меню (Esc)", "campaign_back", 17)
 	_button(Rect2(280, 32, 170, 42), "Журнал", "log_toggle", 17)
@@ -146,6 +168,12 @@ func _ops(r: Rect2, bio: String) -> void:
 	var x := box.position.x + 20.0
 	var w := box.size.x - 40.0
 	y = box.position.y + 18.0
+	if vignette_on():
+		vignette = Rect2(box.position.x + 2.0, box.position.y + 2.0, box.size.x - 4.0, VIGNETTE_H)
+		ctrl.draw_rect(Rect2(vignette.position.x, vignette.end.y, vignette.size.x, 2.0), Color(0.24, 0.3, 0.23))
+		y = vignette.end.y + 18.0
+	else:
+		vignette = Rect2()
 	y += _para(Vector2(x, y + 14.0), Loc.t(String(o["brief"])), w, 16, Color(0.86, 0.88, 0.84)) + 26.0
 	_text(Vector2(x, y), "ЗАДАЧА", 16, C_TITLE)
 	y += 12.0

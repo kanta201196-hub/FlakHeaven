@@ -160,6 +160,8 @@ const RANGES := {
 	"camera_lookahead": [0, 1, 0.05, 0.25, "Камера: упреждение по скорости"],
 	"damage_numbers": [0, 1, 1, 0, "Цифры урона (0/1), также F3"],
 	"story_accents": [0, 1, 1, 1, "Кино-моменты сюжета: замедление и стингер (0/1)"],
+	"story_vignette": [0, 1, 1, 1, "Окно операции на экране «В вылет»: живой вид биома со звеном (0/1)"],
+	"story_lights": [0, 1, 1, 1, "Огни в окнах посёлков в сумеречных и ночных сценах (0/1)"],
 	"plane_lvl2_at": [2, 40, 1, 10, "Не используется с 3.5: самолёт ур. 2 выбирается в ангаре"],
 	"plane_len": [24, 160, 1, 100, "Длина спрайта истребителя на экране, пикс (×размер класса)"],
 	"plane_shadow": [0, 1, 1, 1, "Тень самолётов: 0 — настоящая (бреющий полёт), 1 — высотная (меньше, мягче)"],
@@ -177,7 +179,7 @@ const RANGES := {
 
 var params := {}
 ## Личные настройки игрока — переживают смену версии баланса
-const KEEP := ["master_db", "music_db", "sfx_db", "engine_db", "ui_db", "scheme", "render3d", "sprites", "damage_numbers", "story_accents",
+const KEEP := ["master_db", "music_db", "sfx_db", "engine_db", "ui_db", "scheme", "render3d", "sprites", "damage_numbers", "story_accents", "story_vignette", "story_lights",
 	"shake_mult", "range_rings", "camera_zoom", "plane_len", "cam_tilt"]
 
 

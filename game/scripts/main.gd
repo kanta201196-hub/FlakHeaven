@@ -187,6 +187,11 @@ func _set_state(s: String) -> void:
 		HudPause.focus = "resume"
 	elif s == "dead" or s == "evac":
 		HudResult.focus = "restart"
+	if state == "campaign" and s != "campaign":   # story step 9: leaving the operation vignette
+		TitleFlight.ov_anchor = Vector2.INF
+		HudCampaign.vignette = Rect2()
+		if render3d != null and s != "cutscene":
+			render3d.set_light("day")
 	state = s
 	_state_t = 0.0
 	if s in ["menu", "campaign", "hangar"] and not _args.has("--aces"):
@@ -378,6 +383,16 @@ func _process(delta: float) -> void:
 		camera.zoom = camera.zoom.lerp(Vector2(0.75, 0.75), 0.05)
 		sfx.music("menu")
 		return
+	if state == "campaign" and HudCampaign.vignette_on():
+		# story step 9: the operation vignette — the menu world drifts under the window, the flight is anchored in it,
+		# light and zoom follow the selected operation
+		camera.global_position += TitleFlight.advance(delta / maxf(Engine.time_scale, 0.01), camera.global_position)
+		var k := clampi(int(Campaign.op()["diff"]), 0, 3)
+		camera.zoom = camera.zoom.lerp(Vector2.ONE * float(HudCampaign.VIGNETTE_ZOOM[k]), 0.05)
+		if render3d != null:
+			render3d.set_light(String(HudCampaign.VIGNETTE_LIGHT[k]))
+		if HudCampaign.vignette.size.x > 0.0:
+			TitleFlight.ov_anchor = HudCampaign.vignette.get_center() / get_viewport().get_visible_rect().size
 	# Музыка: меню / бой / ас (если файлы есть в audio/)
 	if state == "campaign":
 		sfx.music("menu")
@@ -743,7 +758,7 @@ func _on_evac_reached() -> void:
 func _after_outro() -> void:
 	var oid := String(Campaign.op()["id"])
 	var south_live := Campaign.OPS.size() > 4 and Demo.op_ok(4)
-	if not aces() and bool(op_result.get("done", false)) and Campaign.story_scene_due("epilogue_" + oid, Settings.cutscenes) and not StoryScenes.epilogue(oid, south_live).is_empty():
+	if not aces() and not _benching() and bool(op_result.get("done", false)) and Campaign.story_scene_due("epilogue_" + oid, Settings.cutscenes) and not StoryScenes.epilogue(oid, south_live).is_empty():
 		Cutscene.play(self, "epilogue_" + oid, StoryScenes.epilogue(oid, south_live), "evac", _after_epilogue)
 	else:
 		_after_epilogue()
@@ -752,7 +767,7 @@ func _after_outro() -> void:
 ## The hangar debrief scene when due (and the operation is done), then the results.
 func _after_epilogue() -> void:
 	var sid := "hangar_%s_after" % String(Campaign.op()["id"])
-	if not aces() and bool(op_result.get("done", false)) and Dialog.due(sid):
+	if not aces() and not _benching() and bool(op_result.get("done", false)) and Dialog.due(sid):
 		Dialog.play(self, sid, StoryDialogs.scene(sid), _set_state.bind("evac"))
 	else:
 		_set_state("evac")
