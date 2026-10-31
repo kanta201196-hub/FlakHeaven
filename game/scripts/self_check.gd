@@ -590,7 +590,7 @@ func _check_combat(e: Dictionary) -> void:
 		if gap > lim:
 			_issue(e, "gap", "%s висит в воздухе: зазор %s длины самолёта" % [k, _pct(gap / tw)], gap / tw, GAP_MAX)
 		if k.contains("_turret_"):
-			var mp := wmi.transform * Vector3(0.35, 0.0, 0.0)
+			var mp := wmi.transform * (wmi.get_meta("muzzle_local", Vector3(0.35, 0.0, 0.0)) as Vector3)
 			var own := MountCheck.faces_of(wmi, root)
 			var mg := MountCheck.point_gap(own, mp, lim * 4.0)
 			if mg > lim:
