@@ -28,8 +28,30 @@ const ORDER := [
 	["hangar_aces", "Учебный полигон «Вершины»", "dlg"],
 ]
 
-## Scene id → definition. Empty until the content steps; a missing id means «no scene», and the flow goes on.
-const SCENES := {}
+## Scene id → definition; a missing id means «no scene», and the flow goes on. Op 1 (step 5): H0 prologue, H1
+## briefing with the first choice (Monolith or Grom first), H1′ debrief (Baron knows the callsign, the rescuers joke).
+const SCENES := {
+	"hangar_prologue": {"steps": [
+		{"who": "Купол", "text": "Неделю назад над перевалом пропал «Гром». Последнее, что было в эфире, — позывной «Барон»."},
+		{"who": "Купол", "text": "Те, кто его сбил, — не банда. Компания «Монолит»: строят дорогу, ПВО и всё, что закажет клиент. Их правило — «Дорога, потом подпись»."},
+		{"who": "Купол", "text": "Пока дорога через перевал наша, их контракт не закрыт. Поэтому летаем мы — больше некому."},
+		{"who": "crew", "text": "Понял, «Купол». Когда вылет?", "trait": true},
+		{"who": "Купол", "text": "Как только колонна выйдет. Самолёт готов — «Ключ» клянётся, что в этот раз закрылки держатся."},
+	]},
+	"hangar_pass": {"steps": [
+		{"who": "Купол", "text": "Колонна выходит на перевал через час. Ваша задача — чтобы над ней пятнадцать минут было пусто."},
+		{"choice": "ask_pass", "prompt": "Есть минута на вопрос.", "options": [["Спросить о «Монолите»", "monolith"], ["Спросить о «Громе»", "grom"]]},
+		{"who": "Купол", "text": "Инженеры с охраной. Приходят с контрактом клиента и строят, пока долина не подпишет. Их асы — тоже по контракту.", "only": ["ask_pass", "monolith"]},
+		{"who": "Купол", "text": "Парашюта никто не видел. Перехватов с его именем — тоже. Для меня это значит «ищем».", "only": ["ask_pass", "grom"]},
+		{"who": "crew", "text": "Принято. Работаем над дорогой."},
+	]},
+	"hangar_pass_after": {"steps": [
+		{"who": "Купол", "text": "Колонна прошла, перевал наш. «Барон» в эфире назвал ваш позывной — теперь это личное."},
+		{"who": "crew", "text": "Пусть называет. Хоть познакомимся.", "trait": true},
+		{"who": "Купол", "text": "Их асы прыгают с парашютом и назавтра снова в строю. У компании хорошие спасатели."},
+		{"who": "Купол", "text": "Разведка: в сухих руслах за перевалом копают позиции. По чертежу. Это ваша следующая операция."},
+	]},
+}
 
 ## `--dialog`: a test scene for the runtime (one crew line with the trait colour, a guest line, a choice and a line
 ## per option), played before the sortie. Not part of the campaign; not listed in the log.

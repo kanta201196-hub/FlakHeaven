@@ -47,6 +47,9 @@ func result(m: Main, size: Vector2) -> void:
 	var op := op_line(m)
 	if not op.is_empty():
 		UiStyle.text(ctrl, ui_font(), Vector2(0, 272), String(op[0]), UiStyle.FS_BODY, op[1], HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	var story := story_line(m)
+	if story != "":
+		UiStyle.text(ctrl, ui_font(), Vector2(0, 296), story, UiStyle.FS_BODY, UiStyle.ACCENT_SOFT, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	var gap := (size.x - 128.0 - LEFT_W - MID_W - RIGHT_W) / 2.0
 	var lx := 64.0
 	var mx := lx + LEFT_W + gap
@@ -380,6 +383,18 @@ func _grouped(v: int) -> String:
 
 
 ## Campaign operation result: [text, colour] or [] when the sortie was not an operation run.
+## The story line of a cleared operation (step 5; `StoryText.RESULT`), "" on a failed one or outside the campaign.
+static func story_line(m: Main) -> String:
+	var o: Dictionary = m.op_result
+	if Main.aces() or o.is_empty() or not bool(o.get("done", false)):
+		return ""
+	var flags: Array = []
+	for f in ["rescued", "grom_free"]:
+		if Campaign.flag(f):
+			flags.append(f)
+	return Loc.t(StoryText.result(String(Campaign.op()["id"]), flags))
+
+
 static func op_line(m: Main) -> Array:
 	if Main.aces():   # «Битва асов»: the score; the test pays no parts
 		return [Loc.t("Асов сбито: %d · ушло: %d · в бою %d:%02d · запчасти в тесте не начисляются") % [m.run.aces_down,

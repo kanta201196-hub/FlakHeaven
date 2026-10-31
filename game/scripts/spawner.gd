@@ -451,6 +451,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		activity_node = site
 		Events.banner.emit("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
 		Story.say(Story.DISPATCH, "Позиция ПВО ожила. Подавите — и небо станет тише.")
+		Story.on_ground_site()
 		Hints.show("act_aa", "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости.", 9.0, 2)
 	elif kind_s == "fort":
 		var base := FortArea.new()
