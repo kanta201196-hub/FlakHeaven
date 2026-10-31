@@ -2441,8 +2441,8 @@ msgstr "EXTRACTION: gate %d / %d · %d m · window %d s"
 
 #: game/scripts/hud_flight.gd:848
 #, c-format
-msgid "Газ [W/S]: %d%%%s"
-msgstr "Throttle [W/S]: %d%%%s"
+msgid "Тяга [W/S]: %d%%%s"
+msgstr "Thrust [W/S]: %d%%%s"
 
 #: game/scripts/hud_flight.gd:848
 msgid "  ФОРСАЖ"
