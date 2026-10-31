@@ -29,7 +29,8 @@ func draw(m: Main, size: Vector2) -> void:
 			var w := font.get_string_size(plate, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 			var tw := minf(size.x * 0.62, 980.0)
 			var x := (size.x - tw) * 0.5
-			_text(Vector2(x, y), plate, 18, Color(UiStyle.ACCENT, a))
+			var enemy := line.size() > 3 and bool(line[3])   # step 7: an enemy voice (Baron) gets the red plate
+			_text(Vector2(x, y), plate, 18, Color(UiStyle.DANGER if enemy else UiStyle.ACCENT, a))
 			_para(Vector2(x + w + 18.0, y - 2.0), text, tw - w - 18.0, 22, Color(1, 1, 1, a))
 	if t > HINT_FROM:
 		var ha := clampf(1.0 - (t - HINT_FROM) / (HINT_TO - HINT_FROM), 0.0, 1.0) * 0.7

@@ -19,6 +19,7 @@ const RADIO := {
 	"grom.alive": "Перехват из крепости: «Гром» жив! Наземные идут за ним.",
 	"ground.pass": "Это не ПВО кочевников. Кто-то строит здесь позиции по чертежу.",
 	"fortress.sight.riverbed": "Вот она. Летающий штаб. Так вот кто чертит их позиции.",
+	"fortress.sight.forts": "«Крепость» по расписанию. Штаб решил посмотреть на дуэль сам.",
 }
 
 ## One story line under the operation title on the results screen, by operation id (first clear and replays alike).
@@ -27,6 +28,7 @@ const RESULT := {
 	"pass": "Перевал открыт. «Барон» знает ваш позывной.",
 	"riverbed": "«Крепость» № 1 сбита. О «Громе» по-прежнему ничего.",
 	"riverbed.rescued": "«Крепость» № 1 сбита. «Гром» — у старых крепостей?",
+	"forts": "«Барон» сбит. «Гром» свободен.",
 }
 
 ## Banners of the three in-combat accents (`Cinematic.accent`), by accent id.
@@ -45,7 +47,9 @@ static func accent(id: String) -> String:
 ## Per-operation lines of recurring enemy pilots («Почтальон» = postman, «Сквозняк» = draft) and the Fortress
 ## controller: key → Array of lines; index by `StoryFlags.line_index(met, n)`: the first line is for the first
 ## meeting, the rest cycle on replays. A missing key means «use the generic line of the unit» (`Boss.LINES`).
-## Op 1 (step 5): Postman is pure business, Draft echoes Baron.
+## Op 1 (step 5): Postman is pure business, Draft echoes Baron. Op 3 (step 7): «Барон» speaks through this table too
+## (`RivalAce.say`), with a "spawn_<lead>" variant by the H2′ choice (recon knows about the parachute, quiet does not);
+## "spawn_after" lines are for pilots who arrive after Baron has fallen (`Boss.say`); «Граф» speaks once on Baron down.
 const OP_LINES := {
 	"postman.pass.spawn": ["Доставка по адресу. Принимайте, «Вершина».", "Опять вы на маршруте. Доставлю всё равно.", "Тот же адрес, тот же курьер."],
 	"postman.pass.run": ["Посылка пошла.", "Распишитесь в получении."],
@@ -61,6 +65,22 @@ const OP_LINES := {
 	"draft.riverbed.down": ["Передайте «Барону»… а, сам скажу. Выхожу."],
 	"hq.riverbed.arrive": ["Воздушный объект на маршруте штаба. Вы серьёзно? Отойдите от трассы.", "Штаб на маршруте. Повторяю: отойдите от трассы."],
 	"hq.riverbed.wing": ["Потеря крыла. Штаб запрашивает резерв. Это… не по плану."],
+	# op 3 «Крепости»: the duel; after Baron falls, Postman is tired and Draft is bitter («Это был мой ведущий»)
+	"baron.forts.spawn": ["Один на один. Без ваших нянек.", "Снова вы. Крепости не прощают второго раза."],
+	"baron.forts.spawn_recon": ["Ищете парашют? Ищите. Я посмотрю сверху, как вы ищете.", "Один на один. Без ваших нянек."],
+	"baron.forts.spawn_quiet": ["Неделю назад ваш «Гром» тоже был уверен в себе. Один на один.", "Один на один. Без ваших нянек."],
+	"baron.forts.down": ["…Неплохо. Для новичка. Передайте… нет. Ничего не передавайте."],
+	"graf.forts.baron_down": ["«Барон» был лучшим из нас. Был.", "Компания помнит, «Вершина». Компания всё записывает."],
+	"postman.forts.spawn": ["Доставка на крепости. «Барон» просил не мешать — я и не мешаю.", "Опять маршрут через вас. Доставлю, как всегда."],
+	"postman.forts.spawn_after": ["Доставка… Ладно. Просто доставка.", "Штаб говорит — работать дальше. Работаю."],
+	"postman.forts.run": ["Посылка на крепость пошла.", "Распишитесь. Хоть кто-нибудь."],
+	"postman.forts.down": ["Курьер выбыл. Устал я от этого адреса…"],
+	"draft.forts.spawn": ["«Барон» ждёт вас над калой. Я прослежу, чтобы вы дошли.", "Сквозняк на месте. Ведущий ждёт — не опаздывайте."],
+	"draft.forts.spawn_after": ["Это был мой ведущий. Мой. Ну всё.", "Вы его сбили. Теперь — я вас."],
+	"draft.forts.angry": ["Повреждения… Не уйду. Не сегодня."],
+	"draft.forts.down": ["Выхожу… «Барон», слышишь? Я… а. Тебя же нет."],
+	"hq.forts.arrive": ["Штаб на маршруте. Крепости — наш объект, воздух над ними — тоже. Отойдите.", "Штаб на маршруте. Повторяем: воздух над крепостями закрыт."],
+	"hq.forts.wing": ["Потеря крыла. Запрос резерва. Протокол соблюдён."],
 }
 
 

@@ -52,7 +52,8 @@ static func play(m: Main, scene_id: String, scene: Dictionary, then: Callable, a
 				_choices[String(s["choice"])] = saved
 	_flags = {}
 	for n in DialogFlow.flag_names(steps):
-		_flags[String(n)] = Campaign.flag(String(n))
+		var cf := DialogFlow.choice_flag(String(n))
+		_flags[String(n)] = Campaign.story_choice(String(cf[0])) == String(cf[1]) if not cf.is_empty() else Campaign.flag(String(n))
 	i = DialogFlow.next_step(steps, 0, _choices, _flags)
 	t = 0.0
 	total = 0.0

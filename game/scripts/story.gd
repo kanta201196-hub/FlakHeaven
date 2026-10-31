@@ -38,6 +38,7 @@ static func start(m: Main) -> void:
 	_finale = false
 	_grom_in = false
 	_ground_said = false
+	_graf_said = false
 	_hq_met = -1
 	rescue_done = false
 	var op := highland_op()
@@ -73,10 +74,12 @@ static func on_fortress_sight() -> void:
 	var op := highland_op()
 	if op < 0 or _hq_met >= 0:
 		return
-	_hq_met = Campaign.met("hq")
+	_hq_met = Campaign.story_met("hq")
 	Campaign.on_met("hq")
 	if op == OP_RIVER:
 		say(DISPATCH, StoryText.radio("fortress.sight.riverbed"))
+	elif op == OP_FORTS:
+		say(DISPATCH, StoryText.radio("fortress.sight.forts"))
 	hq_line("arrive")
 
 
@@ -103,11 +106,23 @@ static func on_ground_site() -> void:
 static var _ground_said := false
 
 
-## Сбит «Барон» в «Крепостях» — «Гром» жив, в финальной операции он летит в звене
+## Сбит «Барон» в «Крепостях» — «Гром» жив, в финальной операции он летит в звене; «Граф» (шаг 7) отвечает
+## один раз за вылет красной рамкой и с этого момента считается знакомым (`Campaign.met("graf")` — его реплики в оп. 4)
 static func on_baron_down() -> void:
-	if highland_op() == OP_FORTS and not Campaign.flag("grom_free"):
+	if highland_op() != OP_FORTS:
+		return
+	if not Campaign.flag("grom_free"):
 		Campaign.set_flag("grom_free")
 		say(DISPATCH, StoryText.radio("grom.alive"))
+	if not _graf_said:
+		_graf_said = true
+		var line := StoryText.op_line("graf", "forts", "baron_down", Campaign.met("graf"))
+		Campaign.on_met("graf")
+		if line != "":
+			say("Граф", line, true)
+
+
+static var _graf_said := false   # «Граф» уже говорил в этом вылете
 
 
 ## Активность «Сбитый пилот» — один раз за вылет в «Сухом русле» (первая активность вылета)

@@ -32,12 +32,23 @@ func _init() -> void:
 	# per-operation lines (step 5+): key = speaker.op.moment, every line fits the radio panel
 	for k in StoryText.OP_LINES:
 		var parts := String(k).split(".")
-		_check(parts.size() == 3 and parts[0] in ["postman", "draft", "graf", "hq"], "op line key is speaker.op.moment: " + k)
+		_check(parts.size() == 3 and parts[0] in ["postman", "draft", "graf", "hq", "baron"], "op line key is speaker.op.moment: " + k)
 		_check(parts[1] in ["pass", "riverbed", "forts", "sky"], "op line key names a Highlands operation: " + k)
 		var arr: Array = StoryText.OP_LINES[k]
 		_check(not arr.is_empty(), "op line key has lines: " + k)
 		for l in arr:
 			_check(String(l).length() <= 120, "op line fits the panel: " + k)
+		if parts[2].begins_with("spawn_"):
+			_check(StoryText.OP_LINES.has("%s.%s.spawn" % [parts[0], parts[1]]), "a spawn variant has its plain spawn line: " + k)
+	# op 3 (step 7): Baron speaks through the table, with a variant by the H2′ choice; Graf's one line; the result line
+	_check(StoryText.op_line("baron", "forts", "spawn", 0).begins_with("Один на один"), "Baron's challenge is the first-meeting line")
+	_check(StoryText.op_line("baron", "forts", "spawn_quiet", 0).contains("Гром"), "quiet lead: Baron still brags about Grom")
+	_check(StoryText.op_line("baron", "forts", "spawn_recon", 0).contains("парашют"), "recon lead: Baron knows we search")
+	_check(StoryText.op_line("baron", "pass", "spawn", 0) == "", "Baron has no table line in op 1 (generic BARON_LINES)")
+	_check(StoryText.op_line("graf", "forts", "baron_down", 0).begins_with("«Барон» был лучшим"), "Graf's line on Baron down")
+	_check(StoryText.op_line("draft", "forts", "spawn_after", 0).contains("ведущий"), "Draft after Baron: his wingman is bitter")
+	_check(StoryText.result("forts", ["grom_free"]).contains("свободен"), "op 3 result line")
+	_check(StoryText.radio("fortress.sight.forts") != "", "Kupol has a Fortress-sighting line in op 3")
 	_check(StoryText.op_line("postman", "pass", "spawn", 0).begins_with("Доставка"), "Postman's first line in op 1")
 	_check(StoryText.op_line("postman", "pass", "spawn", 1) != StoryText.op_line("postman", "pass", "spawn", 0), "Postman's second meeting: another line")
 	_check(StoryText.op_line("draft", "pass", "run", 0) == "", "no draft.pass.run → generic line")

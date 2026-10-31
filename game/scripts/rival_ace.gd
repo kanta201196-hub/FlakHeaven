@@ -102,8 +102,27 @@ func say(key: String, force := false) -> void:
 	if not force and now - float(_said.get("_last", -99.0)) < 4.0:
 		return
 	_said["_last"] = now
-	var arr: Array = BARON_LINES[key] if callsign == "Барон" and BARON_LINES.has(key) else LINES[key]
-	Events.radio.emit(callsign, arr[randi() % arr.size()], true)
+	var line := _story_line(key)
+	if line == "":
+		var arr: Array = BARON_LINES[key] if callsign == "Барон" and BARON_LINES.has(key) else LINES[key]
+		line = arr[randi() % arr.size()]
+	Events.radio.emit(callsign, line, true)
+
+
+## Story (step 7): Baron's line of this operation from `StoryText.OP_LINES` ("baron.<op>.<moment>"), picked by how
+## often he met the player; "spawn"/"again" try the "spawn_<lead>" variant first (the H2′ choice: with the parachute
+## lead passed to recon he knows we search; kept quiet, he still brags about Grom). "" → the generic tables.
+func _story_line(key: String) -> String:
+	if callsign != "Барон" or Story.highland_op() < 0:
+		return ""
+	var op_id := String(Campaign.op()["id"])
+	var met := Campaign.story_met("baron")
+	var moment := "spawn" if key == "again" else key
+	if moment == "spawn" and Campaign.story_choice("lead") != "":
+		var v := StoryText.op_line("baron", op_id, "spawn_" + Campaign.story_choice("lead"), met)
+		if v != "":
+			return v
+	return StoryText.op_line("baron", op_id, moment, met)
 
 
 func take_hit(dmg: float, source := "прочее") -> void:

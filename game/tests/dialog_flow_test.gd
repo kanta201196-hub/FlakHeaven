@@ -77,6 +77,17 @@ func _init() -> void:
 	_check(DialogFlow.validate({"steps": [{"who": "crew", "text": "x".repeat(221)}]}) != "", "overlong line → error")
 	# registry
 	_check(DialogFlow.validate(StoryDialogs.TEST) == "", "TEST scene is sound: " + DialogFlow.validate(StoryDialogs.TEST))
+	# step 7: a flag named "choice.<id>.<option>" reads an earlier hangar choice
+	_check(DialogFlow.choice_flag("choice.lead.recon") == ["lead", "recon"], "choice flag parses to [id, option]")
+	_check(DialogFlow.choice_flag("rescued").is_empty(), "a plain flag name is not a choice flag")
+	_check(DialogFlow.choice_flag("choice.lead").is_empty(), "a choice flag needs an option")
+	_check(DialogFlow.flag_names(StoryDialogs.scene("hangar_forts")["steps"]).has("choice.lead.recon"), "H3 reads the recon choice")
+	var h3: Array = StoryDialogs.scene("hangar_forts")["steps"]
+	var i_recon := DialogFlow.next_step(h3, 2, {}, {"choice.lead.recon": true})
+	var i_quiet := DialogFlow.next_step(h3, 2, {}, {})
+	_check(i_recon == 2 and i_quiet == 3, "H3: the marker line shows only after the recon choice")
+	var h3a: Array = StoryDialogs.scene("hangar_forts_after")["steps"]
+	_check(DialogFlow.next_step(h3a, 5, {"grom_role": "controller"}, {}) == 6, "H3′: controller answer after that choice")
 	var ids := {}
 	for row: Array in StoryDialogs.ORDER:
 		_check(row.size() == 3 and String(row[2]) in ["dlg", "cut"], "ORDER row has id, title, kind: " + String(row[0]))

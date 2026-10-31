@@ -8,7 +8,8 @@ extends RefCounted
 ##   flight — true: the player's flight (hangar models, player livery) flies at the screen anchor, as on the menu
 ##   heading — course of the flight, rad (TitleFlight.H0 points up the screen)
 ##   light  — "day" | "dawn" | "dusk" | "night" (Render3D light preset, restored after the scene)
-##   lines  — captions [[t0, t1, speaker, text], …]; speaker "" draws a title instead of a radio line
+##   lines  — captions [[t0, t1, speaker, text(, enemy)], …]; speaker "" draws a title instead of a radio line;
+##            a fifth element `true` marks an enemy voice (red plate, like enemy radio in the sortie)
 ## Design: docs/story/cutscenes-and-presentation.md §3.4.
 
 ## Course «up the screen» (= TitleFlight.H0; repeated here so the table has no engine dependency and unit tests load it).
@@ -29,8 +30,34 @@ const TEST := {
 
 ## Intros and outros by operation id (`Campaign.OPS` "id"); steps 5–8 add one operation each.
 ## Op 1 «Перевал» (step 5): dawn, the flight climbs over the first ridge with the road below; dusk at the end,
-## the camera pulls back from the flight over the pass.
+## the camera pulls back from the flight over the pass. Op 3 «Крепости» (step 7): Baron's challenge on the open
+## channel over the forts; "forts.recon" is the variant after the H2′ choice «передать разведке» (a marker caption);
+## the outro is night, a green flare from the walls — Grom is ours.
 const INTRO := {
+	"forts": {
+		"dur": 10.0,
+		"cam": [[0.0, Vector2(600.0, 900.0), 0.6], [10.0, Vector2(-300.0, -500.0), 0.76]],
+		"flight": true,
+		"heading": H_UP,
+		"light": "day",
+		"lines": [
+			[0.5, 3.2, "", "Старые крепости · теперь это их позиции"],
+			[3.5, 6.4, "Барон", "Один на один. Без ваших нянек.", true],
+			[6.8, 9.6, StoryText.DISPATCH, "Не отвечайте. Пусть ищет."],
+		],
+	},
+	"forts.recon": {
+		"dur": 10.0,
+		"cam": [[0.0, Vector2(600.0, 900.0), 0.6], [10.0, Vector2(-300.0, -500.0), 0.76]],
+		"flight": true,
+		"heading": H_UP,
+		"light": "day",
+		"lines": [
+			[0.5, 3.2, "", "Старые крепости · метка разведки: восточная кала"],
+			[3.5, 6.4, "Барон", "Один на один. Без ваших нянек.", true],
+			[6.8, 9.6, StoryText.DISPATCH, "Не отвечайте. Пусть ищет. Метка на карте — ваша, не его."],
+		],
+	},
 	"riverbed": {
 		"dur": 10.0,
 		"cam": [[0.0, Vector2(-900.0, 700.0), 0.62], [10.0, Vector2(500.0, -500.0), 0.74]],
@@ -55,6 +82,17 @@ const INTRO := {
 	},
 }
 const OUTRO := {
+	"forts": {
+		"dur": 8.0,
+		"cam": [[0.0, Vector2(0.0, -300.0), 0.9], [8.0, Vector2(-200.0, 600.0), 0.52]],
+		"flight": true,
+		"heading": H_UP,
+		"light": "night",
+		"lines": [
+			[0.4, 2.8, "", "Ночь над крепостями"],
+			[3.0, 7.6, StoryText.DISPATCH, "Зелёная ракета со стены. Зелёная. Он наш."],
+		],
+	},
 	"riverbed": {
 		"dur": 8.0,
 		"cam": [[0.0, Vector2(0.0, -200.0), 0.95], [8.0, Vector2(300.0, 500.0), 0.55]],
@@ -80,8 +118,11 @@ const OUTRO := {
 }
 
 
-## Scene for the start of an operation, {} when the operation has none.
-static func intro(op_id: String) -> Dictionary:
+## Scene for the start of an operation, {} when the operation has none. `variant` (e.g. a hangar choice) picks
+## "<op>.<variant>" when such a scene exists, else the plain one.
+static func intro(op_id: String, variant: String = "") -> Dictionary:
+	if variant != "" and INTRO.has("%s.%s" % [op_id, variant]):
+		return INTRO["%s.%s" % [op_id, variant]]
 	return INTRO.get(op_id, {})
 
 
