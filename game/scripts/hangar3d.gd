@@ -105,6 +105,14 @@ static func ensure(ctrl: Control) -> Hangar3D:
 	return I
 
 
+## Frees the hangar view when a sortie starts: it held its plane model, the weapon store and a 4× MSAA view
+## through the whole fight. ensure() builds it again the next time the hangar is drawn.
+static func release() -> void:
+	if I != null and is_instance_valid(I):
+		I.queue_free()
+	I = null
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	vp = SubViewport.new()
