@@ -274,11 +274,33 @@ func _pair_test() -> void:
 			(m.player.groups[gi] as Hardpoint).level = Weapons.MAX_LEVEL
 		m.run.pending_levels = 1
 		m._open_levelup()
+		if m._args.has("--dupbranch"):
+			_dup_branch_offers()
 		_pair_phase = 1
 	elif _pair_phase == 1 and m.state == "levelup" and m._state_t > 1.0:
-		m.get_viewport().get_texture().get_image().save_png("user://shot_levelup_%s.png" % ("cards" if cards else "pair"))
+		var shot := "dupbranch" if m._args.has("--dupbranch") else ("cards" if cards else "pair")
+		m.get_viewport().get_texture().get_image().save_png("user://shot_levelup_%s.png" % shot)
 		print("SHOT levelup_pair")
 		m.get_tree().quit()
+
+
+## S14-09 frame (--pairtest --dupbranch): two weapons with «Калибр» taken, both rank cards on one screen,
+## so the names must differ (shot_levelup_dupbranch.png).
+func _dup_branch_offers() -> void:
+	var gis: Array[int] = []
+	for i in m.player.groups.size():
+		if not (m.player.groups[i] as Hardpoint).is_empty() and gis.size() < 2:
+			gis.append(i)
+	var offs: Array = []
+	for gi in gis:
+		var g := m.player.groups[gi] as Hardpoint
+		g.level = Weapons.MAX_LEVEL
+		g.branch = "power"
+		g.branch_rank = 1
+		var c := Cards._branch_card(m.player, gi, "power", false)
+		c["rarity"] = 1
+		offs.append(Cards.finalize(m.player, c))
+	m.offers = offs + m.offers.slice(0, maxi(0, 3 - offs.size()))
 
 
 var _hud_phase := 0
