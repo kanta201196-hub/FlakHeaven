@@ -5,7 +5,7 @@ The generator remesh left the thin parts ragged: the leading and trailing edges 
 run in saw teeth and notches of 2–25 mm (model length 1000 mm), folded slivers stick out of them, and the thin
 skin is lumpy. The mechanisation cut (mech_cut.py) kept those edges, so the slats and flaps carried them too.
 
-What it does, per lifting surface (config SURF: a box in model axes that holds only that surface):
+What it does, per lifting surface (config SURF: a box in model axes that holds only that surface, optionally a wider edge gate):
 1. Outline. The raw leading and trailing edge along the span (extremes of the skin in a narrow running window)
    and a robust straight or two-segment fit of each (real wings have straight edges). Every point near an edge is
    moved along the chord by how far the raw edge at its span station is from the fitted line, fading to nothing
@@ -24,6 +24,8 @@ import os
 import sys
 
 import numpy as np
+from scipy.ndimage import gaussian_filter
+from scipy.spatial import cKDTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import glb_io  # noqa: E402
@@ -54,13 +56,27 @@ SURF = {
         ("fin", "y", 0.0, 0.125, -0.48, -0.24, -0.010, 0.010, 1, ("le", "te")),
     ],
     "bomber_2": [
-        ("wing", "z", 0.19, 0.525, -0.34, 0.02, -0.042, -0.018, 1, ("le", "te")),
+        ("wing", "z", 0.19, 0.525, -0.34, 0.02, -0.042, -0.018, 1, ("le", "te"), 0.009, 0.9),
         ("htail", "z", 0.125, 0.20, -0.50, -0.30, -0.035, -0.012, 1, ("le", "te")),
         ("fin", "y", 0.02, 0.125, -0.45, -0.27, -0.008, 0.008, 1, ("le", "te")),
     ],
 }
+# Broad top skins evened by smooth_top (S14-02 autotest: bumps on the fuselage top and the wing root of bomber_2):
+# name, x0, x1, z0, z1 (|z| when mirrored), mirrored, smoothing sigma along x and across z (model units).
+TOPS = {
+    "bomber_2": [
+        ("spine", -0.30, 0.24, -0.06, 0.06, False, 0.010, 0.004),
+        ("glove", -0.32, 0.12, 0.05, 0.215, True, 0.008, 0.006),
+    ],
+}
+# Planes whose moved skin takes the smooth welded normal outright (their own normals are jagged along the edges,
+# S14-02 «Кит-2» leading edge); the rest keep their normals plus the change of shape.
+RENORMAL = ("bomber_2",)
 
 WIN = 0.0016     # running window of the raw edge along the span
+BROAD_R = 0.003   # radius of the broad-deviation median (spike vs pylon)
+TOP_CELL = 0.003  # height-field cell of smooth_top
+TOP_DIP = 0.003   # deepest dimple smooth_top fills; anything lower is another surface
 GATE = 0.005     # 5 mm: farther off the fitted edge is shape, not noise
 EDGE_BAND = 0.25  # chord share over which the edge correction fades out
 GRID_S = 0.004
@@ -92,6 +108,9 @@ class Model:
         self.g = glb_io.load(path)
         j = self.g.j
         self.acc = {}    # position accessor -> dict(M, P(world), N acc, tris list, kind)
+        self.prims = []  # (index accessor, position accessor, material name, slot in that accessor's tris)
+        self.rewound = set()
+        self.renormal = bool(os.environ.get("POLISH_RENORMAL")) or any(k in path for k in RENORMAL)
         for ni, n in enumerate(j["nodes"]):
             if "mesh" not in n:
                 continue
@@ -102,6 +121,7 @@ class Model:
                 e = self.acc.setdefault(a, {"M": M, "tris": [], "nrm": pr["attributes"].get("NORMAL"), "kinds": set()})
                 e["tris"].append(self.g.accessor(pr["indices"]).reshape(-1, 3).astype(np.int64))
                 e["kinds"].add(mat)
+                self.prims.append((pr["indices"], a, mat, len(e["tris"]) - 1))
         for a, e in self.acc.items():
             p = self.g.accessor(a).astype(np.float64)
             e["P0"] = p @ e["M"][:3, :3].T + e["M"][:3, 3]
@@ -113,6 +133,27 @@ class Model:
             for t in e["tris"]:
                 used[t.reshape(-1)] = True
             e["used"] = used
+
+    def pool(self, pick):
+        """World positions of every vertex (all accessors, wells too) that pick(P) selects, as one array, so that a
+        deformation computed on it is one function of position (a cut edge's skin and part vertices move alike);
+        unpool() writes the moved array back. None when nothing is selected."""
+        self._pool = []
+        out = []
+        for a, e in self.acc.items():
+            sel = pick(e["P"])
+            if sel.any():
+                self._pool.append((a, sel))
+                out.append(e["P"][sel])
+        return np.vstack(out) if out else None
+
+    def unpool(self, P):
+        """Write the positions of the last pool() back to their accessors"""
+        off = 0
+        for a, sel in self._pool:
+            n = int(sel.sum())
+            self.acc[a]["P"][sel] = P[off:off + n]
+            off += n
 
     def analysis_points(self):
         """World positions and normals of the painted skin and glass (not the dark wells)"""
@@ -133,8 +174,37 @@ class Model:
             out.append(e["P"][np.vstack(e["tris"])])
         return np.concatenate(out)
 
+    def fix_winding(self, report):
+        """Turn every skin and glass triangle whose winding disagrees with its own vertex normals. The livery
+        shader culls back faces, so such a triangle is a hole where the sky shows through (or a dark pit where the
+        inside shows): the remesh left a few hundred of them on some planes. The normals are what the surface is
+        shaded with and agree with their neighbours, so the winding is the one turned. The dark single-sided wells
+        are left as they are (their winding is deliberate)."""
+        total = 0
+        for ia, a, mat, k in self.prims:
+            e = self.acc[a]
+            if mat == "mech_well" or "N" not in e:
+                continue
+            T = e["tris"][k]
+            P, N = e["P"], e["N"]
+            fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
+            area2 = np.linalg.norm(fn, axis=1)
+            nsum = N[T].sum(1)
+            agree = np.einsum("ij,ij->i", fn, nsum) / np.maximum(area2 * np.linalg.norm(nsum, axis=1), 1e-20)
+            bad = (agree < -0.2) & (area2 > 1e-12)
+            if bad.any():
+                T[bad] = T[bad][:, [0, 2, 1]]
+                self.rewound.add(ia)
+                total += int(bad.sum())
+        report.append("winding: %d triangles turned to face along their normals" % total)
+
     def write(self, path):
         g = self.g
+        for ia, a, mat, k in self.prims:
+            if ia in self.rewound:
+                acc = g.j["accessors"][ia]
+                dt = {5121: np.uint8, 5123: np.uint16, 5125: np.uint32}[acc["componentType"]]
+                _put(g, ia, self.acc[a]["tris"][k].reshape(-1, 1).astype(dt))
         dn = self._normal_deltas()
         for a, e in self.acc.items():
             Minv = np.linalg.inv(e["M"])
@@ -179,7 +249,11 @@ class Model:
                 np.add.at(out, inv[T[:, k]], fn)
             n = out[inv]
             return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-20)
-        d = acc_n(P1) - acc_n(P0)
+        if self.renormal:
+            # the remesh's own normals are jagged here too: the moved skin takes the smooth welded normal
+            d = acc_n(P1) - N0
+        else:
+            d = acc_n(P1) - acc_n(P0)
         d[~moved] = 0
         res, off = {}, 0
         for a in keys:
@@ -365,7 +439,9 @@ def _debug_plot(path, S, X, Tt, sq, le_raw, te_raw, le_fit, te_fit):
 
 
 def polish_surface(model, spec, side, report):
-    name, ax, s0, s1, x0, x1, t0, t1, segs, edges = spec
+    name, ax, s0, s1, x0, x1, t0, t1, segs, edges = spec[:10]
+    gmax = spec[10] if len(spec) > 10 else GATE   # a long, wavy edge may need a wider gate
+    a_mid = spec[11] if len(spec) > 11 else 0.55  # pull of the mid-chord skin (lumps, slat and flap seams)
     AP, AN = model.analysis_points()
     if ax == "z":
         sa, ta = 2, 1
@@ -404,10 +480,10 @@ def polish_surface(model, spec, side, report):
     dte = te_fit(sq) - te_raw
     # a station farther than GATE from the fitted line is a real shape (rounded tip, kink, tail cone, a box edge),
     # not saw teeth: the correction fades out there, and an edge that is mostly off its line is left alone
-    gate = lambda d: 1.0 - smoothstep(GATE * 0.6, GATE, np.abs(d))  # noqa: E731
+    gate = lambda d: 1.0 - smoothstep(gmax * 0.6, gmax, np.abs(d))  # noqa: E731
     raw_le, raw_te = dle.copy(), dte.copy()
-    dle = dle * gate(dle) * (np.mean(np.abs(dle) < GATE) > 0.6)
-    dte = dte * gate(dte) * (np.mean(np.abs(dte) < GATE) > 0.6)
+    dle = dle * gate(dle) * (np.mean(np.abs(dle) < gmax) > 0.6)
+    dte = dte * gate(dte) * (np.mean(np.abs(dte) < gmax) > 0.6)
     tag = "%s%s" % (name, ("L" if side < 0 else "R") if ax == "z" else "")
     report.append("%s: LE raw dev p95 %.2f mm max %.2f mm | TE raw dev p95 %.2f mm max %.2f mm (1 unit = 1000 mm)"
                   % (tag, np.percentile(np.abs(raw_le), 95) * 1e3, np.abs(raw_le).max() * 1e3,
@@ -465,41 +541,138 @@ def polish_surface(model, spec, side, report):
     thick_med = np.median(U(S, C) - L(S, C))
     report.append("%s: chord at root %.3f tip %.3f, median thickness %.2f mm" % (
         tag, chord(np.array([s0]))[0], chord(np.array([s1]))[0], thick_med * 1e3))
-    moved_tot, n_tot, maxd = 0, 0, 0.0
-    for a, e in model.acc.items():
-        P = e["P"]
+    mg = 0.012
+
+    def in_box(P):
         sp, xp, tp = coords(P)
-        mg = 0.012
-        sel = (sp > s0 - mg) & (sp < s1 + mg) & (xp > x0 - mg) & (xp < x1 + mg) & (tp > t0 - mg) & (tp < t1 + mg)
-        if not sel.any():
-            continue
-        sp, xp, tp = sp[sel], xp[sel], tp[sel]
-        # fades: span ends, out of the thickness box
-        ws = smoothstep(s0, s0 + 0.015, sp) * (1 - smoothstep(s1 - 0.015, s1, sp))
-        wt = smoothstep(t0 - 0.004, t0 + 0.002, tp) * (1 - smoothstep(t1 - 0.002, t1 + 0.004, tp))
-        wx = smoothstep(x0 - 0.004, x0 + 0.004, xp) * (1 - smoothstep(x1 - 0.004, x1 + 0.004, xp))
-        w = ws * wt * wx
-        dx = outline_dx(sp, xp) * w
-        xn = xp + dx
-        cn = (xn - te_fit(sp)) / chord(sp)
-        u, l_ = U(sp, cn), L(sp, cn)
-        mid = 0.5 * (u + l_)
-        tgt = np.where(tp >= mid, u, l_)
-        dev = tp - tgt
-        edge_w = np.maximum(smoothstep(0.12, 0.02, cn), smoothstep(0.88, 0.98, cn))
-        alpha = np.maximum(0.55, 0.95 * edge_w)
-        keep = 1 - smoothstep(0.0025, 0.007, np.abs(dev))   # pylons, fairings: far off the skin grid
-        inside = smoothstep(-0.12, -0.03, cn) * (1 - smoothstep(1.03, 1.12, cn))
-        dt = -dev * alpha * keep * inside * w
-        newP = P[sel].copy()
-        newP[:, 0] = xn
-        newP[:, ta] = tp + dt
-        d = np.linalg.norm(newP - P[sel], axis=1)
-        P[sel] = newP
-        moved_tot += int((d > 1e-6).sum())
-        n_tot += int(sel.sum())
-        maxd = max(maxd, float(d.max()) if len(d) else 0.0)
-    report.append("%s: moved %d of %d points in the box, max %.2f mm" % (tag, moved_tot, n_tot, maxd * 1e3))
+        return (sp > s0 - mg) & (sp < s1 + mg) & (xp > x0 - mg) & (xp < x1 + mg) & (tp > t0 - mg) & (tp < t1 + mg)
+    pool = model.pool(in_box)
+    if pool is None:
+        return
+    sp, xp, tp = coords(pool)
+    # fades: span ends, out of the thickness box
+    ws = smoothstep(s0, s0 + 0.015, sp) * (1 - smoothstep(s1 - 0.015, s1, sp))
+    wt = smoothstep(t0 - 0.004, t0 + 0.002, tp) * (1 - smoothstep(t1 - 0.002, t1 + 0.004, tp))
+    wx = smoothstep(x0 - 0.004, x0 + 0.004, xp) * (1 - smoothstep(x1 - 0.004, x1 + 0.004, xp))
+    w = ws * wt * wx
+    dx = outline_dx(sp, xp) * w
+    xn = xp + dx
+    cn = (xn - te_fit(sp)) / chord(sp)
+    u, l_ = U(sp, cn), L(sp, cn)
+    mid = 0.5 * (u + l_)
+    tgt = np.where(tp >= mid, u, l_)
+    dev = tp - tgt
+    edge_w = np.maximum(smoothstep(0.12, 0.02, cn), smoothstep(0.88, 0.98, cn))
+    alpha = np.maximum(a_mid, 0.95 * edge_w)
+    keep = 1 - smoothstep(0.0025, 0.007, broad_dev(pool, dev))   # pylons, fairings: broad, far off the grid
+    inside = smoothstep(-0.12, -0.03, cn) * (1 - smoothstep(1.03, 1.12, cn))
+    if os.environ.get("POLISH_DEBUG"):
+        kp = (keep < 0.5) & (inside * w > 0.5)
+        report.append("%s: kept off-skin points %d, chord share hist %s, dev mm p50 %.1f" % (
+            tag, int(kp.sum()), np.histogram(cn[kp], bins=10, range=(0, 1))[0].tolist(),
+            np.median(np.abs(dev[kp])) * 1e3 if kp.any() else 0))
+    dt = -dev * alpha * keep * inside * w
+    newP = pool.copy()
+    newP[:, 0] = xn
+    newP[:, ta] = tp + dt
+    d = np.linalg.norm(newP - pool, axis=1)
+    model.unpool(newP)
+    report.append("%s: moved %d of %d points in the box, max %.2f mm" % (tag, int((d > 1e-6).sum()), len(pool),
+                                                                         d.max() * 1e3))
+
+
+def broad_dev(P, dev, r=None):
+    """Median |dev| over the points within r of each point. A lump or spike a few millimetres across (remesh noise)
+    has a small broad deviation and is smoothed away; a pylon, hatch, antenna or fairing is broad and is kept."""
+    nb = cKDTree(P).query_ball_point(P, BROAD_R if r is None else r)
+    a = np.abs(dev)
+    return np.array([np.median(a[i]) for i in nb])
+
+
+def smooth_top(model, spec, report):
+    """Even out the upper skin of a broad, gently curved body part (fuselage spine, wing glove): the skin as a
+    height field y(x, z) (medians of the upward-facing skin in 3 mm cells, smoothed more along the body than
+    across, so crowns keep their curvature) and every top-skin point pulled towards it. Bumps and dimples of a few
+    millimetres go; broad shapes (canopy, hatches, fairings, the fin root) are left alone by broad_dev; the lower
+    skin of a thin part is told apart from the top by the height of the downward-facing skin in the same cell, so a
+    thin sheet is never squeezed. Pure function of the position, like polish_surface."""
+    name, x0, x1, z0, z1, mirror, sig_x, sig_z = spec
+    AP, AN = model.analysis_points()
+
+    def zc(P):
+        return np.abs(P[:, 2]) if mirror else P[:, 2]
+    x, y, z = AP[:, 0], AP[:, 1], zc(AP)
+    m = (x > x0) & (x < x1) & (z > z0) & (z < z1)
+    nx, nz = int((x1 - x0) / TOP_CELL) + 1, int((z1 - z0) / TOP_CELL) + 1
+    ix = np.clip(((x - x0) / TOP_CELL).astype(int), 0, nx - 1)
+    iz = np.clip(((z - z0) / TOP_CELL).astype(int), 0, nz - 1)
+    H = np.full((nx, nz), np.nan)
+    B = np.full((nx, nz), -np.inf)
+    up = m & (AN[:, 1] > 0.35)
+    key = ix[up] * nz + iz[up]
+    o = np.argsort(key)
+    ks, ys = key[o], y[up][o]
+    u, st = np.unique(ks, return_index=True)
+    for k, a, b in zip(u, st, np.append(st[1:], len(ks))):
+        c = ys[a:b]
+        # the uppermost layer only: a nacelle or store top under a glove faces up too
+        H[k // nz, k % nz] = np.median(c[c >= c.max() - TOP_DIP])
+    dn = m & (AN[:, 1] < -0.35)
+    np.maximum.at(B, (ix[dn], iz[dn]), y[dn])
+    have = ~np.isnan(H)
+    if have.sum() < 20:
+        report.append("%s: too few top cells, skipped" % name)
+        return
+    # normalised gaussian: holes and box edges do not pull the surface down
+    sg = (sig_x / TOP_CELL, sig_z / TOP_CELL)
+    wgt = gaussian_filter(have.astype(float), sg, mode="nearest")
+    Hs = gaussian_filter(np.where(have, H, 0.0), sg, mode="nearest")
+    Hs = np.where(wgt > 0.2, Hs / np.maximum(wgt, 1e-6), np.nan)
+
+    def ev(G, xq, zq):
+        fx = np.clip((xq - x0) / TOP_CELL - 0.5, 0, nx - 1.001)
+        fz = np.clip((zq - z0) / TOP_CELL - 0.5, 0, nz - 1.001)
+        i0, j0 = fx.astype(int), fz.astype(int)
+        a, b = fx - i0, fz - j0
+        return (G[i0, j0] * (1 - a) * (1 - b) + G[i0 + 1, j0] * a * (1 - b) + G[i0, j0 + 1] * (1 - a) * b
+                + G[i0 + 1, j0 + 1] * a * b)
+    mg = 0.006
+
+    def in_box(P):
+        xx, zz = P[:, 0], zc(P)
+        return (xx > x0 - mg) & (xx < x1 + mg) & (zz > z0 - mg) & (zz < z1 + mg)
+    pool = model.pool(in_box)
+    if pool is None:
+        return
+    xp, yp, zp = pool[:, 0], pool[:, 1], zc(pool)
+    tgt = ev(Hs, xp, zp)
+    ok = ~np.isnan(tgt)
+    tgt = np.where(ok, tgt, yp)
+    ix = np.clip(((xp - x0) / TOP_CELL).astype(int), 0, nx - 1)
+    iz = np.clip(((zp - z0) / TOP_CELL).astype(int), 0, nz - 1)
+    bot = B[ix, iz]
+    dev = yp - tgt
+    # top skin only: nearer the top height than the downward-facing skin of the cell, and within a dimple's depth
+    # below it (deeper is another surface: the lower skin, a well, a nacelle)
+    fin = np.isfinite(bot)
+    rel = np.where(fin, (yp - np.where(fin, bot, 0.0)) / np.maximum(tgt - np.where(fin, bot, 0.0), 1e-5), 1.0)
+    on_top = smoothstep(0.55, 0.75, rel) * smoothstep(-TOP_DIP, -0.5 * TOP_DIP, dev)
+    keep = 1 - smoothstep(0.0015, 0.004, broad_dev(pool, dev))
+    w = (smoothstep(x0 - mg, x0 + 0.01, xp) * (1 - smoothstep(x1 - 0.01, x1 + mg, xp))
+         * smoothstep(z0 - mg, z0 + 0.008, zp) * (1 - smoothstep(z1 - 0.008, z1 + mg, zp)))
+    dy = -dev * 0.85 * keep * on_top * w * ok
+    if os.environ.get("POLISH_DEBUG"):
+        deep = (rel > 0.75) & (w > 0.5) & ok
+        report.append("%s: top points %d, dev mm percentiles 1/5/50/95/99 %s, broad>1.5mm %d" % (
+            name, int(deep.sum()), np.round(np.percentile(dev[deep], [1, 5, 50, 95, 99]) * 1e3, 2).tolist(),
+            int((keep[deep] < 0.5).sum())))
+    newP = pool.copy()
+    newP[:, 1] = yp + dy
+    model.unpool(newP)
+    mv = np.abs(dy) > 1e-6
+    report.append("%s: top skin %d cells, moved %d of %d points, max %.2f mm, p95 %.2f mm" % (
+        name, int(have.sum()), int(mv.sum()), len(pool), np.abs(dy).max() * 1e3,
+        np.percentile(np.abs(dy[mv]), 95) * 1e3 if mv.any() else 0.0))
 
 
 def main():
@@ -510,6 +683,9 @@ def main():
     a = ap.parse_args()
     m = Model(a.src)
     rep = []
+    m.fix_winding(rep)
+    for spec in TOPS.get(a.key, []):
+        smooth_top(m, spec, rep)
     for spec in SURF[a.key]:
         if spec[1] == "z":
             for side in (-1, 1):
