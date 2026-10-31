@@ -73,14 +73,14 @@ func _evo_pick(w: String) -> int:
 	for ci in m.offers.size():
 		var o: Dictionary = m.offers[ci]
 		var ow := String(o.get("weapon", ""))
-		if o["kind"] == "weapon_up" and int(o.get("group", 99)) < p.groups.size():
+		if o["kind"] in ["weapon_up", "profile"] and int(o.get("group", 99)) < p.groups.size():
 			ow = (p.groups[int(o["group"])] as Hardpoint).weapon
 		var rank := 99
 		if o["kind"] == "evolution" and ow == w:
 			rank = 0
 		elif o["kind"] == "weapon_new" and ow == w:
 			rank = 1
-		elif o["kind"] == "weapon_up" and ow == w:
+		elif o["kind"] in ["weapon_up", "profile"] and ow == w:
 			rank = 2
 		elif o["kind"] == "module" and cat.has(String(o["id"])) and int(p.taken.get(String(o["id"]), 0)) < int(cat[String(o["id"])]):
 			rank = 3
@@ -390,6 +390,16 @@ func _combat_ui_test() -> void:
 		_shot("cu_levelup_fade")   # cards still developing, picks blocked (MainInput.CARD_INPUT_DELAY)
 		_cu_fade = true
 	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.5 and _hud_at < now - 1000:
+		# PG-06 frame: --profileshot turns the screen into the profile «or-or» of the first weapon group
+		if m._args.has("--profileshot"):
+			var g0: Hardpoint = p.groups[0]
+			g0.level = 2
+			g0.profile = ""
+			g0.evo = false
+			var pr_cards: Array = []
+			for id in WeaponProfiles.open_ids(g0.weapon, Profile.profile_open(g0.weapon)):
+				pr_cards.append(Cards.finalize(p, Cards.profile_card(g0, 0, String(id), 1)))
+			m.offers = pr_cards
 		# weapon upgrade cards in the frame: the laser's long title (S11-26) and a «now / at lv. N» text (S11-20)
 		var ups: Array = []
 		for gi in p.groups.size():
@@ -398,14 +408,14 @@ func _combat_ui_test() -> void:
 				g.level = mini(g.level, 2)   # frame only: an upgrade with levels still ahead
 				ups.append(Cards.finalize(p, {"id": "up_%d" % gi, "ban": "up:%d" % gi, "kind": "weapon_up", "group": gi,
 					"cat": "Оружие", "title": "%s: улучшение" % Weapons.title(g.weapon), "rarity": 1}))
-		for i in mini(ups.size(), m.offers.size() - 1):
+		for i in (0 if m._args.has("--profileshot") else mini(ups.size(), m.offers.size() - 1)):
 			m.offers[i + 1] = ups[i]
 		# mouse over the second card, so the frame shows its term tooltips (S11-22)
 		var vs := m.get_viewport().get_visible_rect().size
 		m.get_viewport().warp_mouse(Vector2(vs.x / 2.0 - vs.x * 0.085, vs.y * 0.5))
 		_hud_at = now + 100000
 	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 1.2:
-		_shot("cu_levelup")
+		_shot("cu_profile" if m._args.has("--profileshot") else "cu_levelup")
 		# last-minute damage for the pause block and the hardpoint DPS
 		for k in 50:
 			var t := m.run_time - 50.0 + k
@@ -846,7 +856,7 @@ func _run_autotest(delta: float) -> void:
 						for ci in m.offers.size():
 							var o: Dictionary = m.offers[ci]
 							var w := String(o.get("weapon", ""))
-							if o["kind"] == "weapon_up" and m.player.groups.size() > int(o.get("group", 99)):
+							if o["kind"] in ["weapon_up", "profile"] and m.player.groups.size() > int(o.get("group", 99)):
 								w = String((m.player.groups[int(o["group"])] as Hardpoint).weapon)
 							var want := (w in ["aam", "rockets"]) if pass_i == 0 else (String(o["id"]) in ["seeker", "msl_head", "msl_motor", "launcher", "reload"])
 							if want:

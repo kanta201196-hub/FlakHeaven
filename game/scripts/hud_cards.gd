@@ -53,9 +53,9 @@ func draw(m: Main, size: Vector2) -> void:
 	focus = clampi(focus, 0, maxi(n - 1, 0))
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(UiStyle.SCRIM, 0.82))
 	ctrl.draw_rect(Rect2(0, 0, size.x, 8), UiStyle.ACCENT)
-	var pair: bool = n > 0 and m.offers[0]["kind"] == "branch" and bool(m.offers[0]["first"])
+	var pair: bool = n > 0 and ((m.offers[0]["kind"] == "branch" and bool(m.offers[0]["first"])) or m.offers[0]["kind"] == "profile")
 	_header(m, size, pair)
-	var gap := 110.0 if pair else GAP
+	var gap := 110.0 if pair and n <= 2 else GAP
 	var x0 := (size.x - n * CARD_W - (n - 1) * gap) / 2.0
 	var top := 214.0
 	var mp := ctrl.get_local_mouse_position()
@@ -111,8 +111,9 @@ func _header(m: Main, size: Vector2, pair: bool) -> void:
 	var small := Loc.t("НОВЫЙ УРОВЕНЬ")
 	var big := Loc.t("УР %d") % m.run.level
 	var col := UiStyle.ACCENT_SOFT
+	var profile: bool = pair and m.offers[0]["kind"] == "profile"
 	if pair:
-		small = Loc.t("МАСТЕРСТВО ОРУЖИЯ")
+		small = Loc.t("ПРОФИЛЬ ОРУЖИЯ") if profile else Loc.t("МАСТЕРСТВО ОРУЖИЯ")
 		big = Loc.t("ИЛИ-ИЛИ")
 	elif Main.aces():   # «Битва асов»: the draft before takeoff, then a card for every ace shot down
 		small = Loc.t("БИТВА АСОВ")
@@ -127,7 +128,12 @@ func _header(m: Main, size: Vector2, pair: bool) -> void:
 		HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	UiStyle.text(ctrl, UiStyle.head_font(800, 8), Vector2(0, 128), big, 64, col, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	var sub := ""
-	if pair:
+	if profile:
+		sub = Loc.t("Выберите профиль для этого оружия — остальные закроются до конца вылета.")
+		var hint := Cards.profile_hint(m.player, int(m.offers[0]["group"]))
+		if hint != "":
+			sub += " " + hint
+	elif pair:
 		sub = Loc.t("Выберите одну ветку для этого оружия — вторая закроется до конца вылета.")
 	elif m.levelup_intro:
 		sub = Loc.t("Выберите одно улучшение — оно действует до конца вылета. Не знаете, что взять? Берите оружие, которое уже стоит на самолёте.")
@@ -145,7 +151,11 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 	var evo := kind in ["evolution", "mastery"]
 	var rc: Color = Cards.EVO_COLOR if evo else Cards.RARITY[int(c["rarity"])]["color"]
 	var rname := Loc.t("МОДЕРНИЗАЦИЯ") if kind == "evolution" else Loc.t(String(Cards.RARITY[int(c["rarity"])]["name"])).to_upper()
-	if pair:
+	if kind == "profile":
+		var pi := WeaponProfiles.ids(String(c["weapon"])).find(String(c["profile"]))
+		rc = Prog.TAGS[WeaponProfiles.COLORS[clampi(pi, 0, WeaponProfiles.COLORS.size() - 1)]]["color"]
+		rname = Loc.t("ПРОФИЛЬ ОРУЖИЯ")
+	elif pair:
 		rc = Prog.TAGS["maneuver"]["color"] if c["branch"] == "rate" else Prog.TAGS["blast"]["color"]
 		rname = Loc.t("ВЕТКА МАСТЕРСТВА")
 	var shape := HudIcons.tile_shape(r, CUT)
@@ -204,7 +214,7 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 	# text with terms; the "either-or" warning goes to a red box at the bottom
 	var desc := Loc.out(Loc.t(String(c["desc"])))
 	var warn := ""
-	if pair:
+	if pair and kind == "branch":
 		warn = desc.substr(desc.get_slice("\n", 0).length()).strip_edges()
 		desc = desc.get_slice("\n", 0)
 	var path := _card_path(p, c)
@@ -260,6 +270,8 @@ func _tag(p: Player, c: Dictionary, r: Rect2) -> void:
 ## the level line instead. S14-09: when two weapons' branches of the same name are on one screen
 ## (two «Калибр» cards), each name gets its weapon, so the player can tell them apart.
 func _card_title(p: Player, c: Dictionary) -> String:
+	if String(c["kind"]) == "profile":   # PG-06: the profile's own name; the weapon goes to the level line
+		return Loc.t(String(WeaponProfiles.def(String(c["weapon"]), String(c["profile"]))["title"]))
 	if String(c["kind"]) == "branch":
 		var name := _branch_name(p, c)
 		for o: Dictionary in Main.I.offers:
@@ -291,6 +303,8 @@ func _level_line(p: Player, c: Dictionary, lv: Vector2) -> String:
 		parts.append(Loc.t("РАНГ %d → %d") % [lv.x, mini(int(lv.x) + 1, int(lv.y))])
 		if int(lv.x) + 1 >= int(lv.y):
 			parts.append(Loc.t("МАКСИМУМ"))
+	elif kind == "profile":   # the weapon only: the pips above show the level, long names («Наводящиеся ракеты») must fit
+		parts.append(_weapon_name(p.groups[int(c["group"])]).to_upper())
 	elif kind == "weapon_new":
 		parts.append(Loc.t("НОВОЕ ОРУЖИЕ"))
 	elif lv.y > 0:
@@ -307,7 +321,7 @@ func _level_line(p: Player, c: Dictionary, lv: Vector2) -> String:
 ## Level of the card: x — now, y — max (0 — no levels).
 func _card_level(p: Player, c: Dictionary) -> Vector2:
 	match String(c["kind"]):
-		"weapon_up":
+		"weapon_up", "profile":
 			return Vector2((p.groups[int(c["group"])] as Hardpoint).level, Weapons.MAX_LEVEL)
 		"weapon_new":
 			return Vector2(0, Weapons.MAX_LEVEL)

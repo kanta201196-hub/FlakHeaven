@@ -210,6 +210,15 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 					h0.level = 1
 					h0.cd = 0.5
 					break
+	# PG-06 check flag --wprofile=<weapon>:<profile>: that profile (and at least the fork level) from the start
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--wprofile="):
+			var wp := String(arg).substr(11).split(":")
+			for g1 in groups:
+				var h1: Hardpoint = g1
+				if wp.size() == 2 and h1.weapon == wp[0] and not WeaponProfiles.def(wp[0], wp[1]).is_empty():
+					h1.profile = wp[1]
+					h1.level = maxi(h1.level, WeaponProfiles.LEVEL)
 	# стартовое оружие и навык дают очки тегов
 	for g in groups:
 		if not (g as Hardpoint).is_empty():
