@@ -108,8 +108,6 @@ class Model:
         self.g = glb_io.load(path)
         j = self.g.j
         self.acc = {}    # position accessor -> dict(M, P(world), N acc, tris list, kind)
-        self.prims = []  # (index accessor, position accessor, material name, slot in that accessor's tris)
-        self.rewound = set()
         self.renormal = bool(os.environ.get("POLISH_RENORMAL")) or any(k in path for k in RENORMAL)
         for ni, n in enumerate(j["nodes"]):
             if "mesh" not in n:
@@ -121,7 +119,6 @@ class Model:
                 e = self.acc.setdefault(a, {"M": M, "tris": [], "nrm": pr["attributes"].get("NORMAL"), "kinds": set()})
                 e["tris"].append(self.g.accessor(pr["indices"]).reshape(-1, 3).astype(np.int64))
                 e["kinds"].add(mat)
-                self.prims.append((pr["indices"], a, mat, len(e["tris"]) - 1))
         for a, e in self.acc.items():
             p = self.g.accessor(a).astype(np.float64)
             e["P0"] = p @ e["M"][:3, :3].T + e["M"][:3, 3]
@@ -174,37 +171,8 @@ class Model:
             out.append(e["P"][np.vstack(e["tris"])])
         return np.concatenate(out)
 
-    def fix_winding(self, report):
-        """Turn every skin and glass triangle whose winding disagrees with its own vertex normals. The livery
-        shader culls back faces, so such a triangle is a hole where the sky shows through (or a dark pit where the
-        inside shows): the remesh left a few hundred of them on some planes. The normals are what the surface is
-        shaded with and agree with their neighbours, so the winding is the one turned. The dark single-sided wells
-        are left as they are (their winding is deliberate)."""
-        total = 0
-        for ia, a, mat, k in self.prims:
-            e = self.acc[a]
-            if mat == "mech_well" or "N" not in e:
-                continue
-            T = e["tris"][k]
-            P, N = e["P"], e["N"]
-            fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
-            area2 = np.linalg.norm(fn, axis=1)
-            nsum = N[T].sum(1)
-            agree = np.einsum("ij,ij->i", fn, nsum) / np.maximum(area2 * np.linalg.norm(nsum, axis=1), 1e-20)
-            bad = (agree < -0.2) & (area2 > 1e-12)
-            if bad.any():
-                T[bad] = T[bad][:, [0, 2, 1]]
-                self.rewound.add(ia)
-                total += int(bad.sum())
-        report.append("winding: %d triangles turned to face along their normals" % total)
-
     def write(self, path):
         g = self.g
-        for ia, a, mat, k in self.prims:
-            if ia in self.rewound:
-                acc = g.j["accessors"][ia]
-                dt = {5121: np.uint8, 5123: np.uint16, 5125: np.uint32}[acc["componentType"]]
-                _put(g, ia, self.acc[a]["tris"][k].reshape(-1, 1).astype(dt))
         dn = self._normal_deltas()
         for a, e in self.acc.items():
             Minv = np.linalg.inv(e["M"])
@@ -216,6 +184,10 @@ class Model:
             if e["nrm"] is not None and a in dn:
                 nn = e["N"] + dn[a]
                 nn /= np.maximum(np.linalg.norm(nn, axis=1, keepdims=True), 1e-12)
+                # a welded normal is ill-defined on a knife edge (both skins meet): never turn a normal by more
+                # than ~70 degrees there, or the vertex shades as a dark speck against its faces
+                wild = np.einsum("ij,ij->i", nn, e["N"]) < 0.35
+                nn[wild] = e["N"][wild]
                 nl = nn @ e["M"][:3, :3]    # back to local (rotation only; parts have no scale)
                 nl /= np.maximum(np.linalg.norm(nl, axis=1, keepdims=True), 1e-12)
                 _put(g, e["nrm"], nl.astype(np.float32))
@@ -226,8 +198,8 @@ class Model:
         normals round its welded position, over the skin and the parts together (a cut edge sees both sides) and
         with every face turned to agree with the vertex normals it has. Added to the old normal, so the remesh's
         own shading (seams, deliberately hard spots) is kept where nothing moved."""
-        keys = [a for a, e in self.acc.items() if e["nrm"] is not None and e["kinds"] != {"mech_well"}
-                and "glass" not in e["kinds"]]
+        # every accessor that holds skin (the main one shares its vertex buffer with the canopy glass)
+        keys = [a for a, e in self.acc.items() if e["nrm"] is not None and e["kinds"] - {"mech_well", "glass"}]
         P0 = np.vstack([self.acc[a]["P0"] for a in keys])
         P1 = np.vstack([self.acc[a]["P"] for a in keys])
         N0 = np.vstack([self.acc[a]["N"] for a in keys])
@@ -683,7 +655,6 @@ def main():
     a = ap.parse_args()
     m = Model(a.src)
     rep = []
-    m.fix_winding(rep)
     for spec in TOPS.get(a.key, []):
         smooth_top(m, spec, rep)
     for spec in SURF[a.key]:
