@@ -35,6 +35,7 @@ var _codex_ui: HudCodex
 var _hangar_ui: HudHangar
 var _campaign_ui: HudCampaign
 var _cutscene_ui: HudCutscene   # story scenes (step 2)
+var _dialog_ui: HudDialog       # hangar dialogue scenes (step 3)
 
 
 static func ui_font() -> Font:
@@ -107,6 +108,7 @@ func _ready() -> void:
 	_hangar_ui = HudHangar.new(ctrl, _buttons)
 	_campaign_ui = HudCampaign.new(ctrl, _buttons)
 	_cutscene_ui = HudCutscene.new(ctrl, _buttons)
+	_dialog_ui = HudDialog.new(ctrl, _buttons)
 	_autotest = OS.get_cmdline_user_args().has("--autotest")
 	HudIcons.warm()
 	Events.banner.connect(_on_banner)
@@ -261,6 +263,9 @@ func _draw_hud_body() -> void:
 		return
 	if m.state == "cutscene":
 		_cutscene_ui.draw(m, size)
+		return
+	if m.state == "dialog":
+		_dialog_ui.draw(m, size)
 		return
 
 	# pause, card pick and results cover the whole fight, so the flight HUD would only show through them

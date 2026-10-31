@@ -194,14 +194,33 @@ func _set_state(s: String) -> void:
 	get_tree().paused = s != "playing"
 	Settings.set_screen_cap(s != "playing")
 	if is_instance_valid(player) and menu != null:
-		player.visible = not (s == "menu" or s == "hangar" or s == "cutscene" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
+		player.visible = not (s == "menu" or s == "hangar" or s == "cutscene" or s == "dialog" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
 	Engine.time_scale = base_ts
 
 
+## The campaign screen's «В ВЫЛЕТ ▶» (and the «Битва асов» button): the hangar scene before the operation when it
+## is due (step 3; `--dialog` plays the test scene), then the sortie itself (`_launch_sortie`).
 func select_class(id: String) -> void:
 	cls_id = id
+	var oid := String(Campaign.op()["id"])
+	if _args.has("--dialog") and not _dialog_tested:
+		_dialog_tested = true
+		Dialog.play(self, "test", StoryDialogs.TEST, _launch_sortie)
+	elif not aces() and Dialog.due("hangar_" + oid):
+		Dialog.play(self, "hangar_" + oid, StoryDialogs.scene("hangar_" + oid), _launch_sortie)
+	elif aces() and Dialog.due("hangar_aces"):
+		Dialog.play(self, "hangar_aces", StoryDialogs.scene("hangar_aces"), _launch_sortie)
+	else:
+		_launch_sortie()
+
+
+var _dialog_tested := false   # `--dialog`: the test scene plays once per run of the game
+
+
+## Builds the world and gives control: the operation's intro first when it is due (step 2; `--cutscene` plays the
+## test scene).
+func _launch_sortie() -> void:
 	start_run()
-	# story (step 2): the operation's intro before control is given; `--cutscene` plays the test scene
 	if _args.has("--cutscene"):
 		Cutscene.play(self, "test", StoryScenes.TEST, "playing")
 	elif not aces() and Campaign.story_scene_due("intro_" + String(Campaign.op()["id"]), Settings.cutscenes):
@@ -328,6 +347,10 @@ func _process(delta: float) -> void:
 	if state == "cutscene":   # story scene: the camera follows the scene keys, the world stays paused
 		Cutscene.tick(self, delta / maxf(Engine.time_scale, 0.01))
 		sfx.music("menu" if Cutscene.next_state == "playing" else "result")
+		return
+	if state == "dialog":   # hangar scene (step 3): lines type out over the paused world
+		Dialog.tick(self, delta / maxf(Engine.time_scale, 0.01))
+		sfx.music("menu")
 		return
 	if state in ["menu", "settings"] and menu.back_state == "menu":
 		# фон меню: камера медленно плывёт над биомом
@@ -686,10 +709,19 @@ func _on_evac_reached() -> void:
 	_award("evac")
 	RunLog.write(self, "эвакуация")
 	sfx.play("evac", -2.0, 1.2)
-	# story (step 2): the operation's outro between the evacuation and the results
+	# story (step 2): the operation's outro between the evacuation and the results; (step 3) the hangar debrief after it
 	var oid := String(Campaign.op()["id"])
 	if not aces() and Campaign.story_scene_due("outro_" + oid, Settings.cutscenes) and not StoryScenes.outro(oid).is_empty():
-		Cutscene.play(self, "outro_" + oid, StoryScenes.outro(oid), "evac")
+		Cutscene.play(self, "outro_" + oid, StoryScenes.outro(oid), "evac", _after_outro)
+	else:
+		_after_outro()
+
+
+## After the sortie's outro (or straight after the evacuation): the hangar debrief scene when due, then the results.
+func _after_outro() -> void:
+	var sid := "hangar_%s_after" % String(Campaign.op()["id"])
+	if not aces() and Dialog.due(sid):
+		Dialog.play(self, sid, StoryDialogs.scene(sid), _set_state.bind("evac"))
 	else:
 		_set_state("evac")
 
