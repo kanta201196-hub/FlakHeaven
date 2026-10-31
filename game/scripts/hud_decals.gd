@@ -16,7 +16,7 @@ const NAMES := {
 	"bolt": "Молния", "ace_card": "Туз пик", "dice": "Кости", "chevrons": "Шевроны", "sun": "Солнце",
 	"wasp": "Оса", "rook": "Грач", "whale": "Кит", "cat": "Чёрный кот", "shark_mouth": "Акулья пасть",
 	"eye": "Глаз", "peaks": "Горы", "number": "Номер", "tally_air": "Счёт: воздух", "tally_ground": "Счёт: земля",
-	"tally_bomb": "Счёт: бомбы",
+	"tally_bomb": "Счёт: бомбы", "shark_eye": "Акулий глаз",
 }
 ## Preset spots (DecalPresets.NAMES) and their buttons
 const SPOT_TITLE := {"nose": "Нос", "number": "Номер", "tally": "Счёт", "fin": "Киль", "wing": "Крыло"}

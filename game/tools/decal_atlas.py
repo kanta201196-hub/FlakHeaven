@@ -9,7 +9,7 @@ fix keep the weights; the shader tints the three weights with the player's colou
 Cells (index = row * 8 + column):
  0 skull_winged  1 skull_wrench  2 skull_flame  3 bolt  4 ace_card  5 dice  6 chevrons  7 sun
  8 wasp  9 rook  10 whale  11 cat  12-13 shark_mouth (two cells wide)  14 eye  15 peaks
- 16-25 digits 0-9 (PT Sans Bold, game/fonts, OFL)  26 tally_air  27 tally_ground  28 tally_bomb
+ 16-25 digits 0-9 (PT Sans Bold, game/fonts, OFL)  26 tally_air  27 tally_ground  28 tally_bomb  29 shark_eye
 
 All shapes are fictional and neutral: no stars, national roundels, flags, eagles or unit marks.
 
@@ -273,8 +273,14 @@ def shark_mouth() -> Image.Image:
             yb0, yb1 = bot_y(t0), bot_y(t1)
             d.polygon([(x0, yb0), (x1, yb1), ((x0 + x1) / 2, (yb0 + yb1) / 2 - 150)], fill=PRIM)
     d.line(mouth + [mouth[0]], fill=INK, width=36, joint="curve")
-    d.ellipse((w - 700, 130, w - 520, 310), fill=INK)   # eye
-    d.ellipse((w - 650, 165, w - 590, 235), fill=PRIM)
+    return img
+
+
+def shark_eye() -> Image.Image:
+    """The shark mouth's eye as its own picture (Kanta 31.10), so the player places it or leaves it out."""
+    img, d = _cell()
+    d.ellipse((262, 262, 762, 762), fill=INK)
+    d.ellipse((392, 322, 552, 502), fill=PRIM)   # glint, off-centre like the old mouth eye
     return img
 
 
@@ -336,7 +342,7 @@ def build() -> Image.Image:
         (0, skull_winged()), (1, skull_wrench()), (2, skull_flame()), (3, bolt()), (4, ace_card()),
         (5, dice()), (6, chevrons()), (7, sun()), (8, wasp()), (9, rook()), (10, whale()), (11, cat()),
         (12, shark_mouth()), (14, eye()), (15, peaks()), (26, tally_air()), (27, tally_ground()),
-        (28, tally_bomb()),
+        (28, tally_bomb()), (29, shark_eye()),
     ] + [(16 + n, digit(n)) for n in range(10)]
     atlas = Image.new("RGBA", (COLS * CELL, ROWS * CELL), (0, 0, 0, 0))
     for idx, img in cells:
