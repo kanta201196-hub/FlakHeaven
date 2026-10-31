@@ -23,7 +23,7 @@ func handle_global_input() -> void:
 	if m.report != null and m.report.visible:
 		return
 	match m.state:
-		"menu", "settings":
+		"menu", "settings", "cutscene":   # cutscene: `Cutscene.tick` reads the skip press itself
 			return
 		"codex":
 			if Input.is_action_just_pressed("pause") or Input.is_action_just_pressed("loadout"):

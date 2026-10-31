@@ -65,12 +65,21 @@ static var _last := Vector2.INF             # where advance() left the camera
 
 ## The flight's heading now (rad, as a 2D heading: 0 is right, −π/2 is up the screen). On the river
 ## route it is the camera's actual direction of motion; off it, H0 with a slow weave
+## Cutscene (story step 2): the scene sets the course; the camera is driven by `Cutscene`, not by the route.
+static var override := false
+static var ov_heading := 0.0
+
+
 static func heading() -> float:
+	if override:
+		return ov_heading
 	return _head if _on_route else _head + WEAVE * sin(_t * WEAVE_W)
 
 
 ## Turn rate of heading(), rad/s, smoothed over RATE_K (drives the bank)
 static func turn_rate() -> float:
+	if override:
+		return 0.0
 	return _rate if _on_route else _rate + WEAVE * WEAVE_W * cos(_t * WEAVE_W)
 
 

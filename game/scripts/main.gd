@@ -194,14 +194,20 @@ func _set_state(s: String) -> void:
 	get_tree().paused = s != "playing"
 	Settings.set_screen_cap(s != "playing")
 	if is_instance_valid(player) and menu != null:
-		player.visible = not (s == "menu" or s == "hangar" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
+		player.visible = not (s == "menu" or s == "hangar" or s == "cutscene" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
 	Engine.time_scale = base_ts
 
 
 func select_class(id: String) -> void:
 	cls_id = id
 	start_run()
-	_set_state("playing")
+	# story (step 2): the operation's intro before control is given; `--cutscene` plays the test scene
+	if _args.has("--cutscene"):
+		Cutscene.play(self, "test", StoryScenes.TEST, "playing")
+	elif not aces() and Campaign.story_scene_due("intro_" + String(Campaign.op()["id"]), Settings.cutscenes):
+		Cutscene.play(self, "intro_" + String(Campaign.op()["id"]), StoryScenes.intro(String(Campaign.op()["id"])), "playing")
+	else:
+		_set_state("playing")
 
 
 func start_run() -> void:
@@ -319,6 +325,10 @@ func _process(delta: float) -> void:
 		Hints.tick(delta / maxf(Engine.time_scale, 0.01))
 	_state_t += delta / maxf(Engine.time_scale, 0.01)
 
+	if state == "cutscene":   # story scene: the camera follows the scene keys, the world stays paused
+		Cutscene.tick(self, delta / maxf(Engine.time_scale, 0.01))
+		sfx.music("menu" if Cutscene.next_state == "playing" else "result")
+		return
 	if state in ["menu", "settings"] and menu.back_state == "menu":
 		# фон меню: камера медленно плывёт над биомом
 		# тест 3.5-s5 (п. 1): по курсу звена заставки — самолёты летят носом вперёд, а не боком
@@ -675,8 +685,13 @@ func _on_evac_reached() -> void:
 	op_result = Campaign.on_evac(run_time, op_flags)
 	_award("evac")
 	RunLog.write(self, "эвакуация")
-	_set_state("evac")
 	sfx.play("evac", -2.0, 1.2)
+	# story (step 2): the operation's outro between the evacuation and the results
+	var oid := String(Campaign.op()["id"])
+	if not aces() and Campaign.story_scene_due("outro_" + oid, Settings.cutscenes) and not StoryScenes.outro(oid).is_empty():
+		Cutscene.play(self, "outro_" + oid, StoryScenes.outro(oid), "evac")
+	else:
+		_set_state("evac")
 
 
 ## «Левиафан» разбил точку эвакуации (5 залпов): открытое окно закрывается, после его гибели — не откроется
@@ -923,6 +938,8 @@ func hitstop() -> void:
 
 func _input(event: InputEvent) -> void:
 	tele.input(event)
+	if state == "cutscene":
+		Cutscene.request_skip(event)
 
 
 func _exit_tree() -> void:

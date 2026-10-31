@@ -8207,3 +8207,15 @@ msgstr "从不"
 #: game/scripts/story/story_flags.gd
 msgid "при первом прохождении"
 msgstr "仅首次通关"
+
+#: game/scripts/hud_cutscene.gd
+msgid "Заставки кампании"
+msgstr "战役过场"
+
+#: game/scripts/hud_cutscene.gd
+msgid "Короткие заставки до и после операций кампании. Любая клавиша пропускает заставку."
+msgstr "战役行动前后的简短过场。按任意键跳过。"
+
+#: game/scripts/hud_cutscene.gd
+msgid "Пропустить — любая клавиша"
+msgstr "跳过：任意键"
