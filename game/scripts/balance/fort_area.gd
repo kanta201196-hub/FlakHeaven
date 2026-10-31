@@ -17,8 +17,8 @@ const REACH := 7500.0   # 3000 found a fort ahead only 55 % of the time, 6000 �
 const CLEAR_R := 2600.0
 ## S14-05: when the activity takes a fort, the ground this far from it (in fort sizes) is rebuilt with the
 ## fort's pad, trodden earth, fields and sandbag posts: the pad fades out by up to ~1.5 sizes (0.6 · Terrain3D.PAD_REACH),
-## props of the cells round it look one size out.
-const GROUND_R := 1.7
+## props of the cells round it look one size out, and its side valley to the river (Terrain3D._sides) reaches farther.
+const GROUND_R := 2.5
 ## Missile `who` of the base: the base counts its own missiles in the air by it.
 const WHO := "укрепрайон"
 

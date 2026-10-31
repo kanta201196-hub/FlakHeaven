@@ -105,6 +105,8 @@ func process(delta: float) -> void:
 		var f := FortArea.pick_fort(FortArea.forts_near(m.background, sf, 900.0), sf, 900.0)
 		if not f.is_empty() and not m.background.forts_hit.has(FortView.key_of(f["pos"])):
 			m.background.forts_hit[FortView.key_of(f["pos"])] = FortDamage.new()
+			if Terrain3D.active() != null:   # S14-05: the pad and fields come with the fort, as in FortArea.setup_fort
+				Terrain3D.active().rebuild_area(f["pos"], float(f["size"]) * FortBalance.GROUND_R)
 	if p.has("live"):
 		_live(p)
 		return

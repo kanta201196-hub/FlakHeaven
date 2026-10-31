@@ -191,7 +191,10 @@ func valley(x: float, z: float, ctx := {}, rf := NAN) -> float:
 			continue   # ручей (stream_field)
 		# L-08: не ближе края русла — иначе врез русла (_height_v) опускал всю площадку поселения
 		# на 2,5 % высоты, и край посёлка (линия обороны) уходил под землю
-		var dc := maxf(_seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5, D_RIVER * 1.8)
+		var e := _seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5
+		if pads_natural and e > 0.0:
+			e *= 1.0 + SIDE_WOBBLE * _pad.get_noise_2d(x * SIDE_WOBBLE_F, z * SIDE_WOBBLE_F)
+		var dc := maxf(e, D_RIVER * 1.8)
 		if dc < absf(d):
 			d = dc
 	return d
@@ -441,8 +444,8 @@ func _sides(x: float, z: float, ctx := {}) -> Array:
 	for dx in range(-2, 3):
 		for dz in range(-2, 3):
 			var o := _obj(Vector2i(key.x + dx, key.y + dz))
-			if o.is_empty() or not (o["name"] in SETTLE):
-				continue
+			if o.is_empty() or not (o["name"] in SETTLE) or not shown(o):
+				continue   # S14-05: an unused fort spot cuts no side valley (that was the round basin)
 			var a: Vector2 = o["pos"]
 			var sz := float(o["size"])
 			if o["name"] != "o_village":
@@ -1248,6 +1251,11 @@ const PAD_K_MAX := 1.6
 ## How far a pad reaches, in r: the fade ends at r + r / PAD_K_MIN at most
 const PAD_REACH := 1.0 + 1.0 / PAD_K_MIN
 var _pad := FastNoiseLite.new()
+## S14-05: the side valley of a settlement (a capsule from it to the river, _sides) gave a round basin; with
+## pads_natural its edge distance is scaled by 1 ± SIDE_WOBBLE of low-frequency noise (the _pad noise
+## stretched SIDE_WOBBLE_F times, ~1/1700 px), gentle enough that the ground still only rises away from it.
+const SIDE_WOBBLE := 0.3
+const SIDE_WOBBLE_F := 0.25
 
 
 ## Fade-speed factor of a pad edge in the direction of `off` from the pad centre `c` (r — the pad's radius):
@@ -1271,6 +1279,8 @@ func shown(o: Dictionary) -> bool:
 ## not seen. Main thread only.
 func rebuild_area(c: Vector2, radius: float) -> void:
 	_flats.clear()
+	_side.clear()   # the settlement's side valley (_sides) comes with it; ±2 cells read it, so clear all
+	_split.clear()
 	for cx in range(int(floorf((c.x - radius) / CHUNK)), int(floorf((c.x + radius) / CHUNK)) + 1):
 		for cz in range(int(floorf((c.y - radius) / CHUNK)), int(floorf((c.y + radius) / CHUNK)) + 1):
 			var key := Vector2i(cx, cz)
