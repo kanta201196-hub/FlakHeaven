@@ -43,14 +43,10 @@ SURF = {
         ("htail", "z", 0.135, 0.21, -0.49, -0.25, -0.085, -0.045, 1, ("le", "te")),
         ("fin", "y", 0.035, 0.115, -0.51, -0.25, -0.012, 0.012, 1, ("le", "te")),
     ],
-    "fighter_1": [
-        ("wing", "z", 0.10, 0.215, -0.42, -0.02, -0.045, 0.012, 1, ("le", "te")),
-        ("htail", "z", 0.06, 0.165, -0.52, -0.36, -0.050, -0.028, 1, ("le", "te")),
-        ("fin", "y", 0.02, 0.10, -0.50, -0.22, -0.010, 0.010, 1, ("le", "te")),
-    ],
-    "fighter_2": [
-        ("wing", "z", 0.24, 0.405, -0.48, -0.05, -0.050, -0.022, 1, ("le", "te")),
-    ],
+    # «Оса» 1 (Sketchfab, clean low-poly hand model) and «Оса» 2 (Meshy at 100k, flat facets) have straight,
+    # clean edges already; the grid pull bent their sparse flat panels, so they are left as they are
+    "fighter_1": [],
+    "fighter_2": [],
     "bomber_1": [
         ("wing_mid", "z", 0.20, 0.27, -0.12, 0.10, -0.080, -0.045, 1, ("le", "te")),
         ("wing_out", "z", 0.335, 0.49, -0.24, 0.02, -0.100, -0.060, 1, ("le", "te")),
