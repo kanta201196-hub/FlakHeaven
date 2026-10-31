@@ -250,8 +250,8 @@ msgid "Небо над Шахрисангом"
 msgstr "Skies over Shahrisang"
 
 #: game/scripts/campaign.gd:36
-msgid "Последний рывок: всё, что осталось у противника, поднято в воздух. Сбейте «Крепость» и возвращайтесь."
-msgstr "The final push: everything the enemy has left is in the air. Shoot down the \"Fortress\" and come home."
+msgid "Последний рывок: всё, что осталось у противника, поднято в воздух. «Гром» догонит звено на третьей минуте — ему дали первый исправный самолёт. Сбейте «Крепость» и возвращайтесь."
+msgstr "The final push: everything the enemy has left is in the air. \"Grom\" will catch up with the flight at the third minute: they gave him the first airworthy plane. Shoot down the \"Fortress\" and come home."
 
 #: game/scripts/campaign.gd:37
 msgid "Сбить «Крепость» на сложности «Ас» и улететь"
@@ -8191,3 +8191,19 @@ msgstr "Racing Chequer"
 #, c-format
 msgid "Не больше %d цифр"
 msgstr "No more than %d digits"
+
+#: game/scripts/story/story_text.gd
+msgid "Штаб «Монолита»"
+msgstr "Monolith HQ"
+
+#: game/scripts/story/story_flags.gd
+msgid "всегда"
+msgstr "always"
+
+#: game/scripts/story/story_flags.gd
+msgid "никогда"
+msgstr "never"
+
+#: game/scripts/story/story_flags.gd
+msgid "при первом прохождении"
+msgstr "first clear only"
