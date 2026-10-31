@@ -250,8 +250,8 @@ msgid "Небо над Шахрисангом"
 msgstr "沙赫里桑上空"
 
 #: game/scripts/campaign.gd:36
-msgid "Последний рывок: всё, что осталось у противника, поднято в воздух. Сбейте «Крепость» и возвращайтесь."
-msgstr "最后冲刺：敌人剩下的一切都已升空。击落“堡垒”后返航。"
+msgid "Последний рывок: всё, что осталось у противника, поднято в воздух. «Гром» догонит звено на третьей минуте — ему дали первый исправный самолёт. Сбейте «Крепость» и возвращайтесь."
+msgstr "最后冲刺：敌人剩下的一切都已升空。“雷霆”将在第三分钟赶上编队：他们给了他第一架能飞的飞机。击落“堡垒”后返航。"
 
 #: game/scripts/campaign.gd:37
 msgid "Сбить «Крепость» на сложности «Ас» и улететь"
@@ -2441,8 +2441,8 @@ msgstr "撤离：撤离门 %d / %d · %d 米 · 窗口 %d 秒"
 
 #: game/scripts/hud_flight.gd:848
 #, c-format
-msgid "Тяга [W/S]: %d%%%s"
-msgstr "推力 [W/S]：%d%%%s"
+msgid "Скорость [W/S]: %d%%%s"
+msgstr "速度 [W/S]：%d%%%s"
 
 #: game/scripts/hud_flight.gd:848
 msgid "  ФОРСАЖ"
@@ -7996,6 +7996,10 @@ msgstr "战绩：地面"
 msgid "Счёт: бомбы"
 msgstr "战绩：炸弹"
 
+#: game/scripts/hud_decals.gd:19
+msgid "Акулий глаз"
+msgstr "鲨鱼眼"
+
 #: game/scripts/hud_decals.gd:22
 msgid "Нос"
 msgstr "机头"
@@ -8191,3 +8195,19 @@ msgstr "赛车棋格"
 #, c-format
 msgid "Не больше %d цифр"
 msgstr "最多 %d 位数字"
+
+#: game/scripts/story/story_text.gd
+msgid "Штаб «Монолита»"
+msgstr "“磐石”指挥部"
+
+#: game/scripts/story/story_flags.gd
+msgid "всегда"
+msgstr "总是"
+
+#: game/scripts/story/story_flags.gd
+msgid "никогда"
+msgstr "从不"
+
+#: game/scripts/story/story_flags.gd
+msgid "при первом прохождении"
+msgstr "仅首次通关"
