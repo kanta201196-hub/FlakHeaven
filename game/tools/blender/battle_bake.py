@@ -683,6 +683,15 @@ def write_images(imgs: dict, dst: str, jpeg: int) -> tuple:
     return out, tmpd
 
 
+def plain_glass(m: bpy.types.Material) -> None:
+    """Drop image nodes from the glass: the game maps it to canopy_glass.tres, so a hangar texture on it (the
+    fighter_1 glass carries the whole 4K paint map) would only be packed into the GLB and extracted for nothing."""
+    if m.use_nodes:
+        for n in list(m.node_tree.nodes):
+            if n.type == "TEX_IMAGE":
+                m.node_tree.nodes.remove(n)
+
+
 def skin_material(m: bpy.types.Material, imgs: dict) -> None:
     """glTF-shaped PBR skin: paint, ORM (roughness G, metal B) through Separate Color, tangent normal map if baked."""
     m.use_nodes = True
@@ -752,6 +761,7 @@ def main() -> int:
     unwrap(lo, a.tex)
     imgs, tmpd = write_images(bake(hi, lo, a.tex, a.normal, a.samples, a.threads), a.dst, a.jpeg)
     skin_material(lo.data.materials[0], imgs)
+    plain_glass(lo.data.materials[1])
     bpy.data.objects.remove(hi)
     base = os.path.splitext(os.path.basename(a.dst))[0]
     lo.name = base
