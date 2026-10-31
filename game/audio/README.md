@@ -10,6 +10,9 @@
 
 | Событие | Когда | Замена | Что искать |
 | --- | --- | --- | --- |
+| sting_start, sting_fortress, sting_baron, sting_epilogue | стингеры сюжета: начало операции, первая «Крепость», сбит «Барон», эпилог (только из файла) | — | 3–6 с orchestral / rock hit |
+| radio_squelch, radio_click | шипение перед перехватом врага, щелчок тангенты перед своей строкой (нет файла — radio) | radio | squelch / static burst, PTT click |
+| fortress_drone | гул «Крепости» на ней самой (цикл, громче при сближении; только из файла) | — | low rotor / turbine drone loop |
 | engine | гул двигателя (цикл, тон = скорость, на форсаже выше и громче) | — | jet / rocket engine loop |
 | engine_prop | гул винтовых моторов «Кита 1» (цикл); нет файла — играет engine | engine | prop / radial engine loop |
 | gun_fire | курсовое игрока | shot | machine gun / cannon single shot |

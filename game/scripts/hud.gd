@@ -145,7 +145,11 @@ func _on_radio(from: String, text: String, enemy: bool) -> void:
 	radio_t = 3.5 + text.length() * 0.03
 	_radio_at = Time.get_ticks_msec()
 	Hints.show("radio", "Справа внизу — радиоэфир: ведомые отвечают на приказы, штаб предупреждает о задании. Красная рамка — перехват вражеского эфира, жди аса или босса.", 8.0, 2)
-	Main.I.sfx.play("radio", -18.0, 2.2)
+	# step 4: an intercept opens with a burst of static, a friendly line with a soft click (files optional; `radio` otherwise)
+	if Main.I.sfx.variants.has("radio_squelch" if enemy else "radio_click"):
+		Main.I.sfx.play("radio_squelch" if enemy else "radio_click", -16.0)
+	else:
+		Main.I.sfx.play("radio", -18.0, 2.2)
 
 
 func flash_damage() -> void:

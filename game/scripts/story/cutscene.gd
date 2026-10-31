@@ -44,6 +44,8 @@ static func play(m: Main, scene_id: String, scene: Dictionary, after: String, th
 	m.camera.reset_smoothing()
 	if m.render3d != null:
 		m.render3d.set_light(String(def.get("light", "day")))
+	if def.has("stinger"):   # step 4: e.g. "sting_epilogue" under the hook card
+		m.sfx.play(String(def["stinger"]), -6.0)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("CUTSCENE %s started" % id)
 
