@@ -3,8 +3,11 @@
 Kanta 31.10.2026: depth 3 for the Highlands (full narrative), enemy «Монолит», rule amended, everything in the demo,
 second ace «Граф». Design: `docs/story/highlands-storyline.md` (§9 Monolith, §10 bosses, §11 hangar scenes),
 `docs/story/cutscenes-and-presentation.md` (forms, tech, audio, VFX). Backlog ST-01…ST-10.
-**Waits for Kanta's «да» on this plan and the open points in storyline §8.** Large work by the project rules
-(new system + rule change): brainstorming done in the two documents above.
+**Approved by Kanta 31.10.2026 («Корректируй план. Нагорье делаем всё!»)**: the whole Highlands story is one job, no
+split into «before the demo» and «after». Open points of storyline §8 are taken as the recommended options (portraits with
+briefs shown first and no generation spend without a separate «да», Grom's role as the player's choice, mechanic «Ключ»,
+Monolith mark with a frame for «ok»); Kanta can overrule any of them by number. Owner: thread «Проработать сюжет Нагорья
+и заставки», branch `claude/project-thread-d4n9lr`, one PR per step.
 
 ## Rules
 
@@ -47,21 +50,27 @@ second ace «Граф». Design: `docs/story/highlands-storyline.md` (§9 Monoli
    drone; rows in `audio/CREDITS.md`.
 8. **Settings** — `Settings` key `cutscenes` (0 first time / 1 always / 2 never) in the menu «Игра» section.
 
-## Steps (each a PR into main; smoke `all` after each; `full.sh` once for step 5)
+## Steps (each a PR into main; smoke `all` after each; `full.sh` once for step 6)
 
-| # | Step | Content | Est. days | Demo |
-| --- | --- | --- | --- | --- |
-| 1 | ST-01 + flags | small fixes; `Campaign` story API with unit tests; `StoryText` skeleton | 1 | yes |
-| 2 | ST-02 texts (ops 1–2) | all strings for H0–H2′, intros/outros 1–2, radio of Почтальон / Сквозняк / Штаб for ops 1–2, result lines; `.po` stubs | 1.5 | yes |
-| 3 | ST-03 cutscene runtime | `Cutscene`, `hud_cutscene`, light presets, setting, autotest hooks; one test scene | 2.5 | yes |
-| 4 | ST-07 dialogue runtime | `Dialog`, `hud_dialog`, choices, story log panel, portrait fallback | 2.5 | yes |
-| 5 | ST-04 + ST-05 (demo set) | 4 cutscenes ops 1–2, scenes H0–H2′, Fortress first-sight accent, stingers, radio squelch; review page with frames | 2.5 | yes |
-| 6 | ST-02 texts (ops 3–4) + ST-06 | remaining strings, 4 cutscenes, H3–H4′, two more accents, epilogue card with hook, village/column lights, briefing vignette | 4 | no |
-| 7 | ST-08 / ST-09 / ST-10 | portraits (after Kanta's «да» and approval of inputs), Monolith mark decal, Grom choice wiring | 1.5 | portraits yes |
-| | **Total** | | **≈ 15.5**, demo path (1–5 + portraits) **≈ 10.5** | |
+Order: runtime first, then the content operation by operation, so every PR after step 4 adds a playable piece.
+
+| # | Step | Content | Est. days |
+| --- | --- | --- | --- |
+| 1 | ST-01 + flags | small fixes («Штаб „Монолита“» / «Купол», `Loc.t` audit, op 4 briefing sentence); `Campaign` story API with unit tests; `StoryText` skeleton | 1 |
+| 2 | ST-03 cutscene runtime | `Cutscene`, `hud_cutscene`, light presets (both renderers), setting, autotest hooks; one test scene | 2.5 |
+| 3 | ST-07 dialogue runtime | `Dialog`, `hud_dialog`, choices, story log panel, portrait fallback (plates) | 2.5 |
+| 4 | ST-05 accents + audio | `Cinematic.accent`, 4 stingers, radio squelch, Fortress drone (CC0, credits rows) | 1.5 |
+| 5 | Op 1 «Перевал» | texts, H0 / H1 / H1′, intro + outro, boss lines (op 1), result line | 1.5 |
+| 6 | Op 2 «Сухое русло» | texts, H2 / H2′ with the recon choice, intro + outro, Fortress first-sight accent, «Штаб „Монолита“» lines, demo-end hand-off; `full.sh` | 2 |
+| 7 | Op 3 «Крепости» | texts, H3 / H3′ with Grom's role choice (ST-10), intro + outro, «Граф» and «Сквозняк» lines, Baron-down accent | 2 |
+| 8 | Op 4 «Небо над Шахрисангом» | texts, H4 / H4′, intro + outro, epilogue card with the hook, Grom-joins accent, second-controller mode | 2 |
+| 9 | Finish | village / column lights at dusk, briefing vignette (ST-06), review page with one frame per scene and all texts by number, `.po` EN/ZH stubs for the translation thread | 1.5 |
+| 10 | ST-08 / ST-09 | portrait briefs for Купол / Гром / Ключ → Kanta; Monolith mark decal with a frame for «ok»; wire the pictures when they exist | 1 |
+| | **Total** | | **≈ 17.5** |
 
 Estimates are thread-days of one strong-model thread with checks; iteration on Kanta's frame reviews is included once
-per step. Translation (EN/ZH) is the translation thread's time, not counted here.
+per step. Translation (EN/ZH) is the translation thread's time, not counted here. The demo gets whatever is merged for
+ops 1–2 at build time (`Demo` flags hide ops 3–4 as today).
 
 ## Not in this step
 
@@ -72,7 +81,7 @@ per step. Translation (EN/ZH) is the translation thread's time, not counted here
 ## Checks
 
 - `tools/ci/unit.sh` for `story_flags_test.gd`; `tools/ci/smoke.sh all` after every PR (scenes skipped at 0.2 s, must log
-  the skip line and reach `playing`); `tools/ci/full.sh` once after step 5 (accents touch `Engine.time_scale` in combat).
+  the skip line and reach `playing`); `tools/ci/full.sh` once after step 6 (accents touch `Engine.time_scale` in combat) and once before the build.
 - Both renderers for light presets: Compatibility screenshots (`--shots`) and one Forward+ run with lavapipe for the
   review page.
 - Kanta's review: a page with one frame per scene and all texts by number before the demo build.

@@ -343,6 +343,10 @@ func action(p: PackedStringArray) -> bool:
 			e.rotate_by(int(p[2]))
 		"size":
 			e.scale_by(int(p[2]))
+		"zoom":   # S14-03: the panel's view buttons, so the camera backs off even with a decal in hand
+			if h3 == null:
+				return false
+			h3.zoom(int(p[2]))
 		"mirror":
 			e.toggle_mirror()
 		"other":

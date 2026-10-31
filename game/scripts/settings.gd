@@ -61,6 +61,8 @@ var gfx_auto := true       # автоснижение при низком FPS, �
 var gfx_opts := GfxPresets.preset(2)
 ## FPS counter in the corner of the flight screen
 var show_fps := true
+## Story scenes (step 2): StoryFlags.MODE_* — on the first clear of an operation / always / never
+var cutscenes := StoryFlags.MODE_FIRST
 ## UI-01 step 4: action → [key, alternative key, gamepad] tokens (`Binds`); `_defaults` is the
 ## same table read from InputSetup's events, for «reset» and for broken saves
 var binds := {}
@@ -278,7 +280,7 @@ func save_settings() -> void:
 	if f == null:
 		return
 	f.store_string(JSON.stringify({"window_mode": window_mode, "resolution": resolution, "vsync": vsync, "fps_limit": fps_limit,
-		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "gfx_opts": gfx_opts, "show_fps": show_fps, "font": font, "lang": lang, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds_v2": binds, "deadzone": deadzone, "glyphs": glyphs}, "  "))
+		"hide_hud": hide_hud, "gfx": gfx, "gfx_auto": gfx_auto, "gfx_opts": gfx_opts, "show_fps": show_fps, "cutscenes": cutscenes, "font": font, "lang": lang, "wing_prio": wing_prio, "minimap": minimap, "minimap_alpha": minimap_alpha, "binds_v2": binds, "deadzone": deadzone, "glyphs": glyphs}, "  "))
 	f.close()
 
 
@@ -302,6 +304,7 @@ func load_settings() -> void:
 	var go = d.get("gfx_opts", null)
 	gfx_opts = GfxPresets.sanitize(go if go is Dictionary else {}, gfx)   # older saves: the preset of «gfx»
 	show_fps = bool(d.get("show_fps", show_fps))
+	cutscenes = clampi(int(d.get("cutscenes", cutscenes)), 0, StoryFlags.MODES.size() - 1)
 	font = clampi(int(d.get("font", font)), 0, FONTS.size() - 1)
 	lang = clampi(int(d.get("lang", lang)), -1, LANGS.size() - 1)
 	wing_prio = clampi(int(d.get("wing_prio", wing_prio)), 0, WING_PRIO.size() - 1)

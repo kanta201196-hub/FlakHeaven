@@ -33,7 +33,7 @@ const OPS := [
 		"hud": "«Крепость» через",
 		"opens": ["Операция 4 «Небо над Шахрисангом»", "Лазер «Луч» и плазменная бомба для тяжёлого подвеса"]},
 	{"id": "sky", "title": "Небо над Шахрисангом", "diff": 3, "need": ["fortress"], "parts": 1200,
-		"brief": "Последний рывок: всё, что осталось у противника, поднято в воздух. Сбейте «Крепость» и возвращайтесь.",
+		"brief": "Последний рывок: всё, что осталось у противника, поднято в воздух. «Гром» догонит звено на третьей минуте — ему дали первый исправный самолёт. Сбейте «Крепость» и возвращайтесь.",
 		"task": "Сбить «Крепость» на сложности «Ас» и улететь",
 		"hud": "«Крепость» через",
 		"opens": ["Второй биом (готовится)"]},
@@ -183,6 +183,52 @@ static func flag(key: String) -> bool:
 static func set_flag(key: String) -> void:
 	_load()
 	_cfg.set_value("story", key, true)
+	_save()
+
+
+## Highlands story (plan step 1). A scene id is "<intro|outro|hangar>_<op id>" (e.g. "intro_pass", "hangar_riverbed_after").
+## Whether the scene plays now: the «Заставки» setting against the seen flag (`StoryFlags.scene_due`).
+static func story_scene_due(scene: String, mode: int) -> bool:
+	return StoryFlags.scene_due(mode, flag("seen_" + scene))
+
+
+## Remember that a scene was shown (the «при первом прохождении» setting skips it next time).
+static func mark_story_scene(scene: String) -> void:
+	set_flag("seen_" + scene)
+
+
+## The option the player picked in a hangar dialogue ("" — not asked yet). Choices change text and presentation only.
+static func story_choice(id: String) -> String:
+	_load()
+	return String(_cfg.get_value("story", "choice_" + id, ""))
+
+
+static func set_story_choice(id: String, option: String) -> void:
+	_load()
+	_cfg.set_value("story", "choice_" + id, option)
+	_save()
+
+
+## How many sorties the player has already met a recurring enemy pilot in («Почтальон», «Сквозняк», «Граф»);
+## picks their «again» line (`StoryFlags.line_index`). «Барон» keeps his own counter (`baron_met`).
+static func met(callsign: String) -> int:
+	_load()
+	return int(_cfg.get_value("story", "met_" + callsign, 0))
+
+
+## The meeting count that picks a recurring pilot's line for the current operation (step 7): 0 — the first-meeting line
+## of this operation — until the operation is cleared, so every operation's own first line is heard on the clear;
+## afterwards the overall count, cycling the «again» lines on replays. «Барон» counts via `baron_met` (already
+## incremented by `RivalAce.setup` when asked, hence the -1).
+static func story_met(callsign: String) -> int:
+	if not cleared(index()):
+		return 0
+	return maxi(0, baron_met() - 1 if callsign == "baron" else met(callsign))
+
+
+static func on_met(callsign: String) -> void:
+	_load()
+	_cfg.set_value("story", "met_" + callsign, met(callsign) + 1)
 	_save()
 
 

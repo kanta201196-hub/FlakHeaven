@@ -595,6 +595,12 @@ func evo_k(w: String, key: String, plane_lvl: int) -> float:
 	return lerpf(1.0, float(eff.get(key, 1.0)), meta_k())
 
 
+## PG-06: the third weapon profile opens with tier `WeaponProfiles.THIRD_TIER` of the weapon's hangar branch
+## (a weapon without a hangar branch keeps it closed)
+func profile_open(w: String) -> bool:
+	return WeaponProfiles.has(w) and WBRANCH.has(w) and wbranch(w, WeaponProfiles.THIRD_TIER) != ""
+
+
 ## Множитель ветки оружия по ключу (dmg, range, cd, spd, blast_r, fuse, auto_r)
 func wk(w: String, key: String) -> float:
 	if not WBRANCH.has(w):

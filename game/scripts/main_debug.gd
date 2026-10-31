@@ -30,8 +30,11 @@ func process(delta: float) -> void:
 	if m._args.has("--exittest") and _exit_test():
 		return
 	if m._autotest:
-		_run_autotest(delta)
-		if m._args.has("--smoke"):
+		if not _ss_campaign:   # the story-shots run ends on the campaign screen: the bot must not press «В вылет» again
+			_run_autotest(delta)
+		if m._args.has("--storyshots"):
+			_story_shots()
+		elif m._args.has("--smoke"):
 			_smoke_check()
 	if m._args.has("--pairtest") or m._args.has("--cardtest"):
 		_pair_test()
@@ -73,14 +76,14 @@ func _evo_pick(w: String) -> int:
 	for ci in m.offers.size():
 		var o: Dictionary = m.offers[ci]
 		var ow := String(o.get("weapon", ""))
-		if o["kind"] == "weapon_up" and int(o.get("group", 99)) < p.groups.size():
+		if o["kind"] in ["weapon_up", "profile"] and int(o.get("group", 99)) < p.groups.size():
 			ow = (p.groups[int(o["group"])] as Hardpoint).weapon
 		var rank := 99
 		if o["kind"] == "evolution" and ow == w:
 			rank = 0
 		elif o["kind"] == "weapon_new" and ow == w:
 			rank = 1
-		elif o["kind"] == "weapon_up" and ow == w:
+		elif o["kind"] in ["weapon_up", "profile"] and ow == w:
 			rank = 2
 		elif o["kind"] == "module" and cat.has(String(o["id"])) and int(p.taken.get(String(o["id"]), 0)) < int(cat[String(o["id"])]):
 			rank = 3
@@ -274,11 +277,33 @@ func _pair_test() -> void:
 			(m.player.groups[gi] as Hardpoint).level = Weapons.MAX_LEVEL
 		m.run.pending_levels = 1
 		m._open_levelup()
+		if m._args.has("--dupbranch"):
+			_dup_branch_offers()
 		_pair_phase = 1
 	elif _pair_phase == 1 and m.state == "levelup" and m._state_t > 1.0:
-		m.get_viewport().get_texture().get_image().save_png("user://shot_levelup_%s.png" % ("cards" if cards else "pair"))
+		var shot := "dupbranch" if m._args.has("--dupbranch") else ("cards" if cards else "pair")
+		m.get_viewport().get_texture().get_image().save_png("user://shot_levelup_%s.png" % shot)
 		print("SHOT levelup_pair")
 		m.get_tree().quit()
+
+
+## S14-09 frame (--pairtest --dupbranch): two weapons with «Калибр» taken, both rank cards on one screen,
+## so the names must differ (shot_levelup_dupbranch.png).
+func _dup_branch_offers() -> void:
+	var gis: Array[int] = []
+	for i in m.player.groups.size():
+		if not (m.player.groups[i] as Hardpoint).is_empty() and gis.size() < 2:
+			gis.append(i)
+	var offs: Array = []
+	for gi in gis:
+		var g := m.player.groups[gi] as Hardpoint
+		g.level = Weapons.MAX_LEVEL
+		g.branch = "power"
+		g.branch_rank = 1
+		var c := Cards._branch_card(m.player, gi, "power", false)
+		c["rarity"] = 1
+		offs.append(Cards.finalize(m.player, c))
+	m.offers = offs + m.offers.slice(0, maxi(0, 3 - offs.size()))
 
 
 var _hud_phase := 0
@@ -368,6 +393,16 @@ func _combat_ui_test() -> void:
 		_shot("cu_levelup_fade")   # cards still developing, picks blocked (MainInput.CARD_INPUT_DELAY)
 		_cu_fade = true
 	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.5 and _hud_at < now - 1000:
+		# PG-06 frame: --profileshot turns the screen into the profile «or-or» of the first weapon group
+		if m._args.has("--profileshot"):
+			var g0: Hardpoint = p.groups[0]
+			g0.level = 2
+			g0.profile = ""
+			g0.evo = false
+			var pr_cards: Array = []
+			for id in WeaponProfiles.open_ids(g0.weapon, Profile.profile_open(g0.weapon)):
+				pr_cards.append(Cards.finalize(p, Cards.profile_card(g0, 0, String(id), 1)))
+			m.offers = pr_cards
 		# weapon upgrade cards in the frame: the laser's long title (S11-26) and a «now / at lv. N» text (S11-20)
 		var ups: Array = []
 		for gi in p.groups.size():
@@ -376,14 +411,14 @@ func _combat_ui_test() -> void:
 				g.level = mini(g.level, 2)   # frame only: an upgrade with levels still ahead
 				ups.append(Cards.finalize(p, {"id": "up_%d" % gi, "ban": "up:%d" % gi, "kind": "weapon_up", "group": gi,
 					"cat": "Оружие", "title": "%s: улучшение" % Weapons.title(g.weapon), "rarity": 1}))
-		for i in mini(ups.size(), m.offers.size() - 1):
+		for i in (0 if m._args.has("--profileshot") else mini(ups.size(), m.offers.size() - 1)):
 			m.offers[i + 1] = ups[i]
 		# mouse over the second card, so the frame shows its term tooltips (S11-22)
 		var vs := m.get_viewport().get_visible_rect().size
 		m.get_viewport().warp_mouse(Vector2(vs.x / 2.0 - vs.x * 0.085, vs.y * 0.5))
 		_hud_at = now + 100000
 	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 1.2:
-		_shot("cu_levelup")
+		_shot("cu_profile" if m._args.has("--profileshot") else "cu_levelup")
 		# last-minute damage for the pause block and the hardpoint DPS
 		for k in 50:
 			var t := m.run_time - 50.0 + k
@@ -658,6 +693,63 @@ func _smoke_check() -> void:
 		_fortress_log()
 
 
+## --storyshots (story step 9): once the sortie runs, plays every story scene back to back as a replay — the hangar
+## dialogues of `StoryDialogs.ORDER`, then every intro, outro and epilogue card with its variants — so `--cutshot`
+## saves one frame per scene (user://shot_dialog_<id>.png, user://shot_cutscene_<id>.png) for the review page, and
+## then shows the campaign screen for its vignette frame (user://shot_campaign_vignette.png) and quits.
+## `--vignetteshot` with it skips the scenes. Campaign flags and choices are set so the conditional lines exist;
+## the sortie is a throw-away one, so nothing is restored.
+var _ss_queue: Array = []
+var _ss_started := false
+var _ss_campaign := false
+var _ss_t := 0.0
+
+
+func _story_shots() -> void:
+	if not _ss_started:
+		if m.state != "playing" or m.run_time < 0.5:
+			return
+		_ss_started = true
+		Campaign.set_flag("rescued")
+		Campaign.set_flag("grom_free")
+		Campaign.set_story_choice("lead", "recon")
+		Campaign.set_story_choice("grom_role", "controller")
+		for row: Array in StoryDialogs.ORDER:
+			if String(row[2]) == "dlg":
+				_ss_queue.append(["dlg", String(row[0]), StoryDialogs.scene(String(row[0]))])
+		for pair: Array in [["intro", StoryScenes.INTRO], ["outro", StoryScenes.OUTRO], ["epilogue", StoryScenes.EPILOGUE]]:
+			var table: Dictionary = pair[1]
+			for k in table:
+				_ss_queue.append(["cut", "%s_%s" % [pair[0], String(k).replace(".", "_")], table[k]])
+		if m._args.has("--vignetteshot"):   # only the campaign screen's frame
+			_ss_queue.clear()
+		print("AUTOTEST: story shots — %d scenes" % _ss_queue.size())
+		return
+	if _ss_campaign:
+		_ss_t += 1.0 / 60.0
+		if _ss_t >= 1.5:
+			var img := m.get_viewport().get_texture().get_image()
+			if img != null:
+				img.save_png("user://shot_campaign_vignette.png")
+			print("AUTOTEST: story shots done")
+			m.get_tree().quit(0)
+		return
+	if Dialog.active or Cutscene.active or m.state != "playing":
+		return
+	if _ss_queue.is_empty():
+		# last: the campaign screen with the operation vignette (step 9), 1.5 s after the switch so the light has settled
+		if not _ss_campaign:
+			_ss_campaign = true
+			m._set_state("campaign")
+			_ss_t = 0.0
+		return
+	var e: Array = _ss_queue.pop_front()
+	if String(e[0]) == "dlg":
+		Dialog.play(m, String(e[1]), e[2], m._set_state.bind("playing"), true)
+	else:
+		Cutscene.play(m, String(e[1]), e[2], "playing")
+
+
 ## FB-01: смоук с «--fortress» — бой с «Крепостью» до 180 с, раз в 10 с — фаза, точки, расстояние до базы
 const SMOKE_FORTRESS_S := 180.0
 var _flog_t := 0.0
@@ -824,7 +916,7 @@ func _run_autotest(delta: float) -> void:
 						for ci in m.offers.size():
 							var o: Dictionary = m.offers[ci]
 							var w := String(o.get("weapon", ""))
-							if o["kind"] == "weapon_up" and m.player.groups.size() > int(o.get("group", 99)):
+							if o["kind"] in ["weapon_up", "profile"] and m.player.groups.size() > int(o.get("group", 99)):
 								w = String((m.player.groups[int(o["group"])] as Hardpoint).weapon)
 							var want := (w in ["aam", "rockets"]) if pass_i == 0 else (String(o["id"]) in ["seeker", "msl_head", "msl_motor", "launcher", "reload"])
 							if want:
@@ -902,6 +994,12 @@ func _run_autotest(delta: float) -> void:
 		if String(a).begins_with("--until=") and m.run_time >= float(String(a).substr(8)) and m.state == "playing":
 			Events.evac_reached.emit()
 			return
+	# story (step 7): --duelwin — the bot cannot out-fly the rival ace, so 40 s into the duel the ace goes down; checks
+	# the Baron-down chain (accent, «Граф», «Гром» free, outro, debrief) headless
+	if m._args.has("--duelwin") and m.state == "playing":
+		for n in m.get_tree().get_nodes_in_group("enemies"):
+			if n is RivalAce and (n as RivalAce).life < 50.0 and (n as Enemy).hp > 0.0:
+				(n as Enemy).take_hit(1.0e9, "autotest")
 	# EX-04 Б2: кадр со звеном бомбардировщиков рядом (--bombers --shots)
 	if m._args.has("--bombers") and is_instance_valid(m.player):
 		for n in m.get_tree().get_nodes_in_group("enemies"):

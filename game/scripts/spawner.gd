@@ -425,9 +425,10 @@ func start_activity(p: Player, t: float, force := false) -> void:
 	if kind_s == "fort":
 		if not Biome.sea():
 			var bg: Background = Main.I.background
-			var want := p.global_position + Vector2.from_angle(p.heading) * FortBalance.AHEAD
-			var screen: Rect2 = Render3D.view_now if Render3D.enabled and Render3D.I != null else bg._view()
-			fort = FortArea.pick_fort(FortArea.forts_near(bg, want, FortBalance.REACH), want, FortBalance.REACH, bg.forts_hit, screen)
+			var min_d := ActivityBalance.min_dist(_screen_rect())
+			var want := p.global_position + Vector2.from_angle(p.heading) * maxf(FortBalance.AHEAD, min_d + ActivityBalance.EXTRA)
+			fort = FortArea.pick_fort(FortArea.forts_near(bg, want, FortBalance.REACH), want, FortBalance.REACH, bg.forts_hit,
+				_view_rect(), p.global_position, min_d)
 		if fort.is_empty():
 			activity_i += 1
 			kind_s = ACTIVITIES[activity_i % ACTIVITIES.size()]
@@ -445,12 +446,12 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Hints.show("act_rescue", "Сбитый пилот: летите по зелёной стрелке к маяку. Держитесь рядом 30 с, пока вертолёт его забирает. Отлетите — отсчёт встанет.", 9.0, 2)
 	elif kind_s == "ground":
 		var site := AASite.new()
-		var dir := p.heading + randf_range(-1.0, 1.0)
-		site.setup(p.global_position + Vector2.from_angle(dir) * 1700.0, hp_k, recent_dps())
+		_place_aa(site, p, hp_k)
 		Main.I.world.add_child(site)
 		activity_node = site
 		Events.banner.emit("Разведка: позиция ПВО! Награда — выбор из редких карточек", 4.0)
 		Story.say(Story.DISPATCH, "Позиция ПВО ожила. Подавите — и небо станет тише.")
+		Story.on_ground_site()
 		Hints.show("act_aa", "Позиция ПВО: летите по голубой стрелке. Когда подлетите, пойдёт отсчёт — разбейте бункер в центре, пока он не кончился. Зенитки бьют издалека: заходите на скорости.", 9.0, 2)
 	elif kind_s == "fort":
 		var base := FortArea.new()
@@ -499,6 +500,41 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Events.banner.emit("Дуэль: вражеский ас заходит вам в хвост!", 4.0)
 		Hints.show("act_ace", "Дуэль с асом: он заходит в хвост. Сбросьте газ (S) или сделайте боевой разворот (E) — ас проскочит вперёд под вашу пушку.", 8.0, 2)
 	Main.I.sfx.play("boss", -8.0, 1.4)
+
+
+## S14-04 (Kanta 31.10): the AA site appears out of view and at least two screens from the player
+## (ActivityBalance). Tries centres ahead and to the sides; none passes — the try whose nearest point is
+## farthest from the player (the search for level ground can drag a site back toward the player).
+func _place_aa(site: AASite, p: Player, hp_k: float) -> void:
+	var min_d := ActivityBalance.min_dist(_screen_rect())
+	var view := _view_rect()
+	var tr := Terrain3D.active()
+	var turn := randf_range(-0.3, 0.3)
+	var best := PackedVector2Array()
+	var best_d := -1.0
+	for want in ActivityBalance.wants(p.global_position, p.heading + turn, min_d):
+		var spots := AASite.place(tr, want, randf() * TAU, randf_range(0.9, 1.2))
+		if ActivityBalance.far_ok(spots, p.global_position, min_d, view):
+			best = spots
+			break
+		var d := ActivityBalance.near_dist(spots, p.global_position)
+		if d > best_d:
+			best_d = d
+			best = spots
+	site.setup_spots(best, hp_k, recent_dps())
+
+
+## The visible screen in world px (2D camera; with the tilted 3D camera the ground seen is larger, see _view_rect).
+func _screen_rect() -> Rect2:
+	var vp := get_viewport()
+	return vp.get_canvas_transform().affine_inverse() * vp.get_visible_rect()
+
+
+## What the camera may show, with margins (the 3D view with tilt, else the 2D view).
+func _view_rect() -> Rect2:
+	if Render3D.enabled and Render3D.I != null and Render3D.view_now.has_area():
+		return Render3D.view_now
+	return Main.I.background._view()
 
 
 ## Прочность врагов: настройка × сложность операции кампании (U-05)

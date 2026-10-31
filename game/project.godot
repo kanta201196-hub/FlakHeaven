@@ -46,3 +46,7 @@ fx_clear={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)
 }
+story_night={
+"type": "float",
+"value": 0.0
+}

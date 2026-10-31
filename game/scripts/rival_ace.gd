@@ -40,6 +40,8 @@ const BARON_LINES := {
 
 var callsign := ""
 var _again := false   # «Барон» уже встречался в кампании
+var _story_id := ""   # "baron" / "graf": speaker of `StoryText.OP_LINES` in the Highlands campaign, "" elsewhere
+var _story_met := 0   # `Campaign.story_met` at setup: picks the first-meeting or an «again» line
 var life := 90.0
 var _state := "chase"   # chase — заходит в хвост; break — отворот после перелёта
 var _state_t := 0.0
@@ -58,11 +60,20 @@ var _flare_cd := 0.0
 
 
 func setup(hp_total: float) -> void:
-	# U-05: в операциях 2–4 кампании в дуэль выходит «Барон» и помнит прошлые встречи
-	if Campaign.baron() and not Main.aces():   # the test mode does not touch the campaign's «Барон» story
+	# U-05: в операциях 2–4 кампании в дуэль выходит «Барон» и помнит прошлые встречи; шаг 8: в оп. 4, когда «Барон»
+	# сбит («Гром» свободен), асов ведёт «Граф»
+	if Campaign.baron() and not Main.aces() and Story.highland_op() == Story.OP_SKY and Campaign.flag("grom_free"):
+		callsign = "Граф"
+		_story_id = "graf"
+		_story_met = Campaign.story_met("graf")
+		_again = Campaign.met("graf") > 0
+		Campaign.on_met("graf")
+	elif Campaign.baron() and not Main.aces():   # the test mode does not touch the campaign's «Барон» story
 		callsign = "Барон"
+		_story_id = "baron"
 		_again = Campaign.baron_met() > 0
 		Campaign.on_baron_met()
+		_story_met = Campaign.story_met("baron")
 	else:
 		callsign = CALLSIGNS[randi() % CALLSIGNS.size()]
 	hp = hp_total
@@ -102,8 +113,26 @@ func say(key: String, force := false) -> void:
 	if not force and now - float(_said.get("_last", -99.0)) < 4.0:
 		return
 	_said["_last"] = now
-	var arr: Array = BARON_LINES[key] if callsign == "Барон" and BARON_LINES.has(key) else LINES[key]
-	Events.radio.emit(callsign, arr[randi() % arr.size()], true)
+	var line := _story_line(key)
+	if line == "":
+		var arr: Array = BARON_LINES[key] if callsign == "Барон" and BARON_LINES.has(key) else LINES[key]
+		line = arr[randi() % arr.size()]
+	Events.radio.emit(callsign, line, true)
+
+
+## Story (step 7): the ace's line of this operation from `StoryText.OP_LINES` ("<baron|graf>.<op>.<moment>"), picked
+## by how often he met the player; "spawn"/"again" try the "spawn_<lead>" variant first (the H2′ choice: with the
+## parachute lead passed to recon Baron knows we search; kept quiet, he still brags about Grom). "" → the generic tables.
+func _story_line(key: String) -> String:
+	if _story_id == "" or Story.highland_op() < 0:
+		return ""
+	var op_id := String(Campaign.op()["id"])
+	var moment := "spawn" if key == "again" else key
+	if moment == "spawn" and Campaign.story_choice("lead") != "":
+		var v := StoryText.op_line(_story_id, op_id, "spawn_" + Campaign.story_choice("lead"), _story_met)
+		if v != "":
+			return v
+	return StoryText.op_line(_story_id, op_id, moment, _story_met)
 
 
 func take_hit(dmg: float, source := "прочее") -> void:
