@@ -19,6 +19,8 @@ var evo := false         # 3.1: эволюция (оружие ур. 5 + кат�
 var evo_plus := 0        # «Э+» из резерва: +8% урона, −4% перезарядки
 var branch := ""         # S9-15: ветка мастерства с 35-го уровня — "rate" («Скорострел») или "power" («Калибр»); вторая закрыта
 var branch_rank := 0
+## PG-06: weapon profile chosen at the fork (`WeaponProfiles`), "" before the fork or for weapons without one
+var profile := ""
 var _side := 1.0
 var _icd := 0.0          # турели: перехват ракет (зонтик, «Дикобраз», нашивка)
 var _barrel := 0
@@ -58,6 +60,8 @@ func label() -> String:
 		s = "%s ×%d: %s (Э%s)" % [name, slots, evo_title(), ("+%d" % evo_plus) if evo_plus > 0 else ""]
 	if bonus > 0.0:
 		s += " (+%d%%)" % int(round(bonus * 100.0))
+	if profile != "":
+		s += " · %s" % WeaponProfiles.def(weapon, profile).get("title", profile)
 	if branch != "":
 		s += " · %s %d" % [Cards.branch_def(weapon, branch)["title"], branch_rank]
 	if uses_trigger() and trigger == "button":
@@ -70,7 +74,12 @@ func uses_trigger() -> bool:
 
 
 func dmg() -> float:
-	return _dmg() * branch_dmg_k()
+	return _dmg() * branch_dmg_k() * WeaponProfiles.k(weapon, profile, "dmg")
+
+
+## PG-06: definition of the chosen profile (empty without one) — behaviour keys for the firing code
+func prof() -> Dictionary:
+	return WeaponProfiles.def(weapon, profile)
 
 
 ## S9-15: «Калибр» — +18% урона за ранг, «Скорострел» — −10% перезарядки за ранг (до 5 рангов)
@@ -160,6 +169,7 @@ func reload_time(p: Player) -> float:
 		k /= float(p.mods.get("turret_rate", 1.0))
 	if weapon in MISSILES:
 		k *= float(p.mods.get("msl_cd", 1.0)) # модуль «Пусковое устройство»
+	k *= WeaponProfiles.k(weapon, profile, "cd")   # PG-06
 	var t: float = base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd") * branch_cd_k()
 	if MSL_CD_MIN.has(weapon):
 		# правка 3.5-s4 (лог «Осы»: до 59 ракет в воздухе): карточки перезарядки складывались до ×0,07 —
@@ -201,7 +211,7 @@ func _owner_k() -> float:
 
 
 func range_px() -> float:
-	var base: float = Weapons.DEFS[weapon]["range"] * _evo_k("range")
+	var base: float = Weapons.DEFS[weapon]["range"] * _evo_k("range") * WeaponProfiles.k(weapon, profile, "range")   # PG-06
 	var p := Main.I.player if Main.I != null else null
 	if p != null:
 		if weapon == "turret":
@@ -598,7 +608,7 @@ func _slot_pos(p: Player, i: int) -> Vector2:
 
 func _fire_aam(p: Player) -> bool:
 	# 3.5: качество вместо количества — всегда 1 ракета с точки (ур. 4 усиливает ракету, а не добавляет вторую)
-	var per_slot := 1
+	var per_slot := int(prof().get("per_slot", 1))   # PG-06 «Двойной пуск»: two light missiles per slot
 	if evo:
 		per_slot = maxi(1, 2 / slots) # «Шмель»: 2 тяжёлые ракеты, каждая делится на 4 БЧ
 	var hunter := int(p.taken.get("seeker", 0)) >= 3 # «ГСН» ×3: и по наземным
@@ -626,7 +636,10 @@ func _fire_aam(p: Player) -> bool:
 		if p.syn.has("carousel"):
 			opts["carousel"] = 0
 		var md := dmg() * Profile.wk("aam", "dmg")
-		opts["spd_k"] = Profile.wk("aam", "spd") * (1.2 if level >= 4 and not evo else 1.0)
+		opts["spd_k"] = Profile.wk("aam", "spd") * (1.2 if level >= 4 and not evo else 1.0) * WeaponProfiles.k("aam", profile, "spd")
+		if prof().has("splash"):   # PG-06 «Осколочная»: wider burst, neighbours take more
+			opts["splash"] = float(prof()["splash"])
+			opts["splash_k"] = float(prof()["splash_k"])
 		Main.I.projectiles.spawn_player_missile(pos, vel, t, md, "ракеты В-В", opts)
 		if Boom3D.active():
 			Boom3D.ensure().launch(pos, Vector2.from_angle(p.heading), p.velocity)
@@ -655,6 +668,11 @@ func _fire_rockets(p: Player, manual := false) -> bool:
 		return false
 	# S6-02 (решение Kanta 18.10): залп 4 с точки на ур. 1–2, 5 на ур. 3–4, 6 на ур. 5; уровень даёт ещё урон и радиус
 	var per_slot := 4 if level <= 2 else (5 if level <= 4 else 6)
+	# PG-06 profiles: «Веер» adds rockets and widens the cone, «Кумулятив» fires three heavy ones
+	# (the modernization keeps the profile's multipliers only; its own volley wins — PR 2 of PG-06 adds behaviour)
+	var pd := prof() if not evo else {}
+	per_slot = int(pd.get("count", per_slot + int(pd.get("extra", 0))))
+	var half_spread := float(pd.get("spread", 4.5))
 	var splash := 60.0 * (1.0 + Tuning.g("rocket_lvl_r") * (level - 1))
 	var dirs := [0.0]
 	if evo: # «Ливень»: веер в 3 стороны по 5 ракет
@@ -673,13 +691,17 @@ func _fire_rockets(p: Player, manual := false) -> bool:
 		return true
 	var ropts := {"sticky": true, "src": "связка: термобарика"} if p.syn.has("thermobaric") else {}
 	ropts["ground_k"] = ROCKET_GROUND_K
+	if pd.get("ap", false):
+		ropts["armor_k"] = Enemy.DEF_K["armor"]["ap"]   # «Кумулятив»: armor as the guided air-to-ground missile
+	if pd.get("burn", false):
+		ropts["burn"] = true   # «Зажигательные»: incendiary ammo rules on every hit
 	_wolf(p, Weapons.pick_target(p.global_position + fwd * 300.0, 500.0, "nearest"), rd * 3.0)
 	if p.assault_t > 0.0 and p.syn.has("s_conveyor"):
 		per_slot *= 2 # «Конвейер»
 	for s in slots:
 		for d0 in dirs:
 			for i in per_slot:
-				var spread := deg_to_rad(randf_range(-4.5, 4.5)) + float(d0)
+				var spread := deg_to_rad(randf_range(-half_spread, half_spread)) + float(d0)
 				var dir := fwd.rotated(spread)
 				var pos := _slot_pos(p, s) + dir * 10.0
 				Main.I.projectiles.spawn_rocket(pos, p.velocity + dir * randf_range(820.0, 980.0) * rs, rd, splash * Profile.wk("rockets", "blast_r"), i * 0.04, ropts)
