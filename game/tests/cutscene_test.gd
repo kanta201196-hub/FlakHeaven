@@ -30,7 +30,20 @@ func _init() -> void:
 	_check(float(StoryScenes.TEST["dur"]) >= 5.0 and (StoryScenes.TEST["cam"] as Array).size() >= 2, "test scene has a duration and two camera keys")
 	for l in StoryScenes.TEST["lines"]:
 		_check(float((l as Array)[1]) <= float(StoryScenes.TEST["dur"]), "every caption ends inside the scene")
-	_check(StoryScenes.intro("pass").is_empty() and StoryScenes.outro("pass").is_empty(), "no operation scenes yet (steps 5–8)")
+	# every operation scene is well-formed: duration, ordered camera keys, captions inside the scene and ≤ 110 characters
+	for table: Dictionary in [StoryScenes.INTRO, StoryScenes.OUTRO]:
+		for op in table:
+			var d: Dictionary = table[op]
+			var dur := float(d.get("dur", 0.0))
+			_check(dur >= 5.0 and dur <= 15.0, "scene %s: 5–15 s (rule: short, skippable)" % op)
+			var cam: Array = d.get("cam", [])
+			_check(cam.size() >= 2 and float(cam[0][0]) == 0.0 and float(cam[-1][0]) <= dur, "scene %s: camera keys start at 0 and end inside" % op)
+			for l in d.get("lines", []):
+				_check(float((l as Array)[0]) < float((l as Array)[1]) and float((l as Array)[1]) <= dur, "scene %s: caption inside the scene" % op)
+				_check(String((l as Array)[3]).length() <= 110, "scene %s: caption fits the letterbox" % op)
+			_check(String(d.get("light", "day")) in ["day", "dawn", "dusk", "night"], "scene %s: known light preset" % op)
+	_check(not StoryScenes.intro("pass").is_empty() and not StoryScenes.outro("pass").is_empty(), "op 1 has an intro and an outro (step 5)")
+	_check(StoryScenes.intro("no_such_op").is_empty(), "unknown operation → no scene")
 	_check(StoryFlags.MODES.size() == 3, "setting names present for the menu row")
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)

@@ -37,6 +37,7 @@ static func start(m: Main) -> void:
 	_baron_taunt = false
 	_finale = false
 	_grom_in = false
+	_ground_said = false
 	rescue_done = false
 	var op := highland_op()
 	say(DISPATCH, StoryText.radio("start.pass" if op <= OP_PASS else "start.other"))
@@ -63,6 +64,16 @@ static func tick(m: Main) -> void:
 	if not _queue.is_empty() and (m.hud.radio_t <= 0.3 or Time.get_ticks_msec() - int(_queue[0][3]) > 3000):
 		var l: Array = _queue.pop_front()
 		Events.radio.emit(l[0], l[1], l[2])
+
+
+## Первая позиция ПВО в «Перевале» — «Купол» замечает, что противник строит (шаг 5; один раз за вылет)
+static func on_ground_site() -> void:
+	if highland_op() == OP_PASS and not _ground_said:
+		_ground_said = true
+		say(DISPATCH, StoryText.radio("ground.pass"))
+
+
+static var _ground_said := false
 
 
 ## Сбит «Барон» в «Крепостях» — «Гром» жив, в финальной операции он летит в звене
