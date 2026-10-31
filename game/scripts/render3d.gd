@@ -2002,8 +2002,12 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 						l_offs.append((Vector2(bw.x, bw.z) - p.global_position).rotated(-p.heading))
 				elif g.weapon == "turret" or g.weapon == "gunpod":
 					# Kanta 26.10: turret and gun-pod rounds (and their muzzle flash) leave from the barrels of the model,
-					# not from a fixed spot beside the fuselage; +X of the weapon mesh runs along the barrels
-					var mw := root.global_transform * (wmi.transform * Vector3(0.35, 0.0, 0.0))
+					# not from a fixed spot beside the fuselage; +X of the weapon mesh runs along the barrels.
+					# R-23 self-check: one fixed 0.35 overshot the short tail-turret barrels — each model's own
+					# muzzle (by class, side and tier) is the barrel tip; kept as meta so the self-check measures it
+					var ml := WeaponModels.muzzle(g.weapon, p.cls_id, mt["side"], WeaponModels.tier(g.level, g.evo))
+					wmi.set_meta("muzzle_local", ml)
+					var mw := root.global_transform * (wmi.transform * ml)
 					l_offs.append((Vector2(mw.x, mw.z) - p.global_position).rotated(-p.heading))
 				var tr_w := 0.6 if dim else 0.0
 				if wmi.transparency != tr_w:

@@ -208,6 +208,8 @@ func select_class(id: String) -> void:
 	if _args.has("--dialog") and not _dialog_tested:
 		_dialog_tested = true
 		Dialog.play(self, "test", StoryDialogs.TEST, _launch_sortie)
+	elif _benching():   # the frame benches start the sortie at once: a story scene would hold them forever
+		_launch_sortie()
 	elif not aces() and Dialog.due("hangar_" + oid):
 		Dialog.play(self, "hangar_" + oid, StoryDialogs.scene("hangar_" + oid), _launch_sortie)
 	elif aces() and Dialog.due("hangar_aces"):
@@ -219,13 +221,19 @@ func select_class(id: String) -> void:
 var _dialog_tested := false   # `--dialog`: the test scene plays once per run of the game
 
 
+## True for the frame benches (`--visual`, `--boombench`, the R-23 self-check): they drive a fresh profile, where
+## every story scene is due, and have no player to skip a cutscene or a hangar dialogue, so they get none
+func _benching() -> bool:
+	return _args.has("--visual") or _args.has("--boombench")
+
+
 ## Builds the world and gives control: the operation's intro first when it is due (step 2; `--cutscene` plays the
 ## test scene).
 func _launch_sortie() -> void:
 	start_run()
 	if _args.has("--cutscene"):
 		Cutscene.play(self, "test", StoryScenes.TEST, "playing")
-	elif not aces() and Campaign.story_scene_due("intro_" + String(Campaign.op()["id"]), Settings.cutscenes):
+	elif not aces() and not _benching() and Campaign.story_scene_due("intro_" + String(Campaign.op()["id"]), Settings.cutscenes):
 		# step 7: the H2′ choice «передать разведке» picks the intro variant with the recon marker (op 3)
 		var oid := String(Campaign.op()["id"])
 		Cutscene.play(self, "intro_" + oid, StoryScenes.intro(oid, Campaign.story_choice("lead")), "playing")
@@ -724,7 +732,7 @@ func _on_evac_reached() -> void:
 	# Step 7: both only when the operation is done — the outro tells its ending («Он наш»), and a failed sortie keeps
 	# the scenes for the clear
 	var oid := String(Campaign.op()["id"])
-	if not aces() and bool(op_result.get("done", false)) and Campaign.story_scene_due("outro_" + oid, Settings.cutscenes) and not StoryScenes.outro(oid).is_empty():
+	if not aces() and not _benching() and bool(op_result.get("done", false)) and Campaign.story_scene_due("outro_" + oid, Settings.cutscenes) and not StoryScenes.outro(oid).is_empty():
 		Cutscene.play(self, "outro_" + oid, StoryScenes.outro(oid), "evac", _after_outro)
 	else:
 		_after_outro()
