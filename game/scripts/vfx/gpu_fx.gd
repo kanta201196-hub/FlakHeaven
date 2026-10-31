@@ -71,6 +71,13 @@ void fragment() {
 	float f0 = floor(f);
 	vec4 a = mix(texture(atlas, cell(f0, UV)), texture(atlas, cell(min(f0 + 1.0, frames - 1.0), UV)), f - f0);
 	float hot = smoothstep(0.6, 1.0, max(a.r, a.g)) * smoothstep(0.08, 0.35, a.r - a.b);
+	if (COLOR.b > 1.5) {
+		// S14-18: plasma tint (Boom3D.PLASMA_TINT): fire pixels swap red and blue, orange flame turns cyan and the
+		// yellow core blue-white; dust and smoke (little red over blue) keep their colour
+		float fm = smoothstep(0.03, 0.18, a.r - a.b) * smoothstep(0.04, 0.3, max(a.r, a.g));
+		a.rgb = mix(a.rgb, a.bgr * vec3(1.0, 1.05, 1.15), fm);
+		hot = smoothstep(0.6, 1.0, max(a.b, a.g)) * fm;
+	}
 	ALBEDO = (a.rgb * (1.0 + hot * cd.w)) * FX_EXP;
 	float z = texture(depth_tex, SCREEN_UV).r;
 	vec4 v = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, z, 1.0);
@@ -139,8 +146,9 @@ func has_layer(L: int) -> bool:
 
 
 ## Plays flipbook `fx_id` on the ground point g for an effect of size s (Boom3D units); false if there is no
-## such flipbook or all its slots are busy, so the caller builds the effect from particles instead
-func flip(fx_id: String, g: Vector3, s: float) -> bool:
+## such flipbook or all its slots are busy, so the caller builds the effect from particles instead; tint with blue
+## above 1.5 recolours the fire to plasma (Boom3D.PLASMA_TINT)
+func flip(fx_id: String, g: Vector3, s: float, tint := Color(1, 1, 1, 1)) -> bool:
 	var fl: FxLayer = _flips.get(fx_id)
 	if fl == null or fl.alive() >= FLIP_SLOTS:
 		return false
@@ -150,7 +158,7 @@ func flip(fx_id: String, g: Vector3, s: float) -> bool:
 	if Render3D.I != null and Render3D.I.cam != null:
 		up = Render3D.I.cam.global_transform.basis.y
 	fl.emit({"p": g + up * side * float(f["lift"]), "life": float(f["life"]) * randf_range(0.9, 1.1),
-		"r0": side * 0.5, "r1": side * 0.5, "glow": float(f["glow"]), "c": Color(1, 1, 1, 1)})
+		"r0": side * 0.5, "r1": side * 0.5, "glow": float(f["glow"]), "c": tint})
 	return true
 
 

@@ -46,6 +46,8 @@ func _init(main: Main) -> void:
 		{"name": "zones", "times": [0.5, 1.6], "zones": true},
 		{"name": "emp", "times": [0.08, 0.25, 0.5], "emp": true},
 		{"name": "plasma", "times": [0.5, 0.7, 0.9, 1.4, 3.0], "plasma": true},   # S10-08: плазменная бомба падает и рвётся на земле
+		# S14-18: the same drop in real time for a clip (--film with godot --fixed-fps 30): burst, then the zone burns 4 s
+		{"name": "plasmafilm", "times": [1.0, 2.5, 4.0, 5.0], "plasma": true, "slow": 1.0},
 		{"name": "trails", "times": [0.3, 0.6, 1.0, 1.6], "trails": true},   # VFX-03: missile and rocket smoke
 		{"name": "wreck", "times": [1.0, 2.0, 3.0], "wreck": true},   # VFX-03: smoke of a wreck on the ground and of a falling plane
 		{"name": "screen", "times": [0.5, 1.5, 3.0, 5.0], "screen": true},   # VFX-03: convoy smoke screen (as Convoy.smoke_fx)

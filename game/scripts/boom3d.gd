@@ -90,6 +90,16 @@ vec3 ramp(float h) {
 	if (h < 3.0) return mix(c2, c3, h - 2.0);
 	return mix(c3, c4, h - 3.0);
 }
+// S14-18: plasma flame: violet soot → deep blue → cyan → blue-white core (HDR like ramp)
+vec3 pramp(float h) {
+	h = clamp(h, 0.0, 1.0) * 4.0;
+	vec3 c0 = vec3(0.03, 0.03, 0.08); vec3 c1 = vec3(0.06, 0.08, 0.6); vec3 c2 = vec3(0.1, 0.38, 1.5);
+	vec3 c3 = vec3(0.3, 0.8, 2.0); vec3 c4 = vec3(1.1, 1.6, 2.5);
+	if (h < 1.0) return mix(c0, c1, h);
+	if (h < 2.0) return mix(c1, c2, h - 1.0);
+	if (h < 3.0) return mix(c2, c3, h - 2.0);
+	return mix(c3, c4, h - 3.0);
+}
 """
 
 ## Плоская частица, всегда лицом к камере; поворот — INSTANCE_CUSTOM.x, размер — масштаб экземпляра
@@ -120,7 +130,9 @@ void fragment() {
 	float d = t.r * (0.8 + 0.4 * t.g);
 	float a = smoothstep(age * 0.85, age * 0.85 + 0.4, d);
 	float heat = clamp(cd.w * (1.0 - age * 0.9) + (d - 0.45) * 0.9, 0.0, 1.0);
-	ALBEDO = (ramp(heat) * COLOR.rgb) * FX_EXP;
+	// colour blue above 1.5 = plasma flame (Boom3D.PLASMA_TINT; the GPU path makes it linear, still above 1.5)
+	// (plasma at 0.8 heat: the flame body stays blue and cyan, only its heart goes blue-white)
+	ALBEDO = (COLOR.b > 1.5 ? pramp(heat * 0.8) : ramp(heat) * COLOR.rgb) * FX_EXP;
 	ALPHA = a * COLOR.a * fx_clear_k(SCREEN_UV, VIEWPORT_SIZE);
 }
 """
@@ -517,7 +529,10 @@ func spawn(pos: Vector2, s: float, air: bool, kind := "") -> void:
 		elif kind == "ground":
 			_ground(g, s * k * 1.3)
 		elif kind == "plasma":
-			_plasma(g, s * k)
+			if Tuning.g("fx_s14") >= 1.0:
+				_plasma_burn(g, s * k)
+			else:
+				_plasma(g, s * k)
 		else:
 			_blast(g, s * k)
 	elif kind == "flak":
@@ -740,9 +755,9 @@ func _core(p: Vector3, r0: float, r1: float, life: float, heat := 1.0, squash :=
 		"t": -delay, "c": Color(1, 1, 1, 1)})
 
 
-func _fire(p: Vector3, v: Vector3, r0: float, r1: float, life: float, heat := 1.0, buoy := 0.0, delay := 0.0) -> void:
+func _fire(p: Vector3, v: Vector3, r0: float, r1: float, life: float, heat := 1.0, buoy := 0.0, delay := 0.0, col := Color(1, 1, 1, 1)) -> void:
 	_add(L_FIRE, {"p": p, "v": v, "life": life, "r0": r0, "r1": r1, "h": heat, "b": buoy, "drag": 3.0, "g": 0.0,
-		"rot": randf() * TAU, "spin": randf_range(-1.5, 1.5), "tile": randi() % 4, "t": -delay, "c": Color(1, 1, 1, 1)})
+		"rot": randf() * TAU, "spin": randf_range(-1.5, 1.5), "tile": randi() % 4, "t": -delay, "c": col})
 
 
 ## S9-20: клуб чёрного дыма из подбитого двигателя в воздухе (pos — точка плоскости боя, s — размер)
@@ -975,6 +990,40 @@ func _plasma(g: Vector3, s: float) -> void:
 	_light(g + Vector3(0, s * 1.2, 0), clampf(s / 7.0, 1.5, 5.0), clampf(s * 9.0, 220.0, 800.0), 0.3)
 
 
+## S14-18 (Kanta 31.10: «нужен хороший эффект горения, сам взрыв берём из имеющихся… чтобы она была
+## плазменной»; toggle fx_s14, R-22): the burst is the bomb blast flipbook recoloured to plasma (GpuFx.flip
+## with PLASMA_TINT), then the zone burns as long as the plasma fire lasts (Hardpoint plasma t = 4 s): blue
+## flame spots with a cold flickering light and little smoke. Compatibility keeps the particle burst _plasma.
+const PLASMA_BURN := 4.0
+## Colour flag read by FIRE_SH and GpuFx.FLIP_SH: blue above 1.5 switches them to plasma colours
+const PLASMA_TINT := Color(1.0, 1.0, 2.0, 1.0)
+const PLASMA_LIGHT := Color(0.45, 0.7, 1.0)
+
+
+func _plasma_burn(g: Vector3, s: float) -> void:
+	var p := g + Vector3(0, s * 0.05, 0)
+	if _gpu == null or not _gpu.flip("blast", g, s, PLASMA_TINT):
+		_plasma(g, s)
+	else:
+		_flash(p + Vector3(0, s * 0.15, 0), s * 2.2, 0.1, Color(0.8, 0.92, 1.0, 1.0))
+		for i in _n(clampf(s / 8.0, 4.0, 8.0)):
+			var a := randf() * TAU
+			var dv := Vector3(cos(a) * randf_range(1.8, 3.2), randf_range(1.2, 2.4), sin(a) * randf_range(1.8, 3.2)) * s
+			_debris(p, dv, s * randf_range(0.05, 0.09), Color(0.26, 0.2, 0.14), 0.2, "dust", false, 0.0)
+		_sparks(p, _n(14), 280.0 + s * 8.0, 0.5, Color(0.55, 0.82, 1.0, 1.0), 0.1, 0.25)
+		_light(g + Vector3(0, s * 1.2, 0), clampf(s / 7.0, 1.5, 5.0), clampf(s * 9.0, 220.0, 800.0), 0.3)
+	var R := Render3D.I
+	var n := maxi(_n(clampf(s / 14.0, 3.0, 6.0)), 2)
+	for i in n:
+		var a := TAU * float(i) / n + randf_range(-0.4, 0.4)
+		var d := 0.0 if i == 0 else s * randf_range(0.35, 0.8)
+		var q := g + Vector3(cos(a), 0.0, sin(a)) * d
+		if R != null and R.terrain != null:
+			q.y = R.terrain.surface_fast(q.x, q.z).y
+		_emit.append({"p": q, "t": -randf_range(0.0, 0.4), "life": PLASMA_BURN, "s": s * randf_range(0.4, 0.5),
+			"acc_f": 0.0, "acc_s": 0.0, "fire_t": PLASMA_BURN - 0.5, "smk": 0.35, "fr": 1.8, "fc": PLASMA_TINT, "lc": PLASMA_LIGHT})
+
+
 ## Пыльная волна: клубы песка у самой земли разбегаются кольцом и оседают — объёмная, а не круг на земле
 func _dust_skirt(g: Vector3, s: float, reach: float) -> void:
 	# тест 3.5-s7: волна останавливается у края зоны поражения (≈ 1,7 s), клубы меньше — раньше пыль уходила
@@ -1130,13 +1179,13 @@ func _tick_emit(dt: float) -> void:
 			# the glow outlives the flames by 0.6 s: embers, then out
 			var after := float(e["t"]) - float(e.get("fire_t", float(e["life"])))
 			_fire_glow(e, p, s, k * clampf(1.0 - after / 0.6, 0.0, 1.0) if not _lo else 0.0)
-		e["acc_f"] = float(e["acc_f"]) + (dt * 10.0 * _q * k if fire_on else 0.0)
-		e["acc_s"] = float(e["acc_s"]) + dt * 7.0 * _q * (0.4 + 0.6 * k)
+		e["acc_f"] = float(e["acc_f"]) + (dt * 10.0 * float(e.get("fr", 1.0)) * _q * k if fire_on else 0.0)   # fr: flame rate
+		e["acc_s"] = float(e["acc_s"]) + dt * 7.0 * _q * (0.4 + 0.6 * k) * float(e.get("smk", 1.0))   # smk: less smoke (plasma spots)
 		while float(e["acc_f"]) >= 1.0:
 			e["acc_f"] = float(e["acc_f"]) - 1.0
 			var o := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * s * 0.6
 			_fire(p + o + Vector3(0, s * 0.2, 0), Vector3(0, s * randf_range(1.2, 2.2), 0), s * 0.35 * (0.5 + k), s * 0.75 * (0.5 + k),
-				randf_range(0.2, 0.4), 0.7 + 0.2 * k, 10.0)
+				randf_range(0.2, 0.4), 0.7 + 0.2 * k, 10.0, 0.0, e.get("fc", Color(1, 1, 1, 1)))   # fc: plasma spots burn blue
 		while float(e["acc_s"]) >= 1.0:
 			e["acc_s"] = float(e["acc_s"]) - 1.0
 			var o2 := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * s * 0.4
@@ -1174,6 +1223,7 @@ func _fire_glow(e: Dictionary, p: Vector3, s: float, glow: float) -> void:
 	var t := _fire_clock + float(slot["ph"])
 	var flicker := 0.72 + 0.16 * sin(t * 17.0) + 0.12 * sin(t * 41.0 + 1.3) * sin(t * 7.0)
 	var l: OmniLight3D = slot["l"]
+	l.light_color = e.get("lc", Color(1.0, 0.52, 0.2))   # lc: cold light of a plasma spot
 	l.position = p + Vector3(0, s * 0.9 + 8.0, 0)
 	l.omni_range = clampf(s * 10.0, 130.0, 420.0)
 	l.light_energy = clampf(s * 2.5, 18.0, 40.0) * LIGHT_EXPOSURE_COMP * glow * flicker
