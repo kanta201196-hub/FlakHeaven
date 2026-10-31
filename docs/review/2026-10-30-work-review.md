@@ -224,6 +224,6 @@ Effect: it becomes visible whether the daily posts give anything before the Stea
 
 ---
 
-## Decisions (filled in after Kanta's answer)
+## Decisions
 
-_Pending._
+**Kanta 31.10.2026: «По всем пунктам ок»** — all nine proposals accepted. Tasks R-17…R-25 in `docs/backlog.md` (section «Процесс»), journal line 31.10 in `docs/game-context.md`.

@@ -16,9 +16,10 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 - A reply starts with what is needed from Kanta; each action with a direct link.
 - Proposal first for large changes to rules, structure and settings; small reversible things are done right away and reported.
 - Do it yourself / automate first; ask Kanta last (Kanta, 2026-10-20).
-- One thread per system; at most 3 code threads and 2 Opus threads at once.
+- One thread per system; at most 6 strong-model (Opus) threads at once (Kanta, 2026-10-25).
 - Daily stand-up 17:00 MSK; weekly owner checklist (`docs/owner-checklist/`) and Friday review.
 - Models: strong for code, game design, 3D; lighter for statuses, docs, builds. Claude picks and says which. Long processes in background, heavy work during the day.
+- Marketing: posts from the approved weekly plan go out at 12:00 MSK unless Kanta writes «стоп» by 11:00; texts in Kanta's own voice (devlog, opinions, replies to people) still need «ок» (Kanta, 2026-10-31, R-19).
 - Second opinions (GPT, Gemini) are advice: parsed point by point, Kanta decides.
 
 ## Art and 3D
@@ -40,6 +41,9 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 ## Builds
 - Export presets in `game/export_presets.cfg`: "Windows Tester", "macOS Tester", "Linux Check". The `tester` feature turns off debug (F1, F4–F8, hangar debug).
 - Build number: `BUILD` in `game/scripts/main.gd`; report endpoint: `REPORT_URL_BUILTIN` there. Kits: `tools/tester/make_kit.sh`.
+- Every build ships with a «что проверить» page (≤ 15 lines). Items Kanta does not flag become «проверено в sN» in the backlog the next day (Kanta, 2026-10-31, R-18).
+- Before a build: the self-check contact sheet (hangar and combat) is attached to the build message (R-23).
+- Feel and effects changes Kanta wants to judge (turret firing, flight feel, effects) go into `main` behind a toggle, off by default until Kanta's «ок» (Kanta, 2026-10-31, R-22).
 - Debug flags: `--tester`, `--report-url=…`, `--mesatest`, `--reporttest`, `--turbo`.
 
 ## Superpowers experiment (since 2026-10-23)

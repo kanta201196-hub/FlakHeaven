@@ -269,7 +269,7 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 
 | ID | Задача | Тред / владелец | Статус |
 | --- | --- | --- | --- |
-| R-13 | После запуска каналов: один тред предлагает варианты контроля продвижения, отслеживает результаты, отчитывается еженедельно; после страницы Steam — пересмотр графика и формата | Маркетинг и реклама | идея (ждёт запуска каналов) |
+| R-13 | После запуска каналов: один тред предлагает варианты контроля продвижения, отслеживает результаты, отчитывается еженедельно; после страницы Steam — пересмотр графика и формата | Маркетинг и реклама | в работе с 31.10 (каналы запущены, см. R-25) |
 | M-05 (блогеры) | Список 50–100 стримеров и блогеров жанра, пресс-кит | Маркетинг и реклама | идея |
 | MK-01 | Недельное условие вылета (как «модификаторы уровня каждую неделю» у Sublight) — повод возвращаться; решает геймдизайн и Kanta (`docs/marketing/sublight-case.md`) | Маркетинг → геймдизайн | идея |
 | M-02 (веб) | Пробный веб-экспорт Godot (размер, FPS) — годится ли браузерная версия | программист | идея |
@@ -310,11 +310,20 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | R-05 | Инструкции проекта заменить на 15 правил (текст — `docs/process/project-instructions.md`) | координатор (поле настроек проекта) | 22.10 | готово 22.10 |
 | R-07 | Список «только Kanta» (`docs/owner-checklist/kanta-now.md`) первым пунктом планёрки: файл и промпт планёрки | координатор | 22.10 | готово 22.10 |
 | R-09 | Модели принимаются по галерее до сборки (см. раздел «Модели») | 3D-модели, координатор | с 22.10 | готово как правило; действует с возобновлением треда |
-| R-10 | Методика баланса `docs/balance-method.md`: показатели лога `l7`, операция и класс, нормы; правки баланса не чаще раза в сборку с «было → стало»; методику согласует Kanta | Бой, звук и производительность | до следующей сборки | идея |
+| R-10 | Методика баланса `docs/balance-method.md`: показатели лога `l7`, операция и класс, нормы; правки баланса не чаще раза в сборку с «было → стало»; методику согласует Kanta | Бой, звук и производительность | до следующей сборки | готово 23.10: method v1 accepted (`docs/balance-method.md`); «one change per build» still applies |
 | R-12 | Планёрка: строки «цикл сборки» и «дни до Next Fest», раз в неделю — статус ревью | координатор (промпт планёрки) | 22.10 | готово 22.10 |
-| R-14 | Запустить EX-01…EX-12 и код демо DM-02…DM-05: после R-03 и R-04 — координатор запускает с учётом лимита (не больше шести тредов на сильной модели с 25.10) | координатор | после R-04 | в работе (координатор): R-03 и R-04 закрыты 22.10, ждёт запуска |
+| R-14 | Запустить EX-01…EX-12 и код демо DM-02…DM-05: после R-03 и R-04 — координатор запускает с учётом лимита (не больше шести тредов на сильной модели с 25.10) | координатор | после R-04 | готово: EX shipped in 3.5-s9 (22.10), DM-02…DM-05 done 22.10 |
 | R-15 | Еженедельное ревью работы: пятница 18:00 МСК, отдельный тред, сильная модель; первое 30.10 (23.10 пропускаем); запланированная задача trig_019ogc72sDgnqvRSKPUvjrXY (пятница 17:43 МСК, новый тред) | координатор | 22.10 | готово 22.10, первое ревью 30.10 |
 | R-16 | Review 2026-10-30: Superpowers — keep in the repo or install as an account plugin. For the plugin: updates itself, works in every project. Against: the "project rules override skills" lines added to 4 skills are lost on plugin update; not verified whether cloud threads see account plugins (check before the review). Also assess the new short CLAUDE.md (5.9 KB instead of 25.5 KB) | coordinator (review) | 2026-10-30 | idea |
+| R-17 | Home PC: one-time Claude permission allowlist for `godot.exe`, build/bench PowerShell scripts, copying into `E:\Claude\FlakHeaven\builds` — builds and benches stop waiting for «Разрешить» (review 30.10, №1) | Собрать тестовую сборку 3.5-s14 | 01.11 | в работе |
+| R-18 | With every build a page «что проверить» (≤ 15 lines); items Kanta does not flag become «проверено в sN» in the backlog the next day (review 30.10, №2) | Собрать тестовую сборку 3.5-s14 (с s14) | с s14 | в работе |
+| R-19 | Posts from the approved weekly plan go out at 12:00 MSK unless Kanta writes «стоп» by 11:00; texts in Kanta's voice (devlog, opinions, replies) still need «ок» (review 30.10, №3) | Маркетинг и реклама | с 01.11 | в работе |
+| R-20 | Steamworks fill-in page: S1–S3 fields with decided values, tax form choice, legal ways to pay the $100 fee from Russia (review 30.10, №4) | Еженедельное ревью работы | 31.10 | в работе |
+| R-21 | Daily stand-up also updates `docs/owner-checklist/kanta-now.md`, backlog «Где мы сейчас», and a build line in `docs/status-log.md` (review 30.10, №5) | координатор (промпт планёрки) | 01.11 | в работе |
+| R-22 | Feel and effects changes Kanta wants to judge (turret firing, flight feel, effects) go into `main` behind an F1/settings toggle, off by default until «ок» (review 30.10, №6) | все треды боя и эффектов; координатор в брифах | с 31.10 | правило, действует |
+| R-23 | Build self-check as a script: contact sheet of hangar (classes × planes × weapons × lvl 1/3/5/modernised) and combat (nozzles, barrels, pylons, smoke) on a page attached to every build (review 30.10, №7) | 3D-модели по плану Kirill | до s15 | в работе |
+| R-24 | Memory cleanup: `MEMORY.md` index under 4 KB, duplicate «Russian names» memories merged; backlog R-10, R-14 statuses fixed (review 30.10, №8) | Еженедельное ревью работы | 31.10 | в работе |
+| R-25 | Weekly marketing numbers (Sunday, one line in the stand-up): Telegram subscribers, Discord members, site visitors without bots, tester applications, posts out vs plan; starts R-13 (review 30.10, №9) | Маркетинг и реклама | с 01.11 | в работе |
 | T4-06, B-35 | Замер производительности: FPS и треугольники по логам реальных ПК (в облаке рендер программный — FPS не показателен); режим `--bench` в игре есть | Бой, звук и производительность | — | на проверке в сборке 3.5-s8 (колонки лога; прогон на ПК Kanta — по желанию) |
 | CI-FLAKY-01 | Flaky test: `village_thread_test.gd` failed once in `unit.sh` on 24.10 after merging main into PR #372, then passed 3 of 3 reruns (threaded village build, timing?) | — | — | flaky test, watch |
 | EX-11 | После демо: перки, меняющие правила (Е1), вес самолётов (Ж1), новые боссы (Г2), карта кампании (И2) | — | после демо | идея (отложено) |
