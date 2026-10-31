@@ -25,6 +25,8 @@ import sys
 
 import numpy as np
 from scipy.ndimage import gaussian_filter
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import connected_components
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -45,10 +47,16 @@ SURF = {
         ("htail", "z", 0.135, 0.21, -0.49, -0.25, -0.085, -0.045, 1, ("le", "te")),
         ("fin", "y", 0.035, 0.115, -0.51, -0.25, -0.012, 0.012, 1, ("le", "te")),
     ],
-    # «Оса» 1 (Sketchfab, clean low-poly hand model) and «Оса» 2 (Meshy at 100k, flat facets) have straight,
-    # clean edges already; the grid pull bent their sparse flat panels, so they are left as they are
+    # «Оса» 1 (Sketchfab, clean low-poly hand model) has straight, clean edges already; the grid pull bent its
+    # sparse flat panels, so it is left as it is. «Оса» 2 (Meshy at 100k): outline only on its sparse outer
+    # panels (no skin pull, last field False); the fins are canted, one entry per side (z range signed)
     "fighter_1": [],
-    "fighter_2": [],
+    "fighter_2": [
+        ("wing", "z", 0.20, 0.40, -0.40, 0.02, -0.050, -0.024, 1, ("le", "te"), 0.005, 0.55, False),
+        ("htail", "z", 0.16, 0.27, -0.48, -0.395, -0.052, -0.024, 1, ("te",), 0.005, 0.55, False),
+        ("fin_l", "y", 0.012, 0.088, -0.39, -0.22, -0.19, -0.14, 1, ("le", "te"), 0.005, 0.55, False),
+        ("fin_r", "y", 0.012, 0.088, -0.39, -0.22, 0.14, 0.19, 1, ("le", "te"), 0.005, 0.55, False),
+    ],
     "bomber_1": [
         ("wing_mid", "z", 0.20, 0.27, -0.12, 0.10, -0.080, -0.045, 1, ("le", "te")),
         ("wing_out", "z", 0.335, 0.49, -0.24, 0.02, -0.100, -0.060, 1, ("le", "te")),
@@ -63,6 +71,19 @@ SURF = {
 }
 # Broad top skins evened by smooth_top (S14-02 autotest: bumps on the fuselage top and the wing root of bomber_2):
 # name, x0, x1, z0, z1 (|z| when mirrored), mirrored, smoothing sigma along x and across z (model units).
+# Regions whose skin is evened out by denoise (feature-preserving: steps and torn lips go, hard edges stay):
+# name, x0, x1, y0, y1, z0, z1 (|z| when mirrored), mirrored, crease angle (degrees: sharper edges that chain into
+# a line are features and only straightened along themselves), Taubin passes.
+# «Оса» 2 (Meshy at 100k): the intake lips are torn where they meet the fuselage and wing glove, the fuselage
+# sides, nacelle bellies and wing roots are stepped facets (Kanta s14)
+DENOISE = {
+    "fighter_2": [
+        ("intakes", -0.08, 0.14, -0.092, 0.0, 0.03, 0.17, True, 35.0, 3),
+        ("nacelles", -0.40, -0.08, -0.092, -0.03, 0.02, 0.15, True, 35.0, 3),
+        ("glove", -0.38, 0.0, -0.035, 0.012, 0.08, 0.20, True, 35.0, 3),
+        ("fuselage", -0.10, 0.20, -0.06, 0.04, 0.0, 0.08, True, 35.0, 3),
+    ],
+}
 TOPS = {
     "bomber_2": [
         ("spine", -0.30, 0.24, -0.06, 0.06, False, 0.010, 0.004),
@@ -73,6 +94,10 @@ TOPS = {
 WIN = 0.0016     # running window of the raw edge along the span
 BROAD_R = 0.003   # radius of the broad-deviation median (spike vs pylon)
 TOP_CELL = 0.003  # height-field cell of smooth_top
+CREASE_SIG = 0.005  # smoothing length along a crease line (denoise)
+CREASE_MAX = 0.0015  # largest pull of a crease vertex per round (denoise): serrations, not the line's own bends
+NF_RAD = 0.004      # neighbourhood of the face-normal filter (denoise)
+NF_SIGR = 0.3       # normal tolerance of the face-normal filter, |n_i - n_j| (~17 degrees)
 TOP_DIP = 0.003   # deepest dimple smooth_top fills; anything lower is another surface
 GATE = 0.005     # 5 mm: farther off the fitted edge is shape, not noise
 EDGE_BAND = 0.25  # chord share over which the edge correction fades out
@@ -115,8 +140,10 @@ class Model:
             for pr in j["meshes"][n["mesh"]]["primitives"]:
                 a = pr["attributes"]["POSITION"]
                 mat = j["materials"][pr["material"]].get("name", "") if "material" in pr else ""
-                e = self.acc.setdefault(a, {"M": M, "tris": [], "nrm": pr["attributes"].get("NORMAL"), "kinds": set()})
+                e = self.acc.setdefault(a, {"M": M, "tris": [], "nrm": pr["attributes"].get("NORMAL"), "kinds": set(),
+                                            "tri_mats": []})
                 e["tris"].append(self.g.accessor(pr["indices"]).reshape(-1, 3).astype(np.int64))
+                e["tri_mats"].append(mat)
                 e["kinds"].add(mat)
         for a, e in self.acc.items():
             p = self.g.accessor(a).astype(np.float64)
@@ -182,7 +209,7 @@ class Model:
             acc["min"] = [float(v) for v in loc.min(0)]
             acc["max"] = [float(v) for v in loc.max(0)]
             if e["nrm"] is not None and a in dn:
-                nn = e["N"] + dn[a]
+                nn = e["N"] + dn[a] * (~e["Nfixed"])[:, None] if "Nfixed" in e else e["N"] + dn[a]
                 nn /= np.maximum(np.linalg.norm(nn, axis=1, keepdims=True), 1e-12)
                 # a welded normal is ill-defined on a knife edge (both skins meet): never turn a normal by more
                 # than ~70 degrees there, or the vertex shades as a dark speck against its faces
@@ -416,6 +443,7 @@ def polish_surface(model, spec, side, report):
     name, ax, s0, s1, x0, x1, t0, t1, segs, edges = spec[:10]
     gmax = spec[10] if len(spec) > 10 else GATE   # a long, wavy edge may need a wider gate
     a_mid = spec[11] if len(spec) > 11 else 0.55  # pull of the mid-chord skin (lumps, slat and flap seams)
+    skin = spec[12] if len(spec) > 12 else True   # False: outline only (sparse flat panels bend under the grid pull)
     AP, AN = model.analysis_points()
     if ax == "z":
         sa, ta = 2, 1
@@ -545,7 +573,7 @@ def polish_surface(model, spec, side, report):
         report.append("%s: kept off-skin points %d, chord share hist %s, dev mm p50 %.1f" % (
             tag, int(kp.sum()), np.histogram(cn[kp], bins=10, range=(0, 1))[0].tolist(),
             np.median(np.abs(dev[kp])) * 1e3 if kp.any() else 0))
-    dt = -dev * alpha * keep * inside * w
+    dt = -dev * alpha * keep * inside * w * skin
     newP = pool.copy()
     newP[:, 0] = xn
     newP[:, ta] = tp + dt
@@ -553,6 +581,289 @@ def polish_surface(model, spec, side, report):
     model.unpool(newP)
     report.append("%s: moved %d of %d points in the box, max %.2f mm" % (tag, int((d > 1e-6).sum()), len(pool),
                                                                          d.max() * 1e3))
+
+
+def _skin_weld(model):
+    """Every skin face of the model (glass and wells left out) on one welded vertex set: (keys, offsets, inverse
+    map glTF vertex -> welded vertex, welded positions, welded faces without collapsed ones)."""
+    keys = list(model.acc)
+    offs, P, F = {}, [], []
+    off = 0
+    for a in keys:
+        e = model.acc[a]
+        offs[a] = off
+        P.append(e["P"])
+        for t, mt in zip(e["tris"], e["tri_mats"]):
+            if mt not in ("glass", "mech_well"):
+                F.append(t + off)
+        off += len(e["P"])
+    P = np.vstack(P)
+    F = np.vstack(F)
+    _, first, inv = np.unique(np.round(P / 1e-6).astype(np.int64), axis=0, return_index=True, return_inverse=True)
+    inv = inv.reshape(-1)
+    Fw = inv[F]
+    Fw = Fw[(Fw[:, 0] != Fw[:, 1]) & (Fw[:, 1] != Fw[:, 2]) & (Fw[:, 0] != Fw[:, 2])]
+    return keys, offs, inv, P[first].copy(), Fw
+
+
+def _face_normals(W, F):
+    """Unit face normals and areas"""
+    fn = np.cross(W[F[:, 1]] - W[F[:, 0]], W[F[:, 2]] - W[F[:, 0]])
+    ar = np.linalg.norm(fn, axis=1)
+    return fn / np.maximum(ar[:, None], 1e-20), 0.5 * ar
+
+
+def _creases(W, F, crease_deg, min_len):
+    """Crease edges of a welded mesh: dihedral above crease_deg, open or non-manifold, kept only where they chain
+    into a line longer than min_len (single sharp edges in a stepped patch are noise, not features). Returns the
+    crease edges (n, 2)."""
+    fn, _ = _face_normals(W, F)
+    e = np.concatenate([F[:, [0, 1]], F[:, [1, 2]], F[:, [2, 0]]])
+    fid = np.tile(np.arange(len(F)), 3)
+    key = np.sort(e, 1)
+    k1 = key[:, 0] * (1 << 32) + key[:, 1]
+    o = np.argsort(k1, kind="stable")
+    _, st, cnt = np.unique(k1[o], return_index=True, return_counts=True)
+    ue = key[o[st]]
+    sharp = cnt != 2
+    two = np.nonzero(cnt == 2)[0]
+    dot = np.einsum("ij,ij->i", fn[fid[o[st[two]]]], fn[fid[o[st[two] + 1]]])
+    # a knife edge (wing, lip, thin sheet: the faces fold back) is a crease too, so the signed angle counts
+    sharp[two] = np.degrees(np.arccos(np.clip(dot, -1, 1))) > crease_deg
+    ce = ue[sharp]
+    if not len(ce):
+        return ce
+    n = len(W)
+    k, lab = connected_components(coo_matrix((np.ones(len(ce)), (ce[:, 0], ce[:, 1])), shape=(n, n)), directed=False)
+    ln = np.linalg.norm(W[ce[:, 0]] - W[ce[:, 1]], axis=1)
+    tot = np.bincount(lab[ce[:, 0]], weights=ln, minlength=k)
+    return ce[tot[lab[ce[:, 0]]] > min_len]
+
+
+def _crease_paths(ce, cdeg, n):
+    """Crease edges split into simple lines at junctions and ends (vertices with other than two crease edges):
+    yields (vertex list, closed)."""
+    nb = [[] for _ in range(n)]
+    for a, b in ce:
+        nb[a].append(b)
+        nb[b].append(a)
+    used = set()
+    out = []
+    starts = [v for v in np.unique(ce) if cdeg[v] != 2]
+    for st in starts + [v for v in np.unique(ce) if cdeg[v] == 2]:
+        for nx in nb[st]:
+            if (min(st, nx), max(st, nx)) in used:
+                continue
+            path = [st]
+            prev, cur = st, nx
+            used.add((min(st, nx), max(st, nx)))
+            closed = False
+            while True:
+                path.append(cur)
+                if cdeg[cur] != 2:
+                    break
+                nxt = nb[cur][0] if nb[cur][0] != prev else nb[cur][1]
+                k = (min(cur, nxt), max(cur, nxt))
+                if k in used:
+                    closed = nxt == path[0]
+                    break
+                used.add(k)
+                prev, cur = cur, nxt
+            if closed:
+                path = path[:-1] if path[-1] == path[0] else path
+            out.append((np.array(path), closed))
+    return out
+
+
+def _split_corners(W, paths, turn_deg=40.0):
+    """Crease lines cut at their corners (a turn sharper than turn_deg over CREASE_SIG on each side): an intake
+    corner or a chine kink is a feature and must not be rounded off by the smoothing along the line."""
+    out = []
+    for path, closed in paths:
+        Q = W[path]
+        m = len(path)
+        if m < 5:
+            out.append((path, closed))
+            continue
+        sl = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(Q, axis=0), axis=1))]
+        cut = []
+        for i in range(1, m - 1):
+            j0 = np.searchsorted(sl, sl[i] - CREASE_SIG)
+            j1 = min(np.searchsorted(sl, sl[i] + CREASE_SIG), m - 1)
+            u, v = Q[i] - Q[min(j0, i - 1)], Q[max(j1, i + 1)] - Q[i]
+            c = np.dot(u, v) / max(np.linalg.norm(u) * np.linalg.norm(v), 1e-20)
+            if c < np.cos(np.radians(turn_deg)):
+                cut.append(i)
+        if not cut:
+            out.append((path, closed))
+            continue
+        # keep only the sharpest index of each run of cut points
+        runs, cur = [], [cut[0]]
+        for i in cut[1:]:
+            if i == cur[-1] + 1:
+                cur.append(i)
+            else:
+                runs.append(cur)
+                cur = [i]
+        runs.append(cur)
+        idx = [r[len(r) // 2] for r in runs]
+        if closed:
+            path = np.r_[path[idx[0]:], path[:idx[0] + 1]]
+            idx = [i - idx[0] if i >= idx[0] else i + m - idx[0] for i in idx]
+        bounds = [0] + idx + [len(path) - 1]
+        for a, b in zip(bounds[:-1], bounds[1:]):
+            if b - a >= 1:
+                out.append((path[a:b + 1], False))
+    return out
+
+
+def _straighten_creases(W, ce, cdeg, isc, A, deg, wv):
+    """Each crease line between junctions smoothed along its own length (gaussian over arc length, sigma
+    CREASE_SIG), the correction fading to nothing at its ends so junctions and corners stay put; the skin next to a
+    moved crease follows it, decaying over a few rings, so the lip moves as one piece. W is changed in place."""
+    n = len(W)
+    D = np.zeros_like(W)
+    for path, closed in _split_corners(W, _crease_paths(ce, cdeg, n)):
+        Q = W[path]
+        sl = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(Q, axis=0), axis=1))]
+        if len(path) < 4 or sl[-1] < 2 * CREASE_SIG:
+            continue
+        dd = sl[:, None] - sl[None, :]
+        if closed:
+            per = sl[-1] + np.linalg.norm(Q[0] - Q[-1])
+            dd = (dd + per / 2) % per - per / 2
+        wgt = np.exp(-0.5 * (dd / CREASE_SIG) ** 2)
+        sm = wgt @ Q / wgt.sum(1, keepdims=True)
+        fade = np.ones(len(path)) if closed else np.clip(np.minimum(sl, sl[-1] - sl) / (2 * CREASE_SIG), 0, 1)
+        dq = (sm - Q) * fade[:, None]
+        # across the line only: a slide along it changes nothing in the shape but drags the paint
+        tg = np.gradient(sm, axis=0)
+        tg /= np.maximum(np.linalg.norm(tg, axis=1, keepdims=True), 1e-20)
+        dq -= tg * np.einsum("ij,ij->i", dq, tg)[:, None]
+        # serrations are a millimetre or two: a bigger pull is a real bend of the line, kept
+        ln = np.linalg.norm(dq, axis=1, keepdims=True)
+        D[path] = dq * np.minimum(1.0, CREASE_MAX / np.maximum(ln, 1e-12))
+    Dc = D.copy()
+    for _ in range(6):
+        Dc = np.where(isc[:, None], D, (A @ Dc) / deg[:, None] * 0.8)
+    W += Dc * wv[:, None]
+
+
+def _filter_surface(W, F, free, wv):
+    """Bilateral filtering of the face normals (neighbours within NF_RAD, weighted by distance and by how close
+    their normal is: faces across a crease or on the far side of a thin part do not count), then the free vertices
+    moved to fit the planes of the filtered normals (Sun et al. 2007). W is changed in place."""
+    n = len(W)
+    fn, ar = _face_normals(W, F)
+    c = W[F].mean(1)
+    pairs = cKDTree(c).query_pairs(NF_RAD, output_type="ndarray")
+    pi = np.concatenate([pairs[:, 0], pairs[:, 1], np.arange(len(c))])
+    pj = np.concatenate([pairs[:, 1], pairs[:, 0], np.arange(len(c))])
+    ws = ar[pj] * np.exp(-0.5 * (np.linalg.norm(c[pi] - c[pj], axis=1) / (NF_RAD / 2)) ** 2)
+    nf = fn.copy()
+    for _k in range(3):
+        w = ws * np.exp(-0.5 * (np.linalg.norm(nf[pi] - nf[pj], axis=1) / NF_SIGR) ** 2)
+        acc = np.zeros_like(nf)
+        np.add.at(acc, pi, nf[pj] * w[:, None])
+        nf = acc / np.maximum(np.linalg.norm(acc, axis=1, keepdims=True), 1e-20)
+    for _k in range(10):
+        c = W[F].mean(1)
+        d = np.zeros_like(W)
+        cnt = np.zeros(n)
+        for k in range(3):
+            vi = F[:, k]
+            np.add.at(d, vi, nf * np.einsum("ij,ij->i", nf, c - W[vi])[:, None])
+            np.add.at(cnt, vi, 1)
+        ok = (cnt > 0) & free
+        W[ok] += d[ok] / cnt[ok, None] * wv[ok, None]
+
+
+def denoise(model, spec, report):
+    """Fair the skin in one box (DENOISE entry) and keep its features: crease lines (dihedral over crease_deg,
+    chained longer than 12 mm: the intake lips, chines, the wing and fin edges) are smoothed along themselves, so a
+    torn, saw-toothed lip becomes one clean curve; every other vertex moves only along its normal towards the mean
+    of its neighbours (Taubin steps, no shrinking), so stepped facets and dents become one smooth surface and the
+    paint does not slide. The skin and the cut-out parts move as one welded mesh (seams stay closed), the effect
+    fades out over 6 mm round the box, and the moved vertices get fresh normals in write()."""
+    name, x0, x1, y0, y1, z0, z1, mirror, crease_deg, iters = spec
+    keys, offs, inv, W, Fw = _skin_weld(model)
+    mg = 0.006
+
+    def zc(Q):
+        return np.abs(Q[:, 2]) if mirror else Q[:, 2]
+    x, y, z = W[:, 0], W[:, 1], zc(W)
+    wv = (smoothstep(x0 - mg, x0, x) * (1 - smoothstep(x1, x1 + mg, x)) * smoothstep(y0 - mg, y0, y)
+          * (1 - smoothstep(y1, y1 + mg, y)) * smoothstep(z0 - mg, z0, z) * (1 - smoothstep(z1, z1 + mg, z)))
+    act = wv > 0
+    keepf = act[Fw].any(1)
+    F = Fw[keepf]
+    n = len(W)
+    ue = np.unique(np.sort(np.concatenate([F[:, [0, 1]], F[:, [1, 2]], F[:, [2, 0]]]), 1), axis=0)
+    A = coo_matrix((np.ones(2 * len(ue)), (np.r_[ue[:, 0], ue[:, 1]], np.r_[ue[:, 1], ue[:, 0]])), shape=(n, n)).tocsr()
+    deg = np.maximum(np.asarray(A.sum(1)).ravel(), 1)
+    W0 = W.copy()
+    # rounds of: the crease lines found again on the current shape and straightened, then the surfaces between
+    # them evened out; a last crease pass after the surfaces have settled (the filter sharpens a crease, and a
+    # ragged crease shows more once it is sharp)
+    for rnd in range(iters + 1):
+        ce = _creases(W, F, crease_deg, 0.012)
+        isc = np.zeros(n, bool)
+        isc[ce.reshape(-1)] = True
+        cdeg = np.bincount(ce.reshape(-1), minlength=n)
+        _straighten_creases(W, ce, cdeg, isc, A, deg, wv)
+        if rnd < iters:
+            _filter_surface(W, F, ~isc, wv)
+    mv = np.linalg.norm(W - W0, axis=1)
+    for a in keys:
+        e = model.acc[a]
+        cnt = len(e["P"])
+        ii = inv[offs[a]:offs[a] + cnt]
+        sel = mv[ii] > 1e-9
+        e["P"][sel] = W[ii[sel]]
+        e.setdefault("renorm", np.zeros(cnt, bool))
+        e["renorm"] |= wv[ii] > 0
+    report.append("%s: %d vertices in the box, %d crease edges kept, moved %d, max %.2f mm, p95 %.2f mm" % (
+        name, int(act.sum()), len(ce), int((mv > 1e-6).sum()), mv.max() * 1e3,
+        np.percentile(mv[mv > 1e-6], 95) * 1e3 if (mv > 1e-6).any() else 0.0))
+
+
+def fresh_normals(model):
+    """New shading normals for the vertices denoise() evened out: area-weighted over the welded faces round each
+    vertex that lie within 60 degrees of its old normal, so a vertex on one side of a hard edge takes only its own
+    side (the remesh's normals there followed the old steps)."""
+    keys, offs, inv, W, Fw = _skin_weld(model)
+    if not any("renorm" in model.acc[a] for a in keys):
+        return
+    fn, ar = _face_normals(W, Fw)
+    vf = [[] for _ in range(len(W))]
+    need = np.zeros(len(W), bool)
+    for a in keys:
+        e = model.acc[a]
+        if "renorm" in e and "N" in e:
+            need[inv[offs[a]:offs[a] + len(e["P"])][e["renorm"]]] = True
+    for k in range(3):
+        for f, v in zip(np.nonzero(need[Fw[:, k]])[0], Fw[need[Fw[:, k]], k]):
+            vf[v].append(f)
+    for a in keys:
+        e = model.acc[a]
+        if "renorm" not in e or "N" not in e:
+            continue
+        ii = inv[offs[a]:offs[a] + len(e["P"])]
+        for vi in np.nonzero(e["renorm"])[0]:
+            fs = vf[ii[vi]]
+            if not fs:
+                continue
+            fs = np.array(fs)
+            nf = fn[fs] * np.sign(np.einsum("ij,j->i", fn[fs], e["N"][vi]))[:, None]
+            ok = np.einsum("ij,j->i", nf, e["N"][vi]) > 0.5
+            if not ok.any():
+                continue
+            s = (nf[ok] * ar[fs][ok, None]).sum(0)
+            ln = np.linalg.norm(s)
+            if ln > 1e-20:
+                e["N"][vi] = s / ln
+                e["Nfixed"] = e.get("Nfixed", np.zeros(len(e["P"]), bool))
+                e["Nfixed"][vi] = True
 
 
 def broad_dev(P, dev, r=None):
@@ -658,6 +969,8 @@ def main():
     a = ap.parse_args()
     m = Model(a.src)
     rep = []
+    for spec in DENOISE.get(a.key, []):
+        denoise(m, spec, rep)
     for spec in TOPS.get(a.key, []):
         smooth_top(m, spec, rep)
     for spec in SURF[a.key]:
@@ -666,6 +979,8 @@ def main():
                 polish_surface(m, spec, side, rep)
         else:
             polish_surface(m, spec, 0, rep)
+    if os.environ.get("POLISH_FRESH"):
+        fresh_normals(m)
     m.write(a.dst)
     print("\n".join(rep))
     return 0
