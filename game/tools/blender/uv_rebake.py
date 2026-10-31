@@ -22,7 +22,9 @@ Run from the repo root (needs bpy 5.x as a module), then `godot --headless --pat
   python3 game/tools/blender/uv_rebake.py game/models/hangar/fh_hangar_fighter_1.glb /tmp/out_dir \
       [--tex 4096] [--angle 60] [--margin 8] [--samples 4] [--threads 2]
 Output: /tmp/out_dir/<same name>.glb and its maps; copy them over the originals. After it, tex_clean.py for the
-crisp camouflage (docs/tasks/3d-models-handoff.md).
+crisp camouflage, then embed the finished maps again (docs/tasks/3d-models-handoff.md):
+  python3 game/tools/blender/uv_rebake.py --embed <out.glb> <final.glb> color=<color.jpg> orm=<orm.jpg> \
+      normal=<normal.jpg>
 """
 import argparse
 import math
@@ -355,8 +357,25 @@ def rewrite_glb(g: glb_io.Glb, spans: list, cuv: np.ndarray, images: dict, dst: 
     return "textured vertices %d -> %d (split along the new seams)" % (before, after)
 
 
+def embed(glb: str, dst: str, pairs: list) -> None:
+    """Write dst: the GLB with its embedded images replaced by name from JPEG files (name=path), so the images
+    Godot extracts are the finished maps (after tex_clean.py), not the raw bake."""
+    g = glb_io.load(glb)
+    paths = dict(p.split("=", 1) for p in pairs)
+    for im in g.j.get("images", []):
+        if im.get("name") in paths:
+            im["bufferView"] = _append_view(g, np.frombuffer(open(paths[im["name"]], "rb").read(), np.uint8), None)
+            im["mimeType"] = "image/jpeg"
+            log("embedded", im["name"], paths[im["name"]])
+    g.compact()
+    g.save(dst)
+
+
 def main() -> int:
     """Command line: re-unwrap one hangar GLB and re-bake its maps into an output folder."""
+    if len(sys.argv) > 3 and sys.argv[1] == "--embed":
+        embed(sys.argv[2], sys.argv[3], sys.argv[4:])
+        return 0
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("src", help="hangar GLB; its maps are the extracted <model>_<image name>.jpg next to it")
     ap.add_argument("out_dir")

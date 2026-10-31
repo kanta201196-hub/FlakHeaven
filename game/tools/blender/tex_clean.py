@@ -20,7 +20,11 @@
 The GLB is read only for its UVs; images inside it are not touched (Godot uses the extracted files next to it).
 
   python3 -I tex_clean.py <model.glb> <map.jpg> <out.jpg> [--pad 24] [--camo 2 [--sigma 3.5] [--detail 0.7] [--wear 0.35]]
-      [--even 0.85 [--ref <colour map.jpg>]]"""
+      [--even 1 [--ref <colour map.jpg>] [--even-detail 1] [--even-wear 0.3]]
+On a normal map --even with a small --even-detail and no wear keeps the panel relief and drops the generator's
+crinkle and the tilt of every patch (each patch shaded a little differently).
+Recipe of «Оса» 2 (31.10): colour --even 0.9 --even-detail 0.7; ORM --even 1 --ref <colour>; normal --even 1
+--ref <colour> --even-detail 0.4 --even-wear 0."""
 import argparse
 import os
 import sys
@@ -179,8 +183,13 @@ def kmeans(X, k, it=25, seed=1):
     return C
 
 
-def crisp_camo(img, cov, ntones, sigma, detail_k, report, size_k=1.0, wear=0.35):
-    """Redraw the camouflage borders of a baked colour map as anti-aliased curves, keeping detail and some wear"""
+def crisp_camo(img, cov, ntones, sigma, detail_k, report, size_k=1.0, wear=0.35, tones=None, keep=None, thr=0.0):
+    """Redraw the camouflage borders of a baked colour map as anti-aliased curves, keeping detail and some wear.
+
+    tones: explicit camo tones (rows of L, a, b in the lab() space) instead of k-means; needed when the paint
+    shares the map with large non-camo parts (metal, dark machinery) that k-means would take for camo.
+    keep: tones that are never repainted (a texel nearest to one of them keeps the source).
+    thr: fixed distance to the nearest camo tone under which a texel counts as paint (0 = adaptive)."""
     rgb = img.astype(np.float32) / 255.0
     F = lab(rgb)
     lum = F[..., 0]
@@ -190,18 +199,29 @@ def crisp_camo(img, cov, ntones, sigma, detail_k, report, size_k=1.0, wear=0.35)
     rng = np.random.default_rng(3)
     sub = F.reshape(-1, 3)[rng.choice(idx, min(len(idx), 200000), replace=False)]
     # the tones and the «other» stuff: cluster with spare centres, keep the ntones biggest saturated-ish ones
-    C = kmeans(sub, ntones + 3)
-    d = ((sub[:, None, :] - C[None]) ** 2).sum(-1)
-    cnt = np.bincount(d.argmin(1), minlength=len(C))
-    order = np.argsort(-cnt)
-    tones = C[order[:ntones]]
-    report.append("tones (L,a,b): " + "; ".join("%.3f %.3f %.3f (%.0f%%)" % (*t, 100 * cnt[o] / len(sub))
-                                               for t, o in zip(tones, order[:ntones])))
-    # distance of every texel to each tone; painted = close to a tone
+    if tones is None:
+        C = kmeans(sub, ntones + 3)
+        d = ((sub[:, None, :] - C[None]) ** 2).sum(-1)
+        cnt = np.bincount(d.argmin(1), minlength=len(C))
+        order = np.argsort(-cnt)
+        tones = C[order[:ntones]]
+        report.append("tones (L,a,b): " + "; ".join("%.3f %.3f %.3f (%.0f%%)" % (*t, 100 * cnt[o] / len(sub))
+                                                   for t, o in zip(tones, order[:ntones])))
+    else:
+        tones = np.asarray(tones, np.float32)
+        ntones = len(tones)
+        report.append("given tones (L,a,b): " + "; ".join("%.3f %.3f %.3f" % tuple(t) for t in tones))
+    # distance of every texel to each tone; painted = close to a camo tone and closer to it than to any kept one
     D = np.stack([((F - t) ** 2).sum(-1) for t in tones], 0)
     dmin = D.min(0)
-    spread = np.median(np.sqrt(dmin[cand]))
-    painted = cand & (np.sqrt(dmin) < 3.0 * spread + 0.03)
+    if thr > 0:
+        painted = cand & (np.sqrt(dmin) < thr)
+    else:
+        spread = np.median(np.sqrt(dmin[cand]))
+        painted = cand & (np.sqrt(dmin) < 3.0 * spread + 0.03)
+    if keep is not None:
+        K = np.stack([((F - np.asarray(t, np.float32)) ** 2).sum(-1) for t in keep], 0).min(0)
+        painted &= dmin < K
     w = painted.astype(np.float32)
     # smoothed tone fields inside the paint
     P = np.stack([nblur((D.argmin(0) == j).astype(np.float32), w, sigma) for j in range(ntones)], 0)
@@ -250,9 +270,13 @@ def main():
     ap.add_argument("--detail", type=float, default=0.7)
     ap.add_argument("--wear", type=float, default=0.35)
     ap.add_argument("--quality", type=int, default=94)
+    ap.add_argument("--tones", default="", help="camo tones 'L,a,b;L,a,b;...' in the lab() space (else k-means)")
+    ap.add_argument("--keep", default="", help="non-camo tones 'L,a,b;...' that are never repainted")
+    ap.add_argument("--paint-thr", dest="paint_thr", type=float, default=0.0)
     ap.add_argument("--even", type=float, default=0.0)
     ap.add_argument("--ref", default="", help="colour map that tells the paint apart (for --even on ORM)")
     ap.add_argument("--even-detail", dest="even_detail", type=float, default=1.0)
+    ap.add_argument("--even-wear", dest="even_wear", type=float, default=0.3)
     a = ap.parse_args()
     im = Image.open(a.src).convert("RGB")
     arr = np.asarray(im).copy()
@@ -263,9 +287,12 @@ def main():
         ref = None
         if a.ref:
             ref = np.asarray(Image.open(a.ref).convert("RGB").resize((size, size), Image.BILINEAR))
-        arr = even_patches(arr, cov, a.even, rep, ref, detail=a.even_detail)
+        arr = even_patches(arr, cov, a.even, rep, ref, detail=a.even_detail, wear=a.even_wear)
     if a.camo:
-        arr = crisp_camo(arr, cov, a.camo, a.sigma * size / 4096.0, a.detail, rep, size / 4096.0, a.wear)
+        def tl(t):
+            return [[float(v) for v in r.split(",")] for r in t.split(";")] if t else None
+        arr = crisp_camo(arr, cov, a.camo, a.sigma * size / 4096.0, a.detail, rep, size / 4096.0, a.wear,
+                         tl(a.tones), tl(a.keep), a.paint_thr)
     arr = pad(arr, cov, a.pad)
     Image.fromarray(arr).save(a.dst, quality=a.quality, subsampling=0)
     print("\n".join(rep))
