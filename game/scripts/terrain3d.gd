@@ -15,7 +15,9 @@ const CHUNK := 1400.0          # совпадает с Background.CHUNK: объ�
 const N_GFX := [40, 56, 70, 70]
 var N := 70
 ## Поселения — на дне долин (вес 1); обломки самолёта и воронки могут быть где угодно, под ними лишь вмятина
-const FLAT_OBJS := {"o_village": 1.0, "o_fort": 1.0, "o_oasis": 1.0, "o_crater": 0.3}   # o_wreck — без площадки (тест 3.5-s4, п. 18)
+const FLAT_OBJS := {"o_village": 1.0, "o_fort": 1.0, "o_oasis": 1.0}   # o_wreck — без площадки (тест 3.5-s4, п. 18); o_crater — метка на земле (S14-10)
+## S14-10: radius of a map crater's ground mark, share of its size (the old picture's crater fills ~0.4 of it)
+const CRATER_MARK_R := 0.4
 const SETTLE := ["o_village", "o_fort", "o_oasis"]
 ## Профиль поперёк долины по расстоянию до линии реки, px (знак — берег: дорога со стороны «+»)
 const D_RIVER := 26.0          # полуширина русла
@@ -1665,6 +1667,15 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				for it in (ctx["scenes"] as Dictionary).get(Vector2i(key.x + dx, key.y + dz), []):
 					if it["k"] in ["scorch", "crater"] and area.grow(float(it["r"])).has_point(it["p"]):
 						burns.append(it)
+	# S14-10 (Kanta 31.10, «кусок текстуры взрыва в горе»): a map crater (o_crater) was a level picture on a
+	# plane that stuck out of any slope; now it is the same ground mark as a battle-scene crater, lying on the relief
+	if ctx.has("objs"):
+		for k in ctx["objs"]:
+			var o: Dictionary = ctx["objs"][k]
+			if not o.is_empty() and o["name"] == "o_crater":
+				var cr := float(o["size"]) * CRATER_MARK_R
+				if area.grow(cr).has_point(o["pos"]):
+					burns.append({"k": "crater", "p": o["pos"], "r": cr})
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
 	var tans := PackedFloat32Array()
