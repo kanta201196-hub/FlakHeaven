@@ -7996,6 +7996,10 @@ msgstr "战绩：地面"
 msgid "Счёт: бомбы"
 msgstr "战绩：炸弹"
 
+#: game/scripts/hud_decals.gd:19
+msgid "Акулий глаз"
+msgstr "鲨鱼眼"
+
 #: game/scripts/hud_decals.gd:22
 msgid "Нос"
 msgstr "机头"
