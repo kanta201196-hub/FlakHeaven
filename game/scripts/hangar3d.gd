@@ -111,6 +111,14 @@ static func ensure(ctrl: Control) -> Hangar3D:
 	return I
 
 
+## Frees the hangar view when a sortie starts: it held its plane model, the weapon store and a 4× MSAA view
+## through the whole fight. ensure() builds it again the next time the hangar is drawn.
+static func release() -> void:
+	if I != null and is_instance_valid(I):
+		I.queue_free()
+	I = null
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	vp = SubViewport.new()
@@ -974,6 +982,10 @@ func _input(event: InputEvent) -> void:
 			_drag = mb.pressed and rect.has_point(mp)
 			if _drag:
 				get_viewport().set_input_as_handled()
+		elif decal_mode and mb.pressed and rect.has_point(mp) and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] \
+				and mb.ctrl_pressed:   # S14-03: Ctrl + wheel always moves the camera, even with a decal in hand
+			zoom(1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1)
+			get_viewport().set_input_as_handled()
 		elif decal_mode and mb.pressed and rect.has_point(mp) and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			decal_wheel.emit(1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else -1)
 			get_viewport().set_input_as_handled()
@@ -1113,7 +1125,7 @@ func orbit(dx: float, dy: float) -> void:
 	_idle = 0.0
 
 
-## Zooms by `steps` wheel notches (+ closer)
+## Zooms by `steps` wheel notches (+ closer); the decal editor's Ctrl + wheel and its view buttons use it too
 func zoom(steps: int) -> void:
 	_dist *= pow(0.9, steps)
 	_idle = 0.0

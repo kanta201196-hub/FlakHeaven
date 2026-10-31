@@ -213,6 +213,16 @@ var _fly_w := 0.0          # 0 — держит строй, 1 — летит с�
 ## путь к месту в строю огибает ведущего; нос смотрит туда, куда ведомый летит
 const FORM_TURN := 75.0
 var _form_h := NAN
+## S14-08: steering state for WingFollow (heading, speed, turn rate) while `wing_smooth` is on
+var _steer := {}
+
+
+## Steering state synced from the current flight, so switching the toggle or coming back from the old path
+## (respawn, sortie) never makes the nose or speed jump.
+func _st() -> Dictionary:
+	if _steer.is_empty() or not is_equal_approx(float(_steer.heading), heading):
+		_steer = {"heading": heading, "spd": velocity.length(), "turn_v": float(_steer.get("turn_v", 0.0))}
+	return _steer
 
 
 func _fly(p: Player, delta: float) -> void:
@@ -232,6 +242,12 @@ func _fly(p: Player, delta: float) -> void:
 		var out := (near - p.global_position) / nd if nd > 1.0 else Vector2.from_angle(p.heading + (PI / 2.0 if slot % 2 else -PI / 2.0))
 		target += out * (gap - nd) * 1.5
 	var to := target - global_position
+	if Tuning.g("wing_smooth") >= 1.0:
+		velocity = WingFollow.follow(_st(), to, p.velocity, delta)
+		heading = _steer.heading
+		position += velocity * delta
+		_keep_clear(p, delta)
+		return
 	var dist := to.length()
 	var pv := p.velocity
 	var ps := maxf(pv.length(), 1.0)
@@ -410,6 +426,13 @@ func _attack_run(p: Player, delta: float) -> void:
 	var aim := to_t.angle()
 	if d < 170.0:
 		aim += _break * 1.3   # проскочил цель — отворот, не таран
+	if Tuning.g("wing_smooth") >= 1.0:
+		var ps := maxf(p.velocity.length(), 200.0)
+		WingFollow.steer(_st(), aim, ps * 1.3, ps, delta, 1.25)
+		heading = _steer.heading
+		velocity = Vector2.from_angle(heading) * float(_steer.spd)
+		position += velocity * delta
+		return
 	heading = rotate_toward(heading, aim, deg_to_rad(WING_TURN * 1.25) * delta)
 	var spd := maxf(p.velocity.length(), 200.0) * 1.3
 	velocity = velocity.lerp(Vector2.from_angle(heading) * spd, 1.0 - exp(-delta * 3.0))

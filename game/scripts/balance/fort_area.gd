@@ -15,6 +15,10 @@ const AHEAD := 1700.0
 const REACH := 7500.0   # 3000 found a fort ahead only 55 % of the time, 6000 — 94 % (400 random points, 2026-10-25); 7500 since forts keep a screen apart (2026-10-26, s12): the same share of points (335/400 vs 331/400 before) still find one
 ## Leaving this far after the end clears the base's leftovers (as the AA site).
 const CLEAR_R := 2600.0
+## S14-05: when the activity takes a fort, the ground this far from it (in fort sizes) is rebuilt with the
+## fort's pad, trodden earth, fields and sandbag posts: the pad fades out by up to ~1.5 sizes (0.6 · Terrain3D.PAD_REACH),
+## props of the cells round it look one size out, and its side valley to the river (Terrain3D._sides) reaches farther.
+const GROUND_R := 2.5
 ## Missile `who` of the base: the base counts its own missiles in the air by it.
 const WHO := "укрепрайон"
 

@@ -34,6 +34,8 @@ var _result_ui: HudResult
 var _codex_ui: HudCodex
 var _hangar_ui: HudHangar
 var _campaign_ui: HudCampaign
+var _cutscene_ui: HudCutscene   # story scenes (step 2)
+var _dialog_ui: HudDialog       # hangar dialogue scenes (step 3)
 
 
 static func ui_font() -> Font:
@@ -105,6 +107,8 @@ func _ready() -> void:
 	_codex_ui = HudCodex.new(ctrl, _buttons)
 	_hangar_ui = HudHangar.new(ctrl, _buttons)
 	_campaign_ui = HudCampaign.new(ctrl, _buttons)
+	_cutscene_ui = HudCutscene.new(ctrl, _buttons)
+	_dialog_ui = HudDialog.new(ctrl, _buttons)
 	_autotest = OS.get_cmdline_user_args().has("--autotest")
 	HudIcons.warm()
 	Events.banner.connect(_on_banner)
@@ -141,7 +145,11 @@ func _on_radio(from: String, text: String, enemy: bool) -> void:
 	radio_t = 3.5 + text.length() * 0.03
 	_radio_at = Time.get_ticks_msec()
 	Hints.show("radio", "Справа внизу — радиоэфир: ведомые отвечают на приказы, штаб предупреждает о задании. Красная рамка — перехват вражеского эфира, жди аса или босса.", 8.0, 2)
-	Main.I.sfx.play("radio", -18.0, 2.2)
+	# step 4: an intercept opens with a burst of static, a friendly line with a soft click (files optional; `radio` otherwise)
+	if Main.I.sfx.variants.has("radio_squelch" if enemy else "radio_click"):
+		Main.I.sfx.play("radio_squelch" if enemy else "radio_click", -16.0)
+	else:
+		Main.I.sfx.play("radio", -18.0, 2.2)
 
 
 func flash_damage() -> void:
@@ -256,6 +264,12 @@ func _draw_hud_body() -> void:
 		return
 	if m.state == "campaign":
 		_campaign_ui.draw(size)
+		return
+	if m.state == "cutscene":
+		_cutscene_ui.draw(m, size)
+		return
+	if m.state == "dialog":
+		_dialog_ui.draw(m, size)
 		return
 
 	# pause, card pick and results cover the whole fight, so the flight HUD would only show through them

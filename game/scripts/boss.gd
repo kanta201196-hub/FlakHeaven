@@ -94,15 +94,30 @@ func gun_kind() -> String:
 
 func _ready() -> void:
 	super()
+	# story (step 5): a recurring Monolith pilot remembers the player; the count picks the «again» line
+	if not Main.aces() and Story.highland_op() >= 0 and variant in ["carrier", "interceptor"]:
+		_story_id = "postman" if variant == "carrier" else "draft"
+		_met = Campaign.met(_story_id)
+		Campaign.on_met(_story_id)
 	say("spawn")
+
+
+var _story_id := ""   # "postman" / "draft" in the Highlands campaign, "" elsewhere (generic lines)
+var _met := 0
+var _said_n := 0
 
 
 func say(key: String) -> void:
 	if _say_t > 0.0 and key != "down":
 		return
 	_say_t = 6.0
-	var arr: Array = LINES[key]
-	Events.radio.emit(title.trim_prefix("Ас "), arr[randi() % arr.size()], false)
+	# the meeting count picks the first line; later calls in the same sortie walk through the rest («run» repeats)
+	var line := StoryText.op_line(_story_id, String(Campaign.op()["id"]), key, _met + _said_n) if _story_id != "" else ""
+	_said_n += 1
+	if line == "":
+		var arr: Array = LINES[key]
+		line = arr[randi() % arr.size()]
+	Events.radio.emit(title.trim_prefix("Ас "), line, _story_id != "")
 
 
 ## Скорость аса от крейсерской игрока (k — доля), не ниже base

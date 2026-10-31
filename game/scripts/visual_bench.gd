@@ -113,6 +113,8 @@ func process(delta: float) -> void:
 		var f := FortArea.pick_fort(FortArea.forts_near(m.background, sf, 900.0), sf, 900.0)
 		if not f.is_empty() and not m.background.forts_hit.has(FortView.key_of(f["pos"])):
 			m.background.forts_hit[FortView.key_of(f["pos"])] = FortDamage.new()
+			if Terrain3D.active() != null:   # S14-05: the pad and fields come with the fort, as in FortArea.setup_fort
+				Terrain3D.active().rebuild_area(f["pos"], float(f["size"]) * FortBalance.GROUND_R)
 	if p.has("live"):
 		_live(p)
 		return
@@ -2011,7 +2013,7 @@ func _lev_bench(delta: float) -> void:
 ## Opens «Знаки ›» on plane 1 of the class, checks the editor's refusals (DECALEDIT lines) and saves the hangar
 ## screen and the 3D view at each step → user://vis_decaledit_<step>.png / vis_decaledit_vp_<step>.png. The profile
 ## goes to a scratch file (user://vis_decaledit_profile.json, removed at the end): the bench never touches the real one.
-const _DB_STEPS := ["empty", "cursor", "selected", "moving", "focus"]
+const _DB_STEPS := ["empty", "cursor", "selected", "moving", "zoomout", "focus"]
 var _db_step := -1
 var _db_wait := 0
 
@@ -2109,6 +2111,11 @@ func _decal_bench() -> void:
 			for i in 4:
 				HudDecals.move_focus(Vector2i.DOWN if i > 0 else Vector2i.RIGHT)
 			print("DECALEDIT focus %d: %s" % [HudDecals.focus, HudDecals.focused_action()])
+			for i in 12:   # S14-03: the panel's «Вид −» backs the camera off with a decal still selected
+				m.input_ctl.dc.action(PackedStringArray(["dc", "zoom", "-1"]))
+			print("DECALEDIT zoomed out: dist %.2f, sel %d" % [h3._dist, e.sel])
+		"zoomout":
+			pass
 		"focus":   # cap, then close: the profile keeps the decals
 			while e.records.size() < DecalLoadout.MAX_DECALS:
 				DecalLoadout.add(e.records, DecalRecord.from_dict(e.records[0].to_dict()))

@@ -54,6 +54,7 @@ var _rs_n := 0            # замеров счётчиков отрисовки
 var _auto_t := 0.0        # время и кадры текущего окна автоснижения
 var _auto_f := 0
 var _auto_win := 0
+var _load_n := -1         # frames since the sortie started, until load_ms is taken (-1: not counting)
 
 
 func reset() -> void:
@@ -70,6 +71,7 @@ func reset() -> void:
 	_auto_t = 0.0
 	_auto_f = 0
 	_auto_win = 0
+	_load_n = 0
 	v["gfx_start"] = float(Settings.gfx)
 
 
@@ -100,6 +102,18 @@ func input(event: InputEvent) -> void:
 		_device = "kbm"
 
 
+## Takes load_ms: from the sortie start to its third drawn frame (terrain and models around). Called every
+## frame whatever the state: counting only playing frames took the pre-takeoff card draft of «Битва асов»
+## into it (s14: 76 s of the player picking cards read as a 76 s load).
+func load_tick() -> void:
+	if _load_n < 0:
+		return
+	_load_n += 1
+	if _load_n == 3:
+		v["load_ms"] = float(Time.get_ticks_msec() - _t0)
+		_load_n = -1
+
+
 ## Каждый кадр вылета (игра не на паузе)
 func frame(delta: float, m: Main) -> void:
 	var real := delta / maxf(Engine.time_scale, 0.01)
@@ -108,8 +122,6 @@ func frame(delta: float, m: Main) -> void:
 		add("slow_frames")
 	add(_device + "_s", real)
 	add("tilt%d_s" % int(round(Tuning.g("cam_tilt"))), real)   # B-47: сколько секунд при каждом наклоне
-	if _frames.size() == 3:
-		v["load_ms"] = float(Time.get_ticks_msec() - _t0)   # от старта вылета до третьего кадра: рельеф и модели вокруг
 	if _frames.size() % 15 == 0:
 		_render_stats(m)
 	_auto_gfx(real, m)

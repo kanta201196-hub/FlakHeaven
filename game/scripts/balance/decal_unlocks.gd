@@ -5,8 +5,11 @@ class_name DecalUnlocks
 ## medal counters (Profile.medal_counters) and this class's crew rank; counters never go down, so a picture once
 ## open stays open and saved decals are never checked against these rules.
 
-## Open from the first sortie: numbers, the three tally marks, the shark mouth and three neutral symbols
-const START := ["number", "tally_air", "tally_ground", "tally_bomb", "shark_mouth", "bolt", "chevrons", "sun"]
+## Open from the first sortie: numbers, the three tally marks, the shark mouth with its eye (one picture until
+## 31.10, so both stay open) and three neutral symbols
+const START := [
+	"number", "tally_air", "tally_ground", "tally_bomb", "shark_mouth", "shark_eye", "bolt", "chevrons", "sun",
+]
 ## Class mascots: a class's own is open from the start; another class's opens after one sortie on that class
 const MASCOTS := {"fighter": "wasp", "attacker": "rook", "bomber": "whale"}
 ## Picture → milestone: {"crew": rank of this class's crew} or {"c": medal counter, "n": at least} or
