@@ -592,6 +592,10 @@ func _update_player_missiles(delta: float) -> void:
 				if t != null:
 					m["rt"] = int(m.get("rt", 0)) + 1
 					Main.I.tele.add("msl_retarget")
+			if t == null and int(m.get("retarget", 0)) > 0:   # PG-06 «Стая»: own new targets, on top of the seeker module
+				t = Weapons.pick_target(p, 600.0, "nearest", [], true)
+				if t != null:
+					m["retarget"] = int(m["retarget"]) - 1
 			m["t"] = weakref(t)
 			if t == null:
 				m["lost"] = true
@@ -647,6 +651,13 @@ func _update_player_missiles(delta: float) -> void:
 					else:
 						m["gsn3"] = 0
 					m["t"] = weakref(nt)
+					m["life"] = 2.0
+					done = false
+			if done and t.hp <= 0.0 and int(m.get("retarget", 0)) > 0:   # «Стая»: after a kill the missile flies on
+				var nt3 := Weapons.pick_target(p, 600.0, "nearest", [t], true)
+				if nt3 != null:
+					m["retarget"] = int(m["retarget"]) - 1
+					m["t"] = weakref(nt3)
 					m["life"] = 2.0
 					done = false
 		if done:
@@ -737,6 +748,18 @@ func _update_bombs(delta: float) -> void:
 			var mpl := Main.I.player
 			if String(b["src"]) == "бомбы" and is_instance_valid(mpl) and mpl.mastery and mpl.cls_id == "bomber":
 				spawn_fire(b["p"], float(b["r"]) * 0.6, 15.0, 3.0, PlaneClasses.MASTERY_FIRE_SRC, true) # «Выжженная земля»
+			if b.has("quake"):   # PG-06 «Землетрясение»: shockwave on the ground, AA inside goes quiet
+				var qk: Dictionary = b["quake"]
+				aoe(b["p"], float(qk["r"]), float(b["dmg"]) * float(qk["k"]), b["src"], false, null, 0, true)
+				for nq in get_tree().get_nodes_in_group("enemies"):
+					var eq := nq as Enemy
+					if eq != null and eq.hp > 0.0 and eq.is_ground and (b["p"] as Vector2).distance_to(eq.global_position) < float(qk["r"]):
+						eq.silence = maxf(eq.silence, float(qk["silence"]))
+				Main.I.fx.ring(b["p"], float(qk["r"]), Color(0.9, 0.72, 0.45))
+				Main.I.add_shake(3.0)
+			if b.has("napalm"):   # PG-06 «Напалм»: burning pool on the ground
+				var nk: Dictionary = b["napalm"]
+				spawn_fire(b["p"], float(nk["r"]), float(nk["dps"]), float(nk["t"]), b["src"], true)
 			if b.get("road", false): # «Ковровая дорожка»: крест суббоеприпасов и горящее пятно
 				for j in 4:
 					var to: Vector2 = b["p"] + Vector2.from_angle(j * PI / 2.0 + PI / 4.0) * 90.0

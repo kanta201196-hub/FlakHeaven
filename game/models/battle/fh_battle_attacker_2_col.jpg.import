@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cntit6c0nmm5d"
-path="res://.godot/imported/fh_battle_attacker_1_Image_1.jpg-d3a8c50f002f1b7e59037bcb1528c7ed.ctex"
+uid="uid://g6bsj5ca3nst"
+path="res://.godot/imported/fh_battle_attacker_2_col.jpg-d367cba34210ffe0c8571ae871f0f91c.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "f7db06c1c51024671262e987164cd5ab"
 }
 
 [deps]
 
-source_file="res://models/battle/fh_battle_attacker_1_Image_1.jpg"
-dest_files=["res://.godot/imported/fh_battle_attacker_1_Image_1.jpg-d3a8c50f002f1b7e59037bcb1528c7ed.ctex"]
+source_file="res://models/battle/fh_battle_attacker_2_col.jpg"
+dest_files=["res://.godot/imported/fh_battle_attacker_2_col.jpg-d367cba34210ffe0c8571ae871f0f91c.ctex"]
 
 [params]
 
@@ -24,7 +21,7 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

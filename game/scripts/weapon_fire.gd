@@ -9,10 +9,23 @@ extends RefCounted
 ## Short-range heat missiles: one per slot at the nearest air targets in range, faster turn than `aam`.
 ## PG-06 profiles: «Рой» — three mini-missiles per slot at different targets; «Гончая» — twice the turn and a
 ## longer flight; «Перехватчик» — the launch goes at an enemy missile near the player when there is one.
+## PG-06 PR 2 modernizations: «Шершни» — a salvo of `count` for the group, sharper turn (the dodge volley is in
+## `Hardpoint.update`); «Сторож» — every launch first shoots down enemy missiles near the player, then fires.
 static func fire_srm(hp: Hardpoint, p: Player) -> bool:
 	var pd := hp.prof()
+	var ed := hp.evo_def()
 	var guard := float(pd.get("intercept", 0.0))
-	if guard > 0.0:
+	var shot_down := 0
+	if ed.has("intercept"):
+		for i in hp.slots:
+			var at2 = Main.I.projectiles.intercept_missile_at(p.global_position, float(ed["intercept"]))
+			if at2 == null:
+				break
+			shot_down += 1
+			Main.I.fx.explosion(at2, 18.0)
+		if shot_down > 0:
+			Main.I.stats_add_counter("intercepted", shot_down)
+	elif guard > 0.0:
 		var shot := 0
 		for i in hp.slots:
 			var at = Main.I.projectiles.intercept_missile_at(p.global_position, guard)
@@ -25,6 +38,8 @@ static func fire_srm(hp: Hardpoint, p: Player) -> bool:
 			Main.I.sfx.play("aam_launch", -18.0, 1.9)
 			return true
 	var per_slot := int(pd.get("per_slot", 1))
+	if ed.has("count"):
+		per_slot = maxi(1, int(ed["count"]) / hp.slots)
 	var targets: Array = []
 	for i in hp.slots * per_slot:
 		var t := Weapons.pick_target(p.global_position, hp.range_px(), "nearest", targets, true, false, true)
@@ -32,7 +47,7 @@ static func fire_srm(hp: Hardpoint, p: Player) -> bool:
 			break
 		targets.append(t)
 	if targets.is_empty():
-		return false
+		return shot_down > 0
 	var md := hp.dmg()
 	for i in hp.slots * per_slot:
 		var t: Enemy = targets[i % targets.size()]
@@ -40,7 +55,7 @@ static func fire_srm(hp: Hardpoint, p: Player) -> bool:
 		var pos := hp.slot_pos(p, i % hp.slots)
 		var vel := p.velocity + Vector2.from_angle(p.heading + side * (0.35 + 0.15 * floori(i / float(hp.slots)))) * 180.0
 		Main.I.projectiles.spawn_player_missile(pos, vel, t, md, "ракеты ближнего боя",
-			{"turn_k": WeaponBalance.SRM_TURN_K * float(pd.get("turn", 1.0)), "spd_k": 1.1 * float(pd.get("spd", 1.0)),
+			{"turn_k": WeaponBalance.SRM_TURN_K * float(pd.get("turn", 1.0)) * float(ed.get("turn", 1.0)), "spd_k": 1.1 * float(pd.get("spd", 1.0)),
 			"life": float(pd.get("life", 1.8)), "splash": 40.0 if per_slot == 1 else 25.0})
 		if Boom3D.active() and i < hp.slots:
 			Boom3D.ensure().launch(pos, Vector2.from_angle(p.heading), p.velocity)
@@ -51,8 +66,10 @@ static func fire_srm(hp: Hardpoint, p: Player) -> bool:
 ## Guided air-to-ground missile: one per slot at ground targets in range — armored first, then big, then nearest.
 ## PG-06 profiles: «Кассетная» splits over the target into submunitions on the neighbours; «Бетонобой» hits
 ## armor harder; «Противорадарная» goes for radars and AA guns first.
+## PG-06 PR 2 modernizations: «Кувалда» — wide burst and more against armor; «Кассета» — more submunitions.
+## Their keys win over the profile's for the same effect.
 static func fire_agm(hp: Hardpoint, p: Player) -> bool:
-	var pd := hp.prof()
+	var pd := hp.prof().merged(hp.evo_def(), true)
 	var antiradar: bool = pd.get("antiradar", false)
 	var targets: Array = []
 	for i in hp.slots:
@@ -75,6 +92,9 @@ static func fire_agm(hp: Hardpoint, p: Player) -> bool:
 			opts["split_src"] = "УР В-З"
 		if pd.has("armor_k"):
 			opts["armor_k"] = float(pd["armor_k"])
+		if pd.has("splash"):
+			opts["splash"] = float(pd["splash"])
+			opts["splash_k"] = float(pd.get("splash_k", 0.5))
 		Main.I.projectiles.spawn_player_missile(pos, vel, t, md, "УР В-З", opts)
 		if Boom3D.active():
 			Boom3D.ensure().launch(pos, Vector2.from_angle(p.heading), p.velocity)
@@ -105,6 +125,8 @@ static func _agm_target(from: Vector2, max_dist: float, skip: Array, antiradar :
 
 
 ## HE bomb: one heavy bomb per slot — auto on the nearest ground targets, or by button at the aim point.
+## PG-06 PR 2 modernizations: «Землетрясение» adds a shockwave that silences AA, «Напалм» a burning pool
+## (both resolved by `Projectiles._update_bombs`).
 static func fire_hebomb(hp: Hardpoint, p: Player, manual: bool) -> bool:
 	var targets: Array = []
 	if not manual:
@@ -126,6 +148,12 @@ static func fire_hebomb(hp: Hardpoint, p: Player, manual: bool) -> bool:
 		Main.I.projectiles.spawn_bomb(hp.slot_pos(p, s), fuse, hp.dmg() * Hardpoint.GROUND_BOMB_K, hp.range_px(), "фугасные бомбы", to, true)
 		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.HEBOMB_VT0 + WeaponModels.tier(hp.level)
 		Main.I.projectiles.bombs[-1]["shake"] = WeaponBalance.HEBOMB_SHAKE
+		var ed := hp.evo_def()
+		var bd := hp.dmg() * Hardpoint.GROUND_BOMB_K
+		if ed.has("wave_r"):
+			Main.I.projectiles.bombs[-1]["quake"] = {"r": float(ed["wave_r"]), "k": float(ed["wave_k"]), "silence": float(ed["silence"])}
+		if ed.has("fire_t"):
+			Main.I.projectiles.bombs[-1]["napalm"] = {"r": hp.range_px() * float(ed["fire_r_k"]), "dps": bd * float(ed["fire_k"]), "t": float(ed["fire_t"])}
 		hp.bay_release(p, Main.I.projectiles.bombs[-1], 0.0)
 	Main.I.sfx.play("bomb_drop", -12.0, 0.8)
 	return true
