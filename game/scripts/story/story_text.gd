@@ -18,12 +18,15 @@ const RADIO := {
 	"grom.finale": "Небо над Шахрисангом наше. Спасибо, что не бросили.",
 	"grom.alive": "Перехват из крепости: «Гром» жив! Наземные идут за ним.",
 	"ground.pass": "Это не ПВО кочевников. Кто-то строит здесь позиции по чертежу.",
+	"fortress.sight.riverbed": "Вот она. Летающий штаб. Так вот кто чертит их позиции.",
 }
 
 ## One story line under the operation title on the results screen, by operation id (first clear and replays alike).
 ## A key with a suffix is a variant picked by a campaign flag: `result()` tries "<op>.<flag>" first.
 const RESULT := {
 	"pass": "Перевал открыт. «Барон» знает ваш позывной.",
+	"riverbed": "«Крепость» № 1 сбита. О «Громе» по-прежнему ничего.",
+	"riverbed.rescued": "«Крепость» № 1 сбита. «Гром» — у старых крепостей?",
 }
 
 ## Banners of the three in-combat accents (`Cinematic.accent`), by accent id.
@@ -50,6 +53,14 @@ const OP_LINES := {
 	"draft.pass.spawn": ["Сквозит у вас в строю, новичок. Ведущего-то нет.", "Снова вы? «Барон» будет рад.", "Заткну сквозняк. Второй раз проще."],
 	"draft.pass.angry": ["Повреждения! Ну всё, без вежливости."],
 	"draft.pass.down": ["Выхожу… Это не считается, слышите? Не считается!"],
+	# op 2 «Сухое русло»: Postman lets slip that the headquarters is in the air; the Fortress controller is surprised
+	"postman.riverbed.spawn": ["Штаб видит вас с высоты. Доставлю.", "Опять вы. Штаб уже в курсе — он всё видит.", "Маршрут согласован со штабом. Сверху."],
+	"postman.riverbed.run": ["Отправление по расписанию.", "Адресат — вы."],
+	"postman.riverbed.down": ["Штаб, курьер выбыл… Катапульта."],
+	"draft.riverbed.spawn": ["«Барон» просил передать: он вас помнит.", "Сквозняк вернулся. Соскучились?", "В руслах тесно, новичок. Уступите небо."],
+	"draft.riverbed.down": ["Передайте «Барону»… а, сам скажу. Выхожу."],
+	"hq.riverbed.arrive": ["Воздушный объект на маршруте штаба. Вы серьёзно? Отойдите от трассы.", "Штаб на маршруте. Повторяю: отойдите от трассы."],
+	"hq.riverbed.wing": ["Потеря крыла. Штаб запрашивает резерв. Это… не по плану."],
 }
 
 

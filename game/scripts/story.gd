@@ -38,6 +38,7 @@ static func start(m: Main) -> void:
 	_finale = false
 	_grom_in = false
 	_ground_said = false
+	_hq_met = -1
 	rescue_done = false
 	var op := highland_op()
 	say(DISPATCH, StoryText.radio("start.pass" if op <= OP_PASS else "start.other"))
@@ -64,6 +65,32 @@ static func tick(m: Main) -> void:
 	if not _queue.is_empty() and (m.hud.radio_t <= 0.3 or Time.get_ticks_msec() - int(_queue[0][3]) > 3000):
 		var l: Array = _queue.pop_front()
 		Events.radio.emit(l[0], l[1], l[2])
+
+
+## «Крепость» на подходе (шаг 6): «Купол» впервые видит летающий штаб (оп. 2), штаб отвечает своей репликой
+## (`StoryText.OP_LINES` "hq.<op>.arrive", красная рамка); счётчик встреч — `Campaign.met("hq")`
+static func on_fortress_sight() -> void:
+	var op := highland_op()
+	if op < 0 or _hq_met >= 0:
+		return
+	_hq_met = Campaign.met("hq")
+	Campaign.on_met("hq")
+	if op == OP_RIVER:
+		say(DISPATCH, StoryText.radio("fortress.sight.riverbed"))
+	hq_line("arrive")
+
+
+## Реплика контролёра «Крепости» для момента `moment` этой операции (пусто — молчит)
+static func hq_line(moment: String) -> void:
+	var op := highland_op()
+	if op < 0 or _hq_met < 0:
+		return
+	var line := StoryText.op_line("hq", String(Campaign.op()["id"]), moment, _hq_met)
+	if line != "":
+		say(StoryText.ENEMY_HQ, line, true)
+
+
+static var _hq_met := -1   # встреч с «Крепостью» до этого вылета; -1 — в этом вылете она ещё не появлялась
 
 
 ## Первая позиция ПВО в «Перевале» — «Купол» замечает, что противник строит (шаг 5; один раз за вылет)
