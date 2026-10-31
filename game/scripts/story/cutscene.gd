@@ -17,12 +17,15 @@ static var next_state := "playing"
 static var anchor := Vector2.ZERO
 static var _flight := false
 static var _skip := false   # a real key, button or click arrived (Main._input); synthetic bot actions do not count
+static var _then := Callable()   # runs instead of `_set_state(next_state)` when given (a hangar scene after the outro)
 
 
-## Starts a scene. `scene_id` is the campaign flag name ("intro_pass"); `after` — Main state when it ends.
-static func play(m: Main, scene_id: String, scene: Dictionary, after: String) -> void:
+## Starts a scene. `scene_id` is the campaign flag name ("intro_pass"); `after` — Main state when it ends, or
+## `then` runs instead when it is valid (the outro hands over to the hangar scene, which shows the results itself).
+static func play(m: Main, scene_id: String, scene: Dictionary, after: String, then := Callable()) -> void:
+	_then = then
 	if scene.is_empty():
-		m._set_state(after)
+		_hand_over(m, after)
 		return
 	active = true
 	id = scene_id
@@ -112,4 +115,13 @@ static func finish(m: Main) -> void:
 		m.camera.reset_smoothing()
 	if not m.aces():
 		Campaign.mark_story_scene(id)
-	m._set_state(next_state)
+	_hand_over(m, next_state)
+
+
+static func _hand_over(m: Main, after: String) -> void:
+	var cb := _then
+	_then = Callable()
+	if cb.is_valid():
+		cb.call()
+	else:
+		m._set_state(after)

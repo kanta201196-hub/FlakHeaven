@@ -25,6 +25,23 @@ func handle_global_input() -> void:
 	match m.state:
 		"menu", "settings", "cutscene":   # cutscene: `Cutscene.tick` reads the skip press itself
 			return
+		"dialog":   # hangar scene (step 3): Enter / A — next line or the focused option, 1–3 — an option, Esc — skip
+			if Input.is_action_just_pressed("pause"):
+				Dialog.skip(m)
+			elif Input.is_action_just_pressed("ui_accept"):
+				Dialog.advance(m)
+			elif Input.is_action_just_pressed("ui_up") or Input.is_action_just_pressed("ui_left"):
+				Dialog.move(-1)
+			elif Input.is_action_just_pressed("ui_down") or Input.is_action_just_pressed("ui_right"):
+				Dialog.move(1)
+			else:
+				for i in 3:
+					if Input.is_action_just_pressed("choose_%d" % (i + 1)):
+						if Dialog.is_choice():
+							Dialog.pick(m, i)
+						elif i == 0:   # gamepad A is also "choose_1"
+							Dialog.advance(m)
+			return
 		"codex":
 			if Input.is_action_just_pressed("pause") or Input.is_action_just_pressed("loadout"):
 				m._set_state(m.codex_back)
@@ -43,6 +60,10 @@ func handle_global_input() -> void:
 		"campaign":
 			# EX-08: экран «В вылет». Enter — в бой (не тем же нажатием, что открыло экран из меню),
 			# ↑ / ↓ — операция, 1 / 2 / 3 и ← / → — самолёт
+			if HudCampaign.log_open:   # the story log panel: Esc closes it, Enter must not launch the sortie under it
+				if Input.is_action_just_pressed("pause") or Input.is_action_just_pressed("ui_cancel"):
+					HudCampaign.log_open = false
+				return
 			if Input.is_action_just_pressed("pause"):
 				m._set_state("menu")
 			elif Input.is_action_just_pressed("ui_accept") and m._state_t > 0.25:
@@ -230,7 +251,19 @@ func abort_run() -> void:
 
 func ui_click(action: String) -> void:
 	if action == "menu_play":
-		m._set_state("campaign")
+		# story (step 3): the prologue scene the first time the campaign opens
+		if Dialog.due("hangar_prologue"):
+			Dialog.play(m, "hangar_prologue", StoryDialogs.scene("hangar_prologue"), m._set_state.bind("campaign"))
+		else:
+			m._set_state("campaign")
+	elif action.begins_with("dlg:"):
+		Dialog.ui(m, action)
+	elif action == "log_toggle":
+		HudCampaign.log_open = not HudCampaign.log_open
+	elif action.begins_with("replay:"):   # the story log: play a hangar scene again, nothing is saved
+		HudCampaign.log_open = false
+		var sid := action.substr(7)
+		Dialog.play(m, sid, StoryDialogs.scene(sid), m._set_state.bind("campaign"), true)
 	elif action == "menu_aces":   # AB-01: «Битва асов» test mode — «Оса» with the hangar setup, straight into the fight
 		m.mode = "aces"
 		m.cls_id = "fighter"
