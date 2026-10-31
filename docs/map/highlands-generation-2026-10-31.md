@@ -39,6 +39,11 @@ round them and nothing inside (screens 1, 2), and a lighter round disc round an 
 once the «Укрепрайон» activity takes it (`Background.forts_hit`). But only the 3D model was hidden. Every
 other stage still treated each `o_fort` cell object as a fort:
 
+- `_sides` kept the fort's **side valley**: every settlement except a village cuts a capsule of half-width
+  0.375 × size from its centre to the nearest river point into the valley field (`valley()` drops to the
+  floor inside it). Relief rises with the valley distance, so round the fort's centre this is a round basin
+  ~600 px across plus its fans. This was the biggest part of the circles (found from frames: with only the
+  pad removed the basin stayed).
 - `_flat` kept the 760 px fort's pad: relief × 0 inside ~380 px, back to full height at ~760 px. Forts stand
   by the road at the edge of the valley floor (`_settle_spot`: road + fort radius), so the far half of the
   pad cuts into the valley wall: a round basin with a cliff rim.
@@ -56,8 +61,9 @@ valley floor: a lighter disc where the pad runs into a hill (screen 3).
 **Fix (PR for S14-05):**
 
 1. `Terrain3D.shown(o)`: a fort not in `forts_hit` marks nothing. The chunk snapshot (`_ctx`) drops it from the
-   objects (so no ground mask, no props) and `_flats_near` drops it from the pads. Its spot is plain land.
-2. When the activity takes a fort, `FortArea.setup_fort` calls `Terrain3D.rebuild_area(fort, 1.7 × size)`:
+   objects (so no ground mask, no props), `_flats_near` drops it from the pads and `_sides` cuts no side valley
+   for it. Its spot is plain land.
+2. When the activity takes a fort, `FortArea.setup_fort` calls `Terrain3D.rebuild_area(fort, 2.5 × size)`:
    cells round the fort are rebuilt with the pad, earth, fields and posts. Per-cell epochs (`_epoch`) drop
    results computed before the change; a cell that is on the screen keeps its old mesh until the new one is
    placed (`_redo`), so no hole opens. The activity takes forts two screens away (S14-04), so the swap is not
@@ -65,7 +71,8 @@ valley floor: a lighter disc where the pad runs into a hill (screen 3).
 3. Natural pad edges (`pads_natural`, F1 slider `map_pads`, `--pads0` for "before" frames): the fade
    distance of a pad changes with the direction (noise sampled on a ring round the pad, so along each ray the
    ground still only rises): from 0.7× to 1.6× the old fade speed. The flat core under the buildings is
-   unchanged. The edge is ragged instead of a circle.
+   unchanged. The side-valley edge of a settlement (oasis, village tributary) is scaled by 1 ± 0.3 of
+   low-frequency noise (`SIDE_WOBBLE`) the same way. The edge is ragged instead of a circle.
 
 **Not changed (and why):**
 
