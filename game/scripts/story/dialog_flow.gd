@@ -39,6 +39,16 @@ static func next_step(steps: Array, from: int, choices: Dictionary, flags: Dicti
 	return steps.size()
 
 
+## A flag name of the form "choice.<id>.<option>" reads an earlier hangar choice instead of a campaign flag
+## (step 7: H3 mentions the recon marker only after H2′ «передать разведке»). Returns [id, option], or [] for a plain
+## flag name.
+static func choice_flag(name: String) -> Array:
+	var parts := name.split(".")
+	if parts.size() == 3 and parts[0] == "choice" and parts[1] != "" and parts[2] != "":
+		return [parts[1], parts[2]]
+	return []
+
+
 ## Names of the campaign flags a scene reads (`flag` conditions), for `Dialog` to look them up once.
 static func flag_names(steps: Array) -> Array:
 	var out: Array = []

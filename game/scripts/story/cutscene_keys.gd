@@ -26,13 +26,14 @@ static func cam_at(scene: Dictionary, tt: float) -> Array:
 	return [a[1], float(a[2])]
 
 
-## Caption shown at time `tt`: [speaker, text, alpha] or [] when none; fades LINE_FADE s at both ends.
+## Caption shown at time `tt`: [speaker, text, alpha, enemy] or [] when none; fades LINE_FADE s at both ends.
+## `enemy` is the optional fifth element of the line (true: red plate).
 static func line_at(scene: Dictionary, tt: float) -> Array:
 	for l in scene.get("lines", []):
 		var ll: Array = l
 		if tt >= float(ll[0]) and tt <= float(ll[1]):
 			var a := minf(1.0, minf(tt - float(ll[0]), float(ll[1]) - tt) / LINE_FADE)
-			return [String(ll[2]), String(ll[3]), a]
+			return [String(ll[2]), String(ll[3]), a, ll.size() > 4 and bool(ll[4])]
 	return []
 
 

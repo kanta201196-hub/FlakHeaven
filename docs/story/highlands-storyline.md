@@ -109,6 +109,9 @@ companion document (question 3 decides whether they exist). Everything else is r
 Scenes and story lines play **on the first clear of an operation** (campaign save flags). Replays for loot start straight
 in the sortie; a setting «Заставки: при первом прохождении / всегда / никогда» (default: first time). The campaign
 flags that already exist (`rescued`, `grom_free`) stay; new flags: `seen_intro_<op>`, `seen_outro_<op>`, `graf_met`.
+The outro and the hangar debrief tell the operation's ending («Он наш»), so they play only when the sortie cleared the
+operation (`need` met); after a failed sortie they wait for the clear (step 7). The intro and the briefing play before any
+attempt. «Граф» is counted as met from his op 3 line (`met_graf`), so his op 4 lines are «again» lines.
 
 ### «Битва асов» (test mode)
 No story. Optional 3-second title card «Учебный полигон „Вершины“» so the mode has a place in the world. Not before EA.

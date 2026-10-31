@@ -216,6 +216,16 @@ static func met(callsign: String) -> int:
 	return int(_cfg.get_value("story", "met_" + callsign, 0))
 
 
+## The meeting count that picks a recurring pilot's line for the current operation (step 7): 0 — the first-meeting line
+## of this operation — until the operation is cleared, so every operation's own first line is heard on the clear;
+## afterwards the overall count, cycling the «again» lines on replays. «Барон» counts via `baron_met` (already
+## incremented by `RivalAce.setup` when asked, hence the -1).
+static func story_met(callsign: String) -> int:
+	if not cleared(index()):
+		return 0
+	return maxi(0, baron_met() - 1 if callsign == "baron" else met(callsign))
+
+
 static func on_met(callsign: String) -> void:
 	_load()
 	_cfg.set_value("story", "met_" + callsign, met(callsign) + 1)
