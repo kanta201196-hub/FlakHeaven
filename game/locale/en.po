@@ -8514,3 +8514,15 @@ msgstr "synergy: good company"
 #: game/scripts/wingman.gd:473
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
+
+#: game/scripts/hud_cutscene.gd
+msgid "Заставки кампании"
+msgstr "Campaign cutscenes"
+
+#: game/scripts/hud_cutscene.gd
+msgid "Короткие заставки до и после операций кампании. Любая клавиша пропускает заставку."
+msgstr "Short cutscenes before and after campaign operations. Any key skips a cutscene."
+
+#: game/scripts/hud_cutscene.gd
+msgid "Пропустить — любая клавиша"
+msgstr "Skip: any key"

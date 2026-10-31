@@ -42,12 +42,21 @@ static var _t := 0.0
 
 
 ## The flight's heading now (rad, as a 2D heading: 0 is right, −π/2 is up the screen): H0 with the slow weave
+## Cutscene (story step 2): the scene sets the course; the camera is driven by `Cutscene`, not by the menu flight.
+static var override := false
+static var ov_heading := 0.0
+
+
 static func heading() -> float:
+	if override:
+		return ov_heading
 	return H0 + WEAVE * sin(_t * WEAVE_W)
 
 
 ## Turn rate of heading(), rad/s (drives the bank): the weave's derivative, smooth by construction
 static func turn_rate() -> float:
+	if override:
+		return 0.0
 	return WEAVE * WEAVE_W * cos(_t * WEAVE_W)
 
 

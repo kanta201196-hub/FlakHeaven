@@ -64,6 +64,7 @@ const DESCS := {
 	"range_rings": "Пунктирные круги дальности вашего оружия.",
 	"hide_hud": "Убирает интерфейс в полёте — для красивых кадров и видео.",
 	"font": "Шрифт подсказок и текста интерфейса.",
+	"cutscenes": "Короткие заставки до и после операций кампании. Любая клавиша пропускает заставку.",
 	"minimap": "Размер миникарты в углу экрана.",
 	"minimap_alpha": "Насколько миникарта закрывает поле боя.",
 	"master_db": "Громкость всей игры.",
@@ -342,6 +343,7 @@ func _build() -> Array:
 			_chk(rows, "hide_hud", "Скрыть интерфейс в полёте", Settings.hide_hud)
 			_chk(rows, "range_rings", "Круги дальности оружия (пунктир)", Tuning.g("range_rings") > 0.5)
 			_opt(rows, "font", "Шрифт интерфейса", Settings.FONTS[Settings.font])
+			_opt(rows, "cutscenes", "Заставки кампании", StoryFlags.MODES[Settings.cutscenes])
 			_sec(rows, "Миникарта")
 			_opt(rows, "minimap", "Миникарта", Settings.MINIMAP_NAMES[Settings.minimap])
 			_opt(rows, "minimap_alpha", "Прозрачность миникарты", "%d%%" % int(Settings.MINIMAP_ALPHA[Settings.minimap_alpha] * 100.0))
@@ -688,6 +690,8 @@ func _option(key: String, dir: int) -> void:
 			Settings.glyphs = wrapi(Settings.glyphs + dir, 0, Settings.GLYPH_SETS.size())
 		"minimap_alpha":
 			Settings.minimap_alpha = wrapi(Settings.minimap_alpha + dir, 0, Settings.MINIMAP_ALPHA.size())
+		"cutscenes":
+			Settings.cutscenes = wrapi(Settings.cutscenes + dir, 0, StoryFlags.MODES.size())
 		"lang":
 			# cycles auto → Russian → English → Chinese → auto
 			Settings.lang = wrapi(Settings.lang + dir, -1, Settings.LANGS.size())
