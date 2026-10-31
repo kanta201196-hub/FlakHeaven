@@ -697,6 +697,11 @@ func model_units() -> Vector2:
 	return Vector2(n, t)
 
 
+## Self-check (R-23): the 3D unit drawn for the node with instance id `id` (the player's plane), null when none
+func debug_unit(id: int) -> Unit3D:
+	return _units.get(id)
+
+
 func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: float, grid := 56) -> Unit3D:
 	var u: Unit3D = _units.get(id)
 	var bm: PackedScene = _battle_model(tex)   # 3.5 этап 2: враги в воздухе и наземные ПВО (ЗСУ, ЗРК, РЛС)

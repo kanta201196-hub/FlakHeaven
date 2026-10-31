@@ -42,7 +42,7 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 - Export presets in `game/export_presets.cfg`: "Windows Tester", "macOS Tester", "Linux Check". The `tester` feature turns off debug (F1, F4–F8, hangar debug).
 - Build number: `BUILD` in `game/scripts/main.gd`; report endpoint: `REPORT_URL_BUILTIN` there. Kits: `tools/tester/make_kit.sh`.
 - Every build ships with a «что проверить» page (≤ 15 lines). Items Kanta does not flag become «проверено в sN» in the backlog the next day (Kanta, 2026-10-31, R-18).
-- Before a build: the self-check contact sheet (hangar and combat) is attached to the build message (R-23).
+- Before a build: the self-check contact sheet (hangar and combat) is attached to the build message (R-23). Command: `nohup tools/ci/selfcheck.sh &` (presets 0, 2, 3, Forward+ via lavapipe, about an hour per preset; `--quick` — preset 2 only, `--compat` — GL Compatibility, `--only=bomber_2` — one plane). Output: `builds/selfcheck-<commit>/index.html`; exit code 1 on a failed capture or a `SCRIPT ERROR`.
 - Feel and effects changes Kanta wants to judge (turret firing, flight feel, effects) go into `main` behind a toggle, off by default until Kanta's «ок» (Kanta, 2026-10-31, R-22).
 - Debug flags: `--tester`, `--report-url=…`, `--mesatest`, `--reporttest`, `--turbo`.
 

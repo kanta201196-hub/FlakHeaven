@@ -43,12 +43,17 @@ func _init(main: Main) -> void:
 		if a == "--boxhouses":   # VIS-01: "before" — village houses as boxes, not models (vis_<name>_box.png)
 			AdobeBuild.model_houses = false
 			_suffix += "_box"
+	SelfCheck.I = SelfCheck.from_args(main)   # R-23: --selfcheck=hangar|combat, the build contact sheet
 
 
 func process(delta: float) -> void:
 	if m.state == "levelup":   # тест 3.5-s8: игрок сбивает цели стенда и набирает уровень — карточка останавливала кадры
 		m.choose_card(0)
 	_t += delta / maxf(Engine.time_scale, 0.01)
+	if SelfCheck.I != null and SelfCheck.I.part == "hangar":   # R-23: the self-check drives the hangar itself
+		if _t > 1.0:
+			SelfCheck.I.process_hangar()
+		return
 	if OS.get_cmdline_user_args().has("--hangarbench"):
 		_hangar_bench()
 		return
@@ -95,6 +100,9 @@ func process(delta: float) -> void:
 		_i = 0
 		_t = 0.0
 	if _i >= _points.size():
+		if SelfCheck.I != null:   # R-23: the manifest, then quit
+			SelfCheck.I.finish()
+			return
 		print("VISUAL done")
 		m.get_tree().quit()
 		return
@@ -247,7 +255,7 @@ func process(delta: float) -> void:
 			_ew_t = {}
 			_i += 1
 		return
-	if _phase == 0 and _t > float(p.get("wait", WAIT)):
+	if _phase == 0 and _t > float(p.get("wait", WAIT)) and (SelfCheck.I == null or SelfCheck.I.settled(p)):   # R-23: close-up centred
 		if p.get("boom", false):
 			var c: Vector2 = p["pos"]
 			m.fx.explosion(c + Vector2(220, -90), 34.0)
@@ -494,9 +502,14 @@ func _hold(p: Dictionary) -> void:
 			zk = float(a.get_slice("=", 1))
 	m.camera.zoom = Vector2.ONE * float(p.get("zoom", 1.0)) * zk
 	m.camera.reset_smoothing()
+	if SelfCheck.I != null:   # R-23: loadout, afterburner, camera offset and markers of a self-check point
+		SelfCheck.I.hold(p)
 
 
 func _save(name: String) -> void:
+	if SelfCheck.I != null and _i >= 0 and _i < _points.size():   # R-23: a JPEG for the sheet instead of the PNG
+		SelfCheck.I.save_combat(name, m.get_viewport().get_texture().get_image(), _points[_i])
+		return
 	if _i >= 0 and _i < _points.size():   # relief lab: where the frame is, to reshoot it with --pts=
 		print("VISUAL point %s at %s" % [name, str(_points[_i]["pos"])])
 	var img := m.get_viewport().get_texture().get_image()
@@ -1130,6 +1143,8 @@ func _make_points() -> Array:
 			var pp := ter._field_point(Vector2(rd.x, fp.y + SIZE_FORT_PLAYER_OFF.y), Terrain3D.D_ROAD) + Vector2(SIZE_FORT_PLAYER_OFF.x, 0)
 			pts.append({"name": "size_fort", "pos": pp, "convoy": true, "convoy_at": rd,
 				"fort_obj": fp, "cls": ["fighter", 1], "zoom": 1.0, "wait": 2.5, "sizes": true})
+	if SelfCheck.I != null:   # R-23: every plane in flight and close up, nothing else
+		pts = SelfCheck.combat_points(empty + Vector2(300, 300)).filter(SelfCheck.I.wanted)
 	for a in OS.get_cmdline_user_args():
 		# relief lab: --pts=name:x:z:zoom,name2:x:z:zoom — arbitrary camera points; an optional fifth field is a
 		# close-up camera height over the ground in px (ground_dist), like the poplar_close and vehwreck_ points
