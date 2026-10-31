@@ -69,9 +69,6 @@ TOPS = {
         ("glove", -0.32, 0.12, 0.05, 0.215, True, 0.008, 0.006),
     ],
 }
-# Planes whose moved skin takes the smooth welded normal outright (their own normals are jagged along the edges,
-# S14-02 «Кит-2» leading edge); the rest keep their normals plus the change of shape.
-RENORMAL = ("bomber_2",)
 
 WIN = 0.0016     # running window of the raw edge along the span
 BROAD_R = 0.003   # radius of the broad-deviation median (spike vs pylon)
@@ -108,7 +105,9 @@ class Model:
         self.g = glb_io.load(path)
         j = self.g.j
         self.acc = {}    # position accessor -> dict(M, P(world), N acc, tris list, kind)
-        self.renormal = bool(os.environ.get("POLISH_RENORMAL")) or any(k in path for k in RENORMAL)
+        # POLISH_RENORMAL: moved skin takes the welded normal outright instead of old normal + change of shape.
+        # Tried on bomber_2 (31.10): softer lumps on the glove and a dark slit in the hangar, so off by default
+        self.renormal = bool(os.environ.get("POLISH_RENORMAL"))
         for ni, n in enumerate(j["nodes"]):
             if "mesh" not in n:
                 continue
