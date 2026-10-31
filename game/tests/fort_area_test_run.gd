@@ -55,6 +55,13 @@ func _test_pick_fort() -> void:
 	_check(got.get("pos") == Vector2(2000, 0), "a fort on screen is skipped")
 	var edge := _fort(Vector2(1000, 850))   # centre off screen, but its walls reach in
 	_check(FortArea.pick_fort([edge], Vector2.ZERO, 3000.0, {}, screen).is_empty(), "a fort reaching into the screen is skipped")
+	# S14-04 (Kanta 31.10): never closer than two screens to the player (walls included)
+	var near := _fort(Vector2(3000, 0))
+	var far2 := _fort(Vector2(4800, 0))
+	got = FortArea.pick_fort([near, far2], Vector2(3000, 0), 3000.0, {}, Rect2(), Vector2.ZERO, 3840.0)
+	_check(got.get("pos") == Vector2(4800, 0), "a fort within two screens of the player is skipped")
+	got = FortArea.pick_fort([_fort(Vector2(4000, 0))], Vector2(4000, 0), 3000.0, {}, Rect2(), Vector2.ZERO, 3840.0)
+	_check(got.is_empty(), "a fort whose walls reach inside two screens is skipped")
 
 
 ## Tower pads: unit-mesh corners ±0.42 (round towers on the wall corners, FortBuild) scaled by size and turned by rot like Render3D draws them.

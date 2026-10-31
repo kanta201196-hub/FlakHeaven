@@ -84,6 +84,11 @@ const LOD_N := 14
 var _lods := {}                # Vector2i → MeshInstance3D (заглушка до готовности полного куска)
 var lod_frames := 0            # кадров, когда кусок на экране показывали заглушкой (стенд, автотест)
 var props: BiomeProps          # B-41: модели биома на рельефе (null — без них)
+## S14-05: cells whose ground changed mid-sortie (rebuild_area, a fort the activity took). _epoch counts the
+## changes per cell: a result computed before the last change is thrown away. _redo holds the old mesh, still
+## shown, until the new one is placed, so the rebuild never opens a hole.
+var _epoch := {}               # Vector2i → int
+var _redo := {}                # Vector2i → MeshInstance3D
 
 
 ## Relief with the valley floor depth px below the combat plane; mountains rise at most
@@ -140,6 +145,11 @@ func setup(depth: float, mat: Material, bg: Background) -> void:
 	_ero.fractal_octaves = 4
 	_ero.fractal_gain = 0.45
 	_ero.fractal_lacunarity = 2.1
+	_pad.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	_pad.seed = 4093
+	_pad.frequency = 1.0 / 420.0
+	_pad.fractal_type = FastNoiseLite.FRACTAL_FBM
+	_pad.fractal_octaves = 2
 	_find_loops()
 	clear()
 
@@ -157,6 +167,10 @@ func clear() -> void:
 	for k in _lods:
 		(_lods[k] as Node).queue_free()
 	_lods.clear()
+	for k in _redo:
+		(_redo[k] as Node).queue_free()
+	_redo.clear()
+	_epoch.clear()
 	_hgrid.clear()
 	_spare_order.clear()
 	_objs_cache.clear()
@@ -177,7 +191,10 @@ func valley(x: float, z: float, ctx := {}, rf := NAN) -> float:
 			continue   # ручей (stream_field)
 		# L-08: не ближе края русла — иначе врез русла (_height_v) опускал всю площадку поселения
 		# на 2,5 % высоты, и край посёлка (линия обороны) уходил под землю
-		var dc := maxf(_seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5, D_RIVER * 1.8)
+		var e := _seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5
+		if pads_natural and e > 0.0:
+			e *= 1.0 + SIDE_WOBBLE * _pad.get_noise_2d(x * SIDE_WOBBLE_F, z * SIDE_WOBBLE_F)
+		var dc := maxf(e, D_RIVER * 1.8)
 		if dc < absf(d):
 			d = dc
 	return d
@@ -286,6 +303,7 @@ func _pick_style() -> void:
 	relief_style = 1 if on else 0
 	gullies = Tuning.g("relief_gullies") >= 0.5 and not args.has("--gullies0")
 	_prov.landforms = Tuning.g("relief_landforms") >= 0.5 and not args.has("--landforms0")
+	pads_natural = Tuning.g("map_pads") >= 0.5 and not args.has("--pads0")
 
 
 var gullies := true   # RV-02: gullies on the RV-01 relief (see _pick_style)
@@ -426,8 +444,8 @@ func _sides(x: float, z: float, ctx := {}) -> Array:
 	for dx in range(-2, 3):
 		for dz in range(-2, 3):
 			var o := _obj(Vector2i(key.x + dx, key.y + dz))
-			if o.is_empty() or not (o["name"] in SETTLE):
-				continue
+			if o.is_empty() or not (o["name"] in SETTLE) or not shown(o):
+				continue   # S14-05: an unused fort spot cuts no side valley (that was the round basin)
 			var a: Vector2 = o["pos"]
 			var sz := float(o["size"])
 			if o["name"] != "o_village":
@@ -1207,18 +1225,80 @@ func _flat(x: float, z: float, ctx := {}) -> float:
 		# тест 3.5-s4 (п. 17): площадка неровная — по контуру поселения (AdobeBuild.outline), с мягким краем
 		var off := Vector2(x, z) - (o["pos"] as Vector2)
 		var r: float = float(o["size"]) * 0.5
-		var big := r * (1.2 * 1.15 * 2.0 if o["name"] in SETTLE else 2.0)
+		var big := r * (1.2 * 1.15 if o["name"] in SETTLE else 1.0) * (PAD_REACH if pads_natural else 2.0)
 		if off.length_squared() >= big * big:
 			continue
 		if o["name"] in SETTLE:
 			r *= AdobeBuild.outline(int(o.get("var", 0)), off.rotated(-float(o["rot"])).angle()) * (1.15 if o["name"] == "o_village" else 1.0)
 		var d := off.length()
 		var f := smoothstep(r, r * 2.0, d)
+		if pads_natural and d > r:
+			f = smoothstep(r, r * 2.0, r + (d - r) * pad_edge_k(o["pos"], off, r))
 		k = minf(k, lerpf(1.0 - float(FLAT_OBJS[o["name"]]), 1.0, f))
 	return k
 
 
 var _flats := {}
+
+## S14-05 (Kanta 31.10: «ровные выровненные круги»): the pad under a settlement no longer ends on a circle.
+## Its fade-out distance changes with the direction (noise sampled on a ring round the pad, so along one ray
+## the height still only rises), from PAD_K_MIN to PAD_K_MAX of the old r…2r fade: a ragged edge, as if the
+## valley floor ran into the slopes. The flat core (r) under the buildings stays as it was.
+## F1 slider map_pads or --pads0 (frames without it).
+var pads_natural := true
+const PAD_K_MIN := 0.7
+const PAD_K_MAX := 1.6
+## How far a pad reaches, in r: the fade ends at r + r / PAD_K_MIN at most
+const PAD_REACH := 1.0 + 1.0 / PAD_K_MIN
+var _pad := FastNoiseLite.new()
+## S14-05: the side valley of a settlement (a capsule from it to the river, _sides) gave a round basin; with
+## pads_natural its edge distance is scaled by 1 ± SIDE_WOBBLE of low-frequency noise (the _pad noise
+## stretched SIDE_WOBBLE_F times, ~1/1700 px), gentle enough that the ground still only rises away from it.
+const SIDE_WOBBLE := 0.3
+const SIDE_WOBBLE_F := 0.25
+
+
+## Fade-speed factor of a pad edge in the direction of `off` from the pad centre `c` (r — the pad's radius):
+## PAD_K_MIN (wide, gentle edge) … PAD_K_MAX (short edge). Constant along the ray, see pads_natural.
+func pad_edge_k(c: Vector2, off: Vector2, r: float) -> float:
+	var q := c + off.normalized() * r * 1.5
+	var n := clampf(_pad.get_noise_2d(q.x, q.y) * 1.8, -1.0, 1.0)
+	return lerpf(PAD_K_MIN, PAD_K_MAX, n * 0.5 + 0.5)
+
+
+## Whether a map object marks the ground (pad, trodden earth and fields, props round it). Kanta s13: a fort
+## is no scenery and shows only once «Укрепрайон» takes it (Background.forts_hit), so before that its
+## spot is plain land: S14-05, the empty pads with fields round them were those forts. Main thread only.
+func shown(o: Dictionary) -> bool:
+	return o.get("name", "") != "o_fort" or _bg == null or _bg.forts_hit.has(FortView.key_of(o["pos"]))
+
+
+## Rebuilds the ground of every cell within `radius` of `c` (S14-05: the fort the activity just took gets
+## its pad, earth and props). Cells on screen keep their old mesh until the new one is ready (_redo), cached
+## and half-built results are dropped (_epoch). The activity takes forts far off screen, so the swap is
+## not seen. Main thread only.
+func rebuild_area(c: Vector2, radius: float) -> void:
+	_flats.clear()
+	_side.clear()   # the settlement's side valley (_sides) comes with it; ±2 cells read it, so clear all
+	_split.clear()
+	for cx in range(int(floorf((c.x - radius) / CHUNK)), int(floorf((c.x + radius) / CHUNK)) + 1):
+		for cz in range(int(floorf((c.y - radius) / CHUNK)), int(floorf((c.y + radius) / CHUNK)) + 1):
+			var key := Vector2i(cx, cz)
+			_epoch[key] = int(_epoch.get(key, 0)) + 1
+			_hgrid.erase(key)
+			if _spare.has(key):
+				(_spare[key] as Node).queue_free()
+				_spare.erase(key)
+				_spare_order.erase(key)
+			if _chunks.has(key):
+				if _redo.has(key):
+					(_chunks[key] as Node).queue_free()
+				else:
+					_redo[key] = _chunks[key]
+				_chunks.erase(key)
+			_mx.lock()
+			_done.erase(key)
+			_mx.unlock()
 
 
 ## Объекты с площадкой (FLAT_OBJS) в клетках ±3 от key — только главный поток
@@ -1230,7 +1310,7 @@ func _flats_near(key: Vector2i) -> Array:
 		for dx in range(-3, 4):
 			for dz in range(-3, 4):
 				var o := _obj(Vector2i(key.x + dx, key.y + dz))
-				if not o.is_empty() and FLAT_OBJS.has(o["name"]):
+				if not o.is_empty() and FLAT_OBJS.has(o["name"]) and shown(o):
 					out.append(o)
 	if _flats.size() > 2000:
 		_flats.clear()
@@ -1265,7 +1345,8 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 	var missing := 0
 	for key in keys:
 		# RV-05: a key already on its way (placeholder up, full chunk in the background) is not missing
-		if not _chunks.has(key) and not _spare.has(key) and not _lods.has(key) and not _pending.has(key):
+		if not _chunks.has(key) and not _spare.has(key) and not _lods.has(key) and not _pending.has(key) \
+				and not _redo.has(key):
 			missing += 1
 	var now := missing > maxi(6, keys.size() / 2)
 	var hole := false
@@ -1293,7 +1374,7 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 			var ready = _take_done(key)
 			if ready != null:   # computed earlier in the background: place it, no placeholder needed
 				_place_chunk(key, ready)
-			elif not _lods.has(key):
+			elif not _lods.has(key) and not _redo.has(key):
 				lods.append(key)
 			continue
 		var res = _take_done(key)
@@ -1310,7 +1391,7 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 			var tc := Time.get_ticks_usec()
 			_pending[key] = WorkerThreadPool.add_task(_compute_bg.bind(key, _ctx(key), _gen), false, "terrain chunk")
 			if Perf.on: Perf.sub("ter.ctx", tc)
-		if on_screen:
+		if on_screen and not _redo.has(key):   # a cell being rebuilt keeps its old mesh meanwhile
 			hole = true
 			if not _lods.has(key):
 				var tl := Time.get_ticks_usec()
@@ -1337,6 +1418,10 @@ func sync(view: Rect2, budget := 2, core := Rect2()) -> void:
 	for key in _lods.keys():
 		if not want.has(key):
 			_drop_lod(key)
+	for key in _redo.keys():
+		if not want.has(key):
+			(_redo[key] as Node).queue_free()
+			_redo.erase(key)
 	while _spare_order.size() > SPARE_MAX:
 		var old: Vector2i = _spare_order.pop_front()
 		(_spare[old] as Node).queue_free()
@@ -1404,6 +1489,8 @@ func _take_done(key: Vector2i):
 	var r = _done.get(key)
 	_done.erase(key)
 	_mx.unlock()
+	if r != null and int(r.get("ep", 0)) != int(_epoch.get(key, 0)):
+		return null   # built before rebuild_area() changed this cell's ground: the next sync queues it again
 	return r
 
 
@@ -1464,7 +1551,8 @@ func _ctx(key: Vector2i) -> Dictionary:
 	for dx in range(-3, 4):
 		for dz in range(-3, 4):
 			var k := Vector2i(key.x + dx, key.y + dz)
-			objs[k] = _obj(k) if _bg != null else {}
+			var o := _obj(k) if _bg != null else {}
+			objs[k] = o if o.is_empty() or shown(o) else {}
 	for dx in range(-2, 3):   # ±2: модели биома у края клетки смотрят и в соседние
 		for dz in range(-2, 3):
 			var k := Vector2i(key.x + dx, key.y + dz)
@@ -1485,7 +1573,7 @@ func _ctx(key: Vector2i) -> Dictionary:
 		if not o.is_empty() and FLAT_OBJS.has(o["name"]):
 			flats.append(o)
 	var ctx := {"objs": objs, "sides": sides, "flat": _bg != null, "scenes": scn, "flats": flats,
-		"vsides": vsides, "streams": streams}
+		"vsides": vsides, "streams": streams, "ep": int(_epoch.get(key, 0))}
 	if props != null:
 		ctx["hk"] = props.mesh_heights()
 	return ctx
@@ -1662,7 +1750,7 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 		var sk := _skirt(verts, norms, tans, cols, uv1, uv2, idx, V, c0)
 		verts = sk[0]; norms = sk[1]; tans = sk[2]; cols = sk[3]; uv1 = sk[4]; uv2 = sk[5]; idx = sk[6]; c0 = sk[7]
 	var put: Dictionary = props.plan(key, ctx) if props != null and lod == 0 else {}
-	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv1": uv1, "uv2": uv2, "c0": c0, "idx": idx, "gen": gen, "put": put,
+	return {"verts": verts, "norms": norms, "tans": tans, "cols": cols, "uv1": uv1, "uv2": uv2, "c0": c0, "idx": idx, "gen": gen, "ep": int(ctx.get("ep", 0)), "put": put,
 		"hs": hs, "W": W, "step": step, "lod": lod}
 
 
@@ -1736,6 +1824,9 @@ func _place_chunk(key: Vector2i, r: Dictionary) -> void:
 	if props != null:
 		props.apply(r["put"], mi)
 	_drop_lod(key)
+	if _redo.has(key):   # rebuild_area(): the old mesh stayed up until this one was ready
+		(_redo[key] as Node).queue_free()
+		_redo.erase(key)
 	_chunks[key] = mi
 	_hgrid[key] = [r["hs"], r["W"], r["step"]]
 	if Main.I != null and Main.I.state == "playing":   # T4-03: рывки от сборки кусков рельефа (главный поток)
