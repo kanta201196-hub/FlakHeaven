@@ -44,6 +44,11 @@
 | S14-15 | Самопроверка: земля с высоты боя местами в светлых пятнах (проверить вместе с S14-05) | Разобрать генерацию карты Нагорья | проверить на следующей сборке: вероятно та же причина, что S14-05 (догадка) 31.10 |
 | S14-16 | Самопроверка: фугасная бомба ур. 3 и 5 и ракеты «srm» ур. 1 и 3 выглядят одинаково | 3D-модели | в работе (3D-модели) 31.10 |
 | S14-17 | Самопроверка: у медали «Небо над Шахрисангом» обрезана подпись | Меню и ангар | сделано 31.10, PR #508: длинное имя медали уменьшается до 13–11 px |
+| S14-18 | Autotest finding: after ~3 s the plasma bomb fire patch looks like a pixelated white-blue "snow" patch (related to S14-06, which was not reproduced; frame from Kanta needed). Autotest page https://claude.ai/artifact/XSfCTy7c92Aip1Doathf3B | Эффекты боя | передано 31.10 |
+| S14-19 | Autotest guess for S14-10: flat crater quads on slopes in `render3d.gd` `_sync_craters` | Эффекты боя | передано 31.10 |
+| S14-20 | Autotest: first sortie of a new build loads in 76 s, the second in 0.7 s (guess: shader compile); VRAM 2.2-2.9 GB, 1.75 GB of it hangar textures | Ускорить большие бои | передано 31.10 |
+| S14-21 | Autotest: tilted brown slab in the sea on Leviathan (Archipelago) | 3D-модели | передано 31.10 |
+| S14-22 | Autotest signal: bot gets ~400 kills per sortie on Kit vs ~600 on Osa and Grach (no change without Kanta's yes) | Геймдизайн | передано 31.10 |
 
 ## Правки по сборке 3.5-s10
 
