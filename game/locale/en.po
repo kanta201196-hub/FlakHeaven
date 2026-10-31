@@ -7996,6 +7996,10 @@ msgstr "Tally: ground"
 msgid "Счёт: бомбы"
 msgstr "Tally: bombs"
 
+#: game/scripts/hud_decals.gd:19
+msgid "Акулий глаз"
+msgstr "Shark eye"
+
 #: game/scripts/hud_decals.gd:22
 msgid "Нос"
 msgstr "Nose"
