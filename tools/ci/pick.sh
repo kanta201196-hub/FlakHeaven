@@ -23,4 +23,5 @@ echo "pick: после каждой правки — tools/ci/smoke.sh fighter (
 [ -n "$view" ] && echo "pick: менялся вид — кадры: xvfb-run godot --path game --rendering-driver opengl3 -- --autotest --shots (только если нужен скриншот в PR)"
 echo "$code" | grep -qE 'demo\.gd|export_presets' && echo "pick: менялось демо — ещё: godot --headless --path game -- --autotest --smoke --turbo --god --class=fighter --demo"
 [ -n "$combat" ] || echo "pick: бой не менялся — полный автотест не нужен"
+echo "pick: перед сборкой — лист самопроверки tools/ci/selfcheck.sh (R-23, ~1 ч на пресет; --quick — один пресет)"
 exit 0

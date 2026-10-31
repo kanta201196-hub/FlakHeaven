@@ -24,6 +24,12 @@ static var bench_pitch_min := -0.2   # стенд: камера ниже обы�
 static var bench_seeker := 0   # Т-3: стенд --modules — «Глазастик» на ракетах
 ## Bench --hangarweaptab: weapon shown on the weapons tab even if it is not in the class list (PG-01 frames)
 static var bench_tab_w := ""
+## In bench_weapons: this group carries nothing ("" there keeps the class default). The self-check (R-23) shows one
+## weapon alone on the plane
+const BENCH_EMPTY := "-"
+## Self-check (R-23): every mount laid by the last plane build — {weapon, side, node (null for a skin panel that
+## missed), miss (the skin lookup under it failed, so it sits at a fallback height)}. Read by SelfCheck only.
+var debug_mounts: Array[Dictionary] = []
 var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5), 4 — эволюция (Т-4)
 var tier_rects: Array = []   # [Rect2, ступень]
 var _ctrl: Control
@@ -646,6 +652,7 @@ func _bench_glb(key: String) -> Node3D:
 
 
 func _build(cls_id: String, lvl: int) -> void:
+	debug_mounts.clear()
 	for c in pivot.get_children():
 		c.queue_free()
 	var path := "res://models/hangar/fh_hangar_%s_%d.glb" % [cls_id, lvl]
@@ -721,6 +728,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		var g: Hardpoint = groups[gi]
 		if bench_weapons.has(cls_id) and gi < (bench_weapons[cls_id] as Array).size() and bench_weapons[cls_id][gi] != "":
 			g.weapon = bench_weapons[cls_id][gi]
+			if g.weapon == BENCH_EMPTY:
+				g.weapon = ""
 		g.evo = weapon_tier == 4
 		g.level = [1, 3, 5][mini(weapon_tier, 3) - 1]   # ступень вида → уровень оружия (ловушки ставятся по уровню)
 		if g.builtin and g.weapon == "turret":   # тест 3.5-s7: верхняя турель «Кита» — с ур. 3
@@ -738,6 +747,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 				var fp := SkinPatch.flare_panel(_model, float(mt["mx"]), float(mt["mz"]), float(mt.get("seed", 0.0)))
 				if fp != null:
 					_model.add_child(fp)
+				debug_mounts.append({"weapon": g.weapon, "side": side, "node": fp, "miss": fp == null})
 				continue
 			var mtr: int = mt.get("t", mini(weapon_tier, 3))
 			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4, lvl, true)   # тест 3.5-s8: ангарная версия
@@ -819,6 +829,9 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 				bs = Basis(Vector3.BACK, pitch) * bs
 			wmi.basis = bs.scaled(Vector3(wlen, wlen, wlen))
 			pivot.add_child(wmi)
+			# the skin lookups that place this side: a miss leaves the weapon at a fixed fallback height
+			var miss := is_nan(lo) if side in ["under", "belly", "bay", "bottom", "tip"] else (is_nan(hi) if side in ["top", "wing"] else false)
+			debug_mounts.append({"weapon": g.weapon, "side": side, "node": wmi, "miss": miss})
 	if repaint:
 		_apply_livery(_model, cls_id, lvl)
 
@@ -1116,3 +1129,29 @@ func orbit(dx: float, dy: float) -> void:
 func zoom(steps: int) -> void:
 	_dist *= pow(0.9, steps)
 	_idle = 0.0
+
+
+## Self-check (R-23): holds the camera still at yaw / pitch (rad) and distance, no idle spin, so a batch of frames
+## is shot from the hangar's own default view. `aim` — where the camera looks (null keeps what the view set, e.g.
+## the turret mount stand raises it).
+func debug_view(yaw: float, pitch: float, dist: float, aim: Variant = null) -> void:
+	_yaw = yaw
+	_pitch = pitch
+	_dist = dist
+	_idle = -1.0e9   # a software-rendered frame can take seconds: 0 would pass the 3 s idle-spin delay at once
+	if aim is Vector3:
+		focus = aim
+
+
+## Self-check (R-23): shows plane `lvl` of `cls_id` at weapon view `tier` (1–3: weapon lvl 1 / 3 / 5, 4 —
+## modernised) and builds it again on the next show_plane even when only bench_weapons changed.
+func debug_show(cls_id: String, lvl: int, tier: int) -> void:
+	_cls = cls_id
+	view_lvl = lvl
+	weapon_tier = tier
+	_key = "debug_rebuild"   # never a real view key: show_plane rebuilds, _process collects the new parts
+
+
+## Self-check (R-23): the plane model on view (null while none is built or its GLB is missing)
+func debug_model() -> Node3D:
+	return _model if is_instance_valid(_model) else null
