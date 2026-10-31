@@ -769,7 +769,7 @@ msgstr "王牌 "
 msgid "курсовое"
 msgstr "航炮"
 
-#: game/scripts/boss.gd:127 game/scripts/enemy.gd:87 game/scripts/fortress.gd:242 game/scripts/hardpoint.gd:779 game/scripts/hardpoint.gd:803 game/scripts/hud_pause.gd:34
+#: game/scripts/boss.gd:127 game/scripts/enemy.gd:87 game/scripts/fortress.gd:242 game/scripts/hardpoint.gd:780 game/scripts/hardpoint.gd:804 game/scripts/hud_pause.gd:34
 msgid "турели"
 msgstr "炮塔"
 
@@ -1937,7 +1937,7 @@ msgstr "空地导弹"
 msgid "ёлочка"
 msgstr "松树阵"
 
-#: game/scripts/enemy.gd:85 game/scripts/fortress.gd:244 game/scripts/hardpoint.gd:821 game/scripts/hardpoint.gd:828 game/scripts/run_log.gd:10
+#: game/scripts/enemy.gd:85 game/scripts/fortress.gd:244 game/scripts/hardpoint.gd:822 game/scripts/hardpoint.gd:829 game/scripts/run_log.gd:10
 msgid "противоракеты"
 msgstr "反导弹"
 
@@ -1945,7 +1945,7 @@ msgstr "反导弹"
 msgid "ракеты ближнего боя"
 msgstr "近距导弹"
 
-#: game/scripts/enemy.gd:87 game/scripts/fortress.gd:242 game/scripts/hardpoint.gd:779 game/scripts/hud_pause.gd:33 game/scripts/projectiles.gd:562 game/scripts/run_log.gd:9
+#: game/scripts/enemy.gd:87 game/scripts/fortress.gd:242 game/scripts/hardpoint.gd:780 game/scripts/hud_pause.gd:33 game/scripts/projectiles.gd:562 game/scripts/run_log.gd:9
 msgid "гондола"
 msgstr "机炮吊舱"
 
@@ -2090,7 +2090,7 @@ msgstr "“堡垒”再次飞临基地！击落它"
 msgid "Люк открыт! Попадание в люк — ×3 урона"
 msgstr "舱门打开！命中舱门造成 ×3 伤害"
 
-#: game/scripts/fortress.gd:573 game/scripts/hardpoint.gd:873 game/scripts/hardpoint.gd:924 game/scripts/hud_pause.gd:33 game/scripts/player.gd:547 game/scripts/projectiles.gd:92
+#: game/scripts/fortress.gd:573 game/scripts/hardpoint.gd:874 game/scripts/hardpoint.gd:925 game/scripts/hud_pause.gd:33 game/scripts/player.gd:547 game/scripts/projectiles.gd:92
 msgid "бомбы"
 msgstr "炸弹"
 
@@ -2266,15 +2266,15 @@ msgstr "等离子"
 msgid "связка: стальной ёж"
 msgstr "羁绊：钢铁刺猬"
 
-#: game/scripts/hardpoint.gd:691 game/scripts/projectiles.gd:715
+#: game/scripts/hardpoint.gd:692 game/scripts/projectiles.gd:715
 msgid "связка: термобарика"
 msgstr "羁绊：温压"
 
-#: game/scripts/hardpoint.gd:722
+#: game/scripts/hardpoint.gd:723
 msgid "связка: огненный вал"
 msgstr "羁绊：火墙"
 
-#: game/scripts/hardpoint.gd:894 game/scripts/hud_pause.gd:29 game/scripts/plane_art.gd:116 game/scripts/plane_classes.gd:61 game/scripts/profile.gd:390 game/scripts/weapon_models.gd:847
+#: game/scripts/hardpoint.gd:895 game/scripts/hud_pause.gd:29 game/scripts/plane_art.gd:116 game/scripts/plane_classes.gd:61 game/scripts/profile.gd:390 game/scripts/weapon_models.gd:847
 msgid "Бомбоотсек"
 msgstr "弹舱"
 
