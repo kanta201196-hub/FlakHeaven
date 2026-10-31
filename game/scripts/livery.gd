@@ -630,6 +630,45 @@ float nat_cell(vec3 p) {
 	return id;
 }
 
+// pattern 7: nat_cell with its border — id of the nearest cell, id2 of the cell across the nearest wall and edge,
+// the distance to that wall (p units). The masked splinter edges blend over one pixel by it instead of a hard
+// step(id), which stair-stepped along the texel and pixel grid in hangar close-ups (Kanta s14)
+float nat_cell_e(vec3 p, out float id2, out float edge) {
+	vec3 i = floor(p); vec3 f = fract(p);
+	float d1 = 9.0; float id = 0.0; vec3 r1 = vec3(0.0); vec3 c1 = vec3(0.0);
+	for (int z = -1; z <= 1; z++) {
+		for (int y = -1; y <= 1; y++) {
+			for (int x = -1; x <= 1; x++) {
+				vec3 o = vec3(float(x), float(y), float(z));
+				vec3 r = o + vec3(hash3(i + o), hash3(i + o + 17.3), hash3(i + o + 41.9)) - f;
+				float d = dot(r, r);
+				if (d < d1) { d1 = d; id = hash3(i + o + 7.7); r1 = r; c1 = o; }
+			}
+		}
+	}
+	edge = 9.0; id2 = id;
+	for (int z = -1; z <= 1; z++) {
+		for (int y = -1; y <= 1; y++) {
+			for (int x = -1; x <= 1; x++) {
+				vec3 o = c1 + vec3(float(x), float(y), float(z));
+				vec3 r = o + vec3(hash3(i + o), hash3(i + o + 17.3), hash3(i + o + 41.9)) - f;
+				vec3 dr = r - r1;
+				float l2 = dot(dr, dr);
+				if (l2 > 1e-6) {
+					float e = dot(0.5 * (r1 + r), dr * inversesqrt(l2));
+					if (e < edge) { edge = e; id2 = hash3(i + o + 7.7); }
+				}
+			}
+		}
+	}
+	return id;
+}
+
+// weight of the nearest cell against the one across the wall: 0.5 on the wall, full a pixel inside
+float cell_aa(float edge) {
+	return clamp(0.5 + 0.5 * edge / max(fwidth(edge), 1e-5), 0.0, 1.0);
+}
+
 // pattern 7: weights of colour 2 (x) and colour 3 (y) by nat_style at the scaled model point p, normal n
 vec2 nat_pattern(vec3 p, vec3 n) {
 	float s = nat_seed;
@@ -638,9 +677,13 @@ vec2 nat_pattern(vec3 p, vec3 n) {
 		float a = 0.55 + s;
 		vec3 r = vec3(p.x * cos(a) - p.z * sin(a), p.y, p.x * sin(a) + p.z * cos(a));
 		r += (vec3(vnoise3(p * 3.0 + s), vnoise3(p * 3.0 + s + 5.1), vnoise3(p * 3.0 + s + 9.4)) - 0.5) * 0.08;
-		float id = nat_cell(r * vec3(0.55, 1.0, 1.5));
+		float id2; float e;
+		float id = nat_cell_e(r * vec3(0.55, 1.0, 1.5), id2, e);
 		float c2 = step(id, nat_cut.x);
-		return vec2(c2, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y));
+		float c2b = step(id2, nat_cut.x);
+		vec2 wa = vec2(c2, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y));
+		vec2 wb = vec2(c2b, (1.0 - c2b) * step(id2, nat_cut.x + nat_cut.y));
+		return mix(wb, wa, cell_aa(e));
 	} else if (nat_style == 2) {
 		// wavy disruptive bands across the plane, their width breathing along them
 		float warp = (nat_soft(p * 0.7, s) - 0.5) * 2.2;
@@ -655,9 +698,13 @@ vec2 nat_pattern(vec3 p, vec3 n) {
 		return vec2(nat_step(nat_soft(p, s), nat_cut.x), nat_step(blobs(p * 3.4 + vec3(s)), nat_cut.y));
 	} else if (nat_style == 4) {
 		// one tone: panels repainted darker (colour 2) or left to bleach (colour 3), cells longer along the flow
-		float id = nat_cell(p * vec3(0.55, 1.2, 1.0) + vec3(s));
+		float id2; float e;
+		float id = nat_cell_e(p * vec3(0.55, 1.2, 1.0) + vec3(s), id2, e);
 		float c2 = step(id, nat_cut.x);
-		return vec2(c2 * 0.55, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y) * 0.6);
+		float c2b = step(id2, nat_cut.x);
+		vec2 wa = vec2(c2 * 0.55, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y) * 0.6);
+		vec2 wb = vec2(c2b * 0.55, (1.0 - c2b) * step(id2, nat_cut.x + nat_cut.y) * 0.6);
+		return mix(wb, wa, cell_aa(e));
 	} else if (nat_style == 5) {
 		// whitewash: colour 2 (the paint under it) where it wore through — more on forward-facing edges and in
 		// streaks along the flow; colour 3 where the wash is thin
@@ -715,6 +762,15 @@ void fragment() {
 		src = src_color.rgb;
 	}
 	float l = dot(src, vec3(0.2126, 0.7152, 0.0722));
+	// fine detail of the source skin (panel lines, grime) as a ratio to its local mean (a coarse mip): the whole-
+	// pattern liveries (5, 7) keep the panel lines but no longer show the source camouflage under them — its soft
+	// blotch edges came through as smeared patches and texel steps on the new paint (Kanta s14). Brightening is
+	// capped low: the mip mixes in the dark atlas gutter at island borders
+	float detail = 1.0;
+	if (src_mode == 0) {
+		float lm = dot(textureLod(albedo_tex, UV, 4.5).rgb, vec3(0.2126, 0.7152, 0.0722));
+		detail = clamp(l / max(lm, 1e-4), 0.72, 1.04);
+	}
 	float t = l / l_base;
 	// тест 3.5-s7: вершинный цвет механизации и створок снят с текстуры грубой сеткой — по нему только светлые
 	// пятна камуфляжа, без тёмной полосы (иначе закрылки серые на белой «Классике» и в «квадратиках»)
@@ -773,7 +829,7 @@ void fragment() {
 		// светлое брюхо (видно на кренах и разворотах)
 		float belly = under_n;
 		cam = mix(cam, pat_b, belly);
-		col = cam * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5);
+		col = cam * mix(1.0, detail, 0.6);
 	} else if (pattern == 6) {
 		float belly = under_n;
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), belly);
@@ -793,7 +849,9 @@ void fragment() {
 		} else if (nat_style == 11) {
 			// bare metal: rust in soft fields, more on the lower faces; primer on whole repaired panels
 			float rust = nat_step(nat_soft(pn, nat_seed) + 0.2 * smoothstep(0.0, -0.8, n.y), nat_cut.x);
-			float primer = step(nat_cell(pn * vec3(0.55, 1.2, 1.0) + vec3(nat_seed)), nat_cut.y) * (1.0 - rust);
+			float pid2; float pe;
+			float pid = nat_cell_e(pn * vec3(0.55, 1.2, 1.0) + vec3(nat_seed), pid2, pe);
+			float primer = mix(step(pid2, nat_cut.y), step(pid, nat_cut.y), cell_aa(pe)) * (1.0 - rust);
 			w = vec2(rust, primer);
 			metal_k = 1.0 - max(rust, primer);
 		} else if (nat_style == 12) {
@@ -825,7 +883,7 @@ void fragment() {
 			cam = mix(cam, c_light, sm.w);
 			cam = mix(cam, c_dark, pupil);
 		}
-		cam *= mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5);
+		cam *= mix(1.0, detail, 0.6);
 		float top = smoothstep(0.1, 0.85, n.y);
 		float fade_n = smoothstep(0.25, 0.75, blobs(lp * 3.5 + vec3(nat_seed * 2.3)));
 		float lum = dot(cam, vec3(0.2126, 0.7152, 0.0722));
