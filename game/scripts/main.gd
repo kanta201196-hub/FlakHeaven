@@ -67,7 +67,7 @@ var god_mode := false
 ## Тестовая сборка для внешних тестеров: экспорт с фичей «tester» или флаг --tester → без отладки
 static var DEBUG := true
 ## Build number shown in the menu, logs and reports; bump by commit before each export (code.md §11)
-const BUILD := "3.5-s13"
+const BUILD := "3.5-s14"
 ## 3.3-t2: отчёты тестеров уходят в Google Таблицу через веб-приложение Apps Script (пусто — кнопки нет)
 const REPORT_URL_BUILTIN := "https://script.google.com/macros/s/AKfycbxUYjbaKRdhawZJqQp52ZlEnh2LoAxDyEf-PefnyF_90ssskJgmcnFrTGJ0P7Y9PHrw/exec"
 static var REPORT_URL := ""
