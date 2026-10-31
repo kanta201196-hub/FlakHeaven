@@ -19,6 +19,7 @@ const IMAGES := {
 	"cat": [11, 1, "pic"], "shark_mouth": [12, 2, "pic"], "eye": [14, 1, "pic"], "peaks": [15, 1, "pic"],
 	"number": [16, 1, "number"],
 	"tally_air": [26, 1, "tally"], "tally_ground": [27, 1, "tally"], "tally_bomb": [28, 1, "tally"],
+	"shark_eye": [29, 1, "pic"],
 }
 
 ## Matte paints the player picks from (sRGB); index = position, so the shader gets a fixed array

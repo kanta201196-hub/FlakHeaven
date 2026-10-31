@@ -892,7 +892,7 @@ func _edge_arrow(sp: Vector2, rect: Rect2, size: Vector2, col: Color, scale := 1
 		_text(Vector2(r.position.x + 6, lp.y + 5), label, fs, col.lightened(0.25))
 
 
-## Газ (РУД), «на хвосте», серия сбитий
+## Скорость (РУД), «на хвосте», серия сбитий
 func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 	if p.hp <= 0.0:
 		return
@@ -905,7 +905,7 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 		var w := 260.0
 		# s12: thin text over light sand — a dark plate under the label
 		ctrl.draw_rect(Rect2(x - 8.0, y - 30.0, w + 16.0, 48.0), Color(0.02, 0.025, 0.03, 0.55))
-		_text(Vector2(x, y - 8), Loc.t("Газ [W/S]: %d%%%s") % [int(round(p.throttle * 100.0)), Loc.t("  ФОРСАЖ") if p.ab_t > 0.0 else ""], 17, Color(0.85, 0.9, 1.0))
+		_text(Vector2(x, y - 8), Loc.t("Скорость [W/S]: %d%%%s") % [int(round(p.throttle * 100.0)), Loc.t("  ФОРСАЖ") if p.ab_t > 0.0 else ""], 17, Color(0.85, 0.9, 1.0))
 		ctrl.draw_rect(Rect2(x, y, w, 10), Color(1, 1, 1, 0.08))
 		ctrl.draw_rect(Rect2(x, y, w * (p.throttle - lo) / (hi - lo), 10), Color(0.55, 0.8, 1.0) if p.throttle <= 1.0 else Color(1.0, 0.7, 0.35))
 		var mid := x + w * (1.0 - lo) / (hi - lo)

@@ -254,12 +254,27 @@ func _tag(p: Player, c: Dictionary, r: Rect2) -> void:
 ## Name shown on the card. A mastery branch shows its own name («Скорострел» / «Калибр»):
 ## the stored title starts with the weapon name, which is the same on both cards of the
 ## «или-или» pair and pushed the branch name past the ellipsis (S11-33). The weapon goes to
-## the level line instead.
+## the level line instead. S14-09: when two weapons' branches of the same name are on one screen
+## (two «Калибр» cards), each name gets its weapon, so the player can tell them apart.
 func _card_title(p: Player, c: Dictionary) -> String:
 	if String(c["kind"]) == "branch":
-		var g: Hardpoint = p.groups[int(c["group"])]
-		return Loc.t(String(Cards.branch_def(g.weapon, String(c["branch"]))["title"]))
+		var name := _branch_name(p, c)
+		for o: Dictionary in Main.I.offers:
+			if String(o["kind"]) == "branch" and int(o["group"]) != int(c["group"]) and _branch_name(p, o) == name:
+				return "%s: %s" % [name, _weapon_name(p.groups[int(c["group"])])]
+		return name
 	return Loc.title(c["title"])
+
+
+## Translated name of the mastery branch on card `c` («Скорострел», «Калибр», «Яркие ловушки»…).
+func _branch_name(p: Player, c: Dictionary) -> String:
+	var g: Hardpoint = p.groups[int(c["group"])]
+	return Loc.t(String(Cards.branch_def(g.weapon, String(c["branch"]))["title"]))
+
+
+## Short translated name of the weapon in group `g` (its evolution name once evolved).
+func _weapon_name(g: Hardpoint) -> String:
+	return Loc.t(g.evo_title()) if g.evo else Loc.t(String(Weapons.DEFS[g.weapon]["short"]))
 
 
 ## Small line under the name: level or rank with «максимум», the module slot it takes, or the
@@ -269,7 +284,7 @@ func _level_line(p: Player, c: Dictionary, lv: Vector2) -> String:
 	var kind := String(c["kind"])
 	if kind == "branch":
 		var g: Hardpoint = p.groups[int(c["group"])]
-		parts.append((Loc.t(g.evo_title()) if g.evo else Loc.t(String(Weapons.DEFS[g.weapon]["short"]))).to_upper())
+		parts.append(_weapon_name(g).to_upper())
 		parts.append(Loc.t("РАНГ %d → %d") % [lv.x, mini(int(lv.x) + 1, int(lv.y))])
 		if int(lv.x) + 1 >= int(lv.y):
 			parts.append(Loc.t("МАКСИМУМ"))
