@@ -738,6 +738,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 				if not String(c.name).begins_with("prop_"):
 					mi = c
 					break
+			if kind == "enemy" and Tuning.g("story_mark") > 0:   # ST-09: the Monolith slab on the Fortress, AA and trucks
+				MonolithMark.attach(inst, tex.resource_path.get_file().get_basename())
 		if mi == null:
 			bm = null
 			mi = MeshInstance3D.new()
