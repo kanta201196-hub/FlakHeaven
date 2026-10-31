@@ -31,6 +31,17 @@ const TEST := {
 ## Op 1 «Перевал» (step 5): dawn, the flight climbs over the first ridge with the road below; dusk at the end,
 ## the camera pulls back from the flight over the pass.
 const INTRO := {
+	"riverbed": {
+		"dur": 10.0,
+		"cam": [[0.0, Vector2(-900.0, 700.0), 0.62], [10.0, Vector2(500.0, -500.0), 0.74]],
+		"flight": true,
+		"heading": H_UP,
+		"light": "day",
+		"lines": [
+			[0.5, 3.6, "", "Сухое русло · они строят"],
+			[3.9, 9.6, StoryText.DISPATCH, "Позиции в руслах — по чертежу. Где-то над ними тот, кто чертит."],
+		],
+	},
 	"pass": {
 		"dur": 8.0,
 		"cam": [[0.0, Vector2(0.0, 1100.0), 0.58], [8.0, Vector2(0.0, -600.0), 0.78]],
@@ -44,6 +55,17 @@ const INTRO := {
 	},
 }
 const OUTRO := {
+	"riverbed": {
+		"dur": 8.0,
+		"cam": [[0.0, Vector2(0.0, -200.0), 0.95], [8.0, Vector2(300.0, 500.0), 0.55]],
+		"flight": true,
+		"heading": H_UP,
+		"light": "dusk",
+		"lines": [
+			[0.4, 2.8, "", "Первая «Крепость» сбита"],
+			[3.0, 7.6, StoryText.DISPATCH, "Первая. Не последняя: перехват говорит о «программе»."],
+		],
+	},
 	"pass": {
 		"dur": 6.5,
 		"cam": [[0.0, Vector2(0.0, -250.0), 0.9], [6.5, Vector2(0.0, 700.0), 0.5]],

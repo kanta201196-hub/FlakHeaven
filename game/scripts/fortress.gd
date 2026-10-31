@@ -349,6 +349,7 @@ func _point_down(pt: Dictionary) -> void:
 		_bay_t = 1.5
 		Events.banner.emit("Левое крыло сбито! Теперь правое — турели, двигатель и открытый люк", 3.5)
 		Events.radio.emit(StoryText.DISPATCH, "Левое крыло горит! Берите правое: две турели и двигатель. Откроется люк — бейте в брюхо.", false)
+		Story.hq_line("wing")
 		Main.I.tele.add("fortress_phase2_s", Main.I.run_time - _born)
 		_missile_cd = 3.0
 	elif was == 2 and phase == 3:
@@ -436,6 +437,7 @@ func _start_route(p: Player) -> void:
 	_to_base = true
 	# story (step 4): the first sighting is a «кино-момент» (banner + slow-motion + stinger, once per sortie)
 	Cinematic.accent(Main.I, "fortress", StoryText.accent("fortress"))
+	Story.on_fortress_sight()
 	Events.radio.emit(StoryText.DISPATCH, "«Крепость» на подходе. Сначала левое крыло: две турели и двигатель. У турелей свои сектора, нос и хвост — мёртвые зоны.", false)
 	Hints.show("fortress", "«Крепость» летит к нашей базе (стрелка «база»). Сбивайте её крыло за крылом: сначала левое, потом правое. Нос и хвост — мёртвые зоны турелей.", 10.0, 2)
 

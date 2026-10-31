@@ -7,8 +7,10 @@ extends RefCounted
 ##
 ## A scene is `{"steps": [...]}`. A step is either a line
 ##   `{"who": "crew" | "Купол" | "Гром" | "Ключ", "text": "…", "trait": true, "only": ["choice id", "option"]}`
-## (`trait` colours the line with the crew member's trait title; `only` shows the line only after that choice) or a
-## choice `{"choice": "id", "prompt": "…", "options": [["label", "option"], …]}`. Choices change words only.
+## (`trait` colours the line with the crew member's trait title; `only` shows the line only after that choice;
+## `"flag": ["rescued", true]` shows it only when that campaign flag has that value) or a choice
+## `{"choice": "id", "prompt": "…", "options": [["label", "option"], …]}` (a choice may carry `flag` too).
+## Choices change words only.
 
 ## Typewriter speed, characters per second.
 const SPEED := 40.0
@@ -17,19 +19,35 @@ const SPEED := 40.0
 const GUESTS := {"Купол": "kupol", "Гром": "grom", "Ключ": "klyuch"}
 
 
-## Index of the first step at or after `from` that is shown with `choices` (`{choice id: option}`); `steps.size()`
-## when the scene is over. A line with `only` is skipped unless that choice was made that way.
-static func next_step(steps: Array, from: int, choices: Dictionary) -> int:
+## Index of the first step at or after `from` that is shown with `choices` (`{choice id: option}`) and campaign
+## `flags` (`{name: bool}`, missing = false); `steps.size()` when the scene is over. A step with `only` is skipped
+## unless that choice was made that way; a step with `flag` unless the flag has that value.
+static func next_step(steps: Array, from: int, choices: Dictionary, flags: Dictionary = {}) -> int:
 	var i := maxi(from, 0)
 	while i < steps.size():
 		var s: Dictionary = steps[i]
-		if not s.has("only"):
-			return i
-		var cond: Array = s["only"]
-		if cond.size() == 2 and String(choices.get(String(cond[0]), "")) == String(cond[1]):
+		var ok := true
+		if s.has("only"):
+			var cond: Array = s["only"]
+			ok = cond.size() == 2 and String(choices.get(String(cond[0]), "")) == String(cond[1])
+		if ok and s.has("flag"):
+			var fc: Array = s["flag"]
+			ok = fc.size() == 2 and bool(flags.get(String(fc[0]), false)) == bool(fc[1])
+		if ok:
 			return i
 		i += 1
 	return steps.size()
+
+
+## Names of the campaign flags a scene reads (`flag` conditions), for `Dialog` to look them up once.
+static func flag_names(steps: Array) -> Array:
+	var out: Array = []
+	for s: Dictionary in steps:
+		if s.has("flag") and (s["flag"] is Array) and (s["flag"] as Array).size() == 2:
+			var n := String((s["flag"] as Array)[0])
+			if not out.has(n):
+				out.append(n)
+	return out
 
 
 ## Part of `text` the typewriter has shown after `t` seconds of the step.
@@ -85,6 +103,10 @@ static func validate(def: Dictionary) -> String:
 		var s = (def["steps"] as Array)[k]
 		if not (s is Dictionary):
 			return "step %d is not a Dictionary" % k
+		if s.has("flag"):
+			var fc = s["flag"]
+			if not (fc is Array) or (fc as Array).size() != 2 or not (fc[1] is bool) or String(fc[0]) == "":
+				return "step %d: flag is [name, bool]" % k
 		if s.has("choice"):
 			var opts: Array = s.get("options", [])
 			if opts.size() < 2 or opts.size() > 3:

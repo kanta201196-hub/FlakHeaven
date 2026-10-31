@@ -25,6 +25,23 @@ func _init() -> void:
 	_check(DialogFlow.next_step(steps, 5, {}) == 5, "past the end → steps.size()")
 	_check(DialogFlow.next_step(steps, -3, {}) == 0, "negative from is clamped")
 	_check(DialogFlow.next_step([], 0, {}) == 0, "empty scene is over at once")
+	# flag conditions (step 6): a line for the rescued branch and one for the other
+	var fsteps: Array = [
+		{"who": "Купол", "text": "R", "flag": ["rescued", true]},
+		{"who": "Купол", "text": "N", "flag": ["rescued", false]},
+		{"choice": "lead", "prompt": "?", "options": [["a", "a"], ["b", "b"]], "flag": ["rescued", true]},
+		{"who": "crew", "text": "E"},
+	]
+	_check(DialogFlow.next_step(fsteps, 0, {}, {"rescued": true}) == 0, "rescued → line R")
+	_check(DialogFlow.next_step(fsteps, 0, {}, {"rescued": false}) == 1, "not rescued → line N")
+	_check(DialogFlow.next_step(fsteps, 0, {}) == 1, "missing flag counts as false")
+	_check(DialogFlow.next_step(fsteps, 2, {}, {"rescued": false}) == 3, "the choice behind a flag is skipped too")
+	_check(DialogFlow.next_step(fsteps, 2, {}, {"rescued": true}) == 2, "the choice shows when the flag is set")
+	_check(DialogFlow.flag_names(fsteps) == ["rescued"], "flag names collected once")
+	_check(DialogFlow.flag_names(steps).is_empty(), "no flags in the sample scene")
+	_check(DialogFlow.validate({"steps": fsteps}) == "", "flag scene is sound: " + DialogFlow.validate({"steps": fsteps}))
+	_check(DialogFlow.validate({"steps": [{"who": "crew", "text": "x", "flag": ["rescued"]}]}) != "", "flag needs [name, bool]")
+	_check(DialogFlow.validate({"steps": [{"who": "crew", "text": "x", "flag": ["rescued", "yes"]}]}) != "", "flag value must be a bool")
 	# typewriter: SPEED characters per second
 	_check(DialogFlow.shown("Привет, звено", 0.0) == "", "nothing at t = 0")
 	_check(DialogFlow.shown("Привет, звено", 0.1) == "Прив", "4 characters after 0.1 s at 40 c/s")

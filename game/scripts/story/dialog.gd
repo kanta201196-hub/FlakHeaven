@@ -25,6 +25,7 @@ static var replay := false # from the story log: nothing is saved
 static var last_guest := ""   # the guest on the right stays while the crew talks
 static var _then := Callable()
 static var _choices := {}  # choice id → option, saved ones first, then those made in this scene
+static var _flags := {}    # campaign flags the scene reads (`flag` conditions), looked up once at start
 
 
 ## Whether a scene plays now: the «Заставки» setting against the seen flag, and the scene is written.
@@ -49,7 +50,10 @@ static func play(m: Main, scene_id: String, scene: Dictionary, then: Callable, a
 			var saved := Campaign.story_choice(String(s["choice"]))
 			if saved != "":
 				_choices[String(s["choice"])] = saved
-	i = DialogFlow.next_step(steps, 0, _choices)
+	_flags = {}
+	for n in DialogFlow.flag_names(steps):
+		_flags[String(n)] = Campaign.flag(String(n))
+	i = DialogFlow.next_step(steps, 0, _choices, _flags)
 	t = 0.0
 	total = 0.0
 	focus = 0
@@ -146,7 +150,7 @@ static func ui(m: Main, action: String) -> void:
 
 
 static func _next(m: Main) -> void:
-	i = DialogFlow.next_step(steps, i + 1, _choices)
+	i = DialogFlow.next_step(steps, i + 1, _choices, _flags)
 	t = 0.0
 	focus = 0
 	if i >= steps.size():

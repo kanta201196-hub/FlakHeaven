@@ -72,7 +72,7 @@ func _success(m: Main) -> void:
 	done = true
 	Campaign.set_flag("rescued")
 	Events.activity_succeeded.emit(&"rescue")   # reward, banner and sound: Main / RunState
-	Story.say("Спасённый", "Спасибо, звено. Я видел парашют «Грома» — у старых крепостей.")
+	Story.say("Иволга", "Спасибо, звено. Я видела парашют «Грома» — у старых крепостей.")   # the rescued pilot (story §2)
 	_finish(m)
 
 

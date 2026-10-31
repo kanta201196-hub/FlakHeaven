@@ -757,31 +757,31 @@ msgstr "Ace \"Draft\""
 msgid "Ас «Альбатрос»"
 msgstr "Ace \"Albatross\""
 
-#: game/scripts/boss.gd:79 game/scripts/boss.gd:87 game/scripts/boss.gd:226 game/scripts/fortress.gd:132 game/scripts/projectiles.gd:1029
+#: game/scripts/boss.gd:79 game/scripts/boss.gd:87 game/scripts/boss.gd:229 game/scripts/fortress.gd:132 game/scripts/projectiles.gd:1029
 msgid "асы"
 msgstr "aces"
 
-#: game/scripts/boss.gd:117
+#: game/scripts/boss.gd:120
 msgid "Ас "
 msgstr "Ace "
 
-#: game/scripts/boss.gd:136 game/scripts/enemy.gd:87 game/scripts/enemy.gd:97 game/scripts/projectiles.gd:441 game/scripts/projectiles.gd:444 game/scripts/projectiles.gd:564
+#: game/scripts/boss.gd:139 game/scripts/enemy.gd:87 game/scripts/enemy.gd:97 game/scripts/projectiles.gd:441 game/scripts/projectiles.gd:444 game/scripts/projectiles.gd:564
 msgid "курсовое"
 msgstr "forward guns"
 
-#: game/scripts/boss.gd:139 game/scripts/enemy.gd:87 game/scripts/fortress.gd:265 game/scripts/hardpoint.gd:780 game/scripts/hardpoint.gd:804 game/scripts/hud_pause.gd:34
+#: game/scripts/boss.gd:142 game/scripts/enemy.gd:87 game/scripts/fortress.gd:265 game/scripts/hardpoint.gd:780 game/scripts/hardpoint.gd:804 game/scripts/hud_pause.gd:34
 msgid "турели"
 msgstr "turrets"
 
-#: game/scripts/boss.gd:143 game/scripts/enemy.gd:85 game/scripts/fortress.gd:267 game/scripts/hardpoint.gd:643 game/scripts/hud_pause.gd:33 game/scripts/hud_result.gd:496
+#: game/scripts/boss.gd:146 game/scripts/enemy.gd:85 game/scripts/fortress.gd:267 game/scripts/hardpoint.gd:643 game/scripts/hud_pause.gd:33 game/scripts/hud_result.gd:496
 msgid "ракеты В-В"
 msgstr "AAMs"
 
-#: game/scripts/boss.gd:154
+#: game/scripts/boss.gd:157
 msgid "Щит аса держит обычный урон втрое лучше. Пробивают его пушка «на хвосте» у аса, ЭМИ и лазер; турели и ракеты «Осы» бьют сквозь него."
 msgstr "An ace's shield shrugs off normal damage three times better. Your cannon from the ace's tail, an EMP or a laser breaks it; turrets and the Wasp's missiles go straight through it."
 
-#: game/scripts/boss.gd:158 game/scripts/run_log.gd:10
+#: game/scripts/boss.gd:161 game/scripts/run_log.gd:10
 msgid "щит аса"
 msgstr "ace shield"
 
@@ -2058,55 +2058,55 @@ msgstr "Left wing down! Now the right one: turrets, engine and the open hatch"
 msgid "Левое крыло горит! Берите правое: две турели и двигатель. Откроется люк — бейте в брюхо."
 msgstr "Left wing is burning! Take the right one: two turrets and the engine. When the bay opens, hit her belly."
 
-#: game/scripts/fortress.gd:358
+#: game/scripts/fortress.gd:359
 msgid "Двигатели горят! «Крепость» дымит и уходит — догоните и добейте!"
 msgstr "Engines on fire! The “Fortress” is smoking and fleeing — catch it and finish it!"
 
-#: game/scripts/fortress.gd:359
+#: game/scripts/fortress.gd:360
 msgid "Она горит и уходит! Догоняйте, пока не скрылась, — кормовые кольца бьют назад, заходите сбоку."
 msgstr "She's burning and running! Catch her before she's gone — the tail rings fire backwards, come in from the side."
 
-#: game/scripts/fortress.gd:439
+#: game/scripts/fortress.gd:441
 msgid "«Крепость» на подходе. Сначала левое крыло: две турели и двигатель. У турелей свои сектора, нос и хвост — мёртвые зоны."
 msgstr "The Fortress is inbound. Left wing first: two turrets and the engine. Each turret covers its own sector; the nose and the tail are blind spots."
 
-#: game/scripts/fortress.gd:440
+#: game/scripts/fortress.gd:442
 msgid "«Крепость» летит к нашей базе (стрелка «база»). Сбивайте её крыло за крылом: сначала левое, потом правое. Нос и хвост — мёртвые зоны турелей."
 msgstr "\"Fortress\" is flying to our base (\"base\" arrow). Take it down wing by wing: left first, then right. Nose and tail are the turrets' blind spots."
 
-#: game/scripts/fortress.gd:453
+#: game/scripts/fortress.gd:455
 msgid "«Крепость» отбомбилась по базе — запчастей за неё вдвое меньше. Она заходит на второй круг!"
 msgstr "\"Fortress\" bombed the base — half the parts for it now. It's coming around again!"
 
-#: game/scripts/fortress.gd:455
+#: game/scripts/fortress.gd:457
 msgid "«Крепость» снова над базой! Сбейте её"
 msgstr "\"Fortress\" is over the base again! Shoot it down"
 
-#: game/scripts/fortress.gd:553
+#: game/scripts/fortress.gd:555
 msgid "Люк открыт! Попадание в люк — ×3 урона"
 msgstr "Hatch open! Hits on the hatch deal ×3 damage"
 
-#: game/scripts/fortress.gd:597 game/scripts/hardpoint.gd:874 game/scripts/hardpoint.gd:925 game/scripts/hud_pause.gd:33 game/scripts/player.gd:547 game/scripts/projectiles.gd:92
+#: game/scripts/fortress.gd:599 game/scripts/hardpoint.gd:874 game/scripts/hardpoint.gd:925 game/scripts/hud_pause.gd:33 game/scripts/player.gd:547 game/scripts/projectiles.gd:92
 msgid "бомбы"
 msgstr "bombs"
 
-#: game/scripts/fortress.gd:639
+#: game/scripts/fortress.gd:641
 msgid "«Крепость» не дотянула и рухнула сама — запчастей за неё вдвое меньше"
 msgstr "The “Fortress” didn't make it and crashed on its own — half the parts for it"
 
-#: game/scripts/fortress.gd:641
+#: game/scripts/fortress.gd:643
 msgid "«Крепость» сбита!"
 msgstr "\"Fortress\" shot down!"
 
-#: game/scripts/fortress.gd:641
+#: game/scripts/fortress.gd:643
 msgid "«Крепость» сбита! (успела отбомбиться по базе)"
 msgstr "\"Fortress\" down! (after bombing the base)"
 
-#: game/scripts/fortress.gd:709 game/scripts/hud_flight.gd:327
+#: game/scripts/fortress.gd:711 game/scripts/hud_flight.gd:327
 msgid "«Крепость»"
 msgstr "\"Fortress\""
 
-#: game/scripts/fortress.gd:720
+#: game/scripts/fortress.gd:722
 msgid "НАША БАЗА"
 msgstr "OUR BASE"
 
@@ -5079,7 +5079,7 @@ msgstr "Extraction window closed — next one after the next ace"
 msgid "Сбит с хвоста!"
 msgstr "Shot down from behind!"
 
-#: game/scripts/main.gd:826 game/scripts/rival_ace.gd:22 game/scripts/rival_ace.gd:63 game/scripts/rival_ace.gd:105 game/scripts/story.gd:53
+#: game/scripts/main.gd:826 game/scripts/rival_ace.gd:22 game/scripts/rival_ace.gd:63 game/scripts/rival_ace.gd:105 game/scripts/story.gd:54
 msgid "Барон"
 msgstr "Baron"
 
@@ -7621,12 +7621,12 @@ msgid "Сбитый пилот: держите небо над маяком 30 �
 msgstr "Downed pilot: hold the sky over the beacon for 30 s"
 
 #: game/scripts/rescue.gd:75
-msgid "Спасённый"
-msgstr "Rescued pilot"
+msgid "Иволга"
+msgstr "Oriole"
 
 #: game/scripts/rescue.gd:75
-msgid "Спасибо, звено. Я видел парашют «Грома» — у старых крепостей."
-msgstr "Thanks, flight. I saw \"Thunder's\" parachute — near the old fortresses."
+msgid "Спасибо, звено. Я видела парашют «Грома» — у старых крепостей."
+msgstr "Thank you, flight. I saw Thunder's parachute, by the old forts."
 
 #: game/scripts/rescue.gd:81
 msgid "Вертолёт ушёл без пилота. Ищем дальше."
@@ -8014,15 +8014,15 @@ msgstr "Ace duel: he gets on your tail. Cut throttle (S) or do a combat turn (E)
 msgid "AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f из %d с)"
 msgstr "AUTOTEST: boss wave %d hp formula %.0f, by dps %.0f (dps %.0f, single_k %.2f of %d s)"
 
-#: game/scripts/story/dialog_flow.gd:17 game/scripts/story/story_dialogs.gd:35 game/scripts/story/story_dialogs.gd:36 game/scripts/story/story_dialogs.gd:37 game/scripts/story/story_dialogs.gd:39 game/scripts/story/story_dialogs.gd:42
+#: game/scripts/story/dialog_flow.gd:19 game/scripts/story/story_dialogs.gd:35 game/scripts/story/story_dialogs.gd:36 game/scripts/story/story_dialogs.gd:37 game/scripts/story/story_dialogs.gd:39 game/scripts/story/story_dialogs.gd:42
 msgid "Купол"
 msgstr "Dome"
 
-#: game/scripts/story/dialog_flow.gd:17 game/scripts/story.gd:58 game/scripts/story.gd:62
+#: game/scripts/story/dialog_flow.gd:19 game/scripts/story.gd:59 game/scripts/story.gd:63
 msgid "Гром"
 msgstr "Thunder"
 
-#: game/scripts/story/dialog_flow.gd:17
+#: game/scripts/story/dialog_flow.gd:19
 msgid "Ключ"
 msgstr "Wrench"
 
@@ -8147,46 +8147,114 @@ msgid "Принято. Работаем над дорогой."
 msgstr "Copy. We work over the road."
 
 #: game/scripts/story/story_dialogs.gd:49
+msgid "Сухие русла за перевалом. Разведка насчитала шесть позиций ПВО — ровные, как по линейке. Их строят под кого-то в воздухе."
+msgstr "The dry riverbeds beyond the pass. Recon counted six AA positions, straight as a ruler. They are built for someone in the air."
+
+#: game/scripts/story/story_dialogs.gd:50
+msgid "Их курьер в эфире называет это «штаб». Что он имеет в виду, узнаем к пятнадцатой минуте."
+msgstr "Their courier calls it “headquarters” on the air. We will learn what he means by the fifteenth minute."
+
+#: game/scripts/story/story_dialogs.gd:51
+msgid "Один вопрос до вылета."
+msgstr "One question before takeoff."
+
+#: game/scripts/story/story_dialogs.gd:51
+msgid "Спросить о «штабе в воздухе»"
+msgstr "Ask about the “headquarters in the air”"
+
+#: game/scripts/story/story_dialogs.gd:51
+msgid "Спросить о порядке спасения"
+msgstr "Ask about the rescue procedure"
+
+#: game/scripts/story/story_dialogs.gd:52
+msgid "Перехваты говорят о программе «Крепость»: летающий командный пункт с турелями. Если он есть — он придёт к нам сам."
+msgstr "Intercepts mention a “Fortress” programme: a flying command post with turrets. If it exists, it will come to us on its own."
+
+#: game/scripts/story/story_dialogs.gd:53
+msgid "Сбитый включает аварийный маяк. Вертолёт идёт на него, но ему нужно полминуты чистого неба. Услышите маяк — держитесь рядом."
+msgstr "A downed pilot switches on the beacon. The helicopter goes to it, but needs half a minute of clear sky. Hear a beacon, stay close."
+
+#: game/scripts/story/story_dialogs.gd:54
+msgid "Понял. Русла, ПВО, пятнадцатая минута."
+msgstr "Copy. Riverbeds, flak, minute fifteen."
+
+#: game/scripts/story/story_dialogs.gd:57
+msgid "Первая «Крепость» на склоне. Их штаб в эфире назвал это «не по плану». Хорошо, когда у них есть план."
+msgstr "The first Fortress is on a slope. Their headquarters called it “not in the plan” on the air. Good that they have a plan."
+
+#: game/scripts/story/story_dialogs.gd:58
+msgid "«Иволга» дома. Её слова: парашют «Грома» видели у старых крепостей. Это единственная ниточка."
+msgstr "Oriole is home. Her words: Thunder's parachute was seen by the old forts. It is the only thread we have."
+
+#: game/scripts/story/story_dialogs.gd:59
+msgid "Что делаем с ниточкой?"
+msgstr "What do we do with the thread?"
+
+#: game/scripts/story/story_dialogs.gd:59
+msgid "Передать разведке — пусть ищут"
+msgstr "Pass it to recon, let them search"
+
+#: game/scripts/story/story_dialogs.gd:59
+msgid "Пока молчать — «Барон» не должен знать"
+msgstr "Keep quiet for now, Baron must not know"
+
+#: game/scripts/story/story_dialogs.gd:60
+msgid "Передаю. К «Крепостям» полетите с меткой на карте — разведка покажет, где смотреть."
+msgstr "Passing it on. You will fly to the Forts with a mark on the map: recon will show where to look."
+
+#: game/scripts/story/story_dialogs.gd:61
+msgid "Молчим. «Барон» в эфире болтлив — пусть думает, что мы ничего не знаем."
+msgstr "We keep quiet. Baron talks too much on the air; let him think we know nothing."
+
+#: game/scripts/story/story_dialogs.gd:62
+msgid "Вертолёт ушёл без пилота. О «Громе» по-прежнему ничего — разведка смотрит на старые крепости наугад."
+msgstr "The helicopter left without the pilot. Still nothing on Thunder; recon is searching the old forts blind."
+
+#: game/scripts/story/story_dialogs.gd:63
+msgid "Тогда дальше. К крепостям."
+msgstr "Then onward. To the forts."
+
+#: game/scripts/story/story_dialogs.gd:66
 msgid "Колонна прошла, перевал наш. «Барон» в эфире назвал ваш позывной — теперь это личное."
 msgstr "The convoy is through, the pass is ours. Baron said your callsign on the air. Now it is personal."
 
-#: game/scripts/story/story_dialogs.gd:50
+#: game/scripts/story/story_dialogs.gd:67
 msgid "Пусть называет. Хоть познакомимся."
 msgstr "Let him. At least we get introduced."
 
-#: game/scripts/story/story_dialogs.gd:51
+#: game/scripts/story/story_dialogs.gd:68
 msgid "Их асы прыгают с парашютом и назавтра снова в строю. У компании хорошие спасатели."
 msgstr "Their aces bail out and are back in formation the next day. The company has good rescuers."
 
-#: game/scripts/story/story_dialogs.gd:52
+#: game/scripts/story/story_dialogs.gd:69
 msgid "Разведка: в сухих руслах за перевалом копают позиции. По чертежу. Это ваша следующая операция."
 msgstr "Recon: they are digging positions in the dry riverbeds beyond the pass. To a blueprint. That is your next operation."
 
-#: game/scripts/story/story_dialogs.gd:59
+#: game/scripts/story/story_dialogs.gd:76
 msgid "Звено, проверка связи. Ангар слышит вас, картинка идёт."
 msgstr "Flight, radio check. The hangar hears you, picture is coming through."
 
-#: game/scripts/story/story_dialogs.gd:60
+#: game/scripts/story/story_dialogs.gd:77
 msgid "Слышу чисто. Когда вылет?"
 msgstr "Loud and clear. When do we fly?"
 
-#: game/scripts/story/story_dialogs.gd:61
+#: game/scripts/story/story_dialogs.gd:78
 msgid "Купол ждёт ответа."
 msgstr "Dome is waiting for an answer."
 
-#: game/scripts/story/story_dialogs.gd:61
+#: game/scripts/story/story_dialogs.gd:78
 msgid "Спросить о погоде"
 msgstr "Ask about the weather"
 
-#: game/scripts/story/story_dialogs.gd:61
+#: game/scripts/story/story_dialogs.gd:78
 msgid "Спросить о колонне"
 msgstr "Ask about the convoy"
 
-#: game/scripts/story/story_dialogs.gd:62
+#: game/scripts/story/story_dialogs.gd:79
 msgid "Над перевалом ясно, ветер с юга. Хороший день для работы."
 msgstr "Clear over the pass, wind from the south. A good day for work."
 
-#: game/scripts/story/story_dialogs.gd:63
+#: game/scripts/story/story_dialogs.gd:80
 msgid "Колонна вышла в срок. Ваше дело — чтобы она пришла."
 msgstr "The convoy left on time. Your job is to see it arrive."
 
@@ -8207,18 +8275,34 @@ msgid "Звено, небо ваше. Колонна идёт по график�
 msgstr "Flight, the sky is yours. The convoy is on schedule — don't let anyone touch it."
 
 #: game/scripts/story/story_scenes.gd:41
+msgid "Сухое русло · они строят"
+msgstr "Dry Riverbed · they build"
+
+#: game/scripts/story/story_scenes.gd:42
+msgid "Позиции в руслах — по чертежу. Где-то над ними тот, кто чертит."
+msgstr "The positions in the riverbeds follow a blueprint. Somewhere above them is the one who draws it."
+
+#: game/scripts/story/story_scenes.gd:52
 msgid "Перевал Шахрисанг · неделя после пропажи «Грома»"
 msgstr "Shahrisang Pass · a week after Thunder went missing"
 
-#: game/scripts/story/story_scenes.gd:42
+#: game/scripts/story/story_scenes.gd:53
 msgid "Колонна под вами. Пятнадцать минут над ней должно быть пусто."
 msgstr "The convoy is below you. Fifteen minutes of empty sky above it."
 
-#: game/scripts/story/story_scenes.gd:54
+#: game/scripts/story/story_scenes.gd:65
+msgid "Первая «Крепость» сбита"
+msgstr "The first Fortress is down"
+
+#: game/scripts/story/story_scenes.gd:66
+msgid "Первая. Не последняя: перехват говорит о «программе»."
+msgstr "The first. Not the last: the intercept speaks of a “programme”."
+
+#: game/scripts/story/story_scenes.gd:76
 msgid "Перевал пройден"
 msgstr "The pass is cleared"
 
-#: game/scripts/story/story_scenes.gd:55
+#: game/scripts/story/story_scenes.gd:77
 msgid "Колонна прошла. О «Громе» — ничего. Пока."
 msgstr "The convoy is through. Nothing on Thunder. Yet."
 
@@ -8255,65 +8339,129 @@ msgstr "Intercept from the fortress: \"Thunder\" is alive! Ground forces are goi
 msgid "Это не ПВО кочевников. Кто-то строит здесь позиции по чертежу."
 msgstr "That is no nomad flak. Somebody is building positions here to a blueprint."
 
-#: game/scripts/story/story_text.gd:26
+#: game/scripts/story/story_text.gd:21
+msgid "Вот она. Летающий штаб. Так вот кто чертит их позиции."
+msgstr "There it is. A flying headquarters. So that is who draws their positions."
+
+#: game/scripts/story/story_text.gd:27
 msgid "Перевал открыт. «Барон» знает ваш позывной."
 msgstr "The pass is open. Baron knows your callsign."
 
-#: game/scripts/story/story_text.gd:31
+#: game/scripts/story/story_text.gd:28
+msgid "«Крепость» № 1 сбита. О «Громе» по-прежнему ничего."
+msgstr "Fortress no. 1 is down. Still nothing on Thunder."
+
+#: game/scripts/story/story_text.gd:29
+msgid "«Крепость» № 1 сбита. «Гром» — у старых крепостей?"
+msgstr "Fortress no. 1 is down. Thunder, by the old forts?"
+
+#: game/scripts/story/story_text.gd:34
 msgid "«Крепость» идёт на нашу базу! Перехватите её, пока не дошла"
 msgstr "\"Fortress\" is heading for our base! Intercept it before it gets there"
 
-#: game/scripts/story/story_text.gd:32
+#: game/scripts/story/story_text.gd:35
 msgid "«Барон» сбит! Небо над крепостями наше"
 msgstr "Baron is down! The sky over the forts is ours"
 
-#: game/scripts/story/story_text.gd:33
+#: game/scripts/story/story_text.gd:36
 msgid "«Гром» в строю!"
 msgstr "Thunder is back in formation!"
 
-#: game/scripts/story/story_text.gd:47
+#: game/scripts/story/story_text.gd:50
 msgid "Доставка по адресу. Принимайте, «Вершина»."
 msgstr "Delivery to the address. Receive it, Summit."
 
-#: game/scripts/story/story_text.gd:47
+#: game/scripts/story/story_text.gd:50
 msgid "Опять вы на маршруте. Доставлю всё равно."
 msgstr "You on my route again. I will deliver anyway."
 
-#: game/scripts/story/story_text.gd:47
+#: game/scripts/story/story_text.gd:50
 msgid "Тот же адрес, тот же курьер."
 msgstr "Same address, same courier."
 
-#: game/scripts/story/story_text.gd:48
+#: game/scripts/story/story_text.gd:51
 msgid "Посылка пошла."
 msgstr "Package away."
 
-#: game/scripts/story/story_text.gd:48
+#: game/scripts/story/story_text.gd:51
 msgid "Распишитесь в получении."
 msgstr "Sign for the delivery."
 
-#: game/scripts/story/story_text.gd:49
+#: game/scripts/story/story_text.gd:52
 msgid "Груз сброшен… катапульта. Спасатели знают, где искать."
 msgstr "Cargo dropped… ejecting. The rescuers know where to look."
 
-#: game/scripts/story/story_text.gd:50
+#: game/scripts/story/story_text.gd:53
 msgid "Сквозит у вас в строю, новичок. Ведущего-то нет."
 msgstr "There is a draught in your formation, rookie. No leader."
 
-#: game/scripts/story/story_text.gd:50
+#: game/scripts/story/story_text.gd:53
 msgid "Снова вы? «Барон» будет рад."
 msgstr "You again? Baron will be pleased."
 
-#: game/scripts/story/story_text.gd:50
+#: game/scripts/story/story_text.gd:53
 msgid "Заткну сквозняк. Второй раз проще."
 msgstr "I will plug that draught. Easier the second time."
 
-#: game/scripts/story/story_text.gd:51
+#: game/scripts/story/story_text.gd:54
 msgid "Повреждения! Ну всё, без вежливости."
 msgstr "Damage! Fine, no more politeness."
 
-#: game/scripts/story/story_text.gd:52
+#: game/scripts/story/story_text.gd:55
 msgid "Выхожу… Это не считается, слышите? Не считается!"
 msgstr "Bailing out… This does not count, you hear? Does not count!"
+
+#: game/scripts/story/story_text.gd:57
+msgid "Штаб видит вас с высоты. Доставлю."
+msgstr "Headquarters sees you from above. I will deliver."
+
+#: game/scripts/story/story_text.gd:57
+msgid "Опять вы. Штаб уже в курсе — он всё видит."
+msgstr "You again. Headquarters already knows; it sees everything."
+
+#: game/scripts/story/story_text.gd:57
+msgid "Маршрут согласован со штабом. Сверху."
+msgstr "Route cleared with headquarters. From above."
+
+#: game/scripts/story/story_text.gd:58
+msgid "Отправление по расписанию."
+msgstr "Departure on schedule."
+
+#: game/scripts/story/story_text.gd:58
+msgid "Адресат — вы."
+msgstr "Addressee: you."
+
+#: game/scripts/story/story_text.gd:59
+msgid "Штаб, курьер выбыл… Катапульта."
+msgstr "Headquarters, courier is out… Ejecting."
+
+#: game/scripts/story/story_text.gd:60
+msgid "«Барон» просил передать: он вас помнит."
+msgstr "Baron asked me to pass on: he remembers you."
+
+#: game/scripts/story/story_text.gd:60
+msgid "Сквозняк вернулся. Соскучились?"
+msgstr "Draft is back. Missed me?"
+
+#: game/scripts/story/story_text.gd:60
+msgid "В руслах тесно, новичок. Уступите небо."
+msgstr "The riverbeds are crowded, rookie. Yield the sky."
+
+#: game/scripts/story/story_text.gd:61
+msgid "Передайте «Барону»… а, сам скажу. Выхожу."
+msgstr "Tell Baron… ah, I will tell him myself. Bailing out."
+
+#: game/scripts/story/story_text.gd:62
+msgid "Воздушный объект на маршруте штаба. Вы серьёзно? Отойдите от трассы."
+msgstr "Air object on the headquarters' route. Are you serious? Clear the track."
+
+#: game/scripts/story/story_text.gd:62
+msgid "Штаб на маршруте. Повторяю: отойдите от трассы."
+msgstr "Headquarters on route. Repeat: clear the track."
+
+#: game/scripts/story/story_text.gd:63
+msgid "Потеря крыла. Штаб запрашивает резерв. Это… не по плану."
+msgstr "Wing lost. Headquarters requests reserves. This is… not in the plan."
 
 #: game/scripts/tanker.gd:96
 msgid "Заправщик сбит! Следующий — через 2 минуты"
