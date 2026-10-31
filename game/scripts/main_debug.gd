@@ -934,6 +934,12 @@ func _run_autotest(delta: float) -> void:
 		if String(a).begins_with("--until=") and m.run_time >= float(String(a).substr(8)) and m.state == "playing":
 			Events.evac_reached.emit()
 			return
+	# story (step 7): --duelwin — the bot cannot out-fly the rival ace, so 40 s into the duel the ace goes down; checks
+	# the Baron-down chain (accent, «Граф», «Гром» free, outro, debrief) headless
+	if m._args.has("--duelwin") and m.state == "playing":
+		for n in m.get_tree().get_nodes_in_group("enemies"):
+			if n is RivalAce and (n as RivalAce).life < 50.0 and (n as Enemy).hp > 0.0:
+				(n as Enemy).take_hit(1.0e9, "autotest")
 	# EX-04 Б2: кадр со звеном бомбардировщиков рядом (--bombers --shots)
 	if m._args.has("--bombers") and is_instance_valid(m.player):
 		for n in m.get_tree().get_nodes_in_group("enemies"):

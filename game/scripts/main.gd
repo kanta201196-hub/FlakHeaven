@@ -234,7 +234,9 @@ func _launch_sortie() -> void:
 	if _args.has("--cutscene"):
 		Cutscene.play(self, "test", StoryScenes.TEST, "playing")
 	elif not aces() and not _benching() and Campaign.story_scene_due("intro_" + String(Campaign.op()["id"]), Settings.cutscenes):
-		Cutscene.play(self, "intro_" + String(Campaign.op()["id"]), StoryScenes.intro(String(Campaign.op()["id"])), "playing")
+		# step 7: the H2′ choice «передать разведке» picks the intro variant with the recon marker (op 3)
+		var oid := String(Campaign.op()["id"])
+		Cutscene.play(self, "intro_" + oid, StoryScenes.intro(oid, Campaign.story_choice("lead")), "playing")
 	else:
 		_set_state("playing")
 
@@ -726,18 +728,31 @@ func _on_evac_reached() -> void:
 	_award("evac")
 	RunLog.write(self, "эвакуация")
 	sfx.play("evac", -2.0, 1.2)
-	# story (step 2): the operation's outro between the evacuation and the results; (step 3) the hangar debrief after it
+	# story (step 2): the operation's outro between the evacuation and the results; (step 3) the hangar debrief after it.
+	# Step 7: both only when the operation is done — the outro tells its ending («Он наш»), and a failed sortie keeps
+	# the scenes for the clear
 	var oid := String(Campaign.op()["id"])
-	if not aces() and not _benching() and Campaign.story_scene_due("outro_" + oid, Settings.cutscenes) and not StoryScenes.outro(oid).is_empty():
+	if not aces() and not _benching() and bool(op_result.get("done", false)) and Campaign.story_scene_due("outro_" + oid, Settings.cutscenes) and not StoryScenes.outro(oid).is_empty():
 		Cutscene.play(self, "outro_" + oid, StoryScenes.outro(oid), "evac", _after_outro)
 	else:
 		_after_outro()
 
 
-## After the sortie's outro (or straight after the evacuation): the hangar debrief scene when due, then the results.
+## After the sortie's outro (or straight after the evacuation): the epilogue card when the operation has one (step 8:
+## op 4's hook over black, the Archipelago variant when its operations can be played), then the debrief.
 func _after_outro() -> void:
+	var oid := String(Campaign.op()["id"])
+	var south_live := Campaign.OPS.size() > 4 and Demo.op_ok(4)
+	if not aces() and bool(op_result.get("done", false)) and Campaign.story_scene_due("epilogue_" + oid, Settings.cutscenes) and not StoryScenes.epilogue(oid, south_live).is_empty():
+		Cutscene.play(self, "epilogue_" + oid, StoryScenes.epilogue(oid, south_live), "evac", _after_epilogue)
+	else:
+		_after_epilogue()
+
+
+## The hangar debrief scene when due (and the operation is done), then the results.
+func _after_epilogue() -> void:
 	var sid := "hangar_%s_after" % String(Campaign.op()["id"])
-	if not aces() and Dialog.due(sid):
+	if not aces() and bool(op_result.get("done", false)) and Dialog.due(sid):
 		Dialog.play(self, sid, StoryDialogs.scene(sid), _set_state.bind("evac"))
 	else:
 		_set_state("evac")

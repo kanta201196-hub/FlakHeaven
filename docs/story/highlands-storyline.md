@@ -102,13 +102,16 @@ companion document (question 3 decides whether they exist). Everything else is r
 - 3:00 *(in game)*: Grom joins: «Звено, я снова в строю. Должок за мной.»
 - **New:** aces in this op prefer the callsign «Граф» (rival_ace: Baron is dead; Count takes the first slot). Граф on arrival: «Компания не отступает. Только пересчитывает.»
 - Fortress «Прорыв» *(in game)*; on its fall Гром: «Небо над Шахрисангом наше. Спасибо, что не бросили.» *(in game)*
-- **Outro (12 s):** sunset, the flight (player + Grom + wingmen) passes over the pass road with the column moving below and the burnt Fortress on the ridge; slow pull-back to the valley. Then one **hook line** over black: Купол: «Радиоперехват с юга: компания грузится на корабли. Таласора…» → Archipelago (only when biome 2 is live; until then the line is «…Мы ещё услышим о них.»).
+- **Outro (12 s):** sunset, the flight (player + Grom + wingmen) passes over the pass road with the column moving below and the burnt Fortress on the ridge; slow pull-back to the valley. Then one **hook line** over black: Купол: «Радиоперехват с юга: компания грузится на корабли. Таласора…» → Archipelago (only when biome 2 is live; until then the line is «…Мы ещё услышим о них.»). *In game (step 8): the hook is a separate card scene `epilogue_sky` over black with `sting_epilogue`; the «Таласора» variant plays when the Archipelago operations can be played (full game), the other in the demo.*
 - Result line: «Кампания Нагорья завершена» + district credits (already planned in EX-09).
 
 ### Replays and difficulty
 Scenes and story lines play **on the first clear of an operation** (campaign save flags). Replays for loot start straight
 in the sortie; a setting «Заставки: при первом прохождении / всегда / никогда» (default: first time). The campaign
 flags that already exist (`rescued`, `grom_free`) stay; new flags: `seen_intro_<op>`, `seen_outro_<op>`, `graf_met`.
+The outro and the hangar debrief tell the operation's ending («Он наш»), so they play only when the sortie cleared the
+operation (`need` met); after a failed sortie they wait for the clear (step 7). The intro and the briefing play before any
+attempt. «Граф» is counted as met from his op 3 line (`met_graf`), so his op 4 lines are «again» lines.
 
 ### «Битва асов» (test mode)
 No story. Optional 3-second title card «Учебный полигон „Вершины“» so the mode has a place in the world. Not before EA.
@@ -215,7 +218,7 @@ ties the story to «Поколения техники»). Enemies never get port
 | H2 | before op 2 | riverbed AA; Почтальон's «headquarters in the air» line is explained | ask about the Fortress *or* about the rescue beacon procedure |
 | H2′ | after op 2 | Иволга's testimony (if rescued) or recon has nothing; **demo: the demo-end screen follows** | pass the parachute lead to recon (op 3 intro shows the fort with a marker) *or* keep it quiet (Baron does not know; his op 3 «again» line changes) — text and intro only, no balance effect |
 | H3 | before op 3 | Baron's challenge; Купол: «Не отвечайте. Пусть ищет» | accept the duel openly *or* let him come — flavour, the duel happens anyway |
-| H3′ | after op 3 | Grom in the hangar, on crutches, with his portrait; first conversation | **Grom's role in op 4**: flies as the special wingman (default, in code) *or* stays at the base as a second controller (one extra radio warning before each boss; no stats change). Needs Kanta's «ok» — see §8 |
+| H3′ | after op 3 | Grom in the hangar, on crutches, with his portrait; first conversation | **Grom's role in op 4**: flies as the special wingman (default, in code) *or* stays at the base as a second controller (one extra radio warning a minute before each boss; no stats change — in that case «Иволга» flies his plane, so the 3:00 wingman is the same). Taken as recommended 31.10 (step 7–8) |
 | H4 | before op 4 | «Прорыв»: Купол reads the headquarters' «offer» aloud; the crew answers in character | the crew member's reply (two flavours) |
 | H4′ | after op 4 | epilogue: the road, the valley, Grom; Купол's hook about the south | none |
 | HX | «Битва асов» first start | one card «Учебный полигон „Вершины“» | none |
