@@ -193,6 +193,8 @@ func _set_state(s: String) -> void:
 		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
 	Settings.set_screen_cap(s != "playing")
+	if s == "playing":
+		Hangar3D.release()
 	if is_instance_valid(player) and menu != null:
 		player.visible = not (s == "menu" or s == "hangar" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
 	Engine.time_scale = base_ts
@@ -295,6 +297,7 @@ func start_run() -> void:
 func _process(delta: float) -> void:
 	input_ctl.handle_global_input()
 	dbg.process(delta)
+	tele.load_tick()
 	if state in ["dead", "evac"]:
 		result_t += delta / maxf(Engine.time_scale, 0.01)
 	if _slow_t > 0.0 and state == "playing":
