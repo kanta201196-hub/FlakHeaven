@@ -669,7 +669,8 @@ func _fire_rockets(p: Player, manual := false) -> bool:
 	# S6-02 (решение Kanta 18.10): залп 4 с точки на ур. 1–2, 5 на ур. 3–4, 6 на ур. 5; уровень даёт ещё урон и радиус
 	var per_slot := 4 if level <= 2 else (5 if level <= 4 else 6)
 	# PG-06 profiles: «Веер» adds rockets and widens the cone, «Кумулятив» fires three heavy ones
-	var pd := prof()
+	# (the modernization keeps the profile's multipliers only; its own volley wins — PR 2 of PG-06 adds behaviour)
+	var pd := prof() if not evo else {}
 	per_slot = int(pd.get("count", per_slot + int(pd.get("extra", 0))))
 	var half_spread := float(pd.get("spread", 4.5))
 	var splash := 60.0 * (1.0 + Tuning.g("rocket_lvl_r") * (level - 1))

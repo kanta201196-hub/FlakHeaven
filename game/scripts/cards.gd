@@ -564,7 +564,7 @@ static func _branch_card(p: Player, gi: int, b: String, first: bool) -> Dictiona
 
 ## PG-06: true when the next upgrade of group `g` is the profile choice (`WeaponProfiles.due`)
 static func profile_due(g: Hardpoint) -> bool:
-	return not g.is_empty() and not g.builtin and g.level < Weapons.MAX_LEVEL + 1 and WeaponProfiles.due(g.level, g.profile, g.weapon)
+	return not g.is_empty() and not g.builtin and g.level < Weapons.MAX_LEVEL and WeaponProfiles.due(g.level, g.profile, g.weapon)
 
 
 ## PG-06: the group that must choose a profile now (−1 — none): the first due one not declined this choice

@@ -18,6 +18,7 @@ func run() -> Array:
 	_test_hardpoint_factors()
 	_test_hangar_gate()
 	_test_card_rules()
+	_test_due_at_max()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
 	return [_checks, _failed]
 
@@ -124,3 +125,10 @@ func _test_card_rules() -> void:
 	var c := Cards.profile_card(h, 0, "reach", 1)
 	_check(c["kind"] == "profile" and c["profile"] == "reach" and c["group"] == 0 and c["weapon"] == "aam", "profile card fields")
 	_check(String(c["title"]).contains("Дальний захват"), "profile card title names the profile")
+
+
+## A weapon at the top level never gets the fork screen (the card would read «ур. 5 → 5»).
+func _test_due_at_max() -> void:
+	var h := Hardpoint.new("test", 2, "aam")
+	h.level = Weapons.MAX_LEVEL
+	_check(not Cards.profile_due(h), "max level: not due")
