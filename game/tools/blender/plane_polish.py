@@ -172,6 +172,7 @@ class Model:
         return np.concatenate(out)
 
     def write(self, path):
+        """Save the GLB with the moved positions (back in each node's local frame) and updated normals"""
         g = self.g
         dn = self._normal_deltas()
         for a, e in self.acc.items():
@@ -267,6 +268,7 @@ def _normals(P, T, N_old):
 
 
 def smoothstep(a, b, x):
+    """Hermite step from 0 at a to 1 at b (a > b runs it the other way)"""
     t = np.clip((x - a) / (b - a), 0.0, 1.0)
     return t * t * (3 - 2 * t)
 
@@ -411,6 +413,7 @@ def _debug_plot(path, S, X, Tt, sq, le_raw, te_raw, le_fit, te_fit):
 
 
 def polish_surface(model, spec, side, report):
+    """Straighten the edges and even the skin of one lifting surface (one SURF entry, one side); see the module doc"""
     name, ax, s0, s1, x0, x1, t0, t1, segs, edges = spec[:10]
     gmax = spec[10] if len(spec) > 10 else GATE   # a long, wavy edge may need a wider gate
     a_mid = spec[11] if len(spec) > 11 else 0.55  # pull of the mid-chord skin (lumps, slat and flap seams)
@@ -648,6 +651,7 @@ def smooth_top(model, spec, report):
 
 
 def main():
+    """Command line: polish one hangar GLB by its key and write the result"""
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("src")
     ap.add_argument("key")

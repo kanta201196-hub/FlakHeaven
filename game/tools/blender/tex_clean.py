@@ -47,6 +47,7 @@ def coverage(glb_path, size):
 
 
 def _shift(a, dy, dx, fill):
+    """a moved by (dy, dx) texels, the uncovered border set to fill"""
     out = np.full_like(a, fill)
     h, w = a.shape[:2]
     ys, yd = (slice(dy, h), slice(0, h - dy)) if dy >= 0 else (slice(0, h + dy), slice(-dy, h))
@@ -56,6 +57,7 @@ def _shift(a, dy, dx, fill):
 
 
 def _grow(mask, n):
+    """Mask dilated by n texels (4-neighbourhood)"""
     m = mask.copy()
     for _ in range(n):
         m = m | _shift(m, 1, 0, False) | _shift(m, -1, 0, False) | _shift(m, 0, 1, False) | _shift(m, 0, -1, False)
@@ -82,6 +84,7 @@ def pad(img, cov, n):
 
 
 def gauss1d(s):
+    """Normalised 1D gaussian kernel of sigma s (3 sigma radius)"""
     r = int(3 * s + 1)
     k = np.exp(-0.5 * (np.arange(-r, r + 1) / s) ** 2)
     return k / k.sum()
@@ -115,6 +118,7 @@ def lab(rgb):
 
 
 def kmeans(X, k, it=25, seed=1):
+    """k centres of the rows of X (median update, robust to the panel-line outliers)"""
     rng = np.random.default_rng(seed)
     C = X[rng.choice(len(X), k, replace=False)]
     for _ in range(it):
@@ -186,6 +190,7 @@ def crisp_camo(img, cov, ntones, sigma, detail_k, report, size_k=1.0, wear=0.35)
 
 
 def main():
+    """Command line: one map in, one map out"""
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("glb")
     ap.add_argument("src")
