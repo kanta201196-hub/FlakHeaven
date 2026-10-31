@@ -65,7 +65,7 @@ func label() -> String:
 	if profile != "":
 		s += " · %s" % WeaponProfiles.def(weapon, profile).get("title", profile)
 	if branch != "":
-		s += " · %s %d" % [Cards.branch_def(weapon, branch)["title"], branch_rank]
+		s += " · %s %d" % [Cards.branch_def(weapon, branch, profile)["title"], branch_rank]
 	if uses_trigger() and trigger == "button":
 		s += " [прав. кн. мыши]"
 	return s
@@ -76,7 +76,7 @@ func uses_trigger() -> bool:
 
 
 func dmg() -> float:
-	return _dmg() * branch_dmg_k() * WeaponProfiles.k(weapon, profile, "dmg")
+	return _dmg() * branch_dmg_k() * prof_k("dmg")
 
 
 ## True for the classic modernization of `Prog.EVOS` (its firing code keys on `evo` per weapon).
@@ -89,9 +89,15 @@ func evo_def() -> Dictionary:
 	return Modernizations.DEFS.get(evo_id, {}) if evo else {}
 
 
-## PG-06: definition of the chosen profile (empty without one) — behaviour keys for the firing code
+## PG-06: definition of the chosen profile (empty without one) — behaviour keys for the firing code; with
+## mastery ranks of the profile (PR 3, `branch == "profile"`) its own feature is already grown
 func prof() -> Dictionary:
-	return WeaponProfiles.def(weapon, profile)
+	return WeaponProfiles.ranked(weapon, profile, branch_rank if branch == "profile" else 0)
+
+
+## PG-06: profile multiplier `key` (dmg, cd, range, spd) of this group, ranks included; 1 without a profile
+func prof_k(key: String) -> float:
+	return float(prof().get(key, 1.0))
 
 
 ## S9-15: «Калибр» — +18% урона за ранг, «Скорострел» — −10% перезарядки за ранг (до 5 рангов)
@@ -198,7 +204,7 @@ func reload_time(p: Player) -> float:
 		k /= float(p.mods.get("turret_rate", 1.0))
 	if weapon in MISSILES:
 		k *= float(p.mods.get("msl_cd", 1.0)) # модуль «Пусковое устройство»
-	k *= WeaponProfiles.k(weapon, profile, "cd")   # PG-06
+	k *= prof_k("cd")   # PG-06
 	var t: float = base * k * p.mods["hp_cd"] * Profile.wk(weapon, "cd") * branch_cd_k()
 	if MSL_CD_MIN.has(weapon):
 		# правка 3.5-s4 (лог «Осы»: до 59 ракет в воздухе): карточки перезарядки складывались до ×0,07 —
@@ -242,7 +248,7 @@ func _owner_k() -> float:
 
 
 func range_px() -> float:
-	var base: float = Weapons.DEFS[weapon]["range"] * _evo_k("range") * WeaponProfiles.k(weapon, profile, "range")   # PG-06
+	var base: float = Weapons.DEFS[weapon]["range"] * _evo_k("range") * prof_k("range")   # PG-06
 	var p := Main.I.player if Main.I != null else null
 	if p != null:
 		if weapon == "turret":
@@ -677,7 +683,7 @@ func _fire_aam(p: Player) -> bool:
 		if p.syn.has("carousel"):
 			opts["carousel"] = 0
 		var md := dmg() * Profile.wk("aam", "dmg")
-		opts["spd_k"] = Profile.wk("aam", "spd") * (1.2 if level >= 4 and not evo else 1.0) * WeaponProfiles.k("aam", profile, "spd")
+		opts["spd_k"] = Profile.wk("aam", "spd") * (1.2 if level >= 4 and not evo else 1.0) * prof_k("spd")
 		if prof().has("splash"):   # PG-06 «Осколочная»: wider burst, neighbours take more
 			opts["splash"] = float(prof()["splash"])
 			opts["splash_k"] = float(prof()["splash_k"])

@@ -219,6 +219,16 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 				if wp.size() == 2 and h1.weapon == wp[0] and not WeaponProfiles.def(wp[0], wp[1]).is_empty():
 					h1.profile = wp[1]
 					h1.level = maxi(h1.level, WeaponProfiles.LEVEL)
+	# PG-06 PR 3 check flag --wrank=<n>: every group with a profile starts with n mastery ranks of it
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--wrank="):
+			for g3 in groups:
+				var h3: Hardpoint = g3
+				if h3.profile != "":
+					h3.level = Weapons.MAX_LEVEL
+					h3.branch = "profile"
+					h3.branch_rank = clampi(int(String(arg).substr(8)), 0, Cards.BRANCH_MAX)
+					print("AUTOTEST: wrank %s %s rank %d" % [h3.weapon, h3.profile, h3.branch_rank])
 	# PG-06 PR 2 check flag --wevo=<recipe id>: that weapon at the top level and modernized from the start
 	for arg in OS.get_cmdline_user_args():
 		if String(arg).begins_with("--wevo="):

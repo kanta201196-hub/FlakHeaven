@@ -302,7 +302,7 @@ func _card_title(p: Player, c: Dictionary) -> String:
 ## Translated name of the mastery branch on card `c` («Скорострел», «Калибр», «Яркие ловушки»…).
 func _branch_name(p: Player, c: Dictionary) -> String:
 	var g: Hardpoint = p.groups[int(c["group"])]
-	return Loc.t(String(Cards.branch_def(g.weapon, String(c["branch"]))["title"]))
+	return Loc.t(String(Cards.branch_def(g.weapon, String(c["branch"]), g.profile)["title"]))
 
 
 ## Short translated name of the weapon in group `g` (its evolution name once evolved).

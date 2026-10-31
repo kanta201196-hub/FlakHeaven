@@ -19,6 +19,8 @@ func run() -> Array:
 	_test_hangar_gate()
 	_test_card_rules()
 	_test_due_at_max()
+	_test_ranks()
+	_test_new_hangar_branches()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
 	return [_checks, _failed]
 
@@ -106,7 +108,10 @@ func _test_hangar_gate() -> void:
 	_check(not p.profile_open("aam"), "tier 1 alone does not open it")
 	p.data["weapons"]["aam"]["t2"] = "b"
 	_check(p.profile_open("aam") == (p.meta_k() > 0.0), "tier 2 opens the third (meta on)")
-	_check(not p.profile_open("srm"), "srm: no hangar branch, closed")
+	_check(not p.profile_open("srm"), "srm: tier 2 not taken, closed")
+	p.data["weapons"]["srm"]["t1"] = "a"
+	p.data["weapons"]["srm"]["t2"] = "a"
+	_check(p.profile_open("srm") == (p.meta_k() > 0.0), "srm: tier 2 opens the third (PR 3)")
 	_check(not p.profile_open("bombs"), "bombs: no profiles, closed")
 	p.free()
 
@@ -132,3 +137,46 @@ func _test_due_at_max() -> void:
 	var h := Hardpoint.new("test", 2, "aam")
 	h.level = Weapons.MAX_LEVEL
 	_check(not Cards.profile_due(h), "max level: not due")
+
+
+## PR 3: mastery after level 35 on a weapon with a profile = ranks of that profile, +RANK_K to its own
+## feature per rank; rank 0 is the plain profile.
+func _test_ranks() -> void:
+	for w in ["aam", "srm", "agm", "rockets"]:
+		for id in WeaponProfiles.ids(w):
+			var key := WeaponProfiles.rank_key(w, id)
+			_check(key != "", "%s/%s has a rank key" % [w, id])
+			_check(String(WeaponProfiles.RANK_TEXT.get(key, "")) != "", "%s/%s rank key %s has text" % [w, id, key])
+	_check(WeaponProfiles.ranked("aam", "pair", 0) == WeaponProfiles.def("aam", "pair"), "rank 0 = plain profile")
+	_check(is_equal_approx(float(WeaponProfiles.ranked("aam", "pair", 2)["dmg"]), 0.55 * (1.0 + 2.0 * WeaponProfiles.RANK_K)), "pair rank 2: dmg")
+	_check(is_equal_approx(float(WeaponProfiles.ranked("aam", "frag", 1)["splash"]), 110.0 * (1.0 + WeaponProfiles.RANK_K)), "frag rank 1: splash")
+	_check(is_equal_approx(float(WeaponProfiles.ranked("agm", "arm", 3)["dmg"]), 1.0 + 3.0 * WeaponProfiles.RANK_K), "a missing factor starts at 1")
+	_check(WeaponProfiles.ranked("aam", "none", 2).is_empty(), "unknown profile: empty")
+	var h := Hardpoint.new("test", 2, "aam")
+	h.level = 5
+	h.profile = "pair"
+	var d0 := h.dmg()
+	h.branch = "profile"
+	h.branch_rank = 2
+	_check(is_equal_approx(h.dmg() / d0, 1.0 + 2.0 * WeaponProfiles.RANK_K), "hardpoint: rank 2 of pair (got %.3f)" % (h.dmg() / d0))
+	_check(h.label().contains(WeaponProfiles.def("aam", "pair")["title"]), "label keeps the profile")
+	var bd := Cards.branch_def("aam", "profile", "pair")
+	_check(String(bd["title"]).contains(Loc.t("Двойной пуск")) and String(bd["desc"]) != "", "branch_def for a profile rank (got %s)" % bd["title"])
+	var g := Hardpoint.new("test", 2, "aam")
+	g.level = 5
+	_check(Cards.mastery_branches(g) == ["rate", "power"], "no profile: the old pair")
+	g.profile = "reach"
+	_check(Cards.mastery_branches(g) == ["profile"], "with a profile: one rank card")
+
+
+## PR 3: hangar branches (tiers 1–2) for the PG-01 weapons; their save slots exist in a fresh profile.
+func _test_new_hangar_branches() -> void:
+	var p := _fresh_profile()
+	for w in ["srm", "agm", "hebomb"]:
+		_check(Profile.WBRANCH.has(w), "%s: hangar branch" % w)
+		_check((Profile.WBRANCH.get(w, []) as Array).size() == 2, "%s: two tiers" % w)
+		for tier in (Profile.WBRANCH.get(w, []) as Array):
+			_check((tier as Array).size() == 2, "%s: two options per tier" % w)
+		_check(Profile.WEAPON_ORDER.has(w) and p.data["weapons"].has(w), "%s: save slot" % w)
+	_check(not p.profile_open("hebomb"), "hebomb: branch but no profiles, nothing to open")
+	p.free()
