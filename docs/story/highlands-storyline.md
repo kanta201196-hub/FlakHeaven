@@ -1,8 +1,10 @@
 # Shahrisang Highlands — storyline proposal
 
 31.10.2026 · thread «Проработать сюжет Нагорья и заставки» · asked by Kanta («проработай сюжетную линию для биома»).
-Status: **proposal, waiting for Kanta's numbered answers** (questions at the end). Nothing here is in the game yet except
-what is marked *(in game)*. Companion document: `cutscenes-and-presentation.md` (how the story is shown: intros, outros,
+Status: **decided by Kanta 31.10.2026** (answers in §8): depth 3 (full narrative for the Highlands), enemy «Монолит»
+with a worked-out history, rule «катсцены — нет» amended, everything in the demo, second ace «Граф». Implementation plan:
+`docs/superpowers/plans/2026-10-31-highlands-story.md` (waits for Kanta's «yes» on the plan and §8 open points).
+Nothing here is in the game yet except what is marked *(in game)*. Companion document: `cutscenes-and-presentation.md` (how the story is shown: intros, outros,
 radio, visual and audio effects, Godot tech, cost).
 
 Player-facing strings are quoted in Russian because that is the source language of the game; they go through `Loc.t()`
@@ -131,10 +133,108 @@ No story. Optional 3-second title card «Учебный полигон „Вер
 2. Story strings in `story.gd` bypass `Loc.t()` on some lines — check all radio lines go through translation (EN/ZH).
 3. The briefing of op 4 lacks the Grom sentence (S9-17 made him join at 3:00; the text does not say so).
 
-## 7. Questions for Kanta (numbered; answers by number)
+## 7. Decisions (Kanta 31.10.2026)
 
-1. **Story depth.** 1 — only text (§3 radio and result lines, no scenes). **2 — text + short in-engine intros/outros as in §3 (recommended).** 3 — full narrative (crew scenes in the hangar, portraits, choices) — not before EA.
-2. **Enemy name** (the company). 1 — **«Компания „Монолит“»** (recommended: neutral, corporate, nothing real). 2 — «Кондотта» (mercenary flavour, matches the title callsigns). 3 — keep it nameless («противник», «компания» in lower case).
-3. **Rule change.** Intros/outros mean amending «Чего не делаем: катсцены» to «короткие заставки в движке (≤ 15 с, пропускаемые любой клавишей), без видео». 1 — **yes (recommended)**. 2 — no, text only (then question 1 = 1).
-4. **Scope for the demo** (Next Fest, ops 1–2). 1 — **intro + outro of ops 1–2 and the Fortress first-sight line (recommended)**; 2 — only op 1 intro; 3 — nothing new in the demo.
-5. **«Граф»** as the second ace with two lines. 1 — **yes (recommended)**. 2 — no, Baron is the only named enemy.
+| # | Question | Answer |
+| --- | --- | --- |
+| 1 | Story depth | **3 — full narrative for the Highlands now**: hangar dialogue scenes with portraits and choices, plus everything of option 2 |
+| 2 | Enemy name | **«Монолит»**, but with a history: the player must understand why we fight (§9) |
+| 3 | Rule «катсцены — нет» | **amend** — see game-context «Чего не делаем» |
+| 4 | Demo scope | **everything the Highlands story has for ops 1–2** |
+| 5 | Second ace «Граф» | **yes** |
+
+Kanta also asked how the mini-bosses («Сквозняк», «Почтальон») fit in → §10. «Компания» (a firm) vs «кампания»
+(a campaign): both words are used on purpose — Monolith is a company, the four operations are the campaign.
+
+## 9. «Монолит»: why we fight
+
+**What Monolith is.** A military-engineering company. It does not conquer; it *builds under contract*. It arrives in a
+resource region with a client's order, builds the road, the mine, the air defence around them, and runs them. Whoever pays
+Monolith owns the region; whoever refuses gets Monolith anyway, because the client already paid. Its doctrine is written
+on every briefing slide of theirs: «Дорога, потом подпись» — take the road, and the valley will sign.
+
+**Why Shahrisang.** The mines behind the pass («Шахрисанг» — «stone city» in the valley's old speech) hold the metal
+Monolith's client needs. The valley communities refused the contract a year ago. Monolith came in spring with its
+engineers, took the high passes nobody defended, and started building: AA in the dry riverbeds, old kala forts as fire bases,
+and the flying headquarters «Крепость» that lets it direct a whole offensive without putting a soldier in the valley.
+
+**Who we are.** The valley has no army, only a small highland air arm with the «Вершина» peak on its fins: a few dozen
+pilots, one base at the valley mouth, planes bought second-hand and rebuilt by hand (this is why the hangar upgrades and
+«Поколения техники» look the way they do). We are the only thing that reaches the fortresses. The pass road is the valley's
+lifeline: food, fuel, medicine, people. Hold the road and Monolith's contract does not close.
+
+**Why it is not a war of hatred.** Monolith's people are professionals doing a job; their radio is dry and polite. The
+company does not want to destroy the valley — a ruined valley cannot sign. It wants to make resistance unprofitable, which
+is why the campaign's climax is «Прорыв»: the last Fortress flies to our base. No base, no air arm, contract signed.
+The one person in Monolith who enjoys the war is «Барон»; the others («Граф», «Почтальон», «Сквозняк») are colleagues,
+and the humour comes from treating a war like a building site: «У компании хорошие спасатели», «Они опять привезли бетон».
+
+**How the player learns it.** Never as a lecture: one sentence per hangar scene, one radio line per sortie, the «opens»
+lines of the campaign screen. By op 2 the player knows Monolith builds; by op 3 who pays its pilots; by op 4 what «Прорыв» means.
+
+**Enemy visual identity (needs Kanta's «ok» as art):** a plain grey vertical slab as the Monolith mark on the Fortress,
+AA sites and trucks; no colours, no eagles, no letters. Cheap (one decal), makes «they are one company» readable from
+the air. Not in this plan's cost until approved.
+
+## 10. Mini-bosses and bosses in the story
+
+The sortie already has three fixed enemy «characters»: ace «Почтальон» (missile carrier) at 5:00, ace «Сквозняк»
+(interceptor) at 10:00, and the Fortress at 15:00 (`spawner.gd`, `boss.gd`). They respawn every sortie; in the fiction
+Monolith pilots eject and the company's rescue service brings them back — this is said out loud once (op 1, Купол) and
+becomes a running joke. Each gets a role, a memory of the player and two or three lines per operation; the generic
+boss lines stay for other biomes.
+
+| Who | Role in Monolith | Arc over ops 1–4 |
+| --- | --- | --- |
+| **«Почтальон»** | «delivers» the Fortress's orders: the spotter who marks targets for the riverbed AA and brings the missile salvos | op 1: pure business («Доставка по адресу»). op 2: lets slip that the headquarters is in the air («Штаб видит вас с высоты. Доставлю.») — the first mention of the Fortress. op 3: after Baron falls he is the one who sounds tired. op 4: flies escort for the last Fortress: «Последняя доставка». |
+| **«Сквозняк»** | Baron's wingman, the company's hothead | op 1–2: echoes Baron, mocks («Сквозит у вас в строю»). op 3: after Baron is shot down, bitter («Это был мой ведущий»), a mirror of the player's own loss of Grom. op 4: challenges the player personally at 10:00 — the only enemy who takes it personally like Baron did. |
+| **«Барон»** | lead ace | as in §3; falls in op 3 |
+| **«Граф»** | deputy, takes over | §3: one line in op 3, leads the aces of op 4 |
+| **«Крепость»** | the method itself; its controller speaks as «Штаб „Монолита“» (red frame), two lines per appearance | op 2: first appearance, surprised to be attacked at all. op 3: businesslike. op 4: «Прорыв» — the only time the headquarters addresses our base directly: «„Вершина“, предложение остаётся в силе до нашего прибытия». |
+
+Memory: campaign flags `met_postman`, `met_draft` (count) choose the «again» line, like Baron's today.
+
+## 11. Depth 3: hangar scenes and choices
+
+**Where.** In the hangar (the 3D hangar scene with the max-quality plane exists). A scene = 3–6 exchanges with portraits
+left (our side) and right (Купол / guests), typed-out text, Enter / click / gamepad advances, Esc skips the scene; every
+scene can be replayed from the campaign screen («Журнал» — the story log). Scenes are drawn with `HudKit` (ADR-05).
+
+**Who appears.** The player's crew member of the selected class (existing portrait and trait: «Шмель · Торопыга» etc. — the
+trait title colours one line per scene), «Купол» (new portrait), «Гром» (new portrait, op 3 debrief and op 4), «Иволга»
+(radio only), the base mechanic «Ключ» (new portrait, optional: hangar humour, explains plane 2 and experimental weapons —
+ties the story to «Поколения техники»). Enemies never get portraits: red radio plates only.
+
+**Scenes (10):**
+
+| # | When | Content | Choice |
+| --- | --- | --- | --- |
+| H0 | first entry into the campaign | Prologue: a week after Grom; Купол explains the road and Monolith in three lines; the crew member's first line shows the trait | none (sets the tone) |
+| H1 | before op 1 | briefing as dialogue (the briefing text stays on the campaign screen) | ask Купол about Monolith *or* about Grom (changes which fact you learn first) |
+| H1′ | after op 1 | debrief: Baron's taunt discussed; Купол: «У компании хорошие спасатели» | none |
+| H2 | before op 2 | riverbed AA; Почтальон's «headquarters in the air» line is explained | ask about the Fortress *or* about the rescue beacon procedure |
+| H2′ | after op 2 | Иволга's testimony (if rescued) or recon has nothing; **demo: the demo-end screen follows** | pass the parachute lead to recon (op 3 intro shows the fort with a marker) *or* keep it quiet (Baron does not know; his op 3 «again» line changes) — text and intro only, no balance effect |
+| H3 | before op 3 | Baron's challenge; Купол: «Не отвечайте. Пусть ищет» | accept the duel openly *or* let him come — flavour, the duel happens anyway |
+| H3′ | after op 3 | Grom in the hangar, on crutches, with his portrait; first conversation | **Grom's role in op 4**: flies as the special wingman (default, in code) *or* stays at the base as a second controller (one extra radio warning before each boss; no stats change). Needs Kanta's «ok» — see §8 |
+| H4 | before op 4 | «Прорыв»: Купол reads the headquarters' «offer» aloud; the crew answers in character | the crew member's reply (two flavours) |
+| H4′ | after op 4 | epilogue: the road, the valley, Grom; Купол's hook about the south | none |
+| HX | «Битва асов» first start | one card «Учебный полигон „Вершины“» | none |
+
+**Rules for choices.** A choice changes words, a camera target in the intro or one radio warning — never damage,
+HP, rewards or unlocks (rule 2: no balance change without Kanta). All choices are stored in the campaign save and listed
+in the story log.
+
+**Text volume.** ~70 dialogue lines + ~25 radio lines + 8 result lines + 10 hangar-scene captions ≈ 115 strings in
+Russian; EN/ZH drafts through the translation thread.
+
+## 8. Open points for Kanta (answers by number)
+
+1. **Portraits** for Купол, Гром, Ключ (3 pictures, same style as the 15 crew portraits that were made «ChatGPT по брифу,
+   стиль D»). 1 — **generate in the same way, brief and input picture to you for approval first (recommended)**;
+   2 — radio plates without faces for all three; 3 — only Grom gets a face.
+2. **Grom in op 4** (scene H3′): 1 — **the player chooses: wingman or second controller (recommended)**;
+   2 — always a wingman (as coded today), no choice.
+3. **Mechanic «Ключ»** as a fourth voice (hangar humour, explains plane 2 and experimental weapons): 1 — **yes (recommended)**; 2 — no.
+4. **Monolith mark** (grey slab decal on the Fortress, AA and trucks): 1 — **yes, show a frame first (recommended)**; 2 — no marks.
+5. **The plan** `docs/superpowers/plans/2026-10-31-highlands-story.md` — «да» to start. Order: texts and small fixes →
+   cutscene runtime → hangar dialogue runtime → scenes for ops 1–2 (demo) → ops 3–4 → epilogue.

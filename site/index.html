@@ -396,7 +396,9 @@ if(LINKS.tester){
   window.addEventListener("message",function(e){
     if(e.origin!=="https://forms.yandex.ru")return;
     try{var d=JSON.parse(e.data),h=d["iframe-height"],f=document.getElementById("tester-frame");
-      if(f&&h>300){f.style.height=h+"px";}}catch(err){}});
+      if(f&&h>300){var old=f.offsetHeight;f.style.height=h+"px";
+        /* «Далее» укорачивает форму, и на телефоне она целиком уезжает выше экрана: возвращаем её начало в вид. */
+        if(Math.abs(old-h)>50&&f.getBoundingClientRect().top<0){f.scrollIntoView({block:"start"});}}}catch(err){}});
   ["top-tester","wide-tester","mg-tester"].forEach(function(id){var a=document.getElementById(id);a.hidden=false;
     a.onclick=function(e){e.preventDefault();openForm();T.scrollIntoView({behavior:reduce?"auto":"smooth"});};});
 }

@@ -2441,8 +2441,8 @@ msgstr "撤离：撤离门 %d / %d · %d 米 · 窗口 %d 秒"
 
 #: game/scripts/hud_flight.gd:848
 #, c-format
-msgid "Газ [W/S]: %d%%%s"
-msgstr "油门 [W/S]：%d%%%s"
+msgid "Тяга [W/S]: %d%%%s"
+msgstr "推力 [W/S]：%d%%%s"
 
 #: game/scripts/hud_flight.gd:848
 msgid "  ФОРСАЖ"
