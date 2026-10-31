@@ -97,7 +97,6 @@ uniform vec4 gz_c[24];
 uniform int gz_n = 0;
 uniform vec3 gz_cam = vec3(0.0, 1000.0, 0.0);
 uniform float gz_time = 0.0;
-uniform bool gz_v2 = false;   // S14-18: plasma fire patches glow in cracks (Tuning fx_s14)
 
 uniform float tex_world = 460.0;   // мировой размер плитки, px
 uniform float patch_world = 1500.0; // размер пятен материалов, px
@@ -612,11 +611,11 @@ void fragment() {
 				float edge = 1.0 - smoothstep(r * (0.55 + 0.35 * n), r * (0.75 + 0.35 * n), d);
 				// гарь с тлеющими прожилками: светятся только «трещины» шума, остальное — тёмная гарь с лёгким жаром
 				float ember = smoothstep(0.42, 0.78, n2) * edge;
-				bool v2 = gz_v2 && zc.b > zc.r;   // only cold (plasma) patches; orange fire keeps its embers
+				bool v2 = zb.z > 3.5;   // kind 4: crack fire (plasma patch with Tuning fx_s14); kind 3 keeps its embers
 				if (v2) {
 					// S14-18 (R-22 toggle fx_s14): the thresholded value noise above sat on its axis-aligned cell
-					// grid, and a cold plasma colour blooms to white, so the patch read as pixel «snow». Glow now runs
-					// in thin ridged cracks of noise on two rotated grids (no visible cells), over a dim soft heat.
+					// grid, and the cold plasma colour bloomed to white, so the patch read as pixel «snow». Glow now
+					// runs in thin ridged cracks of noise on two rotated grids (no visible cells), over a dim heat.
 					vec2 ra = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * cp;
 					vec2 rb = mat2(vec2(0.28, -0.96), vec2(0.96, 0.28)) * cp;
 					float c1 = 1.0 - abs(vnoise(ra / 22.0 + zb.w + vec2(gz_time * 0.12, 0.0)) * 2.0 - 1.0);

@@ -2995,9 +2995,12 @@ func _sync_ground_zones(m: Main) -> void:
 		if fl.size() > GZ_MAX - _gz_a.size():
 			fl.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
 				return (x["p"] as Vector2).distance_squared_to(_c2) < (y["p"] as Vector2).distance_squared_to(_c2))
+		var cracks := Tuning.g("fx_s14") >= 1.0
 		for f: Dictionary in fl:
 			var fc: Color = f.get("c", Color(1.0, 0.45, 0.1))
-			_gz_add(f["p"], f["p"], float(f["r"]), clampf(float(f["t"]), 0.0, 1.0), 3, fc)
+			# S14-18 (toggle fx_s14): the plasma patch burns as glowing blue cracks in soot (kind 4)
+			var crack: bool = cracks and f.get("src", "") == "плазма"
+			_gz_add(f["p"], f["p"], float(f["r"]), clampf(float(f["t"]), 0.0, 1.0), 4 if crack else 3, fc)
 	_ground_mat.set_shader_parameter("gz_n", _gz_a.size())
 	if _gz_a.is_empty():
 		return
@@ -3009,7 +3012,6 @@ func _sync_ground_zones(m: Main) -> void:
 	_ground_mat.set_shader_parameter("gz_c", _gz_c)
 	_ground_mat.set_shader_parameter("gz_cam", cam.global_position)
 	_ground_mat.set_shader_parameter("gz_time", Time.get_ticks_msec() * 0.001)
-	_ground_mat.set_shader_parameter("gz_v2", Tuning.g("fx_s14") >= 1.0)
 
 
 ## Воронки: плоский квадрат по наклону рельефа с общей текстурой и материалом (без теней, без света),
