@@ -233,7 +233,7 @@ func _offset_outline(pts: PackedVector2Array, r: Rect2, d: float) -> void:
 		pts[k] = c + v + Vector2(signf(v.x), signf(v.y)) * d
 
 
-## Family tag at the bottom: its left edge follows the bevel, so it starts where the cut ends.
+## Family tag at the bottom: its left edge follows the bevel, then the card's left border, so nothing leaves the card.
 func _tag(p: Player, c: Dictionary, r: Rect2) -> void:
 	var fam := HudIcons.card_family(p, c)
 	var tags := Prog.card_tags(p, c)
@@ -245,7 +245,10 @@ func _tag(p: Player, c: Dictionary, r: Rect2) -> void:
 	var h := 28.0
 	var x := r.position.x + 2.0
 	var y := r.end.y - 2.0
-	var poly := PackedVector2Array([Vector2(x + CUT - h, y - h), Vector2(x + CUT + tw, y - h), Vector2(x + CUT + tw, y), Vector2(x + CUT, y)])
+	# S14-01 (Kanta: a corner sticks out of the card): the tag is taller (28) than the bevel (22), so a slanted edge
+	# running the full height started 4 px left of the card's border; it now follows the bevel, then goes straight up
+	var poly := PackedVector2Array([Vector2(x, y - h), Vector2(x + CUT + tw, y - h), Vector2(x + CUT + tw, y), Vector2(x + CUT, y),
+		Vector2(x, y - CUT)])
 	ctrl.draw_colored_polygon(poly, Color(fc, 0.22))
 	UiStyle.text(ctrl, f, Vector2(x + CUT + 6.0, y - 8.0), label, UiStyle.FS_CAPTION, fc.lightened(0.25))
 
