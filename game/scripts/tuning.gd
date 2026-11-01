@@ -163,6 +163,7 @@ const RANGES := {
 	"story_vignette": [0, 1, 1, 1, "Окно операции на экране «В вылет»: живой вид биома со звеном (0/1)"],
 	"story_lights": [0, 1, 1, 1, "Огни в окнах посёлков в сумеречных и ночных сценах (0/1)"],
 	"story_mark": [0, 1, 1, 1, "Знак «Монолита» (серая плита) на «Крепости», ПВО и машинах колонн (0/1)"],
+	"story_art": [0, 1, 1, 1, "Арт заставок (комикс) вместо живого пролёта камеры (0/1)"],
 	"plane_lvl2_at": [2, 40, 1, 10, "Не используется с 3.5: самолёт ур. 2 выбирается в ангаре"],
 	"plane_len": [24, 160, 1, 100, "Длина спрайта истребителя на экране, пикс (×размер класса)"],
 	"plane_shadow": [0, 1, 1, 1, "Тень самолётов: 0 — настоящая (бреющий полёт), 1 — высотная (меньше, мягче)"],
@@ -180,7 +181,7 @@ const RANGES := {
 
 var params := {}
 ## Личные настройки игрока — переживают смену версии баланса
-const KEEP := ["master_db", "music_db", "sfx_db", "engine_db", "ui_db", "scheme", "render3d", "sprites", "damage_numbers", "story_accents", "story_vignette", "story_lights", "story_mark",
+const KEEP := ["master_db", "music_db", "sfx_db", "engine_db", "ui_db", "scheme", "render3d", "sprites", "damage_numbers", "story_accents", "story_vignette", "story_lights", "story_mark", "story_art",
 	"shake_mult", "range_rings", "camera_zoom", "plane_len", "cam_tilt"]
 
 

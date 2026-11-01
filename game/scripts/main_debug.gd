@@ -32,9 +32,9 @@ func process(delta: float) -> void:
 	if m._autotest:
 		if not _ss_campaign:   # the story-shots run ends on the campaign screen: the bot must not press «В вылет» again
 			_run_autotest(delta)
-		if m._args.has("--storyshots"):
+		if m._args.has("--storyshots"):   # the shot drivers replace the smoke wall limit: their runs last longer
 			_story_shots()
-		if m._args.has("--markshot"):
+		elif m._args.has("--markshot"):
 			_mark_shot(delta)
 		elif m._args.has("--smoke"):
 			_smoke_check()
