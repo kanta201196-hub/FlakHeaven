@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://br4kv3v7p82nq"
-path="res://.godot/imported/turret_grach_evo_arctic_tiger_turret_paint_pods_albedo.jpg-00f9e2f73749002fcb73986ea9bc6b6b.ctex"
+path.bptc="res://.godot/imported/turret_grach_evo_arctic_tiger_turret_paint_pods_albedo.jpg-00f9e2f73749002fcb73986ea9bc6b6b.bptc.ctex"
+path.astc="res://.godot/imported/turret_grach_evo_arctic_tiger_turret_paint_pods_albedo.jpg-00f9e2f73749002fcb73986ea9bc6b6b.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "a8051e4178c759a4f48a2163f1fc76fd"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_evo_arctic_tiger_turret_paint_pods_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_evo_arctic_tiger_turret_paint_pods_albedo.jpg-00f9e2f73749002fcb73986ea9bc6b6b.ctex"]
+dest_files=["res://.godot/imported/turret_grach_evo_arctic_tiger_turret_paint_pods_albedo.jpg-00f9e2f73749002fcb73986ea9bc6b6b.bptc.ctex", "res://.godot/imported/turret_grach_evo_arctic_tiger_turret_paint_pods_albedo.jpg-00f9e2f73749002fcb73986ea9bc6b6b.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

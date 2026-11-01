@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bqh3w3lxlhk3c"
-path="res://.godot/imported/oh_d_adobe_oh_d_albedo.jpg-efc2374aa3a2d948f117f89a9ac7d992.ctex"
+path.bptc="res://.godot/imported/oh_d_adobe_oh_d_albedo.jpg-efc2374aa3a2d948f117f89a9ac7d992.bptc.ctex"
+path.astc="res://.godot/imported/oh_d_adobe_oh_d_albedo.jpg-efc2374aa3a2d948f117f89a9ac7d992.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "878e9430b6149c715cb4a42e30d93d28"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/oh_d_adobe_oh_d_albedo.jpg"
-dest_files=["res://.godot/imported/oh_d_adobe_oh_d_albedo.jpg-efc2374aa3a2d948f117f89a9ac7d992.ctex"]
+dest_files=["res://.godot/imported/oh_d_adobe_oh_d_albedo.jpg-efc2374aa3a2d948f117f89a9ac7d992.bptc.ctex", "res://.godot/imported/oh_d_adobe_oh_d_albedo.jpg-efc2374aa3a2d948f117f89a9ac7d992.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

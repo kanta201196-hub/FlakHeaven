@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://j2clvuio0uys"
-path="res://.godot/imported/oh_cistern_adobe_oh_cistern_normal.jpg-4e4139fab44720da3a4387bfa6ccb79d.ctex"
+path.bptc="res://.godot/imported/oh_cistern_adobe_oh_cistern_normal.jpg-4e4139fab44720da3a4387bfa6ccb79d.bptc.ctex"
+path.astc="res://.godot/imported/oh_cistern_adobe_oh_cistern_normal.jpg-4e4139fab44720da3a4387bfa6ccb79d.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d2d621ad477421f843c8481b97f54fb3"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/oh_cistern_adobe_oh_cistern_normal.jpg"
-dest_files=["res://.godot/imported/oh_cistern_adobe_oh_cistern_normal.jpg-4e4139fab44720da3a4387bfa6ccb79d.ctex"]
+dest_files=["res://.godot/imported/oh_cistern_adobe_oh_cistern_normal.jpg-4e4139fab44720da3a4387bfa6ccb79d.bptc.ctex", "res://.godot/imported/oh_cistern_adobe_oh_cistern_normal.jpg-4e4139fab44720da3a4387bfa6ccb79d.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cantmxq2r3cms"
-path="res://.godot/imported/turret_grach_evo_shark_turret_paint_orm.jpg-84e6b03e0d898b4675b8ede58cf06121.ctex"
+path.bptc="res://.godot/imported/turret_grach_evo_shark_turret_paint_orm.jpg-84e6b03e0d898b4675b8ede58cf06121.bptc.ctex"
+path.astc="res://.godot/imported/turret_grach_evo_shark_turret_paint_orm.jpg-84e6b03e0d898b4675b8ede58cf06121.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "a1e3aa4337c3c2c1f744959c769ba34b"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_evo_shark_turret_paint_orm.jpg"
-dest_files=["res://.godot/imported/turret_grach_evo_shark_turret_paint_orm.jpg-84e6b03e0d898b4675b8ede58cf06121.ctex"]
+dest_files=["res://.godot/imported/turret_grach_evo_shark_turret_paint_orm.jpg-84e6b03e0d898b4675b8ede58cf06121.bptc.ctex", "res://.godot/imported/turret_grach_evo_shark_turret_paint_orm.jpg-84e6b03e0d898b4675b8ede58cf06121.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

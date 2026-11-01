@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://w57dl4fy524f"
-path="res://.godot/imported/a03_radar_mast_paint_a03_radar_mast.jpg-f600dcd2dc7a25e306b1140d576f2c52.ctex"
+path.bptc="res://.godot/imported/a03_radar_mast_paint_a03_radar_mast.jpg-f600dcd2dc7a25e306b1140d576f2c52.bptc.ctex"
+path.astc="res://.godot/imported/a03_radar_mast_paint_a03_radar_mast.jpg-f600dcd2dc7a25e306b1140d576f2c52.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "f7dc567d647b1f222a3ce925f29cba31"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a03_radar_mast_paint_a03_radar_mast.jpg"
-dest_files=["res://.godot/imported/a03_radar_mast_paint_a03_radar_mast.jpg-f600dcd2dc7a25e306b1140d576f2c52.ctex"]
+dest_files=["res://.godot/imported/a03_radar_mast_paint_a03_radar_mast.jpg-f600dcd2dc7a25e306b1140d576f2c52.bptc.ctex", "res://.godot/imported/a03_radar_mast_paint_a03_radar_mast.jpg-f600dcd2dc7a25e306b1140d576f2c52.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

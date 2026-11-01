@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://jmcr38kfklbg"
-path="res://.godot/imported/fh_battle_e_drone_sea_e_drone_sea_color.jpg-4d89d461f2d3897140a9f16ea06c6ad2.ctex"
+path.bptc="res://.godot/imported/fh_battle_e_drone_sea_e_drone_sea_color.jpg-4d89d461f2d3897140a9f16ea06c6ad2.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_e_drone_sea_e_drone_sea_color.jpg-4d89d461f2d3897140a9f16ea06c6ad2.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "3438e46ba5e996271c8cc4e127921578"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_drone_sea_e_drone_sea_color.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_drone_sea_e_drone_sea_color.jpg-4d89d461f2d3897140a9f16ea06c6ad2.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_drone_sea_e_drone_sea_color.jpg-4d89d461f2d3897140a9f16ea06c6ad2.bptc.ctex", "res://.godot/imported/fh_battle_e_drone_sea_e_drone_sea_color.jpg-4d89d461f2d3897140a9f16ea06c6ad2.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

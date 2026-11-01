@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cij0r87x2lu6f"
-path="res://.godot/imported/fh_battle_e_seaplane_e_seaplane_color.jpg-e1afbc66b5d25d8e9885bd6cd7bbd156.ctex"
+path.bptc="res://.godot/imported/fh_battle_e_seaplane_e_seaplane_color.jpg-e1afbc66b5d25d8e9885bd6cd7bbd156.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_e_seaplane_e_seaplane_color.jpg-e1afbc66b5d25d8e9885bd6cd7bbd156.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "9b25f629671b2ae16f18ba8e9c3f843c"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_seaplane_e_seaplane_color.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_seaplane_e_seaplane_color.jpg-e1afbc66b5d25d8e9885bd6cd7bbd156.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_seaplane_e_seaplane_color.jpg-e1afbc66b5d25d8e9885bd6cd7bbd156.bptc.ctex", "res://.godot/imported/fh_battle_e_seaplane_e_seaplane_color.jpg-e1afbc66b5d25d8e9885bd6cd7bbd156.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

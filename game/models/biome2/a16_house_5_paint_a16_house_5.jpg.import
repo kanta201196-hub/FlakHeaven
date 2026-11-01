@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cgan76hpsb8tc"
-path="res://.godot/imported/a16_house_5_paint_a16_house_5.jpg-b4c02ad0b65daaf4eed51ea996399b8a.ctex"
+path.bptc="res://.godot/imported/a16_house_5_paint_a16_house_5.jpg-b4c02ad0b65daaf4eed51ea996399b8a.bptc.ctex"
+path.astc="res://.godot/imported/a16_house_5_paint_a16_house_5.jpg-b4c02ad0b65daaf4eed51ea996399b8a.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "568acb6cf6e7be0351307c458aff6a52"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a16_house_5_paint_a16_house_5.jpg"
-dest_files=["res://.godot/imported/a16_house_5_paint_a16_house_5.jpg-b4c02ad0b65daaf4eed51ea996399b8a.ctex"]
+dest_files=["res://.godot/imported/a16_house_5_paint_a16_house_5.jpg-b4c02ad0b65daaf4eed51ea996399b8a.bptc.ctex", "res://.godot/imported/a16_house_5_paint_a16_house_5.jpg-b4c02ad0b65daaf4eed51ea996399b8a.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

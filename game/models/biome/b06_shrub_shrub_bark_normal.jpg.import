@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dbwf5mgcb5hdv"
-path="res://.godot/imported/b06_shrub_shrub_bark_normal.jpg-0dda8d0a9c9b9b93b87a799b6bf2a54e.ctex"
+path.bptc="res://.godot/imported/b06_shrub_shrub_bark_normal.jpg-0dda8d0a9c9b9b93b87a799b6bf2a54e.bptc.ctex"
+path.astc="res://.godot/imported/b06_shrub_shrub_bark_normal.jpg-0dda8d0a9c9b9b93b87a799b6bf2a54e.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "65f1ddb2b7b46be5e880c194e2016889"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b06_shrub_shrub_bark_normal.jpg"
-dest_files=["res://.godot/imported/b06_shrub_shrub_bark_normal.jpg-0dda8d0a9c9b9b93b87a799b6bf2a54e.ctex"]
+dest_files=["res://.godot/imported/b06_shrub_shrub_bark_normal.jpg-0dda8d0a9c9b9b93b87a799b6bf2a54e.bptc.ctex", "res://.godot/imported/b06_shrub_shrub_bark_normal.jpg-0dda8d0a9c9b9b93b87a799b6bf2a54e.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

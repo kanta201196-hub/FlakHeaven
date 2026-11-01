@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bpnwchvywqnlb"
-path="res://.godot/imported/vc_bags_Image_0.jpg-a7305a320f8d79a1db52af867bc087c1.ctex"
+path.bptc="res://.godot/imported/vc_bags_Image_0.jpg-a7305a320f8d79a1db52af867bc087c1.bptc.ctex"
+path.astc="res://.godot/imported/vc_bags_Image_0.jpg-a7305a320f8d79a1db52af867bc087c1.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "f68f23365505c17192524c1fbae59a0c"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/vc_bags_Image_0.jpg"
-dest_files=["res://.godot/imported/vc_bags_Image_0.jpg-a7305a320f8d79a1db52af867bc087c1.ctex"]
+dest_files=["res://.godot/imported/vc_bags_Image_0.jpg-a7305a320f8d79a1db52af867bc087c1.bptc.ctex", "res://.godot/imported/vc_bags_Image_0.jpg-a7305a320f8d79a1db52af867bc087c1.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

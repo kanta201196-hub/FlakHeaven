@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bebupa0vgu0t0"
-path="res://.godot/imported/b11_wreck_heli_wreck_heli_orm.jpg-81da6128ca23c676c2e4025c440ad4fd.ctex"
+path.bptc="res://.godot/imported/b11_wreck_heli_wreck_heli_orm.jpg-81da6128ca23c676c2e4025c440ad4fd.bptc.ctex"
+path.astc="res://.godot/imported/b11_wreck_heli_wreck_heli_orm.jpg-81da6128ca23c676c2e4025c440ad4fd.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "8f63a1956b991b53072689de7201e15a"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b11_wreck_heli_wreck_heli_orm.jpg"
-dest_files=["res://.godot/imported/b11_wreck_heli_wreck_heli_orm.jpg-81da6128ca23c676c2e4025c440ad4fd.ctex"]
+dest_files=["res://.godot/imported/b11_wreck_heli_wreck_heli_orm.jpg-81da6128ca23c676c2e4025c440ad4fd.bptc.ctex", "res://.godot/imported/b11_wreck_heli_wreck_heli_orm.jpg-81da6128ca23c676c2e4025c440ad4fd.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

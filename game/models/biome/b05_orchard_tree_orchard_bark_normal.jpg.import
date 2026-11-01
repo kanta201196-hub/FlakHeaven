@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cbyxa7c2y5o0t"
-path="res://.godot/imported/b05_orchard_tree_orchard_bark_normal.jpg-e228a75be99f1136ae0d990ad1ce395f.ctex"
+path.bptc="res://.godot/imported/b05_orchard_tree_orchard_bark_normal.jpg-e228a75be99f1136ae0d990ad1ce395f.bptc.ctex"
+path.astc="res://.godot/imported/b05_orchard_tree_orchard_bark_normal.jpg-e228a75be99f1136ae0d990ad1ce395f.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e31af085df817862b847ef4265c81907"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b05_orchard_tree_orchard_bark_normal.jpg"
-dest_files=["res://.godot/imported/b05_orchard_tree_orchard_bark_normal.jpg-e228a75be99f1136ae0d990ad1ce395f.ctex"]
+dest_files=["res://.godot/imported/b05_orchard_tree_orchard_bark_normal.jpg-e228a75be99f1136ae0d990ad1ce395f.bptc.ctex", "res://.godot/imported/b05_orchard_tree_orchard_bark_normal.jpg-e228a75be99f1136ae0d990ad1ce395f.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

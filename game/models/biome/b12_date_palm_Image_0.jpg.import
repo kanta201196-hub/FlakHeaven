@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://gbi25tri4je7"
-path="res://.godot/imported/b12_date_palm_Image_0.jpg-eab5fa3f59bc5a2afbe1ff2a033361fd.ctex"
+path.bptc="res://.godot/imported/b12_date_palm_Image_0.jpg-eab5fa3f59bc5a2afbe1ff2a033361fd.bptc.ctex"
+path.astc="res://.godot/imported/b12_date_palm_Image_0.jpg-eab5fa3f59bc5a2afbe1ff2a033361fd.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "105c4fac3a7c7057a35e89930e08d8e0"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b12_date_palm_Image_0.jpg"
-dest_files=["res://.godot/imported/b12_date_palm_Image_0.jpg-eab5fa3f59bc5a2afbe1ff2a033361fd.ctex"]
+dest_files=["res://.godot/imported/b12_date_palm_Image_0.jpg-eab5fa3f59bc5a2afbe1ff2a033361fd.bptc.ctex", "res://.godot/imported/b12_date_palm_Image_0.jpg-eab5fa3f59bc5a2afbe1ff2a033361fd.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

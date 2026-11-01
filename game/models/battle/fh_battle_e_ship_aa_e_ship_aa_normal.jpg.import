@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c8tyyal1bare"
-path="res://.godot/imported/fh_battle_e_ship_aa_e_ship_aa_normal.jpg-b74a1046048c82e5b928471cd7205d6e.ctex"
+path.bptc="res://.godot/imported/fh_battle_e_ship_aa_e_ship_aa_normal.jpg-b74a1046048c82e5b928471cd7205d6e.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_e_ship_aa_e_ship_aa_normal.jpg-b74a1046048c82e5b928471cd7205d6e.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e90e8e94f5e17cb815267729bc3a2cb6"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_ship_aa_e_ship_aa_normal.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_ship_aa_e_ship_aa_normal.jpg-b74a1046048c82e5b928471cd7205d6e.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_ship_aa_e_ship_aa_normal.jpg-b74a1046048c82e5b928471cd7205d6e.bptc.ctex", "res://.godot/imported/fh_battle_e_ship_aa_e_ship_aa_normal.jpg-b74a1046048c82e5b928471cd7205d6e.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

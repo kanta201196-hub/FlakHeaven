@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bm6bher1tpkvo"
-path="res://.godot/imported/a25_boat_b_paint_a25_boat_b.jpg-75903437f9a182917d2e326bbc050800.ctex"
+path.bptc="res://.godot/imported/a25_boat_b_paint_a25_boat_b.jpg-75903437f9a182917d2e326bbc050800.bptc.ctex"
+path.astc="res://.godot/imported/a25_boat_b_paint_a25_boat_b.jpg-75903437f9a182917d2e326bbc050800.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "06881e2ba6e789709d202ab7e7a2f620"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a25_boat_b_paint_a25_boat_b.jpg"
-dest_files=["res://.godot/imported/a25_boat_b_paint_a25_boat_b.jpg-75903437f9a182917d2e326bbc050800.ctex"]
+dest_files=["res://.godot/imported/a25_boat_b_paint_a25_boat_b.jpg-75903437f9a182917d2e326bbc050800.bptc.ctex", "res://.godot/imported/a25_boat_b_paint_a25_boat_b.jpg-75903437f9a182917d2e326bbc050800.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

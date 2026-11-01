@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dxbhp31b3bchx"
-path="res://.godot/imported/b04_poplar_poplar_leaves_normal.jpg-f9031f3870aece6d88b0ff8a23bc2cf9.ctex"
+path.bptc="res://.godot/imported/b04_poplar_poplar_leaves_normal.jpg-f9031f3870aece6d88b0ff8a23bc2cf9.bptc.ctex"
+path.astc="res://.godot/imported/b04_poplar_poplar_leaves_normal.jpg-f9031f3870aece6d88b0ff8a23bc2cf9.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "0af31572b8ef1ed8931a3c77a57be695"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b04_poplar_poplar_leaves_normal.jpg"
-dest_files=["res://.godot/imported/b04_poplar_poplar_leaves_normal.jpg-f9031f3870aece6d88b0ff8a23bc2cf9.ctex"]
+dest_files=["res://.godot/imported/b04_poplar_poplar_leaves_normal.jpg-f9031f3870aece6d88b0ff8a23bc2cf9.bptc.ctex", "res://.godot/imported/b04_poplar_poplar_leaves_normal.jpg-f9031f3870aece6d88b0ff8a23bc2cf9.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

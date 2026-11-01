@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dsjulmpa8ayum"
-path="res://.godot/imported/a09_warehouse_b_paint_a09_warehouse_b.jpg-f6ea5969aff240faf16e22ba2dd774e7.ctex"
+path.bptc="res://.godot/imported/a09_warehouse_b_paint_a09_warehouse_b.jpg-f6ea5969aff240faf16e22ba2dd774e7.bptc.ctex"
+path.astc="res://.godot/imported/a09_warehouse_b_paint_a09_warehouse_b.jpg-f6ea5969aff240faf16e22ba2dd774e7.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "b2c7ebee574b1f02884f379bd85f9386"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a09_warehouse_b_paint_a09_warehouse_b.jpg"
-dest_files=["res://.godot/imported/a09_warehouse_b_paint_a09_warehouse_b.jpg-f6ea5969aff240faf16e22ba2dd774e7.ctex"]
+dest_files=["res://.godot/imported/a09_warehouse_b_paint_a09_warehouse_b.jpg-f6ea5969aff240faf16e22ba2dd774e7.bptc.ctex", "res://.godot/imported/a09_warehouse_b_paint_a09_warehouse_b.jpg-f6ea5969aff240faf16e22ba2dd774e7.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

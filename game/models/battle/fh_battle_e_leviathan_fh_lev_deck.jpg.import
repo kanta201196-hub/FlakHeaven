@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://3skfoav5fuym"
-path="res://.godot/imported/fh_battle_e_leviathan_fh_lev_deck.jpg-f7b7cd94177f2fc31ee897d2ba378bde.ctex"
+path.bptc="res://.godot/imported/fh_battle_e_leviathan_fh_lev_deck.jpg-f7b7cd94177f2fc31ee897d2ba378bde.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_e_leviathan_fh_lev_deck.jpg-f7b7cd94177f2fc31ee897d2ba378bde.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "8558081da3dd750b5b7b8749909cdfcd"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_leviathan_fh_lev_deck.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_leviathan_fh_lev_deck.jpg-f7b7cd94177f2fc31ee897d2ba378bde.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_leviathan_fh_lev_deck.jpg-f7b7cd94177f2fc31ee897d2ba378bde.bptc.ctex", "res://.godot/imported/fh_battle_e_leviathan_fh_lev_deck.jpg-f7b7cd94177f2fc31ee897d2ba378bde.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

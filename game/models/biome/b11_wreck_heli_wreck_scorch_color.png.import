@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://che6u257jqh5w"
-path="res://.godot/imported/b11_wreck_heli_wreck_scorch_color.png-1077b8848ffa62861e4f421d95e4ab05.ctex"
+path.bptc="res://.godot/imported/b11_wreck_heli_wreck_scorch_color.png-1077b8848ffa62861e4f421d95e4ab05.bptc.ctex"
+path.astc="res://.godot/imported/b11_wreck_heli_wreck_scorch_color.png-1077b8848ffa62861e4f421d95e4ab05.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "9a40362877e88098de2405f5530180ae"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b11_wreck_heli_wreck_scorch_color.png"
-dest_files=["res://.godot/imported/b11_wreck_heli_wreck_scorch_color.png-1077b8848ffa62861e4f421d95e4ab05.ctex"]
+dest_files=["res://.godot/imported/b11_wreck_heli_wreck_scorch_color.png-1077b8848ffa62861e4f421d95e4ab05.bptc.ctex", "res://.godot/imported/b11_wreck_heli_wreck_scorch_color.png-1077b8848ffa62861e4f421d95e4ab05.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

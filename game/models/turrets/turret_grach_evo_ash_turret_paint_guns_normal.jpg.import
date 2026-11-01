@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d2ggwk2fbj7oy"
-path="res://.godot/imported/turret_grach_evo_ash_turret_paint_guns_normal.jpg-405b1017f1e52e2503c661b90357354b.ctex"
+path.bptc="res://.godot/imported/turret_grach_evo_ash_turret_paint_guns_normal.jpg-405b1017f1e52e2503c661b90357354b.bptc.ctex"
+path.astc="res://.godot/imported/turret_grach_evo_ash_turret_paint_guns_normal.jpg-405b1017f1e52e2503c661b90357354b.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "8814138ff35f0388029e775ed96031ce"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_evo_ash_turret_paint_guns_normal.jpg"
-dest_files=["res://.godot/imported/turret_grach_evo_ash_turret_paint_guns_normal.jpg-405b1017f1e52e2503c661b90357354b.ctex"]
+dest_files=["res://.godot/imported/turret_grach_evo_ash_turret_paint_guns_normal.jpg-405b1017f1e52e2503c661b90357354b.bptc.ctex", "res://.godot/imported/turret_grach_evo_ash_turret_paint_guns_normal.jpg-405b1017f1e52e2503c661b90357354b.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

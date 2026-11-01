@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b4d2w23nuwwhe"
-path="res://.godot/imported/b10_sandbag_post_sandbag_burlap_normal.jpg-9f7e00920c2d535d0f51f00d2cbdce0e.ctex"
+path.bptc="res://.godot/imported/b10_sandbag_post_sandbag_burlap_normal.jpg-9f7e00920c2d535d0f51f00d2cbdce0e.bptc.ctex"
+path.astc="res://.godot/imported/b10_sandbag_post_sandbag_burlap_normal.jpg-9f7e00920c2d535d0f51f00d2cbdce0e.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "20b9c73925625afae392635ad220102b"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b10_sandbag_post_sandbag_burlap_normal.jpg"
-dest_files=["res://.godot/imported/b10_sandbag_post_sandbag_burlap_normal.jpg-9f7e00920c2d535d0f51f00d2cbdce0e.ctex"]
+dest_files=["res://.godot/imported/b10_sandbag_post_sandbag_burlap_normal.jpg-9f7e00920c2d535d0f51f00d2cbdce0e.bptc.ctex", "res://.godot/imported/b10_sandbag_post_sandbag_burlap_normal.jpg-9f7e00920c2d535d0f51f00d2cbdce0e.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

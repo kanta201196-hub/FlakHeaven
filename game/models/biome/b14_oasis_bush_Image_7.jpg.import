@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c58de1oro3dwr"
-path="res://.godot/imported/b14_oasis_bush_Image_7.jpg-84a44e24749054d875f1e5b7e9ef05e3.ctex"
+path.bptc="res://.godot/imported/b14_oasis_bush_Image_7.jpg-84a44e24749054d875f1e5b7e9ef05e3.bptc.ctex"
+path.astc="res://.godot/imported/b14_oasis_bush_Image_7.jpg-84a44e24749054d875f1e5b7e9ef05e3.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "48345f976f59b841e2706fea1884d7f0"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b14_oasis_bush_Image_7.jpg"
-dest_files=["res://.godot/imported/b14_oasis_bush_Image_7.jpg-84a44e24749054d875f1e5b7e9ef05e3.ctex"]
+dest_files=["res://.godot/imported/b14_oasis_bush_Image_7.jpg-84a44e24749054d875f1e5b7e9ef05e3.bptc.ctex", "res://.godot/imported/b14_oasis_bush_Image_7.jpg-84a44e24749054d875f1e5b7e9ef05e3.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

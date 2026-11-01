@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://drlcimdwt032v"
-path="res://.godot/imported/a18_house_7_paint_a18_house_7.jpg-7b4c8c0d21668a4c32f4f465ae2e35e0.ctex"
+path.bptc="res://.godot/imported/a18_house_7_paint_a18_house_7.jpg-7b4c8c0d21668a4c32f4f465ae2e35e0.bptc.ctex"
+path.astc="res://.godot/imported/a18_house_7_paint_a18_house_7.jpg-7b4c8c0d21668a4c32f4f465ae2e35e0.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "a9e35389d678afebe08465ad5ad4ff9f"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a18_house_7_paint_a18_house_7.jpg"
-dest_files=["res://.godot/imported/a18_house_7_paint_a18_house_7.jpg-7b4c8c0d21668a4c32f4f465ae2e35e0.ctex"]
+dest_files=["res://.godot/imported/a18_house_7_paint_a18_house_7.jpg-7b4c8c0d21668a4c32f4f465ae2e35e0.bptc.ctex", "res://.godot/imported/a18_house_7_paint_a18_house_7.jpg-7b4c8c0d21668a4c32f4f465ae2e35e0.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

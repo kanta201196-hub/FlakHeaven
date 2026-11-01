@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b0av8nc02mjx2"
-path="res://.godot/imported/vc_stall_cloth_stall_orm.jpg-fc0b4ba9134f952a9497a70bbef3cf9f.ctex"
+path.bptc="res://.godot/imported/vc_stall_cloth_stall_orm.jpg-fc0b4ba9134f952a9497a70bbef3cf9f.bptc.ctex"
+path.astc="res://.godot/imported/vc_stall_cloth_stall_orm.jpg-fc0b4ba9134f952a9497a70bbef3cf9f.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "4a4a12cfdab16505866c1e37e61ed52c"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/vc_stall_cloth_stall_orm.jpg"
-dest_files=["res://.godot/imported/vc_stall_cloth_stall_orm.jpg-fc0b4ba9134f952a9497a70bbef3cf9f.ctex"]
+dest_files=["res://.godot/imported/vc_stall_cloth_stall_orm.jpg-fc0b4ba9134f952a9497a70bbef3cf9f.bptc.ctex", "res://.godot/imported/vc_stall_cloth_stall_orm.jpg-fc0b4ba9134f952a9497a70bbef3cf9f.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

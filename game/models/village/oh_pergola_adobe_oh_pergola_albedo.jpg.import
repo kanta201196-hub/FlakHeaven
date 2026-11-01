@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bg2isco4713eq"
-path="res://.godot/imported/oh_pergola_adobe_oh_pergola_albedo.jpg-378b8b0a9dc2dabee09745b8510cc2ec.ctex"
+path.bptc="res://.godot/imported/oh_pergola_adobe_oh_pergola_albedo.jpg-378b8b0a9dc2dabee09745b8510cc2ec.bptc.ctex"
+path.astc="res://.godot/imported/oh_pergola_adobe_oh_pergola_albedo.jpg-378b8b0a9dc2dabee09745b8510cc2ec.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "3df9ce2eda610890429775cf0082b5e6"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/oh_pergola_adobe_oh_pergola_albedo.jpg"
-dest_files=["res://.godot/imported/oh_pergola_adobe_oh_pergola_albedo.jpg-378b8b0a9dc2dabee09745b8510cc2ec.ctex"]
+dest_files=["res://.godot/imported/oh_pergola_adobe_oh_pergola_albedo.jpg-378b8b0a9dc2dabee09745b8510cc2ec.bptc.ctex", "res://.godot/imported/oh_pergola_adobe_oh_pergola_albedo.jpg-378b8b0a9dc2dabee09745b8510cc2ec.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

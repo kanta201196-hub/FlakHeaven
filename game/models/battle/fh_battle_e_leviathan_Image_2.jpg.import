@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b55ueeigxr3x2"
-path="res://.godot/imported/fh_battle_e_leviathan_Image_2.jpg-f4b3039ef3489a344c89dfd5e192fc95.ctex"
+path.bptc="res://.godot/imported/fh_battle_e_leviathan_Image_2.jpg-f4b3039ef3489a344c89dfd5e192fc95.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_e_leviathan_Image_2.jpg-f4b3039ef3489a344c89dfd5e192fc95.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "504d0b6a544464e11c94ddd435fde753"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_leviathan_Image_2.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_leviathan_Image_2.jpg-f4b3039ef3489a344c89dfd5e192fc95.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_leviathan_Image_2.jpg-f4b3039ef3489a344c89dfd5e192fc95.bptc.ctex", "res://.godot/imported/fh_battle_e_leviathan_Image_2.jpg-f4b3039ef3489a344c89dfd5e192fc95.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

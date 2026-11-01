@@ -3,20 +3,22 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://derhjx2h1pbc5"
-path="res://.godot/imported/b12_date_palm_top.png-6196188235d5c799b4038cf60a429b4c.ctex"
+path.bptc="res://.godot/imported/b12_date_palm_top.png-6196188235d5c799b4038cf60a429b4c.bptc.ctex"
+path.astc="res://.godot/imported/b12_date_palm_top.png-6196188235d5c799b4038cf60a429b4c.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/biome/b12_date_palm_top.png"
-dest_files=["res://.godot/imported/b12_date_palm_top.png-6196188235d5c799b4038cf60a429b4c.ctex"]
+dest_files=["res://.godot/imported/b12_date_palm_top.png-6196188235d5c799b4038cf60a429b4c.bptc.ctex", "res://.godot/imported/b12_date_palm_top.png-6196188235d5c799b4038cf60a429b4c.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ci606vkm3b6mf"
-path="res://.godot/imported/a33_rock_paint_a33_rock.jpg-06298d172c06e09b46a0e959974c2704.ctex"
+path.bptc="res://.godot/imported/a33_rock_paint_a33_rock.jpg-06298d172c06e09b46a0e959974c2704.bptc.ctex"
+path.astc="res://.godot/imported/a33_rock_paint_a33_rock.jpg-06298d172c06e09b46a0e959974c2704.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "9804b394a25d94ddaef9eaff75d63cd6"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a33_rock_paint_a33_rock.jpg"
-dest_files=["res://.godot/imported/a33_rock_paint_a33_rock.jpg-06298d172c06e09b46a0e959974c2704.ctex"]
+dest_files=["res://.godot/imported/a33_rock_paint_a33_rock.jpg-06298d172c06e09b46a0e959974c2704.bptc.ctex", "res://.godot/imported/a33_rock_paint_a33_rock.jpg-06298d172c06e09b46a0e959974c2704.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

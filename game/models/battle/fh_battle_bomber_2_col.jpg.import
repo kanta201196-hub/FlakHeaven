@@ -3,20 +3,22 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dwye5rpijkpde"
-path="res://.godot/imported/fh_battle_bomber_2_col.jpg-c28e8173c82e77dba3c2daf9e81ae755.ctex"
+path.bptc="res://.godot/imported/fh_battle_bomber_2_col.jpg-c28e8173c82e77dba3c2daf9e81ae755.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_bomber_2_col.jpg-c28e8173c82e77dba3c2daf9e81ae755.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/battle/fh_battle_bomber_2_col.jpg"
-dest_files=["res://.godot/imported/fh_battle_bomber_2_col.jpg-c28e8173c82e77dba3c2daf9e81ae755.ctex"]
+dest_files=["res://.godot/imported/fh_battle_bomber_2_col.jpg-c28e8173c82e77dba3c2daf9e81ae755.bptc.ctex", "res://.godot/imported/fh_battle_bomber_2_col.jpg-c28e8173c82e77dba3c2daf9e81ae755.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

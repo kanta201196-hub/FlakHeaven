@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://drsva6x8dly40"
-path="res://.godot/imported/b08_wreck_tank_wreck_tank_normal.jpg-3124ce42f77e1ccd8df2c0953c10e561.ctex"
+path.bptc="res://.godot/imported/b08_wreck_tank_wreck_tank_normal.jpg-3124ce42f77e1ccd8df2c0953c10e561.bptc.ctex"
+path.astc="res://.godot/imported/b08_wreck_tank_wreck_tank_normal.jpg-3124ce42f77e1ccd8df2c0953c10e561.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e495b45cd04c73cdab2d4091aee03e19"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b08_wreck_tank_wreck_tank_normal.jpg"
-dest_files=["res://.godot/imported/b08_wreck_tank_wreck_tank_normal.jpg-3124ce42f77e1ccd8df2c0953c10e561.ctex"]
+dest_files=["res://.godot/imported/b08_wreck_tank_wreck_tank_normal.jpg-3124ce42f77e1ccd8df2c0953c10e561.bptc.ctex", "res://.godot/imported/b08_wreck_tank_wreck_tank_normal.jpg-3124ce42f77e1ccd8df2c0953c10e561.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
