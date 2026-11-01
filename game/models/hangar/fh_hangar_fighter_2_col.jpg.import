@@ -3,25 +3,25 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ckwst5rkpx3df"
-path.s3tc="res://.godot/imported/fh_hangar_fighter_2_col.jpg-47942359d8065d79519c4dd3833907a6.s3tc.ctex"
-path.etc2="res://.godot/imported/fh_hangar_fighter_2_col.jpg-47942359d8065d79519c4dd3833907a6.etc2.ctex"
+path.bptc="res://.godot/imported/fh_hangar_fighter_2_col.jpg-47942359d8065d79519c4dd3833907a6.bptc.ctex"
+path.astc="res://.godot/imported/fh_hangar_fighter_2_col.jpg-47942359d8065d79519c4dd3833907a6.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "22d8bb288483e18ac4b2289a46c4ed69"
+"md5": "5da2d7191b792fc6f5fecd4ec3611c77"
 }
 
 [deps]
 
 source_file="res://models/hangar/fh_hangar_fighter_2_col.jpg"
-dest_files=["res://.godot/imported/fh_hangar_fighter_2_col.jpg-47942359d8065d79519c4dd3833907a6.s3tc.ctex", "res://.godot/imported/fh_hangar_fighter_2_col.jpg-47942359d8065d79519c4dd3833907a6.etc2.ctex"]
+dest_files=["res://.godot/imported/fh_hangar_fighter_2_col.jpg-47942359d8065d79519c4dd3833907a6.bptc.ctex", "res://.godot/imported/fh_hangar_fighter_2_col.jpg-47942359d8065d79519c4dd3833907a6.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

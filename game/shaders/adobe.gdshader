@@ -6,7 +6,7 @@ render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_burley, specula
 //   0.04…0.2 still water (AdobeBuild.ID_WATER) — the oasis pond and its irrigation channels, wet mud at a channel's edges;
 //   0.25  sandbags — hessian cloth with its weave in the normal (Kanta 26.10: "replace the sandbag textures if they are bad");
 //   0.42…0.58 trench strip — packed soil, darker and lower in the middle, plank revetment along both edges;
-//   0.67…0.83 street strip — packed earth or a photo lane set (--roadtex), frayed into the yard ground at the edges.
+//   0.67…0.83 street strip — packed earth or a photo lane set (--roadtex), cut away to a ragged scatter of stones at the edges.
 // For the strips the alpha also runs across the strip (edge to edge), so the shader knows where the middle is.
 // Walls and heaps (alpha 1) are weathered mud plaster (weak-models list, item 1, 28.10): the ground photo's
 // polygon cracks are toned down on the walls, with large soft tone patches, plaster fallen off in places showing
@@ -43,6 +43,7 @@ uniform sampler2D lane_nh : hint_default_white, filter_linear_mipmap_anisotropic
 uniform float lane_tile = 24.0;
 uniform vec3 lane_tint : source_color = vec3(1.0);
 uniform float lane_sat = 0.75;
+uniform vec3 lane_dust : source_color = vec3(0.6, 0.53, 0.5);   // dust between the stones (ground palette)
 
 varying vec3 tri_pos;
 varying vec3 tri_w;
@@ -133,17 +134,39 @@ void fragment() {
 		own_n = true;
 		rough = 1.0;
 	} else if (mat_id < 0.9 && lane_tex) {
+		// S14-14 (self-check of 3.5-s14: "street paving in stripes with hard edges"): the strip used to fade into
+		// its own clay-coloured edge, which met the terrain's packed earth in a straight line along every quad,
+		// and the set repeated in rows. Now: the set is sampled twice, the second turned and shifted, and a slow
+		// noise picks between them, so the repeat does not line up; stones are toned to the ground palette with
+		// dust settled between them; and towards the edges only the higher stones stay, the rest of the strip
+		// is cut away (discard), so the terrain's own packed earth shows between the last stones and the street
+		// ends in a ragged scatter instead of a line. The colour does not depend on `across`, so where two
+		// segments of a street overlap (bends, crossings) either one draws the same thing.
 		float across = clamp((mat_id - 0.75) / 0.08, -1.0, 1.0);
 		vec2 lp = wpos.xz / lane_tile;
-		vec3 lc = texture(lane_tex_a, lp).rgb;
-		vec4 ln = texture(lane_nh, lp);
+		const mat2 TURN = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
+		vec2 lp2 = TURN * lp * 1.17 + vec2(0.37, 0.71);
+		float pick = smoothstep(0.42, 0.58, vnoise(vec3(wpos.xz / (lane_tile * 2.3), 7.0)));
+		vec3 lc = mix(texture(lane_tex_a, lp).rgb, texture(lane_tex_a, lp2).rgb, pick);
+		vec4 ln1 = texture(lane_nh, lp);
+		vec4 ln2 = texture(lane_nh, lp2);
+		vec2 n2 = transpose(TURN) * (ln2.rg * 2.0 - 1.0) * 0.5 + 0.5;   // back into world axes
+		vec4 ln = mix(ln1, vec4(n2, ln2.ba), pick);
 		vec3 lane = mix(vec3(dot(lc, vec3(0.333))), lc, lane_sat) * lane_tint;
-		// edges fray into the plain packed earth by the set's height (stones stick out, dust in the hollows)
-		float body = clamp((1.0 - abs(across)) * 2.2 + (ln.b - 0.5) * 1.2, 0.0, 1.0);
-		alb = mix(alb, lane, body);
-		wn = normalize(mix(wn, top_normal(ln.rg, 1.0), body));
+		lane *= 0.8 + 0.14 * vnoise(vec3(wpos.xz / 23.0, 3.0));   // a touch darker than the dust: worn stone, not chalk
+		// dust in the hollows between the stones, in the packed-earth tone of the ground round the village
+		float hollow = 1.0 - smoothstep(0.32, 0.55, ln.b);
+		alb = mix(lane, lane_dust, hollow * 0.55);
+		float edge_n = vnoise(vec3(wpos.xz / 6.0, 1.0)) - 0.5;
+		float keep = (1.0 - abs(across)) * 2.6 + (ln.b - 0.5) * 1.6 + edge_n * 0.9;
+		if (keep < 0.45) {
+			discard;
+		}
+		float rim = 1.0 - smoothstep(0.45, 1.1, keep);   // the last stones sink into the dust
+		alb = mix(alb, lane_dust, rim * 0.45);
+		wn = normalize(mix(top_normal(ln.rg, 1.0), wn, rim * 0.5));
 		own_n = true;
-		rough = mix(rough, 0.9, body);
+		rough = 0.92;
 	}
 	if (mat_id > 0.9 && wear > 0.0) {
 		vec3 cm = albedo.rgb * textureLod(clay_tex, tri_pos.xz, 12.0).rgb * COLOR.rgb;   // the photo's mean

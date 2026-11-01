@@ -219,14 +219,16 @@ static func combat_points(at: Vector2) -> Array:
 	return out
 
 
-## True when job or point `j` passes --selfcheck-only (always without it)
+## True when job or point `j` passes --selfcheck-only (always without it). A term joined with "+" passes only
+## when all its parts match (`store+srm`: the weapon store's srm frames, not every plane carrying srm).
 func wanted(j: Dictionary) -> bool:
 	if only.is_empty():
 		return true
 	var c: String = j["cls"][0] if j["cls"] is Array else j["cls"]
 	var lv: int = j["cls"][1] if j["cls"] is Array else j["lvl"]
+	var keys := [c, "%s_%d" % [c, lv], j.get("section", "combat"), j.get("weapon", ""), j.get("sc_shot", "")]
 	for t in only:
-		if t in [c, "%s_%d" % [c, lv], j.get("section", "combat"), j.get("weapon", ""), j.get("sc_shot", "")]:
+		if Array(t.split("+", false)).all(func(part: String) -> bool: return part in keys):
 			return true
 	return false
 

@@ -532,9 +532,21 @@ const BRANCHES_W := {
 }
 
 
-## Название и описание ветки b мастерства для оружия weapon
-static func branch_def(weapon: String, b: String) -> Dictionary:
+## Title and description of mastery branch `b` of `weapon`. PG-06 PR 3: `b == "profile"` — ranks of the
+## chosen profile `profile` («Двойной пуск: ранг», +RANK_K to its own feature per rank).
+static func branch_def(weapon: String, b: String, profile := "") -> Dictionary:
+	if b == "profile":
+		var pd := WeaponProfiles.def(weapon, profile)
+		var feat := String(WeaponProfiles.RANK_TEXT.get(WeaponProfiles.rank_key(weapon, profile), "урон"))
+		return {"title": Loc.t("%s: ранг") % Loc.t(String(pd.get("title", profile))),
+			"desc": Loc.t("+%d%% к профилю (%s) за ранг") % [roundi(WeaponProfiles.RANK_K * 100.0), Loc.t(feat)]}
 	return BRANCHES_W[weapon][b] if BRANCHES_W.has(weapon) else BRANCHES[b]
+
+
+## Mastery branches offered to group `g` at its first mastery card: a weapon with a profile ranks that profile
+## (one card, PG-06 PR 3, Kanta 31.10 «3b»), the others keep the «or-or» pair.
+static func mastery_branches(g: Hardpoint) -> Array:
+	return ["profile"] if g.profile != "" else BRANCHES.keys()
 
 
 static func branch_on() -> bool:
@@ -555,7 +567,7 @@ static func branch_group(p: Player, banned: Dictionary) -> int:
 static func _branch_card(p: Player, gi: int, b: String, first: bool) -> Dictionary:
 	var g: Hardpoint = p.groups[gi]
 	var wt := g.evo_title() if g.evo else Weapons.title(g.weapon)
-	var title := "%s: %s" % [wt, branch_def(g.weapon, b)["title"]]
+	var title := "%s: %s" % [wt, branch_def(g.weapon, b, g.profile)["title"]]
 	if not first:
 		title += " (ранг %d → %d)" % [g.branch_rank, g.branch_rank + 1]
 	return {"id": "br_%s_%d" % [b, gi], "ban": "br:%d" % gi, "kind": "branch", "branch": b, "group": gi, "first": first,
@@ -771,9 +783,9 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			card["desc"] = Loc.t(syn_def(p, card["syn"])["desc"]) + Loc.t("\nОткрывает слот %d из %d. Следующий слот дороже.") % [p.syn.size() + 1, MAX_SYN]
 		"branch":
 			var bgr: Hardpoint = p.groups[int(card["group"])]
-			var bd: Dictionary = branch_def(bgr.weapon, card["branch"])
+			var bd: Dictionary = branch_def(bgr.weapon, card["branch"], bgr.profile)
 			card["desc"] = Loc.t("%s: %s, до %d рангов") % [bgr.name, Loc.t(bd["desc"]), BRANCH_MAX]
-			if card["first"]:
+			if card["first"] and card["branch"] != "profile":
 				var other := "power" if card["branch"] == "rate" else "rate"
 				card["desc"] += Loc.t("\nИли-или: «%s» для этого оружия закроется до конца вылета") % Loc.t(branch_def(bgr.weapon, other)["title"])
 		"mastery":
@@ -892,11 +904,13 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 	if out.is_empty():
 		var bg := branch_group(p, banned)
 		if bg >= 0:
-			for b in BRANCHES:
+			var brs := mastery_branches(p.groups[bg] as Hardpoint)
+			for b in brs:
 				var bc := _branch_card(p, bg, b, true)
 				bc["rarity"] = 3
 				out.append(finalize(p, bc))
-			return out
+			if brs.size() > 1:
+				return out   # the «or-or» pair is the whole screen; a profile rank card shares it with the usual ones
 	# Закреплённая карточка остаётся, если ещё доступна
 	if not locked.is_empty():
 		for c in cands:

@@ -48,14 +48,14 @@ static func fire_srm(hp: Hardpoint, p: Player) -> bool:
 		targets.append(t)
 	if targets.is_empty():
 		return shot_down > 0
-	var md := hp.dmg()
+	var md := hp.dmg() * Profile.wk("srm", "dmg")   # PG-06 PR 3: hangar branch
 	for i in hp.slots * per_slot:
 		var t: Enemy = targets[i % targets.size()]
 		var side := -1.0 if i % 2 == 0 else 1.0
 		var pos := hp.slot_pos(p, i % hp.slots)
 		var vel := p.velocity + Vector2.from_angle(p.heading + side * (0.35 + 0.15 * floori(i / float(hp.slots)))) * 180.0
 		Main.I.projectiles.spawn_player_missile(pos, vel, t, md, "ракеты ближнего боя",
-			{"turn_k": WeaponBalance.SRM_TURN_K * float(pd.get("turn", 1.0)) * float(ed.get("turn", 1.0)), "spd_k": 1.1 * float(pd.get("spd", 1.0)),
+			{"turn_k": WeaponBalance.SRM_TURN_K * float(pd.get("turn", 1.0)) * float(ed.get("turn", 1.0)), "spd_k": 1.1 * float(pd.get("spd", 1.0)) * Profile.wk("srm", "spd"),
 			"life": float(pd.get("life", 1.8)), "splash": 40.0 if per_slot == 1 else 25.0})
 		if Boom3D.active() and i < hp.slots:
 			Boom3D.ensure().launch(pos, Vector2.from_angle(p.heading), p.velocity)
@@ -79,12 +79,12 @@ static func fire_agm(hp: Hardpoint, p: Player) -> bool:
 		targets.append(t)
 	if targets.is_empty():
 		return false
-	var md := hp.dmg()
+	var md := hp.dmg() * Profile.wk("agm", "dmg")   # PG-06 PR 3: hangar branch
 	for i in hp.slots:
 		var t: Enemy = targets[i % targets.size()]
 		var pos := hp.slot_pos(p, i)
 		var vel := p.velocity + Vector2.from_angle(p.heading) * 120.0
-		var opts := {"ground_k": WeaponBalance.AGM_GROUND_K, "spd_k": 0.9 * float(pd.get("spd", 1.0)), "life": 3.6, "big": true, "free": 0.25}
+		var opts := {"ground_k": WeaponBalance.AGM_GROUND_K, "spd_k": 0.9 * float(pd.get("spd", 1.0)) * Profile.wk("agm", "spd"), "life": 3.6, "big": true, "free": 0.25}
 		if pd.has("split"):
 			opts["split"] = int(pd["split"])
 			opts["split_dmg"] = md * float(pd["split_k"])
@@ -137,7 +137,9 @@ static func fire_hebomb(hp: Hardpoint, p: Player, manual: bool) -> bool:
 			targets.append(t)
 		if targets.is_empty():
 			return false
-	var fuse := WeaponBalance.HEBOMB_FUSE
+	var fuse := WeaponBalance.HEBOMB_FUSE * Profile.wk("hebomb", "fuse")   # PG-06 PR 3: hangar branch
+	var hd := hp.dmg() * Profile.wk("hebomb", "dmg")
+	var hr := hp.range_px() * Profile.wk("hebomb", "blast_r")
 	for s in hp.slots:
 		var to: Vector2
 		if not targets.is_empty():
@@ -145,15 +147,15 @@ static func fire_hebomb(hp: Hardpoint, p: Player, manual: bool) -> bool:
 			to = t.global_position + t.move_vel * fuse
 		else:
 			to = hp.aim_point(p)
-		Main.I.projectiles.spawn_bomb(hp.slot_pos(p, s), fuse, hp.dmg() * Hardpoint.GROUND_BOMB_K, hp.range_px(), "фугасные бомбы", to, true)
+		Main.I.projectiles.spawn_bomb(hp.slot_pos(p, s), fuse, hd * Hardpoint.GROUND_BOMB_K, hr, "фугасные бомбы", to, true)
 		Main.I.projectiles.bombs[-1]["vt"] = WeaponModels.HEBOMB_VT0 + WeaponModels.tier(hp.level)
 		Main.I.projectiles.bombs[-1]["shake"] = WeaponBalance.HEBOMB_SHAKE
 		var ed := hp.evo_def()
-		var bd := hp.dmg() * Hardpoint.GROUND_BOMB_K
+		var bd := hd * Hardpoint.GROUND_BOMB_K
 		if ed.has("wave_r"):
 			Main.I.projectiles.bombs[-1]["quake"] = {"r": float(ed["wave_r"]), "k": float(ed["wave_k"]), "silence": float(ed["silence"])}
 		if ed.has("fire_t"):
-			Main.I.projectiles.bombs[-1]["napalm"] = {"r": hp.range_px() * float(ed["fire_r_k"]), "dps": bd * float(ed["fire_k"]), "t": float(ed["fire_t"])}
+			Main.I.projectiles.bombs[-1]["napalm"] = {"r": hr * float(ed["fire_r_k"]), "dps": bd * float(ed["fire_k"]), "t": float(ed["fire_t"])}
 		hp.bay_release(p, Main.I.projectiles.bombs[-1], 0.0)
 	Main.I.sfx.play("bomb_drop", -12.0, 0.8)
 	return true

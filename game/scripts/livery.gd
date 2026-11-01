@@ -226,6 +226,10 @@ const ENGINE_HOLES := {
 	"bomber_2": [-0.0144, 0.0702, 0.0295, [-0.135, 0.0], [-0.29, -0.24]],
 }
 
+## The source paint in the shader's pass-through form (pattern -1: the texture's own colour, roughness and metal),
+## for the hangar detail layer on liveries that otherwise keep the GLB materials
+const SOURCE_PAINT := ["", "", Color.WHITE, Color.WHITE, Color.WHITE, 0.6, 0.0, -1]
+
 static var _shader: Shader
 static var _force := ""   # стенд: --livery=<id> — окраска своего самолёта в бою, если у класса такая есть
 
@@ -258,6 +262,12 @@ static func _find(cls: String, id: String) -> Array:
 	return []
 
 
+## Main tone of livery `id` of class `cls` (its base colour), or `fallback` for the source paint or an unknown id
+static func main_tone(cls: String, id: String, fallback: Color) -> Color:
+	var v := _find(cls, id)
+	return v[3] if v.size() >= 8 else fallback
+
+
 ## Выбранная окраска класса (из профиля; стенд --livery=… сильнее)
 static func current(cls: String) -> String:
 	if _force == "":
@@ -283,10 +293,15 @@ static func turret_paint(cls: String, id := "") -> Array:
 
 ## Перекрасить модель самолёта (корень модели ангара или боевой; key — «fighter_1» и т. п.). Звать после того,
 ## как подвешены механизация, детали, створки и кормовая кабина. Исходная окраска (вариант без цветов) — ничего не делает.
-static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
+## `detail` (hangar only): every painted surface also gets the PlaneDetail layer (panel lines, rivets, clear coat), and
+## the source paint, which otherwise keeps the GLB's own materials, goes through the same shader unchanged (pattern -1)
+## so it gets the layer too.
+static func apply(model: Node3D, cls: String, lvl: int, id: String, detail := false) -> void:
 	var v := _find(cls, id)
 	if v.size() < 8:
-		return
+		if not detail:
+			return
+		v = SOURCE_PAINT
 	var key := "%s_%d" % [cls, lvl]
 	var src: Array = SRC.get(key, [0.1, 0.012])
 	var ex: Array = EXHAUST.get(key, [])
@@ -319,6 +334,8 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex, holes,
 					float(CLASS_SCALE.get(cls, 1.0)), nose)
 			if sm != null:
+				if detail:
+					PlaneDetail.setup(sm, key, xf)
 				mi.set_surface_override_material(si, sm)
 
 
@@ -470,6 +487,9 @@ uniform float nat_grime = 0.8;
 uniform float nat_belly = 1.0;
 uniform float nat_seed = 0.0;
 uniform vec4 shark_nose = vec4(0.0);   // style 9 (Livery.NOSE): mouth front x, back x, nose axis y, nose radius
+
+#include "res://shaders/srgb.gdshaderinc"
+#include "res://shaders/plane_detail.gdshaderinc"
 
 const float CAMO_DARK = 0.52;
 const float CAMO_OCHRE = 0.53;
@@ -921,8 +941,42 @@ void fragment() {
 	float hole = has_holes ? engine_hole(lp, normalize(ln)) : 0.0;
 	col = mix(col, min(src * 0.45, vec3(0.03)), hole);
 	keep *= 1.0 - hole;
-	ALBEDO = mix(col, src, keep);
-	ROUGHNESS = mix(mix(mix(clamp(liv_rough + rough_add + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
-	METALLIC = mix(mix(mix(liv_metal * metal_k, 0.45, mk), 0.35, hole), 0.0, keep);
+	vec3 alb = mix(col, src, keep);
+	float rough = mix(mix(mix(clamp(liv_rough + rough_add + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
+	float metal = mix(mix(mix(liv_metal * metal_k, 0.45, mk), 0.35, hole), 0.0, keep);
+	if (pattern < 0) {   // Livery.SOURCE_PAINT: the model's own paint, only for the hangar detail layer
+		alb = src;
+		rough = rough0;
+		metal = metal0;
+	}
+	if (detail_k > 0.0) {
+		// PlaneDetail (hangar): engraved seams and rivets bend the normal and collect grime, each panel is a shade
+		// off its neighbours, paint chips to bare metal along seams and leading edges, the coat is glossier
+		vec3 n0 = normalize(ln);
+		vec3 grad;
+		float cav;
+		float riv;
+		float edge;
+		float pid;
+		pd_eval(lp, n0, grad, cav, riv, edge, pid);
+		float dk = detail_k * (1.0 - 0.7 * keep) * (1.0 - hole);
+		vec3 dn = mat3(from_model) * (pd_bump(n0, grad, dk) - n0);
+		NORMAL = normalize(NORMAL + mat3(VIEW_MATRIX) * mat3(MODEL_MATRIX) * dn);
+		alb *= 1.0 + dk * (0.1 * (pid - 0.5) - 0.55 * cav - 0.18 * riv);
+		rough = clamp(rough + dk * (0.14 * (pid - 0.5) + 0.25 * cav - 0.1 * riv), 0.04, 1.0);
+		// chips: small, along seams and on leading edges only, and only once they are a few pixels across (they
+		// would sparkle from afar)
+		float lead = smoothstep(0.55, 0.9, n0.x);
+		float near = clamp(1.6 - length(fwidth(lp)) / 0.0006, 0.0, 1.0);
+		float chip = smoothstep(0.88, 0.93, vnoise3(lp * 520.0) * 0.72 + vnoise3(lp * 60.0) * 0.08 + 0.26 * edge + 0.2 * lead);
+		chip *= dk * (1.0 - keep) * near;
+		alb = mix(alb, SRGB(vec3(0.46, 0.46, 0.44)), chip);
+		metal = mix(metal, 0.6, chip);
+		rough = mix(rough, 0.45, chip);
+		rough = mix(rough, rough * 0.55 + 0.05, pd_gloss * (1.0 - chip));
+	}
+	ALBEDO = alb;
+	ROUGHNESS = rough;
+	METALLIC = metal;
 }
 """
