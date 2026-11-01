@@ -1,4 +1,4 @@
-"""Clean built nacelles and junctions for the remeshed «Кит» bombers and «Грач» 2 (Kanta, 01.11: crumpled, dented orange camo on the nacelles,
+"""Clean built nacelles and junctions for the remeshed «Кит» bombers (Kanta, 01.11: crumpled, dented orange camo on the nacelles,
 dark dimples on the nacelle tops of «Кит» 2; skin_refit.py barely helped, see its header).
 
 Why skin_refit.py was not enough: it fitted a fine spline (5 mm knots round a nacelle) to the dented skin and moved
@@ -28,14 +28,16 @@ on that description, the way intake_rebuild.py rebuilt the intakes:
    (the dark dimples) is evened to the tone's own level; fine detail and the camouflage edges stay. Occlusion in
    the ORM map is evened the same way.
 
-4. Junctions that are neither tube nor slab (the torn skin round the «Грач» 2 intake that intake_rebuild.py built):
+4. Junctions that are neither tube nor slab (first used on the torn skin round the old «Грач» 2 intake ring):
    a region may be a Sheet instead, one penalised height field over a tilted plane fitted robustly to the skin
    (the torn fringes are its outliers). The intake itself is kept by its UV island (KEEP_UV); the see-through gaps
    between the skin and the intake's rim are bridged with sunk strips, and the intake body's dark wall where it
    shows through takes the skin's paint.
 
-Status (01.11): «Кит» 1 and «Грач» 2 shipped. The «Кит» 2 config is kept for the next try but its result was not
-taken: the nacelle front became a blunt bulb, the outboard shoulder boxy, and the bay side opened small holes.
+Status (01.11): «Кит» 1 shipped. «Грач» 2's junction regions were dropped: intake_rebuild.py now builds the
+intake with its fairing, splitter and gap from the generator's skin, so there is no torn skin left to rebuild.
+The «Кит» 2 config is kept for the next try but its result was not taken: the nacelle front became a blunt bulb,
+the outboard shoulder boxy, and the bay side opened small holes.
 
   python3 -I nacelle_rebuild.py <hangar.glb> <key> <out.glb> --maps <col.jpg> <orm.jpg> [--report] [--geo-only]
 The maps are rewritten in place (start from copies of the extracted maps), then tex_clean.py pads them.
@@ -93,21 +95,11 @@ REGIONS: dict = {
          "slab": {"box": (-0.27, -0.06, 0.0, 0.16, -0.075, 0.04), "kx": 0.02, "kz": 0.015, "lam": (1.0, 1.0),
                   "round": 0.003}},
     ],
-    # «Грач» 2: the torn skin round the rebuilt intake (intake_rebuild.py); the intake ring itself is kept (KEEP_UV).
-    # A: under the ring, the nacelle bottom grown into the chin; B: inboard, the ring against the fuselage cheek
-    "attacker_2": [
-        {"name": "jun_lo", "box": (0.025, 0.092, 0.088, 0.125, -0.082, -0.046),
-         "sheet": {"n": (0.0, -0.55, 0.83), "kk": 0.006, "lam": (1.0, 1.0)}, "dark_out": True, "gate": (0.022, 0.03)},
-        {"name": "jun_in", "box": (0.058, 0.100, 0.055, 0.080, -0.050, -0.010),
-         "sheet": {"n": (0.45, 0.45, 0.77), "kk": 0.006, "lam": (1.0, 1.0)}, "dark_out": True, "gate": (0.022, 0.03)},
-    ],
 }
-# Skin kept by its UV island (texel rectangles x0, y0, x1, y1 in a size atlas) and the fade round it: the
-# intake rings intake_rebuild.py built into the skin of the attackers
-KEEP_UV: dict = {
-    "attacker_2": {"size": (4096, 4096), "rects": [(796, 202, 1774, 414)], "near": (0.0005, 0.0015),
-                   "shell": {"axis": (-0.022, 0.096), "rmin": 0.028, "x": (0.03, 0.09)}, "bridge": 0.02},
-}
+# Skin kept by its UV island (texel rectangles x0, y0, x1, y1 in a size atlas) and the fade round it, e.g. a built
+# part inside a region: {"key": {"size": (w, h), "rects": [...], "near": (d0, d1), "shell": {...}, "bridge": d}}.
+# Empty since the «Грач» intakes were rebuilt with a clean junction (intake_rebuild.py, 01.11).
+KEEP_UV: dict = {}
 SKIP_NEAR_PARTS = (0.003, 0.009)   # skin this close to slats, flaps, bay doors, wells or glass stays put (fade)
 EXCL = 0.003         # data of one part closer than this to the other part's fitted surface is junction, not data
 FADE = (0.004, 0.012)  # the region fades out over the slab this far past the fillet (in d = tube - slab - k)
