@@ -453,6 +453,84 @@ def build_turret_burst(out_dir):
         print('%-14s %.2f с  got %.1f dB' % (name, len(out) / SR, H.punch_db(out.mean(1))))
 
 
+# Сюжет Нагорья, шаг 4 (31.10.2026, тред «Сюжет Нагорья и заставки»): стингеры кино-моментов, радиотекстура, гул «Крепости».
+# Стингеры режутся из уже собранных треков игры (nene и bobjt, CC0, см. CREDITS.md) — палитра та же, сети не нужно.
+# Радиотекстура и гул — синтез кодом, без лицензии. Громкость стингеров -14 LUFS (ffmpeg loudnorm).
+STINGS = {
+    # имя: (исходный файл в game/audio, начало с, длительность с, фейд-ин с, фейд-аут с, фильтр ffmpeg или None, саб)
+    'sting_start': ('music_boss.ogg', 0.0, 4.0, 0.0, 1.5, None, (60, 45, 2.0, 1.2)),
+    'sting_fortress': ('music_battle_2.ogg', 0.0, 4.5, 0.05, 2.0, 'lowpass=f=420', (48, 34, 4.5, 0.6)),
+    'sting_baron': ('music_battle_3.ogg', 0.0, 3.0, 0.0, 1.0, None, None),
+    'sting_epilogue': ('music_result.ogg', 0.0, 6.0, 0.5, 2.5, None, None),
+}
+
+
+def _fade(y, fi, fo):
+    n = len(y)
+    a = min(n, int(fi * SR))
+    if a > 0:
+        y[:a] *= np.linspace(0, 1, a)[:, None]
+    b = min(n, int(fo * SR))
+    if b > 0:
+        y[n - b:] *= (np.linspace(1, 0, b) ** 2)[:, None]
+    return y
+
+
+def _loudnorm_ogg(y, path, lufs=-14):
+    r = subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-',
+                        '-af', 'loudnorm=I=%d:TP=-1.5' % lufs, '-ar', str(SR), '-c:a', 'libvorbis', '-q:a', '4', path],
+                       input=y.astype(np.float32).tobytes())
+    r.check_returncode()
+
+
+def build_story(out_dir):
+    for name, (src, start, dur, fi, fo, af, sb) in STINGS.items():
+        x = load_st(os.path.join(H.AUDIO, src))
+        y = x[int(start * SR):int((start + dur) * SR)].copy()
+        if af:
+            y = ff(y, af)
+        if sb:
+            z = sub(sb[0], sb[1], sb[2], sb[3]) * 0.9
+            y[:len(z)] += z[:len(y)]
+        y = _fade(y, fi, fo)
+        _loudnorm_ogg(y, os.path.join(out_dir, name + '.ogg'))
+        print('%-16s %.1f с' % (name, len(y) / SR))
+    rng = np.random.default_rng(7)
+    # radio_squelch: 0.35 с шипения в полосе 1,2–3,2 кГц, щелчок в начале, быстрый спад — «открылся эфир перехвата»
+    n = int(0.35 * SR)
+    t = np.arange(n) / SR
+    noise = rng.standard_normal((n, 2)).astype(np.float32)
+    noise = ff(noise, 'highpass=f=1200,lowpass=f=3200')
+    env = np.exp(-t * 9.0) * (1 - np.exp(-t * 400.0))
+    y = noise * env[:, None]
+    click = sub(2600, 900, 0.06, 120.0)[:int(0.02 * SR)]
+    y[:len(click)] += click * 1.2
+    y = norm_peak(y, -6.0)
+    write_ogg_st(_fade(y, 0.0, 0.05), os.path.join(out_dir, 'radio_squelch.ogg'))
+    # radio_click: 40 мс мягкого щелчка — «нажали тангенту» перед своей строкой
+    n = int(0.04 * SR)
+    t = np.arange(n) / SR
+    y = rng.standard_normal((n, 2)).astype(np.float32)
+    y = ff(y, 'highpass=f=1800,lowpass=f=5000') * np.exp(-t * 140.0)[:, None]
+    y = norm_peak(y, -10.0)
+    write_ogg_st(_fade(y, 0.0, 0.01), os.path.join(out_dir, 'radio_click.ogg'))
+    # fortress_drone: 4 с цикла — гармоники 44 Гц с биением винтов 9 Гц и низким шумом; частоты кратны 0,25 Гц,
+    # поэтому тон замыкается сам, шум сшивается кроссфейдом
+    n = 4 * SR
+    t = np.arange(n) / SR
+    tone = np.zeros(n)
+    for k, g in ((1, 1.0), (2, 0.55), (3, 0.3), (4, 0.18), (6, 0.08)):
+        tone += g * np.sin(2 * np.pi * 44.0 * k * t)
+    tone *= 0.75 + 0.25 * np.sin(2 * np.pi * 9.0 * t)
+    y = np.stack([tone, tone], 1).astype(np.float32)
+    nz = ff(rng.standard_normal((n, 2)).astype(np.float32), 'lowpass=f=300') * 0.35
+    y = y / (np.abs(y).max() + 1e-9) + nz / (np.abs(nz).max() + 1e-9) * 0.4
+    y = loop_st(y, 0.5)
+    y = norm_peak(y, -6.0)
+    write_ogg_st(y, os.path.join(out_dir, 'fortress_drone.ogg'))
+    print('radio_squelch, radio_click, fortress_drone: синтез')
+
+
 def main():
     out_dir = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else H.AUDIO
     only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else None
@@ -467,6 +545,8 @@ def main():
         build_turret_burst(out_dir)
     if only is None or 'sea' in only:
         build_sea(out_dir)
+    if only is None or 'story' in only:
+        build_story(out_dir)
     for event, variants in LAYERS.items():
         if only is not None and event not in only:
             continue

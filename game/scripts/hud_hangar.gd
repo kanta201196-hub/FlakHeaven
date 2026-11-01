@@ -318,7 +318,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		_text(Vector2(lx + 54, y + 24), Loc.t(String(Weapons.DEFS[w]["short"])), 17, Color.WHITE if on else Color(0.85, 0.88, 0.95))
 		var sub := ""
 		if Profile.WBRANCH.has(w):
-			for tier in [1, 2, 3]:
+			for tier in ([1, 2, 3] if Profile.WBRANCH3.has(w) else [1, 2]):
 				var st := Profile.tier_state(w, tier)
 				sub += ("●" if st != "" and st != "?" else "○") + " "
 		_text(Vector2(lx + 54, y + 46), sub, 14, Menu.C_AMBER)
@@ -376,10 +376,13 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 		_text(Vector2(vx + 24, area.position.y + 220), "Встроенное оружие — модель на самолёте", 16, Color(0.7, 0.74, 0.8))
 	_text(Vector2(rx, area.position.y + 24), Loc.t("%s — ветки улучшений (действуют, пока оружие на подвесе; общие для всех классов)") % Loc.t(Weapons.DEFS[w2]["title"]), 18, Menu.C_AMBER)
 	var yy := area.position.y + 50.0
-	if not Profile.WBRANCH.has(w2):   # PG-01: new weapons get hangar branches in PG-03 — say so instead of an empty panel
+	if not Profile.WBRANCH.has(w2):   # a weapon without hangar branches (experimental ones) — say so instead of an empty panel
 		_para(Vector2(rx, yy + 30), Loc.t("У этого оружия веток улучшений в ангаре пока нет: они появятся в следующем этапе прокачки. В бою оно растёт по уровням 1–5 карточками, как и остальное оружие."), rw, 16, Color(0.75, 0.78, 0.84))
-	for tier in ([1, 2, 3] if Profile.WBRANCH.has(w2) else []):   # PG-01: new weapons get hangar branches in PG-03
+	for tier in (([1, 2, 3] if Profile.WBRANCH3.has(w2) else [1, 2]) if Profile.WBRANCH.has(w2) else []):   # no «Tier 3» header without a variant
 		_text(Vector2(rx, yy + 20), Loc.t("Ступень %d%s") % [tier, Loc.t(" · модернизация") if tier == 3 else ""], 18, Color.WHITE)
+		if tier == WeaponProfiles.THIRD_TIER and WeaponProfiles.has(w2):
+			# PG-06 PR 3: which profile this tier opens in the sortie (small, left of the «переиграть» button)
+			_text(Vector2(rx + 110, yy + 20), Loc.t("откроет 3-й профиль в бою: «%s»") % Loc.t(String(WeaponProfiles.def(w2, WeaponProfiles.third(w2))["title"])), 14, Menu.C_AMBER)
 		var st2 := Profile.tier_state(w2, tier)
 		var locked: bool = (tier == 2 and Profile.tier_state(w2, 1) == "") or (tier == 3 and not Profile.tier3_open(w2))
 		var why := Loc.t("сначала выберите ступень %d") % (tier - 1)

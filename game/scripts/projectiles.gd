@@ -315,7 +315,9 @@ func break_locks(from: Vector2, r: float) -> int:
 ## chainable — взрыв НАР или бомбы: только он запускает «Цепную реакцию» (тест 3.5-s7: её запускали и мини-ракеты
 ## «Стального ежа», и всё подряд — у «Кита» цепь дала 39% урона за вылет)
 ## A visible ordnance blast also tells breakable ground structures (Events.player_blast, FA-03).
-func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false, ground_k := 1.0, chainable := false) -> void:
+## PG-06: `armor_k` — extra factor on armored enemies («Кумулятив»), `burn` — every enemy hit catches fire
+## by the incendiary ammo rules («Зажигательные»)
+func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclude: Enemy = null, chain := 0, ground_only := false, ground_k := 1.0, chainable := false, armor_k := 1.0, burn := false) -> void:
 	var edge := 0.35
 	var r_base := r
 	var pl := Main.I.player
@@ -337,7 +339,10 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 		if d < r:
 			var k := lerpf(1.0, edge, clampf(d / r, 0.0, 1.0))
 			e.hit_at = pos
-			e.take_hit(dmg * k * (ground_k if e.is_ground else 1.0), src)
+			var hit := dmg * k * (ground_k if e.is_ground else 1.0) * (armor_k if e.defense == "armor" else 1.0)
+			e.take_hit(hit, src)
+			if burn:
+				ignite(e, hit)
 			if blast2 and e.hp <= 0.0 and not e.is_boss:
 				died.append([e.global_position, e.max_hp])
 	if visual:
@@ -455,11 +460,19 @@ func _ammo_effects(b: Dictionary, p: Vector2, e: Enemy) -> void:
 	if b.has("splash"):
 		var sp: Array = b["splash"]   # [radius, share of damage]
 		aoe(p, float(sp[0]), float(b["dmg"]) * float(sp[1]), "курсовое: осколки", false, e)
-	if b.has("inc") and e.hp > 0.0:
-		var st: Dictionary = e.get_meta("burn", {})
-		if st.is_empty():
-			burning.append(weakref(e))
-		e.set_meta("burn", WeaponBalance.burn_add(st, float(b["dmg"])))
+	if b.has("inc"):
+		ignite(e, float(b["dmg"]))
+
+
+## Sets `e` on fire for a hit of `hit_dmg` by the incendiary ammo rules (`WeaponBalance.burn_add`);
+## nothing on a dead enemy. Course ammo and the «Зажигательные» rocket profile (PG-06) share it.
+func ignite(e: Enemy, hit_dmg: float) -> void:
+	if e.hp <= 0.0:
+		return
+	var st: Dictionary = e.get_meta("burn", {})
+	if st.is_empty():
+		burning.append(weakref(e))
+	e.set_meta("burn", WeaponBalance.burn_add(st, hit_dmg))
 
 
 ## PG-01: burning enemies take damage 4 times a second until the fire goes out
@@ -521,15 +534,22 @@ func _split(p: Vector2, m: Dictionary, hit: Enemy) -> void:
 	var n := int(m.get("split", 0))
 	var skip: Array = [hit]
 	var spare := 0
+	# PG-06 «Кассетная» (guided air-to-ground): submunitions go to ground targets and keep the ground factor
+	var ground: bool = m.get("split_ground", false)
+	var src := String(m.get("split_src", "ракеты В-В"))
 	for i in n:
-		var nt := Weapons.pick_target(p, 700.0, "nearest", skip, true)
+		var nt := Weapons.pick_target(p, 700.0 if not ground else 320.0, "nearest", skip, not ground, ground)
 		if nt == null:
 			spare += 1 # целей рядом нет — эта БЧ рвётся на месте
 			continue
 		skip.append(nt)
-		spawn_player_missile(p, Vector2.from_angle(TAU * i / n + randf() * 0.4) * 260.0, nt, float(m["split_dmg"]), "ракеты В-В", {"sub": true, "life": 1.1, "free": 0.0})
+		var so := {"sub": true, "life": 1.1, "free": 0.0}
+		if ground:
+			so["ground_k"] = float(m.get("ground_k", 1.0))
+			so["splash"] = float(m.get("split_r", 80.0))
+		spawn_player_missile(p, Vector2.from_angle(TAU * i / n + randf() * 0.4) * 260.0, nt, float(m["split_dmg"]), src, so)
 	if spare > 0:
-		aoe(p, 90.0, float(m["split_dmg"]) * 0.5 * spare, "ракеты В-В", false)
+		aoe(p, 90.0, float(m["split_dmg"]) * 0.5 * spare, src, false, null, 0, ground, float(m.get("ground_k", 1.0)) if ground else 1.0)
 
 
 ## Множители пуль: нашивка «Кинетика I», «Штурмовой заход» по наземным
@@ -572,6 +592,10 @@ func _update_player_missiles(delta: float) -> void:
 				if t != null:
 					m["rt"] = int(m.get("rt", 0)) + 1
 					Main.I.tele.add("msl_retarget")
+			if t == null and int(m.get("retarget", 0)) > 0:   # PG-06 «Стая»: own new targets, on top of the seeker module
+				t = Weapons.pick_target(p, 600.0, "nearest", [], true)
+				if t != null:
+					m["retarget"] = int(m["retarget"]) - 1
 			m["t"] = weakref(t)
 			if t == null:
 				m["lost"] = true
@@ -593,10 +617,11 @@ func _update_player_missiles(delta: float) -> void:
 		if t != null and p.distance_to(t.aim_point(p)) < t.aim_radius() + 6.0:
 			t.hit_at = p
 			var dmg := float(m["dmg"]) * (boost if float(m["age"]) < 1.0 else 1.0) # «Форсированный старт»
-			t.take_hit(dmg * (float(m.get("ground_k", 1.0)) if t.is_ground else 1.0), m.get("src", "ракеты В-В"))
-			# 2.8: осколки — задевают соседей (55 пикс., урон падает к краю)
+			# PG-06 «Бетонобой»: extra damage to armored targets on top of the defence table
+			t.take_hit(dmg * (float(m.get("ground_k", 1.0)) if t.is_ground else 1.0) * (float(m.get("armor_k", 1.0)) if t.defense == "armor" else 1.0), m.get("src", "ракеты В-В"))
+			# 2.8: осколки — задевают соседей (55 пикс., урон падает к краю); PG-06 «Осколочная»: wider and stronger
 			var msl_r := float(pl.mods.get("msl_r", 1.0)) if is_instance_valid(pl) else 1.0
-			aoe(p, float(m.get("splash", 55.0)) * msl_r, dmg * 0.5, m.get("src", "ракеты В-В"), false, t)
+			aoe(p, float(m.get("splash", 55.0)) * msl_r, dmg * float(m.get("splash_k", 0.5)), m.get("src", "ракеты В-В"), false, t)
 			Main.I.fx.explosion(p, 30.0 if m.get("big", false) else 20.0)
 			_cluster(p, m)
 			if int(m.get("split", 0)) > 0:
@@ -626,6 +651,13 @@ func _update_player_missiles(delta: float) -> void:
 					else:
 						m["gsn3"] = 0
 					m["t"] = weakref(nt)
+					m["life"] = 2.0
+					done = false
+			if done and t.hp <= 0.0 and int(m.get("retarget", 0)) > 0:   # «Стая»: after a kill the missile flies on
+				var nt3 := Weapons.pick_target(p, 600.0, "nearest", [t], true)
+				if nt3 != null:
+					m["retarget"] = int(m["retarget"]) - 1
+					m["t"] = weakref(nt3)
 					m["life"] = 2.0
 					done = false
 		if done:
@@ -661,7 +693,8 @@ func _update_rockets(delta: float) -> void:
 				_sticky.append({"e": weakref(hit_e) if hit_e != null else null, "off": p - (hit_e.global_position if hit_e != null else p),
 					"p": p, "t": 0.0, "dmg": float(r["dmg"]) * 1.5, "ground_k": float(r.get("ground_k", 1.0))})
 			else:
-				aoe(p, float(r["r"]), float(r["dmg"]), r.get("src", "НАР"), true, null, 0, false, float(r.get("ground_k", 1.0)), true)
+				aoe(p, float(r["r"]), float(r["dmg"]), r.get("src", "НАР"), true, null, 0, false, float(r.get("ground_k", 1.0)), true,
+					float(r.get("armor_k", 1.0)), bool(r.get("burn", false)))
 			rockets.remove_at(i)
 
 
@@ -715,6 +748,18 @@ func _update_bombs(delta: float) -> void:
 			var mpl := Main.I.player
 			if String(b["src"]) == "бомбы" and is_instance_valid(mpl) and mpl.mastery and mpl.cls_id == "bomber":
 				spawn_fire(b["p"], float(b["r"]) * 0.6, 15.0, 3.0, PlaneClasses.MASTERY_FIRE_SRC, true) # «Выжженная земля»
+			if b.has("quake"):   # PG-06 «Землетрясение»: shockwave on the ground, AA inside goes quiet
+				var qk: Dictionary = b["quake"]
+				aoe(b["p"], float(qk["r"]), float(b["dmg"]) * float(qk["k"]), b["src"], false, null, 0, true)
+				for nq in get_tree().get_nodes_in_group("enemies"):
+					var eq := nq as Enemy
+					if eq != null and eq.hp > 0.0 and eq.is_ground and (b["p"] as Vector2).distance_to(eq.global_position) < float(qk["r"]):
+						eq.silence = maxf(eq.silence, float(qk["silence"]))
+				Main.I.fx.ring(b["p"], float(qk["r"]), Color(0.9, 0.72, 0.45))
+				Main.I.add_shake(3.0)
+			if b.has("napalm"):   # PG-06 «Напалм»: burning pool on the ground
+				var nk: Dictionary = b["napalm"]
+				spawn_fire(b["p"], float(nk["r"]), float(nk["dps"]), float(nk["t"]), b["src"], true)
 			if b.get("road", false): # «Ковровая дорожка»: крест суббоеприпасов и горящее пятно
 				for j in 4:
 					var to: Vector2 = b["p"] + Vector2.from_angle(j * PI / 2.0 + PI / 4.0) * 90.0

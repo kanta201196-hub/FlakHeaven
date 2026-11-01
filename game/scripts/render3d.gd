@@ -29,6 +29,20 @@ var sun: DirectionalLight3D
 var terrain: Terrain3D
 var _ground_mat: ShaderMaterial
 var _env: Environment   # тред «Второй биом»: цвет фона под биом
+## Story scenes (step 2): time-of-day presets over the default light. Colours are multipliers and sun colours,
+## so one table serves both renderers (the Forward+ exposure lift stays in `_light_base`). "day" = the default.
+const SUN_COLOR := Color(1.0, 0.9, 0.76)
+const SUN_ENERGY := 1.15
+const SUN_DIR := Vector3(0.62, -0.85, 0.75)
+const LIGHT_PRESETS := {
+	"day": {"sun": SUN_COLOR, "energy": 1.0, "dir": SUN_DIR, "exposure": 1.0, "ambient": 1.0, "bg": Color(1, 1, 1)},
+	"dawn": {"sun": Color(1.0, 0.74, 0.52), "energy": 0.85, "dir": Vector3(0.9, -0.42, 0.55), "exposure": 0.9, "ambient": 0.8, "bg": Color(0.95, 0.8, 0.7)},
+	"dusk": {"sun": Color(1.0, 0.6, 0.42), "energy": 0.75, "dir": Vector3(-0.85, -0.38, 0.6), "exposure": 0.8, "ambient": 0.7, "bg": Color(0.85, 0.6, 0.55)},
+	"night": {"sun": Color(0.55, 0.65, 0.95), "energy": 0.3, "dir": Vector3(0.3, -0.9, 0.4), "exposure": 0.55, "ambient": 0.5, "bg": Color(0.35, 0.4, 0.6)},
+}
+var _light_base := {}
+var _light_tw: Tween
+var light_preset := "day"
 var _units: Dictionary[int, Unit3D] = {}   # instance_id → its 3D unit
 var _objs := {}       # ключ клетки → MeshInstance3D (у обломков o_wreck — сцена модели)
 var _clouds: Array = []          # «Низкое» качество: прежние плоские облака
@@ -116,6 +130,35 @@ const FP_CONTRAST := 1.18
 const FP_AMBIENT := 0.38
 
 
+## Tweens the sun and environment to a preset of LIGHT_PRESETS over `dur` s; unknown names mean "day".
+## Scenes call it on start and `set_light("day")` on end; the sortie itself always runs in "day".
+func set_light(preset: String, dur := 1.0) -> void:
+	if not LIGHT_PRESETS.has(preset):
+		preset = "day"
+	if preset == light_preset or _env == null or sun == null or _light_base.is_empty():
+		return
+	light_preset = preset
+	var p: Dictionary = LIGHT_PRESETS[preset]
+	if _light_tw != null and _light_tw.is_valid():
+		_light_tw.kill()
+	_light_tw = create_tween().set_parallel(true)
+	_light_tw.tween_property(sun, "light_color", p["sun"] as Color, dur)
+	_light_tw.tween_property(sun, "light_energy", SUN_ENERGY * float(p["energy"]), dur)
+	_light_tw.tween_property(_env, "tonemap_exposure", float(_light_base["exposure"]) * float(p["exposure"]), dur)
+	_light_tw.tween_property(_env, "ambient_light_energy", float(_light_base["ambient"]) * float(p["ambient"]), dur)
+	_light_tw.tween_property(_env, "background_color", (_light_base["bg"] as Color) * (p["bg"] as Color), dur)
+	var target := Basis.looking_at((p["dir"] as Vector3).normalized(), Vector3(0, 0, -1))
+	_light_tw.tween_method(func(u: float) -> void: sun.basis = sun.basis.slerp(target, u).orthonormalized(), 0.0, 1.0, dur)
+	# story step 9: the villages' window lights (VillageHouses window quads read the global `story_night`)
+	_light_tw.tween_method(func(v: float) -> void: RenderingServer.global_shader_parameter_set(&"story_night", v), _night, float(NIGHT_LIGHTS.get(preset, 0.0)), dur)
+	_night = float(NIGHT_LIGHTS.get(preset, 0.0))
+
+
+## How lit the villages' windows are per light preset (global shader parameter `story_night`, 0 — off).
+const NIGHT_LIGHTS := {"day": 0.0, "dawn": 0.35, "dusk": 0.8, "night": 1.0}
+var _night := 0.0
+
+
 func _exit_tree() -> void:
 	if _prewarm_id >= 0:
 		WorkerThreadPool.wait_for_task_completion(_prewarm_id)
@@ -165,8 +208,8 @@ func _ready() -> void:
 	add_child(env)
 
 	sun = DirectionalLight3D.new()
-	sun.light_color = Color(1.0, 0.9, 0.76)
-	sun.light_energy = 1.15
+	sun.light_color = SUN_COLOR
+	sun.light_energy = SUN_ENERGY
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.directional_shadow_max_distance = 4000.0
@@ -175,8 +218,9 @@ func _ready() -> void:
 	sun.shadow_opacity = 0.8
 	# B-24: солнце ниже (~40° над горизонтом) — тени длиннее, у объектов видна теневая сторона.
 	# Свет сверху-слева (на экране): тени уходят вниз-вправо
-	sun.basis = Basis.looking_at(Vector3(0.62, -0.85, 0.75).normalized(), Vector3(0, 0, -1))
+	sun.basis = Basis.looking_at(SUN_DIR.normalized(), Vector3(0, 0, -1))
 	add_child(sun)
+	_light_base = {"exposure": e.tonemap_exposure, "ambient": e.ambient_light_energy, "bg": e.background_color}
 
 	_setup_combat_layer()
 
@@ -543,7 +587,7 @@ func _process(delta: float) -> void:
 	var ct0 := pt
 	_sync_crashes(m, sd)
 	if Perf.on: ct0 = Perf.sub("r3d.c.crashes", ct0)
-	title.sync(m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu", delta)
+	title.sync((m.state in ["menu", "settings"] and m.menu != null and m.menu.back_state == "menu") or Cutscene.flight_on() or (m.state == "campaign" and HudCampaign.vignette_on()), delta)
 	_trails.tick(delta if title.active() else sd)   # в меню мир на паузе, а следы звена тают в реальном времени
 	if Perf.on: Perf.sub("r3d.c.trails", ct0)
 	_wakes.tick(sd)
@@ -661,6 +705,11 @@ func model_units() -> Vector2:
 	return Vector2(n, t)
 
 
+## Self-check (R-23): the 3D unit drawn for the node with instance id `id` (the player's plane), null when none
+func debug_unit(id: int) -> Unit3D:
+	return _units.get(id)
+
+
 func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: float, grid := 56) -> Unit3D:
 	var u: Unit3D = _units.get(id)
 	var bm: PackedScene = _battle_model(tex)   # 3.5 этап 2: враги в воздухе и наземные ПВО (ЗСУ, ЗРК, РЛС)
@@ -689,6 +738,8 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 				if not String(c.name).begins_with("prop_"):
 					mi = c
 					break
+			if kind == "enemy" and Tuning.g("story_mark") > 0:   # ST-09: the Monolith slab on the Fortress, AA and trucks
+				MonolithMark.attach(inst, tex.resource_path.get_file().get_basename())
 		if mi == null:
 			bm = null
 			mi = MeshInstance3D.new()
@@ -1961,8 +2012,12 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 						l_offs.append((Vector2(bw.x, bw.z) - p.global_position).rotated(-p.heading))
 				elif g.weapon == "turret" or g.weapon == "gunpod":
 					# Kanta 26.10: turret and gun-pod rounds (and their muzzle flash) leave from the barrels of the model,
-					# not from a fixed spot beside the fuselage; +X of the weapon mesh runs along the barrels
-					var mw := root.global_transform * (wmi.transform * Vector3(0.35, 0.0, 0.0))
+					# not from a fixed spot beside the fuselage; +X of the weapon mesh runs along the barrels.
+					# R-23 self-check: one fixed 0.35 overshot the short tail-turret barrels — each model's own
+					# muzzle (by class, side and tier) is the barrel tip; kept as meta so the self-check measures it
+					var ml := WeaponModels.muzzle(g.weapon, p.cls_id, mt["side"], WeaponModels.tier(g.level, g.evo))
+					wmi.set_meta("muzzle_local", ml)
+					var mw := root.global_transform * (wmi.transform * ml)
 					l_offs.append((Vector2(mw.x, mw.z) - p.global_position).rotated(-p.heading))
 				var tr_w := 0.6 if dim else 0.0
 				if wmi.transparency != tr_w:
@@ -2464,7 +2519,9 @@ func _turret_yaw(p: Player, root: Node3D, local: Vector3, idle := 0.0) -> float:
 const OBJ_TOP := -30.0
 ## B-26: столовая гора-картинка не нужна — горы теперь настоящие;
 ## B-41: скалы-картинки заменены группами моделей (biome_props.gd)
-const OBJ_SKIP_3D := ["o_mesa", "o_rocks_big", "o_rocks_small"]
+## Objects with no 3D picture: BiomeProps models them (rocks), or the ground shader paints them (o_crater, S14-10:
+## the level crater picture stuck out of slopes as a floating slab)
+const OBJ_SKIP_3D := ["o_mesa", "o_rocks_big", "o_rocks_small", "o_crater"]
 var _wreck_scenes := {}   # вид обломков (BiomeProps.PLANE_KINDS) → PackedScene или null
 
 
@@ -2957,9 +3014,12 @@ func _sync_ground_zones(m: Main) -> void:
 		if fl.size() > GZ_MAX - _gz_a.size():
 			fl.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
 				return (x["p"] as Vector2).distance_squared_to(_c2) < (y["p"] as Vector2).distance_squared_to(_c2))
+		var cracks := Tuning.g("fx_s14") >= 1.0
 		for f: Dictionary in fl:
 			var fc: Color = f.get("c", Color(1.0, 0.45, 0.1))
-			_gz_add(f["p"], f["p"], float(f["r"]), clampf(float(f["t"]), 0.0, 1.0), 3, fc)
+			# S14-18 (toggle fx_s14): the plasma patch burns as glowing blue cracks in soot (kind 4)
+			var crack: bool = cracks and f.get("src", "") == "плазма"
+			_gz_add(f["p"], f["p"], float(f["r"]), clampf(float(f["t"]), 0.0, 1.0), 4 if crack else 3, fc)
 	_ground_mat.set_shader_parameter("gz_n", _gz_a.size())
 	if _gz_a.is_empty():
 		return
@@ -3060,6 +3120,10 @@ func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex:
 		add_child(d)
 		pool.append(d)
 	var dc := pool[i]
+	# S14-19 (R-22 toggle fx_s14): a decal box projects along its Y axis, so a cliff wall inside the box got
+	# the mark smeared down it as streaks («кусок взрыва в горе»); normal fade 0.5 hides surfaces at 90° to the
+	# decal and keeps ordinary slopes (30° off the decal axis keeps ~95 %)
+	dc.normal_fade = 0.5 if Tuning.g("fx_s14") >= 1.0 else 0.0
 	dc.visible = col.a > 0.004
 	dc.transform = xf
 	dc.size = sz

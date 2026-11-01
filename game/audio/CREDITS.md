@@ -26,6 +26,17 @@ The Sound Pack Tree, SoundHolder, Soundrangers, Mattia Cellotto, Soundopolis (м
 
 Меню и итоги — выбор Kanta 19.10. Бой и ас — выбор Kanta 18.10 (рок одного автора), сборка `game/tools/build_audio_layers.py --only music_rock`. Меню и итоги — `game/tools/build_audio_hybrid.py --only music`. Обработка меню и итогов: обрезка длинных треков с затуханием, громкость −16 LUFS.
 
+## Сюжет Нагорья: стингеры, радиотекстура, гул «Крепости» (31.10.2026)
+Сборка: `game/tools/build_audio_layers.py --only story` (ffmpeg, numpy; сеть не нужна — режется из треков этой папки).
+
+| Файл | Из чего | Автор | Лицензия |
+| --- | --- | --- | --- |
+| sting_start | первые 4 с music_boss (Boss Battle #9) + саб 60→45 Гц | nene | CC0 |
+| sting_fortress | первые 4,5 с music_battle_2 (Boss Battle #8) через НЧ-фильтр 420 Гц + саб 48→34 Гц | nene | CC0 |
+| sting_baron | первые 3 с music_battle_3 (Short Theme) | nene | CC0 |
+| sting_epilogue | первые 6 с music_result (Remembrance) с плавным входом и выходом | bobjt | CC0 |
+| radio_squelch, radio_click, fortress_drone | синтез кодом (шум в полосе, щелчок, гармоники 44 Гц с биением 9 Гц) | — | без лицензии |
+
 ## Интерфейс (CC0, с 10.10.2026)
 Все файлы — CC0 (общественное достояние): указывать авторов не обязательно, но вежливо — укажем в титрах игры.
 

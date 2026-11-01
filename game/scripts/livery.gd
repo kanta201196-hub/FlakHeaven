@@ -226,6 +226,10 @@ const ENGINE_HOLES := {
 	"bomber_2": [-0.0144, 0.0702, 0.0295, [-0.135, 0.0], [-0.29, -0.24]],
 }
 
+## The source paint in the shader's pass-through form (pattern -1: the texture's own colour, roughness and metal),
+## for the hangar detail layer on liveries that otherwise keep the GLB materials
+const SOURCE_PAINT := ["", "", Color.WHITE, Color.WHITE, Color.WHITE, 0.6, 0.0, -1]
+
 static var _shader: Shader
 static var _force := ""   # стенд: --livery=<id> — окраска своего самолёта в бою, если у класса такая есть
 
@@ -258,6 +262,12 @@ static func _find(cls: String, id: String) -> Array:
 	return []
 
 
+## Main tone of livery `id` of class `cls` (its base colour), or `fallback` for the source paint or an unknown id
+static func main_tone(cls: String, id: String, fallback: Color) -> Color:
+	var v := _find(cls, id)
+	return v[3] if v.size() >= 8 else fallback
+
+
 ## Выбранная окраска класса (из профиля; стенд --livery=… сильнее)
 static func current(cls: String) -> String:
 	if _force == "":
@@ -283,10 +293,15 @@ static func turret_paint(cls: String, id := "") -> Array:
 
 ## Перекрасить модель самолёта (корень модели ангара или боевой; key — «fighter_1» и т. п.). Звать после того,
 ## как подвешены механизация, детали, створки и кормовая кабина. Исходная окраска (вариант без цветов) — ничего не делает.
-static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
+## `detail` (hangar only): every painted surface also gets the PlaneDetail layer (panel lines, rivets, clear coat), and
+## the source paint, which otherwise keeps the GLB's own materials, goes through the same shader unchanged (pattern -1)
+## so it gets the layer too.
+static func apply(model: Node3D, cls: String, lvl: int, id: String, detail := false) -> void:
 	var v := _find(cls, id)
 	if v.size() < 8:
-		return
+		if not detail:
+			return
+		v = SOURCE_PAINT
 	var key := "%s_%d" % [cls, lvl]
 	var src: Array = SRC.get(key, [0.1, 0.012])
 	var ex: Array = EXHAUST.get(key, [])
@@ -319,6 +334,8 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String) -> void:
 			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex, holes,
 					float(CLASS_SCALE.get(cls, 1.0)), nose)
 			if sm != null:
+				if detail:
+					PlaneDetail.setup(sm, key, xf)
 				mi.set_surface_override_material(si, sm)
 
 
@@ -471,6 +488,9 @@ uniform float nat_belly = 1.0;
 uniform float nat_seed = 0.0;
 uniform vec4 shark_nose = vec4(0.0);   // style 9 (Livery.NOSE): mouth front x, back x, nose axis y, nose radius
 
+#include "res://shaders/srgb.gdshaderinc"
+#include "res://shaders/plane_detail.gdshaderinc"
+
 const float CAMO_DARK = 0.52;
 const float CAMO_OCHRE = 0.53;
 
@@ -555,35 +575,43 @@ vec4 shark_mouth(vec3 p, out float pupil) {
 	return vec4(outline, inside, teeth, ring);
 }
 
-// плоскость узора по преобладающей оси нормали: сверху — (x, z), борт — (x, y), торец — (z, y)
-vec2 plane_uv(vec3 p, vec3 n) {
-	vec3 a = abs(n);
-	if (a.y >= a.x && a.y >= a.z) return p.xz;
-	if (a.z >= a.x) return p.xy;
-	return p.zy;
-}
-
-// леопард: розетки — разорванное тёмное кольцо, внутри чуть темнее основы; между ними мелкие пятна
+// леопард: розетки — разорванное тёмное кольцо, внутри чуть темнее основы; между ними мелкие пятна.
+// Every rosette of the 3x3 neighbourhood is drawn whole and the strongest wins: taking only the nearest cell cut
+// a ring off along the straight cell border wherever two rosettes came close, a hard unfiltered edge that read as
+// pixel steps (Kanta 31.10). Edges and ring breaks are drawn about one screen pixel wide (fwidth of the cell grid,
+// continuous across cell borders): crisp up close, no shimmer far away.
 vec2 leopard(vec2 uv) {
 	vec2 g = uv * 12.0;
 	vec2 i = floor(g); vec2 f = fract(g);
-	float d1 = 9.0; vec2 dv = vec2(0.0); float hid = 0.0;
+	float wob = 0.85 + 0.3 * vnoise(uv * 60.0);
+	float gn = 0.35 * vnoise(uv * 40.0);
+	float pf = length(fwidth(g));   // screen pixel in cell units, continuous across cell borders
+	float e = max(0.006, 0.75 * pf);
+	float ring = 0.0; float inner = 0.0;
 	for (int y = -1; y <= 1; y++) {
 		for (int x = -1; x <= 1; x++) {
 			vec2 o = vec2(float(x), float(y));
 			vec2 h = hash22(i + o);
 			vec2 r = o + 0.15 + 0.7 * h - f;
-			float d = dot(r, r);
-			if (d < d1) { d1 = d; dv = r; hid = h.x; }
+			float d = length(r) * wob;
+			float rad = 0.30 + 0.08 * h.x;
+			// the ring's breaks: as crisp as the ring itself (pixel width along the arc, ~1/r per radian)
+			float ga = max(0.03, 2.25 * pf / max(length(r), 0.05));
+			float gaps = smoothstep(-0.55 - ga, -0.55 + ga, sin(atan(r.y, r.x) * 3.0 + h.x * 40.0) + gn);
+			ring = max(ring, smoothstep(rad - 0.125 - e, rad - 0.125 + e, d)
+					* (1.0 - smoothstep(rad + 0.055 - e, rad + 0.055 + e, d)) * gaps);
+			inner = max(inner, 1.0 - smoothstep(rad - 0.135 - e, rad - 0.135 + e, d));
 		}
 	}
-	float d = sqrt(d1) * (0.85 + 0.3 * vnoise(uv * 60.0));
-	float rad = 0.30 + 0.08 * hid;
-	float ang = atan(dv.y, dv.x);
-	float gaps = smoothstep(-0.75, -0.35, sin(ang * 3.0 + hid * 40.0) + 0.35 * vnoise(uv * 40.0));
-	float ring = smoothstep(rad - 0.15, rad - 0.10, d) * (1.0 - smoothstep(rad + 0.03, rad + 0.08, d)) * gaps;
-	float inner = 1.0 - smoothstep(rad - 0.16, rad - 0.11, d);
 	return vec2(ring, inner);
+}
+
+// leopard() on the three model planes, blended by the normal: a hard switch to the dominant axis flickered pixel by
+// pixel on the remeshed skin's uneven normals and cut the rosettes along jagged lines on curved surfaces
+vec2 leopard_tri(vec3 p, vec3 n) {
+	vec3 w = pow(abs(n), vec3(6.0));
+	w /= max(w.x + w.y + w.z, 1e-5);
+	return leopard(p.zy) * w.x + leopard(p.xz) * w.y + leopard(p.xy) * w.z;
 }
 
 // тигр: изогнутые поперечные полосы, к концам сужаются; k — stripe width (1 — «Тигр», «Полярный тигр» wider)
@@ -630,6 +658,45 @@ float nat_cell(vec3 p) {
 	return id;
 }
 
+// pattern 7: nat_cell with its border — id of the nearest cell, id2 of the cell across the nearest wall and edge,
+// the distance to that wall (p units). The masked splinter edges blend over one pixel by it instead of a hard
+// step(id), which stair-stepped along the texel and pixel grid in hangar close-ups (Kanta s14)
+float nat_cell_e(vec3 p, out float id2, out float edge) {
+	vec3 i = floor(p); vec3 f = fract(p);
+	float d1 = 9.0; float id = 0.0; vec3 r1 = vec3(0.0); vec3 c1 = vec3(0.0);
+	for (int z = -1; z <= 1; z++) {
+		for (int y = -1; y <= 1; y++) {
+			for (int x = -1; x <= 1; x++) {
+				vec3 o = vec3(float(x), float(y), float(z));
+				vec3 r = o + vec3(hash3(i + o), hash3(i + o + 17.3), hash3(i + o + 41.9)) - f;
+				float d = dot(r, r);
+				if (d < d1) { d1 = d; id = hash3(i + o + 7.7); r1 = r; c1 = o; }
+			}
+		}
+	}
+	edge = 9.0; id2 = id;
+	for (int z = -1; z <= 1; z++) {
+		for (int y = -1; y <= 1; y++) {
+			for (int x = -1; x <= 1; x++) {
+				vec3 o = c1 + vec3(float(x), float(y), float(z));
+				vec3 r = o + vec3(hash3(i + o), hash3(i + o + 17.3), hash3(i + o + 41.9)) - f;
+				vec3 dr = r - r1;
+				float l2 = dot(dr, dr);
+				if (l2 > 1e-6) {
+					float e = dot(0.5 * (r1 + r), dr * inversesqrt(l2));
+					if (e < edge) { edge = e; id2 = hash3(i + o + 7.7); }
+				}
+			}
+		}
+	}
+	return id;
+}
+
+// weight of the nearest cell against the one across the wall: 0.5 on the wall, full a pixel inside
+float cell_aa(float edge) {
+	return clamp(0.5 + 0.5 * edge / max(fwidth(edge), 1e-5), 0.0, 1.0);
+}
+
 // pattern 7: weights of colour 2 (x) and colour 3 (y) by nat_style at the scaled model point p, normal n
 vec2 nat_pattern(vec3 p, vec3 n) {
 	float s = nat_seed;
@@ -638,9 +705,13 @@ vec2 nat_pattern(vec3 p, vec3 n) {
 		float a = 0.55 + s;
 		vec3 r = vec3(p.x * cos(a) - p.z * sin(a), p.y, p.x * sin(a) + p.z * cos(a));
 		r += (vec3(vnoise3(p * 3.0 + s), vnoise3(p * 3.0 + s + 5.1), vnoise3(p * 3.0 + s + 9.4)) - 0.5) * 0.08;
-		float id = nat_cell(r * vec3(0.55, 1.0, 1.5));
+		float id2; float e;
+		float id = nat_cell_e(r * vec3(0.55, 1.0, 1.5), id2, e);
 		float c2 = step(id, nat_cut.x);
-		return vec2(c2, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y));
+		float c2b = step(id2, nat_cut.x);
+		vec2 wa = vec2(c2, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y));
+		vec2 wb = vec2(c2b, (1.0 - c2b) * step(id2, nat_cut.x + nat_cut.y));
+		return mix(wb, wa, cell_aa(e));
 	} else if (nat_style == 2) {
 		// wavy disruptive bands across the plane, their width breathing along them
 		float warp = (nat_soft(p * 0.7, s) - 0.5) * 2.2;
@@ -655,9 +726,13 @@ vec2 nat_pattern(vec3 p, vec3 n) {
 		return vec2(nat_step(nat_soft(p, s), nat_cut.x), nat_step(blobs(p * 3.4 + vec3(s)), nat_cut.y));
 	} else if (nat_style == 4) {
 		// one tone: panels repainted darker (colour 2) or left to bleach (colour 3), cells longer along the flow
-		float id = nat_cell(p * vec3(0.55, 1.2, 1.0) + vec3(s));
+		float id2; float e;
+		float id = nat_cell_e(p * vec3(0.55, 1.2, 1.0) + vec3(s), id2, e);
 		float c2 = step(id, nat_cut.x);
-		return vec2(c2 * 0.55, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y) * 0.6);
+		float c2b = step(id2, nat_cut.x);
+		vec2 wa = vec2(c2 * 0.55, (1.0 - c2) * step(id, nat_cut.x + nat_cut.y) * 0.6);
+		vec2 wb = vec2(c2b * 0.55, (1.0 - c2b) * step(id2, nat_cut.x + nat_cut.y) * 0.6);
+		return mix(wb, wa, cell_aa(e));
 	} else if (nat_style == 5) {
 		// whitewash: colour 2 (the paint under it) where it wore through — more on forward-facing edges and in
 		// streaks along the flow; colour 3 where the wash is thin
@@ -715,6 +790,15 @@ void fragment() {
 		src = src_color.rgb;
 	}
 	float l = dot(src, vec3(0.2126, 0.7152, 0.0722));
+	// fine detail of the source skin (panel lines, grime) as a ratio to its local mean (a coarse mip): the whole-
+	// pattern liveries (5, 7) keep the panel lines but no longer show the source camouflage under them — its soft
+	// blotch edges came through as smeared patches and texel steps on the new paint (Kanta s14). Brightening is
+	// capped low: the mip mixes in the dark atlas gutter at island borders
+	float detail = 1.0;
+	if (src_mode == 0) {
+		float lm = dot(textureLod(albedo_tex, UV, 4.5).rgb, vec3(0.2126, 0.7152, 0.0722));
+		detail = clamp(l / max(lm, 1e-4), 0.72, 1.04);
+	}
 	float t = l / l_base;
 	// тест 3.5-s7: вершинный цвет механизации и створок снят с текстуры грубой сеткой — по нему только светлые
 	// пятна камуфляжа, без тёмной полосы (иначе закрылки серые на белой «Классике» и в «квадратиках»)
@@ -735,7 +819,7 @@ void fragment() {
 	float rough_add = 0.0;   // pattern 7: roughness variation of the paint
 	float metal_k = 1.0;     // pattern 7 bare metal: rust and primer are not metallic
 	if (pattern == 1) {
-		vec2 lr = leopard(plane_uv(lp, ln));
+		vec2 lr = leopard_tri(lp, ln);
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), lr.y * 0.8);
 		col = mix(col, pat_a, lr.x);
 	} else if (pattern == 2) {
@@ -773,7 +857,7 @@ void fragment() {
 		// светлое брюхо (видно на кренах и разворотах)
 		float belly = under_n;
 		cam = mix(cam, pat_b, belly);
-		col = cam * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5);
+		col = cam * mix(1.0, detail, 0.6);
 	} else if (pattern == 6) {
 		float belly = under_n;
 		col = mix(col, pat_b * mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5), belly);
@@ -793,7 +877,9 @@ void fragment() {
 		} else if (nat_style == 11) {
 			// bare metal: rust in soft fields, more on the lower faces; primer on whole repaired panels
 			float rust = nat_step(nat_soft(pn, nat_seed) + 0.2 * smoothstep(0.0, -0.8, n.y), nat_cut.x);
-			float primer = step(nat_cell(pn * vec3(0.55, 1.2, 1.0) + vec3(nat_seed)), nat_cut.y) * (1.0 - rust);
+			float pid2; float pe;
+			float pid = nat_cell_e(pn * vec3(0.55, 1.2, 1.0) + vec3(nat_seed), pid2, pe);
+			float primer = mix(step(pid2, nat_cut.y), step(pid, nat_cut.y), cell_aa(pe)) * (1.0 - rust);
 			w = vec2(rust, primer);
 			metal_k = 1.0 - max(rust, primer);
 		} else if (nat_style == 12) {
@@ -825,7 +911,7 @@ void fragment() {
 			cam = mix(cam, c_light, sm.w);
 			cam = mix(cam, c_dark, pupil);
 		}
-		cam *= mix(1.0, clamp(t / centre, 0.8, 1.15), 0.5);
+		cam *= mix(1.0, detail, 0.6);
 		float top = smoothstep(0.1, 0.85, n.y);
 		float fade_n = smoothstep(0.25, 0.75, blobs(lp * 3.5 + vec3(nat_seed * 2.3)));
 		float lum = dot(cam, vec3(0.2126, 0.7152, 0.0722));
@@ -855,8 +941,42 @@ void fragment() {
 	float hole = has_holes ? engine_hole(lp, normalize(ln)) : 0.0;
 	col = mix(col, min(src * 0.45, vec3(0.03)), hole);
 	keep *= 1.0 - hole;
-	ALBEDO = mix(col, src, keep);
-	ROUGHNESS = mix(mix(mix(clamp(liv_rough + rough_add + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
-	METALLIC = mix(mix(mix(liv_metal * metal_k, 0.45, mk), 0.35, hole), 0.0, keep);
+	vec3 alb = mix(col, src, keep);
+	float rough = mix(mix(mix(clamp(liv_rough + rough_add + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
+	float metal = mix(mix(mix(liv_metal * metal_k, 0.45, mk), 0.35, hole), 0.0, keep);
+	if (pattern < 0) {   // Livery.SOURCE_PAINT: the model's own paint, only for the hangar detail layer
+		alb = src;
+		rough = rough0;
+		metal = metal0;
+	}
+	if (detail_k > 0.0) {
+		// PlaneDetail (hangar): engraved seams and rivets bend the normal and collect grime, each panel is a shade
+		// off its neighbours, paint chips to bare metal along seams and leading edges, the coat is glossier
+		vec3 n0 = normalize(ln);
+		vec3 grad;
+		float cav;
+		float riv;
+		float edge;
+		float pid;
+		pd_eval(lp, n0, grad, cav, riv, edge, pid);
+		float dk = detail_k * (1.0 - 0.7 * keep) * (1.0 - hole);
+		vec3 dn = mat3(from_model) * (pd_bump(n0, grad, dk) - n0);
+		NORMAL = normalize(NORMAL + mat3(VIEW_MATRIX) * mat3(MODEL_MATRIX) * dn);
+		alb *= 1.0 + dk * (0.1 * (pid - 0.5) - 0.55 * cav - 0.18 * riv);
+		rough = clamp(rough + dk * (0.14 * (pid - 0.5) + 0.25 * cav - 0.1 * riv), 0.04, 1.0);
+		// chips: small, along seams and on leading edges only, and only once they are a few pixels across (they
+		// would sparkle from afar)
+		float lead = smoothstep(0.55, 0.9, n0.x);
+		float near = clamp(1.6 - length(fwidth(lp)) / 0.0006, 0.0, 1.0);
+		float chip = smoothstep(0.88, 0.93, vnoise3(lp * 520.0) * 0.72 + vnoise3(lp * 60.0) * 0.08 + 0.26 * edge + 0.2 * lead);
+		chip *= dk * (1.0 - keep) * near;
+		alb = mix(alb, SRGB(vec3(0.46, 0.46, 0.44)), chip);
+		metal = mix(metal, 0.6, chip);
+		rough = mix(rough, 0.45, chip);
+		rough = mix(rough, rough * 0.55 + 0.05, pd_gloss * (1.0 - chip));
+	}
+	ALBEDO = alb;
+	ROUGHNESS = rough;
+	METALLIC = metal;
 }
 """

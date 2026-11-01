@@ -108,6 +108,7 @@ const CAT_COLORS := {
 	"Связка": Color(1.0, 0.82, 0.25),
 	"Модернизация": EVO_COLOR,
 	"Мастерство класса": EVO_COLOR,
+	"Профиль оружия": EVO_COLOR,
 	"Резерв": Color(0.8, 0.8, 0.75),
 }
 
@@ -333,7 +334,7 @@ static func advances_course(p: Player, card: Dictionary) -> bool:
 	if s.has("w"):
 		if card["kind"] == "weapon_new" and (s["w"] as Array).has(card["weapon"]):
 			return true
-		if card["kind"] == "weapon_up" and (s["w"] as Array).has((p.groups[int(card["group"])] as Hardpoint).weapon) and _wlevel(p, s["w"]) < int(c["lvl"]):
+		if card["kind"] in ["weapon_up", "profile"] and (s["w"] as Array).has((p.groups[int(card["group"])] as Hardpoint).weapon) and _wlevel(p, s["w"]) < int(c["lvl"]):
 			return true
 	if s.has("req_mods") and card["kind"] == "module" and (s["req_mods"] as Array).has(card["id"]):
 		return true
@@ -531,9 +532,21 @@ const BRANCHES_W := {
 }
 
 
-## Название и описание ветки b мастерства для оружия weapon
-static func branch_def(weapon: String, b: String) -> Dictionary:
+## Title and description of mastery branch `b` of `weapon`. PG-06 PR 3: `b == "profile"` — ranks of the
+## chosen profile `profile` («Двойной пуск: ранг», +RANK_K to its own feature per rank).
+static func branch_def(weapon: String, b: String, profile := "") -> Dictionary:
+	if b == "profile":
+		var pd := WeaponProfiles.def(weapon, profile)
+		var feat := String(WeaponProfiles.RANK_TEXT.get(WeaponProfiles.rank_key(weapon, profile), "урон"))
+		return {"title": Loc.t("%s: ранг") % Loc.t(String(pd.get("title", profile))),
+			"desc": Loc.t("+%d%% к профилю (%s) за ранг") % [roundi(WeaponProfiles.RANK_K * 100.0), Loc.t(feat)]}
 	return BRANCHES_W[weapon][b] if BRANCHES_W.has(weapon) else BRANCHES[b]
+
+
+## Mastery branches offered to group `g` at its first mastery card: a weapon with a profile ranks that profile
+## (one card, PG-06 PR 3, Kanta 31.10 «3b»), the others keep the «or-or» pair.
+static func mastery_branches(g: Hardpoint) -> Array:
+	return ["profile"] if g.profile != "" else BRANCHES.keys()
 
 
 static func branch_on() -> bool:
@@ -554,11 +567,41 @@ static func branch_group(p: Player, banned: Dictionary) -> int:
 static func _branch_card(p: Player, gi: int, b: String, first: bool) -> Dictionary:
 	var g: Hardpoint = p.groups[gi]
 	var wt := g.evo_title() if g.evo else Weapons.title(g.weapon)
-	var title := "%s: %s" % [wt, branch_def(g.weapon, b)["title"]]
+	var title := "%s: %s" % [wt, branch_def(g.weapon, b, g.profile)["title"]]
 	if not first:
 		title += " (ранг %d → %d)" % [g.branch_rank, g.branch_rank + 1]
 	return {"id": "br_%s_%d" % [b, gi], "ban": "br:%d" % gi, "kind": "branch", "branch": b, "group": gi, "first": first,
 		"cat": "Мастерство оружия", "title": title}
+
+
+## PG-06: true when the next upgrade of group `g` is the profile choice (`WeaponProfiles.due`)
+static func profile_due(g: Hardpoint) -> bool:
+	return not g.is_empty() and not g.builtin and g.level < Weapons.MAX_LEVEL and WeaponProfiles.due(g.level, g.profile, g.weapon)
+
+
+## PG-06: the group that must choose a profile now (−1 — none): the first due one not declined this choice
+static func profile_group(p: Player, banned: Dictionary) -> int:
+	for gi in p.groups.size():
+		var g: Hardpoint = p.groups[gi]
+		if profile_due(g) and not banned.has("pr:%d" % gi):
+			return gi
+	return -1
+
+
+## PG-06: card of profile `id` for hardpoint `g` (group index `gi`) at card rarity `rarity`
+static func profile_card(g: Hardpoint, gi: int, id: String, rarity: int) -> Dictionary:
+	var d := WeaponProfiles.def(g.weapon, id)
+	return {"id": "pr_%s_%d" % [id, gi], "ban": "pr:%d" % gi, "kind": "profile", "profile": id, "group": gi, "weapon": g.weapon,
+		"cat": "Профиль оружия", "rarity": rarity, "title": "%s: %s" % [Weapons.title(g.weapon), String(d.get("title", id))]}
+
+
+## PG-06: text under the «or-or» header of a profile screen: what the third profile needs when it is closed
+static func profile_hint(p: Player, gi: int) -> String:
+	var g: Hardpoint = p.groups[gi]
+	var third := WeaponProfiles.third(g.weapon)
+	if third == "" or Profile.profile_open(g.weapon):
+		return ""
+	return Loc.t("Третий профиль «%s» откроет ступень %d ветки этого оружия в ангаре.") % [Loc.t(String(WeaponProfiles.def(g.weapon, third)["title"])), WeaponProfiles.THIRD_TIER]
 
 
 ## Все возможные карточки сейчас: [вес, карточка без редкости]
@@ -582,6 +625,8 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		var g: Hardpoint = p.groups[gi]
 		if g.is_empty() or g.level >= Weapons.MAX_LEVEL or banned.has("up:%d" % gi):
 			continue
+		if profile_due(g) and not banned.has("pr:%d" % gi):
+			continue   # PG-06: this weapon's next step is the profile choice (`offer`); a banned choice keeps plain upgrades
 		# фишка 1 (Kanta 18.10): в первых трёх выборах улучшение оружия-особенности класса выпадает втрое чаще
 		var uw := 9.0 if p.picks < 3 and g.weapon == PlaneClasses.signature(p.cls_id) else 3.0
 		cands.append([uw, {"id": "up_%d" % gi, "ban": "up:%d" % gi, "kind": "weapon_up", "group": gi, "cat": "Оружие",
@@ -677,20 +722,23 @@ static func _reserve(p: Player, cands: Array) -> void:
 		var g: Hardpoint = p.groups[gi]
 		if g.evo and g.evo_plus < 5:
 			cands.append([1.5, {"id": "res_evo_%d" % gi, "ban": "res_evo_%d" % gi, "kind": "reserve", "cat": "Резерв", "group": gi,
-				"title": "%s Э+ (%d → %d)" % [Prog.EVOS[g.weapon]["title"], g.evo_plus, g.evo_plus + 1]}])
+				"title": "%s Э+ (%d → %d)" % [g.evo_title(), g.evo_plus, g.evo_plus + 1]}])
 	if p.gun_evo and p.gun_evo_plus < 5:
 		cands.append([1.5, {"id": "res_evo_gun", "ban": "res_evo_gun", "kind": "reserve", "cat": "Резерв", "group": -1,
 			"title": "«Дятел» Э+ (%d → %d)" % [p.gun_evo_plus, p.gun_evo_plus + 1]}])
 
 
-## Эволюции, готовые сейчас (гарантированное место в выборе)
+## Modernizations ready now (a guaranteed place on the screen). PG-06 PR 2: a weapon with two recipes gets the
+## card of whichever is complete; both complete — both cards, one pick closes the other (the weapon is modernized).
+## Card fields: `weapon` — the weapon (tags, icon), `evo` — the recipe id.
 static func _evolutions(p: Player, banned: Dictionary) -> Array:
 	var out: Array = []
-	for w in Prog.EVOS:
-		if banned.has("evo:" + w) or not Prog.evo_ready(p, w):
+	var all := Modernizations.all()
+	for id: String in all:
+		if banned.has("evo:" + id) or not Prog.evo_ready(p, id):
 			continue
-		out.append({"id": "evo_" + w, "ban": "evo:" + w, "kind": "evolution", "weapon": w, "cat": "Модернизация",
-			"title": "МОДЕРНИЗАЦИЯ: %s" % Prog.EVOS[w]["title"]})
+		out.append({"id": "evo_" + id, "ban": "evo:" + id, "kind": "evolution", "weapon": Modernizations.weapon_of(id), "evo": id,
+			"cat": "Модернизация", "title": "МОДЕРНИЗАЦИЯ: %s" % all[id]["title"]})
 	return out
 
 
@@ -716,7 +764,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			var w: String = card["weapon"]
 			var g: Hardpoint = p.groups[int(card["group"])]
 			card["desc"] = Loc.t("%s\nНа подвес: %s ×%d\nСтарт с ур. %d") % [Loc.t(Weapons.DEFS[w]["desc"]), g.name, g.slots, NEW_WEAPON_LEVEL[r]]
-			if Prog.EVOS.has(w):
+			if not Modernizations.ids_for(w).is_empty():
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s") % _cat_text(w)
 		"weapon_up":
 			var g2: Hardpoint = p.groups[int(card["group"])]
@@ -729,22 +777,30 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			var bk := PlaneClasses.bonus_k(p.cls_id, int(p.cls["plane_lvl"]), g2.weapon)
 			if bk > 1.0:
 				card["desc"] += Loc.t("\n★ Бонус самолёта: урон +%d%%") % roundi((bk - 1.0) * 100.0)
-			if to >= Weapons.MAX_LEVEL and Prog.EVOS.has(g2.weapon):
+			if to >= Weapons.MAX_LEVEL and not g2.evo and not Modernizations.ids_for(g2.weapon).is_empty():
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s, с %d:%02d") % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
 			card["desc"] = Loc.t(syn_def(p, card["syn"])["desc"]) + Loc.t("\nОткрывает слот %d из %d. Следующий слот дороже.") % [p.syn.size() + 1, MAX_SYN]
 		"branch":
 			var bgr: Hardpoint = p.groups[int(card["group"])]
-			var bd: Dictionary = branch_def(bgr.weapon, card["branch"])
+			var bd: Dictionary = branch_def(bgr.weapon, card["branch"], bgr.profile)
 			card["desc"] = Loc.t("%s: %s, до %d рангов") % [bgr.name, Loc.t(bd["desc"]), BRANCH_MAX]
-			if card["first"]:
+			if card["first"] and card["branch"] != "profile":
 				var other := "power" if card["branch"] == "rate" else "rate"
 				card["desc"] += Loc.t("\nИли-или: «%s» для этого оружия закроется до конца вылета") % Loc.t(branch_def(bgr.weapon, other)["title"])
 		"mastery":
 			card["desc"] = Loc.t(String(PlaneClasses.MASTERY[p.cls_id]["desc"])) + Loc.t("\nОдна на вылет: если отказаться, больше не придёт.")
+		"profile":
+			var pg2: Hardpoint = p.groups[int(card["group"])]
+			var pd: Dictionary = WeaponProfiles.def(pg2.weapon, card["profile"])
+			var pto := mini(pg2.level + 1, Weapons.MAX_LEVEL)
+			card["desc"] = Loc.t(String(pd["desc"])) + Loc.t("\nПротив кого: %s") % Loc.t(String(pd["vs"]))
+			card["desc"] += Loc.t("\n%s: ур. %d → %d") % [pg2.name, pg2.level, pto]
+			if r > 0:
+				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(0.15 * (k - 1.0))
 		"evolution":
-			var ew: String = card["weapon"]
-			card["desc"] = Loc.t(Prog.EVOS[ew]["desc"]) + Loc.t("\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора.")
+			var ew: String = String(card.get("evo", card["weapon"]))
+			card["desc"] = Loc.t(String(Modernizations.def(ew)["desc"])) + Loc.t("\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора.")
 		"wing_new":
 			var wt: Dictionary = Prog.WING_TYPES[card["wtype"]]
 			card["desc"] = Loc.t("%s\nСила ×%.1f · Ведомых: %d / %d") % [Loc.t(wt["desc"]), k, p.permanent_wingmen(), wing_limit(p)]
@@ -782,12 +838,20 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 	return card
 
 
+## Catalysts of weapon `w`: «Перезарядка ×2»; with two recipes — «Перезарядка ×2 («Шмель») или Двигатели ×2 («Стая»)».
 static func _cat_text(w: String) -> String:
-	var cat: Dictionary = Prog.EVOS[w]["cat"]
-	var parts := PackedStringArray()
-	for m in cat:
-		parts.append("%s ×%d" % [MODULES[m]["title"], int(cat[m])])
-	return ", ".join(parts)
+	var ids := Modernizations.ids_for(w)
+	var out := PackedStringArray()
+	for id: String in ids:
+		var cat := Modernizations.cat(id)
+		var parts := PackedStringArray()
+		for m in cat:
+			parts.append("%s ×%d" % [Loc.t(MODULES[m]["title"]), int(cat[m])])
+		var one := ", ".join(parts)
+		if ids.size() > 1:
+			one += " (%s)" % Loc.t(String(Modernizations.def(id)["title"]))
+		out.append(one)
+	return (" " + Loc.t("или") + " ").join(out)
 
 
 ## Карточка «чужого» тега: ни одного очка ни в одном её теге
@@ -814,24 +878,39 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 	else:
 		var evos := _evolutions(p, banned)
 		if not evos.is_empty():
-			var ev: Dictionary = evos[0].duplicate()
-			ev["rarity"] = 4
-			out.append(finalize(p, ev))
+			# PG-06 PR 2: both recipes of the same weapon ready — both cards, the player picks the end form
+			for evc: Dictionary in evos:
+				if evc["weapon"] != evos[0]["weapon"]:
+					continue
+				var ev: Dictionary = evc.duplicate()
+				ev["rarity"] = 4
+				out.append(finalize(p, ev))
 	# фишка 2: мастерство класса — гарантированное место, если его не заняли связка или модернизация
 	if out.is_empty() and mastery_ready(p, banned):
 		var mc := {"id": "mastery", "ban": "mastery", "kind": "mastery", "cat": "Мастерство класса", "rarity": 4,
 			"weapon": PlaneClasses.signature(p.cls_id),
 			"title": "МАСТЕРСТВО: %s" % PlaneClasses.MASTERY[p.cls_id]["title"]}
 		out.append(finalize(p, mc))
+	# PG-06: профиль оружия — экран «или-или» из двух профилей (третий — из ангара); раньше мастерства оружия
+	if out.is_empty():
+		var pg := profile_group(p, banned)
+		if pg >= 0:
+			var pgr: Hardpoint = p.groups[pg]
+			var pr := roll_rarity(Main.I.run.level, min_r)
+			for id in WeaponProfiles.open_ids(pgr.weapon, Profile.profile_open(pgr.weapon)):
+				out.append(finalize(p, profile_card(pgr, pg, String(id), pr)))
+			return out
 	# S9-15: мастерство оружия — выбор только из двух веток (если место не заняли связка, модернизация, мастерство класса)
 	if out.is_empty():
 		var bg := branch_group(p, banned)
 		if bg >= 0:
-			for b in BRANCHES:
+			var brs := mastery_branches(p.groups[bg] as Hardpoint)
+			for b in brs:
 				var bc := _branch_card(p, bg, b, true)
 				bc["rarity"] = 3
 				out.append(finalize(p, bc))
-			return out
+			if brs.size() > 1:
+				return out   # the «or-or» pair is the whole screen; a profile rank card shares it with the usual ones
 	# Закреплённая карточка остаётся, если ещё доступна
 	if not locked.is_empty():
 		for c in cands:
@@ -918,7 +997,7 @@ static func on_declined(p: Player, offers: Array, chosen: Dictionary) -> void:
 		if c["kind"] == "mastery" and c["id"] != chosen.get("id", ""):
 			p.mastery_off = true
 		if c["kind"] == "evolution" and c["id"] != chosen.get("id", ""):
-			p.evo_wait[c["weapon"]] = p.picks + 3
+			p.evo_wait[String(c.get("evo", c["weapon"]))] = p.picks + 3
 
 
 static func apply(p: Player, card: Dictionary) -> void:
@@ -1007,13 +1086,20 @@ static func apply(p: Player, card: Dictionary) -> void:
 			hb.branch_rank = mini(hb.branch_rank + 1, BRANCH_MAX)
 			if card["first"]:
 				Events.banner.emit(Loc.t("МАСТЕРСТВО ОРУЖИЯ: %s") % Loc.t(card["title"]), 3.0)
+		"profile":
+			var hp: Hardpoint = p.groups[int(card["group"])]
+			hp.profile = card["profile"]
+			hp.level = mini(hp.level + 1, Weapons.MAX_LEVEL)
+			hp.bonus += 0.15 * (k - 1.0)
+			Events.banner.emit(Loc.t("ПРОФИЛЬ: %s") % Loc.t(String(WeaponProfiles.def(hp.weapon, hp.profile)["title"])), 3.0)
 		"mastery":
 			p.mastery = true
 			Main.I.tele.v["mastery_t"] = Main.I.run_time
 			Events.banner.emit(Loc.t("МАСТЕРСТВО КЛАССА: %s") % Loc.t(PlaneClasses.MASTERY[p.cls_id]["title"]), 4.0)
 		"evolution":
-			p.evolve(card["weapon"])
-			Events.banner.emit(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(Prog.EVOS[card["weapon"]]["title"]), 4.0)
+			var eid := String(card.get("evo", card["weapon"]))
+			p.evolve(eid)
+			Events.banner.emit(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(String(Modernizations.def(eid)["title"])), 4.0)
 		"reserve":
 			var tk: String = String(card["id"])
 			p.taken[tk] = int(p.taken.get(tk, 0)) + 1

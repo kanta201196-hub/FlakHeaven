@@ -24,6 +24,12 @@ static var bench_pitch_min := -0.2   # стенд: камера ниже обы�
 static var bench_seeker := 0   # Т-3: стенд --modules — «Глазастик» на ракетах
 ## Bench --hangarweaptab: weapon shown on the weapons tab even if it is not in the class list (PG-01 frames)
 static var bench_tab_w := ""
+## In bench_weapons: this group carries nothing ("" there keeps the class default). The self-check (R-23) shows one
+## weapon alone on the plane
+const BENCH_EMPTY := "-"
+## Self-check (R-23): every mount laid by the last plane build — {weapon, side, node (null for a skin panel that
+## missed), miss (the skin lookup under it failed, so it sits at a fallback height)}. Read by SelfCheck only.
+var debug_mounts: Array[Dictionary] = []
 var weapon_tier := 1        # п. 3: вид оружия — 1 (ур. 1–2), 2 (ур. 3–4), 3 (ур. 5), 4 — эволюция (Т-4)
 var tier_rects: Array = []   # [Rect2, ступень]
 var _ctrl: Control
@@ -92,7 +98,8 @@ var _key_light: DirectionalLight3D
 var _rim_light: DirectionalLight3D
 var _fill_light: DirectionalLight3D   # S9-03: заполняющий свет склада (только вкладка «ОРУЖИЕ»)
 var _flight_bg: Node3D       # п. 32: облака под самолётом плывут назад — «полёт»
-var _store_bg: Node3D        # п. 32: склад вооружения — пол, стеллажи, ящики
+## The weapon store's background: the aircraft hangar (HangarHall, S14-12)
+var _store_bg: Node3D
 var _bg := ""
 var _t := 0.0
 
@@ -156,8 +163,6 @@ func _ready() -> void:
 	vp.add_child(_fill_light)
 	_flight_bg = _make_flight_bg()
 	vp.add_child(_flight_bg)
-	_store_bg = _make_store_bg()
-	vp.add_child(_store_bg)
 	_set_bg("flight")
 	pivot = Node3D.new()
 	vp.add_child(pivot)
@@ -242,60 +247,6 @@ func _make_flight_bg() -> Node3D:
 	return n
 
 
-## Склад вооружения: бетонный пол с разметкой, по кругу — стеллажи с ящиками и бомбами (вид с любой стороны)
-func _make_store_bg() -> Node3D:
-	var n := Node3D.new()
-	var mats := {}
-	for k: String in ["floor", "metal", "olive", "wood", "line", "wall"]:
-		var m := StandardMaterial3D.new()
-		m.albedo_color = {"floor": Color(0.23, 0.23, 0.22), "metal": Color(0.3, 0.32, 0.34), "olive": Color(0.28, 0.31, 0.22),
-			"wood": Color(0.42, 0.32, 0.2), "line": Color(0.75, 0.6, 0.12), "wall": Color(0.16, 0.16, 0.17)}[k]
-		m.roughness = 0.85 if k != "metal" else 0.5
-		m.metallic = 0.5 if k == "metal" else 0.0
-		mats[k] = m
-	var fl := MeshInstance3D.new()
-	var pm := PlaneMesh.new()
-	pm.size = Vector2(12, 12)
-	fl.mesh = pm
-	fl.material_override = mats["floor"]
-	fl.position.y = -0.2
-	n.add_child(fl)
-	var add := func(size: Vector3, pos: Vector3, mat: String, rot := 0.0) -> void:
-		var b := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = size
-		b.mesh = bm
-		b.material_override = mats[mat]
-		b.position = pos
-		b.rotation.y = rot
-		n.add_child(b)
-	# разметка: квадрат стоянки под оружием
-	for i in 4:
-		var a := i * PI / 2.0
-		add.call(Vector3(1.3, 0.002, 0.03), Vector3(cos(a) * 0.65, -0.199, sin(a) * 0.65), "line", a + PI / 2.0)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 35
-	for i in 10:
-		var a := TAU * i / 10.0
-		var c := Vector3(cos(a), 0, sin(a)) * 2.9
-		var rot := -a + PI / 2.0
-		var side := Vector3(-sin(a), 0, cos(a))
-		for py: float in [-0.2, 0.25, 0.7, 1.15]:   # полки
-			add.call(Vector3(1.6, 0.035, 0.55), c + Vector3(0, py, 0), "metal", rot)
-		for sx: float in [-0.78, 0.78]:   # стойки
-			for sz: float in [-0.25, 0.25]:
-				add.call(Vector3(0.04, 1.45, 0.04), c + side * sx + Vector3(cos(a), 0, sin(a)) * sz + Vector3(0, 0.5, 0), "metal", rot)
-		for py: float in [-0.2, 0.25, 0.7]:   # ящики на полках
-			var x := -0.65
-			while x < 0.6:
-				var w := rng.randf_range(0.22, 0.42)
-				var h := rng.randf_range(0.14, 0.32)
-				add.call(Vector3(w, h, 0.42), c + side * (x + w / 2.0) + Vector3(0, py + 0.02 + h / 2.0, 0), "olive" if rng.randf() < 0.7 else "wood", rot)
-				x += w + rng.randf_range(0.04, 0.12)
-		add.call(Vector3(0.1, 2.2, 6.0), c * 1.35 + Vector3(0, 0.9, 0), "wall", rot + PI / 2.0)   # стена за стеллажами
-	return n
-
-
 ## S9-03: свет склада (вкладка «ОРУЖИЕ»)
 const STORE_KEY := 0.62
 const STORE_FILL := 0.25
@@ -307,13 +258,46 @@ const GLOW_THRESHOLD := 1.6   # flight background: glow only above this HDR leve
 const TURRET_SHOW_YAW := 1.35
 
 
+## S14-12: haze of the hangar hall (depth fog): colour, from / to (view units from the camera) and how much of
+## the colour it lays on at the far end; the weapon (camera 0.7–3.2 away) stays clear
+const HALL_FOG := Color(0.55, 0.56, 0.56)
+const HALL_FOG_BEGIN := 3.5
+const HALL_FOG_END := 26.0
+const HALL_FOG_MAX := 0.55
+## Weapon store stands: how much of their own colour they keep, the rest going to a dull khaki (the bright orange
+## of the missile cart read as a toy, S14-13), and the darkening that goes with it
+const STAND_SAT := 0.12
+const STAND_TONE := 0.88
+
+
+## Hangar showcase light (F1 `hangar_light`, R-22: off until Kanta's «ок»), flight background only: a warm key light
+## from the front quarter and a strong neutral rim light that always comes from behind the plane as seen by the camera
+## (aimed every frame in _process), so the silhouette and the panel edges catch a bright outline at any angle.
+const SHOW_KEY_COLOR := Color(1.0, 0.84, 0.64)
+const SHOW_KEY_ENERGY := 1.25
+const SHOW_RIM_COLOR := Color(0.93, 0.96, 1.0)
+const SHOW_RIM_ENERGY := 1.5
+## Rim light highlight strength: a full-strength highlight from behind turned the glossy top of a wing into a white
+## sheet when the camera looked along it
+const SHOW_RIM_SPECULAR := 0.35
+const SHOW_AMBIENT := Color(0.52, 0.62, 0.82)
+const SHOW_AMBIENT_ENERGY := 0.42
+var _show_light := false
+
+
 func _set_bg(mode: String) -> void:
-	if mode == _bg:
+	var show := Tuning.g("hangar_light") > 0.0
+	if mode == _bg and show == _show_light:
 		return
 	_bg = mode
+	_show_light = show
 	var fly := mode == "flight"
 	_flight_bg.visible = fly
-	_store_bg.visible = not fly
+	if not fly and _store_bg == null:   # built on the first visit of the weapons tab: it loads two plane models
+		_store_bg = HangarHall.build()
+		vp.add_child(_store_bg)
+	if _store_bg != null:
+		_store_bg.visible = not fly
 	_env.background_mode = Environment.BG_SKY if fly else Environment.BG_COLOR
 	_env.background_color = Color(0.06, 0.06, 0.065)
 	# S9-03: на складе окружающий свет нейтральный (тёплый 0,75/0,68/0,58 желтил оливковую краску до кремовой)
@@ -341,6 +325,23 @@ func _set_bg(mode: String) -> void:
 	_env.glow_intensity = 0.45
 	_env.glow_bloom = 0.0
 	_env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	# S14-12: haze in the hangar hall gives it depth; it starts behind the weapon and its stand
+	_env.fog_enabled = not fly
+	_env.fog_mode = Environment.FOG_MODE_DEPTH
+	_env.fog_light_color = HALL_FOG
+	_env.fog_depth_begin = HALL_FOG_BEGIN
+	_env.fog_depth_end = HALL_FOG_END
+	_env.fog_density = HALL_FOG_MAX
+	if fly and _show_light:
+		_key_light.light_color = SHOW_KEY_COLOR
+		_key_light.light_energy = SHOW_KEY_ENERGY
+		_rim_light.light_color = SHOW_RIM_COLOR
+		_rim_light.light_energy = SHOW_RIM_ENERGY
+		_rim_light.light_specular = SHOW_RIM_SPECULAR
+		_env.ambient_light_color = SHOW_AMBIENT
+		_env.ambient_light_energy = SHOW_AMBIENT_ENERGY
+	elif fly:
+		_rim_light.basis = Basis.looking_at(Vector3(-0.6, -0.2, 0.75).normalized(), Vector3.UP)
 
 
 ## Каждый кадр, пока открыта вкладка «САМОЛЁТ»: какой самолёт показать и где
@@ -352,7 +353,8 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	_drawn_frame = Engine.get_process_frames()
 	_fit_vp(r)
 	_set_bg("flight")
-	var k := "%s_%d_%d_%s" % [cls_id, view_lvl, weapon_tier, Livery.current(cls_id)]   # п. 35: и окраска
+	# п. 35: и окраска; F1 hangar_detail rebuilds the plane with or without the detail layer and glazed cockpit
+	var k := "%s_%d_%d_%s_%d" % [cls_id, view_lvl, weapon_tier, Livery.current(cls_id), int(PlaneDetail.enabled())]
 	if k != _key:
 		if _key.begins_with("w_"):
 			_dist = DIST0
@@ -442,10 +444,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		if on_mount:
 			_place_on_mount(wmi, s, bottom)
 		if weapon != "turret" and not on_cart and bottom > -0.19:
-			var sm := StandardMaterial3D.new()
-			sm.albedo_color = Color(0.32, 0.34, 0.3)
-			sm.metallic = 0.1   # S9-03: крашеные ложементы — матовые
-			sm.roughness = 0.88
+			# S9-03: painted cradles, matte; S14-13: in service paint
+			var sm := WeaponPaint.plain(Color(0.32, 0.34, 0.3), 0.88, 0.1, 0.4)
 			for sx: float in [-0.17, 0.17]:
 				var st := MeshInstance3D.new()
 				var bx := BoxMesh.new()
@@ -467,7 +467,7 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 	var cb := cart.get_aabb()
 	# a pod is round, but its suspension beam on top lifts the box centre: its width gives the body
 	var pod: bool = stand.get("pod", false)
-	var body := (bb.size.z * 0.5 if pod else _body_radius(wmi.mesh)) * s
+	var body := (bb.size.z * 0.5 if pod else WeaponModels.body_radius(wmi.mesh)) * s
 	var turn: bool = stand.get("turn", false)
 	var lx := (bb.size.z if turn else bb.size.x) * s   # the weapon's length along the stand
 	var ck: float = (body / stand["ring"] if stand.has("ring") else lx * stand["len"]) / cb.size.x
@@ -475,7 +475,7 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 	if turn:
 		cw = bb.size.x * s * float(stand.get("wide", 1.0)) / cb.size.z
 	var cm := MeshInstance3D.new()
-	cm.mesh = cart
+	cm.mesh = WeaponPaint.paint_mesh(cart, "", 0.0, STAND_SAT, STAND_TONE)
 	cm.basis = Basis.from_scale(Vector3(ck, cw, cw))
 	var dx: float = cb.size.x * stand["x"] * ck
 	cm.position = Vector3(-cb.get_center().x * ck - dx * 0.5, FLOOR_Y - cb.position.y * cw, -cb.get_center().z * cw)
@@ -484,7 +484,7 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 	var axis := wmi.position.y + (bb.position.y + bb.size.z * 0.5 if pod else bb.get_center().y) * s
 	var low := bottom
 	if stand.get("body", false):
-		low = axis - _body_radius(wmi.mesh) * s
+		low = axis - WeaponModels.body_radius(wmi.mesh) * s
 	elif stand.get("mid", false):
 		low = axis
 	elif stand.has("cradle"):
@@ -517,7 +517,7 @@ func _place_on_mount(wmi: MeshInstance3D, s: float, bottom: float) -> void:
 	wmi.position.y += FLOOR_Y + float(TURRET_STAND["seat_y"]) * ck - bottom
 	# the turret origin is the centre of its base ring; the stand's fuselage runs along the barrels
 	var sm := MeshInstance3D.new()
-	sm.mesh = stand
+	sm.mesh = WeaponPaint.paint_mesh(stand, "", 0.0, STAND_SAT, STAND_TONE)
 	sm.basis = Basis(Vector3.UP, TURRET_SHOW_YAW).scaled(Vector3.ONE * ck)
 	sm.position = Vector3(wmi.position.x, FLOOR_Y, wmi.position.z)
 	pivot.add_child(sm)
@@ -544,10 +544,8 @@ func _base_radius(m: Mesh) -> float:
 ## `band` is the strap's arc in degrees from the bottom: 360 closes it, less leaves the top free for a pod's
 ## suspension beam (S11-03: a full ring would cut through it).
 func _cradle(axis: Vector3, r: float, span: float, band := 360.0) -> void:
-	var sm := StandardMaterial3D.new()
-	sm.albedo_color = Color(0.58, 0.62, 0.66)   # the loader's own grey: the cradle reads as part of it
-	sm.metallic = 0.3   # painted steel, matte (Kanta 19.10)
-	sm.roughness = 0.8
+	# the loader's own grey, painted steel, matte (Kanta 19.10), in service paint (S14-13)
+	var sm := WeaponPaint.plain(Color(0.58, 0.62, 0.66), 0.8, 0.3, span * 1.5)
 	var beam := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = Vector3(span, r * 0.35, r * 0.9)
@@ -603,34 +601,6 @@ static func _arc_strap(r0: float, r1: float, w: float, arc: float) -> ArrayMesh:
 	return st.commit()
 
 
-static var _radius_cache := {}
-
-## Body radius of a weapon mesh lying along X: the thinnest of the widest cross-sections over the middle 60 %
-## (wings and fins widen some slices, the body is in every one); cached per mesh.
-static func _body_radius(m: Mesh) -> float:
-	if _radius_cache.has(m):
-		return _radius_cache[m]
-	var bb := m.get_aabb()
-	var c := bb.get_center()
-	var step := bb.size.x * 0.05
-	var wide := PackedFloat32Array()
-	wide.resize(13)
-	for si in m.get_surface_count():
-		var vs: PackedVector3Array = m.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]
-		for v in vs:
-			var i := roundi((v.x - c.x) / step)
-			if absi(i) <= 6 and absf(v.x - c.x - i * step) < step * 0.4:
-				wide[i + 6] = maxf(wide[i + 6], Vector2(v.y - c.y, v.z - c.z).length())
-	var r := INF
-	for w in wide:
-		if w > 0.0:
-			r = minf(r, w)
-	if r == INF:
-		r = minf(bb.size.y, bb.size.z) * 0.5
-	_radius_cache[m] = r
-	return r
-
-
 ## Bench: --hangarglb=<cls_lvl>=<absolute .glb> shows that file instead of the imported hangar model, so a GLB fix
 ## made outside the project (S11-07: glove pylons cut from «Оса» 1 while another task owns the hangar GLBs) can be
 ## checked in the hangar without importing it. Loaded at run time (GLTFDocument), so the canopy keeps the GLB's
@@ -646,6 +616,7 @@ func _bench_glb(key: String) -> Node3D:
 
 
 func _build(cls_id: String, lvl: int) -> void:
+	debug_mounts.clear()
 	for c in pivot.get_children():
 		c.queue_free()
 	var path := "res://models/hangar/fh_hangar_%s_%d.glb" % [cls_id, lvl]
@@ -695,9 +666,14 @@ func _build(cls_id: String, lvl: int) -> void:
 	_add_weapons(cls_id, lvl)
 
 
-## Тест 3.5-s4, п. 35: выбранная окраска — на модель и подвешенные к ней механизацию, детали, створки, кабину
+## Тест 3.5-s4, п. 35: выбранная окраска — на модель и подвешенные к ней механизацию, детали, створки, кабину.
+## With F1 `hangar_detail` on (default) the paint carries the PlaneDetail layer and the canopy becomes clear glass
+## over a furnished cockpit (HangarCockpit) whose frame wears the livery's main tone.
 func _apply_livery(model: Node3D, cls_id: String, lvl: int) -> void:
-	Livery.apply(model, cls_id, lvl, Livery.current(cls_id))
+	var detail := PlaneDetail.enabled()
+	Livery.apply(model, cls_id, lvl, Livery.current(cls_id), detail)
+	if detail:
+		HangarCockpit.attach(model, "%s_%d" % [cls_id, lvl], HangarCockpit.frame_colour(cls_id, Livery.current(cls_id)))
 
 
 ## Стартовое оружие класса на узлах подвески — под крылом / в бомбоотсеке (те же точки, что в игре).
@@ -721,6 +697,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		var g: Hardpoint = groups[gi]
 		if bench_weapons.has(cls_id) and gi < (bench_weapons[cls_id] as Array).size() and bench_weapons[cls_id][gi] != "":
 			g.weapon = bench_weapons[cls_id][gi]
+			if g.weapon == BENCH_EMPTY:
+				g.weapon = ""
 		g.evo = weapon_tier == 4
 		g.level = [1, 3, 5][mini(weapon_tier, 3) - 1]   # ступень вида → уровень оружия (ловушки ставятся по уровню)
 		if g.builtin and g.weapon == "turret":   # тест 3.5-s7: верхняя турель «Кита» — с ур. 3
@@ -738,6 +716,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 				var fp := SkinPatch.flare_panel(_model, float(mt["mx"]), float(mt["mz"]), float(mt.get("seed", 0.0)))
 				if fp != null:
 					_model.add_child(fp)
+				debug_mounts.append({"weapon": g.weapon, "side": side, "node": fp, "miss": fp == null})
 				continue
 			var mtr: int = mt.get("t", mini(weapon_tier, 3))
 			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4, lvl, true)   # тест 3.5-s8: ангарная версия
@@ -819,6 +798,9 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 				bs = Basis(Vector3.BACK, pitch) * bs
 			wmi.basis = bs.scaled(Vector3(wlen, wlen, wlen))
 			pivot.add_child(wmi)
+			# the skin lookups that place this side: a miss leaves the weapon at a fixed fallback height
+			var miss := is_nan(lo) if side in ["under", "belly", "bay", "bottom", "tip"] else (is_nan(hi) if side in ["top", "wing"] else false)
+			debug_mounts.append({"weapon": g.weapon, "side": side, "node": wmi, "miss": miss})
 	if repaint:
 		_apply_livery(_model, cls_id, lvl)
 
@@ -925,6 +907,10 @@ func _process(delta: float) -> void:
 	var dir := Vector3(cos(_pitch) * cos(_yaw), sin(_pitch), cos(_pitch) * sin(_yaw))
 	cam.position = focus + dir * _dist
 	cam.look_at(focus, Vector3.UP)
+	if _show_light and _bg == "flight":   # the showcase rim light stays behind the plane as the camera orbits
+		# almost level: from above and behind it would light the top of the wings straight into the camera
+		var travel := Vector3(dir.x, 0.0, dir.z).normalized() + Vector3(0.0, -0.22, 0.0)
+		_rim_light.basis = Basis.looking_at(travel.normalized(), Vector3.UP)
 
 
 func _input(event: InputEvent) -> void:
@@ -1116,3 +1102,29 @@ func orbit(dx: float, dy: float) -> void:
 func zoom(steps: int) -> void:
 	_dist *= pow(0.9, steps)
 	_idle = 0.0
+
+
+## Self-check (R-23): holds the camera still at yaw / pitch (rad) and distance, no idle spin, so a batch of frames
+## is shot from the hangar's own default view. `aim` — where the camera looks (null keeps what the view set, e.g.
+## the turret mount stand raises it).
+func debug_view(yaw: float, pitch: float, dist: float, aim: Variant = null) -> void:
+	_yaw = yaw
+	_pitch = pitch
+	_dist = dist
+	_idle = -1.0e9   # a software-rendered frame can take seconds: 0 would pass the 3 s idle-spin delay at once
+	if aim is Vector3:
+		focus = aim
+
+
+## Self-check (R-23): shows plane `lvl` of `cls_id` at weapon view `tier` (1–3: weapon lvl 1 / 3 / 5, 4 —
+## modernised) and builds it again on the next show_plane even when only bench_weapons changed.
+func debug_show(cls_id: String, lvl: int, tier: int) -> void:
+	_cls = cls_id
+	view_lvl = lvl
+	weapon_tier = tier
+	_key = "debug_rebuild"   # never a real view key: show_plane rebuilds, _process collects the new parts
+
+
+## Self-check (R-23): the plane model on view (null while none is built or its GLB is missing)
+func debug_model() -> Node3D:
+	return _model if is_instance_valid(_model) else null

@@ -118,7 +118,8 @@ const FALLBACK := {
 
 ## События только из файлов, без заглушки (нет файла — тишина). Море Архипелага (18.10):
 ## гудок корабля перед крупным судном, чайки фоном у гаваней (тихие сами, play без -дБ), потопление судна.
-const FILE_ONLY := ["ship_horn", "gulls", "ship_sink"]
+## Story sounds (step 4) play only when their file exists: stingers of the accents, radio texture.
+const FILE_ONLY := ["ship_horn", "gulls", "ship_sink", "sting_start", "sting_fortress", "sting_baron", "sting_epilogue", "radio_squelch", "radio_click"]
 
 
 const VOICES := 24
@@ -145,6 +146,11 @@ const CALM_DB := -4.0
 ## Крупные события ненадолго приглушают музыку (дБ), чтобы удар был слышен
 const DUCK := {"explode_big": 4.0, "bomb": 3.0, "player_hit": 3.0, "player_explode": 8.0, "tanker_down": 6.0,
 	"fortress_part": 4.0, "boss": 4.0, "ship_horn": 3.0, "ship_sink": 4.0}
+
+
+## Ducks the music by `db` for a moment (it comes back by itself, like after a big explosion): story accents.
+func duck(db: float) -> void:
+	_duck = maxf(_duck, db)
 
 
 ## pos — точка в мире боя: звук смещается влево/вправо по положению на экране. Без pos — по центру.

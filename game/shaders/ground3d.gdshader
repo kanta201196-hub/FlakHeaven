@@ -611,8 +611,23 @@ void fragment() {
 				float edge = 1.0 - smoothstep(r * (0.55 + 0.35 * n), r * (0.75 + 0.35 * n), d);
 				// гарь с тлеющими прожилками: светятся только «трещины» шума, остальное — тёмная гарь с лёгким жаром
 				float ember = smoothstep(0.42, 0.78, n2) * edge;
-				alb = mix(alb, alb * SRGB(vec3(0.2, 0.18, 0.16)), edge * 0.8 * a);
-				gz_e += zc * (ember * 1.1 + edge * 0.1) * a;
+				bool v2 = zb.z > 3.5;   // kind 4: crack fire (plasma patch with Tuning fx_s14); kind 3 keeps its embers
+				if (v2) {
+					// S14-18 (R-22 toggle fx_s14): the thresholded value noise above sat on its axis-aligned cell
+					// grid, and the cold plasma colour bloomed to white, so the patch read as pixel «snow». Glow now
+					// runs in thin ridged cracks of noise on two rotated grids (no visible cells), over a dim heat.
+					vec2 ra = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * cp;
+					vec2 rb = mat2(vec2(0.28, -0.96), vec2(0.96, 0.28)) * cp;
+					float c1 = 1.0 - abs(vnoise(ra / 22.0 + zb.w + vec2(gz_time * 0.12, 0.0)) * 2.0 - 1.0);
+					float c2 = 1.0 - abs(vnoise(rb / 9.0 - zb.w + vec2(0.0, gz_time * 0.2)) * 2.0 - 1.0);
+					float crack = max(smoothstep(0.86, 0.97, c1), smoothstep(0.88, 0.98, c2) * 0.6);
+					float pulse = 0.75 + 0.25 * vnoise(ra / 30.0 + vec2(gz_time * 0.9, -gz_time * 0.5));
+					ember = crack * pulse * edge * 0.45 + edge * 0.02 * n;
+				}
+				// v2: deeper soot, so the bloom of the glowing cracks does not wash the patch pale (read as ice)
+				alb = mix(alb, alb * SRGB(vec3(0.2, 0.18, 0.16)) * (v2 ? 0.55 : 1.0), edge * (v2 ? 0.92 : 0.8) * a);
+				// v2: the even glow over the whole patch made cold colours a pale blue film; keep only a trace of it
+				gz_e += zc * (ember * 1.1 + edge * (v2 ? 0.015 : 0.1)) * a;
 			} else {
 				// S9-26 (Kanta: «прицел всё ещё как будто в воздухе»): метка нарисована краской на земле — толщина
 				// кольца в метрах мира (сжимается на склонах и с перспективой), цвет — в альбедо под светом и тенями

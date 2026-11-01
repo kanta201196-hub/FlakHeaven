@@ -35,11 +35,37 @@ const DMG := {"fighter": [63.0, 5.2], "attacker": [53.0, 5.3], "bomber": [42.0, 
 const C_TITLE := Color(1.0, 0.82, 0.29)
 const C_SUB := Color(0.78, 0.82, 0.76)
 
+## The story log («Журнал», step 3) is open over the screen: played scenes and choices, replay of hangar scenes.
+static var log_open := false
+
+
+## Story step 9 (F1 `story_vignette`): the operation card opens with a live window on the biome — the menu world
+## behind the screen shows through a hole in the backdrop, the camera drifts as on the menu with the flight anchored
+## in the window (`TitleFlight.ov_anchor`), the light preset and zoom follow the selected operation (`Main._process`).
+static var vignette := Rect2()   # the window on screen this frame, Rect2() when off
+const VIGNETTE_H := 150.0
+const VIGNETTE_ZOOM := [0.95, 0.85, 0.75, 0.62]        # by operation index in the biome: closer first
+const VIGNETTE_LIGHT := ["dawn", "day", "day", "dusk"]  # the operations' hours (intro presets)
+
+
+static func vignette_on() -> bool:
+	return Tuning.g("story_vignette") > 0.0 and Render3D.enabled
+
 
 func draw(size: Vector2) -> void:
-	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.035, 0.04, 0.032, 0.9))
+	var bd := Color(0.035, 0.04, 0.032, 0.9)
+	if vignette.size.x > 0.0:   # the backdrop around the vignette window, the window itself only slightly dimmed
+		var vg := vignette
+		ctrl.draw_rect(Rect2(0, 0, size.x, vg.position.y), bd)
+		ctrl.draw_rect(Rect2(0, vg.end.y, size.x, size.y - vg.end.y), bd)
+		ctrl.draw_rect(Rect2(0, vg.position.y, vg.position.x, vg.size.y), bd)
+		ctrl.draw_rect(Rect2(vg.end.x, vg.position.y, size.x - vg.end.x, vg.size.y), bd)
+		ctrl.draw_rect(vg, Color(0.0, 0.0, 0.0, 0.12))
+	else:
+		ctrl.draw_rect(Rect2(Vector2.ZERO, size), bd)
 	var m := Main.I
 	_button(Rect2(64, 32, 200, 42), "‹ Меню (Esc)", "campaign_back", 17)
+	_button(Rect2(280, 32, 170, 42), "Журнал", "log_toggle", 17)
 	_text(Vector2(64, 134), "В ВЫЛЕТ", 50, C_TITLE)
 	_text(Vector2(330, 132), "Выберите операцию и самолёт — и в бой. Всё остальное по желанию.", 19, C_SUB)
 	var bio := Campaign.biome_of(Campaign.index())
@@ -60,6 +86,51 @@ func draw(size: Vector2) -> void:
 	_planes(m, Rect2(566, 170, size.x - 64 - 300 - 44 - 566, 840))
 	_go(m, Rect2(size.x - 64 - 300, 170, 300, 840))
 	_text(Vector2(64, size.y - 26), Loc.t("Enter — в вылет · ↑ / ↓ — операция · 1 / 2 / 3 — самолёт · Esc — меню · управление: %s [F2]") % Loc.t(Hud.SCHEMES[int(Tuning.g("scheme"))]), 17, C_SUB)
+	if log_open:
+		_log(size)
+
+
+## «Журнал»: every story scene in campaign order with its state — played (with the choice made), or not yet; a played
+## hangar scene can be watched again (nothing is saved on a replay). Drawn over the screen; its buttons are added
+## last, so they win over the screen's own (`Hud.button_at` picks the last match).
+func _log(size: Vector2) -> void:
+	ctrl.draw_rect(Rect2(Vector2.ZERO, size), UiStyle.SCRIM)
+	_buttons.append([Rect2(Vector2.ZERO, size), "log_toggle"])   # a click outside the panel closes it
+	var pr := Rect2((size.x - 900.0) * 0.5, 96.0, 900.0, size.y - 192.0)
+	_panel(pr, false)
+	_buttons.append([pr, "log_noop"])
+	_text(Vector2(pr.position.x + 32.0, pr.position.y + 50.0), "ЖУРНАЛ", 30, C_TITLE)
+	_text(Vector2(pr.position.x + 190.0, pr.position.y + 48.0), "сцены кампании и ваши ответы", 17, C_SUB)
+	_button(Rect2(pr.end.x - 212.0, pr.position.y + 18.0, 190.0, 40.0), "Закрыть (Esc)", "log_toggle", 16)
+	var y := pr.position.y + 96.0
+	var x := pr.position.x + 32.0
+	for row: Array in StoryDialogs.ORDER:
+		if y > pr.end.y - 40.0:
+			break
+		var sid := String(row[0])
+		var kind := String(row[2])
+		var def := StoryDialogs.scene(sid) if kind == "dlg" else (StoryScenes.intro(sid.substr(6)) if sid.begins_with("intro_") else StoryScenes.outro(sid.substr(6)))
+		if def.is_empty():
+			continue   # not written yet: no row, the log never promises a scene
+		var seen := Campaign.flag("seen_" + sid)
+		var col := Color.WHITE if seen else C_LOCK
+		_text(Vector2(x, y), ("✓  " if seen else "○  ") + Loc.t(String(row[1])), 19, col)
+		var ch := ""
+		if seen and kind == "dlg":
+			for s: Dictionary in def.get("steps", []):
+				if s.has("choice"):
+					var opt := Campaign.story_choice(String(s["choice"]))
+					if opt != "":
+						ch = Loc.t("— ответ: %s") % Loc.t(DialogFlow.option_label(def, String(s["choice"]), opt))
+			_button(Rect2(pr.end.x - 212.0, y - 26.0, 180.0, 36.0), "Повторить", "replay:" + sid, 15)
+		elif not seen:
+			ch = Loc.t("ещё не было")
+		if ch != "":
+			_text(Vector2(x + 36.0, y + 22.0), ch, 15, C_SUB if seen else C_LOCK)
+			y += 22.0
+		y += 40.0
+	if y == pr.position.y + 96.0:
+		_para(Vector2(x, y), "Сцены появятся по ходу кампании.", pr.size.x - 64.0, 18, C_SUB)
 
 
 ## Колонка 1: операции района и задача выбранной
@@ -97,6 +168,12 @@ func _ops(r: Rect2, bio: String) -> void:
 	var x := box.position.x + 20.0
 	var w := box.size.x - 40.0
 	y = box.position.y + 18.0
+	if vignette_on():
+		vignette = Rect2(box.position.x + 2.0, box.position.y + 2.0, box.size.x - 4.0, VIGNETTE_H)
+		ctrl.draw_rect(Rect2(vignette.position.x, vignette.end.y, vignette.size.x, 2.0), Color(0.24, 0.3, 0.23))
+		y = vignette.end.y + 18.0
+	else:
+		vignette = Rect2()
 	y += _para(Vector2(x, y + 14.0), Loc.t(String(o["brief"])), w, 16, Color(0.86, 0.88, 0.84)) + 26.0
 	_text(Vector2(x, y), "ЗАДАЧА", 16, C_TITLE)
 	y += 12.0

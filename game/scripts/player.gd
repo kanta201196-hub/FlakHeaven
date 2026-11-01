@@ -210,6 +210,37 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 					h0.level = 1
 					h0.cd = 0.5
 					break
+	# PG-06 check flag --wprofile=<weapon>:<profile>: that profile (and at least the fork level) from the start
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--wprofile="):
+			var wp := String(arg).substr(11).split(":")
+			for g1 in groups:
+				var h1: Hardpoint = g1
+				if wp.size() == 2 and h1.weapon == wp[0] and not WeaponProfiles.def(wp[0], wp[1]).is_empty():
+					h1.profile = wp[1]
+					h1.level = maxi(h1.level, WeaponProfiles.LEVEL)
+	# PG-06 PR 3 check flag --wrank=<n>: every group with a profile starts with n mastery ranks of it
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--wrank="):
+			for g3 in groups:
+				var h3: Hardpoint = g3
+				if h3.profile != "":
+					h3.level = Weapons.MAX_LEVEL
+					h3.branch = "profile"
+					h3.branch_rank = clampi(int(String(arg).substr(8)), 0, Cards.BRANCH_MAX)
+					print("AUTOTEST: wrank %s %s rank %d" % [h3.weapon, h3.profile, h3.branch_rank])
+	# PG-06 PR 2 check flag --wevo=<recipe id>: that weapon at the top level and modernized from the start
+	for arg in OS.get_cmdline_user_args():
+		if String(arg).begins_with("--wevo="):
+			var eid := String(arg).substr(7)
+			for g2 in groups:
+				var h2: Hardpoint = g2
+				if h2.weapon != "" and h2.weapon == Modernizations.weapon_of(eid) and not h2.evo:
+					h2.level = Weapons.MAX_LEVEL
+					h2.evo = true
+					h2.evo_id = eid if Modernizations.is_new(eid) else ""
+					print("AUTOTEST: wevo %s on %s" % [eid, h2.name])
+					break
 	# стартовое оружие и навык дают очки тегов
 	for g in groups:
 		if not (g as Hardpoint).is_empty():
@@ -297,15 +328,19 @@ func reslot_wingmen() -> void:
 		(wingmen[i] as Wingman).slot = i
 
 
-func evolve(w: String) -> void:
-	evo_times[w] = Main.I.run_time
-	if w == "gun":
+## Modernize by recipe `id` (`Modernizations`: a classic id is the weapon id, "gun" — the course gun): the
+## first group of that weapon at the top level that is not modernized yet.
+func evolve(id: String) -> void:
+	evo_times[id] = Main.I.run_time
+	if id == "gun":
 		gun_evo = true
 		return
+	var w := Modernizations.weapon_of(id)
 	for g in groups:
 		var h: Hardpoint = g
 		if h.weapon == w and h.level >= Weapons.MAX_LEVEL and not h.evo:
 			h.evo = true
+			h.evo_id = id if Modernizations.is_new(id) else ""
 			h.cd = 0.3
 			return
 

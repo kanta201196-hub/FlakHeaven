@@ -7,10 +7,15 @@ extends RefCounted
 
 const DIR := "res://art/ground/road/"
 ## Street set, tile (world px; about 2.5× the photo's real size at the map scale, so the slabs still read at
-## gameplay height) and tint towards the village palette
+## gameplay height) and tint towards the village palette. S14-14: the stones are toned to the packed earth round
+## them (less saturation, no orange cast; they read as orange stripes on the ground before), and LANE_DUST — the
+## dust between the stones and under the last stones of a street's edge — is that packed earth's own tone
+## (measured from Forward+ frames of the Highland ground)
 const LANE := "lane_flag"
 const LANE_TILE := 20.0
-const LANE_TINT := Color(1.08, 1.0, 0.9)
+const LANE_TINT := Color(1.04, 1.03, 1.06)
+const LANE_SAT := 0.45
+const LANE_DUST := Color(0.48, 0.43, 0.41)
 
 static var _old := -1
 
@@ -44,3 +49,5 @@ static func apply_adobe(sm: ShaderMaterial) -> void:
 	sm.set_shader_parameter("lane_nh", load(DIR + LANE + "_nh.jpg"))
 	sm.set_shader_parameter("lane_tile", LANE_TILE)
 	sm.set_shader_parameter("lane_tint", Vector3(LANE_TINT.r, LANE_TINT.g, LANE_TINT.b))
+	sm.set_shader_parameter("lane_sat", LANE_SAT)
+	sm.set_shader_parameter("lane_dust", LANE_DUST)   # a Color: Forward+ converts it like the ground photos

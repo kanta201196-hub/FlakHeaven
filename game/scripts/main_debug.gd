@@ -30,8 +30,13 @@ func process(delta: float) -> void:
 	if m._args.has("--exittest") and _exit_test():
 		return
 	if m._autotest:
-		_run_autotest(delta)
-		if m._args.has("--smoke"):
+		if not _ss_campaign:   # the story-shots run ends on the campaign screen: the bot must not press «В вылет» again
+			_run_autotest(delta)
+		if m._args.has("--storyshots"):
+			_story_shots()
+		if m._args.has("--markshot"):
+			_mark_shot(delta)
+		elif m._args.has("--smoke"):
 			_smoke_check()
 	if m._args.has("--pairtest") or m._args.has("--cardtest"):
 		_pair_test()
@@ -65,22 +70,24 @@ func process(delta: float) -> void:
 
 
 ## EX-05: какую карточку брать для модернизации оружия w: сама модернизация → оружие → его уровни → модули рецепта
-func _evo_pick(w: String) -> int:
+## `rid` — a recipe id of `Modernizations` (a classic one is the weapon id, so old `--evopick=aam` still works).
+func _evo_pick(rid: String) -> int:
 	var p := m.player
-	var cat: Dictionary = Prog.EVOS[w]["cat"]
+	var w := Modernizations.weapon_of(rid)
+	var cat := Modernizations.cat(rid)
 	var best := -1
 	var best_rank := 99
 	for ci in m.offers.size():
 		var o: Dictionary = m.offers[ci]
 		var ow := String(o.get("weapon", ""))
-		if o["kind"] == "weapon_up" and int(o.get("group", 99)) < p.groups.size():
+		if o["kind"] in ["weapon_up", "profile"] and int(o.get("group", 99)) < p.groups.size():
 			ow = (p.groups[int(o["group"])] as Hardpoint).weapon
 		var rank := 99
-		if o["kind"] == "evolution" and ow == w:
+		if o["kind"] == "evolution" and String(o.get("evo", "")) == rid:
 			rank = 0
 		elif o["kind"] == "weapon_new" and ow == w:
 			rank = 1
-		elif o["kind"] == "weapon_up" and ow == w:
+		elif o["kind"] in ["weapon_up", "profile"] and ow == w:
 			rank = 2
 		elif o["kind"] == "module" and cat.has(String(o["id"])) and int(p.taken.get(String(o["id"]), 0)) < int(cat[String(o["id"])]):
 			rank = 3
@@ -390,6 +397,16 @@ func _combat_ui_test() -> void:
 		_shot("cu_levelup_fade")   # cards still developing, picks blocked (MainInput.CARD_INPUT_DELAY)
 		_cu_fade = true
 	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 0.5 and _hud_at < now - 1000:
+		# PG-06 frame: --profileshot turns the screen into the profile «or-or» of the first weapon group
+		if m._args.has("--profileshot"):
+			var g0: Hardpoint = p.groups[0]
+			g0.level = 2
+			g0.profile = ""
+			g0.evo = false
+			var pr_cards: Array = []
+			for id in WeaponProfiles.open_ids(g0.weapon, Profile.profile_open(g0.weapon)):
+				pr_cards.append(Cards.finalize(p, Cards.profile_card(g0, 0, String(id), 1)))
+			m.offers = pr_cards
 		# weapon upgrade cards in the frame: the laser's long title (S11-26) and a «now / at lv. N» text (S11-20)
 		var ups: Array = []
 		for gi in p.groups.size():
@@ -398,14 +415,14 @@ func _combat_ui_test() -> void:
 				g.level = mini(g.level, 2)   # frame only: an upgrade with levels still ahead
 				ups.append(Cards.finalize(p, {"id": "up_%d" % gi, "ban": "up:%d" % gi, "kind": "weapon_up", "group": gi,
 					"cat": "Оружие", "title": "%s: улучшение" % Weapons.title(g.weapon), "rarity": 1}))
-		for i in mini(ups.size(), m.offers.size() - 1):
+		for i in (0 if m._args.has("--profileshot") else mini(ups.size(), m.offers.size() - 1)):
 			m.offers[i + 1] = ups[i]
 		# mouse over the second card, so the frame shows its term tooltips (S11-22)
 		var vs := m.get_viewport().get_visible_rect().size
 		m.get_viewport().warp_mouse(Vector2(vs.x / 2.0 - vs.x * 0.085, vs.y * 0.5))
 		_hud_at = now + 100000
 	elif _cu_phase == 3 and m.state == "levelup" and m._state_t > 1.2:
-		_shot("cu_levelup")
+		_shot("cu_profile" if m._args.has("--profileshot") else "cu_levelup")
 		# last-minute damage for the pause block and the hardpoint DPS
 		for k in 50:
 			var t := m.run_time - 50.0 + k
@@ -680,6 +697,105 @@ func _smoke_check() -> void:
 		_fortress_log()
 
 
+## --storyshots (story step 9): once the sortie runs, plays every story scene back to back as a replay — the hangar
+## dialogues of `StoryDialogs.ORDER`, then every intro, outro and epilogue card with its variants — so `--cutshot`
+## saves one frame per scene (user://shot_dialog_<id>.png, user://shot_cutscene_<id>.png) for the review page, and
+## then shows the campaign screen for its vignette frame (user://shot_campaign_vignette.png) and quits.
+## `--vignetteshot` with it skips the scenes. Campaign flags and choices are set so the conditional lines exist;
+## the sortie is a throw-away one, so nothing is restored.
+var _ss_queue: Array = []
+var _ss_started := false
+var _ss_campaign := false
+var _ss_t := 0.0
+
+
+func _story_shots() -> void:
+	if not _ss_started:
+		if m.state != "playing" or m.run_time < 0.5:
+			return
+		_ss_started = true
+		Campaign.set_flag("rescued")
+		Campaign.set_flag("grom_free")
+		Campaign.set_story_choice("lead", "recon")
+		Campaign.set_story_choice("grom_role", "controller")
+		for row: Array in StoryDialogs.ORDER:
+			if String(row[2]) == "dlg":
+				_ss_queue.append(["dlg", String(row[0]), StoryDialogs.scene(String(row[0]))])
+		for pair: Array in [["intro", StoryScenes.INTRO], ["outro", StoryScenes.OUTRO], ["epilogue", StoryScenes.EPILOGUE]]:
+			var table: Dictionary = pair[1]
+			for k in table:
+				_ss_queue.append(["cut", "%s_%s" % [pair[0], String(k).replace(".", "_")], table[k]])
+		if m._args.has("--vignetteshot"):   # only the campaign screen's frame
+			_ss_queue.clear()
+		print("AUTOTEST: story shots — %d scenes" % _ss_queue.size())
+		return
+	if _ss_campaign:
+		_ss_t += 1.0 / 60.0
+		if _ss_t >= 1.5:
+			var img := m.get_viewport().get_texture().get_image()
+			if img != null:
+				img.save_png("user://shot_campaign_vignette.png")
+			print("AUTOTEST: story shots done")
+			m.get_tree().quit(0)
+		return
+	if Dialog.active or Cutscene.active or m.state != "playing":
+		return
+	if _ss_queue.is_empty():
+		# last: the campaign screen with the operation vignette (step 9), 1.5 s after the switch so the light has settled
+		if not _ss_campaign:
+			_ss_campaign = true
+			m._set_state("campaign")
+			_ss_t = 0.0
+		return
+	var e: Array = _ss_queue.pop_front()
+	if String(e[0]) == "dlg":
+		Dialog.play(m, String(e[1]), e[2], m._set_state.bind("playing"), true)
+	else:
+		Cutscene.play(m, String(e[1]), e[2], "playing")
+
+
+## ST-09 (story plan step 10): frames of the Monolith mark for Kanta's «ok» (--autotest --smoke --turbo --god --markshot
+## --gfx=N). Two seconds into the sortie a Fortress and three AA vehicles are put right ahead of the player, the
+## frame is saved twice (user://shot_mark_1.png at 0.9 s, when the battle models have loaded, shot_mark_2.png at 1.8 s)
+## and the game quits: the smoke bot's own fight is not needed, and its 300 s wall limit never comes.
+var _mark_t := -1.0
+
+
+func _mark_shot(delta: float) -> void:
+	if m.state != "playing" or not is_instance_valid(m.player) or m.run_time < 2.0:
+		return
+	var p := m.player
+	if _mark_t < 0.0:
+		_mark_t = 0.0
+		var ahead := Vector2.from_angle(p.heading)
+		var side := ahead.orthogonal()
+		var f := Fortress.new()
+		f.setup_fortress(4000.0)
+		f.position = p.global_position + ahead * 230.0
+		f.heading = p.heading + PI / 2.0
+		m.world.add_child(f)
+		var i := 0
+		for v in ["zsu", "sam", "radar"]:
+			var g := GroundTarget.new()
+			g.setup(v, null, 1.0)
+			g.position = p.global_position + ahead * 120.0 + side * (90.0 * (i - 1))
+			m.world.add_child(g)
+			i += 1
+		print("MARKSHOT: placed")
+		return
+	_mark_t += delta
+	for k in [1, 2]:
+		var nm := "mark_%d" % k
+		if _mark_t > 0.9 * k and not _shots_done.has(nm):
+			_shots_done[nm] = true
+			var img := m.get_viewport().get_texture().get_image()
+			if img != null:   # headless has no frame
+				img.save_png("user://shot_%s.png" % nm)
+			print("SHOT ", nm)
+	if _shots_done.has("mark_2"):
+		m.get_tree().quit()
+
+
 ## FB-01: смоук с «--fortress» — бой с «Крепостью» до 180 с, раз в 10 с — фаза, точки, расстояние до базы
 const SMOKE_FORTRESS_S := 180.0
 var _flog_t := 0.0
@@ -846,7 +962,7 @@ func _run_autotest(delta: float) -> void:
 						for ci in m.offers.size():
 							var o: Dictionary = m.offers[ci]
 							var w := String(o.get("weapon", ""))
-							if o["kind"] == "weapon_up" and m.player.groups.size() > int(o.get("group", 99)):
+							if o["kind"] in ["weapon_up", "profile"] and m.player.groups.size() > int(o.get("group", 99)):
 								w = String((m.player.groups[int(o["group"])] as Hardpoint).weapon)
 							var want := (w in ["aam", "rockets"]) if pass_i == 0 else (String(o["id"]) in ["seeker", "msl_head", "msl_motor", "launcher", "reload"])
 							if want:
@@ -924,6 +1040,12 @@ func _run_autotest(delta: float) -> void:
 		if String(a).begins_with("--until=") and m.run_time >= float(String(a).substr(8)) and m.state == "playing":
 			Events.evac_reached.emit()
 			return
+	# story (step 7): --duelwin — the bot cannot out-fly the rival ace, so 40 s into the duel the ace goes down; checks
+	# the Baron-down chain (accent, «Граф», «Гром» free, outro, debrief) headless
+	if m._args.has("--duelwin") and m.state == "playing":
+		for n in m.get_tree().get_nodes_in_group("enemies"):
+			if n is RivalAce and (n as RivalAce).life < 50.0 and (n as Enemy).hp > 0.0:
+				(n as Enemy).take_hit(1.0e9, "autotest")
 	# EX-04 Б2: кадр со звеном бомбардировщиков рядом (--bombers --shots)
 	if m._args.has("--bombers") and is_instance_valid(m.player):
 		for n in m.get_tree().get_nodes_in_group("enemies"):
