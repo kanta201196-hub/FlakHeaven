@@ -51,6 +51,18 @@
   - Оса-2, геометрия: `plane_polish.py` с боксами `DENOISE` (воздухозаборники, мотогондолы, наплыв, фюзеляж) — фильтр нормалей граней с сохранением изломов и выпрямление линий изломов (сдвиг до 2.3 мм); кромки крыла, стабилизатора и килей — `SURF` (только контур).
   - Оса-2, текстуры: `tex_clean.py --even 0.9 --even-detail 0.7` (цвет), `--even 1 --ref <цвет>` (ORM), `--even 1 --ref <цвет> --even-detail 0.4 --even-wear 0` (нормали) — лоскуты генератора с разной шероховатостью и тоном выравниваются к медиане краски, деталь и износ остаются; затем `--embed` (имена `col`, `orm`, `nrm`).
   - После обоих — перезапечь боевые модели (`--tris 30000 --tex 2048 --outline 2 --glass 1 --shade hangar`).
+- **Slat noses of «Кит» 2 (01.11, branch claude/kit2-slat).** Saw teeth along the slat edge in the hangar: the
+  remesh's nose faces zigzag across the sharp ridge, and the paint baked on them carries the zigzag (upper camouflage
+  in wedges on the underside). Recipe, from the hangar GLB of `main` and its extracted maps:
+  1. `plane_polish.py <hangar.glb> bomber_2 <n1.glb> --steps nose`, then the same on `n1.glb` → `n2.glb` (step
+     `nose`, config `NOSE`: each slat's section measured as rays from a centre 9 mm behind the nose, ray lengths
+     fitted along the span, points moved radially; a second pass takes the rest of the notches).
+  2. `nose_ridge.py <n2.glb> bomber_2 <out.glb> --maps <col.jpg> <orm.jpg>` — nose faces split along the ridge, new
+     vertices on the straight tip line, fresh nose normals; the paint within 6 mm of the ridge redrawn from each
+     side's own paint (maps rewritten in place; start from copies of the extracted `_col.jpg` / `_orm.jpg`).
+  3. `tex_clean.py <out.glb> <map> <extracted map>` for both maps (padding for the new faces), copy the GLB in,
+     `godot --headless --path game --import`, rebake the battle model (`--tris 36000 --tex 2048 --outline 2
+     --glass 1 --shade hangar --threads 2`).
 - **Hangar close-up detail (01.11, branch claude/plane-detail).** No model or texture rebake: the hangar draws the
   detail in shaders, so the GLBs, their UVs and the battle models are unchanged.
   - Skin: `shaders/plane_detail.gdshaderinc`, included by the livery shader and switched on by `PlaneDetail.setup`

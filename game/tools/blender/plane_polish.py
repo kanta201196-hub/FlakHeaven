@@ -91,6 +91,20 @@ TOPS = {
     ],
 }
 
+# Leading-edge noses cleaned by nose_clean (Kanta s14: saw teeth along the slat edge of «Кит» 2 in the hangar; the
+# outline step straightens the planform, but the nose itself stayed notched and stepped in section):
+# name, s0, s1 (|z| span of the part), x0, x1, t0, t1 (the box of the wing section, as SURF), centre depth behind
+# the leading edge (the rays of the section start there; deeper than the nose, shallower than the slat's chord).
+NOSE = {
+    "bomber_2": [
+        ("slat", 0.200, 0.480, -0.34, 0.02, -0.042, -0.018, 0.009),
+    ],
+}
+NOSE_DS = 0.0002      # span step of the section stations
+NOSE_FAN = (70.0, 100.0)  # degrees off straight ahead: full correction inside, none past (upper and lower skin aft)
+NOSE_MARGIN = 0.008   # fade of the correction past the part's span ends (into the wing next to it)
+NOSE_GATE = (0.003, 0.005)  # farther off the clean nose than this is a real shape, not teeth
+
 WIN = 0.0016     # running window of the raw edge along the span
 BROAD_R = 0.003   # radius of the broad-deviation median (spike vs pylon)
 TOP_CELL = 0.003  # height-field cell of smooth_top
@@ -960,26 +974,217 @@ def smooth_top(model, spec, report):
         np.percentile(np.abs(dy[mv]), 95) * 1e3 if mv.any() else 0.0))
 
 
+def _ray_hits(A, B, c, U):
+    """Farthest hit of each ray c + t·U[k] (t >= 0) with the 2D segments A[i]–B[i]; NaN where a ray hits nothing"""
+    e = B - A                                   # (n, 2)
+    w = A - c                                   # (n, 2)
+    cr = lambda p, q: p[..., 0] * q[..., 1] - p[..., 1] * q[..., 0]  # noqa: E731
+    den = cr(U[:, None, :], e[None, :, :])      # (m, n)
+    ok = np.abs(den) > 1e-14
+    den = np.where(ok, den, 1.0)
+    t = cr(w[None, :, :], e[None, :, :]) / den
+    v = cr(w[None, :, :], U[:, None, :]) / den
+    hit = ok & (t >= 0) & (v >= -1e-9) & (v <= 1 + 1e-9)
+    t = np.where(hit, t, -np.inf).max(1)
+    return np.where(np.isfinite(t), t, np.nan)
+
+
+def _robust_poly(s, r, deg=2, it=8):
+    """Tukey-reweighted polynomial fit r(s) of every column of r (stations × directions; NaN = no data), so teeth
+    and notches along the span do not pull the clean surface. Returns the fitted values at s."""
+    out = np.full_like(r, np.nan)
+    V = np.vander((s - s.mean()) / max(np.ptp(s), 1e-9), deg + 1)
+    for k in range(r.shape[1]):
+        y = r[:, k]
+        ok = ~np.isnan(y)
+        if ok.sum() < 3 * (deg + 1):
+            continue
+        A, yy, ww = V[ok], y[ok], np.ones(ok.sum())
+        for _ in range(it):
+            W = np.sqrt(ww)
+            c, *_ = np.linalg.lstsq(A * W[:, None], yy * W, rcond=None)
+            res = yy - A @ c
+            sc = 4.685 * max(np.median(np.abs(res)) * 1.4826, 2e-4)
+            ww = np.where(np.abs(res) < sc, (1 - (res / sc) ** 2) ** 2, 0.0) + 1e-6
+        out[:, k] = V @ c
+    return out
+
+
+def nose_clean(model, spec, side, report):
+    """Clean, straight nose on a leading-edge part (one NOSE entry, one side): the polish outline keeps the planform
+    straight, but in section the remeshed nose of a slat stays notched and stepped by 1–2 mm, which reads as saw
+    teeth along the edge in the hangar light. The section is measured as rays from a centre a little behind the
+    nose at fine span stations (outermost hit of the skin triangles), each ray's length is fitted along the span by
+    a robust quadratic (a slat is a ruled, tapering body), and every point within the front fan is moved radially
+    by the ratio clean/raw length at its station and direction. Inner points (caps, the slat's back face, wells)
+    scale with the skin, so it stays one function of position and crack-free; the correction fades past the fan,
+    past the span ends and where the raw nose is far off the clean one (a real shape, not teeth)."""
+    name, s0, s1, x0, x1, t0, t1, dc = spec
+    tag = "%s%s" % (name, "L" if side < 0 else "R")
+    mg = NOSE_MARGIN
+    TR = model.analysis_tris()
+    ts, tx, ty = TR[:, :, 2] * side, TR[:, :, 0], TR[:, :, 1]
+    tm = ((ts.max(1) > s0 - mg - 0.001) & (ts.min(1) < s1 + mg + 0.001) & (tx.max(1) > x0) & (tx.min(1) < x1)
+          & (ty.min(1) > t0) & (ty.max(1) < t1))
+    ts, tx, ty = ts[tm], tx[tm], ty[tm]
+    sq_le = np.arange(s0, s1, 0.0005)
+    le_raw, _ = slice_extremes(ts, tx, sq_le, x0, x1)
+    ok = ~np.isnan(le_raw)
+    le_fit = robust_line(sq_le[ok], le_raw[ok])
+    td = le_fit(ts) - tx                       # depth behind the fitted leading edge
+    front = td.min(1) < 2.5 * dc
+    ts, td, ty = ts[front], td[front], ty[front]
+    smin, smax = ts.min(1), ts.max(1)
+    sq = np.arange(s0 - mg, s1 + mg + 1e-9, NOSE_DS)
+    segs = []
+    cy_raw = np.full(len(sq), np.nan)
+    for i, v in enumerate(sq):
+        m = (smin <= v) & (smax >= v)
+        a, b, c = ts[m], td[m], ty[m]
+        pts = []
+        for i0, i1 in ((0, 1), (1, 2), (2, 0)):
+            sa, sb = a[:, i0], a[:, i1]
+            cr = (sa - v) * (sb - v) <= 0
+            den = np.where(np.abs(sb - sa) < 1e-12, 1e-12, sb - sa)
+            u = np.clip((v - sa) / den, 0, 1)
+            pts.append(np.where(cr[:, None], np.stack([b[:, i0] + u * (b[:, i1] - b[:, i0]),
+                                                         c[:, i0] + u * (c[:, i1] - c[:, i0])], 1), np.nan))
+        P = np.stack(pts, 1)                    # (tris, 3 edges, 2)
+        good = ~np.isnan(P[:, :, 0])
+        two = good.sum(1) >= 2
+        P, good = P[two], good[two]
+        first = np.argmax(good, 1)
+        last = 2 - np.argmax(good[:, ::-1], 1)
+        A = P[np.arange(len(P)), first]
+        B = P[np.arange(len(P)), last]
+        segs.append((A, B))
+        # centre height: midway between the skins where they cross the centre depth
+        e = B - A
+        cross = (A[:, 0] - dc) * (B[:, 0] - dc) <= 0
+        if cross.any():
+            u = (dc - A[cross, 0]) / np.where(np.abs(e[cross, 0]) < 1e-12, 1e-12, e[cross, 0])
+            yy = A[cross, 1] + np.clip(u, 0, 1) * e[cross, 1]
+            cy_raw[i] = 0.5 * (yy.max() + yy.min())
+    ok = ~np.isnan(cy_raw)
+    cy_fit = robust_line(sq[ok], cy_raw[ok])
+    ang = np.radians(np.arange(-NOSE_FAN[1] - 10.0, NOSE_FAN[1] + 10.01, 0.5))
+    U = np.stack([-np.cos(ang), np.sin(ang)], 1)   # 0 = straight ahead (towards the nose), +90 = up
+    R0 = np.full((len(sq), len(ang)), np.nan)
+    for i, (A, B) in enumerate(segs):
+        if len(A):
+            R0[i] = _ray_hits(A, B, np.array([dc, cy_fit(np.array([sq[i]]))[0]]), U)
+    inside = (sq >= s0) & (sq <= s1)
+    R1 = R0.copy()
+    R1[inside] = _robust_poly(sq[inside], R0[inside])
+    # the span ends: the fitted section carried on into the margins (weight fades there)
+    for k in range(len(ang)):
+        col = R1[inside, k]
+        if np.isnan(col).all():
+            continue
+        R1[sq < s0, k] = col[~np.isnan(col)][0]
+        R1[sq > s1, k] = col[~np.isnan(col)][-1]
+    hole = np.isnan(R1)   # a light smoothing across the directions: no kinks between neighbouring rays
+    R1 = np.where(hole, np.nan, gaussian_filter(np.nan_to_num(R1, nan=0.0), (0, 1.5), mode="nearest"))
+    fan = np.abs(np.degrees(ang)) <= NOSE_FAN[0]
+    if os.environ.get("POLISH_DEBUG"):
+        np.savez(os.environ["POLISH_DEBUG"] + "_%s.npz" % tag, sq=sq, ang=ang, R0=R0, R1=R1, cy=cy_raw)
+    dev = np.abs(R1 - R0)[inside][:, fan]
+    dev = dev[~np.isnan(dev)]
+    report.append("%s: raw nose off the clean one p95 %.2f mm, max %.2f mm (%d stations, %d directions)" % (
+        tag, np.percentile(dev, 95) * 1e3, dev.max() * 1e3, int(inside.sum()), int(fan.sum())))
+
+    def look(G, sp, th):
+        fs = np.clip((sp - sq[0]) / NOSE_DS, 0, len(sq) - 1.001)
+        fa = np.clip((th - ang[0]) / (ang[1] - ang[0]), 0, len(ang) - 1.001)
+        i0, j0 = fs.astype(int), fa.astype(int)
+        a, b = fs - i0, fa - j0
+        return (G[i0, j0] * (1 - a) * (1 - b) + G[i0 + 1, j0] * a * (1 - b) + G[i0, j0 + 1] * (1 - a) * b
+                + G[i0 + 1, j0 + 1] * a * b)
+
+    def in_box(P):
+        sp = P[:, 2] * side
+        d = le_fit(sp) - P[:, 0]
+        return ((sp > s0 - mg) & (sp < s1 + mg) & (P[:, 1] > t0 - 0.004) & (P[:, 1] < t1 + 0.004)
+                & (d > -0.004) & (d < 2.5 * dc))
+    pool = model.pool(in_box)
+    if pool is None:
+        return
+    sp = pool[:, 2] * side
+    d = le_fit(sp) - pool[:, 0]
+    cy = cy_fit(sp)
+    vd, vy = d - dc, pool[:, 1] - cy
+    r = np.hypot(vd, vy)
+    th = np.arctan2(vy, -vd)
+    r0, r1 = look(R0, sp, th), look(R1, sp, th)
+    good = ~np.isnan(r0) & ~np.isnan(r1) & (r0 > 1e-5)
+    r0, r1 = np.where(good, r0, 1.0), np.where(good, r1, 1.0)
+    w = ((1 - smoothstep(NOSE_FAN[0], NOSE_FAN[1], np.abs(np.degrees(th))))
+         * smoothstep(s0 - mg, s0, sp) * (1 - smoothstep(s1, s1 + mg, sp))
+         * (1 - smoothstep(1.2, 1.5, r / r0))
+         * (1 - smoothstep(NOSE_GATE[0], NOSE_GATE[1], np.abs(r1 - r0))) * good)
+    k = 1 + w * (r1 / r0 - 1)
+    nd, ny = dc + vd * k, cy + vy * k
+    newP = pool.copy()
+    newP[:, 0] = le_fit(sp) - nd
+    newP[:, 1] = ny
+    mv = np.linalg.norm(newP - pool, axis=1)
+    model.unpool(newP)
+    # shading: the remesh's normals on the nose followed its notches, so moved skin takes fresh welded normals
+    for a, sel in model._pool:
+        e = model.acc[a]
+        if "N" not in e:
+            continue
+        idx = np.nonzero(sel)[0]
+        moved = np.zeros(len(e["P"]), bool)
+        moved[idx] = mv[:len(idx)] > 1e-6
+        mv = mv[len(idx):]
+        if not moved.any():
+            continue
+        # reference side of each vertex: its own faces (a cap or the other skin across a hard edge stays out)
+        T = np.vstack(e["tris"])
+        fn = np.cross(e["P"][T[:, 1]] - e["P"][T[:, 0]], e["P"][T[:, 2]] - e["P"][T[:, 0]])
+        acc = np.zeros_like(e["P"])
+        for c in range(3):
+            np.add.at(acc, T[:, c], fn)
+        ln = np.linalg.norm(acc, axis=1)
+        use = moved & (ln > 1e-20)
+        own = acc[use] / ln[use, None]
+        own *= np.where(np.einsum("ij,ij->i", own, e["N"][use]) < 0, -1.0, 1.0)[:, None]
+        e["N"][use] = own
+        e["renorm"] = e.get("renorm", np.zeros(len(e["P"]), bool)) | use
+    report.append("%s: moved %d of %d points, max %.2f mm, p95 %.2f mm" % (
+        tag, int((np.linalg.norm(newP - pool, axis=1) > 1e-6).sum()), len(pool),
+        np.linalg.norm(newP - pool, axis=1).max() * 1e3,
+        np.percentile(np.linalg.norm(newP - pool, axis=1)[np.linalg.norm(newP - pool, axis=1) > 1e-6], 95) * 1e3))
+
+
 def main():
     """Command line: polish one hangar GLB by its key and write the result"""
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("src")
     ap.add_argument("key")
     ap.add_argument("dst")
+    ap.add_argument("--steps", default="denoise,tops,surf,nose",
+                    help="which passes to run, comma-separated (e.g. --steps nose on an already polished model)")
     a = ap.parse_args()
+    steps = set(a.steps.split(","))
     m = Model(a.src)
     rep = []
-    for spec in DENOISE.get(a.key, []):
+    for spec in DENOISE.get(a.key, []) if "denoise" in steps else []:
         denoise(m, spec, rep)
-    for spec in TOPS.get(a.key, []):
+    for spec in TOPS.get(a.key, []) if "tops" in steps else []:
         smooth_top(m, spec, rep)
-    for spec in SURF[a.key]:
+    for spec in SURF[a.key] if "surf" in steps else []:
         if spec[1] == "z":
             for side in (-1, 1):
                 polish_surface(m, spec, side, rep)
         else:
             polish_surface(m, spec, 0, rep)
-    if os.environ.get("POLISH_FRESH"):
+    noses = NOSE.get(a.key, []) if "nose" in steps else []
+    for spec in noses:
+        for side in (-1, 1):
+            nose_clean(m, spec, side, rep)
+    if os.environ.get("POLISH_FRESH") or noses:
         fresh_normals(m)
     m.write(a.dst)
     print("\n".join(rep))
