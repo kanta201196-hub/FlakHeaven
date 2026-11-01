@@ -17,10 +17,13 @@
    the hangar light. On the paint (texels within a band round the common paint tone of the colour map, --ref for
    the ORM map; intakes, nozzles and gaps are left alone) each channel becomes its common median plus the
    source's fine detail and a share of its slow variation (even_patches).
+4. Dent shading (--dents <mask.png>, colour map). The generator baked light and shadow over the dents of its
+   remesh into the paint; once skin_refit.py has rebuilt that skin, the old shading reads as dents again. Inside
+   the mask (skin_refit.py --mask) the luminance band of a dent's size is divided out (flatten_dents).
 The GLB is read only for its UVs; images inside it are not touched (Godot uses the extracted files next to it).
 
   python3 -I tex_clean.py <model.glb> <map.jpg> <out.jpg> [--pad 24] [--camo 2 [--sigma 3.5] [--detail 0.7] [--wear 0.35]]
-      [--even 1 [--ref <colour map.jpg>] [--even-detail 1] [--even-wear 0.3]]
+      [--even 1 [--ref <colour map.jpg>] [--even-detail 1] [--even-wear 0.3]] [--dents <mask.png>]
 On a normal map --even with a small --even-detail and no wear keeps the panel relief and drops the generator's
 crinkle and the tilt of every patch (each patch shaded a little differently).
 Recipe of «Оса» 2 (31.10): colour --even 0.9 --even-detail 0.7; ORM --even 1 --ref <colour>; normal --even 1
@@ -163,6 +166,26 @@ def nblur(a, w, s):
     return blur(a * w, s) / np.maximum(blur(w, s), 1e-4)
 
 
+def flatten_dents(img, mask, cov, report, small=4.0, large=40.0, clip=0.12):
+    """Take the shading the generator baked over its dents out of the paint where the skin was refitted
+    (skin_refit.py --mask): the luminance band between `small` and `large` texels (a dent's light and shadow) is
+    divided out, the fine detail (panel lines, rivets, grime) under `small` and the slow variation over `large`
+    stay. The correction is clipped to +-clip, so a camouflage edge in the band leaves only a faint halo."""
+    from scipy.ndimage import gaussian_filter
+    f = img.astype(np.float32) / 255.0
+    w = cov.astype(np.float32)
+    lum = f @ np.array([0.2126, 0.7152, 0.0722], np.float32) + 1e-3
+
+    def nb(a, s):
+        return gaussian_filter(a * w, s) / np.maximum(gaussian_filter(w, s), 1e-4)
+    ratio = np.clip(nb(lum, large) / np.maximum(nb(lum, small), 1e-3), 1 - clip, 1 + clip)
+    m = np.clip(gaussian_filter(mask.astype(np.float32), small), 0, 1) * w
+    gain = 1 + (ratio - 1) * m
+    report.append("dent shading: %.1f%% of the islands, mean |gain-1| %.3f there" % (
+        100 * (m > 0.5).sum() / max(cov.sum(), 1), float(np.abs(gain - 1)[m > 0.5].mean()) if (m > 0.5).any() else 0))
+    return np.clip(f * gain[..., None] * 255 + 0.5, 0, 255).astype(np.uint8)
+
+
 def lab(rgb):
     """Rough perceptual space (sRGB 0..1 -> L, a, b-like opponent channels) for tone clustering"""
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
@@ -277,6 +300,8 @@ def main():
     ap.add_argument("--ref", default="", help="colour map that tells the paint apart (for --even on ORM)")
     ap.add_argument("--even-detail", dest="even_detail", type=float, default=1.0)
     ap.add_argument("--even-wear", dest="even_wear", type=float, default=0.3)
+    ap.add_argument("--dents", default="", help="UV mask of the refitted skin (skin_refit.py --mask): flatten the "
+                    "baked dent shading there")
     a = ap.parse_args()
     im = Image.open(a.src).convert("RGB")
     arr = np.asarray(im).copy()
@@ -288,6 +313,10 @@ def main():
         if a.ref:
             ref = np.asarray(Image.open(a.ref).convert("RGB").resize((size, size), Image.BILINEAR))
         arr = even_patches(arr, cov, a.even, rep, ref, detail=a.even_detail, wear=a.even_wear)
+    if a.dents:
+        mk = np.asarray(Image.open(a.dents).convert("L").resize((size, size), Image.BILINEAR)) > 127
+        k = size / 4096.0
+        arr = flatten_dents(arr, mk, cov, rep, small=4.0 * k, large=40.0 * k)
     if a.camo:
         def tl(t):
             return [[float(v) for v in r.split(",")] for r in t.split(";")] if t else None
