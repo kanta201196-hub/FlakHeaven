@@ -319,7 +319,10 @@ const TURRET_SHOW_YAW := 1.35
 const SHOW_KEY_COLOR := Color(1.0, 0.84, 0.64)
 const SHOW_KEY_ENERGY := 1.25
 const SHOW_RIM_COLOR := Color(0.93, 0.96, 1.0)
-const SHOW_RIM_ENERGY := 1.7
+const SHOW_RIM_ENERGY := 1.5
+## Rim light highlight strength: a full-strength highlight from behind turned the glossy top of a wing into a white
+## sheet when the camera looked along it
+const SHOW_RIM_SPECULAR := 0.35
 const SHOW_AMBIENT := Color(0.52, 0.62, 0.82)
 const SHOW_AMBIENT_ENERGY := 0.42
 var _show_light := false
@@ -366,7 +369,7 @@ func _set_bg(mode: String) -> void:
 		_key_light.light_energy = SHOW_KEY_ENERGY
 		_rim_light.light_color = SHOW_RIM_COLOR
 		_rim_light.light_energy = SHOW_RIM_ENERGY
-		_rim_light.light_specular = 1.0
+		_rim_light.light_specular = SHOW_RIM_SPECULAR
 		_env.ambient_light_color = SHOW_AMBIENT
 		_env.ambient_light_energy = SHOW_AMBIENT_ENERGY
 	elif fly:
@@ -969,7 +972,8 @@ func _process(delta: float) -> void:
 	cam.position = focus + dir * _dist
 	cam.look_at(focus, Vector3.UP)
 	if _show_light and _bg == "flight":   # the showcase rim light stays behind the plane as the camera orbits
-		var travel := Vector3(dir.x, 0.0, dir.z).normalized() * 0.8 + Vector3(0.0, -0.6, 0.0)
+		# almost level: from above and behind it would light the top of the wings straight into the camera
+		var travel := Vector3(dir.x, 0.0, dir.z).normalized() + Vector3(0.0, -0.22, 0.0)
 		_rim_light.basis = Basis.looking_at(travel.normalized(), Vector3.UP)
 
 
