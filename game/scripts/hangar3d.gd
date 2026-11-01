@@ -266,7 +266,7 @@ const HALL_FOG_END := 26.0
 const HALL_FOG_MAX := 0.55
 ## Weapon store stands: how much of their own colour they keep, the rest going to a dull khaki (the bright orange
 ## of the missile cart read as a toy, S14-13), and the darkening that goes with it
-const STAND_SAT := 0.3
+const STAND_SAT := 0.12
 const STAND_TONE := 0.88
 
 
