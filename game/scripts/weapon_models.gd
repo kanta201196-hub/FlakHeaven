@@ -31,7 +31,7 @@ static func make(weapon: String, t: int, side := "", cls := "", evo := false, pl
 	if side == "under":
 		var pm := MeshInstance3D.new()
 		pm.name = "pylon"
-		pm.mesh = pylon_mesh(weapon, mi.mesh.get_aabb().end.y)
+		pm.mesh = pylon_mesh(weapon, mi.mesh.get_aabb().end.y, hq)
 		mi.add_child(pm)
 	# кормовая кабина стрелка неподвижна — поворачивается только шар со стволами (поворот гасит render3d)
 	if weapon == "turret" and side == "tail" and tm != null:
@@ -159,8 +159,9 @@ static func surface_low(scene: PackedScene, x: float, z: float, high := false) -
 const PYLON_H := 0.07
 
 
-static func pylon_mesh(weapon: String, top: float) -> Mesh:
-	var key := "pylon_%s_%.3f" % [weapon, top]
+## Pylon of `weapon` whose model top is at `top`; `hq` — the hangar's, in service paint (S14-13)
+static func pylon_mesh(weapon: String, top: float, hq := false) -> Mesh:
+	var key := "pylon_%s_%.3f%s" % [weapon, top, "_hq" if hq else ""]
 	if _cache.has(key):
 		return _cache[key]
 	var rail := weapon in ["aam", "arm"]
@@ -175,7 +176,8 @@ static func pylon_mesh(weapon: String, top: float) -> Mesh:
 	if rail:   # пусковой рельс вдоль ракеты
 		st.append_from(_box(Vector3(0.62, 0.012, 0.045)), 0, Transform3D(Basis(), Vector3(-0.02, top + 0.006, 0)))
 	st.commit(am)
-	am.surface_set_material(0, _mat("hull"))
+	var hull := _mat("hull")
+	am.surface_set_material(0, WeaponPaint.plain(hull.albedo_color, hull.roughness, hull.metallic, 0.62) if hq else hull)
 	_cache[key] = am
 	return am
 
@@ -260,6 +262,8 @@ static func has_bay(cls_id: String, lvl: int) -> bool:
 const HQ_DIR := "res://models/weapons/hq/"
 
 
+## Mesh of `weapon` at view tier `t` (or its evolution) from its GLB, null when there is none. `hq` — the
+## hangar version (models/weapons/hq/) in service paint (WeaponPaint, S14-13); combat gets the plain one.
 static func weapon_model(weapon: String, t: int, evo := false, hq := false) -> Mesh:
 	var file := ""
 	if weapon == "bombs" and t == CARPET_BAY_T and ResourceLoader.exists(CARPET_BAY_GLB):
@@ -274,7 +278,39 @@ static func weapon_model(weapon: String, t: int, evo := false, hq := false) -> M
 		return null
 	if hq and ResourceLoader.exists(HQ_DIR + file.get_file()):
 		file = HQ_DIR + file.get_file()
-	return _glb_mesh(file, 1.0, Color(), "glb_" + file.get_file().get_basename() + ("_hq" if file.begins_with(HQ_DIR) else ""))
+	var m := _glb_mesh(file, 1.0, Color(), "glb_" + file.get_file().get_basename() + ("_hq" if file.begins_with(HQ_DIR) else ""))
+	if hq and m != null:
+		return WeaponPaint.paint_mesh(m, weapon, body_radius(m))
+	return m
+
+
+static var _radius_cache := {}
+
+## Body radius of a weapon mesh lying along X: the thinnest of the widest cross-sections over the middle 60 %
+## (wings and fins widen some slices, the body is in every one); cached per mesh. Hangar3D seats weapons on
+## their stands by it, WeaponPaint keeps the section seams on it.
+static func body_radius(m: Mesh) -> float:
+	if _radius_cache.has(m):
+		return _radius_cache[m]
+	var bb := m.get_aabb()
+	var c := bb.get_center()
+	var step := bb.size.x * 0.05
+	var wide := PackedFloat32Array()
+	wide.resize(13)
+	for si in m.get_surface_count():
+		var vs: PackedVector3Array = m.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]
+		for v in vs:
+			var i := roundi((v.x - c.x) / step)
+			if absi(i) <= 6 and absf(v.x - c.x - i * step) < step * 0.4:
+				wide[i + 6] = maxf(wide[i + 6], Vector2(v.y - c.y, v.z - c.z).length())
+	var r := INF
+	for w in wide:
+		if w > 0.0:
+			r = minf(r, w)
+	if r == INF:
+		r = minf(bb.size.y, bb.size.z) * 0.5
+	_radius_cache[m] = r
+	return r
 
 
 ## part: "" — вся турель (бой), "body" — без люльки со стволами, "guns" — только они в своих осях (шарнир — 0),
