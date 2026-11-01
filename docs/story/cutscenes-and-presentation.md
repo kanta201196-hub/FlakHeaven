@@ -56,6 +56,10 @@ Grom joins (op 4). Must obey the «игрок не преодолевает» pr
 during the accent that would not have fired anyway. The autotest must see a `BANNER` line and keep running.
 
 ### 3.4. In-engine intro/outro scenes (M2, M7, M10) — core ~2 days + ~0.4 day per scene
+*(in game: `Cutscene`, `StoryScenes`, `HudCutscene`. Step 11, Kanta 01.11: every intro, outro and the epilogue card
+has comic-style key art (`game/art/story/<scene id>.jpg`, Figma AI, 1536×864) shown with a slow push-in instead of the
+live fly-over; the fly-over remains the fallback behind F1 `story_art`. Plan: `docs/superpowers/plans/2026-11-01-story-art.md`.)*
+
 **Runtime (new `Cutscene` class, `RefCounted` like `Story`):**
 - A scene = a small data script (`game/scripts/story/scenes/<op>_<intro|outro>.gd` or a Dictionary in one file):
   camera keyframes `[t, position, look_at, fov]`, actor list (which hangar models, formation offsets, roll/bank curves),

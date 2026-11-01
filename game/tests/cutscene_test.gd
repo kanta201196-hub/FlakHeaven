@@ -26,6 +26,14 @@ func _init() -> void:
 	_check(is_equal_approx(CutsceneKeys.fade_at(0.0, 10.0), 1.0), "black at the start")
 	_check(is_equal_approx(CutsceneKeys.fade_at(5.0, 10.0), 0.0), "clear in the middle")
 	_check(CutsceneKeys.fade_at(9.9, 10.0) > 0.7, "fading to black at the end")
+	# story art (step 11): the picture covers the screen with a slow push-in, never shows an edge
+	var r0 := CutsceneKeys.art_rect(Vector2(1920, 1080), Vector2(1536, 864), 0.0, 10.0)
+	_check(r0.position.x <= 0.0 and r0.position.y <= 0.0 and r0.end.x >= 1920.0 and r0.end.y >= 1080.0, "art covers the screen at the start")
+	var r1 := CutsceneKeys.art_rect(Vector2(1920, 1080), Vector2(1536, 864), 10.0, 10.0)
+	_check(r1.size.x > r0.size.x and r1.end.x >= 1920.0 and r1.position.x <= 0.0, "art pushes in and still covers the screen at the end")
+	var rt := CutsceneKeys.art_rect(Vector2(1080, 1920), Vector2(1536, 864), 5.0, 10.0)
+	_check(rt.size.y >= 1920.0 and rt.position.y <= 0.0, "a tall window is covered too")
+	_check(CutsceneKeys.art_rect(Vector2(1920, 1080), Vector2.ZERO, 1.0, 10.0) == Rect2(), "no picture: empty rect")
 	# the test scene is well-formed
 	_check(float(StoryScenes.TEST["dur"]) >= 5.0 and (StoryScenes.TEST["cam"] as Array).size() >= 2, "test scene has a duration and two camera keys")
 	for l in StoryScenes.TEST["lines"]:
