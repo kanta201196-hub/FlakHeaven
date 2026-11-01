@@ -51,6 +51,18 @@
   - Оса-2, геометрия: `plane_polish.py` с боксами `DENOISE` (воздухозаборники, мотогондолы, наплыв, фюзеляж) — фильтр нормалей граней с сохранением изломов и выпрямление линий изломов (сдвиг до 2.3 мм); кромки крыла, стабилизатора и килей — `SURF` (только контур).
   - Оса-2, текстуры: `tex_clean.py --even 0.9 --even-detail 0.7` (цвет), `--even 1 --ref <цвет>` (ORM), `--even 1 --ref <цвет> --even-detail 0.4 --even-wear 0` (нормали) — лоскуты генератора с разной шероховатостью и тоном выравниваются к медиане краски, деталь и износ остаются; затем `--embed` (имена `col`, `orm`, `nrm`).
   - После обоих — перезапечь боевые модели (`--tris 30000 --tex 2048 --outline 2 --glass 1 --shade hangar`).
+- **Hangar close-up detail (01.11, branch claude/plane-detail).** No model or texture rebake: the hangar draws the
+  detail in shaders, so the GLBs, their UVs and the battle models are unchanged.
+  - Skin: `shaders/plane_detail.gdshaderinc`, included by the livery shader and switched on by `PlaneDetail.setup`
+    (`game/scripts/plane_detail.gd`) when `Livery.apply(..., detail = true)` — only `Hangar3D` passes it. Engraved
+    panel lines and rivet rows in model axes (frames/spars across the flow, swept by `PlaneDetail.SHAPE`, stringers
+    and ribs along it, staggered bay by bay), per-panel tone, chips along seams (close-ups only), a clear coat
+    (`GLOSS`). The source paint (fighters' default) goes through the same shader as pattern -1.
+  - Canopy: `HangarCockpit` (`game/scripts/hangar_cockpit.gd`) hides the GLB «glass» surface and adds a node
+    «cockpit»: the same glass with `shaders/canopy_glass_hangar.gdshader` (clear, fresnel reflection, frame sill /
+    bows / ribs from `FRAMES`), a tub closing the cut in the skin, seats, panel with gauges, consoles, stick.
+  - F1 `hangar_detail` (default 1) turns both off; F1 `hangar_light` (default 0, R-22) is the warm key + rim light.
+  - A new hangar model needs a `PlaneDetail.SHAPE` and a `HangarCockpit.FRAMES` row (otherwise defaults).
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.
 - `game/tools/model_lab/model_lab.gd` — подготовка сырого GLB (`prep`: длина 1, нос +X, `--nose=-x`, `--budget=N`) и предпросмотр сверху рядом со спрайтом (`preview`). Команды — в начале файла.
