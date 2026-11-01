@@ -75,6 +75,21 @@
     bows / ribs from `FRAMES`), a tub closing the cut in the skin, seats, panel with gauges, consoles, stick.
   - F1 `hangar_detail` (default 1) turns both off; F1 `hangar_light` (default 0, R-22) is the warm key + rim light.
   - A new hangar model needs a `PlaneDetail.SHAPE` and a `HangarCockpit.FRAMES` row (otherwise defaults).
+- **«Кит» dents and «Грач» intakes (01.11, branch claude/kit-grach-fix).** Recipe, from the hangar GLB of `main`
+  and copies of its extracted maps:
+  1. Bombers: `skin_refit.py <hangar.glb> bomber_N <out.glb> --report --mask <mask.png>` — the dented skin (zones in
+     `FITS`: fuselage and nacelle tubes of Кит-1; the Кит-2 nacelle tube is in the config but its result was not
+     taken — it deepened the dark dimples on the nacelle tops, Кит-2 is unchanged) is moved onto robust penalised spline
+     surfaces r(x, theta) and blended by a thin-plate solve; `--report` prints the dent depth (height over a local
+     quadric) before/after per zone. Then `tex_clean.py <out.glb> <col.jpg> <col.jpg> --dents <mask.png>` takes the
+     baked dent shading out of the paint in the moved skin; ORM gets padding only.
+  2. Attackers: `intake_rebuild.py <hangar.glb> attacker_N <out.glb> --maps <col.jpg> <orm.jpg>` (config `INTAKES`)
+     cuts the generator's intake out and builds a lip ring (cowl fit carried to the lip plane, rounded nose of
+     thickness `t`), a dark duct with engine face and spinner, and a nacelle body under the cowl that closes the old
+     holes; its own UV island is painted (lip from the cowl paint, duct below the livery's keep threshold). Then
+     `tex_clean.py` (padding) on both maps. Грач-2's intake span in `Livery.ENGINE_HOLES` is off (see there).
+  3. Copy GLB and maps into `game/models/hangar/`, `godot --headless --path game --import`, rebake the battle models
+     (`battle_bake.py --tris 30000` (Кит-2 36000) `--tex 2048 --outline 2 --glass 1 --shade hangar --threads 2`).
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.
 - `game/tools/model_lab/model_lab.gd` — подготовка сырого GLB (`prep`: длина 1, нос +X, `--nose=-x`, `--budget=N`) и предпросмотр сверху рядом со спрайтом (`preview`). Команды — в начале файла.

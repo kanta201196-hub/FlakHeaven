@@ -220,9 +220,12 @@ const EXHAUST := {
 ## within 0.9 r of the axis in one of the x spans and faces the axis or along it (the duct walls and the caps), so
 ## the outer skin of the nacelle and of the nozzle keeps the paint. Measured on the hangar models (radial fit of the
 ## nacelle skin, caps found by their ±X normals); the battle models share the shape and axes.
+## 01.11 (intake_rebuild.py): the intakes of «Грач» are built geometry now, the duct painted dark in the texture.
+## «Грач» 2's new intake is a smaller oval round its own axis, so the nacelle axis here would darken the lower half
+## of its lip: its intake span is off (x 1.0, outside the model), the nozzle span stays.
 const ENGINE_HOLES := {
 	"attacker_1": [-0.0387, 0.0884, 0.0335, [0.065, 0.13], [-0.26, -0.15]],
-	"attacker_2": [-0.0293, 0.0919, 0.0404, [0.035, 0.12], [-0.31, -0.20]],
+	"attacker_2": [-0.0293, 0.0919, 0.0404, [1.0, 1.0], [-0.31, -0.20]],
 	"bomber_2": [-0.0144, 0.0702, 0.0295, [-0.135, 0.0], [-0.29, -0.24]],
 }
 
