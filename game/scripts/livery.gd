@@ -220,13 +220,27 @@ const EXHAUST := {
 ## within 0.9 r of the axis in one of the x spans and faces the axis or along it (the duct walls and the caps), so
 ## the outer skin of the nacelle and of the nozzle keeps the paint. Measured on the hangar models (radial fit of the
 ## nacelle skin, caps found by their ±X normals); the battle models share the shape and axes.
-## 01.11 (intake_rebuild.py): the intakes of «Грач» are built geometry now, the duct painted dark in the texture.
-## «Грач» 2's new intake is a smaller oval round its own axis, so the nacelle axis here would darken the lower half
-## of its lip: its intake span is off (x 1.0, outside the model), the nozzle span stays.
+## 01.11 (intake_rebuild.py): the intakes of «Грач» 1 and 2 are built geometry with their own duct paint
+## (INTAKE_DUCTS); this round test would darken the inner half of their lips, so their intake spans are off (x 1.0,
+## outside the model), the nozzle spans stay.
 const ENGINE_HOLES := {
-	"attacker_1": [-0.0387, 0.0884, 0.0335, [0.065, 0.13], [-0.26, -0.15]],
+	"attacker_1": [-0.0387, 0.0884, 0.0335, [1.0, 1.0], [-0.26, -0.15]],
 	"attacker_2": [-0.0293, 0.0919, 0.0404, [1.0, 1.0], [-0.31, -0.20]],
 	"bomber_2": [-0.0144, 0.0702, 0.0295, [-0.135, 0.0], [-0.29, -0.24]],
+}
+
+## 01.11 (Kanta: the «Грач» intakes read as jet pods with torn skin; intake_rebuild.py rebuilt them after the
+## prototype's layout): an oval opening behind a rounded lip and a duct that narrows and turns inward, painted in
+## the texture light grey at the lip and fading to near black in its depth (no engine face). Inside the duct the
+## surface keeps that texture colour, roughness and metal under every paint scheme (the paint would carry its
+## camouflage inside), the hangar detail layer is off there, and the specular is low (sky light grazing the duct
+## wall read as a grey disc). Per plane, model axes (nose +X, up +Y, both sides by |z|), as printed by
+## `intake_rebuild.py --report`: [opening centre y, |z|, half height, half width, duct start x at the centre (the
+## lip plane less half the lip), lip plane dx/dy, dx/d|z|, duct depth, |z| of the duct's inboard wall (just outboard
+## of the splitter plate's face, which keeps the paint), shift of the duct's centre line at full depth (dy, d|z|)].
+const INTAKE_DUCTS := {
+	"attacker_1": [-0.0387, 0.0804, 0.025, 0.0205, 0.11025, -0.35, 0.0, 0.055, 0.06155, 0.01172, 0.00465],
+	"attacker_2": [-0.031, 0.0939, 0.027, 0.0195, 0.08135, -0.5, 0.0, 0.052, 0.07605, 0.0202, -0.0011],
 }
 
 ## The source paint in the shader's pass-through form (pattern -1: the texture's own colour, roughness and metal),
@@ -335,7 +349,7 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String, detail := fa
 			var m0 := mi.mesh.surface_get_material(si)
 			var m := mi.get_surface_override_material(si)
 			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex, holes,
-					float(CLASS_SCALE.get(cls, 1.0)), nose)
+					float(CLASS_SCALE.get(cls, 1.0)), nose, INTAKE_DUCTS.get(key, []))
 			if sm != null:
 				if detail:
 					PlaneDetail.setup(sm, key, xf)
@@ -368,10 +382,10 @@ static func _rel(mi: Node3D, model: Node3D) -> Transform3D:
 
 ## Paint material for one surface: `ex` — exhaust boxes (EXHAUST), `holes` — engine openings (ENGINE_HOLES) of the
 ## plane, both only for the textured skin (mode 0); `cls_scale` — CLASS_SCALE of the plane for pattern 7 (NATURAL);
-## `nose` — the plane's NOSE entry for the shark mouth (style 9; empty — no mouth); null for surfaces that keep their
-## own material.
+## `nose` — the plane's NOSE entry for the shark mouth (style 9; empty — no mouth); `ducts` — the plane's
+## INTAKE_DUCTS entry (textured skin only; empty — none); null for surfaces that keep their own material.
 static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transform3D, box: AABB, ex: Array = [],
-		holes: Array = [], cls_scale: float = 1.0, nose: Array = []) -> ShaderMaterial:
+		holes: Array = [], cls_scale: float = 1.0, nose: Array = [], ducts: Array = []) -> ShaderMaterial:
 	var bm := m as BaseMaterial3D
 	if bm == null or nm == "glass":
 		return null                     # стекло фонаря (ShaderMaterial «glass») — одно на все окраски
@@ -418,6 +432,11 @@ static func _material(m: Material, nm: String, v: Array, src: Array, xf: Transfo
 		sm.set_shader_parameter("has_holes", true)
 		sm.set_shader_parameter("hole_axis", Vector3(holes[0], holes[1], holes[2]))
 		sm.set_shader_parameter("hole_x", Vector4(hi[0], hi[1], hn[0], hn[1]))
+	if mode == 0 and ducts.size() == 11:
+		sm.set_shader_parameter("has_ducts", true)
+		sm.set_shader_parameter("duct_o", Vector4(ducts[0], ducts[1], ducts[2], ducts[3]))
+		sm.set_shader_parameter("duct_p", Vector4(ducts[4], ducts[5], ducts[6], ducts[7]))
+		sm.set_shader_parameter("duct_e", Vector3(ducts[9], ducts[10], ducts[8]))
 	sm.set_shader_parameter("c_dark", v[2])
 	sm.set_shader_parameter("c_mid", v[3])
 	sm.set_shader_parameter("c_light", v[4])
@@ -469,6 +488,10 @@ uniform vec3 ex_max1 = vec3(0.0);
 uniform bool has_holes = false;   // Livery.ENGINE_HOLES: intakes and nozzles stay dark metal
 uniform vec3 hole_axis = vec3(0.0);   // nacelle axis y, |z|, radius
 uniform vec4 hole_x = vec4(0.0);      // intake x0, x1, nozzle x0, x1
+uniform bool has_ducts = false;   // Livery.INTAKE_DUCTS: built intake ducts keep their texture paint
+uniform vec4 duct_o = vec4(0.0);  // opening centre y, |z|, half height, half width
+uniform vec4 duct_p = vec4(0.0);  // duct start x at the centre, lip plane dx/dy, dx/d|z|, depth
+uniform vec3 duct_e = vec3(0.0);  // centre-line shift at full depth (dy, d|z|), |z| of the inboard wall
 uniform vec3 c_dark : source_color;
 uniform vec3 c_mid : source_color;
 uniform vec3 c_light : source_color;
@@ -542,6 +565,24 @@ float engine_hole(vec3 p, vec3 n) {
 	float facing = max(1.0 - smoothstep(-0.2, 0.15, radial), smoothstep(0.5, 0.7, abs(n.x)));
 	float span = max(x_span(p.x, hole_x.x, hole_x.y), x_span(p.x, hole_x.z, hole_x.w));
 	return near_axis * facing * span;
+}
+
+// 01.11: 1 inside a built intake duct (Livery.INTAKE_DUCTS): behind the lip, within the opening's oval carried along
+// the duct's centre line as it turns inward, facing that line (the walls; the far cap faces forward), outboard of
+// the splitter plate. The lip and the fairing face outward and keep the paint.
+float intake_duct(vec3 p, vec3 n) {
+	float az = abs(p.z);
+	vec2 q0 = vec2(p.y - duct_o.x, az - duct_o.y);
+	float back = duct_p.x + duct_p.y * q0.x + duct_p.z * q0.y - p.x;   // depth behind the duct's start
+	float s = clamp(back / duct_p.w, 0.0, 1.0);
+	vec2 q = q0 - duct_e.xy * (s * s * (3.0 - 2.0 * s));
+	float e = length(q / duct_o.zw);
+	float in_x = smoothstep(0.0, 0.0015, back) * (1.0 - smoothstep(duct_p.w + 0.015, duct_p.w + 0.025, back));
+	float in_e = 1.0 - smoothstep(1.1, 1.2, e);
+	float wall = smoothstep(duct_e.z - 0.0001, duct_e.z + 0.0001, az);
+	float radial = dot(q, vec2(n.y, n.z * sign(p.z))) / max(length(q), 1e-5);
+	float facing = max(1.0 - smoothstep(-0.1, 0.3, radial), smoothstep(0.5, 0.7, n.x) * smoothstep(0.6, 0.8, s));
+	return in_x * in_e * wall * facing;
 }
 
 // style 9: shark mouth on both sides of the nose (Livery.NOSE). u runs along the nose from the mouth's front end (0)
@@ -944,6 +985,9 @@ void fragment() {
 	float hole = has_holes ? engine_hole(lp, normalize(ln)) : 0.0;
 	col = mix(col, min(src * 0.45, vec3(0.03)), hole);
 	keep *= 1.0 - hole;
+	// 01.11: built intake ducts keep their texture paint (light grey at the lip, dark in the depth), dull
+	float duct = has_ducts ? intake_duct(lp, normalize(ln)) : 0.0;
+	keep = max(keep, duct);
 	vec3 alb = mix(col, src, keep);
 	float rough = mix(mix(mix(clamp(liv_rough + rough_add + (rough0 - 0.6) * 0.25, 0.05, 1.0), 0.5, mk), 0.6, hole), rough0, keep);
 	float metal = mix(mix(mix(liv_metal * metal_k, 0.45, mk), 0.35, hole), 0.0, keep);
@@ -962,7 +1006,7 @@ void fragment() {
 		float edge;
 		float pid;
 		pd_eval(lp, n0, grad, cav, riv, edge, pid);
-		float dk = detail_k * (1.0 - 0.7 * keep) * (1.0 - hole);
+		float dk = detail_k * (1.0 - 0.7 * keep) * (1.0 - hole) * (1.0 - duct);
 		vec3 dn = mat3(from_model) * (pd_bump(n0, grad, dk) - n0);
 		NORMAL = normalize(NORMAL + mat3(VIEW_MATRIX) * mat3(MODEL_MATRIX) * dn);
 		alb *= 1.0 + dk * (0.1 * (pid - 0.5) - 0.55 * cav - 0.18 * riv);
@@ -979,7 +1023,8 @@ void fragment() {
 		rough = mix(rough, rough * 0.55 + 0.05, pd_gloss * (1.0 - chip));
 	}
 	ALBEDO = alb;
-	ROUGHNESS = rough;
+	ROUGHNESS = max(rough, 0.85 * duct);
 	METALLIC = metal;
+	SPECULAR = mix(0.5, 0.15, duct);
 }
 """

@@ -15,8 +15,10 @@ const SPEC := {
 	"bomber_1": {"prop": [Vector2(37, -81), Vector2(55, -39), Vector2(55, 39), Vector2(37, 82)], "pr": 20.0,
 		"trail": [Vector2(-10, -81), Vector2(8, -39), Vector2(8, 39), Vector2(-10, 82)],
 		# 3D model: trails start on each engine axis at x = trail_x (model length 1), where the nacelles end —
-		# measured on fh_battle_bomber_1.glb; on the axis further forward a trail starts inside the nacelle
-		"trail_x": -0.10},
+		# measured on fh_battle_bomber_1.glb; on the axis further forward a trail starts inside the nacelle.
+		# 01.11: the rebuilt nacelles end at x -0.095 (inner) and -0.115 (outer); -0.105 keeps every start within
+		# 0.92 % of the length of the skin (self-check limit 1 %)
+		"trail_x": -0.105},
 	"bomber_2": {"jet": [Vector2(-80, -21.5), Vector2(-80, 21)], "r": 12.0},
 }
 
