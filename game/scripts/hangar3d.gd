@@ -313,10 +313,27 @@ const GLOW_THRESHOLD := 1.6   # flight background: glow only above this HDR leve
 const TURRET_SHOW_YAW := 1.35
 
 
+## Hangar showcase light (F1 `hangar_light`, R-22: off until Kanta's «ок»), flight background only: a warm key light
+## from the front quarter and a strong neutral rim light that always comes from behind the plane as seen by the camera
+## (aimed every frame in _process), so the silhouette and the panel edges catch a bright outline at any angle.
+const SHOW_KEY_COLOR := Color(1.0, 0.84, 0.64)
+const SHOW_KEY_ENERGY := 1.25
+const SHOW_RIM_COLOR := Color(0.93, 0.96, 1.0)
+const SHOW_RIM_ENERGY := 1.5
+## Rim light highlight strength: a full-strength highlight from behind turned the glossy top of a wing into a white
+## sheet when the camera looked along it
+const SHOW_RIM_SPECULAR := 0.35
+const SHOW_AMBIENT := Color(0.52, 0.62, 0.82)
+const SHOW_AMBIENT_ENERGY := 0.42
+var _show_light := false
+
+
 func _set_bg(mode: String) -> void:
-	if mode == _bg:
+	var show := Tuning.g("hangar_light") > 0.0
+	if mode == _bg and show == _show_light:
 		return
 	_bg = mode
+	_show_light = show
 	var fly := mode == "flight"
 	_flight_bg.visible = fly
 	_store_bg.visible = not fly
@@ -347,6 +364,16 @@ func _set_bg(mode: String) -> void:
 	_env.glow_intensity = 0.45
 	_env.glow_bloom = 0.0
 	_env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	if fly and _show_light:
+		_key_light.light_color = SHOW_KEY_COLOR
+		_key_light.light_energy = SHOW_KEY_ENERGY
+		_rim_light.light_color = SHOW_RIM_COLOR
+		_rim_light.light_energy = SHOW_RIM_ENERGY
+		_rim_light.light_specular = SHOW_RIM_SPECULAR
+		_env.ambient_light_color = SHOW_AMBIENT
+		_env.ambient_light_energy = SHOW_AMBIENT_ENERGY
+	elif fly:
+		_rim_light.basis = Basis.looking_at(Vector3(-0.6, -0.2, 0.75).normalized(), Vector3.UP)
 
 
 ## Каждый кадр, пока открыта вкладка «САМОЛЁТ»: какой самолёт показать и где
@@ -358,7 +385,8 @@ func show_plane(cls_id: String, r: Rect2) -> Texture2D:
 	_drawn_frame = Engine.get_process_frames()
 	_fit_vp(r)
 	_set_bg("flight")
-	var k := "%s_%d_%d_%s" % [cls_id, view_lvl, weapon_tier, Livery.current(cls_id)]   # п. 35: и окраска
+	# п. 35: и окраска; F1 hangar_detail rebuilds the plane with or without the detail layer and glazed cockpit
+	var k := "%s_%d_%d_%s_%d" % [cls_id, view_lvl, weapon_tier, Livery.current(cls_id), int(PlaneDetail.enabled())]
 	if k != _key:
 		if _key.begins_with("w_"):
 			_dist = DIST0
@@ -702,9 +730,14 @@ func _build(cls_id: String, lvl: int) -> void:
 	_add_weapons(cls_id, lvl)
 
 
-## Тест 3.5-s4, п. 35: выбранная окраска — на модель и подвешенные к ней механизацию, детали, створки, кабину
+## Тест 3.5-s4, п. 35: выбранная окраска — на модель и подвешенные к ней механизацию, детали, створки, кабину.
+## With F1 `hangar_detail` on (default) the paint carries the PlaneDetail layer and the canopy becomes clear glass
+## over a furnished cockpit (HangarCockpit) whose frame wears the livery's main tone.
 func _apply_livery(model: Node3D, cls_id: String, lvl: int) -> void:
-	Livery.apply(model, cls_id, lvl, Livery.current(cls_id))
+	var detail := PlaneDetail.enabled()
+	Livery.apply(model, cls_id, lvl, Livery.current(cls_id), detail)
+	if detail:
+		HangarCockpit.attach(model, "%s_%d" % [cls_id, lvl], HangarCockpit.frame_colour(cls_id, Livery.current(cls_id)))
 
 
 ## Стартовое оружие класса на узлах подвески — под крылом / в бомбоотсеке (те же точки, что в игре).
@@ -938,6 +971,10 @@ func _process(delta: float) -> void:
 	var dir := Vector3(cos(_pitch) * cos(_yaw), sin(_pitch), cos(_pitch) * sin(_yaw))
 	cam.position = focus + dir * _dist
 	cam.look_at(focus, Vector3.UP)
+	if _show_light and _bg == "flight":   # the showcase rim light stays behind the plane as the camera orbits
+		# almost level: from above and behind it would light the top of the wings straight into the camera
+		var travel := Vector3(dir.x, 0.0, dir.z).normalized() + Vector3(0.0, -0.22, 0.0)
+		_rim_light.basis = Basis.looking_at(travel.normalized(), Vector3.UP)
 
 
 func _input(event: InputEvent) -> void:
