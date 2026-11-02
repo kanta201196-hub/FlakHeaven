@@ -167,9 +167,13 @@
   every livery; a fix is a livery change (belly colour by a box round the plates, say) and needs the owner's yes.
   (2) A small dent beside the «Грач-2» plate front, where the gap fillet meets the skin in front of the plate (the
   generator's mesh, the same as before this pass). (3) One tiny fleck where the slab's inboard end meets the
-  fuselage above the Кит-2 channel (closing the slab there to a thin edge made it worse and was not shipped). The
-  small dark specks round the Кит-2 channel in hangar frames are the detail layer's procedural paint chips
-  (`plane_detail`), present on `main` too and absent in battle.
+  fuselage above the Кит-2 channel (closing the slab there to a thin edge made it worse and was not shipped).
+  Dark specks round the Кит-2 channel (same pass): the bake took small near-black marks from the old skin there,
+  and every livery maps near-black paint to its dark tone. `clean_specks` now fills near-black texels whose
+  surroundings are light (`fill_dark_spots`, grey closing over `SPOT_SIZE`), and `paint_dark_faces` repaints
+  baked faces that came out black among light ones from their nearest light face. The hangar detail layer's
+  paint chips are light and sparser now (`livery.gd`): dark metallic chips mirrored the dark hangar and read as
+  holes.
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.
 - `game/tools/model_lab/model_lab.gd` — подготовка сырого GLB (`prep`: длина 1, нос +X, `--nose=-x`, `--budget=N`) и предпросмотр сверху рядом со спрайтом (`preview`). Команды — в начале файла.

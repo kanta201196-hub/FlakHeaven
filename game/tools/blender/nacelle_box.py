@@ -133,6 +133,10 @@ TE_NOSE = 0.004      # faces this close (x, |z|) to the slab's trailing edge are
 BLOT_SIZE = 61       # dark-blot clean-up: dark features narrower than this (texels, ~2 cm) are blot candidates,
 BLOT_DL = 18         # ... a blot this much darker (0..255 luminance) than the light level round it,
 BLOT_AREA = (150, 6000)  # ... and of this size (texels; rivets are smaller, camouflage patches larger)
+SPOT_LUM = 40        # dark-face clean-up: a baked face whose paint is darker than this (0..255 luminance) ...
+SPOT_AROUND = 50     # ... while the median of its SPOT_NN nearest faces is lighter than this is repainted
+SPOT_NN = 12
+SPOT_SIZE = 121      # near-black spot clean-up: dark marks narrower than this (texels, ~4 cm) are filled
 REFINE_TE = 0.007    # core faces this close (x, |z|) to the slab's trailing edge are refined
 REFINE_ITERS = 2     # ... by this many midpoint splits
 TE_HALF = 0.0012     # half thickness the slab's trailing edge closes to (the wing's own edge is ~2.5 mm thick;
@@ -1120,6 +1124,56 @@ def clean_specks(tuv, groups, col, report):
         sub += (clo - sub) * wf[..., None]
         col[y0:y1, x0:x1] = np.clip(sub, 0, 255).astype(np.uint8)
     report.append("dark blots taken out of the baked paint: %d (%d texels)" % (nb_, int(fix.sum())))
+    n = fill_dark_spots(sub, m)
+    col[y0:y1, x0:x1] = np.clip(sub, 0, 255).astype(np.uint8)
+    report.append("near-black spots taken out of the baked paint: %d texels" % n)
+
+
+def fill_dark_spots(sub, m):
+    """Near-black marks in light paint (in place in sub, float RGB; m: the texels to touch): the projection bake
+    took small near-black marks from the old skin round the rebuilt fuselage channel, too dark and too sharp for the
+    blot clean-up, and every livery maps such paint to its dark tone, so they showed as dark specks in the hangar.
+    A texel below SPOT_LUM where the light level round it (grey closing over SPOT_SIZE, as for the blots) is above
+    SPOT_AROUND takes that light level's colour; dark areas wider than SPOT_SIZE stay. Returns the texels changed."""
+    from scipy.ndimage import grey_closing
+    w = np.array([0.2126, 0.7152, 0.0722], np.float32)
+    lum = sub @ w
+    mf = m.astype(np.float32)
+    clo = np.stack([grey_closing(sub[..., c] * mf, size=(SPOT_SIZE, SPOT_SIZE)) for c in range(3)], -1)
+    bad = m & (lum < SPOT_LUM) & (clo @ w > SPOT_AROUND)
+    sub[bad] = clo[bad]
+    return int(bad.sum())
+
+
+def paint_dark_faces(allr, tuv, groups, col, orm, report):
+    """Faces of the baked skin that came out near black while the skin round them is light (in place in col and
+    orm): the bake left a few small faces round the rebuilt fuselage channel unpainted or painted from the old
+    skin's dark inner faces, and every livery maps such paint to its dark tone, so they showed as dark specks. A
+    face whose paint at its UV centre is below SPOT_LUM, with the median of its SPOT_NN nearest faces above
+    SPOT_AROUND, takes the paint of its nearest light face over all its texels."""
+    V, F = allr["V"], allr["F"]
+    fids = np.unique(np.concatenate([g["faces"] for g in groups]))
+    S = col.shape[0]
+    C = V[F[fids]].mean(1)
+    cu = np.clip(tuv[fids].mean(1).astype(int), 0, S - 1)
+    lum = col[cu[:, 1], cu[:, 0]].astype(np.float32) @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    nn = cKDTree(C).query(C, SPOT_NN)[1]
+    dark = (lum < SPOT_LUM) & (np.median(lum[nn], 1) > SPOT_AROUND)
+    light = lum > SPOT_AROUND
+    if not dark.any() or not light.any():
+        report.append("dark faces repainted from the skin round them: 0")
+        return
+    li = np.nonzero(light)[0]
+    donor = li[cKDTree(C[li]).query(C[dark])[1]]
+    cc, oc = col[cu[donor, 1], cu[donor, 0]].copy(), orm[cu[donor, 1], cu[donor, 0]].copy()
+
+    def cb(k, rr, ccol, bc):
+        """one dark face's texels take its donor's paint"""
+        ok = (rr >= 0) & (rr < S) & (ccol >= 0) & (ccol < S)
+        col[rr[ok], ccol[ok]] = cc[k]
+        orm[rr[ok], ccol[ok]] = oc[k]
+    nr.raster(tuv[fids[dark]], fids[dark], cb, grow=0.5)
+    report.append("dark faces repainted from the skin round them: %d" % int(dark.sum()))
 
 
 def orient(p, inward=False):
@@ -1291,6 +1345,7 @@ def main() -> int:
     log('baked')
     clean_specks(tuv, groups[:len(groups) - len(parts)] + pgroups, col, rep)
     paint_te_nose(sides, allr, tuv, col, orm, rep)
+    paint_dark_faces(allr, tuv, groups[:len(groups) - len(parts)] + pgroups, col, orm, rep)
     paint_built(parts, tuv, offs, col, orm)
     nr.write_region(m, geo, allr, tuv, S, a.dst, rep)
     Image.fromarray(col).save(a.maps[0], quality=95)
