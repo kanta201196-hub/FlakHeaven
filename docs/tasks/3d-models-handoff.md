@@ -114,7 +114,26 @@
   Checks used: a red emissive probe inside the fuselage in Cycles previews and a ray test from inside (no ray may
   leave through the intake area; the leaks found are the generator's own, the same before and after), sections of
   the skin per x, faces whose winding disagrees with their normals (5 left on Грач-2, 24 in the generator's skin).
-  Кит-2 is not shipped: its result had a blunt nacelle front, a boxy shoulder and small holes by the bay.
+  Кит-2 is not shipped by `nacelle_rebuild.py`: its result had a blunt nacelle front, a boxy shoulder and small
+  holes by the bay (see the next entry).
+- **«Кит» 2 box nacelles after the prototype (02.11, branch claude/kit2-nacelle).** Kanta: dark dimples on the nacelle
+  tops and lumpy skin round the nacelles and the wing-root junctions. Rebuilt as built geometry on the prototype's
+  layout (walkaround photos and a three-view; notes and photos stay outside the repository): a box under the wing
+  glove, wider than tall, flat walls and bottom, rounded lower corners, a rectangular intake with thin lips, a
+  vertical splitter and a dark duct (no engine face), the top a long low hump that rounds into the nozzle shroud,
+  which tapers to a thin rim at the nozzle. Recipe, from the hangar GLB of `main` before this entry and copies of
+  its extracted maps:
+  1. `python3 -I game/tools/blender/nacelle_box.py <hangar.glb> bomber_2 <out.glb> --maps <col.jpg> <orm.jpg>
+     --report` (config `NACELLES`; the header says how it is built). `--report` prints the slab fit, dent depth
+     before/after, the dropped and sunk faces, the built parts and the `Livery.INTAKE_DUCTS` row; paste that row
+     into `livery.gd`. About 10 minutes on 2 threads.
+  2. `tex_clean.py <out.glb> <map> <map>` (padding) on both maps, copy GLB and maps into `game/models/hangar/`,
+     `godot --headless --path game --import`, rebake the battle model (`battle_bake.py --tris 36000 --tex 2048
+     --outline 2 --glass 1 --shade hangar --threads 2`).
+  3. Shader: the bomber_2 intake span in `Livery.ENGINE_HOLES` is off (the duct has its own paint); the nozzle span
+     stays and darkens the shroud's rear ring.
+  Checks used: a ray test from inside the fuselage and the nacelles (no ray escapes, as before), sections per x and
+  per |z| against `main`, Cycles grey and textured previews and Forward+ hangar frames before/after.
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.
 - `game/tools/model_lab/model_lab.gd` — подготовка сырого GLB (`prep`: длина 1, нос +X, `--nose=-x`, `--budget=N`) и предпросмотр сверху рядом со спрайтом (`preview`). Команды — в начале файла.

@@ -36,8 +36,9 @@ on that description, the way intake_rebuild.py rebuilt the intakes:
 
 Status (01.11): «Кит» 1 shipped. «Грач» 2's junction regions were dropped: intake_rebuild.py now builds the
 intake with its fairing, splitter and gap from the generator's skin, so there is no torn skin left to rebuild.
-The «Кит» 2 config is kept for the next try but its result was not taken: the nacelle front became a blunt bulb,
-the outboard shoulder boxy, and the bay side opened small holes.
+The «Кит» 2 config here was not taken (the nacelle front became a blunt bulb, the outboard shoulder boxy, the bay
+side opened small holes): a round tube is the wrong shape for its box nacelles. nacelle_box.py builds them instead
+and reuses this module's weld, unwrap, bake and GLB writer; the config stays only as a record of that try.
 
   python3 -I nacelle_rebuild.py <hangar.glb> <key> <out.glb> --maps <col.jpg> <orm.jpg> [--report] [--geo-only]
 The maps are rewritten in place (start from copies of the extracted maps), then tex_clean.py pads them.
