@@ -38,5 +38,9 @@ If a picture comes out too similar to a crew member: «Сделай другое
 
 ## After delivery (thread)
 1. Crop to 2:3, 460×690, export PNG to `game/art/portraits/story_<id>.png`; `godot --headless --path game --import`.
-2. `--dialog` test scene and `--storyshots` frames: the plate is replaced automatically; check H3′ (Grom) and H4′ (Klyuch).
-3. Credits row in `CREDITS.md` as for the crew portraits.
+2. `--storyshots --cutshot` frames: the plate is replaced automatically; besides the first line of each scene the run
+   saves `shot_dialog_<id>_<guest>.png` on the first line of every other guest, so H3′ gives Grom and H4′ Grom and Klyuch.
+3. Credits row for the generated art — there is no credits file in the repo yet; it waits for Kanta's separate «да».
+
+Delivered 02.11.2026: all three portraits were generated with Figma AI (gpt-image-2.5-flare, 1024×1536) from the briefs
+above and scaled to 460×690. Originals: `/mnt/project-files/docs/story/portraits/`.
