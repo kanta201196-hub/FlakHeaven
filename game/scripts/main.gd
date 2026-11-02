@@ -127,7 +127,7 @@ func _ready() -> void:
 			seed(int(a.substr(10)))
 	if _args.has("--trailercap"):
 		add_child(load("res://scripts/trailer_cap.gd").new(self))
-	DEBUG = not (OS.has_feature("tester") or _args.has("--tester"))
+	DEBUG = not (OS.has_feature("tester") or OS.has_feature("release") or _args.has("--tester"))   # "release" = Steam build: no dev flags
 	Events.activity_succeeded.connect(_on_activity_succeeded)
 	Events.activity_failed.connect(_on_activity_failed)
 	Events.enemy_hit.connect(_on_enemy_hit)
