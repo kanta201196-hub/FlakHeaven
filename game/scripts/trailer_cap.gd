@@ -2,7 +2,8 @@ extends Node
 ## Trailer capture (marketing tool, `-- --trailercap`): plays a bot sortie with fixed frame time and
 ## saves PNG frames only inside chosen run-time windows. Outside the windows the render loop is off,
 ## so the GPU-less cloud (lavapipe, ~3 s per Forward+ frame) only pays for the frames it keeps.
-## Args: --capdir=DIR, --capwin=A-B,C-D (run seconds), --capscan (log action per second, no frames),
+## Args: --capscale=F (window content scale: --resolution=1080x1920 with 1.7778 gives the same zoom as a
+## 1920x1920 render cropped to 1080 wide, at 56% of the pixels), --capdir=DIR, --capwin=A-B,C-D (run seconds), --capscan (log action per second, no frames),
 ## --capseed=N, --capend=S (quit after this run second).
 ## Sorties are not frame-exact between runs, so --capshots=NAME:MIN_T:LEN,... picks moments live:
 ## each named shot (see `_want`) starts once, after MIN_T, when its condition holds, and records LEN s.
@@ -41,6 +42,8 @@ func _ready() -> void:
 			for w in a.substr(11).split(","):
 				var p := w.split(":")
 				shots.append({"name": p[0], "min_t": float(p[1]), "len": float(p[2]), "state": 0, "t0": 0.0})
+		elif a.begins_with("--capscale="):
+			get_window().content_scale_factor = float(a.substr(11))
 		elif a.begins_with("--capend="):
 			end_t = float(a.substr(9))
 	scan = OS.get_cmdline_user_args().has("--capscan")
