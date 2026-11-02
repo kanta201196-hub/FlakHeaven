@@ -141,11 +141,39 @@
   notch), old vertices start on the sheet their side belongs to (`skin_sheets`, `Side.seed`), the edge is as thick
   as the wing's own (`TE_HALF`) and folded faces are smoothed out (`untangle`). The edge's nose is repainted from
   the skin just in front of it (`paint_te_nose`: the bake found the old edge's dark flap-well gap line there and
-  left black spots). Open: the narrow channel between
-  the nozzle shroud and the fuselage behind the wing (the slab's inboard side wall meets the fuselage skin in
-  slivers there; the fix is to give the fuselage side its own surface in `f`).
+  left black spots). The narrow channel between the nozzle shroud and the fuselage
+  behind the wing, open here, is fixed in the leftovers entry below.
   Round dark spots on the nacelle hump in the hangar are the «Песочный камуфляж» livery pattern (procedural blobs
   in model space), not geometry: with a plain livery they are gone.
+- **Leftovers of the «Кит-2» nacelle and «Грач» intake passes (02.11, branch claude/model-leftovers).** Same recipes
+  as the two entries above, same inputs (Кит-2: the hangar GLB of `main` before the nacelle entry; «Грач»: commit
+  3dc9892), same rebake budgets. What changed in the tools:
+  - `nacelle_box.py`: the fuselage side between the nozzles is its own surface (`Fuselage`, config `fus`: a radius
+    field r(x, angle) round the fuselage axis fitted to the old skin, joined to the slab by a small fillet), so the
+    channel between the nozzle shroud and the fuselage behind the wing is a clean fillet between two smooth surfaces;
+    the old kept box there is gone (`keep: []`). Region faces the built nacelle takes over are clipped at the
+    nacelle surface (`clip_mesh`, cut vertices projected onto it) instead of dropped whole, which removed the
+    saw-tooth under the glove and most of the "hairs" in the trailing-edge corners. The slab planform's inboard
+    tail ends at the fuselage (x -0.238).
+  - `intake_rebuild.py`: the fairing starts `BAND` behind the cut, just under the old skin, with the skin's own
+    slope (Hermite rows from the section `SLOPE_DX` behind the cut), so its rear seam blends flush (no step). The
+    splitter plate and the plane patch on the plate plane take the fuselage paint under them (`plate_paint`,
+    median of the nearest skin at the plate plane, dark texels left out) instead of one cowl tone. Plane-patch
+    shading normals come from the nearest skin (`PATCH_NDOT` keeps them facing out), so the bulge in front of the
+    «Грач-2» plate no longer reads as a flat cut.
+  Checks: ray test from inside, 0 of 22800 rays escape on all three; Workbench close-ups and Forward+ frames
+  before/after. Open: (1) the light strip under the «Грач-1» fairing is not paint: the livery shader picks the
+  belly colour by the normal (`bel` from `n.y`), and the plate's side faces sideways, so it takes the top colour in
+  every livery; a fix is a livery change (belly colour by a box round the plates, say) and needs the owner's yes.
+  (2) A small dent beside the «Грач-2» plate front, where the gap fillet meets the skin in front of the plate (the
+  generator's mesh, the same as before this pass). (3) One tiny fleck where the slab's inboard end meets the
+  fuselage above the Кит-2 channel (closing the slab there to a thin edge made it worse and was not shipped).
+  Dark specks round the Кит-2 channel (same pass): the bake took small near-black marks from the old skin there,
+  and every livery maps near-black paint to its dark tone. `clean_specks` now fills near-black texels whose
+  surroundings are light (`fill_dark_spots`, grey closing over `SPOT_SIZE`), and `paint_dark_faces` repaints
+  baked faces that came out black among light ones from their nearest light face. The hangar detail layer's
+  paint chips are light and sparser now (`livery.gd`): dark metallic chips mirrored the dark hangar and read as
+  holes.
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.
 - `game/tools/model_lab/model_lab.gd` — подготовка сырого GLB (`prep`: длина 1, нос +X, `--nose=-x`, `--budget=N`) и предпросмотр сверху рядом со спрайтом (`preview`). Команды — в начале файла.
