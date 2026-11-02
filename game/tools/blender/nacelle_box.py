@@ -27,12 +27,17 @@ old skin only has to follow a smooth surface where it stays visible:
    near slats, flaps, bay doors and wells stay put): every vertex is projected onto f = smin(slab, nacelle, k), where
    the slab is the glove and fuselage round the nacelle (upper and lower penalised height fields fitted robustly to
    the skin away from the old tube, cut by a planform polygon) and the nacelle is the signed distance to the built
-   loft. The fillet k fades to 0 at the intake (the box meets the glove with a clean edge, as on the prototype). The
-   region is relaxed, its core remeshed (MeshLab) and projected again. Faces left inside the built nacelle or lying
-   on it beyond the fillet are dropped: there the built loft is the surface, the fillet runs out tangent onto it.
+   loft. The fillet k fades to 0 at the intake (the box meets the glove with a clean edge, as on the prototype).
+   Old vertices clear of the nacelle start on the slab sheet their side of the skin belongs to (by normal, walls by
+   their neighbours), since the old glove lay partly below the fitted slab and would fold onto one sheet. Towards
+   the planform's trailing edge the sheets close to a thin edge at a set height (`te`, `te_y`). The region is
+   relaxed, its core remeshed (MeshLab) and projected again, the faces along the trailing edge split finer and
+   folded faces smoothed out. Faces left inside the built nacelle or lying on it beyond the fillet are dropped:
+   there the built loft is the surface, the fillet runs out tangent onto it.
 3. Paint: the rebuilt region and the built loft and lip get their own UV charts in free atlas space at the skin's
    texel density, projection-baked from the old surface with the generator's dent shading evened out
-   (nacelle_rebuild.bake); the duct is light grey at the lip fading to near black, the splitter and cap dark.
+   (nacelle_rebuild.bake), the trailing edge's nose repainted from the skin just in front of it; the duct is light
+   grey at the lip fading to near black, the splitter and cap dark.
    Livery.INTAKE_DUCTS keeps the duct's texture paint under every livery (--report prints the row).
 
   python3 -I nacelle_box.py <hangar.glb> <key> <out.glb> --maps <col.jpg> <orm.jpg> [--report]
@@ -63,11 +68,17 @@ Image.MAX_IMAGE_PIXELS = None
 # height, + leans the top back), rear end x of the built shroud, walls, corner radii, bottom y_b(x) and cap top
 # y_top(x) as (x, value) knots (monotone cubic), y_mid where the walls meet the cap, the morph span into the round
 # shroud (circle: centre y, |z|, radius), the shroud radius tapering to the nozzle exit (r_tail knots, so the rear
-# face is a thin boat-tail lip, not a flat ring) and the inner radius of the rear ring; intake: lip thickness, opening top,
-# top corner radius, duct depth, splitter half thickness; slab: data box (x0, x1, |z|0, |z|1), knot spacing, penalty,
-# rounding of its edges, planform polygon (x, |z|) and the old tube left out of its data (axis y, |z|, radius, from
-# x); region: box (x0, x1, |z|0, |z|1, y0, y1), fade, kept boxes, the nozzle's inside kept (behind x, within r of the
-# shroud axis), fillet k and the length over which it grows from the lip; the strake box flattened into the slab.
+# face is a thin boat-tail lip, not a flat ring) and the inner radius of the rear ring; intake: lip thickness,
+# opening top, top corner radius, duct depth, splitter half thickness; slab: data box (x0, x1, |z|0, |z|1), knot
+# spacing, penalty, rounding of its edges, planform polygon (x, |z|; its trailing edge follows the old wing's), the
+# trailing-edge polyline, the length over which the sheets close to a thin edge there and the edge's height
+# (|z|, y knots), and the old tube left out of its data (axis y, |z|, radius, from x); region: box (x0, x1, |z|0,
+# |z|1, y0, y1; it reaches 35 mm past the glove/wing trailing-edge corner so the corner is rebuilt whole, not in the
+# fade), fade, kept boxes (x0, x1, |z|0, |z|1, y0, y1 and an optional fade, 4 mm by default; the fuselage between
+# the nozzles fades over 14 mm into the rear fillet, a shorter fade left a step), the nozzle's
+# inside kept (behind x, within r of the shroud axis), fillet k, the length over which it grows from the lip and
+# the larger fillet inboard in the rear half (k_rear: from x to full at x, below |z| fading to |z|, size); the
+# strake box flattened into the slab.
 NACELLES: dict = {
     "bomber_2": {
         "nac": {"x_lip": -0.112, "rake": 0.08, "x_end": -0.2742, "z_in": 0.037, "z_out": 0.104,
@@ -78,15 +89,22 @@ NACELLES: dict = {
                 "morph": (-0.222, -0.252), "circle": (-0.0154, 0.0702, 0.0250), "ring_in": 0.0172,
             "r_tail": [(-0.256, 0.0250), (-0.266, 0.0236), (-0.2742, 0.0200)]},
         "intake": {"t": 0.0015, "y_ot": -0.0500, "r_top": 0.002, "depth": 0.03, "split": 0.0006},
-        "slab": {"box": (-0.30, -0.05, 0.02, 0.17), "kx": 0.02, "kz": 0.015, "lam": (1.0, 1.0), "round": 0.003,
+        "slab": {"box": (-0.30, -0.05, 0.02, 0.215), "kx": 0.02, "kz": 0.015, "lam": (1.0, 1.0), "round": 0.003,
                  "plan_r": 0.005, "tube": (-0.022, 0.0705, 0.046, -0.096),
-                 "plan": [(0.2, -0.05), (0.2, 0.30), (-0.187, 0.30), (-0.1815, 0.150), (-0.1855, 0.140),
-                          (-0.193, 0.133), (-0.21, 0.126), (-0.224, 0.118), (-0.232, 0.108), (-0.236, 0.098),
-                          (-0.236, 0.05), (-0.24, 0.034), (-0.30, 0.034), (-0.30, -0.05)]},
-        "region": {"box": (-0.28, -0.074, 0.022, 0.16, -0.085, 0.035), "fade": 0.008,
-                   "keep": [(-0.32, -0.233, 0.0, 0.034, -0.09, 0.05), (-0.32, -0.17, 0.152, 0.25, -0.09, 0.05)],
+                 "plan": [(0.2, -0.05), (0.2, 0.30), (-0.237, 0.30), (-0.2013, 0.205), (-0.1993, 0.20),
+                          (-0.1929, 0.185), (-0.1877, 0.17), (-0.1832, 0.16), (-0.1802, 0.15), (-0.1810, 0.145),
+                          (-0.1855, 0.140), (-0.191, 0.135), (-0.1975, 0.13),
+                          (-0.21, 0.126), (-0.224, 0.118), (-0.232, 0.108), (-0.236, 0.098),
+                          (-0.236, 0.05), (-0.24, 0.034), (-0.30, 0.034), (-0.30, -0.05)],
+                 "te": [(-0.2013, 0.205), (-0.1993, 0.20), (-0.1929, 0.185), (-0.1877, 0.17), (-0.1832, 0.16),
+                        (-0.1802, 0.15), (-0.1810, 0.145), (-0.1855, 0.140), (-0.191, 0.135), (-0.1975, 0.13),
+                        (-0.21, 0.126), (-0.224, 0.118),
+                        (-0.232, 0.108), (-0.236, 0.098)], "te_len": 0.012,
+                 "te_y": [(0.10, -0.0338), (0.13, -0.0345), (0.168, -0.0291), (0.21, -0.0289)]},
+        "region": {"box": (-0.28, -0.074, 0.030, 0.185, -0.085, 0.035), "fade": 0.008,
+                   "keep": [(-0.32, -0.245, 0.0, 0.034, -0.09, 0.05, 0.014)],
                    "nozzle": (-0.245, 0.019),
-                   "k": 0.006, "k_grow": 0.025,
+                   "k": 0.006, "k_grow": 0.025, "k_rear": (-0.160, -0.190, 0.050, 0.060, 0.014),
                    "strake": (-0.135, -0.07, 0.034, 0.058, -0.075, -0.046)},
     },
 }
@@ -102,9 +120,14 @@ DROP_ON = 0.0005     # ... or lying on it (within DROP_IN) this far past the fil
 SINK = 0.002         # kept vertices on the built nacelle past the fillet are sunk this deep into it
 SPECK_WIN = 11       # neighbourhood (texels) of the bright-speck clean-up of the baked paint
 SPECK_DL = 22        # ... a texel this much lighter (0..255 luminance) than its neighbourhood's median is a speck
+TE_NOSE = 0.004      # faces this close (x, |z|) to the slab's trailing edge are repainted from the skin in front
 BLOT_SIZE = 61       # dark-blot clean-up: dark features narrower than this (texels, ~2 cm) are blot candidates,
 BLOT_DL = 18         # ... a blot this much darker (0..255 luminance) than the light level round it,
 BLOT_AREA = (150, 6000)  # ... and of this size (texels; rivets are smaller, camouflage patches larger)
+REFINE_TE = 0.007    # core faces this close (x, |z|) to the slab's trailing edge are refined
+REFINE_ITERS = 2     # ... by this many midpoint splits
+TE_HALF = 0.0012     # half thickness the slab's trailing edge closes to (the wing's own edge is ~2.5 mm thick;
+                     # a thinner one was cut into a sawtooth by the faces)
 H = 1e-5             # finite-difference step of the gradient
 DUCT_PAINT = ((0.0, 178.0), (0.003, 150.0), (0.008, 60.0), (0.016, 18.0), (1.0, 10.0))   # depth -> grey 0..255
 
@@ -118,6 +141,12 @@ def sstep(a, b, x):
     """Hermite step from 0 at a to 1 at b (either order)"""
     t = np.clip((np.asarray(x, float) - a) / (b - a), 0.0, 1.0)
     return t * t * (3 - 2 * t)
+
+
+def smax_k(a, b, k):
+    """Polynomial smooth maximum with a per-point size k (> 0)"""
+    h = np.clip(0.5 + 0.5 * (a - b) / k, 0.0, 1.0)
+    return b * (1 - h) + a * h + k * h * (1 - h)
 
 
 def knots(pairs):
@@ -261,12 +290,24 @@ def poly_sdf(Q, poly):
     return np.where(inside, -best, best)
 
 
+def polyline_dist(Q, line):
+    """Distance of 2D points Q to an open polyline"""
+    A = np.asarray(line, float)
+    best = np.full(len(Q), np.inf)
+    for a, b in zip(A[:-1], A[1:]):
+        e = b - a
+        t = np.clip(((Q - a) @ e) / max(e @ e, 1e-20), 0, 1)
+        best = np.minimum(best, np.linalg.norm(Q - a - t[:, None] * e, axis=1))
+    return best
+
+
 class Slab:
     """The glove and fuselage round the nacelle: upper and lower penalised height fields y(x, |z|) fitted to the
     skin away from the old tube, their smooth max, cut by the planform polygon"""
 
     def __init__(self, cfg, side):
         self.c, self.side = cfg["slab"], side
+        self.te_y = knots(self.c["te_y"]) if "te_y" in self.c else None
         self.strake = cfg["region"].get("strake")
 
     def fit(self, P, N, use, report, tag):
@@ -298,12 +339,33 @@ class Slab:
         z = np.clip(z, z0, z1)
         return self.sp[0](x, z), self.sp[1](x, z)
 
+    def sheets(self, P):
+        """Upper and lower surface heights at P's (x, |z|), closed in toward the trailing edge"""
+        z = P[:, 2] * self.side
+        up, lo = self.heights(P[:, 0], z)
+        if "te" in self.c:
+            # trailing edge: the two sheets close in on their mean over te_len, so the edge is as thin as the
+            # wing's own (the fitted sheets stay apart there and the planform cut left a blunt tongue)
+            d = polyline_dist(np.stack([P[:, 0], z], 1), self.c["te"])
+            t = sstep(0.0, self.c["te_len"], d)
+            mid, half = (up + lo) / 2, (up - lo) / 2
+            if "te_y" in self.c:
+                # the old glove's trailing edge sat 8 mm below the wing's and met it in a step; near the edge the
+                # mid line follows a gentle ramp between the two heights instead of the fit across that step
+                mid = mid * t + self.te_y(z) * (1 - t)
+            half = np.where(half > TE_HALF, TE_HALF + (half - TE_HALF) * t, half)
+            up, lo = mid + half, mid - half
+        return up, lo
+
     def f(self, P):
         """Signed distance-like value of the slab (negative inside)"""
         z = P[:, 2] * self.side
-        up, lo = self.heights(P[:, 0], z)
-        v = nr.smax(P[:, 1] - up, lo - P[:, 1], self.c["round"])
-        return nr.smax(v, poly_sdf(np.stack([P[:, 0], z], 1), self.c["plan"]), self.c["plan_r"])
+        up, lo = self.sheets(P)
+        # both roundings shrink with the slab's half thickness: a smooth max of size k lifts the middle of a sheet
+        # pair by k / 4, so a round larger than the thin trailing edge ate a notch out of it
+        half = np.maximum((up - lo) / 2, 1e-5)
+        v = smax_k(P[:, 1] - up, lo - P[:, 1], np.minimum(self.c["round"], 2 * half))
+        return smax_k(v, poly_sdf(np.stack([P[:, 0], z], 1), self.c["plan"]), np.minimum(self.c["plan_r"], 2 * half))
 
 
 class Side:
@@ -316,14 +378,23 @@ class Side:
         self.slab = Slab(cfg, side)
         self.r = cfg["region"]
 
-    def k(self, x):
-        """Fillet size at x: none at the lip, full k_grow behind it"""
-        return self.r["k"] * sstep(self.nac.c["x_lip"], self.nac.c["x_lip"] - self.r["k_grow"], x)
+    def k(self, P):
+        """Fillet size at P: none at the lip, full k_grow behind it; inboard in the rear half it grows to k_rear so
+        the narrow V groove between the nacelle's inner wall and the belly (and, behind the glove, the round
+        shroud and the fuselage) becomes one clean rounded fairing instead of a slot narrower than the mesh can
+        follow"""
+        x, z = P[:, 0], P[:, 2] * self.side
+        k = self.r["k"] * sstep(self.nac.c["x_lip"], self.nac.c["x_lip"] - self.r["k_grow"], x)
+        if "k_rear" in self.r:
+            xa, xb, za, zb, kr = self.r["k_rear"]
+            w = sstep(xa, xb, x) * (1 - sstep(za, zb, z))
+            k = k + (kr - k) * w
+        return k
 
     def f(self, P):
         """The surface the old skin goes onto: smooth union of slab and nacelle"""
         a, b = self.nac.sdf(P), self.slab.f(P)
-        k = np.maximum(self.k(P[:, 0]), 1e-6)
+        k = np.maximum(self.k(P), 1e-6)
         h = np.clip(0.5 + 0.5 * (b - a) / k, 0.0, 1.0)
         return b * (1 - h) + a * h - k * h * (1 - h)
 
@@ -347,6 +418,20 @@ class Side:
             Q += st * np.minimum(1.0, 0.004 / np.maximum(ln, 1e-12))
         return Q
 
+    def seed(self, P, N, sheet):
+        """Start points for the projection: an old vertex of the upper (sheet +1) or lower (-1) skin clear of the
+        built nacelle is first put on the slab's matching sheet. Near the glove's trailing edge the old skin lay
+        several mm below the fitted slab, so both of its faces were nearer the lower sheet and folded onto it,
+        leaving no upper skin; the old step between glove and wing folded the same way."""
+        up, lo = self.slab.sheets(P)
+        z = P[:, 2] * self.side
+        inside = poly_sdf(np.stack([P[:, 0], z], 1), self.slab.c["plan"]) < -0.003
+        # a wall vertex at the trailing edge itself is left to the projection, which carries it onto the edge
+        a = sstep(0.006, 0.012, self.nac.sdf(P)) * (sheet != 0) * ((np.abs(N[:, 1]) > 0.5) | inside)
+        Q = P.copy()
+        Q[:, 1] += a * (np.where(sheet > 0, up, lo) - P[:, 1])
+        return Q
+
     def weight(self, P):
         """1 inside the region box, fading over `fade` outside it; 0 in kept boxes and inside the nozzle"""
         x0, x1, z0, z1, y0, y1 = self.r["box"]
@@ -355,8 +440,10 @@ class Side:
         w = (sstep(x0 - 0.002, x0, x) * (1 - sstep(x1, x1 + fd, x)) * sstep(z0 - fd, z0, z)
              * (1 - sstep(z1, z1 + fd, z)) * sstep(y0 - fd, y0, y) * (1 - sstep(y1, y1 + fd, y)))
         for a in self.r.get("keep", []):
-            inside = (sstep(a[0] - 0.004, a[0], x) * (1 - sstep(a[1], a[1] + 0.004, x)) * sstep(a[2] - 0.004, a[2], z)
-                      * (1 - sstep(a[3], a[3] + 0.004, z)) * sstep(a[4] - 0.004, a[4], y) * (1 - sstep(a[5], a[5] + 0.004, y)))
+            e = a[6] if len(a) > 6 else 0.004
+            inside = (sstep(a[0] - e, a[0], x) * (1 - sstep(a[1], a[1] + e, x))
+                      * sstep(a[2] - e, a[2], z) * (1 - sstep(a[3], a[3] + e, z))
+                      * sstep(a[4] - e, a[4], y) * (1 - sstep(a[5], a[5] + e, y)))
             w = w * (1 - inside)
         xn, rn = self.r["nozzle"]
         yc, zc, _ = self.nac.c["circle"]
@@ -388,6 +475,19 @@ def skin_arrays(m):
             "free": sr.smoothstep(0.003, 0.009, dist)}
 
 
+def skin_sheets(N, F, n, rounds=8):
+    """Which sheet each old skin vertex belongs to: +1 upper, -1 lower, by its normal where that is clearly up or
+    down; vertices on steep walls (the old glove/wing step, edges) take the majority of their neighbours"""
+    cls = np.where(np.abs(N[:, 1]) > 0.5, np.sign(N[:, 1]), 0.0)
+    A = nr.adjacency(F, n)
+    for _ in range(rounds):
+        z = cls == 0
+        if not z.any():
+            break
+        cls = np.where(z, np.sign(A @ cls), cls)
+    return cls
+
+
 def rebuild_region(geo, sides, report):
     """Project the old skin of every side onto its f, relax, remesh the core, drop the faces the built nacelle
     covers. Returns the region mesh (V, F, w, owner, normals) and the mask of old faces it replaces."""
@@ -401,9 +501,10 @@ def rebuild_region(geo, sides, report):
     inskin[F.reshape(-1)] = True
     w *= inskin
     tgt = W0.copy()
+    sheet = skin_sheets(geo["Nw"], F, nw)
     for k, s in enumerate(sides):
         sel = (own == k) & (w > 0)
-        tgt[sel] = s.project(W0[sel])
+        tgt[sel] = s.project(s.seed(W0[sel], geo["Nw"][sel], sheet[sel]))
         far = np.linalg.norm(tgt[sel] - W0[sel], axis=1)
         ws = w[sel]
         ws[far > GATE_FAR] = 0.0
@@ -455,6 +556,58 @@ def rebuild_region(geo, sides, report):
         V2 = relax(sides, V2, F2, o2, mv, 6)
         V, Fr, wl, ol, fc = V2, F2, w2, o2, fsel
     report.append("remeshed the core: %d faces, edge %.2f mm (old %.2f mm)" % (int(fc.sum()), tl * 1e3, el * 1e3))
+    # the glove's trailing edge closes to a thin edge, which faces of the core size cut into a sawtooth: the faces
+    # along it are split (midpoint, conforming) down to about a quarter of that size and projected again
+    near = np.zeros(len(Fr), bool)
+    C = V[Fr].mean(1)
+    for k, s in enumerate(sides):
+        if "te" not in s.slab.c:
+            continue
+        sel = ol[Fr].max(1) == k
+        near[sel] = polyline_dist(np.stack([C[sel, 0], C[sel, 2] * s.side], 1), s.slab.c["te"]) < REFINE_TE
+    near &= fc
+    if near.any():
+        V3, F3 = V, Fr
+        for it in range(REFINE_ITERS):
+            if it:
+                C3 = V3[F3].mean(1)
+                o_ = ol[cKDTree(V).query(C3)[1]]
+                mk = np.zeros(len(F3), bool)
+                for k, s in enumerate(sides):
+                    if "te" in s.slab.c:
+                        sel = o_ == k
+                        mk[sel] = polyline_dist(np.stack([C3[sel, 0], C3[sel, 2] * s.side], 1),
+                                                s.slab.c["te"]) < REFINE_TE
+                mk &= fc3
+            else:
+                mk = near
+            V3, F3, par = split_faces(V3, F3, mk)
+            fc3 = (fc if it == 0 else fc3)[par]
+        d, nn = cKDTree(V).query(V3)
+        old = d < 1e-9
+        frozen = np.zeros(len(V), bool)
+        frozen[Fr[~fc].reshape(-1)] = True
+        fz = old & frozen[nn]
+        w3 = np.where(fz, wl[nn], np.where(old, wl[nn], 1.0))
+        o3 = ol[nn]
+        for k, s in enumerate(sides):
+            sel = ~fz & (o3 == k) & ~old
+            if sel.any():
+                V3[sel] = s.project(V3[sel])
+        fc3 = fc3 & ~fz[F3].any(1)
+        report.append("trailing-edge faces refined: %d -> %d faces" % (
+            int(near.sum()), len(F3) - len(Fr) + int(near.sum())))
+        V, Fr, wl, ol, fc = V3, F3, w3, o3, fc3
+    # only clear of the built nacelle: there the faces on and in it are dropped below, and f's gradient in its
+    # crease says nothing about a face's side
+    clear = np.zeros(len(V), bool)
+    for k, s in enumerate(sides):
+        sel = ol == k
+        clear[sel] = s.nac.sdf(V[sel]) > 0.006
+    core = np.zeros(len(V), bool)
+    core[Fr[fc].reshape(-1)] = True
+    V, left = untangle(sides, V, Fr, ol, core & (wl > 0.98) & clear, rounds=20)
+    report.append("core faces still facing against f after untangling (edges and corners mostly): %d" % left)
     # faces the built nacelle covers: inside it, or on it past the fillet
     drop = np.zeros(len(Fr), bool)
     nd = np.zeros(len(V))
@@ -466,7 +619,7 @@ def rebuild_region(geo, sides, report):
         a = s.nac.sdf(V[sel])
         b = s.slab.f(V[sel])
         nd[sel] = a
-        past[sel] = (b - a) - s.k(V[sel, 0])
+        past[sel] = (b - a) - s.k(V[sel])
     vin = (nd < -DROP_IN) | ((np.abs(nd) <= DROP_IN) & (past > DROP_ON))
     vin &= wl > 0.5
     drop = vin[Fr].all(1)
@@ -513,6 +666,45 @@ def rebuild_region(geo, sides, report):
     return {"V": V, "F": Fr, "w": wl, "own": ol, "N": Nn, "fr": fr, "shade": shade, "W": W}
 
 
+def split_faces(V, F, mark):
+    """One conforming midpoint refinement of the marked faces: every edge of a marked face gets its midpoint, and
+    every face (marked or a neighbour) is split by the midpoints on its edges into 2, 3 or 4 faces, so no
+    T-junction is left. Returns the new vertices, faces and each new face's parent face."""
+    E = np.sort(np.stack([F[:, [0, 1]], F[:, [1, 2]], F[:, [2, 0]]], 1), 2)   # (f, 3, 2)
+    key = E[..., 0] * (len(V) + 1) + E[..., 1]
+    sk = np.unique(key[mark].ravel())
+    mid = {int(k): len(V) + i for i, k in enumerate(sk)}
+    a, b = sk // (len(V) + 1), sk % (len(V) + 1)
+    V2 = np.vstack([V, (V[a] + V[b]) / 2])
+    out, par = [], []
+    for f in range(len(F)):
+        m = [mid.get(int(key[f, j]), -1) for j in range(3)]
+        i0, i1, i2 = F[f]
+        m01, m12, m20 = m
+        n = (m01 >= 0) + (m12 >= 0) + (m20 >= 0)
+        if n == 0:
+            tri = [(i0, i1, i2)]
+        elif n == 3:
+            tri = [(i0, m01, m20), (m01, i1, m12), (m20, m12, i2), (m01, m12, m20)]
+        elif n == 1:
+            if m01 >= 0:
+                tri = [(i0, m01, i2), (m01, i1, i2)]
+            elif m12 >= 0:
+                tri = [(i0, i1, m12), (i0, m12, i2)]
+            else:
+                tri = [(i0, i1, m20), (m20, i1, i2)]
+        else:
+            if m01 < 0:
+                tri = [(i0, i1, m12), (i0, m12, m20), (m20, m12, i2)]
+            elif m12 < 0:
+                tri = [(i0, m01, m20), (m01, i1, i2), (m20, m01, i2)]
+            else:
+                tri = [(i0, m01, i2), (m01, i1, m12), (m01, m12, i2)]
+        out += tri
+        par += [f] * len(tri)
+    return V2, np.array(out, np.int64), np.array(par, np.int64)
+
+
 def relax(sides, V, F, own, move, rounds):
     """Tangential relaxation of the vertices `move`, each projected back onto its side's f"""
     A = nr.adjacency(F, len(V))
@@ -530,6 +722,39 @@ def relax(sides, V, F, own, move, rounds):
     return V
 
 
+def untangle(sides, V, F, own, move, rounds):
+    """Smooth out folds: faces of the core whose normal points against f's gradient (a crease of the old skin the
+    remesher kept as a feature line, showing as a dark slash) have their corners and the corners' neighbours moved
+    to the mean of their neighbours and projected back, until none are left. Returns V and the folds left."""
+    A = nr.adjacency(F, len(V))
+    deg = np.maximum(np.asarray(A.sum(1)).ravel(), 1)
+    left = 0
+    for _ in range(rounds):
+        n = np.cross(V[F[:, 1]] - V[F[:, 0]], V[F[:, 2]] - V[F[:, 0]])
+        C = V[F].mean(1)
+        g = np.zeros_like(C)
+        fo = own[F[:, 0]]
+        for k, s in enumerate(sides):
+            sel = fo == k
+            if sel.any():
+                g[sel] = s.grad(C[sel])
+        ln = np.linalg.norm(n, axis=1) * np.linalg.norm(g, axis=1)
+        bad = (np.einsum("ij,ij->i", n, g) < -0.05 * ln) & (ln > 1e-14) & move[F].all(1)
+        left = int(bad.sum())
+        if not left or left > 0.2 * move[F].all(1).sum():
+            break       # none left, or the winding is not outward and the test means nothing
+        vb = np.zeros(len(V), bool)
+        vb[F[bad].reshape(-1)] = True
+        vb |= (A @ vb.astype(float)) > 0
+        vb &= move
+        M = (A @ V) / deg[:, None]
+        for k, s in enumerate(sides):
+            sel = vb & (own == k)
+            if sel.any():
+                V[sel] = s.project(M[sel], iters=6)
+    return V, left
+
+
 def opening(s, n):
     """Intake opening outline in the lip plane: (n, 3) points by angle round the opening centre, matched to the
     outer section's columns later"""
@@ -543,7 +768,8 @@ def opening(s, n):
     def arc(cz, cy, r, a0, a1, k=60):
         u = np.linspace(a0, a1, k)
         return np.stack([cz + r * np.cos(u), cy + r * np.sin(u)], 1)
-    Q = np.vstack([arc(zi + rbi, yb + rbi, rbi, np.pi, 1.5 * np.pi), arc(zo - rbo, yb + rbo, rbo, 1.5 * np.pi, 2 * np.pi),
+    Q = np.vstack([arc(zi + rbi, yb + rbi, rbi, np.pi, 1.5 * np.pi),
+                   arc(zo - rbo, yb + rbo, rbo, 1.5 * np.pi, 2 * np.pi),
                    arc(zo - rt, yt - rt, rt, 0.0, 0.5 * np.pi), arc(zi + rt, yt - rt, rt, 0.5 * np.pi, np.pi)])
     return resample_closed(Q, n), np.array([(zi + zo) / 2, (yb + yt) / 2])
 
@@ -673,6 +899,44 @@ def build_parts(s, report):
         s.tag, nr_, nc, c["x_lip"], float(s.nac.y_b(c["x_lip"])) + it["t"], it["y_ot"], c["z_in"] + it["t"],
         c["z_out"] - it["t"], it["depth"]))
     return parts
+
+
+def paint_te_nose(sides, allr, tuv, col, orm, report):
+    """Paint of the slab's trailing-edge nose (in place in col and orm): the bake found the old edge under it, painted
+    with the dark gap line of the old flap wells, so the nose came out black in spots in every livery. Each face
+    within TE_NOSE of the edge takes the paint at the centre of its nearest face TE_NOSE..2 TE_NOSE in front of the
+    edge on the same side of the skin (plain skin paint), over all its texels."""
+    V, F = allr["V"], allr["F"]
+    C = V[F].mean(1)
+    n = np.cross(V[F[:, 1]] - V[F[:, 0]], V[F[:, 2]] - V[F[:, 0]])
+    S = col.shape[0]
+    nose, donor = [], []
+    for s in sides:
+        if "te" not in s.slab.c:
+            continue
+        on = (C[:, 2] * s.side) > 0
+        d = polyline_dist(np.stack([C[:, 0], C[:, 2] * s.side], 1), s.slab.c["te"])
+        for sgn in (1, -1):
+            side = on & (n[:, 1] * sgn >= 0)
+            src = np.nonzero(side & (d > TE_NOSE) & (d < 2 * TE_NOSE))[0]
+            dst = np.nonzero(side & (d <= TE_NOSE))[0]
+            if len(src) and len(dst):
+                nose.append(dst)
+                donor.append(src[cKDTree(C[src]).query(C[dst])[1]])
+    if not nose:
+        return
+    nose, donor = np.concatenate(nose), np.concatenate(donor)
+    cu = np.clip(tuv[donor].mean(1).astype(int), 0, S - 1)
+    cc, oc = col[cu[:, 1], cu[:, 0]].copy(), orm[cu[:, 1], cu[:, 0]].copy()
+    cnt = [0]
+
+    def cb(k, rr, ccol, bc):
+        ok = (rr >= 0) & (rr < S) & (ccol >= 0) & (ccol < S)
+        col[rr[ok], ccol[ok]] = cc[k]
+        orm[rr[ok], ccol[ok]] = oc[k]
+        cnt[0] += int(ok.sum())
+    nr.raster(tuv[nose], nose, cb, grow=0.5)
+    report.append("trailing-edge nose repainted from the skin in front: %d faces, %d texels" % (len(nose), cnt[0]))
 
 
 def clean_specks(tuv, groups, col, report):
@@ -840,7 +1104,8 @@ def main() -> int:
         d0 = np.abs(sr.dent_metric(W0, N0, pick0))[pick0]
         pick1 = reg["w"] > 0.9
         d1 = np.abs(sr.dent_metric(reg["V"], reg["N"], pick1))[pick1]
-        rep.append("region skin dent p95 %.2f -> %.2f mm, p99 %.2f -> %.2f mm, max %.2f -> %.2f mm (%d -> %d vertices)" % (
+        rep.append("region skin dent p95 %.2f -> %.2f mm, p99 %.2f -> %.2f mm, max %.2f -> %.2f mm "
+                   "(%d -> %d vertices)" % (
             np.percentile(d0, 95) * 1e3, np.percentile(d1, 95) * 1e3, np.percentile(d0, 99) * 1e3,
             np.percentile(d1, 99) * 1e3, d0.max() * 1e3, d1.max() * 1e3, int(pick0.sum()), int(pick1.sum())))
     log('dent report')
@@ -901,6 +1166,7 @@ def main() -> int:
     nr.bake(geo, allr, tuv, groups[:len(groups) - len(parts)] + pgroups, col, orm, rep)
     log('baked')
     clean_specks(tuv, groups[:len(groups) - len(parts)] + pgroups, col, rep)
+    paint_te_nose(sides, allr, tuv, col, orm, rep)
     paint_built(parts, tuv, offs, col, orm)
     nr.write_region(m, geo, allr, tuv, S, a.dst, rep)
     Image.fromarray(col).save(a.maps[0], quality=95)

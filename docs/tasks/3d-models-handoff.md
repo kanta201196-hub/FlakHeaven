@@ -134,6 +134,18 @@
      stays and darkens the shroud's rear ring.
   Checks used: a ray test from inside the fuselage and the nacelles (no ray escapes, as before), sections per x and
   per |z| against `main`, Cycles grey and textured previews and Forward+ hangar frames before/after.
+  Glove/wing trailing-edge corner (second pass, same branch): the old glove's trailing edge sat 8 mm below the
+  wing's and met it in a step, so the old skin there folded onto one sheet of the slab (a hole read as a blunt
+  "tongue") and the step left dark slashes underneath. Now the region reaches past the corner, the slab's edge
+  height follows a ramp (`te_y`), its roundings shrink with its thickness (a round wider than a thin edge eats a
+  notch), old vertices start on the sheet their side belongs to (`skin_sheets`, `Side.seed`), the edge is as thick
+  as the wing's own (`TE_HALF`) and folded faces are smoothed out (`untangle`). The edge's nose is repainted from
+  the skin just in front of it (`paint_te_nose`: the bake found the old edge's dark flap-well gap line there and
+  left black spots). Open: the narrow channel between
+  the nozzle shroud and the fuselage behind the wing (the slab's inboard side wall meets the fuselage skin in
+  slivers there; the fix is to give the fuselage side its own surface in `f`).
+  Round dark spots on the nacelle hump in the hangar are the «Песочный камуфляж» livery pattern (procedural blobs
+  in model space), not geometry: with a plain livery they are gone.
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.
 - `game/tools/model_lab/model_lab.gd` — подготовка сырого GLB (`prep`: длина 1, нос +X, `--nose=-x`, `--budget=N`) и предпросмотр сверху рядом со спрайтом (`preview`). Команды — в начале файла.
