@@ -222,11 +222,14 @@ const EXHAUST := {
 ## nacelle skin, caps found by their ±X normals); the battle models share the shape and axes.
 ## 01.11 (intake_rebuild.py): the intakes of «Грач» 1 and 2 are built geometry with their own duct paint
 ## (INTAKE_DUCTS); this round test would darken the inner half of their lips, so their intake spans are off (x 1.0,
-## outside the model), the nozzle spans stay.
+## outside the model), the nozzle spans stay. 02.11 (nacelle_box.py): the same for «Кит» 2, whose box nacelles have
+## built rectangular intakes; its nozzle span also darkens the rear ring that closes the shroud onto the nozzle. Its
+## radius is the new shroud's rim (0.0235) instead of the old round nacelle's 0.0295, so the test covers just the
+## nozzle opening and that ring, not the box nacelle's skin round them.
 const ENGINE_HOLES := {
 	"attacker_1": [-0.0387, 0.0884, 0.0335, [1.0, 1.0], [-0.26, -0.15]],
 	"attacker_2": [-0.0293, 0.0919, 0.0404, [1.0, 1.0], [-0.31, -0.20]],
-	"bomber_2": [-0.0144, 0.0702, 0.0295, [-0.135, 0.0], [-0.29, -0.24]],
+	"bomber_2": [-0.0144, 0.0702, 0.0235, [1.0, 1.0], [-0.29, -0.24]],
 }
 
 ## 01.11 (Kanta: the «Грач» intakes read as jet pods with torn skin; intake_rebuild.py rebuilt them after the
@@ -238,9 +241,12 @@ const ENGINE_HOLES := {
 ## `intake_rebuild.py --report`: [opening centre y, |z|, half height, half width, duct start x at the centre (the
 ## lip plane less half the lip), lip plane dx/dy, dx/d|z|, duct depth, |z| of the duct's inboard wall (just outboard
 ## of the splitter plate's face, which keeps the paint), shift of the duct's centre line at full depth (dy, d|z|)].
+## 02.11: «Кит» 2's rectangular intakes (nacelle_box.py --report): the oval is the opening's half sizes times 1.45,
+## so it covers the corners of the rectangle; its splitter stands mid-opening and is painted dark in the texture.
 const INTAKE_DUCTS := {
 	"attacker_1": [-0.0387, 0.0804, 0.025, 0.0205, 0.11025, -0.35, 0.0, 0.055, 0.06155, 0.01172, 0.00465],
 	"attacker_2": [-0.031, 0.0939, 0.027, 0.0195, 0.08135, -0.5, 0.0, 0.052, 0.07605, 0.0202, -0.0011],
+	"bomber_2": [-0.0573, 0.0705, 0.0105, 0.0464, -0.1126, -0.08, 0.0, 0.030, 0.0375, 0.0, 0.0],
 }
 
 ## The source paint in the shader's pass-through form (pattern -1: the texture's own colour, roughness and metal),
