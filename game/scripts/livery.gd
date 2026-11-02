@@ -1021,11 +1021,13 @@ void fragment() {
 		// would sparkle from afar)
 		float lead = smoothstep(0.55, 0.9, n0.x);
 		float near = clamp(1.6 - length(fwidth(lp)) / 0.0006, 0.0, 1.0);
-		float chip = smoothstep(0.88, 0.93, vnoise3(lp * 520.0) * 0.72 + vnoise3(lp * 60.0) * 0.08 + 0.26 * edge + 0.2 * lead);
+		// Chips read as worn light primer/aluminium: a dark metallic chip mirrors the dark hangar and looks like a
+		// hole in the skin, so they stay light, mostly dielectric and sparse.
+		float chip = smoothstep(0.91, 0.95, vnoise3(lp * 520.0) * 0.72 + vnoise3(lp * 60.0) * 0.08 + 0.26 * edge + 0.2 * lead);
 		chip *= dk * (1.0 - keep) * near;
-		alb = mix(alb, SRGB(vec3(0.46, 0.46, 0.44)), chip);
-		metal = mix(metal, 0.6, chip);
-		rough = mix(rough, 0.45, chip);
+		alb = mix(alb, SRGB(vec3(0.66, 0.66, 0.63)), chip);
+		metal = mix(metal, 0.25, chip);
+		rough = mix(rough, 0.55, chip);
 		rough = mix(rough, rough * 0.55 + 0.05, pd_gloss * (1.0 - chip));
 	}
 	ALBEDO = alb;
