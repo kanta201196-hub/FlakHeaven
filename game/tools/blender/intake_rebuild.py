@@ -15,7 +15,8 @@ How it is built (per side, mirrored), on the hangar GLB of the generator (before
    new duct behind it. Faces across the cut are clipped on it, so the cut edges are straight: on the splitter plane
    (closed by a flat patch, plane_patch, and covered by the plate) or on the cut plane.
 2. New parts, one grid round the opening (columns round it, rows along the profile):
-   - fairing: from the skin's own section at the cut (its rear band dips under the cut edge like a panel seam) to
+   - fairing: from the skin's own section at the cut, leaving it with the skin's own slope (flush: no seam step, it
+     reads as the nacelle carried on, not a separate cowl; a short band behind the cut lies just under the skin) to
      the lip outline (opening plus lip thickness), a smooth loft (the nacelle narrows to the lip, as on the
      prototype); clamped into the splitter plate inboard;
    - lip nose: a half round of the lip thickness;
@@ -30,7 +31,8 @@ How it is built (per side, mirrored), on the hangar GLB of the generator (before
    and battle_bake treat them as skin) with their own UV islands in free atlas space: the fairing and lip take the
    paint of the skin just behind them (column by column, so camouflage edges carry on), the lip edge a light worn
    band, the duct light grey near the lip fading to near black in its depth (Livery.INTAKE_DUCTS keeps this
-   texture colour in the duct under every paint scheme), the plate the cowl paint round the intake.
+   texture colour in the duct under every paint scheme), the plate and the plane patch the fuselage paint beside
+   each of their points (plate_paint), so a plate carries the paint of the fuselage it stands on.
 
   python3 -I intake_rebuild.py <hangar.glb> <key> <out.glb> --maps <col.jpg> <orm.jpg> [--report]
 The maps are rewritten in place (start from copies of the extracted maps), then tex_clean.py pads them. --report
@@ -70,8 +72,10 @@ INTAKES = {
 }
 NT = 144          # columns round the opening
 CUT_OVER = 0.004  # the skin is cut this far in front of the fairing's rear edge (the band covers the cut)
-DIP = 0.0004      # the fairing's rear edge sinks this far under the joint surface
-PROUD = 0.00025   # the fairing stands this far off the joint surface just in front of its rear edge (a panel seam)
+BAND = 0.0012     # the fairing reaches this far behind the cut, under the skin (no slit along the cut edge) ...
+DIP = 0.00015     # ... its rear edge this far under the skin's surface
+SLOPE_DX = 0.006  # the skin's slope at the cut is taken over this length behind it ...
+SLOPE_MAX = 0.5   # ... and held within +-this (dr/dx), so a crumpled bit of section cannot throw the loft out
 SNAP = 0.005      # open edges of the cut this close to the new parts are snapped onto them
 SPIKE = 0.4       # a vertex this far off its neighbours' mean (in mean edge lengths) near an intake is a spike
 DUCT_END = (0.35, -0.1, 0.4, 0.36)   # the duct's far oval: centre (dy, d|z|) from the nacelle axis, half axes; in r
@@ -79,6 +83,8 @@ CAP_LEAN = 1.2   # x per unit height of the duct's end ring and cap (they face d
 EVEN_BACK = (0.06, 0.10)   # the skin's paint is evened from the fairing's rear edge back this far (full, fading)
 GAP_FAIR = 0.02   # the skin this far inboard of the splitter plane, beside the plate, is faired (the gap)
 INSET = 0.0003    # clamps: fairing this far inside the plate, duct wall this far in front of it
+PLATE_TEX = 160   # texels of the square that paints a splitter plate and its plane patch
+PATCH_NDOT = 0.35  # a plane patch normal taken from the skin keeps at least this much of the outboard direction
 # paint (sRGB)
 DUCT_LIGHT = (168, 168, 162)   # duct paint near the lip
 DUCT_MID = (70, 70, 68)
@@ -166,32 +172,43 @@ def ray_radius(S, frame, dirs, fallback):
     return out
 
 
-def build(frame, S, c, cfg, xcut_of):
+def build(frame, S, c, cfg, xcut_of, S_back=None):
     """The intake grid in mirrored coordinates: positions (rows x NT), a paint class per row (0 fairing, 1 lip nose,
     2 duct, 3 cap), the nose rows' angle (0 outer .. pi inner, for the wear band) and the duct rows' depth share.
-    The fairing starts from the skin's own section at the cut (S), so its rear band covers the cut edge exactly."""
+    The fairing starts from the skin's own section at the cut (S) and leaves it with the skin's own slope (from
+    S_back, the section SLOPE_DX behind the cut), so it carries the nacelle on flush instead of reading as a
+    separate cowl; a short band behind the cut lies just under the skin and closes the slit along the edge."""
     t, (zp, tp) = cfg["t"], cfg["plate"]
     O2, N2, Oc = opening(cfg, frame)
     z_out = zp + tp - INSET          # fairing and the nose's outer half: inside the plate
     z_duct = zp + tp + INSET         # duct wall: just in front of the plate's outboard face
     xn = lip_x(c, frame, O2[:, 0], O2[:, 1]) - t / 2       # nose start per column
     L2 = O2 + t * N2                                        # lip outline
-    # rear contour: the skin's section along the ray from the axis through the lip outline; a running maximum and
-    # a light smoothing round the intake keep it a fair curve that never dips under the section
+    # rear contour: the skin's section along the ray from the axis through the lip outline, lightly smoothed round
+    # the intake (no running maximum: a contour above the section stood proud of the cut edge as a step)
     o = np.array([frame.yc, frame.zc])
     ray = L2 - o
     th = np.arctan2(ray[:, 1], ray[:, 0])
     dirs = np.stack([np.cos(th), np.sin(th)], 1)
-    rsec = ray_radius(S, frame, dirs, np.linalg.norm(ray, axis=1) + 0.002)
+    rl = np.linalg.norm(ray, axis=1)
     w = 3
-    ext = np.r_[rsec[-w:], rsec, rsec[:w]]
-    rsec = np.array([ext[i:i + 2 * w + 1].max() for i in range(NT)])
-    kk = np.exp(-0.5 * (np.arange(-w, w + 1) / 1.5) ** 2)
+    kk = np.exp(-0.5 * (np.arange(-w, w + 1) / 1.0) ** 2)
     kk /= kk.sum()
-    rsec = np.convolve(np.r_[rsec[-w:], rsec, rsec[:w]], kk, "valid")
+
+    def smooth(v):
+        """Gaussian smoothing of a closed (periodic) section"""
+        return np.convolve(np.r_[v[-w:], v, v[:w]], kk, "valid")
+    rsec = smooth(ray_radius(S, frame, dirs, rl + 0.002))
+    # the skin's slope dr/dx at the cut, per column (none where the back section has no hit on that ray)
+    slope = np.zeros(NT)
+    if S_back is not None and len(S_back):
+        rb = ray_radius(S_back, frame, dirs, np.full(NT, -1.0))
+        ok = rb > 0
+        rb = smooth(np.where(ok, rb, rsec))
+        slope = np.clip(np.where(ok, (rsec - rb) / SLOPE_DX, 0.0), -SLOPE_MAX, SLOPE_MAX)
     R2 = o + rsec[:, None] * dirs
     xcut = xcut_of(np.c_[np.zeros(NT), R2])
-    xr = xcut - CUT_OVER
+    xr = xcut - BAND
     rows, cls, aux = [], [], []
 
     def put(x, YZ, k, a=0.0, zmin=None):
@@ -201,18 +218,18 @@ def build(frame, S, c, cfg, xcut_of):
         rows.append(np.stack([np.broadcast_to(x, (NT,)), YZ[:, 0], YZ[:, 1]], 1))
         cls.append(k)
         aux.append(a)
-    # 1. fairing: rear edge dipped under the skin, proud of the section at the cut, then lofted to the lip outline
+    # 1. fairing: a band just under the skin behind the cut, then from the cut edge itself (the same section) a
+    # radial Hermite loft to the lip outline that starts with the skin's slope and ends level at the lip
+    put(xr, o + (rsec - BAND * slope - DIP)[:, None] * dirs, 0, zmin=z_out)
+    span = xn - xcut
+    m0 = slope * span
     K = 16
     for k in range(K + 1):
-        u = k / K
-        x = xr + (xn - xr) * u
-        if k == 0:
-            put(x, o + (rsec - DIP)[:, None] * dirs, 0, zmin=z_out)
-            continue
-        uu = np.clip((x - xcut) / (xn - xcut), 0, 1)
-        h = (uu * uu * (3 - 2 * uu))[:, None]
-        Rj = o + (rsec + PROUD)[:, None] * dirs
-        put(x, Rj + (L2 - Rj) * h, 0, zmin=z_out)
+        u = (k / K) ** 1.3          # rows a little denser at the cut, where the curvature is
+        x = xcut + span * u
+        h00, h10, h01 = 2 * u ** 3 - 3 * u ** 2 + 1, u ** 3 - 2 * u ** 2 + u, -2 * u ** 3 + 3 * u ** 2
+        r = h00 * rsec + h10 * m0 + h01 * rl
+        put(x, o + r[:, None] * dirs, 0, zmin=z_out)
     # 2. lip nose: half round of diameter t from the lip outline to the opening
     C2 = O2 + 0.5 * t * N2
     for k in range(1, 12):
@@ -673,6 +690,43 @@ def skin_paint(tree, keepv, UV, col, orm, q, k=12):
     return np.median(c, 0), np.median(o, 0)
 
 
+def plate_paint(P, T, UV, col, orm, prt, rect, lo, hi, zp, k=16):
+    """Paint of one plate's texel rectangle (x0, y0, w, h; planar over model (x, y) from lo to hi): per texel the
+    median colour and ORM of the k skin vertices nearest to that point on the plate's plane (lit texels only: the
+    old junction in the gap is dark), lightly blurred, so the plate's bottom and the patch under the fairing take
+    the paint of the fuselage round them. Returns (col, orm)."""
+    from scipy.ndimage import gaussian_filter
+    _, _, w, h = rect
+    S = col.shape[0]
+    side = prt["side"]
+    v = np.unique(T)
+    q = P[v]
+    m = (np.abs(q[:, 2] * side - zp) < 0.03) & (q[:, 0] > lo[0] - 0.02) \
+        & (q[:, 0] < hi[0] + 0.02) & (q[:, 1] > lo[1] - 0.02) & (q[:, 1] < hi[1] + 0.02)
+    v = v[m]
+    tree = cKDTree(P[v])
+    jj, ii = np.mgrid[0:h, 0:w]
+    X = lo[0] + (ii - 4 + 0.5) / (w - 8) * (hi[0] - lo[0])
+    Y = lo[1] + (jj - 4 + 0.5) / (h - 8) * (hi[1] - lo[1])
+    Q = np.stack([X.ravel(), Y.ravel(), np.full(X.size, zp * side)], 1)
+    _, nn = tree.query(Q, k=k)
+    uv = UV[v[nn]]
+    tx = np.clip((uv[..., 0] * S).astype(int), 0, S - 1)
+    ty = np.clip((uv[..., 1] * S).astype(int), 0, S - 1)
+    c = col[ty, tx].astype(float)
+    o = orm[ty, tx].astype(float)
+    dark = (c @ np.array([0.2126, 0.7152, 0.0722])) <= 45
+    allx = dark.all(1)
+    dark[allx] = False
+    c[dark] = np.nan
+    o[dark] = np.nan
+    cc = np.nanmedian(c, 1).reshape(h, w, 3)
+    oo = np.nanmedian(o, 1).reshape(h, w, 3)
+    cc = np.stack([gaussian_filter(cc[..., i], 2.0) for i in range(3)], -1)
+    oo = np.stack([gaussian_filter(oo[..., i], 2.0) for i in range(3)], -1)
+    return np.clip(cc + 0.5, 0, 255).astype(np.uint8), np.clip(oo + 0.5, 0, 255).astype(np.uint8)
+
+
 def paint_intake(col, orm, rect, G, cls, aux, lip_rgb, lip_orm, seed):
     """Paint one intake's rectangle (x0, y0, w, h): texel columns run round the opening, rows along the profile in
     arc length. Fairing and lip: the column's skin paint, a light worn band on the lip edge with a few chips;
@@ -800,7 +854,8 @@ def main():
             return lip_x(cc, fr, Q[:, 1], Q[:, 2]) - cfg["t"] / 2 - cfg["fair"] + CUT_OVER
         Pm = P * mir
         sec = cut_section(Pm, T, fr, cfg, xcut_of)
-        G, cls, aux, xr, xn, x_end, O2, Oc = build(fr, sec, c, cfg, xcut_of)
+        sec_back = cut_section(Pm, T, fr, cfg, lambda Q, f=xcut_of: f(Q) - SLOPE_DX)
+        G, cls, aux, xr, xn, x_end, O2, Oc = build(fr, sec, c, cfg, xcut_of, sec_back)
         # ---- cut
         x, _, r = fr.polar(Pm)
         xc = xcut_of(Pm)
@@ -961,18 +1016,22 @@ def main():
         o += len(pos)
         # plate: planar UV over (x, y), its own rectangle, painted with the fuselage paint beside it
         Pp, Np, Tp, XYp = prt["plate"]
-        lo, hi = XYp.min(0), XYp.max(0)
-        pw, ph = 96, 96
+        Pq, Tq = prt["patch"]
+        XYall = np.vstack([XYp] + ([Pq[:, :2]] if len(Tq) else []))
+        lo, hi = XYall.min(0), XYall.max(0)
+        pw, ph = PLATE_TEX, PLATE_TEX
         y1, x1 = free_rect(cov, pw, ph)
         cov[y1:y1 + ph, x1:x1 + pw] = True
-        # inboard face, outboard face and rim share the projection (they carry the same paint)
+        # inboard face, outboard face, rim and the plane patch share the projection (they carry the same paint)
         uvp = np.stack([(x1 + 4 + (XYp[:, 0] - lo[0]) / (hi[0] - lo[0]) * (pw - 8)) / S,
                         (y1 + 4 + (XYp[:, 1] - lo[1]) / (hi[1] - lo[1]) * (ph - 8)) / S], 1)
-        # the cowl paint round the intake (the skin next to the plate is the old dark junction)
-        prgb, porm = np.median(lip_rgb, 0), np.median(lip_orm, 0)
-        col[y1:y1 + ph, x1:x1 + pw] = np.clip(prgb + 0.5, 0, 255).astype(np.uint8)
-        orm[y1:y1 + ph, x1:x1 + pw] = np.clip(porm + 0.5, 0, 255).astype(np.uint8)
-        rep.append("plate UV island %d at texels (%d, %d), paint %s" % (k, x1, y1, np.round(prgb).astype(int)))
+        # the fuselage paint beside each point of the plate and patch, so they take the camouflage of the skin they
+        # stand on rather than one cowl tone
+        prgb, porm = plate_paint(P, keepT, UV, col, orm, prt, (x1, y1, pw, ph), lo, hi, zp)
+        col[y1:y1 + ph, x1:x1 + pw] = prgb
+        orm[y1:y1 + ph, x1:x1 + pw] = porm
+        rep.append("plate UV island %d at texels (%d, %d), paint median %s" % (
+            k, x1, y1, np.median(prgb.reshape(-1, 3), 0).astype(int)))
         if prt["side"] < 0:
             Tp = Tp[:, [0, 2, 1]]   # mirrored
         outP.append(Pp)
@@ -980,10 +1039,16 @@ def main():
         outUV.append(uvp)
         outT.append(Tp + o)
         o += len(Pp)
-        # plane patch: faces outboard, the plate's paint (UV clamped into the plate's rectangle)
-        Pq, Tq = prt["patch"]
+        # plane patch: faces outboard, the plate's paint (inside the plate's rectangle, which spans both)
         if len(Tq):
-            nq = np.tile([0.0, 0.0, float(np.sign(prt["side"]))], (len(Pq), 1))
+            # shading normals from the skin the patch closes (its vertices are the cut skin's own points): a flat
+            # normal showed the bulge in front of the plate as a flat-cut facet; held to face outboard
+            geo_n = np.array([0.0, 0.0, float(np.sign(prt["side"]))])
+            _, nn = tree.query(Pq)
+            nq = N[keepv[nn]].copy()
+            lo_n = nq @ geo_n < PATCH_NDOT
+            nq[lo_n] = nq[lo_n] + (PATCH_NDOT - nq[lo_n] @ geo_n)[:, None] * geo_n
+            nq /= np.maximum(np.linalg.norm(nq, axis=1, keepdims=True), 1e-12)
             fn = np.cross(Pq[Tq[:, 1]] - Pq[Tq[:, 0]], Pq[Tq[:, 2]] - Pq[Tq[:, 0]])
             Tq = np.where((fn[:, 2] * prt["side"] < 0)[:, None], Tq[:, [0, 2, 1]], Tq)
             uq = np.stack([(x1 + 4 + np.clip((Pq[:, 0] - lo[0]) / (hi[0] - lo[0]), 0, 1) * (pw - 8)) / S,

@@ -26,14 +26,18 @@ old skin only has to follow a smooth surface where it stays visible:
 2. Old skin (the region box round each nacelle, fading out over `fade`; kept boxes, the nozzle's inside and the skin
    near slats, flaps, bay doors and wells stay put): every vertex is projected onto f = smin(slab, nacelle, k), where
    the slab is the glove and fuselage round the nacelle (upper and lower penalised height fields fitted robustly to
-   the skin away from the old tube, cut by a planform polygon) and the nacelle is the signed distance to the built
-   loft. The fillet k fades to 0 at the intake (the box meets the glove with a clean edge, as on the prototype).
+   the skin away from the old tube, cut by a planform polygon) joined with the fuselage side (a radius field round
+   the fuselage axis fitted to the old side skin, `fus`; behind the glove the slab ends inside it), and the nacelle
+   is the signed distance to the built loft. The fillet k fades to 0 at the intake (the box meets the glove with a
+   clean edge, as on the prototype); inboard in the rear half it makes the channel between the shroud and the
+   fuselage one rounded fairing.
    Old vertices clear of the nacelle start on the slab sheet their side of the skin belongs to (by normal, walls by
    their neighbours), since the old glove lay partly below the fitted slab and would fold onto one sheet. Towards
    the planform's trailing edge the sheets close to a thin edge at a set height (`te`, `te_y`). The region is
    relaxed, its core remeshed (MeshLab) and projected again, the faces along the trailing edge split finer and
-   folded faces smoothed out. Faces left inside the built nacelle or lying on it beyond the fillet are dropped:
-   there the built loft is the surface, the fillet runs out tangent onto it.
+   folded faces smoothed out. The region is clipped where f becomes the built nacelle alone (inside it, or past
+   the fillet): there the built loft is the surface, the fillet runs out tangent onto it, and the clipped edge is a
+   smooth line on the loft (whole dropped faces left a sawtooth seam and hairs at the trailing-edge corners).
 3. Paint: the rebuilt region and the built loft and lip get their own UV charts in free atlas space at the skin's
    texel density, projection-baked from the old surface with the generator's dent shading evened out
    (nacelle_rebuild.bake), the trailing edge's nose repainted from the skin just in front of it; the duct is light
@@ -74,11 +78,13 @@ Image.MAX_IMAGE_PIXELS = None
 # trailing-edge polyline, the length over which the sheets close to a thin edge there and the edge's height
 # (|z|, y knots), and the old tube left out of its data (axis y, |z|, radius, from x); region: box (x0, x1, |z|0,
 # |z|1, y0, y1; it reaches 35 mm past the glove/wing trailing-edge corner so the corner is rebuilt whole, not in the
-# fade), fade, kept boxes (x0, x1, |z|0, |z|1, y0, y1 and an optional fade, 4 mm by default; the fuselage between
-# the nozzles fades over 14 mm into the rear fillet, a shorter fade left a step), the nozzle's
+# fade), fade, kept boxes (x0, x1, |z|0, |z|1, y0, y1 and an optional fade, 4 mm by default; bomber_2 needs none:
+# the fuselage between the nozzles is its own fitted surface, fus, so no old skin is kept there), the nozzle's
 # inside kept (behind x, within r of the shroud axis), fillet k, the length over which it grows from the lip and
 # the larger fillet inboard in the rear half (k_rear: from x to full at x, below |z| fading to |z|, size); the
-# strake box flattened into the slab.
+# strake box flattened into the slab; fus: the fuselage side (axis y, x range of the fit, x span over which it is
+# pulled inside the slab ahead, |z| and radius limits of its data, angle limit round the axis, knot spacing in x and
+# angle, penalty, fillet to the slab).
 NACELLES: dict = {
     "bomber_2": {
         "nac": {"x_lip": -0.112, "rake": 0.08, "x_end": -0.2742, "z_in": 0.037, "z_out": 0.104,
@@ -95,17 +101,19 @@ NACELLES: dict = {
                           (-0.1929, 0.185), (-0.1877, 0.17), (-0.1832, 0.16), (-0.1802, 0.15), (-0.1810, 0.145),
                           (-0.1855, 0.140), (-0.191, 0.135), (-0.1975, 0.13),
                           (-0.21, 0.126), (-0.224, 0.118), (-0.232, 0.108), (-0.236, 0.098),
-                          (-0.236, 0.05), (-0.24, 0.034), (-0.30, 0.034), (-0.30, -0.05)],
+                          (-0.236, 0.05), (-0.238, 0.0), (-0.238, -0.05)],
                  "te": [(-0.2013, 0.205), (-0.1993, 0.20), (-0.1929, 0.185), (-0.1877, 0.17), (-0.1832, 0.16),
                         (-0.1802, 0.15), (-0.1810, 0.145), (-0.1855, 0.140), (-0.191, 0.135), (-0.1975, 0.13),
                         (-0.21, 0.126), (-0.224, 0.118),
                         (-0.232, 0.108), (-0.236, 0.098)], "te_len": 0.012,
                  "te_y": [(0.10, -0.0338), (0.13, -0.0345), (0.168, -0.0291), (0.21, -0.0289)]},
         "region": {"box": (-0.28, -0.074, 0.030, 0.185, -0.085, 0.035), "fade": 0.008,
-                   "keep": [(-0.32, -0.245, 0.0, 0.034, -0.09, 0.05, 0.014)],
+                   "keep": [],
                    "nozzle": (-0.245, 0.019),
                    "k": 0.006, "k_grow": 0.025, "k_rear": (-0.160, -0.190, 0.050, 0.060, 0.014),
-                   "strake": (-0.135, -0.07, 0.034, 0.058, -0.075, -0.046)},
+                   "strake": (-0.135, -0.07, 0.034, 0.058, -0.075, -0.046),
+                   "fus": {"axis_y": -0.024, "x": (-0.30, -0.13), "fade": (-0.17, -0.145), "zmax": 0.036,
+                           "rmax": 0.05, "theta": 1.35, "kx": 0.012, "kt": 0.18, "lam": (1.0, 1.0), "k": 0.004}},
     },
 }
 NC = 112             # columns round the built section
@@ -118,6 +126,7 @@ TARGET_EDGE = 0.0025 # edge length of the remeshed core
 DROP_IN = 0.0008     # a region face this far inside the built nacelle is dropped
 DROP_ON = 0.0005     # ... or lying on it (within DROP_IN) this far past the fillet
 SINK = 0.002         # kept vertices on the built nacelle past the fillet are sunk this deep into it
+CLIP_SINK = 0.0001   # the edge where the region is clipped onto the built nacelle is sunk this far into it
 SPECK_WIN = 11       # neighbourhood (texels) of the bright-speck clean-up of the baked paint
 SPECK_DL = 22        # ... a texel this much lighter (0..255 luminance) than its neighbourhood's median is a speck
 TE_NOSE = 0.004      # faces this close (x, |z|) to the slab's trailing edge are repainted from the skin in front
@@ -368,8 +377,56 @@ class Slab:
         return smax_k(v, poly_sdf(np.stack([P[:, 0], z], 1), self.c["plan"]), np.minimum(self.c["plan_r"], 2 * half))
 
 
+class Fuselage:
+    """The fuselage side beside the nacelle's rear half: a penalised radius field r(x, theta) round a fuselage axis
+    (theta from the side, up positive), fitted robustly to the old skin of the fuselage side. The slab is a pair of
+    height fields cut by a planform, so behind the glove it gave the fuselage a flat vertical wall that did not lie on
+    the real, rounded side; the old skin faded into it in narrow slivers along the channel between the shroud and the
+    fuselage. With its own surface the fuselage keeps its shape there and the channel is a fillet between two smooth
+    surfaces. Ahead of the fade span the field is pulled inside the slab, which carries the fuselage there."""
+
+    def __init__(self, cfg, side):
+        """Config of this plane's fus block; side is +1 or -1 (the fit runs on that side's skin)"""
+        self.c, self.side = cfg["region"]["fus"], side
+
+    def polar(self, P):
+        """(x, theta, radius) of P round the axis, on this side"""
+        dy = P[:, 1] - self.c["axis_y"]
+        z = np.maximum(P[:, 2] * self.side, 0.0)
+        return P[:, 0], np.arctan2(dy, z), np.hypot(dy, z)
+
+    def fit(self, P, N, use, report, tag):
+        """Robust fit of r(x, theta) to the fuselage side skin: radial normals, inboard of zmax, within rmax"""
+        c = self.c
+        x, th, r = self.polar(P)
+        dy = P[:, 1] - c["axis_y"]
+        z = P[:, 2] * self.side
+        rad = np.stack([np.zeros(len(P)), dy, z], 1) / np.maximum(r, 1e-9)[:, None]
+        nr_ = np.einsum("ij,ij->i", N * np.array([0.0, 1.0, self.side]), rad * np.array([0.0, 1.0, 1.0]))
+        d = (use & (x > c["x"][0]) & (x < c["x"][1]) & (z > 0.004) & (z < c["zmax"]) & (r < c["rmax"])
+             & (nr_ > 0.6) & (np.abs(th) < c["theta"]))
+        self.sp = sr.Spline2(c["x"][0], c["x"][1], c["kx"], -c["theta"], c["theta"], c["kt"])
+        rw = self.sp.fit(x[d], th[d], r[d], prior=np.clip(nr_[d], 0.05, 1), lam=c["lam"])
+        res = r[d] - self.sp(x[d], th[d])
+        report.append("%-6s fuselage: %5d points, %.0f %% kept, residual p50 %.2f p95 %.2f mm" % (
+            tag, int(d.sum()), 100 * np.mean(rw > 0.5), np.median(np.abs(res[rw > 0.5])) * 1e3,
+            np.percentile(np.abs(res[rw > 0.5]), 95) * 1e3))
+
+    def f(self, P):
+        """Radial distance-like value (negative inside), pulled in ahead of the fade span"""
+        c = self.c
+        x, th, r = self.polar(P)
+        xc = np.clip(x, c["x"][0], c["x"][1])
+        tc = np.clip(th, -c["theta"], c["theta"])
+        v = r - self.sp(xc, tc)
+        # past the fitted angle range (top and bottom) and ahead of the fade the field is pulled far in
+        v = v + 0.05 * sstep(c["fade"][0], c["fade"][1], x) + 0.05 * sstep(c["theta"], c["theta"] + 0.15, np.abs(th))
+        return v
+
+
 class Side:
-    """One side's region: the slab, the built nacelle and the implicit surface the old skin goes onto"""
+    """One side's region: the slab, the fuselage side, the built nacelle and the implicit surface the old skin goes
+    onto"""
 
     def __init__(self, cfg, side):
         self.cfg, self.side = cfg, side
@@ -377,6 +434,17 @@ class Side:
         self.nac = Nacelle(cfg, side)
         self.slab = Slab(cfg, side)
         self.r = cfg["region"]
+        self.fus = Fuselage(cfg, side) if "fus" in self.r else None
+
+    def body(self, P):
+        """Slab and fuselage side as one surface (smooth union with the fuselage fillet), negative inside"""
+        b = self.slab.f(P)
+        if self.fus is None:
+            return b
+        a = self.fus.f(P)
+        k = self.r["fus"]["k"]
+        h = np.clip(0.5 + 0.5 * (b - a) / k, 0.0, 1.0)
+        return b * (1 - h) + a * h - k * h * (1 - h)
 
     def k(self, P):
         """Fillet size at P: none at the lip, full k_grow behind it; inboard in the rear half it grows to k_rear so
@@ -393,7 +461,7 @@ class Side:
 
     def f(self, P):
         """The surface the old skin goes onto: smooth union of slab and nacelle"""
-        a, b = self.nac.sdf(P), self.slab.f(P)
+        a, b = self.nac.sdf(P), self.body(P)
         k = np.maximum(self.k(P), 1e-6)
         h = np.clip(0.5 + 0.5 * (b - a) / k, 0.0, 1.0)
         return b * (1 - h) + a * h - k * h * (1 - h)
@@ -608,8 +676,7 @@ def rebuild_region(geo, sides, report):
     core[Fr[fc].reshape(-1)] = True
     V, left = untangle(sides, V, Fr, ol, core & (wl > 0.98) & clear, rounds=20)
     report.append("core faces still facing against f after untangling (edges and corners mostly): %d" % left)
-    # faces the built nacelle covers: inside it, or on it past the fillet
-    drop = np.zeros(len(Fr), bool)
+    # how far each vertex is past the fillet, where the built nacelle alone is f
     nd = np.zeros(len(V))
     past = np.zeros(len(V))
     for k, s in enumerate(sides):
@@ -617,18 +684,24 @@ def rebuild_region(geo, sides, report):
         if not sel.any():
             continue
         a = s.nac.sdf(V[sel])
-        b = s.slab.f(V[sel])
+        b = s.body(V[sel])
         nd[sel] = a
         past[sel] = (b - a) - s.k(V[sel])
-    vin = (nd < -DROP_IN) | ((np.abs(nd) <= DROP_IN) & (past > DROP_ON))
-    vin &= wl > 0.5
-    drop = vin[Fr].all(1)
-    report.append("region faces under the built nacelle dropped: %d of %d" % (int(drop.sum()), len(Fr)))
-    keepf = ~drop
-    used = np.unique(Fr[keepf])
-    loc = np.full(len(V), -1)
-    loc[used] = np.arange(len(used))
-    V, Fr, wl, ol, nd, past = V[used], loc[Fr[keepf]], wl[used], ol[used], nd[used], past[used]
+    # the region is clipped where f becomes the built nacelle alone (past the fillet, or inside the nacelle): whole
+    # dropped faces left the seam along the nacelle walls under the glove as a sawtooth, and hairs at the
+    # trailing-edge corners; the clipped edge is a smooth line on the loft. Faded skin is never clipped.
+    sv = np.where(wl > 0.5, past, -1.0)
+    nf0 = len(Fr)
+    V, Fr, (wl, ol, nd, past), ncut = clip_mesh(V, Fr, sv, [wl, ol, nd, past])
+    for k, s in enumerate(sides):
+        sel = (ol == k) & ncut
+        if sel.any():
+            V[sel] = s.project(V[sel], iters=6)
+            g = np.stack([(s.nac.sdf(V[sel] + e) - s.nac.sdf(V[sel] - e)) / (2 * H) for e in np.eye(3) * H], 1)
+            g /= np.maximum(np.linalg.norm(g, axis=1, keepdims=True), 1e-12)
+            V[sel] -= g * CLIP_SINK
+    report.append("region clipped where the built nacelle takes over: %d -> %d faces, %d new edge vertices" % (
+        nf0, len(Fr), int(ncut.sum())))
     # the kept faces that straddle the crease between glove and built nacelle would cut across the inside corner
     # (a sawtooth standing proud of the lip face and walls); their vertices on the nacelle are sunk into it so the
     # visible seam is the surfaces' own intersection
@@ -664,6 +737,55 @@ def rebuild_region(geo, sides, report):
     shade = np.zeros((len(V), 2))
     shade[:, 0] = (1 - sr.smoothstep(0.0, 0.004, np.abs(past))) * (np.abs(nd) < 0.004)
     return {"V": V, "F": Fr, "w": wl, "own": ol, "N": Nn, "fr": fr, "shade": shade, "W": W}
+
+
+def clip_mesh(V, F, sv, attrs):
+    """Clip the triangles to sv <= 0 (per vertex): faces with every corner above go, faces across get the part
+    below, cut at the zero of sv on their edges (shared by the neighbours, so no crack). Per-vertex attrs are
+    interpolated on the cut (integer ones take the nearer corner). Unused vertices are removed. Returns V, F, attrs
+    and the mask of the new edge vertices."""
+    hot = sv > 0
+    hc = hot[F]
+    part = hc.any(1) & ~hc.all(1)
+    cache = {}
+    nV, nA = [], []
+
+    def cut(a, b):
+        """Index of the vertex where sv crosses zero on edge a-b, made once and shared by both faces"""
+        key = (min(a, b), max(a, b))
+        if key not in cache:
+            t = sv[a] / (sv[a] - sv[b])
+            nV.append(V[a] + t * (V[b] - V[a]))
+            row = []
+            for ar in attrs:
+                if np.issubdtype(ar.dtype, np.integer):
+                    row.append(ar[a] if t < 0.5 else ar[b])
+                else:
+                    row.append(ar[a] + t * (ar[b] - ar[a]))
+            nA.append(row)
+            cache[key] = len(V) + len(nV) - 1
+        return cache[key]
+    out = []
+    for tri in F[part]:
+        poly = []
+        for k in range(3):
+            a, b = int(tri[k]), int(tri[(k + 1) % 3])
+            if sv[a] <= 0:
+                poly.append(a)
+            if (sv[a] <= 0) != (sv[b] <= 0):
+                poly.append(cut(a, b))
+        for k in range(1, len(poly) - 1):
+            out.append((poly[0], poly[k], poly[k + 1]))
+    F2 = np.vstack([F[~hc.any(1)]] + ([np.array(out, np.int64)] if out else []))
+    if nV:
+        V = np.vstack([V, np.array(nV)])
+        attrs = [np.r_[ar, np.array([r[i] for r in nA], ar.dtype)] for i, ar in enumerate(attrs)]
+    new = np.zeros(len(V), bool)
+    new[len(V) - len(nV):] = True
+    used = np.unique(F2)
+    loc = np.full(len(V), -1)
+    loc[used] = np.arange(len(used))
+    return V[used], loc[F2], [ar[used] for ar in attrs], new[used]
 
 
 def split_faces(V, F, mark):
@@ -1094,6 +1216,8 @@ def main() -> int:
     for s in sides:
         s.nac.build_sdf()
         s.slab.fit(geo["W0"], geo["Nw"], geo["free"] > 0.5, rep, s.tag)
+        if s.fus is not None:
+            s.fus.fit(geo["W0"], geo["Nw"], geo["free"] > 0.5, rep, s.tag)
     log('fitted')
     reg = rebuild_region(geo, sides, rep)
     log('region rebuilt')
