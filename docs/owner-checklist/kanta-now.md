@@ -16,6 +16,6 @@
 ## Ждёт ответа Kanta (не срочные сроки)
 
 - Ангар: «ок» на R-22 (детали ангара включены, свет выключен) — страница https://claude.ai/artifact/MuwtyKLcKBfY8KJyWYguDC
-- Камуфляж «Кита 2» поправлен в main (03.11): кадры https://claude.ai/artifact/9gBFoPRHQRAcv1cmzTtpnM — посмотреть и сказать «ок» или что поправить.
+- Камуфляж: правка тёмных пятен на гондоле bomber_2 слита (#544, 03.11); кадры «Кит 2» https://claude.ai/artifact/9gBFoPRHQRAcv1cmzTtpnM — посмотреть и сказать «ок» или что поправить (связь #544 с «Китом 2» — догадка, не проверено).
 - Тред бэкапа заблокирован, нужен ответ: https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WNwxKTmyMY7of5Me5TYX4TB
 - Сборка 3.5-s14 на ПК (R-17, R-18): тред https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WJh5VgjAbiCSYrQ8RBvGvUX
