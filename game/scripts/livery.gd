@@ -249,6 +249,17 @@ const INTAKE_DUCTS := {
 	"bomber_2": [-0.0573, 0.0705, 0.0105, 0.0464, -0.1126, -0.08, 0.0, 0.030, 0.0375, 0.0, 0.0],
 }
 
+## 03.11 (Kanta's «да»): the sand camouflage (pattern 5) lays its procedural spots in model space, and on «Кит» 2 they
+## fell on the long low fairing hump that the box nacelle raises behind the wing glove: round dark spots on a smooth
+## hump read as dents. Inside this box the dark spots fade out over `soft`; the sand and ochre fields stay (clearing
+## them too left a plain rectangle with straight edges in the middle of the disruptive pattern).
+## Per plane, model axes (nose +X, up +Y, both sides by |z|): [x0, x1, y0, y1, |z|0, |z|1, soft] — the hump of
+## nacelle_box.py NACELLES (from where the cap rises out of the glove to the nozzle shroud, between the box walls,
+## its upper half only, so the belly and the lower walls keep their paint).
+const CAMO_CLEAR := {
+	"bomber_2": [-0.285, -0.135, -0.034, 0.04, 0.032, 0.108, 0.008],
+}
+
 ## The source paint in the shader's pass-through form (pattern -1: the texture's own colour, roughness and metal),
 ## for the hangar detail layer on liveries that otherwise keep the GLB materials
 const SOURCE_PAINT := ["", "", Color.WHITE, Color.WHITE, Color.WHITE, 0.6, 0.0, -1]
@@ -357,6 +368,11 @@ static func apply(model: Node3D, cls: String, lvl: int, id: String, detail := fa
 			var sm := _material(m if m != null else m0, String(m0.resource_name) if m0 != null else "", v, src, xf, box, ex, holes,
 					float(CLASS_SCALE.get(cls, 1.0)), nose, INTAKE_DUCTS.get(key, []))
 			if sm != null:
+				var cc: Array = CAMO_CLEAR.get(key, [])
+				if cc.size() == 7:
+					sm.set_shader_parameter("clear_min", Vector3(cc[0], cc[2], cc[4]))
+					sm.set_shader_parameter("clear_max", Vector3(cc[1], cc[3], cc[5]))
+					sm.set_shader_parameter("clear_soft", float(cc[6]))
 				if detail:
 					PlaneDetail.setup(sm, key, xf)
 				mi.set_surface_override_material(si, sm)
@@ -498,6 +514,9 @@ uniform bool has_ducts = false;   // Livery.INTAKE_DUCTS: built intake ducts kee
 uniform vec4 duct_o = vec4(0.0);  // opening centre y, |z|, half height, half width
 uniform vec4 duct_p = vec4(0.0);  // duct start x at the centre, lip plane dx/dy, dx/d|z|, depth
 uniform vec3 duct_e = vec3(0.0);  // centre-line shift at full depth (dy, d|z|), |z| of the inboard wall
+uniform vec3 clear_min = vec3(1.0);   // Livery.CAMO_CLEAR: box (x, y, |z|) kept free of the pattern-5 spots
+uniform vec3 clear_max = vec3(1.0);
+uniform float clear_soft = 0.008;
 uniform vec3 c_dark : source_color;
 uniform vec3 c_mid : source_color;
 uniform vec3 c_light : source_color;
@@ -903,6 +922,11 @@ void fragment() {
 		float bw = fwidth(b) + 0.002;
 		float dk = smoothstep(CAMO_DARK - aw, CAMO_DARK + aw, a);
 		float oc = smoothstep(CAMO_OCHRE - bw, CAMO_OCHRE + bw, b);
+		vec3 cp = vec3(lp.x, lp.y, abs(lp.z));
+		vec3 c_lo = smoothstep(clear_min - clear_soft, clear_min, cp);
+		vec3 c_hi = 1.0 - smoothstep(clear_max, clear_max + clear_soft, cp);
+		float clr = c_lo.x * c_lo.y * c_lo.z * c_hi.x * c_hi.y * c_hi.z;
+		dk *= 1.0 - clr;
 		vec3 cam = mix(mix(c_mid, c_dark, oc), pat_a, dk);
 		// светлое брюхо (видно на кренах и разворотах)
 		float belly = under_n;
