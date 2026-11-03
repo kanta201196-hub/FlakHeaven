@@ -2,7 +2,8 @@ class_name Cutscene
 extends RefCounted
 ## In-engine story scenes (plan step 2, design `docs/story/cutscenes-and-presentation.md` §3.4): the camera flies
 ## over the live sortie terrain, the player's flight (TitleFlight models) sits at the screen anchor, captions in a
-## letterbox. The world stays paused (`Main.state == "cutscene"`), so nothing in the sortie moves or fires.
+## letterbox. Step 11 (Kanta 01.11): a scene that has key art (`art/story/<id>.jpg`, comic style) shows the picture
+## with a slow push-in instead of the fly-over; the fly-over stays the fallback (F1 `story_art` off, no file). The world stays paused (`Main.state == "cutscene"`), so nothing in the sortie moves or fires.
 ## Any key, button or click skips (real input events only, so the autotest bot's synthetic actions do not); the autotest skips at SKIP_AUTOTEST s and logs the scene. The light preset is
 ## restored and the camera returns to the player when the scene ends, then `Main` goes to `next_state`.
 
@@ -18,6 +19,20 @@ static var anchor := Vector2.ZERO
 static var _flight := false
 static var _skip := false   # a real key, button or click arrived (Main._input); synthetic bot actions do not count
 static var _then := Callable()   # runs instead of `_set_state(next_state)` when given (a hangar scene after the outro)
+static var art: Texture2D = null   # step 11: the scene's key art (art/story/<scene id>.jpg), null = the live fly-over
+
+
+## The picture of scene `scene_id` when the F1 switch `story_art` is on and the file exists (loaded for the scene,
+## dropped at its end: ~5 MB of VRAM each, never all at once). The id is the campaign flag name, so the variants of
+## one scene (intro_forts / intro_forts.recon, the two epilogue cards) share one picture.
+static func _load_art(scene_id: String) -> Texture2D:
+	if Tuning.g("story_art") <= 0.0:
+		return null
+	var path := "res://art/story/%s.jpg" % scene_id
+	if not ResourceLoader.exists(path):   # a variant id from the shots run ("intro_forts_recon") → its scene's picture
+		var parts := scene_id.split("_")
+		path = "res://art/story/%s_%s.jpg" % [parts[0], parts[1]] if parts.size() > 2 else path
+	return load(path) if ResourceLoader.exists(path) else null
 
 
 ## Starts a scene. `scene_id` is the campaign flag name ("intro_pass"); `after` — Main state when it ends, or
@@ -33,7 +48,8 @@ static func play(m: Main, scene_id: String, scene: Dictionary, after: String, th
 	t = 0.0
 	next_state = after
 	anchor = m.player.global_position if is_instance_valid(m.player) else m.camera.global_position
-	_flight = bool(def.get("flight", false))
+	art = _load_art(scene_id)
+	_flight = bool(def.get("flight", false)) and art == null   # with a picture the world is not seen: no model flight
 	_skip = false
 	TitleFlight.override = _flight
 	TitleFlight.ov_heading = float(def.get("heading", TitleFlight.H0))
@@ -109,6 +125,7 @@ static func finish(m: Main) -> void:
 	if not active:
 		return
 	active = false
+	art = null
 	TitleFlight.override = false
 	if m.render3d != null:
 		m.render3d.set_light("day")

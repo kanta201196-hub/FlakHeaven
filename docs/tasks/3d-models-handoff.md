@@ -75,6 +75,105 @@
     bows / ribs from `FRAMES`), a tub closing the cut in the skin, seats, panel with gauges, consoles, stick.
   - F1 `hangar_detail` (default 1) turns both off; F1 `hangar_light` (default 0, R-22) is the warm key + rim light.
   - A new hangar model needs a `PlaneDetail.SHAPE` and a `HangarCockpit.FRAMES` row (otherwise defaults).
+- **«Кит» dents and «Грач» intakes (01.11, branch claude/kit-grach-fix).** Recipe, from the hangar GLB of `main`
+  and copies of its extracted maps:
+  1. Bombers: `skin_refit.py <hangar.glb> bomber_N <out.glb> --report --mask <mask.png>` — the dented skin (zones in
+     `FITS`: fuselage and nacelle tubes of Кит-1; the Кит-2 nacelle tube is in the config but its result was not
+     taken — it deepened the dark dimples on the nacelle tops, Кит-2 is unchanged) is moved onto robust penalised spline
+     surfaces r(x, theta) and blended by a thin-plate solve; `--report` prints the dent depth (height over a local
+     quadric) before/after per zone. Then `tex_clean.py <out.glb> <col.jpg> <col.jpg> --dents <mask.png>` takes the
+     baked dent shading out of the paint in the moved skin; ORM gets padding only.
+  2. Attackers: superseded by the next-but-one entry («Грач» intakes after the prototype); this pass built a round
+     pod ring with an engine face and a spinner.
+  3. Copy GLB and maps into `game/models/hangar/`, `godot --headless --path game --import`, rebake the battle models
+     (`battle_bake.py --tris 30000` (Кит-2 36000) `--tex 2048 --outline 2 --glass 1 --shade hangar --threads 2`).
+- **Built nacelles and intake junctions (01.11, branch claude/kit-nacelle).** `python3 -I game/tools/blender/nacelle_rebuild.py
+  <hangar.glb> <key> <out.glb> --maps <col.jpg> <orm.jpg> --report` on the hangar GLB of `main` and copies of its
+  extracted maps (rewritten in place), then `tex_clean.py` (padding) on both maps, then step 3 above. Config `REGIONS`:
+  per nacelle a lofted tube and the wing slab, `f = smin(tube, slab, k)` gives the fillet; the skin is projected on f,
+  the core remeshed (MeshLab, 3 mm), given its own UV charts at the skin's texel density and projection-baked from the
+  old surface with the crease and metal-streak shading replaced by the paint. Junctions that are no tube use a
+  `sheet`; a built part inside a region can be kept by its UV island (`KEEP_UV`), gaps to its rim are bridged.
+  `--report` prints dent depth before/after per region. Shipped: Кит-1 (both nacelles). The Грач-2 intake junctions
+  shipped here were replaced by the next entry (its config is removed).
+- **«Грач» intakes after the prototype (01.11, branch claude/grach-intake).** Kanta: the intake read as a round jet
+  pod with an engine face and a spinner, the skin round it torn. Rebuilt on the prototype's layout (walkaround
+  photos; notes and photos stay outside the repository): an oval opening taller than wide, a thick rounded lip of
+  even thickness with a worn edge, a flat splitter plate standing off the fuselage with a boundary-layer gap, a duct
+  painted light grey that narrows, turns inward and fades to black (no engine face), the nacelle a little wider
+  behind the lip. Recipe, from the generator's hangar GLB (commit 3dc9892, before any intake pass) and copies of its
+  extracted maps:
+  1. `python3 -I game/tools/blender/intake_rebuild.py <hangar.glb> attacker_N <out.glb> --maps <col.jpg> <orm.jpg>
+     --report` (config `INTAKES`; the header says how it is built). `--report` prints the cut, the plate, the cut
+     points off every intended edge and the `Livery.INTAKE_DUCTS` row; paste that row into `livery.gd`.
+  2. `tex_clean.py <out.glb> <map> <map>` (padding) on both maps, copy GLB and maps into `game/models/hangar/`,
+     `godot --headless --path game --import`, rebake the battle models (`battle_bake.py --tris 30000 --tex 2048
+     --outline 2 --glass 1 --shade hangar --threads 2`).
+  3. Shader: `Livery.INTAKE_DUCTS` keeps the duct's texture paint under every livery (no detail layer, low
+     specular); the intake spans of both «Грач» in `Livery.ENGINE_HOLES` are off (they darkened the lip).
+  Checks used: a red emissive probe inside the fuselage in Cycles previews and a ray test from inside (no ray may
+  leave through the intake area; the leaks found are the generator's own, the same before and after), sections of
+  the skin per x, faces whose winding disagrees with their normals (5 left on Грач-2, 24 in the generator's skin).
+  Кит-2 is not shipped by `nacelle_rebuild.py`: its result had a blunt nacelle front, a boxy shoulder and small
+  holes by the bay (see the next entry).
+- **«Кит» 2 box nacelles after the prototype (02.11, branch claude/kit2-nacelle).** Kanta: dark dimples on the nacelle
+  tops and lumpy skin round the nacelles and the wing-root junctions. Rebuilt as built geometry on the prototype's
+  layout (walkaround photos and a three-view; notes and photos stay outside the repository): a box under the wing
+  glove, wider than tall, flat walls and bottom, rounded lower corners, a rectangular intake with thin lips, a
+  vertical splitter and a dark duct (no engine face), the top a long low hump that rounds into the nozzle shroud,
+  which tapers to a thin rim at the nozzle. Recipe, from the hangar GLB of `main` before this entry and copies of
+  its extracted maps:
+  1. `python3 -I game/tools/blender/nacelle_box.py <hangar.glb> bomber_2 <out.glb> --maps <col.jpg> <orm.jpg>
+     --report` (config `NACELLES`; the header says how it is built). `--report` prints the slab fit, dent depth
+     before/after, the dropped and sunk faces, the built parts and the `Livery.INTAKE_DUCTS` row; paste that row
+     into `livery.gd`. About 10 minutes on 2 threads.
+  2. `tex_clean.py <out.glb> <map> <map>` (padding) on both maps, copy GLB and maps into `game/models/hangar/`,
+     `godot --headless --path game --import`, rebake the battle model (`battle_bake.py --tris 36000 --tex 2048
+     --outline 2 --glass 1 --shade hangar --threads 2`).
+  3. Shader: the bomber_2 intake span in `Livery.ENGINE_HOLES` is off (the duct has its own paint); the nozzle span
+     stays and darkens the shroud's rear ring.
+  Checks used: a ray test from inside the fuselage and the nacelles (no ray escapes, as before), sections per x and
+  per |z| against `main`, Cycles grey and textured previews and Forward+ hangar frames before/after.
+  Glove/wing trailing-edge corner (second pass, same branch): the old glove's trailing edge sat 8 mm below the
+  wing's and met it in a step, so the old skin there folded onto one sheet of the slab (a hole read as a blunt
+  "tongue") and the step left dark slashes underneath. Now the region reaches past the corner, the slab's edge
+  height follows a ramp (`te_y`), its roundings shrink with its thickness (a round wider than a thin edge eats a
+  notch), old vertices start on the sheet their side belongs to (`skin_sheets`, `Side.seed`), the edge is as thick
+  as the wing's own (`TE_HALF`) and folded faces are smoothed out (`untangle`). The edge's nose is repainted from
+  the skin just in front of it (`paint_te_nose`: the bake found the old edge's dark flap-well gap line there and
+  left black spots). The narrow channel between the nozzle shroud and the fuselage
+  behind the wing, open here, is fixed in the leftovers entry below.
+  Round dark spots on the nacelle hump in the hangar are the «Песочный камуфляж» livery pattern (procedural blobs
+  in model space), not geometry: with a plain livery they are gone.
+- **Leftovers of the «Кит-2» nacelle and «Грач» intake passes (02.11, branch claude/model-leftovers).** Same recipes
+  as the two entries above, same inputs (Кит-2: the hangar GLB of `main` before the nacelle entry; «Грач»: commit
+  3dc9892), same rebake budgets. What changed in the tools:
+  - `nacelle_box.py`: the fuselage side between the nozzles is its own surface (`Fuselage`, config `fus`: a radius
+    field r(x, angle) round the fuselage axis fitted to the old skin, joined to the slab by a small fillet), so the
+    channel between the nozzle shroud and the fuselage behind the wing is a clean fillet between two smooth surfaces;
+    the old kept box there is gone (`keep: []`). Region faces the built nacelle takes over are clipped at the
+    nacelle surface (`clip_mesh`, cut vertices projected onto it) instead of dropped whole, which removed the
+    saw-tooth under the glove and most of the "hairs" in the trailing-edge corners. The slab planform's inboard
+    tail ends at the fuselage (x -0.238).
+  - `intake_rebuild.py`: the fairing starts `BAND` behind the cut, just under the old skin, with the skin's own
+    slope (Hermite rows from the section `SLOPE_DX` behind the cut), so its rear seam blends flush (no step). The
+    splitter plate and the plane patch on the plate plane take the fuselage paint under them (`plate_paint`,
+    median of the nearest skin at the plate plane, dark texels left out) instead of one cowl tone. Plane-patch
+    shading normals come from the nearest skin (`PATCH_NDOT` keeps them facing out), so the bulge in front of the
+    «Грач-2» plate no longer reads as a flat cut.
+  Checks: ray test from inside, 0 of 22800 rays escape on all three; Workbench close-ups and Forward+ frames
+  before/after. Open: (1) the light strip under the «Грач-1» fairing is not paint: the livery shader picks the
+  belly colour by the normal (`bel` from `n.y`), and the plate's side faces sideways, so it takes the top colour in
+  every livery; a fix is a livery change (belly colour by a box round the plates, say) and needs the owner's yes.
+  (2) A small dent beside the «Грач-2» plate front, where the gap fillet meets the skin in front of the plate (the
+  generator's mesh, the same as before this pass). (3) One tiny fleck where the slab's inboard end meets the
+  fuselage above the Кит-2 channel (closing the slab there to a thin edge made it worse and was not shipped).
+  Dark specks round the Кит-2 channel (same pass): the bake took small near-black marks from the old skin there,
+  and every livery maps near-black paint to its dark tone. `clean_specks` now fills near-black texels whose
+  surroundings are light (`fill_dark_spots`, grey closing over `SPOT_SIZE`), and `paint_dark_faces` repaints
+  baked faces that came out black among light ones from their nearest light face. The hangar detail layer's
+  paint chips are light and sparser now (`livery.gd`): dark metallic chips mirrored the dark hangar and read as
+  holes.
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.
 - `game/tools/model_lab/model_lab.gd` — подготовка сырого GLB (`prep`: длина 1, нос +X, `--nose=-x`, `--budget=N`) и предпросмотр сверху рядом со спрайтом (`preview`). Команды — в начале файла.

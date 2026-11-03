@@ -40,3 +40,25 @@ static func line_at(scene: Dictionary, tt: float) -> Array:
 ## Black overlay alpha at time `tt` of a scene `dur` long: from black at the start, to black at the end.
 static func fade_at(tt: float, dur: float) -> float:
 	return clampf(1.0 - minf(tt, dur - tt) / FADE, 0.0, 1.0)
+
+
+const ART_PUSH := 0.07   # share of extra scale the picture gains over a scene (a slow push-in)
+const ART_DRIFT := 0.02  # share of the screen width the picture drifts sideways over a scene
+
+
+## Where the story picture (`tex_size` px) is drawn on a `size` screen at time `tt` of a scene `dur` long:
+## scaled to cover the screen, then pushed in by ART_PUSH and drifted left by ART_DRIFT over the scene (smooth-step),
+## kept inside the picture so no edge shows. Empty when there is no picture.
+static func art_rect(size: Vector2, tex_size: Vector2, tt: float, dur: float) -> Rect2:
+	if tex_size.x <= 0.0 or tex_size.y <= 0.0 or size.x <= 0.0 or size.y <= 0.0:
+		return Rect2()
+	var u := 0.0 if dur <= 0.0 else clampf(tt / dur, 0.0, 1.0)
+	u = u * u * (3.0 - 2.0 * u)
+	var cover := maxf(size.x / tex_size.x, size.y / tex_size.y)
+	var k := cover * (1.0 + ART_PUSH * u)
+	var drawn := tex_size * k
+	var pos := (size - drawn) * 0.5
+	pos.x -= size.x * ART_DRIFT * (u - 0.5)
+	pos.x = clampf(pos.x, size.x - drawn.x, 0.0)
+	pos.y = clampf(pos.y, size.y - drawn.y, 0.0)
+	return Rect2(pos, drawn)

@@ -6,12 +6,14 @@ extends RefCounted
 ## saved in the campaign (`Campaign.set_story_choice`) and change later lines (`only`), never numbers.
 ## The world stays paused (`Main.state == "dialog"`). When the scene ends, `then` runs (start the sortie, show the
 ## results, back to the campaign screen). The branching rules are `DialogFlow` (unit-tested); the picture is `HudDialog`.
-## The autotest skips every scene at SKIP_AUTOTEST s and logs `DIALOG <id> skipped`; `--cutshot` saves one frame first.
+## The autotest skips every scene at SKIP_AUTOTEST s and logs `DIALOG <id> skipped`; `--cutshot` saves one frame first,
+## then one (`shot_dialog_<id>_<guest>.png`) on the first line of every other guest, so every portrait gets a frame.
 
 const SKIP_AUTOTEST := 0.2
 const ARM := 0.3       # s before a press counts (the press that opened the scene must not advance it)
 const SHOT_AT := 1.6   # `--cutshot`: the frame is saved here, with the first line fully typed
 const FADE := 0.4      # s of black at the start
+const SHOT_GUEST_AT := 0.5   # `--cutshot`: s after the jump to another guest's line before its frame is saved
 
 static var active := false
 static var id := ""
@@ -26,6 +28,9 @@ static var last_guest := ""   # the guest on the right stays while the crew talk
 static var _then := Callable()
 static var _choices := {}  # choice id → option, saved ones first, then those made in this scene
 static var _flags := {}    # campaign flags the scene reads (`flag` conditions), looked up once at start
+static var _shot_guest := ""   # `--cutshot`: guest id of the next extra frame ("" before the first frame and when none is left)
+static var _shot_at := 0.0     # `--cutshot`: scene time of that frame
+static var _shot_seen: Array = []   # `--cutshot`: speakers already on a saved frame
 
 
 ## Whether a scene plays now: the «Заставки» setting against the seen flag, and the scene is written.
@@ -45,6 +50,8 @@ static func play(m: Main, scene_id: String, scene: Dictionary, then: Callable, a
 	replay = as_replay
 	_then = then
 	_choices = {}
+	_shot_guest = ""
+	_shot_seen = []
 	for s: Dictionary in steps:
 		if s.has("choice"):
 			var saved := Campaign.story_choice(String(s["choice"]))
@@ -88,12 +95,18 @@ static func tick(m: Main, dt: float) -> void:
 	if args.has("--cutshot"):
 		if total >= SHOT_AT - 0.3:
 			t = 100.0   # the whole first line on the saved frame
-		if total >= SHOT_AT:
-			var img := m.get_viewport().get_texture().get_image()
-			if img != null:
-				img.save_png("user://shot_dialog_%s.png" % id)
-			print("DIALOG %s skipped" % id)
-			finish(m)
+		if _shot_guest != "":
+			if total >= _shot_at:
+				_save_shot(m, "user://shot_dialog_%s_%s.png" % [id, _shot_guest])
+				_shot_guest = ""
+				if not _jump_to_next_guest():
+					print("DIALOG %s skipped" % id)
+					finish(m)
+		elif total >= SHOT_AT:
+			_save_shot(m, "user://shot_dialog_%s.png" % id)
+			if not _jump_to_next_guest():
+				print("DIALOG %s skipped" % id)
+				finish(m)
 	elif total >= SKIP_AUTOTEST:
 		print("DIALOG %s skipped" % id)
 		finish(m)
@@ -160,6 +173,32 @@ static func _next(m: Main) -> void:
 	var who := String(current().get("who", ""))
 	if who != "" and who != "crew":
 		last_guest = who
+
+
+## `--cutshot`: notes the speaker of the frame just saved and moves to the first reachable line of a guest not yet on
+## a frame (Grom in H3′, Grom and Klyuch in H4′), typed out whole, with its frame due in SHOT_GUEST_AT s; false when
+## no such line is left.
+static func _jump_to_next_guest() -> bool:
+	_shot_seen.append(String(current().get("who", "")))
+	var j := DialogFlow.next_step(steps, i + 1, _choices, _flags)
+	while j < steps.size():
+		var who := String(steps[j].get("who", ""))
+		if DialogFlow.GUESTS.has(who) and not _shot_seen.has(who):
+			i = j
+			t = 100.0
+			focus = 0
+			last_guest = who
+			_shot_guest = String(DialogFlow.GUESTS[who])
+			_shot_at = total + SHOT_GUEST_AT
+			return true
+		j = DialogFlow.next_step(steps, j + 1, _choices, _flags)
+	return false
+
+
+static func _save_shot(m: Main, path: String) -> void:
+	var img := m.get_viewport().get_texture().get_image()
+	if img != null:
+		img.save_png(path)
 
 
 ## Ends the scene: flag it as seen (not on a replay or in «Битва асов»), then run `then`.
