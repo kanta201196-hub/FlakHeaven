@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bgyq6or0gfk4u"
-path="res://.godot/imported/a05_pier_a_paint_a05_pier_a.jpg-31086a8346bf30eb5378608ca216ef60.ctex"
+path.bptc="res://.godot/imported/a05_pier_a_paint_a05_pier_a.jpg-31086a8346bf30eb5378608ca216ef60.bptc.ctex"
+path.astc="res://.godot/imported/a05_pier_a_paint_a05_pier_a.jpg-31086a8346bf30eb5378608ca216ef60.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "fc49abad4e2de36dcde4c5ea67f45c26"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a05_pier_a_paint_a05_pier_a.jpg"
-dest_files=["res://.godot/imported/a05_pier_a_paint_a05_pier_a.jpg-31086a8346bf30eb5378608ca216ef60.ctex"]
+dest_files=["res://.godot/imported/a05_pier_a_paint_a05_pier_a.jpg-31086a8346bf30eb5378608ca216ef60.bptc.ctex", "res://.godot/imported/a05_pier_a_paint_a05_pier_a.jpg-31086a8346bf30eb5378608ca216ef60.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

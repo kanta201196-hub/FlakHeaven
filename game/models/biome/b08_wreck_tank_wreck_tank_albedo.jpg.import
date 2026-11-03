@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://di2d74qygnb5n"
-path="res://.godot/imported/b08_wreck_tank_wreck_tank_albedo.jpg-c44f93154cc40b72020dc1d0ab4561a2.ctex"
+path.bptc="res://.godot/imported/b08_wreck_tank_wreck_tank_albedo.jpg-c44f93154cc40b72020dc1d0ab4561a2.bptc.ctex"
+path.astc="res://.godot/imported/b08_wreck_tank_wreck_tank_albedo.jpg-c44f93154cc40b72020dc1d0ab4561a2.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "7728a4433df9715b2857c8caed2acafc"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b08_wreck_tank_wreck_tank_albedo.jpg"
-dest_files=["res://.godot/imported/b08_wreck_tank_wreck_tank_albedo.jpg-c44f93154cc40b72020dc1d0ab4561a2.ctex"]
+dest_files=["res://.godot/imported/b08_wreck_tank_wreck_tank_albedo.jpg-c44f93154cc40b72020dc1d0ab4561a2.bptc.ctex", "res://.godot/imported/b08_wreck_tank_wreck_tank_albedo.jpg-c44f93154cc40b72020dc1d0ab4561a2.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

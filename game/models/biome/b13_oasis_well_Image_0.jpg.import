@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://baow5gg8jvwvu"
-path="res://.godot/imported/b13_oasis_well_Image_0.jpg-63084e195afd29f987cffa5426b92303.ctex"
+path.bptc="res://.godot/imported/b13_oasis_well_Image_0.jpg-63084e195afd29f987cffa5426b92303.bptc.ctex"
+path.astc="res://.godot/imported/b13_oasis_well_Image_0.jpg-63084e195afd29f987cffa5426b92303.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "7b3c64d6af767c4e2b67a57b78e3d3cc"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b13_oasis_well_Image_0.jpg"
-dest_files=["res://.godot/imported/b13_oasis_well_Image_0.jpg-63084e195afd29f987cffa5426b92303.ctex"]
+dest_files=["res://.godot/imported/b13_oasis_well_Image_0.jpg-63084e195afd29f987cffa5426b92303.bptc.ctex", "res://.godot/imported/b13_oasis_well_Image_0.jpg-63084e195afd29f987cffa5426b92303.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

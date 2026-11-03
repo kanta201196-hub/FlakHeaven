@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://6khpcmgu445n"
-path="res://.godot/imported/fh_battle_e_ekranoplan_e_ekranoplan_normal.jpg-653a00e512d65d188ea1116df5290a47.ctex"
+path.bptc="res://.godot/imported/fh_battle_e_ekranoplan_e_ekranoplan_normal.jpg-653a00e512d65d188ea1116df5290a47.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_e_ekranoplan_e_ekranoplan_normal.jpg-653a00e512d65d188ea1116df5290a47.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "f8143df305cafdc8f8fd7d1062f64f88"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_ekranoplan_e_ekranoplan_normal.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_ekranoplan_e_ekranoplan_normal.jpg-653a00e512d65d188ea1116df5290a47.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_ekranoplan_e_ekranoplan_normal.jpg-653a00e512d65d188ea1116df5290a47.bptc.ctex", "res://.godot/imported/fh_battle_e_ekranoplan_e_ekranoplan_normal.jpg-653a00e512d65d188ea1116df5290a47.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

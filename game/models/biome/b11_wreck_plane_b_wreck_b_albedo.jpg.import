@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dnwop2diboal"
-path="res://.godot/imported/b11_wreck_plane_b_wreck_b_albedo.jpg-ab5d8c191d8556ced812ecb24ef94158.ctex"
+path.bptc="res://.godot/imported/b11_wreck_plane_b_wreck_b_albedo.jpg-ab5d8c191d8556ced812ecb24ef94158.bptc.ctex"
+path.astc="res://.godot/imported/b11_wreck_plane_b_wreck_b_albedo.jpg-ab5d8c191d8556ced812ecb24ef94158.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "dad42a4c7a62f59cbb431aaeb57fccc6"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b11_wreck_plane_b_wreck_b_albedo.jpg"
-dest_files=["res://.godot/imported/b11_wreck_plane_b_wreck_b_albedo.jpg-ab5d8c191d8556ced812ecb24ef94158.ctex"]
+dest_files=["res://.godot/imported/b11_wreck_plane_b_wreck_b_albedo.jpg-ab5d8c191d8556ced812ecb24ef94158.bptc.ctex", "res://.godot/imported/b11_wreck_plane_b_wreck_b_albedo.jpg-ab5d8c191d8556ced812ecb24ef94158.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

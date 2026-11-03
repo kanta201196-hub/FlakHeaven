@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dn2j0e54bmiks"
-path="res://.godot/imported/turret_grach_evo_dazzle_turret_paint_pods_albedo.jpg-e437611a25e8fcbba2e78ccd4c7008cb.ctex"
+path.bptc="res://.godot/imported/turret_grach_evo_dazzle_turret_paint_pods_albedo.jpg-e437611a25e8fcbba2e78ccd4c7008cb.bptc.ctex"
+path.astc="res://.godot/imported/turret_grach_evo_dazzle_turret_paint_pods_albedo.jpg-e437611a25e8fcbba2e78ccd4c7008cb.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "32f7f04590302fa05510153a13b20391"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_evo_dazzle_turret_paint_pods_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_evo_dazzle_turret_paint_pods_albedo.jpg-e437611a25e8fcbba2e78ccd4c7008cb.ctex"]
+dest_files=["res://.godot/imported/turret_grach_evo_dazzle_turret_paint_pods_albedo.jpg-e437611a25e8fcbba2e78ccd4c7008cb.bptc.ctex", "res://.godot/imported/turret_grach_evo_dazzle_turret_paint_pods_albedo.jpg-e437611a25e8fcbba2e78ccd4c7008cb.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bpm0u3wbqk50d"
-path="res://.godot/imported/turret_grach_evo_dazzle_turret_paint_normal.jpg-973560b2f94dc1ed375aa6d81ba39182.ctex"
+path.bptc="res://.godot/imported/turret_grach_evo_dazzle_turret_paint_normal.jpg-973560b2f94dc1ed375aa6d81ba39182.bptc.ctex"
+path.astc="res://.godot/imported/turret_grach_evo_dazzle_turret_paint_normal.jpg-973560b2f94dc1ed375aa6d81ba39182.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "554d5b8e023cd49a6fed89f32832aa09"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/turrets/turret_grach_evo_dazzle_turret_paint_normal.jpg"
-dest_files=["res://.godot/imported/turret_grach_evo_dazzle_turret_paint_normal.jpg-973560b2f94dc1ed375aa6d81ba39182.ctex"]
+dest_files=["res://.godot/imported/turret_grach_evo_dazzle_turret_paint_normal.jpg-973560b2f94dc1ed375aa6d81ba39182.bptc.ctex", "res://.godot/imported/turret_grach_evo_dazzle_turret_paint_normal.jpg-973560b2f94dc1ed375aa6d81ba39182.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

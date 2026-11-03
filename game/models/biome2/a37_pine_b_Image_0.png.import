@@ -3,20 +3,22 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://7x7fc4liebbp"
-path="res://.godot/imported/a37_pine_b_Image_0.png-5e7d0791a1aaeb69426add4c907734cc.ctex"
+path.bptc="res://.godot/imported/a37_pine_b_Image_0.png-5e7d0791a1aaeb69426add4c907734cc.bptc.ctex"
+path.astc="res://.godot/imported/a37_pine_b_Image_0.png-5e7d0791a1aaeb69426add4c907734cc.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/biome2/a37_pine_b_Image_0.png"
-dest_files=["res://.godot/imported/a37_pine_b_Image_0.png-5e7d0791a1aaeb69426add4c907734cc.ctex"]
+dest_files=["res://.godot/imported/a37_pine_b_Image_0.png-5e7d0791a1aaeb69426add4c907734cc.bptc.ctex", "res://.godot/imported/a37_pine_b_Image_0.png-5e7d0791a1aaeb69426add4c907734cc.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

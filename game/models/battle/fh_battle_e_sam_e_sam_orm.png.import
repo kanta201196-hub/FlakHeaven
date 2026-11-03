@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ckjuap2p184np"
-path="res://.godot/imported/fh_battle_e_sam_e_sam_orm.png-b68177d9a78de132ae68aaab075e5633.ctex"
+path.bptc="res://.godot/imported/fh_battle_e_sam_e_sam_orm.png-b68177d9a78de132ae68aaab075e5633.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_e_sam_e_sam_orm.png-b68177d9a78de132ae68aaab075e5633.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "325731add7e044c9b857062e1d159baa"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_sam_e_sam_orm.png"
-dest_files=["res://.godot/imported/fh_battle_e_sam_e_sam_orm.png-b68177d9a78de132ae68aaab075e5633.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_sam_e_sam_orm.png-b68177d9a78de132ae68aaab075e5633.bptc.ctex", "res://.godot/imported/fh_battle_e_sam_e_sam_orm.png-b68177d9a78de132ae68aaab075e5633.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

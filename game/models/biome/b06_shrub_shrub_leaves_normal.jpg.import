@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://wxx01ri4tnwc"
-path="res://.godot/imported/b06_shrub_shrub_leaves_normal.jpg-fcfef04225025fc601e7186e955f2fb4.ctex"
+path.bptc="res://.godot/imported/b06_shrub_shrub_leaves_normal.jpg-fcfef04225025fc601e7186e955f2fb4.bptc.ctex"
+path.astc="res://.godot/imported/b06_shrub_shrub_leaves_normal.jpg-fcfef04225025fc601e7186e955f2fb4.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "577b51919551b0523921004d31dab616"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b06_shrub_shrub_leaves_normal.jpg"
-dest_files=["res://.godot/imported/b06_shrub_shrub_leaves_normal.jpg-fcfef04225025fc601e7186e955f2fb4.ctex"]
+dest_files=["res://.godot/imported/b06_shrub_shrub_leaves_normal.jpg-fcfef04225025fc601e7186e955f2fb4.bptc.ctex", "res://.godot/imported/b06_shrub_shrub_leaves_normal.jpg-fcfef04225025fc601e7186e955f2fb4.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

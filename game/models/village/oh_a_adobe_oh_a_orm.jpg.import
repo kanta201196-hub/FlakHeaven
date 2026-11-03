@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://deqfi26k8bx7u"
-path="res://.godot/imported/oh_a_adobe_oh_a_orm.jpg-c9dcf471f18abf5578eb96345191f363.ctex"
+path.bptc="res://.godot/imported/oh_a_adobe_oh_a_orm.jpg-c9dcf471f18abf5578eb96345191f363.bptc.ctex"
+path.astc="res://.godot/imported/oh_a_adobe_oh_a_orm.jpg-c9dcf471f18abf5578eb96345191f363.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "8b6c6bacf48b087280803a3ef8ecc48a"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/oh_a_adobe_oh_a_orm.jpg"
-dest_files=["res://.godot/imported/oh_a_adobe_oh_a_orm.jpg-c9dcf471f18abf5578eb96345191f363.ctex"]
+dest_files=["res://.godot/imported/oh_a_adobe_oh_a_orm.jpg-c9dcf471f18abf5578eb96345191f363.bptc.ctex", "res://.godot/imported/oh_a_adobe_oh_a_orm.jpg-c9dcf471f18abf5578eb96345191f363.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

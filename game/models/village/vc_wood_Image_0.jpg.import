@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bg8g2rw8k51a5"
-path="res://.godot/imported/vc_wood_Image_0.jpg-8e52ac1d884e9f714c9282e703dfc1ce.ctex"
+path.bptc="res://.godot/imported/vc_wood_Image_0.jpg-8e52ac1d884e9f714c9282e703dfc1ce.bptc.ctex"
+path.astc="res://.godot/imported/vc_wood_Image_0.jpg-8e52ac1d884e9f714c9282e703dfc1ce.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "b02e0111e7247ca7714e8b830f7f8ee6"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/vc_wood_Image_0.jpg"
-dest_files=["res://.godot/imported/vc_wood_Image_0.jpg-8e52ac1d884e9f714c9282e703dfc1ce.ctex"]
+dest_files=["res://.godot/imported/vc_wood_Image_0.jpg-8e52ac1d884e9f714c9282e703dfc1ce.bptc.ctex", "res://.godot/imported/vc_wood_Image_0.jpg-8e52ac1d884e9f714c9282e703dfc1ce.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

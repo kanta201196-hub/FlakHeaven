@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://w1ut3nnyi72a"
-path="res://.godot/imported/a39_reed_paint_a39_reed.jpg-4a30e5cf209d2f4fa2d0b45e191ca0b2.ctex"
+path.bptc="res://.godot/imported/a39_reed_paint_a39_reed.jpg-4a30e5cf209d2f4fa2d0b45e191ca0b2.bptc.ctex"
+path.astc="res://.godot/imported/a39_reed_paint_a39_reed.jpg-4a30e5cf209d2f4fa2d0b45e191ca0b2.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "fe4baf45d336d1b51464876384b954dd"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a39_reed_paint_a39_reed.jpg"
-dest_files=["res://.godot/imported/a39_reed_paint_a39_reed.jpg-4a30e5cf209d2f4fa2d0b45e191ca0b2.ctex"]
+dest_files=["res://.godot/imported/a39_reed_paint_a39_reed.jpg-4a30e5cf209d2f4fa2d0b45e191ca0b2.bptc.ctex", "res://.godot/imported/a39_reed_paint_a39_reed.jpg-4a30e5cf209d2f4fa2d0b45e191ca0b2.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

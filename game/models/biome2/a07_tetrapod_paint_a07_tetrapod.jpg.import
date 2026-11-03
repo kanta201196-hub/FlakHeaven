@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://deouh6ivv366v"
-path="res://.godot/imported/a07_tetrapod_paint_a07_tetrapod.jpg-a40f6209d9b5e330e531505387788020.ctex"
+path.bptc="res://.godot/imported/a07_tetrapod_paint_a07_tetrapod.jpg-a40f6209d9b5e330e531505387788020.bptc.ctex"
+path.astc="res://.godot/imported/a07_tetrapod_paint_a07_tetrapod.jpg-a40f6209d9b5e330e531505387788020.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "c803986993ef2e22befc855139985876"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a07_tetrapod_paint_a07_tetrapod.jpg"
-dest_files=["res://.godot/imported/a07_tetrapod_paint_a07_tetrapod.jpg-a40f6209d9b5e330e531505387788020.ctex"]
+dest_files=["res://.godot/imported/a07_tetrapod_paint_a07_tetrapod.jpg-a40f6209d9b5e330e531505387788020.bptc.ctex", "res://.godot/imported/a07_tetrapod_paint_a07_tetrapod.jpg-a40f6209d9b5e330e531505387788020.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

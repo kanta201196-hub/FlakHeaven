@@ -3,20 +3,22 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bklrssm8cx7da"
-path="res://.godot/imported/a38_tree_leaf_Image_0.png-2df3f97f36cd6e7d147901fc856c67af.ctex"
+path.bptc="res://.godot/imported/a38_tree_leaf_Image_0.png-2df3f97f36cd6e7d147901fc856c67af.bptc.ctex"
+path.astc="res://.godot/imported/a38_tree_leaf_Image_0.png-2df3f97f36cd6e7d147901fc856c67af.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/biome2/a38_tree_leaf_Image_0.png"
-dest_files=["res://.godot/imported/a38_tree_leaf_Image_0.png-2df3f97f36cd6e7d147901fc856c67af.ctex"]
+dest_files=["res://.godot/imported/a38_tree_leaf_Image_0.png-2df3f97f36cd6e7d147901fc856c67af.bptc.ctex", "res://.godot/imported/a38_tree_leaf_Image_0.png-2df3f97f36cd6e7d147901fc856c67af.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

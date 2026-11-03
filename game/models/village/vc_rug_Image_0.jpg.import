@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://tqx45vitniic"
-path="res://.godot/imported/vc_rug_Image_0.jpg-77fa387076788ff02df9f949310036da.ctex"
+path.bptc="res://.godot/imported/vc_rug_Image_0.jpg-77fa387076788ff02df9f949310036da.bptc.ctex"
+path.astc="res://.godot/imported/vc_rug_Image_0.jpg-77fa387076788ff02df9f949310036da.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d75f1e91c8b6dd545ea1cae6c0a4bf0a"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/vc_rug_Image_0.jpg"
-dest_files=["res://.godot/imported/vc_rug_Image_0.jpg-77fa387076788ff02df9f949310036da.ctex"]
+dest_files=["res://.godot/imported/vc_rug_Image_0.jpg-77fa387076788ff02df9f949310036da.bptc.ctex", "res://.godot/imported/vc_rug_Image_0.jpg-77fa387076788ff02df9f949310036da.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

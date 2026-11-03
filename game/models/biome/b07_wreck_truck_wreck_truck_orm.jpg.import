@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cea7dv38e05w6"
-path="res://.godot/imported/b07_wreck_truck_wreck_truck_orm.jpg-6b38211eaf7654706d15e813d25b7fe8.ctex"
+path.bptc="res://.godot/imported/b07_wreck_truck_wreck_truck_orm.jpg-6b38211eaf7654706d15e813d25b7fe8.bptc.ctex"
+path.astc="res://.godot/imported/b07_wreck_truck_wreck_truck_orm.jpg-6b38211eaf7654706d15e813d25b7fe8.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "13b12cfaf0a54a8a8149835ce0cfc769"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b07_wreck_truck_wreck_truck_orm.jpg"
-dest_files=["res://.godot/imported/b07_wreck_truck_wreck_truck_orm.jpg-6b38211eaf7654706d15e813d25b7fe8.ctex"]
+dest_files=["res://.godot/imported/b07_wreck_truck_wreck_truck_orm.jpg-6b38211eaf7654706d15e813d25b7fe8.bptc.ctex", "res://.godot/imported/b07_wreck_truck_wreck_truck_orm.jpg-6b38211eaf7654706d15e813d25b7fe8.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

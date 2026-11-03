@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cltcho2ohfhyp"
-path="res://.godot/imported/oh_pergola_adobe_oh_pergola_normal.jpg-e0d1c6a9e70edcfda7bd2b7652c25273.ctex"
+path.bptc="res://.godot/imported/oh_pergola_adobe_oh_pergola_normal.jpg-e0d1c6a9e70edcfda7bd2b7652c25273.bptc.ctex"
+path.astc="res://.godot/imported/oh_pergola_adobe_oh_pergola_normal.jpg-e0d1c6a9e70edcfda7bd2b7652c25273.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "edc5856544fd401c6ac8e608c569da1a"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/oh_pergola_adobe_oh_pergola_normal.jpg"
-dest_files=["res://.godot/imported/oh_pergola_adobe_oh_pergola_normal.jpg-e0d1c6a9e70edcfda7bd2b7652c25273.ctex"]
+dest_files=["res://.godot/imported/oh_pergola_adobe_oh_pergola_normal.jpg-e0d1c6a9e70edcfda7bd2b7652c25273.bptc.ctex", "res://.godot/imported/oh_pergola_adobe_oh_pergola_normal.jpg-e0d1c6a9e70edcfda7bd2b7652c25273.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://wxe7hank8ngh"
-path="res://.godot/imported/b05_orchard_tree_orchard_leaves_color.png-d777ed1d524f1109a42f8ad286d3964e.ctex"
+path.bptc="res://.godot/imported/b05_orchard_tree_orchard_leaves_color.png-d777ed1d524f1109a42f8ad286d3964e.bptc.ctex"
+path.astc="res://.godot/imported/b05_orchard_tree_orchard_leaves_color.png-d777ed1d524f1109a42f8ad286d3964e.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "ef29028d3f3a056626a077a1f6379e3b"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome/b05_orchard_tree_orchard_leaves_color.png"
-dest_files=["res://.godot/imported/b05_orchard_tree_orchard_leaves_color.png-d777ed1d524f1109a42f8ad286d3964e.ctex"]
+dest_files=["res://.godot/imported/b05_orchard_tree_orchard_leaves_color.png-d777ed1d524f1109a42f8ad286d3964e.bptc.ctex", "res://.godot/imported/b05_orchard_tree_orchard_leaves_color.png-d777ed1d524f1109a42f8ad286d3964e.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

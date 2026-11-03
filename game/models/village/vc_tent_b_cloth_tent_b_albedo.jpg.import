@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ds8s7skpoo4vh"
-path="res://.godot/imported/vc_tent_b_cloth_tent_b_albedo.jpg-157774ced73edfd71036128369772469.ctex"
+path.bptc="res://.godot/imported/vc_tent_b_cloth_tent_b_albedo.jpg-157774ced73edfd71036128369772469.bptc.ctex"
+path.astc="res://.godot/imported/vc_tent_b_cloth_tent_b_albedo.jpg-157774ced73edfd71036128369772469.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "acd0470f8ea58edaefb1ff1689f2535b"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/village/vc_tent_b_cloth_tent_b_albedo.jpg"
-dest_files=["res://.godot/imported/vc_tent_b_cloth_tent_b_albedo.jpg-157774ced73edfd71036128369772469.ctex"]
+dest_files=["res://.godot/imported/vc_tent_b_cloth_tent_b_albedo.jpg-157774ced73edfd71036128369772469.bptc.ctex", "res://.godot/imported/vc_tent_b_cloth_tent_b_albedo.jpg-157774ced73edfd71036128369772469.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://crl5tj08jwac4"
-path="res://.godot/imported/fh_battle_e_convoy_pickup_tent_convoy_pickup_tent_canvas_normal.jpg-4c40cb6e725a5a8c602a086379820f26.ctex"
+path.bptc="res://.godot/imported/fh_battle_e_convoy_pickup_tent_convoy_pickup_tent_canvas_normal.jpg-4c40cb6e725a5a8c602a086379820f26.bptc.ctex"
+path.astc="res://.godot/imported/fh_battle_e_convoy_pickup_tent_convoy_pickup_tent_canvas_normal.jpg-4c40cb6e725a5a8c602a086379820f26.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d177908f6d189013a5a0189690d17982"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_convoy_pickup_tent_convoy_pickup_tent_canvas_normal.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_convoy_pickup_tent_convoy_pickup_tent_canvas_normal.jpg-4c40cb6e725a5a8c602a086379820f26.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_convoy_pickup_tent_convoy_pickup_tent_canvas_normal.jpg-4c40cb6e725a5a8c602a086379820f26.bptc.ctex", "res://.godot/imported/fh_battle_e_convoy_pickup_tent_convoy_pickup_tent_canvas_normal.jpg-4c40cb6e725a5a8c602a086379820f26.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://u6m2yaoposds"
-path="res://.godot/imported/a14_house_3_paint_a14_house_3.jpg-210b5c590943b60f8195d00b31135776.ctex"
+path.bptc="res://.godot/imported/a14_house_3_paint_a14_house_3.jpg-210b5c590943b60f8195d00b31135776.bptc.ctex"
+path.astc="res://.godot/imported/a14_house_3_paint_a14_house_3.jpg-210b5c590943b60f8195d00b31135776.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "ecbfcfd4d4579a39d01f2d7100b057b0"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a14_house_3_paint_a14_house_3.jpg"
-dest_files=["res://.godot/imported/a14_house_3_paint_a14_house_3.jpg-210b5c590943b60f8195d00b31135776.ctex"]
+dest_files=["res://.godot/imported/a14_house_3_paint_a14_house_3.jpg-210b5c590943b60f8195d00b31135776.bptc.ctex", "res://.godot/imported/a14_house_3_paint_a14_house_3.jpg-210b5c590943b60f8195d00b31135776.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

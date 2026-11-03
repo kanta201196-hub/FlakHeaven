@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://kwrbifcl28rm"
-path="res://.godot/imported/a32_cliff_b_paint_a32_cliff_b.jpg-d6059d7a23211f731e0c6d7d567d2faa.ctex"
+path.bptc="res://.godot/imported/a32_cliff_b_paint_a32_cliff_b.jpg-d6059d7a23211f731e0c6d7d567d2faa.bptc.ctex"
+path.astc="res://.godot/imported/a32_cliff_b_paint_a32_cliff_b.jpg-d6059d7a23211f731e0c6d7d567d2faa.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d4060b3a0404f4028834d6f7461409a2"
@@ -14,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://models/biome2/a32_cliff_b_paint_a32_cliff_b.jpg"
-dest_files=["res://.godot/imported/a32_cliff_b_paint_a32_cliff_b.jpg-d6059d7a23211f731e0c6d7d567d2faa.ctex"]
+dest_files=["res://.godot/imported/a32_cliff_b_paint_a32_cliff_b.jpg-d6059d7a23211f731e0c6d7d567d2faa.bptc.ctex", "res://.godot/imported/a32_cliff_b_paint_a32_cliff_b.jpg-d6059d7a23211f731e0c6d7d567d2faa.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
