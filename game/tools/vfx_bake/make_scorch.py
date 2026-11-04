@@ -12,6 +12,8 @@ Straight alpha, RGBA 1024 px, transparent border so the decal never shows its bo
 
 Run from the repo root:
   python3 game/tools/vfx_bake/make_scorch.py BURNED_GROUND_DIFF.jpg game/art/vfx/scorch.png [--seed 7]
+Light variant (S15-G10, toggle scorch_soft):
+  python3 game/tools/vfx_bake/make_scorch.py game/art/vfx/scorch.png game/art/vfx/scorch_soft.png --soften
 Source: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/burned_ground_01/burned_ground_01_diff_1k.jpg
 Dependencies: Pillow, numpy.
 """
@@ -96,13 +98,38 @@ def bake(src: str, out: str, seed: int) -> None:
     Image.fromarray((rgba * 255).round().astype(np.uint8), "RGBA").save(out, optimize=True)
 
 
+def soften(src: str, out: str) -> None:
+    """S15-G10 (Kanta s15 review, item 10): the near-black scorch read as holes in the ground. From the baked
+    scorch.png this writes a lighter variant: burnt brown soil instead of soot (the photo detail is kept through
+    the luminance), a core that never goes fully opaque and alpha that fades out softly toward the rim, so the
+    ragged rays end in a haze instead of a hard black edge. Render3D uses it behind the F1 toggle scorch_soft."""
+    im = np.asarray(Image.open(src).convert("RGBA"), dtype=np.float64) / 255.0
+    size = im.shape[0]
+    yy, xx = np.mgrid[0:size, 0:size]
+    c = (size - 1) / 2.0
+    d = np.hypot((xx - c) / c, (yy - c) / c)
+    lum = im[..., :3].mean(axis=2)
+    # baked lum runs ~0.01 (core) .. ~0.17 (rim); map it onto dark brown .. burnt ochre soil
+    t = smoothstep(0.01, 0.16, lum)[..., None]
+    dark = np.array([0.2, 0.15, 0.11])
+    burnt = np.array([0.46, 0.36, 0.26])
+    rgb = dark + (burnt - dark) * t
+    alpha = im[..., 3] * 0.85 * (1.0 - smoothstep(0.25, 0.95, d))
+    rgba = np.dstack([np.clip(rgb, 0, 1), np.clip(alpha, 0, 1)])
+    Image.fromarray((rgba * 255).round().astype(np.uint8), "RGBA").save(out, optimize=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("src")
     ap.add_argument("out")
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--soften", action="store_true", help="src is a baked scorch.png: write the light variant")
     a = ap.parse_args()
-    bake(a.src, a.out, a.seed)
+    if a.soften:
+        soften(a.src, a.out)
+    else:
+        bake(a.src, a.out, a.seed)
 
 
 if __name__ == "__main__":

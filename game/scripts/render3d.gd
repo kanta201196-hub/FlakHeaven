@@ -56,6 +56,7 @@ var _crater_mat: StandardMaterial3D
 ## VFX-06: Forward+ decal pools for scorch marks and craters (see marks_as_decals)
 var _scorch_decals: Array[Decal] = []
 var _scorch_decal_tex: Texture2D
+var _scorch_soft_tex: Texture2D   # S15-G10: light variant of the scorch decal (Tuning scorch_soft)
 var _crater_decals: Array[Decal] = []
 var _crater_mesh: PlaneMesh
 var _bombs3 := {}                  # тест 3.5-s4 (п. 10): падающие бомбы — номер → MeshInstance3D
@@ -2799,6 +2800,13 @@ func _sync_lights(delta: float) -> void:
 
 # ---------- выжженные пятна ----------
 
+## S15-G10: soft scorch marks (Tuning scorch_soft) are this share of the old size; in Compatibility the
+## quad's vertex colour (times the near-black base colour of _scorch_mat) turns it brown and thinner
+const SCORCH_SOFT_SIZE := 0.7
+const SCORCH_SOFT_QUAD := Color(5.0, 4.6, 4.4, 0.75)
+
+
+## Scorch marks of explosions on the ground: Forward+ decals, or one MultiMesh of quads in Compatibility.
 func _sync_scorch(m: Main) -> void:
 	if m.fx == null or not is_instance_valid(m.fx.ground):
 		return
@@ -2825,6 +2833,11 @@ func _sync_scorch(m: Main) -> void:
 	var mmx := _scorch_mm.multimesh
 	var n := mini(marks.size(), mmx.instance_count)
 	var dm := marks_as_decals()
+	# S15-G10 (R-22 toggle scorch_soft): marks were near-black and large and read as holes in the ground; the soft
+	# variant is burnt brown with a soft rim, 0.7 of the size, in a flatter decal box (see _place_decal)
+	var soft := Tuning.g("scorch_soft") >= 1.0
+	var sz_k := SCORCH_SOFT_SIZE if soft else 1.0
+	var col_q := SCORCH_SOFT_QUAD if soft else Color(1, 1, 1, 1)
 	var lo := Vector3.INF
 	var hi := -Vector3.INF
 	for i in n:
@@ -2833,17 +2846,17 @@ func _sync_scorch(m: Main) -> void:
 			mk["g3"] = ground_under(mk["p"])
 			if _on_water(mk["g3"], float(mk["r"]) * 1.6):   # M-35: копоть на воде не лежит
 				mk["life"] = 0.0
-		var r: float = mk["r"] * 1.6
+		var r: float = mk["r"] * 1.6 * sz_k
 		var pos: Vector3 = mk["g3"] + Vector3(0, 0.8, 0)
 		var fade := clampf(float(mk["life"]) / 6.0, 0.0, 1.0)
 		if dm:
 			# baked mark (dark core, ragged rim, soot rays), turned at random so neighbours differ
 			var sr := r * 2.0
 			_place_decal(_scorch_decals, i, Transform3D(Basis(Vector3.UP, float(mk.get("rot", 0.0))), pos),
-				Vector3(sr, r * 1.2 + 16.0, sr), _scorch_tex(), Color(1, 1, 1, 0.95 * fade))
+				Vector3(sr, (r * 0.5 + 10.0) if soft else (r * 1.2 + 16.0), sr), _scorch_tex(soft), Color(1, 1, 1, 0.95 * fade))
 			continue
 		mmx.set_instance_transform(i, Transform3D(Basis(Vector3.RIGHT, -PI / 2.0).scaled(Vector3(r, 1, r)), pos))
-		mmx.set_instance_color(i, Color(1, 1, 1, fade))
+		mmx.set_instance_color(i, Color(col_q.r, col_q.g, col_q.b, fade * col_q.a))
 		lo = lo.min(pos - Vector3(r, 1, r))
 		hi = hi.max(pos + Vector3(r, 1, r))
 	mmx.visible_instance_count = 0 if dm else n
@@ -3123,7 +3136,12 @@ func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex:
 	# S14-19 (R-22 toggle fx_s14): a decal box projects along its Y axis, so a cliff wall inside the box got
 	# the mark smeared down it as streaks («кусок взрыва в горе»); normal fade 0.5 hides surfaces at 90° to the
 	# decal and keeps ordinary slopes (30° off the decal axis keeps ~95 %)
-	dc.normal_fade = 0.5 if Tuning.g("fx_s14") >= 1.0 else 0.0
+	# S15-G10 (R-22 toggle scorch_soft): 0.5 still left half of a mark on a 60° slope, so a blast at a cliff lip
+	# painted the steep band under the lip as a dark strip along the edge; 0.75 keeps it on ground up to ~40°
+	if Tuning.g("scorch_soft") >= 1.0:
+		dc.normal_fade = 0.75
+	else:
+		dc.normal_fade = 0.5 if Tuning.g("fx_s14") >= 1.0 else 0.0
 	dc.visible = col.a > 0.004
 	dc.transform = xf
 	dc.size = sz
@@ -3133,8 +3151,13 @@ func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex:
 
 
 ## VFX-06: blast scorch decal baked by game/tools/vfx_bake/make_scorch.py: near-black middle fading to burnt
-## soil, ragged rim and soot rays, so a mark reads as a blast and not as a soft round shadow
-func _scorch_tex() -> Texture2D:
+## soil, ragged rim and soot rays, so a mark reads as a blast and not as a soft round shadow.
+## S15-G10: `soft` gives the lighter burnt-brown variant with a soft rim (make_scorch.py --soften).
+func _scorch_tex(soft := false) -> Texture2D:
+	if soft:
+		if _scorch_soft_tex == null:
+			_scorch_soft_tex = load("res://art/vfx/scorch_soft.png")
+		return _scorch_soft_tex
 	if _scorch_decal_tex == null:
 		_scorch_decal_tex = load("res://art/vfx/scorch.png")
 	return _scorch_decal_tex
