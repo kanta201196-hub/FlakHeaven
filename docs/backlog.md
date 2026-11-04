@@ -21,6 +21,20 @@
 - **Главный путь:** EX-01…EX-12 → код демо DM-02…DM-05 → Steamworks (только Kanta, `docs/owner-checklist/kanta-now.md`).
 - **Треды на сильной модели — не больше шести одновременно (с 25.10.2026, было два)**; очередь ведёт координатор.
 
+## Правки по сборке 3.5-s15
+
+Items from the s15 recordings and log review (04.11.2026, `/mnt/project-files/s15_review-20261104T204803-22d9.md`); Kanta 04.11: «Отдавай». ID number = review item number; balance items 21–24 are GD-14…GD-17, aces items 16–20 go to the aces thread. Does not start a new build.
+
+| ID | Task | Thread / owner | Status |
+| --- | --- | --- | --- |
+| S15-01 | False «ИЛИ-ИЛИ» screen from level 36: an ordinary row of 4 cards looked like the mastery fork (`hud_cards.gd:56` checked only the first card) | Починить интерфейс по замечаниям s15 | in progress: `Cards.is_fork` + unit test |
+| S15-02 | Fortress title cut («ПАДАЕТ И ИДЁТ НА ТА») | Починить интерфейс по замечаниям s15 | in progress: boss name shrinks to the bar width (40 → down to 24 px) |
+| S15-03 | Half-screen skill tooltip pops up in flight when the cursor crosses the skill bar | Починить интерфейс по замечаниям s15 | in progress: no skill tooltip in flight (descriptions stay on cards and in the hangar) |
+| S15-04 | System mouse arrow next to the gunsight and over cutscenes | Починить интерфейс по замечаниям s15 | in progress: cursor hidden in flight and cutscenes, shown on screens with buttons |
+| S15-05 | Centre texts on top of each other (evacuation, tanker, task, banner) | Починить интерфейс по замечаниям s15 | in progress: one stack under the boss bars, evacuation and tanker lines on a plate; the «На волоске!» float over the plane not changed |
+| S15-06 | Cut captions: «НАВОДЯЩИЕСЯ РАК…», «бомбы и ракет…», «разворот к враг…» | Починить интерфейс по замечаниям s15 | in progress: left column 250 → 272 px, the skill bar grows upwards for a long hint (up to 3 lines) |
+| S15-15 | «МЫШЬ куда лететь» hint on every sortie | Починить интерфейс по замечаниям s15 | in progress: first 3 sorties only, key of the chosen control scheme |
+
 ## Правки по сборке 3.5-s14
 
 Замечания Kanta 31.10.2026 по тестовой сборке 3.5-s14 (13 пунктов, номер = номер замечания; S14-14…17 — мелочи самопроверки сборки) и страница «что проверить» (R-18, https://claude.ai/artifact/Q2AKgd9VCCB5KFd8HpWSS3). Правки с ощущением и эффектами идут за переключателем до «ок» (R-22). Баланс — не чаще раза в сборку.
