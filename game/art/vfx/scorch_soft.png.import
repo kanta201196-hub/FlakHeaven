@@ -2,7 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-path="res://.godot/imported/scorch_soft.png-f0402f161e273b34d7de619bee9d66ac.ctex"
+uid="uid://1prg7y1irucu"
+path="res://.godot/imported/scorch_soft.png-d314510a6decb985e7f8a56d32e38cd7.ctex"
 metadata={
 "vram_texture": false
 }
@@ -10,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://art/vfx/scorch_soft.png"
-dest_files=["res://.godot/imported/scorch_soft.png-f0402f161e273b34d7de619bee9d66ac.ctex"]
+dest_files=["res://.godot/imported/scorch_soft.png-d314510a6decb985e7f8a56d32e38cd7.ctex"]
 
 [params]
 
