@@ -27,13 +27,13 @@ Items from the s15 recordings and log review (04.11.2026, `/mnt/project-files/s1
 
 | ID | Task | Thread / owner | Status |
 | --- | --- | --- | --- |
-| S15-01 | False «ИЛИ-ИЛИ» screen from level 36: an ordinary row of 4 cards looked like the mastery fork (`hud_cards.gd:56` checked only the first card) | Починить интерфейс по замечаниям s15 | in progress: `Cards.is_fork` + unit test |
-| S15-02 | Fortress title cut («ПАДАЕТ И ИДЁТ НА ТА») | Починить интерфейс по замечаниям s15 | in progress: boss name shrinks to the bar width (40 → down to 24 px) |
-| S15-03 | Half-screen skill tooltip pops up in flight when the cursor crosses the skill bar | Починить интерфейс по замечаниям s15 | in progress: no skill tooltip in flight (descriptions stay on cards and in the hangar) |
-| S15-04 | System mouse arrow next to the gunsight and over cutscenes | Починить интерфейс по замечаниям s15 | in progress: cursor hidden in flight and cutscenes, shown on screens with buttons |
-| S15-05 | Centre texts on top of each other (evacuation, tanker, task, banner) | Починить интерфейс по замечаниям s15 | in progress: one stack under the boss bars, evacuation and tanker lines on a plate; the «На волоске!» float over the plane not changed |
-| S15-06 | Cut captions: «НАВОДЯЩИЕСЯ РАК…», «бомбы и ракет…», «разворот к враг…» | Починить интерфейс по замечаниям s15 | in progress: left column 250 → 272 px, the skill bar grows upwards for a long hint (up to 3 lines) |
-| S15-15 | «МЫШЬ куда лететь» hint on every sortie | Починить интерфейс по замечаниям s15 | in progress: first 3 sorties only, key of the chosen control scheme |
+| S15-01 | False «ИЛИ-ИЛИ» screen from level 36: an ordinary row of 4 cards looked like the mastery fork (`hud_cards.gd:56` checked only the first card) | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: `Cards.is_fork` + unit test |
+| S15-02 | Fortress title cut («ПАДАЕТ И ИДЁТ НА ТА») | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: boss name shrinks to the bar width (40 → down to 24 px) |
+| S15-03 | Half-screen skill tooltip pops up in flight when the cursor crosses the skill bar | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: no skill tooltip in flight (descriptions stay on cards and in the hangar) |
+| S15-04 | System mouse arrow next to the gunsight and over cutscenes | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: cursor hidden in flight and cutscenes, shown on screens with buttons |
+| S15-05 | Centre texts on top of each other (evacuation, tanker, task, banner) | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: one stack under the boss bars, evacuation and tanker lines on a plate; the «На волоске!» float over the plane not changed |
+| S15-06 | Cut captions: «НАВОДЯЩИЕСЯ РАК…», «бомбы и ракет…», «разворот к враг…» | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: left column 250 → 272 px, the skill bar grows upwards for a long hint (up to 3 lines) |
+| S15-15 | «МЫШЬ куда лететь» hint on every sortie | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: first 3 sorties only, key of the chosen control scheme |
 
 ## Правки по сборке 3.5-s14
 
