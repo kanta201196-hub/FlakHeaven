@@ -48,14 +48,13 @@ _ROCK = [(0.51, 0.49, 0.45), (0.43, 0.35, 0.28), (0.29, 0.28, 0.27)]
 for _k, _seed in (("kit", 7), ("grach", 11)):
     PALETTES[_k + "_steppe"] = {"tones": _STEPPE, "share": (0.36, 0.22), "seed": _seed, "pattern": "bands", "freq": 1.3}
     PALETTES[_k + "_rock"] = {"tones": _ROCK, "share": (0.33, 0.33), "seed": _seed, "pattern": "splinter", "cuts": 7}
-# Kanta 27.10 took all ten round-2 liveries (livery.gd FOREST … CHEQUER); the turrets follow them the same way:
+# Kanta 27.10 took the round-2 liveries (livery.gd ROUND2; the chequer was taken out 04.11); the turrets follow them:
 # [base, colour 2, colour 3] the plane's colours about 0.93 darker, and the plane's pattern kind. More kinds:
 # "mottle" — soft clouds of colour 2 and a fine speckle of colour 3; "streaks" — long streaks along the barrels (the
 # flow); "dazzle" — angular pieces (random planes) each striped its own way, half colour 2, half colour 3 (freq —
 # stripes per turret length); "pixel" — the blotch fields sampled on a cube grid (cell — pixel size); "tiger" —
 # tapering stripes across the barrels (width — stripe width, 0…0.5); "rust" — bare steel (metal / rough of the base)
-# with rust (colour 2, more on the lower faces) and whole panels in primer (colour 3); "chequer" — a chequer of
-# colour 2 over the front of the turret (cell — square size, front — x where it starts). A share of 0 drops a colour.
+# with rust (colour 2, more on the lower faces) and whole panels in primer (colour 3). A share of 0 drops a colour.
 # All of them get the same wear, grime, streaks, dust, soot and relief as every turret (_layers): matte, never flat.
 _ROUND2 = {
     "forest": {"tones": [(0.31, 0.34, 0.22), (0.34, 0.27, 0.19), (0.16, 0.18, 0.13)], "share": (0.3, 0.22)},
@@ -73,8 +72,6 @@ _ROUND2 = {
                      "pattern": "tiger", "width": 0.3},
     "rust": {"tones": [(0.51, 0.51, 0.49), (0.42, 0.22, 0.11), (0.51, 0.54, 0.28)], "share": (0.34, 0.18),
              "pattern": "rust", "metal": 0.55, "rough": 0.6},
-    "chequer": {"tones": [(0.74, 0.57, 0.11), (0.06, 0.06, 0.06), (0.06, 0.06, 0.06)], "share": (0.0, 0.0),
-                "pattern": "chequer", "cell": 0.09, "front": 0.18},
 }
 for _k, _seed in (("kit", 7), ("grach", 11)):
     for _liv, _pal in _ROUND2.items():
@@ -405,11 +402,6 @@ def _camo(P, pal, N=None):
         low = 0.0 if N is None else 0.12 * np.clip(-N[:, 2], 0.0, 1.0)   # runs gather on the lower faces
         k[_cells(P, pal, 6, 0.0) < s3] = 2   # whole repaired panels in primer
         k[f1(P) + low > _qcut("r1", f1, s2)] = 1
-    elif pat == "chequer":
-        c = pal.get("cell", 0.09)
-        q = np.floor(P / c).astype(np.int64)
-        par = (q[:, 0] + q[:, 1] + q[:, 2]) % 2 == 1
-        k[par & (P[:, 0] > pal.get("front", 0.18))] = 1
     else:
         c1, cc2 = _cuts(seed, pal["share"])
         n1 = fbm(P, 2.4, seed + 20, 3)

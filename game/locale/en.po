@@ -4944,10 +4944,6 @@ msgstr "Arctic Tiger"
 msgid "Ржавое железо"
 msgstr "Rusty Iron"
 
-#: game/scripts/livery.gd:83
-msgid "Гоночная шахматка"
-msgstr "Racing Chequer"
-
 #: game/scripts/livery.gd:109
 msgid "Серый"
 msgstr "Grey"
@@ -4975,10 +4971,6 @@ msgstr "Matte Black"
 #: game/scripts/livery.gd:123
 msgid "Тигр"
 msgstr "Tiger"
-
-#: game/scripts/livery.gd:134
-msgid "Чёрный с красным"
-msgstr "Black and Red"
 
 #: game/scripts/livery.gd:158
 msgid "Выгоревшая дюна"

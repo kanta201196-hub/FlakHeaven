@@ -4944,10 +4944,6 @@ msgstr "极地虎"
 msgid "Ржавое железо"
 msgstr "锈铁"
 
-#: game/scripts/livery.gd:83
-msgid "Гоночная шахматка"
-msgstr "赛车棋格"
-
 #: game/scripts/livery.gd:109
 msgid "Серый"
 msgstr "灰色"
@@ -4975,10 +4971,6 @@ msgstr "哑光黑"
 #: game/scripts/livery.gd:123
 msgid "Тигр"
 msgstr "虎纹"
-
-#: game/scripts/livery.gd:134
-msgid "Чёрный с красным"
-msgstr "黑红"
 
 #: game/scripts/livery.gd:158
 msgid "Выгоревшая дюна"
