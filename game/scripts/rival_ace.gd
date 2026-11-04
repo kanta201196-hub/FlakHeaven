@@ -57,6 +57,8 @@ var _tailed_t := 0.0
 var _evade_cd := 1.0
 var _scan_t := 0.0
 var _flare_cd := 0.0
+var _msl_cd := AcesBalance.ACE_MSL_FIRST   # «Битва асов» (AB-03): until the next missile may be locked
+var _lock := 0.0   # > 0 — the lock warning is on, the missile leaves when it runs out
 
 
 func setup(hp_total: float) -> void:
@@ -135,6 +137,18 @@ func _story_line(key: String) -> String:
 	return StoryText.op_line(_story_id, op_id, moment, _story_met)
 
 
+## «Битва асов» (AB-03): one missile of the player takes at most 1 / `aces_ace_msl` of the hull.
+func hit_cap(source: String) -> float:
+	if not Main.aces():
+		return INF
+	return AcesBalance.ace_hit_cap(Enemy.src_class(source), max_hp, Tuning.g("aces_ace_msl"))
+
+
+## «Битва асов»: the s15 ace (no missiles, no collision check, 1.6 s break) when the F1 `aces_ai` is 0.
+static func _smart() -> bool:
+	return Main.aces() and Tuning.g("aces_ai") > 0.5
+
+
 func take_hit(dmg: float, source := "прочее") -> void:
 	var h0 := hp
 	super(dmg, source)
@@ -180,9 +194,11 @@ func behave(delta: float) -> void:
 		"break":
 			heading = rotate_toward(heading, _break_dir, minf(deg_to_rad(Tuning.g("turn_rate") * 0.7), _speed / MIN_R) * delta)
 			_speed = move_toward(_speed, cruise * 1.1, 300.0 * delta)
-			if _state_t > 1.6:
+			if _state_t > (AcesBalance.BREAK_T if _smart() else 1.6):
 				_state = "chase"
 				_state_t = 0.0
+	if _smart():
+		_avoid(p, delta)
 	position += Vector2.from_angle(heading) * _speed * delta
 	_hit_win = maxf(0.0, _hit_win - max_hp * HIT_BREAK * delta)
 
@@ -208,6 +224,8 @@ func behave(delta: float) -> void:
 			say("tailed")
 			_tailed_t = -3.0
 
+	if _smart():
+		_missiles(p, to, delta)
 	# Стрельба: игрок в узком конусе прицела аса
 	if _shots > 0:
 		_shot_t -= delta
@@ -227,6 +245,37 @@ func behave(delta: float) -> void:
 		_aim = 0.35
 		_burst_cd = 1.6
 		say("behind")
+
+
+## «Битва асов» (AB-03): a ram costs the player half the hull, so when the two planes will pass closer than
+## `AcesBalance.AVOID_R` the ace turns hard away from the player's side and drops its gun run.
+func _avoid(p: Player, delta: float) -> void:
+	var rel := p.global_position - global_position
+	var rv := p.velocity - Vector2.from_angle(heading) * _speed
+	if not AcesBalance.collision_ahead(rel, rv):
+		return
+	var side := signf(wrapf(rel.angle() - heading, -PI, PI))
+	var away := heading - (side if side != 0.0 else 1.0) * PI / 2.0
+	heading = rotate_toward(heading, away, deg_to_rad(Tuning.g("turn_rate")) * 1.5 * delta)
+	_shots = 0
+	_aim = 0.0
+
+
+## «Битва асов» (AB-03): the ace launches a missile when the player is ahead within range — the usual lock
+## warning first (`missile_telegraph`), then one missile every `AcesBalance.ACE_MSL_CD` s.
+func _missiles(p: Player, to: Vector2, delta: float) -> void:
+	if _lock > 0.0:
+		_lock -= delta
+		if _lock <= 0.0:
+			Main.I.projectiles.spawn_missile(global_position + Vector2.from_angle(heading) * 24.0, Vector2.from_angle(heading), "aam", kind(), Projectiles.MSL_FREE)
+			Main.I.sfx.play("missile_enemy", -8.0)
+			_msl_cd = AcesBalance.ACE_MSL_CD
+		return
+	_msl_cd -= delta
+	var off := rad_to_deg(absf(wrapf(to.angle() - heading, -PI, PI)))
+	if _msl_cd <= 0.0 and _state == "chase" and p.hp > 0.0 and AcesBalance.ace_can_launch(to.length(), off):
+		_lock = Tuning.g("missile_telegraph")
+		Main.I.sfx.play("lock", -6.0)
 
 
 func threatening() -> bool:

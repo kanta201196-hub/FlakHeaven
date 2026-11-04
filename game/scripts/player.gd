@@ -417,7 +417,7 @@ func _ready() -> void:
 
 func cruise_speed() -> float:
 	return Tuning.g("cruise_speed") * float(cls["speed"]) * mods["speed"] * Fuel.speed_k() \
-		* (AcesBalance.SPEED_K if Main.aces() else 1.0) # 3.5: пустой бак −30%
+		* (Tuning.g("aces_speed") if Main.aces() else 1.0) # 3.5: пустой бак −30%
 
 
 func turn_rate() -> float:

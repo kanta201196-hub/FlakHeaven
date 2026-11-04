@@ -192,6 +192,7 @@ func take_hit(dmg: float, source := "прочее") -> void:
 		# второй список, п. 5: и по асу-сопернику в дуэли — тогда и первый ас по силам классу
 		var pool := hp + float(get("shield")) if is_boss else hp
 		Main.I.spawner.note_big(minf(dmg, pool), self, source)
+	dmg = minf(dmg, hit_cap(source))
 	dmg = absorb(dmg)
 	if min_life > 0.0:
 		dmg = _cap_dps(dmg)
@@ -241,6 +242,12 @@ func _cap_dps(dmg: float) -> float:
 	var d := minf(dmg, _cap_budget)
 	_cap_budget -= d
 	return d
+
+
+## Most one hit from `source` may take after all multipliers; INF here. The rival ace of «Битва асов» caps
+## the player's missiles (AB-03).
+func hit_cap(_source: String) -> float:
+	return INF
 
 
 ## Щит (у асов): поглощает урон до того, как он дойдёт до корпуса.
