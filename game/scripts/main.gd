@@ -198,6 +198,9 @@ func _set_state(s: String) -> void:
 		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
 	Settings.set_screen_cap(s != "playing")
+	# s15: the system arrow showed next to the gunsight and over cutscenes; in flight the mouse steers and the HUD
+	# draws its own marker (scheme «мышью»), a cutscene is skipped by key or click — screens with buttons keep it
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if s in ["playing", "cutscene"] else Input.MOUSE_MODE_VISIBLE
 	if s == "playing":
 		Hangar3D.release()
 	if is_instance_valid(player) and menu != null:
