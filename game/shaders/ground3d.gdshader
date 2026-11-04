@@ -72,6 +72,7 @@ uniform float slope_fill = 0.22;   // M-36: подсветка крутых ск
 uniform float hillshade = 0.3;     // отмывка рельефа: склоны от солнца темнее — горы читаются сверху
 uniform vec3 shade_dir = vec3(-0.55, 0.6, -0.58); // откуда «светит» отмывка (как солнце, но ниже)
 uniform bool anti_tile = true;
+uniform bool sand_edge = false;   // S15-G09: noise-broken takyr border off the mesh grid (Tuning sand_edge)
 // 3.4-t1 (п. 33): тени облаков рисуются на самой земле (раньше — 2D-пятна на плоскости боя, при наклоне
 // они висели поверх гор). Облако: xy — центр, z — размер, w — поворот + 10 × номер текстуры
 uniform sampler2D cloud_a : filter_linear, repeat_disable;
@@ -190,8 +191,18 @@ void fragment() {
 	// на склонах, конусах и гребнях — щебень и супесь
 	float slope0 = 1.0 - clamp(wnorm.y, 0.0, 1.0);
 	if (relief) {
-		w1 *= (1.0 - smoothstep(0.03, 0.08, slope0)) * (1.0 - smoothstep(0.04, 0.12, rel.y))
-			* smoothstep(river_guard, river_guard + 60.0, abs(rel.z));
+		if (sand_edge) {
+			// S15-G09 (R-22 toggle sand_edge): slope0 comes from vertex normals, which interpolate linearly
+			// inside each relief triangle, and the old 0.03…0.08 band (~14°…23°) is so narrow that the takyr /
+			// sand border traced the triangle edges as a stair-step («pixel» edge) over the whole Highlands.
+			// A wider band shifted by two octaves of noise moves the border off the mesh grid
+			float en9 = (vnoise(world / 75.0 + 23.0) - 0.5) * 0.07 + (vnoise(world / 23.0 - 7.0) - 0.5) * 0.03;
+			w1 *= (1.0 - smoothstep(0.015, 0.13, slope0 + en9)) * (1.0 - smoothstep(0.03, 0.14, rel.y + en9 * 0.6))
+				* smoothstep(river_guard, river_guard + 60.0, abs(rel.z));
+		} else {
+			w1 *= (1.0 - smoothstep(0.03, 0.08, slope0)) * (1.0 - smoothstep(0.04, 0.12, rel.y))
+				* smoothstep(river_guard, river_guard + 60.0, abs(rel.z));
+		}
 	}
 	float w2 = fbm(q + vec2(-13.1, 41.9));
 	float w3 = fbm(q * 1.3 + vec2(57.2, -21.4)) * 0.88;
