@@ -12,7 +12,7 @@ class_name Livery
 ## Свои знаки (Insignia) и полосы ведомых не перекрашиваются; ведомые — всегда в своей окраске.
 
 ## id → [название, тёмный, основной, светлый, шероховатость, металл, узор, цвет узора A, цвет узора B]
-## Узоры: 0 — нет, 1 — леопард, 2 — тигр, 3 — верх белый, низ голубой, синие полоса по борту, киль и законцовки; 4 — красные нос, законцовки, киль;
+## Узоры: 0 — нет, 1 — леопард, 2 — тигр, 3 — верх белый, низ голубой, синие полоса по борту, киль и законцовки;
 ## 5 — разрывной камуфляж: основной (песок) / тёмный (охра) / узор A (тёмно-оливково-бурый) крупными пятнами с чёткими краями,
 ##     узор B — светлое брюхо (тест 3.5-s6, С-1, решение Kanta 18.10: свой «Грач» и «Кит» читаются на бежевой земле);
 ## 6 — тёмные законцовки крыльев и стабилизатора (узор A), светлое брюхо (узор B)
@@ -60,8 +60,9 @@ const REED := ["reed", "Тростник", Color(0.42, 0.42, 0.27), Color(0.70, 
 ## Unusual, in the spirit of «Розовый леопард» and «Тигр»: «Ослепитель» — black and white stripes, each big angular
 ## piece striped its own way, some stripes blue-grey; «Пиксельная фуксия» — digital camouflage, fuchsia and dark
 ## violet over light lilac; «Акула» — a calm grey plane with a shark mouth on the nose (NOSE); «Полярный тигр» — tiger
-## stripes in graphite over white; «Ржавое железо» — bare matte metal with rust runs and panels in primer;
-## «Гоночная шахматка» — yellow with a black-and-yellow chequer on the nose, wing tips and fin top.
+## stripes in graphite over white; «Ржавое железо» — bare matte metal with rust runs and panels in primer.
+## Kanta 04.11 took «Гоночная шахматка» (yellow with a chequer on the nose, wing tips and fin top) out of the game,
+## with the «Кит»'s «Чёрный с красным»; a save that chose one wears the class default (current()).
 const DAZZLE := ["dazzle", "Ослепитель", Color(0.08, 0.08, 0.09), Color(0.78, 0.78, 0.75), Color(0.82, 0.82, 0.80), 0.86, 0.03, 7,
 	Color(0.35, 0.40, 0.48), Color(0.78, 0.78, 0.75),
 	{"style": 7, "scale": 3.5, "cut": Vector2(0.5, 0.0), "edge": 0.0, "fade": 0.2, "grime": 0.6, "belly": 0.0, "seed": 15.0}]
@@ -80,11 +81,8 @@ const ARCTIC_TIGER := ["arctic_tiger", "Полярный тигр", Color(0.16, 
 const RUST := ["rust", "Ржавое железо", Color(0.45, 0.24, 0.12), Color(0.55, 0.55, 0.53), Color(0.62, 0.62, 0.60), 0.55, 0.6, 7,
 	Color(0.55, 0.58, 0.30), Color(0.55, 0.55, 0.53),
 	{"style": 11, "scale": 7.0, "cut": Vector2(0.62, 0.18), "edge": 0.03, "fade": 0.1, "grime": 1.0, "belly": 0.0, "seed": 19.0}]
-const CHEQUER := ["chequer", "Гоночная шахматка", Color(0.06, 0.06, 0.06), Color(0.80, 0.62, 0.12), Color(0.86, 0.74, 0.40), 0.82, 0.03, 7,
-	Color(0.06, 0.06, 0.06), Color(0.80, 0.62, 0.12),
-	{"style": 12, "scale": 18.0, "cut": Vector2(0.5, 0.5), "edge": 0.0, "fade": 0.3, "grime": 0.8, "belly": 0.0, "seed": 20.0}]
-## The ten round-2 liveries in picker order (natural first)
-const ROUND2 := [FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST, CHEQUER]
+## The round-2 liveries in picker order (natural first)
+const ROUND2 := [FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST]
 ## Turret paint per livery: [suffix of the baked turret GLBs (turret_paint.py PALETTES "<class>_<suffix>",
 ## models/turrets/<turret>_<suffix>.glb), colour of the ring collar under the turret (the baked base a touch darker,
 ## like WeaponModels.TURRET_MODELS body for the sand camo)]. Other liveries keep the sand-camo turrets.
@@ -100,7 +98,6 @@ const TURRET_PAINT := {
 	"shark": ["shark", Color(0.37, 0.39, 0.39)],
 	"arctic_tiger": ["arctic_tiger", Color(0.58, 0.59, 0.59)],
 	"rust": ["rust", Color(0.43, 0.43, 0.42)],
-	"chequer": ["chequer", Color(0.63, 0.49, 0.09)],
 }
 const VARIANTS := {
 	"fighter": [
@@ -113,7 +110,7 @@ const VARIANTS := {
 			Color(0.22, 0.07, 0.13), Color(0.80, 0.36, 0.50)],
 		STEPPE,
 		ROCK,
-		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST, CHEQUER,
+		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST,
 	],
 	"attacker": [
 		SAND_CAMO,
@@ -124,18 +121,16 @@ const VARIANTS := {
 			Color(0.05, 0.04, 0.035), Color(0.92, 0.86, 0.72)],
 		STEPPE,
 		ROCK,
-		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST, CHEQUER,
+		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST,
 	],
 	"bomber": [
 		SAND_CAMO,
 		["sand", "Песок"],
 		CLASSIC_KIT,
 		KHAKI,
-		["black_red", "Чёрный с красным", Color(0.04, 0.04, 0.045), Color(0.07, 0.07, 0.075), Color(0.11, 0.11, 0.115), 0.42, 0.25, 4,
-			Color(0.78, 0.07, 0.05), Color(0.0, 0.0, 0.0)],
 		STEPPE,
 		ROCK,
-		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST, CHEQUER,
+		FOREST, SEA_FOG, ASH, REED, DAZZLE, PIXEL, SHARK, ARCTIC_TIGER, RUST,
 	],
 }
 
@@ -148,7 +143,7 @@ const VARIANTS := {
 ## over soft clouds, 4 one worn tone with repainted panels, 5 worn whitewash over the base, 6 long streaks along the
 ## flow, 7 dazzle (angular pieces, each striped its own way), 8 digital (fields built of square «pixels»), 9 plain coat
 ## with a shark mouth on the nose (NOSE), 10 tiger stripes (cut.x — stripe width, 1 as «Тигр»), 11 bare metal with
-## rust (colour 2) and primer panels (colour 3), 12 chequer on the nose, wing tips and fin top; scale — pattern
+## rust (colour 2) and primer panels (colour 3); scale — pattern
 ## frequency per plane length (× CLASS_SCALE, so a bigger plane wears relatively smaller patches, as real paint
 ## would); cut — noise levels above which colour 2 / colour 3 show (higher — less area); edge — edge softness in
 ## noise units (0 — hard, with a pixel of antialiasing); fade — sun bleaching of the upper surfaces; grime — flow
@@ -907,13 +902,6 @@ void fragment() {
 		// S9-21: грязь и копоть пятнами (до −9 %) и темнее к хвосту — белый не читается «чистым листом»
 		float grime = smoothstep(0.35, 0.8, blobs(lp * 13.0 + vec3(5.3, 1.1, 2.7)));
 		col *= (1.0 - 0.09 * grime) * mix(0.94, 1.0, smoothstep(0.0, 0.45, q.x));
-	} else if (pattern == 4) {
-		// чёрный с красным: нос, законцовки крыльев, верх киля
-		float nose = smoothstep(0.915, 0.93, q.x);
-		float tips = smoothstep(0.43, 0.445, abs(q.z - 0.5));
-		float fin = smoothstep(0.80, 0.82, q.y);
-		float red = max(max(nose, tips), fin);
-		col = mix(col, pat_a * mix(1.0, clamp(t / centre, 0.8, 1.2), 0.4), red);
 	} else if (pattern == 5) {
 		// разрывной камуфляж в осях модели: охра и тёмные пятна поверх песка, края чёткие (сглаживание — на пиксель)
 		float a = blobs(lp * vec3(7.5, 7.5, 7.5) + vec3(3.1, 0.0, 1.7));
@@ -956,12 +944,6 @@ void fragment() {
 			float primer = mix(step(pid2, nat_cut.y), step(pid, nat_cut.y), cell_aa(pe)) * (1.0 - rust);
 			w = vec2(rust, primer);
 			metal_k = 1.0 - max(rust, primer);
-		} else if (nat_style == 12) {
-			// chequer on the nose, the wing tips and the top of the fin, over a plain coat
-			float zone = max(max(smoothstep(0.82, 0.83, q.x), smoothstep(0.38, 0.39, abs(q.z - 0.5))),
-					smoothstep(0.72, 0.73, q.y) * (1.0 - smoothstep(0.32, 0.33, q.x)));
-			vec3 cq = floor(lp * nat_scale);
-			w = vec2(zone * mod(cq.x + cq.y + cq.z, 2.0), 0.0);
 		} else {
 			w = nat_pattern(pn, n);
 		}

@@ -1,6 +1,6 @@
 extends SceneTree
 ## Unit tests for the turret paint that follows the plane's livery (Kanta 2026-10-27, s13 item 4: «Степь» and
-## «Скальный осколок», then all ten round-2 paints (Livery.ROUND2), for all planes, turrets in the same paint). Rules
+## «Скальный осколок», then the round-2 paints (Livery.ROUND2), for all planes, turrets in the same paint). Rules
 ## pinned here: every player turret file (each tier, the evolution, the «Кит» tail ball and cabin) has a baked twin in
 ## every Livery.TURRET_PAINT paint and turret_file picks it; the other liveries keep the sand-camo turret; every
 ## shipped new livery is in the picker of all three classes, once; the shipped list does not leak the bench-only
