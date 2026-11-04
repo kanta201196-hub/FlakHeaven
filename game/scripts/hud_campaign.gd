@@ -43,7 +43,9 @@ static var log_open := false
 ## behind the screen shows through a hole in the backdrop, the camera drifts as on the menu with the flight anchored
 ## in the window (`TitleFlight.ov_anchor`), the light preset and zoom follow the selected operation (`Main._process`).
 static var vignette := Rect2()   # the window on screen this frame, Rect2() when off
+var _brief_core_h := 0.0          # set by a measuring `_brief`: text height that must fit under the window
 const VIGNETTE_H := 150.0
+const VIGNETTE_MIN_H := 70.0   # a thinner window reads as a stripe, not a view: below this the card has none
 const VIGNETTE_ZOOM := [0.95, 0.85, 0.75, 0.62]        # by operation index in the biome: closer first
 const VIGNETTE_LIGHT := ["dawn", "day", "day", "dusk"]  # the operations' hours (intro presets)
 
@@ -163,39 +165,75 @@ func _ops(r: Rect2, bio: String) -> void:
 	var box := Rect2(r.position.x, y + 8.0, r.size.x, r.end.y - y - 8.0)
 	ctrl.draw_rect(box, Color(0.04, 0.055, 0.045, 0.75))
 	ctrl.draw_rect(box, Color(0.24, 0.3, 0.23), false, 2.0)
-	var o := Campaign.op()
-	var d := Campaign.diff()
 	var x := box.position.x + 20.0
 	var w := box.size.x - 40.0
+	# The text sets the window's height, not the other way round: long briefs (and English) used to run the
+	# last line out of the box (Kanta 04.11). The window shrinks to fit the whole text; if even VIGNETTE_MIN_H leaves
+	# no room, it keeps that height and the tail of the rewards list is cut; if the core text does not fit either,
+	# the window is dropped.
+	var full_h := _brief(x, 0.0, w, INF, false)
+	var pad := 18.0 + 20.0 + 2.0   # gap under the window, bottom padding, the window's frame line
+	var vh := minf(VIGNETTE_H, box.size.y - full_h - pad)
+	if vh < VIGNETTE_MIN_H and box.size.y - _brief_core_h - pad >= VIGNETTE_MIN_H:
+		vh = VIGNETTE_MIN_H
+	vignette = Rect2()
 	y = box.position.y + 18.0
-	if vignette_on():
-		vignette = Rect2(box.position.x + 2.0, box.position.y + 2.0, box.size.x - 4.0, VIGNETTE_H)
+	if vignette_on() and vh >= VIGNETTE_MIN_H:
+		vignette = Rect2(box.position.x + 2.0, box.position.y + 2.0, box.size.x - 4.0, vh)
 		ctrl.draw_rect(Rect2(vignette.position.x, vignette.end.y, vignette.size.x, 2.0), Color(0.24, 0.3, 0.23))
 		y = vignette.end.y + 18.0
-	else:
-		vignette = Rect2()
-	y += _para(Vector2(x, y + 14.0), Loc.t(String(o["brief"])), w, 16, Color(0.86, 0.88, 0.84)) + 26.0
-	_text(Vector2(x, y), "ЗАДАЧА", 16, C_TITLE)
+	_brief(x, y, w, box.end.y - 10.0, true)
+
+
+## The selected operation's text under the window: brief, task, class task, first-pass rewards or the «cleared» line.
+## `y` is the top of the text. With `paint` off nothing is drawn and the result is only the height, so `_ops` can size
+## the window to what is left. The rewards list stops at `bottom` (it can be long); the rest is never cut, `_ops` makes
+## room for it. A measuring pass also leaves `_brief_core_h`: the height through the spare-parts line, without the list.
+func _brief(x: float, y: float, w: float, bottom: float, paint: bool) -> float:
+	var top := y
+	var o := Campaign.op()
+	var d := Campaign.diff()
+	y += _bp(Vector2(x, y + 14.0), Loc.t(String(o["brief"])), w, 16, Color(0.86, 0.88, 0.84), paint) + 26.0
+	_bt(Vector2(x, y), "ЗАДАЧА", 16, C_TITLE, paint)
 	y += 12.0
-	y += _para(Vector2(x, y + 14.0), Loc.t(String(o["task"])), w, 18, Color.WHITE) + 8.0
+	y += _bp(Vector2(x, y + 14.0), Loc.t(String(o["task"])), w, 18, Color.WHITE, paint) + 8.0
 	if int(o["diff"]) > 0:
-		y += _para(Vector2(x, y + 14.0), Loc.t("Сложность «%s»: враги прочнее ×%s, бьют сильнее ×%s, добыча ×%s") % [Loc.t(d["title"]), _k(d["hp"]), _k(d["dmg"]), _k(d["reward"])], w, 15, Color(1.0, 0.75, 0.55)) + 8.0
+		y += _bp(Vector2(x, y + 14.0), Loc.t("Сложность «%s»: враги прочнее ×%s, бьют сильнее ×%s, добыча ×%s") % [Loc.t(d["title"]), _k(d["hp"]), _k(d["dmg"]), _k(d["reward"])], w, 15, Color(1.0, 0.75, 0.55), paint) + 8.0
 	y += 26.0
-	_text(Vector2(x, y), "ЗАДАНИЕ КЛАССА · награда — редкая карточка", 16, C_TITLE)
+	_bt(Vector2(x, y), "ЗАДАНИЕ КЛАССА · награда — редкая карточка", 16, C_TITLE, paint)
 	y += 12.0
-	y += _para(Vector2(x, y + 14.0), Loc.t(String(ClassTask.DEFS[Main.I.cls_id]["brief"])), w, 18, Color(1.0, 0.88, 0.55)) + 8.0
+	y += _bp(Vector2(x, y + 14.0), Loc.t(String(ClassTask.DEFS[Main.I.cls_id]["brief"])), w, 18, Color(1.0, 0.88, 0.55), paint) + 8.0
 	y += 26.0
 	if Campaign.cleared(Campaign.index()):
-		_para(Vector2(x, y), "✓ Пройдена — повторный вылет ради запчастей и опыта экипажа", w, 16, C_DONE)
-		return
-	_text(Vector2(x, y), "ЗА ПЕРВЫЙ ПРОХОД", 16, C_TITLE)
+		# the first line's baseline sits at `y`, like the headings above
+		y += _bp(Vector2(x, y), "✓ Пройдена — повторный вылет ради запчастей и опыта экипажа", w, 16, C_DONE, paint) - 12.0
+		_brief_core_h = y - top
+		return y - top
+	_bt(Vector2(x, y), "ЗА ПЕРВЫЙ ПРОХОД", 16, C_TITLE, paint)
 	y += 26.0
-	_text(Vector2(x, y), Loc.t("• +%d запчастей") % int(o["parts"]), 16, Color(0.95, 0.85, 0.55))
+	_bt(Vector2(x, y), Loc.t("• +%d запчастей") % int(o["parts"]), 16, Color(0.95, 0.85, 0.55), paint)
 	y += 4.0
+	_brief_core_h = y - top + 6.0
 	for s in Demo.opens(o):
-		if y > box.end.y - 30.0:
-			break
-		y += _para(Vector2(x, y + 18.0), Loc.t("• Откроется: ") + Loc.t(String(s)), w, 16, Color(1.0, 0.85, 0.4)) + 2.0
+		var line := Loc.t("• Откроется: ") + Loc.t(String(s))
+		var h := _bp(Vector2(x, y + 18.0), line, w, 16, Color.WHITE, false)
+		if y + 4.0 + h > bottom:
+			break   # what does not fit is cut whole, never drawn over the frame
+		y += _bp(Vector2(x, y + 18.0), line, w, 16, Color(1.0, 0.85, 0.4), paint) + 2.0
+	return y - top + 6.0
+
+
+## `_para` that only measures when `paint` is off (same font, width and size, so the height matches the drawing).
+func _bp(pos: Vector2, s: String, width: float, size: int, color: Color, paint: bool) -> float:
+	if paint:
+		return _para(pos, s, width, size, color)
+	return ui_font().get_multiline_string_size(Loc.out(s), HORIZONTAL_ALIGNMENT_LEFT, width, size).y
+
+
+## `_text` that draws only when `paint` is on.
+func _bt(pos: Vector2, s: String, size: int, color: Color, paint: bool) -> void:
+	if paint:
+		_text(pos, s, size, color)
 
 
 ## Колонка 2: три самолёта, выбранный подсвечен; у выбранного — выбор навыка класса
