@@ -53,7 +53,7 @@ func draw(m: Main, size: Vector2) -> void:
 	focus = clampi(focus, 0, maxi(n - 1, 0))
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(UiStyle.SCRIM, 0.82))
 	ctrl.draw_rect(Rect2(0, 0, size.x, 8), UiStyle.ACCENT)
-	var pair: bool = n > 0 and ((m.offers[0]["kind"] == "branch" and bool(m.offers[0]["first"])) or m.offers[0]["kind"] == "profile")
+	var pair := Cards.is_fork(m.offers)
 	_header(m, size, pair)
 	var gap := 110.0 if pair and n <= 2 else GAP
 	var x0 := (size.x - n * CARD_W - (n - 1) * gap) / 2.0

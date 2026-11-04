@@ -198,6 +198,9 @@ func _set_state(s: String) -> void:
 		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
 	Settings.set_screen_cap(s != "playing")
+	# s15: the system arrow showed next to the gunsight and over cutscenes; in flight the mouse steers and the HUD
+	# draws its own marker (scheme «мышью»), a cutscene is skipped by key or click — screens with buttons keep it
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if s in ["playing", "cutscene"] else Input.MOUSE_MODE_VISIBLE
 	if s == "playing":
 		Hangar3D.release()
 	if is_instance_valid(player) and menu != null:
@@ -285,6 +288,7 @@ func start_run() -> void:
 	world.add_child(fx)
 
 	run = RunState.new()
+	run.ground_targets = not aces()   # AB-02: «Битва асов» has only planes, cards hide ground-only weapons
 	run.parts_k = 1.0 if aces() else Profile.medal_parts_k(String(Campaign.op()["id"]))   # medals: parts bonus
 	medal_run = {}
 	medal_kill_t = []
@@ -419,7 +423,7 @@ func _process(delta: float) -> void:
 		var f := clampf(player.velocity.length() / maxf(player.cruise_speed(), 1.0), 0.5, 1.8)
 		var z := Tuning.g("camera_zoom") / lerpf(1.0, player.size, 0.35) / (1.0 + maxf(0.0, f - 1.0) * 0.3)
 		if aces():
-			z *= AcesBalance.ZOOM_K   # faster planes: see the ace a little further out
+			z *= Tuning.g("aces_zoom")   # faster planes: see the ace a little further out (AB-03 slider)
 		camera.zoom = camera.zoom.lerp(Vector2(z, z), 1.0 - exp(-delta * 3.0))
 		_ab_snd = move_toward(_ab_snd, 1.0 if player.ab_t > 0.0 else 0.0, delta * 3.0)
 		sfx.set_engine(player.velocity.length() / player.cruise_speed(), player.hp > 0.0 and state == "playing",

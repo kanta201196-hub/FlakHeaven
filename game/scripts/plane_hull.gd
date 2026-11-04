@@ -21,6 +21,15 @@ const SKIP_NODES := ["wing_mech", "bay_doors", "insignia", "module_parts", "wing
 
 static var _cache := {}   # body Mesh → PlaneHull
 
+
+## Forgets every cached hull (skin, glass, moving parts). The keys and hulls hold the model's mesh and skin texture,
+## so a hangar model's full-size textures stayed in video memory while its hull was cached; `Hangar3D.release`
+## calls this at takeoff.
+static func clear_cache() -> void:
+	_cache.clear()
+	_glass_cache.clear()
+	_part_cache.clear()
+
 var pos := PackedVector3Array()   ## 3 per triangle
 var nrm := PackedVector3Array()   ## vertex normals, 3 per triangle
 var uv := PackedVector2Array()    ## skin texture UV, 3 per triangle (empty when unknown)

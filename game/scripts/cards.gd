@@ -549,6 +549,19 @@ static func mastery_branches(g: Hardpoint) -> Array:
 	return ["profile"] if g.profile != "" else BRANCHES.keys()
 
 
+## True when the offered row is the «or-or» fork: two or more cards, all of them first mastery-branch cards or all
+## weapon-profile cards (`offer` returns such a row as the whole screen). A first-branch card can also share an
+## ordinary row (a profile's rank card, one per weapon, from level 36), and then the row is not a fork (s15).
+static func is_fork(offers: Array) -> bool:
+	if offers.size() < 2:
+		return false
+	var kind := String(offers[0]["kind"])
+	for o: Dictionary in offers:
+		if String(o["kind"]) != kind or (kind == "branch" and not bool(o.get("first", false))):
+			return false
+	return kind in ["branch", "profile"]
+
+
 static func branch_on() -> bool:
 	return Main.I != null and Main.I.run.level >= BRANCH_LEVEL
 
@@ -607,6 +620,7 @@ static func profile_hint(p: Player, gi: int) -> String:
 ## Все возможные карточки сейчас: [вес, карточка без редкости]
 static func _candidates(p: Player, banned: Dictionary) -> Array:
 	var cands: Array = []
+	var ground := Main.I == null or Main.I.run.ground_targets   # AB-02: no ground targets — no ground-only weapons
 	var equipped: Array = []
 	for g in p.groups:
 		if not g.is_empty():
@@ -617,13 +631,13 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 			continue
 		# U-06/U-08: на тяжёлый подвес — только экспериментальное оружие, открытое кампанией; на остальные — обычное
 		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL.filter(func(x): return PlaneClasses.allows(p.cls_id, x, int(p.cls["plane_lvl"])))):
-			if equipped.has(w) or banned.has("w:" + w):
+			if equipped.has(w) or banned.has("w:" + w) or not CardBalance.offered(w, ground):
 				continue
 			cands.append([1.4, {"id": "new_%s_%d" % [w, gi], "ban": "w:" + w, "kind": "weapon_new", "weapon": w, "group": gi, "cat": "Новое оружие",
 				"title": Weapons.title(w)}])
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
-		if g.is_empty() or g.level >= Weapons.MAX_LEVEL or banned.has("up:%d" % gi):
+		if g.is_empty() or g.level >= Weapons.MAX_LEVEL or banned.has("up:%d" % gi) or not CardBalance.offered(g.weapon, ground):
 			continue
 		if profile_due(g) and not banned.has("pr:%d" % gi):
 			continue   # PG-06: this weapon's next step is the profile choice (`offer`); a banned choice keeps plain upgrades

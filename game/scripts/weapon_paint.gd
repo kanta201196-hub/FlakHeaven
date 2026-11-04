@@ -21,6 +21,13 @@ static var _meshes := {}
 static var _mats := {}
 
 
+## Forgets every painted mesh and material. Only the hangar paints, and these hold the hangar weapons' textures, so
+## `Hangar3D.release` drops them at takeoff to free that video memory for the fight (s15 review, item 8).
+static func clear_cache() -> void:
+	_meshes.clear()
+	_mats.clear()
+
+
 ## `src` with every paintable surface in the service paint, cached per source mesh and parameters. `weapon` picks
 ## the seams (SEAMS: missiles and bombs; "" or anything else — none); `body_r` is the round body's radius in
 ## mesh units (0 — no seams); `sat` keeps that share of the colours' saturation and `tone` scales them (stands

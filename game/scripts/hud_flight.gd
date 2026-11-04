@@ -9,7 +9,7 @@ extends HudKit
 
 
 var _mini: HudMinimap = null
-## Skill columns of this frame for the hover tooltip: [Rect2, title, body, action]
+## Skill columns of this frame: [Rect2, title, body, action, row] (`skill_rect` finds a column by action)
 var _skill_tips: Array = []
 ## Top of the bottom bar this frame (hints and radio sit above it)
 var bar_top := 0.0
@@ -62,7 +62,7 @@ const BAR_TILE := 56.0
 const BAR_COL := 112.0
 ## Left column: width, row height (shrinks down to SIDE_ROW_MIN when many rows must fit above
 ## the minimap) and tile size
-const SIDE_W := 250.0
+const SIDE_W := 272.0   # s15: 250 cut «НАВОДЯЩИЕСЯ РАК…»; the longest weapon name needs ~185 px beside the tile
 const SIDE_ROW := 60.0
 const SIDE_ROW_MIN := 50.0
 const SIDE_TILE := 44.0
@@ -95,6 +95,7 @@ func draw(m: Main, size: Vector2, dmg_flash: float) -> void:
 		if Perf.on: pt = Perf.sub("hud.left", pt)
 		_flight_panel(m, p, size)
 		if Perf.on: pt = Perf.sub("hud.flight", pt)
+		_center_stack(m)
 		if m.state == "playing":
 			_activity_panel(m, p, size)
 		if Perf.on: pt = Perf.sub("hud.activity", pt)
@@ -149,22 +150,24 @@ func draw_post(m: Main, size: Vector2) -> void:
 
 	if Hints.t > 0.0 and Hints.text != "" and m.state == "playing":
 		_hint_box(Hints.text, size, clampf(Hints.t * 2.0, 0.0, 1.0))
-	if m.state == "playing":
-		_skill_tooltip(size)   # last: the hovered skill's explanation covers hints and radio
+	# s15: no hover tooltip over the skill bar in flight — the mouse steers (or is hidden) and the half-screen panel
+	# popped up whenever the cursor crossed the bar; the skills are explained on their cards and in the hangar
 	if m.hud.banner_t > 0.0 and m.state == "playing":
 		var a := clampf(m.hud.banner_t, 0.0, 1.0)
 		# dark plate under the banner: yellow text on bright sand is unreadable without it
 		var bw := ui_font().get_string_size(Loc.out(m.hud.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
-		var by := maxf(186.0, _boss_bottom + 20.0)   # under the boss bars when an ace is up, with a gap (s12)
+		var by := _banner_y   # under the boss bars when an ace is up, with a gap (s12); see `_center_stack`
 		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, by, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
 		_ctext(by + 32.0, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
 
-	if m.run_time > 180.0 or m.state != "playing":
+	if m.run_time > 180.0 or m.state != "playing" or int(Profile.data.get("sorties", 0)) >= KEY_HINT_SORTIES:
 		return
-	# first minutes: how to steer and pause (skill keys are on the bar tiles)
+	# first minutes of the first sorties: how to steer and pause (skill keys are on the bar tiles). s15: it came on
+	# every sortie, the 47th too. The steering key follows the control scheme (it said «МЫШЬ» on the keyboard too).
 	var hx := size.x / 2.0
 	var tw := 0.0
-	var pairs := [[Loc.t("МЫШЬ"), Loc.t("куда лететь")], [key_label("pause"), Loc.t("пауза")]]
+	var steer := [["WASD", "A / D", Loc.t("МЫШЬ")][clampi(int(Tuning.g("scheme")), 0, 2)], Loc.t("куда лететь")]
+	var pairs := [steer, [key_label("pause"), Loc.t("пауза")]]
 	if Main.DEBUG:
 		pairs.append(["F5–F7", Loc.t("отладка")])
 	for pr: Array in pairs:
@@ -216,7 +219,7 @@ func _left_panel(m: Main, p: Player) -> void:
 		UiStyle.FS_BODY, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, bw)
 	# fuel: thin bar, minutes left on the right
 	var fu := Fuel.current()
-	if fu != null:
+	if fu != null and not Main.aces():   # s15 review п. 18: «Битва асов» does not burn fuel
 		var fc := UiStyle.DANGER if fu.frac() < 0.1 else (Color(1.0, 0.8, 0.35) if fu.frac() <= Fuel.CALL_AT else Color(0.95, 0.85, 0.4))
 		UiStyle.text(ctrl, UiStyle.head_font(800, 0), Vector2(x + 14.0, y + 66.0), "F", UiStyle.FS_BODY, fc)
 		ctrl.draw_rect(Rect2(bx, y + 54, bw - 130.0, 10), Color(0, 0, 0, 0.6))
@@ -281,11 +284,13 @@ static func grouped(n: int) -> String:
 	return ("-" if n < 0 else "") + s + out
 
 
-## Top-right: parts and kills counters, the sortie goals panel under them, FPS in the corner (setting «Счётчик кадров»).
+## Top-right: parts (not in «Битва асов», it pays none) and kills counters, the sortie goals panel under them, FPS in
+## the corner (setting «Счётчик кадров»).
 func _top_right(m: Main, size: Vector2) -> void:
 	var x := size.x - 20.0
 	x = _counter(Rect2(x, 20.0, 0.0, 56.0), grouped(m.run.kills), Loc.t("СБИТО"), Color.WHITE) - 10.0
-	_counter(Rect2(x, 20.0, 0.0, 56.0), grouped(int(m.run.parts)), Loc.t("ЗАПЧАСТИ"), UiStyle.PARTS)
+	if not Main.aces():   # s15 review п. 18: the test pays no parts
+		_counter(Rect2(x, 20.0, 0.0, 56.0), grouped(int(m.run.parts)), Loc.t("ЗАПЧАСТИ"), UiStyle.PARTS)
 	_goals(m, Rect2(size.x - 460.0, 88.0, 440.0, 0.0))
 	if Settings.show_fps:
 		_text(Vector2(0, size.y - 6), "FPS %d" % Engine.get_frames_per_second(), 14, Color(0.7, 0.7, 0.7, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 8.0)
@@ -405,9 +410,13 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 		var c := _skill_layout(ex, Vector2(_side_rect.position.x, y), sig, true, rh)
 		cols.append(c)
 		y += rh
-	# bottom bar: skills only
+	# bottom bar: skills only. s15: a two-line name with a long hint cut the hint («бомбы и ракет…»), so the
+	# bar grows upwards by the lines the wordiest skill needs over the base (one-line name, two hint lines)
 	var w := skills.size() * BAR_COL + 20.0
-	var r := Rect2((size.x - w) / 2.0, size.y - 158.0, w, 146.0)
+	var extra := 0.0
+	for sk: Dictionary in skills:
+		extra = maxf(extra, _skill_text_h(sk) - SKILL_TEXT_BASE)
+	var r := Rect2((size.x - w) / 2.0, size.y - 158.0 - extra, w, 146.0 + extra)
 	bar_top = r.position.y
 	_bar_rect = r
 	sig.append(r)
@@ -605,6 +614,23 @@ func _row_static(c: BarCol) -> void:
 	_row_text(tr, String(c.sk["title"]).to_upper(), String(c.sk["hint"]), UiStyle.TEXT, UiStyle.TEXT_2)
 
 
+## Text height under a skill tile below the first name line: the second name line (17) and the hint lines (15).
+## Same rule as `_skill_static`: a name wider than the column with a space goes on two lines; the hint up to
+## SKILL_HINT_LINES lines.
+func _skill_text_h(sk: Dictionary) -> float:
+	var title := String(sk["title"]).to_upper()
+	var two := UiStyle.text_w(UiStyle.head_font(700, 1), title, UiStyle.FS_CAPTION) > BAR_COL - 6.0 and title.contains(" ")
+	var hint := String(sk["hint"])
+	var hl := 0 if hint == "" else _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION, null, SKILL_HINT_LINES).size()
+	return (17.0 if two else 0.0) + hl * 15.0
+
+
+## Text a skill column fits in the base bar height: one name line and two hint lines
+const SKILL_TEXT_BASE := 30.0
+## Most hint lines under a skill name (the bar grows for them, `_action_bar`)
+const SKILL_HINT_LINES := 3
+
+
 ## Skill column, static part: tile (amber frame when active or a ready skill, grey otherwise,
 ## dimmed while cooling down), name and hint. The active glow is per-frame (`_skill_dyn`).
 func _skill_static(c: BarCol) -> void:
@@ -627,8 +653,8 @@ func _skill_static(c: BarCol) -> void:
 		UiStyle.text(ctrl, nf, Vector2(pos.x, ny), title, UiStyle.FS_CAPTION, nc, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
 	var hint := String(sk["hint"])
 	if hint != "":
-		# two-line names leave room for one hint line inside the bar
-		var hl := _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION, null, 1 if ny > tr.end.y + 24.0 else 2)
+		# the bar is tall enough for every column's hint (`_action_bar` sizes it with `_skill_text_h`)
+		var hl := _lines(hint, BAR_COL - 6.0, UiStyle.FS_CAPTION, null, SKILL_HINT_LINES)
 		for i in hl.size():
 			UiStyle.text(ctrl, ui_font(), Vector2(pos.x, ny + 17.0 + i * 15.0), hl[i], UiStyle.FS_CAPTION, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_CENTER, BAR_COL)
 
@@ -688,27 +714,6 @@ func skill_rect(action: String) -> Rect2:
 	return Rect2()
 
 
-## Tooltip over the bar for the skill under the mouse (hover only: holding a key fires it).
-func _skill_tooltip(size: Vector2) -> void:
-	var mp := ctrl.get_local_mouse_position()
-	for t: Array in _skill_tips:
-		var r0: Rect2 = t[0]
-		if not r0.has_point(mp):
-			continue
-		var w := 380.0
-		var body := Loc.out(String(t[2]))
-		var bh := ui_font().get_multiline_string_size(body, HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, UiStyle.FS_BODY).y
-		var r := Rect2(clampf(r0.get_center().x - w / 2.0, 12.0, size.x - w - 12.0), bar_top - bh - 64.0, w, bh + 52.0)
-		if t.size() > 4 and bool(t[4]):
-			# left-column row: the tooltip opens to the right of the column
-			r.position = Vector2(_side_rect.end.x + 12.0, clampf(r0.position.y, 12.0, size.y - r.size.y - 12.0))
-		UiStyle.panel(ctrl, r, Color(UiStyle.ACCENT, 0.6), Color(0.04, 0.045, 0.04, 0.95))
-		ctrl.draw_rect(Rect2(r.position, Vector2(4, r.size.y)), UiStyle.ACCENT)
-		UiStyle.text(ctrl, UiStyle.head_font(700, 3), Vector2(r.position.x + 18, r.position.y + 28), String(t[1]), UiStyle.FS_BODY, UiStyle.ACCENT_SOFT)
-		ctrl.draw_multiline_string(ui_font(), Vector2(r.position.x + 18, r.position.y + 52), body, HORIZONTAL_ALIGNMENT_LEFT, w - 32.0, UiStyle.FS_BODY, -1, UiStyle.TEXT)
-		return
-
-
 ## Boss bars under the level and timer frame, Sublight-style (reference frames 24.10): the
 ## boss name in big heading letters over a thick red bar with the hull numbers inside, the
 ## shield as a blue strip under it. Several bosses stack downwards.
@@ -743,13 +748,22 @@ var _boss_box := Rect2()
 const BOSS_BAR_Y := 42.0
 const BOSS_BAR_H := 30.0
 const BOSS_STEP := 94.0
+## Sorties (finished, from the profile) during which the first-minutes key hint under the plane is shown
+const KEY_HINT_SORTIES := 3
+## Smallest boss-name size before a long name is allowed to run past the bar
+const BOSS_NAME_MIN := 24
 
 
 ## Boss name and its thick hull bar with `value` written inside; `frac` is the hull left.
+## A long name gets a smaller font instead of being cut at the bar's width (s15: «ПАДАЕТ И ИДЁТ НА ТА»).
 func _boss_head(title: String, frac: float, value: String, x: float, y: float, w: float) -> void:
 	var hf := UiStyle.head_font(800, 2)
-	UiStyle.text(ctrl, hf, Vector2(x - 2.0, y + 34.0), Loc.out(title).to_upper(), 40, Color(0, 0, 0, 0.6), HORIZONTAL_ALIGNMENT_CENTER, w)
-	UiStyle.text(ctrl, hf, Vector2(x, y + 32.0), Loc.out(title).to_upper(), 40, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, w)
+	var up := Loc.out(title).to_upper()
+	var fs := 40
+	while fs > BOSS_NAME_MIN and UiStyle.text_w(hf, up, fs) > w:
+		fs -= 2
+	UiStyle.text(ctrl, hf, Vector2(x - 2.0, y + 34.0), up, fs, Color(0, 0, 0, 0.6), HORIZONTAL_ALIGNMENT_CENTER, w)
+	UiStyle.text(ctrl, hf, Vector2(x, y + 32.0), up, fs, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, w)
 	var bar := Rect2(x, y + BOSS_BAR_Y, w, BOSS_BAR_H)
 	ctrl.draw_rect(bar.grow(2.0), Color(0, 0, 0, 0.6))
 	ctrl.draw_rect(Rect2(bar.position, Vector2(w * clampf(frac, 0.0, 1.0), BOSS_BAR_H)), UiStyle.DANGER.darkened(0.3))
@@ -822,7 +836,7 @@ func _evac_marker(m: Main, size: Vector2) -> void:
 	var sp := _ws(xf, m.evac.target_pos())
 	var d := int(m.player.global_position.distance_to(m.evac.target_pos()))
 	_edge_arrow(sp, rect, size, Color(0.4, 1.0, 0.5), 1.8, Loc.t("эвакуация %d м") % (d / 10))
-	_ctext(246, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с") % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7))
+	_ptext(_evac_y, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с") % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7), 0.72)
 
 
 ## True when `r` touches the bottom bar or the weapons column — this frame's, or the last
@@ -919,7 +933,7 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 	if rk > 1.05:
 		# EX-04: заход на атаку — прямой полёт усиливает пушку, НАР и бомбы
 		_ptext(size.y / 2.0 + 150.0, Loc.t("ЗАХОД: пушка и взрывы +%d%%") % int(round((rk - 1.0) * 100.0)), 20, Color(1.0, 0.75, 0.4, clampf((rk - 1.0) / Player.RUN_BONUS, 0.4, 1.0)))
-	if m.run.streak >= 3:
+	if m.run.streak >= 3 and not Main.aces():   # s15 review п. 18: no XP in «Битва асов», the multiplier means nothing
 		var a := clampf(m.run.streak_t, 0.0, 1.0)
 		var stt := Loc.t("Серия ×%d · опыт ×%.2f") % [m.run.streak, m.streak_mult()]
 		var stw := ui_font().get_string_size(Loc.out(stt), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 24.0
@@ -955,6 +969,24 @@ func _world_caption(xf: Transform2D, wp: Vector2, radius: float, s: String, col:
 var _task_y := 250.0
 var _task_compact := false
 var _task_rect := Rect2()
+## s15: the centre column under the boss bars is one stack — banner slot, evacuation line, task plate, tanker
+## line — so they never land on each other (they had fixed heights: four lines in a heap at 16:31).
+var _banner_y := 186.0
+var _evac_y := 270.0
+
+
+## Lays out the centre stack for this frame from the last frame's boss bars (`_boss_bottom`). The banner slot is
+## kept even when empty, so the task plate does not jump each time a banner comes and goes.
+func _center_stack(m: Main) -> void:
+	_task_compact = _boss_bottom > 0.0
+	var y := maxf(186.0, _boss_bottom + 20.0)
+	_banner_y = y
+	y += 52.0                     # banner plate 44 + gap
+	if m.state == "playing" and is_instance_valid(m.evac):
+		_evac_y = y + 24.0        # baseline of the 22 px line on its plate
+		y += 40.0
+	_task_y = maxf(y, 250.0)
+	_task_rect = Rect2()
 
 
 ## Activity task line on its dark plate: full width with room for the reward line, or (boss up)
@@ -982,10 +1014,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	var rect := Rect2(Vector2.ZERO, size).grow(-60.0)
 	var node: Node = m.spawner.activity_node if m.spawner != null else null
 	# s12: with boss bars up, the task plate goes under them and the banner slot (it overlapped them);
-	# s13: there it shrinks to one line, so the top of the field is not three plates deep
-	_task_compact = _boss_bottom > 0.0
-	var ay := 250.0 if not _task_compact else maxf(250.0, _boss_bottom + 72.0)
-	_task_y = ay
+	# s13: there it shrinks to one line, so the top of the field is not three plates deep. The y is `_center_stack`'s.
 	if is_instance_valid(node):
 		if node is FortArea:
 			var base := node as FortArea
@@ -1061,7 +1090,8 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	if is_instance_valid(tk) and tk.alive() and not tk.leaving:
 		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8, Loc.t("заправщик %d м") % (int(p.global_position.distance_to(tk.global_position)) / 10))
 		var ts := Loc.t("СТЫКОВКА — ЗАПРАВКА ИДЁТ") if tk.filling else (Loc.t("ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно") if tk.in_cone else Loc.t("ЗАПРАВЩИК: зайдите ему в хвост"))
-		_ctext(ay + (52.0 if _task_compact else 78.0), Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65))
+		var ty := (_task_rect.end.y + 28.0) if _task_rect.has_area() else (_task_y + 24.0)   # its own plate, under the task plate
+		_ptext(ty, Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65), 0.72)
 
 
 ## Правка 20 (тест 3.5-s4): радиоэфир — справа внизу, значок рации, позывной, полупрозрачная плашка.
