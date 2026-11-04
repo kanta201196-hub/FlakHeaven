@@ -945,6 +945,21 @@ func _make_points() -> Array:
 		pts.append({"name": "alt_plain", "pos": empty, "enemies": true, "booms": ab, "shot_t": 0.6, "wait": 1.5, "zoom": 1.0})
 		pts.append({"name": "alt_ridge", "pos": peak + Vector2(0, 300), "enemies": true, "booms": ab, "shot_t": 0.6, "wait": 1.5, "zoom": 1.0})
 		pts.append({"name": "alt_site", "pos": empty + Vector2(2400, 0), "enemies": true, "ground": true, "booms": ab, "shot_t": 0.6, "wait": 2.5, "zoom": 1.0})
+	if OS.get_cmdline_user_args().has("--s15fx"):
+		# Kanta s15 review (items 10, 12): a pile of air and ground blasts right on the player (is the own plane
+		# readable at the peak and in the smoke after it), and ground blasts on the plain and on a ridge shot after
+		# the smoke has gone, so only their scorch marks are left (dark holes, strips along cliffs)
+		pts = []
+		var pile := [[Vector2(0, 0), 20.0, true, ""], [Vector2(45, -30), 30.0, true, ""], [Vector2(-50, 40), 16.0, false, ""],
+			[Vector2(70, 60), 130.0, false, "blast"], [Vector2(-30, -60), 22.0, true, "flak"], [Vector2(20, 25), 46.0, true, ""],
+			[Vector2(-90, -10), 18.0, false, ""], [Vector2(100, -80), 12.0, true, "flak"]]
+		pts.append({"name": "s15_pile", "pos": empty, "enemies": true, "booms": pile, "shot_t": 0.5, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "s15_pile_smoke", "pos": empty + Vector2(2600, 0), "enemies": true, "booms": pile, "shot_t": 1.6, "wait": 1.5, "zoom": 1.0})
+		var gb := [[Vector2(-260, 120), 18.0, false, ""], [Vector2(-60, 200), 26.0, false, ""], [Vector2(180, -140), 14.0, false, ""],
+			[Vector2(260, 160), 130.0, false, "blast"], [Vector2(-200, -180), 22.0, false, ""]]
+		pts.append({"name": "s15_scorch", "pos": empty + Vector2(0, 2600), "booms": gb, "shot_t": 7.0, "wait": 1.0, "zoom": 1.0})
+		pts.append({"name": "s15_scorch_ridge", "pos": peak + Vector2(0, 300), "booms": gb, "shot_t": 7.0, "wait": 1.0, "zoom": 1.0})
+		pts.append({"name": "s15_scorch_peak", "pos": peak, "booms": gb, "shot_t": 7.0, "wait": 1.0, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--fxbench"):   # 3.4-t1: эффекты (след, форсаж, ракеты, винты, падение ведомого)
 		pts = []
 		pts.append({"name": "trail", "pos": empty, "fly": true, "wait": 3.0, "zoom": 0.8})
