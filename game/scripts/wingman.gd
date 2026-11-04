@@ -90,7 +90,8 @@ func damage(amount: float) -> void:
 		visible = false
 		# S9-12: потеря ведомого — в эфир (очередью, не перебивая), замена — через 20 с
 		Story.say(String(Prog.WING_TYPES[type]["short"]), "Подбит, выхожу из боя! Замена через 20 секунд.")
-		Story.say(Story.DISPATCH, "Ведомый сбит. Держитесь, замена на подходе.")
+		Story.say(Story.DISPATCH, RadioPick.pick("wing_lost", ["Ведомый сбит. Держитесь, замена на подходе.", "Потеря в звене. Высылаем замену.",
+			"Ведомого больше нет на радаре. Новый уже взлетает.", "Звено, минус один. Держитесь, помощь в пути."]))   # s15 review п. 13
 
 
 ## Залп ракет В-В: n ракет за время over (навыки «Сомкнуть строй», «Под одним зонтом», «Парад»)
@@ -165,7 +166,8 @@ func _process(delta: float) -> void:
 			heading = p.heading
 			velocity = p.velocity
 			_fly_w = 1.0
-			Events.radio.emit("Ведомый", "Иду к вам, займу место в строю!", false)
+			Events.radio.emit("Ведомый", RadioPick.pick("wing_back", ["Иду к вам, займу место в строю!", "На подходе, держите строй!",
+				"Догоняю! Оставьте мне кого-нибудь.", "Я с вами. Где мне встать?"]), false)   # s15 review п. 13
 		return
 	_sortie(p, delta)
 	_fly(p, delta)

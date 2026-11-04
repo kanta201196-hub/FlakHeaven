@@ -219,7 +219,7 @@ func _left_panel(m: Main, p: Player) -> void:
 		UiStyle.FS_BODY, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, bw)
 	# fuel: thin bar, minutes left on the right
 	var fu := Fuel.current()
-	if fu != null:
+	if fu != null and not Main.aces():   # s15 review п. 18: «Битва асов» does not burn fuel
 		var fc := UiStyle.DANGER if fu.frac() < 0.1 else (Color(1.0, 0.8, 0.35) if fu.frac() <= Fuel.CALL_AT else Color(0.95, 0.85, 0.4))
 		UiStyle.text(ctrl, UiStyle.head_font(800, 0), Vector2(x + 14.0, y + 66.0), "F", UiStyle.FS_BODY, fc)
 		ctrl.draw_rect(Rect2(bx, y + 54, bw - 130.0, 10), Color(0, 0, 0, 0.6))
@@ -284,11 +284,13 @@ static func grouped(n: int) -> String:
 	return ("-" if n < 0 else "") + s + out
 
 
-## Top-right: parts and kills counters, the sortie goals panel under them, FPS in the corner (setting «Счётчик кадров»).
+## Top-right: parts (not in «Битва асов», it pays none) and kills counters, the sortie goals panel under them, FPS in
+## the corner (setting «Счётчик кадров»).
 func _top_right(m: Main, size: Vector2) -> void:
 	var x := size.x - 20.0
 	x = _counter(Rect2(x, 20.0, 0.0, 56.0), grouped(m.run.kills), Loc.t("СБИТО"), Color.WHITE) - 10.0
-	_counter(Rect2(x, 20.0, 0.0, 56.0), grouped(int(m.run.parts)), Loc.t("ЗАПЧАСТИ"), UiStyle.PARTS)
+	if not Main.aces():   # s15 review п. 18: the test pays no parts
+		_counter(Rect2(x, 20.0, 0.0, 56.0), grouped(int(m.run.parts)), Loc.t("ЗАПЧАСТИ"), UiStyle.PARTS)
 	_goals(m, Rect2(size.x - 460.0, 88.0, 440.0, 0.0))
 	if Settings.show_fps:
 		_text(Vector2(0, size.y - 6), "FPS %d" % Engine.get_frames_per_second(), 14, Color(0.7, 0.7, 0.7, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 8.0)
@@ -931,7 +933,7 @@ func _flight_panel(m: Main, p: Player, size: Vector2) -> void:
 	if rk > 1.05:
 		# EX-04: заход на атаку — прямой полёт усиливает пушку, НАР и бомбы
 		_ptext(size.y / 2.0 + 150.0, Loc.t("ЗАХОД: пушка и взрывы +%d%%") % int(round((rk - 1.0) * 100.0)), 20, Color(1.0, 0.75, 0.4, clampf((rk - 1.0) / Player.RUN_BONUS, 0.4, 1.0)))
-	if m.run.streak >= 3:
+	if m.run.streak >= 3 and not Main.aces():   # s15 review п. 18: no XP in «Битва асов», the multiplier means nothing
 		var a := clampf(m.run.streak_t, 0.0, 1.0)
 		var stt := Loc.t("Серия ×%d · опыт ×%.2f") % [m.run.streak, m.streak_mult()]
 		var stw := ui_font().get_string_size(Loc.out(stt), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 24.0

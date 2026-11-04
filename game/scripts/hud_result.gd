@@ -38,10 +38,10 @@ func result(m: Main, size: Vector2) -> void:
 	var evac := m.state == "evac"
 	UiStyle.text(ctrl, UiStyle.head_font(800, 12), Vector2(0, 204), Loc.t("ЭВАКУАЦИЯ") if evac else Loc.t("САМОЛЁТ СБИТ"), 84,
 		UiStyle.OK if evac else UiStyle.DANGER, HORIZONTAL_ALIGNMENT_CENTER, size.x)
-	var sub := Loc.t("ОПЕРАЦИЯ «%s» · «%s» · ЭКИПАЖ «%s»") % [Loc.t(Campaign.op()["title"]).to_upper(),
+	var sub := Loc.t("ОПЕРАЦИЯ «%s» · %s · ЭКИПАЖ «%s»") % [Loc.t(Campaign.op()["title"]).to_upper(),
 		Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper(), String(Profile.cls(m.cls_id)["callsign"]).to_upper()]
 	if Main.aces():
-		sub = Loc.t("БИТВА АСОВ · ТЕСТ · «%s» · ЭКИПАЖ «%s»") % [Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper(),
+		sub = Loc.t("БИТВА АСОВ · ТЕСТ · %s · ЭКИПАЖ «%s»") % [Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper(),
 			String(Profile.cls(m.cls_id)["callsign"]).to_upper()]
 	UiStyle.text(ctrl, UiStyle.head_font(700, 6), Vector2(0, 240), sub, UiStyle.FS_LABEL, UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	var op := op_line(m)
@@ -475,7 +475,11 @@ static func result_insights(m: Main) -> Array:
 		if kk == "ракеты" and int(m.counters.get("intercepted", 0)) == 0:
 			out.append(["Ловушки не увели ни одной ракеты. Уклонение (Space) и боевой разворот сбивают захват — жмите, когда слышите сигнал пуска.", Color(1.0, 0.75, 0.4)])
 		elif kk == "таран":
-			out.append(["Много урона от столкновений: не влетайте в строй врагов, уходите уклонением (Space) или берите броню; у «Грача» под «Бронещитом» врезавшиеся враги разбиваются сами.", Color(1.0, 0.75, 0.4)])
+			# s15 review п. 14: the «Бронещит» part only for the plane that has the skill
+			var ram_tip := "Много урона от столкновений: не влетайте в строй врагов, уходите уклонением (Space) или берите броню."
+			if m.player.has_skill("armor_shield"):
+				ram_tip = "Много урона от столкновений: не влетайте в строй врагов, уходите уклонением (Space) или берите броню; под «Бронещитом» врезавшиеся враги разбиваются сами."
+			out.append([ram_tip, Color(1.0, 0.75, 0.4)])
 	if m.player.syn.is_empty():
 		out.append(["Ни одной связки за вылет. Слева в бою полоса «К связке» показывает, каких карточек не хватает.", Color(1.0, 0.85, 0.4)])
 	else:

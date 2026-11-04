@@ -48,7 +48,7 @@ func _ready() -> void:
 
 
 func speed() -> float:
-	return Tuning.g("interceptor_speed") * (AcesBalance.SPEED_K if Main.aces() else 1.0)
+	return Tuning.g("interceptor_speed") * (Tuning.g("aces_speed") if Main.aces() else 1.0)
 
 
 func turn_deg() -> float:
@@ -91,8 +91,8 @@ func behave(delta: float) -> void:
 			heading = rotate_toward(heading, to.angle(), deg_to_rad(turn_deg()) * delta)
 			if d > 1100.0 or on_tanker:
 				spd = maxf(spd, tgt_vel.length() * 1.1) # догоняет, если цель далеко
-			if d < 250.0:
-				_start_break(to)
+			if d < 250.0 or (RivalAce.smart_ai() and not on_tanker and AcesBalance.collision_ahead(to, tgt_vel - Vector2.from_angle(heading) * spd)):
+				_start_break(to)   # «Битва асов» (AB-03, s15 review п. 16): breaks off before a ram, not at 250 px
 		"break":
 			heading = rotate_toward(heading, _break_dir, deg_to_rad(turn_deg() * 1.2) * delta)
 			if _state_t > 1.8:
