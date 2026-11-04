@@ -13,7 +13,7 @@ waits for Kanta's "yes" before it touches `main`.
 | Renderer on phones | `project.godot` `rendering_method.mobile="gl_compatibility"` (already on main) | Same fallback PCs without Vulkan get; Forward+ is desktop-only |
 | Texture formats | `textures/vram_compression/import_etc2_astc=true` (already on main) | Godot imports ETC2/ASTC next to BC7, so no per-file change is needed |
 | Mobile graphics mix | `game/scripts/mobile/mobile_mode.gd` | Preset «Низкое» + low shadows, 1024 atlas, 70 % render scale, no glow, auto-drop off |
-| Touch controls | `game/scripts/mobile/touch_controls.gd` | Floating stick (left half) → `move_*`; buttons Бочка / Форсаж / Пауза; guns are auto |
+| Touch controls | `game/scripts/mobile/touch_controls.gd` | Floating stick (left half) → `move_*`; buttons Уклонение / Форсаж / Пауза; guns are auto |
 
 On PC `MobileMode` removes itself on start (`OS.has_feature("mobile")` is false), so desktop
 behaviour is unchanged. `--mobile` on PC shows the overlay for a mouse check.
