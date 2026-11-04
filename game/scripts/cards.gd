@@ -549,6 +549,19 @@ static func mastery_branches(g: Hardpoint) -> Array:
 	return ["profile"] if g.profile != "" else BRANCHES.keys()
 
 
+## True when the offered row is the «or-or» fork: two or more cards, all of them first mastery-branch cards or all
+## weapon-profile cards (`offer` returns such a row as the whole screen). A first-branch card can also share an
+## ordinary row (a profile's rank card, one per weapon, from level 36), and then the row is not a fork (s15).
+static func is_fork(offers: Array) -> bool:
+	if offers.size() < 2:
+		return false
+	var kind := String(offers[0]["kind"])
+	for o: Dictionary in offers:
+		if String(o["kind"]) != kind or (kind == "branch" and not bool(o.get("first", false))):
+			return false
+	return kind in ["branch", "profile"]
+
+
 static func branch_on() -> bool:
 	return Main.I != null and Main.I.run.level >= BRANCH_LEVEL
 
