@@ -113,11 +113,18 @@ static func ensure(ctrl: Control) -> Hangar3D:
 
 
 ## Frees the hangar view when a sortie starts: it held its plane model, the weapon store and a 4× MSAA view
-## through the whole fight. ensure() builds it again the next time the hangar is drawn.
+## through the whole fight. ensure() builds it again the next time the hangar is drawn. The skin caches go too:
+## they were keyed by the hangar (and title screen) model's mesh and texture, so they kept its full-size textures
+## in video memory through the fight after the view itself was freed (s15: «Битва асов» 3460 MB against 2600 MB in
+## the campaign, review item 8). Combat rebuilds what it needs from the battle models.
 static func release() -> void:
 	if I != null and is_instance_valid(I):
 		I.queue_free()
 	I = null
+	PlaneHull.clear_cache()
+	SkinPatch.clear_cache()
+	WeaponPaint.clear_cache()
+	WeaponModels.forget_hq()
 
 
 func _ready() -> void:

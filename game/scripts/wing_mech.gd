@@ -167,9 +167,12 @@ static func attach_skin(node: Node3D, model: Node3D = null) -> void:
 
 
 static var _skins := {}
-static var _mr_cache := {}
+static var _mr_cache := {}   # texture path → average metal/roughness; a path, not the Texture, so the cache never
+                             # keeps a hangar model's ORM map in video memory (s15 review, item 8)
 
 
+## Average metal and roughness of `model`'s skin from its metal map (read once per texture, at 32×32), for the
+## vertex-coloured plates that sit on it; a default pair when the model has no metal map
 static func _metal_rough(model: Node3D) -> Vector2:
 	var res := Vector2(0.25, 0.6)
 	if model == null:
@@ -179,7 +182,8 @@ static func _metal_rough(model: Node3D) -> Vector2:
 		if m == null or m.metallic_texture == null:
 			continue
 		var tex := m.metallic_texture
-		if not _mr_cache.has(tex):
+		var key: Variant = tex.resource_path if tex.resource_path != "" else tex.get_instance_id()
+		if not _mr_cache.has(key):
 			var img := tex.get_image()
 			if img == null:
 				return res
@@ -191,8 +195,8 @@ static func _metal_rough(model: Node3D) -> Vector2:
 				for x in 32:
 					var px := img.get_pixel(x, y)
 					sum += Vector2(px.b, px.g)
-			_mr_cache[tex] = Vector2(m.metallic, m.roughness) * sum / 1024.0
-		return _mr_cache[tex]
+			_mr_cache[key] = Vector2(m.metallic, m.roughness) * sum / 1024.0
+		return _mr_cache[key]
 	return res
 
 
