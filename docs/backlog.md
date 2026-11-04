@@ -34,6 +34,8 @@ Items from the s15 recordings and log review (04.11.2026, `/mnt/project-files/s1
 | S15-05 | Centre texts on top of each other (evacuation, tanker, task, banner) | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: one stack under the boss bars, evacuation and tanker lines on a plate; the «На волоске!» float over the plane not changed |
 | S15-06 | Cut captions: «НАВОДЯЩИЕСЯ РАК…», «бомбы и ракет…», «разворот к враг…» | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: left column 250 → 272 px, the skill bar grows upwards for a long hint (up to 3 lines) |
 | S15-15 | «МЫШЬ куда лететь» hint on every sortie | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: first 3 sorties only, key of the chosen control scheme |
+| S15-07 | «Playback can only happen when a node is inside the scene tree» in the log | Ускорить большие бои | merged #549 04.11: the Fortress drone started before the Fortress entered the world, now autoplay; check the next build's log |
+| S15-08 | VRAM in «Битва асов» 3460 MB vs 2600 MB in the campaign | Ускорить большие бои | merged #549 04.11: skin and hq weapon caches kept the hangar plane's full-size textures after takeoff; cleared on takeoff (cloud, Kanta's profile: combat textures 392 → 224 MB). Also restored 363 turret `.import` files emptied by c5c98e82. Check `vram_mb` aces vs campaign in the next build's log |
 
 ## Правки по сборке 3.5-s14
 
