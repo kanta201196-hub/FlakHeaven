@@ -286,6 +286,16 @@ static func weapon_model(weapon: String, t: int, evo := false, hq := false) -> M
 
 static var _radius_cache := {}
 
+
+## Drops the hangar versions (keys ending in `_hq`: hq weapons and their pylons) and the per-mesh radii, which also
+## held hq meshes: `Hangar3D.release` calls it at takeoff so their textures leave video memory (s15 review, item 8).
+## The combat meshes stay cached.
+static func forget_hq() -> void:
+	for k in _cache.keys():
+		if String(k).ends_with("_hq"):
+			_cache.erase(k)
+	_radius_cache.clear()
+
 ## Body radius of a weapon mesh lying along X: the thinnest of the widest cross-sections over the middle 60 %
 ## (wings and fins widen some slices, the body is in every one); cached per mesh. Hangar3D seats weapons on
 ## their stands by it, WeaponPaint keeps the section seams on it.

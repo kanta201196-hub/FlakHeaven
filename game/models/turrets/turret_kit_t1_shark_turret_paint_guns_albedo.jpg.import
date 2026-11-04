@@ -1,0 +1,39 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://br3fmjae4kg6k"
+path.s3tc="res://.godot/imported/turret_kit_t1_shark_turret_paint_guns_albedo.jpg-8ec59f4b0ce6e02b3bd9378518d24909.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t1_shark_turret_paint_guns_albedo.jpg-8ec59f4b0ce6e02b3bd9378518d24909.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "0a9ae8c8d3a81325407179f3c7e1502a"
+}
+
+[deps]
+
+source_file="res://models/turrets/turret_kit_t1_shark_turret_paint_guns_albedo.jpg"
+dest_files=["res://.godot/imported/turret_kit_t1_shark_turret_paint_guns_albedo.jpg-8ec59f4b0ce6e02b3bd9378518d24909.s3tc.ctex", "res://.godot/imported/turret_kit_t1_shark_turret_paint_guns_albedo.jpg-8ec59f4b0ce6e02b3bd9378518d24909.etc2.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1
