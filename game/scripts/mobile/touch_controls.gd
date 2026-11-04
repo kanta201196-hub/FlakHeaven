@@ -1,7 +1,7 @@
 extends CanvasLayer
 ## Minimal touch controls for the Android draft: a floating stick on the left half of the screen
 ## drives move_* (as a gamepad stick would), and three round buttons on the right press roll,
-## afterburner and pause. Guns fire on their own (auto mode), so no fire button is needed. Shown
+## evade (roll), afterburner and pause. Guns fire on their own (auto mode), so no fire button is needed. Shown
 ## only while a sortie is flown and not paused; menus, cards and the hangar take plain taps
 ## (Godot turns a tap into a mouse click).
 
@@ -11,9 +11,9 @@ const BUTTON_R := 95.0
 const PAUSE_R := 55.0
 ## Button centres as fractions of the screen size, right side
 const BUTTONS := [
-	{"action": "roll", "label": "Бочка", "pos": Vector2(0.90, 0.78), "r": BUTTON_R},
+	{"action": "roll", "label": "Уклонение", "pos": Vector2(0.90, 0.78), "r": BUTTON_R},
 	{"action": "afterburner", "label": "Форсаж", "pos": Vector2(0.77, 0.86), "r": BUTTON_R},
-	{"action": "pause", "label": "II", "pos": Vector2(0.95, 0.08), "r": PAUSE_R},
+	{"action": "pause", "label": "II", "pos": Vector2(0.62, 0.07), "r": PAUSE_R},
 ]
 
 var _view: Control
@@ -26,6 +26,9 @@ var _stick_on := false
 
 func _ready() -> void:
 	layer = 90
+	# the tree is paused on every screen but the sortie; the overlay must keep checking to hide/show
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	visible = false
 	_view = Control.new()
 	_view.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
