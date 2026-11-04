@@ -631,13 +631,13 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 			continue
 		# U-06/U-08: на тяжёлый подвес — только экспериментальное оружие, открытое кампанией; на остальные — обычное
 		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL.filter(func(x): return PlaneClasses.allows(p.cls_id, x, int(p.cls["plane_lvl"])))):
-			if equipped.has(w) or banned.has("w:" + w) or not Weapons.offered(w, ground):
+			if equipped.has(w) or banned.has("w:" + w) or not CardBalance.offered(w, ground):
 				continue
 			cands.append([1.4, {"id": "new_%s_%d" % [w, gi], "ban": "w:" + w, "kind": "weapon_new", "weapon": w, "group": gi, "cat": "Новое оружие",
 				"title": Weapons.title(w)}])
 	for gi in p.groups.size():
 		var g: Hardpoint = p.groups[gi]
-		if g.is_empty() or g.level >= Weapons.MAX_LEVEL or banned.has("up:%d" % gi) or not Weapons.offered(g.weapon, ground):
+		if g.is_empty() or g.level >= Weapons.MAX_LEVEL or banned.has("up:%d" % gi) or not CardBalance.offered(g.weapon, ground):
 			continue
 		if profile_due(g) and not banned.has("pr:%d" % gi):
 			continue   # PG-06: this weapon's next step is the profile choice (`offer`); a banned choice keeps plain upgrades
