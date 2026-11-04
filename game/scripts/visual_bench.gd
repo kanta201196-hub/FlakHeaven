@@ -91,7 +91,7 @@ func process(delta: float) -> void:
 		if not keep:
 			(e as Node).queue_free()
 	if m.hud != null:
-		m.hud.visible = false
+		m.hud.visible = cur.get("hud", false)
 	if _i < 0:
 		if _t < 1.0:
 			return
@@ -1005,6 +1005,8 @@ func _make_points() -> Array:
 			pts.append({"name": "clouds_%d_near" % i, "pos": cp + Vector2(330, 260), "wait": 1.0})
 			pts.append({"name": "clouds_%d_under" % i, "pos": cp, "wait": 1.0})
 		if not cl.is_empty():
+			# S15-G11: a cloud under the left weapon column with enemies around and the HUD on (readability)
+			pts.append({"name": "clouds_hud", "pos": (cl[0][0] as Vector2) + Vector2(650, 60), "enemies": true, "hud": true, "wait": 1.5})
 			pts.append({"name": "clouds_wide", "pos": (cl[0][0] as Vector2) + Vector2(500, 300), "zoom": 0.6, "wait": 1.0})
 	if OS.get_cmdline_user_args().has("--seabench") and ter != null and ter.props != null:
 		# «Архипелаг» (-- --visual --seabench --op=5): композиции берега крупно и общим планом, по 2 каждого типа

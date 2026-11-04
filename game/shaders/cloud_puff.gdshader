@@ -14,6 +14,16 @@ uniform vec3 sun_to = vec3(-0.62, 0.85, -0.75);   // направление на
 uniform vec3 lit_color : source_color = vec3(1.0, 0.98, 0.94);
 uniform vec3 shade_color : source_color = vec3(0.5, 0.56, 0.67);
 uniform vec3 base_color : source_color = vec3(0.46, 0.51, 0.61);
+// S15-G11 (Kanta s15, R-22 toggle cloud_soft): the puffs are unshaded, so Forward+'s 1.5 exposure lift
+// (Render3D.FP_EXPOSURE_K) blew their lit side to flat white that hid enemies. soft_k = 1: the lift is taken back
+// (as FX_EXP does for effects), the shaded side and the cloud's underside are darker, and each puff is thinner,
+// more so over the fight
+uniform float soft_k = 0.0;
+#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+#define CLOUD_SOFT_EXP 0.9
+#else
+#define CLOUD_SOFT_EXP (FX_EXP * 1.1)
+#endif
 
 varying vec2 v_sun;     // смещение к солнцу в UV квадрата
 varying vec2 v_up;      // мировая вертикаль в UV квадрата (длина — насколько «боком» видно клуб)
@@ -55,17 +65,19 @@ void fragment() {
 	float a = dens(UV);
 	float s = dens(UV + v_sun);
 	// к солнцу плотность растёт → эта сторона клуба в тени; край к солнцу светлый
-	float lit = clamp(0.86 - (s - a) * 3.4, 0.0, 1.0);
-	lit *= 0.8 + 0.2 * smoothstep(0.3, 0.9, a);   // у края клуба — чуть темнее (щели между клубами)
+	float lit = clamp(mix(0.86, 0.8, soft_k) - (s - a) * mix(3.4, 4.6, soft_k), 0.0, 1.0);
+	lit *= mix(0.8, 0.68, soft_k) + mix(0.2, 0.32, soft_k) * smoothstep(0.3, 0.9, a);   // у края клуба — чуть темнее (щели между клубами)
 	// нижняя сторона клуба (по мировой вертикали) — в тени самого облака; сверху камеры (v_up≈0) не действует
 	float hgt = dot(UV - 0.5, v_up) * 2.0;
-	lit *= 1.0 - 0.32 * smoothstep(0.05, -0.75, hgt);
+	lit *= 1.0 - mix(0.32, 0.45, soft_k) * smoothstep(0.05, -0.75, hgt);
 	float tone = v_data.z;
 	vec3 top = mix(shade_color, lit_color, lit);
 	vec3 low = base_color * mix(0.78, 1.05, lit);
 	vec3 col = mix(low, top, smoothstep(0.0, 0.85, tone));
-	ALBEDO = col;
+	ALBEDO = col * mix(1.0, CLOUD_SOFT_EXP, soft_k);
 	// Kanta s13: a cloud over the fight hid half the screen with the enemies and the player's plane under it;
-	// it thins out to a fifth over a window around the player (3 × the effects' clear zone)
-	ALPHA = smoothstep(0.05, 0.5, a) * v_data.w * fx_clear_kr(SCREEN_UV, VIEWPORT_SIZE, 3.0, 0.8);
+	// it thins out to a fifth over a window around the player (3 × the effects' clear zone).
+	// S15-G11 (soft_k): every puff a quarter thinner, the window wider (4 ×) and clearer (cut 0.88)
+	ALPHA = smoothstep(0.05, 0.5, a) * v_data.w * mix(1.0, 0.75, soft_k)
+		* fx_clear_kr(SCREEN_UV, VIEWPORT_SIZE, mix(3.0, 4.0, soft_k), mix(0.8, 0.88, soft_k));
 }
