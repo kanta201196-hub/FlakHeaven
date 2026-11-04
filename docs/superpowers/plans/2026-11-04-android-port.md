@@ -18,10 +18,23 @@ waits for Kanta's "yes" before it touches `main`.
 On PC `MobileMode` removes itself on start (`OS.has_feature("mobile")` is false), so desktop
 behaviour is unchanged. `--mobile` on PC shows the overlay for a mouse check.
 
+## Draft results (2026-11-04)
+
+- APK `FlakHeaven_android_draft_0.1.apk`, 372 MB, arm64, Android 5.0+ (SDK 21), GLES 3.0, debug-signed,
+  `apksigner verify` passes. Project files: `builds/android-draft/`.
+- Size history: full textures 2.8 GB → all ≤ 1024 px 1.4 GB → models ≤ 512 px, turrets ≤ 256 px,
+  ETC2 instead of high-quality ASTC: 372 MB. Turret paint variants were ~70 % of texture bytes.
+- Mobile copy with the same caps, Compatibility renderer, `--mobile`: smoke fighter ok, `--shots`
+  run with 0 `SCRIPT ERROR` (cloud, llvmpipe). **Not yet run on a real phone.**
+- Not done in the draft: launcher icon (Godot default), touch UI for hover tooltips, keyboard
+  prompts in the HUD, `--perf` log export from the phone.
+
 ## Cloud build — what works
 
 - Godot 4.4.1 + export templates, Android SDK (platform-tools, build-tools 34, platform 34) and a
   debug keystore install in the cloud container in ~3 min (GitHub and dl.google.com are reachable).
+- Build: `tools/android/build_draft_apk.sh` (copy of `game/` with texture caps, ~30 min cold,
+  ~2 min warm). Editor settings need `export/android/android_sdk_path` and a debug keystore.
 - A debug-signed APK needs no Kanta PC. A Play Store release would need an upload keystore kept as
   an environment secret and an AAB (Gradle build) — out of scope for the draft.
 
