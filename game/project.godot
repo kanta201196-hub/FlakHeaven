@@ -14,6 +14,7 @@ config/features=PackedStringArray("4.4", "Forward Plus")
 InputSetup="*res://scripts/input_setup.gd"
 Tuning="*res://scripts/tuning.gd"
 Settings="*res://scripts/settings.gd"
+MobileMode="*res://scripts/mobile/mobile_mode.gd"
 Profile="*res://scripts/profile.gd"
 Events="*res://scripts/events.gd"
 
