@@ -1221,6 +1221,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			for i in pts.size():
 				_trails.emit("p%d" % i, pts[i], st)
 			var mi: MeshInstance3D = u.mi
+			_own_plane_mark(u)
 			mi.transparency = 0.6 if (p.invuln > 0.0 and p.roll_t <= 0.0 and int(p._blink * 20.0) % 2 == 0) else 0.0
 			if u.mech != null:
 				# Т-1: выпуск в крутом вираже и при торможении (РУД меньше крейсерского или сброс газа)
@@ -2299,6 +2300,10 @@ func _sync_enemy_shots(m: Main) -> void:
 
 const FX_CLEAR_R := 2.2      # clear zone radius, plane lengths (s13: 1.6 was not enough late in a run)
 const FX_CLEAR_CUT := 0.85   # share of an effect's opacity taken away over the plane itself
+## S15-G12 (Tuning own_plane_read): with the cut at 0.85 a dozen stacked smoke and fire layers still added up to
+## an opaque cover late in a run, so the zone takes effects away completely over the plane, and reaches farther
+const FX_CLEAR_R_READ := 2.8
+const FX_CLEAR_CUT_READ := 1.0
 
 
 ## Kanta s12 (26.10): late in a run blasts, fire, missile smoke and the fan of a missile salvo hid the player's
@@ -2314,11 +2319,32 @@ func _sync_fx_clear(m: Main, vs: Vector2) -> void:
 			var a := cam.unproject_position(p3)
 			# model length 1 is the picture width, so the plane is k × picture width long in the world
 			var ln := pu.k * (float(pu.tex.get_width()) if pu.tex != null else 1.0)
-			var b := cam.unproject_position(p3 + cam.global_basis.x * ln * FX_CLEAR_R)
-			v = Vector4(a.x / vs.x, a.y / vs.y, a.distance_to(b) / vs.y, FX_CLEAR_CUT)
+			var read := Tuning.g("own_plane_read") >= 1.0
+			var b := cam.unproject_position(p3 + cam.global_basis.x * ln * (FX_CLEAR_R_READ if read else FX_CLEAR_R))
+			v = Vector4(a.x / vs.x, a.y / vs.y, a.distance_to(b) / vs.y, FX_CLEAR_CUT_READ if read else FX_CLEAR_CUT)
 	if v != _fx_clear:
 		_fx_clear = v
 		RenderingServer.global_shader_parameter_set(&"fx_clear", v)
+
+
+var _own_mark_mat: ShaderMaterial
+
+
+## S15-G12 (R-22 toggle own_plane_read): puts the outline overlay (shaders/own_plane_mark.gdshader) on the player's
+## hull mesh, drawn above all effects, or takes it off when the toggle is off. Only touches the overlay it put.
+func _own_plane_mark(u: Unit3D) -> void:
+	var mi: MeshInstance3D = u.mi
+	if u.bm == null or mi == null:   # a relief mesh from the picture has no normals for an outline
+		return
+	if Tuning.g("own_plane_read") >= 1.0:
+		if _own_mark_mat == null:
+			_own_mark_mat = ShaderMaterial.new()
+			_own_mark_mat.shader = preload("res://shaders/own_plane_mark.gdshader")
+			_own_mark_mat.render_priority = Material.RENDER_PRIORITY_MAX   # after clouds (10) and the combat layer (100)
+		if mi.material_overlay != _own_mark_mat:
+			mi.material_overlay = _own_mark_mat
+	elif mi.material_overlay != null and mi.material_overlay == _own_mark_mat:
+		mi.material_overlay = null
 
 
 # ---------- 3.4-t1: сбитый ведомый падает (п. 32) ----------
