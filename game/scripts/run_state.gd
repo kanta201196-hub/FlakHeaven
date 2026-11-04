@@ -38,6 +38,11 @@ var aces_down := 0
 var aces_gone := 0
 
 
+## The sortie has ground targets. False in «Битва асов» (only planes), so cards hide ground-only weapons
+## (`Weapons.offered`, AB-02). Set by Main at the start.
+var ground_targets := true
+
+
 ## Medal parts bonus for this sortie (Profile.medal_parts_k), set by Main at the start
 var parts_k := 1.0
 

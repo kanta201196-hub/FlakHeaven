@@ -288,6 +288,7 @@ func start_run() -> void:
 	world.add_child(fx)
 
 	run = RunState.new()
+	run.ground_targets = not aces()   # AB-02: «Битва асов» has only planes, cards hide ground-only weapons
 	run.parts_k = 1.0 if aces() else Profile.medal_parts_k(String(Campaign.op()["id"]))   # medals: parts bonus
 	medal_run = {}
 	medal_kill_t = []
