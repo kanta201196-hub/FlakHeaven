@@ -41,6 +41,14 @@ B4 is the fallback if the PC hop becomes the bottleneck, because it removes the 
 
 Why not only B3: updates over butler are the nicest, but the single 1.7 GB file and Russian reachability are both unchecked. Why not only B2: no patches and no access control.
 
+### Option T. Telegram bot as the delivery channel (added 2026-11-05 after Kanta's question)
+A bot cannot write to a person first: the person must press Start (/start) once. Verified for our own bot: Kanta's chat works since he pressed Start (`reference-telegram-bot-kanta-chat`). Flow:
+1. The form's thank-you page (and the Shorts description) shows a link `t.me/<bot>?start=tester`.
+2. The tester presses Start; the bot stores their chat id (a personal datum: keep it on a Russian-hosted base or only in the bot's own storage, **guess**, check with `personal-data.md`).
+3. After each build the bot sends "new build sNN" + WHATS_NEW + the download link (B2/B3). Claude sends the broadcast by a script using `TELEGRAM_BOT_TOKEN`; Kanta's "yes" for each broadcast.
+Limits: the bot sends files up to 50 MB only (verified in `docs/marketing/channels.md` note), so builds go as a link, never as a file. Matching a Yandex Form answer to a Telegram chat is possible only if the tester writes the code from the form to the bot, or we skip matching and treat everyone who pressed Start as a tester. Cost 0; needs a small always-on receiver for /start (Cloudflare Worker, **guess**) or a poll by a scheduled Claude routine (once an hour, no server).
+Recommendation: add as the notification layer on top of B2/B3, it replaces "Kanta posts in Telegram/Discord by hand".
+
 ## 4. Part C. Gluing it together (end to end)
 ```
 Yandex Form -> e-mail (A2) -> Claude digest in stand-up -> invite text with the permanent link (B2/B3)
