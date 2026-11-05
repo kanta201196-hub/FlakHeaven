@@ -189,8 +189,14 @@
      first into `livery.gd`, the second must equal `nozzle_flame.gd` (the flame and trail start at the nozzle).
      About 12 minutes per plane on 2 threads.
   2. `tex_clean.py <out.glb> <map> <map>` (padding) on both maps, copy GLB and maps into `game/models/hangar/`,
-     `godot --headless --path game --import`, rebake the battle models (`battle_bake.py --tris 30000 --tex 2048
-     --outline 2 --glass 1 --shade hangar --threads 2`).
+     `godot --headless --path game --import`.
+  3. Battle models from a coarse source, not from the hangar GLB: the hangar build (158k faces, built tails and
+     refined trailing edges on the top-view outline) bakes to 45.7k / 49.1k triangles at any `--tris`, because
+     `battle_bake.py` keeps the outline faces whole and never collapses below a fifth of the free faces. Run step 1
+     again with `--battle` (72 columns, 4 mm rows, one trailing-edge split) into a scratch folder on fresh copies of
+     the original maps, `tex_clean.py` both maps, then `battle_bake.py <coarse.glb> <out>/fh_battle_attacker_N.glb
+     --tris 30000 --tex 2048 --outline 1.5 --glass 1 --shade hangar --threads 2`: 29,995 («Грач» 1) and 30,927
+     («Грач» 2) triangles. Copy GLB and maps into `game/models/battle/`, then import.
   What mattered: the loft's front section is the old skin's, held within 0.85–1.12 of a circle fitted to its upper
   half (rays slipping onto the fuselage or into the wing read far too long), and morphs to the round tail by
   `morph_end`; its lower half keeps the old depth (pulled up to the tail radius it left the belly plate's top
@@ -205,10 +211,8 @@
   Checks: ray test from inside the fuselage and both nacelles, 0 of 13800 rays escape on «Грач» 1, 3 of 13800 on
   «Грач» 2 (the same three as before this pass, from the forward nacelle); sections per x against `main`, grey
   orthographic renders with the rebuilt faces tinted, Forward+ hangar frames before/after (gfx 0 and 2).
-  Open: (1) the battle models come out at 45.7k / 49.1k triangles instead of 30k: `battle_bake.py` keeps the faces
-  along the top-view outline (about 16k here, 7.5k before: the built tails and the refined trailing edges lie on
-  it) and the parts' open edges; a lower `--tris` or a coarser trailing edge would bring it down. (2) A small sliver remains where the belly plate's trailing edge meets the loft and the
-  fuselage (x about -0.19 on «Грач» 1). (3) Paint suggestion, not done (needs Kanta's yes): on the prototype the
+  Open: (1) A small sliver remains where the belly plate's trailing edge meets the loft and the
+  fuselage (x about -0.19 on «Грач» 1). (2) Paint suggestion, not done (needs Kanta's yes): on the prototype the
   tail section round the nozzle is bare or heat-stained metal, not camouflage.
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.

@@ -119,6 +119,12 @@ TAILS: dict = {
 }
 NC = 144             # columns round the loft and the nozzle
 ROW = 0.0020         # row spacing of the built loft
+# --battle: columns, row spacing and trailing-edge splits of the coarse source battle_bake.py collapses to the
+# battle budget. battle_bake.py never collapses below a fifth of the free faces and keeps the faces along the
+# top-view outline whole; from the hangar build (158k faces, the tails and refined edges on the outline) it gave
+# 45.7k / 49.1k triangles for a 30k budget. The battle model is seen from far above, where this detail is lost.
+# One trailing-edge split, not zero: nacelle_box.rebuild_region needs at least one. Bake it with --outline 1.5.
+BATTLE = (72, 0.004, 1)
 NC_DENSE = 512       # columns of the dense loft behind the signed distance
 ROW_DENSE = 0.0004   # its row spacing
 K_SEC = 720          # rays round the axis when the old section is read
@@ -519,7 +525,10 @@ def main() -> int:
     ap.add_argument("dst")
     ap.add_argument("--maps", nargs=2, required=True)
     ap.add_argument("--report", action="store_true")
+    ap.add_argument("--battle", action="store_true",
+                    help="coarse source for battle_bake.py only (see BATTLE); the hangar model is built without it")
     a = ap.parse_args()
+    global NC, ROW
     rep = []
     cfg = TAILS[a.key]
     m = pp.Model(a.src)
@@ -529,6 +538,8 @@ def main() -> int:
     _SIDES[:] = sides
     nb.clip_mesh = clip_plane
     nb.REFINE_ITERS = 2   # as nacelle_box: with one split the edge by the nacelle read as saw teeth from the side
+    if a.battle:
+        NC, ROW, nb.REFINE_ITERS = BATTLE
     for s in sides:
         s.nac.measure(geo["W0"], geo["F"], rep, s.tag)
         s.nac.build_sdf()
