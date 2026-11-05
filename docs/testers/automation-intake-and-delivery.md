@@ -49,6 +49,22 @@ A bot cannot write to a person first: the person must press Start (/start) once.
 Limits: the bot sends files up to 50 MB only (verified in `docs/marketing/channels.md` note), so builds go as a link, never as a file. Matching a Yandex Form answer to a Telegram chat is possible only if the tester writes the code from the form to the bot, or we skip matching and treat everyone who pressed Start as a tester. Cost 0; needs a small always-on receiver for /start (Cloudflare Worker, **guess**) or a poll by a scheduled Claude routine (once an hour, no server).
 Recommendation: add as the notification layer on top of B2/B3, it replaces "Kanta posts in Telegram/Discord by hand".
 
+## 3a. Standard reply to an applicant (Kanta's text, 2026-11-05)
+Claude fills this in for each new application and hands it over as a draft; Kanta (or the bot, option T, after his yes) sends it. Only the link and the folder name change per build or platform.
+
+```
+Привет, Это Flak Heaven!
+Ты оставлял заявку на тест.
+
+Сборка для Windows: https://disk.yandex.ru/d/51-K79RPT2cO7Q, папка «Test for Win».
+
+Распакуй zip и запусти exe. Буду рад любым впечатлениям и багам прямо сюда 🙏
+
+https://flakheaven.com/
+https://www.youtube.com/@FlakHeaven
+```
+Notes: this is the permanent public Yandex Disk folder of option B2, so it already works as the "one link, replace the files inside" scheme; Mac and Android need their own variants of the Disk line, to be written when those folders exist.
+
 ## 4. Part C. Gluing it together (end to end)
 ```
 Yandex Form -> e-mail (A2) -> Claude digest in stand-up -> invite text with the permanent link (B2/B3)
