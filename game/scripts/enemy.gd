@@ -32,6 +32,10 @@ var _cap_t := 0.0
 var silence := 0.0
 ## «Ракетчик» III: run time until which this target carries a missile mark (ArchBalance.MARK_*)
 var arch_mark_until := -INF
+## PG-11 «Перекрёстный огонь»: run time until which the course gun's mark holds for the turrets
+var gun_mark := -1.0
+## PG-11 «Загонщик»: run time until which the course gun's mark holds for guided air-to-ground missiles
+var hunt_mark := -1.0
 var move_vel := Vector2.ZERO   # 3.1: фактическая скорость (для пуль стрелка)
 var _drift := Vector2.INF      # тест 3.5-s7: скорость, с которой заглушённый ЭМИ самолёт летит по инерции
 var _prev_pos := Vector2.INF   # 3.1: ЭМИ «Ласки» — враг молчит

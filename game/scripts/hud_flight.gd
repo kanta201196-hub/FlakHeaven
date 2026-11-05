@@ -380,6 +380,10 @@ func _goal_rows(m: Main) -> Array:
 	rows.append([false, Loc.t("ас в бою!") if m.boss_alive() else Loc.t("ас через %d:%02d") % [int(next) / 60, int(next) % 60], ""])
 	if m.run_time > 900.0:
 		rows.append([false, Loc.t("задержались: добыча ×%.1f") % m.continue_mult(), ""])
+	if m.run.long_on:
+		var lt := int(EndlessBalance.over(m.run_time))
+		var lb := int(Profile.long_best(m.cls_id))
+		rows.append([lt > lb and lb > 0, Loc.t("долгий вылет +%d:%02d · рекорд +%d:%02d") % [lt / 60, lt % 60, maxi(lt, lb) / 60, maxi(lt, lb) % 60], ""])
 	return rows
 
 

@@ -243,10 +243,14 @@ func _rewards(m: Main, r: Rect2) -> void:
 	var short: bool = a.is_empty() or a.get("short", false)
 	if not short:
 		var rk := Campaign.k("reward")
-		lines.append([Loc.t("ДОБЫЧА ВЫЛЕТА · %s") % ("100%" if m.state == "evac" else "50%") + ("" if rk <= 1.0 else " · ×" + HudCampaign._k(rk)), int(m.parts_kept)])
+		# MO-01: a death in the long sortie keeps everything earned by 15:00 and half of the rest
+		var share := "100%" if m.state == "evac" else (Loc.t("до 15:00 всё") if a.has("long") else "50%")
+		lines.append([Loc.t("ДОБЫЧА ВЫЛЕТА · %s") % share + ("" if rk <= 1.0 else " · ×" + HudCampaign._k(rk)), int(m.parts_kept)])
 		lines.append([Loc.t("ЖАЛОВАНЬЕ ТЕХНИКАМ"), int(a["wage"])])
 		if int(a.get("op_parts", 0)) > 0:
 			lines.append([Loc.t("ОПЕРАЦИЯ ПРОЙДЕНА ВПЕРВЫЕ"), int(a["op_parts"])])
+		if int(a.get("album_parts", 0)) > 0:   # PG-11: first finds of the build album
+			lines.append([Loc.t("НОВОЕ В АЛЬБОМЕ ×%d") % (a["album_new"] as Array).size(), int(a["album_parts"])])
 	var extra: Array = []   # [text, colour]
 	if not short:
 		if a.has("promote"):
@@ -256,6 +260,13 @@ func _rewards(m: Main, r: Rect2) -> void:
 			extra.append([Loc.t("ОТКРЫТО: ") + String(u), UiStyle.ACCENT_SOFT])
 		if String(a.get("tech", "")) != "":
 			extra.append([Loc.t("Техник: «%s»") % String(a["tech"]), UiStyle.PARTS])
+		if a.has("long"):   # MO-01: time held past 15:00 and the class record
+			var lg: Dictionary = a["long"]
+			var lt := int(lg["t"])
+			var lb := int(lg["best"])
+			extra.append([(Loc.t("НОВЫЙ РЕКОРД! Долгий вылет +%d:%02d") % [lt / 60, lt % 60]) if bool(lg["record"])
+				else (Loc.t("Долгий вылет +%d:%02d · рекорд +%d:%02d") % [lt / 60, lt % 60, lb / 60, lb % 60]),
+				UiStyle.ACCENT_SOFT if bool(lg["record"]) else UiStyle.TEXT_2])
 		if String(a.get("hint_buy", "")) != "":
 			extra.append([Loc.t("Можно купить: ") + String(a["hint_buy"]), UiStyle.TEXT_2])
 	var medals_new: Array = [] if short else a.get("medals_new", [])

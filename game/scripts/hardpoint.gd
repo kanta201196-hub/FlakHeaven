@@ -902,6 +902,7 @@ func _fire_flares(p: Player) -> bool:
 		if mp != null:
 			killed += 1
 			any = true
+			PairFx.on_flare_intercept(p, mp)
 			if Profile.wbranch("flares", 2) == "a": # «Ловушка с подрывом»
 				Main.I.projectiles.aoe(mp, 60.0, 20.0, "противоракеты")
 			if evo: # «Салют»: перехват выпускает 3 ловушки по врагам

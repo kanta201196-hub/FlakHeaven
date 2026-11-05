@@ -14,10 +14,20 @@ const KILL_FROM := 300.0
 const KILL_TO := 420.0
 const KILL_LATE := 0.5
 
+## GD-16 (s15 item 23, Kanta 05.11): 56 card screens per sortie, one every 18 s, so the late fight kept stopping.
+## After level AUTO_FROM every second level skips the screen and gives AUTO_DMG to all damage instead.
+const AUTO_FROM := 30
+const AUTO_DMG := 0.02
+
 
 ## XP needed to go from `level` to `level + 1`.
 static func need(level: int) -> float:
 	return BASE + (level - 1) * LINEAR + QUAD * pow(level - 1, 2.0)
+
+
+## True when reaching `level` gives the automatic bonus instead of a card screen: 31, 33, 35… (AUTO_FROM = 30).
+static func auto_level(level: int) -> bool:
+	return level > AUTO_FROM and (level - AUTO_FROM) % 2 == 1
 
 
 ## Multiplier for kill XP at sortie time `t`, s.

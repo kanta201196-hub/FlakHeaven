@@ -406,6 +406,8 @@ func hangar_action(a: String) -> void:
 			m.hangar_tab = p[1]
 		"medal":
 			m.hangar_medal = p[1]
+		"album":
+			m.hangar_album = ":".join(p.slice(1))
 		"node":
 			ok = Profile.buy_node(c, p[1], int(p[2]) if p.size() > 2 else 0)
 		"plane2":
