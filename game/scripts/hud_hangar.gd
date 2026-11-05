@@ -9,6 +9,8 @@ extends HudKit
 var _medals: HudMedals
 ## Decal editor panel (created on first use)
 var _decals: HudDecals
+## Drawer of the «АЛЬБОМ» tab (PG-11, created on first use)
+var _album: HudAlbum
 
 func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.05, 0.94))
@@ -33,6 +35,7 @@ func draw(m: Main, size: Vector2) -> void:
 	var tabs := [["plane", "САМОЛЁТ"], ["weapons", "ОРУЖИЕ"], ["crew", "ЭКИПАЖ"]]
 	if not Demo.on:
 		tabs.append(["medals", "НАГРАДЫ"])   # Kanta 27.10: medals with small bonuses, not in the demo
+	tabs.append(["album", "АЛЬБОМ"])   # PG-11 (Kanta 05.11): the build album, in the demo too
 	for i in tabs.size():
 		var r2 := Rect2(size.x / 2.0 - tabs.size() * 150.0 + i * 300.0, 182, 290, 44)
 		var on2: bool = m.hangar_tab == tabs[i][0]
@@ -51,6 +54,10 @@ func draw(m: Main, size: Vector2) -> void:
 			if _medals == null:
 				_medals = HudMedals.new(ctrl, _buttons)
 			_medals.draw(m, area)
+		"album":
+			if _album == null:
+				_album = HudAlbum.new(ctrl, _buttons)
+			_album.draw(m, area)
 	_button(Rect2(size.x / 2.0 - 180, size.y - 110, 360, 56), Loc.t("В ВЫЛЕТ — %s") % Loc.t(PlaneClasses.DATA[c]["title"]), "hg:fly", 20)
 	if Main.DEBUG:
 		var dy := size.y - 110

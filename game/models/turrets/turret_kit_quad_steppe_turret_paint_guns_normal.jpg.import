@@ -2,21 +2,23 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c3ielqp8yalso"
-path="res://.godot/imported/turret_kit_quad_steppe_turret_paint_guns_normal.jpg-74e08c5d9620bfa4bd0ec320b0c57273.ctex"
+uid="uid://cbieqohrvayw3"
+path.bptc="res://.godot/imported/turret_kit_quad_steppe_turret_paint_guns_normal.jpg-74e08c5d9620bfa4bd0ec320b0c57273.bptc.ctex"
+path.astc="res://.godot/imported/turret_kit_quad_steppe_turret_paint_guns_normal.jpg-74e08c5d9620bfa4bd0ec320b0c57273.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_kit_quad_steppe_turret_paint_guns_normal.jpg"
-dest_files=["res://.godot/imported/turret_kit_quad_steppe_turret_paint_guns_normal.jpg-74e08c5d9620bfa4bd0ec320b0c57273.ctex"]
+dest_files=["res://.godot/imported/turret_kit_quad_steppe_turret_paint_guns_normal.jpg-74e08c5d9620bfa4bd0ec320b0c57273.bptc.ctex", "res://.godot/imported/turret_kit_quad_steppe_turret_paint_guns_normal.jpg-74e08c5d9620bfa4bd0ec320b0c57273.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

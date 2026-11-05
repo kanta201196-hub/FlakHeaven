@@ -104,7 +104,9 @@ func setup_fortress(total: float) -> void:
 
 ## Story (step 4): the Fortress's presence — a low rotor drone positioned on it, louder as it comes near
 ## (`AudioStreamPlayer2D` attenuation). Only when the file exists (`fortress_drone.ogg`, synthesised by
-## `build_audio_layers.py --only story`); it dies with the node.
+## `build_audio_layers.py --only story`); it dies with the node. `setup_fortress` runs before the spawner adds the
+## Fortress to the world, so the player starts by `autoplay` on entering the tree: `play()` here logged «Playback can
+## only happen when a node is inside the scene tree» once per Fortress (s15 review, item 7).
 func _add_drone() -> void:
 	const PATH := "res://audio/fortress_drone.ogg"
 	if not ResourceLoader.exists(PATH):
@@ -119,8 +121,8 @@ func _add_drone() -> void:
 	a.attenuation = 1.4
 	a.volume_db = -14.0 + Tuning.g("sfx_db")
 	a.process_mode = Node.PROCESS_MODE_PAUSABLE
+	a.autoplay = true
 	add_child(a)
-	a.play()
 
 
 

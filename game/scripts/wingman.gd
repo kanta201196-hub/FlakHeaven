@@ -72,6 +72,7 @@ func repair(frac: float) -> void:
 		hp = minf(max_hp, hp + max_hp * frac)
 
 
+## Damage to this wingman; downed, it comes back after WING_BACK_BASE s («Командир звена» I: WING_BACK)
 func damage(amount: float) -> void:
 	var p := Main.I.player
 	if not alive() or Main.I.god_mode:
@@ -86,11 +87,14 @@ func damage(amount: float) -> void:
 		if temp:
 			_leave()
 			return
-		dead_t = 20.0
+		# «Командир звена» I: the replacement comes sooner
+		var back := ArchBalance.WING_BACK if is_instance_valid(Main.I.player) and Main.I.player.arch_rank("wing") >= 1 else ArchBalance.WING_BACK_BASE
+		dead_t = back
 		visible = false
 		# S9-12: потеря ведомого — в эфир (очередью, не перебивая), замена — через 20 с
-		Story.say(String(Prog.WING_TYPES[type]["short"]), "Подбит, выхожу из боя! Замена через 20 секунд.")
-		Story.say(Story.DISPATCH, "Ведомый сбит. Держитесь, замена на подходе.")
+		Story.say(String(Prog.WING_TYPES[type]["short"]), Loc.t("Подбит, выхожу из боя! Замена через %d секунд.") % int(back))
+		Story.say(Story.DISPATCH, RadioPick.pick("wing_lost", ["Ведомый сбит. Держитесь, замена на подходе.", "Потеря в звене. Высылаем замену.",
+			"Ведомого больше нет на радаре. Новый уже взлетает.", "Звено, минус один. Держитесь, помощь в пути."]))   # s15 review п. 13
 
 
 ## Залп ракет В-В: n ракет за время over (навыки «Сомкнуть строй», «Под одним зонтом», «Парад»)
@@ -165,7 +169,8 @@ func _process(delta: float) -> void:
 			heading = p.heading
 			velocity = p.velocity
 			_fly_w = 1.0
-			Events.radio.emit("Ведомый", "Иду к вам, займу место в строю!", false)
+			Events.radio.emit("Ведомый", RadioPick.pick("wing_back", ["Иду к вам, займу место в строю!", "На подходе, держите строй!",
+				"Догоняю! Оставьте мне кого-нибудь.", "Я с вами. Где мне встать?"]), false)   # s15 review п. 13
 		return
 	_sortie(p, delta)
 	_fly(p, delta)

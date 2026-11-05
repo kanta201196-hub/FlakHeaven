@@ -2,26 +2,31 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://k0t20ianaq5a"
-path="res://.godot/imported/turret_grach_t3_rust_turret_paint_pods_albedo.jpg-cbc8b7d8e180d16f149f66f2aa86be9f.ctex"
+uid="uid://bky3pk8ht241m"
+path.s3tc="res://.godot/imported/turret_grach_t3_rust_turret_paint_pods_albedo.jpg-cbc8b7d8e180d16f149f66f2aa86be9f.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t3_rust_turret_paint_pods_albedo.jpg-cbc8b7d8e180d16f149f66f2aa86be9f.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "e397723c6f73956a66ec9e2ce0b27e90"
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_grach_t3_rust_turret_paint_pods_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_t3_rust_turret_paint_pods_albedo.jpg-cbc8b7d8e180d16f149f66f2aa86be9f.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t3_rust_turret_paint_pods_albedo.jpg-cbc8b7d8e180d16f149f66f2aa86be9f.s3tc.ctex", "res://.godot/imported/turret_grach_t3_rust_turret_paint_pods_albedo.jpg-cbc8b7d8e180d16f149f66f2aa86be9f.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

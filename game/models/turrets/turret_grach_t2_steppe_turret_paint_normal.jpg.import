@@ -2,21 +2,23 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bt4npv2b3hp5w"
-path="res://.godot/imported/turret_grach_t2_steppe_turret_paint_normal.jpg-7117a8885fd1cfb8c5459490e977bd2b.ctex"
+uid="uid://d3ynxtmebc81l"
+path.bptc="res://.godot/imported/turret_grach_t2_steppe_turret_paint_normal.jpg-7117a8885fd1cfb8c5459490e977bd2b.bptc.ctex"
+path.astc="res://.godot/imported/turret_grach_t2_steppe_turret_paint_normal.jpg-7117a8885fd1cfb8c5459490e977bd2b.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_grach_t2_steppe_turret_paint_normal.jpg"
-dest_files=["res://.godot/imported/turret_grach_t2_steppe_turret_paint_normal.jpg-7117a8885fd1cfb8c5459490e977bd2b.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t2_steppe_turret_paint_normal.jpg-7117a8885fd1cfb8c5459490e977bd2b.bptc.ctex", "res://.godot/imported/turret_grach_t2_steppe_turret_paint_normal.jpg-7117a8885fd1cfb8c5459490e977bd2b.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

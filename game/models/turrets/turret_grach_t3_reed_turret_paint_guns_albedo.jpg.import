@@ -2,26 +2,31 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cuj0tp5oay66u"
-path="res://.godot/imported/turret_grach_t3_reed_turret_paint_guns_albedo.jpg-28dc3c733ee4f69cbd369181462d8bbc.ctex"
+uid="uid://bjcwef30uoac0"
+path.s3tc="res://.godot/imported/turret_grach_t3_reed_turret_paint_guns_albedo.jpg-28dc3c733ee4f69cbd369181462d8bbc.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t3_reed_turret_paint_guns_albedo.jpg-28dc3c733ee4f69cbd369181462d8bbc.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "f318f14d3a9d463927ae2a432bf38f10"
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_grach_t3_reed_turret_paint_guns_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_t3_reed_turret_paint_guns_albedo.jpg-28dc3c733ee4f69cbd369181462d8bbc.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t3_reed_turret_paint_guns_albedo.jpg-28dc3c733ee4f69cbd369181462d8bbc.s3tc.ctex", "res://.godot/imported/turret_grach_t3_reed_turret_paint_guns_albedo.jpg-28dc3c733ee4f69cbd369181462d8bbc.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

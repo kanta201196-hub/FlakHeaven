@@ -9,11 +9,18 @@ const OWN := ["armor", "engine", "wing", "gun_dmg", "gun_rate", "reload", "seeke
 	"res_overload", "res_bounty", "res_kit", "res_course"]
 
 
+## PG-11: archetype modules and trade-off cards borrow the icon of what they change
+const ALIAS := {"gun_belt": "gun_rate", "turret_ring": "turret", "trade_bare": "armor", "trade_msl": "aam",
+	"trade_light": "engine", "trade_ammo": "reload"}
+
+
 ## Ключ значка карточки: свой значок модуля, оружие (если есть) или раздел
 static func key(c: Dictionary, p: Player = null) -> String:
 	var id := String(c.get("id", ""))
 	if OWN.has(id):
 		return id
+	if ALIAS.has(id):
+		return ALIAS[id]
 	var w: String = c.get("weapon", "")
 	if w == "" and c.has("group") and p != null and int(c["group"]) < p.groups.size():
 		w = (p.groups[int(c["group"])] as Hardpoint).weapon   # улучшение оружия в группе подвесов

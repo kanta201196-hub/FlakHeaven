@@ -36,6 +36,13 @@ static var _panel_mats := {}
 static var _fairings := {}
 
 
+## Forgets the decompressed skin images (keyed by the model's texture, which they kept alive in video memory, and a
+## full-size copy in RAM) and the fairing meshes built on that skin; `Hangar3D.release` calls this at takeoff.
+static func clear_cache() -> void:
+	_images.clear()
+	_fairings.clear()
+
+
 ## Flush flare-dispenser panel at (x, z) on the top of `model`'s skin, with the dispenser shader; null when the
 ## skin is not under the whole panel. `seed` varies the spent cartridges between panels.
 static func flare_panel(model: Node3D, x: float, z: float, seed: float) -> MeshInstance3D:

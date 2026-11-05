@@ -81,7 +81,9 @@ const PRESSURE_DOWN := 0.85
 ## При ~60 врагах в воздухе это ~5 сбитых в секунду в начале и ~4 к концу. Эталон по 2–4-й минуте не годится:
 ## в начале врагов уже у предела, а сбивают по 0,2–1 в секунду — эталон выходил бы за минуту.
 const TTK_TARGET := 12.0
-const DENS_MAX := 1.5
+## GD-15 (s15 item 22, Kanta 05.11): 1.5 → 1.8 — at 14:00 kills per minute stayed at 200–330 while damage per
+## minute grew tenfold, so the player could not see the build grow; more enemies instead of tougher ones
+const DENS_MAX := 1.8
 var pressure_k := 1.0
 var pressure_dens := 1.0          # множитель плотности волн, когда прочность упёрлась в потолок
 var _lives: Array = []            # [время гибели, сколько жил]
@@ -709,12 +711,14 @@ func _pressure(t: float, delta: float) -> void:
 	var ttk := f.y / maxf(f.x, 0.01)      # никого не сбили — прочность вниз на полный шаг
 	var target := TTK_TARGET * lerpf(1.0, 1.3, clampf((t - PRESSURE_FROM) / 600.0, 0.0, 1.0))
 	var step := clampf(pow(target / ttk, 0.5), PRESSURE_DOWN, PRESSURE_UP)
-	if step > 1.0 and pressure_k >= PRESSURE_MAX:
-		pressure_dens = minf(pressure_dens * 1.03, DENS_MAX)
+	var lo := Main.I.run.long_on   # «Долгий вылет»: both caps keep rising past 15:00 (EndlessBalance)
+	var p_max := EndlessBalance.pressure_max(PRESSURE_MAX, t, lo)
+	if step > 1.0 and pressure_k >= p_max:
+		pressure_dens = minf(pressure_dens * 1.03, EndlessBalance.dens_max(DENS_MAX, t, lo))
 	elif step < 1.0 and pressure_dens > 1.0:
 		pressure_dens = maxf(pressure_dens * step, 1.0)      # сперва убираем добавленную плотность
 		step = 1.0
-	pressure_k = clampf(pressure_k * step, 1.0, PRESSURE_MAX)
+	pressure_k = clampf(pressure_k * step, 1.0, p_max)
 	if OS.get_cmdline_user_args().has("--autotest") and int(t) % 60 < int(PRESSURE_STEP):
 		print("AUTOTEST: pressure %.0f s: ttk %.1f / target %.1f, kills/s %.2f, air %.0f, k %.2f, dens %.2f" % [
 			t, ttk, target, f.x, f.y, pressure_k, pressure_dens])

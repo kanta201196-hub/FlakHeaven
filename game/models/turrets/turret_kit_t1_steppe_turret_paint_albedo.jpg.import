@@ -2,21 +2,23 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dj757l66kri8b"
-path="res://.godot/imported/turret_kit_t1_steppe_turret_paint_albedo.jpg-22841f19e652e337f89dc325f9ffa71d.ctex"
+uid="uid://htu8sqkbimst"
+path.bptc="res://.godot/imported/turret_kit_t1_steppe_turret_paint_albedo.jpg-22841f19e652e337f89dc325f9ffa71d.bptc.ctex"
+path.astc="res://.godot/imported/turret_kit_t1_steppe_turret_paint_albedo.jpg-22841f19e652e337f89dc325f9ffa71d.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_kit_t1_steppe_turret_paint_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_t1_steppe_turret_paint_albedo.jpg-22841f19e652e337f89dc325f9ffa71d.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t1_steppe_turret_paint_albedo.jpg-22841f19e652e337f89dc325f9ffa71d.bptc.ctex", "res://.godot/imported/turret_kit_t1_steppe_turret_paint_albedo.jpg-22841f19e652e337f89dc325f9ffa71d.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

@@ -2,26 +2,31 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://3m1b87otyxp7"
-path="res://.godot/imported/turret_kit_t1_sea_fog_turret_paint_orm.jpg-fb8a2181fa0a4ea33d04f9986a57f3db.ctex"
+uid="uid://d0olrnwp48nn2"
+path.s3tc="res://.godot/imported/turret_kit_t1_sea_fog_turret_paint_orm.jpg-fb8a2181fa0a4ea33d04f9986a57f3db.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_kit_t1_sea_fog_turret_paint_orm.jpg-fb8a2181fa0a4ea33d04f9986a57f3db.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "df921372e87ea65e1b763ef50dbfe041"
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_kit_t1_sea_fog_turret_paint_orm.jpg"
-dest_files=["res://.godot/imported/turret_kit_t1_sea_fog_turret_paint_orm.jpg-fb8a2181fa0a4ea33d04f9986a57f3db.ctex"]
+dest_files=["res://.godot/imported/turret_kit_t1_sea_fog_turret_paint_orm.jpg-fb8a2181fa0a4ea33d04f9986a57f3db.s3tc.ctex", "res://.godot/imported/turret_kit_t1_sea_fog_turret_paint_orm.jpg-fb8a2181fa0a4ea33d04f9986a57f3db.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

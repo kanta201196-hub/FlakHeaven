@@ -63,6 +63,9 @@ func process(delta: float) -> void:
 	if OS.get_cmdline_user_args().has("--medalbench"):
 		_medal_bench()
 		return
+	if OS.get_cmdline_user_args().has("--albumbench"):
+		_album_bench()
+		return
 	if OS.get_cmdline_user_args().has("--levbench"):
 		_lev_bench(delta)
 		return
@@ -88,7 +91,7 @@ func process(delta: float) -> void:
 		if not keep:
 			(e as Node).queue_free()
 	if m.hud != null:
-		m.hud.visible = false
+		m.hud.visible = cur.get("hud", false)
 	if _i < 0:
 		if _t < 1.0:
 			return
@@ -268,7 +271,7 @@ func process(delta: float) -> void:
 					m.fx.blast(c2 + (b[0] as Vector2), b[1])
 				else:
 					m.fx.explosion(c2 + (b[0] as Vector2), b[1], b[2], true, b[3])
-			Engine.time_scale = 0.2
+			Engine.time_scale = float(p.get("ts", 0.2))   # s15fx: scorch points run at full speed (smoke must clear)
 			_bt = 0.0
 		_phase = 1
 		_t = 0.0
@@ -942,6 +945,21 @@ func _make_points() -> Array:
 		pts.append({"name": "alt_plain", "pos": empty, "enemies": true, "booms": ab, "shot_t": 0.6, "wait": 1.5, "zoom": 1.0})
 		pts.append({"name": "alt_ridge", "pos": peak + Vector2(0, 300), "enemies": true, "booms": ab, "shot_t": 0.6, "wait": 1.5, "zoom": 1.0})
 		pts.append({"name": "alt_site", "pos": empty + Vector2(2400, 0), "enemies": true, "ground": true, "booms": ab, "shot_t": 0.6, "wait": 2.5, "zoom": 1.0})
+	if OS.get_cmdline_user_args().has("--s15fx"):
+		# Kanta s15 review (items 10, 12): a pile of air and ground blasts right on the player (is the own plane
+		# readable at the peak and in the smoke after it), and ground blasts on the plain and on a ridge shot after
+		# the smoke has gone, so only their scorch marks are left (dark holes, strips along cliffs)
+		pts = []
+		var pile := [[Vector2(0, 0), 20.0, true, ""], [Vector2(45, -30), 30.0, true, ""], [Vector2(-50, 40), 16.0, false, ""],
+			[Vector2(70, 60), 130.0, false, "blast"], [Vector2(-30, -60), 22.0, true, "flak"], [Vector2(20, 25), 46.0, true, ""],
+			[Vector2(-90, -10), 18.0, false, ""], [Vector2(100, -80), 12.0, true, "flak"]]
+		pts.append({"name": "s15_pile", "pos": empty, "enemies": true, "booms": pile, "shot_t": 0.5, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "s15_pile_smoke", "pos": empty + Vector2(2600, 0), "enemies": true, "booms": pile, "shot_t": 1.6, "wait": 1.5, "zoom": 1.0})
+		var gb := [[Vector2(-260, 120), 18.0, false, ""], [Vector2(-60, 200), 26.0, false, ""], [Vector2(180, -140), 14.0, false, ""],
+			[Vector2(260, 160), 130.0, false, "blast"], [Vector2(-200, -180), 22.0, false, ""]]
+		pts.append({"name": "s15_scorch", "pos": empty + Vector2(0, 2600), "booms": gb, "shot_t": 7.0, "ts": 1.0, "wait": 1.0, "zoom": 1.0})
+		pts.append({"name": "s15_scorch_ridge", "pos": peak + Vector2(0, 300), "booms": gb, "shot_t": 7.0, "ts": 1.0, "wait": 1.0, "zoom": 1.0})
+		pts.append({"name": "s15_scorch_peak", "pos": peak, "booms": gb, "shot_t": 7.0, "ts": 1.0, "wait": 1.0, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--fxbench"):   # 3.4-t1: эффекты (след, форсаж, ракеты, винты, падение ведомого)
 		pts = []
 		pts.append({"name": "trail", "pos": empty, "fly": true, "wait": 3.0, "zoom": 0.8})
@@ -1002,6 +1020,8 @@ func _make_points() -> Array:
 			pts.append({"name": "clouds_%d_near" % i, "pos": cp + Vector2(330, 260), "wait": 1.0})
 			pts.append({"name": "clouds_%d_under" % i, "pos": cp, "wait": 1.0})
 		if not cl.is_empty():
+			# S15-G11: a cloud under the left weapon column with enemies around and the HUD on (readability)
+			pts.append({"name": "clouds_hud", "pos": (cl[0][0] as Vector2) + Vector2(650, 60), "enemies": true, "hud": true, "wait": 1.5})
 			pts.append({"name": "clouds_wide", "pos": (cl[0][0] as Vector2) + Vector2(500, 300), "zoom": 0.6, "wait": 1.0})
 	if OS.get_cmdline_user_args().has("--seabench") and ter != null and ter.props != null:
 		# «Архипелаг» (-- --visual --seabench --op=5): композиции берега крупно и общим планом, по 2 каждого типа
@@ -1867,6 +1887,28 @@ func _medal_bench() -> void:
 		return
 	if _t > 1.5:
 		_save("hangar_medals")
+		print("VISUAL done")
+		m.get_tree().quit()
+
+
+## Build album (PG-11): the hangar tab «АЛЬБОМ» with a made-up half of the entries found (in memory, not saved),
+## a found synergy open under the grid; frame vis_hangar_album.png
+func _album_bench() -> void:
+	if _t < 1.5:
+		return
+	if m.state != "hangar":
+		m.ui_click("menu_hangar")
+		var ids := Profile.album_ids()
+		var cls := ["fighter", "attacker", "bomber"]
+		for i in ids.size():
+			if i % 2 == 0:
+				Profile.data["album"][ids[i]] = {"t": 1793750400 + i * 86400, "cls": cls[i % 3]}
+		m.hangar_tab = "album"
+		m.hangar_album = String(ids[0])
+		_t = 0.0
+		return
+	if _t > 1.5:
+		_save("hangar_album")
 		print("VISUAL done")
 		m.get_tree().quit()
 

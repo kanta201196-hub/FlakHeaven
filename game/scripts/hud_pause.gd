@@ -69,7 +69,10 @@ func draw(m: Main, size: Vector2) -> void:
 	_menu(m, Vector2(56, maxf(bottom + 36.0, size.y - 340.0)))
 	_blueprint(m, p, Rect2((600.0 + size.x - 480.0) / 2.0 - BP / 2.0, 200.0, BP, BP))
 	var sy := _stats(p, Rect2(size.x - 480.0, 110.0, 440.0, 0.0))
-	sy = _tags(p, Rect2(size.x - 480.0, sy + 16.0, 440.0, 0.0))
+	if Tuning.g("build_arch") >= 0.5:
+		sy = _archetypes(p, Rect2(size.x - 480.0, sy + 16.0, 440.0, 0.0))
+	else:
+		sy = _tags(p, Rect2(size.x - 480.0, sy + 16.0, 440.0, 0.0))
 	_damage(m, Rect2(size.x - 480.0, sy + 16.0, 440.0, 0.0))
 	_hints(size)
 
@@ -415,7 +418,7 @@ func _stats(p: Player, r: Rect2) -> float:
 ## «have/need» in amber, so the old pause's «к связке» progress stays. Returns the bottom y.
 func _tags(p: Player, r: Rect2) -> float:
 	var need := {}
-	if p.has_course():
+	if p.has_course() and not Cards.pairs_on():   # PG-11: with pair recipes tags no longer open synergies
 		var sd := Cards.syn_def(p, p.course)
 		var c := Cards.slot_cost(p)
 		need[String(sd.get("tag", ""))] = int(c["main"])
@@ -435,6 +438,38 @@ func _tags(p: Player, r: Rect2) -> float:
 		var s := str(cnt) if not need.has(t) or int(need[t]) <= 0 else "%d/%d" % [cnt, int(need[t])]
 		UiStyle.text(ctrl, UiStyle.head_font(800, 0), Vector2(c.x - cw / 2.0, c.y + 40.0), s, UiStyle.FS_BODY,
 			UiStyle.ACCENT if need.has(t) else (UiStyle.TEXT if cnt > 0 else UiStyle.TEXT_OFF), HORIZONTAL_ALIGNMENT_CENTER, cw)
+	return r.end.y
+
+
+const ARCH_ROW := 38.0
+
+
+## PG-11 (Б3): every archetype — name and rank, points to the next rank, and one line: the effect that comes next
+## (or the rank III effect when it is reached). Replaces the tag discs while F1 build_arch is on. Returns the bottom y.
+func _archetypes(p: Player, r: Rect2) -> float:
+	r.size.y = 56.0 + Prog.TAG_ORDER.size() * ARCH_ROW
+	UiStyle.panel(ctrl, r, UiStyle.LINE, UiStyle.PANEL, 18.0)
+	UiStyle.text(ctrl, UiStyle.head_font(700, 4), Vector2(r.position.x + 24, r.position.y + 36), Loc.t("АРХЕТИПЫ"), UiStyle.FS_LABEL, UiStyle.ACCENT_SOFT)
+	var y := r.position.y + 52.0
+	var f := ui_font()
+	var hf := UiStyle.head_font(700, 0)
+	for t: String in Prog.TAG_ORDER:
+		var pts := p.tag(t)
+		var rk := ArchBalance.rank(t, pts)
+		var nx := ArchBalance.next_at(t, pts)
+		var d: Dictionary = ArchBalance.DEFS[t]
+		HudIcons.disc(ctrl, Vector2(r.position.x + 36.0, y + 16.0), 12.0, t)
+		if rk == 0:
+			ctrl.draw_circle(Vector2(r.position.x + 36.0, y + 16.0), 12.5, Color(UiStyle.SCRIM, 0.55))
+		var title: String = Loc.t(String(d["title"])) + ("  " + Prog.ROMAN[rk] if rk > 0 else "")
+		UiStyle.text(ctrl, hf, Vector2(r.position.x + 60.0, y + 13.0), title, UiStyle.FS_BODY, UiStyle.TEXT if rk > 0 else UiStyle.TEXT_DIM)
+		var pt := Loc.t("МАКС") if nx < 0 else "%d / %d" % [pts, nx]
+		UiStyle.text(ctrl, hf, Vector2(r.position.x, y + 13.0), pt, UiStyle.FS_CAPTION, Prog.TAGS[t]["color"] if rk > 0 else UiStyle.TEXT_DIM,
+			HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 24.0)
+		var show := mini(rk, ArchBalance.MAX_RANK - 1) if nx >= 0 else ArchBalance.MAX_RANK - 1
+		var line := "%s: %s" % [Prog.ROMAN[show + 1], Loc.t(String(d["ranks"][show]["short"]))]
+		UiStyle.text(ctrl, f, Vector2(r.position.x + 60.0, y + 31.0), line, UiStyle.FS_CAPTION, UiStyle.OK if rk > show else UiStyle.TEXT_DIM)
+		y += ARCH_ROW
 	return r.end.y
 
 

@@ -21,6 +21,26 @@
 - **Главный путь:** EX-01…EX-12 → код демо DM-02…DM-05 → Steamworks (только Kanta, `docs/owner-checklist/kanta-now.md`).
 - **Треды на сильной модели — не больше шести одновременно (с 25.10.2026, было два)**; очередь ведёт координатор.
 
+## Правки по сборке 3.5-s15
+
+Items from the s15 recordings and log review (04.11.2026, `/mnt/project-files/s15_review-20261104T204803-22d9.md`); Kanta 04.11: «Отдавай». ID number = review item number; balance items 21–24 are GD-14…GD-17, aces items 16–20 go to the aces thread. Does not start a new build.
+
+| ID | Task | Thread / owner | Status |
+| --- | --- | --- | --- |
+| S15-01 | False «ИЛИ-ИЛИ» screen from level 36: an ordinary row of 4 cards looked like the mastery fork (`hud_cards.gd:56` checked only the first card) | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: `Cards.is_fork` + unit test |
+| S15-02 | Fortress title cut («ПАДАЕТ И ИДЁТ НА ТА») | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: boss name shrinks to the bar width (40 → down to 24 px) |
+| S15-03 | Half-screen skill tooltip pops up in flight when the cursor crosses the skill bar | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: no skill tooltip in flight (descriptions stay on cards and in the hangar) |
+| S15-04 | System mouse arrow next to the gunsight and over cutscenes | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: cursor hidden in flight and cutscenes, shown on screens with buttons |
+| S15-05 | Centre texts on top of each other (evacuation, tanker, task, banner) | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: one stack under the boss bars, evacuation and tanker lines on a plate; the «На волоске!» float over the plane not changed |
+| S15-06 | Cut captions: «НАВОДЯЩИЕСЯ РАК…», «бомбы и ракет…», «разворот к враг…» | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: left column 250 → 272 px, the skill bar grows upwards for a long hint (up to 3 lines) |
+| S15-15 | «МЫШЬ куда лететь» hint on every sortie | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: first 3 sorties only, key of the chosen control scheme |
+| S15-07 | «Playback can only happen when a node is inside the scene tree» in the log | Ускорить большие бои | merged #549 04.11: the Fortress drone started before the Fortress entered the world, now autoplay; check the next build's log |
+| S15-08 | VRAM in «Битва асов» 3460 MB vs 2600 MB in the campaign | Ускорить большие бои | merged #549 04.11: skin and hq weapon caches kept the hangar plane's full-size textures after takeoff; cleared on takeoff (cloud, Kanta's profile: combat textures 392 → 224 MB). Also restored 363 turret `.import` files emptied by c5c98e82. Check `vram_mb` aces vs campaign in the next build's log |
+| S15-09 | Pale patches with a stair-step «pixel» edge all over the Highlands (ridge snow and the takyr border followed relief triangles) | 3D-модели по плану Kirill | merged #557 05.11 behind F1 `sand_edge` (Kanta «ок» 05.11: on by default, #561): wider band broken by noise; a few rock-outcrop patches keep straighter edges |
+| S15-10 | Scorch marks too black and large; a dark strip along cliffs | 3D-модели по плану Kirill | merged #558 05.11 behind F1 `scorch_soft` (on by default since #561, Kanta «ок» 05.11): burnt-brown soft mark, 0.7 size, not on slopes over ~40°. The long band along cliffs is the canyon sun shadow, not scorch (not changed) |
+| S15-11 | White clouds hide enemies; the left weapon column is unreadable over a cloud | 3D-модели по плану Kirill | merged #559 05.11 behind F1 `cloud_soft` and `hud_backing` (on by default since #561): clouds without Forward+ over-exposure, shaded underside, thinner over the fight; column backing 0.38 → 0.78 |
+| S15-12 | Own plane lost under effects in the last minutes | 3D-модели по плану Kirill | merged #560 05.11 behind F1 `own_plane_read` (on by default since #561): effects fully clear over the plane, zone 2.2 → 2.8 lengths, thin hull outline above effects; bright sparks still not faded |
+
 ## Правки по сборке 3.5-s14
 
 Замечания Kanta 31.10.2026 по тестовой сборке 3.5-s14 (13 пунктов, номер = номер замечания; S14-14…17 — мелочи самопроверки сборки) и страница «что проверить» (R-18, https://claude.ai/artifact/Q2AKgd9VCCB5KFd8HpWSS3). Правки с ощущением и эффектами идут за переключателем до «ок» (R-22). Баланс — не чаще раза в сборку.
@@ -134,6 +154,10 @@
 | GD-11 | «Оса» dies at the first ace (3.5-s12, 3 of 3): aces flare her missiles at 0.5 (Kanta, card option 2). Bot: flared 36 → 26, ace fight in noise. After the build: check Kanta's «Оса» first-ace fights; if still deadly, next option is the first-ace share cap ≤ 1.0 (`docs/playtest/3.5-s12/osa-first-ace.md`) | Геймдизайн-разбор накопленного опыта | done in code, check in the next build |
 | GD-12 | Drones die from 1–2 course-gun hits at any minute (Kanta s13 item 11), `balance/drones.gd`. Bot: «Кит» levels faster, «Грач» would-die 62 → 6. Check in the next build: does the late fight still feel busy, and does pressure stay sane without drones in the measure | Геймдизайн-разбор накопленного опыта | done in code, check in the next build |
 | GD-13 | Ace shield regrows only farther than 900 px from the player (Kanta card 27.10, s13 «Кит» vs «Сквозняк» 90 s), `AceBalance.shield_after`. Check in the next build: ace fights of «Кит» and «Грач» near the 24 s target, «Оса» not too short | Геймдизайн-разбор накопленного опыта | done in code, check in the next build |
+| GD-14 | s15 item 21, little danger (hull 80–100 % for 15 min, 96 % of damage healed, invulnerable 26 % of the sortie). Options 21.1 post-hit invulnerability 0.7 → 0.55 s (recommended for s16) / 21.2 −20 % top repair source / 21.3 enemy damage ramp from 5:00 / 21.4 keep. Page: https://claude.ai/artifact/UtAJBVVAjweHHDMLXztXX1 | Геймдизайн | done 05.11 (Kanta «сразу»), check s16 log |
+| GD-15 | s15 item 22, power spike invisible (damage/min ×10 from min 6 to 14, kills/min flat 200–330: HP ×4 and density ×1.5 caps hit). Options 22.1 density cap 1.5 → 1.8 (after GD-14, FPS check on Kanta's PC) / 22.2 HP cap ×4.8 (not recommended) / 22.3 keep; mostly covered by PG-11 | Геймдизайн | done 05.11 (Kanta «сразу»), check s16 log |
+| GD-16 | s15 item 23, 56 card picks per sortie (one per 18 s). Options 23.1 late levels +20 % costlier / 23.2 after lvl 30 one pick per two levels, odd level auto +2 % / 23.3 keep (recommended until the false «ИЛИ-ИЛИ» bug is fixed and the extra picks are traced in the log) | Геймдизайн | done 05.11 (Kanta «сразу»), check s16 log |
+| GD-17 | s15 item 24, manual gun 2 % of damage (13k of 579k; vs one ace on «Кит» s13 it was 52k of 61k). Options 24.1 keep (recommended) / 24.2 «обороты» cap +50 → +60 % / 24.3 «Стрелок» archetype in PG-11 | Геймдизайн | ждёт «да» Kanta |
 | MD-01 | Medals with small bonuses (Kanta 27.10, option 1): counters, 38 medals, bonuses, hangar tab «НАГРАДЫ», result strip, pictures. Later: liveries/emblems as rewards (art «да»), Steam achievements after the app is registered | Геймдизайн-разбор накопленного опыта | done in code, check in the next build |
 
 **Слито и ждёт проверки Kanta в сборке 3.5-s8** (подробности в архиве, раздел «После теста 3.5-s4: бой»): S4-01, S4-02, S4-03, S4-05…S4-08, S4-10…S4-12 — нырок под самолётами, ловушки асов, цифры урона, ведомые и цель звена, перезарядка ракет, «Крепость», выбор карточки; P5-01…P5-03, P5-05…P5-12, P5-33 — тормоза, тени, бомбы «Кита», ощущение классов, нырок, объёмные взрывы. Статус «на проверке (PR)» в старых таблицах означает, что PR слит до 18.10 (сборка 3.5-s8 собрана из `main` после PR #236); как слияние проверено в игре — не сверялось, это догадка.
@@ -157,6 +181,13 @@
 | S7-F1…S7-F4 | Наименьший радиус разворота по классу, инерция на виражах, 4 вида манёвров асов, нырок над горами не уходит в рельеф (подробно — архив, «Полёт и манёвры») | Полёт и манёвры | на проверке в сборке 3.5-s8 (в таблице было «В PR» на 18.10; слияние до PR #236 не сверялось — догадка) |
 | B-11 | Проверка на геймпаде / Steam Deck (жалоба №1 в жанре) | программист | идея |
 | AB-01 | «Битва асов» — тестовый режим (Kanta 26.10, вариант 1): «Оса» с ангарной настройкой против перехватчиков, ракетоносцев и частых асов, тяжёлый полёт, реалистичный урон; план `docs/superpowers/plans/2026-10-26-aces-battle-test.md`. Дальше — ощущения Kanta в игре; PvP решаем после раннего доступа | Продумать режим «Битва асов» | слит #436 26.10, ждёт пробы Kanta в следующей сборке |
+| AB-02 | «Битва асов»: не предлагать оружие только против земли (ракета В-З, бомбы, фугасная, плазма), раз наземных целей нет; общее правило по наличию наземных целей (Kanta 04.11) | Убрать ракету В-З из битвы асов | слит #550 04.11, проверить в следующей сборке |
+| AB-03 | «Битва асов» после s15: асы прочнее (ракета игрока — не больше 1/4 аса), асы пускают ракеты, уходят от столкновения, чаще заходят в атаку; скорость +20 %, камера дальше; всё за ползунками F1 `aces_*` до «ок» Kanta (04.11) | Убрать ракету В-З из битвы асов | слит #550 04.11, проверить в следующей сборке |
+| AB-04 | Разбор s15 п. 16: перехватчики в «Битве асов» тоже отворачивают до тарана (не на 250 пикс.), вместе с AB-03 за ползунком F1 `aces_ai` | Убрать ракету В-З из битвы асов | слит #550 04.11, проверить в следующей сборке |
+| AB-05 | Разбор s15 п. 13: радио не повторяет фразу, пока не прозвучат остальные (общая память на всех асов); по 4–6 фраз на событие у асов, по 4 у ведомого («сбит», «иду к вам»); en и zh переведены | Убрать ракету В-З из битвы асов | слит #550 04.11, проверить в следующей сборке |
+| AB-06 | Разбор s15 п. 14: совет про таран упоминает «Бронещит», только если он есть у самолёта; в отчёте нет двойных кавычек («ИСТРЕБИТЕЛЬ «ОСА»») | Убрать ракету В-З из битвы асов | слит #550 04.11, проверить в следующей сборке |
+| AB-07 | Разбор s15 п. 18: в «Битве асов» на панели нет запчастей, топлива и строки «Серия · опыт» | Убрать ракету В-З из битвы асов | слит #550 04.11, проверить в следующей сборке |
+| AB-08 | Разбор s15 п. 19–20: после гибели 35–40 с выбора до нового боя; между асами пусто (впечатление). Kanta 04.11: оба пункта не трогаем (выбор «не бесит»; пустоту смотрим после AB-03) | Убрать ракету В-З из битвы асов | отложено Kanta 04.11 |
 
 ## Прокачка и ангар
 
@@ -177,6 +208,8 @@
 | PG-08 | Modules with a behaviour line at lvl 3 (as `msl_head` has): ramming, afterburner after a dodge, reload on an ace kill, blast edge, etc. — proposal §3.4; after PG-06 | Расширить варианты прокачки | ждёт Kanta |
 | PG-09 | Sortie doctrine at the course screen (VS arcana): «Налёт», «Одиночка», «Снабжение», «Охота на асов», «Старая школа» — proposal §3.5; Kanta 31.10: after the demo | Расширить варианты прокачки | идея |
 | PG-10 | «Битва асов» draft from its own pool, starting at weapon lvl 3 so the first pick is a profile — proposal §3.7; Kanta 31.10: after the demo | Расширить варианты прокачки | идея |
+| PG-11 | Build depth (Kanta 04.11: «тупо качай ракеты», wants build collecting). Proposal: Б3 archetypes with rule thresholds at 3/6/9 cards (Ракетчик, Бомбёр, Стрелок, Командир звена, Манёвренный), Б1 synergies need two different weapons/systems (+6–8 new), Б5 build album in the hangar, Б4 3–4 trade-off cards; Б2 target statuses and Б6 doctrine (= PG-09) after the demo. Order s17 Б3+Б4, s18 Б1+Б5. Page: https://claude.ai/artifact/UtAJBVVAjweHHDMLXztXX1. Kanta 05.11: all recommended. Part A (Б3 seven archetypes with per-tag thresholds, Б4 four trade-off cards, F1 `build_arch`) — thread «Добавить архетипы и карты «плюс за минус»»; part B (Б1 + Б5) merged in #554 | Геймдизайн → Прокачка | A: на проверке в игре (s16) |
+| MO-01 | Mode «Долгий вылет» (endless after the Fortress, YAZS Endurance): danger grows without a cap, time record and its build in the hangar; after PG-11, s19. Also Р2 challenges and Р4 daily sortie (after the demo) — same page | Геймдизайн | done 05.11 (Kanta «сразу»), check s16 log |
 | S5-06 | Прокачка самолёта ур. 1 и ур. 2 раздельная: ур. 2 с нуля, перенос в профиле | Понятность игры для новичков | на проверке в сборке 3.5-s8 (в таблице «в работе» на 18.10 — догадка) |
 
 ## Понятность и интерфейс
@@ -274,6 +307,7 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | S8-A3 | Берег: береговое орудие, бункер, маяк, дом, волнорезы, руины, окраска Архипелага (`wip/s8/shore.bundle`, не проверено) | 3D-модели | готово (#325), принято Kanta 23.10 |
 | S8-A4 | Балкер и танкер: естественная, приглушённая окраска (Kanta 23.10) | 3D-модели | готово (#326), принято Kanta 23.10 |
 | V-03…V-06 | Предкрылки и закрылки (сделано в PR #46), модули на моделях (сделано M-15), остовы техники (сделано M-21), ловушки и кассетные бомбы (сделано M-13): остаются только пункты, не закрытые другими задачами, — сверить при снятии паузы | 3D-модели | идея |
+| M-60 | Убрать окраски «Чёрный с красным» («Кит») и «Гоночная шахматка» (все три самолёта); сохранения с ними — на окраску по умолчанию (Kanta 04.11) | 3D-модели | в работе 04.11: PR с юнит-тестом `livery_removed_test.gd` |
 | M-26 | Проба fal.ai (`genmedia`) на одной машине конвоя: сравнение с Meshy по качеству и цене | Kanta | ждёт Kanta (стоп 17.10: нет бесплатного баланса, без трат) |
 
 ## Звук и музыка

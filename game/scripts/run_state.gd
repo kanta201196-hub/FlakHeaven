@@ -13,6 +13,8 @@ var level := 1
 var xp := 0.0
 ## Levels gained but not yet turned into a card pick.
 var pending_levels := 0
+## Levels that gave the automatic damage bonus instead of a card screen (`XpCurve.auto_level`).
+var auto_levels := 0
 ## Card picks made this sortie.
 var picks_taken := 0
 ## How many of `pending_levels` are picks from rare cards.
@@ -38,6 +40,24 @@ var aces_down := 0
 var aces_gone := 0
 
 
+## The sortie has ground targets. False in «Битва асов» (only planes), so cards hide ground-only weapons
+## (`Weapons.offered`, AB-02). Set by Main at the start.
+var ground_targets := true
+
+
+## «Долгий вылет» (MO-01): on once the operation goal is done past 15:00; `parts_at_long` — parts earned by then.
+var long_on := false
+var parts_at_long := 0.0
+
+
+## Starts the long sortie (once): from now on a death keeps what was earned so far (`EndlessBalance.kept_on_death`).
+func start_long() -> void:
+	if long_on:
+		return
+	long_on = true
+	parts_at_long = parts
+
+
 ## Medal parts bonus for this sortie (Profile.medal_parts_k), set by Main at the start
 var parts_k := 1.0
 
@@ -57,13 +77,17 @@ func add_picks(n: int) -> void:
 	pending_levels += maxi(0, n)
 
 
-## Adds XP (already multiplied by the F1 `xp_mult` slider) and queues every level gained.
+## Adds XP (already multiplied by the F1 `xp_mult` slider) and queues every level gained; past
+## `XpCurve.AUTO_FROM` every second level counts in `auto_levels` instead (Main pays the bonus).
 func add_xp(v: float) -> void:
 	xp += v
 	while xp >= xp_need():
 		xp -= xp_need()
 		level += 1
-		pending_levels += 1
+		if XpCurve.auto_level(level):
+			auto_levels += 1
+		else:
+			pending_levels += 1
 
 
 ## XP needed for the next level.

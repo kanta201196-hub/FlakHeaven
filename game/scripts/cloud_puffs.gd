@@ -25,6 +25,7 @@ var _cache := {}                   # зерно облака → описани�
 var _sil := []                     # силуэты текстур облака: [PackedByteArray 48×48]
 var _sil_tex := []
 var _gfx := -1
+var _soft := -1.0               # S15-G11: last Tuning cloud_soft sent to the shader
 var _buf := PackedFloat32Array()
 var _veil_layer: CanvasLayer
 var _veil: ColorRect
@@ -193,6 +194,10 @@ func set_sun(sun_to: Vector3) -> void:
 ## Каждый кадр из Render3D._sync_clouds. focus — точка, над которой облака растворяются (самолёт игрока
 ## на заставке — ведущий звена); c2 — центр кадра на плоскости боя; d0 — расстояние камеры до него.
 func sync(its: Array, cam: Camera3D, c2: Vector2, d0: float, focus: Vector3, gfx: int, delta: float) -> void:
+	var sk := Tuning.g("cloud_soft")
+	if sk != _soft:   # S15-G11 (R-22): the toggle goes to the shader only when it changes
+		_soft = sk
+		(material_override as ShaderMaterial).set_shader_parameter("soft_k", clampf(sk, 0.0, 1.0))
 	if gfx != _gfx:
 		_gfx = gfx
 		_cache.clear()

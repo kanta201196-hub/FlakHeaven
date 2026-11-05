@@ -2,26 +2,31 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ctp7jw0c1hhtq"
-path="res://.godot/imported/turret_grach_t3_rust_turret_paint_guns_orm.jpg-f17b20903298f45891883d0f0b77c0df.ctex"
+uid="uid://cot0sjcpggkhs"
+path.s3tc="res://.godot/imported/turret_grach_t3_rust_turret_paint_guns_orm.jpg-f17b20903298f45891883d0f0b77c0df.s3tc.ctex"
+path.etc2="res://.godot/imported/turret_grach_t3_rust_turret_paint_guns_orm.jpg-f17b20903298f45891883d0f0b77c0df.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "f661f502d1921e69285e84fc40939e32"
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_grach_t3_rust_turret_paint_guns_orm.jpg"
-dest_files=["res://.godot/imported/turret_grach_t3_rust_turret_paint_guns_orm.jpg-f17b20903298f45891883d0f0b77c0df.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t3_rust_turret_paint_guns_orm.jpg-f17b20903298f45891883d0f0b77c0df.s3tc.ctex", "res://.godot/imported/turret_grach_t3_rust_turret_paint_guns_orm.jpg-f17b20903298f45891883d0f0b77c0df.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

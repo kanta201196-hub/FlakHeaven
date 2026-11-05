@@ -56,6 +56,7 @@ var _crater_mat: StandardMaterial3D
 ## VFX-06: Forward+ decal pools for scorch marks and craters (see marks_as_decals)
 var _scorch_decals: Array[Decal] = []
 var _scorch_decal_tex: Texture2D
+var _scorch_soft_tex: Texture2D   # S15-G10: light variant of the scorch decal (Tuning scorch_soft)
 var _crater_decals: Array[Decal] = []
 var _crater_mesh: PlaneMesh
 var _bombs3 := {}                  # тест 3.5-s4 (п. 10): падающие бомбы — номер → MeshInstance3D
@@ -1221,6 +1222,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			for i in pts.size():
 				_trails.emit("p%d" % i, pts[i], st)
 			var mi: MeshInstance3D = u.mi
+			_own_plane_mark(u)
 			mi.transparency = 0.6 if (p.invuln > 0.0 and p.roll_t <= 0.0 and int(p._blink * 20.0) % 2 == 0) else 0.0
 			if u.mech != null:
 				# Т-1: выпуск в крутом вираже и при торможении (РУД меньше крейсерского или сброс газа)
@@ -2299,6 +2301,10 @@ func _sync_enemy_shots(m: Main) -> void:
 
 const FX_CLEAR_R := 2.2      # clear zone radius, plane lengths (s13: 1.6 was not enough late in a run)
 const FX_CLEAR_CUT := 0.85   # share of an effect's opacity taken away over the plane itself
+## S15-G12 (Tuning own_plane_read): with the cut at 0.85 a dozen stacked smoke and fire layers still added up to
+## an opaque cover late in a run, so the zone takes effects away completely over the plane, and reaches farther
+const FX_CLEAR_R_READ := 2.8
+const FX_CLEAR_CUT_READ := 1.0
 
 
 ## Kanta s12 (26.10): late in a run blasts, fire, missile smoke and the fan of a missile salvo hid the player's
@@ -2314,11 +2320,32 @@ func _sync_fx_clear(m: Main, vs: Vector2) -> void:
 			var a := cam.unproject_position(p3)
 			# model length 1 is the picture width, so the plane is k × picture width long in the world
 			var ln := pu.k * (float(pu.tex.get_width()) if pu.tex != null else 1.0)
-			var b := cam.unproject_position(p3 + cam.global_basis.x * ln * FX_CLEAR_R)
-			v = Vector4(a.x / vs.x, a.y / vs.y, a.distance_to(b) / vs.y, FX_CLEAR_CUT)
+			var read := Tuning.g("own_plane_read") >= 1.0
+			var b := cam.unproject_position(p3 + cam.global_basis.x * ln * (FX_CLEAR_R_READ if read else FX_CLEAR_R))
+			v = Vector4(a.x / vs.x, a.y / vs.y, a.distance_to(b) / vs.y, FX_CLEAR_CUT_READ if read else FX_CLEAR_CUT)
 	if v != _fx_clear:
 		_fx_clear = v
 		RenderingServer.global_shader_parameter_set(&"fx_clear", v)
+
+
+var _own_mark_mat: ShaderMaterial
+
+
+## S15-G12 (R-22 toggle own_plane_read): puts the outline overlay (shaders/own_plane_mark.gdshader) on the player's
+## hull mesh, drawn above all effects, or takes it off when the toggle is off. Only touches the overlay it put.
+func _own_plane_mark(u: Unit3D) -> void:
+	var mi: MeshInstance3D = u.mi
+	if u.bm == null or mi == null:   # a relief mesh from the picture has no normals for an outline
+		return
+	if Tuning.g("own_plane_read") >= 1.0:
+		if _own_mark_mat == null:
+			_own_mark_mat = ShaderMaterial.new()
+			_own_mark_mat.shader = preload("res://shaders/own_plane_mark.gdshader")
+			_own_mark_mat.render_priority = Material.RENDER_PRIORITY_MAX   # after clouds (10) and the combat layer (100)
+		if mi.material_overlay != _own_mark_mat:
+			mi.material_overlay = _own_mark_mat
+	elif mi.material_overlay != null and mi.material_overlay == _own_mark_mat:
+		mi.material_overlay = null
 
 
 # ---------- 3.4-t1: сбитый ведомый падает (п. 32) ----------
@@ -2799,6 +2826,13 @@ func _sync_lights(delta: float) -> void:
 
 # ---------- выжженные пятна ----------
 
+## S15-G10: soft scorch marks (Tuning scorch_soft) are this share of the old size; in Compatibility the
+## quad's vertex colour (times the near-black base colour of _scorch_mat) turns it brown and thinner
+const SCORCH_SOFT_SIZE := 0.7
+const SCORCH_SOFT_QUAD := Color(5.0, 4.6, 4.4, 0.75)
+
+
+## Scorch marks of explosions on the ground: Forward+ decals, or one MultiMesh of quads in Compatibility.
 func _sync_scorch(m: Main) -> void:
 	if m.fx == null or not is_instance_valid(m.fx.ground):
 		return
@@ -2825,6 +2859,11 @@ func _sync_scorch(m: Main) -> void:
 	var mmx := _scorch_mm.multimesh
 	var n := mini(marks.size(), mmx.instance_count)
 	var dm := marks_as_decals()
+	# S15-G10 (R-22 toggle scorch_soft): marks were near-black and large and read as holes in the ground; the soft
+	# variant is burnt brown with a soft rim, 0.7 of the size, in a flatter decal box (see _place_decal)
+	var soft := Tuning.g("scorch_soft") >= 1.0
+	var sz_k := SCORCH_SOFT_SIZE if soft else 1.0
+	var col_q := SCORCH_SOFT_QUAD if soft else Color(1, 1, 1, 1)
 	var lo := Vector3.INF
 	var hi := -Vector3.INF
 	for i in n:
@@ -2833,17 +2872,17 @@ func _sync_scorch(m: Main) -> void:
 			mk["g3"] = ground_under(mk["p"])
 			if _on_water(mk["g3"], float(mk["r"]) * 1.6):   # M-35: копоть на воде не лежит
 				mk["life"] = 0.0
-		var r: float = mk["r"] * 1.6
+		var r: float = mk["r"] * 1.6 * sz_k
 		var pos: Vector3 = mk["g3"] + Vector3(0, 0.8, 0)
 		var fade := clampf(float(mk["life"]) / 6.0, 0.0, 1.0)
 		if dm:
 			# baked mark (dark core, ragged rim, soot rays), turned at random so neighbours differ
 			var sr := r * 2.0
 			_place_decal(_scorch_decals, i, Transform3D(Basis(Vector3.UP, float(mk.get("rot", 0.0))), pos),
-				Vector3(sr, r * 1.2 + 16.0, sr), _scorch_tex(), Color(1, 1, 1, 0.95 * fade))
+				Vector3(sr, (r * 0.5 + 10.0) if soft else (r * 1.2 + 16.0), sr), _scorch_tex(soft), Color(1, 1, 1, 0.95 * fade))
 			continue
 		mmx.set_instance_transform(i, Transform3D(Basis(Vector3.RIGHT, -PI / 2.0).scaled(Vector3(r, 1, r)), pos))
-		mmx.set_instance_color(i, Color(1, 1, 1, fade))
+		mmx.set_instance_color(i, Color(col_q.r, col_q.g, col_q.b, fade * col_q.a))
 		lo = lo.min(pos - Vector3(r, 1, r))
 		hi = hi.max(pos + Vector3(r, 1, r))
 	mmx.visible_instance_count = 0 if dm else n
@@ -2984,9 +3023,23 @@ func _drop_lines(lines: Array) -> void:
 	_drop_mesh.surface_end()
 
 
+var _sand_edge := -1.0   # last Tuning sand_edge sent to the ground shader
+
+
+## S15-G09 (R-22): passes the F1 toggle sand_edge to the ground shader when it changes, so the takyr border
+## can be compared live with and without the noise-broken edge
+func _sync_sand_edge() -> void:
+	var v := Tuning.g("sand_edge")
+	if v != _sand_edge:
+		_sand_edge = v
+		_ground_mat.set_shader_parameter("sand_edge", v >= 1.0)
+
+
+## Ground zones of this frame (bomb aim marks, falling bombs, fires) into the ground shader's gz_* arrays.
 func _sync_ground_zones(m: Main) -> void:
 	if _ground_mat == null:
 		return
+	_sync_sand_edge()
 	_gz_a.clear()
 	_gz_b.clear()
 	_gz_c.clear()
@@ -3123,7 +3176,12 @@ func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex:
 	# S14-19 (R-22 toggle fx_s14): a decal box projects along its Y axis, so a cliff wall inside the box got
 	# the mark smeared down it as streaks («кусок взрыва в горе»); normal fade 0.5 hides surfaces at 90° to the
 	# decal and keeps ordinary slopes (30° off the decal axis keeps ~95 %)
-	dc.normal_fade = 0.5 if Tuning.g("fx_s14") >= 1.0 else 0.0
+	# S15-G10 (R-22 toggle scorch_soft): 0.5 still left half of a mark on a 60° slope, so a blast at a cliff lip
+	# painted the steep band under the lip as a dark strip along the edge; 0.75 keeps it on ground up to ~40°
+	if Tuning.g("scorch_soft") >= 1.0:
+		dc.normal_fade = 0.75
+	else:
+		dc.normal_fade = 0.5 if Tuning.g("fx_s14") >= 1.0 else 0.0
 	dc.visible = col.a > 0.004
 	dc.transform = xf
 	dc.size = sz
@@ -3133,8 +3191,13 @@ func _place_decal(pool: Array[Decal], i: int, xf: Transform3D, sz: Vector3, tex:
 
 
 ## VFX-06: blast scorch decal baked by game/tools/vfx_bake/make_scorch.py: near-black middle fading to burnt
-## soil, ragged rim and soot rays, so a mark reads as a blast and not as a soft round shadow
-func _scorch_tex() -> Texture2D:
+## soil, ragged rim and soot rays, so a mark reads as a blast and not as a soft round shadow.
+## S15-G10: `soft` gives the lighter burnt-brown variant with a soft rim (make_scorch.py --soften).
+func _scorch_tex(soft := false) -> Texture2D:
+	if soft:
+		if _scorch_soft_tex == null:
+			_scorch_soft_tex = load("res://art/vfx/scorch_soft.png")
+		return _scorch_soft_tex
 	if _scorch_decal_tex == null:
 		_scorch_decal_tex = load("res://art/vfx/scorch.png")
 	return _scorch_decal_tex

@@ -2,21 +2,23 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dsju2g8bms48e"
-path="res://.godot/imported/turret_grach_t2_steppe_turret_paint_pods_albedo.jpg-aa25b16028a0b085796146bb60c0214f.ctex"
+uid="uid://sulhosybk2nx"
+path.bptc="res://.godot/imported/turret_grach_t2_steppe_turret_paint_pods_albedo.jpg-aa25b16028a0b085796146bb60c0214f.bptc.ctex"
+path.astc="res://.godot/imported/turret_grach_t2_steppe_turret_paint_pods_albedo.jpg-aa25b16028a0b085796146bb60c0214f.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_grach_t2_steppe_turret_paint_pods_albedo.jpg"
-dest_files=["res://.godot/imported/turret_grach_t2_steppe_turret_paint_pods_albedo.jpg-aa25b16028a0b085796146bb60c0214f.ctex"]
+dest_files=["res://.godot/imported/turret_grach_t2_steppe_turret_paint_pods_albedo.jpg-aa25b16028a0b085796146bb60c0214f.bptc.ctex", "res://.godot/imported/turret_grach_t2_steppe_turret_paint_pods_albedo.jpg-aa25b16028a0b085796146bb60c0214f.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

@@ -34,6 +34,7 @@ var result_t := 0.0
 var result_tab := 0 # правка 30: вкладка итогов — 0 обзор, 1 урон, 2 сборка
 var hangar_cls := "fighter"
 var hangar_tab := "plane"
+var hangar_album := ""   # album entry picked on the «АЛЬБОМ» tab (PG-11; its card stays under the grid)
 var hangar_medal := ""   # medal picked on the «НАГРАДЫ» tab (its card stays under the board)
 var hangar_w := "aam"
 var decal_edit: DecalEditor   ## the hangar decal editor while «Знаки ›» is open (DecalEditInput drives it), else null
@@ -67,7 +68,7 @@ var god_mode := false
 ## Тестовая сборка для внешних тестеров: экспорт с фичей «tester» или флаг --tester → без отладки
 static var DEBUG := true
 ## Build number shown in the menu, logs and reports; bump by commit before each export (code.md §11)
-const BUILD := "3.5-s15"
+const BUILD := "3.5-s16"
 ## 3.3-t2: отчёты тестеров уходят в Google Таблицу через веб-приложение Apps Script (пусто — кнопки нет)
 const REPORT_URL_BUILTIN := "https://script.google.com/macros/s/AKfycbxUYjbaKRdhawZJqQp52ZlEnh2LoAxDyEf-PefnyF_90ssskJgmcnFrTGJ0P7Y9PHrw/exec"
 static var REPORT_URL := ""
@@ -198,6 +199,9 @@ func _set_state(s: String) -> void:
 		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
 	Settings.set_screen_cap(s != "playing")
+	# s15: the system arrow showed next to the gunsight and over cutscenes; in flight the mouse steers and the HUD
+	# draws its own marker (scheme «мышью»), a cutscene is skipped by key or click — screens with buttons keep it
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if s in ["playing", "cutscene"] else Input.MOUSE_MODE_VISIBLE
 	if s == "playing":
 		Hangar3D.release()
 	if is_instance_valid(player) and menu != null:
@@ -285,6 +289,7 @@ func start_run() -> void:
 	world.add_child(fx)
 
 	run = RunState.new()
+	run.ground_targets = not aces()   # AB-02: «Битва асов» has only planes, cards hide ground-only weapons
 	run.parts_k = 1.0 if aces() else Profile.medal_parts_k(String(Campaign.op()["id"]))   # medals: parts bonus
 	medal_run = {}
 	medal_kill_t = []
@@ -362,6 +367,7 @@ func _process(delta: float) -> void:
 		if level_at_5 == 0 and run_time >= 300.0:
 			level_at_5 = run.level
 		run.tick(delta)
+		_check_long()
 		if run.pending_levels > 0:
 			_open_levelup()
 	if state == "playing":
@@ -419,7 +425,7 @@ func _process(delta: float) -> void:
 		var f := clampf(player.velocity.length() / maxf(player.cruise_speed(), 1.0), 0.5, 1.8)
 		var z := Tuning.g("camera_zoom") / lerpf(1.0, player.size, 0.35) / (1.0 + maxf(0.0, f - 1.0) * 0.3)
 		if aces():
-			z *= AcesBalance.ZOOM_K   # faster planes: see the ace a little further out
+			z *= Tuning.g("aces_zoom")   # faster planes: see the ace a little further out (AB-03 slider)
 		camera.zoom = camera.zoom.lerp(Vector2(z, z), 1.0 - exp(-delta * 3.0))
 		_ab_snd = move_toward(_ab_snd, 1.0 if player.ab_t > 0.0 else 0.0, delta * 3.0)
 		sfx.set_engine(player.velocity.length() / player.cruise_speed(), player.hp > 0.0 and state == "playing",
@@ -461,7 +467,19 @@ func kill_xp_k() -> float:
 func add_xp(v: float) -> void:
 	if is_dead or aces():   # «Битва асов»: the hangar setup is the build, no cards
 		return
+	var auto0 := run.auto_levels
 	run.add_xp(v * Tuning.g("xp_mult") * (float(player.mods["xp_k"]) if is_instance_valid(player) else 1.0))   # medal «Быстрый взлёт»
+	_auto_levels(run.auto_levels - auto0)
+
+
+## GD-16: levels past XpCurve.AUTO_FROM that skip the card screen give +AUTO_DMG to all damage and a floating line over the plane
+func _auto_levels(n: int) -> void:
+	if n <= 0 or not is_instance_valid(player):
+		return
+	player.mods["dmg_all"] *= pow(1.0 + XpCurve.AUTO_DMG, n)
+	tele.add("auto_levels", n)
+	# not a banner: s15 item 5, centre-screen lines already pile up late in the sortie
+	fx.text(player.global_position + Vector2(0, -70), Loc.t("Уровень %d: +%d%% к урону") % [run.level, roundi(XpCurve.AUTO_DMG * 100.0)], Color(1.0, 0.85, 0.4))
 
 
 func _open_levelup() -> void:
@@ -741,6 +759,7 @@ func _on_evac_reached() -> void:
 	parts_kept = int(run.parts * Campaign.k("reward"))
 	op_result = Campaign.on_evac(run_time, op_flags)
 	_award("evac")
+	_long_record()
 	RunLog.write(self, "эвакуация")
 	sfx.play("evac", -2.0, 1.2)
 	# story (step 2): the operation's outro between the evacuation and the results; (step 3) the hangar debrief after it.
@@ -956,9 +975,38 @@ func _award(outcome: String) -> void:
 	meta_award = Profile.award_run({"cls": cls_id, "outcome": outcome, "run_time": run_time, "level": run.level,
 		"bosses": run.bosses_killed, "activities": run.activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
 		"op_parts": int(op_result.get("parts", 0)), "medals": Medals.run_counters(self, outcome),
-		"cards_taken": _medal_cards(), "syn_taken": player.syn.keys() if is_instance_valid(player) else []})
+		"cards_taken": _medal_cards(), "syn_taken": player.syn.keys() if is_instance_valid(player) else [],
+		"album_new": player.album_new if is_instance_valid(player) else []})
 	result_t = 0.0
 	result_tab = 0
+
+
+## «Долгий вылет» (MO-01): past 15:00 with the operation goal done the sortie turns into a survival run
+func _check_long() -> void:
+	if run.long_on or aces() or _benching() or run_time < EndlessBalance.START or not Campaign.goal_done(run_time, op_flags):
+		return
+	run.start_long()
+	tele.add("long_started")
+	Events.banner.emit(Loc.t("ДОЛГИЙ ВЫЛЕТ · держитесь сколько сможете"), 4.0)
+	Hints.show("long_sortie", Loc.t("Долгий вылет: враги будут только сильнее. Если собьют — всё, что заработано до 15:00, останется. Улететь можно в любое окно эвакуации."), 9.0, 3)
+
+
+## Long-sortie record of this class after the sortie ends (MO-01); `meta_award["long"]` feeds the result screen.
+func _long_record() -> void:
+	if not run.long_on or aces():
+		return
+	var t := EndlessBalance.over(run_time)
+	var best := Profile.long_best(cls_id)
+	var build := {"w": [], "syn": player.syn.keys() if is_instance_valid(player) else []}
+	if is_instance_valid(player):
+		for g in player.groups:
+			if not (g as Hardpoint).is_empty():
+				build["w"].append((g as Hardpoint).weapon)
+	var rec := EndlessBalance.is_record(run_time, best)
+	if rec:
+		Profile.long_save(cls_id, t, build)
+	meta_award["long"] = {"t": t, "best": maxf(best, t), "record": rec}
+	tele.maxv("long_time", t)
 
 
 ## `Events.player_died`: the sortie ends; half the parts kept, profile award, log.
@@ -971,10 +1019,15 @@ func _on_player_died() -> void:
 		result_t = 0.0
 		result_tab = 0
 	else:
-		parts_kept = int(run.parts * 0.5 * Campaign.k("reward"))
-		op_result = Campaign.result_base(run_time, op_flags)
-		op_result["done"] = false
+		if run.long_on:   # MO-01: the operation was done before the long sortie; a death keeps what was earned by 15:00
+			parts_kept = int(EndlessBalance.kept_on_death(run.parts, run.parts_at_long) * Campaign.k("reward"))
+			op_result = Campaign.on_evac(run_time, op_flags)
+		else:
+			parts_kept = int(run.parts * 0.5 * Campaign.k("reward"))
+			op_result = Campaign.result_base(run_time, op_flags)
+			op_result["done"] = false
 		_award("dead")
+		_long_record()
 	fx.explosion(player.global_position, 40.0)
 	sfx.play("player_explode", 0.0, 0.7)
 	add_shake(16.0)

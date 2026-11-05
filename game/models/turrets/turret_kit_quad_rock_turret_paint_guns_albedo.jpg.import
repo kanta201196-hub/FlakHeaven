@@ -2,21 +2,23 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cyh1sx144mkud"
-path="res://.godot/imported/turret_kit_quad_rock_turret_paint_guns_albedo.jpg-c7b379c9ccda8d4b649f0a270968200f.ctex"
+uid="uid://bmxs43xuiwdcl"
+path.bptc="res://.godot/imported/turret_kit_quad_rock_turret_paint_guns_albedo.jpg-c7b379c9ccda8d4b649f0a270968200f.bptc.ctex"
+path.astc="res://.godot/imported/turret_kit_quad_rock_turret_paint_guns_albedo.jpg-c7b379c9ccda8d4b649f0a270968200f.astc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://models/turrets/turret_kit_quad_rock_turret_paint_guns_albedo.jpg"
-dest_files=["res://.godot/imported/turret_kit_quad_rock_turret_paint_guns_albedo.jpg-c7b379c9ccda8d4b649f0a270968200f.ctex"]
+dest_files=["res://.godot/imported/turret_kit_quad_rock_turret_paint_guns_albedo.jpg-c7b379c9ccda8d4b649f0a270968200f.bptc.ctex", "res://.godot/imported/turret_kit_quad_rock_turret_paint_guns_albedo.jpg-c7b379c9ccda8d4b649f0a270968200f.astc.ctex"]
 
 [params]
 
-compress/mode=0
-compress/high_quality=false
+compress/mode=2
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0

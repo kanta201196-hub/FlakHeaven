@@ -150,9 +150,10 @@ func _default_kit() -> Dictionary:
 	return {"gun": "std", "guns": ["std"], "ammo": "std", "ammos": ["std"]}
 
 
+## A new profile: no parts, default classes and weapon branches, empty medals and build album
 func reset_data() -> void:
 	data = {"version": VERSION, "parts": 0, "sorties": 0, "parts_earned_total": 0, "classes": {}, "weapons": {},
-		"medals": {"c": {}, "cards": [], "syn": []}}
+		"medals": {"c": {}, "cards": [], "syn": []}, "long": {}, "album": {}}
 	_medal_cache = {}
 	for c in PlaneClasses.LIST:
 		data["classes"][c] = _default_class(c)
@@ -160,6 +161,7 @@ func reset_data() -> void:
 		data["weapons"][w] = {"t1": "", "t2": "", "t3": ""}
 
 
+## Reads `path` over the defaults, migrating old saves (crew rank, start list, decals, medals, build album)
 func load_profile() -> void:
 	if not FileAccess.file_exists(path):
 		return
@@ -201,10 +203,33 @@ func load_profile() -> void:
 		for k in ["cards", "syn"]:
 			if md.get(k) is Array:
 				data["medals"][k] = (md[k] as Array).duplicate()
+	# PG-11 build album: a save from before it seeds the album with the synergies the medals counted
+	data["album"] = AlbumBook.parse(d.get("album"))
+	if not d.has("album"):
+		AlbumBook.migrate(data["album"], data["medals"]["syn"])
+	# long sortie (MO-01): best time over 15:00 per class and the build that did it; an old save has none
+	if d.get("long") is Dictionary:
+		for c in d["long"]:
+			var e = d["long"][c]
+			if PlaneClasses.LIST.has(c) and e is Dictionary:
+				data["long"][c] = {"t": float(e.get("t", 0.0)), "build": e.get("build", {}) if e.get("build") is Dictionary else {}}
 	if d.get("weapons") is Dictionary:
 		for w in WEAPON_ORDER:
 			if (d["weapons"] as Dictionary).has(w):
 				data["weapons"][w] = d["weapons"][w]
+
+
+## Best long-sortie time for a class, in seconds past 15:00 (0 = never stayed).
+## The hangar and the in-flight goal row show it so the player has a record to beat.
+func long_best(c: String) -> float:
+	return float((data["long"] as Dictionary).get(c, {}).get("t", 0.0))
+
+
+## Store a new long-sortie record for a class with the build that set it.
+## The caller decides it is a record (EndlessBalance.is_record), so this only writes and saves.
+func long_save(c: String, t: float, build: Dictionary) -> void:
+	data["long"][c] = {"t": t, "build": build.duplicate(true)}
+	save()
 
 
 func save() -> void:
@@ -774,6 +799,8 @@ func any_purchase() -> bool:
 
 # ---------- начисление за вылет ----------
 
+## Credits a finished sortie `s` (parts, wage, crew experience, medals, first finds of the build album) and
+## saves; returns the lines and totals for the result screen. A sortie under 30 s credits nothing.
 func award_run(s: Dictionary) -> Dictionary:
 	var c: String = s["cls"]
 	var out := {"parts_before": parts(), "lvl_before": crew_lvl(c), "xp_lines": [], "unlocked": [], "short": false}
@@ -788,6 +815,8 @@ func award_run(s: Dictionary) -> Dictionary:
 		return out
 	var wage := WAGE
 	var add := int(s["parts_kept"]) + wage + int(s.get("op_parts", 0)) # U-05: + награда за первый проход операции
+	var album_new: Array = (s.get("album_new", []) as Array).filter(func(id): return album_add(String(id), c))
+	add += AlbumBook.parts_for(album_new.size())   # PG-11: first finds of the build album
 	out["medals_new"] = medals_award(s.get("medals", {}), add, s.get("cards_taken", []), s.get("syn_taken", []))
 	data["parts"] = parts() + add
 	data["parts_earned_total"] = int(data["parts_earned_total"]) + add
@@ -829,6 +858,8 @@ func award_run(s: Dictionary) -> Dictionary:
 	out["xp_before"] = xp_before
 	out["parts_add"] = add
 	out["op_parts"] = int(s.get("op_parts", 0))
+	out["album_new"] = album_new
+	out["album_parts"] = AlbumBook.parts_for(album_new.size())
 	out["wage"] = wage
 	out["parts_after"] = parts()
 	out["lvl_after"] = crew_lvl(c)
@@ -935,6 +966,30 @@ func gate_r_k(_c: String) -> float:
 ## B-06: объём бака — +8% за уровень узла «Бак»
 func fuel_k(c: String) -> float:
 	return (1.0 + 0.08 * node(c, "tank") * meta_k()) * (1.0 + medal_bonus("fuel"))
+
+
+# ---------- build album (PG-11 B5, Kanta 05.11; AlbumBook) ----------
+
+## Whether album entry `id` is found
+func album_has(id: String) -> bool:
+	return (data["album"] as Dictionary).has(id)
+
+
+## Records entry `id` found by class `cls` now; true on the first find. Called by the sortie's award, which saves.
+func album_add(id: String, cls: String) -> bool:
+	return AlbumBook.add(data["album"], id, cls, int(Time.get_unix_time_from_system()))
+
+
+## Every album entry of the game under the current rules (see `AlbumBook.ids`)
+func album_ids() -> Array:
+	var skill_ids: Array = []
+	for sk in PlaneClasses.SKILL3:
+		skill_ids.append(PlaneClasses.SKILL3[sk]["syn"]["id"])
+	var syn_ids: Array = Cards.SYNERGIES.keys().filter(func(x): return Cards.syn_offered(x))
+	var ids := AlbumBook.ids(syn_ids, skill_ids, Modernizations.all().keys(), WeaponProfiles.DEFS)
+	if Tuning.g("build_arch") < 0.5:   # PG-11 A off (F1): archetype ranks cannot be found
+		ids = ids.filter(func(x): return AlbumBook.kind(String(x)) != "arch")
+	return ids
 
 
 # ---------- медали (Kanta 27.10, «Наградная планка»; MedalBalance) ----------

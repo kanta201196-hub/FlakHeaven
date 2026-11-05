@@ -1,7 +1,8 @@
 extends SceneTree
 ## Unit tests for `AcesBalance`: the «Битва асов» test mode (Kanta 2026-10-26, AB-01). Rules pinned here:
 ## three missiles kill the player, two long bursts of an ace kill the player, other damage is untouched;
-## the ace schedule (first, interval, at most two at once); spawn caps per enemy kind.
+## the ace schedule (first, interval, at most two at once); spawn caps per enemy kind; AB-03 (Kanta 04.11):
+## a rival ace takes at least ACE_MISSILES of the player's missiles, sees a ram coming, launches only ahead in range.
 ## Run from the repository root: `tools/ci/unit.sh`.
 
 var _failed := 0
@@ -17,6 +18,9 @@ func _init() -> void:
 	_test_score()
 	_test_turn_look()
 	_test_build_loop()
+	_test_ace_missile_cap()
+	_test_collision_ahead()
+	_test_ace_launch()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -112,3 +116,32 @@ func _test_build_loop() -> void:
 	_check(total == AcesBalance.CARDS_MAX, "never more than %d cards per sortie (%d)" % [AcesBalance.CARDS_MAX, total])
 	r.add_picks(-3)
 	_check(r.pending_levels == 8, "negative picks are ignored")
+
+
+func _test_ace_missile_cap() -> void:
+	var cap := AcesBalance.ace_hit_cap("homing", AcesBalance.ACE_HP)
+	var hp := AcesBalance.ACE_HP
+	var n := 0
+	while hp > 0.0 and n < 100:
+		hp -= minf(500.0, cap)   # a level-5 missile far above the hull
+		n += 1
+	_check(n == int(AcesBalance.ACE_MISSILES), "even a huge missile needs %d hits on an ace (%d)" % [int(AcesBalance.ACE_MISSILES), n])
+	_check(AcesBalance.ace_hit_cap("gun", AcesBalance.ACE_HP) == INF, "bullets are not capped")
+	_check(AcesBalance.ace_hit_cap("blast", AcesBalance.ACE_HP) == INF, "rockets are not capped")
+	_check(AcesBalance.ace_hit_cap("homing", AcesBalance.ACE_HP, 0.0) == INF, "slider 0 turns the cap off (s15)")
+
+
+func _test_collision_ahead() -> void:
+	_check(AcesBalance.collision_ahead(Vector2(300, 0), Vector2(-500, 0)), "head-on at 300 px and 500 px/s closing: ram ahead")
+	_check(not AcesBalance.collision_ahead(Vector2(300, 0), Vector2(500, 0)), "opening: no ram")
+	_check(not AcesBalance.collision_ahead(Vector2(300, 300), Vector2(-500, 0)), "passing 300 px to the side: no ram")
+	_check(not AcesBalance.collision_ahead(Vector2(2000, 0), Vector2(-500, 0)), "too far to matter within AVOID_T")
+	_check(AcesBalance.collision_ahead(Vector2(50, 0), Vector2.ZERO), "already overlapping")
+
+
+func _test_ace_launch() -> void:
+	_check(AcesBalance.ace_can_launch(600.0, 10.0), "player ahead at 600 px: launch")
+	_check(not AcesBalance.ace_can_launch(600.0, 60.0), "player off the nose: no launch")
+	_check(not AcesBalance.ace_can_launch(100.0, 0.0), "too close: guns, not missiles")
+	_check(not AcesBalance.ace_can_launch(2000.0, 0.0), "out of range")
+	_check(AcesBalance.ACE_MSL_CD >= 3.0, "missiles are not a stream: at least 3 s between launches")
