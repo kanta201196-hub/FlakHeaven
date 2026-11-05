@@ -9709,6 +9709,124 @@ msgstr "synergy: good company"
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
 
+# PG-11 (synergies of two things, build album)
+
+msgid "%s ур. 5 + %s, с 7:00 вылета"
+msgstr "%s lv. 5 + %s, from 7:00 of the sortie"
+
+msgid "%s — в одном вылете; первый слот связки — ур. %d / ×%d у каждого"
+msgstr "%s in one sortie; the first synergy slot asks lv. %d / ×%d of each"
+
+msgid "%s: выбор профиля на ур. %d"
+msgstr "%s: profile choice at lv. %d"
+
+msgid "\n▲ К связке «%s»: %s"
+msgstr "\n▲ Toward «%s»: %s"
+
+msgid "АЛЬБОМ"
+msgstr "ALBUM"
+
+msgid "Архетип"
+msgstr "Archetype"
+
+msgid "Броневой бой"
+msgstr "Ironclad"
+
+msgid "Загонщик"
+msgstr "Beater"
+
+msgid "Зарево"
+msgstr "Glow"
+
+msgid "Каждая ракета, уведённая ловушкой, отвечает: с места перехвата уходит ваша наводящаяся ракета в ближайшего врага (40)"
+msgstr "Every missile a flare leads away answers back: your guided missile leaves the interception point for the nearest enemy (40)"
+
+msgid "Каждое попадание по вам на 5 с усиливает курсовую пушку на 8% (до 5 раз, +40%)"
+msgstr "Every hit you take makes the nose gun 8% stronger for 5 s (up to 5 times, +40%)"
+
+msgid "Каждый перехват ловушкой сбрасывает бомбу на ближайшую наземную цель в 600 пикс. (50 урона, радиус 90)"
+msgstr "Every flare interception drops a bomb on the nearest ground target within 600 px (50 damage, radius 90)"
+
+msgid "Как собрать:"
+msgstr "How to collect:"
+
+msgid "НОВОЕ В АЛЬБОМЕ ×%d"
+msgstr "NEW IN THE ALBUM ×%d"
+
+msgid "НОВОЕ В АЛЬБОМЕ: %s"
+msgstr "NEW IN THE ALBUM: %s"
+
+msgid "Наведите на клетку — здесь, что это и как его собрать. Каждая первая находка даёт запчасти."
+msgstr "Point at a cell to see what it is and how to collect it. Every first find gives parts."
+
+msgid "Наземная цель, по которой попала курсовая пушка, 3 с получает от ракет В-З урон ×1,5"
+msgstr "A ground target hit by the nose gun takes ×1.5 damage from air-to-ground missiles for 3 s"
+
+msgid "Найдено: %d из %d · первая находка: +%d запчастей"
+msgstr "Found: %d of %d · first find: +%d parts"
+
+msgid "Обманка"
+msgstr "Decoy"
+
+msgid "Огненный коридор"
+msgstr "Fire Corridor"
+
+msgid "Перекрёстный огонь"
+msgstr "Crossfire"
+
+msgid "Разрыв ракеты залпа оставляет огонь на 2 с (10 урона/с); бомба, упавшая в огонь, рвётся в 1,5 раза шире"
+msgstr "A volley rocket burst leaves fire for 2 s (10 damage/s); a bomb falling into the fire bursts 1.5 times wider"
+
+msgid "Связка за очки тегов (справочник в бою)"
+msgstr "Synergy from tag points (see the codex in combat)"
+
+msgid "Цель, по которой попала курсовая пушка, 2 с получает от турелей урон ×1,5"
+msgstr "A target hit by the nose gun takes ×1.5 damage from turrets for 2 s"
+
+msgid "есть %s"
+msgstr "have %s"
+
+msgid "залп поджигает — бомбы шире"
+msgstr "volley sets fire, bombs burst wider"
+
+msgid "навык класса"
+msgstr "class skill"
+
+msgid "найдено раньше"
+msgstr "found earlier"
+
+msgid "нужны %s"
+msgstr "need %s"
+
+msgid "перехват → бомба по земле"
+msgstr "interception → bomb on the ground"
+
+msgid "перехват → ответная ракета"
+msgstr "interception → missile back"
+
+msgid "по вам бьют — пушка злее"
+msgstr "hits on you make the gun angrier"
+
+msgid "пушка метит землю для ракет В-З"
+msgstr "gun marks ground targets for AGMs"
+
+msgid "пушка метит — турели добивают"
+msgstr "gun marks, turrets finish"
+
+msgid "связка: зарево"
+msgstr "synergy: glow"
+
+msgid "связка: обманка"
+msgstr "synergy: decoy"
+
+msgid "связка: огненный коридор"
+msgstr "synergy: fire corridor"
+
+msgid "ур."
+msgstr "lv."
+
+msgid "связка недоступна"
+msgstr "synergy unavailable"
 #: game/scripts/main.gd:480
 #, c-format
 msgid "Уровень %d: +%d%% к урону"

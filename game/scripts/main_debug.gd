@@ -846,6 +846,17 @@ var _runs_done := 0
 var _loadout_opened := false
 
 
+## PG-11 check: --syn=crossfire,decoy opens these synergies at the first card screen of every sortie, so the
+## bot flies with them (the new pair synergies need weapons a random bot rarely completes in a short run)
+func _force_syn() -> void:
+	for a in m._args:
+		if String(a).begins_with("--syn=") and is_instance_valid(m.player):
+			for id in String(a).substr(6).split(","):
+				if not m.player.syn.has(id) and Cards.SYNERGIES.has(id):
+					m.player.open_synergy(id)
+					print("AUTOTEST: forced synergy ", id)
+
+
 func _run_autotest(delta: float) -> void:
 	_autotest_t += delta
 	_bot_wait -= delta / maxf(Engine.time_scale, 0.01)
@@ -957,6 +968,7 @@ func _run_autotest(delta: float) -> void:
 				return   # S10-01: экран выбора держим для кадра
 			if _bot_wait <= 0.0:
 				_bot_wait = 0.3
+				_force_syn()
 				if m._args.has("--bot=course"):
 					for ci in m.offers.size():
 						if m.offers[ci].get("course", false) or m.offers[ci]["kind"] in ["synergy", "skill_syn"]:

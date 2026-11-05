@@ -63,6 +63,9 @@ func process(delta: float) -> void:
 	if OS.get_cmdline_user_args().has("--medalbench"):
 		_medal_bench()
 		return
+	if OS.get_cmdline_user_args().has("--albumbench"):
+		_album_bench()
+		return
 	if OS.get_cmdline_user_args().has("--levbench"):
 		_lev_bench(delta)
 		return
@@ -1867,6 +1870,28 @@ func _medal_bench() -> void:
 		return
 	if _t > 1.5:
 		_save("hangar_medals")
+		print("VISUAL done")
+		m.get_tree().quit()
+
+
+## Build album (PG-11): the hangar tab «АЛЬБОМ» with a made-up half of the entries found (in memory, not saved),
+## a found synergy open under the grid; frame vis_hangar_album.png
+func _album_bench() -> void:
+	if _t < 1.5:
+		return
+	if m.state != "hangar":
+		m.ui_click("menu_hangar")
+		var ids := Profile.album_ids()
+		var cls := ["fighter", "attacker", "bomber"]
+		for i in ids.size():
+			if i % 2 == 0:
+				Profile.data["album"][ids[i]] = {"t": 1793750400 + i * 86400, "cls": cls[i % 3]}
+		m.hangar_tab = "album"
+		m.hangar_album = String(ids[0])
+		_t = 0.0
+		return
+	if _t > 1.5:
+		_save("hangar_album")
 		print("VISUAL done")
 		m.get_tree().quit()
 

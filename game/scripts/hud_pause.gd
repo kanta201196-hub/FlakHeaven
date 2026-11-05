@@ -415,7 +415,7 @@ func _stats(p: Player, r: Rect2) -> float:
 ## «have/need» in amber, so the old pause's «к связке» progress stays. Returns the bottom y.
 func _tags(p: Player, r: Rect2) -> float:
 	var need := {}
-	if p.has_course():
+	if p.has_course() and not Cards.pairs_on():   # PG-11: with pair recipes tags no longer open synergies
 		var sd := Cards.syn_def(p, p.course)
 		var c := Cards.slot_cost(p)
 		need[String(sd.get("tag", ""))] = int(c["main"])

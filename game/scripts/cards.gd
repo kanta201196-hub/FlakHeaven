@@ -159,7 +159,95 @@ const SYNERGIES := {
 	"jetwash": {"title": "Реактивный след", "req_mods": ["roll", "afterburner"], "tag": "maneuver", "tag2": "blast", "color": Color(0.5, 0.8, 1.0),
 		"desc": "При уклонении и форсаже за самолётом каждые 50 пикс. остаётся заряд: через 0,4 с взрыв 70 пикс., 30 урона",
 		"short": "огненная дорожка на манёврах"},
+	# PG-11 (Kanta 05.11): synergies of two different things, offered only with the F1 toggle `build_pairs`
+	"crossfire": {"title": "Перекрёстный огонь", "pairs": true, "tag": "kinetic", "tag2": "turrets", "color": Color(0.95, 0.9, 0.45),
+		"desc": "Цель, по которой попала курсовая пушка, 2 с получает от турелей урон ×1,5",
+		"short": "пушка метит — турели добивают"},
+	"hunter": {"title": "Загонщик", "pairs": true, "tag": "kinetic", "tag2": "armor", "color": Color(0.85, 0.75, 0.45),
+		"desc": "Наземная цель, по которой попала курсовая пушка, 3 с получает от ракет В-З урон ×1,5",
+		"short": "пушка метит землю для ракет В-З"},
+	"decoy": {"title": "Обманка", "pairs": true, "tag": "maneuver", "tag2": "missiles", "color": Color(0.55, 1.0, 0.75),
+		"desc": "Каждая ракета, уведённая ловушкой, отвечает: с места перехвата уходит ваша наводящаяся ракета в ближайшего врага (40)",
+		"short": "перехват → ответная ракета"},
+	"corridor": {"title": "Огненный коридор", "pairs": true, "tag": "blast", "tag2": "missiles", "color": Color(1.0, 0.5, 0.25),
+		"desc": "Разрыв ракеты залпа оставляет огонь на 2 с (10 урона/с); бомба, упавшая в огонь, рвётся в 1,5 раза шире",
+		"short": "залп поджигает — бомбы шире"},
+	"glow": {"title": "Зарево", "pairs": true, "tag": "maneuver", "tag2": "blast", "color": Color(1.0, 0.78, 0.4),
+		"desc": "Каждый перехват ловушкой сбрасывает бомбу на ближайшую наземную цель в 600 пикс. (50 урона, радиус 90)",
+		"short": "перехват → бомба по земле"},
+	"ironclad": {"title": "Броневой бой", "pairs": true, "tag": "armor", "tag2": "kinetic", "color": Color(0.8, 0.85, 0.95),
+		"desc": "Каждое попадание по вам на 5 с усиливает курсовую пушку на 8% (до 5 раз, +40%)",
+		"short": "по вам бьют — пушка злее"},
 }
+
+
+## PG-11 (Kanta 05.11): F1 toggle `build_pairs` — synergies need two different things (`SynPairs`).
+## Off — the s15 rules: tag points, and the new pair synergies are not offered.
+static func pairs_on() -> bool:
+	return Tuning.g("build_pairs") >= 0.5
+
+
+## Whether synergy `id` may be offered under the current toggle (pair-only ones need it on, retired ones never)
+static func syn_offered(id: String) -> bool:
+	var s: Dictionary = SYNERGIES.get(id, {})
+	if pairs_on():
+		return not SynPairs.req(id).is_empty()
+	return not s.get("pairs", false)
+
+
+## Snapshot of the plane for `SynPairs`: hardpoint weapon levels, modules taken, permanent wingmen, skill level
+static func pair_snap(p: Player) -> Dictionary:
+	var wl := {}
+	for g in p.groups:
+		var h: Hardpoint = g
+		if h.weapon != "":
+			wl[h.weapon] = maxi(int(wl.get(h.weapon, 0)), h.level)
+	return {"w": wl, "taken": p.taken, "wing": p.permanent_wingmen(), "s3": p.s3_lvl()}
+
+
+## Player name of one `SynPairs` thing
+static func pair_thing_title(p: Player, t: Dictionary) -> String:
+	if t.has("w"):
+		return "/".join(PackedStringArray((t["w"] as Array).map(func(x): return Loc.t(String(Weapons.DEFS[x]["short"])))))
+	if t.has("mods"):
+		if t.has("t"):
+			return Loc.t(String(t["t"]))
+		return " + ".join(PackedStringArray((t["mods"] as Array).map(func(x): return Loc.t(String(MODULES[x]["title"])))))
+	if t.has("wing"):
+		return Loc.t("ведомые")
+	if t.has("skill"):
+		return Loc.t("навык «%s»") % Loc.t(String(PlaneClasses.SKILL3[p.skill3]["title"])) if p != null else Loc.t("навык класса")
+	return ""
+
+
+## Conditions of `id` under the pair rules, in the `cond_list` format: [[text, done, have, need], …]
+static func pair_conds(p: Player, id: String) -> Array:
+	var out: Array = []
+	if SynPairs.req(id).is_empty():   # no recipe (a retired synergy): never ready, even if chosen under the s15 rules
+		return [[Loc.t("связка недоступна"), false, 0, 1]]
+	for st in SynPairs.state(id, pair_snap(p), p.syn.size()):
+		var t: Dictionary = st[0]
+		var unit := Loc.t("ур.") if t.has("w") or t.has("skill") else "×"
+		out.append(["%s %s %d/%d" % [pair_thing_title(p, t), unit, int(st[1]), int(st[2])], int(st[1]) >= int(st[2]), int(st[1]), int(st[2])])
+	return out
+
+
+## Recipe line of the course: «есть Ракеты В-В 4, нужны Ловушки 3» (the met things first, then the missing ones)
+static func pair_recipe(p: Player, id: String) -> String:
+	var got := PackedStringArray()
+	var miss := PackedStringArray()
+	for st in SynPairs.state(id, pair_snap(p), p.syn.size()):
+		var name := pair_thing_title(p, st[0])
+		if int(st[1]) >= int(st[2]):
+			got.append("%s %d" % [name, int(st[1])])
+		else:
+			miss.append("%s %d" % [name, int(st[2])])
+	var parts := PackedStringArray()
+	if not got.is_empty():
+		parts.append(Loc.t("есть %s") % ", ".join(got))
+	if not miss.is_empty():
+		parts.append(Loc.t("нужны %s") % ", ".join(miss))
+	return ", ".join(parts)
 
 
 static func _has_weapon(p: Player, w: String, lvl: int) -> bool:
@@ -208,6 +296,8 @@ static func cond_list(p: Player, id: String) -> Array:
 	var out: Array = []
 	if s.is_empty():
 		return out
+	if pairs_on():
+		return pair_conds(p, id)
 	var main := p.tag(s["tag"])
 	out.append(["%s %d/%d" % [Prog.tag_title(s["tag"]), main, int(c["main"])], main >= int(c["main"]), main, int(c["main"])])
 	if s.has("skill"):
@@ -268,6 +358,15 @@ static func _available(p: Player) -> Array:
 		if p.syn.has(id):
 			continue
 		var s: Dictionary = SYNERGIES[id]
+		if not syn_offered(id):
+			continue
+		if pairs_on():
+			var pd: Dictionary = PlaneClasses.PLANES[p.cls_id][int(p.cls["plane_lvl"])]
+			if not SynPairs.reachable(id, pd["weapons"], wing_limit(p)):
+				continue
+			if _pair_started(p, id, free_group):
+				out.append(id)
+			continue
 		var ok := true
 		if s.has("w"):
 			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w, int(p.cls["plane_lvl"]))):
@@ -280,10 +379,41 @@ static func _available(p: Player) -> Array:
 	return out
 
 
+## PG-11: a pair synergy is open to choose when every weapon thing of its recipe is on the plane or can still be
+## mounted — one free hardpoint group per missing thing, with a weapon the plane allows (turrets come only with
+## the class, never on a free group) — and its wingmen exist or may join
+static func _pair_started(p: Player, id: String, _free_group := false) -> bool:
+	var snap := pair_snap(p)
+	var free := 0
+	for g in p.groups:
+		if not (g as Hardpoint).builtin and (g as Hardpoint).is_empty():
+			free += 1
+	var lv := int(p.cls["plane_lvl"])
+	for t in SynPairs.req(id):
+		if t.has("w") and SynPairs.have(t, snap) == 0:
+			if not (t["w"] as Array).any(func(w): return w != "turret" and Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w, lv)):
+				return false
+			free -= 1
+		if t.has("wing") and int(p.cls["wingmen"]) <= 0 and p.permanent_wingmen() == 0:
+			return false
+	return free >= 0
+
+
+## PG-11: a pair synergy counts as «yours» on the course screen when one of its things is already started
+static func _pair_have(p: Player, id: String) -> bool:
+	var snap := pair_snap(p)
+	for t in SynPairs.req(id):
+		if SynPairs.have(t, snap) > 0:
+			return true
+	return false
+
+
 ## Экран «Выбор курса»: 3 варианта — по оружию, связка навыка, «новый путь»
 static func course_options(p: Player) -> Array:
 	var avail := _available(p)
 	var have: Array = avail.filter(func(id):
+		if pairs_on():
+			return _pair_have(p, id)
 		var s: Dictionary = SYNERGIES[id]
 		if s.has("w"):
 			return _wlevel(p, s["w"]) > 0
@@ -322,6 +452,8 @@ static func _progress(conds: Array) -> float:
 static func advances_course(p: Player, card: Dictionary) -> bool:
 	if not p.has_course() or card["kind"] in ["synergy", "skill_syn", "evolution", "reserve"]:
 		return false
+	if pairs_on():
+		return SynPairs.advances(p.course, _pair_card(p, card), pair_snap(p), p.syn.size())
 	var s := syn_def(p, p.course)
 	var c := slot_cost(p)
 	var tags := Prog.card_tags(p, card)
@@ -343,10 +475,28 @@ static func advances_course(p: Player, card: Dictionary) -> bool:
 	return false
 
 
+## What a card gives in `SynPairs.advances` terms (weapon / module / wingman / skill; {} — nothing)
+static func _pair_card(p: Player, card: Dictionary) -> Dictionary:
+	match card["kind"]:
+		"weapon_new":
+			return {"weapon": card["weapon"]}
+		"weapon_up", "profile":
+			return {"weapon": (p.groups[int(card["group"])] as Hardpoint).weapon}
+		"module":
+			if card["id"] == "skill3":
+				return {"skill": true}
+			return {"mod": card["id"]}
+		"wing_new":
+			return {"wing": true}
+	return {}
+
+
 ## Строка о курсе для карточки
 static func course_hint(p: Player, card: Dictionary) -> String:
 	if not advances_course(p, card):
 		return ""
+	if pairs_on():
+		return Loc.t("\n▲ К связке «%s»: %s") % [Loc.t(syn_def(p, p.course)["title"]), pair_recipe(p, p.course)]
 	var s := syn_def(p, p.course)
 	var c := slot_cost(p)
 	var tags := Prog.card_tags(p, card)
@@ -1106,6 +1256,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 			hp.level = mini(hp.level + 1, Weapons.MAX_LEVEL)
 			hp.bonus += 0.15 * (k - 1.0)
 			Events.banner.emit(Loc.t("ПРОФИЛЬ: %s") % Loc.t(String(WeaponProfiles.def(hp.weapon, hp.profile)["title"])), 3.0)
+			p.album_find("prof:%s:%s" % [hp.weapon, hp.profile], String(WeaponProfiles.def(hp.weapon, hp.profile)["title"]))
 		"mastery":
 			p.mastery = true
 			Main.I.tele.v["mastery_t"] = Main.I.run_time
@@ -1114,6 +1265,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 			var eid := String(card.get("evo", card["weapon"]))
 			p.evolve(eid)
 			Events.banner.emit(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(String(Modernizations.def(eid)["title"])), 4.0)
+			p.album_find("evo:" + eid, String(Modernizations.def(eid)["title"]))
 		"reserve":
 			var tk: String = String(card["id"])
 			p.taken[tk] = int(p.taken.get(tk, 0)) + 1

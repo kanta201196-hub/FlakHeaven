@@ -38,6 +38,8 @@ func gun_damage() -> float:
 		d *= 1.3
 	if pl.on_tail():
 		d *= 1.5 * float(pl.mods["tail_k"])   # medal «На хвосте»
+	if pl.ironclad_n > 0:   # PG-11 «Броневой бой»
+		d *= 1.0 + SynPairs.IRONCLAD_K * pl.ironclad_n
 	return d
 
 

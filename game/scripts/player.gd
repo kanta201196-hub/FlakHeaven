@@ -62,6 +62,11 @@ var ranks_t := 0.0         # «Сомкнуть строй»
 var man_buff_t := 0.0      # нашивка «Манёвр II»
 var roller_t := 0.0        # связка «Каток»
 var _roller_cd := 0.0
+## PG-11 «Броневой бой»: stacks of course gun damage from hits taken, and time left on them
+var ironclad_n := 0
+var ironclad_t := 0.0
+## PG-11 build album: entries found for the first time in this sortie (parts and the result screen)
+var album_new: Array = []
 var _armor2_cd := 0.0
 var _straight_t := 0.0     # «Кит»: разбег
 var _energy := 1.0         # тест 3.5-s7: доля скорости — крутой разворот её съедает, на прямой набирается
@@ -283,13 +288,31 @@ func add_course_pts(n: int) -> void:
 	Main.I.fx.text(global_position + Vector2(0, -70), "+%d к специализации «%s»" % [n, sd["title"]], Color(1.0, 0.85, 0.35))
 
 
+## PG-11 build album: notes entry `id` (player name `title`) when it was never found: a banner after the card's
+## own one. The entry is written to the album, with its parts, only by the sortie's award (Profile.award_run),
+## so a sortie with no award (left from pause, too short, «Битва асов») records nothing.
+func album_find(id: String, title: String) -> void:
+	if Profile.album_has(id) or album_new.has(id):
+		return
+	album_new.append(id)
+	Main.I.tele.add("album_new")
+	var t := get_tree().create_timer(1.6, false)
+	t.timeout.connect(func(): Events.banner.emit(Loc.t("НОВОЕ В АЛЬБОМЕ: %s") % Loc.t(title), 3.0))
+
+
+## Opens synergy `id` in the next free slot: banner, sound, slow motion, first trigger at once, album entry
 func open_synergy(id: String) -> void:
 	syn[id] = Main.I.run_time
 	syn_dmg[id] = 0.0
 	if course == id:
 		course = ""
 	var sd := Cards.syn_def(self, id)
+	if Cards.pairs_on():   # PG-11: which recipes players complete, and how many use two hardpoint weapons
+		Main.I.tele.add("syn_pair_" + id)
+		if SynPairs.two_weapons(id):
+			Main.I.tele.add("syn_pair_2w")
 	Events.banner.emit("СВЯЗКА «%s» — СЛОТ %d" % [String(sd["title"]).to_upper(), syn.size()], 4.5)
+	album_find("syn:" + id, String(sd["title"]))
 	Main.I.sfx.play("synergy", -6.0, 1.6)
 	Main.I.slowmo(0.6)
 	Main.I.fx.ring(global_position, 260.0, sd.get("color", Color(1, 0.85, 0.3)))
@@ -529,6 +552,10 @@ func _process(delta: float) -> void:
 	skills._skill_tick(delta)
 	skills._jetwash()
 	_iron_cd = maxf(0.0, _iron_cd - delta)
+	if ironclad_t > 0.0:
+		ironclad_t -= delta
+		if ironclad_t <= 0.0:
+			ironclad_n = 0
 	if ab_t > 0.0:
 		skills._afterburner_pass()
 	queue_redraw()
@@ -686,6 +713,7 @@ func heal(amount: float, src := "прочее") -> void:
 	Main.I.tele.add("heal_" + src, hp - before)   # EX-10: откуда приходит ремонт
 
 
+## Takes a hit of `amount` from `source` / `who` after dodges, difficulty, shields and synergy reactions
 func damage(amount: float, source := "прочее", who := "") -> void:
 	if is_invulnerable() or hp <= 0.0:
 		return
@@ -721,6 +749,9 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 		if t != null:
 			var d := (t.global_position - global_position).normalized()
 			Main.I.projectiles.spawn_rocket(global_position, velocity + d * 900.0, 30.0, 60.0, 0.0, {"src": "связка: утюг"})
+	if syn.has("ironclad"):   # PG-11 «Броневой бой»
+		ironclad_n = mini(ironclad_n + 1, SynPairs.IRONCLAD_MAX)
+		ironclad_t = SynPairs.IRONCLAD_T
 	amount *= float(mods["taken_k"])
 	var big_hit := amount > max_hp * 0.1
 	hp -= amount

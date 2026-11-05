@@ -249,6 +249,8 @@ func _rewards(m: Main, r: Rect2) -> void:
 		lines.append([Loc.t("ЖАЛОВАНЬЕ ТЕХНИКАМ"), int(a["wage"])])
 		if int(a.get("op_parts", 0)) > 0:
 			lines.append([Loc.t("ОПЕРАЦИЯ ПРОЙДЕНА ВПЕРВЫЕ"), int(a["op_parts"])])
+		if int(a.get("album_parts", 0)) > 0:   # PG-11: first finds of the build album
+			lines.append([Loc.t("НОВОЕ В АЛЬБОМЕ ×%d") % (a["album_new"] as Array).size(), int(a["album_parts"])])
 	var extra: Array = []   # [text, colour]
 	if not short:
 		if a.has("promote"):
