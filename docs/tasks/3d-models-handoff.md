@@ -174,6 +174,42 @@
   baked faces that came out black among light ones from their nearest light face. The hangar detail layer's
   paint chips are light and sparser now (`livery.gd`): dark metallic chips mirrored the dark hangar and read as
   holes.
+- **«Грач» nacelle tails and nozzles (05.11, branch claude/grach-nozzles).** Kanta (s15 close-ups): in front of the
+  nozzle the nacelle ended in a ragged, lumpy dark belt with torn edges, on both planes. Cause: the generator's
+  skin there is a sleeve that stops short over a narrower tube, its end torn; the old `Livery.ENGINE_HOLES` nozzle
+  span reached forward over that torn end and painted it near black. Rebuilt as built geometry on the prototype's
+  layout (museum walkaround photos; notes and photos stay outside the repository): the nacelle tail is a smooth body
+  of revolution with a gentle boat-tail ending in a thin rounded rim; inside it a short annular floor, the engine's
+  convergent nozzle (heat-darkened bare metal by depth) and a dark exhaust cone. Recipe, from the hangar GLB of
+  `main` before this entry (after the intake passes above) and copies of its extracted maps:
+  1. `python3 -I game/tools/blender/nozzle_rebuild.py <hangar.glb> attacker_N <out.glb> --maps <col.jpg> <orm.jpg>
+     --report` (config `TAILS`; the header says how it is built; machinery of `nacelle_box.py`: slab, fuselage
+     field, region rebuild, clip, bake). `--report` prints the old section fit, the slab and fuselage fits, dent
+     depth before/after, the built parts and the `Livery.ENGINE_HOLES` and `NozzleFlame.NOZZLES` rows; paste the
+     first into `livery.gd`, the second must equal `nozzle_flame.gd` (the flame and trail start at the nozzle).
+     About 12 minutes per plane on 2 threads.
+  2. `tex_clean.py <out.glb> <map> <map>` (padding) on both maps, copy GLB and maps into `game/models/hangar/`,
+     `godot --headless --path game --import`, rebake the battle models (`battle_bake.py --tris 30000 --tex 2048
+     --outline 2 --glass 1 --shade hangar --threads 2`).
+  What mattered: the loft's front section is the old skin's, held within 0.85–1.12 of a circle fitted to its upper
+  half (rays slipping onto the fuselage or into the wing read far too long), and morphs to the round tail by
+  `morph_end`; its lower half keeps the old depth (pulled up to the tail radius it left the belly plate's top
+  exposed as a 4 mm fin). The region skin is cut by the plane x = `x_front` as well as the fillet test
+  (`clip_plane`: the weight step alone left a zigzag across the loft's front). The inboard fillet `k_in` is 10 mm
+  and the fuselage-belly fillet 8 mm, so the narrow channel between nacelle and fuselage is one rounded valley
+  instead of a slot of saw teeth; the region reaches onto the fuselage side (`box` |z|0) so the fade does not fall
+  in that channel. The upper wing sheet leaves the old nacelle out of its data wider than the lower one
+  (`tube_up`): the old sleeve's sides read as wing skin and raised the wing beside the tail into a 15 mm wedge
+  whose facets showed as saw teeth from the side. The outboard fillet is 5 mm, the trailing edge is split twice
+  as in `nacelle_box.py`, and the exhaust cone's tip sits behind the flame disc (it showed as a dark dot in it).
+  Checks: ray test from inside the fuselage and both nacelles, 0 of 13800 rays escape on «Грач» 1, 3 of 13800 on
+  «Грач» 2 (the same three as before this pass, from the forward nacelle); sections per x against `main`, grey
+  orthographic renders with the rebuilt faces tinted, Forward+ hangar frames before/after (gfx 0 and 2).
+  Open: (1) the battle models come out at 45.7k / 49.1k triangles instead of 30k: `battle_bake.py` keeps the faces
+  along the top-view outline (about 16k here, 7.5k before: the built tails and the refined trailing edges lie on
+  it) and the parts' open edges; a lower `--tris` or a coarser trailing edge would bring it down. (2) A small sliver remains where the belly plate's trailing edge meets the loft and the
+  fuselage (x about -0.19 on «Грач» 1). (3) Paint suggestion, not done (needs Kanta's yes): on the prototype the
+  tail section round the nozzle is bare or heat-stained metal, not camouflage.
 - `tail_cabin.py <hangar.glb> <класс_ур> <out.glb> --tex=<..._col.jpg>` — кабина хвостового стрелка «Кита» (`models/mech/fh_tail_<ключ>.glb`, точка `ball_mount`); команда — в начале файла.
 - `erase_tail_marks.py` — стирание знаков на оперении по цвету; `audit_models.py` — треугольники, мусор, открытые края и три ракурса.
 - `game/tools/model_lab/model_lab.gd` — подготовка сырого GLB (`prep`: длина 1, нос +X, `--nose=-x`, `--budget=N`) и предпросмотр сверху рядом со спрайтом (`preview`). Команды — в начале файла.

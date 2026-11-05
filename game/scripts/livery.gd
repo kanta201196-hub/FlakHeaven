@@ -221,9 +221,13 @@ const EXHAUST := {
 ## built rectangular intakes; its nozzle span also darkens the rear ring that closes the shroud onto the nozzle. Its
 ## radius is the new shroud's rim (0.0235) instead of the old round nacelle's 0.0295, so the test covers just the
 ## nozzle opening and that ring, not the box nacelle's skin round them.
+## 05.11 (nozzle_rebuild.py): the «Грач» nacelle tails are built bodies of revolution ending in a thin rim with the
+## engine nozzle inside. The old rows (radius of the generator's sleeve, span reaching forward to the sleeve's torn
+## edge) darkened that edge into a ragged black belt; the rows from `nozzle_rebuild.py --report` hold the test to
+## the rim (radius rim / 0.84) and from just behind it to the nozzle's floor.
 const ENGINE_HOLES := {
-	"attacker_1": [-0.0387, 0.0884, 0.0335, [1.0, 1.0], [-0.26, -0.15]],
-	"attacker_2": [-0.0293, 0.0919, 0.0404, [1.0, 1.0], [-0.31, -0.20]],
+	"attacker_1": [-0.0386, 0.0807, 0.0263, [1.0, 1.0], [-0.249, -0.226]],
+	"attacker_2": [-0.0320, 0.0880, 0.0292, [1.0, 1.0], [-0.299, -0.276]],
 	"bomber_2": [-0.0144, 0.0702, 0.0235, [1.0, 1.0], [-0.29, -0.24]],
 }
 
