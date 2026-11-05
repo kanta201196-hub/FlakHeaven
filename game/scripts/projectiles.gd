@@ -324,11 +324,12 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 	var blast2 := false
 	var blast_rank := 0
 	if is_instance_valid(pl):
-		blast_rank = pl.arch_rank("blast")
+		if Enemy.src_class(src) == "blast":   # ordnance only: a gun shell's HE splash does not trigger «Бомбёр»
+			blast_rank = pl.arch_rank("blast")
 		r *= float(pl.mods.get("blast_r", 1.0))
 		if pl.assault_t > 0.0 and pl.lvl_of("assault") >= 2:
 			r *= 1.25
-		if pl.patch("blast") >= 1:
+		if blast_rank >= 1:
 			edge = ArchBalance.BLAST_EDGE   # «Бомбёр» I
 		dmg *= float(pl.mods.get("blast_dmg", 1.0))
 		blast2 = pl.syn.has("chain") and chain < CHAIN_LINKS and (chainable or chain > 0) # 3.2: «Цепная реакция»
@@ -443,20 +444,21 @@ func _update_bullets(delta: float) -> void:
 				if b.has("he"): # «Пушкарь»: фугасный снаряд
 					aoe(p, float(b["he"]), float(b["dmg"]) * 0.6, String(b.get("he_src", "связка: пушкарь")), true, e)
 					b.erase("he")
+				# one shell counts as one hit (accuracy, «Меткий глаз», «обороты») however many targets it goes through
+				if not b.has("hit_once"):
+					b["hit_once"] = true
+					if src.begins_with("курсовое"):
+						Main.I.hits += 1
+					if manual and is_instance_valid(Main.I.player):
+						Main.I.player.on_bullet_hit()
 				if int(b.get("pierce", 0)) > 0:
 					b["pierce"] = int(b["pierce"]) - 1
 					(b["hit"] as Array).append(e)
-					if src.begins_with("курсовое"):
-						Main.I.hits += 1
 					continue
-				if src.begins_with("курсовое"):
-					Main.I.hits += 1
-				if manual and is_instance_valid(Main.I.player):
-					Main.I.player.on_bullet_hit()
 				hit = true
 				break
 		if hit or float(b["life"]) <= 0.0:
-			if not hit and b["m"] and is_instance_valid(Main.I.player):
+			if not hit and not b.has("hit_once") and b["m"] and is_instance_valid(Main.I.player):
 				Main.I.player.on_bullet_miss()
 			if not hit and randf() < 0.5 and Boom3D.active():   # VFX-04: a round that missed lands in the dirt
 				Boom3D.ensure().ground_hit(p)
@@ -566,7 +568,7 @@ func _bullet_k(src: String, e: Enemy) -> float:
 	if not is_instance_valid(pl):
 		return 1.0
 	var k := 1.0
-	if pl.patch("kinetic") >= 1 and e.hp > e.max_hp * 0.5:
+	if pl.arch_rank("kinetic") >= 1 and e.hp > e.max_hp * 0.5:
 		if src == "гондола" or src == "турели":
 			k *= ArchBalance.KIN_K
 		elif src.begins_with("курсовое"):

@@ -72,6 +72,7 @@ func repair(frac: float) -> void:
 		hp = minf(max_hp, hp + max_hp * frac)
 
 
+## Damage to this wingman; downed, it comes back after WING_BACK_BASE s («Командир звена» I: WING_BACK)
 func damage(amount: float) -> void:
 	var p := Main.I.player
 	if not alive() or Main.I.god_mode:

@@ -986,7 +986,10 @@ func album_ids() -> Array:
 	for sk in PlaneClasses.SKILL3:
 		skill_ids.append(PlaneClasses.SKILL3[sk]["syn"]["id"])
 	var syn_ids: Array = Cards.SYNERGIES.keys().filter(func(x): return Cards.syn_offered(x))
-	return AlbumBook.ids(syn_ids, skill_ids, Modernizations.all().keys(), WeaponProfiles.DEFS)
+	var ids := AlbumBook.ids(syn_ids, skill_ids, Modernizations.all().keys(), WeaponProfiles.DEFS)
+	if Tuning.g("build_arch") < 0.5:   # PG-11 A off (F1): archetype ranks cannot be found
+		ids = ids.filter(func(x): return AlbumBook.kind(String(x)) != "arch")
+	return ids
 
 
 # ---------- медали (Kanta 27.10, «Наградная планка»; MedalBalance) ----------

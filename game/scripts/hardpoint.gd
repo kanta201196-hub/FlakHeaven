@@ -247,6 +247,8 @@ func _owner_k() -> float:
 	return k * (1.0 + float(p.mods.get("hp_dmg", 0.0)))
 
 
+## Range of this hardpoint's weapon, px: weapon table, profile, modernization, hangar and class factors,
+## «Турельщик» I for turrets
 func range_px() -> float:
 	var base: float = Weapons.DEFS[weapon]["range"] * _evo_k("range") * prof_k("range")   # PG-06
 	var p := Main.I.player if Main.I != null else null
@@ -280,6 +282,7 @@ func range_px() -> float:
 	return base
 
 
+## One frame of the hardpoint: turret aim and sweeps, cooldown, firing by weapon, «Ракетчик» II second launch
 func update(delta: float, p: Player) -> void:
 	if is_empty():
 		return
@@ -842,16 +845,15 @@ func _fire_gun(p: Player) -> bool:
 	return true
 
 
-var _sweep_cd := 0.0
 var _tracer_n := 0
 
 
-## «Турельщик» II: every TUR_CLEAR_CD the turrets shoot down the enemy bullets close to the plane
-func _arch_sweep(delta: float, p: Player) -> void:
-	_sweep_cd -= delta
-	if _sweep_cd > 0.0 or p.arch_rank("turrets") < 2:
+## «Турельщик» II: every TUR_CLEAR_CD the turrets shoot down the enemy bullets close to the plane. The timer lives
+## on the player, so two turret groups still sweep once per TUR_CLEAR_CD.
+func _arch_sweep(_delta: float, p: Player) -> void:
+	if p.arch_sweep_at > Main.I.run_time or p.arch_rank("turrets") < 2:
 		return
-	_sweep_cd = ArchBalance.TUR_CLEAR_CD
+	p.arch_sweep_at = Main.I.run_time + ArchBalance.TUR_CLEAR_CD
 	var n: int = Main.I.projectiles.intercept_bullets(p.global_position, ArchBalance.TUR_CLEAR_R)
 	if n > 0:
 		Main.I.tele.add("arch_turret_sweep", n)

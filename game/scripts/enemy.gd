@@ -165,6 +165,7 @@ func kind() -> String:
 	return "враг"
 
 
+## Damage from the player's side after every multiplier (medals, archetypes, defences, caps); kills at 0 HP
 func take_hit(dmg: float, source := "прочее") -> void:
 	if hp <= 0.0:
 		return

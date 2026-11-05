@@ -1087,6 +1087,8 @@ static func _alien(p: Player, card: Dictionary) -> bool:
 	return true
 
 
+## The cards of one level-up screen: guaranteed places (synergy, modernization, mastery, profile, fork), the locked
+## card, class guarantees, then weighted picks under the issue rules; trade-off cards come at a fixed rarity
 static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary, min_r := 0) -> Array:
 	var out: Array = []
 	var cands := _candidates(p, banned)
@@ -1222,6 +1224,7 @@ static func on_declined(p: Player, offers: Array, chosen: Dictionary) -> void:
 			p.evo_wait[String(c.get("evo", c["weapon"]))] = p.picks + 3
 
 
+## Takes card `card`: its effect by kind, tag points (and archetype ranks through `Player.add_tags`), the logs
 static func apply(p: Player, card: Dictionary) -> void:
 	var r := int(card["rarity"])
 	var k: float = RARITY[r]["k"]

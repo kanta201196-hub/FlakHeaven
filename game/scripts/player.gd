@@ -62,7 +62,10 @@ var ranks_t := 0.0         # «Сомкнуть строй»
 var man_buff_t := 0.0      # «Манёвренный» II: +20% damage after a manoeuvre
 var _man_reload_cd := 0.0  # «Манёвренный» III: once per ArchBalance.MAN_RELOAD_CD
 var _hurt_t := 99.0        # «Броненосец» III: seconds since the last hit taken
-var _arch_gun_n := 0       # «Стрелок» III: course-gun shells fired, every KIN_HE_EVERY-th is HE
+var _arch_gun_n := 0
+var arch_sweep_at := 0.0   # «Турельщик» II: run time of the next bullet sweep (one timer for every turret group)
+var _arch_ranks := {}      # archetype rank per tag (ArchBalance.rank), kept in step with `tags` by add_tags
+var _regen_acc := 0.0      # «Броненосец» III: repair gathered until it is a whole point (the «healed» stat counts integers)       # «Стрелок» III: course-gun shells fired, every KIN_HE_EVERY-th is HE
 var roller_t := 0.0        # связка «Каток»
 var _roller_cd := 0.0
 ## PG-11 «Броневой бой»: stacks of course gun damage from hits taken, and time left on them
@@ -267,15 +270,11 @@ func tag(t: String) -> int:
 
 ## Archetype rank 0…3 of tag `t` (PG-11 Б3, `ArchBalance`). F1 `build_arch` = 0 — s15 rules: no ranks
 ## (the «нашивки» of 3.1 were off since 3.2, so every rank check reads 0 there).
+## Ranks are cached per tag (`_arch_ranks`, refreshed in `add_tags`): the check runs on every hit and shot.
 func arch_rank(t: String) -> int:
 	if Tuning.g("build_arch") < 0.5:
 		return 0
-	return ArchBalance.rank(t, tag(t))
-
-
-## Old name of the rank check («нашивка»), kept for the hooks in projectiles and damage
-func patch(t: String) -> int:
-	return arch_rank(t)
+	return int(_arch_ranks.get(t, 0))
 
 
 ## Adds tag points; a crossed archetype rank gets its banner, telemetry and one-time effects (`_arch_up`).
@@ -284,6 +283,7 @@ func add_tags(arr: Array, n := 1, quiet := false) -> void:
 	for t in arr:
 		var before := tag(t)
 		tags[t] = before + n
+		_arch_ranks[t] = ArchBalance.rank(String(t), before + n)
 		if Tuning.g("build_arch") < 0.5:
 			continue
 		for r: int in ArchBalance.ranks_crossed(String(t), before, before + n):
@@ -427,7 +427,7 @@ func evolve(id: String) -> void:
 
 ## Множитель урона ракет: «Глазастик», «Ракетчик» I
 func missile_k() -> float:
-	return float(mods["missile_dmg"]) * (ArchBalance.MSL_K if patch("missiles") >= 1 else 1.0)
+	return float(mods["missile_dmg"]) * (ArchBalance.MSL_K if arch_rank("missiles") >= 1 else 1.0)
 
 
 ## «Ласка»: шанс сорвать захват вражеской ракеты рядом с ведущим
@@ -708,6 +708,7 @@ func add_wingman(type := "swift", k := 1.0, temp := false, life := 0.0) -> void:
 	Main.I.world.add_child(w)
 
 
+## A manual-fire course shell hit: the «обороты» grow (twice as fast at «Стрелок» III)
 func on_bullet_hit() -> void:
 	if manual_mode:
 		var step := Tuning.g("manual_step") * (ArchBalance.KIN_REV_K if arch_rank("kinetic") >= 3 else 1.0)   # «Стрелок» III
@@ -777,6 +778,7 @@ func heal(amount: float, src := "прочее") -> void:
 
 
 ## Takes a hit of `amount` from `source` / `who` after dodges, difficulty, shields and synergy reactions
+## Incoming damage after dodges, shields, archetype and perk rules; resets the «Броненосец» III no-hit timer
 func damage(amount: float, source := "прочее", who := "") -> void:
 	if is_invulnerable() or hp <= 0.0:
 		return
@@ -792,7 +794,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	if shield_t > 0.0:
 		_shield_absorbed += amount * 0.7
 		amount *= 0.3
-	if patch("armor") >= 1:
+	if arch_rank("armor") >= 1:
 		amount *= ArchBalance.ARMOR_K
 	if umbrella_t > 0.0 and lvl_of("umbrella") >= 3:
 		amount *= 0.8
@@ -818,6 +820,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	amount *= float(mods["taken_k"])
 	var big_hit := amount > max_hp * 0.1
 	hp -= amount
+	_hurt_t = 0.0
 	if has_perk("a_arm2") and not _second_wind and hp > 0.0 and hp < max_hp * 0.25:
 		_second_wind = true # перк «Второе дыхание»
 		heal(max_hp * 0.2, "perk")
@@ -829,8 +832,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	if who != "":
 		Main.I.add_stat("taken_by", who, amount)
 	invuln = AcesBalance.HIT_INVULN if Main.aces() else HullBalance.HIT_INVULN
-	_hurt_t = 0.0
-	if big_hit and patch("armor") >= 2 and _armor2_cd <= 0.0:
+	if big_hit and arch_rank("armor") >= 2 and _armor2_cd <= 0.0:
 		invuln = ArchBalance.ARMOR_INV
 		_armor2_cd = ArchBalance.ARMOR_INV_CD
 	if manual_mode:

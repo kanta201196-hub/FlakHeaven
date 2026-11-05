@@ -2,7 +2,7 @@ class_name ArchBalance
 extends RefCounted
 ## Archetypes with rule ranks (PG-11 part A, Б3, Kanta 05.11.2026 «Давай все предложения, которые ты рекомендуешь,
 ## сразу»). Every tag (`Prog.TAGS`) is an archetype the player sees in combat. Tag points from cards raise its rank at
-## ARCH_AT; each rank changes a rule of how the plane fights, not only a number. The old «нашивки» (`Prog.PATCHES`,
+## ARCH_AT; each rank changes a rule of how the plane fights, not only a number. The old «нашивки» (3.1,
 ## off since 3.2) are the first two ranks, except where their effect now lives in a synergy (`Cards.SYNERGIES`).
 ## Turrets stay a separate archetype from «Стрелок»: their points come from different cards (turret upgrades, servo,
 ## «Погонное кольцо») and only «Грач» and «Кит» carry turrets, so a merged archetype would fill twice as fast on them.

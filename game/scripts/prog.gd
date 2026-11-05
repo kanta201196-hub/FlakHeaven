@@ -28,19 +28,6 @@ const MODULE_TAGS := {
 	"gun_belt": ["kinetic"], "turret_ring": ["turrets"],   # PG-11: archetype cards (F1 build_arch)
 }
 
-## Нашивки 3.1 (off since 3.2), kept as the history of the archetype ranks: PG-11 moved them to
-## `ArchBalance` (ranks I–III, thresholds per archetype); this table is not read by the game
-const PATCH_AT := [4, 8]
-const PATCHES := {
-	"missiles": ["+10% урона ракет", "20% шанс пуска второй ракеты"],
-	"blast": ["край взрыва бьёт на 50% (было 35%)", "враг, убитый взрывом, сам взрывается (30% урона)"],
-	"kinetic": ["+10% урона по целям с прочностью > 50%", "пули гондолы и турелей пробивают ещё 1 цель"],
-	"turrets": ["+10% дальности турелей", "каждая турель сбивает ракету раз в 3 с"],
-	"wing": ["сбитый ведомый возвращается за 12 с (было 20)", "+1 ведомый сверх лимита"],
-	"maneuver": ["перезарядка уклонения −1 с", "2 с после уклонения или форсажа: +20% урона всему"],
-	"armor": ["−8% входящего урона", "раз в 12 с сильный удар (> 10% прочности) даёт 1 с неуязвимости"],
-}
-
 ## Эволюции: оружие ур. 5 + модуль-катализатор ×N, с 7:00 (EVO_TIME). "gun" — курсовое.
 const EVO_TIME := 420.0
 const EVOS := {
