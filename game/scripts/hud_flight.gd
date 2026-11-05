@@ -162,7 +162,7 @@ func draw_post(m: Main, size: Vector2) -> void:
 		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, by, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
 		_ctext(by + 32.0, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
 
-	if m.run_time > 180.0 or m.state != "playing" or int(Profile.data.get("sorties", 0)) >= KEY_HINT_SORTIES:
+	if m.run_time > 180.0 or m.state != "playing" or int(Profile.data.get("sorties", 0)) >= KEY_HINT_SORTIES or MobileRules.on:
 		return
 	# first minutes of the first sorties: how to steer and pause (skill keys are on the bar tiles). s15: it came on
 	# every sortie, the 47th too. The steering key follows the control scheme (it said «МЫШЬ» on the keyboard too).
@@ -423,7 +423,7 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 	for g in p.groups:
 		if not (g as Hardpoint).is_empty():
 			weps.append(g)
-	var skills := _skill_list(p)
+	var skills := skill_list(p)
 	var extras := _extra_list(p)
 	var cols: Array[BarCol] = []
 	var sig: Array = [size, _side_top, TranslationServer.get_locale(), Settings.font]
@@ -457,11 +457,16 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 		y += rh
 	# bottom bar: skills only. s15: a two-line name with a long hint cut the hint («бомбы и ракет…»), so the
 	# bar grows upwards by the lines the wordiest skill needs over the base (one-line name, two hint lines)
+	# on a touch screen the skills are the touch buttons (TouchControls), so the bar is not drawn
+	if MobileRules.on:
+		skills = []
 	var w := skills.size() * BAR_COL + 20.0
 	var extra := 0.0
 	for sk: Dictionary in skills:
 		extra = maxf(extra, _skill_text_h(sk) - SKILL_TEXT_BASE)
 	var r := Rect2((size.x - w) / 2.0, size.y - 158.0 - extra, w, 146.0 + extra)
+	if skills.is_empty():
+		r = Rect2(size.x / 2.0, size.y - 12.0, 0.0, 0.0)
 	bar_top = r.position.y
 	_bar_rect = r
 	sig.append(r)
@@ -621,8 +626,9 @@ func _extra_list(p: Player) -> Array:
 	return out
 
 
-## Skills on the bar: [{key (icon), action, title, hint, desc, cd, full, active, fam}].
-func _skill_list(p: Player) -> Array:
+## Skills on the bar: [{key (icon), action, title, hint, desc, cd, full, active, fam}]. Static, so
+## the touch buttons (TouchControls) show the same skills, icons and cooldowns as the bar.
+static func skill_list(p: Player) -> Array:
 	var out: Array = []
 	if p.has_roll():
 		out.append({"key": "roll", "action": "roll", "title": Loc.t("Уклонение"), "hint": Loc.t("бочка: уход от ракет"),

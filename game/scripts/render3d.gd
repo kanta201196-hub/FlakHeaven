@@ -327,7 +327,7 @@ func apply_gfx() -> void:
 	vp.use_taa = aa == GfxPresets.AA_TAA
 	vp.scaling_3d_mode = [Viewport.SCALING_3D_MODE_BILINEAR, Viewport.SCALING_3D_MODE_FSR, Viewport.SCALING_3D_MODE_FSR2][Settings.gopt("upscale")]
 	var pct: int = GfxPresets.SCALES[Settings.gopt("scale")]
-	vp.scaling_3d_scale = pct / 100.0
+	vp.scaling_3d_scale = pct / 100.0 * MobileRules.scale_k(float(DisplayServer.window_get_size().y))
 	_combat_max = 1400.0 + (pct - 60) * 30.0
 	if _env != null and Settings.forward_plus():
 		var ao := Settings.gopt("ssao")

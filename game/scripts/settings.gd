@@ -251,7 +251,7 @@ static func forward_plus() -> bool:
 ## Effective value of graphics option `id` (GfxPresets.IDS) for the running renderer. Systems
 ## read this instead of `gfx`, so a custom mix (say, low effects with high terrain) works.
 func gopt(id: String) -> int:
-	return GfxPresets.fallback(id, int(gfx_opts.get(id, 0)), forward_plus())
+	return MobileRules.cap(id, GfxPresets.fallback(id, int(gfx_opts.get(id, 0)), forward_plus()))
 
 
 ## Picks quality preset `i`: every option takes its value (also used by the low-FPS auto-drop).
