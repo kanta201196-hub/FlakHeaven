@@ -36,6 +36,10 @@ Items from the s15 recordings and log review (04.11.2026, `/mnt/project-files/s1
 | S15-15 | «МЫШЬ куда лететь» hint on every sortie | Починить интерфейс по замечаниям s15 | merged #548 04.11, check in the next build: first 3 sorties only, key of the chosen control scheme |
 | S15-07 | «Playback can only happen when a node is inside the scene tree» in the log | Ускорить большие бои | merged #549 04.11: the Fortress drone started before the Fortress entered the world, now autoplay; check the next build's log |
 | S15-08 | VRAM in «Битва асов» 3460 MB vs 2600 MB in the campaign | Ускорить большие бои | merged #549 04.11: skin and hq weapon caches kept the hangar plane's full-size textures after takeoff; cleared on takeoff (cloud, Kanta's profile: combat textures 392 → 224 MB). Also restored 363 turret `.import` files emptied by c5c98e82. Check `vram_mb` aces vs campaign in the next build's log |
+| S15-09 | Pale patches with a stair-step «pixel» edge all over the Highlands (ridge snow and the takyr border followed relief triangles) | 3D-модели по плану Kirill | merged #557 05.11 behind F1 `sand_edge` (off until Kanta's «ок», R-22): wider band broken by noise; a few rock-outcrop patches keep straighter edges |
+| S15-10 | Scorch marks too black and large; a dark strip along cliffs | 3D-модели по плану Kirill | merged #558 05.11 behind F1 `scorch_soft` (off until «ок»): burnt-brown soft mark, 0.7 size, not on slopes over ~40°. The long band along cliffs is the canyon sun shadow, not scorch (not changed) |
+| S15-11 | White clouds hide enemies; the left weapon column is unreadable over a cloud | 3D-модели по плану Kirill | merged #559 05.11 behind F1 `cloud_soft` and `hud_backing` (off until «ок»): clouds without Forward+ over-exposure, shaded underside, thinner over the fight; column backing 0.38 → 0.78 |
+| S15-12 | Own plane lost under effects in the last minutes | 3D-модели по плану Kirill | merged #560 05.11 behind F1 `own_plane_read` (off until «ок»): effects fully clear over the plane, zone 2.2 → 2.8 lengths, thin hull outline above effects; bright sparks still not faded |
 
 ## Правки по сборке 3.5-s14
 
