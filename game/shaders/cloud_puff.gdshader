@@ -22,7 +22,7 @@ uniform float soft_k = 0.0;
 #if CURRENT_RENDERER == RENDERER_COMPATIBILITY
 #define CLOUD_SOFT_EXP 0.9
 #else
-#define CLOUD_SOFT_EXP (FX_EXP * 1.1)
+#define CLOUD_SOFT_EXP (FX_EXP * 0.95)
 #endif
 
 varying vec2 v_sun;     // смещение к солнцу в UV квадрата
