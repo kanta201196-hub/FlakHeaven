@@ -214,7 +214,7 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 	# text with terms; the "either-or" warning goes to a red box at the bottom
 	var desc := Loc.out(Loc.t(String(c["desc"])))
 	var warn := ""
-	if pair and kind == "branch":
+	if (pair and kind == "branch") or kind == "trade":   # PG-11 (Б4): the minus of a trade-off card goes to the red box
 		warn = desc.substr(desc.get_slice("\n", 0).length()).strip_edges()
 		desc = desc.get_slice("\n", 0)
 	var path := _card_path(p, c)

@@ -48,8 +48,7 @@ func _handle_skills() -> void:
 		pl.roll_dir = _turn_side()
 		if pl.syn.has("mirror"):
 			_mirror_fan()
-		if pl.patch("maneuver") >= 2:
-			pl.man_buff_t = 2.0
+		pl.arch_maneuver()
 		Main.I.sfx.play("roll", -10.0)
 	if Input.is_action_just_pressed("dive") and pl.dive_cd <= 0.0 and pl.dive_t <= 0.0:
 		pl.dive_t = pl.dive_time()
@@ -60,8 +59,7 @@ func _handle_skills() -> void:
 		pl.ab_t = pl.ab_time_full()
 		pl._pass_hit.clear()
 		pl.ab_cd = pl.ab_cd_full()
-		if pl.patch("maneuver") >= 2:
-			pl.man_buff_t = 2.0
+		pl.arch_maneuver()
 		Main.I.sfx.play("afterburner", -8.0)
 	if Input.is_action_just_pressed("sharp_turn") and pl.s3_cd <= 0.0 and pl.s3_active() <= 0.0:
 		_activate_skill3(pl.skill3, 0)
@@ -335,8 +333,7 @@ func _flare_salvo(on_f := false) -> void:
 	Main.I.stats_add_counter("intercepted", n)
 	if pl.syn.has("mirror"):
 		_mirror_fan()
-	if pl.patch("maneuver") >= 2:
-		pl.man_buff_t = 2.0
+	pl.arch_maneuver()
 	Main.I.sfx.play("flare", -6.0, 1.4)
 
 
