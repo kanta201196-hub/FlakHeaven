@@ -77,7 +77,7 @@ void fragment() {
 	ALBEDO = col * mix(1.0, CLOUD_SOFT_EXP, soft_k);
 	// Kanta s13: a cloud over the fight hid half the screen with the enemies and the player's plane under it;
 	// it thins out to a fifth over a window around the player (3 × the effects' clear zone).
-	// S15-G11 (soft_k): every puff a quarter thinner, the window wider (4 ×) and clearer (cut 0.88)
-	ALPHA = smoothstep(0.05, 0.5, a) * v_data.w * mix(1.0, 0.75, soft_k)
-		* fx_clear_kr(SCREEN_UV, VIEWPORT_SIZE, mix(3.0, 4.0, soft_k), mix(0.8, 0.88, soft_k));
+	// S15-G11 (soft_k): every puff 15 % thinner, the window wider (3.6 ×) and clearer (cut 0.88)
+	ALPHA = smoothstep(0.05, 0.5, a) * v_data.w * mix(1.0, 0.85, soft_k)
+		* fx_clear_kr(SCREEN_UV, VIEWPORT_SIZE, mix(3.0, 3.6, soft_k), mix(0.8, 0.88, soft_k));
 }
