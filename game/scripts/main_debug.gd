@@ -974,6 +974,14 @@ func _run_autotest(delta: float) -> void:
 							if want:
 								m.choose_card(ci)
 								return
+				# PG-11: --bot=arch:<tag> — a focused sortie: the bot takes cards that give points to this archetype
+				for a in m._args:
+					if String(a).begins_with("--bot=arch:"):
+						var at := String(a).substr(11)
+						for ci in m.offers.size():
+							if at in Prog.card_tags(m.player, m.offers[ci]):
+								m.choose_card(ci)
+								return
 				# EX-05: сценарий сборки — --bot=evo:<оружие>: бот собирает модернизацию этого оружия
 				for a in m._args:
 					if String(a).begins_with("--bot=evo:"):

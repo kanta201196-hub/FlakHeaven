@@ -59,7 +59,10 @@ var ram_t := 0.0           # «Звуковой удар»: таран
 var assault_t := 0.0       # «Штурмовой заход»
 var umbrella_t := 0.0      # «Зенитный зонтик»
 var ranks_t := 0.0         # «Сомкнуть строй»
-var man_buff_t := 0.0      # нашивка «Манёвр II»
+var man_buff_t := 0.0      # «Манёвренный» II: +20% damage after a manoeuvre
+var _man_reload_cd := 0.0  # «Манёвренный» III: once per ArchBalance.MAN_RELOAD_CD
+var _hurt_t := 99.0        # «Броненосец» III: seconds since the last hit taken
+var _arch_gun_n := 0       # «Стрелок» III: course-gun shells fired, every KIN_HE_EVERY-th is HE
 var roller_t := 0.0        # связка «Каток»
 var _roller_cd := 0.0
 var _armor2_cd := 0.0
@@ -257,14 +260,66 @@ func tag(t: String) -> int:
 	return int(tags.get(t, 0))
 
 
-## 3.2: нашивок больше нет (их заметные эффекты перешли в связки) — всегда 0
-func patch(_t: String) -> int:
-	return 0
+## Archetype rank 0…3 of tag `t` (PG-11 Б3, `ArchBalance`). F1 `build_arch` = 0 — s15 rules: no ranks
+## (the «нашивки» of 3.1 were off since 3.2, so every rank check reads 0 there).
+func arch_rank(t: String) -> int:
+	if Tuning.g("build_arch") < 0.5:
+		return 0
+	return ArchBalance.rank(tag(t))
 
 
-func add_tags(arr: Array, n := 1, _quiet := false) -> void:
+## Old name of the rank check («нашивка»), kept for the hooks in projectiles and damage
+func patch(t: String) -> int:
+	return arch_rank(t)
+
+
+## Adds tag points; a crossed archetype rank gets its banner, telemetry and one-time effects (`_arch_up`).
+## `quiet` — the starting loadout (no banner).
+func add_tags(arr: Array, n := 1, quiet := false) -> void:
 	for t in arr:
-		tags[t] = tag(t) + n
+		var before := tag(t)
+		tags[t] = before + n
+		if Tuning.g("build_arch") < 0.5:
+			continue
+		for r: int in ArchBalance.ranks_crossed(before, before + n):
+			_arch_up(String(t), r, quiet)
+
+
+## Archetype `t` reached rank `r`: banner and effect line, log time, telemetry `arch_rank_<tag>_<n>` (minute),
+## and the effects that apply once («Командир звена» II and III)
+func _arch_up(t: String, r: int, quiet: bool) -> void:
+	var now := Main.I.run_time if Main.I != null else 0.0
+	patch_times["%s_%d" % [t, r]] = snappedf(now, 0.1)
+	if Main.I != null and Main.I.tele != null:
+		Main.I.tele.v["arch_rank_%s_%d" % [t, r]] = snappedf(now / 60.0, 0.01)
+	if t == "wing" and (r == 2 or (r == 3 and ArchBalance.wing_full(int(cls.get("wingmen", 1)), Cards.WING_MAX))):
+		mods["wing_dmg"] *= ArchBalance.WING_K
+		if r == 2:
+			mods["wing_hp"] *= ArchBalance.WING_K
+			for w in wingmen:
+				(w as Wingman).refresh_hp()
+	if quiet or Main.I == null:
+		return
+	var d: Dictionary = ArchBalance.DEFS[t]
+	Events.banner.emit(Loc.t("АРХЕТИП «%s» — РАНГ %s") % [Loc.t(String(d["title"])).to_upper(), Prog.ROMAN[r]], 3.5)
+	Main.I.fx.text(global_position + Vector2(0, -80), Loc.t(String(d["ranks"][r - 1]["desc"])), Prog.TAGS[t]["color"])
+	Main.I.fx.ring(global_position, 200.0, Prog.TAGS[t]["color"])
+	Main.I.sfx.play("synergy", -10.0, 1.9)
+
+
+## «Манёвренный»: a dodge, flare salvo or afterburner. II — 2 s of +20% damage; III — every hardpoint's
+## cooldown halved, at most once per MAN_RELOAD_CD
+func arch_maneuver() -> void:
+	var r := arch_rank("maneuver")
+	if r >= 2:
+		man_buff_t = ArchBalance.MAN_BUFF_T
+	if r >= 3 and _man_reload_cd <= 0.0:
+		_man_reload_cd = ArchBalance.MAN_RELOAD_CD
+		for g in groups:
+			var h: Hardpoint = g
+			if not h.is_empty() and h.cd > 0.0:
+				h.cd *= ArchBalance.MAN_RELOAD_K
+		Main.I.fx.ring(global_position, 120.0, Prog.TAGS["maneuver"]["color"])
 
 
 # ---------- 3.2: курс и связки ----------
@@ -345,9 +400,9 @@ func evolve(id: String) -> void:
 			return
 
 
-## Множитель урона ракет: «Глазастик», нашивка «Ракеты I»
+## Множитель урона ракет: «Глазастик», «Ракетчик» I
 func missile_k() -> float:
-	return float(mods["missile_dmg"]) * (1.1 if patch("missiles") >= 1 else 1.0)
+	return float(mods["missile_dmg"]) * (ArchBalance.MSL_K if patch("missiles") >= 1 else 1.0)
 
 
 ## «Ласка»: шанс сорвать захват вражеской ракеты рядом с ведущим
@@ -466,12 +521,17 @@ func roll_time() -> float:
 ## Cooldown the barrel roll gets when used now. Never shorter than the roll + 1 s, so
 ## upgrades cannot chain rolls into permanent invulnerability. Also shown by the HUD.
 func roll_cd_full() -> float:
-	return maxf(maxf(2.0, roll_time() + 1.0), (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+	return maxf(maxf(2.0, roll_time() + 1.0), (Tuning.g("roll_cd") + mods["roll_cd"] - _arch_roll()) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
 
 
 ## Cooldown of the flare salvo that replaces the roll on «Кит» (same upgrades as the roll).
 func salvo_cd_full() -> float:
-	return maxf(3.0, (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+	return maxf(3.0, (Tuning.g("roll_cd") + mods["roll_cd"] - _arch_roll()) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+
+
+## «Манёвренный» I: seconds off the dodge (and flare salvo) cooldown
+func _arch_roll() -> float:
+	return ArchBalance.MAN_ROLL_CD if arch_rank("maneuver") >= 1 else 0.0
 
 
 ## Cooldown of the dive when used now (at least the dive + 1 s).
@@ -621,7 +681,8 @@ func add_wingman(type := "swift", k := 1.0, temp := false, life := 0.0) -> void:
 
 func on_bullet_hit() -> void:
 	if manual_mode:
-		manual_bonus = minf(Tuning.g("manual_max"), manual_bonus + Tuning.g("manual_step"))
+		var step := Tuning.g("manual_step") * (ArchBalance.KIN_REV_K if arch_rank("kinetic") >= 3 else 1.0)   # «Стрелок» III
+		manual_bonus = minf(Tuning.g("manual_max"), manual_bonus + step)
 		_since_hit = 0.0
 		Main.I.peak_rev = maxf(Main.I.peak_rev, manual_bonus)
 
@@ -702,7 +763,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 		_shield_absorbed += amount * 0.7
 		amount *= 0.3
 	if patch("armor") >= 1:
-		amount *= 0.92
+		amount *= ArchBalance.ARMOR_K
 	if umbrella_t > 0.0 and lvl_of("umbrella") >= 3:
 		amount *= 0.8
 	if ranks_t > 0.0:
@@ -735,9 +796,10 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	if who != "":
 		Main.I.add_stat("taken_by", who, amount)
 	invuln = AcesBalance.HIT_INVULN if Main.aces() else 0.7
+	_hurt_t = 0.0
 	if big_hit and patch("armor") >= 2 and _armor2_cd <= 0.0:
-		invuln = 1.0
-		_armor2_cd = 12.0
+		invuln = ArchBalance.ARMOR_INV
+		_armor2_cd = ArchBalance.ARMOR_INV_CD
 	if manual_mode:
 		manual_bonus = maxf(0.0, manual_bonus - Tuning.g("manual_hit_penalty"))
 	Events.player_damaged.emit(amount)

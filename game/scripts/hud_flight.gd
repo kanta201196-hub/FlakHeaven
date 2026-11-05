@@ -232,6 +232,9 @@ func _left_panel(m: Main, p: Player) -> void:
 		extra = 42.0 + (30.0 if p.has_course() else 0.0)
 		UiStyle.panel(ctrl, Rect2(x, y, pw, extra), Color(1, 1, 1, 0.08), Color(0.03, 0.035, 0.035, 0.6))
 		_course_bar(p, Vector2(x + 14, y + 8))
+	var arch_h := _arch_strip(p, Rect2(x, y + extra + (6.0 if extra > 0.0 else 0.0), pw, ARCH_H))
+	if arch_h > 0.0:
+		extra += arch_h + (6.0 if extra > 0.0 else 0.0)
 	if m.god_mode:
 		_text(Vector2(x, y + extra + 24), "ОТЛАДКА: неуязвимость (F7)", 16, Color(1, 0.5, 0.5))
 	_side_top = y + extra + (40.0 if m.god_mode else 12.0)
@@ -239,6 +242,42 @@ func _left_panel(m: Main, p: Player) -> void:
 		var mp := ctrl.get_local_mouse_position()
 		ctrl.draw_arc(mp, 12.0, 0.0, TAU, 24, Color(1, 1, 1, 0.7), 2.0)
 		ctrl.draw_circle(mp, 2.0, Color(1, 1, 1, 0.9))
+
+
+const ARCH_H := 50.0
+
+
+## PG-11 (Б3): top three archetypes by tag points — name, rank and points to the next rank, a thin bar of the
+## progress to it. Nothing with F1 build_arch = 0 or before the first points. Returns the height used.
+func _arch_strip(p: Player, r: Rect2) -> float:
+	if Tuning.g("build_arch") < 0.5 or Main.aces():
+		return 0.0
+	var top := ArchBalance.top(p.tags, Prog.TAG_ORDER, 3)
+	if top.is_empty():
+		return 0.0
+	UiStyle.panel(ctrl, r, Color(1, 1, 1, 0.08), Color(0.03, 0.035, 0.035, 0.6))
+	var cw := (r.size.x - 16.0) / 3.0
+	var hf := UiStyle.head_font(700, 1)
+	for i in top.size():
+		var t: String = top[i]
+		var pts := p.tag(t)
+		var rk := ArchBalance.rank(pts)
+		var cx := r.position.x + 8.0 + cw * i
+		var col: Color = Prog.TAGS[t]["color"]
+		HudIcons.disc(ctrl, Vector2(cx + 14.0, r.position.y + r.size.y / 2.0 - 2.0), 10.0, t)
+		var tx := cx + 30.0
+		var tw := cw - 34.0
+		UiStyle.text(ctrl, hf, Vector2(tx, r.position.y + 20.0), Loc.t(String(ArchBalance.DEFS[t]["title"])), UiStyle.FS_CAPTION,
+			UiStyle.TEXT if rk > 0 else UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, tw)
+		var nx := ArchBalance.next_at(pts)
+		var sub: String = (Prog.ROMAN[rk] + "  ") if rk > 0 else ""
+		sub += Loc.t("МАКС") if nx < 0 else "%d/%d" % [pts, nx]
+		UiStyle.text(ctrl, hf, Vector2(tx, r.position.y + 37.0), sub, UiStyle.FS_CAPTION, col if rk > 0 else UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, tw)
+		var lo := 0 if rk == 0 else int(ArchBalance.ARCH_AT[rk - 1])
+		var k := 1.0 if nx < 0 else clampf(float(pts - lo) / float(nx - lo), 0.0, 1.0)
+		ctrl.draw_rect(Rect2(tx, r.position.y + 42.0, tw - 6.0, 3.0), Color(1, 1, 1, 0.12))
+		ctrl.draw_rect(Rect2(tx, r.position.y + 42.0, (tw - 6.0) * k, 3.0), col)
+	return r.size.y
 
 
 ## Green "+" of the hull row

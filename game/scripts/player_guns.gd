@@ -125,7 +125,19 @@ func _fire_one(fwd: Vector2, aim: Vector2, lead: bool, age := 0.0) -> void:
 		var spd := bullet_speed() * 1.3
 		Main.I.projectiles.spawn_player_bullet(muzzle, aim * spd + pl.velocity, gun_damage() / 0.85 * 2.5, 900.0 / spd, pl.manual_mode, src, 99)
 	else:
-		Main.I.projectiles.spawn_player_bullet(muzzle, aim * bullet_speed() + pl.velocity, gun_damage(), Player.GUN_LIFE, pl.manual_mode, src)
+		# «Стрелок» II: shells go through one more target; III: every KIN_HE_EVERY-th shell is HE
+		var kr := pl.arch_rank("kinetic")
+		var gd := gun_damage()
+		var he := 0.0
+		if kr >= 3:
+			pl._arch_gun_n += 1
+			if pl._arch_gun_n % ArchBalance.KIN_HE_EVERY == 0:
+				gd *= ArchBalance.KIN_HE_K
+				he = ArchBalance.KIN_HE_R
+		Main.I.projectiles.spawn_player_bullet(muzzle, aim * bullet_speed() + pl.velocity, gd, Player.GUN_LIFE, pl.manual_mode, src,
+			ArchBalance.KIN_PIERCE if kr >= 2 else 0, he)
+		if he > 0.0:
+			Main.I.projectiles.bullets[-1]["he_src"] = "курсовое (фугас)"
 	var bl: Dictionary = Main.I.projectiles.bullets[-1]
 	if pl.gun_variant != "std":
 		bl["gun"] = pl.gun_variant   # PG-01: tracer look by variant (projectiles / render3d)

@@ -30,6 +30,8 @@ var min_life := 0.0      # правка 3.5-s4: асы — корпус не б�
 var _cap_budget := -1.0
 var _cap_t := 0.0
 var silence := 0.0
+## «Ракетчик» III: run time until which this target carries a missile mark (ArchBalance.MARK_*)
+var arch_mark_until := -INF
 var move_vel := Vector2.ZERO   # 3.1: фактическая скорость (для пуль стрелка)
 var _drift := Vector2.INF      # тест 3.5-s7: скорость, с которой заглушённый ЭМИ самолёт летит по инерции
 var _prev_pos := Vector2.INF   # 3.1: ЭМИ «Ласки» — враг молчит
@@ -173,6 +175,8 @@ func take_hit(dmg: float, source := "прочее") -> void:
 			Main.I.tele.add("mastery_dmg", dmg * (1.0 - 1.0 / mk))
 	last_src = source
 	var rc := src_class(source)
+	if is_instance_valid(Main.I.player):
+		dmg *= _arch_k(Main.I.player, rc)
 	if (rc == "gun" or rc == "blast") and is_instance_valid(Main.I.player) and not source.begins_with("ведом"):
 		var rk: float = Main.I.player.run_k()
 		if rk > 1.0:
@@ -242,6 +246,23 @@ func _cap_dps(dmg: float) -> float:
 	var d := minf(dmg, _cap_budget)
 	_cap_budget -= d
 	return d
+
+
+## Archetype multipliers on a hit of class `rc` (`src_class`): «Манёвренный» II after a manoeuvre; «Ракетчик» III —
+## a guided missile marks the target, every other source then hits it harder for MARK_TIME
+func _arch_k(pl: Player, rc: String) -> float:
+	var k := 1.0
+	if pl.man_buff_t > 0.0 and pl.arch_rank("maneuver") >= 2:
+		k *= ArchBalance.MAN_BUFF_K
+	if rc == "homing" or rc == "ap":
+		if pl.arch_rank("missiles") >= 3:
+			if arch_mark_until < Main.I.run_time:
+				Main.I.fx.ring(global_position, radius + 18.0, Prog.TAGS["missiles"]["color"])
+			arch_mark_until = Main.I.run_time + ArchBalance.MARK_TIME
+	elif arch_mark_until >= Main.I.run_time:
+		k *= ArchBalance.MARK_K
+		Main.I.tele.add("arch_mark_hits")
+	return k
 
 
 ## Most one hit from `source` may take after all multipliers; INF here. The rival ace of «Битва асов» caps

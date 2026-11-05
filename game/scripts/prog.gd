@@ -25,9 +25,11 @@ const MODULE_TAGS := {
 	"msl_head": ["missiles", "blast"], "msl_motor": ["missiles"], "launcher": ["missiles"], "gun_dmg": ["kinetic"], "gun_rate": ["kinetic"],
 	"servo": ["turrets"], "radio": ["wing"], "engine": ["maneuver"], "wing": ["maneuver"], "roll": ["maneuver"],
 	"afterburner": ["maneuver"], "armor": ["armor"],
+	"gun_belt": ["kinetic"], "turret_ring": ["turrets"],   # PG-11: archetype cards (F1 build_arch)
 }
 
-## Нашивки: очков тега 4 → I, 8 → II
+## Нашивки 3.1 (off since 3.2), kept as the history of the archetype ranks: PG-11 moved them to
+## `ArchBalance` (ranks I–III at 4 / 8 / 12 points); this table is not read by the game
 const PATCH_AT := [4, 8]
 const PATCHES := {
 	"missiles": ["+10% урона ракет", "20% шанс пуска второй ракеты"],

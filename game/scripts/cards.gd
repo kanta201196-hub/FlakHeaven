@@ -67,7 +67,12 @@ const MODULES := {
 	"afterburner": {"title": "Форсаж: тренировка", "max": 3, "cat": "Навык"},
 	"skill3": {"title": "", "max": 3, "cat": "Навык"},
 	"repair": {"title": "Ремонт в воздухе", "max": 99, "cat": "Ремонт"},
+	# PG-11 (Б3): cards that let «Стрелок» and «Турельщик» reach rank III; only with F1 build_arch = 1
+	"gun_belt": {"title": "Ленточное питание", "max": 3, "cat": "Пушка"},
+	"turret_ring": {"title": "Погонное кольцо", "max": 3, "cat": "Подвесы"},
 }
+## PG-11: modules that exist only with the archetypes on (F1 build_arch); the medal sets leave them out
+const ARCH_MODULES := ["gun_belt", "turret_ring"]
 
 ## EX-01 (отзывы внешних тестеров, решение Kanta 21.10): за вылет — не больше MOD_SLOTS разных модулей.
 ## Места заняты — выпадают только улучшения уже взятых. Ремонт и уровни навыка класса места не занимают.
@@ -110,6 +115,7 @@ const CAT_COLORS := {
 	"Мастерство класса": EVO_COLOR,
 	"Профиль оружия": EVO_COLOR,
 	"Резерв": Color(0.8, 0.8, 0.75),
+	"Плюс и минус": Color(1.0, 0.5, 0.42),
 }
 
 ## 3.2: связки — 3 слота за вылет, цель — «курс» (s3-upgrades-v2). Пороги — по номеру слота.
@@ -451,6 +457,10 @@ static func module_desc(p: Player, id: String, k: float) -> String:
 			return "%s %s: %s" % [Loc.t(d["title"]), Prog.ROMAN[nl], Loc.t(d["lv"][nl])]
 		"repair":
 			return Loc.t("Восстановить %s прочности") % _pct(minf(0.4 * k, 1.0))
+		"gun_belt":
+			return Loc.t("Пушка: +%s урона и +%s темпа") % [_pct(0.08 * k), _pct(0.08 * k)]
+		"turret_ring":
+			return Loc.t("Турели: +%s урона") % _pct(0.12 * k)
 	return ""
 
 
@@ -493,6 +503,9 @@ static func module_delta(p: Player, id: String, k: float) -> String:
 			return Loc.t("Форсаж: %.1f → %.1f с") % [a, a + 1.0 * k]
 		"repair":
 			return Loc.t("Прочность: %d → %d из %d") % [int(p.hp), int(minf(p.max_hp, p.hp + p.max_hp * minf(0.4 * k, 1.0))), int(p.max_hp)]
+		"turret_ring":
+			var tk := float(p.mods.get("turret_dmg", 1.0))
+			return Loc.t("Урон турелей: %s → %s") % [_pct(tk), _pct(tk * (1.0 + 0.12 * k))]
 	return ""
 
 
@@ -500,9 +513,10 @@ static func module_delta(p: Player, id: String, k: float) -> String:
 const WING_MAX := 2
 
 
-## Лимит ведомых класса (правка 3.5-s4, Kanta: «Оса» — 1, «Грач» и «Кит» — по 2); связки лимит больше не поднимают
+## Лимит ведомых класса (правка 3.5-s4, Kanta: «Оса» — 1, «Грач» и «Кит» — по 2); связки лимит больше не поднимают.
+## PG-11: «Командир звена» III adds one over the class limit, within WING_MAX
 static func wing_limit(p: Player) -> int:
-	return mini(WING_MAX, int(p.cls["wingmen"]))
+	return ArchBalance.wing_limit(int(p.cls["wingmen"]), WING_MAX, p.arch_rank("wing"))
 
 
 ## S9-15 (решение Kanta 23.10, вариант 1+2): с 35-го уровня у оружия ур. 5 — мастерство оружия на выбор
@@ -645,8 +659,9 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		var uw := 9.0 if p.picks < 3 and g.weapon == PlaneClasses.signature(p.cls_id) else 3.0
 		cands.append([uw, {"id": "up_%d" % gi, "ban": "up:%d" % gi, "kind": "weapon_up", "group": gi, "cat": "Оружие",
 			"title": "%s: улучшение" % Weapons.title(g.weapon)}])
+	var arch_on := Tuning.g("build_arch") >= 0.5
 	for id in MODULES:
-		if banned.has(id):
+		if banned.has(id) or (not arch_on and ARCH_MODULES.has(id)):
 			continue
 		var m: Dictionary = MODULES[id]
 		var taken := int(p.taken.get(id, 0))
@@ -672,6 +687,9 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 			"servo":
 				if not (_equipped(p, "gunpod") or _equipped(p, "turret")):
 					continue
+			"turret_ring":
+				if not _equipped(p, "turret"):
+					continue
 			"warhead":
 				w = 1.8
 			"msl_head", "msl_motor", "launcher":
@@ -685,7 +703,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 				w = 1.0
 				if id == "roll" and not p.has_roll():
 					title = "Залп ловушек: тренировка"
-			"gun_dmg", "gun_rate":
+			"gun_dmg", "gun_rate", "gun_belt":
 				w = 2.0 # 2.4: карточки курсового чаще
 		if taken > 0 and id != "repair" and id != "skill3":
 			title += " (%d → %d)" % [taken, taken + 1]
@@ -703,6 +721,8 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 			continue
 		cands.append([1.2, {"id": "wing_lvl_%d" % wi, "ban": "wl:%d" % wi, "kind": "wing_lvl", "wi": wi, "cat": "Звено",
 			"title": "Звено: слётанность — %s %d (ур. %d → %d)" % [Prog.WING_TYPES[wm.type]["short"], wi + 1, wm.lvl, wm.lvl + 1]}])
+	if arch_on:
+		_trades(p, banned, cands)
 	# S9-15: ранги взятой ветки мастерства оружия
 	for gi in p.groups.size():
 		var gb: Hardpoint = p.groups[gi]
@@ -722,6 +742,17 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 			if (c[1]["kind"] == "module" and not c[1]["id"] in ["repair", "skill3"]) or c[1]["id"] == "res_overload":
 				c[0] = float(c[0]) * BRANCH_PLUS_K
 	return cands
+
+
+## PG-11 (Б4): trade-off cards — a plus and a minus, no module slot; from ArchBalance.TRADE_LEVEL, at most
+## ArchBalance.TRADE_MAX per sortie (`ArchBalance.trade_ok`)
+static func _trades(p: Player, banned: Dictionary, cands: Array) -> void:
+	var lvl := Main.I.run.level if Main.I != null else 1
+	for id: String in ArchBalance.TRADES:
+		if banned.has(id) or not ArchBalance.trade_ok(id, lvl, p.taken, float(p.mods["hp_cd"]), RELOAD_FLOOR):
+			continue
+		cands.append([ArchBalance.TRADE_W, {"id": id, "ban": id, "kind": "trade", "cat": "Плюс и минус",
+			"title": ArchBalance.TRADES[id]["title"]}])
 
 
 static func _reserve(p: Player, cands: Array) -> void:
@@ -795,6 +826,11 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s, с %d:%02d") % [_cat_text(g2.weapon), int(Prog.EVO_TIME) / 60, int(Prog.EVO_TIME) % 60]
 		"synergy", "skill_syn":
 			card["desc"] = Loc.t(syn_def(p, card["syn"])["desc"]) + Loc.t("\nОткрывает слот %d из %d. Следующий слот дороже.") % [p.syn.size() + 1, MAX_SYN]
+		"trade":
+			# the first line is the plus (card text), the rest goes to the red box (hud_cards) — two colours
+			var td: Dictionary = ArchBalance.TRADES[card["id"]]
+			card["desc"] = Loc.t("Плюс: %s") % Loc.t(String(td["plus"])) + "\n" + Loc.t("Минус: %s") % Loc.t(String(td["minus"]))
+			card["desc"] += "\n" + Loc.t("Без места модуля; таких карт — не больше %d за вылет") % ArchBalance.TRADE_MAX
 		"branch":
 			var bgr: Hardpoint = p.groups[int(card["group"])]
 			var bd: Dictionary = branch_def(bgr.weapon, card["branch"], bgr.profile)
@@ -849,7 +885,30 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 	card["tags"] = tags_line(p, card)
 	card["course"] = advances_course(p, card)
 	card["desc"] += course_hint(p, card)
+	if card["kind"] != "trade":
+		card["desc"] += arch_hint(p, card)
 	return card
+
+
+## PG-11 card line: «▲ Стрелок 5 → 6 (ранг II на 8)» for the card's tag closest to a rank (`ArchBalance.hint_tag`);
+## "" with the archetypes off or a card without tags
+static func arch_hint(p: Player, card: Dictionary) -> String:
+	if Tuning.g("build_arch") < 0.5 or card["kind"] in ["synergy", "skill_syn", "reserve"]:
+		return ""
+	var tags := Prog.card_tags(p, card)
+	var add := 2 if card["kind"] == "evolution" else 1
+	var t := ArchBalance.hint_tag(p.tags, tags, add)
+	if t == "":
+		return ""
+	var pts := p.tag(t)
+	var aname := Loc.t(String(ArchBalance.DEFS[t]["title"]))
+	var h := ArchBalance.hint_parts(pts, add)
+	match String(h["kind"]):
+		"reach":
+			return "\n" + Loc.t("▲ %s %d → %d: ранг %s!") % [aname, pts, pts + add, Prog.ROMAN[int(h["rank"])]]
+		"next":
+			return "\n" + Loc.t("▲ %s %d → %d (ранг %s на %d)") % [aname, pts, pts + add, Prog.ROMAN[int(h["rank"])], int(h["at"])]
+	return "\n" + Loc.t("▲ %s %d → %d") % [aname, pts, pts + add]
 
 
 ## Catalysts of weapon `w`: «Перезарядка ×2»; with two recipes — «Перезарядка ×2 («Шмель») или Двигатели ×2 («Стая»)».
@@ -986,7 +1045,7 @@ static func offer(p: Player, count: int, banned: Dictionary, locked: Dictionary,
 			if aliens >= 2:
 				continue
 			aliens += 1
-		card["rarity"] = 4 if card["kind"] in ["synergy", "skill_syn"] else roll_rarity(Main.I.run.level, min_r)
+		card["rarity"] = 4 if card["kind"] in ["synergy", "skill_syn"] else (3 if card["kind"] == "trade" else roll_rarity(Main.I.run.level, min_r))
 		out.append(finalize(p, card))
 		var wpn: String = card.get("weapon", "")
 		cands = cands.filter(func(c): return c[1]["id"] != cid and c[1]["ban"] != cban and (wpn == "" or c[1].get("weapon", "") != wpn))
@@ -1086,6 +1145,13 @@ static func apply(p: Player, card: Dictionary) -> void:
 					p.mods["s3_lvl"] = mini(int(p.mods["s3_lvl"]) + 1, 3)
 				"repair":
 					p.heal(p.max_hp * minf(0.4 * k, 1.0), "card")
+				"gun_belt":
+					p.mods["gun_dmg"] *= 1.0 + 0.08 * k
+					p.mods["gun_rate"] *= 1.0 + 0.08 * k
+				"turret_ring":
+					p.mods["turret_dmg"] = float(p.mods.get("turret_dmg", 1.0)) * (1.0 + 0.12 * k)
+		"trade":
+			apply_trade(p, String(card["id"]))
 		"wing_new":
 			p.add_wingman(card["wtype"], k)
 		"wing_lvl":
@@ -1132,7 +1198,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 						(p.groups[int(card["group"])] as Hardpoint).evo_plus += 1
 					else:
 						p.gun_evo_plus += 1
-	# очки тегов: эволюция +2, остальное +1 (ремонт и резерв — без очков)
+	# очки тегов: эволюция +2, остальное +1 (ремонт, резерв и «плюс и минус» — без очков)
 	if card["kind"] != "reserve" and card["kind"] != "synergy" and card["kind"] != "skill_syn":
 		p.add_tags(tags, 2 if card["kind"] == "evolution" else 1)
 	p.picks += 1
@@ -1141,3 +1207,21 @@ static func apply(p: Player, card: Dictionary) -> void:
 	elif MODULES.has(card["id"]):
 		p.medal_cards.append("m:" + String(card["id"]))
 	p.cards_log.append("%s [%s]" % [card["title"], RARITY[r]["name"]])
+
+
+## PG-11 (Б4): trade-off card `id` on the player — multipliers through `ArchBalance.trade_mods` (reload floor kept),
+## max HP scaled with the hull kept at the same share; counted in `taken` (the per-sortie cap) and telemetry
+static func apply_trade(p: Player, id: String) -> void:
+	var m := ArchBalance.trade_mods(p.mods, id, RELOAD_FLOOR)
+	var hp_k := float(m.get("hp", 1.0))
+	m.erase("hp")
+	for key: String in m:
+		p.mods[key] = m[key]
+	if hp_k != 1.0:
+		var share := p.hp / maxf(p.max_hp, 1.0)
+		p.max_hp = maxf(float(p.cls["hp"]) * ArchBalance.HP_FLOOR, p.max_hp * hp_k)
+		p.hp = minf(p.max_hp, maxf(1.0, p.max_hp * share))
+	p.taken[id] = int(p.taken.get(id, 0)) + 1
+	if Main.I != null and Main.I.tele != null:
+		Main.I.tele.v["trade_" + id] = snappedf(Main.I.run_time / 60.0, 0.01)
+	Events.banner.emit(Loc.t("ПЛЮС И МИНУС: %s") % Loc.t(String(ArchBalance.TRADES[id]["title"])).to_upper(), 3.0)

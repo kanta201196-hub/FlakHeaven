@@ -11,7 +11,7 @@ static func card_set() -> Array:
 	for w in Weapons.POOL + Weapons.EXP:
 		out.append("w:" + w)
 	for k in Cards.MODULES:
-		if not Cards.SLOT_FREE.has(k):
+		if not Cards.SLOT_FREE.has(k) and not Cards.ARCH_MODULES.has(k):   # PG-11 cards exist only with F1 build_arch
 			out.append("m:" + k)
 	return out
 

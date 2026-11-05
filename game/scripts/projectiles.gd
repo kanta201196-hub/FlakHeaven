@@ -322,12 +322,14 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 	var r_base := r
 	var pl := Main.I.player
 	var blast2 := false
+	var blast_rank := 0
 	if is_instance_valid(pl):
+		blast_rank = pl.arch_rank("blast")
 		r *= float(pl.mods.get("blast_r", 1.0))
 		if pl.assault_t > 0.0 and pl.lvl_of("assault") >= 2:
 			r *= 1.25
 		if pl.patch("blast") >= 1:
-			edge = 0.5
+			edge = ArchBalance.BLAST_EDGE   # «Бомбёр» I
 		dmg *= float(pl.mods.get("blast_dmg", 1.0))
 		blast2 = pl.syn.has("chain") and chain < CHAIN_LINKS and (chainable or chain > 0) # 3.2: «Цепная реакция»
 	var died: Array = []
@@ -345,6 +347,10 @@ func aoe(pos: Vector2, r: float, dmg: float, src: String, visual := true, exclud
 				ignite(e, hit)
 			if blast2 and e.hp <= 0.0 and not e.is_boss:
 				died.append([e.global_position, e.max_hp])
+			if blast_rank >= 3 and e.is_ground and not e.is_boss and e.hp > 0.0:
+				e.silence = maxf(e.silence, ArchBalance.BLAST_SILENCE)   # «Бомбёр» III: the hit ground target falls silent
+	if visual and blast_rank >= 2 and intercept_missile_at(pos, r) != null:
+		Main.I.tele.add("arch_blast_intercepts")   # «Бомбёр» II: the blast takes one enemy missile with it
 	if visual:
 		Main.I.fx.blast(pos, r)
 		if (chainable or chain > 0) and r_base >= FortBalance.BLAST_MIN_R:
@@ -433,7 +439,7 @@ func _update_bullets(delta: float) -> void:
 				e.take_hit(float(b["dmg"]) * _bullet_k(src, e), src)
 				_ammo_effects(b, p, e)
 				if b.has("he"): # «Пушкарь»: фугасный снаряд
-					aoe(p, float(b["he"]), float(b["dmg"]) * 0.6, "связка: пушкарь", true, e)
+					aoe(p, float(b["he"]), float(b["dmg"]) * 0.6, String(b.get("he_src", "связка: пушкарь")), true, e)
 					b.erase("he")
 				if int(b.get("pierce", 0)) > 0:
 					b["pierce"] = int(b["pierce"]) - 1
@@ -552,7 +558,7 @@ func _split(p: Vector2, m: Dictionary, hit: Enemy) -> void:
 		aoe(p, 90.0, float(m["split_dmg"]) * 0.5 * spare, src, false, null, 0, ground, float(m.get("ground_k", 1.0)) if ground else 1.0)
 
 
-## Множители пуль: нашивка «Кинетика I», «Штурмовой заход» по наземным
+## Множители пуль: «Стрелок» I, «Штурмовой заход» по наземным
 func _bullet_k(src: String, e: Enemy) -> float:
 	var pl := Main.I.player
 	if not is_instance_valid(pl):
@@ -560,9 +566,9 @@ func _bullet_k(src: String, e: Enemy) -> float:
 	var k := 1.0
 	if pl.patch("kinetic") >= 1 and e.hp > e.max_hp * 0.5:
 		if src == "гондола" or src == "турели":
-			k *= 1.1
+			k *= ArchBalance.KIN_K
 		elif src.begins_with("курсовое"):
-			k *= 1.05 # курсовое — вполовину
+			k *= 1.0 + (ArchBalance.KIN_K - 1.0) * 0.5 # курсовое — вполовину
 	if pl.assault_t > 0.0 and e.is_ground and src.begins_with("курсовое"):
 		k *= 1.5
 	return k

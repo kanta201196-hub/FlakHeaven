@@ -86,10 +86,12 @@ func damage(amount: float) -> void:
 		if temp:
 			_leave()
 			return
-		dead_t = 20.0
+		# «Командир звена» I: the replacement comes sooner
+		var back := ArchBalance.WING_BACK if is_instance_valid(Main.I.player) and Main.I.player.arch_rank("wing") >= 1 else ArchBalance.WING_BACK_BASE
+		dead_t = back
 		visible = false
 		# S9-12: потеря ведомого — в эфир (очередью, не перебивая), замена — через 20 с
-		Story.say(String(Prog.WING_TYPES[type]["short"]), "Подбит, выхожу из боя! Замена через 20 секунд.")
+		Story.say(String(Prog.WING_TYPES[type]["short"]), Loc.t("Подбит, выхожу из боя! Замена через %d секунд.") % int(back))
 		Story.say(Story.DISPATCH, RadioPick.pick("wing_lost", ["Ведомый сбит. Держитесь, замена на подходе.", "Потеря в звене. Высылаем замену.",
 			"Ведомого больше нет на радаре. Новый уже взлетает.", "Звено, минус один. Держитесь, помощь в пути."]))   # s15 review п. 13
 
