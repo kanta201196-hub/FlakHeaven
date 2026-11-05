@@ -271,7 +271,7 @@ func process(delta: float) -> void:
 					m.fx.blast(c2 + (b[0] as Vector2), b[1])
 				else:
 					m.fx.explosion(c2 + (b[0] as Vector2), b[1], b[2], true, b[3])
-			Engine.time_scale = 0.2
+			Engine.time_scale = float(p.get("ts", 0.2))   # s15fx: scorch points run at full speed (smoke must clear)
 			_bt = 0.0
 		_phase = 1
 		_t = 0.0
@@ -957,9 +957,9 @@ func _make_points() -> Array:
 		pts.append({"name": "s15_pile_smoke", "pos": empty + Vector2(2600, 0), "enemies": true, "booms": pile, "shot_t": 1.6, "wait": 1.5, "zoom": 1.0})
 		var gb := [[Vector2(-260, 120), 18.0, false, ""], [Vector2(-60, 200), 26.0, false, ""], [Vector2(180, -140), 14.0, false, ""],
 			[Vector2(260, 160), 130.0, false, "blast"], [Vector2(-200, -180), 22.0, false, ""]]
-		pts.append({"name": "s15_scorch", "pos": empty + Vector2(0, 2600), "booms": gb, "shot_t": 7.0, "wait": 1.0, "zoom": 1.0})
-		pts.append({"name": "s15_scorch_ridge", "pos": peak + Vector2(0, 300), "booms": gb, "shot_t": 7.0, "wait": 1.0, "zoom": 1.0})
-		pts.append({"name": "s15_scorch_peak", "pos": peak, "booms": gb, "shot_t": 7.0, "wait": 1.0, "zoom": 1.0})
+		pts.append({"name": "s15_scorch", "pos": empty + Vector2(0, 2600), "booms": gb, "shot_t": 7.0, "ts": 1.0, "wait": 1.0, "zoom": 1.0})
+		pts.append({"name": "s15_scorch_ridge", "pos": peak + Vector2(0, 300), "booms": gb, "shot_t": 7.0, "ts": 1.0, "wait": 1.0, "zoom": 1.0})
+		pts.append({"name": "s15_scorch_peak", "pos": peak, "booms": gb, "shot_t": 7.0, "ts": 1.0, "wait": 1.0, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--fxbench"):   # 3.4-t1: эффекты (след, форсаж, ракеты, винты, падение ведомого)
 		pts = []
 		pts.append({"name": "trail", "pos": empty, "fly": true, "wait": 3.0, "zoom": 0.8})
