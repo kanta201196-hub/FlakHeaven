@@ -9708,3 +9708,35 @@ msgstr "羁绊：热闹伙伴"
 #: game/scripts/wingman.gd:475
 msgid "связка: волчья стая"
 msgstr "羁绊：狼群"
+
+#: game/scripts/main.gd:480
+#, c-format
+msgid "Уровень %d: +%d%% к урону"
+msgstr "等级 %d：伤害 +%d%%"
+
+#: game/scripts/main.gd
+msgid "ДОЛГИЙ ВЫЛЕТ · держитесь сколько сможете"
+msgstr "持久出击 · 能坚持多久就坚持多久"
+
+#: game/scripts/main.gd
+msgid "Долгий вылет: враги будут только сильнее. Если собьют — всё, что заработано до 15:00, останется. Улететь можно в любое окно эвакуации."
+msgstr "持久出击：敌人只会越来越强。即使被击落，15:00 前获得的一切都会保留。任何撤离窗口都可以离开。"
+
+#: game/scripts/main.gd
+#, c-format
+msgid "долгий вылет +%d:%02d · рекорд +%d:%02d"
+msgstr "持久出击 +%d:%02d · 纪录 +%d:%02d"
+
+#: game/scripts/main.gd
+#, c-format
+msgid "Долгий вылет +%d:%02d · рекорд +%d:%02d"
+msgstr "持久出击 +%d:%02d · 纪录 +%d:%02d"
+
+#: game/scripts/main.gd
+#, c-format
+msgid "НОВЫЙ РЕКОРД! Долгий вылет +%d:%02d"
+msgstr "新纪录！持久出击 +%d:%02d"
+
+#: game/scripts/main.gd
+msgid "до 15:00 всё"
+msgstr "15:00 前全部"
