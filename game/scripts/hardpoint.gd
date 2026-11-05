@@ -247,12 +247,16 @@ func _owner_k() -> float:
 	return k * (1.0 + float(p.mods.get("hp_dmg", 0.0)))
 
 
+## Range of this hardpoint's weapon, px: weapon table, profile, modernization, hangar and class factors,
+## «Турельщик» I for turrets
 func range_px() -> float:
 	var base: float = Weapons.DEFS[weapon]["range"] * _evo_k("range") * prof_k("range")   # PG-06
 	var p := Main.I.player if Main.I != null else null
 	if p != null:
 		if weapon == "turret":
 			base *= float(p.cls.get("turret_range_k", 1.0))
+			if p.arch_rank("turrets") >= 1:
+				base *= ArchBalance.TUR_RANGE   # «Турельщик» I
 			if p.umbrella_t > 0.0:
 				base *= 1.3
 			if evo:
@@ -278,12 +282,14 @@ func range_px() -> float:
 	return base
 
 
+## One frame of the hardpoint: turret aim and sweeps, cooldown, firing by weapon, «Ракетчик» II second launch
 func update(delta: float, p: Player) -> void:
 	if is_empty():
 		return
 	if weapon == "turret":
 		_turret_aim(delta, p)
 		_turret_intercept(delta, p)
+		_arch_sweep(delta, p)
 		if p.syn.has("hedgehog"):
 			_hedgehog(delta, p)
 	if weapon == "railgun":
@@ -328,6 +334,10 @@ func update(delta: float, p: Player) -> void:
 			fired = _fire_plasma(p)
 	if fired and not manual and Weapons.is_bomb(weapon):
 		Hints.show("bomb_auto", "Бомбы падают сами на наземные цели рядом. Бросать вручную с прицелом: в паузе (Tab) переключите бомбы на «Пуск: правой кнопкой мыши».", 8.0, 2)
+	# «Ракетчик» II: a chance to launch again at once (the same short re-arm as `_quick`)
+	if fired and weapon in MISSILES and p.arch_rank("missiles") >= 2 and randf() < ArchBalance.MSL_AGAIN:
+		_quick = true
+		Main.I.tele.add("arch_msl_again")
 	if fired and not manual and weapon in MISSILES:
 		Hints.show("auto_launch", "Ракеты и бомбы пускаются сами, когда враг рядом или впереди. Пускать вручную правой кнопкой мыши — в паузе (Tab).", 8.0, 2)
 	# 3.4: после выстрела переносим опоздание (до 0,05 с) — темп меньше зависит от FPS
@@ -835,7 +845,22 @@ func _fire_gun(p: Player) -> bool:
 	return true
 
 
+var _tracer_n := 0
+
+
+## «Турельщик» II: every TUR_CLEAR_CD the turrets shoot down the enemy bullets close to the plane. The timer lives
+## on the player, so two turret groups still sweep once per TUR_CLEAR_CD.
+func _arch_sweep(_delta: float, p: Player) -> void:
+	if p.arch_sweep_at > Main.I.run_time or p.arch_rank("turrets") < 2:
+		return
+	p.arch_sweep_at = Main.I.run_time + ArchBalance.TUR_CLEAR_CD
+	var n: int = Main.I.projectiles.intercept_bullets(p.global_position, ArchBalance.TUR_CLEAR_R)
+	if n > 0:
+		Main.I.tele.add("arch_turret_sweep", n)
+
+
 ## Турель: огонь по цели, на которую уже наведены стволы (без мгновенного разворота)
+## «Турельщик» III: every TUR_TRACER_EVERY-th burst is a tracer that goes through everything on its line
 func _fire_turret(p: Player) -> bool:
 	var t := _aim_t
 	if t == null or not is_instance_valid(t) or t.hp <= 0.0 or is_nan(aim):
@@ -843,6 +868,10 @@ func _fire_turret(p: Player) -> bool:
 	if absf(wrapf((t.global_position - p.global_position).angle() - aim, -PI, PI)) > TURRET_GATE:
 		return false
 	var barrels := 2 if evo else 1
+	var tracer := false
+	if p.arch_rank("turrets") >= 3:
+		_tracer_n += 1
+		tracer = _tracer_n % ArchBalance.TUR_TRACER_EVERY == 0
 	for s in slots:
 		for b in barrels:
 			var pos := _slot_pos(p, s)
@@ -853,6 +882,10 @@ func _fire_turret(p: Player) -> bool:
 			# стволы смотрят по aim; поправка на место турели на крыле — к цели, но не больше зазора наведения
 			var da := clampf(wrapf(to.angle() - aim, -PI, PI), -TURRET_GATE, TURRET_GATE)
 			var dir := Vector2.from_angle(aim + da + randf_range(-0.03, 0.03))
+			if tracer:
+				Main.I.projectiles.spawn_player_bullet(pos, dir * spd + p.velocity * 0.5, dmg() * Profile.wk(weapon, "dmg") * ArchBalance.TUR_TRACER_K,
+					ArchBalance.TUR_TRACER_LEN / spd, false, "турели", 99, 0.0)
+				continue
 			Main.I.projectiles.spawn_player_bullet(pos, dir * spd + p.velocity * 0.5, dmg() * Profile.wk(weapon, "dmg"),
 				(to.length() + 60.0) / spd, false, "турели", 0, 0.0)
 	Main.I.sfx.play("turret_fire", -21.0)
@@ -871,6 +904,7 @@ func _fire_flares(p: Player) -> bool:
 		if mp != null:
 			killed += 1
 			any = true
+			PairFx.on_flare_intercept(p, mp)
 			if Profile.wbranch("flares", 2) == "a": # «Ловушка с подрывом»
 				Main.I.projectiles.aoe(mp, 60.0, 20.0, "противоракеты")
 			if evo: # «Салют»: перехват выпускает 3 ловушки по врагам

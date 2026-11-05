@@ -9665,10 +9665,6 @@ msgstr "Hints on upgrade cards, a new pause panel, a larger radio panel"
 msgid "ведомые: "
 msgstr "wingmen: "
 
-#: game/scripts/wingman.gd:92
-msgid "Подбит, выхожу из боя! Замена через 20 секунд."
-msgstr "I'm hit, leaving the fight! Replacement in 20 seconds."
-
 #: game/scripts/wingman.gd:93
 msgid "Ведомый сбит. Держитесь, замена на подходе."
 msgstr "Wingman down. Hang on, a replacement is on the way."
@@ -9708,3 +9704,358 @@ msgstr "synergy: good company"
 #: game/scripts/wingman.gd:475
 msgid "связка: волчья стая"
 msgstr "synergy: wolf pack"
+
+#: PG-11 archetypes and trade-off cards
+msgid "+1 ведомый сверх лимита класса (если звено уже полное — ведомые ещё +30% урона)"
+msgstr "+1 wingman over the class limit (with a full flight — wingmen +30% damage instead)"
+
+msgid "+10% по целым целям"
+msgstr "+10% vs healthy targets"
+
+msgid "+10% урона пуль по целям с прочностью больше половины"
+msgstr "+10% bullet damage to targets above half health"
+
+msgid "+15% скорости, +10% разворота"
+msgstr "+15% speed, +10% turn rate"
+
+msgid "+25% урона всему оружию"
+msgstr "+25% damage for all weapons"
+
+msgid "20% шанс сразу пустить ракеты ещё раз"
+msgstr "20% chance to launch again at once"
+
+msgid "20%: второй пуск сразу"
+msgstr "20%: instant second launch"
+
+msgid "4 с без попаданий — корпус чинится на 0,6% в секунду"
+msgstr "4 s without hits — the hull repairs 0.6% per second"
+
+msgid "4-я очередь пробивает всё"
+msgstr "every 4th burst pierces all"
+
+msgid "5-й снаряд фугасный"
+msgstr "every 5th shell is HE"
+
+msgid "АРХЕТИП «%s» — РАНГ %s"
+msgstr "ARCHETYPE «%s» — RANK %s"
+
+msgid "АРХЕТИПЫ"
+msgstr "ARCHETYPES"
+
+msgid "Без брони"
+msgstr "No Armor"
+
+msgid "Бомбёр"
+msgstr "Bombardier"
+
+msgid "Броненосец"
+msgstr "Ironclad"
+
+msgid "Ведомые: +30% урона и прочности"
+msgstr "Wingmen: +30% damage and health"
+
+msgid "Взрыв сбивает одну вражескую ракету в своём радиусе"
+msgstr "A blast shoots down one enemy missile within its radius"
+
+msgid "Двойной боезапас"
+msgstr "Double Ammo"
+
+msgid "Каждая 4-я очередь турели трассирующая: пробивает всё на линии 650 пикс., урон ×1,5"
+msgstr "Every 4th turret burst is a tracer: pierces everything on a 650 px line, damage ×1.5"
+
+msgid "Каждый 5-й снаряд пушки фугасный (урон ×3, взрыв 60 пикс.); «обороты» ручного огня растут вдвое быстрее"
+msgstr "Every 5th gun shell is HE (damage ×3, 60 px blast); manual fire «revs» build twice as fast"
+
+msgid "Командир звена"
+msgstr "Flight Leader"
+
+msgid "Край взрыва бьёт на 50% (было 35%)"
+msgstr "Blast edge deals 50% (was 35%)"
+
+msgid "Ленточное питание"
+msgstr "Belt Feed"
+
+msgid "МАКС"
+msgstr "MAX"
+
+msgid "Манёвренный"
+msgstr "Agile"
+
+msgid "Минус: %s"
+msgstr "Minus: %s"
+
+msgid "Наземные цели, задетые взрывом, молчат 1,5 с"
+msgstr "Ground targets hit by a blast fall silent for 1.5 s"
+
+msgid "Облегчённый планер"
+msgstr "Stripped Airframe"
+
+msgid "ПЛЮС И МИНУС: %s"
+msgstr "TRADE-OFF: %s"
+
+msgid "Перезарядка уклонения −1 с"
+msgstr "Dodge cooldown −1 s"
+
+msgid "Плюс и минус"
+msgstr "Trade-off"
+
+msgid "Плюс: %s"
+msgstr "Plus: %s"
+
+msgid "Погонное кольцо"
+msgstr "Turret Ring"
+
+msgid "Подбит, выхожу из боя! Замена через %d секунд."
+msgstr "I'm hit, pulling out! Replacement in %d seconds."
+
+msgid "Пушка: +%s урона и +%s темпа"
+msgstr "Gun: +%s damage and +%s fire rate"
+
+msgid "Раз в 12 с сильный удар (больше 10% прочности) даёт 1 с неуязвимости"
+msgstr "Once per 12 s a heavy hit (over 10% of health) gives 1 s of invulnerability"
+
+msgid "Раз в 2,5 с турели сбивают вражеские пули в 110 пикс. от самолёта"
+msgstr "Every 2.5 s the turrets shoot down enemy bullets within 110 px of the plane"
+
+msgid "Ракета помечает цель на 3 с: всё остальное оружие и звено бьют её на 20% сильнее"
+msgstr "A missile marks its target for 3 s: all other weapons and the flight deal 20% more to it"
+
+msgid "Сбитый ведомый возвращается за 12 с (было 20)"
+msgstr "A downed wingman returns in 12 s (was 20)"
+
+msgid "Снаряды курсовой пушки пробивают ещё 1 цель"
+msgstr "Course gun shells pierce 1 more target"
+
+msgid "Турели: +%s урона"
+msgstr "Turrets: +%s damage"
+
+msgid "Турельщик"
+msgstr "Turret Gunner"
+
+msgid "Уклонение или форсаж вдвое сокращают перезарядку всех подвесов (не чаще раза в 3 с)"
+msgstr "A dodge or afterburner halves the cooldown of all hardpoints (at most once per 3 s)"
+
+msgid "Урон турелей: %s → %s"
+msgstr "Turret damage: %s → %s"
+
+msgid "Фанатик ракет"
+msgstr "Missile Zealot"
+
+msgid "ведомые +30%"
+msgstr "wingmen +30%"
+
+msgid "ведомый вернётся за 12 с"
+msgstr "wingman back in 12 s"
+
+msgid "взрыв глушит землю 1,5 с"
+msgstr "blast silences ground 1.5 s"
+
+msgid "взрыв сбивает ракету"
+msgstr "blast downs a missile"
+
+msgid "край взрыва 50%"
+msgstr "blast edge 50%"
+
+msgid "курсовая пушка: −50% урона"
+msgstr "course gun: −50% damage"
+
+msgid "курсовое (фугас)"
+msgstr "course gun (HE)"
+
+msgid "манёвр перезаряжает подвесы"
+msgstr "manoeuvre reloads hardpoints"
+
+msgid "метка: остальным +20% урона"
+msgstr "mark: others deal +20%"
+
+msgid "перезарядка подвесов −20%"
+msgstr "hardpoint reload −20%"
+
+msgid "после манёвра +20% урона"
+msgstr "+20% damage after a manoeuvre"
+
+msgid "пушка пробивает 1 цель"
+msgstr "gun pierces 1 target"
+
+msgid "ракеты: +40% урона"
+msgstr "missiles: +40% damage"
+
+msgid "ремонт вдвое слабее"
+msgstr "repairs are halved"
+
+msgid "самопочинка 0,6%/с"
+msgstr "self-repair 0.6%/s"
+
+msgid "сбивают пули рядом"
+msgstr "shoot down nearby bullets"
+
+msgid "сильный удар: 1 с неуязвимости"
+msgstr "heavy hit: 1 s invulnerable"
+
+msgid "уклонение −1 с"
+msgstr "dodge −1 s"
+
+msgid "−12% скорости"
+msgstr "−12% speed"
+
+msgid "−20% прочности"
+msgstr "−20% health"
+
+msgid "▲ %s %d → %d (ранг %s на %d)"
+msgstr "▲ %s %d → %d (rank %s at %d)"
+
+msgid "▲ %s %d → %d: ранг %s!"
+msgstr "▲ %s %d → %d: rank %s!"
+
+# PG-11 (synergies of two things, build album)
+
+msgid "%s ур. 5 + %s, с 7:00 вылета"
+msgstr "%s lv. 5 + %s, from 7:00 of the sortie"
+
+msgid "%s — в одном вылете; первый слот связки — ур. %d / ×%d у каждого"
+msgstr "%s in one sortie; the first synergy slot asks lv. %d / ×%d of each"
+
+msgid "%s: выбор профиля на ур. %d"
+msgstr "%s: profile choice at lv. %d"
+
+msgid "\n▲ К связке «%s»: %s"
+msgstr "\n▲ Toward «%s»: %s"
+
+msgid "АЛЬБОМ"
+msgstr "ALBUM"
+
+msgid "Архетип"
+msgstr "Archetype"
+
+msgid "Броневой бой"
+msgstr "Ironclad"
+
+msgid "Загонщик"
+msgstr "Beater"
+
+msgid "Зарево"
+msgstr "Glow"
+
+msgid "Каждая ракета, уведённая ловушкой, отвечает: с места перехвата уходит ваша наводящаяся ракета в ближайшего врага (40)"
+msgstr "Every missile a flare leads away answers back: your guided missile leaves the interception point for the nearest enemy (40)"
+
+msgid "Каждое попадание по вам на 5 с усиливает курсовую пушку на 8% (до 5 раз, +40%)"
+msgstr "Every hit you take makes the nose gun 8% stronger for 5 s (up to 5 times, +40%)"
+
+msgid "Каждый перехват ловушкой сбрасывает бомбу на ближайшую наземную цель в 600 пикс. (50 урона, радиус 90)"
+msgstr "Every flare interception drops a bomb on the nearest ground target within 600 px (50 damage, radius 90)"
+
+msgid "Как собрать:"
+msgstr "How to collect:"
+
+msgid "НОВОЕ В АЛЬБОМЕ ×%d"
+msgstr "NEW IN THE ALBUM ×%d"
+
+msgid "НОВОЕ В АЛЬБОМЕ: %s"
+msgstr "NEW IN THE ALBUM: %s"
+
+msgid "Наведите на клетку — здесь, что это и как его собрать. Каждая первая находка даёт запчасти."
+msgstr "Point at a cell to see what it is and how to collect it. Every first find gives parts."
+
+msgid "Наземная цель, по которой попала курсовая пушка, 3 с получает от ракет В-З урон ×1,5"
+msgstr "A ground target hit by the nose gun takes ×1.5 damage from air-to-ground missiles for 3 s"
+
+msgid "Найдено: %d из %d · первая находка: +%d запчастей"
+msgstr "Found: %d of %d · first find: +%d parts"
+
+msgid "Обманка"
+msgstr "Decoy"
+
+msgid "Огненный коридор"
+msgstr "Fire Corridor"
+
+msgid "Перекрёстный огонь"
+msgstr "Crossfire"
+
+msgid "Разрыв ракеты залпа оставляет огонь на 2 с (10 урона/с); бомба, упавшая в огонь, рвётся в 1,5 раза шире"
+msgstr "A volley rocket burst leaves fire for 2 s (10 damage/s); a bomb falling into the fire bursts 1.5 times wider"
+
+msgid "Связка за очки тегов (справочник в бою)"
+msgstr "Synergy from tag points (see the codex in combat)"
+
+msgid "Цель, по которой попала курсовая пушка, 2 с получает от турелей урон ×1,5"
+msgstr "A target hit by the nose gun takes ×1.5 damage from turrets for 2 s"
+
+msgid "есть %s"
+msgstr "have %s"
+
+msgid "залп поджигает — бомбы шире"
+msgstr "volley sets fire, bombs burst wider"
+
+msgid "навык класса"
+msgstr "class skill"
+
+msgid "найдено раньше"
+msgstr "found earlier"
+
+msgid "нужны %s"
+msgstr "need %s"
+
+msgid "перехват → бомба по земле"
+msgstr "interception → bomb on the ground"
+
+msgid "перехват → ответная ракета"
+msgstr "interception → missile back"
+
+msgid "по вам бьют — пушка злее"
+msgstr "hits on you make the gun angrier"
+
+msgid "пушка метит землю для ракет В-З"
+msgstr "gun marks ground targets for AGMs"
+
+msgid "пушка метит — турели добивают"
+msgstr "gun marks, turrets finish"
+
+msgid "связка: зарево"
+msgstr "synergy: glow"
+
+msgid "связка: обманка"
+msgstr "synergy: decoy"
+
+msgid "связка: огненный коридор"
+msgstr "synergy: fire corridor"
+
+msgid "ур."
+msgstr "lv."
+
+msgid "связка недоступна"
+msgstr "synergy unavailable"
+#: game/scripts/main.gd:480
+#, c-format
+msgid "Уровень %d: +%d%% к урону"
+msgstr "Level %d: +%d%% damage"
+
+#: game/scripts/main.gd
+msgid "ДОЛГИЙ ВЫЛЕТ · держитесь сколько сможете"
+msgstr "LONG SORTIE · hold out as long as you can"
+
+#: game/scripts/main.gd
+msgid "Долгий вылет: враги будут только сильнее. Если собьют — всё, что заработано до 15:00, останется. Улететь можно в любое окно эвакуации."
+msgstr "Long sortie: the enemy only gets stronger. If you're shot down, everything earned by 15:00 stays yours. You can leave at any evacuation window."
+
+#: game/scripts/main.gd
+#, c-format
+msgid "долгий вылет +%d:%02d · рекорд +%d:%02d"
+msgstr "long sortie +%d:%02d · record +%d:%02d"
+
+#: game/scripts/main.gd
+#, c-format
+msgid "Долгий вылет +%d:%02d · рекорд +%d:%02d"
+msgstr "Long sortie +%d:%02d · record +%d:%02d"
+
+#: game/scripts/main.gd
+#, c-format
+msgid "НОВЫЙ РЕКОРД! Долгий вылет +%d:%02d"
+msgstr "NEW RECORD! Long sortie +%d:%02d"
+
+#: game/scripts/main.gd
+msgid "до 15:00 всё"
+msgstr "all up to 15:00"
+
+msgid "%d очков «%s» за вылет — карточки этого тега"
+msgstr "%d «%s» points in one sortie — cards with this tag"

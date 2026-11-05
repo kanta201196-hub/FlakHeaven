@@ -38,7 +38,7 @@ func process(delta: float) -> void:
 			_mark_shot(delta)
 		elif m._args.has("--smoke"):
 			_smoke_check()
-	if m._args.has("--pairtest") or m._args.has("--cardtest"):
+	if m._args.has("--pairtest") or m._args.has("--cardtest") or m._args.has("--archtest"):
 		_pair_test()
 	if m._args.has("--shots"):
 		_debug_screenshots(delta)
@@ -262,10 +262,19 @@ var _pair_phase := 0
 ## S10-01: экран выбора мастерства в бою («или-ИЛИ», 35-й уровень) — кадр для проверки
 ## godot --path game --rendering-driver opengl3 -- --autotest --smoke --god --class=fighter --pairtest
 ## --cardtest instead of --pairtest: an ordinary level-5 card pick (PG-01, shot_levelup_cards.png)
+## --archtest: PG-11 frames — level 12 with archetype points, a trade-off card on the screen (shot_levelup_arch.png),
+## then the pause screen with the archetype list (shot_pause_arch.png)
 func _pair_test() -> void:
-	var cards := m._args.has("--cardtest")   # PG-01: an ordinary card pick at level 5 (volumetric card icons)
+	var arch := m._args.has("--archtest")
+	var cards := m._args.has("--cardtest") or arch   # PG-01: an ordinary card pick at level 5 (volumetric card icons)
 	if _pair_phase == 0 and m.state == "playing" and m.run_time > 2.0:
-		if cards:
+		if arch:
+			m.run.level = 12
+			m.player.add_tags(["missiles"], 13)
+			m.player.add_tags(["kinetic"], 7)
+			m.player.add_tags(["blast"], 7)
+			m.player.add_tags(["armor"], 3)
+		elif cards:
 			m.run.level = 5
 		else:
 			m.player.mastery = true
@@ -283,11 +292,27 @@ func _pair_test() -> void:
 		m._open_levelup()
 		if m._args.has("--dupbranch"):
 			_dup_branch_offers()
+		if arch and m.offers.size() > 1:
+			var tc := {"id": "trade_bare", "ban": "trade_bare", "kind": "trade", "cat": "Плюс и минус", "rarity": 3,
+				"title": ArchBalance.TRADES["trade_bare"]["title"]}
+			m.offers[m.offers.size() - 1] = Cards.finalize(m.player, tc)
 		_pair_phase = 1
 	elif _pair_phase == 1 and m.state == "levelup" and m._state_t > 1.0:
-		var shot := "dupbranch" if m._args.has("--dupbranch") else ("cards" if cards else "pair")
+		var shot := "dupbranch" if m._args.has("--dupbranch") else ("arch" if arch else ("cards" if cards else "pair"))
 		m.get_viewport().get_texture().get_image().save_png("user://shot_levelup_%s.png" % shot)
 		print("SHOT levelup_pair")
+		if not arch:
+			m.get_tree().quit()
+			return
+		m.choose_card(0)
+		_pair_phase = 2
+	elif _pair_phase == 2 and m.state == "playing" and m._state_t > 1.5:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_game_arch.png")
+		m._set_state("paused")
+		_pair_phase = 3
+	elif _pair_phase == 3 and m.state == "paused" and m._state_t > 1.0:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_pause_arch.png")
+		print("SHOT pause_arch")
 		m.get_tree().quit()
 
 
@@ -846,6 +871,17 @@ var _runs_done := 0
 var _loadout_opened := false
 
 
+## PG-11 check: --syn=crossfire,decoy opens these synergies at the first card screen of every sortie, so the
+## bot flies with them (the new pair synergies need weapons a random bot rarely completes in a short run)
+func _force_syn() -> void:
+	for a in m._args:
+		if String(a).begins_with("--syn=") and is_instance_valid(m.player):
+			for id in String(a).substr(6).split(","):
+				if not m.player.syn.has(id) and Cards.SYNERGIES.has(id):
+					m.player.open_synergy(id)
+					print("AUTOTEST: forced synergy ", id)
+
+
 func _run_autotest(delta: float) -> void:
 	_autotest_t += delta
 	_bot_wait -= delta / maxf(Engine.time_scale, 0.01)
@@ -953,10 +989,11 @@ func _run_autotest(delta: float) -> void:
 				m.choose_course(0)
 			return
 		"levelup":
-			if m._args.has("--pairtest") or m._args.has("--cardtest") or m._args.has("--combatui"):
+			if m._args.has("--pairtest") or m._args.has("--cardtest") or m._args.has("--archtest") or m._args.has("--combatui"):
 				return   # S10-01: экран выбора держим для кадра
 			if _bot_wait <= 0.0:
 				_bot_wait = 0.3
+				_force_syn()
 				if m._args.has("--bot=course"):
 					for ci in m.offers.size():
 						if m.offers[ci].get("course", false) or m.offers[ci]["kind"] in ["synergy", "skill_syn"]:
@@ -972,6 +1009,14 @@ func _run_autotest(delta: float) -> void:
 								w = String((m.player.groups[int(o["group"])] as Hardpoint).weapon)
 							var want := (w in ["aam", "rockets"]) if pass_i == 0 else (String(o["id"]) in ["seeker", "msl_head", "msl_motor", "launcher", "reload"])
 							if want:
+								m.choose_card(ci)
+								return
+				# PG-11: --bot=arch:<tag> — a focused sortie: the bot takes cards that give points to this archetype
+				for a in m._args:
+					if String(a).begins_with("--bot=arch:"):
+						var at := String(a).substr(11)
+						for ci in m.offers.size():
+							if at in Prog.card_tags(m.player, m.offers[ci]):
 								m.choose_card(ci)
 								return
 				# EX-05: сценарий сборки — --bot=evo:<оружие>: бот собирает модернизацию этого оружия

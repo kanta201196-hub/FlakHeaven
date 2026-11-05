@@ -35,6 +35,14 @@ func _tick_timers(delta: float) -> void:
 	pl.roller_t = maxf(0.0, pl.roller_t - delta)
 	pl._roller_cd = maxf(0.0, pl._roller_cd - delta)
 	pl._armor2_cd = maxf(0.0, pl._armor2_cd - delta)
+	pl._man_reload_cd = maxf(0.0, pl._man_reload_cd - delta)
+	# «Броненосец» III: the hull mends itself after a few seconds without hits
+	pl._hurt_t += delta
+	if pl._hurt_t > ArchBalance.ARMOR_REGEN_AFTER and pl.hp > 0.0 and pl.hp < pl.max_hp and pl.arch_rank("armor") >= 3:
+		pl._regen_acc += pl.max_hp * ArchBalance.ARMOR_REGEN * delta
+		if pl._regen_acc >= 1.0:
+			pl.heal(pl._regen_acc, "arch")
+			pl._regen_acc = 0.0
 	pl._speed_buff_t = maxf(0.0, pl._speed_buff_t - delta)
 	pl.invuln = maxf(0.0, pl.invuln - delta)
 	pl._blink += delta

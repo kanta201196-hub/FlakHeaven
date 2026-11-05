@@ -59,9 +59,20 @@ var ram_t := 0.0           # «Звуковой удар»: таран
 var assault_t := 0.0       # «Штурмовой заход»
 var umbrella_t := 0.0      # «Зенитный зонтик»
 var ranks_t := 0.0         # «Сомкнуть строй»
-var man_buff_t := 0.0      # нашивка «Манёвр II»
+var man_buff_t := 0.0      # «Манёвренный» II: +20% damage after a manoeuvre
+var _man_reload_cd := 0.0  # «Манёвренный» III: once per ArchBalance.MAN_RELOAD_CD
+var _hurt_t := 99.0        # «Броненосец» III: seconds since the last hit taken
+var _arch_gun_n := 0
+var arch_sweep_at := 0.0   # «Турельщик» II: run time of the next bullet sweep (one timer for every turret group)
+var _arch_ranks := {}      # archetype rank per tag (ArchBalance.rank), kept in step with `tags` by add_tags
+var _regen_acc := 0.0      # «Броненосец» III: repair gathered until it is a whole point (the «healed» stat counts integers)       # «Стрелок» III: course-gun shells fired, every KIN_HE_EVERY-th is HE
 var roller_t := 0.0        # связка «Каток»
 var _roller_cd := 0.0
+## PG-11 «Броневой бой»: stacks of course gun damage from hits taken, and time left on them
+var ironclad_n := 0
+var ironclad_t := 0.0
+## PG-11 build album: entries found for the first time in this sortie (parts and the result screen)
+var album_new: Array = []
 var _armor2_cd := 0.0
 var _straight_t := 0.0     # «Кит»: разбег
 var _energy := 1.0         # тест 3.5-s7: доля скорости — крутой разворот её съедает, на прямой набирается
@@ -257,14 +268,65 @@ func tag(t: String) -> int:
 	return int(tags.get(t, 0))
 
 
-## 3.2: нашивок больше нет (их заметные эффекты перешли в связки) — всегда 0
-func patch(_t: String) -> int:
-	return 0
+## Archetype rank 0…3 of tag `t` (PG-11 Б3, `ArchBalance`). F1 `build_arch` = 0 — s15 rules: no ranks
+## (the «нашивки» of 3.1 were off since 3.2, so every rank check reads 0 there).
+## Ranks are cached per tag (`_arch_ranks`, refreshed in `add_tags`): the check runs on every hit and shot.
+func arch_rank(t: String) -> int:
+	if Tuning.g("build_arch") < 0.5:
+		return 0
+	return int(_arch_ranks.get(t, 0))
 
 
-func add_tags(arr: Array, n := 1, _quiet := false) -> void:
+## Adds tag points; a crossed archetype rank gets its banner, telemetry and one-time effects (`_arch_up`).
+## `quiet` — the starting loadout (no banner).
+func add_tags(arr: Array, n := 1, quiet := false) -> void:
 	for t in arr:
-		tags[t] = tag(t) + n
+		var before := tag(t)
+		tags[t] = before + n
+		_arch_ranks[t] = ArchBalance.rank(String(t), before + n)
+		if Tuning.g("build_arch") < 0.5:
+			continue
+		for r: int in ArchBalance.ranks_crossed(String(t), before, before + n):
+			_arch_up(String(t), r, quiet)
+
+
+## Archetype `t` reached rank `r`: banner and effect line, log time, telemetry `arch_rank_<tag>_<n>` (minute),
+## and the effects that apply once («Командир звена» II and III)
+func _arch_up(t: String, r: int, quiet: bool) -> void:
+	var now := Main.I.run_time if Main.I != null else 0.0
+	patch_times["%s_%d" % [t, r]] = snappedf(now, 0.1)
+	if Main.I != null and Main.I.tele != null:
+		Main.I.tele.v["arch_rank_%s_%d" % [t, r]] = snappedf(now / 60.0, 0.01)
+	if t == "wing" and (r == 2 or (r == 3 and ArchBalance.wing_full(int(cls.get("wingmen", 1)), Cards.WING_MAX))):
+		mods["wing_dmg"] *= ArchBalance.WING_K
+		if r == 2:
+			mods["wing_hp"] *= ArchBalance.WING_K
+			for w in wingmen:
+				(w as Wingman).refresh_hp()
+	if quiet or Main.I == null:
+		return
+	var d: Dictionary = ArchBalance.DEFS[t]
+	if r == ArchBalance.MAX_RANK:
+		album_find("arch:" + t, "%s III" % String(d["title"]))   # PG-11 B5: rank III goes into the build album
+	Events.banner.emit(Loc.t("АРХЕТИП «%s» — РАНГ %s") % [Loc.t(String(d["title"])).to_upper(), Prog.ROMAN[r]], 3.5)
+	Main.I.fx.text(global_position + Vector2(0, -80), Loc.t(String(d["ranks"][r - 1]["desc"])), Prog.TAGS[t]["color"])
+	Main.I.fx.ring(global_position, 200.0, Prog.TAGS[t]["color"])
+	Main.I.sfx.play("synergy", -10.0, 1.9)
+
+
+## «Манёвренный»: a dodge, flare salvo or afterburner. II — 2 s of +20% damage; III — every hardpoint's
+## cooldown halved, at most once per MAN_RELOAD_CD
+func arch_maneuver() -> void:
+	var r := arch_rank("maneuver")
+	if r >= 2:
+		man_buff_t = ArchBalance.MAN_BUFF_T
+	if r >= 3 and _man_reload_cd <= 0.0:
+		_man_reload_cd = ArchBalance.MAN_RELOAD_CD
+		for g in groups:
+			var h: Hardpoint = g
+			if not h.is_empty() and h.cd > 0.0:
+				h.cd *= ArchBalance.MAN_RELOAD_K
+		Main.I.fx.ring(global_position, 120.0, Prog.TAGS["maneuver"]["color"])
 
 
 # ---------- 3.2: курс и связки ----------
@@ -283,13 +345,31 @@ func add_course_pts(n: int) -> void:
 	Main.I.fx.text(global_position + Vector2(0, -70), "+%d к специализации «%s»" % [n, sd["title"]], Color(1.0, 0.85, 0.35))
 
 
+## PG-11 build album: notes entry `id` (player name `title`) when it was never found: a banner after the card's
+## own one. The entry is written to the album, with its parts, only by the sortie's award (Profile.award_run),
+## so a sortie with no award (left from pause, too short, «Битва асов») records nothing.
+func album_find(id: String, title: String) -> void:
+	if Profile.album_has(id) or album_new.has(id):
+		return
+	album_new.append(id)
+	Main.I.tele.add("album_new")
+	var t := get_tree().create_timer(1.6, false)
+	t.timeout.connect(func(): Events.banner.emit(Loc.t("НОВОЕ В АЛЬБОМЕ: %s") % Loc.t(title), 3.0))
+
+
+## Opens synergy `id` in the next free slot: banner, sound, slow motion, first trigger at once, album entry
 func open_synergy(id: String) -> void:
 	syn[id] = Main.I.run_time
 	syn_dmg[id] = 0.0
 	if course == id:
 		course = ""
 	var sd := Cards.syn_def(self, id)
+	if Cards.pairs_on():   # PG-11: which recipes players complete, and how many use two hardpoint weapons
+		Main.I.tele.add("syn_pair_" + id)
+		if SynPairs.two_weapons(id):
+			Main.I.tele.add("syn_pair_2w")
 	Events.banner.emit("СВЯЗКА «%s» — СЛОТ %d" % [String(sd["title"]).to_upper(), syn.size()], 4.5)
+	album_find("syn:" + id, String(sd["title"]))
 	Main.I.sfx.play("synergy", -6.0, 1.6)
 	Main.I.slowmo(0.6)
 	Main.I.fx.ring(global_position, 260.0, sd.get("color", Color(1, 0.85, 0.3)))
@@ -345,9 +425,9 @@ func evolve(id: String) -> void:
 			return
 
 
-## Множитель урона ракет: «Глазастик», нашивка «Ракеты I»
+## Множитель урона ракет: «Глазастик», «Ракетчик» I
 func missile_k() -> float:
-	return float(mods["missile_dmg"]) * (1.1 if patch("missiles") >= 1 else 1.0)
+	return float(mods["missile_dmg"]) * (ArchBalance.MSL_K if arch_rank("missiles") >= 1 else 1.0)
 
 
 ## «Ласка»: шанс сорвать захват вражеской ракеты рядом с ведущим
@@ -466,12 +546,17 @@ func roll_time() -> float:
 ## Cooldown the barrel roll gets when used now. Never shorter than the roll + 1 s, so
 ## upgrades cannot chain rolls into permanent invulnerability. Also shown by the HUD.
 func roll_cd_full() -> float:
-	return maxf(maxf(2.0, roll_time() + 1.0), (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+	return maxf(maxf(2.0, roll_time() + 1.0), (Tuning.g("roll_cd") + mods["roll_cd"] - _arch_roll()) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
 
 
 ## Cooldown of the flare salvo that replaces the roll on «Кит» (same upgrades as the roll).
 func salvo_cd_full() -> float:
-	return maxf(3.0, (Tuning.g("roll_cd") + mods["roll_cd"]) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+	return maxf(3.0, (Tuning.g("roll_cd") + mods["roll_cd"] - _arch_roll()) * float(cls.get("roll_cd_k", 1.0)) * float(mods["man_cd"]))
+
+
+## «Манёвренный» I: seconds off the dodge (and flare salvo) cooldown
+func _arch_roll() -> float:
+	return ArchBalance.MAN_ROLL_CD if arch_rank("maneuver") >= 1 else 0.0
 
 
 ## Cooldown of the dive when used now (at least the dive + 1 s).
@@ -529,6 +614,10 @@ func _process(delta: float) -> void:
 	skills._skill_tick(delta)
 	skills._jetwash()
 	_iron_cd = maxf(0.0, _iron_cd - delta)
+	if ironclad_t > 0.0:
+		ironclad_t -= delta
+		if ironclad_t <= 0.0:
+			ironclad_n = 0
 	if ab_t > 0.0:
 		skills._afterburner_pass()
 	queue_redraw()
@@ -619,9 +708,11 @@ func add_wingman(type := "swift", k := 1.0, temp := false, life := 0.0) -> void:
 	Main.I.world.add_child(w)
 
 
+## A manual-fire course shell hit: the «обороты» grow (twice as fast at «Стрелок» III)
 func on_bullet_hit() -> void:
 	if manual_mode:
-		manual_bonus = minf(Tuning.g("manual_max"), manual_bonus + Tuning.g("manual_step"))
+		var step := Tuning.g("manual_step") * (ArchBalance.KIN_REV_K if arch_rank("kinetic") >= 3 else 1.0)   # «Стрелок» III
+		manual_bonus = minf(Tuning.g("manual_max"), manual_bonus + step)
 		_since_hit = 0.0
 		Main.I.peak_rev = maxf(Main.I.peak_rev, manual_bonus)
 
@@ -686,6 +777,8 @@ func heal(amount: float, src := "прочее") -> void:
 	Main.I.tele.add("heal_" + src, hp - before)   # EX-10: откуда приходит ремонт
 
 
+## Takes a hit of `amount` from `source` / `who` after dodges, difficulty, shields and synergy reactions
+## Incoming damage after dodges, shields, archetype and perk rules; resets the «Броненосец» III no-hit timer
 func damage(amount: float, source := "прочее", who := "") -> void:
 	if is_invulnerable() or hp <= 0.0:
 		return
@@ -701,8 +794,8 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	if shield_t > 0.0:
 		_shield_absorbed += amount * 0.7
 		amount *= 0.3
-	if patch("armor") >= 1:
-		amount *= 0.92
+	if arch_rank("armor") >= 1:
+		amount *= ArchBalance.ARMOR_K
 	if umbrella_t > 0.0 and lvl_of("umbrella") >= 3:
 		amount *= 0.8
 	if ranks_t > 0.0:
@@ -721,9 +814,13 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 		if t != null:
 			var d := (t.global_position - global_position).normalized()
 			Main.I.projectiles.spawn_rocket(global_position, velocity + d * 900.0, 30.0, 60.0, 0.0, {"src": "связка: утюг"})
+	if syn.has("ironclad"):   # PG-11 «Броневой бой»
+		ironclad_n = mini(ironclad_n + 1, SynPairs.IRONCLAD_MAX)
+		ironclad_t = SynPairs.IRONCLAD_T
 	amount *= float(mods["taken_k"])
 	var big_hit := amount > max_hp * 0.1
 	hp -= amount
+	_hurt_t = 0.0
 	if has_perk("a_arm2") and not _second_wind and hp > 0.0 and hp < max_hp * 0.25:
 		_second_wind = true # перк «Второе дыхание»
 		heal(max_hp * 0.2, "perk")
@@ -734,10 +831,10 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	Main.I.add_stat("taken", source, amount)
 	if who != "":
 		Main.I.add_stat("taken_by", who, amount)
-	invuln = AcesBalance.HIT_INVULN if Main.aces() else 0.7
-	if big_hit and patch("armor") >= 2 and _armor2_cd <= 0.0:
-		invuln = 1.0
-		_armor2_cd = 12.0
+	invuln = AcesBalance.HIT_INVULN if Main.aces() else HullBalance.HIT_INVULN
+	if big_hit and arch_rank("armor") >= 2 and _armor2_cd <= 0.0:
+		invuln = ArchBalance.ARMOR_INV
+		_armor2_cd = ArchBalance.ARMOR_INV_CD
 	if manual_mode:
 		manual_bonus = maxf(0.0, manual_bonus - Tuning.g("manual_hit_penalty"))
 	Events.player_damaged.emit(amount)
