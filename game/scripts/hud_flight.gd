@@ -66,6 +66,8 @@ const SIDE_W := 272.0   # s15: 250 cut «НАВОДЯЩИЕСЯ РАК…»; the
 const SIDE_ROW := 60.0
 const SIDE_ROW_MIN := 50.0
 const SIDE_TILE := 44.0
+## S15-G11: left column backing with the toggle hud_backing on — dense enough for its captions over a white cloud
+const SIDE_BACK_DENSE := 0.78
 
 
 ## Draws the in-flight HUD panels (XP line, hull and fuel, activities, timer, goals and
@@ -432,7 +434,7 @@ func _action_bar(m: Main, p: Player, size: Vector2) -> void:
 	var rh := clampf((low - _side_top - 16.0) / maxf(rows, 1), SIDE_ROW_MIN, SIDE_ROW)
 	_side_rect = Rect2(20.0, _side_top, SIDE_W, rows * rh + 16.0) if rows > 0 else Rect2()
 	_side_row = rh
-	sig.append_array([_side_rect, rh])
+	sig.append_array([_side_rect, rh, Tuning.g("hud_backing")])
 	var y := _side_top + 8.0
 	for g in weps:
 		var hp := g as Hardpoint
@@ -506,7 +508,9 @@ func draw_bar_static() -> void:
 	if _bar_rect.has_area():
 		UiStyle.panel(ctrl, _bar_rect, Color(1, 1, 1, 0.1), Color(0.03, 0.035, 0.035, 0.42))
 	if _side_rect.has_area():
-		UiStyle.panel(ctrl, _side_rect, Color(1, 1, 1, 0.1), Color(0.03, 0.035, 0.035, 0.38))
+		# S15-G11 (Kanta s15, R-22 toggle hud_backing): at 0.38 the column was unreadable over a white cloud
+		var bg_a := SIDE_BACK_DENSE if Tuning.g("hud_backing") >= 1.0 else 0.38
+		UiStyle.panel(ctrl, _side_rect, Color(1, 1, 1, 0.1), Color(0.03, 0.035, 0.035, bg_a))
 	for c in _bar_cols:
 		if c.hp != null:
 			_weapon_static(c)
