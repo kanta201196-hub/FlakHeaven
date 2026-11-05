@@ -21,6 +21,15 @@
 - **Главный путь:** EX-01…EX-12 → код демо DM-02…DM-05 → Steamworks (только Kanta, `docs/owner-checklist/kanta-now.md`).
 - **Треды на сильной модели — не больше шести одновременно (с 25.10.2026, было два)**; очередь ведёт координатор.
 
+## Правки по сборке 3.5-s16
+
+One numbered list for the build under test (3.5-s16). Kanta sends items as he plays; work is handed out only after his «готово» (or an explicit «раздать сразу»). Code locations below are read from the code, causes are hypotheses until reproduced (`systematic-debugging`).
+
+| ID | Task | Thread / owner | Status |
+| --- | --- | --- | --- |
+| S16-01 | In story scenes the mouse does not pick an option in the talk with «Купол» (choice steps, e.g. `ask_pass`, `ask_riverbed`, `lead`, `duel`, `grom_role`, `reply`). Path: `hud_dialog.gd:40-49` registers `dlg:opt:<k>` rects (44 px rows) over a full-screen `dlg:next` → `Hud._input` `button_at` (`hud.gd:166-184`) → `Main.ui_click` (`main_input.gd:259`) → `Dialog.ui` → `Dialog.pick` (`story/dialog.gd:130`, ignored while `total < ARM` 0.3 s). Keyboard path (`1-3`, Enter, arrows) is separate and works. Hypotheses: the click lands on the full `dlg:next` rect (rect order/offset vs drawn rows), or `Hud._input` bails out (`tuning_panel`/`report` visible), or the click is eaten before `Hud`. Needs a repro with `--dialog` and a synthetic click | Интерфейс | collected, not started |
+| S16-02 | Music changes abruptly and constantly. `Main` calls `sfx.music(track)` every frame (`main.gd:379-409`); a different track starts a 1.5 s crossfade with a random file from the list (`sfx.gd:431-453`). Hypothesis: in flight `battle` ↔ `boss` flips whenever `boss_alive()` or a `RivalAce` activity appears/disappears (`main.gd:407-409`), each flip also restarts a random track from 0:00; plus `menu` ↔ `result` in cutscenes (`main.gd:379`). Check the log for track switches per sortie; fix idea: hysteresis/min hold time and no restart when returning to the same family | Звук и музыка | collected, not started |
+
 ## Правки по сборке 3.5-s15
 
 Items from the s15 recordings and log review (04.11.2026, `/mnt/project-files/s15_review-20261104T204803-22d9.md`); Kanta 04.11: «Отдавай». ID number = review item number; balance items 21–24 are GD-14…GD-17, aces items 16–20 go to the aces thread. Does not start a new build.
