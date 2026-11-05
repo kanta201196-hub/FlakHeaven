@@ -114,7 +114,7 @@ each at the slot's level (`SLOT_COST.lvl` and `mods` and `wing`).
 ### B2. Build album (Б5)
 
 - Add a hangar tab «АЛЬБОМ» next to «НАГРАДЫ». It is a grid of every synergy, modernization (`Modernizations.all()`), weapon profile and archetype rank III. Found entries are lit and show the class and date. Unfound entries are silhouettes with the recipe as a hint.
-- Save in `profile.json` as `album: {id: {"t": unix, "cls": id}}`, migrating old saves. The first find gives parts (`RewardBalance`, start 15) and a combat banner «Новое в альбоме: …», and shows on the result screen.
+- Save in `profile.json` as `album: {id: {"t": unix, "cls": id}}`, migrating old saves. The first find gives parts (`Rewards`, start 15) and a combat banner «Новое в альбоме: …», and shows on the result screen.
 - Medal «Коллекционер» (`MedalBalance`) may switch to counting album entries. If it does, migrate the old counter so nobody loses a tier.
 - The album is **on in the demo**: it is the reason to play again. Medals stay off in the demo.
 - Check:
