@@ -16,6 +16,16 @@ func _syn_conds(p: Player, s: Dictionary, skill := false) -> Array:
 		return Cards.cond_list(p, sid)
 	# U-04: в меню — пороги для первой связки, без «11/18/25»
 	var out0: Array = []
+	if Cards.pairs_on():   # PG-11: the recipe of two things at the first slot
+		var sid0: String = s.get("id", "")
+		if sid0 == "":
+			for k in Cards.SYNERGIES:
+				if Cards.SYNERGIES[k] == s:
+					sid0 = k
+		for t in SynPairs.req(sid0):
+			var unit := Loc.t("ур.") if t.has("w") or t.has("skill") else "×"
+			out0.append(["%s %s %d" % [Cards.pair_thing_title(null, t), unit, SynPairs.need(t, SynPairs.cost(0))], false])
+		return out0
 	var c0: Dictionary = Cards.SLOT_COST[0]
 	if skill:
 		out0.append([Loc.t("уровень навыка %d") % int(c0.get("s3", 1)), false])
@@ -76,7 +86,7 @@ func _near_synergies(p: Player, n: int) -> Array:
 	var arr: Array = []
 	for id in Cards.SYNERGIES:
 		var s: Dictionary = Cards.SYNERGIES[id]
-		if p.syn.has(id):
+		if p.syn.has(id) or not Cards.syn_offered(id):
 			continue
 		var conds := _syn_conds(p, s)
 		if s.has("w") and not conds[0][1] and String(conds[0][0]).ends_with("(нет)"):
@@ -247,7 +257,7 @@ func _row(r: Rect2, row: Array) -> void:
 
 
 func _weapon_rows(p: Player) -> Array:
-	var ids: Array = Cards.SYNERGIES.keys()
+	var ids: Array = Cards.SYNERGIES.keys().filter(func(id): return Cards.syn_offered(id))
 	if p != null:
 		ids.sort_custom(func(a, b):
 			var oa := 2.0 if p.syn.has(a) else _progress(_syn_conds(p, Cards.SYNERGIES[a]))
@@ -263,6 +273,8 @@ func _weapon_rows(p: Player) -> Array:
 				mine = mine or Cards._wlevel(p, [w]) > 0
 		if p != null and s.get("wingmen", false):
 			mine = mine and p.permanent_wingmen() > 0
+		if p != null and Cards.pairs_on():
+			mine = Cards._pair_have(p, id)
 		out.append([s["title"], s["short"], _syn_conds(p, s), p != null and p.syn.has(id), mine or (p != null and p.syn.has(id))])
 	return out
 

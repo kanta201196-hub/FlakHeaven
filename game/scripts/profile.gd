@@ -152,7 +152,7 @@ func _default_kit() -> Dictionary:
 
 func reset_data() -> void:
 	data = {"version": VERSION, "parts": 0, "sorties": 0, "parts_earned_total": 0, "classes": {}, "weapons": {},
-		"medals": {"c": {}, "cards": [], "syn": []}}
+		"medals": {"c": {}, "cards": [], "syn": []}, "album": {}}
 	_medal_cache = {}
 	for c in PlaneClasses.LIST:
 		data["classes"][c] = _default_class(c)
@@ -201,6 +201,10 @@ func load_profile() -> void:
 		for k in ["cards", "syn"]:
 			if md.get(k) is Array:
 				data["medals"][k] = (md[k] as Array).duplicate()
+	# PG-11 build album: a save from before it seeds the album with the synergies the medals counted
+	data["album"] = AlbumBook.parse(d.get("album"))
+	if not d.has("album"):
+		AlbumBook.migrate(data["album"], data["medals"]["syn"])
 	if d.get("weapons") is Dictionary:
 		for w in WEAPON_ORDER:
 			if (d["weapons"] as Dictionary).has(w):
@@ -788,6 +792,8 @@ func award_run(s: Dictionary) -> Dictionary:
 		return out
 	var wage := WAGE
 	var add := int(s["parts_kept"]) + wage + int(s.get("op_parts", 0)) # U-05: + награда за первый проход операции
+	var album_new: Array = s.get("album_new", [])
+	add += AlbumBook.parts_for(album_new.size())   # PG-11: first finds of the build album
 	out["medals_new"] = medals_award(s.get("medals", {}), add, s.get("cards_taken", []), s.get("syn_taken", []))
 	data["parts"] = parts() + add
 	data["parts_earned_total"] = int(data["parts_earned_total"]) + add
@@ -829,6 +835,8 @@ func award_run(s: Dictionary) -> Dictionary:
 	out["xp_before"] = xp_before
 	out["parts_add"] = add
 	out["op_parts"] = int(s.get("op_parts", 0))
+	out["album_new"] = album_new
+	out["album_parts"] = AlbumBook.parts_for(album_new.size())
 	out["wage"] = wage
 	out["parts_after"] = parts()
 	out["lvl_after"] = crew_lvl(c)
@@ -935,6 +943,27 @@ func gate_r_k(_c: String) -> float:
 ## B-06: объём бака — +8% за уровень узла «Бак»
 func fuel_k(c: String) -> float:
 	return (1.0 + 0.08 * node(c, "tank") * meta_k()) * (1.0 + medal_bonus("fuel"))
+
+
+# ---------- build album (PG-11 B5, Kanta 05.11; AlbumBook) ----------
+
+## Whether album entry `id` is found
+func album_has(id: String) -> bool:
+	return (data["album"] as Dictionary).has(id)
+
+
+## Records entry `id` found by class `cls` now; true on the first find. Saved with the sortie's award.
+func album_add(id: String, cls: String) -> bool:
+	return AlbumBook.add(data["album"], id, cls, int(Time.get_unix_time_from_system()))
+
+
+## Every album entry of the game under the current rules (see `AlbumBook.ids`)
+func album_ids() -> Array:
+	var skill_ids: Array = []
+	for sk in PlaneClasses.SKILL3:
+		skill_ids.append(PlaneClasses.SKILL3[sk]["syn"]["id"])
+	var syn_ids: Array = Cards.SYNERGIES.keys().filter(func(x): return Cards.syn_offered(x))
+	return AlbumBook.ids(syn_ids, skill_ids, Modernizations.all().keys(), WeaponProfiles.DEFS)
 
 
 # ---------- медали (Kanta 27.10, «Наградная планка»; MedalBalance) ----------

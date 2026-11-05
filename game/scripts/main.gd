@@ -34,6 +34,7 @@ var result_t := 0.0
 var result_tab := 0 # правка 30: вкладка итогов — 0 обзор, 1 урон, 2 сборка
 var hangar_cls := "fighter"
 var hangar_tab := "plane"
+var hangar_album := ""   # album entry picked on the «АЛЬБОМ» tab (PG-11; its card stays under the grid)
 var hangar_medal := ""   # medal picked on the «НАГРАДЫ» tab (its card stays under the board)
 var hangar_w := "aam"
 var decal_edit: DecalEditor   ## the hangar decal editor while «Знаки ›» is open (DecalEditInput drives it), else null
@@ -960,7 +961,8 @@ func _award(outcome: String) -> void:
 	meta_award = Profile.award_run({"cls": cls_id, "outcome": outcome, "run_time": run_time, "level": run.level,
 		"bosses": run.bosses_killed, "activities": run.activities_done, "parts_kept": parts_kept, "continue_mult": continue_mult(),
 		"op_parts": int(op_result.get("parts", 0)), "medals": Medals.run_counters(self, outcome),
-		"cards_taken": _medal_cards(), "syn_taken": player.syn.keys() if is_instance_valid(player) else []})
+		"cards_taken": _medal_cards(), "syn_taken": player.syn.keys() if is_instance_valid(player) else [],
+		"album_new": player.album_new if is_instance_valid(player) else []})
 	result_t = 0.0
 	result_tab = 0
 
