@@ -745,6 +745,8 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, 3, true) - WeaponModels.PYLON_H) * wlen
 				"top":
 					y = hi if not is_nan(hi) else 0.03
+					if not is_nan(hi) and g.weapon == "flares":   # turrets on top keep their tuned collar seat
+						y = _seat_on_crown(wmi, x, z, hi, wlen)
 				"wing":
 					y = hi if not is_nan(hi) else 0.03
 					if g.weapon == "turret":   # S13: «Грач» 2 wing turret — its ring on the crown of a wing fairing
@@ -810,6 +812,42 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 			debug_mounts.append({"weapon": g.weapon, "side": side, "node": wmi, "miss": miss})
 	if repaint:
 		_apply_livery(_model, cls_id, lvl)
+
+
+## Deepest a base is sunk below the crown to reach the skin at its rim (model lengths): a rim over a step or the
+## edge of the model would otherwise bury the whole part
+const SEAT_SINK_MAX := 0.012
+
+
+## s16 self-check: a part on the spine («Салют» launcher) placed at the crown height hi of its centre (x, z)
+## floated over a narrow round spine — its base ring reached past the crown, so the rim stood 1.5 % of the plane
+## length off the skin. Returns the height that puts the base's lowest rim point on the skin: the base footprint
+## (lowest vertices of `wmi`, scale `wlen`) is sampled at 8 rim points and the lowest skin height under them wins.
+## The centre sinks into the spine, which hides inside it.
+func _seat_on_crown(wmi: MeshInstance3D, x: float, z: float, hi: float, wlen: float) -> float:
+	if wmi.mesh == null:
+		return hi
+	var pts := MountCheck.mesh_points(wmi.mesh, Transform3D(), 1500)
+	if pts.is_empty():
+		return hi
+	var ymin := INF
+	for p in pts:
+		ymin = minf(ymin, p.y)
+	var r := 0.0
+	var band := wmi.mesh.get_aabb().size.y * 0.04   # the base's bottom face and its edge
+	for p in pts:
+		if p.y <= ymin + band:
+			r = maxf(r, Vector2(p.x, p.z).length())
+	r *= wlen
+	if r <= 0.0:
+		return hi
+	var y := hi
+	for i in 8:
+		var a := TAU * float(i) / 8.0
+		var h := _surface_y(x + cos(a) * r, z + sin(a) * r, false)
+		if not is_nan(h):
+			y = minf(y, h)
+	return maxf(y, hi - SEAT_SINK_MAX)
 
 
 ## Largest chord slope a pylon follows (rad): a steeper difference between its ends means one end reaches past the
