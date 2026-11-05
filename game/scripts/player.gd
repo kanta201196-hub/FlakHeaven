@@ -306,6 +306,8 @@ func _arch_up(t: String, r: int, quiet: bool) -> void:
 	if quiet or Main.I == null:
 		return
 	var d: Dictionary = ArchBalance.DEFS[t]
+	if r == ArchBalance.MAX_RANK:
+		album_find("arch:" + t, "%s III" % String(d["title"]))   # PG-11 B5: rank III goes into the build album
 	Events.banner.emit(Loc.t("АРХЕТИП «%s» — РАНГ %s") % [Loc.t(String(d["title"])).to_upper(), Prog.ROMAN[r]], 3.5)
 	Main.I.fx.text(global_position + Vector2(0, -80), Loc.t(String(d["ranks"][r - 1]["desc"])), Prog.TAGS[t]["color"])
 	Main.I.fx.ring(global_position, 200.0, Prog.TAGS[t]["color"])

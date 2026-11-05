@@ -10056,3 +10056,6 @@ msgstr "NEW RECORD! Long sortie +%d:%02d"
 #: game/scripts/main.gd
 msgid "до 15:00 всё"
 msgstr "all up to 15:00"
+
+msgid "%d очков «%s» за вылет — карточки этого тега"
+msgstr "%d «%s» points in one sortie — cards with this tag"

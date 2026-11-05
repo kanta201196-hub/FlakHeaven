@@ -97,6 +97,8 @@ static func entry_title(id: String) -> String:
 		"prof":
 			var w := id.get_slice(":", 1)
 			return "%s: %s" % [Loc.t(String(Weapons.DEFS[w]["short"])), Loc.t(String(WeaponProfiles.def(w, id.get_slice(":", 2)).get("title", id)))]
+		"arch":
+			return "%s III" % Loc.t(String(ArchBalance.DEFS.get(id.get_slice(":", 1), {}).get("title", id)))
 	return id
 
 
@@ -112,6 +114,9 @@ static func entry_desc(id: String) -> String:
 			return Loc.t(String(Modernizations.def(id.get_slice(":", 1)).get("desc", "")))
 		"prof":
 			return Loc.t(String(WeaponProfiles.def(id.get_slice(":", 1), id.get_slice(":", 2)).get("desc", "")))
+		"arch":
+			var ad: Dictionary = ArchBalance.DEFS.get(id.get_slice(":", 1), {})
+			return Loc.t(String(ad["ranks"][2]["desc"])) if not ad.is_empty() else ""
 	return ""
 
 
@@ -142,6 +147,11 @@ static func recipe(id: String) -> String:
 			return Loc.t("%s ур. 5 + %s, с 7:00 вылета") % [wn, ", ".join(cat)]
 		"prof":
 			return Loc.t("%s: выбор профиля на ур. %d") % [Loc.t(String(Weapons.DEFS[id.get_slice(":", 1)]["short"])), WeaponProfiles.LEVEL]
+		"arch":
+			var tg := id.get_slice(":", 1)
+			if not ArchBalance.ARCH_AT.has(tg):
+				return ""
+			return Loc.t("%d очков «%s» за вылет — карточки этого тега") % [int(ArchBalance.at_of(tg)[2]), Loc.t(Prog.tag_title(tg))]
 	return ""
 
 

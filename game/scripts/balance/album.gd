@@ -11,8 +11,8 @@ extends RefCounted
 ## Parts for the first find of one entry (first guess)
 const PARTS_FIRST := 15
 
-## Archetype entries (rank III), filled by part A of PG-11; empty until then
-const ARCH_IDS: Array = []
+## Archetype entries (rank III of PG-11 part A): every tag of `Prog.TAG_ORDER` (`ArchBalance.DEFS`)
+const ARCH_IDS: Array = Prog.TAG_ORDER
 
 
 ## Every entry id in album order: weapon synergies, class-skill synergies, modernizations, weapon profiles,

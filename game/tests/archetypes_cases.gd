@@ -34,6 +34,8 @@ func _test_table() -> void:
 			_check(String(r["short"]).length() <= 36, "%s short line fits the pause row: %s" % [t, r["short"]])
 			_check(String(r["desc"]) != "", "%s rank text" % t)
 	_check(ArchBalance.DEFS.size() == Prog.TAG_ORDER.size(), "no archetype without a tag")
+	_check(AlbumBook.ARCH_IDS == Prog.TAG_ORDER, "every archetype rank III is an album entry")
+	_check(AlbumBook.ids([], [], [], {}).has("arch:kinetic"), "album lists «arch:<tag>»")
 	for t: String in Prog.TAG_ORDER:
 		var at: Array = ArchBalance.at_of(t)
 		_check(at.size() == ArchBalance.MAX_RANK and int(at[0]) < int(at[1]) and int(at[1]) < int(at[2]), "%s: three rising thresholds" % t)

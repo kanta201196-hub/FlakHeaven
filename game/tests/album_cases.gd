@@ -43,7 +43,7 @@ func _test_pure() -> void:
 	var bad := AlbumBook.parse({"syn:x": {"t": 5, "cls": "bomber"}, "junk": 3, "evo:y": "z"})
 	_check(bad.size() == 1 and bad.has("syn:x"), "only well-formed entries survive parse")
 	var all := AlbumBook.ids(["carousel", "salvo"], ["s_wheel"], ["aam"], {"aam": {"pair": {}, "reach": {}}})
-	_check(all.size() == 6 and all.has("prof:aam:reach") and all.has("evo:aam") and all.has("syn:s_wheel"), "ids cover every kind (got %s)" % str(all))
+	_check(all.size() == 6 + AlbumBook.ARCH_IDS.size() and all.has("arch:armor") and all.has("prof:aam:reach") and all.has("evo:aam") and all.has("syn:s_wheel"), "ids cover every kind (got %s)" % str(all))
 	_check(AlbumBook.found(a, all) == 1, "found counts only listed ids")
 	_check(AlbumBook.kind("prof:aam:reach") == "prof", "kind of an id")
 	_check(AlbumBook.parts_for(3) == 3 * AlbumBook.PARTS_FIRST and AlbumBook.parts_for(-1) == 0, "parts per first find")
