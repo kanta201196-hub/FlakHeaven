@@ -329,6 +329,16 @@ void fragment() {
 		float snow = smoothstep(sfrom, sfrom + 0.05, rel.y + (hgt - 0.5) * 0.05 + patch)
 			* (1.0 - smoothstep(0.3, 0.55, slope)) * (1.0 - 0.8 * rg)
 			* mix(1.0, smoothstep(0.55, 0.8, prov.x) * (1.0 - prov.y), prov.w);   // RV-01: snow only in high ranges
+		if (sand_edge) {
+			// S15-G09 (Kanta s15: pale patches with a stair-stepped «pixel» edge all over the Highlands): rel.y,
+			// rel.x and the vertex normal behind shade_face are linear inside each relief triangle, and sfrom moved
+			// by up to 0.16 while the snow band was only 0.05 wide, so the patch border ran along triangle edges
+			// (straight cuts and steps). A wider band and two octaves of noise move it off the mesh grid
+			float n9 = (vnoise(world / 55.0 + 3.0) - 0.5) * 0.09 + (vnoise(world / 17.0 - 11.0) - 0.5) * 0.045;
+			snow = smoothstep(sfrom - 0.03, sfrom + 0.11, rel.y + (hgt - 0.5) * 0.05 + patch + n9)
+				* (1.0 - smoothstep(0.26, 0.6, slope + n9)) * (1.0 - 0.8 * rg)
+				* mix(1.0, smoothstep(0.5, 0.85, prov.x + n9) * (1.0 - prov.y), prov.w);
+		}
 		vec3 snow_c = SRGB(vec3(0.64, 0.67, 0.72)) * (0.93 + 0.1 * vnoise(world / 160.0 - 4.0));
 		c = mix(c, snow_c, snow);
 		nxy *= 1.0 - snow;
