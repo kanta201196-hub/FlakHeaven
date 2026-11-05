@@ -214,6 +214,11 @@ void fragment() {
 	Tap s3 = tap(t_river, n_river, uv + 0.13, k);
 	// смешивание по высоте: вес пятна + высота материала, оставляем только верхний слой ± height_blend
 	vec4 hw = vec4(w0, w1, w2, w3) * 3.0 + vec4(s0.n.b, s1.n.b, s2.n.b, s3.n.b) * 0.6;
+	if (sand_edge) {
+		// S15-G09: takyr cells are flat-topped polygons in the height map, so the height blend cut the sand
+		// border along whole cells (blocky steps); the clay height counts for less, the border follows the noise
+		hw.y -= s1.n.b * 0.4;
+	}
 	float m = max(max(hw.x, hw.y), max(hw.z, hw.w));
 	vec4 e = max(hw - (m - height_blend), vec4(0.0));
 	// мягкий запасной вариант старого смешивания, чтобы переходы не стали «ступеньками»
