@@ -16,6 +16,7 @@ func _init() -> void:
 	_test_class_task_not_counted()
 	_test_continue_mult_once()
 	_test_xp_levels()
+	_test_late_auto_levels()
 	_test_rare_queue()
 	_test_all_cards_taken()
 	_test_kill_streak()
@@ -99,6 +100,28 @@ func _test_xp_levels() -> void:
 	_check(s.xp < s.xp_need(), "leftover below next need")
 	_check(XpCurve.need(2) > XpCurve.need(1), "curve grows")
 	_check(XpCurve.kill_k(0.0) == 1.0 and XpCurve.kill_k(10000.0) == XpCurve.KILL_LATE, "kill XP fade")
+
+
+## GD-16 (23.2, Kanta 05.11): from level 30 every second level is a card screen; the level between them is
+## an automatic bonus (`auto_levels`), not a pick. Levels 31, 33, 35 are automatic; 32, 34 are picks.
+func _test_late_auto_levels() -> void:
+	var s := RunState.new()
+	var sum := 0.0
+	for lv in range(1, XpCurve.AUTO_FROM):
+		sum += XpCurve.need(lv)
+	s.add_xp(sum)
+	_check(s.level == XpCurve.AUTO_FROM and s.pending_levels == XpCurve.AUTO_FROM - 1 and s.auto_levels == 0,
+		"every level up to %d is a pick" % XpCurve.AUTO_FROM)
+	s.add_xp(XpCurve.need(s.level))
+	_check(s.level == XpCurve.AUTO_FROM + 1 and s.auto_levels == 1 and s.pending_levels == XpCurve.AUTO_FROM - 1,
+		"level %d is automatic" % (XpCurve.AUTO_FROM + 1))
+	s.add_xp(XpCurve.need(s.level))
+	_check(s.auto_levels == 1 and s.pending_levels == XpCurve.AUTO_FROM, "level %d is a pick" % (XpCurve.AUTO_FROM + 2))
+	for i in 4:
+		s.add_xp(XpCurve.need(s.level))
+	_check(s.auto_levels == 3 and s.pending_levels == XpCurve.AUTO_FROM + 2, "after 30: half the levels are picks")
+	_check(not XpCurve.auto_level(XpCurve.AUTO_FROM) and XpCurve.auto_level(XpCurve.AUTO_FROM + 1)
+		and not XpCurve.auto_level(XpCurve.AUTO_FROM + 2), "auto_level by number")
 
 
 ## A rare pick queues a level and its label; taking it removes both.

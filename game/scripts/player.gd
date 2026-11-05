@@ -765,7 +765,7 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 	Main.I.add_stat("taken", source, amount)
 	if who != "":
 		Main.I.add_stat("taken_by", who, amount)
-	invuln = AcesBalance.HIT_INVULN if Main.aces() else 0.7
+	invuln = AcesBalance.HIT_INVULN if Main.aces() else HullBalance.HIT_INVULN
 	if big_hit and patch("armor") >= 2 and _armor2_cd <= 0.0:
 		invuln = 1.0
 		_armor2_cd = 12.0

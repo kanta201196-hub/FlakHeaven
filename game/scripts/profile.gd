@@ -153,7 +153,7 @@ func _default_kit() -> Dictionary:
 ## A new profile: no parts, default classes and weapon branches, empty medals and build album
 func reset_data() -> void:
 	data = {"version": VERSION, "parts": 0, "sorties": 0, "parts_earned_total": 0, "classes": {}, "weapons": {},
-		"medals": {"c": {}, "cards": [], "syn": []}, "album": {}}
+		"medals": {"c": {}, "cards": [], "syn": []}, "long": {}, "album": {}}
 	_medal_cache = {}
 	for c in PlaneClasses.LIST:
 		data["classes"][c] = _default_class(c)
@@ -207,10 +207,29 @@ func load_profile() -> void:
 	data["album"] = AlbumBook.parse(d.get("album"))
 	if not d.has("album"):
 		AlbumBook.migrate(data["album"], data["medals"]["syn"])
+	# long sortie (MO-01): best time over 15:00 per class and the build that did it; an old save has none
+	if d.get("long") is Dictionary:
+		for c in d["long"]:
+			var e = d["long"][c]
+			if PlaneClasses.LIST.has(c) and e is Dictionary:
+				data["long"][c] = {"t": float(e.get("t", 0.0)), "build": e.get("build", {}) if e.get("build") is Dictionary else {}}
 	if d.get("weapons") is Dictionary:
 		for w in WEAPON_ORDER:
 			if (d["weapons"] as Dictionary).has(w):
 				data["weapons"][w] = d["weapons"][w]
+
+
+## Best long-sortie time for a class, in seconds past 15:00 (0 = never stayed).
+## The hangar and the in-flight goal row show it so the player has a record to beat.
+func long_best(c: String) -> float:
+	return float((data["long"] as Dictionary).get(c, {}).get("t", 0.0))
+
+
+## Store a new long-sortie record for a class with the build that set it.
+## The caller decides it is a record (EndlessBalance.is_record), so this only writes and saves.
+func long_save(c: String, t: float, build: Dictionary) -> void:
+	data["long"][c] = {"t": t, "build": build.duplicate(true)}
+	save()
 
 
 func save() -> void:
