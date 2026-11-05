@@ -9745,9 +9745,6 @@ msgstr "ARCHETYPES"
 msgid "Без брони"
 msgstr "No Armor"
 
-msgid "Без места модуля; таких карт — не больше %d за вылет"
-msgstr "Takes no module slot; at most %d such cards per sortie"
-
 msgid "Бомбёр"
 msgstr "Bombardier"
 

@@ -830,7 +830,6 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			# the first line is the plus (card text), the rest goes to the red box (hud_cards) — two colours
 			var td: Dictionary = ArchBalance.TRADES[card["id"]]
 			card["desc"] = Loc.t("Плюс: %s") % Loc.t(String(td["plus"])) + "\n" + Loc.t("Минус: %s") % Loc.t(String(td["minus"]))
-			card["desc"] += "\n" + Loc.t("Без места модуля; таких карт — не больше %d за вылет") % ArchBalance.TRADE_MAX
 		"branch":
 			var bgr: Hardpoint = p.groups[int(card["group"])]
 			var bd: Dictionary = branch_def(bgr.weapon, card["branch"], bgr.profile)
