@@ -11,11 +11,11 @@ extends CanvasLayer
 ## Sizes in millimetres on the glass, turned into canvas units with the screen's DPI, so a button
 ## is the same size under the thumb on a 6" phone and an 11" tablet
 const STICK_MM := 22.0
-const MAIN_MM := 13.0      # the first skill (evade / flares): the one pressed most
-const BTN_MM := 9.5
+const MAIN_MM := 12.0      # the first skill (evade / flares): the one pressed most
+const BTN_MM := 9.0
 const PAUSE_MM := 6.0
-const ARC_MM := 30.0       # arc radius around the main button
-const EDGE_MM := 16.0      # main button centre from the right and bottom edges
+const ARC_MM := 24.0       # arc radius around the main button
+const EDGE_MM := 14.0      # main button centre from the right and bottom edges
 ## Canvas units per mm when the screen gives no DPI (a 6.5" 1080p phone)
 const FALLBACK_UPMM := 9.0
 
@@ -72,9 +72,11 @@ func _units_per_mm() -> float:
 	var dpi := DisplayServer.screen_get_dpi()
 	var px := float(DisplayServer.window_get_size().y)
 	if dpi <= 0 or px <= 0.0:
-		return FALLBACK_UPMM
+		return maxf(FALLBACK_UPMM, _view.size.y / 160.0)
 	var px_per_mm := float(dpi) / 25.4
-	return clampf(px_per_mm * _view.size.y / px, 3.0, 20.0)
+	# floor: as if the screen were 160 mm tall (a big tablet), so a wrong or missing DPI never
+	# makes buttons smaller than they would be on a 12" tablet
+	return clampf(px_per_mm * _view.size.y / px, _view.size.y / 160.0, 20.0)
 
 
 ## Builds this frame's buttons: main skill in the corner, the rest on an arc around it from left
