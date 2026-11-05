@@ -84,9 +84,10 @@ func _progress(conds: Array) -> float:
 ## Ближайшие к открытию связки (у которых есть оружие/ведомые), по доле выполненных условий
 func _near_synergies(p: Player, n: int) -> Array:
 	var arr: Array = []
+	var avail: Array = Cards._available(p) if Cards.pairs_on() else []
 	for id in Cards.SYNERGIES:
 		var s: Dictionary = Cards.SYNERGIES[id]
-		if p.syn.has(id) or not Cards.syn_offered(id):
+		if p.syn.has(id) or not Cards.syn_offered(id) or (Cards.pairs_on() and not avail.has(id)):
 			continue
 		var conds := _syn_conds(p, s)
 		if s.has("w") and not conds[0][1] and String(conds[0][0]).ends_with("(нет)"):

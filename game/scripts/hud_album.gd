@@ -9,6 +9,7 @@ const KIND_TITLE := {"syn": "Связка", "evo": "Модернизация", "
 const KIND_COLOR := {"syn": Color(1.0, 0.82, 0.25), "evo": Color(0.75, 0.55, 1.0), "prof": Color(0.55, 0.85, 1.0), "arch": Color(0.6, 1.0, 0.7)}
 
 
+## Draws the album grid and the card of the entry under the cursor (or the selected one) inside `area`
 func draw(m: Main, area: Rect2) -> void:
 	var ids := Profile.album_ids()
 	var album: Dictionary = Profile.data["album"]
@@ -120,15 +121,16 @@ static func recipe(id: String) -> String:
 		"syn":
 			var sid := id.get_slice(":", 1)
 			var sk := _skill_of(sid)
+			if not Cards.pairs_on() or SynPairs.req(sid).is_empty():
+				return Loc.t("Связка за очки тегов (справочник в бою)")
 			var parts := PackedStringArray()
 			for t in SynPairs.req(sid):
 				if t.has("skill"):
 					parts.append(Loc.t("навык «%s»") % Loc.t(String(PlaneClasses.SKILL3[sk]["title"])))
 				else:
 					parts.append(Cards.pair_thing_title(null, t))
-			if parts.is_empty():
-				return Loc.t("Связка за очки тегов (справочник в бою)")
-			return Loc.t("%s — в одном вылете; первый слот связки — ур. 3 / ×2 у каждого") % " + ".join(parts)
+			var c0 := SynPairs.cost(0)
+			return Loc.t("%s — в одном вылете; первый слот связки — ур. %d / ×%d у каждого") % [" + ".join(parts), int(c0["lvl"]), int(c0["mods"])]
 		"evo":
 			var eid := id.get_slice(":", 1)
 			var w := Modernizations.weapon_of(eid)

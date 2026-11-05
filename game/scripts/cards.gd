@@ -223,6 +223,8 @@ static func pair_thing_title(p: Player, t: Dictionary) -> String:
 ## Conditions of `id` under the pair rules, in the `cond_list` format: [[text, done, have, need], …]
 static func pair_conds(p: Player, id: String) -> Array:
 	var out: Array = []
+	if SynPairs.req(id).is_empty():   # no recipe (a retired synergy): never ready, even if chosen under the s15 rules
+		return [[Loc.t("связка недоступна"), false, 0, 1]]
 	for st in SynPairs.state(id, pair_snap(p), p.syn.size()):
 		var t: Dictionary = st[0]
 		var unit := Loc.t("ур.") if t.has("w") or t.has("skill") else "×"
@@ -377,16 +379,24 @@ static func _available(p: Player) -> Array:
 	return out
 
 
-## PG-11: a pair synergy is open to choose when every weapon of its recipe is on the plane or can still be
-## mounted (a free hardpoint group; turrets come only with the class), and its wingmen exist or may join
-static func _pair_started(p: Player, id: String, free_group: bool) -> bool:
+## PG-11: a pair synergy is open to choose when every weapon thing of its recipe is on the plane or can still be
+## mounted — one free hardpoint group per missing thing, with a weapon the plane allows (turrets come only with
+## the class, never on a free group) — and its wingmen exist or may join
+static func _pair_started(p: Player, id: String, _free_group := false) -> bool:
 	var snap := pair_snap(p)
+	var free := 0
+	for g in p.groups:
+		if not (g as Hardpoint).builtin and (g as Hardpoint).is_empty():
+			free += 1
+	var lv := int(p.cls["plane_lvl"])
 	for t in SynPairs.req(id):
-		if t.has("w") and SynPairs.have(t, snap) == 0 and (not free_group or (t["w"] as Array).has("turret")):
-			return false
+		if t.has("w") and SynPairs.have(t, snap) == 0:
+			if not (t["w"] as Array).any(func(w): return w != "turret" and Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w, lv)):
+				return false
+			free -= 1
 		if t.has("wing") and int(p.cls["wingmen"]) <= 0 and p.permanent_wingmen() == 0:
 			return false
-	return true
+	return free >= 0
 
 
 ## PG-11: a pair synergy counts as «yours» on the course screen when one of its things is already started

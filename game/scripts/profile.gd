@@ -150,6 +150,7 @@ func _default_kit() -> Dictionary:
 	return {"gun": "std", "guns": ["std"], "ammo": "std", "ammos": ["std"]}
 
 
+## A new profile: no parts, default classes and weapon branches, empty medals and build album
 func reset_data() -> void:
 	data = {"version": VERSION, "parts": 0, "sorties": 0, "parts_earned_total": 0, "classes": {}, "weapons": {},
 		"medals": {"c": {}, "cards": [], "syn": []}, "album": {}}
@@ -160,6 +161,7 @@ func reset_data() -> void:
 		data["weapons"][w] = {"t1": "", "t2": "", "t3": ""}
 
 
+## Reads `path` over the defaults, migrating old saves (crew rank, start list, decals, medals, build album)
 func load_profile() -> void:
 	if not FileAccess.file_exists(path):
 		return
@@ -778,6 +780,8 @@ func any_purchase() -> bool:
 
 # ---------- начисление за вылет ----------
 
+## Credits a finished sortie `s` (parts, wage, crew experience, medals, first finds of the build album) and
+## saves; returns the lines and totals for the result screen. A sortie under 30 s credits nothing.
 func award_run(s: Dictionary) -> Dictionary:
 	var c: String = s["cls"]
 	var out := {"parts_before": parts(), "lvl_before": crew_lvl(c), "xp_lines": [], "unlocked": [], "short": false}
@@ -792,7 +796,7 @@ func award_run(s: Dictionary) -> Dictionary:
 		return out
 	var wage := WAGE
 	var add := int(s["parts_kept"]) + wage + int(s.get("op_parts", 0)) # U-05: + награда за первый проход операции
-	var album_new: Array = s.get("album_new", [])
+	var album_new: Array = (s.get("album_new", []) as Array).filter(func(id): return album_add(String(id), c))
 	add += AlbumBook.parts_for(album_new.size())   # PG-11: first finds of the build album
 	out["medals_new"] = medals_award(s.get("medals", {}), add, s.get("cards_taken", []), s.get("syn_taken", []))
 	data["parts"] = parts() + add
@@ -952,7 +956,7 @@ func album_has(id: String) -> bool:
 	return (data["album"] as Dictionary).has(id)
 
 
-## Records entry `id` found by class `cls` now; true on the first find. Saved with the sortie's award.
+## Records entry `id` found by class `cls` now; true on the first find. Called by the sortie's award, which saves.
 func album_add(id: String, cls: String) -> bool:
 	return AlbumBook.add(data["album"], id, cls, int(Time.get_unix_time_from_system()))
 

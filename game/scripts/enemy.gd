@@ -30,9 +30,10 @@ var min_life := 0.0      # правка 3.5-s4: асы — корпус не б�
 var _cap_budget := -1.0
 var _cap_t := 0.0
 var silence := 0.0
-## PG-11 «Перекрёстный огонь» / «Загонщик»: run time until which the course gun's mark holds (turrets / guided
-## air-to-ground missiles hit the marked target harder)
+## PG-11 «Перекрёстный огонь»: run time until which the course gun's mark holds for the turrets
 var gun_mark := -1.0
+## PG-11 «Загонщик»: run time until which the course gun's mark holds for guided air-to-ground missiles
+var hunt_mark := -1.0
 var move_vel := Vector2.ZERO   # 3.1: фактическая скорость (для пуль стрелка)
 var _drift := Vector2.INF      # тест 3.5-s7: скорость, с которой заглушённый ЭМИ самолёт летит по инерции
 var _prev_pos := Vector2.INF   # 3.1: ЭМИ «Ласки» — враг молчит

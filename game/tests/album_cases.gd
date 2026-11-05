@@ -84,3 +84,11 @@ func _test_award() -> void:
 	var a2: Dictionary = q.award_run(b2)
 	_check(int(a2["parts_add"]) == int(a["parts_add"]) + 2 * AlbumBook.PARTS_FIRST, "two first finds add 2 × %d parts (%d vs %d)" % [AlbumBook.PARTS_FIRST, int(a2["parts_add"]), int(a["parts_add"])])
 	_check(int(a2["album_parts"]) == 2 * AlbumBook.PARTS_FIRST and (a2["album_new"] as Array).size() == 2, "result screen gets the finds")
+	_check(q.album_has("syn:carousel") and q.album_has("evo:aam"), "the award writes the finds into the album")
+	var a3: Dictionary = q.award_run(b2)
+	_check(int(a3["album_parts"]) == 0 and int(a3["parts_add"]) == int(a["parts_add"]), "the same finds next sortie give no parts")
+	var b4 := b2.duplicate()
+	b4["run_time"] = 10.0
+	var r := _fresh_profile()
+	r.award_run(b4)
+	_check(not r.album_has("syn:carousel"), "a sortie with no award records nothing")

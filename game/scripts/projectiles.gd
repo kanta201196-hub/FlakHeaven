@@ -568,7 +568,7 @@ func _bullet_k(src: String, e: Enemy) -> float:
 	if pl.assault_t > 0.0 and e.is_ground and src.begins_with("курсовое"):
 		k *= 1.5
 	if src == "турели" and pl.syn.has("crossfire") and e.gun_mark > Main.I.run_time:   # PG-11 «Перекрёстный огонь»
-		k *= PairFx.MARK_K
+		k *= SynPairs.MARK_K
 		Main.I.fx.hit_spark(e.global_position, PairFx.color("crossfire"))
 	return k
 
@@ -580,9 +580,9 @@ func _gun_mark(e: Enemy) -> void:
 	if not is_instance_valid(pl) or e.hp <= 0.0:
 		return
 	if pl.syn.has("hunter") and e.is_ground:
-		e.gun_mark = maxf(e.gun_mark, Main.I.run_time + PairFx.HUNT_T)
-	elif pl.syn.has("crossfire"):
-		e.gun_mark = maxf(e.gun_mark, Main.I.run_time + PairFx.CROSS_T)
+		e.hunt_mark = Main.I.run_time + SynPairs.HUNT_T
+	if pl.syn.has("crossfire"):
+		e.gun_mark = Main.I.run_time + SynPairs.CROSS_T
 
 
 ## PG-01: tracer width factor by course gun variant (bullet key "gun")
@@ -634,8 +634,8 @@ func _update_player_missiles(delta: float) -> void:
 		if t != null and p.distance_to(t.aim_point(p)) < t.aim_radius() + 6.0:
 			t.hit_at = p
 			var dmg := float(m["dmg"]) * (boost if float(m["age"]) < 1.0 else 1.0) # «Форсированный старт»
-			if m.get("src", "") == "УР В-З" and t.is_ground and t.gun_mark > Main.I.run_time and is_instance_valid(pl) and pl.syn.has("hunter"):
-				dmg *= PairFx.MARK_K   # PG-11 «Загонщик»
+			if m.get("src", "") == "УР В-З" and t.is_ground and t.hunt_mark > Main.I.run_time and is_instance_valid(pl) and pl.syn.has("hunter"):
+				dmg *= SynPairs.MARK_K   # PG-11 «Загонщик»
 				Main.I.fx.ring(p, 70.0, PairFx.color("hunter"))
 			# PG-06 «Бетонобой»: extra damage to armored targets on top of the defence table
 			t.take_hit(dmg * (float(m.get("ground_k", 1.0)) if t.is_ground else 1.0) * (float(m.get("armor_k", 1.0)) if t.defense == "armor" else 1.0), m.get("src", "ракеты В-В"))
@@ -726,8 +726,13 @@ var _sticky: Array = []
 ## PG-11 «Огненный коридор»: a rocket of the volley leaves a short fire at `p`
 func _corridor_fire(p: Vector2) -> void:
 	var pl := Main.I.player
-	if is_instance_valid(pl) and pl.syn.has("corridor"):
-		spawn_fire(p, PairFx.CORRIDOR_R, PairFx.CORRIDOR_DPS, PairFx.CORRIDOR_T, PairFx.CORRIDOR_SRC)
+	if not is_instance_valid(pl) or not pl.syn.has("corridor"):
+		return
+	for f in fires:   # a rocket next to a burning spot renews it instead of stacking another one
+		if f["src"] == SynPairs.CORRIDOR_SRC and (f["p"] as Vector2).distance_to(p) < SynPairs.CORRIDOR_R:
+			f["t"] = SynPairs.CORRIDOR_T
+			return
+	spawn_fire(p, SynPairs.CORRIDOR_R, SynPairs.CORRIDOR_DPS, SynPairs.CORRIDOR_T, SynPairs.CORRIDOR_SRC)
 
 
 ## PG-11 «Огненный коридор»: whether `p` lies in one of its fires
@@ -736,7 +741,7 @@ func _in_corridor(p: Vector2) -> bool:
 	if not is_instance_valid(pl) or not pl.syn.has("corridor"):
 		return false
 	for f in fires:
-		if f["src"] == PairFx.CORRIDOR_SRC and (f["p"] as Vector2).distance_to(p) < float(f["r"]) + 40.0:
+		if f["src"] == SynPairs.CORRIDOR_SRC and (f["p"] as Vector2).distance_to(p) < float(f["r"]) + SynPairs.CORRIDOR_BOMB_PAD:
 			return true
 	return false
 
@@ -785,7 +790,7 @@ func _update_bombs(delta: float) -> void:
 			bombs.remove_at(i)
 		elif float(b["t"]) <= 0.0:
 			if _in_corridor(b["p"]):   # PG-11 «Огненный коридор»: a bomb in the fire bursts wider
-				b["r"] = float(b["r"]) * PairFx.CORRIDOR_R_K
+				b["r"] = float(b["r"]) * SynPairs.CORRIDOR_R_K
 				Main.I.fx.ring(b["p"], float(b["r"]), PairFx.color("corridor"))
 			aoe(b["p"], float(b["r"]), float(b["dmg"]), b["src"], true, null, 0, bool(b.get("ground", false)), 1.0, true)
 			var mpl := Main.I.player

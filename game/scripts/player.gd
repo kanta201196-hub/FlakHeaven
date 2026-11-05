@@ -288,10 +288,11 @@ func add_course_pts(n: int) -> void:
 	Main.I.fx.text(global_position + Vector2(0, -70), "+%d к специализации «%s»" % [n, sd["title"]], Color(1.0, 0.85, 0.35))
 
 
-## PG-11 build album: records entry `id` (player name `title`); on the first find ever, a banner after the
-## card's own one and a line on the result screen
+## PG-11 build album: notes entry `id` (player name `title`) when it was never found: a banner after the card's
+## own one. The entry is written to the album, with its parts, only by the sortie's award (Profile.award_run),
+## so a sortie with no award (left from pause, too short, «Битва асов») records nothing.
 func album_find(id: String, title: String) -> void:
-	if not Profile.album_add(id, cls_id):
+	if Profile.album_has(id) or album_new.has(id):
 		return
 	album_new.append(id)
 	Main.I.tele.add("album_new")
@@ -299,6 +300,7 @@ func album_find(id: String, title: String) -> void:
 	t.timeout.connect(func(): Events.banner.emit(Loc.t("НОВОЕ В АЛЬБОМЕ: %s") % Loc.t(title), 3.0))
 
 
+## Opens synergy `id` in the next free slot: banner, sound, slow motion, first trigger at once, album entry
 func open_synergy(id: String) -> void:
 	syn[id] = Main.I.run_time
 	syn_dmg[id] = 0.0
@@ -711,6 +713,7 @@ func heal(amount: float, src := "прочее") -> void:
 	Main.I.tele.add("heal_" + src, hp - before)   # EX-10: откуда приходит ремонт
 
 
+## Takes a hit of `amount` from `source` / `who` after dodges, difficulty, shields and synergy reactions
 func damage(amount: float, source := "прочее", who := "") -> void:
 	if is_invulnerable() or hp <= 0.0:
 		return
@@ -747,8 +750,8 @@ func damage(amount: float, source := "прочее", who := "") -> void:
 			var d := (t.global_position - global_position).normalized()
 			Main.I.projectiles.spawn_rocket(global_position, velocity + d * 900.0, 30.0, 60.0, 0.0, {"src": "связка: утюг"})
 	if syn.has("ironclad"):   # PG-11 «Броневой бой»
-		ironclad_n = mini(ironclad_n + 1, PairFx.IRONCLAD_MAX)
-		ironclad_t = PairFx.IRONCLAD_T
+		ironclad_n = mini(ironclad_n + 1, SynPairs.IRONCLAD_MAX)
+		ironclad_t = SynPairs.IRONCLAD_T
 	amount *= float(mods["taken_k"])
 	var big_hit := amount > max_hp * 0.1
 	hp -= amount

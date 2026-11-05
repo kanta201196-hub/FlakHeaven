@@ -65,6 +65,33 @@ const SKILL_REQ := {
 }
 
 
+# ---------- numbers of the six new pair synergies (effects: PairFx; first guesses before the balance run) ----------
+
+## «Перекрёстный огонь» / «Загонщик»: damage factor on a marked target, and how long a course gun hit marks it, s
+const MARK_K := 1.5
+const CROSS_T := 2.0
+const HUNT_T := 3.0
+## «Обманка»: damage of the answering missile; «Зарево»: bomb damage, radius and search range, px
+const DECOY_DMG := 40.0
+const DECOY_RANGE := 900.0
+const DECOY_SPD := 250.0
+const GLOW_DMG := 50.0
+const GLOW_R := 90.0
+const GLOW_RANGE := 600.0
+## «Огненный коридор»: fire left by a volley rocket (radius px, damage per s, time s) and the bomb radius factor in it
+const CORRIDOR_R := 45.0
+const CORRIDOR_DPS := 10.0
+const CORRIDOR_T := 2.0
+const CORRIDOR_R_K := 1.5
+## a bomb counts as «in the fire» this far past the fire's edge, px
+const CORRIDOR_BOMB_PAD := 40.0
+const CORRIDOR_SRC := "связка: огненный коридор"
+## «Броневой бой»: course gun damage per stack, stacks cap, how long the stacks hold after the last hit, s
+const IRONCLAD_K := 0.08
+const IRONCLAD_MAX := 5
+const IRONCLAD_T := 5.0
+
+
 ## Recipe of synergy `id` ([] — none: unknown id or a retired synergy)
 static func req(id: String) -> Array:
 	if REQ.has(id):

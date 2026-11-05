@@ -9714,8 +9714,8 @@ msgstr "synergy: wolf pack"
 msgid "%s ур. 5 + %s, с 7:00 вылета"
 msgstr "%s lv. 5 + %s, from 7:00 of the sortie"
 
-msgid "%s — в одном вылете; первый слот связки — ур. 3 / ×2 у каждого"
-msgstr "%s in one sortie; the first synergy slot asks lv. 3 / ×2 of each"
+msgid "%s — в одном вылете; первый слот связки — ур. %d / ×%d у каждого"
+msgstr "%s in one sortie; the first synergy slot asks lv. %d / ×%d of each"
 
 msgid "%s: выбор профиля на ур. %d"
 msgstr "%s: profile choice at lv. %d"
@@ -9824,3 +9824,6 @@ msgstr "synergy: fire corridor"
 
 msgid "ур."
 msgstr "lv."
+
+msgid "связка недоступна"
+msgstr "synergy unavailable"
