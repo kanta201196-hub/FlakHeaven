@@ -261,7 +261,7 @@ func _arch_strip(p: Player, r: Rect2) -> float:
 	for i in top.size():
 		var t: String = top[i]
 		var pts := p.tag(t)
-		var rk := ArchBalance.rank(pts)
+		var rk := ArchBalance.rank(t, pts)
 		var cx := r.position.x + 8.0 + cw * i
 		var col: Color = Prog.TAGS[t]["color"]
 		HudIcons.disc(ctrl, Vector2(cx + 14.0, r.position.y + r.size.y / 2.0 - 2.0), 10.0, t)
@@ -269,11 +269,11 @@ func _arch_strip(p: Player, r: Rect2) -> float:
 		var tw := cw - 34.0
 		UiStyle.text(ctrl, hf, Vector2(tx, r.position.y + 20.0), Loc.t(String(ArchBalance.DEFS[t]["title"])), UiStyle.FS_CAPTION,
 			UiStyle.TEXT if rk > 0 else UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, tw)
-		var nx := ArchBalance.next_at(pts)
+		var nx := ArchBalance.next_at(t, pts)
 		var sub: String = (Prog.ROMAN[rk] + "  ") if rk > 0 else ""
 		sub += Loc.t("МАКС") if nx < 0 else "%d/%d" % [pts, nx]
 		UiStyle.text(ctrl, hf, Vector2(tx, r.position.y + 37.0), sub, UiStyle.FS_CAPTION, col if rk > 0 else UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, tw)
-		var lo := 0 if rk == 0 else int(ArchBalance.ARCH_AT[rk - 1])
+		var lo := ArchBalance.floor_of(t, rk)
 		var k := 1.0 if nx < 0 else clampf(float(pts - lo) / float(nx - lo), 0.0, 1.0)
 		ctrl.draw_rect(Rect2(tx, r.position.y + 42.0, tw - 6.0, 3.0), Color(1, 1, 1, 0.12))
 		ctrl.draw_rect(Rect2(tx, r.position.y + 42.0, (tw - 6.0) * k, 3.0), col)

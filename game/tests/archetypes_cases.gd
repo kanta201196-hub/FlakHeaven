@@ -34,40 +34,53 @@ func _test_table() -> void:
 			_check(String(r["short"]).length() <= 36, "%s short line fits the pause row: %s" % [t, r["short"]])
 			_check(String(r["desc"]) != "", "%s rank text" % t)
 	_check(ArchBalance.DEFS.size() == Prog.TAG_ORDER.size(), "no archetype without a tag")
-	_check(ArchBalance.ARCH_AT == [4, 8, 12], "ranks at 4 / 8 / 12 points")
+	for t: String in Prog.TAG_ORDER:
+		var at: Array = ArchBalance.at_of(t)
+		_check(at.size() == ArchBalance.MAX_RANK and int(at[0]) < int(at[1]) and int(at[1]) < int(at[2]), "%s: three rising thresholds" % t)
+	_check(ArchBalance.at_of("missiles")[2] > ArchBalance.at_of("kinetic")[2], "missiles fill fastest, so their ranks cost more")
 
 
 func _test_ranks() -> void:
-	_check(ArchBalance.rank(0) == 0 and ArchBalance.rank(3) == 0, "below 4 — no rank")
-	_check(ArchBalance.rank(4) == 1 and ArchBalance.rank(7) == 1, "4..7 — rank I")
-	_check(ArchBalance.rank(8) == 2 and ArchBalance.rank(12) == 3 and ArchBalance.rank(40) == 3, "8 — II, 12+ — III")
-	_check(ArchBalance.next_at(0) == 4 and ArchBalance.next_at(4) == 8 and ArchBalance.next_at(11) == 12, "next rank points")
-	_check(ArchBalance.next_at(12) == -1, "no next rank after III")
-	_check(ArchBalance.ranks_crossed(3, 9) == [1, 2], "an evolution (+2) can cross two ranks in one go")
-	_check(ArchBalance.ranks_crossed(8, 9).is_empty(), "no rank crossed inside a band")
-	_check(ArchBalance.ranks_crossed(11, 12) == [3], "rank III reached")
+	# thresholds come from the table; the checks use a fake tag-free table so they do not pin the numbers
+	var at := [4, 8, 12]
+	_check(ArchBalance.rank_at(at, 0) == 0 and ArchBalance.rank_at(at, 3) == 0, "below the first threshold — no rank")
+	_check(ArchBalance.rank_at(at, 4) == 1 and ArchBalance.rank_at(at, 7) == 1, "rank I band")
+	_check(ArchBalance.rank_at(at, 8) == 2 and ArchBalance.rank_at(at, 12) == 3 and ArchBalance.rank_at(at, 40) == 3, "II, then III and beyond")
+	_check(ArchBalance.next_at_of(at, 0) == 4 and ArchBalance.next_at_of(at, 4) == 8 and ArchBalance.next_at_of(at, 11) == 12, "next rank points")
+	_check(ArchBalance.next_at_of(at, 12) == -1, "no next rank after III")
+	_check(ArchBalance.crossed_at(at, 3, 9) == [1, 2], "an evolution (+2) can cross two ranks in one go")
+	_check(ArchBalance.crossed_at(at, 8, 9).is_empty(), "no rank crossed inside a band")
+	_check(ArchBalance.crossed_at(at, 11, 12) == [3], "rank III reached")
+	var m: Array = ArchBalance.at_of("missiles")
+	_check(ArchBalance.rank("missiles", int(m[1])) == 2 and ArchBalance.rank("missiles", int(m[1]) - 1) == 1, "per-tag rank uses the tag's table")
+	_check(ArchBalance.ranks_crossed("missiles", int(m[2]) - 1, int(m[2])) == [3], "per-tag crossing")
 
 
 func _test_top() -> void:
 	var order := Prog.TAG_ORDER
 	var tags := {"missiles": 9, "kinetic": 9, "armor": 2, "wing": 0, "blast": 5}
-	_check(ArchBalance.top(tags, order, 3) == ["missiles", "kinetic", "blast"], "top 3 by points, ties keep the tag order")
+	# kinetic 9 has a rank (its first threshold is lower), missiles 9 not yet: rank first, then points, then the tag order
+	_check(ArchBalance.top(tags, order, 3) == ["kinetic", "missiles", "blast"], "top 3 by rank, then points")
+	_check(ArchBalance.top({"missiles": 3, "blast": 3}, order, 3) == ["missiles", "blast"], "ties keep the tag order")
 	_check(ArchBalance.top({"armor": 1}, order, 3) == ["armor"], "only tags with points")
 	_check(ArchBalance.top({}, order, 3).is_empty(), "nothing at the start")
 
 
 func _test_hint() -> void:
-	var h := ArchBalance.hint_parts(5, 1)
+	var at := [4, 8, 12]
+	var h := ArchBalance.hint_at(at, 5, 1)
 	_check(h["kind"] == "next" and int(h["rank"]) == 2 and int(h["at"]) == 8, "5 → 6: rank II at 8")
-	h = ArchBalance.hint_parts(7, 1)
+	h = ArchBalance.hint_at(at, 7, 1)
 	_check(h["kind"] == "reach" and int(h["rank"]) == 2, "7 → 8 reaches rank II")
-	h = ArchBalance.hint_parts(12, 1)
+	h = ArchBalance.hint_at(at, 12, 1)
 	_check(h["kind"] == "max", "past rank III: no next rank")
-	h = ArchBalance.hint_parts(2, 2)
+	h = ArchBalance.hint_at(at, 2, 2)
 	_check(h["kind"] == "reach" and int(h["rank"]) == 1, "an evolution 2 → 4 reaches rank I")
-	_check(ArchBalance.hint_tag({"missiles": 5, "blast": 3}, ["missiles", "blast"], 1) == "blast", "the tag that reaches a rank wins")
-	_check(ArchBalance.hint_tag({"missiles": 5, "blast": 1}, ["missiles", "blast"], 1) == "missiles", "else the closest to its next rank")
-	_check(ArchBalance.hint_tag({"missiles": 14, "blast": 1}, ["missiles", "blast"], 1) == "blast", "a maxed tag goes last")
+	var k1 := int(ArchBalance.at_of("kinetic")[0])
+	var m1 := int(ArchBalance.at_of("missiles")[0])
+	_check(ArchBalance.hint_tag({"missiles": 0, "kinetic": k1 - 1}, ["missiles", "kinetic"], 1) == "kinetic", "the tag that reaches a rank wins")
+	_check(ArchBalance.hint_tag({"missiles": m1 - 2, "kinetic": 0}, ["missiles", "kinetic"], 1) == "missiles", "else the closest to its next rank")
+	_check(ArchBalance.hint_tag({"missiles": 999, "kinetic": 0}, ["missiles", "kinetic"], 1) == "kinetic", "a maxed tag goes last")
 	_check(ArchBalance.hint_tag({}, [], 1) == "", "no tags — no hint")
 
 

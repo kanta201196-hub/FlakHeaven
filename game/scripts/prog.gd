@@ -29,7 +29,7 @@ const MODULE_TAGS := {
 }
 
 ## Нашивки 3.1 (off since 3.2), kept as the history of the archetype ranks: PG-11 moved them to
-## `ArchBalance` (ranks I–III at 4 / 8 / 12 points); this table is not read by the game
+## `ArchBalance` (ranks I–III, thresholds per archetype); this table is not read by the game
 const PATCH_AT := [4, 8]
 const PATCHES := {
 	"missiles": ["+10% урона ракет", "20% шанс пуска второй ракеты"],

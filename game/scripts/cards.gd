@@ -902,7 +902,7 @@ static func arch_hint(p: Player, card: Dictionary) -> String:
 		return ""
 	var pts := p.tag(t)
 	var aname := Loc.t(String(ArchBalance.DEFS[t]["title"]))
-	var h := ArchBalance.hint_parts(pts, add)
+	var h := ArchBalance.hint_at(ArchBalance.at_of(t), pts, add)
 	match String(h["kind"]):
 		"reach":
 			return "\n" + Loc.t("▲ %s %d → %d: ранг %s!") % [aname, pts, pts + add, Prog.ROMAN[int(h["rank"])]]

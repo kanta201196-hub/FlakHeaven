@@ -455,8 +455,8 @@ func _archetypes(p: Player, r: Rect2) -> float:
 	var hf := UiStyle.head_font(700, 0)
 	for t: String in Prog.TAG_ORDER:
 		var pts := p.tag(t)
-		var rk := ArchBalance.rank(pts)
-		var nx := ArchBalance.next_at(pts)
+		var rk := ArchBalance.rank(t, pts)
+		var nx := ArchBalance.next_at(t, pts)
 		var d: Dictionary = ArchBalance.DEFS[t]
 		HudIcons.disc(ctrl, Vector2(r.position.x + 36.0, y + 16.0), 12.0, t)
 		if rk == 0:

@@ -265,7 +265,7 @@ func tag(t: String) -> int:
 func arch_rank(t: String) -> int:
 	if Tuning.g("build_arch") < 0.5:
 		return 0
-	return ArchBalance.rank(tag(t))
+	return ArchBalance.rank(t, tag(t))
 
 
 ## Old name of the rank check («нашивка»), kept for the hooks in projectiles and damage
@@ -281,7 +281,7 @@ func add_tags(arr: Array, n := 1, quiet := false) -> void:
 		tags[t] = before + n
 		if Tuning.g("build_arch") < 0.5:
 			continue
-		for r: int in ArchBalance.ranks_crossed(before, before + n):
+		for r: int in ArchBalance.ranks_crossed(String(t), before, before + n):
 			_arch_up(String(t), r, quiet)
 
 

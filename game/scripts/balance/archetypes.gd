@@ -11,9 +11,24 @@ extends RefCounted
 ## Plan: docs/superpowers/plans/2026-11-05-build-depth.md, part A. Pure data and rules; `Player` keeps the points,
 ## the combat code reads the rank through `Player.arch_rank`.
 
-## Tag points for ranks I, II, III
-const ARCH_AT := [4, 8, 12]
+## Tag points for ranks I, II, III, per archetype. Measured 05.11 with the bot (`--bot=arch:<tag>`, one focused
+## demo sortie per tag): missiles gather 44 points in 15 min, blast 33, maneuver 24, wing 18, kinetic 15, turrets
+## and armor 10 (their cards run out). At one table [4, 8, 12] rank III came at 2–5 min; the plan wants rank II by
+## about 8:00 and III by about 12:00 in a focused sortie, so each tag gets its own thresholds from its own curve.
+## Tags whose cards run out (kinetic, turrets, armor, wing) reach III when the last cards are in (6–8 min). Kinetic
+## stays at 4 / 8 / 12: a focused «Оса» has 10 points from the two gun modules and the 6-slot limit often keeps
+## «Ленточное питание» out, so III needs «Дятел» (+2).
+const ARCH_AT := {
+	"missiles": [12, 30, 40],
+	"blast": [8, 22, 30],
+	"kinetic": [4, 8, 12],
+	"turrets": [4, 7, 10],
+	"wing": [6, 12, 18],
+	"maneuver": [6, 14, 21],
+	"armor": [4, 7, 10],
+}
 const MAX_RANK := 3
+
 
 ## Archetype per tag: `title` — name in combat; `ranks` — [I, II, III], each {`desc` full text (card, banner),
 ## `short` — pause screen line (≤ 36 characters)}
@@ -89,32 +104,57 @@ const ARMOR_REGEN := 0.006    # III: share of max HP per second
 const ARMOR_REGEN_AFTER := 4.0
 
 
-## Rank 0…3 for `pts` tag points
-static func rank(pts: int) -> int:
+## Thresholds of archetype `t` (ARCH_AT)
+static func at_of(t: String) -> Array:
+	return ARCH_AT[t]
+
+
+## Rank 0…3 of archetype `t` at `pts` tag points
+static func rank(t: String, pts: int) -> int:
+	return rank_at(at_of(t), pts)
+
+
+## Points of the next rank of `t`, or -1 at rank III
+static func next_at(t: String, pts: int) -> int:
+	return next_at_of(at_of(t), pts)
+
+
+## Ranks of `t` crossed going from `before` to `after` points, in order (for banners and telemetry)
+static func ranks_crossed(t: String, before: int, after: int) -> Array:
+	return crossed_at(at_of(t), before, after)
+
+
+## Points where rank `r` (1…3) of `t` starts; 0 for rank 0
+static func floor_of(t: String, r: int) -> int:
+	return 0 if r <= 0 else int(at_of(t)[r - 1])
+
+
+## Rank for thresholds `at`
+static func rank_at(at: Array, pts: int) -> int:
 	var r := 0
-	for at: int in ARCH_AT:
-		if pts >= at:
+	for a in at:
+		if pts >= int(a):
 			r += 1
 	return r
 
 
-## Points of the next rank, or -1 at rank III
-static func next_at(pts: int) -> int:
-	for at: int in ARCH_AT:
-		if pts < at:
-			return at
+## Next threshold of `at` above `pts`, or -1
+static func next_at_of(at: Array, pts: int) -> int:
+	for a in at:
+		if pts < int(a):
+			return int(a)
 	return -1
 
 
-## Ranks crossed going from `before` to `after` points, in order (for banners and telemetry)
-static func ranks_crossed(before: int, after: int) -> Array:
+## Ranks crossed for thresholds `at`
+static func crossed_at(at: Array, before: int, after: int) -> Array:
 	var out: Array = []
-	for r in range(rank(before) + 1, rank(after) + 1):
+	for r in range(rank_at(at, before) + 1, rank_at(at, after) + 1):
 		out.append(r)
 	return out
 
 
-## Up to `n` tags with points, most points first; ties keep `order` (the tag order of `Prog.TAG_ORDER`)
+## Up to `n` tags with points: highest rank first, then most points; ties keep `order` (`Prog.TAG_ORDER`)
 static func top(tags: Dictionary, order: Array, n: int) -> Array:
 	var have: Array = order.filter(func(t): return int(tags.get(t, 0)) > 0)
 	var idx := {}
@@ -123,18 +163,22 @@ static func top(tags: Dictionary, order: Array, n: int) -> Array:
 	have.sort_custom(func(a, b):
 		var pa := int(tags.get(a, 0))
 		var pb := int(tags.get(b, 0))
+		var ra := rank(a, pa)
+		var rb := rank(b, pb)
+		if ra != rb:
+			return ra > rb
 		return pa > pb if pa != pb else int(idx[a]) < int(idx[b]))
 	return have.slice(0, n)
 
 
-## Card line: «▲ Стрелок 5 → 6 (ранг II на 8)»; reaching a rank — «▲ Стрелок 7 → 8: ранг II!»; at rank III — no
-## rank part. Russian template; the caller translates it (Loc.t) before the numbers go in.
-static func hint_parts(pts: int, add: int) -> Dictionary:
+## Card line parts for `pts` → `pts + add` on thresholds `at`: {kind: "reach" (a rank is reached, `rank`), "next"
+## (`rank` comes at `at`), "max" (past rank III)}. Text: `Cards.arch_hint`.
+static func hint_at(at: Array, pts: int, add: int) -> Dictionary:
 	var after := pts + add
-	var r_after := rank(after)
-	if r_after > rank(pts):
+	var r_after := rank_at(at, after)
+	if r_after > rank_at(at, pts):
 		return {"kind": "reach", "rank": r_after}
-	var nx := next_at(after)
+	var nx := next_at_of(at, after)
 	if nx < 0:
 		return {"kind": "max", "rank": r_after}
 	return {"kind": "next", "rank": r_after + 1, "at": nx}
@@ -147,7 +191,7 @@ static func hint_tag(points: Dictionary, tags: Array, add: int) -> String:
 	var best_gap := 1 << 30
 	for t: String in tags:
 		var pts := int(points.get(t, 0))
-		var nx := next_at(pts)
+		var nx := next_at(t, pts)
 		var gap := (1 << 29) if nx < 0 else maxi(0, nx - pts - add)
 		if gap < best_gap:
 			best_gap = gap
