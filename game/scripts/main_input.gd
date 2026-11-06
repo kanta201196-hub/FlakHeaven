@@ -131,7 +131,7 @@ func handle_global_input() -> void:
 				ui_click("to_hangar")
 				return
 			if Input.is_action_just_pressed("restart"):
-				m.restart()
+				ui_click("restart")
 			elif Input.is_action_just_pressed("change_class"):
 				ui_click("change_class")
 			return
@@ -360,12 +360,22 @@ func ui_click(action: String) -> void:
 		m._set_state("playing")
 	elif action.begins_with("rtab:"):
 		m.result_tab = int(action.substr(5))
-	elif action == "restart":
-		m.restart()
+	elif action == "restart":   # results: «Ещё вылет»
+		replay()
 	elif action == "change_class":   # results: «Сменить самолёт» — the plane is picked in the hangar now
 		m.restarts += 1
 		m.start_run()
 		open_hangar(m.cls_id)
+
+
+## Results «Ещё вылет» (Kanta 06.11): back to the mission screen to pick the next operation, not straight into
+## combat; the world behind it is rebuilt for the same plane. «Битва асов» has no mission screen, so it restarts.
+func replay() -> void:
+	if Main.aces():
+		m.restart()
+		return
+	m.restarts += 1
+	open_mission(true)
 
 
 ## Opens the hangar of «Подготовка и вылет» on plane `cls`; Esc there goes back to the main menu.
