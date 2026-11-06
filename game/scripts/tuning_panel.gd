@@ -83,7 +83,7 @@ func _ready() -> void:
 	reset.pressed.connect(func() -> void:
 		if _aces_only:
 			for k in _rows:
-				if String(k).begins_with("aces_"):
+				if in_aces_panel(k):
 					Tuning.set_param(k, float(Tuning.RANGES[k][3]))
 		else:
 			Tuning.reset()
@@ -102,7 +102,7 @@ func toggle(aces_only := false) -> void:
 	if visible:
 		_aces_only = aces_only
 		for k in _rows:
-			(_rows[k] as Control).visible = not aces_only or String(k).begins_with("aces_")
+			(_rows[k] as Control).visible = not aces_only or in_aces_panel(k)
 		_refresh()
 	get_tree().paused = visible
 
@@ -119,3 +119,9 @@ func _fmt(val: float) -> String:
 	if absf(val - round(val)) < 0.0001:
 		return str(int(round(val)))
 	return "%.2f" % val
+
+
+## Whether slider `k` shows in the «Битва асов» F1 panel: the `aces_*` flight sliders plus the soft bank
+## (2026-11-06), which changes the look of the turn in both modes.
+static func in_aces_panel(k: String) -> bool:
+	return k.begins_with("aces_") or k.begins_with("bank_soft")

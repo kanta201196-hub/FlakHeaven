@@ -11,7 +11,7 @@ func _init(p: Player) -> void:
 
 
 func _draw() -> void:
-	var w := 1.0 - 0.45 * absf(pl.bank)
+	var w := 1.0 - 0.45 * absf(pl.bank_vis)
 	if pl.roll_t > 0.0:
 		var p := 1.0 - pl.roll_t / pl.roll_time()
 		w = maxf(0.15, absf(cos(p * TAU)))
