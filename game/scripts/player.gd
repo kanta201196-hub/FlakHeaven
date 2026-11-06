@@ -697,13 +697,18 @@ func gun_rate() -> float:
 
 
 ## Adds a wingman in the next free formation slot; temp ones ("Rooklings") leave after `life` seconds.
+## A permanent one with `wing_arrive` on (S16-16) flies in from beyond the screen edge behind, like a replacement;
+## temp ones still start next to their slot, so the flight in does not eat their short life.
 func add_wingman(type := "swift", k := 1.0, temp := false, life := 0.0) -> void:
 	var w := Wingman.new()
 	w.setup(type, k, temp, life)
 	w.slot = wingmen.size()
-	# S10-16: arrive behind the wingman's own slot, not all at one point behind the leader
-	w.global_position = global_position + w._slot_offset(self) - Vector2.from_angle(heading) * 60.0
-	w.heading = heading
+	if not temp and Tuning.g("wing_arrive") >= 1.0 and Main.I.run_time > 1.0:
+		w.arrive_from_behind(self)
+	else:
+		# S10-16: arrive behind the wingman's own slot, not all at one point behind the leader
+		w.global_position = global_position + w._slot_offset(self) - Vector2.from_angle(heading) * 60.0
+		w.heading = heading
 	wingmen.append(w)
 	Main.I.world.add_child(w)
 

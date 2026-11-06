@@ -45,6 +45,8 @@ func process(delta: float) -> void:
 	if m.state == "playing" and m._args.has("--aaflat") and not _shots_done.has("aaflat") and m.run_time > 3.0:
 		_shots_done["aaflat"] = true
 		_aa_flat_test()
+	if m._args.has("--wingtest"):
+		_wing_test()
 	if _visual != null:
 		_visual.process(delta)
 	if _boom != null:
@@ -1180,3 +1182,36 @@ func _click_ban_check() -> void:
 		printerr("SCRIPT ERROR: CR-01 click on Ban hit '%s'" % act)
 	print("AUTOTEST: ban click -> %s" % act)
 	m.ui_click(act)
+
+
+var _wing := {}
+
+
+## S16-16/S16-24 check in a real sortie (`--autotest --smoke --wingtest`, add `--tune=wing_avoid:1,wing_arrive:1`):
+## two wingmen join at 3 s as from a card; every frame counts how close they come to the leader and the frames
+## their nose line crosses its clear radius; printed as `WINGTEST:` lines every 10 s.
+func _wing_test() -> void:
+	if m.state != "playing" or not is_instance_valid(m.player):
+		return
+	var p := m.player
+	if not _wing.has("added") and m.run_time > 3.0:
+		_wing = {"added": true, "first_d": INF, "min_d": INF, "pokes": 0, "next": 13.0}
+		for i in 2:
+			p.add_wingman("swift")
+		for w: Wingman in p.wingmen:
+			_wing.first_d = minf(_wing.first_d, w.global_position.distance_to(p.global_position))
+	if not _wing.has("added"):
+		return
+	for w: Wingman in p.wingmen:
+		if not w.alive():
+			continue
+		var lead := p.global_position - w.global_position
+		var d := lead.length()
+		var r := w.clear_r(p)
+		_wing.min_d = minf(_wing.min_d, d / r)
+		if d < r * 2.0 and absf(wrapf(w.heading - lead.angle(), -PI, PI)) < asin(minf(1.0, r / maxf(d, 1.0))) * 0.9:
+			_wing.pokes += 1
+	if m.run_time > float(_wing.next):
+		_wing.next = float(_wing.next) + 10.0
+		print("WINGTEST: t %.0f joined at %.0f px, closest %.2f clear radii, nose-poke frames %d, wingmen %d" % [m.run_time,
+			_wing.first_d, _wing.min_d, _wing.pokes, p.wingmen.size()])

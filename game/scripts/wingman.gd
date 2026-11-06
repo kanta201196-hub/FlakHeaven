@@ -135,6 +135,18 @@ func clear_r(p: Player) -> float:
 	return Tuning.g("plane_len") * (p.size + WING_SIZE) * 0.5 + 8.0
 
 
+## Puts the wingman beyond the screen edge behind and to the side of its slot, flying the leader's course, so it
+## catches the formation up instead of popping up beside the leader (3.5-s4 п. 21 for a replacement; S16-16 for a
+## new wingman from a card, toggle `wing_arrive`).
+func arrive_from_behind(p: Player) -> void:
+	var side := -1.0 if slot % 2 == 0 else 1.0
+	global_position = p.global_position + Vector2(-1250.0, side * 450.0).rotated(p.heading)
+	heading = p.heading
+	velocity = p.velocity
+	_steer = {}
+	_fly_w = 1.0
+
+
 func _leave() -> void:
 	var p := Main.I.player
 	if p != null:
@@ -161,14 +173,9 @@ func _process(delta: float) -> void:
 	if dead_t > 0.0:
 		dead_t -= delta
 		if dead_t <= 0.0:
-			# правка 3.5-s4 (п. 21): замена прилетает из-за края экрана сзади-сбоку и догоняет строй
 			visible = true
 			hp = max_hp
-			var side := -1.0 if slot % 2 == 0 else 1.0
-			global_position = p.global_position + Vector2(-1250.0, side * 450.0).rotated(p.heading)
-			heading = p.heading
-			velocity = p.velocity
-			_fly_w = 1.0
+			arrive_from_behind(p)
 			Events.radio.emit("Ведомый", RadioPick.pick("wing_back", ["Иду к вам, займу место в строю!", "На подходе, держите строй!",
 				"Догоняю! Оставьте мне кого-нибудь.", "Я с вами. Где мне встать?"]), false)   # s15 review п. 13
 		return
@@ -237,6 +244,13 @@ func _fly(p: Player, delta: float) -> void:
 		return
 	_form_h = p.heading if is_nan(_form_h) else rotate_toward(_form_h, p.heading, deg_to_rad(FORM_TURN) * delta)
 	var target := p.global_position + _slot_offset(p)
+	if Tuning.g("wing_smooth") >= 1.0 and Tuning.g("wing_avoid") >= 1.0:
+		# S16-24: the whole formation step (detour, nose rule, cross-over, clear radius) lives in WingFollow.step
+		global_position = WingFollow.step(_st(), global_position, target, p.global_position, p.velocity, clear_r(p),
+			-1.0 if slot % 2 == 0 else 1.0, delta, true)
+		velocity = _steer.vel
+		heading = _steer.heading
+		return
 	# путь к месту проходит сквозь ведущего — заходим в обход, с внешней стороны
 	var seg := target - global_position
 	var t_c := clampf((p.global_position - global_position).dot(seg) / maxf(seg.length_squared(), 1.0), 0.0, 1.0)
@@ -284,7 +298,7 @@ func _keep_clear(p: Player, delta: float) -> void:
 		return
 	var side := -1.0 if slot % 2 == 0 else 1.0
 	var away := rel / l if l > 1.0 else Vector2.from_angle(p.heading + side * PI / 2.0)
-	position += away * (r - l) * minf(1.0, delta * 10.0)
+	position += away * (r - l) * (1.0 if Tuning.g("wing_avoid") >= 1.0 else minf(1.0, delta * 10.0))   # S16-24: no overlap
 	velocity -= away * minf(0.0, velocity.dot(away) - p.velocity.dot(away))
 
 
@@ -434,8 +448,11 @@ func _attack_run(p: Player, delta: float) -> void:
 	if Tuning.g("wing_smooth") >= 1.0:
 		var ps := maxf(p.velocity.length(), 200.0)
 		WingFollow.steer(_st(), aim, ps * 1.3, ps, delta, 1.25)
+		if Tuning.g("wing_avoid") >= 1.0:   # S16-24: an attack run does not poke the leader either
+			velocity = WingFollow.nose_clear(_steer, p.global_position - global_position, clear_r(p))
+		else:
+			velocity = Vector2.from_angle(float(_steer.heading)) * float(_steer.spd)
 		heading = _steer.heading
-		velocity = Vector2.from_angle(heading) * float(_steer.spd)
 		position += velocity * delta
 		return
 	heading = rotate_toward(heading, aim, deg_to_rad(WING_TURN * 1.25) * delta)
