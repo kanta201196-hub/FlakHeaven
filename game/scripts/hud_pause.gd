@@ -62,7 +62,9 @@ func draw(m: Main, size: Vector2) -> void:
 	var t := int(m.run_time)
 	var hf := UiStyle.head_font(600, 5)
 	_diamond_outline(Vector2(76, 50), 8.0, UiStyle.TEXT)
-	var crumb := Loc.t("ПАУЗА  //  ВЫЛЕТ «%s»  //  %02d:%02d") % [Loc.t(Campaign.op()["title"]).to_upper(), t / 60, t % 60]
+	# s17 video: «Битва асов» is not a campaign operation — the crumb named the last chosen operation («Крепости»)
+	var where := Loc.t("БИТВА АСОВ") if Main.aces() else Loc.t("ВЫЛЕТ «%s»") % Loc.t(Campaign.op()["title"]).to_upper()
+	var crumb := Loc.t("ПАУЗА  //  %s  //  %02d:%02d") % [where, t / 60, t % 60]
 	UiStyle.text(ctrl, hf, Vector2(98, 58), crumb, 20, UiStyle.TEXT)
 	var left := Rect2(40, 110, 560, 0)
 	var bottom := _hardpoints(m, p, left, size)
@@ -112,7 +114,7 @@ func _hardpoints(m: Main, p: Player, r: Rect2, size: Vector2) -> float:
 		_focusables.append([wr, "wing"])
 		HudIcons.tile(ctrl, Rect2(wr.position.x + 14, wr.position.y + (wr.size.y - 56.0) / 2.0, 56, 56), "wingman", "wing", Color(1, 1, 1, 0.3))
 		UiStyle.text(ctrl, UiStyle.head_font(700, 1), Vector2(wr.position.x + 86, wr.position.y + 32), Loc.t("Звено — кого атакует первым"), UiStyle.FS_LABEL, UiStyle.TEXT)
-		_selector(Rect2(wr.position.x + 86, wr.position.y + 42, 250, 30), Loc.t(Settings.WING_PRIO[Settings.wing_prio]), "wprioback", "wprio", on, "wing")
+		_selector(Rect2(wr.position.x + 86, wr.position.y + 42, 250, 30), Loc.t(Settings.WING_PRIO[Settings.wing_prio_now()]), "wprioback", "wprio", on, "wing")
 	return r.end.y
 
 
