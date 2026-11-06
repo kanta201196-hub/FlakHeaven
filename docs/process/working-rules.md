@@ -49,6 +49,14 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 - Feel and effects changes Kanta wants to judge (turret firing, flight feel, effects) go into `main` behind an F1 toggle that is **on by default**, so Kanta tries them in the next build; 0 gives the old look, and Kanta's «нет» turns it off or removes it (Kanta, 2026-10-31, R-22; changed 2026-11-06: «сначала включены, я же хочу их попробовать» — the tester build has no F1 outside «Битва асов»).
 - Debug flags: `--tester`, `--report-url=…`, `--mesatest`, `--reporttest`, `--turbo`.
 
+## Backup
+- Daily full backup at 06:47 MSK to Yandex Disk, folder `FlakHeaven backup/<YYYY-MM-DD>`; script `tools/backup/yadisk_daily.sh`, scheduled task `trig_01STd9R9WMJZhHWF3eJmrDFm` (Kanta, 2026-11-06).
+- Contents: all git branches (bundle), a `main` snapshot, models, docs and source assets from the shared folder (without builds, marketing, old backups, root mp4/rar), project memory and instructions. About 5.8 GB, about 156 files.
+- Retention: 14 days; older dated folders go to the Disk trash, and only after a fully verified run (Kanta, 2026-11-06).
+- A day is complete only when `SHA256SUMS.txt` is uploaded last. A failed run leaves no `SHA256SUMS.txt`, deletes nothing, and a rerun starts the day again. Check that the folder has `SHA256SUMS.txt`.
+- Old twice-weekly routine (Fri and Mon, Google Drive and laptop copies) is off since 2026-11-06 (R-31).
+- Full copies on the home PC are manual, one-off, and need Kanta's request.
+
 ## Superpowers experiment (since 2026-10-23)
 - 15 skills in `.claude/skills/`; rollback steps in `docs/process/backup-2026-10-23/`. Assessed at the review on 2026-10-30 (task R-16).
 - Task size: small — do it; medium (several files of one system, rules unchanged) — short plan in the PR body; large (new system or screen, rule change, >3 systems or ~500 lines) — brainstorming → plan → Kanta's "yes". The game-designer skill goes before brainstorming for rules, balance and progression.
