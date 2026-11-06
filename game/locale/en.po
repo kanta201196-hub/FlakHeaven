@@ -10059,3 +10059,23 @@ msgstr "all up to 15:00"
 
 msgid "%d очков «%s» за вылет — карточки этого тега"
 msgstr "%d «%s» points in one sortie — cards with this tag"
+
+#: game/scripts/plane_stats.gd
+msgid "Разворот, °/с"
+msgstr "Turn, °/s"
+
+#: game/scripts/plane_stats.gd
+msgid "Пушка, урон/с"
+msgstr "Gun, damage/s"
+
+#: game/scripts/plane_stats.gd
+msgid "Группы подвеса"
+msgstr "Hardpoint groups"
+
+#: game/scripts/plane_stats.gd
+msgid "Турели (макс.)"
+msgstr "Turrets (max)"
+
+#: game/scripts/plane_stats.gd
+msgid "Ведомые"
+msgstr "Wingmen"

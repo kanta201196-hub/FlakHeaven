@@ -94,6 +94,7 @@ func _hg_plane(c: String, area: Rect2) -> void:
 				ctrl.draw_line(cp - d * 14, cp + d * 14, Color.WHITE, 2.0)
 	else:
 		_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
+		_hg_stats(c, vr, h3.view_lvl)
 	# тест 3.5-s8: показ механизации — закрылки и предкрылки, створки отсека, турели (Hangar3D / HangarAnim)
 	var mr := Rect2(vr.end.x - 196, vr.position.y + 8, 188, 30)
 	var mon := h3.mech_demo
@@ -185,6 +186,36 @@ func _hg_plane(c: String, area: Rect2) -> void:
 			else:
 				_text(Vector2(rx, yy + 52), Loc.t("%d (не хватает %d)") % [price, price - Profile.parts()], 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		yy += 102.0
+
+
+## S16-08 (Kanta 06.11): the plane's numbers over the top-left corner of the 3D view — plane 1 and plane 2 side by
+## side (plane 2 better in green, worse in red: its hangar nodes start from zero), the viewed plane's column lit.
+## Only plane 1 when plane 2 is not in this build (demo, meta off). Numbers: `PlaneStats`.
+func _hg_stats(c: String, vr: Rect2, view_lvl: int) -> void:
+	var two := Profile.meta_k() > 0.0 and not Demo.on
+	var s1 := PlaneStats.of(c, 1)
+	var s2 := PlaneStats.of(c, 2) if two else {}
+	var w := 340.0 if two else 270.0
+	var r := Rect2(vr.position.x + 10.0, vr.position.y + 10.0, w, 38.0 + PlaneStats.ROWS.size() * 22.0)
+	ctrl.draw_rect(r, Color(0.02, 0.025, 0.03, 0.72))
+	ctrl.draw_rect(r, Color(Menu.C_AMBER, 0.5), false, 1.0)
+	var x := r.position.x + 12.0
+	var cx := [r.position.x + 176.0, r.position.x + 258.0]   # value columns (right-aligned in 70 px)
+	var y := r.position.y + 24.0
+	_text(Vector2(x, y), "ХАРАКТЕРИСТИКИ", 14, Menu.C_AMBER)
+	for lv in ([1, 2] if two else [1]):
+		_text(Vector2(cx[lv - 1], y), Loc.t("ур. %d") % lv, 14, Menu.C_AMBER if lv == view_lvl else Color(0.62, 0.65, 0.72), HORIZONTAL_ALIGNMENT_RIGHT, 70.0)
+	y += 24.0
+	for row: Array in PlaneStats.ROWS:
+		var k := String(row[0])
+		_text(Vector2(x, y), Loc.t(String(row[1])), 14, Color(0.8, 0.84, 0.9))
+		var v1 := float(s1[k])
+		_text(Vector2(cx[0], y), "%d" % roundi(v1), 15, Color.WHITE if view_lvl == 1 or not two else Color(0.75, 0.78, 0.84), HORIZONTAL_ALIGNMENT_RIGHT, 70.0)
+		if two:
+			var v2 := float(s2[k])
+			var col := Color(0.6, 1.0, 0.7) if roundi(v2) > roundi(v1) else (Color(1.0, 0.6, 0.5) if roundi(v2) < roundi(v1) else Color.WHITE)
+			_text(Vector2(cx[1], y), "%d" % roundi(v2), 15, col, HORIZONTAL_ALIGNMENT_RIGHT, 70.0)
+		y += 22.0
 
 
 ## Тест 3.5-s4, п. 35: ряд «Окраска: …» — выбор сохраняется в профиле класса, виден в ангаре и в бою.

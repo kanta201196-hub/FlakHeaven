@@ -159,11 +159,18 @@ func _fade_in(rects: Array, state_t: float) -> void:
 		ctrl.draw_rect(r.grow(4.0), Color(0.03, 0.035, 0.04, a))
 
 
-## 3.1: у всего текста интерфейса тёмная обводка — читается на светлой земле
-## Перевод: ключ — русская фраза; без таблицы перевода строка выводится как есть
+## Text whose brightest channel is below this is dark (a label on a lit tile) and is drawn without the outline (`_text`);
+## a saturated red or blue still gets it
+const DARK_TEXT := 0.3
+
+
+## Interface text with a dark outline, so it reads on bright ground (3.1). Dark text (on a lit amber tile) gets no
+## outline: a dark rim around dark letters only made them look bold (S16-20, «✓ выбрана»).
+## Translation: the key is the Russian phrase; without a table entry the string is shown as is.
 func _text(pos: Vector2, s: String, size := 20, color := Color(0.92, 0.95, 1.0), align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
 	s = Loc.out(s)
-	ctrl.draw_string_outline(ui_font(), pos, s, align, width, size, maxi(3, size / 5), Color(0.02, 0.025, 0.03, 0.85 * color.a))
+	if maxf(color.r, maxf(color.g, color.b)) >= DARK_TEXT:
+		ctrl.draw_string_outline(ui_font(), pos, s, align, width, size, maxi(3, size / 5), Color(0.02, 0.025, 0.03, 0.85 * color.a))
 	ctrl.draw_string(ui_font(), pos, s, align, width, size, color)
 
 

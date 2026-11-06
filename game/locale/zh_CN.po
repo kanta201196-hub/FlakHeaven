@@ -10059,3 +10059,23 @@ msgstr "15:00 前全部"
 
 msgid "%d очков «%s» за вылет — карточки этого тега"
 msgstr "单次出击获得 %d 点「%s」——带此标签的卡牌"
+
+#: game/scripts/plane_stats.gd
+msgid "Разворот, °/с"
+msgstr "转向，°/秒"
+
+#: game/scripts/plane_stats.gd
+msgid "Пушка, урон/с"
+msgstr "机炮，每秒伤害"
+
+#: game/scripts/plane_stats.gd
+msgid "Группы подвеса"
+msgstr "挂架组"
+
+#: game/scripts/plane_stats.gd
+msgid "Турели (макс.)"
+msgstr "炮塔（最多）"
+
+#: game/scripts/plane_stats.gd
+msgid "Ведомые"
+msgstr "僚机"
