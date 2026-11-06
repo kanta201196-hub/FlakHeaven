@@ -84,4 +84,4 @@ Measured from the GLBs in `main` (triangles / maps):
   stripes), seaplane, tanker, bulk carrier, wrecks `a26`/`a27`, trees `a37`/`a38`, coastal gun `a01`; per-part wear bake on the
   «Левиафан» hull; the `SeaProps.plan()` worker-thread race on const arrays (rule T5).
 
-Fix order and status live in `docs/backlog.md` (tasks `B2-Q*`).
+After PR #589 (2026-11-06): every placed biome 2 prop has colour + normal + ORM; `a31`, `a33`, `a03`, `a21`, `a37`, `a38` rebuilt; cruiser improved; worker-thread fix in. Fix order and status live in `docs/backlog.md` (tasks `B2-Q*`).
