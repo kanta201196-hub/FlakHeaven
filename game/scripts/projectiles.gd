@@ -891,6 +891,7 @@ func _update_missiles(delta: float) -> void:
 		var wk: String = MSL_NAMES.get(kind, "ракеты самолётов")
 		var who: String = m.get("who", "ракетоносцы")
 		var boom := false
+		var on_pl := false   # S16-18: hit the player (not a self-destruct at the end of its life)
 		var wt2: Wingman = m.get("tgt") as Wingman if is_instance_valid(m.get("tgt")) else null
 		if wt2 != null and wt2.alive() and not m["lost"] and p.distance_to(wt2.global_position) < 26.0:
 			wt2.damage(msl_p(kind, "dmg") * float(m.get("dk", 1.0)))
@@ -911,6 +912,7 @@ func _update_missiles(delta: float) -> void:
 				Main.I.stats_add_counter("missile_hits", 1)
 				done = true
 				boom = kind == "sam" or kind == "hnar"
+				on_pl = true
 			elif kind == "sam" and not m["lost"] and not m.has("raw") and _sam_frag(m, dm, pl, done, wk, who):
 				done = true   # ЗРК: подрыв рядом (неконтактный взрыватель) — осколки
 				boom = true
@@ -919,6 +921,8 @@ func _update_missiles(delta: float) -> void:
 		if done:
 			if boom or kind == "hnar":
 				Main.I.fx.explosion(p, 10.0 if kind == "hnar" else 13.0, true, true, "flak")
+			elif on_pl and Tuning.g("fx_s16") >= 1.0:
+				Main.I.fx.missile_blast(p)   # S16-18: a missile that hits the plane bursts, not just sparks
 			else:
 				Main.I.fx.hit_spark(p, Color(1, 0.5, 0.2))
 			missiles.remove_at(i)
