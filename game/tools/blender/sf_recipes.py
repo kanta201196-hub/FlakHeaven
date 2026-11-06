@@ -721,6 +721,12 @@ RECIPES["fighter_t1"] = {
                  (-0.335, -0.27, -0.009, 0.009, 0.005, 0.062),
                  (-0.15, -0.09, 0.055, 0.068, -0.075, -0.028), (-0.15, -0.09, -0.068, -0.055, -0.075, -0.028),
                  (0.39, 0.476, 0.033, 0.066, -0.076, -0.002), (0.39, 0.476, -0.066, -0.033, -0.076, -0.002)],
+    # gear doors that are part of the skin meshes and hang open under the nose and the wing roots (Kanta 06.11:
+    # check every model for open doors and gear legs)
+    "kill_faces": [(r"^Object_[456](\.|$)", b) for b in (
+        (0.325, 0.415, 0.006, 0.028, -0.2, -0.06, 0.8), (0.325, 0.415, -0.028, -0.006, -0.2, -0.06, 0.8),
+        (0.325, 0.415, 0.006, 0.028, -0.2, -0.112), (0.325, 0.415, -0.028, -0.006, -0.2, -0.112),
+        (0.04, 0.12, 0.195, 0.235, -0.2, -0.075), (0.04, 0.12, -0.235, -0.195, -0.2, -0.075))],
     "materials": [(r"PaletteMaterial003$", GLASS),
                   (r"paint_(top|side|bottom)$", {"mode": "paint"}),
                   # the detail parts share one palette strip; its red and white cells are the markings (side
@@ -754,6 +760,10 @@ RECIPES["attacker_t1"] = {
                  (-0.156, -0.095, 0.037, 0.054, -0.052, 0.0), (-0.156, -0.095, -0.054, -0.037, -0.052, 0.0),
                  (0.07, 0.15, 0.345, 0.42, -0.056, -0.022), (0.07, 0.15, -0.42, -0.345, -0.056, -0.022),
                  (0.32, 0.35, 0.058, 0.064, -0.058, -0.037), (0.32, 0.35, -0.064, -0.058, -0.058, -0.037)],
+    # main gear door plates are part of the fuselage skin objects: thin squares hanging under each wing root
+    # (Kanta 06.11: no open hatches or gear parts on any model)
+    "kill_faces": [(r"^Object_1[145](\.|$)", b) for b in (
+        (0.06, 0.105, 0.17, 0.185, -0.112, -0.0765), (0.06, 0.105, -0.185, -0.17, -0.112, -0.0765))],
     "materials": [(r"PaletteMaterial003$", GLASS),
                   (r"jp_.*paint", {"mode": "paint", "flatten": 31}),
                   (r"PaletteMaterial008$", {"mode": "paint"}),   # tip tanks (red on the trainer)
@@ -767,3 +777,33 @@ RECIPES["attacker_t1"] = {
     "paint": TEMPERATE, "tris": 30000,
 }
 RECIPES["attacker_t1_hangar"] = dict(RECIPES["attacker_t1"], root="fh_hangar_attacker_t1", tris=110000)
+
+# «Кит 1» (PT-03, Kanta 06.11 «Кит 1 - ок в работу»): early heavy piston bomber with coupled engine pairs (tier 2 is
+# a propeller plane, so tier 1 cannot be a jet). Source: Sketchfab fY5DQaL5CKSxPd7uKRu8sXaeQcK, CC BY (CREDITS).
+# One 1024 atlas for the whole airframe with a painted two-tone camouflage, the national markings and the author's
+# signature: the markings are erased (rectangles below), the camouflage is flattened and repainted; the top strip
+# (metal, tyre, prop blade swatches) and the wheel hub discs keep their colours. The cockpit instruments and the
+# interior are dropped (the game's canopy glass is not see-through).
+RECIPES["bomber_t1"] = {
+    "root": "bomber_t1", "rot": (0, 0, 180), "ground": False,
+    "drop": r"^Object_(2|3|4|5|7|8|9|10|11|12|13|14|15|16|27|28)$",
+    "split": r"^Object_(1[7-9]|2[0-6])$",
+    # main gear under the inner nacelles (wheels, legs, struts and the doors hanging down) and the tail wheel;
+    # the game flies with the gear up
+    "drop_box": [(0.10, 0.20, 0.125, 0.20, -0.2, -0.06), (0.10, 0.20, -0.20, -0.125, -0.2, -0.06),
+                 (-0.34, -0.30, -0.012, 0.012, -0.08, -0.055)],
+    "materials": [(r"^transparent", GLASS),
+                  (r"texture", {"mode": "paint", "flatten": 31}),
+                  (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+    "keep": {"DefaultWhite_texture.png": [(0.0, 0.0, 1.0, 0.126), (0.0, 0.74, 0.13, 0.83)]},
+    "erase": {"DefaultWhite_texture.png": [
+        (0.055, 0.505, 0.11, 0.56), (0.862, 0.505, 0.915, 0.56),     # wing underside
+        (0.055, 0.672, 0.11, 0.727), (0.862, 0.672, 0.915, 0.727),   # wing top
+        (0.315, 0.8, 0.388, 0.87), (0.612, 0.915, 0.683, 0.983),     # fuselage sides
+        (0.745, 0.381, 0.775, 0.412), (0.912, 0.381, 0.942, 0.412),  # fin
+        (0.6, 0.868, 0.998, 0.9)]},                                   # author's signature
+    "mat_names": {"glass": "glass"}, "img_plain": True,
+    "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+    "paint": HIGHLAND, "tris": 30000,
+}
+RECIPES["bomber_t1_hangar"] = dict(RECIPES["bomber_t1"], root="fh_hangar_bomber_t1", tris=120000)
