@@ -407,6 +407,13 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | PD-02 | Уведомление Роскомнадзора об обработке персональных данных от ИП Kanta (pd.rkn.gov.ru), значения полей готовы | Kanta | ждёт Kanta (не подано) |
 | V-08 | Проверить коммерческие условия Meshy и Hunyuan 3D (модели уже в игре) — до страницы Steam | аналитик → Kanta | ждёт Kanta |
 | M-06 (VK Play) | Заявка на VK Play после старта раннего доступа, проверка условий в консоли | Kanta | идея (апрель 2027) |
+| ED-01 | Two editions at launch (Kanta 06.11): proposal page — 5 base liveries, 10 author liveries + 10 stickers per class, what else goes into the Deluxe edition, prices; numbered questions to Kanta | «Продумать два издания на старте продаж» | proposal ready 06.11, waits for Kanta |
+| ED-02 | Base game: cut the livery list to the 5 core paints per class; saves with a moved paint fall back to the class default unless the Deluxe pack is owned (unit test like `livery_removed_test.gd`) | 3D-модели (after ED-01 answers) | to do |
+| ED-03 | Deluxe liveries: 10 per class (existing extra paints moved + new ones), Blender/code only, no paid generators; gallery on 3 presets for Kanta's «ок» (R-09) | 3D-модели (after ED-01 answers) | to do |
+| ED-04 | Deluxe stickers: 10 new per class into the decal atlas (`tools/decal_atlas.py`, `DecalCatalog`); fictional, no real insignia | 3D-модели (after ED-01 answers) | to do |
+| ED-05 | DLC ownership check: Steam DLC App ID via the Steam API (GodotSteam `isDLCInstalled`), a debug flag for tests, lock icon and «в дополненном издании» line in the hangar; demo shows no locked items | code thread (after Steam App ID) | to do |
+| ED-06 | Steamworks: DLC app «Набор эскадрильи» (own store page, capsules), bundle «Дополненное издание», prices from ED-01 | Kanta + Маркетинг и реклама | waits for App ID and ED-01 |
+| ED-07 | Deluxe extras: digital artbook (PDF from model renders and concept pages), 4K wallpapers from Forward+ frames; soundtrack only if original music is commissioned (current tracks are CC0 / CC-BY, cannot be sold as ours) | Маркетинг и реклама (after ED-01 answers) | idea |
 
 ## Маркетинг
 
