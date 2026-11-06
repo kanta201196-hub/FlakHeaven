@@ -57,6 +57,7 @@ One numbered list for the build under test (3.5-s16). Kanta sends items as he pl
 | S16-28 | System mouse arrow is still visible on cutscenes and in dialogues (`main.gd:204` hides it only in playing/cutscene; probably related to S16-01) | Интерфейс | done 06.11, PR #567 — check in the next build |
 | S16-29 | Turn bank: the plane levels out of the bank too fast (Kanta 06.11). Visible bank now rolls in ×0.75 and levels out ×0.5 slower, flight bank untouched; F1 `bank_soft` (+ `bank_soft_in/out`), off until Kanta's «ок» (R-22). PR #573 | Замедлить выход самолёта из крена | на проверке в следующей сборке |
 | S16-30 | Kanta 06.11: markers say «100 м» while we fly a plane — show real-feeling distances. Display only: `DistText` (`dist_text.gd`), 0.6 m per world px picked from cruise speed (fighter ≈ 840 km/h), «300 м» / «5,3 км» on edge markers, task plates, fortress and warship captions | Сделать реальные расстояния на указателях | merged #575 06.11 — check in the next build |
+| FR06-01 | Flights review 06.11, items 1.1–1.3, 3, 5.1 (Kanta «Да»): synergy texts and recipe line under `build_pairs`, «Наработка» off under it, telemetry `player_missiles_launched`, plane node prices ×2. Item 1.4 (last-mount warning) waits for Kanta | Геймдизайн | done 06.11
 
 ## Правки по сборке 3.5-s15
 

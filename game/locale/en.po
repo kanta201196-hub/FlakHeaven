@@ -10150,3 +10150,9 @@ msgstr "%d m"
 #, c-format
 msgid "%s км"
 msgstr "%s km"
+
+msgid "Связка открывается рецептом из двух разных вещей нужного уровня: например, два вида оружия или оружие и модули. Рецепт — на карточке связки и под полосой «К связке» в бою. Сменить специализацию можно позже за 1 переброс."
+msgstr "A synergy opens from a recipe of two different things at the required level: for example, two kinds of weapons, or a weapon and modules. The recipe is on the synergy card and under the \"Toward synergy\" bar in combat. You can change the specialization later for 1 reroll."
+
+msgid "Ни одной связки за вылет. Слева в бою под полосой «К связке» написан рецепт: чего и какого уровня не хватает."
+msgstr "No synergies this sortie. In combat, the recipe under the \"Toward synergy\" bar on the left shows what is missing and at which level."

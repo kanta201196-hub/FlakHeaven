@@ -29,8 +29,12 @@ func course_pick(m: Main, size: Vector2) -> void:
 	_ctext(150, Loc.t("ВЫБОР СПЕЦИАЛИЗАЦИИ — СВЯЗКА %d ИЗ 3") % slot, 40, Menu.C_AMBER)
 	# s12: one full-width line ran under the objectives panel — wrap to the middle instead
 	var sy := 188.0 + _cpara(188.0, "Связка — сильный бонус, который меняет оружие или навык. Выберите, какую собирать: карточки к ней отмечены «▲» и выпадают чаще.", 960.0, 17, Color(0.8, 0.84, 0.92))
-	_cpara(sy + 4.0, Loc.t("Нужно набрать очки цветных меток на карточках: для 1-й связки — %d, 2-й — %d, 3-й — %d. Сменить специализацию можно позже за 1 переброс.") % [
-		Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]], 960.0, 16, Color(0.7, 0.74, 0.82))
+	# flights review 06.11, item 1.1: under `build_pairs` tag points no longer open a synergy
+	if Cards.pairs_on():
+		_cpara(sy + 4.0, "Связка открывается рецептом из двух разных вещей нужного уровня: например, два вида оружия или оружие и модули. Рецепт — на карточке связки и под полосой «К связке» в бою. Сменить специализацию можно позже за 1 переброс.", 960.0, 16, Color(0.7, 0.74, 0.82))
+	else:
+		_cpara(sy + 4.0, Loc.t("Нужно набрать очки цветных меток на карточках: для 1-й связки — %d, 2-й — %d, 3-й — %d. Сменить специализацию можно позже за 1 переброс.") % [
+			Cards.SLOT_COST[0]["main"], Cards.SLOT_COST[1]["main"], Cards.SLOT_COST[2]["main"]], 960.0, 16, Color(0.7, 0.74, 0.82))
 	var w := 520.0
 	var h := 400.0
 	var gap := 36.0

@@ -492,7 +492,10 @@ static func result_insights(m: Main) -> Array:
 				ram_tip = "Много урона от столкновений: не влетайте в строй врагов, уходите уклонением (Space) или берите броню; под «Бронещитом» врезавшиеся враги разбиваются сами."
 			out.append([ram_tip, Color(1.0, 0.75, 0.4)])
 	if m.player.syn.is_empty():
-		out.append(["Ни одной связки за вылет. Слева в бою полоса «К связке» показывает, каких карточек не хватает.", Color(1.0, 0.85, 0.4)])
+		# flights review 06.11, item 1.1: under `build_pairs` the recipe line names the missing thing
+		var tip := "Ни одной связки за вылет. Слева в бою под полосой «К связке» написан рецепт: чего и какого уровня не хватает." if Cards.pairs_on() \
+			else "Ни одной связки за вылет. Слева в бою полоса «К связке» показывает, каких карточек не хватает."
+		out.append([tip, Color(1.0, 0.85, 0.4)])
 	else:
 		var first := 1e9
 		for id in m.player.syn:

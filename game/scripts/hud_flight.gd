@@ -234,7 +234,7 @@ func _left_panel(m: Main, p: Player) -> void:
 	y += 92.0
 	var extra := 0.0
 	if not p.syn.is_empty() or p.has_course():
-		extra = 42.0 + (30.0 if p.has_course() else 0.0)
+		extra = 42.0 + (30.0 if p.has_course() else 0.0) + (RECIPE_H if _shows_recipe(p) else 0.0)
 		UiStyle.panel(ctrl, Rect2(x, y, pw, extra), Color(1, 1, 1, 0.08), Color(0.03, 0.035, 0.035, 0.6))
 		_course_bar(p, Vector2(x + 14, y + 8))
 	var arch_h := _arch_strip(p, Rect2(x, y + extra + (6.0 if extra > 0.0 else 0.0), pw, ARCH_H))
@@ -1196,8 +1196,18 @@ func _radio_box(m: Main, size: Vector2) -> void:
 
 # ---------- 3.2: курс ----------
 
+## Height of the recipe line under the «К связке» bar (flights review 06.11, item 1.2).
+const RECIPE_H := 20.0
+
+
+## Whether the course plate shows the recipe line: only under the `build_pairs` rule, where the
+## bar alone does not say which thing is missing.
+func _shows_recipe(p: Player) -> bool:
+	return p.has_course() and Cards.pairs_on() and not Cards.pair_recipe(p, p.course).is_empty()
+
+
 ## Course plate under the hull panel: synergy slots, then one line with the progress to the
-## course synergy (its conditions are on the pause screen, tag points).
+## course synergy; under `build_pairs` a recipe line below it names what is still missing.
 func _course_bar(p: Player, pos: Vector2, width := 412.0) -> void:
 	var x := pos.x
 	var sw := (width - 8.0 * (Cards.MAX_SYN - 1)) / Cards.MAX_SYN
@@ -1230,6 +1240,8 @@ func _course_bar(p: Player, pos: Vector2, width := 412.0) -> void:
 	ctrl.draw_rect(Rect2(pos.x + width - bw, y + 2, bw * k, 14), Color(col2.r, col2.g, col2.b, a))
 	if ready:
 		_text(Vector2(pos.x + width - bw, y + 15), Loc.t("в следующем выборе!"), 14, Color(1.0, 0.9, 0.4), HORIZONTAL_ALIGNMENT_CENTER, bw)
+	if _shows_recipe(p):
+		_text(Vector2(pos.x, y + 34), Cards.pair_recipe(p, p.course), 14, Color(0.78, 0.8, 0.86), HORIZONTAL_ALIGNMENT_LEFT, width)
 
 
 ## Мир → экран: с наклонной камерой (B-47) через 3D-камеру, иначе через 2D-трансформ

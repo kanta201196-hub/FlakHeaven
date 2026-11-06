@@ -44,6 +44,9 @@ func spawn_player_missile(pos: Vector2, vel: Vector2, target: Enemy, dmg := 45.0
 	var m := {"p": pos, "v": vel, "life": 2.8, "t": weakref(target), "dmg": dmg, "trail": PackedVector2Array(), "src": src, "free": PM_FREE}
 	m.merge(opts, true)
 	pmissiles.append(m)
+	# flights review 06.11, item 3: the share of missiles that enemy flares lure away needs the total fired
+	if Main.I != null and Main.I.tele != null:
+		Main.I.tele.add("player_missiles_launched")
 
 
 func spawn_fire(pos: Vector2, r: float, dps: float, time: float, src: String, ground_only := false, col := Color(1.0, 0.45, 0.1)) -> void:
