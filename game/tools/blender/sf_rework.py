@@ -906,22 +906,23 @@ def make_low(groups, R, budget):
     return lows
 
 
-def split_uv_islands(obs, cuts):
+def split_uv_islands(obs, cuts, axis=0):
     """Cut long UV islands at the planes x = cuts (normalised model length).
 
     Smart UV project keeps a whole fuselage side as one island as long as the plane; the packer cannot scale the
     atlas past that island, so most of the texture stays empty. Islands are found by shared UV coordinates, so a
     tiny UV shift per segment (faces grouped by the x of their centre) separates them; pack_islands then lays the
-    pieces out freely and the texel density rises."""
+    pieces out freely and the texel density rises. axis 1 cuts across the span (y): a wing top that runs through
+    the fuselage top as one smooth surface is an island as wide as the plane."""
     import bisect
     for o in obs:
         me = o.data
         uvl = me.uv_layers.active.data
         for p in me.polygons:
-            k = bisect.bisect(cuts, (o.matrix_world @ p.center).x)
+            k = bisect.bisect(cuts, (o.matrix_world @ p.center)[axis])
             if k:
                 for li in p.loop_indices:
-                    uvl[li].uv.x += 1e-4 * k
+                    uvl[li].uv[axis] += 1e-4 * k
 
 
 def unwrap(lows, R):
@@ -935,17 +936,37 @@ def unwrap(lows, R):
         while len(o.data.uv_layers) > 0:
             o.data.uv_layers.remove(o.data.uv_layers[0])
         o.data.uv_layers.new(name="UVMap")
+    # the UV packer also follows the aspect of the faces' material image: every face takes an image-less
+    # material for the unwrap, and gets its own back after it
+    blank = bpy.data.materials.new("uv_aspect_1")
+    keep_mi = {}
+    for o in obs:
+        o.data.materials.append(blank)
+        o.active_material_index = len(o.data.materials) - 1
+        keep_mi[o.name] = [p.material_index for p in o.data.polygons]
+        o.data.polygons.foreach_set("material_index", [o.active_material_index] * len(o.data.polygons))
     _select(obs)
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=0.002, area_weight=0.0, scale_to_bounds=False)
-    if R.get("uv_split_x"):
+    # correct_aspect off: by default the projection follows the aspect of the first material's image, and a
+    # palette-strip texture (128 x 4) squashed every island 32 times across the atlas
+    bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=0.002, area_weight=0.0, scale_to_bounds=False,
+                             correct_aspect=False)
+    if R.get("uv_split_x") or R.get("uv_split_y"):
         bpy.ops.object.mode_set(mode="OBJECT")
-        split_uv_islands(obs, R["uv_split_x"])
+        if R.get("uv_split_x"):
+            split_uv_islands(obs, R["uv_split_x"])
+        if R.get("uv_split_y"):
+            split_uv_islands(obs, R["uv_split_y"], 1)
         bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.uv.select_all(action="SELECT")
     bpy.ops.uv.pack_islands(margin=0.002, rotate=True, scale=True)
     bpy.ops.object.mode_set(mode="OBJECT")
+    for o in obs:
+        o.data.polygons.foreach_set("material_index", keep_mi[o.name])
+        o.data.materials.pop(index=len(o.data.materials) - 1)
+        o.active_material_index = 0
+    bpy.data.materials.remove(blank)
     for o in obs:   # smooth normals on lows: auto smooth by angle so hard edges stay
         _select([o])
         bpy.ops.object.shade_smooth_by_angle(angle=math.radians(R.get("smooth_deg", 40)))
