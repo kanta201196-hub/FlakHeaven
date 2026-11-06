@@ -40,6 +40,9 @@ var _dist := DIST0
 var _drag := false
 var _idle := 0.0             # секунд без мыши — потом медленно крутится сам
 var _drawn_frame := -10
+## The view takes the mouse (orbit, zoom, level tabs) only where it is the hangar itself; a story scene draws it as a
+## backdrop, and its full-screen rect ate every click before the HUD saw it (S16-01: the dialogue options ignored the mouse)
+var _interactive := true
 var _cls := ""
 var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
 var _built_lvl := 1          # plane level of the model on view (model_key)
@@ -351,8 +354,10 @@ func _set_bg(mode: String) -> void:
 		_rim_light.basis = Basis.looking_at(Vector3(-0.6, -0.2, 0.75).normalized(), Vector3.UP)
 
 
-## Каждый кадр, пока открыта вкладка «САМОЛЁТ»: какой самолёт показать и где
-func show_plane(cls_id: String, r: Rect2) -> Texture2D:
+## Called every frame while the view is on screen: which plane to show and where. `interactive` false makes it a
+## backdrop that leaves the mouse to the HUD (hangar dialogue scenes).
+func show_plane(cls_id: String, r: Rect2, interactive := true) -> Texture2D:
+	_interactive = interactive
 	if cls_id != _cls:
 		_cls = cls_id
 		view_lvl = Profile.plane_lvl(cls_id)   # S9-02: открываем тот самолёт, на котором летаем
@@ -959,7 +964,7 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if Engine.get_process_frames() - _drawn_frame > 2 or _ctrl == null:
+	if Engine.get_process_frames() - _drawn_frame > 2 or _ctrl == null or not _interactive:
 		return
 	var mp := _ctrl.get_local_mouse_position()
 	if event is InputEventMouseButton:

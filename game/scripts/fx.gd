@@ -248,6 +248,18 @@ func text(pos: Vector2, s: String, color := Color(1, 1, 1)) -> void:
 	numbers.append({"p": pos, "t": Loc.out(s), "life": 1.2, "c": color, "size": 22})
 
 
+## S16-18 (toggle fx_s16): enemy missile hit on the player — a light blast (Boom3D.missile_hit; a small flak burst
+## without 3D) and a short muffled bang, louder than the old spark and quieter than a kill
+func missile_blast(pos: Vector2) -> void:
+	if Boom3D.active():
+		Boom3D.ensure().missile_hit(pos)
+		Render3D.I.light_flash(pos, 10.0)
+	else:
+		explosion(pos, 7.0, true, false, "flak")
+	if Main.I != null and Main.I.sfx != null:
+		Main.I.sfx.play("explode", -10.0, 1.3, pos)
+
+
 ## Bullet hit: a few short sparks at pos (in Forward+ the 3D burst of Boom3D.hit instead)
 func hit_spark(pos: Vector2, color := Color(1, 1, 0.8)) -> void:
 	if Boom3D.active() and Boom3D.ensure().hit(pos, color):   # VFX-04: Forward+ — a small 3D spark burst
