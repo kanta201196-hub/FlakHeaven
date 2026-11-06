@@ -10140,3 +10140,83 @@ msgstr "炮塔（最多）"
 #: game/scripts/plane_stats.gd
 msgid "Ведомые"
 msgstr "僚机"
+
+#: game/scripts/hud_campaign.gd
+msgid "‹ Ангар (Esc)"
+msgstr "‹ 机库（Esc）"
+
+#: game/scripts/hud_campaign.gd
+msgid "РЕЖИМ ВЫЛЕТА"
+msgstr "出击设置"
+
+#: game/scripts/hud_campaign.gd
+msgid "Выберите район и операцию — и в бой."
+msgstr "选择区域和行动，然后出击。"
+
+#: game/scripts/hud_campaign.gd
+msgid "Enter — вылет · ↑ / ↓ — операция · ← / → — район · Esc — ангар · управление: %s [F2]"
+msgstr "Enter — 出击 · ↑ / ↓ — 行动 · ← / → — 区域 · Esc — 机库 · 操控：%s [F2]"
+
+#: game/scripts/hud_campaign.gd
+msgid "1 · РАЙОН"
+msgstr "1 · 区域"
+
+#: game/scripts/hud_campaign.gd
+msgid "после %d операций · осталось %d"
+msgstr "完成 %d 次行动后 · 还差 %d"
+
+#: game/scripts/hud_campaign.gd
+msgid "пройдено %d из %d"
+msgstr "已完成 %d / %d"
+
+#: game/scripts/hud_campaign.gd
+msgid "2 · ОПЕРАЦИЯ"
+msgstr "2 · 行动"
+
+#: game/scripts/hud_campaign.gd
+msgid "3 · БРИФИНГ"
+msgstr "3 · 简报"
+
+#: game/scripts/hud_campaign.gd
+msgid "Операция %d · «%s»"
+msgstr "行动 %d ·「%s」"
+
+#: game/scripts/hud_campaign.gd
+msgid "ЗАДАЧИ"
+msgstr "任务"
+
+#: game/scripts/hud_campaign.gd
+msgid "Самолёт ур. %d · экипаж ур. %d"
+msgstr "飞机 %d 级 · 机组 %d 级"
+
+#: game/scripts/hud_campaign.gd
+msgid "На старте: %s"
+msgstr "初始武器：%s"
+
+#: game/scripts/hud_campaign.gd
+msgid "‹ Изменить в ангаре"
+msgstr "‹ 在机库中更改"
+
+#: game/scripts/hud_campaign.gd
+msgid "ВЫЛЕТ ▶"
+msgstr "出击 ▶"
+
+#: game/scripts/hud_campaign.gd
+msgid "Перед вылетом — ПОДГОТОВКА И ВЫЛЕТ: самолёт, оружие, экипаж, затем район и операция"
+msgstr "出击前 — 准备与出击：飞机、武器、机组，然后选择区域和行动"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПОДГОТОВКА К ВЫЛЕТУ"
+msgstr "出击准备"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПРИГОТОВИТЬСЯ К ВЫЛЕТУ — %s ›"
+msgstr "准备出击 — %s ›"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПОДГОТОВКА И ВЫЛЕТ"
+msgstr "准备与出击"
+
+#: game/scripts/hud_campaign.gd
+msgid "ЗАКРЫТ"
+msgstr "未解锁"

@@ -260,6 +260,7 @@ Items from the s15 recordings and log review (04.11.2026, `/mnt/project-files/s1
 | DM-06 | Первые 90 секунд демо понятны новичку (проверка на внешних тестерах) | Понятность игры для новичков | идея (до 15.12) |
 | UI-01 | Main menu and settings redesign after Sublight (Kanta 24.10): style «Прицел», 5 menu items, «Что нового»/«Отзыв» cards, compact flight log, flexible graphics, controls with rebinding and gamepad; plan `docs/superpowers/plans/2026-10-24-main-menu-settings.md` steps 1–5; Kenney Input Prompts + UI Audio (CC0) approved | Переделать главное меню и настройки | in progress: step 1 (UiStyle + UiFocus merged, PR #367) |
 | UI-02 | Combat UI: HUD, pause variant В «Чертёж самолёта», card pick, results (plan steps 6–9), in parallel (Kanta 24.10) | Переделать интерфейс боя | merged 24.10 (PR #372); waiting: frames from the Sublight video on Kanta's PC. Left from review: colour literals → tokens, HUD skill list per-frame allocations, pause DPS by source prefix, 3rd nested term tooltip overlap |
+| UI-03 | «Подготовка и вылет» (Kanta 06.11): one menu item for hangar + sortie; hangar → «Приготовиться к вылету» → mission screen (theater, operation, «Вылет ▶»); Archipelago after 3 cleared Highlands operations; slots for operation art (`game/art/ops/<op id>.png`) and objectives (`Campaign.OPS[i]["goals"]`) | Объединить ангар и вылет в «Подготовку и вылет» | in progress |
 
 ## Нагорье
 

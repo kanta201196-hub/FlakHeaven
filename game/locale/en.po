@@ -10140,3 +10140,83 @@ msgstr "Turrets (max)"
 #: game/scripts/plane_stats.gd
 msgid "Ведомые"
 msgstr "Wingmen"
+
+#: game/scripts/hud_campaign.gd
+msgid "‹ Ангар (Esc)"
+msgstr "‹ Hangar (Esc)"
+
+#: game/scripts/hud_campaign.gd
+msgid "РЕЖИМ ВЫЛЕТА"
+msgstr "SORTIE SETUP"
+
+#: game/scripts/hud_campaign.gd
+msgid "Выберите район и операцию — и в бой."
+msgstr "Pick a theater and an operation, then take off."
+
+#: game/scripts/hud_campaign.gd
+msgid "Enter — вылет · ↑ / ↓ — операция · ← / → — район · Esc — ангар · управление: %s [F2]"
+msgstr "Enter — take off · ↑ / ↓ — operation · ← / → — theater · Esc — hangar · controls: %s [F2]"
+
+#: game/scripts/hud_campaign.gd
+msgid "1 · РАЙОН"
+msgstr "1 · THEATER"
+
+#: game/scripts/hud_campaign.gd
+msgid "после %d операций · осталось %d"
+msgstr "after %d operations · %d to go"
+
+#: game/scripts/hud_campaign.gd
+msgid "пройдено %d из %d"
+msgstr "%d of %d cleared"
+
+#: game/scripts/hud_campaign.gd
+msgid "2 · ОПЕРАЦИЯ"
+msgstr "2 · OPERATION"
+
+#: game/scripts/hud_campaign.gd
+msgid "3 · БРИФИНГ"
+msgstr "3 · BRIEFING"
+
+#: game/scripts/hud_campaign.gd
+msgid "Операция %d · «%s»"
+msgstr "Operation %d · “%s”"
+
+#: game/scripts/hud_campaign.gd
+msgid "ЗАДАЧИ"
+msgstr "OBJECTIVES"
+
+#: game/scripts/hud_campaign.gd
+msgid "Самолёт ур. %d · экипаж ур. %d"
+msgstr "Plane Lv. %d · crew Lv. %d"
+
+#: game/scripts/hud_campaign.gd
+msgid "На старте: %s"
+msgstr "Starts with: %s"
+
+#: game/scripts/hud_campaign.gd
+msgid "‹ Изменить в ангаре"
+msgstr "‹ Change in the hangar"
+
+#: game/scripts/hud_campaign.gd
+msgid "ВЫЛЕТ ▶"
+msgstr "TAKE OFF ▶"
+
+#: game/scripts/hud_campaign.gd
+msgid "Перед вылетом — ПОДГОТОВКА И ВЫЛЕТ: самолёт, оружие, экипаж, затем район и операция"
+msgstr "Before a sortie — PREPARE AND TAKE OFF: plane, weapons, crew, then theater and operation"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПОДГОТОВКА К ВЫЛЕТУ"
+msgstr "PRE-FLIGHT"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПРИГОТОВИТЬСЯ К ВЫЛЕТУ — %s ›"
+msgstr "READY FOR SORTIE — %s ›"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПОДГОТОВКА И ВЫЛЕТ"
+msgstr "PREPARE AND TAKE OFF"
+
+#: game/scripts/hud_campaign.gd
+msgid "ЗАКРЫТ"
+msgstr "LOCKED"

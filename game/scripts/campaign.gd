@@ -123,6 +123,22 @@ static func unlocked() -> int:
 	return n
 
 
+## Cleared operations of `biome` (counts toward opening the next biome, `CampaignGates`).
+static func cleared_in(biome: String) -> int:
+	var n := 0
+	for i in ops_of(biome):
+		if cleared(i):
+			n += 1
+	return n
+
+
+## Whether the player may fly in `biome`: the demo gate (`Demo.biome_ok`) and the progression gate — the second biome
+## opens after `CampaignGates.BIOME_UNLOCK_OPS` cleared Highlands operations (Kanta 06.11). Checked by the mission
+## screen and the menu's theater switch, not by `select`, so autotests can still pick any operation.
+static func biome_open(biome: String) -> bool:
+	return Demo.biome_ok(biome) and CampaignGates.biome_open(biome, Biome.HIGHLAND, cleared_in(Biome.HIGHLAND))
+
+
 ## Номер операции в своём биоме, с 1 (для подписей «Операция N»)
 static func num(i := -1) -> int:
 	if i < 0:

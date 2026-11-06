@@ -1,6 +1,7 @@
 class_name HudHangar
 extends HudKit
-## 3.2: ангар — самолёт и узлы, ветки оружия, экипаж и перки, слоты навыков.
+## 3.2: ангар — самолёт и узлы, ветки оружия, экипаж и перки, слоты навыков. Step 1 of «Подготовка и вылет»
+## (Kanta 06.11): «Приготовиться к вылету» at the bottom takes the plane on view to the mission screen.
 
 
 # ---------- 3.2: ангар ----------
@@ -15,7 +16,7 @@ var _album: HudAlbum
 func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.05, 0.94))
 	var c := m.hangar_cls
-	_text(Vector2(0, 66), "АНГАР", 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	_text(Vector2(0, 66), "ПОДГОТОВКА К ВЫЛЕТУ", 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	_text(Vector2(0, 66), Loc.t("Запчасти: %d   ") % Profile.parts(), 26, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 60)
 	_button(Rect2(60, 34, 200, 46), "‹ Меню (Esc)", "hg:back", 18)
 	# классы
@@ -58,7 +59,8 @@ func draw(m: Main, size: Vector2) -> void:
 			if _album == null:
 				_album = HudAlbum.new(ctrl, _buttons)
 			_album.draw(m, area)
-	_button(Rect2(size.x / 2.0 - 180, size.y - 110, 360, 56), Loc.t("В ВЫЛЕТ — %s") % Loc.t(PlaneClasses.DATA[c]["title"]), "hg:fly", 20)
+	# «Подготовка и вылет» (Kanta 06.11): set the plane up here, then the mission screen picks theater and operation
+	_button(Rect2(size.x / 2.0 - 260, size.y - 110, 520, 56), Loc.t("ПРИГОТОВИТЬСЯ К ВЫЛЕТУ — %s ›") % Loc.t(PlaneClasses.DATA[c]["title"]), "hg:prep", 20)
 	if Main.DEBUG:
 		var dy := size.y - 110
 		_text(Vector2(60, dy - 10), "ОТЛАДКА (тестовая сборка):", 14, Color(0.7, 0.7, 0.7))

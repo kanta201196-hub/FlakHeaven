@@ -122,6 +122,42 @@ var _ui_phase := 0
 var _menu_phase := 0
 
 
+var _prep_phase := 0
+
+
+## «Подготовка и вылет» frames (UI-03): the menu item, the hangar with «Приготовиться к вылету», the mission screen on a
+## fresh campaign (Archipelago closed), then with every operation open and on the Archipelago tab; then quits.
+## Wipes the campaign progress of this user:// folder. godot --path game -- --autotest --shots --preptest
+func _prep_test() -> void:
+	if m.state == "dialog" and m._state_t > 1.0:   # the prologue scene of a fresh profile
+		Dialog.skip(m)
+		return
+	if _bot_wait > 0.0 or m._state_t < 3.0 or not m.state in ["menu", "hangar", "campaign"]:
+		return
+	_bot_wait = 0.8
+	match _prep_phase:
+		0:
+			Campaign.wipe()
+			_shot("prep_menu")
+			m.ui_click("menu_prep")
+		1:
+			_shot("prep_hangar")
+			m.input_ctl.hangar_action("prep")
+		2:
+			_shot("prep_mission_locked")
+			Campaign.debug_open_all()
+			Campaign.select(2)
+		3:
+			_shot("prep_mission_open")
+			HudCampaign.switch_biome(Biome.ARCHIPELAGO)
+		4:
+			_shot("prep_mission_archipelago")
+			Campaign.wipe()
+			m.get_tree().quit(0)
+			return
+	_prep_phase += 1
+
+
 ## Main menu frames (UI-01): default focus, focus moved down by a real ui_down press,
 ## «Что нового» and «Отзыв» overlays, codex «Как играть»; then quits.
 ## godot --path game --rendering-driver opengl3 -- --autotest --shots --menutest
@@ -890,6 +926,9 @@ func _run_autotest(delta: float) -> void:
 	if m._args.has("--menutest"):
 		_menu_test()
 		return
+	if m._args.has("--preptest"):
+		_prep_test()
+		return
 	if m._args.has("--shots") and m.state != "playing" and m._state_t < 1.0:
 		return # в режиме скриншотов даём экрану постоять
 	match m.state:
@@ -1082,7 +1121,9 @@ func _run_autotest(delta: float) -> void:
 						return
 				if not m._args.has("--shots"):
 					Demo.end_open = false   # GD-01: the "end of demo" screen must not stop a --demo balance run
-					m.ui_click("change_class") # следующий вылет — другим классом
+					m.restarts += 1   # следующий вылет — другим классом, прямо на экран операции
+					m.start_run()
+					m.ui_click("menu_play")
 			return
 	if int(_autotest_t * 10.0) % 100 == 0 and m._args.has("--verbose-bot"):
 		for n in m.get_tree().get_nodes_in_group("enemies"):
