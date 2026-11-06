@@ -22,6 +22,8 @@ const COLS := ["fps_avg", "fps_low1", "slow_frames", "fps_limit", "vsync", "pad_
 	"fortress_points", "fortress_phase2_s", "fortress_phase3_s", "fortress_base", "fortress_bay",
 	# 3.5 (тред «ИИ врагов и активности»): уклонения врагов, их ловушки и уведённые ими ракеты, сбитые ПВО наши ракеты
 	"enemy_evades", "enemy_flares", "enemy_flared_missiles", "aa_shot_down",
+	# S16-07: enemy missiles launched at the player (flares' potential is measured against it)
+	"enemy_missiles_launched",
 	# 3.5: ракеты игрока в воздухе (В-В + НАР; ориентир ≤ 12), перенацеливания ГСН, самоликвидации; звание и черта экипажа
 	"msl_air_avg", "msl_air_max", "msl_retarget", "msl_lost", "crew_rank", "crew_xp_lvl", "callsign_idx", "plane_lvl",
 	# 3.5: бой на 3D-моделях — сколько самолётов в кадре нарисовано моделями (макс.) и их треугольники

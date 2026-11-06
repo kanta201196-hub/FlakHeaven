@@ -49,7 +49,9 @@ const CARD_INVULN := 0.5
 var rerolls := 2        # переброс выбора (базово 2 за вылет, +1 за каждого аса)
 var bans := 2           # исключение карточки до конца вылета (базово 2, +1 за аса)
 ## тест 3.5-s7 (Kanta): на время тестов — по 10 перебросов и блоков за вылет (в игре было по 2)
-const TEST_PICKS := 10
+## S16-22 (Kanta 05.11): starting card rerolls and bans of a sortie (were a test value of 10 each).
+const START_REROLLS := 3
+const START_BANS := 1
 var banned := {}        # ключи исключённых карточек
 var locked: Dictionary = {}  # закреплённая карточка — появится в следующем выборе
 var offer_rare := false
@@ -325,8 +327,8 @@ func start_run() -> void:
 		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
 	evac_windows = 0
 	evac_lost = false
-	rerolls = TEST_PICKS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # 3.5: самолёт ур. 2 — +1 переброс; медаль «Коллекционер»
-	bans = TEST_PICKS + int(Profile.medal_bonus("bans"))   # медаль «Мастер связок»
+	rerolls = START_REROLLS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # 3.5: самолёт ур. 2 — +1 переброс; медаль «Коллекционер»
+	bans = START_BANS + int(Profile.medal_bonus("bans"))   # медаль «Мастер связок»
 	banned = {}
 	locked = {}
 	course_log = []
