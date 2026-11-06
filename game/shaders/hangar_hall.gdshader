@@ -75,10 +75,18 @@ void fragment() {
 		float mid = fbm2(m.xz * 0.45 + 13.0);
 		float fine = vnoise(vec3(m.xz * 7.0, 0.0)) * 0.6 + vnoise(vec3(m.xz * 23.0, 1.0)) * 0.4;
 		alb = SRGB(vec3(0.35, 0.345, 0.33)) * mix(0.8, 1.08, big) * mix(0.92, 1.05, mid) * (0.94 + 0.12 * fine);
-		// aggregate: small light and dark grains, faded where they get smaller than a pixel
-		float grain = hash3(floor(vec3(m.xz * 60.0, 0.0)));
-		float gk = 1.0 - smoothstep(0.004, 0.02, fwl);
-		alb *= 1.0 + (step(0.93, grain) * 0.16 - step(grain, 0.05) * 0.14) * gk;
+		// aggregate: small light and dark grains, faded where they get smaller than a pixel. Each grain is a round
+		// stone at a random spot of its 1.7 cm cell with an anti-aliased edge (S16-10: whole cells lit as square
+		// pixels read as a low-res texture close up)
+		vec2 gp = m.xz * 60.0;
+		vec2 gc = floor(gp);
+		float grain = hash3(vec3(gc, 0.0));
+		vec2 go = vec2(hash3(vec3(gc, 7.0)), hash3(vec3(gc, 13.0))) * 0.3 + 0.35;
+		float gr = 0.2 + 0.13 * hash3(vec3(gc, 21.0));
+		float gaa = max(fwl * 60.0, 1e-4);   // a pixel, in cells
+		float gmask = 1.0 - smoothstep(-0.7 * gaa, 0.7 * gaa, length(fract(gp) - go) - gr);
+		float gk = (1.0 - smoothstep(0.004, 0.02, fwl)) * gmask;
+		alb *= 1.0 + (step(0.88, grain) * 0.16 - step(grain, 0.09) * 0.14) * gk;
 		rough = mix(0.62, 0.86, mid) - big * 0.08;
 		if (outside) {
 			alb *= SRGB(vec3(1.06, 1.03, 0.98));
