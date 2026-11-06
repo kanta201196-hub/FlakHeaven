@@ -706,3 +706,64 @@ RECIPES = {
 # «Оса» lvl 1 hangar close-up: the same rework without decimation, subdivided once (the source has ~11k visible
 # triangles; the hangar camera comes close) and baked at 4096
 RECIPES["fighter_1_hangar"] = dict(RECIPES["fighter_1"], root="fh_hangar_fighter_1", tris=80000, subdiv=1)
+
+# PT-03 tier 1 «Оса» (early swept-wing jet fighter, Kanta 06.11 «Оса 1 - ок»): CC0 museum-grade model (CREDITS).
+# The source lies span along X, nose -Y, in flight (no gear). Its paint maps are planar top / side / bottom
+# projections without markings except the red fin tip, painted over; glass = canopy and windscreen armour.
+RECIPES["fighter_t1"] = {
+    "root": "fighter_t1", "rot": (0, 0, 90), "ground": False, "split": r"^Object_8$",
+    # gear legs, wheels and doors (the game flies with gear up; the skin has the bays closed), and the aerial wire
+    # from the canopy to the fin (a 0.6-long thread that swallows the UV atlas)
+    "drop_box": [(0.33, 0.42, -0.05, 0.05, -0.2, -0.085), (0.03, 0.13, 0.15, 0.21, -0.2, -0.05),
+                 (0.03, 0.13, -0.21, -0.15, -0.2, -0.05), (-0.15, -0.09, -0.01, 0.01, 0.105, 0.12),
+                 # marking decals: thin plates a hair off the skin that the repaint leaves as raised outlines
+                 # (fin squares, fuselage squares, nose number)
+                 (-0.335, -0.27, -0.009, 0.009, 0.005, 0.062),
+                 (-0.15, -0.09, 0.055, 0.068, -0.075, -0.028), (-0.15, -0.09, -0.068, -0.055, -0.075, -0.028),
+                 (0.39, 0.476, 0.033, 0.066, -0.076, -0.002), (0.39, 0.476, -0.066, -0.033, -0.076, -0.002)],
+    "materials": [(r"PaletteMaterial003$", GLASS),
+                  (r"paint_(top|side|bottom)$", {"mode": "paint"}),
+                  # the detail parts share one palette strip; its red and white cells are the markings (side
+                  # number, fin and fuselage squares) and the nose / tank tips: they take the new paint
+                  (r"PaletteMaterial001$", {"mode": "auto", "hue": [(0, 15), (345, 360)], "smin": 0.4, "gray": (0.85, 1.0)}),
+                  (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+    "erase": {"mig15_paint_side": [(0.82, 0.0, 1.0, 0.1)]},
+    "mat_names": {"glass": "glass"}, "img_plain": True,
+    "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+    "paint": HIGHLAND, "tris": 30000,
+}
+RECIPES["fighter_t1_hangar"] = dict(RECIPES["fighter_t1"], root="fh_hangar_fighter_t1", tris=100000)
+
+# PT-03 tier 1 «Грач» (light two-seat side-by-side jet strike plane with tip tanks; Kanta 06.11: the first pick
+# «смотрится игрушечным», his reference screens show a matte green / brown camouflage): CC0 museum-grade model of the
+# trainer sibling (CREDITS); the game hangs its own pylons with the stores. The source's red / white trainer scheme
+# and black anti-glare panels are flattened out of the luminance, so only panel lines and grime reach the new paint.
+TEMPERATE = {"camo": [(0.40, 0.32, 0.22), (0.23, 0.27, 0.17), (0.16, 0.19, 0.13)], "scale": 1.0,
+             "stretch": (0.6, 1.0, 1.0), "belly": (0.46, 0.48, 0.44), "dust": 0.0, "rough": (0.78, 0.86),
+             "wear": 0.35, "detail": 0.8, "wear_col": (0.50, 0.47, 0.40), "fade": 0.05, "fade_col": (0.56, 0.53, 0.44),
+             "streak": 0.1}
+RECIPES["attacker_t1"] = {
+    "root": "attacker_t1", "rot": (0, 0, 90), "ground": False, "split": r"^Object_(7|9)$",
+    # gear legs, wheels and doors (gear up in the game)
+    "drop_box": [(0.35, 0.41, -0.03, 0.03, -0.2, -0.08), (0.04, 0.11, 0.14, 0.2, -0.2, -0.075),
+                 (0.04, 0.11, -0.2, -0.14, -0.2, -0.075),
+                 # marking decals (thin plates on the skin): fin flash and lettering, side serial, fuselage and
+                 # wing roundels, nose number
+                 (-0.36, -0.305, -0.009, 0.009, 0.015, 0.14),
+                 (-0.29, -0.235, 0.033, 0.041, -0.045, -0.012), (-0.29, -0.235, -0.041, -0.033, -0.045, -0.012),
+                 (-0.156, -0.095, 0.037, 0.054, -0.052, 0.0), (-0.156, -0.095, -0.054, -0.037, -0.052, 0.0),
+                 (0.08, 0.15, 0.35, 0.42, -0.052, -0.022), (0.08, 0.15, -0.42, -0.35, -0.052, -0.022),
+                 (0.32, 0.35, 0.058, 0.064, -0.058, -0.037), (0.32, 0.35, -0.064, -0.058, -0.058, -0.037)],
+    "materials": [(r"PaletteMaterial003$", GLASS),
+                  (r"jp_.*paint", {"mode": "paint", "flatten": 31}),
+                  (r"PaletteMaterial008$", {"mode": "paint"}),   # tip tanks (red on the trainer)
+                  # detail parts on two palette strips; red, white and blue cells are the national markings,
+                  # warning triangles and trainer bands: they take the new paint
+                  (r"PaletteMaterial00[12]$", {"mode": "auto", "hue": [(0, 15), (340, 360), (200, 250)], "smin": 0.4,
+                                               "gray": (0.85, 1.0)}),
+                  (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+    "mat_names": {"glass": "glass"}, "img_plain": True,
+    "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+    "paint": TEMPERATE, "tris": 30000,
+}
+RECIPES["attacker_t1_hangar"] = dict(RECIPES["attacker_t1"], root="fh_hangar_attacker_t1", tris=110000)
