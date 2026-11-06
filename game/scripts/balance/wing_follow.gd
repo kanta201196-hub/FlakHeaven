@@ -69,7 +69,7 @@ static func step(st: Dictionary, pos: Vector2, slot: Vector2, lp: Vector2, pv: V
 	var v := follow(st, target - pos, pv, delta, lp - pos if avoid else Vector2.ZERO, clear if avoid else 0.0,
 		speed_to if avoid else target - pos)
 	if avoid:
-		v = _nose_clear(st, lp - pos, clear)
+		v = nose_clear(st, lp - pos, clear)
 	pos += v * delta
 	var rel := pos - lp
 	var l := rel.length()
@@ -144,7 +144,7 @@ static func avoid_heading(want_h: float, cur_h: float, spd: float, lead: Vector2
 ## S16-24 last line of defence when steering alone was too slow (the leader turned hard into the wingman): closer
 ## than clear × NOSE_R the nose is held out of the cone in which its line would cross the leader's disc, on the side
 ## it already is; the cone fades in over NOSE_FADE so the nose never jumps. Returns the velocity along the nose.
-static func _nose_clear(st: Dictionary, lead: Vector2, clear: float) -> Vector2:
+static func nose_clear(st: Dictionary, lead: Vector2, clear: float) -> Vector2:
 	var d := lead.length()
 	var k := clampf((clear * NOSE_R - d) / (clear * NOSE_FADE), 0.0, 1.0)
 	if k > 0.0:

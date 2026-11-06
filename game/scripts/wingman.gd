@@ -298,7 +298,7 @@ func _keep_clear(p: Player, delta: float) -> void:
 		return
 	var side := -1.0 if slot % 2 == 0 else 1.0
 	var away := rel / l if l > 1.0 else Vector2.from_angle(p.heading + side * PI / 2.0)
-	position += away * (r - l) * minf(1.0, delta * 10.0)
+	position += away * (r - l) * (1.0 if Tuning.g("wing_avoid") >= 1.0 else minf(1.0, delta * 10.0))   # S16-24: no overlap
 	velocity -= away * minf(0.0, velocity.dot(away) - p.velocity.dot(away))
 
 
@@ -448,8 +448,11 @@ func _attack_run(p: Player, delta: float) -> void:
 	if Tuning.g("wing_smooth") >= 1.0:
 		var ps := maxf(p.velocity.length(), 200.0)
 		WingFollow.steer(_st(), aim, ps * 1.3, ps, delta, 1.25)
+		if Tuning.g("wing_avoid") >= 1.0:   # S16-24: an attack run does not poke the leader either
+			velocity = WingFollow.nose_clear(_steer, p.global_position - global_position, clear_r(p))
+		else:
+			velocity = Vector2.from_angle(float(_steer.heading)) * float(_steer.spd)
 		heading = _steer.heading
-		velocity = Vector2.from_angle(heading) * float(_steer.spd)
 		position += velocity * delta
 		return
 	heading = rotate_toward(heading, aim, deg_to_rad(WING_TURN * 1.25) * delta)
