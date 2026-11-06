@@ -61,10 +61,10 @@ func draw(m: Main, size: Vector2) -> void:
 			_album.draw(m, area)
 	# «Подготовка и вылет» (Kanta 06.11): set the plane up here, then the mission screen picks theater and operation
 	# the main action of the screen: filled amber like «ВЫЛЕТ ▶», so it reads as the way forward
-	var pr := Rect2(size.x / 2.0 - 280, size.y - 112, 560, 60)
+	var pr := Rect2(size.x / 2.0 - 245, size.y - 112, 490, 60)   # clears the debug buttons on the left in tester builds
 	var hot := pr.has_point(ctrl.get_local_mouse_position())
 	ctrl.draw_rect(pr, Menu.C_AMBER.lightened(0.12 if hot else 0.0))
-	_text(Vector2(pr.position.x, pr.position.y + 39), Loc.t("ПРИГОТОВИТЬСЯ К ВЫЛЕТУ — %s ›") % Loc.t(PlaneClasses.DATA[c]["title"]), 21, Color(0.1, 0.08, 0.02), HORIZONTAL_ALIGNMENT_CENTER, pr.size.x)
+	_text(Vector2(pr.position.x, pr.position.y + 39), Loc.t("ПРИГОТОВИТЬСЯ К ВЫЛЕТУ — %s ›") % Loc.t(PlaneClasses.DATA[c]["title"]), 19, Color(0.1, 0.08, 0.02), HORIZONTAL_ALIGNMENT_CENTER, pr.size.x)
 	_buttons.append([pr, "hg:prep"])
 	if Main.DEBUG:
 		var dy := size.y - 110
