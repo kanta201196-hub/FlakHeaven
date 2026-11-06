@@ -360,6 +360,11 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | V-03…V-06 | Предкрылки и закрылки (сделано в PR #46), модули на моделях (сделано M-15), остовы техники (сделано M-21), ловушки и кассетные бомбы (сделано M-13): остаются только пункты, не закрытые другими задачами, — сверить при снятии паузы | 3D-модели | идея |
 | M-60 | Убрать окраски «Чёрный с красным» («Кит») и «Гоночная шахматка» (все три самолёта); сохранения с ними — на окраску по умолчанию (Kanta 04.11) | 3D-модели | в работе 04.11: PR с юнит-тестом `livery_removed_test.gd` |
 | M-26 | Проба fal.ai (`genmedia`) на одной машине конвоя: сравнение с Meshy по качеству и цене | Kanta | ждёт Kanta (стоп 17.10: нет бесплатного баланса, без трат) |
+| PT-01 | Plane tiers 1–5: concept and art direction for Оса / Грач / Кит (Kanta 06.11), page https://claude.ai/artifact/Jcn2GtNbLrRuCVn2xbS9dE | «Придумать концепты новых самолётов по уровням» | done |
+| PT-02 | Tier 4–5 models (6): Грач 4 first as pilot, then Оса 4, Кит 4, the tier 5 trio; prototype photos first, matte worn paint, glow only on future systems (shield, emitters) | 3D thread (coordinator assigns) | to do |
+| PT-03 | Tier 1 models (3): early swept-wing jet fighter (Оса), light two-seat side-by-side jet strike plane with tip tanks (Грач), piston heavy bomber with coupled engines (Кит) | 3D thread (coordinator assigns) | to do |
+| PT-04 | Progression plan for 5 tiers: what each tier unlocks and when, renumbering current planes, experimental weapons to tiers 4–5, hangar shows 4–5 locked; demo = tiers 1–3 (brainstorming → plan → Kanta «да», flak-heaven-game-design) | coordinator assigns | to do |
+| PT-05 | Future systems as mechanics: laser gun, phase shield in dodge, front energy shield, shield dome over wingmen, drone bay (fold into PT-04 plan, numbers only after measurement) | with PT-04 | idea |
 
 ## Звук и музыка
 
