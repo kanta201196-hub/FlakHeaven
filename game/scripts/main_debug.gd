@@ -1114,6 +1114,8 @@ func _run_autotest(delta: float) -> void:
 				print("AUTOTEST: heal box %d card %d kit %d allcards %d activity %d armor %d other %d, max_hp %d, taken %d, would-die %d" % [int(m.tele.g("heal_box")), int(m.tele.g("heal_card")), int(m.tele.g("heal_kit")), int(m.tele.g("heal_allcards")), int(m.tele.g("heal_activity")), int(m.tele.g("heal_armor")), int(m.tele.g("heal_прочее")) + int(m.tele.g("heal_perk")), int(m.player.max_hp), int(m.total("taken")), int(m.tele.g("nodie"))])
 				print("AUTOTEST: dealt air %d ground %d" % [int(m.tele.g("dealt_air")), int(m.tele.g("dealt_ground"))])
 				print("AUTOTEST: evo times %s, level %d, groups %s" % [str(m.player.evo_times), m.run.level, ", ".join(PackedStringArray(m.player.groups.map(func(g): return "%s %d" % [(g as Hardpoint).weapon, (g as Hardpoint).level])))])
+				if m.op_tasks != null:
+					print("AUTOTEST: op tasks %s %s" % [m.op_tasks.op_id, ", ".join(PackedStringArray(m.op_tasks.defs.map(func(d): return "%s %d/%d" % [d["id"], m.op_tasks.count(d["id"]), int(d["need"])])))])
 				if m.class_task != null:
 					print("AUTOTEST: class task %s %d/%d %s" % [m.class_task.cls, m.class_task.n, m.class_task.need(), m.class_task.state])
 				print("AUTOTEST: defense hits armor %d agile %d ecm %d front %d, run bonus dmg %d, bombers down %d" % [int(m.tele.g("def_armor")), int(m.tele.g("def_agile")), int(m.tele.g("def_ecm")), int(m.tele.g("def_front")), int(m.tele.g("run_dmg")), int(m.tele.g("bomber_kills"))])

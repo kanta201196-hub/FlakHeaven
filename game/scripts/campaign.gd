@@ -248,6 +248,24 @@ static func on_met(callsign: String) -> void:
 	_save()
 
 
+## OT-01: side objectives of operation i (`OpTaskBalance.TASKS`), for the operation card and the hangar's departure
+## screen. Each entry is a definition dictionary (id, act, need, brief, hud).
+static func tasks_of(i: int) -> Array:
+	return OpTaskBalance.tasks(String(OPS[i]["id"]))
+
+
+## Whether objective `task_id` of operation i was ever done (section «tasks», key "<op id>/<task id>").
+static func task_done(i: int, task_id: String) -> bool:
+	_load()
+	return bool(_cfg.get_value("tasks", "%s/%s" % [OPS[i]["id"], task_id], false))
+
+
+static func mark_task(i: int, task_id: String) -> void:
+	_load()
+	_cfg.set_value("tasks", "%s/%s" % [OPS[i]["id"], task_id], true)
+	_save()
+
+
 ## Выполнено ли условие need в вылете (flags — Main.op_flags)
 static func need_done(need: String, run_time: float, flags: Dictionary) -> bool:
 	if need == "time":
