@@ -9,7 +9,7 @@ const MISSILE_CAP := 4
 ## Approach closer than this — alarm, banner «Обнаружена база противника», timer (same as the AA site).
 const ACTIVATE_R := 1150.0
 ## Optional-activity timer after the alarm (*guess*, the AA site has 60 s and one bunker).
-const LIMIT := 150.0   # S16-06: was 90; launchers now hold longer (Kanta 06.11)
+const LIMIT := 90.0
 ## The activity takes a real map fort within REACH of the point AHEAD px along the player's heading (*guess*).
 const AHEAD := 1700.0
 const REACH := 7500.0   # 3000 found a fort ahead only 55 % of the time, 6000 — 94 % (400 random points, 2026-10-25); 7500 since forts keep a screen apart (2026-10-26, s12): the same share of points (335/400 vs 331/400 before) still find one

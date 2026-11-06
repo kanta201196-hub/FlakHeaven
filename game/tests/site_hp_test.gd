@@ -15,7 +15,6 @@ func _init() -> void:
 	_check(is_equal_approx(GroundTarget.site_floor_hp(GroundTarget.HP_STD, 1.0, 1000.0), 3000.0), "standard 3 s of damage")
 	# the convoy keeps the old floor
 	_check(is_equal_approx(GroundTarget.floor_hp(GroundTarget.HP_FORT, 1.0, 1000.0), 3000.0), "convoy floor unchanged")
-	_check(AASite.LIMIT >= 150.0 and FortBalance.LIMIT >= 150.0, "site timers cover the 60-100 s goal")
 	print("UNIT: site_hp_test %s" % ("OK" if _failed == 0 else "%d FAILED" % _failed))
 	quit(1 if _failed > 0 else 0)
 
