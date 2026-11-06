@@ -943,7 +943,8 @@ func _run_autotest(delta: float) -> void:
 					Profile.debug_level("fighter")
 					# 3.5: опыта — на звание выше, чтобы на скриншоте была кнопка «Повысить в звании»
 					Profile.cls("fighter")["crew_xp"] = int(Profile.CREW_CUM[mini(Profile.crew_lvl("fighter"), Profile.CREW_CUM.size() - 1)])
-					Profile.buy_plane2("fighter") # 3.5: на скриншоте — выбор самолёта на вылет
+					Profile.debug_parts(PlaneTiers.cost(2))
+					Profile.buy_tier("fighter", 2) # 3.5: the shot shows the choice of plane for the sortie
 					m.ui_click("menu_hangar")
 				elif m._args.has("--shots") and not _shots_done.has("settings") and not m._args.has("--combatui"):
 					m.menu.settings_screen.tab = 1   # graphics tab on the settings shot
@@ -956,7 +957,7 @@ func _run_autotest(delta: float) -> void:
 					elif m._args.has("--profile=max") and not _demo_profile_set:
 						_demo_profile_set = true   # S11-30: upgraded player, see Profile.debug_max_profile
 						Profile.debug_max_profile()
-						print("AUTOTEST: max profile, plane %d" % Profile.plane_lvl("attacker"))
+						print("AUTOTEST: max profile, plane tier %d" % Profile.tier("attacker"))
 					m.ui_click("menu_play")
 			return
 		"settings":

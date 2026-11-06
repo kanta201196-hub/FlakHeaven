@@ -256,7 +256,7 @@ func row(m: Main) -> PackedStringArray:
 	v["crew_rank"] = float(Profile.crew_lvl(m.cls_id))
 	var extra: Array = Profile.start_weapons(m.cls_id).filter(func(w): return w != PlaneClasses.signature(m.cls_id))
 	v["start2"] = float(Weapons.POOL.find(extra[0]) + 1) if not extra.is_empty() else 0.0
-	v["plane_lvl"] = float(m.player.plane_lvl) if is_instance_valid(m.player) else 0.0
+	v["plane_lvl"] = float(m.player.tier) if is_instance_valid(m.player) else 0.0   # PT-04: the tier 1–5, name kept for old logs
 	v["crew_xp_lvl"] = float(Profile.xp_lvl(m.cls_id))
 	v["callsign_idx"] = float((Profile.CALLSIGNS[m.cls_id] as Array).find(Profile.cls(m.cls_id)["callsign"]))
 	var out := PackedStringArray()

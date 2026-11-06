@@ -26,6 +26,8 @@ func run() -> Array:
 	_test_profile_ammo()
 	_test_profile_third_group()
 	_test_profile_round_trip()
+	_test_profile_tiers()
+	_test_profile_tier_migration()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
 	return [_checks, _failed]
 
@@ -44,38 +46,47 @@ func _fresh_profile() -> Node:
 	return p
 
 
-## Kanta 24.10: weapon sets, class bonus, turrets and wingmen are per plane (class + plane level).
+## Kanta 24.10: weapon sets, class bonus, turrets and wingmen are per plane (class + tier; tiers 2 and 3 are the old
+## planes 1 and 2, PT-04).
 func _test_class_lists() -> void:
 	var f1 := ["aam", "agm", "rockets", "flares"]
 	var a1 := ["rockets", "aam", "agm", "bombs", "turret", "flares"]
 	var b1 := ["bombs", "hebomb", "rockets", "turret", "flares"]
 	var want := {"fighter": [f1, f1 + ["srm"]], "attacker": [a1, a1], "bomber": [b1, b1]}
 	for c in want:
-		for lv in [1, 2]:
+		for lv in [2, 3]:   # PT-04: tier 2 is the old plane 1, tier 3 the old plane 2
 			var got: Array = PlaneClasses.plane(c, lv)["weapons"]
-			var need: Array = want[c][lv - 1]
+			var need: Array = want[c][lv - 2]
 			_check(got.size() == need.size() and need.all(func(w): return got.has(w)), "%s %d: weapon set" % [c, lv])
 			for w in Weapons.POOL:
 				_check(PlaneClasses.allows(c, w, lv) == need.has(w), "%s %d allows %s" % [c, lv, w])
-	_check(not PlaneClasses.allows("fighter", "srm", 1) and PlaneClasses.allows("fighter", "srm", 2), "srm unique to fighter 2")
-	_check(not PlaneClasses.allows("bomber", "agm", 1), "bomber: no agm")
+	_check(not PlaneClasses.allows("fighter", "srm", 2) and PlaneClasses.allows("fighter", "srm", 3), "srm unique to fighter 2")
+	_check(not PlaneClasses.allows("bomber", "agm", 2), "bomber: no agm")
 	# class bonus 15 % on plane 1, 20 % on plane 2; fighter 2 also +5 % on agm (test with and without)
-	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 1, "aam"), 1.15), "fighter 1 aam +15%")
-	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 2, "aam"), 1.2), "fighter 2 aam +20%")
-	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 2, "agm"), 1.05), "fighter 2 agm +5%")
-	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 1, "agm"), 1.0), "fighter 1 agm no bonus")
-	_check(is_equal_approx(PlaneClasses.bonus_k("attacker", 1, "rockets"), 1.15) and is_equal_approx(PlaneClasses.bonus_k("attacker", 2, "rockets"), 1.2), "attacker rockets 15/20")
-	_check(is_equal_approx(PlaneClasses.bonus_k("bomber", 1, "bombs"), 1.15) and is_equal_approx(PlaneClasses.bonus_k("bomber", 2, "bombs"), 1.2), "bomber bombs 15/20")
+	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 2, "aam"), 1.15), "fighter 1 aam +15%")
+	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 3, "aam"), 1.2), "fighter 2 aam +20%")
+	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 3, "agm"), 1.05), "fighter 2 agm +5%")
+	_check(is_equal_approx(PlaneClasses.bonus_k("fighter", 2, "agm"), 1.0), "fighter 1 agm no bonus")
+	_check(is_equal_approx(PlaneClasses.bonus_k("attacker", 2, "rockets"), 1.15) and is_equal_approx(PlaneClasses.bonus_k("attacker", 3, "rockets"), 1.2), "attacker rockets 15/20")
+	_check(is_equal_approx(PlaneClasses.bonus_k("bomber", 2, "bombs"), 1.15) and is_equal_approx(PlaneClasses.bonus_k("bomber", 3, "bombs"), 1.2), "bomber bombs 15/20")
 	# turrets: start 1, +1 at turret lvl 3 and lvl 5, up to the plane's max
-	_check(PlaneClasses.turret_slots("attacker", 5, 1) == 1 and PlaneClasses.turret_slots("attacker", 3, 2) == 2, "attacker turrets 1 / 2")
-	_check(PlaneClasses.turret_slots("attacker", 2, 2) == 1, "attacker 2: second turret from lvl 3")
-	_check(PlaneClasses.turret_slots("bomber", 2, 1) == 1 and PlaneClasses.turret_slots("bomber", 3, 1) == 2 and PlaneClasses.turret_slots("bomber", 5, 1) == 2, "bomber 1 turrets up to 2")
-	_check(PlaneClasses.turret_slots("bomber", 3, 2) == 2 and PlaneClasses.turret_slots("bomber", 5, 2) == 3, "bomber 2 turrets up to 3")
+	_check(PlaneClasses.turret_slots("attacker", 5, 2) == 1 and PlaneClasses.turret_slots("attacker", 3, 3) == 2, "attacker turrets 1 / 2")
+	_check(PlaneClasses.turret_slots("attacker", 2, 3) == 1, "attacker 2: second turret from lvl 3")
+	_check(PlaneClasses.turret_slots("bomber", 2, 2) == 1 and PlaneClasses.turret_slots("bomber", 3, 2) == 2 and PlaneClasses.turret_slots("bomber", 5, 2) == 2, "bomber 1 turrets up to 2")
+	_check(PlaneClasses.turret_slots("bomber", 3, 3) == 2 and PlaneClasses.turret_slots("bomber", 5, 3) == 3, "bomber 2 turrets up to 3")
 	# wingmen: count and types
-	_check(PlaneClasses.plane("fighter", 1)["wingmen"] == 1 and PlaneClasses.wing_type_ok("fighter", 1, "swift") and not PlaneClasses.wing_type_ok("fighter", 1, "rook"), "fighter 1: 1 fighter wingman")
-	_check(PlaneClasses.wing_type_ok("fighter", 2, "rook"), "fighter 2: fighter or attacker")
-	_check(PlaneClasses.plane("attacker", 1)["wingmen"] == 1 and PlaneClasses.plane("attacker", 2)["wingmen"] == 1, "attacker: 1 wingman")
-	_check(PlaneClasses.plane("bomber", 2)["wingmen"] == 2 and not PlaneClasses.wing_type_ok("bomber", 2, "rook"), "bomber: 2 fighters only")
+	_check(PlaneClasses.plane("fighter", 2)["wingmen"] == 1 and PlaneClasses.wing_type_ok("fighter", 2, "swift") and not PlaneClasses.wing_type_ok("fighter", 2, "rook"), "fighter 1: 1 fighter wingman")
+	_check(PlaneClasses.wing_type_ok("fighter", 3, "rook"), "fighter 2: fighter or attacker")
+	_check(PlaneClasses.plane("attacker", 2)["wingmen"] == 1 and PlaneClasses.plane("attacker", 3)["wingmen"] == 1, "attacker: 1 wingman")
+	_check(PlaneClasses.plane("bomber", 3)["wingmen"] == 2 and not PlaneClasses.wing_type_ok("bomber", 3, "rook"), "bomber: 2 fighters only")
+	# PT-04 tier 1: simpler — fewer weapon kinds, «Грач» without a turret, «Кит» with one wingman
+	_check(PlaneClasses.plane("fighter", 1)["weapons"] == ["aam", "rockets", "flares"], "fighter 1: aam, rockets, flares")
+	_check(PlaneClasses.turret_slots("attacker", 5, 1) == 0 and PlaneClasses.turrets_start("attacker", 1) == 0, "attacker 1: no turret")
+	_check(not PlaneClasses.allows("attacker", "turret", 1), "attacker 1: no turret cards")
+	_check(PlaneClasses.plane("bomber", 1)["wingmen"] == 1 and PlaneClasses.turret_slots("bomber", 5, 1) == 2, "bomber 1: one wingman, turrets up to 2")
+	for c in PlaneClasses.LIST:
+		_check(PlaneClasses.allows(c, PlaneClasses.signature(c), 1), "%s 1 carries its signature" % c)
+		_check(is_equal_approx(PlaneClasses.bonus_k(c, 5, PlaneClasses.signature(c)), 1.25), "%s 5: ★ +25%%" % c)
 	for c in PlaneClasses.LIST:
 		_check(PlaneClasses.signature(c) in ["aam", "rockets", "bombs"], "signature unchanged for %s" % c)
 
@@ -199,11 +210,11 @@ func _test_profile_ammo() -> void:
 func _test_profile_third_group() -> void:
 	var p := _fresh_profile()
 	_check(not p.third_group("attacker", 1), "no third group at pylons 0")
-	p.cls("attacker")["nodes"]["pylons"] = 1
+	p.cls("attacker")["nodes_t1"]["pylons"] = 1
 	_check(not p.third_group("attacker", 1), "no third group at pylons 1")
-	p.cls("attacker")["nodes"]["pylons"] = 2
+	p.cls("attacker")["nodes_t1"]["pylons"] = 2
 	_check(p.third_group("attacker", 1), "third group at pylons 2")
-	_check(not p.third_group("attacker", 2), "plane lvl 2 has its own nodes")
+	_check(not p.third_group("attacker", 2), "tier 2 has its own nodes")
 	p.free()
 
 
@@ -220,8 +231,8 @@ func _test_profile_round_trip() -> void:
 	_check(q.ammo("bomber") == "inc", "ammo survives save/load")
 	var old: Dictionary = q.data.duplicate(true)
 	for c in old["classes"]:
-		old["classes"][c].erase("kit1")
-		old["classes"][c].erase("kit2")
+		for t in range(1, PlaneTiers.MAX + 1):
+			old["classes"][c].erase("kit_t%d" % t)
 	var f := FileAccess.open(TEST_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(old))
 	f.close()
@@ -230,3 +241,47 @@ func _test_profile_round_trip() -> void:
 	_check(r.gun("bomber") == "std" and r.guns("bomber") == ["std"] and r.ammo("bomber") == "std", "old save → defaults")
 	for x in [p, q, r]:
 		x.free()
+
+
+## PT-04: a fresh profile owns tier 1 only; tier 2 is sold after «Перевал» with crew and parts; nodes are per tier
+func _test_profile_tiers() -> void:
+	var p := _fresh_profile()
+	_check(p.tiers_owned("fighter") == [1] and p.tier("fighter") == 1, "fresh profile: tier 1 owned and flown")
+	_check(p.plane_lvl("fighter") == PlaneTiers.model(1), "plane_lvl is the model generation of the tier")
+	p.set_plane("fighter", 2)
+	_check(p.tier("fighter") == 1, "an unowned tier cannot be selected")
+	p.cls("fighter")["tiers"] = [1, 2]
+	p.set_plane("fighter", 2)
+	_check(p.tier("fighter") == 2, "an owned tier is selected")
+	p.cls("fighter")["nodes_t2"]["armor"] = 3
+	_check(p.node("fighter", "armor", 2) == 3 and p.node("fighter", "armor", 1) == 0, "nodes are per tier")
+	p.cls("fighter")["nodes_t1"]["armor"] = 9
+	_check(p.node("fighter", "armor", 1) == PlaneTiers.cap(1), "a node level is capped by its tier")
+	_check(not p.can_buy_node("fighter", "wing", 1), "tier 1 has no wing node")
+	p.data["parts"] = 999999
+	_check(not p.can_buy_node("fighter", "armor", 3), "no node purchase on an unowned tier")
+	_check(p.extra_rerolls("fighter") == 0, "no extra reroll below tier 3")
+	p.free()
+
+
+## PT-04: a version-1 save with plane 2 bought loads as tiers 1–3, flies tier 3, nodes and kits moved
+func _test_profile_tier_migration() -> void:
+	var p := _fresh_profile()
+	var old: Dictionary = {"version": 1, "parts": 5, "classes": {"bomber": {"crew_xp": 0, "plane2": true, "plane_sel": 2,
+		"nodes": {"frame": 2, "engine": 0, "armor": 4, "wing": 0, "pylons": 0, "tank": 1},
+		"nodes2": {"frame": 0, "engine": 0, "armor": 1, "wing": 0, "pylons": 2, "tank": 0},
+		"kit1": {"gun": "std", "guns": ["std"], "ammo": "std", "ammos": ["std"]},
+		"kit2": {"gun": "heavy", "guns": ["std", "heavy"], "ammo": "std", "ammos": ["std"]}}}}
+	var f := FileAccess.open(TEST_PATH, FileAccess.WRITE)
+	f.store_string(JSON.stringify(old))
+	f.close()
+	p.load_profile()
+	_check(p.tiers_owned("bomber") == [1, 2, 3], "old plane 2 owner owns tiers 1–3")
+	_check(p.tier("bomber") == 3, "flew old plane 2 → flies tier 3")
+	_check(p.node("bomber", "armor", 2) == 4 and p.node("bomber", "tank", 2) == 1, "old plane 1 nodes → tier 2")
+	_check(p.node("bomber", "pylons", 3) == 2 and p.third_group("bomber", 3), "old plane 2 nodes → tier 3")
+	_check(p.gun("bomber", 3) == "heavy" and p.gun("bomber", 2) == "std", "kits move with their plane")
+	_check(p.tiers_owned("fighter") == [1], "a class missing from the save starts fresh")
+	_check(int(p.data["version"]) == 2, "the profile is version 2 now")
+	_check(p.extra_rerolls("bomber") == 1, "tier 3 keeps the old plane 2 extra reroll")
+	p.free()

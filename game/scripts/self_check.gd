@@ -110,19 +110,26 @@ static func from_args(main: Main) -> SelfCheck:
 
 # ---------- what to shoot (pure: no scene needed) ----------
 
-## Plane keys that exist: [class, plane level] for every class and plane 1 / 2 (PlaneClasses.PLANES)
+## Plane keys that exist: [class, model generation] for every class and model 1 / 2. The sheet checks models (mounts,
+## sprites), so each model is shown with the fullest tier drawn by it (`tier_of`)
 static func planes() -> Array:
 	var out: Array = []
 	for c: String in PlaneClasses.LIST:
-		for lv: int in (PlaneClasses.PLANES[c] as Dictionary).keys():
+		for lv: int in [1, 2]:
 			out.append([c, lv])
 	return out
 
 
-## Weapons plane `lv` of `cls` may carry, in the order of its list (the experimental heavy weapons left out)
+## Tier whose weapons model generation `lv` is checked with: model 1 — tier 2 (the old plane 1), model 2 — tier 3
+## (the old plane 2); the heavy mount of tiers 4–5 is added on model 2 by `_set_variant`
+static func tier_of(lv: int) -> int:
+	return 3 if lv >= 2 else 2
+
+
+## Weapons model `lv` of `cls` may carry (its `tier_of`), in the order of its list (experimental heavy weapons left out)
 static func plane_weapons(cls: String, lv: int) -> Array[String]:
 	var out: Array[String] = []
-	for w: String in PlaneClasses.PLANES[cls][lv]["weapons"]:
+	for w: String in PlaneClasses.PLANES[cls][tier_of(lv)]["weapons"]:
 		if Weapons.in_game(w):
 			out.append(w)
 	return out
@@ -511,7 +518,8 @@ func _set_variant(cls: String, lv: int) -> void:
 	var pl := m.player
 	pl.cls_id = cls
 	pl.plane_lvl = lv
-	pl.cls = PlaneClasses.plane(cls, lv)
+	pl.tier = tier_of(lv)
+	pl.cls = PlaneClasses.plane(cls, pl.tier)
 	pl.size = float(pl.cls["size"])
 	var load := combat_loadout(cls, lv)
 	var defs := PlaneClasses.group_defs(cls, true)
@@ -528,7 +536,7 @@ func _set_variant(cls: String, lv: int) -> void:
 	if int(PlaneClasses.DATA[cls]["turrets"]) > 0:
 		var tg := Hardpoint.new("Турели", 1, "turret", true)
 		tg.level = Weapons.MAX_LEVEL
-		tg.slots = PlaneClasses.turret_slots(cls, tg.level, lv)
+		tg.slots = PlaneClasses.turret_slots(cls, tg.level, tier_of(lv))
 		gs.append(tg)
 	if lv == 2:
 		var heavy := Hardpoint.new("Тяжёлый подвес", 1, "")

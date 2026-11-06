@@ -341,7 +341,7 @@ func start_run() -> void:
 		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
 	evac_windows = 0
 	evac_lost = false
-	rerolls = START_REROLLS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # 3.5: самолёт ур. 2 — +1 переброс; медаль «Коллекционер»
+	rerolls = START_REROLLS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # +1 reroll from plane tier 3; medal «Коллекционер»
 	# S16-22: crew rank adds rerolls, bans and pins (PickBalance.CREW); medals add rerolls and bans
 	var crew_picks := PickBalance.crew(Profile.crew_lvl(cls_id)) if Profile.meta_k() > 0.0 else PickBalance.crew(0)
 	rerolls += int(crew_picks["rerolls"])

@@ -1,27 +1,15 @@
 extends Node
 ## 3.2: мета-прогрессия v0 (спецификация claude/sprint1/s3-meta-v0.md) — профиль игрока между вылетами.
-## Запчасти, экипажи классов (опыт, перки, навыки, позывной), узлы самолёта, самолёт ур. 2, ветки оружия.
+## Запчасти, экипажи классов (опыт, перки, навыки, позывной), уровни самолётов 1–5 и их узлы, ветки оружия.
 ## Файл user://profile.json (запись через .tmp + rename). Всё, что вычисляется (уровни, очки перков), не хранится.
 
 const PATH := "user://profile.json"
-const VERSION := 1
+## 2 — plane tiers 1–5 (PT-04): old plane 1 → tier 2, old plane 2 → tier 3 (`PlaneTiers.migrate_class`)
+const VERSION := 2
 const TEST_BUILD := true   # тестовая сборка: отладочная панель в ангаре (F9)
 
-## Plane node prices, levels 1–5. Flights review 06.11, item 5.1 (Kanta «да»): ×2 from 80/250/600/1400/2900,
-## so all six nodes of a plane cost about 4 sorties (62 760) instead of two; the second plane costs 50 000.
-const NODE_COST := [160, 500, 1200, 2800, 5800]
-const NODES := {
-	"frame": {"title": "Планер", "step": "перезарядка уклонения и форсажа −4%", "note": "временно: до введения веса"},
-	"engine": {"title": "Двигатель", "step": "скорость +2%", "note": ""},
-	"armor": {"title": "Броня", "step": "прочность +5%", "note": ""},
-	"wing": {"title": "Крыло", "step": "разворот +3%", "note": ""},
-	"pylons": {"title": "Узлы подвеса", "step": "урон подвесов и турелей +4%", "note": "ур. 2 — третья группа подвеса"},
-	"tank": {"title": "Топливный бак", "step": "объём бака +8% (≈ +43 с полёта)", "note": ""},
-}
-const NODE_ORDER := ["frame", "engine", "armor", "wing", "pylons", "tank"]
-
-const PLANE2_COST := 50000 # 3.5: purchase in the hangar, chosen before a sortie (15.10); 1500 → 50000 by Kanta 06.11 (s16: a sortie earns ~13k)
-const PLANE2_CREW := 3
+## Plane node catalogs, prices and caps live in `PlaneTiers` (per tier since PT-04); the old two-plane constants
+## (NODES, NODE_ORDER, NODE_COST, PLANE2_COST) went with it.
 
 const TIER_COST := [400, 1200, 3000]
 const REDO_COST := [100, 300, 750]
@@ -126,7 +114,7 @@ const PROMOTE_COST := [[5, 100], [10, 300], [15, 700], [20, 1200]]
 var data := {}
 ## Where the profile is stored; unit tests point it to a test file so a real profile is never touched.
 var path := PATH
-## Check flag --plane=1|2: every class flies that plane (balance runs of plane 2 under --demo); 0 — off
+## Check flag --plane=1..5: every class flies that tier (balance runs of a tier under --demo); 0 — off
 var debug_plane := 0
 
 
@@ -135,16 +123,22 @@ func _ready() -> void:
 	load_profile()
 	for arg in OS.get_cmdline_user_args():
 		if String(arg).begins_with("--plane="):
-			debug_plane = clampi(int(String(arg).substr(8)), 1, 2)
+			debug_plane = clampi(int(String(arg).substr(8)), 1, PlaneTiers.MAX)
 
 
+## A fresh class record: tier 1 owned and selected, empty nodes and a default kit per tier. Decals stay per model
+## generation (`decals1` / `decals2`): they are placed on the model's surface, and tiers share models for now.
 func _default_class(cls: String) -> Dictionary:
-	return {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "plane2": false, "plane_sel": 2, "livery": "",
-		"nodes": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
-		"nodes2": {"frame": 0, "engine": 0, "armor": 0, "wing": 0, "pylons": 0, "tank": 0},
+	var d := {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "tiers": [1], "plane_sel": 1, "livery": "",
 		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start": [PlaneClasses.signature(cls)],
-		"kit1": _default_kit(), "kit2": _default_kit(),
 		"decals1": {"v": DecalLoadout.VERSION, "items": []}, "decals2": {"v": DecalLoadout.VERSION, "items": []}}
+	for t in range(1, PlaneTiers.MAX + 1):
+		var n := {}
+		for id in PlaneTiers.nodes(t):
+			n[id] = 0
+		d["nodes_t%d" % t] = n
+		d["kit_t%d" % t] = _default_kit()
+	return d
 
 
 ## PG-01 (Kanta 24.10): course gun and ammo of one plane — bought per plane, not per class
@@ -180,12 +174,24 @@ func load_profile() -> void:
 	if d.get("classes") is Dictionary:
 		for c in PlaneClasses.LIST:
 			if (d["classes"] as Dictionary).has(c):
-				var src: Dictionary = d["classes"][c]
+				var src: Dictionary = (d["classes"][c] as Dictionary).duplicate()
 				var dst: Dictionary = data["classes"][c]
+				# PT-04: a two-plane save moves to tiers (old plane 1 → tier 2, old plane 2 → tier 3, tier 1 free)
+				if int(d.get("version", 1)) < 2 and not src.has("tiers"):
+					src.merge(PlaneTiers.migrate_class(src), true)
 				for k2 in dst:
 					if src.has(k2):
 						dst[k2] = src[k2]
 				dst["crew_xp"] = int(dst["crew_xp"])
+				dst["tiers"] = _tiers_clean(dst["tiers"])
+				dst["plane_sel"] = int(dst["plane_sel"])
+				for t in range(1, PlaneTiers.MAX + 1):   # a node a tier no longer has is dropped, a new one starts at 0
+					var nk := "nodes_t%d" % t
+					var got: Dictionary = dst[nk] if dst[nk] is Dictionary else {}
+					var n := {}
+					for id in PlaneTiers.nodes(t):
+						n[id] = clampi(int(got.get(id, 0)), 0, PlaneTiers.cap(t))
+					dst[nk] = n
 				# 3.5: старый профиль без звания — звание = уровень по опыту (прогресс не теряется)
 				dst["crew_rank"] = int(src["crew_rank"]) if src.has("crew_rank") else xp_lvl_of(int(dst["crew_xp"]))
 				# S11-09: an old save has no start list — signature plus the old «second hardpoint at start»
@@ -329,8 +335,9 @@ func unlocks_at(c: String, lv: int) -> Array:
 			out.append(Loc.t("навык «%s»") % PlaneClasses.SKILL3[PlaneClasses.CLASS_SKILLS[c][i]]["title"])
 	if lv == SLOT2_LVL:
 		out.append("второй слот навыка [F]")
-	if lv == PLANE2_CREW:
-		out.append("можно купить самолёт ур. 2")
+	for t in range(2, PlaneTiers.MAX + 1):
+		if lv == PlaneTiers.crew(t):
+			out.append(Loc.t("можно купить самолёт ур. %d") % t)
 	if lv == PERK_T2_LVL:
 		out.append("перки 2-й ступени")
 	for k in PickBalance.crew_at(lv):   # S16-22
@@ -342,16 +349,62 @@ func unlocks_at(c: String, lv: int) -> Array:
 	return out
 
 
-## 3.5: на каком самолёте вылет — ур. 2, если куплен и выбран в ангаре
-func plane_lvl(c: String) -> int:
+## Owned tiers from a save value: whole numbers 1–MAX, sorted, tier 1 always there
+static func _tiers_clean(v) -> Array:
+	var out: Array = [1]
+	if v is Array:
+		for t in v:
+			var ti := int(t)
+			if ti >= 1 and ti <= PlaneTiers.MAX and not out.has(ti):
+				out.append(ti)
+	out.sort()
+	return out
+
+
+## Tiers class `c` owns (tier 1 always)
+func tiers_owned(c: String) -> Array:
+	return _tiers_clean(cls(c).get("tiers", [1]))
+
+
+## Whether class `c` may fly tier `t` now: owned, and in the demo not above `PlaneTiers.DEMO_MAX`
+func tier_flyable(c: String, t: int) -> bool:
+	return tiers_owned(c).has(t) and (not Demo.on or t <= PlaneTiers.DEMO_MAX)
+
+
+## Tier the class flies on the next sortie (1–5): the hangar choice if it may fly it, else the highest one it may.
+## Meta progression off (balance runs) — tier 2, the old start plane; `--plane=` overrides everything
+func tier(c: String) -> int:
 	if debug_plane > 0:
 		return debug_plane
-	return 2 if plane2(c) and int(cls(c).get("plane_sel", 2)) == 2 else 1
+	if meta_k() <= 0.0:
+		return 2
+	var sel := int(cls(c).get("plane_sel", 1))
+	if tier_flyable(c, sel):
+		return sel
+	var best := 1
+	for t in tiers_owned(c):
+		if tier_flyable(c, t):
+			best = maxi(best, int(t))
+	return best
 
 
-func set_plane(c: String, lv: int) -> void:
-	cls(c)["plane_sel"] = clampi(lv, 1, 2)
+## Model generation (1 or 2) the class flies with — what art, hangar model, mounts and sprites are keyed by
+## (`PlaneTiers.model`). Game rules use `tier`.
+func plane_lvl(c: String) -> int:
+	return PlaneTiers.model(tier(c))
+
+
+## Hangar choice of the tier to fly; a tier the class may not fly is ignored
+func set_plane(c: String, t: int) -> void:
+	if not tier_flyable(c, t):
+		return
+	cls(c)["plane_sel"] = t
 	save()
+
+
+## Tier `t` or, for 0, the tier the class flies now
+func _t(c: String, t: int) -> int:
+	return clampi(tier(c) if t <= 0 else t, 1, PlaneTiers.MAX)
 
 
 ## Тест 3.5-s4, п. 35: окраска самолёта класса (Livery.VARIANTS; "" — исходная)
@@ -366,9 +419,10 @@ const START2_LVL := 5
 ## Weapons the hangar offers for the start: this plane's standard pool, the class signature first
 func start_options(c: String) -> Array:
 	var sig := PlaneClasses.signature(c)
-	var out: Array = [sig] if PlaneClasses.allows(c, sig) else []
+	var t := tier(c)
+	var out: Array = [sig] if PlaneClasses.allows(c, sig, t) else []
 	for w in Weapons.POOL:
-		if w != sig and PlaneClasses.allows(c, w):
+		if w != sig and PlaneClasses.allows(c, w, t):
 			out.append(w)
 	return out
 
@@ -428,9 +482,9 @@ static func _bay_rank(group: String, bomb: bool) -> int:
 	return 0 if bomb == group.begins_with("Бомбоотсек") else 1
 
 
-## PG-01 (Kanta 24.10): what plane `lv` of class `c` carries — course gun and ammo; lv 0 = the plane it flies now
+## PG-01 (Kanta 24.10): what tier `lv` of class `c` carries — course gun and ammo; lv 0 = the tier it flies now
 func kit(c: String, lv := 0) -> Dictionary:
-	var key := "kit2" if (plane_lvl(c) if lv <= 0 else lv) == 2 else "kit1"
+	var key := "kit_t%d" % _t(c, lv)
 	if not (cls(c).get(key) is Dictionary):
 		cls(c)[key] = _default_kit()
 	return cls(c)[key]
@@ -508,15 +562,12 @@ func _kit_set(c: String, lv: int, id: String, key: String, list_key: String, kno
 	save()
 
 
-## PG-01 (Kanta 24.10, answer 3a): the third hardpoint group opens at node «Узлы подвеса» lvl 2 of plane `lv`
-const GROUP3_PYLONS := 2
-
-
+## PG-01 (Kanta 24.10, answer 3a): the third hardpoint group opens at the pylons-place node lvl 2 of tier `lv`
 func third_group(c: String, lv := 0) -> bool:
-	return node(c, "pylons", lv) >= GROUP3_PYLONS
+	return node(c, "pylons", lv) >= PlaneTiers.GROUP3_LVL
 
 
-## Free-placed decals of plane `lv` (1 or 2) of class `c`; empty for a save from a newer build (kept untouched)
+## Free-placed decals of model generation `lv` (1 or 2, `PlaneTiers.model`) of class `c`; empty for a save from a newer build (kept untouched)
 func decals(c: String, lv: int) -> Array[DecalRecord]:
 	return DecalLoadout.parse(cls(c).get("decals%d" % clampi(lv, 1, 2))).records
 
@@ -544,9 +595,9 @@ func set_livery(c: String, id: String) -> void:
 	save()
 
 
-## Перебросы сверх стартовых: самолёт ур. 2 — +1
+## Rerolls on top of the start ones: +1 from tier 3 (the old plane 2 rule)
 func extra_rerolls(c: String) -> int:
-	return 1 if plane_lvl(c) == 2 else 0
+	return 1 if tier(c) >= 3 else 0
 
 
 var _portraits := {}
@@ -573,19 +624,23 @@ func has_perk(c: String, id: String) -> bool:
 	return meta_k() > 0.0 and (cls(c)["perks"] as Array).has(id)
 
 
-## Правка 6 теста 3.5-s5 (Kanta): у самолёта ур. 2 своя прокачка с нуля, прогресс ур. 1 остаётся при нём.
-## Узлы — того самолёта, на котором класс сейчас летает (plane_lvl).
-## S9-02: lv — самолёт явно (ангар прокачивает тот, что на виде); 0 — тот, на котором класс летает
+## Node levels of tier `lv` (place → level; 3.5-s5: each plane upgrades from zero and keeps its own progress).
+## S9-02: lv — the tier explicitly (the hangar upgrades the one on view); 0 — the tier the class flies now
 func nodes_of(c: String, lv := 0) -> Dictionary:
-	return cls(c)["nodes2" if (plane_lvl(c) if lv <= 0 else lv) == 2 else "nodes"]
+	var key := "nodes_t%d" % _t(c, lv)
+	if not (cls(c).get(key) is Dictionary):
+		cls(c)[key] = {}
+	return cls(c)[key]
 
 
+## Level of node `id` on tier `lv`: capped by the tier, and in the demo by the demo cap (a full-game save is kept)
 func node(c: String, id: String, lv := 0) -> int:
-	return mini(int(nodes_of(c, lv).get(id, 0)), Demo.node_cap())   # демо: сохранение полной игры не выше потолка
+	return mini(mini(int(nodes_of(c, lv).get(id, 0)), PlaneTiers.cap(_t(c, lv))), Demo.node_cap())
 
 
-func plane2(c: String) -> bool:
-	return meta_k() > 0.0 and not Demo.on and bool(cls(c)["plane2"])
+## Highest node level the player can buy on tier `t` now (tier cap, demo cap)
+func node_top(t: int) -> int:
+	return mini(PlaneTiers.cap(t), Demo.node_cap())
 
 
 func skill_unlocked(c: String, sk: String) -> bool:
@@ -616,18 +671,18 @@ func tier3_open(w: String) -> bool:
 	return WBRANCH3.has(w) and tier_state(w, 2) != "" and Campaign.cleared(1)
 
 
-## U-07: вариант модернизации (ступень 3) — название или "", только на самолёте ур. 2
-func evo_variant(w: String, plane_lvl: int) -> String:
+## U-07: weapon modernization (branch tier 3) — its name or "", only from plane tier 3 (the old plane 2)
+func evo_variant(w: String, plane_tier: int) -> String:
 	var ch := wbranch(w, 3)
-	if ch == "" or plane_lvl < 2 or not WBRANCH3.has(w):
+	if ch == "" or plane_tier < 3 or not WBRANCH3.has(w):
 		return ""
 	return String(WBRANCH3[w][0 if ch == "a" else 1][0])
 
 
 ## U-07: множитель модернизированного оружия по ключу (dmg, cd, range) от ступени 3
-func evo_k(w: String, key: String, plane_lvl: int) -> float:
+func evo_k(w: String, key: String, plane_tier: int) -> float:
 	var ch := wbranch(w, 3)
-	if ch == "" or plane_lvl < 2 or not WBRANCH3.has(w):
+	if ch == "" or plane_tier < 3 or not WBRANCH3.has(w):
 		return 1.0
 	var eff: Dictionary = WBRANCH3[w][0 if ch == "a" else 1][2]
 	return lerpf(1.0, float(eff.get(key, 1.0)), meta_k())
@@ -663,34 +718,56 @@ func skills(c: String) -> Array:
 
 # ---------- покупки ----------
 
+## Whether node `id` of tier `pl` (0 — the flown tier) can be bought one level up: the tier is owned, has that node,
+## some of its step already works, it is below the cap and the parts pay
 func can_buy_node(c: String, id: String, pl := 0) -> bool:
-	if pl == 2 and not plane2(c):
+	var t := _t(c, pl)
+	if not tiers_owned(c).has(t) or not PlaneTiers.node_live(t, id):
 		return false
-	var lv := node(c, id, pl)
-	return lv < Demo.node_cap() and parts() >= int(NODE_COST[lv])
+	var lv := node(c, id, t)
+	return lv < node_top(t) and parts() >= PlaneTiers.node_cost(t, lv)
 
 
 func buy_node(c: String, id: String, pl := 0) -> bool:
 	if not can_buy_node(c, id, pl):
 		return false
-	data["parts"] = parts() - int(NODE_COST[node(c, id, pl)])
-	nodes_of(c, pl)[id] = node(c, id, pl) + 1
+	var t := _t(c, pl)
+	data["parts"] = parts() - PlaneTiers.node_cost(t, node(c, id, t))
+	nodes_of(c, t)[id] = node(c, id, t) + 1
 	save()
 	return true
 
 
-## U-05/U-06: самолёт ур. 2 продают после операции 1 кампании «Перевал»
-func can_buy_plane2(c: String) -> bool:
-	return not Demo.on and not bool(cls(c)["plane2"]) and parts() >= PLANE2_COST and crew_lvl(c) >= PLANE2_CREW and Campaign.cleared(0)
+## Why tier `t` of class `c` cannot be bought now (`PlaneTiers.lock_reason`); "" — it can
+func tier_lock(c: String, t: int) -> String:
+	var g := PlaneTiers.gate_op(t)
+	return PlaneTiers.lock_reason(t, tiers_owned(c), parts(), crew_lvl(c), g < 0 or Campaign.cleared(g), Demo.on)
 
 
-func buy_plane2(c: String) -> bool:
-	if not can_buy_plane2(c):
+## PT-04: tiers are sold in the hangar one after another, each after its campaign operation (tier 2 — «Перевал»)
+func can_buy_tier(c: String, t: int) -> bool:
+	return meta_k() > 0.0 and tier_lock(c, t) == ""
+
+
+## Buys tier `t` and selects it for the next sortie
+func buy_tier(c: String, t: int) -> bool:
+	if not can_buy_tier(c, t):
 		return false
-	data["parts"] = parts() - PLANE2_COST
-	cls(c)["plane2"] = true
+	data["parts"] = parts() - PlaneTiers.cost(t)
+	var own := tiers_owned(c)
+	own.append(t)
+	cls(c)["tiers"] = _tiers_clean(own)
+	cls(c)["plane_sel"] = t
 	save()
 	return true
+
+
+## The next tier class `c` does not own yet (0 — owns them all)
+func next_tier(c: String) -> int:
+	for t in range(2, PlaneTiers.MAX + 1):
+		if not tiers_owned(c).has(t):
+			return t
+	return 0
 
 
 func tier_state(w: String, tier: int) -> String:
@@ -782,14 +859,17 @@ func next_callsign(c: String) -> void:
 func hint_buy(c: String) -> String:
 	var best := ""
 	var price := 1 << 30
-	for id in NODE_ORDER:
+	var t := tier(c)
+	for id in PlaneTiers.nodes(t):
 		var lv := node(c, id)
-		if lv < 5 and int(NODE_COST[lv]) <= parts() and int(NODE_COST[lv]) < price:
-			price = int(NODE_COST[lv])
-			best = Loc.t("%s ур. %d (%d)") % [Loc.t(NODES[id]["title"]), lv + 1, price]
-	if can_buy_plane2(c) and PLANE2_COST < price:
-		price = PLANE2_COST
-		best = Loc.t("Самолёт ур. 2 (%d)") % PLANE2_COST
+		var cost := PlaneTiers.node_cost(t, lv)
+		if can_buy_node(c, id) and cost < price:
+			price = cost
+			best = Loc.t("%s ур. %d (%d)") % [Loc.t(PlaneTiers.node_def(t, id)["title"]), lv + 1, price]
+	var nt := next_tier(c)
+	if nt > 0 and can_buy_tier(c, nt) and PlaneTiers.cost(nt) < price:
+		price = PlaneTiers.cost(nt)
+		best = Loc.t("Самолёт ур. %d (%d)") % [nt, price]
 	if can_promote(c) and promote_cost(crew_lvl(c) + 1) < price:
 		best = Loc.t("Повысить в звании до ур. %d (%d)") % [crew_lvl(c) + 1, promote_cost(crew_lvl(c) + 1)]
 	return best
@@ -797,7 +877,7 @@ func hint_buy(c: String) -> String:
 
 ## «Можно улучшить самолёт» (06.11 review, point 4): plane `c` flies with zero node upgrades and the parts pay for one.
 func upgrade_hint(c: String) -> bool:
-	return PrepHint.upgrade_due(nodes_of(c).values(), parts(), int(NODE_COST[0]))
+	return PrepHint.upgrade_due(nodes_of(c).values(), parts(), PlaneTiers.node_cost(tier(c), 0))
 
 
 func any_purchase() -> bool:
@@ -879,14 +959,17 @@ func award_run(s: Dictionary) -> Dictionary:
 	if promote_ready(c):
 		out["promote"] = [crew_lvl(c) + 1, promote_cost(crew_lvl(c) + 1)]
 	out["hint_buy"] = hint_buy(c)
-	# 3.5: реплика техника про самолёт ур. 2 — на экране итогов, а не в вылете
-	if meta_k() > 0.0 and not plane2(c):
-		if not Campaign.cleared(0) and crew_lvl(c) >= PLANE2_CREW:
-			out["tech"] = "Самолёт ур. 2 выдадут после операции «Перевал» — пройдите её."
-		elif can_buy_plane2(c):
-			out["tech"] = Loc.t("Самолёт ур. 2 ждёт — загляни в ангар: %d запчастей.") % PLANE2_COST
-		elif crew_lvl(c) >= PLANE2_CREW:
-			out["tech"] = Loc.t("Копим на самолёт ур. 2: %d запчастей (есть %d).") % [PLANE2_COST, parts()]
+	# 3.5: the mechanic's line about the next plane tier — on the result screen, not in flight
+	var nt := next_tier(c)
+	if meta_k() > 0.0 and nt > 0:
+		var why := tier_lock(c, nt)
+		var op := PlaneTiers.gate_op(nt)
+		if why == "gate" and crew_lvl(c) >= PlaneTiers.crew(nt):
+			out["tech"] = Loc.t("Самолёт ур. %d выдадут после операции «%s» — пройдите её.") % [nt, Loc.t(Campaign.OPS[op]["title"])]
+		elif why == "":
+			out["tech"] = Loc.t("Самолёт ур. %d ждёт — загляни в ангар: %d запчастей.") % [nt, PlaneTiers.cost(nt)]
+		elif why == "parts":
+			out["tech"] = Loc.t("Копим на самолёт ур. %d: %d запчастей (есть %d).") % [nt, PlaneTiers.cost(nt), parts()]
 	save()
 	return out
 
@@ -901,12 +984,15 @@ func apply(p: Player) -> void:
 	var c := p.cls_id
 	var L := crew_lvl(c) - 1
 	var m: Dictionary = p.mods
-	# узлы самолёта
-	m["man_cd"] *= 1.0 - 0.04 * node(c, "frame") * k
-	m["speed"] *= 1.0 + 0.02 * node(c, "engine") * k
-	p.max_hp *= 1.0 + 0.05 * node(c, "armor") * k
-	m["turn"] *= 1.0 + 0.03 * node(c, "wing") * k
-	m["hp_dmg"] += 0.04 * node(c, "pylons") * k
+	# plane nodes of the flown tier (PlaneTiers catalog; tier 2 = the old six lines)
+	var t := tier(c)
+	var lv := {}
+	for id in PlaneTiers.nodes(t):
+		lv[id] = node(c, id, t)
+	for key in ["man_cd", "speed", "turn", "hp_cd"]:
+		m[key] *= PlaneTiers.fx_total(t, lv, key, k)
+	p.max_hp *= PlaneTiers.fx_total(t, lv, "hp", k)
+	m["hp_dmg"] += PlaneTiers.fx_total(t, lv, "hp_dmg", k)
 	# экипаж
 	match c:
 		"fighter":
@@ -920,12 +1006,13 @@ func apply(p: Player) -> void:
 			p.max_hp *= 1.0 + 0.005 * L * k
 			m["pickup"] *= 1.0 + 0.007 * L * k
 			m["turret_rate"] *= 1.0 + 0.006 * L * k
-	# 3.5: самолёт ур. 2 — с начала вылета (раньше — модернизация в полёте на 10-м уровне пилота)
-	if plane_lvl(c) == 2:
-		p.plane_lvl = 2
-		p.max_hp *= 1.15
-		m["speed"] *= 1.05
-		m["turn"] *= 1.05
+	# the plane tier itself (tier 3 — the old plane 2 step: hull +15 %, speed and turn +5 %)
+	p.tier = t
+	p.plane_lvl = PlaneTiers.model(t)
+	var b := PlaneTiers.base(t)
+	p.max_hp *= float(b["hp"])
+	m["speed"] *= float(b["speed"])
+	m["turn"] *= float(b["turn"])
 	# черта позывного (плюс и минус)
 	var tr: Dictionary = trait_of(c).get("mods", {})
 	for key in tr:
@@ -973,9 +1060,13 @@ func gate_r_k(_c: String) -> float:
 	return 1.0
 
 
-## B-06: объём бака — +8% за уровень узла «Бак»
+## B-06: tank volume — the tier's fuel nodes (tier 2 «Топливный бак» +8 % a level) and the fuel medal
 func fuel_k(c: String) -> float:
-	return (1.0 + 0.08 * node(c, "tank") * meta_k()) * (1.0 + medal_bonus("fuel"))
+	var t := tier(c)
+	var lv := {}
+	for id in PlaneTiers.nodes(t):
+		lv[id] = node(c, id, t)
+	return PlaneTiers.fx_total(t, lv, "fuel", meta_k()) * (1.0 + medal_bonus("fuel"))
 
 
 # ---------- build album (PG-11 B5, Kanta 05.11; AlbumBook) ----------
@@ -1112,8 +1203,10 @@ func debug_level(c: String) -> void:
 func debug_demo_profile() -> void:
 	for c in PlaneClasses.LIST:
 		var d := cls(c)
-		for k in (d["nodes"] as Dictionary).keys():
-			d["nodes"][k] = Demo.node_cap()
+		d["tiers"] = [1, 2]   # the demo's last tier, as the old demo plane 1 measured before tiers
+		d["plane_sel"] = 2
+		for k in (d["nodes_t2"] as Dictionary).keys():
+			d["nodes_t2"][k] = Demo.node_cap()
 		d["crew_rank"] = Demo.crew_cap()
 		d["crew_xp"] = int(CREW_CUM[Demo.crew_cap() - 1])
 		d["perks"] = []
@@ -1127,18 +1220,18 @@ func debug_demo_profile() -> void:
 
 
 ## S11-30: balance autotest as an upgraded player, copied from Kanta's 3.5-s11 log (run without --demo):
-## plane lvl 2, every node of both planes at 5, crew lvl 12, first perk of each branch then the second ones,
+## tier 3 (the old plane 2), every node of tiers 1–3 at the cap, crew lvl 12, first perk of each branch then the second ones,
 ## weapon tiers 1–2 as Kanta picked them (aam ab, rockets bb, gunpod ab, flares bb, bombs ab, turret ab)
 func debug_max_profile() -> void:
 	const CREW := 12
 	const PICKS := {"aam": "ab", "rockets": "bb", "gunpod": "ab", "flares": "bb", "bombs": "ab", "turret": "ab"}
 	for c in PlaneClasses.LIST:
 		var d := cls(c)
-		for key in ["nodes", "nodes2"]:
-			for k in (d[key] as Dictionary).keys():
-				d[key][k] = 5
-		d["plane2"] = true
-		d["plane_sel"] = 2
+		for t in [1, 2, 3]:
+			for k in (d["nodes_t%d" % t] as Dictionary).keys():
+				d["nodes_t%d" % t][k] = PlaneTiers.cap(t)
+		d["tiers"] = [1, 2, 3]
+		d["plane_sel"] = 3
 		d["crew_rank"] = CREW
 		d["crew_xp"] = int(CREW_CUM[CREW - 1])
 		d["perks"] = []

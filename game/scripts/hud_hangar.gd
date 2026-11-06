@@ -78,21 +78,21 @@ func draw(m: Main, size: Vector2) -> void:
 
 
 func _hg_plane(c: String, area: Rect2) -> void:
-	# слева — самолёт ур. 1 / ур. 2
+	# left: the plane on view — one of the tiers 1–5 (PT-04)
 	var lx := area.position.x
 	var lw := 680.0   # s13: wider (was 560), the 3D view gets the room; the node cards still fit on the right
 	_panel(Rect2(lx, area.position.y, lw, area.size.y), false)
-	var bought: bool = bool(Profile.cls(c)["plane2"])
-	# 3.4-t1 (п. 1): объёмная модель — тянуть мышью, колесо — приближение; ур. 2 виден и не купленным
+	# 3.4-t1 (п. 1): объёмная модель — тянуть мышью, колесо — приближение; любой уровень виден и не купленным
 	var h3 := Hangar3D.ensure(ctrl)
-	# S9-02: узлы того самолёта, что на виде (раньше — того, что выбран в вылет: смотрели ур. 1, а улучшался ур. 2)
-	var vl: int = h3.view_lvl if bought else 1
 	# s13 (Kanta's video: a small model window top left, the panel's bottom empty): the view takes all the height
 	# the controls below leave free (434 px at 1080p instead of 330); dy moves the controls down with it
 	var vh := maxf(330.0, area.size.y - 266.0)   # 266: the controls and the «buy» button under the view
 	var dy := vh - 330.0
 	var vr := Rect2(lx + 8, area.position.y + 8, lw - 16, vh)
 	ctrl.draw_texture_rect(h3.show_plane(c, vr), vr, false)
+	# S9-02: nodes of the tier on view (the hangar upgrades what it shows); an unowned tier shows its catalog only
+	var vl: int = clampi(h3.view_tier, 1, PlaneTiers.MAX)
+	var owned: bool = Profile.tiers_owned(c).has(vl)
 	var editing := Main.I.decal_edit != null
 	if editing:
 		_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Щёлкните по самолёту — поставить знак; правая кнопка — вращение", 14, Color(0.85, 0.88, 0.95))
@@ -111,24 +111,17 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	_text(Vector2(mr.position.x, mr.position.y + 21), ("■ " if mon else "▶ ") + Loc.t("Механизация"), 15, Color(0.08, 0.07, 0.05) if mon else Color(0.95, 0.9, 0.75), HORIZONTAL_ALIGNMENT_CENTER, mr.size.x)
 	h3.mech_rect = mr
 	h3.lvl_rects.clear()
-	for lv in [1, 2]:
-		var br := Rect2(lx + 24 + (lv - 1) * 150, area.position.y + dy + 348, 140, 36)
-		var on: bool = h3.view_lvl == lv
-		ctrl.draw_rect(br, Menu.C_AMBER if on else Color(1, 1, 1, 0.08))
-		_text(Vector2(br.position.x, br.position.y + 25), Loc.t("Ур. %d") % lv, 17, Color(0.08, 0.07, 0.05) if on else Color(0.85, 0.88, 0.95), HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
-		h3.lvl_rects.append([br, lv])
-	if bought:
-		# 3.5: выбор самолёта на вылет — для уровня, который сейчас на виде
-		var sel := Profile.plane_lvl(c)
-		var sr := Rect2(lx + 330, area.position.y + dy + 348, 210, 36)
-		if h3.view_lvl == sel:
-			_panel(sr, true)
-			ctrl.draw_rect(sr, Color(0.5, 1.0, 0.6), false, 2.0)
-			_text(Vector2(sr.position.x, sr.position.y + 25), Loc.t("✓ ур. %d — в вылет") % sel, 16, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_CENTER, sr.size.x)
-		else:
-			_button(sr, Loc.t("ЛЕТАТЬ НА УР. %d") % h3.view_lvl, "hg:plane_sel:%d" % h3.view_lvl, 14)
-	elif h3.view_lvl == 2:
-		_text(Vector2(lx + 330, area.position.y + dy + 372), "не куплен — в вылет недоступен", 15, Color(1.0, 0.75, 0.45))
+	var sel := Profile.tier(c)
+	for t in range(1, PlaneTiers.MAX + 1):
+		var br := Rect2(lx + 24 + (t - 1) * 126, area.position.y + dy + 348, 118, 36)
+		var on: bool = vl == t
+		var have: bool = Profile.tiers_owned(c).has(t)
+		ctrl.draw_rect(br, Menu.C_AMBER if on else Color(1, 1, 1, 0.08 if have else 0.03))
+		if t == sel:
+			ctrl.draw_rect(br, Color(0.5, 1.0, 0.6), false, 2.0)
+		var lc := Color(0.08, 0.07, 0.05) if on else (Color(0.85, 0.88, 0.95) if have else Color(0.55, 0.57, 0.62))
+		_text(Vector2(br.position.x, br.position.y + 25), Loc.t("Ур. %d") % t + ("" if have else " ·"), 17, lc, HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
+		h3.lvl_rects.append([br, t])
 	# п. 3: как оружие меняется с уровнем
 	h3.tier_rects.clear()
 	_text(Vector2(lx + 24, area.position.y + dy + 414), "Вид оружия:", 15, Color(0.8, 0.84, 0.9))
@@ -146,22 +139,8 @@ func _hg_plane(c: String, area: Rect2) -> void:
 	_text(Vector2(dr.position.x, dr.position.y + 21), Loc.t("‹ Знаки") if editing else Loc.t("Знаки ›"), 15, Color(0.08, 0.07, 0.05) if editing else Color(0.95, 0.9, 0.75), HORIZONTAL_ALIGNMENT_CENTER, dr.size.x)
 	_buttons.append([dr, "hg:dc:close" if editing else "hg:dc:open"])
 	var y := area.position.y + dy + 486.0
-	if bought:
-		_text(Vector2(lx + 24, y), "Самолёт ур. 2 куплен — выберите, на каком лететь", 16, Color(0.6, 1.0, 0.7))
-		_text(Vector2(lx + 24, y + 24), "ур. 2: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 15, Color(0.8, 0.85, 0.9))
-		# правка 6 теста 3.5-s5: прокачка у каждого самолёта своя
-		_text(Vector2(lx + 24, y + 48), Loc.t("Улучшения справа — для самолёта ур. %d; у ур. 1 и ур. 2 своя прокачка") % vl, 14, Menu.C_AMBER)
-	elif Demo.on:
-		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
-		_text(Vector2(lx + 24, y + 24), Loc.t("Покупка — ") + Loc.t(Demo.LOCKED), 15, Menu.C_AMBER)
-		_text(Vector2(lx + 24, y + 46), "даёт: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 14, Color(0.7, 0.74, 0.8))
-	else:
-		_text(Vector2(lx + 24, y), "Самолёт ур. 2 — новая модель", 18, Color.WHITE)
-		_text(Vector2(lx + 24, y + 24), Loc.t("Требует: операция «Перевал»%s · экипаж ур. %d (сейчас %d) · %d запчастей") % [" ✓" if Campaign.cleared(0) else "", Profile.PLANE2_CREW, Profile.crew_lvl(c), Profile.PLANE2_COST], 15, Color(0.8, 0.85, 0.9))
-		_text(Vector2(lx + 24, y + 46), "даёт: прочность +15%, скорость и разворот +5%, +1 переброс, тяжёлый подвес", 14, Color(0.7, 0.74, 0.8))
-		if Profile.can_buy_plane2(c):
-			_button(Rect2(lx + 24, y + 60, 320, 46), Loc.t("МОДЕРНИЗИРОВАТЬ — %d") % Profile.PLANE2_COST, "hg:plane2", 17)
-	# справа — 6 узлов
+	_hg_tier_info(c, vl, Rect2(lx + 24, y, lw - 48, area.end.y - y))
+	# right: the node cards of the tier on view (its own catalog, PlaneTiers.NODES)
 	var rx := lx + lw + 30.0
 	var rw := area.size.x - lw - 30.0
 	var yy := area.position.y
@@ -171,56 +150,111 @@ func _hg_plane(c: String, area: Rect2) -> void:
 		_decals.draw(Main.I, Rect2(rx, yy, rw, area.size.y))
 		return
 	var hover_node := ""
-	for id in Profile.NODE_ORDER:
-		var nd: Dictionary = Profile.NODES[id]
+	var ids := PlaneTiers.nodes(vl)
+	var nh := clampf(floorf((area.size.y - 200.0) / ids.size()) - 8.0, 60.0, NODE_H)
+	var top := PlaneTiers.cap(vl)
+	for id: String in ids:
+		var nd := PlaneTiers.node_def(vl, id)
+		var live := PlaneTiers.node_live(vl, id)
 		var lv2 := Profile.node(c, id, vl)
-		var r := Rect2(rx, yy, rw, NODE_H)
+		var r := Rect2(rx, yy, rw, nh)
 		_panel(r, false)
 		var hov := r.has_point(ctrl.get_local_mouse_position())
-		if hov and lv2 < 5:
+		if hov and live and lv2 < top:
 			hover_node = id   # Kanta 06.11: the stats panel shows this node's gain in green
 		if id == "wing" and hov:
 			h3.mech_hover = true   # тест 3.5-s8: курсор на «Крыле» — на модели идёт показ механизации
 		_text(Vector2(rx + 20, yy + 27), Loc.t(String(nd["title"])), 20, Color.WHITE)
-		for i in 5:
-			ctrl.draw_rect(Rect2(rx + 200 + i * 30, yy + 13, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))
-		_text(Vector2(rx + 20, yy + 51), Loc.t("за уровень: %s · сейчас ур. %d%s") % [nd["step"], lv2, (Loc.t(" (самолёт ур. %d)") % vl) if bought else ""], 15, Color(0.8, 0.84, 0.9))
-		if String(nd["note"]) != "":
+		for i in top:
+			ctrl.draw_rect(Rect2(rx + 330 + i * 30, yy + 13, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))
+		var step := Loc.t(String(nd["step"]))
+		if String(nd.get("wip", "")) != "":
+			step += Loc.t(" (в работе: %s)") % Loc.t(String(nd["wip"]))
+		_text(Vector2(rx + 20, yy + 51), Loc.t("за уровень: %s · сейчас ур. %d") % [step, lv2], 15, Color(0.8, 0.84, 0.9))
+		if String(nd.get("note", "")) != "" and nh >= NODE_H:
 			_text(Vector2(rx + 20, yy + 68), Loc.t(String(nd["note"])), 12, Color(0.6, 0.62, 0.68))
-		if lv2 >= 5:
+		if not live:
+			_text(Vector2(rx, yy + 44), Loc.t("в работе"), 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
+		elif lv2 >= top:
 			_text(Vector2(rx, yy + 44), "МАКС.", 18, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		elif lv2 >= Demo.node_cap():
-			_text(Vector2(rx, yy + 44), Loc.t("ур. %d–5 — ") % (lv2 + 1) + Loc.t(Demo.LOCKED), 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
+			_text(Vector2(rx, yy + 44), Loc.t("ур. %d–%d — ") % [lv2 + 1, top] + Loc.t(Demo.LOCKED), 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
+		elif not owned:
+			_text(Vector2(rx, yy + 44), Loc.t("%d · сначала купите самолёт") % PlaneTiers.node_cost(vl, lv2), 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		else:
-			var price: int = Profile.NODE_COST[lv2]
+			var price := PlaneTiers.node_cost(vl, lv2)
 			if Profile.can_buy_node(c, id, vl):
-				_button(Rect2(rx + rw - 250, yy + 15, 230, 44), Loc.t("УЛУЧШИТЬ — %d") % price, "hg:node:%s:%d" % [id, vl], 16)
+				_button(Rect2(rx + rw - 250, yy + (nh - 44.0) / 2.0, 230, 44), Loc.t("УЛУЧШИТЬ — %d") % price, "hg:node:%s:%d" % [id, vl], 16)
 			else:
 				_text(Vector2(rx, yy + 44), Loc.t("%d (не хватает %d)") % [price, price - Profile.parts()], 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
-		yy += NODE_H + 8.0
+		yy += nh + 8.0
 	# Kanta 06.11 (s16: the numbers over the model looked bad): the stats take the room under the node cards
-	_hg_stats(c, Rect2(rx, yy, rw, area.end.y - yy), h3.view_lvl, two_planes(), hover_node if vl == h3.view_lvl else "")
+	_hg_stats(c, Rect2(rx, yy, rw, area.end.y - yy), vl, compare_tier(c, vl), hover_node)
+
+
+## The tier on view under the strip (PT-04): owned — fly it or it is the one that flies; not owned — what it gives,
+## what it needs (checked items) and the buy button; in the demo tiers above PlaneTiers.DEMO_MAX say «в полной игре».
+## A tier drawn with a borrowed model says so.
+func _hg_tier_info(c: String, t: int, r: Rect2) -> void:
+	var x := r.position.x
+	var y := r.position.y
+	var own_model := "" if PlaneTiers.has_own_model(t) else Loc.t(" · модель в работе")
+	_text(Vector2(x, y), Loc.t("Самолёт ур. %d") % t + own_model, 18, Color.WHITE)
+	_text(Vector2(x, y + 24), Loc.t(PlaneTiers.blurb(t)), 14, Color(0.7, 0.74, 0.8))
+	if Profile.tiers_owned(c).has(t):
+		var sr := Rect2(x, y + 40, 300, 36)
+		if Profile.tier(c) == t:
+			_panel(sr, true)
+			ctrl.draw_rect(sr, Color(0.5, 1.0, 0.6), false, 2.0)
+			_text(Vector2(sr.position.x, sr.position.y + 25), Loc.t("✓ ур. %d — в вылет") % t, 16, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_CENTER, sr.size.x)
+		elif Profile.tier_flyable(c, t):
+			_button(sr, Loc.t("ЛЕТАТЬ НА УР. %d") % t, "hg:plane_sel:%d" % t, 14)
+		else:
+			_text(Vector2(x, y + 64), Loc.t("Ур. %d — ") % t + Loc.t(Demo.LOCKED), 15, Menu.C_AMBER)
+		return
+	var why := Profile.tier_lock(c, t)
+	if why == "demo":
+		_text(Vector2(x, y + 50), Loc.t("Покупка — ") + Loc.t(Demo.LOCKED), 16, Menu.C_AMBER)
+		return
+	var op := PlaneTiers.gate_op(t)
+	var chips: Array = []
+	if t > 2:
+		chips.append([Loc.t("самолёт ур. %d") % (t - 1), Profile.tiers_owned(c).has(t - 1)])
+	if op >= 0:
+		chips.append([Loc.t("операция «%s»") % Loc.t(Campaign.OPS[op]["title"]), Campaign.cleared(op)])
+	chips.append([Loc.t("экипаж ур. %d") % PlaneTiers.crew(t), Profile.crew_lvl(c) >= PlaneTiers.crew(t)])
+	chips.append([Loc.t("%d запч.") % PlaneTiers.cost(t), Profile.parts() >= PlaneTiers.cost(t)])
+	_text(Vector2(x, y + 56), "Нужно:", 15, Color(0.8, 0.84, 0.9))
+	_cond_chips(Vector2(x + 60, y + 40), chips)
+	if why == "":
+		_button(Rect2(x, y + 76, 320, 46), Loc.t("КУПИТЬ УР. %d — %d") % [t, PlaneTiers.cost(t)], "hg:tier:%d" % t, 17)
+
+
+## Tier the stats panel compares tier `t` with: the tier the class flies when another is on view, otherwise the
+## tier below; 0 — nothing to compare (tier 1 on view and flown, or meta progression off)
 
 
 ## Height of a hangar node card (was 92: Kanta 06.11 — the stats panel moved under the cards needs the room)
 const NODE_H := 74.0
 
 
-## True when plane 2 exists in this build (not the demo, meta progression on): the stats compare both planes.
-func two_planes() -> bool:
-	return Profile.meta_k() > 0.0 and not Demo.on
+func compare_tier(c: String, t: int) -> int:
+	if Profile.meta_k() <= 0.0:
+		return 0
+	var f := Profile.tier(c)
+	return f if f != t else t - 1
 
 
 ## The plane's numbers in a panel under the node cards (S16-08; Kanta 06.11: the table over the model looked bad,
-## and a hover over a node card should show its gain in green). Tiles in four columns: title, the value of the plane
-## on view (`view_lvl`) in large type and, when plane 2 exists, the other plane's value small beside it (better in
-## green, worse in red). With `hover_node` the row that node improves shows «now → after» with the gain in green.
+## and a hover over a node card should show its gain in green). Tiles in four columns: title, the value of the tier
+## on view (`view_lvl`) in large type and, when `other_lvl` > 0, that tier's value small beside it (better in green,
+## worse in red). With `hover_node` the row that node improves shows «now → after» with the gain in green.
 ## Numbers and units: `PlaneStats`.
-func _hg_stats(c: String, r: Rect2, view_lvl: int, two: bool, hover_node: String) -> void:
+func _hg_stats(c: String, r: Rect2, view_lvl: int, other_lvl: int, hover_node: String) -> void:
 	var cur := PlaneStats.of(c, view_lvl)
-	var other_lvl := 2 if view_lvl == 1 else 1
+	var two := other_lvl > 0
 	var oth := PlaneStats.of(c, other_lvl) if two else {}
-	var hk := String(PlaneStats.NODE_ROW.get(hover_node, ""))
+	var hk := String(PlaneStats.row_of(view_lvl, hover_node))
 	var nxt := PlaneStats.with_node(c, view_lvl, hover_node) if hk != "" else {}
 	_panel(r, false)
 	_text(Vector2(r.position.x + 20, r.position.y + 26), Loc.t("ХАРАКТЕРИСТИКИ · самолёт ур. %d") % view_lvl, 16, Menu.C_AMBER)
@@ -477,7 +511,7 @@ func _hg_weapons(m: Main, area: Rect2) -> void:
 			_cond_chips(Vector2(rx + 310, yy + 4), [["ступень 2", Profile.tier_state(w2, 2) != ""],
 				["операция 2 «Сухое русло»", Campaign.cleared(1)],
 				[Loc.t("%d запч.") % int(Profile.TIER_COST[2]), Profile.parts() >= int(Profile.TIER_COST[2])],
-				["самолёт ур. 2", Profile.plane_lvl(m.hangar_cls) == 2]])
+				["самолёт ур. 3", Profile.tier(m.hangar_cls) >= 3]])
 		for oi in 2:
 			var opt: Array = Profile.WBRANCH[w2][tier - 1][oi] if tier < 3 else Profile.WBRANCH3[w2][oi]
 			var key := "a" if oi == 0 else "b"

@@ -70,13 +70,16 @@ func _test_advances() -> void:
 
 
 func _test_classes() -> void:
+	# every plane tier (PT-04). Tier 1 is the simpler start plane with fewer weapon kinds (Kanta 06.11): «Оса» 1
+	# (aam, rockets, flares) has one two-weapon recipe («Карусель»), so tier 1 needs one, the other tiers two
 	for c in PlaneClasses.LIST:
-		for lv in [1, 2]:
+		for lv in range(1, PlaneTiers.MAX + 1):
 			var pd: Dictionary = PlaneClasses.PLANES[c][lv]
 			var ids := SynPairs.reachable_ids(pd["weapons"], int(pd["wingmen"]))
-			_check(ids.size() >= 4, "%s plane %d: at least 4 reachable synergies (got %d: %s)" % [c, lv, ids.size(), str(ids)])
+			_check(ids.size() >= 4, "%s tier %d: at least 4 reachable synergies (got %d: %s)" % [c, lv, ids.size(), str(ids)])
 			var mixed := ids.filter(func(id): return SynPairs.two_weapons(id))
-			_check(mixed.size() >= 2, "%s plane %d: at least 2 two-weapon synergies (got %s)" % [c, lv, str(mixed)])
+			var need := 1 if lv == 1 else 2
+			_check(mixed.size() >= need, "%s tier %d: at least %d two-weapon synergies (got %s)" % [c, lv, need, str(mixed)])
 
 
 func _test_closes() -> void:

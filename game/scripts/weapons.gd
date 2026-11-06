@@ -72,7 +72,7 @@ const DEFS := {
 		"cd": 9.0, "dmg": 110.0, "range": 200.0, "uses_priority": false, "uses_trigger": true,
 		"lvl": "1 бомба с точки; ур. 2–5: +25% урона, +8% радиуса",
 	},
-	# U-08: экспериментальное оружие — только на тяжёлом подвесе самолёта ур. 2, открывается кампанией
+	# U-08: experimental weapons — only on the heavy hardpoint (plane tier 4+, PT-04), opened by the campaign
 	"railgun": {
 		"title": "Рельсотрон (экспериментальный)",
 		"short": "Рельсотрон",

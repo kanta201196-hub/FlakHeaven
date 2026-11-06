@@ -153,53 +153,82 @@ const SKILL3 := {
 }
 
 
-## Kanta 24.10: what each plane (class + plane level) carries. Overrides the class `DATA` for that plane:
-## weapons — card and hangar pool; bonus — damage factor per weapon (the ★ class bonus, 15 % on plane 1,
-## 20 % on plane 2, plus extras); turrets_max — turret cap reached by turret upgrades; wingmen — permanent
-## wingmen cap; wing_types — allowed wingman types. Experimental weapons of the heavy hardpoint stay common.
+## What each plane (class + tier 1–5, `PlaneTiers`) carries. Overrides the class `DATA` for that plane:
+## weapons — card and hangar pool; bonus — damage factor per weapon (the ★ class bonus plus extras); turrets — built-in
+## turrets at start (when it differs from the class); turrets_max — turret cap reached by turret upgrades; wingmen —
+## permanent wingmen cap; wing_types — allowed wingman types. Experimental weapons of the heavy hardpoint stay common.
+## Tier 2 is the old plane 1 and tier 3 the old plane 2 (Kanta 24.10), unchanged. Tier 1 (PT-04, Kanta 06.11: «проще,
+## но не слабее») has fewer weapon kinds, so its first cards stack faster: «Грач» flies without a turret, «Кит» with
+## one wingman. Tiers 4–5 are tier 3 with ★ 20 % / 25 % until their systems come (plan stages C–D). All guesses.
 const PLANES := {
 	"fighter": {
-		1: {"weapons": ["aam", "agm", "rockets", "flares"], "bonus": {"aam": 1.15},
+		1: {"weapons": ["aam", "rockets", "flares"], "bonus": {"aam": 1.15},
 			"turrets_max": 0, "wingmen": 1, "wing_types": ["swift"]},
-		2: {"weapons": ["aam", "agm", "rockets", "flares", "srm"], "bonus": {"aam": 1.2, "agm": 1.05},
+		2: {"weapons": ["aam", "agm", "rockets", "flares"], "bonus": {"aam": 1.15},
+			"turrets_max": 0, "wingmen": 1, "wing_types": ["swift"]},
+		3: {"weapons": ["aam", "agm", "rockets", "flares", "srm"], "bonus": {"aam": 1.2, "agm": 1.05},
+			"turrets_max": 0, "wingmen": 1, "wing_types": ["swift", "rook"]},
+		4: {"weapons": ["aam", "agm", "rockets", "flares", "srm"], "bonus": {"aam": 1.2, "agm": 1.05},
+			"turrets_max": 0, "wingmen": 1, "wing_types": ["swift", "rook"]},
+		5: {"weapons": ["aam", "agm", "rockets", "flares", "srm"], "bonus": {"aam": 1.25, "agm": 1.05},
 			"turrets_max": 0, "wingmen": 1, "wing_types": ["swift", "rook"]},
 	},
 	"attacker": {
-		1: {"weapons": ["rockets", "aam", "agm", "bombs", "turret", "flares"], "bonus": {"rockets": 1.15},
+		1: {"weapons": ["rockets", "aam", "bombs", "flares"], "bonus": {"rockets": 1.15},
+			"turrets": 0, "turrets_max": 0, "wingmen": 1, "wing_types": ["swift", "rook"]},
+		2: {"weapons": ["rockets", "aam", "agm", "bombs", "turret", "flares"], "bonus": {"rockets": 1.15},
 			"turrets_max": 1, "wingmen": 1, "wing_types": ["swift", "rook"]},
-		2: {"weapons": ["rockets", "aam", "agm", "bombs", "turret", "flares"], "bonus": {"rockets": 1.2},
+		3: {"weapons": ["rockets", "aam", "agm", "bombs", "turret", "flares"], "bonus": {"rockets": 1.2},
+			"turrets_max": 2, "wingmen": 1, "wing_types": ["swift", "rook"]},
+		4: {"weapons": ["rockets", "aam", "agm", "bombs", "turret", "flares"], "bonus": {"rockets": 1.2},
+			"turrets_max": 2, "wingmen": 1, "wing_types": ["swift", "rook"]},
+		5: {"weapons": ["rockets", "aam", "agm", "bombs", "turret", "flares"], "bonus": {"rockets": 1.25},
 			"turrets_max": 2, "wingmen": 1, "wing_types": ["swift", "rook"]},
 	},
 	"bomber": {
-		1: {"weapons": ["bombs", "hebomb", "rockets", "turret", "flares"], "bonus": {"bombs": 1.15},
+		1: {"weapons": ["bombs", "hebomb", "turret", "flares"], "bonus": {"bombs": 1.15},
+			"turrets_max": 2, "wingmen": 1, "wing_types": ["swift"]},
+		2: {"weapons": ["bombs", "hebomb", "rockets", "turret", "flares"], "bonus": {"bombs": 1.15},
 			"turrets_max": 2, "wingmen": 2, "wing_types": ["swift"]},
-		2: {"weapons": ["bombs", "hebomb", "rockets", "turret", "flares"], "bonus": {"bombs": 1.2},
+		3: {"weapons": ["bombs", "hebomb", "rockets", "turret", "flares"], "bonus": {"bombs": 1.2},
+			"turrets_max": 3, "wingmen": 2, "wing_types": ["swift"]},
+		4: {"weapons": ["bombs", "hebomb", "rockets", "turret", "flares"], "bonus": {"bombs": 1.2},
+			"turrets_max": 3, "wingmen": 2, "wing_types": ["swift"]},
+		5: {"weapons": ["bombs", "hebomb", "rockets", "turret", "flares"], "bonus": {"bombs": 1.25},
 			"turrets_max": 3, "wingmen": 2, "wing_types": ["swift"]},
 	},
 }
 
 
-## Class data of plane `lv` (1 or 2): `DATA` of the class with that plane's `PLANES` overrides
+## Class data of tier `lv` (1–5): `DATA` of the class with that plane's `PLANES` overrides. `tier` — the tier;
+## `plane_lvl` — the model generation that draws it (`PlaneTiers.model`), which art and mounts are keyed by
 static func plane(cls_id: String, lv: int) -> Dictionary:
+	var t := clampi(lv, 1, PlaneTiers.MAX)
 	var d: Dictionary = (DATA[cls_id] as Dictionary).duplicate(true)
-	d.merge((PLANES[cls_id][clampi(lv, 1, 2)] as Dictionary).duplicate(true), true)
-	d["plane_lvl"] = clampi(lv, 1, 2)
+	d.merge((PLANES[cls_id][t] as Dictionary).duplicate(true), true)
+	d["tier"] = t
+	d["plane_lvl"] = PlaneTiers.model(t)
 	return d
 
 
-## Plane level to use when the caller gives none: the plane this class flies now
+## Tier to use when the caller gives none: the tier this class flies now
 static func _lv(cls_id: String, lv: int) -> int:
-	return lv if lv > 0 else Profile.plane_lvl(cls_id)
+	return clampi(lv if lv > 0 else Profile.tier(cls_id), 1, PlaneTiers.MAX)
 
 
-## Damage factor of weapon `w` on plane `lv` (the ★ class bonus and plane extras; 1.0 — none)
+## Damage factor of weapon `w` on tier `lv` (the ★ class bonus and plane extras; 1.0 — none)
 static func bonus_k(cls_id: String, lv: int, w: String) -> float:
-	return float((PLANES[cls_id][clampi(_lv(cls_id, lv), 1, 2)]["bonus"] as Dictionary).get(w, 1.0))
+	return float((PLANES[cls_id][_lv(cls_id, lv)]["bonus"] as Dictionary).get(w, 1.0))
 
 
-## Whether plane `lv` may take a permanent wingman of type `t` (`Prog.WING_TYPES` id)
+## Whether tier `lv` may take a permanent wingman of type `t` (`Prog.WING_TYPES` id)
 static func wing_type_ok(cls_id: String, lv: int, t: String) -> bool:
-	return (PLANES[cls_id][clampi(_lv(cls_id, lv), 1, 2)]["wing_types"] as Array).has(t)
+	return (PLANES[cls_id][_lv(cls_id, lv)]["wing_types"] as Array).has(t)
+
+
+## Built-in turrets of tier `lv` at the start of a sortie (the class count unless the tier overrides it)
+static func turrets_start(cls_id: String, lv := 0) -> int:
+	return int((PLANES[cls_id][_lv(cls_id, lv)] as Dictionary).get("turrets", DATA[cls_id]["turrets"]))
 
 
 ## Фишка 2 (Kanta 18.10, «бери в работу»): мастерство класса — одна особая карточка за вылет,
@@ -218,24 +247,25 @@ const MASTERY_FIRE_SRC := "мастерство: выжженная земля"
 
 ## Тест 3.5-s7 (Kanta): у «Кита» на старте только кормовая турель, верхняя на фюзеляже — с ур. 3 турелей
 const TURRET2_LVL := 3
-## Kanta 24.10: third turret mount («Кит» plane 2) at turret lvl 5
+## Kanta 24.10: third turret mount («Кит» tier 3, the old plane 2) at turret lvl 5
 const TURRET3_LVL := 5
 
 
-## Turret mounts at turret upgrade `level` on plane `lv`: the class start count, +1 at lvl 3 and +1 at lvl 5,
-## capped by the plane's `turrets_max` (Kanta 24.10: «Грач» 1 / 2, «Кит» 2 / 3)
+## Turret mounts at turret upgrade `level` on tier `lv`: the tier's start count, +1 at lvl 3 and +1 at lvl 5,
+## capped by the tier's `turrets_max` (Kanta 24.10: «Грач» 1 / 2, «Кит» 2 / 3; tier 1 «Грач» has none)
 static func turret_slots(cls_id: String, level: int, lv := 0) -> int:
-	var n := int(DATA[cls_id]["turrets"])
-	if n <= 0:
+	var n0 := turrets_start(cls_id, lv)
+	if n0 <= 0:
 		return 0
+	var n := n0
 	if level >= TURRET2_LVL:
 		n += 1
 	if level >= TURRET3_LVL:
 		n += 1
-	return mini(n, maxi(int(DATA[cls_id]["turrets"]), int(PLANES[cls_id][clampi(_lv(cls_id, lv), 1, 2)]["turrets_max"])))
+	return mini(n, maxi(n0, int(PLANES[cls_id][_lv(cls_id, lv)]["turrets_max"])))
 
 
-## PG-01 (Kanta 24.10): third hardpoint group, opened by hangar node «Узлы подвеса» lvl 2 of that plane.
+## PG-01 (Kanta 24.10): third hardpoint group, opened by the pylons-place node lvl 2 of that tier.
 ## Appended after all other groups (turrets, heavy), so card ids, saves and 3D layout keep their indices.
 ## frac — where a wing pair hangs along the half-span (0 — the default by group index).
 const GROUP3 := {
@@ -253,9 +283,9 @@ static func group_defs(cls_id: String, third: bool) -> Array:
 	return out
 
 
-## Whether plane `lv` of the class may carry weapon `w` (0 — the plane the class flies now)
+## Whether tier `lv` of the class may carry weapon `w` (0 — the tier the class flies now)
 static func allows(cls_id: String, w: String, lv := 0) -> bool:
-	return Weapons.EXP.has(w) or (PLANES[cls_id][clampi(_lv(cls_id, lv), 1, 2)]["weapons"] as Array).has(w)
+	return Weapons.EXP.has(w) or (PLANES[cls_id][_lv(cls_id, lv)]["weapons"] as Array).has(w)
 
 
 static func signature(cls_id: String) -> String:
