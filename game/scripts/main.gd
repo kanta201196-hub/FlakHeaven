@@ -47,11 +47,14 @@ const OFFER_COUNT := 4
 ## 3.5: неуязвимость после выбора карточки (было 1 с — к 15-й минуте набегало больше минуты)
 const CARD_INVULN := 0.5
 var rerolls := 2        # переброс выбора (базово 2 за вылет, +1 за каждого аса)
+var pins := 2           # закрепов на вылет (START_PINS); закрепление тратит один, открепление возвращает
 var bans := 2           # исключение карточки до конца вылета (базово 2, +1 за аса)
 ## тест 3.5-s7 (Kanta): на время тестов — по 10 перебросов и блоков за вылет (в игре было по 2)
 ## S16-22 (Kanta 05.11): starting card rerolls and bans of a sortie (were a test value of 10 each).
 const START_REROLLS := 3
 const START_BANS := 1
+## S16-22: pins a sortie starts with; a pin is spent by locking a card and comes back when the card is unlocked.
+const START_PINS := 2
 var banned := {}        # ключи исключённых карточек
 var locked: Dictionary = {}  # закреплённая карточка — появится в следующем выборе
 var offer_rare := false
@@ -328,6 +331,7 @@ func start_run() -> void:
 	evac_windows = 0
 	evac_lost = false
 	rerolls = START_REROLLS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # 3.5: самолёт ур. 2 — +1 переброс; медаль «Коллекционер»
+	pins = START_PINS
 	bans = START_BANS + int(Profile.medal_bonus("bans"))   # медаль «Мастер связок»
 	banned = {}
 	locked = {}
@@ -605,8 +609,13 @@ func lock_card(i: int) -> void:
 		return
 	if not locked.is_empty() and locked["id"] == offers[i]["id"]:
 		locked = {}
-	else:
+		pins += 1
+	elif pins > 0:
+		if locked.is_empty():
+			pins -= 1   # re-locking another card moves the same pin
 		locked = offers[i].duplicate()
+	else:
+		return
 	sfx.play("card", -12.0, 1.5)
 
 

@@ -544,7 +544,7 @@ func _actions(m: Main, pos: Vector2, pair: bool) -> void:
 		return
 	var x := pos.x
 	var locked: bool = not m.locked.is_empty() and focus < m.offers.size() and m.locked["id"] == m.offers[focus]["id"]
-	x = _key_button(Vector2(x, y + 22), key_label("card_lock"), Loc.t("ОТКРЕПИТЬ") if locked else Loc.t("ЗАКРЕПИТЬ"), "lock:%d" % focus, true)
+	x = _key_button(Vector2(x, y + 22), key_label("card_lock"), Loc.t("ОТКРЕПИТЬ") if locked else Loc.t("ЗАКРЕПИТЬ · %d") % m.pins, "lock:%d" % focus, locked or m.pins > 0 or not m.locked.is_empty())
 	_key_button(Vector2(x, y + 22), key_label("card_ban"), Loc.t("ИСКЛЮЧИТЬ · %d") % m.bans, "ban:%d" % focus, m.bans > 0)
 	if not m.banned.is_empty():
 		var names := PackedStringArray(m.banned.values().map(func(v) -> String: return Loc.title(String(v))))

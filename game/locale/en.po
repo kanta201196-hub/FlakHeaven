@@ -2684,6 +2684,10 @@ msgstr "UNLOCK"
 msgid "ЗАКРЕПИТЬ"
 msgstr "LOCK"
 
+#, c-format
+msgid "ЗАКРЕПИТЬ · %d"
+msgstr "LOCK · %d"
+
 #: game/scripts/hud_cards.gd:548
 #, c-format
 msgid "ИСКЛЮЧИТЬ · %d"

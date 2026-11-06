@@ -2684,6 +2684,10 @@ msgstr "解锁"
 msgid "ЗАКРЕПИТЬ"
 msgstr "锁定"
 
+#, c-format
+msgid "ЗАКРЕПИТЬ · %d"
+msgstr "锁定 · %d"
+
 #: game/scripts/hud_cards.gd:548
 #, c-format
 msgid "ИСКЛЮЧИТЬ · %d"
