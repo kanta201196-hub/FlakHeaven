@@ -376,6 +376,12 @@ var _music_cur := 0
 var _music_track := ""
 var _music_streams := {}
 var _music_tw: Tween
+## S16-02: which family plays (hold before the battle music returns after a boss or ace)
+var _music_dir := MusicDirector.new()
+## S16-02: the battle track and its position when a boss took over, so the battle music resumes instead of
+## restarting a random track from 0:00; cleared outside a sortie so each sortie starts fresh
+var _battle_stream: AudioStream = null
+var _battle_pos := 0.0
 
 
 ## Ползунок до упора влево — музыка выключена
@@ -428,28 +434,48 @@ func _init_music() -> void:
 		print("Sfx: музыка ", _music_streams.keys())
 
 
+## Main calls this every frame with the family it wants; `MusicDirector` decides what actually plays.
+## With Tuning "music_steady" on (S16-02) the battle music waits BOSS_HOLD s after a boss or ace, resumes the
+## battle track where it stopped and crossfades 3 s; off — the s16 behaviour.
 func music(track: String) -> void:
 	if _music.is_empty():
 		_init_music()
 	_ambient_on(track == "battle" or track == "boss")
+	_music_dir.steady = Tuning.g("music_steady") > 0.5
+	track = _music_dir.step(track, get_process_delta_time() / maxf(Engine.time_scale, 0.01))
 	if track == _music_track:
 		return
+	var prev := _music_track
 	_music_track = track
 	var old := _music[_music_cur]
+	if _music_dir.steady and prev == "battle" and track == "boss" and old.playing:
+		_battle_stream = old.stream
+		_battle_pos = old.get_playback_position()
+	elif track != "battle" and track != "boss":
+		_battle_stream = null
 	_music_cur = 1 - _music_cur
 	var nw := _music[_music_cur]
 	if _music_tw != null and _music_tw.is_valid():
 		_music_tw.kill()
+	var fade := MusicDirector.fade_time(prev, track, _music_dir.steady)
 	var tw := create_tween().set_parallel(true)
 	_music_tw = tw
-	tw.tween_property(old, "volume_db", -80.0, 1.5)
+	tw.tween_property(old, "volume_db", -80.0, fade)
 	if track == "result" and not _music_streams.has("result"):
 		track = "menu"
 	if _music_streams.has(track):
-		nw.stream = (_music_streams[track] as Array).pick_random() # несколько треков боя — случайный
+		var from := 0.0
+		if track == "battle" and _music_dir.steady and _battle_stream != null:
+			nw.stream = _battle_stream   # back from a boss: the same battle track, from where it stopped
+			from = _battle_pos
+			_battle_stream = null
+		else:
+			nw.stream = (_music_streams[track] as Array).pick_random() # несколько треков боя — случайный
 		nw.volume_db = -60.0
-		nw.play()
-		tw.tween_property(nw, "volume_db", music_db(), 1.5)
+		nw.play(from)
+		tw.tween_property(nw, "volume_db", music_db(), fade)
+	if OS.get_cmdline_user_args().has("--autotest"):
+		print("Sfx: music %s -> %s (fade %.1f s)" % [prev, _music_track, fade])
 
 
 ## Трек боя закончился — следующий, не тот же самый (если треков больше одного)
