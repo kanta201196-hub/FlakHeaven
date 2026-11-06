@@ -10065,6 +10065,62 @@ msgstr "all up to 15:00"
 msgid "%d очков «%s» за вылет — карточки этого тега"
 msgstr "%d «%s» points in one sortie — cards with this tag"
 
+#, c-format
+msgid "+%s исключение карточки за вылет"
+msgstr "+%s card ban per sortie"
+
+msgid "+1 закреп карточки за вылет"
+msgstr "+1 card pin per sortie"
+
+msgid "+1 исключение карточки за вылет"
+msgstr "+1 card ban per sortie"
+
+msgid "+1 переброс карточек за вылет"
+msgstr "+1 card reroll per sortie"
+
+
+msgid "БЕЗ МЕСТА МОДУЛЯ"
+msgstr "NO MODULE SLOT"
+
+
+
+
+
+#, c-format
+msgid "Выбрать %s карточек"
+msgstr "Pick %s cards"
+
+#, c-format
+msgid "Выполнить %s заданий в вылетах"
+msgstr "Complete %s tasks in sorties"
+
+
+
+
+
+msgid "Разведка боем"
+msgstr "Reconnaissance in Force"
+
+msgid "Синяя дуга — броня бомбардировщика: спереди и с боков урон вдвое меньше. Слабое место — хвост, но его прикрывает турель (красный сектор)."
+msgstr "The blue arc is the bomber's armour: half damage from the front and sides. The tail is the weak spot, but the turret guards it (red sector)."
+
+
+msgid "Транспорт, нас засекли! Уходим, полный газ!"
+msgstr "Transport, we're spotted! Breaking off, full throttle!"
+
+
+
+msgid "Штабист"
+msgstr "Staff Officer"
+
+#, c-format
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно открыто"
+msgstr "EVACUATION: gate %d / %d · %d m · window open"
+
+
+
+
+
 #: game/scripts/plane_stats.gd
 msgid "Разворот, °/с"
 msgstr "Turn, °/s"

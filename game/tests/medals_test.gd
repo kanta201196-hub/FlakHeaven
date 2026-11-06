@@ -95,4 +95,4 @@ func _test_data() -> void:
 		ids[m["id"]] = true
 		_check((m["t"] as Array).size() == (m["v"] as Array).size(), "tiers and bonuses line up: " + m["id"])
 		_check(MedalBalance.FRAMES.has(m["f"]), "known frame: " + m["id"])
-	_check(MedalBalance.LIST.size() == 38, "38 medals: every row of the proposal page (its header said 39) (got %d)" % MedalBalance.LIST.size())
+	_check(MedalBalance.LIST.size() == 40, "40 medals: the 38 rows of the proposal page plus «Разведка боем» and «Штабист» (S16-22) (got %d)" % MedalBalance.LIST.size())

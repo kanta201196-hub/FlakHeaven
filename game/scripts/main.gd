@@ -340,8 +340,11 @@ func start_run() -> void:
 	evac_windows = 0
 	evac_lost = false
 	rerolls = START_REROLLS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # 3.5: самолёт ур. 2 — +1 переброс; медаль «Коллекционер»
-	pins = START_PINS
-	bans = START_BANS + int(Profile.medal_bonus("bans"))   # медаль «Мастер связок»
+	# S16-22: crew rank adds rerolls, bans and pins (PickBalance.CREW); medals add rerolls and bans
+	var crew_picks := PickBalance.crew(Profile.crew_lvl(cls_id)) if Profile.meta_k() > 0.0 else PickBalance.crew(0)
+	rerolls += int(crew_picks["rerolls"])
+	pins = START_PINS + int(crew_picks["pins"]) + int(Profile.medal_bonus("pins"))
+	bans = START_BANS + int(crew_picks["bans"]) + int(Profile.medal_bonus("bans"))   # медали «Мастер связок», «Штабист»
 	banned = {}
 	locked = {}
 	course_log = []
@@ -674,6 +677,9 @@ func _on_activity_succeeded(kind: StringName) -> void:
 		return
 	if kind == &"fort":
 		medal_add("fort_areas")
+	medal_add("activities")
+	rerolls += PickBalance.ACTIVITY_REROLLS   # S16-22: a task done pays a reroll
+	tele.add("picks_from_tasks", PickBalance.ACTIVITY_REROLLS)
 	var r := run.award_activity(kind)
 	if r.is_empty():
 		return

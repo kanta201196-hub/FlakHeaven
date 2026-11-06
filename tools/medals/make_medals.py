@@ -155,6 +155,12 @@ def emblem(mid, c, h):
         "quick": lambda: f'<path d="M58,10 L30,54 L48,54 L40,90 L72,40 L54,40 Z" fill="{c}"/>',
         "collector": lambda: "".join(f'<rect x="38" y="22" width="26" height="40" rx="3" fill="{c if k % 2 else h}" stroke="{c}" stroke-width="2" '
                                      f'transform="rotate({-30 + k * 20} 50 80)"/>' for k in range(4)),
+        # S16-22: «Разведка боем» — a field flag over a target ring; «Штабист» — a map sheet with three pins
+        "scout": lambda: ring(50, 62, 20, c, 5) + f'<path d="M46,64 L46,14" stroke="{c}" stroke-width="5"/>'
+        f'<path d="M48,16 L78,26 L48,36 Z" fill="{h}" stroke="{c}" stroke-width="2"/>',
+        "planner": lambda: f'<path d="M20,30 L40,24 L60,30 L80,24 L80,74 L60,80 L40,74 L20,80 Z" fill="{h}" stroke="{c}" stroke-width="3"/>'
+        f'<g stroke="{c}" stroke-width="2"><path d="M40,24 L40,74"/><path d="M60,30 L60,80"/></g>'
+        + "".join(f'<circle cx="{x}" cy="{y}" r="5" fill="{c}"/>' for x, y in ((32, 44), (52, 58), (70, 42))),
         "synergy": lambda: ring(38, 50, 18, c, 6) + ring(62, 50, 18, c, 6) + f'<path d="M50,36 A18,18 0 0 1 50,64" stroke="{h}" stroke-width="2" fill="none"/>',
         "cls_fighter": lambda: f'<ellipse cx="50" cy="60" rx="9" ry="20" fill="{c}"/><circle cx="50" cy="34" r="8" fill="{c}"/>'
         f'<g fill="{h}" stroke="{c}" stroke-width="2"><ellipse cx="34" cy="44" rx="16" ry="7" transform="rotate(-25 34 44)"/>'

@@ -76,8 +76,11 @@ const ARCH_MODULES := ["gun_belt", "turret_ring"]
 
 ## EX-01 (отзывы внешних тестеров, решение Kanta 21.10): за вылет — не больше MOD_SLOTS разных модулей.
 ## Места заняты — выпадают только улучшения уже взятых. Ремонт и уровни навыка класса места не занимают.
+## S16-15 (Kanta 05.11): «Сборщик трофеев» is a passive pickup perk, not equipment, so it takes no slot either.
 const MOD_SLOTS := 6
-const SLOT_FREE := ["repair", "skill3"]
+const SLOT_FREE := ["repair", "skill3", "magnet"]
+## Cards that are not part of the «every card» medal set: the instant repair and the class-skill levels.
+const NOT_COLLECTED := ["repair", "skill3"]
 ## EX-01: «Быстрая перезарядка» — не ниже этой доли исходной (было 0,3: брали её и забывали о скорострельности)
 const RELOAD_FLOOR := 0.6
 

@@ -412,7 +412,9 @@ func _patrol(p: Player, t: float, delta: float) -> void:
 
 
 func start_activity(p: Player, t: float, force := false) -> void:
-	if not force and (m_boss() or is_instance_valid(activity_node)):
+	# S16-26 (Kanta 05.11): no new task while the evacuation gates are open (it was issued after the «Крепость» fell,
+	# and its banner piled onto the evacuation line, S16-25)
+	if not force and (m_boss() or is_instance_valid(activity_node) or is_instance_valid(Main.I.evac)):
 		next_activity = t + 15.0
 		return
 	var kind_s: String = ACTIVITIES[activity_i % ACTIVITIES.size()]
