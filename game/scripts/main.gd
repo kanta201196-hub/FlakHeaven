@@ -223,7 +223,7 @@ func _mouse_mode() -> void:
 		Input.mouse_mode = want
 
 
-## The campaign screen's «В ВЫЛЕТ ▶» (and the «Битва асов» button): the hangar scene before the operation when it
+## The mission screen's «ВЫЛЕТ ▶» (and the «Битва асов» button): the hangar scene before the operation when it
 ## is due (step 3; `--dialog` plays the test scene), then the sortie itself (`_launch_sortie`).
 func select_class(id: String) -> void:
 	cls_id = id

@@ -793,6 +793,11 @@ func hint_buy(c: String) -> String:
 	return best
 
 
+## «Можно улучшить самолёт» (06.11 review, point 4): plane `c` flies with zero node upgrades and the parts pay for one.
+func upgrade_hint(c: String) -> bool:
+	return PrepHint.upgrade_due(nodes_of(c).values(), parts(), int(NODE_COST[0]))
+
+
 func any_purchase() -> bool:
 	for c in PlaneClasses.LIST:
 		if hint_buy(c) != "" or perk_points(c) > 0:

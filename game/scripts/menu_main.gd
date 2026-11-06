@@ -1,6 +1,6 @@
 class_name MenuMain
 extends RefCounted
-## Main menu screen (UI-01, plan step 1): five items in the «Прицел» style on the left, the
+## Main menu screen (UI-01, plan step 1): the items in the «Прицел» style on the left, the
 ## «Что нового» and «Отзыв» cards, theater switch and a compact flight log on the right,
 ## key hints at the bottom. Created and drawn by `Menu` while the game is in state "menu";
 ## every item works with mouse, keyboard and gamepad through `UiFocus`. Actions go to
@@ -8,9 +8,8 @@ extends RefCounted
 
 ## Left column: [action, label]
 const ITEMS := [
-	[&"menu_play", "ВЫЛЕТ"],
+	[&"menu_prep", "ПОДГОТОВКА И ВЫЛЕТ"],   # Kanta 06.11: the hangar and the sortie are one item
 	[&"menu_aces", "БИТВА АСОВ"],
-	[&"menu_hangar", "АНГАР"],
 	[&"menu_codex", "СПРАВОЧНИК"],
 	[&"menu_settings", "НАСТРОЙКИ"],
 	[&"menu_quit", "ВЫХОД"],
@@ -25,8 +24,8 @@ var menu: Menu
 var ctrl: Control
 ## Open overlay: &"" (none), &"whats_new" or &"feedback"
 var overlay: StringName = &""
-var _focus: StringName = &"menu_play"
-var _focus_back: StringName = &"menu_play"
+var _focus: StringName = &"menu_prep"
+var _focus_back: StringName = &"menu_prep"
 ## Selection wipe-in per action id, 0…1
 var _anim: Dictionary[StringName, float] = {}
 ## Focusable items drawn this frame, in draw order: [Rect2, StringName]
@@ -38,10 +37,10 @@ func _init(owner: Menu) -> void:
 	ctrl = owner.ctrl
 
 
-## Back to the default state when the menu opens again (focus on «Вылет», no overlay).
+## Back to the default state when the menu opens again (focus on «Подготовка и вылет», no overlay).
 func reset() -> void:
 	overlay = &""
-	_focus = &"menu_play"
+	_focus = &"menu_prep"
 
 
 ## Advances the selection wipe-in of every item towards its target.
@@ -204,12 +203,18 @@ func _item(r: Rect2, id: StringName, label: String) -> void:
 	var badge := false
 	if id == &"menu_aces":
 		note = Loc.t("ТЕСТ · «ОСА» ПРОТИВ АСОВ · РЕАЛИСТИЧНЫЙ УРОН")
-	if id == &"menu_hangar":
+	if id == &"menu_prep":
 		badge = Profile.any_purchase()
 		note = Loc.t("ЗАПЧАСТИ %d") % Profile.parts()
 		if badge:
 			note += " · " + Loc.t("ЕСТЬ ЧТО КУПИТЬ")
-	UiStyle.menu_item(ctrl, r, label, _focus_k(id), true, note, badge)
+	# a long label («ПОДГОТОВКА И ВЫЛЕТ», its translations) shrinks to stay inside the row, left of the «›»
+	var fs := UiStyle.FS_H1
+	var avail := r.size.x - 34.0 - 130.0   # left padding, the «›», the «есть что купить» dot and gaps (letter spacing reads wider than measured)
+	var lw := UiStyle.text_w(UiStyle.head_font(700), label, fs)
+	if lw > avail:
+		fs = maxi(UiStyle.FS_H3, int(fs * avail / lw))
+	UiStyle.menu_item(ctrl, r, label, _focus_k(id), true, note, badge, false, fs)
 	_items.append([r, id])
 
 
@@ -238,8 +243,8 @@ func _card(r: Rect2, id: StringName, title: String, caption: String, bubble: boo
 	_items.append([r, id])
 
 
-## Theater switch: two segments, the current one filled amber. A locked demo theater is
-## shown but cannot be focused.
+## Theater switch: two segments, the current one filled amber. A theater that is not open yet (demo, or the
+## second one before 3 Highlands operations, `Campaign.biome_open`) is shown but cannot be focused.
 func _biomes(r: Rect2) -> void:
 	var lf := UiStyle.head_font(700, 4)
 	# backing tab: on a bright frame (snow, a plane passing under) the bare caption got lost
@@ -254,12 +259,12 @@ func _biomes(r: Rect2) -> void:
 		var on: bool = b[0] == cur
 		var id := StringName("menu_biome:" + String(b[0]))
 		var k := _focus_k(id)
-		var locked := not Demo.biome_ok(b[0])
+		var locked := not Campaign.biome_open(b[0])
 		ctrl.draw_rect(s, UiStyle.ACCENT if on else Color(0.07, 0.075, 0.07, 0.88))
 		ctrl.draw_rect(s, UiStyle.LINE.lerp(UiStyle.ACCENT, maxf(k, 1.0 if on else 0.0)), false, UiStyle.BORDER)
 		var tc := UiStyle.ON_ACCENT if on else (UiStyle.TEXT_OFF if locked else UiStyle.TEXT_WARM.lerp(UiStyle.ACCENT, k))
 		var f := UiStyle.head_font(700, 4)
-		var tag := Loc.t(Demo.LOCKED) if locked else (Loc.t("ТЕСТ") if b[0] == "archipelago" else "")
+		var tag := (Loc.t(Demo.LOCKED) if not Demo.biome_ok(b[0]) else Loc.t("ЗАКРЫТ")) if locked else (Loc.t("ТЕСТ") if b[0] == "archipelago" else "")
 		var lw := UiStyle.text_w(f, b[1], UiStyle.FS_LABEL)
 		var tw := UiStyle.text_w(UiStyle.head_font(600, 1), tag, UiStyle.FS_CAPTION) + 12.0 if tag != "" else 0.0
 		var lx := s.position.x + (s.size.x - lw - (tw + 10.0 if tag != "" else 0.0)) * 0.5
