@@ -1,0 +1,102 @@
+# Plane tiers 1–5: plan (2026-11-06)
+
+Backlog PT-04 (progression for 5 tiers) with PT-05 (future systems) folded in. Kanta's decision is in `docs/game-context.md` (journal 2026-11-06, «Plane tiers 1–5»), concept page https://claude.ai/artifact/Jcn2GtNbLrRuCVn2xbS9dE. Models are PT-02 / PT-03, owned by the 3D thread «3D-модели по плану Kirill».
+
+**Status: draft, waits for Kanta's «да» on the open questions (section 7). No code before that.** All numbers marked *guess* are first guesses for the balance run, not rules.
+
+## 1. What Kanta decided (fixed, not up for discussion here)
+
+- Five tiers per class: 1 — early aircraft; 2–3 — the current models (plane 1 → tier 2, plane 2 → tier 3); 4–5 — near future (shields, lasers).
+- Tier 1 references: Оса — MiG-15/17-like; Грач — Strikemaster-like (backup Su-11 1947); Кит — He 177 A-3-like piston (tier 1 cannot be a jet, Кит 2 has propellers). Real names never go into the repo or the game.
+- Experimental weapons move from plane lvl 2 to tiers 4–5.
+- Demo: tiers 1–3 playable; tiers 4–5 visible in the hangar, locked («в полной игре»).
+
+## 2. Today in code (main 552ec666)
+
+- Two planes per class. `Profile` class dict: `plane2` (bought), `plane_sel` (1/2), `nodes` / `nodes2`, `kit1` / `kit2`, `decals1` / `decals2`. `Profile.plane_lvl(c)` returns 1 or 2; `--plane=1|2` debug flag.
+- Plane 2: `PLANE2_COST` 50 000 parts, crew lvl 3 (`PLANE2_CREW`), after operation 1 «Перевал» (`can_buy_plane2`). Not sold in the demo (`Profile.plane2` is false when `Demo.on`).
+- What plane 2 gives over plane 1 (`PlaneClasses.PLANES`): ★ class bonus 15 % → 20 %; Оса — `srm` and agm +5 %; Грач — turrets max 1 → 2; Кит — turrets max 2 → 3; Оса — wingman type «Грачонок». Also: heavy hardpoint with experimental weapons (`Player`, `Weapons.EXP`, gated per operation by `Weapons.EXP_OP`), weapon branch tier 3 (`Profile.evo_variant`, needs plane 2), +1 card reroll (`Profile.extra_rerolls`).
+- Node progress is separate per plane, plane 2 starts from zero (Kanta, test 3.5-s5 edit 6). Node prices 160 / 500 / 1 200 / 2 800 / 5 800, all six nodes of one plane 62 760 parts. A sortie earns about 13–15 k (s16 logs).
+- `plane_lvl` / `plane2` / `nodes2` / `kit2` / `PLANE2` appear in 23 scripts, 46 times in `profile.gd`. Models: `fh_battle_<cls>_1|2.glb` and hangar twins; `PlaneArt.plane_tex / shape_info / slot_points` and `WeaponModels.mounts` key on `(cls, lvl)`.
+- Demo (`Demo`): operations «Перевал» and «Сухое русло», only plane 1, node cap 2, branch tier cap 1, crew cap 5; the first clear of «Сухое русло» shows «Конец демо».
+
+## 3. Design
+
+### 3.1 Principle
+
+A tier gives *something new to build with*, not only bigger numbers (Kanta 04.11: buildcraft first). Tier 1 is *simpler, not weaker*: fewer weapon kinds in the card pool, the same hull, speed and course gun as today's start plane. Fewer kinds also means the first cards stack faster, so the first sortie feels strong (Kanta's «кайфовать» principle).
+
+### 3.2 Tier table (*guess* for every number)
+
+| Tier | Оса | Грач | Кит | ★ bonus |
+| --- | --- | --- | --- | --- |
+| 1 (new) | aam, rockets, flares; wingmen 1 «Стриж» | rockets, bombs, aam, flares; turrets 0; wingmen 1 | bombs, hebomb, turret, flares; turrets max 2; wingmen 1 | 15 % |
+| 2 (today's plane 1, unchanged) | + agm | + agm, turret (max 1) | + rockets; wingmen 2 | 15 % |
+| 3 (today's plane 2, minus heavy hardpoint) | + srm, agm +5 %, «Грачонок» | turrets max 2 | turrets max 3 | 20 % |
+| 4 (future) | heavy hardpoint: laser «Луч», EMP; built-in laser course gun | heavy hardpoint; built-in «Луч» point-defence laser (shoots down missiles) | heavy hardpoint; laser turrets; EMP bomb | 20 % |
+| 5 (future) | + railgun on heavy; phase shield during the roll; micro-missile swarm | + railgun, plasma; front energy shield | + plasma; shield dome over wingmen; drone bay | 25 % |
+
+Kept from plane 2 and moved by rule: weapon branch tier 3 needs tier ≥ 3; +1 reroll at tier ≥ 3. Heavy hardpoint and `Weapons.EXP` move to tier ≥ 4; the per-operation gate `EXP_OP` is replaced by the tier (tier 4 itself already needs operation 3).
+
+Hull, speed and turn stay the class values on all tiers in stage A. Per-tier stats (e.g. a slower piston Кит 1) are a later balance item, measured, one package per build.
+
+### 3.3 Unlock (*guess*)
+
+| Tier | Parts | Crew lvl | Campaign gate | Demo |
+| --- | --- | --- | --- | --- |
+| 1 | free | — | — | yes |
+| 2 | 8 000 | 2 | «Перевал» cleared | yes |
+| 3 | 50 000 (today's plane 2) | 4 | «Сухое русло» open (= «Перевал» cleared) | yes |
+| 4 | 120 000 | 8 | «Крепости» cleared | visible, locked |
+| 5 | 250 000 | 12 | «Небо над Шахрисангом» cleared | visible, locked |
+
+At ~14 k a sortie: tier 2 ≈ 1 sortie, tier 3 ≈ 4, tier 4 ≈ 9, tier 5 ≈ 18 (plus nodes). The demo keeps its node cap 2; in the demo tier 3 must be reachable before «Конец демо», so its gate is «Перевал», not «Сухое русло» (question 4).
+
+### 3.4 Nodes between tiers (question 1)
+
+Recommended: nodes belong to the class and carry over to every tier; each tier raises the node cap (tier 1 → 2, 2 → 3, 3 → 4, 4–5 → 5). One price list, nothing is lost when moving up, the new tier is never weaker than the old one. This replaces the 3.5-s5 rule «plane 2 starts from zero», so it is Kanta's call. With «each tier from zero» the full class costs 5 × 62 760 nodes + 428 000 tiers ≈ 52 sorties.
+
+### 3.5 Hangar
+
+- Plane tab: a strip of 5 tier cards per class (model render or silhouette, tier number, «есть / купить — цена / нужно: …»). The player flies any tier they own (`plane_sel` becomes 1–5). The current single «МОДЕРНИЗИРОВАТЬ» button becomes «Купить — цена» on the next locked card.
+- Tiers 4–5 in the demo: card visible with the concept silhouette and the list of its future systems, button «В полной игре».
+- Until a tier's model exists, the card and the battle use the nearest existing model with the note «модель в работе» (tier 1 → tier 2 model, tiers 4–5 → tier 3 model), so code does not wait for art.
+
+### 3.6 Save migration
+
+Profile version bump. Old plane 1 → tier 2, old plane 2 → tier 3 (`nodes`/`nodes2`, `kit1`/`kit2`, `decals1`/`decals2` move with them; with question 1 = «carry over», nodes take the max of both). Every existing save gets tier 1 free and keeps its selected plane. Testers who flew plane 2 lose the heavy hardpoint until tier 4 (that is Kanta's decision; say it in the build's «Что нового»).
+
+## 4. Code shape
+
+- New pure-logic file `game/scripts/balance/plane_tiers.gd` (`class_name PlaneTiers`): `MAX := 5`, `UNLOCK` (parts, crew, op gate per tier), `DEMO_MAX := 3`, `NODE_CAP`, `MODEL` (tier → model id with fallback), `heavy(tier)`, `exp_pool(cls, tier)`, `can_buy(...)` as a pure function over plain values, so it is unit-tested without the profile.
+- `PlaneClasses.PLANES` keyed 1–5; `plane()` and `bonus_k()` clamp to 1–5 instead of 1–2.
+- `Profile`: `plane2: bool` → `tiers: Array[int]` (owned), `plane_sel` 1–5, per-tier dicts `kits`, `decals` (and `nodes` per question 1); `plane_lvl()` keeps its name and returns the tier; `can_buy_plane2` / `buy_plane2` → `can_buy_tier(c, t)` / `buy_tier(c, t)`; `--plane=1..5`.
+- Every `plane_lvl == 2` test becomes a tier rule from `PlaneTiers` (heavy hardpoint, branch tier 3, reroll, kit keys, decal keys, telemetry field `plane_lvl` keeps the name with values 1–5).
+- `PlaneArt`, `WeaponModels.mounts`, `Hangar3D` resolve the model through `PlaneTiers.MODEL`.
+- `Demo`: `tier_ok(t)`; texts in `Demo.OPENS` and `Campaign.OPS[*].opens` updated (no more «Самолёт ур. 2 … тяжёлый подвес»).
+- Player text through `.po` keys (ru source, en, zh_CN).
+
+## 5. Stages
+
+| Stage | What | Needs | Checks |
+| --- | --- | --- | --- |
+| A — tiers in the game (demo-critical) | `PlaneTiers`, profile + migration, `PLANES` 1–5 with tier 1 kits, unlock rules, hangar strip, demo gating, texts. Tiers 1, 4, 5 on fallback models | Kanta's «да» | TDD for `PlaneTiers` and migration (`unit.sh`); `smoke.sh all`; `full.sh` once (cards and hardpoints change) |
+| B — tier 1 models | wire `fh_battle_<cls>_t1` + hangar twins, mount points, icons | 3D thread PT-03 | `--visual` frames of all three, smoke |
+| C — tiers 4–5 playable with today's mechanics | heavy hardpoint on tier ≥ 4, EXP per tier as in 3.2, ★ 20/25 % | stage A | smoke, full, bot run per class on tier 4 (method agreed with Kanta first) |
+| D — future systems (PT-05), one PR each, each behind an F1 toggle until Kanta's «ок» (R-22) | order: «Луч» point-defence (Грач 4, pilot model) → laser course gun (Оса 4) → laser turrets + EMP bomb (Кит 4) → front shield (Грач 5) → phase shield in the roll (Оса 5) → shield dome over wingmen (Кит 5) → micro-missile swarm (Оса 5) → drone bay (Кит 5) | stage C; tier 4–5 models from PT-02 | per system: brainstorm note, unit tests for its numbers, frames page, measurement before numbers become rules |
+
+Stage A size: ~600–900 lines over ~20 files, so it is one feature branch with 2–3 PRs (data + profile + tests; hangar UI; demo and texts). Stage A should land before the demo build review (18.01, `docs/demo-next-fest.md`), ideally by end of November so testers see it in an s-build.
+
+## 6. Risks
+
+- Save migration breaks testers' profiles → unit test on a copy of a real s16 profile, plus a backup of the old save on first load (`user://profile.bak`).
+- 23 scripts read the plane level → grep `plane_lvl|plane2|nodes2|kit2|decals2|PLANE2` must be empty of `== 2` checks after stage A.
+- Tier 1 with fewer weapon kinds could feel thin by minute 10 → check the card offers in the bot run: no empty «Э+ only» stretches before 8:00.
+- Demo length grows with tiers 2–3 → that is the point (a goal in the demo), but the «Конец демо» screen text changes.
+
+## 7. Open questions for Kanta (numbered, with recommendation)
+
+1. Nodes between tiers: (1) each tier from zero, as plane 2 today; (2) nodes carry over and the cap grows with the tier — **recommended**; (3) half carries over.
+2. Prices and gates in 3.3: (1) as in the table — **recommended**; (2) cheaper (tier 3 at 30 000, tier 4 at 80 000, tier 5 at 150 000).
+3. Tier 1: (1) simpler, not weaker — fewer weapon kinds, same hull, speed and ★ 15 % — **recommended**; (2) also weaker by numbers (★ 10 %, hull −10 %), to feel the jump to tier 2.
+4. Tier 3 in the demo: (1) opens after «Перевал» with crew 4 and 50 000, so it is reachable before «Конец демо» — **recommended**; (2) after «Сухое русло», i.e. only after the demo's end screen.
