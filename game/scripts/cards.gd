@@ -13,6 +13,19 @@ const RARITY := [
 	{"name": "Легендарная", "color": Color(1.0, 0.6, 0.15), "k": 3.0, "w": 2.0},
 ]
 const EVO_COLOR := Color(1.0, 0.95, 0.75)
+## Group damage a card above «Базовая» adds on top of its effect: +RARITY_DMG × (k − 1) — weapon upgrades and
+## profiles since 3.5; Kanta 06.11 (answer «1»): also «Э+» and weapon mastery rank cards, so their rarity counts.
+const RARITY_DMG := 0.15
+
+
+## Rarity bonus to group damage for rarity factor `k` (0 for «Базовая», +30 % for «Легендарная»).
+static func rarity_dmg(k: float) -> float:
+	return RARITY_DMG * (k - 1.0)
+
+
+## Whether a mastery rank card of weapon `w` takes the rarity damage bonus: weapons without damage (flares, EMP) do not.
+static func rank_rarity_ok(w: String) -> bool:
+	return not BRANCHES_W.has(w)
 
 
 ## Правки 15–16 (тест 3.5): взятые карточки сводкой — одна строка на улучшение с итоговым уровнем
@@ -733,15 +746,18 @@ static func branch_def(weapon: String, b: String, profile := "") -> Dictionary:
 ## Kanta 06.11 («что такое к профилю? непонятные описания»): the real numbers a mastery rank card changes on
 ## group `g` — damage per hit, reload, lock range, splash radius… now → after one more rank of branch `b`
 ## ("power", "rate", "profile"). Measured on the group itself (the rank is added, read and taken back), so class
-## bonus, modules and floors count: a reload already at its floor says so instead of promising a cut.
-static func branch_line(p: Player, g: Hardpoint, b: String) -> String:
-	var keep := [g.branch, g.branch_rank]
+## bonus, modules and floors count: a reload already at its floor says so instead of promising a cut. `rb` — the
+## card's rarity damage bonus (`rarity_dmg`), counted in the «after» damage.
+static func branch_line(p: Player, g: Hardpoint, b: String, rb := 0.0) -> String:
+	var keep := [g.branch, g.branch_rank, g.bonus]
 	var before := _measure(p, g)
 	g.branch = b
 	g.branch_rank = (int(keep[1]) if String(keep[0]) == b else 0) + 1
+	g.bonus += rb
 	var after := _measure(p, g)
 	g.branch = keep[0]
 	g.branch_rank = keep[1]
+	g.bonus = keep[2]
 	var floor_note := Loc.t(" (уже на нижнем пределе)")
 	if b == "rate":
 		return CardText.step(Loc.t("Перезарядка"), CardText.sec(before["cd"]), CardText.sec(after["cd"]), floor_note)
@@ -775,25 +791,35 @@ static func _measure(p: Player, g: Hardpoint) -> Dictionary:
 
 ## Kanta 06.11 («отличаются ли показатели карточек от рангов?»): the «Э+» reserve card in real numbers — group
 ## `gi` (−1 — the course gun «Дятел»): damage per hit now → after, and reload for a hardpoint (the gun's Э+ adds
-## damage only; a reload at its floor says so). Every Э+ step is the same +8 % damage of the base, −4 % reload.
-static func evo_plus_desc(p: Player, gi: int) -> String:
+## damage only; a reload at its floor says so). Every Э+ step is the same +8 % damage of the base, −4 % reload; `rb`
+## — the card's rarity damage bonus (`rarity_dmg`, Kanta 06.11), counted in «after» and named on its own line.
+static func evo_plus_desc(p: Player, gi: int, rb := 0.0) -> String:
 	var out := ""
 	if gi < 0:
 		var d0 := p.guns.base_damage()
+		var gk := float(p.mods["gun_dmg"])
 		p.gun_evo_plus += 1
+		p.mods["gun_dmg"] = gk * (1.0 + rb)
 		var d1 := p.guns.base_damage()
 		p.gun_evo_plus -= 1
+		p.mods["gun_dmg"] = gk
 		out = Loc.t("«Дятел», Э+ %d → %d из 5") % [p.gun_evo_plus, p.gun_evo_plus + 1]
 		out += "\n" + CardText.step(Loc.t("Урон снаряда"), CardText.num(d0), CardText.num(d1))
+		if rb > 0.0:
+			out += Loc.t("\nБонус редкости: +%s урона пушки") % _pct(rb)
 		return out + "\n" + Loc.t("(+8 % урона за шаг)")
 	var g: Hardpoint = p.groups[gi]
 	var before := _measure(p, g)
 	g.evo_plus += 1
+	g.bonus += rb
 	var after := _measure(p, g)
 	g.evo_plus -= 1
+	g.bonus -= rb
 	out = Loc.t("%s, Э+ %d → %d из 5") % [g.evo_title(), g.evo_plus, g.evo_plus + 1]
 	out += "\n" + CardText.step(Loc.t("Урон за попадание"), CardText.num(before["dmg"]), CardText.num(after["dmg"]))
 	out += "\n" + CardText.step(Loc.t("Перезарядка"), CardText.sec(before["cd"]), CardText.sec(after["cd"]), Loc.t(" (уже на нижнем пределе)"))
+	if rb > 0.0:
+		out += Loc.t("\nБонус редкости: +%s урона группы") % _pct(rb)
 	return out + "\n" + Loc.t("(+8 % урона и −4 % перезарядки за шаг)")
 
 
@@ -1062,7 +1088,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to, int(p.cls["plane_lvl"])) > g2.slots:
 				card["desc"] += "\nВторая турель — сверху на фюзеляже" if g2.slots == 1 else "\nЕщё одна турель"
 			if r > 0:
-				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(0.15 * (k - 1.0))
+				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(rarity_dmg(k))
 			var bk := PlaneClasses.bonus_k(p.cls_id, int(p.cls["plane_lvl"]), g2.weapon)
 			if bk > 1.0:
 				card["desc"] += Loc.t("\n★ Бонус самолёта: урон +%d%%") % roundi((bk - 1.0) * 100.0)
@@ -1077,8 +1103,11 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 		"branch":
 			var bgr: Hardpoint = p.groups[int(card["group"])]
 			var bd: Dictionary = branch_def(bgr.weapon, card["branch"], bgr.profile)
+			var brb := rarity_dmg(k) if rank_rarity_ok(bgr.weapon) else 0.0
 			card["desc"] = Loc.t("%s, ранг %d → %d из %d") % [bgr.name, bgr.branch_rank, bgr.branch_rank + 1, BRANCH_MAX] \
-				+ "\n" + branch_line(p, bgr, String(card["branch"])) + "\n" + Loc.t("(%s)") % Loc.t(bd["desc"])
+				+ "\n" + branch_line(p, bgr, String(card["branch"]), brb) + "\n" + Loc.t("(%s)") % Loc.t(bd["desc"])
+			if brb > 0.0:
+				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(brb)
 			if card["first"] and card["branch"] != "profile":
 				var other := "power" if card["branch"] == "rate" else "rate"
 				card["desc"] += Loc.t("\nИли-или: «%s» для этого оружия закроется до конца вылета") % Loc.t(branch_def(bgr.weapon, other)["title"])
@@ -1091,7 +1120,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			card["desc"] = Loc.t(String(pd["desc"])) + Loc.t("\nПротив кого: %s") % Loc.t(String(pd["vs"]))
 			card["desc"] += Loc.t("\n%s: ур. %d → %d") % [pg2.name, pg2.level, pto]
 			if r > 0:
-				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(0.15 * (k - 1.0))
+				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(rarity_dmg(k))
 		"evolution":
 			var ew: String = String(card.get("evo", card["weapon"]))
 			card["desc"] = Loc.t(String(Modernizations.def(ew)["desc"])) + Loc.t("\nЗаменяет оружие на том же подвесе. Отказ — вернётся через 3 выбора.")
@@ -1114,7 +1143,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 						var cs := syn_def(p, p.course)
 						card["desc"] = Loc.t("+1 очко «%s» — к связке «%s» (до 3 за вылет)") % [Loc.t(Prog.tag_title(cs["tag"])), Loc.t(cs["title"])]
 					else:
-						card["desc"] = evo_plus_desc(p, int(card["group"]))
+						card["desc"] = evo_plus_desc(p, int(card["group"]), rarity_dmg(k))
 		_:
 			card["desc"] = module_desc(p, card["id"], k)
 			if MODULE_TOTAL.has(String(card["id"])):
@@ -1336,7 +1365,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 		"weapon_up":
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			g2.level = mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
-			g2.bonus += 0.15 * (k - 1.0)
+			g2.bonus += rarity_dmg(k)
 			if g2.builtin and g2.weapon == "turret":
 				g2.slots = PlaneClasses.turret_slots(p.cls_id, g2.level, int(p.cls["plane_lvl"]))
 		"module":
@@ -1411,13 +1440,15 @@ static func apply(p: Player, card: Dictionary) -> void:
 			var hb: Hardpoint = p.groups[int(card["group"])]
 			hb.branch = card["branch"]
 			hb.branch_rank = mini(hb.branch_rank + 1, BRANCH_MAX)
+			if rank_rarity_ok(hb.weapon):
+				hb.bonus += rarity_dmg(k)   # Kanta 06.11: the rank card's rarity counts
 			if card["first"]:
 				Events.banner.emit(Loc.t("МАСТЕРСТВО ОРУЖИЯ: %s") % Loc.t(card["title"]), 3.0)
 		"profile":
 			var hp: Hardpoint = p.groups[int(card["group"])]
 			hp.profile = card["profile"]
 			hp.level = mini(hp.level + 1, Weapons.MAX_LEVEL)
-			hp.bonus += 0.15 * (k - 1.0)
+			hp.bonus += rarity_dmg(k)
 			Events.banner.emit(Loc.t("ПРОФИЛЬ: %s") % Loc.t(String(WeaponProfiles.def(hp.weapon, hp.profile)["title"])), 3.0)
 			p.album_find("prof:%s:%s" % [hp.weapon, hp.profile], String(WeaponProfiles.def(hp.weapon, hp.profile)["title"]))
 		"mastery":
@@ -1445,8 +1476,10 @@ static func apply(p: Player, card: Dictionary) -> void:
 						p.add_course_pts(1)
 					elif int(card["group"]) >= 0:
 						(p.groups[int(card["group"])] as Hardpoint).evo_plus += 1
+						(p.groups[int(card["group"])] as Hardpoint).bonus += rarity_dmg(k)   # Kanta 06.11: rarity counts
 					else:
 						p.gun_evo_plus += 1
+						p.mods["gun_dmg"] *= 1.0 + rarity_dmg(k)
 	# очки тегов: эволюция +2, остальное +1 (ремонт, резерв и «плюс и минус» — без очков)
 	if card["kind"] != "reserve" and card["kind"] != "synergy" and card["kind"] != "skill_syn":
 		p.add_tags(tags, 2 if card["kind"] == "evolution" else 1)

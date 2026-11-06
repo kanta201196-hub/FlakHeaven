@@ -10542,6 +10542,11 @@ msgstr "A synergy opens from a recipe of two different things at the required le
 msgid "Ни одной связки за вылет. Слева в бою под полосой «К связке» написан рецепт: чего и какого уровня не хватает."
 msgstr "No synergies this sortie. In combat, the recipe under the \"Toward synergy\" bar on the left shows what is missing and at which level."
 
+#: game/scripts/cards.gd
+#, c-format
+msgid "\nБонус редкости: +%s урона пушки"
+msgstr "\nRarity bonus: +%s gun damage"
+
 msgid "\nВнимание: последний подвес — связка «%s» закроется, некуда будет взять %s"
 msgstr "\nWarning: last mount — the \"%s\" synergy will close, no room left for %s"
 
