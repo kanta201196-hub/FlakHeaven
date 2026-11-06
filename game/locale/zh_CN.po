@@ -10220,3 +10220,11 @@ msgstr "准备与出击"
 #: game/scripts/hud_campaign.gd
 msgid "ЗАКРЫТ"
 msgstr "未解锁"
+
+#: game/scripts/hud_campaign.gd
+msgid "Можно улучшить самолёт: узлы без улучшений, запчастей хватает (%d)"
+msgstr "可以强化飞机：部件尚未强化，零件足够（%d）"
+
+#: game/scripts/hud_campaign.gd
+msgid "‹ Улучшить в ангаре"
+msgstr "‹ 在机库中强化"

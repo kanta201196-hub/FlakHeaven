@@ -66,6 +66,8 @@ func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(pr, Menu.C_AMBER.lightened(0.12 if hot else 0.0))
 	_text(Vector2(pr.position.x, pr.position.y + 39), Loc.t("ПРИГОТОВИТЬСЯ К ВЫЛЕТУ — %s ›") % Loc.t(PlaneClasses.DATA[c]["title"]), 19, Color(0.1, 0.08, 0.02), HORIZONTAL_ALIGNMENT_CENTER, pr.size.x)
 	_buttons.append([pr, "hg:prep"])
+	if Profile.upgrade_hint(c):   # 06.11 review, point 4: no upgrades and parts in stock — say so before take-off
+		_text(Vector2(0, pr.position.y - 14), Loc.t("Можно улучшить самолёт: узлы без улучшений, запчастей хватает (%d)") % Profile.parts(), 18, Color(1.0, 0.72, 0.35), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	if Main.DEBUG:
 		var dy := size.y - 110
 		_text(Vector2(60, dy - 10), "ОТЛАДКА (тестовая сборка):", 14, Color(0.7, 0.7, 0.7))

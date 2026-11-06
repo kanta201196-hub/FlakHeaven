@@ -40,11 +40,15 @@ static func prepare() -> void:
 	for o: Dictionary in Campaign.OPS:
 		var id := String(o["id"])
 		if not _art.has(id):
-			var path := ART_DIR + id + ".png"
-			_art[id] = load(path) if ResourceLoader.exists(path) else null
+			_art[id] = null
+			for ext in [".jpg", ".png"]:
+				var path := ART_DIR + id + ext
+				if ResourceLoader.exists(path):
+					_art[id] = load(path)
+					break
 
 
-## Folder with one picture per operation, named by its id (`pass.png`, `riverbed.png` …). The operation art work
+## Folder with one picture per operation, named by its id (`pass.jpg`, `riverbed.jpg` …; .png also read). The operation art work
 ## drops files here; without a file the card shows the live vignette or a plain frame.
 const ART_DIR := "res://art/ops/"
 static var _art: Dictionary = {}
@@ -343,7 +347,14 @@ func _plane(m: Main, r: Rect2) -> void:
 	_text(Vector2(x, y), "ЗАДАНИЕ КЛАССА · награда — редкая карточка", 15, C_TITLE)
 	y += 8.0
 	_para(Vector2(x, y + 14.0), Loc.t(String(ClassTask.DEFS[id]["brief"])), tw, 15, Color(1.0, 0.88, 0.55))
-	_button(Rect2(card.position.x + 12, card.end.y - 58.0, card.size.x - 24, 46.0), Loc.t("‹ Изменить в ангаре") + ("  !" if Profile.any_purchase() else ""), "campaign_back", 17)
+	if Profile.upgrade_hint(id):   # 06.11 review, point 4: the plane goes up with zero upgrades while parts lie unspent
+		var hr := Rect2(card.position.x + 12, card.end.y - 58.0 - 70.0, card.size.x - 24, 60.0)
+		ctrl.draw_rect(hr, Color(1.0, 0.6, 0.15, 0.16))
+		ctrl.draw_rect(hr, Color(1.0, 0.72, 0.35), false, 1.5)
+		_para(Vector2(hr.position.x + 12, hr.position.y + 24), Loc.t("Можно улучшить самолёт: узлы без улучшений, запчастей хватает (%d)") % Profile.parts(), hr.size.x - 24, 15, Color(1.0, 0.8, 0.5))
+		_button(Rect2(card.position.x + 12, card.end.y - 58.0, card.size.x - 24, 46.0), Loc.t("‹ Улучшить в ангаре"), "campaign_back", 17)
+	else:
+		_button(Rect2(card.position.x + 12, card.end.y - 58.0, card.size.x - 24, 46.0), Loc.t("‹ Изменить в ангаре") + ("  !" if Profile.any_purchase() else ""), "campaign_back", 17)
 	_go(Rect2(r.position.x, r.end.y - 110.0, r.size.x, 110.0))
 
 

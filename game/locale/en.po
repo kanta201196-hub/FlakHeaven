@@ -10220,3 +10220,11 @@ msgstr "PREPARE AND TAKE OFF"
 #: game/scripts/hud_campaign.gd
 msgid "ЗАКРЫТ"
 msgstr "LOCKED"
+
+#: game/scripts/hud_campaign.gd
+msgid "Можно улучшить самолёт: узлы без улучшений, запчастей хватает (%d)"
+msgstr "You can upgrade the plane: no node upgrades yet, enough parts (%d)"
+
+#: game/scripts/hud_campaign.gd
+msgid "‹ Улучшить в ангаре"
+msgstr "‹ Upgrade in the hangar"
