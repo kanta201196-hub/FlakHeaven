@@ -14,6 +14,7 @@ func run() -> Array:
 	_test_store_jobs()
 	_test_loadout()
 	_test_combat()
+	_test_tip_group()
 	return [_checks, _failed]
 
 
@@ -73,8 +74,35 @@ func _test_combat() -> void:
 	_check(b[0] == "bombs", "bombs in the bay group (got %s)" % b[0])
 	_check(not b.has("turret") and not b.has("flares"), "no turret or flares on a hardpoint")
 	var pts := SelfCheck.combat_points(Vector2(10, 20))
-	_check(pts.size() == 6 * 5, "five shots per plane (got %d)" % pts.size())
+	var pods := SelfCheck.planes().filter(func(pl: Array) -> bool: return SelfCheck.combat_loadout(pl[0], pl[1]).has("rockets"))
+	_check(pts.size() == 6 * 5 + pods.size(), "five shots per plane, a salvo on each with rocket pods (got %d)" % pts.size())
+	var salvo := pts.filter(func(p: Dictionary) -> bool: return p["sc_shot"] == "salvo")
+	_check(salvo.size() == pods.size() and pods.size() > 0, "a salvo shot per rocket-pod plane (got %d)" % salvo.size())
+	_check(salvo.all(func(p: Dictionary) -> bool: return p.get("sc_salvo", false) and not p.has("sc_fill")), "salvo at the gameplay camera")
 	_check(pts.filter(func(p: Dictionary) -> bool: return p.get("sc_check", false)).size() == 6, "one checked shot per plane")
 	_check(pts.all(func(p: Dictionary) -> bool: return p["pos"] == Vector2(10, 20)), "all at the given spot")
 	var close := pts.filter(func(p: Dictionary) -> bool: return p["sc_shot"] in ["nozzles", "muzzles", "stores"])
 	_check(close.all(func(p: Dictionary) -> bool: return p.has("sc_fill") and not p.has("zoom")), "close-ups sized by plane length, not a fixed zoom")
+
+
+## The «Оса» wing-tip group: missiles ride the tip rail; a rocket pod (Kanta, «Оса» 2: it stood half off the
+## wing tip) hangs under the outer wing at PlaneArt.OUTER_PAIR, inside the half-span and outboard of the inner pair
+func _test_tip_group() -> void:
+	_check(WeaponModels.on_tip_rail("aam") and WeaponModels.on_tip_rail("srm"), "missiles ride the tip rail")
+	_check(not WeaponModels.on_tip_rail("rockets") and not WeaponModels.on_tip_rail("bombs"), "pods and bombs do not")
+	var g3: Dictionary = PlaneClasses.GROUP3["fighter"]
+	for lv in [1, 2]:
+		var gi := PlaneClasses.group_defs("fighter", true).size() - 1
+		var h := Hardpoint.new(g3["name"], int(g3["slots"]), "aam")
+		h.mount_frac = float(g3["frac"])
+		var rail: Array = WeaponModels.mounts("fighter", lv, gi, h)
+		_check(rail.size() == 2 and rail.all(func(m: Dictionary) -> bool: return m["side"] == "tip"), "fighter_%d: aam on the tip rail" % lv)
+		h.weapon = "rockets"
+		var pods: Array = WeaponModels.mounts("fighter", lv, gi, h)
+		var tw := float(PlaneArt.plane_tex("fighter", lv).get_width())
+		var st: Vector2 = PlaneArt.OUTER_PAIR["fighter_%d" % lv]
+		_check(pods.size() == 2 and pods.all(func(m: Dictionary) -> bool: return m["side"] == "under"), "fighter_%d: rocket pods under the wing" % lv)
+		_check(pods.all(func(m: Dictionary) -> bool: return absf(absf((m["p"] as Vector2).y) / tw - st.y) < 0.001 and absf((m["p"] as Vector2).x / tw - st.x) < 0.001), "fighter_%d: pods at the outer station" % lv)
+		var inner: Vector2 = PlaneArt.WING_PAIR["fighter_%d" % lv]
+		var half := float(PlaneArt.shape_info("fighter", lv)["half"]) / tw
+		_check(st.y > inner.y and st.y < half, "fighter_%d: outer station between the inner pair and the tip" % lv)
