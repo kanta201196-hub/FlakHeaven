@@ -16,7 +16,7 @@ const KINDS := {
 	"s_gun": ["res://models/biome2/a01_battery_gun", 56.0, 64.0],
 	"s_gun_broken": ["res://models/biome2/a01_battery_gun_broken", 56.0, 64.0],
 	"s_bunker": ["res://models/biome2/a02_bunker_coast", 120.0, 140.0],
-	"s_radar": ["res://models/biome2/a03_radar_mast", 30.0, 34.0],
+	"s_radar": ["res://models/biome2/a03_radar_mast", 50.0, 54.0],   # 9 m pad and fence at ~6 px/m (B2-Q05)
 	"s_lighthouse": ["res://models/biome2/a04_lighthouse", 80.0, 90.0],
 	"s_pier_a": ["res://models/biome2/a05_pier_a", 160.0, 210.0],
 	"s_pier_b": ["res://models/biome2/a06_pier_b", 150.0, 200.0],
@@ -59,7 +59,7 @@ const SIZE := {
 	"s_gun": Vector2(56.0, 64.0),
 	"s_gun_broken": Vector2(56.0, 64.0),
 	"s_bunker": Vector2(120.0, 140.0),
-	"s_radar": Vector2(30.0, 34.0),
+	"s_radar": Vector2(50.0, 54.0),
 	"s_lighthouse": Vector2(80.0, 90.0),
 	"s_pier_a": Vector2(160.0, 210.0),
 	"s_pier_b": Vector2(150.0, 200.0),
@@ -99,6 +99,12 @@ const SIZE := {
 }
 const HOUSES := ["s_house_1", "s_house_2", "s_house_3", "s_house_4", "s_house_5", "s_house_6", "s_house_7", "s_house_8"]
 const SMALL := ["s_shrub", "s_reed", "s_rock", "s_hedgehog", "s_tetrapod", "s_buoy_red", "s_buoy_green", "s_olive_a", "s_olive_b", "s_tree", "s_pine_a", "s_pine_b"]
+# Worker-thread copies of the lists plan() reads: plan() runs on Terrain3D's chunk tasks, and an element of a
+# const (read-only) Array comes back through one scratch slot per array, so threads reading HOUSES at once took
+# each other's house (the BiomeProps race fixed in #488, tests/sea_props_thread_test.gd). Built when the script
+# loads, on the main thread; the consts stay the source of truth.
+static var _houses := PackedStringArray(HOUSES)
+static var _small := PackedStringArray(SMALL)
 
 ## доли клеток по композициям («Сколько чего на одну карту», вариант A): остальное — только природа
 const COMP_KEYS: PackedStringArray = ["harbor", "cape", "battery", "beach", "reef"]
@@ -309,7 +315,7 @@ func _harbor(o: Vector2) -> void:
 			break
 		var d := _rng.randf_range(110.0, 460.0)
 		var q := p + n * d + t * _rng.randf_range(-1.0, 1.0) * (160.0 + d * 0.5)
-		var kind: String = HOUSES[_rng.randi() % HOUSES.size()]
+		var kind: String = _houses[_rng.randi() % _houses.size()]
 		var w := size(kind)
 		if shore(q) < 60.0 or slope(q) > 0.55 or h01(q) > 0.45 or not room(q, w * 0.42):
 			continue
@@ -362,8 +368,8 @@ func _cape(o: Vector2) -> void:
 	if shore(hq) > 25.0 and slope(hq) < 0.5 and room(hq, 28.0):
 		put("s_house_5", hq, size("s_house_5"), n.angle(), 30.0)
 	var rq := p + n * 170.0
-	if shore(rq) > 80.0 and slope(rq) < 0.5 and room(rq, 20.0):
-		put("s_radar", rq, size("s_radar"), _rng.randf() * TAU, 20.0)
+	if shore(rq) > 80.0 and slope(rq) < 0.5 and room(rq, 30.0):
+		put("s_radar", rq, size("s_radar"), _rng.randf() * TAU, 30.0)
 	# буи у отмели: красный по одну сторону фарватера, зелёный — по другую
 	for sg: float in [-1.0, 1.0]:
 		var bq := p + sea * _rng.randf_range(170.0, 240.0) + sea.orthogonal() * sg * _rng.randf_range(90.0, 140.0)
@@ -527,4 +533,4 @@ func _nature(o: Vector2) -> void:
 			if kind == "s_cliff_a":
 				put(kind, q, w, seaward(q).angle() + PI * 0.5, w * 0.4)
 			else:
-				put(kind, q, w, _rng.randf() * TAU, w * 0.3 if kind in SMALL else w * 0.45)
+				put(kind, q, w, _rng.randf() * TAU, w * 0.3 if _small.has(kind) else w * 0.45)

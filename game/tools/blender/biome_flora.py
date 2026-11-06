@@ -17,7 +17,8 @@
 Единицы — как у моделей биома (tools/model_lab/biome_prep.py): стоит на z = 0 (в Godot y = 0), центр
 в нуле, наибольший размер в плане = 1 — игра масштабирует под ширину в пикселях (biome_props.gd).
 
-Запуск (bpy 5.x): python3 biome_flora.py <папка вывода> [orchard] [shrub] [sandbag] [poplar]
+  cypress, broadleaf — Archipelago trees a37_pine_b and a38_tree_leaf (biome 2, B2-Q07), same build.
+Запуск (bpy 5.x): python3 biome_flora.py <папка вывода> [orchard] [shrub] [sandbag] [poplar] [cypress] [broadleaf]
   → <папка>/b05_orchard_tree.glb, b06_shrub.glb, b10_sandbag_post.glb, b04_poplar.glb (+ .blend в $FH_SRC, если задан)
 Облегчённое дерево («карточки») после этого: tools/model_lab/bake_impostor.gd (см. его шапку)."""
 import sys, os, math
@@ -554,5 +555,105 @@ def sandbag():
     normalize_export(ob, "b10_sandbag_post")
 
 
+# ---------------- Archipelago: cypress and broadleaf tree (biome 2, backlog B2-Q07) ----------------
+def cypress():
+    """Mediterranean cypress «a37_pine_b» (Kanta's weak-models list 28.10: the old one was a PS1-style card, 100
+    triangles). The columnar form of the island cypress: a straight trunk hidden almost to the ground, many short
+    branches rising steeply and hugging it, a dense dark blue-green crown in a narrow flame shape (widest at a
+    quarter of the height, a soft pointed tip), scale-leaf sprays as small alpha cards packed close, so the crown
+    reads solid from above with a broken edge. ~14 m high, ~2.6 m wide; one mesh, bark and leaf materials."""
+    reset()
+    rng = np.random.default_rng(57)
+    B = Builder()
+    bark_c, bark_n = T.bark("cypress_bark", 29, base=(0.42, 0.34, 0.27))
+    leaf_c, leaf_n = T.leaves("cypress_leaves", 31, n_leaf=160, leaf_len=(0.07, 0.11), width=0.5,
+                              base=(0.2, 0.27, 0.17), dry=(0.36, 0.34, 0.22), dry_share=0.06, var=0.06)
+    m_bark = material("cypress_bark", bark_c, bark_n, nstrength=1.1)
+    m_leaf = material("cypress_leaves", leaf_c, leaf_n, alpha=True, nstrength=0.8)
+    white = srgb((1.0, 1.0, 1.0))
+    H, Z0, RMAX = 14.0, 0.5, 1.3
+
+    def env(z):
+        t = (z - Z0) / (H - Z0)
+        if t <= 0.0 or t >= 1.0:
+            return 0.12
+        return RMAX * (math.sin(math.pi * min(1.0, t ** 0.55)) ** 0.6) * (1.0 - 0.55 * t) + 0.15
+
+    tr = [Vector((math.sin(z * 0.4) * 0.04, math.cos(z * 0.3) * 0.04, z)) for z in np.linspace(-0.1, H * 0.95, 11)]
+    B.sweep(tr, [0.24, 0.2, 0.18] + [0.17 * (1 - i / 11) + 0.02 for i in range(3, 11)], white, 0, sides=8, wobble=0.06, seed=5.0)
+    clumps = []
+    golden = math.pi * (3 - math.sqrt(5))
+    for i in range(64):
+        zb = Z0 + (H * 0.92 - Z0) * (i / 63) ** 0.95
+        a = i * golden + rng.uniform(-0.3, 0.3)
+        el = math.radians(rng.uniform(66, 80))
+        L = min(env(zb + 0.8) / max(math.cos(el), 0.2) * 0.75, H - zb)
+        d = Vector((math.cos(a) * math.cos(el), math.sin(a) * math.cos(el), math.sin(el)))
+        p = branch(B, Vector((0, 0, zb)), d, L, 0.045, 0.012, white, 0, rng, segs=3, curve=0.3, sides=4)
+        for k in (1, 2, 3):
+            q = p[k]
+            rr = env(q.z)
+            flat = Vector((q.x, q.y, 0.0))
+            if flat.length > rr * 0.85:
+                q = Vector((flat.x * rr * 0.85 / flat.length, flat.y * rr * 0.85 / flat.length, q.z))
+            clumps.append((q, rng.uniform(0.45, 0.6) * (0.7 + 0.3 * env(q.z) / RMAX)))
+    for z in np.arange(H * 0.9, H * 1.0, 0.25):   # the soft tip
+        clumps.append((Vector((0, 0, z)), 0.3))
+    cc = Vector((0, 0, H * 0.4))
+    foliage(B, rng, clumps, cc, (RMAX * 1.2, RMAX * 1.2, H * 0.5), 0.55, 1, 14, dry_share=0.05, dark=0.36, tint=0.9)
+    ob = B.finish("a37_pine_b", [m_bark, m_leaf])
+    normalize_export(ob, "a37_pine_b")
+
+
+def broadleaf():
+    """Broadleaf island tree «a38_tree_leaf» (weak-models list 28.10, the old one a 128 px alpha card set): in
+    the spirit of the carob and holm-oak of Mediterranean slopes — a short thick leaning trunk that forks low into
+    three to four limbs, a broad dome-shaped evergreen crown, dark glossy-looking (but matte) leaves in big clumps
+    with gaps, the underside darker. ~8 m crown, ~6.5 m high; the orchard tree's build."""
+    reset()
+    rng = np.random.default_rng(63)
+    B = Builder()
+    bark_c, bark_n = T.bark("broadleaf_bark", 33, base=(0.31, 0.27, 0.23))
+    leaf_c, leaf_n = T.leaves("broadleaf_leaves", 35, n_leaf=170, leaf_len=(0.08, 0.12), width=0.5,
+                              base=(0.24, 0.31, 0.16), dry=(0.44, 0.42, 0.25), dry_share=0.08, var=0.07)
+    m_bark = material("broadleaf_bark", bark_c, bark_n, nstrength=1.2)
+    m_leaf = material("broadleaf_leaves", leaf_c, leaf_n, alpha=True, nstrength=0.8)
+    white = srgb((1.0, 1.0, 1.0))
+    lean = Vector((0.18, 0.06, 1)).normalized()
+    tr = [Vector((0, 0, -0.05))]
+    for i in range(1, 6):
+        tr.append(tr[-1] + lean * 0.35 + Vector((math.sin(i * 1.9) * 0.06, math.cos(i * 1.4) * 0.06, 0)))
+    B.sweep(tr, [0.5, 0.38, 0.33, 0.31, 0.3, 0.29], white, 0, sides=11, cap=False, wobble=0.14, seed=2.0)
+    top = tr[-1]
+    clumps = []
+    a0 = rng.uniform(0, math.tau)
+    for i in range(4):
+        a = a0 + math.tau * i / 4 + rng.uniform(-0.3, 0.3)
+        el = math.radians(rng.uniform(30, 45))
+        d = Vector((math.cos(a) * math.cos(el), math.sin(a) * math.cos(el), math.sin(el)))
+        p = branch(B, top - lean * rng.uniform(0.0, 0.3), d, rng.uniform(2.0, 2.6), 0.2, 0.1, white, 0, rng,
+                   segs=5, curve=0.3, sides=8)
+        for k0, side in ((2, -1), (4, 1), (5, -1)):
+            dd = (p[k0] - p[k0 - 1]).normalized()
+            d2 = (Matrix.Rotation(side * rng.uniform(0.5, 0.8), 3, "Z") @ dd + Vector((0, 0, 0.3))).normalized()
+            p2 = branch(B, p[k0], d2, rng.uniform(1.0, 1.5), 0.08, 0.03, white, 0, rng, segs=3, curve=0.2, sides=6)
+            clumps.append((p2[-1] + Vector((0, 0, 0.15)), rng.uniform(0.75, 0.95)))
+            clumps.append((p2[1] + Vector((0, 0, 0.35)), rng.uniform(0.6, 0.8)))
+        clumps.append((p[-1] + Vector((0, 0, 0.2)), 0.9))
+    xs = [c for c, r in clumps]
+    cc = sum(xs, Vector()) / len(xs)
+    # close the dome: clumps over the fork and round the crown's middle, so it is one broad crown, not lobes
+    for i in range(9):
+        a = math.tau * i / 9 + rng.uniform(-0.2, 0.2)
+        rr = rng.uniform(0.6, 1.8)
+        clumps.append((cc + Vector((math.cos(a) * rr, math.sin(a) * rr, 0.6 + rng.uniform(-0.2, 0.4) - 0.15 * rr)), 1.0))
+    clumps.append((cc + Vector((0, 0, 0.9)), 1.1))
+    cc.z -= 0.4
+    foliage(B, rng, clumps, cc, (4.0, 4.0, 1.8), 0.7, 1, 40, dark=0.3, tint=0.85)
+    ob = B.finish("a38_tree_leaf", [m_bark, m_leaf])
+    normalize_export(ob, "a38_tree_leaf")
+
+
 for k in ONLY:
-    {"orchard": orchard, "shrub": shrub, "sandbag": sandbag, "poplar": poplar}[k]()
+    {"orchard": orchard, "shrub": shrub, "sandbag": sandbag, "poplar": poplar, "cypress": cypress,
+     "broadleaf": broadleaf}[k]()

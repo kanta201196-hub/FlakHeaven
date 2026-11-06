@@ -2,6 +2,7 @@ extends Node
 ## Working part of props_thread_test.gd: builds the world terrain like the game, plans the props of a block of
 ## chunks on the main thread, then plans them again many times at once on worker threads and compares every kind,
 ## count and transform. Any difference, or a kind BiomeProps does not know, fails the test.
+## With sea = true (sea_props_thread_test.gd) the same check runs on the Archipelago (SeaProps.plan).
 
 const SIDE := 6        # chunks from -SIDE to SIDE - 1 on each axis
 const ROUNDS := 6      # parallel passes over the block; the race showed in 2–4 of 6 before the fix
@@ -10,9 +11,12 @@ var _keys: Array[Vector2i] = []
 var _ctxs: Array = []
 var _res: Array = []
 var _t: Terrain3D
+## Archipelago pass: Biome.id is set before the terrain is built; SeaProps.KINDS are known kinds too
+var sea := false
 
 
 func _ready() -> void:
+	Biome.id = Biome.ARCHIPELAGO if sea else Biome.HIGHLAND
 	var bg: Background = load("res://scripts/background.gd").new()
 	add_child(bg)
 	await get_tree().process_frame
@@ -29,7 +33,7 @@ func _ready() -> void:
 	var ref := []
 	for i in _keys.size():
 		ref.append(_sig(_t.props.plan(_keys[i], _ctxs[i])))
-	print("UNIT: props thread — main-thread plan hash %d" % hash(ref))
+	print("UNIT: props thread%s — main-thread plan hash %d" % [" (sea)" if sea else "", hash(ref)])
 	var failed := 0
 	var rocks := 0
 	for r in ROUNDS:
@@ -40,16 +44,16 @@ func _ready() -> void:
 		for i in _keys.size():
 			var put: Dictionary = _res[i]
 			for kind: String in put:
-				if kind == "" or not BiomeProps.KINDS.has(kind):
+				if kind == "" or not (BiomeProps.KINDS.has(kind) or sea and SeaProps.KINDS.has(kind)):
 					failed += 1
 					print("FAIL: unknown kind '%s' in chunk %s, round %d" % [kind, _keys[i], r])
-				elif kind in BiomeProps.ROCK_KINDS:
+				elif sea or kind in BiomeProps.ROCK_KINDS:   # sea: every placed prop counts
 					rocks += (put[kind] as Array).size()
 			var sig := _sig(put)
 			if sig != ref[i]:
 				failed += 1
 				print("FAIL: chunk %s, round %d: worker plan differs\n  worker %s\n  main   %s" % [_keys[i], r, sig, ref[i]])
-	print("UNIT: props thread — %d chunks × %d rounds, %d rocks placed, %d failed" % [_keys.size(), ROUNDS, rocks, failed])
+	print("UNIT: props thread%s — %d chunks × %d rounds, %d props placed, %d failed" % [" (sea)" if sea else "", _keys.size(), ROUNDS, rocks, failed])
 	get_tree().quit(1 if failed > 0 or rocks == 0 else 0)
 
 
