@@ -710,6 +710,73 @@ static func branch_def(weapon: String, b: String, profile := "") -> Dictionary:
 	return BRANCHES_W[weapon][b] if BRANCHES_W.has(weapon) else BRANCHES[b]
 
 
+## Kanta 06.11 («что такое к профилю? непонятные описания»): the real numbers a mastery rank card changes on
+## group `g` — damage per hit, reload, lock range, splash radius… now → after one more rank of branch `b`
+## ("power", "rate", "profile"). Measured on the group itself (the rank is added, read and taken back), so class
+## bonus, modules and floors count: a reload already at its floor says so instead of promising a cut.
+static func branch_line(p: Player, g: Hardpoint, b: String) -> String:
+	var keep := [g.branch, g.branch_rank]
+	var before := _measure(p, g)
+	g.branch = b
+	g.branch_rank = (int(keep[1]) if String(keep[0]) == b else 0) + 1
+	var after := _measure(p, g)
+	g.branch = keep[0]
+	g.branch_rank = keep[1]
+	var floor_note := Loc.t(" (уже на нижнем пределе)")
+	if b == "rate":
+		return CardText.step(Loc.t("Перезарядка"), CardText.sec(before["cd"]), CardText.sec(after["cd"]), floor_note)
+	if b == "power" and BRANCHES_W.has(g.weapon):
+		return CardText.step(Loc.t("Радиус"), DistText.text(before["range"]), DistText.text(after["range"]))
+	var key := WeaponProfiles.rank_key(g.weapon, g.profile) if b == "profile" else "dmg"
+	match key:
+		"dmg":
+			return CardText.step(Loc.t("Урон за попадание"), CardText.num(before["dmg"]), CardText.num(after["dmg"]))
+		"range":
+			return CardText.step(Loc.t("Дальность захвата"), DistText.text(before["range"]), DistText.text(after["range"]))
+		"splash", "intercept":
+			var lbl := Loc.t("Радиус осколков") if key == "splash" else Loc.t("Радиус перехвата")
+			return CardText.step(lbl, DistText.text(float(before["feat"])), DistText.text(float(after["feat"])))
+		"split_k":
+			return CardText.step(Loc.t("Урон суббоеприпаса"), CardText.num(before["dmg"] * float(before["feat"])), CardText.num(after["dmg"] * float(after["feat"])))
+		"armor_k":
+			return CardText.step(Loc.t("Урон по броне"), CardText.factor(before["feat"]), CardText.factor(after["feat"]))
+		"turn":
+			return CardText.step(Loc.t("Доворот ракеты"), CardText.factor(before["feat"]), CardText.factor(after["feat"]))
+	return ""
+
+
+## Numbers of group `g` for the card lines: damage per hit (with the hangar branch), reload, range, and the value of
+## its profile's ranked feature (`feat`, 0 without a profile).
+static func _measure(p: Player, g: Hardpoint) -> Dictionary:
+	var key := WeaponProfiles.rank_key(g.weapon, g.profile) if g.profile != "" else ""
+	return {"dmg": g.dmg() * Profile.wk(g.weapon, "dmg"), "cd": g.reload_time(p), "range": g.range_px(),
+		"feat": float(g.prof().get(key, 1.0 if key in WeaponProfiles.FACTOR_KEYS else 0.0)) if key != "" else 0.0}
+
+
+## Kanta 06.11 («отличаются ли показатели карточек от рангов?»): the «Э+» reserve card in real numbers — group
+## `gi` (−1 — the course gun «Дятел»): damage per hit now → after, and reload for a hardpoint (the gun's Э+ adds
+## damage only; a reload at its floor says so). Every Э+ step is the same +8 % damage of the base, −4 % reload.
+static func evo_plus_desc(p: Player, gi: int) -> String:
+	var out := ""
+	if gi < 0:
+		var d0 := p.guns.base_damage()
+		p.gun_evo_plus += 1
+		var d1 := p.guns.base_damage()
+		p.gun_evo_plus -= 1
+		out = Loc.t("«Дятел», Э+ %d → %d из 5") % [p.gun_evo_plus, p.gun_evo_plus + 1]
+		out += "\n" + CardText.step(Loc.t("Урон снаряда"), CardText.num(d0), CardText.num(d1))
+		return out + "\n" + Loc.t("(+8 % урона за шаг)")
+	var g: Hardpoint = p.groups[gi]
+	var before := _measure(p, g)
+	g.evo_plus += 1
+	var after := _measure(p, g)
+	g.evo_plus -= 1
+	out = Loc.t("%s, Э+ %d → %d из 5") % [g.evo_title(), g.evo_plus, g.evo_plus + 1]
+	out += "\n" + CardText.step(Loc.t("Урон за попадание"), CardText.num(before["dmg"]), CardText.num(after["dmg"]))
+	out += "\n" + CardText.step(Loc.t("Перезарядка"), CardText.sec(before["cd"]), CardText.sec(after["cd"]), Loc.t(" (уже на нижнем пределе)"))
+	return out + "\n" + Loc.t("(+8 % урона и −4 % перезарядки за шаг)")
+
+
 ## Mastery branches offered to group `g` at its first mastery card: a weapon with a profile ranks that profile
 ## (one card, PG-06 PR 3, Kanta 31.10 «3b»), the others keep the «or-or» pair.
 static func mastery_branches(g: Hardpoint) -> Array:
@@ -986,7 +1053,8 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 		"branch":
 			var bgr: Hardpoint = p.groups[int(card["group"])]
 			var bd: Dictionary = branch_def(bgr.weapon, card["branch"], bgr.profile)
-			card["desc"] = Loc.t("%s: %s, до %d рангов") % [bgr.name, Loc.t(bd["desc"]), BRANCH_MAX]
+			card["desc"] = Loc.t("%s, ранг %d → %d из %d") % [bgr.name, bgr.branch_rank, bgr.branch_rank + 1, BRANCH_MAX] \
+				+ "\n" + branch_line(p, bgr, String(card["branch"])) + "\n" + Loc.t("(%s)") % Loc.t(bd["desc"])
 			if card["first"] and card["branch"] != "profile":
 				var other := "power" if card["branch"] == "rate" else "rate"
 				card["desc"] += Loc.t("\nИли-или: «%s» для этого оружия закроется до конца вылета") % Loc.t(branch_def(bgr.weapon, other)["title"])
@@ -1022,7 +1090,7 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 						var cs := syn_def(p, p.course)
 						card["desc"] = Loc.t("+1 очко «%s» — к связке «%s» (до 3 за вылет)") % [Loc.t(Prog.tag_title(cs["tag"])), Loc.t(cs["title"])]
 					else:
-						card["desc"] = "Модернизация: +8% урона, −4% перезарядки (до 5 раз)"
+						card["desc"] = evo_plus_desc(p, int(card["group"]))
 		_:
 			card["desc"] = module_desc(p, card["id"], k)
 			if MODULE_TOTAL.has(String(card["id"])):

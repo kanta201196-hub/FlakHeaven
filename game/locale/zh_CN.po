@@ -10337,3 +10337,129 @@ msgstr "%d 米"
 #, c-format
 msgid "%s км"
 msgstr "%s 公里"
+
+#: game/scripts/plane_stats.gd
+msgid "Урон в секунду"
+msgstr "每秒伤害"
+
+#: game/scripts/plane_stats.gd
+msgid "по воздуху"
+msgstr "对空"
+
+#: game/scripts/plane_stats.gd
+msgid "по земле"
+msgstr "对地"
+
+#: game/scripts/plane_stats.gd
+msgid "Перезарядка уклонения"
+msgstr "闪避冷却"
+
+#: game/scripts/plane_stats.gd
+msgid "Перезарядка ловушек"
+msgstr "干扰弹冷却"
+
+#: game/scripts/plane_stats.gd
+msgid "Топливо"
+msgstr "燃油"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%d км/ч"
+msgstr "%d 公里/时"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%d °/с"
+msgstr "%d °/秒"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%s мин"
+msgstr "%s 分钟"
+
+#: game/scripts/card_text.gd
+#, c-format
+msgid "%s с"
+msgstr "%s 秒"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "%s, ранг %d → %d из %d"
+msgstr "%s，等级 %d → %d（共 %d）"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "(%s)"
+msgstr "（%s）"
+
+#: game/scripts/cards.gd
+msgid " (уже на нижнем пределе)"
+msgstr "（已达下限）"
+
+#: game/scripts/cards.gd
+msgid "Радиус"
+msgstr "半径"
+
+#: game/scripts/cards.gd
+msgid "Урон за попадание"
+msgstr "每次命中伤害"
+
+#: game/scripts/cards.gd
+msgid "Дальность захвата"
+msgstr "锁定距离"
+
+#: game/scripts/cards.gd
+msgid "Радиус осколков"
+msgstr "破片半径"
+
+#: game/scripts/cards.gd
+msgid "Радиус перехвата"
+msgstr "拦截半径"
+
+#: game/scripts/cards.gd
+msgid "Урон суббоеприпаса"
+msgstr "子弹药伤害"
+
+#: game/scripts/cards.gd
+msgid "Урон по броне"
+msgstr "对装甲伤害"
+
+#: game/scripts/cards.gd
+msgid "Доворот ракеты"
+msgstr "导弹转向"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "«Дятел», Э+ %d → %d из 5"
+msgstr "«啄木鸟»，E+ %d → %d（共 5）"
+
+#: game/scripts/cards.gd
+msgid "Урон снаряда"
+msgstr "炮弹伤害"
+
+#: game/scripts/cards.gd
+msgid "(+8 % урона за шаг)"
+msgstr "（每级伤害 +8%）"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "%s, Э+ %d → %d из 5"
+msgstr "%s，E+ %d → %d（共 5）"
+
+#: game/scripts/cards.gd
+msgid "(+8 % урона и −4 % перезарядки за шаг)"
+msgstr "（每级伤害 +8%，冷却 −4%）"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ХАРАКТЕРИСТИКИ · самолёт ур. %d"
+msgstr "性能 · 飞机 %d 级"
+
+#: game/scripts/hud_hangar.gd
+msgid "зелёным — что даст улучшение"
+msgstr "绿色 — 升级后的效果"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ур. %d: %s"
+msgstr "%d 级：%s"

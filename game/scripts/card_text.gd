@@ -1,7 +1,7 @@
 class_name CardText
 extends RefCounted
 ## Pure helpers for texts on level-up cards, kept apart from `Cards` so unit tests can load
-## them without the game scene. Tests: game/tests/card_total_test.gd.
+## them without the game scene. Tests: game/tests/card_text_test.gd.
 
 
 ## Total bonus after taking a card, from the base 100%: `now` × (1 + `step` × `k`) − 1, as
@@ -37,3 +37,33 @@ static func level_split(text: String, from: int, to: int) -> Dictionary:
 		elif a > to:
 			later.append([a, m.get_string(3)])
 	return {"now": now, "later": later, "base": base}
+
+
+## Decimal mark of number text `s` for the player's language: a comma in Russian (as `DistText`), a point otherwise.
+static func dec(s: String) -> String:
+	return s.replace(".", ",") if TranslationServer.get_locale().begins_with("ru") else s
+
+
+## A damage or other count for a card line: whole above 10 («34»), one decimal below («7,5»), so a
+## small step (+8 %) still shows.
+static func num(v: float) -> String:
+	if absf(v) >= 10.0:
+		return "%d" % roundi(v)
+	return dec(("%.1f" % v).trim_suffix(".0"))
+
+
+## Seconds with one decimal (comma in Russian): «3 с», «2,9 с».
+static func sec(v: float) -> String:
+	return Loc.t("%s с") % dec(("%.1f" % v).trim_suffix(".0"))
+
+
+## Factor «×1,3» (two decimals when needed: «×1,12»).
+static func factor(v: float) -> String:
+	return "×" + dec(("%.2f" % v).trim_suffix("0").trim_suffix(".0"))
+
+
+## One «now → after» line of a card: «Урон за попадание: 30 → 34». Equal ends say so instead of a fake step.
+static func step(label: String, now: String, after: String, same_note := "") -> String:
+	if now == after:
+		return "%s: %s%s" % [label, now, same_note]
+	return "%s: %s → %s" % [label, now, after]

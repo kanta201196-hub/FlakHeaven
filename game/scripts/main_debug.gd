@@ -973,6 +973,10 @@ func _run_autotest(delta: float) -> void:
 						m.input_ctl.hangar_action("node:armor")
 						return
 					_shot("hangar_plane")
+					# Kanta 06.11: next frame — the cursor on the «Двигатель» card, the stats panel shows its gain in green
+					m.get_viewport().warp_mouse(Vector2(1000.0, 369.0))
+				elif not _shots_done.has("hangar_hover"):
+					_shot("hangar_hover")
 					m.hangar_tab = "weapons"
 					m.input_ctl.hangar_action("tier:aam:1:a")
 					m.input_ctl.hangar_action("tier:aam:2:b")
