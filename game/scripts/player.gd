@@ -13,6 +13,8 @@ var max_hp := 100.0
 var hp := 100.0
 var radius := 12.0 # хитбокс ~60% от размера спрайта
 var bank := 0.0
+## Bank the model shows (FlightBalance, F1 `bank_soft`): follows `bank` slower when the toggle is on.
+var bank_vis := 0.0
 
 ## Множители и прибавки от карточек
 var mods := {

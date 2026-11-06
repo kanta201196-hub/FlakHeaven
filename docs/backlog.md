@@ -55,6 +55,7 @@ One numbered list for the build under test (3.5-s16). Kanta sends items as he pl
 | S16-26 | A new «база противника» task is issued during the evacuation after the «Крепость» is killed — looks superfluous; Kanta decides | Геймдизайн | done 06.11: no new task while the evacuation gates are open |
 | S16-27 | Evacuation window burns out 2–3 times per sortie while the player fights (gate 1 of 3 moves away); is the «Окно эвакуации закрыто» hint understood? | Интерфейс + Геймдизайн | done 06.11 behind F1 `evac_hold` = 1: the window after the final boss with the goal done does not close |
 | S16-28 | System mouse arrow is still visible on cutscenes and in dialogues (`main.gd:204` hides it only in playing/cutscene; probably related to S16-01) | Интерфейс | done 06.11, PR #567 — check in the next build |
+| S16-29 | Turn bank: the plane levels out of the bank too fast (Kanta 06.11). Visible bank now rolls in ×0.75 and levels out ×0.5 slower, flight bank untouched; F1 `bank_soft` (+ `bank_soft_in/out`), off until Kanta's «ок» (R-22). PR #573 | Замедлить выход самолёта из крена | на проверке в следующей сборке |
 
 ## Правки по сборке 3.5-s15
 
