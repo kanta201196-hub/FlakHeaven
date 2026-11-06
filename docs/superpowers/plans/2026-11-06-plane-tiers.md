@@ -73,6 +73,7 @@ Profile version bump. Old plane 1 → tier 2, old plane 2 → tier 3 (`nodes`/`n
 - `Profile`: `plane2: bool` → `tiers: Array[int]` (owned), `plane_sel` 1–5, per-tier dicts `kits`, `decals` (and `nodes` per question 1); `plane_lvl()` keeps its name and returns the tier; `can_buy_plane2` / `buy_plane2` → `can_buy_tier(c, t)` / `buy_tier(c, t)`; `--plane=1..5`.
 - Every `plane_lvl == 2` test becomes a tier rule from `PlaneTiers` (heavy hardpoint, branch tier 3, reroll, kit keys, decal keys, telemetry field `plane_lvl` keeps the name with values 1–5).
 - `PlaneArt`, `WeaponModels.mounts`, `Hangar3D` resolve the model through `PlaneTiers.MODEL`.
+- Model paths built as `"%s_%d" % [cls, lvl]` today (3D thread, 06.11): `hangar3d.gd:878`, `title_flight.gd:151–153`, `self_check.gd:335`, `render3d.gd:658/672` (sprite basename); `PlaneArt` reads `res://art/planes/<cls>_<lvl>.png` for slot points. All go through `PlaneTiers.MODEL`. Agreed names: `fh_battle_<cls>_t1|t4|t5`, `fh_hangar_<cls>_t1|t4|t5`, sprite `<cls>_t1.png` etc.; `_1` / `_2` stay as tiers 2 / 3. The 3D thread ships each model with its top-down sprite and `WING_PAIR` / `OUTER_PAIR` entries if needed; order tier 1 trio → Грач 4 → the rest; dates wait for Kanta's «да» on the sources page https://claude.ai/artifact/47ZGcWwvu5L34zKzenkAZB.
 - `Demo`: `tier_ok(t)`; texts in `Demo.OPENS` and `Campaign.OPS[*].opens` updated (no more «Самолёт ур. 2 … тяжёлый подвес»).
 - Player text through `.po` keys (ru source, en, zh_CN).
 
