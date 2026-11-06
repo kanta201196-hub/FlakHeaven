@@ -23,6 +23,9 @@ var branch := ""         # S9-15: ветка мастерства с 35-го у�
 var branch_rank := 0
 ## PG-06: weapon profile chosen at the fork (`WeaponProfiles`), "" before the fork or for weapons without one
 var profile := ""
+## Player whose numbers this group reads instead of the flying one (`PlaneStats` builds a throwaway plane for the
+## hangar, where `Main.I.player` is absent or left from the last sortie); null — the flying player
+var stats_owner: Player = null
 var _side := 1.0
 var _icd := 0.0          # турели: перехват ракет (зонтик, «Дикобраз», нашивка)
 var _barrel := 0
@@ -217,7 +220,7 @@ func reload_time(p: Player) -> float:
 
 ## U-07: множитель модернизации от ступени 3 ветки (только самолёт ур. 2)
 func _evo_k(key: String) -> float:
-	var p := Main.I.player if Main.I != null else null
+	var p := _owner()
 	if not evo or p == null:
 		return 1.0
 	return Profile.evo_k(weapon, key, p.plane_lvl)
@@ -231,9 +234,16 @@ func evo_title() -> String:
 	return String(Prog.EVOS[weapon]["title"]) + ("" if v == "" else " · " + v)
 
 
+## The player whose class, mods and synergies scale this group: `stats_owner` when set, else the flying player.
+func _owner() -> Player:
+	if stats_owner != null:
+		return stats_owner
+	return Main.I.player if Main.I != null else null
+
+
 ## Множители урона от класса самолёта и связок (2.8)
 func _owner_k() -> float:
-	var p := Main.I.player if Main.I != null else null
+	var p := _owner()
 	if p == null:
 		return 1.0
 	var k := 1.0
