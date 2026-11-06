@@ -46,7 +46,7 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 - Builds are delivered from the cloud without the home PC: itch.io via butler with the environment key, Yandex Disk via the Disk API «upload by URL» (Disk pulls the file server-side; direct PUT from the cloud is cut after ~30 s on slow routes). The PC is a fallback only (Kanta, 2026-11-06, R-26).
 - Balance: all balance changes of a build cycle form one numbered package (one journal line, each change «было → стало»), read against the next build log (Kanta, 2026-11-06, R-28; replaces «one change per build»).
 - Before a build: the self-check contact sheet (hangar and combat) is attached to the build message (R-23). Command: `nohup tools/ci/selfcheck.sh &` (presets 0, 2, 3, Forward+ via lavapipe, about an hour per preset; `--quick` — preset 2 only, `--compat` — GL Compatibility, `--only=bomber_2` — one plane). Output: `builds/selfcheck-<commit>/index.html`; exit code 1 on a failed capture or a `SCRIPT ERROR`.
-- Feel and effects changes Kanta wants to judge (turret firing, flight feel, effects) go into `main` behind a toggle, off by default until Kanta's «ок» (Kanta, 2026-10-31, R-22).
+- Feel and effects changes Kanta wants to judge (turret firing, flight feel, effects) go into `main` behind an F1 toggle that is **on by default**, so Kanta tries them in the next build; 0 gives the old look, and Kanta's «нет» turns it off or removes it (Kanta, 2026-10-31, R-22; changed 2026-11-06: «сначала включены, я же хочу их попробовать» — the tester build has no F1 outside «Битва асов»).
 - Debug flags: `--tester`, `--report-url=…`, `--mesatest`, `--reporttest`, `--turbo`.
 
 ## Superpowers experiment (since 2026-10-23)
