@@ -258,6 +258,10 @@ func _rewards(m: Main, r: Rect2) -> void:
 			extra.append([Loc.t("Опыта хватает на ур. %d: «Повысить в звании» в ангаре — %d") % [int(pv[0]), int(pv[1])], UiStyle.ACCENT_SOFT])
 		for u in a["unlocked"]:
 			extra.append([Loc.t("ОТКРЫТО: ") + String(u), UiStyle.ACCENT_SOFT])
+		if m.op_tasks != null and not m.op_tasks.defs.is_empty():   # OT-01: parts are already in the sortie's loot
+			var od := m.op_tasks.done_count()
+			extra.append([Loc.t("ЗАДАНИЯ ОПЕРАЦИИ: %d из %d") % [od, m.op_tasks.defs.size()] + (Loc.t(" · +%d запчастей в добыче") % int(m.op_tasks.paid * Campaign.k("reward")) if od > 0 else ""),
+				UiStyle.ACCENT_SOFT if m.op_tasks.all_done() else UiStyle.TEXT_2])
 		if String(a.get("tech", "")) != "":
 			extra.append([Loc.t("Техник: «%s»") % String(a["tech"]), UiStyle.PARTS])
 		if a.has("long"):   # MO-01: time held past 15:00 and the class record

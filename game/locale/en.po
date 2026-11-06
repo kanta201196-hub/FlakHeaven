@@ -10140,3 +10140,79 @@ msgstr "Turrets (max)"
 #: game/scripts/plane_stats.gd
 msgid "Ведомые"
 msgstr "Wingmen"
+
+# OT-01 operation objectives
+msgid "Задание операции выполнено: %s · +%d запчастей"
+msgstr "Operation objective complete: %s · +%d parts"
+
+# OT-01 operation objectives
+msgid "Все задания операции выполнены. Отличная работа."
+msgstr "All operation objectives complete. Great work."
+
+# OT-01 operation objectives
+msgid "Задание операции выполнено. Так держать."
+msgstr "Operation objective complete. Keep it up."
+
+# OT-01 operation objectives
+msgid "ЗАДАНИЯ ОПЕРАЦИИ · +%d запчастей за каждое"
+msgstr "OPERATION OBJECTIVES · +%d parts each"
+
+# OT-01 operation objectives
+msgid "ЗАДАНИЯ ОПЕРАЦИИ: %d из %d"
+msgstr "OPERATION OBJECTIVES: %d of %d"
+
+# OT-01 operation objectives
+msgid " · +%d запчастей в добыче"
+msgstr " · +%d parts in the loot"
+
+# OT-01 operation objectives
+msgid "Сжечь 3 колонны противника на дороге"
+msgstr "Burn 3 enemy columns on the road"
+
+# OT-01 operation objectives
+msgid "Подавить 2 позиции ПВО у перевала"
+msgstr "Suppress 2 air-defence sites at the pass"
+
+# OT-01 operation objectives
+msgid "Подавить 3 позиции ПВО в руслах"
+msgstr "Suppress 3 air-defence sites in the riverbeds"
+
+# OT-01 operation objectives
+msgid "Перехватить 2 колонны с ракетами для ПВО"
+msgstr "Intercept 2 columns carrying missiles for the air defence"
+
+# OT-01 operation objectives
+msgid "Разгромить 3 укрепрайона в старых крепостях"
+msgstr "Crush 3 strongholds in the old forts"
+
+# OT-01 operation objectives
+msgid "Сжечь 2 колонны снабжения крепостей"
+msgstr "Burn 2 supply columns of the forts"
+
+# OT-01 operation objectives
+msgid "Выиграть 2 дуэли с вражескими асами"
+msgstr "Win 2 duels with enemy aces"
+
+# OT-01 operation objectives
+msgid "Сбить 2 транспортника с подкреплением"
+msgstr "Shoot down 2 transports with reinforcements"
+
+# OT-01 operation objectives
+msgid "колонны %d из %d"
+msgstr "columns %d of %d"
+
+# OT-01 operation objectives
+msgid "позиции ПВО %d из %d"
+msgstr "AA sites %d of %d"
+
+# OT-01 operation objectives
+msgid "укрепрайоны %d из %d"
+msgstr "strongholds %d of %d"
+
+# OT-01 operation objectives
+msgid "дуэли %d из %d"
+msgstr "duels %d of %d"
+
+# OT-01 operation objectives
+msgid "транспортники %d из %d"
+msgstr "transports %d of %d"

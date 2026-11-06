@@ -59,6 +59,7 @@ var banned := {}        # ключи исключённых карточек
 var locked: Dictionary = {}  # закреплённая карточка — появится в следующем выборе
 var offer_rare := false
 var class_task: ClassTask = null   # EX-07: задание класса на вылет
+var op_tasks: OpTasks = null   # OT-01: side objectives of the operation (null in «Битва асов» or with F1 op_tasks = 0)
 var level_at_5 := 0   # уровень на 5:00 — для баланса кривой опыта
 var stats := {}
 ## Damage per second by source over the last minute (pause screen, combat UI v2)
@@ -295,6 +296,7 @@ func start_run() -> void:
 	player.setup(cls_id, sk1, sks[1] if sks[1] != sk1 else (sks[0] if sks[0] != sk1 else ""))
 	world.add_child(player)
 	class_task = null if aces() else ClassTask.new(cls_id)
+	op_tasks = null if aces() or not OpTaskBalance.on() else OpTasks.new(String(Campaign.op()["id"]))
 	if not aces():
 		Story.start(self)   # EX-09: «Купол», задание класса, в финале — «Гром» в звене
 	projectiles = Projectiles.new()
@@ -678,6 +680,9 @@ func _on_activity_succeeded(kind: StringName) -> void:
 	if kind == &"fort":
 		medal_add("fort_areas")
 	medal_add("activities")
+	if op_tasks != null:
+		for id in op_tasks.on_activity(kind):
+			_on_op_task_done(id)
 	rerolls += PickBalance.ACTIVITY_REROLLS   # S16-22: a task done pays a reroll
 	tele.add("picks_from_tasks", PickBalance.ACTIVITY_REROLLS)
 	var r := run.award_activity(kind)
@@ -706,6 +711,21 @@ func _on_activity_succeeded(kind: StringName) -> void:
 				if rare else Loc.t("ремонт 20%% и +%d запчастей") % paid
 			Events.banner.emit(Loc.t("%s Награда: %s") % [Loc.t(ACTIVITY_TITLE.get(kind, "")), reward], 4.0)
 			sfx.play("evac", -4.0, 1.3)
+
+
+## OT-01: an operation objective completed — pays `OpTaskBalance.PARTS`, remembers it in the campaign save
+## (✓ on the operation card), banner and radio. The banner waits a little so it does not cover the activity's own.
+func _on_op_task_done(id: String) -> void:
+	var d := op_tasks.def(id)
+	var paid := int(run.grant_parts(OpTaskBalance.PARTS, &"op_task"))
+	op_tasks.paid += paid
+	Campaign.mark_task(Campaign.index(), id)
+	tele.add("op_tasks", 1)
+	if _autotest:
+		print("AUTOTEST: op task %s done at %.0f" % [id, run_time])
+	var line := Loc.t("Задание операции выполнено: %s · +%d запчастей") % [Loc.t(String(d.get("brief", ""))), paid]
+	get_tree().create_timer(4.2, false).timeout.connect(func() -> void: Events.banner.emit(line, 4.0))
+	Events.radio.emit("Штаб", Loc.t("Все задания операции выполнены. Отличная работа.") if op_tasks.all_done() else Loc.t("Задание операции выполнено. Так держать."), false)
 
 
 ## `Events.activity_failed`: dispatcher line and, for an escaped ace, a banner. No reward.

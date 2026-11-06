@@ -10140,3 +10140,79 @@ msgstr "炮塔（最多）"
 #: game/scripts/plane_stats.gd
 msgid "Ведомые"
 msgstr "僚机"
+
+# OT-01 operation objectives
+msgid "Задание операции выполнено: %s · +%d запчастей"
+msgstr "作战任务完成：%s · +%d 零件"
+
+# OT-01 operation objectives
+msgid "Все задания операции выполнены. Отличная работа."
+msgstr "作战任务全部完成。干得漂亮。"
+
+# OT-01 operation objectives
+msgid "Задание операции выполнено. Так держать."
+msgstr "作战任务完成。继续保持。"
+
+# OT-01 operation objectives
+msgid "ЗАДАНИЯ ОПЕРАЦИИ · +%d запчастей за каждое"
+msgstr "作战任务 · 每项 +%d 零件"
+
+# OT-01 operation objectives
+msgid "ЗАДАНИЯ ОПЕРАЦИИ: %d из %d"
+msgstr "作战任务：%d / %d"
+
+# OT-01 operation objectives
+msgid " · +%d запчастей в добыче"
+msgstr " · 战利品 +%d 零件"
+
+# OT-01 operation objectives
+msgid "Сжечь 3 колонны противника на дороге"
+msgstr "摧毁道路上的 3 支敌方车队"
+
+# OT-01 operation objectives
+msgid "Подавить 2 позиции ПВО у перевала"
+msgstr "压制山口的 2 处防空阵地"
+
+# OT-01 operation objectives
+msgid "Подавить 3 позиции ПВО в руслах"
+msgstr "压制河床中的 3 处防空阵地"
+
+# OT-01 operation objectives
+msgid "Перехватить 2 колонны с ракетами для ПВО"
+msgstr "拦截 2 支为防空运送导弹的车队"
+
+# OT-01 operation objectives
+msgid "Разгромить 3 укрепрайона в старых крепостях"
+msgstr "捣毁旧要塞中的 3 处据点"
+
+# OT-01 operation objectives
+msgid "Сжечь 2 колонны снабжения крепостей"
+msgstr "摧毁 2 支要塞补给车队"
+
+# OT-01 operation objectives
+msgid "Выиграть 2 дуэли с вражескими асами"
+msgstr "赢得 2 场与敌方王牌的对决"
+
+# OT-01 operation objectives
+msgid "Сбить 2 транспортника с подкреплением"
+msgstr "击落 2 架运送增援的运输机"
+
+# OT-01 operation objectives
+msgid "колонны %d из %d"
+msgstr "车队 %d / %d"
+
+# OT-01 operation objectives
+msgid "позиции ПВО %d из %d"
+msgstr "防空阵地 %d / %d"
+
+# OT-01 operation objectives
+msgid "укрепрайоны %d из %d"
+msgstr "据点 %d / %d"
+
+# OT-01 operation objectives
+msgid "дуэли %d из %d"
+msgstr "对决 %d / %d"
+
+# OT-01 operation objectives
+msgid "транспортники %d из %d"
+msgstr "运输机 %d / %d"
