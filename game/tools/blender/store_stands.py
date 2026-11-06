@@ -94,7 +94,7 @@ def trailer(L_, W, M):
 
 def platform(L_, W, M):
     """Flat platform trolley: a steel deck with a low lip and a rubber mat, four casters (two swivel),
-    a tubular push handle at the back end"""
+    a tubular push handle at the +X end (away from the store camera, so it does not hide the load)"""
     hx, hy = L_ / 2, W / 2
     t = 0.05
     box("deck", (0, 0, PLAT_Z - 0.012 - t / 2), (L_, W, t), M["frame"], 0.01)
@@ -118,16 +118,16 @@ def platform(L_, W, M):
             cyl("caster", (x, y, r), r, 0.06, M["tyre"], "Y", 20, 0.012)
             cyl("caster_hub", (x, y, r), 0.03, 0.075, M["metal"], "Y", 10)
         tube("brace", [(x, -hy + 0.12, 2 * r + 0.12), (x, hy - 0.12, 2 * r + 0.12)], 0.018, M["frame"])
-    # push handle at the back
-    x = -hx - 0.03
-    tube("handle", [(x, -hy + 0.08, PLAT_Z - 0.02), (x - 0.05, -hy + 0.08, PLAT_Z + 0.5), (x - 0.05, hy - 0.08, PLAT_Z + 0.5),
+    # push handle at the +X end
+    x = hx + 0.03
+    tube("handle", [(x, -hy + 0.08, PLAT_Z - 0.02), (x + 0.05, -hy + 0.08, PLAT_Z + 0.5), (x + 0.05, hy - 0.08, PLAT_Z + 0.5),
                     (x, hy - 0.08, PLAT_Z - 0.02)], 0.018, M["metal"])
-    cyl("grip", (x - 0.05, 0, PLAT_Z + 0.5), 0.026, W * 0.5, M["tyre"], "Y", 12)
+    cyl("grip", (x + 0.05, 0, PLAT_Z + 0.5), 0.026, W * 0.5, M["tyre"], "Y", 12)
 
 
 def materials():
     return {
-        "frame": mat("stand_frame", (0.27, 0.29, 0.22), 0.1, 0.84),    # faded olive-drab painted steel
+        "frame": mat("stand_frame", (0.085, 0.095, 0.07), 0.1, 0.84),  # dark olive-drab painted steel (the pods are pale)
         "rail": mat("stand_rail", (0.33, 0.33, 0.31), 0.45, 0.7),     # worn steel tracks
         "dark": mat("stand_dark", (0.07, 0.07, 0.075), 0.1, 0.85),
         "metal": mat("stand_metal", (0.42, 0.42, 0.41), 0.6, 0.55),
