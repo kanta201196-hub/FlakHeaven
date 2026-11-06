@@ -183,6 +183,8 @@ func _ready() -> void:
 	_set_state("menu")
 
 
+## Real time of the last mouse movement (`MouseView`: the arrow shows in a dialogue scene while the mouse moves)
+var _mouse_moved_ms := 0
 var _state_t := 0.0 # сколько реального времени прошло с последней смены состояния
 
 
@@ -204,14 +206,21 @@ func _set_state(s: String) -> void:
 		mode = "campaign"   # leaving «Битва асов» by any screen: the next sortie is a campaign one unless picked again
 	get_tree().paused = s != "playing"
 	Settings.set_screen_cap(s != "playing")
-	# s15: the system arrow showed next to the gunsight and over cutscenes; in flight the mouse steers and the HUD
-	# draws its own marker (scheme «мышью»), a cutscene is skipped by key or click — screens with buttons keep it
-	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN if s in ["playing", "cutscene"] else Input.MOUSE_MODE_VISIBLE
+	_mouse_mode()   # s15/S16-28: the arrow hides in flight, cutscenes and resting dialogues (`MouseView`)
 	if s == "playing":
 		Hangar3D.release()
 	if is_instance_valid(player) and menu != null:
 		player.visible = not (s == "menu" or s == "hangar" or s == "cutscene" or s == "dialog" or (s == "settings" and menu.back_state == "menu") or (s == "codex" and codex_back == "menu"))
 	Engine.time_scale = base_ts
+
+
+## Shows or hides the system arrow for the current state (`MouseView`). Runs every frame, not only on a state change:
+## the dialogue rule depends on mouse idle time, and re-applying also restores the mode if the OS reset it (guess:
+## the s16 arrow over cutscenes, which were already hidden on the state change).
+func _mouse_mode() -> void:
+	var want := MouseView.mode(MouseView.hidden(state, (Time.get_ticks_msec() - _mouse_moved_ms) / 1000.0))
+	if Input.mouse_mode != want:
+		Input.mouse_mode = want
 
 
 ## The campaign screen's «В ВЫЛЕТ ▶» (and the «Битва асов» button): the hangar scene before the operation when it
@@ -352,6 +361,7 @@ func start_run() -> void:
 
 func _process(delta: float) -> void:
 	input_ctl.handle_global_input()
+	_mouse_mode()
 	dbg.process(delta)
 	tele.load_tick()
 	if state in ["dead", "evac"]:
@@ -1099,6 +1109,8 @@ func hitstop() -> void:
 
 func _input(event: InputEvent) -> void:
 	tele.input(event)
+	if event is InputEventMouseMotion:
+		_mouse_moved_ms = Time.get_ticks_msec()
 	if state == "cutscene":
 		Cutscene.request_skip(event)
 

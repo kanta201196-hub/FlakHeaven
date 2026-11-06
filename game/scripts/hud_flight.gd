@@ -157,10 +157,13 @@ func draw_post(m: Main, size: Vector2) -> void:
 	if m.hud.banner_t > 0.0 and m.state == "playing":
 		var a := clampf(m.hud.banner_t, 0.0, 1.0)
 		# dark plate under the banner: yellow text on bright sand is unreadable without it
-		var bw := ui_font().get_string_size(Loc.out(m.hud.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 40.0
+		# S16-25: a long banner («Разведка: …») ran under the objectives panel; the font shrinks to the free centre span
+		var tw := ui_font().get_string_size(Loc.out(m.hud.banner), HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+		var fs := clampi(int(30.0 * minf(1.0, BANNER_MAX_W / maxf(tw, 1.0))), 20, 30)
+		var bw := tw * fs / 30.0 + 40.0
 		var by := _banner_y   # under the boss bars when an ace is up, with a gap (s12); see `_center_stack`
 		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, by, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
-		_ctext(by + 32.0, m.hud.banner, 30, Color(1.0, 0.85, 0.5, a))
+		_ctext(by + 22.0 + fs / 3.0, m.hud.banner, fs, Color(1.0, 0.85, 0.5, a))
 
 	if m.run_time > 180.0 or m.state != "playing" or int(Profile.data.get("sorties", 0)) >= KEY_HINT_SORTIES:
 		return
@@ -1023,6 +1026,16 @@ var _task_rect := Rect2()
 ## line — so they never land on each other (they had fixed heights: four lines in a heap at 16:31).
 var _banner_y := 186.0
 var _evac_y := 270.0
+## S16-25: px between the plates of the centre stack (they touched: three lines read as one heap at 16:15)
+const STACK_GAP := 14.0
+## Widest banner text: the centre span between the hull panel on the left and the objectives panel on the right
+const BANNER_MAX_W := 940.0
+## S16-04: s the activity plate shows its reward line, then it folds to the one-line form (the convoy plate was a
+## full-width 980×62 bar the whole time)
+const TASK_SUB_S := 8.0
+## The activity on the task plate and the run time it appeared (`TASK_SUB_S`)
+var _task_node: Node = null
+var _task_since := 0.0
 
 
 ## Lays out the centre stack for this frame from the last frame's boss bars (`_boss_bottom`). The banner slot is
@@ -1031,31 +1044,29 @@ func _center_stack(m: Main) -> void:
 	_task_compact = _boss_bottom > 0.0
 	var y := maxf(186.0, _boss_bottom + 20.0)
 	_banner_y = y
-	y += 52.0                     # banner plate 44 + gap
+	y += 44.0 + STACK_GAP         # banner plate
 	if m.state == "playing" and is_instance_valid(m.evac):
-		_evac_y = y + 24.0        # baseline of the 22 px line on its plate
-		y += 40.0
+		_evac_y = y + 24.0        # baseline of the 22 px line on its plate (`_ptext`: plate y-23 … y+9)
+		y += 33.0 + STACK_GAP
 	_task_y = maxf(y, 250.0)
 	_task_rect = Rect2()
 
 
-## Activity task line on its dark plate: full width with room for the reward line, or (boss up)
-## a plate just around the line.
-func _task(s: String, col: Color) -> void:
-	var w := 980.0
-	var h := 62.0
-	if _task_compact:
-		w = ui_font().get_string_size(Loc.out(s), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 40.0
-		h = 34.0
+## Activity task line on its dark plate, sized to its text. The reward line `sub` sits under it for the first
+## TASK_SUB_S s of the activity; after that, and while boss bars are up, the plate is the one-line form.
+func _task(s: String, col: Color, sub := "") -> void:
+	var full := not _task_compact and sub != "" and Main.I.run_time - _task_since < TASK_SUB_S
+	var fs := 22 if full else 20
+	var w := ui_font().get_string_size(Loc.out(s), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	if full:
+		w = maxf(w, ui_font().get_string_size(Loc.out(sub), HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x)
+	w = minf(w + 48.0, 980.0)
+	var h := 62.0 if full else 34.0
 	_task_rect = Rect2((ctrl.size.x - w) / 2.0, _task_y, w, h)
 	ctrl.draw_rect(_task_rect, Color(0.02, 0.025, 0.03, 0.78))   # s12: dense, red text read poorly on brown
-	_ctext(_task_y + (24.0 if _task_compact else 26.0), s, 20 if _task_compact else 22, col)
-
-
-## Reward line under the task; left out of the one-line form.
-func _task_sub(s: String) -> void:
-	if not _task_compact:
-		_ctext(_task_y + 52.0, s, 17, Color(0.85, 0.75, 1.0))
+	_ctext(_task_y + (26.0 if full else 24.0), s, fs, col)
+	if full:
+		_ctext(_task_y + 52.0, sub, 17, Color(0.85, 0.75, 1.0))
 
 
 ## Активности: указатели на позицию ПВО и аса-соперника, радиопереговоры, «ХВОСТ!»
@@ -1065,6 +1076,9 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	var node: Node = m.spawner.activity_node if m.spawner != null else null
 	# s12: with boss bars up, the task plate goes under them and the banner slot (it overlapped them);
 	# s13: there it shrinks to one line, so the top of the field is not three plates deep. The y is `_center_stack`'s.
+	if node != _task_node:
+		_task_node = node
+		_task_since = m.run_time
 	if is_instance_valid(node):
 		if node is FortArea:
 			var base := node as FortArea
@@ -1077,9 +1091,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				bs = Loc.t("УКРЕПРАЙОН: %d с · пусковых на башнях: %d из %d") % [int(ceil(base.timer)), base.launchers_left(), base.launchers.size()]
 			else:
 				bs = Loc.t("База противника: %d м — подлетите, чтобы начать") % (db / 10)
-			_task(bs, Color(1.0, 0.7, 0.55))
-			if not base.failed:
-				_task_sub("Награда: выбор из редких карточек + 60 запчастей")
+			_task(bs, Color(1.0, 0.7, 0.55), "" if base.failed else "Награда: выбор из редких карточек + 60 запчастей")
 		elif node is AASite:
 			var site := node as AASite
 			var d := int(p.global_position.distance_to(site.global_position))
@@ -1091,9 +1103,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				s = Loc.t("ПОЗИЦИЯ ПВО: %d с · уничтожьте бункер: %d%%") % [int(ceil(site.timer)), int(ceil(site.bunker_frac() * 100.0))]
 			else:
 				s = Loc.t("Позиция ПВО: %d м — подлетите, чтобы начать") % (d / 10)
-			_task(s, Color(1.0, 0.85, 0.4))
-			if not site.failed:
-				_task_sub("Награда: выбор из редких карточек + 40 запчастей")
+			_task(s, Color(1.0, 0.85, 0.4), "" if site.failed else "Награда: выбор из редких карточек + 40 запчастей")
 		elif node is Rescue:
 			var rs := node as Rescue
 			var dr := int(p.global_position.distance_to(rs.global_position)) / 10
@@ -1107,9 +1117,7 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				rt = Loc.t("СБИТЫЙ ПИЛОТ: держите небо над маяком ещё %d с") % int(ceil(rs.timer)) + ("" if p.global_position.distance_to(rs.global_position) < Rescue.HOLD_R else Loc.t(" · вернитесь к маяку!"))
 			else:
 				rt = Loc.t("Аварийный маяк: %d м · вертолёт ждёт ещё %d с") % [dr, int(ceil(rs.life))]
-			_task(rt, Color(0.55, 1.0, 0.65))
-			if not rs.done and not rs.failed:
-				_task_sub("Награда: выбор из редких карточек + 40 запчастей")
+			_task(rt, Color(0.55, 1.0, 0.65), "" if rs.done or rs.failed else "Награда: выбор из редких карточек + 40 запчастей")
 		elif node is Convoy:
 			var cv := node as Convoy
 			var sea := Biome.sea()
@@ -1120,19 +1128,16 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 				cs = Loc.t("КАРАВАН: до гавани %d с · сухогрузов: %d из %d" if sea else "КОЛОННА: до укрытия %d с · грузовиков: %d из %d") % [int(ceil(maxf(cv.timer, 0.0))), cv.trucks_left(), cv.trucks_total]
 			else:
 				cs = Loc.t("Караван снабжения: %d м — подлетите и потопите сухогрузы" if sea else "Колонна снабжения: %d м — подлетите и сожгите грузовики") % dm
-			_task(cs, Color(1.0, 0.78, 0.45))
-			_task_sub("Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза" if sea else "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика")
+			_task(cs, Color(1.0, 0.78, 0.45), "Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза" if sea else "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика")
 		elif node is Transport:
 			var tr := node as Transport
 			_edge_arrow(_ws(xf, tr.global_position), rect, size, C_TRANSPORT, 1.8, Loc.t("транспортник %d м") % (int(p.global_position.distance_to(tr.global_position)) / 10))
-			_task(Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], Color(1.0, 0.75, 0.45))
+			_task(Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], Color(1.0, 0.75, 0.45), "Награда: груз — запчасти и ремкомплекты")
 			_world_caption(xf, tr.global_position, tr.radius, "Транспортник", Color(1, 0.85, 0.6), _task_rect)   # this frame's plate
-			_task_sub("Награда: груз — запчасти и ремкомплекты")
 		elif node is RivalAce:
 			var ace := node as RivalAce
 			_edge_arrow(_ws(xf, ace.global_position), rect, size, Color(1.0, 0.3, 0.35), 1.8, Loc.t("ас %d м") % (int(p.global_position.distance_to(ace.global_position)) / 10))
-			_task(Loc.t("ДОГФАЙТ: ас «%s» · уйдёт через %d с") % [ace.callsign, int(ceil(ace.life))], Color(1.0, 0.72, 0.7))
-			_task_sub("Награда: выбор из редких карточек")
+			_task(Loc.t("ДОГФАЙТ: ас «%s» · уйдёт через %d с") % [ace.callsign, int(ceil(ace.life))], Color(1.0, 0.72, 0.7), "Награда: выбор из редких карточек")
 			if ace.threatening() and int(Time.get_ticks_msec() / 200) % 2 == 0:
 				_ptext(size.y / 2.0 + 196.0, "ХВОСТ! Сбрось газ (S) или манёвр", 30, Color(1.0, 0.42, 0.36), 0.75)   # under the plane: above it the boss and task plates stack
 	# 3.5: свой заправщик

@@ -10078,23 +10078,13 @@ msgstr "+1 card ban per sortie"
 msgid "+1 переброс карточек за вылет"
 msgstr "+1 card reroll per sortie"
 
-msgid "°/с"
-msgstr "°/s"
 
 msgid "БЕЗ МЕСТА МОДУЛЯ"
 msgstr "NO MODULE SLOT"
 
-msgid "Бак"
-msgstr "Fuel tank"
 
-msgid "Бонус ★ к оружию класса"
-msgstr "★ class weapon bonus"
 
-msgid "Ведомых"
-msgstr "Wingmen"
 
-msgid "Видов оружия"
-msgstr "Weapon types"
 
 #, c-format
 msgid "Выбрать %s карточек"
@@ -10104,17 +10094,9 @@ msgstr "Pick %s cards"
 msgid "Выполнить %s заданий в вылетах"
 msgstr "Complete %s tasks in sorties"
 
-msgid "Мест модулей"
-msgstr "Module slots"
 
-msgid "Перезарядка уклонения"
-msgstr "Evade cooldown"
 
-msgid "Пушка, урон в секунду"
-msgstr "Gun damage per second"
 
-msgid "Радиус виража"
-msgstr "Turn radius"
 
 msgid "Разведка боем"
 msgstr "Reconnaissance in Force"
@@ -10122,17 +10104,11 @@ msgstr "Reconnaissance in Force"
 msgid "Синяя дуга — броня бомбардировщика: спереди и с боков урон вдвое меньше. Слабое место — хвост, но его прикрывает турель (красный сектор)."
 msgstr "The blue arc is the bomber's armour: half damage from the front and sides. The tail is the weak spot, but the turret guards it (red sector)."
 
-msgid "Точек подвеса"
-msgstr "Hardpoints"
 
 msgid "Транспорт, нас засекли! Уходим, полный газ!"
 msgstr "Transport, we're spotted! Breaking off, full throttle!"
 
-msgid "Турелей в бою, до"
-msgstr "Turrets in combat, up to"
 
-msgid "Урон подвесов и турелей"
-msgstr "Hardpoint and turret damage"
 
 msgid "Штабист"
 msgstr "Staff Officer"
@@ -10141,14 +10117,26 @@ msgstr "Staff Officer"
 msgid "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно открыто"
 msgstr "EVACUATION: gate %d / %d · %d m · window open"
 
-msgid "мин"
-msgstr "min"
 
-msgid "пикс"
-msgstr "px"
 
-msgid "пикс/с"
-msgstr "px/s"
 
-msgid "с"
-msgstr "s"
+
+#: game/scripts/plane_stats.gd
+msgid "Разворот, °/с"
+msgstr "Turn, °/s"
+
+#: game/scripts/plane_stats.gd
+msgid "Пушка, урон/с"
+msgstr "Gun, damage/s"
+
+#: game/scripts/plane_stats.gd
+msgid "Группы подвеса"
+msgstr "Hardpoint groups"
+
+#: game/scripts/plane_stats.gd
+msgid "Турели (макс.)"
+msgstr "Turrets (max)"
+
+#: game/scripts/plane_stats.gd
+msgid "Ведомые"
+msgstr "Wingmen"

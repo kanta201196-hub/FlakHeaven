@@ -10078,23 +10078,13 @@ msgstr "每次出击 +1 次卡牌排除"
 msgid "+1 переброс карточек за вылет"
 msgstr "每次出击 +1 次卡牌重抽"
 
-msgid "°/с"
-msgstr "°/秒"
 
 msgid "БЕЗ МЕСТА МОДУЛЯ"
 msgstr "不占模块槽"
 
-msgid "Бак"
-msgstr "油箱"
 
-msgid "Бонус ★ к оружию класса"
-msgstr "★ 职业武器加成"
 
-msgid "Ведомых"
-msgstr "僚机"
 
-msgid "Видов оружия"
-msgstr "武器种类"
 
 #, c-format
 msgid "Выбрать %s карточек"
@@ -10104,17 +10094,9 @@ msgstr "选择 %s 张卡牌"
 msgid "Выполнить %s заданий в вылетах"
 msgstr "在出击中完成 %s 个任务"
 
-msgid "Мест модулей"
-msgstr "模块槽"
 
-msgid "Перезарядка уклонения"
-msgstr "闪避冷却"
 
-msgid "Пушка, урон в секунду"
-msgstr "机炮每秒伤害"
 
-msgid "Радиус виража"
-msgstr "转弯半径"
 
 msgid "Разведка боем"
 msgstr "武装侦察"
@@ -10122,17 +10104,11 @@ msgstr "武装侦察"
 msgid "Синяя дуга — броня бомбардировщика: спереди и с боков урон вдвое меньше. Слабое место — хвост, но его прикрывает турель (красный сектор)."
 msgstr "蓝色弧线是轰炸机的装甲：正面和侧面伤害减半。弱点在机尾，但有炮塔守护（红色扇区）。"
 
-msgid "Точек подвеса"
-msgstr "挂点"
 
 msgid "Транспорт, нас засекли! Уходим, полный газ!"
 msgstr "运输机，我们被发现了！全速撤离！"
 
-msgid "Турелей в бою, до"
-msgstr "战斗中炮塔，最多"
 
-msgid "Урон подвесов и турелей"
-msgstr "挂载与炮塔伤害"
 
 msgid "Штабист"
 msgstr "参谋"
@@ -10141,14 +10117,26 @@ msgstr "参谋"
 msgid "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно открыто"
 msgstr "撤离：关卡 %d / %d · %d 米 · 窗口开启"
 
-msgid "мин"
-msgstr "分钟"
 
-msgid "пикс"
-msgstr "像素"
 
-msgid "пикс/с"
-msgstr "像素/秒"
 
-msgid "с"
-msgstr "秒"
+
+#: game/scripts/plane_stats.gd
+msgid "Разворот, °/с"
+msgstr "转向，°/秒"
+
+#: game/scripts/plane_stats.gd
+msgid "Пушка, урон/с"
+msgstr "机炮，每秒伤害"
+
+#: game/scripts/plane_stats.gd
+msgid "Группы подвеса"
+msgstr "挂架组"
+
+#: game/scripts/plane_stats.gd
+msgid "Турели (макс.)"
+msgstr "炮塔（最多）"
+
+#: game/scripts/plane_stats.gd
+msgid "Ведомые"
+msgstr "僚机"
