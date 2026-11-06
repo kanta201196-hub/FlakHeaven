@@ -325,6 +325,8 @@ func _level_line(p: Player, c: Dictionary, lv: Vector2) -> String:
 		parts.append(_weapon_name(p.groups[int(c["group"])]).to_upper())
 	elif kind == "weapon_new":
 		parts.append(Loc.t("НОВОЕ ОРУЖИЕ"))
+		if Cards.course_lost_by(p, c) != "":   # flights review 06.11, item 1.4: visible before the description is read
+			parts.append(Loc.t("ЗАКРОЕТ СВЯЗКУ"))
 	elif lv.y > 0:
 		parts.append(Loc.t("УР. %d → %d") % [lv.x, mini(int(lv.x) + 1, int(lv.y))])
 		if int(lv.x) + 1 >= int(lv.y):

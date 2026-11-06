@@ -10546,3 +10546,9 @@ msgstr "No synergies this sortie. In combat, the recipe under the \"Toward syner
 #, c-format
 msgid "\nБонус редкости: +%s урона пушки"
 msgstr "\nRarity bonus: +%s gun damage"
+
+msgid "\nВнимание: последний подвес — связка «%s» закроется, некуда будет взять %s"
+msgstr "\nWarning: last mount — the \"%s\" synergy will close, no room left for %s"
+
+msgid "ЗАКРОЕТ СВЯЗКУ"
+msgstr "CLOSES SYNERGY"

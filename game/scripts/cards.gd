@@ -242,6 +242,26 @@ static func pair_thing_title(p: Player, t: Dictionary) -> String:
 	return ""
 
 
+## Name of the weapon the course recipe can no longer get if new-weapon `card` takes its mount, or "".
+## Under `build_pairs` only (flights review 06.11, item 1.4): heavy mounts take experimental weapons only, so
+## they do not count as room for a recipe weapon.
+static func course_lost_by(p: Player, card: Dictionary) -> String:
+	if not pairs_on() or not p.has_course() or p.syn.has(p.course):
+		return ""
+	var weapons: Array = []
+	var free_after := 0
+	for gi in p.groups.size():
+		var g: Hardpoint = p.groups[gi]
+		if not g.is_empty():
+			weapons.append(g.weapon)
+		elif gi != int(card["group"]) and not g.builtin and not g.heavy:
+			free_after += 1
+	var w: String = card["weapon"]
+	if not SynPairs.closes(p.course, weapons, w, free_after):
+		return ""
+	return pair_thing_title(p, SynPairs.weapons_missing(p.course, weapons + [w])[0])
+
+
 ## Conditions of `id` under the pair rules, in the `cond_list` format: [[text, done, have, need], …]
 static func pair_conds(p: Player, id: String) -> Array:
 	var out: Array = []
@@ -1058,6 +1078,9 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			card["desc"] = Loc.t("%s\nНа подвес: %s ×%d\nСтарт с ур. %d") % [Loc.t(Weapons.DEFS[w]["desc"]), g.name, g.slots, NEW_WEAPON_LEVEL[r]]
 			if not Modernizations.ids_for(w).is_empty():
 				card["desc"] += Loc.t("\nМодернизация: ур. 5 + %s") % _cat_text(w)
+			var lost := course_lost_by(p, card)
+			if lost != "":
+				card["desc"] += Loc.t("\nВнимание: последний подвес — связка «%s» закроется, некуда будет взять %s") % [Loc.t(syn_def(p, p.course)["title"]), lost]
 		"weapon_up":
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			var to := mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
