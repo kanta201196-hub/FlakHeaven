@@ -18,7 +18,7 @@ const NODES := {
 }
 const NODE_ORDER := ["frame", "engine", "armor", "wing", "pylons", "tank"]
 
-const PLANE2_COST := 1500 # 3.5: покупка в ангаре, выбор до вылета (решение 15.10)
+const PLANE2_COST := 50000 # 3.5: purchase in the hangar, chosen before a sortie (15.10); 1500 → 50000 by Kanta 06.11 (s16: a sortie earns ~13k)
 const PLANE2_CREW := 3
 
 const TIER_COST := [400, 1200, 3000]

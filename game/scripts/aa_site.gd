@@ -206,7 +206,7 @@ func _process(delta: float) -> void:
 		return
 	if not active and p.global_position.distance_to(global_position) < ACTIVATE_R:
 		active = true
-		Events.banner.emit("Позиция ПВО обнаружила вас! 60 с на уничтожение", 3.0)
+		Events.banner.emit(Loc.t("Позиция ПВО обнаружила вас! %d с на уничтожение") % int(LIMIT), 3.0)
 		Main.I.sfx.play("aa_alert", -2.0, 0.6)
 	if active and not failed and not done:
 		timer -= delta

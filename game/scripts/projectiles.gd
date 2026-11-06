@@ -161,6 +161,8 @@ func spawn_missile(pos: Vector2, dir: Vector2, kind := "aam", who := "ракет
 	if tgt != null:
 		m["tgt"] = tgt
 	missiles.append(m)
+	if Main.I != null and Main.I.tele != null:
+		Main.I.tele.add("enemy_missiles_launched")
 	Main.I.stats_add_counter("msl_" + kind, 1)   # сколько пущено ракет каждого вида (автотест)
 	if kind == "sam" and Boom3D.active():
 		Boom3D.ensure().ground_launch(pos, dir)   # вспышка пуска и клуб дыма у земли
