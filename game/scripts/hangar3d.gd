@@ -307,7 +307,7 @@ const STAND_SAT := 0.12
 const STAND_TONE := 0.88
 
 
-## Hangar showcase light (F1 `hangar_light`, R-22: off until Kanta's «ок»), flight background only: a warm key light
+## Hangar showcase light (F1 `hangar_light`, R-22: on by default, 0 turns it off), flight background only: a warm key light
 ## from the front quarter and a strong neutral rim light that always comes from behind the plane as seen by the camera
 ## (aimed every frame in _process), so the silhouette and the panel edges catch a bright outline at any angle.
 const SHOW_KEY_COLOR := Color(1.0, 0.84, 0.64)
