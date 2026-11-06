@@ -364,7 +364,7 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | PT-01 | Plane tiers 1–5: concept and art direction for Оса / Грач / Кит (Kanta 06.11), page https://claude.ai/artifact/Jcn2GtNbLrRuCVn2xbS9dE | «Придумать концепты новых самолётов по уровням» | done |
 | PT-02 | Tier 4–5 models (6): Грач 4 first as pilot, then Оса 4, Кит 4, the tier 5 trio; prototype photos first, matte worn paint, glow only on future systems (shield, emitters) | 3D thread (coordinator assigns) | to do |
 | PT-03 | Tier 1 models (3): early swept-wing jet fighter (Оса), light two-seat side-by-side jet strike plane with tip tanks (Грач), piston heavy bomber with coupled engines (Кит) | 3D thread (coordinator assigns) | to do |
-| PT-04 | Progression plan for 5 tiers: what each tier unlocks and when, renumbering current planes, experimental weapons to tiers 4–5, hangar shows 4–5 locked; demo = tiers 1–3 (brainstorming → plan → Kanta «да», flak-heaven-game-design); plan docs/superpowers/plans/2026-11-06-plane-tiers.md | thread «Спланировать прокачку самолётов на пять уровней» | plan ready, waits for Kanta (4 questions) |
+| PT-04 | Progression plan for 5 tiers: what each tier unlocks and when, renumbering current planes, experimental weapons to tiers 4–5, hangar shows 4–5 locked; demo = tiers 1–3 (brainstorming → plan → Kanta «да», flak-heaven-game-design); plan docs/superpowers/plans/2026-11-06-plane-tiers.md | thread «Спланировать прокачку самолётов на пять уровней» | in work: stage A (Kanta «да» 06.11 19:03) |
 | PT-05 | Future systems as mechanics: laser gun, phase shield in dodge, front energy shield, shield dome over wingmen, drone bay (fold into PT-04 plan, numbers only after measurement) | with PT-04 | idea |
 
 ## Звук и музыка
