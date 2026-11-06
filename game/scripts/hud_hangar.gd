@@ -224,8 +224,6 @@ func _hg_stats(c: String, r: Rect2, view_lvl: int, two: bool, hover_node: String
 	var nxt := PlaneStats.with_node(c, view_lvl, hover_node) if hk != "" else {}
 	_panel(r, false)
 	_text(Vector2(r.position.x + 20, r.position.y + 26), Loc.t("ХАРАКТЕРИСТИКИ · самолёт ур. %d") % view_lvl, 16, Menu.C_AMBER)
-	if hk != "":
-		_text(Vector2(r.position.x, r.position.y + 26), Loc.t("зелёным — что даст улучшение"), 14, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 20.0)
 	var cols := 4
 	var rows := ceili(PlaneStats.ROWS.size() / float(cols))
 	var tw := (r.size.x - 40.0) / cols

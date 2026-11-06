@@ -10530,9 +10530,6 @@ msgstr "(+8% damage and −4% cooldown per step)"
 msgid "ХАРАКТЕРИСТИКИ · самолёт ур. %d"
 msgstr "STATS · aircraft Lv. %d"
 
-#: game/scripts/hud_hangar.gd
-msgid "зелёным — что даст улучшение"
-msgstr "green — what the upgrade gives"
 
 #: game/scripts/hud_hangar.gd
 #, c-format

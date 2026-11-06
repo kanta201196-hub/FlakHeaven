@@ -10530,9 +10530,6 @@ msgstr "（每级伤害 +8%，冷却 −4%）"
 msgid "ХАРАКТЕРИСТИКИ · самолёт ур. %d"
 msgstr "性能 · 飞机 %d 级"
 
-#: game/scripts/hud_hangar.gd
-msgid "зелёным — что даст улучшение"
-msgstr "绿色 — 升级后的效果"
 
 #: game/scripts/hud_hangar.gd
 #, c-format
