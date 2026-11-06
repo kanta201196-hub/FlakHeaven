@@ -208,7 +208,13 @@ func _item(r: Rect2, id: StringName, label: String) -> void:
 		note = Loc.t("ЗАПЧАСТИ %d") % Profile.parts()
 		if badge:
 			note += " · " + Loc.t("ЕСТЬ ЧТО КУПИТЬ")
-	UiStyle.menu_item(ctrl, r, label, _focus_k(id), true, note, badge)
+	# a long label («ПОДГОТОВКА И ВЫЛЕТ», its translations) shrinks to stay inside the row, left of the «›»
+	var fs := UiStyle.FS_H1
+	var avail := r.size.x - 34.0 - 96.0   # left padding, the «›» and a gap before it (letter spacing reads wider than measured)
+	var lw := UiStyle.text_w(UiStyle.head_font(700), label, fs)
+	if lw > avail:
+		fs = maxi(UiStyle.FS_H3, int(fs * avail / lw))
+	UiStyle.menu_item(ctrl, r, label, _focus_k(id), true, note, badge, false, fs)
 	_items.append([r, id])
 
 
