@@ -57,6 +57,7 @@ One numbered list for the build under test (3.5-s16). Kanta sends items as he pl
 | S16-28 | System mouse arrow is still visible on cutscenes and in dialogues (`main.gd:204` hides it only in playing/cutscene; probably related to S16-01) | Интерфейс | done 06.11, PR #567 — check in the next build |
 | S16-29 | Turn bank: the plane levels out of the bank too fast (Kanta 06.11). Visible bank now rolls in ×0.75 and levels out ×0.5 slower, flight bank untouched; F1 `bank_soft` (+ `bank_soft_in/out`), off until Kanta's «ок» (R-22). PR #573 | Замедлить выход самолёта из крена | на проверке в следующей сборке |
 | S16-30 | Kanta 06.11: markers say «100 м» while we fly a plane — show real-feeling distances. Display only: `DistText` (`dist_text.gd`), 0.6 m per world px picked from cruise speed (fighter ≈ 840 km/h), «300 м» / «5,3 км» on edge markers, task plates, fortress and warship captions | Сделать реальные расстояния на указателях | merged #575 06.11 — check in the next build |
+| S16-31 | Kanta 06.11: hangar plane stats as real numbers, not bars (damage per second with air / ground factors, km/h); the table over the model looked bad, hover over a node upgrade shows its gain in green; rank and «Э+» cards in real «now → after» numbers. Open: rarity does not change «Э+» and mastery rank cards — Kanta to choose (1) make it count, (2) hide rarity there (recommended), (3) keep | Показать реальные цифры характеристик самолётов | merged #578 06.11 — check in the next build; rarity question waits for Kanta |
 
 ## Правки по сборке 3.5-s15
 
