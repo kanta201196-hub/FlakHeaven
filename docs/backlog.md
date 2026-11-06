@@ -333,6 +333,7 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | B2-Q06 | Improve cruiser «Сторож»: real main turrets, armour belt (belt, turret roof detail, per-part wear; 17.8k) | Запустить второй биом Архипелаг | готово 06.11 (#589) |
 | B2-Q07 | Improve trees `a37_pine_b` (100-tri card), `a38_tree_leaf`; coastal gun `a01`. Trees done (cypress 7.5k, broadleaf 4k, #589); gun `a01` and olive crowns (still ball-like) remain | Запустить второй биом Архипелаг | в работе |
 | B2-Q08 | Improve landing barge, «Крачка», seaplane, tanker, bulk carrier, wrecks `a26`/`a27`; «Левиафан» launcher/ZSU stripes, hull per-part wear bake | Запустить второй биом Архипелаг | идея |
+| W-01 | Archipelago water (Kanta 06.11 «да на план по воде»): baked FFT wave loop (`game/tools/water/water_maps.py`), sky reflection from a CC0 panorama, whitecaps and lace foam, drift; F1 `water_v2`, off until «ок» | Запустить второй биом Архипелаг | в работе |
 | E-02 | Объём раннего доступа: 2 биома, 18 перков, 8–9 видов оружия (вместо 3 / 36 / 12) — на решение | продюсер → Kanta | ждёт Kanta |
 
 Отзывы по сборке 3.5-s8 для E-07, E-08, E-10, E-14 (враги, «Левиафан», кампания, берег и суда) — ждём ответов внешних тестеров; строки в архиве.

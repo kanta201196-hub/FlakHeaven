@@ -1044,7 +1044,7 @@ func _make_points() -> Array:
 					var at := Vector2((arr[0] as Transform3D).origin.x, (arr[0] as Transform3D).origin.z)
 					var n := int(seen.get(c, 0))
 					seen[c] = n + 1
-					pts.append({"name": "sea_%s_%d" % [c, n], "pos": at, "zoom": 1.6, "wait": 1.2})
+					pts.append({"name": "sea_%s_%d" % [c, n], "pos": at, "zoom": 1.6, "wait": _sea_wait()})
 					pts.append({"name": "sea_%s_%d_wide" % [c, n], "pos": at, "zoom": 0.7, "wait": 1.2})
 		print("VISUAL sea compositions ", seen)
 	if OS.get_cmdline_user_args().has("--wakebench") and ter != null:
@@ -2373,3 +2373,12 @@ func _ds_place(h3: Hangar3D, sh: Dictionary, key: String) -> void:
 	h3._pitch = clampf(asin(clampf(dir.y, -1.0, 1.0)) + float(view[1]), -1.3, 1.3)
 	h3._dist = float(view[2]) if float(view[2]) > 0.0 else clampf(size * mt.basis.get_scale().x * 7.0, 0.2, 1.2)
 	h3._idle = 0.0
+
+
+## W-01: how long the sea bench holds each close-up before its shot, s (default 1.2). A longer hold with Godot's
+## movie maker (--write-movie, fixed fps) records the water moving for the review page: --seawait=8
+func _sea_wait() -> float:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--seawait="):
+			return float(a.substr(10))
+	return 1.2
