@@ -358,9 +358,9 @@ func _draw() -> void:
 			var a := 0.35 + 0.5 * absf(sin(_t * 30.0))
 			draw_line(Vector2.ZERO, to_local(p.global_position), Color(1, 0.15, 0.1, a), 3.0)
 	draw_string(Hud.ui_font(), Vector2(-140, -radius - 30.0), title, HORIZONTAL_ALIGNMENT_CENTER, 280, 18, Color(1, 0.85, 0.7))
-	var sub := Loc.t("до гавани %.1f км") % (left_px() / 1000.0)
+	var sub := Loc.t("до гавани %s") % DistText.text(left_px())
 	if _station_s >= 0.0:
-		sub = (Loc.t("залпов по берегу: %d из %d") % [_salvos, SALVOS]) if _on_station else (Loc.t("до огневой позиции %.1f км") % (absf(_station_s - _s) / 1000.0))
+		sub = (Loc.t("залпов по берегу: %d из %d") % [_salvos, SALVOS]) if _on_station else (Loc.t("до огневой позиции %s") % DistText.text(_station_s - _s))
 	draw_string(Hud.ui_font(), Vector2(-140, -radius - 10.0), sub, HORIZONTAL_ALIGNMENT_CENTER, 280, 15, Color(1, 0.75, 0.55))
 	# точка эвакуации и круги падения — в мировых координатах, поворот корабля не нужен
 	draw_set_transform_matrix(get_global_transform().affine_inverse())

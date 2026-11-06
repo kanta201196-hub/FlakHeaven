@@ -41,7 +41,7 @@ static func prepare() -> void:
 		var id := String(o["id"])
 		if not _art.has(id):
 			_art[id] = null
-			for ext in [".jpg", ".png"]:
+			for ext: String in [".jpg", ".png"]:
 				var path := ART_DIR + id + ext
 				if ResourceLoader.exists(path):
 					_art[id] = load(path)

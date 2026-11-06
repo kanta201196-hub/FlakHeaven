@@ -10228,3 +10228,112 @@ msgstr "可以强化飞机：部件尚未强化，零件足够（%d）"
 #: game/scripts/hud_campaign.gd
 msgid "‹ Улучшить в ангаре"
 msgstr "‹ 在机库中强化"
+
+#: game/scripts/hud_flight.gd:788
+#, c-format
+msgid "до базы %s"
+msgstr "距基地 %s"
+
+#: game/scripts/hud_flight.gd:788
+#, c-format
+msgid "отбомбилась · до базы %s"
+msgstr "已轰炸 · 距基地 %s"
+
+#: game/scripts/hud_flight.gd:814 game/scripts/hud_flight.gd:993
+#, c-format
+msgid "база %s"
+msgstr "基地 %s"
+
+#: game/scripts/hud_flight.gd:824
+#, c-format
+msgid "эвакуация %s"
+msgstr "撤离 %s"
+
+#: game/scripts/hud_flight.gd:825
+#, c-format
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %s · окно %d с"
+msgstr "撤离：撤离门 %d / %d · %s · 窗口 %d 秒"
+
+#: game/scripts/hud_flight.gd:1000
+#, c-format
+msgid "База противника: %s — подлетите, чтобы начать"
+msgstr "敌军基地：%s——飞近以开始"
+
+#: game/scripts/hud_flight.gd:1007
+#, c-format
+msgid "ПВО %s"
+msgstr "防空 %s"
+
+#: game/scripts/hud_flight.gd:1014
+#, c-format
+msgid "Позиция ПВО: %s — подлетите, чтобы начать"
+msgstr "防空阵地：%s——靠近以开始"
+
+#: game/scripts/hud_flight.gd:1021
+#, c-format
+msgid "маяк %s"
+msgstr "信标 %s"
+
+#: game/scripts/hud_flight.gd:1030
+#, c-format
+msgid "Аварийный маяк: %s · вертолёт ждёт ещё %d с"
+msgstr "求救信标：%s · 直升机还会等 %d 秒"
+
+#: game/scripts/hud_flight.gd:1038
+#, c-format
+msgid "караван %s"
+msgstr "船队 %s"
+
+#: game/scripts/hud_flight.gd:1038
+#, c-format
+msgid "колонна %s"
+msgstr "车队 %s"
+
+#: game/scripts/hud_flight.gd:1043
+#, c-format
+msgid "Караван снабжения: %s — подлетите и потопите сухогрузы"
+msgstr "补给船队：%s——飞过去击沉货轮"
+
+#: game/scripts/hud_flight.gd:1043
+#, c-format
+msgid "Колонна снабжения: %s — подлетите и сожгите грузовики"
+msgstr "补给车队：%s——飞过去烧毁卡车"
+
+#: game/scripts/hud_flight.gd:1048
+#, c-format
+msgid "транспортник %s"
+msgstr "运输机 %s"
+
+#: game/scripts/hud_flight.gd:1054
+#, c-format
+msgid "ас %s"
+msgstr "王牌 %s"
+
+#: game/scripts/hud_flight.gd:1062
+#, c-format
+msgid "заправщик %s"
+msgstr "加油机 %s"
+
+#: game/scripts/warship.gd:361
+#, c-format
+msgid "до гавани %s"
+msgstr "距港口 %s"
+
+#: game/scripts/warship.gd:363
+#, c-format
+msgid "до огневой позиции %s"
+msgstr "距射击阵位 %s"
+
+#, c-format
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %s · окно открыто"
+msgstr "撤离：关卡 %d / %d · %s · 窗口开启"
+
+#: game/scripts/dist_text.gd
+#, c-format
+msgid "%d м"
+msgstr "%d 米"
+
+#: game/scripts/dist_text.gd
+#, c-format
+msgid "%s км"
+msgstr "%s 公里"

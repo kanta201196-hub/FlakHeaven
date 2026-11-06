@@ -10228,3 +10228,112 @@ msgstr "You can upgrade the plane: no node upgrades yet, enough parts (%d)"
 #: game/scripts/hud_campaign.gd
 msgid "‹ Улучшить в ангаре"
 msgstr "‹ Upgrade in the hangar"
+
+#: game/scripts/hud_flight.gd:788
+#, c-format
+msgid "до базы %s"
+msgstr "%s to base"
+
+#: game/scripts/hud_flight.gd:788
+#, c-format
+msgid "отбомбилась · до базы %s"
+msgstr "bombed · %s to base"
+
+#: game/scripts/hud_flight.gd:814 game/scripts/hud_flight.gd:993
+#, c-format
+msgid "база %s"
+msgstr "base %s"
+
+#: game/scripts/hud_flight.gd:824
+#, c-format
+msgid "эвакуация %s"
+msgstr "extraction %s"
+
+#: game/scripts/hud_flight.gd:825
+#, c-format
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %s · окно %d с"
+msgstr "EXTRACTION: gate %d / %d · %s · window %d s"
+
+#: game/scripts/hud_flight.gd:1000
+#, c-format
+msgid "База противника: %s — подлетите, чтобы начать"
+msgstr "Enemy base: %s — fly in to start"
+
+#: game/scripts/hud_flight.gd:1007
+#, c-format
+msgid "ПВО %s"
+msgstr "AA %s"
+
+#: game/scripts/hud_flight.gd:1014
+#, c-format
+msgid "Позиция ПВО: %s — подлетите, чтобы начать"
+msgstr "AA site: %s. Fly closer to start"
+
+#: game/scripts/hud_flight.gd:1021
+#, c-format
+msgid "маяк %s"
+msgstr "beacon %s"
+
+#: game/scripts/hud_flight.gd:1030
+#, c-format
+msgid "Аварийный маяк: %s · вертолёт ждёт ещё %d с"
+msgstr "Distress beacon: %s · the helicopter waits %d more s"
+
+#: game/scripts/hud_flight.gd:1038
+#, c-format
+msgid "караван %s"
+msgstr "caravan %s"
+
+#: game/scripts/hud_flight.gd:1038
+#, c-format
+msgid "колонна %s"
+msgstr "convoy %s"
+
+#: game/scripts/hud_flight.gd:1043
+#, c-format
+msgid "Караван снабжения: %s — подлетите и потопите сухогрузы"
+msgstr "Supply caravan: %s — fly in and sink the freighters"
+
+#: game/scripts/hud_flight.gd:1043
+#, c-format
+msgid "Колонна снабжения: %s — подлетите и сожгите грузовики"
+msgstr "Supply convoy: %s. Fly in and burn the trucks"
+
+#: game/scripts/hud_flight.gd:1048
+#, c-format
+msgid "транспортник %s"
+msgstr "transport %s"
+
+#: game/scripts/hud_flight.gd:1054
+#, c-format
+msgid "ас %s"
+msgstr "ace %s"
+
+#: game/scripts/hud_flight.gd:1062
+#, c-format
+msgid "заправщик %s"
+msgstr "tanker %s"
+
+#: game/scripts/warship.gd:361
+#, c-format
+msgid "до гавани %s"
+msgstr "to harbor %s"
+
+#: game/scripts/warship.gd:363
+#, c-format
+msgid "до огневой позиции %s"
+msgstr "%s to firing position"
+
+#, c-format
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %s · окно открыто"
+msgstr "EVACUATION: gate %d / %d · %s · window open"
+
+#: game/scripts/dist_text.gd
+#, c-format
+msgid "%d м"
+msgstr "%d m"
+
+#: game/scripts/dist_text.gd
+#, c-format
+msgid "%s км"
+msgstr "%s km"
