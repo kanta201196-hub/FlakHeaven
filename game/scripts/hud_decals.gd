@@ -17,6 +17,20 @@ const NAMES := {
 	"wasp": "Оса", "rook": "Грач", "whale": "Кит", "cat": "Чёрный кот", "shark_mouth": "Акулья пасть",
 	"eye": "Глаз", "peaks": "Горы", "number": "Номер", "tally_air": "Счёт: воздух", "tally_ground": "Счёт: земля",
 	"tally_bomb": "Счёт: бомбы", "shark_eye": "Акулий глаз",
+	# ED-04 / ED-08: the Deluxe pack (DecalCatalog.PACK_IMAGES)
+	"wasp_missile": "Оса с ракетой", "honeycomb": "Соты", "sting_arrow": "Жало", "winged_bolt": "Крылатая молния",
+	"wasp_ace": "Оса-ас", "reticle": "Прицел", "swallow": "Ласточка", "daredevil": "Сорвиголова",
+	"nose_flames": "Языки пламени", "tally_wasp": "Счёт: осы", "rook_bomb": "Грач с бомбой",
+	"feather_dagger": "Перо-кинжал", "horseshoe": "Подкова", "sledgehammer": "Кувалда",
+	"raven_skull": "Ворон на черепе", "wolf_jaw": "Волчья пасть", "wrench_bolt": "Ключ и молния",
+	"tank_reticle": "Танк в прицеле", "jester": "Джокер", "hourglass": "Песочные часы", "whale_bomb": "Кит с бомбой",
+	"spout": "Фонтан", "anchor": "Якорь", "wave": "Волна", "compass_rose": "Роза ветров", "lighthouse": "Маяк",
+	"bomb_bow": "Посылка", "owl": "Сова", "bear": "Медведь", "turtle": "Черепаха", "key_f": "Клавиша F", "gg": "GG",
+	"three_am": "Три часа ночи", "pixel_shades": "Так и задумано", "bug_feature": "Не баг, а фича",
+	"dumbbell_wings": "Скилл", "snail_ping": "Пинг 999", "loading_bar": "Загрузка 99 %", "afk_zzz": "AFK",
+	"pixel_heart": "+1 жизнь", "capybara": "Капибара", "goose_wrench": "Гусь-механик", "rubber_duck": "Уточка",
+	"cute_bomb": "Бомбочка", "baguette": "Батон", "arrow_gear": "Запчасти растут", "grumpy_navigator": "Кот-штурман",
+	"fine_smile": "Всё под контролем", "bang": "Бах!", "no_feed_whale": "Не кормить Кита",
 }
 ## Preset spots (DecalPresets.NAMES) and their buttons
 const SPOT_TITLE := {"nose": "Нос", "number": "Номер", "tally": "Счёт", "fin": "Киль", "wing": "Крыло"}
@@ -171,7 +185,10 @@ func _grid(e: DecalEditor, x: float, y: float, w: float) -> float:
 	var row := 0
 	var gy := y + 24.0
 	var why := ""
-	for id: String in DecalCatalog.IMAGES:
+	var ids: Array = DecalCatalog.IMAGES.keys()
+	if DecalCatalog.pack_shown():   # ED-04: the Deluxe pack's stickers after the base set
+		ids += DecalCatalog.PACK_IMAGES.keys()
+	for id: String in ids:
 		var cw := int(DecalCatalog.aspect(id))
 		if col + cw > per:
 			col = 0

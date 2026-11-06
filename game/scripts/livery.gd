@@ -169,6 +169,97 @@ const NATURAL := [
 		Color(0.56, 0.55, 0.47), Color(0.70, 0.69, 0.66),
 		{"style": 5, "scale": 8.0, "cut": Vector2(0.68, 0.58), "edge": 0.03, "fade": 0.2, "grime": 0.9, "belly": 0.6, "seed": 8.0}],
 ]
+## Two editions at launch (ED-02, ED-03, ED-08; Kanta 06.11 «в остальном ок — бери в работу»): the Standard edition keeps
+## five paints per class, the Deluxe pack «Набор “Эскадрилья”» adds ten per class (six of today's paints and four
+## new ones) and the «Хулиганский ящик» meme paints for every class. Until the Steam DLC check (ED-05) and the
+## cut of the old list (ED-02) land, the edition lists are shown only on the bench (--liveditions), so players see no
+## change. New styles of pattern 7 (see NATURAL for the params): 12 stripes on the tail and wing tips (cut.x — tail
+## share, cut.y — tip line), 13 zigzag bolts across the span (cut.x — width), 14 nose → tail fade (base → colour 2),
+## 15 rainbow along the plane, 16 two arcs round the tail (colour 3, colour 2), 17 bands across the wings and the tail
+## (colour 3, cut.x — band line), 18 wings and tail in colour 3 (cut.x — wing line, cut.y — tail share), 19 orca
+## patches in colour 3, 20 two-colour cube chequer, 21 blueprint grid in colour 3 (cut.x — line width), 22 carpet
+## diamonds (colour 2 and colour 3 rings), 23 crossed tape strips in colour 3 (cut.x — share of cells taped).
+## All schemes are invented: no national, unit or display-team scheme is copied.
+const EDITION_NEW := [
+	["ed_sting", "Жало", Color(0.07, 0.07, 0.07), Color(0.45, 0.47, 0.49), Color(0.58, 0.60, 0.62), 0.80, 0.05, 7,
+		Color(0.86, 0.66, 0.10), Color(0.60, 0.62, 0.64),
+		{"style": 12, "scale": 4.0, "cut": Vector2(0.30, 0.36), "edge": 0.000, "fade": 0.30, "grime": 0.60, "belly": 1.00, "seed": 21.0}],
+	["ed_storm", "Гроза", Color(0.07, 0.09, 0.16), Color(0.12, 0.17, 0.30), Color(0.26, 0.31, 0.42), 0.70, 0.05, 7,
+		Color(0.90, 0.92, 0.95), Color(0.30, 0.35, 0.45),
+		{"style": 13, "scale": 3.0, "cut": Vector2(0.10, 0.00), "edge": 0.000, "fade": 0.20, "grime": 0.50, "belly": 0.80, "seed": 22.0}],
+	["ed_sunset", "Закат", Color(0.34, 0.13, 0.44), Color(0.92, 0.50, 0.14), Color(0.95, 0.62, 0.30), 0.60, 0.05, 7,
+		Color(0.60, 0.25, 0.35), Color(0.42, 0.22, 0.42),
+		{"style": 14, "scale": 1.0, "cut": Vector2(0.00, 0.00), "edge": 0.000, "fade": 0.15, "grime": 0.40, "belly": 0.60, "seed": 23.0}],
+	["ed_aero", "Пилотажная", Color(0.08, 0.50, 0.53), Color(0.83, 0.83, 0.81), Color(0.88, 0.88, 0.86), 0.55, 0.05, 7,
+		Color(0.88, 0.40, 0.10), Color(0.80, 0.80, 0.78),
+		{"style": 16, "scale": 1.0, "cut": Vector2(0.00, 0.00), "edge": 0.000, "fade": 0.10, "grime": 0.40, "belly": 0.00, "seed": 24.0}],
+	["ed_raven", "Вороново крыло", Color(0.13, 0.09, 0.20), Color(0.07, 0.08, 0.11), Color(0.16, 0.18, 0.26), 0.35, 0.35, 7,
+		Color(0.10, 0.12, 0.22), Color(0.10, 0.11, 0.15),
+		{"style": 0, "scale": 4.0, "cut": Vector2(0.60, 0.70), "edge": 0.080, "fade": 0.10, "grime": 0.50, "belly": 0.00, "seed": 25.0}],
+	["ed_bare", "Голый металл", Color(0.45, 0.30, 0.18), Color(0.62, 0.63, 0.62), Color(0.70, 0.71, 0.70), 0.40, 0.70, 7,
+		Color(0.42, 0.47, 0.30), Color(0.62, 0.63, 0.62),
+		{"style": 11, "scale": 6.0, "cut": Vector2(0.86, 0.24), "edge": 0.030, "fade": 0.05, "grime": 0.90, "belly": 0.00, "seed": 26.0}],
+	["ed_hunter", "Охотник", Color(0.14, 0.18, 0.12), Color(0.21, 0.27, 0.17), Color(0.32, 0.36, 0.26), 0.85, 0.03, 7,
+		Color(0.88, 0.45, 0.10), Color(0.40, 0.44, 0.36),
+		{"style": 17, "scale": 4.0, "cut": Vector2(0.30, 0.00), "edge": 0.000, "fade": 0.40, "grime": 0.80, "belly": 1.00, "seed": 27.0}],
+	["ed_winter", "Зимний осколок", Color(0.50, 0.53, 0.55), Color(0.80, 0.81, 0.80), Color(0.84, 0.85, 0.84), 0.88, 0.03, 7,
+		Color(0.66, 0.68, 0.70), Color(0.62, 0.65, 0.68),
+		{"style": 1, "scale": 5.0, "cut": Vector2(0.30, 0.30), "edge": 0.000, "fade": 0.20, "grime": 0.80, "belly": 0.80, "seed": 28.0}],
+	["ed_deep", "Глубина", Color(0.08, 0.14, 0.24), Color(0.12, 0.20, 0.32), Color(0.24, 0.32, 0.42), 0.80, 0.03, 7,
+		Color(0.18, 0.28, 0.40), Color(0.74, 0.77, 0.79),
+		{"style": 0, "scale": 3.0, "cut": Vector2(0.55, 0.65), "edge": 0.080, "fade": 0.30, "grime": 0.70, "belly": 1.00, "seed": 29.0}],
+	["ed_orca", "Косатка", Color(0.05, 0.05, 0.06), Color(0.06, 0.06, 0.07), Color(0.14, 0.14, 0.15), 0.60, 0.05, 7,
+		Color(0.90, 0.90, 0.88), Color(0.88, 0.88, 0.86),
+		{"style": 19, "scale": 1.0, "cut": Vector2(0.00, 0.00), "edge": 0.000, "fade": 0.10, "grime": 0.50, "belly": 1.00, "seed": 30.0}],
+	["ed_night", "Ночной рейс", Color(0.12, 0.12, 0.13), Color(0.16, 0.17, 0.18), Color(0.24, 0.25, 0.26), 0.90, 0.03, 7,
+		Color(0.80, 0.76, 0.64), Color(0.20, 0.21, 0.22),
+		{"style": 17, "scale": 4.0, "cut": Vector2(0.26, 0.00), "edge": 0.000, "fade": 0.20, "grime": 0.80, "belly": 0.00, "seed": 31.0}],
+	["ed_polar", "Экспедиция", Color(0.60, 0.60, 0.58), Color(0.83, 0.83, 0.81), Color(0.88, 0.88, 0.86), 0.70, 0.03, 7,
+		Color(0.88, 0.34, 0.10), Color(0.80, 0.80, 0.78),
+		{"style": 18, "scale": 1.0, "cut": Vector2(0.12, 0.20), "edge": 0.000, "fade": 0.10, "grime": 0.60, "belly": 0.00, "seed": 32.0}],
+	["meme_tape", "Синяя изолента", Color(0.38, 0.40, 0.42), Color(0.48, 0.50, 0.52), Color(0.58, 0.60, 0.62), 0.80, 0.05, 7,
+		Color(0.12, 0.30, 0.72), Color(0.50, 0.52, 0.54),
+		{"style": 23, "scale": 5.0, "cut": Vector2(0.35, 0.00), "edge": 0.000, "fade": 0.30, "grime": 0.90, "belly": 0.50, "seed": 33.0}],
+	["meme_missing", "Битая текстура", Color(0.03, 0.03, 0.03), Color(0.85, 0.10, 0.85), Color(0.85, 0.10, 0.85), 0.60, 0.00, 7,
+		Color(0.85, 0.10, 0.85), Color(0.85, 0.10, 0.85),
+		{"style": 20, "scale": 6.0, "cut": Vector2(0.00, 0.00), "edge": 0.000, "fade": 0.00, "grime": 0.00, "belly": 0.00, "seed": 34.0}],
+	["meme_banana", "Банан для масштаба", Color(0.80, 0.64, 0.12), Color(0.93, 0.80, 0.22), Color(0.96, 0.86, 0.40), 0.60, 0.00, 7,
+		Color(0.33, 0.21, 0.08), Color(0.88, 0.78, 0.30),
+		{"style": 3, "scale": 5.0, "cut": Vector2(0.70, 0.70), "edge": 0.030, "fade": 0.10, "grime": 0.30, "belly": 0.00, "seed": 35.0}],
+	["meme_cow", "Корова", Color(0.05, 0.05, 0.05), Color(0.88, 0.88, 0.86), Color(0.90, 0.90, 0.88), 0.75, 0.00, 7,
+		Color(0.05, 0.05, 0.05), Color(0.86, 0.80, 0.78),
+		{"style": 0, "scale": 3.0, "cut": Vector2(0.60, 0.80), "edge": 0.005, "fade": 0.10, "grime": 0.30, "belly": 0.00, "seed": 36.0}],
+	["meme_carpet", "Ковёр на стене", Color(0.12, 0.20, 0.42), Color(0.50, 0.10, 0.14), Color(0.55, 0.15, 0.18), 0.95, 0.00, 7,
+		Color(0.84, 0.66, 0.34), Color(0.50, 0.10, 0.14),
+		{"style": 22, "scale": 2.2, "cut": Vector2(0.00, 0.00), "edge": 0.000, "fade": 0.10, "grime": 0.30, "belly": 0.00, "seed": 37.0}],
+	["meme_rgb", "RGB-подсветка", Color(0.05, 0.05, 0.06), Color(0.10, 0.10, 0.12), Color(0.15, 0.15, 0.17), 0.30, 0.20, 7,
+		Color(0.90, 0.90, 0.90), Color(0.10, 0.10, 0.12),
+		{"style": 15, "scale": 1.0, "cut": Vector2(0.00, 0.00), "edge": 0.000, "fade": 0.00, "grime": 0.20, "belly": 0.00, "seed": 38.0}],
+	["meme_blueprint", "Чертёж", Color(0.10, 0.26, 0.56), Color(0.12, 0.30, 0.62), Color(0.16, 0.36, 0.68), 0.90, 0.00, 7,
+		Color(0.88, 0.92, 0.98), Color(0.12, 0.30, 0.62),
+		{"style": 21, "scale": 14.0, "cut": Vector2(0.04, 0.00), "edge": 0.000, "fade": 0.05, "grime": 0.20, "belly": 0.00, "seed": 39.0}],
+	["meme_kit", "Сборная модель", Color(0.50, 0.52, 0.54), Color(0.58, 0.60, 0.62), Color(0.62, 0.64, 0.66), 0.45, 0.00, 7,
+		Color(0.58, 0.60, 0.62), Color(0.58, 0.60, 0.62),
+		{"style": 0, "scale": 1.0, "cut": Vector2(2.00, 2.00), "edge": 0.000, "fade": 0.00, "grime": 0.00, "belly": 0.00, "seed": 40.0}],
+]
+## Standard edition: the same five names on every class (the first is the class default)
+const EDITION_BASE := {
+	"fighter": ["classic", "steppe", "rock", "sea_fog", "ash"],
+	"attacker": ["sand_camo", "steppe", "rock", "sea_fog", "ash"],
+	"bomber": ["sand_camo", "steppe", "rock", "sea_fog", "ash"],
+}
+## Deluxe pack: ten per class, today's paints first, then the new ones (EDITION_NEW ids)
+const EDITION_PACK := {
+	"fighter": ["pink_leopard", "black_gloss", "shark", "arctic_tiger", "dazzle", "pixel",
+		"ed_sting", "ed_storm", "ed_sunset", "ed_aero"],
+	"attacker": ["tiger", "black_matte", "rust", "reed", "forest", "pixel",
+		"ed_raven", "ed_bare", "ed_hunter", "ed_winter"],
+	"bomber": ["classic", "forest", "rust", "arctic_tiger", "shark", "dazzle",
+		"ed_deep", "ed_orca", "ed_night", "ed_polar"],
+}
+## «Хулиганский ящик»: the meme paints, the same on every class
+const EDITION_MEMES := ["meme_tape", "meme_missing", "meme_banana", "meme_cow", "meme_carpet", "meme_rgb",
+	"meme_blueprint", "meme_kit"]
 ## Pattern 7 frequency per class: battle sizes are 1.0 / 1.25 / 1.6 (PlaneClasses), so a bigger plane gets a
 ## finer pattern in its own model units and its patches stay about the size of the fighter's on screen
 const CLASS_SCALE := {"fighter": 1.0, "attacker": 1.2, "bomber": 1.45}
@@ -279,9 +370,28 @@ static func list(cls: String) -> Array:
 ## The class's paints, plus the NATURAL proposals on the bench (--livproposals)
 static func _all(cls: String) -> Array:
 	var l: Array = VARIANTS.get(cls, [])
+	if _editions and VARIANTS.has(cls):
+		return edition_list(cls)
 	if _proposals and VARIANTS.has(cls):
 		l = l + NATURAL
 	return l
+
+
+## The two editions' paints of class `cls` in picker order: Standard five, the pack's ten, the meme paints
+## (bench --liveditions until ED-02 / ED-05)
+static func edition_list(cls: String) -> Array:
+	var out: Array = []
+	var ids: Array = (EDITION_BASE.get(cls, []) as Array) + (EDITION_PACK.get(cls, []) as Array) + EDITION_MEMES
+	for id: String in ids:
+		for v: Array in (VARIANTS.get(cls, []) as Array) + EDITION_NEW:
+			if v[0] == id:
+				out.append(v)
+				break
+	return out
+
+
+## `--liveditions` read once, like `--livproposals`
+static var _editions: bool = OS.get_cmdline_user_args().has("--liveditions")
 
 
 ## `--livproposals` read once: list()/current() run every hangar frame (review 2026-10-30, R-10)
@@ -765,9 +875,77 @@ float cell_aa(float edge) {
 	return clamp(0.5 + 0.5 * edge / max(fwidth(edge), 1e-5), 0.0, 1.0);
 }
 
+// smooth band 0…1 for x in [a, b], antialiased by its own derivative
+float band(float x, float a, float b) {
+	float w = fwidth(x) + 0.001;
+	return smoothstep(a - w, a + w, x) * (1.0 - smoothstep(b - w, b + w, x));
+}
+
+// Livery.EDITION_NEW styles 12–23: weights of colour 2 (x) and colour 3 (y); p — scaled model point, q — box 0…1
+vec2 ed_pattern(vec3 p, vec3 n, vec3 q, float dz) {
+	if (nat_style == 12) {   // tail and wing tips striped colour 3 / colour 2
+		float zone = max(1.0 - smoothstep(nat_cut.x - 0.01, nat_cut.x + 0.01, q.x),
+				smoothstep(nat_cut.y - 0.005, nat_cut.y + 0.005, dz));
+		float f = fract((p.x + p.z * 0.9) * 0.9);
+		float y = band(f, 0.0, 0.5);
+		return vec2(zone * (1.0 - y), zone * y);
+	} else if (nat_style == 13) {   // zigzag bolts across the span
+		float tri = abs(fract(p.z * 0.9) - 0.5) * 2.0;
+		float v = fract(p.x * 0.35 + tri * 0.55 + nat_seed);
+		return vec2(0.0, band(v, 0.5 - nat_cut.x, 0.5 + nat_cut.x));
+	} else if (nat_style == 14) {   // fade nose → tail
+		return vec2(smoothstep(0.85, 0.1, q.x), 0.0);
+	} else if (nat_style == 16) {   // two arcs round the tail
+		float r = length(vec2(q.x * 1.05, dz * 1.5));
+		return vec2(band(r, 0.66, 0.74), band(r, 0.52, 0.62));
+	} else if (nat_style == 17) {   // bands across the wings and the stabiliser
+		float wing = band(dz, nat_cut.x, nat_cut.x + 0.05) + band(dz, nat_cut.x + 0.08, nat_cut.x + 0.1);
+		float tail = band(q.x, 0.04, 0.09);
+		return vec2(0.0, clamp(wing + tail, 0.0, 1.0));
+	} else if (nat_style == 18) {   // wings and tail in colour 3
+		float z = max(smoothstep(nat_cut.x - 0.005, nat_cut.x + 0.005, dz) * step(0.2, q.x),
+				1.0 - smoothstep(nat_cut.y - 0.01, nat_cut.y + 0.01, q.x));
+		return vec2(0.0, z);
+	} else if (nat_style == 19) {   // orca: a white patch behind the cockpit on each side, white wing roots
+		float e = length(vec2((q.x - 0.66) * 9.0, (dz - 0.05) * 16.0));
+		float e2 = length(vec2((q.x - 0.45) * 7.0, (dz - 0.16) * 9.0));
+		float w = fwidth(e) + 0.002;
+		return vec2(0.0, max(1.0 - smoothstep(1.0 - w, 1.0 + w, e), 1.0 - smoothstep(1.0 - w, 1.0 + w, e2)));
+	} else if (nat_style == 20) {   // cube chequer
+		vec3 c = floor(p);
+		float k = mod(c.x + c.y + c.z, 2.0);
+		return vec2(k, 0.0);
+	} else if (nat_style == 21) {   // blueprint grid, a heavier line every fifth
+		vec3 f = abs(fract(p) - 0.5);
+		float thin = max(max(band(f.x, 0.5 - nat_cut.x, 0.6), band(f.z, 0.5 - nat_cut.x, 0.6)), band(f.y, 0.5 - nat_cut.x, 0.6));
+		vec3 f5 = abs(fract(p * 0.2) - 0.5);
+		float thick = max(band(f5.x, 0.485, 0.6), band(f5.z, 0.485, 0.6));
+		return vec2(0.0, max(thin * 0.75, thick));
+	} else if (nat_style == 22) {   // carpet: diamonds with rings of colour 2 and colour 3
+		vec2 c = abs(fract(vec2(p.x, p.z + p.y)) - 0.5);
+		float d = c.x + c.y;
+		float r = fract(d * 3.0);
+		return vec2(band(r, 0.0, 0.3), band(r, 0.42, 0.6) + (1.0 - smoothstep(0.08, 0.1, d)));
+	} else if (nat_style == 23) {   // crossed tape strips on some cells
+		float a = 0.6 + nat_seed;
+		vec2 r = vec2(p.x * cos(a) - p.z * sin(a), p.x * sin(a) + p.z * cos(a)) + vec2(0.0, p.y * 0.7);
+		vec2 cell = floor(r);
+		float on = step(hash2(cell + vec2(nat_seed)), nat_cut.x);
+		vec2 f = fract(r) - 0.5;
+		float s1 = band(f.y, -0.1, 0.1) * band(f.x, -0.38, 0.38);
+		float s2 = band(f.x, -0.1, 0.1) * band(f.y, -0.38, 0.38) * step(0.5, hash2(cell + vec2(3.7)));
+		return vec2(0.0, on * max(s1, s2));
+	}
+	return vec2(0.0);
+}
+
 // pattern 7: weights of colour 2 (x) and colour 3 (y) by nat_style at the scaled model point p, normal n
-vec2 nat_pattern(vec3 p, vec3 n) {
+vec2 nat_pattern(vec3 p, vec3 n, vec3 q) {
 	float s = nat_seed;
+	float dz = abs(q.z - 0.5);   // 0 on the fuselage axis, 0.5 at the wing tips
+	if (nat_style >= 12) {
+		return ed_pattern(p, n, q, dz);
+	}
 	if (nat_style == 1) {
 		// hard splinter: cells turned and stretched along a diagonal, a little hand wobble on the edges
 		float a = 0.55 + s;
@@ -949,9 +1127,13 @@ void fragment() {
 			w = vec2(rust, primer);
 			metal_k = 1.0 - max(rust, primer);
 		} else {
-			w = nat_pattern(pn, n);
+			w = nat_pattern(pn, n, q);
 		}
 		vec3 cam = mix(mix(c_mid, c_dark, w.x), pat_a, w.y);
+		if (nat_style == 15) {   // rainbow along the plane and a little across the span
+			float h = fract(q.x * 0.85 + abs(q.z - 0.5) * 0.4);
+			cam = clamp(abs(fract(vec3(h) + vec3(0.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0) - 1.0, 0.0, 1.0) * 0.8 + 0.05;
+		}
 		if (nat_style == 5) {   // whitewash: colour 3 is a thin wash between the white and the paint under it
 			cam = mix(mix(c_mid, pat_a, w.y), c_dark, w.x);
 		}
