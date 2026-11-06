@@ -147,7 +147,7 @@ The second factor is fair (more damage, more HP, the same fight length). The fir
 
 Bot «Оса», 8 + 8 sorties (`osa_max`, `osa_demo`): `single_k` 0.35–0.78, Fortress HP 16.5–44k (the formula floor), killed 8/8 on demo (median 70 s), 4/8 on max (the max bot barely attacks: raw/hp 0.5–1.6). The bot does not reach Kanta's damage, so it cannot show the ×6; the cause comes from Kanta's log and the formula.
 
-Options (Kanta decides, one balance change per build):
+Options (Kanta decides, one balance package per build, Kanta 2026-11-06):
 1. **The Fortress uses one fixed share for every class, 0.55** (median of «Грач» and «Кит»): Kanta's «Оса» 605k → about 208k, the others unchanged. Recommended.
 2. Cap the share for the Fortress at 1.0: 605k → about 378k.
 3. Leave it: the 45 s cap already stops a fight being too short, so the HP could follow damage only; not recommended (no cause fixed).

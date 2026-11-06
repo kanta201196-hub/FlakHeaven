@@ -11,7 +11,7 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 - Documents are the source of truth: decision → `docs/game-context.md`, task → `docs/backlog.md`, build result → `docs/status-log.md` and `game/README.md`. Heavy files (builds, raw models, `.blend`) stay in the Claude project files (`/mnt/project-files`).
 
 ## Communication
-- Chat, statuses, thread titles and in-game menus in Russian. GitHub buttons quoted as on screen ("Merge pull request", "Confirm merge").
+- Chat, statuses, thread titles and in-game menus in Russian. Before sending, a reply that came out in English is rewritten in Russian (Kanta, 2026-11-06, R-32, after three English coordinator replies). GitHub buttons quoted as on screen ("Merge pull request", "Confirm merge").
 - Feedback is collected into one numbered list per build; work starts after "готово".
 - Questions as numbered options with a recommendation; a choice card is only an addition.
 - A reply starts with what is needed from Kanta; each action with a direct link.
@@ -42,7 +42,9 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 ## Builds
 - Export presets in `game/export_presets.cfg`: "Windows Tester", "macOS Tester", "Linux Check". The `tester` feature turns off debug (F1, F4–F8, hangar debug).
 - Build number: `BUILD` in `game/scripts/main.gd`; report endpoint: `REPORT_URL_BUILTIN` there. Kits: `tools/tester/make_kit.sh`.
-- Every build ships with a «что проверить» page (≤ 15 lines). Items Kanta does not flag become «проверено в sN» in the backlog the next day (Kanta, 2026-10-31, R-18).
+- Every build ships with a «что проверить» page (≤ 15 lines), attached to the build message. 24 h after Kanta's first message about the build, every item he did not flag becomes «проверено в sN» in the backlog and the build list is archived; the build thread itself adds the build line to `docs/status-log.md` (Kanta, 2026-10-31 R-18; 2026-11-06 R-30).
+- Builds are delivered from the cloud without the home PC: itch.io via butler with the environment key, Yandex Disk via the Disk API «upload by URL» (Disk pulls the file server-side; direct PUT from the cloud is cut after ~30 s on slow routes). The PC is a fallback only (Kanta, 2026-11-06, R-26).
+- Balance: all balance changes of a build cycle form one numbered package (one journal line, each change «было → стало»), read against the next build log (Kanta, 2026-11-06, R-28; replaces «one change per build»).
 - Before a build: the self-check contact sheet (hangar and combat) is attached to the build message (R-23). Command: `nohup tools/ci/selfcheck.sh &` (presets 0, 2, 3, Forward+ via lavapipe, about an hour per preset; `--quick` — preset 2 only, `--compat` — GL Compatibility, `--only=bomber_2` — one plane). Output: `builds/selfcheck-<commit>/index.html`; exit code 1 on a failed capture or a `SCRIPT ERROR`.
 - Feel and effects changes Kanta wants to judge (turret firing, flight feel, effects) go into `main` behind a toggle, off by default until Kanta's «ок» (Kanta, 2026-10-31, R-22).
 - Debug flags: `--tester`, `--report-url=…`, `--mesatest`, `--reporttest`, `--turbo`.

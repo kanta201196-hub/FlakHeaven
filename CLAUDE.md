@@ -23,7 +23,7 @@ Engine: **Godot 4.4.1**, renderer **Forward+** (since 24.10.2026; Godot falls ba
 
 ## Hard rules
 1. **Fictional world.** No real countries, flags, insignia, real aircraft names or real conflicts. Hardware is "inspired by". Applies to code, assets, strings and docs.
-2. **No game-rule, balance, art, audio, money or legal changes without the user's explicit "yes".** Balance at most once per build cycle.
+2. **No game-rule, balance, art, audio, money or legal changes without the user's explicit "yes".** Balance: one numbered package per build cycle (each change «before → after», read against the next build log; Kanta 2026-11-06).
 3. **Never build or export a test build (zip/exe/app) unless the user asks for it directly.**
 4. **No spending** (paid services, generator credits) and **no writes to external services** without the user's "yes". Do not bypass service or region restrictions or captchas.
 5. **Secrets** live only in environment secrets. Never print, log or commit tokens, keys, passwords.

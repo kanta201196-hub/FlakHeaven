@@ -218,3 +218,15 @@ evenings to a filter. From Kanta: «да».
 
 **What to take first:** 1 (removes most of Kanta's manual work), 4 (the Steam page is the next deadline), 2, 5.
 6–8 are cheap and can go the same day.
+
+---
+
+## Decisions
+
+**Kanta 06.11.2026 (20:16 MSK):** 1 «Да, проверь где узкое место и устрани его» (R-26); 2 «не критично» — not adopted (R-27);
+3 «Согласен» (R-28, rule changed); 4 «Запускай» (R-29); 5 «Ок» (R-30); 6 «Да, делай» (R-31); 7 «Да» (R-32);
+8 «Почему?» — answered in the thread, decision pending (R-33). Journal line 06.11 in `docs/game-context.md`.
+
+Bottleneck for №1 (measured 06.11 from the cloud): Cloudflare upload ~10 MB/s, Google storage ~18 MB/s, Yandex Disk direct
+PUT 0.25–0.6 MB/s with a 502 at ~30 s on 8 MB and 20 MB files; Disk «upload by URL» pulled a 50 MB test file in seconds.
+butler download host `broth.itch.ovh` is refused by the network policy; `ITCH_API_KEY` is already in the environment.
