@@ -55,6 +55,18 @@ uniform float shore_a = 12.0;
 uniform float sea_depth_px = 450.0;
 // S10-06: откуда светит солнце сцены (render3d.gd sun) — блики и светлые склоны волн
 uniform vec3 sea_sun = vec3(-0.48, 0.658, -0.58);
+// W-01 (Kanta 06.11, план по воде; F1 water_v2, выключено до «ок»): волны из запечённой FFT-анимации
+// (game/tools/water/water_maps.py: RG — наклон, B — высота, A — пена гребней; слой = кадр петли), отражение
+// неба (game/tools/water/sky_pano.py, CC0 Poly Haven) по Френелю, пена гребней и кружево на отмели
+uniform bool water_v2 = false;
+uniform sampler2DArray sea_waves : repeat_enable, filter_linear_mipmap;
+uniform sampler2D sea_sky : source_color, repeat_enable, filter_linear_mipmap;
+uniform float sea_frames = 64.0;   // слоёв в sea_waves (water_maps.py FRAMES)
+uniform float sea_loop = 24.0;     // секунд в петле (water_maps.py LOOP)
+uniform float sea_tile = 256.0;    // px мира на плитку волн (water_maps.py TILE)
+uniform float sea_slope_k = 1.6;   // кодировка наклона (water_maps.py SLOPE_K)
+uniform vec2 sea_drift = vec2(2.2, 3.1);   // снос рисунка волн течением, px/с
+uniform float sea_sky_k = 1.6;     // сила отражения неба
 uniform vec3 road_color : source_color = vec3(0.7, 0.62, 0.5);
 uniform vec3 rock_tint : source_color = vec3(0.74, 0.66, 0.58); // скала к палитре стайл-гайда (фото рыжее)
 uniform float rock_sat = 0.45;
@@ -181,6 +193,16 @@ Tap tap(sampler2D ta, sampler2D tn, vec2 uv, float k) {
 		r.n = vec4(0.5, 0.5, dot(r.a.rgb, vec3(0.3333)), 1.0);
 	}
 	return r;
+}
+
+// W-01: волны из массива кадров — два соседних кадра петли с плавным переходом; xy — наклон, z — высота, w — пена
+vec4 sea_wave(vec2 uv, float fr) {
+	float f0 = floor(fr);
+	float a = fr - f0;
+	vec4 w0 = texture(sea_waves, vec3(uv, mod(f0, sea_frames)));
+	vec4 w1 = texture(sea_waves, vec3(uv, mod(f0 + 1.0, sea_frames)));
+	vec4 w = mix(w0, w1, a);
+	return vec4((w.xy - 0.5) / sea_slope_k, w.z, w.w);
 }
 
 void fragment() {
@@ -484,7 +506,21 @@ void fragment() {
 				vec2 g = vec2(0.0);
 				float hh = 0.0;
 				float hn = 0.0;
-				for (int i = 0; i < 9; i++) {
+				float crest = 0.0;   // W-01: пена гребней из FFT
+				if (water_v2) {
+					// две выборки FFT-петли: мелкая волна и крупная зыбь под углом 37°, со сдвигом по времени —
+					// повтор плитки не читается; течение сносит рисунок
+					float fr = t / sea_loop * sea_frames;
+					vec2 wa = (world - sea_drift * t) / sea_tile;
+					mat2 rot = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
+					vec2 wb = rot * (world - sea_drift * t * 0.6) / (sea_tile * 2.3) + vec2(0.37, 0.61);
+					vec4 sa = sea_wave(wa, fr);
+					vec4 sb = sea_wave(wb, fr + sea_frames * 0.43);
+					g = sa.xy * 0.75 + transpose(rot) * sb.xy * 0.7;   // наклон выборки B — назад в оси мира
+					hh = sa.z * 0.55 + sb.z * 0.45;
+					hn = 1.0;
+					crest = max(sa.w, sb.w * 0.8);
+				} else for (int i = 0; i < 9; i++) {
 					float fi = float(i);
 					float L = 2.6 * pow(1.5, fi);   // 2,6 … 67 px
 					float ang = 0.6 + sin(fi * 3.7 + 0.5) * 1.1;   // направления вразброс вокруг ветра
@@ -519,6 +555,23 @@ void fragment() {
 				float cap = smoothstep(0.8, 0.95, hk) * smoothstep(0.6, 0.85, vnoise(world / 170.0 + vec2(t * 0.05, 3.0)))
 					* smoothstep(0.3, 0.55, dp0);
 				foam = max(foam, cap * 0.6);
+				if (water_v2) {
+					// W-01: прибой и пена у кромки рвутся по гребням волн — кружево, а не ровная полоса
+					foam *= 0.45 + 0.55 * smoothstep(0.35, 0.7, hk + crest * 0.5);
+					// барашки там, где гребень FFT-волны заворачивается, на глубине и пятнами (ветер не везде)
+					float wcap = crest * smoothstep(0.22, 0.5, dp0)
+						* smoothstep(0.45, 0.8, vnoise(world / 300.0 + vec2(t * 0.02, 7.0)));
+					foam = max(foam, wcap * 0.55);
+					// отражение неба: луч камеры от волны в панораму (верхняя полусфера), сила — по Френелю;
+					// склоны к горизонту светлеют, облака плывут по воде
+					vec3 vw = normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz);
+					vec3 rr = reflect(-vw, nn);
+					vec2 su = vec2(atan(rr.x, -rr.z) * 0.15915 + 0.5, acos(clamp(rr.y, 0.0, 1.0)) * 0.63662);
+					vec3 skyc = textureLod(sea_sky, su, 1.5).rgb;
+					float fres = 0.02 + 0.98 * pow(1.0 - clamp(dot(nn, vw), 0.0, 1.0), 5.0);
+					wc *= 1.0 - fres;
+					sea_e += skyc * fres * sea_sky_k;
+				}
 				// отмель: рябь песка на дне и сетка каустики (тонкие светлые линии) — гаснут с глубиной
 				float shal = 1.0 - smoothstep(0.03, 0.3, dp0);
 				vec2 bd = vec2(world.x * 0.8 + world.y * 0.6, world.y * 0.8 - world.x * 0.6);

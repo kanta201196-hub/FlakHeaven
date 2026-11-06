@@ -57,9 +57,6 @@ var _built_lvl := 1          # plane level of the model on view (model_key)
 ## (fins wider than the body hang beside the cradles, 3.5-s12: the HE bomb floated); turn — the weapon is turned
 ## lengthwise on the stand and the stand is stretched along it to `len` of the weapon, its width to `wide` of the
 ## weapon's depth (Kanta 26.10 «растяни её»: the carpet row of eight bombs on the bomb cart).
-## The bomb cart lost its floating discs and reflectors (glb_drop_parts.py), so y counts to its cradle tops.
-const STAND_CART := "res://models/hangar/stand_cart.glb"
-const STAND_BOMB := {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.95, "view": 1.0}
 ## S16-11..14 (Kanta: the HE bomb, the evolved pods and bomb rack hung over a cart far too small for them, the flat
 ## flare dispensers floated over its saddles): ground-handling kit sized to the weapon (tools/blender/store_stands.py).
 ## Trailers carry long bodies, racks and pod clusters on timber bolsters shaped to the weapon's underside
@@ -94,10 +91,19 @@ const STANDS_EVO := {
 	"bombs": {"path": TRAILER_LONG, "deck": true, "len": 1.03, "wid": 0.0, "bolsters": [0.27, 0.73], "notch": 0.06,
 		"view": 1.0, "turn": true},
 }
+## «Кит»'s modernised bombs are the bay cassette, already long (the attacker's evolved rack is turned to lie along
+## its trailer): the same long trailer, cassette lengthwise on two bolsters (Kanta 06.11: it floated over the cart)
+const STAND_BAY_CASSETTE := {"path": TRAILER_LONG, "deck": true, "len": 1.03, "wid": 0.0, "bolsters": [0.27, 0.73],
+	"notch": 0.06, "view": 1.0}
 const MISSILE_CART := {"path": "res://models/hangar/stand_missile_cart.glb", "ring": 0.052, "x": 0.0, "y": 0.863,
 	"mid": true, "slots": [-0.2317, 0.2475], "view": 0.8}
 const STANDS := {
 	"hebomb": {"path": TRAILER_MID, "deck": true, "len": 1.0, "wid": 0.0, "bolsters": [0.4, 0.66], "notch": 0.16,
+		"view": 0.72},
+	# Kanta 06.11 «бомбы всё ещё висят», lvl 1 / 3 / 5: the small cart's cradles are V saddles a round body cannot
+	# reach down into (its height share y measured the saddle tips, the fins took the lowest point), so the free-fall
+	# bombs float over it. They go on the mid trailer too, on bolsters shaped to the body between nose and fins.
+	"bombs": {"path": TRAILER_MID, "deck": true, "len": 1.0, "wid": 0.0, "bolsters": [0.36, 0.68], "notch": 0.12,
 		"view": 0.72},
 	"flares": {"path": PLATFORM, "deck": true, "len": 1.25, "wid": 1.2, "view": 0.85},
 	"aam": MISSILE_CART,
@@ -307,7 +313,7 @@ const STAND_SAT := 0.12
 const STAND_TONE := 0.88
 
 
-## Hangar showcase light (F1 `hangar_light`, R-22: off until Kanta's «ок»), flight background only: a warm key light
+## Hangar showcase light (F1 `hangar_light`, R-22: on by default, 0 turns it off), flight background only: a warm key light
 ## from the front quarter and a strong neutral rim light that always comes from behind the plane as seen by the camera
 ## (aimed every frame in _process), so the silhouette and the panel edges catch a bright outline at any angle.
 const SHOW_KEY_COLOR := Color(1.0, 0.84, 0.64)
@@ -457,11 +463,11 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
 		var bb := wmi.mesh.get_aabb()
 		var s := (0.62 if weapon != "turret" else 1.05) / maxf(1.0, maxf(bb.size.x, bb.size.z))
-		var stand: Dictionary = STANDS.get(weapon, STAND_BOMB if Weapons.is_bomb(weapon) else {})
+		var stand: Dictionary = STANDS.get(weapon, {})
 		if evo:
 			stand = STANDS_EVO.get(weapon, {})
 			if weapon == "bombs" and t == WeaponModels.CARPET_BAY_T:
-				stand = STAND_BOMB   # the bomber's bay cassette is already long: it lies along the cart as it is
+				stand = STAND_BAY_CASSETTE   # the bomber's bay cassette is already long: it lies along the trailer
 		if not ResourceLoader.exists(stand.get("path", "")):
 			stand = {}
 		s *= stand.get("view", 1.0)
