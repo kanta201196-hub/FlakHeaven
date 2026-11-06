@@ -659,9 +659,11 @@ void fragment() {
 				// кольца в метрах мира (сжимается на склонах и с перспективой), цвет — в альбедо под светом и тенями
 				// рельефа; свечение слабое, только чтобы метку было видно в тени. Было: кольцо постоянной толщины
 				// на экране и яркое свечение — читалось как наклейка интерфейса над землёй.
-				float rw = max(r * 0.022, fw * 1.2);
-				float ring = 1.0 - smoothstep(rw * 0.5, rw * 0.5 + fw * 1.2, abs(d - r));
-				float fill = (1.0 - smoothstep(r - fw * 2.0, r, d)) * 0.22;
+				// kind 2.25: soft falling-bomb mark (Tuning bombzone_s16) — thinner line with a blurred edge, lighter fill
+				bool soft = zb.z > 2.1;
+				float rw = max(r * (soft ? 0.012 : 0.022), fw * 1.2);
+				float ring = 1.0 - smoothstep(rw * 0.5, rw * 0.5 + fw * 1.2 + (soft ? r * 0.03 : 0.0), abs(d - r));
+				float fill = (1.0 - smoothstep(r - fw * 2.0, r, d)) * (soft ? 0.1 : 0.22);
 				float m = ring;
 				if (zb.z < 1.5) {
 					vec2 u = dv / max(d, 1e-3);
@@ -675,7 +677,7 @@ void fragment() {
 				// краска пропускает рисунок земли: камни и трещины видны сквозь метку
 				float lum = dot(alb, vec3(0.333));
 				alb = mix(alb, zc * (0.45 + lum * 1.6), m * 0.85);
-				gz_e += zc * m * 0.18;
+				gz_e += zc * m * (soft ? 0.06 : 0.18);
 			}
 		}
 	}
