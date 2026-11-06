@@ -57,19 +57,46 @@ var _built_lvl := 1          # plane level of the model on view (model_key)
 ## The bomb cart lost its floating discs and reflectors (glb_drop_parts.py), so y counts to its cradle tops.
 const STAND_CART := "res://models/hangar/stand_cart.glb"
 const STAND_BOMB := {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.95, "view": 1.0}
+## S16-11..14 (Kanta: the HE bomb, the evolved pods and bomb rack hung over a cart far too small for them, the flat
+## flare dispensers floated over its saddles): ground-handling kit sized to the weapon (tools/blender/store_stands.py).
+## Trailers carry long bodies, racks and pod clusters on timber bolsters shaped to the weapon's underside
+## (_bolster); flat items lie straight on the platform trolley's rubber mat. Keys of a `deck` stand: len / wid —
+## deck length / width per weapon length / width (the larger of the two sizes the stand, so the weapon fits both
+## ways; wid 0 — the weapon may overhang the sides, as fins do); bolsters — where they cross the weapon, shares of
+## its length from its back end (turned: they run along the deck at shares of the weapon's depth); notch — how far
+## a bolster climbs round the weapon, in the stand model's metres.
+const TRAILER_LONG := "res://models/hangar/stand_trailer_long.glb"
+const TRAILER_MID := "res://models/hangar/stand_trailer_mid.glb"
+const TRAILER_WIDE := "res://models/hangar/stand_trailer_wide.glb"
+const PLATFORM := "res://models/hangar/stand_platform.glb"
+## Deck of each model in its own units (store_stands.py TRAILERS / PLATFORM, DECK_Z / PLAT_Z): length, width, top height
+const STAND_DECKS := {
+	TRAILER_LONG: Vector3(3.4, 1.3, 0.62),
+	TRAILER_MID: Vector3(2.8, 1.5, 0.62),
+	TRAILER_WIDE: Vector3(2.2, 1.9, 0.62),
+	PLATFORM: Vector3(1.6, 0.9, 0.5),
+}
+## Bolster timber, in the stand model's metres: thickness and the lowest it may be under the weapon
+const BOLSTER_T := 0.14
+const BOLSTER_MIN := 0.08
+## Points a bolster's top is measured at along its length (its shape follows the weapon between them)
+const BOLSTER_N := 48
 ## 3.5-s12 (Kanta: «модерниз. — на кирпичах»): every evolved weapon stands on a real stand too
 const STAND_LOADER := {"path": "res://models/hangar/stand_loader.glb", "len": 1.6, "x": 0.44, "y": 0.854, "cradle": 0.13, "view": 0.5}
 const STANDS_EVO := {
 	"aam": STAND_LOADER,
-	"rockets": {"path": STAND_CART, "len": 1.15, "x": 0.0, "y": 0.97, "view": 0.85},
-	"flares": {"path": STAND_CART, "len": 1.25, "x": 0.0, "y": 1.0, "view": 0.8},
-	"bombs": {"path": STAND_CART, "len": 1.04, "x": 0.0, "y": 0.95, "view": 1.0, "turn": true, "wide": 1.15},
+	"rockets": {"path": TRAILER_WIDE, "deck": true, "len": 1.05, "wid": 1.0, "bolsters": [0.3, 0.72], "notch": 0.1,
+		"view": 0.85},
+	"flares": {"path": PLATFORM, "deck": true, "len": 1.3, "wid": 1.2, "view": 0.8},
+	"bombs": {"path": TRAILER_LONG, "deck": true, "len": 1.03, "wid": 0.0, "bolsters": [0.27, 0.73], "notch": 0.06,
+		"view": 1.0, "turn": true},
 }
 const MISSILE_CART := {"path": "res://models/hangar/stand_missile_cart.glb", "ring": 0.052, "x": 0.0, "y": 0.863,
 	"mid": true, "slots": [-0.2317, 0.2475], "view": 0.8}
 const STANDS := {
-	"hebomb": {"path": STAND_CART, "len": 1.05, "x": 0.0, "y": 0.95, "view": 0.72, "body": true},
-	"flares": {"path": STAND_CART, "len": 1.25, "x": 0.0, "y": 0.86, "view": 0.85},   # the cassette nests into the cradle saddles
+	"hebomb": {"path": TRAILER_MID, "deck": true, "len": 1.0, "wid": 0.0, "bolsters": [0.4, 0.66], "notch": 0.16,
+		"view": 0.72},
+	"flares": {"path": PLATFORM, "deck": true, "len": 1.25, "wid": 1.2, "view": 0.85},
 	"aam": MISSILE_CART,
 	"srm": MISSILE_CART,
 	"agm": STAND_LOADER,
@@ -468,6 +495,8 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 ## (STANDS): on the cradle, in the rings (a second missile in the next ring pair) or strapped to the loader plate.
 ## The weapon and the stand move apart by half the cradle offset each, so the pair is centred in the view.
 func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, stand: Dictionary) -> bool:
+	if stand.get("deck", false):
+		return _place_on_deck(wmi, stand)
 	var cart := WeaponModels._glb_mesh(stand["path"], 1.0, Color(), stand["path"].get_file().get_basename())
 	if cart == null:
 		return false
@@ -510,6 +539,221 @@ func _place_on_stand(wmi: MeshInstance3D, bb: AABB, s: float, bottom: float, sta
 		_cradle(Vector3(wmi.position.x + bb.get_center().x * s, axis, wmi.position.z + bb.get_center().z * s),
 			body, float(stand["cradle"]) * cb.size.x * ck, float(stand.get("band", 360.0)))
 	return true
+
+
+## S16-11..14: puts the weapon `wmi` (already in the view, scaled and centred) on a trailer or the platform trolley
+## (`stand`, a `deck` entry of STANDS): the stand is sized so its deck covers the weapon (len / wid), its wheels
+## stand on the store floor, the timber bolsters are shaped to the weapon's underside and the weapon is raised
+## onto them; without bolsters it lies on the deck. The deck sits under the weapon's lowest point (fins of the HE
+## bomb clear it), the bolsters at least BOLSTER_MIN high. Returns false when the stand model is missing.
+func _place_on_deck(wmi: MeshInstance3D, stand: Dictionary) -> bool:
+	var path: String = stand["path"]
+	var cart := WeaponModels._glb_mesh(path, 1.0, Color(), path.get_file().get_basename())
+	if cart == null or not STAND_DECKS.has(path):
+		return false
+	var deck: Vector3 = STAND_DECKS[path]
+	var turn: bool = stand.get("turn", false)
+	var wb: AABB = wmi.transform * wmi.mesh.get_aabb()   # the weapon's box in the view
+	var ck := maxf(wb.size.x * float(stand["len"]) / deck.x, wb.size.z * float(stand.get("wid", 0.0)) / deck.y)
+	var c := wb.get_center()
+	var top := wb.position.y   # deck top under the weapon as it lies now (moved with it below)
+	var tops: Array[PackedFloat32Array] = []
+	var spans: Array[Vector3] = []   # per bolster kept: centre (view x, z) and, in z, 1 when it runs along the deck
+	var shares: Array = stand.get("bolsters", [])
+	if not shares.is_empty():
+		var lines: Array[PackedVector3Array] = []
+		var all_spans: Array[Vector3] = []
+		for sh: float in shares:
+			# across the deck at a share of the weapon's length; turned: along the deck at a share of its depth
+			var at := Vector3(wb.position.x + wb.size.x * sh, 0.0, c.z) if not turn \
+				else Vector3(c.x, 0.0, wb.position.z + wb.size.z * sh)
+			all_spans.append(Vector3(at.x, at.z, 1.0 if turn else 0.0))
+			lines.append_array(_bolster_lines(at, turn, (deck.x if turn else deck.y) * ck, BOLSTER_T * ck))
+		var low := _lowest_under(wmi, lines)
+		var lo := INF
+		for b in shares.size():
+			# the timber's top at each point: the lowest of the weapon over its thickness there, cut off `notch`
+			# over its lowest point (it cradles the body, it does not climb its sides or reach past it)
+			var t := PackedFloat32Array()
+			t.resize(lines[0].size())
+			for k in t.size():
+				t[k] = minf(low[b * 3][k], minf(low[b * 3 + 1][k], low[b * 3 + 2][k]))
+			var tl := INF
+			for h in t:
+				tl = minf(tl, h)
+			if tl == INF:
+				continue   # the weapon is nowhere over this bolster: leave it out
+			for k in t.size():
+				t[k] = minf(t[k], tl + float(stand.get("notch", 0.1)) * ck)
+			tops.append(t)
+			spans.append(all_spans[b])
+			lo = minf(lo, tl)
+		top = minf(wb.position.y, lo - BOLSTER_MIN * ck)
+	# the stand stands on the floor; the weapon (and the bolster tops measured under it) goes up onto it
+	var lift := FLOOR_Y + deck.z * ck - top
+	wmi.position.y += lift
+	var cm := MeshInstance3D.new()
+	cm.mesh = WeaponPaint.paint_mesh(cart, "", 0.0, 1.0, 1.0)
+	cm.basis = Basis.from_scale(Vector3.ONE * ck)
+	cm.position = Vector3(c.x, FLOOR_Y - cart.get_aabb().position.y * ck, c.z)
+	pivot.add_child(cm)
+	var deck_y := FLOOR_Y + deck.z * ck
+	for i in tops.size():
+		var t := tops[i]
+		for k in t.size():
+			t[k] += lift
+		pivot.add_child(_bolster(spans[i], t, deck_y, (deck.x if spans[i].z > 0.5 else deck.y) * ck, BOLSTER_T * ck))
+	return true
+
+
+## Sample lines of a bolster (view x, z; y unused): three lines (its two faces and its middle, `thick` apart) of
+## BOLSTER_N + 1 points over `length` centred at `at`, across the deck or along it (`along`).
+static func _bolster_lines(at: Vector3, along: bool, length: float, thick: float) -> Array[PackedVector3Array]:
+	var out: Array[PackedVector3Array] = []
+	for o: float in [-0.5, 0.0, 0.5]:
+		var line := PackedVector3Array()
+		for i in BOLSTER_N + 1:
+			var u := (float(i) / BOLSTER_N - 0.5) * length
+			line.append(Vector3(at.x + (u if along else o * thick), 0.0, at.z + (o * thick if along else u)))
+		out.append(line)
+	return out
+
+
+## Lowest point (view y) of the weapon `wmi`'s surface over each point of each straight line in `lines` (view x, z),
+## INF where it has none. The weapon is only turned round Y and scaled evenly, so a line along a view axis runs
+## along one of the mesh's own axes: each triangle that crosses a line's plane gives a segment, and the points
+## under it take its height. One pass over the triangles (no ray casts: TriangleMesh has no script API in 4.4).
+static func _lowest_under(wmi: MeshInstance3D, lines: Array[PackedVector3Array]) -> Array[PackedFloat32Array]:
+	var inv := wmi.transform.affine_inverse()
+	var fixed := PackedInt32Array()       # mesh axis held by each line (0 x, 2 z)
+	var cval := PackedFloat32Array()      # its value
+	var u0 := PackedFloat32Array()        # the other axis at the first point and its step
+	var du := PackedFloat32Array()
+	var lows: Array[Array] = []           # plain arrays: written in place below (packed ones are copied)
+	for line in lines:
+		var a := inv * line[0]
+		var b := inv * line[line.size() - 1]
+		var ax := 0 if absf(a.x - b.x) < absf(a.z - b.z) else 2
+		var ou := 2 - ax
+		fixed.append(ax)
+		cval.append(a[ax])
+		u0.append(a[ou])
+		du.append((b[ou] - a[ou]) / maxf(line.size() - 1, 1))
+		var low: Array[float] = []
+		low.resize(line.size())
+		low.fill(INF)
+		lows.append(low)
+	# every line holds the same mesh axis (the bolsters of a stand are parallel): most triangles miss them all
+	var ax0 := fixed[0]
+	var cmin := INF
+	var cmax := -INF
+	for cv in cval:
+		cmin = minf(cmin, cv)
+		cmax = maxf(cmax, cv)
+	var f := wmi.mesh.get_faces()
+	for i in range(0, f.size(), 3):
+		var fa: float = f[i][ax0]
+		var fb: float = f[i + 1][ax0]
+		var fc: float = f[i + 2][ax0]
+		if (fa > cmax and fb > cmax and fc > cmax) or (fa < cmin and fb < cmin and fc < cmin):
+			continue
+		var p := [f[i], f[i + 1], f[i + 2]]
+		for li in lines.size():
+			var ax := fixed[li]
+			var cv := cval[li]
+			var d0: float = p[0][ax] - cv
+			var d1: float = p[1][ax] - cv
+			var d2: float = p[2][ax] - cv
+			if (d0 > 0.0 and d1 > 0.0 and d2 > 0.0) or (d0 < 0.0 and d1 < 0.0 and d2 < 0.0):
+				continue
+			# the triangle's cut by the line's plane: a segment in (other axis, y)
+			var ou := 2 - ax
+			var pts: Array[Vector2] = []
+			var ds := [d0, d1, d2]
+			for e in 3:
+				var da: float = ds[e]
+				var db: float = ds[(e + 1) % 3]
+				var pa: Vector3 = p[e]
+				var pb: Vector3 = p[(e + 1) % 3]
+				if da == 0.0:
+					pts.append(Vector2(pa[ou], pa.y))
+				elif da * db < 0.0:
+					var q := pa.lerp(pb, da / (da - db))
+					pts.append(Vector2(q[ou], q.y))
+			if pts.is_empty():
+				continue
+			var s0 := pts[0]
+			var s1 := pts[0]
+			for q in pts:
+				if q.x < s0.x:
+					s0 = q
+				if q.x > s1.x:
+					s1 = q
+			var step := du[li]
+			if absf(step) < 1e-9:
+				continue
+			var k0 := (s0.x - u0[li]) / step
+			var k1 := (s1.x - u0[li]) / step
+			var low: Array = lows[li]
+			for k in range(maxi(0, ceili(minf(k0, k1))), mini(low.size() - 1, floori(maxf(k0, k1))) + 1):
+				var u := u0[li] + k * step
+				var y := s0.y if s1.x - s0.x < 1e-9 else lerpf(s0.y, s1.y, (u - s0.x) / (s1.x - s0.x))
+				var vy := (wmi.transform * Vector3(0.0, y, 0.0)).y
+				if vy < low[k]:
+					low[k] = vy
+	var out: Array[PackedFloat32Array] = []
+	for lw in lows:
+		out.append(PackedFloat32Array(lw))
+	return out
+
+
+## Timber bolster mesh: `length` long, `thick` thick, centred at span.x / span.y (view x / z), across the deck
+## (span.z 0) or along it (1); its bottom on the deck at `deck_y`, its top following `tops` (_place_on_deck), in the
+## store's weathered paint over a dark timber colour.
+static func _bolster(span: Vector3, tops: PackedFloat32Array, deck_y: float, length: float, thick: float) -> MeshInstance3D:
+	var along := span.z > 0.5
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_smooth_group(-1)
+	var n := tops.size() - 1
+	var pt := func(u: float, y: float, side: float) -> Vector3:
+		return Vector3(span.x + (u if along else side), y, span.y + (side if along else u))
+	var h2 := thick * 0.5
+	var side_dir := Vector3(0, 0, 1) if along else Vector3(1, 0, 0)
+	var u_dir := Vector3(1, 0, 0) if along else Vector3(0, 0, 1)
+	for i in n:
+		var u0 := (float(i) / n - 0.5) * length
+		var u1 := (float(i + 1) / n - 0.5) * length
+		var a: Vector3 = pt.call(u0, tops[i], -h2)
+		var b: Vector3 = pt.call(u1, tops[i + 1], -h2)
+		var a2: Vector3 = pt.call(u0, tops[i], h2)
+		var b2: Vector3 = pt.call(u1, tops[i + 1], h2)
+		var a0: Vector3 = pt.call(u0, deck_y, -h2)
+		var b0: Vector3 = pt.call(u1, deck_y, -h2)
+		var a20: Vector3 = pt.call(u0, deck_y, h2)
+		var b20: Vector3 = pt.call(u1, deck_y, h2)
+		_quad(st, a, b, b2, a2, Vector3.UP)
+		_quad(st, a0, b0, b, a, -side_dir)
+		_quad(st, b20, a20, a2, b2, side_dir)
+	var e0: Vector3 = pt.call(-0.5 * length, deck_y, -h2)
+	var e1: Vector3 = pt.call(-0.5 * length, deck_y, h2)
+	_quad(st, e1, e0, pt.call(-0.5 * length, tops[0], -h2), pt.call(-0.5 * length, tops[0], h2), -u_dir)
+	var f0: Vector3 = pt.call(0.5 * length, deck_y, -h2)
+	var f1: Vector3 = pt.call(0.5 * length, deck_y, h2)
+	_quad(st, f0, f1, pt.call(0.5 * length, tops[n], h2), pt.call(0.5 * length, tops[n], -h2), u_dir)
+	st.generate_normals()
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = WeaponPaint.plain(Color(0.34, 0.27, 0.19), 0.9, 0.0, length)
+	return mi
+
+
+## Quad a-b-c-d (a convex outline in either order) into `st` as two triangles, wound so the face shows from the
+## `out` side (Godot draws clockwise faces as front faces).
+static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, out: Vector3) -> void:
+	var vs := [a, b, c, a, c, d] if (b - a).cross(c - a).dot(out) < 0.0 else [a, c, b, a, d, c]
+	for v: Vector3 in vs:
+		st.add_vertex(v)
 
 
 ## S11-13: seats the turret `wmi` (view scale `s`, lowest point `bottom`) on the ring mount stand
