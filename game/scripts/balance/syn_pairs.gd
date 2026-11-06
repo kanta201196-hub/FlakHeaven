@@ -197,6 +197,22 @@ static func reachable_ids(weapons: Array, wing_cap: int) -> Array:
 	return REQ.keys().filter(func(id): return reachable(id, weapons, wing_cap))
 
 
+## Hardpoint weapon things of `id` that none of `weapons` (the families on the plane) covers.
+## Modules, wingmen and the skill are left out: they never need a mount.
+static func weapons_missing(id: String, weapons: Array) -> Array:
+	return req(id).filter(func(t): return t.has("w") and not (t["w"] as Array).any(func(w): return weapons.has(w)))
+
+
+## Whether putting weapon `new_w` on a mount closes synergy `id` for good: after it the recipe still misses
+## more weapon families than the `free_after` normal mounts left. Flights review 06.11, item 1.4 (Kanta «да»):
+## in s16 the «Оса» filled both mounts with weapons outside its course recipe and the synergy silently died.
+static func closes(id: String, weapons: Array, new_w: String, free_after: int) -> bool:
+	if req(id).is_empty():
+		return false
+	var miss := weapons_missing(id, weapons + [new_w])
+	return not miss.is_empty() and miss.size() > free_after
+
+
 ## Whether the recipe of `id` uses two different hardpoint weapon families (telemetry: share of mixed builds)
 static func two_weapons(id: String) -> bool:
 	var n := 0
