@@ -630,7 +630,7 @@ func _update_player_missiles(delta: float) -> void:
 				Main.I.tele.add("msl_lost")
 		var spd := minf(v.length() + 1500.0 * delta, 720.0 * _missile_spd() * float(m.get("spd_k", 1.0)))
 		if t != null and float(m["age"]) >= float(m.get("free", 0.0)):
-			var ang := rotate_toward(v.angle(), (t.aim_point(p) - p).angle(), deg_to_rad(320.0 * float(m.get("turn_k", 1.0))) * delta)
+			var ang := rotate_toward(v.angle(), (t.aim_point(p) - p).angle(), deg_to_rad(320.0 * float(m.get("turn_k", 1.0)) * _turn_spd_k(m)) * delta)
 			v = Vector2.from_angle(ang) * spd
 		else:
 			v = v.normalized() * spd
@@ -829,6 +829,15 @@ func _update_bombs(delta: float) -> void:
 			Main.I.sfx.play("bomb", -10.0 + (4.0 if b.has("shake") else 0.0), 0.8 if b.has("shake") else 1.0, b["p"])
 			Main.I.add_shake(float(b.get("shake", 2.0)))   # PG-01: the HE bomb shakes harder
 			bombs.remove_at(i)
+
+
+## Review 06.11 item 2 (`msl_s16`): the turn rate grows with the missile's top speed, so the turn radius stays
+## that of a stock missile (about 130 px). With a constant 320°/s a missile boosted ×2.2 by cards turns in a
+## ~280 px circle and can orbit its target instead of hitting it.
+func _turn_spd_k(m: Dictionary) -> float:
+	if Tuning.g("msl_s16") < 1.0:
+		return 1.0
+	return maxf(1.0, _missile_spd() * float(m.get("spd_k", 1.0)))
 
 
 func _missile_spd() -> float:

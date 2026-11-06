@@ -44,6 +44,7 @@ func _init(main: Main) -> void:
 			"blast": [Vector2(380, 150), 130.0]},
 		{"name": "stress", "times": [0.5, 1.5], "stress": 30},
 		{"name": "zones", "times": [0.5, 1.6], "zones": true},
+		{"name": "bombzone", "times": [0.6, 1.6, 2.6], "zones": true},   # review 06.11 item 6: falling-bomb marks over the fall
 		{"name": "emp", "times": [0.08, 0.25, 0.5], "emp": true},
 		{"name": "plasma", "times": [0.5, 0.7, 0.9, 1.4, 3.0], "plasma": true},   # S10-08: плазменная бомба падает и рвётся на земле
 		# S14-18: the same drop in real time for a clip (--film with godot --fixed-fps 30): burst, then the zone burns 4 s
@@ -51,6 +52,7 @@ func _init(main: Main) -> void:
 		{"name": "mhit", "times": [0.04, 0.1, 0.2, 0.4, 0.8, 1.4], "mhit": true},
 		{"name": "plasmafilm", "times": [1.0, 2.5, 4.0, 5.0], "plasma": true, "slow": 1.0},
 		{"name": "trails", "times": [0.3, 0.6, 1.0, 1.6], "trails": true},   # VFX-03: missile and rocket smoke
+		{"name": "pmsl", "times": [0.3, 0.5, 0.8], "pmsl": true},   # review 06.11 item 2: own air-to-air missile smoke (msl_s16)
 		{"name": "wreck", "times": [1.0, 2.0, 3.0], "wreck": true},   # VFX-03: smoke of a wreck on the ground and of a falling plane
 		{"name": "screen", "times": [0.5, 1.5, 3.0, 5.0], "screen": true},   # VFX-03: convoy smoke screen (as Convoy.smoke_fx)
 		{"name": "marks", "times": [2.0, 5.0, 9.0], "blasts": [[Vector2(-220, -60), 130.0], [Vector2(260, 90), 130.0],
@@ -162,6 +164,11 @@ func process(delta: float) -> void:
 					m.projectiles.spawn_missile(a, (pp - a).normalized(), src[1])
 				for k in 3:
 					m.projectiles.spawn_rocket(pp + Vector2(0, -20 * k), Vector2(520, -300).rotated(0.08 * k), 0.0, 40.0, 0.0)
+			if sc.get("pmsl", false):   # four own missiles fanning out ahead; no target, so each flies straight
+				for i in 4:
+					var a := m.player.heading + (float(i) / 3.0 - 0.5) * 1.4
+					m.projectiles.spawn_player_missile(m.player.global_position, m.player.velocity * 0.5 + Vector2.from_angle(a) * 300.0,
+						null, 0.0, "ракеты В-В")
 			if sc.get("salvo", false):   # the «Ёлочка» fan as PlayerSkills._fire_yolka launches it
 				for i in 10:
 					var a := m.player.heading + (float(i) / 9.0 - 0.5) * 2.6
