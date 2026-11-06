@@ -3,23 +3,5 @@ extends SceneTree
 ## player damage, and the old base × growth value still wins when the player's damage is low.
 ## Run from the repository root: `tools/ci/unit.sh`.
 
-var _failed := 0
-
-
-func _init() -> void:
-	# low damage: base x growth decides (bunker 270 x 1.68 = 453)
-	_check(is_equal_approx(GroundTarget.site_floor_hp(GroundTarget.HP_FORT, 1.68, 10.0), 270.0 * 1.68), "low dps: base x growth")
-	# high damage: 20 s of it for the bunker, 6 s for armor, 3 s for standard
-	_check(is_equal_approx(GroundTarget.site_floor_hp(GroundTarget.HP_FORT, 1.0, 1000.0), 20000.0), "bunker 20 s of damage")
-	_check(is_equal_approx(GroundTarget.site_floor_hp(GroundTarget.HP_ARMOR, 1.0, 1000.0), 6000.0), "armor 6 s of damage")
-	_check(is_equal_approx(GroundTarget.site_floor_hp(GroundTarget.HP_STD, 1.0, 1000.0), 3000.0), "standard 3 s of damage")
-	# the convoy keeps the old floor
-	_check(is_equal_approx(GroundTarget.floor_hp(GroundTarget.HP_FORT, 1.0, 1000.0), 3000.0), "convoy floor unchanged")
-	print("UNIT: site_hp_test %s" % ("OK" if _failed == 0 else "%d FAILED" % _failed))
-	quit(1 if _failed > 0 else 0)
-
-
-func _check(ok: bool, what: String) -> void:
-	if not ok:
-		_failed += 1
-		printerr("FAIL: ", what)
+func _initialize() -> void:
+	root.add_child.call_deferred(load("res://tests/site_hp_test_run.gd").new())
