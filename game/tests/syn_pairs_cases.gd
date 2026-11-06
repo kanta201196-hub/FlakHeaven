@@ -13,6 +13,7 @@ func run() -> Array:
 	_test_state()
 	_test_advances()
 	_test_classes()
+	_test_closes()
 	return [_checks, _failed]
 
 
@@ -76,3 +77,15 @@ func _test_classes() -> void:
 			_check(ids.size() >= 4, "%s plane %d: at least 4 reachable synergies (got %d: %s)" % [c, lv, ids.size(), str(ids)])
 			var mixed := ids.filter(func(id): return SynPairs.two_weapons(id))
 			_check(mixed.size() >= 2, "%s plane %d: at least 2 two-weapon synergies (got %s)" % [c, lv, str(mixed)])
+
+
+func _test_closes() -> void:
+	# flights review 06.11, item 1.4: a new weapon on the last free mount must not hide that the recipe is lost
+	_check(SynPairs.weapons_missing("carousel", ["aam"]).size() == 1, "aam only: «Карусель» still misses flares")
+	_check(SynPairs.weapons_missing("carousel", ["aam", "flares"]).is_empty(), "aam + flares: nothing missing")
+	_check(SynPairs.weapons_missing("carousel", ["aam", "rockets"]).size() == 1, "aam + rockets: flares still missing")
+	_check(SynPairs.weapons_missing("thermobaric", ["rockets"]).is_empty(), "«Термобарика»: modules do not count as a missing weapon")
+	_check(SynPairs.closes("carousel", ["aam"], "rockets", 0), "rockets on the last mount close «Карусель»")
+	_check(not SynPairs.closes("carousel", ["aam"], "rockets", 1), "one mount left after rockets: «Карусель» stays open")
+	_check(not SynPairs.closes("carousel", ["aam"], "flares", 0), "flares on the last mount complete the recipe")
+	_check(not SynPairs.closes("gunner", ["aam"], "rockets", 0), "a synergy with no recipe is never reported")
