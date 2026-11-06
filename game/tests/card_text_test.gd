@@ -2,7 +2,8 @@ extends SceneTree
 ## Unit tests for `CardText`: the «(всего +N%)» total on single-stat module cards (Kanta
 ## 24.10, idea 3: multiplier now × (1 + step × rarity) − 1, rounded, signed) and the weapon
 ## level text split into "now" and "later" (S11-20: the card must say whether a bonus comes
-## with this pick or only at a later level).
+## with this pick or only at a later level), and the number formats of «now → after» card lines (Kanta 06.11:
+## real numbers instead of «+12 % к профилю»).
 ## Run from the repository root: `tools/ci/unit.sh`.
 
 var _failed := 0
@@ -15,6 +16,7 @@ func _init() -> void:
 	_check(CardText.total_pct(0.8, 0.1, 1.0) == "−12%", "a total below base gets a minus sign: %s" % CardText.total_pct(0.8, 0.1, 1.0))
 	_check(CardText.total_pct(0.95, 0.05, 1.0) == "0%", "a zero total has no sign: %s" % CardText.total_pct(0.95, 0.05, 1.0))
 	_test_level_text()
+	_test_numbers()
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -47,3 +49,13 @@ func _test_level_text() -> void:
 	_check(e["now"].size() == 2 and e["later"].is_empty(), "a two-level jump gets the level it passes too: %s" % [e["now"]])
 	var f := CardText.level_split(ru, 4, 5)
 	_check(f["now"] == PackedStringArray(["+30% урона, −10% перезарядки"]), "a single level already taken is not repeated: %s" % [f["now"]])
+
+
+func _test_numbers() -> void:
+	TranslationServer.set_locale("ru")   # the decimal comma is Russian only (CardText.dec)
+	_check(CardText.num(33.6) == "34", "big numbers are whole: %s" % CardText.num(33.6))
+	_check(CardText.num(7.5) == "7,5" and CardText.num(7.0) == "7", "small numbers keep one decimal with a comma: %s %s" % [CardText.num(7.5), CardText.num(7.0)])
+	_check(CardText.sec(2.88) == "2,9 с" and CardText.sec(3.0) == "3 с", "seconds: %s / %s" % [CardText.sec(2.88), CardText.sec(3.0)])
+	_check(CardText.factor(1.3) == "×1,3" and CardText.factor(1.12) == "×1,12" and CardText.factor(2.0) == "×2", "factors: %s %s %s" % [CardText.factor(1.3), CardText.factor(1.12), CardText.factor(2.0)])
+	_check(CardText.step("Урон", "30", "34") == "Урон: 30 → 34", "a step line")
+	_check(CardText.step("Перезарядка", "3 с", "3 с", " (предел)") == "Перезарядка: 3 с (предел)", "an equal step says so instead of «3 → 3»")

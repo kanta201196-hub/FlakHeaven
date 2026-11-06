@@ -10150,3 +10150,129 @@ msgstr "%d m"
 #, c-format
 msgid "%s км"
 msgstr "%s km"
+
+#: game/scripts/plane_stats.gd
+msgid "Урон в секунду"
+msgstr "Damage per second"
+
+#: game/scripts/plane_stats.gd
+msgid "по воздуху"
+msgstr "vs air"
+
+#: game/scripts/plane_stats.gd
+msgid "по земле"
+msgstr "vs ground"
+
+#: game/scripts/plane_stats.gd
+msgid "Перезарядка уклонения"
+msgstr "Evade cooldown"
+
+#: game/scripts/plane_stats.gd
+msgid "Перезарядка ловушек"
+msgstr "Flare cooldown"
+
+#: game/scripts/plane_stats.gd
+msgid "Топливо"
+msgstr "Fuel"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%d км/ч"
+msgstr "%d km/h"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%d °/с"
+msgstr "%d °/s"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%s мин"
+msgstr "%s min"
+
+#: game/scripts/card_text.gd
+#, c-format
+msgid "%s с"
+msgstr "%s s"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "%s, ранг %d → %d из %d"
+msgstr "%s, rank %d → %d of %d"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "(%s)"
+msgstr "(%s)"
+
+#: game/scripts/cards.gd
+msgid " (уже на нижнем пределе)"
+msgstr " (already at its floor)"
+
+#: game/scripts/cards.gd
+msgid "Радиус"
+msgstr "Radius"
+
+#: game/scripts/cards.gd
+msgid "Урон за попадание"
+msgstr "Damage per hit"
+
+#: game/scripts/cards.gd
+msgid "Дальность захвата"
+msgstr "Lock range"
+
+#: game/scripts/cards.gd
+msgid "Радиус осколков"
+msgstr "Fragment radius"
+
+#: game/scripts/cards.gd
+msgid "Радиус перехвата"
+msgstr "Intercept radius"
+
+#: game/scripts/cards.gd
+msgid "Урон суббоеприпаса"
+msgstr "Submunition damage"
+
+#: game/scripts/cards.gd
+msgid "Урон по броне"
+msgstr "Damage vs armor"
+
+#: game/scripts/cards.gd
+msgid "Доворот ракеты"
+msgstr "Missile turn"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "«Дятел», Э+ %d → %d из 5"
+msgstr "«Woodpecker», E+ %d → %d of 5"
+
+#: game/scripts/cards.gd
+msgid "Урон снаряда"
+msgstr "Shell damage"
+
+#: game/scripts/cards.gd
+msgid "(+8 % урона за шаг)"
+msgstr "(+8% damage per step)"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "%s, Э+ %d → %d из 5"
+msgstr "%s, E+ %d → %d of 5"
+
+#: game/scripts/cards.gd
+msgid "(+8 % урона и −4 % перезарядки за шаг)"
+msgstr "(+8% damage and −4% cooldown per step)"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ХАРАКТЕРИСТИКИ · самолёт ур. %d"
+msgstr "STATS · aircraft Lv. %d"
+
+#: game/scripts/hud_hangar.gd
+msgid "зелёным — что даст улучшение"
+msgstr "green — what the upgrade gives"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ур. %d: %s"
+msgstr "Lv. %d: %s"
