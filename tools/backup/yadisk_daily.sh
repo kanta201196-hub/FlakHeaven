@@ -8,7 +8,8 @@
 ## cloud-api.yandex.net; this script sends a dummy header and never sees the token.
 ## Big files are split into PART_SIZE pieces: the cloud egress tunnel drops single uploads
 ## after ~90 MB / ~60 s, while 40 MB pieces go through at ~7 MB/s.
-## Never deletes anything on the Disk; exits early if the day's folder already has SHA256SUMS.txt.
+## Exits early if the day's folder already has SHA256SUMS.txt. After a verified run, dated folders
+## older than KEEP_DAYS (default 14, Kanta 2026-11-06) go to the Disk trash; nothing else is touched.
 ## Usage: tools/backup/yadisk_daily.sh [work_dir]   (needs ~13 GB free in work_dir)
 set -euo pipefail
 
@@ -122,3 +123,18 @@ echo "== 4/4 verify size and sha256 on the Disk"
 upload_one SHA256SUMS.txt && verify_one SHA256SUMS.txt >> "$WORK/../verify-$DAY.log"
 echo "verified OK: $(grep -c '^OK' "$WORK/../verify-$DAY.log") of $(ls "$WORK" | wc -l)"
 echo "yadisk: backup $DEST complete"
+
+# Retention (Kanta 2026-11-06: keep 14 days). Runs only after a fully verified backup, touches
+# only YYYY-MM-DD folders under $ROOT, and moves them to the Disk trash (recoverable), not permanently.
+KEEP_DAYS="${KEEP_DAYS:-14}"
+CUTOFF="$(TZ=Europe/Moscow date -d "$DAY - $((KEEP_DAYS - 1)) days" +%F)"
+curl -sS -f -H "$AUTH" "$API/resources?path=$(urlencode "$ROOT")&limit=1000&fields=_embedded.items.name,_embedded.items.type" \
+  | python3 -c 'import sys,json,re
+for i in json.load(sys.stdin)["_embedded"]["items"]:
+    if i["type"]=="dir" and re.fullmatch(r"\d{4}-\d{2}-\d{2}",i["name"]): print(i["name"])' \
+  | while read -r old; do
+      if [[ "$old" < "$CUTOFF" ]]; then
+        curl -sS -f -o /dev/null -X DELETE -H "$AUTH" "$API/resources?path=$(urlencode "$ROOT/$old")" \
+          && echo "retention: moved $old to trash (older than $KEEP_DAYS days)"
+      fi
+    done
