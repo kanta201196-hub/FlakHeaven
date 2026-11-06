@@ -326,7 +326,7 @@ func start_run() -> void:
 	op_result = {}
 	Hints.clear()
 	if aces():
-		Events.banner.emit(Loc.t("БИТВА АСОВ · ТЕСТ"), 4.0)
+		Events.banner.emit(Loc.t("БИТВА АСОВ"), 4.0)
 		run.add_picks(AcesBalance.DRAFT_PICKS)   # option 1 (Kanta 26.10): the build is drafted before takeoff
 		Hints.show("aces_goal2", "Битва асов: асы взлетают один за другим. Три ракеты или пара очередей аса — и самолёт сбит, у них так же. От ракет: F — ловушки, E — разворот сбивает наведение, Пробел — бочка. F1 — настройка полёта.", 10.0, 3)
 	else:

@@ -269,6 +269,10 @@ func _ui_test() -> void:
 		m.stats["kills_by"] = {"дроны": 2890.0, "перехватчики": 519.0, "ракетоносцы": 43.0, "асы": 3.0}
 		m.run.debug_set(&"kills", 3455)
 		m.run.debug_set(&"bosses_killed", 3)
+		if Main.aces():   # with --aces: the result screen must count rival aces, not Bosses (s17)
+			m.run.debug_set(&"bosses_killed", 0)
+			for i in 8:
+				m.run.on_rival_down()
 		m.shots = 4000
 		m.hits = 1480
 		Events.evac_reached.emit()

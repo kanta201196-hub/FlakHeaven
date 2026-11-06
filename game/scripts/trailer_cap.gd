@@ -4,7 +4,10 @@ extends Node
 ## so the GPU-less cloud (lavapipe, ~3 s per Forward+ frame) only pays for the frames it keeps.
 ## Args: --capscale=F (window content scale: --resolution=1080x1920 with 1.7778 gives the same zoom as a
 ## 1920x1920 render cropped to 1080 wide, at 56% of the pixels), --capdir=DIR, --capwin=A-B,C-D (run seconds), --capscan (log action per second, no frames),
-## --capseed=N, --capend=S (quit after this run second).
+## --capseed=N, --capend=S (quit after this run second), --capzoom=F (camera zoom held every frame, so store
+## art can frame the plane closer than the player slider allows), --caphud (keep the HUD, as a player sees it: no
+## debug labels, the hull is refilled every frame instead of god mode, which the HUD would show), --capcards=N:T (also save the first N card-pick screens after run second T,
+## once the cards are up).
 ## Sorties are not frame-exact between runs, so --capshots=NAME:MIN_T:LEN,... picks moments live:
 ## each named shot (see `_want`) starts once, after MIN_T, when its condition holds, and records LEN s.
 
@@ -22,6 +25,11 @@ var _saving := false
 var shots: Array = []   # [{name, min_t, len, state: 0 wait / 1 preroll+rec / 2 done, t0}]
 var _st := {}           # latest stats from `_stats`
 var _kill_hist: Array = []
+var zoom := 0.0      # >0: camera_zoom forced every frame (--capzoom)
+var keep_hud := false
+var cards_left := 0  # card-pick screens still to save (--capcards)
+var cards_from := 0.0
+var _in_cards := false
 
 
 func _init(main: Node) -> void:
@@ -46,15 +54,29 @@ func _ready() -> void:
 			get_window().content_scale_factor = float(a.substr(11))
 		elif a.begins_with("--capend="):
 			end_t = float(a.substr(9))
+		elif a.begins_with("--capcards="):
+			var p := a.substr(11).split(":")
+			cards_left = int(p[0])
+			cards_from = float(p[1]) if p.size() > 1 else 0.0
+		elif a.begins_with("--capzoom="):
+			zoom = float(a.substr(10))
 	scan = OS.get_cmdline_user_args().has("--capscan")
+	keep_hud = OS.get_cmdline_user_args().has("--caphud")
 	if dir != "":
 		DirAccess.make_dir_recursive_absolute(dir)
 	RenderingServer.frame_post_draw.connect(_on_drawn)
 
 
 func _process(_d: float) -> void:
-	if m.hud != null:
+	if m.hud != null and not keep_hud:
 		m.hud.visible = m.state != "playing"
+	if keep_hud:
+		m.god_mode = false
+		Main.DEBUG = false
+		if m.player != null and is_instance_valid(m.player):
+			m.player.hp = m.player.max_hp
+	if zoom > 0.0:
+		Tuning.set_param("camera_zoom", zoom)
 	var t: float = m.run_time
 	var playing: bool = m.state == "playing"
 	var render := false
@@ -72,6 +94,13 @@ func _process(_d: float) -> void:
 				if t > sh["t0"] + PREROLL + sh["len"]:
 					sh["state"] = 2
 					print("TRAILERCAP: shot %s done at %.1f" % [sh["name"], t])
+	if m.state == "levelup" and cards_left > 0 and t >= cards_from:
+		render = true
+		_saving = m._state_t >= MainInput.CARD_INPUT_DELAY + 0.02
+		_in_cards = true
+	elif _in_cards:
+		_in_cards = false
+		cards_left -= 1
 	_set_render(render)
 	if playing and t >= _scan_t:
 		_scan_t = t + 1.0
@@ -101,9 +130,9 @@ func _on_drawn() -> void:
 	if not _saving or dir == "":
 		return
 	var img := get_viewport().get_texture().get_image()
-	var name := "win"
+	var name := "cards" if _in_cards else "win"
 	for sh in shots:
-		if sh["state"] == 1:
+		if sh["state"] == 1 and not _in_cards:
 			name = sh["name"]
 	img.save_png("%s/%s_%05d_%07.2f.png" % [dir, name, _n, float(m.run_time)])
 	_n += 1

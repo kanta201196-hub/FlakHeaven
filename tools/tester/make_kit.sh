@@ -40,4 +40,4 @@ cp "$here"/SAFETY_NOTE_*.txt "$here"/INSTRUCTIONS_*.txt "$dir"/
 echo "Комплект готов в $dir:"; ls "$dir"
 # Kanta 2026-10-25: testers learn about a new build from the game menu (UpdateCheck compares with site/version.json)
 echo
-echo "После заливки на itch.io: site/version.json → \"build\": \"$build\" (коммит в main), пост о сборке в Discord и Telegram."
+echo "После заливки на itch.io: site/version.json → \"build\": \"$build\" (коммит в main). Посты о сборке делает тред маркетинга."

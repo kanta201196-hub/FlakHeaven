@@ -202,7 +202,7 @@ func _item(r: Rect2, id: StringName, label: String) -> void:
 	var note := ""
 	var badge := false
 	if id == &"menu_aces":
-		note = Loc.t("ТЕСТ · «ОСА» ПРОТИВ АСОВ · РЕАЛИСТИЧНЫЙ УРОН")
+		note = Loc.t("«ОСА» ПРОТИВ АСОВ · РЕАЛИСТИЧНЫЙ УРОН")
 	if id == &"menu_prep":
 		badge = Profile.any_purchase()
 		note = Loc.t("ЗАПЧАСТИ %d") % Profile.parts()

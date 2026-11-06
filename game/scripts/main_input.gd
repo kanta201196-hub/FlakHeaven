@@ -485,7 +485,9 @@ func hangar_action(a: String) -> void:
 ## Правка 3.5-s4: цель звена — по кругу; ведущий слышит ответ по радио
 ## Steps the wingmen's target forward (`dir` 1) or back (-1) and says it on the radio.
 func cycle_wing_prio(dir := 1) -> void:
-	Settings.wing_prio = wrapi(Settings.wing_prio + dir, 0, Settings.WING_PRIO.size())
+	Settings.wing_prio = wrapi(Settings.wing_prio_now() + dir, 0, Settings.WING_PRIO.size())
+	if Settings.wing_prio_now() != Settings.wing_prio:   # no ground targets: «наземные цели» is skipped
+		Settings.wing_prio = wrapi(Settings.wing_prio + dir, 0, Settings.WING_PRIO.size())
 	Settings.save_settings()
 	var t: String = Settings.WING_PRIO[Settings.wing_prio]
 	Events.radio.emit("Звено", "Принял: %s!" % (t.left(1).to_upper() + t.substr(1)), false)

@@ -5,7 +5,7 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 ## Decisions and money
 - Decisions on game design, art, audio, money, legal and team are made by Kanta (Kirill stepped back on 2026-10-18). Each decision is a line in the decision log `docs/game-context.md` with who decided → a numbered task in `docs/backlog.md` → an owner thread right away. Agents prepare options and a recommendation.
 - A new test build only on Kanta's direct command, once the previous build's list is closed and checked in game; at least a day between builds (Kanta, 2026-10-22).
-- After Kanta uploads a build to itch.io: set `site/version.json` → `"build"` to the new number (commit to `main`; testers on an older build then see «Вышла сборка …» in the main menu with the itch.io link), and post the build in Discord and Telegram (Kanta, 2026-10-25).
+- After Kanta uploads a build to itch.io: set `site/version.json` → `"build"` to the new number (commit to `main`; testers on an older build then see «Вышла сборка …» in the main menu with the itch.io link) (Kanta, 2026-10-25). Posts about the build in Discord and Telegram belong to the marketing thread, not the build thread (Kanta, 2026-11-06).
 - Standing permission (Kanta, 2026-11-06): once a build is built and self-checked (after his "собери"), upload it to the Yandex Disk folders `FlakHeaven - testers/Test for Win` and `Test for Mac` via the Disk API (`cloud-api.yandex.net`, secret `Authorization: OAuth ...` in Network secrets) with no further approval, then bump `site/version.json`. Testers get only current builds (Kanta, 2026-11-06): after a successful upload and size check, delete the previous version from the same test folder (to the Disk trash, not permanently); touch no other Disk folder. Telegram posts and bot broadcasts still need his yes. Options doc: `docs/testers/automation-intake-and-delivery.md`.
 - No spending on people. Money only for tools and subscriptions, Kanta decides.
 - Documents are the source of truth: decision → `docs/game-context.md`, task → `docs/backlog.md`, build result → `docs/status-log.md` and `game/README.md`. Heavy files (builds, raw models, `.blend`) stay in the Claude project files (`/mnt/project-files`).
@@ -48,6 +48,20 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 - Before a build: the self-check contact sheet (hangar and combat) is attached to the build message (R-23). Command: `nohup tools/ci/selfcheck.sh &` (presets 0, 2, 3, Forward+ via lavapipe, about an hour per preset; `--quick` — preset 2 only, `--compat` — GL Compatibility, `--only=bomber_2` — one plane). Output: `builds/selfcheck-<commit>/index.html`; exit code 1 on a failed capture or a `SCRIPT ERROR`.
 - Feel and effects changes Kanta wants to judge (turret firing, flight feel, effects) go into `main` behind an F1 toggle that is **on by default**, so Kanta tries them in the next build; 0 gives the old look, and Kanta's «нет» turns it off or removes it (Kanta, 2026-10-31, R-22; changed 2026-11-06: «сначала включены, я же хочу их попробовать» — the tester build has no F1 outside «Битва асов»).
 - Debug flags: `--tester`, `--report-url=…`, `--mesatest`, `--reporttest`, `--turbo`.
+
+## Backup
+- Daily full backup at 06:47 MSK to Yandex Disk, folder `FlakHeaven backup/<YYYY-MM-DD>`; script `tools/backup/yadisk_daily.sh`, scheduled task `trig_01STd9R9WMJZhHWF3eJmrDFm` (Kanta, 2026-11-06).
+- Contents: all git branches (bundle), a `main` snapshot, models, docs and source assets from the shared folder (without builds, marketing, old backups, root mp4/rar), project memory and instructions. About 5.8 GB, about 156 files.
+- Retention: 14 days; older dated folders go to the Disk trash, and only after a fully verified run (Kanta, 2026-11-06).
+- A day is complete only when `SHA256SUMS.txt` is uploaded last. Check that the folder has `SHA256SUMS.txt`.
+- The backup must happen without Kanta (Kanta, 2026-11-06). How each failure is handled:
+  - Upload cut off or container lost: rerunning resumes. Today's pack is reused if it is still on disk; files already on the Disk with the same size and sha256 are skipped; parts of an older pack are removed from the day folder before `SHA256SUMS.txt` goes up. Each run makes up to 3 passes over the files that failed.
+  - Run failed or never fired: the watchdog task `trig_01RZM2LwqJnzsYaTBLGduvbS` (10:17, 14:17, 20:17 MSK, thread "Сделать бэкап надёжным без Kanta", a different session from the main run) checks for today's `SHA256SUMS.txt` and reruns the script if it is missing.
+  - Disk unreachable, token rejected, not enough space, or shared folder missing: the script stops before uploading and saves the small irreplaceable part (project memory, instructions, branch list, `WHY.txt`) to `/mnt/project-files/backups/emergency/<date>/` (newest 3 kept). Code stays on GitHub and models stay in the shared folder, so nothing exists in only one place.
+  - Exit codes: 0 done, 2 Disk unreachable or token rejected, 3 not enough space, 4 shared folder missing or under 500 files, 5 files failed after 3 passes, 1 other.
+  - Kanta is told only when he must act (token rejected: renew it in the environment's network secret for `cloud-api.yandex.net`; Disk full) or when the 20:17 watchdog run still has no complete day. Disk trash counts toward the quota and is never emptied without Kanta.
+- Old twice-weekly routine (Fri and Mon, Google Drive and laptop copies) is off since 2026-11-06 (R-31).
+- Full copies on the home PC are manual, one-off, and need Kanta's request.
 
 ## Superpowers experiment (since 2026-10-23)
 - 15 skills in `.claude/skills/`; rollback steps in `docs/process/backup-2026-10-23/`. Assessed at the review on 2026-10-30 (task R-16).
