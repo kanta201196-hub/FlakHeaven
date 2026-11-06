@@ -87,6 +87,14 @@ func _steer(delta: float) -> void:
 	var want_bank := clampf(ang_vel / tr, -1.0, 1.0)
 	var bank_rate := AcesBalance.bank_rate(pl.bank, want_bank, Tuning.g("aces_roll_in"), Tuning.g("aces_roll_out")) if Main.aces() else float(pl.cls.get("bank_rate", 12.0))
 	pl.bank = lerpf(pl.bank, want_bank, 1.0 - exp(-delta * bank_rate))
+	# 2026-11-06 (Kanta): the model rolls in a little slower and levels out slower; flight bank is untouched
+	if Tuning.g("bank_soft") >= 1.0:
+		var r_in := Tuning.g("aces_roll_in") if Main.aces() else float(pl.cls.get("bank_rate", 12.0))
+		var r_out := Tuning.g("aces_roll_out") if Main.aces() else r_in
+		var vr := FlightBalance.vis_bank_rate(pl.bank_vis, want_bank, r_in, r_out, Tuning.g("bank_soft_in"), Tuning.g("bank_soft_out"))
+		pl.bank_vis = lerpf(pl.bank_vis, want_bank, 1.0 - exp(-delta * vr))
+	else:
+		pl.bank_vis = pl.bank
 
 
 ## Желаемая угловая скорость к курсу target: не больше, чем успеем погасить до него (без перелёта)
