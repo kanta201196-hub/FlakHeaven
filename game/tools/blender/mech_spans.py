@@ -17,6 +17,11 @@ SPANS = {
     "bomber_1": {"slat": [(0.21, 0.26, -0.03, -0.045), (0.37, 0.48, -0.11, -0.16)],
                  "flap": [(0.20, 0.27, -0.02, -0.04), (0.355, 0.41, -0.09, -0.12)]},
     "bomber_2": {"slat": [(0.20, 0.48, -0.11, -0.25)], "flap": [(0.17, 0.36, -0.10, -0.19)]},
+    # tier 1 (PT-03, 06.11), measured on the hangar models' top view: fuselage edge |y| 0.07
+    # «Оса 1»: drop tank under 0.26-0.30 (its nose shows ahead of the leading edge), wing fences at 0.29 and 0.40, tip at 0.48; the slat sits between the fences
+    "fighter_t1": {"slat": [(0.32, 0.39, -0.016, -0.061)], "flap": [(0.10, 0.25, 0.117, 0.034)]},
+    # «Грач 1»: straight wing 0.08-0.50, tip tanks outboard of 0.51
+    "attacker_t1": {"slat": [(0.30, 0.48, 0.094, 0.102)], "flap": [(0.10, 0.30, 0.098, 0.094)]},
 }
 SLAT_C = 0.15     # share of the local chord
 FLAP_C = 0.26
