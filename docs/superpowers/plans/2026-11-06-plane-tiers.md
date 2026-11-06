@@ -2,7 +2,7 @@
 
 Backlog PT-04 (progression for 5 tiers) with PT-05 (future systems) folded in. Kanta's decision is in `docs/game-context.md` (journal 2026-11-06, «Plane tiers 1–5»), concept page https://claude.ai/artifact/Jcn2GtNbLrRuCVn2xbS9dE. Models are PT-02 / PT-03, owned by the 3D thread «3D-модели по плану Kirill».
 
-**Status: draft, waits for Kanta's «да» on the open questions (section 7). No code before that.** All numbers marked *guess* are first guesses for the balance run, not rules.
+**Status: Kanta answered 06.11 18:05 UTC (section 7); two readings to confirm (section 8). Node design (3.4) is new and waits for his «да». No code before that.** All numbers marked *guess* are first guesses for the balance run, not rules.
 
 ## 1. What Kanta decided (fixed, not up for discussion here)
 
@@ -45,16 +45,38 @@ Hull, speed and turn stay the class values on all tiers in stage A. Per-tier sta
 | Tier | Parts | Crew lvl | Campaign gate | Demo |
 | --- | --- | --- | --- | --- |
 | 1 | free | — | — | yes |
-| 2 | 8 000 | 2 | «Перевал» cleared | yes |
-| 3 | 50 000 (today's plane 2) | 4 | «Сухое русло» open (= «Перевал» cleared) | yes |
-| 4 | 120 000 | 8 | «Крепости» cleared | visible, locked |
-| 5 | 250 000 | 12 | «Небо над Шахрисангом» cleared | visible, locked |
+| 2 | 10 000 | 2 | «Перевал» cleared | yes, last playable |
+| 3 | 35 000 | 4 | «Сухое русло» cleared | visible, locked |
+| 4 | 60 000 | 8 | «Крепости» cleared | visible, locked |
+| 5 | 115 000 | 12 | «Небо над Шахрисангом» cleared | visible, locked |
 
-At ~14 k a sortie: tier 2 ≈ 1 sortie, tier 3 ≈ 4, tier 4 ≈ 9, tier 5 ≈ 18 (plus nodes). The demo keeps its node cap 2; in the demo tier 3 must be reachable before «Конец демо», so its gate is «Перевал», not «Сухое русло» (question 4).
+Prices are Kanta's (06.11), read as tiers 2–5; he gave five numbers (10 000 / 35 000 / 60 000 / 115 000 / 200 000), so the reading is confirmed in section 8. Crew levels and gates are *guess*. Demo (Kanta Q4): tier 2 is the last playable one, tiers 3–5 visible and locked; demo node cap stays 2.
 
-### 3.4 Nodes between tiers (question 1)
+### 3.4 Nodes per tier (Kanta 06.11: «оставляем как есть, подумай над разными узлами для уровней… базовые на начальных, потом композитные материалы, мощность энергоустановки»)
 
-Recommended: nodes belong to the class and carry over to every tier; each tier raises the node cap (tier 1 → 2, 2 → 3, 3 → 4, 4–5 → 5). One price list, nothing is lost when moving up, the new tier is never weaker than the old one. This replaces the 3.5-s5 rule «plane 2 starts from zero», so it is Kanta's call. With «each tier from zero» the full class costs 5 × 62 760 nodes + 428 000 tiers ≈ 52 sorties.
+Each tier keeps its own nodes from zero (unchanged rule). New: each tier has its *own node catalog*, one generation of hardware. The six hangar places stay (frame, engine, armor, wing, pylons, tank) plus two new ones, avionics (tier ≥ 3) and power plant (tier ≥ 4); a later tier swaps a node for an advanced version in the same place.
+
+Rules (all numbers *guess*):
+1. Node count and cap grow: tier 1 — 4 nodes (frame, engine, armor, pylons), cap 3; tier 2 — today's 6, cap 4; tier 3 — 7 (+ avionics), cap 5; tiers 4–5 — 7 (tank and wing fold into engine, + power plant), cap 5.
+2. From tier 3, the top level of every node adds a combat rule, not a percent (precedent: «Узлы подвеса» lvl 2 opens the third group).
+3. Future nodes feed future systems: without the power plant lasers and shields run on base numbers.
+4. Tier 4 «Тяжёлый подвес» node lvl 1 opens the heavy hardpoint (so the experimental weapon is something you build toward on the plane).
+5. Price ladder stays 160 / 500 / 1 200 / 2 800 / 5 800 × tier factor 0.5 / 1 / 1.25 / 1.5 / 2. One class, everything: nodes ≈ 380 k + planes 220 k ≈ 43 sorties at 14 k (today ≈ 12); later operations pay more (Ас ×2.2), real count lower — check in logs.
+
+| Place | Tier 1 | Tier 2 (today's 1) | Tier 3 (today's 2) | Tier 4 | Tier 5 |
+| --- | --- | --- | --- | --- | --- |
+| Frame | riveted: roll/afterburner cd −4 % | −4 % (today) | composite: −4 %, hull +2 %; top: roll i-frames +0.3 s | low-observable: enemy missiles lock 6 % slower; top: AA sites fire less at you | metamaterial: Оса 5 phase shield longer; top: 1 hit per 20 s passes through |
+| Engine | first jet (Кит: piston): speed +2 % | jet +2 % | afterburning: +2 %, afterburner +10 %; top: 2 s afterburner without fuel | thrust vectoring: speed +2 %, turn +2 %; top: hard turn keeps speed | adaptive: speed +2 %, tank +6 %; top: 3 s free afterburner after a roll |
+| Armor | plates: hull +5 % | +5 % | composite: +5 %, AA damage −3 %; top: card repair +20 % | ceramic: +6 %; top: first hit per 20 s halved | active protection: +6 %; top: shoots down 1 missile per 15 s |
+| Wing | — | turn +3 % | high-lift devices: +3 %; top: turn radius −10 % | new profile: +3 %, speed in turns +2 % | in engine |
+| Pylons | pylons: +4 %; lvl 2 third group | +4 % (today) | multi-ejector racks: +4 %, reload −2 %; top: +1 missile per salvo every 10 s | heavy hardpoint: lvl 1 opens it, then EXP damage +6 % | internal bay: +4 %, reload −3 %; top: second heavy hardpoint |
+| Fuel | — | tank +8 % | drop tanks: +8 %; top: tanker comes 30 % earlier | in engine | in engine |
+| Avionics | — | — | radar: lock range +5 %; top: off-screen target marks | AESA: +5 %, missile turn +4 %; top: missiles retarget on their own | network: wingmen +6 % on your target; top: wingmen share your sight |
+| Power plant | — | — | — | power plant: laser damage and shield HP +8 %; top: second shield charge | compact reactor: +8 %, future-system cooldown −4 %; top: shield and laser at once |
+
+Why tier 1 still makes you want tier 2 (Kanta Q3 «разница всё равно должна быть»): 3–4 weapon kinds instead of 4–5, 4 nodes instead of 6, node cap 3 instead of 4 (armor +15 % instead of +20 %), Кит one wingman instead of two; hull, speed and ★ at start equal today's start plane. A fresh next tier is weaker than a maxed previous one (fresh tier 3 has 14 % less hull than maxed tier 2) but carries more weapons, ★ 20 % and a higher ceiling; optional per-tier base step (hull +6 %, speed +3 %) decided after measurement.
+
+Code: `PlaneTiers.NODES[tier]` = ordered list of node ids per tier, `NODE_DEF[id]` = title, step effects, cap, top rule; `Profile` stores nodes per tier (`nodes_t1`…`nodes_t5`); `Profile.apply_nodes` reads effects from the table instead of the six fixed lines (profile.gd ~905). Top-level rules are each a small hook with a unit test.
 
 ### 3.5 Hangar
 
@@ -101,3 +123,11 @@ Stage A size: ~600–900 lines over ~20 files, so it is one feature branch with 
 2. Prices and gates in 3.3: (1) as in the table — **recommended**; (2) cheaper (tier 3 at 30 000, tier 4 at 80 000, tier 5 at 150 000).
 3. Tier 1: (1) simpler, not weaker — fewer weapon kinds, same hull, speed and ★ 15 % — **recommended**; (2) also weaker by numbers (★ 10 %, hull −10 %), to feel the jump to tier 2.
 4. Tier 3 in the demo: (1) opens after «Перевал» with crew 4 and 50 000, so it is reachable before «Конец демо» — **recommended**; (2) after «Сухое русло», i.e. only after the demo's end screen.
+
+**Kanta's answers 06.11 18:05 UTC:** 1 — keep «each tier from zero», design distinct nodes per tier (3.4); 2 — prices 10 000 / 35 000 / 60 000 / 115 000 / 200 000; 3 — yes, but tier 1 must still differ enough to want tier 2; 4 — «ур. 2 открывается после 2 этапа Перевала и на нем играем до конца» (demo ends on tier 2).
+
+## 8. To confirm with Kanta
+
+1. Five prices for four purchases: (1) tiers 2–5 = 10 000 / 35 000 / 60 000 / 115 000, 200 000 for something he names — working reading; (2) tiers 2–5 = 35 000 … 200 000, 10 000 = tier 1 of the second and third class.
+2. «2 этап Перевала» (operations have no stages in code): (1) after the first clear of «Перевал» — working reading; (2) after the second clear; (3) after «Сухое русло».
+3. Node design 3.4: «да» or edits.
