@@ -443,6 +443,14 @@ void fragment() {
 				wc = mix(SRGB(vec3(0.34, 0.64, 0.62)), SRGB(vec3(0.15, 0.47, 0.55)), smoothstep(0.02, 0.42, min(dp, dd + 0.12)));
 				wc = mix(wc, SRGB(vec3(0.09, 0.27, 0.4)), smoothstep(0.32, 0.78, dd));
 				wc *= 0.97 + 0.05 * vnoise(wq / 90.0 + 11.0);
+				if (water_v2) {
+					// W-01 (Kanta 06.11: «слишком резкие границы цвета между глубинами»): те же три цвета, но
+					// переходы в 2–3 раза шире и внахлёст — отмель уходит в глубину плавно, без ступеньки
+					float dz = clamp(dp * 0.7 + big * 0.3, 0.0, 1.0);
+					wc = mix(SRGB(vec3(0.34, 0.64, 0.62)), SRGB(vec3(0.15, 0.47, 0.55)), smoothstep(-0.1, 0.75, dz));
+					wc = mix(wc, SRGB(vec3(0.09, 0.27, 0.4)), smoothstep(0.25, 1.0, dz));
+					wc *= 0.97 + 0.05 * vnoise(wq / 90.0 + 11.0);
+				}
 			}
 			float t = TIME;
 			if (sea_look >= 3) {
@@ -455,7 +463,7 @@ void fragment() {
 					// под водой красный гаснет: дно в бирюзу, светлее только косы
 					bed = mix(SRGB(vec3(0.42, 0.66, 0.6)), SRGB(vec3(0.58, 0.76, 0.66)), bar);
 					bed = mix(bed, SRGB(vec3(0.18, 0.34, 0.32)), weed * 0.7);
-					wc = mix(bed, wc, smoothstep(0.0, 0.45, dp0) * 0.75 + 0.25);
+					wc = mix(bed, wc, smoothstep(0.0, water_v2 ? 0.7 : 0.45, dp0) * 0.75 + 0.25);   // W-01: дно гаснет плавнее
 				} else {
 					wc = mix(bed, wc, smoothstep(0.01, 0.3, dp0) * 0.85 + 0.15);
 				}
@@ -538,7 +546,7 @@ void fragment() {
 					g += dir * (a * k * cos(ph) * ex);
 				}
 				float hk = hh / max(hn, 1e-3);   // высота 0…1
-				float calm = smoothstep(0.02, 0.18, dp0);   // у самого берега вода гладкая
+				float calm = water_v2 ? smoothstep(0.0, 0.4, dp0) : smoothstep(0.02, 0.18, dp0);   // у самого берега вода гладкая; W-01 — волны нарастают плавно, без границы
 				g *= calm;
 				vec3 nn = normalize(vec3(-g.x, 1.0, -g.y));
 				vec3 sl = normalize(sea_sun);
@@ -560,8 +568,8 @@ void fragment() {
 					foam *= 0.45 + 0.55 * smoothstep(0.35, 0.7, hk + crest * 0.5);
 					// барашки там, где гребень FFT-волны заворачивается, на глубине и пятнами (ветер не везде)
 					float wcap = crest * smoothstep(0.22, 0.5, dp0)
-						* smoothstep(0.45, 0.8, vnoise(world / 300.0 + vec2(t * 0.02, 7.0)));
-					foam = max(foam, wcap * 0.55);
+						* smoothstep(0.55, 0.85, vnoise(world / 300.0 + vec2(t * 0.02, 7.0)));
+					foam = max(foam, wcap * 0.45);
 					// отражение неба: луч камеры от волны в панораму (верхняя полусфера), сила — по Френелю;
 					// склоны к горизонту светлеют, облака плывут по воде
 					vec3 vw = normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz);
