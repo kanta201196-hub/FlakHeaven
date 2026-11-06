@@ -22,6 +22,9 @@ SPANS = {
     "fighter_t1": {"slat": [(0.32, 0.39, -0.016, -0.061)], "flap": [(0.10, 0.25, 0.117, 0.034)]},
     # «Грач 1»: straight wing 0.08-0.50, tip tanks outboard of 0.51
     "attacker_t1": {"slat": [(0.30, 0.48, 0.094, 0.102)], "flap": [(0.10, 0.30, 0.098, 0.094)]},
+    # «Кит 1»: straight wing, fuselage edge 0.045, coupled-engine nacelle 0.13-0.20, tip at 0.69; mid-chord ~0.08
+    "bomber_t1": {"slat": [(0.22, 0.40, 0.085, 0.09)],
+                  "flap": [(0.055, 0.12, 0.08, 0.08), (0.21, 0.40, 0.082, 0.085)]},
 }
 SLAT_C = 0.15     # share of the local chord
 FLAP_C = 0.26

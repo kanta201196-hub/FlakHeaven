@@ -159,6 +159,29 @@ def kill_box_faces(obs, boxes):
         bm.free()
 
 
+def fill_box_holes(obs, entries):
+    """Close open holes whose whole rim lies in a box: entries are (name regex, (x0, x1, y0, y1, z0, z1)).
+
+    Gear wells and bays modelled as openings in the skin stay open once the gear and doors are dropped; a flat
+    cap over the rim closes them. The camouflage is painted in object space and the belly tone follows the face
+    normal, so the cap takes the surrounding paint without UV work."""
+    for o in obs:
+        boxes = [b for rx, b in entries if re.search(rx, o.name)]
+        if not boxes:
+            continue
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        rim = [e for e in bm.edges if e.is_boundary
+               and any(all(_in_box(v.co, b) for v in e.verts) for b in boxes)]
+        if rim:
+            new = bmesh.ops.holes_fill(bm, edges=rim, sides=0)["faces"]
+            if new:
+                bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+                print("FILL", o.name, len(new), "caps")
+                bm.to_mesh(o.data)
+        bm.free()
+
+
 def _make_proxies(obs, R):
     """Build simple stand-ins for the low mesh of parts that collapse decimation cannot shrink.
 
@@ -1026,6 +1049,14 @@ def bake(groups, lows, R, tex, samples, out_dir, name):
 def finish(groups, lows, imgs, R, out_dir, name, tex, jpeg=0):
     """Pack ORM, build body/glass materials, set pivots and parents, export GLB, merge primitives."""
     w = tex
+    if R.get("nrm_min_z"):
+        # a ray that slips into a slot of the source (a flap gap) bakes the slot wall: the texel's normal then
+        # leans past what any skin detail does and the panel turns black in light. Such texels go flat.
+        n = _px(imgs["normal"]).copy()
+        bad = (n[..., 2] * 2.0 - 1.0) < R["nrm_min_z"]
+        n[bad, 0:3] = (0.5, 0.5, 1.0)
+        imgs["normal"].pixels.foreach_set(n.ravel())
+        print("NRM flattened %d texels" % int(bad.sum()))
     rough = _px(imgs["rough"])[..., 0]
     metal = _px(imgs["metal"])[..., 0]
     orm = np.ones((w, w, 4), np.float32)
@@ -1178,6 +1209,8 @@ def main() -> int:
             if not o.data.polygons:
                 obs.remove(o)
                 bpy.data.objects.remove(o)
+    if R.get("fill_holes"):
+        fill_box_holes(obs, R["fill_holes"])
     if R.get("build"):   # parts made in code (e.g. the technical's machine gun)
         obs += R["build"]()
     if R.get("launcher"):   # turntable + elevating box (SAM), folded for travel

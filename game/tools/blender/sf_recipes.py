@@ -792,6 +792,13 @@ RECIPES["bomber_t1"] = {
     # the game flies with the gear up
     "drop_box": [(0.10, 0.20, 0.125, 0.20, -0.2, -0.06), (0.10, 0.20, -0.20, -0.125, -0.2, -0.06),
                  (-0.34, -0.30, -0.012, 0.012, -0.08, -0.055)],
+    # the two main-gear wells under each inner wing stay open once the gear is dropped: cap their rims
+    "fill_holes": [(r"^Object_1[79](\.|$)", (0.10, 0.185, 0.04, 0.28, -0.05, -0.02)),
+                   (r"^Object_1[79](\.|$)", (0.10, 0.185, -0.28, -0.04, -0.05, -0.02))],
+    # the decimated inner wing sits ~5 mm (of 1000) under the source skin by the flap slot, so a ray from the
+    # default 6 mm cage starts inside the wing and bakes the slot's grey belly-facing walls: a wider cage,
+    # and texels whose normal still leans past any skin detail go flat
+    "cage": 0.012, "nrm_min_z": 0.35,
     "materials": [(r"^transparent", GLASS),
                   (r"texture", {"mode": "paint", "flatten": 31}),
                   (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
