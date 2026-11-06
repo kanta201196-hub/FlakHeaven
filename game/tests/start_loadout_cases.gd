@@ -95,8 +95,10 @@ func _test_migration() -> void:
 	var p := _fresh_profile()
 	_to_lvl(p, "bomber", p.START2_LVL)
 	var old: Dictionary = p.data.duplicate(true)
+	old["version"] = 1   # a save from before tiers: the bomber flew the old plane 1 (tier 2, which carries rockets)
 	for c in old["classes"]:
 		old["classes"][c].erase("start")
+		old["classes"][c].erase("tiers")
 	old["classes"]["bomber"]["start2"] = "rockets"
 	var f := FileAccess.open(TEST_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(old))

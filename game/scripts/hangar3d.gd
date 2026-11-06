@@ -16,8 +16,9 @@ var vp: SubViewport
 var cam: Camera3D
 var pivot: Node3D
 var rect := Rect2()          # где на экране (в координатах ctrl) нарисован вид
-var lvl_rects: Array = []    # [Rect2, ур.] — переключатель «Ур. 1 / Ур. 2»
-var view_lvl := 1
+var lvl_rects: Array = []    # [Rect2, tier] — the strip of plane tiers 1–5
+var view_lvl := 1            # model generation on view (`PlaneTiers.model` of view_tier)
+var view_tier := 1           # plane tier 1–5 on view (PT-04): the hangar shows and upgrades this one
 ## Стенд --hangarevo: оружие в пустых группах (класс → [оружие по группам]), чтобы показать все эволюции
 static var bench_weapons := {}
 static var bench_pitch_min := -0.2   # стенд: камера ниже обычного (тест 3.5-s5, п. 3 — открытый бомбоотсек снизу)
@@ -393,7 +394,8 @@ func show_plane(cls_id: String, r: Rect2, interactive := true) -> Texture2D:
 	_interactive = interactive
 	if cls_id != _cls:
 		_cls = cls_id
-		view_lvl = Profile.plane_lvl(cls_id)   # S9-02: открываем тот самолёт, на котором летаем
+		view_tier = Profile.tier(cls_id)   # S9-02: open on the plane the class flies
+		view_lvl = PlaneTiers.model(view_tier)
 	rect = r
 	_drawn_frame = Engine.get_process_frames()
 	_fit_vp(r)
@@ -1227,7 +1229,8 @@ func _input(event: InputEvent) -> void:
 					return
 				for lr in lvl_rects:
 					if (lr[0] as Rect2).has_point(mp):
-						view_lvl = int(lr[1])
+						view_tier = int(lr[1])
+						view_lvl = PlaneTiers.model(view_tier)
 						get_viewport().set_input_as_handled()
 						return
 				for tr in tier_rects:

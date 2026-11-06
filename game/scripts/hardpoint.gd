@@ -9,7 +9,7 @@ var weapon := ""      # "" — пустая группа
 var level := 1
 var priority := "nearest"
 var builtin := false  # встроенные турели: оружие не меняется
-var heavy := false    # U-06: тяжёлый подвес самолёта ур. 2 — только экспериментальное оружие
+var heavy := false    # U-06: heavy hardpoint (plane tier 4+, PT-04) — experimental weapons only
 ## PG-01: where a wing pair hangs along the half-span (0 — by group index, as before)
 var mount_frac := 0.0
 var cd := 1.5
@@ -218,19 +218,19 @@ func reload_time(p: Player) -> float:
 	return t
 
 
-## U-07: множитель модернизации от ступени 3 ветки (только самолёт ур. 2)
+## U-07: modernization factor from branch tier 3 (plane tier 3 and up, the old plane 2)
 func _evo_k(key: String) -> float:
 	var p := _owner()
 	if not evo or p == null:
 		return 1.0
-	return Profile.evo_k(weapon, key, p.plane_lvl)
+	return Profile.evo_k(weapon, key, p.tier)
 
 
 func evo_title() -> String:
 	var p := Main.I.player if Main.I != null else null
 	if evo_id != "":
 		return String(Modernizations.def(evo_id).get("title", evo_id))
-	var v := Profile.evo_variant(weapon, p.plane_lvl if p != null else 1)
+	var v := Profile.evo_variant(weapon, p.tier if p != null else 1)
 	return String(Prog.EVOS[weapon]["title"]) + ("" if v == "" else " · " + v)
 
 

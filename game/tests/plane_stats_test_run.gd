@@ -22,20 +22,26 @@ func _ready() -> void:
 	Profile.debug_plane = 0
 	_check(Profile.meta_k() > 0.0, "meta progression is on (hangar bonuses count)")
 	for c: String in PlaneClasses.LIST:
-		var s1 := PlaneStats.compute(c, 1)
-		var s2 := PlaneStats.compute(c, 2)
-		_check(_near(float(s2["hull"]), float(s1["hull"]) * 1.15), "%s: plane 2 hull +15%%" % c)
-		_check(_near(float(s2["speed"]), float(s1["speed"]) * 1.05), "%s: plane 2 speed +5%%" % c)
-		_check(_near(float(s2["turn"]), float(s1["turn"]) * 1.05), "%s: plane 2 turn +5%%" % c)
-		_check(int(s2["groups"]) == int(s1["groups"]) + 1, "%s: plane 2 has the heavy mount group" % c)
+		# PT-04: tier 2 is the old plane 1, tier 3 the old plane 2 (its base step), tier 4 carries the heavy hardpoint
+		var s1 := PlaneStats.compute(c, 2)
+		var s2 := PlaneStats.compute(c, 3)
+		var s4 := PlaneStats.compute(c, 4)
+		_check(_near(float(s2["hull"]), float(s1["hull"]) * 1.15), "%s: tier 3 hull +15%%" % c)
+		_check(_near(float(s2["speed"]), float(s1["speed"]) * 1.05), "%s: tier 3 speed +5%%" % c)
+		_check(_near(float(s2["turn"]), float(s1["turn"]) * 1.05), "%s: tier 3 turn +5%%" % c)
+		_check(int(s2["groups"]) == int(s1["groups"]), "%s: tier 3 has no heavy mount group any more" % c)
+		_check(int(s4["groups"]) == int(s2["groups"]) + 1, "%s: tier 4 has the heavy mount group" % c)
+		var t1 := PlaneStats.compute(c, 1)
+		_check(_near(float(t1["hull"]), float(s1["hull"])) and _near(float(t1["speed"]), float(s1["speed"])),
+			"%s: tier 1 is simpler, not weaker — hull and speed of tier 2" % c)
 		_check(float(s1["gun_dps"]) > 0.0, "%s: course gun has damage per second" % c)
 		for row: Array in PlaneStats.ROWS:
-			_check(s1.has(row[0]) and s2.has(row[0]), "%s: row %s present" % [c, row[0]])
+			_check(s1.has(row[0]) and s2.has(row[0]) and t1.has(row[0]), "%s: row %s present" % [c, row[0]])
 		_check(Profile.debug_plane == 0, "%s: the flying plane override is restored" % c)
 	# Kanta 06.11: damage per second of the starting kit and its air / ground factors, from each class's signature
-	var f1 := PlaneStats.compute("fighter", 1)
-	var a1 := PlaneStats.compute("attacker", 1)
-	var b1 := PlaneStats.compute("bomber", 1)
+	var f1 := PlaneStats.compute("fighter", 2)
+	var a1 := PlaneStats.compute("attacker", 2)
+	var b1 := PlaneStats.compute("bomber", 2)
 	for s: Dictionary in [f1, a1, b1]:
 		_check(float(s["dps"]) > float(s["gun_dps"]), "starting weapons add to the course gun's damage per second")
 	_check(_near(float(f1["air_k"]), 1.0) and float(f1["ground_k"]) < 1.0, "fighter: air-to-air missiles count on planes only")
@@ -58,24 +64,29 @@ func _ready() -> void:
 	_check(PlaneStats.text(1.25, "x") == "×1,2" or PlaneStats.text(1.25, "x") == "×1,3", "factor text has a decimal comma")
 	_check(PlaneStats.text(119.6, "n") == "120", "whole numbers are rounded")
 	# hover preview of a node card: one level more on that node, the profile left as it was
-	var nodes_before := str(Profile.nodes_of("fighter", 1))
-	for nid: String in PlaneStats.NODE_ROW:
-		var key := String(PlaneStats.NODE_ROW[nid])
-		var now := float(PlaneStats.compute("fighter", 1)[key])
-		var nxt := float(PlaneStats.with_node("fighter", 1, nid)[key])
-		_check(nxt < now if key == "dodge" else nxt > now, "node %s moves row %s: %s → %s" % [nid, key, now, nxt])
-	_check(str(Profile.nodes_of("fighter", 1)) == nodes_before, "with_node leaves the profile's nodes as they were")
+	for t in range(1, PlaneTiers.MAX + 1):
+		var nodes_before := str(Profile.nodes_of("fighter", t))
+		for nid: String in PlaneTiers.nodes(t):
+			var key := PlaneStats.row_of(t, nid)
+			if key == "":
+				_check(not PlaneTiers.node_live(t, nid) or PlaneTiers.fx(t, nid).keys().all(func(k): return not PlaneStats.FX_ROW.has(k)),
+					"tier %d node %s: no row only while it is in work" % [t, nid])
+				continue
+			var now := float(PlaneStats.compute("fighter", t)[key])
+			var nxt := float(PlaneStats.with_node("fighter", t, nid)[key])
+			_check(nxt < now if key == "dodge" else nxt > now, "tier %d node %s moves row %s: %s → %s" % [t, nid, key, now, nxt])
+		_check(str(Profile.nodes_of("fighter", t)) == nodes_before, "tier %d: with_node leaves the profile's nodes as they were" % t)
 	_check(PlaneStats.title("bomber", "dodge", "x") == "Перезарядка ловушек", "the bomber's dodge row names the flare salvo")
 	_check(PlaneStats.text(540.0, "min") == "9 мин" and PlaneStats.text(583.2, "min") == "9,7 мин", "fuel in minutes")
-	# the «Броня» node of plane 1 raises plane 1's hull only (+5% per level)
-	var base1 := float(PlaneStats.compute("fighter", 1)["hull"])
-	var base2 := float(PlaneStats.compute("fighter", 2)["hull"])
-	Profile.cls("fighter")["nodes"]["armor"] = 2
-	_check(_near(float(PlaneStats.compute("fighter", 1)["hull"]), base1 * (1.0 + 0.1 * Profile.meta_k())), "armor node lvl 2 on plane 1: hull +10%")
-	_check(_near(float(PlaneStats.compute("fighter", 2)["hull"]), base2), "plane 1's armor node leaves plane 2 alone")
+	# the «Броня» node of tier 2 raises tier 2's hull only (+5% per level)
+	var base1 := float(PlaneStats.compute("fighter", 2)["hull"])
+	var base2 := float(PlaneStats.compute("fighter", 3)["hull"])
+	Profile.cls("fighter")["nodes_t2"]["armor"] = 2
+	_check(_near(float(PlaneStats.compute("fighter", 2)["hull"]), base1 * (1.0 + 0.1 * Profile.meta_k())), "armor node lvl 2 on tier 2: hull +10%")
+	_check(_near(float(PlaneStats.compute("fighter", 3)["hull"]), base2), "tier 2's armor node leaves tier 3 alone")
 	# the cached call follows a profile change
-	var cached := float(PlaneStats.of("fighter", 1)["hull"])
-	Profile.cls("fighter")["nodes"]["armor"] = 0
-	_check(_near(float(PlaneStats.of("fighter", 1)["hull"]), base1) and not _near(cached, base1), "cache follows a node purchase")
+	var cached := float(PlaneStats.of("fighter", 2)["hull"])
+	Profile.cls("fighter")["nodes_t2"]["armor"] = 0
+	_check(_near(float(PlaneStats.of("fighter", 2)["hull"]), base1) and not _near(cached, base1), "cache follows a node purchase")
 	print("UNIT: plane_stats %d checks, %d failed" % [_checks, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)

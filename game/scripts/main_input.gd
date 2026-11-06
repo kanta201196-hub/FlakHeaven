@@ -430,8 +430,8 @@ func hangar_action(a: String) -> void:
 			m.hangar_album = ":".join(p.slice(1))
 		"node":
 			ok = Profile.buy_node(c, p[1], int(p[2]) if p.size() > 2 else 0)
-		"plane2":
-			ok = Profile.buy_plane2(c)
+		"tier":   # PT-04: buy plane tier N (it is selected for the next sortie)
+			ok = Profile.buy_tier(c, int(p[1]))
 		"plane_sel":
 			Profile.set_plane(c, int(p[1]))
 		"livery":
