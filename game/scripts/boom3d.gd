@@ -610,6 +610,34 @@ func hit(pos: Vector2, color: Color) -> bool:
 	return true
 
 
+## S16-18 (Kanta: «ракеты, попадая в игрока, тоже должны взрываться лёгким взрывом»; toggle fx_s16, R-22):
+## an enemy missile hitting the player bursts in a light blast at the hit point — a short white-yellow flash, a
+## small fireball that is gone in a fifth of a second, a ring of sparks, a little grey smoke and a quick light.
+## Kept small and short, so it does not hide the plane (the player clear zone fades it further).
+func missile_hit(pos: Vector2) -> void:
+	if Render3D.I == null or Render3D.I.cam == null:
+		return
+	_q = FxMath.quality(Settings.gopt("effects"), count())
+	_lo = Settings.gopt("effects") == 0
+	var s := 15.0
+	var p := Vector3(pos.x, 8.0, pos.y)
+	# flashes and sparks are not faded by the player clear zone, so they carry the hit over the plane; fire and
+	# smoke fly outward fast and show as soon as they leave the zone (the plane also flies on)
+	_flash(p, s * 3.6, 0.1, Color(1.0, 0.93, 0.78, 1.0))
+	_flash(p, s * 2.2, 0.24, Color(1.0, 0.6, 0.25, 0.7))
+	_core(p, s * 0.3, s * 0.8, 0.18, 1.0)
+	for i in _n(4):
+		var d := _rdir()
+		_fire(p + d * s * 0.3, d * s * 3.2, s * 0.25, s * 0.6, randf_range(0.14, 0.24), 0.9)
+	for i in _n(4):
+		var d2 := _rdir()
+		var g := randf_range(0.3, 0.4)
+		_smoke(p + d2 * s * 0.5, d2 * s * 4.0, s * 0.35, s * randf_range(1.2, 1.7), randf_range(1.0, 1.6),
+			Color(g, g * 0.97, g * 0.93, 0.6), 0.35, 3.0, 2.0, randf_range(0.02, 0.08))
+	_sparks(p, _n(16), 340.0 + s * 10.0, 0.4, Color(1.0, 0.75, 0.35, 1.0), 0.0, 0.5)
+	_light(p + Vector3(0, s, 0), 2.5, 300.0, 0.18)
+
+
 ## VFX-05: water column of a bomb or a crash in the river: flash, a white column that falls back, spray
 ## in all directions, foam and a ring on the surface (the river is ~50 px wide, so they stay small)
 func _water_blast(g: Vector3, s: float) -> void:

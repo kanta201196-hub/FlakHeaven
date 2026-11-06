@@ -47,6 +47,8 @@ func _init(main: Main) -> void:
 		{"name": "emp", "times": [0.08, 0.25, 0.5], "emp": true},
 		{"name": "plasma", "times": [0.5, 0.7, 0.9, 1.4, 3.0], "plasma": true},   # S10-08: плазменная бомба падает и рвётся на земле
 		# S14-18: the same drop in real time for a clip (--film with godot --fixed-fps 30): burst, then the zone burns 4 s
+		# S16-18: an enemy missile bursts on the player (Fx.missile_blast, as with fx_s16 on), seen around the plane
+		{"name": "mhit", "times": [0.04, 0.1, 0.2, 0.4, 0.8, 1.4], "mhit": true},
 		{"name": "plasmafilm", "times": [1.0, 2.5, 4.0, 5.0], "plasma": true, "slow": 1.0},
 		{"name": "trails", "times": [0.3, 0.6, 1.0, 1.6], "trails": true},   # VFX-03: missile and rocket smoke
 		{"name": "wreck", "times": [1.0, 2.0, 3.0], "wreck": true},   # VFX-03: smoke of a wreck on the ground and of a falling plane
@@ -148,6 +150,8 @@ func process(delta: float) -> void:
 				m.projectiles.spawn_bomb(_pos + Vector2(-250, -200), 3.0, 0.0, 130.0, "бомбы", _pos + Vector2(-250, -200), true)
 				m.projectiles.spawn_fire(_pos + Vector2(80, 180), 90.0, 0.0, 4.0, "мастерство: выжженная земля", true)
 				m.projectiles.spawn_fire(_pos + Vector2(420, 120), 70.0, 0.0, 4.0, "связка: ковровая дорожка", true)
+			if sc.get("mhit", false):
+				m.fx.missile_blast(m.player.global_position + Vector2.from_angle(m.player.heading + 2.4) * 14.0)
 			if sc.get("plasma", false):
 				m.projectiles.spawn_bomb(m.player.global_position, Hardpoint.PLASMA_FUSE, 0.0, 160.0, "плазма", _pos, true)
 				m.projectiles.bombs.back()["plasma"] = {"dps": 0.0, "t": 4.0}
