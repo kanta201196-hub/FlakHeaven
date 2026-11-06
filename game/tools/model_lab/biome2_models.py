@@ -5,6 +5,7 @@
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy
+import bmesh
 from mathutils import Vector, Matrix
 import b2lib as L
 
@@ -397,32 +398,113 @@ def a02_bunker_coast():
 
 
 # ---------------- Т-2 РЛС на решётчатой мачте (20 м, кодом) ----------------
+def _strut(a, b, t, mat, name='strut'):
+    """Thin square bar from point a to point b (metres), t — its side: lattice members at any angle."""
+    a, b = Vector(a), Vector(b)
+    d = b - a
+    bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.scale(bm, vec=Vector((t, t, d.length)), verts=bm.verts)
+    bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=d.to_track_quat('Z', 'Y').to_matrix(), verts=bm.verts)
+    bmesh.ops.translate(bm, vec=(a + b) / 2, verts=bm.verts)
+    return L._new(name, bm, mat)
+
+
 def a03_radar_mast():
+    """Coastal surveillance radar on a 16 m lattice tower (Kanta 28.10: the old one read as a step-ladder, 404
+    triangles). Built after real coastal radar towers (internal reference): four angle legs tapering up, a belt
+    and X-bracing in every panel of every face, a caged ladder up one face with a rest platform, a top platform
+    with grating and handrails, a curved slotted reflector on a turning pedestal with its feed arm, a cable tray
+    down the tower into an equipment shelter with a door and a cooler, a fenced concrete pad with footings."""
     L.reset()
-    steel = L.flat('fh_steel', (0.55, 0.57, 0.58), 0.6, 0.3)
+    steel = L.flat('fh_steel', (0.50, 0.52, 0.53), 0.75, 0.0)
+    galv = L.flat('fh_galv', (0.62, 0.63, 0.62), 0.8, 0.0)
     conc = L.flat('fh_concrete', CONCRETE, 0.95)
-    red = L.flat('fh_red', RED, 0.6)
-    o = [L.box((0, 0, 0.15), (7.0, 7.0, 0.3), conc, 'pad'),
-         L.box((-4.8, 0.0, 1.4), (3.0, 4.0, 2.8), L.flat('fh_hut', WHITE, 0.9), 'hut'),
-         L.box((-4.8, 0.0, 2.9), (3.3, 4.3, 0.2), conc, 'hut_roof')]
-    h = 16.0
-    for sx in (-1, 1):   # четыре ноги, сходятся кверху
+    hut = L.flat('fh_hut', (0.80, 0.79, 0.74), 0.9)
+    dark = L.flat('fh_dark', (0.16, 0.17, 0.18), 0.85)
+    refl = L.flat('fh_radar', (0.82, 0.83, 0.82), 0.8)
+    red = L.flat('fh_red', RED, 0.75)
+    o = [L.box((0, 0, 0.15), (9.0, 8.0, 0.3), conc, 'pad')]
+    h, b0, b1 = 16.0, 2.1, 0.75          # height, half base, half top
+    leg = lambda sx, sy, z: (sx * (b0 + (b1 - b0) * z / h), sy * (b0 + (b1 - b0) * z / h), z)
+    for sx in (-1, 1):
         for sy in (-1, 1):
-            o.append(L.loft([[(sx * 2.0 - 0.15, sy * 2.0 - 0.15, 0.3), (sx * 2.0 + 0.15, sy * 2.0 - 0.15, 0.3),
-                              (sx * 2.0 + 0.15, sy * 2.0 + 0.15, 0.3), (sx * 2.0 - 0.15, sy * 2.0 + 0.15, 0.3)],
-                             [(sx * 0.7 - 0.1, sy * 0.7 - 0.1, h), (sx * 0.7 + 0.1, sy * 0.7 - 0.1, h),
-                              (sx * 0.7 + 0.1, sy * 0.7 + 0.1, h), (sx * 0.7 - 0.1, sy * 0.7 + 0.1, h)]], steel, 'leg'))
-    for k in range(1, 6):   # пояса и раскосы
-        z = h * k / 6.0; w = 2.0 - 1.3 * k / 6.0
-        for rz in (0, 90, 180, 270):
-            r = math.radians(rz)
-            c = Matrix.Rotation(r, 3, 'Z') @ Vector((w, 0, z))
-            o.append(L.box(c, (0.1, 2 * w, 0.1), steel, 'belt', rz=r))
-    o += [L.box((0, 0, h + 0.15), (2.2, 2.2, 0.3), steel, 'platform'),
-          L.box((0, 0, h + 1.4), (0.5, 6.5, 1.8), L.flat('fh_radar', (0.85, 0.86, 0.86), 0.5), 'antenna', rz=math.radians(20)),
-          L.cyl((0, 0, h + 0.8), 0.3, 1.0, steel, 'rotor', seg=8),
-          L.cyl((0, 0, h + 3.0), 0.15, 0.3, red, 'beacon', seg=8)]
-    L.finish(o, scenery('a03_radar_mast'), target=2500, fit='xy')
+            o.append(L.box((sx * b0, sy * b0, 0.45), (0.7, 0.7, 0.3), conc, 'footing'))
+            o.append(_strut(leg(sx, sy, 0.55), leg(sx, sy, h), 0.16, steel, 'leg'))
+    zs = [0.6, 3.6, 6.4, 9.0, 11.4, 13.7, 16.0]
+    faces = [((-1, -1), (1, -1)), ((1, -1), (1, 1)), ((1, 1), (-1, 1)), ((-1, 1), (-1, -1))]
+    for (ax, ay), (bx, by) in faces:
+        for i, z in enumerate(zs):
+            o.append(_strut(leg(ax, ay, z), leg(bx, by, z), 0.09, steel, 'belt'))
+            if i:
+                z0 = zs[i - 1]
+                o.append(_strut(leg(ax, ay, z0), leg(bx, by, z), 0.06, steel, 'brace'))
+                o.append(_strut(leg(bx, by, z0), leg(ax, ay, z), 0.06, steel, 'brace'))
+    # ladder with a cage on the -x face, a rest platform half way
+    for y in (-0.22, 0.22):
+        o.append(_strut((-b0 - 0.25, y, 0.3), (-b1 - 0.25, y, h), 0.05, galv, 'ladder'))
+    for z in range(1, 16, 1):
+        x = -(b0 + (b1 - b0) * z / h) - 0.25
+        o.append(_strut((x, -0.22, z), (x, 0.22, z), 0.035, galv, 'rung'))
+    for z in (3.0, 6.0, 10.0, 13.0):
+        x = -(b0 + (b1 - b0) * z / h) - 0.25
+        o.append(L.ring((x - 0.35, 0, z), 0.42, 0.37, 0.06, galv, 'cage', seg=10))
+    o.append(L.box((-(b0 + (b1 - b0) * 0.5) - 0.2, 0, 8.0), (1.0, 1.4, 0.08), galv, 'rest'))
+    # top platform with grating and handrail
+    o += [L.box((0, 0, h + 0.05), (2.6, 2.6, 0.1), galv, 'platform')]
+    for (ax, ay), (bx, by) in faces:
+        o.append(_strut((ax * 1.3, ay * 1.3, h + 1.0), (bx * 1.3, by * 1.3, h + 1.0), 0.05, galv, 'rail'))
+        o.append(_strut((ax * 1.3, ay * 1.3, h + 0.5), (bx * 1.3, by * 1.3, h + 0.5), 0.04, galv, 'rail'))
+        o.append(_strut((ax * 1.3, ay * 1.3, h + 0.1), (ax * 1.3, ay * 1.3, h + 1.0), 0.05, galv, 'post'))
+    # radar: pedestal, turning drum, curved slotted reflector (a bent sheet, wider than tall) and the feed arm
+    o += [L.cyl((0, 0, h + 0.45), 0.45, 0.8, dark, 'pedestal', seg=12),
+          L.cyl((0, 0, h + 1.0), 0.32, 0.3, steel, 'drum', seg=12)]
+    rot = math.radians(20)
+    R = Matrix.Rotation(rot, 3, 'Z')
+    cols = 14
+    span, hgt, depth = 6.4, 1.3, 0.55
+    secs = []
+    for zz in (-hgt / 2, hgt / 2):
+        ring = []
+        for i in range(cols + 1):
+            y = -span / 2 + span * i / cols
+            x = 0.35 + depth * (2 * y / span) ** 2
+            ring.append(tuple(R @ Vector((x, y, h + 1.85 + zz))))
+        for i in range(cols, -1, -1):
+            y = -span / 2 + span * i / cols
+            x = 0.43 + depth * (2 * y / span) ** 2
+            ring.append(tuple(R @ Vector((x, y, h + 1.85 + zz))))
+        secs.append(ring)
+    o.append(L.loft(secs, refl, 'reflector'))
+    for i in range(1, cols):   # slots / ribs across the face
+        y = -span / 2 + span * i / cols
+        x = 0.3 + depth * (2 * y / span) ** 2
+        o.append(L.box(tuple(R @ Vector((x, y, h + 1.85))), (0.06, 0.05, hgt + 0.06), dark, 'rib', rz=rot))
+    o.append(_strut(tuple(R @ Vector((0.2, 0, h + 1.2))), tuple(R @ Vector((-1.4, 0, h + 1.85))), 0.1, steel, 'feed_arm'))
+    o.append(L.box(tuple(R @ Vector((-1.5, 0, h + 1.85))), (0.3, 0.5, 0.35), dark, 'feed', rz=rot))
+    o.append(L.cyl((0, 0, h + 2.9), 0.08, 1.4, steel, 'beacon_mast', seg=6))
+    o.append(L.cyl((0, 0, h + 3.65), 0.13, 0.22, red, 'beacon', seg=8))
+    # cable tray down the +y leg into the shelter
+    o.append(_strut((b1 - 0.1, b1 + 0.2, h), (b0 - 0.1, b0 + 0.2, 0.6), 0.14, galv, 'cable_tray'))
+    o.append(_strut((b0 - 0.1, b0 + 0.2, 0.6), (b0 - 0.1, 3.0, 0.6), 0.14, galv, 'cable_tray'))
+    # equipment shelter: walls, flat roof with a lip, door, a wall cooler and a vent
+    sx, sy = 2.3, 3.2
+    o += [L.box((sx, sy + 0.4, 1.55), (2.6, 1.9, 2.5), hut, 'shelter'),
+          L.box((sx, sy + 0.4, 2.88), (2.8, 2.1, 0.16), conc, 'shelter_roof'),
+          L.box((sx - 1.31, sy + 0.4, 1.3), (0.04, 0.9, 2.0), dark, 'door'),
+          L.box((sx + 0.3, sy + 1.37, 1.8), (1.0, 0.25, 0.7), galv, 'cooler'),
+          L.box((sx + 0.3, sy + 1.42, 1.8), (0.8, 0.06, 0.5), dark, 'cooler_grille'),
+          L.cyl((sx + 0.7, sy + 0.1, 3.15), 0.15, 0.4, galv, 'vent', seg=8)]
+    # fence round the pad: posts and two wires
+    fx, fy = 4.3, 3.8
+    pts = [(-fx, -fy), (fx, -fy), (fx, fy), (-fx, fy), (-fx, -fy)]
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        n = max(2, int(math.hypot(bx - ax, by - ay) / 2.2))
+        for i in range(n):
+            px, py = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
+            o.append(L.box((px, py, 1.1), (0.08, 0.08, 1.6), galv, 'fence_post'))
+        for z in (0.9, 1.75):
+            o.append(_strut((ax, ay, z), (bx, by, z), 0.03, galv, 'fence_wire'))
+    L.finish(o, scenery('a03_radar_mast'), target=5000, fit='xy')
 
 
 # ---------------- Т-3 маяк (25 м) с домиком смотрителя ----------------

@@ -34,6 +34,7 @@ K.KINDS.update({
     "red": ((0.68, 0.17, 0.13), 0.1, 0.55, 0.0, False),
     "black": ((0.03, 0.03, 0.03), 0.2, 0.6, 0.0, False),
     "below": ((0.3, 0.12, 0.1), 0.1, 0.7, 0.0, False),     # подводная часть
+    "belt": ((0.25, 0.26, 0.275), 0.25, 0.6, 0.0, False),  # armour belt, a shade darker than the hull
     "dark": ((0.1, 0.1, 0.1), 0.3, 0.6, 0.0, False),
     "steel": ((0.3, 0.3, 0.3), 0.7, 0.45, 0.0, False),
     "wood": ((0.47, 0.4, 0.3), 0.0, 0.85, 0.0, False),
@@ -123,6 +124,27 @@ def side_strip(name, z0, z1, kind, off=0.04):
 
 side_strip("below", -1.5, -0.35, "below")
 side_strip("boot", -0.35, 0.7, "black")
+
+
+def belt(x0, x1, z0, z1, t=0.32, taper=6.0):
+    """Armour belt (Kanta 28.10: «корпус без пояса»): a plate band standing proud of the side over the machinery
+    and magazines, from below the waterline to the lower deck, its ends tapering into the hull over `taper` m and
+    its top edge chamfered, so it throws a thin shadow line along the side as on real mid-century cruisers"""
+    bx = [x for x in xs[1:-1] if x0 <= x <= x1]
+    for side in (1, -1):
+        rows = []
+        for x in bx:
+            k = min(1.0, (x - x0) / taper, (x1 - x) / taper)
+            o = t * max(0.0, k)
+            rows.append([hull_pt(x, z0, side, 0.05 + o), hull_pt(x, z1 - 0.25, side, 0.05 + o),
+                         hull_pt(x, z1, side, 0.05 + o * 0.35), hull_pt(x, z1 + 0.05, side, 0.02)])
+        vs = [q for r in rows for q in r]
+        f = [(i * 4 + j, i * 4 + j + 1, (i + 1) * 4 + j + 1, (i + 1) * 4 + j) for i in range(len(rows) - 1)
+             for j in range(3)]
+        K._obj("belt", vs, f, "belt")
+
+
+belt(-58.0, 64.0, 0.75, 4.6)
 # якоря и клюзы
 for side in (1, -1):
     p = hull_pt(84.0, 8.2, side, 0.05)
@@ -298,10 +320,20 @@ def main_turret(i, x, y, lift, yaw):
     lo = [(3.9, 2.9), (1.8, 4.5), (-4.6, 4.5), (-5.2, 3.0), (-5.2, -3.0), (-4.6, -4.5), (1.8, -4.5), (3.9, -2.9)]
     hi = [(2.6, 2.2), (1.2, 3.9), (-4.3, 3.9), (-4.8, 2.6), (-4.8, -2.6), (-4.3, -3.9), (1.2, -3.9), (2.6, -2.2)]
     loft("turret", [[P(a, b, 0.0) for a, b in lo], [P(a, b, 2.9) for a, b in hi]], "turret", 0.06)
-    loft("turret_roof", [[P(a * 0.97, b * 0.97, 2.92) for a, b in hi], [P(a * 0.97, b * 0.97, 2.98) for a, b in hi]], "red", 0.0)
-    for py in (-1.5, 1.5):     # колпаки дальномера/перископов
-        cyl("hood", tuple(P(-1.0, py, 3.1)), 0.55, 0.4, "turret", "Z", 10)
-    box("rf_arm", tuple(P(-3.6, 0, 2.2)), (1.0, 10.0, 0.8), "turret", 0.0, rot=R)
+    # roof (Kanta 28.10: «плоские красные главные башни»): the grey armour roof itself, with the red enemy mark
+    # painted on it inside a grey rim (not a slab over the whole roof); sighting hoods on the front of the roof,
+    # the rangefinder across the rear with its end «ears», a ventilator, an access hatch and the rear overhang
+    # where the shells come up
+    loft("turret_roof", [[P(a * 0.8, b * 0.8, 2.905) for a, b in hi], [P(a * 0.8, b * 0.8, 2.93) for a, b in hi]], "red", 0.0)
+    for py in (-1.7, 0.0, 1.7):   # gunlayers' sighting hoods, one per gun, on the front of the roof
+        box("hood", tuple(P(1.0, py, 3.05)), (1.1, 0.7, 0.45), "turret", 0.08, rot=R)
+    box("rf_arm", tuple(P(-3.7, 0, 3.3)), (0.9, 8.6, 0.75), "turret", 0.08, rot=R)
+    for py in (-4.3, 4.3):        # rangefinder ears with their dark lens ports
+        cyl("rf_ear", tuple(P(-3.7, py, 3.3)), 0.62, 1.0, "turret", tuple(R @ Vector((0, 1, 0))), 12)
+        cyl("rf_lens", tuple(P(-3.7, py * 1.06, 3.3)), 0.4, 0.08, "dark", tuple(R @ Vector((0, 1, 0))), 10)
+    cyl("roof_vent", tuple(P(-1.8, -2.6, 3.15)), 0.4, 0.5, "turret", "Z", 10)
+    box("roof_hatch", tuple(P(-2.0, 2.4, 2.98)), (1.1, 0.9, 0.12), "turret", 0.05, rot=R)
+    box("rear_overhang", tuple(P(-5.4, 0, 2.2)), (1.2, 6.4, 1.6), "turret", 0.1, rot=R)
     for py in (-1.5, 0.0, 1.5):
         tube("gun", [tuple(P(3.0, py, 1.35)), tuple(P(15.0, py, 1.45))], 0.32, "dark", 10)
         tube("gun_bag", [tuple(P(2.6, py, 1.35)), tuple(P(4.0, py, 1.37))], 0.55, "dark", 8)

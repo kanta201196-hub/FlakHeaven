@@ -1422,26 +1422,48 @@ def a06_pier_b(scenery, src=None):
 
 # ================= П-4 стена террасы, сухая кладка (10 м) =================
 def a21_terrace_wall(scenery, src=None):
+    """Dry-stone terrace wall, 10 m (Kanta 28.10: the old one was a box with stones painted on). Built the way such
+    walls stand on Mediterranean hillsides: real stones laid in rough courses, big ones at the foot, each stone
+    its own irregular block, the face battered back, a row of flat coping stones on top, gaps between stones,
+    earth behind and on the top, a few fallen stones at the foot."""
     L.reset()
     st = L.flat('drystone', LIME, 1.0); soil = L.flat('soil', EARTH, 1.0)
     rng = random.Random(21)
-    secs = []
-    n = 16
-    for i in range(n + 1):   # стенка с наклоном внутрь, верх неровный
-        x = -5.0 + 10.0 * i / n
-        h = 1.55 + rng.uniform(-0.12, 0.08)
-        secs.append([(x, -0.35, 0), (x, -0.2, h), (x, 0.35, h), (x, 0.35, 0)])
-    o = [L.loft(secs, st, 'wall')]
-    o.append(L.hull([(-5.0, 0.3, 0), (5.0, 0.3, 0), (-5.0, 0.3, 1.5), (5.0, 0.3, 1.5), (-5.0, 2.6, 0), (5.0, 2.6, 0), (-5.0, 2.6, 1.6), (5.0, 2.6, 1.6)], soil, 'fill'))
-    for k in range(10):   # камни сверху и у подножия
-        s = rng.uniform(0.25, 0.5)
-        b = L.box((rng.uniform(-4.6, 4.6), rng.choice((-0.6, 0.05)), (1.6 if k % 2 else 0.12)), (s, s * 0.8, s * 0.6), st, 'stone', rz=rng.uniform(0, 3))
-        subdiv(b, 1); jag(b, s * 0.1, k); o.append(b)
-    L.smooth(o, 35)
-    sh = by_mat({'drystone': lambda b, P, N: weather(masonry(b, P, N, row=0.3, blen=0.5, seed=95, var=0.22, mortar=0.05), P, N, seed=96, grime_h=0.5),
-                 'soil': f_earth(97), 'stone': f_plain(98, stain=0.2)})
-    ob = join_bake(o, sh, 'a21_terrace_wall', size=512)
-    L.finish([ob], scenery('a21_terrace_wall'), target=1500, maxtex=512, fit='xy')
+    o = []
+    z = 0.0
+    courses = [(0.42, 0.75), (0.36, 0.62), (0.32, 0.55), (0.28, 0.5)]
+    for ci, (ch, cl) in enumerate(courses):
+        x = -5.0 + rng.uniform(0.0, cl * 0.5)
+        back = 0.09 * (z + ch / 2)          # batter: the face leans back as it rises
+        while x < 5.0:
+            ln = min(cl * rng.uniform(0.7, 1.3), 5.0 - x)
+            if ln < 0.18:
+                break
+            hh = ch * rng.uniform(0.82, 1.0)
+            b = L.box((x + ln / 2, -0.25 + back + rng.uniform(-0.03, 0.03), z + hh / 2),
+                      (ln - 0.04, rng.uniform(0.4, 0.55), hh - 0.03), st, 'stone', rz=rng.uniform(-0.06, 0.06))
+            subdiv(b, 1); jag(b, min(ln, hh) * 0.12, ci * 100 + int(x * 10)); o.append(b)
+            x += ln
+        z += ch
+    # coping: flat stones laid across the top, uneven
+    x = -5.0
+    while x < 5.0:
+        ln = rng.uniform(0.35, 0.6)
+        b = L.box((x + ln / 2, -0.05 + 0.09 * z, z + 0.07), (ln - 0.03, 0.62, 0.14), st, 'stone', rz=rng.uniform(-0.15, 0.15))
+        subdiv(b, 1); jag(b, 0.05, int(x * 37) + 999); o.append(b)
+        x += ln
+    # earth fill behind (a slope up to the next terrace) and a ragged grass top
+    o.append(L.hull([(-5.0, 0.15, 0), (5.0, 0.15, 0), (-5.0, 0.2, z - 0.05), (5.0, 0.2, z - 0.05),
+                     (-5.0, 2.8, 0), (5.0, 2.8, 0), (-5.0, 2.8, z + 0.15), (5.0, 2.8, z + 0.15)], soil, 'fill'))
+    for k in range(6):   # fallen stones at the foot
+        s_ = rng.uniform(0.22, 0.4)
+        b = L.box((rng.uniform(-4.6, 4.6), rng.uniform(-0.9, -0.55), s_ * 0.25), (s_, s_ * 0.8, s_ * 0.55), st, 'stone', rz=rng.uniform(0, 3))
+        subdiv(b, 1); jag(b, s_ * 0.12, 700 + k); o.append(b)
+    L.smooth([b for b in o if b.name.startswith('fill')], 35)   # stones stay faceted: broken stone, not pillows
+    sh = by_mat({'drystone': lambda b, P, N: weather(b * (0.86 + 0.28 * vnoise(P, 2.2, 95))[:, None], P, N, seed=96, grime_h=0.5),
+                 'soil': f_earth(97)})
+    ob = join_bake(o, sh, 'a21_terrace_wall', size=1024)
+    L.finish([ob], scenery('a21_terrace_wall'), target=None, maxtex=1024, fit='xy')
 
 
 # ================= природа: листва и кора =================
