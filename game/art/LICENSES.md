@@ -15,6 +15,14 @@
 | `pbr/river_*` | River Small Rocks (`river_small_rocks`) | Rob Tuytel, Rico Cilliers | https://polyhaven.com/a/river_small_rocks |
 | `pbr/rock_*` | Cliff Side (`cliff_side`) | James Ray Cock, Jenelle van Heerden, Dario Barresi | https://polyhaven.com/a/cliff_side |
 
+## Небо для отражения в воде Архипелага (`game/art/water/sea_sky.png`), Poly Haven — https://polyhaven.com/license
+
+Подготовка: `game/tools/water/sky_pano.py` (HDR 1K → верхняя полусфера, 512 × 128, LDR). Волны `game/art/water/sea_waves.png` — свои, `game/tools/water/water_maps.py`.
+
+| Файл | Набор | Авторы | Страница |
+| --- | --- | --- | --- |
+| `water/sea_sky.png` | Kloofendal 48d Partly Cloudy (Pure Sky) (`kloofendal_48d_partly_cloudy_puresky`) | Greg Zaal, Jarod Guest | https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky |
+
 ## Текстуры улиц, окопов и мешков (`game/art/ground/road/`), Poly Haven — https://polyhaven.com/license
 
 Подготовка: `game/tools/terrain/prep_road.py` (цвет 1K; нормаль OpenGL в R,G + высота в B). Код — `game/scripts/road_tex.gd`, `game/shaders/adobe.gdshader`.
