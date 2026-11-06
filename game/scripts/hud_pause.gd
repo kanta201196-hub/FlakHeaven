@@ -303,7 +303,7 @@ func _modules(p: Player, box: Rect2) -> void:
 	var right: Array = []
 	var mods: Array = []
 	for id in Cards.MODULES:
-		if int(p.taken.get(id, 0)) > 0:
+		if int(p.taken.get(id, 0)) > 0 and id != "repair":   # S16-17: a repair is an instant heal, not equipment
 			mods.append(id)
 	mods.sort_custom(func(a: String, b: String) -> bool: return _module_at(a).y < _module_at(b).y)
 	for id: String in mods:

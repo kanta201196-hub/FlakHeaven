@@ -883,7 +883,10 @@ func _evac_marker(m: Main, size: Vector2) -> void:
 	var sp := _ws(xf, m.evac.target_pos())
 	var d := int(m.player.global_position.distance_to(m.evac.target_pos()))
 	_edge_arrow(sp, rect, size, Color(0.4, 1.0, 0.5), 1.8, Loc.t("эвакуация %d м") % (d / 10))
-	_ptext(_evac_y, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с") % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7), 0.72)
+	if m.evac.hold:   # S16-27: the window after the final boss stays open
+		_ptext(_evac_y, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно открыто") % [m.evac.passed + 1, EvacZone.GATES, d / 10], 22, Color(0.6, 1.0, 0.7), 0.72)
+	else:
+		_ptext(_evac_y, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с") % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7), 0.72)
 
 
 ## True when `r` touches the bottom bar or the weapons column — this frame's, or the last

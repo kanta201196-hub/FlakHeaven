@@ -11,7 +11,7 @@ static func card_set() -> Array:
 	for w in Weapons.POOL + Weapons.EXP:
 		out.append("w:" + w)
 	for k in Cards.MODULES:
-		if not Cards.SLOT_FREE.has(k) and not Cards.ARCH_MODULES.has(k):   # PG-11 cards exist only with F1 build_arch
+		if not Cards.NOT_COLLECTED.has(k) and not Cards.ARCH_MODULES.has(k):   # PG-11 cards exist only with F1 build_arch
 			out.append("m:" + k)
 	return out
 
@@ -35,7 +35,7 @@ static func run_counters(m: Main, outcome: String) -> Dictionary:
 		"wing_dmg": int(wing), "convoys": int(tv.get("convoy_done", 0)), "dive_dodged": int(tv.get("dive_dodged", 0)),
 		"dives": int(tv.get("dive_uses", 0)), "healed": int(m.counters.get("healed", 0)), "refuels": int(tv.get("fuel_refuels", 0)),
 		"evacs": 1 if evac else 0, "lvl20_early": 1 if m.level_at_5 >= 20 else 0, "sorties_" + m.cls_id: 1,
-		"kills_minute": MedalBalance.best_minute(m.medal_kill_t),
+		"kills_minute": MedalBalance.best_minute(m.medal_kill_t), "picks": m.run.picks_taken,
 	}
 	for k in m.medal_run:   # "aces", "fortresses", … from Main._medal_kill
 		r[k] = int(r.get(k, 0)) + int(m.medal_run[k])

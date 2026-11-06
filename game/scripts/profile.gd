@@ -331,6 +331,9 @@ func unlocks_at(c: String, lv: int) -> Array:
 		out.append("можно купить самолёт ур. 2")
 	if lv == PERK_T2_LVL:
 		out.append("перки 2-й ступени")
+	for k in PickBalance.crew_at(lv):   # S16-22
+		out.append({"rerolls": Loc.t("+1 переброс карточек за вылет"), "bans": Loc.t("+1 исключение карточки за вылет"),
+			"pins": Loc.t("+1 закреп карточки за вылет")}[k])
 	for t in WING_UNLOCK:
 		if int(WING_UNLOCK[t]) == lv:
 			out.append(Loc.t("ведомый %s в карточках") % Loc.t(Prog.WING_TYPES[t]["title"]))

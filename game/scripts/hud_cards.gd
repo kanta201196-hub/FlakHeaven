@@ -331,6 +331,8 @@ func _level_line(p: Player, c: Dictionary, lv: Vector2) -> String:
 			parts.append(Loc.t("МАКСИМУМ"))
 	if kind == "module" and Cards.MODULES.has(c["id"]) and not Cards.SLOT_FREE.has(c["id"]) and int(p.taken.get(c["id"], 0)) == 0:
 		parts.append(Loc.t("МОДУЛЬ %d ИЗ %d") % [Cards.mod_slots_used(p) + 1, Cards.MOD_SLOTS])
+	elif kind == "module" and Cards.SLOT_FREE.has(c["id"]) and not Cards.NOT_COLLECTED.has(c["id"]):   # S16-15
+		parts.append(Loc.t("БЕЗ МЕСТА МОДУЛЯ"))
 	if parts.is_empty():
 		parts.append(Loc.t(String(c.get("cat", ""))).to_upper())
 	return " · ".join(parts)

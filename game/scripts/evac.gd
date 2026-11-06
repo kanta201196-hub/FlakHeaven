@@ -6,12 +6,17 @@ extends Node2D
 
 const GATES := 3
 const GATE_R0 := 120.0
+## Sortie time from which an evacuation window can be held open (the final boss comes at 15:00).
+const HOLD_FROM := 890.0
 var GATE_R := GATE_R0   # 3.2: узел «Бак» расширяет ворота и окно
 var WINDOW := 60.0
 
 var gates: Array = []    # мировые позиции
 var passed := 0
 var time_left := 60.0
+## S16-27 (Kanta 05.11): the window kept burning while the player fought (2–3 closes a sortie). With F1 `evac_hold` = 1
+## the window opened after the final boss, with the operation goal done, never closes: the player leaves when ready.
+var hold := false
 var _t := 0.0
 
 
@@ -20,6 +25,7 @@ func setup(from: Vector2, heading: float) -> void:
 	WINDOW = Profile.evac_window(c)
 	GATE_R = GATE_R0 * Profile.gate_r_k(c)
 	time_left = WINDOW
+	hold = Tuning.g("evac_hold") >= 1.0 and Main.I.run_time >= HOLD_FROM and Campaign.goal_done(Main.I.run_time, Main.I.op_flags)
 	var dir := heading + randf_range(-1.0, 1.0)
 	var pos := from + Vector2.from_angle(dir) * 950.0
 	for i in GATES:
@@ -39,7 +45,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	time_left -= delta
+	if not hold:
+		time_left -= delta
 	var p := Main.I.player
 	if p != null and p.hp > 0.0 and passed < GATES:
 		if p.global_position.distance_to(gates[passed]) < GATE_R + p.radius:

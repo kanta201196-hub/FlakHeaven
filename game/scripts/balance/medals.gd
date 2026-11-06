@@ -69,6 +69,11 @@ const LIST := [
 		"b": "rerolls", "v": [1], "cond": "Взять каждую карточку хоть раз", "bonus": "+%s переброс карточек за вылет"},
 	{"id": "synergy", "g": "economy", "f": "medal", "title": "Мастер связок", "c": "syn_seen", "t": [5, -1],
 		"b": "bans", "v": [0, 1], "cond": "Открыть %s связок", "bonus": "+1 изгнание карточки за вылет (ступень 2)"},
+	# S16-22 (Kanta 05.11): medals that give card rerolls and bans
+	{"id": "scout", "g": "economy", "f": "patch", "title": "Разведка боем", "c": "activities", "t": [10, 50, 200],
+		"b": "rerolls", "v": [1, 2, 3], "cond": "Выполнить %s заданий в вылетах", "bonus": "+%s переброс карточек за вылет"},
+	{"id": "planner", "g": "economy", "f": "medal", "title": "Штабист", "c": "picks", "t": [500, 2500],
+		"b": "bans", "v": [1, 2], "cond": "Выбрать %s карточек", "bonus": "+%s исключение карточки за вылет"},
 	# --- классы и кампания ---
 	{"id": "cls_fighter", "g": "class", "f": "badge", "title": "Крылья «Осы»", "c": "sorties_fighter", "t": [25, 100, 300],
 		"b": "fighter_turn", "v": [0.02, 0.04, 0.06], "cond": "Совершить %s вылетов на «Осе»", "bonus": "разворот «Осы» +%s"},
@@ -218,7 +223,7 @@ static func best_minute(times: Array) -> int:
 
 ## Bonus keys counted in seconds and in pieces; the rest are fractions shown as percent
 const SECONDS := ["dive_time", "roll_time"]
-const PIECES := ["rerolls", "bans"]
+const PIECES := ["rerolls", "bans", "pins"]
 
 
 ## Picture metal of tier `n` for a medal with `count` tiers: "none" before the first, gold for a single-tier medal

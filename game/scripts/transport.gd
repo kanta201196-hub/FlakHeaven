@@ -8,6 +8,12 @@ extends Enemy
 
 const LIFE := 60.0
 const SPEED := 170.0
+## S16-23 (Kanta 05.11): «должен пытаться убежать». With F1 `transport_flee` = 1, once the player comes within
+## FLEE_R or hits it, the transport turns away from the player at FLEE_TURN and speeds up to ×FLEE_K: a chase,
+## not a plane flying past. Escorts keep their slots, so they turn with it.
+const FLEE_R := 900.0
+const FLEE_TURN := 22.0   # deg/s: a heavy plane, the player still catches it
+const FLEE_K := 1.3
 
 var life := LIFE
 var _turret_cd := [1.2, 2.0]
@@ -15,6 +21,7 @@ var _shots := [0, 0]
 var _shot_t := [0.0, 0.0]
 var _flare_cd := 0.0
 var _escaped := false
+var _fleeing := false
 
 
 func setup(hp_total: float) -> void:
@@ -56,8 +63,9 @@ func spawn_escort(n: int, hp_k: float) -> void:
 
 func behave(delta: float) -> void:
 	life -= delta
-	position += Vector2.from_angle(heading) * SPEED * (1.6 if life <= 0.0 else 1.0) * delta
 	var p := Main.I.player
+	_flee(p, delta)
+	position += Vector2.from_angle(heading) * SPEED * (1.6 if life <= 0.0 else (FLEE_K if _fleeing else 1.0)) * delta
 	if life <= 0.0:
 		if not _escaped:
 			_escaped = true
@@ -88,6 +96,18 @@ func behave(delta: float) -> void:
 		if _turret_cd[i] <= 0.0 and d < 650.0:
 			_shots[i] = 3
 			_turret_cd[i] = randf_range(1.6, 2.2)
+
+
+## S16-23: spotted (player near or a hit taken) — turn the tail to the player and run.
+func _flee(p: Player, delta: float) -> void:
+	if Tuning.g("transport_flee") < 1.0 or p == null or p.hp <= 0.0 or life <= 0.0:
+		return
+	if not _fleeing and (hp < max_hp or global_position.distance_to(p.global_position) < FLEE_R):
+		_fleeing = true
+		Main.I.tele.add("transport_fled", 1.0)
+		Events.radio.emit("Перехват", Loc.t("Транспорт, нас засекли! Уходим, полный газ!"), true)
+	if _fleeing:
+		heading = rotate_toward(heading, (global_position - p.global_position).angle(), deg_to_rad(FLEE_TURN) * delta)
 
 
 func _die() -> void:

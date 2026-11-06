@@ -13,6 +13,11 @@ const FRONT_K := 0.5
 const TAIL_DEG := 65.0
 const TAIL_R := 620.0
 const LEN := 120.0
+## S16-19 (Kanta 05.11): with F1 `bomber_rear` = 1 the armour covers the nose and both sides (ARMOR_DEG from the nose)
+## and the tail is the weak spot (REAR_K), guarded by the tail turret: the run is «get behind and outlast the gunner».
+## 0 — s16: armour on the nose only, the sides are the gap.
+const ARMOR_DEG := 115.0
+const REAR_K := 1.25
 
 var life := LIFE
 var lead: Bomber = null          # ведущий звена (у ведущего — null)
@@ -50,13 +55,28 @@ func _aspect(p: Vector2) -> float:
 	return absf(wrapf((p - global_position).angle() - heading, -PI, PI))
 
 
+## Damage factor by where the player is: armour arc ×FRONT_K, outside it ×1 (s16) or the tail weak spot ×REAR_K.
 func aspect_k(_src: String) -> float:
 	var p := Main.I.player
-	if p == null or _aspect(p.global_position) > deg_to_rad(FRONT_DEG):
+	if p == null:
+		return 1.0
+	var rear := Tuning.g("bomber_rear") >= 1.0
+	if _aspect(p.global_position) > deg_to_rad(_armor_deg()):
+		if rear:
+			Main.I.tele.add("def_rear", 1.0)
+			return REAR_K
 		return 1.0
 	Main.I.tele.add("def_front", 1.0)
-	Hints.show("def_front", "Синяя дуга у носа бомбардировщика — лобовая броня: спереди урон вдвое меньше. Сзади бьёт турель (красный сектор). Заходите сбоку.", 9.0, 2)
+	if rear:
+		Hints.show("def_rear", Loc.t("Синяя дуга — броня бомбардировщика: спереди и с боков урон вдвое меньше. Слабое место — хвост, но его прикрывает турель (красный сектор)."), 9.0, 2)
+	else:
+		Hints.show("def_front", "Синяя дуга у носа бомбардировщика — лобовая броня: спереди урон вдвое меньше. Сзади бьёт турель (красный сектор). Заходите сбоку.", 9.0, 2)
 	return FRONT_K
+
+
+## Half-width of the armour arc, degrees: nose and sides with `bomber_rear`, the nose only without.
+func _armor_deg() -> float:
+	return ARMOR_DEG if Tuning.g("bomber_rear") >= 1.0 else FRONT_DEG
 
 
 func behave(delta: float) -> void:
@@ -117,5 +137,5 @@ func _draw_sectors() -> void:
 		pts.append(Vector2.from_angle(tail - a + 2.0 * a * i / 12.0) * TAIL_R)
 	draw_colored_polygon(pts, Color(1.0, 0.2, 0.15, 0.05))
 	draw_arc(Vector2.ZERO, TAIL_R, tail - a, tail + a, 24, Color(1.0, 0.3, 0.2, 0.35), 3.0)
-	var f := deg_to_rad(FRONT_DEG)
+	var f := deg_to_rad(_armor_deg())
 	draw_arc(Vector2.ZERO, radius + 18.0, heading - f, heading + f, 16, Color(0.45, 0.75, 1.0, 0.85), 4.0)
