@@ -58,14 +58,14 @@ func handle_global_input() -> void:
 				m._set_state(m.hangar_back)
 			return
 		"campaign":
-			# EX-08: экран «В вылет». Enter — в бой (не тем же нажатием, что открыло экран из меню),
-			# ↑ / ↓ — операция, 1 / 2 / 3 и ← / → — самолёт
+			# «Подготовка и вылет» step 2: the mission screen. Enter — fly (not on the press that opened the screen),
+			# ↑ / ↓ — operation, ← / → — theater, Esc — back to the hangar
 			if HudCampaign.log_open:   # the story log panel: Esc closes it, Enter must not launch the sortie under it
 				if Input.is_action_just_pressed("pause") or Input.is_action_just_pressed("ui_cancel"):
 					HudCampaign.log_open = false
 				return
 			if Input.is_action_just_pressed("pause"):
-				m._set_state("menu")
+				ui_click("campaign_back")
 			elif Input.is_action_just_pressed("ui_accept") and m._state_t > 0.25:
 				m.select_class(m.cls_id)
 			elif Input.is_action_just_pressed("ui_up") or Input.is_action_just_pressed("ui_down"):
@@ -74,14 +74,11 @@ func handle_global_input() -> void:
 				var k := ids.find(Campaign.index())
 				Campaign.select(ids[wrapi(k + (1 if Input.is_action_just_pressed("ui_down") else -1), 0, ids.size())])
 			elif Input.is_action_just_pressed("ui_left") or Input.is_action_just_pressed("ui_right"):
-				var k := PlaneClasses.LIST.find(m.cls_id)
-				m.cls_id = PlaneClasses.LIST[wrapi(k + (1 if Input.is_action_just_pressed("ui_right") else -1), 0, 3)]
+				var bs := HudCampaign.BIOMES
+				var k := bs.find(Campaign.biome_of(Campaign.index()))
+				HudCampaign.switch_biome(bs[wrapi(k + (1 if Input.is_action_just_pressed("ui_right") else -1), 0, bs.size())])
 			elif Input.is_action_just_pressed("toggle_scheme"):
 				_cycle_scheme()
-			else:
-				for i in 3:
-					if Input.is_action_just_pressed("choose_%d" % (i + 1)):
-						m.cls_id = PlaneClasses.LIST[i]
 			return
 		"course_pick":
 			if m._state_t < CARD_INPUT_DELAY:
@@ -136,9 +133,7 @@ func handle_global_input() -> void:
 			if Input.is_action_just_pressed("restart"):
 				m.restart()
 			elif Input.is_action_just_pressed("change_class"):
-				m.restarts += 1
-				m.start_run()
-				m._set_state("campaign")
+				ui_click("change_class")
 			return
 	if Input.is_action_just_pressed("toggle_tuning") and (Main.DEBUG or Main.aces()):
 		m.tuning_panel.toggle(not Main.DEBUG)
@@ -250,12 +245,15 @@ func abort_run() -> void:
 
 
 func ui_click(action: String) -> void:
-	if action == "menu_play":
-		# story (step 3): the prologue scene the first time the campaign opens
+	if action == "menu_prep":
+		# «Подготовка и вылет» (Kanta 06.11): one menu item — the hangar first, its «Приготовиться к вылету» opens the
+		# mission screen. Story (step 3): the prologue scene the first time.
 		if Dialog.due("hangar_prologue"):
-			Dialog.play(m, "hangar_prologue", StoryDialogs.scene("hangar_prologue"), m._set_state.bind("campaign"))
+			Dialog.play(m, "hangar_prologue", StoryDialogs.scene("hangar_prologue"), open_hangar.bind(m.cls_id))
 		else:
-			m._set_state("campaign")
+			open_hangar(m.cls_id)
+	elif action == "menu_play":   # straight to the mission screen (autotests, the self-check)
+		open_mission()
 	elif action.begins_with("dlg:"):
 		Dialog.ui(m, action)
 	elif action == "log_toggle":
@@ -263,13 +261,13 @@ func ui_click(action: String) -> void:
 	elif action.begins_with("replay:"):   # the story log: play a hangar scene again, nothing is saved
 		HudCampaign.log_open = false
 		var sid := action.substr(7)
-		Dialog.play(m, sid, StoryDialogs.scene(sid), m._set_state.bind("campaign"), true)
+		Dialog.play(m, sid, StoryDialogs.scene(sid), open_mission, true)
 	elif action == "menu_aces":   # AB-01: «Битва асов» test mode — «Оса» with the hangar setup, straight into the fight
 		m.mode = "aces"
 		m.cls_id = "fighter"
 		m.select_class(m.cls_id)
-	elif action == "campaign_back":
-		m._set_state("menu")
+	elif action == "campaign_back":   # the mission screen's «‹ Ангар»: the plane is changed there
+		open_hangar(m.cls_id)
 	elif action.begins_with("op:"):
 		Campaign.select(int(action.substr(3)))
 	elif action.begins_with("biome:"):
@@ -278,12 +276,8 @@ func ui_click(action: String) -> void:
 		HudCampaign.switch_biome(action.substr(11))
 		m.start_run()
 		m._set_state("menu")
-	elif action == "op_go":   # EX-08: «В ВЫЛЕТ ▶» — выбранный самолёт сразу в бой
+	elif action == "op_go":   # the mission screen's «ВЫЛЕТ ▶» — the plane from the hangar goes into combat
 		m.select_class(m.cls_id)
-	elif action == "sortie_hangar":   # «Улучшить самолёт» с экрана вылета — и обратно на него
-		m.hangar_back = "campaign"
-		m.hangar_cls = m.cls_id
-		m._set_state("hangar")
 	elif action == "menu_hangar" or action == "to_hangar":
 		m.hangar_back = "menu"
 		if m.state in ["dead", "evac"]:
@@ -368,10 +362,26 @@ func ui_click(action: String) -> void:
 		m.result_tab = int(action.substr(5))
 	elif action == "restart":
 		m.restart()
-	elif action == "change_class":
+	elif action == "change_class":   # results: «Сменить самолёт» — the plane is picked in the hangar now
 		m.restarts += 1
 		m.start_run()
-		m._set_state("campaign")
+		open_hangar(m.cls_id)
+
+
+## Opens the hangar of «Подготовка и вылет» on plane `cls`; Esc there goes back to the main menu.
+func open_hangar(cls: String) -> void:
+	m.hangar_back = "menu"
+	m.hangar_cls = cls
+	m._set_state("hangar")
+
+
+## Opens the mission screen (theater, operation, «ВЫЛЕТ ▶») for the plane in `m.cls_id`. `rebuild` remakes the
+## world behind it (the plane or the theater may have changed in the hangar), after the theater check of `prepare`.
+func open_mission(rebuild := false) -> void:
+	HudCampaign.prepare()
+	if rebuild:
+		m.start_run()
+	m._set_state("campaign")
 
 
 ## Steps the target mode of hardpoint group `gi` forward (`dir` 1) or back (-1); the pause
@@ -452,9 +462,10 @@ func hangar_action(a: String) -> void:
 		"promote":
 			ok = Profile.can_promote(c)
 			Profile.promote(c)
-		"fly":
+		"fly", "prep":   # «Приготовиться к вылету»: this plane goes to the mission screen
+			m.cls_id = c
 			m.skill_pick[c] = Profile.skills(c)[0]
-			m.select_class(c)
+			open_mission(true)
 			return
 		"back":
 			m.start_run()

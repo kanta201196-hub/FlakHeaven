@@ -3496,18 +3496,18 @@ msgstr ". Reload %d s."
 
 #: game/scripts/hud_flight.gd:788
 #, c-format
-msgid "до базы %s"
-msgstr "%s to base"
+msgid "до базы %d м"
+msgstr "%d m to base"
 
 #: game/scripts/hud_flight.gd:788
 #, c-format
-msgid "отбомбилась · до базы %s"
-msgstr "bombed · %s to base"
+msgid "отбомбилась · до базы %d м"
+msgstr "bombed · %d m to base"
 
 #: game/scripts/hud_flight.gd:814 game/scripts/hud_flight.gd:993
 #, c-format
-msgid "база %s"
-msgstr "base %s"
+msgid "база %d м"
+msgstr "base %d m"
 
 #: game/scripts/hud_flight.gd:814
 msgid "база"
@@ -3515,13 +3515,13 @@ msgstr "base"
 
 #: game/scripts/hud_flight.gd:824
 #, c-format
-msgid "эвакуация %s"
-msgstr "extraction %s"
+msgid "эвакуация %d м"
+msgstr "extraction %d m"
 
 #: game/scripts/hud_flight.gd:825
 #, c-format
-msgid "ЭВАКУАЦИЯ: ворота %d / %d · %s · окно %d с"
-msgstr "EXTRACTION: gate %d / %d · %s · window %d s"
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с"
+msgstr "EXTRACTION: gate %d / %d · %d m · window %d s"
 
 #: game/scripts/hud_flight.gd:908
 #, c-format
@@ -3564,8 +3564,8 @@ msgstr "STRONGHOLD: %d s · tower launchers: %d of %d"
 
 #: game/scripts/hud_flight.gd:1000
 #, c-format
-msgid "База противника: %s — подлетите, чтобы начать"
-msgstr "Enemy base: %s — fly in to start"
+msgid "База противника: %d м — подлетите, чтобы начать"
+msgstr "Enemy base: %d m — fly in to start"
 
 #: game/scripts/hud_flight.gd:1003
 msgid "Награда: выбор из редких карточек + 60 запчастей"
@@ -3573,8 +3573,8 @@ msgstr "Reward: a pick of rare cards + 60 parts"
 
 #: game/scripts/hud_flight.gd:1007
 #, c-format
-msgid "ПВО %s"
-msgstr "AA %s"
+msgid "ПВО %d м"
+msgstr "AA %d m"
 
 #: game/scripts/hud_flight.gd:1010
 #, c-format
@@ -3588,13 +3588,13 @@ msgstr "AA SITE: %d s · destroy the bunker: %d%%"
 
 #: game/scripts/hud_flight.gd:1014
 #, c-format
-msgid "Позиция ПВО: %s — подлетите, чтобы начать"
-msgstr "AA site: %s. Fly closer to start"
+msgid "Позиция ПВО: %d м — подлетите, чтобы начать"
+msgstr "AA site: %d m. Fly closer to start"
 
 #: game/scripts/hud_flight.gd:1021
 #, c-format
-msgid "маяк %s"
-msgstr "beacon %s"
+msgid "маяк %d м"
+msgstr "beacon %d m"
 
 #: game/scripts/hud_flight.gd:1024
 msgid "Пилот спасён!"
@@ -3615,18 +3615,18 @@ msgstr " · get back to the beacon!"
 
 #: game/scripts/hud_flight.gd:1030
 #, c-format
-msgid "Аварийный маяк: %s · вертолёт ждёт ещё %d с"
-msgstr "Distress beacon: %s · the helicopter waits %d more s"
+msgid "Аварийный маяк: %d м · вертолёт ждёт ещё %d с"
+msgstr "Distress beacon: %d m · the helicopter waits %d more s"
 
 #: game/scripts/hud_flight.gd:1038
 #, c-format
-msgid "караван %s"
-msgstr "caravan %s"
+msgid "караван %d м"
+msgstr "caravan %d m"
 
 #: game/scripts/hud_flight.gd:1038
 #, c-format
-msgid "колонна %s"
-msgstr "convoy %s"
+msgid "колонна %d м"
+msgstr "convoy %d m"
 
 #: game/scripts/hud_flight.gd:1041
 #, c-format
@@ -3640,13 +3640,13 @@ msgstr "CONVOY: %d s to cover · trucks: %d of %d"
 
 #: game/scripts/hud_flight.gd:1043
 #, c-format
-msgid "Караван снабжения: %s — подлетите и потопите сухогрузы"
-msgstr "Supply caravan: %s — fly in and sink the freighters"
+msgid "Караван снабжения: %d м — подлетите и потопите сухогрузы"
+msgstr "Supply caravan: %d m — fly in and sink the freighters"
 
 #: game/scripts/hud_flight.gd:1043
 #, c-format
-msgid "Колонна снабжения: %s — подлетите и сожгите грузовики"
-msgstr "Supply convoy: %s. Fly in and burn the trucks"
+msgid "Колонна снабжения: %d м — подлетите и сожгите грузовики"
+msgstr "Supply convoy: %d m. Fly in and burn the trucks"
 
 #: game/scripts/hud_flight.gd:1045
 msgid "Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза"
@@ -3658,8 +3658,8 @@ msgstr "Hit the lead vehicle to stop the convoy · reward: cargo from each truck
 
 #: game/scripts/hud_flight.gd:1048
 #, c-format
-msgid "транспортник %s"
-msgstr "transport %s"
+msgid "транспортник %d м"
+msgstr "transport %d m"
 
 #: game/scripts/hud_flight.gd:1049
 #, c-format
@@ -3672,8 +3672,8 @@ msgstr "Transport"
 
 #: game/scripts/hud_flight.gd:1054
 #, c-format
-msgid "ас %s"
-msgstr "ace %s"
+msgid "ас %d м"
+msgstr "ace %d m"
 
 #: game/scripts/hud_flight.gd:1055
 #, c-format
@@ -3686,8 +3686,8 @@ msgstr "ON YOUR TAIL! Cut throttle (S) or maneuver"
 
 #: game/scripts/hud_flight.gd:1062
 #, c-format
-msgid "заправщик %s"
-msgstr "tanker %s"
+msgid "заправщик %d м"
+msgstr "tanker %d m"
 
 #: game/scripts/hud_flight.gd:1063
 msgid "СТЫКОВКА — ЗАПРАВКА ИДЁТ"
@@ -9396,8 +9396,8 @@ msgstr "\"Gulls\" take off from the \"Leviathan\" deck!"
 
 #: game/scripts/warship.gd:361
 #, c-format
-msgid "до гавани %s"
-msgstr "to harbor %s"
+msgid "до гавани %.1f км"
+msgstr "to harbor %.1f km"
 
 #: game/scripts/warship.gd:363
 #, c-format
@@ -9406,8 +9406,8 @@ msgstr "shore salvos: %d of %d"
 
 #: game/scripts/warship.gd:363
 #, c-format
-msgid "до огневой позиции %s"
-msgstr "%s to firing position"
+msgid "до огневой позиции %.1f км"
+msgstr "%.1f km to firing position"
 
 #: game/scripts/warship.gd:370
 msgid "Точка эвакуации"
@@ -10114,8 +10114,8 @@ msgid "Штабист"
 msgstr "Staff Officer"
 
 #, c-format
-msgid "ЭВАКУАЦИЯ: ворота %d / %d · %s · окно открыто"
-msgstr "EVACUATION: gate %d / %d · %s · window open"
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно открыто"
+msgstr "EVACUATION: gate %d / %d · %d m · window open"
 
 
 
@@ -10141,6 +10141,268 @@ msgstr "Turrets (max)"
 msgid "Ведомые"
 msgstr "Wingmen"
 
+# OT-01 operation objectives
+msgid "Задание операции выполнено: %s · +%d запчастей"
+msgstr "Operation objective complete: %s · +%d parts"
+
+# OT-01 operation objectives
+msgid "Все задания операции выполнены. Отличная работа."
+msgstr "All operation objectives complete. Great work."
+
+# OT-01 operation objectives
+msgid "Задание операции выполнено. Так держать."
+msgstr "Operation objective complete. Keep it up."
+
+# OT-01 operation objectives
+msgid "ЗАДАНИЯ ОПЕРАЦИИ · +%d запчастей за каждое"
+msgstr "OPERATION OBJECTIVES · +%d parts each"
+
+# OT-01 operation objectives
+msgid "ЗАДАНИЯ ОПЕРАЦИИ: %d из %d"
+msgstr "OPERATION OBJECTIVES: %d of %d"
+
+# OT-01 operation objectives
+msgid " · +%d запчастей в добыче"
+msgstr " · +%d parts in the loot"
+
+# OT-01 operation objectives
+msgid "Сжечь 3 колонны противника на дороге"
+msgstr "Burn 3 enemy columns on the road"
+
+# OT-01 operation objectives
+msgid "Подавить 2 позиции ПВО у перевала"
+msgstr "Suppress 2 air-defence sites at the pass"
+
+# OT-01 operation objectives
+msgid "Подавить 3 позиции ПВО в руслах"
+msgstr "Suppress 3 air-defence sites in the riverbeds"
+
+# OT-01 operation objectives
+msgid "Перехватить 2 колонны с ракетами для ПВО"
+msgstr "Intercept 2 columns carrying missiles for the air defence"
+
+# OT-01 operation objectives
+msgid "Разгромить 3 укрепрайона в старых крепостях"
+msgstr "Crush 3 strongholds in the old forts"
+
+# OT-01 operation objectives
+msgid "Сжечь 2 колонны снабжения крепостей"
+msgstr "Burn 2 supply columns of the forts"
+
+# OT-01 operation objectives
+msgid "Выиграть 2 дуэли с вражескими асами"
+msgstr "Win 2 duels with enemy aces"
+
+# OT-01 operation objectives
+msgid "Сбить 2 транспортника с подкреплением"
+msgstr "Shoot down 2 transports with reinforcements"
+
+# OT-01 operation objectives
+msgid "колонны %d из %d"
+msgstr "columns %d of %d"
+
+# OT-01 operation objectives
+msgid "позиции ПВО %d из %d"
+msgstr "AA sites %d of %d"
+
+# OT-01 operation objectives
+msgid "укрепрайоны %d из %d"
+msgstr "strongholds %d of %d"
+
+# OT-01 operation objectives
+msgid "дуэли %d из %d"
+msgstr "duels %d of %d"
+
+# OT-01 operation objectives
+msgid "транспортники %d из %d"
+msgstr "transports %d of %d"
+#: game/scripts/hud_campaign.gd
+msgid "‹ Ангар (Esc)"
+msgstr "‹ Hangar (Esc)"
+
+#: game/scripts/hud_campaign.gd
+msgid "РЕЖИМ ВЫЛЕТА"
+msgstr "SORTIE SETUP"
+
+#: game/scripts/hud_campaign.gd
+msgid "Выберите район и операцию — и в бой."
+msgstr "Pick a theater and an operation, then take off."
+
+#: game/scripts/hud_campaign.gd
+msgid "Enter — вылет · ↑ / ↓ — операция · ← / → — район · Esc — ангар · управление: %s [F2]"
+msgstr "Enter — take off · ↑ / ↓ — operation · ← / → — theater · Esc — hangar · controls: %s [F2]"
+
+#: game/scripts/hud_campaign.gd
+msgid "1 · РАЙОН"
+msgstr "1 · THEATER"
+
+#: game/scripts/hud_campaign.gd
+msgid "после %d операций · осталось %d"
+msgstr "after %d operations · %d to go"
+
+#: game/scripts/hud_campaign.gd
+msgid "пройдено %d из %d"
+msgstr "%d of %d cleared"
+
+#: game/scripts/hud_campaign.gd
+msgid "2 · ОПЕРАЦИЯ"
+msgstr "2 · OPERATION"
+
+#: game/scripts/hud_campaign.gd
+msgid "3 · БРИФИНГ"
+msgstr "3 · BRIEFING"
+
+#: game/scripts/hud_campaign.gd
+msgid "Операция %d · «%s»"
+msgstr "Operation %d · “%s”"
+
+#: game/scripts/hud_campaign.gd
+msgid "ЗАДАЧИ"
+msgstr "OBJECTIVES"
+
+#: game/scripts/hud_campaign.gd
+msgid "Самолёт ур. %d · экипаж ур. %d"
+msgstr "Plane Lv. %d · crew Lv. %d"
+
+#: game/scripts/hud_campaign.gd
+msgid "На старте: %s"
+msgstr "Starts with: %s"
+
+#: game/scripts/hud_campaign.gd
+msgid "‹ Изменить в ангаре"
+msgstr "‹ Change in the hangar"
+
+#: game/scripts/hud_campaign.gd
+msgid "ВЫЛЕТ ▶"
+msgstr "TAKE OFF ▶"
+
+#: game/scripts/hud_campaign.gd
+msgid "Перед вылетом — ПОДГОТОВКА И ВЫЛЕТ: самолёт, оружие, экипаж, затем район и операция"
+msgstr "Before a sortie — PREPARE AND TAKE OFF: plane, weapons, crew, then theater and operation"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПОДГОТОВКА К ВЫЛЕТУ"
+msgstr "PRE-FLIGHT"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПРИГОТОВИТЬСЯ К ВЫЛЕТУ — %s ›"
+msgstr "READY FOR SORTIE — %s ›"
+
+#: game/scripts/hud_campaign.gd
+msgid "ПОДГОТОВКА И ВЫЛЕТ"
+msgstr "PREPARE AND TAKE OFF"
+
+#: game/scripts/hud_campaign.gd
+msgid "ЗАКРЫТ"
+msgstr "LOCKED"
+
+#: game/scripts/hud_campaign.gd
+msgid "Можно улучшить самолёт: узлы без улучшений, запчастей хватает (%d)"
+msgstr "You can upgrade the plane: no node upgrades yet, enough parts (%d)"
+
+#: game/scripts/hud_campaign.gd
+msgid "‹ Улучшить в ангаре"
+msgstr "‹ Upgrade in the hangar"
+
+#: game/scripts/hud_flight.gd:788
+#, c-format
+msgid "до базы %s"
+msgstr "%s to base"
+
+#: game/scripts/hud_flight.gd:788
+#, c-format
+msgid "отбомбилась · до базы %s"
+msgstr "bombed · %s to base"
+
+#: game/scripts/hud_flight.gd:814 game/scripts/hud_flight.gd:993
+#, c-format
+msgid "база %s"
+msgstr "base %s"
+
+#: game/scripts/hud_flight.gd:824
+#, c-format
+msgid "эвакуация %s"
+msgstr "extraction %s"
+
+#: game/scripts/hud_flight.gd:825
+#, c-format
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %s · окно %d с"
+msgstr "EXTRACTION: gate %d / %d · %s · window %d s"
+
+#: game/scripts/hud_flight.gd:1000
+#, c-format
+msgid "База противника: %s — подлетите, чтобы начать"
+msgstr "Enemy base: %s — fly in to start"
+
+#: game/scripts/hud_flight.gd:1007
+#, c-format
+msgid "ПВО %s"
+msgstr "AA %s"
+
+#: game/scripts/hud_flight.gd:1014
+#, c-format
+msgid "Позиция ПВО: %s — подлетите, чтобы начать"
+msgstr "AA site: %s. Fly closer to start"
+
+#: game/scripts/hud_flight.gd:1021
+#, c-format
+msgid "маяк %s"
+msgstr "beacon %s"
+
+#: game/scripts/hud_flight.gd:1030
+#, c-format
+msgid "Аварийный маяк: %s · вертолёт ждёт ещё %d с"
+msgstr "Distress beacon: %s · the helicopter waits %d more s"
+
+#: game/scripts/hud_flight.gd:1038
+#, c-format
+msgid "караван %s"
+msgstr "caravan %s"
+
+#: game/scripts/hud_flight.gd:1038
+#, c-format
+msgid "колонна %s"
+msgstr "convoy %s"
+
+#: game/scripts/hud_flight.gd:1043
+#, c-format
+msgid "Караван снабжения: %s — подлетите и потопите сухогрузы"
+msgstr "Supply caravan: %s — fly in and sink the freighters"
+
+#: game/scripts/hud_flight.gd:1043
+#, c-format
+msgid "Колонна снабжения: %s — подлетите и сожгите грузовики"
+msgstr "Supply convoy: %s. Fly in and burn the trucks"
+
+#: game/scripts/hud_flight.gd:1048
+#, c-format
+msgid "транспортник %s"
+msgstr "transport %s"
+
+#: game/scripts/hud_flight.gd:1054
+#, c-format
+msgid "ас %s"
+msgstr "ace %s"
+
+#: game/scripts/hud_flight.gd:1062
+#, c-format
+msgid "заправщик %s"
+msgstr "tanker %s"
+
+#: game/scripts/warship.gd:361
+#, c-format
+msgid "до гавани %s"
+msgstr "to harbor %s"
+
+#: game/scripts/warship.gd:363
+#, c-format
+msgid "до огневой позиции %s"
+msgstr "%s to firing position"
+
+#, c-format
+msgid "ЭВАКУАЦИЯ: ворота %d / %d · %s · окно открыто"
+msgstr "EVACUATION: gate %d / %d · %s · window open"
+
 #: game/scripts/dist_text.gd
 #, c-format
 msgid "%d м"
@@ -10150,6 +10412,129 @@ msgstr "%d m"
 #, c-format
 msgid "%s км"
 msgstr "%s km"
+
+#: game/scripts/plane_stats.gd
+msgid "Урон в секунду"
+msgstr "Damage per second"
+
+#: game/scripts/plane_stats.gd
+msgid "по воздуху"
+msgstr "vs air"
+
+#: game/scripts/plane_stats.gd
+msgid "по земле"
+msgstr "vs ground"
+
+#: game/scripts/plane_stats.gd
+msgid "Перезарядка уклонения"
+msgstr "Evade cooldown"
+
+#: game/scripts/plane_stats.gd
+msgid "Перезарядка ловушек"
+msgstr "Flare cooldown"
+
+#: game/scripts/plane_stats.gd
+msgid "Топливо"
+msgstr "Fuel"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%d км/ч"
+msgstr "%d km/h"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%d °/с"
+msgstr "%d °/s"
+
+#: game/scripts/plane_stats.gd
+#, c-format
+msgid "%s мин"
+msgstr "%s min"
+
+#: game/scripts/card_text.gd
+#, c-format
+msgid "%s с"
+msgstr "%s s"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "%s, ранг %d → %d из %d"
+msgstr "%s, rank %d → %d of %d"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "(%s)"
+msgstr "(%s)"
+
+#: game/scripts/cards.gd
+msgid " (уже на нижнем пределе)"
+msgstr " (already at its floor)"
+
+#: game/scripts/cards.gd
+msgid "Радиус"
+msgstr "Radius"
+
+#: game/scripts/cards.gd
+msgid "Урон за попадание"
+msgstr "Damage per hit"
+
+#: game/scripts/cards.gd
+msgid "Дальность захвата"
+msgstr "Lock range"
+
+#: game/scripts/cards.gd
+msgid "Радиус осколков"
+msgstr "Fragment radius"
+
+#: game/scripts/cards.gd
+msgid "Радиус перехвата"
+msgstr "Intercept radius"
+
+#: game/scripts/cards.gd
+msgid "Урон суббоеприпаса"
+msgstr "Submunition damage"
+
+#: game/scripts/cards.gd
+msgid "Урон по броне"
+msgstr "Damage vs armor"
+
+#: game/scripts/cards.gd
+msgid "Доворот ракеты"
+msgstr "Missile turn"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "«Дятел», Э+ %d → %d из 5"
+msgstr "«Woodpecker», E+ %d → %d of 5"
+
+#: game/scripts/cards.gd
+msgid "Урон снаряда"
+msgstr "Shell damage"
+
+#: game/scripts/cards.gd
+msgid "(+8 % урона за шаг)"
+msgstr "(+8% damage per step)"
+
+#: game/scripts/cards.gd
+#, c-format
+msgid "%s, Э+ %d → %d из 5"
+msgstr "%s, E+ %d → %d of 5"
+
+#: game/scripts/cards.gd
+msgid "(+8 % урона и −4 % перезарядки за шаг)"
+msgstr "(+8% damage and −4% cooldown per step)"
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ХАРАКТЕРИСТИКИ · самолёт ур. %d"
+msgstr "STATS · aircraft Lv. %d"
+
+
+#: game/scripts/hud_hangar.gd
+#, c-format
+msgid "ур. %d: %s"
+msgstr "Lv. %d: %s"
 
 msgid "Связка открывается рецептом из двух разных вещей нужного уровня: например, два вида оружия или оружие и модули. Рецепт — на карточке связки и под полосой «К связке» в бою. Сменить специализацию можно позже за 1 переброс."
 msgstr "A synergy opens from a recipe of two different things at the required level: for example, two kinds of weapons, or a weapon and modules. The recipe is on the synergy card and under the \"Toward synergy\" bar in combat. You can change the specialization later for 1 reroll."

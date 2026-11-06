@@ -7,7 +7,8 @@ extends RefCounted
 ##            lvl 1 / 3 / 5 and modernised, from the hangar's default view (Hangar3D, the «САМОЛЁТ» tab); then
 ##            the weapon store («ОРУЖИЕ» tab): each weapon on its stand at the same levels.
 ##   combat — every plane in a sortie at the gameplay camera (VisualBench points): in flight, then close-ups of the
-##            nozzle flames, the muzzle points (magenta markers), the stores (rolled belly-up) and the trails.
+##            nozzle flames, the muzzle points (magenta markers), the stores (rolled belly-up), the trails
+##            and, on a plane carrying rocket pods, a salvo leaving them.
 ## Each frame also runs cheap geometry checks (MountCheck): a weapon, turret, flame or muzzle point that lies
 ## farther than GAP_MAX from the skin it belongs to, or a node that is missing, becomes an issue in the manifest.
 ##
@@ -47,6 +48,10 @@ const STORE_CLASSES := {"turret": ["attacker", "bomber"], "bombs": ["attacker", 
 ## Combat wide shots: camera zoom (1 = the gameplay camera)
 const ZOOM_FLIGHT := 1.0
 const ZOOM_TRAIL := 1.4
+## Rocket salvo shot (Kanta, «Оса» 2 НАР): the gameplay camera close in, where the 2D rockets and the 3D pods
+## line up (a close-up camera of its own would not move the 2D rockets with it); pods refire every SALVO_EVERY s
+const ZOOM_SALVO := 4.5
+const SALVO_EVERY := 0.3
 ## Combat close-ups: plane length as a share of the frame height, so a small fighter and a «Кит» fill it alike
 ## (a fixed zoom left the fighter a speck and the bomber at 400 px of 1920)
 const FILL_NOZZLE := 1.7
@@ -78,6 +83,7 @@ var _started := false
 var _finished := false
 var _applied := false   # hangar: the current job reached Hangar3D
 var _ccam: Camera3D = null   # combat close-up camera
+var _salvo_t := 0.0   # salvo shot: time to the next rocket salvo
 var _close_name := ""   # the close-up point the camera serves now
 var _close_n := 0   # frames of that point so far
 
@@ -198,7 +204,8 @@ static func combat_loadout(cls: String, lv: int) -> Array[String]:
 
 
 ## Combat points for VisualBench at `at`: per plane — in flight at the gameplay camera, then close-ups of the nozzles
-## (afterburner on), the muzzle points, the stores (belly to the camera) and the trails with missile smoke
+## (afterburner on), the muzzle points, the stores (belly to the camera) and the trails with missile smoke,
+## and a rocket salvo at the gameplay camera when the plane carries rocket pods
 static func combat_points(at: Vector2) -> Array:
 	var out: Array = []
 	for pl: Array in planes():
@@ -211,6 +218,8 @@ static func combat_points(at: Vector2) -> Array:
 			{"sc_shot": "stores", "roll": 0.55, "sc_fill": FILL_CLOSE, "wait": 1.0},
 			{"sc_shot": "trails", "fly": true, "sc_ab": true, "missiles": true, "zoom": ZOOM_TRAIL, "wait": 3.0},
 		]
+		if combat_loadout(pl[0], pl[1]).has("rockets"):
+			shots.append({"sc_shot": "salvo", "sc_salvo": true, "zoom": ZOOM_SALVO, "wait": 2.0})
 		for s: Dictionary in shots:
 			var p := base.duplicate(true)
 			p.merge(s)
@@ -390,7 +399,8 @@ func _check_store(e: Dictionary) -> void:
 # ---------- combat part ----------
 
 ## Called by VisualBench._hold for a self-check point: the plane's loadout, the afterburner, the camera offset and
-## the muzzle markers; weapons that leave the pylon stay loaded (no launches hide them)
+## the muzzle markers; weapons that leave the pylon stay loaded (no launches hide them), except rocket pods on a
+## salvo point, which keep firing
 func hold(p: Dictionary) -> void:
 	if not p.has("sc") or not _gate():
 		return
@@ -398,8 +408,25 @@ func hold(p: Dictionary) -> void:
 	if _variant != p["sc"]:
 		_variant = p["sc"]
 		_set_variant(p["cls"][0], p["cls"][1])
+	var salvo := false
+	# salvo shot: the player's own steering is off (it turned the plane away from the heading VisualBench sets, so
+	# the rockets left at another angle than the model showed), level flight, and the rocket pods fire again every
+	# SALVO_EVERY s on a timer of their own (with the group's cd up its auto mode, finding no target, does nothing)
+	pl.process_mode = Node.PROCESS_MODE_DISABLED if p.get("sc_salvo", false) else Node.PROCESS_MODE_INHERIT
+	if p.get("sc_salvo", false):
+		pl.bank = 0.0
+		pl.roll_t = 0.0
+		pl.velocity = Vector2.ZERO   # no camera lead: the plane stays in the middle of the frame
+		_salvo_t -= m.get_process_delta_time()
+		salvo = _salvo_t <= 0.0
+		if salvo:
+			_salvo_t = SALVO_EVERY
 	for g: Hardpoint in pl.groups:
-		if Weapons.leaves_pylon(g.weapon) or g.weapon == "turret":
+		if p.get("sc_salvo", false) and g.weapon == "rockets":
+			g.cd = 1.0
+			if salvo:
+				g._fire_rockets(pl, true)
+		elif Weapons.leaves_pylon(g.weapon) or g.weapon == "turret":
 			g.cd = 0.29   # above zero: no launch; below 0.3: Render3D still shows the store
 	if p.get("sc_ab", false):
 		pl.ab_t = 1.0
@@ -561,7 +588,10 @@ func _muzzle_points(u: Unit3D) -> Array[Vector3]:
 		var wmi := u.weapons[k] as MeshInstance3D
 		if wmi == null or k.ends_with("_skin") or k.ends_with("_fair") or wmi.mesh == null:
 			continue
-		out.append(wmi.transform * Vector3(0.35, 0.0, 0.0) if k.contains("_turret_") else wmi.position)
+		if k.contains("_rockets_") and wmi.has_meta("muzzle_local"):   # rockets leave from the pod's front
+			out.append(wmi.transform * (wmi.get_meta("muzzle_local") as Vector3))
+		else:
+			out.append(wmi.transform * Vector3(0.35, 0.0, 0.0) if k.contains("_turret_") else wmi.position)
 	return out
 
 

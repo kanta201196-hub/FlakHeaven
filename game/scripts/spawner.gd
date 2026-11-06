@@ -16,6 +16,9 @@ var activity_i := 0
 var activity_node: Node = null
 var fuel: Fuel = null   # 3.5: топливо и свой заправщик
 const ACTIVITIES := ["ground", "dogfight", "transport", "convoy", "fort"]
+## OT-01: this sortie's activity order — the operation's own (`OpTaskBalance.QUEUE`), the common one in «Битва асов»,
+## with F1 op_tasks = 0 and with the --dogfight/--transport/--convoy/--fort checks (they index ACTIVITIES).
+var queue: Array = ACTIVITIES
 ## EX-03 (отзывы внешних тестеров 21.10): «очередь на атаку» — одновременно заходят не больше attack_slots()
 ## дронов и ракетоносцев, остальные ждут поодаль и не стреляют. Толпа вокруг игрока не кружит «вальс».
 var _attackers: Array = []
@@ -27,6 +30,11 @@ func _ready() -> void:
 	fuel.capacity = Fuel.CAPACITY * Profile.fuel_k(Main.I.cls_id)
 	fuel.left = fuel.capacity
 	add_child(fuel)
+	if not Main.aces() and OpTaskBalance.on():
+		queue = OpTaskBalance.queue(String(Campaign.op()["id"]))
+	for a in ["--dogfight", "--transport", "--convoy", "--fort"]:
+		if OS.get_cmdline_user_args().has(a):
+			queue = ACTIVITIES
 	if OS.get_cmdline_user_args().has("--dogfight"):
 		activity_i = 1      # проверка: сразу догфайт
 		next_activity = 20.0
@@ -417,7 +425,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 	if not force and (m_boss() or is_instance_valid(activity_node) or is_instance_valid(Main.I.evac)):
 		next_activity = t + 15.0
 		return
-	var kind_s: String = ACTIVITIES[activity_i % ACTIVITIES.size()]
+	var kind_s: String = queue[activity_i % queue.size()]
 	if Story.wants_rescue():
 		kind_s = "rescue"   # EX-09: «Сухое русло» — первая активность вылета: сбитый пилот
 		Story.rescue_done = true
@@ -435,7 +443,7 @@ func start_activity(p: Player, t: float, force := false) -> void:
 				_view_rect(), p.global_position, min_d)
 		if fort.is_empty():
 			activity_i += 1
-			kind_s = ACTIVITIES[activity_i % ACTIVITIES.size()]
+			kind_s = queue[activity_i % queue.size()]
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: activity start ", kind_s, " at %.0f" % t)
 	activity_i += 1

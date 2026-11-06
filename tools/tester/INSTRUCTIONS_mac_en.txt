@@ -10,7 +10,7 @@ LAUNCH ON MAC
 Works on Macs with Apple chips (M1–M4) and Intel, macOS 11 or newer.
 
 1. Unzip the archive (double-click) and drag
-   "Flak Heaven - Prototype 3 (3D)" to Applications (or keep it anywhere).
+   "Flak Heaven" to Applications (or keep it anywhere).
 2. Double-click to open. macOS will say it can't verify the developer —
    that's because the test build has no paid Apple notarization.
    Click "Done" (NOT "Move to Trash").
@@ -23,7 +23,7 @@ Works on Macs with Apple chips (M1–M4) and Intel, macOS 11 or newer.
    Open Terminal, paste the line below and press Enter
    (the path assumes the game is in Applications):
 
-   xattr -cr "/Applications/Flak Heaven - Prototype 3 (3D).app"
+   xattr -cr "/Applications/Flak Heaven.app"
 
    Then open the game again.
 
@@ -68,7 +68,7 @@ does not collect your name, email or other personal data.
 Fallback (if the button doesn't work): in the main menu click LOGS —
 the game folder opens; send the organizer the playtest_log_*.csv file
 and the logs folder. The folder is here:
-~/Library/Application Support/Godot/app_userdata/Flak Heaven - Prototype 3 (3D)
+~/Library/Application Support/Godot/app_userdata/Flak Heaven
 (in Finder: Go → Go to Folder…, paste this path)
 
 GENERAL SURVEY (at the end of the test, reply in a message to the organizer)

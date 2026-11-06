@@ -380,6 +380,9 @@ func _goal_rows(m: Main) -> Array:
 	var task := m.class_task.hud_line() if m.class_task != null else ""
 	if task != "":
 		rows.append([m.class_task.state == "done", task.trim_prefix("✓ "), "+%d" % int(Rewards.ACTIVITY[&"class_task"]["parts"])])
+	if m.op_tasks != null:   # OT-01: the operation's side objectives
+		for r: Array in m.op_tasks.rows():
+			rows.append([r[0], r[1], "" if r[0] else "+%d" % int(OpTaskBalance.PARTS)])
 	var every := Tuning.g("boss_every")
 	var next := (floorf(m.run_time / every) + 1.0) * every - m.run_time
 	rows.append([false, Loc.t("ас в бою!") if m.boss_alive() else Loc.t("ас через %d:%02d") % [int(next) / 60, int(next) % 60], ""])

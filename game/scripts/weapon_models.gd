@@ -816,6 +816,13 @@ static var _wing_pts := {}
 const TIP_FRAC := 0.95
 
 
+## Whether `weapon` on a wing-tip group rides a launch rail beside the tip. Missiles do, as on real fighters;
+## a rocket pod is a fat launcher that hangs from a pylon, so beside the tip it stood half off the wing
+## (Kanta, «Оса» 2) — it and the other pylon stores go under the outer wing instead.
+static func on_tip_rail(weapon: String) -> bool:
+	return weapon in Hardpoint.MISSILES and weapon != "rockets"
+
+
 static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.0) -> Vector2:
 	var key := "%s_%d" % [cls_id, lvl]
 	var ck := key if zf_override < 0.0 else "%s_%.2f" % [key, zf_override]
@@ -922,8 +929,9 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 				out.append({"p": q * fw, "side": "skin", "yaw": 0.0, "t": tier(g.level), "mx": q.x, "mz": q.y, "seed": float(i)})
 			return out
 	# Kanta 24.10: wing-tip pair («Оса» third group) hangs beside the tip at wing level, not under the swept wing
-	# (from above it looked as if the missiles lay on top of the wing)
-	if not g.builtin and g.mount_frac >= TIP_FRAC:
+	# (from above it looked as if the missiles lay on top of the wing). Only rail-launched missiles: a rocket pod,
+	# bomb or gun pod there stuck out past the tip; those hang under the outer wing (PlaneArt.OUTER_PAIR)
+	if not g.builtin and g.mount_frac >= TIP_FRAC and on_tip_rail(g.weapon):
 		for sd in [-1.0, 1.0]:
 			out.append({"p": wing_point(cls_id, lvl, sd, 0.98), "side": "tip", "yaw": 0.0, "rail": true})
 		return out

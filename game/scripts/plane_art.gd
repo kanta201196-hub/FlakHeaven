@@ -16,6 +16,11 @@ const WEAPON_FRAC := {"aam": 0.34, "rockets": 0.26, "bombs": 0.27, "gunpod": 0.3
 ## «Оса» 1: under the fixed wing glove, the source model's own pylon station (the silhouette point sat against the
 ## fuselage side under the swing-wing root, with the pylon's rear half behind the trailing edge).
 const WING_PAIR := {"fighter_1": Vector2(-0.075, 0.085), "fighter_2": Vector2(-0.15, 0.2)}
+## Kanta («Оса» 2 НАР): pylon station of the wing-tip group («Законцовки крыла») for stores that do not ride the
+## tip rail (rocket pods, bombs, gun pods; WeaponModels.on_tip_rail), same units as WING_PAIR. Beside the tip a
+## pod stood half off the wing; here it hangs under the flat outer wing, outboard of the inner pair with room for
+## the widest pod (tier 3) next to the inner missile, its pylon on the chord (battle-model underside probed).
+const OUTER_PAIR := {"fighter_1": Vector2(-0.25, 0.17), "fighter_2": Vector2(-0.19, 0.28)}
 
 static var _tex := {}
 static var _anchors := {}
@@ -98,7 +103,8 @@ static func shape_info(cls_id: String, lvl: int) -> Dictionary:
 
 
 ## Точки подвеса для группы (в пикселях текстуры, начало — центр, нос вправо).
-## Wing pairs come from the silhouette; the first pair of a plane in WING_PAIR hangs at its measured station instead.
+## Wing pairs come from the silhouette; the first pair of a plane in WING_PAIR hangs at its measured station instead,
+## and a pylon store (not a tip-rail missile) on the wing-tip group of a plane in OUTER_PAIR hangs at that station.
 static func slot_points(cls_id: String, lvl: int, group_index: int, group: Hardpoint) -> Array:
 	var s := shape_info(cls_id, lvl)
 	if s.is_empty():
@@ -129,9 +135,13 @@ static func slot_points(cls_id: String, lvl: int, group_index: int, group: Hardp
 	var off := maxf(fus + 5.0, half * frac)
 	var px := wx - 1.0
 	var station: Vector2 = WING_PAIR.get("%s_%d" % [cls_id, lvl], Vector2.ZERO)
+	var outer: Vector2 = OUTER_PAIR.get("%s_%d" % [cls_id, lvl], Vector2.ZERO)
 	if group_index == 0 and group.mount_frac <= 0.0 and station != Vector2.ZERO:
 		px = station.x * float(s["w"])
 		off = station.y * float(s["w"])
+	elif group.mount_frac >= WeaponModels.TIP_FRAC and outer != Vector2.ZERO and not WeaponModels.on_tip_rail(group.weapon):
+		px = outer.x * float(s["w"])
+		off = outer.y * float(s["w"])
 	for i in group.slots / 2:
 		var o := off + i * half * 0.14
 		pts.append(Vector2(px, o))

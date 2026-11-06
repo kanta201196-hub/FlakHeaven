@@ -1,6 +1,7 @@
 class_name HudHangar
 extends HudKit
-## 3.2: ангар — самолёт и узлы, ветки оружия, экипаж и перки, слоты навыков.
+## 3.2: ангар — самолёт и узлы, ветки оружия, экипаж и перки, слоты навыков. Step 1 of «Подготовка и вылет»
+## (Kanta 06.11): «Приготовиться к вылету» at the bottom takes the plane on view to the mission screen.
 
 
 # ---------- 3.2: ангар ----------
@@ -15,7 +16,7 @@ var _album: HudAlbum
 func draw(m: Main, size: Vector2) -> void:
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.045, 0.05, 0.94))
 	var c := m.hangar_cls
-	_text(Vector2(0, 66), "АНГАР", 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
+	_text(Vector2(0, 66), "ПОДГОТОВКА К ВЫЛЕТУ", 40, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	_text(Vector2(0, 66), Loc.t("Запчасти: %d   ") % Profile.parts(), 26, Color(0.95, 0.85, 0.55), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 60)
 	_button(Rect2(60, 34, 200, 46), "‹ Меню (Esc)", "hg:back", 18)
 	# классы
@@ -58,7 +59,15 @@ func draw(m: Main, size: Vector2) -> void:
 			if _album == null:
 				_album = HudAlbum.new(ctrl, _buttons)
 			_album.draw(m, area)
-	_button(Rect2(size.x / 2.0 - 180, size.y - 110, 360, 56), Loc.t("В ВЫЛЕТ — %s") % Loc.t(PlaneClasses.DATA[c]["title"]), "hg:fly", 20)
+	# «Подготовка и вылет» (Kanta 06.11): set the plane up here, then the mission screen picks theater and operation
+	# the main action of the screen: filled amber like «ВЫЛЕТ ▶», so it reads as the way forward
+	var pr := Rect2(size.x / 2.0 - 245, size.y - 112, 490, 60)   # clears the debug buttons on the left in tester builds
+	var hot := pr.has_point(ctrl.get_local_mouse_position())
+	ctrl.draw_rect(pr, Menu.C_AMBER.lightened(0.12 if hot else 0.0))
+	_text(Vector2(pr.position.x, pr.position.y + 39), Loc.t("ПРИГОТОВИТЬСЯ К ВЫЛЕТУ — %s ›") % Loc.t(PlaneClasses.DATA[c]["title"]), 19, Color(0.1, 0.08, 0.02), HORIZONTAL_ALIGNMENT_CENTER, pr.size.x)
+	_buttons.append([pr, "hg:prep"])
+	if Profile.upgrade_hint(c):   # 06.11 review, point 4: no upgrades and parts in stock — say so before take-off
+		_text(Vector2(0, pr.position.y - 14), Loc.t("Можно улучшить самолёт: узлы без улучшений, запчастей хватает (%d)") % Profile.parts(), 18, Color(1.0, 0.72, 0.35), HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	if Main.DEBUG:
 		var dy := size.y - 110
 		_text(Vector2(60, dy - 10), "ОТЛАДКА (тестовая сборка):", 14, Color(0.7, 0.7, 0.7))
@@ -94,7 +103,6 @@ func _hg_plane(c: String, area: Rect2) -> void:
 				ctrl.draw_line(cp - d * 14, cp + d * 14, Color.WHITE, 2.0)
 	else:
 		_text(Vector2(vr.position.x + 12, vr.end.y - 12), "Тяните мышью — вращение, колесо — приближение", 13, Color(0.7, 0.74, 0.8))
-		_hg_stats(c, vr, h3.view_lvl)
 	# тест 3.5-s8: показ механизации — закрылки и предкрылки, створки отсека, турели (Hangar3D / HangarAnim)
 	var mr := Rect2(vr.end.x - 196, vr.position.y + 8, 188, 30)
 	var mon := h3.mech_demo
@@ -162,60 +170,88 @@ func _hg_plane(c: String, area: Rect2) -> void:
 			_decals = HudDecals.new(ctrl, _buttons)
 		_decals.draw(Main.I, Rect2(rx, yy, rw, area.size.y))
 		return
+	var hover_node := ""
 	for id in Profile.NODE_ORDER:
 		var nd: Dictionary = Profile.NODES[id]
 		var lv2 := Profile.node(c, id, vl)
-		var r := Rect2(rx, yy, rw, 92)
+		var r := Rect2(rx, yy, rw, NODE_H)
 		_panel(r, false)
-		if id == "wing" and r.has_point(ctrl.get_local_mouse_position()):
+		var hov := r.has_point(ctrl.get_local_mouse_position())
+		if hov and lv2 < 5:
+			hover_node = id   # Kanta 06.11: the stats panel shows this node's gain in green
+		if id == "wing" and hov:
 			h3.mech_hover = true   # тест 3.5-s8: курсор на «Крыле» — на модели идёт показ механизации
-		_text(Vector2(rx + 20, yy + 30), Loc.t(String(nd["title"])), 20, Color.WHITE)
+		_text(Vector2(rx + 20, yy + 27), Loc.t(String(nd["title"])), 20, Color.WHITE)
 		for i in 5:
-			ctrl.draw_rect(Rect2(rx + 200 + i * 30, yy + 16, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))
-		_text(Vector2(rx + 20, yy + 58), Loc.t("за уровень: %s · сейчас ур. %d%s") % [nd["step"], lv2, (Loc.t(" (самолёт ур. %d)") % vl) if bought else ""], 15, Color(0.8, 0.84, 0.9))
+			ctrl.draw_rect(Rect2(rx + 200 + i * 30, yy + 13, 24, 14), Menu.C_AMBER if i < lv2 else Color(1, 1, 1, 0.12))
+		_text(Vector2(rx + 20, yy + 51), Loc.t("за уровень: %s · сейчас ур. %d%s") % [nd["step"], lv2, (Loc.t(" (самолёт ур. %d)") % vl) if bought else ""], 15, Color(0.8, 0.84, 0.9))
 		if String(nd["note"]) != "":
-			_text(Vector2(rx + 20, yy + 80), Loc.t(String(nd["note"])), 12, Color(0.6, 0.62, 0.68))
+			_text(Vector2(rx + 20, yy + 68), Loc.t(String(nd["note"])), 12, Color(0.6, 0.62, 0.68))
 		if lv2 >= 5:
-			_text(Vector2(rx, yy + 52), "МАКС.", 18, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
+			_text(Vector2(rx, yy + 44), "МАКС.", 18, Color(0.6, 1.0, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		elif lv2 >= Demo.node_cap():
-			_text(Vector2(rx, yy + 52), Loc.t("ур. %d–5 — ") % (lv2 + 1) + Loc.t(Demo.LOCKED), 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
+			_text(Vector2(rx, yy + 44), Loc.t("ур. %d–5 — ") % (lv2 + 1) + Loc.t(Demo.LOCKED), 16, Menu.C_AMBER, HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
 		else:
 			var price: int = Profile.NODE_COST[lv2]
 			if Profile.can_buy_node(c, id, vl):
-				_button(Rect2(rx + rw - 250, yy + 24, 230, 44), Loc.t("УЛУЧШИТЬ — %d") % price, "hg:node:%s:%d" % [id, vl], 16)
+				_button(Rect2(rx + rw - 250, yy + 15, 230, 44), Loc.t("УЛУЧШИТЬ — %d") % price, "hg:node:%s:%d" % [id, vl], 16)
 			else:
-				_text(Vector2(rx, yy + 52), Loc.t("%d (не хватает %d)") % [price, price - Profile.parts()], 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
-		yy += 102.0
+				_text(Vector2(rx, yy + 44), Loc.t("%d (не хватает %d)") % [price, price - Profile.parts()], 16, Color(0.65, 0.65, 0.7), HORIZONTAL_ALIGNMENT_RIGHT, rw - 24)
+		yy += NODE_H + 8.0
+	# Kanta 06.11 (s16: the numbers over the model looked bad): the stats take the room under the node cards
+	_hg_stats(c, Rect2(rx, yy, rw, area.end.y - yy), h3.view_lvl, two_planes(), hover_node if vl == h3.view_lvl else "")
 
 
-## S16-08 (Kanta 06.11): the plane's numbers over the top-left corner of the 3D view — plane 1 and plane 2 side by
-## side (plane 2 better in green, worse in red: its hangar nodes start from zero), the viewed plane's column lit.
-## Only plane 1 when plane 2 is not in this build (demo, meta off). Numbers: `PlaneStats`.
-func _hg_stats(c: String, vr: Rect2, view_lvl: int) -> void:
-	var two := Profile.meta_k() > 0.0 and not Demo.on
-	var s1 := PlaneStats.of(c, 1)
-	var s2 := PlaneStats.of(c, 2) if two else {}
-	var w := 340.0 if two else 270.0
-	var r := Rect2(vr.position.x + 10.0, vr.position.y + 10.0, w, 38.0 + PlaneStats.ROWS.size() * 22.0)
-	ctrl.draw_rect(r, Color(0.02, 0.025, 0.03, 0.72))
-	ctrl.draw_rect(r, Color(Menu.C_AMBER, 0.5), false, 1.0)
-	var x := r.position.x + 12.0
-	var cx := [r.position.x + 176.0, r.position.x + 258.0]   # value columns (right-aligned in 70 px)
-	var y := r.position.y + 24.0
-	_text(Vector2(x, y), "ХАРАКТЕРИСТИКИ", 14, Menu.C_AMBER)
-	for lv in ([1, 2] if two else [1]):
-		_text(Vector2(cx[lv - 1], y), Loc.t("ур. %d") % lv, 14, Menu.C_AMBER if lv == view_lvl else Color(0.62, 0.65, 0.72), HORIZONTAL_ALIGNMENT_RIGHT, 70.0)
-	y += 24.0
-	for row: Array in PlaneStats.ROWS:
+## Height of a hangar node card (was 92: Kanta 06.11 — the stats panel moved under the cards needs the room)
+const NODE_H := 74.0
+
+
+## True when plane 2 exists in this build (not the demo, meta progression on): the stats compare both planes.
+func two_planes() -> bool:
+	return Profile.meta_k() > 0.0 and not Demo.on
+
+
+## The plane's numbers in a panel under the node cards (S16-08; Kanta 06.11: the table over the model looked bad,
+## and a hover over a node card should show its gain in green). Tiles in four columns: title, the value of the plane
+## on view (`view_lvl`) in large type and, when plane 2 exists, the other plane's value small beside it (better in
+## green, worse in red). With `hover_node` the row that node improves shows «now → after» with the gain in green.
+## Numbers and units: `PlaneStats`.
+func _hg_stats(c: String, r: Rect2, view_lvl: int, two: bool, hover_node: String) -> void:
+	var cur := PlaneStats.of(c, view_lvl)
+	var other_lvl := 2 if view_lvl == 1 else 1
+	var oth := PlaneStats.of(c, other_lvl) if two else {}
+	var hk := String(PlaneStats.NODE_ROW.get(hover_node, ""))
+	var nxt := PlaneStats.with_node(c, view_lvl, hover_node) if hk != "" else {}
+	_panel(r, false)
+	_text(Vector2(r.position.x + 20, r.position.y + 26), Loc.t("ХАРАКТЕРИСТИКИ · самолёт ур. %d") % view_lvl, 16, Menu.C_AMBER)
+	var cols := 4
+	var rows := ceili(PlaneStats.ROWS.size() / float(cols))
+	var tw := (r.size.x - 40.0) / cols
+	var th := minf(58.0, (r.size.y - 44.0) / rows)
+	for i in PlaneStats.ROWS.size():
+		var row: Array = PlaneStats.ROWS[i]
 		var k := String(row[0])
-		_text(Vector2(x, y), Loc.t(String(row[1])), 14, Color(0.8, 0.84, 0.9))
-		var v1 := float(s1[k])
-		_text(Vector2(cx[0], y), "%d" % roundi(v1), 15, Color.WHITE if view_lvl == 1 or not two else Color(0.75, 0.78, 0.84), HORIZONTAL_ALIGNMENT_RIGHT, 70.0)
+		var fmt := String(row[2])
+		var tx := r.position.x + 20.0 + (i % cols) * tw
+		var ty := r.position.y + 40.0 + (i / cols) * th
+		var lit := k == hk
+		if lit:
+			ctrl.draw_rect(Rect2(tx - 6.0, ty - 2.0, tw - 8.0, th - 4.0), Color(0.6, 1.0, 0.7, 0.10))
+		_text(Vector2(tx, ty + 14.0), Loc.t(PlaneStats.title(c, k, String(row[1]))), 13, Color(0.62, 0.66, 0.74))
+		var vt := PlaneStats.text(float(cur[k]), fmt)
+		_text(Vector2(tx, ty + 38.0), vt, 20, Color.WHITE)
+		var vx := tx + ui_font().get_string_size(Loc.out(vt), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 8.0
+		if lit:
+			var nt := PlaneStats.text(float(nxt[k]), fmt)
+			if nt != vt:
+				_text(Vector2(vx, ty + 38.0), "→ " + nt, 20, Color(0.6, 1.0, 0.7))
+				continue
 		if two:
-			var v2 := float(s2[k])
-			var col := Color(0.6, 1.0, 0.7) if roundi(v2) > roundi(v1) else (Color(1.0, 0.6, 0.5) if roundi(v2) < roundi(v1) else Color.WHITE)
-			_text(Vector2(cx[1], y), "%d" % roundi(v2), 15, col, HORIZONTAL_ALIGNMENT_RIGHT, 70.0)
-		y += 22.0
+			var ot := PlaneStats.text(float(oth[k]), fmt)
+			if ot != vt:
+				# a shorter dodge cooldown is the better one
+				var better := (float(oth[k]) < float(cur[k])) if k == "dodge" else (float(oth[k]) > float(cur[k]))
+				_text(Vector2(vx, ty + 37.0), Loc.t("ур. %d: %s") % [other_lvl, ot], 13, Color(0.6, 1.0, 0.7) if better else Color(1.0, 0.6, 0.5))
 
 
 ## Тест 3.5-s4, п. 35: ряд «Окраска: …» — выбор сохраняется в профиле класса, виден в ангаре и в бою.

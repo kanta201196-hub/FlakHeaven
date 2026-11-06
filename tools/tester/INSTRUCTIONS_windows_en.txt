@@ -56,7 +56,7 @@ does not collect your name, email or other personal data.
 Fallback (if the button doesn't work): in the main menu click LOGS —
 the game folder opens; send the organizer the playtest_log_*.csv file
 and the logs folder. The folder is here:
-%APPDATA%\Godot\app_userdata\Flak Heaven - Prototype 3 (3D)
+%APPDATA%\Godot\app_userdata\Flak Heaven
 
 GENERAL SURVEY (at the end of the test, reply in a message to the organizer)
 -----------------------------------------------------------------------------

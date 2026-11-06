@@ -846,6 +846,17 @@ func _on_ray(p: Vector2, y: float) -> Vector2:
 	return Vector2(c.x + (p.x - c.x) * k, c.z + (p.y - c.z) * k)
 
 
+## The combat-plane point (2D) that shows on screen where the 3D point `w` does: the camera ray through `w` meets
+## the plane y = 0 — the inverse of _on_ray. Launch points of the player's stores go through it: the plane flies
+## at its relief altitude on the camera ray of its 2D spot, while rockets, missiles, bombs and rounds fly and
+## smoke at the combat plane; taking the pod's own x, z put the rockets' start up to half a plane length behind
+## or ahead of the pods on screen, by height and heading (Kanta, «Оса» 2).
+func _combat_point(w: Vector3) -> Vector2:
+	var c := cam.global_position
+	var k := c.y / maxf(c.y - w.y, 1.0)
+	return Vector2(c.x + (w.x - c.x) * k, c.z + (w.z - c.z) * k)
+
+
 ## Полёт по рельефу: самолёт плавно поднимается над хребтами и опускается в долины.
 ## Высота цели — рельеф под самолётом и впереди по курсу (look — на сколько пикс. вперёд смотреть)
 ## плюс запас relief_clear, в пределах relief_up / relief_down от плоскости боя. Returns the height;
@@ -1999,11 +2010,18 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 				wmi.basis = b.scaled(Vector3(len_px, len_px, len_px))
 				if tail_cab and wmi.get_child_count() > 0:   # кабина стрелка неподвижна, крутится только шар
 					(wmi.get_child(0) as Node3D).basis = Basis(Vector3.UP, float(mt["yaw"]) - yaw)
-			if g.weapon in Hardpoint.MISSILES:
+			if g.weapon == "rockets":
+				# Kanta («Оса» 2): a rocket pod is a launcher, it stays on the pylon after a salvo, and the rockets
+				# leave from the front of its tubes (they used to start from the middle of a pod that had vanished)
+				var rl := WeaponModels.muzzle("rockets")
+				wmi.set_meta("muzzle_local", rl)
+				var rw := root.global_transform * (wmi.transform * rl)
+				l_offs.append((_combat_point(rw) - p.global_position).rotated(-p.heading))
+			elif g.weapon in Hardpoint.MISSILES:
 				# правка 3.5-s4 (п. 27): ракета ушла с пилона — её там нет до перезарядки; пуск — с этой точки
 				wmi.visible = not dim
 				var wp := root.global_transform * wmi.position
-				l_offs.append((Vector2(wp.x, wp.z) - p.global_position).rotated(-p.heading))
+				l_offs.append((_combat_point(wp) - p.global_position).rotated(-p.heading))
 			else:
 				if Weapons.is_bomb(g.weapon):
 					# тест 3.5-s5 (п. 3): бомбы падают с точек подвеса (из бомбоотсека — из открытого люка);
@@ -2011,7 +2029,7 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 					var bl: Array = WeaponModels.CARPET_BAY_PTS if int(mt["t"]) == WeaponModels.CARPET_BAY_T else [Vector3.ZERO]
 					for lp: Vector3 in bl:
 						var bw := root.global_transform * (wmi.transform * lp)
-						l_offs.append((Vector2(bw.x, bw.z) - p.global_position).rotated(-p.heading))
+						l_offs.append((_combat_point(bw) - p.global_position).rotated(-p.heading))
 				elif g.weapon == "turret" or g.weapon == "gunpod":
 					# Kanta 26.10: turret and gun-pod rounds (and their muzzle flash) leave from the barrels of the model,
 					# not from a fixed spot beside the fuselage; +X of the weapon mesh runs along the barrels.
@@ -2020,7 +2038,7 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 					var ml := WeaponModels.muzzle(g.weapon, p.cls_id, mt["side"], WeaponModels.tier(g.level, g.evo))
 					wmi.set_meta("muzzle_local", ml)
 					var mw := root.global_transform * (wmi.transform * ml)
-					l_offs.append((Vector2(mw.x, mw.z) - p.global_position).rotated(-p.heading))
+					l_offs.append((_combat_point(mw) - p.global_position).rotated(-p.heading))
 				var tr_w := 0.6 if dim else 0.0
 				if wmi.transparency != tr_w:
 					wmi.transparency = tr_w
@@ -2125,6 +2143,7 @@ func _sync_missiles(m: Main) -> void:
 	# M-39 (аудит 3.5-s6 Э-2): дым ракет светло-серый, плотный и широкий у сопла, расплывается и тает быстрее
 	# (жизнь короче — без длинных дуг через полэкрана); на «Низком» точки реже
 	var lo := 1.5 if Settings.gopt("effects") == 0 else 1.0
+	var slim := Tuning.g("msl_s16") >= 1.0
 	for arr_st in [[pr.pmissiles, [0.85, 5.0, 14.0, 1.0, 16.0 * lo, Color(0.9, 0.9, 0.91)]],
 			[pr.missiles, [0.8, 5.0, 13.0, 0.95, 16.0 * lo, Color(0.84, 0.83, 0.82)]],
 			[pr.rockets, [0.7, 3.5, 9.0, 0.6, 14.0 * lo, Color(0.88, 0.88, 0.9)]]]:
@@ -2144,6 +2163,10 @@ func _sync_missiles(m: Main) -> void:
 				# Kanta s12: the 10–14 mini-rockets of the salvo fanned out in full missile smoke and hid the plane
 				# for about a second; a mini-rocket leaves a thin, short-lived trail
 				st = [0.6, 2.0, 5.5, 0.5, 12.0 * lo, st[5]]
+			elif arr_st[0] == pr.pmissiles and slim:
+				# review 06.11 item 2: own missile smoke half as wide and gone twice as fast, so fast missiles do not
+				# draw thick white circles over the battle
+				st = [st[0], st[1] * 0.5, st[2] * 0.5, st[3] * 0.5, st[4], st[5]]
 			if mm.has("tint"):   # связки: след своего цвета (бирюзовый, золотой…), но светлый
 				st = st.duplicate()
 				st[5] = (mm["tint"] as Color).lerp(Color.WHITE, 0.45)
@@ -2963,7 +2986,8 @@ func ground_zones_on() -> bool:
 
 ## on_ground (BM-01, Kanta 20.10): метка прицела и падения бомб — в точке рельефа под a/b (как взрыв бомбы,
 ## Boom3D: ground_under) и в мировых координатах: кольцо лежит по склонам, а не висит плоским кругом на высоте боя
-func _gz_add(a: Vector2, b: Vector2, r: float, alpha: float, kind: int, col: Color, on_ground := false) -> void:
+## kind: 0/1 aim mark (ready/waiting), 2 falling bomb, 2.25 soft falling bomb (bombzone_s16), 3 fire, 4 crack fire
+func _gz_add(a: Vector2, b: Vector2, r: float, alpha: float, kind: float, col: Color, on_ground := false) -> void:
 	if _gz_a.size() >= GZ_MAX or alpha <= 0.01:
 		return
 	var w := 1.0
@@ -2976,7 +3000,7 @@ func _gz_add(a: Vector2, b: Vector2, r: float, alpha: float, kind: int, col: Col
 		b = Vector2(gb.x, gb.z)
 		w = 0.0
 	_gz_a.append(Vector4(a.x, a.y, b.x, b.y))
-	_gz_b.append(Vector4(r, alpha, float(kind), fmod(absf(a.x * 0.013 + a.y * 0.007), 50.0)))
+	_gz_b.append(Vector4(r, alpha, kind, fmod(absf(a.x * 0.013 + a.y * 0.007), 50.0)))
 	_gz_c.append(Vector4(col.r, col.g, col.b, w))
 
 
@@ -3059,10 +3083,17 @@ func _sync_ground_zones(m: Main) -> void:
 	var pr := m.projectiles
 	if pr != null:
 		var rk := pr.aoe_r_k()
+		var soft_bz := Tuning.g("bombzone_s16") >= 1.0
 		for i in range(pr.bombs.size() - 1, -1, -1):
 			var b: Dictionary = pr.bombs[i]
 			var k := 1.0 - float(b["t"]) / maxf(float(b["fuse"]), 0.01)
-			_gz_add(b["to"], b["to"], float(b["r"]) * rk, 0.3 + 0.6 * k, 2, GZ_AIM, true)
+			if soft_bz:
+				# review 06.11 item 6 (Kanta: option 2, «мягче и короче»): the falling-bomb mark drew a bright uneven
+				# yellow outline over the relief for the whole fall. Now it shows only for the last 60 % of the fall,
+				# fades in, and is painted thinner with a blurred edge (kind 2.25, ground3d.gdshader)
+				_gz_add(b["to"], b["to"], float(b["r"]) * rk, 0.55 * clampf((k - 0.4) / 0.6, 0.0, 1.0), 2.25, GZ_AIM, true)
+			else:
+				_gz_add(b["to"], b["to"], float(b["r"]) * rk, 0.3 + 0.6 * k, 2, GZ_AIM, true)
 		var fl: Array = pr.fires.duplicate()
 		if fl.size() > GZ_MAX - _gz_a.size():
 			fl.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
