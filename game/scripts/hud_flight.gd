@@ -848,8 +848,8 @@ func _fortress_bar(f: Fortress, x: float, y: float, w: float) -> float:
 			ctrl.draw_rect(Rect2(ix, y + 44, 22.0 * float(pt["hp"]) / float(pt["max"]), 3), Color(0.4, 1.0, 0.5))
 		ix += 28.0
 	if f.base_pos != Vector2.INF and f.phase < 3:
-		var d := int(f.global_position.distance_to(f.base_pos)) / 10
-		var s := ("до базы %d м" % d) if f.base_hits == 0 else ("отбомбилась · до базы %d м" % d)
+		var d := DistText.text(f.global_position.distance_to(f.base_pos))
+		var s := (Loc.t("до базы %s") % d) if f.base_hits == 0 else (Loc.t("отбомбилась · до базы %s") % d)
 		_text(Vector2(ix + 8, y + 45), s, 15, Color(0.6, 0.9, 1.0) if f.base_hits == 0 else Color(1.0, 0.55, 0.45))
 	if task != "":
 		_ptext(y + 78.0, task.left(1).to_upper() + task.substr(1), UiStyle.FS_LABEL, Color(1.0, 0.85, 0.55))
@@ -875,7 +875,7 @@ func _threat_markers(size: Vector2) -> void:
 			_edge_arrow(_ws(xf, (n as Node2D).global_position), rect, size, Color(1.0, 0.3, 0.6), 1.6)
 			if n is Fortress and (n as Fortress).base_pos != Vector2.INF and (n as Fortress).phase < 3:
 				var bp: Vector2 = (n as Fortress).base_pos
-				_edge_arrow(_ws(xf, bp), rect, size, Color(0.4, 0.8, 1.0), 1.6, Loc.t("база %d м") % (int(m.player.global_position.distance_to(bp)) / 10) if is_instance_valid(m.player) else Loc.t("база"))
+				_edge_arrow(_ws(xf, bp), rect, size, Color(0.4, 0.8, 1.0), 1.6, Loc.t("база %s") % DistText.text(m.player.global_position.distance_to(bp)) if is_instance_valid(m.player) else Loc.t("база"))
 
 
 func _evac_marker(m: Main, size: Vector2) -> void:
@@ -884,12 +884,12 @@ func _evac_marker(m: Main, size: Vector2) -> void:
 	var xf := m.get_viewport().get_canvas_transform()
 	var rect := Rect2(Vector2.ZERO, size).grow(-60.0)
 	var sp := _ws(xf, m.evac.target_pos())
-	var d := int(m.player.global_position.distance_to(m.evac.target_pos()))
-	_edge_arrow(sp, rect, size, Color(0.4, 1.0, 0.5), 1.8, Loc.t("эвакуация %d м") % (d / 10))
+	var d := DistText.text(m.player.global_position.distance_to(m.evac.target_pos()))
+	_edge_arrow(sp, rect, size, Color(0.4, 1.0, 0.5), 1.8, Loc.t("эвакуация %s") % d)
 	if m.evac.hold:   # S16-27: the window after the final boss stays open
-		_ptext(_evac_y, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно открыто") % [m.evac.passed + 1, EvacZone.GATES, d / 10], 22, Color(0.6, 1.0, 0.7), 0.72)
+		_ptext(_evac_y, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %s · окно открыто") % [m.evac.passed + 1, EvacZone.GATES, d], 22, Color(0.6, 1.0, 0.7), 0.72)
 	else:
-		_ptext(_evac_y, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %d м · окно %d с") % [m.evac.passed + 1, EvacZone.GATES, d / 10, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7), 0.72)
+		_ptext(_evac_y, Loc.t("ЭВАКУАЦИЯ: ворота %d / %d · %s · окно %d с") % [m.evac.passed + 1, EvacZone.GATES, d, int(ceil(m.evac.time_left))], 22, Color(0.6, 1.0, 0.7), 0.72)
 
 
 ## True when `r` touches the bottom bar or the weapons column — this frame's, or the last
@@ -1082,32 +1082,32 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 	if is_instance_valid(node):
 		if node is FortArea:
 			var base := node as FortArea
-			var db := int(p.global_position.distance_to(base.global_position))
-			_edge_arrow(_ws(xf, base.global_position), rect, size, C_FORT, 1.8, Loc.t("база %d м") % (db / 10))
+			var db := DistText.text(p.global_position.distance_to(base.global_position))
+			_edge_arrow(_ws(xf, base.global_position), rect, size, C_FORT, 1.8, Loc.t("база %s") % db)
 			var bs: String
 			if base.failed:
 				bs = Loc.t("База противника устояла · пусковых осталось: %d") % base.launchers_left()
 			elif base.active:
 				bs = Loc.t("УКРЕПРАЙОН: %d с · пусковых на башнях: %d из %d") % [int(ceil(base.timer)), base.launchers_left(), base.launchers.size()]
 			else:
-				bs = Loc.t("База противника: %d м — подлетите, чтобы начать") % (db / 10)
+				bs = Loc.t("База противника: %s — подлетите, чтобы начать") % db
 			_task(bs, Color(1.0, 0.7, 0.55), "" if base.failed else "Награда: выбор из редких карточек + 60 запчастей")
 		elif node is AASite:
 			var site := node as AASite
-			var d := int(p.global_position.distance_to(site.global_position))
-			_edge_arrow(_ws(xf, site.global_position), rect, size, C_AA, 1.8, Loc.t("ПВО %d м") % (d / 10))
+			var d := DistText.text(p.global_position.distance_to(site.global_position))
+			_edge_arrow(_ws(xf, site.global_position), rect, size, C_AA, 1.8, Loc.t("ПВО %s") % d)
 			var s: String
 			if site.failed:
 				s = Loc.t("Позиция ПВО устояла · бункер: %d%%") % int(ceil(site.bunker_frac() * 100.0))
 			elif site.active:
 				s = Loc.t("ПОЗИЦИЯ ПВО: %d с · уничтожьте бункер: %d%%") % [int(ceil(site.timer)), int(ceil(site.bunker_frac() * 100.0))]
 			else:
-				s = Loc.t("Позиция ПВО: %d м — подлетите, чтобы начать") % (d / 10)
+				s = Loc.t("Позиция ПВО: %s — подлетите, чтобы начать") % d
 			_task(s, Color(1.0, 0.85, 0.4), "" if site.failed else "Награда: выбор из редких карточек + 40 запчастей")
 		elif node is Rescue:
 			var rs := node as Rescue
-			var dr := int(p.global_position.distance_to(rs.global_position)) / 10
-			_edge_arrow(_ws(xf, rs.global_position), rect, size, C_RESCUE, 1.8, Loc.t("маяк %d м") % dr)
+			var dr := DistText.text(p.global_position.distance_to(rs.global_position))
+			_edge_arrow(_ws(xf, rs.global_position), rect, size, C_RESCUE, 1.8, Loc.t("маяк %s") % dr)
 			var rt: String
 			if rs.done:
 				rt = Loc.t("Пилот спасён!")
@@ -1116,34 +1116,34 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 			elif rs.active:
 				rt = Loc.t("СБИТЫЙ ПИЛОТ: держите небо над маяком ещё %d с") % int(ceil(rs.timer)) + ("" if p.global_position.distance_to(rs.global_position) < Rescue.HOLD_R else Loc.t(" · вернитесь к маяку!"))
 			else:
-				rt = Loc.t("Аварийный маяк: %d м · вертолёт ждёт ещё %d с") % [dr, int(ceil(rs.life))]
+				rt = Loc.t("Аварийный маяк: %s · вертолёт ждёт ещё %d с") % [dr, int(ceil(rs.life))]
 			_task(rt, Color(0.55, 1.0, 0.65), "" if rs.done or rs.failed else "Награда: выбор из редких карточек + 40 запчастей")
 		elif node is Convoy:
 			var cv := node as Convoy
 			var sea := Biome.sea()
-			var dm := int(p.global_position.distance_to(cv.global_position)) / 10
-			_edge_arrow(_ws(xf, cv.global_position), rect, size, C_CONVOY, 1.8, Loc.t("караван %d м" if sea else "колонна %d м") % dm)
+			var dm := DistText.text(p.global_position.distance_to(cv.global_position))
+			_edge_arrow(_ws(xf, cv.global_position), rect, size, C_CONVOY, 1.8, Loc.t("караван %s" if sea else "колонна %s") % dm)
 			var cs: String
 			if cv.alarm:
 				cs = Loc.t("КАРАВАН: до гавани %d с · сухогрузов: %d из %d" if sea else "КОЛОННА: до укрытия %d с · грузовиков: %d из %d") % [int(ceil(maxf(cv.timer, 0.0))), cv.trucks_left(), cv.trucks_total]
 			else:
-				cs = Loc.t("Караван снабжения: %d м — подлетите и потопите сухогрузы" if sea else "Колонна снабжения: %d м — подлетите и сожгите грузовики") % dm
+				cs = Loc.t("Караван снабжения: %s — подлетите и потопите сухогрузы" if sea else "Колонна снабжения: %s — подлетите и сожгите грузовики") % dm
 			_task(cs, Color(1.0, 0.78, 0.45), "Подбейте головное судно — караван встанет · награда: груз с каждого сухогруза" if sea else "Подбейте головную машину — колонна встанет · награда: груз с каждого грузовика")
 		elif node is Transport:
 			var tr := node as Transport
-			_edge_arrow(_ws(xf, tr.global_position), rect, size, C_TRANSPORT, 1.8, Loc.t("транспортник %d м") % (int(p.global_position.distance_to(tr.global_position)) / 10))
+			_edge_arrow(_ws(xf, tr.global_position), rect, size, C_TRANSPORT, 1.8, Loc.t("транспортник %s") % DistText.text(p.global_position.distance_to(tr.global_position)))
 			_task(Loc.t("ОХОТА: транспортник уйдёт через %d с · прочность %d%%") % [int(ceil(maxf(tr.life, 0.0))), int(ceil(tr.hp / tr.max_hp * 100.0))], Color(1.0, 0.75, 0.45), "Награда: груз — запчасти и ремкомплекты")
 			_world_caption(xf, tr.global_position, tr.radius, "Транспортник", Color(1, 0.85, 0.6), _task_rect)   # this frame's plate
 		elif node is RivalAce:
 			var ace := node as RivalAce
-			_edge_arrow(_ws(xf, ace.global_position), rect, size, Color(1.0, 0.3, 0.35), 1.8, Loc.t("ас %d м") % (int(p.global_position.distance_to(ace.global_position)) / 10))
+			_edge_arrow(_ws(xf, ace.global_position), rect, size, Color(1.0, 0.3, 0.35), 1.8, Loc.t("ас %s") % DistText.text(p.global_position.distance_to(ace.global_position)))
 			_task(Loc.t("ДОГФАЙТ: ас «%s» · уйдёт через %d с") % [ace.callsign, int(ceil(ace.life))], Color(1.0, 0.72, 0.7), "Награда: выбор из редких карточек")
 			if ace.threatening() and int(Time.get_ticks_msec() / 200) % 2 == 0:
 				_ptext(size.y / 2.0 + 196.0, "ХВОСТ! Сбрось газ (S) или манёвр", 30, Color(1.0, 0.42, 0.36), 0.75)   # under the plane: above it the boss and task plates stack
 	# 3.5: свой заправщик
 	var tk: Tanker = m.spawner.fuel.tanker if m.spawner != null and m.spawner.fuel != null else null
 	if is_instance_valid(tk) and tk.alive() and not tk.leaving:
-		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8, Loc.t("заправщик %d м") % (int(p.global_position.distance_to(tk.global_position)) / 10))
+		_edge_arrow(_ws(xf, tk.global_position), rect, size, Color(0.45, 1.0, 0.55), 1.8, Loc.t("заправщик %s") % DistText.text(p.global_position.distance_to(tk.global_position)))
 		var ts := Loc.t("СТЫКОВКА — ЗАПРАВКА ИДЁТ") if tk.filling else (Loc.t("ШТАНГА ВЫДВИГАЕТСЯ — держитесь ровно") if tk.in_cone else Loc.t("ЗАПРАВЩИК: зайдите ему в хвост"))
 		var ty := (_task_rect.end.y + 28.0) if _task_rect.has_area() else (_task_y + 24.0)   # its own plate, under the task plate
 		_ptext(ty, Loc.t("%s · уйдёт через %d с · прочность %d%%") % [ts, int(ceil(tk.life)), int(ceil(tk.hp / tk.max_hp * 100.0))], 20, Color(0.55, 1.0, 0.65), 0.72)
