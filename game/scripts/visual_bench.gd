@@ -1045,8 +1045,9 @@ func _make_points() -> Array:
 					var n := int(seen.get(c, 0))
 					seen[c] = n + 1
 					pts.append({"name": "sea_%s_%d" % [c, n], "pos": at, "zoom": 1.6, "wait": _sea_wait()})
-					if OS.get_cmdline_user_args().has("--seaclose"):   # Kanta 06.11: close-ups to review details before a build
-						pts.append({"name": "sea_%s_%d_close" % [c, n], "pos": at, "zoom": 3.6, "wait": 1.5})
+					if OS.get_cmdline_user_args().has("--seaclose"):   # Kanta 06.11: real close-ups (own camera near the ground) to review details before a build
+						pts.append({"name": "sea_%s_%d_close" % [c, n], "pos": at, "ground_dist": 320.0, "wait": 2.0})
+						pts.append({"name": "sea_%s_%d_detail" % [c, n], "pos": at, "ground_dist": 130.0, "wait": 2.0})
 					pts.append({"name": "sea_%s_%d_wide" % [c, n], "pos": at, "zoom": 0.7, "wait": 1.2})
 		print("VISUAL sea compositions ", seen)
 	if OS.get_cmdline_user_args().has("--wakebench") and ter != null:
