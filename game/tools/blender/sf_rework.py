@@ -952,9 +952,10 @@ def unwrap(lows, R):
     # palette-strip texture (128 x 4) squashed every island 32 times across the atlas
     bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=0.002, area_weight=0.0, scale_to_bounds=False,
                              correct_aspect=False)
-    if R.get("uv_split_x"):
+    if R.get("uv_split_x") or R.get("uv_split_y"):
         bpy.ops.object.mode_set(mode="OBJECT")
-        split_uv_islands(obs, R["uv_split_x"])
+        if R.get("uv_split_x"):
+            split_uv_islands(obs, R["uv_split_x"])
         if R.get("uv_split_y"):
             split_uv_islands(obs, R["uv_split_y"], 1)
         bpy.ops.object.mode_set(mode="EDIT")
