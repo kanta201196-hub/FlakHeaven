@@ -4,7 +4,7 @@ extends HudKit
 ## «Приготовиться к вылету» button opens this screen: pick the theater (the second one opens after
 ## `CampaignGates.BIOME_UNLOCK_OPS` Highlands operations), pick the operation, «ВЫЛЕТ ▶». Each operation card has a
 ## slot for its art (`ART_DIR`/<op id>.png, drawn when the file exists) and a task list: the main task plus the
-## operation's own objectives (`Campaign.OPS[i]["goals"]`, empty until the objectives work lands).
+## operation's own objectives (`Campaign.tasks_of`, ✓ for the ones ever done).
 
 const C_DONE := Color(0.5, 1.0, 0.6)
 const C_LOCK := Color(0.45, 0.47, 0.5)
@@ -272,10 +272,16 @@ func _brief(x: float, y: float, w: float, bottom: float, paint: bool) -> float:
 	y += _bp(Vector2(x, y + 14.0), Loc.t(String(o["brief"])), w, 16, Color(0.86, 0.88, 0.84), paint) + 26.0
 	_bt(Vector2(x, y), "ЗАДАЧИ", 16, C_TITLE, paint)
 	y += 12.0
-	# the main task first, then the operation's own objectives («goals», filled by the objectives work)
+	# the main task first, then the operation's own objectives (`OpTaskBalance`, F1 op_tasks): ✓ once ever done
 	y += _bp(Vector2(x, y + 14.0), "◆ " + Loc.t(String(o["task"])), w, 18, Color.WHITE, paint) + 8.0
-	for g in (o.get("goals", []) as Array):
-		y += _bp(Vector2(x, y + 14.0), "• " + Loc.t(String(g)), w, 17, Color(0.9, 0.92, 0.86), paint) + 6.0
+	var tasks := Campaign.tasks_of(Campaign.index())
+	if OpTaskBalance.on() and not tasks.is_empty():
+		y += 14.0
+		_bt(Vector2(x, y), Loc.t("ЗАДАНИЯ ОПЕРАЦИИ · +%d запчастей за каждое") % int(OpTaskBalance.PARTS), 15, C_TITLE, paint)
+		y += 10.0
+		for t: Dictionary in tasks:
+			var done := Campaign.task_done(Campaign.index(), String(t["id"]))
+			y += _bp(Vector2(x, y + 14.0), ("✓ " if done else "• ") + Loc.t(String(t["brief"])), w, 17, C_DONE if done else Color(0.9, 0.92, 0.86), paint) + 6.0
 	if int(o["diff"]) > 0:
 		y += _bp(Vector2(x, y + 14.0), Loc.t("Сложность «%s»: враги прочнее ×%s, бьют сильнее ×%s, добыча ×%s") % [Loc.t(d["title"]), _k(d["hp"]), _k(d["dmg"]), _k(d["reward"])], w, 15, Color(1.0, 0.75, 0.55), paint) + 8.0
 	y += 26.0
