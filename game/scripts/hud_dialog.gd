@@ -17,7 +17,7 @@ var _portraits := {}   # guest → Texture2D or null
 func draw(m: Main, size: Vector2) -> void:
 	var full := Rect2(Vector2.ZERO, size)
 	var h3 := Hangar3D.ensure(ctrl)
-	ctrl.draw_texture_rect(h3.show_plane(m.cls_id, full), full, false)
+	ctrl.draw_texture_rect(h3.show_plane(m.cls_id, full, false), full, false)
 	ctrl.draw_rect(full, Color(0.02, 0.03, 0.025, 0.42))
 	_buttons.append([full, "dlg:next"])   # a click anywhere advances; the buttons below sit on top (CR-01 order)
 	var s := Dialog.current()
