@@ -2,7 +2,7 @@
 
 Backlog PT-04 (progression for 5 tiers) with PT-05 (future systems) folded in. Kanta's decision is in `docs/game-context.md` (journal 2026-11-06, «Plane tiers 1–5»), concept page https://claude.ai/artifact/Jcn2GtNbLrRuCVn2xbS9dE. Models are PT-02 / PT-03, owned by the 3D thread «3D-модели по плану Kirill».
 
-**Status: Kanta answered 06.11 18:05 UTC (section 7); two readings to confirm (section 8). Node design (3.4) is new and waits for his «да». No code before that.** All numbers marked *guess* are first guesses for the balance run, not rules.
+**Status: prices and demo settled by Kanta 06.11 18:19 UTC (section 8). Node design (3.4) waits for his «да»; no code before that.** All numbers marked *guess* are first guesses for the balance run, not rules.
 
 ## 1. What Kanta decided (fixed, not up for discussion here)
 
@@ -45,12 +45,12 @@ Hull, speed and turn stay the class values on all tiers in stage A. Per-tier sta
 | Tier | Parts | Crew lvl | Campaign gate | Demo |
 | --- | --- | --- | --- | --- |
 | 1 | free | — | — | yes |
-| 2 | 10 000 | 2 | «Перевал» cleared | yes, last playable |
-| 3 | 35 000 | 4 | «Сухое русло» cleared | visible, locked |
-| 4 | 60 000 | 8 | «Крепости» cleared | visible, locked |
-| 5 | 115 000 | 12 | «Небо над Шахрисангом» cleared | visible, locked |
+| 2 | 20 000 | 2 | «Перевал» cleared | yes, last playable |
+| 3 | 50 000 | 4 | «Сухое русло» cleared | visible, locked |
+| 4 | 120 000 | 8 | «Крепости» cleared | visible, locked |
+| 5 | 250 000 | 12 | «Небо над Шахрисангом» cleared | visible, locked |
 
-Prices are Kanta's (06.11), read as tiers 2–5; he gave five numbers (10 000 / 35 000 / 60 000 / 115 000 / 200 000), so the reading is confirmed in section 8. Crew levels and gates are *guess*. Demo (Kanta Q4): tier 2 is the last playable one, tiers 3–5 visible and locked; demo node cap stays 2.
+Prices are Kanta's (06.11 18:19 UTC): tiers 2–5 = 20 000 / 50 000 / 120 000 / 250 000. At ~14 k a sortie: ≈ 1.5 / 3.5 / 8.5 / 18 sorties. Crew levels and gates are *guess*. Demo (Kanta Q4): tier 2 is the last playable one, tiers 3–5 visible and locked; demo node cap stays 2.
 
 ### 3.4 Nodes per tier (Kanta 06.11: «оставляем как есть, подумай над разными узлами для уровней… базовые на начальных, потом композитные материалы, мощность энергоустановки»)
 
@@ -61,7 +61,7 @@ Rules (all numbers *guess*):
 2. From tier 3, the top level of every node adds a combat rule, not a percent (precedent: «Узлы подвеса» lvl 2 opens the third group).
 3. Future nodes feed future systems: without the power plant lasers and shields run on base numbers.
 4. Tier 4 «Тяжёлый подвес» node lvl 1 opens the heavy hardpoint (so the experimental weapon is something you build toward on the plane).
-5. Price ladder stays 160 / 500 / 1 200 / 2 800 / 5 800 × tier factor 0.5 / 1 / 1.25 / 1.5 / 2. One class, everything: nodes ≈ 380 k + planes 220 k ≈ 43 sorties at 14 k (today ≈ 12); later operations pay more (Ас ×2.2), real count lower — check in logs.
+5. Price ladder stays 160 / 500 / 1 200 / 2 800 / 5 800 × tier factor 0.5 / 1 / 1.25 / 1.5 / 2. One class, everything: nodes ≈ 380 k + planes 440 k ≈ 59 sorties at 14 k (today ≈ 12); later operations pay more (Ас ×2.2), real count lower — check in logs.
 
 | Place | Tier 1 | Tier 2 (today's 1) | Tier 3 (today's 2) | Tier 4 | Tier 5 |
 | --- | --- | --- | --- | --- | --- |
@@ -126,8 +126,8 @@ Stage A size: ~600–900 lines over ~20 files, so it is one feature branch with 
 
 **Kanta's answers 06.11 18:05 UTC:** 1 — keep «each tier from zero», design distinct nodes per tier (3.4); 2 — prices 10 000 / 35 000 / 60 000 / 115 000 / 200 000; 3 — yes, but tier 1 must still differ enough to want tier 2; 4 — «ур. 2 открывается после 2 этапа Перевала и на нем играем до конца» (demo ends on tier 2).
 
-## 8. To confirm with Kanta
+## 8. Settled 06.11 18:19 UTC (was: to confirm)
 
-1. Five prices for four purchases: (1) tiers 2–5 = 10 000 / 35 000 / 60 000 / 115 000, 200 000 for something he names — working reading; (2) tiers 2–5 = 35 000 … 200 000, 10 000 = tier 1 of the second and third class.
-2. «2 этап Перевала» (operations have no stages in code): (1) after the first clear of «Перевал» — working reading; (2) after the second clear; (3) after «Сухое русло».
+1. **Settled: tiers 2–5 = 20 000 / 50 000 / 120 000 / 250 000.** Was: five prices for four purchases: (1) tiers 2–5 = 10 000 / 35 000 / 60 000 / 115 000, 200 000 for something he names — working reading; (2) tiers 2–5 = 35 000 … 200 000, 10 000 = tier 1 of the second and third class.
+2. **Settled: «этап» = operation; read as tier 2 opening after the first clear of «Перевал», then «Сухое русло» is flown on it to the demo end.** Was: «2 этап Перевала» (operations have no stages in code): (1) after the first clear of «Перевал» — working reading; (2) after the second clear; (3) after «Сухое русло».
 3. Node design 3.4: «да» or edits.
