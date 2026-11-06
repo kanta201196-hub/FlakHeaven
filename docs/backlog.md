@@ -407,7 +407,7 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | PD-02 | Уведомление Роскомнадзора об обработке персональных данных от ИП Kanta (pd.rkn.gov.ru), значения полей готовы | Kanta | ждёт Kanta (не подано) |
 | V-08 | Проверить коммерческие условия Meshy и Hunyuan 3D (модели уже в игре) — до страницы Steam | аналитик → Kanta | ждёт Kanta |
 | M-06 (VK Play) | Заявка на VK Play после старта раннего доступа, проверка условий в консоли | Kanta | идея (апрель 2027) |
-| ED-01 | Two editions at launch (Kanta 06.11): proposal page — 5 base liveries, 10 author liveries + 10 stickers per class, what else goes into the Deluxe edition, prices; numbered questions to Kanta | «Продумать два издания на старте продаж» | proposal ready 06.11, waits for Kanta |
+| ED-01 | Two editions at launch (Kanta 06.11): proposal page — 5 base liveries, 10 author liveries + 10 stickers per class, what else goes into the Deluxe edition, prices; numbered questions to Kanta; page https://claude.ai/artifact/YBjfDTiTE5Zz9qXXXXCJSd | «Продумать два издания на старте продаж» | proposal ready 06.11, waits for Kanta |
 | ED-02 | Base game: cut the livery list to the 5 core paints per class; saves with a moved paint fall back to the class default unless the Deluxe pack is owned (unit test like `livery_removed_test.gd`) | 3D-модели (after ED-01 answers) | to do |
 | ED-03 | Deluxe liveries: 10 per class (existing extra paints moved + new ones), Blender/code only, no paid generators; gallery on 3 presets for Kanta's «ок» (R-09) | 3D-модели (after ED-01 answers) | to do |
 | ED-04 | Deluxe stickers: 10 new per class into the decal atlas (`tools/decal_atlas.py`, `DecalCatalog`); fictional, no real insignia | 3D-модели (after ED-01 answers) | to do |
