@@ -980,7 +980,8 @@ static func _reserve(p: Player, cands: Array) -> void:
 	cands.append([1.0 * pow(0.85, n_over), {"id": "res_overload", "ban": "res_overload", "kind": "reserve", "cat": "Резерв", "title": "Перегрузка"}])
 	cands.append([0.8, {"id": "res_bounty", "ban": "res_bounty", "kind": "reserve", "cat": "Резерв", "title": "Премия"}])
 	cands.append([0.8, {"id": "res_kit", "ban": "res_kit", "kind": "reserve", "cat": "Резерв", "title": "Ремкомплект"}])
-	if p.has_course() and int(p.taken.get("res_course", 0)) < 3:
+	# flights review 06.11, item 1.3: tag points do nothing under `build_pairs`, so «Наработка» is not offered
+	if p.has_course() and not pairs_on() and int(p.taken.get("res_course", 0)) < 3:
 		cands.append([1.4, {"id": "res_course", "ban": "res_course", "kind": "reserve", "cat": "Резерв",
 			"title": "Наработка: +1 к специализации"}])
 	for gi in p.groups.size():

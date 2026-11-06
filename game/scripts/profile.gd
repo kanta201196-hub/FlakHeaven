@@ -7,7 +7,9 @@ const PATH := "user://profile.json"
 const VERSION := 1
 const TEST_BUILD := true   # тестовая сборка: отладочная панель в ангаре (F9)
 
-const NODE_COST := [80, 250, 600, 1400, 2900]
+## Plane node prices, levels 1–5. Flights review 06.11, item 5.1 (Kanta «да»): ×2 from 80/250/600/1400/2900,
+## so all six nodes of a plane cost about 4 sorties (62 760) instead of two; the second plane costs 50 000.
+const NODE_COST := [160, 500, 1200, 2800, 5800]
 const NODES := {
 	"frame": {"title": "Планер", "step": "перезарядка уклонения и форсажа −4%", "note": "временно: до введения веса"},
 	"engine": {"title": "Двигатель", "step": "скорость +2%", "note": ""},
