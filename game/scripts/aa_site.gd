@@ -7,7 +7,7 @@ extends Node2D
 ## ЗСУ и ЗРК переезжают вокруг бункера, прикрывая его, ЗСУ сбивают наши ракеты и НАР.
 ## Не успел — позиция остаётся и продолжает стрелять, награды нет.
 
-const LIMIT := 60.0
+const LIMIT := 150.0   # S16-05: was 60; the bunker now holds 60-100 s (Kanta 06.11)
 const ACTIVATE_R := 1150.0   # M-37: позиция шире (радиус ~200 → ~330) — обнаружение раньше на столько же
 const SPACING := 150.0   # тест 3.5-s4: машины позиции не ближе этого друг к другу; M-37: 110 → 150, позиция реже
 const SPREAD := 1.6      # M-37 (Kanta 18.10): позиция ПВО шире — раскладка и переезды дальше от бункера
@@ -206,7 +206,7 @@ func _process(delta: float) -> void:
 		return
 	if not active and p.global_position.distance_to(global_position) < ACTIVATE_R:
 		active = true
-		Events.banner.emit("Позиция ПВО обнаружила вас! 60 с на уничтожение", 3.0)
+		Events.banner.emit(Loc.t("Позиция ПВО обнаружила вас! %d с на уничтожение") % int(LIMIT), 3.0)
 		Main.I.sfx.play("aa_alert", -2.0, 0.6)
 	if active and not failed and not done:
 		timer -= delta

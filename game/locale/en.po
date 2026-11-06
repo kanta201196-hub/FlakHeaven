@@ -9,8 +9,9 @@ msgid "ПВО"
 msgstr "AA"
 
 #: game/scripts/aa_site.gd:209
-msgid "Позиция ПВО обнаружила вас! 60 с на уничтожение"
-msgstr "AA site has spotted you! 60 s to destroy it"
+#, c-format
+msgid "Позиция ПВО обнаружила вас! %d с на уничтожение"
+msgstr "AA site has spotted you! %d s to destroy it"
 
 #: game/scripts/aa_site.gd:215
 msgid "Позиция ПВО устояла — награды не будет"

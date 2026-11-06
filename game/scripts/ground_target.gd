@@ -25,6 +25,17 @@ const HP_FORT := 270.0
 const FLOOR_S := {HP_STD: 0.6, HP_ARMOR: 1.0, HP_FORT: 3.0}
 
 
+## S16-05/06 (Kanta 06.11): the bunker and the vehicles of an AA site or fortified area hold longer than convoy
+## vehicles: s16 measured 2-4 s for the bunker and 7-12 s for a base against a 60-100 s goal. Same seconds of player
+## damage as FLOOR_S, but only for site members (`setup`); the convoy keeps FLOOR_S.
+const SITE_FLOOR_S := {HP_STD: 3.0, HP_ARMOR: 6.0, HP_FORT: 20.0}
+
+
+## Site-member variant of `floor_hp`: floor of SITE_FLOOR_S seconds of player damage.
+static func site_floor_hp(base: float, hp_k: float, dps: float) -> float:
+	return maxf(base * hp_k, dps * float(SITE_FLOOR_S.get(base, 3.0)))
+
+
 ## Прочность цели категории base: base × рост врагов, но не меньше FLOOR_S секунд урона игрока
 static func floor_hp(base: float, hp_k: float, dps: float) -> float:
 	return maxf(base * hp_k, dps * float(FLOOR_S.get(base, 0.6)))
@@ -96,7 +107,7 @@ func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 			radius = 43.0   # hitbox follows the +35% bunker model (Kanta 24.10)
 			xp = 8
 			parts = 10
-	hp = floor_hp(hp, hp_mult, dps)
+	hp = site_floor_hp(hp, hp_mult, dps)
 	max_hp = hp
 	repair_chance = 0.15
 	kill_shake = 6.0
