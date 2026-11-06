@@ -41,7 +41,7 @@ func result(m: Main, size: Vector2) -> void:
 	var sub := Loc.t("ОПЕРАЦИЯ «%s» · %s · ЭКИПАЖ «%s»") % [Loc.t(Campaign.op()["title"]).to_upper(),
 		Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper(), String(Profile.cls(m.cls_id)["callsign"]).to_upper()]
 	if Main.aces():
-		sub = Loc.t("БИТВА АСОВ · ТЕСТ · %s · ЭКИПАЖ «%s»") % [Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper(),
+		sub = Loc.t("БИТВА АСОВ · %s · ЭКИПАЖ «%s»") % [Loc.t(PlaneClasses.DATA[m.cls_id]["title"]).to_upper(),
 			String(Profile.cls(m.cls_id)["callsign"]).to_upper()]
 	UiStyle.text(ctrl, UiStyle.head_font(700, 6), Vector2(0, 240), sub, UiStyle.FS_LABEL, UiStyle.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, size.x)
 	var op := op_line(m)
@@ -176,7 +176,7 @@ func _toggle(r: Rect2, label: String, action: String) -> void:
 func _numbers(m: Main, r: Rect2) -> float:
 	var t := int(m.run_time)
 	var rows := [[Loc.t("СБИТО"), _grouped(m.run.kills)], [Loc.t("ВРЕМЯ"), "%d:%02d" % [t / 60, t % 60]],
-		[Loc.t("УР. ПИЛОТА"), str(m.run.level)], [Loc.t("АСОВ"), str(m.run.bosses_killed)]]
+		[Loc.t("УР. ПИЛОТА"), str(m.run.level)], [Loc.t("АСОВ"), str(aces_shot(m))]]
 	r.size.y = 36.0 + rows.size() * 56.0
 	UiStyle.panel(ctrl, r, UiStyle.ACCENT, UiStyle.PANEL, 18.0)
 	var y := r.position.y + 62.0
@@ -412,7 +412,7 @@ static func story_line(m: Main) -> String:
 
 static func op_line(m: Main) -> Array:
 	if Main.aces():   # «Битва асов»: the score; the test pays no parts
-		return [Loc.t("Асов сбито: %d · ушло: %d · в бою %d:%02d · запчасти в тесте не начисляются") % [m.run.aces_down,
+		return [Loc.t("Асов сбито: %d · ушло: %d · в бою %d:%02d · запчасти в этом режиме не начисляются") % [m.run.aces_down,
 			m.run.aces_gone, int(m.run_time) / 60, int(m.run_time) % 60], UiStyle.ACCENT_SOFT]
 	var o: Dictionary = m.op_result
 	if o.is_empty():
@@ -486,9 +486,14 @@ static func result_insights(m: Main) -> Array:
 			if kk == "" or float(kind[k]) > float(kind[kk]):
 				kk = k
 		if bk != "":
-			out.append([Loc.t("Больше всего урона вы получили от врагов «%s» (%d%%), в основном — %s.") % [bk, int(round(100.0 * float(by.get(bk, 0)) / tk)), kk], Color(1.0, 0.55, 0.45)])
+			# s17 (Kanta): the main damage kind is counted over all enemies, not for `bk` alone, so it is its own sentence
+			out.append([Loc.t("Больше всего урона вы получили от врагов «%s» (%d%%). Чаще всего урон шёл от: %s (%d%%).") % [Loc.t(bk),
+				int(round(100.0 * float(by.get(bk, 0)) / tk)), Loc.t(kk), int(round(100.0 * float(kind.get(kk, 0)) / tk))], Color(1.0, 0.55, 0.45)])
 		if kk == "ракеты" and int(m.counters.get("intercepted", 0)) == 0:
-			out.append(["Ловушки не увели ни одной ракеты. Уклонение (Space) и боевой разворот сбивают захват — жмите, когда слышите сигнал пуска.", Color(1.0, 0.75, 0.4)])
+			var flare_tip := "Ловушки не увели ни одной ракеты. Уклонение (Space) и боевой разворот сбивают захват — жмите, когда слышите сигнал пуска."
+			if Main.aces():   # «Битва асов» has its own flares key
+				flare_tip = "Ловушки не увели ни одной ракеты. Жмите ловушки (F), когда слышите сигнал пуска; уклонение (Space) тоже сбивает захват."
+			out.append([flare_tip, Color(1.0, 0.75, 0.4)])
 		elif kk == "таран":
 			# s15 review п. 14: the «Бронещит» part only for the plane that has the skill
 			var ram_tip := "Много урона от столкновений: не влетайте в строй врагов, уходите уклонением (Space) или берите броню."
@@ -507,9 +512,18 @@ static func result_insights(m: Main) -> Array:
 		out.append([Loc.t("Связок: %d, первая — на %d:%02d.") % [m.player.syn.size(), int(first) / 60, int(first) % 60], Menu.C_AMBER])
 	if m.shots > 50 and m.hits * 100 < m.shots * 30:
 		out.append([Loc.t("Пушка попадала только в %d%% выстрелов: держите нос на цели или включите ручной огонь (Q) — он сильнее.") % int(100.0 * m.hits / m.shots), Color(0.75, 0.85, 1.0)])
-	if m.run.bosses_killed == 0 and m.run_time > 200.0:
-		out.append(["Ни одного сбитого аса — без него не открываются ворота эвакуации.", Color(1.0, 0.55, 0.45)])
+	if aces_shot(m) == 0 and m.run_time > 200.0:
+		# «Битва асов» has no evacuation gates: the sortie ends with the plane
+		var no_ace := "Ни одного сбитого аса за вылет." if Main.aces() \
+			else "Ни одного сбитого аса — без него не открываются ворота эвакуации."
+		out.append([no_ace, Color(1.0, 0.55, 0.45)])
 	return out.slice(0, 6)
+
+
+## Aces shot down this sortie. «Битва асов» counts rival aces in `RunState.aces_down` (they are not Bosses, so
+## `bosses_killed` stays 0 there — the s17 result screen said «no aces» after a won fight); the campaign counts Bosses.
+static func aces_shot(m: Main) -> int:
+	return m.run.aces_down if Main.aces() else m.run.bosses_killed
 
 
 ## U-01: внутренние имена источников урона (их пишет лог l5) → понятные игроку

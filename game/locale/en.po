@@ -4382,8 +4382,8 @@ msgstr "rockets"
 
 #: game/scripts/hud_pause.gd:65
 #, c-format
-msgid "ПАУЗА  //  ВЫЛЕТ «%s»  //  %02d:%02d"
-msgstr "PAUSE  //  SORTIE «%s»  //  %02d:%02d"
+msgid "ПАУЗА  //  %s  //  %02d:%02d"
+msgstr "PAUSE  //  %s  //  %02d:%02d"
 
 #: game/scripts/hud_pause.gd:93
 msgid "ПОДВЕСЫ · ВЫБОР ЦЕЛИ"
@@ -4502,8 +4502,8 @@ msgstr "OPERATION «%s» · %s · CREW «%s»"
 
 #: game/scripts/hud_result.gd:44
 #, c-format
-msgid "БИТВА АСОВ · ТЕСТ · %s · ЭКИПАЖ «%s»"
-msgstr "ACES BATTLE · TEST · %s · CREW «%s»"
+msgid "БИТВА АСОВ · %s · ЭКИПАЖ «%s»"
+msgstr "ACES BATTLE · %s · CREW «%s»"
 
 #: game/scripts/hud_result.gd:79
 msgid "СВОДКА УРОНА"
@@ -4675,8 +4675,8 @@ msgstr "%s K"
 
 #: game/scripts/hud_result.gd:400
 #, c-format
-msgid "Асов сбито: %d · ушло: %d · в бою %d:%02d · запчасти в тесте не начисляются"
-msgstr "Aces down: %d · got away: %d · in combat %d:%02d · the test pays no parts"
+msgid "Асов сбито: %d · ушло: %d · в бою %d:%02d · запчасти в этом режиме не начисляются"
+msgstr "Aces down: %d · got away: %d · in combat %d:%02d · this mode pays no parts"
 
 #: game/scripts/hud_result.gd:406
 #, c-format
@@ -4769,8 +4769,8 @@ msgstr "Almost everything rests on one weapon. If its damage drops, so does the 
 
 #: game/scripts/hud_result.gd:474
 #, c-format
-msgid "Больше всего урона вы получили от врагов «%s» (%d%%), в основном — %s."
-msgstr "You took most damage from \"%s\" (%d%%), mainly %s."
+msgid "Больше всего урона вы получили от врагов «%s» (%d%%). Чаще всего урон шёл от: %s (%d%%)."
+msgstr "You took the most damage from «%s» (%d%%). Most damage came from: %s (%d%%)."
 
 #: game/scripts/hud_result.gd:476
 msgid "Ловушки не увели ни одной ракеты. Уклонение (Space) и боевой разворот сбивают захват — жмите, когда слышите сигнал пуска."
@@ -5325,8 +5325,8 @@ msgid "НАЗАД"
 msgstr "BACK"
 
 #: game/scripts/menu_main.gd:206
-msgid "ТЕСТ · «ОСА» ПРОТИВ АСОВ · РЕАЛИСТИЧНЫЙ УРОН"
-msgstr "TEST · «WASP» VS ACES · REALISTIC DAMAGE"
+msgid "«ОСА» ПРОТИВ АСОВ · РЕАЛИСТИЧНЫЙ УРОН"
+msgstr "«WASP» VS ACES · REALISTIC DAMAGE"
 
 #: game/scripts/menu_main.gd:209
 #, c-format
@@ -10552,3 +10552,12 @@ msgstr "\nWarning: last mount — the \"%s\" synergy will close, no room left fo
 
 msgid "ЗАКРОЕТ СВЯЗКУ"
 msgstr "CLOSES SYNERGY"
+
+msgid "Ловушки не увели ни одной ракеты. Жмите ловушки (F), когда слышите сигнал пуска; уклонение (Space) тоже сбивает захват."
+msgstr "Flares didn't decoy a single missile. Fire flares (F) when you hear the launch warning; evading (Space) also breaks the lock."
+
+msgid "Ни одного сбитого аса за вылет."
+msgstr "No aces shot down this sortie."
+
+msgid "ВЫЛЕТ «%s»"
+msgstr "SORTIE «%s»"

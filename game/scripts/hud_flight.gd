@@ -620,7 +620,7 @@ func _extra_list(p: Player) -> Array:
 		wl.append("%s %d" % [Loc.t(Prog.WING_TYPES[wm.type]["short"]), wm.lvl])
 		if not wm.temp and not wm.alive():
 			back = maxf(back, wm.dead_t)
-	var hint := (Loc.t("вернётся %d с") % int(ceil(back))) if back > 0.0 else (Loc.t("цель: %s") % Loc.t(Settings.WING_PRIO[Settings.wing_prio]))
+	var hint := (Loc.t("вернётся %d с") % int(ceil(back))) if back > 0.0 else (Loc.t("цель: %s") % Loc.t(Settings.WING_PRIO[Settings.wing_prio_now()]))
 	out.append({"key": "wingman", "action": "wing_prio", "title": Loc.t("Звено"), "hint": hint,
 		"desc": Loc.t("В звене: %s. Ведомые держат строй и бьют сами. Клавиша меняет, кого они атакуют первым.") % ", ".join(wl),
 		"cd": 0.0, "full": 1.0, "active": 0.0, "fam": "wing"})
