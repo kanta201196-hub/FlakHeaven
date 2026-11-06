@@ -5,12 +5,13 @@ config_version=5
 
 [application]
 
-config/name="Flak Heaven - Prototype 3 (3D)"
+config/name="Flak Heaven"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
 
 [autoload]
 
+UserDirMove="*res://scripts/user_dir_migration.gd"
 InputSetup="*res://scripts/input_setup.gd"
 Tuning="*res://scripts/tuning.gd"
 Settings="*res://scripts/settings.gd"
