@@ -355,11 +355,15 @@ func _check_hangar(e: Dictionary) -> void:
 	_check_nozzles(e, key, model, MountCheck.rel_xf(model, h3.pivot), faces, 1.0, model.find_child("nozzle_flame", false, false) != null)
 
 
-## Weapon store: the weapon rests on its stand (gap ≤ STAND_GAP_MAX) instead of floating over it
+## Weapon store: the weapon rests on its stand (gap ≤ STAND_GAP_MAX) instead of floating over it. The gap is
+## measured both ways, weapon points to stand faces and stand points to weapon faces: a vertex sample of either
+## side can miss the contact where that side has only long faces (a missile body between its end rings resting
+## in a stand ring read as floating 0.012 over it, s16 self-check).
 func _check_store(e: Dictionary) -> void:
 	var h3 := Hangar3D.I
 	var weapon: MeshInstance3D = null
 	var rest := PackedVector3Array()
+	var rest_pts := PackedVector3Array()
 	for c in h3.pivot.get_children():
 		if c.is_queued_for_deletion() or not c is Node3D:
 			continue
@@ -367,6 +371,7 @@ func _check_store(e: Dictionary) -> void:
 			weapon = c as MeshInstance3D   # show_weapon adds the weapon first, its stand after
 		else:
 			rest.append_array(MountCheck.faces_of(c as Node3D, h3.pivot))
+			rest_pts.append_array(MountCheck.node_points(c as Node3D, h3.pivot))
 	if weapon == null:
 		_issue(e, "missing", "%s: модели нет на складе" % _wname(e["weapon"]))
 		return
@@ -375,6 +380,9 @@ func _check_store(e: Dictionary) -> void:
 		return
 	var grid := MountCheck.build_grid(rest, STAND_GAP_MAX * 4.0)
 	var gap := MountCheck.grid_gap(grid, MountCheck.node_points(weapon, h3.pivot), STAND_GAP_MAX)
+	if gap > STAND_GAP_MAX:
+		var wgrid := MountCheck.build_grid(MountCheck.faces_of(weapon, h3.pivot), STAND_GAP_MAX * 4.0)
+		gap = minf(gap, MountCheck.grid_gap(wgrid, rest_pts, STAND_GAP_MAX))
 	if gap > STAND_GAP_MAX:
 		_issue(e, "stand", "%s не лежит на подставке: зазор %s" % [_wname(e["weapon"]), _num(gap)], gap, STAND_GAP_MAX)
 
