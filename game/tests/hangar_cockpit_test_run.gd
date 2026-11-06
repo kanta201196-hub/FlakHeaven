@@ -9,7 +9,7 @@ var _checks := 0
 
 
 func _ready() -> void:
-	_check(Tuning.g("hangar_light") == 0.0, "showcase light is off by default (R-22)")
+	_check(Tuning.g("hangar_light") == 1.0, "showcase light is on by default (R-22 since 2026-11-06)")
 	_check(PlaneDetail.enabled(), "hangar detail is on by default")
 	for key: String in KEYS:
 		_check(PlaneDetail.SHAPE.has(key), "%s has a panel layout" % key)

@@ -56,7 +56,7 @@ Short version for Kanta (Russian): the page linked from the 06.11 message in the
 
 | # | Rule | Source |
 | --- | --- | --- |
-| F1 | New feel/effect changes go to `main` **behind an F1 toggle, off until Kanta's «ок»** (R-22). Pure model/texture fixes that Kanta already asked for do not need a toggle. | Kanta 2026-10-31 |
+| F1 | New feel/effect changes go to `main` **behind an F1 toggle, on by default; 0 gives the old look** (R-22, changed 2026-11-06). Pure model/texture fixes that Kanta already asked for do not need a toggle. | Kanta 2026-10-31, 2026-11-06 |
 | F2 | Effects anchor to the model (nozzles, gun anchors, 3D barrels), not to sprite points. | #448 |
 | F3 | GPU effects (`GpuFx`) in Forward+, `Boom3D` in Compatibility; Forward+ omni lights `omni_attenuation 0.5`. | VFX-01…06 |
 

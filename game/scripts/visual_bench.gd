@@ -383,12 +383,13 @@ func _hold(p: Dictionary) -> void:
 	if p.has("cls"):   # 3.4-t1 п. 9, 19: другой самолёт (винты «Кита 1», сопла)
 		m.player.cls_id = p["cls"][0]
 		m.player.plane_lvl = p["cls"][1]
+		m.player.tier = SelfCheck.tier_of(int(p["cls"][1]))
 	if p.has("tlv"):   # S12 --turretbench: turret level (tier 1/2/3 at 1/3/5), evolution and «Стальной ёж» pods
 		for g: Hardpoint in m.player.groups:
 			if g.weapon == "turret":
 				g.level = int(p["tlv"])
 				g.evo = p.get("evo", false)
-				g.slots = PlaneClasses.turret_slots(m.player.cls_id, g.level, m.player.plane_lvl)
+				g.slots = PlaneClasses.turret_slots(m.player.cls_id, g.level, m.player.tier)
 		if p.get("hh", false):
 			m.player.syn["hedgehog"] = true
 		else:

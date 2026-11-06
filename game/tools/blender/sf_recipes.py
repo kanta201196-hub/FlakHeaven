@@ -706,3 +706,111 @@ RECIPES = {
 # «Оса» lvl 1 hangar close-up: the same rework without decimation, subdivided once (the source has ~11k visible
 # triangles; the hangar camera comes close) and baked at 4096
 RECIPES["fighter_1_hangar"] = dict(RECIPES["fighter_1"], root="fh_hangar_fighter_1", tris=80000, subdiv=1)
+
+# PT-03 tier 1 «Оса» (early swept-wing jet fighter, Kanta 06.11 «Оса 1 - ок»): CC0 museum-grade model (CREDITS).
+# The source lies span along X, nose -Y, in flight (no gear). Its paint maps are planar top / side / bottom
+# projections without markings except the red fin tip, painted over; glass = canopy and windscreen armour.
+RECIPES["fighter_t1"] = {
+    "root": "fighter_t1", "rot": (0, 0, 90), "ground": False, "split": r"^Object_8$",
+    # gear legs, wheels and doors (the game flies with gear up; the skin has the bays closed), and the aerial wire
+    # from the canopy to the fin (a 0.6-long thread that swallows the UV atlas)
+    "drop_box": [(0.33, 0.42, -0.05, 0.05, -0.2, -0.085), (0.03, 0.13, 0.15, 0.21, -0.2, -0.05),
+                 (0.03, 0.13, -0.21, -0.15, -0.2, -0.05), (-0.15, -0.09, -0.01, 0.01, 0.105, 0.12),
+                 # marking decals: thin plates a hair off the skin that the repaint leaves as raised outlines
+                 # (fin squares, fuselage squares, nose number)
+                 (-0.335, -0.27, -0.009, 0.009, 0.005, 0.062),
+                 (-0.15, -0.09, 0.055, 0.068, -0.075, -0.028), (-0.15, -0.09, -0.068, -0.055, -0.075, -0.028),
+                 (0.39, 0.476, 0.033, 0.066, -0.076, -0.002), (0.39, 0.476, -0.066, -0.033, -0.076, -0.002)],
+    # gear doors that are part of the skin meshes and hang open under the nose and the wing roots (Kanta 06.11:
+    # check every model for open doors and gear legs)
+    "kill_faces": [(r"^Object_[456](\.|$)", b) for b in (
+        (0.325, 0.415, 0.006, 0.028, -0.2, -0.06, 0.8), (0.325, 0.415, -0.028, -0.006, -0.2, -0.06, 0.8),
+        (0.325, 0.415, 0.006, 0.028, -0.2, -0.112), (0.325, 0.415, -0.028, -0.006, -0.2, -0.112),
+        (0.04, 0.12, 0.195, 0.235, -0.2, -0.075), (0.04, 0.12, -0.235, -0.195, -0.2, -0.075))],
+    "materials": [(r"PaletteMaterial003$", GLASS),
+                  (r"paint_(top|side|bottom)$", {"mode": "paint"}),
+                  # the detail parts share one palette strip; its red and white cells are the markings (side
+                  # number, fin and fuselage squares) and the nose / tank tips: they take the new paint
+                  (r"PaletteMaterial001$", {"mode": "auto", "hue": [(0, 15), (345, 360)], "smin": 0.4, "gray": (0.85, 1.0)}),
+                  (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+    "erase": {"mig15_paint_side": [(0.82, 0.0, 1.0, 0.1)]},
+    "mat_names": {"glass": "glass"}, "img_plain": True,
+    "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+    "paint": HIGHLAND, "tris": 30000,
+}
+RECIPES["fighter_t1_hangar"] = dict(RECIPES["fighter_t1"], root="fh_hangar_fighter_t1", tris=100000)
+
+# PT-03 tier 1 «Грач» (light two-seat side-by-side jet strike plane with tip tanks; Kanta 06.11: the first pick
+# «смотрится игрушечным», his reference screens show a matte green / brown camouflage): CC0 museum-grade model of the
+# trainer sibling (CREDITS); the game hangs its own pylons with the stores. The source's red / white trainer scheme
+# and black anti-glare panels are flattened out of the luminance, so only panel lines and grime reach the new paint.
+TEMPERATE = {"camo": [(0.40, 0.32, 0.22), (0.23, 0.27, 0.17), (0.16, 0.19, 0.13)], "scale": 1.0,
+             "stretch": (0.6, 1.0, 1.0), "belly": (0.46, 0.48, 0.44), "dust": 0.0, "rough": (0.78, 0.86),
+             "wear": 0.35, "detail": 0.8, "wear_col": (0.50, 0.47, 0.40), "fade": 0.05, "fade_col": (0.56, 0.53, 0.44),
+             "streak": 0.1}
+RECIPES["attacker_t1"] = {
+    "root": "attacker_t1", "rot": (0, 0, 90), "ground": False, "split": r"^Object_(7|9)$",
+    # gear legs, wheels and doors (gear up in the game)
+    "drop_box": [(0.35, 0.41, -0.03, 0.03, -0.2, -0.08), (0.04, 0.11, 0.14, 0.2, -0.2, -0.075),
+                 (0.04, 0.11, -0.2, -0.14, -0.2, -0.075),
+                 # marking decals (thin plates on the skin): fin flash and lettering, side serial, fuselage and
+                 # wing roundels, nose number
+                 (-0.36, -0.305, -0.009, 0.009, 0.015, 0.14),
+                 (-0.29, -0.235, 0.033, 0.041, -0.045, -0.012), (-0.29, -0.235, -0.041, -0.033, -0.045, -0.012),
+                 (-0.156, -0.095, 0.037, 0.054, -0.052, 0.0), (-0.156, -0.095, -0.054, -0.037, -0.052, 0.0),
+                 (0.07, 0.15, 0.345, 0.42, -0.056, -0.022), (0.07, 0.15, -0.42, -0.345, -0.056, -0.022),
+                 (0.32, 0.35, 0.058, 0.064, -0.058, -0.037), (0.32, 0.35, -0.064, -0.058, -0.058, -0.037)],
+    # main gear door plates are part of the fuselage skin objects: thin squares hanging under each wing root
+    # (Kanta 06.11: no open hatches or gear parts on any model)
+    "kill_faces": [(r"^Object_1[145](\.|$)", b) for b in (
+        (0.06, 0.105, 0.17, 0.185, -0.112, -0.0765), (0.06, 0.105, -0.185, -0.17, -0.112, -0.0765))],
+    "materials": [(r"PaletteMaterial003$", GLASS),
+                  (r"jp_.*paint", {"mode": "paint", "flatten": 31}),
+                  (r"PaletteMaterial008$", {"mode": "paint"}),   # tip tanks (red on the trainer)
+                  # detail parts on two palette strips; red, white and blue cells are the national markings,
+                  # warning triangles and trainer bands: they take the new paint
+                  (r"PaletteMaterial00[12]$", {"mode": "auto", "hue": [(0, 15), (340, 360), (200, 250)], "smin": 0.4,
+                                               "gray": (0.85, 1.0)}),
+                  (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+    "mat_names": {"glass": "glass"}, "img_plain": True,
+    "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+    "paint": TEMPERATE, "tris": 30000,
+}
+RECIPES["attacker_t1_hangar"] = dict(RECIPES["attacker_t1"], root="fh_hangar_attacker_t1", tris=110000)
+
+# «Кит 1» (PT-03, Kanta 06.11 «Кит 1 - ок в работу»): early heavy piston bomber with coupled engine pairs (tier 2 is
+# a propeller plane, so tier 1 cannot be a jet). Source: Sketchfab fY5DQaL5CKSxPd7uKRu8sXaeQcK, CC BY (CREDITS).
+# One 1024 atlas for the whole airframe with a painted two-tone camouflage, the national markings and the author's
+# signature: the markings are erased (rectangles below), the camouflage is flattened and repainted; the top strip
+# (metal, tyre, prop blade swatches) and the wheel hub discs keep their colours. The cockpit instruments and the
+# interior are dropped (the game's canopy glass is not see-through).
+RECIPES["bomber_t1"] = {
+    "root": "bomber_t1", "rot": (0, 0, 180), "ground": False,
+    "drop": r"^Object_(2|3|4|5|7|8|9|10|11|12|13|14|15|16|27|28)$",
+    "split": r"^Object_(1[7-9]|2[0-6])$",
+    # main gear under the inner nacelles (wheels, legs, struts and the doors hanging down) and the tail wheel;
+    # the game flies with the gear up
+    "drop_box": [(0.10, 0.20, 0.125, 0.20, -0.2, -0.06), (0.10, 0.20, -0.20, -0.125, -0.2, -0.06),
+                 (-0.34, -0.30, -0.012, 0.012, -0.08, -0.055)],
+    # the two main-gear wells under each inner wing stay open once the gear is dropped: cap their rims
+    "fill_holes": [(r"^Object_1[79](\.|$)", (0.10, 0.185, 0.04, 0.28, -0.05, -0.02)),
+                   (r"^Object_1[79](\.|$)", (0.10, 0.185, -0.28, -0.04, -0.05, -0.02))],
+    # the decimated inner wing sits ~5 mm (of 1000) under the source skin by the flap slot, so a ray from the
+    # default 6 mm cage starts inside the wing and bakes the slot's grey belly-facing walls: a wider cage,
+    # and texels whose normal still leans past any skin detail go flat
+    "cage": 0.012, "nrm_min_z": 0.35,
+    "materials": [(r"^transparent", GLASS),
+                  (r"texture", {"mode": "paint", "flatten": 31}),
+                  (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+    "keep": {"DefaultWhite_texture.png": [(0.0, 0.0, 1.0, 0.126), (0.0, 0.74, 0.13, 0.83)]},
+    "erase": {"DefaultWhite_texture.png": [
+        (0.055, 0.505, 0.11, 0.56), (0.862, 0.505, 0.915, 0.56),     # wing underside
+        (0.055, 0.672, 0.11, 0.727), (0.862, 0.672, 0.915, 0.727),   # wing top
+        (0.315, 0.8, 0.388, 0.87), (0.612, 0.915, 0.683, 0.983),     # fuselage sides
+        (0.745, 0.381, 0.775, 0.412), (0.912, 0.381, 0.942, 0.412),  # fin
+        (0.6, 0.868, 0.998, 0.9)]},                                   # author's signature
+    "mat_names": {"glass": "glass"}, "img_plain": True,
+    "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+    "paint": HIGHLAND, "tris": 30000,
+}
+RECIPES["bomber_t1_hangar"] = dict(RECIPES["bomber_t1"], root="fh_hangar_bomber_t1", tris=120000)

@@ -3,7 +3,7 @@ extends RefCounted
 ## Look of the player's bank in a turn (Kanta 2026-11-06: «из крена слишком быстро выходим, надо чуть замедлить
 ## наклон и стабилизацию после него»). Only the picture: the flight bank (`Player.bank`) that drives speed bleed
 ## and skills keeps its rate; the model follows a separate visible bank that rolls in a little slower and levels
-## out clearly slower. Behind the F1 toggle `bank_soft` until Kanta's «ок» (R-22); the multipliers are the
+## out clearly slower. On by default, F1 `bank_soft` = 0 turns it off (R-22 since 2026-11-06); the multipliers are the
 ## defaults of the F1 sliders `bank_soft_in` / `bank_soft_out`.
 
 ## Roll-in rate × this: a little slower (fighter 11 → 8.3 /s, ≈ 0.12 s time constant instead of 0.09 s).

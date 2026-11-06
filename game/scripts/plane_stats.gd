@@ -2,11 +2,11 @@ class_name PlaneStats
 extends RefCounted
 ## Concrete numbers of a plane for the hangar (S16-08, Kanta 06.11): hull, cruise speed in km/h, turn rate, dodge
 ## cooldown, fuel, damage per second of the starting kit with its air and ground factors, course-gun damage per
-## second, hardpoint groups, turret mounts and wingmen — for plane 1 and plane 2 side by side, so buying plane 2
-## shows what changes.
+## second, hardpoint groups, turret mounts and wingmen — for a plane tier (1–5) beside another one, so buying the
+## next tier shows what changes.
 ## The numbers come from the same code the sortie uses: a throwaway `Player` goes through `Player.setup` (class data,
 ## starting weapons on their groups, `Profile.apply` with hangar nodes, crew level, callsign trait, perks, medals),
-## with `Profile.debug_plane` set to the plane asked for. Nothing here changes a number in flight.
+## with `Profile.debug_plane` set to the tier asked for. Nothing here changes a number in flight.
 ##
 ## Kanta 06.11 («привязать к реальным цифрам, не шкалы»): «Урон в секунду» is the nominal damage per second on one
 ## plain target of everything that fires by itself at the start — course gun, starting weapons at level 1, turrets —
@@ -17,7 +17,7 @@ extends RefCounted
 
 ## Row order, titles and formats (keys of `of`): "n" — whole number, "kmh" — speed in km/h, "deg" — «168 °/с»,
 ## "s" — seconds, "min" — minutes of flight, "x" — factor «×1,2». Every hangar node moves one of these rows, so a
-## hover over a node card can show its gain (`NODE_ROW`). The «dodge» title is swapped for the flare salvo on a plane
+## hover over a node card can show its gain (`row_of`). The «dodge» title is swapped for the flare salvo on a plane
 ## whose space key fires flares (`dodge_title`).
 const ROWS := [
 	["hull", "Прочность", "n"],
@@ -34,8 +34,19 @@ const ROWS := [
 	["wingmen", "Ведомые", "n"],
 ]
 
-## Hangar node → the row it improves (`Profile.NODES`): «Планер» the dodge cooldown, «Узлы подвеса» the damage.
-const NODE_ROW := {"frame": "dodge", "engine": "speed", "armor": "hull", "wing": "turn", "pylons": "dps", "tank": "fuel"}
+## Node effect (`PlaneTiers.FX_KEYS`) → the row it moves; a node shows the row of its first effect that has one
+## («Планер» the dodge cooldown, «Узлы подвеса» the damage).
+const FX_ROW := {"man_cd": "dodge", "speed": "speed", "hp": "hull", "turn": "turn", "hp_dmg": "dps", "hp_cd": "dps", "fuel": "fuel"}
+
+
+## Row that node `id` of tier `t` moves ("" — none, e.g. a node still in work)
+static func row_of(t: int, id: String) -> String:
+	if id == "":
+		return ""
+	for key in PlaneTiers.fx(t, id):
+		if FX_ROW.has(key):
+			return String(FX_ROW[key])
+	return ""
 
 ## Weapon → [shots per mount in one volley at level 1, factor on planes, factor on ground targets], as the firing code
 ## does it: `Hardpoint._fire_aam` (1, planes only), `_fire_rockets` (4 per mount on levels 1–2, ground ×3),
@@ -56,7 +67,7 @@ const HIT := {
 static var _cache := {}
 
 
-## Stats of class `c` on plane `lv` (1 or 2) with the current profile. Cached on the class's profile record, so the
+## Stats of class `c` on tier `lv` (1–5) with the current profile. Cached on the class's profile record, so the
 ## hangar can ask every frame.
 static func of(c: String, lv: int) -> Dictionary:
 	var key := "%s|%d|%s|%s" % [c, lv, str(Profile.cls(c)), str(Profile.data.get("medals", {}))]
@@ -71,7 +82,7 @@ static func of(c: String, lv: int) -> Dictionary:
 
 ## Uncached `of` (unit tests call it directly).
 static func compute(c: String, lv: int) -> Dictionary:
-	lv = clampi(lv, 1, 2)
+	lv = clampi(lv, 1, PlaneTiers.MAX)
 	var keep := Profile.debug_plane
 	Profile.debug_plane = lv
 	var p := Player.new()
@@ -91,7 +102,7 @@ static func compute(c: String, lv: int) -> Dictionary:
 		"gun_dps": gun,
 		"dodge": p.salvo_cd_full() if String(p.cls.get("space", "roll")) == "flares" else p.roll_cd_full(),
 		"fuel": Fuel.CAPACITY * Profile.fuel_k(c),
-		"groups": (p.cls["groups"] as Array).size() + (1 if lv == 2 else 0) + (1 if Profile.third_group(c, lv) else 0),
+		"groups": (p.cls["groups"] as Array).size() + (1 if PlaneTiers.heavy(lv) else 0) + (1 if Profile.third_group(c, lv) else 0),
 		"turrets": int(p.cls["turrets_max"]),
 		"wingmen": int(p.cls["wingmen"]),
 	}
@@ -124,13 +135,13 @@ static func kit_dps(p: Player, gun: float) -> Dictionary:
 	return {"dps": raw * all, "air_k": air / raw if raw > 0.0 else 0.0, "ground_k": ground * gk / raw if raw > 0.0 else 0.0}
 
 
-## Stats of class `c` on plane `lv` as they would be with hangar node `node_id` one level higher — the hover preview
+## Stats of class `c` on tier `lv` as they would be with hangar node `node_id` one level higher — the hover preview
 ## of a node card. The profile is changed in memory only and put back (nothing saved); a node at the top returns the
 ## stats as they are.
 static func with_node(c: String, lv: int, node_id: String) -> Dictionary:
 	var nodes: Dictionary = Profile.nodes_of(c, lv)
 	var was := int(nodes.get(node_id, 0))
-	if was >= 5:
+	if was >= PlaneTiers.cap(lv):
 		return of(c, lv)
 	nodes[node_id] = was + 1
 	var out := of(c, lv)

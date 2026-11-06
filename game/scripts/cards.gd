@@ -403,7 +403,7 @@ static func _available(p: Player) -> Array:
 		if not syn_offered(id):
 			continue
 		if pairs_on():
-			var pd: Dictionary = PlaneClasses.PLANES[p.cls_id][int(p.cls["plane_lvl"])]
+			var pd: Dictionary = PlaneClasses.PLANES[p.cls_id][int(p.cls["tier"])]
 			if not SynPairs.reachable(id, pd["weapons"], wing_limit(p)):
 				continue
 			if _pair_started(p, id, free_group):
@@ -411,7 +411,7 @@ static func _available(p: Player) -> Array:
 			continue
 		var ok := true
 		if s.has("w"):
-			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w, int(p.cls["plane_lvl"]))):
+			if not (s["w"] as Array).any(func(w): return Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w, int(p.cls["tier"]))):
 				continue
 			ok = _wlevel(p, s["w"]) > 0 or (free_group and not (s["w"] as Array).has("turret"))
 		if s.get("wingmen", false):
@@ -430,7 +430,7 @@ static func _pair_started(p: Player, id: String, _free_group := false) -> bool:
 	for g in p.groups:
 		if not (g as Hardpoint).builtin and (g as Hardpoint).is_empty():
 			free += 1
-	var lv := int(p.cls["plane_lvl"])
+	var lv := int(p.cls["tier"])
 	for t in SynPairs.req(id):
 		if t.has("w") and SynPairs.have(t, snap) == 0:
 			if not (t["w"] as Array).any(func(w): return w != "turret" and Weapons.in_game(w) and PlaneClasses.allows(p.cls_id, w, lv)):
@@ -910,7 +910,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		if g.builtin or not g.is_empty():
 			continue
 		# U-06/U-08: на тяжёлый подвес — только экспериментальное оружие, открытое кампанией; на остальные — обычное
-		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL.filter(func(x): return PlaneClasses.allows(p.cls_id, x, int(p.cls["plane_lvl"])))):
+		for w in (Weapons.EXP.filter(func(x): return Weapons.exp_open(x)) if g.heavy else Weapons.POOL.filter(func(x): return PlaneClasses.allows(p.cls_id, x, int(p.cls["tier"])))):
 			if equipped.has(w) or banned.has("w:" + w) or not CardBalance.offered(w, ground):
 				continue
 			cands.append([1.4, {"id": "new_%s_%d" % [w, gi], "ban": "w:" + w, "kind": "weapon_new", "weapon": w, "group": gi, "cat": "Новое оружие",
@@ -977,7 +977,7 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 	# ведомые: новый ведомый выбранного типа (до лимита) и «слётанность» (+1 уровень конкретному)
 	if p.permanent_wingmen() < wing_limit(p):
 		for t in Prog.WING_TYPES:
-			if banned.has("wn:" + t) or not Profile.wing_ok(p.cls_id, t) or not PlaneClasses.wing_type_ok(p.cls_id, int(p.cls["plane_lvl"]), t):
+			if banned.has("wn:" + t) or not Profile.wing_ok(p.cls_id, t) or not PlaneClasses.wing_type_ok(p.cls_id, int(p.cls["tier"]), t):
 				continue
 			cands.append([1.3, {"id": "wing_new_" + t, "ban": "wn:" + t, "kind": "wing_new", "wtype": t, "cat": "Звено",
 				"title": "Ведомый: %s" % Prog.WING_TYPES[t]["title"]}])
@@ -1085,11 +1085,11 @@ static func finalize(p: Player, card: Dictionary) -> Dictionary:
 			var g2: Hardpoint = p.groups[int(card["group"])]
 			var to := mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
 			card["desc"] = Loc.t("%s: ур. %d → %d") % [g2.name, g2.level, to] + _level_lines(Loc.t(Weapons.DEFS[g2.weapon]["lvl"]), g2.level, to)
-			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to, int(p.cls["plane_lvl"])) > g2.slots:
+			if g2.builtin and g2.weapon == "turret" and PlaneClasses.turret_slots(p.cls_id, to, int(p.cls["tier"])) > g2.slots:
 				card["desc"] += "\nВторая турель — сверху на фюзеляже" if g2.slots == 1 else "\nЕщё одна турель"
 			if r > 0:
 				card["desc"] += Loc.t("\nБонус редкости: +%s урона группы") % _pct(rarity_dmg(k))
-			var bk := PlaneClasses.bonus_k(p.cls_id, int(p.cls["plane_lvl"]), g2.weapon)
+			var bk := PlaneClasses.bonus_k(p.cls_id, int(p.cls["tier"]), g2.weapon)
 			if bk > 1.0:
 				card["desc"] += Loc.t("\n★ Бонус самолёта: урон +%d%%") % roundi((bk - 1.0) * 100.0)
 			if to >= Weapons.MAX_LEVEL and not g2.evo and not Modernizations.ids_for(g2.weapon).is_empty():
@@ -1367,7 +1367,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 			g2.level = mini(g2.level + UP_LEVELS[r], Weapons.MAX_LEVEL)
 			g2.bonus += rarity_dmg(k)
 			if g2.builtin and g2.weapon == "turret":
-				g2.slots = PlaneClasses.turret_slots(p.cls_id, g2.level, int(p.cls["plane_lvl"]))
+				g2.slots = PlaneClasses.turret_slots(p.cls_id, g2.level, int(p.cls["tier"]))
 		"module":
 			var id: String = card["id"]
 			p.taken[id] = int(p.taken.get(id, 0)) + 1

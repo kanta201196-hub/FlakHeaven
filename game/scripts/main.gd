@@ -326,7 +326,7 @@ func start_run() -> void:
 	op_result = {}
 	Hints.clear()
 	if aces():
-		Events.banner.emit(Loc.t("БИТВА АСОВ · ТЕСТ"), 4.0)
+		Events.banner.emit(Loc.t("БИТВА АСОВ"), 4.0)
 		run.add_picks(AcesBalance.DRAFT_PICKS)   # option 1 (Kanta 26.10): the build is drafted before takeoff
 		Hints.show("aces_goal2", "Битва асов: асы взлетают один за другим. Три ракеты или пара очередей аса — и самолёт сбит, у них так же. От ракет: F — ловушки, E — разворот сбивает наведение, Пробел — бочка. F1 — настройка полёта.", 10.0, 3)
 	else:
@@ -341,7 +341,7 @@ func start_run() -> void:
 		Hints.show("minimap", "Слева внизу — миникарта: север сверху, белая стрелка — вы, красные точки — враги, розовые — асы, цветной ромб — задание, зелёный ромб — ворота эвакуации, фиолетовые точки — звено. Размер и прозрачность — в «Настройки → Графика».", 8.0, 2)
 	evac_windows = 0
 	evac_lost = false
-	rerolls = START_REROLLS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # 3.5: самолёт ур. 2 — +1 переброс; медаль «Коллекционер»
+	rerolls = START_REROLLS + Profile.extra_rerolls(cls_id) + int(Profile.medal_bonus("rerolls")) # +1 reroll from plane tier 3; medal «Коллекционер»
 	# S16-22: crew rank adds rerolls, bans and pins (PickBalance.CREW); medals add rerolls and bans
 	var crew_picks := PickBalance.crew(Profile.crew_lvl(cls_id)) if Profile.meta_k() > 0.0 else PickBalance.crew(0)
 	rerolls += int(crew_picks["rerolls"])

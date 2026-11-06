@@ -340,7 +340,7 @@ func _plane(m: Main, r: Rect2) -> void:
 	var x := card.position.x + 18.0
 	var tw := card.size.x - 36.0
 	var y := pic.end.y + 28.0
-	_text(Vector2(x, y), Loc.t("Самолёт ур. %d · экипаж ур. %d") % [Profile.plane_lvl(id), Profile.crew_lvl(id)], 17, Color.WHITE)
+	_text(Vector2(x, y), Loc.t("Самолёт ур. %d · экипаж ур. %d") % [Profile.tier(id), Profile.crew_lvl(id)], 17, Color.WHITE)
 	y += 30.0
 	var sk: String = m.skill_pick.get(id, Profile.skills(id)[0])
 	y += _para(Vector2(x, y), Loc.t("Навык [E]: %s") % Loc.t(String(PlaneClasses.SKILL3[sk]["title"])), tw, 16, Color(0.7, 1.0, 0.7)) + 8.0

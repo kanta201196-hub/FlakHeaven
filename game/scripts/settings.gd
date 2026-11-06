@@ -48,7 +48,16 @@ const LANGS := [["ru", "Русский"], ["en", "English"], ["zh_CN", "简体�
 var lang := -1
 ## Правка 3.5-s4: кого звено атакует первым (клавиша G в полёте, кнопка на экране паузы)
 const WING_PRIO := ["по задаче ведомого", "прикрывать меня", "крупные и асы", "наземные цели"]
+## Index of «наземные цели» in WING_PRIO
+const WING_PRIO_GROUND := 3
 var wing_prio := 0
+
+
+## The wingmen target in force this sortie: the saved choice, except «наземные цели» in a sortie without
+## ground targets («Битва асов», s17 video: the HUD said «цель: наземные цели» over an all-air fight).
+func wing_prio_now() -> int:
+	var ground: bool = Main.I == null or Main.I.run.ground_targets
+	return 0 if wing_prio == WING_PRIO_GROUND and not ground else wing_prio
 ## Правка 24: миникарта — размер (0 — выключена) и прозрачность
 const MINIMAP_SIZES := [0.0, 180.0, 240.0, 320.0]
 const MINIMAP_NAMES := ["выключена", "малая", "средняя", "большая"]

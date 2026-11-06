@@ -138,7 +138,8 @@ var _since_hit := 99.0
 var _fire_cd := 0.0
 var _gun_side := 1.0
 var _blink := 0.0
-var plane_lvl := 1       # внешний вид: ур. 1 → ур. 2 (модернизация по уровню пилота)
+var plane_lvl := 1       # model generation the plane is drawn with (`PlaneTiers.model`): art, mounts, sprites
+var tier := 1            # plane tier 1–5 (PT-04): game rules — weapons, ★ bonus, heavy hardpoint
 var _upgrade_flash := 0.0
 
 # модули (код вынесен из этого файла, состояние — здесь)
@@ -157,7 +158,9 @@ func _init() -> void:
 
 func setup(id: String, sk := "", sk2 := "") -> void:
 	cls_id = id
-	cls = PlaneClasses.plane(id, Profile.plane_lvl(id))   # Kanta 24.10: weapons, ★ bonus, turrets, wingmen per plane
+	tier = Profile.tier(id)
+	plane_lvl = PlaneTiers.model(tier)
+	cls = PlaneClasses.plane(id, tier)   # Kanta 24.10: weapons, ★ bonus, turrets, wingmen per plane (tier since PT-04)
 	for arg in OS.get_cmdline_user_args():   # check flag --bonus=<weapon>:<k>, e.g. --bonus=agm:1.0 (A/B of a plane bonus)
 		if String(arg).begins_with("--bonus=") and String(arg).contains(":"):
 			var kv := String(arg).substr(8).split(":")
@@ -176,9 +179,10 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 			ammo = String(arg).substr(7)
 	for gd in cls["groups"]:
 		groups.append(Hardpoint.new(gd["name"], int(gd["slots"]), gd["weapon"]))
-	# U-06: самолёт ур. 2 — тяжёлый подвес под экспериментальное оружие (после турелей: номера групп моделей не сдвигаются)
+	# U-06: heavy hardpoint for experimental weapons, from tier 4 since PT-04 (after the turrets: model group
+	# indices do not shift)
 	var heavy: Hardpoint = null
-	if Profile.plane_lvl(id) == 2:
+	if PlaneTiers.heavy(tier):
 		heavy = Hardpoint.new("Тяжёлый подвес", 1, "")
 		heavy.heavy = true
 	for arg in OS.get_cmdline_user_args():   # проверка: --heavy=railgun / emp — тяжёлый подвес с оружием сразу; --mastery — мастерство с начала
@@ -192,7 +196,7 @@ func setup(id: String, sk := "", sk2 := "") -> void:
 		var tg := Hardpoint.new("Турели", turrets, "turret", true)
 		if id == "bomber":
 			tg.level = 2 # 3.1: «Кит» стартует с турелями ур. 2
-		tg.slots = PlaneClasses.turret_slots(id, tg.level, int(cls["plane_lvl"]))
+		tg.slots = PlaneClasses.turret_slots(id, tg.level, tier)
 		groups.append(tg)
 	if heavy != null:
 		groups.append(heavy)
@@ -878,7 +882,7 @@ func has_perk(id: String) -> bool:
 	return Profile.has_perk(cls_id, id)
 
 
-## 3.5: самолёт ур. 2 выбирается в ангаре до вылета (Profile.apply); в вылете модернизации нет
+## 3.5: the plane tier is chosen in the hangar before the sortie (Profile.apply); there is no upgrade in flight
 func check_upgrade() -> void:
 	pass
 

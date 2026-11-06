@@ -131,7 +131,7 @@ func handle_global_input() -> void:
 				ui_click("to_hangar")
 				return
 			if Input.is_action_just_pressed("restart"):
-				m.restart()
+				ui_click("restart")
 			elif Input.is_action_just_pressed("change_class"):
 				ui_click("change_class")
 			return
@@ -360,12 +360,22 @@ func ui_click(action: String) -> void:
 		m._set_state("playing")
 	elif action.begins_with("rtab:"):
 		m.result_tab = int(action.substr(5))
-	elif action == "restart":
-		m.restart()
+	elif action == "restart":   # results: «Ещё вылет»
+		replay()
 	elif action == "change_class":   # results: «Сменить самолёт» — the plane is picked in the hangar now
 		m.restarts += 1
 		m.start_run()
 		open_hangar(m.cls_id)
+
+
+## Results «Ещё вылет» (Kanta 06.11): back to the mission screen to pick the next operation, not straight into
+## combat; the world behind it is rebuilt for the same plane. «Битва асов» has no mission screen, so it restarts.
+func replay() -> void:
+	if Main.aces():
+		m.restart()
+		return
+	m.restarts += 1
+	open_mission(true)
 
 
 ## Opens the hangar of «Подготовка и вылет» on plane `cls`; Esc there goes back to the main menu.
@@ -420,8 +430,8 @@ func hangar_action(a: String) -> void:
 			m.hangar_album = ":".join(p.slice(1))
 		"node":
 			ok = Profile.buy_node(c, p[1], int(p[2]) if p.size() > 2 else 0)
-		"plane2":
-			ok = Profile.buy_plane2(c)
+		"tier":   # PT-04: buy plane tier N (it is selected for the next sortie)
+			ok = Profile.buy_tier(c, int(p[1]))
 		"plane_sel":
 			Profile.set_plane(c, int(p[1]))
 		"livery":
@@ -485,7 +495,9 @@ func hangar_action(a: String) -> void:
 ## Правка 3.5-s4: цель звена — по кругу; ведущий слышит ответ по радио
 ## Steps the wingmen's target forward (`dir` 1) or back (-1) and says it on the radio.
 func cycle_wing_prio(dir := 1) -> void:
-	Settings.wing_prio = wrapi(Settings.wing_prio + dir, 0, Settings.WING_PRIO.size())
+	Settings.wing_prio = wrapi(Settings.wing_prio_now() + dir, 0, Settings.WING_PRIO.size())
+	if Settings.wing_prio_now() != Settings.wing_prio:   # no ground targets: «наземные цели» is skipped
+		Settings.wing_prio = wrapi(Settings.wing_prio + dir, 0, Settings.WING_PRIO.size())
 	Settings.save_settings()
 	var t: String = Settings.WING_PRIO[Settings.wing_prio]
 	Events.radio.emit("Звено", "Принял: %s!" % (t.left(1).to_upper() + t.substr(1)), false)

@@ -141,7 +141,9 @@ def _in_box(p, b):
 def kill_box_faces(obs, boxes):
     """Delete faces whose centre lies in any of the boxes (x0, x1, y0, y1, z0, z1), normalised coordinates.
     An entry (regex, box) applies only to objects whose name matches, so a part can be cut out of a composite
-    source object without holing the skin of other objects that cross the same box (S11-07 glove pylons)."""
+    source object without holing the skin of other objects that cross the same box (S11-07 glove pylons).
+    An optional 7th box value is the least |normal.y| a face needs: thin vertical plates (gear doors modelled
+    inside the skin object) are cut while the skin they cross, which faces down or sideways-down, stays."""
     for o in obs:
         mine = [b[1] if isinstance(b[0], str) else b for b in boxes
                 if not isinstance(b[0], str) or re.search(b[0], o.name)]
@@ -149,10 +151,34 @@ def kill_box_faces(obs, boxes):
             continue
         bm = bmesh.new()
         bm.from_mesh(o.data)
-        dead = [f for f in bm.faces if any(_in_box(f.calc_center_median(), b) for b in mine)]
+        dead = [f for f in bm.faces if any(_in_box(f.calc_center_median(), b)
+                                           and (len(b) < 7 or abs(f.normal.y) >= b[6]) for b in mine)]
         if dead:
             bmesh.ops.delete(bm, geom=dead, context="FACES")
             bm.to_mesh(o.data)
+        bm.free()
+
+
+def fill_box_holes(obs, entries):
+    """Close open holes whose whole rim lies in a box: entries are (name regex, (x0, x1, y0, y1, z0, z1)).
+
+    Gear wells and bays modelled as openings in the skin stay open once the gear and doors are dropped; a flat
+    cap over the rim closes them. The camouflage is painted in object space and the belly tone follows the face
+    normal, so the cap takes the surrounding paint without UV work."""
+    for o in obs:
+        boxes = [b for rx, b in entries if re.search(rx, o.name)]
+        if not boxes:
+            continue
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        rim = [e for e in bm.edges if e.is_boundary
+               and any(all(_in_box(v.co, b) for v in e.verts) for b in boxes)]
+        if rim:
+            new = bmesh.ops.holes_fill(bm, edges=rim, sides=0)["faces"]
+            if new:
+                bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+                print("FILL", o.name, len(new), "caps")
+                bm.to_mesh(o.data)
         bm.free()
 
 
@@ -906,22 +932,23 @@ def make_low(groups, R, budget):
     return lows
 
 
-def split_uv_islands(obs, cuts):
+def split_uv_islands(obs, cuts, axis=0):
     """Cut long UV islands at the planes x = cuts (normalised model length).
 
     Smart UV project keeps a whole fuselage side as one island as long as the plane; the packer cannot scale the
     atlas past that island, so most of the texture stays empty. Islands are found by shared UV coordinates, so a
     tiny UV shift per segment (faces grouped by the x of their centre) separates them; pack_islands then lays the
-    pieces out freely and the texel density rises."""
+    pieces out freely and the texel density rises. axis 1 cuts across the span (y): a wing top that runs through
+    the fuselage top as one smooth surface is an island as wide as the plane."""
     import bisect
     for o in obs:
         me = o.data
         uvl = me.uv_layers.active.data
         for p in me.polygons:
-            k = bisect.bisect(cuts, (o.matrix_world @ p.center).x)
+            k = bisect.bisect(cuts, (o.matrix_world @ p.center)[axis])
             if k:
                 for li in p.loop_indices:
-                    uvl[li].uv.x += 1e-4 * k
+                    uvl[li].uv[axis] += 1e-4 * k
 
 
 def unwrap(lows, R):
@@ -935,17 +962,37 @@ def unwrap(lows, R):
         while len(o.data.uv_layers) > 0:
             o.data.uv_layers.remove(o.data.uv_layers[0])
         o.data.uv_layers.new(name="UVMap")
+    # the UV packer also follows the aspect of the faces' material image: every face takes an image-less
+    # material for the unwrap, and gets its own back after it
+    blank = bpy.data.materials.new("uv_aspect_1")
+    keep_mi = {}
+    for o in obs:
+        o.data.materials.append(blank)
+        o.active_material_index = len(o.data.materials) - 1
+        keep_mi[o.name] = [p.material_index for p in o.data.polygons]
+        o.data.polygons.foreach_set("material_index", [o.active_material_index] * len(o.data.polygons))
     _select(obs)
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=0.002, area_weight=0.0, scale_to_bounds=False)
-    if R.get("uv_split_x"):
+    # correct_aspect off: by default the projection follows the aspect of the first material's image, and a
+    # palette-strip texture (128 x 4) squashed every island 32 times across the atlas
+    bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=0.002, area_weight=0.0, scale_to_bounds=False,
+                             correct_aspect=False)
+    if R.get("uv_split_x") or R.get("uv_split_y"):
         bpy.ops.object.mode_set(mode="OBJECT")
-        split_uv_islands(obs, R["uv_split_x"])
+        if R.get("uv_split_x"):
+            split_uv_islands(obs, R["uv_split_x"])
+        if R.get("uv_split_y"):
+            split_uv_islands(obs, R["uv_split_y"], 1)
         bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.uv.select_all(action="SELECT")
     bpy.ops.uv.pack_islands(margin=0.002, rotate=True, scale=True)
     bpy.ops.object.mode_set(mode="OBJECT")
+    for o in obs:
+        o.data.polygons.foreach_set("material_index", keep_mi[o.name])
+        o.data.materials.pop(index=len(o.data.materials) - 1)
+        o.active_material_index = 0
+    bpy.data.materials.remove(blank)
     for o in obs:   # smooth normals on lows: auto smooth by angle so hard edges stay
         _select([o])
         bpy.ops.object.shade_smooth_by_angle(angle=math.radians(R.get("smooth_deg", 40)))
@@ -1002,6 +1049,14 @@ def bake(groups, lows, R, tex, samples, out_dir, name):
 def finish(groups, lows, imgs, R, out_dir, name, tex, jpeg=0):
     """Pack ORM, build body/glass materials, set pivots and parents, export GLB, merge primitives."""
     w = tex
+    if R.get("nrm_min_z"):
+        # a ray that slips into a slot of the source (a flap gap) bakes the slot wall: the texel's normal then
+        # leans past what any skin detail does and the panel turns black in light. Such texels go flat.
+        n = _px(imgs["normal"]).copy()
+        bad = (n[..., 2] * 2.0 - 1.0) < R["nrm_min_z"]
+        n[bad, 0:3] = (0.5, 0.5, 1.0)
+        imgs["normal"].pixels.foreach_set(n.ravel())
+        print("NRM flattened %d texels" % int(bad.sum()))
     rough = _px(imgs["rough"])[..., 0]
     metal = _px(imgs["metal"])[..., 0]
     orm = np.ones((w, w, 4), np.float32)
@@ -1154,6 +1209,8 @@ def main() -> int:
             if not o.data.polygons:
                 obs.remove(o)
                 bpy.data.objects.remove(o)
+    if R.get("fill_holes"):
+        fill_box_holes(obs, R["fill_holes"])
     if R.get("build"):   # parts made in code (e.g. the technical's machine gun)
         obs += R["build"]()
     if R.get("launcher"):   # turntable + elevating box (SAM), folded for travel

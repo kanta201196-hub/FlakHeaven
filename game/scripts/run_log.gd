@@ -24,7 +24,7 @@ static func write(m: Main, outcome: String) -> void:
 		head += ";dealt_" + k
 	head += ";shots;hits;peak_rev;near_misses;best_streak;tail_kills;banned;cards;synergies;max_hp"
 	head += ";skill3;skill3_lvl;skill3_uses;tags;patches;evolutions;wingmen;intercepted;dealt_detail;taken_by"
-	head += ";skill2;course_log;syn_open;course_pts;crew_lvl;crew_xp_gain;parts_total;nodes;plane2;perks;wbranch;meta_k"
+	head += ";skill2;course_log;syn_open;course_pts;crew_lvl;crew_xp_gain;parts_total;nodes;plane_tier;perks;wbranch;meta_k"
 	# 3.4: замеры для анализа правок по кросс-проверке (Telemetry); timeline — последняя колонка
 	# S8 «eweap» (l7): taken_kind — полученный урон по видам оружия врагов (ПЗРК, ЗРК, пулемёт пикапа, пушка БМП…)
 	head += ";log_ver;" + ";".join(PackedStringArray(Telemetry.COLS)) + ";op;aces;taken_kind;timeline"
@@ -55,7 +55,7 @@ static func write(m: Main, outcome: String) -> void:
 		wb.append("%s=%s%s" % [w, Profile.tier_state(w, 1), Profile.tier_state(w, 2)])
 	row.append_array(PackedStringArray([m.player.skill_b, " | ".join(PackedStringArray(m.course_log)), kv(m.player.syn), str(m.player.course_pts),
 		str(Profile.crew_lvl(m.cls_id)), str(int(m.meta_award.get("xp_add", 0))), str(Profile.parts()), kv(Profile.nodes_of(m.cls_id)),
-		str(Profile.plane2(m.cls_id)), ",".join(PackedStringArray(Profile.cls(m.cls_id)["perks"])), " ".join(wb), str(Tuning.g("meta_k"))]))
+		str(Profile.tier(m.cls_id)), ",".join(PackedStringArray(Profile.cls(m.cls_id)["perks"])), " ".join(wb), str(Tuning.g("meta_k"))]))
 	m.tele.v["xp_continue"] = float(m.meta_award.get("xp_continue", 0))
 	row.append(Telemetry.LOG_VER)
 	row.append_array(m.tele.row(m))
