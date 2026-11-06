@@ -19,7 +19,7 @@ Moved out of `CLAUDE.md` on 2026-10-23 so that every thread doesn't load them. C
 - Do it yourself / automate first; ask Kanta last (Kanta, 2026-10-20).
 - One thread per system; at most 6 strong-model (Opus) threads at once (Kanta, 2026-10-25).
 - Daily stand-up 17:00 MSK; weekly owner checklist (`docs/owner-checklist/`) and Friday review.
-- Models: strong for code, game design, 3D; lighter for statuses, docs, builds. Claude picks and says which. Long processes in background, heavy work during the day.
+- Models: strong for code, game design, 3D; lighter for statuses, docs, builds. Claude picks and says which. Weapons, damage and upgrade work starts on Opus; Fable only for story and texts (its safety filter stopped weapon-upgrade work twice on 31.10; Kanta 2026-11-06, R-33). Long processes in background, heavy work during the day.
 - Marketing: posts from the approved weekly plan go out at 12:00 MSK unless Kanta writes «стоп» by 11:00; texts in Kanta's own voice (devlog, opinions, replies to people) still need «ок» (Kanta, 2026-10-31, R-19).
 - Second opinions (GPT, Gemini) are advice: parsed point by point, Kanta decides.
 

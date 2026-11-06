@@ -225,7 +225,7 @@ evenings to a filter. From Kanta: «да».
 
 **Kanta 06.11.2026 (20:16 MSK):** 1 «Да, проверь где узкое место и устрани его» (R-26); 2 «не критично» — not adopted (R-27);
 3 «Согласен» (R-28, rule changed); 4 «Запускай» (R-29); 5 «Ок» (R-30); 6 «Да, делай» (R-31); 7 «Да» (R-32);
-8 «Почему?» — answered in the thread, decision pending (R-33). Journal line 06.11 in `docs/game-context.md`.
+8 «Почему?» — answered in the thread, then «Ок» (R-33). Journal line 06.11 in `docs/game-context.md`.
 
 Bottleneck for №1 (measured 06.11 from the cloud): Cloudflare upload ~10 MB/s, Google storage ~18 MB/s, Yandex Disk direct
 PUT 0.25–0.6 MB/s with a 502 at ~30 s on 8 MB and 20 MB files; Disk «upload by URL» pulled a 50 MB test file in seconds.
