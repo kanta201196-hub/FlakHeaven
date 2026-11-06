@@ -324,6 +324,15 @@ Thread «Улучшить эффекты боя» (Kanta 24.10, variant 2). Plan
 | E-09 | Особенность биома «Шквал»: грозовой фронт с ветром (снос самолёта и пуль) и молниями по отмеченным кругам, бьёт и по врагам | Второй биом | идея |
 | E-04 | Каталог моделей Архипелага: список и план — `docs/biome2/models-plan.md`; ждём референсы Kanta, ответы 1–4 и команду на старт | Второй биом → Kanta | ждёт Kanta |
 | E-06 | Модели Блендером кодом: суда конвоя, береговая батарея, РЛС, маяк, причал, волнорез, буи, лодки, домики, остовы на мели (часть — в S8-A1…A3) | 3D-модели по плану Kirill | идея (после E-04, тред на паузе) |
+| B2-Q00 | Kanta 06.11: Archipelago back in work. Quality bar from the Highlands in one doc — `docs/standards/art-quality-bar.md` | Запустить второй биом Архипелаг | готово 06.11 |
+| B2-Q01 | `SeaProps.plan()` reads const Arrays on worker threads (same race as #488) → packed arrays, warmed on the main thread | Запустить второй биом Архипелаг | в работе |
+| B2-Q02 | All 41 scenery props: add normal + ORM (roughness) maps with wear, grime, salt (rule S3) | Запустить второй биом Архипелаг | в работе |
+| B2-Q03 | Replace floating battery `e_ship_battery` (box barge, flat disc turrets, no textures) | Запустить второй биом Архипелаг | идея |
+| B2-Q04 | Replace shore cliffs `a31_cliff_a`, `a33_rock` («inflated balls») with layered limestone | Запустить второй биом Архипелаг | идея |
+| B2-Q05 | Replace radar mast `a03` (404 tris) and terrace wall `a21` (box with painted stone) | Запустить второй биом Архипелаг | идея |
+| B2-Q06 | Improve cruiser «Сторож»: real main turrets, armour belt | Запустить второй биом Архипелаг | идея |
+| B2-Q07 | Improve trees `a37_pine_b` (100-tri card), `a38_tree_leaf`; coastal gun `a01` | Запустить второй биом Архипелаг | идея |
+| B2-Q08 | Improve landing barge, «Крачка», seaplane, tanker, bulk carrier, wrecks `a26`/`a27`; «Левиафан» launcher/ZSU stripes, hull per-part wear bake | Запустить второй биом Архипелаг | идея |
 | E-02 | Объём раннего доступа: 2 биома, 18 перков, 8–9 видов оружия (вместо 3 / 36 / 12) — на решение | продюсер → Kanta | ждёт Kanta |
 
 Отзывы по сборке 3.5-s8 для E-07, E-08, E-10, E-14 (враги, «Левиафан», кампания, берег и суда) — ждём ответов внешних тестеров; строки в архиве.
