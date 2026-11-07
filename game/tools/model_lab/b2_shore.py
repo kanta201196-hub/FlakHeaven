@@ -1331,9 +1331,12 @@ def a04_lighthouse(scenery, src):
     L.smooth([b for b in o if b.name in ('dome', 'vent_ball')], 60)
     # домик смотрителя и двор с оградой
     house_parts(o, 10.5, 0.0, 8.0, 6.0, 1, 'gable', (0.57, 0.50, 0.39), 41, shutters=(0.32, 0.40, 0.44), door_side='n')
-    yard = L.flat('yard', (0.46, 0.41, 0.32), 1.0)
+    yard = L.flat('yard', (0.62, 0.56, 0.44), 1.0)
     # (07.11, Kanta: the yard fence read as loose sticks with open corners and a missing side) a closed
     # dry-stone yard: the walls meet with overlapping corners, the west wall runs behind the tower, a gate east
+    # the yard is a stone terrace: on a slope the game seats it at the highest corner (SeaProps._cape) and its
+    # dry-stone face shows on the low side; the top is trodden, dusty earth
+    o.append(L.box((6.35, 0, -1.4), (26.2, 14.8, 2.9), L.flat('drystone', LIME, 1.0), 'terrace'))
     o.append(L.box((6.3, 0, 0.04), (25.4, 14.0, 0.08), yard, 'yard'))
     th = 0.6
     for y in (6.8, -6.8):
@@ -1364,6 +1367,9 @@ def a04_lighthouse(scenery, src):
                 c = weather(c, p, nn, seed=44, stain=0.16, streak=0.30, grime_h=3.0, grime=0.5)
                 top = p[:, 2] > glass_top - 0.1
                 c = np.where(top[:, None], weather(col((0.60, 0.20, 0.16), len(p)), p, nn, seed=45, streak=0.1, grime=0), c)
+                # the source's flagstone base plate read as a paved yard; the yard is trodden earth up to the tower
+                foot = (nn[:, 2] > 0.9) & (p[:, 2] < 0.6)
+                c = np.where(foot[:, None], f_earth(50)(col((0.62, 0.56, 0.44), len(p)), p, nn), c)
                 out[sel] = c
             elif nm.startswith('railings'):
                 out[sel] = weather(col((0.20, 0.19, 0.18), len(p)), p, nn, seed=46, grime=0)

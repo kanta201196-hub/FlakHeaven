@@ -314,7 +314,9 @@ def layers(P, N, Bd, AO, glass, src, srough, rec, texel):
     rough = rough * (1 - bare) + 0.6 * bare    # worn, oxidised metal: dull, so it never mirrors the sky
     metal = 0.35 * bare * (1.0 if kind == "air" else 0.8)
     # --- relief: seams sunk, chips sunk a little below the paint, fine orange-peel
-    height = -0.5 * sm - 0.35 * primer + 0.08 * (fbm(Pm, 30.0, seed + 14, 2) - 0.5)
+    # kinds without panel seams (seam 0: plaster, stone, rock, plants) get no sunk seam grid either; it read as
+    # paving on yards and plaster walls
+    height = -0.5 * sm * (rec.get("seam", 1.0) > 0) - 0.35 * primer + 0.08 * (fbm(Pm, 30.0, seed + 14, 2) - 0.5)
     return np.clip(col, 0, 1), np.clip(rough, 0.05, 1), np.clip(metal, 0, 1), height
 
 

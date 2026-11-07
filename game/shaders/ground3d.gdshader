@@ -517,11 +517,15 @@ void fragment() {
 				// width varies along the coast (a gentle wide flat here, a quick drop there) and big patches of
 				// shoal and hollow break the contours; the first px at the edge keep the plain depth
 				float shelf = arch_shelf(world);
-				float dsh = pow(dp0, mix(0.8, 1.5, shelf));   // gentler than 0.55…1.7: no quick drop right off the beach
-				// the drop-off line meanders across the shelf (mid-scale noise), so on a straight beach the edge of
-				// the turquoise is not a ruler line parallel to it
-				float patch = (big - 0.5) * 0.6 + (vnoise(wq / 150.0 + 23.0) - 0.5) * 0.32 + (vnoise(wq / 60.0 - 5.0) - 0.5) * 0.1;
-				dp = clamp(dsh + patch * smoothstep(0.03, 0.2, dp0), 0.0, 1.0);
+				// B2-Q12 (Kanta 07.11 evening: the shelf edge still a hard line, the shelf too wide even far from
+				// shore): depth now runs linear in the distance to shore (the ease in terrain3d.gd is undone), so it
+				// has no steep start and flat plateau whose meeting drew the line; a little steeper on rocky coasts
+				// (narrow shelf) than in coves. The patch noise is weak and fades out at sea, so no pale shoals
+				// rise in the middle of the strait
+				float lin = 1.0 - sqrt(max(1.0 - dp0, 0.0));
+				float dsh = pow(lin, mix(0.6, 0.85, shelf));
+				float patch = (big - 0.5) * 0.24 + (vnoise(wq / 150.0 + 23.0) - 0.5) * 0.12;
+				dp = clamp(dsh + patch * smoothstep(0.03, 0.25, lin) * (1.0 - 0.6 * lin), 0.0, 1.0);
 			}
 			vec3 sh = SRGB(vec3(0.4, 0.66, 0.6)), md = SRGB(vec3(0.13, 0.4, 0.47)), dpc = SRGB(vec3(0.06, 0.2, 0.3));
 			wc = mix(sh, md, smoothstep(0.03, 0.3, dp));
@@ -547,10 +551,12 @@ void fragment() {
 					// B2-Q10 (Kanta 07.11: «вода всё ещё резко переходит из цвета в цвет… ровным градиентом, от менее
 					// насыщенного бирюзового»): one even ramp over the whole depth, muted turquoise → teal → deep blue,
 					// linear in depth (two overlapping smoothsteps bunched the change into a band)
-					float dz = clamp(dp * 0.85 + big * 0.15, 0.0, 1.0);
-					float tz = smoothstep(0.0, 1.0, dz);
+					// B2-Q12: two wide overlapping blends (pale → teal over the first half, teal → deep over almost the
+					// whole depth): the turquoise stays by the shore and melts into the blue with no edge
+					float dz = clamp(dp * 0.9 + (big - 0.5) * 0.1, 0.0, 1.0);
 					vec3 sa = SRGB(vec3(0.42, 0.6, 0.58)), sm = SRGB(vec3(0.2, 0.43, 0.5)), sd = SRGB(vec3(0.09, 0.26, 0.39));
-					wc = tz < 0.5 ? mix(sa, sm, tz * 2.0) : mix(sm, sd, tz * 2.0 - 1.0);
+					wc = mix(sa, sm, smoothstep(-0.05, 0.45, dz));
+					wc = mix(wc, sd, smoothstep(0.1, 1.0, dz));
 					wc *= 0.97 + 0.05 * vnoise(wq / 90.0 + 11.0);
 				}
 			}
@@ -589,7 +595,7 @@ void fragment() {
 					}
 					if (arch_detail) {   // muted bed, fading out over the whole shelf instead of the first third
 						bed = mix(bed, vec3(dot(bed, vec3(0.333))), 0.3);
-						wc = mix(bed, wc, smoothstep(0.0, 0.9, dp) * 0.8 + 0.2);
+						wc = mix(bed, wc, smoothstep(0.0, 0.4, dp) * 0.82 + 0.18);   // B2-Q12: the bed shows on the narrow shelf only
 					} else
 					wc = mix(bed, wc, smoothstep(0.0, water_v2 ? 0.7 : 0.45, dp0) * 0.75 + 0.25);   // B2-Q10: bed fades by the varied depth   // W-01: дно гаснет плавнее
 				} else {
