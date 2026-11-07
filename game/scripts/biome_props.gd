@@ -169,6 +169,10 @@ func _init(terrain: Terrain3D) -> void:
 ## Mesh the MultiMesh of a kind draws: tree cards below "Max", the decimated copy for
 ## LOW_POLY kinds, otherwise the full model (null when the model file is missing)
 func _mesh(kind: String) -> Mesh:
+	if kind == SeaProps.FOAM_KIND:
+		if not _meshes.has(kind):
+			_meshes[kind] = _foam_disc()
+		return _meshes[kind]
 	if LOW_POLY.has(kind):
 		return _low_poly(kind)
 	if LITE.has(kind) and Settings.gopt("props") < Settings.GFX_MAX:
@@ -177,6 +181,17 @@ func _mesh(kind: String) -> Mesh:
 			_meshes[lk] = _lite_tree(kind)
 		return _meshes[lk]
 	return _full_mesh(kind)
+
+
+## B2-Q08: the contact-foam disc SeaProps puts under boats, wrecks and rocks in the water: diameter 1 in X/Z at
+## y = 0, drawn with shaders/contact_foam.gdshader (dark waterline band and torn foam ring by the UV radius).
+func _foam_disc() -> Mesh:
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(1.0, 1.0)
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/contact_foam.gdshader")
+	pm.material = mat
+	return pm
 
 
 ## Mesh of a tree kind (LITE) as the biome draws it on the current preset: the full model on "Max", the
@@ -580,6 +595,8 @@ func _clear_wrecks(put: Dictionary, key: Vector2i, ctx: Dictionary) -> void:
 ## Модели в сцену (главный поток): каждый вид — один MultiMesh
 func apply(put: Dictionary, parent: Node3D) -> void:
 	for kind in put:
+		if kind == SeaProps.FOAM_KIND and Tuning.g("arch_detail") < 1.0:
+			continue   # R-22 toggle off: the old look without contact foam
 		var mesh := _mesh(kind)
 		if mesh == null:
 			continue
@@ -596,7 +613,7 @@ func apply(put: Dictionary, parent: Node3D) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.name = kind
-		var small: bool = kind in ["shrub", "bush", "boulders_b", "boulders_c", "poplar", "orchard"] or kind in SeaProps.SMALL
+		var small: bool = kind in ["shrub", "bush", "boulders_b", "boulders_c", "poplar", "orchard"] or kind in SeaProps.SMALL or kind == SeaProps.FOAM_KIND
 		# 3.5 (правка 7): «Низкое» — модели биома без теней (вдвое меньше вызовов отрисовки), «Среднее» — мелкие без теней
 		# bushes never cast shadows: 8.6k-triangle leaf cards, 20–30 per oasis, too small to need them
 		var no_shadow: bool = kind == "bush" or Settings.gopt("props") == 0 or (Settings.gopt("props") == 1 and small)

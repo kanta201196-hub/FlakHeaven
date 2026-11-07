@@ -18,7 +18,8 @@ Kinds (the `kind` of enemy_weather.layers, plus how much of each layer):
 Real size: the model is 1 long; its length in metres comes from SeaProps.KINDS (width px / 6 px per metre,
 docs/biome2/models-pipeline.md), so chips and streaks keep a real size.
 
-Not here: a37_pine_b and a38_tree_leaf (alpha cut-out cards, they are replaced instead, backlog B2-Q07);
+Not here: a34_olive_a, a35_olive_b, a36_pine_a, a37_pine_b and a38_tree_leaf (alpha cut-out cards, built by
+biome_flora.py with their own maps, backlog B2-Q07 and B2-Q08);
 a32_cliff_b is not placed (Kanta 19.10); a31_cliff_a and a33_rock are rebuilt with their own maps by shore_cliffs.py (B2-Q04).
 
 Run from the repo root (bpy 5.2 module, numpy, Pillow, scipy):
@@ -66,7 +67,6 @@ PROPS = {
     "a22_buoy_red": ("sea", 512), "a23_buoy_green": ("sea", 512), "a24_boat_a": ("sea", 1024),
     "a25_boat_b": ("sea", 1024), "a26_wreck_a": ("sea", 1024), "a27_wreck_b": ("sea", 1024),
     "a28_wreck_plane_sea": ("sea", 1024), "a29_hedgehog": ("metal", 512), "a30_boom_net": ("sea", 512),
-    "a34_olive_a": ("plant", 512), "a35_olive_b": ("plant", 512), "a36_pine_a": ("plant", 512),
     "a39_reed": ("plant", 256), "a40_shrub": ("plant", 512),
 }
 for _i in range(1, 9):

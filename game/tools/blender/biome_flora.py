@@ -18,6 +18,7 @@
 в нуле, наибольший размер в плане = 1 — игра масштабирует под ширину в пикселях (biome_props.gd).
 
   cypress, broadleaf — Archipelago trees a37_pine_b and a38_tree_leaf (biome 2, B2-Q07), same build.
+  olive_a, olive_b, stone_pine — a34_olive_a, a35_olive_b, a36_pine_a (B2-Q08, crowns were balls).
 Запуск (bpy 5.x): python3 biome_flora.py <папка вывода> [orchard] [shrub] [sandbag] [poplar] [cypress] [broadleaf]
   → <папка>/b05_orchard_tree.glb, b06_shrub.glb, b10_sandbag_post.glb, b04_poplar.glb (+ .blend в $FH_SRC, если задан)
 Облегчённое дерево («карточки») после этого: tools/model_lab/bake_impostor.gd (см. его шапку)."""
@@ -654,6 +655,109 @@ def broadleaf():
     normalize_export(ob, "a38_tree_leaf")
 
 
+def olive(name, seed, lean_k=1.0, stems=2):
+    """Olive «a34_olive_a» / «a35_olive_b» (Kanta 07.11, close-up № 3: the crowns were balls). An old island
+    olive: a short, thick trunk twisted and split into two or three gnarled stems that lean apart, open limbs and
+    a low broad irregular crown of separate silvery grey-green clumps with gaps (sky and ground show through,
+    limbs visible inside). ~6 m high, ~7 m crown; the orchard tree's build."""
+    reset()
+    rng = np.random.default_rng(seed)
+    B = Builder()
+    bark_c, bark_n = T.bark(name + "_bark", seed + 1, base=(0.38, 0.35, 0.31))
+    leaf_c, leaf_n = T.leaves(name + "_leaves", seed + 2, n_leaf=190, leaf_len=(0.12, 0.17), width=0.28,
+                              base=(0.42, 0.47, 0.4), dry=(0.52, 0.54, 0.47), dry_share=0.15, var=0.05)
+    m_bark = material(name + "_bark", bark_c, bark_n, nstrength=1.5)
+    m_leaf = material(name + "_leaves", leaf_c, leaf_n, alpha=True, nstrength=0.8)
+    white = srgb((1.0, 1.0, 1.0))
+    clumps = []
+    a0 = rng.uniform(0, math.tau)
+    for s in range(stems):
+        a = a0 + math.tau * s / stems + rng.uniform(-0.3, 0.3)
+        lean = Vector((math.cos(a) * 0.22 * lean_k, math.sin(a) * 0.22 * lean_k, 1)).normalized()
+        tr = [Vector((math.cos(a) * 0.12, math.sin(a) * 0.12, -0.05))]
+        for i in range(1, 6):
+            tw = Vector((math.sin(i * 1.7 + s) * 0.12, math.cos(i * 1.3 + s) * 0.12, 0))
+            tr.append(tr[-1] + lean * 0.36 + tw)
+        r0 = 0.42 if stems == 1 else 0.3
+        B.sweep(tr, [r0 * 1.25, r0, r0 * 0.85, r0 * 0.8, r0 * 0.72, r0 * 0.62], white, 0, sides=10, cap=False, wobble=0.22, seed=float(s + seed))
+        top = tr[-1]
+        for i in range(6 - stems):
+            aa = a + math.tau * i / (6 - stems) + rng.uniform(-0.4, 0.4)
+            el = math.radians(rng.uniform(25, 45))
+            d = Vector((math.cos(aa) * math.cos(el), math.sin(aa) * math.cos(el), math.sin(el)))
+            p = branch(B, top - lean * rng.uniform(0.0, 0.5), d, rng.uniform(1.4, 2.0), 0.14, 0.05, white, 0, rng,
+                       segs=5, curve=0.15, sides=7)
+            for k0, side in ((2, -1), (3, 1), (5, 0)):
+                dd = (p[k0] - p[k0 - 1]).normalized()
+                d2 = (Matrix.Rotation(side * rng.uniform(0.5, 0.9), 3, "Z") @ dd + Vector((0, 0, 0.1))).normalized()
+                p2 = branch(B, p[k0], d2, rng.uniform(0.7, 1.2), 0.06, 0.02, white, 0, rng, segs=3, curve=-0.1, sides=5)
+                # separate clumps, some drooping below the limb: an open, uneven crown
+                clumps.append((p2[-1] + Vector((0, 0, rng.uniform(-0.15, 0.2))), rng.uniform(0.55, 0.8)))
+                if rng.random() < 0.6:
+                    clumps.append((p2[1] + Vector((0, 0, rng.uniform(-0.2, 0.1))), rng.uniform(0.4, 0.6)))
+    xs = [c for c, r in clumps]
+    cc = sum(xs, Vector()) / len(xs)
+    # fill the middle of the crown with a few clumps over the forks: one irregular crown with gaps, not a «V»
+    for i in range(7):
+        aa = math.tau * i / 7 + rng.uniform(-0.3, 0.3)
+        rr = rng.uniform(0.3, 1.6)
+        clumps.append((cc + Vector((math.cos(aa) * rr, math.sin(aa) * rr, rng.uniform(0.1, 0.6))), rng.uniform(0.6, 0.85)))
+    cc.z -= 0.3
+    foliage(B, rng, clumps, cc, (3.0, 3.0, 1.5), 0.5, 1, 30, dry_share=0.12, dark=0.4, tint=1.0)
+    ob = B.finish(name, [m_bark, m_leaf])
+    normalize_export(ob, name)
+
+
+def stone_pine():
+    """Stone pine «a36_pine_a» (Kanta 07.11, close-up № 3: the crown was a ball). The umbrella pine of the island
+    coasts: a tall bare trunk with a slight lean that forks high into several limbs spreading almost flat, a
+    flat-topped broad canopy of dense dark needle tufts in separate pads with gaps, the underside in shade.
+    ~13 m high, ~11 m crown."""
+    reset()
+    rng = np.random.default_rng(71)
+    B = Builder()
+    bark_c, bark_n = T.bark("stone_pine_bark", 73, base=(0.45, 0.33, 0.25))
+    leaf_c, leaf_n = T.leaves("stone_pine_needles", 75, n_leaf=260, leaf_len=(0.2, 0.28), width=0.12,
+                              base=(0.2, 0.3, 0.16), dry=(0.4, 0.38, 0.22), dry_share=0.06, var=0.05)
+    m_bark = material("stone_pine_bark", bark_c, bark_n, nstrength=1.4)
+    m_leaf = material("stone_pine_needles", leaf_c, leaf_n, alpha=True, nstrength=0.8)
+    white = srgb((1.0, 1.0, 1.0))
+    lean = Vector((0.12, -0.05, 1)).normalized()
+    tr = [Vector((0, 0, -0.05))]
+    for i in range(1, 9):
+        tr.append(tr[-1] + lean * 1.1 + Vector((math.sin(i * 1.1) * 0.08, math.cos(i * 0.9) * 0.08, 0)))
+    B.sweep(tr, [0.42, 0.34, 0.31, 0.29, 0.27, 0.25, 0.23, 0.21, 0.19], white, 0, sides=10, cap=False, wobble=0.1, seed=7.0)
+    top = tr[-1]
+    clumps = []
+    a0 = rng.uniform(0, math.tau)
+    for i in range(6):
+        a = a0 + math.tau * i / 6 + rng.uniform(-0.25, 0.25)
+        el = math.radians(rng.uniform(25, 40))
+        d = Vector((math.cos(a) * math.cos(el), math.sin(a) * math.cos(el), math.sin(el)))
+        p = branch(B, top - lean * rng.uniform(0.0, 1.2), d, rng.uniform(3.0, 4.2), 0.16, 0.07, white, 0, rng,
+                   segs=5, curve=-0.25, sides=7)
+        for k0, side in ((2, -1), (3, 1), (4, -1), (5, 1)):
+            dd = (p[k0] - p[k0 - 1]).normalized()
+            d2 = (Matrix.Rotation(side * rng.uniform(0.6, 1.0), 3, "Z") @ dd + Vector((0, 0, 0.25))).normalized()
+            p2 = branch(B, p[k0], d2, rng.uniform(0.9, 1.5), 0.06, 0.02, white, 0, rng, segs=3, curve=0.3, sides=5)
+            clumps.append((p2[-1] + Vector((0, 0, 0.25)), rng.uniform(0.75, 1.0)))
+    tc = sum((c for c, r in clumps), Vector()) / len(clumps)
+    for i in range(6):   # fill the gap over the fork
+        aa = math.tau * i / 6 + rng.uniform(-0.3, 0.3)
+        clumps.append((Vector((tc.x + math.cos(aa) * 1.2, tc.y + math.sin(aa) * 1.2, tc.z)), 0.9))
+    zt = max(c.z for c, r in clumps)
+    # flat top: clumps pulled to a common height band, the canopy a flattened dome
+    clumps = [(Vector((c.x, c.y, zt - 0.35 * (Vector((c.x, c.y, 0)).length / 5.0) ** 2 + rng.uniform(-0.25, 0.15))), r)
+              for c, r in clumps]
+    xs = [c for c, r in clumps]
+    cc = sum(xs, Vector()) / len(xs)
+    cc.z -= 0.6
+    foliage(B, rng, clumps, cc, (5.5, 5.5, 1.0), 0.75, 1, 34, dry_share=0.05, dark=0.3, tint=0.88)
+    ob = B.finish("a36_pine_a", [m_bark, m_leaf])
+    normalize_export(ob, "a36_pine_a")
+
+
 for k in ONLY:
     {"orchard": orchard, "shrub": shrub, "sandbag": sandbag, "poplar": poplar, "cypress": cypress,
-     "broadleaf": broadleaf}[k]()
+     "broadleaf": broadleaf, "olive_a": lambda: olive("a34_olive_a", 81, 1.0, 2),
+     "olive_b": lambda: olive("a35_olive_b", 91, 0.6, 3), "stone_pine": stone_pine}[k]()

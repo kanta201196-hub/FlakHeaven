@@ -605,10 +605,12 @@ def _gun_site(broken):
     o += [L.cyl((0, 0, 0.55), 1.0, 0.6, iron, 'pedestal', seg=24),
           L.cyl((0, 0, 0.95), 2.0, 0.22, gun, 'turntable', seg=36)]
     z0, z1 = 1.06, 2.95
-    front = [(1.55, -1.55, z0), (1.55, 1.55, z0), (0.95, 1.3, z1), (0.95, -1.3, z1)]
-    roof = [(0.95, -1.3, z1), (0.95, 1.3, z1), (-2.0, 1.36, z1 - 0.05), (-2.0, -1.36, z1 - 0.05)]
-    side_l = [(-2.0, 1.55, z0), (1.55, 1.55, z0), (0.95, 1.3, z1), (-2.0, 1.36, z1 - 0.05)]
-    side_r = [(1.55, -1.55, z0), (-2.0, -1.55, z0), (-2.0, -1.36, z1 - 0.05), (0.95, -1.3, z1)]
+    # B2-Q08: a wedge, not a cube — the front plate leans back steeply and narrows to the top, the roof falls
+    # towards the open rear, the sides taper
+    front = [(1.75, -1.55, z0), (1.75, 1.55, z0), (0.5, 1.08, z1), (0.5, -1.08, z1)]
+    roof = [(0.5, -1.08, z1), (0.5, 1.08, z1), (-2.0, 1.28, z1 - 0.3), (-2.0, -1.28, z1 - 0.3)]
+    side_l = [(-2.0, 1.55, z0), (1.75, 1.55, z0), (0.5, 1.08, z1), (-2.0, 1.28, z1 - 0.3)]
+    side_r = [(1.75, -1.55, z0), (-2.0, -1.55, z0), (-2.0, -1.28, z1 - 0.3), (0.5, -1.08, z1)]
     pf = plate(front, 0.09, gun, 'shield_front'); pr = plate(roof, 0.07, gun, 'shield_roof')
     pl = plate(side_l, 0.07, gun, 'shield_side'); pr2 = plate(side_r, 0.07, gun, 'shield_side')
     breech = L.box((-0.4, 0, 1.95), (1.6, 0.7, 0.6), iron, 'breech')
@@ -620,9 +622,29 @@ def _gun_site(broken):
                   L.cyl((7.6, 0, 0), 0.165, 0.32, gun, 'muzzle', seg=16, axis='X'),
                   L.cyl((1.35, 0, 0), 0.34, 0.9, gun, 'mantlet', seg=16, axis='X'),
                   L.cyl((1.5, 0, -0.28), 0.12, 1.8, iron, 'recoil', seg=10, axis='X')]
+        # B2-Q08 (Kanta 07.11, close-up № 8: «серо-зелёная коробка с трубой, мелко для такого места»): muzzle
+        # brake, twin recoil cylinders over the barrel, the shield's lower skirt, rivet strips on its edges,
+        # handwheels and the crew platform behind; then the whole mount is 1.45× bigger, so the gun fills the pit
+        # and its barrel reaches past the parapet as on a real battery
+        barrel += [L.cyl((7.95, 0, 0), 0.24, 0.5, iron, 'muzzle_brake', seg=16, axis='X'),
+                   L.cyl((1.7, 0, 0.3), 0.09, 1.9, iron, 'recoil', seg=10, axis='X'),
+                   L.cyl((1.7, 0.22, 0.3), 0.09, 1.9, iron, 'recoil', seg=10, axis='X')]
         for b in barrel:
             b.data.transform(Matrix.Translation((0, 0, 2.0)) @ el)
-        o += [pf, pr, pl, pr2, breech, cradle] + sight + barrel
+        extra = [plate([(1.95, -1.6, 0.98), (1.95, 1.6, 0.98), (1.75, 1.55, z0 + 0.02), (1.75, -1.55, z0 + 0.02)], 0.07, gun, 'shield_skirt'),
+                 L.box((-2.6, 0, 1.12), (1.3, 2.6, 0.08), iron, 'platform'),
+                 L.cyl((0.0, 0.62, 1.55), 0.22, 0.05, iron, 'handwheel', seg=12, axis='Y'),
+                 L.cyl((-0.4, -0.62, 1.55), 0.22, 0.05, iron, 'handwheel', seg=12, axis='Y')]
+        for (a, b2) in ((front[0], front[3]), (front[1], front[2]), (front[3], front[2]), (roof[2], roof[3])):
+            a, b2 = Vector(a), Vector(b2)
+            mid = (a + b2) / 2; dv = b2 - a
+            strip = L.box((0, 0, 0), (dv.length, 0.1, 0.05), iron, 'rivets')
+            strip.data.transform(Matrix.Translation(mid) @ dv.to_track_quat('X', 'Z').to_matrix().to_4x4())
+            extra.append(strip)
+        mount = [pf, pr, pl, pr2, breech, cradle] + sight + barrel + extra
+        for b in mount + [b for b in o if b.name.startswith(('pedestal', 'turntable'))]:
+            b.data.transform(Matrix.Scale(GUN_K, 4))
+        o += mount
     else:
         # щит разворочен: крыша сорвана и лежит у бруствера, левый борт отогнут наружу, верх рваный
         tear(pf, (0, 0, 1), 0.9, seed=3)
@@ -743,7 +765,8 @@ def finish_ref(ob, out, ref, **kw):
     L.finish([ob], out, length=(mx.x - mn.x) / ref, fit='x', **kw)
 
 
-GUN_REF = 13.95   # длина целого орудия по X (бруствер 13,6 м + дульный срез), м
+GUN_REF = 13.95   # scale reference: 1 = 13.95 m (the parapet's 13.6 m + a margin), the same for the broken site
+GUN_K = 1.45      # B2-Q08: the intact mount is this much bigger than the broken one's (barrel past the parapet)
 
 
 def a01_battery_gun(scenery, src=None):
@@ -932,8 +955,11 @@ def a02_bunker_coast(scenery, src=None):
         c = weather(b, P, N, seed=30, stain=0.25, grain=0.14, streak=0.0, grime=0.0, dust=0.0)
         grass = np.clip((fbm(P, 0.22, 4, 31) - 0.12) * 2.6, 0, 1) * np.clip(N[:, 2] * 1.3, 0, 1)
         tuft = 0.8 + 0.4 * vnoise(P, 3.5, 32)
-        c = mix(c, col((0.31, 0.41, 0.18), n) * tuft[:, None], 0.95 * grass)        # трава Архипелага (как у земли рельефа; насыщенность с запасом на natural())
-        c = mix(c, col((0.39, 0.45, 0.22), n) * tuft[:, None], 0.5 * grass * np.clip((fbm(P, 0.5, 3, 33) - 0.5) * 3, 0, 1))
+        # B2-Q08 (Kanta 07.11, close-up № 9: «ярко-зелёная буханка, зелень как краска»): summer island turf —
+        # dry olive-straw grass with darker green tufts and moss in patches, bare earth showing through
+        c = mix(c, col((0.45, 0.43, 0.27), n) * tuft[:, None], 0.8 * grass)
+        c = mix(c, col((0.29, 0.34, 0.19), n) * tuft[:, None], 0.55 * grass * np.clip((fbm(P, 0.5, 3, 33) - 0.5) * 3, 0, 1))
+        c = mix(c, col(DIRT, n), 0.35 * np.clip((fbm(P, 0.9, 3, 36) - 0.55) * 4, 0, 1))
         steep = np.clip((0.75 - N[:, 2]) * 3, 0, 1)                                    # осыпи на крутых местах — голая земля
         c = mix(c, col(DIRT, n) * (0.9 + 0.2 * vnoise(P, 2.0, 34))[:, None], 0.6 * steep)
         st = np.clip((vnoise(P, 2.4, 35) - 0.82) * 8, 0, 1)
@@ -1772,43 +1798,130 @@ def a29_hedgehog(scenery, src):
     _scan(scenery, src, 'a29_hedgehog', 'M-5_hedgehog.glb', sh, 900, place={'length': 2.0}, size=512)
 
 
-def a26_wreck_a(scenery, src):
-    """Остов катера на мели 30 м: ржавый металл и тёмное дерево вместо белых пятен скана, мокрый низ с водорослями."""
-    def pre(o):
-        P = np.array([tuple(v.co) for ob in o for v in ob.data.vertices])
-        A = np.c_[P[:, 0], P[:, 1], np.ones(len(P))]
-        k = np.linalg.lstsq(A, P[:, 2], rcond=None)[0]
-        o = L.kill_faces(o, lambda c, n: c.z - (k[0] * c.x + k[1] * c.y + k[2]) < 0.7)   # песчаное дно скана
-        o = L.kill_parts(o, lambda mn, mx, n: n < 60)
-        L.place(o)
-        L.xform(o, Matrix.Translation((0, 0, -0.6)))
-        return o
-
-    def sh(base, P, N, M, names):
+def _wreck_shade(seed, paint, z_wet):
+    """Wreck surface: faded paint over rust (rust wins on top edges and in runs down the plating), dark wet band
+    and weed at the waterline, the open holds and the hull inside darker."""
+    def f(b, P, N):
         n = len(P)
-        l = np.clip(lum_norm(base), 0.4, 1.3) ** 0.8
-        c = mix(col((0.40, 0.31, 0.24), n), col((0.30, 0.27, 0.24), n), fbm(P, 0.5, 3, 171)) * l[:, None]
-        c = mix(c, col(RUST, n) * 1.1, 0.5 * np.clip((fbm(P, 1.2, 4, 172) - 0.5) * 3, 0, 1))
-        c = weather(c, P, N, seed=173, stain=0.2, streak=0.25, grime=0.0, dust=0.0)
-        return waterline(c, P, 0.6, 0.3)
-    _scan(scenery, src, 'a26_wreck_a', 'M-3a_wreck_small.glb', sh, 7000, place={'length': 30}, pre=pre)
+        c = col(paint, n) * (0.85 + 0.3 * fbm(P, 0.6, 3, seed))[:, None]
+        rust = np.clip((fbm(P * np.array([1, 1, 0.3]), 0.9, 4, seed + 1) - 0.42) * 2.6, 0, 1)
+        c = mix(c, col(RUST, n) * (0.8 + 0.4 * vnoise(P, 3.0, seed + 2))[:, None], 0.8 * rust)
+        c = weather(c, P, N, seed=seed + 3, stain=0.2, streak=0.35, grime=0.0, dust=0.0)
+        return waterline(c, P, z_wet, z_wet * 0.4)
+    return f
 
 
-def a27_wreck_b(scenery, src):
-    """Остов судна 80 м: выгоревшая краска с ржавыми потёками вместо надписей и полос, низ под водой."""
-    def pre(o):
-        L.xform(o, Matrix.Translation((0, 0, -2.5)))
-        return o
+def a26_wreck_a(scenery, src=None):
+    """Landing-barge wreck, 15 m (Kanta 07.11 close-up № 10: the scanned wreck was a flat torn box, nothing
+    readable). Built in code: a flat-bottomed hull whose side plating is torn down to the frames in places, the
+    bow ramp fallen forward into the water, a wheelhouse at the stern with its roof caved in, debris in the well
+    deck. Bow +X, the base a little below the waterline (SeaProps puts it 3 % of its width down)."""
+    L.reset()
+    rng = random.Random(26)
+    hullm = L.flat('hull', (0.33, 0.34, 0.3), 0.9); inner = L.flat('inner', (0.2, 0.19, 0.17), 1.0)
+    iron = L.flat('iron', IRON, 0.9); void = L.flat('void', (0.03, 0.03, 0.03), 1.0)
+    o = []
+    X0, X1, BW, H = -7.5, 5.6, 2.3, 2.1
+    o.append(L.box(((X0 + X1) / 2, 0, 0.25), (X1 - X0, BW * 2, 0.5), inner, 'well_deck'))
+    for sg in (-1, 1):
+        side = plate([(X0, sg * BW, 0.0), (X1, sg * BW, 0.0), (X1, sg * BW, H), (X0, sg * BW, H)], 0.12, hullm, 'side')
+        tear(side, (0, 0, 1), 1.3 if sg > 0 else 0.7, seed=3 + sg, cuts=9)
+        o.append(side)
+        for k in range(10):   # frames: show above the torn plating
+            x = X0 + 0.8 + k * 1.3
+            o.append(L.box((x, sg * (BW - 0.18), H * 0.5 + 0.05), (0.12, 0.22, H + 0.1 - (0.3 if k % 3 else 0.0)), iron, 'frame'))
+        o.append(L.box(((X0 + X1) / 2, sg * (BW - 0.1), H - 0.05), (X1 - X0, 0.3, 0.12), hullm, 'gunwale') if sg < 0 else
+                 L.box((X0 + 2.5, sg * (BW - 0.1), H - 0.05), (5.0, 0.3, 0.12), hullm, 'gunwale'))
+    o.append(plate([(X0, -BW, 0), (X0, BW, 0), (X0, BW, H + 0.3), (X0, -BW, H + 0.3)], 0.15, hullm, 'transom'))
+    # bow ramp, hinged at the bow and fallen forward 25° into the water, its top edge torn
+    ramp = plate([(0, -BW, 0), (0, BW, 0), (4.2, BW, 0), (4.2, -BW, 0)], 0.15, hullm, 'ramp')
+    tear(ramp, (1, 0, 0), 0.6, seed=8, cuts=6)
+    ramp.data.transform(Matrix.Translation((X1, 0, 0.9)) @ Matrix.Rotation(math.radians(25), 4, 'Y'))
+    o.append(ramp)
+    for sg in (-1, 1):   # bow side cheeks
+        o.append(plate([(X1, sg * BW, 0), (X1 + 0.7, sg * (BW - 0.4), 0), (X1 + 0.7, sg * (BW - 0.4), H * 0.7), (X1, sg * BW, H)], 0.1, hullm, 'cheek'))
+    # wheelhouse with a caved-in roof and dark empty windows
+    wx = X0 + 1.6
+    o.append(L.box((wx, 0.3, 1.6), (2.4, 2.6, 2.6), hullm, 'house'))
+    for y in (-0.6, 0.4, 1.2):
+        o.append(L.box((wx + 1.22, y, 2.3), (0.05, 0.5, 0.45), void, 'window'))
+    roof = plate([(wx - 1.3, -1.0, 2.95), (wx + 1.3, -1.0, 2.95), (wx + 1.3, 1.6, 2.95), (wx - 1.3, 1.6, 2.95)], 0.08, hullm, 'roof')
+    tear(roof, (1, 0, 0), 0.8, seed=11, cuts=5)
+    roof.data.transform(Matrix.Translation((wx - 1.3, 0, 2.95)) @ Matrix.Rotation(math.radians(-18), 4, 'Y') @ Matrix.Translation((-(wx - 1.3), 0, -2.95)))
+    o.append(roof)
+    o.append(L.cyl((wx - 0.6, -0.8, 3.6), 0.05, 1.6, iron, 'mast', seg=6))
+    for k in range(7):   # debris in the well deck: crates, a drum, plates
+        x = rng.uniform(X0 + 3.4, X1 - 1.0); y = rng.uniform(-1.6, 1.6)
+        if k % 3 == 0:
+            o.append(L.cyl((x, y, 0.85), 0.3, 0.7, iron, 'drum', seg=10))
+        else:
+            o.append(L.box((x, y, 0.75), (rng.uniform(0.6, 1.1), rng.uniform(0.5, 0.9), 0.5), hullm if k % 2 else inner, 'debris', rz=rng.uniform(0, 3)))
+    chamfer([b for b in o if b.name.startswith(('house', 'gunwale'))], 0.04)
+    sh = by_mat({'hull': _wreck_shade(261, (0.36, 0.37, 0.32), 0.9), 'inner': _wreck_shade(262, (0.26, 0.24, 0.21), 0.9),
+                 'iron': f_paint(263), 'void': lambda b, P, N: b})
+    ob = join_bake(o, sh, 'a26_wreck_a', size=1024)
+    L.finish([ob], scenery('a26_wreck_a'), target=7000, maxtex=1024, fit='xy')
 
-    def sh(base, P, N, M, names):
-        n = len(P)
-        hsv_s = (base.max(1) - base.min(1)) / (base.max(1) + 1e-3)
-        l = np.clip(lum_norm(base), 0.4, 1.3) ** 0.85
-        c = col((0.48, 0.45, 0.40), n) * l[:, None]   # надписи, полосы и белые пятна скана — в одну выгоревшую краску   # надписи и полосы — в краску
-        c = mix(c, col(RUST, n), 0.55 * np.clip((fbm(P * np.array([1, 1, 0.25]), 0.8, 4, 181) - 0.55) * 3, 0, 1))
-        c = weather(c, P, N, seed=182, stain=0.2, streak=0.3, grime=0.0, dust=0.0)
-        return waterline(c, P, 0.8, 0.4)
-    _scan(scenery, src, 'a27_wreck_b', 'M-3b_wreck_ship.glb', sh, 9000, place={'bow': '+y', 'length': 80}, pre=pre)
+
+def a27_wreck_b(scenery, src=None):
+    """Cargo-ship wreck aground, 80 m (Kanta 07.11 close-up № 10: the scan's edges looked chewed). Built in code:
+    a lofted hull broken in two — the bow part lists and its forefoot rides up on the shoal, the stern part has
+    settled lower and turned a little; open holds, the bridge block aft with dark windows, the funnel fallen
+    across the deck, one mast standing and one down, torn plating at the break."""
+    L.reset()
+    rng = random.Random(27)
+    hullm = L.flat('hull', (0.3, 0.3, 0.29), 0.9); deck = L.flat('deck', (0.36, 0.33, 0.29), 0.95)
+    sup = L.flat('sup', (0.55, 0.53, 0.48), 0.9); iron = L.flat('iron', IRON, 0.9); void = L.flat('void', (0.03, 0.03, 0.03), 1.0)
+    B2, H = 5.5, 6.0
+
+    def half_b(x):
+        bow = min(1.0, max(0.0, (40.0 - x) / 14.0)) ** 0.55
+        stern = min(1.0, max(0.0, (x + 40.0) / 5.0)) ** 0.35
+        return max(0.15, B2 * bow * stern)
+
+    def ring(x):
+        b = half_b(x); h = H + 1.4 * max(0.0, x / 40.0) ** 2
+        return [(x, -b * 0.55, 0.0), (x, -b, h * 0.35), (x, -b, h), (x, b, h), (x, b, h * 0.35), (x, b * 0.55, 0.0)]
+
+    o = []
+    fore = L.loft([ring(x) for x in np.linspace(1.0, 40.0, 16)], hullm, 'hull_fore')
+    aft = L.loft([ring(x) for x in np.linspace(-40.0, -2.0, 14)], hullm, 'hull_aft')
+    for part, up in ((fore, (-1, 0, 0)), (aft, (1, 0, 0))):
+        tear(part, up, 2.5, seed=31 if part is fore else 32, cuts=2)
+    parts_fore = [fore]; parts_aft = [aft]
+    for x0, x1 in ((6, 14), (18, 26), (29, 34)):   # open holds on the fore deck
+        zd = H + 1.4 * ((x0 + x1) / 80.0) ** 2
+        xm, w, d = (x0 + x1) / 2, x1 - x0, B2 * 1.1
+        parts_fore.append(L.box((xm, 0, zd + 0.06), (w, d, 0.05), void, 'hold'))
+        for (cx, cy, sx, sy) in ((xm, -d / 2, w + 0.4, 0.2), (xm, d / 2, w + 0.4, 0.2), (x0, 0, 0.2, d), (x1, 0, 0.2, d)):
+            parts_fore.append(L.box((cx, cy, zd + 0.35), (sx, sy, 0.7), deck, 'coaming'))
+    parts_fore.append(L.cyl((20.0, 0, H + 5.0), 0.25, 10.0, iron, 'mast', seg=8))
+    # bridge block aft, two decks, dark window bands
+    parts_aft += [L.box((-30.0, 0, H + 1.8), (8.0, 9.0, 3.6), sup, 'bridge'), L.box((-29.0, 0, H + 4.6), (5.0, 7.5, 2.0), sup, 'bridge2')]
+    for y in (-4.52, 4.52):
+        parts_aft.append(L.box((-30.0, y, H + 2.4), (6.5, 0.05, 0.6), void, 'windows'))
+    parts_aft.append(L.box((-26.48, 0, H + 4.9), (0.05, 6.0, 0.7), void, 'windows'))
+    funnel = L.cyl((0, 0, 0), 1.6, 5.0, hullm, 'funnel', seg=16, axis='X')
+    funnel.data.transform(Matrix.Translation((-19.0, 2.0, H + 1.6)) @ Matrix.Rotation(0.5, 4, 'Z'))
+    parts_aft.append(funnel)
+    m2 = L.cyl((0, 0, 0), 0.22, 11.0, iron, 'mast_down', seg=8, axis='X')
+    m2.data.transform(Matrix.Translation((-12.0, -1.5, H + 0.3)) @ Matrix.Rotation(-0.35, 4, 'Z'))
+    parts_aft.append(m2)
+    for k in range(6):   # torn plates and debris at the break
+        b = L.box((rng.uniform(-3, 3), rng.uniform(-4, 4), rng.uniform(2.0, H)), (rng.uniform(1.0, 2.5), 0.12, rng.uniform(0.8, 2.0)), hullm, 'shard', rz=rng.uniform(0, 3))
+        subdiv(b, 1); jag(b, 0.25, seed=40 + k)
+        (parts_fore if k % 2 else parts_aft).append(b)
+    for b in parts_fore:   # bow part: lists 7°, forefoot up on the shoal
+        b.data.transform(Matrix.Translation((0, 0, -1.2)) @ Matrix.Rotation(math.radians(7), 4, 'X') @ Matrix.Rotation(math.radians(-2.5), 4, 'Y'))
+    for b in parts_aft:    # stern part: settled lower, turned and listing the other way
+        b.data.transform(Matrix.Translation((-1.5, 0.8, -3.2)) @ Matrix.Rotation(math.radians(6), 4, 'Z') @ Matrix.Rotation(math.radians(-5), 4, 'X'))
+    o = parts_fore + parts_aft
+    chamfer([b for b in o if b.name.startswith(('bridge', 'coaming'))], 0.08)
+    L.smooth([b for b in o if b.name.startswith(('hull', 'funnel', 'mast'))], 40)
+    sh = by_mat({'hull': _wreck_shade(271, (0.3, 0.3, 0.29), 1.2), 'deck': _wreck_shade(272, (0.36, 0.33, 0.29), 1.2),
+                 'sup': _wreck_shade(273, (0.55, 0.53, 0.48), 1.2), 'iron': f_paint(274), 'void': lambda b, P, N: b})
+    ob = join_bake(o, sh, 'a27_wreck_b', size=1024)
+    L.finish([ob], scenery('a27_wreck_b'), target=9000, maxtex=1024, fit='xy')
 
 
 def a39_reed(scenery, src=None):
@@ -1863,6 +1976,6 @@ def a03_radar_mast(scenery, src=None):
 
 # рецепты этого файла: имя → функция(scenery); biome2_models.py подменяет ими прежние
 SHORE = ['a01_battery_gun', 'a01_battery_gun_broken', 'a02_bunker_coast', 'a04_lighthouse', 'a07_tetrapod', 'a11_tower_ruins', 'a05_pier_a', 'a06_pier_b', 'a21_terrace_wall',
-         'a34_olive_a', 'a35_olive_b', 'a36_pine_a', 'a31_cliff_a', 'a32_cliff_b', 'a33_rock',
+         'a31_cliff_a', 'a32_cliff_b', 'a33_rock',
          'a08_warehouse_a', 'a09_warehouse_b', 'a10_crane', 'a20_bell_tower', 'a24_boat_a', 'a25_boat_b', 'a29_hedgehog', 'a26_wreck_a', 'a27_wreck_b',
          'a39_reed', 'a03_radar_mast'] + list(HOUSES)
