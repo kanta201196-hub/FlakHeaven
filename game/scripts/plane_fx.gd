@@ -27,6 +27,15 @@ const SPEC := {
 	# start at the nacelle tails (x 0.017) on the engine axes, `y` below the model centre
 	"bomber_t1": {"prop": [Vector2(74.25, -43.2), Vector2(74.25, 43.2)], "pr": 25.0,
 		"trail": [Vector2(4.6, -44.0), Vector2(4.6, 44.0)], "y": -8.1, "hub_y": -0.022, "hub_r": 0.095},
+	# tiers 4-5: NozzleFlame.NOZZLES × the sprite width (225 px fighters and attackers, 300 px bombers); «Кит» 5's
+	# ducted fans are jets, not propellers
+	"fighter_t4": {"jet": [Vector2(-101.7, 0)], "r": 2.3, "y": -0.9},
+	"fighter_t5": {"jet": [Vector2(-111.8, -11.5), Vector2(-111.8, 11.5)], "r": 6.0, "y": -6.1},
+	"attacker_t4": {"jet": [Vector2(-111.8, 0)], "r": 6.7, "y": -11.3},
+	"attacker_t5": {"jet": [Vector2(-111.8, -28.6), Vector2(-111.8, 28.6), Vector2(-93.4, 0)], "r": 7.6, "y": -7.8},
+	"bomber_t4": {"jet": [Vector2(-50.4, -47.1), Vector2(-50.4, 47.1), Vector2(10.5, -67.8), Vector2(10.5, 67.8)],
+		"r": 5.3, "y": -24.8},
+	"bomber_t5": {"jet": [Vector2(-149.1, -25.2), Vector2(-149.1, 25.2)], "r": 3.1, "y": -5.4},
 }
 
 static var _flame_mesh: QuadMesh
@@ -66,14 +75,21 @@ void fragment() {
 
 
 ## Nozzle exits of a 3D battle model in picture pixels: {"jet": [Vector2(x, z)…], "y": axis height, "r": radius};
-## empty for a plane without jets. From NozzleFlame.NOZZLES, which was measured on the models themselves.
+## empty for a plane without jets. From NozzleFlame.NOZZLES, which was measured on the models themselves. The flames
+## share one height and radius: with several engine pairs («Кит» 4) the mean of their axes and radii.
 static func model_nozzles(key: String, tex_w: float) -> Dictionary:
-	var n: Array = NozzleFlame.NOZZLES.get(key, [])
-	if n.is_empty():
+	var ex := NozzleFlame.exits(key)
+	if ex.is_empty():
 		return {}
-	var z: float = float(n[2]) * tex_w
-	var pts: Array = [Vector2(float(n[0]) * tex_w, 0.0)] if is_zero_approx(z) else [Vector2(float(n[0]) * tex_w, -z), Vector2(float(n[0]) * tex_w, z)]
-	return {"jet": pts, "y": float(n[1]) * tex_w, "r": float(n[3]) * tex_w * 1.15}
+	var pts: Array = []
+	var y := 0.0
+	var r := 0.0
+	for e: Array in ex:
+		var c: Vector3 = e[0]
+		pts.append(Vector2(c.x, c.z) * tex_w)
+		y += c.y
+		r += float(e[1])
+	return {"jet": pts, "y": y / ex.size() * tex_w, "r": r / ex.size() * tex_w * 1.15}
 
 
 ## Whether plane `key` («bomber_1», «bomber_t1») flies on propellers: the engine sound takes the piston voice

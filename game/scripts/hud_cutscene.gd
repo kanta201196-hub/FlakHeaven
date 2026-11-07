@@ -4,6 +4,8 @@ extends HudKit
 ## caption (speaker plate + text) in the lower bar, the skip hint after a second, black fades at both ends.
 ## Step 11: when the scene has key art (`Cutscene.art`) it is drawn first, covering the screen with a slow push-in
 ## (`CutsceneKeys.art_rect`), and a soft dark gradient above the lower bar keeps the title readable on any picture.
+## ST-12: a scene with a comic page (`Cutscene.comic`) is drawn by `HudComic` instead — no letterbox, the lines
+## live in balloons and caption plates; the skip hint and the fades stay.
 ## Drawn in code like every screen (ADR-05); tokens from UiStyle.
 
 const BAR := 0.12          # bar height, share of the screen
@@ -13,9 +15,18 @@ const ART_FOOT := 0.22     # share of the screen: the dark gradient above the lo
 const ART_FOOT_STEPS := 14
 
 
+var _comic: HudComic
+
+
 func draw(m: Main, size: Vector2) -> void:
 	var bar := size.y * BAR
 	var t := Cutscene.t
+	if Cutscene.comic != "":
+		if _comic == null:
+			_comic = HudComic.new(ctrl, _buttons)
+		_comic.draw(size, Cutscene.comic, t, Cutscene.def, Cutscene.comic_tex)
+		_hint_and_fade(size, bar, t)
+		return
 	if bool(Cutscene.def.get("black", false)):   # step 8: the epilogue card — captions over black, no world
 		ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color.BLACK)
 	if Cutscene.art != null:   # step 11: key art under the captions — covers the screen, slow push-in, dark foot for the title
@@ -45,6 +56,11 @@ func draw(m: Main, size: Vector2) -> void:
 			var enemy := line.size() > 3 and bool(line[3])   # step 7: an enemy voice (Baron) gets the red plate
 			_text(Vector2(x, y), plate, 18, Color(UiStyle.DANGER if enemy else UiStyle.ACCENT, a))
 			_para(Vector2(x + w + 18.0, y - 2.0), text, tw - w - 18.0, 22, Color(1, 1, 1, a))
+	_hint_and_fade(size, bar, t)
+
+
+## «Пропустить» in the top right for the first seconds and the black fades at both ends of the scene.
+func _hint_and_fade(size: Vector2, bar: float, t: float) -> void:
 	if t > HINT_FROM:
 		var ha := clampf(1.0 - (t - HINT_FROM) / (HINT_TO - HINT_FROM), 0.0, 1.0) * 0.7
 		if ha > 0.0:

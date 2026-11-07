@@ -27,6 +27,14 @@ const FLARE_ROWS := {
 	"bomber_t1": [-0.14, -0.04, 0.018],   # aft of the rear dorsal dome (x -0.07), beside the aerial wire (z 0)
 	"bomber_1": [-0.14, -0.038, 0.013],
 	"bomber_2": [-0.29, -0.042, 0.018],
+	# tiers 4-5 (hangar GLB top profiles at |z| 0-0.06): on smooth spine skin aft of the canopy, clear of the dorsal
+	# intake, domes, grilles, fins and the attackers' top turret (WeaponModels.TOP_TURRET_X)
+	"fighter_t4": [-0.06, -0.042, 0.03],   # dorsal intake slot (|z| < 0.025) ends at x -0.01
+	"fighter_t5": [-0.04, -0.042, 0.028],   # flat spine between the canopy (to x 0.02) and the engine humps (|z| > 0.04)
+	"attacker_t4": [-0.1, -0.042, 0.032],   # aft of the top turret (x -0.05), ahead of the fin root (x -0.22)
+	"attacker_t5": [-0.15, -0.042, 0.036],   # beside the fin root (|z| < 0.026), aft of the «Луч» dome (x -0.065…-0.125)
+	"bomber_t4": [-0.13, -0.042, 0.022],   # aft of the wing on the flat spine, ahead of the fin (x -0.3)
+	"bomber_t5": [-0.25, -0.042, 0.035],   # aft of the dorsal grille (x -0.02…-0.22), beside the centre ridge (|z| < 0.025)
 }
 ## Flare panel length and width (model units, plane length 1)
 const PANEL := Vector2(0.034, 0.013)

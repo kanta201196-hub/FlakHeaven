@@ -81,11 +81,14 @@ func _models() -> void:
 	_check(PlaneTiers.model(1) == "t1", "tier 1 flies its own model (stage B)")
 	_check(PlaneTiers.model(2) == "1", "tier 2 is today's plane 1, art paths unchanged")
 	_check(PlaneTiers.model(3) == "2", "tier 3 is today's plane 2, art paths unchanged")
-	_check(PlaneTiers.model(4) == "2" and PlaneTiers.model(5) == "2", "tiers 4–5 use the tier 3 model for now")
-	_check(PlaneTiers.has_own_model(1) and PlaneTiers.has_own_model(2) and PlaneTiers.has_own_model(3), "tiers 1–3 own their models")
-	_check(not PlaneTiers.has_own_model(4) and not PlaneTiers.has_own_model(5), "tiers 4–5 borrow (hangar: «модель в работе»)")
-	_check(PlaneTiers.model_keys() == ["t1", "1", "2"], "model keys in tier order, each once")
-	_check(PlaneTiers.model_tier("t1") == 1 and PlaneTiers.model_tier("1") == 2 and PlaneTiers.model_tier("2") == 3,
+	_check(PlaneTiers.model(4) == "t4" and PlaneTiers.model(5) == "t5", "tiers 4–5 fly their own models (PT-02)")
+	var own := true
+	for t in range(1, 6):
+		own = own and PlaneTiers.has_own_model(t)
+	_check(own, "every tier owns its model (no «модель в работе» in the hangar)")
+	_check(PlaneTiers.model_keys() == ["t1", "1", "2", "t4", "t5"], "model keys in tier order, each once")
+	_check(PlaneTiers.model_tier("t1") == 1 and PlaneTiers.model_tier("1") == 2 and PlaneTiers.model_tier("2") == 3
+		and PlaneTiers.model_tier("t4") == 4 and PlaneTiers.model_tier("t5") == 5,
 		"each model belongs to the first tier drawn with it")
 	_check(PlaneTiers.model_tier("t9") == 0, "unknown model: no tier")
 	_check(PlaneTiers.art_key("fighter", "t1") == "fighter_t1" and PlaneTiers.art_key("bomber", "2") == "bomber_2",

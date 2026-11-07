@@ -16,13 +16,22 @@ from mathutils import Vector
 # доля полуразмаха под знак на крыле (у «Кита» дальше к концу — между мотогондолами и законцовкой)
 # t1: «Кит» outboard of the outer flap and slat (|z| ≤ 0.40), which move in the hangar; «Оса» outboard of the baked
 # drop tank (from above its nose and tail stick out of the chord) and of the slat (|z| ≤ 0.39)
-WING_F = {"fighter_t1": 0.85, "bomber_t1": 0.72, "bomber_1": 0.74, "bomber_2": 0.66}
+# tiers 4-5: «Кит» 4 outboard of the flap (|z| > 0.30); «Кит» 5 on the blended body between its ducted fans (the stub
+# wings carry slat and flap); the others at the default 0.6, mid chord clear of the slat and flap hinges
+WING_F = {"fighter_t1": 0.85, "bomber_t1": 0.72, "bomber_1": 0.74, "bomber_2": 0.66, "bomber_t4": 0.86, "bomber_t5": 0.575}
 # знак аса на борту: x (длина 1, нос +X) и сдвиг по высоте от оси борта
 # t1: behind the wing flaps, where a ray from the side meets only the fuselage (ahead of it the drop tanks, tip
 # tanks and nacelles with their propellers stand in the way)
 SIDE = {"fighter_t1": (-0.1, 0.0), "attacker_t1": (-0.06, 0.0), "bomber_t1": (-0.06, -0.03),
         "attacker_1": (0.16, 0.0), "attacker_2": (0.17, 0.0), "fighter_1": (0.14, 0.0),
-        "fighter_2": (0.12, 0.0), "bomber_1": (0.3, 0.0), "bomber_2": (0.28, 0.0)}
+        "fighter_2": (0.12, 0.0), "bomber_1": (0.3, 0.0), "bomber_2": (0.28, 0.0),
+        # tiers 4-5: above the wing on the blended bodies of «Оса» 4/5; «Грач» 4 aft of the intake trunks, below the fin;
+        # «Грач» 5 ahead of the engine pods under the canopy; «Кит» 4/5 aft of the wing, ahead of the tail
+        "fighter_t4": (-0.2, 0.01), "fighter_t5": (-0.1, 0.025), "attacker_t4": (-0.29, -0.04),
+        "attacker_t5": (0.2, -0.015), "bomber_t4": (-0.28, 0.0), "bomber_t5": (-0.13, 0.0)}
+# fin: x range (length 1, nose +X) where the fin's highest point is searched, for planes whose highest point is not
+# the fin («Оса» 4: the spine hump at the dorsal intake rises above its small canted tail surfaces)
+FIN_X = {"fighter_t4": (-0.5, -0.38)}
 N = 8             # сетка наклейки N×N
 LIFT = 0.0008     # над обшивкой
 
@@ -117,7 +126,9 @@ for side, s in ((1, "l"), (-1, "r")):
     print("INS wing_%s: x %.3f y %.3f chord %.3f size %.3f" % (s, c.x, y, chord, size))
 
 # --- киль: точки обшивки около плоскости киля (|y − y_fin| мало, нормаль вбок), центр и размер плоской части
-top = V[V[:, 2].argmax()]
+fx0, fx1 = FIN_X.get(key, (-1.0, 1.0))
+VF = V[(V[:, 0] >= fx0) & (V[:, 0] <= fx1)]
+top = VF[VF[:, 2].argmax()]
 yfin = abs(float(top[1]))
 ztop = float(top[2])
 for side, s in ((1, "l"), (-1, "r")):

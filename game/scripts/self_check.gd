@@ -539,7 +539,7 @@ func _set_variant(cls: String, lv: String) -> void:
 		tg.level = Weapons.MAX_LEVEL
 		tg.slots = PlaneClasses.turret_slots(cls, tg.level, tier_of(lv))
 		gs.append(tg)
-	if lv == PlaneTiers.model(4):   # the heavy hardpoint (tier ≥ 4) on the model tier 4 is drawn with
+	if PlaneTiers.heavy(tier_of(lv)):   # the heavy hardpoint (tier ≥ 4) on the models tiers 4-5 are drawn with
 		var heavy := Hardpoint.new("Тяжёлый подвес", 1, "")
 		heavy.heavy = true
 		gs.append(heavy)
@@ -652,7 +652,7 @@ func _check_combat(e: Dictionary) -> void:
 		_issue(e, "flame", "факелов %d, сопел %d" % [flames.size(), (nz["jet"] as Array).size()], flames.size(), (nz["jet"] as Array).size())
 	_check_nozzles(e, key, model, model.transform, faces, tw, not flames.is_empty())
 	for tp: Vector3 in u.fx.get("trail", []):
-		var r := float(NozzleFlame.NOZZLES.get(key, [0, 0, 0, 0.0])[3]) * tw
+		var r := float(nz.get("r", 0.0)) / 1.15
 		var tg := MountCheck.point_gap(faces, tp, lim * 4.0 + r * 2.0)
 		if tg > lim + r * 2.0:
 			_issue(e, "trail", "след начинается в %s длины от самолёта" % _pct(tg / tw), tg / tw, GAP_MAX)
@@ -668,14 +668,15 @@ func _check_combat(e: Dictionary) -> void:
 ## Nozzle flames of plane `key`: present when the plane has jets, and each nozzle (NozzleFlame.NOZZLES, model axes,
 ## moved by `xf` and scaled by `scale`) has a lip round it — the mean gap of a ring at its inner radius
 func _check_nozzles(e: Dictionary, key: String, model: Node3D, xf: Transform3D, faces: PackedVector3Array, scale: float, has_flame: bool) -> void:
-	var n: Array = NozzleFlame.NOZZLES.get(key, [])
-	if n.is_empty():
+	var ex := NozzleFlame.exits(key)
+	if ex.is_empty():
 		return
 	if not has_flame:
 		_issue(e, "flame", "нет факела в соплах")
-	var r: float = float(n[3]) * scale
-	for z: float in ([0.0] if is_zero_approx(float(n[2])) else [-float(n[2]), float(n[2])]):
-		var c := xf * Vector3(float(n[0]), float(n[1]), z)
+	for x: Array in ex:
+		var r: float = float(x[1]) * scale
+		var z: float = (x[0] as Vector3).z
+		var c := xf * (x[0] as Vector3)
 		var ring := MountCheck.ring(c, xf.basis.x, r)
 		var g := MountCheck.mean_gap(faces, ring, r * 3.0)
 		e["nozzle_ring"] = snappedf(g / r if not is_inf(g) else 99.0, 0.01)

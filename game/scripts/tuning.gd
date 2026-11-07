@@ -187,6 +187,7 @@ const RANGES := {
 	"story_lights": [0, 1, 1, 1, "Огни в окнах посёлков в сумеречных и ночных сценах (0/1)"],
 	"story_mark": [0, 1, 1, 1, "Знак «Монолита» (серая плита) на «Крепости», ПВО и машинах колонн (0/1)"],
 	"story_art": [0, 1, 1, 1, "Арт заставок (комикс) вместо живого пролёта камеры (0/1)"],
+	"story_comic": [0, 1, 1, 1, "Заставки страницей комикса: панели, облачка, дым и вспышки (ST-12; 0 — одна картинка)"],
 	"hangar_detail": [0, 1, 1, 1, "Ангар: швы панелей, заклёпки, глянец и стекло фонаря с кабиной (0 — как до 01.11)"],
 	"hangar_light": [0, 1, 1, 1, "Ангар: тёплый ключевой и яркий контровой свет (R-22: вкл. сразу, 0 — как раньше)"],
 	"plane_lvl2_at": [2, 40, 1, 10, "Не используется с 3.5: самолёт ур. 2 выбирается в ангаре"],
@@ -209,7 +210,7 @@ const RANGES := {
 
 var params := {}
 ## Личные настройки игрока — переживают смену версии баланса
-const KEEP := ["master_db", "music_db", "sfx_db", "engine_db", "ui_db", "scheme", "render3d", "sprites", "damage_numbers", "story_accents", "story_vignette", "story_lights", "story_mark", "story_art",
+const KEEP := ["master_db", "music_db", "sfx_db", "engine_db", "ui_db", "scheme", "render3d", "sprites", "damage_numbers", "story_accents", "story_vignette", "story_lights", "story_mark", "story_art", "story_comic",
 	"shake_mult", "range_rings", "camera_zoom", "plane_len", "cam_tilt"]
 
 
