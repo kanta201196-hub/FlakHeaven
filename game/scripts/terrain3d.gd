@@ -576,6 +576,7 @@ func set_biome() -> void:
 	_isl_from = float(Biome.g("isl_from", 0.34))
 	_isl_thr = float(Biome.g("isl_thr", 0.38))
 	_isl_k = float(Biome.g("isl_k", 520.0))
+	_loop_lift = LOOP_LIFT + (_strait * V_SCALE if _sea else 0.0)
 	_isl.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	_isl.seed = 4093
 	_isl.frequency = float(Biome.g("isl_freq", 1.0 / 950.0))
@@ -718,11 +719,21 @@ func _v_raw(x: float, z: float) -> float:
 	var wx := x + _warp.get_noise_2d(x, z) * 380.0
 	var wz := z + _warp.get_noise_2d(x + 913.0, z - 377.0) * 380.0
 	var v := _valley.get_noise_2d(wx, wz)
-	if not _loops.is_empty():   # L-02: заплатки на мелкие кольца реки
+	# L-02: patches over small river rings (at sea a ring of the strait: a round moat inside land)
+	if not _loops.is_empty():
 		for b in _loops.get(Vector2i(floori(x / LOOP_CELL), floori(z / LOOP_CELL)), _NO_LOOPS):
-			var d := Vector2(x, z).distance_to(b[0])
-			if d < float(b[3]):
-				v -= float(b[1]) * 1.25 * (1.0 - smoothstep(float(b[2]), float(b[3]), d))
+			if Vector2(x, z).distance_to(b[0]) >= float(b[3]):
+				continue
+			# Kanta 07.11: the old patch (v − 1.25·v_e inside a circle) left |v| ≈ 0.25·v_e in the middle,
+			# so every patch was a perfectly round basin. Now the field inside the old island is mirrored to
+			# the surrounding sign (its middle keeps its own noise-shaped height) and lifted by LOOP_LIFT so
+			# the old river line is hillside, not a dry valley. The lift fades with the distance from the
+			# island's own cells (b[4]), so the patch follows the island's outline, not a circle.
+			var mw := _loop_mask(b[4], x, z)   # x — mirror weight, y — lift weight
+			var so := -signf(float(b[1]))
+			if mw.x > 0.0 and v * so < 0.0:
+				v = lerpf(v, -v, mw.x)
+			v += so * _loop_lift * mw.y
 	return v
 
 
@@ -735,10 +746,12 @@ func _v_raw(x: float, z: float) -> float:
 const LOOP_STEP := 300.0
 const LOOP_HALF := 54000.0     # область поиска вокруг начала мира, px
 const LOOP_MAX := 16.0e6       # площадь острова, px² (~16 км²: на 80 × 80 км таких было ~28)
-const LOOP_FADE := 1400.0
 const LOOP_CELL := 4000.0
+const LOOP_LIFT := 0.16       # field lift on a patch (≈ 570 px past the valley floor): the old river line is hillside
+var _loop_lift := LOOP_LIFT   # set_biome: + the strait half-width at sea (the moat's water is that wide)
+const LOOP_REACH := 7         # lift fades over this many LOOP_STEP nodes from the island (2.1 km): rivers nearby keep their width
 const _NO_LOOPS := []
-var _loops := {}               # Vector2i ячейки LOOP_CELL → [[центр, v_e, R, R + LOOP_FADE], …]; после setup только читается
+var _loops := {}               # Vector2i ячейки LOOP_CELL → [[центр, v_e, R, R + reach, island distance grid], …]; после setup только читается
 
 
 func _find_loops() -> void:
@@ -790,14 +803,40 @@ func _find_loops_pass() -> void:
 		for k in cells:
 			r = maxf(r, ctr.distance_to(Vector2(-LOOP_HALF + (k % n) * LOOP_STEP, -LOOP_HALF + (k / n) * LOOP_STEP)))
 		r += LOOP_STEP * 2.0
-		var b := [ctr, vs[best], r, r + LOOP_FADE]
-		var reach := r + LOOP_FADE
+		var cs := {}   # LOOP_STEP grid node → distance from the island in nodes (0 inside), up to LOOP_REACH
+		for k in cells:
+			for oy in range(-LOOP_REACH, LOOP_REACH + 1):
+				for ox in range(-LOOP_REACH, LOOP_REACH + 1):
+					var dd := sqrt(float(ox * ox + oy * oy))
+					var key := Vector2i(k % n + ox, k / n + oy)
+					if dd <= LOOP_REACH and dd < float(cs.get(key, 1e9)):
+						cs[key] = dd
+		var b := [ctr, vs[best], r, r + LOOP_REACH * LOOP_STEP, cs]
+		var reach := r + LOOP_REACH * LOOP_STEP
 		for gx in range(floori((ctr.x - reach) / LOOP_CELL), floori((ctr.x + reach) / LOOP_CELL) + 1):
 			for gz in range(floori((ctr.y - reach) / LOOP_CELL), floori((ctr.y + reach) / LOOP_CELL) + 1):
 				var gk := Vector2i(gx, gz)
 				if not _loops.has(gk):
 					_loops[gk] = []
 				_loops[gk].append(b)
+
+
+## L-02 patch weights at (x, z) from the island distance grid cs, bilinear over the LOOP_STEP nodes:
+## x — mirror (1 within one node of the island: every point inside it is covered), y — lift (1 near the
+## island, fading to 0 at LOOP_REACH nodes).
+func _loop_mask(cs: Dictionary, x: float, z: float) -> Vector2:
+	var fx := (x + LOOP_HALF) / LOOP_STEP
+	var fz := (z + LOOP_HALF) / LOOP_STEP
+	var i := floori(fx)
+	var j := floori(fz)
+	var tx := fx - i
+	var tz := fz - j
+	var out := Vector2.ZERO
+	for c in 4:
+		var dd := float(cs.get(Vector2i(i + (c & 1), j + (c >> 1)), 1e9))
+		var wgt := (tx if c & 1 else 1.0 - tx) * (tz if c >> 1 else 1.0 - tz)
+		out += wgt * Vector2(1.0 if dd <= 1.5 else 0.0, 1.0 - smoothstep(1.0, float(LOOP_REACH), dd))
+	return out
 
 
 ## Ближайшая точка дна долины (не дальше D_FLOOR от реки) около p — для наземной техники.
