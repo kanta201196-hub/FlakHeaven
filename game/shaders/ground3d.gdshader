@@ -412,7 +412,13 @@ void fragment() {
 			// field is linear inside each triangle, so move the shore line itself by noise of about a mesh step
 			// (≈ ±11 px), near the edge only; water, foam, wet sand and beach all follow the moved line
 			float shn = (vnoise(world / 48.0 + 7.0) - 0.5) * 16.0 + (vnoise(world / 15.0 - 3.0) - 0.5) * 6.0 + (vnoise(world / 4.5 + 1.0) - 0.5) * 2.0;
-			rd = max(rd + shn * (1.0 - smoothstep(10.0, 40.0, abs(rd - sea_w))), 0.0);
+			// on the water side the field is 1 unit/px only for the first shore_a px, then it is squeezed (16 units
+			// span the whole depth), so the shift must end inside that strip or it smears the depth colours into
+			// blotches; the linear taper keeps rd monotonic (|shn| < shore_a)
+			shn = clamp(shn, -shore_a + 1.0, shore_a - 1.0);
+			float wsd = sea_w - rd;   // px into the water
+			float fade = wsd > 0.0 ? clamp(1.0 - wsd / shore_a, 0.0, 1.0) : 1.0 - smoothstep(10.0, 40.0, -wsd);
+			rd = max(rd + shn * fade, 0.0);
 		}
 		// M-35: в охранной зоне реки ни утоптанной земли, ни огородов, ни гари — только вода и мокрый берег;
 		// край — по расстоянию до реки в пикселе (у вершин шаг 20 px), с той же неровной кромкой, что у берега
@@ -503,9 +509,15 @@ void fragment() {
 					// дно: светлые песчаные косы и тёмные пятна водорослей, видны далеко от берега
 					float bar = smoothstep(0.45, 0.75, vnoise(vec2(world.x * 0.6 + world.y * 0.8, world.y * 0.6 - world.x * 0.8) / vec2(140.0, 45.0)));
 					float weed = smoothstep(0.55, 0.8, vnoise(wq / 55.0 - 6.0)) * (0.6 + 0.4 * vnoise(world / 12.0));
-					if (arch_detail) {   // B2-Q08: value noise at a hard threshold gave square-cornered weed patches
-						vec2 wr2 = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * wq;
-						weed = smoothstep(0.5, 0.85, fbm(wr2 / 70.0 - 6.0)) * (0.6 + 0.4 * vnoise(world / 12.0));
+					if (arch_detail) {
+						// B2-Q08: value noise at a hard threshold gave square-cornered weed patches, and a 2-octave
+						// fbm at that threshold traced its fine cells as pixel steps. One big rotated, warped octave
+						// sets the patch; a weak fine octave only frays its rim; patches fade out with depth
+						vec2 wr2 = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * wq
+							+ vec2(vnoise(world / 40.0 + 2.0), vnoise(world / 40.0 - 8.0)) * 30.0;
+						float wn = vnoise(wr2 / 85.0 - 6.0) + (vnoise(wr2 / 11.0 + 4.0) - 0.5) * 0.1;
+						weed = smoothstep(0.62, 0.76, wn) * (0.7 + 0.3 * vnoise(world / 12.0))
+							* (1.0 - smoothstep(0.12, 0.45, dp0)) * 0.8;
 					}
 					// под водой красный гаснет: дно в бирюзу, светлее только косы
 					bed = mix(SRGB(vec3(0.42, 0.66, 0.6)), SRGB(vec3(0.58, 0.76, 0.66)), bar);
@@ -605,6 +617,12 @@ void fragment() {
 				vec3 hv = normalize(sl + vec3(0.0, 1.0, 0.25));
 				float sp = pow(clamp(dot(nn, hv), 0.0, 1.0), 350.0);
 				float spm = smoothstep(0.35, 0.75, vnoise(world / 260.0 + vec2(t * 0.02, 1.0)));
+				if (arch_detail) {
+					// B2-Q08 (close-up № 1): on the smooth wave-map normals the sun glint drew soft white blots that
+					// read as blurry whitecaps; a tighter lobe broken by fine moving noise leaves sparkles
+					sp = pow(clamp(dot(nn, hv), 0.0, 1.0), 900.0) * 1.8
+						* smoothstep(0.45, 0.8, vnoise(world / 2.6 + vec2(t * 0.9, -t * 0.4)) * 0.7 + vnoise(world / 9.0 - t * 0.2) * 0.3);
+				}
 				sea_e += SRGB(vec3(1.0, 0.95, 0.82)) * sp * 1.1 * calm * spm;
 				// барашки: редкие белые гребни больших волн, только на глубине и пятнами
 				float cap = smoothstep(0.8, 0.95, hk) * smoothstep(0.6, 0.85, vnoise(world / 170.0 + vec2(t * 0.05, 3.0)))

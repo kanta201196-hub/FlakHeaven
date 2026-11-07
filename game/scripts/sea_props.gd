@@ -506,7 +506,10 @@ func _wreck_near(c: Vector2, r: float, kind := "") -> void:
 		var w := size(kind)
 		if sd < -6.0 and sd > -45.0 and room(q, w * 0.4) and shore(q + seaward(q) * w * 0.3) < 0.0 and shore(q - seaward(q) * w * 0.3) < 0.0:
 			var yaw := seaward(q).orthogonal().angle() + _rng.randf_range(-0.5, 0.5)
-			put(kind, q, w, yaw, w * 0.4, water_y(q) - w * 0.03, _rng.randf_range(-0.25, 0.25))
+			# B2-Q08: the rebuilt hulls are taller than the old scans; at 3 % they floated like boxes on the water.
+			# Sunk to about half the side height (the barge to its gunwale band, the ship's stern deck nearly awash)
+			var sink := 0.06 if kind == "s_wreck_b" else (0.07 if kind == "s_wreck_a" else 0.03)
+			put(kind, q, w, yaw, w * 0.4, water_y(q) - w * sink, _rng.randf_range(-0.25, 0.25))
 			return
 
 
