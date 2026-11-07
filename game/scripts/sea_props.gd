@@ -228,6 +228,23 @@ func _level(p: Vector2, r: float, tol: float) -> bool:
 	return true
 
 
+## Unit direction along the contour at p (perpendicular to the height gradient); RIGHT on flat ground
+func _contour(p: Vector2) -> Vector2:
+	var e := 12.0
+	var g := Vector2(_t.height(p.x + e, p.y, _ctx) - _t.height(p.x - e, p.y, _ctx), _t.height(p.x, p.y + e, _ctx) - _t.height(p.x, p.y - e, _ctx))
+	return g.normalized().orthogonal() if g.length() > 0.5 else Vector2.RIGHT
+
+
+## Height to seat a dug-in pit at: the highest ground at the centre and on a ring of radius r, so no slope rises
+## through the floor (the model's earth berm covers the ground falling away below it)
+func _pad_y(p: Vector2, r: float) -> float:
+	var y := _t.surface(p.x, p.y, _ctx).y
+	for i in 8:
+		var q := p + Vector2.from_angle(TAU * i / 8.0) * r
+		y = maxf(y, _t.surface(q.x, q.y, _ctx).y)
+	return y
+
+
 func room(p: Vector2, r: float) -> bool:
 	for k in _keep:
 		if p.distance_to(k[0]) < r + float(k[1]):
@@ -469,14 +486,34 @@ func _cape(o: Vector2) -> void:
 # ---------- 3. батарея на вершине ----------
 
 func _battery(o: Vector2) -> void:
-	var p := _best(o, 70, func(q: Vector2) -> float:
-		if shore(q) < 180.0:
-			return INF
-		var h := h01(q)
-		if h < 0.25 or slope(q) > 0.14:
-			return INF
-		return -h)
-	if p == Vector2.INF:
+	# B2-Q11 (Kanta 07.11: «орудия расставляй не случайным образом, они должны организовывать композицию»):
+	# laid out like a real coast battery — the guns in one line along the crest, evenly spaced (about 1.9 pit
+	# widths centre to centre, as the 22–25 m between 13–14 m pits of period batteries), all trained on the same
+	# arc out to sea, the flanks a little back so the line bows towards the water; the command post (bunker)
+	# in the middle behind. The line runs along the contour, so the pits sit at one height; the site is the
+	# high ground where the most of the three pads are level
+	var gw := size("s_gun")
+	var sp := gw * 1.9   # the berms (1.58 w across) must not merge
+	var best_n := -1
+	var best_s := INF
+	var p := Vector2.INF
+	var side := Vector2.RIGHT
+	for t in 120:
+		var q := o + Vector2(_rng.randf_range(160.0, Terrain3D.CHUNK - 160.0), _rng.randf_range(160.0, Terrain3D.CHUNK - 160.0))
+		if shore(q) < 180.0 or h01(q) < 0.22 or slope(q) > 0.2:
+			continue
+		var sd := _contour(q)
+		var n := 0
+		for i in 3:
+			if _level(q + sd * (i - 1) * sp, gw * 0.5, gw * 0.2):
+				n += 1
+		var sc := -float(n) * 10.0 - h01(q)
+		if sc < best_s:
+			best_s = sc
+			best_n = n
+			p = q
+			side = sd
+	if p == Vector2.INF or best_n < 2:
 		return
 	# куда смотреть: ближайшая вода из 12 направлений
 	var face := Vector2.RIGHT
@@ -489,22 +526,26 @@ func _battery(o: Vector2) -> void:
 					best = k
 					face = d
 				break
-	var side := face.orthogonal()
+	if absf(side.dot(face)) > 0.85:
+		side = face.orthogonal()   # the contour points at the sea (a spur): line up across the field of fire
+	var placed := 0
 	for i in 3:
-		var a := (i - 1) * 0.55
-		# орудие бывает разбитым (Kanta 19.10: «целое и разбитое», как башни «Левиафана») — след прежних налётов
 		var gk := "s_gun_broken" if _rng.randf() < 0.3 else "s_gun"
-		var gw := size(gk)
-		# B2-Q10 (Kanta 07.11: «площадка орудия прям на обрыве»): the slope was checked at the centre only, so a pit
-		# could hang half over a cliff. Now the whole pad must be level; try a few distances, else skip this gun
-		for dist: float in [80.0, 60.0, 105.0, 130.0, 45.0]:
-			var q := p + face.rotated(a) * dist
-			if _level(q, gw * 0.55, gw * 0.16):
-				put(gk, q, gw, face.rotated(a).angle(), 34.0)
+		var back := -absf(i - 1) * gw * 0.2
+		# B2-Q10: the whole pad must be level (no pit over a cliff); slide along the firing line, else skip this gun
+		for dv: float in [0.0, -12.0, 12.0, -24.0, 24.0]:
+			var q := p + side * (i - 1) * sp + face * (back + dv)
+			if _level(q, gw * 0.5, gw * 0.2):   # the berm hides up to 0.14 w of ground falling away
+				put(gk, q, gw, face.angle(), gw * 0.85, _pad_y(q, gw * 0.5))
+				placed += 1
 				break
-	var bq := p - face * 90.0
-	if slope(bq) < 0.35:
-		put("s_bunker", bq, size("s_bunker"), side.angle(), 70.0)
+	if placed > 0:
+		for k: float in [2.3, 2.8, 1.9, 3.3]:
+			var bq := p - face * gw * k
+			if slope(bq) < 0.45 and room(bq, 50.0):
+				put("s_bunker", bq, size("s_bunker"), side.angle(), 70.0)
+				break
+	side = face.orthogonal()
 	# руины старой крепости рядом, на той же высоте
 	if _rng.randf() < 0.7:
 		var rq := p + side * (1.0 if _rng.randf() < 0.5 else -1.0) * _rng.randf_range(200.0, 260.0)

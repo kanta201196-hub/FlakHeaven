@@ -575,6 +575,17 @@ def _gun_site(broken):
             a = rng.uniform(0.1, 0.85); r = rng.uniform(5.4, 6.5); s = rng.uniform(0.35, 0.8)
             b = L.box((r * math.cos(a), r * math.sin(a), s * 0.35), (s, s * 0.8, s * 0.6), conc, 'rubble', rz=rng.uniform(0, 3))
             subdiv(b, 1); jag(b, s * 0.12, seed=k); o.append(b)
+    # (07.11, Kanta: «орудие слиплось с холмом») the pit is dug in: an earth berm banks the parapet and falls 2 m
+    # below the floor, so the game can seat the floor at the highest ground under it (SeaProps._battery) and the
+    # downhill side shows a grassy mound instead of a floating slab; a ramp leads out of the rear entrance
+    berm_m = L.flat('berm', EARTH, 1.0)
+    if not broken:
+        o.append(arc_wall((0, 0, -2.0), 6.75, 11.0, 3.0, 1.6, -math.pi + gap, math.pi - gap, berm_m, 'berm', seg=64))
+    else:
+        o.append(arc_wall((0, 0, -2.0), 6.75, 11.0, 3.0, 1.6, -math.pi + gap, 0.15, berm_m, 'berm', seg=64))
+        o.append(arc_wall((0, 0, -2.0), 6.75, 11.0, 3.0, 1.6, 0.75, math.pi - gap, berm_m, 'berm', seg=64))
+    o.append(L.hull([(-5.9, -1.3, 0.25), (-5.9, 1.3, 0.25), (-5.9, -1.3, -2.0), (-5.9, 1.3, -2.0),
+                     (-10.5, -1.9, -2.0), (-10.5, 1.9, -2.0)], berm_m, 'berm_ramp'))
     # торцы бруствера у входа, ниши боезапаса, ящики, снаряды
     for sg in (-1, 1):
         a = math.pi - gap
@@ -588,11 +599,13 @@ def _gun_site(broken):
         o.append(L.cyl((-4.42, -1.0 + k * 0.28, 0.42), 0.11, 0.14, iron, 'shell_tip', seg=8, axis='X', r2=0.03))
     # B2-Q10: pit clutter — ammo boxes with lids and rope handles, spent cases, a telephone box on the parapet,
     # drain grates and tie-down rings in the floor
-    for k, (bx, by, rz) in enumerate(((-3.3, 1.6, 0.3), (-3.0, 2.15, 0.9), (-4.2, 1.1, 1.4), (-2.6, -2.4, -0.4))):
+    # (07.11, Kanta: «что-то наложилось») kept clear of the 1.45× mount: its shield reaches r 3.4 m and the crew
+    # platform x -4.1 m, so boxes stand beside it and the spent cases lie in the ring between mount and parapet
+    for k, (bx, by, rz) in enumerate(((-2.2, 2.95, 0.2), (-1.1, 3.45, 0.6), (-4.5, 2.3, 1.2), (-2.3, -3.05, -0.3))):
         o.append(L.box((bx, by, 0.4), (0.9, 0.45, 0.3), gun, 'ammo_box', rz=rz))
         o.append(L.box((bx, by, 0.57), (0.94, 0.49, 0.05), iron, 'ammo_lid', rz=rz))
     for k in range(7):
-        a = rng.uniform(0, math.tau); r = rng.uniform(2.6, 4.6)
+        a = rng.uniform(0, math.tau); r = rng.uniform(4.2, 5.2)
         o.append(L.cyl((r * math.cos(a), r * math.sin(a), 0.33), 0.1, 0.65, brass, 'case', seg=8, axis='X', rot=Matrix.Rotation(rng.uniform(0, 3), 3, 'Z')))
     o.append(L.box((-5.0, 3.2, 1.0), (0.3, 0.45, 0.5), gun, 'phone_box', rz=-0.6))
     for a in (0.6, 2.0, -2.0, -0.6):
@@ -655,7 +668,7 @@ def _gun_site(broken):
         for b in barrel:
             b.data.transform(Matrix.Translation((0, 0, 2.0)) @ el)
         extra = [plate([(1.95, -1.6, 0.98), (1.95, 1.6, 0.98), (1.75, 1.55, z0 + 0.02), (1.75, -1.55, z0 + 0.02)], 0.07, gun, 'shield_skirt'),
-                 L.box((-2.6, 0, 1.12), (1.3, 2.6, 0.08), iron, 'platform'),
+                 L.box((-2.35, 0, 1.12), (0.9, 2.6, 0.08), iron, 'platform'),
                  L.cyl((0.0, 0.62, 1.55), 0.22, 0.05, iron, 'handwheel', seg=12, axis='Y'),
                  L.cyl((-0.4, -0.62, 1.55), 0.22, 0.05, iron, 'handwheel', seg=12, axis='Y')]
         for (a, b2) in ((front[0], front[3]), (front[1], front[2]), (front[3], front[2]), (roof[2], roof[3])):
@@ -711,8 +724,8 @@ def _gun_site(broken):
                   L.box((-1.55, 0.18, 1.9), (1.0, 0.03, 0.1), iron, 'tray'), L.box((-1.55, -0.18, 1.9), (1.0, 0.03, 0.1), iron, 'tray'),
                   L.cyl((-1.0, 1.05, 1.5), 0.04, 0.6, iron, 'seat_post', seg=6), L.cyl((-1.0, 1.05, 1.82), 0.2, 0.05, iron, 'seat', seg=10),
                   L.cyl((-1.2, -1.05, 1.5), 0.04, 0.6, iron, 'seat_post', seg=6), L.cyl((-1.2, -1.05, 1.82), 0.2, 0.05, iron, 'seat', seg=10),
-                  L.cyl((-2.5, 0.9, 1.25), 0.04, 2.2, brass, 'rammer', seg=6, axis='X'),
-                  L.box((-2.7, -0.95, 1.35), (0.45, 0.35, 0.4), gun, 'fuze_box')]
+                  L.cyl((-2.2, 0.9, 1.25), 0.04, 1.5, brass, 'rammer', seg=6, axis='X'),
+                  L.box((-2.45, -0.95, 1.35), (0.4, 0.35, 0.4), gun, 'fuze_box')]
         mount = [pf, pr, pl, pr2, breech, cradle] + sight + barrel + extra
         for b in mount + [b for b in o if b.name.startswith(('pedestal', 'turntable'))]:
             b.data.transform(Matrix.Scale(GUN_K, 4))
@@ -816,7 +829,15 @@ def _gun_site(broken):
         c = weather(b, P, N, seed=14, stain=0.2)
         return mix(c, col(EARTH, len(P)), 0.55 * np.clip((fbm(P, 0.35, 3, 15) - 0.45) * 3, 0, 1))   # нанесённый песок
 
-    table = {'conc': concrete, 'gun': paint, 'floor': floor_f, 'scorch': scorch_f, 'earth': crater_f,
+    def berm_f(b, P, N):   # the bank is grown over like the hillside round it: dry garrigue, dark maquis tufts, stones
+        n = len(P)
+        c = col((0.31, 0.3, 0.21), n) * (0.85 + 0.3 * fbm(P, 0.5, 3, 67))[:, None]
+        tuft = np.clip((vnoise(P, 1.6, 68) - 0.6) * 5, 0, 1)
+        c = mix(c, col((0.17, 0.23, 0.12), n), 0.8 * tuft)
+        st = np.clip((vnoise(P, 3.0, 69) - 0.82) * 8, 0, 1)
+        return mix(c, col((0.55, 0.53, 0.48), n), 0.6 * st * (1 - tuft))
+
+    table = {'conc': concrete, 'gun': paint, 'floor': floor_f, 'scorch': scorch_f, 'earth': crater_f, 'berm': berm_f,
              'sand': f_burlap(16),
              'iron': lambda b, P, N: weather(b, P, N, seed=17, grime=0.2), 'brass': lambda b, P, N: weather(b, P, N, seed=18),
              'void': lambda b, P, N: b}
@@ -1311,11 +1332,17 @@ def a04_lighthouse(scenery, src):
     # домик смотрителя и двор с оградой
     house_parts(o, 10.5, 0.0, 8.0, 6.0, 1, 'gable', (0.57, 0.50, 0.39), 41, shutters=(0.32, 0.40, 0.44), door_side='n')
     yard = L.flat('yard', (0.46, 0.41, 0.32), 1.0)
-    o.append(L.box((8.0, 0, 0.04), (22.0, 14.0, 0.08), yard, 'yard'))
+    # (07.11, Kanta: the yard fence read as loose sticks with open corners and a missing side) a closed
+    # dry-stone yard: the walls meet with overlapping corners, the west wall runs behind the tower, a gate east
+    o.append(L.box((6.3, 0, 0.04), (25.4, 14.0, 0.08), yard, 'yard'))
+    th = 0.6
     for y in (6.8, -6.8):
-        yard_wall(o, (-3.0, y), (19.0, y), 1.1, 41)
-    yard_wall(o, (19.0, -6.8), (19.0, -1.2), 1.1, 42)
-    yard_wall(o, (19.0, 1.2), (19.0, 6.8), 1.1, 43)
+        yard_wall(o, (-6.3 - th / 2, y), (19.0 + th / 2, y), 1.1, 41, th=th)
+    yard_wall(o, (-6.3, -6.8), (-6.3, 6.8), 1.1, 44, th=th)
+    yard_wall(o, (19.0, -6.8), (19.0, -1.4), 1.1, 42, th=th)
+    yard_wall(o, (19.0, 1.4), (19.0, 6.8), 1.1, 43, th=th)
+    for y in (-1.4, 1.4):   # gate piers
+        o.append(L.box((19.0, y, 0.7), (0.8, 0.8, 1.4), L.flat('drystone', LIME, 1.0), 'yard_wall'))
     stone_names = ('Concrete_material', 'Concrete_material.002')
     sh_town = town_shade(41)
 

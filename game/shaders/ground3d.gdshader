@@ -517,7 +517,7 @@ void fragment() {
 				// width varies along the coast (a gentle wide flat here, a quick drop there) and big patches of
 				// shoal and hollow break the contours; the first px at the edge keep the plain depth
 				float shelf = arch_shelf(world);
-				float dsh = pow(dp0, mix(0.55, 1.7, shelf));
+				float dsh = pow(dp0, mix(0.8, 1.5, shelf));   // gentler than 0.55…1.7: no quick drop right off the beach
 				// the drop-off line meanders across the shelf (mid-scale noise), so on a straight beach the edge of
 				// the turquoise is not a ruler line parallel to it
 				float patch = (big - 0.5) * 0.6 + (vnoise(wq / 150.0 + 23.0) - 0.5) * 0.32 + (vnoise(wq / 60.0 - 5.0) - 0.5) * 0.1;
@@ -541,6 +541,16 @@ void fragment() {
 					float dz = clamp(dp * 0.7 + big * 0.3, 0.0, 1.0);
 					wc = mix(SRGB(vec3(0.34, 0.64, 0.62)), SRGB(vec3(0.15, 0.47, 0.55)), smoothstep(-0.1, 0.75, dz));
 					wc = mix(wc, SRGB(vec3(0.09, 0.27, 0.4)), smoothstep(0.25, 1.0, dz));
+					wc *= 0.97 + 0.05 * vnoise(wq / 90.0 + 11.0);
+				}
+				if (arch_detail) {
+					// B2-Q10 (Kanta 07.11: «вода всё ещё резко переходит из цвета в цвет… ровным градиентом, от менее
+					// насыщенного бирюзового»): one even ramp over the whole depth, muted turquoise → teal → deep blue,
+					// linear in depth (two overlapping smoothsteps bunched the change into a band)
+					float dz = clamp(dp * 0.85 + big * 0.15, 0.0, 1.0);
+					float tz = smoothstep(0.0, 1.0, dz);
+					vec3 sa = SRGB(vec3(0.42, 0.6, 0.58)), sm = SRGB(vec3(0.2, 0.43, 0.5)), sd = SRGB(vec3(0.09, 0.26, 0.39));
+					wc = tz < 0.5 ? mix(sa, sm, tz * 2.0) : mix(sm, sd, tz * 2.0 - 1.0);
 					wc *= 0.97 + 0.05 * vnoise(wq / 90.0 + 11.0);
 				}
 			}
@@ -577,7 +587,11 @@ void fragment() {
 						vec3 rock_bed = mix(SRGB(vec3(0.2, 0.33, 0.33)), SRGB(vec3(0.33, 0.45, 0.42)), vnoise(world / 7.0) * 0.6 + vnoise(world / 30.0) * 0.4);
 						bed = mix(bed, rock_bed, smoothstep(0.35, 0.75, rk));
 					}
-					wc = mix(bed, wc, smoothstep(0.0, water_v2 ? 0.7 : 0.45, arch_detail ? dp : dp0) * 0.75 + 0.25);   // B2-Q10: bed fades by the varied depth   // W-01: дно гаснет плавнее
+					if (arch_detail) {   // muted bed, fading out over the whole shelf instead of the first third
+						bed = mix(bed, vec3(dot(bed, vec3(0.333))), 0.3);
+						wc = mix(bed, wc, smoothstep(0.0, 0.9, dp) * 0.8 + 0.2);
+					} else
+					wc = mix(bed, wc, smoothstep(0.0, water_v2 ? 0.7 : 0.45, dp0) * 0.75 + 0.25);   // B2-Q10: bed fades by the varied depth   // W-01: дно гаснет плавнее
 				} else {
 					wc = mix(bed, wc, smoothstep(0.01, 0.3, dp0) * 0.85 + 0.15);
 				}
@@ -783,13 +797,17 @@ void fragment() {
 				if (arch_detail) {
 					// rocky shore: a band of pale weathered limestone 4–12 px, cracked and pitted, its foot dark and
 					// wet where the swell reaches; garrigue starts right behind it
+					// (07.11, Kanta: «очень мыльный берег») value noise made soft blobs; the photo rock texture,
+					// greyed to limestone and at a finer scale, gives crisp clasts, edges and pits
+					vec3 rtx = texture(t_rock, world / (rock_world * 0.45)).rgb;
+					float rtl = dot(rtx, vec3(0.333));
 					float rw = (5.0 + 8.0 * vnoise(world / 35.0 + 2.0)) * (1.0 - smoothstep(0.4, 0.6, shelf_k));
-					float rock = (1.0 - smoothstep(rw - 2.0, rw + 1.5, sl + (vnoise(world / 6.0) - 0.5) * 3.0)) * (1.0 - water) * (1.0 - beach);
+					float rock = (1.0 - smoothstep(rw - 0.8, rw + 0.6, sl + (vnoise(world / 6.0) - 0.5) * 3.0 + (rtl - 0.45) * 4.0)) * (1.0 - water) * (1.0 - beach);
 					float crk = smoothstep(0.62, 0.7, 1.0 - abs(vnoise(world / 4.0 + 31.0) * 2.0 - 1.0));
-					vec3 lime = SRGB(vec3(0.57, 0.55, 0.5)) * (0.82 + 0.25 * vnoise(world / 2.2)) * (1.0 - 0.35 * crk);
+					vec3 lime = SRGB(vec3(0.6, 0.58, 0.53)) * (0.55 + 0.75 * rtl) * (0.9 + 0.15 * vnoise(world / 9.0)) * (1.0 - 0.35 * crk);
 					lime = mix(lime * SRGB(vec3(0.45, 0.45, 0.42)), lime, smoothstep(0.0, 3.0, sl));
 					c = mix(c, lime, rock);
-					nxy = mix(nxy, vec2(vnoise(world / 2.0) - 0.5, vnoise(world / 2.0 + 7.0) - 0.5) * 1.4, rock);
+					nxy = mix(nxy, (texture(n_rock, world / (rock_world * 0.45)).rg * 2.0 - 1.0) * 1.2, rock);
 				}
 			}
 			c = mix(c, c * SRGB(vec3(0.7, 0.72, 0.7)), wet * 0.7);
