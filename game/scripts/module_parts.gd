@@ -13,8 +13,11 @@ const IDS := ["engine", "armor", "gun_dmg", "radio"]
 ## PT-04 B: course-gun points measured by hand where the generic one (nose side, 80 % of the half-width) misses
 ## the skin, model axes: «Оса» t1 has a nose intake, so at the gun height the half-width search stops at the duct
 ## wall and put the gun inside the intake; here it sits on the outer skin below the intake lip (battle GLB section
-## at x 0.43: outer skin at |z| 0.046 for y -0.065)
-const GUN_AT := {"fighter_t1": Vector3(0.43, -0.065, 0.044)}
+## at x 0.43: outer skin at |z| 0.046 for y -0.065). «Грач» 4/5 and «Кит» 5 have wide noses, where 80 % of the
+## half-width lies 1.1-1.3 % of the length inside the skin (combat self-check), so their guns sit on the outer skin
+## at the generic x and y (battle GLB sections at x 0.43: |z| 0.058 at y -0.088, 0.066 at -0.08, 0.070 at -0.062)
+const GUN_AT := {"fighter_t1": Vector3(0.43, -0.065, 0.044), "attacker_t4": Vector3(0.43, -0.088, 0.056),
+	"attacker_t5": Vector3(0.43, -0.08, 0.064), "bomber_t5": Vector3(0.43, -0.062, 0.068)}
 
 static var _anchors := {}
 static var _mats := {}
@@ -256,12 +259,12 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 	a["gun"] = GUN_AT.get(key, Vector3(gx, gy, _half_width(faces, gx, gy) * 0.8))
 	# сопла: точки огня PlaneFx (пикс. картинки) → оси модели; высота — середина сечения перед соплом
 	var jets: Array = []
-	var nz: Array = NozzleFlame.NOZZLES.get(key, [])
-	if not nz.is_empty():   # Kanta 26.10: the nozzle exits measured on the models — the same place as the flames
-		for z in ([0.0] if is_zero_approx(float(nz[2])) else [-float(nz[2]), float(nz[2])]):
-			jets.append(Vector3(float(nz[0]), float(nz[1]), z))
+	var ex := NozzleFlame.exits(key)
+	if not ex.is_empty():   # Kanta 26.10: the nozzle exits measured on the models — the same place as the flames
+		for e: Array in ex:
+			jets.append(e[0])
 		a["jets"] = jets
-		a["jet_r"] = float(nz[3])
+		a["jet_r"] = float(ex[0][1])
 		return a
 	var spec: Dictionary = PlaneFx.SPEC.get(key, {})
 	var cls := key.get_slice("_", 0)

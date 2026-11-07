@@ -91,3 +91,16 @@
 | --- | --- | --- |
 | biome/b04_poplar (тополь; карточки b04_poplar_side/top) | `tools/blender/biome_flora.py poplar` | генерацию Meshy (список слабых моделей, Kanta 28.10.2026) |
 | biome/b08_wreck_tank, biome/b07_wreck_truck (сгоревшие танк и грузовик) | `tools/blender/vehicle_wreck.py` | генерации Meshy (список слабых моделей, Kanta 28.10.2026) |
+
+## Самолёты ур. 4–5 (Meshy)
+
+Сгенерированы в Meshy (платный план, Kanta, 07.11.2026) по нашим собственным концептам видов сверху и сбоку; сторонних моделей нет. Сырые генерации в репозиторий не кладём: подготовка `tools/blender/meshy_prep.py` с настройками `tools/blender/meshy_prep_cfg/<модель>.json`, затем `sf_rework.py <модель>_hangar` и `battle_bake.py`.
+
+| Модель в игре | Что | Источник |
+| --- | --- | --- |
+| fh_battle_fighter_t4, fh_hangar_fighter_t4 | «Оса» ур. 4 | Meshy |
+| fh_battle_fighter_t5, fh_hangar_fighter_t5 | «Оса» ур. 5 | Meshy |
+| fh_battle_attacker_t4, fh_hangar_attacker_t4 | «Грач» ур. 4 | Meshy |
+| fh_battle_attacker_t5, fh_hangar_attacker_t5 | «Грач» ур. 5 | Meshy |
+| fh_battle_bomber_t4, fh_hangar_bomber_t4 | «Кит» ур. 4 | Meshy |
+| fh_battle_bomber_t5, fh_hangar_bomber_t5 | «Кит» ур. 5 | Meshy |

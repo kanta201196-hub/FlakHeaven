@@ -870,10 +870,15 @@ static func wing_point(cls_id: String, lvl: String, side: float, zf_override := 
 
 
 const KIT_TOP_TURRET := 0.4   # верхняя турель «Кита»: доля длины от носа
-## PT-04 B: model x (plane length 1) of the top turret on a «Кит» model where KIT_TOP_TURRET lands on something:
+## PT-04 B: model x (plane length 1) of the top turret on a «Кит» or «Грач» model where the generic point (the
+## bombers' KIT_TOP_TURRET, the attackers' half length) lands on something:
 ## «Кит» t1 — the aerial wire leaves the spine at x 0.105 and a baked dorsal turret stands at 0.19–0.235, so the
-## turret sits between them with its barrels (pointing aft) above the wire's root
-const KIT_TOP_TURRET_X := {"bomber_t1": 0.155}
+## turret sits between them with its barrels (pointing aft) above the wire's root;
+## «Грач» 4 — a flat dome stands on the spine at x 0.015–0.065, so the gunner sits aft of it;
+## «Грач» 5 — the canopy glass starts at x 0.002 and the «Луч» laser dome sits at −0.065…−0.125 with the fin behind
+## it, so the turret (ring about 0.042 across) takes the short spine between them, centred a little forward so its
+## ring stands clear of the dome (at −0.044 the ring touched the dome's front)
+const TOP_TURRET_X := {"bomber_t1": 0.155, "attacker_t4": -0.05, "attacker_t5": -0.03}
 ## S13: ventral turret of «Кит» (third slot): model x (plane length 1), just aft of the bomb bay (x -0.31..0)
 const KIT_BOTTOM_TURRET_X := -0.335
 ## S13 (Kanta 27.10): wing turrets of «Грач» 2 — model (x, |z|) on the wing, on the outer panel just outboard of
@@ -967,14 +972,17 @@ static func mounts(cls_id: String, lvl: String, gi: int, g: Hardpoint) -> Array:
 		# тест 3.5-s7 (Kanta): турели «Кита» только на корпусе — кормовая под килем и верхняя на спине фюзеляжа;
 		# S13: the third («Кит» 2, lvl 5) — ventral, under the fuselage aft of the bomb bay (it used to wrap onto the tail)
 		var top_x: float = nose - L * KIT_TOP_TURRET
-		if KIT_TOP_TURRET_X.has(PlaneTiers.art_key(cls_id, lvl)) and wtex != null:
-			top_x = float(KIT_TOP_TURRET_X[PlaneTiers.art_key(cls_id, lvl)]) * float(wtex.get_width())
+		if TOP_TURRET_X.has(PlaneTiers.art_key(cls_id, lvl)) and wtex != null:
+			top_x = float(TOP_TURRET_X[PlaneTiers.art_key(cls_id, lvl)]) * float(wtex.get_width())
 		order = [["tail", tail + L * 0.035, PI, 0.0], ["top", top_x, PI, 0.0]]
 		if wtex != null:
 			order.append(["bottom", KIT_BOTTOM_TURRET_X * float(wtex.get_width()), PI, 0.0])
 	else:
 		# штурмовик: стрелок за кабиной (верхняя; тест 3.5-s3 — на фюзеляже за фонарём, не на нём), вторая — нижняя
-		order = [["top", nose - L * 0.5, PI, 0.0], ["bottom", nose - L * 0.45, PI, 0.0], ["tail", tail + L * 0.035, PI, 0.0]]
+		var top_a: float = nose - L * 0.5
+		if TOP_TURRET_X.has(PlaneTiers.art_key(cls_id, lvl)) and wtex != null:
+			top_a = float(TOP_TURRET_X[PlaneTiers.art_key(cls_id, lvl)]) * float(wtex.get_width())
+		order = [["top", top_a, PI, 0.0], ["bottom", nose - L * 0.45, PI, 0.0], ["tail", tail + L * 0.035, PI, 0.0]]
 	for i in g.slots:
 		var o: Array = order[i % order.size()]
 		out.append({"p": Vector2(o[1], o[3]), "side": o[0], "yaw": o[2]})
