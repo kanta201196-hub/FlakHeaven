@@ -518,7 +518,9 @@ void fragment() {
 				// shoal and hollow break the contours; the first px at the edge keep the plain depth
 				float shelf = arch_shelf(world);
 				float dsh = pow(dp0, mix(0.55, 1.7, shelf));
-				float patch = (big - 0.5) * 0.5 + (vnoise(wq / 95.0 + 23.0) - 0.5) * 0.14;
+				// the drop-off line meanders across the shelf (mid-scale noise), so on a straight beach the edge of
+				// the turquoise is not a ruler line parallel to it
+				float patch = (big - 0.5) * 0.6 + (vnoise(wq / 150.0 + 23.0) - 0.5) * 0.32 + (vnoise(wq / 60.0 - 5.0) - 0.5) * 0.1;
 				dp = clamp(dsh + patch * smoothstep(0.03, 0.2, dp0), 0.0, 1.0);
 			}
 			vec3 sh = SRGB(vec3(0.4, 0.66, 0.6)), md = SRGB(vec3(0.13, 0.4, 0.47)), dpc = SRGB(vec3(0.06, 0.2, 0.3));

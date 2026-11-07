@@ -533,7 +533,17 @@ func _coast(x: float, z: float, r: float) -> float:
 	var w := smoothstep(_strait * _isl_from, _strait * (_isl_from + 0.15), a)
 	if w > 0.0:
 		var isl := (_isl.get_noise_2d(x, z) - _isl_thr) * _isl_k
-		s = maxf(s, lerpf(-_strait, isl, w))
+		var s1 := lerpf(-_strait, isl, w)
+		var sx := maxf(s, s1)
+		if sx < 0.0:
+			# B2-Q10 (Kanta 07.11: «острые углы» in the water): a plain max of the strait and island fields
+			# creases where they meet, and every depth contour got a V corner there. A smooth max with the blend
+			# width growing with depth keeps the coastline exact (k = 0 at the edge) and rounds the contours
+			# out at sea; the blend adds at most k/4 = 0.2·|s|, so water stays water
+			var k := -sx * 0.8
+			var h := clampf(0.5 + 0.5 * (s - s1) / k, 0.0, 1.0)
+			sx = lerpf(s1, s, h) + k * h * (1.0 - h)
+		s = sx
 	var sg := 1.0 if r >= 0.0 else -1.0
 	if s >= 0.0:
 		return sg * (SEA_W + s)
@@ -1785,7 +1795,10 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				# the shallow band got straight edges and corners. True depth 0…1, linear in the distance to shore,
 				# rides in CUSTOM0.z (unused without landform regions: every prov.z use is gated by prov.w = 0)
 				var av := absf(vs[gi])
-				c0[vi * 4 + 2] = clampf(1.0 - av / SEA_W, 0.0, 1.0) if av < SEA_W else 0.0
+				# eased to full depth (zero slope at 1): a plain clamp left a straight hard line where the shelf
+				# met the flat strait floor
+				var lin := clampf(1.0 - av / SEA_W, 0.0, 1.0) if av < SEA_W else 0.0
+				c0[vi * 4 + 2] = 1.0 - (1.0 - lin) * (1.0 - lin)
 	var idx := PackedInt32Array()
 	idx.resize(nn * nn * 6)
 	var p := 0
