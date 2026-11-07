@@ -382,8 +382,8 @@ func _hold(p: Dictionary) -> void:
 	_ground_cam(p)
 	if p.has("cls"):   # 3.4-t1 п. 9, 19: другой самолёт (винты «Кита 1», сопла)
 		m.player.cls_id = p["cls"][0]
-		m.player.plane_lvl = p["cls"][1]
-		m.player.tier = SelfCheck.tier_of(int(p["cls"][1]))
+		m.player.plane_model = String(p["cls"][1])
+		m.player.tier = SelfCheck.tier_of(String(p["cls"][1]))
 	if p.has("tlv"):   # S12 --turretbench: turret level (tier 1/2/3 at 1/3/5), evolution and «Стальной ёж» pods
 		for g: Hardpoint in m.player.groups:
 			if g.weapon == "turret":
@@ -776,7 +776,7 @@ func _make_points() -> Array:
 		pts.append({"name": "road_convoy", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 2.2, "convoy": true, "wait": 1.5})
 		pts.append({"name": "road_ground", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "ground_dist": 110.0, "wait": 2.0})   # Kanta 26.10: road surface up close
 		# Kanta 26.10 (road wide enough for 1.5 vehicles): the convoy on the road at gameplay height, the player's plane beside it
-		pts.append({"name": "road_play", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "cls": ["fighter", 1], "zoom": 1.3, "convoy": true, "wait": 1.5})
+		pts.append({"name": "road_play", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "cls": ["fighter", "1"], "zoom": 1.3, "convoy": true, "wait": 1.5})
 		pts.append({"name": "road_smoke", "pos": ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD), "zoom": 1.0, "convoy": true, "smoke": true, "wait": 3.0})
 		# M-37: позиция ПВО целиком и рядом с колонной (размеры ПВО относительно машин конвоя)
 		pts.append({"name": "aa_site", "pos": empty, "zoom": 1.0, "enemies": true, "ground": true, "wait": 2.5})
@@ -845,7 +845,7 @@ func _make_points() -> Array:
 		pts.append({"name": "village_close", "pos": found["o_village"] + Vector2(0, 600), "zoom": 2.4})
 		pts.append({"name": "village_houses", "pos": found["o_village"] + Vector2(-150, 0), "ground_dist": 260.0, "wait": 3.0})   # VIS-01: house models up close
 		# VIS-01: the village at gameplay height with the player's plane over it, to judge the houses' scale
-		pts.append({"name": "village_play", "pos": found["o_village"] + Vector2(0, 450), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+		pts.append({"name": "village_play", "pos": found["o_village"] + Vector2(0, 450), "cls": ["fighter", "1"], "zoom": 1.3, "wait": 1.5})
 		# VIS-01: the market on the square up close (Kanta 26.10: tents in the centre of the kishlak)
 		pts.append({"name": "village_market", "pos": found["o_village"], "ground_dist": 170.0, "wait": 3.0})
 		# Kanta 26.10 (street and road textures, trench and sandbags): a street and the defence line up close.
@@ -908,12 +908,12 @@ func _make_points() -> Array:
 		if bq != Vector2.INF:
 			pts.append({"name": "road_bridge", "pos": bq, "zoom": 2.5})
 			pts.append({"name": "bridge_close", "pos": bq, "ground_dist": 150.0, "wait": 3.0})
-			pts.append({"name": "bridge_play", "pos": bq + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+			pts.append({"name": "bridge_play", "pos": bq + Vector2(0, 120), "cls": ["fighter", "1"], "zoom": 1.3, "wait": 1.5})
 		if found.has("o_oasis"):
 			pts.append({"name": "footbridge_close", "pos": ter._river_point(found["o_oasis"]), "ground_dist": 230.0, "wait": 3.0})
 		if yq != Vector2.INF:
 			pts.append({"name": "yurt_close", "pos": yq, "ground_dist": 95.0, "wait": 3.0})
-			pts.append({"name": "yurt_play", "pos": yq + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+			pts.append({"name": "yurt_play", "pos": yq + Vector2(0, 120), "cls": ["fighter", "1"], "zoom": 1.3, "wait": 1.5})
 		# weak-models list (Kanta 28.10): the densest poplar grove by the nearest village, and burnt-out vehicles on
 		# the road, at gameplay height and close up. The places come from BiomeProps.plan, so a before/after pair
 		# of frames shows the same trees and hulks
@@ -974,7 +974,7 @@ func _make_points() -> Array:
 		pts.append({"name": "nozzle_ab", "pos": empty, "fly": true, "ab": true, "wait": 1.0, "zoom": 2.2})
 		pts.append({"name": "crash_fall", "pos": empty + Vector2(0, 600), "crash": true, "wait": 2.0, "zoom": 1.2})
 		pts.append({"name": "crash_wreck", "pos": empty + Vector2(0, 600), "wait": 2.5, "zoom": 1.2})
-		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "wait": 0.8, "zoom": 2.2})
+		pts.append({"name": "kit_props", "pos": empty + Vector2(300, 300), "cls": ["bomber", "1"], "wait": 0.8, "zoom": 2.2})
 	if OS.get_cmdline_user_args().has("--wreckbench") and ter != null:
 		# Kanta 26.10: crashed-plane wrecks blended into the ground; the first four plane scenes of past fights
 		# (valley sides, several wreck variants) and the map's wreck object, from a camera close to the ground
@@ -988,7 +988,7 @@ func _make_points() -> Array:
 					for it in ter.scenes(Vector2i(cx, cy)):
 						if it["k"] == "plane" and nw < 4:
 							if nw == 0:   # the first one also at gameplay height with the player's plane, for scale
-								pts.append({"name": "wreck_play", "pos": (it["p"] as Vector2) + Vector2(0, 120), "cls": ["fighter", 1], "zoom": 1.3, "wait": 1.5})
+								pts.append({"name": "wreck_play", "pos": (it["p"] as Vector2) + Vector2(0, 120), "cls": ["fighter", "1"], "zoom": 1.3, "wait": 1.5})
 							pts.append({"name": "wreck_scene%d" % nw, "pos": it["p"], "ground_dist": 230.0, "wait": 2.0})
 							nw += 1
 		if found.has("o_wreck"):
@@ -999,19 +999,19 @@ func _make_points() -> Array:
 		pts.append({"name": "eweap_close", "pos": empty, "eweap": true, "shot_t": 1.5, "zoom": 2.0})
 	if OS.get_cmdline_user_args().has("--bombaim"):   # S9-26: прицел бомб «Кита» по кнопке — должен лежать на земле
 		pts = []
-		pts.append({"name": "bomb_aim", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "aim": true, "wait": 1.5, "zoom": 1.0})
-		pts.append({"name": "bomb_aim_hill", "pos": empty + Vector2(-900, 700), "cls": ["bomber", 1], "aim": true, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "bomb_aim", "pos": empty + Vector2(300, 300), "cls": ["bomber", "1"], "aim": true, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "bomb_aim_hill", "pos": empty + Vector2(-900, 700), "cls": ["bomber", "1"], "aim": true, "wait": 1.5, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--carpetskill"):   # BM-01: умение «Огненный ковёр» — метки бомб
 		pts = []
-		pts.append({"name": "carpet_skill", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "skill_carpet": 2.5, "wait": 99.0, "zoom": 1.6})
+		pts.append({"name": "carpet_skill", "pos": empty + Vector2(300, 300), "cls": ["bomber", "1"], "skill_carpet": 2.5, "wait": 99.0, "zoom": 1.6})
 	if OS.get_cmdline_user_args().has("--bombbench"):   # тест 3.5-s4 (п. 10, 14): падающие бомбы ступеней и воронки
 		pts = []
-		pts.append({"name": "bomb_drop", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "bombs": true, "wait": 2.5, "zoom": 2.6})
-		for lv in [1, 2]:
-			pts.append({"name": "carpet_drop_%d" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": true, "wait": 6.5, "zoom": 5.0})
-			pts.append({"name": "carpet_roll_%d" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": true, "wait": 6.5, "zoom": 5.0, "roll": 0.62, "ph": 0.17})
-			pts.append({"name": "baybomb_drop_%d" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": false, "wait": 6.5, "zoom": 5.0})
-		pts.append({"name": "bomb_craters", "pos": empty + Vector2(300, 300), "cls": ["bomber", 1], "craters": true, "wait": 3.0, "zoom": 1.0})
+		pts.append({"name": "bomb_drop", "pos": empty + Vector2(300, 300), "cls": ["bomber", "1"], "bombs": true, "wait": 2.5, "zoom": 2.6})
+		for lv in PlaneTiers.model_keys():
+			pts.append({"name": "carpet_drop_%s" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": true, "wait": 6.5, "zoom": 5.0})
+			pts.append({"name": "carpet_roll_%s" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": true, "wait": 6.5, "zoom": 5.0, "roll": 0.62, "ph": 0.17})
+			pts.append({"name": "baybomb_drop_%s" % lv, "pos": empty + Vector2(300, 300), "cls": ["bomber", lv], "carpet": false, "wait": 6.5, "zoom": 5.0})
+		pts.append({"name": "bomb_craters", "pos": empty + Vector2(300, 300), "cls": ["bomber", "1"], "craters": true, "wait": 3.0, "zoom": 1.0})
 	if OS.get_cmdline_user_args().has("--cloudbench"):   # тест 3.5-s5 (M-31): облака — рядом, над игроком, общий план
 		pts = []
 		var cl: Array = m.clouds.items() if m.clouds != null else []
@@ -1107,38 +1107,38 @@ func _make_points() -> Array:
 	if OS.get_cmdline_user_args().has("--modelbench"):   # 3.5: самолёты игрока 3D-моделями в бою
 		pts = []
 		for c in ["fighter", "attacker", "bomber"]:
-			for lv in [1, 2]:
-				pts.append({"name": "model_%s_%d" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "wait": 1.0, "zoom": 2.2})
-				pts.append({"name": "model_%s_%d_far" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "fly": true, "wait": 1.5, "zoom": 1.0})
-		pts.append({"name": "model_wingmen", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.0, "wingmen": true, "wait": 1.0})
-		pts.append({"name": "model_roll", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.2, "roll": 0.62})
-		pts.append({"name": "model_tanker", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.5, "tanker": true, "wait": 1.0})
-		pts.append({"name": "model_ground", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.3, "enemies": true, "ground": true, "wait": 2.5})
+			for lv in PlaneTiers.model_keys():
+				pts.append({"name": "model_%s_%s" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "wait": 1.0, "zoom": 2.2})
+				pts.append({"name": "model_%s_%s_far" % [c, lv], "pos": empty + Vector2(300, 300), "cls": [c, lv], "fly": true, "wait": 1.5, "zoom": 1.0})
+		pts.append({"name": "model_wingmen", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 2.0, "wingmen": true, "wait": 1.0})
+		pts.append({"name": "model_roll", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 2.2, "roll": 0.62})
+		pts.append({"name": "model_tanker", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 1.5, "tanker": true, "wait": 1.0})
+		pts.append({"name": "model_ground", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 1.3, "enemies": true, "ground": true, "wait": 2.5})
 		for ph in [1, 2, 3]:
-			pts.append({"name": "model_fortress_%d" % ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "enemies": true, "fortress": ph, "wait": 2.5})
+			pts.append({"name": "model_fortress_%d" % ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 1.0, "enemies": true, "fortress": ph, "wait": 2.5})
 		# S11-29: the Fortress close (turrets on the hull, paint) and under steady fire (hit flash every frame)
-		pts.append({"name": "model_fortress_close", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.6, "enemies": true, "fortress": 1, "wait": 2.5})
-		pts.append({"name": "model_fortress_hit", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.6, "enemies": true, "fortress": 1, "fort_hit": true, "wait": 2.5})
-		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.6, "enemies": true, "wait": 0.6})
+		pts.append({"name": "model_fortress_close", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 2.6, "enemies": true, "fortress": 1, "wait": 2.5})
+		pts.append({"name": "model_fortress_hit", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 2.6, "enemies": true, "fortress": 1, "fort_hit": true, "wait": 2.5})
+		pts.append({"name": "model_enemies", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 1.6, "enemies": true, "wait": 0.6})
 		for ph in ["march", "track", "launch"]:   # Kanta 24.10: SAM launcher folded, raised and tracking, launching
-			pts.append({"name": "sam_" + ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 9.0, "sam_poses": ph, "wait": 2.5})
+			pts.append({"name": "sam_" + ph, "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 9.0, "sam_poses": ph, "wait": 2.5})
 		# VIS-01: each reworked enemy model alone and close, moving parts posed (turret turned, wheels steered)
 		for k in UNIT_POSES:
-			pts.append({"name": "unit_" + k, "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": UNIT_POSES[k][2], "unit_poses": k, "wait": 3.5})
+			pts.append({"name": "unit_" + k, "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": UNIT_POSES[k][2], "unit_poses": k, "wait": 3.5})
 		# the bunker at the normal gameplay zoom with the player's fighter beside it, for scale
-		pts.append({"name": "unit_bunker_play", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 1.0, "unit_poses": "bunker", "play": true, "wait": 3.5})
+		pts.append({"name": "unit_bunker_play", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 1.0, "unit_poses": "bunker", "play": true, "wait": 3.5})
 		# S9-22: вертолёт «Сарыч» крупно — диск несущего винта над песком
-		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", 1], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
+		pts.append({"name": "model_heli", "pos": empty + Vector2(300, 300), "cls": ["fighter", "1"], "zoom": 2.4, "enemies": true, "heli": true, "wait": 1.5})
 	if OS.get_cmdline_user_args().has("--planebench"):
 		# S13 (Kanta 27.10): the --cls plane 1 and 2 at the gameplay zoom and close, turret lvl 1 / 3 / 5 with
 		# flares of the same level on the second group (flv), so turret mounts, flare dispensers and the nozzle
 		# flames are seen as the player sees them; run with --cls=attacker or --cls=bomber
 		pts = []
-		for lv in [1, 2]:
+		for lv in PlaneTiers.model_keys():
 			for q in [[1, 0], [3, 3], [5, 5]]:
-				pts.append({"name": "plane_%d_t%d" % [lv, q[0]], "pos": empty + Vector2(300, 300), "cls": [m.player.cls_id, lv],
+				pts.append({"name": "plane_%s_t%d" % [lv, q[0]], "pos": empty + Vector2(300, 300), "cls": [m.player.cls_id, lv],
 					"tlv": q[0], "flv": q[1], "zoom": 1.0, "wait": 1.5})
-			pts.append({"name": "plane_%d_close" % lv, "pos": empty + Vector2(300, 300), "cls": [m.player.cls_id, lv],
+			pts.append({"name": "plane_%s_close" % lv, "pos": empty + Vector2(300, 300), "cls": [m.player.cls_id, lv],
 				"tlv": 5, "flv": 5, "zoom": 2.6, "wait": 1.5})
 	if OS.get_cmdline_user_args().has("--turretbench"):
 		# S12 (Kanta 26.10): the turrets of the --cls plane close up in battle, tier by tier, then the evolution
@@ -1154,7 +1154,7 @@ func _make_points() -> Array:
 		pts = []
 		var road := ter._field_point(empty + Vector2(0, 700), Terrain3D.D_ROAD)
 		pts.append({"name": "size_trio", "pos": road + SIZE_PLAYER_OFF, "convoy": true, "convoy_at": road,
-			"fortress": 1, "fort_off": SIZE_FORT_OFF, "cls": ["fighter", 1], "zoom": 1.0, "wait": 2.5,
+			"fortress": 1, "fort_off": SIZE_FORT_OFF, "cls": ["fighter", "1"], "zoom": 1.0, "wait": 2.5,
 			"sizes": true})
 		# VIS-01 (Kanta 24.10): the same at the ground fort (Highland o_fort) — the fighter, the fort and
 		# a convoy on the road past it; the log adds the fort side's on-screen length
@@ -1166,7 +1166,7 @@ func _make_points() -> Array:
 			# of the fort, so a fort twice as big still fits in the frame
 			var pp := ter._field_point(Vector2(rd.x, fp.y + SIZE_FORT_PLAYER_OFF.y), Terrain3D.D_ROAD) + Vector2(SIZE_FORT_PLAYER_OFF.x, 0)
 			pts.append({"name": "size_fort", "pos": pp, "convoy": true, "convoy_at": rd,
-				"fort_obj": fp, "cls": ["fighter", 1], "zoom": 1.0, "wait": 2.5, "sizes": true})
+				"fort_obj": fp, "cls": ["fighter", "1"], "zoom": 1.0, "wait": 2.5, "sizes": true})
 	if SelfCheck.I != null:   # R-23: every plane in flight and close up, nothing else
 		pts = SelfCheck.combat_points(empty + Vector2(300, 300)).filter(SelfCheck.I.wanted)
 	for a in OS.get_cmdline_user_args():
@@ -1561,14 +1561,20 @@ const _MECH_VIEWS := {
 ## [focus, yaw, pitch, distance] in hangar axes (nose +X, up +Y, left wing -Z); "bay" only on the bombers
 var _mc_last := ""   # --mechclose: plane of the previous frame
 const _MECHCLOSE := {
+	"fighter_t1": {"low34": [Vector3(0.0, -0.05, -0.2), PI + 0.55, -0.4, 0.34], "side": [Vector3(0.0, -0.05, -0.2), -PI / 2.0 - 0.55, -0.05, 0.4],
+		"top34": [Vector3(0.0, -0.05, -0.2), PI + 0.55, 0.55, 0.34]},
 	"fighter_1": {"low34": [Vector3(-0.24, -0.02, -0.14), PI + 0.55, -0.4, 0.34], "side": [Vector3(-0.24, -0.02, -0.14), -PI / 2.0 - 0.55, -0.05, 0.4],
 		"top34": [Vector3(-0.24, -0.02, -0.14), PI + 0.55, 0.55, 0.34]},
 	"fighter_2": {"low34": [Vector3(-0.2, -0.03, -0.27), PI + 0.55, -0.4, 0.36], "side": [Vector3(-0.2, -0.03, -0.27), -PI / 2.0 - 0.55, -0.05, 0.42],
 		"top34": [Vector3(-0.2, -0.03, -0.27), PI + 0.55, 0.55, 0.36]},
+	"attacker_t1": {"low34": [Vector3(0.02, -0.06, -0.22), PI + 0.55, -0.4, 0.38], "side": [Vector3(0.02, -0.06, -0.22), -PI / 2.0 - 0.55, -0.05, 0.46],
+		"top34": [Vector3(0.02, -0.06, -0.22), PI + 0.55, 0.55, 0.38]},
 	"attacker_1": {"low34": [Vector3(-0.12, -0.06, -0.24), PI + 0.55, -0.4, 0.38], "side": [Vector3(-0.12, -0.06, -0.24), -PI / 2.0 - 0.55, -0.05, 0.46],
 		"top34": [Vector3(-0.12, -0.06, -0.24), PI + 0.55, 0.55, 0.38]},
 	"attacker_2": {"low34": [Vector3(-0.16, -0.06, -0.25), PI + 0.55, -0.4, 0.38], "side": [Vector3(-0.16, -0.06, -0.25), -PI / 2.0 - 0.55, -0.05, 0.46],
 		"top34": [Vector3(-0.16, -0.06, -0.25), PI + 0.55, 0.55, 0.38]},
+	"bomber_t1": {"low34": [Vector3(0.03, -0.02, -0.3), PI + 0.55, -0.4, 0.42], "side": [Vector3(0.03, -0.02, -0.3), -PI / 2.0 - 0.55, -0.05, 0.5],
+		"top34": [Vector3(0.03, -0.02, -0.3), PI + 0.55, 0.55, 0.42]},
 	"bomber_1": {"low34": [Vector3(-0.08, -0.07, -0.3), PI + 0.55, -0.4, 0.42], "side": [Vector3(-0.08, -0.07, -0.3), -PI / 2.0 - 0.55, -0.05, 0.5],
 		"top34": [Vector3(-0.08, -0.07, -0.3), PI + 0.55, 0.55, 0.42], "bay": [Vector3(-0.01, -0.08, 0.0), -PI / 2.0 + 0.45, -0.55, 0.38]},
 	"bomber_2": {"low34": [Vector3(-0.17, -0.03, -0.27), PI + 0.55, -0.4, 0.42], "side": [Vector3(-0.17, -0.03, -0.27), -PI / 2.0 - 0.55, -0.05, 0.5],
@@ -1596,9 +1602,9 @@ func _hangar_bench() -> void:
 		if OS.get_cmdline_user_args().has("--turretclose"):
 			# крупно турели: штурмовик и бомбардировщик по ступеням 1 / 2 / 3 и эволюции (4), кормовая установка
 			# [класс, ур., ступень, № турели]; у «Кита» № 0 — корма, 1 — на спине (ступени 2+: с ур. 3)
-			for q in [["attacker", 1, 1, 0], ["attacker", 1, 2, 0], ["attacker", 2, 3, 0],
-					["bomber", 1, 1, 1], ["bomber", 1, 2, 1], ["bomber", 1, 3, 1], ["bomber", 1, 4, 1], ["bomber", 2, 3, 1],
-					["bomber", 1, 1, 0], ["bomber", 1, 2, 0], ["bomber", 2, 3, 0]]:
+			for q in [["attacker", "1", 1, 0], ["attacker", "1", 2, 0], ["attacker", "2", 3, 0],
+					["bomber", "1", 1, 1], ["bomber", "1", 2, 1], ["bomber", "1", 3, 1], ["bomber", "1", 4, 1], ["bomber", "2", 3, 1],
+					["bomber", "1", 1, 0], ["bomber", "1", 2, 0], ["bomber", "2", 3, 0]]:
 				_hq.append(q)
 			_t = 0.0
 			return
@@ -1616,7 +1622,7 @@ func _hangar_bench() -> void:
 				Hangar3D.bench_supersample = 2.5
 			for vi in _hcam().size():
 				var hv: Array = _hcam()[vi]
-				_hq.append([hv[1], int(hv[2]), int(hv[3]), "C", hv[4], vi])
+				_hq.append([hv[1], String(hv[2]), int(hv[3]), "C", hv[4], vi])
 			_t = 0.0
 			return
 		if OS.get_cmdline_user_args().has("--mechanim"):
@@ -1626,14 +1632,14 @@ func _hangar_bench() -> void:
 					if OS.get_cmdline_user_args().has("--mechview=%d" % (1 - vi)):   # только один ракурс
 						continue
 					for f in MECH_FRAMES:
-						_hq.append([c, 1, 3 if c == "bomber" else 1, "M", f, vi])
+						_hq.append([c, "1", 3 if c == "bomber" else 1, "M", f, vi])
 			_t = 0.0
 			return
 		if OS.get_cmdline_user_args().has("--mechclose"):
 			for key: String in _MECHCLOSE:
 				for view: String in _MECHCLOSE[key]:
 					for pose in [0, 1]:
-						_hq.append([key.get_slice("_", 0), int(key.get_slice("_", 1)), 3 if key.begins_with("bomber") else 1, "K", view, pose])
+						_hq.append([key.get_slice("_", 0), key.get_slice("_", 1), 3 if key.begins_with("bomber") else 1, "K", view, pose])
 			_t = 0.0
 			return
 		if OS.get_cmdline_user_args().has("--hangarweaptab"):
@@ -1649,7 +1655,7 @@ func _hangar_bench() -> void:
 			return
 		if OS.get_cmdline_user_args().has("--hangarcarpet"):
 			# тест 3.5-s5 (п. 3): «Кит» ур. 1 и 2 — бомбы ступени 3 и «ковёр» в открытом бомбоотсеке (вид снизу сбоку)
-			for lv in [1, 2]:
+			for lv in PlaneTiers.model_keys():
 				for wt in [3, 4]:
 					_hq.append(["bomber", lv, wt])
 			_t = 0.0
@@ -1659,7 +1665,7 @@ func _hangar_bench() -> void:
 			Hangar3D.bench_weapons = {"fighter": ["srm", ""], "attacker": ["srm", "agm"], "bomber": ["hebomb", ""]}
 			for c in PlaneClasses.LIST:
 				for wt in [1, 2, 3]:
-					_hq.append([c, 1, wt])
+					_hq.append([c, "1", wt])
 			_t = 0.0
 			return
 		var evo_bench := OS.get_cmdline_user_args().has("--hangarevo")
@@ -1670,14 +1676,14 @@ func _hangar_bench() -> void:
 			Hangar3D.bench_weapons = {"fighter": ["", "flares"], "attacker": ["", "bombs"], "bomber": ["", "flares"]}
 			for c in PlaneClasses.LIST:
 				for wt in ([3, 4] if evo_bench else [1, 2, 3]):
-					_hq.append([c, 1, wt])
+					_hq.append([c, "1", wt])
 			_t = 0.0
 			return
-		if OS.get_cmdline_user_args().has("--liveries"):   # п. 35: каждый класс во всех окрасках (ур. 1; --livlvl=2 — ур. 2)
-			var llv := 1
+		if OS.get_cmdline_user_args().has("--liveries"):   # п. 35: каждый класс во всех окрасках (модель 1; --livlvl=2 / t1)
+			var llv := "1"
 			for a in OS.get_cmdline_user_args():
 				if a.begins_with("--livlvl="):
-					llv = int(a.get_slice("=", 1))
+					llv = a.get_slice("=", 1)
 			for c in PlaneClasses.LIST:
 				for lv in [llv]:
 					for lv2: Array in Livery.list(c):
@@ -1690,22 +1696,22 @@ func _hangar_bench() -> void:
 			return
 		for c in PlaneClasses.LIST:
 			if OS.get_cmdline_user_args().has("--modfront") or OS.get_cmdline_user_args().has("--modrear"):
-				for lv in [1, 2]:
+				for lv in PlaneTiers.model_keys():
 					_hq.append([c, lv, 1])
 				continue
 			if OS.get_cmdline_user_args().has("--hangarlow"):
-				for lv in [1, 2]:
+				for lv in PlaneTiers.model_keys():
 					for wt in [1, 2, 3]:
 						_hq.append([c, lv, wt])
 				continue
 			if OS.get_cmdline_user_args().has("--hangarside"):
-				_hq.append([c, 1, 1])
-				_hq.append([c, 2, 1])
+				for lv in PlaneTiers.model_keys():
+					_hq.append([c, lv, 1])
 				continue
-			for lv in [1, 2]:
+			for lv in PlaneTiers.model_keys():
 				_hq.append([c, lv, 1])
-			_hq.append([c, 1, 2])
-			_hq.append([c, 1, 3])
+			_hq.append([c, "1", 2])
+			_hq.append([c, "1", 3])
 		_t = 0.0
 		return
 	for a in OS.get_cmdline_user_args():   # --hangarcls=bomber: только этот класс
@@ -1750,9 +1756,10 @@ func _hangar_bench() -> void:
 	if Hangar3D.I != null:
 		Hangar3D.I._cls = cur[0]
 		Hangar3D.I.view_lvl = cur[1]
+		Hangar3D.I.view_tier = maxi(PlaneTiers.model_tier(cur[1]), 1)
 		Hangar3D.I.weapon_tier = cur[2]
 		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K":   # --mechclose
-			var cv: Array = _MECHCLOSE["%s_%d" % [cur[0], cur[1]]][cur[4]]
+			var cv: Array = _MECHCLOSE[PlaneTiers.art_key(cur[0], cur[1])][cur[4]]
 			HangarAnim.bench_pose = float(cur[5])
 			Hangar3D.anim_time = 0.0
 			Hangar3D.bench_pitch_min = -0.9
@@ -1828,11 +1835,11 @@ func _hangar_bench() -> void:
 	_hf += 1
 	var mech_next: bool = cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "M" and int(cur[4]) > 0   # модель уже собрана
 	# --mechclose: the same plane as the previous frame is already built, only the camera and the pose change
-	mech_next = mech_next or (cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K" and _mc_last == "%s_%d" % [cur[0], cur[1]] and _hf > 2)
+	mech_next = mech_next or (cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K" and _mc_last == PlaneTiers.art_key(cur[0], cur[1]) and _hf > 2)
 	if (_hf > 8 and _t > 1.2 and (cur.size() < 6 or typeof(cur[3]) != TYPE_STRING or _hf > 14)) or (mech_next and _hf > 2):   # в облаке (программная отрисовка) кадр идёт ~1 с — ждём кадры, а не секунды
 		if cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "K":   # --mechclose
-			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_mechclose_%s_%d_%s_p%d%s.png" % [cur[0], cur[1], cur[4], cur[5], _suffix])
-			_mc_last = "%s_%d" % [cur[0], cur[1]]
+			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_mechclose_%s_%s_%s_p%d%s.png" % [cur[0], cur[1], cur[4], cur[5], _suffix])
+			_mc_last = PlaneTiers.art_key(cur[0], cur[1])
 		elif cur.size() > 5 and typeof(cur[3]) == TYPE_STRING and cur[3] == "C":
 			# S11: only the 3D view (SubViewport, supersampled), so the close-up is not shrunk into the hangar frame
 			var hn := "user://vis_hcam_%s%s.png" % [_hcam()[cur[5]][0], _suffix]
@@ -1852,16 +1859,16 @@ func _hangar_bench() -> void:
 			if int(cur[4]) == 0 and cur[5] == 0:
 				_save("mech_%s_screen" % cur[0])
 		elif cur.size() > 5:
-			_save("hangar_close_%s_%d_%s_v%d" % [cur[0], cur[1], cur[4], cur[5]])
+			_save("hangar_close_%s_%s_%s_v%d" % [cur[0], cur[1], cur[4], cur[5]])
 		elif cur.size() > 4:
-			_save("hangar_livery_%s_%d_%s" % [cur[0], cur[1], cur[4]])
+			_save("hangar_livery_%s_%s_%s" % [cur[0], cur[1], cur[4]])
 		elif cur.size() > 3:
-			_save("turret_s%d_%s_%d_w%d_v%d" % [WeaponModels.turret_style, cur[0], cur[1], cur[2], cur[3]])
+			_save("turret_s%d_%s_%s_w%d_v%d" % [WeaponModels.turret_style, cur[0], cur[1], cur[2], cur[3]])
 			# S11-13: the hangar view alone, at its own resolution (close-up frames)
-			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_turretvp_%s_%d_w%d_v%d%s.png" % [
+			Hangar3D.I.vp.get_texture().get_image().save_png("user://vis_turretvp_%s_%s_w%d_v%d%s.png" % [
 				cur[0], cur[1], cur[2], cur[3], _suffix])
 		else:
-			_save("hangar_%s_%d_w%d" % [cur[0], cur[1], cur[2]])
+			_save("hangar_%s_%s_w%d" % [cur[0], cur[1], cur[2]])
 		_hq.pop_front()
 		_t = 0.0
 		_hf = 0
@@ -2084,7 +2091,7 @@ func _decal_bench() -> void:
 		return
 	if _db_step < 0:
 		h3._cls = cls
-		h3.view_lvl = 1
+		h3.view_lvl = "1"
 		h3._yaw = -1.15
 		h3._pitch = 0.2
 		h3._dist = 0.95
@@ -2142,7 +2149,7 @@ func _decal_bench() -> void:
 			h3.decal_pad = false
 			h3.decal_cursor = Vector2(-1, -1)
 			m.input_ctl.dc.frame(0.016)
-			print("DECALEDIT records %d, profile %d" % [e.records.size(), Profile.decals(cls, 1).size()])
+			print("DECALEDIT records %d, profile %d" % [e.records.size(), Profile.decals(cls, "1").size()])
 		"selected":   # → the number picked up and carried towards the tail
 			e.sel = 1
 			e.grab()
@@ -2170,7 +2177,7 @@ func _decal_bench() -> void:
 			e.records.resize(3)
 			e.changed = true
 			m.input_ctl.dc.close()
-			print("DECALEDIT closed: %s, profile %d decals" % [m.decal_edit == null, Profile.decals(cls, 1).size()])
+			print("DECALEDIT closed: %s, profile %d decals" % [m.decal_edit == null, Profile.decals(cls, "1").size()])
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(Profile.path))
 			print("VISUAL done")
 			m.get_tree().quit()
@@ -2204,14 +2211,14 @@ func _decal_audit() -> void:
 		_da_tag = "_" + only if only != "" else ""   # one plane per run: several runs can go side by side
 		Profile.path = "user://vis_daudit_profile%s.json" % _da_tag
 		for c in PlaneClasses.LIST:
-			for lv in [1, 2]:
-				if only != "" and only != "%s_%d" % [c, lv]:
+			for lv in PlaneTiers.model_keys():
+				if only != "" and only != PlaneTiers.art_key(c, lv):
 					continue
 				for tier in [1, 2, 3, 4]:
 					_da_q.append(["hangar", c, lv, tier])
 		for c in PlaneClasses.LIST:
-			for lv in [1, 2]:
-				if only != "" and only != "%s_%d" % [c, lv]:
+			for lv in PlaneTiers.model_keys():
+				if only != "" and only != PlaneTiers.art_key(c, lv):
 					continue
 				for mods in [0, 5]:
 					_da_q.append(["battle", c, lv, mods])
@@ -2230,7 +2237,7 @@ func _decal_audit() -> void:
 		m.get_tree().quit()
 		return
 	var cur: Array = _da_q[0]
-	var key := "%s_%d" % [cur[1], cur[2]]
+	var key := PlaneTiers.art_key(cur[1], cur[2])
 	if cur[0] == "battle":
 		var holder := DecalAuditRun.battle_model(m, key, int(cur[3]))
 		if holder != null:
@@ -2245,8 +2252,9 @@ func _decal_audit() -> void:
 		return
 	h3._cls = cur[1]
 	h3.view_lvl = cur[2]
+	h3.view_tier = maxi(PlaneTiers.model_tier(cur[2]), 1)
 	h3.weapon_tier = cur[3]
-	if h3._key != "%s_%d_%d_%s" % [cur[1], cur[2], cur[3], Livery.current(cur[1])] or h3._model == null:
+	if h3._key != h3.view_key(cur[1]) or h3._model == null:
 		_da_wait = 0
 		return
 	_da_wait += 1
@@ -2298,7 +2306,7 @@ func _decal_shots() -> void:
 	var sh: Dictionary = _ds_q[0]
 	var key := String(sh["key"])
 	var cls := key.get_slice("_", 0)
-	var lvl := int(key.get_slice("_", 1))
+	var lvl := key.get_slice("_", 1)
 	var tier := int(sh.get("tier", 1))
 	m.hangar_tab = "plane"
 	m.hangar_cls = cls
@@ -2307,9 +2315,10 @@ func _decal_shots() -> void:
 		return
 	h3._cls = cls
 	h3.view_lvl = lvl
+	h3.view_tier = maxi(PlaneTiers.model_tier(lvl), 1)
 	h3.weapon_tier = tier
 	h3.decal_mode = true
-	if h3._key != "%s_%d_%d_%s" % [cls, lvl, tier, Livery.current(cls)] or h3._model == null:
+	if h3._key != h3.view_key(cls) or h3._model == null:
 		_ds_wait = 0
 		return
 	_ds_wait += 1

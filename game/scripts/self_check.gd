@@ -3,7 +3,7 @@ extends RefCounted
 ## Build self-check (R-23, Kanta 31.10): the contact sheet attached to every build. One Godot process shoots one
 ## part at one graphics preset and writes JPEG frames plus a JSON manifest into an output folder; the wrapper
 ## tools/ci/selfcheck.sh runs the processes and tools/ci/selfcheck_page.py builds the page.
-##   hangar — every plane (class × plane 1/2) with each weapon it may carry alone on its hardpoints, at weapon
+##   hangar — every plane (class × model t1 / 1 / 2, PlaneTiers.model_keys) with each weapon it may carry alone on its hardpoints, at weapon
 ##            lvl 1 / 3 / 5 and modernised, from the hangar's default view (Hangar3D, the «САМОЛЁТ» tab); then
 ##            the weapon store («ОРУЖИЕ» tab): each weapon on its stand at the same levels.
 ##   combat — every plane in a sortie at the gameplay camera (VisualBench points): in flight, then close-ups of the
@@ -110,24 +110,25 @@ static func from_args(main: Main) -> SelfCheck:
 
 # ---------- what to shoot (pure: no scene needed) ----------
 
-## Plane keys that exist: [class, model generation] for every class and model 1 / 2. The sheet checks models (mounts,
-## sprites), so each model is shown with the fullest tier drawn by it (`tier_of`)
+## Plane keys that exist: [class, model key] for every class and model (PlaneTiers.model_keys: t1, 1, 2). The sheet
+## checks models (mounts, sprites), so each model is shown with the tier it was made for (`tier_of`)
 static func planes() -> Array:
 	var out: Array = []
 	for c: String in PlaneClasses.LIST:
-		for lv: int in [1, 2]:
+		for lv in PlaneTiers.model_keys():
 			out.append([c, lv])
 	return out
 
 
-## Tier whose weapons model generation `lv` is checked with: model 1 — tier 2 (the old plane 1), model 2 — tier 3
-## (the old plane 2); the heavy mount of tiers 4–5 is added on model 2 by `_set_variant`
-static func tier_of(lv: int) -> int:
-	return 3 if lv >= 2 else 2
+## Tier whose weapons model `lv` is checked with: the first tier drawn by it (t1 — tier 1, model 1 — tier 2, the old
+## plane 1, model 2 — tier 3, the old plane 2); the heavy mount of tiers 4–5 is added on the model tier 4 borrows
+## by `_set_variant`
+static func tier_of(lv: String) -> int:
+	return maxi(PlaneTiers.model_tier(lv), 1)
 
 
 ## Weapons model `lv` of `cls` may carry (its `tier_of`), in the order of its list (experimental heavy weapons left out)
-static func plane_weapons(cls: String, lv: int) -> Array[String]:
+static func plane_weapons(cls: String, lv: String) -> Array[String]:
 	var out: Array[String] = []
 	for w: String in PlaneClasses.PLANES[cls][tier_of(lv)]["weapons"]:
 		if Weapons.in_game(w):
@@ -172,7 +173,7 @@ static func store_jobs() -> Array[Dictionary]:
 	for w in seen:
 		for c: String in STORE_CLASSES.get(w, ["attacker"]):
 			for t in [1, 2, 3, 4]:
-				out.append({"section": "store", "cls": c, "lvl": 0, "weapon": w, "tier": t, "na": not tiers(w).has(t)})
+				out.append({"section": "store", "cls": c, "lvl": "", "weapon": w, "tier": t, "na": not tiers(w).has(t)})
 	return out
 
 
@@ -189,7 +190,7 @@ static func loadout(cls: String, w: String) -> Array:
 
 ## Combat: weapons of plane `lv` on the base groups and the third group, in Player group order, the signature
 ## first and then the next weapons of the plane's list, so every pylon of the plane carries something
-static func combat_loadout(cls: String, lv: int) -> Array[String]:
+static func combat_loadout(cls: String, lv: String) -> Array[String]:
 	var pool: Array[String] = []
 	for w in plane_weapons(cls, lv):
 		if w != "turret" and w != "flares":   # turrets are built in; flares are skin panels, nothing hangs
@@ -216,7 +217,7 @@ static func combat_loadout(cls: String, lv: int) -> Array[String]:
 static func combat_points(at: Vector2) -> Array:
 	var out: Array = []
 	for pl: Array in planes():
-		var key := "%s_%d" % [pl[0], pl[1]]
+		var key := PlaneTiers.art_key(pl[0], pl[1])
 		var base := {"pos": at, "cls": [pl[0], pl[1]], "sc": key}
 		var shots := [
 			{"sc_shot": "flight", "fly": true, "zoom": ZOOM_FLIGHT, "wait": 3.0},
@@ -241,8 +242,8 @@ func wanted(j: Dictionary) -> bool:
 	if only.is_empty():
 		return true
 	var c: String = j["cls"][0] if j["cls"] is Array else j["cls"]
-	var lv: int = j["cls"][1] if j["cls"] is Array else j["lvl"]
-	var keys := [c, "%s_%d" % [c, lv], j.get("section", "combat"), j.get("weapon", ""), j.get("sc_shot", "")]
+	var lv: String = j["cls"][1] if j["cls"] is Array else j["lvl"]
+	var keys := [c, PlaneTiers.art_key(c, lv), j.get("section", "combat"), j.get("weapon", ""), j.get("sc_shot", "")]
 	for t in only:
 		if Array(t.split("+", false)).all(func(part: String) -> bool: return part in keys):
 			return true
@@ -336,8 +337,8 @@ func _setup_job(j: Dictionary) -> bool:
 func _check_hangar(e: Dictionary) -> void:
 	var h3 := Hangar3D.I
 	var cls: String = e["cls"]
-	var lvl: int = e["lvl"]
-	var key := "%s_%d" % [cls, lvl]
+	var lvl: String = e["lvl"]
+	var key := PlaneTiers.art_key(cls, lvl)
 	var model := h3.debug_model()
 	if model == null or not ResourceLoader.exists("res://models/hangar/fh_hangar_%s.glb" % key):
 		_issue(e, "model", "нет ангарной модели %s" % key)
@@ -365,7 +366,7 @@ func _check_hangar(e: Dictionary) -> void:
 	if not found:
 		_issue(e, "missing", "%s не подвешено" % _wname(e["weapon"]))
 	if int(PlaneClasses.DATA[cls]["turrets"]) > 0:
-		var want := PlaneClasses.turret_slots(cls, int(TIER_LEVEL[e["tier"]]), lvl)
+		var want := PlaneClasses.turret_slots(cls, int(TIER_LEVEL[e["tier"]]), tier_of(lvl))
 		if turrets != want:
 			_issue(e, "turrets", "турелей %d, а по уровню должно быть %d" % [turrets, want], turrets, want)
 	_check_nozzles(e, key, model, MountCheck.rel_xf(model, h3.pivot), faces, 1.0, model.find_child("nozzle_flame", false, false) != null)
@@ -514,10 +515,10 @@ func save_combat(name: String, img: Image, p: Dictionary) -> void:
 
 ## The player becomes plane `lv` of `cls` with the combat loadout at lvl 5 on every group, built in Player.setup's
 ## group order (base groups, turrets, the plane-2 heavy hardpoint, the third group), so the 3D layout matches
-func _set_variant(cls: String, lv: int) -> void:
+func _set_variant(cls: String, lv: String) -> void:
 	var pl := m.player
 	pl.cls_id = cls
-	pl.plane_lvl = lv
+	pl.plane_model = lv
 	pl.tier = tier_of(lv)
 	pl.cls = PlaneClasses.plane(cls, pl.tier)
 	pl.size = float(pl.cls["size"])
@@ -538,7 +539,7 @@ func _set_variant(cls: String, lv: int) -> void:
 		tg.level = Weapons.MAX_LEVEL
 		tg.slots = PlaneClasses.turret_slots(cls, tg.level, tier_of(lv))
 		gs.append(tg)
-	if lv == 2:
+	if lv == PlaneTiers.model(4):   # the heavy hardpoint (tier ≥ 4) on the model tier 4 is drawn with
 		var heavy := Hardpoint.new("Тяжёлый подвес", 1, "")
 		heavy.heavy = true
 		gs.append(heavy)
@@ -551,8 +552,8 @@ func _set_variant(cls: String, lv: int) -> void:
 ## Plane length on screen in world px (Render3D sizes the player's unit the same way)
 func _plane_px() -> float:
 	var pl := m.player
-	var tex := PlaneArt.plane_tex(pl.cls_id, pl.plane_lvl)
-	var t1 := PlaneArt.plane_tex(pl.cls_id, 1)
+	var tex := PlaneArt.plane_tex(pl.cls_id, pl.plane_model)
+	var t1 := PlaneArt.plane_tex(pl.cls_id, "1")
 	var k := float(tex.get_width()) / float(t1.get_width()) if tex != null and t1 != null else 1.0
 	return Tuning.g("plane_len") * pl.size * k
 
@@ -743,7 +744,7 @@ func _save(img: Image, file: String, crop: bool) -> bool:
 func _file_name(j: Dictionary) -> String:
 	if j["section"] == "store":
 		return "s_%s_%s_t%d_g%d.jpg" % [j["cls"], j["weapon"], j["tier"], gfx]
-	return "h_%s_%d_%s_t%d_g%d.jpg" % [j["cls"], j["lvl"], j["weapon"], j["tier"], gfx]
+	return "h_%s_%s_%s_t%d_g%d.jpg" % [j["cls"], j["lvl"], j["weapon"], j["tier"], gfx]
 
 
 func _entry(j: Dictionary, file: String) -> Dictionary:

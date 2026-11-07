@@ -10,6 +10,11 @@ class_name ModuleParts
 ## сопла — PlaneFx.SPEC), поэтому одна таблица на все 6 самолётов. Оси модели: длина 1, нос +X, верх +Y.
 
 const IDS := ["engine", "armor", "gun_dmg", "radio"]
+## PT-04 B: course-gun points measured by hand where the generic one (nose side, 80 % of the half-width) misses
+## the skin, model axes: «Оса» t1 has a nose intake, so at the gun height the half-width search stops at the duct
+## wall and put the gun inside the intake; here it sits on the outer skin below the intake lip (battle GLB section
+## at x 0.43: outer skin at |z| 0.046 for y -0.065)
+const GUN_AT := {"fighter_t1": Vector3(0.43, -0.065, 0.044)}
 
 static var _anchors := {}
 static var _mats := {}
@@ -248,7 +253,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 	var glo := _surf(faces, gx, 0.0, true)
 	var ghi := _surf(faces, gx, 0.0, false)
 	var gy := nose.y if is_nan(glo) else lerpf(glo, ghi, 0.35)
-	a["gun"] = Vector3(gx, gy, _half_width(faces, gx, gy) * 0.8)
+	a["gun"] = GUN_AT.get(key, Vector3(gx, gy, _half_width(faces, gx, gy) * 0.8))
 	# сопла: точки огня PlaneFx (пикс. картинки) → оси модели; высота — середина сечения перед соплом
 	var jets: Array = []
 	var nz: Array = NozzleFlame.NOZZLES.get(key, [])
@@ -260,7 +265,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		return a
 	var spec: Dictionary = PlaneFx.SPEC.get(key, {})
 	var cls := key.get_slice("_", 0)
-	var tex := PlaneArt.plane_tex(cls, int(key.get_slice("_", 1)))
+	var tex := PlaneArt.plane_tex(cls, key.get_slice("_", 1))
 	var tw := float(tex.get_width()) if tex != null else 200.0
 	# картинка и модель «Осы» не совпадают по размаху и длине — срез сопла ищем на самой модели:
 	# от точки картинки вдоль оси вперёд до обшивки, по ширине — самое толстое сечение рядом

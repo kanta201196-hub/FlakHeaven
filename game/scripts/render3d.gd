@@ -783,9 +783,9 @@ func _ensure(id: int, kind: String, tex: Texture2D, length_px: float, thick: flo
 
 ## Тест 3.5-s4, п. 35: окраска своего самолёта из ангара (ведомые — в своей, с полосами звена)
 func _apply_livery(model: Node3D, tex: Texture2D) -> void:
-	var key := tex.resource_path.get_file().get_basename()   # «fighter_1»
+	var key := tex.resource_path.get_file().get_basename()   # «fighter_1», «bomber_t1»
 	var cls := key.get_slice("_", 0)
-	Livery.apply(model, cls, int(key.get_slice("_", 1)), Livery.current(cls))
+	Livery.apply(model, cls, key.get_slice("_", 1), Livery.current(cls))
 
 
 func _place(u: Unit3D, p: Vector2, heading: float, bank: float, roll: float, y := 0.0, scale_k := 1.0, pitch := 0.0) -> void:
@@ -1211,9 +1211,9 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 	var ut := Time.get_ticks_usec() if Perf.on else 0
 	var p := m.player
 	if is_instance_valid(p) and p.is_visible_in_tree():
-		var tex := PlaneArt.plane_tex(p.cls_id, p.plane_lvl)
+		var tex := PlaneArt.plane_tex(p.cls_id, p.plane_model)
 		if tex != null:
-			var u := _ensure(p.get_instance_id(), "player", tex, Tuning.g("plane_len") * p.size * (float(tex.get_width()) / PlaneArt.plane_tex(p.cls_id, 1).get_width()), 0.075, 72)
+			var u := _ensure(p.get_instance_id(), "player", tex, Tuning.g("plane_len") * p.size * (float(tex.get_width()) / PlaneArt.plane_tex(p.cls_id, "1").get_width()), 0.075, 72)
 			var roll := 0.0
 			if p.roll_t > 0.0:
 				roll = (1.0 - p.roll_t / p.roll_time()) * TAU * p.roll_dir
@@ -1266,7 +1266,7 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var wt := wm.plane_tex()
 			if wt == null or not wm.alive():
 				continue
-			var len_w := Tuning.g("plane_len") * 0.85 * float(wt.get_width()) / float(PlaneArt.plane_tex("fighter", 1).get_width())
+			var len_w := Tuning.g("plane_len") * 0.85 * float(wt.get_width()) / float(PlaneArt.plane_tex("fighter", "1").get_width())
 			var uw := _ensure(wm.get_instance_id(), "wing", wt, len_w, 0.075, 48)
 			uw.ref = weakref(wm)
 			if uw.kit == null and uw.bm != null:   # Т-8: полосы звена и подвесы по типу ведомого
@@ -1936,7 +1936,7 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 		if PlaneArt.weapon_tex(g.weapon) == null and not (g.weapon in Weapons.EXP):
 			continue
 		var seek := ModuleParts.stage(int(p.taken.get("seeker", 0))) if g.weapon == "aam" and not g.evo else 0
-		var sig := [p.cls_id, p.plane_lvl, g.weapon, g.level, g.evo, g.slots, g.builtin, g.name, seek, u.k, Tuning.g("plane_len"), u.bm]
+		var sig := [p.cls_id, p.plane_model, g.weapon, g.level, g.evo, g.slots, g.builtin, g.name, seek, u.k, Tuning.g("plane_len"), u.bm]
 		var ent: Dictionary = wc.get(gi, {})
 		if ent.is_empty() or ent["sig"] != sig:
 			ent = _weapon_layout(u, p, tex, gi, g, seek)
@@ -1973,7 +1973,7 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 					continue
 			var wmi: MeshInstance3D = u.weapons.get(key)
 			if wmi == null:
-				wmi = WeaponModels.make(g.weapon, mt["t"], mt["side"], p.cls_id, g.evo, p.plane_lvl)
+				wmi = WeaponModels.make(g.weapon, mt["t"], mt["side"], p.cls_id, g.evo, p.plane_model)
 				ModuleParts.seeker_head(wmi, seek, mt["t"])   # Т-3: «Глазастик»
 				root.add_child(wmi)
 				u.weapons[key] = wmi
@@ -2055,7 +2055,7 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 ## Раскладка подвесов группы: точки, высота пилона, модель — считается при смене оружия, уровня или самолёта,
 ## а не каждый кадр (раньше — до 1,7 мс на кадр у «Кита» с полным набором)
 func _weapon_layout(u: Unit3D, p: Player, tex: Texture2D, gi: int, g: Hardpoint, seek: int) -> Dictionary:
-	var pts := WeaponModels.mounts(p.cls_id, p.plane_lvl, gi, g)
+	var pts := WeaponModels.mounts(p.cls_id, p.plane_model, gi, g)
 	var k: float = u.k
 	var len_px: float = PlaneArt.WEAPON_FRAC.get(g.weapon, 0.25) * Tuning.g("plane_len") / k  # в пикселях текстуры самолёта
 	# 3.4-t1 (п. 3): объёмные модели, вид меняется на ур. 3 и 5

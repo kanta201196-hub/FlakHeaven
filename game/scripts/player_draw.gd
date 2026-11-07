@@ -16,7 +16,7 @@ func _draw() -> void:
 		var p := 1.0 - pl.roll_t / pl.roll_time()
 		w = maxf(0.15, absf(cos(p * TAU)))
 	var xf := Transform2D(pl.heading, Vector2.ZERO).scaled(Vector2(pl.size, pl.size))
-	if Tuning.g("sprites") >= 1 and PlaneArt.plane_tex(pl.cls_id, pl.plane_lvl) != null:
+	if Tuning.g("sprites") >= 1 and PlaneArt.plane_tex(pl.cls_id, pl.plane_model) != null:
 		if Render3D.enabled:
 			_draw_3d_extras(w)
 		else:
@@ -48,18 +48,18 @@ func _draw() -> void:
 
 
 func _sprite_scale() -> float:
-	var s := PlaneArt.shape_info(pl.cls_id, pl.plane_lvl)
+	var s := PlaneArt.shape_info(pl.cls_id, pl.plane_model)
 	if s.is_empty():
 		return 1.0
 	# длина на экране: истребитель plane_len, остальные × size; ур. 2 чуть крупнее по пропорции картинок
 	var base_len := Tuning.g("plane_len") * pl.size
-	var s1 := PlaneArt.shape_info(pl.cls_id, 1)
+	var s1 := PlaneArt.shape_info(pl.cls_id, "1")
 	var k_lvl := float(s["w"]) / float(s1["w"]) if not s1.is_empty() else 1.0
 	return base_len * k_lvl / float(s["w"])
 
 
 func _draw_sprite(w: float) -> void:
-	var tex := PlaneArt.plane_tex(pl.cls_id, pl.plane_lvl)
+	var tex := PlaneArt.plane_tex(pl.cls_id, pl.plane_model)
 	var k := _sprite_scale()
 	var sc := Vector2(k, k * w)
 	var col := Color(1, 1, 1, 1)
@@ -81,7 +81,7 @@ func _draw_sprite(w: float) -> void:
 		var g: Hardpoint = pl.groups[gi]
 		if g.is_empty():
 			continue
-		var pts := PlaneArt.slot_points(pl.cls_id, pl.plane_lvl, gi, g)
+		var pts := PlaneArt.slot_points(pl.cls_id, pl.plane_model, gi, g)
 		var a := 1.0
 		if Weapons.leaves_pylon(g.weapon) and g.cd > 0.3:
 			a = 0.4

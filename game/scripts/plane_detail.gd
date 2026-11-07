@@ -12,10 +12,13 @@ extends RefCounted
 ## x = 0.05 and the leading / trailing edges between half and 0.9 span); the deltas get a spar sweep between their
 ## leading and trailing edges.
 const SHAPE := {
+	"fighter_t1": [-0.05, 0.068, 0.75],
 	"fighter_1": [-0.03, 0.05, 0.55],
 	"fighter_2": [-0.03, 0.06, 0.35],
+	"attacker_t1": [-0.035, 0.065, 0.27],
 	"attacker_1": [-0.044, 0.05, 0.31],
 	"attacker_2": [-0.034, 0.05, 0.29],
+	"bomber_t1": [-0.034, 0.042, 0.0],   # straight wing: edges within 0.01 between half and 0.9 span
 	"bomber_1": [-0.03, 0.06, 0.6],
 	"bomber_2": [-0.019, 0.065, 0.55],
 }

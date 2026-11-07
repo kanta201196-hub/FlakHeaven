@@ -21,9 +21,9 @@ static func tier(level: int, evo := false) -> int:
 ## Узел с моделью (общий меш из кэша — копировать дёшево)
 ## side — место крепления (mounts): от него зависит вид турели; cls — класс самолёта
 ## (у «Кита» и «Грача» свои турели — модели Blender по фото владельца, 16.10)
-## evo — эволюция (у турели — «Дикобраз»), plvl — уровень самолёта (окраска турели под обшивку)
+## evo — эволюция (у турели — «Дикобраз»), plvl — модель самолёта (PlaneTiers.model; окраска кольца турели)
 ## hq — ангарная версия (тест 3.5-s8: models/weapons/hq/, те же оси и габарит, детали и запечённая окраска)
-static func make(weapon: String, t: int, side := "", cls := "", evo := false, plvl := 1, hq := false) -> MeshInstance3D:
+static func make(weapon: String, t: int, side := "", cls := "", evo := false, plvl := "1", hq := false) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var tm: Mesh = turret_model(cls, t, side, evo, plvl) if weapon == "turret" else weapon_model(weapon, t, evo, hq)
 	mi.mesh = tm if tm != null else mesh(weapon, t, side)
@@ -252,8 +252,8 @@ const CARPET_BAY_PTS := [Vector3(0.66, 0, -0.072), Vector3(0.66, 0, 0.072), Vect
 
 
 ## У самолёта есть бомбоотсек со створками (Т-5: tools/blender/bay_doors.py)
-static func has_bay(cls_id: String, lvl: int) -> bool:
-	return ResourceLoader.exists("res://models/mech/fh_bay_%s_%d.glb" % [cls_id, lvl])
+static func has_bay(cls_id: String, lvl: String) -> bool:
+	return ResourceLoader.exists("res://models/mech/fh_bay_%s.glb" % PlaneTiers.art_key(cls_id, lvl))
 
 
 ## Тест 3.5-s8 (Kanta: «для ангара — супер качественные модели, они показываются близко»): ангарные версии
@@ -325,13 +325,13 @@ static func body_radius(m: Mesh) -> float:
 
 ## part: "" — вся турель (бой), "body" — без люльки со стволами, "guns" — только они в своих осях (шарнир — 0),
 ## "pods" — only the «Стальной ёж» launch pods, in the turret axes (null when the model has none)
-static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := 1, part := "") -> Mesh:
+static func turret_model(cls: String, t := 1, side := "", evo := false, plvl := "1", part := "") -> Mesh:
 	var file := turret_file(cls, t, side, evo)
 	if file == "":
 		return null
 	var spec: Dictionary = TURRET_MODELS[cls]
 	var cols: Array = spec["body"]
-	var tint: Color = cols[clampi(plvl, 1, cols.size()) - 1]
+	var tint: Color = cols[clampi(PlaneTiers.model_tier(plvl) - 1, 0, cols.size() - 1)]
 	var tp := Livery.turret_paint(cls)
 	if tp.size() > 1 and file.get_basename().ends_with("_" + String(tp[0])):
 		tint = tp[1]   # the ring collar continues the livery's baked turret paint
@@ -785,11 +785,11 @@ static func _mat(n: String) -> StandardMaterial3D:
 ## Совпадает с тем, где 3D-модуль стоит на самолёте (Render3D._sync_weapons).
 static func muzzle_world(p: Player, g: Hardpoint, si: int, aim := NAN) -> Vector2:
 	var gi := p.groups.find(g)
-	var tex := PlaneArt.plane_tex(p.cls_id, p.plane_lvl)
-	var tex1 := PlaneArt.plane_tex(p.cls_id, 1)
+	var tex := PlaneArt.plane_tex(p.cls_id, p.plane_model)
+	var tex1 := PlaneArt.plane_tex(p.cls_id, "1")
 	if gi < 0 or tex == null or tex1 == null:
 		return p.global_position
-	var pts := mounts(p.cls_id, p.plane_lvl, gi, g)
+	var pts := mounts(p.cls_id, p.plane_model, gi, g)
 	if pts.is_empty():
 		return p.global_position
 	var pt: Vector2 = (pts[si % pts.size()] as Dictionary)["p"]
@@ -823,8 +823,8 @@ static func on_tip_rail(weapon: String) -> bool:
 	return weapon in Hardpoint.MISSILES and weapon != "rockets"
 
 
-static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.0) -> Vector2:
-	var key := "%s_%d" % [cls_id, lvl]
+static func wing_point(cls_id: String, lvl: String, side: float, zf_override := -1.0) -> Vector2:
+	var key := PlaneTiers.art_key(cls_id, lvl)
 	var ck := key if zf_override < 0.0 else "%s_%.2f" % [key, zf_override]
 	if not _wing_pts.has(ck):
 		var t := PlaneArt.plane_tex(cls_id, lvl)
@@ -870,6 +870,10 @@ static func wing_point(cls_id: String, lvl: int, side: float, zf_override := -1.
 
 
 const KIT_TOP_TURRET := 0.4   # верхняя турель «Кита»: доля длины от носа
+## PT-04 B: model x (plane length 1) of the top turret on a «Кит» model where KIT_TOP_TURRET lands on something:
+## «Кит» t1 — the aerial wire leaves the spine at x 0.105 and a baked dorsal turret stands at 0.19–0.235, so the
+## turret sits between them with its barrels (pointing aft) above the wire's root
+const KIT_TOP_TURRET_X := {"bomber_t1": 0.155}
 ## S13: ventral turret of «Кит» (third slot): model x (plane length 1), just aft of the bomb bay (x -0.31..0)
 const KIT_BOTTOM_TURRET_X := -0.335
 ## S13 (Kanta 27.10): wing turrets of «Грач» 2 — model (x, |z|) on the wing, on the outer panel just outboard of
@@ -895,7 +899,7 @@ static func collar_r(cls: String, t: int) -> float:
 ##   "bottom" — нижняя под фюзеляжем. yaw — куда смотрят стволы без цели (0 — вперёд, PI — назад).
 ##   S13: "wing" turret — on a wing fairing (WING_TURRETS), "skin" — a flush flare panel; both also carry
 ##   "mx"/"mz", the spot in model axes (plane length 1), for SkinPatch.
-static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
+static func mounts(cls_id: String, lvl: String, gi: int, g: Hardpoint) -> Array:
 	var out: Array = []
 	var bay_grp := g.weapon == "bombs" and g.name.begins_with("Бомбоотсек") and has_bay(cls_id, lvl)
 	# тест 3.5-s5 (п. 3): «Бабушкин ковёр» в бомбоотсеке — кассета внутри, на месте обычных бомб
@@ -923,7 +927,7 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 		var ftex := PlaneArt.plane_tex(cls_id, lvl)
 		if ftex != null:
 			var fw := float(ftex.get_width())
-			var spots := SkinPatch.flare_spots("%s_%d" % [cls_id, lvl], tier(g.level))
+			var spots := SkinPatch.flare_spots(PlaneTiers.art_key(cls_id, lvl), tier(g.level))
 			for i in spots.size():
 				var q: Vector2 = spots[i]
 				out.append({"p": q * fw, "side": "skin", "yaw": 0.0, "t": tier(g.level), "mx": q.x, "mz": q.y, "seed": float(i)})
@@ -951,7 +955,7 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	var nose: float = s["nose"]
 	# S13 (Kanta 27.10): «Грач» 2 with both turrets carries them on the wings, one per wing on a fairing
 	# (SkinPatch.turret_fairing); with one — the gunner behind the canopy as before
-	var wt: Vector2 = WING_TURRETS.get("%s_%d" % [cls_id, lvl], Vector2.ZERO)
+	var wt: Vector2 = WING_TURRETS.get(PlaneTiers.art_key(cls_id, lvl), Vector2.ZERO)
 	var wtex := PlaneArt.plane_tex(cls_id, lvl)
 	if wt != Vector2.ZERO and g.slots >= 2 and wtex != null:
 		var ww := float(wtex.get_width())
@@ -962,7 +966,10 @@ static func mounts(cls_id: String, lvl: int, gi: int, g: Hardpoint) -> Array:
 	if cls_id == "bomber":
 		# тест 3.5-s7 (Kanta): турели «Кита» только на корпусе — кормовая под килем и верхняя на спине фюзеляжа;
 		# S13: the third («Кит» 2, lvl 5) — ventral, under the fuselage aft of the bomb bay (it used to wrap onto the tail)
-		order = [["tail", tail + L * 0.035, PI, 0.0], ["top", nose - L * KIT_TOP_TURRET, PI, 0.0]]
+		var top_x: float = nose - L * KIT_TOP_TURRET
+		if KIT_TOP_TURRET_X.has(PlaneTiers.art_key(cls_id, lvl)) and wtex != null:
+			top_x = float(KIT_TOP_TURRET_X[PlaneTiers.art_key(cls_id, lvl)]) * float(wtex.get_width())
+		order = [["tail", tail + L * 0.035, PI, 0.0], ["top", top_x, PI, 0.0]]
 		if wtex != null:
 			order.append(["bottom", KIT_BOTTOM_TURRET_X * float(wtex.get_width()), PI, 0.0])
 	else:

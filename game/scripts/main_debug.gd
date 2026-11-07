@@ -698,7 +698,7 @@ func _debug_screenshots(delta: float) -> void:
 		_shot("game_early")
 	if m.state == "playing" and m.run_time > 100.0:
 		_shot("game")
-	if m.state == "playing" and m.player.plane_lvl == 2 and m.player._upgrade_flash > 0.6:
+	if m.state == "playing" and m.player.tier >= 3 and m.player._upgrade_flash > 0.6:
 		_shot("upgrade")
 	if m.state == "playing" and m.boss_alive() and m.run_time > Tuning.g("boss_every") + 6.0:
 		_shot("boss")

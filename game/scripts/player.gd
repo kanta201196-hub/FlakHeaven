@@ -138,7 +138,7 @@ var _since_hit := 99.0
 var _fire_cd := 0.0
 var _gun_side := 1.0
 var _blink := 0.0
-var plane_lvl := 1       # model generation the plane is drawn with (`PlaneTiers.model`): art, mounts, sprites
+var plane_model := "1"   # model key the plane is drawn with (`PlaneTiers.model`: "t1", "1", "2"): art, mounts, sprites
 var tier := 1            # plane tier 1–5 (PT-04): game rules — weapons, ★ bonus, heavy hardpoint
 var _upgrade_flash := 0.0
 
@@ -159,7 +159,7 @@ func _init() -> void:
 func setup(id: String, sk := "", sk2 := "") -> void:
 	cls_id = id
 	tier = Profile.tier(id)
-	plane_lvl = PlaneTiers.model(tier)
+	plane_model = PlaneTiers.model(tier)
 	cls = PlaneClasses.plane(id, tier)   # Kanta 24.10: weapons, ★ bonus, turrets, wingmen per plane (tier since PT-04)
 	for arg in OS.get_cmdline_user_args():   # check flag --bonus=<weapon>:<k>, e.g. --bonus=agm:1.0 (A/B of a plane bonus)
 		if String(arg).begins_with("--bonus=") and String(arg).contains(":"):

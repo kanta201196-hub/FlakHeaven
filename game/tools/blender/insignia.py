@@ -14,9 +14,14 @@ import numpy as np
 from mathutils import Vector
 
 # доля полуразмаха под знак на крыле (у «Кита» дальше к концу — между мотогондолами и законцовкой)
-WING_F = {"bomber_1": 0.74, "bomber_2": 0.66}
+# t1: «Кит» outboard of the outer flap and slat (|z| ≤ 0.40), which move in the hangar; «Оса» outboard of the baked
+# drop tank (from above its nose and tail stick out of the chord) and of the slat (|z| ≤ 0.39)
+WING_F = {"fighter_t1": 0.85, "bomber_t1": 0.72, "bomber_1": 0.74, "bomber_2": 0.66}
 # знак аса на борту: x (длина 1, нос +X) и сдвиг по высоте от оси борта
-SIDE = {"attacker_1": (0.16, 0.0), "attacker_2": (0.17, 0.0), "fighter_1": (0.14, 0.0),
+# t1: behind the wing flaps, where a ray from the side meets only the fuselage (ahead of it the drop tanks, tip
+# tanks and nacelles with their propellers stand in the way)
+SIDE = {"fighter_t1": (-0.1, 0.0), "attacker_t1": (-0.06, 0.0), "bomber_t1": (-0.06, -0.03),
+        "attacker_1": (0.16, 0.0), "attacker_2": (0.17, 0.0), "fighter_1": (0.14, 0.0),
         "fighter_2": (0.12, 0.0), "bomber_1": (0.3, 0.0), "bomber_2": (0.28, 0.0)}
 N = 8             # сетка наклейки N×N
 LIFT = 0.0008     # над обшивкой

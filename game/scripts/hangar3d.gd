@@ -17,7 +17,7 @@ var cam: Camera3D
 var pivot: Node3D
 var rect := Rect2()          # где на экране (в координатах ctrl) нарисован вид
 var lvl_rects: Array = []    # [Rect2, tier] — the strip of plane tiers 1–5
-var view_lvl := 1            # model generation on view (`PlaneTiers.model` of view_tier)
+var view_lvl := "1"          # model key on view (`PlaneTiers.model` of view_tier: "t1", "1", "2")
 var view_tier := 1           # plane tier 1–5 on view (PT-04): the hangar shows and upgrades this one
 ## Стенд --hangarevo: оружие в пустых группах (класс → [оружие по группам]), чтобы показать все эволюции
 static var bench_weapons := {}
@@ -46,7 +46,7 @@ var _drawn_frame := -10
 var _interactive := true
 var _cls := ""
 var focus := Vector3.ZERO    # куда смотрит камера (стенд крупных планов турелей)
-var _built_lvl := 1          # plane level of the model on view (model_key)
+var _built_lvl := "1"        # model key of the model on view (model_key)
 ## Kanta 24.10: real stands from Sketchfab (CC BY, CREDITS.md) instead of box stands. Per weapon, shares of the stand
 ## model (measured on it): x — weapon centre from the stand centre (of its length), y — weapon bottom over the floor
 ## (of its height). Size: len — stand length per weapon length, or ring — inner radius of the stand's rings (of its
@@ -401,7 +401,7 @@ func show_plane(cls_id: String, r: Rect2, interactive := true) -> Texture2D:
 	_fit_vp(r)
 	_set_bg("flight")
 	# п. 35: и окраска; F1 hangar_detail rebuilds the plane with or without the detail layer and glazed cockpit
-	var k := "%s_%d_%d_%s_%d" % [cls_id, view_lvl, weapon_tier, Livery.current(cls_id), int(PlaneDetail.enabled())]
+	var k := view_key(cls_id)
 	if k != _key:
 		if _key.begins_with("w_"):
 			_dist = DIST0
@@ -409,6 +409,12 @@ func show_plane(cls_id: String, r: Rect2, interactive := true) -> Texture2D:
 		_key = k
 		_build(cls_id, view_lvl)
 	return vp.get_texture()
+
+
+## Key of the plane view of `cls_id` as it is set now (model, tier, weapon view, livery, detail layer): the view is
+## rebuilt when it changes; benches wait for `_key` to reach it
+func view_key(cls_id: String) -> String:
+	return "%s_%s_%d_%d_%s_%d" % [cls_id, view_lvl, view_tier, weapon_tier, Livery.current(cls_id), int(PlaneDetail.enabled())]
 
 
 ## Тест 3.5-s3 («текстуры в ангаре — идеально»): вид рисуется с запасом по разрешению — в пикселях экрана
@@ -457,11 +463,11 @@ func show_weapon(cls_id: String, weapon: String, r: Rect2) -> Texture2D:
 			side = "top"
 		elif evo and weapon == "bombs":
 			side = ""
-			if WeaponModels.has_bay(cls_id, 1):   # тест 3.5-s5 (п. 3): у «Кита» «ковёр» — кассета бомбоотсека
+			if WeaponModels.has_bay(cls_id, "1"):   # тест 3.5-s5 (п. 3): у «Кита» «ковёр» — кассета бомбоотсека
 				t = WeaponModels.CARPET_BAY_T
 		if weapon == "bombs" and not evo:   # тест 3.5-s8: калибр по уровню вкладки (ур. 1 / 3 / 5 → «50» / «250» / «1000»)
 			t = WeaponModels.bomb_t([1, 3, 5][t - 1])
-		var wmi := WeaponModels.make(weapon, t, side, cls_id, evo, 1, true)
+		var wmi := WeaponModels.make(weapon, t, side, cls_id, evo, "1", true)
 		# во весь вид по габариту модели («Бабушкин ковёр» поперёк полёта шире, чем длинный)
 		var bb := wmi.mesh.get_aabb()
 		var s := (0.62 if weapon != "turret" else 1.05) / maxf(1.0, maxf(bb.size.x, bb.size.z))
@@ -879,14 +885,17 @@ func _bench_glb(key: String) -> Node3D:
 	return null
 
 
-func _build(cls_id: String, lvl: int) -> void:
+## Builds the hangar view of class `cls_id` drawn with model `lvl` («t1», «1», «2»: PlaneTiers.model): the hangar
+## GLB with its mechanisation, details, insignia, livery, flames and the start weapons
+func _build(cls_id: String, lvl: String) -> void:
 	debug_mounts.clear()
 	for c in pivot.get_children():
 		c.queue_free()
-	var path := "res://models/hangar/fh_hangar_%s_%d.glb" % [cls_id, lvl]
+	var key := PlaneTiers.art_key(cls_id, lvl)
+	var path := "res://models/hangar/fh_hangar_%s.glb" % key
 	if not ResourceLoader.exists(path):
 		return
-	var model: Node3D = _bench_glb("%s_%d" % [cls_id, lvl])
+	var model: Node3D = _bench_glb(key)
 	if model == null:
 		model = (load(path) as PackedScene).instantiate()
 	# обшивка под углом (крылья, фюзеляж сбоку) — анизотропная фильтрация, иначе текстура «плывёт»
@@ -905,46 +914,46 @@ func _build(cls_id: String, lvl: int) -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--modules="):
 			var ml := int(a.get_slice("=", 1))
-			ModuleParts.update(ModuleParts.attach(model, "%s_%d" % [cls_id, lvl]), {"engine": ml, "armor": ml, "gun_dmg": ml, "radio": ml})
+			ModuleParts.update(ModuleParts.attach(model, key), {"engine": ml, "armor": ml, "gun_dmg": ml, "radio": ml})
 			bench_seeker = ModuleParts.stage(ml)
 	# Т-1: предкрылки и закрылки; в ангаре убраны (стенд --mechdown показывает выпущенными)
-	var mech := WingMech.attach(model, "%s_%d" % [cls_id, lvl])
+	var mech := WingMech.attach(model, key)
 	if mech != null and OS.get_cmdline_user_args().has("--mechdown"):
 		WingMech.pose(mech, 1.0)
 	# Т-2: отличие «Грача 2» сверху (ПГО, контейнеры на законцовках)
-	WingMech.attach_detail(model, "%s_%d" % [cls_id, lvl])
+	WingMech.attach_detail(model, key)
 	# V-07: свои знаки на крыльях, киле и (у асов) на борту
-	Insignia.attach(model, "%s_%d" % [cls_id, lvl], "player")
+	Insignia.attach(model, key, "player")
 	# тест 3.5-s3: кормовая кабина «Кита» — продолжение фюзеляжа в цвет обшивки
-	_tail = WingMech.attach_tail(model, "%s_%d" % [cls_id, lvl])
+	_tail = WingMech.attach_tail(model, key)
 	# замечание 31/33 (3.5-s4): свои винты «Кита 1» — 4 одинаковых по 4 лопасти (винты Meshy из модели удалены)
-	var props := WingMech.attach_props(model, "%s_%d" % [cls_id, lvl])
+	var props := WingMech.attach_props(model, key)
 	_props = WingMech.prop_nodes(props) if props != null else []
 	# Т-5: створки бомбоотсека в ангаре открыты — видно бомбы
-	var bay := WingMech.attach_bay(model, "%s_%d" % [cls_id, lvl])
+	var bay := WingMech.attach_bay(model, key)
 	if bay != null:
 		WingMech.pose_bay(bay, 1.0)
 	_apply_livery(model, cls_id, lvl)
 	# Kanta 25.10: running engines — the flame fills the rough remeshed nozzles (not on «Кит» 1, propellers)
-	NozzleFlame.attach(model, "%s_%d" % [cls_id, lvl])
+	NozzleFlame.attach(model, key)
 	_add_weapons(cls_id, lvl)
 
 
 ## Тест 3.5-s4, п. 35: выбранная окраска — на модель и подвешенные к ней механизацию, детали, створки, кабину.
 ## With F1 `hangar_detail` on (default) the paint carries the PlaneDetail layer and the canopy becomes clear glass
 ## over a furnished cockpit (HangarCockpit) whose frame wears the livery's main tone.
-func _apply_livery(model: Node3D, cls_id: String, lvl: int) -> void:
+func _apply_livery(model: Node3D, cls_id: String, lvl: String) -> void:
 	var detail := PlaneDetail.enabled()
 	Livery.apply(model, cls_id, lvl, Livery.current(cls_id), detail)
 	if detail:
-		HangarCockpit.attach(model, "%s_%d" % [cls_id, lvl], HangarCockpit.frame_colour(cls_id, Livery.current(cls_id)))
+		HangarCockpit.attach(model, PlaneTiers.art_key(cls_id, lvl), HangarCockpit.frame_colour(cls_id, Livery.current(cls_id)))
 
 
 ## Стартовое оружие класса на узлах подвески — под крылом / в бомбоотсеке (те же точки, что в игре).
 ## Flares and wing-turret fairings are laid onto the model's skin (SkinPatch), the same as Render3D does in battle.
-func _add_weapons(cls_id: String, lvl: int) -> void:
+func _add_weapons(cls_id: String, lvl: String) -> void:
 	var tex := PlaneArt.plane_tex(cls_id, lvl)
-	var tex1 := PlaneArt.plane_tex(cls_id, 1)
+	var tex1 := PlaneArt.plane_tex(cls_id, "1")
 	if tex == null or tex1 == null:
 		return
 	var data := PlaneClasses.get_data(cls_id)
@@ -966,7 +975,7 @@ func _add_weapons(cls_id: String, lvl: int) -> void:
 		g.evo = weapon_tier == 4
 		g.level = [1, 3, 5][mini(weapon_tier, 3) - 1]   # ступень вида → уровень оружия (ловушки ставятся по уровню)
 		if g.builtin and g.weapon == "turret":   # тест 3.5-s7: верхняя турель «Кита» — с ур. 3
-			g.slots = PlaneClasses.turret_slots(cls_id, g.level, lvl)
+			g.slots = PlaneClasses.turret_slots(cls_id, g.level, view_tier)
 		if g.is_empty():
 			continue
 		var wt := PlaneArt.weapon_tex(g.weapon)
@@ -1299,7 +1308,7 @@ var _dc_live_sig := ""
 
 ## Plane key of the model on view («fighter_2»): what the decal presets and Profile.decals are keyed by
 func model_key() -> String:
-	return "%s_%d" % [_cls, _built_lvl]
+	return PlaneTiers.art_key(_cls, _built_lvl)
 
 
 ## The skin under screen point `p` (ctrl coordinates): [position, normal] in model axes, [] off the plane or on the
@@ -1419,11 +1428,13 @@ func debug_view(yaw: float, pitch: float, dist: float, aim: Variant = null) -> v
 		focus = aim
 
 
-## Self-check (R-23): shows plane `lvl` of `cls_id` at weapon view `tier` (1–3: weapon lvl 1 / 3 / 5, 4 —
-## modernised) and builds it again on the next show_plane even when only bench_weapons changed.
-func debug_show(cls_id: String, lvl: int, tier: int) -> void:
+## Self-check (R-23): shows model `lvl` («t1», «1», «2») of `cls_id`, as the first tier drawn with it, at weapon view
+## `tier` (1–3: weapon lvl 1 / 3 / 5, 4 — modernised) and builds it again on the next show_plane even when only
+## bench_weapons changed.
+func debug_show(cls_id: String, lvl: String, tier: int) -> void:
 	_cls = cls_id
 	view_lvl = lvl
+	view_tier = maxi(PlaneTiers.model_tier(lvl), 1)
 	weapon_tier = tier
 	_key = "debug_rebuild"   # never a real view key: show_plane rebuilds, _process collects the new parts
 

@@ -498,8 +498,8 @@ func mirror_launch(t: Enemy, d: float) -> void:
 func plane_tex() -> Texture2D:
 	match type:
 		"rook":
-			return PlaneArt.plane_tex("attacker", 1)
-	return PlaneArt.plane_tex("fighter", 1)
+			return PlaneArt.plane_tex("attacker", "1")
+	return PlaneArt.plane_tex("fighter", "1")
 
 
 func tint() -> Color:
@@ -522,7 +522,7 @@ func _draw() -> void:
 			draw_arc(Vector2.ZERO, 26.0, -PI / 2.0, -PI / 2.0 + TAU * clampf(life / 15.0, 0.0, 1.0), 24, Color(0.7, 1.0, 0.6, 0.5), 2.0)
 		if Render3D.enabled:
 			return
-		var kk := Tuning.g("plane_len") * 0.85 / float(PlaneArt.plane_tex("fighter", 1).get_width())
+		var kk := Tuning.g("plane_len") * 0.85 / float(PlaneArt.plane_tex("fighter", "1").get_width())
 		draw_set_transform(Vector2(14, 22), heading, Vector2(kk, kk))
 		draw_texture(wt, -wt.get_size() / 2.0, Color(0, 0, 0, 0.25))
 		draw_set_transform(Vector2.ZERO, heading, Vector2(kk, kk))

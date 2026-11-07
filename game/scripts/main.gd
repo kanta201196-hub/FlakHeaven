@@ -450,7 +450,7 @@ func _process(delta: float) -> void:
 		camera.zoom = camera.zoom.lerp(Vector2(z, z), 1.0 - exp(-delta * 3.0))
 		_ab_snd = move_toward(_ab_snd, 1.0 if player.ab_t > 0.0 else 0.0, delta * 3.0)
 		sfx.set_engine(player.velocity.length() / player.cruise_speed(), player.hp > 0.0 and state == "playing",
-			_ab_snd, player.cls_id == "bomber" and player.plane_lvl <= 1, delta)
+			_ab_snd, PlaneFx.has_props(PlaneTiers.art_key(player.cls_id, player.plane_model)), delta)
 	else:
 		sfx.set_engine(0.0, false)
 
