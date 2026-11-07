@@ -21,6 +21,12 @@ const SHAPE := {
 	"bomber_t1": [-0.034, 0.042, 0.0],   # straight wing: edges within 0.01 between half and 0.9 span
 	"bomber_1": [-0.03, 0.06, 0.6],
 	"bomber_2": [-0.019, 0.065, 0.55],
+	"fighter_t4": [-0.025, 0.08, 0.48],   # blended body; leading edge swept back, trailing edge forward
+	"fighter_t5": [-0.03, 0.065, -0.2],   # manta: the mid-chord line runs slightly forward
+	"attacker_t4": [-0.05, 0.065, 0.19],
+	"attacker_t5": [-0.06, 0.06, 0.15],
+	"bomber_t4": [-0.04, 0.045, -0.6],   # forward-swept wing (trailing edge -1.0, leading edge -0.2)
+	"bomber_t5": [-0.045, 0.12, 0.0],   # blended body, straight stub wings between the fans
 }
 ## Clear-coat strength in the hangar (pd_gloss): roughness goes towards 0.55 × itself + 0.05, so matte camouflage
 ## keeps a soft sheen and gloss paints get a sharp highlight; chipped metal keeps its own value

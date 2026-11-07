@@ -13,6 +13,8 @@ class_name NozzleFlame
 ## off their axis): circle fits of the nozzle lip in cross-sections of the hangar GLBs, checked on the battle
 ## GLBs (same axes within 0.001): x of the lip, centre of the opening, radius of the opening inside the lip.
 ## The earlier values came from the nacelle radius (Livery.ENGINE_HOLES), 1.6–2× the opening.
+## A plane with more than one engine pair lists one such row per pair (an Array of rows); read them through
+## rows() / exits(), never by index.
 const NOZZLES := {
 	"fighter_t1": [-0.298, -0.072, 0.0, 0.016],   # tail pipe under the fin (rear depth map of the hangar GLB)
 	"fighter_1": [-0.47, -0.058, 0.0, 0.028],
@@ -21,6 +23,17 @@ const NOZZLES := {
 	"attacker_1": [-0.242, -0.0386, 0.0807, 0.016],
 	"attacker_2": [-0.292, -0.032, 0.088, 0.0158],
 	"bomber_2": [-0.274, -0.0156, 0.0702, 0.0176],
+	# tiers 4-5: rear depth maps of the hangar GLBs (first skin hit seen from behind): x of the lip, centre and radius
+	# of the opening inside it
+	"fighter_t4": [-0.452, -0.004, 0.0, 0.009],   # small exhaust between the canted tail surfaces
+	"fighter_t5": [-0.497, -0.027, 0.051, 0.023],
+	"attacker_t4": [-0.497, -0.05, 0.0, 0.026],
+	# «Грач» 5: round exhausts of the engine pods beside the fuselage and the rectangular centre nozzle box
+	"attacker_t5": [[-0.497, -0.037, 0.127, 0.033], [-0.415, -0.032, 0.0, 0.026]],
+	# «Кит» 4: inner nacelles under the trailing edge, outer ones hung ahead of the leading edge (boat-tail exit)
+	"bomber_t4": [[-0.168, -0.08, 0.157, 0.016], [0.02, -0.085, 0.226, 0.013]],
+	# «Кит» 5: its ducted fans lift (axes vertical); the jets exhaust from the two tail pods
+	"bomber_t5": [-0.497, -0.018, 0.084, 0.009],
 }
 const PLUME_LEN := 9.0   # outer plume length, in nozzle radii
 const CORE_LEN := 3.2    # hot core length, in nozzle radii
@@ -30,10 +43,28 @@ static var _shader: Shader
 static var _haze_shader: Shader
 
 
-## Adds the flames as a child of `model` (key «fighter_1» etc.). Returns null for a plane without jets.
-static func attach(model: Node3D, key: String) -> Node3D:
+## Nozzle rows of plane `key`, each [exit x, axis y, axis |z|, inner radius]: one row per engine pair (a single
+## row in NOZZLES counts as a list of one); empty for a plane without jets
+static func rows(key: String) -> Array:
 	var n: Array = NOZZLES.get(key, [])
 	if n.is_empty():
+		return []
+	return n if n[0] is Array else [n]
+
+
+## Every nozzle exit of plane `key` in model axes, both sides of each pair: [[centre: Vector3, inner radius], ...]
+static func exits(key: String) -> Array:
+	var out: Array = []
+	for n: Array in rows(key):
+		for z: float in ([0.0] if is_zero_approx(float(n[2])) else [-float(n[2]), float(n[2])]):
+			out.append([Vector3(float(n[0]), float(n[1]), z), float(n[3])])
+	return out
+
+
+## Adds the flames as a child of `model` (key «fighter_1» etc.). Returns null for a plane without jets.
+static func attach(model: Node3D, key: String) -> Node3D:
+	var ex := exits(key)
+	if ex.is_empty():
 		return null
 	if _shader == null:
 		_shader = preload("res://shaders/nozzle_flame.gdshader")
@@ -41,11 +72,9 @@ static func attach(model: Node3D, key: String) -> Node3D:
 	var root := Node3D.new()
 	root.name = "nozzle_flame"
 	model.add_child(root)
-	var x: float = n[0]
-	var r: float = n[3]
-	var sides: Array = [0.0] if is_zero_approx(float(n[2])) else [-float(n[2]), float(n[2])]
-	for i in sides.size():
-		var at := Vector3(x, n[1], sides[i])
+	for i in ex.size():
+		var at: Vector3 = ex[i][0]
+		var r: float = ex[i][1]
 		_disc(root, at, r, i)
 		_plume(root, at, r, r * PLUME_LEN, 0.4, 4.5, 0.0, i)
 		_plume(root, at, r * 0.7, r * CORE_LEN, 0.2, 5.0, 3.0, i)

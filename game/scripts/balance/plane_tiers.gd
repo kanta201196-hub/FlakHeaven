@@ -32,10 +32,11 @@ const BASE := [
 ## `<class>_<model>` — battle and hangar GLBs `fh_battle_<class>_<model>.glb` / `fh_hangar_…`, the top-down sprite
 ## `art/planes/<class>_<model>.png`, and the mount, flame, livery, decal and camera tables. "1" and "2" are the old
 ## planes 1 and 2, now tiers 2 and 3 (their paths unchanged); "t1", "t4", "t5" are the new tier models.
-## Tiers 4–5 borrow the tier 3 model until theirs ship: then add their table entries (`tests/model_tables_test.gd`
-## lists the tables) and set MODEL to "t4" / "t5" and OWN_MODEL to true here.
-const MODEL := ["t1", "1", "2", "2", "2"]
-const OWN_MODEL := [true, true, true, false, false]
+## A tier whose model has not shipped borrows the previous tier's key with OWN_MODEL false; a new model needs its
+## table entries (`tests/model_tables_test.gd` lists the tables) before its key goes here. Every tier has its own
+## model since PT-02 (07.11).
+const MODEL := ["t1", "1", "2", "t4", "t5"]
+const OWN_MODEL := [true, true, true, true, true]
 ## Node price ladder of tier 2 (the old one, flights review 06.11) and the factor per tier
 const NODE_COST := [160, 500, 1200, 2800, 5800]
 const PRICE_K := [0.5, 1.0, 1.25, 1.5, 2.0]

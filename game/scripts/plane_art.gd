@@ -17,14 +17,17 @@ const WEAPON_FRAC := {"aam": 0.34, "rockets": 0.26, "bombs": 0.27, "gunpod": 0.3
 ## fuselage side under the swing-wing root, with the pylon's rear half behind the trailing edge).
 ## «Оса» t1: between the fuselage and the baked drop tank (|z| 0.25–0.31), ahead of the flap (x < 0.062) on the
 ## fixed wing (chord 0.03–0.185 at |z| 0.16, hangar GLB body).
-const WING_PAIR := {"fighter_t1": Vector2(0.12, 0.17), "fighter_1": Vector2(-0.075, 0.085), "fighter_2": Vector2(-0.15, 0.2)}
+## Tiers 4-5: «Оса» 4 under the inner wing (chord −0.29…0.07 at |z| 0.15), «Оса» 5 under the manta wing
+## (chord −0.42…−0.035 at |z| 0.17), both ahead of the flap hinge.
+const WING_PAIR := {"fighter_t1": Vector2(0.12, 0.17), "fighter_t4": Vector2(-0.06, 0.15), "fighter_t5": Vector2(-0.17, 0.17), "fighter_1": Vector2(-0.075, 0.085), "fighter_2": Vector2(-0.15, 0.2)}
 ## Kanta («Оса» 2 НАР): pylon station of the wing-tip group («Законцовки крыла») for stores that do not ride the
 ## tip rail (rocket pods, bombs, gun pods; WeaponModels.on_tip_rail), same units as WING_PAIR. Beside the tip a
 ## pod stood half off the wing; here it hangs under the flat outer wing, outboard of the inner pair with room for
 ## the widest pod (tier 3) next to the inner missile, its pylon on the chord (battle-model underside probed).
 ## «Оса» t1: outboard of the drop tank, behind the slat (x ≥ 0) at mid chord of the fixed wing (−0.14…0.02 at
 ## |z| 0.38).
-const OUTER_PAIR := {"fighter_t1": Vector2(-0.06, 0.38), "fighter_1": Vector2(-0.25, 0.17), "fighter_2": Vector2(-0.19, 0.28)}
+## Tiers 4-5: mid chord of the outer panel (−0.25…−0.04 at |z| 0.235; −0.335…−0.13 at |z| 0.28).
+const OUTER_PAIR := {"fighter_t1": Vector2(-0.06, 0.38), "fighter_t4": Vector2(-0.14, 0.235), "fighter_t5": Vector2(-0.2, 0.28), "fighter_1": Vector2(-0.25, 0.17), "fighter_2": Vector2(-0.19, 0.28)}
 
 static var _tex := {}
 static var _anchors := {}

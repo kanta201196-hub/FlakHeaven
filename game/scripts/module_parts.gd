@@ -256,12 +256,12 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 	a["gun"] = GUN_AT.get(key, Vector3(gx, gy, _half_width(faces, gx, gy) * 0.8))
 	# сопла: точки огня PlaneFx (пикс. картинки) → оси модели; высота — середина сечения перед соплом
 	var jets: Array = []
-	var nz: Array = NozzleFlame.NOZZLES.get(key, [])
-	if not nz.is_empty():   # Kanta 26.10: the nozzle exits measured on the models — the same place as the flames
-		for z in ([0.0] if is_zero_approx(float(nz[2])) else [-float(nz[2]), float(nz[2])]):
-			jets.append(Vector3(float(nz[0]), float(nz[1]), z))
+	var ex := NozzleFlame.exits(key)
+	if not ex.is_empty():   # Kanta 26.10: the nozzle exits measured on the models — the same place as the flames
+		for e: Array in ex:
+			jets.append(e[0])
 		a["jets"] = jets
-		a["jet_r"] = float(nz[3])
+		a["jet_r"] = float(ex[0][1])
 		return a
 	var spec: Dictionary = PlaneFx.SPEC.get(key, {})
 	var cls := key.get_slice("_", 0)

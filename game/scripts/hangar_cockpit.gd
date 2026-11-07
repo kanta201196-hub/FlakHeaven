@@ -32,6 +32,12 @@ const FRAMES := {
 	"attacker_2": {"bows": [0.26, 0.62], "ribs": [], "seats": [[0.56, 0.0]]},
 	"bomber_1": {"bows": [0.22, 0.45, 0.7], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 	"bomber_2": {"bows": [0.24, 0.5, 0.76], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
+	"fighter_t4": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
+	"fighter_t5": {"bows": [0.3], "ribs": [], "seats": [[0.6, 0.0]]},
+	"attacker_t4": {"bows": [0.3, 0.62], "ribs": [], "seats": [[0.28, 0.0], [0.7, 0.0]]},   # tandem two-seater
+	"attacker_t5": {"bows": [0.33, 0.66], "ribs": [], "seats": [[0.25, 0.0], [0.58, 0.0]]},   # three-pane canopy
+	"bomber_t4": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.55, -0.42], [0.55, 0.42]]},
+	"bomber_t5": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 }
 ## Frame paint when the livery has no colours of its own (the source paint): a dark worn grey
 const FRAME_DEFAULT := Color(0.22, 0.23, 0.22)
