@@ -280,6 +280,9 @@ void fragment() {
 		zc = mix(zc, mix(vec3(lum), c, 0.6) * 1.85 * zone_slope, smoothstep(0.1, 0.22, zh));
 		zc = mix(zc, vec3(lum) * 1.9 * zone_crest, smoothstep(0.55, 0.85, zh));
 		c = zc;
+		float shrub_a = 0.0;   // B2-Q10: maquis shrubs, also drawn over rock below (they grow in limestone cracks)
+		vec3 bush_a = vec3(0.0);
+		vec2 sdir_a = vec2(0.0);
 		if (sea && arch_detail) {
 			// B2-Q08 (close-up № 4: islands were a flat green carpet): dry-grass glades, bare limestone on
 			// the steeper ground, dark maquis clumps with their own bump, and scattered stones
@@ -290,7 +293,10 @@ void fragment() {
 			// maquis shrubs: round bushes scattered on a jittered grid, denser where the noise says, each with a lit
 			// crown and a darker rim (from above a shrub is a dome, not a smudge)
 			// B2-Q10: maquis grows in dense dark thickets (in gullies and on shaded slopes) between open garrigue
-			float thicket = smoothstep(0.42, 0.58, fbm(world / 170.0 - 9.0) + clamp(0.5 - rel.x, -0.2, 0.2) * 0.4);
+			// whole island interior is dry garrigue (olive-grey), not the bare brown of the Highlands soil
+			c = mix(c, mix(vec3(lum), c, 0.35) * SRGB(vec3(0.92, 0.98, 0.7)), 0.55 * (1.0 - bare));
+			float thicket = smoothstep(0.4, 0.56, fbm(world / 95.0 - 9.0) + (vnoise(world / 30.0 + 3.0) - 0.5) * 0.18
+				+ clamp(0.5 - rel.x, -0.15, 0.15) * 0.8 - bare * 0.25);
 			float dens = mix(0.12, 1.0, thicket) * (1.0 - bare * 0.8);
 			float shrub = 0.0;
 			vec2 sdir = vec2(0.0);
@@ -312,6 +318,7 @@ void fragment() {
 			c = mix(c, bush, shrub * 0.85);
 			c = mix(c, SRGB(vec3(0.14, 0.2, 0.1)) * (0.85 + 0.3 * vnoise(world / 3.0)), thicket * (1.0 - shrub) * 0.75);   // shade between thicket bushes
 			nxy += sdir * shrub * 0.9;
+			shrub_a = shrub; bush_a = bush; sdir_a = sdir;
 			// scattered stones: small round pale pebbles, more on bare ground
 			float stone = smoothstep(0.86, 0.93, vnoise(world / 1.6 + 71.0)) * (0.3 + 0.7 * bare) * (1.0 - shrub);
 			c = mix(c, vec3(lum) * 1.45, stone * 0.6);
@@ -365,7 +372,15 @@ void fragment() {
 			float shelf = rg * (1.0 - smoothstep(0.12, 0.3, slope));
 			rc = mix(rc, mix(s2.a.rgb, vec3(dot(s2.a.rgb, vec3(0.333))), 0.5) * 1.05, shelf * 0.45);
 			rc = mix(rc, rc * mesa_cliff_tint, prov.y * prov.w * mesa_cliff_k);   // RV-01
+			if (sea && arch_detail) {
+				// B2-Q10 (Kanta 07.11: islands looked like Highlands desert): Adriatic islands are pale grey
+				// limestone, not brown sandstone — the photo rock is greyed and lifted, its strata grey too
+				float rlum = dot(rc, vec3(0.333));
+				rc = mix(rc, vec3(rlum) * SRGB(vec3(1.12, 1.1, 1.02)) * 1.15, 0.75);
+			}
 			c = mix(c, rc, rk);
+			// maquis clings to the rock: shrubs stay on all but the steepest walls
+			c = mix(c, bush_a, shrub_a * 0.85 * rk * (1.0 - smoothstep(0.45, 0.8, slope)));
 			nxy = mix(nxy, (texture(n_rock, world3.xz / rock_world).rg * 2.0 - 1.0) * max(1.0 - slope, 0.4), rk);
 		}
 		// осыпь у подножия: светлее и серее в местах, где склон переходит в долину
@@ -379,6 +394,9 @@ void fragment() {
 			vec3 scc = scree_color * (0.7 + 0.45 * grit) * (0.93 + 0.12 * vnoise(world / 6.0));
 			if (sea) {
 				sc *= smoothstep(sea_w + 25.0, sea_w + 110.0, abs(rel.z));
+			}
+			if (sea && arch_detail) {
+				scc = mix(scc, vec3(dot(scc, vec3(0.333))) * 1.1, 0.7);
 			}
 			c = mix(c, scc, sc * scree_k);
 			nxy = mix(nxy, s2.n.rg * 2.0 - 1.0, sc * 0.6);
