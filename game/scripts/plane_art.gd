@@ -19,7 +19,11 @@ const WEAPON_FRAC := {"aam": 0.34, "rockets": 0.26, "bombs": 0.27, "gunpod": 0.3
 ## fixed wing (chord 0.03–0.185 at |z| 0.16, hangar GLB body).
 ## Tiers 4-5: «Оса» 4 under the inner wing (chord −0.29…0.07 at |z| 0.15), «Оса» 5 under the manta wing
 ## (chord −0.42…−0.035 at |z| 0.17), both ahead of the flap hinge.
-const WING_PAIR := {"fighter_t1": Vector2(0.12, 0.17), "fighter_t4": Vector2(-0.06, 0.15), "fighter_t5": Vector2(-0.17, 0.17), "fighter_1": Vector2(-0.075, 0.085), "fighter_2": Vector2(-0.15, 0.2)}
+## «Грач» 4/5: the silhouette's 38 % of the half-span (tip tanks and tip pods included) lands against the intake
+## trunks (|z| ≤ 0.16) and the engine pods (|z| ≤ 0.20), so the inner pair hangs outboard of them (chord −0.19…0.055
+## at |z| 0.21 on «Грач» 4, −0.275…0.03 at |z| 0.24 on «Грач» 5).
+const WING_PAIR := {"fighter_t1": Vector2(0.12, 0.17), "fighter_t4": Vector2(-0.06, 0.15), "fighter_t5": Vector2(-0.17, 0.17),
+	"attacker_t4": Vector2(-0.06, 0.21), "attacker_t5": Vector2(-0.1, 0.24), "fighter_1": Vector2(-0.075, 0.085), "fighter_2": Vector2(-0.15, 0.2)}
 ## Kanta («Оса» 2 НАР): pylon station of the wing-tip group («Законцовки крыла») for stores that do not ride the
 ## tip rail (rocket pods, bombs, gun pods; WeaponModels.on_tip_rail), same units as WING_PAIR. Beside the tip a
 ## pod stood half off the wing; here it hangs under the flat outer wing, outboard of the inner pair with room for
@@ -28,6 +32,13 @@ const WING_PAIR := {"fighter_t1": Vector2(0.12, 0.17), "fighter_t4": Vector2(-0.
 ## |z| 0.38).
 ## Tiers 4-5: mid chord of the outer panel (−0.25…−0.04 at |z| 0.235; −0.335…−0.13 at |z| 0.28).
 const OUTER_PAIR := {"fighter_t1": Vector2(-0.06, 0.38), "fighter_t4": Vector2(-0.14, 0.235), "fighter_t5": Vector2(-0.2, 0.28), "fighter_1": Vector2(-0.25, 0.17), "fighter_2": Vector2(-0.19, 0.28)}
+
+## The second wing pair (the attackers' outer pair, the bombers' «Крылья (пара)»), same units, where 62 % of the
+## silhouette half-span sits too close to the inner pair moved by WING_PAIR, a tip tank or pod, or a nacelle:
+## «Грач» 4 (tip tanks from |z| 0.40, chord −0.17…0.0 at 0.30), «Грач» 5 (tip pods from |z| 0.35, chord −0.26…−0.005
+## at 0.305), room for the widest tier-3 pod beside both; «Кит» 4 inboard of its inner nacelle (|z| 0.13–0.18; the
+## outer one under 0.19–0.24 took the silhouette point), chord −0.21…0.12 at 0.09.
+const MID_PAIR := {"attacker_t4": Vector2(-0.07, 0.30), "attacker_t5": Vector2(-0.11, 0.305), "bomber_t4": Vector2(-0.03, 0.09)}
 
 static var _tex := {}
 static var _anchors := {}
@@ -112,7 +123,8 @@ static func shape_info(cls_id: String, lvl: String) -> Dictionary:
 
 ## Точки подвеса для группы (в пикселях текстуры, начало — центр, нос вправо).
 ## Wing pairs come from the silhouette; the first pair of a plane in WING_PAIR hangs at its measured station instead,
-## and a pylon store (not a tip-rail missile) on the wing-tip group of a plane in OUTER_PAIR hangs at that station.
+## and a pylon store (not a tip-rail missile) on the wing-tip group of a plane in OUTER_PAIR hangs at that station;
+## the second pair of a plane in MID_PAIR hangs at its station too.
 static func slot_points(cls_id: String, lvl: String, group_index: int, group: Hardpoint) -> Array:
 	var s := shape_info(cls_id, lvl)
 	if s.is_empty():
@@ -144,9 +156,13 @@ static func slot_points(cls_id: String, lvl: String, group_index: int, group: Ha
 	var px := wx - 1.0
 	var station: Vector2 = WING_PAIR.get(PlaneTiers.art_key(cls_id, lvl), Vector2.ZERO)
 	var outer: Vector2 = OUTER_PAIR.get(PlaneTiers.art_key(cls_id, lvl), Vector2.ZERO)
+	var mid: Vector2 = MID_PAIR.get(PlaneTiers.art_key(cls_id, lvl), Vector2.ZERO)
 	if group_index == 0 and group.mount_frac <= 0.0 and station != Vector2.ZERO:
 		px = station.x * float(s["w"])
 		off = station.y * float(s["w"])
+	elif group_index == 1 and group.mount_frac <= 0.0 and mid != Vector2.ZERO:
+		px = mid.x * float(s["w"])
+		off = mid.y * float(s["w"])
 	elif group.mount_frac >= WeaponModels.TIP_FRAC and outer != Vector2.ZERO and not WeaponModels.on_tip_rail(group.weapon):
 		px = outer.x * float(s["w"])
 		off = outer.y * float(s["w"])

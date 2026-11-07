@@ -33,8 +33,8 @@ const SPEC := {
 	"fighter_t5": {"jet": [Vector2(-111.8, -11.5), Vector2(-111.8, 11.5)], "r": 6.0, "y": -6.1},
 	"attacker_t4": {"jet": [Vector2(-111.8, 0)], "r": 6.7, "y": -11.3},
 	"attacker_t5": {"jet": [Vector2(-111.8, -28.6), Vector2(-111.8, 28.6), Vector2(-93.4, 0)], "r": 7.6, "y": -7.8},
-	"bomber_t4": {"jet": [Vector2(-50.4, -47.1), Vector2(-50.4, 47.1), Vector2(6.0, -67.8), Vector2(6.0, 67.8)],
-		"r": 5.0, "y": -24.8},
+	"bomber_t4": {"jet": [Vector2(-50.4, -47.1), Vector2(-50.4, 47.1), Vector2(10.5, -67.8), Vector2(10.5, 67.8)],
+		"r": 5.3, "y": -24.8},
 	"bomber_t5": {"jet": [Vector2(-149.1, -25.2), Vector2(-149.1, 25.2)], "r": 3.1, "y": -5.4},
 }
 

@@ -31,7 +31,7 @@ const NOZZLES := {
 	# «Грач» 5: round exhausts of the engine pods beside the fuselage and the rectangular centre nozzle box
 	"attacker_t5": [[-0.497, -0.037, 0.127, 0.033], [-0.415, -0.032, 0.0, 0.026]],
 	# «Кит» 4: inner nacelles under the trailing edge, outer ones hung ahead of the leading edge (boat-tail exit)
-	"bomber_t4": [[-0.168, -0.08, 0.157, 0.016], [0.02, -0.085, 0.226, 0.013]],
+	"bomber_t4": [[-0.168, -0.08, 0.157, 0.016], [0.035, -0.085, 0.226, 0.015]],
 	# «Кит» 5: its ducted fans lift (axes vertical); the jets exhaust from the two tail pods
 	"bomber_t5": [-0.497, -0.018, 0.084, 0.009],
 }
