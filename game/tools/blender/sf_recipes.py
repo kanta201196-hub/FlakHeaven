@@ -814,3 +814,29 @@ RECIPES["bomber_t1"] = {
     "paint": HIGHLAND, "tris": 30000,
 }
 RECIPES["bomber_t1_hangar"] = dict(RECIPES["bomber_t1"], root="fh_hangar_bomber_t1", tris=120000)
+
+# PT-02 tiers 4-5 (Kanta 07.11: Грач 4-В, 5-В; Оса 4-Г, 5-Г; Кит 4-А, 5-Г): Meshy multi-image-to-3d models from our own
+# concept sheets (CREDITS: generated). meshy_prep.py turns the raw GLB nose +X at length 1, splits the canopy glass
+# into material `glass` (dark texels inside a canopy box), adds dark plates `dark` across open ducts and any domes,
+# and marks the generator's own dark metal (nozzles, tank noses, fans) as material `keep` by boxes, so the recipes only
+# sort four materials: `paint` is repainted whole in the class camouflage (its blotches flattened out, panel lines kept),
+# `keep` keeps the generator's colours except the cyan rings of the future systems (glow only on future systems, PT-02).
+def _meshy(root, paint, tris=30000):
+    return {
+        "root": root, "rot": (0, 0, 0), "ground": False,
+        "materials": [(r"^glass", GLASS),
+                      (r"^dark", {"mode": "keep", "desat": 0.0, "rough": 0.55}),
+                      (r"^keep", {"mode": "keep", "desat": 0.3, "rough": 0.5}),
+                      (r"^paint", {"mode": "auto", "hue": [(0, 160), (205, 360)], "smin": 0.0, "vmin": 0.0,
+                                   "flatten": 31}),
+                      (r".", {"mode": "paint"})],
+        "mat_names": {"glass": "glass"}, "img_plain": True,
+        "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+        "paint": paint, "tris": tris,
+    }
+
+
+for _k, _p in (("attacker_t4", TEMPERATE), ("attacker_t5", TEMPERATE), ("fighter_t4", HIGHLAND),
+               ("fighter_t5", HIGHLAND), ("bomber_t4", HIGHLAND), ("bomber_t5", HIGHLAND)):
+    RECIPES[_k] = _meshy(_k, _p)
+    RECIPES[_k + "_hangar"] = _meshy("fh_hangar_" + _k, _p, 110000)
