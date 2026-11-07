@@ -126,12 +126,14 @@ func _ready() -> void:
 			debug_plane = clampi(int(String(arg).substr(8)), 1, PlaneTiers.MAX)
 
 
-## A fresh class record: tier 1 owned and selected, empty nodes and a default kit per tier. Decals stay per model
-## generation (`decals1` / `decals2`): they are placed on the model's surface, and tiers share models for now.
+## A fresh class record: tier 1 owned and selected, empty nodes and a default kit per tier. Decals are kept per
+## model (`decal_key`: `decals1` / `decals2` / `decals_t1` …): they are placed on the model's surface, and tiers
+## 4–5 share the tier 3 model for now.
 func _default_class(cls: String) -> Dictionary:
 	var d := {"crew_xp": 0, "crew_rank": 1, "callsign": CALLSIGNS[cls][0], "tiers": [1], "plane_sel": 1, "livery": "",
-		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start": [PlaneClasses.signature(cls)],
-		"decals1": {"v": DecalLoadout.VERSION, "items": []}, "decals2": {"v": DecalLoadout.VERSION, "items": []}}
+		"perks": [], "skills": [PlaneClasses.CLASS_SKILLS[cls][0], ""], "seen_unlocks": [], "start": [PlaneClasses.signature(cls)]}
+	for mk in PlaneTiers.model_keys():
+		d[decal_key(mk)] = {"v": DecalLoadout.VERSION, "items": []}
 	for t in range(1, PlaneTiers.MAX + 1):
 		var n := {}
 		for id in PlaneTiers.nodes(t):
@@ -199,8 +201,10 @@ func load_profile() -> void:
 					dst["start"] = [PlaneClasses.signature(c)] + ([String(src["start2"])] if String(src.get("start2", "")) != "" else [])
 				if not (CALLSIGNS[c] as Array).has(dst["callsign"]):
 					dst["callsign"] = CALLSIGNS[c][0]
-				# free-placed decals (Kanta 27.10): every entry checked, old formats migrated, a newer one kept as is
-				for dk in ["decals1", "decals2"]:
+				# free-placed decals (Kanta 27.10): every entry checked, old formats migrated, a newer one kept as is.
+				# A model added later (stage B: «t1») has no store in an older save and starts empty
+				for mk in PlaneTiers.model_keys():
+					var dk := decal_key(mk)
 					dst[dk] = DecalLoadout.to_save(DecalLoadout.parse(src.get(dk)))
 	# medals (Kanta 27.10): lifetime counters and the cards / synergies ever taken; an old save starts from zero
 	if d.get("medals") is Dictionary:
@@ -388,9 +392,9 @@ func tier(c: String) -> int:
 	return best
 
 
-## Model generation (1 or 2) the class flies with — what art, hangar model, mounts and sprites are keyed by
+## Model key ("t1", "1", "2", …) the class flies with — what art, hangar model, mounts and sprites are keyed by
 ## (`PlaneTiers.model`). Game rules use `tier`.
-func plane_lvl(c: String) -> int:
+func plane_model(c: String) -> String:
 	return PlaneTiers.model(tier(c))
 
 
@@ -567,17 +571,27 @@ func third_group(c: String, lv := 0) -> bool:
 	return node(c, "pylons", lv) >= PlaneTiers.GROUP3_LVL
 
 
-## Free-placed decals of model generation `lv` (1 or 2, `PlaneTiers.model`) of class `c`; empty for a save from a newer build (kept untouched)
-func decals(c: String, lv: int) -> Array[DecalRecord]:
-	return DecalLoadout.parse(cls(c).get("decals%d" % clampi(lv, 1, 2))).records
+## Save key of the decals on model `mk` (`PlaneTiers.model`): the old planes keep `decals1` / `decals2`, so saves
+## from before tiers load unchanged; a new model gets `decals_<key>` («decals_t1»)
+static func decal_key(mk: String) -> String:
+	return "decals" + mk if mk.is_valid_int() else "decals_" + mk
 
 
-## Replaces the decals of plane `lv`; more than DecalLoadout.MAX_DECALS are cut. Saved with the next `save()`
-func set_decals(c: String, lv: int, list: Array[DecalRecord]) -> void:
+## Free-placed decals of model `mk` («t1», «1», «2», `PlaneTiers.model`) of class `c`; empty for a model without a
+## store and for a save from a newer build (kept untouched)
+func decals(c: String, mk: String) -> Array[DecalRecord]:
+	return DecalLoadout.parse(cls(c).get(decal_key(mk))).records
+
+
+## Replaces the decals of model `mk`; more than DecalLoadout.MAX_DECALS are cut; an unknown model is ignored.
+## Saved with the next `save()`
+func set_decals(c: String, mk: String, list: Array[DecalRecord]) -> void:
+	if not PlaneTiers.model_keys().has(mk):
+		return
 	var lo := DecalLoadout.new()
 	for r in list:
 		DecalLoadout.add(lo.records, r)
-	cls(c)["decals%d" % clampi(lv, 1, 2)] = DecalLoadout.to_save(lo)
+	cls(c)[decal_key(mk)] = DecalLoadout.to_save(lo)
 
 
 ## True when decal picture `id` may go on a plane of class `c` (DecalUnlocks: start set or a milestone reached)
@@ -1008,7 +1022,7 @@ func apply(p: Player) -> void:
 			m["turret_rate"] *= 1.0 + 0.006 * L * k
 	# the plane tier itself (tier 3 — the old plane 2 step: hull +15 %, speed and turn +5 %)
 	p.tier = t
-	p.plane_lvl = PlaneTiers.model(t)
+	p.plane_model = PlaneTiers.model(t)
 	var b := PlaneTiers.base(t)
 	p.max_hp *= float(b["hp"])
 	m["speed"] *= float(b["speed"])

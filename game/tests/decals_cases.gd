@@ -22,6 +22,7 @@ func run() -> Array:
 	_test_projection()
 	_test_profile_round_trip()
 	_test_old_profile()
+	_test_model_t1_store()
 	_test_hull()
 	_test_extra_hull()
 	_test_mirror()
@@ -203,13 +204,34 @@ func _fresh_profile() -> Node:
 func _test_profile_round_trip() -> void:
 	var p := _fresh_profile()
 	var list: Array[DecalRecord] = [_sample()]
-	p.set_decals("fighter", 1, list)
+	p.set_decals("fighter", "1", list)
 	p.save()
 	var q := _fresh_profile()
 	q.load_profile()
-	var got: Array[DecalRecord] = q.decals("fighter", 1)
+	var got: Array[DecalRecord] = q.decals("fighter", "1")
 	_check(got.size() == 1 and got[0].id == "skull_winged" and got[0].mirror, "decals survive save and load")
-	_check(q.decals("fighter", 2).is_empty(), "plane 2 keeps its own (empty) decals")
+	_check(q.decals("fighter", "2").is_empty(), "plane 2 keeps its own (empty) decals")
+	_check(q.decals("fighter", "t1").is_empty(), "the tier 1 model keeps its own (empty) decals")
+	q.free()
+	p.free()
+
+
+## PT-04 stage B: the tier 1 model has its own decal store (`decals_t1`), saved apart from the old planes' stores
+func _test_model_t1_store() -> void:
+	var p := _fresh_profile()
+	_check(p.decal_key("t1") == "decals_t1" and p.decal_key("1") == "decals1" and p.decal_key("2") == "decals2",
+		"store keys: the old planes keep theirs, a new model gets decals_<key>")
+	_check((p.cls("fighter") as Dictionary).has("decals_t1"), "a fresh profile has an empty tier 1 store")
+	var list: Array[DecalRecord] = [_sample()]
+	p.set_decals("fighter", "t1", list)
+	p.set_decals("fighter", "t9", list)   # no such model: ignored, nothing written
+	_check(not (p.cls("fighter") as Dictionary).has("decals_t9"), "an unknown model gets no store")
+	p.save()
+	var q := _fresh_profile()
+	q.load_profile()
+	_check(q.decals("fighter", "t1").size() == 1, "tier 1 decals survive save and load")
+	_check(q.decals("fighter", "1").is_empty() and q.decals("fighter", "2").is_empty(),
+		"tier 1 decals stay off the old planes")
 	q.free()
 	p.free()
 
@@ -221,9 +243,20 @@ func _test_old_profile() -> void:
 	f.close()
 	var q := _fresh_profile()
 	q.load_profile()
-	_check(q.decals("bomber", 1).is_empty() and int(q.data["parts"]) == 5, "an old profile loads, no decals")
-	_check(q.decals("attacker", 1).size() == 1, "broken decal entries are dropped on load, valid ones kept")
+	_check(q.decals("bomber", "1").is_empty() and int(q.data["parts"]) == 5, "an old profile loads, no decals")
+	_check(q.decals("attacker", "1").size() == 1, "broken decal entries are dropped on load, valid ones kept")
 	q.free()
+	# a stage A save (version 2, decals on the old planes, no tier 1 store): loads with both kept and t1 empty
+	f = FileAccess.open(TEST_PATH, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": 2, "parts": 7, "classes": {"fighter": {"tiers": [1, 2, 3], "plane_sel": 3,
+		"decals1": {"v": 1, "items": [_sample().to_dict()]}, "decals2": {"v": 1, "items": [_sample().to_dict(), _sample().to_dict()]}}}}))
+	f.close()
+	var r := _fresh_profile()
+	r.load_profile()
+	_check(r.decals("fighter", "1").size() == 1 and r.decals("fighter", "2").size() == 2, "stage A save: old decals kept per model")
+	_check(r.decals("fighter", "t1").is_empty() and (r.cls("fighter") as Dictionary).has("decals_t1"),
+		"stage A save: the tier 1 store is added empty")
+	r.free()
 
 
 ## Triangles of an axis-aligned box centred at `c` with half sizes `h`, normals outward
@@ -377,7 +410,7 @@ func _test_unlocks() -> void:
 func _test_editor() -> void:
 	var e := DecalEditor.new()
 	var given: Array[DecalRecord] = [_sample()]
-	e.open("fighter", 1, given)
+	e.open("fighter", "1", given)
 	_check(e.records.size() == 1 and e.records[0] != given[0], "the editor works on copies of the plane's decals")
 	_check(e.sel == -1 and e.tool == "" and not e.changed, "nothing is selected or changed on open")
 	var hit := [Vector3(0.1, 0.0, -0.05), Vector3(0, 0, -1)]
@@ -802,7 +835,7 @@ func _test_editor_fit() -> void:
 	var b := _box(Vector3.ZERO, Vector3(0.05, 0.05, 0.02))
 	var e := DecalEditor.new()
 	var none: Array[DecalRecord] = []
-	e.open("fighter", 1, none)
+	e.open("fighter", "1", none)
 	e.hull = PlaneHull.from_triangles(b[0], b[1])
 	e.pick("bolt", true)
 	e.size = DecalRecord.SIZE_MAX

@@ -247,7 +247,7 @@ func _test_profile_round_trip() -> void:
 func _test_profile_tiers() -> void:
 	var p := _fresh_profile()
 	_check(p.tiers_owned("fighter") == [1] and p.tier("fighter") == 1, "fresh profile: tier 1 owned and flown")
-	_check(p.plane_lvl("fighter") == PlaneTiers.model(1), "plane_lvl is the model generation of the tier")
+	_check(p.plane_model("fighter") == PlaneTiers.model(1), "plane_model is the model key of the tier")
 	p.set_plane("fighter", 2)
 	_check(p.tier("fighter") == 1, "an unowned tier cannot be selected")
 	p.cls("fighter")["tiers"] = [1, 2]

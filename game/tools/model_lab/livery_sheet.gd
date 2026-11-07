@@ -29,7 +29,7 @@ const CLOSE := [
 func _ready():
 	var args := OS.get_cmdline_user_args()
 	var classes := ["fighter", "attacker", "bomber"]
-	var lvls := [1]
+	var lvls := ["1"]
 	var kind := "hangar"
 	var only: Array = []
 	var views: Array = [0, 1]
@@ -43,7 +43,7 @@ func _ready():
 			for x in a.get_slice("=", 1).split(","):
 				views.append(int(x))
 		if a.begins_with("cls="): classes = [a.get_slice("=", 1)]
-		if a.begins_with("lvl="): lvls = [int(a.get_slice("=", 1))]
+		if a.begins_with("lvl="): lvls = [a.get_slice("=", 1)]
 		if a.begins_with("kind="): kind = a.get_slice("=", 1)
 		if a == "env=hangar": hangar_env = true
 	for c in classes:
@@ -104,10 +104,10 @@ func _process(_d: float) -> void:
 		cur = queue.pop_front()
 		for c in holder.get_children():
 			c.free()
-		var path := "res://models/%s/fh_%s_%s_%d.glb" % [cur[4], cur[4], cur[0], cur[1]]
+		var path := "res://models/%s/fh_%s_%s_%s.glb" % [cur[4], cur[4], cur[0], cur[1]]
 		var model: Node3D = (load(path) as PackedScene).instantiate()
 		holder.add_child(model)
-		var k := "%s_%d" % [cur[0], cur[1]]
+		var k := "%s_%s" % [cur[0], cur[1]]
 		WingMech.attach(model, k)
 		WingMech.attach_detail(model, k)
 		WingMech.attach_tail(model, k)

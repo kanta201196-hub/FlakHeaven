@@ -260,7 +260,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		return a
 	var spec: Dictionary = PlaneFx.SPEC.get(key, {})
 	var cls := key.get_slice("_", 0)
-	var tex := PlaneArt.plane_tex(cls, int(key.get_slice("_", 1)))
+	var tex := PlaneArt.plane_tex(cls, key.get_slice("_", 1))
 	var tw := float(tex.get_width()) if tex != null else 200.0
 	# картинка и модель «Осы» не совпадают по размаху и длине — срез сопла ищем на самой модели:
 	# от точки картинки вдоль оси вперёд до обшивки, по ширине — самое толстое сечение рядом

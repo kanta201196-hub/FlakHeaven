@@ -39,11 +39,20 @@ func _ready() -> void:
 	_check(Livery.VARIANTS["attacker"][0][0] == "sand_camo" and Livery.VARIANTS["bomber"][0][0] == "sand_camo"
 			and Livery.VARIANTS["fighter"][0][0] == "classic", "defaults unchanged")
 	# the shark mouth is placed by each plane's own nose: every plane model has one, inside its length
-	for key in ["fighter_1", "fighter_2", "attacker_1", "attacker_2", "bomber_1", "bomber_2"]:
+	for key in _plane_keys():
 		var n: Array = Livery.NOSE.get(key, [])
 		_check(n.size() == 4 and n[0] > n[1] and n[0] < 0.5 and n[1] > 0.0 and n[3] > 0.0, "%s nose for the shark mouth" % key)
 	print("UNIT: %d checks, %d failed" % [_checks, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
+
+
+## Art keys of every player plane model in use (PlaneTiers.model_keys × class)
+func _plane_keys() -> Array[String]:
+	var out: Array[String] = []
+	for cls: String in PlaneClasses.LIST:
+		for mk in PlaneTiers.model_keys():
+			out.append(PlaneTiers.art_key(cls, mk))
+	return out
 
 
 func _check(ok: bool, what: String) -> void:

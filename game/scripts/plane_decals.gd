@@ -56,7 +56,7 @@ static func attach(model: Node3D, key: String, ins: Node3D) -> void:
 	if ins == null:
 		return
 	var cls := key.get_slice("_", 0)
-	var lvl := int(key.get_slice("_", 1))
+	var lvl := key.get_slice("_", 1)
 	var records: Array[DecalRecord] = []
 	var tally := 0
 	if samples_on():

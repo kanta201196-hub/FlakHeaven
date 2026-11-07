@@ -15,7 +15,7 @@ const PREVIEW_TALLY := 5      ## marks a tally shows in the editor while the pla
 const GRAB_K := 0.6           ## a click this close to a decal's centre (× its size) picks it up
 
 var cls := ""
-var lvl := 1
+var lvl := "1"               ## model key of the plane (PlaneTiers.model: "t1", "1", "2")
 var records: Array[DecalRecord] = []
 var sel := -1                 ## selected record, -1 none
 var tool := ""                ## picture being placed, "" none
@@ -36,8 +36,8 @@ var _fit_key := ""
 var _fit_size := 0.0
 
 
-## Starts editing plane `lv` of class `c` with copies of `list`
-func open(c: String, lv: int, list: Array[DecalRecord]) -> void:
+## Starts editing model `lv` («t1», «1», «2») of class `c` with copies of `list`
+func open(c: String, lv: String, list: Array[DecalRecord]) -> void:
 	cls = c
 	lvl = lv
 	records.clear()

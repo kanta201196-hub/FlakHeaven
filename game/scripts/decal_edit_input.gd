@@ -48,7 +48,7 @@ func open() -> void:
 		return
 	var key := h3.model_key()
 	var cls := key.get_slice("_", 0)
-	var lvl := int(key.get_slice("_", 1))
+	var lvl := key.get_slice("_", 1)
 	if cls != m.hangar_cls or lvl != h3.view_lvl:
 		return
 	var e := DecalEditor.new()
@@ -76,7 +76,7 @@ func close() -> void:
 		_dirty = false
 	var h3 := Hangar3D.I
 	if h3 != null:
-		h3.decal_close("%s_%d" % [e.cls, e.lvl], Profile.decals(e.cls, e.lvl), tally)
+		h3.decal_close(PlaneTiers.art_key(e.cls, e.lvl), Profile.decals(e.cls, e.lvl), tally)
 	HudDecals.focus = -1
 
 
@@ -133,7 +133,7 @@ func frame(delta: float) -> void:
 		return
 	var h3 := Hangar3D.I
 	if h3 == null or m.hangar_tab != "plane" or m.hangar_cls != e.cls or h3.view_lvl != e.lvl \
-			or h3.model_key() != "%s_%d" % [e.cls, e.lvl]:
+			or h3.model_key() != PlaneTiers.art_key(e.cls, e.lvl):
 		close()
 		return
 	note_t = maxf(0.0, note_t - delta)

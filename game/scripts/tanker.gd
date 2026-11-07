@@ -73,7 +73,7 @@ static func _base_speed(p: Player) -> float:
 ## Для 3D: текстура и длина (как у ведомых)
 func ally_tex() -> Texture2D:
 	var t: Texture2D = Enemy.etex("a_tanker")
-	return t if t != null else PlaneArt.plane_tex("bomber", 2)
+	return t if t != null else PlaneArt.plane_tex("bomber", "2")
 
 
 func ally_len() -> float:
