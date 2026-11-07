@@ -10785,3 +10785,29 @@ msgstr "本次出击一个王牌也没击落。"
 
 msgid "ВЫЛЕТ «%s»"
 msgstr "出击«%s»"
+
+# ST-12 comic cutscenes: sound words
+msgid "БУМ!"
+msgstr "轰！"
+
+msgid "ВВУУХ!"
+msgstr "呜——！"
+
+msgid "ВЖЖ!"
+msgstr "嗖！"
+
+msgid "ДЗЫНЬ"
+msgstr "铛"
+
+msgid "ПШШ!"
+msgstr "嘶——！"
+
+msgid "РРАУ!"
+msgstr "轰隆！"
+
+msgid "ТРЕСК"
+msgstr "噼啪"
+
+msgid "ШШШ…"
+msgstr "沙沙……"
+

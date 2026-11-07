@@ -66,7 +66,8 @@ func _init() -> void:
 			_check(float(r[0]) >= 0.0 and float(r[1]) >= 0.0 and float(r[0]) + float(r[2]) <= 1.001 and float(r[1]) + float(r[3]) <= 1.001, "%s: panel inside the page" % id)
 			_check(float(pd["t"]) < float(scene.get("dur", 0.0)), "%s: panel comes in before the scene ends" % id)
 			if pd.has("say"):
-				_check(int((pd["say"] as Array)[0]) < lines.size(), "%s: balloon line exists" % id)
+				for li in ((pd["say"] as Array)[0] as Array):
+					_check(int(li) < lines.size(), "%s: balloon line exists" % id)
 			_check(ResourceLoader.exists(String(pd["img"])), "%s: picture %s exists" % [id, pd["img"]])
 			for f in pd.get("fx", []):
 				if (f as Dictionary).has("img"):

@@ -26,6 +26,30 @@ const TRACER_PERIOD := 0.75      # s a tracer takes to cross its path
 const RAIN_LINES := 70
 
 var _box: StyleBoxFlat
+static var _soft: Texture2D   # radial white → clear, one texture for glows, smoke and flak (tinted per draw)
+
+
+## The soft round sprite every in-panel effect is drawn with: smooth edges instead of flat discs.
+static func _soft_tex() -> Texture2D:
+	if _soft == null:
+		var g := Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		g.add_point(0.45, Color(1, 1, 1, 0.55))
+		var gt := GradientTexture2D.new()
+		gt.gradient = g
+		gt.fill = GradientTexture2D.FILL_RADIAL
+		gt.fill_from = Vector2(0.5, 0.5)
+		gt.fill_to = Vector2(1.0, 0.5)
+		gt.width = 128
+		gt.height = 128
+		_soft = gt
+	return _soft
+
+
+## A soft blob of radius `rad` at `pos`, tinted `c`.
+func _blob(pos: Vector2, rad: float, c: Color) -> void:
+	ctrl.draw_texture_rect(_soft_tex(), Rect2(pos - Vector2(rad, rad), Vector2(rad, rad) * 2.0), false, c)
 
 
 ## Draws page `key` at scene time `t` over the whole `size` screen; `textures` maps image paths to loaded textures,
@@ -120,22 +144,24 @@ func _fx(f: Dictionary, inner: Rect2, src: Rect2, t: float, a: float) -> void:
 				var pf := ComicKeys.puff(f["at"], f["drift"], i + seed, t, PUFF_LIFE)
 				var pos := _map(pf[0], inner, src)
 				var rad := float(f["r"]) * float(pf[1]) * k
-				if inner.grow(-rad * 0.3).has_point(pos):
-					var al := float(pf[2]) * a * (0.32 if dust else 0.6)
-					ctrl.draw_circle(pos, rad, Color(c, al))
-					if not dust:
-						ctrl.draw_arc(pos, rad, 0.0, TAU, 20, Color(INK, al * 0.6), maxf(1.0, rad * 0.06))
+				var room := minf(minf(pos.x - inner.position.x, inner.end.x - pos.x), minf(pos.y - inner.position.y, inner.end.y - pos.y))
+				rad = minf(rad, room)
+				if rad > 2.0:
+					var al := float(pf[2]) * a * (0.45 if dust else 0.8)
+					_blob(pos, rad, Color(c, al))
+					if not dust:   # a second, offset lobe: smoke reads as a cloud, not a disc
+						_blob(pos + Vector2(rad * 0.45, -rad * 0.25), rad * 0.7, Color(c, al * 0.8))
 		"glow":
 			var c: Color = f["c"]
 			var fl := float(f.get("flick", 0.3))
 			var w := 1.0 - fl * 0.5 * (1.0 + sin(t * 23.0 + seed) * sin(t * 7.3 + seed * 0.5))
 			var pos := _map(f["at"], inner, src)
-			var rad := float(f["r"]) * k
-			if inner.has_point(pos):
-				for i in 4:
-					var q := 1.0 - i * 0.22
-					ctrl.draw_circle(pos, rad * (1.6 - i * 0.35) * (0.85 + 0.15 * w), Color(c, a * 0.16 * w / q))
-				ctrl.draw_circle(pos, rad * 0.22 * (0.8 + 0.2 * w), Color(1, 1, 0.92, a * 0.7 * w))
+			# the halo is cut to the room left to the panel edge: no engine clipping, and a glow must not spill
+			var room := minf(minf(pos.x - inner.position.x, inner.end.x - pos.x), minf(pos.y - inner.position.y, inner.end.y - pos.y))
+			var rad := minf(float(f["r"]) * k, room / 1.6)
+			if inner.has_point(pos) and rad > 1.0:
+				_blob(pos, rad * 1.6 * (0.85 + 0.15 * w), Color(c, a * 0.55 * w))
+				_blob(pos, rad * 0.5 * (0.8 + 0.2 * w), Color(1, 1, 0.92, a * 0.85 * w))
 		"flak":
 			var area: Rect2 = f["area"]
 			for i in int(f.get("n", 3)):
@@ -146,12 +172,12 @@ func _fx(f: Dictionary, inner: Rect2, src: Rect2, t: float, a: float) -> void:
 				var pos := _map(at, inner, src)
 				if not inner.grow(-6.0).has_point(pos):
 					continue
-				var rad := (14.0 + 26.0 * minf(s / 0.5, 1.0)) * k
+				var rad := (12.0 + 20.0 * minf(s / 0.5, 1.0)) * k
 				var fade := clampf(1.0 - (s - 0.4) / 1.0, 0.0, 1.0)
-				if s < 0.12:
-					ctrl.draw_circle(pos, rad * 1.3, Color(1.0, 0.85, 0.45, a * 0.9))
-				ctrl.draw_circle(pos, rad, Color(0.09, 0.08, 0.08, a * 0.75 * fade))
-				ctrl.draw_arc(pos, rad, 0.0, TAU, 18, Color(INK, a * 0.5 * fade), maxf(1.0, rad * 0.08))
+				if s < 0.15:
+					_blob(pos, rad * 1.6, Color(1.0, 0.85, 0.45, a))
+				_blob(pos, rad, Color(0.09, 0.08, 0.08, a * 0.85 * fade))
+				_blob(pos + Vector2(rad * 0.4, rad * 0.2), rad * 0.7, Color(0.09, 0.08, 0.08, a * 0.7 * fade))
 		"tracer":
 			var c: Color = f["c"]
 			var pa := _map(f["a"], inner, src)

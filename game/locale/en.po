@@ -10785,3 +10785,29 @@ msgstr "No aces shot down this sortie."
 
 msgid "ВЫЛЕТ «%s»"
 msgstr "SORTIE «%s»"
+
+# ST-12 comic cutscenes: sound words
+msgid "БУМ!"
+msgstr "BOOM!"
+
+msgid "ВВУУХ!"
+msgstr "VROOOM!"
+
+msgid "ВЖЖ!"
+msgstr "ZZZOOM!"
+
+msgid "ДЗЫНЬ"
+msgstr "CLANG"
+
+msgid "ПШШ!"
+msgstr "FSSSH!"
+
+msgid "РРАУ!"
+msgstr "RRROAR!"
+
+msgid "ТРЕСК"
+msgstr "CRACKLE"
+
+msgid "ШШШ…"
+msgstr "KSSHH…"
+
