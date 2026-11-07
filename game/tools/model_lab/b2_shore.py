@@ -563,6 +563,7 @@ def _gun_site(broken):
     rng = random.Random(7)
     conc = L.flat('conc', CONC, 0.95); gun = L.flat('gun', GUNPAINT, 0.9); iron = L.flat('iron', IRON, 0.9)
     sand = L.flat('sand', SAND_C, 1.0); floor = L.flat('floor', CONC, 0.95); brass = L.flat('brass', (0.55, 0.46, 0.30), 0.9)
+    void = L.flat('void', (0.04, 0.04, 0.04), 1.0)
     o = [L.cyl((0, 0, 0.125), 6.0, 0.25, floor, 'floor', seg=40)]
     gap = 0.42
     if not broken:
@@ -584,6 +585,20 @@ def _gun_site(broken):
         o.append(L.box((-3.6, sg * 3.3, 0.55), (1.1, 0.6, 0.6), gun, 'locker', rz=sg * 0.5))
     for k in range(5):   # снаряды в стойке у задней стенки
         o.append(L.cyl((-4.9, -1.0 + k * 0.28, 0.42), 0.11, 0.9, brass, 'shell', seg=8, axis='X'))
+        o.append(L.cyl((-4.42, -1.0 + k * 0.28, 0.42), 0.11, 0.14, iron, 'shell_tip', seg=8, axis='X', r2=0.03))
+    # B2-Q10: pit clutter — ammo boxes with lids and rope handles, spent cases, a telephone box on the parapet,
+    # drain grates and tie-down rings in the floor
+    for k, (bx, by, rz) in enumerate(((-3.3, 1.6, 0.3), (-3.0, 2.15, 0.9), (-4.2, 1.1, 1.4), (-2.6, -2.4, -0.4))):
+        o.append(L.box((bx, by, 0.4), (0.9, 0.45, 0.3), gun, 'ammo_box', rz=rz))
+        o.append(L.box((bx, by, 0.57), (0.94, 0.49, 0.05), iron, 'ammo_lid', rz=rz))
+    for k in range(7):
+        a = rng.uniform(0, math.tau); r = rng.uniform(2.6, 4.6)
+        o.append(L.cyl((r * math.cos(a), r * math.sin(a), 0.33), 0.1, 0.65, brass, 'case', seg=8, axis='X', rot=Matrix.Rotation(rng.uniform(0, 3), 3, 'Z')))
+    o.append(L.box((-5.0, 3.2, 1.0), (0.3, 0.45, 0.5), gun, 'phone_box', rz=-0.6))
+    for a in (0.6, 2.0, -2.0, -0.6):
+        o.append(L.cyl((4.6 * math.cos(a), 4.6 * math.sin(a), 0.26), 0.09, 0.03, iron, 'ring', seg=10))
+    for a in (1.4, -1.4):
+        o.append(L.box((5.3 * math.cos(a), 5.3 * math.sin(a), 0.255), (0.5, 0.25, 0.02), iron, 'grate', rz=a))
     o.append(L.box((-4.9, -0.45, 0.28), (1.1, 1.6, 0.08), iron, 'rack'))
     # мешки с песком по гребню бруствера спереди: два ряда понизу, один поверх вперевязку (подушки, как у поста Нагорья)
     items = []
@@ -618,7 +633,7 @@ def _gun_site(broken):
     sight = [L.box((0.3, 0.95, 2.4), (0.5, 0.2, 0.3), iron, 'sight'), L.cyl((-0.6, -0.8, z1 + 0.25), 0.12, 0.5, iron, 'periscope', seg=8)]
     el = Matrix.Rotation(math.radians(-4), 4, 'Y')
     if not broken:
-        barrel = [L.cyl((4.4, 0, 0), 0.17, 6.6, gun, 'barrel', seg=16, axis='X', r2=0.13),
+        barrel = [L.cyl((4.4, 0, 0), 0.17, 6.6, gun, 'barrel', seg=28, axis='X', r2=0.13),
                   L.cyl((7.6, 0, 0), 0.165, 0.32, gun, 'muzzle', seg=16, axis='X'),
                   L.cyl((1.35, 0, 0), 0.34, 0.9, gun, 'mantlet', seg=16, axis='X'),
                   L.cyl((1.5, 0, -0.28), 0.12, 1.8, iron, 'recoil', seg=10, axis='X')]
@@ -629,6 +644,14 @@ def _gun_site(broken):
         barrel += [L.cyl((7.95, 0, 0), 0.24, 0.5, iron, 'muzzle_brake', seg=16, axis='X'),
                    L.cyl((1.7, 0, 0.3), 0.09, 1.9, iron, 'recoil', seg=10, axis='X'),
                    L.cyl((1.7, 0.22, 0.3), 0.09, 1.9, iron, 'recoil', seg=10, axis='X')]
+        # B2-Q10 (Kanta 07.11: «повысить детализацию орудия»): hoops and a breech ring on the tube, the jacket
+        # step, a clamp band on the brake
+        for x, r in ((2.4, 0.2), (3.6, 0.19), (5.0, 0.175), (6.3, 0.165), (7.75, 0.265), (8.15, 0.265)):
+            barrel.append(L.cyl((x, 0, 0), r, 0.12, iron, 'barrel_hoop', seg=16, axis='X'))
+        barrel.append(L.cyl((1.95, 0, 0), 0.24, 0.5, gun, 'barrel_jacket', seg=16, axis='X', r2=0.2))
+        for k in range(4):   # brake ports: dark slots on both sides
+            for sg in (-1, 1):
+                barrel.append(L.box((7.82 + k * 0.1, sg * 0.24, 0), (0.05, 0.03, 0.16), void, 'brake_port'))
         for b in barrel:
             b.data.transform(Matrix.Translation((0, 0, 2.0)) @ el)
         extra = [plate([(1.95, -1.6, 0.98), (1.95, 1.6, 0.98), (1.75, 1.55, z0 + 0.02), (1.75, -1.55, z0 + 0.02)], 0.07, gun, 'shield_skirt'),
@@ -641,6 +664,55 @@ def _gun_site(broken):
             strip = L.box((0, 0, 0), (dv.length, 0.1, 0.05), iron, 'rivets')
             strip.data.transform(Matrix.Translation(mid) @ dv.to_track_quat('X', 'Z').to_matrix().to_4x4())
             extra.append(strip)
+        # elevating arc with teeth on the left of the cradle, its pinion and handwheel spokes
+        arc = L.cyl((0.1, 0.5, 1.45), 0.75, 0.05, iron, 'elev_arc', seg=24, axis='Y')
+        extra.append(arc)
+        for k in range(14):
+            a = math.radians(-70 + k * 10)
+            tooth = L.box((0.1 + 0.78 * math.cos(a), 0.5, 1.45 + 0.78 * math.sin(a)), (0.06, 0.05, 0.08), iron, 'elev_tooth')
+            tooth.data.transform(Matrix.Translation(tooth.location) @ Matrix.Rotation(-a, 4, 'Y') @ Matrix.Translation(-tooth.location))
+            extra.append(tooth)
+        for (hx, hy) in ((0.0, 0.62), (-0.4, -0.62)):
+            for k in range(3):
+                a = k * math.pi / 3
+                extra.append(L.box((hx, hy + (0.03 if hy > 0 else -0.03), 1.55), (0.4 * abs(math.cos(a)) + 0.03, 0.025, 0.4 * abs(math.sin(a)) + 0.03), iron, 'spoke'))
+            extra.append(L.cyl((hx, hy * 0.9, 1.55), 0.04, 0.2, iron, 'wheel_axle', seg=6, axis='Y'))
+        # traverse rack: teeth round the turntable rim, bolts on its top
+        for k in range(48):
+            a = k * math.tau / 48
+            extra.append(L.box((2.03 * math.cos(a), 2.03 * math.sin(a), 0.95), (0.045, 0.06, 0.1), iron, 'rack_tooth', rz=a))
+            if k % 2 == 0:
+                extra.append(L.cyl((1.78 * math.cos(a), 1.78 * math.sin(a), 1.07), 0.04, 0.04, iron, 'bolt', seg=6))
+        # rivet heads in rows along the shield plates, vision slits, lifting eyes, a grab rail
+        def rivets_on(quad, rows, nrm_out):
+            a, b, c, d = (Vector(q) for q in quad)
+            n = Vector(nrm_out).normalized()
+            for (u0, v0, u1, v1) in rows:
+                p0 = a.lerp(b, u0).lerp(d.lerp(c, u0), v0); p1 = a.lerp(b, u1).lerp(d.lerp(c, u1), v1)
+                cnt = max(2, int((p1 - p0).length / 0.22))
+                for k in range(cnt + 1):
+                    q = p0.lerp(p1, k / cnt) + n * 0.05
+                    h = L.cyl((0, 0, 0), 0.022, 0.02, iron, 'rivet', seg=6)
+                    h.data.transform(Matrix.Translation(q) @ n.to_track_quat('Z', 'Y').to_matrix().to_4x4())
+                    extra.append(h)
+        rivets_on(front, ((0.04, 0.05, 0.96, 0.05), (0.04, 0.95, 0.96, 0.95), (0.04, 0.05, 0.04, 0.95), (0.96, 0.05, 0.96, 0.95), (0.5, 0.05, 0.5, 0.95)), (0.83, 0, 0.55))
+        rivets_on(side_l, ((0.04, 0.06, 0.96, 0.06), (0.04, 0.06, 0.04, 0.92)), (0, 1, 0))
+        rivets_on(side_r, ((0.04, 0.06, 0.96, 0.06), (0.96, 0.06, 0.96, 0.92)), (0, -1, 0))
+        rivets_on(roof, ((0.05, 0.05, 0.05, 0.95), (0.95, 0.05, 0.95, 0.95)), (0.12, 0, 0.99))
+        for yy in (-0.62, 0.62):
+            slit = L.box((1.2, yy, 2.25), (0.06, 0.42, 0.07), void, 'slit')
+            slit.data.transform(Matrix.Translation((1.2, yy, 2.25)) @ Matrix.Rotation(math.radians(-34), 4, 'Y') @ Matrix.Translation((-1.2, -yy, -2.25)))
+            extra.append(slit)
+        for yy in (-0.8, 0.8):
+            extra.append(L.cyl((-0.6, yy, z1 - 0.05), 0.07, 0.04, iron, 'lift_eye', seg=8, axis='X'))
+        extra.append(L.cyl((-2.05, 0, z1 - 0.45), 0.03, 2.2, iron, 'grab_rail', seg=6, axis='Y'))
+        # loading tray behind the breech, the layer's and loader's seats, the rammer, a fuze-setter box
+        extra += [L.box((-1.55, 0, 1.85), (1.0, 0.35, 0.05), iron, 'tray'),
+                  L.box((-1.55, 0.18, 1.9), (1.0, 0.03, 0.1), iron, 'tray'), L.box((-1.55, -0.18, 1.9), (1.0, 0.03, 0.1), iron, 'tray'),
+                  L.cyl((-1.0, 1.05, 1.5), 0.04, 0.6, iron, 'seat_post', seg=6), L.cyl((-1.0, 1.05, 1.82), 0.2, 0.05, iron, 'seat', seg=10),
+                  L.cyl((-1.2, -1.05, 1.5), 0.04, 0.6, iron, 'seat_post', seg=6), L.cyl((-1.2, -1.05, 1.82), 0.2, 0.05, iron, 'seat', seg=10),
+                  L.cyl((-2.5, 0.9, 1.25), 0.04, 2.2, brass, 'rammer', seg=6, axis='X'),
+                  L.box((-2.7, -0.95, 1.35), (0.45, 0.35, 0.4), gun, 'fuze_box')]
         mount = [pf, pr, pl, pr2, breech, cradle] + sight + barrel + extra
         for b in mount + [b for b in o if b.name.startswith(('pedestal', 'turntable'))]:
             b.data.transform(Matrix.Scale(GUN_K, 4))
@@ -746,7 +818,8 @@ def _gun_site(broken):
 
     table = {'conc': concrete, 'gun': paint, 'floor': floor_f, 'scorch': scorch_f, 'earth': crater_f,
              'sand': f_burlap(16),
-             'iron': lambda b, P, N: weather(b, P, N, seed=17, grime=0.2), 'brass': lambda b, P, N: weather(b, P, N, seed=18)}
+             'iron': lambda b, P, N: weather(b, P, N, seed=17, grime=0.2), 'brass': lambda b, P, N: weather(b, P, N, seed=18),
+             'void': lambda b, P, N: b}
     sh = by_mat(table)
     if broken:
         base_sh = sh
@@ -756,7 +829,7 @@ def _gun_site(broken):
             c = mix(c, col(RUST, len(P)), 0.35 * np.clip(1 - np.linalg.norm(P - np.array([0, 0, 2.0]), axis=1) / 4.5, 0, 1))   # окалина от огня
             return soot(c, P, [((0.3, 0.2, 2.2), 3.4), ((0.8, 0.9, 0.3), 3.2), ((4.6, 2.5, 0.8), 2.0), ((-3.0, -2.6, 0.6), 1.6), ((6.0, 2.9, 0.9), 2.4)], seed=19)
     name = 'a01_battery_gun' + ('_broken' if broken else '')
-    return join_bake(o, sh, name, size=1024), name
+    return join_bake(o, sh, name, size=2048), name
 
 
 def finish_ref(ob, out, ref, **kw):
@@ -771,12 +844,12 @@ GUN_K = 1.45      # B2-Q08: the intact mount is this much bigger than the broken
 
 def a01_battery_gun(scenery, src=None):
     ob, name = _gun_site(False)
-    finish_ref(ob, scenery(name), GUN_REF, target=9000, maxtex=1024)
+    finish_ref(ob, scenery(name), GUN_REF, target=22000, maxtex=2048)   # B2-Q10: detail kept, not decimated away
 
 
 def a01_battery_gun_broken(scenery, src=None):
     ob, name = _gun_site(True)
-    finish_ref(ob, scenery(name), GUN_REF, target=9000, maxtex=1024)
+    finish_ref(ob, scenery(name), GUN_REF, target=16000, maxtex=2048)
 
 
 # ================= общие фактуры построек =================
@@ -1807,6 +1880,17 @@ def _wreck_shade(seed, paint, z_wet):
         rust = np.clip((fbm(P * np.array([1, 1, 0.3]), 0.9, 4, seed + 1) - 0.42) * 2.6, 0, 1)
         c = mix(c, col(RUST, n) * (0.8 + 0.4 * vnoise(P, 3.0, seed + 2))[:, None], 0.8 * rust)
         c = weather(c, P, N, seed=seed + 3, stain=0.2, streak=0.35, grime=0.0, dust=0.0)
+        # B2-Q10 (Kanta 07.11: «низкая детализация остовов»): plating seams — strakes 1.2 m high, butts every 2.4 m
+        # (staggered by strake), each seam a dark line with a rust run below it; on decks a plank-like plate grid
+        side = np.abs(N[:, 2]) < 0.6
+        strake = np.floor(P[:, 2] / 1.2)
+        su = np.mod(P[:, 2], 1.2); sx = np.mod(P[:, 0] + 1.2 * np.mod(strake, 2), 2.4)
+        seam = side & ((su < 0.035) | (sx < 0.03))
+        run = side & (su > 1.2 - 0.35) & (vnoise(P * np.array([4.0, 4.0, 0.4]), 1.0, seed + 7) > 0.62)
+        deck = N[:, 2] > 0.8
+        dseam = deck & ((np.mod(P[:, 0], 1.8) < 0.03) | (np.mod(P[:, 1], 1.5) < 0.03))
+        c = np.where((seam | dseam)[:, None], c * 0.62, c)
+        c = np.where(run[:, None], c * 0.55 + col(RUST, n) * 0.8 * 0.45, c)
         return waterline(c, P, z_wet, z_wet * 0.4)
     return f
 
@@ -1856,11 +1940,43 @@ def a26_wreck_a(scenery, src=None):
             o.append(L.cyl((x, y, 0.85), 0.3, 0.7, iron, 'drum', seg=10))
         else:
             o.append(L.box((x, y, 0.75), (rng.uniform(0.6, 1.1), rng.uniform(0.5, 0.9), 0.5), hullm if k % 2 else inner, 'debris', rz=rng.uniform(0, 3)))
+    # B2-Q10 (Kanta 07.11: «низкая детализация»): rubbing strakes and tyre fenders on the sides, bollards and
+    # cleats on the gunwale, the ramp winch with its chains, a ladder, wheelhouse door, roof rail, vents and stack
+    for sg in (-1, 1):
+        o.append(L.box(((X0 + X1) / 2, sg * (BW + 0.08), H * 0.62), (X1 - X0 - 0.4, 0.16, 0.14), iron, 'strake'))
+        o.append(L.box(((X0 + X1) / 2, sg * (BW + 0.06), H * 0.25), (X1 - X0 - 0.8, 0.12, 0.1), iron, 'strake'))
+        for k in range(5):
+            if rng.random() < 0.75:
+                tyre = L.cyl((X0 + 1.5 + k * 2.6, sg * (BW + 0.25), H * 0.45), 0.38, 0.22, inner, 'tyre', seg=12, axis='Y')
+                o.append(tyre)
+        for x in (X0 + 0.6, X0 + 5.0, X1 - 0.8):
+            o.append(L.cyl((x, sg * (BW - 0.1), H + 0.18), 0.12, 0.36, iron, 'bollard', seg=10))
+            o.append(L.cyl((x, sg * (BW - 0.1), H + 0.38), 0.16, 0.05, iron, 'bollard', seg=10))
+    o.append(L.box((X1 - 0.6, 0, H + 0.35), (0.6, 1.2, 0.5), iron, 'winch'))
+    o.append(L.cyl((X1 - 0.6, 0, H + 0.45), 0.25, 1.4, iron, 'winch_drum', seg=12, axis='Y'))
+    for sg in (-1, 1):   # chains from the winch down to the fallen ramp
+        for k in range(8):
+            t = k / 7
+            o.append(L.cyl((X1 - 0.4 + t * 2.4, sg * 1.6, H + 0.4 - t * 1.6), 0.05, 0.3, iron, 'chain', seg=6, axis='X',
+                           rot=Matrix.Rotation(math.radians(35), 3, 'Y')))
+    for k in range(6):
+        o.append(L.box((wx + 1.3, -1.2, 0.4 + k * 0.42), (0.05, 0.5, 0.05), iron, 'ladder'))
+    o += [L.box((wx + 1.22, 1.0, 1.4), (0.05, 0.75, 1.7), void, 'door'),
+          L.cyl((wx - 0.9, 1.1, 3.4), 0.18, 1.1, iron, 'stack', seg=10), L.cyl((wx - 0.9, 1.1, 3.98), 0.22, 0.08, iron, 'stack', seg=10),
+          L.cyl((wx + 0.6, -0.7, 3.15), 0.14, 0.45, iron, 'vent', seg=10), L.cyl((wx + 0.6, -0.55, 3.4), 0.18, 0.3, iron, 'vent', seg=10, axis='Y')]
+    for (a, b) in (((wx - 1.2, -0.95), (wx + 1.2, -0.95)), ((wx + 1.2, -0.95), (wx + 1.2, 1.5))):
+        L0 = Vector((b[0] - a[0], b[1] - a[1], 0)).length
+        mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        rz = math.atan2(b[1] - a[1], b[0] - a[0])
+        o.append(L.box((mid[0], mid[1], 3.6), (L0, 0.04, 0.04), iron, 'rail', rz=rz))
+        for k in range(int(L0 / 0.8) + 1):
+            t = k / max(1, int(L0 / 0.8))
+            o.append(L.box((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, 3.3), (0.04, 0.04, 0.6), iron, 'rail_post'))
     chamfer([b for b in o if b.name.startswith(('house', 'gunwale'))], 0.04)
     sh = by_mat({'hull': _wreck_shade(261, (0.36, 0.37, 0.32), 0.9), 'inner': _wreck_shade(262, (0.26, 0.24, 0.21), 0.9),
                  'iron': f_paint(263), 'void': lambda b, P, N: b})
-    ob = join_bake(o, sh, 'a26_wreck_a', size=1024)
-    L.finish([ob], scenery('a26_wreck_a'), target=7000, maxtex=1024, fit='xy')
+    ob = join_bake(o, sh, 'a26_wreck_a', size=2048)
+    L.finish([ob], scenery('a26_wreck_a'), target=16000, maxtex=2048, fit='xy')
 
 
 def a27_wreck_b(scenery, src=None):
@@ -1911,6 +2027,69 @@ def a27_wreck_b(scenery, src=None):
         b = L.box((rng.uniform(-3, 3), rng.uniform(-4, 4), rng.uniform(2.0, H)), (rng.uniform(1.0, 2.5), 0.12, rng.uniform(0.8, 2.0)), hullm, 'shard', rz=rng.uniform(0, 3))
         subdiv(b, 1); jag(b, 0.25, seed=40 + k)
         (parts_fore if k % 2 else parts_aft).append(b)
+    # B2-Q10 (Kanta 07.11: «низкая детализация остовов»): forecastle with a breakwater and anchor gear, deck
+    # railings (bent and gone in places), bollards and fairleads, winches and derrick posts at the holds, hatch
+    # boards — some in place, one slab slid off —, a rubbing strake; aft: bridge wings, portholes, davits, vents
+    def deck_z(x):
+        return H + 1.4 * max(0.0, x / 40.0) ** 2
+    parts_fore.append(L.box((36.0, 0, deck_z(36) + 0.9), (7.0, half_b(36) * 1.8, 1.8), deck, 'forecastle'))
+    parts_fore.append(L.box((32.6, 0, deck_z(33) + 0.6), (0.15, half_b(33) * 1.6, 1.2), hullm, 'breakwater'))
+    for sg in (-1, 1):
+        parts_fore.append(L.cyl((37.5, sg * 1.3, deck_z(37) + 1.9), 0.35, 0.6, iron, 'windlass', seg=12, axis='Y'))
+        parts_fore.append(L.cyl((39.0, sg * (half_b(39) * 0.85), deck_z(39) - 0.6), 0.25, 0.8, void, 'hawse', seg=10, axis='Y'))
+        anchor = L.box((39.2, sg * (half_b(39) + 0.15), deck_z(39) - 1.6), (0.2, 0.25, 1.8), iron, 'anchor')
+        parts_fore.append(anchor)
+        for xs in np.arange(3.0, 37.0, 2.0):   # rubbing strake in short runs that follow the hull's taper
+            parts_fore.append(L.box((xs + 1.0, sg * (half_b(xs + 1.0) + 0.06), H * 0.82), (2.05, 0.16, 0.25), iron, 'strake'))
+        x = 3.0
+        while x < 33.0:   # railing: posts and two rails in 4 m runs, some runs missing or bent down
+            if rng.random() < 0.8:
+                yb = sg * (half_b(x + 2) - 0.15)
+                zb = deck_z(x + 2)
+                bend = rng.random() < 0.25
+                for k in range(4):
+                    px = x + k * 1.3
+                    post = L.box((px, yb, zb + 0.55), (0.06, 0.06, 1.1), iron, 'rail_post')
+                    if bend:
+                        post.data.transform(Matrix.Translation((px, yb, zb)) @ Matrix.Rotation(sg * math.radians(rng.uniform(25, 60)), 4, 'X') @ Matrix.Translation((-px, -yb, -zb)))
+                    parts_fore.append(post)
+                if not bend:
+                    for zz in (0.55, 1.05):
+                        parts_fore.append(L.box((x + 2.0, yb, zb + zz), (4.0, 0.05, 0.05), iron, 'rail'))
+            x += 4.2
+        for x in (4.5, 16.0, 28.0):
+            for dx in (0, 0.7):
+                parts_fore.append(L.cyl((x + dx, sg * (half_b(x) - 0.6), deck_z(x) + 0.3), 0.2, 0.6, iron, 'bollard', seg=10))
+    for (x0, x1) in ((6, 14), (18, 26), (29, 34)):
+        xm = (x0 + x1) / 2; zd = deck_z(xm); d = B2 * 1.1
+        for k in range(int(x1 - x0) // 2):   # hatch boards across the hold, some missing
+            if rng.random() < 0.45:
+                parts_fore.append(L.box((x0 + 1.0 + k * 2.0, 0, zd + 0.72), (1.8, d - 0.2, 0.12), deck, 'hatch_board'))
+        parts_fore.append(L.box((x0 - 1.4, 0, zd + 0.5), (1.0, 2.2, 1.0), iron, 'winch'))
+        parts_fore.append(L.cyl((x0 - 1.4, 0, zd + 0.85), 0.35, 2.6, iron, 'winch_drum', seg=12, axis='Y'))
+        for sg in (-1, 1):
+            parts_fore.append(L.cyl((x0 - 2.4, sg * 2.6, zd + 1.8), 0.28, 3.6, sup, 'derrick_post', seg=10))
+            parts_fore.append(L.cyl((x0 - 2.4, sg * 2.6, zd + 3.65), 0.34, 0.15, sup, 'derrick_post', seg=10))
+    slab = L.box((0, 0, 0), (2.0, 5.5, 0.15), deck, 'hatch_board')
+    slab.data.transform(Matrix.Translation((21.0, half_b(21) + 0.6, deck_z(21) - 0.2)) @ Matrix.Rotation(math.radians(40), 4, 'X'))
+    parts_fore.append(slab)
+    for sg in (-1, 1):   # bridge wings with rails, portholes on the house fronts, davits and boats gone
+        parts_aft.append(L.box((-27.0, sg * 5.6, H + 3.5), (2.0, 2.2, 0.15), sup, 'wing'))
+        for k in range(3):
+            parts_aft.append(L.box((-27.0 + (k - 1) * 0.9, sg * 6.65, H + 4.0), (0.05, 0.05, 1.0), iron, 'rail_post'))
+        parts_aft.append(L.box((-27.0, sg * 6.65, H + 4.45), (2.0, 0.05, 0.05), iron, 'rail'))
+        for k in range(6):
+            parts_aft.append(L.cyl((-32.5 + k * 1.1, sg * 4.52, H + 1.1), 0.18, 0.06, void, 'porthole', seg=10, axis='Y'))
+        for x in (-33.0, -28.5):
+            d1 = L.box((x, sg * 4.9, H + 4.0), (0.15, 0.15, 1.6), iron, 'davit')
+            d2 = L.box((x, sg * 5.3, H + 4.75), (0.15, 0.9, 0.15), iron, 'davit')
+            parts_aft += [d1, d2]
+        parts_aft.append(L.box((-36.0, sg * (half_b(-36) - 0.15), H + 0.55), (6.0, 0.05, 0.05), iron, 'rail'))
+    for (vx, vy) in ((-24.5, 3.0), (-24.5, -3.0), (-35.5, 1.5)):
+        parts_aft.append(L.cyl((vx, vy, H + 0.6), 0.3, 1.2, sup, 'vent', seg=12))
+        parts_aft.append(L.cyl((vx + 0.25, vy, H + 1.3), 0.42, 0.5, sup, 'vent', seg=12, axis='X'))
+    parts_aft.append(L.cyl((-29.0, 0, H + 6.6), 0.15, 2.4, iron, 'mast', seg=8))
+    parts_aft.append(L.box((-29.0, 0, H + 7.5), (0.12, 2.0, 0.12), iron, 'mast'))
     for b in parts_fore:   # bow part: lists 7°, forefoot up on the shoal
         b.data.transform(Matrix.Translation((0, 0, -1.2)) @ Matrix.Rotation(math.radians(7), 4, 'X') @ Matrix.Rotation(math.radians(-2.5), 4, 'Y'))
     for b in parts_aft:    # stern part: settled lower, turned and listing the other way
@@ -1920,8 +2099,8 @@ def a27_wreck_b(scenery, src=None):
     L.smooth([b for b in o if b.name.startswith(('hull', 'funnel', 'mast'))], 40)
     sh = by_mat({'hull': _wreck_shade(271, (0.3, 0.3, 0.29), 1.2), 'deck': _wreck_shade(272, (0.36, 0.33, 0.29), 1.2),
                  'sup': _wreck_shade(273, (0.55, 0.53, 0.48), 1.2), 'iron': f_paint(274), 'void': lambda b, P, N: b})
-    ob = join_bake(o, sh, 'a27_wreck_b', size=1024)
-    L.finish([ob], scenery('a27_wreck_b'), target=9000, maxtex=1024, fit='xy')
+    ob = join_bake(o, sh, 'a27_wreck_b', size=2048)
+    L.finish([ob], scenery('a27_wreck_b'), target=24000, maxtex=2048, fit='xy')
 
 
 def a39_reed(scenery, src=None):

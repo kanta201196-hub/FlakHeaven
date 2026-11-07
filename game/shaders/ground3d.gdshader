@@ -168,6 +168,12 @@ float vnoise(vec2 p) {
 	return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
 }
 float fbm(vec2 p) { return vnoise(p) * 0.65 + vnoise(p * 2.7 + 17.0) * 0.35; }
+// B2-Q10: kind of coast along the Archipelago shore, 0 — steep rocky limestone (narrow shelf, dark rocky bed),
+// 1 — a sandy cove (wide pale shelf, beach). Water depth and the beach read the same field, so they agree
+float arch_shelf(vec2 w) {
+	vec2 wq = w + vec2(vnoise(w / 230.0 + 5.0), vnoise(w / 230.0 - 9.0)) * 120.0;
+	return smoothstep(0.2, 0.8, vnoise(wq / 640.0 + 17.0));
+}
 
 // Защита от повторов (по мотивам И. Килеза): шум выбирает один из 8 сдвигов плитки,
 // между соседними сдвигами — плавный переход по двум выборкам. Производные — от исходных UV,
@@ -274,6 +280,9 @@ void fragment() {
 		zc = mix(zc, mix(vec3(lum), c, 0.6) * 1.85 * zone_slope, smoothstep(0.1, 0.22, zh));
 		zc = mix(zc, vec3(lum) * 1.9 * zone_crest, smoothstep(0.55, 0.85, zh));
 		c = zc;
+		float shrub_a = 0.0;   // B2-Q10: maquis shrubs, also drawn over rock below (they grow in limestone cracks)
+		vec3 bush_a = vec3(0.0);
+		vec2 sdir_a = vec2(0.0);
 		if (sea && arch_detail) {
 			// B2-Q08 (close-up № 4: islands were a flat green carpet): dry-grass glades, bare limestone on
 			// the steeper ground, dark maquis clumps with their own bump, and scattered stones
@@ -283,7 +292,12 @@ void fragment() {
 			c = mix(c, vec3(lum) * SRGB(vec3(1.35, 1.3, 1.18)), bare * 0.45);
 			// maquis shrubs: round bushes scattered on a jittered grid, denser where the noise says, each with a lit
 			// crown and a darker rim (from above a shrub is a dome, not a smudge)
-			float dens = smoothstep(0.3, 0.75, vnoise(world / 90.0 - 9.0)) * (1.0 - bare * 0.8);
+			// B2-Q10: maquis grows in dense dark thickets (in gullies and on shaded slopes) between open garrigue
+			// whole island interior is dry garrigue (olive-grey), not the bare brown of the Highlands soil
+			c = mix(c, mix(vec3(lum), c, 0.35) * SRGB(vec3(0.92, 0.98, 0.7)), 0.55 * (1.0 - bare));
+			float thicket = smoothstep(0.4, 0.56, fbm(world / 95.0 - 9.0) + (vnoise(world / 30.0 + 3.0) - 0.5) * 0.18
+				+ clamp(0.5 - rel.x, -0.15, 0.15) * 0.8 - bare * 0.25);
+			float dens = mix(0.12, 1.0, thicket) * (1.0 - bare * 0.8);
 			float shrub = 0.0;
 			vec2 sdir = vec2(0.0);
 			vec2 gc = floor(world / 11.0);
@@ -302,7 +316,9 @@ void fragment() {
 			}
 			vec3 bush = SRGB(vec3(0.24, 0.32, 0.17)) * (0.8 + 0.35 * clamp(0.6 - dot(sdir, vec2(0.6, 0.6)), 0.0, 1.0)) * (0.9 + 0.2 * vnoise(world / 1.5));
 			c = mix(c, bush, shrub * 0.85);
+			c = mix(c, SRGB(vec3(0.14, 0.2, 0.1)) * (0.85 + 0.3 * vnoise(world / 3.0)), thicket * (1.0 - shrub) * 0.75);   // shade between thicket bushes
 			nxy += sdir * shrub * 0.9;
+			shrub_a = shrub; bush_a = bush; sdir_a = sdir;
 			// scattered stones: small round pale pebbles, more on bare ground
 			float stone = smoothstep(0.86, 0.93, vnoise(world / 1.6 + 71.0)) * (0.3 + 0.7 * bare) * (1.0 - shrub);
 			c = mix(c, vec3(lum) * 1.45, stone * 0.6);
@@ -356,7 +372,15 @@ void fragment() {
 			float shelf = rg * (1.0 - smoothstep(0.12, 0.3, slope));
 			rc = mix(rc, mix(s2.a.rgb, vec3(dot(s2.a.rgb, vec3(0.333))), 0.5) * 1.05, shelf * 0.45);
 			rc = mix(rc, rc * mesa_cliff_tint, prov.y * prov.w * mesa_cliff_k);   // RV-01
+			if (sea && arch_detail) {
+				// B2-Q10 (Kanta 07.11: islands looked like Highlands desert): Adriatic islands are pale grey
+				// limestone, not brown sandstone — the photo rock is greyed and lifted, its strata grey too
+				float rlum = dot(rc, vec3(0.333));
+				rc = mix(rc, vec3(rlum) * SRGB(vec3(1.12, 1.1, 1.02)) * 1.15, 0.75);
+			}
 			c = mix(c, rc, rk);
+			// maquis clings to the rock: shrubs stay on all but the steepest walls
+			c = mix(c, bush_a, shrub_a * 0.85 * rk * (1.0 - smoothstep(0.45, 0.8, slope)));
 			nxy = mix(nxy, (texture(n_rock, world3.xz / rock_world).rg * 2.0 - 1.0) * max(1.0 - slope, 0.4), rk);
 		}
 		// осыпь у подножия: светлее и серее в местах, где склон переходит в долину
@@ -370,6 +394,9 @@ void fragment() {
 			vec3 scc = scree_color * (0.7 + 0.45 * grit) * (0.93 + 0.12 * vnoise(world / 6.0));
 			if (sea) {
 				sc *= smoothstep(sea_w + 25.0, sea_w + 110.0, abs(rel.z));
+			}
+			if (sea && arch_detail) {
+				scc = mix(scc, vec3(dot(scc, vec3(0.333))) * 1.1, 0.7);
 			}
 			c = mix(c, scc, sc * scree_k);
 			nxy = mix(nxy, s2.n.rg * 2.0 - 1.0, sc * 0.6);
@@ -477,9 +504,25 @@ void fragment() {
 			float u0 = sea_w - shore_a;
 			float dpx = rd >= u0 ? sea_w - rd : shore_a + (1.0 - rd / max(u0, 0.01)) * (sea_depth_px - shore_a);
 			float dp0 = clamp(dpx / sea_depth_px, 0.0, 1.0);
+			if (arch_detail && relief) {
+				// B2-Q10: past the first few px take the smooth depth from CUSTOM0.z (terrain3d.gd), not the squeezed
+				// shore field, so depth bands have no triangle edges; at the very edge the 1 px/unit field stays exact
+				dp0 = mix(dp0, prov.z, smoothstep(0.02, 0.07, prov.z));
+			}
 			vec2 wq = world + vec2(vnoise(world / 230.0 + 5.0), vnoise(world / 230.0 - 9.0)) * 120.0;
 			float big = vnoise(wq / 520.0 + 3.0) * 0.65 + vnoise(wq / 190.0 - 4.0) * 0.35;
 			float dp = clamp(dp0 + (big - 0.5) * 0.22 * smoothstep(0.04, 0.25, dp0), 0.0, 1.0);
+			if (arch_detail) {
+				// B2-Q10 (Kanta 07.11: «идеально ровные переходы цвета», bands ran parallel to every shore): the shelf
+				// width varies along the coast (a gentle wide flat here, a quick drop there) and big patches of
+				// shoal and hollow break the contours; the first px at the edge keep the plain depth
+				float shelf = arch_shelf(world);
+				float dsh = pow(dp0, mix(0.55, 1.7, shelf));
+				// the drop-off line meanders across the shelf (mid-scale noise), so on a straight beach the edge of
+				// the turquoise is not a ruler line parallel to it
+				float patch = (big - 0.5) * 0.6 + (vnoise(wq / 150.0 + 23.0) - 0.5) * 0.32 + (vnoise(wq / 60.0 - 5.0) - 0.5) * 0.1;
+				dp = clamp(dsh + patch * smoothstep(0.03, 0.2, dp0), 0.0, 1.0);
+			}
 			vec3 sh = SRGB(vec3(0.4, 0.66, 0.6)), md = SRGB(vec3(0.13, 0.4, 0.47)), dpc = SRGB(vec3(0.06, 0.2, 0.3));
 			wc = mix(sh, md, smoothstep(0.03, 0.3, dp));
 			// глубокое — по смеси поля и шума: у оси узкого пролива поле ломается по треугольникам, шум прячет излом
@@ -508,6 +551,13 @@ void fragment() {
 				if (sea_look >= 4) {
 					// дно: светлые песчаные косы и тёмные пятна водорослей, видны далеко от берега
 					float bar = smoothstep(0.45, 0.75, vnoise(vec2(world.x * 0.6 + world.y * 0.8, world.y * 0.6 - world.x * 0.8) / vec2(140.0, 45.0)));
+					if (arch_detail) {
+						// B2-Q10: the long stretched bars read as even diagonal stripes from the game camera; sand
+						// ripples now bend with a strong warp, are shorter and only show on sandy shelves
+						vec2 bw = world + vec2(vnoise(world / 110.0 + 3.0), vnoise(world / 110.0 - 6.0)) * 90.0;
+						bar = smoothstep(0.5, 0.8, vnoise(vec2(bw.x * 0.6 + bw.y * 0.8, bw.y * 0.6 - bw.x * 0.8) / vec2(90.0, 50.0)))
+							* smoothstep(0.35, 0.75, arch_shelf(world)) * 0.7;
+					}
 					float weed = smoothstep(0.55, 0.8, vnoise(wq / 55.0 - 6.0)) * (0.6 + 0.4 * vnoise(world / 12.0));
 					if (arch_detail) {
 						// B2-Q08: value noise at a hard threshold gave square-cornered weed patches, and a 2-octave
@@ -522,7 +572,12 @@ void fragment() {
 					// под водой красный гаснет: дно в бирюзу, светлее только косы
 					bed = mix(SRGB(vec3(0.42, 0.66, 0.6)), SRGB(vec3(0.58, 0.76, 0.66)), bar);
 					bed = mix(bed, SRGB(vec3(0.18, 0.34, 0.32)), weed * 0.7);
-					wc = mix(bed, wc, smoothstep(0.0, water_v2 ? 0.7 : 0.45, dp0) * 0.75 + 0.25);   // W-01: дно гаснет плавнее
+					if (arch_detail) {   // B2-Q10: under rocky coasts the bed is rock and weed, not pale sand
+						float rk = 1.0 - arch_shelf(world);
+						vec3 rock_bed = mix(SRGB(vec3(0.2, 0.33, 0.33)), SRGB(vec3(0.33, 0.45, 0.42)), vnoise(world / 7.0) * 0.6 + vnoise(world / 30.0) * 0.4);
+						bed = mix(bed, rock_bed, smoothstep(0.35, 0.75, rk));
+					}
+					wc = mix(bed, wc, smoothstep(0.0, water_v2 ? 0.7 : 0.45, arch_detail ? dp : dp0) * 0.75 + 0.25);   // B2-Q10: bed fades by the varied depth   // W-01: дно гаснет плавнее
 				} else {
 					wc = mix(bed, wc, smoothstep(0.01, 0.3, dp0) * 0.85 + 0.15);
 				}
@@ -695,10 +750,22 @@ void fragment() {
 				// рыжей полосы дна долины у воды нет
 				float sl = rd - sea_w;   // пикс. от кромки по суше
 				float bw = 22.0 * smoothstep(0.3, 0.65, vnoise(world / 210.0 + 8.0)) + 3.0 * vnoise(world / 9.0);
+				float shelf_k = arch_detail ? arch_shelf(world) : 1.0;
+				if (arch_detail) {
+					// B2-Q10 (Kanta 07.11: every island had the same sand rim; real Adriatic coasts are mostly
+					// rock with sand only in coves): the beach lives in coves (wide shelf) and is wider there
+					bw = (26.0 * smoothstep(0.5, 0.85, shelf_k) + 4.0 * vnoise(world / 9.0)) * smoothstep(0.45, 0.6, shelf_k);
+				}
 				float beach = (1.0 - smoothstep(bw - 3.0, bw + 1.0, sl)) * (1.0 - water);
 				float veg = (1.0 - smoothstep(60.0, 190.0, sl + (vnoise(world / 70.0) - 0.5) * 80.0)) * (1.0 - beach);
 				vec3 vc = mix(SRGB(vec3(0.25, 0.39, 0.19)), SRGB(vec3(0.37, 0.47, 0.25)), vnoise(world / 24.0)) * (0.85 + 0.3 * vnoise(world / 6.0));
-				c = mix(c, vc, veg * 0.8 * smoothstep(0.3, 0.6, vnoise(world / 90.0 + 4.0) * 0.6 + 0.4));
+				float vk = veg * 0.8 * smoothstep(0.3, 0.6, vnoise(world / 90.0 + 4.0) * 0.6 + 0.4);
+				if (arch_detail) {
+					// B2-Q10: summer garrigue is not lawn-green — dry olive-gold grass with grey-green herbs
+					vc = mix(SRGB(vec3(0.42, 0.42, 0.25)), SRGB(vec3(0.3, 0.36, 0.2)), vnoise(world / 24.0)) * (0.85 + 0.3 * vnoise(world / 6.0));
+					vk *= 0.6;   // a tint over the ground, so the maquis bushes and rock drawn above stay visible
+				}
+				c = mix(c, vc, vk);
 				vec3 sand = SRGB(vec3(0.88, 0.76, 0.55)) * (0.94 + 0.1 * vnoise(world / 5.0));
 				if (arch_detail) {
 					// B2-Q08 (close-up № 7: sand was soapy up close): grain, wind ripples, pebbles and a darker
@@ -713,6 +780,17 @@ void fragment() {
 				}
 				c = mix(c, sand, beach * 0.92);
 				wet *= 0.25;
+				if (arch_detail) {
+					// rocky shore: a band of pale weathered limestone 4–12 px, cracked and pitted, its foot dark and
+					// wet where the swell reaches; garrigue starts right behind it
+					float rw = (5.0 + 8.0 * vnoise(world / 35.0 + 2.0)) * (1.0 - smoothstep(0.4, 0.6, shelf_k));
+					float rock = (1.0 - smoothstep(rw - 2.0, rw + 1.5, sl + (vnoise(world / 6.0) - 0.5) * 3.0)) * (1.0 - water) * (1.0 - beach);
+					float crk = smoothstep(0.62, 0.7, 1.0 - abs(vnoise(world / 4.0 + 31.0) * 2.0 - 1.0));
+					vec3 lime = SRGB(vec3(0.57, 0.55, 0.5)) * (0.82 + 0.25 * vnoise(world / 2.2)) * (1.0 - 0.35 * crk);
+					lime = mix(lime * SRGB(vec3(0.45, 0.45, 0.42)), lime, smoothstep(0.0, 3.0, sl));
+					c = mix(c, lime, rock);
+					nxy = mix(nxy, vec2(vnoise(world / 2.0) - 0.5, vnoise(world / 2.0 + 7.0) - 0.5) * 1.4, rock);
+				}
 			}
 			c = mix(c, c * SRGB(vec3(0.7, 0.72, 0.7)), wet * 0.7);
 		}
