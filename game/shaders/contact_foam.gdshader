@@ -34,8 +34,8 @@ void fragment() {
 	float n = vn(wpos.xz / 6.0 + vec2(t * 0.4, -t * 0.25)) * 0.65 + vn(wpos.xz / 2.2 - t * 0.3) * 0.35;
 	float ring = smoothstep(0.7, 0.78, r + br) * (1.0 - smoothstep(0.82, 0.98, r + br * 0.5));
 	float foam = ring * smoothstep(0.5, 0.75, n + (0.8 - r) * 0.8);
-	foam *= 0.35 + 0.65 * smoothstep(0.35, 0.7, vn(wpos.xz / 0.9 + vec2(-t * 0.5, t * 0.35)));   // lace, not blots
+	foam *= 0.5 + 0.5 * smoothstep(0.3, 0.75, vn(wpos.xz / 2.5 + vec2(-t * 0.5, t * 0.35)));   // lace, not blots
 	ALBEDO = mix(SRGB(vec3(0.04, 0.12, 0.13)), SRGB(vec3(0.9, 0.93, 0.92)), foam / max(foam + dark * 0.6, 1e-3));
-	ALPHA = clamp(foam * 0.6 + dark * 0.25, 0.0, 1.0) * (1.0 - smoothstep(0.95, 1.0, r));
+	ALPHA = clamp(foam * 0.6 + dark * 0.15, 0.0, 1.0) * (1.0 - smoothstep(0.95, 1.0, r));
 	ROUGHNESS = 0.9;
 }

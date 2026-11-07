@@ -106,6 +106,12 @@ const FOAM := {
 	"s_rock": Vector2(1.25, 1.25), "s_tetrapod": Vector2(1.3, 1.3),
 	"s_buoy_red": Vector2(1.7, 1.7), "s_buoy_green": Vector2(1.7, 1.7),
 }
+## Hulls broken in two get one disc per part instead (one ellipse round both drew a foam ring across the gap;
+## the sunk stern of s_wreck_b shows only its bridge, so its disc hugs the bridge):
+## x, y — centre along / across the hull, z, w — length × beam, all in model widths
+const FOAM_SPLIT := {
+	"s_wreck_b": [Vector4(0.26, 0.0, 0.66, 0.2), Vector4(-0.39, 0.01, 0.22, 0.2)],
+}
 const HOUSES := ["s_house_1", "s_house_2", "s_house_3", "s_house_4", "s_house_5", "s_house_6", "s_house_7", "s_house_8"]
 const SMALL := ["s_shrub", "s_reed", "s_rock", "s_hedgehog", "s_tetrapod", "s_buoy_red", "s_buoy_green", "s_olive_a", "s_olive_b", "s_tree", "s_pine_a", "s_pine_b"]
 # Worker-thread copies of the lists plan() reads: plan() runs on Terrain3D's chunk tasks, and an element of a
@@ -243,10 +249,13 @@ func put(kind: String, p: Vector2, w: float, yaw: float, r_keep := -1.0, y := NA
 	_put[kind].append(t)
 	if not is_nan(y) and FOAM.has(kind) and shore(p) < 0.0:
 		var fs: Vector2 = FOAM[kind]
-		var fb := Basis(Vector3.UP, -yaw) * Basis.from_scale(Vector3(w * fs.x, 1.0, w * fs.y))
+		var parts: Array = FOAM_SPLIT.get(kind, [Vector4(0.0, 0.0, fs.x, fs.y)])
 		if not _put.has(FOAM_KIND):
 			_put[FOAM_KIND] = []
-		_put[FOAM_KIND].append(Transform3D(fb, Vector3(p.x, water_y(p) + 0.6, p.y)))
+		for f: Vector4 in parts:
+			var fb := Basis(Vector3.UP, -yaw) * Basis.from_scale(Vector3(w * f.z, 1.0, w * f.w))
+			var c := p + Vector2(f.x, f.y).rotated(yaw) * w   # model X lies along from_angle(yaw) in (x, z)
+			_put[FOAM_KIND].append(Transform3D(fb, Vector3(c.x, water_y(p) + 0.6, c.y)))
 	if r_keep > 0.0:
 		_keep.append([p, r_keep])
 
