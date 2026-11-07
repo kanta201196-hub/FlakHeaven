@@ -178,10 +178,13 @@ const CLASS_SCALE := {"fighter": 1.0, "attacker": 1.2, "bomber": 1.45}
 ## near the nose); the battle models share the shape and axes. The mouth is laid out in x along the nose and in the
 ## angle round the nose axis, so it keeps its shape on the tapering cone, and the eye is sized by the radius.
 const NOSE := {
+	"fighter_t1": [0.485, 0.29, -0.034, 0.066],   # nose intake lip at 0.5
 	"fighter_1": [0.425, 0.245, -0.031, 0.027],
 	"fighter_2": [0.485, 0.29, -0.034, 0.045],
+	"attacker_t1": [0.455, 0.27, -0.034, 0.063],   # pitot probe ahead of 0.47 excluded
 	"attacker_1": [0.43, 0.24, -0.06, 0.042],
 	"attacker_2": [0.45, 0.25, -0.064, 0.042],
+	"bomber_t1": [0.47, 0.30, -0.034, 0.042],
 	"bomber_1": [0.44, 0.25, -0.063, 0.032],
 	"bomber_2": [0.45, 0.27, -0.042, 0.031],
 }
@@ -193,6 +196,7 @@ const NOSE := {
 ## spots in the dark band, grey-tan slightly lighter than the base, the belly in the light band; below 0.012 —
 ## nozzle, wells, cockpit
 const SRC := {
+	"fighter_t1": [0.05, 0.012], "attacker_t1": [0.05, 0.010], "bomber_t1": [0.06, 0.013],
 	"fighter_1": [0.056, 0.012], "fighter_2": [0.14, 0.022],
 	"attacker_1": [0.056, 0.011], "attacker_2": [0.056, 0.011],
 	"bomber_1": [0.079, 0.013], "bomber_2": [0.078, 0.013],
@@ -324,18 +328,18 @@ static func turret_paint(cls: String, id := "") -> Array:
 	return TURRET_PAINT.get(id if id != "" else current(cls), [])
 
 
-## Перекрасить модель самолёта (корень модели ангара или боевой; key — «fighter_1» и т. п.). Звать после того,
+## Перекрасить модель самолёта (корень модели ангара или боевой; lvl — модель PlaneTiers.model, «t1», «1», «2»). Звать после того,
 ## как подвешены механизация, детали, створки и кормовая кабина. Исходная окраска (вариант без цветов) — ничего не делает.
 ## `detail` (hangar only): every painted surface also gets the PlaneDetail layer (panel lines, rivets, clear coat), and
 ## the source paint, which otherwise keeps the GLB's own materials, goes through the same shader unchanged (pattern -1)
 ## so it gets the layer too.
-static func apply(model: Node3D, cls: String, lvl: int, id: String, detail := false) -> void:
+static func apply(model: Node3D, cls: String, lvl: String, id: String, detail := false) -> void:
 	var v := _find(cls, id)
 	if v.size() < 8:
 		if not detail:
 			return
 		v = SOURCE_PAINT
-	var key := "%s_%d" % [cls, lvl]
+	var key := PlaneTiers.art_key(cls, lvl)
 	var src: Array = SRC.get(key, [0.1, 0.012])
 	var ex: Array = EXHAUST.get(key, [])
 	var holes: Array = ENGINE_HOLES.get(key, [])

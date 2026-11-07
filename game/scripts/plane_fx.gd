@@ -8,8 +8,10 @@ class_name PlaneFx
 ## y — высота оси сопел над центром модели (пикс.), если сопло не на общей высоте (ширина картинки × 0,012).
 ## «Оса 1» (модель Sketchfab, VIS-01): одно сопло по оси, срез x −0,464 длины, ось на −0,060, радиус 0,031 — по модели.
 const SPEC := {
+	"fighter_t1": {"jet": [Vector2(-51, 0)], "r": 3.1, "y": -12.2},   # NozzleFlame.NOZZLES × 170 px
 	"fighter_1": {"jet": [Vector2(-79, 0)], "r": 5.3, "y": -10.2},
 	"fighter_2": {"jet": [Vector2(-100, -16.5), Vector2(-100, 16.5)], "r": 5.5},   # Meshy model 24.10: nozzle exits x -0.444, z ±0.074
+	"attacker_t1": {"jet": [Vector2(-96.8, 0)], "r": 4.2, "y": -9.1},   # NozzleFlame.NOZZLES × 215 px
 	"attacker_1": {"jet": [Vector2(-49, -19.5), Vector2(-49, 18.5)], "r": 6.5},
 	"attacker_2": {"jet": [Vector2(-61, -20), Vector2(-61, 20)], "r": 7.0},
 	"bomber_1": {"prop": [Vector2(37, -81), Vector2(55, -39), Vector2(55, 39), Vector2(37, 82)], "pr": 20.0,
@@ -20,6 +22,11 @@ const SPEC := {
 		# 0.92 % of the length of the skin (self-check limit 1 %)
 		"trail_x": -0.105},
 	"bomber_2": {"jet": [Vector2(-80, -21.5), Vector2(-80, 21)], "r": 12.0},
+	# «Кит» t1: two nacelles, propellers baked into the model (hub x 0.275, y -0.022, |z| 0.16, blade tip 0.095);
+	# no fh_prop file, so the 3D model gets blur discs at the hubs (hub_y, hub_r in model units) and the trails
+	# start at the nacelle tails (x 0.017) on the engine axes, `y` below the model centre
+	"bomber_t1": {"prop": [Vector2(74.25, -43.2), Vector2(74.25, 43.2)], "pr": 25.0,
+		"trail": [Vector2(4.6, -44.0), Vector2(4.6, 44.0)], "y": -8.1, "hub_y": -0.022, "hub_r": 0.095},
 }
 
 static var _flame_mesh: QuadMesh
@@ -67,6 +74,11 @@ static func model_nozzles(key: String, tex_w: float) -> Dictionary:
 	var z: float = float(n[2]) * tex_w
 	var pts: Array = [Vector2(float(n[0]) * tex_w, 0.0)] if is_zero_approx(z) else [Vector2(float(n[0]) * tex_w, -z), Vector2(float(n[0]) * tex_w, z)]
 	return {"jet": pts, "y": float(n[1]) * tex_w, "r": float(n[3]) * tex_w * 1.15}
+
+
+## Whether plane `key` («bomber_1», «bomber_t1») flies on propellers: the engine sound takes the piston voice
+static func has_props(key: String) -> bool:
+	return (SPEC.get(key, {}) as Dictionary).has("prop")
 
 
 static func spec_of(tex: Texture2D) -> Dictionary:
@@ -125,7 +137,12 @@ static func attach(u: Unit3D, tex: Texture2D) -> void:
 			d.basis = Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3.ONE * PROP_R * 2.0)
 			n.get_parent().add_child(d)   # рядом с винтом: сам диск не вращается, полосы крутит шейдер
 			fx["blurs"].append(d)
-	for pt: Vector2 in (s.get("prop", []) if props == null else []):
+	var baked := props == null and u.bm != null and s.has("hub_y")
+	if baked:
+		# propellers baked into the model (no fh_prop file): only a blur disc in the plane of each baked propeller;
+		# no flat picture discs, and the trails start at the SPEC points at the model's own `y`
+		_hub_discs(root, s, fx, tex.get_width())
+	for pt: Vector2 in (s.get("prop", []) if props == null and not baked else []):
 		var pr: float = s["pr"]
 		var d := MeshInstance3D.new()
 		d.mesh = _prop_mesh
@@ -146,6 +163,24 @@ static func attach(u: Unit3D, tex: Texture2D) -> void:
 		return
 	for pt: Vector2 in s.get("trail", []):
 		fx["trail"].append(Vector3(pt.x, y, pt.y))
+
+
+## Blur discs over the propellers baked into a 3D model (SPEC hub_y, hub_r in model units; the hub x and z are the
+## SPEC prop points in picture pixels): a quad in the model's Y/Z plane just ahead of each baked propeller, whose
+## blades the shader spins. They go in fx["blurs"] with no blade nodes, so `update` hides them with the engine off.
+static func _hub_discs(root: Node3D, s: Dictionary, fx: Dictionary, tex_w: float) -> void:
+	fx["blades"] = []
+	fx["blurs"] = []
+	var r := float(s["hub_r"]) * tex_w
+	for pt: Vector2 in s["prop"]:
+		var d := MeshInstance3D.new()
+		d.mesh = _prop_mesh
+		d.material_override = _blur_mat
+		d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		d.position = Vector3(pt.x + 0.009 * tex_w, float(s["hub_y"]) * tex_w, pt.y)
+		d.basis = Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3.ONE * r * 2.0)
+		root.add_child(d)
+		fx["blurs"].append(d)
 
 
 ## Position of `n` in the axes of `root` (one of its ancestors), from local transforms only, so it holds before

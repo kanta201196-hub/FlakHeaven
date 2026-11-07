@@ -201,13 +201,13 @@ const PLANES := {
 
 
 ## Class data of tier `lv` (1–5): `DATA` of the class with that plane's `PLANES` overrides. `tier` — the tier;
-## `plane_lvl` — the model generation that draws it (`PlaneTiers.model`), which art and mounts are keyed by
+## `plane_model` — the model key that draws it (`PlaneTiers.model`), which art and mounts are keyed by
 static func plane(cls_id: String, lv: int) -> Dictionary:
 	var t := clampi(lv, 1, PlaneTiers.MAX)
 	var d: Dictionary = (DATA[cls_id] as Dictionary).duplicate(true)
 	d.merge((PLANES[cls_id][t] as Dictionary).duplicate(true), true)
 	d["tier"] = t
-	d["plane_lvl"] = PlaneTiers.model(t)
+	d["plane_model"] = PlaneTiers.model(t)
 	return d
 
 

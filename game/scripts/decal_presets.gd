@@ -9,6 +9,12 @@ const NAMES := ["nose", "number", "tally", "fin", "wing"]
 ## Spots in model axes (nose +X, up +Y, left wing −Z, length 1). A side spot is [x, y, size], shot from the chosen
 ## side; the tally x is its front end; a wing spot is [x, |z|, size], shot from above onto the chosen wing.
 const SPOTS := {
+	"fighter_t1": {"nose": [0.4, -0.032, 0.03], "tally": [0.3, -0.012, 0.011], "number": [-0.21, -0.06, 0.024],
+		"fin": [-0.38, 0.045, 0.035], "wing": [-0.06, 0.38, 0.05]},
+	"attacker_t1": {"nose": [0.4, -0.04, 0.03], "tally": [0.3, 0.0, 0.012], "number": [-0.15, -0.035, 0.022],
+		"fin": [-0.38, 0.08, 0.04], "wing": [0.07, 0.36, 0.05]},
+	"bomber_t1": {"nose": [0.345, -0.025, 0.026], "tally": [0.36, -0.055, 0.01], "number": [-0.2, -0.03, 0.03],
+		"fin": [-0.39, 0.08, 0.045], "wing": [0.1, 0.48, 0.05]},
 	"fighter_1": {"nose": [0.33, -0.032, 0.03], "tally": [0.255, -0.012, 0.011], "number": [0.06, -0.015, 0.026],
 		"fin": [-0.407, 0.064, 0.035], "wing": [-0.24, 0.09, 0.045]},
 	"fighter_2": {"nose": [0.405, -0.036, 0.026], "tally": [0.33, -0.008, 0.01], "number": [0.02, -0.052, 0.016],

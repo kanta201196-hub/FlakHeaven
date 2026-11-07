@@ -28,10 +28,14 @@ const BASE := [
 	{"hp": 1.15, "speed": 1.05, "turn": 1.05},
 	{"hp": 1.15, "speed": 1.05, "turn": 1.05},
 ]
-## Which existing model generation a tier is drawn with: art is keyed `<class>_1` / `<class>_2` (old planes 1 and 2).
-## Tiers 1, 4, 5 borrow the nearest model until the 3D thread ships `_t1` / `_t4` / `_t5` (plan §3.5, stage B)
-const MODEL := [1, 1, 2, 2, 2]
-const OWN_MODEL := [false, true, true, false, false]
+## Model key a tier is drawn with (plan §3.5, stage B): every art path and per-model table is keyed
+## `<class>_<model>` — battle and hangar GLBs `fh_battle_<class>_<model>.glb` / `fh_hangar_…`, the top-down sprite
+## `art/planes/<class>_<model>.png`, and the mount, flame, livery, decal and camera tables. "1" and "2" are the old
+## planes 1 and 2, now tiers 2 and 3 (their paths unchanged); "t1", "t4", "t5" are the new tier models.
+## Tiers 4–5 borrow the tier 3 model until theirs ship: then add their table entries (`tests/model_tables_test.gd`
+## lists the tables) and set MODEL to "t4" / "t5" and OWN_MODEL to true here.
+const MODEL := ["t1", "1", "2", "2", "2"]
+const OWN_MODEL := [true, true, true, false, false]
 ## Node price ladder of tier 2 (the old one, flights review 06.11) and the factor per tier
 const NODE_COST := [160, 500, 1200, 2800, 5800]
 const PRICE_K := [0.5, 1.0, 1.25, 1.5, 2.0]
@@ -141,9 +145,32 @@ static func base(tier: int) -> Dictionary:
 	return BASE[_i(tier)]
 
 
-## Existing model generation (1 or 2) that draws `tier`: art, hangar model, mounts and sprites are keyed by it
-static func model(tier: int) -> int:
-	return int(MODEL[_i(tier)])
+## Model key ("t1", "1", "2", …) that draws `tier`: art, hangar model, mounts and sprites are keyed by it
+static func model(tier: int) -> String:
+	return String(MODEL[_i(tier)])
+
+
+## Every model key some tier is drawn with, in tier order, each once: what benches and the self-check walk over and
+## what every per-model table must cover
+static func model_keys() -> Array[String]:
+	var out: Array[String] = []
+	for k in MODEL:
+		if not out.has(String(k)):
+			out.append(String(k))
+	return out
+
+
+## First tier drawn with model `key` (the tier the model was made for; 0 for an unknown key): the self-check and
+## benches show a model with that tier's weapons
+static func model_tier(key: String) -> int:
+	var i := MODEL.find(key)
+	return i + 1 if i >= 0 else 0
+
+
+## Art key of class `cls` drawn with model `key` («fighter_t1», «bomber_2»): the basename of its GLBs and sprite and
+## the key of every per-model table
+static func art_key(cls: String, key: String) -> String:
+	return "%s_%s" % [cls, key]
 
 
 ## One line on what `tier` gives (hangar card)
@@ -235,7 +262,8 @@ static func fx_total(tier: int, levels: Dictionary, key: String, k: float) -> fl
 
 ## Save keys of the two-plane game moved to tiers: old plane 1 → tier 2, old plane 2 → tier 3, tier 1 free for
 ## everyone. Returns only the new keys (tiers, plane_sel, nodes_t*, kit_t*) for the keys `src` has. Decals stay keyed
-## by model generation (`decals1` / `decals2`): they sit on the model's surface, and tiers 2 and 3 keep those models
+## by model (`decals1` / `decals2`, `Profile.decal_key`): they sit on the model's surface, and tiers 2 and 3 keep
+## those models
 static func migrate_class(src: Dictionary) -> Dictionary:
 	var had2 := bool(src.get("plane2", false))
 	var out := {"tiers": [1, 2, 3] if had2 else [1, 2]}

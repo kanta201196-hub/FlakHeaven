@@ -14,8 +14,10 @@ class_name NozzleFlame
 ## GLBs (same axes within 0.001): x of the lip, centre of the opening, radius of the opening inside the lip.
 ## The earlier values came from the nacelle radius (Livery.ENGINE_HOLES), 1.6–2× the opening.
 const NOZZLES := {
+	"fighter_t1": [-0.298, -0.072, 0.0, 0.016],   # tail pipe under the fin (rear depth map of the hangar GLB)
 	"fighter_1": [-0.47, -0.058, 0.0, 0.028],
 	"fighter_2": [-0.455, -0.042, 0.0755, 0.025],
+	"attacker_t1": [-0.45, -0.0425, 0.0, 0.017],   # single jet pipe at the tail
 	"attacker_1": [-0.242, -0.0386, 0.0807, 0.016],
 	"attacker_2": [-0.292, -0.032, 0.088, 0.0158],
 	"bomber_2": [-0.274, -0.0156, 0.0702, 0.0176],

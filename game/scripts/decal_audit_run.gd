@@ -101,7 +101,7 @@ func run_model(root: Node3D, model: Node3D, key: String, kind: String, variant: 
 ## Every livery of the class on the hangar model: the hull, the glass and a preset decal must not change with it
 func run_liveries(model: Node3D, key: String) -> void:
 	var cls := key.get_slice("_", 0)
-	var lvl := int(key.get_slice("_", 1))
+	var lvl := key.get_slice("_", 1)
 	var ref := -1
 	for lv: Array in Livery.list(cls):
 		Livery.apply(model, cls, lvl, String(lv[0]))

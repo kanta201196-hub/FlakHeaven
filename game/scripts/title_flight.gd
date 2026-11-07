@@ -5,7 +5,7 @@ extends Node3D
 ## Камера меню плывёт по курсу звена (main.gd берёт шаг из advance()), поэтому самолёты стоят в кадре,
 ## а земля уходит назад под ними — звено летит носом вперёд, а не ползёт боком, как плоские картинки 3.4.
 ## Курс прямо к верху экрана (S14-11) с едва заметной «змейкой» — отсюда лёгкие крены; у каждого свой небольшой разнобой высоты и крена.
-## Окраска — выбранная в ангаре (Livery.current), уровень самолёта — выбранный в ангаре (Profile.plane_lvl).
+## Окраска — выбранная в ангаре (Livery.current), уровень самолёта — выбранный в ангаре (Profile.plane_model).
 ## Механизация, детали силуэта, знаки, кормовая кабина и винты «Кита 1» — те же узлы, что в ангаре и в бою.
 ## Тени — дешёвые «высотные» пятна по силуэту (как у своих самолётов в бою), без прохода теней солнца.
 ## С-5 (аудит 3.5-s6): на «Низком» качестве — тоже 3D, облегчённые модели боя (models/battle), а не старые
@@ -105,7 +105,7 @@ func sync(on: bool, delta: float) -> void:
 		_check_t = 0.5   # смена окраски / уровня в ангаре — пересобрать звено
 		var key := ""
 		for f in FLIGHT:
-			key += "%s%d%s;" % [f[0], Profile.plane_lvl(f[0]), Livery.current(f[0])]
+			key += "%s%s%s;" % [f[0], Profile.plane_model(f[0]), Livery.current(f[0])]
 		key += "g%d" % mini(Settings.gopt("props"), 1)   # «Низкое» ↔ остальные: другая модель
 		if key != _key:
 			clear()
@@ -145,12 +145,13 @@ func sync(on: bool, delta: float) -> void:
 func _build() -> void:
 	for f in FLIGHT:
 		var cls: String = f[0]
-		var lvl: int = Profile.plane_lvl(cls)
+		var lvl: String = Profile.plane_model(cls)
 		var tex := PlaneArt.plane_tex(cls, lvl)
-		var tex1 := PlaneArt.plane_tex(cls, 1)
-		var path := "res://models/hangar/fh_hangar_%s_%d.glb" % [cls, lvl]
+		var tex1 := PlaneArt.plane_tex(cls, "1")
+		var key := PlaneTiers.art_key(cls, lvl)
+		var path := "res://models/hangar/fh_hangar_%s.glb" % key
 		if Settings.gopt("props") == 0:   # «Низкое»: облегчённая модель боя (те же оси и узлы деталей)
-			var lite := "res://models/battle/fh_battle_%s_%d.glb" % [cls, lvl]
+			var lite := "res://models/battle/fh_battle_%s.glb" % key
 			if ResourceLoader.exists(lite):
 				path = lite
 		if tex == null or tex1 == null or not ResourceLoader.exists(path):
@@ -161,7 +162,6 @@ func _build() -> void:
 		var root := Node3D.new()
 		root.add_child(model)
 		add_child(root)
-		var key := "%s_%d" % [cls, lvl]
 		# как в ангаре (Hangar3D._build): механизация убрана, детали силуэта, знаки, кормовая кабина, створки закрыты
 		WingMech.attach(model, key)
 		WingMech.attach_detail(model, key)

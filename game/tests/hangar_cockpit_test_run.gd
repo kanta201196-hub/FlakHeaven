@@ -2,7 +2,6 @@ extends Node
 ## Working part of hangar_cockpit_test.gd: HangarCockpit and PlaneDetail compile against the autoloads (Tuning,
 ## Profile through Livery), which exist only after the SceneTree starts.
 
-const KEYS := ["fighter_1", "fighter_2", "attacker_1", "attacker_2", "bomber_1", "bomber_2"]
 
 var _failed := 0
 var _checks := 0
@@ -11,7 +10,11 @@ var _checks := 0
 func _ready() -> void:
 	_check(Tuning.g("hangar_light") == 1.0, "showcase light is on by default (R-22 since 2026-11-06)")
 	_check(PlaneDetail.enabled(), "hangar detail is on by default")
-	for key: String in KEYS:
+	var keys: Array[String] = []
+	for cls: String in PlaneClasses.LIST:   # every player plane model in use
+		for mk in PlaneTiers.model_keys():
+			keys.append(PlaneTiers.art_key(cls, mk))
+	for key: String in keys:
 		_check(PlaneDetail.SHAPE.has(key), "%s has a panel layout" % key)
 		_check(HangarCockpit.FRAMES.has(key), "%s has canopy frames" % key)
 		_test_plane(key)

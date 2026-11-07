@@ -330,7 +330,7 @@ func _plane(m: Main, r: Rect2) -> void:
 	var band := Rect2(card.position, Vector2(card.size.x, 36))
 	ctrl.draw_rect(band, col)
 	_text(Vector2(band.position.x + 14, band.position.y + 25), Loc.t(String(d["title"])), 15, Color(0.06, 0.08, 0.06))
-	var t := PlaneArt.plane_tex(id, Profile.plane_lvl(id))
+	var t := PlaneArt.plane_tex(id, Profile.plane_model(id))
 	var pic := Rect2(card.position.x, band.end.y + 6.0, card.size.x, 190.0)
 	if t != null:
 		var k := minf(pic.size.y / t.get_width(), (card.size.x * 0.8) / t.get_height())
