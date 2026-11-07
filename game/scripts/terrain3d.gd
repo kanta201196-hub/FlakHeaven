@@ -1779,6 +1779,13 @@ func _compute(key: Vector2i, ctx: Dictionary, gen: int, lod := 0) -> Dictionary:
 				c0[vi * 4 + 1] = pw4.y
 				c0[vi * 4 + 2] = pw4.w
 				c0[vi * 4 + 3] = 1.0
+			elif _sea:
+				# B2-Q10 (Kanta 07.11: «резкий переход от отмелей к глубине», «острые края»): the shore field in UV2 is
+				# 1 unit/px for SHORE_A px and then squeezed, so depth drawn from it jumped inside one triangle and
+				# the shallow band got straight edges and corners. True depth 0…1, linear in the distance to shore,
+				# rides in CUSTOM0.z (unused without landform regions: every prov.z use is gated by prov.w = 0)
+				var av := absf(vs[gi])
+				c0[vi * 4 + 2] = clampf(1.0 - av / SEA_W, 0.0, 1.0) if av < SEA_W else 0.0
 	var idx := PackedInt32Array()
 	idx.resize(nn * nn * 6)
 	var p := 0

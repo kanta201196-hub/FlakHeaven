@@ -59,13 +59,13 @@ KIND = {
 
 # prop file → (kind, atlas size); the model's metres come from SeaProps.KINDS
 PROPS = {
-    "a01_battery_gun": ("metal", 1024), "a01_battery_gun_broken": ("metal", 1024),
+    "a01_battery_gun": ("metal", 2048), "a01_battery_gun_broken": ("metal", 2048),
     "a02_bunker_coast": ("wall", 1024), "a03_radar_mast": ("metal", 1024), "a04_lighthouse": ("wall", 1024),
     "a05_pier_a": ("sea", 2048), "a06_pier_b": ("sea", 2048), "a07_tetrapod": ("sea", 512),
     "a08_warehouse_a": ("wall", 1024), "a09_warehouse_b": ("wall", 1024), "a10_crane": ("metal", 1024),
     "a11_tower_ruins": ("wall", 2048), "a20_bell_tower": ("wall", 1024), "a21_terrace_wall": ("wall", 1024),
     "a22_buoy_red": ("sea", 512), "a23_buoy_green": ("sea", 512), "a24_boat_a": ("sea", 1024),
-    "a25_boat_b": ("sea", 1024), "a26_wreck_a": ("sea", 1024), "a27_wreck_b": ("sea", 1024),
+    "a25_boat_b": ("sea", 1024), "a26_wreck_a": ("sea", 2048), "a27_wreck_b": ("sea", 2048),
     "a28_wreck_plane_sea": ("sea", 1024), "a29_hedgehog": ("metal", 512), "a30_boom_net": ("sea", 512),
     "a39_reed": ("plant", 256), "a40_shrub": ("plant", 512),
 }

@@ -112,6 +112,9 @@ const FOAM := {
 const FOAM_SPLIT := {
 	"s_wreck_b": [Vector4(0.26, 0.0, 0.66, 0.2), Vector4(-0.39, 0.01, 0.22, 0.2)],
 }
+## Half beam of piers and boats in model widths (from the .glb bounds), for the harbour overlap test
+const PIER_BEAM := {"s_pier_a": 0.1, "s_pier_b": 0.045}
+const BOAT_BEAM := {"s_boat_a": 0.14, "s_boat_b": 0.23}
 const HOUSES := ["s_house_1", "s_house_2", "s_house_3", "s_house_4", "s_house_5", "s_house_6", "s_house_7", "s_house_8"]
 const SMALL := ["s_shrub", "s_reed", "s_rock", "s_hedgehog", "s_tetrapod", "s_buoy_red", "s_buoy_green", "s_olive_a", "s_olive_b", "s_tree", "s_pine_a", "s_pine_b"]
 # Worker-thread copies of the lists plan() reads: plan() runs on Terrain3D's chunk tasks, and an element of a
@@ -212,6 +215,19 @@ func slope(p: Vector2) -> float:
 	return _bp._slope(p, _ctx)
 
 
+## True when the ground within r of p is level: 8 rim points and the centre differ by at most tol px in height
+## and none of them is on a steep slope (a pad or a gun pit must not overhang a cliff)
+func _level(p: Vector2, r: float, tol: float) -> bool:
+	var h0 := _t.height(p.x, p.y, _ctx)
+	if slope(p) > 0.25:
+		return false
+	for i in 8:
+		var q := p + Vector2.from_angle(TAU * i / 8.0) * r
+		if absf(_t.height(q.x, q.y, _ctx) - h0) > tol or slope(q) > 0.45:
+			return false
+	return true
+
+
 func room(p: Vector2, r: float) -> bool:
 	for k in _keep:
 		if p.distance_to(k[0]) < r + float(k[1]):
@@ -260,6 +276,28 @@ func put(kind: String, p: Vector2, w: float, yaw: float, r_keep := -1.0, y := NA
 		_keep.append([p, r_keep])
 
 
+## True when capsule c ([a, b, half_beam]) keeps at least gap px from every capsule in caps
+func _caps_clear(caps: Array, c: Array, gap: float) -> bool:
+	for o: Array in caps:
+		if _seg_dist(c[0], c[1], o[0], o[1]) < float(c[2]) + float(o[2]) + gap:
+			return false
+	return true
+
+
+## Shortest distance between segments a–b and c–d (zero when they cross)
+static func _seg_dist(a: Vector2, b: Vector2, c: Vector2, d: Vector2) -> float:
+	var r := b - a
+	var s := d - c
+	var den := r.cross(s)
+	if absf(den) > 1e-6:
+		var tt := (c - a).cross(s) / den
+		var uu := (c - a).cross(r) / den
+		if tt >= 0.0 and tt <= 1.0 and uu >= 0.0 and uu <= 1.0:
+			return 0.0
+	return minf(minf(Geometry2D.get_closest_point_to_segment(a, c, d).distance_to(a), Geometry2D.get_closest_point_to_segment(b, c, d).distance_to(b)),
+		minf(Geometry2D.get_closest_point_to_segment(c, a, b).distance_to(c), Geometry2D.get_closest_point_to_segment(d, a, b).distance_to(d)))
+
+
 func size(kind: String) -> float:
 	var w: Vector2 = SIZE[kind]
 	return _rng.randf_range(w.x, w.y)
@@ -291,7 +329,11 @@ func _harbor(o: Vector2) -> void:
 	var sea := seaward(p)
 	var n := -sea
 	var t := n.orthogonal()
-	# причалы — 2–3 в воду поперёк берега; у каждого 1–2 лодки
+	# причалы — 2–3 в воду поперёк берега; у каждого 1–2 лодки.
+	# B2-Q10 (Kanta 07.11: «наложение моделей»): in a curved bay the piers converged and the boats, set at a fixed
+	# 26–34 px from the pier axis, sank into the deck. Each pier and boat is now a capsule (segment + half beam);
+	# a new one is placed only clear of all the others, with a gap
+	var caps: Array = []   # [a, b, half_beam]
 	var np := _rng.randi_range(2, 3)
 	for i in np:
 		var a := (i - (np - 1) * 0.5) * _rng.randf_range(130.0, 160.0)
@@ -304,14 +346,27 @@ func _harbor(o: Vector2) -> void:
 		var c := root + sw * w * 0.42
 		if shore(c + sw * w * 0.45) > -2.0:
 			continue   # конец причала на суше — бухта слишком мелкая
+		var pc := [c - sw * w * 0.5, c + sw * w * 0.5, w * PIER_BEAM[kind]]
+		if not _caps_clear(caps, pc, 40.0):
+			continue   # would cross or crowd a pier already built: no room for boats between them
+		caps.append(pc)
 		put(kind, c, w, sw.angle(), 0.0, water_y(c) + 1.0)
 		_keep.append([c, w * 0.15])
 		_keep.append([c + sw * w * 0.3, w * 0.15])
 		for b in _rng.randi_range(1, 2):
 			var bk := "s_boat_a" if _rng.randf() < 0.5 else "s_boat_b"
-			var bq := c + sw * _rng.randf_range(-0.1, 0.35) * w + sw.orthogonal() * (1.0 if b == 0 else -1.0) * _rng.randf_range(26.0, 34.0)
-			if shore(bq) < -3.0:
-				put(bk, bq, size(bk), sw.angle() + _rng.randf_range(-0.15, 0.15), 30.0, water_y(bq))
+			var bw := size(bk)
+			var side := 1.0 if b == 0 else -1.0
+			for k in 4:
+				var yaw := sw.angle() + _rng.randf_range(-0.12, 0.12)
+				var off: float = pc[2] + bw * BOAT_BEAM[bk] + _rng.randf_range(4.0, 10.0)
+				var bq := c + sw * _rng.randf_range(-0.05, 0.3) * w + sw.orthogonal() * side * off
+				var bd := Vector2.from_angle(yaw) * bw * 0.5
+				var bc := [bq - bd, bq + bd, bw * BOAT_BEAM[bk]]
+				if shore(bq) < -3.0 and shore(bq + bd) < 0.0 and shore(bq - bd) < 0.0 and _caps_clear(caps, bc, 3.0):
+					caps.append(bc)
+					put(bk, bq, bw, yaw, 30.0, water_y(bq))
+					break
 	# склады и кран у воды
 	for sg: float in [-1.0, 1.0]:
 		var kind := "s_store_a" if sg < 0.0 else "s_store_b"
@@ -437,11 +492,16 @@ func _battery(o: Vector2) -> void:
 	var side := face.orthogonal()
 	for i in 3:
 		var a := (i - 1) * 0.55
-		var q := p + face.rotated(a) * 80.0
-		if slope(q) < 0.3:
-			# орудие бывает разбитым (Kanta 19.10: «целое и разбитое», как башни «Левиафана») — след прежних налётов
-			var gk := "s_gun_broken" if _rng.randf() < 0.3 else "s_gun"
-			put(gk, q, size(gk), face.rotated(a).angle(), 34.0)
+		# орудие бывает разбитым (Kanta 19.10: «целое и разбитое», как башни «Левиафана») — след прежних налётов
+		var gk := "s_gun_broken" if _rng.randf() < 0.3 else "s_gun"
+		var gw := size(gk)
+		# B2-Q10 (Kanta 07.11: «площадка орудия прям на обрыве»): the slope was checked at the centre only, so a pit
+		# could hang half over a cliff. Now the whole pad must be level; try a few distances, else skip this gun
+		for dist: float in [80.0, 60.0, 105.0, 130.0, 45.0]:
+			var q := p + face.rotated(a) * dist
+			if _level(q, gw * 0.55, gw * 0.16):
+				put(gk, q, gw, face.rotated(a).angle(), 34.0)
+				break
 	var bq := p - face * 90.0
 	if slope(bq) < 0.35:
 		put("s_bunker", bq, size("s_bunker"), side.angle(), 70.0)
@@ -517,7 +577,7 @@ func _wreck_near(c: Vector2, r: float, kind := "") -> void:
 			var yaw := seaward(q).orthogonal().angle() + _rng.randf_range(-0.5, 0.5)
 			# B2-Q08: the rebuilt hulls are taller than the old scans; at 3 % they floated like boxes on the water.
 			# Sunk to about half the side height (the barge to its gunwale band, the ship's stern deck nearly awash)
-			var sink := 0.06 if kind == "s_wreck_b" else (0.07 if kind == "s_wreck_a" else 0.03)
+			var sink := 0.06 if kind == "s_wreck_b" else (0.05 if kind == "s_wreck_a" else 0.03)
 			put(kind, q, w, yaw, w * 0.4, water_y(q) - w * sink, _rng.randf_range(-0.25, 0.25))
 			return
 
