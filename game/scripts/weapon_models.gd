@@ -875,9 +875,10 @@ const KIT_TOP_TURRET := 0.4   # верхняя турель «Кита»: дол
 ## «Кит» t1 — the aerial wire leaves the spine at x 0.105 and a baked dorsal turret stands at 0.19–0.235, so the
 ## turret sits between them with its barrels (pointing aft) above the wire's root;
 ## «Грач» 4 — a flat dome stands on the spine at x 0.015–0.065, so the gunner sits aft of it;
-## «Грач» 5 — the canopy runs back to x −0.022 and the «Луч» laser dome sits at −0.065…−0.125 with the fin behind it,
-## so the turret takes the short spine between canopy and dome
-const TOP_TURRET_X := {"bomber_t1": 0.155, "attacker_t4": -0.05, "attacker_t5": -0.044}
+## «Грач» 5 — the canopy glass starts at x 0.002 and the «Луч» laser dome sits at −0.065…−0.125 with the fin behind
+## it, so the turret (ring about 0.042 across) takes the short spine between them, centred a little forward so its
+## ring stands clear of the dome (at −0.044 the ring touched the dome's front)
+const TOP_TURRET_X := {"bomber_t1": 0.155, "attacker_t4": -0.05, "attacker_t5": -0.03}
 ## S13: ventral turret of «Кит» (third slot): model x (plane length 1), just aft of the bomb bay (x -0.31..0)
 const KIT_BOTTOM_TURRET_X := -0.335
 ## S13 (Kanta 27.10): wing turrets of «Грач» 2 — model (x, |z|) on the wing, on the outer panel just outboard of

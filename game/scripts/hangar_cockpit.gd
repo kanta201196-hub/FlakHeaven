@@ -21,7 +21,11 @@ const NODE := "cockpit"
 ## tub and no painted frame; the glass is smoked (its tub texture is smeared since the UV rebake) and a seat and a
 ## panel stand in `pit` = [front x, length, floor y, half-width] of the space under the canopy; tub — the tub depth in
 ## half-widths of the glass loop where TUB_DEPTH would push its floor out through a shallow fuselage (wide or low glass:
-## «Оса» 4/5, «Кит» 4/5; measured as glass bottom − depth × half-width against the belly under the canopy).
+## «Оса» 4/5, «Кит» 4/5; measured as glass bottom − depth × half-width against the belly under the canopy);
+## main — [centre z, half-width] of the main glass loop where the welded glass falls apart into many small loops and
+## the longest one is lopsided: «Кит» 5's framed glasshouse gives a main loop centred at z 0.027 with a half-width
+## of 0.108 (the glass spans |z| ≤ 0.08), which dropped the tub floor through the belly and stood the seats and side
+## consoles outside the hull side under the nose.
 ## Read off the canopy shapes: bubble canopies have a windscreen bow only, the attackers a windscreen and a hood
 ## bow, the bombers a framed glasshouse.
 const FRAMES := {
@@ -39,7 +43,8 @@ const FRAMES := {
 	"attacker_t4": {"bows": [0.3, 0.62], "ribs": [], "seats": [[0.28, 0.0], [0.7, 0.0]]},   # tandem two-seater
 	"attacker_t5": {"bows": [0.33, 0.66], "ribs": [], "seats": [[0.25, 0.0], [0.58, 0.0]]},   # three-pane canopy
 	"bomber_t4": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.55, -0.42], [0.55, 0.42]], "tub": 1.0},
-	"bomber_t5": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]], "tub": 1.0},
+	"bomber_t5": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]], "tub": 0.8,
+		"main": [0.0, 0.078]},
 }
 ## Frame paint when the livery has no colours of its own (the source paint): a dark worn grey
 const FRAME_DEFAULT := Color(0.22, 0.23, 0.22)
@@ -220,6 +225,11 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		if float(b["len"]) > main_len:
 			main_len = b["len"]
 			main_i = li
+	if spec.has("main") and not boxes.is_empty():
+		var mb: Dictionary = boxes[main_i]
+		var mc: Vector3 = mb["c"]
+		mb["c"] = Vector3(mc.x, mc.y, float(spec["main"][0]))
+		mb["hw"] = float(spec["main"][1])
 	for li in loops.size():
 		var b: Dictionary = boxes[li]
 		for f: float in spec["bows"]:
