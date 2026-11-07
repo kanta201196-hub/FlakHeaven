@@ -59,6 +59,9 @@ uniform vec3 sea_sun = vec3(-0.48, 0.658, -0.58);
 // (game/tools/water/water_maps.py: RG — наклон, B — высота, A — пена гребней; слой = кадр петли), отражение
 // неба (game/tools/water/sky_pano.py, CC0 Poly Haven) по Френелю, пена гребней и кружево на отмели
 uniform bool water_v2 = false;
+// B2-Q08 (Kanta 07.11, «исправляй все» after the close-up review; R-22 toggle arch_detail): shore line off the
+// mesh grid, sharp rare whitecaps, no hatching on the shallows, grainy sand, varied island ground
+uniform bool arch_detail = false;
 uniform sampler2DArray sea_waves : repeat_enable, filter_linear_mipmap;
 uniform sampler2D sea_sky : source_color, repeat_enable, filter_linear_mipmap;
 uniform float sea_frames = 64.0;   // слоёв в sea_waves (water_maps.py FRAMES)
@@ -271,6 +274,39 @@ void fragment() {
 		zc = mix(zc, mix(vec3(lum), c, 0.6) * 1.85 * zone_slope, smoothstep(0.1, 0.22, zh));
 		zc = mix(zc, vec3(lum) * 1.9 * zone_crest, smoothstep(0.55, 0.85, zh));
 		c = zc;
+		if (sea && arch_detail) {
+			// B2-Q08 (close-up № 4: islands were a flat green carpet): dry-grass glades, bare limestone on
+			// the steeper ground, dark maquis clumps with their own bump, and scattered stones
+			float dg = smoothstep(0.42, 0.72, fbm(world / 260.0 + 4.0) + (vnoise(world / 40.0) - 0.5) * 0.25);
+			c = mix(c, mix(vec3(lum), c, 0.5) * SRGB(vec3(1.18, 1.08, 0.72)), dg * 0.55);
+			float bare = smoothstep(0.5, 0.8, vnoise(world / 120.0 + 17.0) + slope * 1.2 - 0.2) * smoothstep(0.05, 0.2, zh);
+			c = mix(c, vec3(lum) * SRGB(vec3(1.35, 1.3, 1.18)), bare * 0.45);
+			// maquis shrubs: round bushes scattered on a jittered grid, denser where the noise says, each with a lit
+			// crown and a darker rim (from above a shrub is a dome, not a smudge)
+			float dens = smoothstep(0.3, 0.75, vnoise(world / 90.0 - 9.0)) * (1.0 - bare * 0.8);
+			float shrub = 0.0;
+			vec2 sdir = vec2(0.0);
+			vec2 gc = floor(world / 11.0);
+			for (int j = -1; j <= 1; j++) {
+				for (int i = -1; i <= 1; i++) {
+					vec2 cc = gc + vec2(float(i), float(j));
+					float hp = hash(cc + 211.0);
+					if (hp < dens * 0.85) {
+						vec2 ctr = (cc + vec2(hash(cc + 97.0), hash(cc + 131.0))) * 11.0;
+						float rr = 2.2 + 3.2 * hash(cc + 17.0);
+						vec2 dv = world - ctr;
+						float k = 1.0 - smoothstep(rr * 0.55, rr, length(dv));
+						if (k > shrub) { shrub = k; sdir = dv / rr; }
+					}
+				}
+			}
+			vec3 bush = SRGB(vec3(0.24, 0.32, 0.17)) * (0.8 + 0.35 * clamp(0.6 - dot(sdir, vec2(0.6, 0.6)), 0.0, 1.0)) * (0.9 + 0.2 * vnoise(world / 1.5));
+			c = mix(c, bush, shrub * 0.85);
+			nxy += sdir * shrub * 0.9;
+			// scattered stones: small round pale pebbles, more on bare ground
+			float stone = smoothstep(0.86, 0.93, vnoise(world / 1.6 + 71.0)) * (0.3 + 0.7 * bare) * (1.0 - shrub);
+			c = mix(c, vec3(lum) * 1.45, stone * 0.6);
+		}
 		// RV-01: region tone — grass on gentle hills, warm caprock on flat mesa tops
 		float flat_k = 1.0 - smoothstep(0.08, 0.25, slope);
 		float on_land = smoothstep(0.03, 0.1, zh);
@@ -371,6 +407,13 @@ void fragment() {
 		// поселения: пятно утоптанной земли и лоскуты полей с неровной кромкой (маска — по вершинам, край — шумом)
 		float rd = abs(rel.z);
 		float edge = (vnoise(world / 90.0 + 3.0) - 0.5) * 8.0;
+		if (sea && sea_look > 0 && arch_detail) {
+			// B2-Q08 (close-up № 2: the water edge ran in straight steps along the terrain triangles): the shore
+			// field is linear inside each triangle, so move the shore line itself by noise of about a mesh step
+			// (≈ ±11 px), near the edge only; water, foam, wet sand and beach all follow the moved line
+			float shn = (vnoise(world / 48.0 + 7.0) - 0.5) * 16.0 + (vnoise(world / 15.0 - 3.0) - 0.5) * 6.0 + (vnoise(world / 4.5 + 1.0) - 0.5) * 2.0;
+			rd = max(rd + shn * (1.0 - smoothstep(10.0, 40.0, abs(rd - sea_w))), 0.0);
+		}
 		// M-35: в охранной зоне реки ни утоптанной земли, ни огородов, ни гари — только вода и мокрый берег;
 		// край — по расстоянию до реки в пикселе (у вершин шаг 20 px), с той же неровной кромкой, что у берега
 		vec3 sm = smask * smoothstep(river_guard, river_guard + 10.0, rd + edge);
@@ -418,7 +461,7 @@ void fragment() {
 			// у моря поле по воде растянуто (1 ед. ≈ depth_px / sea_w px), у реки — нет: кромка резкая, ~15 px
 			// поле у кромки — 1 ед./пикс. по обе стороны: край ровный, неровность — шумом в пикселях
 			float sh_n = (vnoise(world / 23.0 + 7.0) - 0.5) * 7.0 + (vnoise(world / 7.0 - 3.0) - 0.5) * 2.5;
-			water = 1.0 - smoothstep(sea_w - 1.5, sea_w + 1.0, rd + sh_n);
+			water = 1.0 - smoothstep(sea_w - 1.5, sea_w + 1.0, rd + (arch_detail ? 0.0 : sh_n));
 		}
 		vec3 wc = water_color * (0.9 + 0.2 * vnoise(world / 60.0));
 		if (sea && sea_look > 0) {
@@ -460,6 +503,10 @@ void fragment() {
 					// дно: светлые песчаные косы и тёмные пятна водорослей, видны далеко от берега
 					float bar = smoothstep(0.45, 0.75, vnoise(vec2(world.x * 0.6 + world.y * 0.8, world.y * 0.6 - world.x * 0.8) / vec2(140.0, 45.0)));
 					float weed = smoothstep(0.55, 0.8, vnoise(wq / 55.0 - 6.0)) * (0.6 + 0.4 * vnoise(world / 12.0));
+					if (arch_detail) {   // B2-Q08: value noise at a hard threshold gave square-cornered weed patches
+						vec2 wr2 = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * wq;
+						weed = smoothstep(0.5, 0.85, fbm(wr2 / 70.0 - 6.0)) * (0.6 + 0.4 * vnoise(world / 12.0));
+					}
 					// под водой красный гаснет: дно в бирюзу, светлее только косы
 					bed = mix(SRGB(vec3(0.42, 0.66, 0.6)), SRGB(vec3(0.58, 0.76, 0.66)), bar);
 					bed = mix(bed, SRGB(vec3(0.18, 0.34, 0.32)), weed * 0.7);
@@ -562,14 +609,22 @@ void fragment() {
 				// барашки: редкие белые гребни больших волн, только на глубине и пятнами
 				float cap = smoothstep(0.8, 0.95, hk) * smoothstep(0.6, 0.85, vnoise(world / 170.0 + vec2(t * 0.05, 3.0)))
 					* smoothstep(0.3, 0.55, dp0);
-				foam = max(foam, cap * 0.6);
+				foam = max(foam, cap * (arch_detail && water_v2 ? 0.15 : 0.6));
 				if (water_v2) {
 					// W-01: прибой и пена у кромки рвутся по гребням волн — кружево, а не ровная полоса
 					foam *= 0.45 + 0.55 * smoothstep(0.35, 0.7, hk + crest * 0.5);
 					// барашки там, где гребень FFT-волны заворачивается, на глубине и пятнами (ветер не везде)
 					float wcap = crest * smoothstep(0.22, 0.5, dp0)
 						* smoothstep(0.55, 0.85, vnoise(world / 300.0 + vec2(t * 0.02, 7.0)));
-					foam = max(foam, wcap * 0.45);
+					if (arch_detail) {
+						// B2-Q08 (close-up № 1: whitecaps were soft white blots, too many): only the top of the crest,
+						// rarer patches, torn into thin streaks along the wind
+						vec2 ws = mat2(vec2(0.82, 0.57), vec2(-0.57, 0.82)) * world;
+						float lace = smoothstep(0.55, 0.8, vnoise(ws / vec2(10.0, 2.2) + vec2(t * 0.6, 0.0)) * 0.6 + vnoise(world / 3.0 - t * 0.3) * 0.4);
+						wcap = smoothstep(0.5, 0.9, crest) * smoothstep(0.3, 0.55, dp0)
+							* smoothstep(0.7, 0.92, vnoise(world / 300.0 + vec2(t * 0.02, 7.0))) * lace;
+					}
+					foam = max(foam, wcap * (arch_detail ? 0.55 : 0.45));
 					// отражение неба: луч камеры от волны в панораму (верхняя полусфера), сила — по Френелю;
 					// склоны к горизонту светлеют, облака плывут по воде
 					vec3 vw = normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz);
@@ -584,6 +639,14 @@ void fragment() {
 				float shal = 1.0 - smoothstep(0.03, 0.3, dp0);
 				vec2 bd = vec2(world.x * 0.8 + world.y * 0.6, world.y * 0.8 - world.x * 0.6);
 				float rip = sin(bd.x / 7.0 * 6.2832 + vnoise(world / 40.0) * 6.0) * (1.0 - smoothstep(1.2, 2.5, fw));
+				if (arch_detail) {
+					// B2-Q08 (close-up № 11: even diagonal stripes on the shallows like hatching): ripples bend,
+					// change direction by noise and show only in patches
+					float ra = vnoise(world / 160.0 + 2.0) * 3.0;
+					vec2 rdir = vec2(cos(ra), sin(ra));
+					rip = sin(dot(world, rdir) / 9.0 * 6.2832 + vnoise(world / 22.0) * 9.0) * (1.0 - smoothstep(1.2, 2.5, fw))
+						* smoothstep(0.5, 0.8, vnoise(world / 70.0 - 6.0)) * 0.6;
+				}
 				wc *= 1.0 + rip * 0.05 * shal;
 				vec2 cq = world / 16.0 + g * 1.5;
 				float r1 = 1.0 - abs(vnoise(cq + vec2(t * 0.3, t * 0.2)) * 2.0 - 1.0);
@@ -618,7 +681,19 @@ void fragment() {
 				float veg = (1.0 - smoothstep(60.0, 190.0, sl + (vnoise(world / 70.0) - 0.5) * 80.0)) * (1.0 - beach);
 				vec3 vc = mix(SRGB(vec3(0.25, 0.39, 0.19)), SRGB(vec3(0.37, 0.47, 0.25)), vnoise(world / 24.0)) * (0.85 + 0.3 * vnoise(world / 6.0));
 				c = mix(c, vc, veg * 0.8 * smoothstep(0.3, 0.6, vnoise(world / 90.0 + 4.0) * 0.6 + 0.4));
-				c = mix(c, SRGB(vec3(0.88, 0.76, 0.55)) * (0.94 + 0.1 * vnoise(world / 5.0)), beach * 0.92);
+				vec3 sand = SRGB(vec3(0.88, 0.76, 0.55)) * (0.94 + 0.1 * vnoise(world / 5.0));
+				if (arch_detail) {
+					// B2-Q08 (close-up № 7: sand was soapy up close): grain, wind ripples, pebbles and a darker
+					// damp band towards the water, with their own bump
+					float gn = vnoise(world / 1.3) * 0.6 + vnoise(world / 0.6 + 9.0) * 0.4;
+					float wr = sin(dot(world, vec2(0.6, 0.8)) / 3.2 + vnoise(world / 18.0) * 7.0) * smoothstep(0.4, 0.7, vnoise(world / 45.0 + 5.0));
+					float peb = smoothstep(0.84, 0.92, vnoise(world / 1.3 + 13.0)) * smoothstep(0.45, 0.75, vnoise(world / 25.0 - 2.0));
+					sand *= 0.86 + 0.2 * gn - 0.05 * wr;
+					sand = mix(sand, SRGB(vec3(0.5, 0.46, 0.4)), peb * 0.7);
+					sand = mix(sand * SRGB(vec3(0.82, 0.8, 0.76)), sand, smoothstep(0.0, 8.0, sl));
+					nxy = mix(nxy, vec2(wr * 0.25 + (gn - 0.5) * 0.5, (gn - 0.5) * 0.5), beach);
+				}
+				c = mix(c, sand, beach * 0.92);
 				wet *= 0.25;
 			}
 			c = mix(c, c * SRGB(vec3(0.7, 0.72, 0.7)), wet * 0.7);

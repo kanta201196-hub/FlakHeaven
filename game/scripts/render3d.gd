@@ -3049,6 +3049,7 @@ func _drop_lines(lines: Array) -> void:
 
 var _sand_edge := -1.0   # last Tuning sand_edge sent to the ground shader
 var _water_v2 := -1.0   # last Tuning water_v2 sent to the ground shader
+var _arch_detail := -1.0   # last Tuning arch_detail sent to the ground shader
 const SEA_WAVES := preload("res://art/water/sea_waves.png")   # W-01: Texture2DArray, game/tools/water/water_maps.py
 const SEA_SKY := preload("res://art/water/sea_sky.png")       # W-01: sky the sea reflects, game/tools/water/sky_pano.py
 
@@ -3073,12 +3074,22 @@ func _sync_water_v2() -> void:
 		_ground_mat.set_shader_parameter("sea_sky", SEA_SKY)
 
 
+## B2-Q08 (R-22): passes the F1 toggle arch_detail (Archipelago close-up fixes: shore line, whitecaps, shallows,
+## sand, island ground) to the ground shader when it changes, so both looks can be compared live
+func _sync_arch_detail() -> void:
+	var v := Tuning.g("arch_detail")
+	if v != _arch_detail:
+		_arch_detail = v
+		_ground_mat.set_shader_parameter("arch_detail", v >= 1.0)
+
+
 ## Ground zones of this frame (bomb aim marks, falling bombs, fires) into the ground shader's gz_* arrays.
 func _sync_ground_zones(m: Main) -> void:
 	if _ground_mat == null:
 		return
 	_sync_sand_edge()
 	_sync_water_v2()
+	_sync_arch_detail()
 	_gz_a.clear()
 	_gz_b.clear()
 	_gz_c.clear()

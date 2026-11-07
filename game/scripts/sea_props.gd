@@ -97,6 +97,15 @@ const SIZE := {
 	"s_reed": Vector2(14.0, 22.0),
 	"s_shrub": Vector2(20.0, 34.0),
 }
+## B2-Q08 (Kanta 07.11, close-up № 5): kinds that stand in the water get a contact-foam disc (BiomeProps
+## _foam_disc) at the waterline: length × beam of the disc in model widths (the model's X axis is its length).
+const FOAM_KIND := "s_foam"
+const FOAM := {
+	"s_boat_a": Vector2(1.18, 0.42), "s_boat_b": Vector2(1.18, 0.42),
+	"s_wreck_a": Vector2(1.15, 0.42), "s_wreck_b": Vector2(1.12, 0.22), "s_wreck_plane": Vector2(0.7, 0.7),
+	"s_rock": Vector2(1.25, 1.25), "s_tetrapod": Vector2(1.3, 1.3),
+	"s_buoy_red": Vector2(1.7, 1.7), "s_buoy_green": Vector2(1.7, 1.7),
+}
 const HOUSES := ["s_house_1", "s_house_2", "s_house_3", "s_house_4", "s_house_5", "s_house_6", "s_house_7", "s_house_8"]
 const SMALL := ["s_shrub", "s_reed", "s_rock", "s_hedgehog", "s_tetrapod", "s_buoy_red", "s_buoy_green", "s_olive_a", "s_olive_b", "s_tree", "s_pine_a", "s_pine_b"]
 # Worker-thread copies of the lists plan() reads: plan() runs on Terrain3D's chunk tasks, and an element of a
@@ -232,6 +241,12 @@ func put(kind: String, p: Vector2, w: float, yaw: float, r_keep := -1.0, y := NA
 	if not _put.has(kind):
 		_put[kind] = []
 	_put[kind].append(t)
+	if not is_nan(y) and FOAM.has(kind) and shore(p) < 0.0:
+		var fs: Vector2 = FOAM[kind]
+		var fb := Basis(Vector3.UP, -yaw) * Basis.from_scale(Vector3(w * fs.x, 1.0, w * fs.y))
+		if not _put.has(FOAM_KIND):
+			_put[FOAM_KIND] = []
+		_put[FOAM_KIND].append(Transform3D(fb, Vector3(p.x, water_y(p) + 0.6, p.y)))
 	if r_keep > 0.0:
 		_keep.append([p, r_keep])
 
@@ -353,17 +368,23 @@ func _snap_shore(p: Vector2) -> Vector2:
 # ---------- 2. мыс с маяком ----------
 
 func _cape(o: Vector2) -> void:
-	var p := _best(o, 60, func(q: Vector2) -> float:
+	# B2-Q08 (Kanta 07.11, close-up № 6: the lighthouse stood on the very edge, part of its fence over the
+	# water): the whole fenced yard (half the model width + a strip of shore) must be on land
+	var lw := size("s_lighthouse")
+	var p := _best(o, 80, func(q: Vector2) -> float:
 		var sd := shore(q)
-		if sd < 8.0 or sd > 40.0 or slope(q) > 0.5:
+		if sd < lw * 0.5 + 10.0 or sd > lw * 0.5 + 70.0 or slope(q) > 0.5:
 			return INF
+		for i in 12:
+			if shore(q + Vector2.from_angle(TAU * i / 12.0) * (lw * 0.5 + 6.0)) < 4.0:
+				return INF
 		var wf := water_frac(q, 260.0)
-		return INF if wf < 0.6 else 1.0 - wf)
+		return INF if wf < 0.55 else 1.0 - wf)
 	if p == Vector2.INF:
 		return
 	var sea := seaward(p)
 	var n := -sea
-	put("s_lighthouse", p, size("s_lighthouse"), sea.angle() + PI, 55.0)
+	put("s_lighthouse", p, lw, sea.angle() + PI, 55.0)
 	var hq := p + n * 70.0 + n.orthogonal() * 40.0
 	if shore(hq) > 25.0 and slope(hq) < 0.5 and room(hq, 28.0):
 		put("s_house_5", hq, size("s_house_5"), n.angle(), 30.0)
