@@ -870,6 +870,10 @@ static func wing_point(cls_id: String, lvl: String, side: float, zf_override := 
 
 
 const KIT_TOP_TURRET := 0.4   # верхняя турель «Кита»: доля длины от носа
+## PT-04 B: model x (plane length 1) of the top turret on a «Кит» model where KIT_TOP_TURRET lands on something:
+## «Кит» t1 — the aerial wire leaves the spine at x 0.105 and a baked dorsal turret stands at 0.19–0.235, so the
+## turret sits between them with its barrels (pointing aft) above the wire's root
+const KIT_TOP_TURRET_X := {"bomber_t1": 0.155}
 ## S13: ventral turret of «Кит» (third slot): model x (plane length 1), just aft of the bomb bay (x -0.31..0)
 const KIT_BOTTOM_TURRET_X := -0.335
 ## S13 (Kanta 27.10): wing turrets of «Грач» 2 — model (x, |z|) on the wing, on the outer panel just outboard of
@@ -962,7 +966,10 @@ static func mounts(cls_id: String, lvl: String, gi: int, g: Hardpoint) -> Array:
 	if cls_id == "bomber":
 		# тест 3.5-s7 (Kanta): турели «Кита» только на корпусе — кормовая под килем и верхняя на спине фюзеляжа;
 		# S13: the third («Кит» 2, lvl 5) — ventral, under the fuselage aft of the bomb bay (it used to wrap onto the tail)
-		order = [["tail", tail + L * 0.035, PI, 0.0], ["top", nose - L * KIT_TOP_TURRET, PI, 0.0]]
+		var top_x: float = nose - L * KIT_TOP_TURRET
+		if KIT_TOP_TURRET_X.has(PlaneTiers.art_key(cls_id, lvl)) and wtex != null:
+			top_x = float(KIT_TOP_TURRET_X[PlaneTiers.art_key(cls_id, lvl)]) * float(wtex.get_width())
+		order = [["tail", tail + L * 0.035, PI, 0.0], ["top", top_x, PI, 0.0]]
 		if wtex != null:
 			order.append(["bottom", KIT_BOTTOM_TURRET_X * float(wtex.get_width()), PI, 0.0])
 	else:
