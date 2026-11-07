@@ -20,6 +20,8 @@ static var _flight := false
 static var _skip := false   # a real key, button or click arrived (Main._input); synthetic bot actions do not count
 static var _then := Callable()   # runs instead of `_set_state(next_state)` when given (a hangar scene after the outro)
 static var art: Texture2D = null   # step 11: the scene's key art (art/story/<scene id>.jpg), null = the live fly-over
+static var comic := ""   # ST-12: `StoryComic` page key of the scene, "" = no page (the key art or the fly-over instead)
+static var comic_tex := {}   # ST-12: image path → texture of the page's panels, loaded for the scene, dropped at its end
 
 
 ## The picture of scene `scene_id` when the F1 switch `story_art` is on and the file exists (loaded for the scene,
@@ -35,6 +37,25 @@ static func _load_art(scene_id: String) -> Texture2D:
 	return load(path) if ResourceLoader.exists(path) else null
 
 
+## ST-12: the comic page of the scene when the F1 switch `story_comic` is on and the page has every picture; fills
+## `comic` and `comic_tex` (a few crops of 2–3 pictures, loaded for the scene and dropped at its end like `art`).
+static func _load_comic(scene_id: String, scene: Dictionary) -> void:
+	comic = ""
+	comic_tex = {}
+	if Tuning.g("story_comic") <= 0.0:
+		return
+	var key := StoryComic.key_of(scene_id, scene)
+	if key == "":
+		return
+	var tex := {}
+	for path in StoryComic.images(key):
+		if not ResourceLoader.exists(path):
+			return
+		tex[path] = load(path)
+	comic = key
+	comic_tex = tex
+
+
 ## Starts a scene. `scene_id` is the campaign flag name ("intro_pass"); `after` — Main state when it ends, or
 ## `then` runs instead when it is valid (the outro hands over to the hangar scene, which shows the results itself).
 static func play(m: Main, scene_id: String, scene: Dictionary, after: String, then := Callable()) -> void:
@@ -48,8 +69,9 @@ static func play(m: Main, scene_id: String, scene: Dictionary, after: String, th
 	t = 0.0
 	next_state = after
 	anchor = m.player.global_position if is_instance_valid(m.player) else m.camera.global_position
-	art = _load_art(scene_id)
-	_flight = bool(def.get("flight", false)) and art == null   # with a picture the world is not seen: no model flight
+	_load_comic(scene_id, scene)
+	art = null if comic != "" else _load_art(scene_id)
+	_flight = bool(def.get("flight", false)) and art == null and comic == ""   # with a picture the world is not seen: no model flight
 	_skip = false
 	TitleFlight.override = _flight
 	TitleFlight.ov_heading = float(def.get("heading", TitleFlight.H0))
@@ -97,7 +119,10 @@ static func tick(m: Main, dt: float) -> void:
 	var autotest := args.has("--autotest")
 	# `--cutshot`: hold the scene to its middle, save one frame for the review page, then skip as the autotest does
 	# (separate from `--shots`, whose screen tour drives the states itself)
-	var skip_at := float(def.get("dur", 1.0)) * 0.5 if args.has("--cutshot") else SKIP_AUTOTEST
+	# A comic page (ST-12) is shot just before the closing fade, when every panel and balloon is in.
+	var skip_at := SKIP_AUTOTEST
+	if args.has("--cutshot"):
+		skip_at = float(def.get("dur", 1.0)) - 0.6 if comic != "" else float(def.get("dur", 1.0)) * 0.5
 	if autotest and t >= skip_at:
 		if args.has("--cutshot"):
 			var img := m.get_viewport().get_texture().get_image()
@@ -126,6 +151,8 @@ static func finish(m: Main) -> void:
 		return
 	active = false
 	art = null
+	comic = ""
+	comic_tex = {}
 	TitleFlight.override = false
 	if m.render3d != null:
 		m.render3d.set_light("day")
