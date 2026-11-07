@@ -23,6 +23,9 @@ const NODE := "cockpit"
 ## Read off the canopy shapes: bubble canopies have a windscreen bow only, the attackers a windscreen and a hood
 ## bow, the bombers a framed glasshouse.
 const FRAMES := {
+	"fighter_t1": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
+	"attacker_t1": {"bows": [0.32], "ribs": [], "seats": [[0.6, -0.42], [0.6, 0.42]]},   # side by side
+	"bomber_t1": {"bows": [0.2, 0.4, 0.6, 0.8], "ribs": [0.0], "seats": [[0.7, -0.42], [0.7, 0.42]]},
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_1": {"bows": [0.3, 0.7], "ribs": [], "seats": [[0.58, 0.0]]},
