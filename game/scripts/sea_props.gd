@@ -239,10 +239,27 @@ func _contour(p: Vector2) -> Vector2:
 ## through the floor (the model's earth berm covers the ground falling away below it)
 func _pad_y(p: Vector2, r: float) -> float:
 	var y := _t.surface(p.x, p.y, _ctx).y
-	for i in 8:
-		var q := p + Vector2.from_angle(TAU * i / 8.0) * r
-		y = maxf(y, _t.surface(q.x, q.y, _ctx).y)
+	for rr: float in [r, r * 1.3]:   # the parapet and the inner half of the berm too, or an uphill bank buries them
+		for i in 12:
+			var q := p + Vector2.from_angle(TAU * i / 12.0) * rr
+			y = maxf(y, _t.surface(q.x, q.y, _ctx).y)
 	return y
+
+
+## Highest ground under a rectangle in model units (x0…x1 along the model's X, ±hy across) scaled by w and turned
+## by yaw: the seat for a building on a stone terrace (the lighthouse yard), so no slope swallows its walls
+func _rect_top(p: Vector2, w: float, yaw: float, x0: float, x1: float, hy: float) -> Vector2:
+	var lo := INF
+	var hi := -INF
+	var ax := Vector2.from_angle(yaw)
+	var ay := ax.orthogonal()
+	for i in 5:
+		for j in 3:
+			var q := p + ax * lerpf(x0, x1, i / 4.0) * w + ay * (j - 1) * hy * w
+			var y := _t.surface(q.x, q.y, _ctx).y
+			lo = minf(lo, y)
+			hi = maxf(hi, y)
+	return Vector2(lo, hi)
 
 
 func room(p: Vector2, r: float) -> bool:
@@ -460,12 +477,18 @@ func _cape(o: Vector2) -> void:
 			if shore(q + Vector2.from_angle(TAU * i / 12.0) * (lw * 0.5 + 6.0)) < 4.0:
 				return INF
 		var wf := water_frac(q, 260.0)
-		return INF if wf < 0.55 else 1.0 - wf)
+		if wf < 0.55:
+			return INF
+		# (Kanta 07.11: part of the yard wall and the yard itself sank into the slope) prefer even ground: the
+		# stone terrace under the yard is 2.9 m (0.11 w) deep
+		var rt := _rect_top(q, lw, seaward(q).angle() + PI, -0.25, 0.73, 0.28)
+		return 1.0 - wf + maxf(rt.y - rt.x - lw * 0.08, 0.0) * 0.05)
 	if p == Vector2.INF:
 		return
 	var sea := seaward(p)
 	var n := -sea
-	put("s_lighthouse", p, lw, sea.angle() + PI, 55.0)
+	var rt := _rect_top(p, lw, sea.angle() + PI, -0.25, 0.73, 0.28)
+	put("s_lighthouse", p, lw, sea.angle() + PI, 55.0, rt.y)
 	var hq := p + n * 70.0 + n.orthogonal() * 40.0
 	if shore(hq) > 25.0 and slope(hq) < 0.5 and room(hq, 28.0):
 		put("s_house_5", hq, size("s_house_5"), n.angle(), 30.0)
@@ -505,7 +528,7 @@ func _battery(o: Vector2) -> void:
 		var sd := _contour(q)
 		var n := 0
 		for i in 3:
-			if _level(q + sd * (i - 1) * sp, gw * 0.5, gw * 0.2):
+			if _level(q + sd * (i - 1) * sp, gw * 0.5, gw * 0.14):
 				n += 1
 		var sc := -float(n) * 10.0 - h01(q)
 		if sc < best_s:
@@ -535,7 +558,7 @@ func _battery(o: Vector2) -> void:
 		# B2-Q10: the whole pad must be level (no pit over a cliff); slide along the firing line, else skip this gun
 		for dv: float in [0.0, -12.0, 12.0, -24.0, 24.0]:
 			var q := p + side * (i - 1) * sp + face * (back + dv)
-			if _level(q, gw * 0.5, gw * 0.2):   # the berm hides up to 0.14 w of ground falling away
+			if _level(q, gw * 0.5, gw * 0.14):   # the berm hides up to 0.14 w of ground falling away
 				put(gk, q, gw, face.angle(), gw * 0.85, _pad_y(q, gw * 0.5))
 				placed += 1
 				break
