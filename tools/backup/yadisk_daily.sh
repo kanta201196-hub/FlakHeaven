@@ -34,6 +34,8 @@ WORK="${1:-${TMPDIR:-/tmp}/yadisk-backup}/$DAY"
 REPO="${REPO:-$(git rev-parse --show-toplevel)}"
 MEM="${MEM:-/tmp/claude/memory/team/silo}"
 PF="${PF:-/mnt/project-files}"
+## The shared folder is a symlink (/mnt/project-files -> /mnt/attach/...); find does not follow it, so resolve it once.
+PF="$(readlink -f "$PF")"
 ROOT="${YADISK_ROOT:-disk:/FlakHeaven backup}"
 DEST="$ROOT/$DAY"
 PART_SIZE="${PART_SIZE:-40M}"
