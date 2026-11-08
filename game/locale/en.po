@@ -10811,3 +10811,6 @@ msgstr "CRACKLE"
 msgid "ШШШ…"
 msgstr "KSSHH…"
 
+msgid "ЧИРК"
+msgstr "SCRITCH"
+
