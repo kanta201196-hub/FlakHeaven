@@ -72,6 +72,9 @@ func _init() -> void:
 			for f in pd.get("fx", []):
 				if (f as Dictionary).has("img"):
 					_check(ResourceLoader.exists(String(f["img"])), "%s: cut-out %s exists" % [id, f["img"]])
+				if String((f as Dictionary)["k"]) == "fly":
+					var nose := float(StoryComic.NOSE_X.get(String(f["img"]).get_file().get_basename(), 0.0))
+					_check(nose * ((f["to"] as Vector2).x - (f["from"] as Vector2).x) >= 0.0, "%s: %s flies nose first" % [id, f["img"]])
 	# page keys of playing scenes: the variant is told apart by its definition; the shots replay ids match too
 	_check(StoryComic.key_of("intro_forts", StoryScenes.INTRO["forts.recon"]) == "intro_forts.recon", "recon variant finds its page")
 	_check(StoryComic.key_of("intro_forts", StoryScenes.INTRO["forts"]) == "intro_forts", "plain scene finds its page")
