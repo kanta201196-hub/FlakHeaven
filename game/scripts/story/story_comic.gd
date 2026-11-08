@@ -149,10 +149,10 @@ const PAGES := {
 		{"t": 3.0, "rect": [0.42, 0.44, 0.26, 0.56], "img": KUPOL, "src": FACE, "push": [0.06, 0.0, -0.02],
 			"say": [[1], 0.3, 0.36, 0.3]},
 		{"t": 4.6, "rect": [0.68, 0.44, 0.32, 0.56], "img": PANEL % "b05_fort_night", "src": [300, 0, 1236, 864],
-			"push": [0.08, -0.03, 0.0], "sfx": ["ВЖЖ!", 0.1, 0.1, 0.06, -6.0, YELLOW],
+			"push": [0.08, -0.03, 0.0], "sfx": ["ВЖЖ!", 0.55, 0.1, 0.06, 6.0, YELLOW],
 			"fx": [{"k": "smoke", "at": Vector2(200, 520), "drift": Vector2(80, -360), "r": 40.0, "n": 7, "c": Color(0.35, 0.8, 0.3)},
-				{"k": "fly", "img": CUT % "jet_night_side", "t0": 0.0, "t1": 3.2, "from": Vector2(-0.1, 0.55),
-				"to": Vector2(1.1, 0.3), "s0": 0.22, "s1": 0.3}]},
+				{"k": "fly", "img": CUT % "jet_night_side", "t0": 0.0, "t1": 3.2, "from": Vector2(1.1, 0.6),
+				"to": Vector2(-0.1, 0.3), "s0": 0.22, "s1": 0.3}]},
 	]},
 	"outro_riverbed": {"panels": [
 		{"t": 0.0, "rect": [0.0, 0.0, 0.6, 0.55], "img": ART % "outro_riverbed", "src": FULL,
@@ -215,6 +215,11 @@ static func images(key: String) -> Array:
 			if (f as Dictionary).has("img") and not out.has(String(f["img"])):
 				out.append(String(f["img"]))
 	return out
+
+
+## Side-view cut-outs and the way their nose points on the picture (-1 left, 1 right): a jet flying across a panel
+## must move nose first (Kanta 08.11: the night jet in outro_forts flew tail first). Rear and front views have no entry.
+const NOSE_X := {"jet_night_side": -1.0}
 
 
 ## Caption text of a panel whose `cap` line index is -1 (no line of the scene): who is on the picture.
