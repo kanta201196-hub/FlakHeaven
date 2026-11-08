@@ -11,13 +11,13 @@
 
 **Правила ведения.** В каждом разделе не больше 10–15 живых задач. Новая задача — в раздел своей системы, с номером. Номера не меняются. Закрыл — строка в конец `backlog-archive.md` («Дописано после…»), здесь удалил. Шапку «Где мы сейчас» обновляем при каждой сборке и каждую пятницу на ревью.
 
-## Где мы сейчас (07.11.2026)
+## Where we are (08.11.2026)
 
-- **Игра:** `main` на `9afcba3` (07.11). Слито за 06–07.11: PT-04 этап A (#598, классы 1–5 по плану), Tier-1 модели Осы/Грача/Кита (#594, #601, #602), вода W-01 включена по умолчанию (#603), Архипелаг B2-Q08/Q09 (#605), бэкап (#593, #604), «Ещё вылет» (#599). Последняя собранная версия — **3.5-s17** (06.11 по команде Kanta; архивы в `builds/`).
-- **Цикл сборки:** счёт «закрыто X из Y» по s17 не сверён в планёрке 07.11 (догадка: часть пунктов s17 уже в `main`, проверка в игре не отмечена). Следующая сборка — только по команде Kanta, когда список по s17 закрыт и проверен в игре, и не раньше чем через день после s17. В `docs/status-log.md` строки по сборкам с 23.10 не было; добавлена строка по s17.
-- **Главный путь:** Steam и Next Fest. Проверка Valve ждёт результат около 16.11; регистрация Next Fest до 10.01.2027 (осталось 64 дня); демо и страница на проверку Valve до 18.01.2027 (осталось 72 дня). Отзыв внешних тестеров EX-01…EX-12 — раздел «Бой и баланс»; их запуск — R-14.
-- **Открыто на Kanta:** `docs/owner-checklist/kanta-now.md` (первый список планёрки). Модели Meshy по уровням 4–5 ждут выбора варианта в треде 3D-моделей.
-- **Треды на сильной модели** — не больше шести одновременно (с 25.10.2026); очередь ведёт координатор.
+- **Game:** `main` at `3ebeb3f` (08.11, docs only); game code as of `0ffe479`. Merged 07–08.11: PT-04 stage B (#607) and tiers 4–5 flying their own models (#610), Archipelago rounds 2–4 (#606, #608, #611), story cutscenes as living comic pages, phases A and B (#609, #612), comic outro fix (#613), build number bump (#614).
+- **Last build:** 3.5-s18, shipped 08.11 at 11:54 MSK on Kanta's command (itch.io and Yandex Disk; archives and self-check in `/mnt/project-files/builds/3.5-s18/`; line in `docs/status-log.md`). The s18 in-game checklist is not in the repo, so "closed X of Y" is not counted yet. Next build only on Kanta's command, not before 09.11 and after the s18 items are checked in the game.
+- **Main path:** Valve's review of Steamworks documents ~16.11 (8 days left); Next Fest registration by 10.01.2027 (63 days left); demo and page to Valve by 18.01.2027 (71 days left).
+- **Open on Kanta:** `docs/owner-checklist/kanta-now.md` (first item of the daily stand-up).
+- **Strong-model threads:** no more than six at once (since 25.10.2026); the coordinator runs the queue.
 
 ## Правки по сборке 3.5-s16
 
