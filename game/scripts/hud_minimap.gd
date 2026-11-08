@@ -87,6 +87,8 @@ func draw(m: Main, size: Vector2) -> void:
 		var col := HudFlight.C_AA
 		if node is Convoy:
 			col = HudFlight.C_CONVOY
+		elif node is CoastBattery:
+			col = HudFlight.C_FORT
 		elif node is Transport:
 			col = HudFlight.C_TRANSPORT
 		elif node is RivalAce:

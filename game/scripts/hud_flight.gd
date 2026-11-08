@@ -1095,6 +1095,21 @@ func _activity_panel(m: Main, p: Player, size: Vector2) -> void:
 			else:
 				bs = Loc.t("База противника: %s — подлетите, чтобы начать") % db
 			_task(bs, Color(1.0, 0.7, 0.55), "" if base.failed else "Награда: выбор из редких карточек + 60 запчастей")
+		elif node is CoastBattery:
+			# B2-A01: the guns stand apart — before the alarm the arrow leads to the battery, then to the nearest gun
+			var cb := node as CoastBattery
+			var gun := cb.nearest_gun(p.global_position) if cb.active else null
+			var at: Vector2 = gun.global_position if gun != null else cb.global_position
+			var dg := DistText.text(p.global_position.distance_to(at))
+			_edge_arrow(_ws(xf, at), rect, size, C_FORT, 1.8, Loc.t("орудие %s") % dg)
+			var gs: String
+			if cb.failed:
+				gs = Loc.t("Батарея устояла · орудий осталось: %d") % cb.guns_left()
+			elif cb.active:
+				gs = Loc.t("БЕРЕГОВАЯ БАТАРЕЯ: %d с · орудий: %d из %d") % [int(ceil(cb.timer)), cb.guns_left(), cb.targets.size()]
+			else:
+				gs = Loc.t("Береговая батарея: %s — подлетите, чтобы начать") % dg
+			_task(gs, Color(1.0, 0.7, 0.55), "" if cb.failed else "Награда: выбор из редких карточек + 60 запчастей")
 		elif node is AASite:
 			var site := node as AASite
 			var d := DistText.text(p.global_position.distance_to(site.global_position))

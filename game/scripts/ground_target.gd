@@ -9,6 +9,8 @@ extends Enemy
 ##   bunker — командный бункер: прочный, без оружия. 3.5: главная цель — уничтожен бункер, позиция взята.
 ##   jeep   — machine-gun pickup in the yard of the fortified area (FortArea): bursts like the convoy
 ##            technical, never drives.
+##   coast_gun — coastal gun of the «Береговая батарея» (CoastBattery, B2-A01): turns its turret after the plane,
+##            fires a slow heavy flak shell through the battery (`CoastBattery.fire`: ring, then burst).
 ## `fixed` (FortArea): the target never drives — the tower launchers and the yard jeeps.
 ## 3.5: бункер и РЛС стоят на месте; ЗСУ и ЗРК переезжают между позициями вокруг бункера,
 ## встают между ним и самолётом и прикрывают его. Без бункера техника теряет управление и уезжает.
@@ -61,6 +63,10 @@ var drive: GroundDrive = null   # правка 3.5-s4: у ЗСУ и ЗРК
 var fixed := false
 ## FortArea: height of the mount above the ground in world px (tower top); 0 — on the ground
 var mount_h := 0.0
+## Coast gun: the way its pit faces (to the sea), rad; the turret turns from it after the plane
+var face := 0.0
+## Coast gun: barrel elevation the 3D model shows, rad (high when the plane is near, low at the range limit)
+var elev := BatteryBalance.ELEV_MIN
 ## SAM launcher (Kanta 24.10): missiles fired so far — picks the next cell of the launch box
 var launches := 0
 ## Combat-plane point of the next cell mouth, set by Render3D from the 3D launcher; INF — no 3D model
@@ -102,6 +108,12 @@ func setup(v: String, s: AASite, hp_mult: float, dps := 0.0) -> void:
 			radius = 20.0
 			xp = 4
 			parts = 4
+		"coast_gun":   # B2-A01: as the fort's tower launcher (plan 2026-11-08, item 1)
+			defense = "armor"
+			hp = GroundTarget.HP_ARMOR
+			radius = 24.0
+			xp = 5
+			parts = 5
 		"bunker":
 			hp = GroundTarget.HP_FORT # главная цель позиции
 			radius = 43.0   # hitbox follows the +35% bunker model (Kanta 24.10)
@@ -229,6 +241,8 @@ func behave(delta: float) -> void:
 					_cd = randf_range(1.8, 2.6)
 		"jeep":
 			_jeep_fire(delta, d)
+		"coast_gun":
+			_coast_fire(delta, d)
 		"sam":
 			if _lock > 0.0:
 				_lock -= delta
@@ -246,6 +260,26 @@ func behave(delta: float) -> void:
 					_lock = Tuning.g("msl_sam_lock")
 					_cd = randf_range(5.0, 6.5)
 					Main.I.sfx.play("sam_lock", -6.0, 1.2)
+
+
+## Coast gun (CoastBattery): reloads, then fires when the plane is in range and the battery has a free ring;
+## a held shot waits a moment and tries again. The barrel rises as the plane comes closer.
+func _coast_fire(delta: float, d: float) -> void:
+	elev = lerpf(BatteryBalance.ELEV_MAX, BatteryBalance.ELEV_MIN, clampf(d / BatteryBalance.RANGE, 0.0, 1.0))
+	if _shots > 0:
+		_shot_t -= delta
+		if _shot_t <= 0.0:
+			_shots = 0
+	_cd -= delta
+	if _cd > 0.0 or d > BatteryBalance.RANGE:
+		return
+	var cb := site as CoastBattery
+	if cb != null and cb.fire(self):
+		_cd = randf_range(BatteryBalance.RELOAD_MIN, BatteryBalance.RELOAD_MAX)
+		_shots = 1   # muzzle flash on the sprite for a moment
+		_shot_t = 0.15
+	else:
+		_cd = 0.4
 
 
 ## Jeep (FortArea yard): bursts of the convoy pickup's gun at the player in range (same rhythm as
@@ -435,8 +469,9 @@ func _draw() -> void:
 	# Хитбоксы (radius) не менялись — попадание чуть щедрее картинки, как у конвоя.
 	# Тест 3.5-s8 (Kanta: «бункер — улучшить качество и размер»): новый бункер кодом, 44 (~13 м с обваловкой) —
 	# заметно крупнее машин ПВО, читается как командный пункт позиции
-	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "jeep": ["e_convoy_technical", 14.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 59.0]}   # Kanta 24.10: bunker +35% (44 -> 59)
-	var ba: float = _body_angle
+	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "jeep": ["e_convoy_technical", 14.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 59.0],   # Kanta 24.10: bunker +35% (44 -> 59)
+		"coast_gun": [BatteryBalance.TEX, BatteryBalance.LEN]}
+	var ba: float = face if variant == "coast_gun" else _body_angle
 	if mobile() and not leaderless and _goal == Vector2.INF and site != null and site.active:
 		ba = heading # стоит — разворачивается на цель
 	if variant == "zsu" and _def_flash > 0.0:
@@ -445,6 +480,8 @@ func _draw() -> void:
 	if draw_enemy_sprite(spr[variant][0], slen, Color.WHITE, ba):
 		if variant == "zsu" and (_aim > 0.0 or _shots > 0 or _def_flash > 0.0):
 			draw_circle(Vector2.from_angle(ba) * 19.0, 5.0, Color(1.0, 0.9, 0.3))   # M-37: у среза ствола меньшей модели
+		if variant == "coast_gun" and _shots > 0 and not Render3D.enabled:
+			draw_circle(Vector2.from_angle(heading) * 30.0, 6.0, Color(1.0, 0.85, 0.4))
 		if variant == "sam" and _lock > 0.0:
 			var pl := Main.I.player
 			if pl != null and pl.hp > 0.0:

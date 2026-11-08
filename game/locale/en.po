@@ -10814,3 +10814,55 @@ msgstr "KSSHH…"
 msgid "ЧИРК"
 msgstr "SCRITCH"
 
+
+#: game/scripts/coast_battery.gd
+msgid "БЕРЕГОВАЯ БАТАРЕЯ: %d с · орудий: %d из %d"
+msgstr "COASTAL BATTERY: %d s · guns: %d of %d"
+
+#: game/scripts/coast_battery.gd
+msgid "Батарея устояла · орудий осталось: %d"
+msgstr "The battery held · guns left: %d"
+
+#: game/scripts/coast_battery.gd
+msgid "Батарея устояла — награды не будет"
+msgstr "The battery held — no reward"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея бьёт по проливу. Четыре орудия — заставьте их замолчать."
+msgstr "A coastal battery is shelling the strait. Four guns — silence them."
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея открыла огонь! %d с на четыре орудия"
+msgstr "The coastal battery opened fire! %d s for four guns"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея подавлена!"
+msgstr "Coastal battery silenced!"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея: %s — подлетите, чтобы начать"
+msgstr "Coastal battery: %s — fly closer to start"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея: четыре орудия стоят врозь на мысах — летите по стрелке от одного к другому. Красное кольцо — сюда через секунду ляжет снаряд: уйдите из круга."
+msgstr "Coastal battery: four guns stand apart on the capes — follow the arrow from one to the next. A red ring marks where a shell lands in a second: get out of the circle."
+
+#: game/scripts/coast_battery.gd
+msgid "ЗА БЕРЕГОВУЮ БАТАРЕЮ"
+msgstr "FOR THE COASTAL BATTERY"
+
+#: game/scripts/coast_battery.gd
+msgid "Разведка: на мысах ожила береговая батарея! Награда — выбор из редких карточек"
+msgstr "Recon: a coastal battery has come alive on the capes! Reward — a pick of rare cards"
+
+#: game/scripts/coast_battery.gd
+msgid "береговая батарея"
+msgstr "coastal battery"
+
+#: game/scripts/coast_battery.gd
+msgid "береговое орудие"
+msgstr "coastal gun"
+
+#: game/scripts/coast_battery.gd
+msgid "орудие %s"
+msgstr "gun %s"

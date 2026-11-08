@@ -32,7 +32,7 @@ func _ready() -> void:
 	add_child(fuel)
 	if not Main.aces() and OpTaskBalance.on():
 		queue = OpTaskBalance.queue(String(Campaign.op()["id"]))
-	for a in ["--dogfight", "--transport", "--convoy", "--fort"]:
+	for a in ["--dogfight", "--transport", "--convoy", "--fort", "--battery"]:
 		if OS.get_cmdline_user_args().has(a):
 			queue = ACTIVITIES
 	if OS.get_cmdline_user_args().has("--dogfight"):
@@ -44,8 +44,8 @@ func _ready() -> void:
 	if OS.get_cmdline_user_args().has("--convoy"):
 		activity_i = 3      # проверка: сразу конвой
 		next_activity = 10.0
-	if OS.get_cmdline_user_args().has("--fort"):
-		activity_i = 4      # check: the fortified area first (FA-01)
+	if OS.get_cmdline_user_args().has("--fort") or OS.get_cmdline_user_args().has("--battery"):
+		activity_i = 4      # check: the fortified area first (FA-01); at sea (--op=5) the coast battery (B2-A01)
 		next_activity = 10.0
 	if OS.get_cmdline_user_args().has("--warship"):   # проверка «Архипелага»: корабль-босс на 1:00 (--leviathan — «Левиафан»)
 		Tuning.set_param("boss_every", 60.0)
@@ -434,6 +434,15 @@ func start_activity(p: Player, t: float, force := false) -> void:
 	# Kanta s13: the fort shows only for the activity (Render3D draws forts in forts_hit), so never one already
 	# used this sortie and never one on screen, where it would pop up
 	var fort: Dictionary = {}
+	var guns := PackedVector2Array()
+	if kind_s == "fort" and Biome.sea():
+		# B2-A01 (Kanta 08.11): at sea the fort slot is the «Береговая батарея»: four guns on capes and islets
+		guns = _place_battery(p)
+		if guns.is_empty():
+			activity_i += 1
+			kind_s = queue[activity_i % queue.size()]
+		else:
+			kind_s = "battery"
 	if kind_s == "fort":
 		if not Biome.sea():
 			var bg: Background = Main.I.background
@@ -473,6 +482,14 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Events.banner.emit("Разведка: в старой крепости база противника! Награда — выбор из редких карточек", 4.0)
 		Story.say(Story.DISPATCH, "В крепости засели зенитчики. Пусковые на башнях — снесите их.")
 		Hints.show("act_fort", "Укрепрайон: летите по стрелке к крепости. На четырёх башнях пусковые ЗРК — разбейте все четыре, пока идёт отсчёт. Тепловые ловушки уводят их ракеты, джипы во дворе бьют из пулемётов.", 9.0, 2)
+	elif kind_s == "battery":
+		var cb := CoastBattery.new()
+		cb.setup_guns(guns, hp_k, recent_dps())
+		Main.I.world.add_child(cb)
+		activity_node = cb
+		Events.banner.emit("Разведка: на мысах ожила береговая батарея! Награда — выбор из редких карточек", 4.0)
+		Story.say(Story.DISPATCH, "Береговая батарея бьёт по проливу. Четыре орудия — заставьте их замолчать.")
+		Hints.show("act_battery", "Береговая батарея: четыре орудия стоят врозь на мысах — летите по стрелке от одного к другому. Красное кольцо — сюда через секунду ляжет снаряд: уйдите из круга.", 9.0, 2)
 	elif kind_s == "convoy":
 		var cv := Convoy.new()
 		# колонна пересекает курс игрока впереди: маршрут через точку в 1 300 пикс. по курсу
@@ -512,6 +529,25 @@ func start_activity(p: Player, t: float, force := false) -> void:
 		Events.banner.emit("Дуэль: вражеский ас заходит вам в хвост!", 4.0)
 		Hints.show("act_ace", "Дуэль с асом: он заходит в хвост. Сбросьте газ (S) или сделайте боевой разворот (E) — ас проскочит вперёд под вашу пушку.", 8.0, 2)
 	Main.I.sfx.play("boss", -8.0, 1.4)
+
+
+## B2-A01: gun spots of a coast battery ahead (CoastBattery.pick on shore candidates), out of view and at least two
+## screens from the player, as the AA site (ActivityBalance); empty when no stretch of coast in reach fits four guns.
+func _place_battery(p: Player) -> PackedVector2Array:
+	var tr := Terrain3D.active()
+	if tr == null:
+		return PackedVector2Array()
+	var min_d := ActivityBalance.min_dist(_screen_rect())
+	var view := _view_rect()
+	var tries := 0
+	for want in ActivityBalance.wants(p.global_position, p.heading, min_d):
+		if tries >= ActivityBalance.TRIES:
+			break
+		tries += 1
+		var guns := CoastBattery.pick(CoastBattery.candidates(tr, want), want)
+		if not guns.is_empty() and ActivityBalance.far_ok(guns, p.global_position, min_d, view):
+			return guns
+	return PackedVector2Array()
 
 
 ## S14-04 (Kanta 31.10): the AA site appears out of view and at least two screens from the player
