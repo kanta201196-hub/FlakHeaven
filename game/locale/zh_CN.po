@@ -10811,3 +10811,6 @@ msgstr "噼啪"
 msgid "ШШШ…"
 msgstr "沙沙……"
 
+msgid "ЧИРК"
+msgstr "唰"
+
