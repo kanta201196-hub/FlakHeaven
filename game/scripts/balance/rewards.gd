@@ -23,6 +23,8 @@ const ACTIVITY := {
 		"counted": true, "course_pts": 1, "reason": "ЗА ПОЗИЦИЮ ПВО"},
 	&"fort": {"parts": 60.0, "parts_common": 90.0, "heal_common": 0.2, "rare": Rare.EVERY_2ND,
 		"counted": true, "course_pts": 1, "reason": "ЗА УКРЕПРАЙОН"},   # FA-01: the AA site's parts ×1.5 (spec, guess)
+	&"battery": {"parts": 60.0, "parts_common": 90.0, "heal_common": 0.2, "rare": Rare.EVERY_2ND,
+		"counted": true, "course_pts": 1, "reason": "ЗА БЕРЕГОВУЮ БАТАРЕЮ"},   # B2-A01: as the fort (plan 2026-11-08, item 10)
 	&"convoy": {"parts": 0.0, "parts_common": 60.0, "heal_common": 0.2, "rare": Rare.EVERY_2ND,
 		"counted": true, "course_pts": 1, "reason": "ЗА КОЛОННУ"},
 	&"dogfight": {"parts": 0.0, "parts_common": 0.0, "heal_common": 0.0, "rare": Rare.ALWAYS,

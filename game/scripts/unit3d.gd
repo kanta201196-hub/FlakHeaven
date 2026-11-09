@@ -58,6 +58,8 @@ var pitch := 0.0
 ## Hull heading; NAN until the parts were looked up on the model
 var hull := NAN
 var turret: Node3D = null
+## Coast gun (B2-A01): the barrel node under the turret, pitched by GroundTarget.elev
+var barrel: Node3D = null
 var antenna: Node3D = null
 var launcher: Node3D = null
 var launcher_yaw: Node3D = null

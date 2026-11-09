@@ -661,7 +661,7 @@ func ban_card(i: int) -> void:
 ## Banner headline per activity kind; the reward part is built from what `RunState` paid.
 const ACTIVITY_TITLE := {
 	&"ground": "Позиция ПВО уничтожена!", &"convoy": "Колонна разбита!", &"dogfight": "Ас-соперник сбит!",
-	&"fort": "База противника разгромлена!",
+	&"fort": "База противника разгромлена!", &"battery": "Береговая батарея подавлена!",
 }
 
 
@@ -677,7 +677,7 @@ func _on_activity_succeeded(kind: StringName) -> void:
 			run.add_picks(AcesBalance.ace_picks(run.aces_down))   # option 1: a card for every ace
 			Events.banner.emit(Loc.t("Ас сбит! Всего: %d") % run.aces_down, 2.5)
 		return
-	if kind == &"fort":
+	if kind == &"fort" or kind == &"battery":   # B2-A01: the Archipelago's battery counts for «Укрепрайон взят»
 		medal_add("fort_areas")
 	medal_add("activities")
 	if op_tasks != null:

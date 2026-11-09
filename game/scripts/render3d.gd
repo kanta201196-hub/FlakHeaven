@@ -1448,7 +1448,16 @@ func _ground_parts(u: Unit3D, e: Enemy, ang: float, delta: float) -> float:
 				cells.append(c)
 			u.cells = cells
 	var gt := e as GroundTarget
-	if gt != null and gt.fixed:
+	if gt != null and gt.variant == "coast_gun":
+		# B2-A01: the pit faces the sea; the turret turns after the plane (heading), the barrel rises (elev)
+		u.hull = gt.face
+		ang = gt.heading
+		if u.barrel == null:
+			u.barrel = (u.node as Node3D).get_child(0).find_child("barrel", true, false)
+		if u.barrel != null:
+			var bn := u.barrel as Node3D
+			bn.rotation.z = move_toward(bn.rotation.z, gt.elev, delta * 0.8)
+	elif gt != null and gt.fixed:
 		pass   # FortArea: tower launchers and yard jeeps never turn their hull (the screen point drifts with the camera)
 	elif gt != null and gt.drive != null:
 		# правка 3.5-s4: курс корпуса — из модуля движения. Раньше брался сдвиг точки на экране,

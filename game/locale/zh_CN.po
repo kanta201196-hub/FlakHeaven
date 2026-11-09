@@ -10814,3 +10814,59 @@ msgstr "沙沙……"
 msgid "ЧИРК"
 msgstr "唰"
 
+
+#: game/scripts/coast_battery.gd
+msgid "БЕРЕГОВАЯ БАТАРЕЯ: %d с · орудий: %d из %d"
+msgstr "海岸炮台：%d 秒 · 火炮：%d / %d"
+
+#: game/scripts/coast_battery.gd
+msgid "Батарея устояла · орудий осталось: %d"
+msgstr "炮台守住了 · 剩余火炮：%d"
+
+#: game/scripts/coast_battery.gd
+msgid "Батарея устояла — награды не будет"
+msgstr "炮台守住了——没有奖励"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея бьёт по проливу. Четыре орудия — заставьте их замолчать."
+msgstr "海岸炮台正在炮击海峡。四门火炮——让它们闭嘴。"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея открыла огонь! %d с на четыре орудия"
+msgstr "海岸炮台开火了！%d 秒内摧毁四门火炮"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея подавлена!"
+msgstr "海岸炮台已被压制！"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея: %s — подлетите, чтобы начать"
+msgstr "海岸炮台：%s——飞近以开始"
+
+#: game/scripts/coast_battery.gd
+msgid "Береговая батарея: четыре орудия стоят врозь на мысах — летите по стрелке от одного к другому. Красное кольцо — сюда через секунду ляжет снаряд: уйдите из круга."
+msgstr "海岸炮台：四门火炮分散在各个海岬上——跟着箭头逐一飞去。红圈表示一秒后炮弹落点：飞出圈外。"
+
+#: game/scripts/coast_battery.gd
+msgid "ЗА БЕРЕГОВУЮ БАТАРЕЮ"
+msgstr "摧毁海岸炮台"
+
+#: game/scripts/coast_battery.gd
+msgid "Разведка: на мысах ожила береговая батарея! Награда — выбор из редких карточек"
+msgstr "侦察：海岬上的海岸炮台启动了！奖励——稀有卡牌任选"
+
+#: game/scripts/coast_battery.gd
+msgid "береговая батарея"
+msgstr "海岸炮台"
+
+#: game/scripts/coast_battery.gd
+msgid "береговое орудие"
+msgstr "海岸火炮"
+
+#: game/scripts/coast_battery.gd
+msgid "орудие %s"
+msgstr "火炮 %s"
+
+#: game/scripts/hud_flight.gd
+msgid "Награда: выбор из редких карточек + 60 запчастей + ремкомплект"
+msgstr "奖励：稀有卡牌任选 + 60 零件 + 维修包"
