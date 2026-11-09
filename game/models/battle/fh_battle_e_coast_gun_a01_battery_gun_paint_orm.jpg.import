@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ilh8167qkpae"
-path="res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_orm.jpg-fcc6874989f843f8b22c0602d5566978.ctex"
+path.s3tc="res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_orm.jpg-fcc6874989f843f8b22c0602d5566978.s3tc.ctex"
+path.etc2="res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_orm.jpg-fcc6874989f843f8b22c0602d5566978.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "14681bff63375e3481243a1aaada1148"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_coast_gun_a01_battery_gun_paint_orm.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_orm.jpg-fcc6874989f843f8b22c0602d5566978.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_orm.jpg-fcc6874989f843f8b22c0602d5566978.s3tc.ctex", "res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_orm.jpg-fcc6874989f843f8b22c0602d5566978.etc2.ctex"]
 
 [params]
 

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://del2sofaqvcfp"
-path="res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_albedo.jpg-d6f9cd60952d613b38365e1ae302144f.ctex"
+path.s3tc="res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_albedo.jpg-d6f9cd60952d613b38365e1ae302144f.s3tc.ctex"
+path.etc2="res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_albedo.jpg-d6f9cd60952d613b38365e1ae302144f.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "669e13c3a1940d9a7d2c8f609d84f93c"
@@ -14,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://models/battle/fh_battle_e_coast_gun_a01_battery_gun_paint_albedo.jpg"
-dest_files=["res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_albedo.jpg-d6f9cd60952d613b38365e1ae302144f.ctex"]
+dest_files=["res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_albedo.jpg-d6f9cd60952d613b38365e1ae302144f.s3tc.ctex", "res://.godot/imported/fh_battle_e_coast_gun_a01_battery_gun_paint_albedo.jpg-d6f9cd60952d613b38365e1ae302144f.etc2.ctex"]
 
 [params]
 

@@ -122,6 +122,11 @@ func setup_guns(spots: PackedVector2Array, hp_mult: float, dps := 0.0) -> void:
 		targets.append(g)
 
 
+func _ready() -> void:
+	super()
+	z_index = 2   # the rings lie over the 3D ground and its props (AASite's -3 hid them)
+
+
 func who() -> String:
 	return BatteryBalance.WHO
 

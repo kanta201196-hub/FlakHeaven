@@ -14,8 +14,8 @@ const SEARCH_R := 900.0
 ## Grid step of the shore candidate search, px.
 const GRID := 50.0
 ## A gun stands on land this far from the water's edge, px (a cape or islet, not inland, not on the beach).
-const SHORE_MIN := 40.0
-const SHORE_MAX := 250.0
+const SHORE_MIN := 60.0   # the berm reaches ~49 px from the gun: it must not hang over the water
+const SHORE_MAX := 260.0
 ## Level pad: ground at ±PAD_R differs from the centre by at most PAD_TOL px (the scenery battery's _level: berm hides
 ## 0.14 of the 56–64 px site).
 const PAD_R := 30.0
