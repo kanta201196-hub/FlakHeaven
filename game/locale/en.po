@@ -10866,3 +10866,7 @@ msgstr "coastal gun"
 #: game/scripts/coast_battery.gd
 msgid "орудие %s"
 msgstr "gun %s"
+
+#: game/scripts/hud_flight.gd
+msgid "Награда: выбор из редких карточек + 60 запчастей + ремкомплект"
+msgstr "Reward: a pick of rare cards + 60 parts + repair kit"

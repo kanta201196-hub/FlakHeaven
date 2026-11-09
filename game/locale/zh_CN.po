@@ -10866,3 +10866,7 @@ msgstr "海岸火炮"
 #: game/scripts/coast_battery.gd
 msgid "орудие %s"
 msgstr "火炮 %s"
+
+#: game/scripts/hud_flight.gd
+msgid "Награда: выбор из редких карточек + 60 запчастей + ремкомплект"
+msgstr "奖励：稀有卡牌任选 + 60 零件 + 维修包"

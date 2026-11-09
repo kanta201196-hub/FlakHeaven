@@ -39,8 +39,9 @@ const RELOAD_MIN := 5.0
 const RELOAD_MAX := 6.0
 ## Range of one gun, px (*guess*; SAM 900).
 const RANGE := 1100.0
-## At most this many rings on the ground for the whole battery (*guess*), so the guns never wall the sky off.
-const RING_CAP := 2
+## Kanta 09.11 (plan item 7): no cap on rings at once — the guns fire actively, each on its own reload.
+## Repair kits dropped at the last gun when the battery is taken (Kanta 09.11, item 10: reward as the fort «и ремкомплект»).
+const REPAIR_KITS := 1
 ## Gun barrel elevation, rad: low at the range limit, high right overhead (look only).
 const ELEV_MIN := 0.12
 const ELEV_MAX := 0.9

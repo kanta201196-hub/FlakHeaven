@@ -10,7 +10,6 @@ func _ready() -> void:
 	_test_pick_spacing()
 	_test_pick_fails()
 	_test_pick_nearest_first()
-	_test_cap()
 	_test_lead()
 	_test_hit()
 	await _test_real_coast()
@@ -60,13 +59,6 @@ func _test_pick_nearest_first() -> void:
 		cands.append(Vector2(-700.0 + i * 25.0, 0.0))
 	var g := CoastBattery.pick(cands, Vector2(10, 0))
 	_check(not g.is_empty() and g[0].distance_to(Vector2(10, 0)) < 13.0, "first gun nearest the centre")
-
-
-## At most RING_CAP shells on the ground at once for the whole battery.
-func _test_cap() -> void:
-	_check(CoastBattery.can_fire(0), "no rings → may fire")
-	_check(CoastBattery.can_fire(BatteryBalance.RING_CAP - 1), "one under the cap → may fire")
-	_check(not CoastBattery.can_fire(BatteryBalance.RING_CAP), "at the cap → holds fire")
 
 
 ## The shell aims where the player will be when it bursts.

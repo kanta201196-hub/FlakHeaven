@@ -4,8 +4,9 @@ extends AASite
 ## The Archipelago's ground target in the slot «Укрепрайон» takes in the Highlands (no forts at sea): four coastal
 ## guns stand apart on capes and islets along the strait, 300–600 px from each other. Closer than ACTIVATE_R — banner
 ## and timer; each gun turns its turret after the plane and fires slow heavy flak: the shell aims where the plane will
-## be in RING_T s, a ring on the ground shows the spot, then the burst. At most RING_CAP rings at once for the whole
-## battery. All four down within the timer — reward like the fort. A destroyed gun leaves the scenery's broken site.
+## be in RING_T s, a ring on the ground shows the spot, then the burst. Kanta 09.11: no cap on rings, every gun fires
+## on its own reload. All four down within the timer — reward like the fort plus a repair kit dropped at the last gun.
+## A destroyed gun leaves the scenery's broken site.
 ## Built on AASite: the same targets list, `active`, timer and cleanup; GroundTarget "coast_gun" asks `fire`.
 
 ## Shells on the ground: {"p": burst point, "t": seconds left}
@@ -89,11 +90,6 @@ static func sea_dir(tr: Terrain3D, q: Vector2) -> Vector2:
 	return face
 
 
-## May the battery put one more ring on the ground (`rings` are there now)?
-static func can_fire(rings: int) -> bool:
-	return rings < BatteryBalance.RING_CAP
-
-
 ## Where a plane at `pos` flying `vel` will be after `t` s (the shell's aim).
 static func lead(pos: Vector2, vel: Vector2, t: float) -> Vector2:
 	return pos + vel * t
@@ -131,10 +127,10 @@ func who() -> String:
 	return BatteryBalance.WHO
 
 
-## Gun `g` fires if the battery has a free ring: the shell lands where the plane will be in RING_T s.
+## Gun `g` fires: the shell lands where the plane will be in RING_T s. False when there is no plane to aim at.
 func fire(g: GroundTarget) -> bool:
 	var p := Main.I.player
-	if p == null or not can_fire(shells.size()):
+	if p == null:
 		return false
 	shells.append({"p": lead(p.global_position, p.velocity, BatteryBalance.RING_T), "t": BatteryBalance.RING_T})
 	Main.I.sfx.play("explode_big", -12.0, 0.55, g.global_position)
@@ -169,6 +165,8 @@ func on_target_destroyed(g: GroundTarget) -> void:
 		done = true
 		if not failed:
 			Events.activity_succeeded.emit(&"battery")
+			for i in BatteryBalance.REPAIR_KITS:   # Kanta 09.11 (plan item 10): «и ремкомплект»
+				Main.I.pickups.drop_repair(g.global_position + Vector2(randf_range(-40, 40), randf_range(-40, 40)))
 		if Main.I.spawner != null and Main.I.spawner.activity_node == self:
 			Main.I.spawner.activity_node = null
 
