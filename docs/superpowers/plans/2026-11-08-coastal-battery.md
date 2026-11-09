@@ -1,7 +1,7 @@
 # Coastal battery activity «Береговая батарея» (B2-A01) — plan
 
 Decision: `docs/game-context.md`, log line 2026-11-08 (Kanta: option 1, 4 guns, heavy flak only).
-Status: numbers below wait for Kanta's «да» (CLAUDE.md hard rule 2). Model split (step 1) is not a balance change and starts now.
+Status: Kanta «да» 2026-11-09 with two changes — item 7: no ring cap; item 10: plus a repair kit. Placement strip 60–260 px (frames showed the berm over the water at 40). Done in PR #615.
 
 ## What exists (read 2026-11-08)
 - `Spawner.start_activity`: the «fort» slot of the queue is skipped at sea (`Biome.sea()`), the next kind is taken.
@@ -21,10 +21,10 @@ Status: numbers below wait for Kanta's «да» (CLAUDE.md hard rule 2). Model s
 | 4 | Ring before burst | 1.0 s; shell aims at the player's predicted point at burst time | Kanta 08.11 «~1 s» |
 | 5 | Reload per gun | 5–6 s random (*guess*) | SAM 5–6.5 s |
 | 6 | Range | 1100 px from the gun (*guess*) | SAM 900 px |
-| 7 | Cap | at most 2 rings on the ground at once for the whole battery (*guess*) | fort: 4 missiles |
-| 8 | Placement | centre as the fort (AHEAD 1700 px along heading, out of view, ≥ 2 screens); 4 guns on land 40–250 px from water, level pad, 300–600 px apart, within 900 px of the centre; no spot → slot skipped as today | Kanta 08.11 |
+| 7 | Cap | ~~at most 2 rings~~ no cap (Kanta 09.11: «пусть стреляют активно») | fort: 4 missiles |
+| 8 | Placement | centre as the fort (AHEAD 1700 px along heading, out of view, ≥ 2 screens); 4 guns on land 60–260 px from water, level pad, 300–600 px apart, within 900 px of the centre; no spot → slot skipped as today | Kanta 08.11 |
 | 9 | Alarm and timer | 1150 px from the centre, 150 s | `FortBalance` |
-| 10 | Reward | as the fort: 60 parts, rare pick every 2nd activity, else +90 parts and 20 % repair; label «ЗА БЕРЕГОВУЮ БАТАРЕЮ»; xp 5 per gun | `Rewards.ACTIVITY[&"fort"]` |
+| 10 | Reward | as the fort: 60 parts, rare pick every 2nd activity, else +90 parts and 20 % repair; plus 1 repair kit (Kanta 09.11); label «ЗА БЕРЕГОВУЮ БАТАРЕЮ»; xp 5 per gun | `Rewards.ACTIVITY[&"fort"]` |
 | 11 | Medal | «Укрепрайон взят» counts batteries too (otherwise unreachable at sea) | `medals.gd` fort_area |
 | 12 | Wreck | a destroyed gun becomes the broken site model and stays for the sortie | Kanta 08.11 |
 
