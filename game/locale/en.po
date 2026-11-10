@@ -10870,3 +10870,51 @@ msgstr "gun %s"
 #: game/scripts/hud_flight.gd
 msgid "Награда: выбор из редких карточек + 60 запчастей + ремкомплект"
 msgstr "Reward: a pick of rare cards + 60 parts + repair kit"
+
+#: AB-09 loops
+msgid "Битва асов: асы взлетают один за другим. Три ракеты или пара очередей аса — и самолёт сбит, у них так же. От ракет: F — ловушки, E — полупетля сбивает наведение, Пробел — бочка. V — петля: ас на хвосте проскочит вперёд. F1 — настройка полёта."
+msgstr "Ace Battle: aces take off one after another. Three missiles or a couple of an ace's bursts and you are down, and so are they. Against missiles: F — flares, E — the half loop breaks their lock, Space — barrel roll. V — loop: an ace on your tail overshoots. F1 — flight tuning."
+
+#: AB-09 loops
+msgid "ПЕТЛЯ"
+msgstr "LOOP"
+
+#: AB-09 loops
+msgid "ПОЛУПЕТЛЯ"
+msgstr "HALF LOOP"
+
+#: AB-09 loops
+msgid "Петля"
+msgstr "Loop"
+
+#: AB-09 loops
+msgid "Полупетля"
+msgstr "Half loop"
+
+#: AB-09 loops
+msgid "Петля вверх: выход тем же курсом почти там же, где начали, пули и таран проходят снизу. Перезарядка %d с."
+msgstr "A loop up and over: you come out on the same course almost where you started, bullets and rams pass beneath. Reload %d s."
+
+#: AB-09 loops
+msgid "Петля: самолёт уходит вверх и выходит тем же курсом почти там же, где начал. Ас на хвосте проскакивает вперёд, а пули и таран проходят снизу."
+msgstr "Loop: the plane goes up and over and comes out on the same course almost where it started. An ace on your tail overshoots, and bullets and rams pass beneath."
+
+#: AB-09 loops
+msgid "Полупетля вверх: выход обратным курсом, носом на врага сзади; наверху ракеты теряют вас, пули проходят снизу, потом 3 секунды пушка бьёт вдвое чаще"
+msgstr "A half loop up: you come out on the reverse course, nose on the enemy behind; at the top missiles lose you and bullets pass beneath, then for 3 seconds the gun fires twice as often"
+
+#: AB-09 loops
+msgid "Полупетля: самолёт уходит вверх и выходит обратным курсом, носом на врага сзади. Наверху ракеты теряют вас, пули проходят снизу, потом 3 секунды пушка бьёт вдвое чаще."
+msgstr "Half loop: the plane pulls up and comes out on the reverse course, nose on the enemy behind. At the top missiles lose you and bullets pass beneath, then for 3 seconds the gun fires twice as often."
+
+#: AB-09 loops
+msgid "ас на хвосте проскочит вперёд"
+msgstr "an ace on your tail overshoots"
+
+#: AB-09 loops
+msgid "назад через верх, пушка ×2"
+msgstr "back over the top, gun ×2"
+
+#: AB-09 loops
+msgid "ракеты сбиты с наведения: %d"
+msgstr "missiles lost lock: %d"

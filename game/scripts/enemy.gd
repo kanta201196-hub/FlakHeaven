@@ -616,7 +616,7 @@ func _check_contact() -> void:
 	var p := Main.I.player
 	if p == null or p.hp <= 0.0:
 		return
-	if p.dive_t > 0.0:
+	if p.dive_t > 0.0 or p.loop_guarded():
 		return   # правка 3.5-s4: в нырке игрок проходит под самолётами — ни урона, ни столкновения
 	if global_position.distance_to(p.global_position) < radius + p.radius:
 		# второй список 3.5-s5, п. 7: ас-соперник в дуэли и транспортник от столкновения не падают, как и асы

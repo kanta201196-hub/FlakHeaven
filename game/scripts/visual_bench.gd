@@ -497,6 +497,14 @@ func _hold(p: Dictionary) -> void:
 		for i in 9:
 			var cp := pos + Vector2.from_angle(i * 0.7) * (140.0 + 45.0 * i)
 			m.fx.ground.crater(cp, [90.0, 120.0, 150.0][i % 3])
+	if p.has("loop"):   # AB-09: the plane frozen at a share of the loop (negative — of the half loop)
+		var lf := float(p["loop"])
+		m.player.loop_half = lf < 0.0
+		m.player.loop_dur = 1.0
+		m.player.loop_t = 1.0 - absf(lf)
+		m.player._loop_top = m.player.loop_half and absf(lf) >= 0.5
+		m.player.dive_cd = 99.0
+		m.player.s3_cd = 99.0
 	if p.has("roll"):   # 3.4-t1 п. 6: самолёт в бочке, брюхом к камере
 		m.player.roll_dir = 1
 		m.player.roll_t = m.player.roll_time() * float(p["roll"])
@@ -937,6 +945,9 @@ func _make_points() -> Array:
 	pts.append({"name": "closeup", "pos": found.get("o_rocks_big", empty) + Vector2(-260, 0), "zoom": 2.5})
 	pts.append({"name": "roll", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.62})
 	pts.append({"name": "roll90", "pos": empty + Vector2(300, 300), "zoom": 2.5, "roll": 0.78})
+	for lf in [0.15, 0.3, 0.5, 0.7, 0.85]:   # AB-09: loop (Nesterov-style) and half loop poses
+		pts.append({"name": "loop_%02d" % int(lf * 100), "pos": empty + Vector2(300, 300), "zoom": 2.5, "loop": lf})
+		pts.append({"name": "halfloop_%02d" % int(lf * 100), "pos": empty + Vector2(300, 300), "zoom": 2.5, "loop": -lf})
 	if OS.get_cmdline_user_args().has("--altbench"):
 		# Kanta 25.10 (flight altitude): the gameplay zoom over the plain, a ridge and an AA site with enemy
 		# planes around the player and air and ground blasts mid-way, to judge how high the planes read

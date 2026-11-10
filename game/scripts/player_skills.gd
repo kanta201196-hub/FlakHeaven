@@ -39,7 +39,7 @@ func _turn_side() -> float:
 func _handle_skills() -> void:
 	if Input.is_action_just_pressed("roll") and pl.roll_cd <= 0.0 and pl.roll_t <= 0.0 and not pl.has_roll():
 		_flare_salvo()
-	elif Input.is_action_just_pressed("roll") and pl.roll_cd <= 0.0 and pl.roll_t <= 0.0:
+	elif Input.is_action_just_pressed("roll") and pl.roll_cd <= 0.0 and pl.roll_t <= 0.0 and pl.loop_t <= 0.0:
 		pl.roll_t = pl.roll_time()
 		pl.roll_inv = Tuning.g("roll_time") + pl.mods["roll_time"]
 		# 3.4: перезарядка не короче бочки + 1 с — без непрерывной неуязвимости при прокачке
@@ -50,7 +50,11 @@ func _handle_skills() -> void:
 			_mirror_fan()
 		pl.arch_maneuver()
 		Main.I.sfx.play("roll", -10.0)
-	if Input.is_action_just_pressed("dive") and pl.dive_cd <= 0.0 and pl.dive_t <= 0.0:
+	if pl.loops_on():
+		# AB-09: V is the full loop in «Битва асов» (no AA guns there for the dive to duck under)
+		if Input.is_action_just_pressed("dive") and pl.dive_cd <= 0.0 and pl.loop_t <= 0.0 and pl.roll_t <= 0.0:
+			_start_loop(false)
+	elif Input.is_action_just_pressed("dive") and pl.dive_cd <= 0.0 and pl.dive_t <= 0.0:
 		pl.dive_t = pl.dive_time()
 		pl.dive_cd = pl.dive_cd_full()
 		Main.I.tele.add("dive_uses")
@@ -61,7 +65,7 @@ func _handle_skills() -> void:
 		pl.ab_cd = pl.ab_cd_full()
 		pl.arch_maneuver()
 		Main.I.sfx.play("afterburner", -8.0)
-	if Input.is_action_just_pressed("sharp_turn") and pl.s3_cd <= 0.0 and pl.s3_active() <= 0.0:
+	if Input.is_action_just_pressed("sharp_turn") and pl.s3_cd <= 0.0 and pl.s3_active() <= 0.0 and pl.loop_t <= 0.0:
 		_activate_skill3(pl.skill3, 0)
 	if Main.aces():
 		# «Битва асов» (s12, Kanta: «нет способов ухода от ракет»): F — залп ловушек вместо навыка 2-го слота
@@ -72,6 +76,71 @@ func _handle_skills() -> void:
 	if Input.is_action_just_pressed("toggle_fire_mode"):
 		pl.manual_mode = not pl.manual_mode
 		pl.manual_bonus = 0.0
+
+
+## AB-09: starts a loop of «Оса» in «Битва асов»: `half` — the half loop on E (reverses the course), else the
+## full loop on V (keeps it). Steering and movement follow `AcesBalance` until `loop_t` runs out.
+func _start_loop(half: bool) -> void:
+	pl.loop_half = half
+	pl.loop_dur = Tuning.g("aces_half_time" if half else "aces_loop_time")
+	pl.loop_t = pl.loop_dur
+	pl.loop_h0 = pl.heading
+	pl.loop_h1 = pl.heading
+	pl._loop_top = false
+	pl._turn_vel = 0.0
+	if not half:
+		pl.dive_cd = Tuning.g("aces_loop_cd")
+		Main.I.stats_add_counter("loop_uses", 1)
+		Main.I.fx.text(pl.global_position + Vector2(0, -80), Loc.t("ПЕТЛЯ"), Color(0.6, 0.9, 1.0))
+		Hints.show("aces_loop", Loc.t("Петля: самолёт уходит вверх и выходит тем же курсом почти там же, где начал. Ас на хвосте проскакивает вперёд, а пули и таран проходят снизу."), 8.0, 2)
+		Main.I.sfx.play("dive", -12.0, 1.2)
+	pl.arch_maneuver()
+
+
+## AB-09: the combat turn of «Оса» as a half loop in «Битва асов». Exit course: nose on the nearest enemy behind
+## (within the lock cone of the reverse course), else the reverse course. Keeps the combat turn's gun mode,
+## levels and «Чёртово колесо»; missiles lose lock at the top (`loop_top`).
+func _half_loop(lvl: int) -> void:
+	_start_loop(true)
+	Main.I.stats_add_counter("half_loop_uses", 1)
+	var back := wrapf(pl.heading + PI, -PI, PI)
+	pl.turn_lock = _combat_target(back)
+	var has := pl.turn_lock != null
+	var want := (pl.turn_lock.global_position - pl.global_position).angle() if has else back
+	pl.loop_h1 = AcesBalance.half_loop_exit(pl.heading, want, has)
+	if has and not is_equal_approx(pl.loop_h1, wrapf(want, -PI, PI)):
+		pl.turn_lock = null   # the enemy is off to the side: plain reversal, no gun lock
+	pl.s3_t = pl.loop_dur
+	pl.combat_t = pl.loop_dur + 3.0 + (1.0 if lvl >= 1 else 0.0)
+	if pl.syn.has("s_wheel"): # «Чёртово колесо»: ракеты В-В сразу готовы
+		for g in pl.groups:
+			if (g as Hardpoint).weapon == "aam":
+				(g as Hardpoint).cd = 0.0
+	Main.I.fx.text(pl.global_position + Vector2(0, -80), Loc.t("ПОЛУПЕТЛЯ") + " · " + Loc.t("ПУШКА ×2"), Color(0.6, 0.9, 1.0))
+	Hints.show("aces_half_loop", Loc.t("Полупетля: самолёт уходит вверх и выходит обратным курсом, носом на врага сзади. Наверху ракеты теряют вас, пули проходят снизу, потом 3 секунды пушка бьёт вдвое чаще."), 8.0, 2)
+	Main.I.sfx.play("combat_turn", -6.0, 0.6)
+
+
+## AB-09: the top of the half loop — the course flips (seen from above the plane is vertical) and missiles
+## chasing it lose lock, as the combat turn's did.
+func loop_top() -> void:
+	pl._loop_top = true
+	pl.heading = pl.loop_h1
+	var n := Main.I.projectiles.break_locks(pl.global_position, 1100.0)
+	Main.I.stats_add_counter("locks_broken", n)
+	if pl.lvl_of("combat_turn") >= 3:
+		_intercept_all(250.0)
+	Main.I.fx.ring(pl.global_position, 90.0, Color(0.6, 0.9, 1.0))
+	if n > 0:
+		Main.I.fx.text(pl.global_position + Vector2(0, -60), Loc.t("ракеты сбиты с наведения: %d") % n, Color(0.6, 0.9, 1.0))
+
+
+## AB-09: the end of a loop: the plane flies on at a share of its speed and gets back the usual steering.
+func loop_end() -> void:
+	pl.heading = pl.loop_h1 if pl.loop_half else pl.loop_h0
+	pl._energy *= Tuning.g("aces_half_exit" if pl.loop_half else "aces_loop_exit")
+	pl.velocity = Vector2.from_angle(pl.heading) * pl.velocity.length()
+	pl.loop_t = 0.0
 
 
 func _activate_skill3(id := "", slot := 0) -> void:
@@ -85,6 +154,8 @@ func _activate_skill3(id := "", slot := 0) -> void:
 		pl.sb_cd = pl.cd_of(id)
 	Main.I.stats_add_counter("skill3_uses" if slot == 0 else "skill2_uses", 1)
 	match id:
+		"combat_turn" when pl.loops_on():
+			_half_loop(lvl)
 		"combat_turn":
 			pl.s3_t = float(d["time"])
 			pl.turn_t = pl.s3_t

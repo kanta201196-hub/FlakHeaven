@@ -900,6 +900,7 @@ func _smoke_end(code: int, why: String) -> void:
 		print("SMOKE: aces mode — aces down %d, gone %d, hp %.0f / %.0f, cards %d (+%d pending)" % [m.run.aces_down, m.run.aces_gone,
 			m.player.hp if is_instance_valid(m.player) else 0.0, m.player.max_hp if is_instance_valid(m.player) else 0.0,
 			m.run.picks_taken, m.run.pending_levels])
+		print("SMOKE: aces mode — loops %d, half loops %d (AB-09)" % [int(m.counters.get("loop_uses", 0)), int(m.counters.get("half_loop_uses", 0))])
 		# AB-02: the mode has no ground targets, so cards never hand out a ground-only weapon
 		var ground_w: Array = m.player.groups.filter(func(g): return not (g as Hardpoint).builtin and not CardBalance.offered((g as Hardpoint).weapon, false)).map(func(g): return (g as Hardpoint).weapon) if is_instance_valid(m.player) else []
 		print("SMOKE: aces mode — weapons %s, ground-only %s" % [str(m.player.groups.map(func(g): return (g as Hardpoint).weapon)) if is_instance_valid(m.player) else "[]", str(ground_w)])

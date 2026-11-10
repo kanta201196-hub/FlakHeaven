@@ -10870,3 +10870,31 @@ msgstr "火炮 %s"
 #: game/scripts/hud_flight.gd
 msgid "Награда: выбор из редких карточек + 60 запчастей + ремкомплект"
 msgstr "奖励：稀有卡牌任选 + 60 零件 + 维修包"
+
+#: AB-09 loops
+msgid "ПЕТЛЯ"
+msgstr "筋斗"
+
+#: AB-09 loops
+msgid "ПОЛУПЕТЛЯ"
+msgstr "半筋斗"
+
+#: AB-09 loops
+msgid "Петля"
+msgstr "筋斗"
+
+#: AB-09 loops
+msgid "Полупетля"
+msgstr "半筋斗"
+
+#: AB-09 loops
+msgid "ас на хвосте проскочит вперёд"
+msgstr "咬尾的王牌会冲过头"
+
+#: AB-09 loops
+msgid "назад через верх, пушка ×2"
+msgstr "从上方掉头，机炮 ×2"
+
+#: AB-09 loops
+msgid "ракеты сбиты с наведения: %d"
+msgstr "导弹丢失锁定：%d"
