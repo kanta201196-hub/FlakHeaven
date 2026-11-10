@@ -1220,7 +1220,13 @@ func _sync_units(m: Main, delta: float, sd: float) -> void:
 			var dk := p.dive_k()   # 3.5 «Нырок»: самолёт плавно ниже и меньше на экране
 			var ra := _relief_alt(u, p.global_position, p.velocity, 1.0, sd)
 			var y: float = maxf(ra - Tuning.g("dive_depth") * dk, _ground_floor(p.global_position, Tuning.g("plane_len") * p.size * 0.5))
-			_place(u, p.global_position, p.heading, (p.bank_vis * deg_to_rad(Tuning.g("aces_bank")) if Main.aces() else vis_bank(p.bank_vis, float(p.cls.get("bank_deg", 32.0)))), roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), u.pitch - 0.2 * p.dive_pitch())
+			var pitch: float = u.pitch - 0.2 * p.dive_pitch()
+			if p.loop_t > 0.0:   # AB-09: loops of «Оса» in «Битва асов» — pitch through the vertical, up towards the camera
+				var lp := AcesBalance.loop_pose(p.loop_frac(), p.loop_half)
+				pitch = u.pitch + lp.y
+				roll = lp.z
+				y += Tuning.g("aces_loop_h") * lp.w
+			_place(u, p.global_position, p.heading, (p.bank_vis * deg_to_rad(Tuning.g("aces_bank")) if Main.aces() else vis_bank(p.bank_vis, float(p.cls.get("bank_deg", 32.0)))), roll, y, (1.0 - 0.15 * dk) * _alt_scale(y), pitch)
 			# форсаж: огонь длиннее, след плотнее и шире (плавно, без скачка)
 			# S9-16: на «Звуковом ударе» (ram_t) — тот же огонь и плотный след, что на форсаже
 			u.ab = move_toward(float(u.ab), 1.0 if p.ab_t > 0.0 or p.ram_t > 0.0 else 0.0, sd * 4.0)

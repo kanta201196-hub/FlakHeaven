@@ -107,6 +107,12 @@ var roll_inv := 0.0        # 3.5: неуязвимость бочки — у «�
 var salvo_t := 0.0         # 3.5: «Кит» — залп ловушек (для индикатора)
 var dive_t := 0.0          # 3.5 (правка 29): «Нырок» — самолёт ниже, пули и таран самолётов проходят над ним
 var dive_cd := 0.0
+var loop_t := 0.0          # AB-09: «Битва асов» loop / half loop of «Оса» in progress, s left
+var loop_dur := 0.0
+var loop_half := false     # true — half loop on E (reverses the course), false — full loop on V
+var loop_h0 := 0.0         # course on entry
+var loop_h1 := 0.0         # course after the half loop
+var _loop_top := false     # the half loop has passed the vertical (heading flipped, locks broken)
 var _turn_vel := 0.0       # 3.5: угловая скорость — набирается с ускорением класса
 var _thr_hold := 0.0       # 3.5: сколько секунд РУД не на крейсерской
 var _thr_lock := false     # 3.5: РУД вернули принудительно — ждём, пока отпустят W/S
@@ -771,9 +777,25 @@ func dive_pitch() -> float:
 	return 0.0
 
 
-## В нырке пули и таран вражеских самолётов проходят выше; ПВО, ракеты и земля — бьют
+## В нырке пули и таран вражеских самолётов проходят выше; ПВО, ракеты и земля — бьют.
+## AB-09: in the middle of a loop they pass under the plane in the same way.
 func dodges(source: String, who: String) -> bool:
-	return dive_t > 0.0 and who != "ПВО" and (source == "пули" or source == "таран")
+	return (dive_t > 0.0 or loop_guarded()) and who != "ПВО" and (source == "пули" or source == "таран")
+
+
+## AB-09: the «Битва асов» loops replace the combat turn (E) and the dive (V) of «Оса» (F1 `aces_loops`).
+func loops_on() -> bool:
+	return Main.aces() and cls_id == "fighter" and Tuning.g("aces_loops") >= 1.0
+
+
+## Share of the current loop flown, 0..1 (0 when there is none).
+func loop_frac() -> float:
+	return 0.0 if loop_t <= 0.0 or loop_dur <= 0.0 else 1.0 - loop_t / loop_dur
+
+
+## True while bullets and rams pass under the plane in a loop (AB-09).
+func loop_guarded() -> bool:
+	return loop_t > 0.0 and AcesBalance.loop_guard(loop_frac(), Tuning.g("aces_loop_guard"))
 
 
 func is_invulnerable() -> bool:

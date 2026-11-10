@@ -149,3 +149,58 @@ static func collision_ahead(rel_pos: Vector2, rel_vel: Vector2, r: float = AVOID
 ## True when a rival ace may launch a missile at the player `d` px away and `off_deg` degrees off its nose.
 static func ace_can_launch(d: float, off_deg: float) -> bool:
 	return d >= ACE_MSL_MIN and d <= ACE_MSL_MAX and off_deg <= ACE_MSL_CONE
+
+
+## Loops of «Оса» in the mode (Kanta 2026-11-10, AB-09; F1 `aces_loops`, 0 — combat turn on E and dive on V):
+## E — half loop with a half roll at the end (Immelmann-style; its in-game name has no surname, the world is
+## fictional): the plane pulls up and comes back over its starting point on the reverse course, or nose on the
+## nearest enemy behind when it is within HALF_LOCK_DEG of that course. It keeps the combat turn's cooldown,
+## levels and «Чёртово колесо»; missiles lose lock at the top; gun ×2 for 3 s after the exit.
+## V — full loop (Nesterov-style): the plane goes up and over and comes out on the same course where it began,
+## so an ace on its tail overshoots. Cooldown LOOP_CD s.
+## Both: bullets and rams pass under in the middle LOOP_GUARD share of the manoeuvre (missiles still hit), and
+## the plane leaves it at HALF_EXIT / LOOP_EXIT of its speed. First guesses, F1 sliders `aces_*loop*`.
+const HALF_LOOP_TIME := 1.2
+const LOOP_TIME := 1.8
+const LOOP_CD := 10.0
+const LOOP_GUARD := 0.7
+const HALF_EXIT := 0.7
+const LOOP_EXIT := 0.85
+const HALF_LOCK_DEG := 60.0
+## How high the model climbs at the top, px (3D; the dive goes 110 down)
+const LOOP_HEIGHT := 150.0
+
+
+## Course after the half loop entered on `heading`: nose on `target` (an angle) when there is one within
+## HALF_LOCK_DEG of the reverse course, else the reverse course itself.
+static func half_loop_exit(heading: float, target: float, has_target: bool, lock_deg: float = HALF_LOCK_DEG) -> float:
+	var back := wrapf(heading + PI, -PI, PI)
+	if has_target and absf(wrapf(target - back, -PI, PI)) <= deg_to_rad(lock_deg):
+		return wrapf(target, -PI, PI)
+	return back
+
+
+## Ground speed along the entry course at share `f` (0..1) of the manoeuvre, × flight speed: the cosine of the
+## pitch angle (a loop seen from above). The half loop ends flying back (−1), the full loop forward (+1);
+## both end over their starting point.
+static func loop_ground_k(f: float, half: bool) -> float:
+	return cos(clampf(f, 0.0, 1.0) * (PI if half else TAU))
+
+
+## True while bullets and rams pass under the plane: the middle `guard` share of the manoeuvre.
+static func loop_guard(f: float, guard: float = LOOP_GUARD) -> bool:
+	return absf(f - 0.5) < guard * 0.5
+
+
+## Pose of the model at share `f` of the manoeuvre: Vector4(yaw offset from the plane's current heading, pitch
+## (nose up +), roll, height 0..1). The half loop flips the heading at the vertical (the game does it), so after
+## that the model is inverted on the new course with the nose coming down and rolls upright over the last 30 %.
+static func loop_pose(f: float, half: bool) -> Vector4:
+	f = clampf(f, 0.0, 1.0)
+	if not half:
+		var s := sin(PI * f)
+		return Vector4(0.0, TAU * f, 0.0, s * s)
+	var th := PI * f
+	if f < 0.5:
+		return Vector4(0.0, th, 0.0, sin(th))
+	return Vector4(0.0, PI - th, PI * (1.0 - smoothstep(0.7, 1.0, f)), sin(th))

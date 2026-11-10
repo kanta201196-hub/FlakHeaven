@@ -12,6 +12,12 @@ func _init(p: Player) -> void:
 
 func _tick_timers(delta: float) -> void:
 	pl.roll_t = maxf(0.0, pl.roll_t - delta)
+	if pl.loop_t > 0.0:   # AB-09: loops of «Оса» in «Битва асов»
+		pl.loop_t = maxf(0.0, pl.loop_t - delta)
+		if pl.loop_half and not pl._loop_top and pl.loop_frac() >= 0.5:
+			pl.skills.loop_top()
+		if pl.loop_t <= 0.0:
+			pl.skills.loop_end()
 	pl.roll_inv = maxf(0.0, pl.roll_inv - delta)
 	pl.salvo_t = maxf(0.0, pl.salvo_t - delta)
 	pl.skills.salvo_waves()
@@ -54,6 +60,12 @@ func _tick_timers(delta: float) -> void:
 
 
 func _steer(delta: float) -> void:
+	if pl.loop_t > 0.0:
+		# AB-09: in a loop the plane flies in the vertical plane — no steering, the wings level out
+		pl._turn_vel = 0.0
+		pl.bank = lerpf(pl.bank, 0.0, 1.0 - exp(-delta * 12.0))
+		pl.bank_vis = lerpf(pl.bank_vis, 0.0, 1.0 - exp(-delta * 12.0))
+		return
 	var tr := pl.turn_rate()
 	var prev := pl.heading
 	# 3.5 (правка 13): угловая скорость набирается и гасится с ускорением класса — Оса вертится сразу,
@@ -193,6 +205,17 @@ func _move(delta: float) -> void:
 		want_e = pl._energy
 	var rate := Tuning.g("speed_regain") * float(pl.cls.get("accel_k", 1.0))
 	pl._energy = move_toward(pl._energy, want_e, (rate * 1.5 if want_e < pl._energy else rate) * delta)
+	if pl.loop_t > 0.0:
+		# AB-09: a loop seen from above — ground speed along the entry course is the cosine of the pitch
+		# after the top of the half loop the plane comes back along its exit course (it may lean onto an enemy)
+		var gk := AcesBalance.loop_ground_k(pl.loop_frac(), pl.loop_half)
+		var dir := Vector2.from_angle(pl.loop_h0)
+		if pl.loop_half and pl._loop_top:
+			dir = Vector2.from_angle(pl.loop_h1)
+			gk = -gk
+		pl.velocity = dir * speed * pl._energy * gk
+		pl.position += pl.velocity * delta
+		return
 	speed *= pl._energy
 	var target := Vector2.from_angle(pl.heading) * speed
 	var inertia := Tuning.g("inertia") * (Tuning.g("aces_slide") if Main.aces() else 1.0)

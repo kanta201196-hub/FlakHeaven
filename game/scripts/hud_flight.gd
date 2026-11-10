@@ -641,12 +641,25 @@ func _skill_list(p: Player) -> Array:
 	out.append({"key": "afterburner", "action": "afterburner", "title": Loc.t("Форсаж"), "hint": Loc.t("рывок вперёд"),
 		"desc": Loc.t("Рывок на скорости %.1f с, таранит мелких врагов на пути. Тратит топливо. Перезарядка %d с.") % [p.ab_time_full(), int(round(p.ab_cd_full()))],
 		"cd": p.ab_cd, "full": p.ab_cd_full(), "active": p.ab_t, "fam": "maneuver_skill"})
-	out.append({"key": "dive", "action": "dive", "title": Loc.t("Нырок"), "hint": Loc.t("вниз, под огнём ПВО"),
-		"desc": Loc.t("Самолёт уходит к земле на %.1f с: ПВО и ракеты его теряют. Перезарядка %d с.") % [p.dive_time(), int(round(p.dive_cd_full()))],
-		"cd": p.dive_cd, "full": p.dive_cd_full(), "active": p.dive_t, "fam": "maneuver_skill"})
+	var loops := p.loops_on()   # AB-09: «Битва асов» — V is the loop, E (combat turn) is the half loop
+	if loops:
+		out.append({"key": "dive", "action": "dive", "title": Loc.t("Петля"), "hint": Loc.t("ас на хвосте проскочит вперёд"),
+			"desc": Loc.t("Петля вверх: выход тем же курсом почти там же, где начали, пули и таран проходят снизу. Перезарядка %d с.") % int(round(Tuning.g("aces_loop_cd"))),
+			"cd": p.dive_cd, "full": Tuning.g("aces_loop_cd"), "active": p.loop_t if not p.loop_half else 0.0, "fam": "maneuver_skill"})
+	else:
+		out.append({"key": "dive", "action": "dive", "title": Loc.t("Нырок"), "hint": Loc.t("вниз, под огнём ПВО"),
+			"desc": Loc.t("Самолёт уходит к земле на %.1f с: ПВО и ракеты его теряют. Перезарядка %d с.") % [p.dive_time(), int(round(p.dive_cd_full()))],
+			"cd": p.dive_cd, "full": p.dive_cd_full(), "active": p.dive_t, "fam": "maneuver_skill"})
 	var s3: Dictionary = p.s3_def()
-	out.append({"key": p.skill3, "action": "sharp_turn", "title": Loc.t(s3["title"]) + ("" if p.s3_lvl() <= 0 else " " + Prog.ROMAN[p.s3_lvl()]),
-		"hint": Loc.t(String(s3.get("hud", ""))), "desc": Loc.t(String(s3.get("short", ""))) + Loc.t(". Перезарядка %d с.") % int(round(p.cd_of(p.skill3))),
+	var s3_title := Loc.t(s3["title"])
+	var s3_hint := Loc.t(String(s3.get("hud", "")))
+	var s3_short := Loc.t(String(s3.get("short", "")))
+	if loops and p.skill3 == "combat_turn":
+		s3_title = Loc.t("Полупетля")
+		s3_hint = Loc.t("назад через верх, пушка ×2")
+		s3_short = Loc.t("Полупетля вверх: выход обратным курсом, носом на врага сзади; наверху ракеты теряют вас, пули проходят снизу, потом 3 секунды пушка бьёт вдвое чаще")
+	out.append({"key": p.skill3, "action": "sharp_turn", "title": s3_title + ("" if p.s3_lvl() <= 0 else " " + Prog.ROMAN[p.s3_lvl()]),
+		"hint": s3_hint, "desc": s3_short + Loc.t(". Перезарядка %d с.") % int(round(p.cd_of(p.skill3))),
 		"cd": p.s3_cd, "full": p.cd_of(p.skill3), "active": p.s3_active(), "fam": "skill"})
 	if Main.aces():
 		out.append({"key": "flares", "action": "skill_2", "title": Loc.t("Ловушки"), "hint": Loc.t("уводят ракеты"),
