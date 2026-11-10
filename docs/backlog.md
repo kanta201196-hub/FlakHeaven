@@ -11,11 +11,11 @@
 
 **Правила ведения.** В каждом разделе не больше 10–15 живых задач. Новая задача — в раздел своей системы, с номером. Номера не меняются. Закрыл — строка в конец `backlog-archive.md` («Дописано после…»), здесь удалил. Шапку «Где мы сейчас» обновляем при каждой сборке и каждую пятницу на ревью.
 
-## Where we are (09.11.2026)
+## Where we are (10.11.2026)
 
-- **Game:** `main` at `e0070bb` (PR #615, coastal battery B2-A01, merged 09.11); the earlier list of merges is in `docs/status-log.md`. Open: PR #600 (two editions, ED-03/04/08), checks green, not merged yet.
-- **Last build:** 3.5-s18, shipped 08.11 on Kanta's command (itch.io and Yandex Disk; line in `docs/status-log.md`). The s18 in-game checklist is not in the repo, so "closed X of Y" is not counted (догадка: 0 of N checked until Kanta reports). Next build only on Kanta's command, and only after the s18 items are checked in the game.
-- **Main path:** Valve's review of Steamworks documents ~16.11 (7 days left); Next Fest registration by 10.01.2027 (62 days left); demo and page to Valve by 18.01.2027 (70 days left).
+- **Game:** `main` at `e513e6c` (PR #616, skills `steam-publish` and `game-feel`, merged 09.11; before it PR #615, coastal battery B2-A01); the earlier list of merges is in `docs/status-log.md`. Open: PR #600 (two editions, ED-03/04/08), checks green, not merged yet (not in `main` as of 10.11).
+- **Last build:** 3.5-s18, rebuilt 09.11 with #615 on Kanta's command (itch.io and Yandex Disk; lines in `docs/status-log.md`). Kanta has not checked it yet. The s18 in-game checklist is not in the repo, so "closed X of Y" is not counted (догадка: 0 of N checked until Kanta reports). Next build only on Kanta's command, not before the next day, and only after the s18 items are checked in the game.
+- **Main path:** Valve's review of Steamworks documents ~16.11 (6 days left); Next Fest registration by 10.01.2027 (61 days left); demo and page to Valve by 18.01.2027 (69 days left).
 - **Open on Kanta:** `docs/owner-checklist/kanta-now.md` (first item of the daily stand-up).
 - **Strong-model threads:** no more than six at once (since 25.10.2026); the coordinator runs the queue.
 
