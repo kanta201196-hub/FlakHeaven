@@ -400,7 +400,7 @@ var _break := 0.0             # направление отворота посл
 func _target(rng: float) -> Enemy:
 	var air := type == "swift"
 	var natural := "nearest" if air else "ground"
-	match Settings.wing_prio_now():
+	match 0 if FirstSortie.light() else Settings.wing_prio_now():   # PG-17: first sortie — each wingman by own task
 		1:
 			var p := Main.I.player
 			var t := Weapons.pick_target(p.global_position, rng * 0.8, "nearest", [], air)

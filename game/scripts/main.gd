@@ -59,7 +59,7 @@ var banned := {}        # ключи исключённых карточек
 var locked: Dictionary = {}  # закреплённая карточка — появится в следующем выборе
 var offer_rare := false
 var class_task: ClassTask = null   # EX-07: задание класса на вылет
-var op_tasks: OpTasks = null   # OT-01: side objectives of the operation (null in «Битва асов» or with F1 op_tasks = 0)
+var op_tasks: OpTasks = null   # OT-01: side objectives of the operation (null in «Битва асов», with F1 op_tasks = 0 and in the first sortie, PG-17)
 var level_at_5 := 0   # уровень на 5:00 — для баланса кривой опыта
 var stats := {}
 ## Damage per second by source over the last minute (pause screen, combat UI v2)
@@ -296,9 +296,13 @@ func start_run() -> void:
 	player.setup(cls_id, sk1, sks[1] if sks[1] != sk1 else (sks[0] if sks[0] != sk1 else ""))
 	world.add_child(player)
 	class_task = null if aces() else ClassTask.new(cls_id)
-	op_tasks = null if aces() or not OpTaskBalance.on() else OpTasks.new(String(Campaign.op()["id"]))
+	# PG-17: the profile's first sortie has no side objectives (and no wing orders, see FirstSortie)
+	FirstSortie.begin(int(Profile.data.get("sorties", 0)), aces())
+	op_tasks = null if aces() or not OpTaskBalance.on() or FirstSortie.light() else OpTasks.new(String(Campaign.op()["id"]))
 	if not aces():
 		Story.start(self)   # EX-09: «Купол», задание класса, в финале — «Гром» в звене
+		if FirstSortie.fresh():   # PG-17: the second sortie — HQ says what has opened since the first
+			Story.say("Штаб", Loc.t(FirstSortie.radio_line(op_tasks != null)))
 	projectiles = Projectiles.new()
 	world.add_child(projectiles)
 	fx = Fx.new()

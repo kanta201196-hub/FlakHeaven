@@ -137,7 +137,7 @@ func handle_global_input() -> void:
 			return
 	if Input.is_action_just_pressed("toggle_tuning") and (Main.DEBUG or Main.aces()):
 		m.tuning_panel.toggle(not Main.DEBUG)
-	if Input.is_action_just_pressed("wing_prio") and m.state == "playing" and is_instance_valid(m.player) and not m.player.wingmen.is_empty():
+	if Input.is_action_just_pressed("wing_prio") and m.state == "playing" and is_instance_valid(m.player) and not m.player.wingmen.is_empty() and not FirstSortie.light():
 		cycle_wing_prio()
 	if Input.is_action_just_pressed("toggle_numbers"):
 		Tuning.set_param("damage_numbers", 1.0 - Tuning.g("damage_numbers"))
@@ -495,6 +495,8 @@ func hangar_action(a: String) -> void:
 ## Правка 3.5-s4: цель звена — по кругу; ведущий слышит ответ по радио
 ## Steps the wingmen's target forward (`dir` 1) or back (-1) and says it on the radio.
 func cycle_wing_prio(dir := 1) -> void:
+	if FirstSortie.light():   # PG-17: no wing orders in the first sortie
+		return
 	Settings.wing_prio = wrapi(Settings.wing_prio_now() + dir, 0, Settings.WING_PRIO.size())
 	if Settings.wing_prio_now() != Settings.wing_prio:   # no ground targets: «наземные цели» is skipped
 		Settings.wing_prio = wrapi(Settings.wing_prio + dir, 0, Settings.WING_PRIO.size())

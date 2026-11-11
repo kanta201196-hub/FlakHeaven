@@ -10898,3 +10898,27 @@ msgstr "从上方掉头，机炮 ×2"
 #: AB-09 loops
 msgid "ракеты сбиты с наведения: %d"
 msgstr "导弹丢失锁定：%d"
+
+#: PG-17 lighter first sortie
+msgid "новое"
+msgstr "新"
+
+#: PG-17 lighter first sortie
+msgid "НОВОЕ"
+msgstr "新"
+
+#: PG-17 lighter first sortie
+msgid "держат строй"
+msgstr "保持编队"
+
+#: PG-17 lighter first sortie
+msgid "В звене: %s. Ведомые держат строй и бьют сами."
+msgstr "编队成员：%s。僚机保持编队并自主攻击。"
+
+#: PG-17 lighter first sortie
+msgid "Сегодня у операции есть свои задания — смотрите список целей, за каждое запчасти. И звено теперь слушает приказы: кого бить первым."
+msgstr "今天的行动有专属任务——请看目标列表，每完成一项都有零件奖励。编队现在也听从命令：优先攻击谁。"
+
+#: PG-17 lighter first sortie
+msgid "Звено теперь слушает приказы: кого бить первым. Плитка «Звено» внизу и пауза."
+msgstr "编队现在听从命令：优先攻击谁。使用下方的“编队”图块或暂停菜单。"
