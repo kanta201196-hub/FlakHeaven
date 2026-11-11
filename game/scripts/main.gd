@@ -30,6 +30,8 @@ var mode := "campaign"
 var cls_id := "fighter"
 var skill_pick := {}
 var codex_back := "menu"
+## PG-16: where the album tab returns to — "paused" (opened from the pause tab strip) or "levelup" (Tab on the card pick)
+var album_back := "paused"
 var result_t := 0.0
 var result_tab := 0 # правка 30: вкладка итогов — 0 обзор, 1 урон, 2 сборка
 var hangar_cls := "fighter"

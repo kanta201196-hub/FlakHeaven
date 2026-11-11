@@ -88,8 +88,20 @@ func handle_global_input() -> void:
 					m.choose_course(i)
 					return
 			return
+		"album":   # PG-16: the album tab over the frozen fight
+			if Input.is_action_just_pressed("ui_up") or Input.is_action_just_pressed("ui_down"):
+				HudAlbumRun.move(1 if Input.is_action_just_pressed("ui_down") else -1)
+			elif Input.is_action_just_pressed("pause"):
+				m._set_state("levelup" if m.album_back == "levelup" else "playing")
+			elif Input.is_action_just_pressed("loadout") or Input.is_action_just_pressed("tab_prev") or Input.is_action_just_pressed("tab_next"):
+				m._set_state(m.album_back)
+			return
 		"levelup":
 			if m._state_t < CARD_INPUT_DELAY:
+				return
+			# PG-16: Tab (or E / RB, the pause tab key) — the whole album, the cards wait under it
+			if Input.is_action_just_pressed("loadout") or Input.is_action_just_pressed("tab_next"):
+				open_album("levelup")
 				return
 			# Enter / gamepad A take the focused card (A is also "choose_1": focus starts on card 1)
 			if _accept_pressed():
@@ -178,6 +190,9 @@ func _pause_nav() -> void:
 			var a := HudPause.side(dir)
 			if a != "":
 				ui_click(a)
+	if Input.is_action_just_pressed("tab_prev") or Input.is_action_just_pressed("tab_next"):
+		open_album("paused")
+		return
 	if _accept_pressed():
 		var a := HudPause.accept()
 		if a != "":
@@ -244,7 +259,25 @@ func abort_run() -> void:
 	m._set_state("menu")
 
 
+## PG-16: opens the album tab over the fight; `back` — "paused" or "levelup", where Tab / the other tab return
+func open_album(back: String) -> void:
+	m.album_back = back
+	m._set_state("album")
+
+
 func ui_click(action: String) -> void:
+	if action == "tab_album" and m.state == "paused":
+		open_album("paused")
+		return
+	if action == "album_open" and m.state == "levelup":
+		open_album("levelup")
+		return
+	if action == "tab_build" and m.state == "album":
+		m._set_state(m.album_back)
+		return
+	if action.begins_with("album_sel:"):
+		HudAlbumRun.sel = int(action.substr(10))
+		return
 	if action == "menu_prep":
 		# «Подготовка и вылет» (Kanta 06.11): one menu item — the hangar first, its «Приготовиться к вылету» opens the
 		# mission screen. Story (step 3): the prologue scene the first time.

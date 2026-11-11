@@ -10919,6 +10919,159 @@ msgstr "back over the top, gun ×2"
 msgid "ракеты сбиты с наведения: %d"
 msgstr "missiles lost lock: %d"
 
+msgid "в ангаре выбран другой навык класса"
+msgstr "another class skill is chosen in the hangar"
+
+msgid "самолёту не положены ведомые"
+msgstr "this plane takes no wingmen"
+
+msgid "нет на самолёте: "
+msgstr "not on this plane: "
+
+msgid "в этом вылете выбран другой профиль"
+msgstr "another profile is chosen this sortie"
+
+msgid "третий профиль открывает ветка оружия в ангаре"
+msgstr "the third profile opens in the weapon's hangar branch"
+
+msgid "оч."
+msgstr "pts"
+
+msgid "СОБРАНО В ЭТОМ ВЫЛЕТЕ"
+msgstr "COLLECTED THIS SORTIE"
+
+msgid "МОЖНО СОБРАТЬ В ЭТОМ ВЫЛЕТЕ"
+msgstr "CAN BE BUILT THIS SORTIE"
+
+msgid "НА ЭТОМ САМОЛЁТЕ НЕ СОБРАТЬ"
+msgstr "NOT ON THIS PLANE"
+
+msgid "СБОРКА"
+msgstr "BUILD"
+
+msgid "КАРТОЧКИ"
+msgstr "CARDS"
+
+msgid "Записей альбома для этого самолёта нет"
+msgstr "No album entries for this plane"
+
+msgid "ваша специализация"
+msgstr "your specialization"
+
+msgid "новое для альбома"
+msgstr "new to the album"
+
+msgid "собрано в этом вылете"
+msgstr "collected this sortie"
+
+msgid "с 7:00"
+msgstr "from 7:00"
+
+#, c-format
+msgid "нет на самолёте: %s"
+msgstr "not on this plane: %s"
+
+msgid "в альбоме: "
+msgstr "in the album: "
+
+msgid "ещё не найдена"
+msgstr "not found yet"
+
+msgid "Что делает: "
+msgstr "What it does: "
+
+msgid "Собрано в этом вылете"
+msgstr "Collected this sortie"
+
+msgid "Рецепт: "
+msgstr "Recipe: "
+
+msgid "На этом самолёте не собрать: "
+msgstr "Cannot be built on this plane: "
+
+msgid "Есть: "
+msgstr "Have: "
+
+#, c-format
+msgid "Первая находка: +%d запчастей"
+msgstr "First find: +%d parts"
+
+msgid "Ваша специализация: когда рецепт готов, связка придёт карточкой."
+msgstr "Your specialization: once the recipe is met, the synergy comes as a card."
+
+msgid "Связка придёт карточкой, если выбрать её специализацией (смена — за один переброс)."
+msgstr "The synergy comes as a card if you make it your specialization (changing costs one reroll)."
+
+msgid "Связка придёт карточкой, если выбрать её специализацией."
+msgstr "The synergy comes as a card if you make it your specialization."
+
+msgid "Модернизация придёт карточкой с 7:00 вылета, когда рецепт готов."
+msgstr "The modernization comes as a card from 7:00 of the sortie, once the recipe is met."
+
+#, c-format
+msgid "Профиль выбирается карточкой на ур. %d оружия."
+msgstr "The profile is picked by a card at weapon Lv. %d."
+
+msgid "Очки дают карточки этого тега."
+msgstr "Points come from cards with this tag."
+
+msgid "запись"
+msgstr "entry"
+
+msgid "к карточкам"
+msgstr "to the cards"
+
+msgid "к сборке"
+msgstr "to the build"
+
+#, c-format
+msgid "▲ ОТКРОЕТ СВЯЗКУ «%s»"
+msgstr "▲ OPENS SYNERGY “%s”"
+
+#, c-format
+msgid "▲ РЕЦЕПТ СВЯЗКИ «%s»"
+msgstr "▲ RECIPE OF “%s” MET"
+
+msgid "нужно выбрать её специализацией"
+msgstr "make it your specialization"
+
+#, c-format
+msgid "▲ ОТКРОЕТ МОДЕРНИЗАЦИЮ %s"
+msgstr "▲ OPENS MODERNIZATION %s"
+
+msgid "карточка придёт с 7:00"
+msgstr "the card comes from 7:00"
+
+#, c-format
+msgid "К связке «%s»: %d из %d"
+msgstr "Toward “%s”: %d of %d"
+
+#, c-format
+msgid "К модернизации %s: %d из %d"
+msgstr "Toward %s: %d of %d"
+
+msgid "нужно ещё: "
+msgstr "still needed: "
+
+msgid "БЛИЖАЙШИЕ РЕЦЕПТЫ"
+msgstr "NEAREST RECIPES"
+
+msgid "Всё, что этот самолёт может собрать, уже собрано."
+msgstr "Everything this plane can build is built."
+
+#, c-format
+msgid "Весь альбом: найдено %d из %d"
+msgstr "Whole album: %d of %d found"
+
+msgid "специализация"
+msgstr "specialization"
+
+msgid "▲ эта карточка"
+msgstr "▲ this card"
+
+msgid "альбом"
+msgstr "album"
+
 #: PG-17 lighter first sortie
 msgid "новое"
 msgstr "new"

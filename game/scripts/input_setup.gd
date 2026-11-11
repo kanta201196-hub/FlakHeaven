@@ -26,6 +26,9 @@ func _ready() -> void:
 	_add("pause", [KEY_ESCAPE], [JOY_BUTTON_BACK])
 	_add("restart", [KEY_R], [JOY_BUTTON_START])
 	_add("loadout", [KEY_TAB], [])
+	# PG-16: pause tabs «СБОРКА» / «АЛЬБОМ» (only read while paused, so Q / E and the shoulders keep their combat jobs)
+	_add("tab_prev", [KEY_Q], [JOY_BUTTON_LEFT_SHOULDER])
+	_add("tab_next", [KEY_E], [JOY_BUTTON_RIGHT_SHOULDER])
 	_add("fire_hardpoint", [KEY_K], [], [[JOY_AXIS_TRIGGER_LEFT, 1.0]], [MOUSE_BUTTON_RIGHT])
 	# card pick: gamepad buttons apart from combat ones (design system §3.2); the card pick
 	# ignores Start's "restart" and the d-pad's up/down
