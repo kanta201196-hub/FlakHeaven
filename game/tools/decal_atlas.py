@@ -1,7 +1,7 @@
 """Plane decal atlas (prototype, spec docs/superpowers/specs/2026-10-27-plane-decals-design.md).
 
 Draws the decal set procedurally with PIL (no downloaded art) into one mask atlas:
-8 x 4 cells of 256 px, 2048 x 1024. Each pixel stores which paint it takes, not a colour:
+8 x 12 cells of 256 px, 2048 x 3072 (rows 4-11: the Deluxe pack, decal_editions.py). Each pixel stores which paint it takes, not a colour:
 R = primary paint, G = secondary paint, B = ink (outline, dark details), A = coverage.
 RGB is normalised (R + G + B = 255 where A > 0), so mipmaps and the importer's alpha-border
 fix keep the weights; the shader tints the three weights with the player's colours.
@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CELL = 256
 SS = 4  # supersampling
 C = CELL * SS
-COLS, ROWS = 8, 4
+COLS, ROWS = 8, 12
 PRIM, SEC, INK = (255, 0, 0, 255), (0, 255, 0, 255), (0, 0, 255, 255)
 OUT_W = 40  # ink outline width in supersampled pixels
 
@@ -344,6 +344,8 @@ def build() -> Image.Image:
         (12, shark_mouth()), (14, eye()), (15, peaks()), (26, tally_air()), (27, tally_ground()),
         (28, tally_bomb()), (29, shark_eye()),
     ] + [(16 + n, digit(n)) for n in range(10)]
+    import decal_editions   # the Deluxe pack (ED-04, ED-08) from cell 32; imported here, it imports this module
+    cells += [(decal_editions.FIRST + i, fn()) for i, (_id, fn) in enumerate(decal_editions.EDITIONS)]
     atlas = Image.new("RGBA", (COLS * CELL, ROWS * CELL), (0, 0, 0, 0))
     for idx, img in cells:
         small = img.resize((img.width // SS, img.height // SS), Image.Resampling.BOX)

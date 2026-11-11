@@ -31,6 +31,8 @@ const RULES := {
 static func is_open(id: String, cls: String, counters: Dictionary, crew: int) -> bool:
 	if id in START:
 		return true
+	if DecalCatalog.PACK_IMAGES.has(id):   # the Deluxe pack has no milestones: owned (today: the bench) — all open
+		return DecalCatalog.pack_shown()
 	for owner: String in MASCOTS:
 		if MASCOTS[owner] == id:
 			return owner == cls or int(counters.get("sorties_" + owner, 0)) >= 1

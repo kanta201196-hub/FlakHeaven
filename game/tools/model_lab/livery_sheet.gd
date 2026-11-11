@@ -6,7 +6,7 @@ extends Node
 ##   [liv=classic,black_gloss] — только эти окраски; [views=0,1,2] — виды: 0 — 3/4 сверху, 1 — сверху, 2 — крупно кабина;
 ##   тест 3.5-s7 (дефекты окраски в ангаре), крупно как в ангаре: 3 — двигатель и крыло спереди слева (ракурс Kanta),
 ##   4 — крыло сзади сверху, 5 — низ спереди, 6 — хвост, 7 — нос, 8 / 9 — гондола и правое крыло сзади почти по горизонту (ракурс скриншота Kanta), 10 — хвост внутренней гондолы снизу сзади;
-##   [scale=2] — кадр вдвое крупнее [env=hangar] — небо, свет и винты как в ангаре
+##   [dist=1.3] — camera distance of views 0 and 1 (×, the whole plane in frame); [scale=2] — кадр вдвое крупнее [env=hangar] — небо, свет и винты как в ангаре
 var vp: SubViewport
 var cam: Camera3D
 var holder: Node3D
@@ -15,6 +15,7 @@ var frames := 0
 var shots: Array = []
 var cur: Array
 var sc := 1
+var dist := 1.0   ## dist=… multiplies the camera distance of views 0 and 1
 const CLOSE := [
 	[Vector3(0.05, -0.02, -0.2), -0.75, 0.18, 0.42],
 	[Vector3(-0.05, 0.0, -0.2), -2.3, 0.55, 0.45],
@@ -36,6 +37,7 @@ func _ready():
 	var hangar_env := false
 	for a in args:
 		if a.begins_with("scale="): sc = int(a.get_slice("=", 1))
+		if a.begins_with("dist="): dist = float(a.get_slice("=", 1))
 	for a in args:
 		if a.begins_with("liv="): only = Array(a.get_slice("=", 1).split(","))
 		if a.begins_with("views="):
@@ -118,10 +120,10 @@ func _process(_d: float) -> void:
 		Insignia.attach(model, k, "player")
 		Livery.apply(model, cur[0], cur[1], cur[2])
 		if cur[3] == 0:
-			cam.position = Vector3(cos(-2.3), 0.0, sin(-2.3)) * cos(0.45) * 0.95 + Vector3(0, sin(0.45) * 0.95, 0)
+			cam.position = Vector3(cos(-2.3), 0.0, sin(-2.3)) * cos(0.45) * 0.95 * dist + Vector3(0, sin(0.45) * 0.95 * dist, 0)
 			cam.look_at(Vector3.ZERO, Vector3.UP)
 		elif cur[3] == 1:
-			cam.position = Vector3(0, 1.15, 0.001)
+			cam.position = Vector3(0, 1.15 * dist, 0.001)
 			cam.look_at(Vector3.ZERO, Vector3(1, 0, 0))
 		elif cur[3] >= 3:   # крупные планы: [фокус, рысканье, тангаж, дальность] — как камера ангара
 			var cv: Array = CLOSE[cur[3] - 3]
