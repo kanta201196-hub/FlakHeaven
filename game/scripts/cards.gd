@@ -1458,8 +1458,13 @@ static func apply(p: Player, card: Dictionary) -> void:
 		"evolution":
 			var eid := String(card.get("evo", card["weapon"]))
 			p.evolve(eid)
-			Events.banner.emit(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(String(Modernizations.def(eid)["title"])), 4.0)
-			p.album_find("evo:" + eid, String(Modernizations.def(eid)["title"]))
+			var ed := Modernizations.def(eid)
+			if HudPower.on():   # PG-13: a modernization is a «момент силы»
+				Events.power_moment.emit(&"evo", Loc.t(String(ed["title"])), Loc.t(String(ed.get("desc", ""))),
+					UiStyle.ACCENT_SOFT, 0)
+			else:
+				Events.banner.emit(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(String(ed["title"])), 4.0)
+			p.album_find("evo:" + eid, String(ed["title"]))
 		"reserve":
 			var tk: String = String(card["id"])
 			p.taken[tk] = int(p.taken.get(tk, 0)) + 1

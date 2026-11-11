@@ -126,6 +126,40 @@ func _shot(name: String) -> void:
 
 
 var _ui_phase := 0
+var _power_at := -1.0
+
+
+## PG-13 frames: godot --path game --rendering-driver opengl3 -- --autotest --god --shots --powertest
+## At 3 s of flight opens the «Карусель» synergy and queues an archetype rank III and a modernization
+## moment; saves shot_power_flash.png (the flash), shot_power_synergy / _arch / _evo.png (each title at
+## 0.9 s) and quits. With --tune=power_moment:0 it saves shot_power_off.png (the s16 banner) instead.
+func _power_test() -> void:
+	var pw := m.hud.power
+	if _power_at < 0.0:
+		if m.run_time < 3.0:
+			return
+		_power_at = _shot_t
+		m.player.open_synergy("carousel")
+		if HudPower.on():
+			var ad: Dictionary = ArchBalance.DEFS["missiles"]
+			Events.power_moment.emit(&"arch", "«%s»" % Loc.t(String(ad["title"])),
+				Loc.t(String(ad["ranks"][2]["desc"])), Prog.TAGS["missiles"]["color"], 0)
+			var ed := Modernizations.def("aam_swarm")
+			Events.power_moment.emit(&"evo", Loc.t(String(ed["title"])), Loc.t(String(ed["desc"])),
+				UiStyle.ACCENT_SOFT, 0)
+		return
+	if not HudPower.on():
+		if _shot_t - _power_at > 0.8:
+			_shot("power_off")
+			m.get_tree().quit()
+		return
+	var a := pw.age()
+	if pw.kind() == &"synergy" and a > 0.08 and a < 0.3:
+		_shot("power_flash")
+	if a > 0.9:
+		_shot("power_" + String(pw.kind()))
+	if _shots_done.has("power_evo"):
+		m.get_tree().quit()
 var _menu_phase := 0
 
 
@@ -755,6 +789,9 @@ func _debug_screenshots(delta: float) -> void:
 		return
 	if m._args.has("--hudtest") and m.state == "playing":
 		_hud_test()
+		return
+	if m._args.has("--powertest") and m.state == "playing":
+		_power_test()
 		return
 	if m.state == "menu" and m._state_t > 1.0:
 		_shot("menu")

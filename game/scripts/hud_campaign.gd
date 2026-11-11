@@ -275,9 +275,12 @@ func _brief(x: float, y: float, w: float, bottom: float, paint: bool) -> float:
 	# the main task first, then the operation's own objectives (`OpTaskBalance`, F1 op_tasks): ✓ once ever done
 	y += _bp(Vector2(x, y + 14.0), "◆ " + Loc.t(String(o["task"])), w, 18, Color.WHITE, paint) + 8.0
 	var tasks := Campaign.tasks_of(Campaign.index())
-	if OpTaskBalance.on() and not tasks.is_empty():
+	# PG-17: none before the profile's first sortie, marked «НОВОЕ» before the second
+	var phase := FirstSortie.upcoming()
+	if OpTaskBalance.on() and not tasks.is_empty() and phase != FirstSortie.LIGHT:
 		y += 14.0
-		_bt(Vector2(x, y), Loc.t("ЗАДАНИЯ ОПЕРАЦИИ · +%d запчастей за каждое") % int(OpTaskBalance.PARTS), 15, C_TITLE, paint)
+		var head := Loc.t("ЗАДАНИЯ ОПЕРАЦИИ · +%d запчастей за каждое") % int(OpTaskBalance.PARTS)
+		_bt(Vector2(x, y), (Loc.t("НОВОЕ") + " · " + head) if phase == FirstSortie.NEW else head, 15, C_TITLE, paint)
 		y += 10.0
 		for t: Dictionary in tasks:
 			var done := Campaign.task_done(Campaign.index(), String(t["id"]))

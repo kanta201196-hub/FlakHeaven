@@ -65,6 +65,7 @@ Project rules override skills. Small, clear changes (one file, a number, text): 
 - **requesting-code-review** (or the Engineering plugin's **code-review**) before merging a code PR.
 - Engineering plugin **architecture** / **system-design** when a change touches the structure in `architecture.md` (new ADR, new system boundary).
 - **test-driven-development** for any new non-visual logic: formulas, progression, saves, rewards, card selection (unit tests in `game/tests/*_test.gd`, run by `tools/ci/unit.sh`). Combat feel, graphics and menus: `smoke.sh` / `full.sh`.
+- **task-observer** (TRIAL since 2026-11-11, Kanta; plan and removal steps: `docs/process/task-observer-trial.md`): in a thread with multi-step work, invoke it before the first tool call and run its Session Start Protocol. Log pinned to `docs/process/skill-observations/observation-log/` (one file per observation, committed to `main` with the thread's docs; never only on a working branch). Log, don't act: never edit a skill or rule because of an observation without Kanta's "yes". Skip it for one-line questions and for subagents.
 - Docs, site, marketing and builds: no skill chain.
 
 ## Library docs (Context7)

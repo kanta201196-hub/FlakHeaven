@@ -49,6 +49,10 @@ signal evac_point_lost(who: String)
 ## Show a banner at the top of the screen for `duration` real seconds.
 @warning_ignore("unused_signal")
 signal banner(text: String, duration: float)
+## «Момент силы» (PG-13): a synergy, archetype rank III or modernization opened. `kind` — &"synergy",
+## &"arch", &"evo"; `title`, `line` — translated name and one effect line; `slot` — synergy slot number.
+@warning_ignore("unused_signal")
+signal power_moment(kind: StringName, title: String, line: String, color: Color, slot: int)
 ## Radio message from `from`; `enemy` marks intercepted enemy chatter (red frame).
 @warning_ignore("unused_signal")
 signal radio(from: String, text: String, enemy: bool)
