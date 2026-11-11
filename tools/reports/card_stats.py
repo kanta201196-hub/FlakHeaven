@@ -141,10 +141,11 @@ def main() -> int:
     ap.add_argument("--cls", default="", help="only this class (fighter / attacker / bomber)")
     ap.add_argument("--min", type=int, default=1, help="hide cards offered fewer times")
     a = ap.parse_args()
-    rows = [r for r in load(a.paths) if not a.cls or r.get("class") == a.cls]
+    keep = lambda rs: [r for r in rs if not a.cls or r.get("class") == a.cls]  # noqa: E731
+    rows = keep(load(a.paths))
     if a.syn_by > 0:
         after = syn_share(rows, a.syn_by)
-        before = syn_share(load(a.before), a.syn_by) if a.before else None
+        before = syn_share(keep(load(a.before)), a.syn_by) if a.before else None
         print(f"Sorties with ≥ 1 synergy by {int(a.syn_by) // 60}:{int(a.syn_by) % 60:02d}\n")
         print("| Class | " + ("Before | After |" if before else "Share |"))
         print("| --- | " + ("--- | --- |" if before else "--- |"))
