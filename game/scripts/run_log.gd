@@ -27,7 +27,8 @@ static func write(m: Main, outcome: String) -> void:
 	head += ";skill2;course_log;syn_open;course_pts;crew_lvl;crew_xp_gain;parts_total;nodes;plane_tier;perks;wbranch;meta_k"
 	# 3.4: замеры для анализа правок по кросс-проверке (Telemetry); timeline — последняя колонка
 	# S8 «eweap» (l7): taken_kind — полученный урон по видам оружия врагов (ПЗРК, ЗРК, пулемёт пикапа, пушка БМП…)
-	head += ";log_ver;" + ";".join(PackedStringArray(Telemetry.COLS)) + ";op;aces;taken_kind;timeline"
+	# l8 (PG-12): card_offers — every card screen «second Llevel: key/rarity, …» with the taken card marked «*»
+	head += ";log_ver;" + ";".join(PackedStringArray(Telemetry.COLS)) + ";op;aces;taken_kind;card_offers;timeline"
 	m.last_log_header = head
 	if exists:
 		f.seek_end()
@@ -63,6 +64,7 @@ static func write(m: Main, outcome: String) -> void:
 	row.append("aces/test" if Main.aces() else "%s/%s" % [Campaign.op()["id"], Campaign.diff()["title"]])
 	row.append(aces(m))
 	row.append(kv(m.stats.get("taken_kind", {})))
+	row.append(" | ".join(PackedStringArray(m.card_offers)))
 	row.append(" | ".join(m.tele.timeline))
 	m.last_log_row = ";".join(row)
 	m.last_outcome = outcome
