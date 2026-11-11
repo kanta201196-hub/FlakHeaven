@@ -21,6 +21,8 @@ var radio_enemy := false
 var _radio_at := 0
 var _autotest := false
 var _dmg_flash := 0.0
+## «Момент силы» (PG-13): queue and drawing of the unlock moments; `HudFlight.draw_post` draws it.
+var power := HudPower.new()
 var _buttons: Array = [] # [Rect2, action]
 ## The flight HUD layers drew something last frame (so they need one more pass to clear)
 var _layers_live := false
@@ -113,13 +115,16 @@ func _ready() -> void:
 	HudIcons.warm()
 	Events.banner.connect(_on_banner)
 	Events.radio.connect(_on_radio)
+	Events.power_moment.connect(power.push)
+	power.log_lines = _autotest
 
 
-## Clears the banner and radio panel (new sortie).
+## Clears the banner, radio panel and queued power moments (new sortie).
 func clear_messages() -> void:
 	banner = ""
 	banner_t = 0.0
 	radio_t = 0.0
+	power.clear()
 
 
 ## Seconds since the current radio message arrived (panel slide-in and flash).
@@ -161,6 +166,7 @@ func _process(delta: float) -> void:
 	var real := delta / maxf(Engine.time_scale, 0.01)   # messages count real time (slow-mo, hit-stop)
 	banner_t = maxf(0.0, banner_t - real)
 	radio_t = maxf(0.0, radio_t - real)
+	power.tick(real, Main.I != null and Main.I.state == "playing")
 	ctrl.queue_redraw()   # its pass queues the flight HUD layers (`_draw_hud`)
 
 

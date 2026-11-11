@@ -320,6 +320,10 @@ func _arch_up(t: String, r: int, quiet: bool) -> void:
 	var d: Dictionary = ArchBalance.DEFS[t]
 	if r == ArchBalance.MAX_RANK:
 		album_find("arch:" + t, "%s III" % String(d["title"]))   # PG-11 B5: rank III goes into the build album
+	if r == ArchBalance.MAX_RANK and HudPower.on():   # PG-13: rank III is a «момент силы»
+		Events.power_moment.emit(&"arch", "«%s»" % Loc.t(String(d["title"])), Loc.t(String(d["ranks"][r - 1]["desc"])),
+			Prog.TAGS[t]["color"], 0)
+		return
 	Events.banner.emit(Loc.t("АРХЕТИП «%s» — РАНГ %s") % [Loc.t(String(d["title"])).to_upper(), Prog.ROMAN[r]], 3.5)
 	Main.I.fx.text(global_position + Vector2(0, -80), Loc.t(String(d["ranks"][r - 1]["desc"])), Prog.TAGS[t]["color"])
 	Main.I.fx.ring(global_position, 200.0, Prog.TAGS[t]["color"])
@@ -380,9 +384,13 @@ func open_synergy(id: String) -> void:
 		Main.I.tele.add("syn_pair_" + id)
 		if SynPairs.two_weapons(id):
 			Main.I.tele.add("syn_pair_2w")
-	Events.banner.emit("СВЯЗКА «%s» — СЛОТ %d" % [String(sd["title"]).to_upper(), syn.size()], 4.5)
+	if HudPower.on():   # PG-13: the moment plays its own sound and rings when the player is back in flight
+		Events.power_moment.emit(&"synergy", "«%s»" % Loc.t(String(sd["title"])),
+			Loc.t(String(sd.get("desc", sd.get("short", "")))), sd.get("color", Color(1, 0.85, 0.3)), syn.size())
+	else:
+		Events.banner.emit("СВЯЗКА «%s» — СЛОТ %d" % [String(sd["title"]).to_upper(), syn.size()], 4.5)
+		Main.I.sfx.play("synergy", -6.0, 1.6)
 	album_find("syn:" + id, String(sd["title"]))
-	Main.I.sfx.play("synergy", -6.0, 1.6)
 	Main.I.slowmo(0.6)
 	Main.I.fx.ring(global_position, 260.0, sd.get("color", Color(1, 0.85, 0.3)))
 	# первое срабатывание сразу — связку видно в ту же секунду

@@ -128,7 +128,7 @@ func bar_now() -> bool:
 
 
 ## The flight HUD above the bottom bar, in the order it always had: minimap, combat texts,
-## boss bars, markers, radio, hints, the skill tooltip, banner and first-minute key hints.
+## boss bars, markers, radio, hints, the skill tooltip, banner, power moment and first-minute key hints.
 ## Hud draws it on its own layer after the bar layers, so the bar can sit between the panels
 ## drawn by `draw` and these without being redrawn every frame.
 func draw_post(m: Main, size: Vector2) -> void:
@@ -164,6 +164,8 @@ func draw_post(m: Main, size: Vector2) -> void:
 		var by := _banner_y   # under the boss bars when an ace is up, with a gap (s12); see `_center_stack`
 		ctrl.draw_rect(Rect2((size.x - bw) / 2.0, by, bw, 44), Color(0.02, 0.025, 0.03, 0.6 * a))
 		_ctext(by + 22.0 + fs / 3.0, m.hud.banner, fs, Color(1.0, 0.85, 0.5, a))
+	if m.state == "playing":
+		m.hud.power.draw(ctrl, size)
 
 	if m.run_time > 180.0 or m.state != "playing" or int(Profile.data.get("sorties", 0)) >= KEY_HINT_SORTIES:
 		return
