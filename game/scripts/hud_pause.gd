@@ -104,9 +104,9 @@ func _hardpoints(m: Main, p: Player, r: Rect2, size: Vector2) -> float:
 		var row := Rect2(r.position.x + 12.0, y, r.size.x - 24.0, rh - 6.0)
 		_group_row(m, p, gi, row, mp)
 		y += rh
-		if gi < p.groups.size() - 1 or not p.wingmen.is_empty():
+		if gi < p.groups.size() - 1 or (not p.wingmen.is_empty() and not FirstSortie.light()):
 			ctrl.draw_line(Vector2(r.position.x + 24, y - 4), Vector2(r.end.x - 24, y - 4), UiStyle.LINE, 1.0)
-	if not p.wingmen.is_empty():
+	if not p.wingmen.is_empty() and not FirstSortie.light():   # PG-17: no wing orders in the first sortie
 		var wr := Rect2(r.position.x + 12.0, y, r.size.x - 24.0, rh - 6.0)
 		var on := focus == "wing"
 		if on:

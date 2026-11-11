@@ -380,9 +380,10 @@ func _goal_rows(m: Main) -> Array:
 	var task := m.class_task.hud_line() if m.class_task != null else ""
 	if task != "":
 		rows.append([m.class_task.state == "done", task.trim_prefix("✓ "), "+%d" % int(Rewards.ACTIVITY[&"class_task"]["parts"])])
-	if m.op_tasks != null:   # OT-01: the operation's side objectives
+	if m.op_tasks != null:   # OT-01: the operation's side objectives; PG-17: «новое» in the profile's second sortie
+		var mark := (Loc.t("новое") + " · ") if FirstSortie.fresh() else ""
 		for r: Array in m.op_tasks.rows():
-			rows.append([r[0], r[1], "" if r[0] else "+%d" % int(OpTaskBalance.PARTS)])
+			rows.append([r[0], ("" if r[0] else mark) + String(r[1]), "" if r[0] else "+%d" % int(OpTaskBalance.PARTS)])
 	var every := Tuning.g("boss_every")
 	var next := (floorf(m.run_time / every) + 1.0) * every - m.run_time
 	rows.append([false, Loc.t("ас в бою!") if m.boss_alive() else Loc.t("ас через %d:%02d") % [int(next) / 60, int(next) % 60], ""])
@@ -493,10 +494,11 @@ func _skill_layout(sk: Dictionary, pos: Vector2, sig: Array, row := false, rh :=
 	if active > 0.0 or (cd <= 0.0 and fam == "skill"):
 		frame = UiStyle.ACCENT
 	var dim := cd > 0.0 and active <= 0.0
-	var key := key_label(String(sk["action"]))
+	var key := "" if String(sk["action"]) == "" else key_label(String(sk["action"]))   # PG-17: a row with no key
 	sig.append_array([sk["key"], fam, frame, dim, sk["title"], sk["hint"]])
 	var tip := Rect2(pos.x, pos.y, SIDE_W, rh) if row else Rect2(pos.x, pos.y - 16.0, BAR_COL, 136.0)
-	_skill_tips.append([tip, "%s · %s" % [String(sk["title"]).to_upper(), key], String(sk["desc"]), String(sk["action"]), row])
+	var head := String(sk["title"]).to_upper() if key == "" else "%s · %s" % [String(sk["title"]).to_upper(), key]
+	_skill_tips.append([tip, head, String(sk["desc"]), String(sk["action"]), row])
 	var c := BarCol.new()
 	c.sk = sk
 	c.pos = pos
@@ -620,7 +622,15 @@ func _extra_list(p: Player) -> Array:
 		wl.append("%s %d" % [Loc.t(Prog.WING_TYPES[wm.type]["short"]), wm.lvl])
 		if not wm.temp and not wm.alive():
 			back = maxf(back, wm.dead_t)
+	if FirstSortie.light():   # PG-17: no orders in the first sortie — no key cap, no «цель»
+		out.append({"key": "wingman", "action": "", "title": Loc.t("Звено"),
+			"hint": (Loc.t("вернётся %d с") % int(ceil(back))) if back > 0.0 else Loc.t("держат строй"),
+			"desc": Loc.t("В звене: %s. Ведомые держат строй и бьют сами.") % ", ".join(wl),
+			"cd": 0.0, "full": 1.0, "active": 0.0, "fam": "wing"})
+		return out
 	var hint := (Loc.t("вернётся %d с") % int(ceil(back))) if back > 0.0 else (Loc.t("цель: %s") % Loc.t(Settings.WING_PRIO[Settings.wing_prio_now()]))
+	if FirstSortie.fresh():
+		hint = Loc.t("новое") + " · " + hint
 	out.append({"key": "wingman", "action": "wing_prio", "title": Loc.t("Звено"), "hint": hint,
 		"desc": Loc.t("В звене: %s. Ведомые держат строй и бьют сами. Клавиша меняет, кого они атакуют первым.") % ", ".join(wl),
 		"cd": 0.0, "full": 1.0, "active": 0.0, "fam": "wing"})
@@ -763,6 +773,8 @@ func _skill_dyn(c: BarCol) -> void:
 		ctrl.draw_string(f2, Vector2(tr.position.x, tr.position.y + 22.0), as_, HORIZONTAL_ALIGNMENT_RIGHT, tr.size.x - 5.0, 20, UiStyle.ACCENT_SOFT)
 	var kf := UiStyle.head_font(700, 1)
 	var key := c.key
+	if key == "":   # PG-17: the wing row in the first sortie has no key
+		return
 	var kw := maxf(28.0, UiStyle.text_w(kf, key, UiStyle.FS_CAPTION) + 14.0)
 	# key cap on the tile's top-left corner; in a left-column row it hangs off the left edge
 	# instead, so it stays inside the row

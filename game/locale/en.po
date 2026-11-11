@@ -10918,3 +10918,27 @@ msgstr "back over the top, gun ×2"
 #: AB-09 loops
 msgid "ракеты сбиты с наведения: %d"
 msgstr "missiles lost lock: %d"
+
+#: PG-17 lighter first sortie
+msgid "новое"
+msgstr "new"
+
+#: PG-17 lighter first sortie
+msgid "НОВОЕ"
+msgstr "NEW"
+
+#: PG-17 lighter first sortie
+msgid "держат строй"
+msgstr "holding formation"
+
+#: PG-17 lighter first sortie
+msgid "В звене: %s. Ведомые держат строй и бьют сами."
+msgstr "In the flight: %s. Wingmen hold formation and fight on their own."
+
+#: PG-17 lighter first sortie
+msgid "Сегодня у операции есть свои задания — смотрите список целей, за каждое запчасти. И звено теперь слушает приказы: кого бить первым."
+msgstr "Today the operation has objectives of its own: see the goal list, each one pays parts. And the flight takes orders now: who to hit first."
+
+#: PG-17 lighter first sortie
+msgid "Звено теперь слушает приказы: кого бить первым. Плитка «Звено» внизу и пауза."
+msgstr "The flight takes orders now: who to hit first. Use the Flight tile below or the pause menu."
