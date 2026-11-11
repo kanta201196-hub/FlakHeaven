@@ -29,6 +29,11 @@ func _init(main: Main) -> void:
 func process(delta: float) -> void:
 	if m._args.has("--exittest") and _exit_test():
 		return
+	if m._args.has("--albumshots"):   # PG-16: album pictures; the bot only gets the sortie started
+		if _album == null:
+			_album = AlbumShots.new(m)
+		if _album.process(delta):
+			return
 	if m._autotest:
 		if not _ss_campaign:   # the story-shots run ends on the campaign screen: the bot must not press «В вылет» again
 			_run_autotest(delta)
@@ -40,6 +45,8 @@ func process(delta: float) -> void:
 			_smoke_check()
 	if m._args.has("--pairtest") or m._args.has("--cardtest") or m._args.has("--archtest"):
 		_pair_test()
+	if m._args.has("--albumtest"):
+		_album_test()
 	if m._args.has("--shots"):
 		_debug_screenshots(delta)
 	if m.state == "playing" and m._args.has("--aaflat") and not _shots_done.has("aaflat") and m.run_time > 3.0:
@@ -300,6 +307,81 @@ func _ui_test() -> void:
 
 
 var _pair_phase := 0
+var _album_phase := 0
+var _album_t := 0.0
+
+
+## PG-16 frames: a level-9 card pick on a plane halfway to «Карусель» and «Шмель» (user://shot_album_cards.png),
+## Tab → the album tab over the cards (shot_album_tab.png), a row further down (shot_album_tab2.png), then the pause
+## with its tab strip (shot_album_pause.png) and its album tab (shot_album_pause_tab.png); then quits.
+## godot --path game --rendering-driver opengl3 -- --autotest --god --class=fighter --albumtest
+func _album_test() -> void:
+	_album_t += get_process_delta_time_real()
+	var p := m.player
+	if _album_phase == 0 and m.state == "playing" and m.run_time > 2.0 and is_instance_valid(p):
+		for g in p.groups:
+			var h: Hardpoint = g
+			if h.weapon == "aam":
+				h.level = 4
+			elif not h.builtin and h.is_empty() and not h.heavy and not p.groups.any(func(x): return (x as Hardpoint).weapon == "flares"):
+				h.weapon = "flares"
+				h.level = 2
+				h.priority = "nearest"
+		p.taken["reload"] = 1
+		p.course = "carousel"
+		m.run.level = 9
+		m.run.pending_levels = 1
+		m._open_levelup()
+		# a flares upgrade first, so the shot shows a card that completes the recipe
+		for gi in p.groups.size():
+			if (p.groups[gi] as Hardpoint).weapon == "flares" and m.offers.size() > 0:
+				m.offers[0] = Cards.finalize(p, {"id": "up_%d" % gi, "ban": "up_flares", "kind": "weapon_up", "group": gi, "rarity": 1,
+					"cat": "Оружие", "title": "Тепловые ловушки"})
+		_album_phase = 1
+		_album_t = 0.0
+	elif _album_phase == 1 and m.state == "levelup" and _album_t > 1.2:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_album_cards.png")
+		print("SHOT album_cards")
+		m.input_ctl.open_album("levelup")
+		_album_phase = 2
+		_album_t = 0.0
+	elif _album_phase == 2 and _album_t > 0.8:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_album_tab.png")
+		print("SHOT album_tab")
+		for i in 6:
+			HudAlbumRun.move(1)
+		_album_phase = 3
+		_album_t = 0.0
+	elif _album_phase == 3 and _album_t > 0.6:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_album_tab2.png")
+		print("SHOT album_tab2")
+		m._set_state("levelup")
+		_album_phase = 7
+		_album_t = 0.0
+	elif _album_phase == 7 and _album_t > 0.9:   # the card pick is live again after its input delay
+		m.choose_card(0)
+		_album_phase = 4
+		_album_t = 0.0
+	elif _album_phase == 4 and m.state == "playing" and _album_t > 0.6:
+		m._set_state("paused")
+		_album_phase = 5
+		_album_t = 0.0
+	elif _album_phase == 5 and _album_t > 0.8:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_album_pause.png")
+		print("SHOT album_pause")
+		m.input_ctl.open_album("paused")
+		HudAlbumRun.sel = 0
+		_album_phase = 6
+		_album_t = 0.0
+	elif _album_phase == 6 and _album_t > 0.8:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_album_pause_tab.png")
+		print("SHOT album_pause_tab")
+		m.get_tree().quit()
+
+
+## Real seconds of this frame (the card pick and the pause stop game time)
+func get_process_delta_time_real() -> float:
+	return m.get_process_delta_time() / maxf(Engine.time_scale, 0.01)
 
 ## S10-01: экран выбора мастерства в бою («или-ИЛИ», 35-й уровень) — кадр для проверки
 ## godot --path game --rendering-driver opengl3 -- --autotest --smoke --god --class=fighter --pairtest
@@ -914,6 +996,7 @@ func _smoke_end(code: int, why: String) -> void:
 # ---------- Автотест (-- --autotest): бот летает, берёт карточки, умирает/эвакуируется и начинает заново ----------
 
 var _bot_wait := 0.0
+var _album: AlbumShots = null
 var _runs_done := 0
 var _loadout_opened := false
 
@@ -1044,7 +1127,7 @@ func _run_autotest(delta: float) -> void:
 				m.choose_course(0)
 			return
 		"levelup":
-			if m._args.has("--pairtest") or m._args.has("--cardtest") or m._args.has("--archtest") or m._args.has("--combatui"):
+			if m._args.has("--pairtest") or m._args.has("--cardtest") or m._args.has("--archtest") or m._args.has("--combatui") or m._args.has("--albumtest"):
 				return   # S10-01: экран выбора держим для кадра
 			if _bot_wait <= 0.0:
 				_bot_wait = 0.3
