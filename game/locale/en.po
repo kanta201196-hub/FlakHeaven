@@ -10942,3 +10942,9 @@ msgstr "Today the operation has objectives of its own: see the goal list, each o
 #: PG-17 lighter first sortie
 msgid "Звено теперь слушает приказы: кого бить первым. Плитка «Звено» внизу и пауза."
 msgstr "The flight takes orders now: who to hit first. Use the Flight tile below or the pause menu."
+#: PG-13 power moment
+msgid "НОВАЯ СВЯЗКА · СЛОТ %d"
+msgstr "NEW SYNERGY · SLOT %d"
+
+msgid "АРХЕТИП · РАНГ III"
+msgstr "ARCHETYPE · RANK III"
