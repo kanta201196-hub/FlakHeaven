@@ -11,11 +11,11 @@
 
 **Правила ведения.** В каждом разделе не больше 10–15 живых задач. Новая задача — в раздел своей системы, с номером. Номера не меняются. Закрыл — строка в конец `backlog-archive.md` («Дописано после…»), здесь удалил. Шапку «Где мы сейчас» обновляем при каждой сборке и каждую пятницу на ревью.
 
-## Where we are (10.11.2026)
+## Where we are (11.11.2026)
 
-- **Game:** `main` at `e513e6c` (PR #616, skills `steam-publish` and `game-feel`, merged 09.11; before it PR #615, coastal battery B2-A01); the earlier list of merges is in `docs/status-log.md`. Open: PR #600 (two editions, ED-03/04/08), checks green, not merged yet (not in `main` as of 10.11).
-- **Last build:** 3.5-s18, rebuilt 09.11 with #615 on Kanta's command (itch.io and Yandex Disk; lines in `docs/status-log.md`). Kanta has not checked it yet. The s18 in-game checklist is not in the repo, so "closed X of Y" is not counted (догадка: 0 of N checked until Kanta reports). Next build only on Kanta's command, not before the next day, and only after the s18 items are checked in the game.
-- **Main path:** Valve's review of Steamworks documents ~16.11 (6 days left); Next Fest registration by 10.01.2027 (61 days left); demo and page to Valve by 18.01.2027 (69 days left).
+- **Game:** `main` at `78678ff` (last merge PR #622, card telemetry and first synergy reachable, 11.11). Merged 10–11.11: #617 (AB-09), #618 (task-observer trial), #619 (PG-17), #620 (PG-13), #621 (PG-16), #622 (PG-12/PG-14); earlier merges are in `docs/status-log.md`. Open: PR #600 (two editions, ED-03/04/08), checks green, not merged (not in `main` as of 11.11).
+- **Last build:** 3.5-s18, rebuilt 09.11 with #615 on Kanta's command (itch.io and Yandex Disk; lines in `docs/status-log.md`). Kanta has not checked it yet. Merges #617–#622 are not in any build yet. The s18 in-game checklist is not in the repo, so "closed X of Y" is not counted (догадка: 0 of N checked until Kanta reports). Next build only on Kanta's command, not before the next day, and only after the s18 items are checked in the game.
+- **Main path:** Valve's review of Steamworks documents ~16.11 (5 days left); Next Fest registration by 10.01.2027 (60 days left); demo and page to Valve by 18.01.2027 (68 days left).
 - **Open on Kanta:** `docs/owner-checklist/kanta-now.md` (first item of the daily stand-up).
 - **Strong-model threads:** no more than six at once (since 25.10.2026); the coordinator runs the queue.
 
