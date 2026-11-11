@@ -59,13 +59,8 @@ func draw(m: Main, size: Vector2) -> void:
 	_sides.clear()
 	var p := m.player
 	ctrl.draw_rect(Rect2(Vector2.ZERO, size), Color(UiStyle.SCRIM, 0.9))
-	var t := int(m.run_time)
-	var hf := UiStyle.head_font(600, 5)
-	_diamond_outline(Vector2(76, 50), 8.0, UiStyle.TEXT)
-	# s17 video: «Битва асов» is not a campaign operation — the crumb named the last chosen operation («Крепости»)
-	var where := Loc.t("БИТВА АСОВ") if Main.aces() else Loc.t("ВЫЛЕТ «%s»") % Loc.t(Campaign.op()["title"]).to_upper()
-	var crumb := Loc.t("ПАУЗА  //  %s  //  %02d:%02d") % [where, t / 60, t % 60]
-	UiStyle.text(ctrl, hf, Vector2(98, 58), crumb, 20, UiStyle.TEXT)
+	draw_crumb(ctrl, m)
+	HudAlbumRun.tabs(ctrl, _buttons, size, 0)
 	var left := Rect2(40, 110, 560, 0)
 	var bottom := _hardpoints(m, p, left, size)
 	_menu(m, Vector2(56, maxf(bottom + 36.0, size.y - 340.0)))
@@ -79,9 +74,17 @@ func draw(m: Main, size: Vector2) -> void:
 	_hints(size)
 
 
-func _diamond_outline(c: Vector2, s: float, col: Color) -> void:
-	var pts := PackedVector2Array([c + Vector2(0, -s), c + Vector2(s, 0), c + Vector2(0, s), c + Vector2(-s, 0), c + Vector2(0, -s)])
-	ctrl.draw_polyline(pts, col, 2.0)
+## «ПАУЗА // ВЫЛЕТ «…» // 05:12» in the top-left corner; shared with the album tab (`HudAlbumRun`)
+static func draw_crumb(ci: Control, m: Main) -> void:
+	var t := int(m.run_time)
+	var hf := UiStyle.head_font(600, 5)
+	var c := Vector2(76, 50)
+	var s := 8.0
+	ci.draw_polyline(PackedVector2Array([c + Vector2(0, -s), c + Vector2(s, 0), c + Vector2(0, s), c + Vector2(-s, 0), c + Vector2(0, -s)]), UiStyle.TEXT, 2.0)
+	# s17 video: «Битва асов» is not a campaign operation — the crumb named the last chosen operation («Крепости»)
+	var where := Loc.t("БИТВА АСОВ") if Main.aces() else Loc.t("ВЫЛЕТ «%s»") % Loc.t(Campaign.op()["title"]).to_upper()
+	var crumb := Loc.t("ПАУЗА  //  %s  //  %02d:%02d") % [where, t / 60, t % 60]
+	UiStyle.text(ci, hf, Vector2(98, 58), crumb, 20, UiStyle.TEXT)
 
 
 # ---------- Hardpoints ----------
@@ -507,7 +510,8 @@ func _damage(m: Main, r: Rect2) -> void:
 
 ## Key hints strip at the bottom centre.
 func _hints(size: Vector2) -> void:
-	var pairs := [[key_label("pause"), Loc.t("продолжить")], ["↑ ↓", Loc.t("подвес")], ["← →", Loc.t("цель подвеса")]]
+	var pairs := [[key_label("pause"), Loc.t("продолжить")], ["↑ ↓", Loc.t("подвес")], ["← →", Loc.t("цель подвеса")],
+		[key_label("tab_next"), Loc.t("альбом")]]
 	var w := 0.0
 	for pr: Array in pairs:
 		w += UiStyle.text_w(UiStyle.head_font(700, 1), String(pr[0]), UiStyle.FS_CAPTION) + 18.0 + 10.0 \

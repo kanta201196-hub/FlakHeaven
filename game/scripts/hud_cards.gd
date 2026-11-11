@@ -18,6 +18,11 @@ const ICON := 132.0
 const TIP_W := 480.0
 ## Deepest chain of nested term explanations
 const TIP_DEPTH := 3
+## PG-16: the «nearest recipes» panel on the right, its width and gap to the cards
+const NEAR_W := 430.0
+const NEAR_GAP := 40.0
+## PG-16: height of the album line at the bottom of a card (what the card opens or advances)
+const PATH_H := 60.0
 
 ## Focused card (keyboard, gamepad or the last card under the mouse)
 static var focus := 0
@@ -39,6 +44,9 @@ static var _tip_rects: Array[Rect2] = []
 ## True after ←/→ until the mouse moves: then the focused card's explanation stays open
 ## without the mouse over it (S11-22 hides it when the mouse leaves the cards).
 static var _kbd := false
+## PG-16: album context and rows of this frame (`AlbumNear`), empty when the album panel is off
+var _actx := {}
+var _arows: Array = []
 
 
 ## Draws the whole screen over the paused fight.
@@ -56,7 +64,12 @@ func draw(m: Main, size: Vector2) -> void:
 	var pair := Cards.is_fork(m.offers)
 	_header(m, size, pair)
 	var gap := 110.0 if pair and n <= 2 else GAP
-	var x0 := (size.x - n * CARD_W - (n - 1) * gap) / 2.0
+	# PG-16: with pair recipes the album is on the screen — each card's line and the nearest recipes on the right
+	var side := Cards.pairs_on() and not pair
+	_actx = AlbumNear.ctx_of(p, m.run_time) if side else {}
+	_arows = AlbumNear.rows(_actx, Profile.album_ids()) if side else []
+	var avail := size.x - (NEAR_W + NEAR_GAP + 40.0 if side else 0.0)
+	var x0 := (avail - n * CARD_W - (n - 1) * gap) / 2.0
 	var top := 214.0
 	var mp := ctrl.get_local_mouse_position()
 	var moved := mp != _last_mp
@@ -88,6 +101,8 @@ func draw(m: Main, size: Vector2) -> void:
 	var by := top + CARD_H + 26.0
 	_actions(m, Vector2(x0, by), pair)
 	_terms_tips(m, Vector2(x0 + 420.0, by - 4.0), size, over_card or _kbd)
+	if side:
+		_near(m, p, Rect2(size.x - NEAR_W - 40.0, top - 14.0, NEAR_W, CARD_H + 14.0))
 	_hints(size, pair)
 	_hull(p)
 
@@ -217,8 +232,10 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 	if (pair and kind == "branch") or kind == "trade":   # PG-11 (Б4): the minus of a trade-off card goes to the red box
 		warn = desc.substr(desc.get_slice("\n", 0).length()).strip_edges()
 		desc = desc.get_slice("\n", 0)
-	var path := _card_path(p, c)
-	var bottom := r.end.y - 32.0 - (22.0 if path != "" else 0.0) - (66.0 if warn != "" else 0.0)
+	# PG-16: with the album on, the line of what the card opens replaces the old one-line path (EX-02)
+	var eff := AlbumNear.card_effect(_actx, _arows, AlbumNear.card_of(p, c)) if not _actx.is_empty() else {}
+	var path := _card_path(p, c) if _actx.is_empty() else ""
+	var bottom := r.end.y - 32.0 - (22.0 if path != "" else 0.0) - (66.0 if warn != "" else 0.0) - (PATH_H + 8.0 if not eff.is_empty() else 0.0)
 	var segs := _parse(desc)
 	var fs := 16
 	while fs > UiStyle.FS_MIN and _rich_height(segs, w - 32.0, fs) > bottom - y:
@@ -231,8 +248,118 @@ func _card(m: Main, p: Player, i: int, r: Rect2, on: bool, pair: bool) -> void:
 		_para(Vector2(wr.position.x + 12, wr.position.y + 24), warn, wr.size.x - 24.0, UiStyle.FS_CAPTION, UiStyle.DANGER.lightened(0.35))
 	if path != "":
 		UiStyle.text(ctrl, ui_font(), Vector2(cx + 16.0, r.end.y - 40.0), _fit(path, w - 32.0, UiStyle.FS_CAPTION), UiStyle.FS_CAPTION, UiStyle.ACCENT_SOFT)
+	if not eff.is_empty():
+		var py := (r.end.y - 100.0 - 8.0 - PATH_H) if warn != "" else (r.end.y - 36.0 - PATH_H)
+		_album_line(eff, Rect2(cx + 12.0, py, w - 24.0, PATH_H))
 	_tag(p, c, r)
 	UiStyle.key_hint(ctrl, Vector2(r.end.x - 48.0, r.end.y - 9.0), str(i + 1), "")
+
+
+## PG-16 (sketch item 1): what the card does to the album, in a box at the bottom of the card. Green when it
+## completes a recipe: «▲ ОТКРОЕТ СВЯЗКУ «Карусель»» and the recipe with ✓; amber when it only moves one:
+## «К связке «Обманка»: 1 из 2» and what is still missing after this card.
+func _album_line(eff: Dictionary, r: Rect2) -> void:
+	var row: Dictionary = eff["row"]
+	var after: Array = eff["after"]
+	var id := String(row["id"])
+	var syn := String(row["kind"]) == "syn"
+	var name := HudAlbum.entry_title(id)
+	var col := UiStyle.OK if eff["opens"] else UiStyle.ACCENT_SOFT
+	ctrl.draw_rect(r, Color(col, 0.12))
+	ctrl.draw_rect(r, Color(col, 0.75), false, 1.5)
+	var head := ""
+	var sub := ""
+	if eff["opens"]:
+		if syn and row["course"]:
+			head = Loc.t("▲ ОТКРОЕТ СВЯЗКУ «%s»") % name
+		elif syn:
+			head = Loc.t("▲ РЕЦЕПТ СВЯЗКИ «%s»") % name
+			sub = Loc.t("нужно выбрать её специализацией")
+		else:
+			head = Loc.t("▲ ОТКРОЕТ МОДЕРНИЗАЦИЮ %s") % name
+			if row.get("late", false):
+				sub = Loc.t("карточка придёт с 7:00")
+		if sub == "":
+			var parts := PackedStringArray()
+			for t: Dictionary in after:
+				parts.append(HudAlbumRun.thing_text(t))
+			sub = " + ".join(parts)
+	else:
+		head = (Loc.t("К связке «%s»: %d из %d") if syn else Loc.t("К модернизации %s: %d из %d")) % [name, AlbumNear.met(after), after.size()]
+		var miss := PackedStringArray()
+		for t: Dictionary in after:
+			if int(t["have"]) < int(t["need"]):
+				miss.append(HudAlbumRun.thing_text(t))
+		sub = Loc.t("нужно ещё: ") + ", ".join(miss)
+	var hf := UiStyle.head_font(700, 1)
+	UiStyle.text(ctrl, hf, Vector2(r.position.x + 10.0, r.position.y + 24.0), _fit(head, r.size.x - 20.0, UiStyle.FS_CAPTION, hf), UiStyle.FS_CAPTION, col)
+	UiStyle.text(ctrl, ui_font(), Vector2(r.position.x + 10.0, r.position.y + 46.0), _fit(sub, r.size.x - 20.0, UiStyle.FS_CAPTION), UiStyle.FS_CAPTION,
+		col.lightened(0.2) if eff["opens"] else UiStyle.TEXT_WARM)
+
+
+## PG-16 (sketch items 2 and 3): the three recipes this plane is closest to, each with its picture, what is met and
+## what is missing, and a bar; the one the focused card moves is marked. At the bottom, Tab opens the whole album.
+func _near(m: Main, p: Player, r: Rect2) -> void:
+	UiStyle.panel(ctrl, r, UiStyle.LINE, UiStyle.PANEL, 18.0)
+	var hf := UiStyle.head_font(700, 4)
+	UiStyle.text(ctrl, hf, Vector2(r.position.x + 22, r.position.y + 38), Loc.t("БЛИЖАЙШИЕ РЕЦЕПТЫ"), UiStyle.FS_LABEL, UiStyle.ACCENT_SOFT)
+	ctrl.draw_line(Vector2(r.position.x, r.position.y + 58), Vector2(r.end.x, r.position.y + 58), UiStyle.LINE, 1.0)
+	var near := AlbumNear.nearest(_arows)
+	var foc_id := ""
+	if focus < m.offers.size():
+		var fe := AlbumNear.card_effect(_actx, _arows, AlbumNear.card_of(p, m.offers[focus]))
+		if not fe.is_empty():
+			foc_id = String(fe["row"]["id"])
+	var y := r.position.y + 66.0
+	var rh := 112.0
+	if near.is_empty():
+		_para(Vector2(r.position.x + 22, y + 30), Loc.t("Всё, что этот самолёт может собрать, уже собрано."), r.size.x - 44.0, UiStyle.FS_BODY, UiStyle.TEXT_2)
+	for row: Dictionary in near:
+		var rr := Rect2(r.position.x + 8.0, y, r.size.x - 16.0, rh - 6.0)
+		_near_row(row, rr, String(row["id"]) == foc_id)
+		y += rh
+		ctrl.draw_line(Vector2(r.position.x, y - 3.0), Vector2(r.end.x, y - 3.0), UiStyle.LINE, 1.0)
+	# Tab — the whole album without leaving the fight
+	var ids := Profile.album_ids()
+	var fr := Rect2(r.position.x + 8.0, r.end.y - 58.0, r.size.x - 16.0, 48.0)
+	if fr.has_point(ctrl.get_local_mouse_position()):
+		ctrl.draw_rect(fr, Color(UiStyle.ACCENT, 0.12))
+	var x := UiStyle.key_hint(ctrl, Vector2(fr.position.x + 14.0, fr.position.y + 32.0), key_label("loadout"), "")
+	UiStyle.text(ctrl, ui_font(), Vector2(x - 20.0, fr.position.y + 32.0), Loc.t("Весь альбом: найдено %d из %d") % [AlbumBook.found(Profile.data["album"], ids), ids.size()],
+		UiStyle.FS_BODY, UiStyle.TEXT_2)
+	_buttons.append([fr, "album_open"])
+
+
+## One row of the nearest-recipes panel: picture, name, recipe, progress bar; `hot` — the focused card moves it
+func _near_row(row: Dictionary, r: Rect2, hot: bool) -> void:
+	var id := String(row["id"])
+	var col := HudAlbum.entry_color(id)
+	if hot:
+		ctrl.draw_rect(r, Color(UiStyle.ACCENT, 0.1))
+		ctrl.draw_rect(Rect2(r.position.x, r.position.y, 4.0, r.size.y), UiStyle.ACCENT)
+	var th := Rect2(r.position.x + 14.0, r.position.y + 10.0, 128.0, 72.0)
+	AlbumArt.draw(ctrl, th, id, Color(col, 0.8))
+	var tx := th.end.x + 14.0
+	var tw := r.end.x - tx - 10.0
+	var nf := UiStyle.head_font(700, 1)
+	UiStyle.text(ctrl, nf, Vector2(tx, r.position.y + 26.0), _fit(HudAlbum.entry_title(id), tw, UiStyle.FS_LABEL, nf), UiStyle.FS_LABEL, UiStyle.TEXT)
+	var kind := Loc.t(String(HudAlbum.KIND_TITLE[AlbumBook.kind(id)])).to_lower()
+	if row["course"]:
+		kind += " · " + Loc.t("специализация")
+	elif row.get("late", false):
+		kind += " · " + Loc.t("с 7:00")
+	if hot:
+		kind = Loc.t("▲ эта карточка") + " · " + kind
+	UiStyle.text(ctrl, ui_font(), Vector2(tx, r.position.y + 46.0), _fit(kind, tw, UiStyle.FS_CAPTION), UiStyle.FS_CAPTION, UiStyle.ACCENT if hot else UiStyle.TEXT_DIM)
+	var things: Array = row["things"]
+	for i in things.size():
+		var t: Dictionary = things[i]
+		var ok := int(t["have"]) >= int(t["need"])
+		UiStyle.text(ctrl, ui_font(), Vector2(tx, r.position.y + 68.0 + i * 19.0), _fit(HudAlbumRun.thing_text(t), tw, UiStyle.FS_CAPTION),
+			UiStyle.FS_CAPTION, UiStyle.OK if ok else UiStyle.ACCENT_SOFT)
+	var bar := Rect2(th.position.x, th.end.y + 9.0, th.size.x, 5.0)
+	ctrl.draw_rect(bar, Color(1, 1, 1, 0.1))
+	ctrl.draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(float(row["prog"]), 0.0, 1.0), bar.size.y)), UiStyle.ACCENT_SOFT)
 
 
 ## Grows a closed outline of `r` (last point = first) outward by `d` along every edge (glow rings of the focused
@@ -642,6 +769,8 @@ func _hints(size: Vector2, pair: bool) -> void:
 	var pairs := [["1–%d" % mini(4, Main.I.offers.size()), Loc.t("взять")], ["← →", Loc.t("карточка")]]
 	if not pair:
 		pairs.append([key_label("reroll"), Loc.t("перебросить")])
+	if Cards.pairs_on() and not pair:
+		pairs.append([key_label("loadout"), Loc.t("альбом")])
 	var w := 0.0
 	for pr: Array in pairs:
 		w += UiStyle.text_w(UiStyle.head_font(700, 1), String(pr[0]), UiStyle.FS_CAPTION) + 18.0 + 10.0 \

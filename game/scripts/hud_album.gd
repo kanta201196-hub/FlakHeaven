@@ -3,7 +3,8 @@ extends HudKit
 ## Hangar tab «АЛЬБОМ» (PG-11 B5, Kanta 2026-11-05): every synergy, modernization and weapon profile as a grid.
 ## Found entries are lit in their colour and show the class and the date of the first find; unfound ones are
 ## silhouettes with the recipe as a hint. The entry under the cursor (or the one clicked) is explained below.
-## On in the demo too: collecting is the reason to play again. Data: `AlbumBook`, entries: `Profile`.
+## On in the demo too: collecting is the reason to play again. Data: `AlbumBook`, entries: `Profile`. PG-16: the
+## detail shows the entry's in-game picture (`AlbumArt`); the same album is open in combat (`HudAlbumRun`).
 
 const KIND_TITLE := {"syn": "Связка", "evo": "Модернизация", "prof": "Профиль оружия", "arch": "Архетип"}
 const KIND_COLOR := {"syn": Color(1.0, 0.82, 0.25), "evo": Color(0.75, 0.55, 1.0), "prof": Color(0.55, 0.85, 1.0), "arch": Color(0.6, 1.0, 0.7)}
@@ -36,7 +37,7 @@ func draw(m: Main, area: Rect2) -> void:
 		_text(Vector2(cell.position.x + 8, cell.position.y + fs + 6), _fit(entry_title(id) if have else "? " + entry_title(id), cell.size.x - 16, fs), fs,
 			UiStyle.TEXT if have else UiStyle.TEXT_OFF)
 		if ch >= 48.0:
-			var sub := _found_line(album[id]) if have else Loc.t(String(KIND_TITLE[AlbumBook.kind(id)]))
+			var sub := found_line(album[id]) if have else Loc.t(String(KIND_TITLE[AlbumBook.kind(id)]))
 			_text(Vector2(cell.position.x + 8, cell.position.y + fs + 26), _fit(sub, cell.size.x - 16, 12), 12, col if have else UiStyle.TEXT_DIM)
 	_text(Vector2(area.position.x, area.position.y - 8), Loc.t("Найдено: %d из %d · первая находка: +%d запчастей") % [AlbumBook.found(album, ids), ids.size(), AlbumBook.PARTS_FIRST],
 		15, UiStyle.TEXT_2, HORIZONTAL_ALIGNMENT_RIGHT, area.size.x)
@@ -44,7 +45,7 @@ func draw(m: Main, area: Rect2) -> void:
 
 
 ## «Оса · 05.11.2026» — class and date of the first find (an entry migrated from an old save has neither)
-func _found_line(e: Dictionary) -> String:
+static func found_line(e: Dictionary) -> String:
 	var parts := PackedStringArray()
 	var c := String(e.get("cls", ""))
 	if PlaneClasses.DATA.has(c):
@@ -65,9 +66,13 @@ func _detail(id: String, album: Dictionary, r: Rect2) -> void:
 	var col := entry_color(id)
 	var head := "%s · %s" % [Loc.t(String(KIND_TITLE[AlbumBook.kind(id)])), entry_title(id)]
 	if have:
-		head += " · " + _found_line(album[id])
-	_text(Vector2(r.position.x + 20, r.position.y + 32), head, 21, col if have else UiStyle.TEXT)
-	_para(Vector2(r.position.x + 20, r.position.y + 56), entry_desc(id), r.size.x * 0.55, 15, UiStyle.TEXT_2)
+		head += " · " + found_line(album[id])
+	# PG-16: the entry's in-game picture on the left (greyed until found)
+	var ph := r.size.y - 16.0
+	AlbumArt.draw(ctrl, Rect2(r.position.x + 8.0, r.position.y + 8.0, ph * AlbumArt.ASPECT, ph), id, Color(col, 0.7) if have else UiStyle.LINE, not have)
+	var tx := r.position.x + 24.0 + ph * AlbumArt.ASPECT
+	_text(Vector2(tx, r.position.y + 32), head, 21, col if have else UiStyle.TEXT)
+	_para(Vector2(tx, r.position.y + 56), entry_desc(id), r.size.x * 0.6 - (tx - r.position.x), 15, UiStyle.TEXT_2)
 	var rx := r.position.x + r.size.x * 0.6
 	_text(Vector2(rx, r.position.y + 62), Loc.t("Как собрать:"), 15, UiStyle.TEXT_DIM)
 	_para(Vector2(rx, r.position.y + 84), recipe(id), r.size.x * 0.38, 15, UiStyle.ACCENT_SOFT)

@@ -533,12 +533,12 @@ static func _pair_card(p: Player, card: Dictionary) -> Dictionary:
 	return {}
 
 
-## Строка о курсе для карточки
+## Строка о курсе для карточки (under pair recipes the card's album box shows it instead, PG-16)
 static func course_hint(p: Player, card: Dictionary) -> String:
 	if not advances_course(p, card):
 		return ""
-	if pairs_on():
-		return Loc.t("\n▲ К связке «%s»: %s") % [Loc.t(syn_def(p, p.course)["title"]), pair_recipe(p, p.course)]
+	if pairs_on():   # PG-16: the card's album box (HudCards._album_line) says it, with the recipe after the card
+		return ""
 	var s := syn_def(p, p.course)
 	var c := slot_cost(p)
 	var tags := Prog.card_tags(p, card)

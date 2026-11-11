@@ -29,6 +29,7 @@ var _layers_live := false
 var _flight_ui: HudFlight
 var _screens_ui: HudScreens
 var _pause_ui: HudPause
+var _album_ui: HudAlbumRun
 var _cards_ui: HudCards
 var _result_ui: HudResult
 var _codex_ui: HudCodex
@@ -102,6 +103,7 @@ func _ready() -> void:
 		_flight_ui.layers[n] = l
 	_screens_ui = HudScreens.new(ctrl, _buttons)
 	_pause_ui = HudPause.new(ctrl, _buttons)
+	_album_ui = HudAlbumRun.new(ctrl, _buttons)
 	_cards_ui = HudCards.new(ctrl, _buttons)
 	_result_ui = HudResult.new(ctrl, _buttons)
 	_codex_ui = HudCodex.new(ctrl, _buttons)
@@ -165,6 +167,10 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and Main.I != null and Main.I.state == "album" \
+			and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:   # PG-16: the album list scrolls
+		HudAlbumRun.move(1 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1)
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var m := Main.I
 		if m == null or m.state == "playing" or m.tuning_panel.visible or m.report.visible:
@@ -273,7 +279,7 @@ func _draw_hud_body() -> void:
 		return
 
 	# pause, card pick and results cover the whole fight, so the flight HUD would only show through them
-	if m.state not in ["paused", "levelup", "dead", "evac"]:
+	if m.state not in ["paused", "levelup", "dead", "evac", "album"]:
 		_flight_ui.draw(m, size, _dmg_flash)
 
 	match m.state:
@@ -281,5 +287,7 @@ func _draw_hud_body() -> void:
 			_cards_ui.draw(m, size)
 		"paused":
 			_pause_ui.draw(m, size)
+		"album":
+			_album_ui.draw(m, size)
 		"dead", "evac":
 			_result_ui.result(m, size)
