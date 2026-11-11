@@ -1349,16 +1349,30 @@ func _tap(action: String, on: bool) -> void:
 ## CR-01: ban the first card through a real hit-test of the "Ban" button. The click must hit the
 ## button, not the card under it; a wrong hit fails smoke and the full autotest.
 func _click_ban_check() -> void:
-	var r := m.hud.button_rect("ban:0") if m.hud != null else Rect2()
+	var bi := _ban_pick()
+	var bid := "ban:%d" % bi
+	var r := m.hud.button_rect(bid) if m.hud != null else Rect2()
 	if r.size == Vector2.ZERO:
 		print("AUTOTEST: ban click check skipped (screen not drawn)")
-		m.ban_card(0)
+		m.ban_card(bi)
 		return
 	var act := m.hud.button_at(r.get_center())
-	if act != "ban:0":
+	if act != bid:
 		printerr("SCRIPT ERROR: CR-01 click on Ban hit '%s'" % act)
 	print("AUTOTEST: ban click -> %s" % act)
 	m.ui_click(act)
+
+
+## PG-14: which card the bot's ban check removes — the first that is not an upgrade of a mounted weapon and does
+## not lead to the specialization (0 if all are). Banning card 0 removed the signature weapon's upgrades (and the
+## «Кит» turret, guaranteed in the first choices) for the whole sortie in 40 of 72 bot sorties of 11.11, so the
+## first-synergy measurement counted a bot habit no player has.
+func _ban_pick() -> int:
+	for i in m.offers.size():
+		var o: Dictionary = m.offers[i]
+		if not o.get("course", false) and not o["kind"] in ["weapon_up", "profile", "branch", "synergy", "skill_syn", "evolution", "mastery"]:
+			return i
+	return 0
 
 
 var _wing := {}

@@ -897,6 +897,20 @@ static func profile_hint(p: Player, gi: int) -> String:
 	return Loc.t("Третий профиль «%s» откроет ступень %d ветки этого оружия в ангаре.") % [Loc.t(String(WeaponProfiles.def(g.weapon, third)["title"])), WeaponProfiles.THIRD_TIER]
 
 
+## PG-14 (genre research 11.11, item 4; Kanta «да»): the synergy the card weights lead to while the plane has none,
+## under `build_pairs` only: the chosen specialization (only its synergy card is ever offered, `offer`), or before
+## the choice the nearest recipe among those open to the class (`SynPairs.nearest`). "" — none (a synergy is open,
+## pairs are off, or the class had no specialization to choose).
+static func first_target(p: Player) -> String:
+	if not pairs_on() or not p.syn.is_empty():
+		return ""
+	if p.has_course():
+		return p.course
+	if p.course != "":
+		return ""
+	return SynPairs.nearest(_available(p), pair_snap(p), 0)
+
+
 ## Все возможные карточки сейчас: [вес, карточка без редкости]
 static func _candidates(p: Player, banned: Dictionary) -> Array:
 	var cands: Array = []
@@ -995,9 +1009,16 @@ static func _candidates(p: Player, banned: Dictionary) -> Array:
 		if gb.branch != "" and gb.branch_rank < BRANCH_MAX and not banned.has("br:%d" % gi):
 			cands.append([3.0, _branch_card(p, gi, gb.branch, false)])
 	# 3.2: вес ×1,8 карточкам курса; катализаторам эволюций — ×1,5
+	# PG-14: until the first synergy, cards of the first-synergy recipe get the larger of the two factors (no stacking)
+	var first := first_target(p)
+	var fk := SynPairs.first_k(p.syn.size(), Tuning.g("first_syn_weight")) if first != "" else 1.0
+	var snap := pair_snap(p) if first != "" else {}
 	for c in cands:
-		if advances_course(p, c[1]):
-			c[0] = float(c[0]) * Tuning.g("course_weight")
+		var k := Tuning.g("course_weight") if advances_course(p, c[1]) else 1.0
+		if fk > 1.0 and SynPairs.advances(first, _pair_card(p, c[1]), snap, p.syn.size()):
+			k = maxf(k, fk)
+		if k > 1.0:
+			c[0] = float(c[0]) * k
 		elif c[1]["kind"] == "module" and Prog.evo_hint(p, c[1]["id"]) != "":
 			c[0] = float(c[0]) * 1.5
 	# Резерв v1: когда кандидатов мало или после 15:00

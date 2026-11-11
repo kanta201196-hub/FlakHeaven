@@ -14,6 +14,7 @@ func run() -> Array:
 	_test_advances()
 	_test_classes()
 	_test_closes()
+	_test_first()
 	return [_checks, _failed]
 
 
@@ -92,3 +93,23 @@ func _test_closes() -> void:
 	_check(not SynPairs.closes("carousel", ["aam"], "rockets", 1), "one mount left after rockets: «Карусель» stays open")
 	_check(not SynPairs.closes("carousel", ["aam"], "flares", 0), "flares on the last mount complete the recipe")
 	_check(not SynPairs.closes("gunner", ["aam"], "rockets", 0), "a synergy with no recipe is never reported")
+
+
+## PG-14: steps left to a recipe, the nearest recipe, and the weight factor of the first synergy
+func _test_first() -> void:
+	var snap := {"w": {"aam": 2, "flares": 1}, "taken": {"gun_dmg": 1}, "wing": 0, "s3": 0}
+	_check(SynPairs.steps_left("carousel", snap, 0) == 3, "aam 2/3 + flares 1/3: 3 steps to «Карусель»")
+	_check(SynPairs.steps_left("mirror", snap, 0) == 3, "flares 1/3 + gun 1/2: 3 steps to «Зеркало»")
+	_check(SynPairs.steps_left("corridor", snap, 0) == 6, "no rockets, no bombs: 6 steps to «Огненный коридор»")
+	_check(SynPairs.steps_left("gunner", snap, 0) < 0, "a synergy with no recipe has no steps (−1)")
+	snap["w"]["flares"] = 3
+	snap["w"]["aam"] = 3
+	_check(SynPairs.steps_left("carousel", snap, 0) == 0, "a ready recipe has 0 steps")
+	snap["w"] = {"aam": 2, "flares": 1}
+	_check(SynPairs.nearest(["corridor", "carousel", "mirror"], snap, 0) == "carousel", "nearest: the first of the equal ones in list order")
+	_check(SynPairs.nearest(["corridor", "mirror"], snap, 0) == "mirror", "nearest: fewer steps wins")
+	_check(SynPairs.nearest(["gunner"], snap, 0) == "", "nearest: no recipe — none")
+	_check(SynPairs.nearest([], snap, 0) == "", "nearest: empty list — none")
+	_check(is_equal_approx(SynPairs.first_k(0, 3.0), 3.0), "no synergy yet: the first-synergy factor applies")
+	_check(is_equal_approx(SynPairs.first_k(1, 3.0), 1.0), "after the first synergy: factor 1")
+	_check(is_equal_approx(SynPairs.first_k(0, 0.5), 1.0), "a factor below 1 never lowers weights")
