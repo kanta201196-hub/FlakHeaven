@@ -359,6 +359,7 @@ func start_run() -> void:
 	banned = {}
 	locked = {}
 	course_log = []
+	card_offers = []
 	meta_award = {}
 	_slow_t = 0.0
 	_accent_t = 0.0
@@ -557,6 +558,7 @@ func choose_card(i: int) -> void:
 	if state != "levelup" or i < 0 or i >= offers.size() or not cards_live():
 		return
 	var c: Dictionary = offers[i]
+	_log_offers(i)
 	if not locked.is_empty() and c["id"] == locked["id"]:
 		locked = {}
 	Cards.on_declined(player, offers, c)
@@ -567,6 +569,23 @@ func choose_card(i: int) -> void:
 		_open_course()
 	elif run.pending_levels <= 0 or not refill_offers():
 		_resume_after_cards()
+
+
+## PG-12: card screens of the sortie (`CardLog.entry`), written to the sortie log column `card_offers`
+var card_offers: Array = []
+
+
+## PG-12: notes the screen on show — taken card `taken` (−1: left by a reroll); called before the card is applied,
+## so an upgrade key names the weapon the group had when offered
+func _log_offers(taken: int) -> void:
+	var keys: Array = []
+	var rar: Array = []
+	for o: Dictionary in offers:
+		var gi := int(o.get("group", -1))
+		var gw := String((player.groups[gi] as Hardpoint).weapon) if gi >= 0 and gi < player.groups.size() else ""
+		keys.append(CardLog.key(o, gw))
+		rar.append(int(o.get("rarity", 0)))
+	card_offers.append(CardLog.entry(run_time, run.level, keys, rar, taken))
 
 
 # ---------- 3.2: курс ----------
@@ -621,6 +640,7 @@ func reroll() -> void:
 	if state != "levelup" or rerolls <= 0 or not cards_live():
 		return
 	rerolls -= 1
+	_log_offers(-1)
 	sfx.play("card", -10.0, 0.8)
 	if not refill_offers():
 		_resume_after_cards()

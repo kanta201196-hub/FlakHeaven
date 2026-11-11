@@ -220,3 +220,35 @@ static func two_weapons(id: String) -> bool:
 		if t.has("w"):
 			n += 1
 	return n >= 2
+
+
+## Cards still missing to recipe `id` for slot `slot`: the sum of unmet levels and picks (a weapon not on the plane
+## counts its whole level); 0 — ready, −1 — no recipe. PG-14: measures which recipe is «nearest».
+static func steps_left(id: String, snap: Dictionary, slot: int) -> int:
+	var st := state(id, snap, slot)
+	if st.is_empty():
+		return -1
+	var n := 0
+	for s in st:
+		n += maxi(0, int(s[2]) - int(s[1]))
+	return n
+
+
+## The recipe of `ids` with the fewest `steps_left` (the first of equal ones; "" — none has a recipe).
+## PG-14: before the player picks a specialization, this is the synergy the card weights lead to.
+static func nearest(ids: Array, snap: Dictionary, slot: int) -> String:
+	var best := ""
+	var best_n := 1 << 30
+	for id in ids:
+		var n := steps_left(String(id), snap, slot)
+		if n >= 0 and n < best_n:
+			best = String(id)
+			best_n = n
+	return best
+
+
+## PG-14 (genre research 11.11, item 4; Kanta «да»): weight factor of cards that lead to the first synergy.
+## Applies only while the plane has no synergy (`syn_count` 0): in s16 «Оса» flights ended with none, so the
+## player never met the layer at all. Never below 1, so the F1 slider cannot make those cards rarer.
+static func first_k(syn_count: int, k: float) -> float:
+	return maxf(k, 1.0) if syn_count == 0 else 1.0
