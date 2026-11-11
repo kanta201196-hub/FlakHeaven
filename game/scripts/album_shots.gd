@@ -195,9 +195,9 @@ func _targets() -> void:
 	var fwd := Vector2.from_angle(p.heading)
 	for i in AIR_N:
 		var e: Enemy = Interceptor.new() if i % 3 == 0 else Drone.new()
-		var a := p.heading + randf_range(-0.7, 0.7)
-		e.position = p.global_position + Vector2.from_angle(a) * randf_range(AIR_D.x, AIR_D.y)
-		e.heading = p.heading + PI + randf_range(-0.5, 0.5)
+		var a := p.heading + rng.randf_range(-0.7, 0.7)
+		e.position = p.global_position + Vector2.from_angle(a) * rng.randf_range(AIR_D.x, AIR_D.y)
+		e.heading = p.heading + PI + rng.randf_range(-0.5, 0.5)
 		m.world.add_child(e)
 	var b := Bomber.new()   # one big target ahead that draws the fire into the frame
 	b.heading = p.heading + PI * 0.75

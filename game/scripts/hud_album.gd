@@ -68,7 +68,7 @@ func _detail(id: String, album: Dictionary, r: Rect2) -> void:
 	if have:
 		head += " · " + found_line(album[id])
 	# PG-16: the entry's in-game picture on the left (greyed until found)
-	var ph := r.size.y - 16.0
+	var ph := minf(r.size.y - 16.0, r.size.x * 0.25 / AlbumArt.ASPECT)   # a short wide box keeps room for the text
 	AlbumArt.draw(ctrl, Rect2(r.position.x + 8.0, r.position.y + 8.0, ph * AlbumArt.ASPECT, ph), id, Color(col, 0.7) if have else UiStyle.LINE, not have)
 	var tx := r.position.x + 24.0 + ph * AlbumArt.ASPECT
 	_text(Vector2(tx, r.position.y + 32), head, 21, col if have else UiStyle.TEXT)
