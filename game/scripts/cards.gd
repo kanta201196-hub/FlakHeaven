@@ -1464,7 +1464,7 @@ static func apply(p: Player, card: Dictionary) -> void:
 					UiStyle.ACCENT_SOFT, 0)
 			else:
 				Events.banner.emit(Loc.t("МОДЕРНИЗАЦИЯ: %s") % Loc.t(String(ed["title"])), 4.0)
-			p.album_find("evo:" + eid, String(Modernizations.def(eid)["title"]))
+			p.album_find("evo:" + eid, String(ed["title"]))
 		"reserve":
 			var tk: String = String(card["id"])
 			p.taken[tk] = int(p.taken.get(tk, 0)) + 1
