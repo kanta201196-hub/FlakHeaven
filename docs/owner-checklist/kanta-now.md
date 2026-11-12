@@ -1,45 +1,41 @@
 # Только Kanta: что не может сделать Claude
 
-Обновлено: 10.11.2026
+Обновлено: 12.11.2026
 
 Первый пункт каждой планёрки (решение Kanta 22.10.2026, ревью 5.7). Не больше 7 пунктов. Планёрка показывает, сколько дней до срока. Сделанное — вычёркивать и переносить в `checklist.md` с датой.
 
-Статусы 10.11 взяты из того, что Kanta написал за последние сутки (треды и чат). Всё, что не подтверждено его сообщением, помечено как догадка.
+Дни до срока считаются от 12.11.2026. Всё, что не подтверждено сообщением Kanta или документом, помечено как догадка.
 
 | № | Что | Срок | Где делается | Статус |
 | --- | --- | --- | --- | --- |
-| 1 | Уведомление в РКН об обработке персональных данных (PD-02) | 24.10.2026, просрочено на 17 дней | https://pd.rkn.gov.ru/ ; значения полей — `docs/legal/personal-data.md` | отметки «подал» нет (догадка: не подано, в переписке за сутки не упоминалось) |
-| 2 | Анкета о контенте и раскрытие ИИ в Steamworks (S6) | 20.11.2026 (осталось 10 дней) | https://partner.steamgames.com/ → страница игры | черновики готовы (`docs/marketing/steam-content-survey.md`), ждут ввода Kanta; раздел про ИИ — после проверки условий Meshy и Hunyuan (V-08) |
-| 3 | Проверка Valve по S1–S3 | около 16.11 (осталось 6 дней) | Steamworks, статус проверки | ждёт Valve, действий Kanta нет |
-| 4 | Демо и страница игры на проверку Valve (DM-10) | 18.01.2027 по Steamworks (осталось 69 дней); в `docs/process/early-access.md` стоит 25.01 — сверить | Steamworks → страница игры → демо | после пункта 3 |
-| 5 | Регистрация игры на Steam Next Fest (DM-10) | 10.01.2027 (осталось 61 день); старт фестиваля 22.02.2027 (осталось 104 дня) | Steamworks → страница игры → фестивали | после пункта 4 |
-| 6 | Вставить строку в `settings.json` для `tools/pc/*.ps1` (R-17) и новый промпт планёрки в рутину (R-21) | к следующей сборке | на ПК: `settings.json`; рутина — настройки планёрки | ждёт Kanta (координатор не может менять рутину) |
+| 1 | Уведомление в РКН об обработке персональных данных (PD-02) | 24.10.2026, просрочено на 19 дней | https://pd.rkn.gov.ru/ ; значения полей — `docs/legal/personal-data.md` | подачи нет в репозитории (догадка: не подано) |
+| 2 | Анкета о контенте и раскрытие ИИ в Steamworks (S6) | 20.11.2026 (осталось 8 дней) | https://partner.steamgames.com/ → страница игры | черновики готовы (`docs/marketing/steam-content-survey.md`), ждут ввода Kanta; раздел про ИИ — после проверки условий Meshy и Hunyuan (V-08), сверку готовит Claude |
+| 3 | Проверка Valve по S1–S3 | около 16.11.2026 (осталось 4 дня) | Steamworks, статус проверки | ждёт Valve, действий Kanta нет |
+| 4 | Демо и страница игры на проверку Valve (DM-10) | 18.01.2027 по Steamworks (осталось 67 дней); в `docs/process/early-access.md` стоит 25.01 — сверить | Steamworks → страница игры → демо | после пункта 3 |
+| 5 | Регистрация игры на Steam Next Fest (DM-10) | 10.01.2027 (осталось 59 дней); старт фестиваля 22.02.2027 (осталось 102 дня) | Steamworks → страница игры → фестивали | после пункта 4 |
+| 6 | «ок» на 7 капсул и 8 скриншотов Steam (R-29) | нужно для страницы; срок не назван (догадка: до пункта 4) | https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WL7tQUNACaf3j1DA8bm5TsK | ждёт «ок» |
+| 7 | Вставить строку в `settings.json` для `tools/pc/*.ps1` (R-17) и новый промпт планёрки в рутину (R-21) | к следующей сборке | на ПК: `settings.json`; рутина — настройки планёрки | ждёт Kanta (координатор не может менять рутину) |
 
-Дальше по очереди: кадры и трейлер для страницы Steam (конец ноября).
+## Ждёт решения Kanta (без срока)
+
+- Пакет для бомб «Кита» (GD-18): выбрать 1, 2, 3 или «пока ничего»; Claude рекомендует 1 — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WLPHVyUCkgnVnEz7ziRJP9i
+- Альбом сборок в бою (PG-16): посмотреть кадры и написать правки — https://claude.ai/artifact/AdfLagBdVKYw4ftXJJYYoe (тред — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WPkxNeDFgYAvWGWw6tv2EKm)
+- Маркетинг: «ок» или правки на Дневник №4, №5, «Оружие в ангаре» и ещё два (в Word, в личке бота), пятничный рилс «Оса» — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WXg1Zyyd9Z1RQ643rufRAE6 (последний пост в канале — 10.11)
+- Дорожная карта релиза в Steam: выбрать вариант раннего доступа (рекомендован B) — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WBSPszaJfkMh8vCSYpqH3Pa
+- Заставки: «да» на перерисовку «Купола» и «Грома» (2 генерации Figma, тратят кредиты) — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WJQ7bnVMg1iWG5bFZBPD6pm
+- Облачная видеокарта для рендера: после утверждения аниматика второй части напиши «считай» — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WKnuKi5ji4Ku4p3jNX3H7XG
+- PR #600 (два издания): решение о слиянии (по состоянию на 10.11 открыт; на 12.11 не перепроверен) — https://github.com/kanta201196-hub/FlakHeaven/pull/600
+- Сборка 3.5-s18: проверить в игре и отметить, что не так. Следующая сборка — только по команде Kanta.
+- Тред бэкапа ждёт «удаляй» — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WNwxKTmyMY7of5Me5TYX4TB
+- Ангар: «ок» на R-22 — https://claude.ai/artifact/MuwtyKLcKBfY8KJyWYguDC
+- Камуфляж «Кит 2»: «ок» или что поправить — https://claude.ai/artifact/9gBFoPRHQRAcv1cmzTtpnM
+- APK на Android (эксперимент) ждёт теста на телефоне — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WEVBC5J2UM79jZ1ct9zRUq3
+- Бот тестеров «Старт» (PR в ревью) — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W8npvQTh1WDX9gLNnGD8FNE
+- «Грач»: «да» или правки по шву, хвосту и полосе — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W51paqT882Z4wfzxcCJPcha
+- Тред «Составить список для выхода в Steam» ждёт App ID от Valve (не Kanta) — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W6HMX1ospp3M7eJsWDKo7Bq
 
 ## Сделано за сутки (для сверки)
 
-- Навыки из awesome-gamedev-agent-skills: по решению Kanta 09.11 (вариант 2 из 3) взяты `steam-publish` и `game-feel`, PR #616 слит (`e513e6c`).
-- Береговая батарея (B2-A01): PR #615 слит (`e0070bb`), сборка 3.5-s18 пересобрана 09.11 с ним. Kanta в игре ещё не проверял.
-
-## Ждёт ответа Kanta (сроков нет или срок не сегодня)
-
-- Тред «Маркетинг и реклама»: вторничный пост «Кишлак и река» не вышел в 12:00 МСК 10.11. Выбор: 1 — выложить сейчас (кадры проверены, советуем), 2 — перенести на завтра на 12:00 — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WXg1Zyyd9Z1RQ643rufRAE6
-- Тред «Оценить набор навыков awesome-gamedev-agent-skills»: «да» на 2–3 навыка (по записи 09.11 взяты два; уточнить в треде, что ещё нужно; ссылка на тред — у координатора)
-- Сборка 3.5-s18 (пересобрана 09.11, с береговой батареей): проверить в игре и отметить, что не так. Следующая сборка — только по команде Kanta, после проверки s18 и не раньше, чем через день после 09.11 — тред сборок в `docs/status-log.md`.
-- PR #600 (два издания: ливреи и наклейки, ED-03/04/08), открыт, проверки зелёные, в `main` не слит: решение Kanta, сливать ли самому — https://github.com/kanta201196-hub/FlakHeaven/pull/600
-- Заставки: «да» на перерисовку «Купола» и «Грома» — тред https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WJQ7bnVMg1iWG5bFZBPD6pm (со слов координатора, в репозитории не проверено)
-- «Сделать красочные сюжетные заставки» — ждёт «да» на комикс-вариант (ST-11, ST-12) — тот же тред заставок (ссылка выше)
-- «Подобрать облачную видеокарту» — ждёт выбора Kanta (со слов координатора, в репозитории не проверено; ссылка на тред — у координатора)
-- «Продумать два издания» — ждёт PR #600 (см. выше), решение о слиянии
-- «Сделать капсулы и скриншоты для Steam» (R-29): «ок» на 7 капсул и 8 скриншотов, когда будут готовы — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2WL7tQUNACaf3j1DA8bm5TsK
-- Серия 0 (маркетинг): аниматик части 2 придёт в тред на просмотр; полный счёт видео — только после «да» — тред https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WXg1Zyyd9Z1RQ643rufRAE6
-- «Грач»: голый металл хвоста, светлая полоса под пластиной «Грача 1», шов на борту — «да» или правки: тред 3D-моделей https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W51paqT882Z4wfzxcCJPcha
-- Отзыв по 6 шортсам и «ок» на описание YouTube-канала: тред Маркетинг и реклама (ссылка выше)
-- «Собрать все модели Архипелага в один док» и «Спланировать прокачку на пять уровней» — на проверке, нужен взгляд Kanta (со слов координатора, в репозитории не проверено)
-- Бот тестеров, «Старт» (PR в ревью с 06.11): https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W8npvQTh1WDX9gLNnGD8FNE
-- APK на Android (эксперимент) ждёт теста на телефоне: тред https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WEVBC5J2UM79jZ1ct9zRUq3
-- Тред бэкапа ждёт «удаляй»: https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WNwxKTmyMY7of5Me5TYX4TB
-- Ангар: «ок» на R-22 (детали ангара включены, свет выключен) — страница https://claude.ai/artifact/MuwtyKLcKBfY8KJyWYguDC
-- Камуфляж: кадры «Кит 2» после правки тёмных пятен на гондоле (#544) — «ок» или что поправить: https://claude.ai/artifact/9gBFoPRHQRAcv1cmzTtpnM
-- Тред «Составить список для выхода в Steam» ждёт App ID от Valve (не Kanta): https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W6HMX1ospp3M7eJsWDKo7Bq
+- PR #619 (PG-17, лёгкий первый вылет), #620 (PG-13, «момент силы»), #621 (PG-16, альбом в бою) и #622 (PG-12 и PG-14, первая связка) слиты в `main` 11.11.
+- Треды закрыты 11.11: «Упростить первый вылет новичка», «Сделать первую связку достижимой», «Показать «момент силы» в бою».
+- Журнал: установлен task-observer как пробный навык (PR #618).
