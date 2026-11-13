@@ -18,6 +18,7 @@
 
 ## Ждёт решения Kanta (без срока)
 
+- Еженедельное ревью 13.11: ответить цифрами на 7 предложений (первыми 1–3: капсулы Steam и V-08 до 20.11, исправление колонн отдельно от баланса, посты без «ок») — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WEjqUhqJjoJUfBirGkWeWPf
 - Пакет для бомб «Кита» (GD-18): выбрать 1, 2, 3 или «пока ничего»; Claude рекомендует 1 — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WLPHVyUCkgnVnEz7ziRJP9i
 - Альбом сборок в бою (PG-16): посмотреть кадры и написать правки — https://claude.ai/artifact/AdfLagBdVKYw4ftXJJYYoe (тред — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WPkxNeDFgYAvWGWw6tv2EKm)
 - Маркетинг: «ок» или правки на Дневник №4, №5, «Оружие в ангаре» и ещё два (в Word, в личке бота), пятничный рилс «Оса» — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WXg1Zyyd9Z1RQ643rufRAE6 (последний пост в канале — 10.11)
