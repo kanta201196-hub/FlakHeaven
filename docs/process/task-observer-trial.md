@@ -11,7 +11,7 @@ Meta-skill from https://github.com/rebelytics/one-skill-to-rule-them-all (v3.10.
 - Skills and rules are changed only with Kanta's "yes" (see "Log, don't act" in the skill).
 
 ## Review every 3 days (scheduled task, owner: this thread)
-Review dates: 2026-11-14, 11-17, 11-20, ... Each review records one row below.
+Review dates: 2026-11-13, 11-16, 11-19, ... (every 3rd day of the month, 11:17 MSK) Each review records one row below.
 Measure:
 1. Observations written since last review (count; how many are specific and new vs. noise or duplicates of memory/backlog).
 2. Observations that led to a concrete accepted change (skill/rule edit, new skill) with Kanta's yes.
@@ -27,3 +27,4 @@ Delete `.claude/skills/task-observer/`, the task-observer bullet in `CLAUDE.md`,
 | Date | Observations | Accepted changes | Cost / friction | Verdict |
 | --- | --- | --- | --- | --- |
 | 2026-11-11 | 0 | 0 | baseline | installed |
+| 2026-11-13 | 0 (log has only .gitkeep) | 0 | Sampled the only post-install thread I could read (daily stand-up 12.11, Haiku): it loaded the skill but skipped the Session Start Protocol as "too much for a stand-up" and logged nothing. Other recent threads started before the install or are long-running (not sampled). 1 sample, so cost and friction are a guess; no CLAUDE.md conflict seen. | too early; keep to the next review (11-16) |
