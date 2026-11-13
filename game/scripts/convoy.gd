@@ -64,7 +64,7 @@ func setup(center: Vector2, dir: Vector2, hp_k: float, dps: float, t: float) -> 
 		return
 	var order := ["scout", "technical", "truck", "light", "truck", "ifv", "manpads"]
 	if patrol:
-		order = ["technical", "truck", "light"]
+		order = ActivityBalance.patrol_order(Tuning.g("kit_patrols") >= 0.5)
 	else:
 		if t >= 480.0:
 			order.append("ifv")       # с 8-й минуты вторая БМП
@@ -682,6 +682,19 @@ func _process(delta: float) -> void:
 		var first := smoke_c == Vector2.INF
 		smoke_c = mid if first else smoke_c.lerp(mid, 1.0 - exp(-delta * 0.8))
 		smoke_fx(delta, first)
+	# GD-18: an untouched patrol left behind is removed, otherwise it never ends and blocks the next columns
+	if patrol and not alarm:
+		var dists: Array = []
+		for v in alive():
+			dists.append((v as Node2D).global_position.distance_to(p.global_position))
+		if ActivityBalance.patrol_gone(Tuning.g("kit_patrols") >= 0.5, alarm, _t, dists):
+			for v in vehicles:
+				if is_instance_valid(v):
+					(v as Node).queue_free()
+			queue_free()
+			if OS.get_cmdline_user_args().has("--autotest"):
+				print("AUTOTEST: patrol column dropped at %.0f" % _t)
+			return
 	# ушли далеко после конца — убираем всё, включая остовы
 	if ended and (alive().is_empty() or f.distance_to(p.global_position) > 2600.0):
 		var far := true
