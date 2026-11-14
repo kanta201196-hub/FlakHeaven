@@ -11,12 +11,12 @@
 
 **Правила ведения.** В каждом разделе не больше 10–15 живых задач. Новая задача — в раздел своей системы, с номером. Номера не меняются. Закрыл — строка в конец `backlog-archive.md` («Дописано после…»), здесь удалил. Шапку «Где мы сейчас» обновляем при каждой сборке и каждую пятницу на ревью.
 
-## Where we are (13.11.2026)
+## Where we are (14.11.2026)
 
-- **Game:** no code PR merged on 12–13.11 (only docs commits: #624 task-observer review, GD-18 backlog line, W46 marketing plan). Last code PR merged is #622 (PG-12 card telemetry, PG-14 first synergy), on 11.11. Also merged on 11.11: #619 (PG-17 lighter first sortie), #620 (PG-13 «момент силы»), #621 (PG-16 album in combat). Open: PR #600 (two editions, ED-03/04/08); not re-checked on 12.11 (догадка: still open, waits for Kanta's merge decision).
-- **Last build:** 3.5-s18, rebuilt 09.11 with #615. Nothing new since, so no build line in `docs/status-log.md` on 12.11. Kanta has not reported the s18 check (догадка: not done yet). Next build only on Kanta's command, not before the s18 items are checked in the game. The next build will carry the 11.11 merges (#619–#622).
-- **Waiting on Kanta (details in `docs/owner-checklist/kanta-now.md`):** pick a bomb package for «Кит» (GD-18, Claude recommends option 1); look at the in-combat album frames (PG-16); «ок» on the marketing texts (Diary №4 and №5, and more); decide on the Steam roadmap (early access option B, `Составить дорожную карту релиза в Steam`); «да» on the two comic redraws (Купол, Гром; two Figma generations, it spends credits); «ок» on the 7 capsules and 8 screenshots (R-29).
-- **Main path:** Valve's review of the Steamworks documents ~16.11 (3 days left); Steam Next Fest registration by 10.01.2027 (58 days left); demo and page to Valve by 18.01.2027 (66 days left); Next Fest starts 22.02.2027 (101 days left). The 18.01 date comes from Steamworks; `docs/process/early-access.md` still says 25.01 (to reconcile).
+- **Game:** no code PR merged in the last 24 h. Commits since 13.11 are docs and marketing only: stand-up 13.11 (fec0d25), weekly review (d838bd3), W46 plan and status (a5842f6, c87036a). Last code PR merged is #622 (PG-12, PG-14) on 11.11; also on 11.11: #619 (PG-17), #620 (PG-13), #621 (PG-16). Open: PR #600 (two editions, ED-03/04/08) and PR #623 (GD-18 balance package), both wait for Kanta (догадка: #600 still open, not re-checked).
+- **Build cycle:** last build 3.5-s18, rebuilt 09.11 with #615. The s18 check is not closed: Kanta has not reported it, and there is no s18 item list in this file yet. No build since, so no build line in `docs/status-log.md`. Next build only on Kanta's command, after s18 is checked and at least a day has passed.
+- **Waiting on Kanta:** dated items and day counts in `docs/owner-checklist/kanta-now.md`; the weekly review of 13.11 (7 proposals, numbers) is unanswered.
+- **Main path:** Valve review ~16.11 (2 days left); Steam content survey (S6) 20.11 (6 days); Next Fest registration 10.01.2027 (57 days); demo and page to Valve 18.01.2027 (65 days); Next Fest starts 22.02.2027 (100 days). `docs/process/early-access.md` still says 25.01 (to reconcile).
 - **Strong-model threads:** no more than six at once (since 25.10.2026); the coordinator runs the queue.
 
 ## Правки по сборке 3.5-s16
