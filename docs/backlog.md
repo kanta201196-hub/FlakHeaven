@@ -11,12 +11,12 @@
 
 **Правила ведения.** В каждом разделе не больше 10–15 живых задач. Новая задача — в раздел своей системы, с номером. Номера не меняются. Закрыл — строка в конец `backlog-archive.md` («Дописано после…»), здесь удалил. Шапку «Где мы сейчас» обновляем при каждой сборке и каждую пятницу на ревью.
 
-## Where we are (14.11.2026)
+## Where we are (15.11.2026)
 
-- **Game:** no code PR merged in the last 24 h. Commits since 13.11 are docs and marketing only: stand-up 13.11 (fec0d25), weekly review (d838bd3), W46 plan and status (a5842f6, c87036a). Last code PR merged is #622 (PG-12, PG-14) on 11.11; also on 11.11: #619 (PG-17), #620 (PG-13), #621 (PG-16). Open: PR #600 (two editions, ED-03/04/08) and PR #623 (GD-18 balance package), both wait for Kanta (догадка: #600 still open, not re-checked).
+- **Game:** no code PR merged in the last 24 h. Commits since 14.11 are docs and marketing only: stand-up 14.11 (733b53c), W46 status 15.11 (9c2aba4). Last code PR merged is #622 (PG-12, PG-14) on 11.11; also on 11.11: #619 (PG-17), #620 (PG-13), #621 (PG-16). Open: PR #600 (two editions, ED-03/04/08) and PR #623 (GD-18 balance package), both wait for Kanta (догадка: #600 still open, not re-checked).
 - **Build cycle:** last build 3.5-s18, rebuilt 09.11 with #615. The s18 check is not closed: Kanta has not reported it, and there is no s18 item list in this file yet. No build since, so no build line in `docs/status-log.md`. Next build only on Kanta's command, after s18 is checked and at least a day has passed.
 - **Waiting on Kanta:** dated items and day counts in `docs/owner-checklist/kanta-now.md`; the weekly review of 13.11 (7 proposals, numbers) is unanswered.
-- **Main path:** Valve review ~16.11 (2 days left); Steam content survey (S6) 20.11 (6 days); Next Fest registration 10.01.2027 (57 days); demo and page to Valve 18.01.2027 (65 days); Next Fest starts 22.02.2027 (100 days). `docs/process/early-access.md` still says 25.01 (to reconcile).
+- **Main path:** Valve review ~16.11 (1 day left); Steam content survey (S6) 20.11 (5 days); Next Fest registration 10.01.2027 (56 days); demo and page to Valve 18.01.2027 (64 days); Next Fest starts 22.02.2027 (99 days). `docs/process/early-access.md` still says 25.01 (to reconcile).
 - **Strong-model threads:** no more than six at once (since 25.10.2026); the coordinator runs the queue.
 
 ## Правки по сборке 3.5-s16
