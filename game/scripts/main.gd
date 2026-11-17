@@ -417,13 +417,21 @@ func _process(delta: float) -> void:
 		# фон меню: камера медленно плывёт над биомом
 		# тест 3.5-s5 (п. 1): по курсу звена заставки — самолёты летят носом вперёд, а не боком
 		camera.global_position += TitleFlight.advance(delta / maxf(Engine.time_scale, 0.01), camera.global_position)
-		camera.zoom = camera.zoom.lerp(Vector2(0.75, 0.75), 0.05)
+		# 3.5-s19 (7): the flight must look already in steady flight on entering the menu. The camera neither eases
+		# into its speed (smoothing would make the planes accelerate in the world) nor zooms in from the last screen
+		# (the formation would slide over the ground and smear its trails) — the zoom snaps when the flight appears
+		camera.position_smoothing_enabled = false
+		if render3d == null or not render3d.title.active():
+			camera.zoom = Vector2(0.75, 0.75)
+		else:
+			camera.zoom = camera.zoom.lerp(Vector2(0.75, 0.75), 0.05)
 		sfx.music("menu")
 		return
 	if state == "campaign" and HudCampaign.vignette_on():
 		# story step 9: the operation vignette — the menu world drifts under the window, the flight is anchored in it,
 		# light and zoom follow the selected operation
 		camera.global_position += TitleFlight.advance(delta / maxf(Engine.time_scale, 0.01), camera.global_position)
+		camera.position_smoothing_enabled = false   # steady flight from the first frame, as in the menu
 		var k := clampi(int(Campaign.op()["diff"]), 0, 3)
 		camera.zoom = camera.zoom.lerp(Vector2.ONE * float(HudCampaign.VIGNETTE_ZOOM[k]), 0.05)
 		if render3d != null:
