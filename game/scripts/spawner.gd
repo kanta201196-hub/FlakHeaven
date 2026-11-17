@@ -222,7 +222,8 @@ func _process(delta: float) -> void:
 	_drone_cd -= delta * mult
 	if _drone_cd <= 0.0:
 		_drone_cd = maxf(0.7, 2.6 - t * 0.008)
-		if enemies.size() < 60:
+		# GD-18: «Кит» patrol vehicles do not count here, or their extra columns would choke the drone waves
+		if enemies.size() - _patrol_units() < 60:
 			# 3.1: мелочи ~на 35% меньше (было 1+t/120 … 2+t/50)
 			var count := randi_range(1 + int(t / 160.0), 2 + int(t / 75.0))
 			var ang := randf() * TAU
@@ -388,22 +389,36 @@ func spawn_bombers(p: Player, t: float) -> void:
 
 
 ## Тест 3.5-s7 (Kanta, «бери в работу»): у «Кита» бомбы давали 1,5% урона — наземных целей на пути мало.
-## Ему вне активностей раз в PATROL_EVERY с курс пересекает малая колонна (пикап, грузовик, техничка) —
-## без баннера и таймера, груз с грузовиков как у конвоя
-const PATROL_EVERY := 35.0
+## Outside activities a small column crosses his course (no banner or timer, trucks drop cargo like a convoy's).
+## How often, how many at once and what it carries: ActivityBalance.patrol_* (GD-18, F1 `kit_patrols`).
 const PATROL_FROM := 45.0
 const PATROL_RETRY := 6.0   # s: next try after a patrol found no road near the bomber's path
 var _patrol_cd := PATROL_FROM
-var _patrol_cv: Convoy = null
+var _patrols: Array = []   # live patrol columns
 
 
+## Live vehicles of «Кит» patrol columns when F1 `kit_patrols` is on (0 when off, as in s18): they are left out of
+## the drone limit, which counts the whole «enemies» group, ground included.
+func _patrol_units() -> int:
+	if Tuning.g("kit_patrols") < 0.5:
+		return 0
+	var n := 0
+	for c in _patrols:
+		if is_instance_valid(c):
+			n += (c as Convoy).alive().size()
+	return n
+
+
+## Spawns the next «Кит» patrol column on his path when the timer is up and fewer than the cap are on the map.
 func _patrol(p: Player, t: float, delta: float) -> void:
 	if p.cls_id != "bomber" or m_boss():
 		return
 	_patrol_cd -= delta
-	if _patrol_cd > 0.0 or is_instance_valid(_patrol_cv):
+	_patrols = _patrols.filter(func(c): return is_instance_valid(c))
+	var on := Tuning.g("kit_patrols") >= 0.5
+	if _patrol_cd > 0.0 or _patrols.size() >= ActivityBalance.patrol_max(on):
 		return
-	_patrol_cd = PATROL_EVERY
+	_patrol_cd = ActivityBalance.patrol_every(on)
 	var cv := Convoy.new()
 	cv.patrol = true
 	var mid := p.global_position + Vector2.from_angle(p.heading + randf_range(-0.5, 0.5)) * 1100.0
@@ -414,7 +429,7 @@ func _patrol(p: Player, t: float, delta: float) -> void:
 		_patrol_cd = PATROL_RETRY
 		return
 	Main.I.world.add_child(cv)
-	_patrol_cv = cv
+	_patrols.append(cv)
 	if OS.get_cmdline_user_args().has("--autotest"):
 		print("AUTOTEST: patrol column at %.0f" % t)
 
