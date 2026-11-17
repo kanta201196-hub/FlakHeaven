@@ -1988,7 +1988,7 @@ func _sync_weapons(u: Unit3D, p: Player, tex: Texture2D) -> void:
 					continue
 			var wmi: MeshInstance3D = u.weapons.get(key)
 			if wmi == null:
-				wmi = WeaponModels.make(g.weapon, mt["t"], mt["side"], p.cls_id, g.evo, p.plane_model)
+				wmi = WeaponModels.make(g.weapon, mt["t"], mt["side"], p.cls_id, WeaponModels.mount_evo(g, mt), p.plane_model)
 				ModuleParts.seeker_head(wmi, seek, mt["t"])   # Т-3: «Глазастик»
 				root.add_child(wmi)
 				u.weapons[key] = wmi
@@ -2081,6 +2081,7 @@ func _weapon_layout(u: Unit3D, p: Player, tex: Texture2D, gi: int, g: Hardpoint,
 	for si in pts.size():
 		var mt: Dictionary = pts[si]
 		var mtr: int = mt.get("t", tr)   # Т-5: у ловушек модель задаёт точка (кассета / контейнер)
+		var mev := WeaponModels.mount_evo(g, mt)   # 3.5-s19: modernised bombs on pylons are plain «250»
 		var pt: Vector2 = mt["p"]
 		var fair_rb := 0.0
 		if mt["side"] == "skin":   # S13: flush flare panel, laid onto the model in _sync_weapons
@@ -2092,11 +2093,11 @@ func _weapon_layout(u: Unit3D, p: Player, tex: Texture2D, gi: int, g: Hardpoint,
 		# турель-модель в корме висит под концом фюзеляжа основанием вверх (как нижняя)
 		var tail_cab: bool = mt["side"] == "tail" and g.weapon == "turret" and (WeaponModels.TURRET_MODELS.get(p.cls_id, {}) as Dictionary).has("tail")
 		var under_tail: bool = mt["side"] == "tail" and g.weapon == "turret" and WeaponModels.TURRET_MODELS.has(p.cls_id) and not tail_cab
-		var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px, "belly": -tw * 0.028 - (WeaponModels.hang(g.weapon, tr, true) - WeaponModels.PYLON_H) * len_px, "bay": -tw * 0.02 - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
+		var y: float = {"under": -tw * 0.012 - WeaponModels.hang(g.weapon, mtr, mev) * len_px, "belly": -tw * 0.028 - (WeaponModels.hang(g.weapon, tr, true) - WeaponModels.PYLON_H) * len_px, "bay": -tw * 0.02 - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6, "top": tw * 0.028, "wing": tw * 0.012, "bottom": -tw * 0.028, "tail": -tw * 0.028 if under_tail else 0.0}.get(mt["side"], 0.0)
 		if mt["side"] == "under" and u.bm != null:   # пилон — под настоящим крылом модели (тест 3.5-s3)
 			var lo := WeaponModels.surface_low(u.bm, pt.x / tw, pt.y / tw)
 			if not is_nan(lo):
-				y = lo * tw - WeaponModels.hang(g.weapon, mtr, g.evo) * len_px
+				y = lo * tw - WeaponModels.hang(g.weapon, mtr, mev) * len_px
 		elif mt.get("rail", false) and u.bm != null:   # Kanta 24.10: missile beside the real wing tip, at wing level
 			var tr2 := WeaponModels.tip_rail(u.bm, pt.x / tw, pt.y / tw)
 			if not is_nan(tr2.x):
@@ -2129,7 +2130,7 @@ func _weapon_layout(u: Unit3D, p: Player, tex: Texture2D, gi: int, g: Hardpoint,
 			var lo2 := WeaponModels.surface_low(u.bm, pt.x / tw, pt.y / tw)
 			if not is_nan(lo2):
 				y = lo2 * tw - (WeaponModels.hang(g.weapon, mtr) - WeaponModels.PYLON_H) * len_px * 0.6
-		var ent := {"key": "%d_%d_%s_%d%s_s%d" % [gi, si, g.weapon, mtr, "e" if g.evo else "", seek], "t": mtr,
+		var ent := {"key": "%d_%d_%s_%d%s_s%d" % [gi, si, g.weapon, mtr, "e" if mev else "", seek], "t": mtr, "plain": not mev,
 			"side": mt["side"], "yaw": float(mt["yaw"]), "pos": Vector3(pt.x, y, pt.y), "tail_cab": tail_cab,
 			"flip": mt["side"] == "bottom" or under_tail}
 		if fair_rb > 0.0:

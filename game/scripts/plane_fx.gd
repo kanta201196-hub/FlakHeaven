@@ -35,7 +35,10 @@ const SPEC := {
 	"attacker_t5": {"jet": [Vector2(-111.8, -28.6), Vector2(-111.8, 28.6), Vector2(-93.4, 0)], "r": 7.6, "y": -7.8},
 	"bomber_t4": {"jet": [Vector2(-50.4, -47.1), Vector2(-50.4, 47.1), Vector2(10.5, -67.8), Vector2(10.5, 67.8)],
 		"r": 5.3, "y": -24.8},
-	"bomber_t5": {"jet": [Vector2(-149.1, -25.2), Vector2(-149.1, 25.2)], "r": 3.1, "y": -5.4},
+	# 3.5-s19 (Kanta: «двигатели не вертятся, а должны»): the four lift fans are rotors of their own
+	# (fh_prop_bomber_t5.glb, kit5_fix.py) that spin like propellers; «fan_r» — their radius for the blur disc.
+	# Not «prop»: that key also gives the plane the piston engine voice (has_props)
+	"bomber_t5": {"jet": [Vector2(-149.1, -25.2), Vector2(-149.1, 25.2)], "r": 3.1, "y": -5.4, "fan_r": 0.0605},
 }
 
 static var _flame_mesh: QuadMesh
@@ -137,7 +140,7 @@ static func attach(u: Unit3D, tex: Texture2D) -> void:
 		fx["flames"].append({"n": f, "r": r, "ph": randf() * 10.0})
 		fx["trail"].append(Vector3(pt.x - r, y, pt.y))
 	var props: Node3D = null
-	if s.has("prop") and u.bm != null:
+	if (s.has("prop") or s.has("fan_r")) and u.bm != null:
 		props = WingMech.attach_props(root.get_child(0) as Node3D, tex.resource_path.get_file().get_basename())
 	if props != null:
 		u.props = props
@@ -148,9 +151,11 @@ static func attach(u: Unit3D, tex: Texture2D) -> void:
 			d.mesh = _prop_mesh
 			d.material_override = _blur_mat
 			d.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			# квад в плоскости Y/Z модели (нормаль — ось винта X), в плоскости лопастей
-			d.position = n.position + Vector3(0.009, 0, 0)
-			d.basis = Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3.ONE * PROP_R * 2.0)
+			# квад в плоскости лопастей: нормаль — ось винта, локальная X узла (у «Кита» 5 подъёмные вентиляторы
+			# смотрят вверх)
+			var ax := n.basis.orthonormalized()
+			d.position = n.position + ax.x * 0.009
+			d.basis = ax * Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3.ONE * float(s.get("fan_r", PROP_R)) * 2.0)
 			n.get_parent().add_child(d)   # рядом с винтом: сам диск не вращается, полосы крутит шейдер
 			fx["blurs"].append(d)
 	var baked := props == null and u.bm != null and s.has("hub_y")

@@ -992,7 +992,7 @@ func _add_weapons(cls_id: String, lvl: String) -> void:
 				debug_mounts.append({"weapon": g.weapon, "side": side, "node": fp, "miss": fp == null})
 				continue
 			var mtr: int = mt.get("t", mini(weapon_tier, 3))
-			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4, lvl, true)   # тест 3.5-s8: ангарная версия
+			var wmi := WeaponModels.make(g.weapon, mtr, side, cls_id, weapon_tier == 4 and not mt.get("plain", false), lvl, true)   # тест 3.5-s8: ангарная версия
 			if g.weapon == "aam" and weapon_tier != 4:
 				ModuleParts.seeker_head(wmi, bench_seeker, mtr)
 			# по настоящей поверхности модели: подвес — под крылом на пилоне, верхняя турель
@@ -1005,7 +1005,7 @@ func _add_weapons(cls_id: String, lvl: String) -> void:
 			var pitch := 0.0
 			match side:
 				"under":
-					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mtr, weapon_tier == 4) * wlen
+					y = (lo if not is_nan(lo) else -0.02) - WeaponModels.hang(g.weapon, mtr, weapon_tier == 4 and not mt.get("plain", false)) * wlen
 					pitch = _chord_pitch(x - 0.02 * wlen, z, (0.18 if g.weapon in ["aam", "arm"] else 0.25) * wlen)
 				"belly":   # Т-6: «Бабушкин ковёр» — своим узлом прямо к брюху, без пилона
 					y = (lo if not is_nan(lo) else -0.03) - (WeaponModels.hang(g.weapon, 3, true) - WeaponModels.PYLON_H) * wlen

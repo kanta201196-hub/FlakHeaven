@@ -251,6 +251,16 @@ const CARPET_BAY_PTS := [Vector3(0.66, 0, -0.072), Vector3(0.66, 0, 0.072), Vect
 	Vector3(-0.22, 0, -0.072), Vector3(-0.22, 0, 0.072), Vector3(-0.66, 0, -0.072), Vector3(-0.66, 0, 0.072)]
 
 
+## Calibre on each pylon of a modernised bomb group without a bay: «250», the bomb of the carpet (bomb_t 3)
+const CARPET_PYLON_T := 3
+
+
+## Whether the model on mount `mt` of group `g` is the group's evolution model; false for a mount `mounts` marked
+## «plain» (modernised bombs on wing pylons show the ordinary «250»)
+static func mount_evo(g: Hardpoint, mt: Dictionary) -> bool:
+	return g.evo and not mt.get("plain", false)
+
+
 ## У самолёта есть бомбоотсек со створками (Т-5: tools/blender/bay_doors.py)
 static func has_bay(cls_id: String, lvl: String) -> bool:
 	return ResourceLoader.exists("res://models/mech/fh_bay_%s.glb" % PlaneTiers.art_key(cls_id, lvl))
@@ -917,8 +927,15 @@ static func mounts(cls_id: String, lvl: String, gi: int, g: Hardpoint) -> Array:
 				c += q
 			out.append({"p": c / bp.size(), "side": "bay", "yaw": 0.0, "t": CARPET_BAY_T})
 			return out
-	# Т-6: «Салют» — одна пусковая на спине за кабиной, «Бабушкин ковёр» — одна планка под фюзеляжем
-	if g.evo and g.weapon in ["flares", "bombs"] and ResourceLoader.exists(EVO_GLB % g.weapon):
+	# 3.5-s19 (Kanta: «так висеть не могут, бомбы — в бомбоотсеке»): «Бабушкин ковёр» never hangs as the beam of
+	# 8 bombs under the fuselage. A bay group without a bay model falls through to its own points, and wing pylons
+	# carry one «250» each (the carpet calibre), drawn as plain bombs (mount_evo false)
+	if g.evo and g.weapon == "bombs":
+		for pt: Vector2 in PlaneArt.slot_points(cls_id, lvl, gi, g):
+			out.append({"p": pt, "side": "under", "yaw": 0.0, "t": CARPET_PYLON_T, "plain": true})
+		return out
+	# Т-6: «Салют» — одна пусковая на спине за кабиной
+	if g.evo and g.weapon == "flares" and ResourceLoader.exists(EVO_GLB % g.weapon):
 		var sh := PlaneArt.shape_info(cls_id, lvl)
 		if not sh.is_empty():
 			var top := g.weapon == "flares"

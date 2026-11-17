@@ -59,6 +59,17 @@ func _test_plane(key: String) -> void:
 	for b in bows:
 		_check(b >= glass_box.position.x and b <= glass_box.end.x, "%s: bow at x %.3f is on the glass" % [key, b])
 	var inner := node.get_node_or_null("interior") as MeshInstance3D
+	if (HangarCockpit.FRAMES[key] as Dictionary).get("liner", false):
+		# 3.5-s19: a glazed nose gets a dark liner just inside the glass and nothing hanging below it
+		var ln := node.get_node_or_null("tub") as MeshInstance3D
+		_check(ln != null and ln.mesh != null, "%s: liner under the glazed nose" % key)
+		_check(inner == null, "%s: no seats in a glazed nose" % key)
+		if ln != null and ln.mesh != null:
+			var lb := ln.mesh.get_aabb()
+			_check(lb.position.y >= glass_box.position.y - HangarCockpit.LINER_D - 0.001 and glass_box.grow(HangarCockpit.LINER_D + 0.001).encloses(lb),
+					"%s: liner inside the glass box (liner %s, glass %s)" % [key, lb, glass_box])
+		model.free()
+		return
 	_check(inner != null, "%s: seat and panel built" % key)
 	var own: bool = (HangarCockpit.FRAMES[key] as Dictionary).get("own_pit", false)
 	if own:

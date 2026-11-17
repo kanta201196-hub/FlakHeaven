@@ -26,12 +26,16 @@ const NODE := "cockpit"
 ## the longest one is lopsided: «Кит» 5's framed glasshouse gives a main loop centred at z 0.027 with a half-width
 ## of 0.108 (the glass spans |z| ≤ 0.08), which dropped the tub floor through the belly and stood the seats and side
 ## consoles outside the hull side under the nose.
+## liner — a glazed nose or glasshouse (3.5-s19, Kanta: «Кит 1 — кусков не хватает», «дыра в модели Кит 5»): the
+## glass wraps the nose down to the belly, so a tub dropped from its rim hung below the nose as black slabs and left
+## the sky showing through the far side; such a plane gets a dark liner a little inside the glass instead (the glass
+## shows depth and the cabin's dark inside, never the sky), and no seats.
 ## Read off the canopy shapes: bubble canopies have a windscreen bow only, the attackers a windscreen and a hood
 ## bow, the bombers a framed glasshouse.
 const FRAMES := {
 	"fighter_t1": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_t1": {"bows": [0.32], "ribs": [], "seats": [[0.6, -0.42], [0.6, 0.42]]},   # side by side
-	"bomber_t1": {"bows": [0.2, 0.4, 0.6, 0.8], "ribs": [0.0], "seats": [[0.7, -0.42], [0.7, 0.42]]},
+	"bomber_t1": {"bows": [0.2, 0.4, 0.6, 0.8], "ribs": [0.0], "seats": [], "liner": true},
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_1": {"bows": [0.3, 0.7], "ribs": [], "seats": [[0.58, 0.0]]},
@@ -43,11 +47,12 @@ const FRAMES := {
 	"attacker_t4": {"bows": [0.3, 0.62], "ribs": [], "seats": [[0.28, 0.0], [0.7, 0.0]]},   # tandem two-seater
 	"attacker_t5": {"bows": [0.33, 0.66], "ribs": [], "seats": [[0.25, 0.0], [0.58, 0.0]]},   # three-pane canopy
 	"bomber_t4": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.55, -0.42], [0.55, 0.42]], "tub": 1.0},
-	"bomber_t5": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]], "tub": 0.8,
-		"main": [0.0, 0.078]},
+	"bomber_t5": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [], "liner": true},
 }
 ## Frame paint when the livery has no colours of its own (the source paint): a dark worn grey
 const FRAME_DEFAULT := Color(0.22, 0.23, 0.22)
+## Liner (FRAMES «liner»): how far inside the glass it sits, model units (about 12 cm on a 25 m bomber)
+const LINER_D := 0.005
 ## Tub depth below the sill, in half-widths of the glass loop, and how far its floor draws in towards the middle
 const TUB_DEPTH := 1.5
 const TUB_INSET := 0.25
@@ -209,6 +214,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 	var rim := _rim_distance(pos, loops)
 	var spec: Dictionary = FRAMES.get(key, {"bows": [0.3], "ribs": [], "seats": [[0.6, 0.0]]})
 	var own: bool = spec.get("own_pit", false)
+	var liner: bool = spec.get("liner", false)
 	var bows := PackedFloat32Array()
 	var ribs := PackedFloat32Array()
 	var tub := SurfaceTool.new()
@@ -237,13 +243,17 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		if li == main_i:
 			for f: float in spec["ribs"]:
 				ribs.append(f * float(b["hw"]))
-		if own:
+		if own or liner:
 			continue
 		_tub(tub, pos, loops[li], b)
 		if li == main_i:
 			_furnish(st, pos, loops[li], b, spec["seats"])
 	var tub_mesh: ArrayMesh = null
-	if not own:
+	if liner:
+		_liner(tub, pos, nrm, tris)
+		tub.generate_normals()
+		tub_mesh = tub.commit()
+	elif not own:
 		tub.generate_normals()
 		tub_mesh = tub.commit()
 	elif spec.has("pit"):
@@ -253,7 +263,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 			"hw": hw, "sill": float(pit[2]) + TUB_DEPTH * hw * 0.8, "low": float(pit[2]) + TUB_DEPTH * hw}
 		_furnish(st, pos, PackedInt32Array(), pb, spec["seats"])
 	var interior: ArrayMesh = null
-	if not own or spec.has("pit"):
+	if (not own and not liner) or spec.has("pit"):
 		st.generate_normals()
 		interior = st.commit()
 	return {"glass": _glass_mesh(pos, nrm, tris, rim), "bows": bows, "ribs": ribs, "tub": tub_mesh, "interior": interior,
@@ -353,6 +363,23 @@ static func _glass_mesh(pos: PackedVector3Array, nrm: PackedVector3Array, tris: 
 			st.set_uv2(Vector2(rim[v], 0.0))
 			st.add_vertex(pos[v])
 	return st.commit()
+
+
+## Liner under a glazed nose: the glass triangles moved LINER_D inwards along their normals, facing out (seen through
+## the glass), in the dark cabin paint
+static func _liner(st: SurfaceTool, pos: PackedVector3Array, nrm: PackedVector3Array, tris: PackedInt32Array) -> void:
+	var col := C_TUB.darkened(0.45)
+	for t in range(0, tris.size(), 3):
+		var a := tris[t]
+		var b := tris[t + 1]
+		var c := tris[t + 2]
+		var pa := pos[a] - nrm[a] * LINER_D
+		var pb := pos[b] - nrm[b] * LINER_D
+		var pc := pos[c] - nrm[c] * LINER_D
+		if (pb - pa).cross(pc - pa).dot(nrm[a] + nrm[b] + nrm[c]) > 0.0:
+			_tri(st, pa, pb, pc, col, col, col)
+		else:
+			_tri(st, pa, pc, pb, col, col, col)
 
 
 ## Tub under one glass loop: a wall from every cut edge down and in towards the loop's middle, and a floor
