@@ -11101,3 +11101,12 @@ msgstr "NEW SYNERGY · SLOT %d"
 
 msgid "АРХЕТИП · РАНГ III"
 msgstr "ARCHETYPE · RANK III"
+
+msgid "Берите карточки с этим значком: каждая продвигает рецепт."
+msgstr "Take cards with this icon: each one moves the recipe forward."
+
+msgid "Нужно: %s — уже есть"
+msgstr "Needs: %s — done"
+
+msgid "Нужно: %s, сейчас %d"
+msgstr "Needs: %s, now %d"

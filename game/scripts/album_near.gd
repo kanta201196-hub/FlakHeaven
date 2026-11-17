@@ -245,6 +245,44 @@ static func _thing_name(ctx: Dictionary, t: Dictionary) -> String:
 	return ""
 
 
+## Icon of thing `t` for `HudIcons.tile`: [key, family]. A choice of weapons shows the one this plane carries,
+## a module group its first module, so the recipe reads as the cards the player will actually be offered.
+static func thing_icon(ctx: Dictionary, t: Dictionary) -> Array:
+	if t.has("skill"):
+		return [String(ctx.get("skill", "")), "skill"]
+	if t.has("wing"):
+		return ["wingman", "wing"]
+	if t.has("mods"):
+		var mk := String((t["mods"] as Array)[0])
+		var tags: Array = Prog.MODULE_TAGS.get(mk, ["armor"])
+		return [mk, String(tags[0])]
+	if t.has("w"):
+		var w := _carried(ctx, t["w"])
+		return [w, HudIcons.weapon_family(w)]
+	return ["module", "armor"]
+
+
+## Short label of thing `t` under its icon: one weapon name (the carried one), the group name, «ведомый»
+static func thing_short(ctx: Dictionary, t: Dictionary) -> String:
+	if t.has("skill"):
+		return String(ctx.get("skill_title", ""))
+	if t.has("wing"):
+		return "ведомый"
+	if t.has("mods"):
+		return String(t["t"]) if t.has("t") else String(Cards.MODULES[String((t["mods"] as Array)[0])]["title"])
+	if t.has("w"):
+		return String(Weapons.DEFS[_carried(ctx, t["w"])]["short"])
+	return ""
+
+
+## First weapon of `ws` this plane carries, else the first of the list
+static func _carried(ctx: Dictionary, ws: Array) -> String:
+	for w in ws:
+		if (ctx.get("weapons", []) as Array).has(w):
+			return String(w)
+	return String(ws[0])
+
+
 # ---------- from the live plane ----------
 
 ## Context of player `p` at sortie time `run_time` (see the class doc)
@@ -272,7 +310,7 @@ static func ctx_of(p: Player, run_time: float) -> Dictionary:
 	for tg: String in Prog.TAG_ORDER:
 		tags[tg] = p.tag(tg)
 	return {"snap": Cards.pair_snap(p), "weapons": weapons, "wing_cap": Cards.wing_limit(p),
-		"skill_syn": String(PlaneClasses.SKILL3[p.skill3]["syn"]["id"]), "skill_title": String(PlaneClasses.SKILL3[p.skill3]["title"]),
+		"skill": p.skill3, "skill_syn": String(PlaneClasses.SKILL3[p.skill3]["syn"]["id"]), "skill_title": String(PlaneClasses.SKILL3[p.skill3]["title"]),
 		"class_syns": (PlaneClasses.CLASS_SKILLS.get(p.cls_id, []) as Array).map(func(sk): return String(PlaneClasses.SKILL3[sk]["syn"]["id"])),
 		"owned": p.syn.keys(), "course": p.course, "evo_done": evo_done, "evo_time": run_time >= Prog.EVO_TIME,
 		"profiles": profiles, "third_open": third, "tags": tags, "arch_on": Tuning.g("build_arch") >= 0.5, "pairs_on": Cards.pairs_on()}

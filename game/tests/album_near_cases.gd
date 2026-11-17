@@ -13,6 +13,7 @@ func run() -> Array:
 	_test_prof_arch()
 	_test_nearest()
 	_test_card_effect()
+	_test_thing_icons()
 	return [_checks, _failed]
 
 
@@ -116,3 +117,18 @@ func _test_card_effect() -> void:
 	rows = AlbumNear.rows(c, ["syn:carousel"])
 	e = AlbumNear.card_effect(c, rows, {"weapon": "aam", "add": 2, "new": true})
 	_check(not e.is_empty() and int(e["after"][0]["have"]) == 2 and not e["opens"], "a new AAM at level 2 advances, does not open")
+
+
+## Recipe formula (Kanta 2026-11-17): each ingredient shows the card the player will be offered
+func _test_thing_icons() -> void:
+	var c := _ctx()
+	c["skill"] = "combat_turn"
+	_check(AlbumNear.thing_icon(c, {"w": ["aam"]}) == ["aam", HudIcons.weapon_family("aam")], "weapon thing → its weapon icon")
+	_check(AlbumNear.thing_icon(c, {"w": ["srm", "aam", "rockets"]})[0] == "aam", "a choice of weapons → the one carried")
+	_check(AlbumNear.thing_icon(c, {"w": ["bombs", "hebomb"]})[0] == "bombs", "none carried → the first of the list")
+	_check(AlbumNear.thing_icon(c, {"mods": ["gun_dmg", "gun_rate"], "t": "Пушка"}) == ["gun_dmg", "kinetic"], "module group → first module, its tag")
+	_check(AlbumNear.thing_icon(c, {"wing": 1}) == ["wingman", "wing"], "wingmen → wingman icon")
+	_check(AlbumNear.thing_icon(c, {"skill": 1}) == ["combat_turn", "skill"], "skill → the class skill of the plane")
+	_check(AlbumNear.thing_short(c, {"w": ["srm", "aam"]}) == String(Weapons.DEFS["aam"]["short"]), "label: the carried weapon only")
+	_check(AlbumNear.thing_short(c, {"mods": ["gun_dmg", "gun_rate"], "t": "Пушка"}) == "Пушка", "label: the group name")
+	_check(AlbumNear.thing_short(c, {"wing": 1}) == "ведомый", "label: wingman")

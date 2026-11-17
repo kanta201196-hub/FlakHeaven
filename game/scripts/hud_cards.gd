@@ -47,6 +47,8 @@ static var _kbd := false
 ## PG-16: album context and rows of this frame (`AlbumNear`), empty when the album panel is off
 var _actx := {}
 var _arows: Array = []
+## Recipe icons of the nearest-recipes panel, for the hover hint (`RecipeArt.tooltip`)
+var _rhits: Array = []
 
 
 ## Draws the whole screen over the paused fight.
@@ -102,9 +104,11 @@ func draw(m: Main, size: Vector2) -> void:
 	_actions(m, Vector2(x0, by), pair)
 	_terms_tips(m, Vector2(x0 + 420.0, by - 4.0), size, over_card or _kbd)
 	if side:
-		_near(m, p, Rect2(size.x - NEAR_W - 40.0, top - 14.0, NEAR_W, CARD_H + 14.0))
+		_near(m, p, Rect2(size.x - NEAR_W - 40.0, top - 14.0, NEAR_W, minf(CARD_H + 170.0, size.y - top - 110.0)))
 	_hints(size, pair)
 	_hull(p)
+	if side:   # on top of everything: the hovered recipe icon's name and explanation
+		RecipeArt.tooltip(ctrl, _rhits, _actx, ctrl.get_local_mouse_position(), size)
 
 
 ## S11-23: hull bar in the top-left corner, where it is in flight, so a pick can weigh repair.
@@ -304,21 +308,28 @@ func _near(m: Main, p: Player, r: Rect2) -> void:
 	var hf := UiStyle.head_font(700, 4)
 	UiStyle.text(ctrl, hf, Vector2(r.position.x + 22, r.position.y + 38), Loc.t("БЛИЖАЙШИЕ РЕЦЕПТЫ"), UiStyle.FS_LABEL, UiStyle.ACCENT_SOFT)
 	ctrl.draw_line(Vector2(r.position.x, r.position.y + 58), Vector2(r.end.x, r.position.y + 58), UiStyle.LINE, 1.0)
+	_rhits.clear()
 	var near := AlbumNear.nearest(_arows)
 	var foc_id := ""
+	var foc_hot := -1
 	if focus < m.offers.size():
 		var fe := AlbumNear.card_effect(_actx, _arows, AlbumNear.card_of(p, m.offers[focus]))
 		if not fe.is_empty():
 			foc_id = String(fe["row"]["id"])
-	var y := r.position.y + 66.0
-	var rh := 112.0
+			var before: Array = fe["row"]["things"]
+			for i in before.size():
+				if int((fe["after"] as Array)[i]["have"]) > int(before[i]["have"]):
+					foc_hot = i
+	var y := r.position.y + 62.0
+	var rh := floorf((r.end.y - 62.0 - y) / 3.0)
 	if near.is_empty():
 		_para(Vector2(r.position.x + 22, y + 30), Loc.t("Всё, что этот самолёт может собрать, уже собрано."), r.size.x - 44.0, UiStyle.FS_BODY, UiStyle.TEXT_2)
 	for row: Dictionary in near:
-		var rr := Rect2(r.position.x + 8.0, y, r.size.x - 16.0, rh - 6.0)
-		_near_row(row, rr, String(row["id"]) == foc_id)
+		var rr := Rect2(r.position.x + 8.0, y, r.size.x - 16.0, rh - 4.0)
+		var hot := String(row["id"]) == foc_id
+		_near_row(row, rr, foc_hot if hot else -2)
 		y += rh
-		ctrl.draw_line(Vector2(r.position.x, y - 3.0), Vector2(r.end.x, y - 3.0), UiStyle.LINE, 1.0)
+		ctrl.draw_line(Vector2(r.position.x, y - 2.0), Vector2(r.end.x, y - 2.0), UiStyle.LINE, 1.0)
 	# Tab — the whole album without leaving the fight
 	var ids := Profile.album_ids()
 	var fr := Rect2(r.position.x + 8.0, r.end.y - 58.0, r.size.x - 16.0, 48.0)
@@ -330,36 +341,31 @@ func _near(m: Main, p: Player, r: Rect2) -> void:
 	_buttons.append([fr, "album_open"])
 
 
-## One row of the nearest-recipes panel: picture, name, recipe, progress bar; `hot` — the focused card moves it
-func _near_row(row: Dictionary, r: Rect2, hot: bool) -> void:
+## One row of the nearest-recipes panel: name and kind, then the recipe as a formula of card icons
+## (`RecipeArt`). `hot` — index of the ingredient the focused card raises (-1 the row is moved by it with no single
+## ingredient, -2 not moved by it).
+func _near_row(row: Dictionary, r: Rect2, hot: int) -> void:
 	var id := String(row["id"])
-	var col := HudAlbum.entry_color(id)
-	if hot:
+	var moved := hot > -2
+	if moved:
 		ctrl.draw_rect(r, Color(UiStyle.ACCENT, 0.1))
 		ctrl.draw_rect(Rect2(r.position.x, r.position.y, 4.0, r.size.y), UiStyle.ACCENT)
-	var th := Rect2(r.position.x + 14.0, r.position.y + 10.0, 128.0, 72.0)
-	AlbumArt.draw(ctrl, th, id, Color(col, 0.8))
-	var tx := th.end.x + 14.0
-	var tw := r.end.x - tx - 10.0
 	var nf := UiStyle.head_font(700, 1)
-	UiStyle.text(ctrl, nf, Vector2(tx, r.position.y + 26.0), _fit(HudAlbum.entry_title(id), tw, UiStyle.FS_LABEL, nf), UiStyle.FS_LABEL, UiStyle.TEXT)
+	var x := r.position.x + 16.0
+	var name := HudAlbum.entry_title(id)
+	UiStyle.text(ctrl, nf, Vector2(x, r.position.y + 24.0), _fit(name, r.size.x * 0.55, UiStyle.FS_LABEL, nf), UiStyle.FS_LABEL, UiStyle.TEXT)
 	var kind := Loc.t(String(HudAlbum.KIND_TITLE[AlbumBook.kind(id)])).to_lower()
 	if row["course"]:
 		kind += " · " + Loc.t("специализация")
 	elif row.get("late", false):
 		kind += " · " + Loc.t("с 7:00")
-	if hot:
+	if moved:
 		kind = Loc.t("▲ эта карточка") + " · " + kind
-	UiStyle.text(ctrl, ui_font(), Vector2(tx, r.position.y + 46.0), _fit(kind, tw, UiStyle.FS_CAPTION), UiStyle.FS_CAPTION, UiStyle.ACCENT if hot else UiStyle.TEXT_DIM)
-	var things: Array = row["things"]
-	for i in things.size():
-		var t: Dictionary = things[i]
-		var ok := int(t["have"]) >= int(t["need"])
-		UiStyle.text(ctrl, ui_font(), Vector2(tx, r.position.y + 68.0 + i * 19.0), _fit(HudAlbumRun.thing_text(t), tw, UiStyle.FS_CAPTION),
-			UiStyle.FS_CAPTION, UiStyle.OK if ok else UiStyle.ACCENT_SOFT)
-	var bar := Rect2(th.position.x, th.end.y + 9.0, th.size.x, 5.0)
-	ctrl.draw_rect(bar, Color(1, 1, 1, 0.1))
-	ctrl.draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(float(row["prog"]), 0.0, 1.0), bar.size.y)), UiStyle.ACCENT_SOFT)
+	var kx := x + minf(UiStyle.text_w(nf, name, UiStyle.FS_LABEL), r.size.x * 0.55) + 12.0
+	UiStyle.text(ctrl, ui_font(), Vector2(kx, r.position.y + 23.0), _fit(kind, r.end.x - kx - 10.0, UiStyle.FS_CAPTION), UiStyle.FS_CAPTION,
+		UiStyle.ACCENT if moved else UiStyle.TEXT_DIM)
+	var s := clampf(r.size.y - 84.0, 36.0, 64.0)
+	RecipeArt.draw(ctrl, Rect2(x, r.position.y + 36.0, r.size.x - 32.0, s), row, _actx, s, hot, _rhits)
 
 
 ## Grows a closed outline of `r` (last point = first) outward by `d` along every edge (glow rings of the focused
