@@ -16,7 +16,9 @@ extends Node3D
 ## minute the planes pointed every way; the camera now flies a straight line and the ground passes under it.
 ## A slow, small weave keeps a little life in the banks without turning the nose away from the top.
 const H0 := -PI / 2.0          # курс звена: прямо вверх по экрану
-const SPEED := 80.0            # пикс/с по плоскости боя (было 76 в 3.4 — та же неторопливость)
+## 3.5-s19 (7, Kanta: «ускорь, земля должна пролетать быстрее»): 80 → 240 px/s, ~0.6 of combat cruise (390)
+const SPEED := 240.0           # пикс/с по плоскости боя
+const TRAIL_LIFE := 3.0        # wingtip trail life, s (the pre-warmed history is this long)
 const WEAVE := 0.035           # «змейка» курса, ± рад (2°: нос всегда к верху экрана)
 const WEAVE_W := 0.11          # её частота, рад/с (период ~57 с)
 const BANK_K := 3.2            # крен от скорости разворота
@@ -80,6 +82,9 @@ var r3: Render3D
 var _units: Array[Unit3D] = []   # same records as Render3D._units
 var _key := ""
 var _check_t := 0.0
+## Frames left before the trails start: the camera zoom and position settle first, then the trails are pre-warmed
+## with TRAIL_LIFE of history (see _prewarm), so the flight never shows trails being born
+var _warm := 0
 
 
 func _init(render: Render3D) -> void:
@@ -111,6 +116,7 @@ func sync(on: bool, delta: float) -> void:
 			clear()
 			_key = key
 			_build()
+			_warm = 3
 	if _units.is_empty():
 		return
 	var cam := r3.cam
@@ -127,6 +133,7 @@ func sync(on: bool, delta: float) -> void:
 	var right := fwd.orthogonal() * -1.0   # вправо по курсу (2D: y вниз)
 	var lead := mid - (fwd * _CENTRE.x + right * _CENTRE.y) * L
 	var bank := clampf(turn_rate() * BANK_K, -0.35, 0.35)
+	var fresh := _warm == 1   # the frame the trails start: lay their history first
 	for u: Unit3D in _units:
 		var w := wobble(u.wob)
 		var off: Vector2 = u.slot
@@ -136,10 +143,28 @@ func sync(on: bool, delta: float) -> void:
 		u.k = len_w / float((u.tex as Texture2D).get_width())
 		r3._place(u, p, h, bank + w.z, 0.0, y, r3._alt_scale(y))
 		PlaneFx.update(u, delta, 0.0)
+		if _warm > 1:
+			continue
 		var pts := PlaneFx.trail_points(u)
 		var s := len_w / 100.0
+		var st := [0.16, 2.5 * s, 9.0 * s, TRAIL_LIFE, 10.0 * s]
 		for i in pts.size():
-			r3._trails.emit("title_%s_%d" % [u.cls, i], pts[i], [0.16, 2.5 * s, 9.0 * s, 3.0, 10.0 * s])
+			var key := "title_%s_%d" % [u.cls, i]
+			if fresh:
+				_prewarm(key, pts[i], fwd, st)
+			r3._trails.emit(key, pts[i], st)
+	_warm = maxi(_warm - 1, 0)
+
+
+## Lays the trail the plane would have left over the last TRAIL_LIFE seconds of straight flight at SPEED, oldest
+## point first, so the trail exists in full the moment the flight appears (3.5-s19, 7: no «take-off» look)
+func _prewarm(key: String, head: Vector3, fwd: Vector2, st: Array) -> void:
+	var back := Vector3(-fwd.x, 0.0, -fwd.y)
+	var step: float = float(st[4]) * 1.05   # a little over the trail's point step, so every point is kept
+	var n := int(TRAIL_LIFE * SPEED / step)
+	for j in range(n, 0, -1):
+		var d := step * j
+		r3._trails.emit(key, head + back * d, st, d / SPEED)
 
 
 func _build() -> void:

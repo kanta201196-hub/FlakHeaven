@@ -90,7 +90,9 @@ func _ready() -> void:
 
 ## Точка следа. style: [альфа, ширина у источника, ширина в конце, время жизни, шаг точек, (цвет)]
 ## M-39 (аудит 3.5-s6 Э-2): цвет — необязательный 6-й элемент (дым ракет светло-серый), без него — белая инверсия
-func emit(key: Variant, pos: Vector3, style: Array) -> void:
+## age: the point is born that many seconds ago. The menu flight pre-warms its trails with it (oldest point first),
+## so on returning to the menu the planes look as if they have been flying all along, not taking off.
+func emit(key: Variant, pos: Vector3, style: Array, age := 0.0) -> void:
 	var t: Dictionary = _tr.get(key, {})
 	if not t.is_empty() and (t["head"] as Vector3).distance_squared_to(pos) > 250.0 * 250.0:
 		# скачок (телепорт, новый вылет): старый след дотаивает сам, новый начинается заново
@@ -109,7 +111,7 @@ func emit(key: Variant, pos: Vector3, style: Array) -> void:
 		if _count >= MAX_POINTS:
 			return
 		pts.append(pos)
-		t["t"].append(_time)
+		t["t"].append(_time - age)
 		t["s"].append(style)
 		_count += 1
 
