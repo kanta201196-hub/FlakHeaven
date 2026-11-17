@@ -19,21 +19,21 @@
 ## Ждёт решения Kanta (без срока)
 
 - Еженедельное ревью 13.11: ответить цифрами на 7 предложений (первыми 1–3: капсулы Steam и V-08 до 20.11, исправление колонн отдельно от баланса, посты без «ок») — https://github.com/kanta201196-hub/FlakHeaven/blob/main/docs/review/2026-11-13-work-review.md
-- Пакет для бомб «Кита» (GD-18): выбрать 1, 2, 3 или «пока ничего»; Claude рекомендует 1 — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WLPHVyUCkgnVnEz7ziRJP9i
-- Альбом сборок в бою (PG-16): посмотреть кадры и написать правки — https://claude.ai/artifact/AdfLagBdVKYw4ftXJJYYoe (тред — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WPkxNeDFgYAvWGWw6tv2EKm)
-- Маркетинг: «ок» или правки на Дневник №4, №5, «Оружие в ангаре» и ещё два (в Word, в личке бота), пятничный рилс «Оса» — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WXg1Zyyd9Z1RQ643rufRAE6 (последний пост в канале — 10.11)
-- Дорожная карта релиза в Steam: выбрать вариант раннего доступа (рекомендован B) — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WBSPszaJfkMh8vCSYpqH3Pa
-- Заставки: «да» на перерисовку «Купола» и «Грома» (2 генерации Figma, тратят кредиты) — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WJQ7bnVMg1iWG5bFZBPD6pm
-- Облачная видеокарта для рендера: после утверждения аниматика второй части напиши «считай» — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WKnuKi5ji4Ku4p3jNX3H7XG
+- Пакет для бомб «Кита» (GD-18): выбрать 1, 2, 3 или «пока ничего»; Claude рекомендует 1 — тред в списке тредов Claude
+- Альбом сборок в бою (PG-16): посмотреть кадры и написать правки — https://claude.ai/artifact/AdfLagBdVKYw4ftXJJYYoe (тред — тред в списке тредов Claude
+- Маркетинг: «ок» или правки на Дневник №4, №5, «Оружие в ангаре» и ещё два (в Word, в личке бота), пятничный рилс «Оса» — тред в списке тредов Claude (последний пост в канале — 10.11)
+- Дорожная карта релиза в Steam: выбрать вариант раннего доступа (рекомендован B) — тред в списке тредов Claude
+- Заставки: «да» на перерисовку «Купола» и «Грома» (2 генерации Figma, тратят кредиты) — тред в списке тредов Claude
+- Облачная видеокарта для рендера: после утверждения аниматика второй части напиши «считай» — тред в списке тредов Claude
 - PR #600 (два издания): решение о слиянии (по состоянию на 10.11 открыт; на 12.11 не перепроверен) — https://github.com/kanta201196-hub/FlakHeaven/pull/600
 - Сборка 3.5-s18: проверить в игре и отметить, что не так. Следующая сборка — только по команде Kanta.
-- Тред бэкапа ждёт «удаляй» — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WNwxKTmyMY7of5Me5TYX4TB
+- Тред бэкапа ждёт «удаляй» — тред в списке тредов Claude
 - Ангар: «ок» на R-22 — https://claude.ai/artifact/MuwtyKLcKBfY8KJyWYguDC
 - Камуфляж «Кит 2»: «ок» или что поправить — https://claude.ai/artifact/9gBFoPRHQRAcv1cmzTtpnM
-- APK на Android (эксперимент) ждёт теста на телефоне — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WEVBC5J2UM79jZ1ct9zRUq3
-- Бот тестеров «Старт» (PR в ревью) — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W8npvQTh1WDX9gLNnGD8FNE
-- «Грач»: «да» или правки по шву, хвосту и полосе — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W51paqT882Z4wfzxcCJPcha
-- Тред «Составить список для выхода в Steam» ждёт App ID от Valve (не Kanta) — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2W6HMX1ospp3M7eJsWDKo7Bq
+- APK на Android (эксперимент) ждёт теста на телефоне — тред в списке тредов Claude
+- Бот тестеров «Старт» (PR в ревью) — тред в списке тредов Claude
+- «Грач»: «да» или правки по шву, хвосту и полосе — тред в списке тредов Claude
+- Тред «Составить список для выхода в Steam» ждёт App ID от Valve (не Kanta) — тред в списке тредов Claude
 
 ## Сделано за сутки (для сверки)
 
