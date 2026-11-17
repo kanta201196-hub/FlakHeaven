@@ -13,12 +13,12 @@
 | 3 | Проверка Valve по S1–S3 | около 16.11.2026 (срок прошёл 16.11) | Steamworks, статус проверки | статус не подтверждён (догадка: ждёт Valve); действий Kanta нет |
 | 4 | Демо и страница игры на проверку Valve (DM-10) | 18.01.2027 по Steamworks (осталось 62 дня); в `docs/process/early-access.md` стоит 25.01 — сверить | Steamworks → страница игры → демо | после пункта 3 |
 | 5 | Регистрация игры на Steam Next Fest (DM-10) | 10.01.2027 (осталось 54 дня); старт фестиваля 22.02.2027 (осталось 97 дней) | Steamworks → страница игры → фестивали | после пункта 4 |
-| 6 | «ок» на 7 капсул и 8 скриншотов Steam (R-29) | нужно для страницы; срок не назван (догадка: до пункта 4) | https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WL7tQUNACaf3j1DA8bm5TsK | ждёт «ок» |
+| 6 | «ок» на 7 капсул и 8 скриншотов Steam (R-29) | нужно для страницы; срок не назван (догадка: до пункта 4) | https://claude.ai/code/artifact/6376c637-9357-4d31-870e-9d60001ecb32 | ждёт «ок» |
 | 7 | Вставить строку в `settings.json` для `tools/pc/*.ps1` (R-17) и новый промпт планёрки в рутину (R-21) | к следующей сборке | на ПК: `settings.json`; рутина — настройки планёрки | ждёт Kanta (координатор не может менять рутину) |
 
 ## Ждёт решения Kanta (без срока)
 
-- Еженедельное ревью 13.11: ответить цифрами на 7 предложений (первыми 1–3: капсулы Steam и V-08 до 20.11, исправление колонн отдельно от баланса, посты без «ок») — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WEjqUhqJjoJUfBirGkWeWPf
+- Еженедельное ревью 13.11: ответить цифрами на 7 предложений (первыми 1–3: капсулы Steam и V-08 до 20.11, исправление колонн отдельно от баланса, посты без «ок») — https://github.com/kanta201196-hub/FlakHeaven/blob/main/docs/review/2026-11-13-work-review.md
 - Пакет для бомб «Кита» (GD-18): выбрать 1, 2, 3 или «пока ничего»; Claude рекомендует 1 — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WLPHVyUCkgnVnEz7ziRJP9i
 - Альбом сборок в бою (PG-16): посмотреть кадры и написать правки — https://claude.ai/artifact/AdfLagBdVKYw4ftXJJYYoe (тред — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WPkxNeDFgYAvWGWw6tv2EKm)
 - Маркетинг: «ок» или правки на Дневник №4, №5, «Оружие в ангаре» и ещё два (в Word, в личке бота), пятничный рилс «Оса» — https://claude.ai/code/project/chan_01SdohJnNRxu3TbJs1P3Ny2W?thread=cmsg_01SdohJnNRxu3TbJs1P3Ny2WXg1Zyyd9Z1RQ643rufRAE6 (последний пост в канале — 10.11)
