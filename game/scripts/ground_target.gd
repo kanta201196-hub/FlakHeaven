@@ -469,7 +469,7 @@ func _draw() -> void:
 	# Хитбоксы (radius) не менялись — попадание чуть щедрее картинки, как у конвоя.
 	# Тест 3.5-s8 (Kanta: «бункер — улучшить качество и размер»): новый бункер кодом, 44 (~13 м с обваловкой) —
 	# заметно крупнее машин ПВО, читается как командный пункт позиции
-	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "jeep": ["e_convoy_technical", 14.0], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 59.0],   # Kanta 24.10: bunker +35% (44 -> 59)
+	var spr := {"zsu": ["e_zsu", 27.0], "sam": ["e_sam", 34.0], "jeep": ["e_convoy_technical", 18.5], "radar": ["e_radar", 32.0], "bunker": ["e_bunker", 59.0],   # Kanta 24.10: bunker +35% (44 -> 59)
 		"coast_gun": [BatteryBalance.TEX, BatteryBalance.LEN]}
 	var ba: float = face if variant == "coast_gun" else _body_angle
 	if mobile() and not leaderless and _goal == Vector2.INF and site != null and site.active:

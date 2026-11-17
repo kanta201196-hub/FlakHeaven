@@ -13,13 +13,15 @@ const SPEC := {
 	# грузовик 7,9 м = 1; БМП 6,8 м ≈ 0,88; пикап 5,2 м ≈ 0,66; броневик 5 м ≈ 0,64; всё меньше прежнего (грузовик 58 → 50)
 	# Тест 3.5-s6 (Kanta 18.10, A-08): масштаб мира «с высоты 2–4 км» — грузовик ≈ 0,5 истребителя (plane_len 100 → 28 × 1,8 = 50 пикс.),
 	# пикапы 0,5 грузовика, БМП 0,9, броневик 0,64
+	# Kanta 17.11 (Steam art v2): pickups at 0.5 read «10× smaller» than the truck, because the truck model is also
+	# wider and taller — back to the real 0.66 (14 -> 18.5) for the light truck, the technical and the MANPADS pickup
 	# hp — прочность по категориям S6-02 (× рост врагов): стандартная 90 — грузовики, пикап, техничка;
 	# бронированная 135 — броневик, БМП, ПЗРК. r — радиус поворота, pivot — разворот на месте
 	"truck": {"len": 28.0, "hp": GroundTarget.HP_STD, "r": 75.0, "pivot": 0.0, "acc": 32.0, "xp": 6, "parts": 6},
-	"light": {"len": 14.0, "hp": GroundTarget.HP_STD, "r": 45.0, "pivot": 0.0, "acc": 50.0, "xp": 4, "parts": 4},
+	"light": {"len": 18.5, "hp": GroundTarget.HP_STD, "r": 45.0, "pivot": 0.0, "acc": 50.0, "xp": 4, "parts": 4},
 	"scout": {"len": 18.0, "hp": GroundTarget.HP_ARMOR, "r": 50.0, "pivot": 0.0, "acc": 55.0, "xp": 5, "parts": 5},
-	"technical": {"len": 14.0, "hp": GroundTarget.HP_STD, "r": 42.0, "pivot": 0.0, "acc": 60.0, "xp": 4, "parts": 4},
-	"manpads": {"len": 14.0, "hp": GroundTarget.HP_ARMOR, "r": 42.0, "pivot": 0.0, "acc": 60.0, "xp": 5, "parts": 5},
+	"technical": {"len": 18.5, "hp": GroundTarget.HP_STD, "r": 42.0, "pivot": 0.0, "acc": 60.0, "xp": 4, "parts": 4},
+	"manpads": {"len": 18.5, "hp": GroundTarget.HP_ARMOR, "r": 42.0, "pivot": 0.0, "acc": 60.0, "xp": 5, "parts": 5},
 	"ifv": {"len": 25.0, "hp": GroundTarget.HP_ARMOR, "r": 55.0, "pivot": 1.0, "acc": 38.0, "xp": 8, "parts": 8},
 }
 const TEX := {"truck": "e_convoy_truck", "light": "e_convoy_pickup_tent", "scout": "e_convoy_scout",

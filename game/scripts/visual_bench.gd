@@ -1355,7 +1355,7 @@ func _fort_break(b: Dictionary) -> void:
 ## (GroundTarget._draw, ConvoyVehicle.SPEC, Helicopter.LEN, Interceptor._draw); zoom brings each to ~40 % of the frame.
 const UNIT_POSES := {
 	"zsu": ["e_zsu", 27.0, 20.0], "truck": ["e_convoy_truck", 28.0, 20.0], "ifv": ["e_convoy_ifv", 25.0, 22.0],
-	"scout": ["e_convoy_scout", 18.0, 28.0], "technical": ["e_convoy_technical", 14.0, 34.0],
+	"scout": ["e_convoy_scout", 18.0, 28.0], "technical": ["e_convoy_technical", 18.5, 26.0],
 	"heli": ["e_helicopter", 60.0, 9.0], "interceptor": ["e_interceptor", 46.0, 11.0],
 	# S11-24: the strike drone plain and elite (the elite marking drew it flat yellow on Forward+)
 	"drone": ["e_drone", 34.0, 14.0], "drone_elite": ["e_drone", 34.0, 12.0], "drone_hit": ["e_drone", 34.0, 14.0],
@@ -1363,8 +1363,8 @@ const UNIT_POSES := {
 	"interceptor_elite": ["e_interceptor", 46.0, 9.5], "carrier": ["e_carrier", 60.0, 8.5],
 	"carrier_elite": ["e_carrier", 60.0, 7.2], "bomber": ["e_bomber", 120.0, 4.2],
 	"transport": ["e_transport", 190.0, 2.7], "rival": ["e_rival", 64.0, 8.0], "postman": ["e_postman", 92.0, 5.5],
-	"draft": ["e_draft", 84.0, 6.0], "light": ["e_convoy_pickup_tent", 14.0, 34.0],
-	"manpads": ["e_convoy_manpads", 14.0, 34.0], "radar": ["e_radar", 32.0, 15.0], "bunker": ["e_bunker", 59.0, 8.5],
+	"draft": ["e_draft", 84.0, 6.0], "light": ["e_convoy_pickup_tent", 18.5, 26.0],
+	"manpads": ["e_convoy_manpads", 18.5, 26.0], "radar": ["e_radar", 32.0, 15.0], "bunker": ["e_bunker", 59.0, 8.5],
 	"sam": ["e_sam", 34.0, 14.0],
 }
 var _unit: Enemy = null
