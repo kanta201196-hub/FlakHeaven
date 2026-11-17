@@ -42,10 +42,29 @@ func _test_plane(cls: String, key: String) -> void:
 		# propellers either come as their own spinning nodes or are baked into the model and get hub blur discs
 		_check(ResourceLoader.exists("res://models/mech/fh_prop_%s.glb" % key) or spec.has("hub_y"),
 			"%s: propellers have nodes or hub discs" % key)
+	if spec.has("fan_r"):   # 3.5-s19: «Кит» 5's lift fans spin as nodes of their own
+		_check(ResourceLoader.exists("res://models/mech/fh_prop_%s.glb" % key), "%s: fan rotors have nodes" % key)
+	_test_evo_bombs(cls, key.trim_prefix(cls + "_"))
 	_check((DecalPresets.SPOTS.get(key, {}) as Dictionary).size() == DecalPresets.NAMES.size(), "%s: every decal spot" % key)
 	if cls == "fighter":
 		# the wing-tip group of the fighter hangs its pylon stores at the measured outer station
 		_check(PlaneArt.WING_PAIR.has(key) and PlaneArt.OUTER_PAIR.has(key), "%s: inner and outer wing stations" % key)
+
+
+## 3.5-s19 (Kanta: «бомбы — в бомбоотсеке», «так висеть не могут»): every model with a bomb-bay group has its bay
+## doors, and modernised bombs on any group of any model never hang as the beam under the fuselage («belly»)
+func _test_evo_bombs(cls: String, lvl: String) -> void:
+	var defs: Array = PlaneClasses.DATA[cls]["groups"]
+	for gi in defs.size():
+		var g := Hardpoint.new(defs[gi]["name"], int(defs[gi]["slots"]), "bombs")
+		g.evo = true
+		g.level = 5
+		if g.name.begins_with("Бомбоотсек"):
+			_check(WeaponModels.has_bay(cls, lvl), "%s_%s: bomb bay doors" % [cls, lvl])
+		var mts := WeaponModels.mounts(cls, lvl, gi, g)
+		_check(not mts.is_empty(), "%s_%s group %d: modernised bombs have mounts" % [cls, lvl, gi])
+		for mt: Dictionary in mts:
+			_check(mt["side"] != "belly", "%s_%s group %d: no bomb beam under the fuselage" % [cls, lvl, gi])
 
 
 func _check(ok: bool, what: String) -> void:

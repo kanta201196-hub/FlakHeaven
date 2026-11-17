@@ -18,6 +18,11 @@ from mathutils import Vector, Matrix, geometry
 BAYS = {
     "bomber_1": (-0.2, 0.15, 0.028),
     "bomber_2": (-0.33, 0.0, 0.03),
+    # 3.5-s19 (Kanta: «бомбы — в бомбоотсеке» on every new model): tier 1, 4 and 5 «Кит» got no bay with the
+    # new hulls, so the modernised bombs fell back to the belly beam; spans from their sprites' wing_x ± 0.09
+    "bomber_t1": (-0.06, 0.26, 0.026),
+    "bomber_t4": (-0.12, 0.22, 0.03),
+    "bomber_t5": (-0.11, 0.24, 0.034),
 }
 DROP = 0.0018     # створка ниже обшивки, чтобы не утонула
 THICK = 0.0015
