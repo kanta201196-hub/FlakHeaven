@@ -4,13 +4,18 @@ extends HudKit
 ## seen from the plane in the air: on top what this sortie has already collected, then what this plane can still
 ## build with the recipe of each (met things green with ✓, missing ones amber with «сейчас N»), the chosen
 ## specialization first, then the furthest along; below, greyed, what this plane can never build and why.
-## Right: the selected entry — its in-game picture (`AlbumArt`), what it does, have / need, and the parts for a
+## Right: the selected entry — its recipe as a formula of card icons (`RecipeArt`), what it does, have / need, and the parts for a
 ## first find. Opened from the pause tab strip (Q / E, LB / RB, or a click) and with Tab from the card pick; Esc and
 ## Tab go back where it came from. Rows: `AlbumNear`; names, colours, descriptions: `HudAlbum`.
 
 const ROW_H := 78.0
 const HEAD_H := 46.0
 const THUMB := Vector2(112.0, 63.0)
+
+## `AlbumNear` context of the frame being drawn (which weapon of a choice this plane carries)
+var _ctx := {}
+## Icons of the detail recipe under the mouse hint (`RecipeArt.tooltip`)
+var _hits: Array = []
 ## Section titles: collected this sortie, can collect, cannot on this plane
 const SECTIONS := ["СОБРАНО В ЭТОМ ВЫЛЕТЕ", "МОЖНО СОБРАТЬ В ЭТОМ ВЫЛЕТЕ", "НА ЭТОМ САМОЛЁТЕ НЕ СОБРАТЬ"]
 ## Pause tabs: action and title
@@ -34,14 +39,17 @@ func draw(m: Main, size: Vector2) -> void:
 	if not is_instance_valid(p):
 		return
 	var ctx := AlbumNear.ctx_of(p, m.run_time)
+	_ctx = ctx
 	var ids := Profile.album_ids()
 	var sec := AlbumNear.sections(AlbumNear.rows(ctx, ids))
 	var list := Rect2(40, 110, 900, size.y - 200.0)
 	var flat := _list(sec, list, Profile.data["album"])
 	var right := Rect2(list.end.x + 32.0, 110, size.x - list.end.x - 72.0, size.y - 200.0)
 	if not flat.is_empty():
+		_hits.clear()
 		_detail(flat[clampi(sel, 0, flat.size() - 1)], ctx, Profile.data["album"], right)
 	_hints(size, m.album_back == "levelup")
+	RecipeArt.tooltip(ctrl, _hits, ctx, ctrl.get_local_mouse_position(), size)
 
 
 ## The pause tab strip at the top centre: `on` — the open tab; from the card pick the first tab reads «КАРТОЧКИ».
@@ -140,7 +148,7 @@ func _row(row: Dictionary, r: Rect2, on: bool, album: Dictionary) -> void:
 		ctrl.draw_rect(r, Color(UiStyle.ACCENT, 0.1))
 		UiStyle.brackets(ctrl, r, UiStyle.ACCENT)
 	var th := Rect2(r.position.x + 12.0, r.position.y + (r.size.y - THUMB.y) / 2.0, THUMB.x, THUMB.y)
-	AlbumArt.draw(ctrl, th, id, Color(col, 0.8) if reach else UiStyle.LINE, not reach)
+	_thumb(row, th, col, reach)
 	var tx := th.end.x + 18.0
 	var nf := UiStyle.head_font(700, 1)
 	var name := HudAlbum.entry_title(id)
@@ -230,6 +238,25 @@ static func recipe_line(ci: Control, pos: Vector2, things: Array, w: float, fs: 
 		x += tw
 
 
+## Row thumbnail: the recipe's ingredient cards side by side (what to pick), or the entry's icon when it has one thing
+func _thumb(row: Dictionary, r: Rect2, col: Color, reach: bool) -> void:
+	var things: Array = row["things"]
+	if things.size() < 2:
+		var s1 := r.size.y
+		HudIcons.tile(ctrl, Rect2(r.position.x + (r.size.x - s1) / 2.0, r.position.y, s1, s1), AlbumArt.icon_key(String(row["id"])),
+			AlbumArt.icon_family(String(row["id"])), Color(col, 0.8) if reach else UiStyle.LINE, -1, s1 * 0.16, not reach)
+		return
+	var s := minf(r.size.y * 0.82, (r.size.x - 14.0) / 2.0)
+	for i in 2:
+		var t: Dictionary = things[i]
+		var ic := AlbumNear.thing_icon(_ctx, t.get("src", {}))
+		var ok := int(t["have"]) >= int(t["need"])
+		var tr := Rect2(r.position.x + i * (s + 14.0), r.position.y + (r.size.y - s) / 2.0, s, s)
+		HudIcons.tile(ctrl, tr, String(ic[0]), String(ic[1]), (RecipeArt.MET if ok else RecipeArt.MISS) if reach else UiStyle.LINE, -1,
+			s * 0.16, not reach)
+	UiStyle.text(ctrl, UiStyle.head_font(700, 0), Vector2(r.position.x + s + 2.0, r.get_center().y + 6.0), "+", UiStyle.FS_BODY, UiStyle.TEXT_DIM)
+
+
 # ---------- detail ----------
 
 func _detail(row: Dictionary, ctx: Dictionary, album: Dictionary, r: Rect2) -> void:
@@ -245,11 +272,11 @@ func _detail(row: Dictionary, ctx: Dictionary, album: Dictionary, r: Rect2) -> v
 	else:
 		sub += " · " + Loc.t("ещё не найдена")
 	UiStyle.text(ctrl, ui_font(), Vector2(x, r.position.y + 80), sub, UiStyle.FS_BODY, UiStyle.TEXT_2)
-	# the picture: 16:9 across the panel, capped so the text below keeps its room
-	var pw := minf(w, (r.size.y - 330.0) * AlbumArt.ASPECT)
-	var pic := Rect2(x + (w - pw) / 2.0, r.position.y + 100.0, pw, pw / AlbumArt.ASPECT)
-	AlbumArt.draw(ctrl, pic, id, Color(col, 0.7), not (row["reach"] or row["done"]))
-	var y := pic.end.y + 36.0
+	# the recipe: the ingredient cards as icons with their pips, «→», the result (Kanta 2026-11-17: frames of the
+	# effect read as nothing, the cards the player picks do)
+	var s := clampf(w / 6.0, 72.0, 110.0)
+	RecipeArt.draw(ctrl, Rect2(x, r.position.y + 118.0, w, s), row, ctx, s, -1, _hits)
+	var y := r.position.y + 118.0 + s + 96.0
 	y += _para(Vector2(x, y), Loc.t("Что делает: ") + HudAlbum.entry_desc(id), w, UiStyle.FS_LABEL, UiStyle.TEXT_WARM) + 14.0
 	if row["done"]:
 		UiStyle.text(ctrl, ui_font(), Vector2(x, y), "✓ " + Loc.t("Собрано в этом вылете"), UiStyle.FS_LABEL, UiStyle.OK)
@@ -273,7 +300,7 @@ func _detail(row: Dictionary, ctx: Dictionary, album: Dictionary, r: Rect2) -> v
 		if not need.is_empty():
 			UiStyle.text(ctrl, ui_font(), Vector2(x, y), _fit(Loc.t("Нужно: ") + ", ".join(need), w, UiStyle.FS_LABEL), UiStyle.FS_LABEL, UiStyle.ACCENT_SOFT)
 			y += 30.0
-		var note := _note(row, ctx)
+		var note := note(row, ctx)
 		if note != "":
 			UiStyle.text(ctrl, ui_font(), Vector2(x, y), _fit(note, w, UiStyle.FS_BODY), UiStyle.FS_BODY, UiStyle.TEXT_2)
 			y += 28.0
@@ -281,8 +308,8 @@ func _detail(row: Dictionary, ctx: Dictionary, album: Dictionary, r: Rect2) -> v
 		UiStyle.text(ctrl, ui_font(), Vector2(x, y + 8.0), Loc.t("Первая находка: +%d запчастей") % AlbumBook.PARTS_FIRST, UiStyle.FS_BODY, UiStyle.PARTS)
 
 
-## How a met recipe turns into the entry: a synergy needs to be the specialization, a modernization waits for 7:00
-static func _note(row: Dictionary, ctx: Dictionary) -> String:
+## How a met recipe turns into the entry (also the result hint of `RecipeArt`): a synergy needs to be the specialization, a modernization waits for 7:00
+static func note(row: Dictionary, ctx: Dictionary) -> String:
 	match String(row["kind"]):
 		"syn":
 			if row["course"]:

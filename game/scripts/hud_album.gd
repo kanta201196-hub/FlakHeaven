@@ -4,7 +4,7 @@ extends HudKit
 ## Found entries are lit in their colour and show the class and the date of the first find; unfound ones are
 ## silhouettes with the recipe as a hint. The entry under the cursor (or the one clicked) is explained below.
 ## On in the demo too: collecting is the reason to play again. Data: `AlbumBook`, entries: `Profile`. PG-16: the
-## detail shows the entry's in-game picture (`AlbumArt`); the same album is open in combat (`HudAlbumRun`).
+## detail shows the entry's icon (`AlbumArt`); the same album is open in combat (`HudAlbumRun`).
 
 const KIND_TITLE := {"syn": "Связка", "evo": "Модернизация", "prof": "Профиль оружия", "arch": "Архетип"}
 const KIND_COLOR := {"syn": Color(1.0, 0.82, 0.25), "evo": Color(0.75, 0.55, 1.0), "prof": Color(0.55, 0.85, 1.0), "arch": Color(0.6, 1.0, 0.7)}
@@ -67,10 +67,11 @@ func _detail(id: String, album: Dictionary, r: Rect2) -> void:
 	var head := "%s · %s" % [Loc.t(String(KIND_TITLE[AlbumBook.kind(id)])), entry_title(id)]
 	if have:
 		head += " · " + found_line(album[id])
-	# PG-16: the entry's in-game picture on the left (greyed until found)
-	var ph := minf(r.size.y - 16.0, r.size.x * 0.25 / AlbumArt.ASPECT)   # a short wide box keeps room for the text
-	AlbumArt.draw(ctrl, Rect2(r.position.x + 8.0, r.position.y + 8.0, ph * AlbumArt.ASPECT, ph), id, Color(col, 0.7) if have else UiStyle.LINE, not have)
-	var tx := r.position.x + 24.0 + ph * AlbumArt.ASPECT
+	# the entry's icon on the left (greyed until found); in-game frames were dropped, Kanta 2026-11-17
+	var ph := r.size.y - 16.0
+	HudIcons.tile(ctrl, Rect2(r.position.x + 8.0, r.position.y + 8.0, ph, ph), AlbumArt.icon_key(id), AlbumArt.icon_family(id),
+		Color(col, 0.7) if have else UiStyle.LINE, -1, ph * 0.16, not have)
+	var tx := r.position.x + 24.0 + ph
 	_text(Vector2(tx, r.position.y + 32), head, 21, col if have else UiStyle.TEXT)
 	_para(Vector2(tx, r.position.y + 56), entry_desc(id), r.size.x * 0.6 - (tx - r.position.x), 15, UiStyle.TEXT_2)
 	var rx := r.position.x + r.size.x * 0.6

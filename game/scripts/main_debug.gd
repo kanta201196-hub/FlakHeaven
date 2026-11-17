@@ -29,11 +29,6 @@ func _init(main: Main) -> void:
 func process(delta: float) -> void:
 	if m._args.has("--exittest") and _exit_test():
 		return
-	if m._args.has("--albumshots"):   # PG-16: album pictures; the bot only gets the sortie started
-		if _album == null:
-			_album = AlbumShots.new(m)
-		if _album.process(delta):
-			return
 	if m._autotest:
 		if not _ss_campaign:   # the story-shots run ends on the campaign screen: the bot must not press «В вылет» again
 			_run_autotest(delta)
@@ -345,7 +340,7 @@ var _album_phase := 0
 var _album_t := 0.0
 
 
-## PG-16 frames: a level-9 card pick on a plane halfway to «Карусель» and «Шмель» (user://shot_album_cards.png),
+## PG-16 frames: a level-9 card pick on a plane halfway to «Карусель» and «Шмель» (user://shot_album_cards.png), the recipe hover hints (shot_album_cards_tip.png, _tip2),
 ## Tab → the album tab over the cards (shot_album_tab.png), a row further down (shot_album_tab2.png), then the pause
 ## with its tab strip (shot_album_pause.png) and its album tab (shot_album_pause_tab.png); then quits.
 ## godot --path game --rendering-driver opengl3 -- --autotest --god --class=fighter --albumtest
@@ -376,6 +371,24 @@ func _album_test() -> void:
 	elif _album_phase == 1 and m.state == "levelup" and _album_t > 1.2:
 		m.get_viewport().get_texture().get_image().save_png("user://shot_album_cards.png")
 		print("SHOT album_cards")
+		# the hover hint: the mouse on the result of the second recipe, then the first ingredient of the third
+		var hits: Array = m.hud._cards_ui._rhits.filter(func(h): return int(h[2]) == -1)
+		if hits.size() >= 2:
+			m.get_viewport().warp_mouse((hits[1][0] as Rect2).get_center())
+		_album_phase = 8
+		_album_t = 0.0
+	elif _album_phase == 8 and _album_t > 0.6:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_album_cards_tip.png")
+		print("SHOT album_cards_tip")
+		var ing: Array = m.hud._cards_ui._rhits.filter(func(h): return int(h[2]) == 0)
+		if ing.size() >= 3:
+			m.get_viewport().warp_mouse((ing[2][0] as Rect2).get_center())
+		_album_phase = 9
+		_album_t = 0.0
+	elif _album_phase == 9 and _album_t > 0.6:
+		m.get_viewport().get_texture().get_image().save_png("user://shot_album_cards_tip2.png")
+		print("SHOT album_cards_tip2")
+		m.get_viewport().warp_mouse(Vector2(5, 5))
 		m.input_ctl.open_album("levelup")
 		_album_phase = 2
 		_album_t = 0.0
@@ -1033,7 +1046,6 @@ func _smoke_end(code: int, why: String) -> void:
 # ---------- Автотест (-- --autotest): бот летает, берёт карточки, умирает/эвакуируется и начинает заново ----------
 
 var _bot_wait := 0.0
-var _album: AlbumShots = null
 var _runs_done := 0
 var _loadout_opened := false
 
