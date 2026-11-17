@@ -7,7 +7,13 @@ extends Node
 ## --capseed=N, --capend=S (quit after this run second), --capzoom=F (camera zoom held every frame, so store
 ## art can frame the plane closer than the player slider allows), --caphud (keep the HUD, as a player sees it: no
 ## debug labels, the hull is refilled every frame instead of god mode, which the HUD would show), --capcards=N:T (also save the first N card-pick screens after run second T,
-## once the cards are up).
+## once the cards are up), --capclean (hide the 2D world layer: HP arcs, sectors, name tags and target rings over the 3D
+## view, so store art shows only the scene), --captilt=D (camera tilt held every frame, degrees from vertical).
+## Story shots for store art (Kanta 17.11): fort (an active fortified area with its SAMs up, player close),
+## fortdown (the taken fort burning; the player is moved back over it), missile (enemy missiles closing on the
+## player; a class with flares fires a salvo), convoyhit (convoy close with the player's rockets/bombs in the air),
+## loop (Wasp's loop in «Битва асов», started by the director), boom (several kills in two seconds close by),
+## flares (a missile within range: the director fires a flare salvo right away and records the missiles turning).
 ## Sorties are not frame-exact between runs, so --capshots=NAME:MIN_T:LEN,... picks moments live:
 ## each named shot (see `_want`) starts once, after MIN_T, when its condition holds, and records LEN s.
 
@@ -30,6 +36,11 @@ var keep_hud := false
 var cards_left := 0  # card-pick screens still to save (--capcards)
 var cards_from := 0.0
 var _in_cards := false
+var clean := false   # --capclean
+var tilt := -1.0     # >=0: cam_tilt forced every frame (--captilt)
+var _fort_pos := Vector2.INF   # last seen fortified area (its ruin stays on the map after it is taken)
+var _fort_done_t := -1.0       # run second the fort was taken, -1 while it stands
+var _acts: Array = []          # pending director actions: [{t, kind}]
 
 
 func _init(main: Node) -> void:
@@ -60,8 +71,11 @@ func _ready() -> void:
 			cards_from = float(p[1]) if p.size() > 1 else 0.0
 		elif a.begins_with("--capzoom="):
 			zoom = float(a.substr(10))
+		elif a.begins_with("--captilt="):
+			tilt = float(a.substr(10))
 	scan = OS.get_cmdline_user_args().has("--capscan")
 	keep_hud = OS.get_cmdline_user_args().has("--caphud")
+	clean = OS.get_cmdline_user_args().has("--capclean")
 	if dir != "":
 		DirAccess.make_dir_recursive_absolute(dir)
 	RenderingServer.frame_post_draw.connect(_on_drawn)
@@ -77,7 +91,12 @@ func _process(_d: float) -> void:
 			m.player.hp = m.player.max_hp
 	if zoom > 0.0:
 		Tuning.set_param("camera_zoom", zoom)
+	if tilt >= 0.0:
+		Tuning.set_param("cam_tilt", tilt)
+	if clean and m.world != null and is_instance_valid(m.world):
+		m.world.modulate = Color(1, 1, 1, 0)
 	var t: float = m.run_time
+	_run_acts(t)
 	var playing: bool = m.state == "playing"
 	var render := false
 	_saving = false
@@ -90,8 +109,9 @@ func _process(_d: float) -> void:
 		for sh in shots:
 			if sh["state"] == 1:
 				render = true
-				_saving = t >= sh["t0"] + PREROLL
-				if t > sh["t0"] + PREROLL + sh["len"]:
+				var pre := _preroll(String(sh["name"]))
+				_saving = t >= sh["t0"] + pre
+				if t > sh["t0"] + pre + sh["len"]:
 					sh["state"] = 2
 					print("TRAILERCAP: shot %s done at %.1f" % [sh["name"], t])
 	if m.state == "levelup" and cards_left > 0 and t >= cards_from:
@@ -173,12 +193,13 @@ func _direct(t: float) -> void:
 		if sh["state"] == 0 and t >= sh["min_t"] and _want(String(sh["name"]), t):
 			sh["state"] = 1
 			sh["t0"] = t
+			_on_shot_start(String(sh["name"]).split("_")[0], t)
 			print("TRAILERCAP: shot %s starts at %.1f %s" % [sh["name"], t, JSON.stringify(_st)])
 			return
 
 
 ## Condition for each shot name (prefix before "_" so a run can hold several shots of one kind).
-func _want(name: String, _t: float) -> bool:
+func _want(name: String, t: float) -> bool:
 	var k: Dictionary = _st.get("kinds", {})
 	var g := func(n: String) -> int: return int(k.get(n, 0))
 	match name.split("_")[0]:
@@ -198,7 +219,61 @@ func _want(name: String, _t: float) -> bool:
 			return g.call("Bomber") >= 2
 		"late":
 			return int(_st["near"]) >= 50 and int(_st["kills2"]) >= 9
+		"fort":
+			return bool(_st["fort_up"]) and float(_st["fort_d"]) < 650.0 and int(_st["emsl"]) >= 1
+		"fortdown":
+			return _fort_done_t >= 0.0 and t > _fort_done_t + 4.0
+		"missile":
+			return int(_st["emsl"]) >= 2
+		"convoyhit":
+			return g.call("ConvoyVehicle") >= 3 and int(_st["pord"]) >= 3
+		"loop":
+			return Main.aces() and float(_st["ace_d"]) < 700.0 and m.player.loop_t <= 0.0
+		"boom":
+			return int(_st["kills2"]) >= 5
+		"flares":
+			return int(_st["emsl"]) >= 1 and (m.player.cls_id == "bomber" or Main.aces())
 	return false
+
+
+## A flare salvo is fired by the director at the shot start, so its shot cannot wait the full preroll:
+## the missiles would already be lured away by the first saved frame.
+func _preroll(name: String) -> float:
+	return 0.25 if name.split("_")[0] == "flares" else PREROLL
+
+
+## What a shot needs from the director when it starts: flares into the missiles, the loop, the move back over
+## the ruined fort. Actions land inside the preroll or the recorded window.
+func _on_shot_start(kind: String, t: float) -> void:
+	match kind:
+		"missile":
+			if m.player.cls_id == "bomber" or Main.aces():
+				_acts.append({"t": t + PREROLL, "kind": "flares_close"})
+		"loop":
+			_acts.append({"t": t + PREROLL - 0.2, "kind": "loop"})
+		"flares":
+			_acts.append({"t": t + 0.3, "kind": "flares"})
+		"fortdown":
+			if _fort_pos != Vector2.INF:
+				m.player.global_position = _fort_pos + Vector2(-260, 220)
+
+
+func _run_acts(t: float) -> void:
+	for a in _acts.duplicate():
+		if t < float(a["t"]):
+			continue
+		if String(a["kind"]) == "flares_close" and int(_near_msl(180.0)) == 0 and t < float(a["t"]) + 1.2:
+			continue   # wait until a missile is about to hit, so the frame holds both the missile and the flares
+		_acts.erase(a)
+		if m.player == null or not is_instance_valid(m.player):
+			continue
+		match String(a["kind"]):
+			"flares", "flares_close":
+				m.player.skills._flare_salvo(Main.aces())
+				print("TRAILERCAP: flares at %.1f" % t)
+			"loop":
+				m.player.skills._start_loop(false)
+				print("TRAILERCAP: loop at %.1f" % t)
 
 
 func _stats(t: float) -> void:
@@ -220,4 +295,29 @@ func _stats(t: float) -> void:
 	var act := ""
 	if m.spawner != null and is_instance_valid(m.spawner.activity_node):
 		act = String((m.spawner.activity_node.get_script() as Script).get_global_name())
-	_st = {"near": near, "kinds": kinds, "ace_d": int(ace_d), "act": act, "kills2": int(m.run.kills) - int(_kill_hist[0][1]), "lvl": int(m.run.level)}
+	var fort_up := false
+	var fort_d := 99999.0
+	if m.spawner != null and is_instance_valid(m.spawner.activity_node) and m.spawner.activity_node is FortArea:
+		var fa: FortArea = m.spawner.activity_node
+		_fort_pos = fa.global_position   # air-space projection of the fort, where the camera looks
+		fort_up = fa.active and not fa.done
+		fort_d = pp.distance_to(_fort_pos)
+		if fa.done and _fort_done_t < 0.0:
+			_fort_done_t = t
+			print("TRAILERCAP: fort taken at %.1f" % t)
+	elif _fort_pos != Vector2.INF and _fort_done_t < 0.0:
+		_fort_done_t = t   # the activity freed the node the moment the base was taken
+		print("TRAILERCAP: fort left the activity at %.1f" % t)
+	var emsl := _near_msl(330.0)
+	var pord: int = m.projectiles.rockets.size() + m.projectiles.pmissiles.size() + m.projectiles.bombs.size()
+	_st = {"near": near, "fort_up": fort_up, "fort_d": int(fort_d), "emsl": emsl, "pord": pord, "kinds": kinds, "ace_d": int(ace_d), "act": act, "kills2": int(m.run.kills) - int(_kill_hist[0][1]), "lvl": int(m.run.level)}
+
+
+## Enemy missiles still homing within `r` of the player.
+func _near_msl(r: float) -> int:
+	var n := 0
+	var pp: Vector2 = m.player.global_position
+	for ms in m.projectiles.missiles:
+		if not bool(ms.get("lost", false)) and (ms["p"] as Vector2).distance_to(pp) < r:
+			n += 1
+	return n
