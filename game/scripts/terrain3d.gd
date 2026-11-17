@@ -194,8 +194,11 @@ func valley(x: float, z: float, ctx := {}, rf := NAN) -> float:
 		# L-08: не ближе края русла — иначе врез русла (_height_v) опускал всю площадку поселения
 		# на 2,5 % высоты, и край посёлка (линия обороны) уходил под землю
 		var e := _seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5
-		if pads_natural and e > 0.0:
-			e *= 1.0 + SIDE_WOBBLE * _pad.get_noise_2d(x * SIDE_WOBBLE_F, z * SIDE_WOBBLE_F)
+		if e > 0.0:
+			if sides_natural:
+				e = e * side_edge_k(Vector2(x, z), s[0], s[1]) + SIDE_LIFT * minf(e / 40.0, 1.0)   # S19-02, no jump at e = 0
+			elif pads_natural:
+				e *= 1.0 + SIDE_WOBBLE * _pad.get_noise_2d(x * SIDE_WOBBLE_F, z * SIDE_WOBBLE_F)
 		var dc := maxf(e, D_RIVER * 1.8)
 		if dc < absf(d):
 			d = dc
@@ -306,6 +309,7 @@ func _pick_style() -> void:
 	gullies = Tuning.g("relief_gullies") >= 0.5 and not args.has("--gullies0")
 	_prov.landforms = Tuning.g("relief_landforms") >= 0.5 and not args.has("--landforms0")
 	pads_natural = Tuning.g("map_pads") >= 0.5 and not args.has("--pads0")
+	sides_natural = Tuning.g("map_sides") >= 0.5 and not args.has("--sides0")
 
 
 var gullies := true   # RV-02: gullies on the RV-01 relief (see _pick_style)
@@ -1307,6 +1311,38 @@ var _pad := FastNoiseLite.new()
 ## stretched SIDE_WOBBLE_F times, ~1/1700 px), gentle enough that the ground still only rises away from it.
 const SIDE_WOBBLE := 0.3
 const SIDE_WOBBLE_F := 0.25
+
+## S19-02 (Kanta 17.11, build 3.5-s19: «на карте остались ровные круглые поля»): the ±30 % wobble above is
+## sampled at ~1/1700 px, nearly constant over one settlement, so the end of the side valley round an oasis or
+## a village stayed a circle: valley floor (the pinkish floor tone of the ground shader) ~600 px round the centre,
+## then slopes. Now the edge distance is scaled by a factor that changes with the DIRECTION from the nearest
+## point of the valley axis (noise sampled on a ring SIDE_RING px out, like pad_edge_k), from SIDE_K_MIN (the
+## floor reaches farther, a bay) to SIDE_K_MAX (the slope comes closer, a spur). Along each ray from the axis the
+## factor is constant, so the ground still only rises away from the valley (no pits). Joined segments of a
+## village tributary share the joint point and direction, so the edge stays continuous.
+## The floor also ends SIDE_LIFT closer to the axis, so the clearing is about the size of the settlement's own pad.
+## F1 slider map_sides (on by default, R-22) or --sides0 (frames without it).
+var sides_natural := true
+const SIDE_K_MIN := 0.7
+const SIDE_K_MAX := 1.4
+const SIDE_RING := 260.0
+## S19-02: the floor of a side valley ends this much closer to its axis (px of the valley field): the old floor
+## (~440 px past the capsule) made a disc far wider than the settlement; its own pad (_flat) keeps the core level.
+const SIDE_LIFT := 220.0
+
+
+## Edge-distance factor of a settlement side valley (segment a…b) at point p: SIDE_K_MIN … SIDE_K_MAX by the
+## direction from the nearest axis point (see sides_natural). Main thread and chunk workers (reads only _pad).
+func side_edge_k(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var l2 := ab.length_squared()
+	var n := a if l2 < 1e-6 else a + ab * clampf((p - a).dot(ab) / l2, 0.0, 1.0)
+	var off := p - n
+	if off.length_squared() < 1e-6:
+		return 1.0
+	var q := n + off.normalized() * SIDE_RING
+	var t := clampf(_pad.get_noise_2d(q.x, q.y) * 1.8, -1.0, 1.0)
+	return lerpf(SIDE_K_MIN, SIDE_K_MAX, t * 0.5 + 0.5)
 
 
 ## Fade-speed factor of a pad edge in the direction of `off` from the pad centre `c` (r — the pad's radius):
