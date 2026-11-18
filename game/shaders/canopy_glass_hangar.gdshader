@@ -42,7 +42,9 @@ void fragment() {
 	float fx = fwidth(mp.x);
 	float fz = fwidth(abs(mp.z));
 	float fr = fwidth(UV2.x);
-	float frame = 1.0 - smoothstep(rim_w - fr, rim_w + fr, UV2.x);
+	// rim_w 0 — no sill: smoothstep(-fr, fr, 0) is 0.5, which painted every cut-edge vertex half in the frame colour
+	// (the many-pane glazing of «Кит» 1 and 5 has nearly all its vertices on cut edges)
+	float frame = rim_w > 0.0 ? 1.0 - smoothstep(rim_w - fr, rim_w + fr, UV2.x) : 0.0;
 	for (int i = 0; i < bow_count; i++) {
 		float d = abs(mp.x - bows[i]);
 		frame = max(frame, 1.0 - smoothstep(bow_w - fx, bow_w + fx, d));
