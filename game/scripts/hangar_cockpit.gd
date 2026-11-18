@@ -83,6 +83,17 @@ const C_CUSHION := Color(0.30, 0.26, 0.19)
 const C_PANEL := Color(0.05, 0.05, 0.055)
 const C_GAUGE := Color(0.36, 0.37, 0.35)
 const C_BELT := Color(0.42, 0.38, 0.27)
+# the bombardier's station (glazed noses): warm leather and khaki against the dark cabin, so the figure reads
+const C_JACKET := Color(0.45, 0.33, 0.2)
+const C_HELMET := Color(0.24, 0.16, 0.1)
+const C_FACE := Color(0.72, 0.55, 0.43)
+const C_GOGGLES := Color(0.55, 0.6, 0.62)
+const C_COLLAR := Color(0.62, 0.55, 0.42)
+const C_GUN := Color(0.09, 0.09, 0.1)
+const C_DRUM := Color(0.2, 0.21, 0.2)
+const C_DIAL := Color(0.8, 0.78, 0.68)
+const C_RELEASE := Color(0.42, 0.12, 0.08)
+const C_OXYGEN := Color(0.3, 0.4, 0.5)
 ## Glass opacity looking straight through on an own_pit model (smoked, the tub under it is not ours)
 const OWN_PIT_ALPHA := 0.4
 const GLASS_SHADER := preload("res://shaders/canopy_glass_hangar.gdshader")
@@ -556,15 +567,118 @@ static func _cabin(st: SurfaceTool, model: Node3D, glass: PackedVector3Array, ca
 				_tri(st, Vector3(px, fy, prev.x), Vector3(x, fy, cur.y), Vector3(x, fy, cur.x), fc, fc, fc)
 			prev = cur
 		x += CABIN_STEP
-	# bombsight on the floor, the seat behind it facing forward
+	_bombardier(st, pts, lo, hi, fy, float(cabin[2]), float(cabin[3]))
+
+
+## The bombardier's station in a glazed nose, sized from the glazing's height so it reads through the glass (Kanta
+## 18.11: «проработай внутреннее убранство, сейчас не пойму что там»): a seat with the navigator on it, leaning to a
+## bombsight column on the floor, hands on its head; a flexible gun in a ball mount at the nose tip, with its drum and
+## grips; an instrument panel with gauges on the left wall, a bomb-release box on the right, an oxygen bottle and a
+## map case on the bulkhead side. `pts` is the hull's inside surface (for the wall positions), `fy` the floor height
+static func _bombardier(st: SurfaceTool, pts: PackedVector3Array, lo: Vector3, hi: Vector3, fy: float, sx: float,
+		tx: float) -> void:
 	var h := hi.y - lo.y
-	var sx := float(cabin[2])
-	_box(st, Vector3(sx, fy + h * 0.06, 0.0), Vector3(h * 0.07, h * 0.12, h * 0.07), Basis.IDENTITY, C_PANEL)
-	_box(st, Vector3(sx + h * 0.02, fy + h * 0.13, 0.0), Vector3(h * 0.1, h * 0.04, h * 0.05), Basis.IDENTITY, C_GAUGE)
-	var tx := float(cabin[3])
-	_box(st, Vector3(tx, fy + h * 0.1, 0.0), Vector3(h * 0.16, h * 0.04, h * 0.2), Basis.IDENTITY, C_CUSHION)
-	_box(st, Vector3(tx - h * 0.09, fy + h * 0.2, 0.0), Vector3(h * 0.04, h * 0.22, h * 0.2), Basis.IDENTITY, C_SEAT)
-	_box(st, Vector3(tx, fy + h * 0.04, 0.0), Vector3(h * 0.05, h * 0.08, h * 0.05), Basis.IDENTITY, C_SEAT)
+	var u := h * 0.4   # the navigator's seated height
+	# seat: pan, back and post
+	var pan_y := fy + u * 0.3
+	_box(st, Vector3(tx, pan_y - u * 0.04, 0.0), Vector3(u * 0.36, u * 0.08, u * 0.42), Basis.IDENTITY, C_CUSHION)
+	_box(st, Vector3(tx - u * 0.2, pan_y + u * 0.2, 0.0), Vector3(u * 0.06, u * 0.5, u * 0.42), Basis.IDENTITY, C_SEAT)
+	_beam(st, Vector3(tx, fy, 0.0), Vector3(tx, pan_y - u * 0.08, 0.0), u * 0.1, C_SEAT)
+	# the bombsight: a base, a column and the optic head with its eyepiece towards the navigator
+	var head_y := pan_y + u * 0.62
+	var sight_top := pan_y + u * 0.4
+	_box(st, Vector3(sx, fy + u * 0.02, 0.0), Vector3(u * 0.3, u * 0.04, u * 0.3), Basis.IDENTITY, C_PANEL)
+	_beam(st, Vector3(sx, fy, 0.0), Vector3(sx, sight_top, 0.0), u * 0.1, C_PANEL.lightened(0.1))
+	_box(st, Vector3(sx, sight_top + u * 0.06, 0.0), Vector3(u * 0.22, u * 0.14, u * 0.14), Basis.IDENTITY, C_GAUGE)
+	_beam(st, Vector3(sx - u * 0.1, sight_top + u * 0.08, 0.0), Vector3(sx - u * 0.2, sight_top + u * 0.12, 0.0),
+			u * 0.06, C_PANEL)
+	for side in [-1.0, 1.0]:   # the sight's two handwheels
+		_box(st, Vector3(sx, sight_top + u * 0.04, side * u * 0.1), Vector3(u * 0.1, u * 0.1, u * 0.02),
+				Basis.IDENTITY, C_GAUGE.lightened(0.25))
+	# the navigator: thighs and shins, the torso leaning to the eyepiece, the head in a leather helmet with goggles,
+	# the arms down to the handwheels
+	var hip := Vector3(tx + u * 0.02, pan_y + u * 0.06, 0.0)
+	var lean := Basis(Vector3(0.0, 0.0, 1.0), -0.55)
+	var torso_c := hip + lean * Vector3(0.0, u * 0.26, 0.0)
+	_box(st, torso_c, Vector3(u * 0.24, u * 0.52, u * 0.4), lean, C_JACKET)
+	var neck := hip + lean * Vector3(0.0, u * 0.54, 0.0)
+	var head := neck + Vector3(u * 0.06, u * 0.1, 0.0)
+	_box(st, head, Vector3(u * 0.22, u * 0.24, u * 0.2), Basis.IDENTITY, C_HELMET)
+	_box(st, head + Vector3(u * 0.1, -u * 0.03, 0.0), Vector3(u * 0.04, u * 0.12, u * 0.16), Basis.IDENTITY, C_FACE)
+	_box(st, head + Vector3(u * 0.11, u * 0.04, 0.0), Vector3(u * 0.04, u * 0.05, u * 0.2), Basis.IDENTITY, C_GOGGLES)
+	_box(st, neck + lean * Vector3(0.0, -u * 0.02, 0.0), Vector3(u * 0.26, u * 0.06, u * 0.44), lean, C_COLLAR)
+	for side in [-1.0, 1.0]:
+		var z: float = side * u * 0.11
+		var knee := Vector3(tx + u * 0.4, pan_y + u * 0.1, z)
+		_beam(st, hip + Vector3(0.0, 0.0, z), knee, u * 0.13, C_JACKET.darkened(0.2))
+		_beam(st, knee, Vector3(tx + u * 0.46, fy + u * 0.04, z), u * 0.11, C_JACKET.darkened(0.2))
+		_box(st, Vector3(tx + u * 0.5, fy + u * 0.03, z), Vector3(u * 0.16, u * 0.06, u * 0.09), Basis.IDENTITY, C_SEAT)
+		var shoulder := neck + lean * Vector3(0.0, -u * 0.06, 0.0) + Vector3(0.0, 0.0, side * u * 0.21)
+		var hand := Vector3(sx - u * 0.02, sight_top + u * 0.04, side * u * 0.13)
+		var elbow := (shoulder + hand) * 0.5 + Vector3(-u * 0.04, -u * 0.08, side * u * 0.03)
+		_beam(st, shoulder, elbow, u * 0.1, C_JACKET)
+		_beam(st, elbow, hand, u * 0.09, C_JACKET)
+		_box(st, hand, Vector3(u * 0.07, u * 0.07, u * 0.06), Basis.IDENTITY, C_HELMET)
+	# the flexible gun in a ball mount at the nose tip: barrel out through the glazing, receiver, drum and grips
+	var tip := Vector3(hi.x, 0.0, 0.0)
+	var tip_y := -INF
+	var tip_lo := INF
+	for p in pts:
+		if p.x > hi.x - 0.01:
+			tip_y = maxf(tip_y, p.y)
+			tip_lo = minf(tip_lo, p.y)
+	if tip_y > -INF:
+		tip.y = (tip_y + tip_lo) * 0.5
+	var mount := tip - Vector3(u * 0.12, 0.0, 0.0)
+	_box(st, mount, Vector3(u * 0.16, u * 0.2, u * 0.2), Basis.IDENTITY, C_PANEL.lightened(0.15))
+	var recv := mount - Vector3(u * 0.36, -u * 0.02, 0.0)
+	_beam(st, recv, tip + Vector3(u * 0.3, 0.0, 0.0), u * 0.05, C_GUN)
+	_beam(st, mount, tip + Vector3(u * 0.08, 0.0, 0.0), u * 0.1, C_GUN)
+	_box(st, recv, Vector3(u * 0.34, u * 0.1, u * 0.09), Basis.IDENTITY, C_GUN)
+	_box(st, recv + Vector3(u * 0.02, u * 0.1, 0.0), Vector3(u * 0.22, u * 0.05, u * 0.22), Basis.IDENTITY, C_DRUM)
+	_beam(st, recv - Vector3(u * 0.17, 0.0, 0.0), recv - Vector3(u * 0.24, u * 0.12, 0.0), u * 0.05, C_HELMET)
+	# the walls: half-width of the hull at a station and height, from the inside surface
+	var walls := func(x: float, y: float) -> Vector2:
+		var zl := 0.0
+		var zr := 0.0
+		for p in pts:
+			if absf(p.x - x) < 0.004 and absf(p.y - y) < 0.006:
+				zl = minf(zl, p.z)
+				zr = maxf(zr, p.z)
+		return Vector2(zl, zr)
+	# instrument panel on the left wall: a board and four gauges facing the navigator's side
+	var px := tx + u * 0.15
+	var py := pan_y + u * 0.35
+	var w: Vector2 = walls.call(px, py)
+	if w.x < -u * 0.3:
+		var z := w.x + u * 0.06
+		_box(st, Vector3(px, py, z), Vector3(u * 0.5, u * 0.3, u * 0.04), Basis.IDENTITY, C_PANEL)
+		for i in 4:
+			var g := Vector3(px + (float(i % 2) - 0.5) * u * 0.22, py + (0.06 if i < 2 else -0.07) * u, z + u * 0.03)
+			_box(st, g, Vector3(u * 0.09, u * 0.09, u * 0.02), Basis.IDENTITY, C_DIAL)
+	# bomb-release box on the right wall, with its row of switches
+	w = walls.call(sx - u * 0.1, py)
+	if w.y > u * 0.3:
+		var z := w.y - u * 0.07
+		_box(st, Vector3(sx - u * 0.1, py, z), Vector3(u * 0.34, u * 0.2, u * 0.08), Basis.IDENTITY, C_RELEASE)
+		for i in 4:
+			_box(st, Vector3(sx - u * 0.22 + float(i) * u * 0.08, py + u * 0.04, z - u * 0.05),
+					Vector3(u * 0.03, u * 0.06, u * 0.03), Basis.IDENTITY, C_GAUGE.lightened(0.3))
+	# oxygen bottle and map case behind the seat, against the bulkhead
+	_beam(st, Vector3(tx - u * 0.42, fy, -u * 0.2), Vector3(tx - u * 0.42, fy + u * 0.5, -u * 0.2), u * 0.14, C_OXYGEN)
+	_box(st, Vector3(tx - u * 0.42, fy + u * 0.2, u * 0.2), Vector3(u * 0.1, u * 0.4, u * 0.3), Basis.IDENTITY,
+			C_CUSHION.darkened(0.2))
+
+
+## A square bar of width `w` from `a` to `b`, flat-coloured
+static func _beam(st: SurfaceTool, a: Vector3, b: Vector3, w: float, col: Color) -> void:
+	var d := b - a
+	if d.length() < 1e-6:
+		return
+	var xa := d.normalized()
+	var up := Vector3.UP if absf(xa.y) < 0.9 else Vector3.RIGHT
+	var za := xa.cross(up).normalized()
+	_box(st, (a + b) * 0.5, Vector3(d.length(), w, w), Basis(xa, za.cross(xa), za), col)
 
 
 ## Tub under one glass loop: a wall from every cut edge down and in towards the loop's middle, and a floor
