@@ -11,14 +11,23 @@
 
 **Правила ведения.** В каждом разделе не больше 10–15 живых задач. Новая задача — в раздел своей системы, с номером. Номера не меняются. Закрыл — строка в конец `backlog-archive.md` («Дописано после…»), здесь удалил. Шапку «Где мы сейчас» обновляем при каждой сборке и каждую пятницу на ревью.
 
-## Where we are (17.11.2026)
+## Where we are (18.11.2026)
 
-- **Game:** no game code PR merged in the last 24 h (17.11). Commits since 15.11 are docs and marketing: W47 reconciliation 17.11 (153f1a9), W47 content plan (d94ff70), W47 reconciliation (1911fe4), task-observer review (a9078d1, PR #625 merged). Open code PRs: #600 (two editions, open since 06.11) and #623 (GD-18 patrol package, draft, waits for Kanta «да»). Also open and not on any list: #298 (Instagram plan, 21.10); status unknown (guess: stale, can close).
-- **Build cycle:** last build 3.5-s18, rebuilt 09.11 with #615. Checked in the game: 0 of 31 items on the s16 list (S16-01…S16-31); S16-03 not started, S16-07 waits for «да». Kanta has not reported an s17 or s18 check. Next build only on Kanta's command, after s18 is checked and at least a day has passed.
-- **Waiting on Kanta:** dated items and day counts in `docs/owner-checklist/kanta-now.md`; the weekly review of 13.11 (7 proposals) is unanswered; marketing «ок» for posts (Telegram silent since 10.11).
-- **Main path (days from 16.11):** Valve review ~16.11 (date passed; status unknown, guess: still waiting); Steam content survey S6 20.11 (3 days); Next Fest registration 10.01.2027 (54 days); demo and page to Valve 18.01.2027 (62 days); Next Fest starts 22.02.2027 (97 days). `docs/process/early-access.md` still says 25.01 (to reconcile). RKN PD-02 was due 24.10, now 24 days overdue (filing not confirmed in the repo).
+- **Game:** merged 18.11: #634 («Грач» 2 and 3 from one CC BY model, Kit 1/5 glass), #633 (glass fix), #632 (bomber bays, Kit 5 fans). Merged 17.11: #629 (pickups 0.66 of truck), #630 (menu flight), #631 (round valley fields), #628 (recipe formulas), #627 (capture tool). PR #600 (two editions) not re-checked since 10.11.
+- **Build cycle:** 3.5-s19 built 17.11. Remarks in `docs/process/build-remarks/3.5-s19.md`: 7 fixed in code (2–8), 1 handed over (1), 4 not started (9, 10, 12, 14), 2 decided (11, 13, see «Правки по сборке 3.5-s19»), 1 waits for a new recording (15). Checked in the game: 0 of 15. Next build only on Kanta's command, at least a day after s19 is checked.
+- **Waiting on Kanta:** dated items and day counts in `docs/owner-checklist/kanta-now.md` (updated 18.11); weekly review of 13.11 (7 proposals) still unanswered; the choice of «Osa 1» manoeuvres; a new recording of a sortie.
+- **Main path (days from 18.11):** Valve review ~16.11 (date passed; status unknown, guess: still waiting); Steam content survey S6 20.11 (2 days); Next Fest registration 10.01.2027 (53 days); demo and page to Valve 18.01.2027 (61 days; `docs/process/early-access.md` says 25.01, to reconcile); Next Fest starts 22.02.2027 (96 days). R-29 Steam art: Kanta picked on 18.11, final files in `marketing/steam-art-final`.
 - **Review R-01…R-33 (16.11):** done: R-02, R-03, R-04, R-05, R-06, R-07, R-09, R-10, R-12, R-14, R-15, R-20, R-22, R-23, R-24, R-28, R-31, R-32; rule in force, waits for Kanta's word: R-33. Ready, first full run on s18: R-26. In work: R-13, R-17 (Kanta pastes one line on the PC), R-18, R-19, R-21, R-25. Rule written, not yet checked in a build: R-30. Not accepted: R-27. Idea only: R-16. R-01, R-08, R-11 are standing rules; their status was not re-checked today (guess: still in force).
 - **Strong-model threads:** no more than six at once (since 25.10.2026); the coordinator runs the queue.
+
+## Правки по сборке 3.5-s19
+
+Items 1–15 of build 3.5-s19 are in `docs/process/build-remarks/3.5-s19.md` (with owner threads). Only the decided items are listed here.
+
+| ID | Task | Thread / owner | Status |
+| --- | --- | --- | --- |
+| S19-11 | «Osa 1» gets the combat turn only; half loop and loop unlock by crew level, and stay in «Battle of aces». Add more manoeuvres (1 brake, 2 sideways dash, 3 climb, 4 scissors, 5 afterburner dash); the player picks at most 2. Thresholds from a measurement; game-design skill; Kanta's «да» on the package before code | Полёт и манёвры + game design | decided 18.11 (Kanta, option 3); option choice and «да» waiting |
+| S19-13 | Convoys path-find around mountains (passability map by slope); AA vehicles stand as positions and do not drive. New system boundary (S11-32 earlier) | Ground targets / convoy + game design | decided 18.11 (Kanta, recommendation); brainstorming and plan not started |
 
 ## Правки по сборке 3.5-s16
 
