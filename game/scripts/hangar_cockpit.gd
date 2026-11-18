@@ -29,13 +29,18 @@ const NODE := "cockpit"
 ## liner — a glazed nose or glasshouse (3.5-s19, Kanta: «Кит 1 — кусков не хватает», «дыра в модели Кит 5»): the
 ## glass wraps the nose down to the belly, so a tub dropped from its rim hung below the nose as black slabs and left
 ## the sky showing through the far side; such a plane gets a dark liner a little inside the glass instead (the glass
-## shows depth and the cabin's dark inside, never the sky), and no seats.
+## shows depth and the cabin's dark inside, never the sky), and no seats. Their glass comes in many small panes cut
+## out between the model's own frame strips (Kanta 18.11: «Кит 1 — всё равно видны дыры», «Кит 5 — закрашено стекло
+## кабины»): the painted sill is off, so are the bows on «Кит» 1 (its glazing has frames of its own), the glass
+## normals are rebuilt to point out of the fuselage (_outward_normals), and the liner closes every pane edge with a
+## fan towards the glass centre (gaps between panes and skin showed the sky). «Кит» 5's canopy is one fitted shell
+## (kit5_fix.py glaze) with bows across its main loop only.
 ## Read off the canopy shapes: bubble canopies have a windscreen bow only, the attackers a windscreen and a hood
 ## bow, the bombers a framed glasshouse.
 const FRAMES := {
 	"fighter_t1": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_t1": {"bows": [0.32], "ribs": [], "seats": [[0.6, -0.42], [0.6, 0.42]]},   # side by side
-	"bomber_t1": {"bows": [0.2, 0.4, 0.6, 0.8], "ribs": [0.0], "seats": [], "liner": true},
+	"bomber_t1": {"bows": [], "ribs": [], "seats": [], "liner": true},
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_1": {"bows": [0.3, 0.7], "ribs": [], "seats": [[0.58, 0.0]]},
@@ -47,7 +52,7 @@ const FRAMES := {
 	"attacker_t4": {"bows": [0.3, 0.62], "ribs": [], "seats": [[0.28, 0.0], [0.7, 0.0]]},   # tandem two-seater
 	"attacker_t5": {"bows": [0.33, 0.66], "ribs": [], "seats": [[0.25, 0.0], [0.58, 0.0]]},   # three-pane canopy
 	"bomber_t4": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.55, -0.42], [0.55, 0.42]], "tub": 1.0},
-	"bomber_t5": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [], "liner": true},
+	"bomber_t5": {"bows": [0.3, 0.62], "ribs": [0.0], "seats": [], "liner": true},
 }
 ## Frame paint when the livery has no colours of its own (the source paint): a dark worn grey
 const FRAME_DEFAULT := Color(0.22, 0.23, 0.22)
@@ -103,8 +108,9 @@ static func attach(model: Node3D, key: String, frame: Color) -> Node3D:
 	gm.set_shader_parameter("bow_count", bows.size())
 	gm.set_shader_parameter("ribs", ribs)
 	gm.set_shader_parameter("rib_count", ribs.size())
-	if data["own_pit"]:
+	if data["own_pit"] or data.get("liner", false):
 		gm.set_shader_parameter("rim_w", 0.0)
+	if data["own_pit"]:
 		gm.set_shader_parameter("alpha_min", OWN_PIT_ALPHA)
 	gl.material_override = gm
 	root.add_child(gl)
@@ -215,6 +221,8 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 	var spec: Dictionary = FRAMES.get(key, {"bows": [0.3], "ribs": [], "seats": [[0.6, 0.0]]})
 	var own: bool = spec.get("own_pit", false)
 	var liner: bool = spec.get("liner", false)
+	if liner:
+		nrm = _outward_normals(pos, tris)
 	var bows := PackedFloat32Array()
 	var ribs := PackedFloat32Array()
 	var tub := SurfaceTool.new()
@@ -238,6 +246,8 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		mb["hw"] = float(spec["main"][1])
 	for li in loops.size():
 		var b: Dictionary = boxes[li]
+		if liner and li != main_i:
+			continue   # a lined canopy is one glazed shell: frame bows across its main loop only
 		for f: float in spec["bows"]:
 			bows.append(float(b["front"]) - f * float(b["len"]))
 		if li == main_i:
@@ -250,7 +260,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 			_furnish(st, pos, loops[li], b, spec["seats"])
 	var tub_mesh: ArrayMesh = null
 	if liner:
-		_liner(tub, pos, nrm, tris)
+		_liner(tub, pos, nrm, tris, loops)
 		tub.generate_normals()
 		tub_mesh = tub.commit()
 	elif not own:
@@ -267,7 +277,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		st.generate_normals()
 		interior = st.commit()
 	return {"glass": _glass_mesh(pos, nrm, tris, rim), "bows": bows, "ribs": ribs, "tub": tub_mesh, "interior": interior,
-		"own_pit": own}
+		"own_pit": own, "liner": liner}
 
 
 ## Boundary loops of a triangle list (edges used by one triangle), each as an ordered list of vertex indices
@@ -365,10 +375,47 @@ static func _glass_mesh(pos: PackedVector3Array, nrm: PackedVector3Array, tris: 
 	return st.commit()
 
 
+## Smooth glass normals pointing out of the fuselage: away from a point on the model axis (y = z = 0) a little behind
+## each triangle, so the nose tip faces forward and a dome on the spine faces up. The generated glazing of «Кит» 1
+## and 5 comes with vertex normals that point in and out at random, and the hangar glass turns a pane whose normal
+## faces away from the camera into an opaque mirror (fresnel at grazing): such panes read as painted over, the
+## others as holes
+static func _outward_normals(pos: PackedVector3Array, tris: PackedInt32Array) -> PackedVector3Array:
+	var acc := PackedVector3Array()
+	acc.resize(pos.size())
+	for t in range(0, tris.size(), 3):
+		var a := pos[tris[t]]
+		var b := pos[tris[t + 1]]
+		var c := pos[tris[t + 2]]
+		var fn := (b - a).cross(c - a)
+		var ct := (a + b + c) / 3.0
+		if fn.dot(ct - Vector3(ct.x - 0.05, 0.0, 0.0)) < 0.0:
+			fn = -fn
+		for k in 3:
+			acc[tris[t + k]] += fn
+	for i in acc.size():
+		acc[i] = acc[i].normalized() if acc[i].length_squared() > 0.0 else Vector3.UP
+	return acc
+
+
 ## Liner under a glazed nose: the glass triangles moved LINER_D inwards along their normals, facing out (seen through
-## the glass), in the dark cabin paint
-static func _liner(st: SurfaceTool, pos: PackedVector3Array, nrm: PackedVector3Array, tris: PackedInt32Array) -> void:
+## the glass), in the dark cabin paint, and from every cut edge (`loops`) a two-sided fan to the centre of the glass,
+## so a look through any gap between a pane and the skin ends on the dark cabin, not on the sky behind the plane
+static func _liner(st: SurfaceTool, pos: PackedVector3Array, nrm: PackedVector3Array, tris: PackedInt32Array,
+		loops: Array) -> void:
 	var col := C_TUB.darkened(0.45)
+	var mid := Vector3.ZERO
+	for p in pos:
+		mid += p
+	mid /= maxf(1.0, float(pos.size()))
+	for lp: PackedInt32Array in loops:
+		for i in lp.size():
+			var a := lp[i]
+			var b := lp[(i + 1) % lp.size()]
+			var pa := pos[a] - nrm[a] * LINER_D
+			var pb := pos[b] - nrm[b] * LINER_D
+			_tri(st, pa, pb, mid, col, col, col)
+			_tri(st, pb, pa, mid, col, col, col)
 	for t in range(0, tris.size(), 3):
 		var a := tris[t]
 		var b := tris[t + 1]

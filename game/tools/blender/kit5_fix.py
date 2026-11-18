@@ -18,6 +18,7 @@ Axes: glTF/Godot — nose +X, up +Y, right wing +Z; model length 1. Blender — 
 Run from the repo root (bpy 5.x as a module):
   python3 game/tools/blender/kit5_fix.py cut game/models/hangar/fh_hangar_bomber_t5.glb <out.glb>
   python3 game/tools/blender/kit5_fix.py parts <original hangar glb, before cut> game/models/mech
+  python3 game/tools/blender/kit5_fix.py glaze game/models/hangar/fh_hangar_bomber_t5.glb <out.glb>
 then rebake the battle model from the cut hangar model (battle_bake.py)."""
 import os
 import sys
@@ -337,8 +338,132 @@ def parts(src, out_dir):
     print("parts written")
 
 
+GLAZE_DROP = 0.006   # a skin triangle up to this far below the nearest glass vertex still counts as canopy
+GLAZE_STEP = 0.003   # grid step of the new glazing, model units
+GLAZE_LIFT = 0.0015  # the new glazing sits this far over the fit, so the rim's skin teeth stay under it
+GLAZE_SKIRT = 0.015  # the new glazing's edge turns down into the hull this far (hides the cut's ragged rim)
+
+
+def _crown(x, z):
+    """Terms of the canopy surface fit y(x, z): symmetric in z (the glasshouse is), cubic along x"""
+    return np.stack([np.ones_like(x), x, z * z, x * x, x * z * z, x ** 3, z ** 4, x * x * z * z], 1)
+
+
+def glaze(src, dst):
+    """3.5-s19 recheck (Kanta 18.11, «Кит 5 — закрашено стекло кабины»): the Meshy canopy glass is a jagged patch of
+    shards with skin shards between and over its panes, so the hangar showed camouflage on the glazing and torn edges.
+    The whole canopy is replaced by one clean glazed surface:
+      1. the surface — a robust least-squares fit y(x, z) (_crown, symmetric in z) to the upper envelope of the old
+         glass (the highest vertex in each 4 mm cell; median miss about 1 mm);
+      2. the footprint — the convex hull, seen from above (x, z), of the glass vertices within GLAZE_DROP of that
+         surface (the side windows lower down keep their own glass); inside it every skin and old glass triangle
+         whose centre is less than GLAZE_DROP under the surface is removed, and every skin triangle with two corners
+         above it;
+      3. a GLAZE_STEP grid over the footprint triangulated as the new glass primitive (normals from the fit, UV 0),
+         and a skirt from its outline GLAZE_SKIRT down towards the axis, so no gap at the rim shows the sky.
+    Only the triangle lists and the glass vertices change: the body's vertices, UV and the embedded images stay
+    byte for byte."""
+    from scipy.spatial import ConvexHull, Delaunay, cKDTree
+    g = glb_io.load(src)
+    prims = g.j["meshes"][0]["primitives"]
+    names = [g.j["materials"][p["material"]]["name"] for p in prims]
+    bi = next(i for i, n in enumerate(names) if n.endswith("_body"))
+    gi = names.index("glass")
+    bp, bt = g.mesh_world(0, bi)
+    gp, gt = g.mesh_world(0, gi)
+    gv = gp[np.unique(gt)]
+    # upper envelope of the old glass and the robust fit
+    cell = {}
+    for i, k in enumerate(map(tuple, np.floor(gv[:, [0, 2]] / 0.004).astype(int))):
+        if k not in cell or gv[i, 1] > gv[cell[k], 1]:
+            cell[k] = i
+    u = gv[list(cell.values())]
+    w = np.ones(len(u))
+    for _ in range(6):
+        co, *_ = np.linalg.lstsq(_crown(u[:, 0], u[:, 2]) * w[:, None], u[:, 1] * w, rcond=None)
+        r = u[:, 1] - _crown(u[:, 0], u[:, 2]) @ co
+        w = 1.0 / np.maximum(1.0, np.abs(r) / (np.median(np.abs(r)) * 1.5 + 1e-4))
+    # footprint: the glass that lies on that surface (the side windows lower down keep their old glass)
+    top = gv[np.abs(gv[:, 1] - _crown(gv[:, 0], gv[:, 2]) @ co) < GLAZE_DROP]
+    xz = top[:, [0, 2]]
+    hull = ConvexHull(xz)
+    tri = Delaunay(xz[hull.vertices])
+    fit_b = _crown(bp[:, 0], bp[:, 2]) @ co
+    cen = bp[bt].mean(1)
+    sel = (tri.find_simplex(cen[:, [0, 2]]) >= 0) & (cen[:, 1] > (_crown(cen[:, 0], cen[:, 2]) @ co) - GLAZE_DROP)
+    # skin shards that reach over the new surface inside the footprint go too
+    over = (tri.find_simplex(bp[:, [0, 2]]) >= 0) & (bp[:, 1] > fit_b + 0.0005)
+    sel |= over[bt].sum(1) >= 2
+    gcen = gp[gt].mean(1)
+    keep_glass = (tri.find_simplex(gcen[:, [0, 2]]) < 0) | (gcen[:, 1] < (_crown(gcen[:, 0], gcen[:, 2]) @ co) - GLAZE_DROP)
+    # grid inside the footprint plus its outline resampled at GLAZE_STEP
+    ring = xz[hull.vertices]
+    out = []
+    for i in range(len(ring)):
+        p0, p1 = ring[i], ring[(i + 1) % len(ring)]
+        n = max(1, int(np.ceil(np.linalg.norm(p1 - p0) / GLAZE_STEP)))
+        out += [p0 + (p1 - p0) * t / n for t in range(n)]
+    out = np.array(out)
+    lo, hi = ring.min(0), ring.max(0)
+    gx, gz = np.meshgrid(np.arange(lo[0], hi[0], GLAZE_STEP), np.arange(lo[1], hi[1], GLAZE_STEP))
+    inner = np.stack([gx.ravel(), gz.ravel()], 1)
+    inner = inner[tri.find_simplex(inner) >= 0]
+    inner = inner[cKDTree(out).query(inner)[0] > GLAZE_STEP * 0.5]
+    pts = np.vstack([out, inner])
+    faces = Delaunay(pts).simplices
+    y = _crown(pts[:, 0], pts[:, 1]) @ co + GLAZE_LIFT
+    pos = np.stack([pts[:, 0], y, pts[:, 1]], 1)
+    # normals from the fit's gradient (numeric), pointing up
+    e = 1e-4
+    dx = (_crown(pts[:, 0] + e, pts[:, 1]) @ co + GLAZE_LIFT - y) / e
+    dz = (_crown(pts[:, 0], pts[:, 1] + e) @ co + GLAZE_LIFT - y) / e
+    nrm = np.stack([-dx, np.ones_like(dx), -dz], 1)
+    nrm /= np.linalg.norm(nrm, axis=1, keepdims=True)
+    # wind every triangle so it faces up
+    fn = np.cross(pos[faces[:, 1]] - pos[faces[:, 0]], pos[faces[:, 2]] - pos[faces[:, 0]])
+    flip = fn[:, 1] < 0
+    faces[flip] = faces[flip][:, [0, 2, 1]]
+    # skirt: outline vertices copied GLAZE_SKIRT down, a quad strip between them
+    k = len(out)
+    low = pos[:k] - np.array([0.0, GLAZE_SKIRT, 0.0])
+    side = np.zeros((k, 3))
+    side[:, [0, 2]] = out - out.mean(0)
+    side /= np.linalg.norm(side, axis=1, keepdims=True) + 1e-12
+    pos = np.vstack([pos, low])
+    nrm = np.vstack([nrm, side])
+    skirt = []
+    for i in range(k):
+        j = (i + 1) % k
+        skirt += [[i, k * 0 + j, len(pts) + i], [j, len(pts) + j, len(pts) + i]]
+    skirt = np.array(skirt)
+    sf = np.cross(pos[skirt[:, 1]] - pos[skirt[:, 0]], pos[skirt[:, 2]] - pos[skirt[:, 0]])
+    sflip = np.einsum("ij,ij->i", sf, side[skirt[:, 0]]) < 0
+    skirt[sflip] = skirt[sflip][:, [0, 2, 1]]
+    tris = np.vstack([faces, skirt])
+    # into the glass primitive's local space (the hull mesh node may carry a transform)
+    m = g.world_of_mesh(0)
+    inv = np.linalg.inv(m)
+    lpos = pos @ inv[:3, :3].T + inv[:3, 3]
+    lnrm = nrm @ m[:3, :3]
+    lnrm /= np.linalg.norm(lnrm, axis=1, keepdims=True)
+    attrs = {"POSITION": lpos, "NORMAL": lnrm}
+    for name in prims[gi]["attributes"]:
+        if name not in attrs:
+            ncomp = g.accessor(prims[gi]["attributes"][name]).shape[1]
+            attrs[name] = np.zeros((len(lpos), ncomp))
+    g.set_indices(0, bi, bt[~sel])
+    base = len(g.accessor(prims[gi]["attributes"]["POSITION"]))
+    g.append_tris(0, gi, attrs, tris)
+    g.set_indices(0, gi, np.vstack([gt[keep_glass], tris + base]))   # old glass on the surface goes
+    g.save(dst)
+    print("glaze: %d skin and %d old glass triangles removed, new glazing %d triangles (fit median miss %.4f)"
+          % (int(sel.sum()), int((~keep_glass).sum()), len(tris), float(np.median(np.abs(r)))))
+
+
 if __name__ == "__main__":
-    if sys.argv[1] == "cut":
+    if sys.argv[1] == "glaze":
+        glaze(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == "cut":
         cut(sys.argv[2], sys.argv[3])
     else:
         parts(sys.argv[2], sys.argv[3])

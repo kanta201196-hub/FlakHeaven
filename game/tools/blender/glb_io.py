@@ -5,7 +5,8 @@ Godot извлечённый файл не перезаписывает — ок
 поэтому для правки геометрии готовой модели лучше этот модуль.
 
 load(path) -> Glb; g.mesh_world(mesh_i, prim_i) -> (позиции в мире модели, индексы треугольников);
-g.set_indices(mesh_i, prim_i, новые индексы); g.save(path)."""
+g.set_indices(mesh_i, prim_i, новые индексы); g.append_tris(mesh_i, prim_i, {атрибут: массив}, треугольники);
+g.save(path)."""
 import json
 import struct
 import numpy as np
@@ -98,6 +99,33 @@ class Glb:
         self.j["bufferViews"].append({"buffer": 0, "byteOffset": off, "byteLength": int(flat.nbytes), "target": 34963})
         a["bufferView"] = len(self.j["bufferViews"]) - 1
         self.compact()
+
+    def append_tris(self, mesh_i, prim_i, attrs, tris):
+        """Adds triangles with vertices of their own to a primitive: `attrs` — {attribute name: array (n, k)} for
+        every attribute the primitive has, `tris` (m, 3) — indices into those n new vertices. The attribute
+        accessors get new bufferViews holding old + new data (POSITION min/max updated)."""
+        p = self.j["meshes"][mesh_i]["primitives"][prim_i]
+        base = None
+        for name, ai in p["attributes"].items():
+            old = self.accessor(ai)
+            new = np.asarray(attrs[name], dtype=old.dtype).reshape(-1, old.shape[1])
+            both = np.vstack([old, new])
+            base = len(old) if base is None else base
+            a = self.j["accessors"][ai]
+            a["count"] = int(len(both))
+            a.pop("byteOffset", None)
+            if name == "POSITION":
+                a["min"] = both.min(0).tolist()
+                a["max"] = both.max(0).tolist()
+            while len(self.bin) % 4:
+                self.bin.append(0)
+            off = len(self.bin)
+            self.bin += both.tobytes()
+            self.j["bufferViews"].append({"buffer": 0, "byteOffset": off, "byteLength": int(both.nbytes),
+                                          "target": 34962})
+            a["bufferView"] = len(self.j["bufferViews"]) - 1
+        idx = self.accessor(p["indices"]).reshape(-1, 3).astype(np.int64)
+        self.set_indices(mesh_i, prim_i, np.vstack([idx, np.asarray(tris, np.int64) + base]))
 
     def compact(self):
         """Выкидывает bufferView, на которые никто не ссылается, и упаковывает буфер заново."""
