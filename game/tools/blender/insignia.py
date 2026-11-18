@@ -23,7 +23,7 @@ WING_F = {"fighter_t1": 0.85, "bomber_t1": 0.72, "bomber_1": 0.74, "bomber_2": 0
 # t1: behind the wing flaps, where a ray from the side meets only the fuselage (ahead of it the drop tanks, tip
 # tanks and nacelles with their propellers stand in the way)
 SIDE = {"fighter_t1": (-0.1, 0.0), "attacker_t1": (-0.06, 0.0), "bomber_t1": (-0.06, -0.03),
-        "attacker_1": (0.16, 0.0), "attacker_2": (0.17, 0.0), "fighter_1": (0.14, 0.0),
+        "attacker_1": (-0.2, 0.0), "attacker_2": (-0.2, 0.0), "fighter_1": (0.14, 0.0),
         "fighter_2": (0.12, 0.0), "bomber_1": (0.3, 0.0), "bomber_2": (0.28, 0.0),
         # tiers 4-5: above the wing on the blended bodies of «Оса» 4/5; «Грач» 4 aft of the intake trunks, below the fin;
         # «Грач» 5 ahead of the engine pods under the canopy; «Кит» 4/5 aft of the wing, ahead of the tail

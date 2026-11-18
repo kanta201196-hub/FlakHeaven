@@ -1213,6 +1213,9 @@ def main() -> int:
         fill_box_holes(obs, R["fill_holes"])
     if R.get("build"):   # parts made in code (e.g. the technical's machine gun)
         obs += R["build"]()
+    if R.get("warp"):   # reshape the placed source in code (a tier variant: a shorter nose ...), built parts too
+        R["warp"](obs)
+        place(obs, {"ground": R.get("ground", True)})   # back to length 1, centred
     if R.get("launcher"):   # turntable + elevating box (SAM), folded for travel
         obs = build_launcher(obs, R)
     if R.get("wheels"):

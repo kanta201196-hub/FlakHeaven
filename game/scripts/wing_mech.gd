@@ -244,8 +244,7 @@ static func tail_mount(tail: Node3D, base: Node3D) -> Vector3:
 
 
 # ---------- Т-2: детали силуэта поверх модели Meshy ----------
-## models/mech/fh_detail_<класс>_<ур>.glb: «Грач 2» — ПГО и контейнеры на законцовках (attacker2_detail.py);
-## «Кит 1» — Н-оперение и баки на законцовках, «Кит 2» — развал-кили, ПГО, винглеты (bomber_detail.py).
+## models/mech/fh_detail_<класс>_<ур>.glb: «Кит 1» — Н-оперение и баки на законцовках, «Кит 2» — развал-кили, ПГО, винглеты (bomber_detail.py).
 ## Цвет — в материале детали (средний тон обшивки под ней)
 ## Замечание 31/33 (3.5-s4): свои винты «Кита 1» (tools/blender/kit_props.py) вместо винтов Meshy, удалённых
 ## из моделей (kit_props_cut.py). Узлы prop_* — origin на оси двигателя, вращение вокруг локальной X.
@@ -278,7 +277,8 @@ static func spin_props(nodes: Array, angle: float) -> void:
 
 
 ## Т-2: silhouette details of the plane (models/mech/fh_detail_<key>.glb: canards, fins, winglets, tip tanks)
-## under `model`, painted with the skin material; null when the plane has none
+## under `model`, painted with the skin material; null when the plane has none. «Грач» 2 lost its file with the
+## 3.5-s19 hull: the new source has its own wingtip pods.
 static func attach_detail(model: Node3D, key: String) -> Node3D:
 	var path := "res://models/mech/fh_detail_%s.glb" % key
 	if not _scenes.has(path):

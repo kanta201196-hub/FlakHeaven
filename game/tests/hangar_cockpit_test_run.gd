@@ -58,12 +58,32 @@ func _test_plane(key: String) -> void:
 	var bows: PackedFloat32Array = gm.get_shader_parameter("bows")
 	for b in bows:
 		_check(b >= glass_box.position.x and b <= glass_box.end.x, "%s: bow at x %.3f is on the glass" % [key, b])
+	if (HangarCockpit.FRAMES[key] as Dictionary).get("frame_uv", false):
+		# 18.11: «Кит» 5's modelled sill is painted from its vertices' U: both frame and clear glass must be there
+		var frame_v := 0
+		var clear_v := 0
+		var a := gl.mesh.surface_get_arrays(0)
+		for uv: Vector2 in (a[Mesh.ARRAY_TEX_UV2] as PackedVector2Array):
+			if uv.x < 0.5:
+				frame_v += 1
+			else:
+				clear_v += 1
+		_check(frame_v > 0 and clear_v > frame_v, "%s: sill frame %d and clear glass %d vertices" % [key, frame_v, clear_v])
 	var inner := node.get_node_or_null("interior") as MeshInstance3D
 	if (HangarCockpit.FRAMES[key] as Dictionary).get("liner", false):
 		# 3.5-s19: a glazed nose gets a dark liner just inside the glass and nothing hanging below it
 		var ln := node.get_node_or_null("tub") as MeshInstance3D
 		_check(ln != null and ln.mesh != null, "%s: liner under the glazed nose" % key)
 		_check(inner == null, "%s: no seats in a glazed nose" % key)
+		var cabin: Array = (HangarCockpit.FRAMES[key] as Dictionary).get("cabin", [])
+		if not cabin.is_empty():
+			# 18.11: a see-through cabin ahead of its bulkhead instead of the liner shell (the «dark ball»)
+			if ln != null and ln.mesh != null:
+				var cb := ln.mesh.get_aabb()
+				_check(cb.position.x >= float(cabin[0]) - 0.005, "%s: cabin ahead of its bulkhead (from x %.3f)" % [
+						key, cb.position.x])
+			model.free()
+			return
 		if ln != null and ln.mesh != null:
 			var lb := ln.mesh.get_aabb()
 			_check(lb.position.y >= glass_box.position.y - HangarCockpit.LINER_D - 0.001 and glass_box.grow(HangarCockpit.LINER_D + 0.001).encloses(lb),

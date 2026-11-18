@@ -182,8 +182,8 @@ const NOSE := {
 	"fighter_1": [0.425, 0.245, -0.031, 0.027],
 	"fighter_2": [0.485, 0.29, -0.034, 0.045],
 	"attacker_t1": [0.455, 0.27, -0.034, 0.063],   # pitot probe ahead of 0.47 excluded
-	"attacker_1": [0.43, 0.24, -0.06, 0.042],
-	"attacker_2": [0.45, 0.25, -0.064, 0.042],
+	"attacker_1": [0.45, 0.30, -0.08, 0.045],   # «Грач» 2 / 3 (3.5-s19 hulls): short nose, long sensor nose
+	"attacker_2": [0.425, 0.25, -0.08, 0.04],
 	"bomber_t1": [0.47, 0.30, -0.034, 0.042],
 	"bomber_1": [0.44, 0.25, -0.063, 0.032],
 	"bomber_2": [0.45, 0.27, -0.042, 0.031],
@@ -204,7 +204,7 @@ const NOSE := {
 const SRC := {
 	"fighter_t1": [0.05, 0.012], "attacker_t1": [0.05, 0.010], "bomber_t1": [0.06, 0.013],
 	"fighter_1": [0.056, 0.012], "fighter_2": [0.14, 0.022],
-	"attacker_1": [0.056, 0.011], "attacker_2": [0.056, 0.011],
+	"attacker_1": [0.05, 0.010], "attacker_2": [0.05, 0.010],   # 3.5-s19 hulls, the t1 paint (TEMPERATE)
 	"bomber_1": [0.079, 0.013], "bomber_2": [0.078, 0.013],
 	# tiers 4-5, same camouflage family as t1: base between the dark (0.024-0.039) and light (0.074-0.099) peaks
 	"fighter_t4": [0.06, 0.012], "fighter_t5": [0.05, 0.011], "attacker_t4": [0.05, 0.012],
@@ -238,9 +238,9 @@ const EXHAUST := {
 ## engine nozzle inside. The old rows (radius of the generator's sleeve, span reaching forward to the sleeve's torn
 ## edge) darkened that edge into a ragged black belt; the rows from `nozzle_rebuild.py --report` hold the test to
 ## the rim (radius rim / 0.84) and from just behind it to the nozzle's floor.
+## 18.11 (3.5-s19): «Грач» 2 and 3 have new hulls with their own modelled intakes and nozzles (dark in the source
+## texture, under l_keep), so their rows here and in INTAKE_DUCTS are gone.
 const ENGINE_HOLES := {
-	"attacker_1": [-0.0386, 0.0807, 0.0263, [1.0, 1.0], [-0.249, -0.226]],
-	"attacker_2": [-0.0320, 0.0880, 0.0292, [1.0, 1.0], [-0.299, -0.276]],
 	"bomber_2": [-0.0144, 0.0702, 0.0235, [1.0, 1.0], [-0.29, -0.24]],
 }
 
@@ -256,8 +256,6 @@ const ENGINE_HOLES := {
 ## 02.11: «Кит» 2's rectangular intakes (nacelle_box.py --report): the oval is the opening's half sizes times 1.45,
 ## so it covers the corners of the rectangle; its splitter stands mid-opening and is painted dark in the texture.
 const INTAKE_DUCTS := {
-	"attacker_1": [-0.0387, 0.0804, 0.025, 0.0205, 0.11025, -0.35, 0.0, 0.055, 0.06155, 0.01172, 0.00465],
-	"attacker_2": [-0.031, 0.0939, 0.027, 0.0195, 0.08135, -0.5, 0.0, 0.052, 0.07605, 0.0202, -0.0011],
 	"bomber_2": [-0.0573, 0.0705, 0.0105, 0.0464, -0.1126, -0.08, 0.0, 0.030, 0.0375, 0.0, 0.0],
 }
 

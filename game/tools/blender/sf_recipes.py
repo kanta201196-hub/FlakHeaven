@@ -840,3 +840,128 @@ for _k, _p in (("attacker_t4", TEMPERATE), ("attacker_t5", TEMPERATE), ("fighter
                ("fighter_t5", HIGHLAND), ("bomber_t4", HIGHLAND), ("bomber_t5", HIGHLAND)):
     RECIPES[_k] = _meshy(_k, _p)
     RECIPES[_k + "_hangar"] = _meshy("fh_hangar_" + _k, _p, 110000)
+
+
+
+def _nose_warp(x0, k, blend):
+    """Shorten everything ahead of x0 (model axes, length 1) to k of its length: a tier variant with a shorter nose
+    from one long-nose source. The scale eases in over `blend` (smoothstep slope), so the skin bends without a crease
+    at x0; custom normals follow the stretch (n.x / slope). sf_rework re-places the model to length 1 afterwards."""
+    def warp(obs):
+        import numpy as np
+        done = set()
+        for o in obs:
+            me = o.data
+            if me.name in done:
+                continue
+            done.add(me.name)
+            n = len(me.vertices)
+            co = np.empty(n * 3, np.float32)
+            me.vertices.foreach_get("co", co)
+            co = co.reshape(-1, 3)
+            d = np.maximum(co[:, 0] - x0, 0.0)
+            if not (d > 0).any():
+                continue
+            u = np.minimum(d / blend, 1.0)
+            shift = (1.0 - k) * np.where(d < blend, blend * (u ** 3 - u ** 4 / 2.0), blend * 0.5 + (d - blend))
+            slope = 1.0 - (1.0 - k) * (3 * u ** 2 - 2 * u ** 3)
+            cn = None
+            if me.has_custom_normals:
+                cn = np.empty(len(me.loops) * 3, np.float32)
+                me.corner_normals.foreach_get("vector", cn)
+                cn = cn.reshape(-1, 3)
+                lv = np.empty(len(me.loops), np.int32)
+                me.loops.foreach_get("vertex_index", lv)
+                cn[:, 0] /= slope[lv]
+                cn /= np.maximum(np.linalg.norm(cn, axis=1, keepdims=True), 1e-9)
+            co[:, 0] -= shift
+            me.vertices.foreach_set("co", co.ravel())
+            me.update()
+            if cn is not None:
+                me.normals_split_custom_set([tuple(v) for v in cn])
+    return warp
+
+
+def grach_bay_covers():
+    """Closed gear doors for «Грач» 2 and 3: the source is modelled gear down, and once the gear (with its doors) is
+    dropped the main wells in the nacelle bottoms and the nose wells stay open. Measured by vertical rays on the
+    placed source: main wells x -0.048…0.048, |y| 0.021…0.08, ceiling z -0.101…-0.118 against the belly at -0.13…
+    -0.142; nose wells x 0.084…0.204, |y| < 0.027, ceiling -0.081…-0.109. Each cover is a grid plate whose height is
+    interpolated between the belly sections just ahead of and behind the well, 0.8 mm under the skin, so the rim of
+    the opening reads as a door seam; painted like the skin."""
+    import bpy
+    import bmesh
+    import numpy as np
+    mat = _flat_mat("grach_bay_paint", (0.46, 0.48, 0.44), 0.8, 0.0)
+    obs = []
+
+    def plate(name, x0, x1, y0, y1, aft, fore, nx=10, ny=8):
+        """aft / fore: (|y| list, z list) belly sections at x0 / x1; z blends linearly between them."""
+        me = bpy.data.meshes.new(name)
+        bm = bmesh.new()
+
+        def z(x, y):
+            t = (x - x0) / (x1 - x0)
+            return (1 - t) * np.interp(abs(y), *aft) + t * np.interp(abs(y), *fore) - 0.0008
+        grid = [[bm.verts.new((x, y, z(x, y))) for y in np.linspace(y0, y1, ny + 1)]
+                for x in np.linspace(x0, x1, nx + 1)]
+        for i in range(nx):
+            for j in range(ny):
+                f = bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+                f.normal_update()
+                if f.normal.z > 0:
+                    f.normal_flip()
+        bm.to_mesh(me)
+        bm.free()
+        me.uv_layers.new(name="UVMap")
+        me.materials.append(mat)
+        o = bpy.data.objects.new(name, me)
+        bpy.context.scene.collection.objects.link(o)
+        obs.append(o)
+
+    aft = ([0.0, 0.054, 0.066, 0.072, 0.078, 0.082], [-0.142, -0.142, -0.140, -0.137, -0.119, -0.108])
+    fore = ([0.0, 0.03, 0.036, 0.048, 0.06, 0.066, 0.072, 0.078, 0.082],
+            [-0.137, -0.134, -0.132, -0.134, -0.135, -0.134, -0.129, -0.119, -0.108])
+    for s in (1, -1):
+        plate("grach_cover_main_%s" % ("l" if s > 0 else "r"), -0.052, 0.052, s * 0.017, s * 0.081, aft, fore)
+    plate("grach_cover_nose", 0.078, 0.208, -0.027, 0.027, ([0.0, 0.024, 0.03], [-0.136, -0.136, -0.134]),
+          ([0.0, 0.024, 0.03], [-0.133, -0.132, -0.130]), nx=14, ny=6)
+    return obs
+
+
+# «Грач» 2 and 3 (tiers 2-3, keys attacker_1 / attacker_2; 3.5-s19 item 3, Kanta 18.11: «у нас же там разные машины,
+# они отличаются, ты сможешь дорисовать 4 модель как нужно?»). Both from one twin-engine armoured attacker, Sketchfab
+# e1b6ee3af1d94ed19952925e64684335 (Alexios_Apokaukos, CC BY, CREDITS). The source is the late long-nose variant with
+# a sensor window under the nose: «Грач» 3 keeps it, «Грач» 2 gets the short early nose (_nose_warp ahead of the
+# windscreen), which shows from above as well. Dropped: main and nose gear with their doors (the game flies gear up),
+# pylons and stores (the game hangs its own weapons); the open wells get closed doors (grach_bay_covers). One 1024 atlas (Material_1) carries the whole skin with a
+# painted camouflage and six national stars (fin, wing tops, wing undersides): stars erased, camouflage flattened and
+# repainted; dark grey detail cells keep their colour. Material_5 (tail cone and flare cassettes) carries a stencil
+# warning in a real language: erased.
+_GRACH_STARS = [(0.682, 0.056, 0.739, 0.114), (0.781, 0.074, 0.836, 0.13),     # fin, both sides
+                (0.502, 0.258, 0.541, 0.295), (0.630, 0.258, 0.668, 0.295),    # wing tops
+                (0.336, 0.418, 0.396, 0.48), (0.779, 0.418, 0.828, 0.479)]     # wing undersides
+_GRACH = {
+    "rot": (0, 0, 90), "ground": False,
+    # Object_114 main gear (wheels and legs, one object), _6 pylons, _317/_314/_320 stores (Material_0),
+    # nose gear: leg, wheel, links, doors (_89 ... _251) and the strut fairing _69
+    # cockpit interior (_10, _298, _247, _241, _244): the hangar builds its own tub and seat under the glass
+    # (HangarCockpit), and left in, the bake pulled its dark texels onto the canopy sill as ragged black spots
+    "drop": r"^Object_(114|6|317|314|320|89|61|104|63|101|92|71|77|80|66|74|95|83|86|98|107|110|251|69"
+            r"|10|298|247|241|244)$",
+    "build": grach_bay_covers,
+    # Material_2: plain grey plates lying on the wing and tail skin (flap and airbrake panels); kept grey, the bake
+    # picked them or the skin under them in blocks and the wing came out with grey blotches
+    "materials": [(r"^Material_4$", GLASS), (r"^(grach_bay_paint|Material_2)$", {"mode": "paint"}),
+                  (r"^Material_1$", {"mode": "auto", "hue": [(0, 225), (330, 360)], "smin": 0.08,
+                                     "vmin": 0.14, "gray": (0.3, 1.0), "flatten": 31}),
+                  (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+    "erase": {"Material_1": _GRACH_STARS, "Material_5": [(0.2, 0.735, 0.56, 0.79), (0.2, 0.875, 0.56, 0.93)]},
+    "mat_names": {"glass": "glass"}, "img_plain": True,
+    "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+    "paint": TEMPERATE, "tris": 30000,
+}
+RECIPES["attacker_1"] = dict(_GRACH, root="attacker_1", warp=_nose_warp(0.33, 0.45, 0.05))
+RECIPES["attacker_1_hangar"] = dict(RECIPES["attacker_1"], root="fh_hangar_attacker_1", tris=110000)
+RECIPES["attacker_2"] = dict(_GRACH, root="attacker_2")
+RECIPES["attacker_2_hangar"] = dict(RECIPES["attacker_2"], root="fh_hangar_attacker_2", tris=110000)
