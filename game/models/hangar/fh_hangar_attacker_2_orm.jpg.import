@@ -2,10 +2,13 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dfoi8clayd62g"
+uid="uid://cuhllt6dio21k"
 path="res://.godot/imported/fh_hangar_attacker_2_orm.jpg-f07ae8eb41931a7e92d6c5f3362b0180.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "377aa9911aef807d276437ce1fae8d31"
 }
 
 [deps]

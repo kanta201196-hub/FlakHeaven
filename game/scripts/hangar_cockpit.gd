@@ -43,8 +43,8 @@ const FRAMES := {
 	"bomber_t1": {"bows": [], "ribs": [], "seats": [], "liner": true},
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
-	"attacker_1": {"bows": [0.3, 0.7], "ribs": [], "seats": [[0.58, 0.0]]},
-	"attacker_2": {"bows": [0.26, 0.62], "ribs": [], "seats": [[0.56, 0.0]]},
+	"attacker_1": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]]},   # 3.5-s19 hulls: the frames are modelled
+	"attacker_2": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]]},
 	"bomber_1": {"bows": [0.22, 0.45, 0.7], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 	"bomber_2": {"bows": [0.24, 0.5, 0.76], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 	"fighter_t4": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]], "tub": 1.0},

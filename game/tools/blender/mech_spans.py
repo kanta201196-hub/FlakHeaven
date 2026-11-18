@@ -11,8 +11,10 @@ SPANS = {
     # fighter_1 «Оса» (Sketchfab model, VIS-01, 24.10): swing wing from the glove (y 0.09) to the tip (0.225)
     "fighter_1": {"slat": [(0.14, 0.205, -0.21, -0.334)], "flap": [(0.10, 0.17, -0.153, -0.276)]},
     "fighter_2": {"slat": [(0.20, 0.37, -0.165, -0.238)], "flap": [(0.21, 0.32, -0.174, -0.218)]},
-    "attacker_1": {"slat": [(0.20, 0.42, -0.12, -0.17)], "flap": [(0.12, 0.32, -0.10, -0.14)]},
-    "attacker_2": {"slat": [(0.20, 0.44, -0.16, -0.20)], "flap": [(0.15, 0.33, -0.15, -0.18)]},
+    # «Грач» 2 / 3 (3.5-s19, one source, 18.11): swept leading edge, straight trailing edge, nacelle side 0.085,
+    # tip pods from 0.44 (3) / 0.48 (2, the short nose rescales the plane by 1.087)
+    "attacker_1": {"slat": [(0.22, 0.45, -0.048, -0.088)], "flap": [(0.11, 0.33, -0.028, -0.066)]},
+    "attacker_2": {"slat": [(0.20, 0.42, -0.086, -0.12)], "flap": [(0.10, 0.30, -0.066, -0.098)]},
     # «Кит 1»: between the nacelles and outboard of the outer one
     "bomber_1": {"slat": [(0.21, 0.26, -0.03, -0.045), (0.37, 0.48, -0.11, -0.16)],
                  "flap": [(0.20, 0.27, -0.02, -0.04), (0.355, 0.41, -0.09, -0.12)]},

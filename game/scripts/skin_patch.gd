@@ -22,8 +22,8 @@ const FLARE_ROWS := {
 	"fighter_1": [-0.27, -0.042, 0.033],
 	"fighter_2": [-0.25, -0.042, 0.04],
 	"attacker_t1": [-0.04, -0.042, 0.025],   # beside the dorsal ridge (|z| < 0.006), ahead of the fin (x -0.24)
-	"attacker_1": [-0.275, -0.042, 0.024],
-	"attacker_2": [-0.29, -0.036, 0.026],
+	"attacker_1": [-0.15, -0.027, 0.022],   # 3.5-s19 hulls: spine aft of the wing, ahead of the fin
+	"attacker_2": [-0.17, -0.025, 0.02],
 	"bomber_t1": [-0.14, -0.04, 0.018],   # aft of the rear dorsal dome (x -0.07), beside the aerial wire (z 0)
 	"bomber_1": [-0.14, -0.038, 0.013],
 	"bomber_2": [-0.29, -0.042, 0.018],
