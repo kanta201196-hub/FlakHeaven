@@ -844,8 +844,8 @@ for _k, _p in (("attacker_t4", TEMPERATE), ("attacker_t5", TEMPERATE), ("fighter
 
 
 def _nose_warp(x0, k, blend):
-    """Shorten everything ahead of x0 (model axes, length 1) to k of its length: a tier variant with a shorter nose
-    from one long-nose source. The scale eases in over `blend` (smoothstep slope), so the skin bends without a crease
+    """Scale everything ahead of x0 (model axes, length 1) to k of its length: a tier variant with a shorter (k < 1)
+    or longer (k > 1) nose from one source. The scale eases in over `blend` (smoothstep slope), so the skin bends without a crease
     at x0; custom normals follow the stretch (n.x / slope). sf_rework re-places the model to length 1 afterwards."""
     def warp(obs):
         import numpy as np
@@ -929,11 +929,73 @@ def grach_bay_covers():
     return obs
 
 
+def _loft(name, rings, mat):
+    """A closed tube through `rings` (each a list of points, all the same length), its ends fanned shut to their
+    centres; outward faces. One object in `mat`."""
+    import bpy
+    import bmesh
+    import numpy as np
+    me = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    vs = [[bm.verts.new(tuple(p)) for p in r] for r in rings]
+    n = len(rings[0])
+    for a, b in zip(vs[:-1], vs[1:]):
+        for j in range(n):
+            bm.faces.new((a[j], a[(j + 1) % n], b[(j + 1) % n], b[j]))
+    for r in (vs[0], vs[-1]):
+        c = bm.verts.new(tuple(np.mean([v.co for v in r], 0)))
+        for j in range(n):
+            bm.faces.new((r[j], r[(j + 1) % n], c))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    me.uv_layers.new(name="UVMap")
+    me.materials.append(mat)
+    o = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(o)
+    return o
+
+
+def grach3_parts():
+    """«Грач» 3 over «Грач» 2 (Kanta 18.11: «не вижу отличий грача 2 и 3»): besides its long nose (_nose_warp
+    stretching it), two things that read from above. Wingtip containers: the source's slim tip pods (x -0.204…-0.052,
+    centre z -0.084, |y| 0.457, radius ~0.012, measured on the placed source) are sheathed in fatter, longer ones,
+    radius 0.019, x -0.25…0.0, with an ogive nose and a short tail cone. A dorsal spine: a ridge 4.2 cm wide from the
+    canopy's rear (x 0.035) to the fin root (x -0.27), its crest on the canopy's top line (0.6 cm falling to 0), so it
+    stands up to 3.5 cm over the flat back between the canopy and the fin, its foot sunk in the fuselage. Both painted like the
+    skin, plus the closed gear doors that both «Грачи» get."""
+    import numpy as np
+    obs = grach_bay_covers()
+    mat = _flat_mat("grach_bay_paint", (0.46, 0.48, 0.44), 0.8, 0.0)
+    ang = np.linspace(0.0, 2.0 * np.pi, 20, endpoint=False)
+    for s in (1, -1):
+        rings = []
+        for x in np.linspace(-0.25, 0.0, 26):
+            t = (x + 0.25) / 0.25
+            r = 0.019 * min(1.0, np.sqrt(max(0.0, (1.0 - t) / 0.28))) * min(1.0, 0.45 + t / 0.12 * 0.55)
+            r = max(r, 0.0015)
+            rings.append([(x, s * 0.457 + r * np.cos(a), -0.084 + r * np.sin(a)) for a in ang])
+        obs.append(_loft("grach3_tip_pod_%s" % ("l" if s > 0 else "r"), rings, mat))
+    rings = []
+    half = np.linspace(0.0, np.pi, 11)
+    for x in np.linspace(0.035, -0.27, 32):
+        t = (0.035 - x) / 0.305
+        ease = min(1.0, t / 0.15) * min(1.0, (1.0 - t) / 0.08 + 0.35)
+        top = 0.006 - 0.006 * t
+        w = 0.021 * ease
+        foot = -0.06
+        arch = [(x, w * np.cos(a), foot + (top - foot) * np.sin(a) ** 0.35) for a in half]
+        rings.append(arch)
+    obs.append(_loft("grach3_spine", rings, mat))
+    return obs
+
+
 # «Грач» 2 and 3 (tiers 2-3, keys attacker_1 / attacker_2; 3.5-s19 item 3, Kanta 18.11: «у нас же там разные машины,
 # они отличаются, ты сможешь дорисовать 4 модель как нужно?»). Both from one twin-engine armoured attacker, Sketchfab
 # e1b6ee3af1d94ed19952925e64684335 (Alexios_Apokaukos, CC BY, CREDITS). The source is the late long-nose variant with
-# a sensor window under the nose: «Грач» 3 keeps it, «Грач» 2 gets the short early nose (_nose_warp ahead of the
-# windscreen), which shows from above as well. Dropped: main and nose gear with their doors (the game flies gear up),
+# a sensor window under the nose: «Грач» 2 gets the short early nose (_nose_warp ahead of the windscreen), «Грач» 3
+# a nose stretched further, fat wingtip containers and a dorsal spine (grach3_parts; Kanta 18.11: «не вижу отличий
+# грача 2 и 3»), so the two read apart from above. Dropped: main and nose gear with their doors (the game flies gear up),
 # pylons and stores (the game hangs its own weapons); the open wells get closed doors (grach_bay_covers). One 1024 atlas (Material_1) carries the whole skin with a
 # painted camouflage and six national stars (fin, wing tops, wing undersides): stars erased, camouflage flattened and
 # repainted; dark grey detail cells keep their colour. Material_5 (tail cone and flare cassettes) carries a stencil
@@ -963,5 +1025,5 @@ _GRACH = {
 }
 RECIPES["attacker_1"] = dict(_GRACH, root="attacker_1", warp=_nose_warp(0.33, 0.45, 0.05))
 RECIPES["attacker_1_hangar"] = dict(RECIPES["attacker_1"], root="fh_hangar_attacker_1", tris=110000)
-RECIPES["attacker_2"] = dict(_GRACH, root="attacker_2")
+RECIPES["attacker_2"] = dict(_GRACH, root="attacker_2", build=grach3_parts, warp=_nose_warp(0.33, 1.35, 0.05))
 RECIPES["attacker_2_hangar"] = dict(RECIPES["attacker_2"], root="fh_hangar_attacker_2", tris=110000)

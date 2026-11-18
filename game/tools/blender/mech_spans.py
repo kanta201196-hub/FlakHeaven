@@ -14,7 +14,7 @@ SPANS = {
     # «Грач» 2 / 3 (3.5-s19, one source, 18.11): swept leading edge, straight trailing edge, nacelle side 0.085,
     # tip pods from 0.44 (3) / 0.48 (2, the short nose rescales the plane by 1.087)
     "attacker_1": {"slat": [(0.22, 0.45, -0.048, -0.088)], "flap": [(0.11, 0.33, -0.028, -0.066)]},
-    "attacker_2": {"slat": [(0.20, 0.42, -0.086, -0.12)], "flap": [(0.10, 0.30, -0.066, -0.098)]},
+    "attacker_2": {"slat": [(0.19, 0.40, -0.106, -0.138)], "flap": [(0.095, 0.285, -0.087, -0.117)]},
     # «Кит 1»: between the nacelles and outboard of the outer one
     "bomber_1": {"slat": [(0.21, 0.26, -0.03, -0.045), (0.37, 0.48, -0.11, -0.16)],
                  "flap": [(0.20, 0.27, -0.02, -0.04), (0.355, 0.41, -0.09, -0.12)]},

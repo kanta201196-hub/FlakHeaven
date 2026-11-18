@@ -895,7 +895,7 @@ const KIT_BOTTOM_TURRET_X := -0.335
 ## the flaps (z 0.15–0.33, they move in flight) and of the wing insignia (z 0.24–0.34), between the slats and the
 ## trailing edge, near the chord's thickest line
 ## 18.11 (3.5-s19 hull): flaps to |z| 0.30, wing insignia at 0.285, tip pod from 0.44; chord −0.158…−0.06 at 0.37
-const WING_TURRETS := {"attacker_2": Vector2(-0.115, 0.37)}
+const WING_TURRETS := {"attacker_2": Vector2(-0.134, 0.352)}
 
 
 ## Radius of a turret's ring collar (_with_ring) in the weapon mesh units, before the mount scale; tier t 1–3
