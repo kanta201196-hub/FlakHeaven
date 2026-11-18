@@ -35,12 +35,24 @@ const NODE := "cockpit"
 ## normals are rebuilt to point out of the fuselage (_outward_normals), and the liner closes every pane edge with a
 ## fan towards the glass centre (gaps between panes and skin showed the sky). «Кит» 5's canopy is one fitted shell
 ## (kit5_fix.py glaze) with bows across its main loop only.
+## cabin — [x0, floor, sight x, seat x] (Kanta 18.11 on «Кит» 1's nose: «что за тёмная сфера внутри?», «если там
+## стекло, почему оно закрашено?»): the liner shell under every pane read as a dark ball and turned the glazing into
+## a dark painted surface. A lined plane with `cabin` gets a see-through cabin instead: the glass is drawn from both
+## sides, the inside of the hull skin ahead of x0 (frames, the skin round the glazing) gets an inner face in cockpit
+## paint, a bulkhead closes the hull at x0, a floor runs at `floor` (fraction of the glazing's height from its
+## bottom), with a bombsight at `sight x` and the bombardier's seat at `seat x`. Through the glass you see the
+## cabin, the far frames and the far panes, as through a real glazed nose.
+## frame_uv — the glass is a fitted shell with a modelled sill round it, whose vertices carry U = 1 (the glazing's
+## U = 0): «Кит» 5's canopy (kit5_fix.py glaze, Kanta 18.11: «посмотри края остекления») has a frame band 13 mm wide
+## that turns down into the hull outside and into the cockpit inside. The frame is painted from U, not from the
+## distance to the cut edge: that distance, measured to the edge's vertices, painted a sawtooth strip on the steep
+## glass next to the inner face.
 ## Read off the canopy shapes: bubble canopies have a windscreen bow only, the attackers a windscreen and a hood
 ## bow, the bombers a framed glasshouse.
 const FRAMES := {
 	"fighter_t1": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_t1": {"bows": [0.32], "ribs": [], "seats": [[0.6, -0.42], [0.6, 0.42]]},   # side by side
-	"bomber_t1": {"bows": [], "ribs": [], "seats": [], "liner": true},
+	"bomber_t1": {"bows": [], "ribs": [], "seats": [], "liner": true, "cabin": [0.335, 0.3, 0.45, 0.415]},
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_1": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]]},   # 3.5-s19 hulls: the frames are modelled
@@ -52,12 +64,15 @@ const FRAMES := {
 	"attacker_t4": {"bows": [0.3, 0.62], "ribs": [], "seats": [[0.28, 0.0], [0.7, 0.0]]},   # tandem two-seater
 	"attacker_t5": {"bows": [0.33, 0.66], "ribs": [], "seats": [[0.25, 0.0], [0.58, 0.0]]},   # three-pane canopy
 	"bomber_t4": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.55, -0.42], [0.55, 0.42]], "tub": 1.0},
-	"bomber_t5": {"bows": [0.3, 0.62], "ribs": [0.0], "seats": [], "liner": true},
+	"bomber_t5": {"bows": [0.3, 0.62], "ribs": [0.0], "seats": [[0.42, -0.45], [0.42, 0.45]], "tub": 0.7, "frame_uv": true},
 }
 ## Frame paint when the livery has no colours of its own (the source paint): a dark worn grey
 const FRAME_DEFAULT := Color(0.22, 0.23, 0.22)
 ## Liner (FRAMES «liner»): how far inside the glass it sits, model units (about 12 cm on a 25 m bomber)
 const LINER_D := 0.005
+## Cabin (FRAMES «cabin»): the inner face of the hull skin sits this far inside it; the floor's station step
+const CABIN_SKIN := 0.0006
+const CABIN_STEP := 0.004
 ## Tub depth below the sill, in half-widths of the glass loop, and how far its floor draws in towards the middle
 const TUB_DEPTH := 1.5
 const TUB_INSET := 0.25
@@ -110,6 +125,8 @@ static func attach(model: Node3D, key: String, frame: Color) -> Node3D:
 	gm.set_shader_parameter("rib_count", ribs.size())
 	if data["own_pit"] or data.get("liner", false):
 		gm.set_shader_parameter("rim_w", 0.0)
+	if data.get("frame_uv", false):
+		gm.set_shader_parameter("rim_w", 0.5)   # UV2.x = 1 − U: 0 on the frame, 1 on the glazing
 	if data["own_pit"]:
 		gm.set_shader_parameter("alpha_min", OWN_PIT_ALPHA)
 	gl.material_override = gm
@@ -183,6 +200,7 @@ static func _rel(n: Node, model: Node3D) -> Transform3D:
 static func _measure(model: Node3D, key: String) -> Dictionary:
 	var pos := PackedVector3Array()   # welded vertices, model axes
 	var nrm := PackedVector3Array()
+	var uvx := PackedFloat32Array()   # U of each welded vertex (FRAMES «frame_uv»)
 	var tris := PackedInt32Array()
 	var weld := {}
 	for c in model.find_children("*", "MeshInstance3D", true, false):
@@ -197,6 +215,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 			var arr := mi.mesh.surface_get_arrays(si)
 			var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 			var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+			var uvs: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
 			var ids: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
 			if ids.is_empty():
 				ids.resize(vs.size())
@@ -211,14 +230,18 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 					weld[k] = pos.size()
 					pos.append(p)
 					nrm.append((xf.basis * ns[i]).normalized() if i < ns.size() else Vector3.UP)
+					uvx.append(uvs[i].x if i < uvs.size() else 0.0)
 				local[i] = weld[k]
 			for i in ids.size():
 				tris.append(local[ids[i]])
 	if tris.size() < 9:
 		return {"glass": null, "tub": null, "interior": null, "own_pit": false}
 	var loops := _loops(tris)
-	var rim := _rim_distance(pos, loops)
 	var spec: Dictionary = FRAMES.get(key, {"bows": [0.3], "ribs": [], "seats": [[0.6, 0.0]]})
+	var rim := _rim_distance(pos, loops)
+	if spec.get("frame_uv", false):
+		for i in rim.size():
+			rim[i] = 1.0 - uvx[i]
 	var own: bool = spec.get("own_pit", false)
 	var liner: bool = spec.get("liner", false)
 	if liner:
@@ -239,6 +262,16 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		if float(b["len"]) > main_len:
 			main_len = b["len"]
 			main_i = li
+	if spec.get("frame_uv", false):
+		# a fitted canopy has three open edges: the glazing's own edge, the sill's foot outside the glass and its inner
+		# face's foot under the glass edge; the tub hangs from the inner face's foot (from the outer one its walls showed through the glass above the sill)
+		var shortest := INF
+		for li in boxes.size():
+			if uvx[loops[li][0]] < 0.5:
+				continue   # the glazing's own edge (the frame starts on a copy of it): not a cut edge
+			if float(boxes[li]["len"]) < shortest:
+				shortest = boxes[li]["len"]
+				main_i = li
 	if spec.has("main") and not boxes.is_empty():
 		var mb: Dictionary = boxes[main_i]
 		var mc: Vector3 = mb["c"]
@@ -246,8 +279,8 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		mb["hw"] = float(spec["main"][1])
 	for li in loops.size():
 		var b: Dictionary = boxes[li]
-		if liner and li != main_i:
-			continue   # a lined canopy is one glazed shell: frame bows across its main loop only
+		if (liner or spec.get("frame_uv", false)) and li != main_i:
+			continue   # one glazed shell (a liner, or a fitted canopy with its sill): bows across its main loop only
 		for f: float in spec["bows"]:
 			bows.append(float(b["front"]) - f * float(b["len"]))
 		if li == main_i:
@@ -259,7 +292,11 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		if li == main_i:
 			_furnish(st, pos, loops[li], b, spec["seats"])
 	var tub_mesh: ArrayMesh = null
-	if liner:
+	if liner and spec.has("cabin"):
+		_cabin(tub, model, pos, spec["cabin"])
+		tub.generate_normals()
+		tub_mesh = tub.commit()
+	elif liner:
 		_liner(tub, pos, nrm, tris, loops)
 		tub.generate_normals()
 		tub_mesh = tub.commit()
@@ -276,8 +313,8 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 	if (not own and not liner) or spec.has("pit"):
 		st.generate_normals()
 		interior = st.commit()
-	return {"glass": _glass_mesh(pos, nrm, tris, rim), "bows": bows, "ribs": ribs, "tub": tub_mesh, "interior": interior,
-		"own_pit": own, "liner": liner}
+	return {"glass": _glass_mesh(pos, nrm, tris, rim, spec.has("cabin")), "bows": bows, "ribs": ribs, "tub": tub_mesh,
+		"interior": interior, "own_pit": own, "liner": liner, "frame_uv": spec.get("frame_uv", false)}
 
 
 ## Boundary loops of a triangle list (edges used by one triangle), each as an ordered list of vertex indices
@@ -356,9 +393,10 @@ static func _loop_box(pos: PackedVector3Array, loop: PackedInt32Array) -> Dictio
 
 
 ## Hangar glass mesh: the welded glass triangles, wound outwards (away from the loop centre below them), with the
-## rim distance in UV2.x for the frame
+## rim distance in UV2.x for the frame; `both` adds every triangle again wound inwards with the normal turned, so a
+## see-through cabin (FRAMES «cabin») shows its far panes from inside
 static func _glass_mesh(pos: PackedVector3Array, nrm: PackedVector3Array, tris: PackedInt32Array,
-		rim: PackedFloat32Array) -> ArrayMesh:
+		rim: PackedFloat32Array, both := false) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for t in range(0, tris.size(), 3):
@@ -372,6 +410,11 @@ static func _glass_mesh(pos: PackedVector3Array, nrm: PackedVector3Array, tris: 
 			st.set_normal(nrm[v])
 			st.set_uv2(Vector2(rim[v], 0.0))
 			st.add_vertex(pos[v])
+		if both:
+			for i in [0, 2, 1]:
+				st.set_normal(-nrm[order[i]])
+				st.set_uv2(Vector2(rim[order[i]], 0.0))
+				st.add_vertex(pos[order[i]])
 	return st.commit()
 
 
@@ -427,6 +470,101 @@ static func _liner(st: SurfaceTool, pos: PackedVector3Array, nrm: PackedVector3A
 			_tri(st, pa, pb, pc, col, col, col)
 		else:
 			_tri(st, pa, pc, pb, col, col, col)
+
+
+## See-through cabin of a glazed nose (FRAMES «cabin» = [x0, floor, sight x, seat x]): an inner face in cockpit paint
+## for every hull skin triangle ahead of x0 (offset CABIN_SKIN inwards, wound to face the inside), a bulkhead across
+## the hull at x0 (the convex outline of the skin there), a floor across the hull at the given fraction of the glass
+## height (its half-width at each station read off the skin and glass there), a bombsight on the floor and a seat
+static func _cabin(st: SurfaceTool, model: Node3D, glass: PackedVector3Array, cabin: Array) -> void:
+	var x0 := float(cabin[0])
+	var wall := C_TUB.darkened(0.15)
+	var pts := PackedVector3Array()   # skin and glass ahead of x0: the hull's inside surface
+	for p in glass:
+		if p.x > x0:
+			pts.append(p)
+	for c in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		if mi.mesh == null or _under_cockpit(mi, model):
+			continue
+		var xf := _rel(mi, model)
+		for si in mi.mesh.get_surface_count():
+			var m := mi.mesh.surface_get_material(si)
+			if m == null or not String(m.resource_name).ends_with("_body"):
+				continue
+			var arr := mi.mesh.surface_get_arrays(si)
+			var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+			var ids: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			if ids.is_empty():
+				ids.resize(vs.size())
+				for i in vs.size():
+					ids[i] = i
+			for t in range(0, ids.size(), 3):
+				var a := xf * vs[ids[t]]
+				var b := xf * vs[ids[t + 1]]
+				var d := xf * vs[ids[t + 2]]
+				if a.x < x0 - 0.004 or b.x < x0 - 0.004 or d.x < x0 - 0.004:
+					continue
+				var n := (xf.basis * (ns[ids[t]] + ns[ids[t + 1]] + ns[ids[t + 2]])).normalized()
+				var off := -n * CABIN_SKIN
+				pts.append(a)
+				pts.append(b)
+				pts.append(d)
+				_tri(st, a + off, d + off, b + off, wall, wall, wall)   # wound against the skin: faces the inside
+	if pts.is_empty():
+		return
+	var lo := Vector3(INF, INF, INF)
+	var hi := -lo
+	for p in glass:
+		if p.x > x0:
+			lo = lo.min(p)
+			hi = hi.max(p)
+	# bulkhead: the convex outline (y, z) of the hull points within 4 mm of x0
+	var ring := PackedVector2Array()
+	for p in pts:
+		if absf(p.x - x0) < 0.004:
+			ring.append(Vector2(p.z, p.y))
+	var hull := Geometry2D.convex_hull(ring)
+	if hull.size() >= 3:
+		var mid := Vector2.ZERO
+		for q in hull:
+			mid += q
+		mid /= float(hull.size())
+		var bc := C_TUB.darkened(0.35)
+		for i in hull.size() - 1:
+			var qa := mid + (hull[i] - mid) * 0.97
+			var qb := mid + (hull[i + 1] - mid) * 0.97
+			_tri(st, Vector3(x0, mid.y, mid.x), Vector3(x0, qa.y, qa.x), Vector3(x0, qb.y, qb.x), bc, bc, bc)
+	# floor: half-width at each 4 mm station from the hull points within 8 mm of its height
+	var fy := lo.y + (hi.y - lo.y) * float(cabin[1])
+	var fc := C_TUB.darkened(0.3)
+	var prev := Vector2.INF
+	var x := x0
+	while x < hi.x:
+		var zl := INF
+		var zr := -INF
+		for p in pts:
+			if absf(p.x - x) < 0.003 and absf(p.y - fy) < 0.008:
+				zl = minf(zl, p.z)
+				zr = maxf(zr, p.z)
+		if zl < zr:
+			var cur := Vector2(zl + 0.002, zr - 0.002)
+			if prev != Vector2.INF:
+				var px := x - CABIN_STEP
+				_tri(st, Vector3(px, fy, prev.x), Vector3(px, fy, prev.y), Vector3(x, fy, cur.y), fc, fc, fc)
+				_tri(st, Vector3(px, fy, prev.x), Vector3(x, fy, cur.y), Vector3(x, fy, cur.x), fc, fc, fc)
+			prev = cur
+		x += CABIN_STEP
+	# bombsight on the floor, the seat behind it facing forward
+	var h := hi.y - lo.y
+	var sx := float(cabin[2])
+	_box(st, Vector3(sx, fy + h * 0.06, 0.0), Vector3(h * 0.07, h * 0.12, h * 0.07), Basis.IDENTITY, C_PANEL)
+	_box(st, Vector3(sx + h * 0.02, fy + h * 0.13, 0.0), Vector3(h * 0.1, h * 0.04, h * 0.05), Basis.IDENTITY, C_GAUGE)
+	var tx := float(cabin[3])
+	_box(st, Vector3(tx, fy + h * 0.1, 0.0), Vector3(h * 0.16, h * 0.04, h * 0.2), Basis.IDENTITY, C_CUSHION)
+	_box(st, Vector3(tx - h * 0.09, fy + h * 0.2, 0.0), Vector3(h * 0.04, h * 0.22, h * 0.2), Basis.IDENTITY, C_SEAT)
+	_box(st, Vector3(tx, fy + h * 0.04, 0.0), Vector3(h * 0.05, h * 0.08, h * 0.05), Basis.IDENTITY, C_SEAT)
 
 
 ## Tub under one glass loop: a wall from every cut edge down and in towards the loop's middle, and a floor
