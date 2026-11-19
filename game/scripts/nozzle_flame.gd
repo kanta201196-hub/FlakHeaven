@@ -21,7 +21,7 @@ const NOZZLES := {
 	"fighter_2": [-0.455, -0.042, 0.0755, 0.025],
 	"attacker_t1": [-0.45, -0.0425, 0.0, 0.017],   # single jet pipe at the tail
 	"attacker_1": [-0.245, -0.121, 0.054, 0.0185],   # 3.5-s19 hulls: rear depth maps of the hangar GLBs
-	"attacker_2": [-0.276, -0.108, 0.048, 0.016],
+	"attacker_2": [-0.276, -0.119, 0.058, 0.019],
 	"bomber_2": [-0.274, -0.0156, 0.0702, 0.0176],
 	# tiers 4-5: rear depth maps of the hangar GLBs (first skin hit seen from behind): x of the lip, centre and radius
 	# of the opening inside it

@@ -78,9 +78,13 @@ func _test_plane(key: String) -> void:
 		var cabin: Array = (HangarCockpit.FRAMES[key] as Dictionary).get("cabin", [])
 		if not cabin.is_empty():
 			# 18.11: a see-through cabin ahead of its bulkhead instead of the liner shell (the «dark ball»)
+			# 19.11: the dome turret's guns reach aft over the spine, up to two dome lengths behind the dome
+			var aft := float(cabin[0])
+			if cabin.size() > 4:
+				aft = minf(aft, float(cabin[4]) - (float(cabin[5]) - float(cabin[4])) * 2.0)
 			if ln != null and ln.mesh != null:
 				var cb := ln.mesh.get_aabb()
-				_check(cb.position.x >= float(cabin[0]) - 0.005, "%s: cabin ahead of its bulkhead (from x %.3f)" % [
+				_check(cb.position.x >= aft - 0.005, "%s: cabin ahead of its bulkhead (from x %.3f)" % [
 						key, cb.position.x])
 			model.free()
 			return

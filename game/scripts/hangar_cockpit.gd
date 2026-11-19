@@ -35,16 +35,18 @@ const NODE := "cockpit"
 ## normals are rebuilt to point out of the fuselage (_outward_normals), and the liner closes every pane edge with a
 ## fan towards the glass centre (gaps between panes and skin showed the sky). «Кит» 5's canopy is one fitted shell
 ## (kit5_fix.py glaze) with bows across its main loop only.
-## cabin — [x0, floor, sight x, seat x] (Kanta 18.11 on «Кит» 1's nose: «что за тёмная сфера внутри?», «если там
+## cabin — [x0, floor, sight x, seat x, (dome x0, dome x1, dome y0)] (Kanta 18.11 on «Кит» 1's nose: «что за тёмная сфера внутри?», «если там
 ## стекло, почему оно закрашено?»): the liner shell under every pane read as a dark ball and turned the glazing into
 ## a dark painted surface. A lined plane with `cabin` gets a see-through cabin instead: the glass is drawn from both
 ## sides, the inside of the hull skin ahead of x0 (frames, the skin round the glazing) gets an inner face in cockpit
 ## paint, a bulkhead closes the hull at x0, a floor runs at `floor` (fraction of the glazing's height from its
 ## bottom), with a bombsight at `sight x` and the bombardier's seat at `seat x`. Through the glass you see the
-## cabin, the far frames and the far panes, as through a real glazed nose.
+## cabin, the far frames and the far panes, as through a real glazed nose. The optional dome triple turns the glass
+## dome over the cabin into a gunner's turret (_dome_turret).
 ## frame_uv — the glass is a fitted shell with a modelled sill round it, whose vertices carry U = 1 (the glazing's
-## U = 0): «Кит» 5's canopy (kit5_fix.py glaze, Kanta 18.11: «посмотри края остекления») has a frame band 13 mm wide
-## that turns down into the hull outside and into the cockpit inside. The frame is painted from U, not from the
+## U = 0): «Кит» 5's canopy (kit5_fix.py glaze) ends in a thin rail and a collar of hull round it (in the body
+## primitive, hull paint; Kanta 19.11: «она должна стать частью самолета»); only the inner face down into the
+## cockpit is in the glass primitive. The frame is painted from U, not from the
 ## distance to the cut edge: that distance, measured to the edge's vertices, painted a sawtooth strip on the steep
 ## glass next to the inner face.
 ## Read off the canopy shapes: bubble canopies have a windscreen bow only, the attackers a windscreen and a hood
@@ -52,7 +54,7 @@ const NODE := "cockpit"
 const FRAMES := {
 	"fighter_t1": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_t1": {"bows": [0.32], "ribs": [], "seats": [[0.6, -0.42], [0.6, 0.42]]},   # side by side
-	"bomber_t1": {"bows": [], "ribs": [], "seats": [], "liner": true, "cabin": [0.335, 0.3, 0.45, 0.415]},
+	"bomber_t1": {"bows": [], "ribs": [], "seats": [], "liner": true, "cabin": [0.335, 0.3, 0.45, 0.415, 0.36, 0.401, 0.0105]},
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_1": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]]},   # 3.5-s19 hulls: the frames are modelled
@@ -92,7 +94,6 @@ const C_COLLAR := Color(0.62, 0.55, 0.42)
 const C_GUN := Color(0.09, 0.09, 0.1)
 const C_DRUM := Color(0.2, 0.21, 0.2)
 const C_DIAL := Color(0.8, 0.78, 0.68)
-const C_RELEASE := Color(0.42, 0.12, 0.08)
 const C_OXYGEN := Color(0.3, 0.4, 0.5)
 ## Glass opacity looking straight through on an own_pit model (smoked, the tub under it is not ours)
 const OWN_PIT_ALPHA := 0.4
@@ -568,13 +569,50 @@ static func _cabin(st: SurfaceTool, model: Node3D, glass: PackedVector3Array, ca
 			prev = cur
 		x += CABIN_STEP
 	_bombardier(st, pts, lo, hi, fy, float(cabin[2]), float(cabin[3]))
+	if cabin.size() > 4:
+		_dome_turret(st, glass, float(cabin[4]), float(cabin[5]), float(cabin[6]))
+
+
+## A gunner's turret in the glass dome over the cabin (Kanta 19.11: «над кабиной у тебя стеклянный колпак, давай
+## сделаем из него турель»): the dome is the glass between x0 and x1 above the cabin; inside it a turret ring on
+## its base, the gunner (helmet, goggles, shoulders) facing aft, and twin guns on a cradle, their barrels out through
+## the glass towards the tail and a little up, as a dorsal turret covers the rear hemisphere. The dome is the glass
+## between x0 and x1 above y0 (the side windows below it are glass too)
+static func _dome_turret(st: SurfaceTool, glass: PackedVector3Array, x0: float, x1: float, y0: float) -> void:
+	var lo := Vector3(INF, INF, INF)
+	var hi := -lo
+	for p in glass:
+		if p.x >= x0 and p.x <= x1 and p.y > y0:
+			lo = lo.min(p)
+			hi = hi.max(p)
+	if lo.x == INF:
+		return
+	var c := (lo + hi) * 0.5
+	var r := maxf(hi.x - lo.x, hi.z - lo.z) * 0.5
+	var h := hi.y - lo.y
+	var base := Vector3(c.x, lo.y, c.z)
+	_box(st, base + Vector3(0.0, h * 0.06, 0.0), Vector3(r * 1.7, h * 0.12, r * 1.7), Basis.IDENTITY, C_PANEL)
+	# the gunner, looking aft over the guns
+	var head := base + Vector3(r * 0.25, h * 0.5, 0.0)
+	_box(st, head - Vector3(0.0, h * 0.32, 0.0), Vector3(r * 0.5, h * 0.3, r * 0.9), Basis.IDENTITY, C_JACKET)
+	_box(st, head, Vector3(r * 0.5, h * 0.36, r * 0.46), Basis.IDENTITY, C_HELMET)
+	_box(st, head + Vector3(-r * 0.24, -h * 0.02, 0.0), Vector3(r * 0.06, h * 0.18, r * 0.36), Basis.IDENTITY, C_FACE)
+	_box(st, head + Vector3(-r * 0.26, h * 0.06, 0.0), Vector3(r * 0.05, h * 0.08, r * 0.44), Basis.IDENTITY, C_GOGGLES)
+	# the guns: cradle, two receivers and barrels running aft through the glass
+	var pivot := base + Vector3(-r * 0.2, h * 0.42, 0.0)
+	_box(st, pivot, Vector3(r * 0.5, h * 0.16, r * 0.7), Basis.IDENTITY, C_GUN)
+	for side in [-1.0, 1.0]:
+		var zo: float = side * r * 0.24
+		var recv := pivot + Vector3(-r * 0.1, h * 0.08, zo)
+		_box(st, recv, Vector3(r * 0.6, h * 0.16, r * 0.14), Basis.IDENTITY, C_GUN)
+		_beam(st, recv, recv + Vector3(-r * 3.2, h * 0.35, 0.0), r * 0.08, C_GUN)
 
 
 ## The bombardier's station in a glazed nose, sized from the glazing's height so it reads through the glass (Kanta
 ## 18.11: «проработай внутреннее убранство, сейчас не пойму что там»): a seat with the navigator on it, leaning to a
 ## bombsight column on the floor, hands on its head; a flexible gun in a ball mount at the nose tip, with its drum and
-## grips; an instrument panel with gauges on the left wall, a bomb-release box on the right, an oxygen bottle and a
-## map case on the bulkhead side. `pts` is the hull's inside surface (for the wall positions), `fy` the floor height
+## grips; an instrument panel with gauges on the left wall, an oxygen bottle and a map case on the bulkhead side
+## (a red bomb-release box on the right wall stuck out through a side window, Kanta 19.11: «что торчит из окна?»). `pts` is the hull's inside surface (for the wall positions), `fy` the floor height
 static func _bombardier(st: SurfaceTool, pts: PackedVector3Array, lo: Vector3, hi: Vector3, fy: float, sx: float,
 		tx: float) -> void:
 	var h := hi.y - lo.y
@@ -651,19 +689,11 @@ static func _bombardier(st: SurfaceTool, pts: PackedVector3Array, lo: Vector3, h
 	var py := pan_y + u * 0.35
 	var w: Vector2 = walls.call(px, py)
 	if w.x < -u * 0.3:
-		var z := w.x + u * 0.06
+		var z := w.x + u * 0.16   # well inside the wall: it curves in above and below the panel
 		_box(st, Vector3(px, py, z), Vector3(u * 0.5, u * 0.3, u * 0.04), Basis.IDENTITY, C_PANEL)
 		for i in 4:
 			var g := Vector3(px + (float(i % 2) - 0.5) * u * 0.22, py + (0.06 if i < 2 else -0.07) * u, z + u * 0.03)
 			_box(st, g, Vector3(u * 0.09, u * 0.09, u * 0.02), Basis.IDENTITY, C_DIAL)
-	# bomb-release box on the right wall, with its row of switches
-	w = walls.call(sx - u * 0.1, py)
-	if w.y > u * 0.3:
-		var z := w.y - u * 0.07
-		_box(st, Vector3(sx - u * 0.1, py, z), Vector3(u * 0.34, u * 0.2, u * 0.08), Basis.IDENTITY, C_RELEASE)
-		for i in 4:
-			_box(st, Vector3(sx - u * 0.22 + float(i) * u * 0.08, py + u * 0.04, z - u * 0.05),
-					Vector3(u * 0.03, u * 0.06, u * 0.03), Basis.IDENTITY, C_GAUGE.lightened(0.3))
 	# oxygen bottle and map case behind the seat, against the bulkhead
 	_beam(st, Vector3(tx - u * 0.42, fy, -u * 0.2), Vector3(tx - u * 0.42, fy + u * 0.5, -u * 0.2), u * 0.14, C_OXYGEN)
 	_box(st, Vector3(tx - u * 0.42, fy + u * 0.2, u * 0.2), Vector3(u * 0.1, u * 0.4, u * 0.3), Basis.IDENTITY,

@@ -344,17 +344,38 @@ GLAZE_CLEAR = 0.045  # under the footprint the skin goes down to this far below 
                      # through the clear glass as a jagged cream edge
 GLAZE_STEP = 0.003   # grid step of the new glazing, model units
 GLAZE_LIFT = 0.0015  # the new glazing sits this far over the fit
-SILL_W = 0.011       # the canopy sill: a frame band this wide round the glazing, over the skin's ragged rim
-SILL_REACH = 0.004   # skin this far past the band's outer edge still sets the band's height
-SILL_PROUD = 0.0007  # the band stands this far over the highest skin under it
-SILL_FLARE = 0.01    # ... sloping out this far
-SILL_DROP = 0.012    # the band's outer edge turns down into the hull this far
+COLLAR_W = 0.04      # the collar: hull rebuilt this wide round the glazing, from a thin rail over the glass edge
+                     # down to the hull, so the canopy sits in the skin (Kanta 19.11: «должна стать частью самолета»)
+COLLAR_LIP = 0.0012  # the rail stands this far over the glass edge
+COLLAR_RINGS = 5     # rings across the collar
+COLLAR_CAP = 0.03    # skin more than this over the glass edge is not the hull the collar runs down to (torn teeth)
+COLLAR_NEAR = 0.004  # skin under the collar's span within this of it goes
+COLLAR_SINK = 0.0008  # the collar's outer edge runs this far under the skin, so the skin draws over it there
 SILL_WELL = 0.02     # and its inner face runs this far down into the cockpit (the cut skin edge stays behind it)
 
 
 def _crown(x, z):
     """Terms of the canopy surface fit y(x, z): symmetric in z (the glasshouse is), cubic along x"""
     return np.stack([np.ones_like(x), x, z * z, x * x, x * z * z, x ** 3, z ** 4, x * x * z * z], 1)
+
+
+def _cast_down(tris, centres, reach, p, cap):
+    """Height of the highest triangle of `tris` (n, 3, 3) under the point p (x, z) and below `cap`, or None.
+    `centres` is a cKDTree of the triangles' (x, z) centres and `reach` the largest centre-to-corner distance."""
+    ids = centres.query_ball_point(p, reach)
+    if not ids:
+        return None
+    t = tris[ids]
+    a, b, c = t[:, 0], t[:, 1], t[:, 2]
+    d = (b[:, 2] - c[:, 2]) * (a[:, 0] - c[:, 0]) + (c[:, 0] - b[:, 0]) * (a[:, 2] - c[:, 2])
+    good = np.abs(d) > 1e-14
+    d = np.where(good, d, 1.0)
+    l1 = ((b[:, 2] - c[:, 2]) * (p[0] - c[:, 0]) + (c[:, 0] - b[:, 0]) * (p[1] - c[:, 2])) / d
+    l2 = ((c[:, 2] - a[:, 2]) * (p[0] - c[:, 0]) + (a[:, 0] - c[:, 0]) * (p[1] - c[:, 2])) / d
+    l3 = 1.0 - l1 - l2
+    y = l1 * a[:, 1] + l2 * b[:, 1] + l3 * c[:, 1]
+    hit = good & (l1 >= 0) & (l2 >= 0) & (l3 >= 0) & (y < cap)
+    return float(y[hit].max()) if hit.any() else None
 
 
 def _outward(ring):
@@ -373,7 +394,8 @@ def glaze(src, dst):
     """3.5-s19 recheck (Kanta 18.11, «Кит 5 — закрашено стекло кабины», «посмотри края остекления. Ты не можешь
     определить где заканчивается стекло?», then «а че она не симметричная такая?» and «торчит над контуром корпуса»):
     the Meshy canopy glass is a lopsided, jagged patch of shards with skin shards between and over its panes, and the
-    skin round it is torn into teeth. The whole canopy is replaced by one clean, symmetric glazed surface with a sill:
+    skin round it is torn into teeth. The whole canopy is replaced by one clean, symmetric glazed surface set into a
+    rebuilt hull collar:
       1. the surface: a robust least-squares fit y(x, z) (_crown, symmetric in z) to the upper envelope of the old
          glass (the highest vertex in each 4 mm cell; median miss about 1 mm), its crown lowered at the aft end to
          the old glass's height there (the cubic ran 2.8 cm over it, over the fairing behind the canopy);
@@ -381,18 +403,16 @@ def glaze(src, dst):
          fit and their mirror images (z -> -z); inside it every skin and old glass triangle whose centre is less than
          GLAZE_CLEAR under the raw fit is removed, and every skin triangle with two corners above it;
       3. a GLAZE_STEP grid over the footprint, triangulated, at the surface plus GLAZE_LIFT;
-      4. the sill: a band SILL_W wide round the outline, SILL_PROUD over the highest skin under it (skin up to
-         SILL_REACH past its edge counts), the same height at an outline point and its mirror image, smoothed along
-         the outline; a step up from the glass at its inner edge, a chamfer SILL_DROP down and SILL_FLARE out at its
-         outer edge, and an inner face SILL_WELL down into the cockpit under the glass edge. At the aft end the band
-         follows the hull, so the lowered glazing tucks under the fairing behind a step and the frame never stands
-         over the hull. Each strip has its own vertex rings (0.05 mm apart), so each shades flat-on; skin teeth
-         beside the band that poke through it, fold over (facing down) or lie loose over it go. The band is part of
-         the glass primitive: its vertices carry U = 1 (the glazing's U = 0), and the hangar paints them as opaque
-         frame in the livery's main tone (HangarCockpit, FRAMES «frame_uv»); in battle the whole canopy is the dark
-         opaque glass anyway.
-    Only the triangle lists and the glass vertices change: the body's vertices, UV and the embedded images stay
-    byte for byte."""
+      4. the collar (Kanta 19.11: «всё ещё очень толстая рамка у кабины ... смотрится как будто ты просто налепил
+         её грубо сверху. Она должна стать частью самолета»): no frame stands on the hull; the hull itself is rebuilt
+         COLLAR_W wide round the outline, from a thin rail COLLAR_LIP over the glass edge down to the top skin
+         surface just past it (cast down through the skin, the same at an outline point and its mirror image,
+         smoothed, COLLAR_SINK under it), its outer edge tucked under the skin. Skin wholly under its span and near
+         it, skin rising through it and folded flaps go; skin straddling its outer edge stays. The rail, collar and
+         tuck are body triangles, each with the hull's UV at its spot, so they carry the hull's paint; only an inner
+         face SILL_WELL down into the cockpit under the glass edge stays in the glass primitive with U = 1, for the
+         hangar's frame paint (HangarCockpit, FRAMES «frame_uv»).
+    The body's vertices, UV and the embedded images stay byte for byte; the body gains the collar's triangles."""
     from scipy.spatial import ConvexHull, Delaunay, cKDTree
     g = glb_io.load(src)
     prims = g.j["meshes"][0]["primitives"]
@@ -477,88 +497,101 @@ def glaze(src, dst):
     rest = ~sel
     sk = np.vstack([bp[np.unique(bt[rest])], cen[rest]])
     st = cKDTree(sk[:, [0, 2]])
-    band_h = np.empty(k)
-    for i in range(k):
-        h = fit(out[i, 0], out[i, 1])[0] + GLAZE_LIFT
-        for t in np.linspace(0.0, SILL_W + SILL_REACH, 7):
-            q = out[i] + on[i] * t
-            ids = st.query_ball_point(q, 0.0025)
-            if ids:
-                h = max(h, float(sk[ids, 1].max()) + SILL_PROUD)
-        band_h[i] = h
-    # smooth along the outline: a running max over ±3 vertices, then a running mean, so the line runs clean
-    pad = np.concatenate([band_h[-3:], band_h, band_h[:3]])
-    band_h = np.array([pad[i:i + 7].max() for i in range(k)])
-    pad = np.concatenate([band_h[-4:], band_h, band_h[:4]])
-    band_h = np.convolve(pad, np.ones(9) / 9.0, "valid")
-    # never flush with the glass edge: the hangar welds coincident vertices, and a lip welded to the glass edge took
-    # the glazing's U and left a sawtooth of clear glass in the frame
     edge_h = fit(out[:, 0], out[:, 1]) + GLAZE_LIFT
-    # the same height on both sides: each outline point takes the higher of itself and its mirror image
-    band_h = np.maximum(band_h, band_h[cKDTree(out).query(out * np.array([1.0, -1.0]))[1]])
-    # the band follows the hull and never stands over it: at the aft end, where the hull rises into the fairing, the
-    # lowered glazing tucks under the fairing behind a step rather than the frame rising over it
-    band_h = np.maximum(band_h, edge_h + 0.0004)
-    pad = np.concatenate([band_h[-7:], band_h, band_h[:7]])
-    band_h = np.maximum(np.convolve(pad, np.ones(15) / 15.0, "valid"), edge_h + 0.0004)
-    # skin shards lying wholly over the band just past it (loose overlays of the torn rim, not the skin itself, which
-    # runs on lower) go
+    mirror = cKDTree(out).query(out * np.array([1.0, -1.0]))[1]
+
+    def along(v, n):
+        """Running mean over ±n outline points (the outline is closed)"""
+        pad = np.concatenate([v[-n:], v, v[:n]])
+        return np.convolve(pad, np.ones(2 * n + 1) / (2 * n + 1), "valid")
+    # the collar's outer edge sits on the hull: the TOP skin surface just past it, found by casting down through the
+    # remaining skin (a median over every skin layer under a point took the belly and the inner faces too, and the
+    # collar stood out over the flanks as a shelf with nothing under it), skin teeth well over the glass edge
+    # ignored; the median of 9 casts, the higher of each point and its mirror image, smoothed along the outline
+    rest_t = np.flatnonzero(~sel)
+    tri3 = bp[bt[rest_t]]
+    tc = cKDTree(tri3.mean(1)[:, [0, 2]])
+    reach = float(np.linalg.norm(tri3[:, :, [0, 2]] - tri3.mean(1)[:, None, [0, 2]], axis=2).max())
+    tang = np.stack([-on[:, 1], on[:, 0]], 1)
+    hull_h = np.full(k, np.nan)
+    for i in range(k):
+        hs = []
+        for t in (COLLAR_W, COLLAR_W + 0.003, COLLAR_W + 0.006):
+            for o in (-0.003, 0.0, 0.003):
+                h = _cast_down(tri3, tc, reach, out[i] + on[i] * t + tang[i] * o, edge_h[i] + COLLAR_CAP)
+                if h is not None:
+                    hs.append(h)
+        if hs:
+            hull_h[i] = np.median(hs)
+    ok = ~np.isnan(hull_h)
+    idx = np.arange(k)
+    hull_h = np.interp(idx, idx[ok], hull_h[ok], period=k)
+    hull_h = along(np.maximum(hull_h, hull_h[mirror]), 4) - COLLAR_SINK
+    lip_h = edge_h + COLLAR_LIP
+    # skin straddling the collar's outer edge stays unless it rises through the collar (taking it away opened holes
+    # past the collar), and folded flaps (facing down) that reach up to it go
     d_c, i_c = cKDTree(out).query(cen[:, [0, 2]])
     outside = tri.find_simplex(cen[:, [0, 2]]) < 0
-    near = np.flatnonzero(~sel & outside & (d_c < SILL_W + 0.012))
-    low = bp[bt[near]][:, :, 1].min(1)
-    sel[near[low > band_h[i_c[near]] - 0.0015]] = True
-    # and the torn teeth folded over on themselves (facing down or edge-on) beside the band read as dark flaps
-    tn = np.cross(bp[bt[near, 1]] - bp[bt[near, 0]], bp[bt[near, 2]] - bp[bt[near, 0]])
+    near = np.flatnonzero(~sel & outside & (d_c < COLLAR_W + 0.012))
+    tv = bp[bt[near]]                                             # (m, 3, 3)
+    dv, iv = cKDTree(out).query(tv[:, :, [0, 2]].reshape(-1, 2))
+    dv, iv = dv.reshape(-1, 3), iv.reshape(-1, 3)
+    tt = np.clip(dv / COLLAR_W, 0.0, 1.0)
+    ch = lip_h[iv] + (hull_h[iv] - lip_h[iv]) * tt * tt * (3 - 2 * tt)
+    # skin wholly under the collar's span and within COLLAR_NEAR under it goes (the collar is the hull there; left
+    # in, it drew through the collar in a sawtooth; deeper skin stays, or the flanks under the collar opened), and
+    # straddling skin whose inner corners rise over the collar
+    inside_all = (dv < COLLAR_W).all(1) & (tv[:, :, 1] > ch - COLLAR_NEAR).any(1)
+    poke = near[inside_all | ((dv < COLLAR_W) & (tv[:, :, 1] > ch + 0.0003)).any(1)]
+    tn = np.cross(tv[:, 1] - tv[:, 0], tv[:, 2] - tv[:, 0])
     tn /= np.maximum(np.linalg.norm(tn, axis=1, keepdims=True), 1e-12)
-    flaps = near[tn[:, 1] < 0.35]
-    sel[flaps] = True
-    # and teeth under the band or its chamfer that poke up through it (the band and chamfer cover the gap they leave)
-    hi = bp[bt[near]][:, :, 1].max(1)
-    poke = near[(d_c[near] < SILL_W + 0.008) & (hi > band_h[i_c[near]] - 0.0003)]
+    flaps = near[(tn[:, 1] < 0.0) & ((dv < COLLAR_W) & (tv[:, :, 1] > ch - 0.002)).any(1)]
+    print("glaze: %d skin triangles under or through the collar and %d folded flaps removed" % (len(poke), len(flaps)))
     sel[poke] = True
-    print("glaze: %d loose shards, %d folded flaps and %d poking teeth beside the sill removed"
-          % (int((low > band_h[i_c[near]] - 0.0015).sum()), len(flaps), len(poke)))
+    sel[flaps] = True
+    band_h = lip_h
     up = np.array([0.0, 1.0, 0.0])
     side = np.zeros((k, 3))
     side[:, [0, 2]] = on
-    lip = np.stack([out[:, 0], band_h, out[:, 1]], 1)                       # step up from the glass edge
-    o2 = out + on * SILL_W
-    crest = np.stack([o2[:, 0], band_h, o2[:, 1]], 1)                        # the band's outer edge
-    # down into the hull as a chamfer, not a wall: on the side where the hull lies lower the band stands proud of
-    # it (the line is mirrored), and a sheer wall cut by the coarse skin showed as dark jagged flaps
-    foot = crest + side * SILL_FLARE - up * SILL_DROP
     well = pos[:k] - up * SILL_WELL                                          # inside the glass edge, down into the pit
-    # the frame starts on its own copy of the glass edge, 0.05 mm under it: welded to the glazing's edge it took the
-    # glazing's normals and U, and the hangar drew a sawtooth of glass and frame along the step and the inner face
+    # the hull starts on its own copy of the glass edge, 0.05 mm under it: welded to the glazing's edge it took the
+    # glazing's normals and U, and the hangar drew a sawtooth of glass and frame
     edge = pos[:k] - up * 0.00005
-    # each strip has its own rings, 0.05 mm apart where two strips meet: a ring shared by the step and the band took
-    # the step's sideways normal, and the band shaded in dark teeth on the side away from the light
-    wall_n = side * SILL_DROP + up * SILL_FLARE
-    wall_n /= np.linalg.norm(wall_n, axis=1, keepdims=True)
-    eps = 0.00005
-    rings = [(edge, -side), (lip, -side),                                    # step: glass edge -> lip
-             (lip + side * eps, np.tile(up, (k, 1))), (crest, np.tile(up, (k, 1))),   # band: lip -> crest
-             (crest + side * eps - up * eps, wall_n), (foot, wall_n),      # chamfer: crest -> foot
-             (edge - side * eps, -side), (well, -side)]                     # inner face: glass edge -> well
+    rings = [edge, np.stack([out[:, 0], lip_h, out[:, 1]], 1)]               # the thin rail over the glass edge
+    rn = [-side, -side]
+    for t in np.linspace(0.0, 1.0, COLLAR_RINGS):                             # the collar, rail -> hull
+        e = t * t * (3 - 2 * t)
+        q = out + on * (COLLAR_W * t)
+        h = lip_h + (hull_h - lip_h) * e
+        slope = (hull_h - lip_h) * 6 * t * (1 - t) / COLLAR_W
+        n = up[None, :] - side * slope[:, None]
+        rings.append(np.stack([q[:, 0], h, q[:, 1]], 1))
+        rn.append(n / np.linalg.norm(n, axis=1, keepdims=True))
+    foot = rings[-1] + side * 0.004 - up * 0.006                              # tucked under the skin's edge
+    wall_n = side * 0.006 + up * 0.004
+    rings.append(foot)
+    rn.append(wall_n / np.linalg.norm(wall_n, axis=1, keepdims=True))
+    rings += [edge - side * 0.00005, well]                                    # inner face: glass edge -> well
+    rn += [-side, -side]
     n0 = len(pos)
-    pos = np.vstack([pos] + [r for r, _ in rings])
-    nrm = np.vstack([nrm] + [n for _, n in rings])
+    pos = np.vstack([pos] + rings)
+    nrm = np.vstack([nrm] + rn)
+    ri = [n0 + r * k + np.arange(k) for r in range(len(rings))]
+    pairs = [(ri[r], ri[r + 1], rn[r], True) for r in range(len(rings) - 3)]  # rail, collar, tuck: the hull
+    pairs.append((ri[-2], ri[-1], -side, False))                              # inner face: frame (glass primitive)
     strips = []
-    for si in range(4):
-        a = n0 + 2 * si * k + np.arange(k)
-        b = a + k
-        want = rings[2 * si][1]
+    body_strips = []
+    for a, b, want, to_body in pairs:
         for i in range(k):
             j = (i + 1) % k
             for t3 in ([a[i], a[j], b[i]], [a[j], b[j], b[i]]):
                 t3 = np.array(t3)
                 fnn = np.cross(pos[t3[1]] - pos[t3[0]], pos[t3[2]] - pos[t3[0]])
-                strips.append(t3 if fnn @ want[i] >= 0 else t3[[0, 2, 1]])
-    # old glass shards under the sill or just past it go too: each was a loop of its own, and the hangar's frame paint
+                (body_strips if to_body else strips).append(t3 if fnn @ want[i] >= 0 else t3[[0, 2, 1]])
+    # old glass shards under the collar or just past it go too: each was a loop of its own, and the hangar's frame paint
     # (distance to the nearest cut edge) turned them into cream blobs on the new glazing
     d_g = cKDTree(out).query(gcen[:, [0, 2]])[0]
-    keep_glass &= (tri.find_simplex(gcen[:, [0, 2]]) < 0) & (d_g > SILL_W + 0.015)
+    keep_glass &= (tri.find_simplex(gcen[:, [0, 2]]) < 0) & (d_g > COLLAR_W + 0.004)
     tris = np.vstack([faces, np.array(strips)])
     # into the glass primitive's local space (the hull mesh node may carry a transform)
     m = g.world_of_mesh(0)
@@ -573,13 +606,29 @@ def glaze(src, dst):
             attrs[name] = np.zeros((len(lpos), ncomp))
     # the frame's vertices carry U = 1 (the glazing's 0): HangarCockpit (FRAMES «frame_uv») paints the frame from it
     attrs["TEXCOORD_0"][n0:, 0] = 1.0
+    # the band and its chamfer belong to the hull (Kanta 19.11: «смотрится как будто ты просто налепил её грубо
+    # сверху. Она должна стать частью самолета»): body primitive, each vertex with the UV of the nearest remaining
+    # skin vertex, so they carry the hull's own paint and panel texture up to the glass
+    # each triangle has vertices of its own, all with the UV of the skin vertex nearest its centre: neighbouring
+    # skin vertices at the torn rim sit on different atlas islands, and a UV per vertex smeared the atlas across the
+    # band in stripes; one UV per triangle gives each the hull's paint colour at that spot
+    bs = np.array(body_strips)
+    keep_v = np.unique(bt[~sel])
+    buv = g.accessor(prims[bi]["attributes"]["TEXCOORD_0"])
+    near_v = keep_v[cKDTree(bp[keep_v]).query(pos[bs].mean(1))[1]]
+    flat = bs.reshape(-1)
+    battrs = {"POSITION": lpos[flat], "NORMAL": lnrm[flat], "TEXCOORD_0": np.repeat(buv[near_v], 3, axis=0)}
+    for name in prims[bi]["attributes"]:
+        if name not in battrs:
+            battrs[name] = np.zeros((len(flat), g.accessor(prims[bi]["attributes"][name]).shape[1]))
     g.set_indices(0, bi, bt[~sel])
+    g.append_tris(0, bi, battrs, np.arange(len(flat)).reshape(-1, 3))
     base = len(g.accessor(prims[gi]["attributes"]["POSITION"]))
     g.append_tris(0, gi, attrs, tris)
     g.set_indices(0, gi, np.vstack([gt[keep_glass], tris + base]))   # old glass on the surface goes
     g.save(dst)
     print("glaze: %d skin and %d old glass triangles removed, new glazing %d triangles (fit median miss %.4f), "
-          "sill %.1f..%.1f mm over the glass edge"
+          "rail %.1f..%.1f mm over the glass edge"
           % (int(sel.sum()), int((~keep_glass).sum()), len(tris), float(np.median(np.abs(r))),
              float((band_h - pos[:k, 1]).min() * 1000), float((band_h - pos[:k, 1]).max() * 1000)))
 
