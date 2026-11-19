@@ -61,9 +61,8 @@ const FRAMES := {
 	"bomber_t1": {"bows": [], "ribs": [], "seats": [], "liner": true, "cabin": [0.335, 0.3, 0.45, 0.415, 0.36, 0.401, 0.0105]},
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
-	"attacker_1": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]], "no_sill": true},   # 3.5-s19 hulls: frames modelled
-	"attacker_2": {"bows": [], "ribs": [], "seats": [[0.6, -0.42], [0.6, 0.42]], "tub": 0.55,
-		"no_sill": true},   # two-seat, side by side; shallow hull
+	"attacker_1": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]], "no_sill": true},   # 19.11: frames modelled
+	"attacker_2": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]], "no_sill": true},   # «Грач» 2's cockpit, widened
 	"bomber_1": {"bows": [0.22, 0.45, 0.7], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 	"bomber_2": {"bows": [0.24, 0.5, 0.76], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 	"fighter_t4": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]], "tub": 1.0, "screens": true},

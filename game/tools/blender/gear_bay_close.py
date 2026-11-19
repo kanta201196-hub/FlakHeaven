@@ -1,7 +1,6 @@
 """S13-5 (Kanta 27.10: «Кит 2» flies with its nose-gear bay open): close the nose-gear bay Meshy baked into the
-belly of «Кит» 2, in the hangar and the battle model. The same flattening shuts the empty nose-gear well of «Грач» 3
-(3.5-s19, 19.11): the source model is built with its gear down, sf_rework drops the gear and the well stays open,
-deep enough to see through into the hull from below. Each bay is a preset in BAYS (--bay, default bomber_2).
+belly of «Кит» 2, in the hangar and the battle model. Each bay is a preset in BAYS (--bay, default bomber_2), so the
+same flattening can shut another source's empty gear well.
 
 remove_gear.py (T-2) dropped the gear legs and wheels but left the bay: a cavity going up into the belly with its two
 doors hanging open below it, and mech_cut.py --close (S11-10) only closed the main-gear wells in the nacelles. Here the
@@ -18,7 +17,6 @@ they are, so Godot keeps the extracted textures (and livery.gd SRC tones).
 Run from game/tools/blender (no Blender needed), in place is allowed:
   python3 -I gear_bay_close.py ../../models/hangar/fh_hangar_bomber_2.glb ../../models/hangar/fh_hangar_bomber_2.glb
   python3 -I gear_bay_close.py ../../models/battle/fh_battle_bomber_2.glb ../../models/battle/fh_battle_bomber_2.glb
-  python3 -I gear_bay_close.py <hangar or battle attacker_2.glb> <out.glb> --bay attacker_2
 Then `godot --headless --path game --import`."""
 import os
 import sys
@@ -37,11 +35,6 @@ import glb_io  # noqa: E402
 # (lamps in the well; the canopy glass above it stays) is pulled up to it, inside the hull, out of sight.
 BAYS = {
     "bomber_2": {"xa": 0.149, "xb": 0.2125, "zj": 0.0205, "zw": 0.031, "y_top": -0.044, "fit_x": (0.085, 0.147)},
-    # «Грач» 3: the well between the canard roots, x 0.095-0.21, |z| < 0.013, belly -0.06…-0.07, open up to y -0.022
-    # (the hull is shallow: the cockpit's top skin starts at y -0.01). Its two landing lights are glass in the well.
-    "attacker_2": {"xa": 0.09, "xb": 0.214, "zj": 0.014, "zw": 0.022, "y_top": -0.01, "fit_x": (0.216, 0.27),
-                   "fit_zw": 0.03, "walls": True, "fit_ahead": True,
-                   "hide_glass": -0.035},
 }
 XA = XB = ZJ = ZW = Y_TOP = 0.0
 FIT_X = (0.0, 0.0)

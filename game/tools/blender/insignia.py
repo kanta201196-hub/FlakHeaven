@@ -20,10 +20,11 @@ from mathutils import Vector
 # wings carry slat and flap); the others at the default 0.6, mid chord clear of the slat and flap hinges
 WING_F = {"fighter_t1": 0.85, "bomber_t1": 0.72, "bomber_1": 0.74, "bomber_2": 0.66, "bomber_t4": 0.86, "bomber_t5": 0.575}
 # знак аса на борту: x (длина 1, нос +X) и сдвиг по высоте от оси борта
+# «Грач» 2 (19.11): on the tail boom behind the engine pods (they end at x -0.30)
 # t1: behind the wing flaps, where a ray from the side meets only the fuselage (ahead of it the drop tanks, tip
 # tanks and nacelles with their propellers stand in the way)
 SIDE = {"fighter_t1": (-0.1, 0.0), "attacker_t1": (-0.06, 0.0), "bomber_t1": (-0.06, -0.03),
-        "attacker_1": (-0.2, 0.0), "attacker_2": (-0.2, 0.0), "fighter_1": (0.14, 0.0),
+        "attacker_1": (-0.36, 0.0), "attacker_2": (-0.2, 0.0), "fighter_1": (0.14, 0.0),
         "fighter_2": (0.12, 0.0), "bomber_1": (0.3, 0.0), "bomber_2": (0.28, 0.0),
         # tiers 4-5: above the wing on the blended bodies of «Оса» 4/5; «Грач» 4 aft of the intake trunks, below the fin;
         # «Грач» 5 ahead of the engine pods under the canopy; «Кит» 4/5 aft of the wing, ahead of the tail

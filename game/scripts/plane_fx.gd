@@ -12,8 +12,8 @@ const SPEC := {
 	"fighter_1": {"jet": [Vector2(-79, 0)], "r": 5.3, "y": -10.2},
 	"fighter_2": {"jet": [Vector2(-100, -16.5), Vector2(-100, 16.5)], "r": 5.5},   # Meshy model 24.10: nozzle exits x -0.444, z ±0.074
 	"attacker_t1": {"jet": [Vector2(-96.8, 0)], "r": 4.2, "y": -9.1},   # NozzleFlame.NOZZLES × 215 px
-	"attacker_1": {"jet": [Vector2(-52.7, -11.6), Vector2(-52.7, 11.6)], "r": 4.0, "y": -26.0},   # NozzleFlame.NOZZLES × 215 px
-	"attacker_2": {"jet": [Vector2(-83.3, -11.3), Vector2(-83.3, 11.3)], "r": 4.5, "y": -15.3},   # × 225 px
+	"attacker_1": {"jet": [Vector2(-64.5, -19.4), Vector2(-64.5, 19.4)], "r": 5.6, "y": 2.6},   # NozzleFlame.NOZZLES × 215 px
+	"attacker_2": {"jet": [Vector2(-55.1, -15.8), Vector2(-55.1, 15.8)], "r": 4.8, "y": -30.4},   # × 225 px
 	"bomber_1": {"prop": [Vector2(37, -81), Vector2(55, -39), Vector2(55, 39), Vector2(37, 82)], "pr": 20.0,
 		"trail": [Vector2(-10, -81), Vector2(8, -39), Vector2(8, 39), Vector2(-10, 82)],
 		# 3D model: trails start on each engine axis at x = trail_x (model length 1), where the nacelles end —

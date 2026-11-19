@@ -19,11 +19,13 @@ const SPOTS := {
 		"fin": [-0.407, 0.064, 0.035], "wing": [-0.24, 0.09, 0.045]},
 	"fighter_2": {"nose": [0.405, -0.036, 0.026], "tally": [0.33, -0.008, 0.01], "number": [0.02, -0.052, 0.016],
 		"fin": [-0.318, 0.058, 0.03], "wing": [-0.2, 0.16, 0.05]},
-	# «Грач» 2 / 3, 3.5-s19 hulls: the number ahead of the intakes (the ace mark sits on the nacelle at x −0.2)
-	"attacker_1": {"nose": [0.39, -0.104, 0.03], "tally": [0.326, -0.06, 0.012], "number": [0.228, -0.114, 0.022],
-		"fin": [-0.391, 0.054, 0.035], "wing": [-0.076, 0.217, 0.05]},
-	"attacker_2": {"nose": [0.38, -0.058, 0.028], "tally": [0.2, -0.035, 0.011], "number": [0.13, -0.04, 0.025],
-		"fin": [-0.27, 0.05, 0.03], "wing": [-0.17, 0.235, 0.05]},   # «Грач» 3, the heavy two-seater (19.11)
+	# «Грач» 2 (19.11, the straight-wing armoured attacker): the number on the fuselage side ahead of the wing, the
+	# fin mark on the outer face of the twin fins (|z| 0.17), the wing mark mid chord outboard of the flaps
+	"attacker_1": {"nose": [0.4, -0.035, 0.03], "tally": [0.25, -0.02, 0.012], "number": [0.15, -0.02, 0.024],
+		"fin": [-0.45, 0.04, 0.035], "wing": [-0.02, 0.40, 0.05]},
+	# «Грач» 3 (19.11: the former «Грач» 2 with its hull 1.3× wider and 1.12× deeper, the wing moved out 0.036)
+	"attacker_2": {"nose": [0.39, -0.116, 0.033], "tally": [0.326, -0.067, 0.013], "number": [0.228, -0.127, 0.024],
+		"fin": [-0.391, 0.06, 0.038], "wing": [-0.076, 0.253, 0.05]},
 	"bomber_1": {"nose": [0.38, -0.066, 0.026], "tally": [0.33, -0.053, 0.01], "number": [-0.2, -0.058, 0.03],
 		"fin": [-0.404, 0.087, 0.045], "wing": [0.0, 0.12, 0.05]},
 	"bomber_2": {"nose": [0.405, -0.046, 0.024], "tally": [0.33, -0.005, 0.01], "number": [0.23, -0.036, 0.016],

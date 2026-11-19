@@ -7,8 +7,8 @@
 | fh_battle_fighter_1, fh_hangar_fighter_1 («Оса» ур. 1) | Mig-23 MLD | citizensnip | https://sketchfab.com/3d-models/7a13c91f07e042a685b4d265644fdc06 | CC BY 4.0, изменено |
 | fh_battle_fighter_t1, fh_hangar_fighter_t1 («Оса» самолёт ур. 1) | Mikoyan-Gurevich MiG-15bis / Lim-2 | mgg8 | https://sketchfab.com/3d-models/e7bf3257337f4dd6aafe34cbc3b563d8 | CC0, изменено |
 | fh_battle_attacker_t1, fh_hangar_attacker_t1 («Грач» самолёт ур. 1) | Hunting Jet Provost T.3A | mgg8 | https://sketchfab.com/3d-models/c5ff8fb2396b47579b8b4c1eb5401c99 | CC0, изменено |
-| fh_battle_attacker_1, fh_hangar_attacker_1 («Грач» ур. 2, нос укорочен) | двухдвигательный штурмовик | Alexios_Apokaukos | https://sketchfab.com/3d-models/e1b6ee3af1d94ed19952925e64684335 | CC BY 4.0, изменено |
-| fh_battle_attacker_2, fh_hangar_attacker_2 («Грач» ур. 3: оружие, шасси и опознавательные знаки убраны, перекрашен) | тяжёлый двухдвигательный ударный самолёт | Jeyhun1985 | https://sketchfab.com/3d-models/399a952a40854007b77db40d5ed43441 | CC BY 4.0, изменено |
+| fh_battle_attacker_1, fh_hangar_attacker_1 («Грач» ур. 2: оружие, шасси и опознавательные знаки убраны, ниши шасси закрыты, перекрашен) | бронированный штурмовик с прямым крылом | ioai25312 | https://sketchfab.com/3d-models/623514b5f1f9483a9bbee7f25da77468 | CC BY 4.0, изменено |
+| fh_battle_attacker_2, fh_hangar_attacker_2 («Грач» ур. 3: нос укорочен, фюзеляж и мотогондолы расширены) | двухдвигательный штурмовик | Alexios_Apokaukos | https://sketchfab.com/3d-models/e1b6ee3af1d94ed19952925e64684335 | CC BY 4.0, изменено |
 | fh_battle_bomber_t1, fh_hangar_bomber_t1 («Кит» самолёт ур. 1) | Heinkel He 177 | helijah | https://sketchfab.com/3d-models/heinkel-he-177-fY5DQaL5CKSxPd7uKRu8sXaeQcK | CC BY 4.0, изменено |
 | fh_battle_e_ship_cargo (сухогруз) | Small Cargo Ship | Styx | https://sketchfab.com/3d-models/small-cargo-ship-6362d3e9b11e4396aaafa854c3aa6f06 | CC BY 4.0, изменено |
 | fh_battle_e_ship_tanker (танкер) | Tanker Ship | KoreanNavy | https://sketchfab.com/3d-models/tanker-ship-96ebf61af42b4062ae98a6ad848e1a25 | CC BY 4.0, изменено |

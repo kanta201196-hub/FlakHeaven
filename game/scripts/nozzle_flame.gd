@@ -20,8 +20,8 @@ const NOZZLES := {
 	"fighter_1": [-0.47, -0.058, 0.0, 0.028],
 	"fighter_2": [-0.455, -0.042, 0.0755, 0.025],
 	"attacker_t1": [-0.45, -0.0425, 0.0, 0.017],   # single jet pipe at the tail
-	"attacker_1": [-0.245, -0.121, 0.054, 0.0185],   # 3.5-s19 hulls: rear depth maps of the hangar GLBs
-	"attacker_2": [-0.37, -0.068, 0.05, 0.02],   # «Грач» 3 (19.11): circle fit of the nozzle rims
+	"attacker_1": [-0.30, 0.012, 0.09, 0.026],   # «Грач» 2 (19.11): engine pods over the tail, rear depth map
+	"attacker_2": [-0.245, -0.135, 0.07, 0.0215],   # «Грач» 3 (19.11): «Грач» 2's nacelles spread 1.3× and deepened
 	"bomber_2": [-0.274, -0.0156, 0.0702, 0.0176],
 	# tiers 4-5: rear depth maps of the hangar GLBs (first skin hit seen from behind): x of the lip, centre and radius
 	# of the opening inside it
