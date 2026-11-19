@@ -14,7 +14,9 @@ SPANS = {
     # «Грач» 2 / 3 (3.5-s19, one source, 18.11): swept leading edge, straight trailing edge, nacelle side 0.085,
     # tip pods from 0.44 (3) / 0.48 (2, the short nose rescales the plane by 1.087)
     "attacker_1": {"slat": [(0.22, 0.45, -0.048, -0.088)], "flap": [(0.11, 0.33, -0.028, -0.066)]},
-    "attacker_2": {"slat": [(0.19, 0.40, -0.106, -0.138)], "flap": [(0.095, 0.285, -0.087, -0.117)]},
+    # «Грач» 3 (19.11, the heavy two-seater): swept wing from the fuselage side (|z| 0.12) to the tip (0.30), leading
+    # edge −0.008…−0.151, trailing edge −0.203…−0.246 (top-view raster of the hangar model)
+    "attacker_2": {"slat": [(0.18, 0.28, -0.141, -0.199)], "flap": [(0.13, 0.22, -0.112, -0.163)]},
     # «Кит 1»: between the nacelles and outboard of the outer one
     "bomber_1": {"slat": [(0.21, 0.26, -0.03, -0.045), (0.37, 0.48, -0.11, -0.16)],
                  "flap": [(0.20, 0.27, -0.02, -0.04), (0.355, 0.41, -0.09, -0.12)]},

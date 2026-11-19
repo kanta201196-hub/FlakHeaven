@@ -1,5 +1,7 @@
 """S13-5 (Kanta 27.10: «Кит 2» flies with its nose-gear bay open): close the nose-gear bay Meshy baked into the
-belly of «Кит» 2, in the hangar and the battle model.
+belly of «Кит» 2, in the hangar and the battle model. The same flattening shuts the empty nose-gear well of «Грач» 3
+(3.5-s19, 19.11): the source model is built with its gear down, sf_rework drops the gear and the well stays open,
+deep enough to see through into the hull from below. Each bay is a preset in BAYS (--bay, default bomber_2).
 
 remove_gear.py (T-2) dropped the gear legs and wheels but left the bay: a cavity going up into the belly with its two
 doors hanging open below it, and mech_cut.py --close (S11-10) only closed the main-gear wells in the nacelles. Here the
@@ -16,6 +18,7 @@ they are, so Godot keeps the extracted textures (and livery.gd SRC tones).
 Run from game/tools/blender (no Blender needed), in place is allowed:
   python3 -I gear_bay_close.py ../../models/hangar/fh_hangar_bomber_2.glb ../../models/hangar/fh_hangar_bomber_2.glb
   python3 -I gear_bay_close.py ../../models/battle/fh_battle_bomber_2.glb ../../models/battle/fh_battle_bomber_2.glb
+  python3 -I gear_bay_close.py <hangar or battle attacker_2.glb> <out.glb> --bay attacker_2
 Then `godot --headless --path game --import`."""
 import os
 import sys
@@ -25,13 +28,24 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import glb_io  # noqa: E402
 
-# bay of «Кит» 2 in Godot model axes (nose +X, up +Y, length 1): clean belly sections at XA (ahead) and XB (behind),
-# the doors' hinge line |z| = ZJ, the region the doors reach (|z| < ZW) and how high the bay goes (Y_TOP)
-XA, XB = 0.149, 0.2125
-ZJ, ZW = 0.0205, 0.031
-Y_TOP = -0.044
+# bays in Godot model axes (nose +X, up +Y, length 1): clean belly sections at xa (behind) and xb (ahead), the doors'
+# hinge line |z| = zj, the region the doors reach (|z| < zw), how high the bay goes (y_top) and the belly skin used
+# for the UV fit (fit_x, just behind xa, |z| < fit_zw, default zw). "walls": the bay's side walls rise above the belly
+# between zj and zw (no doors hang below it), so only skin close to the belly there counts as belly and the walls
+# fold onto the hinge line like doors. "fit_ahead": the UV fit uses the skin ahead of xb (fit_x past xb), where the
+# skin behind the bay is cluttered. "hide_glass": y — glass of the same mesh inside the bay box below that height
+# (lamps in the well; the canopy glass above it stays) is pulled up to it, inside the hull, out of sight.
+BAYS = {
+    "bomber_2": {"xa": 0.149, "xb": 0.2125, "zj": 0.0205, "zw": 0.031, "y_top": -0.044, "fit_x": (0.085, 0.147)},
+    # «Грач» 3: the well between the canard roots, x 0.095-0.21, |z| < 0.013, belly -0.06…-0.07, open up to y -0.022
+    # (the hull is shallow: the cockpit's top skin starts at y -0.01). Its two landing lights are glass in the well.
+    "attacker_2": {"xa": 0.09, "xb": 0.214, "zj": 0.014, "zw": 0.022, "y_top": -0.01, "fit_x": (0.216, 0.27),
+                   "fit_zw": 0.03, "walls": True, "fit_ahead": True,
+                   "hide_glass": -0.035},
+}
+XA = XB = ZJ = ZW = Y_TOP = 0.0
+FIT_X = (0.0, 0.0)
 HULL_TOL = 0.0025   # a vertex outside the hinge line this close to the belly is belly skin, not a door
-FIT_X = (0.085, 0.147)   # belly skin used for the UV fit
 
 
 def write_accessor(g, i, arr):
@@ -90,7 +104,18 @@ def _islands(T, n):
 
 
 def main() -> int:
-    src, dst = sys.argv[1], sys.argv[2]
+    """Flatten the bay chosen by --bay (default bomber_2) of the GLB argv[1] into argv[2]"""
+    global XA, XB, ZJ, ZW, Y_TOP, FIT_X
+    args = sys.argv[1:]
+    bay = "bomber_2"
+    if "--bay" in args:
+        i = args.index("--bay")
+        bay = args[i + 1]
+        del args[i:i + 2]
+    src, dst = args[0], args[1]
+    b = BAYS[bay]
+    XA, XB, ZJ, ZW, Y_TOP, FIT_X = b["xa"], b["xb"], b["zj"], b["zw"], b["y_top"], b["fit_x"]
+    fit_zw = b.get("fit_zw", ZW)
     g = glb_io.load(src)
     prim = g.j["meshes"][0]["primitives"][0]
     at = prim["attributes"]
@@ -110,7 +135,8 @@ def main() -> int:
 
     inb = (P[:, 0] > XA) & (P[:, 0] < XB) & (np.abs(P[:, 2]) < ZW) & (P[:, 1] < Y_TOP)
     yb_at = belly(P[:, 0], P[:, 2])
-    hull = inb & (np.abs(P[:, 2]) >= ZJ) & (P[:, 1] >= yb_at - HULL_TOL)
+    near = np.abs(P[:, 1] - yb_at) < HULL_TOL if b.get("walls") else P[:, 1] >= yb_at - HULL_TOL
+    hull = inb & (np.abs(P[:, 2]) >= ZJ) & near
     inside = inb & (np.abs(P[:, 2]) < ZJ)
     door = inb & ~hull & ~inside
     moved = inside | door
@@ -129,7 +155,7 @@ def main() -> int:
     # into several islands (seams are duplicated vertices), and a fit across them would smear the atlas
     island = _islands(T, len(P))
     for sd in (-1.0, 1.0):
-        fit = ((P[:, 0] > FIT_X[0]) & (P[:, 0] < FIT_X[1]) & (P[:, 2] * sd > -0.004) & (np.abs(P[:, 2]) < ZW)
+        fit = ((P[:, 0] > FIT_X[0]) & (P[:, 0] < FIT_X[1]) & (P[:, 2] * sd > -0.004) & (np.abs(P[:, 2]) < fit_zw)
                & (N[:, 1] < -0.5) & (P[:, 1] < Y_TOP) & ~moved)
         ids, cnt = np.unique(island[fit], return_counts=True)
         fit &= island == ids[np.argmax(cnt)]
@@ -139,7 +165,7 @@ def main() -> int:
         tgt = moved & (Q[:, 2] * sd >= 0.0)
         # mirrored about XA into the fitted skin: extrapolated past FIT_X the fit leaves the UV island and lands
         # in the dark gutter of the atlas
-        xm = np.clip(2.0 * XA - Q[tgt, 0], FIT_X[0], FIT_X[1])
+        xm = np.clip(2.0 * (XB if b.get("fit_ahead") else XA) - Q[tgt, 0], FIT_X[0], FIT_X[1])
         UV[tgt] = np.c_[xm, Q[tgt, 2], np.ones(int(tgt.sum()))] @ coef
         print("  side %+d: UV fit on %d belly vertices, max residual %s, %d vertices remapped"
               % (sd, int(fit.sum()), res.round(4), int(tgt.sum())))
@@ -147,6 +173,16 @@ def main() -> int:
     write_accessor(g, at["POSITION"], local)
     write_accessor(g, at["NORMAL"], (N @ M[:3, :3]) / np.linalg.norm(N @ M[:3, :3], axis=1, keepdims=True))
     write_accessor(g, at["TEXCOORD_0"], UV)
+    if b.get("hide_glass"):
+        for pi, pr in enumerate(g.j["meshes"][0]["primitives"]):
+            if pi == 0 or g.j["materials"][pr.get("material", 0)]["name"] != "glass":
+                continue
+            G, _ = g.mesh_world(0, pi)
+            hy = float(b["hide_glass"])
+            box = (G[:, 0] > XA) & (G[:, 0] < XB) & (np.abs(G[:, 2]) < ZW) & (G[:, 1] < hy)
+            G[box, 1] = hy
+            write_accessor(g, pr["attributes"]["POSITION"], G @ Minv[:3, :3].T + Minv[:3, 3])
+            print("  %d glass vertices in the bay hidden" % int(box.sum()))
     # the doors' inner faces and the bay walls faced into the bay; laid onto the belly they face up into the hull
     # and are culled, which leaves a dark hole: every flattened triangle is wound to face down like the belly
     a, b, c = Q[T[:, 0]], Q[T[:, 1]], Q[T[:, 2]]

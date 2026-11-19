@@ -1162,6 +1162,13 @@ def finish(groups, lows, imgs, R, out_dir, name, tex, jpeg=0):
     gm = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gm)
     gm.merge(out)
+    # the body primitive first: the hangar tools (mech_cut, insignia) take primitive 0 as the skin, and the exporter
+    # put the glass first on some sources (the heavy «Грач» 3)
+    js, bin_ = gm.read_glb(out)
+    mats = js.get("materials", [])
+    for mesh in js["meshes"]:
+        mesh["primitives"].sort(key=lambda p: mats[p["material"]]["name"] == "glass" if "material" in p else False)
+    gm.write_glb(out, js, bin_)
     if R.get("img_plain"):
         # the glTF exporter names an image after its file (<recipe>_color.png), not its datablock: rename in the GLB
         js, bin_ = gm.read_glb(out)

@@ -17,7 +17,7 @@ const SHAPE := {
 	"fighter_2": [-0.03, 0.06, 0.35],
 	"attacker_t1": [-0.035, 0.065, 0.27],
 	"attacker_1": [-0.075, 0.085, 0.17],   # 3.5-s19 hulls: nacelles beside the fuselage, straight trailing edge
-	"attacker_2": [-0.07, 0.091, 0.162],
+	"attacker_2": [-0.035, 0.12, 0.58],   # «Грач» 3, heavy two-seater (19.11): wing from 0.12, LE sweep 0.89, TE 0.27
 	"bomber_t1": [-0.034, 0.042, 0.0],   # straight wing: edges within 0.01 between half and 0.9 span
 	"bomber_1": [-0.03, 0.06, 0.6],
 	"bomber_2": [-0.019, 0.065, 0.55],

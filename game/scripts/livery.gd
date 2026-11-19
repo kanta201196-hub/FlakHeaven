@@ -183,7 +183,7 @@ const NOSE := {
 	"fighter_2": [0.485, 0.29, -0.034, 0.045],
 	"attacker_t1": [0.455, 0.27, -0.034, 0.063],   # pitot probe ahead of 0.47 excluded
 	"attacker_1": [0.45, 0.30, -0.08, 0.045],   # «Грач» 2 / 3 (3.5-s19 hulls): short nose, long sensor nose
-	"attacker_2": [0.404, 0.214, -0.081, 0.046],
+	"attacker_2": [0.44, 0.30, -0.048, 0.038],   # «Грач» 3 (19.11): flat radome to 0.30, probe excluded
 	"bomber_t1": [0.47, 0.30, -0.034, 0.042],
 	"bomber_1": [0.44, 0.25, -0.063, 0.032],
 	"bomber_2": [0.45, 0.27, -0.042, 0.031],

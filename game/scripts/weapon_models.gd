@@ -894,8 +894,8 @@ const KIT_BOTTOM_TURRET_X := -0.335
 ## S13 (Kanta 27.10): wing turrets of «Грач» 2 — model (x, |z|) on the wing, on the outer panel just outboard of
 ## the flaps (z 0.15–0.33, they move in flight) and of the wing insignia (z 0.24–0.34), between the slats and the
 ## trailing edge, near the chord's thickest line
-## 18.11 (3.5-s19 hull): flaps to |z| 0.30, wing insignia at 0.285, tip pod from 0.44; chord −0.158…−0.06 at 0.37
-const WING_TURRETS := {"attacker_2": Vector2(-0.134, 0.352)}
+## 19.11 («Грач» 3 is now the heavy two-seater): wing |z| 0.12–0.30, flaps to 0.22, chord −0.237…−0.124 at 0.25
+const WING_TURRETS := {"attacker_2": Vector2(-0.165, 0.25)}
 
 
 ## Radius of a turret's ring collar (_with_ring) in the weapon mesh units, before the mount scale; tier t 1–3
