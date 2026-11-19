@@ -49,6 +49,8 @@ const NODE := "cockpit"
 ## cockpit is in the glass primitive. The frame is painted from U, not from the
 ## distance to the cut edge: that distance, measured to the edge's vertices, painted a sawtooth strip on the steep
 ## glass next to the inner face.
+## no_sill — no painted sill: the glass is cut into many small panes between the model's own frame strips («Грач» 3),
+## and a sill along every pane edge painted jagged livery blobs over the windscreen.
 ## Read off the canopy shapes: bubble canopies have a windscreen bow only, the attackers a windscreen and a hood
 ## bow, the bombers a framed glasshouse.
 const FRAMES := {
@@ -58,7 +60,8 @@ const FRAMES := {
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
 	"attacker_1": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]]},   # 3.5-s19 hulls: the frames are modelled
-	"attacker_2": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]]},
+	"attacker_2": {"bows": [], "ribs": [], "seats": [[0.6, -0.42], [0.6, 0.42]], "tub": 0.55,
+		"no_sill": true},   # two-seat, side by side; shallow hull
 	"bomber_1": {"bows": [0.22, 0.45, 0.7], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 	"bomber_2": {"bows": [0.24, 0.5, 0.76], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 	"fighter_t4": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]], "tub": 1.0},
@@ -254,6 +257,8 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 	if spec.get("frame_uv", false):
 		for i in rim.size():
 			rim[i] = 1.0 - uvx[i]
+	elif spec.get("no_sill", false):
+		rim.fill(1.0)
 	var own: bool = spec.get("own_pit", false)
 	var liner: bool = spec.get("liner", false)
 	if liner:

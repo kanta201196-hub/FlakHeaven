@@ -956,97 +956,11 @@ def _loft(name, rings, mat):
     return o
 
 
-def _grach3_fatten(nose):
-    """«Грач» 3 as the late, heavier machine (Kanta 19.11: «их не видно практически ... мб сделать немного более
-    пузатенькой»): the fuselage and nacelles grow GRACH3_FAT wider and deeper about the body axis (z −0.07, model
-    axes, length 1) inside |y| < 0.09, easing out to the wing by |y| 0.17 so the wing keeps its shape; full from
-    x −0.3 to the nose, easing to nothing at the tail cone (x −0.45). Custom normals take the inverse scale. Then
-    `nose` (a _nose_warp) runs."""
-    def warp(obs):
-        import numpy as np
-        done = set()
-        for o in obs:
-            me = o.data
-            if me.name in done:
-                continue
-            done.add(me.name)
-            n = len(me.vertices)
-            co = np.empty(n * 3, np.float32)
-            me.vertices.foreach_get("co", co)
-            co = co.reshape(-1, 3)
-
-            def ease(t):
-                t = np.clip(t, 0.0, 1.0)
-                return t * t * (3 - 2 * t)
-            w = (1.0 - ease((np.abs(co[:, 1]) - 0.09) / 0.08)) * ease((co[:, 0] + 0.45) / 0.15)
-            f = 1.0 + GRACH3_FAT * w
-            cn = None
-            if me.has_custom_normals:
-                cn = np.empty(len(me.loops) * 3, np.float32)
-                me.corner_normals.foreach_get("vector", cn)
-                cn = cn.reshape(-1, 3)
-                lv = np.empty(len(me.loops), np.int32)
-                me.loops.foreach_get("vertex_index", lv)
-                cn[:, 1] /= f[lv]
-                cn[:, 2] /= f[lv]
-                cn /= np.maximum(np.linalg.norm(cn, axis=1, keepdims=True), 1e-9)
-            co[:, 1] *= f
-            co[:, 2] = GRACH3_AXIS_Z + (co[:, 2] - GRACH3_AXIS_Z) * f
-            me.vertices.foreach_set("co", co.ravel())
-            me.update()
-            if cn is not None:
-                me.normals_split_custom_set([tuple(v) for v in cn])
-        nose(obs)
-    return warp
-
-
-GRACH3_FAT = 0.2
-GRACH3_AXIS_Z = -0.07
-
-
-def grach3_parts():
-    """«Грач» 3 over «Грач» 2 (Kanta 18.11: «не вижу отличий грача 2 и 3»): besides its long nose (_nose_warp stretching
-    it), two things that read from above. Wingtip containers: the source's slim tip pods (x -0.204…-0.052, centre z
-    -0.084, |y| 0.457, radius ~0.012, measured on the placed source) are sheathed in fatter, longer ones, radius
-    0.019, x -0.25…0.0, with an ogive nose and a short tail cone. A dorsal hump (Kanta 19.11: «мб сделать немного
-    более пузатенькой»): a rounded fairing from the canopy's rear (x 0.045) into the fin root (x -0.27), 10 cm wide
-    at the front narrowing to 2.4 cm, its crest level with the canopy's top line (0.6 cm) back to x -0.03 and falling
-    to -3 cm at the fin; a bell section (1 - u²)^0.8 so it meets the flat back between the nacelles at a slope, never
-    as a box; foot 1.2 cm under that back. Both painted like the skin, plus the closed gear doors that both «Грачи»
-    get."""
-    import numpy as np
-    obs = grach_bay_covers()
-    mat = _flat_mat("grach_bay_paint", (0.46, 0.48, 0.44), 0.8, 0.0)
-    ang = np.linspace(0.0, 2.0 * np.pi, 20, endpoint=False)
-    for s in (1, -1):
-        rings = []
-        for x in np.linspace(-0.25, 0.0, 26):
-            t = (x + 0.25) / 0.25
-            r = 0.019 * min(1.0, np.sqrt(max(0.0, (1.0 - t) / 0.28))) * min(1.0, 0.45 + t / 0.12 * 0.55)
-            r = max(r, 0.0015)
-            rings.append([(x, s * 0.457 + r * np.cos(a), -0.084 + r * np.sin(a)) for a in ang])
-        obs.append(_loft("grach3_tip_pod_%s" % ("l" if s > 0 else "r"), rings, mat))
-    rings = []
-    for x in np.linspace(0.045, -0.27, 42):
-        t = (0.045 - x) / 0.315
-        front = np.sqrt(min(1.0, t / 0.12))
-        # level with the canopy's rear top from the start (a lower front left a notch behind the canopy)
-        crest = 0.006 if t < 0.23 else 0.006 - 0.036 * ((t - 0.23) / 0.77) ** 1.3
-        w = (0.05 - 0.038 * max(0.0, (t - 0.3) / 0.7) ** 1.2) * front
-        foot = -0.06 + 0.164 * min(0.0, x - 0.004)   # 1.2 cm under the flat back beside it
-        u = np.cos(np.linspace(0.0, np.pi, 19))
-        rings.append([(x, w * v, foot + (crest - foot) * (1.0 - v * v) ** 0.8) for v in u])
-    obs.append(_loft("grach3_spine", rings, mat))
-    return obs
-
-
 # «Грач» 2 and 3 (tiers 2-3, keys attacker_1 / attacker_2; 3.5-s19 item 3, Kanta 18.11: «у нас же там разные машины,
 # они отличаются, ты сможешь дорисовать 4 модель как нужно?»). Both from one twin-engine armoured attacker, Sketchfab
 # e1b6ee3af1d94ed19952925e64684335 (Alexios_Apokaukos, CC BY, CREDITS). The source is the late long-nose variant with
-# a sensor window under the nose: «Грач» 2 gets the short early nose (_nose_warp ahead of the windscreen), «Грач» 3
-# a nose stretched further, fat wingtip containers and a dorsal hump (grach3_parts; Kanta 18.11: «не вижу отличий
-# грача 2 и 3»), and a fuselage 20 % fatter (_grach3_fatten; Kanta 19.11: «мб сделать немного более пузатенькой»), so
-# the two read apart from above and from the side. Dropped: main and nose gear with their doors (the game flies gear up),
+# a sensor window under the nose: «Грач» 2 gets the short early nose (_nose_warp ahead of the windscreen); «Грач» 3
+# is another machine (_GRACH3 below). Dropped: main and nose gear with their doors (the game flies gear up),
 # pylons and stores (the game hangs its own weapons); the open wells get closed doors (grach_bay_covers). One 1024 atlas (Material_1) carries the whole skin with a
 # painted camouflage and six national stars (fin, wing tops, wing undersides): stars erased, camouflage flattened and
 # repainted; dark grey detail cells keep their colour. Material_5 (tail cone and flare cassettes) carries a stencil
@@ -1076,6 +990,35 @@ _GRACH = {
 }
 RECIPES["attacker_1"] = dict(_GRACH, root="attacker_1", warp=_nose_warp(0.33, 0.45, 0.05))
 RECIPES["attacker_1_hangar"] = dict(RECIPES["attacker_1"], root="fh_hangar_attacker_1", tris=110000)
-RECIPES["attacker_2"] = dict(_GRACH, root="attacker_2", build=grach3_parts,
-                            warp=_grach3_fatten(_nose_warp(0.33, 1.35, 0.05)))
+# «Грач» 3 (tier 3, key attacker_2; Kanta 19.11: «Грач всё ещё не нравится, ищи другое решение, машины должны быть
+# отличимы», then picked «Тяжёлый, два киля» on the candidates page): the next generation of the attacker, a heavy
+# twin-engine strike aircraft with a side-by-side two-seat cockpit, a long flat nose, canards and twin fins, Sketchfab
+# 399a952a40854007b77db40d5ed43441 (Jeyhun1985, CC BY, CREDITS). Source axes: nose -Y, up +Z, 24 units long.
+# Dropped: guided bombs (_5..._10), pylons (_15..._20), under-wing rails (_12), wingtip rails (_13), stores' fins
+# (_53, _54), navigation lights (_2, _3, _4), the exhaust glow cards (_26), the cockpit tub and seats (_11, _21..._25:
+# the hangar builds its own under the glass), wheels, legs and gear doors (_29, _31, _30, _48, _35..._40, _42, _46,
+# _47, _50, _51: the game flies gear up; the hull under them is closed). One 1024 atlas (d8983ad8…) carries the skin
+# in a two-tone blue camouflage with red stars (wings, fins), side numbers (nose, fins) and fin lettering in a real
+# language: all erased, the blues repainted.
+_GRACH3_MARKS = [(0.541, 0.035, 0.59, 0.08), (0.55, 0.172, 0.6, 0.216),          # nose numbers
+                 (0.722, 0.287, 0.758, 0.324), (0.847, 0.311, 0.884, 0.351),      # wing stars
+                 (0.847, 0.516, 0.884, 0.555), (0.721, 0.541, 0.758, 0.579),
+                 (0.553, 0.355, 0.61, 0.425), (0.738, 0.685, 0.792, 0.753),       # fin stars and numbers
+                 (0.548, 0.249, 0.66, 0.35), (0.684, 0.752, 0.79, 0.845),         # fin lettering
+                 (0.983, 0.068, 1.0, 0.096), (0.974, 0.437, 1.0, 0.464), (0.954, 0.841, 0.977, 0.864),
+                 (0.417, 0.901, 0.442, 0.925)]                                     # small red stencils
+_GRACH3 = {
+    "rot": (0, 0, 90), "ground": False,
+    "drop": r"^Object_(2|3|4|5|6|7|8|9|10|11|12|13|15|16|17|18|19|20|21|22|23|24|25|26|29|30|31|35|36|37|38|39|40"
+            r"|42|46|47|48|50|51|53|54)$",
+    "materials": [(r"^295393bc", GLASS),
+                  (r"^d8983ad8", {"mode": "auto", "hue": [(165, 245)], "smin": 0.1, "vmin": 0.14, "gray": (0.3, 1.0),
+                                 "flatten": 31}),
+                  (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
+    "erase": {"d8983ad8-1ea6-4c55-ba47-aff22a6ab3af": _GRACH3_MARKS},
+    "mat_names": {"glass": "glass"}, "img_plain": True,
+    "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
+    "paint": TEMPERATE, "tris": 30000,
+}
+RECIPES["attacker_2"] = dict(_GRACH3, root="attacker_2")
 RECIPES["attacker_2_hangar"] = dict(RECIPES["attacker_2"], root="fh_hangar_attacker_2", tris=110000)
