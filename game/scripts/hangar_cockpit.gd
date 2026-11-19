@@ -51,6 +51,8 @@ const NODE := "cockpit"
 ## glass next to the inner face.
 ## no_sill — no painted sill: the glass is cut into many small panes between the model's own frame strips («Грач» 3),
 ## and a sill along every pane edge painted jagged livery blobs over the windscreen.
+## seat_k — seat size factor where the glass loop is far wider than a crew station («Кит» 5); screens — display
+## screens on the instrument panel instead of round gauges (tiers 4–5, future machines).
 ## Read off the canopy shapes: bubble canopies have a windscreen bow only, the attackers a windscreen and a hood
 ## bow, the bombers a framed glasshouse.
 const FRAMES := {
@@ -59,17 +61,18 @@ const FRAMES := {
 	"bomber_t1": {"bows": [], "ribs": [], "seats": [], "liner": true, "cabin": [0.335, 0.3, 0.45, 0.415, 0.36, 0.401, 0.0105]},
 	"fighter_1": {"bows": [], "ribs": [], "seats": [[0.62, 0.0]], "own_pit": true, "pit": [0.25, 0.085, -0.02, 0.019]},
 	"fighter_2": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]]},
-	"attacker_1": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]]},   # 3.5-s19 hulls: the frames are modelled
+	"attacker_1": {"bows": [], "ribs": [], "seats": [[0.6, 0.0]], "no_sill": true},   # 3.5-s19 hulls: frames modelled
 	"attacker_2": {"bows": [], "ribs": [], "seats": [[0.6, -0.42], [0.6, 0.42]], "tub": 0.55,
 		"no_sill": true},   # two-seat, side by side; shallow hull
 	"bomber_1": {"bows": [0.22, 0.45, 0.7], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
 	"bomber_2": {"bows": [0.24, 0.5, 0.76], "ribs": [0.0], "seats": [[0.6, -0.42], [0.6, 0.42]]},
-	"fighter_t4": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]], "tub": 1.0},
-	"fighter_t5": {"bows": [0.3], "ribs": [], "seats": [[0.6, 0.0]], "tub": 1.2},
-	"attacker_t4": {"bows": [0.3, 0.62], "ribs": [], "seats": [[0.28, 0.0], [0.7, 0.0]]},   # tandem two-seater
-	"attacker_t5": {"bows": [0.33, 0.66], "ribs": [], "seats": [[0.25, 0.0], [0.58, 0.0]]},   # three-pane canopy
-	"bomber_t4": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.55, -0.42], [0.55, 0.42]], "tub": 1.0},
-	"bomber_t5": {"bows": [0.3, 0.62], "ribs": [0.0], "seats": [[0.42, -0.45], [0.42, 0.45]], "tub": 0.7, "frame_uv": true},
+	"fighter_t4": {"bows": [0.3], "ribs": [], "seats": [[0.62, 0.0]], "tub": 1.0, "screens": true},
+	"fighter_t5": {"bows": [0.3], "ribs": [], "seats": [[0.6, 0.0]], "tub": 1.2, "screens": true},
+	"attacker_t4": {"bows": [0.3, 0.62], "ribs": [], "seats": [[0.28, 0.0], [0.7, 0.0]], "screens": true, "no_sill": true},   # tandem two-seater
+	"attacker_t5": {"bows": [0.33, 0.66], "ribs": [], "seats": [[0.25, 0.0], [0.58, 0.0]], "screens": true, "no_sill": true},   # three-pane canopy
+	"bomber_t4": {"bows": [0.25, 0.5, 0.75], "ribs": [0.0], "seats": [[0.55, -0.42], [0.55, 0.42]], "tub": 1.0, "screens": true, "no_sill": true},
+	"bomber_t5": {"bows": [0.3, 0.62], "ribs": [0.0], "seats": [[0.42, -0.45], [0.42, 0.45]], "tub": 0.7, "frame_uv": true,
+		"seat_k": 0.55, "screens": true},
 }
 ## Frame paint when the livery has no colours of its own (the source paint): a dark worn grey
 const FRAME_DEFAULT := Color(0.22, 0.23, 0.22)
@@ -81,13 +84,16 @@ const CABIN_STEP := 0.004
 ## Tub depth below the sill, in half-widths of the glass loop, and how far its floor draws in towards the middle
 const TUB_DEPTH := 1.5
 const TUB_INSET := 0.25
-## Interior colours (sRGB): cockpit paint, seat cushion, black panel, gauge rims, belts
-const C_TUB := Color(0.30, 0.32, 0.30)
+## Interior colours (sRGB): cockpit paint (dark: under clear glass a light tub read as bare grey sheets, Kanta
+## 19.11), seat cushion, black panel, gauge rims, belts
+const C_TUB := Color(0.17, 0.18, 0.17)
 const C_SEAT := Color(0.12, 0.12, 0.12)
 const C_CUSHION := Color(0.30, 0.26, 0.19)
 const C_PANEL := Color(0.05, 0.05, 0.055)
 const C_GAUGE := Color(0.36, 0.37, 0.35)
 const C_BELT := Color(0.42, 0.38, 0.27)
+const C_HANDLE := Color(0.62, 0.5, 0.12)   # ejection handle: yellow, as on real seats
+const C_SCREEN := Color(0.07, 0.13, 0.11)   # an unlit display: dark green-grey glass
 # the bombardier's station (glazed noses): warm leather and khaki against the dark cabin, so the figure reads
 const C_JACKET := Color(0.45, 0.33, 0.2)
 const C_HELMET := Color(0.24, 0.16, 0.1)
@@ -307,7 +313,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 			continue
 		_tub(tub, pos, loops[li], b)
 		if li == main_i:
-			_furnish(st, pos, loops[li], b, spec["seats"])
+			_furnish(st, pos, loops[li], b, spec["seats"], spec)
 	var tub_mesh: ArrayMesh = null
 	if liner and spec.has("cabin"):
 		_cabin(tub, model, pos, spec["cabin"])
@@ -325,7 +331,7 @@ static func _measure(model: Node3D, key: String) -> Dictionary:
 		var hw := float(pit[3])
 		var pb := {"front": float(pit[0]), "len": float(pit[1]), "c": Vector3(float(pit[0]) - float(pit[1]) * 0.5, 0.0, 0.0),
 			"hw": hw, "sill": float(pit[2]) + TUB_DEPTH * hw * 0.8, "low": float(pit[2]) + TUB_DEPTH * hw}
-		_furnish(st, pos, PackedInt32Array(), pb, spec["seats"])
+		_furnish(st, pos, PackedInt32Array(), pb, spec["seats"], spec)
 	var interior: ArrayMesh = null
 	if (not own and not liner) or spec.has("pit"):
 		st.generate_normals()
@@ -774,10 +780,12 @@ static func _loop_at(pos: PackedVector3Array, loop: PackedInt32Array, b: Diction
 	return Vector2(hw, low)
 
 
-## Seats, instrument panel, coaming, gauges, consoles and stick in the main glass loop, sized from it.
-## `seats` — FRAMES[...]["seats"]
+## Seats, instrument panel, coaming, gauges or screens, consoles and stick in the main glass loop, sized from it.
+## `seats` — FRAMES[...]["seats"]; `spec` — the plane's FRAMES row: «seat_k» scales the seats where the glass
+## loop is far wider than a crew station (Kanta 19.11 on «Кит» 5: seats sized from its huge canopy stood as grey
+## crates up to the glass), «screens» puts display screens on the panel instead of round gauges (tiers 4–5).
 static func _furnish(st: SurfaceTool, pos: PackedVector3Array, loop: PackedInt32Array, b: Dictionary,
-		seats: Array) -> void:
+		seats: Array, spec: Dictionary = {}) -> void:
 	var c: Vector3 = b["c"]
 	var hw: float = b["hw"]
 	var front: float = b["front"]
@@ -785,7 +793,7 @@ static func _furnish(st: SurfaceTool, pos: PackedVector3Array, loop: PackedInt32
 	var sill: float = b["sill"]
 	var floor_y: float = float(b["low"]) - float(b.get("depth", TUB_DEPTH)) * hw
 	var two := seats.size() > 1
-	var sw := hw * (0.62 if two else 1.0)   # seat width
+	var sw := hw * (0.62 if two else 1.0) * float(spec.get("seat_k", 1.0))   # seat width
 	for s: Array in seats:
 		var sx := front - float(s[0]) * length
 		var sz := c.z + float(s[1]) * _loop_at(pos, loop, b, sx).x
@@ -811,6 +819,14 @@ static func _furnish(st: SurfaceTool, pos: PackedVector3Array, loop: PackedInt32
 		for side in [-1.0, 1.0]:
 			_box(st, back_c + Vector3(sw * 0.17, back_h * 0.05, side * sw * 0.2), Vector3(sw * 0.03, back_h * 0.7, sw * 0.12),
 					tilt, C_BELT)
+		# ejection seat frame: side rails up past the headrest, armrests, the firing handle between the knees
+		for side in [-1.0, 1.0]:
+			_box(st, back_c + tilt * Vector3(-sw * 0.06, sw * 0.12, side * sw * 0.5),
+					Vector3(sw * 0.1, back_h + sw * 0.5, sw * 0.06), tilt, C_SEAT.lightened(0.08))
+			_box(st, Vector3(sx + sw * 0.05, pan_y + sw * 0.16, sz + side * sw * 0.48), Vector3(sw * 0.55, sw * 0.06,
+					sw * 0.08), Basis.IDENTITY, C_SEAT.lightened(0.05))
+		_box(st, Vector3(sx + sw * 0.55, pan_y + sw * 0.05, sz), Vector3(sw * 0.08, sw * 0.12, sw * 0.22),
+				Basis.IDENTITY, C_HANDLE)
 		# stick between the knees
 		var stick_x := sx + sw * 0.75
 		_box(st, Vector3(stick_x, floor_y + room * 0.3, sz), Vector3(sw * 0.07, room * 0.5, sw * 0.07),
@@ -827,7 +843,18 @@ static func _furnish(st: SurfaceTool, pos: PackedVector3Array, loop: PackedInt32
 	_box(st, Vector3(px + hw * 0.08, ptop + hw * 0.04, c.z), Vector3(hw * 0.4, hw * 0.08, pw * 0.92), Basis.IDENTITY,
 			C_SEAT)
 	var cols := 3 if not two else 5
-	for row in 2:
+	if spec.get("screens", false):
+		# glass cockpit: a row of display screens with dark bezels across the panel
+		var n := 2 if not two else 4
+		var sz2 := pw / float(n) * 0.78
+		for col in n:
+			var gz := c.z + (float(col) - float(n - 1) * 0.5) * pw / float(n)
+			_box(st, Vector3(px - hw * 0.065, ptop - ph * 0.42, gz), Vector3(hw * 0.02, minf(sz2 * 0.8, ph * 0.6), sz2),
+					Basis(Vector3.BACK, -0.12), C_SEAT.lightened(0.05))
+			_box(st, Vector3(px - hw * 0.077, ptop - ph * 0.42, gz), Vector3(hw * 0.004, minf(sz2 * 0.66, ph * 0.5),
+					sz2 * 0.84), Basis(Vector3.BACK, -0.12), C_SCREEN)
+		cols = 0
+	for row in (2 if cols > 0 else 0):
 		for col in cols:
 			var gz := c.z + (float(col) - float(cols - 1) * 0.5) * pw / float(cols + 0.6)
 			var gy := ptop - ph * (0.3 + 0.32 * float(row))
