@@ -882,9 +882,63 @@ def _nose_warp(x0, k, blend):
     return warp
 
 
+GRACH_WIDE = 0.3     # «Грач» 3 hull: fuselage and nacelles this much wider
+GRACH_DEEP = 0.12    # and this much deeper about the body axis
+GRACH_AXIS_Z = -0.07  # body axis height on the placed source (model axes, length 1)
+GRACH_HULL_Y = 0.085  # nacelle outer side: inside it the hull scales, outside it the wing only moves out
+GRACH_EASE_Y = 0.05   # width of the blend from scaling to moving
+
+
+def _grach_widen(then):
+    """«Грач» 3 as a heavier machine than «Грач» 2 from the same source (Kanta 19.11: «Ур 3 - расширь корпус, сделай
+    массивнее»; the line grows bulkier tier by tier). Inside |y| < GRACH_HULL_Y the fuselage and nacelles scale
+    1 + GRACH_WIDE across and 1 + GRACH_DEEP in height about GRACH_AXIS_Z; beyond it the wing, tailplane and tip pods
+    keep their shape and only move out by the hull's growth, so the span grows with the hull instead of the wing root
+    being squeezed. The lateral map y -> y + WIDE * g(|y|) has slope 1 + WIDE inside the hull, easing to 1 over
+    GRACH_EASE_Y (smoothstep slope, no crease at the wing root); custom normals take the inverse slopes. Then `then`
+    (the short-nose _nose_warp) runs, along the length only."""
+    def warp(obs):
+        import numpy as np
+        a, b = GRACH_HULL_Y, GRACH_EASE_Y
+        done = set()
+        for o in obs:
+            me = o.data
+            if me.name in done:
+                continue
+            done.add(me.name)
+            n = len(me.vertices)
+            co = np.empty(n * 3, np.float32)
+            me.vertices.foreach_get("co", co)
+            co = co.reshape(-1, 3)
+            t = np.abs(co[:, 1])
+            u = np.clip((t - a) / b, 0.0, 1.0)
+            g = np.where(t < a, t, a + b * (u - (u ** 3 - u ** 4 / 2.0)))
+            slope = 1.0 - (3 * u ** 2 - 2 * u ** 3)          # dg/dt: 1 inside the hull, 0 out on the wing
+            sy = 1.0 + GRACH_WIDE * slope
+            sz = 1.0 + GRACH_DEEP * slope
+            cn = None
+            if me.has_custom_normals:
+                cn = np.empty(len(me.loops) * 3, np.float32)
+                me.corner_normals.foreach_get("vector", cn)
+                cn = cn.reshape(-1, 3)
+                lv = np.empty(len(me.loops), np.int32)
+                me.loops.foreach_get("vertex_index", lv)
+                cn[:, 1] /= sy[lv]
+                cn[:, 2] /= sz[lv]
+                cn /= np.maximum(np.linalg.norm(cn, axis=1, keepdims=True), 1e-9)
+            co[:, 1] += np.sign(co[:, 1]) * GRACH_WIDE * g
+            co[:, 2] = GRACH_AXIS_Z + (co[:, 2] - GRACH_AXIS_Z) * sz
+            me.vertices.foreach_set("co", co.ravel())
+            me.update()
+            if cn is not None:
+                me.normals_split_custom_set([tuple(v) for v in cn])
+        then(obs)
+    return warp
+
+
 def grach_bay_covers():
-    """Closed gear doors for «Грач» 2 and 3: the source is modelled gear down, and once the gear (with its doors) is
-    dropped the main wells in the nacelle bottoms and the nose wells stay open. Measured by vertical rays on the
+    """Closed gear doors for «Грач» 3 (this source was «Грач» 2 until 19.11): the source is modelled gear down, and
+    once the gear (with its doors) is dropped the main wells in the nacelle bottoms and the nose wells stay open. Measured by vertical rays on the
     placed source: main wells x -0.048…0.048, |y| 0.021…0.08, ceiling z -0.101…-0.118 against the belly at -0.13…
     -0.142; nose wells x 0.084…0.204, |y| < 0.027, ceiling -0.081…-0.109. Each cover is a grid plate whose height is
     interpolated between the belly sections just ahead of and behind the well, 0.8 mm under the skin, so the rim of
@@ -956,11 +1010,9 @@ def _loft(name, rings, mat):
     return o
 
 
-# «Грач» 2 and 3 (tiers 2-3, keys attacker_1 / attacker_2; 3.5-s19 item 3, Kanta 18.11: «у нас же там разные машины,
-# они отличаются, ты сможешь дорисовать 4 модель как нужно?»). Both from one twin-engine armoured attacker, Sketchfab
+# «Грач» 3 (tier 3, key attacker_2; until 19.11 this was «Грач» 2): a twin-engine armoured attacker, Sketchfab
 # e1b6ee3af1d94ed19952925e64684335 (Alexios_Apokaukos, CC BY, CREDITS). The source is the late long-nose variant with
-# a sensor window under the nose: «Грач» 2 gets the short early nose (_nose_warp ahead of the windscreen); «Грач» 3
-# is another machine (_GRACH3 below). Dropped: main and nose gear with their doors (the game flies gear up),
+# a sensor window under the nose; the game uses the short early nose (_nose_warp ahead of the windscreen). Dropped: main and nose gear with their doors (the game flies gear up),
 # pylons and stores (the game hangs its own weapons); the open wells get closed doors (grach_bay_covers). One 1024 atlas (Material_1) carries the whole skin with a
 # painted camouflage and six national stars (fin, wing tops, wing undersides): stars erased, camouflage flattened and
 # repainted; dark grey detail cells keep their colour. Material_5 (tail cone and flare cassettes) carries a stencil
@@ -988,37 +1040,112 @@ _GRACH = {
     "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
     "paint": TEMPERATE, "tris": 30000,
 }
-RECIPES["attacker_1"] = dict(_GRACH, root="attacker_1", warp=_nose_warp(0.33, 0.45, 0.05))
-RECIPES["attacker_1_hangar"] = dict(RECIPES["attacker_1"], root="fh_hangar_attacker_1", tris=110000)
-# «Грач» 3 (tier 3, key attacker_2; Kanta 19.11: «Грач всё ещё не нравится, ищи другое решение, машины должны быть
-# отличимы», then picked «Тяжёлый, два киля» on the candidates page): the next generation of the attacker, a heavy
-# twin-engine strike aircraft with a side-by-side two-seat cockpit, a long flat nose, canards and twin fins, Sketchfab
-# 399a952a40854007b77db40d5ed43441 (Jeyhun1985, CC BY, CREDITS). Source axes: nose -Y, up +Z, 24 units long.
-# Dropped: guided bombs (_5..._10), pylons (_15..._20), under-wing rails (_12), wingtip rails (_13), stores' fins
-# (_53, _54), navigation lights (_2, _3, _4), the exhaust glow cards (_26), the cockpit tub and seats (_11, _21..._25:
-# the hangar builds its own under the glass), wheels, legs and gear doors (_29, _31, _30, _48, _35..._40, _42, _46,
-# _47, _50, _51: the game flies gear up; the hull under them is closed). One 1024 atlas (d8983ad8…) carries the skin
-# in a two-tone blue camouflage with red stars (wings, fins), side numbers (nose, fins) and fin lettering in a real
-# language: all erased, the blues repainted.
-_GRACH3_MARKS = [(0.541, 0.035, 0.59, 0.08), (0.55, 0.172, 0.6, 0.216),          # nose numbers
-                 (0.722, 0.287, 0.758, 0.324), (0.847, 0.311, 0.884, 0.351),      # wing stars
-                 (0.847, 0.516, 0.884, 0.555), (0.721, 0.541, 0.758, 0.579),
-                 (0.553, 0.355, 0.61, 0.425), (0.738, 0.685, 0.792, 0.753),       # fin stars and numbers
-                 (0.548, 0.249, 0.66, 0.35), (0.684, 0.752, 0.79, 0.845),         # fin lettering
-                 (0.983, 0.068, 1.0, 0.096), (0.974, 0.437, 1.0, 0.464), (0.954, 0.841, 0.977, 0.864),
-                 (0.417, 0.901, 0.442, 0.925)]                                     # small red stencils
-_GRACH3 = {
-    "rot": (0, 0, 90), "ground": False,
-    "drop": r"^Object_(2|3|4|5|6|7|8|9|10|11|12|13|15|16|17|18|19|20|21|22|23|24|25|26|29|30|31|35|36|37|38|39|40"
-            r"|42|46|47|48|50|51|53|54)$",
-    "materials": [(r"^295393bc", GLASS),
-                  (r"^d8983ad8", {"mode": "auto", "hue": [(165, 245)], "smin": 0.1, "vmin": 0.14, "gray": (0.3, 1.0),
-                                 "flatten": 31}),
+# «Грач» 3 (tier 3, key attacker_2; Kanta 19.11: «на ур 3 должна встать та модель которая была грачом 2», then
+# «Ур 3 - расширь корпус, сделай массивнее»): the short-nose machine that was «Грач» 2, with the hull widened
+# (_grach_widen) so the line keeps growing bulkier tier by tier.
+RECIPES["attacker_2"] = dict(_GRACH, root="attacker_2", warp=_grach_widen(_nose_warp(0.33, 0.45, 0.05)))
+RECIPES["attacker_2_hangar"] = dict(RECIPES["attacker_2"], root="fh_hangar_attacker_2", tris=110000)
+
+
+# «Грач» 2 (tier 2, key attacker_1; Kanta 19.11: «3 модель из картинок ... она станет на ур 2»): a straight-wing
+# armoured attacker with two engines in pods high on the rear fuselage and twin fins on a tailplane, Sketchfab
+# 623514b5f1f9483a9bbee7f25da77468 (ioai25312, CC BY, CREDITS). Source axes: nose -Y, up +Z, ~65 units long.
+# Dropped: stores and their racks (_5, _9, _10, _24…_31, _44, _46, _56…_62, _71, _72, _74, _75) and the pylon set
+# (_8): the game hangs its own weapons; main and nose gear with wheels, legs, links and the landing light (_2, _3,
+# _4, _11…_20, _22, _63, _69, _70, _96, _97): the game flies gear up; the decal sheet (_23: national insignia,
+# numbers, stencils in a real language); the cockpit interior and the gunsight glass (_32…_41, _45, _47…_55, _66,
+# _68, _73, _76…_94): the hangar builds its own tub and seat under the glass (HangarCockpit). Kept: the nose gun
+# (_95), the fan faces (_42, _43, _67). Two 1024 atlases carry the skin (fuselage and nacelles _4, wing and tail _5)
+# in two-tone grey with national insignia and unit lettering: erased, repainted.
+_GRACH2_SKIN_MARKS = [(0.70, 0.584, 0.76, 0.625), (0.70, 0.76, 0.76, 0.80),        # fuselage insignia, both sides
+                      (0.36, 0.56, 0.40, 0.585), (0.36, 0.795, 0.40, 0.82),        # nose numbers
+                      (0.553, 0.60, 0.576, 0.625), (0.553, 0.754, 0.576, 0.778),   # unit badges
+                      (0.576, 0.594, 0.60, 0.61), (0.576, 0.772, 0.60, 0.787),     # small lettering
+                      (0.15, 0.07, 0.23, 0.088)]                                   # stencil
+_GRACH2_WING_MARKS = [(0.128, 0.379, 0.178, 0.405), (0.831, 0.529, 0.881, 0.558),  # wing insignia
+                      (0.066, 0.825, 0.118, 0.88), (0.454, 0.825, 0.502, 0.88),    # fin lettering and numbers
+                      (0.068, 0.91, 0.087, 0.934), (0.46, 0.91, 0.479, 0.934),     # fin badges
+                      (0.24, 0.277, 0.275, 0.291), (0.73, 0.277, 0.765, 0.291),    # stencils («no step»)
+                      (0.30, 0.333, 0.33, 0.346), (0.42, 0.333, 0.45, 0.346), (0.555, 0.333, 0.585, 0.346),
+                      (0.675, 0.333, 0.705, 0.346), (0.368, 0.383, 0.382, 0.417), (0.622, 0.383, 0.636, 0.417)]
+_GRACH2_SKIN = {"mode": "auto", "hue": [(0, 360)], "smin": 0.0, "vmin": 0.14, "gray": (0.3, 1.0), "flatten": 31}
+def grach2_pod_covers():
+    """Closed gear doors for the new «Грач» 2: its main gear retracts into the pods under the wing, and once the gear
+    is dropped the pods stay open from below over x -0.03…0.115, |y| 0.145…0.19 (vertical rays on the placed
+    source: the pod keel at z -0.075…-0.085 ahead of and behind the well, the wing underside at -0.06 and the well
+    ceiling at -0.035…-0.046 inside it). Each cover is a grid plate curved across like the pod's keel (lowest
+    -0.077 on the pod's centre line |y| 0.168, rising to -0.058 at the pod sides), so it closes the well flush with
+    the keel; painted like the skin, the old opening's rim reads as the door seam."""
+    import bpy
+    import bmesh
+    import numpy as np
+    mat = _flat_mat("grach2_bay_paint", (0.46, 0.48, 0.44), 0.8, 0.0)
+    obs = []
+    for s in (1, -1):
+        me = bpy.data.meshes.new("grach2_cover_%s" % ("l" if s > 0 else "r"))
+        bm = bmesh.new()
+        nx, ny = 16, 8
+        grid = []
+        for x in np.linspace(-0.035, 0.118, nx + 1):
+            row = []
+            for y in np.linspace(0.145, 0.191, ny + 1):
+                t = (y - 0.168) / 0.023
+                row.append(bm.verts.new((x, s * y, -0.077 + 0.019 * min(1.0, t * t))))
+            grid.append(row)
+        for i in range(nx):
+            for j in range(ny):
+                f = bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+                f.normal_update()
+                if f.normal.z > 0:
+                    f.normal_flip()
+        bm.to_mesh(me)
+        bm.free()
+        me.uv_layers.new(name="UVMap")
+        me.materials.append(mat)
+        o = bpy.data.objects.new(me.name, me)
+        bpy.context.scene.collection.objects.link(o)
+        obs.append(o)
+        # the pod is an open trough under the wing, and its tail shows the hollow from behind: an end wall at x -0.08
+        # from the pod's keel (z -0.076, rising to -0.066 at its sides |y| 0.145 / 0.175) up into the wing (-0.044)
+        me = bpy.data.meshes.new("grach2_cap_%s" % ("l" if s > 0 else "r"))
+        bm = bmesh.new()
+        ys = np.linspace(0.143, 0.177, 9)
+        lo = [bm.verts.new((-0.078, s * y, -0.084 + 0.012 * ((y - 0.16) / 0.017) ** 2)) for y in ys]
+        hi = [bm.verts.new((-0.078, s * y, -0.05)) for y in ys]
+        for k in range(8):
+            f = bm.faces.new((lo[k], lo[k + 1], hi[k + 1], hi[k]))
+            f.normal_update()
+            if f.normal.x > 0:
+                f.normal_flip()
+        bm.to_mesh(me)
+        bm.free()
+        me.uv_layers.new(name="UVMap")
+        me.materials.append(mat)
+        o = bpy.data.objects.new(me.name, me)
+        bpy.context.scene.collection.objects.link(o)
+        obs.append(o)
+    return obs
+
+
+_GRACH2 = {
+    "rot": (0, 0, 90), "ground": False, "build": grach2_pod_covers,
+    # the pod gear doors are modelled in the wing skin object (_102), hanging open below the pods: thin side-facing
+    # plates under z -0.079 along the wells
+    "kill_faces": [(r"^Object_102$", (-0.04, 0.112, 0.136, 0.182, -0.12, -0.079, 0.6)),
+                   (r"^Object_102$", (-0.04, 0.112, -0.182, -0.136, -0.12, -0.079, 0.6)),
+                   # and their aft end plates, facing back at x -0.033
+                   (r"^Object_102$", (-0.04, -0.027, 0.136, 0.182, -0.12, -0.079)),
+                   (r"^Object_102$", (-0.04, -0.027, -0.182, -0.136, -0.12, -0.079))],
+    "drop": r"^Object_(5|9|10|2[4-9]|3[01]|44|46|5[6-9]|6[0-2]|71|72|74|75|8"
+            r"|2|3|4|1[1-9]|2[0-2]|63|69|70|96|97|23"
+            r"|3[2-9]|4[01]|45|4[7-9]|5[0-5]|66|68|73|7[6-9]|8[0-9]|9[0-4])$",
+    "materials": [(r"^Meshesaglass00[24]1Mtl$|^Meshesaglass0051Mtl$", GLASS),
+                  (r"^Meshesagauges0201Mtl_9[12]$", _GRACH2_SKIN), (r"^grach2_bay_paint$", {"mode": "paint"}),
                   (r".", {"mode": "keep", "desat": 0.75, "rough": 0.6})],
-    "erase": {"d8983ad8-1ea6-4c55-ba47-aff22a6ab3af": _GRACH3_MARKS},
+    "erase": {"Meshesagauges0201Mtl_91": _GRACH2_SKIN_MARKS, "Meshesagauges0201Mtl_92": _GRACH2_WING_MARKS},
     "mat_names": {"glass": "glass"}, "img_plain": True,
     "uv_split_x": [-0.3, -0.1, 0.1, 0.3], "uv_split_y": [-0.3, -0.1, 0.1, 0.3],
     "paint": TEMPERATE, "tris": 30000,
 }
-RECIPES["attacker_2"] = dict(_GRACH3, root="attacker_2")
-RECIPES["attacker_2_hangar"] = dict(RECIPES["attacker_2"], root="fh_hangar_attacker_2", tris=110000)
+RECIPES["attacker_1"] = dict(_GRACH2, root="attacker_1")
+RECIPES["attacker_1_hangar"] = dict(RECIPES["attacker_1"], root="fh_hangar_attacker_1", tris=110000)
