@@ -11,9 +11,9 @@
 
 **Правила ведения.** В каждом разделе не больше 10–15 живых задач. Новая задача — в раздел своей системы, с номером. Номера не меняются. Закрыл — строка в конец `backlog-archive.md` («Дописано после…»), здесь удалил. Шапку «Где мы сейчас» обновляем при каждой сборке и каждую пятницу на ревью.
 
-## Where we are (18.11.2026)
+## Where we are (19.11.2026)
 
-- **Game:** merged 18.11: #634 («Грач» 2 and 3 from one CC BY model, Kit 1/5 glass), #633 (glass fix), #632 (bomber bays, Kit 5 fans). Merged 17.11: #629 (pickups 0.66 of truck), #630 (menu flight), #631 (round valley fields), #628 (recipe formulas), #627 (capture tool). PR #600 (two editions) not re-checked since 10.11.
+- **Game:** merged 19.11: #637 («Kit» 1 turret, «Kit» 5 hull skin, «Grach» 3 hump), #638 («Grach» 3 from the model Kanta chose). Merged 18.11: #634 («Грач» 2 and 3 from one CC BY model, Kit 1/5 glass), #633 (glass fix), #632 (bomber bays, Kit 5 fans). Merged 17.11: #629 (pickups 0.66 of truck), #630 (menu flight), #631 (round valley fields), #628 (recipe formulas), #627 (capture tool). PR #600 (two editions) not re-checked since 10.11.
 - **Build cycle:** 3.5-s19 built 17.11. Remarks in `docs/process/build-remarks/3.5-s19.md`: 7 fixed in code (2–8), 1 handed over (1), 4 not started (9, 10, 12, 14), 2 decided (11, 13, see «Правки по сборке 3.5-s19»), 1 waits for a new recording (15). Checked in the game: 0 of 15. Next build only on Kanta's command, at least a day after s19 is checked.
 - **Waiting on Kanta:** dated items and day counts in `docs/owner-checklist/kanta-now.md` (updated 18.11); weekly review of 13.11 (7 proposals) still unanswered; the choice of «Osa 1» manoeuvres; a new recording of a sortie.
 - **Main path (days from 18.11):** Valve review ~16.11 (date passed; status unknown, guess: still waiting); Steam content survey S6 20.11 (2 days); Next Fest registration 10.01.2027 (53 days); demo and page to Valve 18.01.2027 (61 days; `docs/process/early-access.md` says 25.01, to reconcile); Next Fest starts 22.02.2027 (96 days). R-29 Steam art: Kanta picked on 18.11, final files in `marketing/steam-art-final`.
