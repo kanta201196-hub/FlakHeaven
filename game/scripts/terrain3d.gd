@@ -196,7 +196,14 @@ func valley(x: float, z: float, ctx := {}, rf := NAN) -> float:
 		var e := _seg_dist(Vector2(x, z), s[0], s[1]) - float(s[2]) * 0.5
 		if e > 0.0:
 			if sides_natural:
-				e = e * side_edge_k(Vector2(x, z), s[0], s[1]) + SIDE_LIFT * minf(e / 40.0, 1.0)   # S19-02, no jump at e = 0
+				# S19-02: ragged edge by direction, a mid-scale wobble on top, floor ends SIDE_LIFT closer (ramped in,
+				# no jump at e = 0), then the settlement's own slope (s[3]: gentle approach or a valley wall)
+				var ej := e + SIDE_JAG * _pad.get_noise_2d(x * SIDE_JAG_F, z * SIDE_JAG_F) * minf(e / 80.0, 1.0)
+				var g := maxf(ej, 0.0) * side_edge_k(Vector2(x, z), s[0], s[1])
+				var sl := float(s[3]) if s.size() > 3 else 1.0
+				# past SIDE_FAR the slope steepens back, so a gentle approach does not level the hills round it
+				g = g * sl if g < SIDE_FAR else SIDE_FAR * sl + (g - SIDE_FAR) * SIDE_FAR_K
+				e = g + SIDE_LIFT * minf(e / 40.0, 1.0)
 			elif pads_natural:
 				e *= 1.0 + SIDE_WOBBLE * _pad.get_noise_2d(x * SIDE_WOBBLE_F, z * SIDE_WOBBLE_F)
 		var dc := maxf(e, D_RIVER * 1.8)
@@ -455,12 +462,12 @@ func _sides(x: float, z: float, ctx := {}) -> Array:
 			var a: Vector2 = o["pos"]
 			var sz := float(o["size"])
 			if o["name"] != "o_village":
-				out.append([a, _river_point(a), sz * 0.75])
+				out.append([a, _river_point(a), sz * 0.75, side_slope(a)])
 				continue
 			# L-09: посёлок — в извилистой долине-притоке; вдоль неё — ручей с одной стороны оси
 			var tr := _trib(a)
 			for i in tr.size() - 1:
-				out.append([tr[i], tr[i + 1], sz * (0.75 if i == 0 else 0.5)])
+				out.append([tr[i], tr[i + 1], sz * (0.75 if i == 0 else 0.5), side_slope(a)])
 			var nrm := (tr[tr.size() - 1] - a).orthogonal().normalized()
 			var R := sz * AdobeBuild.footprint("o_village")
 			# исток — сбоку от посёлка, ручей идёт вдоль долины и к устью прижимается к её оси
@@ -1329,6 +1336,30 @@ const SIDE_RING := 260.0
 ## S19-02: the floor of a side valley ends this much closer to its axis (px of the valley field): the old floor
 ## (~440 px past the capsule) made a disc far wider than the settlement; its own pad (_flat) keeps the core level.
 const SIDE_LIFT := 220.0
+## S19-02 round 2 (Kanta 19.11: «слишком ровные края углубления», «почему бы не поставить просто на плавном
+## спуске»): a mid-scale wobble of the edge (±SIDE_JAG px, ~1/180 px) so the rim is not one smooth curve, and
+## each settlement gets its own slope (side_slope): about half sit on a long gentle descent to the river, the rest
+## in a valley with a steeper side. Repeated oases no longer share one shape.
+const SIDE_JAG := 70.0
+const SIDE_JAG_F := 2.3
+## Share of settlements on a gentle slope, and the slope range (× the valley-field rise; less is gentler)
+const SIDE_GENTLE := 0.5
+const SIDE_SLOPE_GENTLE := Vector2(0.5, 0.65)
+const SIDE_SLOPE_STEEP := Vector2(0.85, 1.1)
+## How far from the valley edge (px) the settlement's own slope holds; past it the field rises SIDE_FAR_K × as fast
+const SIDE_FAR := 700.0
+const SIDE_FAR_K := 1.6
+
+
+## The rise of a settlement's side valley away from its axis (× the valley field; < 1 — a gentle descent, the
+## settlement on a long slope down to the river). Fixed by the settlement's position, so it never changes.
+static func side_slope(a: Vector2) -> float:
+	var h := absf(sin(a.x * 12.9898 + a.y * 78.233) * 43758.5453)
+	h -= floorf(h)
+	var h2 := absf(sin(a.x * 39.346 + a.y * 11.135) * 24634.6345)
+	h2 -= floorf(h2)
+	var r := SIDE_SLOPE_GENTLE if h < SIDE_GENTLE else SIDE_SLOPE_STEEP
+	return lerpf(r.x, r.y, h2)
 
 
 ## Edge-distance factor of a settlement side valley (segment a…b) at point p: SIDE_K_MIN … SIDE_K_MAX by the
